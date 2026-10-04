@@ -388,7 +388,7 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
     mz
   }
 
-  a <- x$analyses
+  a <- .ard_spec_flat(x$analyses)
   analyses <- list()
   # each ARS analysis, what it was written from: the spec row, its method,
   # its role (bign: the output's subject count; any: subjects with any

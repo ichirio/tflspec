@@ -1,5 +1,18 @@
 # tflspec (development version)
 
+* **Analyses run inside another: the `parent` column** (#96).  A row of
+  the `analyses` sheet whose `parent` names an analysis with method
+  `cards::ard_stack`, `cards::ard_strata` or `cards::ard_pairwise` is run
+  inside it, on its data, analysis set and condition (and in a stack its
+  `by`).  The program writes the one call a person would --
+  `cards::ard_stack(pop_saf, .by = ARM, cards::ard_continuous(variables =
+  c(AGE, BMIBL)), cards::ard_categorical(variables = SEX))` -- and tags each
+  variable's rows with its own `analysis_id` (the stack's own rows, the by
+  counts and the total N, with the parent's).  `tfl_ars()` writes each row
+  inside as an analysis of its own.  What a row inside may not say (the
+  parent's data, a second analysis of one variable in a stack, `custom`) is
+  refused by name.  A blank `parent` is as before.
+
 * **The ARD functions as a catalog** (#93): `tfl_ard_functions()` lists
   every installed cards / cardx `ard_*()` by category, with a heading, a
   sentence and its shape (columns, a formula, a fitted model, other

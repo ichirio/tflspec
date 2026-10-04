@@ -193,6 +193,17 @@ argument is written in one place: a column, or `args`, never both.
 - `by`, `strata`, `variables`, `statistics`: `|` between several. `strata`:
   the analysis repeated within them (cards' `strata`: a subgroup, a
   parameter by visit).
+- `parent`: the analysis this one runs inside, when that one's method is
+  `cards::ard_stack` (several analyses on the same data and `by`, plus the
+  by counts and the total N with `args` `.total_n = TRUE`),
+  `cards::ard_strata` (within the subgroups of its `by` / `strata`) or
+  `cards::ard_pairwise` (each pair of the levels of its one `variables`).
+  The rows inside leave `dataset` / `population_id` / `where` (and in a
+  stack `by`) blank: they are the parent's. The program writes one call,
+  `cards::ard_stack(pop_saf, .by = ARM, cards::ard_continuous(variables =
+  c(AGE, BMIBL)), cards::ard_categorical(variables = SEX))`, and tags each
+  variable's rows with its own analysis (the stack's own rows with the
+  parent's id). ARS gets each row inside as an analysis of its own.
 - `denominator`: what percentages are of — `population` (the analysis
   set; `hierarchical` and `max` take it anyway), `row` / `column` / `cell`
   (cards), another population, or a dataset (its records of the analysis

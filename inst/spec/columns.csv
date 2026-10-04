@@ -22,6 +22,7 @@ populations,where,"An R condition on that dataset choosing the subjects; blank: 
 populations,derive,"Columns added to the population, NAME = R expression, | between them; blank: none.",TRTA = TRT01A
 analyses,,"ARD: one analysis a row; each becomes one cards / cardx call in the ARD program, its result tagged with output_id, analysis_id and population_id.",
 analyses,analysis_id,"The analysis's id within its report; an ARD column.",AGE
+analyses,parent,"The analysis this one runs inside: an analysis of the same report whose method is cards::ard_stack (several analyses on the same data and by, with the by counts and the total N), cards::ard_strata (within subgroups) or cards::ard_pairwise (each pair of groups). It takes the parent's dataset, population_id and where (and in a stack its by), so leave those blank; blank: an analysis of its own.",DEMO
 analyses,label,"A name a person reads (for ARS and the GUI); blank: none.",Age (years)
 analyses,method,"What is computed: a keyword of tfl_ard_methods() (continuous, categorical, hierarchical ...), any pkg::function (cards::, cardx::), or a function of the study's own that the study key source loads.",continuous
 analyses,dataset,"The data analysed; blank: the population's own dataset.",ADAE
