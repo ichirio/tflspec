@@ -1,0 +1,93 @@
+package,function,use,note
+cards,add_calculated_row,post,A step on the ARD after its method: the analysis row's post column.
+cards,filter_ard_hierarchical,post,A step on the ARD after its method: the analysis row's post column.
+cards,sort_ard_hierarchical,post,A step on the ARD after its method: the analysis row's post column.
+cards,diff_ard_hierarchical,post,A step on the ARD after its method: the analysis row's post column.
+cards,replace_null_statistic,post,A step on the ARD after its method: the analysis row's post column.
+cards,update_ard_stat_label,post,A step on the ARD after its method: the analysis row's post column.
+cards,update_ard_fmt_fun,code,Written by the generated ARD code.
+cards,apply_fmt_fun,code,Written by the generated ARD code.
+cards,label_round,code,Written by the generated ARD code.
+cards,alias_as_fmt_fun,code,Written by the generated ARD code.
+cards,continuous_summary_fns,code,Written by the generated ARD code.
+cards,tidy_ard_column_order,code,Written by the generated ARD code.
+cards,tidy_ard_row_order,code,Written by the generated ARD code.
+cards,update_ard_fmt_fn,old,cards' old name of the *_fun function.
+cards,apply_fmt_fn,old,cards' old name of the *_fun function.
+cards,alias_as_fmt_fn,old,cards' old name of the *_fun function.
+cards,bind_ard,not_used,Not for the study ARD: it does not count output_id / analysis_id in a row's key (tflspec #118). Used inside cards' own functions.
+cards,compare_ard,screen,Comparing ARDs: an ARD taken in against the study's own (tflplanner).
+cards,is_ard_equal,screen,Comparing ARDs: an ARD taken in against the study's own (tflplanner).
+cards,check_ard_equal,screen,Comparing ARDs: an ARD taken in against the study's own (tflplanner).
+cards,print_ard_conditions,screen,As a table: tfl_ard_conditions().
+cards,mock_attributes,future,A shell before there is data (an example ARD from the ARD definition and the code lists).
+cards,mock_categorical,future,A shell before there is data (an example ARD from the ARD definition and the code lists).
+cards,mock_continuous,future,A shell before there is data (an example ARD from the ARD definition and the code lists).
+cards,mock_dichotomous,future,A shell before there is data (an example ARD from the ARD definition and the code lists).
+cards,mock_missing,future,A shell before there is data (an example ARD from the ARD definition and the code lists).
+cards,mock_total_n,future,A shell before there is data (an example ARD from the ARD definition and the code lists).
+cards,as_card,internal,"Used inside tflspec (checking, writing, reading an ARD) or inside cards; not written in a definition."
+cards,check_ard_structure,internal,"Used inside tflspec (checking, writing, reading an ARD) or inside cards; not written in a definition."
+cards,as_nested_list,internal,"Used inside tflspec (checking, writing, reading an ARD) or inside cards; not written in a definition."
+cards,get_ard_statistics,internal,"Used inside tflspec (checking, writing, reading an ARD) or inside cards; not written in a definition."
+cards,unlist_ard_columns,internal,"Used inside tflspec (checking, writing, reading an ARD) or inside cards; not written in a definition."
+cards,rename_ard_columns,internal,"Used inside tflspec (checking, writing, reading an ARD) or inside cards; not written in a definition."
+cards,rename_ard_groups_shift,internal,"Used inside tflspec (checking, writing, reading an ARD) or inside cards; not written in a definition."
+cards,rename_ard_groups_reverse,internal,"Used inside tflspec (checking, writing, reading an ARD) or inside cards; not written in a definition."
+cards,nest_for_ard,internal,"Used inside tflspec (checking, writing, reading an ARD) or inside cards; not written in a definition."
+cards,default_stat_labels,internal,"Used inside tflspec (checking, writing, reading an ARD) or inside cards; not written in a definition."
+cards,maximum_variable_value,internal,"Used inside tflspec (checking, writing, reading an ARD) or inside cards; not written in a definition."
+cards,check_list_elements,internal,"Used inside tflspec (checking, writing, reading an ARD) or inside cards; not written in a definition."
+cards,all_missing_columns,internal,"Used inside tflspec (checking, writing, reading an ARD) or inside cards; not written in a definition."
+cards,round5,internal,"Used inside tflspec (checking, writing, reading an ARD) or inside cards; not written in a definition."
+cards,tidy_as_ard,own_function,For writing an ARD function of one's own (tfl_ard_function_template()).
+cards,eval_capture_conditions,own_function,For writing an ARD function of one's own (tfl_ard_function_template()).
+cards,captured_condition_as_error,own_function,For writing an ARD function of one's own (tfl_ard_function_template()).
+cards,captured_condition_as_message,own_function,For writing an ARD function of one's own (tfl_ard_function_template()).
+cards,as_cards_fn,own_function,For writing an ARD function of one's own (tfl_ard_function_template()).
+cards,is_cards_fn,own_function,For writing an ARD function of one's own (tfl_ard_function_template()).
+cards,get_cards_fn_stat_names,own_function,For writing an ARD function of one's own (tfl_ard_function_template()).
+cards,process_selectors,own_function,For writing an ARD function of one's own (tfl_ard_function_template()).
+cards,process_formula_selectors,own_function,For writing an ARD function of one's own (tfl_ard_function_template()).
+cards,fill_formula_selectors,own_function,For writing an ARD function of one's own (tfl_ard_function_template()).
+cards,compute_formula_selector,own_function,For writing an ARD function of one's own (tfl_ard_function_template()).
+cards,cards_select,own_function,For writing an ARD function of one's own (tfl_ard_function_template()).
+cards,all_ard_groups,selector,Selecting an ARD's columns; not an analysis.
+cards,all_ard_variables,selector,Selecting an ARD's columns; not an analysis.
+cards,all_ard_group_n,selector,Selecting an ARD's columns; not an analysis.
+cards,%>%,selector,Re-exported from magrittr / tidyselect.
+cards,all_of,selector,Re-exported from magrittr / tidyselect.
+cards,any_of,selector,Re-exported from magrittr / tidyselect.
+cards,contains,selector,Re-exported from magrittr / tidyselect.
+cards,ends_with,selector,Re-exported from magrittr / tidyselect.
+cards,everything,selector,Re-exported from magrittr / tidyselect.
+cards,last_col,selector,Re-exported from magrittr / tidyselect.
+cards,matches,selector,Re-exported from magrittr / tidyselect.
+cards,num_range,selector,Re-exported from magrittr / tidyselect.
+cards,one_of,selector,Re-exported from magrittr / tidyselect.
+cards,starts_with,selector,Re-exported from magrittr / tidyselect.
+cards,where,selector,Re-exported from magrittr / tidyselect.
+cards,shuffle_ard,not_used,Deprecated in cards 0.8.0.
+cardx,proportion_ci_agresti_coull,choice,Choices of ard_categorical_ci(method = ); not called directly.
+cardx,proportion_ci_clopper_pearson,choice,Choices of ard_categorical_ci(method = ); not called directly.
+cardx,proportion_ci_jeffreys,choice,Choices of ard_categorical_ci(method = ); not called directly.
+cardx,proportion_ci_strat_wilson,choice,Choices of ard_categorical_ci(method = ); not called directly.
+cardx,proportion_ci_wald,choice,Choices of ard_categorical_ci(method = ); not called directly.
+cardx,proportion_ci_wilson,choice,Choices of ard_categorical_ci(method = ); not called directly.
+cardx,construct_model,internal,Building a model's formula: inside cardx's model functions.
+cardx,reformulate2,internal,Building a model's formula: inside cardx's model functions.
+cardx,bt,internal,Building a model's formula: inside cardx's model functions.
+cardx,bt_strip,internal,Building a model's formula: inside cardx's model functions.
+cardx,is_binary,internal,Building a model's formula: inside cardx's model functions.
+cardx,%>%,selector,Re-exported from magrittr / tidyselect.
+cardx,all_of,selector,Re-exported from magrittr / tidyselect.
+cardx,any_of,selector,Re-exported from magrittr / tidyselect.
+cardx,contains,selector,Re-exported from magrittr / tidyselect.
+cardx,ends_with,selector,Re-exported from magrittr / tidyselect.
+cardx,everything,selector,Re-exported from magrittr / tidyselect.
+cardx,last_col,selector,Re-exported from magrittr / tidyselect.
+cardx,matches,selector,Re-exported from magrittr / tidyselect.
+cardx,num_range,selector,Re-exported from magrittr / tidyselect.
+cardx,one_of,selector,Re-exported from magrittr / tidyselect.
+cardx,starts_with,selector,Re-exported from magrittr / tidyselect.
+cardx,where,selector,Re-exported from magrittr / tidyselect.

@@ -145,6 +145,34 @@ test_that("a parent row's function says the columns the generated code reads", {
   expect_identical(col("cards::ard_summary", "by"), "by")
 })
 
+test_that("every other exported function of cards / cardx has a decided use", {
+  # ARD builder design ch. 7: each of cards' and cardx's functions that is
+  # not an ard_*() (those are in the catalog, above) is decided once --
+  # a post step, written by the generated code, a screen's tool, internal,
+  # for writing one's own ARD function, a selector, a choice, not used.
+  # A new cards / cardx (CI runs CRAN's every week) adds one: this test
+  # names it, and inst/ard/utilities.csv gets a row.
+  u <- utils::read.csv(system.file("ard", "utilities.csv", package = "tflspec"),
+                       stringsAsFactors = FALSE)
+  expect_true(all(u$use %in% c("post", "code", "old", "not_used", "screen",
+                               "future", "internal", "own_function",
+                               "selector", "choice")))
+  # the versions the table was written for: an older cards (the oldest
+  # supported, tested too) is not held to it
+  written_for <- c(cards = "0.9.0", cardx = "0.3.4")
+  for (p in c("cards", "cardx")) {
+    if (!requireNamespace(p, quietly = TRUE) ||
+        utils::packageVersion(p) < written_for[[p]]) next
+    e <- getNamespaceExports(p)
+    e <- e[!startsWith(e, "ard_") & !startsWith(e, ".")]
+    new <- setdiff(e, u$`function`[u$package == p])
+    expect_identical(sort(new), character(0),
+                     info = paste0(p, " ", utils::packageVersion(p),
+                                   ": decide the use of ", paste(new, collapse = ", "),
+                                   " in inst/ard/utilities.csv"))
+  }
+})
+
 test_that("two outputs with the same statistics keep their own rows", {
   # the study ARD is bound with dplyr::bind_rows(), not cards::bind_ard():
   # bind_ard() does not count output_id / analysis_id as part of a row's key,
