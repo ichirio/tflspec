@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9032** (the development version,
+**This manual documents tflspec 0.0.24.9033** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -130,6 +130,9 @@ back) or XPT (flat; factors, formats and warnings are lost, with a
 warning); the rds stays the record. An ARD made elsewhere: `report$ard_source`
 `import:<file>` (the file in the study's `input/ard/`), checked with
 `tfl_check_ard(ard, spec)` (its shape, and what the table reads).
+`tfl_ard_conditions(ard)` lists what went wrong while an ARD was made (a
+test that could not run, a statistic that stopped or warned): cards keeps
+going and leaves the message in the `error` / `warning` column.
 
 ---
 
@@ -583,7 +586,7 @@ back): rename the value or choose another separator.
 **ARD spec:** `tfl_ard_spec` `tfl_read_ard_spec` `tfl_write_ard_spec`
 `tfl_ard_spec_template` `tfl_ard_code` `tfl_build_ard` `tfl_ard_for`
 `tfl_ard_spec_hash` `tfl_ard_methods` `tfl_ard_statistics`
-`tfl_ard_functions` `tfl_ard_args` `tfl_write_ard` `tfl_read_ard` `tfl_check_ard` `tfl_check_ard_function`
+`tfl_ard_functions` `tfl_ard_args` `tfl_write_ard` `tfl_read_ard` `tfl_check_ard` `tfl_check_ard_function` `tfl_ard_conditions`
 
 **CDISC ARS:** `tfl_ars` `tfl_write_ars_json` `tfl_check_ars`
 `tfl_ars_unmapped` `tfl_ars_ard` `tfl_read_ars_json` `tfl_ars_to_specs`

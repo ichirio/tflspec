@@ -117,3 +117,81 @@ tfl_check_ard <- function(ard, spec = NULL, output_id = NULL) {
   }
   out
 }
+
+
+#' What went wrong while an ARD was made
+#'
+#' cards does not stop when one analysis fails: a test that cannot be run
+#' (two groups needed, three given), a statistic whose function stops or
+#' warns, leaves its message in the ARD's `error` / `warning` column and the
+#' other analyses carry on.  `tfl_ard_conditions()` lists those messages,
+#' one row per analysis, variable, groups and message, so a screen can show
+#' them and a program can stop on them.  It is what
+#' [cards::print_ard_conditions()] prints, as a table, with the study ARD's
+#' `output_id` and `analysis_id`.
+#'
+#' @param ard An ARD: the study's ([tfl_build_ard()]), one report's
+#'   ([tfl_ard_for()]), or any cards ARD.
+#' @return A data frame: `output_id` and `analysis_id` (when the ARD has
+#'   them), `variable`, `groups` (the group columns, `|` between them; empty
+#'   for none), `level` (`"error"` or `"warning"`), `message`, and
+#'   `statistics` (the statistics it is about, `, ` between them).  Errors
+#'   first.  No rows: nothing went wrong.
+#' @seealso [tfl_check_ard()] for whether a report can be made from an ARD.
+#' @examples
+#' if (requireNamespace("cards", quietly = TRUE)) {
+#'   ard <- cards::ard_summary(cards::ADSL, variables = AGE,
+#'     statistic = ~ list(mean = mean, bad = function(x) stop("no data")))
+#'   tfl_ard_conditions(ard)
+#' }
+#' @export
+tfl_ard_conditions <- function(ard) {
+  ids <- intersect(c("output_id", "analysis_id"), names(ard))
+  out <- data.frame(stringsAsFactors = FALSE,
+                    matrix(character(), 0L, length(ids) + 5L,
+                           dimnames = list(NULL, c(ids, "variable", "groups",
+                                                   "level", "message",
+                                                   "statistics"))))
+  if (!is.data.frame(ard) || !nrow(ard)) return(out)
+  g <- grep("^group[0-9]+$", names(ard), value = TRUE)
+  groups <- if (length(g)) {
+    vapply(seq_len(nrow(ard)), function(i) {
+      v <- vapply(g, function(k) {
+        x <- unlist(ard[[k]][i])
+        if (length(x) && !is.na(x[1L])) as.character(x[1L]) else NA_character_
+      }, "")
+      paste(stats::na.omit(v), collapse = " | ")
+    }, "")
+  } else rep("", nrow(ard))
+  key <- function(col, i) {
+    if (!col %in% names(ard)) return(NA_character_)
+    x <- unlist(ard[[col]][i])
+    if (length(x)) as.character(x[1L]) else NA_character_
+  }
+  rows <- list()
+  for (level in c("error", "warning")) {
+    if (!level %in% names(ard)) next
+    msgs <- ard[[level]]
+    for (i in seq_len(nrow(ard))) {
+      m <- unlist(msgs[i])
+      m <- m[!is.na(m) & nzchar(m)]
+      for (one in unique(m)) {
+        rows[[length(rows) + 1L]] <- c(
+          stats::setNames(vapply(ids, key, "", i = i), ids),
+          variable = key("variable", i), groups = groups[i], level = level,
+          message = one, stat = key("stat_name", i))
+      }
+    }
+  }
+  if (!length(rows)) return(out)
+  d <- as.data.frame(do.call(rbind, rows), stringsAsFactors = FALSE)
+  by <- c(ids, "variable", "groups", "level", "message")
+  d$.k <- do.call(paste, c(lapply(by, function(k) d[[k]]), sep = "\r"))
+  first <- !duplicated(d$.k)
+  res <- d[first, by, drop = FALSE]
+  res$statistics <- vapply(d$.k[first], function(k)
+    paste(unique(stats::na.omit(d$stat[d$.k == k])), collapse = ", "), "",
+    USE.NAMES = FALSE)
+  rownames(res) <- NULL
+  res
+}
