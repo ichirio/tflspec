@@ -1,5 +1,18 @@
 # tflspec (development version)
 
+* **`tfl_ard_function_info(files)`** (#125): what the ARD functions of one's own in
+  some R files are, read without running them -- one row per function an
+  analysis could name (`name <- function(...)`, or `name <-
+  cards::as_cards_fn(function(...), stat_names = )` as the templates write
+  it) with its file, the title and description of the roxygen block above
+  it, the statistics it declares and its arguments with their `@param`
+  hints.  `test-*.R` files are skipped.  One way of finding them, for a
+  screen's list, an analysis form's arguments and the ARS (which now uses
+  it).
+* The templates of `tfl_ard_function_template()` start with a roxygen block
+  (a title, a description, `@param` for each argument), so a screen shows
+  a function made from one with its title and argument hints.
+
 * **ARS: a report with no analyses is listed, not dropped** (#123): a report
   of user code that does not read the ARD, a listing, or a table not defined
   yet has no analyses, so it is not an ARS output; `tfl_ars_unmapped()` now

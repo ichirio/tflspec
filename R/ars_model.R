@@ -794,24 +794,14 @@ print.tfl_ars <- function(x, ...) {
 # `name <- cards::as_cards_fn(function(...) ..., stat_names = c("a", "b"))`.
 .ars_own_functions <- function(x, dir = ".") {
   out <- list(file = list(), stat_names = list())
-  for (f in .split_bar(.study_value(x, "source", NA))) {
-    p <- file.path(dir, f)
-    ex <- if (file.exists(p)) tryCatch(parse(p, keep.source = FALSE),
-                                       error = function(e) NULL)
-    for (e in ex) {
-      if (!is.call(e) || !as.character(e[[1L]]) %in% c("<-", "=") ||
-          !is.name(e[[2L]])) next
-      name <- as.character(e[[2L]])
-      rhs <- e[[3L]]
-      is_fun <- is.call(rhs) && identical(rhs[[1L]], as.name("function"))
-      fn <- if (is.call(rhs)) paste(deparse(rhs[[1L]]), collapse = "") else ""
-      is_cards_fn <- fn %in% c("cards::as_cards_fn", "as_cards_fn")
-      if (!is_fun && !is_cards_fn) next
-      out$file[[name]] <- f
-      if (is_cards_fn && !is.null(rhs$stat_names)) {
-        sn <- tryCatch(eval(rhs$stat_names, baseenv()), error = function(e) NULL)
-        if (is.character(sn)) out$stat_names[[name]] <- sn
-      }
+  src <- .split_bar(.study_value(x, "source", NA))
+  if (!length(src)) return(out)
+  info <- tfl_ard_function_info(file.path(dir, src))
+  info <- info[!is.na(info$name), , drop = FALSE]
+  for (i in seq_len(nrow(info))) {
+    out$file[[info$name[i]]] <- src[match(info$file[i], file.path(dir, src))]
+    if (nzchar(info$stat_names[i])) {
+      out$stat_names[[info$name[i]]] <- .split_bar(info$stat_names[i])
     }
   }
   out

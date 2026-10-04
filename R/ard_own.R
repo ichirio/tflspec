@@ -157,3 +157,134 @@ tfl_ard_function_template <- function(name, type = c("summary", "test", "free"),
   }
   invisible(code)
 }
+
+#' What the ARD functions of one's own in some R files are
+#'
+#' Reads the files -- it does not run them -- and returns one row per
+#' function an analysis row could name as its method: a top-level
+#' `name <- function(...)`, or `name <- cards::as_cards_fn(function(...),
+#' stat_names = c(...))` as the templates of [tfl_ard_function_template()]
+#' write it.  What a person reads to choose one comes from the roxygen
+#' block above it: the title (its first line), the description (the
+#' paragraph after), and each argument's `@param`.  The statistics are the
+#' ones `as_cards_fn()` declares.  Test files (`test-*.R`) are skipped.
+#'
+#' @param files R files: a study's own functions (its key `source`), a
+#'   company's (a standards folder), or both.
+#' @return A data frame: `name`, `file`, `title`, `description`,
+#'   `stat_names` (` | ` between them; empty when the function declares
+#'   none), and `args`, a list column of data frames (`arg`, `default`,
+#'   `hint`).  A file that does not parse is a row with `name` `NA` and the
+#'   parse error as its `description`.
+#' @seealso [tfl_ard_function_template()], [tfl_check_ard_function()]
+#' @examples
+#' f <- file.path(tempdir(), "ard_mine.R")
+#' tfl_ard_function_template("ard_mine", "test", file = f, overwrite = TRUE)
+#' info <- tfl_ard_function_info(f)
+#' info[, c("name", "title", "stat_names")]
+#' info$args[[1]]
+#' @export
+tfl_ard_function_info <- function(files) {
+  files <- files[!grepl("^test-", basename(files))]
+  rows <- lapply(files, .ard_fn_info_file)
+  empty <- data.frame(name = character(), file = character(),
+                      title = character(), description = character(),
+                      stat_names = character(), stringsAsFactors = FALSE)
+  empty$args <- list()
+  out <- do.call(rbind, c(list(empty), rows))
+  rownames(out) <- NULL
+  out
+}
+
+.ard_fn_info_file <- function(file) {
+  row <- function(name, title, description, stat_names, args) {
+    d <- data.frame(name = name, file = file, title = title,
+                    description = description, stat_names = stat_names,
+                    stringsAsFactors = FALSE)
+    d$args <- list(args)
+    d
+  }
+  if (!file.exists(file)) return(NULL)
+  lines <- readLines(file, warn = FALSE, encoding = "UTF-8")
+  ex <- tryCatch(parse(text = lines, keep.source = TRUE),
+                 error = function(e) e)
+  if (inherits(ex, "error")) {
+    return(row(NA_character_, NA_character_, conditionMessage(ex), "",
+               .ard_fn_args(NULL, list())))
+  }
+  refs <- attr(ex, "srcref")
+  out <- list()
+  for (i in seq_along(ex)) {
+    e <- ex[[i]]
+    if (!is.call(e) || !as.character(e[[1L]]) %in% c("<-", "=") ||
+        !is.name(e[[2L]])) next
+    rhs <- e[[3L]]
+    fn <- if (is.call(rhs)) paste(deparse(rhs[[1L]]), collapse = "") else ""
+    fun <- if (identical(fn, "function")) rhs else
+      if (fn %in% c("cards::as_cards_fn", "as_cards_fn") &&
+          is.call(rhs[[2L]]) && identical(rhs[[2L]][[1L]], as.name("function")))
+        rhs[[2L]] else NULL
+    if (is.null(fun)) next
+    sn <- if (!identical(fn, "function") && !is.null(rhs$stat_names)) {
+      v <- tryCatch(eval(rhs$stat_names, baseenv()), error = function(e) NULL)
+      if (is.character(v)) v else character()
+    } else character()
+    rox <- .ard_fn_roxygen(lines, refs[[i]][1L])
+    out[[length(out) + 1L]] <- row(
+      as.character(e[[2L]]), rox$title, rox$description,
+      paste(sn, collapse = " | "), .ard_fn_args(fun, rox$params))
+  }
+  do.call(rbind, out)
+}
+
+# the roxygen block right above line `at`: its title, description, @params
+.ard_fn_roxygen <- function(lines, at) {
+  # blank lines between the block and the function are allowed, as roxygen
+  # allows them
+  while (at > 1L && !nzchar(trimws(lines[at - 1L]))) at <- at - 1L
+  i <- at - 1L
+  while (i >= 1L && grepl("^\\s*#'", lines[i])) i <- i - 1L
+  block <- if (i + 1L <= at - 1L) lines[(i + 1L):(at - 1L)] else character()
+  block <- sub("^\\s*#' ?", "", block)
+  tag <- grepl("^@", block)
+  first_tag <- if (any(tag)) which(tag)[1L] else length(block) + 1L
+  text <- block[seq_len(first_tag - 1L)]
+  paras <- split(text, cumsum(!nzchar(trimws(text))))
+  paras <- vapply(paras, function(p) trimws(paste(trimws(p[nzchar(trimws(p))]),
+                                                  collapse = " ")), "")
+  paras <- paras[nzchar(paras)]
+  params <- list()
+  cur <- NULL
+  for (ln in block[seq_along(block) >= first_tag]) {
+    m <- regmatches(ln, regexec("^@param\\s+([^[:space:]]+)\\s*(.*)$", ln))[[1L]]
+    if (length(m)) {
+      for (a in strsplit(m[2L], ",", fixed = TRUE)[[1L]]) params[[trimws(a)]] <- m[3L]
+      cur <- strsplit(m[2L], ",", fixed = TRUE)[[1L]]
+    } else if (grepl("^@", ln)) {
+      cur <- NULL
+    } else if (!is.null(cur) && nzchar(trimws(ln))) {
+      for (a in cur) params[[trimws(a)]] <- paste(params[[trimws(a)]], trimws(ln))
+    }
+  }
+  list(title = if (length(paras)) paras[[1L]] else NA_character_,
+       description = if (length(paras) > 1L) paste(paras[-1L], collapse = "\n\n")
+                     else NA_character_,
+       params = params)
+}
+
+# a function's arguments, from its definition (not run), with their hints
+.ard_fn_args <- function(fun, params) {
+  fm <- if (is.null(fun)) NULL else fun[[2L]]
+  if (is.null(fm)) {
+    return(data.frame(arg = character(), default = character(),
+                      hint = character(), stringsAsFactors = FALSE))
+  }
+  dflt <- vapply(as.list(fm), function(d) {
+    if (is.name(d) && identical(as.character(d), "")) NA_character_
+    else paste(deparse(d, width.cutoff = 500L), collapse = " ")
+  }, "")
+  data.frame(arg = names(fm), default = unname(dflt),
+             hint = vapply(names(fm), function(a) params[[a]] %||% NA_character_, "",
+                           USE.NAMES = FALSE),
+             stringsAsFactors = FALSE)
+}

@@ -1,11 +1,15 @@
-# {name}(): any calculation, group by group, made an ARD with
-# cards::ard_strata() and cards::ard_identity().
-#
-# An analysis row names it as its method:  {name}
-#   method {name}   by TRT01A   variables AGE
-# Each statistic is one element of the list given to ard_identity(); name
-# them all in `stat_names`.
-
+#' A calculation of one's own, group by group
+#'
+#' Any calculation within each group, made an ARD with cards::ard_strata()
+#' and cards::ard_identity() -- here the number of subjects above the
+#' overall median.  An analysis row names it as its method ({name}, by
+#' TRT01A, variables AGE).  Each statistic is one element of the list given
+#' to ard_identity(); name them all in `stat_names`.
+#'
+#' @param data The analysis data (its dataset and analysis set).
+#' @param by The group columns, e.g. TRT01A.
+#' @param variables The numeric variables.
+#' @param ... Not used.
 {name} <- cards::as_cards_fn(
   function(data, by, variables, ...) {
     cards::process_selectors(data, by = {{ by }}, variables = {{ variables }})
