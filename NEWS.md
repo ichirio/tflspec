@@ -24,6 +24,24 @@
   now say so, so a screen that builds a parent row from the catalog writes
   them where the code reads them.
 
+* **An ARD function of one's own, from a template** (#115):
+  `tfl_ard_function_template(name, type, file, test = TRUE)` writes an
+  `ard_*()` an analysis row can name as its method, in the three shapes
+  cards and cardx write theirs -- `"summary"` (statistics of one's own,
+  `ard_summary(statistic = )`), `"test"` (a test across groups,
+  `tidy_as_ard()`, its errors kept in the ARD) and `"free"`
+  (`ard_strata()` + `ard_identity()`) -- and, with `test = TRUE`, a
+  testthat file next to it.  Each says which statistics it gives
+  (`cards::as_cards_fn(stat_names = )`).
+* `tfl_check_ard_function()` checks the statistics a function says it gives
+  (`attr(fun, "stat_names")`, as `cards::as_cards_fn()` sets it) without
+  `stat_names =`; one that says nothing gets a note.
+* `tfl_check_ard()` no longer calls a `groupN` without `groupN_level` an
+  error: a test across groups has that shape (cardx's own `ard_stats_*()`
+  give it), so an ARD of tests taken in, or an own function wrapping a test,
+  was refused.  cards' note that the ARD has no `method` rows is left out
+  (no report reads them; an ARD written and read back has none).
+
 * **`tfl_ard_conditions()`**: what went wrong while an ARD was made, as a
   table.  cards does not stop when one analysis fails (a test given three
   groups, a statistic whose function stops or warns): it leaves the message
