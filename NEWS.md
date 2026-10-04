@@ -1,5 +1,13 @@
 # tflspec (development version)
 
+* **Every function of cards / cardx has a decided use** (#121): besides the
+  ard_*() of the catalog, `inst/ard/utilities.csv` says what each other
+  exported function of cards and cardx is to tflspec -- a post step, written
+  by the generated code, a screen's tool, internal, for writing one's own ARD
+  function, a selector, a choice of an argument, not used (`bind_ard()`:
+  tflspec #118) -- and a test names any function a new cards / cardx exports
+  without a row (the weekly CRAN-latest CI).
+
 * **An ARS method of a function says what it runs** (#119): an analysis
   whose method is a function (`cards::ard_summary`, a study's own
   `ard_riskdiff`) gets, as its method's `codeTemplate`, the call the ARD
