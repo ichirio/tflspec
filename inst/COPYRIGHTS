@@ -1,0 +1,11 @@
+tflspec is copyright (c) 2026 Yoichi Masui and licensed under the MIT
+License (see LICENSE).
+
+It includes one file of others' work, unchanged:
+
+inst/ars/ars_ldm.json
+  The JSON Schema of the CDISC Analysis Results Standard (ARS) v1.0
+  logical data model, from https://github.com/cdisc-org/analysis-results-standard
+  (tag v1.0.0, model/ars_ldm.json).
+  Copyright (c) CDISC. Licensed under the MIT License; the licence text is
+  reproduced in inst/ars/README.md.

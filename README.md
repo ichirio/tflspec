@@ -142,3 +142,33 @@ has a unit says it (`_twips`, `_in`, `_half_points`; `rel_width` is a
 relative width). One argument is written in one place: a column, or
 `args`, never both. Every column is described on its header cell's comment
 and by `tfl_spec_columns()`.
+
+## Citation
+
+If tflspec helps your work, please cite it with `citation("tflspec")`. The
+statistics of the tables come from [cards](https://pharmaverse.github.io/cards/)
+and [cardx](https://insightsengineering.github.io/cardx/); please cite those
+too (`citation("cards")`, `citation("cardx")`).
+
+## Acknowledgements
+
+tflspec stands on the work of many others, and we are grateful to their
+authors.
+
+- **[cards](https://pharmaverse.github.io/cards/) and
+  [cardx](https://insightsengineering.github.io/cardx/)**: the analysis
+  results data (ARD) that every ARD spec is written for, an outcome of the
+  [pharmaverse](https://pharmaverse.org/) community's work on analysis results
+  data.
+- **[ggplot2](https://ggplot2.tidyverse.org/)** and its extensions
+  ([ggsurvfit](https://www.danieldsjoberg.com/ggsurvfit/),
+  [patchwork](https://patchwork.data-imaginist.com) and others): the figure
+  code tflspec writes is their code.
+- **[CDISC](https://www.cdisc.org/)**: the Analysis Results Standard, whose
+  JSON Schema is included unchanged (`inst/ars/`, MIT; see `inst/COPYRIGHTS`),
+  and **[siera](https://clymbclinical.github.io/siera/)**, which reads ARS.
+- **[pharmaverseadam](https://pharmaverse.github.io/pharmaverseadam/)**: the
+  ADaM data (from the CDISC pilot study) of the examples.
+
+tflspec is an independent project and is not affiliated with, or endorsed by,
+the authors of these packages or CDISC.
