@@ -170,6 +170,7 @@ report,page_footer,"TRUE / FALSE: FALSE drops the running page footer, likewise;
 report,watermark,"A word drawn diagonally behind every page (rtf_document(watermark = )); blank: none.",DRAFT
 report,figure_width_in,"A figure report: the figure's width in inches (rtf_figures(width_twips = )); blank: the figure's own.",9
 report,figure_height_in,"A figure report: the figure's height in inches (rtf_figures(height_twips = )); blank: the figure's own.",5
+report,ard_source,"Where the report's ARD comes from: blank, its own ARD definition (the analyses rows of its output_id); import:<file>, an ARD made elsewhere and taken in (the file in the study's input/ard/ folder, read with tfl_read_ard()).",import:t_14_2_1_cro.json
 page,,"Report: one row a report; the page (rtf_page()) and the document's text defaults (rtf_default_format()). Blank: rtfreporter's options (landscape Letter, 0.75 in margins).",
 page,paper_size,"letter / legal / A4 / A3 / A5; blank: letter.",A4
 page,orientation,"landscape / portrait; blank: landscape.",portrait

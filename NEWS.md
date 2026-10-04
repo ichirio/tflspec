@@ -1,5 +1,12 @@
 # tflspec (development version)
 
+* **An ARD made elsewhere** (#101): the `report` sheet's `ard_source` says
+  where a report's ARD comes from -- blank, its own ARD definition;
+  `import:<file>`, an ARD taken into the study's `input/ard/`.
+  `tfl_check_ard(ard, spec)` checks one: its shape as a cards ARD, and
+  whether it has what the report's table reads (the column and row keys,
+  the variables, the statistics the templates name).
+
 * **The study ARD as JSON, YAML or XPT** (#99): `tfl_write_ard()` writes a
   copy -- JSON / YAML as one record per statistic with each variable's levels
   in their order and the column types, which `tfl_read_ard()` reads back

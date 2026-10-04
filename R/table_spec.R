@@ -93,7 +93,7 @@
     table_font_size_half_points = "int", title_font_size_half_points = "int",
     footnote_font_size_half_points = "int", page_header = "bool",
     page_footer = "bool", watermark = "text", figure_width_in = "num",
-    figure_height_in = "num"),
+    figure_height_in = "num", ard_source = "text"),
   page = c(
     paper_size = "text", orientation = "text", width_in = "num",
     height_in = "num", margin_top_in = "num", margin_bottom_in = "num",
@@ -759,6 +759,16 @@ tfl_table_spec <- function(tables = NULL, variables = NULL, cells = NULL,
     .ard_stop("Every `col_header` row needs a `line` and `cols`.")
   }
   .ard_spec_check_cell_styles(sp$cell_styles)
+  # where a report's ARD comes from: its ARD definition (blank), or an ARD
+  # made elsewhere and taken in (import:<the file in input/ard/>)
+  src <- sp$report$ard_source %||% character()
+  bad <- !is.na(src) & !grepl("^import:[^[:space:]]", src)
+  if (any(bad)) {
+    .ard_stop(sprintf(paste0(
+      "`report$ard_source` is blank (the report's ARD definition) or ",
+      "import:<file> (an ARD taken in); not %s."),
+      paste(sQuote(unique(src[bad])), collapse = ", ")))
+  }
   for (sh in names(.ard_spec_types)) {
     for (i in seq_len(nrow(sp[[sh]]))) {
       .ard_spec_typed(sp[[sh]][i, , drop = FALSE], sh)
