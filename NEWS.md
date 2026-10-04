@@ -1,5 +1,12 @@
 # tflspec (development version)
 
+* **Authors, copyright and citation** (#86).  `Authors@R` names the author
+  in full as the copyright holder, and CDISC as the copyright holder of the
+  ARS JSON Schema in `inst/ars/` (MIT, included unchanged; listed in
+  `inst/COPYRIGHTS`).  `citation("tflspec")` has a CITATION file, and the
+  README says how to cite tflspec (and cards / cardx) and acknowledges the
+  packages and standards it builds on.
+
 * **A follow-up `R CMD check --as-cran` on R 4.6.1 with every Suggests**
   (#84).  The check is clean but for the CRAN-incoming NOTE.  `Language:
   en-GB` is declared (the text is British) and `inst/WORDLIST` lists the

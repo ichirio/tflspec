@@ -1,7 +1,13 @@
 Package: tflspec
 Title: Excel Specifications for Clinical Tables, Listings and Figures
-Version: 0.0.24.9023
-Authors@R: person("ichirio", role = c("aut", "cre"), email = "ichi.r.pro@gmail.com")
+Version: 0.0.24.9024
+Authors@R: c(
+    person(given  = "Yoichi",
+           family = "Masui",
+           email  = "ichi.r.pro@gmail.com",
+           role   = c("aut", "cre", "cph")),
+    person("CDISC", role = "cph",
+           comment = "JSON Schema of the ARS model, inst/ars/ars_ldm.json (MIT)"))
 Description: Reads study specifications written in Excel and produces what a
     clinical TFL report is made of. Tables: 'cards'/'cardx' analysis results
     data (ARD) are normalized and laid out through a declarative plan or a
