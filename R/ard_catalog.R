@@ -9,8 +9,8 @@
 # ============================================================================
 
 # The statistics an ARD analysis may ask for.  `kind` says which methods
-# give it: continuous (in statistic = of ard_continuous()), categorical
-# (ard_categorical(), ard_dichotomous(), hierarchical ...), missing
+# give it: continuous (in statistic = of ard_summary()), categorical
+# (ard_tabulate(), ard_tabulate_value(), hierarchical ...), missing
 # (ard_missing()) or result (what a CI / test / model gives: statistics
 # keeps some of them).  A continuous statistic without `fun` is cards' own
 # (continuous_summary_fns()); one with `fun` is computed by that function
@@ -126,8 +126,8 @@
               "Proportion with CI", "Mean with CI", "t test",
               "Wilcoxon rank-sum test", "Chi-square test",
               "Fisher's exact test", "Custom R code"),
-    call = c("cards::ard_continuous", "cards::ard_categorical",
-             "cards::ard_dichotomous", "cards::ard_missing",
+    call = c("cards::ard_summary", "cards::ard_tabulate",
+             "cards::ard_tabulate_value", "cards::ard_missing",
              "cards::ard_stack_hierarchical", "cardx::ard_tabulate_max",
              "(subjects)", "cards::ard_total_n",
              "cardx::ard_categorical_ci", "cardx::ard_continuous_ci",

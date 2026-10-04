@@ -1,5 +1,16 @@
 # tflspec (development version)
 
+* **The ARD keywords call cards' current names** (#104): `continuous`,
+  `categorical` and `dichotomous` (and the `subjects` flag) write
+  `cards::ard_summary()`, `ard_tabulate()` and `ard_tabulate_value()`
+  instead of the names cards 0.7.0 deprecated.  **The ARD's `context`
+  changes**: `continuous` -> `summary`, `categorical` -> `tabulate`,
+  `dichotomous` -> `tabulate_value` (the values are the same; rtfreporter
+  reads either as the same kind of row, and the tables do not change --
+  SAMPLE-01's reports are byte for byte the same).  A Table Spec whose
+  `cells$context` names the old context of an ARD made before should be
+  made again with the study ARD.
+
 * **The ARD catalog, refined** (#103): `tfl_ard_functions()` returns
   `offered` (`FALSE` for the old names and what is not offered by design);
   the arguments a screen cannot write as a column or a level are `code` or
