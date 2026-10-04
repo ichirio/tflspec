@@ -1,6 +1,6 @@
 Package: tflspec
 Title: Excel Specifications for Clinical Tables, Listings and Figures
-Version: 0.0.24.9023
+Version: 0.0.24.9024
 Authors@R: person("ichirio", role = c("aut", "cre"), email = "ichi.r.pro@gmail.com")
 Description: Reads study specifications written in Excel and produces what a
     clinical TFL report is made of. Tables: 'cards'/'cardx' analysis results

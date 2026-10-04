@@ -1,5 +1,29 @@
 # tflspec (development version)
 
+* **The ARD functions as a catalog** (#93): `tfl_ard_functions()` lists
+  every installed cards / cardx `ard_*()` by category, with a heading, a
+  sentence and its shape (columns, a formula, a fitted model, other
+  analyses); `tfl_ard_args("cardx::ard_categorical_ci")` gives one
+  function's arguments read from its own `formals()` -- default, required,
+  what fills each (columns, levels, a number, a choice ...), a hint, and the
+  analysis row's column it goes in.  Rows in `inst/ard/functions.csv` and
+  `args.csv`; a company adds its own with `options(tflspec.ard_functions =,
+  tflspec.ard_args =)`.  A test compares the catalog with the installed
+  cards / cardx, so a version that adds or renames a function is noticed.
+  The groundwork for choosing any ARD function in tflplanner; analysis rows
+  and the generated code are unchanged.
+
+* **The study ARD stays a cards ARD** (#92): the ARD program's `.tag()`
+  keeps a result's class `card` (the ids go in front), so the study ARD is
+  one and cards' own tools take it (`as_nested_list()`, `compare_ard()`).
+  The values and the rows are unchanged; a result that is not a card
+  (custom code) is tagged as before.
+
+* **A report's line that says `(none)`** (#91) in the `header`, `footer`,
+  `titles` or `footnotes` sheet takes the study's line of that number out,
+  instead of replacing it (a line with no text is still a blank line).  The
+  run-information line 99 a report does without, for example.
+
 * **A follow-up `R CMD check --as-cran` on R 4.6.1 with every Suggests**
   (#84).  The check is clean but for the CRAN-incoming NOTE.  `Language:
   en-GB` is declared (the text is British) and `inst/WORDLIST` lists the

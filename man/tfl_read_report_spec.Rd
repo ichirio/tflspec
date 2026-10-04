@@ -36,7 +36,9 @@ the key}: the study's page header is written once, as default lines 1
 and 2, a report's titles follow on its own lines 3, 4, ..., and a
 run-information line 99 in the default footer
 (\verb{\{PROGRAM\}      Generated on: \{DATETIME\}}) closes every report's
-footnotes.  A line with no text is a blank line.  The page tokens
+footnotes.  A line with no text is a blank line; a report's line that
+says \code{(none)} (in any of its cells) takes the default line of that
+number out instead -- the run line a report does without.  The page tokens
 (\code{{PAGE}}, \code{{TOTAL_PAGES}}, ...) and the run tokens (\code{\link[rtfreporter:generate_rtfreport]{rtfreporter::generate_rtfreport()}})
 work in every cell.
 
