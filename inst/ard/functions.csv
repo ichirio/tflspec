@@ -1,65 +1,65 @@
-call,category,label,description,shape,replaced_by
-cards::ard_summary,Summaries,Summary statistics,"Summary statistics (n, mean, SD, median, quartiles, min, max ...) of numeric variables.",variables,
-cards::ard_tabulate,Summaries,Counts and percents,Counts and percents of each level of categorical variables.,variables,
-cards::ard_tabulate_value,Summaries,Count of one level,"Counts and percents of one level of each variable (Y, a grade, TRUE).",variables,
-cards::ard_missing,Summaries,Missing counts,Numbers of missing and non-missing values.,variables,
-cards::ard_tabulate_rows,Summaries,Number of rows,"Number of rows (records) of the data, by group.",columns,
-cards::ard_total_n,Subjects and attributes,Number of subjects,Total number of rows of the data (the subjects of a subject-level data set).,data,
-cards::ard_attributes,Subjects and attributes,Variable labels,The label attribute of each variable (to print a variable's own label).,variables,
-cards::ard_stack_hierarchical,Hierarchical (adverse events),Nested subject counts,"Subjects with an event at each level of a hierarchy (SOC / PT), with any-event and overall rows.",variables,
-cards::ard_stack_hierarchical_count,Hierarchical (adverse events),Nested event counts,"Events (records, not subjects) at each level of a hierarchy, with overall rows.",variables,
-cards::ard_hierarchical,Hierarchical (adverse events),Nested subject counts (one level),Subject rates of the innermost level of a hierarchy; ard_stack_hierarchical() is the usual entry.,variables,
-cards::ard_hierarchical_count,Hierarchical (adverse events),Nested event counts (one level),Event counts of the innermost level of a hierarchy; ard_stack_hierarchical_count() is the usual entry.,variables,
-cardx::ard_tabulate_max,Hierarchical (adverse events),Worst level per subject,"Counts of the maximum (worst) level per subject, e.g. the worst toxicity grade.",variables,
-cardx::ard_tabulate_abnormal,Hierarchical (adverse events),Abnormal values,"Subjects with an abnormal post-baseline value (Low, High), with or without a normal baseline.",columns,
-cardx::ard_categorical_ci,Confidence intervals and rates,Proportion with CI,"Confidence interval of a proportion (Wilson, Clopper-Pearson, Wald, ...).",variables,
-cardx::ard_continuous_ci,Confidence intervals and rates,Mean with CI,Confidence interval of a mean (t) or a median.,variables,
-cardx::ard_incidence_rate,Confidence intervals and rates,Incidence rate,"Events per person-time, with a confidence interval.",columns,
-cardx::ard_stats_t_test,Tests: two groups,t test,Two-sample t test between the two by groups.,variables,
-cardx::ard_stats_wilcox_test,Tests: two groups,Wilcoxon rank-sum test,Wilcoxon rank-sum (Mann-Whitney) test between the two by groups.,variables,
-cardx::ard_stats_chisq_test,Tests: two groups,Chi-square test,Pearson's chi-square test of a variable by the groups.,variables,
-cardx::ard_stats_fisher_test,Tests: two groups,Fisher's exact test,Fisher's exact test of a variable by the groups.,variables,
-cardx::ard_stats_prop_test,Tests: two groups,Test of two proportions,Two-sample test of proportions (prop.test()).,variables,
-cardx::ard_stats_poisson_test,Tests: two groups,Poisson test,Exact test of a Poisson rate or the ratio of two rates.,variables,
-cardx::ard_stats_mood_test,Tests: two groups,Mood test of scale,Mood two-sample test of scale.,variables,
-cardx::ard_stats_aov,Tests: three or more groups / strata,Analysis of variance,One-way or multi-way ANOVA from a formula (aov()).,formula,
-cardx::ard_stats_oneway_test,Tests: three or more groups / strata,One-way test of means,Test of equal means in a one-way layout (oneway.test()).,formula,
-cardx::ard_stats_kruskal_test,Tests: three or more groups / strata,Kruskal-Wallis test,Kruskal-Wallis rank-sum test across the by groups.,variables,
-cardx::ard_stats_mantelhaen_test,Tests: three or more groups / strata,Cochran-Mantel-Haenszel test,CMH chi-square test of a variable by the groups within strata.,variables,
-cardx::ard_stats_anova,Tests: three or more groups / strata,ANOVA of nested models,ANOVA comparing a list of models (formulas) fitted to the data.,formula,
-cardx::ard_stats_paired_t_test,Tests: paired / one sample,Paired t test,Paired t test between two by groups (the subject key pairs the records).,variables,
-cardx::ard_stats_paired_wilcox_test,Tests: paired / one sample,Wilcoxon signed-rank test,Paired Wilcoxon test between two by groups.,variables,
-cardx::ard_stats_mcnemar_test,Tests: paired / one sample,McNemar's test,McNemar's test of a paired binary variable (one record per subject).,variables,
-cardx::ard_stats_mcnemar_test_long,Tests: paired / one sample,McNemar's test (long data),McNemar's test with one record per subject and visit.,variables,
-cardx::ard_stats_t_test_onesample,Tests: paired / one sample,One-sample t test,One-sample t test of a mean.,variables,
-cardx::ard_stats_wilcox_test_onesample,Tests: paired / one sample,One-sample Wilcoxon test,One-sample Wilcoxon signed-rank test.,variables,
-cardx::ard_effectsize_cohens_d,Effect sizes,Cohen's d,Standardised mean difference (Cohen's d) between two groups.,variables,
-cardx::ard_effectsize_hedges_g,Effect sizes,Hedges' g,Standardised mean difference (Hedges' g) between two groups.,variables,
-cardx::ard_effectsize_paired_cohens_d,Effect sizes,Paired Cohen's d,Cohen's d for paired data.,variables,
-cardx::ard_effectsize_paired_hedges_g,Effect sizes,Paired Hedges' g,Hedges' g for paired data.,variables,
-cardx::ard_smd_smd,Effect sizes,Standardised mean difference,Standardised mean difference (smd package) with an optional CI.,variables,
-cardx::ard_regression,Models,Regression model,"Coefficients of a regression model (lm, glm, coxph ...) from a formula.",formula,
-cardx::ard_regression_basic,Models,Regression model (basic),A simpler table of a regression model's coefficients.,formula,
-cardx::ard_emmeans_emmeans,Models,Least-squares means,LS means from a model (emmeans).,formula,
-cardx::ard_emmeans_contrast,Models,Least-squares mean differences,Differences of LS means between groups (emmeans).,formula,
-cardx::ard_car_anova,Models,ANOVA of a model (car),Type II / III ANOVA of a fitted model (car::Anova()).,model,
-cardx::ard_car_vif,Models,Variance inflation factors,VIF of a fitted model (car::vif()).,model,
-cardx::ard_aod_wald_test,Models,Wald test of a model,Wald test of a fitted model's coefficients (aod).,model,
-cardx::ard_survival_survfit,Survival,Kaplan-Meier estimates,"Survival at times, or survival quantiles (median), from a Kaplan-Meier fit.",formula,
-cardx::ard_survival_survfit_diff,Survival,Difference in survival,Difference in Kaplan-Meier survival between groups at times.,model,
-cardx::ard_survival_survdiff,Survival,Log-rank test,Log-rank (and G-rho family) test of survival curves.,formula,
-cards::ard_stack,Run several together,Several analyses on the same data,Runs several analyses with the same data and by variables; adds the by variable's counts and the total N.,wrapper,
-cards::ard_strata,Run several together,Within each subgroup,Runs an analysis within each level of the strata (and by) variables.,wrapper,
-cards::ard_pairwise,Run several together,Each pair of groups,Runs an analysis for each pair of levels of a variable (pairwise comparisons).,wrapper,
-cards::ard_mvsummary,Own and code,Summary with your own function,"Statistics computed by your own function, which may use other columns of the data.",variables,
-cards::ard_identity,Own and code,Statistics already computed,Turns statistics computed elsewhere (a named list) into an ARD.,data,
-cards::ard_formals,Own and code,Argument values,"Records a function's argument values as an ARD (a building block for writing your own ARD function, not an analysis).",data,
-cardx::ard_survey_svychisq,Survey designs,Survey chi-square test,Chi-square test on a survey design object (not a data frame).,variables,
-cardx::ard_survey_svyranktest,Survey designs,Survey rank test,Rank test on a survey design object (not a data frame).,variables,
-cardx::ard_survey_svyttest,Survey designs,Survey t test,t test on a survey design object (not a data frame).,variables,
-cards::ard_continuous,Summaries,Summary statistics (old name),Old name of ard_summary().,variables,cards::ard_summary
-cards::ard_categorical,Summaries,Counts and percents (old name),Old name of ard_tabulate().,variables,cards::ard_tabulate
-cards::ard_dichotomous,Summaries,Count of one level (old name),Old name of ard_tabulate_value().,variables,cards::ard_tabulate_value
-cards::ard_complex,Own and code,Summary with your own function (old name),Old name of ard_mvsummary().,variables,cards::ard_mvsummary
-cardx::ard_categorical_max,Hierarchical (adverse events),Worst level per subject (old name),Old name of ard_tabulate_max().,variables,cardx::ard_tabulate_max
-cardx::ard_emmeans_mean_difference,Models,Least-squares mean differences (old name),Old name of ard_emmeans_contrast().,formula,cardx::ard_emmeans_contrast
+call,category,label,description,shape,replaced_by,offered
+cards::ard_summary,Summaries,Summary statistics,"Summary statistics (n, mean, SD, median, quartiles, min, max ...) of numeric variables.",variables,,TRUE
+cards::ard_tabulate,Summaries,Counts and percents,Counts and percents of each level of categorical variables.,variables,,TRUE
+cards::ard_tabulate_value,Summaries,Count of one level,"Counts and percents of one level of each variable (Y, a grade, TRUE).",variables,,TRUE
+cards::ard_missing,Summaries,Missing counts,Numbers of missing and non-missing values.,variables,,TRUE
+cards::ard_tabulate_rows,Summaries,Number of rows,"Number of rows (records) of the data, by group.",columns,,TRUE
+cards::ard_total_n,Subjects and attributes,Number of subjects,Total number of rows of the data (the subjects of a subject-level data set).,data,,TRUE
+cards::ard_attributes,Subjects and attributes,Variable labels,The label attribute of each variable (to print a variable's own label).,variables,,TRUE
+cards::ard_stack_hierarchical,Hierarchical (adverse events),Nested subject counts,"Subjects with an event at each level of a hierarchy (SOC / PT), with any-event and overall rows.",variables,,TRUE
+cards::ard_stack_hierarchical_count,Hierarchical (adverse events),Nested event counts,"Events (records, not subjects) at each level of a hierarchy, with overall rows.",variables,,TRUE
+cards::ard_hierarchical,Hierarchical (adverse events),Nested subject counts (one level),Subject rates of the innermost level of a hierarchy; ard_stack_hierarchical() is the usual entry.,variables,,TRUE
+cards::ard_hierarchical_count,Hierarchical (adverse events),Nested event counts (one level),Event counts of the innermost level of a hierarchy; ard_stack_hierarchical_count() is the usual entry.,variables,,TRUE
+cardx::ard_tabulate_max,Hierarchical (adverse events),Worst level per subject,"Counts of the maximum (worst) level per subject, e.g. the worst toxicity grade.",variables,,TRUE
+cardx::ard_tabulate_abnormal,Hierarchical (adverse events),Abnormal values,"Subjects with an abnormal post-baseline value (Low, High), with or without a normal baseline.",columns,,TRUE
+cardx::ard_categorical_ci,Confidence intervals and rates,Proportion with CI,"Confidence interval of a proportion (Wilson, Clopper-Pearson, Wald, ...).",variables,,TRUE
+cardx::ard_continuous_ci,Confidence intervals and rates,Mean with CI,Confidence interval of a mean (t) or a median.,variables,,TRUE
+cardx::ard_incidence_rate,Confidence intervals and rates,Incidence rate,"Events per person-time, with a confidence interval.",columns,,TRUE
+cardx::ard_stats_t_test,Tests: two groups,t test,Two-sample t test between the two by groups.,variables,,TRUE
+cardx::ard_stats_wilcox_test,Tests: two groups,Wilcoxon rank-sum test,Wilcoxon rank-sum (Mann-Whitney) test between the two by groups.,variables,,TRUE
+cardx::ard_stats_chisq_test,Tests: two groups,Chi-square test,Pearson's chi-square test of a variable by the groups.,variables,,TRUE
+cardx::ard_stats_fisher_test,Tests: two groups,Fisher's exact test,Fisher's exact test of a variable by the groups.,variables,,TRUE
+cardx::ard_stats_prop_test,Tests: two groups,Test of two proportions,Two-sample test of proportions (prop.test()).,variables,,TRUE
+cardx::ard_stats_poisson_test,Tests: two groups,Poisson test,Exact test of a Poisson rate or the ratio of two rates.,variables,,TRUE
+cardx::ard_stats_mood_test,Tests: two groups,Mood test of scale,Mood two-sample test of scale.,variables,,TRUE
+cardx::ard_stats_aov,Tests: three or more groups / strata,Analysis of variance,One-way or multi-way ANOVA from a formula (aov()).,formula,,TRUE
+cardx::ard_stats_oneway_test,Tests: three or more groups / strata,One-way test of means,Test of equal means in a one-way layout (oneway.test()).,formula,,TRUE
+cardx::ard_stats_kruskal_test,Tests: three or more groups / strata,Kruskal-Wallis test,Kruskal-Wallis rank-sum test across the by groups.,variables,,TRUE
+cardx::ard_stats_mantelhaen_test,Tests: three or more groups / strata,Cochran-Mantel-Haenszel test,CMH chi-square test of a variable by the groups within strata.,variables,,TRUE
+cardx::ard_stats_anova,Tests: three or more groups / strata,ANOVA of nested models,ANOVA comparing a list of models (formulas) fitted to the data.,formula,,TRUE
+cardx::ard_stats_paired_t_test,Tests: paired / one sample,Paired t test,Paired t test between two by groups (the subject key pairs the records).,variables,,TRUE
+cardx::ard_stats_paired_wilcox_test,Tests: paired / one sample,Wilcoxon signed-rank test,Paired Wilcoxon test between two by groups.,variables,,TRUE
+cardx::ard_stats_mcnemar_test,Tests: paired / one sample,McNemar's test,McNemar's test of a paired binary variable (one record per subject).,variables,,TRUE
+cardx::ard_stats_mcnemar_test_long,Tests: paired / one sample,McNemar's test (long data),McNemar's test with one record per subject and visit.,variables,,TRUE
+cardx::ard_stats_t_test_onesample,Tests: paired / one sample,One-sample t test,One-sample t test of a mean.,variables,,TRUE
+cardx::ard_stats_wilcox_test_onesample,Tests: paired / one sample,One-sample Wilcoxon test,One-sample Wilcoxon signed-rank test.,variables,,TRUE
+cardx::ard_effectsize_cohens_d,Effect sizes,Cohen's d,Standardised mean difference (Cohen's d) between two groups.,variables,,TRUE
+cardx::ard_effectsize_hedges_g,Effect sizes,Hedges' g,Standardised mean difference (Hedges' g) between two groups.,variables,,TRUE
+cardx::ard_effectsize_paired_cohens_d,Effect sizes,Paired Cohen's d,Cohen's d for paired data.,variables,,TRUE
+cardx::ard_effectsize_paired_hedges_g,Effect sizes,Paired Hedges' g,Hedges' g for paired data.,variables,,TRUE
+cardx::ard_smd_smd,Effect sizes,Standardised mean difference,Standardised mean difference (smd package) with an optional CI.,variables,,TRUE
+cardx::ard_regression,Models,Regression model,"Coefficients of a regression model (lm, glm, coxph ...) from a formula.",formula,,TRUE
+cardx::ard_regression_basic,Models,Regression model (basic),A simpler table of a regression model's coefficients.,formula,,TRUE
+cardx::ard_emmeans_emmeans,Models,Least-squares means,LS means from a model (emmeans).,formula,,TRUE
+cardx::ard_emmeans_contrast,Models,Least-squares mean differences,Differences of LS means between groups (emmeans).,formula,,TRUE
+cardx::ard_car_anova,Models,ANOVA of a model (car),Type II / III ANOVA of a fitted model (car::Anova()).,model,,TRUE
+cardx::ard_car_vif,Models,Variance inflation factors,VIF of a fitted model (car::vif()).,model,,TRUE
+cardx::ard_aod_wald_test,Models,Wald test of a model,Wald test of a fitted model's coefficients (aod).,model,,TRUE
+cardx::ard_survival_survfit,Survival,Kaplan-Meier estimates,"Survival at times, or survival quantiles (median), from a Kaplan-Meier fit.",formula,,TRUE
+cardx::ard_survival_survfit_diff,Survival,Difference in survival,Difference in Kaplan-Meier survival between groups at times.,model,,TRUE
+cardx::ard_survival_survdiff,Survival,Log-rank test,Log-rank (and G-rho family) test of survival curves.,formula,,TRUE
+cards::ard_stack,Run several together,Several analyses on the same data,Runs several analyses with the same data and by variables; adds the by variable's counts and the total N.,wrapper,,TRUE
+cards::ard_strata,Run several together,Within each subgroup,Runs an analysis within each level of the strata (and by) variables.,wrapper,,TRUE
+cards::ard_pairwise,Run several together,Each pair of groups,Runs an analysis for each pair of levels of a variable (pairwise comparisons).,wrapper,,TRUE
+cards::ard_mvsummary,Own and code,Summary with your own function,"Statistics computed by your own function, which may use other columns of the data.",variables,,TRUE
+cards::ard_identity,Own and code,Statistics already computed,Turns statistics computed elsewhere (a named list) into an ARD.,data,,TRUE
+cards::ard_formals,Own and code,Argument values,"Records a function's argument values as an ARD (a building block for writing your own ARD function, not an analysis).",data,,FALSE
+cardx::ard_survey_svychisq,Survey designs,Survey chi-square test,Chi-square test on a survey design object (not a data frame).,variables,,FALSE
+cardx::ard_survey_svyranktest,Survey designs,Survey rank test,Rank test on a survey design object (not a data frame).,variables,,FALSE
+cardx::ard_survey_svyttest,Survey designs,Survey t test,t test on a survey design object (not a data frame).,variables,,FALSE
+cards::ard_continuous,Summaries,Summary statistics (old name),Old name of ard_summary().,variables,cards::ard_summary,FALSE
+cards::ard_categorical,Summaries,Counts and percents (old name),Old name of ard_tabulate().,variables,cards::ard_tabulate,FALSE
+cards::ard_dichotomous,Summaries,Count of one level (old name),Old name of ard_tabulate_value().,variables,cards::ard_tabulate_value,FALSE
+cards::ard_complex,Own and code,Summary with your own function (old name),Old name of ard_mvsummary().,variables,cards::ard_mvsummary,FALSE
+cardx::ard_categorical_max,Hierarchical (adverse events),Worst level per subject (old name),Old name of ard_tabulate_max().,variables,cardx::ard_tabulate_max,FALSE
+cardx::ard_emmeans_mean_difference,Models,Least-squares mean differences (old name),Old name of ard_emmeans_contrast().,formula,cardx::ard_emmeans_contrast,FALSE

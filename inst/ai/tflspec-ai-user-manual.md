@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9028** (the development version,
+**This manual documents tflspec 0.0.24.9029** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -127,7 +127,9 @@ writes the cards code; `tfl_build_ard()` runs it and saves one study ARD;
 `tfl_write_ard(ard, "ard.json")` writes a copy as JSON / YAML (one record
 per statistic, each variable's levels in order; `tfl_read_ard()` reads it
 back) or XPT (flat; factors, formats and warnings are lost, with a
-warning); the rds stays the record.
+warning); the rds stays the record. An ARD made elsewhere: `report$ard_source`
+`import:<file>` (the file in the study's `input/ard/`), checked with
+`tfl_check_ard(ard, spec)` (its shape, and what the table reads).
 
 ---
 
@@ -581,7 +583,7 @@ back): rename the value or choose another separator.
 **ARD spec:** `tfl_ard_spec` `tfl_read_ard_spec` `tfl_write_ard_spec`
 `tfl_ard_spec_template` `tfl_ard_code` `tfl_build_ard` `tfl_ard_for`
 `tfl_ard_spec_hash` `tfl_ard_methods` `tfl_ard_statistics`
-`tfl_ard_functions` `tfl_ard_args` `tfl_write_ard` `tfl_read_ard`
+`tfl_ard_functions` `tfl_ard_args` `tfl_write_ard` `tfl_read_ard` `tfl_check_ard` `tfl_check_ard_function`
 
 **CDISC ARS:** `tfl_ars` `tfl_write_ars_json` `tfl_check_ars`
 `tfl_ars_unmapped` `tfl_ars_ard` `tfl_read_ars_json` `tfl_ars_to_specs`

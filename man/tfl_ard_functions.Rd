@@ -12,7 +12,7 @@ here (their package installed); \code{FALSE} every row of the catalog.}
 }
 \value{
 A data frame: \code{call}, \code{category}, \code{label}, \code{description},
-\code{shape}, \code{replaced_by}, \code{installed}, \code{in_catalog}.
+\code{shape}, \code{replaced_by}, \code{offered}, \code{installed}, \code{in_catalog}.
 }
 \description{
 Every \verb{ard_*()} of cards and cardx that is installed, with what a person
@@ -35,7 +35,10 @@ An analysis row names one of them as its \code{method} (\code{cards::ard_summary
 as it names any function; this list is the catalog that describes them.
 A function the catalog does not describe (one a newer cards adds) is
 listed too, with \code{in_catalog = FALSE} and its help page's title as its
-label.  \code{replaced_by} names the new name of an old one.
+label.  \code{replaced_by} names the new name of an old one.  \code{offered} is
+\code{FALSE} for what a new analysis is not to choose: the old names and the
+functions not offered by design (below); a screen lists them only for
+an analysis that already names one.
 
 The versions it is written for: cards >= 0.8.0 and cardx >= 0.3.1 (the
 oldest are tested, and every week what CRAN has now).

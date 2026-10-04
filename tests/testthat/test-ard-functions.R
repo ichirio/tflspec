@@ -110,3 +110,19 @@ test_that("the study ARD stays a cards ARD, ids in front", {
                                 variables = c(AGE, BMIBL))
   expect_identical(exact_numbers(ard), exact_numbers(hand))
 })
+
+test_that("what a new analysis is not to choose is marked", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  f <- tfl_ard_functions()
+  off <- f$call[!f$offered]
+  expect_true(all(c("cardx::ard_survey_svychisq", "cardx::ard_survey_svyranktest",
+                    "cardx::ard_survey_svyttest", "cards::ard_formals",
+                    "cards::ard_continuous", "cardx::ard_categorical_max") %in% off))
+  expect_true(f$offered[f$call == "cards::ard_summary"])
+  # the arguments R has to write as they are
+  expect_identical(tfl_ard_args("cardx::ard_tabulate_abnormal")$kind[
+    tfl_ard_args("cardx::ard_tabulate_abnormal")$arg == "abnormal"], "code")
+  e <- tfl_ard_args("cardx::ard_emmeans_emmeans")
+  expect_identical(e$kind[e$arg == "primary_covariate"], "text")
+})

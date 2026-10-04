@@ -1,5 +1,23 @@
 # tflspec (development version)
 
+* **The ARD catalog, refined** (#103): `tfl_ard_functions()` returns
+  `offered` (`FALSE` for the old names and what is not offered by design);
+  the arguments a screen cannot write as a column or a level are `code` or
+  `text` (`abnormal`, `include` of `ard_pairwise()`, `primary_covariate`,
+  `stats_to_remove`); every argument of the offered functions has a hint.
+
+* **Try an ARD function of one's own** (#102): `tfl_check_ard_function(fun,
+  data, by = , variables = , stat_names = )` calls it as an analysis row
+  would and reports what is wrong -- an error or warning in the call, a
+  result that is not a cards ARD, the statistics it should give.
+
+* **An ARD made elsewhere** (#101): the `report` sheet's `ard_source` says
+  where a report's ARD comes from -- blank, its own ARD definition;
+  `import:<file>`, an ARD taken into the study's `input/ard/`.
+  `tfl_check_ard(ard, spec)` checks one: its shape as a cards ARD, and
+  whether it has what the report's table reads (the column and row keys,
+  the variables, the statistics the templates name).
+
 * **The study ARD as JSON, YAML or XPT** (#99): `tfl_write_ard()` writes a
   copy -- JSON / YAML as one record per statistic with each variable's levels
   in their order and the column types, which `tfl_read_ard()` reads back
