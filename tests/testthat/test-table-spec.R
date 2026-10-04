@@ -521,3 +521,22 @@ test_that("tfl_report() takes the output before the content", {
   expect_error(tfl_report(tfl_table_spec(), list(1)),
                "tfl_report(spec, content = plan)", fixed = TRUE)
 })
+
+test_that("a report's line that says (none) takes the study's line of that number out", {
+  ftr <- data.frame(output_id = c("", "", "T2"), line = c("1", "99", "99"),
+                    left = c("Note", "{PROGRAM}", "(none)"),
+                    center = "", right = "", stringsAsFactors = FALSE)
+  band <- function(f, id) {
+    sp <- tfl_table_spec(report = data.frame(output_id = c("T1", "T2"),
+                                             type = "table"),
+                         footer = f)
+    .ard_spec_band(.ard_spec_scope(sp, id), "footer")
+  }
+  expect_identical(band(ftr, "T1"), list(c(l = "Note"), c(l = "{PROGRAM}")))
+  expect_identical(band(ftr, "T2"), list(c(l = "Note")))
+  # in any cell; a band left with no line is no band
+  f2 <- ftr[2:3, ]
+  f2$left[2] <- ""; f2$center[2] <- "(none)"
+  expect_null(band(f2, "T2"))
+  expect_identical(band(f2, "T1"), list(c(l = "{PROGRAM}")))
+})

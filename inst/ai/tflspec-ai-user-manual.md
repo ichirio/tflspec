@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9026** (the development version,
+**This manual documents tflspec 0.0.24.9027** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -184,7 +184,12 @@ argument is written in one place: a column, or `args`, never both.
   keywords, each with a `label` (the name a person reads: "Summary
   statistics", "Counts and percents", "Nested counts (e.g. SOC / PT)" …)
   and a one-line `note`; `tfl_ard_statistics()` the statistics and their
-  formats.
+  formats. `tfl_ard_functions()` lists every installed cards / cardx
+  `ard_*()` by category with a heading and a sentence, and
+  `tfl_ard_args("cardx::ard_categorical_ci")` one function's arguments
+  (default, required, what fills each, the analysis row's column it goes
+  in: `by` / `variables` / `strata` / `denominator` / `statistics`, else
+  `args`).
 - `by`, `strata`, `variables`, `statistics`: `|` between several. `strata`:
   the analysis repeated within them (cards' `strata`: a subgroup, a
   parameter by visit).
@@ -372,7 +377,7 @@ file.
 |---|---|
 | `report` | `type` (`table` / `listing` / `figure`), `file` (`{output_id}.rtf`), `program`, `auto_section`, `section_align`, `auto_title`, `title_align`, `table_font_size_half_points`, `title_font_size_half_points`, `footnote_font_size_half_points`, `page_header`, `page_footer`, `watermark` (`DRAFT`), `figure_width_in`, `figure_height_in` |
 | `page` | `paper_size`, `orientation`, `width_in`, `height_in`, margins `margin_*_in`, `header_dist_in`, `footer_dist_in`, `font_size_half_points`, `title_format`, `footnote_format`, `title_width`, `footnote_width`, `markup` |
-| `header`, `footer`, `titles`, `footnotes` | `line`, `left`, `center`, `right` — a report's line replaces the default line of the same number |
+| `header`, `footer`, `titles`, `footnotes` | `line`, `left`, `center`, `right` — a report's line replaces the default line of the same number; a report's line that says `(none)` takes it out |
 
 Page tokens in the running header / footer: `{PAGE}`, `{TOTAL_PAGES}`,
 `{PROGRAM}`, `{DATETIME}`.
@@ -554,6 +559,7 @@ back): rename the value or choose another separator.
 **ARD spec:** `tfl_ard_spec` `tfl_read_ard_spec` `tfl_write_ard_spec`
 `tfl_ard_spec_template` `tfl_ard_code` `tfl_build_ard` `tfl_ard_for`
 `tfl_ard_spec_hash` `tfl_ard_methods` `tfl_ard_statistics`
+`tfl_ard_functions` `tfl_ard_args`
 
 **CDISC ARS:** `tfl_ars` `tfl_write_ars_json` `tfl_check_ars`
 `tfl_ars_unmapped` `tfl_ars_ard` `tfl_read_ars_json` `tfl_ars_to_specs`
