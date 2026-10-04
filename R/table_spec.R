@@ -1349,11 +1349,20 @@ tfl_table_spec_template <- function(ard, path = NULL, cols = NULL,
 
 # One band of rows (header, footer, titles, footnotes) as the rows its
 # constructor takes: c(l = , c = , r = ), in line order.  A line with no
-# text is a blank line, which is how a title block gets its spacing.
+# text is a blank line, which is how a title block gets its spacing.  A
+# line that says `(none)` is no line at all: a report's row of that kind
+# takes the study's line of the same number out instead of replacing it
+# (the run line 99 a report does without).
+.ard_spec_omit <- "(none)"
 .ard_spec_band <- function(sp, sheet) {
   d <- sp[[sheet]]
   if (is.null(d) || !nrow(d)) return(NULL)
   d <- d[order(suppressWarnings(as.numeric(d$line))), , drop = FALSE]
+  cells <- intersect(c("left", "center", "right"), names(d))
+  gone <- Reduce(`|`, lapply(d[cells], function(v) trimws(v) %in% .ard_spec_omit),
+                 rep(FALSE, nrow(d)))
+  d <- d[!gone, , drop = FALSE]
+  if (!nrow(d)) return(NULL)
   lapply(seq_len(nrow(d)), function(i) {
     r <- .ard_spec_typed(d[i, , drop = FALSE], sheet)
     cells <- c(l = r[["left"]] %||% NA, c = r[["center"]] %||% NA,
@@ -1401,7 +1410,9 @@ tfl_table_spec_template <- function(ard, path = NULL, cols = NULL,
 #' and 2, a report's titles follow on its own lines 3, 4, ..., and a
 #' run-information line 99 in the default footer
 #' (`{PROGRAM}      Generated on: {DATETIME}`) closes every report's
-#' footnotes.  A line with no text is a blank line.  The page tokens
+#' footnotes.  A line with no text is a blank line; a report's line that
+#' says `(none)` (in any of its cells) takes the default line of that
+#' number out instead -- the run line a report does without.  The page tokens
 #' (`{PAGE}`, `{TOTAL_PAGES}`, ...) and the run tokens ([rtfreporter::generate_rtfreport()])
 #' work in every cell.
 #'

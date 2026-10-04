@@ -185,7 +185,7 @@ page,footnote_format,"table (content-width, with the separator rule) / text (par
 page,title_width,"The title block's width: content / page / a fraction of the writable width / twips; blank: content.",page
 page,footnote_width,"The footnote block's width, as title_width; blank: content.",page
 page,markup,"Cell-text markup for the whole document: script / relational / all / none; blank: script.",all
-header,,"Report: the running page header, one row a line; the line is the key (the study's lines on blank output_id, a report's own on its rows). A line with no text is a blank line.",
+header,,"Report: the running page header, one row a line; the line is the key (the study's lines on blank output_id, a report's own on its rows). A line with no text is a blank line; a report's line that says (none) takes the study's line of that number out.",
 header,line,"The line number, a whole number (1 = the top).",1
 header,left,"The text at the left; tokens work.",Protocol XYZ-001
 header,center,"The text in the centre.",CONFIDENTIAL
