@@ -12,7 +12,8 @@ tfl_ars(
   study_id = NULL,
   purpose = NULL,
   reason = "SPECIFIED IN SAP",
-  dataset_names = NULL
+  dataset_names = NULL,
+  dir = "."
 )
 }
 \arguments{
@@ -41,6 +42,10 @@ one of the CDISC terms, or \code{NULL}.  \code{reason} defaults to
 
 \item{dataset_names}{A named character vector: the ADaM name the ARS
 uses for a spec dataset (default: the spec's name in upper case).}
+
+\item{dir}{The study folder: the files of the study key \code{source} (its
+own ARD functions) are read from it -- not run -- for the statistics a
+function says it gives (\code{cards::as_cards_fn(stat_names = )}).}
 }
 \value{
 A \code{tfl_ars}: the reporting event as a nested list, with
