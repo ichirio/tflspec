@@ -189,7 +189,9 @@ argument is written in one place: a column, or `args`, never both.
   `tfl_ard_args("cardx::ard_categorical_ci")` one function's arguments
   (default, required, what fills each, the analysis row's column it goes
   in: `by` / `variables` / `strata` / `denominator` / `statistics`, else
-  `args`).
+  `args`). Not offered, by design: the old names (`replaced_by` gives the
+  new one), the survey-design functions (their input is not a data frame)
+  and `ard_formals()` (not an analysis). cards >= 0.8.0, cardx >= 0.3.1.
 - `by`, `strata`, `variables`, `statistics`: `|` between several. `strata`:
   the analysis repeated within them (cards' `strata`: a subgroup, a
   parameter by visit).

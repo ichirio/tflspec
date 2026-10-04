@@ -1,5 +1,12 @@
 # tflspec (development version)
 
+* **cards >= 0.8.0 and cardx >= 0.3.1** (#98), stated in DESCRIPTION and
+  tested at both ends: CI has a row with exactly those versions, and runs
+  every week on what CRAN has now, where a new `ard_*()` the catalog does not
+  describe fails a test.  `?tfl_ard_functions` names what is not offered by
+  design: the old names, the survey-design functions (their input is not a
+  data frame) and `ard_formals()`.
+
 * **Steps on the ARD after the call: the `post` column** (#97).  Calls
   with the ARD left out, `|` between them, piped after the analysis:
   `cards::add_calculated_row(expr = sd / sqrt(N), stat_name = "se")` (a

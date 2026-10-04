@@ -37,10 +37,30 @@ A function the catalog does not describe (one a newer cards adds) is
 listed too, with \code{in_catalog = FALSE} and its help page's title as its
 label.  \code{replaced_by} names the new name of an old one.
 
+The versions it is written for: cards >= 0.8.0 and cardx >= 0.3.1 (the
+oldest are tested, and every week what CRAN has now).
+}
+\section{Not offered, by design (decided 2026-10-04)}{
+
+Listed, but not for an analysis row:
+\itemize{
+\item the \strong{old names} (\code{ard_continuous()}, \code{ard_categorical()},
+\code{ard_dichotomous()}, \code{ard_complex()}, \code{ard_categorical_max()},
+\code{ard_emmeans_mean_difference()}): the function in \code{replaced_by} gives
+the same result;
+\item the \strong{survey design} functions (\code{ard_survey_svychisq()},
+\code{ard_survey_svyranktest()}, \code{ard_survey_svyttest()}, and the
+survey.design methods of the summaries): their input is a survey design
+object, not the data frame an analysis row reads;
+\item \strong{\code{ard_formals()}}: it records a function's argument values, a
+building block for writing an ARD function, not an analysis.
+}
+
 A company adds its own rows -- its own ARD functions, other headings --
 with \verb{options(tflspec.ard_functions = <data frame>)} (the same columns;
 a row with the same \code{call} replaces the built-in one).
 }
+
 \examples{
 f <- tfl_ard_functions()
 f[f$category == "Summaries", c("call", "label")]
