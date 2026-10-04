@@ -1,5 +1,13 @@
 # tflspec (development version)
 
+* **The study's code lists, before the ARD** (#105): `tfl_ard_code()`,
+  `tfl_build_ard()` and `tfl_ard_spec_hash()` take `codelists` (a table
+  definition's `codelists` sheet, its study rows).  Each listed character
+  column of the data read becomes a factor in the code list's order, so the
+  ARD keeps the order and **counts a level no record has** (`n = 0`): a
+  table made from it shows that level's row with 0.  Without `codelists`, as
+  before.
+
 * **The ARD keywords call cards' current names** (#104): `continuous`,
   `categorical` and `dichotomous` (and the `subjects` flag) write
   `cards::ard_summary()`, `ard_tabulate()` and `ard_tabulate_value()`

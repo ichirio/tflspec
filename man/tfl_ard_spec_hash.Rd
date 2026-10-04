@@ -4,7 +4,7 @@
 \alias{tfl_ard_spec_hash}
 \title{A fingerprint of one output's ARD definition}
 \usage{
-tfl_ard_spec_hash(spec, output_id, dir = ".")
+tfl_ard_spec_hash(spec, output_id, dir = ".", codelists = NULL)
 }
 \arguments{
 \item{spec}{An \code{\link[=tfl_ard_spec]{tfl_ard_spec()}}.}
@@ -12,6 +12,9 @@ tfl_ard_spec_hash(spec, output_id, dir = ".")
 \item{output_id}{The output.}
 
 \item{dir}{The study folder, which \code{source} files are relative to.}
+
+\item{codelists}{As \code{\link[=tfl_ard_code]{tfl_ard_code()}}: they change the ARD, so they are
+part of the fingerprint (only when there are some).}
 }
 \value{
 A single string.
