@@ -25,10 +25,11 @@ For an ARD made elsewhere and taken in (a report's \code{ard_source} is
 }
 \details{
 \itemize{
-\item \strong{shape}: the columns every ARD has (\code{variable}, \code{stat_name}, \code{stat}),
-each \code{groupN} with its \code{groupN_level}; with cards installed, its own
-\code{\link[cards:check_ard_structure]{cards::check_ard_structure()}} (as notes); an old column name
-(\code{fmt_fn}, now \code{fmt_fun}).
+\item \strong{shape}: the columns every ARD has (\code{variable}, \code{stat_name}, \code{stat});
+with cards installed, its own \code{\link[cards:check_ard_structure]{cards::check_ard_structure()}} (as notes,
+less its wish for \code{method} rows, which no report reads); an old column
+name (\code{fmt_fn}, now \code{fmt_fun}).  A \code{groupN} without \code{groupN_level} is
+a result across the groups (a test), as cardx gives it.
 \item with \code{spec}, the report's table definition: the columns its \code{tables}
 roles name (\code{cols}, \code{rows}) are in the ARD (as a group or a variable),
 the variables its \code{cells} name are analysed, and the statistics its

@@ -23,9 +23,11 @@ test_that("tfl_check_ard() finds what a report's table reads and an ARD lacks", 
   expect_identical(tfl_check_ard(list(1))$level, "error")
   p <- tfl_check_ard(data.frame(variable = "A", stat = 1))
   expect_match(p$message, "stat_name")
+  # a result across the groups (a test) has group1 without group1_level,
+  # as cardx's own tests give it: not an error
   p <- tfl_check_ard(data.frame(group1 = "ARM", variable = "AGE",
                                 stat_name = "n", stat = 1))
-  expect_true(any(grepl("group1_level", p$message)))
+  expect_false(any(p$level == "error"))
   # without a spec, the shape only
   expect_identical(tfl_check_ard(ard)$level[tfl_check_ard(ard)$level != "note"],
                    character())
@@ -58,8 +60,44 @@ test_that("tfl_check_ard_function() tries a function of one's own", {
   expect_true(any(p$check == "result" & p$level == "error"))
   boom <- function(data, ...) stop("no such column")
   p <- tfl_check_ard_function(boom, cards::ADSL)
-  expect_identical(p$check, "call")
-  expect_match(p$message, "no such column")
+  expect_identical(p$check[p$level != "note"], "call")
+  expect_match(p$message[p$check == "call"], "no such column")
+  # one that does not say which statistics it gives: a note
+  expect_true(any(p$check == "statistics" & p$level == "note"))
+  # one that says so, the way cards' own do: checked without stat_names
+  said <- cards::as_cards_fn(good, stat_names = c("N", "sd"))
+  p <- tfl_check_ard_function(said, cards::ADSL, by = ARM, variables = AGE)
+  expect_true(any(p$check == "statistics" & p$level == "error" &
+                    grepl("sd", p$message)))
+})
+
+test_that("the three templates of an ARD function work as they are", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("broom")
+  data <- cards::ADSL[cards::ADSL$ARM %in% c("Placebo", "Xanomeline High Dose"), ]
+  for (type in c("summary", "test", "free")) {
+    dir <- withr::local_tempdir()
+    f <- file.path(dir, paste0("ard_mine_", type, ".R"))
+    code <- tfl_ard_function_template(paste0("ard_mine_", type), type,
+                                      file = f, test = TRUE)
+    expect_true(file.exists(f))
+    expect_true(file.exists(file.path(dir, paste0("test-ard_mine_", type, ".R"))))
+    env <- new.env()
+    sys.source(f, envir = env)
+    fun <- get(paste0("ard_mine_", type), envir = env)
+    expect_false(is.null(attr(fun, "stat_names")), info = type)
+    p <- tfl_check_ard_function(fun, data, by = ARM, variables = AGE)
+    expect_identical(p$message[p$level %in% c("error", "warning")], character(),
+                     info = type)
+    # and its test file passes
+    withr::with_dir(dir, testthat::test_file(
+      file.path(dir, paste0("test-ard_mine_", type, ".R")), reporter = "silent"))
+  }
+  expect_error(tfl_ard_function_template("ard x"), "function's name")
+  f <- file.path(withr::local_tempdir(), "ard_a.R")
+  tfl_ard_function_template("ard_a", file = f)
+  expect_error(tfl_ard_function_template("ard_a", file = f), "overwrite")
+  expect_identical(substr(tfl_ard_function_template("ard_b", "free")[1], 1, 9), "# ard_b()")
 })
 
 test_that("tfl_ard_conditions() lists what went wrong, one row per message", {
