@@ -986,6 +986,10 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
                       if (is.na(pid)) "NA_character_" else
                         encodeString(pid, quote = "\"")))
   }
+  # dplyr::bind_rows(), not cards::bind_ard(): bind_ard() does not count
+  # output_id / analysis_id as part of a row's key, so the same statistic in
+  # two outputs (AGE's mean in two analysis sets) would stop it, or, with the
+  # same value, lose one output's rows.  The class card is kept by .tag().
   c(code, "", "ard <- do.call(dplyr::bind_rows, ards)")
 }
 
