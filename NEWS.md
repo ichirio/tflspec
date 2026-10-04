@@ -1,5 +1,9 @@
 # tflspec (development version)
 
+* **The report spec's `type` names `user`** (#108): a report whose own code
+  leaves `content` (a data frame, rtftable pages, rtfplot figures or a
+  list of them), dressed by the report spec as a table is (`rtf_tables()`
+  takes all of these).  Only the column help and the AI manual change.
 * **The study's code lists, before the ARD** (#105): `tfl_ard_code()`,
   `tfl_build_ard()` and `tfl_ard_spec_hash()` take `codelists` (a table
   definition's `codelists` sheet, its study rows).  Each listed character

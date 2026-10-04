@@ -156,7 +156,7 @@ col_header,bold,"TRUE / FALSE; blank: FALSE.",TRUE
 col_header,border_top,"The cell's top rule: single / double / none ... (rtf_border()); blank: the header's.",single
 col_header,border_bottom,"The cell's bottom rule, as border_top.",single
 report,,"Report: one row a report; blank output_id: the study's default.",
-report,type,"table / listing / figure; blank: table.",listing
+report,type,"table / listing / figure / user (the report's own code leaves `content`: a data frame, rtftable pages, rtfplot figures or a list of them); blank: table.",listing
 report,file,"The RTF file, relative to the study key output_path; {output_id} is the report's id; blank: {output_id}.rtf.",{output_id}.rtf
 report,program,"The program's name, joined to program_dir for {PROGRAM}; blank: {output_id}.",{output_id}
 report,auto_section,"TRUE / FALSE: each named table a section with its name in the page header (rtf_tables(auto_section = )); blank: FALSE.",TRUE
