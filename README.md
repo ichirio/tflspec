@@ -1,5 +1,7 @@
 # tflspec
 
+[![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
+
 Specifications for clinical **tables, listings and figures**, as Excel
 workbooks (and YAML for figures): what is analysed, how it is laid out, how
 the report is dressed. tflspec turns a spec into the object it stands for
@@ -172,3 +174,9 @@ authors.
 
 tflspec is an independent project and is not affiliated with, or endorsed by,
 the authors of these packages or CDISC.
+
+## License
+
+Apache License 2.0 © 2026 Yoichi Masui. See [LICENSE.md](LICENSE.md). The
+CDISC ARS JSON Schema in `inst/ars/` keeps its own MIT licence (see
+`inst/COPYRIGHTS`).
