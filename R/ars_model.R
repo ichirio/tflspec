@@ -213,6 +213,9 @@
 #'   `"SPECIFIED IN SAP"`.
 #' @param dataset_names A named character vector: the ADaM name the ARS
 #'   uses for a spec dataset (default: the spec's name in upper case).
+#' @param dir The study folder: the files of the study key `source` (its
+#'   own ARD functions) are read from it -- not run -- for the statistics a
+#'   function says it gives (`cards::as_cards_fn(stat_names = )`).
 #' @return A `tfl_ars`: the reporting event as a nested list, with
 #'   attributes `profile`, `unmapped` (a data frame `where`, `item`,
 #'   `reason`: what the ARS does not say) and `ids` (each spec analysis and
@@ -222,7 +225,8 @@
 tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
                     profile = c("cdisc", "siera"), study_id = NULL,
                     purpose = NULL,
-                    reason = "SPECIFIED IN SAP", dataset_names = NULL) {
+                    reason = "SPECIFIED IN SAP", dataset_names = NULL,
+                    dir = ".") {
   profile <- match.arg(profile)
   if (!inherits(ard_spec, "tfl_ard_spec")) ard_spec <- tfl_ard_spec(ard_spec)
   if (!is.null(purpose)) purpose <- match.arg(toupper(purpose), .ars_purposes)
@@ -235,6 +239,11 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
   }
   subj <- .study_value(x, "id", "USUBJID")
   study_id <- study_id %||% .study_value(x, "study_id", "STUDY")
+  # the study's own ARD functions: the file each is in, and the statistics
+  # it declares
+  own <- .ars_own_functions(x, dir)
+  own_src <- own$file
+  own_stats <- own$stat_names
   ds_name <- function(d) {
     if (is.na(d)) return(NA_character_)
     if (!is.null(dataset_names) && d %in% names(dataset_names)) {
@@ -503,7 +512,16 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
     if (m == "custom") {
       code <- r$code
     } else if (!m %in% keys$method) {
-      code <- sprintf("%s(...)", m)
+      # the call the ARD program makes, and where an own function is defined
+      given <- c(.args_given(r$args), if (!is.na(r$strata)) "strata",
+                 if (!is.na(r$denominator)) "denominator")
+      code <- tryCatch(
+        .analysis_body(r, keys, subj, function(arg) arg %in% given),
+        error = function(e) sprintf("%s(...)", m))
+      where <- own_src[[m]]
+      if (!is.null(where)) code <- paste0("# ", m, "(): ", where, "\n", code)
+      # the statistics: the row's, else the ones the function says it gives
+      if (!length(stats)) stats <- own_stats[[m]] %||% character()
     }
     ss <- subset(r$where, ds, tag)
     lbl <- if (!is.na(r$label)) r$label else NULL
@@ -768,4 +786,33 @@ print.tfl_ars <- function(x, ...) {
     cat(sprintf("  %d item(s) not in the ARS: tfl_ars_unmapped()\n", nrow(u)))
   }
   invisible(x)
+}
+
+# The study's own ARD functions (the files of the study key `source`), read
+# without running them: for each function the file it is defined in, and
+# the statistics it declares the way cards' own do,
+# `name <- cards::as_cards_fn(function(...) ..., stat_names = c("a", "b"))`.
+.ars_own_functions <- function(x, dir = ".") {
+  out <- list(file = list(), stat_names = list())
+  for (f in .split_bar(.study_value(x, "source", NA))) {
+    p <- file.path(dir, f)
+    ex <- if (file.exists(p)) tryCatch(parse(p, keep.source = FALSE),
+                                       error = function(e) NULL)
+    for (e in ex) {
+      if (!is.call(e) || !as.character(e[[1L]]) %in% c("<-", "=") ||
+          !is.name(e[[2L]])) next
+      name <- as.character(e[[2L]])
+      rhs <- e[[3L]]
+      is_fun <- is.call(rhs) && identical(rhs[[1L]], as.name("function"))
+      fn <- if (is.call(rhs)) paste(deparse(rhs[[1L]]), collapse = "") else ""
+      is_cards_fn <- fn %in% c("cards::as_cards_fn", "as_cards_fn")
+      if (!is_fun && !is_cards_fn) next
+      out$file[[name]] <- f
+      if (is_cards_fn && !is.null(rhs$stat_names)) {
+        sn <- tryCatch(eval(rhs$stat_names, baseenv()), error = function(e) NULL)
+        if (is.character(sn)) out$stat_names[[name]] <- sn
+      }
+    }
+  }
+  out
 }
