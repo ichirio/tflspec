@@ -199,7 +199,9 @@ tfl_ard_functions <- function(installed = TRUE) {
 #' (`method = c("waldcc", "wald", ...)`).
 #'
 #' `column` says where an analysis row writes it: the `by`, `variables`,
-#' `strata`, `denominator` or `statistics` column, or `args`.  The data is
+#' `strata`, `denominator` or `statistics` column, or `args` (a parent row's
+#' `ard_stack(.by =)`, `ard_strata(.by =, .strata =)` and
+#' `ard_pairwise(variable =)` are its `by`, `strata` and `variables`).  The data is
 #' the row's own (`data`).
 #'
 #' A company adds its own rows with `options(tflspec.ard_args = <data
@@ -251,7 +253,7 @@ tfl_ard_args <- function(call) {
     }
     data.frame(arg = a, default = dtext, required = required, kind = kind,
                hint = pick(a, "hint"), choices = ch,
-               column = .ard_arg_column(a, kind), stringsAsFactors = FALSE)
+               column = .ard_arg_column(a, kind, call), stringsAsFactors = FALSE)
   })
   out <- do.call(rbind, rows)
   rownames(out) <- NULL
@@ -269,10 +271,17 @@ tfl_ard_args <- function(call) {
   "code"
 }
 
-# the analysis row's column an argument is written in
-.ard_arg_column <- function(arg, kind) {
+# the analysis row's column an argument is written in.  The functions that
+# run other analyses (a parent row) take theirs under other names; the
+# generated code writes them from the same columns (.ard_wrapper_lines()).
+.ard_arg_column <- function(arg, kind, call = "") {
   m <- c(by = "by", variables = "variables", strata = "strata",
          denominator = "denominator", statistic = "statistics")
+  wrap <- list(`cards::ard_stack` = c(.by = "by"),
+               `cards::ard_strata` = c(.by = "by", .strata = "strata"),
+               `cards::ard_pairwise` = c(variable = "variables"))
+  w <- wrap[[sub("^(cards::)?", "cards::", call)]]
+  if (!is.null(w) && arg %in% names(w)) return(w[[arg]])
   if (arg %in% names(m)) return(m[[arg]])
   if (identical(kind, "data")) "data" else "args"
 }

@@ -1,5 +1,12 @@
 # tflspec (development version)
 
+* **A parent row's arguments say the columns they are written in** (#113):
+  `tfl_ard_args()` gave `ard_stack(.by =)`, `ard_strata(.by =, .strata =)`
+  and `ard_pairwise(variable =)` the column `args`, though the generated code
+  writes them from the analysis row's `by`, `strata` and `variables`.  They
+  now say so, so a screen that builds a parent row from the catalog writes
+  them where the code reads them.
+
 * **`tfl_ard_conditions()`**: what went wrong while an ARD was made, as a
   table.  cards does not stop when one analysis fails (a test given three
   groups, a statistic whose function stops or warns): it leaves the message

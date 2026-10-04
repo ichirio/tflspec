@@ -126,3 +126,21 @@ test_that("what a new analysis is not to choose is marked", {
   e <- tfl_ard_args("cardx::ard_emmeans_emmeans")
   expect_identical(e$kind[e$arg == "primary_covariate"], "text")
 })
+
+test_that("a parent row's function says the columns the generated code reads", {
+  skip_if_not_installed("cards")
+  col <- function(call, arg) {
+    a <- tfl_ard_args(call)
+    a$column[a$arg == arg]
+  }
+  # ard_stack(.by =), ard_strata(.by =, .strata =) and ard_pairwise(variable =)
+  # are written from the analysis row's by / strata / variables columns
+  expect_identical(col("cards::ard_stack", ".by"), "by")
+  expect_identical(col("cards::ard_strata", ".by"), "by")
+  expect_identical(col("cards::ard_strata", ".strata"), "strata")
+  expect_identical(col("cards::ard_pairwise", "variable"), "variables")
+  # the rest of their arguments stay in args
+  expect_identical(col("cards::ard_stack", ".total_n"), "args")
+  # and the other functions are as before
+  expect_identical(col("cards::ard_summary", "by"), "by")
+})
