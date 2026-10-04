@@ -276,6 +276,7 @@ test_that("a report of user code: with analyses it is an output, without them it
   expect_match(why("L1"), "listing")
   expect_match(why("T9"), "no analyses")
   expect_identical(nrow(tfl_check_ars(ars, schema = FALSE)), 0L)
+})
 
 test_that("a function's method carries its call, its file and its statistics", {
   dir <- withr::local_tempdir()

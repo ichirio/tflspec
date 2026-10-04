@@ -171,6 +171,7 @@ test_that("every other exported function of cards / cardx has a decided use", {
                                    ": decide the use of ", paste(new, collapse = ", "),
                                    " in inst/ard/utilities.csv"))
   }
+})
 
 test_that("two outputs with the same statistics keep their own rows", {
   # the study ARD is bound with dplyr::bind_rows(), not cards::bind_ard():
