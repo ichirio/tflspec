@@ -1,5 +1,7 @@
 # tflspec
 
+[![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
+
 Specifications for clinical **tables, listings and figures**, as Excel
 workbooks (and YAML for figures): what is analysed, how it is laid out, how
 the report is dressed. tflspec turns a spec into the object it stands for
@@ -142,3 +144,39 @@ has a unit says it (`_twips`, `_in`, `_half_points`; `rel_width` is a
 relative width). One argument is written in one place: a column, or
 `args`, never both. Every column is described on its header cell's comment
 and by `tfl_spec_columns()`.
+
+## Citation
+
+If tflspec helps your work, please cite it with `citation("tflspec")`. The
+statistics of the tables come from [cards](https://pharmaverse.github.io/cards/)
+and [cardx](https://insightsengineering.github.io/cardx/); please cite those
+too (`citation("cards")`, `citation("cardx")`).
+
+## Acknowledgements
+
+tflspec stands on the work of many others, and we are grateful to their
+authors.
+
+- **[cards](https://pharmaverse.github.io/cards/) and
+  [cardx](https://insightsengineering.github.io/cardx/)**: the analysis
+  results data (ARD) that every ARD spec is written for, an outcome of the
+  [pharmaverse](https://pharmaverse.org/) community's work on analysis results
+  data.
+- **[ggplot2](https://ggplot2.tidyverse.org/)** and its extensions
+  ([ggsurvfit](https://www.danieldsjoberg.com/ggsurvfit/),
+  [patchwork](https://patchwork.data-imaginist.com) and others): the figure
+  code tflspec writes is their code.
+- **[CDISC](https://www.cdisc.org/)**: the Analysis Results Standard, whose
+  JSON Schema is included unchanged (`inst/ars/`, MIT; see `inst/COPYRIGHTS`),
+  and **[siera](https://clymbclinical.github.io/siera/)**, which reads ARS.
+- **[pharmaverseadam](https://pharmaverse.github.io/pharmaverseadam/)**: the
+  ADaM data (from the CDISC pilot study) of the examples.
+
+tflspec is an independent project and is not affiliated with, or endorsed by,
+the authors of these packages or CDISC.
+
+## License
+
+Apache License 2.0 © 2026 Yoichi Masui. See [LICENSE.md](LICENSE.md). The
+CDISC ARS JSON Schema in `inst/ars/` keeps its own MIT licence (see
+`inst/COPYRIGHTS`).
