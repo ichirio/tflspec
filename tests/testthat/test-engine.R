@@ -22,6 +22,19 @@ test_that("example spec generates runnable code for every legend variant", {
   }
 })
 
+test_that("a manual legend is drawn for every figure type, without warnings", {
+  skip_if_not_installed("ggsurvfit")
+  skip_if_not_installed("patchwork")
+  for (pos in c("below", "inside_br", "right")) {
+    code <- tfl_fig_code(with_variant(tfl_example_fig_spec(), "manual", pos))
+    for (id in names(code)) {
+      # the panel has its columns (not NA): no item is dropped
+      expect_false(grepl("ncol = NA", code[[id]], fixed = TRUE), label = paste(id, pos))
+      expect_no_warning(run_code(code[[id]]), message = paste(id, pos))
+    }
+  }
+})
+
 test_that("generated code does not depend on tflspec", {
   code <- tfl_fig_code(tfl_example_fig_spec(), adam = tfl_example_adam())
   expect_false(any(grepl("tflspec::", code)))
