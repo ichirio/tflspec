@@ -388,7 +388,7 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
     mz
   }
 
-  a <- x$analyses
+  a <- .ard_spec_flat(x$analyses)
   analyses <- list()
   # each ARS analysis, what it was written from: the spec row, its method,
   # its role (bign: the output's subject count; any: subjects with any
@@ -466,6 +466,11 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
     if (!is.na(r$formats)) {
       miss(tag, "formats",
            "display formats are the table's, not ARS analysis metadata")
+    }
+    if (!is.na(r$post %||% NA)) {
+      miss(tag, "post", sprintf(
+        "`%s`: ARS has no place for steps on the results after the method",
+        r$post))
     }
     opt <- NULL
     code <- NULL

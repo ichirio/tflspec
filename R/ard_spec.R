@@ -20,8 +20,9 @@
 #   datasets     dataset, path, derive           the analysis data
 #   populations  population_id, dataset, where,  analysis sets (and the
 #                derive                          denominators)
-#   analyses     output_id, analysis_id, method, dataset, population_id,
-#                where, by, variables, statistics, formats, args, code
+#   analyses     output_id, analysis_id, parent, method, dataset,
+#                population_id, where, by, variables, statistics, formats,
+#                args, code
 #
 # The concepts are those of CDISC ARS (analysis set, data subset, grouping,
 # method), so an tfl_ard_spec can later be written as ARS metadata.
@@ -30,10 +31,11 @@
   study = c("key", "value"),
   datasets = c("dataset", "level", "path", "derive"),
   populations = c("population_id", "dataset", "where", "derive"),
-  analyses = c("output_id", "analysis_id", "label", "method", "dataset",
+  analyses = c("output_id", "analysis_id", "parent", "label", "method",
+               "dataset",
                "population_id", "where", "by", "strata", "variables",
-               "statistics", "denominator", "formats", "args", "code",
-               "purpose", "reason"))
+               "statistics", "denominator", "formats", "args", "post",
+               "code", "purpose", "reason"))
 
 .split_bar <- function(x) {
   if (is.null(x) || is.na(x) || !nzchar(trimws(x))) return(character())
@@ -256,6 +258,19 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   if (any(dup)) err <- c(err, sprintf("output_id / analysis_id repeated: %s",
                                       paste(unique(paste(a$output_id, a$analysis_id)[dup]),
                                             collapse = ", ")))
+  err <- c(err, .ard_parent_problems(a))
+  for (i in which(!is.na(a$post %||% rep(NA, nrow(a))))) {
+    tag <- paste(a$output_id[i], a$analysis_id[i], sep = " / ")
+    if (!is.na(a$parent[i] %||% NA)) {
+      err <- c(err, sprintf(paste(
+        "%s: `post` works on an analysis's ARD; inside %s it goes on the",
+        "parent's row"), tag, a$parent[i]))
+    }
+    for (st in .split_post(a$post[i])) {
+      p <- .post_problem(st)
+      if (!is.null(p)) err <- c(err, sprintf("%s: `post` %s", tag, p))
+    }
+  }
   m <- stats::na.omit(a$method)
   known <- m %in% tfl_ard_methods()$method
   pkgfun <- grepl("^[A-Za-z.][A-Za-z0-9.]*::[A-Za-z._][A-Za-z0-9._]*$", m)
@@ -345,6 +360,159 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   if (length(err)) stop(paste(c("The ARD definition is not valid:", err),
                               collapse = "\n  "), call. = FALSE)
   x
+}
+
+# An analysis run inside another (`parent`): the parent is an analysis of
+# the same report that runs others (cards::ard_stack(), ard_strata(),
+# ard_pairwise()), and the rows inside take its data -- they say what is
+# computed, not on what.
+.ard_parent_problems <- function(a) {
+  par <- a$parent %||% rep(NA_character_, nrow(a))
+  err <- character()
+  tag <- function(i) paste(a$output_id[i], a$analysis_id[i], sep = " / ")
+  for (i in which(!is.na(par))) {
+    p <- which(a$output_id == a$output_id[i] & a$analysis_id == par[i])
+    if (!length(p)) {
+      err <- c(err, sprintf("%s: parent %s is not an analysis of %s", tag(i),
+                            par[i], a$output_id[i]))
+      next
+    }
+    p <- p[1L]
+    if (!a$method[p] %in% .ard_wrappers) {
+      err <- c(err, sprintf(paste(
+        "%s: its parent %s runs no other analyses -- a parent's method is",
+        "one of %s"), tag(i), par[i], paste(.ard_wrappers, collapse = ", ")))
+      next
+    }
+    if (!is.na(par[p])) {
+      err <- c(err, sprintf("%s: its parent %s is inside another itself",
+                            tag(i), par[i]))
+    }
+    own <- c("dataset", "population_id", "where",
+             if (identical(a$method[p], "cards::ard_stack")) c("by", "strata"))
+    set <- own[!is.na(unlist(a[i, own]))]
+    if (length(set)) {
+      err <- c(err, sprintf(
+        "%s: %s %s the parent's (%s); leave blank", tag(i),
+        paste0("`", set, "`", collapse = ", "),
+        if (length(set) > 1L) "are" else "is", par[i]))
+    }
+    if (a$method[i] %in% c("subjects", "custom", .ard_wrappers)) {
+      err <- c(err, sprintf("%s: a `%s` analysis cannot run inside %s",
+                            tag(i), a$method[i], par[i]))
+    }
+    if (.names_data(a[i, ])) {
+      err <- c(err, sprintf(paste(
+        "%s: inside %s the data is the parent's, so its args may not name",
+        "`data` or `population`"), tag(i), par[i]))
+    }
+  }
+  for (p in which(a$method %in% .ard_wrappers)) {
+    kids <- which(!is.na(par) & par == a$analysis_id[p] &
+                    a$output_id == a$output_id[p])
+    if (!length(kids)) next
+    if (!identical(a$method[p], "cards::ard_stack") && length(kids) > 1L) {
+      err <- c(err, sprintf("%s: %s runs one analysis; %d name it as parent",
+                            tag(p), a$method[p], length(kids)))
+    }
+    if (identical(a$method[p], "cards::ard_pairwise") &&
+        length(.split_bar(a$variables[p])) != 1L) {
+      err <- c(err, sprintf(
+        "%s: ard_pairwise() compares the pairs of ONE column's levels: `variables`",
+        tag(p)))
+    }
+    if (identical(a$method[p], "cards::ard_stack")) {
+      v <- unlist(lapply(kids, function(k) .split_bar(a$variables[k])))
+      if (anyDuplicated(v)) {
+        err <- c(err, sprintf(paste(
+          "%s: %s is analysed by two of the analyses inside it, whose rows",
+          "could not be told apart; make one of them an analysis of its own"),
+          tag(p), paste(unique(v[duplicated(v)]), collapse = ", ")))
+      }
+      keys <- tfl_ard_methods()
+      for (k in kids) {
+        kk <- match(a$method[k], keys$method)
+        kind <- if (is.na(kk)) "" else keys$kind[kk]
+        if (!is.na(a$statistics[k]) &&
+            !kind %in% c("continuous", "categorical", "missing")) {
+          err <- c(err, sprintf(paste(
+            "%s: inside a stack, `statistics` cannot keep some of what %s",
+            "gives; make it an analysis of its own"), tag(k), a$method[k]))
+        }
+      }
+    }
+  }
+  err
+}
+
+# The analyses as ARS sees them: an analysis inside another is one of its
+# own, on the parent's data, analysis set and condition, grouped by the
+# parent's groups (a stack's by; the subgroups of ard_strata()); the parent
+# that only runs them is not an analysis.
+.ard_spec_flat <- function(a) {
+  par <- a$parent %||% rep(NA_character_, nrow(a))
+  if (all(is.na(par))) return(a)
+  drop <- logical(nrow(a))
+  for (i in which(!is.na(par))) {
+    p <- which(a$output_id == a$output_id[i] & a$analysis_id == par[i])[1L]
+    if (is.na(p)) next
+    for (cn in c("dataset", "population_id", "where")) a[[cn]][i] <- a[[cn]][p]
+    grp <- c(.split_bar(a$by[p]),
+             if (!identical(a$method[p], "cards::ard_stack"))
+               c(.split_bar(a$strata[p]), .split_bar(a$by[i])))
+    a$by[i] <- if (length(grp)) paste(unique(grp), collapse = " | ") else NA
+    drop[p] <- TRUE
+  }
+  a <- a[!drop, , drop = FALSE]
+  a$parent <- NA_character_
+  rownames(a) <- NULL
+  a
+}
+
+# The `post` column: steps on the ARD after the call, each a call whose
+# first argument -- the ARD -- is left out
+# (`cards::add_calculated_row(expr = sd / sqrt(N), stat_name = "se")`),
+# `|` between them.  A `|` inside a call (an R "or") is the call's.
+.split_post <- function(x) {
+  if (is.null(x) || is.na(x) || !nzchar(trimws(x))) return(character())
+  ch <- strsplit(x, "", fixed = TRUE)[[1L]]
+  depth <- cumsum(ch %in% c("(", "[", "{")) - cumsum(ch %in% c(")", "]", "}"))
+  quote <- character()
+  cut <- integer()
+  for (i in seq_along(ch)) {
+    if (length(quote)) {
+      if (ch[i] == quote && (i == 1L || ch[i - 1L] != "\\")) quote <- character()
+      next
+    }
+    if (ch[i] %in% c("\"", "'")) quote <- ch[i]
+    else if (ch[i] == "|" && depth[i] == 0L) cut <- c(cut, i)
+  }
+  parts <- substring(x, c(1L, cut + 1L), c(cut - 1L, nchar(x)))
+  parts <- trimws(parts)
+  parts[nzchar(parts)]
+}
+
+# what is wrong with one step of `post`, or NULL
+.post_problem <- function(step) {
+  e <- tryCatch(str2lang(step), error = function(e) NULL)
+  fn <- if (is.call(e)) paste(deparse(e[[1L]]), collapse = "") else ""
+  named <- grepl("^([A-Za-z.][A-Za-z0-9._]*:::?)?[A-Za-z.][A-Za-z0-9._]*$", fn)
+  if (!named) {
+    return(sprintf("`%s` is not a call (a function with its arguments, the ARD left out)",
+                   step))
+  }
+  f <- tryCatch(eval(e[[1L]]), error = function(e) NULL)
+  if (is.function(f) && !length(formals(f))) {
+    return(sprintf("%s takes no ARD", fn))
+  }
+  NULL
+}
+
+# the program's lines for `post`: the ARD piped through each step
+.post_lines <- function(post) {
+  st <- .split_post(post)
+  if (!length(st)) return(NULL)
+  c("ard <- ard |>", paste0("  ", st, c(rep(" |>", length(st) - 1L), "")))
 }
 
 .study_value <- function(x, key, default) {
@@ -532,7 +700,11 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
     "  cards::apply_fmt_fun(ard)",
     "}",
     "# only the statistics asked for, of a method that gives more",
-    ".keep <- function(ard, keep) ard[ard$stat_name %in% keep, , drop = FALSE]",
+    ".keep <- function(ard, keep) {",
+    "  # several ARDs (cards::ard_pairwise(): one per pair): each of them",
+    "  if (is.list(ard) && !is.data.frame(ard)) return(lapply(ard, .keep, keep))",
+    "  ard[ard$stat_name %in% keep, , drop = FALSE]",
+    "}",
     "")
 }
 
@@ -615,6 +787,14 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
     "# the ids in front; a cards ARD stays one (class card), so the study ARD",
     "# is one too and cards' own tools (as_nested_list(), compare_ard()) take it",
     ".tag <- function(ard, output_id, analysis_id, population_id) {",
+    "  # several analyses run together (cards::ard_stack()): each variable's",
+    "  # rows are its own analysis's, the rest (the by counts, the total N)",
+    "  # the stack's",
+    "  if (length(analysis_id) > 1L) {",
+    "    id <- unname(analysis_id[as.character(ard$variable)])",
+    "    id[is.na(id)] <- analysis_id[[\".other\"]]",
+    "    analysis_id <- id",
+    "  }",
     "  if (inherits(ard, \"card\")) {",
     "    return(dplyr::mutate(ard, output_id = output_id,",
     "                         analysis_id = analysis_id,",
@@ -696,8 +876,18 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
   }, "")
   if (length(made)) code <- c(code, "", "# ---- the analysis data", made)
   code <- c(code, "", "# ---- analyses", "ards <- list()")
+  par <- a$parent %||% rep(NA_character_, nrow(a))
   for (i in seq_len(nrow(a))) {
     r <- a[i, ]
+    # an analysis run inside another is written with it
+    if (!is.na(par[i])) next
+    kids <- which(!is.na(par) & par == r$analysis_id &
+                    a$output_id == r$output_id)
+    if (length(kids)) {
+      code <- c(code, .ard_wrapper_lines(x, r, a[kids, , drop = FALSE],
+                                         keys, subj, data_name[[i]], i))
+      next
+    }
     pid <- r$population_id
     pop <- if (!is.na(pid)) paste0("pop_", .r_name(pid))
     pop_name <- if (is.null(pop)) "NULL" else pop
@@ -735,7 +925,7 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
     code <- c(code,
               sprintf("# %s / %s%s", r$output_id, r$analysis_id,
                       if (!is.na(r$label)) paste(":", r$label) else ""),
-              core,
+              core, .post_lines(r$post),
               if (length(keep)) sprintf("ard <- .keep(ard, c(%s))",
                                         paste(encodeString(keep, quote = "\""),
                                               collapse = ", ")),
@@ -747,6 +937,93 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
                         encodeString(pid, quote = "\"")))
   }
   c(code, "", "ard <- do.call(dplyr::bind_rows, ards)")
+}
+
+# The functions that run other analyses: an analysis row whose `parent`
+# names a row with one of these as its method is run inside it.
+.ard_wrappers <- c("cards::ard_stack", "cards::ard_strata",
+                   "cards::ard_pairwise")
+
+# One analysis that runs others (its `parent` rows), as the call a person
+# writes: cards::ard_stack(data, .by = ARM, ard_summary(...), ...).
+# The rows inside take the parent's data, analysis set and condition; in a
+# stack, its by too.  Each variable's rows are tagged with the analysis that
+# computed them, the stack's own (the by counts, the total N) with the
+# parent's id; inside ard_strata() / ard_pairwise() the one analysis's id.
+.ard_wrapper_lines <- function(x, r, kids, keys, subj, data, i) {
+  pid <- r$population_id
+  pop <- if (!is.na(pid)) paste0("pop_", .r_name(pid))
+  pop_name <- if (is.null(pop)) "NULL" else pop
+  stack <- identical(r$method, "cards::ard_stack")
+  child <- function(kr) {
+    given <- c(.args_given(kr$args), if (!is.na(kr$strata)) "strata",
+               if (!is.na(kr$denominator)) "denominator")
+    has <- function(arg) arg %in% given
+    den <- .den_code(kr$denominator, x, pop, subj, population = pop_name)
+    if (stack) kr$by <- NA
+    body <- .analysis_body(kr, keys, subj, has, den,
+                           data = if (stack) NULL else ".x",
+                           population = pop_name)
+    gsub("\n", "\n  ", body, fixed = TRUE)
+  }
+  bodies <- vapply(seq_len(nrow(kids)), function(j) child(kids[j, ]), "")
+  args <- c(data,
+            if (stack && !is.na(r$by)) paste(".by =", .vars(r$by)),
+            if (!stack && identical(r$method, "cards::ard_strata")) c(
+              if (!is.na(r$by)) paste(".by =", .vars(r$by)),
+              if (!is.na(r$strata)) paste(".strata =", .vars(r$strata))),
+            if (identical(r$method, "cards::ard_pairwise"))
+              paste("variable =", .vars(r$variables)),
+            if (stack) bodies else paste(".f = ~", bodies),
+            if (!is.na(r$args)) r$args)
+  call <- sprintf("%s(%s)", r$method, paste(args, collapse = ",\n    "))
+  core <- strsplit(call, "\n", fixed = TRUE)[[1L]]
+  core[1L] <- paste("ard <-", core[1L])
+  # formats: a row's own, for its own variables
+  fmt <- character()
+  for (j in seq_len(nrow(kids))) {
+    kr <- kids[j, ]
+    k <- match(kr$method, keys$method)
+    f <- c(if (!is.na(k)) .parse_formats(keys$formats[k]),
+           .parse_formats(kr$formats))
+    if (stack && length(f)) {
+      plain <- !grepl(":", names(f), fixed = TRUE)
+      vv <- .split_bar(kr$variables)
+      f <- c(f[!plain], unlist(lapply(vv, function(v)
+        stats::setNames(f[plain], paste0(v, ":", names(f)[plain])))))
+    }
+    fmt <- c(fmt, f)
+  }
+  fmt <- c(.parse_formats(r$formats), fmt)
+  fmt <- fmt[!duplicated(names(fmt), fromLast = TRUE)]
+  keep <- if (!stack) {
+    k <- match(kids$method[1L], keys$method)
+    kind <- if (is.na(k)) "" else keys$kind[k]
+    if (!kind %in% c("continuous", "categorical", "missing"))
+      .split_bar(kids$statistics[1L])
+  }
+  ids <- if (stack) {
+    v <- unlist(lapply(seq_len(nrow(kids)), function(j)
+      stats::setNames(rep(kids$analysis_id[j],
+                          length(.split_bar(kids$variables[j]))),
+                      .split_bar(kids$variables[j]))))
+    v <- c(v, .other = r$analysis_id)
+    sprintf("c(%s)", paste(sprintf("%s = %s", encodeString(names(v), quote = "`"),
+                                   encodeString(v, quote = "\"")),
+                           collapse = ", "))
+  } else encodeString(kids$analysis_id[1L], quote = "\"")
+  c(sprintf("# %s / %s%s: %s", r$output_id, r$analysis_id,
+            if (!is.na(r$label)) paste(":", r$label) else "",
+            paste(kids$analysis_id, collapse = ", ")),
+    core, .post_lines(r$post),
+    if (length(keep)) sprintf("ard <- .keep(ard, c(%s))",
+                              paste(encodeString(keep, quote = "\""),
+                                    collapse = ", ")),
+    sprintf("ards[[%d]] <- .tag(.fmt(ard%s), %s, %s, %s)", i,
+            if (length(fmt)) paste0(", ", .fmt_vector(fmt)) else "",
+            encodeString(r$output_id, quote = "\""), ids,
+            if (is.na(pid)) "NA_character_" else
+              encodeString(pid, quote = "\"")))
 }
 
 # A fingerprint of what makes an output's ARD: its analysis rows and the

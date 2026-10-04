@@ -1,5 +1,40 @@
 # tflspec (development version)
 
+* **The study ARD as JSON, YAML or XPT** (#99): `tfl_write_ard()` writes a
+  copy -- JSON / YAML as one record per statistic with each variable's levels
+  in their order and the column types, which `tfl_read_ard()` reads back
+  (all but the formatting functions); or cards' nested shape; or XPT
+  (version 8, or 5 with 8-character names).  Each format says in a warning
+  what it does not keep.  The rds stays the record.
+
+* **cards >= 0.8.0 and cardx >= 0.3.1** (#98), stated in DESCRIPTION and
+  tested at both ends: CI has a row with exactly those versions, and runs
+  every week on what CRAN has now, where a new `ard_*()` the catalog does not
+  describe fails a test.  `?tfl_ard_functions` names what is not offered by
+  design: the old names, the survey-design functions (their input is not a
+  data frame) and `ard_formals()`.
+
+* **Steps on the ARD after the call: the `post` column** (#97).  Calls
+  with the ARD left out, `|` between them, piped after the analysis:
+  `cards::add_calculated_row(expr = sd / sqrt(N), stat_name = "se")` (a
+  statistic computed from others), `cards::filter_ard_hierarchical(p > 0.05)`,
+  `cards::sort_ard_hierarchical()`, `cards::diff_ard_hierarchical()`, or a
+  function of one's own.  `tfl_ars()` lists it as unmapped.  Blank: as
+  before.
+
+* **Analyses run inside another: the `parent` column** (#96).  A row of
+  the `analyses` sheet whose `parent` names an analysis with method
+  `cards::ard_stack`, `cards::ard_strata` or `cards::ard_pairwise` is run
+  inside it, on its data, analysis set and condition (and in a stack its
+  `by`).  The program writes the one call a person would --
+  `cards::ard_stack(pop_saf, .by = ARM, cards::ard_continuous(variables =
+  c(AGE, BMIBL)), cards::ard_categorical(variables = SEX))` -- and tags each
+  variable's rows with its own `analysis_id` (the stack's own rows, the by
+  counts and the total N, with the parent's).  `tfl_ars()` writes each row
+  inside as an analysis of its own.  What a row inside may not say (the
+  parent's data, a second analysis of one variable in a stack, `custom`) is
+  refused by name.  A blank `parent` is as before.
+
 * **The ARD functions as a catalog** (#93): `tfl_ard_functions()` lists
   every installed cards / cardx `ard_*()` by category, with a heading, a
   sentence and its shape (columns, a formula, a fitted model, other

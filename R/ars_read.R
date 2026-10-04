@@ -529,6 +529,10 @@ tfl_ars_to_specs <- function(ars, table = FALSE) {
   pop <- data.frame(population_id = pops$population_id,
                     dataset = pops$dataset, where = pops$where,
                     derive = NA_character_, stringsAsFactors = FALSE)
+  # a column ARS has no place for is blank
+  for (cn in setdiff(.ard_spec_sheets$analyses, names(an))) {
+    an[[cn]] <- rep(NA_character_, nrow(an))
+  }
   ard <- tfl_ard_spec(list(study = study, datasets = ds, populations = pop,
                            analyses = an[.ard_spec_sheets$analyses]))
 

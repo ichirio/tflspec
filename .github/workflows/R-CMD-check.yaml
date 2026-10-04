@@ -3,11 +3,18 @@
 # ggplot2 lines figure designs are written for (3.5.x and 4.0.x; see
 # inst/fig/ggplot2_compat.csv).
 # ggsurvfit >= 1.2.0 needs ggplot2 >= 4.0.0, so the 3.5.2 row pins ggsurvfit 1.1.0.
+# The ARD functions are checked on the oldest cards / cardx DESCRIPTION
+# allows (the `cards` row) and, every week, on what CRAN has now: a version
+# that adds or renames an ard_*() fails test-ard-functions.R until the
+# catalog (inst/ard/functions.csv) describes it.
 on:
   push:
     branches: [main, master]
   pull_request:
   workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * 1'
+
 
 name: R-CMD-check
 
@@ -31,6 +38,7 @@ jobs:
           - {os: windows-latest, r: 'release'}
           - {os: ubuntu-latest,  r: 'release', gg: 'ggplot2@3.5.2 ggsurvfit@1.1.0', want: '3.5.2'}
           - {os: ubuntu-latest,  r: 'release', gg: 'ggplot2@>=4.0.0', want: '4.0'}
+          - {os: ubuntu-latest,  r: 'release', gg: 'cards@0.8.0 cardx@0.3.1', cards: '0.8.0'}
 
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
@@ -59,6 +67,13 @@ jobs:
         run: |
           v <- as.character(packageVersion("ggplot2")); message("ggplot2 ", v)
           stopifnot(startsWith(v, "${{ matrix.config.want }}"))
+        shell: Rscript {0}
+
+      - name: Confirm the cards / cardx under test
+        if: matrix.config.cards
+        run: |
+          v <- as.character(packageVersion("cards")); message("cards ", v, ", cardx ", packageVersion("cardx"))
+          stopifnot(identical(v, "${{ matrix.config.cards }}"))
         shell: Rscript {0}
 
       - uses: r-lib/actions/check-r-package@v2

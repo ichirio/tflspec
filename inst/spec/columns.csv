@@ -22,6 +22,7 @@ populations,where,"An R condition on that dataset choosing the subjects; blank: 
 populations,derive,"Columns added to the population, NAME = R expression, | between them; blank: none.",TRTA = TRT01A
 analyses,,"ARD: one analysis a row; each becomes one cards / cardx call in the ARD program, its result tagged with output_id, analysis_id and population_id.",
 analyses,analysis_id,"The analysis's id within its report; an ARD column.",AGE
+analyses,parent,"The analysis this one runs inside: an analysis of the same report whose method is cards::ard_stack (several analyses on the same data and by, with the by counts and the total N), cards::ard_strata (within subgroups) or cards::ard_pairwise (each pair of groups). It takes the parent's dataset, population_id and where (and in a stack its by), so leave those blank; blank: an analysis of its own.",DEMO
 analyses,label,"A name a person reads (for ARS and the GUI); blank: none.",Age (years)
 analyses,method,"What is computed: a keyword of tfl_ard_methods() (continuous, categorical, hierarchical ...), any pkg::function (cards::, cardx::), or a function of the study's own that the study key source loads.",continuous
 analyses,dataset,"The data analysed; blank: the population's own dataset.",ADAE
@@ -34,6 +35,7 @@ analyses,statistics,"For continuous / categorical / missing: the statistics comp
 analyses,denominator,"What percentages are of: population (the analysis set; hierarchical and max take it anyway), row / column / cell (cards), another population, or a dataset (its records of the analysis set's subjects); blank: the method's default.",row
 analyses,formats,"Display formats, statistic=format, | between them; VAR:statistic=format for one variable. xx.x = one decimal (the x's count only after the point), xx.x% = a proportion as a percent, a number = decimals, pvalue = <0.001 or 3 decimals; blank: the statistic's default.",mean=xx.x | p=xx.x%
 analyses,args,"More arguments of the call, as R (data and population are bound), in any order; refused if not R. An argument a column gives (by, variables, strata, denominator, statistic) may not be given here too; blank: none.",over_variables = TRUE
+analyses,post,"Steps on the ARD after the call, each a call with the ARD left out, | between them: cards::add_calculated_row() (a statistic computed from others), cards::filter_ard_hierarchical() (only the rows that pass), cards::sort_ard_hierarchical(), cards::diff_ard_hierarchical(), or a function of your own that takes an ARD and gives one; blank: none.","cards::add_calculated_row(expr = sd / sqrt(N), stat_name = ""se"")"
 analyses,code,"method = custom only: the R code that gives the ARD (data and population are bound).","cards::ard_tabulate(data, variables = SEX)"
 analyses,purpose,"For CDISC ARS (tfl_ars()): PRIMARY / SECONDARY / EXPLORATORY OUTCOME MEASURE; blank: tfl_ars(purpose = ).",PRIMARY OUTCOME MEASURE
 analyses,reason,"For CDISC ARS: SPECIFIED IN PROTOCOL / SPECIFIED IN SAP / DATA DRIVEN / REQUESTED BY REGULATORY AGENCY; blank: SPECIFIED IN SAP.",SPECIFIED IN SAP

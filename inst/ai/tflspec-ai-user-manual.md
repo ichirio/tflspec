@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9027** (the development version,
+**This manual documents tflspec 0.0.24.9028** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -124,6 +124,10 @@ generate_rtfreport(doc, "output/DM.rtf", overwrite = TRUE)
 The ARD comes from the ARD spec (§5): `tfl_ard_code(spec, output_id)`
 writes the cards code; `tfl_build_ard()` runs it and saves one study ARD;
 `tfl_ard_for(ard, output_id)` takes one output's rows.
+`tfl_write_ard(ard, "ard.json")` writes a copy as JSON / YAML (one record
+per statistic, each variable's levels in order; `tfl_read_ard()` reads it
+back) or XPT (flat; factors, formats and warnings are lost, with a
+warning); the rds stays the record.
 
 ---
 
@@ -189,10 +193,28 @@ argument is written in one place: a column, or `args`, never both.
   `tfl_ard_args("cardx::ard_categorical_ci")` one function's arguments
   (default, required, what fills each, the analysis row's column it goes
   in: `by` / `variables` / `strata` / `denominator` / `statistics`, else
-  `args`).
+  `args`). Not offered, by design: the old names (`replaced_by` gives the
+  new one), the survey-design functions (their input is not a data frame)
+  and `ard_formals()` (not an analysis). cards >= 0.8.0, cardx >= 0.3.1.
 - `by`, `strata`, `variables`, `statistics`: `|` between several. `strata`:
   the analysis repeated within them (cards' `strata`: a subgroup, a
   parameter by visit).
+- `parent`: the analysis this one runs inside, when that one's method is
+  `cards::ard_stack` (several analyses on the same data and `by`, plus the
+  by counts and the total N with `args` `.total_n = TRUE`),
+  `cards::ard_strata` (within the subgroups of its `by` / `strata`) or
+  `cards::ard_pairwise` (each pair of the levels of its one `variables`).
+  The rows inside leave `dataset` / `population_id` / `where` (and in a
+  stack `by`) blank: they are the parent's. The program writes one call,
+  `cards::ard_stack(pop_saf, .by = ARM, cards::ard_continuous(variables =
+  c(AGE, BMIBL)), cards::ard_categorical(variables = SEX))`, and tags each
+  variable's rows with its own analysis (the stack's own rows with the
+  parent's id). ARS gets each row inside as an analysis of its own.
+- `post`: steps on the ARD after the call, the ARD left out, `|` between
+  them — `cards::add_calculated_row(expr = sd / sqrt(N), stat_name = "se")`,
+  `cards::filter_ard_hierarchical(p > 0.05)`, `cards::sort_ard_hierarchical()`.
+  Written as `ard <- ard |> step1 |> step2`. Not on a row inside a parent
+  (put it on the parent).
 - `denominator`: what percentages are of — `population` (the analysis
   set; `hierarchical` and `max` take it anyway), `row` / `column` / `cell`
   (cards), another population, or a dataset (its records of the analysis
@@ -559,7 +581,7 @@ back): rename the value or choose another separator.
 **ARD spec:** `tfl_ard_spec` `tfl_read_ard_spec` `tfl_write_ard_spec`
 `tfl_ard_spec_template` `tfl_ard_code` `tfl_build_ard` `tfl_ard_for`
 `tfl_ard_spec_hash` `tfl_ard_methods` `tfl_ard_statistics`
-`tfl_ard_functions` `tfl_ard_args`
+`tfl_ard_functions` `tfl_ard_args` `tfl_write_ard` `tfl_read_ard`
 
 **CDISC ARS:** `tfl_ars` `tfl_write_ars_json` `tfl_check_ars`
 `tfl_ars_unmapped` `tfl_ars_ard` `tfl_read_ars_json` `tfl_ars_to_specs`

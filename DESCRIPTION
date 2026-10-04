@@ -1,6 +1,6 @@
 Package: tflspec
 Title: Excel Specifications for Clinical Tables, Listings and Figures
-Version: 0.0.24.9027
+Version: 0.0.24.9028
 Authors@R: c(
     person(given  = "Yoichi",
            family = "Masui",
@@ -38,8 +38,8 @@ Suggests:
     broom,
     broom.helpers,
     car,
-    cards,
-    cardx,
+    cards (>= 0.8.0),
+    cardx (>= 0.3.1),
     dplyr,
     emmeans,
     ggsurvfit,

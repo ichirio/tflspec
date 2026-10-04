@@ -109,6 +109,22 @@
 #' listed too, with `in_catalog = FALSE` and its help page's title as its
 #' label.  `replaced_by` names the new name of an old one.
 #'
+#' The versions it is written for: cards >= 0.8.0 and cardx >= 0.3.1 (the
+#' oldest are tested, and every week what CRAN has now).
+#'
+#' @section Not offered, by design (decided 2026-10-04):
+#' Listed, but not for an analysis row:
+#' * the **old names** (`ard_continuous()`, `ard_categorical()`,
+#'   `ard_dichotomous()`, `ard_complex()`, `ard_categorical_max()`,
+#'   `ard_emmeans_mean_difference()`): the function in `replaced_by` gives
+#'   the same result;
+#' * the **survey design** functions (`ard_survey_svychisq()`,
+#'   `ard_survey_svyranktest()`, `ard_survey_svyttest()`, and the
+#'   survey.design methods of the summaries): their input is a survey design
+#'   object, not the data frame an analysis row reads;
+#' * **`ard_formals()`**: it records a function's argument values, a
+#'   building block for writing an ARD function, not an analysis.
+#'
 #' A company adds its own rows -- its own ARD functions, other headings --
 #' with `options(tflspec.ard_functions = <data frame>)` (the same columns;
 #' a row with the same `call` replaces the built-in one).
