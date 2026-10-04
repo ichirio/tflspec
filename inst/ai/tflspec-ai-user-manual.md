@@ -124,6 +124,10 @@ generate_rtfreport(doc, "output/DM.rtf", overwrite = TRUE)
 The ARD comes from the ARD spec (§5): `tfl_ard_code(spec, output_id)`
 writes the cards code; `tfl_build_ard()` runs it and saves one study ARD;
 `tfl_ard_for(ard, output_id)` takes one output's rows.
+`tfl_write_ard(ard, "ard.json")` writes a copy as JSON / YAML (one record
+per statistic, each variable's levels in order; `tfl_read_ard()` reads it
+back) or XPT (flat; factors, formats and warnings are lost, with a
+warning); the rds stays the record.
 
 ---
 
@@ -577,7 +581,7 @@ back): rename the value or choose another separator.
 **ARD spec:** `tfl_ard_spec` `tfl_read_ard_spec` `tfl_write_ard_spec`
 `tfl_ard_spec_template` `tfl_ard_code` `tfl_build_ard` `tfl_ard_for`
 `tfl_ard_spec_hash` `tfl_ard_methods` `tfl_ard_statistics`
-`tfl_ard_functions` `tfl_ard_args`
+`tfl_ard_functions` `tfl_ard_args` `tfl_write_ard` `tfl_read_ard`
 
 **CDISC ARS:** `tfl_ars` `tfl_write_ars_json` `tfl_check_ars`
 `tfl_ars_unmapped` `tfl_ars_ard` `tfl_read_ars_json` `tfl_ars_to_specs`

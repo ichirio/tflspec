@@ -1,5 +1,12 @@
 # tflspec (development version)
 
+* **The study ARD as JSON, YAML or XPT** (#99): `tfl_write_ard()` writes a
+  copy -- JSON / YAML as one record per statistic with each variable's levels
+  in their order and the column types, which `tfl_read_ard()` reads back
+  (all but the formatting functions); or cards' nested shape; or XPT
+  (version 8, or 5 with 8-character names).  Each format says in a warning
+  what it does not keep.  The rds stays the record.
+
 * **cards >= 0.8.0 and cardx >= 0.3.1** (#98), stated in DESCRIPTION and
   tested at both ends: CI has a row with exactly those versions, and runs
   every week on what CRAN has now, where a new `ard_*()` the catalog does not
