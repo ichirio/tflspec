@@ -1,5 +1,11 @@
 # tflspec (development version)
 
+* **tflspec is now licensed under the Apache License 2.0** (#90), like
+  rtfreporter and tflplanner, instead of MIT.  `LICENSE` (the MIT template)
+  is replaced by `LICENSE.md` (the licence text); the README has the licence
+  badge and section.  The CDISC ARS JSON Schema in `inst/ars/` keeps its own
+  MIT licence.
+
 * **A manual legend of a KM or waterfall figure was drawn empty** (#88).  The
   style catalog gave the legend panel's columns and height
   (`legend_ncol`, `legend_height`) to swimmer figures only, so the generated

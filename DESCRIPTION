@@ -1,6 +1,6 @@
 Package: tflspec
 Title: Excel Specifications for Clinical Tables, Listings and Figures
-Version: 0.0.24.9025
+Version: 0.0.24.9026
 Authors@R: c(
     person(given  = "Yoichi",
            family = "Masui",
@@ -18,7 +18,7 @@ Description: Reads study specifications written in Excel and produces what a
     functions built on 'ggplot2', are the exception).
 URL: https://github.com/ichirio/tflspec, https://ichirio.github.io/tflspec/
 BugReports: https://github.com/ichirio/tflspec/issues
-License: MIT + file LICENSE
+License: Apache License (>= 2)
 Encoding: UTF-8
 Language: en-GB
 Roxygen: list(markdown = TRUE)
