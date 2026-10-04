@@ -1,5 +1,20 @@
 # tflspec (development version)
 
+* **A manual legend of a KM or waterfall figure was drawn empty** (#88).  The
+  style catalog gave the legend panel's columns and height
+  (`legend_ncol`, `legend_height`) to swimmer figures only, so the generated
+  code of any other figure with `legend_type = "manual"` called
+  `legend_panel(ncol = NA)`: every item was dropped, with ggplot's
+  "Removed N rows containing missing values" warnings (and "Killing locked
+  device" inside the plot).  Both now have a value for every figure type --
+  swimmer's, 3 columns and 0.2 of the plot height -- so the legend is drawn
+  and the generated script runs without warnings.  A manual legend beside
+  the plot (`right` / `left`) now stacks its items in one column, as one
+  inside the plot does, and `legend_panel()` takes `n_rows` so the items
+  keep their size at the top of a panel as tall as the plot instead of
+  being stretched over it.  Mapped legends are unchanged; a swimmer
+  figure's manual legend changes only beside the plot.
+
 * **Authors, copyright and citation** (#86).  `Authors@R` names the author
   in full as the copyright holder, and CDISC as the copyright holder of the
   ARS JSON Schema in `inst/ars/` (MIT, included unchanged; listed in

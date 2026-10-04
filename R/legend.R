@@ -60,7 +60,7 @@ tribble_code <- function(df) {
 legend_panel_fun <- '# Draw a legend panel from a table of items (independent of the plot data).
 #   glyph: "point" (shape / colour / fill), "line" (colour / linetype), "rect" (fill)
 legend_panel <- function(items, ncol = 3, width_chars = 100, text_size = 2.6,
-                         key_size = 2.2, box = FALSE) {
+                         key_size = 2.2, box = FALSE, n_rows = NA) {
   items <- as.data.frame(items)
   n <- nrow(items)
   items$col <- (seq_len(n) - 1) %% ncol
@@ -83,7 +83,8 @@ legend_panel <- function(items, ncol = 3, width_chars = 100, text_size = 2.6,
     scale_shape_identity() + scale_colour_identity() +
     scale_fill_identity() + scale_linetype_identity() +
     coord_cartesian(xlim = c(-1.5, max(sum(w), width_chars)),
-                    ylim = c(min(items$row) - 0.6, 0.6), expand = FALSE) +
+                    ylim = c(min(min(items$row) - 0.6, 0.4 - n_rows, na.rm = TRUE), 0.6),
+                    expand = FALSE) +
     theme_void()
   if (box) p <- p + theme(plot.background = element_rect(colour = "black", fill = "white", linewidth = 0.3))
   p
@@ -150,7 +151,8 @@ pp_legend_code <- function(ctx, auto_parts, fig_width_in) {
   }
   ncol <- as.integer(pp_opt(ctx, "legend_ncol"))
   inside <- pos %in% names(pp_inside_just)
-  if (inside && !is.na(n_items)) ncol <- min(ncol, 1L)
+  # inside the plot or beside it, the items stack in one column
+  if ((inside || pos %in% c("right", "left")) && !is.na(n_items)) ncol <- min(ncol, 1L)
   # legend text is ~17 characters per inch; the panel is ~85% of the figure width
   frac <- if (pos %in% c("right", "left")) pp_opt_num(ctx, "legend_width") else 1
   width_chars <- round(fig_width_in * frac * 17)
@@ -165,8 +167,12 @@ pp_legend_code <- function(ctx, auto_parts, fig_width_in) {
              key_size = pp_opt(ctx, "legend_point_size"))
   sizes <- sizes[!is.na(sizes) & nzchar(sizes)]
   extra <- if (length(sizes)) paste0(", ", names(sizes), " = ", sizes, collapse = "") else ""
-  call <- sprintf("p_legend <- legend_panel(legend_items, ncol = %d, width_chars = %d%s%s)",
-                  ncol, width_chars, extra, if (inside) ", box = TRUE" else "")
+  # beside the plot the panel is as tall as the plot: rows of a fixed height
+  # (n_rows to the panel), the items at the top, not stretched over it
+  side <- pos %in% c("right", "left")
+  call <- sprintf("p_legend <- legend_panel(legend_items, ncol = %d, width_chars = %d%s%s%s)",
+                  ncol, width_chars, extra, if (inside) ", box = TRUE" else "",
+                  if (side) ", n_rows = 20" else "")
   pre <- c(legend_panel_fun,
            sprintf("# ---- legend: manual (%s) - edit the items freely ----", source),
            items_code, call)
