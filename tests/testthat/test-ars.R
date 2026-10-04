@@ -258,3 +258,44 @@ test_that("strata are groupings in ARS; a denominator other than the analysis se
   expect_true(any(un$item == "args" & grepl("fmt_fun = NULL", un$reason,
                                             fixed = TRUE)))
 })
+
+test_that("a function's method carries its call, its file and its statistics", {
+  dir <- withr::local_tempdir()
+  dir.create(file.path(dir, "R"))
+  writeLines(c(
+    "helper <- 1",
+    "ard_mine <- cards::as_cards_fn(",
+    "  function(data, by, variables, ...) stop(\"not run here\"),",
+    "  stat_names = c(\"statistic\", \"p.value\"))"),
+    file.path(dir, "R", "ard_mine.R"))
+  # (ars_spec() builds the spec before `source` is added: its warning about
+  # an own function with no source is expected here)
+  sp <- suppressWarnings(ars_spec(ars_df(
+    list(output_id = "T1", analysis_id = "W", method = "ard_mine",
+         population_id = "SAF", by = "TRT01A", variables = "AGE",
+         args = "exact = FALSE"),
+    list(output_id = "T1", analysis_id = "S", method = "cards::ard_summary",
+         population_id = "SAF", by = "TRT01A", variables = "AGE"))))
+  sp$study <- rbind(sp$study, data.frame(key = "source", value = "R/ard_mine.R"))
+  ars <- tfl_ars(sp, dir = dir)
+  m <- Filter(function(m) grepl("ard_mine", m$codeTemplate$code %||% ""),
+              ars$methods)[[1L]]
+  code <- m$codeTemplate$code
+  # where it is defined, and the call the ARD program makes
+  expect_match(code, "# ard_mine(): R/ard_mine.R", fixed = TRUE)
+  expect_match(code, "ard_mine(data", fixed = TRUE)
+  expect_match(code, "by = TRT01A", fixed = TRUE)
+  expect_match(code, "exact = FALSE", fixed = TRUE)
+  # its operations: the statistics it declares (as_cards_fn(stat_names = ))
+  ops <- vapply(m$operations, function(o) o$label %||% o$name, "")
+  expect_setequal(ops, c("statistic", "p.value"))
+  # a package's function: its call too, instead of "f(...)"
+  s <- Filter(function(m) grepl("cards::ard_summary", m$codeTemplate$code %||% ""),
+              ars$methods)[[1L]]
+  expect_match(s$codeTemplate$code, "cards::ard_summary(data", fixed = TRUE)
+  # without the folder: the call, no file, the default operation
+  ars0 <- tfl_ars(sp, dir = withr::local_tempdir())
+  m0 <- Filter(function(m) grepl("ard_mine", m$codeTemplate$code %||% ""),
+               ars0$methods)[[1L]]
+  expect_false(grepl("R/ard_mine.R", m0$codeTemplate$code, fixed = TRUE))
+})
