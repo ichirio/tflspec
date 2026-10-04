@@ -1,5 +1,11 @@
 # tflspec (development version)
 
+* **ARS: a report with no analyses is listed, not dropped** (#123): a report
+  of user code that does not read the ARD, a listing, or a table not defined
+  yet has no analyses, so it is not an ARS output; `tfl_ars_unmapped()` now
+  says so (item `output`), with the reason by its type.  A user-code report
+  that reads the ARD is an output with its analyses, as a table is.
+
 * **A parent row's arguments say the columns they are written in** (#113):
   `tfl_ard_args()` gave `ard_stack(.by =)`, `ard_strata(.by =, .strata =)`
   and `ard_pairwise(variable =)` the column `args`, though the generated code

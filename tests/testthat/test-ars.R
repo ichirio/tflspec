@@ -258,3 +258,22 @@ test_that("strata are groupings in ARS; a denominator other than the analysis se
   expect_true(any(un$item == "args" & grepl("fmt_fun = NULL", un$reason,
                                             fixed = TRUE)))
 })
+
+test_that("a report of user code: with analyses it is an output, without them it is listed", {
+  rs <- list(report = ars_df(
+    list(output_id = "DM", type = "table", file = "t.rtf"),
+    list(output_id = "AE", type = "user", file = "u.rtf"),
+    list(output_id = "U2", type = "user", file = "u2.rtf"),
+    list(output_id = "L1", type = "listing", file = "l.rtf"),
+    list(output_id = "T9", type = "table", file = "t9.rtf")))
+  ars <- tfl_ars(dm_ae(), report_spec = rs)
+  # a user-code report that reads the ARD (AE) has its analyses, as a table
+  expect_identical(vapply(ars$outputs, `[[`, "", "id"), c("DM", "AE"))
+  # the others are not ARS outputs, and the list says why
+  un <- tfl_ars_unmapped(ars)
+  why <- function(o) un$reason[un$where == o & un$item == "output"]
+  expect_match(why("U2"), "user code")
+  expect_match(why("L1"), "listing")
+  expect_match(why("T9"), "no analyses")
+  expect_identical(nrow(tfl_check_ars(ars, schema = FALSE)), 0L)
+})
