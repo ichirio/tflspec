@@ -6,7 +6,11 @@
   column of the data read becomes a factor in the code list's order, so the
   ARD keeps the order and **counts a level no record has** (`n = 0`): a
   table made from it shows that level's row with 0.  Without `codelists`, as
-  before.
+  before.  To leave those rows out of one table, the `variables` sheet has a
+  new column **`empty_levels`** (`show`, the default, or `hide`): `hide`
+  writes `plan_levels(.drop_empty = )` (rtfreporter >= 0.8.2.9015, now
+  required), which drops a value counted 0 in every column.  The ARD keeps
+  every level either way; `tfl_as_table_spec()` gives the column back.
 
 * **The ARD keywords call cards' current names** (#104): `continuous`,
   `categorical` and `dichotomous` (and the `subjects` flag) write

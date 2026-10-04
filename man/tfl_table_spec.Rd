@@ -126,6 +126,10 @@ page's, with a warning when the ARD states both.  See
 \item{\code{label}}{Display text replacing the variable's name.}
 \item{\code{order}}{Number; the order the variables appear in.}
 \item{\code{levels}}{The order of its values: \verb{Grade 0 | Grade 1 | Total}.}
+\item{\code{empty_levels}}{\code{show} (blank, the default) or \code{hide}: whether
+its values that no record has -- a code list's value, counted 0 in
+every column of an ARD made with the study's code lists -- get a row
+(\code{plan_levels(.drop_empty = )}).}
 }
 }
 

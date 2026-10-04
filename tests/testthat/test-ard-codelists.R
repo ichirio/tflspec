@@ -35,3 +35,36 @@ test_that("code lists make the listed columns factors before the analyses", {
   cl2 <- cl; cl2$output_id <- "T1"
   expect_null(.codelist_levels(cl2))
 })
+
+test_that("variables$empty_levels = hide leaves out the values no record has", {
+  skip_if_not_installed("cards")
+  skip_if(utils::packageVersion("rtfreporter") < "0.8.2.9015")
+  adsl <- data.frame(
+    USUBJID = 1:6, TRT = rep(c("A", "B"), 3),
+    RACE = factor(c("WHITE", "WHITE", "ASIAN", "WHITE", "ASIAN", "WHITE"),
+                  levels = c("WHITE", "ASIAN", "OTHER")))
+  d <- suppressMessages(rtfreporter::normalize_ard(
+    cards::ard_tabulate(adsl, by = TRT, variables = RACE)))
+  tab <- function(v) {
+    sp <- tfl_table_spec(tables = data.frame(cols = "TRT"), variables = v)
+    p <- tfl_table_plan(d, sp) |> rtfreporter::plan_cells(notes = FALSE)
+    as.character(suppressMessages(rtfreporter::plan_apply(p, "table"))$label)
+  }
+  # the default (and `show`): every value of the code list has its row
+  expect_identical(tab(data.frame(variable = "RACE", label = "Race")),
+                   c("WHITE", "ASIAN", "OTHER"))
+  expect_identical(tab(data.frame(variable = "RACE", empty_levels = "show")),
+                   c("WHITE", "ASIAN", "OTHER"))
+  hide <- data.frame(variable = "RACE", empty_levels = "hide")
+  expect_identical(tab(hide), c("WHITE", "ASIAN"))
+  # the code says so, and a plan gives the column back
+  sp <- tfl_table_spec(tables = data.frame(cols = "TRT"), variables = hide)
+  expect_true(any(grepl(".drop_empty = \"RACE\"", tfl_table_code(sp),
+                        fixed = TRUE)))
+  back <- suppressMessages(tfl_as_table_spec(tfl_table_plan(d, sp), "T1"))
+  expect_identical(back$variables$empty_levels[back$variables$variable == "RACE"],
+                   "hide")
+  expect_error(tfl_table_spec(tables = data.frame(cols = "TRT"),
+    variables = data.frame(variable = "RACE", empty_levels = "no")),
+    "empty_levels")
+})

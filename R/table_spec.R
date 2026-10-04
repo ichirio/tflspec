@@ -184,7 +184,8 @@
   list(
     tables    = c("output_id", "cols", "rows", "label", "stats", "value",
                   "sep", "sort", "sort_stat", "na", "header_n"),
-    variables = c("output_id", "variable", "label", "order", "levels"),
+    variables = c("output_id", "variable", "label", "order", "levels",
+                  "empty_levels"),
     # the study's code list: a value's text and place
     codelists = c("output_id", "variable", "value", "label", "order"),
     cells     = c("output_id", "variable", "context", "row", "when",
@@ -546,6 +547,10 @@
 #'   \item{`label`}{Display text replacing the variable's name.}
 #'   \item{`order`}{Number; the order the variables appear in.}
 #'   \item{`levels`}{The order of its values: `Grade 0 | Grade 1 | Total`.}
+#'   \item{`empty_levels`}{`show` (blank, the default) or `hide`: whether
+#'     its values that no record has -- a code list's value, counted 0 in
+#'     every column of an ARD made with the study's code lists -- get a row
+#'     (`plan_levels(.drop_empty = )`).}
 #' }
 #'
 #' @section `cells`:
@@ -740,6 +745,12 @@ tfl_table_spec <- function(tables = NULL, variables = NULL, cells = NULL,
   chk(t$value, c("stat", "stat_fmt"), "value")
   if (any(is.na(sp$variables$variable))) {
     .ard_stop("Every `variables` row needs a `variable`.")
+  }
+  el <- tolower(trimws(sp$variables$empty_levels))
+  if (any(!is.na(el) & !el %in% c("show", "hide"))) {
+    .ard_stop(sprintf("`variables$empty_levels` must be 'show' or 'hide'; got %s.",
+                      sQuote(sp$variables$empty_levels[!is.na(el) &
+                        !el %in% c("show", "hide")][1L])))
   }
   # a row with no template is a stats = rows display format, which needs
   # the format it is there to give
@@ -999,6 +1010,16 @@ print.tfl_table_spec <- function(x, ...) {
     return(unlist(out))
   }
   out
+}
+
+# plan_levels(.drop_empty = ): the variables whose values no record has
+# are not shown (variables$empty_levels = hide).
+.ard_spec_drop_empty <- function(sp) {
+  v <- sp$variables
+  if (is.null(v$empty_levels)) return(NULL)
+  hide <- !is.na(v$empty_levels) & tolower(trimws(v$empty_levels)) == "hide"
+  out <- unique(v$variable[hide])
+  if (length(out)) out
 }
 
 # plan_levels(): a variable's own `levels` (variables sheet), else the code
@@ -1729,13 +1750,15 @@ tfl_as_table_spec <- function(x, output_id = NULL, compare = TRUE) {
     }
     lbl <- unlist(lbl[plain])
   }
-  vars <- unique(c(names(lbl), names(s$levels)))
+  hide <- unique(unlist(ly$levels$drop_empty))
+  vars <- unique(c(names(lbl), names(s$levels), hide))
   variables <- data.frame(
     output_id = rep(id, length(vars)), variable = vars,
     label = unname(ifelse(vars %in% names(lbl), lbl[vars], NA_character_)),
     order = ifelse(vars %in% names(lbl), match(vars, names(lbl)), NA),
     levels = vapply(vars, function(v)
       if (is.null(s$levels[[v]])) NA_character_ else bar(s$levels[[v]]), ""),
+    empty_levels = ifelse(vars %in% hide, "hide", NA_character_),
     stringsAsFactors = FALSE)
 
   # -- cells ------------------------------------------------------------------
