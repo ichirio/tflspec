@@ -88,7 +88,7 @@
     return(paste0(
       sprintf("population$%s <- population$%s %%in%% data$%s\n", flag, subj,
               subj),
-      sprintf("cards::ard_dichotomous(population%s, variables = %s, value = list(%s = TRUE)%s%s%s)",
+      sprintf("cards::ard_tabulate_value(population%s, variables = %s, value = list(%s = TRUE)%s%s%s)",
               if (!is.null(by)) paste0(", by = ", by) else "", flag, flag,
               if (!is.null(st)) paste0(", ", st) else "",
               if (length(own)) paste0(", ", paste(own, collapse = ", ")) else "",

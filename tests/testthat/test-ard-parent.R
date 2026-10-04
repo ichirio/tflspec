@@ -34,8 +34,8 @@ test_that("a stack is one ard_stack() call, each variable tagged with its analys
   txt <- paste(code, collapse = "\n")
   expect_match(txt, "ard <- cards::ard_stack(pop_saf,", fixed = TRUE)
   expect_match(txt, ".by = ARM", fixed = TRUE)
-  expect_match(txt, "cards::ard_continuous(variables = c(AGE, BMIBL)", fixed = TRUE)
-  expect_match(txt, "cards::ard_categorical(variables = SEX", fixed = TRUE)
+  expect_match(txt, "cards::ard_summary(variables = c(AGE, BMIBL)", fixed = TRUE)
+  expect_match(txt, "cards::ard_tabulate(variables = SEX", fixed = TRUE)
   expect_match(txt, "c(`AGE` = \"CONT\", `BMIBL` = \"CONT\", `SEX` = \"CAT\", `.other` = \"DEMO\")",
                fixed = TRUE)
   # one call, not three
@@ -75,7 +75,7 @@ test_that("ard_strata() and ard_pairwise() run their one analysis with .x", {
     list(analysis_id = "TT", parent = "PAIRS", method = "ttest", by = "ARM",
          variables = "AGE", statistics = "estimate | p.value")))
   txt <- paste(tfl_ard_code(sp, part = "body"), collapse = "\n")
-  expect_match(txt, "cards::ard_strata(pop_saf,\n    .strata = SEX,\n    .f = ~ cards::ard_continuous(.x,",
+  expect_match(txt, "cards::ard_strata(pop_saf,\n    .strata = SEX,\n    .f = ~ cards::ard_summary(.x,",
                fixed = TRUE)
   expect_match(txt, "cards::ard_pairwise(pop_saf,\n    variable = ARM,\n    .f = ~ cardx::ard_stats_t_test(.x,",
                fixed = TRUE)

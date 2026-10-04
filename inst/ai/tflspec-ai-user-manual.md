@@ -208,8 +208,8 @@ argument is written in one place: a column, or `args`, never both.
   `cards::ard_pairwise` (each pair of the levels of its one `variables`).
   The rows inside leave `dataset` / `population_id` / `where` (and in a
   stack `by`) blank: they are the parent's. The program writes one call,
-  `cards::ard_stack(pop_saf, .by = ARM, cards::ard_continuous(variables =
-  c(AGE, BMIBL)), cards::ard_categorical(variables = SEX))`, and tags each
+  `cards::ard_stack(pop_saf, .by = ARM, cards::ard_summary(variables =
+  c(AGE, BMIBL)), cards::ard_tabulate(variables = SEX))`, and tags each
   variable's rows with its own analysis (the stack's own rows with the
   parent's id). ARS gets each row inside as an analysis of its own.
 - `post`: steps on the ARD after the call, the ARD left out, `|` between
