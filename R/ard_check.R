@@ -14,10 +14,11 @@
 #' For an ARD made elsewhere and taken in (a report's `ard_source` is
 #' `import:<file>`).  Checks, each a row of the result:
 #'
-#' * **shape**: the columns every ARD has (`variable`, `stat_name`, `stat`),
-#'   each `groupN` with its `groupN_level`; with cards installed, its own
-#'   [cards::check_ard_structure()] (as notes); an old column name
-#'   (`fmt_fn`, now `fmt_fun`).
+#' * **shape**: the columns every ARD has (`variable`, `stat_name`, `stat`);
+#'   with cards installed, its own [cards::check_ard_structure()] (as notes,
+#'   less its wish for `method` rows, which no report reads); an old column
+#'   name (`fmt_fn`, now `fmt_fun`).  A `groupN` without `groupN_level` is
+#'   a result across the groups (a test), as cardx gives it.
 #' * with `spec`, the report's table definition: the columns its `tables`
 #'   roles name (`cols`, `rows`) are in the ARD (as a group or a variable),
 #'   the variables its `cells` name are analysed, and the statistics its
@@ -48,12 +49,9 @@ tfl_check_ard <- function(ard, spec = NULL, output_id = NULL) {
                                   paste(need, collapse = ", ")))
     return(out)
   }
+  # a groupN with no groupN_level is a result across the groups (a test:
+  # cardx's own ard_stats_*() give that shape), not a broken ARD
   g <- grep("^group[0-9]+$", names(ard), value = TRUE)
-  for (k in g) {
-    if (!paste0(k, "_level") %in% names(ard)) {
-      add("error", "shape", sprintf("%s has no %s_level", k, k))
-    }
-  }
   if ("fmt_fn" %in% names(ard) && !"fmt_fun" %in% names(ard)) {
     add("note", "shape", "the column fmt_fn has cards' old name (fmt_fun since cards 0.6.1)")
   }
@@ -70,7 +68,10 @@ tfl_check_ard <- function(ard, spec = NULL, output_id = NULL) {
           msg <<- c(msg, trimws(conditionMessage(m)))
           invokeRestart("muffleMessage")
         })
-      msg <- msg[nzchar(msg) & !grepl("tidy_ard_column_order", msg, fixed = TRUE)]
+      # cards asks for the `method` rows its own ard_*() add: a report
+      # never reads them, and an ARD written and read back has none
+      msg <- msg[nzchar(msg) & !grepl("tidy_ard_column_order", msg, fixed = TRUE) &
+                   !grepl("stat_name = 'method'", msg, fixed = TRUE)]
       for (m in unique(msg)) add("note", "cards", m)
     }
   }

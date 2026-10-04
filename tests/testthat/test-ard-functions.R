@@ -171,4 +171,25 @@ test_that("every other exported function of cards / cardx has a decided use", {
                                    ": decide the use of ", paste(new, collapse = ", "),
                                    " in inst/ard/utilities.csv"))
   }
+
+test_that("two outputs with the same statistics keep their own rows", {
+  # the study ARD is bound with dplyr::bind_rows(), not cards::bind_ard():
+  # bind_ard() does not count output_id / analysis_id as part of a row's key,
+  # so the same statistic in two outputs stops it (different values) or loses
+  # one output's rows (the same values)
+  skip_on_cran()
+  skip_if_not_installed("cards")
+  adam <- exact_data()
+  dir <- exact_dir(adam)
+  sp <- exact_spec(list(method = "continuous", dataset = "ADSL",
+                        population_id = "SAF", by = "ARM", variables = "AGE"))
+  two <- sp$analyses
+  two$output_id <- "T2"
+  sp$analyses <- rbind(sp$analyses, two)
+  ard <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE))
+  n <- table(ard$output_id)
+  expect_identical(names(n), c("T", "T2"))
+  expect_identical(n[["T"]], n[["T2"]])
+  expect_identical(exact_numbers(tfl_ard_for(ard, "T")),
+                   exact_numbers(tfl_ard_for(ard, "T2")))
 })
