@@ -14,7 +14,9 @@ tfl_check_ard_function(fun, data, ..., stat_names = NULL)
 \item{...}{Its other arguments, as an analysis row would give them
 (unquoted column names are passed as they are).}
 
-\item{stat_names}{The statistics it should give (\code{NULL}: not checked).}
+\item{stat_names}{The statistics it should give; \code{NULL} (default):
+the ones the function declares (\code{attr(fun, "stat_names")}, as
+\code{\link[cards:as_cards_fn]{cards::as_cards_fn()}} sets it), if any.}
 }
 \value{
 A data frame of problems as \code{\link[=tfl_check_ard]{tfl_check_ard()}} (\code{level}, \code{check},
@@ -24,10 +26,15 @@ A data frame of problems as \code{\link[=tfl_check_ard]{tfl_check_ard()}} (\code
 \description{
 Calls \code{fun(data, ...)} and checks what it gives: a cards ARD (class
 \code{card}, \code{\link[cards:check_ard_structure]{cards::check_ard_structure()}} as notes), the columns every ARD
-has, and -- with \code{stat_names} -- those statistics among its rows.  An
-error or a warning in the call is reported, not raised.
+has, and the statistics it says it gives among its rows.  An error or a
+warning in the call is reported, not raised.
 }
 \details{
+A function says which statistics it gives the way cards' own do:
+\code{cards::as_cards_fn(fun, stat_names = c("estimate", "p.value"))} (the
+templates of \code{\link[=tfl_ard_function_template]{tfl_ard_function_template()}} are written so).  One that
+says nothing is tried all the same, with a note.
+
 An analysis row calls the function as \verb{fun(<the analysis data>, by = , variables = , <args>)} (see \code{\link[=tfl_ard_methods]{tfl_ard_methods()}}), so try it the same way:
 \code{tfl_check_ard_function(ard_riskdiff_mn, adsl, by = TRT01A, variables = AEFL)}.
 }
