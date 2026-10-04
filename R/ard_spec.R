@@ -34,8 +34,8 @@
   analyses = c("output_id", "analysis_id", "parent", "label", "method",
                "dataset",
                "population_id", "where", "by", "strata", "variables",
-               "statistics", "denominator", "formats", "args", "code",
-               "purpose", "reason"))
+               "statistics", "denominator", "formats", "args", "post",
+               "code", "purpose", "reason"))
 
 .split_bar <- function(x) {
   if (is.null(x) || is.na(x) || !nzchar(trimws(x))) return(character())
@@ -259,6 +259,18 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
                                       paste(unique(paste(a$output_id, a$analysis_id)[dup]),
                                             collapse = ", ")))
   err <- c(err, .ard_parent_problems(a))
+  for (i in which(!is.na(a$post %||% rep(NA, nrow(a))))) {
+    tag <- paste(a$output_id[i], a$analysis_id[i], sep = " / ")
+    if (!is.na(a$parent[i] %||% NA)) {
+      err <- c(err, sprintf(paste(
+        "%s: `post` works on an analysis's ARD; inside %s it goes on the",
+        "parent's row"), tag, a$parent[i]))
+    }
+    for (st in .split_post(a$post[i])) {
+      p <- .post_problem(st)
+      if (!is.null(p)) err <- c(err, sprintf("%s: `post` %s", tag, p))
+    }
+  }
   m <- stats::na.omit(a$method)
   known <- m %in% tfl_ard_methods()$method
   pkgfun <- grepl("^[A-Za-z.][A-Za-z0-9.]*::[A-Za-z._][A-Za-z0-9._]*$", m)
@@ -455,6 +467,52 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   a$parent <- NA_character_
   rownames(a) <- NULL
   a
+}
+
+# The `post` column: steps on the ARD after the call, each a call whose
+# first argument -- the ARD -- is left out
+# (`cards::add_calculated_row(expr = sd / sqrt(N), stat_name = "se")`),
+# `|` between them.  A `|` inside a call (an R "or") is the call's.
+.split_post <- function(x) {
+  if (is.null(x) || is.na(x) || !nzchar(trimws(x))) return(character())
+  ch <- strsplit(x, "", fixed = TRUE)[[1L]]
+  depth <- cumsum(ch %in% c("(", "[", "{")) - cumsum(ch %in% c(")", "]", "}"))
+  quote <- character()
+  cut <- integer()
+  for (i in seq_along(ch)) {
+    if (length(quote)) {
+      if (ch[i] == quote && (i == 1L || ch[i - 1L] != "\\")) quote <- character()
+      next
+    }
+    if (ch[i] %in% c("\"", "'")) quote <- ch[i]
+    else if (ch[i] == "|" && depth[i] == 0L) cut <- c(cut, i)
+  }
+  parts <- substring(x, c(1L, cut + 1L), c(cut - 1L, nchar(x)))
+  parts <- trimws(parts)
+  parts[nzchar(parts)]
+}
+
+# what is wrong with one step of `post`, or NULL
+.post_problem <- function(step) {
+  e <- tryCatch(str2lang(step), error = function(e) NULL)
+  fn <- if (is.call(e)) paste(deparse(e[[1L]]), collapse = "") else ""
+  named <- grepl("^([A-Za-z.][A-Za-z0-9._]*:::?)?[A-Za-z.][A-Za-z0-9._]*$", fn)
+  if (!named) {
+    return(sprintf("`%s` is not a call (a function with its arguments, the ARD left out)",
+                   step))
+  }
+  f <- tryCatch(eval(e[[1L]]), error = function(e) NULL)
+  if (is.function(f) && !length(formals(f))) {
+    return(sprintf("%s takes no ARD", fn))
+  }
+  NULL
+}
+
+# the program's lines for `post`: the ARD piped through each step
+.post_lines <- function(post) {
+  st <- .split_post(post)
+  if (!length(st)) return(NULL)
+  c("ard <- ard |>", paste0("  ", st, c(rep(" |>", length(st) - 1L), "")))
 }
 
 .study_value <- function(x, key, default) {
@@ -867,7 +925,7 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
     code <- c(code,
               sprintf("# %s / %s%s", r$output_id, r$analysis_id,
                       if (!is.na(r$label)) paste(":", r$label) else ""),
-              core,
+              core, .post_lines(r$post),
               if (length(keep)) sprintf("ard <- .keep(ard, c(%s))",
                                         paste(encodeString(keep, quote = "\""),
                                               collapse = ", ")),
@@ -957,7 +1015,7 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
   c(sprintf("# %s / %s%s: %s", r$output_id, r$analysis_id,
             if (!is.na(r$label)) paste(":", r$label) else "",
             paste(kids$analysis_id, collapse = ", ")),
-    core,
+    core, .post_lines(r$post),
     if (length(keep)) sprintf("ard <- .keep(ard, c(%s))",
                               paste(encodeString(keep, quote = "\""),
                                     collapse = ", ")),

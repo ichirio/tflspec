@@ -467,6 +467,11 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
       miss(tag, "formats",
            "display formats are the table's, not ARS analysis metadata")
     }
+    if (!is.na(r$post %||% NA)) {
+      miss(tag, "post", sprintf(
+        "`%s`: ARS has no place for steps on the results after the method",
+        r$post))
+    }
     opt <- NULL
     code <- NULL
     over <- FALSE

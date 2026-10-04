@@ -204,6 +204,11 @@ argument is written in one place: a column, or `args`, never both.
   c(AGE, BMIBL)), cards::ard_categorical(variables = SEX))`, and tags each
   variable's rows with its own analysis (the stack's own rows with the
   parent's id). ARS gets each row inside as an analysis of its own.
+- `post`: steps on the ARD after the call, the ARD left out, `|` between
+  them — `cards::add_calculated_row(expr = sd / sqrt(N), stat_name = "se")`,
+  `cards::filter_ard_hierarchical(p > 0.05)`, `cards::sort_ard_hierarchical()`.
+  Written as `ard <- ard |> step1 |> step2`. Not on a row inside a parent
+  (put it on the parent).
 - `denominator`: what percentages are of — `population` (the analysis
   set; `hierarchical` and `max` take it anyway), `row` / `column` / `cell`
   (cards), another population, or a dataset (its records of the analysis

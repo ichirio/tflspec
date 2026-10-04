@@ -1,5 +1,13 @@
 # tflspec (development version)
 
+* **Steps on the ARD after the call: the `post` column** (#97).  Calls
+  with the ARD left out, `|` between them, piped after the analysis:
+  `cards::add_calculated_row(expr = sd / sqrt(N), stat_name = "se")` (a
+  statistic computed from others), `cards::filter_ard_hierarchical(p > 0.05)`,
+  `cards::sort_ard_hierarchical()`, `cards::diff_ard_hierarchical()`, or a
+  function of one's own.  `tfl_ars()` lists it as unmapped.  Blank: as
+  before.
+
 * **Analyses run inside another: the `parent` column** (#96).  A row of
   the `analyses` sheet whose `parent` names an analysis with method
   `cards::ard_stack`, `cards::ard_strata` or `cards::ard_pairwise` is run

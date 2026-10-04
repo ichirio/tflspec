@@ -149,3 +149,32 @@ test_that("tfl_ars() writes the analyses inside a stack", {
   expect_true(all(c("An_T_CONT_AGE", "An_T_CONT_BMIBL") %in% ids))
   expect_false(any(grepl("DEMO", ids)))
 })
+
+test_that("post: steps on the ARD after the call", {
+  skip_on_cran()
+  skip_if_not_installed("cards")
+  adam <- exact_data()
+  dir <- exact_dir(adam)
+  sp <- parent_spec(list(list(
+    analysis_id = "CONT", method = "continuous", dataset = "ADSL",
+    population_id = "SAF", by = "ARM", variables = "AGE",
+    statistics = "N | mean | sd",
+    post = "cards::add_calculated_row(expr = sd / sqrt(N), stat_name = \"se\")")))
+  txt <- paste(tfl_ard_code(sp, part = "body"), collapse = "\n")
+  expect_match(txt, "ard <- ard |>\n  cards::add_calculated_row(expr = sd / sqrt(N), stat_name = \"se\")",
+               fixed = TRUE)
+  ard <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE))
+  se <- unlist(ard$stat[ard$stat_name == "se"])
+  sd <- unlist(ard$stat[ard$stat_name == "sd"])
+  n <- unlist(ard$stat[ard$stat_name == "N"])
+  expect_equal(se, sd / sqrt(n))
+  # a | inside a call is the call's; two steps
+  expect_identical(.split_post("f(a | b) | g(x = \"|\")"), c("f(a | b)", "g(x = \"|\")"))
+  expect_error(parent_spec(list(list(analysis_id = "A", method = "continuous",
+                                     dataset = "ADSL", variables = "AGE",
+                                     post = "sd / 2"))), "is not a call")
+  expect_error(parent_spec(list(
+    list(analysis_id = "S", method = "cards::ard_stack", dataset = "ADSL", by = "ARM"),
+    list(analysis_id = "A", parent = "S", method = "continuous", variables = "AGE",
+         post = "cards::sort_ard_hierarchical()"))), "goes on the parent's row")
+})
