@@ -61,3 +61,32 @@ test_that("tfl_check_ard_function() tries a function of one's own", {
   expect_identical(p$check, "call")
   expect_match(p$message, "no such column")
 })
+
+test_that("tfl_ard_conditions() lists what went wrong, one row per message", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  adsl <- cards::ADSL
+  # a test that needs two groups, given three; a statistic that stops; one
+  # that warns
+  a <- cardx::ard_stats_t_test(adsl, by = ARM, variables = AGE)
+  b <- cards::ard_summary(adsl, variables = AGE, statistic = ~ list(
+    bad = function(x) stop("boom"),
+    w = function(x) { warning("careful"); 1 }))
+  x <- cards::bind_ard(a, b)
+  x$output_id <- "T1"
+  x$analysis_id <- rep(c("TTEST", "AGE"), c(nrow(a), nrow(b)))
+  d <- tfl_ard_conditions(x)
+  expect_identical(names(d), c("output_id", "analysis_id", "variable", "groups",
+                               "level", "message", "statistics"))
+  expect_identical(d$level, c("error", "error", "warning"))
+  expect_identical(d$analysis_id, c("TTEST", "AGE", "AGE"))
+  expect_identical(d$groups, c("ARM", "", ""))
+  expect_match(d$message[1], "exactly 2 levels")
+  expect_match(d$statistics[1], "^estimate, ")
+  expect_identical(d$statistics[2:3], c("bad", "w"))
+  # nothing wrong: no rows, the same columns
+  ok <- tfl_ard_conditions(cards::ard_summary(adsl, variables = AGE))
+  expect_identical(nrow(ok), 0L)
+  expect_identical(names(ok), c("variable", "groups", "level", "message",
+                                "statistics"))
+})

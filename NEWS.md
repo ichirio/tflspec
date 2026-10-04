@@ -1,5 +1,14 @@
 # tflspec (development version)
 
+* **`tfl_ard_conditions()`**: what went wrong while an ARD was made, as a
+  table.  cards does not stop when one analysis fails (a test given three
+  groups, a statistic whose function stops or warns): it leaves the message
+  in the ARD's `error` / `warning` column and carries on, so a study ARD can
+  look complete with an analysis missing.  One row per analysis, variable,
+  groups and message, with the statistics it is about -- what
+  `cards::print_ard_conditions()` prints, with `output_id` / `analysis_id`.
+  For the ARD tab's list of problems (tflplanner).
+
 * **The report spec's `type` names `user`** (#108): a report whose own code
   leaves `content` (a data frame, rtftable pages, rtfplot figures or a
   list of them), dressed by the report spec as a table is (`rtf_tables()`
