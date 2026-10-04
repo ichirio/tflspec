@@ -45,6 +45,7 @@ reference:
       - tfl_write_ard
       - tfl_read_ard
       - tfl_check_ard
+      - tfl_check_ard_function
   - title: CDISC ARS
     desc: The analyses as CDISC's Analysis Results Standard, and back.
     contents:

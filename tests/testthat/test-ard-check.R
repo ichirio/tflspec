@@ -39,3 +39,25 @@ test_that("report$ard_source is blank or import:<file>", {
                                                   ard_source = "cro.json")),
                "import:<file>")
 })
+
+test_that("tfl_check_ard_function() tries a function of one's own", {
+  skip_if_not_installed("cards")
+  good <- function(data, by, variables, ...) {
+    cards::ard_summary(data, by = {{ by }}, variables = {{ variables }},
+                       statistic = ~ cards::continuous_summary_fns(c("N", "mean")))
+  }
+  p <- tfl_check_ard_function(good, cards::ADSL, by = ARM, variables = AGE,
+                              stat_names = c("N", "mean"))
+  expect_identical(p$level[p$level != "note"], character())
+  expect_s3_class(attr(p, "ard"), "card")
+  p <- tfl_check_ard_function(good, cards::ADSL, by = ARM, variables = AGE,
+                              stat_names = c("N", "sd"))
+  expect_true(any(p$check == "statistics" & grepl("sd", p$message)))
+  plain <- function(data, ...) data.frame(x = 1)
+  p <- tfl_check_ard_function(plain, cards::ADSL)
+  expect_true(any(p$check == "result" & p$level == "error"))
+  boom <- function(data, ...) stop("no such column")
+  p <- tfl_check_ard_function(boom, cards::ADSL)
+  expect_identical(p$check, "call")
+  expect_match(p$message, "no such column")
+})

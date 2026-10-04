@@ -1,5 +1,10 @@
 # tflspec (development version)
 
+* **Try an ARD function of one's own** (#102): `tfl_check_ard_function(fun,
+  data, by = , variables = , stat_names = )` calls it as an analysis row
+  would and reports what is wrong -- an error or warning in the call, a
+  result that is not a cards ARD, the statistics it should give.
+
 * **An ARD made elsewhere** (#101): the `report` sheet's `ard_source` says
   where a report's ARD comes from -- blank, its own ARD definition;
   `import:<file>`, an ARD taken into the study's `input/ard/`.

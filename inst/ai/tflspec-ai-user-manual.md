@@ -583,7 +583,7 @@ back): rename the value or choose another separator.
 **ARD spec:** `tfl_ard_spec` `tfl_read_ard_spec` `tfl_write_ard_spec`
 `tfl_ard_spec_template` `tfl_ard_code` `tfl_build_ard` `tfl_ard_for`
 `tfl_ard_spec_hash` `tfl_ard_methods` `tfl_ard_statistics`
-`tfl_ard_functions` `tfl_ard_args` `tfl_write_ard` `tfl_read_ard` `tfl_check_ard`
+`tfl_ard_functions` `tfl_ard_args` `tfl_write_ard` `tfl_read_ard` `tfl_check_ard` `tfl_check_ard_function`
 
 **CDISC ARS:** `tfl_ars` `tfl_write_ars_json` `tfl_check_ars`
 `tfl_ars_unmapped` `tfl_ars_ard` `tfl_read_ars_json` `tfl_ars_to_specs`
