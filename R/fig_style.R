@@ -27,6 +27,8 @@
     s(NA, "axis_text_size", "8", "axis tick labels (pt)"),
     s(NA, "legend_text_size", "9", "legend text (pt)"),
     s(NA, "legend_key_size", "0.7", "legend key size (lines)"),
+    s(NA, "legend_ncol", "3", "manual legend panel: columns"),
+    s(NA, "legend_height", "0.2", "manual legend panel / plot height"),
     s(NA, "text_size", "3", "text drawn in the panel (mm, geom_text size)"),
     s(NA, "theme", "boxed", "boxed | L_axis | minimal | classic"),
     s(NA, "panel_border_width", "0.5", "boxed: panel border (mm)"),

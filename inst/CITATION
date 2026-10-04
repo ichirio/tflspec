@@ -1,0 +1,13 @@
+bibentry(
+  bibtype  = "Manual",
+  title    = "{tflspec}: Excel Specifications for Clinical Tables, Listings and Figures",
+  author   = person("Yoichi", "Masui"),
+  year     = "2026",
+  note     = paste("R package version", meta$Version),
+  url      = "https://github.com/ichirio/tflspec",
+  textVersion = paste0(
+    "Masui Y (2026). tflspec: Excel Specifications for Clinical Tables, ",
+    "Listings and Figures. R package version ", meta$Version, ". ",
+    "https://github.com/ichirio/tflspec"
+  )
+)
