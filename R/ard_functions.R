@@ -107,7 +107,10 @@
 #' as it names any function; this list is the catalog that describes them.
 #' A function the catalog does not describe (one a newer cards adds) is
 #' listed too, with `in_catalog = FALSE` and its help page's title as its
-#' label.  `replaced_by` names the new name of an old one.
+#' label.  `replaced_by` names the new name of an old one.  `offered` is
+#' `FALSE` for what a new analysis is not to choose: the old names and the
+#' functions not offered by design (below); a screen lists them only for
+#' an analysis that already names one.
 #'
 #' The versions it is written for: cards >= 0.8.0 and cardx >= 0.3.1 (the
 #' oldest are tested, and every week what CRAN has now).
@@ -132,7 +135,7 @@
 #' @param installed `TRUE` (default) only the functions that can be called
 #'   here (their package installed); `FALSE` every row of the catalog.
 #' @return A data frame: `call`, `category`, `label`, `description`,
-#'   `shape`, `replaced_by`, `installed`, `in_catalog`.
+#'   `shape`, `replaced_by`, `offered`, `installed`, `in_catalog`.
 #' @seealso [tfl_ard_args()] for one function's arguments;
 #'   [tfl_ard_methods()] for the keywords an analysis may name.
 #' @examples
@@ -141,19 +144,22 @@
 #' @export
 tfl_ard_functions <- function(installed = TRUE) {
   d <- .ard_catalog_rows("functions.csv", "tflspec.ard_functions", "call")
+  # not offered for a new analysis: an old name, or one decided against
+  # (blank in a company's rows: offered)
+  d$offered <- !toupper(d$offered) %in% "FALSE" & !nzchar(d$replaced_by)
   d$in_catalog <- TRUE
   extra <- setdiff(.ard_installed(), d$call)
   if (length(extra)) {
     d <- rbind(d, data.frame(
       call = extra, category = "Other", label = vapply(extra, .ard_help_title, ""),
-      description = "", shape = "", replaced_by = "", in_catalog = FALSE,
-      stringsAsFactors = FALSE))
+      description = "", shape = "", replaced_by = "", offered = TRUE,
+      in_catalog = FALSE, stringsAsFactors = FALSE))
   }
   d$installed <- vapply(d$call, function(cl) !is.null(.ard_fun(cl)), NA)
   if (isTRUE(installed)) d <- d[d$installed, , drop = FALSE]
   rownames(d) <- NULL
   d[c("call", "category", "label", "description", "shape", "replaced_by",
-      "installed", "in_catalog")]
+      "offered", "installed", "in_catalog")]
 }
 
 # the title of a function's help page (a function the catalog does not

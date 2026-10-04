@@ -1,5 +1,11 @@
 # tflspec (development version)
 
+* **The ARD catalog, refined** (#103): `tfl_ard_functions()` returns
+  `offered` (`FALSE` for the old names and what is not offered by design);
+  the arguments a screen cannot write as a column or a level are `code` or
+  `text` (`abnormal`, `include` of `ard_pairwise()`, `primary_covariate`,
+  `stats_to_remove`); every argument of the offered functions has a hint.
+
 * **Try an ARD function of one's own** (#102): `tfl_check_ard_function(fun,
   data, by = , variables = , stat_names = )` calls it as an analysis row
   would and reports what is wrong -- an error or warning in the call, a
