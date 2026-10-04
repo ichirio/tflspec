@@ -14,12 +14,39 @@
   tflspec #118) -- and a test names any function a new cards / cardx exports
   without a row (the weekly CRAN-latest CI).
 
+* **An ARS method of a function says what it runs** (#119): an analysis
+  whose method is a function (`cards::ard_summary`, a study's own
+  `ard_riskdiff`) gets, as its method's `codeTemplate`, the call the ARD
+  program makes (`ard_riskdiff(data, by = TRT01A, variables = AEFL, ...)`)
+  instead of `ard_riskdiff(...)`; an own function's file is named above it,
+  and the statistics it declares (`cards::as_cards_fn(stat_names = )`) are
+  its operations when the row names none.  `tfl_ars(dir = )` is the study
+  folder the `source` files are read from (read, not run).
+
 * **A parent row's arguments say the columns they are written in** (#113):
   `tfl_ard_args()` gave `ard_stack(.by =)`, `ard_strata(.by =, .strata =)`
   and `ard_pairwise(variable =)` the column `args`, though the generated code
   writes them from the analysis row's `by`, `strata` and `variables`.  They
   now say so, so a screen that builds a parent row from the catalog writes
   them where the code reads them.
+
+* **An ARD function of one's own, from a template** (#115):
+  `tfl_ard_function_template(name, type, file, test = TRUE)` writes an
+  `ard_*()` an analysis row can name as its method, in the three shapes
+  cards and cardx write theirs -- `"summary"` (statistics of one's own,
+  `ard_summary(statistic = )`), `"test"` (a test across groups,
+  `tidy_as_ard()`, its errors kept in the ARD) and `"free"`
+  (`ard_strata()` + `ard_identity()`) -- and, with `test = TRUE`, a
+  testthat file next to it.  Each says which statistics it gives
+  (`cards::as_cards_fn(stat_names = )`).
+* `tfl_check_ard_function()` checks the statistics a function says it gives
+  (`attr(fun, "stat_names")`, as `cards::as_cards_fn()` sets it) without
+  `stat_names =`; one that says nothing gets a note.
+* `tfl_check_ard()` no longer calls a `groupN` without `groupN_level` an
+  error: a test across groups has that shape (cardx's own `ard_stats_*()`
+  give it), so an ARD of tests taken in, or an own function wrapping a test,
+  was refused.  cards' note that the ARD has no `method` rows is left out
+  (no report reads them; an ARD written and read back has none).
 
 * **`tfl_ard_conditions()`**: what went wrong while an ARD was made, as a
   table.  cards does not stop when one analysis fails (a test given three
