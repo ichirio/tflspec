@@ -6,6 +6,14 @@
   says so (item `output`), with the reason by its type.  A user-code report
   that reads the ARD is an output with its analyses, as a table is.
 
+* **Every function of cards / cardx has a decided use** (#121): besides the
+  ard_*() of the catalog, `inst/ard/utilities.csv` says what each other
+  exported function of cards and cardx is to tflspec -- a post step, written
+  by the generated code, a screen's tool, internal, for writing one's own ARD
+  function, a selector, a choice of an argument, not used (`bind_ard()`:
+  tflspec #118) -- and a test names any function a new cards / cardx exports
+  without a row (the weekly CRAN-latest CI).
+
 * **A parent row's arguments say the columns they are written in** (#113):
   `tfl_ard_args()` gave `ard_stack(.by =)`, `ard_strata(.by =, .strata =)`
   and `ard_pairwise(variable =)` the column `args`, though the generated code
