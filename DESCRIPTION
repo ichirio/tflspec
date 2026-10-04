@@ -1,6 +1,6 @@
 Package: tflspec
 Title: Excel Specifications for Clinical Tables, Listings and Figures
-Version: 0.0.24.9033
+Version: 0.0.24.9034
 Authors@R: c(
     person(given  = "Yoichi",
            family = "Masui",

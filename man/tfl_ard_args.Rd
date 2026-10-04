@@ -30,7 +30,9 @@ number -> \code{number}, a character vector -> \code{choice}, else \code{code}.
 (\code{method = c("waldcc", "wald", ...)}).
 
 \code{column} says where an analysis row writes it: the \code{by}, \code{variables},
-\code{strata}, \code{denominator} or \code{statistics} column, or \code{args}.  The data is
+\code{strata}, \code{denominator} or \code{statistics} column, or \code{args} (a parent row's
+\code{ard_stack(.by =)}, \code{ard_strata(.by =, .strata =)} and
+\code{ard_pairwise(variable =)} are its \code{by}, \code{strata} and \code{variables}).  The data is
 the row's own (\code{data}).
 
 A company adds its own rows with \verb{options(tflspec.ard_args = <data frame>)}: \code{call} (or \code{*} for every function), \code{arg}, \code{kind}, \code{hint},
