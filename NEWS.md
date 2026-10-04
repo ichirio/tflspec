@@ -1,5 +1,11 @@
 # tflspec (development version)
 
+* **ARS: a report with no analyses is listed, not dropped** (#123): a report
+  of user code that does not read the ARD, a listing, or a table not defined
+  yet has no analyses, so it is not an ARS output; `tfl_ars_unmapped()` now
+  says so (item `output`), with the reason by its type.  A user-code report
+  that reads the ARD is an output with its analyses, as a table is.
+
 * **Every function of cards / cardx has a decided use** (#121): besides the
   ard_*() of the catalog, `inst/ard/utilities.csv` says what each other
   exported function of cards and cardx is to tflspec -- a post step, written

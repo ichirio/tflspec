@@ -662,6 +662,23 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
   rs <- report_spec %||% table_spec
   outs <- unique(c(intersect(rs$report$output_id, a$output_id), a$output_id))
   outs <- outs[outs %in% vapply(analyses, `[[`, "", "output")]
+  # a report with no analyses is not an ARS output: say so, with why
+  rep_all <- rs$report
+  if (!is.null(rep_all) && NROW(rep_all)) {
+    for (k in seq_len(nrow(rep_all))) {
+      o <- rep_all$output_id[k]
+      if (is.na(o) || o %in% outs) next
+      type <- tolower(rep_all$type[k] %||% NA_character_)
+      miss(o, "output", switch(type %|NA|% "",
+        user = paste("a report of user code with no analyses in the ARD",
+                     "definition: what it shows is made by its own code,",
+                     "which ARS does not hold"),
+        listing = paste("a listing: ARS describes analyses and their",
+                        "results, and a listing has none"),
+        paste("no analyses in the ARD definition, so nothing for ARS to",
+              "describe")))
+    }
+  }
   text_of <- function(d, j) {
     t <- stats::na.omit(c(d$left[j], d$center[j], d$right[j]))
     paste(t, collapse = "  ")
