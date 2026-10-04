@@ -187,7 +187,11 @@
   }
   if (!is.null(sa[["rounding"]])) add("plan_digits", rounding = sa[["rounding"]])
   lv <- .ard_spec_levels(sp)
-  if (length(lv)) do.call(add, c(list("plan_levels"), as.list(lv)))
+  de <- .ard_spec_drop_empty(sp)
+  if (length(lv) || length(de)) {
+    do.call(add, c(list("plan_levels"), as.list(lv),
+                   if (length(de)) list(.drop_empty = de)))
+  }
   lb <- .ard_spec_labels(sp)
   if (length(lb)) do.call(add, c(list("plan_labels"), as.list(lb)))
   cm <- .ard_spec_cells(sp)

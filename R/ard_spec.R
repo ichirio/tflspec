@@ -515,6 +515,28 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   c("ard <- ard |>", paste0("  ", st, c(rep(" |>", length(st) - 1L), "")))
 }
 
+# The study's code lists as each variable's values in their order: the
+# `codelists` sheet of a table definition (its study rows, blank
+# output_id), or a data frame with `variable`, `value` and `order`.
+.codelist_levels <- function(codelists) {
+  if (is.null(codelists)) return(NULL)
+  if (inherits(codelists, "tfl_table_spec") || (is.list(codelists) &&
+                                                !is.data.frame(codelists))) {
+    codelists <- codelists$codelists
+  }
+  if (!is.data.frame(codelists) || !nrow(codelists)) return(NULL)
+  d <- as.data.frame(codelists, stringsAsFactors = FALSE)
+  if ("output_id" %in% names(d)) {
+    d <- d[is.na(d$output_id) | !nzchar(trimws(d$output_id)), , drop = FALSE]
+  }
+  d <- d[!is.na(d$variable) & !is.na(d$value), , drop = FALSE]
+  if (!nrow(d)) return(NULL)
+  ord <- suppressWarnings(as.numeric(d$order %||% NA))
+  d <- d[order(match(d$variable, unique(d$variable)), is.na(ord), ord), , drop = FALSE]
+  lapply(split(as.character(d$value), factor(d$variable, levels = unique(d$variable))),
+         unique)
+}
+
 .study_value <- function(x, key, default) {
   v <- x$study$value[match(key, x$study$key)]
   if (length(v) && !is.na(v)) v else default
@@ -728,12 +750,20 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 #' @param part `"all"` (the whole program), `"setup"` or `"body"`.
 #' @param dir The study folder: the fingerprints saved with the ARD
 #'   ([tfl_ard_spec_hash()]) read the study's own function files from it.
+#' @param codelists The study's code lists: a table definition (its
+#'   `codelists` sheet, the study rows with a blank `output_id`) or a data
+#'   frame with `variable`, `value` and `order`.  Each listed column of
+#'   every dataset read becomes a factor in that order before any analysis
+#'   (a value the list does not have comes after, alphabetically), so the
+#'   ARD keeps the order and counts a level no record has (`n = 0`).
+#'   `NULL` (default): the data as read.
 #' @inheritParams tfl_write_ard_spec
 #' @return The code, one element per line.
 #' @export
 tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
                           part = c("all", "setup", "body"),
-                          statistics = NULL, methods = NULL, dir = ".") {
+                          statistics = NULL, methods = NULL, dir = ".",
+                          codelists = NULL) {
   part <- match.arg(part)
   old <- .set_catalogs(statistics, methods)
   on.exit(options(old), add = TRUE)
@@ -744,7 +774,8 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
     st <- tfl_ard_statistics("continuous")
     return(.ard_common_lines(st$statistic[!is.na(st$fun)], x))
   }
-  if (part == "body") return(.ard_body_lines(x, a))
+  lv <- .codelist_levels(codelists)
+  if (part == "body") return(.ard_body_lines(x, a, lv))
   out <- .study_value(x, "output", "output/ard/ard.rds")
   code <- c(
     "# The study's ARD, made from its ARD definition.  Run from the study folder.",
@@ -752,10 +783,10 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
            ", ", format(Sys.Date())),
     "",
     .ard_common_lines(unlist(lapply(a$statistics, .split_bar)), x),
-    .ard_body_lines(x, a))
+    .ard_body_lines(x, a, lv))
   if (save) {
     ids <- unique(a$output_id)
-    hashes <- vapply(ids, function(id) .ard_output_hash(x, id, dir), "")
+    hashes <- vapply(ids, function(id) .ard_output_hash(x, id, dir, codelists), "")
     q <- function(v) paste(encodeString(v, quote = "\""), collapse = ", ")
     code <- c(code,
               sprintf("dir.create(dirname(%s), recursive = TRUE, showWarnings = FALSE)",
@@ -810,9 +841,27 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
 
 # the analyses `a`: their data, their analysis sets, one call each, bound
 # into `ard`
-.ard_body_lines <- function(x, a) {
+.ard_body_lines <- function(x, a, levels = NULL) {
   subj <- .study_value(x, "id", "USUBJID")
   code <- "# ---- data"
+  if (length(levels)) {
+    code <- c(code,
+      "# the study's code lists: each listed column a factor in their order,",
+      "# so the ARD keeps the order and counts a level no record has (0)",
+      sprintf(".codelists <- list(\n  %s)", paste(vapply(names(levels), function(v)
+        sprintf("%s = c(%s)", encodeString(v, quote = "`"),
+                paste(encodeString(levels[[v]], quote = "\""), collapse = ", ")),
+        ""), collapse = ",\n  ")),
+      ".levels <- function(d) {",
+      "  for (v in intersect(names(.codelists), names(d))) {",
+      "    x <- d[[v]]",
+      "    if (!is.character(x) && !is.factor(x)) next",
+      "    seen <- sort(unique(as.character(x[!is.na(x)])))",
+      "    d[[v]] <- factor(as.character(x), levels = unique(c(.codelists[[v]], seen)))",
+      "  }",
+      "  d",
+      "}")
+  }
   pops <- unique(stats::na.omit(c(a$population_id,
                                   a$denominator[a$denominator %in%
                                                   x$populations$population_id])))
@@ -824,7 +873,8 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
     r <- x$datasets[x$datasets$dataset == ds, ]
     obj <- .r_name(ds)
     code <- c(code, sprintf("%s <- %s", obj, .reader(r$path[1L])),
-              .derive_code(obj, r$derive[1L]))
+              .derive_code(obj, r$derive[1L]),
+              if (length(levels)) sprintf("%s <- .levels(%s)", obj, obj))
   }
   code <- c(code, "", "# ---- populations")
   for (pid in pops) {
@@ -1042,13 +1092,15 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
 #' @param spec An [tfl_ard_spec()].
 #' @param output_id The output.
 #' @param dir The study folder, which `source` files are relative to.
+#' @param codelists As [tfl_ard_code()]: they change the ARD, so they are
+#'   part of the fingerprint (only when there are some).
 #' @return A single string.
 #' @export
-tfl_ard_spec_hash <- function(spec, output_id, dir = ".") {
-  .ard_output_hash(spec, output_id, dir)
+tfl_ard_spec_hash <- function(spec, output_id, dir = ".", codelists = NULL) {
+  .ard_output_hash(spec, output_id, dir, codelists)
 }
 
-.ard_output_hash <- function(spec, output_id, dir = ".") {
+.ard_output_hash <- function(spec, output_id, dir = ".", codelists = NULL) {
   a <- spec$analyses[spec$analyses$output_id %in% output_id, , drop = FALSE]
   a <- a[vapply(a, function(v) !all(is.na(v)), NA)]
   src <- .split_bar(.study_value(spec, "source", NA))
@@ -1064,7 +1116,11 @@ tfl_ard_spec_hash <- function(spec, output_id, dir = ".") {
                  utils::capture.output(print(as.list(pops))),
                  utils::capture.output(print(as.list(dss[setdiff(names(dss), "level")]))),
                  utils::capture.output(print(as.list(spec$study))),
-                 if (length(src)) paste(src, src_md5)),
+                 if (length(src)) paste(src, src_md5),
+                 # the code lists, only when there are some: a study without
+                 # keeps the fingerprints it had
+                 if (length(lv <- .codelist_levels(codelists)))
+                   utils::capture.output(print(lv))),
                collapse = "\n")
   f <- tempfile()
   on.exit(unlink(f))
@@ -1084,9 +1140,10 @@ tfl_ard_spec_hash <- function(spec, output_id, dir = ".") {
 #'   says.
 #' @export
 tfl_build_ard <- function(spec, dir = ".", output_id = NULL, save = TRUE,
-                      statistics = NULL, methods = NULL) {
+                      statistics = NULL, methods = NULL, codelists = NULL) {
   code <- tfl_ard_code(spec, output_id = output_id, save = save,
-                        statistics = statistics, methods = methods, dir = dir)
+                        statistics = statistics, methods = methods, dir = dir,
+                        codelists = codelists)
   owd <- setwd(dir)
   on.exit(setwd(owd), add = TRUE)
   e <- new.env(parent = globalenv())
