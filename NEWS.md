@@ -8,6 +8,15 @@
   tflspec #118) -- and a test names any function a new cards / cardx exports
   without a row (the weekly CRAN-latest CI).
 
+* **An ARS method of a function says what it runs** (#119): an analysis
+  whose method is a function (`cards::ard_summary`, a study's own
+  `ard_riskdiff`) gets, as its method's `codeTemplate`, the call the ARD
+  program makes (`ard_riskdiff(data, by = TRT01A, variables = AEFL, ...)`)
+  instead of `ard_riskdiff(...)`; an own function's file is named above it,
+  and the statistics it declares (`cards::as_cards_fn(stat_names = )`) are
+  its operations when the row names none.  `tfl_ars(dir = )` is the study
+  folder the `source` files are read from (read, not run).
+
 * **A parent row's arguments say the columns they are written in** (#113):
   `tfl_ard_args()` gave `ard_stack(.by =)`, `ard_strata(.by =, .strata =)`
   and `ard_pairwise(variable =)` the column `args`, though the generated code
