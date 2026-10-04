@@ -97,7 +97,10 @@ test_that("the three templates of an ARD function work as they are", {
   f <- file.path(withr::local_tempdir(), "ard_a.R")
   tfl_ard_function_template("ard_a", file = f)
   expect_error(tfl_ard_function_template("ard_a", file = f), "overwrite")
-  expect_identical(substr(tfl_ard_function_template("ard_b", "free")[1], 1, 9), "# ard_b()")
+  b <- tfl_ard_function_template("ard_b", "free")
+  expect_true(startsWith(b[1], "#' "))                 # a roxygen title
+  expect_true(any(startsWith(b, "ard_b <- cards::as_cards_fn(")))
+  expect_false(any(grepl("{name}", b, fixed = TRUE)))
 })
 
 test_that("tfl_ard_conditions() lists what went wrong, one row per message", {
@@ -127,4 +130,48 @@ test_that("tfl_ard_conditions() lists what went wrong, one row per message", {
   expect_identical(nrow(ok), 0L)
   expect_identical(names(ok), c("variable", "groups", "level", "message",
                                 "statistics"))
+})
+
+test_that("tfl_ard_function_info() reads the functions of some files, without running them", {
+  d <- withr::local_tempdir()
+  for (t in c("summary", "test", "free")) {
+    tfl_ard_function_template(paste0("ard_", t), t,
+                              file = file.path(d, paste0("ard_", t, ".R")), test = TRUE)
+  }
+  writeLines(c("#' Plain one", "#'", "#' Does a thing,", "#' in two lines.",
+               "#' @param data The data.", "#' @param by,k Its groups",
+               "#'   and a number.", "",
+               "ard_plain <- function(data, by = NULL, k = 2) stop(\"not run\")",
+               "helper <- 1",
+               "other <- function(x) x"),
+             file.path(d, "plain.R"))
+  writeLines("ard_bad <- function(", file.path(d, "bad.R"))
+  info <- tfl_ard_function_info(list.files(d, full.names = TRUE))
+  # the templates' functions (as_cards_fn), a plain function -- and not the
+  # test files, nor a value
+  expect_setequal(stats::na.omit(info$name),
+                  c("ard_free", "ard_summary", "ard_test", "ard_plain", "other"))
+  expect_false(any(grepl("^test-", basename(info$file))))
+  t <- info[info$name %in% "ard_test", ]
+  expect_identical(t$title, "A test across two groups")
+  expect_match(t$description, "tidy_as_ard")
+  expect_identical(t$stat_names, "statistic | p.value")
+  expect_identical(t$args[[1]]$arg, c("data", "by", "variables", "..."))
+  expect_match(t$args[[1]]$hint[2], "two groups")
+  p <- info[info$name %in% "ard_plain", ]
+  expect_identical(p$title, "Plain one")
+  expect_identical(p$description, "Does a thing, in two lines.")
+  expect_identical(p$stat_names, "")
+  a <- p$args[[1]]
+  expect_identical(a$default, c(NA, "NULL", "2"))
+  expect_identical(a$hint, c("The data.", "Its groups and a number.",
+                             "Its groups and a number."))
+  # a function with no roxygen block above it: no title
+  expect_true(is.na(info$title[info$name %in% "other"]))
+  # a file that does not parse: a row that says so
+  bad <- info[is.na(info$name), ]
+  expect_identical(basename(bad$file), "bad.R")
+  expect_match(bad$description, "unexpected")
+  # nothing: the columns
+  expect_identical(nrow(tfl_ard_function_info(character())), 0L)
 })

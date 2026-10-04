@@ -1,10 +1,15 @@
-# {name}(): a test across groups, made an ARD with cards::tidy_as_ard().
-#
-# An analysis row names it as its method:  {name}
-#   method {name}   by TRT01A   variables AGE
-# Its errors and warnings go into the ARD's error / warning columns (they
-# do not stop the study ARD); tflspec::tfl_ard_conditions() lists them.
-
+#' A test across two groups
+#'
+#' A Wilcoxon rank-sum test of each variable between the two groups, made an
+#' ARD with cards::tidy_as_ard().  An analysis row names it as its method
+#' ({name}, by TRT01A, variables AGE).  Its errors and warnings go into the
+#' ARD's error / warning columns (they do not stop the study ARD);
+#' tflspec::tfl_ard_conditions() lists them.
+#'
+#' @param data The analysis data (its dataset and analysis set).
+#' @param by The group column: two groups.
+#' @param variables The numeric variables.
+#' @param ... Passed to stats::wilcox.test(), e.g. exact = FALSE.
 {name} <- cards::as_cards_fn(
   function(data, by, variables, ...) {
     cards::process_selectors(data, by = {{ by }}, variables = {{ variables }})
