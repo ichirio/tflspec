@@ -216,3 +216,41 @@ test_that("an analysis with no dataset and no population still writes its code",
   expect_silent(parse(text = code))
   expect_true(any(code == "  data <- NULL"))
 })
+
+test_that("a keyword's function name is the keyword's analysis", {
+  rows <- list(
+    list(output_id = "DM", analysis_id = "AGE", method = "continuous",
+         population_id = "SAF", by = "TRT01A", variables = "AGE",
+         statistics = "N | mean | cv | sd", formats = "mean=xx.xx"),
+    list(output_id = "DM", analysis_id = "SEX", method = "categorical",
+         population_id = "SAF", by = "TRT01A", variables = "SEX"),
+    list(output_id = "AE", analysis_id = "TEAE", method = "hierarchical",
+         dataset = "ADAE", population_id = "SAF", by = "TRTA",
+         variables = "AEBODSYS | AEDECOD"),
+    list(output_id = "CI", analysis_id = "MCI", method = "mean_ci",
+         population_id = "SAF", by = "TRT01A", variables = "AGE"),
+    list(output_id = "CI", analysis_id = "PCI", method = "proportion_ci",
+         population_id = "SAF", by = "TRT01A", variables = "SEX"))
+  keys <- tfl_ard_methods()
+  by_fun <- lapply(rows, function(r) {
+    r$method <- keys$call[match(r$method, keys$method)]
+    r
+  })
+  kw <- toy_spec(do.call(spec_df, rows))
+  fn <- toy_spec(do.call(spec_df, by_fun))
+  expect_identical(tfl_ard_code(fn, save = FALSE),
+                   tfl_ard_code(kw, save = FALSE))
+  # and the same ARS methods (Mth_categorical ...)
+  # (its `ids` keep the method as written)
+  no_ids <- function(x) {
+    attr(x, "ids")$method <- NULL
+    x
+  }
+  expect_identical(no_ids(tfl_ars(fn)), no_ids(tfl_ars(kw)))
+  # a function the catalog does not know stays as written
+  own <- toy_spec(spec_df(list(output_id = "T", analysis_id = "N",
+                               method = "cards::ard_tabulate_rows",
+                               population_id = "SAF", by = "TRT01A")))
+  expect_true(any(grepl("cards::ard_tabulate_rows(", tfl_ard_code(own, save = FALSE),
+                        fixed = TRUE)))
+})

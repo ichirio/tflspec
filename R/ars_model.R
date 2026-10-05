@@ -353,7 +353,7 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
     if (!is.na(hit)) return(methods[[hit]])
     same <- sum(vapply(methods, function(z) identical(z$base, base), NA))
     id <- if (same) paste0(base, "_", same + 1L) else base
-    k <- match(m, keys$method)
+    k <- .method_key(m, keys)
     ops <- lapply(seq_along(stats), function(j) {
       o <- list(id = paste(id, j, stats[j], sep = "_"),
                 name = unname(.ars_stat_names[stats[j]] %||% stats[j]),
@@ -446,7 +446,10 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
     out <- r$output_id
     tag <- paste(out, r$analysis_id, sep = " / ")
     m <- r$method
-    pds <- if (!is.na(r$population_id)) pop_ds[[r$population_id]] else NA
+    # a keyword's function name is the keyword's method
+    km <- .method_key(m, keys)
+    if (!is.na(km)) m <- keys$method[km]
+    pds <-if (!is.na(r$population_id)) pop_ds[[r$population_id]] else NA
     ds <- if (!is.na(r$dataset)) ds_name(r$dataset) else pds
     if (is.na(ds)) {
       miss(tag, "dataset", "no dataset (and no population to take it from)")

@@ -65,11 +65,21 @@
   }, error = function(e) conditionMessage(e))
 }
 
+# The catalog row of a method: its keyword (`categorical`), or the
+# function a keyword calls (`cards::ard_tabulate`) -- the same analysis
+# either way, with the keyword's statistics, defaults and formats.  NA for a
+# function the catalog does not know (a study's own, another cards one).
+.method_key <- function(m, keys) {
+  k <- match(m, keys$method)
+  if (is.na(k)) k <- match(m, keys$call)
+  k
+}
+
 # The call an analysis row stands for, with `data` and `population` bound.
 .analysis_body <- function(r, keys, subj, has, den = NULL, data = "data",
                            population = "population") {
   m <- r$method
-  k <- match(m, keys$method)
+  k <- .method_key(m, keys)
   fn <- if (is.na(k)) m else keys$call[k]
   kind <- if (is.na(k)) "" else keys$kind[k]
   stats <- if (!is.na(r$statistics)) r$statistics else if (!is.na(k) &&
@@ -296,7 +306,7 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   km <- tfl_ard_methods()
   for (i in which(!is.na(a$args))) {
     if (!is.null(.args_problem(a$args[i]))) next
-    k <- match(a$method[i], km$method)
+    k <- .method_key(a$method[i], km)
     passes_stats <- !is.na(k) && (km$kind[k] %in%
       c("continuous", "categorical", "missing") ||
         identical(km$call[k], "(subjects)"))
@@ -341,7 +351,7 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   keys <- tfl_ard_methods()
   st <- tfl_ard_statistics()
   for (i in seq_len(nrow(a))) {
-    k <- match(a$method[i], keys$method)
+    k <- .method_key(a$method[i], keys)
     s <- .split_bar(a$statistics[i])
     if (!is.na(k) && keys$kind[k] == "continuous") {
       bad <- setdiff(s, st$statistic[st$kind == "continuous"])
@@ -431,7 +441,7 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
       }
       keys <- tfl_ard_methods()
       for (k in kids) {
-        kk <- match(a$method[k], keys$method)
+        kk <- .method_key(a$method[k], keys)
         kind <- if (is.na(kk)) "" else keys$kind[kk]
         if (!is.na(a$statistics[k]) &&
             !kind %in% c("continuous", "categorical", "missing")) {
@@ -608,7 +618,7 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 # The function a method calls, when it can be found (else NULL)
 .method_fun <- function(m) {
   keys <- tfl_ard_methods()
-  k <- match(m, keys$method)
+  k <- .method_key(m, keys)
   fn <- if (is.na(k)) m else keys$call[k]
   if (startsWith(fn, "(")) return(NULL)
   f <- tryCatch(eval(str2lang(fn)), error = function(e) NULL)
@@ -944,7 +954,7 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
     given <- c(.args_given(r$args), if (!is.na(r$strata)) "strata",
                if (!is.na(r$denominator)) "denominator")
     has <- function(arg) arg %in% given
-    k <- match(r$method, keys$method)
+    k <- .method_key(r$method, keys)
     kind <- if (is.na(k)) "" else keys$kind[k]
     # R the row writes itself (args, code) may name `data` and
     # `population`, and a subject flag changes its population: those bind
@@ -1037,7 +1047,7 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
   fmt <- character()
   for (j in seq_len(nrow(kids))) {
     kr <- kids[j, ]
-    k <- match(kr$method, keys$method)
+    k <- .method_key(kr$method, keys)
     f <- c(if (!is.na(k)) .parse_formats(keys$formats[k]),
            .parse_formats(kr$formats))
     if (stack && length(f)) {
@@ -1051,7 +1061,7 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
   fmt <- c(.parse_formats(r$formats), fmt)
   fmt <- fmt[!duplicated(names(fmt), fromLast = TRUE)]
   keep <- if (!stack) {
-    k <- match(kids$method[1L], keys$method)
+    k <- .method_key(kids$method[1L], keys)
     kind <- if (is.na(k)) "" else keys$kind[k]
     if (!kind %in% c("continuous", "categorical", "missing"))
       .split_bar(kids$statistics[1L])

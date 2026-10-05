@@ -176,6 +176,11 @@
 #' way once `args` names the first one (`formula = ...`).  The row's
 #' `strata` and `denominator` columns are passed as those arguments.
 #'
+#' The function a keyword calls (its `call`: `cards::ard_summary`,
+#' `cards::ard_stack_hierarchical` ...) is that keyword's analysis: it gets
+#' the same `statistic =` from `statistics`, the same defaults and the same
+#' formats, so either name writes the same code.
+#'
 #' A function of the study's own is a method too, by its plain name
 #' (`ard_riskdiff_mn`), when the study key `source` names the R file that
 #' defines it (the ARD program sources it first).  It is called the same
