@@ -21,6 +21,11 @@ way once \code{args} names the first one (\code{formula = ...}).  The row's
 \code{strata} and \code{denominator} columns are passed as those arguments.
 }
 \details{
+The function a keyword calls (its \code{call}: \code{cards::ard_summary},
+\code{cards::ard_stack_hierarchical} ...) is that keyword's analysis: it gets
+the same \verb{statistic =} from \code{statistics}, the same defaults and the same
+formats, so either name writes the same code.
+
 A function of the study's own is a method too, by its plain name
 (\code{ard_riskdiff_mn}), when the study key \code{source} names the R file that
 defines it (the ARD program sources it first).  It is called the same

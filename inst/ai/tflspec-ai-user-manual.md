@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9043** (the development version,
+**This manual documents tflspec 0.0.24.9044** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -189,7 +189,9 @@ argument is written in one place: a column, or `args`, never both.
   `pkg::function` (`cards::`, `cardx::`), or a function of the study's own
   that the study key `source` loads (`ard_riskdiff_mn`): it takes the
   analysis data first, `by` and `variables` as bare column names, and gives
-  a cards ARD. `tfl_ard_methods()` lists the
+  a cards ARD. The function a keyword calls (`cards::ard_summary`,
+  `cards::ard_tabulate` …) is that keyword: the same statistics, defaults
+  and formats. `tfl_ard_methods()` lists the
   keywords, each with a `label` (the name a person reads: "Summary
   statistics", "Counts and percents", "Nested counts (e.g. SOC / PT)" …)
   and a one-line `note`; `tfl_ard_statistics()` the statistics and their

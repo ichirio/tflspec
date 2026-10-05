@@ -1,5 +1,12 @@
 # tflspec (development version)
 
+* **A keyword's function name is the keyword's analysis** (#133).
+  `method` written as the function a keyword calls -- `cards::ard_summary`,
+  `cards::ard_stack_hierarchical`, `cardx::ard_continuous_ci` ... -- gets
+  the keyword's `statistic =` from `statistics`, its defaults
+  (`denominator`, `id`) and its formats, so the code is the same either
+  way; `tfl_ars()` gives it the keyword's method (`Mth_categorical` ...).
+  A function the catalog does not know stays as written.
 * **A blank `program` is the file name of the program that runs** (#131).
   The report sheet's `program` is said to rtfreporter only when it is
   written; blank, `tfl_report()` / `tfl_report_code()` pass
