@@ -1,5 +1,8 @@
 # tflspec (development version)
 
+* The workbook's tokens help names **`{PROGRAM_FULL}`**, the program's
+  absolute path (rtfreporter #560; #127).  rtfreporter fills it, so it
+  needs rtfreporter 0.8.2.9021: the floor is raised.
 * **`tfl_ard_function_info(files)`** (#125): what the ARD functions of one's own in
   some R files are, read without running them -- one row per function an
   analysis could name (`name <- function(...)`, or `name <-

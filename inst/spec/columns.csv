@@ -3,7 +3,7 @@ sheet,column,description,example
 (workbook),output_id,"The report a row belongs to. Blank: a study-wide default; a row naming a report replaces the default row with the same key (ARD analyses: the report the analysis serves).",T-14-1-1
 (workbook),note,"A column for people, on any sheet; never read. Any other column a sheet does not read is an error (a mistyped header).",
 (workbook),(list),"Several values in one cell: | between them.",TRT01A | SEX
-(workbook),(tokens),"In titles, footnotes, header and footer cells: {PAGE} {TOTAL_PAGES} {AUTO_PAGE} {AUTO_TOTAL_PAGES} (page numbers), {PROGRAM} {PROGRAM_NAME} {PROGRAM_DIR} (the program), {DATETIME} {DATETIME:%Y-%m-%d} (the run).",
+(workbook),(tokens),"In titles, footnotes, header and footer cells: {PAGE} {TOTAL_PAGES} {AUTO_PAGE} {AUTO_TOTAL_PAGES} (page numbers), {PROGRAM} {PROGRAM_FULL} {PROGRAM_NAME} {PROGRAM_DIR} (the program; {PROGRAM_FULL} its absolute path), {DATETIME} {DATETIME:%Y-%m-%d} (the run).",
 study,,"What is one for the whole study: one row a key. Table / report keys: rounding, output_path, program_dir. ARD keys: id, output, source. No output_id.",
 study,key,"The fact: rounding (r: round half to even; sas: round half away from zero; blank: options(rtfreporter.rounding)); output_path (the folder of the RTF files); program_dir (the folder of the programs, for {PROGRAM}); ARD: id (the subject key; default USUBJID), output (the study ARD's file; default output/ard/ard.rds), source (R files of the study's own analysis functions, relative to the study folder, | between them).",rounding
 study,value,"Its value, as text.",sas

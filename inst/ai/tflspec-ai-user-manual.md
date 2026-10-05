@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9040** (the development version,
+**This manual documents tflspec 0.0.24.9041** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -407,7 +407,7 @@ file.
 | `header`, `footer`, `titles`, `footnotes` | `line`, `left`, `center`, `right` — a report's line replaces the default line of the same number; a report's line that says `(none)` takes it out |
 
 Page tokens in the running header / footer: `{PAGE}`, `{TOTAL_PAGES}`,
-`{PROGRAM}`, `{DATETIME}`.
+`{PROGRAM}` (or `{PROGRAM_FULL}`, its absolute path), `{DATETIME}`.
 
 ### 7.1 A company's TOC as report specs
 
