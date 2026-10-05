@@ -440,7 +440,8 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
                         default_format = if (length(fmt))
                           do.call(.spec_call, c(list("rtf_default_format"), fmt)),
                         watermark = r$watermark,
-                        program = prog))
+                        program = prog,
+                        tokens = .ard_spec_tokens(sp)))
   # a report may go without the study's running header or footer -- one
   # that puts its run line under the table instead, say
   hdr <- if (!identical(r$page_header, FALSE)) .ard_spec_band(sp, "header")

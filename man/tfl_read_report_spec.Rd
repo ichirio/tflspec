@@ -25,6 +25,7 @@ say how a report's pages are dressed:\tabular{lll}{
    \code{footer} \tab line of the page footer \tab the same \cr
    \code{titles} \tab line above the table \tab the same \cr
    \code{footnotes} \tab line below the table \tab the same \cr
+   \code{tokens} \tab token of one's own \tab \code{name}, \code{value}: \code{{STUDY}} in any cell \cr
 }
 
 
@@ -41,6 +42,13 @@ says \code{(none)} (in any of its cells) takes the default line of that
 number out instead -- the run line a report does without.  The page tokens
 (\code{{PAGE}}, \code{{TOTAL_PAGES}}, ...) and the run tokens (\code{\link[rtfreporter:generate_rtfreport]{rtfreporter::generate_rtfreport()}})
 work in every cell.
+
+The \code{tokens} sheet names tokens of one's own: \code{name} \code{STUDY}, \code{value}
+\code{ABC-123}, and a header, footer, title or footnote says \code{{STUDY}}
+(\code{\link[rtfreporter:rtf_document]{rtfreporter::rtf_document()}}'s \code{tokens}).  A blank \code{output_id} is the
+study's default; a report's row of the same name replaces it, and one
+that says \code{(none)} takes it out.  A name is upper case -- a letter, then
+letters, digits or \verb{_} -- and not one of rtfreporter's own tokens.
 
 The sheets may be in \strong{one workbook or several} --- a \code{report.xlsx} a
 lead keeps (the list of outputs, titles, footnotes) and a \code{tables.xlsx}
