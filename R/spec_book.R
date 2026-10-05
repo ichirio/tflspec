@@ -3,7 +3,7 @@
 # ============================================================================
 #
 #  A spec workbook holds the sheets of ONE kind of spec -- a table spec its
-#  table sheets, a report spec its report sheets, an ARD spec its three --
+#  table sheets, a report spec its report sheets, an ARD spec its four --
 #  with the `study` keys that kind reads and an `about` sheet stating the
 #  spec_version.  Fewer sheets are easier to read.  What a column means is a
 #  comment on its header cell (tfl_spec_columns()), not a `_README` sheet.

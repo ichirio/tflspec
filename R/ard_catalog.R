@@ -260,12 +260,12 @@ tfl_ard_statistics <- function(kind = NULL) {
 
 #' An empty ARD spec
 #'
-#' The four sheets with their columns and no rows, and the `study` keys a
+#' The five sheets with their columns and no rows, and the `study` keys a
 #' new spec starts with: `id` (the subject key) and `output` (where the
 #' study ARD goes).
 #'
 #' @return A list of data frames: `study`, `datasets`, `populations`,
-#'   `analyses`.
+#'   `analysis_data`, `analyses`.
 #' @export
 tfl_ard_spec_template <- function() {
   out <- lapply(.ard_spec_sheets, function(cols)

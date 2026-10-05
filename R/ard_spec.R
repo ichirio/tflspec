@@ -31,8 +31,10 @@
   study = c("key", "value"),
   datasets = c("dataset", "level", "path", "derive"),
   populations = c("population_id", "dataset", "where", "derive"),
+  analysis_data = c("data_id", "label", "from", "population_id", "where",
+                    "add", "derive", "distinct"),
   analyses = c("output_id", "analysis_id", "parent", "label", "method",
-               "dataset",
+               "data", "dataset",
                "population_id", "where", "by", "strata", "variables",
                "statistics", "denominator", "formats", "args", "post",
                "code", "purpose", "reason"))
@@ -156,7 +158,8 @@
 
 #' Write an ARD definition to a workbook
 #'
-#' Writes the four sheets (`study`, `datasets`, `populations`, `analyses`)
+#' Writes the five sheets (`study`, `datasets`, `populations`,
+#' `analysis_data`, `analyses`)
 #' and no more; what each column means is a comment on its header cell
 #' ([tfl_spec_columns()]).  [tfl_read_ard_spec()] takes one back.  With
 #' other specs in one workbook: [tfl_write_specs()].
@@ -180,7 +183,7 @@ tfl_write_ard_spec <- function(spec, path, statistics = NULL, methods = NULL,
          `_statistics` = tfl_ard_statistics())), path)
 }
 
-# the four sheets of an ARD definition, in shape
+# the sheets of an ARD definition, in shape
 .ard_spec_normalized <- function(spec) {
   stats::setNames(lapply(names(.ard_spec_sheets), function(s)
     .normalize_ard_sheet(spec[[s]], s)), names(.ard_spec_sheets))
@@ -192,7 +195,8 @@ tfl_write_ard_spec <- function(spec, path, statistics = NULL, methods = NULL,
 #' @param check `FALSE` reads a definition still being written without
 #'   refusing it.
 #' @inheritParams tfl_write_ard_spec
-#' @return An `tfl_ard_spec`: a list of the four sheets.
+#' @return An `tfl_ard_spec`: a list of the five sheets (a workbook
+#'   without `analysis_data`, written before it was added, reads it empty).
 #' @export
 tfl_read_ard_spec <- function(path, check = TRUE, statistics = NULL,
                           methods = NULL) {
@@ -251,6 +255,8 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   on.exit(options(old), add = TRUE)
   # a column a definition does not have yet (written before it was added)
   # is blank
+  # the analysis data in shape (none, written before it was added: empty)
+  x$analysis_data <- .adata_sheet(x)
   for (s in intersect(names(.ard_spec_sheets), names(x))) {
     for (c in setdiff(.ard_spec_sheets[[s]], names(x[[s]]))) {
       x[[s]][[c]] <- rep(NA_character_, nrow(x[[s]]))
@@ -268,7 +274,7 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   if (any(dup)) err <- c(err, sprintf("output_id / analysis_id repeated: %s",
                                       paste(unique(paste(a$output_id, a$analysis_id)[dup]),
                                             collapse = ", ")))
-  err <- c(err, .ard_parent_problems(a))
+  err <- c(err, .ard_parent_problems(a), .adata_problems(x, a))
   for (i in which(!is.na(a$post %||% rep(NA, nrow(a))))) {
     tag <- paste(a$output_id[i], a$analysis_id[i], sep = " / ")
     if (!is.na(a$parent[i] %||% NA)) {
@@ -336,9 +342,10 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   den <- a$denominator %||% rep(NA, nrow(a))
   bad <- unique(stats::na.omit(den[!den %in% c(.den_words,
                                                x$populations$population_id,
-                                               x$datasets$dataset)]))
+                                               x$datasets$dataset,
+                                               x$analysis_data$data_id)]))
   if (length(bad)) err <- c(err, sprintf(
-    "denominator(s) %s: population, row, column, cell, a population or a dataset",
+    "denominator(s) %s: population, row, column, cell, a population, a dataset or an analysis data",
     paste(bad, collapse = ", ")))
   miss <- setdiff(stats::na.omit(c(a$dataset, x$populations$dataset)),
                   x$datasets$dataset)
@@ -398,7 +405,7 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
       err <- c(err, sprintf("%s: its parent %s is inside another itself",
                             tag(i), par[i]))
     }
-    own <- c("dataset", "population_id", "where",
+    own <- c(intersect("data", names(a)), "dataset", "population_id", "where",
              if (identical(a$method[p], "cards::ard_stack")) c("by", "strata"))
     set <- own[!is.na(unlist(a[i, own]))]
     if (length(set)) {
@@ -595,6 +602,7 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   if (den %in% x$populations$population_id) {
     return(paste0("pop_", .r_name(den)))
   }
+  if (den %in% x$analysis_data$data_id) return(den)
   obj <- .r_name(den)
   if (is.null(pop)) obj else
     sprintf("subset(%s, %s %%in%% %s$%s)", obj, subj, population, subj)
@@ -853,6 +861,14 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
 # into `ard`
 .ard_body_lines <- function(x, a, levels = NULL) {
   subj <- .study_value(x, "id", "USUBJID")
+  # an analysis on an analysis data is of its population; the named data
+  # it reads (and its denominator), with the rows they are made from
+  ad <- .adata_sheet(x)
+  x$analysis_data <- ad
+  dcol <- .data_col(a)
+  for (i in which(!is.na(dcol))) a$population_id[i] <- .adata_pop(ad, dcol[i])
+  named <- .adata_used(ad, a)
+  nad <- ad[match(named, ad$data_id), , drop = FALSE]
   code <- "# ---- data"
   if (length(levels)) {
     code <- c(code,
@@ -874,10 +890,13 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
   }
   pops <- unique(stats::na.omit(c(a$population_id,
                                   a$denominator[a$denominator %in%
-                                                  x$populations$population_id])))
+                                                  x$populations$population_id],
+                                  nad$population_id)))
   den_ds <- a$denominator[a$denominator %in% x$datasets$dataset &
                             !a$denominator %in% .den_words]
-  used_ds <- unique(stats::na.omit(c(a$dataset, den_ds, x$populations$dataset[
+  used_ds <- unique(stats::na.omit(c(a$dataset, den_ds,
+                                     nad$from[nad$from %in% x$datasets$dataset],
+                                     x$populations$dataset[
     x$populations$population_id %in% pops])))
   for (ds in used_ds) {
     r <- x$datasets[x$datasets$dataset == ds, ]
@@ -900,11 +919,22 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
   # subjects (or the population itself when it is that dataset), and to
   # the analysis's own subset -- made once, under a name, for every
   # analysis that reads it
-  taken <- c(.r_name(used_ds), paste0("pop_", .r_name(pops)))
+  taken <- c(.r_name(used_ds), paste0("pop_", .r_name(pops)), ad$data_id)
   data_of <- character()
-  made <- character()
+  made <- .adata_lines(x, named, subj)
   data_name <- vapply(seq_len(nrow(a)), function(i) {
     r <- a[i, ]
+    # on an analysis data: it, or its records the analysis's condition keeps
+    if (!is.na(dcol[i])) {
+      if (is.na(r$where)) return(dcol[i])
+      expr <- sprintf("subset(%s, %s)", dcol[i], r$where)
+      if (!is.na(data_of[expr])) return(data_of[[expr]])
+      nm <- make.unique(c(taken, dcol[i]), sep = "_")[length(taken) + 1L]
+      taken <<- c(taken, nm)
+      data_of[[expr]] <<- nm
+      made <<- c(made, sprintf("%s <- %s", nm, expr))
+      return(nm)
+    }
     pid <- r$population_id
     pop <- if (!is.na(pid)) paste0("pop_", .r_name(pid))
     ds <- if (!is.na(r$dataset)) .r_name(r$dataset) else pop
@@ -1122,11 +1152,14 @@ tfl_ard_spec_hash <- function(spec, output_id, dir = ".", codelists = NULL) {
     p <- file.path(dir, f)
     if (file.exists(p)) unname(tools::md5sum(p)) else "missing"
   }, "")
+  ad <- .adata_sheet(spec)
+  ad <- ad[ad$data_id %in% .adata_used(ad, a), , drop = FALSE]
   pops <- spec$populations[spec$populations$population_id %in%
-                             a$population_id, , drop = FALSE]
+                             c(a$population_id, ad$population_id), , drop = FALSE]
   dss <- spec$datasets[spec$datasets$dataset %in%
-                         c(a$dataset, pops$dataset), , drop = FALSE]
+                         c(a$dataset, pops$dataset, ad$from), , drop = FALSE]
   txt <- paste(c(utils::capture.output(print(as.list(a[order(a$analysis_id), ]))),
+                 if (nrow(ad)) utils::capture.output(print(as.list(ad))),
                  utils::capture.output(print(as.list(pops))),
                  utils::capture.output(print(as.list(dss[setdiff(names(dss), "level")]))),
                  utils::capture.output(print(as.list(spec$study))),

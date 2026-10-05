@@ -42,17 +42,18 @@ test_that("the report writer keeps the report keys and the report sheets", {
   expect_identical(back$study$key, c("output_path", "program_dir"))
 })
 
-test_that("an ARD spec is its four sheets; the catalogs only on request", {
+test_that("an ARD spec is its five sheets; the catalogs only on request", {
   skip_if_not_installed("readxl")
   a <- tfl_ard_spec_template()
   f <- withr::local_tempfile(fileext = ".xlsx")
   tfl_write_ard_spec(a, f)
   expect_identical(readxl::excel_sheets(f),
-                   c("study", "datasets", "populations", "analyses"))
+                   c("study", "datasets", "populations", "analysis_data",
+                     "analyses"))
   tfl_write_ard_spec(a, f, catalogs = TRUE)
   expect_identical(readxl::excel_sheets(f),
-                   c("study", "datasets", "populations", "analyses",
-                     "_methods", "_statistics"))
+                   c("study", "datasets", "populations", "analysis_data",
+                     "analyses", "_methods", "_statistics"))
 })
 
 test_that("the column help is a comment on each header cell", {

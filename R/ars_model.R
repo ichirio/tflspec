@@ -397,7 +397,31 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
     mz
   }
 
-  a <- .ard_spec_flat(x$analyses)
+  # an analysis on an analysis data: its analysis set, the dataset it is made
+  # from, and its conditions and the analysis's together; what else it does
+  # (columns added or derived, one row per subject ...) ARS has no place for
+  an <- x$analyses
+  ad <- .adata_sheet(x)
+  dcol <- .data_col(an)
+  for (i in which(!is.na(dcol) & dcol %in% ad$data_id)) {
+    tag <- paste(an$output_id[i], an$analysis_id[i], sep = " / ")
+    ch <- .adata_chain(ad, dcol[i])
+    rows <- ad[match(ch, ad$data_id), , drop = FALSE]
+    w <- c(stats::na.omit(rows$where), stats::na.omit(an$where[i]))
+    an$where[i] <- if (!length(w)) NA_character_ else if (length(w) == 1L) w else
+      paste0("(", w, ")", collapse = " & ")
+    an$population_id[i] <- .adata_pop(ad, dcol[i])
+    an$dataset[i] <- .adata_dataset(ad, dcol[i])
+    for (cn in c("add", "derive", "distinct")) {
+      for (j in which(!is.na(rows[[cn]]))) {
+        miss(tag, paste0("analysis_data$", cn), sprintf(
+          "%s: `%s` -- ARS reads the ADaM as it is, by a WhereClause",
+          rows$data_id[j], rows[[cn]][j]))
+      }
+    }
+  }
+  if (!is.null(an$data)) an$data <- NA_character_
+  a <- .ard_spec_flat(an)
   analyses <- list()
   # each ARS analysis, what it was written from: the spec row, its method,
   # its role (bign: the output's subject count; any: subjects with any
