@@ -1466,7 +1466,12 @@ tfl_table_spec_template <- function(ard, path = NULL, cols = NULL,
   r <- if (nrow(sp$report)) .ard_spec_typed(sp$report[1L, ], "report") else list()
   id <- attr(sp, "output_id") %||% NA_character_
   r$file <- .ard_spec_fill_id(r$file %||% "{output_id}.rtf", id)
-  r$program <- .ard_spec_fill_id(r$program %||% "{output_id}", id)
+  # the program: said in the sheet, else left to rtfreporter -- the file
+  # name of the program that runs, and the report's ID only when no file
+  # name is found (program_fallback)
+  # (exact names: `r$program` would match `program_fallback` partially)
+  r[["program"]] <- .ard_spec_fill_id(r[["program"]], id)
+  if (is.null(r[["program"]]) && !is.na(id)) r[["program_fallback"]] <- id
   r
 }
 
@@ -1520,8 +1525,10 @@ tfl_table_spec_template <- function(ard, path = NULL, cols = NULL,
 #'
 #' @section `report`:
 #' `type` (`table`, `listing`, `figure`; default `table`), `file` (default
-#' `{output_id}.rtf`), `program` (default `{output_id}`, joined to
-#' `study$program_dir` for `{PROGRAM}`), `auto_section`, `section_align`,
+#' `{output_id}.rtf`), `program` (joined to `study$program_dir` for
+#' `{PROGRAM}`; blank: the file name of the program that runs, and
+#' `{output_id}` only when none is found -- rtfreporter's
+#' `program_fallback`), `auto_section`, `section_align`,
 #' `auto_title`, `title_align` (as [rtfreporter::rtf_tables()] takes them), and
 #' `table_font_size_half_points`, `title_font_size_half_points`,
 #' `footnote_font_size_half_points`,

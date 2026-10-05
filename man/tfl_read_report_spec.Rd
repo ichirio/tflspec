@@ -58,8 +58,10 @@ together.  A sheet found in two of them is an error.
 \section{\code{report}}{
 
 \code{type} (\code{table}, \code{listing}, \code{figure}; default \code{table}), \code{file} (default
-\verb{\{output_id\}.rtf}), \code{program} (default \code{{output_id}}, joined to
-\code{study$program_dir} for \code{{PROGRAM}}), \code{auto_section}, \code{section_align},
+\verb{\{output_id\}.rtf}), \code{program} (joined to \code{study$program_dir} for
+\code{{PROGRAM}}; blank: the file name of the program that runs, and
+\code{{output_id}} only when none is found -- rtfreporter's
+\code{program_fallback}), \code{auto_section}, \code{section_align},
 \code{auto_title}, \code{title_align} (as \code{\link[rtfreporter:rtf_tables]{rtfreporter::rtf_tables()}} takes them), and
 \code{table_font_size_half_points}, \code{title_font_size_half_points},
 \code{footnote_font_size_half_points},

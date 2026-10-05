@@ -1,5 +1,12 @@
 # tflspec (development version)
 
+* **A blank `program` is the file name of the program that runs** (#131).
+  The report sheet's `program` is said to rtfreporter only when it is
+  written; blank, `tfl_report()` / `tfl_report_code()` pass
+  `rtf_document(program_fallback = <program_dir>/<output_id>)` instead, so
+  `{PROGRAM}` names the program that runs (sourced, run by Rscript ...) and
+  the report's ID only when no file name is found.  Needs rtfreporter
+  0.8.2.9024.
 * **A `tokens` sheet** (#129): tokens of one's own for a report's
   header, footer, titles and footnotes -- `name` `STUDY`, `value`
   `ABC-123`, written `{STUDY}` -- like the `titles` sheet: a blank
