@@ -1,5 +1,12 @@
 # tflspec (development version)
 
+* **The hints of `by` and `strata` say what differs** (#139).  In cards'
+  summaries `by` analyses every combination of its levels, one the data do
+  not have too (0), and `strata` only the combinations the data have; in a
+  test `by` is the groups compared.  `strata` of `ard_categorical_ci()`
+  (the stratified Wilson interval) and of `ard_stats_mantelhaen_test()`
+  (the CMH strata) has a hint of its own.  `tfl_ard_args()`.
+
 * **Analysis data: a report's own subjects, the columns kept; code lists
   per report** (#137).  `analysis_data$subjects` keeps the subjects of an
   analysis data above (the safety set in phase 1 ...): the numerator kept

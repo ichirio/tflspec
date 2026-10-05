@@ -229,10 +229,19 @@ tfl_ard_args <- function(call) {
   first <- names(fm)[1L]
   fm <- fm[setdiff(names(fm), c("...", "fmt_fn"))]
   cat_rows <- .ard_catalog_rows("args.csv", "tflspec.ard_args", c("call", "arg"))
+  # a company's rows first, its `*` rows too: before the built-in rows of
+  # the function itself
+  co <- getOption("tflspec.ard_args")
+  co <- if (!is.null(co)) as.data.frame(co, stringsAsFactors = FALSE)
+  from_co <- function(cl, a, field) {
+    if (is.null(co) || !field %in% names(co)) return(character())
+    v <- co[[field]][co$call == cl & co$arg == a]
+    as.character(v[!is.na(v)])
+  }
   pick <- function(a, field) {
     own <- cat_rows[cat_rows$call == call & cat_rows$arg == a, field]
     any <- cat_rows[cat_rows$call == "*" & cat_rows$arg == a, field]
-    v <- c(own, any)
+    v <- c(from_co(call, a, field), from_co("*", a, field), own, any)
     v <- v[nzchar(v)]
     if (length(v)) v[1L] else ""
   }
