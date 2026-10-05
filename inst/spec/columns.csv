@@ -158,7 +158,7 @@ col_header,border_bottom,"The cell's bottom rule, as border_top.",single
 report,,"Report: one row a report; blank output_id: the study's default.",
 report,type,"table / listing / figure / user (the report's own code leaves `content`: a data frame, rtftable pages, rtfplot figures or a list of them); blank: table.",listing
 report,file,"The RTF file, relative to the study key output_path; {output_id} is the report's id; blank: {output_id}.rtf.",{output_id}.rtf
-report,program,"The program's name, joined to program_dir for {PROGRAM}; blank: {output_id}.",{output_id}
+report,program,"The program's name, joined to program_dir for {PROGRAM}; blank: the file name of the program that runs, {output_id} only when none is found.",t_14_1_1.R
 report,auto_section,"TRUE / FALSE: each named table a section with its name in the page header (rtf_tables(auto_section = )); blank: FALSE.",TRUE
 report,section_align,"left / center / right: the section label (rtf_tables(section_label_align = )); blank: left.",left
 report,auto_title,"TRUE / FALSE: each named table's name as its last title line (rtf_tables(auto_title = )); blank: FALSE.",TRUE

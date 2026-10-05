@@ -429,11 +429,15 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
     if (!is.na(v)) fmt[[w]] <- v
   }
   dir <- .ard_spec_study_value(sp, "program_dir")
-  prog <- r$program
-  if (!is.na(dir)) {
+  in_dir <- function(p) {
+    if (is.null(p) || is.na(dir)) return(p)
     sep <- if (grepl("\\", dir, fixed = TRUE)) "\\" else "/"
-    prog <- paste(sub("[\\\\/]+$", "", dir), prog, sep = sep)
+    paste(sub("[\\\\/]+$", "", dir), p, sep = sep)
   }
+  # a program written in the sheet is said; with none, the report's ID is
+  # rtfreporter's last resort, after the file name of the program that runs
+  prog <- in_dir(r$program)
+  fallback <- in_dir(r$program_fallback)
   doc <- .spec_sym("doc")
   st <- list(.spec_call("rtf_document",
                         page = if (length(page)) page,
@@ -441,6 +445,7 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
                           do.call(.spec_call, c(list("rtf_default_format"), fmt)),
                         watermark = r$watermark,
                         program = prog,
+                        program_fallback = fallback,
                         tokens = .ard_spec_tokens(sp)))
   # a report may go without the study's running header or footer -- one
   # that puts its run line under the table instead, say

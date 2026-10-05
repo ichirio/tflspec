@@ -439,7 +439,8 @@ test_that("the example workbooks shipped with the package still read and run", {
 
 rep_spec <- function() tfl_table_spec(
   study = c(output_path = "out", program_dir = "C:\\tfl"),
-  report = data.frame(output_id = c(NA, "T2"), page_footer = c(NA, "FALSE")),
+  report = data.frame(output_id = c(NA, "T2"), page_footer = c(NA, "FALSE"),
+                      program = c("{output_id}.R", NA)),
   page = data.frame(output_id = "T2", orientation = "portrait",
                     margin_left_in = "0.5"),
   header = data.frame(output_id = c(NA, NA, "T1", "T1"), line = c(1, 2, 3, 4),
@@ -463,7 +464,7 @@ test_that("tfl_report() is the document the same code would build", {
   pages <- as_rtftables(data.frame(A = "a", B = "b"))
   sp <- tflspec:::.ard_spec_scope(rep_spec(), "T1")
   by_spec <- tfl_report(sp, content = pages)
-  by_code <- rtf_document(program = "C:\\tfl\\T1") |>
+  by_code <- rtf_document(program = "C:\\tfl\\T1.R") |>
     rtf_section(secinfo = list(
       header = rtf_header(list(c("SPONSOR"), c("PROTOCOL", "Page {PAGE} of {TOTAL_PAGES}"),
                                c(""), c("Table 1"))),
@@ -472,10 +473,25 @@ test_that("tfl_report() is the document the same code would build", {
   # the unnamed c("SPONSOR") is centred; the workbook said left
   by_code$sections[[1L]]$header$rows[[1L]] <- c(l = "SPONSOR")
   expect_identical(render_lines(by_spec), render_lines(by_code))
-  # the default program `{output_id}` has no extension: rtfreporter adds .R
+  # the program the sheet says
   expect_true(any(grepl("C:\\\\tfl\\\\T1.R  01Jan2026  09:00", render_lines(by_spec),
                         fixed = TRUE)))
   expect_identical(tfl_report_path(sp), file.path("out", "T1.rtf"))
+})
+
+test_that("a blank program is left to rtfreporter, the ID its last resort", {
+  sp <- tflspec:::.ard_spec_scope(tfl_table_spec(
+    study = c(program_dir = "C:\\tfl"),
+    report = data.frame(output_id = "T1", type = "table")), "T1")
+  code <- paste(tfl_report_code(sp, content = "pages"), collapse = "\n")
+  expect_match(code, 'program_fallback = "C:\\\\tfl\\\\T1"', fixed = TRUE)
+  expect_false(grepl("program = ", sub("program_fallback = ", "", code), fixed = TRUE))
+  # written: said, no fallback
+  sp2 <- tflspec:::.ard_spec_scope(tfl_table_spec(
+    report = data.frame(output_id = "T1", program = "t_dm.R")), "T1")
+  code2 <- paste(tfl_report_code(sp2, content = "pages"), collapse = "\n")
+  expect_match(code2, 'program = "t_dm.R"', fixed = TRUE)
+  expect_false(grepl("program_fallback", code2, fixed = TRUE))
 })
 
 test_that("a report can drop the running footer and use the page sheet", {
