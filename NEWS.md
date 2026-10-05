@@ -1,5 +1,15 @@
 # tflspec (development version)
 
+* **A `tokens` sheet** (#129): tokens of one's own for a report's
+  header, footer, titles and footnotes -- `name` `STUDY`, `value`
+  `ABC-123`, written `{STUDY}` -- like the `titles` sheet: a blank
+  `output_id` is the study's default, a report's row of the same name
+  replaces it, `(none)` takes it out.  `tfl_report()` and
+  `tfl_report_code()` hand them to `rtf_document(tokens = )`.  Names follow
+  rtfreporter's rule (upper case, not one of its own tokens).  Needs
+  rtfreporter 0.8.2.9023.  With rtfreporter 0.8.2.9022 a program name with
+  no extension -- the default `{output_id}` -- shows as `{output_id}.R` in
+  `{PROGRAM}`.
 * The workbook's tokens help names **`{PROGRAM_FULL}`**, the program's
   absolute path (rtfreporter #560; #127).  rtfreporter fills it, so it
   needs rtfreporter 0.8.2.9021: the floor is raised.

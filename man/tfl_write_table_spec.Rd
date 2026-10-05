@@ -22,7 +22,7 @@ Each writer writes the sheets its kind of spec needs and no more:
 \code{tfl_write_table_spec()} the table sheets (\code{tables}, \code{variables},
 \code{cells}, \code{layout}, \code{columns}, \code{style}, \code{col_header}),
 \code{tfl_write_report_spec()} the report sheets (\code{report}, \code{page}, \code{header},
-\code{footer}, \code{titles}, \code{footnotes}), each with the \code{study} sheet (showing the
+\code{footer}, \code{titles}, \code{footnotes}, \code{tokens}), each with the \code{study} sheet (showing the
 keys that kind reads: \code{rounding}; \code{output_path}, \code{program_dir}) and an
 \code{about} sheet stating \code{spec_version}.  Its own sheets are written even
 when empty, so their columns are there to fill in; a sheet of the other

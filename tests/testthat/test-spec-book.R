@@ -36,7 +36,7 @@ test_that("the report writer keeps the report keys and the report sheets", {
   tfl_write_report_spec(r, f)
   expect_identical(readxl::excel_sheets(f),
                    c("study", "report", "page", "header", "footer", "titles",
-                     "footnotes", "about"))
+                     "footnotes", "tokens", "about"))
   back <- tfl_read_report_spec(f)
   expect_identical(back$header, r$header)
   expect_identical(back$study$key, c("output_path", "program_dir"))

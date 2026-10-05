@@ -105,7 +105,9 @@
   header    = c(line = "int", left = "text", center = "text", right = "text"),
   footer    = c(line = "int", left = "text", center = "text", right = "text"),
   titles    = c(line = "int", left = "text", center = "text", right = "text"),
-  footnotes = c(line = "int", left = "text", center = "text", right = "text"))
+  footnotes = c(line = "int", left = "text", center = "text", right = "text"),
+  # tokens of one's own: {STUDY} in a header, footer, title or footnote
+  tokens    = c(name = "text", value = "text"))
 
 .ard_spec_unquote <- function(x) {
   q <- regmatches(x, regexec("^([\"'])(.*)\\1$", x))[[1L]]
@@ -203,7 +205,8 @@
     header    = c("output_id", names(.ard_spec_types$header)),
     footer    = c("output_id", names(.ard_spec_types$footer)),
     titles    = c("output_id", names(.ard_spec_types$titles)),
-    footnotes = c("output_id", names(.ard_spec_types$footnotes)))
+    footnotes = c("output_id", names(.ard_spec_types$footnotes)),
+    tokens    = c("output_id", names(.ard_spec_types$tokens)))
 }
 
 # The facts the `study` sheet may state, one value each for the whole
@@ -234,7 +237,9 @@
                        header    = "line",
                        footer    = "line",
                        titles    = "line",
-                       footnotes = "line")
+                       footnotes = "line",
+                       # a report's own value replaces the default of its name
+                       tokens    = "name")
 
 # Sheets a later version will read (the rest of the RTF deliverable).  A
 # workbook that already carries one is told so, not refused: the file can be
@@ -325,7 +330,7 @@
     }
   }
   for (sh in c("variables", "codelists", "columns", "header", "footer",
-                "titles", "footnotes")) {
+                "titles", "footnotes", "tokens")) {
     v <- sp[[sh]]
     if (is.null(v)) next
     key <- .ard_spec_keys[[sh]]
@@ -687,7 +692,7 @@
 #'
 #' @param tables,variables,cells,layout,columns,style,col_header,cell_styles
 #'   Data frames with the columns above; missing columns are added as `NA`.
-#' @param report,page,header,footer,titles,footnotes The report sheets, as
+#' @param report,page,header,footer,titles,footnotes,tokens The report sheets, as
 #'   data frames with the columns [tfl_read_report_spec()] describes.  `tables` may instead be a named list of the
 #'   sheets, or an `tfl_table_spec` (returned as it is).
 #' @param study The `study` sheet: a `key` / `value` frame, or a named
@@ -706,7 +711,8 @@ tfl_table_spec <- function(tables = NULL, variables = NULL, cells = NULL,
                        study = NULL, layout = NULL, columns = NULL,
                        style = NULL, col_header = NULL, report = NULL,
                        page = NULL, header = NULL, footer = NULL,
-                       titles = NULL, footnotes = NULL, cell_styles = NULL) {
+                       titles = NULL, footnotes = NULL, cell_styles = NULL,
+                       tokens = NULL) {
   if (inherits(tables, "tfl_table_spec")) return(tables)
   if (is.data.frame(tables) && "template" %in% names(tables) &&
       is.null(variables) && is.null(cells)) {
@@ -717,7 +723,7 @@ tfl_table_spec <- function(tables = NULL, variables = NULL, cells = NULL,
                style = style, cell_styles = cell_styles,
                col_header = col_header, report = report,
                page = page, header = header, footer = footer,
-               titles = titles, footnotes = footnotes)
+               titles = titles, footnotes = footnotes, tokens = tokens)
   if (is.list(tables) && !is.data.frame(tables)) {
     x <- tables
     bad <- setdiff(names(x), c("study", names(.ard_spec_schema())))
@@ -741,6 +747,7 @@ tfl_table_spec <- function(tables = NULL, variables = NULL, cells = NULL,
                         sQuote(v[bad][1L])))
     }
   }
+  .ard_spec_check_tokens(sp$tokens)
   chk(t$stats, c("cells", "rows"), "stats")
   chk(t$value, c("stat", "stat_fmt"), "value")
   if (any(is.na(sp$variables$variable))) {
@@ -1262,7 +1269,7 @@ tfl_read_table_spec <- function(path, output_id = NULL) {
 #' `tfl_write_table_spec()` the table sheets (`tables`, `variables`,
 #' `cells`, `layout`, `columns`, `style`, `col_header`),
 #' `tfl_write_report_spec()` the report sheets (`report`, `page`, `header`,
-#' `footer`, `titles`, `footnotes`), each with the `study` sheet (showing the
+#' `footer`, `titles`, `footnotes`, `tokens`), each with the `study` sheet (showing the
 #' keys that kind reads: `rounding`; `output_path`, `program_dir`) and an
 #' `about` sheet stating `spec_version`.  Its own sheets are written even
 #' when empty, so their columns are there to fill in; a sheet of the other
@@ -1385,6 +1392,51 @@ tfl_table_spec_template <- function(ard, path = NULL, cols = NULL,
 # takes the study's line of the same number out instead of replacing it
 # (the run line 99 a report does without).
 .ard_spec_omit <- "(none)"
+
+# ---- the tokens sheet --------------------------------------------------------
+# Tokens of one's own -- {STUDY}, {CUTOFF} -- for a report's header, footer,
+# titles and footnotes: rtfreporter::rtf_document(tokens = ).  One row a
+# token (output_id, name, value); a blank output_id is the study's default,
+# a report's row of the same name replaces it, and "(none)" takes it out.
+# The names follow rtfreporter's rule: upper case, a letter then letters,
+# digits or _, never one of rtfreporter's own tokens.
+.ard_spec_own_rx <- "^[A-Z][A-Z0-9_]*$"
+.ard_spec_rtf_tokens <- c("PAGE", "TOTAL_PAGES", "BOOK_PAGE", "AUTO_PAGE",
+                          "AUTO_TOTAL_PAGES", "SECTION_PAGES", "PROGRAM",
+                          "PROGRAM_FULL", "PROGRAM_NAME", "PROGRAM_DIR",
+                          "DATETIME")
+
+.ard_spec_check_tokens <- function(d) {
+  if (is.null(d) || !nrow(d)) return(invisible(NULL))
+  nm <- trimws(d$name)
+  if (any(is.na(nm) | !nzchar(nm))) {
+    .ard_stop("Every `tokens` row needs a `name` (STUDY, DATA_CUTOFF ...).")
+  }
+  bad <- nm[!grepl(.ard_spec_own_rx, nm)]
+  if (length(bad)) {
+    .ard_stop(paste0(
+      "`tokens$name` is upper case -- a letter, then letters, digits or _ ",
+      "(STUDY, DATA_CUTOFF): not ", paste(sQuote(unique(bad)), collapse = ", "), "."))
+  }
+  own <- intersect(nm, .ard_spec_rtf_tokens)
+  if (length(own)) {
+    .ard_stop(paste0(
+      "`tokens`: ", paste0("{", own, "}", collapse = ", "),
+      " is rtfreporter's own token; give yours another name."))
+  }
+  invisible(NULL)
+}
+
+# A report's tokens (the sheet already scoped to it), as rtf_document()
+# takes them: a named list; NULL when there is none.
+.ard_spec_tokens <- function(sp) {
+  d <- sp$tokens
+  if (is.null(d) || !nrow(d)) return(NULL)
+  v <- ifelse(is.na(d$value), "", d$value)
+  keep <- !trimws(v) %in% .ard_spec_omit
+  if (!any(keep)) return(NULL)
+  stats::setNames(as.list(v[keep]), trimws(d$name[keep]))
+}
 .ard_spec_band <- function(sp, sheet) {
   d <- sp[[sheet]]
   if (is.null(d) || !nrow(d)) return(NULL)
@@ -1432,6 +1484,7 @@ tfl_table_spec_template <- function(ard, path = NULL, cols = NULL,
 #' | `footer` | line of the page footer | the same |
 #' | `titles` | line above the table | the same |
 #' | `footnotes` | line below the table | the same |
+#' | `tokens` | token of one's own | `name`, `value`: `{STUDY}` in any cell |
 #'
 #' plus `study` keys `output_path` (where the RTF files go) and
 #' `program_dir` (where the programs are, for `{PROGRAM}`).
@@ -1446,6 +1499,13 @@ tfl_table_spec_template <- function(ard, path = NULL, cols = NULL,
 #' number out instead -- the run line a report does without.  The page tokens
 #' (`{PAGE}`, `{TOTAL_PAGES}`, ...) and the run tokens ([rtfreporter::generate_rtfreport()])
 #' work in every cell.
+#'
+#' The `tokens` sheet names tokens of one's own: `name` `STUDY`, `value`
+#' `ABC-123`, and a header, footer, title or footnote says `{STUDY}`
+#' ([rtfreporter::rtf_document()]'s `tokens`).  A blank `output_id` is the
+#' study's default; a report's row of the same name replaces it, and one
+#' that says `(none)` takes it out.  A name is upper case -- a letter, then
+#' letters, digits or `_` -- and not one of rtfreporter's own tokens.
 #'
 #' The sheets may be in **one workbook or several** --- a `report.xlsx` a
 #' lead keeps (the list of outputs, titles, footnotes) and a `tables.xlsx`

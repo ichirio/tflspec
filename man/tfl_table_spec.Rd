@@ -19,7 +19,8 @@ tfl_table_spec(
   footer = NULL,
   titles = NULL,
   footnotes = NULL,
-  cell_styles = NULL
+  cell_styles = NULL,
+  tokens = NULL
 )
 }
 \arguments{
@@ -28,7 +29,7 @@ tfl_table_spec(
 \item{study}{The \code{study} sheet: a \code{key} / \code{value} frame, or a named
 vector such as \code{c(rounding = "sas")}.}
 
-\item{report, page, header, footer, titles, footnotes}{The report sheets, as
+\item{report, page, header, footer, titles, footnotes, tokens}{The report sheets, as
 data frames with the columns \code{\link[=tfl_read_report_spec]{tfl_read_report_spec()}} describes.  \code{tables} may instead be a named list of the
 sheets, or an \code{tfl_table_spec} (returned as it is).}
 }

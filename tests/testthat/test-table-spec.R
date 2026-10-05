@@ -153,7 +153,7 @@ test_that("a three-sheet spec supplies the roles as well as the cells", {
   expect_identical(names(sp), c("study", "tables", "variables", "codelists", "cells",
                                 "layout", "columns", "style", "cell_styles",
                                 "col_header", "report", "page", "header", "footer",
-                                "titles", "footnotes"))
+                                "titles", "footnotes", "tokens"))
 
   # no cols / rows in the call: the `tables` sheet says them
   tbl <- spec_table(normalize_ard(make_ard()), sp)
@@ -472,7 +472,8 @@ test_that("tfl_report() is the document the same code would build", {
   # the unnamed c("SPONSOR") is centred; the workbook said left
   by_code$sections[[1L]]$header$rows[[1L]] <- c(l = "SPONSOR")
   expect_identical(render_lines(by_spec), render_lines(by_code))
-  expect_true(any(grepl("C:\\\\tfl\\\\T1  01Jan2026  09:00", render_lines(by_spec),
+  # the default program `{output_id}` has no extension: rtfreporter adds .R
+  expect_true(any(grepl("C:\\\\tfl\\\\T1.R  01Jan2026  09:00", render_lines(by_spec),
                         fixed = TRUE)))
   expect_identical(tfl_report_path(sp), file.path("out", "T1.rtf"))
 })
