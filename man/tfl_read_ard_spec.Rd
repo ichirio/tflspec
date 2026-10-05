@@ -21,7 +21,8 @@ refusing it.}
 \item{x}{A list of the sheets (data frames).}
 }
 \value{
-An \code{tfl_ard_spec}: a list of the four sheets.
+An \code{tfl_ard_spec}: a list of the five sheets (a workbook
+without \code{analysis_data}, written before it was added, reads it empty).
 }
 \description{
 Read and check an ARD definition workbook

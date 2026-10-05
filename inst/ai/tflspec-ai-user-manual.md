@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9044** (the development version,
+**This manual documents tflspec 0.0.24.9045** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -171,7 +171,7 @@ argument is written in one place: a column, or `args`, never both.
 
 ---
 
-## 5. ARD spec — four sheets
+## 5. ARD spec — five sheets
 
 `tfl_ard_spec()`, `tfl_read_ard_spec()`, `tfl_write_ard_spec()`,
 `tfl_ard_spec_template()`.
@@ -181,7 +181,8 @@ argument is written in one place: a column, or `args`, never both.
 | `study` | `key`, `value` | `id`: the subject key (`USUBJID`); `output`: where the study ARD goes (`output/ard/ard.rds`); `source`: R files of the study's own analysis functions, relative to the study folder (`|` between them) |
 | `datasets` | `dataset`, `level`, `path`, `derive` | a name for the data, its level (`SDTM` / `ADaM`), its file relative to the study folder, new columns (`NAME = R expression`, `|` between them) |
 | `populations` | `population_id`, `dataset`, `where`, `derive` | an analysis set: the subjects of `dataset` for which `where` (R) holds; `derive` adds columns (`TRTA = TRT01A`) |
-| `analyses` | `output_id`, `analysis_id`, `label`, `method`, `dataset`, `population_id`, `where`, `by`, `strata`, `variables`, `statistics`, `denominator`, `formats`, `args`, `code`, `purpose`, `reason` | one analysis a row; both ids become ARD columns; `purpose` / `reason` (CDISC terms) only for `tfl_ars()` |
+| `analysis_data` | `data_id`, `label`, `from`, `population_id`, `where`, `add`, `derive`, `distinct` | named data the analyses read (the study's): made `from` a dataset or an analysis data above, kept to a population's subjects and the records `where` keeps, with columns of the population's data added by the subject key (`add`), columns derived, and one row per set of values (`distinct`: `USUBJID | APHASE`, a denominator per subject and phase) -- in that order. `data_id` is the object's name in the ARD program (lower case, not a dataset's or `pop_*`) |
+| `analyses` | `output_id`, `analysis_id`, `label`, `method`, `data`, `dataset`, `population_id`, `where`, `by`, `strata`, `variables`, `statistics`, `denominator`, `formats`, `args`, `code`, `purpose`, `reason` | one analysis a row; both ids become ARD columns; `purpose` / `reason` (CDISC terms) only for `tfl_ars()` |
 
 - `method`: a keyword — `continuous`, `categorical`, `dichotomous`,
   `missing`, `hierarchical`, `max`, `subjects`, `total_n`, `proportion_ci`,
@@ -203,6 +204,12 @@ argument is written in one place: a column, or `args`, never both.
   `args`). Not offered, by design: the old names (`replaced_by` gives the
   new one), the survey-design functions (their input is not a data frame)
   and `ard_formals()` (not an analysis). cards >= 0.8.0, cardx >= 0.3.1.
+- `data`: an analysis data (`data_id`) instead of `dataset` /
+  `population_id` (not both); the analysis set is its population, and the
+  analysis's `where` is applied on top of its conditions. `denominator` may
+  name an analysis data too (as it is: one row a subject and phase gives
+  the N of each phase). A spec without the sheet reads and writes as
+  before: the same code, the same fingerprints.
 - `by`, `strata`, `variables`, `statistics`: `|` between several. `strata`:
   the analysis repeated within them (cards' `strata`: a subgroup, a
   parameter by visit).

@@ -1,5 +1,21 @@
 # tflspec (development version)
 
+* **Analysis data: named data the analyses read** (#135).  A sheet
+  `analysis_data` (the study's): each row makes one data, its `data_id` the
+  object's name in the ARD program -- `from` a dataset or an analysis data
+  above it, kept to a population's subjects (`population_id`) and the
+  records `where` keeps, with columns of the population's data added by
+  the subject key (`add`: `TRT01A | AGEGR1`), columns derived (`derive`)
+  and one row per set of values (`distinct`: `USUBJID | APHASE`, a
+  denominator per subject and phase).  An analysis names one in its new
+  column `data` instead of `dataset` / `population_id`; its `where` still
+  applies, on top; `denominator` may name one too.  The program makes
+  the named data a report reads once, in the sheet's order.  `tfl_ars()`
+  gives such an analysis its population, first dataset and the
+  conditions together; `add` / `derive` / `distinct` are unmapped.  A
+  spec without the sheet reads, writes and runs as before: the same code
+  and the same fingerprints.
+
 * **A keyword's function name is the keyword's analysis** (#133).
   `method` written as the function a keyword calls -- `cards::ard_summary`,
   `cards::ard_stack_hierarchical`, `cardx::ard_continuous_ci` ... -- gets

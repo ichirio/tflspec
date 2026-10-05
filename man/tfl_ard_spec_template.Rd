@@ -8,10 +8,10 @@ tfl_ard_spec_template()
 }
 \value{
 A list of data frames: \code{study}, \code{datasets}, \code{populations},
-\code{analyses}.
+\code{analysis_data}, \code{analyses}.
 }
 \description{
-The four sheets with their columns and no rows, and the \code{study} keys a
+The five sheets with their columns and no rows, and the \code{study} keys a
 new spec starts with: \code{id} (the subject key) and \code{output} (where the
 study ARD goes).
 }
