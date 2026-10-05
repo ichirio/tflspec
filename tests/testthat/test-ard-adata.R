@@ -156,3 +156,55 @@ test_that("ARS: the data's population, first dataset and conditions", {
   un <- tfl_ars_unmapped(ars)
   expect_true(all(c("analysis_data$add", "analysis_data$derive") %in% un$item))
 })
+
+test_that("a report's own subjects, the columns kept, factors of derived columns (#137)", {
+  ad <- ad_df(
+    data_id = c("adsl_old", "adae_old"), from = c("ADSL", "ADAE"),
+    population_id = c("SAF", NA), subjects = c(NA, "adsl_old"),
+    where = c("AGE >= 65", "TRTEMFL == \"Y\""), add = c(NA, "TRT01A"),
+    derive = c("OLD = ifelse(AGE >= 75, \"75+\", \"65-74\")", NA),
+    keep = c(NA, "TRT01A | AEBODSYS | AEDECOD"))
+  an <- ad_df(output_id = c("T1", "T1"), analysis_id = c("OLD", "AE"),
+              method = c("cards::ard_tabulate", "cards::ard_stack_hierarchical"),
+              data = c("adsl_old", "adae_old"), by = "TRT01A",
+              variables = c("OLD", "AEBODSYS | AEDECOD"),
+              denominator = c(NA, "adsl_old"))
+  x <- ad_spec(ad, an)
+  cl <- ad_df(output_id = c(NA, "T1", "T1"), variable = c("SEX", "OLD", "OLD"),
+              value = c("F", "75+", "65-74"), order = c(1, 1, 2))
+  code <- tfl_ard_code(x, output_id = "T1", save = FALSE, part = "body", codelists = cl)
+  # the numerator kept to the denominator's subjects; add from that data
+  expect_true(any(code == "adae_old <- subset(adae, USUBJID %in% adsl_old$USUBJID & (TRTEMFL == \"Y\"))"))
+  expect_true(any(grepl("adsl_old[c(\"USUBJID\", \"TRT01A\")]", code, fixed = TRUE)))
+  expect_true(any(code == "adae_old <- adae_old[c(\"USUBJID\", \"TRT01A\", \"AEBODSYS\", \"AEDECOD\")]"))
+  # the derived column a factor: the report's own code list rows count
+  expect_true(any(code == "adsl_old <- .levels(adsl_old)"))
+  expect_true(any(grepl("`OLD` = c(\"75+\", \"65-74\")", code, fixed = TRUE)))
+  # the study's program: the study rows only (no OLD, no factor line)
+  all <- tfl_ard_code(x, save = FALSE, part = "body", codelists = cl)
+  expect_false(any(grepl("`OLD`", all, fixed = TRUE)))
+  expect_false(any(all == "adsl_old <- .levels(adsl_old)"))
+  # the ARD's analysis set: the one the subjects are of
+  expect_true(any(grepl("\"T1\", \"AE\", \"SAF\")", code, fixed = TRUE)))
+  # a report's rows are part of its fingerprint
+  expect_false(identical(tfl_ard_spec_hash(x, "T1", codelists = cl),
+                         tfl_ard_spec_hash(x, "T1", codelists = cl[1L, ])))
+  # checks
+  d <- ad; d$population_id[2L] <- "SAF"
+  expect_error(ad_spec(d, an), "not both", fixed = TRUE)
+  d <- ad; d$subjects[2L] <- "adae_old"
+  expect_error(ad_spec(d, an), "is not an analysis data above it", fixed = TRUE)
+  # ARS: the subjects' own condition has no place
+  x$analyses$purpose <- "PRIMARY OUTCOME MEASURE"
+  un <- tfl_ars_unmapped(tfl_ars(x))
+  expect_true("analysis_data$subjects" %in% un$item)
+
+  skip_if_not_installed("cards")
+  dir <- withr_tempdir()
+  saveRDS(cards::ADSL, file.path(dir, "adsl.rds"))
+  saveRDS(cards::ADAE, file.path(dir, "adae.rds"))
+  a <- tfl_build_ard(x, dir = dir, output_id = "T1", save = FALSE, codelists = cl)
+  o <- a[a$analysis_id == "OLD" & a$stat_name == "n", ]
+  expect_identical(unique(vapply(o$variable_level, function(v) as.character(v[[1L]]), "")),
+                   c("75+", "65-74"))
+})

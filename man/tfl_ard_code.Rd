@@ -31,9 +31,12 @@ tfl_ard_code(
 (\code{\link[=tfl_ard_spec_hash]{tfl_ard_spec_hash()}}) read the study's own function files from it.}
 
 \item{codelists}{The study's code lists: a table definition (its
-\code{codelists} sheet, the study rows with a blank \code{output_id}) or a data
-frame with \code{variable}, \code{value} and \code{order}.  Each listed column of
-every dataset read becomes a factor in that order before any analysis
+\code{codelists} sheet) or a data frame with \code{variable}, \code{value}, \code{order}
+and optionally \code{output_id}.  The study rows (a blank \code{output_id})
+count; for one report (\code{output_id} one value) its own rows too, which
+replace the study's of the same variable and value.  Each listed
+column of every dataset read, and of the populations and analysis
+data that derive it, becomes a factor in that order before any analysis
 (a value the list does not have comes after, alphabetically), so the
 ARD keeps the order and counts a level no record has (\code{n = 0}).
 \code{NULL} (default): the data as read.}

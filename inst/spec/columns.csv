@@ -25,9 +25,11 @@ analysis_data,data_id,"The data's name, and its object's name in the ARD program
 analysis_data,label,"A name a person reads; blank: none.",Treatment-emergent AEs
 analysis_data,from,"What it is made from: a dataset, or an analysis data of a row above.",ADAE
 analysis_data,population_id,"Keeps the subjects of this population; blank: no restriction here (made from an analysis data: that one's population).",SAF
+analysis_data,subjects,"Keeps the subjects of an analysis data above (a report's own subjects: the safety set in phase 1 ...): the numerator kept to the denominator's subjects. Instead of population_id; blank: no restriction here.",adsl_saf_p1
 analysis_data,where,"An R condition on the records (the numerator's filter); blank: every record.","TRTEMFL == ""Y"""
-analysis_data,add,"Columns of the population's data (its dataset, ADSL) added by the subject key, | between them; a column of the same name is replaced. Needs a population, here or above; blank: none.",TRT01A | AGEGR1
-analysis_data,derive,"New columns, NAME = R expression, | between them (transform()); blank: none.",PHASE = APHASE
+analysis_data,add,"Columns of the population's data (its dataset, ADSL) -- or of the data of `subjects` -- added by the subject key, | between them; a column of the same name is replaced. Needs a population or subjects, here or above; blank: none.",TRT01A | AGEGR1
+analysis_data,derive,"New columns, NAME = R expression, | between them (transform()); a column the code lists list becomes a factor in their order; blank: none.",PHASE = APHASE
+analysis_data,keep,"The columns kept, | between them (the subject key always); with derive, what transmute() does; blank: every column.",TRT01A | AEBODSYS | AEDECOD
 analysis_data,distinct,"One row for each set of values of these columns, | between them (dplyr::distinct(), the first row kept): a denominator per subject and phase; blank: every row.",USUBJID | APHASE
 analyses,,"ARD: one analysis a row; each becomes one cards / cardx call in the ARD program, its result tagged with output_id, analysis_id and population_id.",
 analyses,analysis_id,"The analysis's id within its report; an ARD column.",AGE
@@ -66,7 +68,7 @@ variables,label,"What prints for its name (plan_labels()); blank: the name.",Age
 variables,order,"Its place among the variables (a number); blank: the data's order.",1
 variables,levels,"Its values in print order, | between them (plan_levels()); blank: the data's order.",Grade 0 | Grade 1 | Total
 variables,empty_levels,"Its values no record has -- a code list's value, counted 0 in every column -- show (a 0 row) or hide (plan_levels(.drop_empty = )); blank: show.",hide
-codelists,,"Table: the study's code list, one row a value of a variable -- the text it prints as and its place (plan_labels(), plan_levels()). A report's own rows replace the defaults of the same variable and value. A variable's `levels` on the variables sheet, when given, is the order instead.",
+codelists,,"Table: the study's code list, one row a value of a variable -- the text it prints as and its place (plan_labels(), plan_levels()). A report's own rows replace the defaults of the same variable and value. A variable's `levels` on the variables sheet, when given, is the order instead. The ARD too: a report's ARD program makes factors of the columns it lists (the study's rows and the report's own) before any analysis.",
 codelists,variable,"The variable (an analysis variable or a column key).",SEX
 codelists,value,"A value as the data have it.",F
 codelists,label,"What prints for the value; blank: the value.",Female

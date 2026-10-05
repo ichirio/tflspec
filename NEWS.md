@@ -1,5 +1,17 @@
 # tflspec (development version)
 
+* **Analysis data: a report's own subjects, the columns kept; code lists
+  per report** (#137).  `analysis_data$subjects` keeps the subjects of an
+  analysis data above (the safety set in phase 1 ...): the numerator kept
+  to the denominator's subjects, instead of `population_id`; `add` then
+  takes its columns from that data.  `analysis_data$keep` keeps those
+  columns (the subject key always): with `derive`, transmute().  The code
+  lists make factors of derived columns too (analysis data, populations),
+  and a report's program (`tfl_ard_code(output_id = )` one report) uses
+  its own code list rows as well, which replace the study's of the same
+  variable and value -- as its tables do.  Blank columns and no report
+  rows: the same code and fingerprints.
+
 * **Analysis data: named data the analyses read** (#135).  A sheet
   `analysis_data` (the study's): each row makes one data, its `data_id` the
   object's name in the ARD program -- `from` a dataset or an analysis data
