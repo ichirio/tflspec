@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9045** (the development version,
+**This manual documents tflspec 0.0.24.9046** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -181,7 +181,7 @@ argument is written in one place: a column, or `args`, never both.
 | `study` | `key`, `value` | `id`: the subject key (`USUBJID`); `output`: where the study ARD goes (`output/ard/ard.rds`); `source`: R files of the study's own analysis functions, relative to the study folder (`|` between them) |
 | `datasets` | `dataset`, `level`, `path`, `derive` | a name for the data, its level (`SDTM` / `ADaM`), its file relative to the study folder, new columns (`NAME = R expression`, `|` between them) |
 | `populations` | `population_id`, `dataset`, `where`, `derive` | an analysis set: the subjects of `dataset` for which `where` (R) holds; `derive` adds columns (`TRTA = TRT01A`) |
-| `analysis_data` | `data_id`, `label`, `from`, `population_id`, `where`, `add`, `derive`, `distinct` | named data the analyses read (the study's): made `from` a dataset or an analysis data above, kept to a population's subjects and the records `where` keeps, with columns of the population's data added by the subject key (`add`), columns derived, and one row per set of values (`distinct`: `USUBJID | APHASE`, a denominator per subject and phase) -- in that order. `data_id` is the object's name in the ARD program (lower case, not a dataset's or `pop_*`) |
+| `analysis_data` | `data_id`, `label`, `from`, `population_id`, `subjects`, `where`, `add`, `derive`, `keep`, `distinct` | named data the analyses read (the study's): made `from` a dataset or an analysis data above, kept to a population's subjects and the records `where` keeps, with columns of the population's data added by the subject key (`add`), columns derived, and one row per set of values (`distinct`: `USUBJID | APHASE`, a denominator per subject and phase) -- in that order; `subjects` (instead of `population_id`) keeps the subjects of an analysis data above, a report's own subjects (the numerator kept to the denominator's), and `keep` the columns kept (with `derive`, transmute()). `data_id` is the object's name in the ARD program (lower case, not a dataset's or `pop_*`) |
 | `analyses` | `output_id`, `analysis_id`, `label`, `method`, `data`, `dataset`, `population_id`, `where`, `by`, `strata`, `variables`, `statistics`, `denominator`, `formats`, `args`, `code`, `purpose`, `reason` | one analysis a row; both ids become ARD columns; `purpose` / `reason` (CDISC terms) only for `tfl_ars()` |
 
 - `method`: a keyword — `continuous`, `categorical`, `dichotomous`,
@@ -333,7 +333,7 @@ once. The `study` sheet has `key` / `value` (`rounding`: `sas` / `iec` /
 **variables**: `variable`, `label`, `order`, `levels` (`Grade 0 | Grade 1`), `empty_levels` (`hide`: no row for a value no record has; blank: a 0 row)
 → `plan_labels()`, `plan_levels()`.
 
-**codelists** (the study's code list, one row a value): `variable`, `value`, `label`, `order` → `plan_labels(SEX = c(SEX = "Sex", F = "Female"))` and `plan_levels(SEX = c("M", "F"))`. A report's own rows replace the defaults of the same variable / value; a variable's `levels` on the `variables` sheet, when given, is the order instead.
+**codelists** (the study's code list, one row a value): `variable`, `value`, `label`, `order` → `plan_labels(SEX = c(SEX = "Sex", F = "Female"))` and `plan_levels(SEX = c("M", "F"))`. A report's own rows replace the defaults of the same variable / value; a variable's `levels` on the `variables` sheet, when given, is the order instead. `tfl_ard_code(codelists = )` makes factors of the listed columns before any analysis (derived columns too); for one report, with its own rows.
 
 **cells**: `variable`, `context`, `row`, `when`, `template`, `digits`,
 `signif` → `plan_cells()`. A row with `variable` blank is the table's

@@ -31,8 +31,8 @@
   study = c("key", "value"),
   datasets = c("dataset", "level", "path", "derive"),
   populations = c("population_id", "dataset", "where", "derive"),
-  analysis_data = c("data_id", "label", "from", "population_id", "where",
-                    "add", "derive", "distinct"),
+  analysis_data = c("data_id", "label", "from", "population_id", "subjects",
+                    "where", "add", "derive", "keep", "distinct"),
   analyses = c("output_id", "analysis_id", "parent", "label", "method",
                "data", "dataset",
                "population_id", "where", "by", "strata", "variables",
@@ -535,7 +535,7 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 # The study's code lists as each variable's values in their order: the
 # `codelists` sheet of a table definition (its study rows, blank
 # output_id), or a data frame with `variable`, `value` and `order`.
-.codelist_levels <- function(codelists) {
+.codelist_levels <- function(codelists, output_id = NULL) {
   if (is.null(codelists)) return(NULL)
   if (inherits(codelists, "tfl_table_spec") || (is.list(codelists) &&
                                                 !is.data.frame(codelists))) {
@@ -544,7 +544,13 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   if (!is.data.frame(codelists) || !nrow(codelists)) return(NULL)
   d <- as.data.frame(codelists, stringsAsFactors = FALSE)
   if ("output_id" %in% names(d)) {
-    d <- d[is.na(d$output_id) | !nzchar(trimws(d$output_id)), , drop = FALSE]
+    study <- is.na(d$output_id) | !nzchar(trimws(d$output_id))
+    # one report's: its own rows replace the study's of the same variable
+    # and value (as in its tables)
+    own <- if (length(output_id) == 1L && !is.na(output_id))
+      !study & d$output_id == output_id else rep(FALSE, nrow(d))
+    key <- paste(d$variable, d$value, sep = "\r")
+    d <- rbind(d[study & !key %in% key[own], , drop = FALSE], d[own, , drop = FALSE])
   }
   d <- d[!is.na(d$variable) & !is.na(d$value), , drop = FALSE]
   if (!nrow(d)) return(NULL)
@@ -560,6 +566,15 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 }
 
 .r_name <- function(x) make.names(tolower(x))
+
+# `obj <- .levels(obj)` when the code lists list a column `derive` makes
+# (NULL otherwise: no line, the code as it was)
+.levels_line <- function(obj, derive, levels) {
+  made <- trimws(sub("=.*$", "", .split_bar(derive)))
+  if (length(levels) && any(made %in% names(levels))) {
+    sprintf("%s <- .levels(%s)", obj, obj)
+  }
+}
 
 # `NAME = expr | NAME = expr` as a transform() call on `obj`
 .derive_code <- function(obj, derive) {
@@ -769,9 +784,12 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 #' @param dir The study folder: the fingerprints saved with the ARD
 #'   ([tfl_ard_spec_hash()]) read the study's own function files from it.
 #' @param codelists The study's code lists: a table definition (its
-#'   `codelists` sheet, the study rows with a blank `output_id`) or a data
-#'   frame with `variable`, `value` and `order`.  Each listed column of
-#'   every dataset read becomes a factor in that order before any analysis
+#'   `codelists` sheet) or a data frame with `variable`, `value`, `order`
+#'   and optionally `output_id`.  The study rows (a blank `output_id`)
+#'   count; for one report (`output_id` one value) its own rows too, which
+#'   replace the study's of the same variable and value.  Each listed
+#'   column of every dataset read, and of the populations and analysis
+#'   data that derive it, becomes a factor in that order before any analysis
 #'   (a value the list does not have comes after, alphabetically), so the
 #'   ARD keeps the order and counts a level no record has (`n = 0`).
 #'   `NULL` (default): the data as read.
@@ -792,7 +810,8 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
     st <- tfl_ard_statistics("continuous")
     return(.ard_common_lines(st$statistic[!is.na(st$fun)], x))
   }
-  lv <- .codelist_levels(codelists)
+  # one report's program: its own code list rows too
+  lv <- .codelist_levels(codelists, if (length(output_id) == 1L) output_id)
   if (part == "body") return(.ard_body_lines(x, a, lv))
   out <- .study_value(x, "output", "output/ard/ard.rds")
   code <- c(
@@ -912,7 +931,7 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
     src <- .r_name(r$dataset[1L])
     code <- c(code, if (is.na(r$where[1L])) sprintf("%s <- %s", obj, src) else
       sprintf("%s <- subset(%s, %s)", obj, src, r$where[1L]),
-      .derive_code(obj, r$derive[1L]))
+      .derive_code(obj, r$derive[1L]), .levels_line(obj, r$derive[1L], levels))
   }
   keys <- tfl_ard_methods()
   # each analysis's data: the dataset, restricted to the population's
@@ -921,7 +940,7 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
   # analysis that reads it
   taken <- c(.r_name(used_ds), paste0("pop_", .r_name(pops)), ad$data_id)
   data_of <- character()
-  made <- .adata_lines(x, named, subj)
+  made <- .adata_lines(x, named, subj, levels)
   data_name <- vapply(seq_len(nrow(a)), function(i) {
     r <- a[i, ]
     # on an analysis data: it, or its records the analysis's condition keeps
@@ -1154,6 +1173,9 @@ tfl_ard_spec_hash <- function(spec, output_id, dir = ".", codelists = NULL) {
   }, "")
   ad <- .adata_sheet(spec)
   ad <- ad[ad$data_id %in% .adata_used(ad, a), , drop = FALSE]
+  # a column added since (subjects, keep) blank in every row does not count
+  later <- c("subjects", "keep")
+  ad <- ad[setdiff(names(ad), later[vapply(later, function(cn) all(is.na(ad[[cn]])), NA)])]
   pops <- spec$populations[spec$populations$population_id %in%
                              c(a$population_id, ad$population_id), , drop = FALSE]
   dss <- spec$datasets[spec$datasets$dataset %in%
@@ -1166,7 +1188,7 @@ tfl_ard_spec_hash <- function(spec, output_id, dir = ".", codelists = NULL) {
                  if (length(src)) paste(src, src_md5),
                  # the code lists, only when there are some: a study without
                  # keeps the fingerprints it had
-                 if (length(lv <- .codelist_levels(codelists)))
+                 if (length(lv <- .codelist_levels(codelists, output_id)))
                    utils::capture.output(print(lv))),
                collapse = "\n")
   f <- tempfile()

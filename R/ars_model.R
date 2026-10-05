@@ -412,7 +412,7 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
       paste0("(", w, ")", collapse = " & ")
     an$population_id[i] <- .adata_pop(ad, dcol[i])
     an$dataset[i] <- .adata_dataset(ad, dcol[i])
-    for (cn in c("add", "derive", "distinct")) {
+    for (cn in c("subjects", "add", "derive", "distinct")) {
       for (j in which(!is.na(rows[[cn]]))) {
         miss(tag, paste0("analysis_data$", cn), sprintf(
           "%s: `%s` -- ARS reads the ADaM as it is, by a WhereClause",

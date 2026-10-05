@@ -4,10 +4,12 @@
 #
 #  A row makes one data, under its `data_id` -- the object's name in the ARD
 #  program too: from a dataset or an analysis data above it, the subjects of
-#  a population, the records a condition keeps, columns of the population's
-#  data added by the subject key, columns derived, and one row for each set
-#  of values of some columns (a denominator per subject and phase).  In that
-#  order.  An analysis names one in `data` (instead of `dataset` /
+#  a population (or of an analysis data above: `subjects`, the subjects a
+#  report's own analysis set kept), the records a condition keeps, columns
+#  of the population's (or that data's) added by the subject key, columns
+#  derived (the code lists made factors of them too), the columns kept, and
+#  one row for each set of values of some columns (a denominator per
+#  subject and phase).  In that order.  An analysis names one in `data` (instead of `dataset` /
 #  `population_id`) and may name one as its `denominator`.  The analysis
 #  data is the study's: one name, one meaning, for every report.
 # ============================================================================
@@ -41,12 +43,26 @@
   if (!length(out)) NULL else out
 }
 
-# The analysis set of a data: its own population, else the nearest above
-# it (NA when none)
-.adata_pop <- function(ad, id) {
+# The analysis set of a data: its own population, else that of the data
+# whose subjects it keeps, else the nearest above it (NA when none)
+.adata_pop <- function(ad, id, seen = character()) {
   for (d in rev(.adata_chain(ad, id))) {
-    p <- ad$population_id[match(d, ad$data_id)]
+    i <- match(d, ad$data_id)
+    p <- ad$population_id[i]
     if (!is.na(p)) return(p)
+    s <- ad$subjects[i] %||% NA
+    if (!is.na(s) && !s %in% c(seen, d)) return(.adata_pop(ad, s, c(seen, d)))
+  }
+  NA_character_
+}
+
+# The data a row's `add` takes its columns from: the data whose subjects it
+# keeps, else its analysis set's (`pop_<id>`); NA when none
+.adata_add_from <- function(ad, id) {
+  for (d in rev(.adata_chain(ad, id))) {
+    i <- match(d, ad$data_id)
+    if (!is.na(ad$subjects[i] %||% NA)) return(ad$subjects[i])
+    if (!is.na(ad$population_id[i])) return(paste0("pop_", .r_name(ad$population_id[i])))
   }
   NA_character_
 }
@@ -63,7 +79,13 @@
 .adata_used <- function(ad, a) {
   if (!nrow(ad)) return(character())
   ids <- intersect(c(.data_col(a), a$denominator %||% character()), ad$data_id)
-  all <- unique(unlist(lapply(ids, function(id) .adata_chain(ad, id))))
+  # with the data whose subjects they keep (and theirs)
+  all <- character()
+  while (length(new <- setdiff(unique(unlist(lapply(ids, function(id)
+    .adata_chain(ad, id)))), all))) {
+    all <- c(all, new)
+    ids <- intersect(stats::na.omit(ad$subjects[match(new, ad$data_id)]), ad$data_id)
+  }
   ad$data_id[ad$data_id %in% all]
 }
 
@@ -108,10 +130,22 @@
     if (!is.na(p) && !p %in% pops) {
       err <- c(err, sprintf("%s: population %s is not in `populations`", tag(i), p))
     }
-    if (length(.split_bar(ad$add[i])) && is.na(.adata_pop(ad, id))) {
+    s <- ad$subjects[i]
+    if (!is.na(s)) {
+      if (!s %in% ad$data_id[seq_len(i - 1L)]) {
+        err <- c(err, sprintf(
+          "%s: `subjects` %s is not an analysis data above it", tag(i), s))
+      }
+      if (!is.na(p)) {
+        err <- c(err, sprintf(paste(
+          "%s: the subjects are a population's (`population_id`) or an",
+          "analysis data's (`subjects`); not both"), tag(i)))
+      }
+    }
+    if (length(.split_bar(ad$add[i])) && is.na(.adata_add_from(ad, id))) {
       err <- c(err, sprintf(paste(
-        "%s: `add` takes columns from the population's data, and it has no",
-        "population (here or above)"), tag(i)))
+        "%s: `add` takes columns from the population's data or the data of",
+        "`subjects`, and it has neither (here or above)"), tag(i)))
     }
     for (cn in c("where")) {
       v <- ad[[cn]][i]
@@ -136,9 +170,9 @@
   err
 }
 
-# The lines that make the analysis data `ids` (in their order), and the
-# population each is of
-.adata_lines <- function(x, ids, subj) {
+# The lines that make the analysis data `ids` (in their order); `levels`:
+# the code lists, made factors of the columns a row derives
+.adata_lines <- function(x, ids, subj, levels = NULL) {
   ad <- .adata_sheet(x)
   out <- character()
   for (id in ids) {
@@ -149,12 +183,14 @@
     pop <- if (!is.na(pid)) paste0("pop_", .r_name(pid))
     pop_ds <- if (!is.na(pid)) x$populations$dataset[
       x$populations$population_id == pid][1L]
+    # the subjects an analysis data above kept (a report's own analysis set)
+    if (!is.na(r$subjects)) pop <- r$subjects
     whr <- if (!is.na(r$where)) r$where
     # as each analysis's data: the population itself when the data is its
     # dataset, else the dataset's records of its subjects
     expr <- if (is.null(pop)) {
       if (is.null(whr)) src else sprintf("subset(%s, %s)", src, whr)
-    } else if (!from_data && identical(r$from, pop_ds)) {
+    } else if (!from_data && is.na(r$subjects) && identical(r$from, pop_ds)) {
       if (is.null(whr)) pop else sprintf("subset(%s, %s)", pop, whr)
     } else {
       cond <- sprintf("%s %%in%% %s$%s", subj, pop, subj)
@@ -164,14 +200,19 @@
     out <- c(out, sprintf("%s <- %s", id, expr))
     add <- .split_bar(r$add)
     if (length(add)) {
-      p <- paste0("pop_", .r_name(.adata_pop(ad, id)))
+      p <- .adata_add_from(ad, id)
       q <- function(v) paste(encodeString(v, quote = "\""), collapse = ", ")
       # the population's values replace a column of the same name
       out <- c(out, sprintf(
         "%s <- dplyr::left_join(%s[setdiff(names(%s), c(%s))], %s[c(%s)], by = %s)",
         id, id, id, q(add), p, q(c(subj, add)), encodeString(subj, quote = "\"")))
     }
-    out <- c(out, .derive_code(id, r$derive))
+    out <- c(out, .derive_code(id, r$derive), .levels_line(id, r$derive, levels))
+    keep <- .split_bar(r$keep)
+    if (length(keep)) {
+      out <- c(out, sprintf("%s <- %s[c(%s)]", id, id, paste(
+        encodeString(unique(c(subj, keep)), quote = "\""), collapse = ", ")))
+    }
     dis <- .split_bar(r$distinct)
     if (length(dis)) {
       out <- c(out, sprintf("%s <- dplyr::distinct(%s, %s, .keep_all = TRUE)",
