@@ -436,8 +436,8 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
   }
   # a program written in the sheet is said; with none, the report's ID is
   # rtfreporter's last resort, after the file name of the program that runs
-  prog <- in_dir(r$program)
-  fallback <- in_dir(r$program_fallback)
+  prog <- in_dir(r[["program"]])
+  fallback <- in_dir(r[["program_fallback"]])
   doc <- .spec_sym("doc")
   st <- list(.spec_call("rtf_document",
                         page = if (length(page)) page,

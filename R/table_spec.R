@@ -1469,8 +1469,9 @@ tfl_table_spec_template <- function(ard, path = NULL, cols = NULL,
   # the program: said in the sheet, else left to rtfreporter -- the file
   # name of the program that runs, and the report's ID only when no file
   # name is found (program_fallback)
-  r$program <- .ard_spec_fill_id(r$program, id)
-  if (is.null(r$program) && !is.na(id)) r$program_fallback <- id
+  # (exact names: `r$program` would match `program_fallback` partially)
+  r[["program"]] <- .ard_spec_fill_id(r[["program"]], id)
+  if (is.null(r[["program"]]) && !is.na(id)) r[["program_fallback"]] <- id
   r
 }
 
