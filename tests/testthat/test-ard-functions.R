@@ -194,3 +194,12 @@ test_that("two outputs with the same statistics keep their own rows", {
   expect_identical(exact_numbers(tfl_ard_for(ard, "T")),
                    exact_numbers(tfl_ard_for(ard, "T2")))
 })
+
+test_that("the hints of by and strata say what differs, function by function (#139)", {
+  h <- function(f, a) { d <- tfl_ard_args(f); d$hint[d$arg == a] }
+  expect_match(h("cards::ard_summary", "by"), "do not have too", fixed = TRUE)
+  expect_match(h("cards::ard_summary", "strata"), "only the combinations the data have", fixed = TRUE)
+  expect_match(h("cardx::ard_stats_t_test", "by"), "the groups compared", fixed = TRUE)
+  expect_match(h("cardx::ard_categorical_ci", "strata"), "stratified Wilson", fixed = TRUE)
+  expect_match(h("cardx::ard_stats_mantelhaen_test", "strata"), "Cochran-Mantel-Haenszel", fixed = TRUE)
+})
