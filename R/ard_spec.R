@@ -1244,3 +1244,56 @@ tfl_ard_for <- function(ard, output_id) {
   d <- ard[ard$output_id %in% output_id, , drop = FALSE]
   d[setdiff(names(d), c("output_id", "analysis_id", "population_id"))]
 }
+
+#' An analysis as R: the code of a custom analysis
+#'
+#' The call an analysis row of the definition stands for, written as the
+#' `code` of a `custom` analysis (where `data` and `population` are the
+#' analysis's data and analysis set), with the formats its method gives by
+#' default written out: an analysis the columns cannot say starts from what
+#' they say now, and gives the same ARD.  The definition keeps the R (the
+#' program written from it is never edited).
+#'
+#' @param spec A `tfl_ard_spec` (or the list of its sheets).
+#' @param output_id,analysis_id The analysis.
+#' @return A list: `code` (the R; `NA` for an analysis that runs others
+#'   inside it, or one run inside another), `formats` (the row's `formats`
+#'   with its method's defaults, as the column writes them; `NA` for none),
+#'   `method` (`"custom"`).
+#' @export
+tfl_ard_as_custom <- function(spec, output_id, analysis_id) {
+  x <- spec
+  a <- x$analyses
+  i <- which(a$output_id %in% output_id & a$analysis_id %in% analysis_id)
+  if (length(i) != 1L) {
+    stop("tfl_ard_as_custom(): no analysis ", output_id, " / ", analysis_id, ".",
+         call. = FALSE)
+  }
+  r <- a[i, , drop = FALSE]
+  par <- a$parent %||% rep(NA_character_, nrow(a))
+  none <- list(code = NA_character_, formats = NA_character_, method = "custom")
+  if (!is.na(par[i]) || any(!is.na(par) & par == analysis_id & a$output_id == output_id)) {
+    return(none)
+  }
+  if (identical(r$method, "custom")) {
+    return(list(code = r$code, formats = r$formats, method = "custom"))
+  }
+  subj <- .study_value(x, "id", "USUBJID")
+  x$analysis_data <- .adata_sheet(x)
+  d <- .data_col(r)
+  if (!is.na(d)) r$population_id <- .adata_pop(x$analysis_data, d)
+  keys <- tfl_ard_methods()
+  pid <- r$population_id
+  pop <- if (!is.na(pid)) paste0("pop_", .r_name(pid))
+  given <- c(.args_given(r$args), if (!is.na(r$strata)) "strata",
+             if (!is.na(r$denominator)) "denominator")
+  has <- function(arg) arg %in% given
+  den <- .den_code(r$denominator, x, pop, subj, population = "population")
+  body <- .analysis_body(r, keys, subj, has, den)
+  k <- .method_key(r$method, keys)
+  fmt <- c(if (!is.na(k)) .parse_formats(keys$formats[k]), .parse_formats(r$formats))
+  fmt <- fmt[!duplicated(names(fmt), fromLast = TRUE)]
+  fmt <- if (!length(fmt)) NA_character_ else
+    paste(ifelse(is.na(fmt), names(fmt), paste0(names(fmt), "=", fmt)), collapse = " | ")
+  list(code = body, formats = fmt, method = "custom")
+}

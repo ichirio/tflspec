@@ -39,6 +39,7 @@ reference:
       - tfl_ard_for
       - tfl_ard_spec_hash
       - tfl_ard_methods
+      - tfl_ard_as_custom
       - tfl_ard_statistics
       - tfl_ard_functions
       - tfl_ard_args

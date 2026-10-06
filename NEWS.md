@@ -1,5 +1,12 @@
 # tflspec (development version)
 
+* **`tfl_ard_as_custom()`: an analysis as R** (#143).  The call an analysis
+  row stands for, written as the code of a `custom` analysis (`data` and
+  `population` bound), with its method's default formats written out: the
+  custom analysis gives the same ARD, and its code can then be changed for
+  what the columns cannot say.  The definition keeps the code; the program
+  is never edited.
+
 * **Analysis data written as R: `analysis_data$code`** (#141).  When the
   columns cannot say how a data is made, `code` is R whose value is the
   data, the program's objects in reach (the datasets, `pop_<population>`,
