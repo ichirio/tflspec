@@ -214,36 +214,38 @@
     whr <- if (!is.na(r$where)) r$where
     # as each analysis's data: the population itself when the data is its
     # dataset, else the dataset's records of its subjects
-    expr <- if (is.null(pop)) {
-      if (is.null(whr)) src else sprintf("subset(%s, %s)", src, whr)
+    base <- if (is.null(pop)) {
+      list(src, if (!is.null(whr)) sprintf("subset(%s)", whr))
     } else if (!from_data && is.na(r$subjects) && identical(r$from, pop_ds)) {
-      if (is.null(whr)) pop else sprintf("subset(%s, %s)", pop, whr)
+      list(pop, if (!is.null(whr)) sprintf("subset(%s)", whr))
     } else {
       cond <- sprintf("%s %%in%% %s$%s", subj, pop, subj)
-      if (!is.null(whr)) cond <- sprintf("%s & (%s)", cond, whr)
-      sprintf("subset(%s, %s)", src, cond)
+      if (!is.null(whr)) cond <- .cond_and(cond, whr)
+      list(src, sprintf("subset(%s)", cond))
     }
-    out <- c(out, sprintf("%s <- %s", id, expr))
     add <- .split_bar(r$add)
-    if (length(add)) {
-      p <- .adata_add_from(ad, id)
-      q <- function(v) paste(encodeString(v, quote = "\""), collapse = ", ")
-      # the population's values replace a column of the same name
-      out <- c(out, sprintf(
-        "%s <- dplyr::left_join(%s[setdiff(names(%s), c(%s))], %s[c(%s)], by = %s)",
-        id, id, id, q(add), p, q(c(subj, add)), encodeString(subj, quote = "\"")))
-    }
-    out <- c(out, .derive_code(id, r$derive), .levels_line(id, r$derive, levels))
     keep <- .split_bar(r$keep)
-    if (length(keep)) {
-      out <- c(out, sprintf("%s <- %s[c(%s)]", id, id, paste(
-        encodeString(unique(c(subj, keep)), quote = "\""), collapse = ", ")))
-    }
     dis <- .split_bar(r$distinct)
-    if (length(dis)) {
-      out <- c(out, sprintf("%s <- dplyr::distinct(%s, %s, .keep_all = TRUE)",
-                            id, id, paste(dis, collapse = ", ")))
+    # what follows the rows: derived, its code lists, the columns kept, one
+    # row per ... -- in the statement that makes it, unless columns are
+    # added from the subjects' data first (a join, a statement of its own)
+    rest <- c(.derive_steps(r$derive, levels),
+              if (length(keep)) sprintf("subset(select = c(%s))",
+                                        paste(unique(c(subj, keep)), collapse = ", ")),
+              if (length(dis)) sprintf("dplyr::distinct(%s, .keep_all = TRUE)",
+                                       paste(dis, collapse = ", ")))
+    if (!length(add)) {
+      out <- c(out, .make_code(id, base[[1L]], c(base[[2L]], rest)))
+      next
     }
+    out <- c(out, .make_code(id, base[[1L]], base[[2L]]))
+    p <- .adata_add_from(ad, id)
+    q <- function(v) paste(encodeString(v, quote = "\""), collapse = ", ")
+    # the population's values replace a column of the same name
+    out <- c(out, sprintf(
+      "%s <- dplyr::left_join(%s[setdiff(names(%s), c(%s))], %s[c(%s)], by = %s)",
+      id, id, id, q(add), p, q(c(subj, add)), encodeString(subj, quote = "\"")))
+    if (length(rest)) out <- c(out, .make_code(id, id, rest))
   }
   out
 }
