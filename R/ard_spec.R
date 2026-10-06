@@ -32,7 +32,7 @@
   datasets = c("dataset", "level", "path", "derive"),
   populations = c("population_id", "dataset", "where", "derive"),
   analysis_data = c("data_id", "label", "from", "population_id", "subjects",
-                    "where", "add", "derive", "keep", "distinct"),
+                    "where", "add", "derive", "keep", "distinct", "code"),
   analyses = c("output_id", "analysis_id", "parent", "label", "method",
                "data", "dataset",
                "population_id", "where", "by", "strata", "variables",
@@ -1174,7 +1174,7 @@ tfl_ard_spec_hash <- function(spec, output_id, dir = ".", codelists = NULL) {
   ad <- .adata_sheet(spec)
   ad <- ad[ad$data_id %in% .adata_used(ad, a), , drop = FALSE]
   # a column added since (subjects, keep) blank in every row does not count
-  later <- c("subjects", "keep")
+  later <- c("subjects", "keep", "code")
   ad <- ad[setdiff(names(ad), later[vapply(later, function(cn) all(is.na(ad[[cn]])), NA)])]
   pops <- spec$populations[spec$populations$population_id %in%
                              c(a$population_id, ad$population_id), , drop = FALSE]
