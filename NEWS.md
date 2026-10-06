@@ -1,5 +1,10 @@
 # tflspec (development version)
 
+* **`tfl_read_toc()`: each report's datasets** (#149).  A new field of the
+  map, `datasets`: each report's datasets are `attr(, "datasets")` (named
+  by output id), "ADSL, ADAE", "ADSL / ADAE" or one a line as
+  `"ADSL | ADAE"`.  Not part of the spec, as the sections.
+
 * **`tfl_read_toc()`: each report's section** (#145).  The TOC's heading
   rows ("14.1 Demographics") were passed over; each report's section is
   now `attr(, "sections")` (named by output id): the last heading row
