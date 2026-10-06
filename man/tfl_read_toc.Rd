@@ -11,7 +11,7 @@ tfl_read_toc(path, map, sheet = NULL, skip = 0L, type_from_id = TRUE)
 
 \item{map}{Which column is what: a named character vector or list, the
 names among \code{output_id} (required), \code{type}, \code{title}, \code{population},
-\code{footnote}, \code{program}, \code{file}, \code{note}, \code{section}, each the TOC's column name (or
+\code{footnote}, \code{program}, \code{file}, \code{note}, \code{section}, \code{label}, each the TOC's column name (or
 names, for \code{title} and \code{footnote}).  Names are matched ignoring case
 and surrounding blanks.}
 
@@ -50,6 +50,9 @@ kind was guessed is listed in \code{attr(, "guessed")}.
 section heading such as "14.1 Demographics"), is passed over and
 listed in \code{attr(, "skipped")}; a row with no output id that has more
 is an error, as is an output id given twice.
+\item For a report list's tokens: \code{attr(, "labels")} (the map's \code{label}, the
+report's ID as printed, "Table 14.1.1"), \code{attr(, "first_titles")} and
+\code{attr(, "populations")}, each named by output id, \code{NA} for none.
 \item Each report's section is in \code{attr(, "sections")} (named by output id;
 \code{NA} for none): its \code{section} column when the map names one, else the
 heading row above it (the text of the last row passed over as a

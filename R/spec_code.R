@@ -439,6 +439,7 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
   prog <- in_dir(r[["program"]])
   fallback <- in_dir(r[["program_fallback"]])
   doc <- .spec_sym("doc")
+  tokens <- .ard_spec_tokens(sp, r)
   st <- list(.spec_call("rtf_document",
                         page = if (length(page)) page,
                         default_format = if (length(fmt))
@@ -446,11 +447,11 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
                         watermark = r$watermark,
                         program = prog,
                         program_fallback = fallback,
-                        tokens = .ard_spec_tokens(sp)))
+                        tokens = tokens))
   # a report may go without the study's running header or footer -- one
   # that puts its run line under the table instead, say
-  hdr <- if (!identical(r$page_header, FALSE)) .ard_spec_band(sp, "header")
-  ftr <- if (!identical(r$page_footer, FALSE)) .ard_spec_band(sp, "footer")
+  hdr <- if (!identical(r$page_header, FALSE)) .ard_spec_band(sp, "header", tokens)
+  ftr <- if (!identical(r$page_footer, FALSE)) .ard_spec_band(sp, "footer", tokens)
   if (length(hdr) || length(ftr)) {
     st[[length(st) + 1L]] <- .spec_call("rtf_section", doc, secinfo = list(
       header = if (length(hdr)) .spec_call("rtf_header", hdr),
@@ -470,12 +471,12 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
       title_label_align = r$title_align,
       font_size_half_points = r$table_font_size_half_points)
   }
-  tt <- .ard_spec_band(sp, "titles")
+  tt <- .ard_spec_band(sp, "titles", tokens)
   if (length(tt)) {
     st[[length(st) + 1L]] <- .spec_call("rtf_titles", doc, list(tt),
       font_size_half_points = r$title_font_size_half_points)
   }
-  fn <- .ard_spec_band(sp, "footnotes")
+  fn <- .ard_spec_band(sp, "footnotes", tokens)
   if (length(fn)) {
     st[[length(st) + 1L]] <- .spec_call("rtf_footnotes", doc, list(fn),
       font_size_half_points = r$footnote_font_size_half_points)

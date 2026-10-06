@@ -77,3 +77,63 @@ test_that("the tokens sheet goes through a workbook and back", {
   # the column help is there
   expect_true(all(c("name", "value") %in% tfl_spec_columns("tokens")$column))
 })
+
+# the report's own tokens: OUTPUT_ID, OUTPUT_LABEL, and the TOC's
+own_spec <- function(tokens = NULL, header = NULL) tfl_table_spec(
+  study = c(output_path = "out"),
+  report = data.frame(output_id = c(NA, "T-14-1-1", "L-16-2-7"),
+                      type = c("table", NA, "listing")),
+  header = header %||% data.frame(
+    output_id = NA, line = c("4", "5", "6"),
+    center = c("{OUTPUT_LABEL}", "{OUTPUT_TITLE}", "<{OUTPUT_POPULATION}>")),
+  tokens = tokens)
+
+test_that("a report's own tokens are given when its bands say them", {
+  t1 <- tflspec:::.ard_spec_tokens(tflspec:::.ard_spec_scope(own_spec(), "T-14-1-1"),
+                                   list(type = "table"))
+  expect_identical(t1, list(OUTPUT_LABEL = "Table 14.1.1", OUTPUT_TITLE = "",
+                            OUTPUT_POPULATION = ""))
+  l1 <- tflspec:::.ard_spec_tokens(tflspec:::.ard_spec_scope(own_spec(), "L-16-2-7"),
+                                   list(type = "listing"))
+  expect_identical(l1$OUTPUT_LABEL, "Listing 16.2.7")
+  # the tokens sheet wins: its own label, a TOC's title, other words for the kinds
+  tk <- data.frame(output_id = c("T-14-1-1", "T-14-1-1", NA),
+                   name = c("OUTPUT_TITLE", "OUTPUT_POPULATION", "OUTPUT_KIND_TABLE"),
+                   value = c("Demographics", "Safety Analysis Set", "Tab."))
+  t2 <- tflspec:::.ard_spec_tokens(tflspec:::.ard_spec_scope(own_spec(tk), "T-14-1-1"),
+                                   list(type = "table"))
+  expect_identical(t2$OUTPUT_LABEL, "Tab. 14.1.1")
+  expect_identical(t2$OUTPUT_TITLE, "Demographics")
+  # a report whose bands say none: no own tokens (its program as before)
+  none <- own_spec(header = data.frame(output_id = NA, line = "1", left = "Company"))
+  expect_null(tflspec:::.ard_spec_tokens(tflspec:::.ard_spec_scope(none, "T-14-1-1")))
+})
+
+test_that("a line left with nothing but empty tokens is not printed", {
+  sp <- tflspec:::.ard_spec_scope(own_spec(), "T-14-1-1")
+  code <- paste(tfl_report_code(sp, content = "pages"), collapse = "\n")
+  # the label's line stays; the title's and the analysis set's go
+  expect_match(code, "{OUTPUT_LABEL}", fixed = TRUE)
+  expect_false(grepl("{OUTPUT_TITLE}", code, fixed = TRUE))
+  expect_false(grepl("<{OUTPUT_POPULATION}>", code, fixed = TRUE))
+  expect_match(code, "OUTPUT_LABEL = \"Table 14.1.1\"", fixed = TRUE)
+  tk <- data.frame(output_id = "T-14-1-1", name = "OUTPUT_POPULATION",
+                   value = "Safety Analysis Set")
+  code2 <- paste(tfl_report_code(tflspec:::.ard_spec_scope(own_spec(tk), "T-14-1-1"),
+                                 content = "pages"), collapse = "\n")
+  expect_match(code2, "<{OUTPUT_POPULATION}>", fixed = TRUE)
+})
+
+test_that("the report fills its own tokens when the file is written", {
+  skip_if_not_installed("rtfreporter", "0.8.2.9023")
+  tk <- data.frame(output_id = "T-14-1-1", name = "OUTPUT_TITLE", value = "Demographics")
+  sp <- tflspec:::.ard_spec_scope(own_spec(tk), "T-14-1-1")
+  doc <- tfl_report(sp, content = rtfreporter::as_rtftables(data.frame(A = "a")))
+  f <- tempfile(fileext = ".rtf")
+  on.exit(unlink(f), add = TRUE)
+  rtfreporter::generate_rtfreport(doc, f, overwrite = TRUE)
+  out <- paste(readLines(f, warn = FALSE), collapse = "\n")
+  expect_match(out, "Table 14.1.1", fixed = TRUE)
+  expect_match(out, "Demographics", fixed = TRUE)
+  expect_false(grepl("OUTPUT_", out, fixed = TRUE))
+})

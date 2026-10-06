@@ -1,5 +1,19 @@
 # tflspec (development version)
 
+* **A report's own tokens** (#148).  A report's header, footer, titles
+  and footnotes may say `{OUTPUT_ID}`, `{OUTPUT_LABEL}` ("Table 14.1.1",
+  made from the ID: its first letter T / L / F, else the report's type,
+  and its number from the first digit, separators made dots; the tokens
+  rows `OUTPUT_KIND_TABLE` / `_LISTING` / `_FIGURE` give other words),
+  `{OUTPUT_TITLE}`, `{OUTPUT_POPULATION}`, `{OUTPUT_SECTION}` and
+  `{STUDY_ID}` (blank unless the tokens sheet gives them: a report list
+  writes them from a TOC).  They go to `rtf_document(tokens = )` only when
+  the report says one, so a report that says none is written as before; a
+  row of the tokens sheet wins.  A band line left with nothing but empty
+  tokens (and brackets: `<{OUTPUT_POPULATION}>`) is not printed.
+  `tfl_read_toc()`: a `label` field in the map, and the attributes
+  `labels`, `first_titles` and `populations` for a report list's tokens.
+
 * **`tfl_read_toc()`: each report's section** (#145).  The TOC's heading
   rows ("14.1 Demographics") were passed over; each report's section is
   now `attr(, "sections")` (named by output id): the last heading row

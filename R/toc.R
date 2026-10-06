@@ -10,7 +10,7 @@
 
 # What a TOC column may be mapped to.
 .toc_fields <- c("output_id", "type", "title", "population", "footnote",
-                 "program", "file", "note", "section")
+                 "program", "file", "note", "section", "label")
 
 #' Read a table of contents (TOC) as report specs
 #'
@@ -34,6 +34,9 @@
 #'   section heading such as "14.1 Demographics"), is passed over and
 #'   listed in `attr(, "skipped")`; a row with no output id that has more
 #'   is an error, as is an output id given twice.
+#' * For a report list's tokens: `attr(, "labels")` (the map's `label`, the
+#'   report's ID as printed, "Table 14.1.1"), `attr(, "first_titles")` and
+#'   `attr(, "populations")`, each named by output id, `NA` for none.
 #' * Each report's section is in `attr(, "sections")` (named by output id;
 #'   `NA` for none): its `section` column when the map names one, else the
 #'   heading row above it (the text of the last row passed over as a
@@ -43,7 +46,7 @@
 #' @param path An `.xlsx` or `.csv` file.
 #' @param map Which column is what: a named character vector or list, the
 #'   names among `output_id` (required), `type`, `title`, `population`,
-#'   `footnote`, `program`, `file`, `note`, `section`, each the TOC's column name (or
+#'   `footnote`, `program`, `file`, `note`, `section`, `label`, each the TOC's column name (or
 #'   names, for `title` and `footnote`).  Names are matched ignoring case
 #'   and surrounding blanks.
 #' @param sheet The sheet of a workbook (name or number); `NULL` for the
@@ -170,6 +173,13 @@ tfl_read_toc <- function(path, map, sheet = NULL, skip = 0L,
   attr(sp, "guessed") <- guessed
   attr(sp, "skipped") <- skipped
   attr(sp, "sections") <- stats::setNames(sec, id)
+  # what a report list keeps for the report's own tokens ({OUTPUT_LABEL},
+  # {OUTPUT_TITLE}, {OUTPUT_POPULATION}): the label as printed (the map's
+  # `label`), the first title line, the analysis set; NA for none
+  attr(sp, "labels") <- stats::setNames(col1("label"), id)
+  attr(sp, "first_titles") <- stats::setNames(
+    vapply(lines_of("title"), function(x) if (length(x)) x[1L] else NA_character_, ""), id)
+  attr(sp, "populations") <- stats::setNames(pop, id)
   sp
 }
 

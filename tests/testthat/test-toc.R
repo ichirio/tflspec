@@ -132,3 +132,15 @@ test_that("each report's section: the heading row above it, or its own column", 
   # not part of the spec
   expect_false("section" %in% names(sp3$report))
 })
+
+test_that("a TOC's label, first title and analysis set, for the report's own tokens", {
+  f <- toc_csv(c("No.,Label,Title,Population",
+                 "T-14-1-1,Table 14.1.1,Demographics | Age and sex,Safety Analysis Set",
+                 "T-14-1-2,,Disposition,"))
+  sp <- tfl_read_toc(f, map = c(output_id = "No.", label = "Label", title = "Title",
+                                population = "Population"))
+  expect_identical(unname(attr(sp, "labels")), c("Table 14.1.1", NA))
+  expect_identical(unname(attr(sp, "first_titles")), c("Demographics", "Disposition"))
+  expect_identical(unname(attr(sp, "populations")), c("Safety Analysis Set", NA))
+  expect_identical(names(attr(sp, "labels")), c("T-14-1-1", "T-14-1-2"))
+})
