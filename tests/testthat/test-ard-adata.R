@@ -208,3 +208,41 @@ test_that("a report's own subjects, the columns kept, factors of derived columns
   expect_identical(unique(vapply(o$variable_level, function(v) as.character(v[[1L]]), "")),
                    c("75+", "65-74"))
 })
+
+test_that("a data written as R (`code`): made by it, checked, in the fingerprint", {
+  d <- ad_rows()
+  d$code <- NA_character_
+  # adae_ser written as R instead of its columns
+  d$where[3L] <- NA
+  d$derive[3L] <- NA
+  d$code[3L] <- "out <- adae_teae[adae_teae$AESER == \"Y\", ]\nout$SER <- 1\nout"
+  x <- ad_spec(d, an_rows())
+  code <- tfl_ard_code(x, output_id = "T1", save = FALSE, part = "body")
+  expect_true(any(code == paste0("adae_ser <- local({\n  out <- adae_teae[adae_teae$AESER == \"Y\", ]\n",
+                                 "  out$SER <- 1\n  out\n})")))
+  # in the sheet's order, after what it reads
+  expect_lt(match("adae_teae <- subset(adae, USUBJID %in% pop_saf$USUBJID & (TRTEMFL == \"Y\"))", code),
+            grep("^adae_ser <- local", code))
+  # checked: R, and the columns that make a data left blank
+  bad <- d; bad$code[3L] <- "subset(adae_teae,"
+  expect_error(ad_spec(bad, an_rows()), "`code` does not read as R", fixed = TRUE)
+  bad <- d; bad$where[3L] <- "AESER == \"Y\""
+  expect_error(ad_spec(bad, an_rows()), "`code` makes the data itself; `where`", fixed = TRUE)
+  # a code blank in every row keeps the fingerprint; a code counts
+  plain <- ad_spec(ad_rows(), an_rows())
+  blank <- ad_rows(); blank$code <- NA_character_
+  expect_identical(tfl_ard_spec_hash(ad_spec(blank, an_rows()), "T1"), tfl_ard_spec_hash(plain, "T1"))
+  d2 <- d; d2$code[3L] <- sub("1", "2", d$code[3L])
+  expect_false(identical(tfl_ard_spec_hash(x, "T1"), tfl_ard_spec_hash(ad_spec(d2, an_rows()), "T1")))
+
+  skip_if_not_installed("cards")
+  dir <- withr_tempdir()
+  saveRDS(cards::ADSL, file.path(dir, "adsl.rds"))
+  saveRDS(cards::ADAE, file.path(dir, "adae.rds"))
+  a <- tfl_build_ard(x, dir = dir, output_id = "T1", save = FALSE)
+  # the same ARD as the columns made it
+  b <- tfl_build_ard(plain, dir = dir, output_id = "T1", save = FALSE)
+  key <- function(z) z[z$analysis_id == "SER", c("group1_level", "variable_level", "stat_name", "stat")]
+  expect_identical(key(a), key(b))
+})
+

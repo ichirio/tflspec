@@ -9,7 +9,10 @@
 #  of the population's (or that data's) added by the subject key, columns
 #  derived (the code lists made factors of them too), the columns kept, and
 #  one row for each set of values of some columns (a denominator per
-#  subject and phase).  In that order.  An analysis names one in `data` (instead of `dataset` /
+#  subject and phase).  In that order.  Or, when the columns cannot say it,
+#  `code`: R that makes the data itself (the program's objects in reach:
+#  the datasets, pop_<population>, the analysis data above), the other
+#  columns but `from` left blank.  An analysis names one in `data` (instead of `dataset` /
 #  `population_id`) and may name one as its `denominator`.  The analysis
 #  data is the study's: one name, one meaning, for every report.
 # ============================================================================
@@ -142,6 +145,21 @@
           "analysis data's (`subjects`); not both"), tag(i)))
       }
     }
+    code <- ad$code[i] %||% NA
+    if (!is.na(code)) {
+      if (is.null(tryCatch(parse(text = code), error = function(e) NULL))) {
+        err <- c(err, sprintf("%s: `code` does not read as R", tag(i)))
+      }
+      also <- c("population_id", "subjects", "where", "add", "derive", "keep", "distinct")
+      also <- also[vapply(also, function(cn) !is.na(ad[[cn]][i] %||% NA), NA)]
+      if (length(also)) {
+        err <- c(err, sprintf(paste(
+          "%s: `code` makes the data itself; %s are for a data the columns make",
+          "(leave them blank, or the code blank)"), tag(i),
+          paste0("`", also, "`", collapse = ", ")))
+      }
+      next
+    }
     if (length(.split_bar(ad$add[i])) && is.na(.adata_add_from(ad, id))) {
       err <- c(err, sprintf(paste(
         "%s: `add` takes columns from the population's data or the data of",
@@ -177,6 +195,14 @@
   out <- character()
   for (id in ids) {
     r <- ad[match(id, ad$data_id), ]
+    # written as R: its value is the data (what it makes on the way stays
+    # inside)
+    if (!is.na(r$code %||% NA)) {
+      out <- c(out, sprintf("%s <- local({\n%s\n})", id,
+                            paste0("  ", strsplit(trimws(r$code), "\n", fixed = TRUE)[[1L]],
+                                   collapse = "\n")))
+      next
+    }
     from_data <- r$from %in% ad$data_id
     src <- if (from_data) r$from else .r_name(r$from)
     pid <- r$population_id

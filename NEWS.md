@@ -1,5 +1,14 @@
 # tflspec (development version)
 
+* **Analysis data written as R: `analysis_data$code`** (#141).  When the
+  columns cannot say how a data is made, `code` is R whose value is the
+  data, the program's objects in reach (the datasets, `pop_<population>`,
+  the analysis data above).  `from` stays; the other columns that make a
+  data are left blank with it (checked).  The program has it as
+  `<data_id> <- local({ ... })`, in the sheet's order.  A `code` column
+  blank in every row leaves the fingerprints as they were; ARS notes it as
+  what it has no place for.
+
 * **The hints of `by` and `strata` say what differs** (#139).  In cards'
   summaries `by` analyses every combination of its levels, one the data do
   not have too (0), and `strata` only the combinations the data have; in a
