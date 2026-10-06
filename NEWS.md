@@ -1,5 +1,12 @@
 # tflspec (development version)
 
+* **`tfl_read_toc()`: each report's section** (#145).  The TOC's heading
+  rows ("14.1 Demographics") were passed over; each report's section is
+  now `attr(, "sections")` (named by output id): the last heading row
+  above it, or the TOC's `section` column when the map names one (a new
+  field of the map).  It is not part of the spec (the report sheet is the
+  same): a report list may keep it.
+
 * **`tfl_ard_as_custom()`: an analysis as R** (#143).  The call an analysis
   row stands for, written as the code of a `custom` analysis (`data` and
   `population` bound), with its method's default formats written out: the

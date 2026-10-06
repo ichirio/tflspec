@@ -10,7 +10,7 @@
 
 # What a TOC column may be mapped to.
 .toc_fields <- c("output_id", "type", "title", "population", "footnote",
-                 "program", "file", "note")
+                 "program", "file", "note", "section")
 
 #' Read a table of contents (TOC) as report specs
 #'
@@ -34,11 +34,16 @@
 #'   section heading such as "14.1 Demographics"), is passed over and
 #'   listed in `attr(, "skipped")`; a row with no output id that has more
 #'   is an error, as is an output id given twice.
+#' * Each report's section is in `attr(, "sections")` (named by output id;
+#'   `NA` for none): its `section` column when the map names one, else the
+#'   heading row above it (the text of the last row passed over as a
+#'   heading).  It is not part of the spec: what keeps a report list (an
+#'   app) may keep it.
 #'
 #' @param path An `.xlsx` or `.csv` file.
 #' @param map Which column is what: a named character vector or list, the
 #'   names among `output_id` (required), `type`, `title`, `population`,
-#'   `footnote`, `program`, `file`, `note`, each the TOC's column name (or
+#'   `footnote`, `program`, `file`, `note`, `section`, each the TOC's column name (or
 #'   names, for `title` and `footnote`).  Names are matched ignoring case
 #'   and surrounding blanks.
 #' @param sheet The sheet of a workbook (name or number); `NULL` for the
@@ -84,6 +89,22 @@ tfl_read_toc <- function(path, map, sheet = NULL, skip = 0L,
       paste(bad + skip + 1L, collapse = ", "), sQuote(map$output_id)))
   }
   skipped <- d[heading & said > 0L, others, drop = FALSE]
+  # each row's section: the text of the last heading row above it (a row
+  # with no id and one cell at most, of any column), or its own `section`
+  head_text <- apply(d, 1L, function(r) {
+    v <- r[!is.na(r)]
+    if (length(v)) v[[1L]] else NA_character_
+  })
+  sec <- rep(NA_character_, nrow(d))
+  cur <- NA_character_
+  for (i in seq_len(nrow(d))) {
+    if (heading[i] && !is.na(head_text[i])) cur <- unname(head_text[i])
+    sec[i] <- cur
+  }
+  if (length(map$section)) {
+    own <- d[[map$section[[1L]]]]
+    sec[!is.na(own)] <- own[!is.na(own)]
+  }
   keep <- !no_id
   dup <- unique(id[keep][duplicated(id[keep])])
   if (length(dup)) {
@@ -91,6 +112,7 @@ tfl_read_toc <- function(path, map, sheet = NULL, skip = 0L,
                       paste(sQuote(dup), collapse = ", ")))
   }
   d <- d[keep, , drop = FALSE]
+  sec <- sec[keep]
   id <- id[keep]
   n <- length(id)
   col1 <- function(field) {
@@ -147,6 +169,7 @@ tfl_read_toc <- function(path, map, sheet = NULL, skip = 0L,
   sp <- tfl_table_spec(sheets)
   attr(sp, "guessed") <- guessed
   attr(sp, "skipped") <- skipped
+  attr(sp, "sections") <- stats::setNames(sec, id)
   sp
 }
 
