@@ -414,7 +414,7 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
 # The rtfreporter calls a report definition stands for, as `doc <- ...`
 # steps: what tfl_report() runs and what tfl_report_code() writes.
 # `content` is the name of the report's content in the program.
-.report_spec_steps <- function(sp, content = "content") {
+.report_spec_steps <- function(sp, content = "content", setup = FALSE) {
   r <- .ard_spec_report_row(sp)
   pg <- if (nrow(sp$page)) .ard_spec_typed(sp$page[1L, ], "page") else list()
   geo <- c("paper_size", "orientation", "width_in", "height_in",
@@ -439,6 +439,10 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
   prog <- in_dir(r[["program"]])
   fallback <- in_dir(r[["program_fallback"]])
   doc <- .spec_sym("doc")
+  tokens <- .ard_spec_tokens(sp, r)
+  # the study's tokens left to options(rtfreporter.tokens = ): the
+  # document's own then (rtfreporter fills from both, the document's first)
+  doc_tokens <- if (setup) .ard_spec_tokens(sp, r, study = FALSE) else tokens
   st <- list(.spec_call("rtf_document",
                         page = if (length(page)) page,
                         default_format = if (length(fmt))
@@ -446,15 +450,27 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
                         watermark = r$watermark,
                         program = prog,
                         program_fallback = fallback,
-                        tokens = .ard_spec_tokens(sp)))
+                        tokens = doc_tokens))
   # a report may go without the study's running header or footer -- one
   # that puts its run line under the table instead, say
-  hdr <- if (!identical(r$page_header, FALSE)) .ard_spec_band(sp, "header")
-  ftr <- if (!identical(r$page_footer, FALSE)) .ard_spec_band(sp, "footer")
+  band <- function(sheet) {
+    if (identical(r[[paste0("page_", sheet)]], FALSE)) return(NULL)
+    # the study's, defined once by the setup code: the report says its name
+    # (rtfreporter leaves out a line its tokens leave empty), unless the
+    # report has its own
+    if (setup && !isTRUE(attr(sp, "bands_own")[[sheet]]) &&
+        length(.ard_spec_band(sp, sheet))) {
+      return(.spec_sym(.setup_band_names[[sheet]]))
+    }
+    b <- .ard_spec_band(sp, sheet, tokens)
+    if (!length(b)) return(NULL)
+    .spec_call(paste0("rtf_", sheet), b)
+  }
+  hdr <- band("header")
+  ftr <- band("footer")
   if (length(hdr) || length(ftr)) {
     st[[length(st) + 1L]] <- .spec_call("rtf_section", doc, secinfo = list(
-      header = if (length(hdr)) .spec_call("rtf_header", hdr),
-      footer = if (length(ftr)) .spec_call("rtf_footer", ftr))[
+      header = hdr, footer = ftr)[
         c(if (length(hdr)) "header", if (length(ftr)) "footer")])
   }
   if (identical(r$type %||% "table", "figure")) {
@@ -470,17 +486,100 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
       title_label_align = r$title_align,
       font_size_half_points = r$table_font_size_half_points)
   }
-  tt <- .ard_spec_band(sp, "titles")
+  tt <- .ard_spec_band(sp, "titles", tokens)
   if (length(tt)) {
     st[[length(st) + 1L]] <- .spec_call("rtf_titles", doc, list(tt),
       font_size_half_points = r$title_font_size_half_points)
   }
-  fn <- .ard_spec_band(sp, "footnotes")
+  fn <- .ard_spec_band(sp, "footnotes", tokens)
   if (length(fn)) {
     st[[length(st) + 1L]] <- .spec_call("rtf_footnotes", doc, list(fn),
       font_size_half_points = r$footnote_font_size_half_points)
   }
   st
+}
+
+# the names the setup code gives the study's header and footer
+.setup_band_names <- c(header = "study_header", footer = "study_footer")
+
+#' The study's setup code for its report programs
+#'
+#' What every report of a study shares, as code written once: the study's
+#' tokens (the tokens sheet's default rows, a blank `output_id`:
+#' `COMPANY`, `STUDY_ID` ...) as
+#' `options(rtfreporter.tokens = list(...))`, and its running header and
+#' footer (the header and footer sheets' default rows) as
+#' `study_header <- rtf_header(..., drop_empty_rows = TRUE)` and
+#' `study_footer <- rtf_footer(...)` (a line a report's tokens leave empty
+#' is left out of that report's file).
+#' A study's report programs source it and are written with
+#' `tfl_report_code(setup = TRUE)`: each then says only its own tokens
+#' (`OUTPUT_LABEL`, `OUTPUT_TITLE` ...), and the study's values are in one
+#' place, in the definition and in the code.
+#'
+#' @param spec A report definition (the study's default rows: one with
+#'   several reports serves).
+#' @return The code, one element per line; none when the study has no
+#'   tokens, header or footer.
+#' @examples
+#' sp <- tfl_table_spec(
+#'   header = data.frame(output_id = NA, line = c("1", "2"),
+#'                       left = c("{COMPANY}", "PROTOCOL: {STUDY_ID}"),
+#'                       right = c(NA, "Page {PAGE} of {TOTAL_PAGES}")),
+#'   tokens = data.frame(output_id = NA, name = c("COMPANY", "STUDY_ID"),
+#'                       value = c("Sample Pharma", "ABC-123")))
+#' cat(tfl_report_setup_code(sp), sep = "\n")
+#' @export
+tfl_report_setup_code <- function(spec) {
+  sp <- .as_spec(spec, "table", "tfl_report_setup_code")
+  study <- function(d) if (!is.null(d)) d[is.na(d$output_id), , drop = FALSE]
+  out <- character()
+  d <- study(sp$tokens)
+  if (!is.null(d) && nrow(d)) {
+    v <- ifelse(is.na(d$value), "", d$value)
+    keep <- !trimws(v) %in% .ard_spec_omit
+    if (any(keep)) {
+      tok <- stats::setNames(as.list(v[keep]), trimws(d$name[keep]))
+      out <- c(out, .spec_call_code(.spec_call("options", rtfreporter.tokens = tok), 0L))
+    }
+  }
+  for (sheet in names(.setup_band_names)) {
+    one <- sp
+    one[[sheet]] <- study(sp[[sheet]])
+    b <- .ard_spec_band(one, sheet)
+    if (!length(b)) next
+    # a line of tokens of one's own goes when a report's are empty
+    own <- setdiff(.ard_spec_used_tokens(one[sheet]), .ard_spec_rtf_tokens)
+    call <- .spec_call(paste0("rtf_", sheet), b,
+                       drop_empty_rows = if (length(own)) TRUE)
+    out <- c(out, paste(.setup_band_names[[sheet]], "<-", .spec_call_code(call, 0L)))
+  }
+  if (!length(out)) return(character())
+  unlist(strsplit(out, "\n", fixed = TRUE))
+}
+
+#' A report's tokens
+#'
+#' The values a report's header, footer, titles and footnotes fill their
+#' `{TOKENS}` with -- the study's, the report's own rows, and the report's
+#' own tokens it says (`OUTPUT_LABEL` "Table 14.1.1" ...) -- as
+#' [tfl_report_code()] gives them to `rtf_document(tokens = )`: for a
+#' preview of the page.
+#'
+#' @inheritParams tfl_report
+#' @return A named character vector (none: empty).
+#' @examples
+#' sp <- tfl_table_spec(
+#'   report = data.frame(output_id = "T-14-1-1", type = "table"),
+#'   header = data.frame(output_id = NA, line = "1", center = "{OUTPUT_LABEL}"))
+#' tfl_report_tokens(sp, "T-14-1-1")
+#' @export
+tfl_report_tokens <- function(spec, output_id = NULL) {
+  sp <- .ard_spec_scope(.as_spec(spec, "table", "tfl_report_tokens",
+                                 output_id = output_id), output_id)
+  tk <- .ard_spec_tokens(sp, .ard_spec_report_row(sp))
+  if (is.null(tk)) return(stats::setNames(character(), character()))
+  vapply(tk, as.character, "")
 }
 
 #' The code of a report's document, from its definition
@@ -497,6 +596,15 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
 #'   ([tfl_table_code()]), `rtftable` pages ([tfl_listing_code()]) or the
 #'   figures.
 #' @param doc The name the document is assigned to.
+#' @param setup `TRUE`: the program runs after the study's setup code
+#'   ([tfl_report_setup_code()]), so it leaves out what that defines: the
+#'   study's tokens (rtfreporter fills from the document's first, then
+#'   `options(rtfreporter.tokens = )`), and the study's header and footer,
+#'   said by name (`study_header`, `study_footer`; a line the report's
+#'   tokens leave empty, a blank `<{OUTPUT_POPULATION}>`, is left out when
+#'   the file is written) -- unless the report has its own, written here
+#'   as before.
+#'   `FALSE` (default): the program stands alone.
 #' @return The code, one element per line.
 #' @examples
 #' spec <- tfl_read_report_spec(
@@ -505,10 +613,10 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
 #' cat(tfl_report_code(spec, content = "plan"), sep = "\n")
 #' @export
 tfl_report_code <- function(spec, output_id = NULL, content = "content",
-                            doc = "doc") {
+                            doc = "doc", setup = FALSE) {
   sp <- .ard_spec_scope(.as_spec(spec, "table", "tfl_report_code",
                                  output_id = output_id), output_id)
-  steps <- .report_spec_steps(sp, content)
+  steps <- .report_spec_steps(sp, content, isTRUE(setup))
   out <- vapply(steps, function(s) {
     if (length(s$args) && inherits(s$args[[1L]], "tfl_spec_sym") &&
         identical(s$args[[1L]]$name, "doc")) {
