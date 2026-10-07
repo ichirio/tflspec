@@ -23,6 +23,27 @@ the version you have installed) to the chat session.
 Status: early development (0.0.x). Discussion and sample code:
 [Discussions](https://github.com/ichirio/tflspec/discussions).
 
+## Concept
+
+- **A spec becomes readable code.**  The program tflspec writes from a spec
+  is short and plain, close to what a statistical programmer writes by
+  hand and easy to maintain -- a program people can read, copy and finish
+  by hand.
+- **The typical cases, kept simple.**  The spec's columns cover the
+  analyses and table layouts most studies use, so that the code written
+  from them stays simple; they do not try to cover every possible design.
+- **R code inside the spec.**  What the columns cannot say is written in
+  the spec as R -- a condition, a derived column, an argument, a step
+  after the ARD, or a whole program for a report -- and the written
+  program places it where it belongs.
+- **Shared setup, per-report values.**  What all reports share (header,
+  footer, page style, and study information such as the company name,
+  analysis type and protocol ID) is written once as setup code; each
+  report's program carries only its own values.
+- **Spec -> code, one way.**  The spec is the source (written by
+  tflplanner or edited directly) and the program is written from it; the
+  program is not edited in place.
+
 ## The one workflow
 
 ```text

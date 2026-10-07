@@ -1,5 +1,10 @@
 # tflspec (development version)
 
+* **The design concept, written down** (#154).  The README has a
+  "Concept" section: readable code from a spec, the typical cases kept
+  simple, R code inside the spec, shared setup code and per-report
+  values, spec -> code one way.  Docs only.
+
 * **A hex logo, shared with rtfreporter and tflplanner** (#158), made with
   the site's favicons by `data-raw/logo.R`.
 
