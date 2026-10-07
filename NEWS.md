@@ -11,6 +11,17 @@
   statistic N is labelled "Number of non-missing values" (it read "n (...)",
   next to the categorical n).
 
+* **The design concept, written down** (#154).  The README has a
+  "Concept" section: readable code from a spec, the typical cases kept
+  simple, R code inside the spec, shared setup code and per-report
+  values, spec -> code one way.  Docs only.
+
+* **A hex logo, shared with rtfreporter and tflplanner** (#158), made with
+  the site's favicons by `data-raw/logo.R`.
+
+* Added a root `CITATION.cff` so GitHub's "Cite this repository" button
+  works (#156).
+
 * **`tfl_read_toc()`: each report's datasets** (#149).  A new field of the
   map, `datasets`: each report's datasets are `attr(, "datasets")` (named
   by output id), "ADSL, ADAE", "ADSL / ADAE" or one a line as
