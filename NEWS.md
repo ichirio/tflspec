@@ -9,6 +9,11 @@
   report's own it still says).  Blank: no line, rtfreporter's own
   (Courier, 9 pt).  A program standing alone says them itself; the file
   is the same either way.
+* **A code list of `variable`: the variables' labels** (#172).  Its
+  values are the variables' names (the ARD's `variable` column) and its
+  labels what they print as: `variable / AGE / Age (years)`.  The variables
+  sheet's `label`, when given, wins; it is not an order (the rows follow
+  the variables sheet).  A label is a report's, like its code lists.
 
 * **A code list is a report's** (#170).  Every `codelists` row names its
   report: a blank `output_id` is an error, in a table definition and in
