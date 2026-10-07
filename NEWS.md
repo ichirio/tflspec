@@ -1,5 +1,8 @@
 # tflspec (development version)
 
+* **A hex logo, shared with rtfreporter and tflplanner** (#158), made with
+  the site's favicons by `data-raw/logo.R`.
+
 * **The ARD program as a person writes it** (#150).  A data is made in one
   statement -- its condition, derive, code lists, the columns kept
   (`subset(select = )`) and one row per (`dplyr::distinct()`) as a pipe --
