@@ -1,5 +1,10 @@
 # tflspec (development version)
 
+* **The design concept, written down** (#154).  The README has a
+  "Concept" section: readable code from a spec, the typical cases kept
+  simple, R code inside the spec, shared setup code and per-report
+  values, spec -> code one way.  Docs only.
+
 * **The ARD program as a person writes it** (#150).  A data is made in one
   statement -- its condition, derive, code lists, the columns kept
   (`subset(select = )`) and one row per (`dplyr::distinct()`) as a pipe --
