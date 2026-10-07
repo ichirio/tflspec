@@ -40,10 +40,11 @@ test_that("the analysis data is made once, in order, for what a report reads", {
   x <- ad_spec(ad_rows(), an_rows())
   code <- tfl_ard_code(x, save = FALSE, part = "body")
   # in the sheet's order; the population itself when the data is its dataset
+  # (a data made in one statement: its condition, derive, one row per ...)
   at <- match(c("adsl_saf <- pop_saf",
-                "adae_teae <- subset(adae, USUBJID %in% pop_saf$USUBJID & (TRTEMFL == \"Y\"))",
-                "adae_ser <- subset(adae_teae, AESER == \"Y\")",
-                "adae_subj <- adae_teae"), code)
+                "adae_teae <- subset(adae, USUBJID %in% pop_saf$USUBJID & TRTEMFL == \"Y\")",
+                "adae_ser <- adae_teae |>\n  subset(AESER == \"Y\") |>\n  transform(SER = 1)",
+                "adae_subj <- dplyr::distinct(adae_teae, USUBJID, .keep_all = TRUE)"), code)
   expect_false(anyNA(at))
   expect_false(is.unsorted(at))
   # the population's columns (they replace one of the same name), derived
@@ -52,8 +53,6 @@ test_that("the analysis data is made once, in order, for what a report reads", {
     "adae_teae <- dplyr::left_join(adae_teae[setdiff(names(adae_teae), ",
     "c(\"TRT01A\", \"AGEGR1\"))], pop_saf[c(\"USUBJID\", \"TRT01A\", ",
     "\"AGEGR1\")], by = \"USUBJID\")")))
-  expect_true(any(code == "adae_ser <- transform(adae_ser, SER = 1)"))
-  expect_true(any(code == "adae_subj <- dplyr::distinct(adae_subj, USUBJID, .keep_all = TRUE)"))
   # an analysis's own condition on top, under a name of its own; the
   # denominator as it is; the analysis set is the data's
   expect_true(any(code == "adae_ser_1 <- subset(adae_ser, AESEV == \"SEVERE\")"))
@@ -174,11 +173,11 @@ test_that("a report's own subjects, the columns kept, factors of derived columns
               value = c("F", "75+", "65-74"), order = c(1, 1, 2))
   code <- tfl_ard_code(x, output_id = "T1", save = FALSE, part = "body", codelists = cl)
   # the numerator kept to the denominator's subjects; add from that data
-  expect_true(any(code == "adae_old <- subset(adae, USUBJID %in% adsl_old$USUBJID & (TRTEMFL == \"Y\"))"))
+  expect_true(any(code == "adae_old <- subset(adae, USUBJID %in% adsl_old$USUBJID & TRTEMFL == \"Y\")"))
   expect_true(any(grepl("adsl_old[c(\"USUBJID\", \"TRT01A\")]", code, fixed = TRUE)))
-  expect_true(any(code == "adae_old <- adae_old[c(\"USUBJID\", \"TRT01A\", \"AEBODSYS\", \"AEDECOD\")]"))
+  expect_true(any(code == "adae_old <- subset(adae_old, select = c(USUBJID, TRT01A, AEBODSYS, AEDECOD))"))
   # the derived column a factor: the report's own code list rows count
-  expect_true(any(code == "adsl_old <- .levels(adsl_old)"))
+  expect_true(any(startsWith(code, "adsl_old <- pop_saf |>") & endsWith(code, " |>\n  .levels()")))
   expect_true(any(grepl("`OLD` = c(\"75+\", \"65-74\")", code, fixed = TRUE)))
   # the study's program: the study rows only (no OLD, no factor line)
   all <- tfl_ard_code(x, save = FALSE, part = "body", codelists = cl)
@@ -221,7 +220,7 @@ test_that("a data written as R (`code`): made by it, checked, in the fingerprint
   expect_true(any(code == paste0("adae_ser <- local({\n  out <- adae_teae[adae_teae$AESER == \"Y\", ]\n",
                                  "  out$SER <- 1\n  out\n})")))
   # in the sheet's order, after what it reads
-  expect_lt(match("adae_teae <- subset(adae, USUBJID %in% pop_saf$USUBJID & (TRTEMFL == \"Y\"))", code),
+  expect_lt(match("adae_teae <- subset(adae, USUBJID %in% pop_saf$USUBJID & TRTEMFL == \"Y\")", code),
             grep("^adae_ser <- local", code))
   # checked: R, and the columns that make a data left blank
   bad <- d; bad$code[3L] <- "subset(adae_teae,"

@@ -67,7 +67,7 @@ test_that("the definition becomes code and the code the study ARD", {
   expect_true(any(grepl("denominator = pop_saf", code, fixed = TRUE)))
   # the analysis data is made once, by name; a custom row binds `data`
   expect_true(any(code ==
-    "adae_saf <- subset(adae, USUBJID %in% pop_saf$USUBJID & (TRTEMFL == \"Y\"))"))
+    "adae_saf <- subset(adae, USUBJID %in% pop_saf$USUBJID & TRTEMFL == \"Y\")"))
   expect_true(any(code == "  data <- pop_saf"))
 
   a <- tfl_build_ard(x, dir = dir)
