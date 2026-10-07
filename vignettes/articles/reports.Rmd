@@ -1,0 +1,166 @@
+---
+title: "Reports: headers, footers, titles, footnotes and tokens"
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+knitr::opts_template$set(code = list(comment = "", class.output = "r"))
+options(knitr.kable.NA = "")
+```
+
+The report spec is the document around a table, a listing or a figure:
+the page, the running header and footer, the titles and footnotes, a
+watermark. `tfl_report_code()` writes the rtfreporter calls it stands for
+(`doc <- rtf_document(...)`, `rtf_section()`, `rtf_tables()`,
+`rtf_titles()`, `rtf_footnotes()`), and `tfl_report()` makes the same
+document from a plan or pages in hand.
+
+```{r, message = FALSE}
+library(tflspec)
+library(rtfreporter)
+```
+
+## The sheets
+
+| Sheet | One row per | Holds |
+|---|---|---|
+| `report` | report | `type` (`table`, `listing`, `figure`, `user`), `file` (`{output_id}.rtf`), `program`, font sizes, `page_header` / `page_footer`, `watermark`, a figure's size |
+| `page` | report | paper, orientation, margins, the document's text defaults |
+| `header`, `footer`, `titles`, `footnotes` | line | `line`, `left`, `center`, `right` |
+| `tokens` | token | `name`, `value`: a token of one's own, `{STUDY}` in any cell above |
+
+plus the `study` keys `output_path` (where the RTF files go) and
+`program_dir` (where the programs are, for `{PROGRAM}`).
+
+## Written once for the study
+
+The `output_id` rule makes the study's look a matter of **default rows**
+(a blank `output_id`), written once; each report adds or replaces only
+what is its own. On the line sheets **the line number is the key**:
+
+- the study's page header is default lines 1 and 2, and each report's
+  titles follow on its own lines 3, 4, ...;
+- a run line 99 in the default footer closes every report;
+- a report's line replaces the default line of the same number, and a
+  report's line that says `(none)` takes it out.
+
+```{r}
+df <- function(...) data.frame(..., stringsAsFactors = FALSE)
+
+spec <- tfl_table_spec(
+  study = c(output_path = "output", program_dir = "programs"),
+  report = df(output_id = c(NA, "T-14-1-1", "T-14-3-1"),
+              file = c("{output_id}.rtf", NA, NA),
+              watermark = c("DRAFT", NA, NA)),
+  header = df(output_id = c(NA, NA, "T-14-1-1", "T-14-1-1", "T-14-3-1"),
+              line = c(1, 2, 3, 4, 3),
+              left = c("{SPONSOR}", "Protocol: {STUDY}", NA, NA, NA),
+              center = c(NA, NA, "Table 14.1.1", "Demographics",
+                         "Table 14.3.1"),
+              right = c("{CUTOFF}", "Page {PAGE} of {TOTAL_PAGES}",
+                        NA, NA, NA)),
+  footer = df(output_id = c(NA, "T-14-3-1"), line = c(99, 99),
+              left = c("{PROGRAM}   Generated on: {DATETIME}", "(none)")),
+  footnotes = df(output_id = "T-14-3-1", line = 1,
+                 left = "MedDRA version {MEDDRA}."),
+  tokens = df(output_id = c(NA, NA, NA, NA, "T-14-3-1"),
+              name = c("SPONSOR", "STUDY", "CUTOFF", "MEDDRA", "CUTOFF"),
+              value = c("ACME Pharma", "ABC-123", "Data cut-off: 01JUN2026",
+                        "27.1", "Data cut-off: 01SEP2026")))
+```
+
+The demographics table gets the study's header with its own two title
+lines, the study's run line, and the study's tokens:
+
+```{r, opts.label = "code"}
+cat(tfl_report_code(spec, "T-14-1-1", content = "plan"), sep = "\n")
+```
+
+The AE table has its own cut-off (its `CUTOFF` row replaces the study's),
+a footnote, and no run line (its line 99 says `(none)`):
+
+```{r, opts.label = "code"}
+cat(tfl_report_code(spec, "T-14-3-1", content = "plan"), sep = "\n")
+```
+
+## Tokens
+
+A cell of the header, footer, titles or footnotes may say a token:
+
+- **rtfreporter's own**, filled when the file is written: `{PAGE}`,
+  `{TOTAL_PAGES}`, `{PROGRAM}` (or `{PROGRAM_FULL}`, its absolute path)
+  and `{DATETIME}`. `{PROGRAM}` is the report sheet's `program` joined to
+  `program_dir`; with `program` blank, it is the file name of the program
+  that runs (and the report's id only when none is found).
+- **one's own**, from the `tokens` sheet: a name in upper case (a letter,
+  then letters, digits or `_`), not one of rtfreporter's. A blank
+  `output_id` is the study's default; a report's row of the same name
+  replaces it, and `(none)` takes it out. They go to
+  `rtf_document(tokens = )`.
+
+A value that is the same for every report -- the sponsor, the protocol,
+the cut-off -- is written once, as a study row of the `tokens` sheet;
+the header and footer say `{SPONSOR}` and never repeat it.
+
+## The document
+
+`tfl_report()` makes the document from the content -- a plan, `rtftable`
+pages, or a plain data frame as here; `tfl_report_path()` says where it
+goes (`output_path` and the report's `file`):
+
+```{r}
+content <- data.frame(Statistic = "n", Placebo = "86", Active = "84")
+doc <- tfl_report(spec, "T-14-1-1", content = content)
+tfl_report_path(spec, "T-14-1-1")
+```
+
+```{r, eval = FALSE}
+generate_rtfreport(doc, tfl_report_path(spec, "T-14-1-1"), overwrite = TRUE)
+```
+
+## The example workbook
+
+`report.xlsx` in the package is a study's report spec for the five example
+tables: the sponsor and protocol on lines 1 and 2 of the default header,
+each table's titles on its lines 3 to 6, a run line 99 in the default
+footer, and a PK table that puts its run line under the table instead
+(`page_footer = FALSE`).
+
+```{r}
+ex <- system.file("extdata", "ard-spec", package = "tflspec")
+rs <- tfl_read_report_spec(file.path(ex, c("report.xlsx", "study.xlsx")))
+rs$report[, c("output_id", "type", "file", "page_footer", "note")]
+```
+
+## A company's TOC as report specs
+
+A study's list of outputs usually exists before any table, in the
+company's own workbook. `tfl_read_toc()` reads it through a map of its
+columns, and gives the `report`, `titles` and `footnotes` sheets -- every
+report exists, titled, before a table is written:
+
+```{r}
+toc <- file.path(tempdir(), "toc.csv")
+write.csv(df(
+  `Output No.` = c("", "T-14-1-1", "T-14-3-1", "L-16-2-7"),
+  Title = c("14.1 Demographics", "Demographic Characteristics",
+            "Treatment-Emergent Adverse Events", "Listing of Serious AEs"),
+  `Analysis Set` = c("", "Safety Analysis Set", "Safety Analysis Set",
+                     "Safety Analysis Set"),
+  Datasets = c("", "ADSL", "ADSL, ADAE", "ADAE"),
+  check.names = FALSE), toc, row.names = FALSE)
+
+sp <- tfl_read_toc(toc, map = list(output_id = "Output No.", title = "Title",
+                                   population = "Analysis Set",
+                                   datasets = "Datasets"))
+sp$report[, c("output_id", "type")]
+sp$titles[, c("output_id", "line", "center")]
+attr(sp, "sections")
+attr(sp, "datasets")
+```
+
+The kind of each report comes from its id (`T-`, `L-`, `F-`) when the TOC
+does not say it; a heading row ("14.1 Demographics") is each report's
+section. Write the result with `tfl_write_specs("spec/report.xlsx",
+report = sp)` (or `tfl_write_report_spec()`), and open it in Excel or in
+tflplanner.

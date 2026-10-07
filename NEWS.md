@@ -1,5 +1,11 @@
 # tflspec (development version)
 
+* **The pkgdown site, tidied** (#162): a "Get started" article that walks
+  the whole flow (an ARD spec -> `tfl_ard_code()` / the ARD -> the bundled
+  `DM.xlsx` table -> the bundled `report.xlsx` report), articles on the
+  ARD spec, the table spec, reports, listings, figures and ARS, and a
+  reference index grouped by the workflow.
+
 * **`tfl_read_toc()`: each report's datasets** (#149).  A new field of the
   map, `datasets`: each report's datasets are `attr(, "datasets")` (named
   by output id), "ADSL, ADAE", "ADSL / ADAE" or one a line as
