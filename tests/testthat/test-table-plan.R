@@ -844,3 +844,35 @@ test_that("the codelists sheet: a value's text and place (plan_labels / plan_lev
   expect_error(tfl_table_spec(unclass(bad)), "Row 3 of the code lists (AGEGR1 / <65)",
                fixed = TRUE)
 })
+
+test_that("the code list of `variable`: the variables' labels, the variables sheet's first", {
+  skip_if_not_installed("cards")
+  skip_if(utils::packageVersion("rtfreporter") < "0.8.2.9004")
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  adsl$SEX <- as.character(adsl$SEX)
+  ard <- cards::ard_stack(adsl, .by = TRT,
+    cards::ard_categorical(variables = c(SEX, AGEGR1), statistic = ~ c("n", "p")))
+  d <- suppressMessages(rtfreporter::normalize_ard(ard))
+  sp <- tfl_table_spec(list(
+    tables = data.frame(output_id = "T1", cols = "TRT", rows = "group = variable"),
+    variables = data.frame(output_id = "T1", variable = c("SEX", "AGEGR1"),
+                           label = c(NA, "Age group"), order = c("1", "2")),
+    codelists = data.frame(output_id = "T1",
+                           variable = c("variable", "variable", "SEX", "SEX"),
+                           value = c("SEX", "AGEGR1", "F", "M"),
+                           label = c("Sex (code list)", "not this", "Female", "Male"),
+                           order = c("2", "1", "1", "2")),
+    cells = data.frame(output_id = NA, template = "{n:d} ({p:.1f%})")))
+  lab <- .ard_spec_labels(.ard_spec_scope(sp, "T1"))
+  # SEX's label from the code list, with its values' text; AGEGR1's the sheet's
+  expect_identical(lab$SEX, c(SEX = "Sex (code list)", F = "Female", M = "Male"))
+  expect_identical(lab$AGEGR1, "Age group")
+  expect_null(lab$variable)
+  # not an order: the rows are the variables sheet's
+  expect_null(.ard_spec_levels(.ard_spec_scope(sp, "T1"))$variable)
+  x <- suppressMessages(rtfreporter::plan_apply(tfl_table_plan(d, sp, output_id = "T1")))
+  x <- if (is.data.frame(x)) x else if (inherits(x, "rtftable")) x$data else x[[1L]]$data
+  expect_setequal(unique(as.character(x$group)), c("Sex (code list)", "Age group"))
+  expect_true(all(c("Female", "Male") %in% as.character(x$label)))
+})

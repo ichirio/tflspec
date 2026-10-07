@@ -1042,12 +1042,25 @@ print.tfl_table_spec <- function(x, ...) {
 # plan_labels(): a variable's label (variables$label) and, from the code
 # list, its values' text -- one entry a variable, since one key cannot hold
 # both: SEX = c(SEX = "Sex", F = "Female"), the variable's own name its
-# label (rtfreporter#514).
+# label (rtfreporter#514).  The code list of `variable` (the ARD's column:
+# its values the variables' names) gives a variable's label where the
+# variables sheet gives none.
 .ard_spec_labels <- function(sp) {
   v <- .ard_spec_variables(sp)
   v <- v[!is.na(v$label), , drop = FALSE]
   out <- if (nrow(v)) as.list(stats::setNames(v$label, v$variable)) else list()
-  for (cl in .ard_spec_codelists(sp)) {
+  cls <- .ard_spec_codelists(sp)
+  vl <- cls[["variable"]]
+  if (!is.null(vl)) {
+    vl <- vl[!is.na(vl$label), , drop = FALSE]
+    for (i in seq_len(nrow(vl))) {
+      if (is.null(out[[vl$value[i]]])) out[[vl$value[i]]] <- vl$label[i]
+    }
+    # in the variables sheet's order (the rows follow it)
+    ord <- .ard_spec_variables(sp)$variable
+    out <- out[order(match(names(out), ord, nomatch = length(ord) + 1L))]
+  }
+  for (cl in cls[names(cls) != "variable"]) {
     cl <- cl[!is.na(cl$label), , drop = FALSE]
     if (!nrow(cl)) next
     var <- cl$variable[1L]
@@ -1072,11 +1085,13 @@ print.tfl_table_spec <- function(x, ...) {
 }
 
 # plan_levels(): a variable's own `levels` (variables sheet), else the code
-# list's order of its values.
+# list's order of its values.  (`variable`'s code list is the variables'
+# labels, not an order: the rows' order is the variables sheet's.)
 .ard_spec_levels <- function(sp) {
   v <- sp$variables[!is.na(sp$variables$levels), , drop = FALSE]
   out <- stats::setNames(lapply(v$levels, .ard_spec_split), v$variable)
-  for (cl in .ard_spec_codelists(sp)) {
+  cls <- .ard_spec_codelists(sp)
+  for (cl in cls[names(cls) != "variable"]) {
     var <- cl$variable[1L]
     if (is.null(out[[var]])) out[[var]] <- cl$value
   }
