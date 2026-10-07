@@ -10,7 +10,7 @@
 
 # What a TOC column may be mapped to.
 .toc_fields <- c("output_id", "type", "title", "population", "footnote",
-                 "program", "file", "note", "section", "label")
+                 "program", "file", "note", "section", "datasets", "label")
 
 #' Read a table of contents (TOC) as report specs
 #'
@@ -42,11 +42,15 @@
 #'   heading row above it (the text of the last row passed over as a
 #'   heading).  It is not part of the spec: what keeps a report list (an
 #'   app) may keep it.
+#' * Each report's datasets are in `attr(, "datasets")` (named by output
+#'   id; `NA` for none), from its `datasets` column: "ADSL, ADAE",
+#'   "ADSL / ADAE" or one a line become `"ADSL | ADAE"`.  Not part of the
+#'   spec either.
 #'
 #' @param path An `.xlsx` or `.csv` file.
 #' @param map Which column is what: a named character vector or list, the
 #'   names among `output_id` (required), `type`, `title`, `population`,
-#'   `footnote`, `program`, `file`, `note`, `section`, `label`, each the TOC's column name (or
+#'   `footnote`, `program`, `file`, `note`, `section`, `datasets`, `label`, each the TOC's column name (or
 #'   names, for `title` and `footnote`).  Names are matched ignoring case
 #'   and surrounding blanks.
 #' @param sheet The sheet of a workbook (name or number); `NULL` for the
@@ -173,6 +177,7 @@ tfl_read_toc <- function(path, map, sheet = NULL, skip = 0L,
   attr(sp, "guessed") <- guessed
   attr(sp, "skipped") <- skipped
   attr(sp, "sections") <- stats::setNames(sec, id)
+  attr(sp, "datasets") <- stats::setNames(.toc_datasets(col1("datasets")), id)
   # what a report list keeps for the report's own tokens ({OUTPUT_LABEL},
   # {OUTPUT_TITLE}, {OUTPUT_POPULATION}): the label as printed (the map's
   # `label`), the first title line, the analysis set; NA for none
@@ -181,6 +186,17 @@ tfl_read_toc <- function(path, map, sheet = NULL, skip = 0L,
     vapply(lines_of("title"), function(x) if (length(x)) x[1L] else NA_character_, ""), id)
   attr(sp, "populations") <- stats::setNames(pop, id)
   sp
+}
+
+# A TOC's datasets cell as "ADSL | ADAE" (commas, semicolons, slashes,
+# bars, lines or blanks between them); NA when blank
+.toc_datasets <- function(v) {
+  vapply(v, function(s) {
+    if (is.na(s)) return(NA_character_)
+    p <- trimws(unlist(strsplit(s, "[,;/|[:space:]]+")))
+    p <- unique(p[nzchar(p)])
+    if (length(p)) paste(p, collapse = " | ") else NA_character_
+  }, "", USE.NAMES = FALSE)
 }
 
 # The TOC as text: every column character, blanks NA.
@@ -222,7 +238,8 @@ tfl_read_toc <- function(path, map, sheet = NULL, skip = 0L,
   if (is.null(map$output_id)) {
     .ard_stop("tfl_read_toc(): `map` must say which column is the `output_id`.")
   }
-  for (f in c("output_id", "type", "population", "program", "file", "note")) {
+  for (f in c("output_id", "type", "population", "program", "file", "note",
+              "datasets")) {
     if (length(map[[f]]) > 1L) {
       .ard_stop(sprintf("tfl_read_toc(): `%s` is one column; got %d.", f,
                         length(map[[f]])))

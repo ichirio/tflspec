@@ -144,3 +144,20 @@ test_that("a TOC's label, first title and analysis set, for the report's own tok
   expect_identical(unname(attr(sp, "populations")), c("Safety Analysis Set", NA))
   expect_identical(names(attr(sp, "labels")), c("T-14-1-1", "T-14-1-2"))
 })
+
+test_that("each report's datasets: its datasets column, as one value", {
+  f <- toc_csv(c("No.,Title,Data",
+                 "T-1,One,\"ADSL, ADAE\"",
+                 "T-2,Two,ADSL / ADVS",
+                 "T-3,Three,"))
+  sp <- tfl_read_toc(f, map = c(output_id = "No.", title = "Title", datasets = "Data"))
+  expect_identical(attr(sp, "datasets"),
+                   c(`T-1` = "ADSL | ADAE", `T-2` = "ADSL | ADVS", `T-3` = NA))
+  expect_false("datasets" %in% names(sp$report))
+  # none mapped: NA for each
+  sp2 <- tfl_read_toc(f, map = c(output_id = "No.", title = "Title"))
+  expect_true(all(is.na(attr(sp2, "datasets"))))
+  expect_identical(.toc_datasets(c("ADSL;ADAE", "ADSL ADSL", NA)), c("ADSL | ADAE", "ADSL", NA))
+  expect_error(tfl_read_toc(f, map = list(output_id = "No.", datasets = c("Data", "Title"))),
+               "one column")
+})

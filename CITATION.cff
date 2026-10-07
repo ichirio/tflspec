@@ -1,0 +1,27 @@
+# ------------------------------------------------
+# CITATION.cff file created with {cffr} R package
+# See also: https://docs.ropensci.org/cffr/
+# ------------------------------------------------
+ 
+cff-version: 1.2.0
+message: 'To cite package "tflspec" in publications use:'
+type: software
+license: Apache-2.0
+title: 'tflspec: Excel Specifications for Clinical Tables, Listings and Figures'
+abstract: 'Reads study specifications written in Excel and produces what a clinical
+  TFL report is made of: analysis results data (ARD) normalized and laid out through
+  a declarative plan, rendered as tables by the rtfreporter package, plus skeleton
+  ggplot2 code generated from a plot specification for figures.'
+authors:
+- family-names: Masui
+  given-names: Yoichi
+  email: ichi.r.pro@gmail.com
+repository-code: https://github.com/ichirio/tflspec
+url: https://ichirio.github.io/tflspec/
+keywords:
+- clinical trials
+- TFL
+- Excel
+- analysis results data
+- R package
+

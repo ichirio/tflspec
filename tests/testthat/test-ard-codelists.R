@@ -12,7 +12,7 @@ test_that("code lists make the listed columns factors before the analyses", {
                    value = c("<65", "65-80", ">80", "Unknown", "M"),
                    order = c("1", "2", "3", "4", "1"))
   code <- paste(tfl_ard_code(sp, part = "body", codelists = cl), collapse = "\n")
-  expect_match(code, "adsl <- .levels(adsl)", fixed = TRUE)
+  expect_match(code, "adsl <- readRDS\\([^)]*\\) \\|> \\.levels\\(\\)")
   expect_match(code, "`AGEGR1` = c(\"<65\", \"65-80\", \">80\", \"Unknown\")", fixed = TRUE)
   ard <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE, codelists = cl))
   ag <- ard[ard$variable == "AGEGR1", ]

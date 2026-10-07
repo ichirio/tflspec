@@ -439,7 +439,8 @@ tfl_write_specs("spec/report.xlsx", report = sp)
 ```
 
 - `map` names are the fields (`output_id` required; `type`, `title`,
-  `population`, `footnote`, `program`, `file`, `note`, `section`, `label`); values are the
+  `population`, `footnote`, `program`, `file`, `note`, `section`,
+  `datasets`, `label`); values are the
   TOC's column names, matched ignoring case. A missing column names the
   closest ones.
 - `title` / `footnote`: one column or several; a cell's line breaks or
@@ -453,6 +454,9 @@ tfl_write_specs("spec/report.xlsx", report = sp)
 - Each report's section is `attr(, "sections")` (named by output id; `NA`
   for none): its `section` column, else the last heading row above it. It
   is not part of the spec.
+- Each report's datasets are `attr(, "datasets")` (named by output id;
+  `NA` for none): its `datasets` column, "ADSL, ADAE" or "ADSL / ADAE" as
+  `"ADSL | ADAE"`. Not part of the spec either.
 - `attr(, "labels")` (the map's `label`: the ID as printed), `attr(, "first_titles")`, `attr(, "populations")`: for a report list to write the report's own tokens.
 
 ---

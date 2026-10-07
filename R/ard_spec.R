@@ -569,11 +569,37 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 
 # `obj <- .levels(obj)` when the code lists list a column `derive` makes
 # (NULL otherwise: no line, the code as it was)
-.levels_line <- function(obj, derive, levels) {
-  made <- trimws(sub("=.*$", "", .split_bar(derive)))
-  if (length(levels) && any(made %in% names(levels))) {
-    sprintf("%s <- .levels(%s)", obj, obj)
+# A condition and another: the second in brackets only when it needs them
+# (an "or", or R that does not read)
+.cond_and <- function(a, b) {
+  e <- tryCatch(str2lang(b), error = function(err) NULL)
+  low <- is.call(e) && as.character(e[[1L]]) %in% c("|", "||")
+  sprintf(if (is.null(e) || low) "%s & (%s)" else "%s & %s", a, b)
+}
+
+# `obj` made from `src` by `steps` (calls without their data: "subset(X)",
+# "transform(A = B)", ".levels()") in one statement, the way a person
+# writes it: no step, `obj <- src`; one step on a name, `obj <- subset(src,
+# X)`; else a pipe, a step a line
+.make_code <- function(obj, src, steps) {
+  steps <- steps[!is.na(steps) & nzchar(steps)]
+  if (!length(steps)) return(sprintf("%s <- %s", obj, src))
+  if (length(steps) == 1L && grepl("^[A-Za-z.][A-Za-z0-9._]*$", src)) {
+    s <- steps[[1L]]
+    inner <- sub("^[^(]*\\((.*)\\)$", "\\1", s)
+    fn <- sub("\\(.*$", "", s)
+    return(sprintf("%s <- %s(%s%s)", obj, fn, src, if (nzchar(inner)) paste0(", ", inner) else ""))
   }
+  if (length(steps) == 1L) return(sprintf("%s <- %s |> %s", obj, src, steps[[1L]]))
+  paste0(obj, " <- ", src, " |>\n  ", paste(steps, collapse = " |>\n  "))
+}
+
+# the steps of a derive and of the code lists: transform(...), .levels()
+.derive_steps <- function(derive, levels = NULL) {
+  d <- .split_bar(derive)
+  made <- trimws(sub("=.*$", "", d))
+  c(if (length(d)) sprintf("transform(%s)", paste(d, collapse = ", ")),
+    if (length(levels) && any(made %in% names(levels))) ".levels()")
 }
 
 # `NAME = expr | NAME = expr` as a transform() call on `obj`
@@ -920,18 +946,19 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
   for (ds in used_ds) {
     r <- x$datasets[x$datasets$dataset == ds, ]
     obj <- .r_name(ds)
-    code <- c(code, sprintf("%s <- %s", obj, .reader(r$path[1L])),
-              .derive_code(obj, r$derive[1L]),
-              if (length(levels)) sprintf("%s <- .levels(%s)", obj, obj))
+    d <- .split_bar(r$derive[1L])
+    code <- c(code, .make_code(obj, .reader(r$path[1L]), c(
+      if (length(d)) sprintf("transform(%s)", paste(d, collapse = ", ")),
+      if (length(levels)) ".levels()")))
   }
   code <- c(code, "", "# ---- populations")
   for (pid in pops) {
     r <- x$populations[x$populations$population_id == pid, ]
     obj <- paste0("pop_", .r_name(pid))
     src <- .r_name(r$dataset[1L])
-    code <- c(code, if (is.na(r$where[1L])) sprintf("%s <- %s", obj, src) else
-      sprintf("%s <- subset(%s, %s)", obj, src, r$where[1L]),
-      .derive_code(obj, r$derive[1L]), .levels_line(obj, r$derive[1L], levels))
+    code <- c(code, .make_code(obj, src, c(
+      if (!is.na(r$where[1L])) sprintf("subset(%s)", r$where[1L]),
+      .derive_steps(r$derive[1L], levels))))
   }
   keys <- tfl_ard_methods()
   # each analysis's data: the dataset, restricted to the population's
@@ -968,7 +995,7 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
       if (is.null(whr)) src else sprintf("subset(%s, %s)", src, whr)
     } else {
       cond <- sprintf("%s %%in%% %s$%s", subj, pop, subj)
-      if (!is.null(whr)) cond <- sprintf("%s & (%s)", cond, whr)
+      if (!is.null(whr)) cond <- .cond_and(cond, whr)
       sprintf("subset(%s, %s)", ds, cond)
     }
     # no dataset and no population: no data (as before, `data` is NULL)
@@ -1049,7 +1076,32 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
   # output_id / analysis_id as part of a row's key, so the same statistic in
   # two outputs (AGE's mean in two analysis sets) would stop it, or, with the
   # same value, lose one output's rows.  The class card is kept by .tag().
-  c(code, "", "ard <- do.call(dplyr::bind_rows, ards)")
+  .pop_as_adata(c(code, "", "ard <- do.call(dplyr::bind_rows, ards)"), ad$data_id)
+}
+
+# An analysis data that is an analysis set and nothing else (`adsl_saf <-
+# pop_saf`), when the set is used for nothing else in the program: made
+# once, under the data's name, where the analysis data are
+# (`adsl_saf <- adsl |> subset(SAFFL == "Y") |> ...`), and no pop_saf.
+.pop_as_adata <- function(code, data_ids) {
+  rx <- "^([A-Za-z.][A-Za-z0-9._]*) <- (pop_[A-Za-z0-9._]+)$"
+  for (k in rev(grep(rx, code))) {
+    d <- sub(rx, "\\1", code[k])
+    p <- sub(rx, "\\2", code[k])
+    if (!d %in% data_ids) next
+    def <- which(startsWith(code, paste0(p, " <- ")))
+    if (length(def) != 1L) next
+    word <- paste0("(^|[^A-Za-z0-9._])", gsub(".", "\\.", p, fixed = TRUE), "($|[^A-Za-z0-9._])")
+    if (any(grepl(word, code[-c(k, def)]))) next
+    code[k] <- paste0(d, substring(code[def], nchar(p) + 1L))
+    code <- code[-def]
+  }
+  # a populations section with nothing left in it goes
+  h <- which(code == "# ---- populations")
+  if (length(h) && (h == length(code) || !nzchar(code[h + 1L]))) {
+    code <- code[-c(if (h > 1L && !nzchar(code[h - 1L])) h - 1L, h)]
+  }
+  code
 }
 
 # The functions that run other analyses: an analysis row whose `parent`
