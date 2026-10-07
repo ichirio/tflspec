@@ -122,7 +122,7 @@ pp_q_adsl_join <- function(vars, key = "USUBJID") {
   if (!length(vars)) return(NULL)
   v <- paste(q(vars), collapse = ", ")
   c(sprintf("select(-any_of(c(%s)))", v),
-    sprintf("left_join(adsl %%>%% select(%s, all_of(c(%s))), by = %s)", key, v, q(key)))
+    sprintf("left_join(adsl |> select(%s, all_of(c(%s))), by = %s)", key, v, q(key)))
 }
 
 # Evaluate a data step on the ADaM data at generation time (for literal
@@ -177,17 +177,17 @@ pp_q_pal <- function(obj, df, var, df_name, palette = "treatment", values = NULL
 # (e.g. TRT01AN order instead of alphabetical).
 pp_q_group_pal <- function(obj, df, var, df_name, palette) {
   c(pp_q_pal(obj, df, var, df_name, palette),
-    sprintf("%s <- %s %%>%% mutate(%s = factor(%s, levels = names(%s)))", df_name, df_name, var, var, obj))
+    sprintf("%s <- %s |> mutate(%s = factor(%s, levels = names(%s)))", df_name, df_name, var, var, obj))
 }
 
 pp_q_script <- function(pid, what, title, libs, data, plot, width, height, dpi = 300, units = "in",
                         file = NULL) {
   code <- paste(c(
     pp_seq_header(pid, what, title, libs),
-    section("Step1: Preparing Analysis Data"),
+    section("data"),
     paste(data[!vapply(data, is.null, logical(1))], collapse = "\n\n"),
     "",
-    section("Step2: Making a figure"),
+    section("the figure"),
     paste(plot, collapse = "\n"),
     "fig",
     "",

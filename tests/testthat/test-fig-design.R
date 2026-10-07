@@ -142,8 +142,8 @@ test_that("the new statistics and settings write what they say", {
   expect_match(code, "facet_wrap(vars(TRT01A))", fixed = TRUE)
   d <- tfl_fig_template("swimmer_assessment")
   code <- paste(tfl_fig_design_code(d), collapse = "\n")
-  expect_match(code, "assess <- adrs %>%", fixed = TRUE)
-  expect_match(code, "inner_join(df %>% select(USUBJID, Y_ID)", fixed = TRUE)
+  expect_match(code, "assess <- adrs |>", fixed = TRUE)
+  expect_match(code, "inner_join(df |> select(USUBJID, Y_ID)", fixed = TRUE)
   expect_match(code, "arrow = arrow(", fixed = TRUE)
   # a whole-script template is one figure layer
   d <- tfl_fig_template("edish_alt")
@@ -166,4 +166,31 @@ test_that("a time can stay in days: no conversion, no check error", {
   expect_false(grepl("AVAL = AVAL / 1", code, fixed = TRUE))
   expect_true("days" %in% strsplit(tfl_fig_parts()$choices[
     tfl_fig_parts()$piece == "time_unit" & tfl_fig_parts()$field == "unit"], " | ", fixed = TRUE)[[1L]])
+})
+
+test_that("a report program's figure: no save, its own name, the study's palette", {
+  d <- tfl_fig_template("km_simple", data = "ADTTE", param = "TTDE",
+                        pop = "SAFFL", group = "TRT01A", time_unit = "days")
+  whole <- tfl_fig_design_code(d)
+  expect_true(any(grepl("^# ---- saving the figure", whole)))
+  expect_true(any(grepl("^ggsave\\(", whole)))
+  expect_true(any(grepl("pal <- setNames(", whole, fixed = TRUE)))
+  expect_false(any(grepl("#####", whole, fixed = TRUE)))
+  expect_false(any(grepl("%>%", whole, fixed = TRUE)))
+  part <- tfl_fig_design_code(d, setup = TRUE, save = FALSE, name = "plot")
+  expect_false(any(grepl("ggsave|saving the figure", part)))
+  expect_true("plot <- p" %in% part)
+  expect_false(any(grepl("^fig", part)))
+  expect_true(any(grepl('pal <- tfl_colours("treatment", levels(droplevels(factor(df$TRT01A))))',
+                        part, fixed = TRUE)))
+  # it runs, after the study's figure setup
+  skip_if_not_installed("ggsurvfit")
+  e <- new.env()
+  eval(parse(text = tfl_fig_setup_code()), e)
+  e$adtte <- data.frame(USUBJID = 1:6, PARAMCD = "TTDE", SAFFL = "Y",
+                        TRT01A = rep(c("A", "B"), 3), AVAL = c(5, 8, 12, 3, 9, 15),
+                        CNSR = c(0, 1, 0, 0, 1, 0))
+  suppressPackageStartupMessages(eval(parse(text = part), e))
+  expect_s3_class(e$plot, "ggplot")
+  expect_identical(unname(e$pal), unname(e$tfl_colours("treatment", c("A", "B"))))
 })

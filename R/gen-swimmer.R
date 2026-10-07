@@ -71,7 +71,7 @@ pp_gen_swimmer <- function(ctx) {
     a_src <- pp_use_ds(ctx, a_ds)
     a_flist <- pp_filters(ctx, "assessment_marker", a_ds)
     a_steps <- list(a_src, pp_filter_code(ctx, a_flist, a_ds), pp_time_mutate(ctx, ax$variable),
-                    sprintf("inner_join(bar_df %%>%% select(%s, Y_ID), by = %s)", key, q(key)))
+                    sprintf("inner_join(bar_df |> select(%s, Y_ID), by = %s)", key, q(key)))
     if (!is.null(af)) {
       sv_as <- pp_scale_values(ctx, "pal_assess", af$variable,
                                pp_values_or_null(pp_filtered_data(ctx, a_ds, a_flist), af$variable),
@@ -88,8 +88,8 @@ pp_gen_swimmer <- function(ctx) {
       sprintf("event_shape  <- %s", vec_code(stats::setNames(events$shape, events$label))),
       sprintf("event_colour <- %s", vec_code(stats::setNames(events$colour, events$label))),
       paste0("event_df <- bind_rows(\n",
-             paste(sprintf("  bar_df %%>%% transmute(Y_ID, X = %s, EVENT = %s)", events$var, q(events$label)), collapse = ",\n"),
-             "\n) %>%\n  filter(!is.na(X)) %>%\n  mutate(EVENT = factor(EVENT, levels = names(event_shape)))"))
+             paste(sprintf("  bar_df |> transmute(Y_ID, X = %s, EVENT = %s)", events$var, q(events$label)), collapse = ",\n"),
+             "\n) |>\n  filter(!is.na(X)) |>\n  mutate(EVENT = factor(EVENT, levels = names(event_shape)))"))
   }
   data <- c(pal_before(sv_bar, sv_as), data, pal_after(sv_bar, sv_as), pp_x_axis_lines(ctx, "bar_df", end))
   grid <- has_layer(ctx, "visit_grid")
@@ -168,7 +168,7 @@ pp_gen_swimmer <- function(ctx) {
     if (!length(o_flist)) stop("Plot ", ctx$pid, ": layer ongoing_arrow needs a filter row (layer = ongoing_arrow), e.g. EOSSTT = ONGOING.", call. = FALSE)
     plot <- c(plot, "# ---- layer: ongoing_arrow ----",
       paste0("p <- p + geom_segment(\n",
-             "  data = bar_df %>% ", pp_filter_code(ctx, o_flist, ctx$ds), ",\n",
+             "  data = bar_df |> ", pp_filter_code(ctx, o_flist, ctx$ds), ",\n",
              "  aes(x = ", end, ", xend = ", end, " + x_max * 0.03, yend = Y_ID),\n",
              "  arrow = arrow(length = unit(0.12, \"cm\"), type = \"closed\"), linewidth = 0.3\n)"))
   }

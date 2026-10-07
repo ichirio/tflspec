@@ -11,27 +11,27 @@ pp_q_ae_data <- function(adam, data, term, group, pop, tefl, key, top, min_pct, 
     pipe_code("pop_df", list("adsl", pp_q_pop(pop))),
     pp_q_pal("pal_grp", sl, group, "pop_df", palette),
     sprintf("arms <- names(pal_grp)[1:2]  # reference first; only two arms are compared"),
-    sprintf("N_df <- pop_df %%>%% count(%s, name = \"N\")", group),
+    sprintf("N_df <- pop_df |> count(%s, name = \"N\")", group),
     pipe_code("ae_df", c(list(pp_ds_name(data), if (!is.null(tefl)) sprintf('filter(%s == "Y")', tefl), pp_q_where(where),
                               sprintf("select(-any_of(%s))", q(group)),
-                              sprintf("inner_join(pop_df %%>%% select(%s, %s), by = %s)", key, group, q(key)),
+                              sprintf("inner_join(pop_df |> select(%s, %s), by = %s)", key, group, q(key)),
                               sprintf("distinct(%s, %s, %s)", key, group, term)))),
-    paste0("inc_df <- ae_df %>%\n",
-           sprintf("  count(%s, %s, name = \"n\") %%>%%\n", term, group),
+    paste0("inc_df <- ae_df |>\n",
+           sprintf("  count(%s, %s, name = \"n\") |>\n", term, group),
            sprintf("  right_join(expand.grid(%s = unique(ae_df$%s), %s = arms, stringsAsFactors = FALSE),\n", term, term, group),
-           sprintf("             by = c(%s, %s)) %%>%%\n", q(term), q(group)),
-           "  mutate(n = coalesce(n, 0L)) %>%\n",
-           sprintf("  left_join(N_df, by = %s) %%>%%\n", q(group)),
+           sprintf("             by = c(%s, %s)) |>\n", q(term), q(group)),
+           "  mutate(n = coalesce(n, 0L)) |>\n",
+           sprintf("  left_join(N_df, by = %s) |>\n", q(group)),
            "  mutate(pct = 100 * n / N)"),
     paste0(sprintf("# terms shown: incidence >= %s%% in any arm, top %s by the highest incidence\n", format(min_pct), top),
-           "terms <- inc_df %>%\n",
-           sprintf("  group_by(%s) %%>%%\n", term),
-           "  summarise(m = max(pct), .groups = \"drop\") %>%\n",
-           sprintf("  filter(m >= %s) %%>%%\n", format(min_pct)),
-           sprintf("  slice_max(m, n = %s, with_ties = FALSE) %%>%%\n", top),
-           "  arrange(m) %>%\n",
+           "terms <- inc_df |>\n",
+           sprintf("  group_by(%s) |>\n", term),
+           "  summarise(m = max(pct), .groups = \"drop\") |>\n",
+           sprintf("  filter(m >= %s) |>\n", format(min_pct)),
+           sprintf("  slice_max(m, n = %s, with_ties = FALSE) |>\n", top),
+           "  arrange(m) |>\n",
            sprintf("  pull(%s)", term)),
-    sprintf("inc_df <- inc_df %%>%% filter(%s %%in%% terms) %%>%% mutate(%s = factor(%s, levels = terms))", term, term, term))
+    sprintf("inc_df <- inc_df |> filter(%s %%in%% terms) |> mutate(%s = factor(%s, levels = terms))", term, term, term))
 }
 
 #' AE dot plot code
@@ -65,10 +65,10 @@ tfl_fig_ae_dot <- function(adam = NULL, style = c("risk_diff", "incidence"), dat
     plot <- c(inc_plot, "fig <- p")
   } else {
     data_lines <- c(data_lines, paste0(
-      "rd_df <- inc_df %>%\n",
-      sprintf("  filter(%s == arms[1]) %%>%%\n", group),
-      sprintf("  select(%s, n_a = n, N_a = N) %%>%%\n", term),
-      sprintf("  inner_join(inc_df %%>%% filter(%s == arms[2]) %%>%% select(%s, n_b = n, N_b = N), by = %s) %%>%%\n",
+      "rd_df <- inc_df |>\n",
+      sprintf("  filter(%s == arms[1]) |>\n", group),
+      sprintf("  select(%s, n_a = n, N_a = N) |>\n", term),
+      sprintf("  inner_join(inc_df |> filter(%s == arms[2]) |> select(%s, n_b = n, N_b = N), by = %s) |>\n",
               group, term, q(term)),
       "  mutate(\n",
       "    pa = n_a / N_a, pb = n_b / N_b,\n",
@@ -108,7 +108,7 @@ tfl_fig_butterfly <- function(adam = NULL, style = c("soc", "pt"), data = "ADAE"
   adam <- pp_prep_adam(adam)
   term <- term %or% if (style == "soc") "AEBODSYS" else "AEDECOD"
   data_lines <- c(pp_q_ae_data(adam, data, term, group, pop, tefl, key, top, min_pct, palette, where),
-                  sprintf("inc_df <- inc_df %%>%% mutate(x = ifelse(%s == arms[1], -pct, pct))", group),
+                  sprintf("inc_df <- inc_df |> mutate(x = ifelse(%s == arms[1], -pct, pct))", group),
                   "x_lim <- max(inc_df$pct) * 1.2")
   plot <- c(plus_code("p", c(list(
     sprintf("ggplot(inc_df, aes(x = x, y = %s, fill = %s))", term, group),
@@ -153,14 +153,14 @@ tfl_fig_edish <- function(adam = NULL, style = c("alt", "alt_ast"), data = "ADLB
                          as.list(pp_q_adsl_join(c(group, pop), key)),
                          list(pp_q_pop(pop), pp_q_where(where), sprintf("mutate(XULN = AVAL / %s)", uln), "filter(!is.na(XULN))"))),
     pp_q_group_pal("pal_grp", sl, group, "lb_df", palette),
-    paste0("max_df <- lb_df %>%\n",
-           sprintf("  group_by(%s, %s, PARAMCD) %%>%%\n", key, group),
+    paste0("max_df <- lb_df |>\n",
+           sprintf("  group_by(%s, %s, PARAMCD) |>\n", key, group),
            "  summarise(m = max(XULN, na.rm = TRUE), .groups = \"drop\")"),
-    paste0("ed_df <- max_df %>%\n",
-           sprintf("  filter(PARAMCD %%in%% %s) %%>%%\n", vec_code(x_params)),
-           sprintf("  group_by(%s, %s) %%>%%\n", key, group),
-           "  summarise(x = max(m), .groups = \"drop\") %>%\n",
-           sprintf("  inner_join(max_df %%>%% filter(PARAMCD == %s) %%>%% select(%s, y = m), by = %s)", q(bili), key, q(key))))
+    paste0("ed_df <- max_df |>\n",
+           sprintf("  filter(PARAMCD %%in%% %s) |>\n", vec_code(x_params)),
+           sprintf("  group_by(%s, %s) |>\n", key, group),
+           "  summarise(x = max(m), .groups = \"drop\") |>\n",
+           sprintf("  inner_join(max_df |> filter(PARAMCD == %s) |> select(%s, y = m), by = %s)", q(bili), key, q(key))))
   x_lab <- if (style == "alt") "Maximum post-baseline ALT (x ULN)" else "Maximum post-baseline ALT or AST (x ULN)"
   plot <- c(plus_code("p", c(list(
     sprintf("ggplot(ed_df, aes(x = x, y = y, colour = %s, shape = %s))", group, group),

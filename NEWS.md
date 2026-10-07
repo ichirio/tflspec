@@ -1,5 +1,17 @@
 # tflspec (development version)
 
+* **Figure code in the style of a study's other programs** (#164).  Every
+  generated figure script (the designer's templates, the `pp_*` types)
+  pipes with `|>` (the dplyr verbs stay); its parts are one line each
+  (`# ---- data ----`, `# ---- the figure ----`, `# ---- saving the figure
+  ----`) instead of `#####` Step banners; `filter(a) |> filter(b)` is
+  `filter(a, b)`; the palette is two short lines.
+  `tfl_fig_design_code()` gains `setup` (the palette from the study's
+  figure setup, `tfl_colours()`), `save` (`FALSE`: no PNG) and `name`
+  (what the figure is called): a report program gets its figure as
+  `plot` directly.  A composed figure's panels are made as `fig_<name>`.
+  The figures drawn are the same (all 38 templates).
+
 * **`tfl_read_toc()`: each report's datasets** (#149).  A new field of the
   map, `datasets`: each report's datasets are `attr(, "datasets")` (named
   by output id), "ADSL, ADAE", "ADSL / ADAE" or one a line as
