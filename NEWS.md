@@ -11,6 +11,17 @@
   its own `.codelists` and reads the data again with them, so a report's
   factors are not the next report's; without code lists it reads the data
   once, as before.
+* **Decimals written once: the `digits` sheet** (#168).  Each statistic's
+  decimals (`statistic`, `digits`), for every analysis variable (`variable`
+  blank) or a variable's exception (`variable` = its name); a report's rows
+  replace the defaults.  A template's tokens that say no format take them
+  (`{mean} ({sd})` with mean 1, sd 2 is `{mean:.1f} ({sd:.2f})`; `p`, a
+  percent, `{p:.1f%}`); a variable with an exception and no rows of its
+  own gets the kind's rows with its decimals.  A template's own format
+  and a `cells` row's `digits` win.  `tables$value` now says which of the
+  ARD's values a table prints for its cells too: `stat` (rounded here) or
+  `stat_fmt` (the ARD's own text: the `digits` sheet does not apply).  The
+  generated code is `plan_cells()` as before.
 
 * **An analysis data is a report's** (#166).  `analysis_data` has an
   `output_id` column, first: the key is the report and the name, so the

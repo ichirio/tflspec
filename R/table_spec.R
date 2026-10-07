@@ -192,6 +192,9 @@
     codelists = c("output_id", "variable", "value", "label", "order"),
     cells     = c("output_id", "variable", "context", "row", "when",
                   "template", "digits", "signif"),
+    # the statistics' decimals: every analysis variable's (variable blank),
+    # and the exceptions of one variable
+    digits    = c("output_id", "variable", "statistic", "digits"),
     # the table half: what as_rtftables() / rtftable() are told, read by
     # tfl_table_plan() and resolved like the plan's own verbs
     layout    = c("output_id", names(.ard_spec_types$layout)),
@@ -222,6 +225,7 @@
                        variables = "variable",
                        codelists = c("variable", "value"),
                        cells     = c("variable", "context", "row"),
+                       digits    = c("variable", "statistic"),
                        layout    = character(),
                        columns   = "column",
                        style     = character(),
@@ -329,8 +333,8 @@
         ".\n  One row per report; merge them."))
     }
   }
-  for (sh in c("variables", "codelists", "columns", "header", "footer",
-                "titles", "footnotes", "tokens")) {
+  for (sh in c("variables", "codelists", "digits", "columns", "header",
+                "footer", "titles", "footnotes", "tokens")) {
     v <- sp[[sh]]
     if (is.null(v)) next
     key <- .ard_spec_keys[[sh]]
@@ -483,6 +487,7 @@
 #' | `tables` | report | the roles and the table-wide options |
 #' | `variables` | variable | display label, order, level order |
 #' | `cells` | line of a cell | template, guard, digits |
+#' | `digits` | statistic | its decimals, for every variable or one |
 #' | `layout` | report | pages, groups, blank rows, stub |
 #' | `columns` | printed column | width, row title, decimal split, hidden |
 #' | `style` | report | border, row heights, font |
@@ -575,11 +580,28 @@
 #'     when comma-separated: `1,2` for `{mean} ({sd})`.}
 #'   \item{`signif`}{Significant digits; wins over `digits`.}
 #' }
+#' A token with no format and no `digits` takes its statistic's decimals
+#' from the `digits` sheet.
+#'
 #' For a `stats = rows` table (one statistic per row, the raw value in the
 #' cell) a row with **no template** is instead that statistic's display
 #' format: `row` names the statistic as the label column prints it (`N`,
 #' `Mean`) and `digits` / `signif` say how many, for every value column
 #' (`plan_digits(.rows = c(Mean = 2, SD = "3s"))`).
+#'
+#' @section `digits`:
+#' The decimals of each statistic, so that a template is written once
+#' (`{mean} ({sd})`) and the decimals once:
+#' \describe{
+#'   \item{`variable`}{Blank: every analysis variable (the table's rule).  A
+#'     variable: its exception, over the rule.}
+#'   \item{`statistic`}{The statistic, as the ARD names it: `mean`, `sd`,
+#'     `p` (a percent: `1` prints `61.6`) ...}
+#'   \item{`digits`}{Its decimals, a whole number.}
+#' }
+#' A token of a template that says its own format (`{mean:.2f}`) or the
+#' row's `digits` win.  A table of `tables$value = stat_fmt` prints the
+#' ARD's own text (`stat_fmt`): the sheet does not apply to it.
 #'
 #' @section `layout`:
 #' One row per report, each column one argument of the plan verb its
@@ -690,7 +712,7 @@
 #' `about` sheet (`key` / `value`) may state `spec_version`; sheets whose
 #' name starts with `_` are ignored.
 #'
-#' @param tables,variables,cells,layout,columns,style,col_header,cell_styles
+#' @param tables,variables,cells,digits,layout,columns,style,col_header,cell_styles
 #'   Data frames with the columns above; missing columns are added as `NA`.
 #' @param report,page,header,footer,titles,footnotes,tokens The report sheets, as
 #'   data frames with the columns [tfl_read_report_spec()] describes.  `tables` may instead be a named list of the
@@ -712,7 +734,7 @@ tfl_table_spec <- function(tables = NULL, variables = NULL, cells = NULL,
                        style = NULL, col_header = NULL, report = NULL,
                        page = NULL, header = NULL, footer = NULL,
                        titles = NULL, footnotes = NULL, cell_styles = NULL,
-                       tokens = NULL) {
+                       tokens = NULL, digits = NULL) {
   if (inherits(tables, "tfl_table_spec")) return(tables)
   if (is.data.frame(tables) && "template" %in% names(tables) &&
       is.null(variables) && is.null(cells)) {
@@ -723,7 +745,8 @@ tfl_table_spec <- function(tables = NULL, variables = NULL, cells = NULL,
                style = style, cell_styles = cell_styles,
                col_header = col_header, report = report,
                page = page, header = header, footer = footer,
-               titles = titles, footnotes = footnotes, tokens = tokens)
+               titles = titles, footnotes = footnotes, tokens = tokens,
+               digits = digits)
   if (is.list(tables) && !is.data.frame(tables)) {
     x <- tables
     bad <- setdiff(names(x), c("study", names(.ard_spec_schema())))
@@ -749,6 +772,7 @@ tfl_table_spec <- function(tables = NULL, variables = NULL, cells = NULL,
   }
   .ard_spec_check_tokens(sp$tokens)
   .codelists_check(sp$codelists)
+  .ard_spec_check_digits(sp$digits)
   chk(t$stats, c("cells", "rows"), "stats")
   chk(t$value, c("stat", "stat_fmt"), "value")
   if (any(is.na(sp$variables$variable))) {
@@ -1092,8 +1116,9 @@ print.tfl_table_spec <- function(x, ...) {
 # One `cells` row as one element of a chain: its template with the digits
 # written in, guarded by `when` when there is one.  The guard is parsed
 # here, so a malformed one names its row.
-.ard_spec_chain_el <- function(r, i) {
-  tpl <- .ard_apply_digits(r$template, r$digits, r$signif)
+.ard_spec_chain_el <- function(r, i, rule = NULL) {
+  tpl <- .ard_apply_rules(.ard_apply_digits(r$template, r$digits, r$signif),
+                          rule)
   if (is.na(r$when)) return(tpl)
   cond <- tryCatch(str2lang(r$when), error = function(e) {
     .ard_stop(sprintf("`cells` row %d: `when` is not valid R: %s\n  %s",
@@ -1109,6 +1134,7 @@ print.tfl_table_spec <- function(x, ...) {
   s <- sp$cells
   s <- s[!is.na(s$template), , drop = FALSE]    # the rest are rows formats
   if (!nrow(s)) return(NULL)
+  rules <- .ard_spec_digit_rules(sp)
   ord <- .ard_spec_variables(sp)$variable
   key <- ifelse(!is.na(s$variable) & !is.na(s$context),
                 paste(s$variable, s$context, sep = "\r"),
@@ -1117,21 +1143,106 @@ print.tfl_table_spec <- function(x, ...) {
   first <- .ard_first_seen(key)
   rank <- match(sub("\r.*$", "", first), ord)
   first <- first[order(is.na(rank), rank)]
-  out <- list()
-  for (k in first) {
-    idx  <- which(key == k)
+  # a key's rows as a recipe, the decimals of `var` (NA: the table's rule)
+  # written into the tokens that say none
+  recipe <- function(idx, var) {
+    rule <- .ard_spec_rule_for(rules, var)
     rows <- s$row[idx]
     rows[is.na(rows)] <- ""
     labs <- .ard_first_seen(rows)
     chains <- lapply(labs, function(lb) {
       els <- lapply(idx[rows == lb], function(i)
-        .ard_spec_chain_el(s[i, , drop = FALSE], i))
+        .ard_spec_chain_el(s[i, , drop = FALSE], i, rule))
       if (all(vapply(els, is.character, NA))) unlist(els) else els
     })
     guarded <- any(vapply(chains, is.list, NA))
-    out[[k]] <- if (identical(labs, "")) chains[[1L]]
-                else if (guarded) do.call(rtfreporter::cell_rows, stats::setNames(chains, labs))
-                else stats::setNames(chains, labs)
+    if (identical(labs, "")) chains[[1L]]
+    else if (guarded) do.call(rtfreporter::cell_rows, stats::setNames(chains, labs))
+    else stats::setNames(chains, labs)
+  }
+  kinds <- c("continuous", "categorical")
+  var_of <- function(k) {
+    v <- s$variable[match(k, key)]
+    if (is.na(v) || v %in% kinds) NA_character_ else v
+  }
+  out <- list()
+  for (k in first) out[[k]] <- recipe(which(key == k), var_of(k))
+  # a variable with decimals of its own and no rows of its own: the rows of
+  # the kind (or the default) that print those statistics, its decimals in
+  for (v in setdiff(names(rules$by), s$variable)) {
+    stats_v <- names(rules$by[[v]])
+    for (k in intersect(c(kinds, "default"), first)) {
+      idx <- which(key == k)
+      used <- unique(unlist(lapply(s$template[idx], .ard_template_stats)))
+      if (!length(intersect(used, stats_v))) next
+      out[[v]] <- recipe(idx, v)
+      break
+    }
+  }
+  out
+}
+
+# The statistics a template names: "{mean} ({sd:.2f})" -> mean, sd
+.ard_template_stats <- function(tpl) {
+  vapply(.ard_tokens(tpl), function(t) .ard_token_parts(t)$name, "",
+         USE.NAMES = FALSE)
+}
+
+# The `digits` sheet as rules: `all` (statistic -> decimals) and `by`
+# (variable -> its own); NULL when there is none, or when the table prints
+# the ARD's own text (tables$value = stat_fmt), which has no decimals to set.
+.ard_spec_digit_rules <- function(sp) {
+  d <- sp$digits
+  if (is.null(d) || !nrow(d)) return(NULL)
+  if (identical(.ard_spec_table_args(sp)[["value"]], "stat_fmt")) return(NULL)
+  dg <- as.integer(d$digits)
+  st <- trimws(d$statistic)
+  all <- d$variable %in% NA
+  by <- lapply(split(seq_len(nrow(d))[!all], d$variable[!all]), function(i)
+    stats::setNames(dg[i], st[i]))
+  list(all = stats::setNames(dg[all], st[all]), by = by)
+}
+
+.ard_spec_rule_for <- function(rules, var) {
+  if (is.null(rules)) return(NULL)
+  r <- rules$all
+  if (!is.na(var) && !is.null(rules$by[[var]])) {
+    own <- rules$by[[var]]
+    r[names(own)] <- own
+  }
+  r
+}
+
+.ard_spec_check_digits <- function(d) {
+  if (is.null(d) || !nrow(d)) return(invisible(NULL))
+  if (any(is.na(d$statistic) | !nzchar(trimws(d$statistic)))) {
+    .ard_stop("Every `digits` row needs a `statistic` (mean, sd, p ...).")
+  }
+  n <- suppressWarnings(as.numeric(d$digits))
+  bad <- is.na(n) | n < 0 | n != round(n)
+  if (any(bad)) {
+    .ard_stop(sprintf(paste0(
+      "`digits$digits` is a whole number of decimals (0, 1, 2 ...); ",
+      "got %s for %s."), sQuote(d$digits[bad][1L]),
+      sQuote(d$statistic[bad][1L])))
+  }
+  invisible(NULL)
+}
+
+# a statistic that is a proportion prints as a percent ("{p:.1f%}")
+.ard_pct_stats <- c("p", "p_cum", "p_miss", "p_nonmiss")
+
+# The tokens a template leaves without a format, given their statistic's
+# decimals: "{mean} ({sd})" + c(mean = 1, sd = 2) -> "{mean:.1f} ({sd:.2f})"
+.ard_apply_rules <- function(tpl, rule) {
+  if (!length(rule)) return(tpl)
+  out <- tpl
+  for (tok in .ard_tokens(tpl)) {
+    p <- .ard_token_parts(tok)
+    if (nzchar(p$spec) || is.na(rule[p$name])) next
+    spec <- paste0(".", rule[[p$name]], "f",
+                   if (p$name %in% .ard_pct_stats) "%")
+    out <- sub(tok, paste0("{", p$name, ":", spec, "}"), out, fixed = TRUE)
   }
   out
 }

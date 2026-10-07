@@ -20,11 +20,12 @@ tfl_table_spec(
   titles = NULL,
   footnotes = NULL,
   cell_styles = NULL,
-  tokens = NULL
+  tokens = NULL,
+  digits = NULL
 )
 }
 \arguments{
-\item{tables, variables, cells, layout, columns, style, col_header, cell_styles}{Data frames with the columns above; missing columns are added as \code{NA}.}
+\item{tables, variables, cells, digits, layout, columns, style, col_header, cell_styles}{Data frames with the columns above; missing columns are added as \code{NA}.}
 
 \item{study}{The \code{study} sheet: a \code{key} / \code{value} frame, or a named
 vector such as \code{c(rounding = "sas")}.}
@@ -49,6 +50,7 @@ that each fact is written once:\tabular{lll}{
    \code{tables} \tab report \tab the roles and the table-wide options \cr
    \code{variables} \tab variable \tab display label, order, level order \cr
    \code{cells} \tab line of a cell \tab template, guard, digits \cr
+   \code{digits} \tab statistic \tab its decimals, for every variable or one \cr
    \code{layout} \tab report \tab pages, groups, blank rows, stub \cr
    \code{columns} \tab printed column \tab width, row title, decimal split, hidden \cr
    \code{style} \tab report \tab border, row heights, font \cr
@@ -152,11 +154,30 @@ whose template resolves wins.}
 when comma-separated: \verb{1,2} for \code{{mean} ({sd})}.}
 \item{\code{signif}}{Significant digits; wins over \code{digits}.}
 }
+A token with no format and no \code{digits} takes its statistic's decimals
+from the \code{digits} sheet.
+
 For a \code{stats = rows} table (one statistic per row, the raw value in the
 cell) a row with \strong{no template} is instead that statistic's display
 format: \code{row} names the statistic as the label column prints it (\code{N},
 \code{Mean}) and \code{digits} / \code{signif} say how many, for every value column
 (\code{plan_digits(.rows = c(Mean = 2, SD = "3s"))}).
+}
+
+\section{\code{digits}}{
+
+The decimals of each statistic, so that a template is written once
+(\code{{mean} ({sd})}) and the decimals once:
+\describe{
+\item{\code{variable}}{Blank: every analysis variable (the table's rule).  A
+variable: its exception, over the rule.}
+\item{\code{statistic}}{The statistic, as the ARD names it: \code{mean}, \code{sd},
+\code{p} (a percent: \code{1} prints \code{61.6}) ...}
+\item{\code{digits}}{Its decimals, a whole number.}
+}
+A token of a template that says its own format (\verb{\{mean:.2f\}}) or the
+row's \code{digits} win.  A table of \code{tables$value = stat_fmt} prints the
+ARD's own text (\code{stat_fmt}): the sheet does not apply to it.
 }
 
 \section{\code{layout}}{
