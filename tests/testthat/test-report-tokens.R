@@ -287,3 +287,42 @@ test_that("with the company's font, the setup and a program make the file it alo
     expect_true(any(grepl("Courier New", shared, fixed = TRUE)))
   }
 })
+
+test_that("a report's own font wins over the company's, in its program and its file", {
+  skip_if_not_installed("rtfreporter", "0.8.2.9025")
+  sp <- tfl_table_spec(
+    study = c(output_path = "out"),
+    report = data.frame(output_id = c(NA, "T-14-1-1", "L-16-2-7"),
+                        type = c("table", NA, "listing")),
+    page = data.frame(output_id = c(NA, "T-14-1-1", "L-16-2-7"),
+                      font = c("Courier New", "Arial", NA),
+                      font_size_half_points = c("20", NA, NA)))
+  t <- paste(tfl_report_code(sp, "T-14-1-1", content = "pages", setup = TRUE),
+             collapse = "\n")
+  expect_match(t, 'font_table = list(list(name = "Arial"))', fixed = TRUE)
+  expect_false(grepl("font_size_half_points", t, fixed = TRUE))
+  old <- options(rtfreporter.font = NULL, rtfreporter.font_size_half_points = NULL)
+  on.exit(options(old), add = TRUE)
+  run <- function(code) {
+    env <- new.env(parent = asNamespace("rtfreporter"))
+    env$pages <- rtfreporter::as_rtftables(data.frame(A = "a"))
+    eval(parse(text = code), env)
+    f <- tempfile(fileext = ".rtf")
+    rtfreporter::generate_rtfreport(env$doc, f, overwrite = TRUE)
+    out <- readLines(f, warn = FALSE)
+    unlink(f)
+    out[!grepl("creatim|revtim", out)]
+  }
+  font_of <- function(rtf) {
+    sub(";.*", "", sub(".*fcharset0 ", "", grep("fonttbl", rtf, value = TRUE)[1L]))
+  }
+  shared <- run(c(tfl_report_setup_code(sp),
+                  tfl_report_code(sp, "T-14-1-1", content = "pages", setup = TRUE)))
+  options(old)
+  expect_identical(font_of(shared), "Arial")
+  expect_identical(shared, run(tfl_report_code(sp, "T-14-1-1", content = "pages")))
+  options(old)
+  other <- run(c(tfl_report_setup_code(sp),
+                 tfl_report_code(sp, "L-16-2-7", content = "pages", setup = TRUE)))
+  expect_identical(font_of(other), "Courier New")
+})

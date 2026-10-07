@@ -1,5 +1,10 @@
 # tflspec (development version)
 
+* **A report's own font** (#176).  A report's row of `page` that says its
+  `font` (or size) wins over the company's: its program says it, with the
+  setup and alone, and the file is in it.  A test now holds it; nothing
+  else changes.
+
 * **The company's font, said once** (#174).  The `page` sheet gains
   `font`, the document's font (`rtf_document(font_table = )`).  The study's
   row (blank `output_id`) of `font` and `font_size_half_points` is the
