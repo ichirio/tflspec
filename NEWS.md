@@ -11,6 +11,12 @@
   (what the figure is called): a report program gets its figure as
   `plot` directly.  A composed figure's panels are made as `fig_<name>`.
   The figures drawn are the same (all 38 templates).
+* **A code list of `variable`: the variables' labels** (#172).  Its
+  values are the variables' names (the ARD's `variable` column) and its
+  labels what they print as: `variable / AGE / Age (years)`.  The variables
+  sheet's `label`, when given, wins; it is not an order (the rows follow
+  the variables sheet).  A label is a report's, like its code lists.
+
 * **A code list is a report's** (#170).  Every `codelists` row names its
   report: a blank `output_id` is an error, in a table definition and in
   `tfl_ard_code(codelists = )` (no study-wide rows; a sheet made before
