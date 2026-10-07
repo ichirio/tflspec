@@ -163,7 +163,7 @@ pipe_code <- function(target, steps) {
   steps <- steps[!vapply(steps, is.null, logical(1))]
   body <- vapply(steps, function(s) paste(indent(s), collapse = "\n"), character(1))
   if (length(body) == 1) return(sprintf("%s <- %s", target, trimws(body)))
-  paste0(target, " <- ", trimws(body[1]), " %>%\n", paste(body[-1], collapse = " %>%\n"))
+  paste0(target, " <- ", trimws(body[1]), " |>\n", paste(body[-1], collapse = " |>\n"))
 }
 
 # Bring `var` from another dataset by id. Returns list(code, name).
@@ -270,7 +270,6 @@ plus_code <- function(target, terms, append = FALSE) {
 }
 
 section <- function(title) {
-  paste0("#########################################################\n",
-         "# ", title, "\n",
-         "#########################################################")
+  head <- paste("# ----", title, "")
+  paste0(head, strrep("-", max(3L, 78L - nchar(head))))
 }

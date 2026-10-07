@@ -1,5 +1,16 @@
 # tflspec (development version)
 
+* **Figure code in the style of a study's other programs** (#164).  Every
+  generated figure script (the designer's templates, the `pp_*` types)
+  pipes with `|>` (the dplyr verbs stay); its parts are one line each
+  (`# ---- data ----`, `# ---- the figure ----`, `# ---- saving the figure
+  ----`) instead of `#####` Step banners; `filter(a) |> filter(b)` is
+  `filter(a, b)`; the palette is two short lines.
+  `tfl_fig_design_code()` gains `setup` (the palette from the study's
+  figure setup, `tfl_colours()`), `save` (`FALSE`: no PNG) and `name`
+  (what the figure is called): a report program gets its figure as
+  `plot` directly.  A composed figure's panels are made as `fig_<name>`.
+  The figures drawn are the same (all 38 templates).
 * **A code list of `variable`: the variables' labels** (#172).  Its
   values are the variables' names (the ARD's `variable` column) and its
   labels what they print as: `variable / AGE / Age (years)`.  The variables

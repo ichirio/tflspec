@@ -40,9 +40,9 @@ tfl_fig_mean <- function(adam = NULL, style = c("se", "sd", "ci", "se_n"), param
                          list(pp_q_pop(pop), pp_q_where(where), sprintf("filter(!is.na(%s), !is.na(%s))", value, visit),
                               pp_q_visit_step(visit, visit_label)))),
     pp_q_group_pal("pal_grp", df, group, "mn_df", palette),
-    paste0("sum_df <- mn_df %>%\n",
-           sprintf("  group_by(%s, %s, %s) %%>%%\n", group, visit, visit_label %or% visit),
-           sprintf("  summarise(n = n(), mean = mean(%s), sd = sd(%s), .groups = \"drop\") %%>%%\n", value, value),
+    paste0("sum_df <- mn_df |>\n",
+           sprintf("  group_by(%s, %s, %s) |>\n", group, visit, visit_label %or% visit),
+           sprintf("  summarise(n = n(), mean = mean(%s), sd = sd(%s), .groups = \"drop\") |>\n", value, value),
            sprintf("  mutate(se = sd / sqrt(n), lo = %s, hi = %s)", bar[2], bar[3])))
   x <- visit_label %or% visit
   y_lab <- sprintf("%s %s%s", bar[4], if (value == "AVAL") "" else paste0(value, " of "), plab)
@@ -111,7 +111,7 @@ tfl_fig_individual <- function(adam = NULL, style = c("spaghetti", "spider"), pa
   if (spider) {
     bor_df <- pp_q_eval(adam, "ADRS", list(PARAMCD = response))
     steps <- c(steps,
-      sprintf("left_join(adrs %%>%% filter(PARAMCD == %s) %%>%% select(%s, %s = AVALC), by = %s)", q(response), key, response, q(key)),
+      sprintf("left_join(adrs |> filter(PARAMCD == %s) |> select(%s, %s = AVALC), by = %s)", q(response), key, response, q(key)),
       if (div != 1) sprintf("mutate(%s = %s / %s)", x, x, format(div)))
     colour_var <- response
     pal <- pp_q_pal("pal", bor_df, "AVALC", "id_df", palette)
