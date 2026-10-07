@@ -137,3 +137,98 @@ test_that("the report fills its own tokens when the file is written", {
   expect_match(out, "Demographics", fixed = TRUE)
   expect_false(grepl("OUTPUT_", out, fixed = TRUE))
 })
+
+setup_spec <- function(tokens = NULL, header = NULL) own_spec(
+  tokens = rbind(data.frame(output_id = NA, name = c("COMPANY", "STUDY_ID"),
+                            value = c("Sample \"Pharma\"", "ABC-123")), tokens),
+  header = header %||% data.frame(
+    output_id = NA, line = c("1", "2", "4", "5"),
+    left = c("{COMPANY}", "PROTOCOL: {STUDY_ID}", NA, NA),
+    center = c(NA, NA, "{OUTPUT_LABEL}", "{OUTPUT_TITLE}"),
+    right = c(NA, "Page {PAGE} of {TOTAL_PAGES}", NA, NA)))
+
+test_that("what the study's reports share is written once, in a setup", {
+  tk <- data.frame(output_id = "T-14-1-1", name = "OUTPUT_TITLE", value = "Demographics")
+  sp <- setup_spec(tk)
+  set <- paste(tfl_report_setup_code(sp), collapse = "\n")
+  expect_match(set, "options(", fixed = TRUE)
+  expect_match(set, "COMPANY = \"Sample \\\"Pharma\\\"\"", fixed = TRUE)
+  expect_match(set, "STUDY_ID = \"ABC-123\"", fixed = TRUE)
+  expect_false(grepl("OUTPUT_TITLE =", set, fixed = TRUE))
+  expect_match(set, "study_header <- rtf_header(", fixed = TRUE)
+  expect_match(set, "{OUTPUT_LABEL}", fixed = TRUE)
+  # the report then says the header by name, and only its own tokens
+  opt <- paste(tfl_report_code(sp, "T-14-1-1", content = "pages", setup = TRUE),
+               collapse = "\n")
+  expect_false(grepl("COMPANY", opt, fixed = TRUE))
+  expect_false(grepl("rtf_header", opt, fixed = TRUE))
+  expect_match(opt, "header = study_header", fixed = TRUE)
+  expect_match(opt, "OUTPUT_TITLE = \"Demographics\"", fixed = TRUE)
+  # standing alone (the default): as before
+  doc <- paste(tfl_report_code(sp, "T-14-1-1", content = "pages"), collapse = "\n")
+  expect_match(doc, "COMPANY = ", fixed = TRUE)
+  expect_match(doc, "rtf_header(", fixed = TRUE)
+  # nothing shared: no setup
+  expect_identical(tfl_report_setup_code(tfl_table_spec()), character())
+})
+
+test_that("only a report with its own header writes it", {
+  # no title for L-16-2-7: the study's header still (its line left out
+  # when the file is written)
+  sp <- setup_spec()
+  l <- paste(tfl_report_code(sp, "L-16-2-7", content = "pages", setup = TRUE),
+             collapse = "\n")
+  expect_match(l, "header = study_header", fixed = TRUE)
+  expect_match(l, "OUTPUT_TITLE = \"\"", fixed = TRUE)
+  hd <- rbind(setup_spec()$header,
+              data.frame(output_id = "T-14-1-1", line = "1", left = "Own",
+                         center = NA, right = NA))
+  t <- paste(tfl_report_code(setup_spec(header = hd), "T-14-1-1",
+                             content = "pages", setup = TRUE), collapse = "\n")
+  expect_match(t, "rtf_header(", fixed = TRUE)
+  expect_match(t, "\"Own\"", fixed = TRUE)
+})
+
+test_that("the setup and a report's program make the same file as it alone", {
+  skip_if_not_installed("rtfreporter", "0.8.2.9025")
+  tk <- data.frame(output_id = "T-14-1-1", name = "OUTPUT_TITLE", value = "Demographics")
+  sp <- setup_spec(tk)
+  old <- getOption("rtfreporter.tokens")
+  on.exit(options(rtfreporter.tokens = old), add = TRUE)
+  run <- function(code) {
+    env <- new.env(parent = asNamespace("rtfreporter"))
+    env$pages <- rtfreporter::as_rtftables(data.frame(A = "a"))
+    eval(parse(text = code), env)
+    f <- tempfile(fileext = ".rtf")
+    rtfreporter::generate_rtfreport(env$doc, f, overwrite = TRUE)
+    out <- readLines(f, warn = FALSE)
+    unlink(f)
+    out[!grepl("creatim|revtim", out)]
+  }
+  # T-14-1-1 has a title; L-16-2-7 none (its title line left out)
+  for (id in c("T-14-1-1", "L-16-2-7")) {
+    options(rtfreporter.tokens = old)
+    alone <- run(tfl_report_code(sp, id, content = "pages"))
+    shared <- run(c(tfl_report_setup_code(sp),
+                    tfl_report_code(sp, id, content = "pages", setup = TRUE)))
+    expect_identical(shared, alone)
+    expect_true(any(grepl("ABC-123", shared, fixed = TRUE)))
+  }
+})
+
+test_that("tfl_report_tokens() gives a report's tokens as its program does", {
+  tk <- data.frame(output_id = "T-14-1-1", name = "OUTPUT_TITLE", value = "Demographics")
+  v <- tfl_report_tokens(setup_spec(tk), "T-14-1-1")
+  expect_identical(v[["COMPANY"]], "Sample \"Pharma\"")
+  expect_identical(v[["OUTPUT_LABEL"]], "Table 14.1.1")
+  expect_identical(v[["OUTPUT_TITLE"]], "Demographics")
+  expect_length(tfl_report_tokens(tfl_table_spec()), 0L)
+})
+
+test_that("a spec of defaults only is the report's it is asked for", {
+  sp <- tfl_table_spec(
+    report = data.frame(output_id = NA, type = "table", file = "{output_id}.rtf"),
+    header = data.frame(output_id = NA, line = "1", center = "{OUTPUT_LABEL}"))
+  expect_identical(tfl_report_tokens(sp, "T-14-1-1")[["OUTPUT_LABEL"]], "Table 14.1.1")
+  expect_identical(tfl_report_path(sp, "T-14-1-1"), "T-14-1-1.rtf")
+})

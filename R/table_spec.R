@@ -841,7 +841,14 @@ print.tfl_table_spec <- function(x, ...) {
     if (!length(ids)) return(sp)
     output_id <- ids
   }
-  if (!length(ids)) return(sp)          # a file of defaults serves any report
+  if (!length(ids)) {
+    # a file of defaults serves any report -- it is this one's (its
+    # {output_id}, its own tokens)
+    if (is.character(output_id) && length(output_id) == 1L && !is.na(output_id)) {
+      attr(sp, "output_id") <- output_id
+    }
+    return(sp)
+  }
   if (!is.character(output_id) || length(output_id) != 1L ||
       is.na(output_id)) {
     .ard_stop("`output_id` must be a single string.")
@@ -863,10 +870,15 @@ print.tfl_table_spec <- function(x, ...) {
       "\n  The file defines: %s"),
       sQuote(output_id), paste(sQuote(ids), collapse = ", ")))
   }
+  tokens_study <- character()
+  bands_own <- c(header = FALSE, footer = FALSE)
   for (s in names(.ard_spec_schema())) {
     d <- sp[[s]]
     d <- d[is.na(d$output_id) | d$output_id == output_id, , drop = FALSE]
     mine <- !is.na(d$output_id)
+    # a header or footer of the report's own (not the study's): written in
+    # its program, not left to the study's setup (tfl_report_setup_code())
+    if (s %in% names(bands_own)) bands_own[[s]] <- any(mine)
     if (!length(.ard_spec_keys[[s]])) {
       # one row: the report's own values over the defaults, column by column
       if (sum(mine) && sum(!mine)) {
@@ -881,11 +893,16 @@ print.tfl_table_spec <- function(x, ...) {
       k <- .ard_spec_rowkey(d, s)
       d <- d[mine | !(k %in% k[mine]), , drop = FALSE]
     }
+    # the study's tokens (its default rows, no report's own): the ones a
+    # program may leave to options(rtfreporter.tokens = ) (tfl_report_setup_code())
+    if (identical(s, "tokens")) tokens_study <- trimws(d$name[is.na(d$output_id)])
     d$output_id <- rep(output_id, nrow(d))
     rownames(d) <- NULL
     sp[[s]] <- d
   }
   attr(sp, "output_id") <- output_id
+  attr(sp, "tokens_study") <- tokens_study
+  attr(sp, "bands_own") <- bands_own
   sp
 }
 
@@ -1435,7 +1452,7 @@ tfl_table_spec_template <- function(ard, path = NULL, cols = NULL,
 .ard_spec_output_tokens <- c("OUTPUT_ID", "OUTPUT_LABEL", "OUTPUT_TITLE",
                              "OUTPUT_POPULATION", "OUTPUT_SECTION", "STUDY_ID")
 # the kinds' words in OUTPUT_LABEL; the tokens sheet's rows of these names
-# (a study's or the company's: Table -> 表) say others
+# (a study's or the company's: Table -> a Japanese word) say others
 .ard_spec_kind_words <- c(table = "Table", listing = "Listing", figure = "Figure")
 
 # "Table 14.1.1" from T-14-1-1: the kind (the ID's first letter T / L / F,
@@ -1460,7 +1477,9 @@ tfl_table_spec_template <- function(ard, path = NULL, cols = NULL,
 # takes them: a named list; NULL when there is none.  The report's own
 # tokens (OUTPUT_ID ...) are given when its header, footer, titles or
 # footnotes say one, so a report that says none is written as before.
-.ard_spec_tokens <- function(sp, r = list()) {
+# `study = FALSE` leaves out the study's tokens (its default rows), set
+# once for every report by options(rtfreporter.tokens = ).
+.ard_spec_tokens <- function(sp, r = list(), study = TRUE) {
   d <- sp$tokens
   out <- list()
   if (!is.null(d) && nrow(d)) {
@@ -1480,6 +1499,15 @@ tfl_table_spec_template <- function(ard, path = NULL, cols = NULL,
     own <- list(OUTPUT_ID = if (is.na(id)) "" else id,
                 OUTPUT_LABEL = .ard_spec_output_label(id, r$type %||% NA, words))
     for (k in setdiff(want, names(out))) out[[k]] <- own[[k]] %||% ""
+    # the report's own last, in their order (label, title, analysis set)
+    mine <- intersect(.ard_spec_output_tokens, names(out))
+    out <- out[c(setdiff(names(out), mine), mine)]
+  }
+  if (!study) {
+    # unscoped (a file of defaults only): its rows are the study's
+    st <- attr(sp, "tokens_study") %||%
+      if (!is.null(d)) trimws(d$name[is.na(d$output_id)])
+    out <- out[setdiff(names(out), st)]
   }
   if (!length(out)) return(NULL)
   out

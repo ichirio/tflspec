@@ -1,6 +1,6 @@
 Package: tflspec
 Title: Excel Specifications for Clinical Tables, Listings and Figures
-Version: 0.0.24.9050
+Version: 0.0.24.9052
 Authors@R: c(
     person(given  = "Yoichi",
            family = "Masui",
@@ -34,7 +34,7 @@ Imports:
     stats,
     utils
 Suggests:
-    rtfreporter (>= 0.8.2.9024),
+    rtfreporter (>= 0.8.2.9025),
     broom,
     broom.helpers,
     car,

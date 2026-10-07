@@ -1,18 +1,34 @@
 # tflspec (development version)
 
-* **A report's own tokens** (#148).  A report's header, footer, titles
-  and footnotes may say `{OUTPUT_ID}`, `{OUTPUT_LABEL}` ("Table 14.1.1",
-  made from the ID: its first letter T / L / F, else the report's type,
-  and its number from the first digit, separators made dots; the tokens
-  rows `OUTPUT_KIND_TABLE` / `_LISTING` / `_FIGURE` give other words),
-  `{OUTPUT_TITLE}`, `{OUTPUT_POPULATION}`, `{OUTPUT_SECTION}` and
-  `{STUDY_ID}` (blank unless the tokens sheet gives them: a report list
-  writes them from a TOC).  They go to `rtf_document(tokens = )` only when
-  the report says one, so a report that says none is written as before; a
-  row of the tokens sheet wins.  A band line left with nothing but empty
-  tokens (and brackets: `<{OUTPUT_POPULATION}>`) is not printed.
-  `tfl_read_toc()`: a `label` field in the map, and the attributes
-  `labels`, `first_titles` and `populations` for a report list's tokens.
+* **A report's own tokens, and one header for every report** (#148).
+  - A report's header, footer, titles and footnotes may say
+    `{OUTPUT_ID}`, `{OUTPUT_LABEL}`, `{OUTPUT_TITLE}`,
+    `{OUTPUT_POPULATION}`, `{OUTPUT_SECTION}` and `{STUDY_ID}`.
+    `{OUTPUT_LABEL}` is made from the ID ("T-14-1-1" -> "Table 14.1.1":
+    the kind from its first letter T / L / F, else the report's type; the
+    number from its first digit, separators made dots); tokens rows
+    `OUTPUT_KIND_TABLE` / `_LISTING` / `_FIGURE` give other words.  The
+    others are blank unless the tokens sheet gives them (a report list
+    writes them from a TOC).  A row of the tokens sheet always wins.
+  - They go to `rtf_document(tokens = )` only when the report says one: a
+    report that says none is written as before.
+  - A band line left with nothing but empty tokens (and brackets:
+    `<{OUTPUT_POPULATION}>`) is not printed.
+  - `tfl_report_setup_code()` writes what a study's reports share, once:
+    its tokens (the tokens sheet's default rows) as
+    `options(rtfreporter.tokens = )`, its header and footer as
+    `study_header` / `study_footer` (with `drop_empty_rows = TRUE`, so a
+    line a report's tokens leave empty is not printed).
+    `tfl_report_code(setup = TRUE)` then uses those by name and gives the
+    document only the report's own tokens; a report with its own header
+    writes it as before.  The file is the same as the program alone.
+    Needs rtfreporter 0.8.2.9025.
+  - `tfl_report_tokens()`: a report's tokens as its program gives them
+    (for a preview of its page).
+  - `tfl_read_toc()`: a `label` field in the map, and the attributes
+    `labels`, `first_titles` and `populations` for a report list's tokens.
+  - A spec of study defaults only, scoped to a report, is that report's
+    (its `{output_id}` file name and its own tokens were blank).
 
 * **`tfl_read_toc()`: each report's section** (#145).  The TOC's heading
   rows ("14.1 Demographics") were passed over; each report's section is
