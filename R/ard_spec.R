@@ -532,10 +532,12 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   c("ard <- ard |>", paste0("  ", st, c(rep(" |>", length(st) - 1L), "")))
 }
 
-# The study's code lists as each variable's values in their order: the
-# `codelists` sheet of a table definition (its study rows, blank
-# output_id), or a data frame with `variable`, `value` and `order`.
-.codelist_levels <- function(codelists, output_id = NULL) {
+# A report's code lists as each variable's values in their order: the
+# `codelists` sheet of a table definition, or a data frame with
+# `output_id`, `variable`, `value` and `order`.  A code list is a report's:
+# a row without `output_id` stops.  `vars`: only these variables (the ones
+# the report's ARD reads); NULL, all the report's.
+.codelist_levels <- function(codelists, output_id = NULL, vars = NULL) {
   if (is.null(codelists)) return(NULL)
   if (inherits(codelists, "tfl_table_spec") || (is.list(codelists) &&
                                                 !is.data.frame(codelists))) {
@@ -543,21 +545,55 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   }
   if (!is.data.frame(codelists) || !nrow(codelists)) return(NULL)
   d <- as.data.frame(codelists, stringsAsFactors = FALSE)
-  if ("output_id" %in% names(d)) {
-    study <- is.na(d$output_id) | !nzchar(trimws(d$output_id))
-    # one report's: its own rows replace the study's of the same variable
-    # and value (as in its tables)
-    own <- if (length(output_id) == 1L && !is.na(output_id))
-      !study & d$output_id == output_id else rep(FALSE, nrow(d))
-    key <- paste(d$variable, d$value, sep = "\r")
-    d <- rbind(d[study & !key %in% key[own], , drop = FALSE], d[own, , drop = FALSE])
-  }
-  d <- d[!is.na(d$variable) & !is.na(d$value), , drop = FALSE]
+  .codelists_check(d)
+  if (length(output_id) != 1L || is.na(output_id)) return(NULL)
+  d <- d[d$output_id == output_id & !is.na(d$variable) & !is.na(d$value), ,
+         drop = FALSE]
+  if (!is.null(vars)) d <- d[d$variable %in% vars, , drop = FALSE]
   if (!nrow(d)) return(NULL)
   ord <- suppressWarnings(as.numeric(d$order %||% NA))
   d <- d[order(match(d$variable, unique(d$variable)), is.na(ord), ord), , drop = FALSE]
   lapply(split(as.character(d$value), factor(d$variable, levels = unique(d$variable))),
          unique)
+}
+
+# Every code list row names its report (no study-wide rows)
+.codelists_check <- function(d) {
+  if (is.null(d) || !nrow(d)) return(invisible(NULL))
+  used <- !is.na(d$variable) | !is.na(d$value)
+  if (!"output_id" %in% names(d)) {
+    .ard_stop("The code lists have no `output_id` column.\n",
+              "  A code list is a report's: give each row its report.")
+  }
+  blank <- which(used & (is.na(d$output_id) | !nzchar(trimws(d$output_id))))
+  if (length(blank)) {
+    .ard_stop(sprintf(paste0(
+      "Row %d of the code lists (%s) has no `output_id`.\n",
+      "  A code list is a report's: give the report, and copy the rows into ",
+      "each report that uses them."),
+      blank[1L], paste(d$variable[blank[1L]], d$value[blank[1L]], sep = " / ")))
+  }
+  invisible(NULL)
+}
+
+# The columns a report's analyses read as variables: by, strata, variables,
+# and the names their own R (args, code, post) uses
+.ard_read_vars <- function(a) {
+  cols <- unlist(lapply(c("by", "strata", "variables"), function(cn)
+    unlist(lapply(a[[cn]], .split_bar))))
+  r <- unlist(lapply(c("args", "code", "post"), function(cn) a[[cn]]))
+  r <- r[!is.na(r) & nzchar(r)]
+  syms <- unlist(lapply(r, function(txt) tryCatch(all.names(parse(text = txt)),
+                                                  error = function(e) NULL)))
+  unique(c(cols, syms))
+}
+
+# Each report's code lists for its ARD (NULL when none has any)
+.codelist_levels_by <- function(codelists, a) {
+  outs <- unique(a$output_id)
+  lv <- lapply(stats::setNames(outs, outs), function(o)
+    .codelist_levels(codelists, o, .ard_read_vars(a[a$output_id == o, , drop = FALSE])))
+  if (all(lengths(lv) == 0L)) NULL else lv
 }
 
 .study_value <- function(x, key, default) {
@@ -809,16 +845,18 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 #' @param part `"all"` (the whole program), `"setup"` or `"body"`.
 #' @param dir The study folder: the fingerprints saved with the ARD
 #'   ([tfl_ard_spec_hash()]) read the study's own function files from it.
-#' @param codelists The study's code lists: a table definition (its
-#'   `codelists` sheet) or a data frame with `variable`, `value`, `order`
-#'   and optionally `output_id`.  The study rows (a blank `output_id`)
-#'   count; for one report (`output_id` one value) its own rows too, which
-#'   replace the study's of the same variable and value.  Each listed
-#'   column of every dataset read, and of the populations and analysis
-#'   data that derive it, becomes a factor in that order before any analysis
-#'   (a value the list does not have comes after, alphabetically), so the
-#'   ARD keeps the order and counts a level no record has (`n = 0`).
-#'   `NULL` (default): the data as read.
+#' @param codelists The reports' code lists: a table definition (its
+#'   `codelists` sheet) or a data frame with `output_id`, `variable`,
+#'   `value` and `order`.  A code list is a report's: every row names its
+#'   report (a blank `output_id` stops).  A report's rows of the variables
+#'   its analyses read (`by`, `strata`, `variables`, and the names in
+#'   `args`, `code` and `post`) count: each such column of the data the
+#'   report reads, and of the populations and analysis data that derive it,
+#'   becomes a factor in that order before any analysis (a value the list
+#'   does not have comes after, alphabetically), so the ARD keeps the order
+#'   and counts a level no record has (`n = 0`).  In the study's program,
+#'   when a report has code lists, each report's part reads its data again
+#'   with its own.  `NULL` (default): the data as read.
 #' @inheritParams tfl_write_ard_spec
 #' @return The code, one element per line.
 #' @export
@@ -836,8 +874,8 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
     st <- tfl_ard_statistics("continuous")
     return(.ard_common_lines(st$statistic[!is.na(st$fun)], x))
   }
-  # one report's program: its own code list rows too
-  lv <- .codelist_levels(codelists, if (length(output_id) == 1L) output_id)
+  # each report's code lists, of the variables its analyses read
+  lv <- .codelist_levels_by(codelists, a)
   if (part == "body") return(.ard_body_lines(x, a, lv))
   out <- .study_value(x, "output", "output/ard/ard.rds")
   code <- c(
@@ -902,8 +940,62 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
     .ard_helpers(used))
 }
 
+# `.codelists <- list(...)`: the code lists' values of each variable
+.codelists_line <- function(levels) {
+  sprintf(".codelists <- list(\n  %s)", paste(vapply(names(levels), function(v)
+    sprintf("%s = c(%s)", encodeString(v, quote = "`"),
+            paste(encodeString(levels[[v]], quote = "\""), collapse = ", ")),
+    ""), collapse = ",\n  "))
+}
+
+.levels_fn_lines <- function() {
+  c(".levels <- function(d) {",
+    "  for (v in intersect(names(.codelists), names(d))) {",
+    "    x <- d[[v]]",
+    "    if (!is.character(x) && !is.factor(x)) next",
+    "    seen <- sort(unique(as.character(x[!is.na(x)])))",
+    "    d[[v]] <- factor(as.character(x), levels = unique(c(.codelists[[v]], seen)))",
+    "  }",
+    "  d",
+    "}")
+}
+
+# The datasets and populations analyses `a` (and analysis data `nad`)
+# read: their lines, with `.levels()` when there are code lists
+.ard_data_lines <- function(x, a, nad, levels = NULL) {
+  pops <- unique(stats::na.omit(c(a$population_id,
+                                  a$denominator[a$denominator %in%
+                                                  x$populations$population_id],
+                                  nad$population_id)))
+  den_ds <- a$denominator[a$denominator %in% x$datasets$dataset &
+                            !a$denominator %in% .den_words]
+  used_ds <- unique(stats::na.omit(c(a$dataset, den_ds,
+                                     nad$from[nad$from %in% x$datasets$dataset],
+                                     x$populations$dataset[
+    x$populations$population_id %in% pops])))
+  code <- character()
+  for (ds in used_ds) {
+    r <- x$datasets[x$datasets$dataset == ds, ]
+    obj <- .r_name(ds)
+    d <- .split_bar(r$derive[1L])
+    code <- c(code, .make_code(obj, .reader(r$path[1L]), c(
+      if (length(d)) sprintf("transform(%s)", paste(d, collapse = ", ")),
+      if (length(levels)) ".levels()")))
+  }
+  pop_code <- character()
+  for (pid in pops) {
+    r <- x$populations[x$populations$population_id == pid, ]
+    obj <- paste0("pop_", .r_name(pid))
+    src <- .r_name(r$dataset[1L])
+    pop_code <- c(pop_code, .make_code(obj, src, c(
+      if (!is.na(r$where[1L])) sprintf("subset(%s)", r$where[1L]),
+      .derive_steps(r$derive[1L], levels))))
+  }
+  list(data = code, pops = pop_code, used_ds = used_ds, pops_id = pops)
+}
+
 # the analyses `a`: their data, their analysis sets, one call each, bound
-# into `ard`
+# into `ard`.  `levels`: each report's code lists (.codelist_levels_by()).
 .ard_body_lines <- function(x, a, levels = NULL) {
   subj <- .study_value(x, "id", "USUBJID")
   # an analysis on an analysis data is of its population: the data is its
@@ -920,55 +1012,38 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
     ad_o <- .adata_of(ad, o)
     .adata_used(ad_o, a[a$output_id == o, , drop = FALSE])
   })
-  nad <- do.call(rbind, c(list(ad[0L, , drop = FALSE]), lapply(outs, function(o) {
+  nad_of <- function(o) {
     ad_o <- .adata_of(ad, o)
     ad_o[ad_o$data_id %in% named[[o]], , drop = FALSE]
-  })))
+  }
+  nad <- do.call(rbind, c(list(ad[0L, , drop = FALSE]), lapply(outs, nad_of)))
+  several <- length(outs) > 1L
+  # the study's program with code lists: each report's part reads its data
+  # with its own (a report's factors are not the next report's)
+  own_data <- several && length(levels) > 0L
+  lv_of <- function(o) if (is.null(levels)) NULL else levels[[o]]
   code <- "# ---- data"
-  if (length(levels)) {
+  lv1 <- if (!several) lv_of(outs[1L])
+  if (length(lv1)) {
     code <- c(code,
-      "# the study's code lists: each listed column a factor in their order,",
+      "# the report's code lists: each listed column a factor in their order,",
       "# so the ARD keeps the order and counts a level no record has (0)",
-      sprintf(".codelists <- list(\n  %s)", paste(vapply(names(levels), function(v)
-        sprintf("%s = c(%s)", encodeString(v, quote = "`"),
-                paste(encodeString(levels[[v]], quote = "\""), collapse = ", ")),
-        ""), collapse = ",\n  ")),
-      ".levels <- function(d) {",
-      "  for (v in intersect(names(.codelists), names(d))) {",
-      "    x <- d[[v]]",
-      "    if (!is.character(x) && !is.factor(x)) next",
-      "    seen <- sort(unique(as.character(x[!is.na(x)])))",
-      "    d[[v]] <- factor(as.character(x), levels = unique(c(.codelists[[v]], seen)))",
-      "  }",
-      "  d",
-      "}")
+      .codelists_line(lv1), .levels_fn_lines())
+  } else if (own_data) {
+    code <- c(code,
+      "# a report's code lists (.codelists, in its part): each listed column a",
+      "# factor in their order, so the ARD keeps the order and counts a level",
+      "# no record has (0)",
+      .levels_fn_lines())
   }
-  pops <- unique(stats::na.omit(c(a$population_id,
-                                  a$denominator[a$denominator %in%
-                                                  x$populations$population_id],
-                                  nad$population_id)))
-  den_ds <- a$denominator[a$denominator %in% x$datasets$dataset &
-                            !a$denominator %in% .den_words]
-  used_ds <- unique(stats::na.omit(c(a$dataset, den_ds,
-                                     nad$from[nad$from %in% x$datasets$dataset],
-                                     x$populations$dataset[
-    x$populations$population_id %in% pops])))
-  for (ds in used_ds) {
-    r <- x$datasets[x$datasets$dataset == ds, ]
-    obj <- .r_name(ds)
-    d <- .split_bar(r$derive[1L])
-    code <- c(code, .make_code(obj, .reader(r$path[1L]), c(
-      if (length(d)) sprintf("transform(%s)", paste(d, collapse = ", ")),
-      if (length(levels)) ".levels()")))
-  }
-  code <- c(code, "", "# ---- populations")
-  for (pid in pops) {
-    r <- x$populations[x$populations$population_id == pid, ]
-    obj <- paste0("pop_", .r_name(pid))
-    src <- .r_name(r$dataset[1L])
-    code <- c(code, .make_code(obj, src, c(
-      if (!is.na(r$where[1L])) sprintf("subset(%s)", r$where[1L]),
-      .derive_steps(r$derive[1L], levels))))
+  if (own_data) {
+    used_ds <- character()
+    pops <- character()
+  } else {
+    dl <- .ard_data_lines(x, a, nad, lv1)
+    used_ds <- dl$used_ds
+    pops <- dl$pops_id
+    code <- c(code, dl$data, "", "# ---- populations", dl$pops)
   }
   keys <- tfl_ard_methods()
   par <- a$parent %||% rep(NA_character_, nrow(a))
@@ -976,20 +1051,27 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
   # report, each making its own analysis data before its analyses (a name
   # the next report uses too is simply made again), after "ards <- list()"
   # once; the ards index is the row's in the study's table.
-  several <- length(outs) > 1L
   if (several) code <- c(code, "", "ards <- list()")
   for (o in outs) {
     xo <- x
     ad_o <- .adata_of(ad, o)
     xo$analysis_data <- ad_o
     rows <- which(a$output_id == o)
+    lv <- if (several) lv_of(o) else lv1
+    part <- NULL
+    if (own_data) {
+      dl <- .ard_data_lines(x, a[rows, , drop = FALSE], nad_of(o), lv)
+      used_ds <- dl$used_ds
+      pops <- dl$pops_id
+      part <- c(if (length(lv)) .codelists_line(lv), dl$data, dl$pops)
+    }
     # each analysis's data: the dataset, restricted to the population's
     # subjects (or the population itself when it is that dataset), and to
     # the analysis's own subset -- made once, under a name, for every
     # analysis that reads it
     taken <- c(.r_name(used_ds), paste0("pop_", .r_name(pops)), ad_o$data_id)
     data_of <- character()
-    made <- .adata_lines(xo, named[[o]], subj, levels)
+    made <- .adata_lines(xo, named[[o]], subj, lv)
     data_name <- vapply(rows, function(i) {
       r <- a[i, ]
       # on an analysis data: it, or its records the analysis's condition keeps
@@ -1034,7 +1116,7 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
     }, "")
     names(data_name) <- as.character(rows)
     if (several) {
-      code <- c(code, "", sprintf("# ---- %s", o), made)
+      code <- c(code, "", sprintf("# ---- %s", o), part, made)
     } else {
       if (length(made)) code <- c(code, "", "# ---- the analysis data", made)
       code <- c(code, "", "# ---- analyses", "ards <- list()")
@@ -1270,7 +1352,8 @@ tfl_ard_spec_hash <- function(spec, output_id, dir = ".", codelists = NULL) {
                  if (length(src)) paste(src, src_md5),
                  # the code lists, only when there are some: a study without
                  # keeps the fingerprints it had
-                 if (length(lv <- .codelist_levels(codelists, output_id)))
+                 if (length(lv <- .codelist_levels(codelists, output_id,
+                                                   .ard_read_vars(a))))
                    utils::capture.output(print(lv))),
                collapse = "\n")
   f <- tempfile()

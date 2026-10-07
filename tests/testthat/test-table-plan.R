@@ -814,7 +814,7 @@ test_that("the codelists sheet: a value's text and place (plan_labels / plan_lev
     variables = data.frame(output_id = NA, variable = c("SEX", "AGEGR1"),
                            label = c("Sex", "Age group"), order = c("1", "2"),
                            levels = c(NA, "<65 | 65-80 | >80")),
-    codelists = data.frame(output_id = NA, variable = c("SEX", "SEX", "AGEGR1"),
+    codelists = data.frame(output_id = "T1", variable = c("SEX", "SEX", "AGEGR1"),
                            value = c("F", "M", "<65"),
                            label = c("Female", "Male", "Under 65"),
                            order = c("2", "1", NA)),
@@ -838,4 +838,9 @@ test_that("the codelists sheet: a value's text and place (plan_labels / plan_lev
   bad <- sp
   bad$codelists <- rbind(bad$codelists, bad$codelists[1L, ])
   expect_error(tfl_table_spec(unclass(bad)), "two rows for 'SEX / F'")
+  # a code list is a report's: a row without one is refused
+  bad <- sp
+  bad$codelists$output_id[3L] <- NA
+  expect_error(tfl_table_spec(unclass(bad)), "Row 3 of the code lists (AGEGR1 / <65)",
+               fixed = TRUE)
 })

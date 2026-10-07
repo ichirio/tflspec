@@ -748,6 +748,7 @@ tfl_table_spec <- function(tables = NULL, variables = NULL, cells = NULL,
     }
   }
   .ard_spec_check_tokens(sp$tokens)
+  .codelists_check(sp$codelists)
   chk(t$stats, c("cells", "rows"), "stats")
   chk(t$value, c("stat", "stat_fmt"), "value")
   if (any(is.na(sp$variables$variable))) {

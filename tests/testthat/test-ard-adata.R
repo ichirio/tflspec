@@ -171,7 +171,7 @@ test_that("a report's own subjects, the columns kept, factors of derived columns
               variables = c("OLD", "AEBODSYS | AEDECOD"),
               denominator = c(NA, "adsl_old"))
   x <- ad_spec(ad, an)
-  cl <- ad_df(output_id = c(NA, "T1", "T1"), variable = c("SEX", "OLD", "OLD"),
+  cl <- ad_df(output_id = c("T1", "T1", "T1"), variable = c("SEX", "OLD", "OLD"),
               value = c("F", "75+", "65-74"), order = c(1, 1, 2))
   code <- tfl_ard_code(x, output_id = "T1", save = FALSE, part = "body", codelists = cl)
   # the numerator kept to the denominator's subjects; add from that data
@@ -181,15 +181,15 @@ test_that("a report's own subjects, the columns kept, factors of derived columns
   # the derived column a factor: the report's own code list rows count
   expect_true(any(startsWith(code, "adsl_old <- pop_saf |>") & endsWith(code, " |>\n  .levels()")))
   expect_true(any(grepl("`OLD` = c(\"75+\", \"65-74\")", code, fixed = TRUE)))
-  # the study's program: the study rows only (no OLD, no factor line)
-  all <- tfl_ard_code(x, save = FALSE, part = "body", codelists = cl)
-  expect_false(any(grepl("`OLD`", all, fixed = TRUE)))
-  expect_false(any(all == "adsl_old <- .levels(adsl_old)"))
+  # only what the analyses read: no SEX
+  expect_false(any(grepl("`SEX`", code, fixed = TRUE)))
+  # the study's program of its one report: the same
+  expect_identical(tfl_ard_code(x, save = FALSE, part = "body", codelists = cl), code)
   # the ARD's analysis set: the one the subjects are of
   expect_true(any(grepl("\"T1\", \"AE\", \"SAF\")", code, fixed = TRUE)))
   # a report's rows are part of its fingerprint
   expect_false(identical(tfl_ard_spec_hash(x, "T1", codelists = cl),
-                         tfl_ard_spec_hash(x, "T1", codelists = cl[1L, ])))
+                         tfl_ard_spec_hash(x, "T1", codelists = cl[1:2, ])))
   # checks
   d <- ad; d$population_id[2L] <- "SAF"
   expect_error(ad_spec(d, an), "not both", fixed = TRUE)

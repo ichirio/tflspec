@@ -1,5 +1,17 @@
 # tflspec (development version)
 
+* **A code list is a report's** (#170).  Every `codelists` row names its
+  report: a blank `output_id` is an error, in a table definition and in
+  `tfl_ard_code(codelists = )` (no study-wide rows; a sheet made before
+  this version gives its rows their report).  A report's ARD program, and
+  its fingerprint, take only its code lists of the variables its analyses
+  read (`by`, `strata`, `variables`, the names in `args`, `code` and
+  `post`): a variable its tables only show is not made a factor.  The
+  study's program, when a report has code lists, gives each report's part
+  its own `.codelists` and reads the data again with them, so a report's
+  factors are not the next report's; without code lists it reads the data
+  once, as before.
+
 * **An analysis data is a report's** (#166).  `analysis_data` has an
   `output_id` column, first: the key is the report and the name, so the
   same `data_id` may mean something else in another report (a Phase I
