@@ -31,7 +31,7 @@ tfl_fig_forest <- function(adam = NULL, style = c("hr", "or", "estimates"), para
     data_lines <- c(
       "# est_df: one row per line of the plot, with columns",
       "#   label (text on the y axis), est, lcl, ucl (NA for heading rows) and optionally n",
-      "est_df <- est_df %>%",
+      "est_df <- est_df |>",
       "  mutate(y = rev(seq_len(n())), txt = ifelse(is.na(est), \"\", sprintf(\"%.2f (%.2f, %.2f)\", est, lcl, ucl)))")
     x_lab <- "Estimate (95% CI)"
     ref <- 1
@@ -80,7 +80,7 @@ tfl_fig_forest <- function(adam = NULL, style = c("hr", "or", "estimates"), para
              "    rows[[length(rows) + 1]] <- cbind(data.frame(label = paste0(\"   \", lv), head = FALSE, n = nrow(d)), fit_est(d))\n",
              "  }\n",
              "}"),
-      paste0("est_df <- bind_rows(rows) %>%\n",
+      paste0("est_df <- bind_rows(rows) |>\n",
              "  mutate(\n",
              "    # not estimable (e.g. no events / all responders in a subgroup): no point, \"NE\"\n",
              "    ok  = is.finite(est) & is.finite(lcl) & is.finite(ucl) & lcl > 0 & ucl < 1000,\n",
@@ -151,9 +151,9 @@ tfl_fig_bar <- function(adam = NULL, style = c("rate_ci", "stacked", "dodged"), 
   lab <- pp_q_param_label(adam, data, param, param)
   if (style == "rate_ci") {
     data_lines <- c(pp_q_load(c(data, "ADSL")), prep, pal,
-      paste0("rate_df <- bar_df %>%\n",
-             sprintf("  group_by(%s) %%>%%\n", group),
-             sprintf("  summarise(n = n(), x = sum(%s %%in%% %s), .groups = \"drop\") %%>%%\n", category, vec_code(responders)),
+      paste0("rate_df <- bar_df |>\n",
+             sprintf("  group_by(%s) |>\n", group),
+             sprintf("  summarise(n = n(), x = sum(%s %%in%% %s), .groups = \"drop\") |>\n", category, vec_code(responders)),
              "  mutate(\n",
              "    rate = 100 * x / n,\n",
              "    lcl  = 100 * mapply(function(x, n) binom.test(x, n)$conf.int[1], x, n),\n",
@@ -171,15 +171,15 @@ tfl_fig_bar <- function(adam = NULL, style = c("rate_ci", "stacked", "dodged"), 
       as.list(pp_theme_lines(theme)), as.list(pp_q_legend(legend))))
   } else {
     data_lines <- c(pp_q_load(c(data, "ADSL")), prep, pal,
-      paste0("pct_df <- bar_df %>%\n",
-             sprintf("  count(%s, %s) %%>%%\n", group, category),
-             sprintf("  group_by(%s) %%>%%\n", group),
-             "  mutate(pct = 100 * n / sum(n)) %>%\n",
+      paste0("pct_df <- bar_df |>\n",
+             sprintf("  count(%s, %s) |>\n", group, category),
+             sprintf("  group_by(%s) |>\n", group),
+             "  mutate(pct = 100 * n / sum(n)) |>\n",
              "  ungroup()",
              if (style == "stacked") {
-               sprintf(" %%>%%\n  mutate(%s = factor(%s, levels = rev(intersect(names(pal), %s))))", category, category, category)
+               sprintf(" |>\n  mutate(%s = factor(%s, levels = rev(intersect(names(pal), %s))))", category, category, category)
              } else {
-               sprintf(" %%>%%\n  # response categories in their usual order, other values after them\n  mutate(%s = factor(%s, levels = unique(c(intersect(%s, %s), sort(%s)))))",
+               sprintf(" |>\n  # response categories in their usual order, other values after them\n  mutate(%s = factor(%s, levels = unique(c(intersect(%s, %s), sort(%s)))))",
                        category, category, vec_code(names(tfl_fig_palettes()$response)), category, category)
              }))
     plot <- if (style == "stacked") {

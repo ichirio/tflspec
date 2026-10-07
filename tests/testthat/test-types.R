@@ -34,7 +34,7 @@ test_that("every style of the template types generates runnable code", {
 test_that("ADSL variables are joined from ADSL", {
   code <- tfl_fig_mean(param = "AST")
   expect_match(code, 'select(-any_of(c("TRT01A", "SAFFL")))', fixed = TRUE)
-  expect_match(code, 'left_join(adsl %>% select(USUBJID, all_of(c("TRT01A", "SAFFL"))), by = "USUBJID")', fixed = TRUE)
+  expect_match(code, 'left_join(adsl |> select(USUBJID, all_of(c("TRT01A", "SAFFL"))), by = "USUBJID")', fixed = TRUE)
   expect_match(code, 'filter(PARAMCD == "AST")', fixed = TRUE)
 })
 

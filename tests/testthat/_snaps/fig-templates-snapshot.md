@@ -11,28 +11,23 @@
       library(ggsurvfit)
       library(patchwork)
       
-      #########################################################
-      # Step1: Preparing Analysis Data
-      #########################################################
+      # ---- data ------------------------------------------------------------------
       # Input data frames: adtte
       
-      df <- adtte %>%
-        filter(PARAMCD == "OS") %>%
-        filter(FASFL == "Y") %>%
+      df <- adtte |>
+        filter(PARAMCD == "OS", FASFL == "Y") |>
         # days -> months
         mutate(AVAL = AVAL / 30.4375)
       
       fit <- survfit2(Surv(AVAL, CNSR == 0) ~ TRT01P, data = df)
       
       # the treatment palette, a colour for each TRT01P
-      pal_lv <- if (is.factor(df$TRT01P)) levels(droplevels(df$TRT01P)) else sort(unique(as.character(df$TRT01P)))
-      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(pal_lv)], pal_lv)
+      lv <- levels(droplevels(factor(df$TRT01P)))
+      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
       
       x_breaks <- pretty(c(0, max(fit$time)))
       
-      #########################################################
-      # Step2: Making a figure
-      #########################################################
+      # ---- the figure ------------------------------------------------------------
       p <- ggsurvfit(fit, linewidth = 0.3)
       # ---- layer 2: censor marks ----
       p <- p + add_censor_mark(shape = 4, size = 3, stroke = 0.6)
@@ -85,13 +80,10 @@
           axis.text.y         = element_text(hjust = 1, margin = margin(r = 5))
         )
       
-      # ---- assemble ----
       fig <- p / p_risk + plot_layout(heights = c(0.833, 0.167))
       fig
       
-      #########################################################
-      # Step3: Saving the figure
-      #########################################################
+      # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "km_risk_table.png")
       fig_width  <- 8.33
       fig_height <- 4.79
@@ -120,27 +112,21 @@
       library(ggplot2)
       library(ggsurvfit)
       
-      #########################################################
-      # Step1: Preparing Analysis Data
-      #########################################################
+      # ---- data ------------------------------------------------------------------
       # Input data frames: adtte
       
-      df <- adtte %>%
-        filter(PARAMCD == "OS") %>%
-        filter(FASFL == "Y") %>%
+      df <- adtte |>
+        filter(PARAMCD == "OS", FASFL == "Y") |>
         # days -> months
         mutate(AVAL = AVAL / 30.4375)
       
       fit <- survfit2(Surv(AVAL, CNSR == 0) ~ TRT01P, data = df)
       
       # the treatment palette, a colour for each TRT01P
-      pal_lv <- if (is.factor(df$TRT01P)) levels(droplevels(df$TRT01P)) else sort(unique(as.character(df$TRT01P)))
-      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(pal_lv)], pal_lv)
+      lv <- levels(droplevels(factor(df$TRT01P)))
+      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
       
-      
-      #########################################################
-      # Step2: Making a figure
-      #########################################################
+      # ---- the figure ------------------------------------------------------------
       p <- ggsurvfit(fit, linewidth = 0.3)
       # ---- layer 2: censor marks ----
       p <- p + add_censor_mark(shape = 4, size = 3, stroke = 0.6)
@@ -169,13 +155,10 @@
         ) +
         theme(legend.title = element_blank())
       
-      # ---- assemble ----
       fig <- p
       fig
       
-      #########################################################
-      # Step3: Saving the figure
-      #########################################################
+      # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "km_simple.png")
       fig_width  <- 8.33
       fig_height <- 4.79
@@ -205,28 +188,23 @@
       library(ggsurvfit)
       library(patchwork)
       
-      #########################################################
-      # Step1: Preparing Analysis Data
-      #########################################################
+      # ---- data ------------------------------------------------------------------
       # Input data frames: adtte
       
-      df <- adtte %>%
-        filter(PARAMCD == "OS") %>%
-        filter(FASFL == "Y") %>%
+      df <- adtte |>
+        filter(PARAMCD == "OS", FASFL == "Y") |>
         # days -> months
         mutate(AVAL = AVAL / 30.4375)
       
       fit <- survfit2(Surv(AVAL, CNSR == 0) ~ TRT01P, data = df)
       
       # the treatment palette, a colour for each TRT01P
-      pal_lv <- if (is.factor(df$TRT01P)) levels(droplevels(df$TRT01P)) else sort(unique(as.character(df$TRT01P)))
-      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(pal_lv)], pal_lv)
+      lv <- levels(droplevels(factor(df$TRT01P)))
+      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
       
       x_breaks <- pretty(c(0, max(fit$time)))
       
-      #########################################################
-      # Step2: Making a figure
-      #########################################################
+      # ---- the figure ------------------------------------------------------------
       p <- ggsurvfit(fit, linewidth = 0.3)
       # ---- layer 2: KM confidence bands ----
       p <- p + add_confidence_interval(alpha = 0.2)
@@ -282,13 +260,10 @@
           axis.text.y         = element_text(hjust = 1, margin = margin(r = 5))
         )
       
-      # ---- assemble ----
       fig <- p / p_risk + plot_layout(heights = c(0.833, 0.167))
       fig
       
-      #########################################################
-      # Step3: Saving the figure
-      #########################################################
+      # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "km_ci.png")
       fig_width  <- 8.33
       fig_height <- 4.79
@@ -318,14 +293,11 @@
       library(ggsurvfit)
       library(patchwork)
       
-      #########################################################
-      # Step1: Preparing Analysis Data
-      #########################################################
+      # ---- data ------------------------------------------------------------------
       # Input data frames: adtte
       
-      df <- adtte %>%
-        filter(PARAMCD == "OS") %>%
-        filter(FASFL == "Y") %>%
+      df <- adtte |>
+        filter(PARAMCD == "OS", FASFL == "Y") |>
         # days -> months
         mutate(AVAL = AVAL / 30.4375)
       
@@ -335,9 +307,7 @@
       
       x_breaks <- pretty(c(0, max(fit$time)))
       
-      #########################################################
-      # Step2: Making a figure
-      #########################################################
+      # ---- the figure ------------------------------------------------------------
       p <- ggsurvfit(fit, linewidth = 0.3, colour = pal[[1]])
       # ---- layer 2: censor marks ----
       p <- p + add_censor_mark(shape = 4, size = 3, stroke = 0.6, colour = pal[[1]])
@@ -383,13 +353,10 @@
           axis.text.y         = element_text(hjust = 1, margin = margin(r = 5))
         )
       
-      # ---- assemble ----
       fig <- p / p_risk + plot_layout(heights = c(0.833, 0.167))
       fig
       
-      #########################################################
-      # Step3: Saving the figure
-      #########################################################
+      # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "km_single_arm.png")
       fig_width  <- 8.33
       fig_height <- 4.79
@@ -417,21 +384,18 @@
       library(dplyr)
       library(ggplot2)
       
-      #########################################################
-      # Step1: Preparing Analysis Data
-      #########################################################
+      # ---- data ------------------------------------------------------------------
       # Input data frames: adtr, adrs
       
-      df <- adtr %>%
-        filter(PARAMCD == "BPCHG") %>%
-        filter(FASFL == "Y") %>%
+      df <- adtr |>
+        filter(PARAMCD == "BPCHG", FASFL == "Y") |>
         left_join(
-          adrs %>% filter(PARAMCD == "BOR") %>% select(USUBJID, BOR = AVALC),
+          adrs |> filter(PARAMCD == "BOR") |> select(USUBJID, BOR = AVALC),
           by = "USUBJID"
-        ) %>%
-        filter(!is.na(AVAL)) %>%
-        arrange(desc(AVAL)) %>%
-        mutate(INDEX = row_number()) %>%
+        ) |>
+        filter(!is.na(AVAL)) |>
+        arrange(desc(AVAL)) |>
+        mutate(INDEX = row_number()) |>
         mutate(BOR = factor(BOR, levels = c("CR", "PR", "SD", "PD", "NE")))
       
       # the response palette: a colour for each value
@@ -444,10 +408,7 @@
         "NON-CR/NON-PD" = "#20B2AA"
       )
       
-      
-      #########################################################
-      # Step2: Making a figure
-      #########################################################
+      # ---- the figure ------------------------------------------------------------
       p <- ggplot()
       # ---- layer 1: Bars ----
       p <- p + geom_col(data = df, aes(x = INDEX, y = AVAL, fill = BOR), width = 0.8)
@@ -484,13 +445,10 @@
         theme(legend.title = element_blank())
       p <- p + theme(plot.margin = margin(5.5, 50, 5.5, 5.5))   # room for the labels
       
-      # ---- assemble ----
       fig <- p
       fig
       
-      #########################################################
-      # Step3: Saving the figure
-      #########################################################
+      # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "waterfall_response.png")
       fig_width  <- 7.3
       fig_height <- 4.2
@@ -518,24 +476,17 @@
       library(dplyr)
       library(ggplot2)
       
-      #########################################################
-      # Step1: Preparing Analysis Data
-      #########################################################
+      # ---- data ------------------------------------------------------------------
       # Input data frames: adtr
       
-      df <- adtr %>%
-        filter(PARAMCD == "BPCHG") %>%
-        filter(FASFL == "Y") %>%
-        filter(!is.na(AVAL)) %>%
-        arrange(desc(AVAL)) %>%
+      df <- adtr |>
+        filter(PARAMCD == "BPCHG", FASFL == "Y", !is.na(AVAL)) |>
+        arrange(desc(AVAL)) |>
         mutate(INDEX = row_number())
       
       pal <- c(All = "blue")
       
-      
-      #########################################################
-      # Step2: Making a figure
-      #########################################################
+      # ---- the figure ------------------------------------------------------------
       p <- ggplot()
       # ---- layer 1: Bars ----
       p <- p + geom_col(data = df, aes(x = INDEX, y = AVAL), width = 0.8)
@@ -565,13 +516,10 @@
         theme(legend.position = "none")
       p <- p + theme(plot.margin = margin(5.5, 50, 5.5, 5.5))   # room for the labels
       
-      # ---- assemble ----
       fig <- p
       fig
       
-      #########################################################
-      # Step3: Saving the figure
-      #########################################################
+      # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "waterfall_plain.png")
       fig_width  <- 7.3
       fig_height <- 4.2
@@ -599,29 +547,23 @@
       library(dplyr)
       library(ggplot2)
       
-      #########################################################
-      # Step1: Preparing Analysis Data
-      #########################################################
+      # ---- data ------------------------------------------------------------------
       # Input data frames: adsl
       
-      df <- adsl %>%
-        filter(FASFL == "Y") %>%
-        filter(!is.na(TRTDURD)) %>%
+      df <- adsl |>
+        filter(FASFL == "Y", !is.na(TRTDURD)) |>
         # days -> months
-        mutate(TRTDURD = TRTDURD / 30.4375) %>%
-        mutate(X0 = 0) %>%
-        mutate(Y_ID = reorder(USUBJID, TRTDURD)) %>%
+        mutate(TRTDURD = TRTDURD / 30.4375) |>
+        mutate(X0 = 0) |>
+        mutate(Y_ID = reorder(USUBJID, TRTDURD)) |>
         mutate(X_ARROW = TRTDURD + max(TRTDURD) * 0.03)
       
-      ongoing <- df %>%
+      ongoing <- df |>
         filter(EOSSTT == "ONGOING")
       
       pal <- c(All = "blue")
       
-      
-      #########################################################
-      # Step2: Making a figure
-      #########################################################
+      # ---- the figure ------------------------------------------------------------
       p <- ggplot()
       # ---- layer 1: Segments ----
       p <- p + geom_segment(data = df, aes(x = X0, y = Y_ID, xend = TRTDURD, yend = Y_ID), linewidth = 1.2)
@@ -642,13 +584,10 @@
         ) +
         theme(legend.position = "none")
       
-      # ---- assemble ----
       fig <- p
       fig
       
-      #########################################################
-      # Step3: Saving the figure
-      #########################################################
+      # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "swimmer_bar.png")
       fig_width  <- 7.71
       fig_height <- 4.17
@@ -676,26 +615,24 @@
       library(dplyr)
       library(ggplot2)
       
-      #########################################################
-      # Step1: Preparing Analysis Data
-      #########################################################
+      # ---- data ------------------------------------------------------------------
       # Input data frames: adsl, adrs
       
-      df <- adsl %>%
-        filter(FASFL == "Y") %>%
+      df <- adsl |>
+        filter(FASFL == "Y") |>
         left_join(
-          adrs %>% filter(PARAMCD == "BOR") %>% select(USUBJID, BOR = AVALC),
+          adrs |> filter(PARAMCD == "BOR") |> select(USUBJID, BOR = AVALC),
           by = "USUBJID"
-        ) %>%
-        filter(!is.na(TRTDURD)) %>%
+        ) |>
+        filter(!is.na(TRTDURD)) |>
         # days -> months
-        mutate(TRTDURD = TRTDURD / 30.4375) %>%
-        mutate(X0 = 0) %>%
-        mutate(Y_ID = reorder(USUBJID, TRTDURD)) %>%
-        mutate(X_ARROW = TRTDURD + max(TRTDURD) * 0.03) %>%
+        mutate(TRTDURD = TRTDURD / 30.4375) |>
+        mutate(X0 = 0) |>
+        mutate(Y_ID = reorder(USUBJID, TRTDURD)) |>
+        mutate(X_ARROW = TRTDURD + max(TRTDURD) * 0.03) |>
         mutate(BOR = factor(BOR, levels = c("CR", "PR", "SD", "PD", "NE")))
       
-      ongoing <- df %>%
+      ongoing <- df |>
         filter(EOSSTT == "ONGOING")
       
       # the response_light palette: a colour for each value
@@ -708,10 +645,7 @@
         "NON-CR/NON-PD" = "#99D8D3"
       )
       
-      
-      #########################################################
-      # Step2: Making a figure
-      #########################################################
+      # ---- the figure ------------------------------------------------------------
       p <- ggplot()
       # ---- layer 1: Segments ----
       p <- p + geom_segment(data = df, aes(x = X0, y = Y_ID, xend = TRTDURD, yend = Y_ID, colour = BOR), linewidth = 1.2)
@@ -734,13 +668,10 @@
         theme(legend.position = "right") +
         theme(legend.title = element_blank())
       
-      # ---- assemble ----
       fig <- p
       fig
       
-      #########################################################
-      # Step3: Saving the figure
-      #########################################################
+      # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "swimmer_response.png")
       fig_width  <- 7.71
       fig_height <- 4.17
@@ -768,34 +699,32 @@
       library(dplyr)
       library(ggplot2)
       
-      #########################################################
-      # Step1: Preparing Analysis Data
-      #########################################################
+      # ---- data ------------------------------------------------------------------
       # Input data frames: adsl, adrs
       
-      df <- adsl %>%
-        filter(FASFL == "Y") %>%
+      df <- adsl |>
+        filter(FASFL == "Y") |>
         left_join(
-          adrs %>% filter(PARAMCD == "BOR") %>% select(USUBJID, BOR = AVALC),
+          adrs |> filter(PARAMCD == "BOR") |> select(USUBJID, BOR = AVALC),
           by = "USUBJID"
-        ) %>%
-        filter(!is.na(TRTDURD)) %>%
+        ) |>
+        filter(!is.na(TRTDURD)) |>
         # days -> months
-        mutate(TRTDURD = TRTDURD / 30.4375) %>%
-        mutate(X0 = 0) %>%
-        mutate(Y_ID = reorder(USUBJID, TRTDURD)) %>%
-        mutate(X_ARROW = TRTDURD + max(TRTDURD) * 0.03) %>%
+        mutate(TRTDURD = TRTDURD / 30.4375) |>
+        mutate(X0 = 0) |>
+        mutate(Y_ID = reorder(USUBJID, TRTDURD)) |>
+        mutate(X_ARROW = TRTDURD + max(TRTDURD) * 0.03) |>
         mutate(BOR = factor(BOR, levels = c("CR", "PR", "SD", "PD", "NE")))
       
-      ongoing <- df %>%
+      ongoing <- df |>
         filter(EOSSTT == "ONGOING")
       
-      assess <- adrs %>%
-        filter(PARAMCD == "OVR" & !is.na(ADY)) %>%
-        inner_join(df %>% select(USUBJID, Y_ID), by = "USUBJID")
+      assess <- adrs |>
+        filter(PARAMCD == "OVR" & !is.na(ADY)) |>
+        inner_join(df |> select(USUBJID, Y_ID), by = "USUBJID")
       
       # your code
-      assess <- assess %>% mutate(ADY = ADY / 30.4375)
+      assess <- assess |> mutate(ADY = ADY / 30.4375)
       
       # the response_light palette: a colour for each value
       pal <- c(
@@ -807,10 +736,7 @@
         "NON-CR/NON-PD" = "#99D8D3"
       )
       
-      
-      #########################################################
-      # Step2: Making a figure
-      #########################################################
+      # ---- the figure ------------------------------------------------------------
       p <- ggplot()
       # ---- layer 1: Segments ----
       p <- p + geom_segment(data = df, aes(x = X0, y = Y_ID, xend = TRTDURD, yend = Y_ID, colour = BOR), linewidth = 1.2)
@@ -835,13 +761,10 @@
         theme(legend.position = "right") +
         theme(legend.title = element_blank())
       
-      # ---- assemble ----
       fig <- p
       fig
       
-      #########################################################
-      # Step3: Saving the figure
-      #########################################################
+      # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "swimmer_assessment.png")
       fig_width  <- 7.71
       fig_height <- 4.17
@@ -869,34 +792,32 @@
       library(dplyr)
       library(ggplot2)
       
-      #########################################################
-      # Step1: Preparing Analysis Data
-      #########################################################
+      # ---- data ------------------------------------------------------------------
       # Input data frames: adsl, adrs
       
-      df <- adsl %>%
-        filter(FASFL == "Y") %>%
+      df <- adsl |>
+        filter(FASFL == "Y") |>
         left_join(
-          adrs %>% filter(PARAMCD == "BOR") %>% select(USUBJID, BOR = AVALC),
+          adrs |> filter(PARAMCD == "BOR") |> select(USUBJID, BOR = AVALC),
           by = "USUBJID"
-        ) %>%
-        filter(!is.na(TRTDURD)) %>%
+        ) |>
+        filter(!is.na(TRTDURD)) |>
         # days -> months
-        mutate(TRTDURD = TRTDURD / 30.4375) %>%
-        mutate(X0 = 0) %>%
-        mutate(Y_ID = reorder(USUBJID, TRTDURD)) %>%
-        mutate(X_ARROW = TRTDURD + max(TRTDURD) * 0.03) %>%
+        mutate(TRTDURD = TRTDURD / 30.4375) |>
+        mutate(X0 = 0) |>
+        mutate(Y_ID = reorder(USUBJID, TRTDURD)) |>
+        mutate(X_ARROW = TRTDURD + max(TRTDURD) * 0.03) |>
         mutate(BOR = factor(BOR, levels = c("CR", "PR", "SD", "PD", "NE")))
       
-      ongoing <- df %>%
+      ongoing <- df |>
         filter(EOSSTT == "ONGOING")
       
-      assess <- adrs %>%
-        filter(PARAMCD == "OVR" & !is.na(ADY)) %>%
-        inner_join(df %>% select(USUBJID, Y_ID), by = "USUBJID")
+      assess <- adrs |>
+        filter(PARAMCD == "OVR" & !is.na(ADY)) |>
+        inner_join(df |> select(USUBJID, Y_ID), by = "USUBJID")
       
       # your code
-      assess <- assess %>% mutate(ADY = ADY / 30.4375)
+      assess <- assess |> mutate(ADY = ADY / 30.4375)
       
       # the response_light palette: a colour for each value
       pal <- c(
@@ -908,10 +829,7 @@
         "NON-CR/NON-PD" = "#99D8D3"
       )
       
-      
-      #########################################################
-      # Step2: Making a figure
-      #########################################################
+      # ---- the figure ------------------------------------------------------------
       p <- ggplot()
       # ---- layer 1: Segments ----
       p <- p + geom_segment(data = df, aes(x = X0, y = Y_ID, xend = TRTDURD, yend = Y_ID, colour = BOR), linewidth = 1.2)
@@ -938,13 +856,10 @@
         theme(legend.position = "right") +
         theme(legend.title = element_blank())
       
-      # ---- assemble ----
       fig <- p
       fig
       
-      #########################################################
-      # Step3: Saving the figure
-      #########################################################
+      # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "swimmer_full.png")
       fig_width  <- 7.71
       fig_height <- 4.17
@@ -972,21 +887,18 @@
       library(dplyr)
       library(ggplot2)
       
-      #########################################################
-      # Step1: Preparing Analysis Data
-      #########################################################
+      # ---- data ------------------------------------------------------------------
       # Input data frames: adtr, adrs
       
-      df <- adtr %>%
-        filter(PARAMCD == "SDIAM") %>%
-        filter(FASFL == "Y") %>%
+      df <- adtr |>
+        filter(PARAMCD == "SDIAM", FASFL == "Y") |>
         left_join(
-          adrs %>% filter(PARAMCD == "BOR") %>% select(USUBJID, BOR = AVALC),
+          adrs |> filter(PARAMCD == "BOR") |> select(USUBJID, BOR = AVALC),
           by = "USUBJID"
-        ) %>%
-        filter(!is.na(PCHG) & !is.na(ADY)) %>%
+        ) |>
+        filter(!is.na(PCHG) & !is.na(ADY)) |>
         # days -> months
-        mutate(ADY = ADY / 30.4375) %>%
+        mutate(ADY = ADY / 30.4375) |>
         mutate(BOR = factor(BOR, levels = c("CR", "PR", "SD", "PD", "NE")))
       
       # the response palette: a colour for each value
@@ -999,10 +911,7 @@
         "NON-CR/NON-PD" = "#20B2AA"
       )
       
-      
-      #########################################################
-      # Step2: Making a figure
-      #########################################################
+      # ---- the figure ------------------------------------------------------------
       p <- ggplot()
       # ---- layer 1: Horizontal lines ----
       p <- p + geom_hline(yintercept = 0, linetype = "solid", colour = "grey40", linewidth = 0.3)
@@ -1030,13 +939,10 @@
         theme(legend.position = "right") +
         theme(legend.title = element_blank())
       
-      # ---- assemble ----
       fig <- p
       fig
       
-      #########################################################
-      # Step3: Saving the figure
-      #########################################################
+      # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "individual_spider.png")
       fig_width  <- 7.3
       fig_height <- 4.2
@@ -1064,22 +970,20 @@
       library(dplyr)
       library(ggplot2)
       
-      #########################################################
-      # Step1: Preparing Analysis Data
-      #########################################################
+      # ---- data ------------------------------------------------------------------
       # Input data frames: adrs, adsl
       
-      df <- adrs %>%
-        filter(PARAMCD == "BOR") %>%
+      df <- adrs |>
+        filter(PARAMCD == "BOR") |>
         left_join(
-          adsl %>% select(USUBJID, TRT01P, FASFL),
+          adsl |> select(USUBJID, TRT01P, FASFL),
           by = "USUBJID"
-        ) %>%
+        ) |>
         filter(FASFL == "Y")
       
-      rt <- df %>%
-        group_by(TRT01P) %>%
-        summarise(n = n(), x = sum(AVALC %in% c("CR", "PR")), .groups = "drop") %>%
+      rt <- df |>
+        group_by(TRT01P) |>
+        summarise(n = n(), x = sum(AVALC %in% c("CR", "PR")), .groups = "drop") |>
         mutate(
           rate  = 100 * x / n,
           lcl   = 100 * mapply(function(x, n) binom.test(x, n)$conf.int[1], x, n),
@@ -1088,13 +992,10 @@
         )
       
       # the treatment palette, a colour for each TRT01P
-      pal_lv <- if (is.factor(df$TRT01P)) levels(droplevels(df$TRT01P)) else sort(unique(as.character(df$TRT01P)))
-      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(pal_lv)], pal_lv)
+      lv <- levels(droplevels(factor(df$TRT01P)))
+      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
       
-      
-      #########################################################
-      # Step2: Making a figure
-      #########################################################
+      # ---- the figure ------------------------------------------------------------
       p <- ggplot()
       # ---- layer 1: Bars ----
       p <- p + geom_col(data = rt, aes(x = TRT01P, y = rate, fill = TRT01P), width = 0.6)
@@ -1120,13 +1021,10 @@
         ) +
         theme(legend.position = "none")
       
-      # ---- assemble ----
       fig <- p
       fig
       
-      #########################################################
-      # Step3: Saving the figure
-      #########################################################
+      # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "bar_rate_ci.png")
       fig_width  <- 7.3
       fig_height <- 4.2
@@ -1154,24 +1052,22 @@
       library(dplyr)
       library(ggplot2)
       
-      #########################################################
-      # Step1: Preparing Analysis Data
-      #########################################################
+      # ---- data ------------------------------------------------------------------
       # Input data frames: adrs, adsl
       
-      df <- adrs %>%
-        filter(PARAMCD == "BOR") %>%
+      df <- adrs |>
+        filter(PARAMCD == "BOR") |>
         left_join(
-          adsl %>% select(USUBJID, TRT01P, FASFL),
+          adsl |> select(USUBJID, TRT01P, FASFL),
           by = "USUBJID"
-        ) %>%
+        ) |>
         filter(FASFL == "Y")
       
-      ct <- df %>%
-        count(TRT01P, AVALC) %>%
-        group_by(TRT01P) %>%
-        mutate(pct = 100 * n / sum(n), label = sprintf("%.0f%%", pct)) %>%
-        ungroup() %>%
+      ct <- df |>
+        count(TRT01P, AVALC) |>
+        group_by(TRT01P) |>
+        mutate(pct = 100 * n / sum(n), label = sprintf("%.0f%%", pct)) |>
+        ungroup() |>
         mutate(AVALC = factor(AVALC, levels = unique(c(intersect(c("CR", "PR", "SD", "PD", "NE"), AVALC), sort(AVALC)))))
       
       # the response palette: a colour for each value
@@ -1184,10 +1080,7 @@
         "NON-CR/NON-PD" = "#20B2AA"
       )
       
-      
-      #########################################################
-      # Step2: Making a figure
-      #########################################################
+      # ---- the figure ------------------------------------------------------------
       p <- ggplot()
       # ---- layer 1: Bars ----
       p <- p + geom_col(data = ct, aes(x = TRT01P, y = pct, fill = AVALC), width = 0.6, colour = "white")
@@ -1211,13 +1104,10 @@
         theme(legend.position = "right") +
         theme(legend.title = element_blank())
       
-      # ---- assemble ----
       fig <- p
       fig
       
-      #########################################################
-      # Step3: Saving the figure
-      #########################################################
+      # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "bar_stacked.png")
       fig_width  <- 7.3
       fig_height <- 4.2
@@ -1245,33 +1135,28 @@
       library(dplyr)
       library(ggplot2)
       
-      #########################################################
-      # Step1: Preparing Analysis Data
-      #########################################################
+      # ---- data ------------------------------------------------------------------
       # Input data frames: adrs, adsl
       
-      df <- adrs %>%
-        filter(PARAMCD == "BOR") %>%
+      df <- adrs |>
+        filter(PARAMCD == "BOR") |>
         left_join(
-          adsl %>% select(USUBJID, TRT01P, FASFL),
+          adsl |> select(USUBJID, TRT01P, FASFL),
           by = "USUBJID"
-        ) %>%
+        ) |>
         filter(FASFL == "Y")
       
-      ct <- df %>%
-        count(TRT01P, AVALC) %>%
-        group_by(TRT01P) %>%
-        mutate(pct = 100 * n / sum(n), label = sprintf("%.0f%%", pct)) %>%
+      ct <- df |>
+        count(TRT01P, AVALC) |>
+        group_by(TRT01P) |>
+        mutate(pct = 100 * n / sum(n), label = sprintf("%.0f%%", pct)) |>
         ungroup()
       
       # the treatment palette, a colour for each TRT01P
-      pal_lv <- if (is.factor(df$TRT01P)) levels(droplevels(df$TRT01P)) else sort(unique(as.character(df$TRT01P)))
-      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(pal_lv)], pal_lv)
+      lv <- levels(droplevels(factor(df$TRT01P)))
+      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
       
-      
-      #########################################################
-      # Step2: Making a figure
-      #########################################################
+      # ---- the figure ------------------------------------------------------------
       p <- ggplot()
       # ---- layer 1: Bars ----
       p <- p + geom_col(data = ct, aes(x = AVALC, y = pct, fill = TRT01P), width = 0.7, position = position_dodge(width = 0.75))
@@ -1295,13 +1180,10 @@
         theme(legend.position = "right") +
         theme(legend.title = element_blank())
       
-      # ---- assemble ----
       fig <- p
       fig
       
-      #########################################################
-      # Step3: Saving the figure
-      #########################################################
+      # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "bar_dodged.png")
       fig_width  <- 7.3
       fig_height <- 4.2
@@ -1329,36 +1211,31 @@
       library(dplyr)
       library(ggplot2)
       
-      #########################################################
-      # Step1: Preparing Analysis Data
-      #########################################################
+      # ---- data ------------------------------------------------------------------
       # Input data frames: adlb, adsl
       
-      df <- adlb %>%
-        filter(PARAMCD == "ALT") %>%
+      df <- adlb |>
+        filter(PARAMCD == "ALT") |>
         left_join(
-          adsl %>% select(USUBJID, TRT01A, SAFFL),
+          adsl |> select(USUBJID, TRT01A, SAFFL),
           by = "USUBJID"
-        ) %>%
-        filter(SAFFL == "Y") %>%
-        filter(!is.na(AVAL) & !is.na(AVISITN)) %>%
+        ) |>
+        filter(SAFFL == "Y", !is.na(AVAL) & !is.na(AVISITN)) |>
         mutate(AVISIT = reorder(factor(AVISIT), AVISITN))
       
-      sm <- df %>%
-        filter(!is.na(AVAL)) %>%
-        group_by(TRT01A, AVISITN, AVISIT) %>%
-        summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") %>%
+      sm <- df |>
+        filter(!is.na(AVAL)) |>
+        group_by(TRT01A, AVISITN, AVISIT) |>
+        summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") |>
         mutate(se = sd / sqrt(n), lo = mean - se, hi = mean + se)
       
       # the treatment palette, a colour for each TRT01A
-      pal_lv <- if (is.factor(df$TRT01A)) levels(droplevels(df$TRT01A)) else sort(unique(as.character(df$TRT01A)))
-      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(pal_lv)], pal_lv)
+      lv <- levels(droplevels(factor(df$TRT01A)))
+      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
       
       pd <- position_dodge(width = 0.3)
       
-      #########################################################
-      # Step2: Making a figure
-      #########################################################
+      # ---- the figure ------------------------------------------------------------
       p <- ggplot()
       # ---- layer 1: Lines ----
       p <- p + geom_line(data = sm, aes(x = AVISIT, y = mean, colour = TRT01A, group = TRT01A), linewidth = 0.5, position = pd)
@@ -1384,13 +1261,10 @@
         theme(legend.position = "bottom") +
         theme(legend.title = element_blank())
       
-      # ---- assemble ----
       fig <- p
       fig
       
-      #########################################################
-      # Step3: Saving the figure
-      #########################################################
+      # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "mean_se.png")
       fig_width  <- 7.3
       fig_height <- 4.2
@@ -1418,36 +1292,31 @@
       library(dplyr)
       library(ggplot2)
       
-      #########################################################
-      # Step1: Preparing Analysis Data
-      #########################################################
+      # ---- data ------------------------------------------------------------------
       # Input data frames: adlb, adsl
       
-      df <- adlb %>%
-        filter(PARAMCD == "ALT") %>%
+      df <- adlb |>
+        filter(PARAMCD == "ALT") |>
         left_join(
-          adsl %>% select(USUBJID, TRT01A, SAFFL),
+          adsl |> select(USUBJID, TRT01A, SAFFL),
           by = "USUBJID"
-        ) %>%
-        filter(SAFFL == "Y") %>%
-        filter(!is.na(AVAL) & !is.na(AVISITN)) %>%
+        ) |>
+        filter(SAFFL == "Y", !is.na(AVAL) & !is.na(AVISITN)) |>
         mutate(AVISIT = reorder(factor(AVISIT), AVISITN))
       
-      sm <- df %>%
-        filter(!is.na(AVAL)) %>%
-        group_by(TRT01A, AVISITN, AVISIT) %>%
-        summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") %>%
+      sm <- df |>
+        filter(!is.na(AVAL)) |>
+        group_by(TRT01A, AVISITN, AVISIT) |>
+        summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") |>
         mutate(se = sd / sqrt(n), lo = mean - sd, hi = mean + sd)
       
       # the treatment palette, a colour for each TRT01A
-      pal_lv <- if (is.factor(df$TRT01A)) levels(droplevels(df$TRT01A)) else sort(unique(as.character(df$TRT01A)))
-      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(pal_lv)], pal_lv)
+      lv <- levels(droplevels(factor(df$TRT01A)))
+      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
       
       pd <- position_dodge(width = 0.3)
       
-      #########################################################
-      # Step2: Making a figure
-      #########################################################
+      # ---- the figure ------------------------------------------------------------
       p <- ggplot()
       # ---- layer 1: Lines ----
       p <- p + geom_line(data = sm, aes(x = AVISIT, y = mean, colour = TRT01A, group = TRT01A), linewidth = 0.5, position = pd)
@@ -1473,13 +1342,10 @@
         theme(legend.position = "bottom") +
         theme(legend.title = element_blank())
       
-      # ---- assemble ----
       fig <- p
       fig
       
-      #########################################################
-      # Step3: Saving the figure
-      #########################################################
+      # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "mean_sd.png")
       fig_width  <- 7.3
       fig_height <- 4.2
@@ -1507,36 +1373,31 @@
       library(dplyr)
       library(ggplot2)
       
-      #########################################################
-      # Step1: Preparing Analysis Data
-      #########################################################
+      # ---- data ------------------------------------------------------------------
       # Input data frames: adlb, adsl
       
-      df <- adlb %>%
-        filter(PARAMCD == "ALT") %>%
+      df <- adlb |>
+        filter(PARAMCD == "ALT") |>
         left_join(
-          adsl %>% select(USUBJID, TRT01A, SAFFL),
+          adsl |> select(USUBJID, TRT01A, SAFFL),
           by = "USUBJID"
-        ) %>%
-        filter(SAFFL == "Y") %>%
-        filter(!is.na(AVAL) & !is.na(AVISITN)) %>%
+        ) |>
+        filter(SAFFL == "Y", !is.na(AVAL) & !is.na(AVISITN)) |>
         mutate(AVISIT = reorder(factor(AVISIT), AVISITN))
       
-      sm <- df %>%
-        filter(!is.na(AVAL)) %>%
-        group_by(TRT01A, AVISITN, AVISIT) %>%
-        summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") %>%
+      sm <- df |>
+        filter(!is.na(AVAL)) |>
+        group_by(TRT01A, AVISITN, AVISIT) |>
+        summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") |>
         mutate(se = sd / sqrt(n), lo = mean - qt(0.975, n - 1) * se, hi = mean + qt(0.975, n - 1) * se)
       
       # the treatment palette, a colour for each TRT01A
-      pal_lv <- if (is.factor(df$TRT01A)) levels(droplevels(df$TRT01A)) else sort(unique(as.character(df$TRT01A)))
-      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(pal_lv)], pal_lv)
+      lv <- levels(droplevels(factor(df$TRT01A)))
+      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
       
       pd <- position_dodge(width = 0.3)
       
-      #########################################################
-      # Step2: Making a figure
-      #########################################################
+      # ---- the figure ------------------------------------------------------------
       p <- ggplot()
       # ---- layer 1: Lines ----
       p <- p + geom_line(data = sm, aes(x = AVISIT, y = mean, colour = TRT01A, group = TRT01A), linewidth = 0.5, position = pd)
@@ -1562,13 +1423,10 @@
         theme(legend.position = "bottom") +
         theme(legend.title = element_blank())
       
-      # ---- assemble ----
       fig <- p
       fig
       
-      #########################################################
-      # Step3: Saving the figure
-      #########################################################
+      # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "mean_ci.png")
       fig_width  <- 7.3
       fig_height <- 4.2
@@ -1597,36 +1455,31 @@
       library(ggplot2)
       library(patchwork)
       
-      #########################################################
-      # Step1: Preparing Analysis Data
-      #########################################################
+      # ---- data ------------------------------------------------------------------
       # Input data frames: adlb, adsl
       
-      df <- adlb %>%
-        filter(PARAMCD == "ALT") %>%
+      df <- adlb |>
+        filter(PARAMCD == "ALT") |>
         left_join(
-          adsl %>% select(USUBJID, TRT01A, SAFFL),
+          adsl |> select(USUBJID, TRT01A, SAFFL),
           by = "USUBJID"
-        ) %>%
-        filter(SAFFL == "Y") %>%
-        filter(!is.na(AVAL) & !is.na(AVISITN)) %>%
+        ) |>
+        filter(SAFFL == "Y", !is.na(AVAL) & !is.na(AVISITN)) |>
         mutate(AVISIT = reorder(factor(AVISIT), AVISITN))
       
-      sm <- df %>%
-        filter(!is.na(AVAL)) %>%
-        group_by(TRT01A, AVISITN, AVISIT) %>%
-        summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") %>%
+      sm <- df |>
+        filter(!is.na(AVAL)) |>
+        group_by(TRT01A, AVISITN, AVISIT) |>
+        summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") |>
         mutate(se = sd / sqrt(n), lo = mean - se, hi = mean + se)
       
       # the treatment palette, a colour for each TRT01A
-      pal_lv <- if (is.factor(df$TRT01A)) levels(droplevels(df$TRT01A)) else sort(unique(as.character(df$TRT01A)))
-      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(pal_lv)], pal_lv)
+      lv <- levels(droplevels(factor(df$TRT01A)))
+      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
       
       pd <- position_dodge(width = 0.3)
       
-      #########################################################
-      # Step2: Making a figure
-      #########################################################
+      # ---- the figure ------------------------------------------------------------
       p <- ggplot()
       # ---- layer 1: Lines ----
       p <- p + geom_line(data = sm, aes(x = AVISIT, y = mean, colour = TRT01A, group = TRT01A), linewidth = 0.5, position = pd)
@@ -1660,13 +1513,10 @@
         theme_void(base_size = 10) +
         theme(axis.text.y = element_text(hjust = 1, margin = margin(r = 5)), plot.title = element_text(size = rel(0.9)))
       
-      # ---- assemble ----
       fig <- p / p_n4 + plot_layout(heights = c(0.82, 0.18))
       fig
       
-      #########################################################
-      # Step3: Saving the figure
-      #########################################################
+      # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "mean_se_n.png")
       fig_width  <- 7.3
       fig_height <- 4.2
@@ -1694,35 +1544,29 @@
       library(dplyr)
       library(ggplot2)
       
-      #########################################################
-      # Step1: Preparing Analysis Data
-      #########################################################
+      # ---- data ------------------------------------------------------------------
       # Input data frames: adlb, adsl
       
-      df <- adlb %>%
-        filter(PARAMCD == "ALT") %>%
+      df <- adlb |>
+        filter(PARAMCD == "ALT") |>
         left_join(
-          adsl %>% select(USUBJID, TRT01A, SAFFL),
+          adsl |> select(USUBJID, TRT01A, SAFFL),
           by = "USUBJID"
-        ) %>%
-        filter(SAFFL == "Y") %>%
-        filter(!is.na(AVAL) & !is.na(AVISIT)) %>%
+        ) |>
+        filter(SAFFL == "Y", !is.na(AVAL) & !is.na(AVISIT)) |>
         mutate(AVISIT = reorder(factor(AVISIT), AVISITN))
       
-      sm <- df %>%
-        filter(!is.na(AVAL)) %>%
-        group_by(TRT01A, AVISITN, AVISIT) %>%
-        summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") %>%
+      sm <- df |>
+        filter(!is.na(AVAL)) |>
+        group_by(TRT01A, AVISITN, AVISIT) |>
+        summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") |>
         mutate(se = sd / sqrt(n), lo = mean - se, hi = mean + se)
       
       # the treatment palette, a colour for each TRT01A
-      pal_lv <- if (is.factor(df$TRT01A)) levels(droplevels(df$TRT01A)) else sort(unique(as.character(df$TRT01A)))
-      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(pal_lv)], pal_lv)
+      lv <- levels(droplevels(factor(df$TRT01A)))
+      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
       
-      
-      #########################################################
-      # Step2: Making a figure
-      #########################################################
+      # ---- the figure ------------------------------------------------------------
       p <- ggplot()
       # ---- layer 1: Lines ----
       p <- p + geom_line(data = df, aes(x = AVISIT, y = AVAL, colour = TRT01A, group = USUBJID), linewidth = 0.5, alpha = 0.35)
@@ -1746,13 +1590,10 @@
         theme(legend.position = "right") +
         theme(legend.title = element_blank())
       
-      # ---- assemble ----
       fig <- p
       fig
       
-      #########################################################
-      # Step3: Saving the figure
-      #########################################################
+      # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "individual_spaghetti.png")
       fig_width  <- 7.3
       fig_height <- 4.2
@@ -1780,36 +1621,31 @@
       library(dplyr)
       library(ggplot2)
       
-      #########################################################
-      # Step1: Preparing Analysis Data
-      #########################################################
+      # ---- data ------------------------------------------------------------------
       # Input data frames: adlb, adsl
       
-      df <- adlb %>%
-        filter(PARAMCD == "ALT") %>%
+      df <- adlb |>
+        filter(PARAMCD == "ALT") |>
         left_join(
-          adsl %>% select(USUBJID, TRT01A, SAFFL),
+          adsl |> select(USUBJID, TRT01A, SAFFL),
           by = "USUBJID"
-        ) %>%
-        filter(SAFFL == "Y") %>%
-        filter(!is.na(AVAL)) %>%
+        ) |>
+        filter(SAFFL == "Y", !is.na(AVAL)) |>
         mutate(AVISIT = reorder(factor(AVISIT), AVISITN))
       
-      sg <- df %>%
-        filter(!is.na(AVAL)) %>%
-        group_by(TRT01A, AVISITN, AVISIT) %>%
-        summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") %>%
+      sg <- df |>
+        filter(!is.na(AVAL)) |>
+        group_by(TRT01A, AVISITN, AVISIT) |>
+        summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") |>
         mutate(se = sd / sqrt(n), lo = mean - se, hi = mean + se)
       
       # the treatment palette, a colour for each TRT01A
-      pal_lv <- if (is.factor(df$TRT01A)) levels(droplevels(df$TRT01A)) else sort(unique(as.character(df$TRT01A)))
-      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(pal_lv)], pal_lv)
+      lv <- levels(droplevels(factor(df$TRT01A)))
+      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
       
       pd <- position_dodge(width = 0.8)
       
-      #########################################################
-      # Step2: Making a figure
-      #########################################################
+      # ---- the figure ------------------------------------------------------------
       p <- ggplot()
       # ---- layer 1: Box plots ----
       p <- p + geom_boxplot(data = df, aes(x = AVISIT, y = AVAL, fill = TRT01A), width = 0.7, outlier.shape = 16, position = pd)
@@ -1833,13 +1669,10 @@
         theme(legend.position = "bottom") +
         theme(legend.title = element_blank())
       
-      # ---- assemble ----
       fig <- p
       fig
       
-      #########################################################
-      # Step3: Saving the figure
-      #########################################################
+      # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "box_by_visit.png")
       fig_width  <- 7.3
       fig_height <- 4.2
@@ -1867,35 +1700,28 @@
       library(dplyr)
       library(ggplot2)
       
-      #########################################################
-      # Step1: Preparing Analysis Data
-      #########################################################
+      # ---- data ------------------------------------------------------------------
       # Input data frames: adlb, adsl
       
-      df <- adlb %>%
-        filter(PARAMCD == "ALT") %>%
+      df <- adlb |>
+        filter(PARAMCD == "ALT") |>
         left_join(
-          adsl %>% select(USUBJID, TRT01A, SAFFL),
+          adsl |> select(USUBJID, TRT01A, SAFFL),
           by = "USUBJID"
-        ) %>%
-        filter(SAFFL == "Y") %>%
-        filter(!is.na(AVAL)) %>%
-        filter(AVISITN == max(AVISITN))
+        ) |>
+        filter(SAFFL == "Y", !is.na(AVAL), AVISITN == max(AVISITN))
       
-      sg <- df %>%
-        filter(!is.na(AVAL)) %>%
-        group_by(TRT01A) %>%
-        summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") %>%
+      sg <- df |>
+        filter(!is.na(AVAL)) |>
+        group_by(TRT01A) |>
+        summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") |>
         mutate(se = sd / sqrt(n), lo = mean - se, hi = mean + se)
       
       # the treatment palette, a colour for each TRT01A
-      pal_lv <- if (is.factor(df$TRT01A)) levels(droplevels(df$TRT01A)) else sort(unique(as.character(df$TRT01A)))
-      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(pal_lv)], pal_lv)
+      lv <- levels(droplevels(factor(df$TRT01A)))
+      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
       
-      
-      #########################################################
-      # Step2: Making a figure
-      #########################################################
+      # ---- the figure ------------------------------------------------------------
       p <- ggplot()
       # ---- layer 1: Box plots ----
       p <- p + geom_boxplot(data = df, aes(x = TRT01A, y = AVAL, fill = TRT01A), width = 0.5, outlier.shape = 1, alpha = 0.6)
@@ -1920,13 +1746,10 @@
         ) +
         theme(legend.position = "none")
       
-      # ---- assemble ----
       fig <- p
       fig
       
-      #########################################################
-      # Step3: Saving the figure
-      #########################################################
+      # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "box_by_group.png")
       fig_width  <- 7.3
       fig_height <- 4.2
@@ -1954,37 +1777,31 @@
       library(dplyr)
       library(ggplot2)
       
-      #########################################################
-      # Step1: Preparing Analysis Data
-      #########################################################
+      # ---- data ------------------------------------------------------------------
       # Input data frames: adlb, adsl
       
-      df <- adlb %>%
-        filter(PARAMCD == "ALT") %>%
+      df <- adlb |>
+        filter(PARAMCD == "ALT") |>
         left_join(
-          adsl %>% select(USUBJID, TRT01A, SAFFL),
+          adsl |> select(USUBJID, TRT01A, SAFFL),
           by = "USUBJID"
-        ) %>%
-        filter(SAFFL == "Y") %>%
-        filter(!is.na(CHG)) %>%
-        filter(AVISITN > 0) %>%
+        ) |>
+        filter(SAFFL == "Y", !is.na(CHG), AVISITN > 0) |>
         mutate(AVISIT = reorder(factor(AVISIT), AVISITN))
       
-      sg <- df %>%
-        filter(!is.na(CHG)) %>%
-        group_by(TRT01A, AVISITN, AVISIT) %>%
-        summarise(n = n(), mean = mean(CHG), sd = sd(CHG), .groups = "drop") %>%
+      sg <- df |>
+        filter(!is.na(CHG)) |>
+        group_by(TRT01A, AVISITN, AVISIT) |>
+        summarise(n = n(), mean = mean(CHG), sd = sd(CHG), .groups = "drop") |>
         mutate(se = sd / sqrt(n), lo = mean - se, hi = mean + se)
       
       # the treatment palette, a colour for each TRT01A
-      pal_lv <- if (is.factor(df$TRT01A)) levels(droplevels(df$TRT01A)) else sort(unique(as.character(df$TRT01A)))
-      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(pal_lv)], pal_lv)
+      lv <- levels(droplevels(factor(df$TRT01A)))
+      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
       
       pd <- position_dodge(width = 0.8)
       
-      #########################################################
-      # Step2: Making a figure
-      #########################################################
+      # ---- the figure ------------------------------------------------------------
       p <- ggplot()
       # ---- layer 1: Horizontal lines ----
       p <- p + geom_hline(yintercept = 0, linetype = "solid", colour = "grey60", linewidth = 0.3)
@@ -2010,13 +1827,10 @@
         theme(legend.position = "bottom") +
         theme(legend.title = element_blank())
       
-      # ---- assemble ----
       fig <- p
       fig
       
-      #########################################################
-      # Step3: Saving the figure
-      #########################################################
+      # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "box_change.png")
       fig_width  <- 7.3
       fig_height <- 4.2
@@ -2044,29 +1858,22 @@
       library(dplyr)
       library(ggplot2)
       
-      #########################################################
-      # Step1: Preparing Analysis Data
-      #########################################################
+      # ---- data ------------------------------------------------------------------
       # Input data frames: adlb, adsl
       
-      df <- adlb %>%
-        filter(PARAMCD == "ALT") %>%
+      df <- adlb |>
+        filter(PARAMCD == "ALT") |>
         left_join(
-          adsl %>% select(USUBJID, TRT01A, SAFFL),
+          adsl |> select(USUBJID, TRT01A, SAFFL),
           by = "USUBJID"
-        ) %>%
-        filter(SAFFL == "Y") %>%
-        filter(AVISITN > 0 & !is.na(BASE) & !is.na(AVAL)) %>%
-        filter(AVISITN == max(AVISITN))
+        ) |>
+        filter(SAFFL == "Y", AVISITN > 0 & !is.na(BASE) & !is.na(AVAL), AVISITN == max(AVISITN))
       
       # the treatment palette, a colour for each TRT01A
-      pal_lv <- if (is.factor(df$TRT01A)) levels(droplevels(df$TRT01A)) else sort(unique(as.character(df$TRT01A)))
-      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(pal_lv)], pal_lv)
+      lv <- levels(droplevels(factor(df$TRT01A)))
+      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
       
-      
-      #########################################################
-      # Step2: Making a figure
-      #########################################################
+      # ---- the figure ------------------------------------------------------------
       p <- ggplot()
       # ---- layer 1: Diagonal line ----
       p <- p + geom_abline(intercept = 0, slope = 1, linetype = "dashed", colour = "grey50")
@@ -2095,13 +1902,10 @@
         ) +
         theme(legend.title = element_blank())
       
-      # ---- assemble ----
       fig <- p
       fig
       
-      #########################################################
-      # Step3: Saving the figure
-      #########################################################
+      # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "scatter_shift.png")
       fig_width  <- 7.3
       fig_height <- 4.2
@@ -2129,29 +1933,22 @@
       library(dplyr)
       library(ggplot2)
       
-      #########################################################
-      # Step1: Preparing Analysis Data
-      #########################################################
+      # ---- data ------------------------------------------------------------------
       # Input data frames: adlb, adsl
       
-      df <- adlb %>%
-        filter(PARAMCD == "ALT") %>%
+      df <- adlb |>
+        filter(PARAMCD == "ALT") |>
         left_join(
-          adsl %>% select(USUBJID, TRT01A, SAFFL),
+          adsl |> select(USUBJID, TRT01A, SAFFL),
           by = "USUBJID"
-        ) %>%
-        filter(SAFFL == "Y") %>%
-        filter(AVISITN > 0 & !is.na(BASE) & !is.na(CHG)) %>%
-        filter(AVISITN == max(AVISITN))
+        ) |>
+        filter(SAFFL == "Y", AVISITN > 0 & !is.na(BASE) & !is.na(CHG), AVISITN == max(AVISITN))
       
       # the treatment palette, a colour for each TRT01A
-      pal_lv <- if (is.factor(df$TRT01A)) levels(droplevels(df$TRT01A)) else sort(unique(as.character(df$TRT01A)))
-      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(pal_lv)], pal_lv)
+      lv <- levels(droplevels(factor(df$TRT01A)))
+      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
       
-      
-      #########################################################
-      # Step2: Making a figure
-      #########################################################
+      # ---- the figure ------------------------------------------------------------
       p <- ggplot()
       # ---- layer 1: Horizontal lines ----
       p <- p + geom_hline(yintercept = 0, linetype = "solid", colour = "grey60", linewidth = 0.3)
@@ -2182,13 +1979,10 @@
         ) +
         theme(legend.title = element_blank())
       
-      # ---- assemble ----
       fig <- p
       fig
       
-      #########################################################
-      # Step3: Saving the figure
-      #########################################################
+      # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "scatter_xy.png")
       fig_width  <- 7.3
       fig_height <- 4.2
@@ -2216,33 +2010,27 @@
       library(dplyr)
       library(ggplot2)
       
-      #########################################################
-      # Step1: Preparing Analysis Data
-      #########################################################
+      # ---- data ------------------------------------------------------------------
       # Input data frames: adpc, adsl
       
-      df <- adpc %>%
+      df <- adpc |>
         left_join(
-          adsl %>% select(USUBJID, TRT01A, SAFFL),
+          adsl |> select(USUBJID, TRT01A, SAFFL),
           by = "USUBJID"
-        ) %>%
-        filter(SAFFL == "Y") %>%
-        filter(!is.na(AVAL))
+        ) |>
+        filter(SAFFL == "Y", !is.na(AVAL))
       
-      sm <- df %>%
-        filter(!is.na(AVAL)) %>%
-        group_by(TRT01A, NFRLT) %>%
-        summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") %>%
+      sm <- df |>
+        filter(!is.na(AVAL)) |>
+        group_by(TRT01A, NFRLT) |>
+        summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") |>
         mutate(se = sd / sqrt(n), lo = mean - sd, hi = mean + sd)
       
       # the treatment palette, a colour for each TRT01A
-      pal_lv <- if (is.factor(df$TRT01A)) levels(droplevels(df$TRT01A)) else sort(unique(as.character(df$TRT01A)))
-      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(pal_lv)], pal_lv)
+      lv <- levels(droplevels(factor(df$TRT01A)))
+      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
       
-      
-      #########################################################
-      # Step2: Making a figure
-      #########################################################
+      # ---- the figure ------------------------------------------------------------
       p <- ggplot()
       # ---- layer 1: Lines ----
       p <- p + geom_line(data = sm, aes(x = NFRLT, y = mean, colour = TRT01A, group = TRT01A), linewidth = 0.5)
@@ -2273,13 +2061,10 @@
         ) +
         theme(legend.title = element_blank())
       
-      # ---- assemble ----
       fig <- p
       fig
       
-      #########################################################
-      # Step3: Saving the figure
-      #########################################################
+      # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "pk_mean.png")
       fig_width  <- 7.3
       fig_height <- 4.2
@@ -2307,35 +2092,28 @@
       library(dplyr)
       library(ggplot2)
       
-      #########################################################
-      # Step1: Preparing Analysis Data
-      #########################################################
+      # ---- data ------------------------------------------------------------------
       # Input data frames: adpc, adsl
       
-      df <- adpc %>%
+      df <- adpc |>
         left_join(
-          adsl %>% select(USUBJID, TRT01A, SAFFL),
+          adsl |> select(USUBJID, TRT01A, SAFFL),
           by = "USUBJID"
-        ) %>%
-        filter(SAFFL == "Y") %>%
-        filter(!is.na(AVAL)) %>%
-        filter(AVAL > 0)
+        ) |>
+        filter(SAFFL == "Y", !is.na(AVAL), AVAL > 0)
       
-      sm <- df %>%
-        filter(!is.na(AVAL)) %>%
-        group_by(TRT01A, NFRLT) %>%
-        summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") %>%
-        mutate(se = sd / sqrt(n), lo = mean - sd, hi = mean + sd) %>%
+      sm <- df |>
+        filter(!is.na(AVAL)) |>
+        group_by(TRT01A, NFRLT) |>
+        summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") |>
+        mutate(se = sd / sqrt(n), lo = mean - sd, hi = mean + sd) |>
         mutate(lo = ifelse(lo > 0, lo, NA))   # log axis: no lower bar at or below 0
       
       # the treatment palette, a colour for each TRT01A
-      pal_lv <- if (is.factor(df$TRT01A)) levels(droplevels(df$TRT01A)) else sort(unique(as.character(df$TRT01A)))
-      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(pal_lv)], pal_lv)
+      lv <- levels(droplevels(factor(df$TRT01A)))
+      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
       
-      
-      #########################################################
-      # Step2: Making a figure
-      #########################################################
+      # ---- the figure ------------------------------------------------------------
       p <- ggplot()
       # ---- layer 1: Lines ----
       p <- p + geom_line(data = sm, aes(x = NFRLT, y = mean, colour = TRT01A, group = TRT01A), linewidth = 0.5)
@@ -2367,13 +2145,10 @@
         ) +
         theme(legend.title = element_blank())
       
-      # ---- assemble ----
       fig <- p
       fig
       
-      #########################################################
-      # Step3: Saving the figure
-      #########################################################
+      # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "pk_mean_log.png")
       fig_width  <- 7.3
       fig_height <- 4.2
@@ -2401,28 +2176,21 @@
       library(dplyr)
       library(ggplot2)
       
-      #########################################################
-      # Step1: Preparing Analysis Data
-      #########################################################
+      # ---- data ------------------------------------------------------------------
       # Input data frames: adpc, adsl
       
-      df <- adpc %>%
+      df <- adpc |>
         left_join(
-          adsl %>% select(USUBJID, TRT01A, SAFFL),
+          adsl |> select(USUBJID, TRT01A, SAFFL),
           by = "USUBJID"
-        ) %>%
-        filter(SAFFL == "Y") %>%
-        filter(!is.na(AVAL)) %>%
-        filter(AVAL > 0)
+        ) |>
+        filter(SAFFL == "Y", !is.na(AVAL), AVAL > 0)
       
       # the treatment palette, a colour for each TRT01A
-      pal_lv <- if (is.factor(df$TRT01A)) levels(droplevels(df$TRT01A)) else sort(unique(as.character(df$TRT01A)))
-      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(pal_lv)], pal_lv)
+      lv <- levels(droplevels(factor(df$TRT01A)))
+      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
       
-      
-      #########################################################
-      # Step2: Making a figure
-      #########################################################
+      # ---- the figure ------------------------------------------------------------
       p <- ggplot()
       # ---- layer 1: Lines ----
       p <- p + geom_line(data = df, aes(x = NFRLT, y = AVAL, colour = TRT01A, group = USUBJID), linewidth = 0.5, alpha = 0.5)
@@ -2447,13 +2215,10 @@
         ) +
         theme(legend.position = "none")
       
-      # ---- assemble ----
       fig <- p
       fig
       
-      #########################################################
-      # Step3: Saving the figure
-      #########################################################
+      # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "pk_individual.png")
       fig_width  <- 7.3
       fig_height <- 4.2
@@ -2483,19 +2248,17 @@
       library(patchwork)
       library(survival)
       
-      #########################################################
-      # Step1: Preparing Analysis Data
-      #########################################################
+      # ---- data ------------------------------------------------------------------
       # Input data frames: adtte, adsl
       
       subgroups <- c("SEX", "AGEGR1")
       
-      fr_df <- adtte %>%
-        filter(PARAMCD == "OS") %>%
-        select(-any_of(c("TRT01P", "FASFL", "SEX", "AGEGR1"))) %>%
-        left_join(adsl %>% select(USUBJID, all_of(c("TRT01P", "FASFL", "SEX", "AGEGR1"))), by = "USUBJID") %>%
-        filter(FASFL == "Y") %>%
-        mutate(TRT01P = factor(TRT01P, levels = sort(unique(TRT01P)))) %>%
+      fr_df <- adtte |>
+        filter(PARAMCD == "OS") |>
+        select(-any_of(c("TRT01P", "FASFL", "SEX", "AGEGR1"))) |>
+        left_join(adsl |> select(USUBJID, all_of(c("TRT01P", "FASFL", "SEX", "AGEGR1"))), by = "USUBJID") |>
+        filter(FASFL == "Y") |>
+        mutate(TRT01P = factor(TRT01P, levels = sort(unique(TRT01P)))) |>
         droplevels()  # groups removed by the filters drop out of the model
       
       # hazard ratio: each other arm vs the reference (first level of TRT01P)
@@ -2518,7 +2281,7 @@
         }
       }
       
-      est_df <- bind_rows(rows) %>%
+      est_df <- bind_rows(rows) |>
         mutate(
           # not estimable (e.g. no events / all responders in a subgroup): no point, "NE"
           ok  = is.finite(est) & is.finite(lcl) & is.finite(ucl) & lcl > 0 & ucl < 1000,
@@ -2527,9 +2290,7 @@
           y   = rev(seq_len(n()))
         )
       
-      #########################################################
-      # Step2: Making a figure
-      #########################################################
+      # ---- the figure ------------------------------------------------------------
       p <-
         ggplot(est_df, aes(y = y)) +
         geom_vline(xintercept = 1, linetype = "dashed", colour = "grey50") +
@@ -2562,9 +2323,7 @@
       fig <- p + p_txt + plot_layout(widths = c(3, 2))
       fig
       
-      #########################################################
-      # Step3: Saving the figure
-      #########################################################
+      # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "forest_hr.png")
       fig_width  <- 8
       fig_height <- 5
@@ -2594,20 +2353,18 @@
       library(ggplot2)
       library(patchwork)
       
-      #########################################################
-      # Step1: Preparing Analysis Data
-      #########################################################
+      # ---- data ------------------------------------------------------------------
       # Input data frames: adrs, adsl
       
       subgroups <- c("SEX", "AGEGR1")
       
-      fr_df <- adrs %>%
-        filter(PARAMCD == "OS") %>%
-        select(-any_of(c("TRT01P", "FASFL", "SEX", "AGEGR1"))) %>%
-        left_join(adsl %>% select(USUBJID, all_of(c("TRT01P", "FASFL", "SEX", "AGEGR1"))), by = "USUBJID") %>%
-        filter(FASFL == "Y") %>%
-        mutate(RESP = as.integer(AVALC %in% c("CR", "PR"))) %>%
-        mutate(TRT01P = factor(TRT01P, levels = sort(unique(TRT01P)))) %>%
+      fr_df <- adrs |>
+        filter(PARAMCD == "OS") |>
+        select(-any_of(c("TRT01P", "FASFL", "SEX", "AGEGR1"))) |>
+        left_join(adsl |> select(USUBJID, all_of(c("TRT01P", "FASFL", "SEX", "AGEGR1"))), by = "USUBJID") |>
+        filter(FASFL == "Y") |>
+        mutate(RESP = as.integer(AVALC %in% c("CR", "PR"))) |>
+        mutate(TRT01P = factor(TRT01P, levels = sort(unique(TRT01P)))) |>
         droplevels()  # groups removed by the filters drop out of the model
       
       # odds ratio: each other arm vs the reference (first level of TRT01P)
@@ -2629,7 +2386,7 @@
         }
       }
       
-      est_df <- bind_rows(rows) %>%
+      est_df <- bind_rows(rows) |>
         mutate(
           # not estimable (e.g. no events / all responders in a subgroup): no point, "NE"
           ok  = is.finite(est) & is.finite(lcl) & is.finite(ucl) & lcl > 0 & ucl < 1000,
@@ -2638,9 +2395,7 @@
           y   = rev(seq_len(n()))
         )
       
-      #########################################################
-      # Step2: Making a figure
-      #########################################################
+      # ---- the figure ------------------------------------------------------------
       p <-
         ggplot(est_df, aes(y = y)) +
         geom_vline(xintercept = 1, linetype = "dashed", colour = "grey50") +
@@ -2673,9 +2428,7 @@
       fig <- p + p_txt + plot_layout(widths = c(3, 2))
       fig
       
-      #########################################################
-      # Step3: Saving the figure
-      #########################################################
+      # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "forest_or.png")
       fig_width  <- 8
       fig_height <- 5
@@ -2705,12 +2458,10 @@
       library(ggplot2)
       library(patchwork)
       
-      #########################################################
-      # Step1: Preparing Analysis Data
-      #########################################################
+      # ---- data ------------------------------------------------------------------
       # Input data frames: adae, adsl
       
-      pop_df <- adsl %>%
+      pop_df <- adsl |>
         filter(SAFFL == "Y")
       
       pal_grp_lv <- if (is.factor(pop_df$TRT01A)) levels(pop_df$TRT01A) else sort(unique(na.omit(pop_df$TRT01A)))
@@ -2718,37 +2469,37 @@
       
       arms <- names(pal_grp)[1:2]  # reference first; only two arms are compared
       
-      N_df <- pop_df %>% count(TRT01A, name = "N")
+      N_df <- pop_df |> count(TRT01A, name = "N")
       
-      ae_df <- adae %>%
-        filter(TRTEMFL == "Y") %>%
-        select(-any_of("TRT01A")) %>%
-        inner_join(pop_df %>% select(USUBJID, TRT01A), by = "USUBJID") %>%
+      ae_df <- adae |>
+        filter(TRTEMFL == "Y") |>
+        select(-any_of("TRT01A")) |>
+        inner_join(pop_df |> select(USUBJID, TRT01A), by = "USUBJID") |>
         distinct(USUBJID, TRT01A, AEDECOD)
       
-      inc_df <- ae_df %>%
-        count(AEDECOD, TRT01A, name = "n") %>%
+      inc_df <- ae_df |>
+        count(AEDECOD, TRT01A, name = "n") |>
         right_join(expand.grid(AEDECOD = unique(ae_df$AEDECOD), TRT01A = arms, stringsAsFactors = FALSE),
-                   by = c("AEDECOD", "TRT01A")) %>%
-        mutate(n = coalesce(n, 0L)) %>%
-        left_join(N_df, by = "TRT01A") %>%
+                   by = c("AEDECOD", "TRT01A")) |>
+        mutate(n = coalesce(n, 0L)) |>
+        left_join(N_df, by = "TRT01A") |>
         mutate(pct = 100 * n / N)
       
       # terms shown: incidence >= 5% in any arm, top 20 by the highest incidence
-      terms <- inc_df %>%
-        group_by(AEDECOD) %>%
-        summarise(m = max(pct), .groups = "drop") %>%
-        filter(m >= 5) %>%
-        slice_max(m, n = 20, with_ties = FALSE) %>%
-        arrange(m) %>%
+      terms <- inc_df |>
+        group_by(AEDECOD) |>
+        summarise(m = max(pct), .groups = "drop") |>
+        filter(m >= 5) |>
+        slice_max(m, n = 20, with_ties = FALSE) |>
+        arrange(m) |>
         pull(AEDECOD)
       
-      inc_df <- inc_df %>% filter(AEDECOD %in% terms) %>% mutate(AEDECOD = factor(AEDECOD, levels = terms))
+      inc_df <- inc_df |> filter(AEDECOD %in% terms) |> mutate(AEDECOD = factor(AEDECOD, levels = terms))
       
-      rd_df <- inc_df %>%
-        filter(TRT01A == arms[1]) %>%
-        select(AEDECOD, n_a = n, N_a = N) %>%
-        inner_join(inc_df %>% filter(TRT01A == arms[2]) %>% select(AEDECOD, n_b = n, N_b = N), by = "AEDECOD") %>%
+      rd_df <- inc_df |>
+        filter(TRT01A == arms[1]) |>
+        select(AEDECOD, n_a = n, N_a = N) |>
+        inner_join(inc_df |> filter(TRT01A == arms[2]) |> select(AEDECOD, n_b = n, N_b = N), by = "AEDECOD") |>
         mutate(
           pa = n_a / N_a, pb = n_b / N_b,
           rd = 100 * (pb - pa),
@@ -2756,9 +2507,7 @@
           lcl = rd - 1.96 * se, ucl = rd + 1.96 * se
         )
       
-      #########################################################
-      # Step2: Making a figure
-      #########################################################
+      # ---- the figure ------------------------------------------------------------
       p <-
         ggplot(inc_df, aes(x = pct, y = AEDECOD, colour = TRT01A, shape = TRT01A)) +
         geom_point(size = 2.5) +
@@ -2800,9 +2549,7 @@
       fig <- p + p_rd + plot_layout(widths = c(3, 2))
       fig
       
-      #########################################################
-      # Step3: Saving the figure
-      #########################################################
+      # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "ae_dot_risk_diff.png")
       fig_width  <- 8
       fig_height <- 5.5
@@ -2831,12 +2578,10 @@
       library(dplyr)
       library(ggplot2)
       
-      #########################################################
-      # Step1: Preparing Analysis Data
-      #########################################################
+      # ---- data ------------------------------------------------------------------
       # Input data frames: adae, adsl
       
-      pop_df <- adsl %>%
+      pop_df <- adsl |>
         filter(SAFFL == "Y")
       
       pal_grp_lv <- if (is.factor(pop_df$TRT01A)) levels(pop_df$TRT01A) else sort(unique(na.omit(pop_df$TRT01A)))
@@ -2844,36 +2589,34 @@
       
       arms <- names(pal_grp)[1:2]  # reference first; only two arms are compared
       
-      N_df <- pop_df %>% count(TRT01A, name = "N")
+      N_df <- pop_df |> count(TRT01A, name = "N")
       
-      ae_df <- adae %>%
-        filter(TRTEMFL == "Y") %>%
-        select(-any_of("TRT01A")) %>%
-        inner_join(pop_df %>% select(USUBJID, TRT01A), by = "USUBJID") %>%
+      ae_df <- adae |>
+        filter(TRTEMFL == "Y") |>
+        select(-any_of("TRT01A")) |>
+        inner_join(pop_df |> select(USUBJID, TRT01A), by = "USUBJID") |>
         distinct(USUBJID, TRT01A, AEDECOD)
       
-      inc_df <- ae_df %>%
-        count(AEDECOD, TRT01A, name = "n") %>%
+      inc_df <- ae_df |>
+        count(AEDECOD, TRT01A, name = "n") |>
         right_join(expand.grid(AEDECOD = unique(ae_df$AEDECOD), TRT01A = arms, stringsAsFactors = FALSE),
-                   by = c("AEDECOD", "TRT01A")) %>%
-        mutate(n = coalesce(n, 0L)) %>%
-        left_join(N_df, by = "TRT01A") %>%
+                   by = c("AEDECOD", "TRT01A")) |>
+        mutate(n = coalesce(n, 0L)) |>
+        left_join(N_df, by = "TRT01A") |>
         mutate(pct = 100 * n / N)
       
       # terms shown: incidence >= 5% in any arm, top 20 by the highest incidence
-      terms <- inc_df %>%
-        group_by(AEDECOD) %>%
-        summarise(m = max(pct), .groups = "drop") %>%
-        filter(m >= 5) %>%
-        slice_max(m, n = 20, with_ties = FALSE) %>%
-        arrange(m) %>%
+      terms <- inc_df |>
+        group_by(AEDECOD) |>
+        summarise(m = max(pct), .groups = "drop") |>
+        filter(m >= 5) |>
+        slice_max(m, n = 20, with_ties = FALSE) |>
+        arrange(m) |>
         pull(AEDECOD)
       
-      inc_df <- inc_df %>% filter(AEDECOD %in% terms) %>% mutate(AEDECOD = factor(AEDECOD, levels = terms))
+      inc_df <- inc_df |> filter(AEDECOD %in% terms) |> mutate(AEDECOD = factor(AEDECOD, levels = terms))
       
-      #########################################################
-      # Step2: Making a figure
-      #########################################################
+      # ---- the figure ------------------------------------------------------------
       p <-
         ggplot(inc_df, aes(x = pct, y = AEDECOD, colour = TRT01A, shape = TRT01A)) +
         geom_point(size = 2.5) +
@@ -2896,9 +2639,7 @@
       fig <- p
       fig
       
-      #########################################################
-      # Step3: Saving the figure
-      #########################################################
+      # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "ae_dot_incidence.png")
       fig_width  <- 8
       fig_height <- 5.5
@@ -2927,12 +2668,10 @@
       library(dplyr)
       library(ggplot2)
       
-      #########################################################
-      # Step1: Preparing Analysis Data
-      #########################################################
+      # ---- data ------------------------------------------------------------------
       # Input data frames: adae, adsl
       
-      pop_df <- adsl %>%
+      pop_df <- adsl |>
         filter(SAFFL == "Y")
       
       pal_grp_lv <- if (is.factor(pop_df$TRT01A)) levels(pop_df$TRT01A) else sort(unique(na.omit(pop_df$TRT01A)))
@@ -2940,40 +2679,38 @@
       
       arms <- names(pal_grp)[1:2]  # reference first; only two arms are compared
       
-      N_df <- pop_df %>% count(TRT01A, name = "N")
+      N_df <- pop_df |> count(TRT01A, name = "N")
       
-      ae_df <- adae %>%
-        filter(TRTEMFL == "Y") %>%
-        select(-any_of("TRT01A")) %>%
-        inner_join(pop_df %>% select(USUBJID, TRT01A), by = "USUBJID") %>%
+      ae_df <- adae |>
+        filter(TRTEMFL == "Y") |>
+        select(-any_of("TRT01A")) |>
+        inner_join(pop_df |> select(USUBJID, TRT01A), by = "USUBJID") |>
         distinct(USUBJID, TRT01A, AEBODSYS)
       
-      inc_df <- ae_df %>%
-        count(AEBODSYS, TRT01A, name = "n") %>%
+      inc_df <- ae_df |>
+        count(AEBODSYS, TRT01A, name = "n") |>
         right_join(expand.grid(AEBODSYS = unique(ae_df$AEBODSYS), TRT01A = arms, stringsAsFactors = FALSE),
-                   by = c("AEBODSYS", "TRT01A")) %>%
-        mutate(n = coalesce(n, 0L)) %>%
-        left_join(N_df, by = "TRT01A") %>%
+                   by = c("AEBODSYS", "TRT01A")) |>
+        mutate(n = coalesce(n, 0L)) |>
+        left_join(N_df, by = "TRT01A") |>
         mutate(pct = 100 * n / N)
       
       # terms shown: incidence >= 0% in any arm, top 20 by the highest incidence
-      terms <- inc_df %>%
-        group_by(AEBODSYS) %>%
-        summarise(m = max(pct), .groups = "drop") %>%
-        filter(m >= 0) %>%
-        slice_max(m, n = 20, with_ties = FALSE) %>%
-        arrange(m) %>%
+      terms <- inc_df |>
+        group_by(AEBODSYS) |>
+        summarise(m = max(pct), .groups = "drop") |>
+        filter(m >= 0) |>
+        slice_max(m, n = 20, with_ties = FALSE) |>
+        arrange(m) |>
         pull(AEBODSYS)
       
-      inc_df <- inc_df %>% filter(AEBODSYS %in% terms) %>% mutate(AEBODSYS = factor(AEBODSYS, levels = terms))
+      inc_df <- inc_df |> filter(AEBODSYS %in% terms) |> mutate(AEBODSYS = factor(AEBODSYS, levels = terms))
       
-      inc_df <- inc_df %>% mutate(x = ifelse(TRT01A == arms[1], -pct, pct))
+      inc_df <- inc_df |> mutate(x = ifelse(TRT01A == arms[1], -pct, pct))
       
       x_lim <- max(inc_df$pct) * 1.2
       
-      #########################################################
-      # Step2: Making a figure
-      #########################################################
+      # ---- the figure ------------------------------------------------------------
       p <-
         ggplot(inc_df, aes(x = x, y = AEBODSYS, fill = TRT01A)) +
         geom_col(width = 0.7) +
@@ -2998,9 +2735,7 @@
       fig <- p
       fig
       
-      #########################################################
-      # Step3: Saving the figure
-      #########################################################
+      # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "butterfly_soc.png")
       fig_width  <- 8
       fig_height <- 5
@@ -3029,12 +2764,10 @@
       library(dplyr)
       library(ggplot2)
       
-      #########################################################
-      # Step1: Preparing Analysis Data
-      #########################################################
+      # ---- data ------------------------------------------------------------------
       # Input data frames: adae, adsl
       
-      pop_df <- adsl %>%
+      pop_df <- adsl |>
         filter(SAFFL == "Y")
       
       pal_grp_lv <- if (is.factor(pop_df$TRT01A)) levels(pop_df$TRT01A) else sort(unique(na.omit(pop_df$TRT01A)))
@@ -3042,40 +2775,38 @@
       
       arms <- names(pal_grp)[1:2]  # reference first; only two arms are compared
       
-      N_df <- pop_df %>% count(TRT01A, name = "N")
+      N_df <- pop_df |> count(TRT01A, name = "N")
       
-      ae_df <- adae %>%
-        filter(TRTEMFL == "Y") %>%
-        select(-any_of("TRT01A")) %>%
-        inner_join(pop_df %>% select(USUBJID, TRT01A), by = "USUBJID") %>%
+      ae_df <- adae |>
+        filter(TRTEMFL == "Y") |>
+        select(-any_of("TRT01A")) |>
+        inner_join(pop_df |> select(USUBJID, TRT01A), by = "USUBJID") |>
         distinct(USUBJID, TRT01A, AEDECOD)
       
-      inc_df <- ae_df %>%
-        count(AEDECOD, TRT01A, name = "n") %>%
+      inc_df <- ae_df |>
+        count(AEDECOD, TRT01A, name = "n") |>
         right_join(expand.grid(AEDECOD = unique(ae_df$AEDECOD), TRT01A = arms, stringsAsFactors = FALSE),
-                   by = c("AEDECOD", "TRT01A")) %>%
-        mutate(n = coalesce(n, 0L)) %>%
-        left_join(N_df, by = "TRT01A") %>%
+                   by = c("AEDECOD", "TRT01A")) |>
+        mutate(n = coalesce(n, 0L)) |>
+        left_join(N_df, by = "TRT01A") |>
         mutate(pct = 100 * n / N)
       
       # terms shown: incidence >= 0% in any arm, top 20 by the highest incidence
-      terms <- inc_df %>%
-        group_by(AEDECOD) %>%
-        summarise(m = max(pct), .groups = "drop") %>%
-        filter(m >= 0) %>%
-        slice_max(m, n = 20, with_ties = FALSE) %>%
-        arrange(m) %>%
+      terms <- inc_df |>
+        group_by(AEDECOD) |>
+        summarise(m = max(pct), .groups = "drop") |>
+        filter(m >= 0) |>
+        slice_max(m, n = 20, with_ties = FALSE) |>
+        arrange(m) |>
         pull(AEDECOD)
       
-      inc_df <- inc_df %>% filter(AEDECOD %in% terms) %>% mutate(AEDECOD = factor(AEDECOD, levels = terms))
+      inc_df <- inc_df |> filter(AEDECOD %in% terms) |> mutate(AEDECOD = factor(AEDECOD, levels = terms))
       
-      inc_df <- inc_df %>% mutate(x = ifelse(TRT01A == arms[1], -pct, pct))
+      inc_df <- inc_df |> mutate(x = ifelse(TRT01A == arms[1], -pct, pct))
       
       x_lim <- max(inc_df$pct) * 1.2
       
-      #########################################################
-      # Step2: Making a figure
-      #########################################################
+      # ---- the figure ------------------------------------------------------------
       p <-
         ggplot(inc_df, aes(x = x, y = AEDECOD, fill = TRT01A)) +
         geom_col(width = 0.7) +
@@ -3100,9 +2831,7 @@
       fig <- p
       fig
       
-      #########################################################
-      # Step3: Saving the figure
-      #########################################################
+      # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "butterfly_pt.png")
       fig_width  <- 8
       fig_height <- 5
@@ -3131,38 +2860,34 @@
       library(dplyr)
       library(ggplot2)
       
-      #########################################################
-      # Step1: Preparing Analysis Data
-      #########################################################
+      # ---- data ------------------------------------------------------------------
       # Input data frames: adlb, adsl
       
-      lb_df <- adlb %>%
-        filter(PARAMCD %in% c("ALT", "BILI")) %>%
-        filter(AVISITN > 0) %>%
-        select(-any_of(c("TRT01A", "SAFFL"))) %>%
-        left_join(adsl %>% select(USUBJID, all_of(c("TRT01A", "SAFFL"))), by = "USUBJID") %>%
-        filter(SAFFL == "Y") %>%
-        mutate(XULN = AVAL / ANRHI) %>%
+      lb_df <- adlb |>
+        filter(PARAMCD %in% c("ALT", "BILI")) |>
+        filter(AVISITN > 0) |>
+        select(-any_of(c("TRT01A", "SAFFL"))) |>
+        left_join(adsl |> select(USUBJID, all_of(c("TRT01A", "SAFFL"))), by = "USUBJID") |>
+        filter(SAFFL == "Y") |>
+        mutate(XULN = AVAL / ANRHI) |>
         filter(!is.na(XULN))
       
       pal_grp_lv <- if (is.factor(lb_df$TRT01A)) levels(lb_df$TRT01A) else sort(unique(na.omit(lb_df$TRT01A)))
       pal_grp <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(pal_grp_lv)], pal_grp_lv)
       
-      lb_df <- lb_df %>% mutate(TRT01A = factor(TRT01A, levels = names(pal_grp)))
+      lb_df <- lb_df |> mutate(TRT01A = factor(TRT01A, levels = names(pal_grp)))
       
-      max_df <- lb_df %>%
-        group_by(USUBJID, TRT01A, PARAMCD) %>%
+      max_df <- lb_df |>
+        group_by(USUBJID, TRT01A, PARAMCD) |>
         summarise(m = max(XULN, na.rm = TRUE), .groups = "drop")
       
-      ed_df <- max_df %>%
-        filter(PARAMCD %in% c("ALT")) %>%
-        group_by(USUBJID, TRT01A) %>%
-        summarise(x = max(m), .groups = "drop") %>%
-        inner_join(max_df %>% filter(PARAMCD == "BILI") %>% select(USUBJID, y = m), by = "USUBJID")
+      ed_df <- max_df |>
+        filter(PARAMCD %in% c("ALT")) |>
+        group_by(USUBJID, TRT01A) |>
+        summarise(x = max(m), .groups = "drop") |>
+        inner_join(max_df |> filter(PARAMCD == "BILI") |> select(USUBJID, y = m), by = "USUBJID")
       
-      #########################################################
-      # Step2: Making a figure
-      #########################################################
+      # ---- the figure ------------------------------------------------------------
       p <-
         ggplot(ed_df, aes(x = x, y = y, colour = TRT01A, shape = TRT01A)) +
         geom_vline(xintercept = 3, linetype = "dashed", colour = "grey50") +
@@ -3196,9 +2921,7 @@
       fig <- p
       fig
       
-      #########################################################
-      # Step3: Saving the figure
-      #########################################################
+      # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "edish_alt.png")
       fig_width  <- 7
       fig_height <- 6
@@ -3227,38 +2950,34 @@
       library(dplyr)
       library(ggplot2)
       
-      #########################################################
-      # Step1: Preparing Analysis Data
-      #########################################################
+      # ---- data ------------------------------------------------------------------
       # Input data frames: adlb, adsl
       
-      lb_df <- adlb %>%
-        filter(PARAMCD %in% c("ALT", "AST", "BILI")) %>%
-        filter(AVISITN > 0) %>%
-        select(-any_of(c("TRT01A", "SAFFL"))) %>%
-        left_join(adsl %>% select(USUBJID, all_of(c("TRT01A", "SAFFL"))), by = "USUBJID") %>%
-        filter(SAFFL == "Y") %>%
-        mutate(XULN = AVAL / ANRHI) %>%
+      lb_df <- adlb |>
+        filter(PARAMCD %in% c("ALT", "AST", "BILI")) |>
+        filter(AVISITN > 0) |>
+        select(-any_of(c("TRT01A", "SAFFL"))) |>
+        left_join(adsl |> select(USUBJID, all_of(c("TRT01A", "SAFFL"))), by = "USUBJID") |>
+        filter(SAFFL == "Y") |>
+        mutate(XULN = AVAL / ANRHI) |>
         filter(!is.na(XULN))
       
       pal_grp_lv <- if (is.factor(lb_df$TRT01A)) levels(lb_df$TRT01A) else sort(unique(na.omit(lb_df$TRT01A)))
       pal_grp <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(pal_grp_lv)], pal_grp_lv)
       
-      lb_df <- lb_df %>% mutate(TRT01A = factor(TRT01A, levels = names(pal_grp)))
+      lb_df <- lb_df |> mutate(TRT01A = factor(TRT01A, levels = names(pal_grp)))
       
-      max_df <- lb_df %>%
-        group_by(USUBJID, TRT01A, PARAMCD) %>%
+      max_df <- lb_df |>
+        group_by(USUBJID, TRT01A, PARAMCD) |>
         summarise(m = max(XULN, na.rm = TRUE), .groups = "drop")
       
-      ed_df <- max_df %>%
-        filter(PARAMCD %in% c("ALT", "AST")) %>%
-        group_by(USUBJID, TRT01A) %>%
-        summarise(x = max(m), .groups = "drop") %>%
-        inner_join(max_df %>% filter(PARAMCD == "BILI") %>% select(USUBJID, y = m), by = "USUBJID")
+      ed_df <- max_df |>
+        filter(PARAMCD %in% c("ALT", "AST")) |>
+        group_by(USUBJID, TRT01A) |>
+        summarise(x = max(m), .groups = "drop") |>
+        inner_join(max_df |> filter(PARAMCD == "BILI") |> select(USUBJID, y = m), by = "USUBJID")
       
-      #########################################################
-      # Step2: Making a figure
-      #########################################################
+      # ---- the figure ------------------------------------------------------------
       p <-
         ggplot(ed_df, aes(x = x, y = y, colour = TRT01A, shape = TRT01A)) +
         geom_vline(xintercept = 3, linetype = "dashed", colour = "grey50") +
@@ -3292,9 +3011,7 @@
       fig <- p
       fig
       
-      #########################################################
-      # Step3: Saving the figure
-      #########################################################
+      # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "edish_alt_ast.png")
       fig_width  <- 7
       fig_height <- 6
@@ -3324,20 +3041,16 @@
       library(ggplot2)
       library(tflspec)
       
-      #########################################################
-      # Step1: Preparing Analysis Data
-      #########################################################
+      # ---- data ------------------------------------------------------------------
       # Input data frame: adlot (one row per subject and LINE)
       
-      seq_df <- adlot %>%
+      seq_df <- adlot |>
         filter(FASFL == "Y")
       
       cat_levels <- unique(seq_df$TRT[order(seq_df$LINE)])
       pal_cat <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(cat_levels)], cat_levels)
       
-      #########################################################
-      # Step2: Making a figure
-      #########################################################
+      # ---- the figure ------------------------------------------------------------
       # nodes: one per line x category (n = subjects); links: subjects moving to the next line
       sk <- tfl_sankey_data(seq_df, id = "USUBJID", stage = "LINE", category = "TRT")
       p <- tfl_plot_sankey(
@@ -3352,9 +3065,7 @@
       fig <- p
       fig
       
-      #########################################################
-      # Step3: Saving the figure
-      #########################################################
+      # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "sankey_grey_links.png")
       fig_width  <- 9
       fig_height <- 5
@@ -3384,20 +3095,16 @@
       library(ggplot2)
       library(tflspec)
       
-      #########################################################
-      # Step1: Preparing Analysis Data
-      #########################################################
+      # ---- data ------------------------------------------------------------------
       # Input data frame: adlot (one row per subject and LINE)
       
-      seq_df <- adlot %>%
+      seq_df <- adlot |>
         filter(FASFL == "Y")
       
       cat_levels <- unique(seq_df$TRT[order(seq_df$LINE)])
       pal_cat <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(cat_levels)], cat_levels)
       
-      #########################################################
-      # Step2: Making a figure
-      #########################################################
+      # ---- the figure ------------------------------------------------------------
       # nodes: one per line x category (n = subjects); links: subjects moving to the next line
       sk <- tfl_sankey_data(seq_df, id = "USUBJID", stage = "LINE", category = "TRT")
       p <- tfl_plot_sankey(
@@ -3413,9 +3120,7 @@
       fig <- p
       fig
       
-      #########################################################
-      # Step3: Saving the figure
-      #########################################################
+      # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "sankey_colored_links.png")
       fig_width  <- 9
       fig_height <- 5
@@ -3445,20 +3150,16 @@
       library(ggplot2)
       library(tflspec)
       
-      #########################################################
-      # Step1: Preparing Analysis Data
-      #########################################################
+      # ---- data ------------------------------------------------------------------
       # Input data frame: adlot (one row per subject and LINE)
       
-      seq_df <- adlot %>%
+      seq_df <- adlot |>
         filter(FASFL == "Y")
       
       cat_levels <- unique(seq_df$TRT[order(seq_df$LINE)])
       pal_cat <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(cat_levels)], cat_levels)
       
-      #########################################################
-      # Step2: Making a figure
-      #########################################################
+      # ---- the figure ------------------------------------------------------------
       # one row per treatment sequence (L1, L2, ...) with its number of subjects
       paths <- tfl_sunburst_data(seq_df, id = "USUBJID", stage = "LINE", category = "TRT")
       p <- tfl_plot_sunburst(
@@ -3473,9 +3174,7 @@
         theme(legend.position = "right", legend.title = element_blank())
       fig
       
-      #########################################################
-      # Step3: Saving the figure
-      #########################################################
+      # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "sunburst_rings.png")
       fig_width  <- 6.5
       fig_height <- 5.5
