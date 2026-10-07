@@ -1,5 +1,20 @@
 # tflspec (development version)
 
+* **A code list is a report's** (#170).  Every `codelists` row names its
+  report: a blank `output_id` is an error, in a table definition and in
+  `tfl_ard_code(codelists = )` (no study-wide rows; a sheet made before
+  this version gives its rows their report).  A report's ARD program, and
+  its fingerprint, take only its code lists of the variables its analyses
+  read (`by`, `strata`, `variables`, the names in `args`, `code` and
+  `post`): a variable its tables only show is not made a factor.  The
+  study's program, when a report has code lists, gives each report's part
+  its own `.codelists` and reads the data again with them, so a report's
+  factors are not the next report's; without code lists it reads the data
+  once, as before.  A data made from another (a population, an analysis
+  data, an analysis's own subset) is made factors again as its last step
+  (`|> .levels()`): a value the lists do not have counts only where the
+  data analysed have it (a table of the safety population has no column
+  for the screen failures' arm).
 * **Decimals written once: the `digits` sheet** (#168).  Each statistic's
   decimals (`statistic`, `digits`), for every analysis variable (`variable`
   blank) or a variable's exception (`variable` = its name); a report's rows
