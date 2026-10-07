@@ -11,7 +11,7 @@ tfl_read_toc(path, map, sheet = NULL, skip = 0L, type_from_id = TRUE)
 
 \item{map}{Which column is what: a named character vector or list, the
 names among \code{output_id} (required), \code{type}, \code{title}, \code{population},
-\code{footnote}, \code{program}, \code{file}, \code{note}, \code{section}, each the TOC's column name (or
+\code{footnote}, \code{program}, \code{file}, \code{note}, \code{section}, \code{datasets}, each the TOC's column name (or
 names, for \code{title} and \code{footnote}).  Names are matched ignoring case
 and surrounding blanks.}
 
@@ -55,6 +55,10 @@ is an error, as is an output id given twice.
 heading row above it (the text of the last row passed over as a
 heading).  It is not part of the spec: what keeps a report list (an
 app) may keep it.
+\item Each report's datasets are in \code{attr(, "datasets")} (named by output
+id; \code{NA} for none), from its \code{datasets} column: "ADSL, ADAE",
+"ADSL / ADAE" or one a line become \code{"ADSL | ADAE"}.  Not part of the
+spec either.
 }
 }
 \examples{
