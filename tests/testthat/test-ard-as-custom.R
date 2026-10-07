@@ -6,7 +6,7 @@ test_that("an analysis as R: the same ARD as its columns gave", {
     study = df(key = "id", value = "USUBJID"),
     datasets = df(dataset = c("ADSL", "ADAE"), path = c("adsl.rds", "adae.rds")),
     populations = df(population_id = "SAF", dataset = "ADSL", where = "SAFFL == \"Y\""),
-    analysis_data = df(data_id = c("adsl_saf", "adae_teae"), from = c("ADSL", "ADAE"),
+    analysis_data = df(output_id = "T1", data_id = c("adsl_saf", "adae_teae"), from = c("ADSL", "ADAE"),
                        population_id = c("SAF", "SAF"), where = c(NA, "TRTEMFL == \"Y\""),
                        add = c(NA, "TRT01A")),
     analyses = df(

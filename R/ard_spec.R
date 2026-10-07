@@ -31,7 +31,7 @@
   study = c("key", "value"),
   datasets = c("dataset", "level", "path", "derive"),
   populations = c("population_id", "dataset", "where", "derive"),
-  analysis_data = c("data_id", "label", "from", "population_id", "subjects",
+  analysis_data = c("output_id", "data_id", "label", "from", "population_id", "subjects",
                     "where", "add", "derive", "keep", "distinct", "code"),
   analyses = c("output_id", "analysis_id", "parent", "label", "method",
                "data", "dataset",
@@ -906,14 +906,24 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
 # into `ard`
 .ard_body_lines <- function(x, a, levels = NULL) {
   subj <- .study_value(x, "id", "USUBJID")
-  # an analysis on an analysis data is of its population; the named data
-  # it reads (and its denominator), with the rows they are made from
+  # an analysis on an analysis data is of its population: the data is its
+  # own report's (analysis_data is by report); the named data each report
+  # reads (and its denominator), with the rows they are made from
   ad <- .adata_sheet(x)
   x$analysis_data <- ad
   dcol <- .data_col(a)
-  for (i in which(!is.na(dcol))) a$population_id[i] <- .adata_pop(ad, dcol[i])
-  named <- .adata_used(ad, a)
-  nad <- ad[match(named, ad$data_id), , drop = FALSE]
+  outs <- unique(a$output_id)
+  for (i in which(!is.na(dcol))) {
+    a$population_id[i] <- .adata_pop(.adata_of(ad, a$output_id[i]), dcol[i])
+  }
+  named <- lapply(stats::setNames(outs, outs), function(o) {
+    ad_o <- .adata_of(ad, o)
+    .adata_used(ad_o, a[a$output_id == o, , drop = FALSE])
+  })
+  nad <- do.call(rbind, c(list(ad[0L, , drop = FALSE]), lapply(outs, function(o) {
+    ad_o <- .adata_of(ad, o)
+    ad_o[ad_o$data_id %in% named[[o]], , drop = FALSE]
+  })))
   code <- "# ---- data"
   if (length(levels)) {
     code <- c(code,
@@ -961,122 +971,142 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
       .derive_steps(r$derive[1L], levels))))
   }
   keys <- tfl_ard_methods()
-  # each analysis's data: the dataset, restricted to the population's
-  # subjects (or the population itself when it is that dataset), and to
-  # the analysis's own subset -- made once, under a name, for every
-  # analysis that reads it
-  taken <- c(.r_name(used_ds), paste0("pop_", .r_name(pops)), ad$data_id)
-  data_of <- character()
-  made <- .adata_lines(x, named, subj, levels)
-  data_name <- vapply(seq_len(nrow(a)), function(i) {
-    r <- a[i, ]
-    # on an analysis data: it, or its records the analysis's condition keeps
-    if (!is.na(dcol[i])) {
-      if (is.na(r$where)) return(dcol[i])
-      expr <- sprintf("subset(%s, %s)", dcol[i], r$where)
+  par <- a$parent %||% rep(NA_character_, nrow(a))
+  # One report's analysis data and analyses.  Several reports: one part a
+  # report, each making its own analysis data before its analyses (a name
+  # the next report uses too is simply made again), after "ards <- list()"
+  # once; the ards index is the row's in the study's table.
+  several <- length(outs) > 1L
+  if (several) code <- c(code, "", "ards <- list()")
+  for (o in outs) {
+    xo <- x
+    ad_o <- .adata_of(ad, o)
+    xo$analysis_data <- ad_o
+    rows <- which(a$output_id == o)
+    # each analysis's data: the dataset, restricted to the population's
+    # subjects (or the population itself when it is that dataset), and to
+    # the analysis's own subset -- made once, under a name, for every
+    # analysis that reads it
+    taken <- c(.r_name(used_ds), paste0("pop_", .r_name(pops)), ad_o$data_id)
+    data_of <- character()
+    made <- .adata_lines(xo, named[[o]], subj, levels)
+    data_name <- vapply(rows, function(i) {
+      r <- a[i, ]
+      # on an analysis data: it, or its records the analysis's condition keeps
+      if (!is.na(dcol[i])) {
+        if (is.na(r$where)) return(dcol[i])
+        expr <- sprintf("subset(%s, %s)", dcol[i], r$where)
+        if (!is.na(data_of[expr])) return(data_of[[expr]])
+        nm <- make.unique(c(taken, dcol[i]), sep = "_")[length(taken) + 1L]
+        taken <<- c(taken, nm)
+        data_of[[expr]] <<- nm
+        made <<- c(made, sprintf("%s <- %s", nm, expr))
+        return(nm)
+      }
+      pid <- r$population_id
+      pop <- if (!is.na(pid)) paste0("pop_", .r_name(pid))
+      ds <- if (!is.na(r$dataset)) .r_name(r$dataset) else pop
+      pop_ds <- if (!is.na(pid)) x$populations$dataset[
+        x$populations$population_id == pid][1L]
+      # one subset() for the population's subjects and the analysis's own
+      # condition (subset() drops the rows a condition leaves NA either way)
+      whr <- if (!is.na(r$where)) r$where
+      expr <- if (is.null(pop) || identical(r$dataset, pop_ds) ||
+                  is.na(r$dataset)) {
+        src <- if (is.null(pop)) ds else pop
+        if (is.null(whr)) src else sprintf("subset(%s, %s)", src, whr)
+      } else {
+        cond <- sprintf("%s %%in%% %s$%s", subj, pop, subj)
+        if (!is.null(whr)) cond <- .cond_and(cond, whr)
+        sprintf("subset(%s, %s)", ds, cond)
+      }
+      # no dataset and no population: no data (as before, `data` is NULL)
+      if (is.null(expr)) return("NULL")
+      if (expr %in% taken) return(expr)            # a dataset or a population
       if (!is.na(data_of[expr])) return(data_of[[expr]])
-      nm <- make.unique(c(taken, dcol[i]), sep = "_")[length(taken) + 1L]
+      base <- paste(c(if (!is.na(r$dataset)) .r_name(r$dataset) else
+        .r_name(pop_ds), if (!is.na(pid)) .r_name(pid)), collapse = "_")
+      nm <- make.unique(c(taken, base), sep = "_")[length(taken) + 1L]
       taken <<- c(taken, nm)
       data_of[[expr]] <<- nm
       made <<- c(made, sprintf("%s <- %s", nm, expr))
-      return(nm)
-    }
-    pid <- r$population_id
-    pop <- if (!is.na(pid)) paste0("pop_", .r_name(pid))
-    ds <- if (!is.na(r$dataset)) .r_name(r$dataset) else pop
-    pop_ds <- if (!is.na(pid)) x$populations$dataset[
-      x$populations$population_id == pid][1L]
-    # one subset() for the population's subjects and the analysis's own
-    # condition (subset() drops the rows a condition leaves NA either way)
-    whr <- if (!is.na(r$where)) r$where
-    expr <- if (is.null(pop) || identical(r$dataset, pop_ds) ||
-                is.na(r$dataset)) {
-      src <- if (is.null(pop)) ds else pop
-      if (is.null(whr)) src else sprintf("subset(%s, %s)", src, whr)
+      nm
+    }, "")
+    names(data_name) <- as.character(rows)
+    if (several) {
+      code <- c(code, "", sprintf("# ---- %s", o), made)
     } else {
-      cond <- sprintf("%s %%in%% %s$%s", subj, pop, subj)
-      if (!is.null(whr)) cond <- .cond_and(cond, whr)
-      sprintf("subset(%s, %s)", ds, cond)
+      if (length(made)) code <- c(code, "", "# ---- the analysis data", made)
+      code <- c(code, "", "# ---- analyses", "ards <- list()")
     }
-    # no dataset and no population: no data (as before, `data` is NULL)
-    if (is.null(expr)) return("NULL")
-    if (expr %in% taken) return(expr)            # a dataset or a population
-    if (!is.na(data_of[expr])) return(data_of[[expr]])
-    base <- paste(c(if (!is.na(r$dataset)) .r_name(r$dataset) else
-      .r_name(pop_ds), if (!is.na(pid)) .r_name(pid)), collapse = "_")
-    nm <- make.unique(c(taken, base), sep = "_")[length(taken) + 1L]
-    taken <<- c(taken, nm)
-    data_of[[expr]] <<- nm
-    made <<- c(made, sprintf("%s <- %s", nm, expr))
-    nm
-  }, "")
-  if (length(made)) code <- c(code, "", "# ---- the analysis data", made)
-  code <- c(code, "", "# ---- analyses", "ards <- list()")
-  par <- a$parent %||% rep(NA_character_, nrow(a))
-  for (i in seq_len(nrow(a))) {
-    r <- a[i, ]
-    # an analysis run inside another is written with it
-    if (!is.na(par[i])) next
-    kids <- which(!is.na(par) & par == r$analysis_id &
-                    a$output_id == r$output_id)
-    if (length(kids)) {
-      code <- c(code, .ard_wrapper_lines(x, r, a[kids, , drop = FALSE],
-                                         keys, subj, data_name[[i]], i))
-      next
+    for (i in rows) {
+      r <- a[i, ]
+      # an analysis run inside another is written with it
+      if (!is.na(par[i])) next
+      kids <- which(!is.na(par) & par == r$analysis_id &
+                      a$output_id == r$output_id)
+      if (length(kids)) {
+        code <- c(code, .ard_wrapper_lines(xo, r, a[kids, , drop = FALSE],
+                                           keys, subj, data_name[[as.character(i)]], i))
+        next
+      }
+      pid <- r$population_id
+      pop <- if (!is.na(pid)) paste0("pop_", .r_name(pid))
+      pop_name <- if (is.null(pop)) "NULL" else pop
+      given <- c(.args_given(r$args), if (!is.na(r$strata)) "strata",
+                 if (!is.na(r$denominator)) "denominator")
+      has <- function(arg) arg %in% given
+      k <- .method_key(r$method, keys)
+      kind <- if (is.na(k)) "" else keys$kind[k]
+      # R the row writes itself (args, code) may name `data` and
+      # `population`, and a subject flag changes its population: those bind
+      # the two names in a local scope; any other analysis is one call on
+      # the data by its name
+      bind <- identical(keys$call[k], "(subjects)") ||
+        identical(keys$call[k], "(code)") || .names_data(r)
+      den <- .den_code(r$denominator, xo, pop, subj,
+                       population = if (bind) "population" else pop_name)
+      body <- if (bind) .analysis_body(r, keys, subj, has, den) else
+        .analysis_body(r, keys, subj, has, den, data = data_name[[as.character(i)]],
+                       population = pop_name)
+      core <- strsplit(body, "\n", fixed = TRUE)[[1L]]
+      if (bind) {
+        core <- c("local({",
+                  paste0("  data <- ", data_name[[as.character(i)]]),
+                  paste0("  population <- ", pop_name),
+                  paste0("  ", core),
+                  "})")
+      }
+      keep <- if (!kind %in% c("continuous", "categorical", "missing") &&
+                  !identical(keys$call[k], "(subjects)"))
+        .split_bar(r$statistics)
+      fmt <- c(if (!is.na(k)) .parse_formats(keys$formats[k]),
+               .parse_formats(r$formats))
+      fmt <- fmt[!duplicated(names(fmt), fromLast = TRUE)]
+      core[1L] <- paste("ard <-", core[1L])
+      code <- c(code,
+                sprintf("# %s / %s%s", r$output_id, r$analysis_id,
+                        if (!is.na(r$label)) paste(":", r$label) else ""),
+                core, .post_lines(r$post),
+                if (length(keep)) sprintf("ard <- .keep(ard, c(%s))",
+                                          paste(encodeString(keep, quote = "\""),
+                                                collapse = ", ")),
+                sprintf("ards[[%d]] <- .tag(.fmt(ard%s), %s, %s, %s)", i,
+                        if (length(fmt)) paste0(", ", .fmt_vector(fmt)) else "",
+                        encodeString(r$output_id, quote = "\""),
+                        encodeString(r$analysis_id, quote = "\""),
+                        if (is.na(pid)) "NA_character_" else
+                          encodeString(pid, quote = "\"")))
     }
-    pid <- r$population_id
-    pop <- if (!is.na(pid)) paste0("pop_", .r_name(pid))
-    pop_name <- if (is.null(pop)) "NULL" else pop
-    given <- c(.args_given(r$args), if (!is.na(r$strata)) "strata",
-               if (!is.na(r$denominator)) "denominator")
-    has <- function(arg) arg %in% given
-    k <- .method_key(r$method, keys)
-    kind <- if (is.na(k)) "" else keys$kind[k]
-    # R the row writes itself (args, code) may name `data` and
-    # `population`, and a subject flag changes its population: those bind
-    # the two names in a local scope; any other analysis is one call on
-    # the data by its name
-    bind <- identical(keys$call[k], "(subjects)") ||
-      identical(keys$call[k], "(code)") || .names_data(r)
-    den <- .den_code(r$denominator, x, pop, subj,
-                     population = if (bind) "population" else pop_name)
-    body <- if (bind) .analysis_body(r, keys, subj, has, den) else
-      .analysis_body(r, keys, subj, has, den, data = data_name[[i]],
-                     population = pop_name)
-    core <- strsplit(body, "\n", fixed = TRUE)[[1L]]
-    if (bind) {
-      core <- c("local({",
-                paste0("  data <- ", data_name[[i]]),
-                paste0("  population <- ", pop_name),
-                paste0("  ", core),
-                "})")
-    }
-    keep <- if (!kind %in% c("continuous", "categorical", "missing") &&
-                !identical(keys$call[k], "(subjects)"))
-      .split_bar(r$statistics)
-    fmt <- c(if (!is.na(k)) .parse_formats(keys$formats[k]),
-             .parse_formats(r$formats))
-    fmt <- fmt[!duplicated(names(fmt), fromLast = TRUE)]
-    core[1L] <- paste("ard <-", core[1L])
-    code <- c(code,
-              sprintf("# %s / %s%s", r$output_id, r$analysis_id,
-                      if (!is.na(r$label)) paste(":", r$label) else ""),
-              core, .post_lines(r$post),
-              if (length(keep)) sprintf("ard <- .keep(ard, c(%s))",
-                                        paste(encodeString(keep, quote = "\""),
-                                              collapse = ", ")),
-              sprintf("ards[[%d]] <- .tag(.fmt(ard%s), %s, %s, %s)", i,
-                      if (length(fmt)) paste0(", ", .fmt_vector(fmt)) else "",
-                      encodeString(r$output_id, quote = "\""),
-                      encodeString(r$analysis_id, quote = "\""),
-                      if (is.na(pid)) "NA_character_" else
-                        encodeString(pid, quote = "\"")))
   }
   # dplyr::bind_rows(), not cards::bind_ard(): bind_ard() does not count
   # output_id / analysis_id as part of a row's key, so the same statistic in
   # two outputs (AGE's mean in two analysis sets) would stop it, or, with the
   # same value, lose one output's rows.  The class card is kept by .tag().
-  .pop_as_adata(c(code, "", "ard <- do.call(dplyr::bind_rows, ards)"), ad$data_id)
+  code <- c(code, "", "ard <- do.call(dplyr::bind_rows, ards)")
+  # (one report's program: an analysis set that is only its adsl_<set> is
+  # made once, under that name; the study's keeps pop_* for every report)
+  if (several) code else .pop_as_adata(code, ad$data_id)
 }
 
 # An analysis data that is an analysis set and nothing else (`adsl_saf <-
@@ -1223,7 +1253,7 @@ tfl_ard_spec_hash <- function(spec, output_id, dir = ".", codelists = NULL) {
     p <- file.path(dir, f)
     if (file.exists(p)) unname(tools::md5sum(p)) else "missing"
   }, "")
-  ad <- .adata_sheet(spec)
+  ad <- .adata_of(.adata_sheet(spec), output_id)
   ad <- ad[ad$data_id %in% .adata_used(ad, a), , drop = FALSE]
   # a column added since (subjects, keep) blank in every row does not count
   later <- c("subjects", "keep", "code")
@@ -1331,7 +1361,7 @@ tfl_ard_as_custom <- function(spec, output_id, analysis_id) {
     return(list(code = r$code, formats = r$formats, method = "custom"))
   }
   subj <- .study_value(x, "id", "USUBJID")
-  x$analysis_data <- .adata_sheet(x)
+  x$analysis_data <- .adata_of(.adata_sheet(x), output_id)
   d <- .data_col(r)
   if (!is.na(d)) r$population_id <- .adata_pop(x$analysis_data, d)
   keys <- tfl_ard_methods()
