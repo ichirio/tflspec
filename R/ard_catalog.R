@@ -31,7 +31,7 @@
     sign))
   rows <- list(
     # continuous: cards
-    c("N", "continuous", "cards", "n (non-missing values)", "xx", ""),
+    c("N", "continuous", "cards", "Number of non-missing values", "xx", ""),
     c("mean", "continuous", "cards", "Mean", "xx.x", ""),
     c("sd", "continuous", "cards", "SD", "xx.xx", ""),
     c("median", "continuous", "cards", "Median", "xx.x", ""),

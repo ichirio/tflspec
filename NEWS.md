@@ -7,7 +7,9 @@
   `overall`, `include`, `attributes`, `total_n`, `by_stats`;
   `ard_tabulate_value()`'s and `ard_categorical_ci()`'s `value` -- the hint
   of `tfl_ard_args()` gains a sentence of use ("Use it for a Total
-  column"), and `attributes` says where the label goes.
+  column"), and `attributes` says where the label goes.  The
+  statistic N is labelled "Number of non-missing values" (it read "n (...)",
+  next to the categorical n).
 
 * **`tfl_read_toc()`: each report's datasets** (#149).  A new field of the
   map, `datasets`: each report's datasets are `attr(, "datasets")` (named
