@@ -875,4 +875,7 @@ test_that("the code list of `variable`: the variables' labels, the variables she
   x <- if (is.data.frame(x)) x else if (inherits(x, "rtftable")) x$data else x[[1L]]$data
   expect_setequal(unique(as.character(x$group)), c("Sex (code list)", "Age group"))
   expect_true(all(c("Female", "Male") %in% as.character(x$label)))
+  # in the variables sheet's order (rtfreporter#585 keeps plan_labels()'s)
+  skip_if(utils::packageVersion("rtfreporter") < "0.8.2.9027")
+  expect_identical(unique(as.character(x$group)), c("Sex (code list)", "Age group"))
 })
