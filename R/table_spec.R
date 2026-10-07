@@ -841,7 +841,14 @@ print.tfl_table_spec <- function(x, ...) {
     if (!length(ids)) return(sp)
     output_id <- ids
   }
-  if (!length(ids)) return(sp)          # a file of defaults serves any report
+  if (!length(ids)) {
+    # a file of defaults serves any report -- it is this one's (its
+    # {output_id}, its own tokens)
+    if (is.character(output_id) && length(output_id) == 1L && !is.na(output_id)) {
+      attr(sp, "output_id") <- output_id
+    }
+    return(sp)
+  }
   if (!is.character(output_id) || length(output_id) != 1L ||
       is.na(output_id)) {
     .ard_stop("`output_id` must be a single string.")
@@ -863,10 +870,15 @@ print.tfl_table_spec <- function(x, ...) {
       "\n  The file defines: %s"),
       sQuote(output_id), paste(sQuote(ids), collapse = ", ")))
   }
+  tokens_study <- character()
+  bands_own <- c(header = FALSE, footer = FALSE)
   for (s in names(.ard_spec_schema())) {
     d <- sp[[s]]
     d <- d[is.na(d$output_id) | d$output_id == output_id, , drop = FALSE]
     mine <- !is.na(d$output_id)
+    # a header or footer of the report's own (not the study's): written in
+    # its program, not left to the study's setup (tfl_report_setup_code())
+    if (s %in% names(bands_own)) bands_own[[s]] <- any(mine)
     if (!length(.ard_spec_keys[[s]])) {
       # one row: the report's own values over the defaults, column by column
       if (sum(mine) && sum(!mine)) {
@@ -881,11 +893,16 @@ print.tfl_table_spec <- function(x, ...) {
       k <- .ard_spec_rowkey(d, s)
       d <- d[mine | !(k %in% k[mine]), , drop = FALSE]
     }
+    # the study's tokens (its default rows, no report's own): the ones a
+    # program may leave to options(rtfreporter.tokens = ) (tfl_report_setup_code())
+    if (identical(s, "tokens")) tokens_study <- trimws(d$name[is.na(d$output_id)])
     d$output_id <- rep(output_id, nrow(d))
     rownames(d) <- NULL
     sp[[s]] <- d
   }
   attr(sp, "output_id") <- output_id
+  attr(sp, "tokens_study") <- tokens_study
+  attr(sp, "bands_own") <- bands_own
   sp
 }
 
@@ -1427,17 +1444,103 @@ tfl_table_spec_template <- function(ard, path = NULL, cols = NULL,
   invisible(NULL)
 }
 
-# A report's tokens (the sheet already scoped to it), as rtf_document()
-# takes them: a named list; NULL when there is none.
-.ard_spec_tokens <- function(sp) {
-  d <- sp$tokens
-  if (is.null(d) || !nrow(d)) return(NULL)
-  v <- ifelse(is.na(d$value), "", d$value)
-  keep <- !trimws(v) %in% .ard_spec_omit
-  if (!any(keep)) return(NULL)
-  stats::setNames(as.list(v[keep]), trimws(d$name[keep]))
+# The report's own tokens, there for any report: its ID, its label as
+# printed ("Table 14.1.1"), and what a TOC says of it (title, analysis set,
+# section) and the study's ID -- the last four written by whoever keeps
+# the report list (tflplanner) in the tokens sheet, "" when not.  A row of
+# the sheet with the same name wins.
+.ard_spec_output_tokens <- c("OUTPUT_ID", "OUTPUT_LABEL", "OUTPUT_TITLE",
+                             "OUTPUT_POPULATION", "OUTPUT_SECTION", "STUDY_ID")
+# the kinds' words in OUTPUT_LABEL; the tokens sheet's rows of these names
+# (a study's or the company's: Table -> a Japanese word) say others
+.ard_spec_kind_words <- c(table = "Table", listing = "Listing", figure = "Figure")
+
+# "Table 14.1.1" from T-14-1-1: the kind (the ID's first letter T / L / F,
+# else the report's type) and the number (from the ID's first digit, its
+# separators made dots: 14-1-1 -> 14.1.1, 14-1-1S -> 14.1.1S).  An ID with
+# no digit is its own label.
+.ard_spec_output_label <- function(id, type = NA, words = .ard_spec_kind_words) {
+  if (is.null(id) || is.na(id)) return("")
+  at <- regexpr("[0-9]", id)
+  if (at < 0L) return(id)
+  num <- substring(id, at)
+  num <- gsub("[^0-9A-Za-z]+", ".", num)
+  num <- sub("\\.+$", "", num)
+  first <- toupper(substr(id, 1L, 1L))
+  kind <- switch(first, T = "table", L = "listing", F = "figure",
+                 if (!is.na(type) && type %in% names(words)) type else NA)
+  if (is.na(kind)) return(num)
+  paste(words[[kind]], num)
 }
-.ard_spec_band <- function(sp, sheet) {
+
+# A report's tokens (the sheet already scoped to it), as rtf_document()
+# takes them: a named list; NULL when there is none.  The report's own
+# tokens (OUTPUT_ID ...) are given when its header, footer, titles or
+# footnotes say one, so a report that says none is written as before.
+# `study = FALSE` leaves out the study's tokens (its default rows), set
+# once for every report by options(rtfreporter.tokens = ).
+.ard_spec_tokens <- function(sp, r = list(), study = TRUE) {
+  d <- sp$tokens
+  out <- list()
+  if (!is.null(d) && nrow(d)) {
+    v <- ifelse(is.na(d$value), "", d$value)
+    keep <- !trimws(v) %in% .ard_spec_omit
+    out <- stats::setNames(as.list(v[keep]), trimws(d$name[keep]))
+  }
+  used <- .ard_spec_used_tokens(sp)
+  want <- intersect(.ard_spec_output_tokens, used)
+  if (length(want)) {
+    id <- attr(sp, "output_id") %||% NA_character_
+    words <- .ard_spec_kind_words
+    for (k in names(words)) {
+      w <- out[[paste0("OUTPUT_KIND_", toupper(k))]]
+      if (!is.null(w) && nzchar(w)) words[[k]] <- w
+    }
+    own <- list(OUTPUT_ID = if (is.na(id)) "" else id,
+                OUTPUT_LABEL = .ard_spec_output_label(id, r$type %||% NA, words))
+    for (k in setdiff(want, names(out))) out[[k]] <- own[[k]] %||% ""
+    # the report's own last, in their order (label, title, analysis set)
+    mine <- intersect(.ard_spec_output_tokens, names(out))
+    out <- out[c(setdiff(names(out), mine), mine)]
+  }
+  if (!study) {
+    # unscoped (a file of defaults only): its rows are the study's
+    st <- attr(sp, "tokens_study") %||%
+      if (!is.null(d)) trimws(d$name[is.na(d$output_id)])
+    out <- out[setdiff(names(out), st)]
+  }
+  if (!length(out)) return(NULL)
+  out
+}
+
+# The {NAME} tokens a report's header, footer, titles and footnotes say
+.ard_spec_used_tokens <- function(sp) {
+  txt <- unlist(lapply(c("header", "footer", "titles", "footnotes"), function(sh) {
+    d <- sp[[sh]]
+    if (is.null(d) || !nrow(d)) return(character())
+    unlist(d[intersect(c("left", "center", "right"), names(d))])
+  }))
+  txt <- txt[!is.na(txt)]
+  m <- unlist(regmatches(txt, gregexpr("\\{[A-Z][A-Z0-9_]*\\}", txt)))
+  unique(substr(m, 2L, nchar(m) - 1L))
+}
+
+# A line of a band that says nothing once its tokens are filled: every
+# token it has is "" and the rest is blank or brackets ("<{OUTPUT_POPULATION}>"
+# for a report the TOC gave no analysis set).  Such a line is left out.
+.ard_spec_empty_line <- function(cells, tokens) {
+  if (!length(tokens)) return(FALSE)
+  txt <- paste(cells[!is.na(cells)], collapse = " ")
+  m <- unlist(regmatches(txt, gregexpr("\\{[A-Z][A-Z0-9_]*\\}", txt)))
+  if (!length(m)) return(FALSE)
+  nm <- substr(m, 2L, nchar(m) - 1L)
+  if (!all(nm %in% names(tokens))) return(FALSE)
+  if (any(nzchar(trimws(unlist(tokens[nm]))))) return(FALSE)
+  rest <- gsub("\\{[A-Z][A-Z0-9_]*\\}", "", txt)
+  !nzchar(gsub("[][[:space:]<>():;,.|/-]", "", rest))
+}
+
+.ard_spec_band <- function(sp, sheet, tokens = NULL) {
   d <- sp[[sheet]]
   if (is.null(d) || !nrow(d)) return(NULL)
   d <- d[order(suppressWarnings(as.numeric(d$line))), , drop = FALSE]
@@ -1445,6 +1548,10 @@ tfl_table_spec_template <- function(ard, path = NULL, cols = NULL,
   gone <- Reduce(`|`, lapply(d[cells], function(v) trimws(v) %in% .ard_spec_omit),
                  rep(FALSE, nrow(d)))
   d <- d[!gone, , drop = FALSE]
+  if (!nrow(d)) return(NULL)
+  empty <- vapply(seq_len(nrow(d)), function(i)
+    .ard_spec_empty_line(unlist(d[i, cells]), tokens), NA)
+  d <- d[!empty, , drop = FALSE]
   if (!nrow(d)) return(NULL)
   lapply(seq_len(nrow(d)), function(i) {
     r <- .ard_spec_typed(d[i, , drop = FALSE], sheet)

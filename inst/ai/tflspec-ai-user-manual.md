@@ -417,7 +417,7 @@ file.
 | `report` | `type` (`table` / `listing` / `figure` / `user`: the report's own code leaves `content`), `file` (`{output_id}.rtf`), `program`, `auto_section`, `section_align`, `auto_title`, `title_align`, `table_font_size_half_points`, `title_font_size_half_points`, `footnote_font_size_half_points`, `page_header`, `page_footer`, `watermark` (`DRAFT`), `figure_width_in`, `figure_height_in` |
 | `page` | `paper_size`, `orientation`, `width_in`, `height_in`, margins `margin_*_in`, `header_dist_in`, `footer_dist_in`, `font_size_half_points`, `title_format`, `footnote_format`, `title_width`, `footnote_width`, `markup` |
 | `header`, `footer`, `titles`, `footnotes` | `line`, `left`, `center`, `right` — a report's line replaces the default line of the same number; a report's line that says `(none)` takes it out |
-| `tokens` | `name`, `value` — a token of one's own, `{STUDY}` in any of the cells above (`rtf_document(tokens = )`); a report's row replaces the default of the same name, `(none)` takes it out; names upper case, not rtfreporter's own |
+| `tokens` | `name`, `value` — a token of one's own, `{STUDY}` in any of the cells above (`rtf_document(tokens = )`); a report's row replaces the default of the same name, `(none)` takes it out; names upper case, not rtfreporter's own. A report's own tokens work without a row: `{OUTPUT_ID}`, `{OUTPUT_LABEL}` ("Table 14.1.1" from the ID; rows `OUTPUT_KIND_TABLE` / `_LISTING` / `_FIGURE` change the words), `{OUTPUT_TITLE}` `{OUTPUT_POPULATION}` `{OUTPUT_SECTION}` `{STUDY_ID}` (blank unless a row gives them); a line left with only empty tokens is not printed. What every report shares (the default token rows, the default header / footer) can be written once: `tfl_report_setup_code(spec)` (`options(rtfreporter.tokens = )`, `study_header`, `study_footer`), and each program with `tfl_report_code(..., setup = TRUE)` |
 
 Page tokens in the running header / footer: `{PAGE}`, `{TOTAL_PAGES}`,
 `{PROGRAM}` (or `{PROGRAM_FULL}`, its absolute path), `{DATETIME}`.
@@ -440,7 +440,7 @@ tfl_write_specs("spec/report.xlsx", report = sp)
 
 - `map` names are the fields (`output_id` required; `type`, `title`,
   `population`, `footnote`, `program`, `file`, `note`, `section`,
-  `datasets`); values are the
+  `datasets`, `label`); values are the
   TOC's column names, matched ignoring case. A missing column names the
   closest ones.
 - `title` / `footnote`: one column or several; a cell's line breaks or
@@ -457,6 +457,7 @@ tfl_write_specs("spec/report.xlsx", report = sp)
 - Each report's datasets are `attr(, "datasets")` (named by output id;
   `NA` for none): its `datasets` column, "ADSL, ADAE" or "ADSL / ADAE" as
   `"ADSL | ADAE"`. Not part of the spec either.
+- `attr(, "labels")` (the map's `label`: the ID as printed), `attr(, "first_titles")`, `attr(, "populations")`: for a report list to write the report's own tokens.
 
 ---
 
@@ -618,7 +619,7 @@ back): rename the value or choose another separator.
 `tfl_as_table_spec`
 
 **Report spec:** `tfl_read_report_spec` `tfl_read_toc` `tfl_report` `tfl_report_code`
-`tfl_report_path`
+`tfl_report_path` `tfl_report_setup_code` `tfl_report_tokens`
 
 **Listing spec:** `tfl_listing_spec` `tfl_read_listing_spec`
 `tfl_write_listing_spec` `tfl_listing` `tfl_listing_code`
