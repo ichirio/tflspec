@@ -11,6 +11,32 @@
   (what the figure is called): a report program gets its figure as
   `plot` directly.  A composed figure's panels are made as `fig_<name>`.
   The figures drawn are the same (all 38 templates).
+* **A code list is a report's** (#170).  Every `codelists` row names its
+  report: a blank `output_id` is an error, in a table definition and in
+  `tfl_ard_code(codelists = )` (no study-wide rows; a sheet made before
+  this version gives its rows their report).  A report's ARD program, and
+  its fingerprint, take only its code lists of the variables its analyses
+  read (`by`, `strata`, `variables`, the names in `args`, `code` and
+  `post`): a variable its tables only show is not made a factor.  The
+  study's program, when a report has code lists, gives each report's part
+  its own `.codelists` and reads the data again with them, so a report's
+  factors are not the next report's; without code lists it reads the data
+  once, as before.  A data made from another (a population, an analysis
+  data, an analysis's own subset) is made factors again as its last step
+  (`|> .levels()`): a value the lists do not have counts only where the
+  data analysed have it (a table of the safety population has no column
+  for the screen failures' arm).
+* **Decimals written once: the `digits` sheet** (#168).  Each statistic's
+  decimals (`statistic`, `digits`), for every analysis variable (`variable`
+  blank) or a variable's exception (`variable` = its name); a report's rows
+  replace the defaults.  A template's tokens that say no format take them
+  (`{mean} ({sd})` with mean 1, sd 2 is `{mean:.1f} ({sd:.2f})`; `p`, a
+  percent, `{p:.1f%}`); a variable with an exception and no rows of its
+  own gets the kind's rows with its decimals.  A template's own format
+  and a `cells` row's `digits` win.  `tables$value` now says which of the
+  ARD's values a table prints for its cells too: `stat` (rounded here) or
+  `stat_fmt` (the ARD's own text: the `digits` sheet does not apply).  The
+  generated code is `plan_cells()` as before.
 
 * **An analysis data is a report's** (#166).  `analysis_data` has an
   `output_id` column, first: the key is the report and the name, so the

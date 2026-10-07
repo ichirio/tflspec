@@ -57,7 +57,7 @@ tables,cols,"The key spread across the columns, outermost first, | between them 
 tables,rows,"The keys down the rows (table_plan(rows = )); name = column renames, a quoted value is a constant heading; | between them.","group1 = AEBODSYS | grp = ""Worst Post-Baseline Values"""
 tables,label,"Where the row label comes from (table_plan(label = )); blank: .label; NA: used to tell rows apart, not printed; NULL: not used.",label = AEDECOD
 tables,stats,"cells (cells built from templates) or rows (one statistic a row, the raw values) (plan_cells(stats = )); blank: cells.",rows
-tables,value,"With stats = rows: stat (the number) or stat_fmt (cards' formatted text) (plan_cells(value = )); blank: stat.",stat
+tables,value,"Which of the ARD's values the table prints: stat (the number, rounded here: the digits sheet, a template's {x:.1f}) or stat_fmt (the ARD's own text, as it was formatted: no digits to set; a template still combines them, {mean} ({sd})); a row may say otherwise in its template ({mean:stat_fmt}, {mean:.1f}). With stats = rows: which goes in the cell (plan_cells(value = )). Blank: stat.",stat
 tables,sep,"What joins several column keys into a column name (plan_columns(sep = )); the columns sheet names value columns with it; blank: ____.",_
 tables,sort,"TRUE, FALSE, or the sort keys in order, - in front for descending (plan_sort()); blank: the data's order.",.overall | group1 | -n | label
 tables,sort_stat,"The statistic totalled across columns for a frequency order (plan_sort(stat = )).",n
@@ -69,7 +69,7 @@ variables,label,"What prints for its name (plan_labels()); blank: the name.",Age
 variables,order,"Its place among the variables (a number); blank: the data's order.",1
 variables,levels,"Its values in print order, | between them (plan_levels()); blank: the data's order.",Grade 0 | Grade 1 | Total
 variables,empty_levels,"Its values no record has -- a code list's value, counted 0 in every column -- show (a 0 row) or hide (plan_levels(.drop_empty = )); blank: show.",hide
-codelists,,"Table: the study's code list, one row a value of a variable -- the text it prints as and its place (plan_labels(), plan_levels()). A report's own rows replace the defaults of the same variable and value. A variable's `levels` on the variables sheet, when given, is the order instead. The ARD too: a report's ARD program makes factors of the columns it lists (the study's rows and the report's own) before any analysis.",
+codelists,,"A report's code lists, one row a value of a variable -- the text it prints as and its place (plan_labels(), plan_levels()). Every row names its report in `output_id` (a blank one is an error: copy the rows into each report that uses them). A variable's `levels` on the variables sheet, when given, is the order in the table instead. The ARD too: a report's ARD program makes factors of the columns it lists that its analyses read (by, strata, variables) before any analysis.",
 codelists,variable,"The variable (an analysis variable or a column key).",SEX
 codelists,value,"A value as the data have it.",F
 codelists,label,"What prints for the value; blank: the value.",Female
@@ -82,6 +82,10 @@ cells,when,"An R condition on the statistics; the row is used only when it holds
 cells,template,"The cell's text with {statistic:format} tokens.",{mean} ({sd})
 cells,digits,"Decimals of a token with no format, a comma between tokens; blank: plan_digits().","2,3"
 cells,signif,"Significant digits (wins over digits); blank: none.",4
+digits,,"Table: the decimals of each statistic, written once for every analysis variable, and a variable's exceptions. A template's own format ({mean:.2f}) or a cells row's digits win; a table of stat_fmt (tables$value) is not rounded here.",
+digits,variable,Blank: every analysis variable (the rule); a variable: its exception.,WEIGHTBL
+digits,statistic,"The statistic, as the ARD names it (mean, sd, median, p ...).",mean
+digits,digits,"Its decimals, a whole number (p, a percent: 1 prints 61.6).",1
 layout,,"Table: one row a report. Pages, groups, blank rows, stub; the prefix names the plan verb, the rest its argument.",
 layout,pages_max_rows,"Rows a page (plan_paginate_rows(max_rows = )), a whole number; blank: as_rtftables()' default.",26
 layout,pages_split,"How a page break may cut: group_safe / group_force / rows / ... (plan_paginate_rows(split = )); blank: as_rtftables()' default.",group_force

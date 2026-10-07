@@ -326,7 +326,7 @@ once. The `study` sheet has `key` / `value` (`rounding`: `sas` / `iec` /
 | `rows` | `table_plan(rows = )` | `name = column`; a quoted value is a constant heading |
 | `label` | `table_plan(label = )` | blank keeps `.label`; `NA` builds then drops; `NULL` leaves out |
 | `stats` | `plan_cells(stats = )` | `cells` (default: a cell from a template) or `rows` (one statistic a row, the raw values) |
-| `value` | `plan_cells(value = )` | which column a cell's values come from: `stat` (the number; default) or `stat_fmt` (cards' formatted text). **Not** a template: templates are `cells$template` |
+| `value` | `plan_cells(value = )` | which of the ARD's values the table prints: `stat` (the number, rounded here by the `digits` sheet; default) or `stat_fmt` (the ARD's own text: no digits set here). For `cells` templates too; a row may say otherwise (`{mean:stat_fmt}`, `{mean:.1f}`). **Not** a template: templates are `cells$template` |
 | `na` | `plan_cells(na = )` | what a cell no template could fill prints |
 | `sep` | `plan_columns(sep = )` | what joins several column keys into a column name (default `____`) |
 | `sort` | `plan_sort()` | `TRUE`, `FALSE`, or keys in order, `-` for descending |
@@ -336,7 +336,9 @@ once. The `study` sheet has `key` / `value` (`rounding`: `sas` / `iec` /
 **variables**: `variable`, `label`, `order`, `levels` (`Grade 0 | Grade 1`), `empty_levels` (`hide`: no row for a value no record has; blank: a 0 row)
 → `plan_labels()`, `plan_levels()`.
 
-**codelists** (the study's code list, one row a value): `variable`, `value`, `label`, `order` → `plan_labels(SEX = c(SEX = "Sex", F = "Female"))` and `plan_levels(SEX = c("M", "F"))`. A report's own rows replace the defaults of the same variable / value; a variable's `levels` on the `variables` sheet, when given, is the order instead. `tfl_ard_code(codelists = )` makes factors of the listed columns before any analysis (derived columns too); for one report, with its own rows.
+**codelists** (a report's code lists, one row a value): `output_id`, `variable`, `value`, `label`, `order` → `plan_labels(SEX = c(SEX = "Sex", F = "Female"))` and `plan_levels(SEX = c("M", "F"))`. Every row names its report: a blank `output_id` is an error (no study-wide rows; copy the rows into each report). A variable's `levels` on the `variables` sheet, when given, is the order instead. `tfl_ard_code(codelists = )` makes factors, before any analysis, of the listed columns the report's analyses read (`by`, `strata`, `variables`, names in `args` / `code` / `post`; derived columns too); in the study's program each report's part has its own `.codelists` and reads its data with them.
+
+**digits** (each statistic's decimals, once): `variable` (blank: every analysis variable; a name: its exception), `statistic` (`mean`, `sd`, `p` a percent ...), `digits` → written into the templates' tokens that say no format (`{mean} ({sd})` → `{mean:.1f} ({sd:.2f})`). A template's own format or a `cells` row's `digits` wins; a table of `tables$value = stat_fmt` (the ARD's own text) is not rounded here.
 
 **cells**: `variable`, `context`, `row`, `when`, `template`, `digits`,
 `signif` → `plan_cells()`. A row with `variable` blank is the table's
