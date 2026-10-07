@@ -77,8 +77,12 @@ inches, \code{\link[rtfreporter:rtf_figures]{rtfreporter::rtf_figures()}}).
 \code{paper_size}, \code{orientation}, \code{width_in}, \code{height_in}, \code{margin_top_in},
 \code{margin_bottom_in}, \code{margin_left_in}, \code{margin_right_in},
 \code{header_dist_in}, \code{footer_dist_in} (the page, as \code{\link[rtfreporter:rtf_document]{rtfreporter::rtf_document()}} takes
-it), and \code{font_size_half_points}, \code{title_format}, \code{footnote_format},
+it), \code{font} (the document's font: \code{rtf_document(font_table = )}), and
+\code{font_size_half_points}, \code{title_format}, \code{footnote_format},
 \code{title_width}, \code{footnote_width}, \code{markup} (\code{\link[rtfreporter:rtf_default_format]{rtfreporter::rtf_default_format()}}).
+The study's row (blank \code{output_id}) of \code{font} and \code{font_size_half_points}
+is the company's: \code{\link[=tfl_report_setup_code]{tfl_report_setup_code()}} writes it once as
+\code{options(rtfreporter.font = , rtfreporter.font_size_half_points = )}.
 }
 
 \section{The table engine}{

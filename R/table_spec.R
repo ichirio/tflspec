@@ -99,7 +99,7 @@
     height_in = "num", margin_top_in = "num", margin_bottom_in = "num",
     margin_left_in = "num", margin_right_in = "num",
     header_dist_in = "num", footer_dist_in = "num",
-    font_size_half_points = "int", title_format = "text",
+    font = "text", font_size_half_points = "int", title_format = "text",
     footnote_format = "text", title_width = "text",
     footnote_width = "text", markup = "text"),
   header    = c(line = "int", left = "text", center = "text", right = "text"),
@@ -896,6 +896,7 @@ print.tfl_table_spec <- function(x, ...) {
       sQuote(output_id), paste(sQuote(ids), collapse = ", ")))
   }
   tokens_study <- character()
+  page_study <- character()
   bands_own <- c(header = FALSE, footer = FALSE)
   for (s in names(.ard_spec_schema())) {
     d <- sp[[s]]
@@ -921,14 +922,32 @@ print.tfl_table_spec <- function(x, ...) {
     # the study's tokens (its default rows, no report's own): the ones a
     # program may leave to options(rtfreporter.tokens = ) (tfl_report_setup_code())
     if (identical(s, "tokens")) tokens_study <- trimws(d$name[is.na(d$output_id)])
+    # the page's font and size the study's row gives and the report's does
+    # not: left to the setup's options() (tfl_report_setup_code())
+    if (identical(s, "page")) page_study <- .page_study_cols(sp[[s]], output_id)
     d$output_id <- rep(output_id, nrow(d))
     rownames(d) <- NULL
     sp[[s]] <- d
   }
   attr(sp, "output_id") <- output_id
   attr(sp, "tokens_study") <- tokens_study
+  attr(sp, "page_study") <- page_study
   attr(sp, "bands_own") <- bands_own
   sp
+}
+
+# The study-wide options of the page sheet, rtfreporter's options they are
+.page_options <- c(font = "rtfreporter.font",
+                   font_size_half_points = "rtfreporter.font_size_half_points")
+
+# Of the page's study-wide options, the ones the study's row (blank
+# `output_id`) says and the report's own row does not
+.page_study_cols <- function(d, output_id) {
+  said <- function(rows) {
+    names(.page_options)[vapply(names(.page_options), function(cn)
+      !is.null(d[[cn]]) && any(!is.na(d[[cn]][rows]) & nzchar(trimws(d[[cn]][rows]))), NA)]
+  }
+  setdiff(said(is.na(d$output_id)), said(d$output_id %in% output_id))
 }
 
 # `a | b | c` -> c("a", "b", "c")
@@ -1761,8 +1780,12 @@ tfl_table_spec_template <- function(ard, path = NULL, cols = NULL,
 #' `paper_size`, `orientation`, `width_in`, `height_in`, `margin_top_in`,
 #' `margin_bottom_in`, `margin_left_in`, `margin_right_in`,
 #' `header_dist_in`, `footer_dist_in` (the page, as [rtfreporter::rtf_document()] takes
-#' it), and `font_size_half_points`, `title_format`, `footnote_format`,
+#' it), `font` (the document's font: `rtf_document(font_table = )`), and
+#' `font_size_half_points`, `title_format`, `footnote_format`,
 #' `title_width`, `footnote_width`, `markup` ([rtfreporter::rtf_default_format()]).
+#' The study's row (blank `output_id`) of `font` and `font_size_half_points`
+#' is the company's: [tfl_report_setup_code()] writes it once as
+#' `options(rtfreporter.font = , rtfreporter.font_size_half_points = )`.
 #'
 #' @section The table engine:
 #' The ARD functions and the plan are rtfreporter's:

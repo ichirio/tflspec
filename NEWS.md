@@ -1,5 +1,15 @@
 # tflspec (development version)
 
+* **The company's font, said once** (#174).  The `page` sheet gains
+  `font`, the document's font (`rtf_document(font_table = )`).  The study's
+  row (blank `output_id`) of `font` and `font_size_half_points` is the
+  company's: `tfl_report_setup_code()` writes it once as
+  `options(rtfreporter.font = , rtfreporter.font_size_half_points = )`, and
+  a report's program written with `setup = TRUE` leaves them to it (a
+  report's own it still says).  Blank: no line, rtfreporter's own
+  (Courier, 9 pt).  A program standing alone says them itself; the file
+  is the same either way.
+
 * **A code list is a report's** (#170).  Every `codelists` row names its
   report: a blank `output_id` is an error, in a table definition and in
   `tfl_ard_code(codelists = )` (no study-wide rows; a sheet made before
