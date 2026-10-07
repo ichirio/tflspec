@@ -15,6 +15,7 @@ ad_spec <- function(analysis_data, analyses, check = TRUE) {
 }
 
 ad_rows <- function() ad_df(
+  output_id = "T1",
   data_id = c("adsl_saf", "adae_teae", "adae_ser", "adae_subj"),
   from = c("ADSL", "ADAE", "adae_teae", "adae_teae"),
   population_id = c("SAF", "SAF", NA, NA),
@@ -114,7 +115,7 @@ test_that("the sheet and the analyses' data are checked", {
   d <- ad_rows(); d$population_id[2L] <- NA
   bad(d, msg = "`add` takes columns from the population's data")
   a <- an_rows(); a$data[2L] <- "adae_none"
-  bad(an = a, msg = "data adae_none is not in `analysis_data`")
+  bad(an = a, msg = "data adae_none is not an analysis data of T1")
   a <- an_rows(); a$dataset[2L] <- "ADAE"
   bad(an = a, msg = "its `data` or a `dataset`; not both")
   a <- an_rows(); a$denominator[2L] <- "adae_none"
@@ -158,6 +159,7 @@ test_that("ARS: the data's population, first dataset and conditions", {
 
 test_that("a report's own subjects, the columns kept, factors of derived columns (#137)", {
   ad <- ad_df(
+    output_id = "T1",
     data_id = c("adsl_old", "adae_old"), from = c("ADSL", "ADAE"),
     population_id = c("SAF", NA), subjects = c(NA, "adsl_old"),
     where = c("AGE >= 65", "TRTEMFL == \"Y\""), add = c(NA, "TRT01A"),
@@ -245,3 +247,55 @@ test_that("a data written as R (`code`): made by it, checked, in the fingerprint
   expect_identical(key(a), key(b))
 })
 
+
+test_that("an analysis data is a report's: the same name, another meaning elsewhere", {
+  # T1's adsl_saf is the safety set; T2's is the safety set over 65
+  ad <- ad_df(output_id = c("T1", "T2"), data_id = "adsl_saf", from = "ADSL",
+              population_id = "SAF", where = c(NA, "AGE >= 65"))
+  an <- ad_df(output_id = c("T1", "T2"), analysis_id = "AGE",
+              method = "cards::ard_summary", data = "adsl_saf", variables = "AGE")
+  x <- ad_spec(ad, an)
+  c1 <- tfl_ard_code(x, output_id = "T1", save = FALSE, part = "body")
+  c2 <- tfl_ard_code(x, output_id = "T2", save = FALSE, part = "body")
+  expect_true(any(grepl("^adsl_saf <- subset\\(adsl, SAFFL == ", c1)))
+  expect_false(any(grepl("AGE >= 65", c1, fixed = TRUE)))
+  expect_true(any(grepl("AGE >= 65", c2, fixed = TRUE)))
+  # the study's program: one part a report, each making its own adsl_saf
+  all <- tfl_ard_code(x, save = FALSE, part = "body")
+  expect_identical(sum(all == "# ---- T1"), 1L)
+  expect_identical(sum(all == "# ---- T2"), 1L)
+  expect_identical(sum(grepl("^adsl_saf <- ", all)), 2L)
+  expect_lt(which(all == "# ---- T1"), which(all == "# ---- T2"))
+  expect_identical(sum(all == "ards <- list()"), 1L)
+  expect_silent(parse(text = all))
+  # the fingerprints: each report's own rows; T2's changes when its adsl_saf does
+  h1 <- tfl_ard_spec_hash(x, "T1")
+  h2 <- tfl_ard_spec_hash(x, "T2")
+  y <- x
+  y$analysis_data$where[2L] <- "AGE >= 75"
+  expect_identical(tfl_ard_spec_hash(y, "T1"), h1)
+  expect_false(identical(tfl_ard_spec_hash(y, "T2"), h2))
+})
+
+test_that("a report's analysis data name only its own rows; a blank output_id is an error", {
+  ad <- ad_df(output_id = c("T1", "T2"), data_id = c("adsl_saf", "adae_teae"),
+              from = c("ADSL", "ADAE"), population_id = c("SAF", NA),
+              subjects = c(NA, "adsl_saf"), where = c(NA, "TRTEMFL == \"Y\""))
+  an <- ad_df(output_id = "T2", analysis_id = "AE", method = "cards::ard_tabulate",
+              data = "adae_teae", variables = "AEDECOD")
+  expect_error(ad_spec(ad, an), "`subjects` adsl_saf is not an analysis data above it in the report",
+               fixed = TRUE)
+  # an analysis reads another report's data
+  ad2 <- ad_df(output_id = "T1", data_id = "adsl_saf", from = "ADSL", population_id = "SAF")
+  an2 <- ad_df(output_id = "T2", analysis_id = "AGE", method = "cards::ard_summary",
+               data = "adsl_saf", variables = "AGE")
+  expect_error(ad_spec(ad2, an2), "data adsl_saf is not an analysis data of T2 (another report's",
+               fixed = TRUE)
+  # the same name twice in a report
+  ad3 <- ad_df(output_id = "T1", data_id = c("adsl_saf", "adsl_saf"), from = "ADSL",
+               population_id = "SAF")
+  expect_error(ad_spec(ad3, an_rows()[1L, ]), "`data_id` repeated in the report", fixed = TRUE)
+  # no report: said, with what to do
+  ad4 <- ad_df(output_id = NA_character_, data_id = "adsl_saf", from = "ADSL", population_id = "SAF")
+  expect_error(ad_spec(ad4, an_rows()[1L, ]), "`output_id` is blank", fixed = TRUE)
+})
