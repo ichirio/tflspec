@@ -1,5 +1,17 @@
 # tflspec (development version)
 
+* **An analysis data is a report's** (#166).  `analysis_data` has an
+  `output_id` column, first: the key is the report and the name, so the
+  same `data_id` may mean something else in another report (a Phase I
+  table's adsl_saf and a Phase II table's).  A row's `from` and `subjects`
+  name its own report's rows above it, an analysis's `data` and
+  `denominator` its own report's; the checks say so, and a blank
+  `output_id` is an error (a sheet made before this version is the study's:
+  give its rows their report).  A report's program is as it was; the
+  study's is one part a report after the datasets and populations, each
+  part making its own analysis data before its analyses.  The fingerprint,
+  ARS and `tfl_ard_as_custom()` read the report's rows.
+
 * **A report's own tokens, and one header for every report** (#148).
   - A report's header, footer, titles and footnotes may say
     `{OUTPUT_ID}`, `{OUTPUT_LABEL}`, `{OUTPUT_TITLE}`,

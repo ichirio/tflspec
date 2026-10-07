@@ -403,15 +403,17 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
   an <- x$analyses
   ad <- .adata_sheet(x)
   dcol <- .data_col(an)
-  for (i in which(!is.na(dcol) & dcol %in% ad$data_id)) {
+  for (i in which(!is.na(dcol))) {
+    ad_o <- .adata_of(ad, an$output_id[i])
+    if (!dcol[i] %in% ad_o$data_id) next
     tag <- paste(an$output_id[i], an$analysis_id[i], sep = " / ")
-    ch <- .adata_chain(ad, dcol[i])
-    rows <- ad[match(ch, ad$data_id), , drop = FALSE]
+    ch <- .adata_chain(ad_o, dcol[i])
+    rows <- ad_o[match(ch, ad_o$data_id), , drop = FALSE]
     w <- c(stats::na.omit(rows$where), stats::na.omit(an$where[i]))
     an$where[i] <- if (!length(w)) NA_character_ else if (length(w) == 1L) w else
       paste0("(", w, ")", collapse = " & ")
-    an$population_id[i] <- .adata_pop(ad, dcol[i])
-    an$dataset[i] <- .adata_dataset(ad, dcol[i])
+    an$population_id[i] <- .adata_pop(ad_o, dcol[i])
+    an$dataset[i] <- .adata_dataset(ad_o, dcol[i])
     for (cn in c("subjects", "add", "derive", "distinct", "code")) {
       for (j in which(!is.na(rows[[cn]]))) {
         miss(tag, paste0("analysis_data$", cn), sprintf(
