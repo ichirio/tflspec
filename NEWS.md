@@ -3,6 +3,11 @@
 * Added a root `CITATION.cff` so GitHub's "Cite this repository" button
   works (#156).
 
+* **`tfl_read_toc()`: each report's datasets** (#149).  A new field of the
+  map, `datasets`: each report's datasets are `attr(, "datasets")` (named
+  by output id), "ADSL, ADAE", "ADSL / ADAE" or one a line as
+  `"ADSL | ADAE"`.  Not part of the spec, as the sections.
+
 * **The ARD program as a person writes it** (#150).  A data is made in one
   statement -- its condition, derive, code lists, the columns kept
   (`subset(select = )`) and one row per (`dplyr::distinct()`) as a pipe --
