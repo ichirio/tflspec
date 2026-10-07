@@ -16,6 +16,8 @@ tokens, header or footer.
 }
 \description{
 What every report of a study shares, as code written once: the study's
+font and size (the page sheet's default row: \code{font},
+\code{font_size_half_points}) as \code{options(rtfreporter.font = , rtfreporter.font_size_half_points = )}, its
 tokens (the tokens sheet's default rows, a blank \code{output_id}:
 \code{COMPANY}, \code{STUDY_ID} ...) as
 \code{options(rtfreporter.tokens = list(...))}, and its running header and

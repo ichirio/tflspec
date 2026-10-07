@@ -417,6 +417,8 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
 .report_spec_steps <- function(sp, content = "content", setup = FALSE) {
   r <- .ard_spec_report_row(sp)
   pg <- if (nrow(sp$page)) .ard_spec_typed(sp$page[1L, ], "page") else list()
+  # the study's font and size: the setup's options() say them
+  if (setup) pg[attr(sp, "page_study")] <- NULL
   geo <- c("paper_size", "orientation", "width_in", "height_in",
            "margin_top_in", "margin_bottom_in", "margin_left_in",
            "margin_right_in", "header_dist_in", "footer_dist_in")
@@ -444,6 +446,7 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
   # document's own then (rtfreporter fills from both, the document's first)
   doc_tokens <- if (setup) .ard_spec_tokens(sp, r, study = FALSE) else tokens
   st <- list(.spec_call("rtf_document",
+                        font_table = if (!is.null(pg[["font"]])) list(list(name = pg[["font"]])),
                         page = if (length(page)) page,
                         default_format = if (length(fmt))
                           do.call(.spec_call, c(list("rtf_default_format"), fmt)),
@@ -505,6 +508,9 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
 #' The study's setup code for its report programs
 #'
 #' What every report of a study shares, as code written once: the study's
+#' font and size (the page sheet's default row: `font`,
+#' `font_size_half_points`) as `options(rtfreporter.font = ,
+#' rtfreporter.font_size_half_points = )`, its
 #' tokens (the tokens sheet's default rows, a blank `output_id`:
 #' `COMPANY`, `STUDY_ID` ...) as
 #' `options(rtfreporter.tokens = list(...))`, and its running header and
@@ -534,6 +540,16 @@ tfl_report_setup_code <- function(spec) {
   sp <- .as_spec(spec, "table", "tfl_report_setup_code")
   study <- function(d) if (!is.null(d)) d[is.na(d$output_id), , drop = FALSE]
   out <- character()
+  # the company's font and size, for every report
+  pg <- study(sp$page)
+  if (!is.null(pg) && nrow(pg)) {
+    pg <- .ard_spec_typed(pg[1L, ], "page")[names(.page_options)]
+    pg <- pg[!vapply(pg, is.null, NA)]
+    if (length(pg)) {
+      names(pg) <- .page_options[names(pg)]
+      out <- c(out, .spec_call_code(do.call(.spec_call, c(list("options"), pg)), 0L))
+    }
+  }
   d <- study(sp$tokens)
   if (!is.null(d) && nrow(d)) {
     v <- ifelse(is.na(d$value), "", d$value)

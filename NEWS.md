@@ -1,5 +1,14 @@
 # tflspec (development version)
 
+* **The company's font, said once** (#174).  The `page` sheet gains
+  `font`, the document's font (`rtf_document(font_table = )`).  The study's
+  row (blank `output_id`) of `font` and `font_size_half_points` is the
+  company's: `tfl_report_setup_code()` writes it once as
+  `options(rtfreporter.font = , rtfreporter.font_size_half_points = )`, and
+  a report's program written with `setup = TRUE` leaves them to it (a
+  report's own it still says).  Blank: no line, rtfreporter's own
+  (Courier, 9 pt).  A program standing alone says them itself; the file
+  is the same either way.
 * **Figure code in the style of a study's other programs** (#164).  Every
   generated figure script (the designer's templates, the `pp_*` types)
   pipes with `|>` (the dplyr verbs stay); its parts are one line each

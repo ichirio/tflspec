@@ -200,6 +200,7 @@ page,margin_left_in,"Left margin in inches; blank: 0.75.",0.5
 page,margin_right_in,"Right margin in inches; blank: 0.75.",0.5
 page,header_dist_in,"From the page's top edge to the running header, in inches; blank: the top margin.",0.5
 page,footer_dist_in,"From the page's bottom edge to the running footer, in inches; blank: the bottom margin.",0.5
+page,font,"The document's font (its font table); the study's row (blank output_id) is the company's, written once in the setup code; blank: rtfreporter's option (Courier).",Courier New
 page,font_size_half_points,"The body font size in half-points (18 = 9 pt); blank: rtfreporter's option.",18
 page,title_format,"text (centred paragraphs) / table (a content-width one-column table); blank: text.",table
 page,footnote_format,"table (content-width, with the separator rule) / text (paragraphs); blank: table.",text

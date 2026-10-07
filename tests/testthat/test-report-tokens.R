@@ -232,3 +232,58 @@ test_that("a spec of defaults only is the report's it is asked for", {
   expect_identical(tfl_report_tokens(sp, "T-14-1-1")[["OUTPUT_LABEL"]], "Table 14.1.1")
   expect_identical(tfl_report_path(sp, "T-14-1-1"), "T-14-1-1.rtf")
 })
+
+font_spec <- function() tfl_table_spec(
+  study = c(output_path = "out"),
+  report = data.frame(output_id = c(NA, "T-14-1-1", "L-16-2-7"),
+                      type = c("table", NA, "listing")),
+  page = data.frame(output_id = c(NA, "T-14-1-1", "L-16-2-7"),
+                    font = c("Courier New", NA, NA),
+                    font_size_half_points = c("20", NA, "16")))
+
+test_that("the company's font and size are the setup's options(), once", {
+  sp <- font_spec()
+  set <- tfl_report_setup_code(sp)
+  expect_identical(set[1:4], c("options(", '  rtfreporter.font = "Courier New",',
+                               "  rtfreporter.font_size_half_points = 20L", ")"))
+  # a report says none of the study's; its own size it says
+  t <- paste(tfl_report_code(sp, "T-14-1-1", content = "pages", setup = TRUE),
+             collapse = "\n")
+  expect_false(grepl("font", t, fixed = TRUE))
+  l <- paste(tfl_report_code(sp, "L-16-2-7", content = "pages", setup = TRUE),
+             collapse = "\n")
+  expect_false(grepl("font_table", l, fixed = TRUE))
+  expect_match(l, "font_size_half_points = 16L", fixed = TRUE)
+  # standing alone: in its program
+  a <- paste(tfl_report_code(sp, "T-14-1-1", content = "pages"), collapse = "\n")
+  expect_match(a, 'font_table = list(list(name = "Courier New"))', fixed = TRUE)
+  expect_match(a, "font_size_half_points = 20L", fixed = TRUE)
+  # none said: no line
+  expect_false(any(grepl("rtfreporter.font", tfl_report_setup_code(own_spec()),
+                         fixed = TRUE)))
+})
+
+test_that("with the company's font, the setup and a program make the file it alone does", {
+  skip_if_not_installed("rtfreporter", "0.8.2.9025")
+  sp <- font_spec()
+  old <- options(rtfreporter.font = NULL, rtfreporter.font_size_half_points = NULL)
+  on.exit(options(old), add = TRUE)
+  run <- function(code) {
+    env <- new.env(parent = asNamespace("rtfreporter"))
+    env$pages <- rtfreporter::as_rtftables(data.frame(A = "a"))
+    eval(parse(text = code), env)
+    f <- tempfile(fileext = ".rtf")
+    rtfreporter::generate_rtfreport(env$doc, f, overwrite = TRUE)
+    out <- readLines(f, warn = FALSE)
+    unlink(f)
+    out[!grepl("creatim|revtim", out)]
+  }
+  for (id in c("T-14-1-1", "L-16-2-7")) {
+    options(old)
+    alone <- run(tfl_report_code(sp, id, content = "pages"))
+    shared <- run(c(tfl_report_setup_code(sp),
+                    tfl_report_code(sp, id, content = "pages", setup = TRUE)))
+    expect_identical(shared, alone)
+    expect_true(any(grepl("Courier New", shared, fixed = TRUE)))
+  }
+})
