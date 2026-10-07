@@ -603,8 +603,6 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 
 .r_name <- function(x) make.names(tolower(x))
 
-# `obj <- .levels(obj)` when the code lists list a column `derive` makes
-# (NULL otherwise: no line, the code as it was)
 # A condition and another: the second in brackets only when it needs them
 # (an "or", or R that does not read)
 .cond_and <- function(a, b) {
@@ -630,12 +628,20 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   paste0(obj, " <- ", src, " |>\n  ", paste(steps, collapse = " |>\n  "))
 }
 
-# the steps of a derive and of the code lists: transform(...), .levels()
+# the steps of a derive and of the code lists: transform(...), .levels().
+# With code lists, a data made from another is made factors again: the
+# columns it derives, and the values its rows no longer have that the
+# lists do not list (a population's: not the screen failures' arm)
 .derive_steps <- function(derive, levels = NULL) {
   d <- .split_bar(derive)
-  made <- trimws(sub("=.*$", "", d))
   c(if (length(d)) sprintf("transform(%s)", paste(d, collapse = ", ")),
-    if (length(levels) && any(made %in% names(levels))) ".levels()")
+    if (length(levels)) ".levels()")
+}
+
+# `nm <- expr`: a data made for an analysis (with code lists made factors
+# again, as .derive_steps())
+.made_line <- function(nm, expr, levels = NULL) {
+  sprintf(if (length(levels)) "%s <- %s |> .levels()" else "%s <- %s", nm, expr)
 }
 
 # `NAME = expr | NAME = expr` as a transform() call on `obj`
@@ -1082,7 +1088,7 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
         nm <- make.unique(c(taken, dcol[i]), sep = "_")[length(taken) + 1L]
         taken <<- c(taken, nm)
         data_of[[expr]] <<- nm
-        made <<- c(made, sprintf("%s <- %s", nm, expr))
+        made <<- c(made, .made_line(nm, expr, lv))
         return(nm)
       }
       pid <- r$population_id
@@ -1111,7 +1117,7 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
       nm <- make.unique(c(taken, base), sep = "_")[length(taken) + 1L]
       taken <<- c(taken, nm)
       data_of[[expr]] <<- nm
-      made <<- c(made, sprintf("%s <- %s", nm, expr))
+      made <<- c(made, .made_line(nm, expr, lv))
       nm
     }, "")
     names(data_name) <- as.character(rows)

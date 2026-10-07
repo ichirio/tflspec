@@ -10,7 +10,11 @@
   study's program, when a report has code lists, gives each report's part
   its own `.codelists` and reads the data again with them, so a report's
   factors are not the next report's; without code lists it reads the data
-  once, as before.
+  once, as before.  A data made from another (a population, an analysis
+  data, an analysis's own subset) is made factors again as its last step
+  (`|> .levels()`): a value the lists do not have counts only where the
+  data analysed have it (a table of the safety population has no column
+  for the screen failures' arm).
 * **Decimals written once: the `digits` sheet** (#168).  Each statistic's
   decimals (`statistic`, `digits`), for every analysis variable (`variable`
   blank) or a variable's exception (`variable` = its name); a report's rows

@@ -177,7 +177,8 @@ test_that("a report's own subjects, the columns kept, factors of derived columns
   # the numerator kept to the denominator's subjects; add from that data
   expect_true(any(code == "adae_old <- subset(adae, USUBJID %in% adsl_old$USUBJID & TRTEMFL == \"Y\")"))
   expect_true(any(grepl("adsl_old[c(\"USUBJID\", \"TRT01A\")]", code, fixed = TRUE)))
-  expect_true(any(code == "adae_old <- subset(adae_old, select = c(USUBJID, TRT01A, AEBODSYS, AEDECOD))"))
+  expect_true(any(code == paste0("adae_old <- adae_old |>\n  subset(select = c(USUBJID, TRT01A, AEBODSYS, AEDECOD)) |>\n",
+                                 "  .levels()")))
   # the derived column a factor: the report's own code list rows count
   expect_true(any(startsWith(code, "adsl_old <- pop_saf |>") & endsWith(code, " |>\n  .levels()")))
   expect_true(any(grepl("`OLD` = c(\"75+\", \"65-74\")", code, fixed = TRUE)))

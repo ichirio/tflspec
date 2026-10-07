@@ -223,7 +223,7 @@
 }
 
 # The lines that make the analysis data `ids` (in their order); `levels`:
-# the code lists, made factors of the columns a row derives
+# the code lists, each data made factors again (.derive_steps())
 .adata_lines <- function(x, ids, subj, levels = NULL) {
   ad <- .adata_sheet(x)
   out <- character()
@@ -234,7 +234,8 @@
     if (!is.na(r$code %||% NA)) {
       out <- c(out, sprintf("%s <- local({\n%s\n})", id,
                             paste0("  ", strsplit(trimws(r$code), "\n", fixed = TRUE)[[1L]],
-                                   collapse = "\n")))
+                                   collapse = "\n")),
+               if (length(levels)) sprintf("%s <- .levels(%s)", id, id))
       next
     }
     from_data <- r$from %in% ad$data_id
@@ -260,14 +261,15 @@
     add <- .split_bar(r$add)
     keep <- .split_bar(r$keep)
     dis <- .split_bar(r$distinct)
-    # what follows the rows: derived, its code lists, the columns kept, one
-    # row per ... -- in the statement that makes it, unless columns are
+    # what follows the rows: derived, the columns kept, one row per ...,
+    # its code lists -- in the statement that makes it, unless columns are
     # added from the subjects' data first (a join, a statement of its own)
-    rest <- c(.derive_steps(r$derive, levels),
+    rest <- c(.derive_steps(r$derive),
               if (length(keep)) sprintf("subset(select = c(%s))",
                                         paste(unique(c(subj, keep)), collapse = ", ")),
               if (length(dis)) sprintf("dplyr::distinct(%s, .keep_all = TRUE)",
-                                       paste(dis, collapse = ", ")))
+                                       paste(dis, collapse = ", ")),
+              if (length(levels)) ".levels()")
     if (!length(add)) {
       out <- c(out, .make_code(id, base[[1L]], c(base[[2L]], rest)))
       next

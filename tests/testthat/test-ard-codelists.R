@@ -24,6 +24,20 @@ test_that("code lists make the listed columns factors before the analyses", {
   # a value the list does not have comes after the listed ones
   sx <- unique(vapply(ard$variable_level[ard$variable == "SEX"], as.character, ""))
   expect_identical(sx, c("M", "F"))
+  # a value the list does not have counts only where the data analysed have
+  # it: not the rows the population or the condition leave out (a screen
+  # failure's arm in a table of the safety population)
+  sp2 <- exact_spec(list(method = "categorical", dataset = "ADSL",
+                         population_id = "SAF", by = "ARM", where = "ARM != \"Placebo\"",
+                         variables = "SEX"))
+  cl2 <- data.frame(output_id = "T", variable = "ARM", value = "Xanomeline High Dose",
+                    order = "1")
+  expect_true(any(grepl("|> .levels()", tfl_ard_code(sp2, part = "body", codelists = cl2),
+                        fixed = TRUE)))
+  a2 <- suppressMessages(tfl_build_ard(sp2, dir = dir, save = FALSE, codelists = cl2))
+  arms <- unique(vapply(a2$group1_level, function(v) as.character(v[[1L]]), ""))
+  expect_identical(arms[!is.na(arms)][1:2], c("Xanomeline High Dose", "Xanomeline Low Dose"))
+  expect_false("Placebo" %in% arms)
   # without code lists: as before
   plain <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE))
   expect_false(any(vapply(plain$variable_level[plain$variable == "AGEGR1"],
