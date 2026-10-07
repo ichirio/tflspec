@@ -1,5 +1,16 @@
 # tflspec (development version)
 
+* **The arguments' help says when to use them** (#160).  For the
+  functions used most -- the common `id`, `denominator`, `include`,
+  `strata`; `ard_stack()`'s `.overall`, `.missing`, `.attributes`,
+  `.total_n`; `ard_stack_hierarchical()`'s `variables`, `over_variables`,
+  `overall`, `include`, `attributes`, `total_n`, `by_stats`;
+  `ard_tabulate_value()`'s and `ard_categorical_ci()`'s `value` -- the hint
+  of `tfl_ard_args()` gains a sentence of use ("Use it for a Total
+  column"), and `attributes` says where the label goes.  The
+  statistic N is labelled "Number of non-missing values" (it read "n (...)",
+  next to the categorical n).
+
 * **The design concept, written down** (#154).  The README has a
   "Concept" section: readable code from a spec, the typical cases kept
   simple, R code inside the spec, shared setup code and per-report
