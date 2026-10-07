@@ -9,9 +9,9 @@ test_that("a table spec is written with its sheets only, a report spec with its"
   tfl_write_report_spec(sp, rf)
   # both halves hold rows here: each writer still writes its own half (and
   # the other's sheets only when they hold rows -- so nothing is dropped)
-  expect_identical(readxl::excel_sheets(tf)[1:10],
-                   c("study", "tables", "variables", "codelists", "cells", "layout",
-                     "columns", "style", "cell_styles", "col_header"))
+  expect_identical(readxl::excel_sheets(tf)[1:11],
+                   c("study", "tables", "variables", "codelists", "cells", "digits",
+                     "layout", "columns", "style", "cell_styles", "col_header"))
   expect_identical(readxl::excel_sheets(rf)[1:7],
                    c("study", "report", "page", "header", "footer",
                      "titles", "footnotes"))
@@ -19,8 +19,8 @@ test_that("a table spec is written with its sheets only, a report spec with its"
   t_only <- tfl_read_table_spec(ex("DM.xlsx"))
   tfl_write_table_spec(t_only, tf)
   expect_identical(readxl::excel_sheets(tf),
-                   c("study", "tables", "variables", "codelists", "cells", "layout",
-                     "columns", "style", "cell_styles", "col_header",
+                   c("study", "tables", "variables", "codelists", "cells", "digits",
+                     "layout", "columns", "style", "cell_styles", "col_header",
                      "about"))
   expect_false(any(startsWith(readxl::excel_sheets(tf), "_")))
   # its study sheet shows the table's key, not the report's
