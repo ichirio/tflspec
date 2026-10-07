@@ -132,3 +132,20 @@ test_that("each report's section: the heading row above it, or its own column", 
   # not part of the spec
   expect_false("section" %in% names(sp3$report))
 })
+
+test_that("each report's datasets: its datasets column, as one value", {
+  f <- toc_csv(c("No.,Title,Data",
+                 "T-1,One,\"ADSL, ADAE\"",
+                 "T-2,Two,ADSL / ADVS",
+                 "T-3,Three,"))
+  sp <- tfl_read_toc(f, map = c(output_id = "No.", title = "Title", datasets = "Data"))
+  expect_identical(attr(sp, "datasets"),
+                   c(`T-1` = "ADSL | ADAE", `T-2` = "ADSL | ADVS", `T-3` = NA))
+  expect_false("datasets" %in% names(sp$report))
+  # none mapped: NA for each
+  sp2 <- tfl_read_toc(f, map = c(output_id = "No.", title = "Title"))
+  expect_true(all(is.na(attr(sp2, "datasets"))))
+  expect_identical(.toc_datasets(c("ADSL;ADAE", "ADSL ADSL", NA)), c("ADSL | ADAE", "ADSL", NA))
+  expect_error(tfl_read_toc(f, map = list(output_id = "No.", datasets = c("Data", "Title"))),
+               "one column")
+})
