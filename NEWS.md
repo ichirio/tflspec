@@ -1,5 +1,8 @@
 # tflspec (development version)
 
+* Added a root `CITATION.cff` so GitHub's "Cite this repository" button
+  works (#156).
+
 * **The ARD program as a person writes it** (#150).  A data is made in one
   statement -- its condition, derive, code lists, the columns kept
   (`subset(select = )`) and one row per (`dplyr::distinct()`) as a pipe --
