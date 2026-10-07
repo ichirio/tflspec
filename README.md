@@ -1,4 +1,4 @@
-# tflspec
+# tflspec <img src="man/figures/logo.png" align="right" height="120" alt="tflspec logo: a spec sheet turning into R code" />
 
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
