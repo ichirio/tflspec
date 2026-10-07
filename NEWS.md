@@ -1,5 +1,14 @@
 # tflspec (development version)
 
+* **The ARD program as a person writes it** (#150).  A data is made in one
+  statement -- its condition, derive, code lists, the columns kept
+  (`subset(select = )`) and one row per (`dplyr::distinct()`) as a pipe --
+  instead of a copy changed line by line; one condition after the
+  subjects' is not put in brackets; an analysis data that is an analysis
+  set and nothing else is made under its own name
+  (`adsl_saf <- adsl |> subset(SAFFL == "Y") |> transform(TRTA = TRT01A)`)
+  when the program uses the set for nothing else.  The data are the same.
+
 * **`tfl_read_toc()`: each report's section** (#145).  The TOC's heading
   rows ("14.1 Demographics") were passed over; each report's section is
   now `attr(, "sections")` (named by output id): the last heading row
