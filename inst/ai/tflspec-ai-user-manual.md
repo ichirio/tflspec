@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9052** (the development version,
+**This manual documents tflspec 0.0.24.9063** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -181,7 +181,7 @@ argument is written in one place: a column, or `args`, never both.
 | `study` | `key`, `value` | `id`: the subject key (`USUBJID`); `output`: where the study ARD goes (`output/ard/ard.rds`); `source`: R files of the study's own analysis functions, relative to the study folder (`|` between them) |
 | `datasets` | `dataset`, `level`, `path`, `derive` | a name for the data, its level (`SDTM` / `ADaM`), its file relative to the study folder, new columns (`NAME = R expression`, `|` between them) |
 | `populations` | `population_id`, `dataset`, `where`, `derive` | an analysis set: the subjects of `dataset` for which `where` (R) holds; `derive` adds columns (`TRTA = TRT01A`) |
-| `analysis_data` | `data_id`, `label`, `from`, `population_id`, `subjects`, `where`, `add`, `derive`, `keep`, `distinct`, `code` | named data the analyses read (the study's): made `from` a dataset or an analysis data above, kept to a population's subjects and the records `where` keeps, with columns of the population's data added by the subject key (`add`), columns derived, and one row per set of values (`distinct`: `USUBJID | APHASE`, a denominator per subject and phase) -- in that order; `subjects` (instead of `population_id`) keeps the subjects of an analysis data above, a report's own subjects (the numerator kept to the denominator's), and `keep` the columns kept (with `derive`, transmute()). `data_id` is the object's name in the ARD program (lower case, not a dataset's or `pop_*`). When the columns cannot say it, `code` is R that makes the data itself (its value is the data; the datasets, `pop_*` and the analysis data above are in reach); then the other columns but `from` stay blank |
+| `analysis_data` | `output_id`, `data_id`, `label`, `from`, `population_id`, `subjects`, `where`, `add`, `derive`, `keep`, `distinct`, `code` | named data a report's analyses read (a report's, by `output_id`: the same `data_id` may mean something else in another report; a row names only its own report's rows above it): made `from` a dataset or an analysis data above, kept to a population's subjects and the records `where` keeps, with columns of the population's data added by the subject key (`add`), columns derived, and one row per set of values (`distinct`: `USUBJID | APHASE`, a denominator per subject and phase) -- in that order; `subjects` (instead of `population_id`) keeps the subjects of an analysis data above, a report's own subjects (the numerator kept to the denominator's), and `keep` the columns kept (with `derive`, transmute()). `data_id` is the object's name in the ARD program (lower case, not a dataset's or `pop_*`). When the columns cannot say it, `code` is R that makes the data itself (its value is the data; the datasets, `pop_*` and the analysis data above are in reach); then the other columns but `from` stay blank |
 | `analyses` | `output_id`, `analysis_id`, `label`, `method`, `data`, `dataset`, `population_id`, `where`, `by`, `strata`, `variables`, `statistics`, `denominator`, `formats`, `args`, `code`, `purpose`, `reason` | one analysis a row; both ids become ARD columns; `purpose` / `reason` (CDISC terms) only for `tfl_ars()` |
 
 - `method`: a keyword — `continuous`, `categorical`, `dichotomous`,
@@ -326,7 +326,7 @@ once. The `study` sheet has `key` / `value` (`rounding`: `sas` / `iec` /
 | `rows` | `table_plan(rows = )` | `name = column`; a quoted value is a constant heading |
 | `label` | `table_plan(label = )` | blank keeps `.label`; `NA` builds then drops; `NULL` leaves out |
 | `stats` | `plan_cells(stats = )` | `cells` (default: a cell from a template) or `rows` (one statistic a row, the raw values) |
-| `value` | `plan_cells(value = )` | which column a cell's values come from: `stat` (the number; default) or `stat_fmt` (cards' formatted text). **Not** a template: templates are `cells$template` |
+| `value` | `plan_cells(value = )` | which of the ARD's values the table prints: `stat` (the number, rounded here by the `digits` sheet; default) or `stat_fmt` (the ARD's own text: no digits set here). For `cells` templates too; a row may say otherwise (`{mean:stat_fmt}`, `{mean:.1f}`). **Not** a template: templates are `cells$template` |
 | `na` | `plan_cells(na = )` | what a cell no template could fill prints |
 | `sep` | `plan_columns(sep = )` | what joins several column keys into a column name (default `____`) |
 | `sort` | `plan_sort()` | `TRUE`, `FALSE`, or keys in order, `-` for descending |
@@ -336,7 +336,9 @@ once. The `study` sheet has `key` / `value` (`rounding`: `sas` / `iec` /
 **variables**: `variable`, `label`, `order`, `levels` (`Grade 0 | Grade 1`), `empty_levels` (`hide`: no row for a value no record has; blank: a 0 row)
 → `plan_labels()`, `plan_levels()`.
 
-**codelists** (the study's code list, one row a value): `variable`, `value`, `label`, `order` → `plan_labels(SEX = c(SEX = "Sex", F = "Female"))` and `plan_levels(SEX = c("M", "F"))`. A report's own rows replace the defaults of the same variable / value; a variable's `levels` on the `variables` sheet, when given, is the order instead. `tfl_ard_code(codelists = )` makes factors of the listed columns before any analysis (derived columns too); for one report, with its own rows.
+**codelists** (a report's code lists, one row a value): `output_id`, `variable`, `value`, `label`, `order` → `plan_labels(SEX = c(SEX = "Sex", F = "Female"))` and `plan_levels(SEX = c("M", "F"))`. Every row names its report: a blank `output_id` is an error (no study-wide rows; copy the rows into each report). A variable's `levels` on the `variables` sheet, when given, is the order instead. The code list of `variable` (the ARD's column; `value` a variable's name, `label` its label: `variable / AGE / Age (years)`) gives the variables' labels where the `variables` sheet's `label` is blank; it is not an order. `tfl_ard_code(codelists = )` makes factors, before any analysis, of the listed columns the report's analyses read (`by`, `strata`, `variables`, names in `args` / `code` / `post`; derived columns too); in the study's program each report's part has its own `.codelists` and reads its data with them.
+
+**digits** (each statistic's decimals, once): `variable` (blank: every analysis variable; a name: its exception), `statistic` (`mean`, `sd`, `p` a percent ...), `digits` → written into the templates' tokens that say no format (`{mean} ({sd})` → `{mean:.1f} ({sd:.2f})`). A template's own format or a `cells` row's `digits` wins; a table of `tables$value = stat_fmt` (the ARD's own text) is not rounded here.
 
 **cells**: `variable`, `context`, `row`, `when`, `template`, `digits`,
 `signif` → `plan_cells()`. A row with `variable` blank is the table's
@@ -415,9 +417,9 @@ file.
 | Sheet | Columns |
 |---|---|
 | `report` | `type` (`table` / `listing` / `figure` / `user`: the report's own code leaves `content`), `file` (`{output_id}.rtf`), `program`, `auto_section`, `section_align`, `auto_title`, `title_align`, `table_font_size_half_points`, `title_font_size_half_points`, `footnote_font_size_half_points`, `page_header`, `page_footer`, `watermark` (`DRAFT`), `figure_width_in`, `figure_height_in` |
-| `page` | `paper_size`, `orientation`, `width_in`, `height_in`, margins `margin_*_in`, `header_dist_in`, `footer_dist_in`, `font_size_half_points`, `title_format`, `footnote_format`, `title_width`, `footnote_width`, `markup` |
+| `page` | `paper_size`, `orientation`, `width_in`, `height_in`, margins `margin_*_in`, `header_dist_in`, `footer_dist_in`, `font` (the document's font; the study's row goes to the setup's `options()`), `font_size_half_points`, `title_format`, `footnote_format`, `title_width`, `footnote_width`, `markup` |
 | `header`, `footer`, `titles`, `footnotes` | `line`, `left`, `center`, `right` — a report's line replaces the default line of the same number; a report's line that says `(none)` takes it out |
-| `tokens` | `name`, `value` — a token of one's own, `{STUDY}` in any of the cells above (`rtf_document(tokens = )`); a report's row replaces the default of the same name, `(none)` takes it out; names upper case, not rtfreporter's own |
+| `tokens` | `name`, `value` — a token of one's own, `{STUDY}` in any of the cells above (`rtf_document(tokens = )`); a report's row replaces the default of the same name, `(none)` takes it out; names upper case, not rtfreporter's own. A report's own tokens work without a row: `{OUTPUT_ID}`, `{OUTPUT_LABEL}` ("Table 14.1.1" from the ID; rows `OUTPUT_KIND_TABLE` / `_LISTING` / `_FIGURE` change the words), `{OUTPUT_TITLE}` `{OUTPUT_POPULATION}` `{OUTPUT_SECTION}` `{STUDY_ID}` (blank unless a row gives them); a line left with only empty tokens is not printed. What every report shares (the default token rows, the default header / footer) can be written once: `tfl_report_setup_code(spec)` (`options(rtfreporter.tokens = )`, `study_header`, `study_footer`), and each program with `tfl_report_code(..., setup = TRUE)` |
 
 Page tokens in the running header / footer: `{PAGE}`, `{TOTAL_PAGES}`,
 `{PROGRAM}` (or `{PROGRAM_FULL}`, its absolute path), `{DATETIME}`.
@@ -440,7 +442,7 @@ tfl_write_specs("spec/report.xlsx", report = sp)
 
 - `map` names are the fields (`output_id` required; `type`, `title`,
   `population`, `footnote`, `program`, `file`, `note`, `section`,
-  `datasets`); values are the
+  `datasets`, `label`); values are the
   TOC's column names, matched ignoring case. A missing column names the
   closest ones.
 - `title` / `footnote`: one column or several; a cell's line breaks or
@@ -457,6 +459,7 @@ tfl_write_specs("spec/report.xlsx", report = sp)
 - Each report's datasets are `attr(, "datasets")` (named by output id;
   `NA` for none): its `datasets` column, "ADSL, ADAE" or "ADSL / ADAE" as
   `"ADSL | ADAE"`. Not part of the spec either.
+- `attr(, "labels")` (the map's `label`: the ID as printed), `attr(, "first_titles")`, `attr(, "populations")`: for a report list to write the report's own tokens.
 
 ---
 
@@ -618,7 +621,7 @@ back): rename the value or choose another separator.
 `tfl_as_table_spec`
 
 **Report spec:** `tfl_read_report_spec` `tfl_read_toc` `tfl_report` `tfl_report_code`
-`tfl_report_path`
+`tfl_report_path` `tfl_report_setup_code` `tfl_report_tokens`
 
 **Listing spec:** `tfl_listing_spec` `tfl_read_listing_spec`
 `tfl_write_listing_spec` `tfl_listing` `tfl_listing_code`

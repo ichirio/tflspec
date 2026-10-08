@@ -6,6 +6,128 @@
   ARD spec, the table spec, reports, listings, figures and ARS, and a
   reference index grouped by the workflow.
 
+* **A report's own font** (#176).  A report's row of `page` that says its
+  `font` (or size) wins over the company's: its program says it, with the
+  setup and alone, and the file is in it.  A test now holds it; nothing
+  else changes.
+
+* **The company's font, said once** (#174).  The `page` sheet gains
+  `font`, the document's font (`rtf_document(font_table = )`).  The study's
+  row (blank `output_id`) of `font` and `font_size_half_points` is the
+  company's: `tfl_report_setup_code()` writes it once as
+  `options(rtfreporter.font = , rtfreporter.font_size_half_points = )`, and
+  a report's program written with `setup = TRUE` leaves them to it (a
+  report's own it still says).  Blank: no line, rtfreporter's own
+  (Courier, 9 pt).  A program standing alone says them itself; the file
+  is the same either way.
+* **Figure code in the style of a study's other programs** (#164).  Every
+  generated figure script (the designer's templates, the `pp_*` types)
+  pipes with `|>` (the dplyr verbs stay); its parts are one line each
+  (`# ---- data ----`, `# ---- the figure ----`, `# ---- saving the figure
+  ----`) instead of `#####` Step banners; `filter(a) |> filter(b)` is
+  `filter(a, b)`; the palette is two short lines.
+  `tfl_fig_design_code()` gains `setup` (the palette from the study's
+  figure setup, `tfl_colours()`), `save` (`FALSE`: no PNG) and `name`
+  (what the figure is called): a report program gets its figure as
+  `plot` directly.  A composed figure's panels are made as `fig_<name>`.
+  The figures drawn are the same (all 38 templates).
+* **A code list of `variable`: the variables' labels** (#172).  Its
+  values are the variables' names (the ARD's `variable` column) and its
+  labels what they print as: `variable / AGE / Age (years)`.  The variables
+  sheet's `label`, when given, wins; it is not an order (the rows follow
+  the variables sheet).  A label is a report's, like its code lists.
+
+* **A code list is a report's** (#170).  Every `codelists` row names its
+  report: a blank `output_id` is an error, in a table definition and in
+  `tfl_ard_code(codelists = )` (no study-wide rows; a sheet made before
+  this version gives its rows their report).  A report's ARD program, and
+  its fingerprint, take only its code lists of the variables its analyses
+  read (`by`, `strata`, `variables`, the names in `args`, `code` and
+  `post`): a variable its tables only show is not made a factor.  The
+  study's program, when a report has code lists, gives each report's part
+  its own `.codelists` and reads the data again with them, so a report's
+  factors are not the next report's; without code lists it reads the data
+  once, as before.  A data made from another (a population, an analysis
+  data, an analysis's own subset) is made factors again as its last step
+  (`|> .levels()`): a value the lists do not have counts only where the
+  data analysed have it (a table of the safety population has no column
+  for the screen failures' arm).
+* **Decimals written once: the `digits` sheet** (#168).  Each statistic's
+  decimals (`statistic`, `digits`), for every analysis variable (`variable`
+  blank) or a variable's exception (`variable` = its name); a report's rows
+  replace the defaults.  A template's tokens that say no format take them
+  (`{mean} ({sd})` with mean 1, sd 2 is `{mean:.1f} ({sd:.2f})`; `p`, a
+  percent, `{p:.1f%}`); a variable with an exception and no rows of its
+  own gets the kind's rows with its decimals.  A template's own format
+  and a `cells` row's `digits` win.  `tables$value` now says which of the
+  ARD's values a table prints for its cells too: `stat` (rounded here) or
+  `stat_fmt` (the ARD's own text: the `digits` sheet does not apply).  The
+  generated code is `plan_cells()` as before.
+
+* **An analysis data is a report's** (#166).  `analysis_data` has an
+  `output_id` column, first: the key is the report and the name, so the
+  same `data_id` may mean something else in another report (a Phase I
+  table's adsl_saf and a Phase II table's).  A row's `from` and `subjects`
+  name its own report's rows above it, an analysis's `data` and
+  `denominator` its own report's; the checks say so, and a blank
+  `output_id` is an error (a sheet made before this version is the study's:
+  give its rows their report).  A report's program is as it was; the
+  study's is one part a report after the datasets and populations, each
+  part making its own analysis data before its analyses.  The fingerprint,
+  ARS and `tfl_ard_as_custom()` read the report's rows.
+
+* **A report's own tokens, and one header for every report** (#148).
+  - A report's header, footer, titles and footnotes may say
+    `{OUTPUT_ID}`, `{OUTPUT_LABEL}`, `{OUTPUT_TITLE}`,
+    `{OUTPUT_POPULATION}`, `{OUTPUT_SECTION}` and `{STUDY_ID}`.
+    `{OUTPUT_LABEL}` is made from the ID ("T-14-1-1" -> "Table 14.1.1":
+    the kind from its first letter T / L / F, else the report's type; the
+    number from its first digit, separators made dots); tokens rows
+    `OUTPUT_KIND_TABLE` / `_LISTING` / `_FIGURE` give other words.  The
+    others are blank unless the tokens sheet gives them (a report list
+    writes them from a TOC).  A row of the tokens sheet always wins.
+  - They go to `rtf_document(tokens = )` only when the report says one: a
+    report that says none is written as before.
+  - A band line left with nothing but empty tokens (and brackets:
+    `<{OUTPUT_POPULATION}>`) is not printed.
+  - `tfl_report_setup_code()` writes what a study's reports share, once:
+    its tokens (the tokens sheet's default rows) as
+    `options(rtfreporter.tokens = )`, its header and footer as
+    `study_header` / `study_footer` (with `drop_empty_rows = TRUE`, so a
+    line a report's tokens leave empty is not printed).
+    `tfl_report_code(setup = TRUE)` then uses those by name and gives the
+    document only the report's own tokens; a report with its own header
+    writes it as before.  The file is the same as the program alone.
+    Needs rtfreporter 0.8.2.9025.
+  - `tfl_report_tokens()`: a report's tokens as its program gives them
+    (for a preview of its page).
+  - `tfl_read_toc()`: a `label` field in the map, and the attributes
+    `labels`, `first_titles` and `populations` for a report list's tokens.
+  - A spec of study defaults only, scoped to a report, is that report's
+    (its `{output_id}` file name and its own tokens were blank).
+
+* **The arguments' help says when to use them** (#160).  For the
+  functions used most -- the common `id`, `denominator`, `include`,
+  `strata`; `ard_stack()`'s `.overall`, `.missing`, `.attributes`,
+  `.total_n`; `ard_stack_hierarchical()`'s `variables`, `over_variables`,
+  `overall`, `include`, `attributes`, `total_n`, `by_stats`;
+  `ard_tabulate_value()`'s and `ard_categorical_ci()`'s `value` -- the hint
+  of `tfl_ard_args()` gains a sentence of use ("Use it for a Total
+  column"), and `attributes` says where the label goes.  The
+  statistic N is labelled "Number of non-missing values" (it read "n (...)",
+  next to the categorical n).
+
+* **The design concept, written down** (#154).  The README has a
+  "Concept" section: readable code from a spec, the typical cases kept
+  simple, R code inside the spec, shared setup code and per-report
+  values, spec -> code one way.  Docs only.
+
+* **A hex logo, shared with rtfreporter and tflplanner** (#158), made with
+  the site's favicons by `data-raw/logo.R`.
+
+* Added a root `CITATION.cff` so GitHub's "Cite this repository" button
+  works (#156).
+
 * **`tfl_read_toc()`: each report's datasets** (#149).  A new field of the
   map, `datasets`: each report's datasets are `attr(, "datasets")` (named
   by output id), "ADSL, ADAE", "ADSL / ADAE" or one a line as

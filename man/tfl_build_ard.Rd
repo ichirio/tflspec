@@ -26,16 +26,18 @@ tfl_build_ard(
 \item{statistics, methods}{The catalogs (\code{\link[=tfl_ard_statistics]{tfl_ard_statistics()}},
 \code{\link[=tfl_ard_methods]{tfl_ard_methods()}}) to use instead of the current ones.}
 
-\item{codelists}{The study's code lists: a table definition (its
-\code{codelists} sheet) or a data frame with \code{variable}, \code{value}, \code{order}
-and optionally \code{output_id}.  The study rows (a blank \code{output_id})
-count; for one report (\code{output_id} one value) its own rows too, which
-replace the study's of the same variable and value.  Each listed
-column of every dataset read, and of the populations and analysis
-data that derive it, becomes a factor in that order before any analysis
-(a value the list does not have comes after, alphabetically), so the
-ARD keeps the order and counts a level no record has (\code{n = 0}).
-\code{NULL} (default): the data as read.}
+\item{codelists}{The reports' code lists: a table definition (its
+\code{codelists} sheet) or a data frame with \code{output_id}, \code{variable},
+\code{value} and \code{order}.  A code list is a report's: every row names its
+report (a blank \code{output_id} stops).  A report's rows of the variables
+its analyses read (\code{by}, \code{strata}, \code{variables}, and the names in
+\code{args}, \code{code} and \code{post}) count: each such column of the data the
+report reads, and of the populations and analysis data that derive it,
+becomes a factor in that order before any analysis (a value the list
+does not have comes after, alphabetically), so the ARD keeps the order
+and counts a level no record has (\code{n = 0}).  In the study's program,
+when a report has code lists, each report's part reads its data again
+with its own.  \code{NULL} (default): the data as read.}
 }
 \value{
 The ARD (with \code{output_id}, \code{analysis_id}, \code{population_id}),

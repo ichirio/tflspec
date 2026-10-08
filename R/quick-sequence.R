@@ -15,7 +15,7 @@ pp_seq_header <- function(pid, what, title, libs) {
 
 pp_seq_save <- function(pid, width, height, dpi, units) {
   fp <- getOption("tflspec.fig_path") %or% pp_default_options()$fig_path
-  c(section("Step3: Saving the figure"),
+  c(section("saving the figure"),
     sprintf("fig_path   <- %s", gsub("{plot_id}", pid, fp, fixed = TRUE)),
     sprintf("fig_width  <- %s", format(width)),
     sprintf("fig_height <- %s", format(height)),
@@ -54,7 +54,7 @@ pp_seq_data <- function(adam, data, pop, id, stage, category, palette) {
     paste0("cat_levels <- unique(seq_df$", category, "[order(seq_df$", stage, ")])\n",
            "pal_cat <- setNames(", vec_code(pal), "[seq_along(cat_levels)], cat_levels)")
   }
-  c(section("Step1: Preparing Analysis Data"),
+  c(section("data"),
     if (rhs != ds) sprintf("%s <- %s", ds, rhs) else sprintf("# Input data frame: %s (one row per subject and %s)", ds, stage),
     "",
     pipe_code("seq_df", list(ds, if (!is.null(pop)) sprintf('filter(%s == "Y")', pop))),
@@ -122,7 +122,7 @@ tfl_fig_sankey <- function(adam = NULL, style = c("grey_links", "colored_links",
     pp_seq_header(plot_id, "Sankey diagram of treatment sequences (tflspec::tfl_plot_sankey)", title, libs),
     pp_seq_data(adam, data, pop, id, stage, category, palette),
     "",
-    section("Step2: Making a figure"),
+    section("the figure"),
     "# nodes: one per line x category (n = subjects); links: subjects moving to the next line",
     plot, "fig",
     "",
@@ -154,7 +154,7 @@ tfl_fig_sunburst <- function(adam = NULL, style = "rings",
                   c("dplyr", "ggplot2", "tflspec")),
     pp_seq_data(adam, data, pop, id, stage, category, palette),
     "",
-    section("Step2: Making a figure"),
+    section("the figure"),
     "# one row per treatment sequence (L1, L2, ...) with its number of subjects",
     sprintf("paths <- tfl_sunburst_data(seq_df, id = %s, stage = %s, category = %s)", q(id), q(stage), q(category)),
     paste0("p <- tfl_plot_sunburst(\n",

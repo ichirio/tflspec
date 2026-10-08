@@ -99,7 +99,7 @@
     height_in = "num", margin_top_in = "num", margin_bottom_in = "num",
     margin_left_in = "num", margin_right_in = "num",
     header_dist_in = "num", footer_dist_in = "num",
-    font_size_half_points = "int", title_format = "text",
+    font = "text", font_size_half_points = "int", title_format = "text",
     footnote_format = "text", title_width = "text",
     footnote_width = "text", markup = "text"),
   header    = c(line = "int", left = "text", center = "text", right = "text"),
@@ -192,6 +192,9 @@
     codelists = c("output_id", "variable", "value", "label", "order"),
     cells     = c("output_id", "variable", "context", "row", "when",
                   "template", "digits", "signif"),
+    # the statistics' decimals: every analysis variable's (variable blank),
+    # and the exceptions of one variable
+    digits    = c("output_id", "variable", "statistic", "digits"),
     # the table half: what as_rtftables() / rtftable() are told, read by
     # tfl_table_plan() and resolved like the plan's own verbs
     layout    = c("output_id", names(.ard_spec_types$layout)),
@@ -222,6 +225,7 @@
                        variables = "variable",
                        codelists = c("variable", "value"),
                        cells     = c("variable", "context", "row"),
+                       digits    = c("variable", "statistic"),
                        layout    = character(),
                        columns   = "column",
                        style     = character(),
@@ -329,8 +333,8 @@
         ".\n  One row per report; merge them."))
     }
   }
-  for (sh in c("variables", "codelists", "columns", "header", "footer",
-                "titles", "footnotes", "tokens")) {
+  for (sh in c("variables", "codelists", "digits", "columns", "header",
+                "footer", "titles", "footnotes", "tokens")) {
     v <- sp[[sh]]
     if (is.null(v)) next
     key <- .ard_spec_keys[[sh]]
@@ -483,6 +487,7 @@
 #' | `tables` | report | the roles and the table-wide options |
 #' | `variables` | variable | display label, order, level order |
 #' | `cells` | line of a cell | template, guard, digits |
+#' | `digits` | statistic | its decimals, for every variable or one |
 #' | `layout` | report | pages, groups, blank rows, stub |
 #' | `columns` | printed column | width, row title, decimal split, hidden |
 #' | `style` | report | border, row heights, font |
@@ -575,11 +580,28 @@
 #'     when comma-separated: `1,2` for `{mean} ({sd})`.}
 #'   \item{`signif`}{Significant digits; wins over `digits`.}
 #' }
+#' A token with no format and no `digits` takes its statistic's decimals
+#' from the `digits` sheet.
+#'
 #' For a `stats = rows` table (one statistic per row, the raw value in the
 #' cell) a row with **no template** is instead that statistic's display
 #' format: `row` names the statistic as the label column prints it (`N`,
 #' `Mean`) and `digits` / `signif` say how many, for every value column
 #' (`plan_digits(.rows = c(Mean = 2, SD = "3s"))`).
+#'
+#' @section `digits`:
+#' The decimals of each statistic, so that a template is written once
+#' (`{mean} ({sd})`) and the decimals once:
+#' \describe{
+#'   \item{`variable`}{Blank: every analysis variable (the table's rule).  A
+#'     variable: its exception, over the rule.}
+#'   \item{`statistic`}{The statistic, as the ARD names it: `mean`, `sd`,
+#'     `p` (a percent: `1` prints `61.6`) ...}
+#'   \item{`digits`}{Its decimals, a whole number.}
+#' }
+#' A token of a template that says its own format (`{mean:.2f}`) or the
+#' row's `digits` win.  A table of `tables$value = stat_fmt` prints the
+#' ARD's own text (`stat_fmt`): the sheet does not apply to it.
 #'
 #' @section `layout`:
 #' One row per report, each column one argument of the plan verb its
@@ -690,7 +712,7 @@
 #' `about` sheet (`key` / `value`) may state `spec_version`; sheets whose
 #' name starts with `_` are ignored.
 #'
-#' @param tables,variables,cells,layout,columns,style,col_header,cell_styles
+#' @param tables,variables,cells,digits,layout,columns,style,col_header,cell_styles
 #'   Data frames with the columns above; missing columns are added as `NA`.
 #' @param report,page,header,footer,titles,footnotes,tokens The report sheets, as
 #'   data frames with the columns [tfl_read_report_spec()] describes.  `tables` may instead be a named list of the
@@ -712,7 +734,7 @@ tfl_table_spec <- function(tables = NULL, variables = NULL, cells = NULL,
                        style = NULL, col_header = NULL, report = NULL,
                        page = NULL, header = NULL, footer = NULL,
                        titles = NULL, footnotes = NULL, cell_styles = NULL,
-                       tokens = NULL) {
+                       tokens = NULL, digits = NULL) {
   if (inherits(tables, "tfl_table_spec")) return(tables)
   if (is.data.frame(tables) && "template" %in% names(tables) &&
       is.null(variables) && is.null(cells)) {
@@ -723,7 +745,8 @@ tfl_table_spec <- function(tables = NULL, variables = NULL, cells = NULL,
                style = style, cell_styles = cell_styles,
                col_header = col_header, report = report,
                page = page, header = header, footer = footer,
-               titles = titles, footnotes = footnotes, tokens = tokens)
+               titles = titles, footnotes = footnotes, tokens = tokens,
+               digits = digits)
   if (is.list(tables) && !is.data.frame(tables)) {
     x <- tables
     bad <- setdiff(names(x), c("study", names(.ard_spec_schema())))
@@ -748,6 +771,8 @@ tfl_table_spec <- function(tables = NULL, variables = NULL, cells = NULL,
     }
   }
   .ard_spec_check_tokens(sp$tokens)
+  .codelists_check(sp$codelists)
+  .ard_spec_check_digits(sp$digits)
   chk(t$stats, c("cells", "rows"), "stats")
   chk(t$value, c("stat", "stat_fmt"), "value")
   if (any(is.na(sp$variables$variable))) {
@@ -841,7 +866,14 @@ print.tfl_table_spec <- function(x, ...) {
     if (!length(ids)) return(sp)
     output_id <- ids
   }
-  if (!length(ids)) return(sp)          # a file of defaults serves any report
+  if (!length(ids)) {
+    # a file of defaults serves any report -- it is this one's (its
+    # {output_id}, its own tokens)
+    if (is.character(output_id) && length(output_id) == 1L && !is.na(output_id)) {
+      attr(sp, "output_id") <- output_id
+    }
+    return(sp)
+  }
   if (!is.character(output_id) || length(output_id) != 1L ||
       is.na(output_id)) {
     .ard_stop("`output_id` must be a single string.")
@@ -863,10 +895,16 @@ print.tfl_table_spec <- function(x, ...) {
       "\n  The file defines: %s"),
       sQuote(output_id), paste(sQuote(ids), collapse = ", ")))
   }
+  tokens_study <- character()
+  page_study <- character()
+  bands_own <- c(header = FALSE, footer = FALSE)
   for (s in names(.ard_spec_schema())) {
     d <- sp[[s]]
     d <- d[is.na(d$output_id) | d$output_id == output_id, , drop = FALSE]
     mine <- !is.na(d$output_id)
+    # a header or footer of the report's own (not the study's): written in
+    # its program, not left to the study's setup (tfl_report_setup_code())
+    if (s %in% names(bands_own)) bands_own[[s]] <- any(mine)
     if (!length(.ard_spec_keys[[s]])) {
       # one row: the report's own values over the defaults, column by column
       if (sum(mine) && sum(!mine)) {
@@ -881,12 +919,35 @@ print.tfl_table_spec <- function(x, ...) {
       k <- .ard_spec_rowkey(d, s)
       d <- d[mine | !(k %in% k[mine]), , drop = FALSE]
     }
+    # the study's tokens (its default rows, no report's own): the ones a
+    # program may leave to options(rtfreporter.tokens = ) (tfl_report_setup_code())
+    if (identical(s, "tokens")) tokens_study <- trimws(d$name[is.na(d$output_id)])
+    # the page's font and size the study's row gives and the report's does
+    # not: left to the setup's options() (tfl_report_setup_code())
+    if (identical(s, "page")) page_study <- .page_study_cols(sp[[s]], output_id)
     d$output_id <- rep(output_id, nrow(d))
     rownames(d) <- NULL
     sp[[s]] <- d
   }
   attr(sp, "output_id") <- output_id
+  attr(sp, "tokens_study") <- tokens_study
+  attr(sp, "page_study") <- page_study
+  attr(sp, "bands_own") <- bands_own
   sp
+}
+
+# The study-wide options of the page sheet, rtfreporter's options they are
+.page_options <- c(font = "rtfreporter.font",
+                   font_size_half_points = "rtfreporter.font_size_half_points")
+
+# Of the page's study-wide options, the ones the study's row (blank
+# `output_id`) says and the report's own row does not
+.page_study_cols <- function(d, output_id) {
+  said <- function(rows) {
+    names(.page_options)[vapply(names(.page_options), function(cn)
+      !is.null(d[[cn]]) && any(!is.na(d[[cn]][rows]) & nzchar(trimws(d[[cn]][rows]))), NA)]
+  }
+  setdiff(said(is.na(d$output_id)), said(d$output_id %in% output_id))
 }
 
 # `a | b | c` -> c("a", "b", "c")
@@ -1000,12 +1061,25 @@ print.tfl_table_spec <- function(x, ...) {
 # plan_labels(): a variable's label (variables$label) and, from the code
 # list, its values' text -- one entry a variable, since one key cannot hold
 # both: SEX = c(SEX = "Sex", F = "Female"), the variable's own name its
-# label (rtfreporter#514).
+# label (rtfreporter#514).  The code list of `variable` (the ARD's column:
+# its values the variables' names) gives a variable's label where the
+# variables sheet gives none.
 .ard_spec_labels <- function(sp) {
   v <- .ard_spec_variables(sp)
   v <- v[!is.na(v$label), , drop = FALSE]
   out <- if (nrow(v)) as.list(stats::setNames(v$label, v$variable)) else list()
-  for (cl in .ard_spec_codelists(sp)) {
+  cls <- .ard_spec_codelists(sp)
+  vl <- cls[["variable"]]
+  if (!is.null(vl)) {
+    vl <- vl[!is.na(vl$label), , drop = FALSE]
+    for (i in seq_len(nrow(vl))) {
+      if (is.null(out[[vl$value[i]]])) out[[vl$value[i]]] <- vl$label[i]
+    }
+    # in the variables sheet's order (the rows follow it)
+    ord <- .ard_spec_variables(sp)$variable
+    out <- out[order(match(names(out), ord, nomatch = length(ord) + 1L))]
+  }
+  for (cl in cls[names(cls) != "variable"]) {
     cl <- cl[!is.na(cl$label), , drop = FALSE]
     if (!nrow(cl)) next
     var <- cl$variable[1L]
@@ -1030,11 +1104,13 @@ print.tfl_table_spec <- function(x, ...) {
 }
 
 # plan_levels(): a variable's own `levels` (variables sheet), else the code
-# list's order of its values.
+# list's order of its values.  (`variable`'s code list is the variables'
+# labels, not an order: the rows' order is the variables sheet's.)
 .ard_spec_levels <- function(sp) {
   v <- sp$variables[!is.na(sp$variables$levels), , drop = FALSE]
   out <- stats::setNames(lapply(v$levels, .ard_spec_split), v$variable)
-  for (cl in .ard_spec_codelists(sp)) {
+  cls <- .ard_spec_codelists(sp)
+  for (cl in cls[names(cls) != "variable"]) {
     var <- cl$variable[1L]
     if (is.null(out[[var]])) out[[var]] <- cl$value
   }
@@ -1074,8 +1150,9 @@ print.tfl_table_spec <- function(x, ...) {
 # One `cells` row as one element of a chain: its template with the digits
 # written in, guarded by `when` when there is one.  The guard is parsed
 # here, so a malformed one names its row.
-.ard_spec_chain_el <- function(r, i) {
-  tpl <- .ard_apply_digits(r$template, r$digits, r$signif)
+.ard_spec_chain_el <- function(r, i, rule = NULL) {
+  tpl <- .ard_apply_rules(.ard_apply_digits(r$template, r$digits, r$signif),
+                          rule)
   if (is.na(r$when)) return(tpl)
   cond <- tryCatch(str2lang(r$when), error = function(e) {
     .ard_stop(sprintf("`cells` row %d: `when` is not valid R: %s\n  %s",
@@ -1091,6 +1168,7 @@ print.tfl_table_spec <- function(x, ...) {
   s <- sp$cells
   s <- s[!is.na(s$template), , drop = FALSE]    # the rest are rows formats
   if (!nrow(s)) return(NULL)
+  rules <- .ard_spec_digit_rules(sp)
   ord <- .ard_spec_variables(sp)$variable
   key <- ifelse(!is.na(s$variable) & !is.na(s$context),
                 paste(s$variable, s$context, sep = "\r"),
@@ -1099,21 +1177,106 @@ print.tfl_table_spec <- function(x, ...) {
   first <- .ard_first_seen(key)
   rank <- match(sub("\r.*$", "", first), ord)
   first <- first[order(is.na(rank), rank)]
-  out <- list()
-  for (k in first) {
-    idx  <- which(key == k)
+  # a key's rows as a recipe, the decimals of `var` (NA: the table's rule)
+  # written into the tokens that say none
+  recipe <- function(idx, var) {
+    rule <- .ard_spec_rule_for(rules, var)
     rows <- s$row[idx]
     rows[is.na(rows)] <- ""
     labs <- .ard_first_seen(rows)
     chains <- lapply(labs, function(lb) {
       els <- lapply(idx[rows == lb], function(i)
-        .ard_spec_chain_el(s[i, , drop = FALSE], i))
+        .ard_spec_chain_el(s[i, , drop = FALSE], i, rule))
       if (all(vapply(els, is.character, NA))) unlist(els) else els
     })
     guarded <- any(vapply(chains, is.list, NA))
-    out[[k]] <- if (identical(labs, "")) chains[[1L]]
-                else if (guarded) do.call(rtfreporter::cell_rows, stats::setNames(chains, labs))
-                else stats::setNames(chains, labs)
+    if (identical(labs, "")) chains[[1L]]
+    else if (guarded) do.call(rtfreporter::cell_rows, stats::setNames(chains, labs))
+    else stats::setNames(chains, labs)
+  }
+  kinds <- c("continuous", "categorical")
+  var_of <- function(k) {
+    v <- s$variable[match(k, key)]
+    if (is.na(v) || v %in% kinds) NA_character_ else v
+  }
+  out <- list()
+  for (k in first) out[[k]] <- recipe(which(key == k), var_of(k))
+  # a variable with decimals of its own and no rows of its own: the rows of
+  # the kind (or the default) that print those statistics, its decimals in
+  for (v in setdiff(names(rules$by), s$variable)) {
+    stats_v <- names(rules$by[[v]])
+    for (k in intersect(c(kinds, "default"), first)) {
+      idx <- which(key == k)
+      used <- unique(unlist(lapply(s$template[idx], .ard_template_stats)))
+      if (!length(intersect(used, stats_v))) next
+      out[[v]] <- recipe(idx, v)
+      break
+    }
+  }
+  out
+}
+
+# The statistics a template names: "{mean} ({sd:.2f})" -> mean, sd
+.ard_template_stats <- function(tpl) {
+  vapply(.ard_tokens(tpl), function(t) .ard_token_parts(t)$name, "",
+         USE.NAMES = FALSE)
+}
+
+# The `digits` sheet as rules: `all` (statistic -> decimals) and `by`
+# (variable -> its own); NULL when there is none, or when the table prints
+# the ARD's own text (tables$value = stat_fmt), which has no decimals to set.
+.ard_spec_digit_rules <- function(sp) {
+  d <- sp$digits
+  if (is.null(d) || !nrow(d)) return(NULL)
+  if (identical(.ard_spec_table_args(sp)[["value"]], "stat_fmt")) return(NULL)
+  dg <- as.integer(d$digits)
+  st <- trimws(d$statistic)
+  all <- d$variable %in% NA
+  by <- lapply(split(seq_len(nrow(d))[!all], d$variable[!all]), function(i)
+    stats::setNames(dg[i], st[i]))
+  list(all = stats::setNames(dg[all], st[all]), by = by)
+}
+
+.ard_spec_rule_for <- function(rules, var) {
+  if (is.null(rules)) return(NULL)
+  r <- rules$all
+  if (!is.na(var) && !is.null(rules$by[[var]])) {
+    own <- rules$by[[var]]
+    r[names(own)] <- own
+  }
+  r
+}
+
+.ard_spec_check_digits <- function(d) {
+  if (is.null(d) || !nrow(d)) return(invisible(NULL))
+  if (any(is.na(d$statistic) | !nzchar(trimws(d$statistic)))) {
+    .ard_stop("Every `digits` row needs a `statistic` (mean, sd, p ...).")
+  }
+  n <- suppressWarnings(as.numeric(d$digits))
+  bad <- is.na(n) | n < 0 | n != round(n)
+  if (any(bad)) {
+    .ard_stop(sprintf(paste0(
+      "`digits$digits` is a whole number of decimals (0, 1, 2 ...); ",
+      "got %s for %s."), sQuote(d$digits[bad][1L]),
+      sQuote(d$statistic[bad][1L])))
+  }
+  invisible(NULL)
+}
+
+# a statistic that is a proportion prints as a percent ("{p:.1f%}")
+.ard_pct_stats <- c("p", "p_cum", "p_miss", "p_nonmiss")
+
+# The tokens a template leaves without a format, given their statistic's
+# decimals: "{mean} ({sd})" + c(mean = 1, sd = 2) -> "{mean:.1f} ({sd:.2f})"
+.ard_apply_rules <- function(tpl, rule) {
+  if (!length(rule)) return(tpl)
+  out <- tpl
+  for (tok in .ard_tokens(tpl)) {
+    p <- .ard_token_parts(tok)
+    if (nzchar(p$spec) || is.na(rule[p$name])) next
+    spec <- paste0(".", rule[[p$name]], "f",
+                   if (p$name %in% .ard_pct_stats) "%")
+    out <- sub(tok, paste0("{", p$name, ":", spec, "}"), out, fixed = TRUE)
   }
   out
 }
@@ -1427,17 +1590,103 @@ tfl_table_spec_template <- function(ard, path = NULL, cols = NULL,
   invisible(NULL)
 }
 
-# A report's tokens (the sheet already scoped to it), as rtf_document()
-# takes them: a named list; NULL when there is none.
-.ard_spec_tokens <- function(sp) {
-  d <- sp$tokens
-  if (is.null(d) || !nrow(d)) return(NULL)
-  v <- ifelse(is.na(d$value), "", d$value)
-  keep <- !trimws(v) %in% .ard_spec_omit
-  if (!any(keep)) return(NULL)
-  stats::setNames(as.list(v[keep]), trimws(d$name[keep]))
+# The report's own tokens, there for any report: its ID, its label as
+# printed ("Table 14.1.1"), and what a TOC says of it (title, analysis set,
+# section) and the study's ID -- the last four written by whoever keeps
+# the report list (tflplanner) in the tokens sheet, "" when not.  A row of
+# the sheet with the same name wins.
+.ard_spec_output_tokens <- c("OUTPUT_ID", "OUTPUT_LABEL", "OUTPUT_TITLE",
+                             "OUTPUT_POPULATION", "OUTPUT_SECTION", "STUDY_ID")
+# the kinds' words in OUTPUT_LABEL; the tokens sheet's rows of these names
+# (a study's or the company's: Table -> a Japanese word) say others
+.ard_spec_kind_words <- c(table = "Table", listing = "Listing", figure = "Figure")
+
+# "Table 14.1.1" from T-14-1-1: the kind (the ID's first letter T / L / F,
+# else the report's type) and the number (from the ID's first digit, its
+# separators made dots: 14-1-1 -> 14.1.1, 14-1-1S -> 14.1.1S).  An ID with
+# no digit is its own label.
+.ard_spec_output_label <- function(id, type = NA, words = .ard_spec_kind_words) {
+  if (is.null(id) || is.na(id)) return("")
+  at <- regexpr("[0-9]", id)
+  if (at < 0L) return(id)
+  num <- substring(id, at)
+  num <- gsub("[^0-9A-Za-z]+", ".", num)
+  num <- sub("\\.+$", "", num)
+  first <- toupper(substr(id, 1L, 1L))
+  kind <- switch(first, T = "table", L = "listing", F = "figure",
+                 if (!is.na(type) && type %in% names(words)) type else NA)
+  if (is.na(kind)) return(num)
+  paste(words[[kind]], num)
 }
-.ard_spec_band <- function(sp, sheet) {
+
+# A report's tokens (the sheet already scoped to it), as rtf_document()
+# takes them: a named list; NULL when there is none.  The report's own
+# tokens (OUTPUT_ID ...) are given when its header, footer, titles or
+# footnotes say one, so a report that says none is written as before.
+# `study = FALSE` leaves out the study's tokens (its default rows), set
+# once for every report by options(rtfreporter.tokens = ).
+.ard_spec_tokens <- function(sp, r = list(), study = TRUE) {
+  d <- sp$tokens
+  out <- list()
+  if (!is.null(d) && nrow(d)) {
+    v <- ifelse(is.na(d$value), "", d$value)
+    keep <- !trimws(v) %in% .ard_spec_omit
+    out <- stats::setNames(as.list(v[keep]), trimws(d$name[keep]))
+  }
+  used <- .ard_spec_used_tokens(sp)
+  want <- intersect(.ard_spec_output_tokens, used)
+  if (length(want)) {
+    id <- attr(sp, "output_id") %||% NA_character_
+    words <- .ard_spec_kind_words
+    for (k in names(words)) {
+      w <- out[[paste0("OUTPUT_KIND_", toupper(k))]]
+      if (!is.null(w) && nzchar(w)) words[[k]] <- w
+    }
+    own <- list(OUTPUT_ID = if (is.na(id)) "" else id,
+                OUTPUT_LABEL = .ard_spec_output_label(id, r$type %||% NA, words))
+    for (k in setdiff(want, names(out))) out[[k]] <- own[[k]] %||% ""
+    # the report's own last, in their order (label, title, analysis set)
+    mine <- intersect(.ard_spec_output_tokens, names(out))
+    out <- out[c(setdiff(names(out), mine), mine)]
+  }
+  if (!study) {
+    # unscoped (a file of defaults only): its rows are the study's
+    st <- attr(sp, "tokens_study") %||%
+      if (!is.null(d)) trimws(d$name[is.na(d$output_id)])
+    out <- out[setdiff(names(out), st)]
+  }
+  if (!length(out)) return(NULL)
+  out
+}
+
+# The {NAME} tokens a report's header, footer, titles and footnotes say
+.ard_spec_used_tokens <- function(sp) {
+  txt <- unlist(lapply(c("header", "footer", "titles", "footnotes"), function(sh) {
+    d <- sp[[sh]]
+    if (is.null(d) || !nrow(d)) return(character())
+    unlist(d[intersect(c("left", "center", "right"), names(d))])
+  }))
+  txt <- txt[!is.na(txt)]
+  m <- unlist(regmatches(txt, gregexpr("\\{[A-Z][A-Z0-9_]*\\}", txt)))
+  unique(substr(m, 2L, nchar(m) - 1L))
+}
+
+# A line of a band that says nothing once its tokens are filled: every
+# token it has is "" and the rest is blank or brackets ("<{OUTPUT_POPULATION}>"
+# for a report the TOC gave no analysis set).  Such a line is left out.
+.ard_spec_empty_line <- function(cells, tokens) {
+  if (!length(tokens)) return(FALSE)
+  txt <- paste(cells[!is.na(cells)], collapse = " ")
+  m <- unlist(regmatches(txt, gregexpr("\\{[A-Z][A-Z0-9_]*\\}", txt)))
+  if (!length(m)) return(FALSE)
+  nm <- substr(m, 2L, nchar(m) - 1L)
+  if (!all(nm %in% names(tokens))) return(FALSE)
+  if (any(nzchar(trimws(unlist(tokens[nm]))))) return(FALSE)
+  rest <- gsub("\\{[A-Z][A-Z0-9_]*\\}", "", txt)
+  !nzchar(gsub("[][[:space:]<>():;,.|/-]", "", rest))
+}
+
+.ard_spec_band <- function(sp, sheet, tokens = NULL) {
   d <- sp[[sheet]]
   if (is.null(d) || !nrow(d)) return(NULL)
   d <- d[order(suppressWarnings(as.numeric(d$line))), , drop = FALSE]
@@ -1445,6 +1694,10 @@ tfl_table_spec_template <- function(ard, path = NULL, cols = NULL,
   gone <- Reduce(`|`, lapply(d[cells], function(v) trimws(v) %in% .ard_spec_omit),
                  rep(FALSE, nrow(d)))
   d <- d[!gone, , drop = FALSE]
+  if (!nrow(d)) return(NULL)
+  empty <- vapply(seq_len(nrow(d)), function(i)
+    .ard_spec_empty_line(unlist(d[i, cells]), tokens), NA)
+  d <- d[!empty, , drop = FALSE]
   if (!nrow(d)) return(NULL)
   lapply(seq_len(nrow(d)), function(i) {
     r <- .ard_spec_typed(d[i, , drop = FALSE], sheet)
@@ -1542,8 +1795,12 @@ tfl_table_spec_template <- function(ard, path = NULL, cols = NULL,
 #' `paper_size`, `orientation`, `width_in`, `height_in`, `margin_top_in`,
 #' `margin_bottom_in`, `margin_left_in`, `margin_right_in`,
 #' `header_dist_in`, `footer_dist_in` (the page, as [rtfreporter::rtf_document()] takes
-#' it), and `font_size_half_points`, `title_format`, `footnote_format`,
+#' it), `font` (the document's font: `rtf_document(font_table = )`), and
+#' `font_size_half_points`, `title_format`, `footnote_format`,
 #' `title_width`, `footnote_width`, `markup` ([rtfreporter::rtf_default_format()]).
+#' The study's row (blank `output_id`) of `font` and `font_size_half_points`
+#' is the company's: [tfl_report_setup_code()] writes it once as
+#' `options(rtfreporter.font = , rtfreporter.font_size_half_points = )`.
 #'
 #' @section The table engine:
 #' The ARD functions and the plan are rtfreporter's:

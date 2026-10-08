@@ -167,7 +167,7 @@ test_that("a version guard only when a 4.0-only feature is written", {
   code <- tfl_fig_design_code(d, ggplot2_version = "4.0")
   expect_true(any(code == 'stopifnot(utils::packageVersion("ggplot2") >= "4.0.0")'))
   expect_true(any(grepl("# needs ggplot2 >= 4.0.0: labs(dictionary =)", code, fixed = TRUE)))
-  expect_lt(grep("stopifnot", code), grep("Step1", code))
+  expect_lt(grep("stopifnot", code), grep("^# ---- data", code))
   # 3.5.0 features need none (the package needs ggplot2 >= 3.5.0)
   d2 <- compat_design(add = list(list(fn = "coord_radial")))
   expect_false(any(grepl("stopifnot", tfl_fig_design_code(d2, ggplot2_version = "4.0"))))

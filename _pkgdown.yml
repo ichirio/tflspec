@@ -96,6 +96,8 @@ reference:
       - tfl_read_report_spec
       - tfl_report
       - tfl_report_code
+      - tfl_report_setup_code
+      - tfl_report_tokens
       - tfl_report_path
   - title: Listings
     desc: Two sheets keyed by `output_id`, the pages and the program.
