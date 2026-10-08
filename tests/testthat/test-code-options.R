@@ -65,11 +65,10 @@ test_that("an ARD program with the setup's folders and packages: the same ARD", 
   calls <- lines[!grepl("^[[:space:]]*#", lines)]
   expect_false(any(grepl("cards::", calls, fixed = TRUE)))
   expect_true(any(grepl("ard_tabulate(", code, fixed = TRUE)))
-  # dplyr not attached: its prefix stays
-  expect_true(any(grepl("dplyr::bind_rows", code, fixed = TRUE)))
-  # the setup's comments keep what they say
-  expect_true(any(grepl("cards::ard_stack()", tfl_ard_code(sp, part = "setup"),
-                        fixed = TRUE)))
+  # the ARD program attaches the others it calls itself (dplyr, tflspec)
+  expect_true(all(c("library(dplyr)", "library(tflspec)") %in% code))
+  expect_true(any(grepl("bind_rows(", code, fixed = TRUE)))
+  expect_false(any(grepl("dplyr::", calls, fixed = TRUE)))
   # with save: the study ARD through its folder's variable
   full <- tfl_ard_code(sp)
   expect_true(any(full == "saveRDS(ard, file.path(path_ard, \"ard.rds\"))"))

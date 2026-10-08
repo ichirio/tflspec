@@ -21,7 +21,9 @@ tfl_build_ard(
 
 \item{output_id}{Only these outputs' analyses; \code{NULL} for all.}
 
-\item{save}{\code{FALSE} leaves out the final \code{saveRDS()}.}
+\item{save}{\code{FALSE} leaves out the final \code{saveRDS()}.  For one report's
+\code{"body"}, \code{TRUE} ends it in \code{tflspec::save_ard()} (its rows into the
+study ARD, with the definition's fingerprint), \code{FALSE} in \code{ard}.}
 
 \item{statistics, methods}{The catalogs (\code{\link[=tfl_ard_statistics]{tfl_ard_statistics()}},
 \code{\link[=tfl_ard_methods]{tfl_ard_methods()}}) to use instead of the current ones.}
@@ -35,7 +37,8 @@ its analyses read (\code{by}, \code{strata}, \code{variables}, and the names in
 report reads, and of the populations and analysis data that derive it,
 becomes a factor in that order before any analysis (a value the list
 does not have comes after, alphabetically), so the ARD keeps the order
-and counts a level no record has (\code{n = 0}).  In the study's program,
+and counts a level no record has (\code{n = 0}): the program has
+\code{codelists <- list(...)} and \code{set_levels(codelists)}.  In the study's program,
 when a report has code lists, each report's part reads its data again
 with its own.  \code{NULL} (default): the data as read.}
 }

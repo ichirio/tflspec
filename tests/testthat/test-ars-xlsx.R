@@ -65,7 +65,7 @@ test_that("the reporting event is written as CDISC's Excel template", {
   expect_identical(c(sex$groupingId1, sex$groupingId2),
                    c("AG_ADSL_TRT01A", "AG_ADSL_SEX"))
   expect_identical(sex$referencedAnalysisOperations_analysisId2,
-                   "An_DM_BIGN_TRT01A")
+                   "An_DM_GROUPN_TRT01A")
   # the hierarchy's deepest level has three groupings
   expect_identical(an$groupingId3[an$id == "An_AE_TEAE_L2"],
                    "AG_ADAE_AEDECOD")

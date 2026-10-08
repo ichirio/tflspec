@@ -1,5 +1,44 @@
 # tflspec (development version)
 
+* **The ARD program reads as a person writes it** (#181).  Same ARDs:
+  - no function or loop of its own: it calls `set_levels()`, `tag_ard()`,
+    `fmt_ard()`, `keep_stats()`, `fmt_pvalue()` and `save_ard()`, new
+    exports named as a program calls them (not `tfl_`); its setup is
+    `library(cards)`, `library(dplyr)`, `library(tflspec)` and the
+    company standards' values (`tfl_stats`, `fmt_default`, which replace
+    `.tfl_stats`, `.fmt_default`; `.fmts(mean = 2L)` is now
+    `modifyList(fmt_default, list(mean = 2L))`);
+  - one pipe an analysis, from its data: `ard_cont <- adsl_saf |>
+    ard_summary(...) |> apply_fmt_fun() |> tag_ard(output_id, "CONT",
+    population = "SAF")`; one report's ends in `bind_rows(...) |>
+    save_ard(output_id, definition = "...")` (`tfl_ard_code(part = "body",
+    save = FALSE)`: in `ard`), with `output_id <- "..."` once at its top --
+    no `ards[[i]]`; in the study's program, a part a report into `ards`;
+  - the tidyverse layout: a call on one line when it fits in 80
+    characters, else an argument a line two spaces in and the closing
+    bracket on its own line, a long vector a value a line;
+  - dplyr's verbs for the data (`filter()`, `mutate()`, `select()`,
+    `left_join()`).  A data frame's column keeps its label through
+    `filter()` (base `subset()` dropped it), so a model's `var_label` in
+    the ARD is the column's label where the data are plain data frames
+    with labels (read as tibbles, as before);
+  - a report's code lists on the data its analyses read, as
+    `set_levels()`'s arguments (`codelists <- list(...)` once when more
+    data take them); an analysis set the data is made from is no longer
+    made factors again, and `adsl_saf` is made in one statement again
+    (#171 left `pop_saf` and `adsl_saf <- .levels(pop_saf)`);
+  - a `custom` analysis's code with the data's names in place of `data`
+    and `population` and its last expression the analysis's ARD; in
+    `local()` only when it defines a function or assigns a name the
+    program has.  An analysis data's `code` of one expression likewise.
+    A function's own `data` argument in `args` stays as it is;
+  - a comment of the analysis's label only; `# ---- data ----` headings.
+
+* **The group count's analysis is GROUPN** (#181): the subjects per group,
+  which clinical reporting calls big N, written by `tfl_ars()` for a
+  percentage's denominator (`An_<output>_GROUPN_<by>`, was `BIGN`).  No
+  alias.
+
 * **The generated programs name a study's folders and its attached
   packages as its setup does** (#178).  Two options, unset by default
   (the code as before):

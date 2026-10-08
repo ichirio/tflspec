@@ -12,8 +12,10 @@ test_that("code lists make the listed columns factors before the analyses", {
                    value = c("<65", "65-80", ">80", "Unknown", "M"),
                    order = c("1", "2", "3", "4", "1"))
   code <- paste(tfl_ard_code(sp, part = "body", codelists = cl), collapse = "\n")
-  expect_match(code, "adsl <- readRDS\\([^)]*\\) \\|> \\.levels\\(\\)")
-  expect_match(code, "`AGEGR1` = c(\"<65\", \"65-80\", \">80\", \"Unknown\")", fixed = TRUE)
+  # on the data the analysis reads, the lists in the call (one data)
+  expect_match(code, paste0("pop_saf <- adsl |>\n  filter(SAFFL == \"Y\") |>\n",
+                            "  set_levels(AGEGR1 = c(\"<65\", \"65-80\", \">80\", \"Unknown\"), SEX = \"M\")"),
+               fixed = TRUE)
   ard <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE, codelists = cl))
   ag <- ard[ard$variable == "AGEGR1", ]
   lv <- unique(vapply(ag$variable_level, as.character, ""))
@@ -32,8 +34,8 @@ test_that("code lists make the listed columns factors before the analyses", {
                          variables = "SEX"))
   cl2 <- data.frame(output_id = "T", variable = "ARM", value = "Xanomeline High Dose",
                     order = "1")
-  expect_true(any(grepl("|> .levels()", tfl_ard_code(sp2, part = "body", codelists = cl2),
-                        fixed = TRUE)))
+  expect_true(any(grepl("set_levels(ARM = \"Xanomeline High Dose\")",
+                        tfl_ard_code(sp2, part = "body", codelists = cl2), fixed = TRUE)))
   a2 <- suppressMessages(tfl_build_ard(sp2, dir = dir, save = FALSE, codelists = cl2))
   arms <- unique(vapply(a2$group1_level, function(v) as.character(v[[1L]]), ""))
   expect_identical(arms[!is.na(arms)][1:2], c("Xanomeline High Dose", "Xanomeline Low Dose"))
@@ -48,7 +50,7 @@ test_that("code lists make the listed columns factors before the analyses", {
   # another report's rows are not this one's
   cl2 <- cl; cl2$output_id <- "T1"
   expect_null(.codelist_levels(cl2, "T"))
-  expect_false(any(grepl(".levels", tfl_ard_code(sp, part = "body", codelists = cl2),
+  expect_false(any(grepl("set_levels", tfl_ard_code(sp, part = "body", codelists = cl2),
                          fixed = TRUE)))
   # a code list is a report's: a row without one stops, and so does a
   # table without the column
@@ -76,8 +78,8 @@ test_that("only the variables a report's analyses read; the study's program a pa
                    order = c("1", "2", "1", "1", "2"))
   # one report's program: only what its analyses read (T reads no SEX)
   t1 <- tfl_ard_code(sp, output_id = "T", part = "body", codelists = cl)
-  expect_true(any(grepl("`AGEGR1` = c(\">80\", \"<65\")", t1, fixed = TRUE)))
-  expect_false(any(grepl("`SEX`", t1, fixed = TRUE)))
+  expect_true(any(grepl("AGEGR1 = c(\">80\", \"<65\")", t1, fixed = TRUE)))
+  expect_false(any(grepl("SEX =", t1, fixed = TRUE)))
   # the fingerprint likewise: T's SEX row is not part of it
   expect_identical(tfl_ard_spec_hash(sp, "T", codelists = cl),
                    tfl_ard_spec_hash(sp, "T", codelists = cl[-3L, ]))
@@ -85,9 +87,9 @@ test_that("only the variables a report's analyses read; the study's program a pa
                          tfl_ard_spec_hash(sp, "T", codelists = cl[-1L, ])))
   # the study's: each part its code lists and its data read with them
   all <- tfl_ard_code(sp, save = FALSE, codelists = cl)
-  u <- which(all == "# ---- U")
-  expect_true(any(grepl("`AGEGR1`", all[seq_len(u)], fixed = TRUE)))
-  expect_true(any(grepl("`SEX` = c(\"M\", \"F\")", all[u:length(all)], fixed = TRUE)))
+  u <- which(all == "# ---- U ----")
+  expect_true(any(grepl("AGEGR1 =", all[seq_len(u)], fixed = TRUE)))
+  expect_true(any(grepl("SEX = c(\"M\", \"F\")", all[u:length(all)], fixed = TRUE)))
   expect_identical(sum(grepl("^adsl <- readRDS", all)), 2L)
   ard <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE, codelists = cl))
   lv <- function(v) unique(vapply(ard$variable_level[ard$variable == v], as.character, ""))

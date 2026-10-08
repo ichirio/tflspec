@@ -1,5 +1,5 @@
 # The formats of an ARD spec in the cards call (fmt_fun) give the stat_fmt
-# that formatting after the call (.fmt(), the route of every analysis
+# that formatting after the call (fmt_ard(), the route of every analysis
 # before) gives: the same text, row by row.
 
 fmt_spec <- function(rows, populations = NULL) {
@@ -34,8 +34,8 @@ fmt_after <- function(sp, dir, ...) {
   testthat::local_mocked_bindings(.takes_fmt_fun = function(fn) FALSE,
                                   .package = "tflspec")
   code <- tfl_ard_code(sp, save = FALSE, ...)
-  expect_false(any(!startsWith(code, "#") & grepl("~ .fmt", code, fixed = TRUE)))
-  expect_false(any(grepl("^ards.*apply_fmt_fun", code)))
+  expect_false(any(!startsWith(code, "#") & grepl("~ (fmt_default|modifyList)", code)))
+  expect_false(any(grepl("apply_fmt_fun()", code, fixed = TRUE)))
   build_quiet(sp, dir, ...)
 }
 
@@ -177,44 +177,80 @@ test_that("an analysis's formats are in its cards call; the rest after it", {
   skip_if_not_installed("cardx")
   code <- tfl_ard_code(fmt_spec(fmt_rows), save = FALSE)
   txt <- paste(code, collapse = "\n")
-  # the helpers: the defaults as fmt_fun takes them
-  expect_true(".pvalue <- function(x) ifelse(x < 0.001, \"<0.001\", sprintf(\"%.3f\", x))" %in% code)
-  expect_match(txt, "`p.value` = .pvalue|p.value = .pvalue")
-  expect_match(txt, "p = cards::label_round(1, scale = 100)", fixed = TRUE)
-  expect_match(txt, ".fmts <- function(...) utils::modifyList(.fmt_default, list(...))",
-               fixed = TRUE)
+  # the setup: the defaults as fmt_fun takes them, no function of its own
+  expect_match(txt, "p.value = tflspec::fmt_pvalue|p.value = fmt_pvalue")
+  expect_match(txt, "p = label_round(1, scale = 100)", fixed = TRUE)
+  expect_false(any(grepl("<- function(", code, fixed = TRUE)))
   # in the call: cards' summaries, counts, missing, a subject flag
-  expect_match(txt, paste0("fmt_fun = list(\n      everything() ~ .fmts(mean = 2L),\n",
-                           "      BMIBL ~ .fmts(mean = 2L, sd = 3L, min = 1L))"),
-               fixed = TRUE)
-  expect_match(txt, "fmt_fun = list(\n      everything() ~ .fmt_default,\n      AGEGR1 ~ .fmts(p = cards::label_round(2, scale = 100)))",
-               fixed = TRUE)
-  expect_match(txt, "fmt_fun = everything() ~ .fmts(p = cards::label_round(0, scale = 100))",
-               fixed = TRUE)
-  expect_match(txt, "value = list(ANYSER = TRUE),\n      fmt_fun = everything() ~ .fmts(p = 2L))",
-               fixed = TRUE)
-  expect_true("ards[[1]] <- .tag(cards::apply_fmt_fun(ard), \"T\", \"AGE\", \"SAF\")" %in% code)
+  expect_match(txt, paste0(
+    "    fmt_fun = list(\n",
+    "      everything() ~ modifyList(fmt_default, list(mean = 2L)),\n",
+    "      BMIBL ~ modifyList(fmt_default, list(mean = 2L, sd = 3L, min = 1L))\n",
+    "    )"), fixed = TRUE)
+  expect_match(txt, paste0(
+    "      AGEGR1 ~ modifyList(fmt_default, list(p = label_round(2, scale = 100)))"),
+    fixed = TRUE)
+  expect_match(txt, "list(p = label_round(0, scale = 100))", fixed = TRUE)
+  expect_match(txt, paste0(
+    "  mutate(ANYSER = USUBJID %in% adae_saf$USUBJID) |>\n",
+    "  ard_tabulate_value(\n",
+    "    by = TRT01A,\n",
+    "    variables = ANYSER,\n",
+    "    value = list(ANYSER = TRUE),\n",
+    "    fmt_fun = everything() ~ modifyList(fmt_default, list(p = 2L))\n",
+    "  ) |>"), fixed = TRUE)
+  expect_match(txt, paste0(
+    "  apply_fmt_fun() |>\n",
+    "  tag_ard(output_id, \"AGE\", population = \"SAF\")"), fixed = TRUE)
   # after it: cardx, a fmt_fun of the analysis's own, post, ard_stack_hierarchical()
-  expect_true("ards[[6]] <- .tag(.fmt(ard), \"T\", \"TT\", \"SAF\")" %in% code)
-  expect_true("ards[[8]] <- .tag(.fmt(ard), \"T\", \"OWN\", \"SAF\")" %in% code)
-  expect_true("ards[[9]] <- .tag(.fmt(ard), \"T\", \"POST\", \"SAF\")" %in% code)
-  expect_true(any(grepl("^ards\\[\\[10\\]\\] <- \\.tag\\(\\.fmt\\(ard, list\\(p = ", code)))
+  after <- function(id) paste0("  fmt_ard(fmt_default) |>\n  tag_ard(output_id, \"",
+                               id, "\", population = \"SAF\")")
+  expect_match(txt, after("TT"), fixed = TRUE)
+  expect_match(txt, after("OWN"), fixed = TRUE)
+  expect_match(txt, after("POST"), fixed = TRUE)
+  expect_match(txt, paste0(
+    "  fmt_ard(modifyList(fmt_default, list(p = label_round(2, scale = 100)))) |>\n",
+    "  tag_ard(output_id, \"AE\", population = \"SAF\")"), fixed = TRUE)
   # a stack: in each call, and the stack's own rows after it
-  expect_match(txt, "cards::ard_summary(variables = c(AGE, BMIBL),\n      statistic = ~ cards::continuous_summary_fns(c(\"N\", \"mean\", \"sd\")),\n      fmt_fun = everything() ~ .fmts(p = cards::label_round(2, scale = 100), n = 2L, mean = 2L, sd = 3L)),",
-               fixed = TRUE)
-  expect_true(any(grepl("skip = c(\"AGE\", \"BMIBL\", \"SEX\")), \"T\", c(`AGE` = \"S_CONT\"",
-                        code, fixed = TRUE)))
-  expect_match(txt, "id = USUBJID,\n      fmt_fun = everything() ~ .fmts(p = cards::label_round(2, scale = 100), n = 1L))",
-               fixed = TRUE)
-  expect_true("ards[[19]] <- .tag(.fmt(ard, list(`AEDECOD:p` = cards::label_round(2, scale = 100))), \"T\", \"H2\", \"SAF\")" %in% code)
-  expect_match(txt, "cards::ard_tabulate_rows(adae_saf_1,\n    by = TRTA,\n    fmt_fun = everything() ~ .fmts(n = 2L))",
-               fixed = TRUE)
-  expect_match(txt, "id = USUBJID,\n    fmt_fun = everything() ~ .fmts(p = cards::label_round(2, scale = 100)))", fixed = TRUE)
-  expect_true("ards[[21]] <- .tag(cards::apply_fmt_fun(ard), \"T\", \"MX\", \"SAF\")" %in% code)
-  expect_match(txt, "fmt_fun = list(\n        everything() ~ .fmts(corr = 2L),\n        BMIBL ~ .fmts(corr = 3L))",
-               fixed = TRUE)
+  expect_match(txt, paste0(
+    "    ard_summary(\n",
+    "      variables = c(AGE, BMIBL),\n",
+    "      statistic = ~ continuous_summary_fns(c(\"N\", \"mean\", \"sd\")),\n",
+    "      fmt_fun = everything() ~ modifyList(\n",
+    "        fmt_default,\n",
+    "        list(p = label_round(2, scale = 100), n = 2L, mean = 2L, sd = 3L)\n",
+    "      )\n",
+    "    ),"), fixed = TRUE)
+  expect_match(txt, paste0(
+    "    skip = c(\"AGE\", \"BMIBL\", \"SEX\")\n",
+    "  ) |>\n",
+    "  tag_ard(\n",
+    "    output_id,\n",
+    "    \"DEMO\",\n",
+    "    population = \"SAF\",\n",
+    "    analyses = list(S_CONT = c(\"AGE\", \"BMIBL\"), S_CAT = \"SEX\")\n",
+    "  )"), fixed = TRUE)
+  expect_match(txt, "list(p = label_round(2, scale = 100), n = 1L)", fixed = TRUE)
+  expect_match(txt, paste0(
+    "  fmt_ard(\n",
+    "    modifyList(fmt_default, list(`AEDECOD:p` = label_round(2, scale = 100)))\n",
+    "  ) |>\n",
+    "  tag_ard(output_id, \"H2\", population = \"SAF\")"), fixed = TRUE)
+  expect_match(txt, paste0(
+    "ard_rows <- adae_saf_1 |>\n",
+    "  ard_tabulate_rows(\n",
+    "    by = TRTA,\n",
+    "    fmt_fun = everything() ~ modifyList(fmt_default, list(n = 2L))\n",
+    "  ) |>"), fixed = TRUE)
+  expect_match(txt, paste0(
+    "  apply_fmt_fun() |>\n",
+    "  tag_ard(output_id, \"MX\", population = \"SAF\")"), fixed = TRUE)
+  expect_match(txt, paste0(
+    "      everything() ~ modifyList(fmt_default, list(corr = 2L)),\n",
+    "      BMIBL ~ modifyList(fmt_default, list(corr = 3L))"), fixed = TRUE)
   # in ard_strata(): the call's; ard_strata() adds no rows of its own
-  expect_match(txt, ".f = ~ cards::ard_summary(.x,", fixed = TRUE)
-  expect_true(any(grepl("<- .tag(cards::apply_fmt_fun(ard), \"T\", \"ST\", \"SAF\")",
-                        code, fixed = TRUE)))
+  expect_match(txt, ".f = ~ ard_summary(\n      .x,", fixed = TRUE)
+  expect_match(txt, paste0(
+    "  apply_fmt_fun() |>\n",
+    "  tag_ard(output_id, \"ST\", population = \"SAF\")"), fixed = TRUE)
 })

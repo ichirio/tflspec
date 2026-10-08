@@ -20,7 +20,9 @@ tfl_ard_code(
 
 \item{output_id}{Only these outputs' analyses; \code{NULL} for all.}
 
-\item{save}{\code{FALSE} leaves out the final \code{saveRDS()}.}
+\item{save}{\code{FALSE} leaves out the final \code{saveRDS()}.  For one report's
+\code{"body"}, \code{TRUE} ends it in \code{tflspec::save_ard()} (its rows into the
+study ARD, with the definition's fingerprint), \code{FALSE} in \code{ard}.}
 
 \item{part}{\code{"all"} (the whole program), \code{"setup"} or \code{"body"}.}
 
@@ -39,7 +41,8 @@ its analyses read (\code{by}, \code{strata}, \code{variables}, and the names in
 report reads, and of the populations and analysis data that derive it,
 becomes a factor in that order before any analysis (a value the list
 does not have comes after, alphabetically), so the ARD keeps the order
-and counts a level no record has (\code{n = 0}).  In the study's program,
+and counts a level no record has (\code{n = 0}): the program has
+\code{codelists <- list(...)} and \code{set_levels(codelists)}.  In the study's program,
 when a report has code lists, each report's part reads its data again
 with its own.  \code{NULL} (default): the data as read.}
 }
@@ -47,21 +50,27 @@ with its own.  \code{NULL} (default): the data as read.}
 The code, one element per line.
 }
 \description{
-One cards / cardx call per analysis row, each result tagged with its
-\code{output_id}, \code{analysis_id} and \code{population_id}, bound into one ARD and
-saved to the study key \code{output} (default \code{output/ard/ard.rds}).  The code
-runs from the study folder.
+One cards / cardx call per analysis row, each result under a name of its
+own (\verb{ard_<analysis_id>}) and tagged with its \code{output_id}, \code{analysis_id}
+and \code{population_id} (\code{tag_ard()}), bound into one ARD and saved to the
+study key \code{output} (default \code{output/ard/ard.rds}).  The code runs from
+the study folder, and reads as a person writes it: the tidyverse layout
+(a call on one line when it fits in 80 characters, else an argument a
+line), dplyr verbs for the data (\code{filter()}, \code{mutate()}, \code{select()}), and
+a \code{custom} analysis's code with the program's names in place of \code{data}
+and \code{population} (in \code{local()} only when it needs a scope of its own: it
+defines a function, or assigns a name the program has).
 }
 \details{
 The formats (the method's and the row's \code{formats}, over each statistic's
 default in \code{\link[=tfl_ard_statistics]{tfl_ard_statistics()}}) are in the cards call itself, its
 \code{fmt_fun} argument, where a reader sees them next to the statistics:
-\code{fmt_fun = everything() ~ .fmts(mean = 2L)}, a variable's own
-(\code{BMIBL:sd=3}) as \code{BMIBL ~ .fmts(mean = 2L, sd = 3L)}.  An integer is
+\code{fmt_fun = everything() ~ fmt_with(mean = 2L)}, a variable's own
+(\code{BMIBL:sd=3}) as \code{BMIBL ~ fmt_with(mean = 2L, sd = 3L)}.  An integer is
 that many decimals, \verb{xx.x\%} is \code{label_round(1, scale = 100)} and
-\code{pvalue} the program's \code{.pvalue()} (\verb{<0.001} or 3 decimals);
+\code{pvalue} the program's \code{fmt_pvalue()} (\verb{<0.001} or 3 decimals);
 \code{cards::apply_fmt_fun()} then fills \code{stat_fmt}.  What takes no \code{fmt_fun}
-gets the same formats after the call, from \code{.fmt()}: cardx's tests, CIs
+gets the same formats after the call, from \code{fmt_ard()}: cardx's tests, CIs
 and models, \code{cards::ard_stack_hierarchical()}, a study's own function,
 \code{custom} code, \code{ard_pairwise()}, \code{ard_stack()}'s own rows (the by counts,
 the total N), an analysis whose \code{args} gives \code{fmt_fun} or whose \code{post}
@@ -71,8 +80,10 @@ changes the ARD, a variable's own format for \code{ard_hierarchical()} or
 \code{part} gives a piece of it instead, for a program layout of one's own
 (tflplanner writes one program per output that sources a shared setup):
 \code{"setup"} is what every piece starts with -- \code{library(cards)}, the
-tagging helper, every computed statistic of the catalog and the
-\code{stat_fmt} helpers (\code{.fmt_default}, \code{.fmts()}, \code{.pvalue()}, \code{.fmt()});
-\code{"body"} is the analyses of \code{output_id}, ending in
-\code{ard} -- without a header or \code{saveRDS()}.
+tagging helper \code{tag_ard()}, \code{set_levels()} (the code lists), every
+computed statistic of the catalog (\code{tfl_stats}) and the \code{stat_fmt}
+helpers (\code{fmt_default}, \code{fmt_with()}, \code{fmt_pvalue()}, \code{fmt_ard()},
+\code{keep_stats()}); \code{"body"} is the analyses of \code{output_id}, starting with
+\code{output_id <- "..."} and ending in \code{ard} -- without a header or
+\code{saveRDS()}.
 }

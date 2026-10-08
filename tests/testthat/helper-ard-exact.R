@@ -48,20 +48,21 @@ exact_spec <- function(r, pop_derive = NULL, ds_derive = NULL,
     analyses = exact_sheet(list(r), S$analyses)))
 }
 
-# the analysis data as the generated program makes it
+# the analysis data as the generated program makes it (dplyr: a column keeps
+# its label)
 exact_inputs <- function(r, adam, pop_derive = NULL, ds_derive = NULL) {
-  pop <- subset(adam$ADSL, SAFFL == "Y")
+  pop <- dplyr::filter(adam$ADSL, SAFFL == "Y")
   if (!is.null(pop_derive)) {
-    pop <- eval(str2lang(sprintf("transform(pop, %s)", pop_derive)))
+    pop <- eval(str2lang(sprintf("dplyr::mutate(pop, %s)", pop_derive)))
   }
   ds <- r$dataset %||% "ADSL"
   src <- adam[[ds]]
   if (!is.null(ds_derive) && ds != "ADSL") {
-    src <- eval(str2lang(sprintf("transform(src, %s)",
+    src <- eval(str2lang(sprintf("dplyr::mutate(src, %s)",
                                  gsub("|", ",", ds_derive, fixed = TRUE))))
   }
-  d <- if (ds == "ADSL") pop else subset(src, USUBJID %in% pop$USUBJID)
-  if (!is.null(r$where)) d <- subset(d, eval(str2lang(r$where)))
+  d <- if (ds == "ADSL") pop else dplyr::filter(src, USUBJID %in% pop$USUBJID)
+  if (!is.null(r$where)) d <- dplyr::filter(d, !!str2lang(r$where))
   list(data = d, population = pop)
 }
 
