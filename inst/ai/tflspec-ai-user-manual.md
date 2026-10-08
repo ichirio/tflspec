@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9064** (the development version,
+**This manual documents tflspec 0.0.24.9065** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -560,6 +560,16 @@ and `plan_apply(plan, stage = "args")` shows the calls it amounts to.
 tflplanner is the GUI over these specs (one study folder: `spec/`,
 `programs/`, `output/`). What it saves is these workbooks and YAML files;
 anything written here can be opened there.
+
+A study's setup file (tflplanner's `programs/study_setup.R`) defines the
+folders as variables and attaches the packages every program uses. Two
+options make the written code fit it: `options(tflspec.paths = c(path_adam =
+"data/adam", path_ard = "output/ard"))` writes a file under one of those
+folders through its variable (`readRDS(file.path(path_adam, "adsl.rds"))`),
+and `options(tflspec.attached = c("cards", "dplyr"))` leaves out `pkg::` for
+those packages in the code (a string or comment keeps it) and the ARD
+program's own `library(cards)`. Unset, the code is as before.
+`tfl_build_ard()` runs the program by itself and ignores both.
 
 ---
 

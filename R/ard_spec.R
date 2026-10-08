@@ -658,13 +658,13 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   # an .rda / .RData file holds one dataset: the object it has
   if (ext %in% c("rda", "rdata")) {
     return(sprintf("local({ e <- new.env(); load(%s, envir = e); e[[ls(e)[1L]]] })",
-                   encodeString(path, quote = "\"")))
+                   .path_code(path)))
   }
   f <- switch(ext, rds = "readRDS", xpt = "haven::read_xpt",
               sas7bdat = "haven::read_sas", csv = "utils::read.csv",
               parquet = "arrow::read_parquet",
               stop("No reader for .", ext, call. = FALSE))
-  sprintf("%s(%s)", f, encodeString(path, quote = "\""))
+  sprintf("%s(%s)", f, .path_code(path))
 }
 
 .vars <- function(x) {
@@ -977,11 +977,11 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
   if (!is.null(output_id)) a <- a[a$output_id %in% output_id, , drop = FALSE]
   if (part == "setup") {
     st <- tfl_ard_statistics("continuous")
-    return(.ard_common_lines(st$statistic[!is.na(st$fun)], x))
+    return(.drop_attached_ns(.ard_common_lines(st$statistic[!is.na(st$fun)], x)))
   }
   # each report's code lists, of the variables its analyses read
   lv <- .codelist_levels_by(codelists, a)
-  if (part == "body") return(.ard_body_lines(x, a, lv))
+  if (part == "body") return(.drop_attached_ns(.ard_body_lines(x, a, lv)))
   out <- .study_value(x, "output", "output/ard/ard.rds")
   code <- c(
     "# The study's ARD, made from its ARD definition.  Run from the study folder.",
@@ -996,8 +996,8 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
     q <- function(v) paste(encodeString(v, quote = "\""), collapse = ", ")
     code <- c(code,
               sprintf("dir.create(dirname(%s), recursive = TRUE, showWarnings = FALSE)",
-                      encodeString(out, quote = "\"")),
-              sprintf("saveRDS(ard, %s)", encodeString(out, quote = "\"")),
+                      .path_code(out)),
+              sprintf("saveRDS(ard, %s)", .path_code(out)),
               "# what was built, and from which definition (tfl_ard_spec_hash())",
               "status <- data.frame(",
               sprintf("  output_id = c(%s),", q(ids)),
@@ -1006,9 +1006,9 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
               "  stringsAsFactors = FALSE)",
               "status$rows <- as.integer(table(factor(ard$output_id, levels = status$output_id)))",
               sprintf("utils::write.csv(status, file.path(dirname(%s), \"ard_status.csv\"), row.names = FALSE)",
-                      encodeString(out, quote = "\"")))
+                      .path_code(out)))
   }
-  c(code, "")
+  .drop_attached_ns(c(code, ""))
 }
 
 
@@ -1016,10 +1016,10 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
 # the helpers (the computed statistics `used`, stat_fmt)
 .ard_common_lines <- function(used, x = NULL) {
   src <- .split_bar(.study_value(x, "source", NA))
-  c("library(cards)",
+  c(if (!"cards" %in% .attached()) "library(cards)",
     if (length(src)) c(
       "# the study's own analysis functions (study key `source`)",
-      sprintf("source(%s)", encodeString(src, quote = "\""))),
+      sprintf("source(%s)", vapply(src, .path_code, ""))),
     "",
     "# the ids in front; a cards ARD stays one (class card), so the study ARD",
     "# is one too and cards' own tools (as_nested_list(), compare_ard()) take it",
@@ -1546,6 +1546,9 @@ tfl_ard_spec_hash <- function(spec, output_id, dir = ".", codelists = NULL) {
 #' @export
 tfl_build_ard <- function(spec, dir = ".", output_id = NULL, save = TRUE,
                       statistics = NULL, methods = NULL, codelists = NULL) {
+  # run where nothing is attached and no folder variable is defined
+  old <- options(tflspec.paths = NULL, tflspec.attached = NULL)
+  on.exit(options(old), add = TRUE)
   code <- tfl_ard_code(spec, output_id = output_id, save = save,
                         statistics = statistics, methods = methods, dir = dir,
                         codelists = codelists)
