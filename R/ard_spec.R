@@ -1094,7 +1094,9 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
     src <- .r_name(r$dataset[1L])
     pop_code <- c(pop_code, .make_code(obj, src, c(
       if (!is.na(r$where[1L])) sprintf("subset(%s)", r$where[1L]),
-      .derive_steps(r$derive[1L], levels))))
+      # an analysis set with every record of its dataset: its factors as they are
+      .derive_steps(r$derive[1L], if (!is.na(r$where[1L]) ||
+                                     length(.split_bar(r$derive[1L]))) levels))))
   }
   list(data = code, pops = pop_code, used_ds = used_ds, pops_id = pops)
 }

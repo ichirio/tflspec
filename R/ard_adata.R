@@ -269,7 +269,9 @@
                                         paste(unique(c(subj, keep)), collapse = ", ")),
               if (length(dis)) sprintf("dplyr::distinct(%s, .keep_all = TRUE)",
                                        paste(dis, collapse = ", ")),
-              if (length(levels)) ".levels()")
+              # the same rows as the data it is made from: the same levels
+              if (length(levels) && length(c(base[[2L]], .split_bar(r$derive), dis)))
+                ".levels()")
     if (!length(add)) {
       out <- c(out, .make_code(id, base[[1L]], c(base[[2L]], rest)))
       next
