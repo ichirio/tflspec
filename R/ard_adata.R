@@ -223,19 +223,29 @@
 }
 
 # The lines that make the analysis data `ids` (in their order); `levels`:
-# the code lists, each data made factors again (.derive_steps())
-.adata_lines <- function(x, ids, subj, levels = NULL) {
+# the code lists, each data made factors again (.derive_steps()); `avoid`:
+# the program's names, which a data's own code does not assign
+.adata_lines <- function(x, ids, subj, levels = NULL, avoid = character()) {
   ad <- .adata_sheet(x)
   out <- character()
+  lv <- if (length(levels)) .levels_step
   for (id in ids) {
     r <- ad[match(id, ad$data_id), ]
-    # written as R: its value is the data (what it makes on the way stays
+    # written as R: its value is the data.  One expression is the data
+    # itself; several run in local() (what they make on the way stays
     # inside)
     if (!is.na(r$code %||% NA)) {
-      out <- c(out, sprintf("%s <- local({\n%s\n})", id,
-                            paste0("  ", strsplit(trimws(r$code), "\n", fixed = TRUE)[[1L]],
-                                   collapse = "\n")),
-               if (length(levels)) sprintf("%s <- .levels(%s)", id, id))
+      code <- trimws(r$code)
+      one <- tryCatch(length(parse(text = code, keep.source = FALSE)) == 1L,
+                      error = function(e) FALSE)
+      made <- if (one) .code_as_program(code, id, list(lv), c(avoid, ids))
+      if (is.null(made)) {
+        made <- c(sprintf("%s <- local({\n%s\n})", id,
+                          paste0("  ", strsplit(code, "\n", fixed = TRUE)[[1L]],
+                                 collapse = "\n")),
+                  if (length(lv)) sprintf("%s <- set_levels(%s, codelists)", id, id))
+      }
+      out <- c(out, made)
       next
     }
     from_data <- r$from %in% ad$data_id
@@ -250,40 +260,34 @@
     # as each analysis's data: the population itself when the data is its
     # dataset, else the dataset's records of its subjects
     base <- if (is.null(pop)) {
-      list(src, if (!is.null(whr)) sprintf("subset(%s)", whr))
+      list(src, if (!is.null(whr)) sprintf("dplyr::filter(%s)", whr))
     } else if (!from_data && is.na(r$subjects) && identical(r$from, pop_ds)) {
-      list(pop, if (!is.null(whr)) sprintf("subset(%s)", whr))
+      list(pop, if (!is.null(whr)) sprintf("dplyr::filter(%s)", whr))
     } else {
       cond <- sprintf("%s %%in%% %s$%s", subj, pop, subj)
       if (!is.null(whr)) cond <- .cond_and(cond, whr)
-      list(src, sprintf("subset(%s)", cond))
+      list(src, sprintf("dplyr::filter(%s)", cond))
     }
     add <- .split_bar(r$add)
     keep <- .split_bar(r$keep)
     dis <- .split_bar(r$distinct)
-    # what follows the rows: derived, the columns kept, one row per ...,
-    # its code lists -- in the statement that makes it, unless columns are
-    # added from the subjects' data first (a join, a statement of its own)
-    rest <- c(.derive_steps(r$derive),
-              if (length(keep)) sprintf("subset(select = c(%s))",
-                                        paste(unique(c(subj, keep)), collapse = ", ")),
-              if (length(dis)) sprintf("dplyr::distinct(%s, .keep_all = TRUE)",
-                                       paste(dis, collapse = ", ")),
-              # the same rows as the data it is made from: the same levels
-              if (length(levels) && length(c(base[[2L]], .split_bar(r$derive), dis)))
-                ".levels()")
-    if (!length(add)) {
-      out <- c(out, .make_code(id, base[[1L]], c(base[[2L]], rest)))
-      next
-    }
-    out <- c(out, .make_code(id, base[[1L]], base[[2L]]))
-    p <- .adata_add_from(ad, id)
-    q <- function(v) paste(encodeString(v, quote = "\""), collapse = ", ")
-    # the population's values replace a column of the same name
-    out <- c(out, sprintf(
-      "%s <- dplyr::left_join(%s[setdiff(names(%s), c(%s))], %s[c(%s)], by = %s)",
-      id, id, id, q(add), p, q(c(subj, add)), encodeString(subj, quote = "\"")))
-    if (length(rest)) out <- c(out, .make_code(id, id, rest))
+    # columns from the subjects' data: the population's values replace a
+    # column of the same name
+    join <- if (length(add)) c(
+      sprintf("dplyr::select(-dplyr::any_of(%s))", .lay(.c_str(add), width = Inf)),
+      sprintf("dplyr::left_join(dplyr::select(%s, %s), by = %s)",
+              .adata_add_from(ad, id), paste(unique(c(subj, add)), collapse = ", "),
+              .q(subj)))
+    # what follows the rows: the columns added, derived, the columns kept,
+    # one row per ..., its code lists
+    steps <- c(base[[2L]], join, .derive_steps(r$derive),
+               if (length(keep)) sprintf("dplyr::select(%s)",
+                                         paste(unique(c(subj, keep)), collapse = ", ")),
+               if (length(dis)) sprintf("dplyr::distinct(%s, .keep_all = TRUE)",
+                                        paste(dis, collapse = ", ")),
+               # the same rows as the data it is made from: the same levels
+               if (length(c(base[[2L]], .split_bar(r$derive), dis, add))) lv)
+    out <- c(out, .make_code(id, base[[1L]], steps))
   }
   out
 }
