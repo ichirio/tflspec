@@ -35,3 +35,17 @@ as they are) and records what was built in \code{ard_status.csv} next to it:
 the report, the definition's fingerprint (\code{\link[=tfl_ard_spec_hash]{tfl_ard_spec_hash()}}), when,
 and how many rows.
 }
+\details{
+One of the six functions a generated ARD program calls
+(\code{\link[=tfl_ard_code]{tfl_ard_code()}}); unlike tflspec's others, their names have no
+\code{tfl_} (they read as a person writes them there).
+}
+\seealso{
+Other functions an ARD program calls: 
+\code{\link{fmt_ard}()},
+\code{\link{fmt_pvalue}()},
+\code{\link{keep_stats}()},
+\code{\link{set_levels}()},
+\code{\link{tag_ard}()}
+}
+\concept{functions an ARD program calls}

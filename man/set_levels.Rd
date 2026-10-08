@@ -23,7 +23,21 @@ counts a level no record has (\code{n = 0}).  A column that is neither
 character nor factor, and a list of a column the data does not have, are
 left alone.
 }
+\details{
+One of the six functions a generated ARD program calls
+(\code{\link[=tfl_ard_code]{tfl_ard_code()}}); unlike tflspec's others, their names have no
+\code{tfl_} (they read as a person writes them there).
+}
 \examples{
 d <- data.frame(SEX = c("M", "F", "U"))
 levels(set_levels(d, SEX = c("F", "M"))$SEX)
 }
+\seealso{
+Other functions an ARD program calls: 
+\code{\link{fmt_ard}()},
+\code{\link{fmt_pvalue}()},
+\code{\link{keep_stats}()},
+\code{\link{save_ard}()},
+\code{\link{tag_ard}()}
+}
+\concept{functions an ARD program calls}

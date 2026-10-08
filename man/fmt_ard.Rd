@@ -26,3 +26,17 @@ statistic (\code{"AGE:sd"}), then \code{cards::apply_fmt_fun()}.  A list of ARDs
 (\code{cards::ard_pairwise()}, one per pair of groups) becomes one, each row
 keeping its ARD's name as \code{pairwise}.
 }
+\details{
+One of the six functions a generated ARD program calls
+(\code{\link[=tfl_ard_code]{tfl_ard_code()}}); unlike tflspec's others, their names have no
+\code{tfl_} (they read as a person writes them there).
+}
+\seealso{
+Other functions an ARD program calls: 
+\code{\link{fmt_pvalue}()},
+\code{\link{keep_stats}()},
+\code{\link{save_ard}()},
+\code{\link{set_levels}()},
+\code{\link{tag_ard}()}
+}
+\concept{functions an ARD program calls}

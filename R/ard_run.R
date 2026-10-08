@@ -18,6 +18,10 @@
 #' @examples
 #' d <- data.frame(SEX = c("M", "F", "U"))
 #' levels(set_levels(d, SEX = c("F", "M"))$SEX)
+#' @details One of the six functions a generated ARD program calls
+#'   ([tfl_ard_code()]); unlike tflspec's others, their names have no
+#'   `tfl_` (they read as a person writes them there).
+#' @family functions an ARD program calls
 #' @export
 set_levels <- function(data, ...) {
   cl <- list(...)
@@ -49,6 +53,10 @@ set_levels <- function(data, ...) {
 #' @param analyses For analyses run together: each analysis's variables,
 #'   `list(CONT = "AGE", CAT = c("SEX", "RACE"))`; their rows are theirs.
 #' @return The ARD with the three ids first.
+#' @details One of the six functions a generated ARD program calls
+#'   ([tfl_ard_code()]); unlike tflspec's others, their names have no
+#'   `tfl_` (they read as a person writes them there).
+#' @family functions an ARD program calls
 #' @export
 tag_ard <- function(ard, output_id, analysis_id, population = NA_character_,
                     analyses = NULL) {
@@ -76,6 +84,10 @@ tag_ard <- function(ard, output_id, analysis_id, population = NA_character_,
 #' @return Character.
 #' @examples
 #' fmt_pvalue(c(0.0004, 0.0123))
+#' @details One of the six functions a generated ARD program calls
+#'   ([tfl_ard_code()]); unlike tflspec's others, their names have no
+#'   `tfl_` (they read as a person writes them there).
+#' @family functions an ARD program calls
 #' @export
 fmt_pvalue <- function(x) ifelse(x < 0.001, "<0.001", sprintf("%.3f", x))
 
@@ -94,6 +106,10 @@ fmt_pvalue <- function(x) ifelse(x < 0.001, "<0.001", sprintf("%.3f", x))
 #' @param skip Variables whose rows have theirs already (formatted in their
 #'   call).
 #' @return The ARD, `stat_fmt` filled.  Not a cards ARD: as it is.
+#' @details One of the six functions a generated ARD program calls
+#'   ([tfl_ard_code()]); unlike tflspec's others, their names have no
+#'   `tfl_` (they read as a person writes them there).
+#' @family functions an ARD program calls
 #' @export
 fmt_ard <- function(ard, formats = list(), skip = character()) {
   if (is.list(ard) && !is.data.frame(ard)) {
@@ -123,6 +139,10 @@ fmt_ard <- function(ard, formats = list(), skip = character()) {
 #' @param ard An ARD, or a list of them (`cards::ard_pairwise()`).
 #' @param stats The statistics (`stat_name`) to keep.
 #' @return The ARD with only those rows.
+#' @details One of the six functions a generated ARD program calls
+#'   ([tfl_ard_code()]); unlike tflspec's others, their names have no
+#'   `tfl_` (they read as a person writes them there).
+#' @family functions an ARD program calls
 #' @export
 keep_stats <- function(ard, stats) {
   if (is.list(ard) && !is.data.frame(ard)) return(lapply(ard, keep_stats, stats))
@@ -145,6 +165,10 @@ keep_stats <- function(ard, stats) {
 #'   option `tflspec.ard_sources`, which a study's setup sets once
 #'   (`options(tflspec.ard_sources = c(setup = "programs/study_setup.R"))`).
 #' @return `ard`, invisibly.
+#' @details One of the six functions a generated ARD program calls
+#'   ([tfl_ard_code()]); unlike tflspec's others, their names have no
+#'   `tfl_` (they read as a person writes them there).
+#' @family functions an ARD program calls
 #' @export
 save_ard <- function(ard, output_id, definition = NA_character_,
                      path = "output/ard/ard.rds",

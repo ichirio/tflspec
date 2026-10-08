@@ -17,3 +17,17 @@ The ARD with only those rows.
 \description{
 Of a method that gives more than the analysis asks for.
 }
+\details{
+One of the six functions a generated ARD program calls
+(\code{\link[=tfl_ard_code]{tfl_ard_code()}}); unlike tflspec's others, their names have no
+\code{tfl_} (they read as a person writes them there).
+}
+\seealso{
+Other functions an ARD program calls: 
+\code{\link{fmt_ard}()},
+\code{\link{fmt_pvalue}()},
+\code{\link{save_ard}()},
+\code{\link{set_levels}()},
+\code{\link{tag_ard}()}
+}
+\concept{functions an ARD program calls}

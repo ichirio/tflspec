@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9065** (the development version,
+**This manual documents tflspec 0.0.24.9066** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -32,7 +32,10 @@ differ, trust the package, not this file, and fetch the matching copy with
    (`table_plan()`, the `plan_*()` verbs, `plan_apply()`) and the RTF
    rendering are **rtfreporter's**. A program that runs a table spec starts
    with `library(rtfreporter)`.
-3. **Every tflspec function is `tfl_*`** (and `tflspec_ai_manual()`).
+3. **Every tflspec function is `tfl_*`** (and `tflspec_ai_manual()`),
+   except the six a generated ARD program calls as it runs:
+   `set_levels()`, `tag_ard()`, `fmt_ard()`, `keep_stats()`,
+   `fmt_pvalue()`, `save_ard()` (short, as a person writes them there).
    `table_plan()`, the `plan_*()` verbs, `plan_apply()`, `normalize_ard()`
    are **rtfreporter's**, never `tfl_`-prefixed; there are no aliases for
    former names (§12).
@@ -237,16 +240,20 @@ argument is written in one place: a column, or `args`, never both.
   read as the arguments of a call — any order; refused if not R.
 - `formats`: `mean=xx.x | p=xx.x% | AGE:sd=xx.xx` — the `xx` part says the
   decimals only. The program gives them to the cards call itself
-  (`fmt_fun = everything() ~ .fmts(mean = 1L)`, over the catalog's defaults
-  `.fmt_default`); a function that takes no `fmt_fun` (cardx's tests, CIs
-  and models, a study's own function, `custom` code, `ard_stack()`'s own
-  rows) gets them after the call, `.fmt(ard, list(...))`. Same `stat_fmt`.
+  (`fmt_fun = everything() ~ modifyList(fmt_default, list(mean = 1L))`,
+  over the catalog's defaults `fmt_default`); a function that takes no
+  `fmt_fun` (cardx's tests, CIs and models, a study's own function,
+  `custom` code, `ard_stack()`'s own rows) gets them after the call,
+  `fmt_ard(modifyList(fmt_default, list(...)))`. Same `stat_fmt`.
 - `custom` takes R in `code`; `args` passes arguments to the method.
   `tfl_ard_as_custom(spec, output_id, analysis_id)` writes an analysis as
   the code of a custom one (the same ARD), to start from when the columns
   cannot say it; the definition keeps the code, the program is never edited.
 - In `args` and `code`, `data` is the analysis data and `population` the
-  analysis set's subjects.
+  analysis set's subjects; the program writes them as the data's own names
+  (`adtte_ttde`, `pop_saf`), and a `custom` analysis's last expression is
+  its ARD (`local()` only when its code defines a function or assigns a
+  name the program has).
 - A function that takes a **formula** (`cardx::ard_survival_survdiff`,
   `cardx::ard_regression`, `cardx::ard_stats_aov`) leaves `by` and
   `variables` blank and gets `formula = ...` in `args`.
@@ -340,7 +347,7 @@ once. The `study` sheet has `key` / `value` (`rounding`: `sas` / `iec` /
 **variables**: `variable`, `label`, `order`, `levels` (`Grade 0 | Grade 1`), `empty_levels` (`hide`: no row for a value no record has; blank: a 0 row)
 → `plan_labels()`, `plan_levels()`.
 
-**codelists** (a report's code lists, one row a value): `output_id`, `variable`, `value`, `label`, `order` → `plan_labels(SEX = c(SEX = "Sex", F = "Female"))` and `plan_levels(SEX = c("M", "F"))`. Every row names its report: a blank `output_id` is an error (no study-wide rows; copy the rows into each report). A variable's `levels` on the `variables` sheet, when given, is the order instead. The code list of `variable` (the ARD's column; `value` a variable's name, `label` its label: `variable / AGE / Age (years)`) gives the variables' labels where the `variables` sheet's `label` is blank; it is not an order. `tfl_ard_code(codelists = )` makes factors, before any analysis, of the listed columns the report's analyses read (`by`, `strata`, `variables`, names in `args` / `code` / `post`; derived columns too); in the study's program each report's part has its own `.codelists` and reads its data with them.
+**codelists** (a report's code lists, one row a value): `output_id`, `variable`, `value`, `label`, `order` → `plan_labels(SEX = c(SEX = "Sex", F = "Female"))` and `plan_levels(SEX = c("M", "F"))`. Every row names its report: a blank `output_id` is an error (no study-wide rows; copy the rows into each report). A variable's `levels` on the `variables` sheet, when given, is the order instead. The code list of `variable` (the ARD's column; `value` a variable's name, `label` its label: `variable / AGE / Age (years)`) gives the variables' labels where the `variables` sheet's `label` is blank; it is not an order. `tfl_ard_code(codelists = )` makes factors, before any analysis, of the listed columns the report's analyses read (`by`, `strata`, `variables`, names in `args` / `code` / `post`; derived columns too); the program puts them on the data the analyses read with `set_levels()` (the lists as its arguments, or `codelists <- list(...)` once when more than one data takes them); in the study's program each report's part has its own `codelists`.
 
 **digits** (each statistic's decimals, once): `variable` (blank: every analysis variable; a name: its exception), `statistic` (`mean`, `sd`, `p` a percent ...), `digits` → written into the templates' tokens that say no format (`{mean} ({sd})` → `{mean:.1f} ({sd:.2f})`). A template's own format or a `cells` row's `digits` wins; a table of `tables$value = stat_fmt` (the ARD's own text) is not rounded here.
 
@@ -619,6 +626,9 @@ back): rename the value or choose another separator.
 ## 13. Complete public API (nothing outside this list exists)
 
 **Manual:** `tflspec_ai_manual`
+
+**Called by a generated ARD program:** `set_levels` `tag_ard` `fmt_ard`
+`keep_stats` `fmt_pvalue` `save_ard`
 
 **ARD spec:** `tfl_ard_spec` `tfl_read_ard_spec` `tfl_write_ard_spec`
 `tfl_ard_spec_template` `tfl_ard_code` `tfl_build_ard` `tfl_ard_for`

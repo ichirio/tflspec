@@ -35,3 +35,17 @@ ARD's columns.  A cards ARD stays one (class \code{card}), so the study ARD is
 one too and cards' own tools (\code{as_nested_list()}, \code{compare_ard()}) take
 it.
 }
+\details{
+One of the six functions a generated ARD program calls
+(\code{\link[=tfl_ard_code]{tfl_ard_code()}}); unlike tflspec's others, their names have no
+\code{tfl_} (they read as a person writes them there).
+}
+\seealso{
+Other functions an ARD program calls: 
+\code{\link{fmt_ard}()},
+\code{\link{fmt_pvalue}()},
+\code{\link{keep_stats}()},
+\code{\link{save_ard}()},
+\code{\link{set_levels}()}
+}
+\concept{functions an ARD program calls}
