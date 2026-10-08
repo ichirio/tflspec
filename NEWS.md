@@ -1,5 +1,34 @@
 # tflspec (development version)
 
+* **AI-assisted drafting, the network-free core** (#182, part 1: the `toc`
+  and `figure` tasks).  tflspec writes the prompt and reads the answer; it
+  sends nothing (no HTTP client, no key):
+  - `tfl_ai_context()`: the study facts a prompt carries, checked (the
+    study, the report, its titles and analysis set, the datasets' names,
+    labels and kinds -- never their values -- the current design, the
+    TOC's columns and reports);
+  - `tfl_ai_prompt()`: the prompt, `system` + `user` (+ `attach` in chat
+    mode, the documents' text between `<document>` fences in API mode,
+    `messages` for a client), one text to copy with `format()`.  English,
+    with the assumptions asked in the user's language; the fixed wording
+    is in `inst/ai/prompts/*.md`;
+  - `tfl_ai_schema()`: the columns or pieces the answer may write,
+    generated from what tflspec reads (`tfl_read_toc()`'s fields;
+    `tfl_fig_parts()`, `tfl_fig_templates()`), so the prompt cannot drift;
+  - `tfl_ai_parse()`: the answer's block, YAML by default and JSON too,
+    with the header `tflspec_ai: {task, version, output_id}`; nothing is
+    repaired silently: a block that does not read, an unknown column or
+    key, a header of another task or version, a block cut off are problems
+    with their place;
+  - `tfl_ai_check()`: the answer through `tfl_read_toc()` /
+    `tfl_check_fig_design()` in its context (`where`, `problem`,
+    `severity`); `tfl_ai_repair_prompt()`: the problems sent back with the
+    schema of the offending parts only;
+  - `tfl_ai_diff()`: what the answer changes, a TOC's rows by
+    `output_id`, a figure's pieces by name and position (`added`,
+    `changed` field by field, `removed`, `moved`, `same`);
+  - `tfl_ai_tasks()` lists the tasks; `table` and `ard` come later.
+
 * **The ARD program reads as a person writes it** (#181).  Same ARDs:
   - no function or loop of its own: it calls `set_levels()`, `tag_ard()`,
     `fmt_ard()`, `keep_stats()`, `fmt_pvalue()` and `save_ard()`, new

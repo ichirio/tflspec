@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9066** (the development version,
+**This manual documents tflspec 0.0.24.9067** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -160,6 +160,7 @@ going and leaves the message in the `error` / `warning` column.
 | a listing's program / its pages | `tfl_listing_code(spec)` / `tfl_listing(data, spec)` |
 | a figure: start / check / write the script | `tfl_fig_template()` / `tfl_check_fig_design()` / `tfl_fig_design_code()` |
 | attach this manual to a chat session | `tflspec_ai_manual(file = )` |
+| draft a TOC or a figure design with an AI chat | `tfl_ai_context()` → `tfl_ai_prompt()` → the chat → `tfl_ai_parse()` → `tfl_ai_check()` (problems: `tfl_ai_repair_prompt()`) → `tfl_ai_diff()` (§11.1) |
 
 ### 4.1 How the columns are named
 
@@ -578,6 +579,27 @@ those packages in the code (a string or comment keeps it) and the ARD
 program's own `library(cards)`. Unset, the code is as before.
 `tfl_build_ard()` runs the program by itself and ignores both.
 
+### 11.1 Drafting with an AI chat
+
+tflspec makes the prompt and reads the answer; it sends nothing (no HTTP
+client, no key). `tfl_ai_tasks()` lists what can be drafted: `toc` (the
+study's list of outputs, read through `tfl_read_toc()`) and `figure` (one
+report's whole design, checked by `tfl_check_fig_design()`). The prompt
+carries the schema (`tfl_ai_schema()`, generated from what tflspec reads)
+and the study's names and labels (`tfl_ai_context()`), never the data's
+values; the answer is one fenced YAML (or JSON) block that starts with a
+header naming its task and version. The result is always a draft: a
+person reviews `tfl_ai_diff()` item by item before anything is applied.
+
+```r
+ctx <- tfl_ai_context("figure", output_id = "F-14-2-1",
+                      titles = "Kaplan-Meier Plot of Overall Survival")
+prompt <- tfl_ai_prompt("figure", ctx)    # format(prompt): paste into the chat
+answer <- tfl_ai_parse(reply_text, "figure")
+problems <- tfl_ai_check(answer, ctx)     # errors: send tfl_ai_repair_prompt(answer, problems)
+tfl_ai_diff(current_design, answer)       # what to accept, piece by piece
+```
+
 ---
 
 ## 12. Names that do NOT exist
@@ -626,6 +648,10 @@ back): rename the value or choose another separator.
 ## 13. Complete public API (nothing outside this list exists)
 
 **Manual:** `tflspec_ai_manual`
+
+**AI-assisted drafting:** `tfl_ai_tasks` `tfl_ai_context` `tfl_ai_schema`
+`tfl_ai_prompt` `tfl_ai_parse` `tfl_ai_check` `tfl_ai_repair_prompt`
+`tfl_ai_diff`
 
 **Called by a generated ARD program:** `set_levels` `tag_ard` `fmt_ard`
 `keep_stats` `fmt_pvalue` `save_ard`
