@@ -630,7 +630,7 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 # data.frame method; cards 0.9.0, cardx 0.3.4), for when the package is not
 # there to ask.  The rest -- cardx's tests, CIs and models, ard_stack(),
 # ard_stack_hierarchical(), ard_total_n() -- get their formats after the
-# call (.fmt()).
+# call (fmt_ard()).
 .fmt_fun_known <- c("cards::ard_summary", "cards::ard_tabulate",
                     "cards::ard_tabulate_value", "cards::ard_missing",
                     "cards::ard_hierarchical", "cards::ard_hierarchical_count",
