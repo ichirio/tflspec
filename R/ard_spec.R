@@ -79,7 +79,7 @@
 
 # The call an analysis row stands for, with `data` and `population` bound.
 .analysis_body <- function(r, keys, subj, has, den = NULL, data = "data",
-                           population = "population") {
+                           population = "population", fmt_fun = NULL) {
   m <- r$method
   k <- .method_key(m, keys)
   fn <- if (is.na(k)) m else keys$call[k]
@@ -100,11 +100,12 @@
     return(paste0(
       sprintf("population$%s <- population$%s %%in%% data$%s\n", flag, subj,
               subj),
-      sprintf("cards::ard_tabulate_value(population%s, variables = %s, value = list(%s = TRUE)%s%s%s)",
+      sprintf("cards::ard_tabulate_value(population%s, variables = %s, value = list(%s = TRUE)%s%s%s%s)",
               if (!is.null(by)) paste0(", by = ", by) else "", flag, flag,
               if (!is.null(st)) paste0(", ", st) else "",
               if (length(own)) paste0(", ", paste(own, collapse = ", ")) else "",
-              if (!is.na(r$args)) paste0(", ", r$args) else "")))
+              if (!is.na(r$args)) paste0(", ", r$args) else "",
+              if (!is.null(fmt_fun)) paste0(",\n    ", fmt_fun) else "")))
   }
   # the keyword's own arguments, each unless the row's args gives it
   dflt <- if (!is.na(k) && nzchar(keys$defaults[k])) {
@@ -120,7 +121,8 @@
     own,
     if (!has("statistic")) .stat_arg(kind, stats),
     dflt,
-    if (!is.na(r$args)) r$args)
+    if (!is.na(r$args)) r$args,
+    fmt_fun)
   first <- .data_arg(fn, has)
   if (!is.null(first)) first <- data
   sprintf("%s(%s)", fn, paste(c(first, args), collapse = ",\n    "))
@@ -763,11 +765,93 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   stats::setNames(v, k)
 }
 
-.fmt_vector <- function(f) {
-  if (!length(f)) return("character()")
-  sprintf("c(%s)", paste(sprintf("%s = %s", encodeString(names(f), quote = "`"),
-                                 encodeString(f, quote = "\"")),
-                         collapse = ", "))
+# A format of the spec as R that cards' fmt_fun takes: an integer is that
+# many decimals (cards::label_round(d)), xx.x% a proportion as a percent,
+# pvalue the program's .pvalue()
+.fmt_r <- function(f) {
+  if (identical(f, "pvalue")) return(".pvalue")
+  d <- if (grepl("^[0-9]+$", f)) as.integer(f) else
+    nchar(sub("^[^.]*[.]?", "", sub("%$", "", f)))
+  if (endsWith(f, "%")) sprintf("cards::label_round(%d, scale = 100)", d) else
+    sprintf("%dL", d)
+}
+
+# a name as R writes it: `AGE:sd` and the like in backquotes
+.r_arg_name <- function(x) {
+  ifelse(make.names(x) == x, x, encodeString(x, quote = "`"))
+}
+
+# `mean = 2L, sd = 3L`
+.fmt_args <- function(f) {
+  paste(sprintf("%s = %s", .r_arg_name(names(f)), vapply(f, .fmt_r, "")),
+        collapse = ", ")
+}
+
+# The formats an analysis's call gives cards itself: `fmt_fun = ...`, each
+# variable's statistics with the defaults (.fmt_default) and the analysis's
+# own formats over them, a variable's own (`BMIBL:sd`) over those for every
+# variable -- what .fmt() gives the same ARD after the call.  cards takes a
+# variable's list whole (a later formula does not add to an earlier one),
+# so a variable with formats of its own gets every one again.  NULL when
+# the call cannot say them: a format of a variable the call's `variables`
+# do not name (or name as R, not by name).
+.fmt_fun_arg <- function(fmt, vars) {
+  if (anyNA(fmt) || !all(.fmt_ok(fmt))) return(NULL)
+  own <- grepl(":", names(fmt), fixed = TRUE)
+  plain <- fmt[!own]
+  spec <- fmt[own]
+  sv <- sub(":.*$", "", names(spec))
+  if (!all(sv %in% vars)) return(NULL)
+  one <- function(m) if (length(m)) sprintf(".fmts(%s)", .fmt_args(m)) else
+    ".fmt_default"
+  own_v <- intersect(vars, sv)
+  lists <- vapply(own_v, function(v) {
+    m <- plain
+    o <- spec[sv == v]
+    m[sub("^.*:", "", names(o))] <- o
+    one(m)
+  }, "")
+  # the same formats for every variable (an analysis's own, in a stack):
+  # one formula; variables with the same list: c(AGE, BMIBL)
+  if (length(lists) && setequal(own_v, vars) && length(unique(lists)) == 1L) {
+    plain <- spec[sv == own_v[1L]]
+    names(plain) <- sub("^.*:", "", names(plain))
+    plain <- c(fmt[!own][setdiff(names(fmt[!own]), names(plain))], plain)
+    lists <- character()
+  }
+  parts <- c(paste("everything() ~", one(plain)),
+             vapply(unique(lists), function(l) {
+               v <- .r_arg_name(names(lists)[lists == l])
+               sprintf("%s ~ %s", if (length(v) > 1L)
+                 sprintf("c(%s)", paste(v, collapse = ", ")) else v, l)
+             }, ""))
+  sprintf("fmt_fun = %s", if (length(parts) == 1L) parts else
+    sprintf("list(\n      %s)", paste(parts, collapse = ",\n      ")))
+}
+
+# The cards / cardx functions whose call takes fmt_fun (that of their
+# data.frame method; cards 0.9.0, cardx 0.3.4), for when the package is not
+# there to ask.  The rest -- cardx's tests, CIs and models, ard_stack(),
+# ard_stack_hierarchical(), ard_total_n() -- get their formats after the
+# call (.fmt()).
+.fmt_fun_known <- c("cards::ard_summary", "cards::ard_tabulate",
+                    "cards::ard_tabulate_value", "cards::ard_missing",
+                    "cards::ard_hierarchical", "cards::ard_hierarchical_count",
+                    "cards::ard_mvsummary", "cards::ard_tabulate_rows",
+                    "cardx::ard_tabulate_max")
+
+# Does a method's function take fmt_fun?  A subject flag is
+# cards::ard_tabulate_value(); code, a study's own function, no.
+.takes_fmt_fun <- function(fn) {
+  if (identical(fn, "(subjects)")) fn <- "cards::ard_tabulate_value"
+  if (startsWith(fn, "(") || !grepl("::", fn, fixed = TRUE)) return(FALSE)
+  f <- tryCatch(eval(str2lang(fn)), error = function(e) NULL)
+  if (!is.function(f)) return(fn %in% .fmt_fun_known)
+  if ("fmt_fun" %in% names(formals(f))) return(TRUE)
+  m <- tryCatch(utils::getS3method(sub("^.*::", "", fn), "data.frame",
+                                   optional = TRUE, envir = environment(f)),
+                error = function(e) NULL)
+  is.function(m) && "fmt_fun" %in% names(formals(m))
 }
 
 # the helpers every ARD program starts with: the computed statistics it
@@ -777,8 +861,7 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   cst <- st[st$kind == "continuous" & !is.na(st$fun) & st$statistic %in% used, ]
   dflt <- st[!duplicated(st$statistic) & !is.na(st$fmt), ]
   dflt <- stats::setNames(dflt$fmt, dflt$statistic)
-  fl <- sprintf("%s = %s", encodeString(names(dflt), quote = "`"),
-                encodeString(dflt, quote = "\""))
+  fl <- sprintf("%s = %s", .r_arg_name(names(dflt)), vapply(dflt, .fmt_r, ""))
   fl <- vapply(split(fl, ceiling(seq_along(fl) / 5)), paste, "",
                collapse = ", ")
   c(if (nrow(cst)) c(
@@ -787,38 +870,37 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
       paste0("  ", encodeString(cst$statistic, quote = "`"), " = ", cst$fun,
              c(rep(",", nrow(cst) - 1L), "")),
       ")", ""),
-    "# stat_fmt: each statistic formatted -- xx.x = 1 decimal, xx.x% = a",
-    "# proportion as a percent, pvalue = <0.001 or 3 decimals",
-    ".fmt_default <- c(",
+    "# stat_fmt: each statistic's format, as cards' fmt_fun takes it -- an",
+    "# integer is that many decimals, label_round(1, scale = 100) a proportion",
+    "# as a percent, .pvalue <0.001 or 3 decimals",
+    ".pvalue <- function(x) ifelse(x < 0.001, \"<0.001\", sprintf(\"%.3f\", x))",
+    ".fmt_default <- list(",
     paste0("  ", fl, c(rep(",", length(fl) - 1L), "")),
     ")",
-    ".fmt <- function(ard, fmt = character()) {",
+    "# the defaults with an analysis's own formats: fmt_fun = everything() ~ .fmts(mean = 2L)",
+    ".fmts <- function(...) utils::modifyList(.fmt_default, list(...))",
+    "# the formats after the call, for what takes no fmt_fun (cardx, a study's",
+    "# own functions, code, ard_stack()'s own rows): `fmt` by statistic or",
+    "# variable:statistic over the defaults; the rows of the variables `skip`",
+    "# have theirs already (fmt_fun inside ard_stack())",
+    ".fmt <- function(ard, fmt = list(), skip = character()) {",
     "  # a method that gives several ARDs (cards::ard_pairwise(): one per",
     "  # pair of groups): one, each row keeping its ARD's name as `pairwise`",
     "  if (is.list(ard) && !is.data.frame(ard)) {",
     "    ard <- dplyr::bind_rows(ard, .id = \"pairwise\")",
     "  }",
     "  if (!inherits(ard, \"card\")) return(ard)",
-    "  f <- .fmt_default",
-    "  f[names(fmt)] <- fmt",
+    "  f <- utils::modifyList(.fmt_default, fmt)",
     "  f <- f[order(grepl(\":\", names(f), fixed = TRUE))]",
     "  for (k in names(f)) {",
     "    s <- sub(\"^.*:\", \"\", k)",
     "    v <- if (grepl(\":\", k, fixed = TRUE)) sub(\":.*$\", \"\", k)",
-    "    rows <- ard$stat_name == s & (is.null(v) | ard$variable %in% v)",
+    "    rows <- ard$stat_name == s & (is.null(v) | ard$variable %in% v) &",
+    "      !ard$variable %in% skip",
     "    if (!any(rows)) next",
-    "    fun <- if (f[[k]] == \"pvalue\") {",
-    "      function(x) ifelse(x < 0.001, \"<0.001\", sprintf(\"%.3f\", x))",
-    "    } else {",
-    "      # the decimals (the x after the point, or the number); % scales by 100",
-    "      d <- if (grepl(\"^[0-9]+$\", f[[k]])) as.integer(f[[k]]) else",
-    "        nchar(sub(\"^[^.]*[.]?\", \"\", sub(\"%$\", \"\", f[[k]])))",
-    "      sc <- if (endsWith(f[[k]], \"%\")) 100 else 1",
-    "      local({ d <- d; sc <- sc; cards::label_round(d, scale = sc) })",
-    "    }",
     "    ard <- cards::update_ard_fmt_fun(",
     "      ard, variables = dplyr::all_of(unique(ard$variable[rows])),",
-    "      stat_names = s, fmt_fun = fun)",
+    "      stat_names = s, fmt_fun = f[[k]])",
     "  }",
     "  cards::apply_fmt_fun(ard)",
     "}",
@@ -838,11 +920,27 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 #' saved to the study key `output` (default `output/ard/ard.rds`).  The code
 #' runs from the study folder.
 #'
+#' The formats (the method's and the row's `formats`, over each statistic's
+#' default in [tfl_ard_statistics()]) are in the cards call itself, its
+#' `fmt_fun` argument, where a reader sees them next to the statistics:
+#' `fmt_fun = everything() ~ .fmts(mean = 2L)`, a variable's own
+#' (`BMIBL:sd=3`) as `BMIBL ~ .fmts(mean = 2L, sd = 3L)`.  An integer is
+#' that many decimals, `xx.x%` is `label_round(1, scale = 100)` and
+#' `pvalue` the program's `.pvalue()` (`<0.001` or 3 decimals);
+#' `cards::apply_fmt_fun()` then fills `stat_fmt`.  What takes no `fmt_fun`
+#' gets the same formats after the call, from `.fmt()`: cardx's tests, CIs
+#' and models, `cards::ard_stack_hierarchical()`, a study's own function,
+#' `custom` code, `ard_pairwise()`, `ard_stack()`'s own rows (the by counts,
+#' the total N), an analysis whose `args` gives `fmt_fun` or whose `post`
+#' changes the ARD, a variable's own format for `ard_hierarchical()` or
+#' `ard_tabulate_rows()`.  `stat_fmt` is the same either way.
+#'
 #' `part` gives a piece of it instead, for a program layout of one's own
 #' (tflplanner writes one program per output that sources a shared setup):
 #' `"setup"` is what every piece starts with -- `library(cards)`, the
 #' tagging helper, every computed statistic of the catalog and the
-#' `stat_fmt` helpers; `"body"` is the analyses of `output_id`, ending in
+#' `stat_fmt` helpers (`.fmt_default`, `.fmts()`, `.pvalue()`, `.fmt()`);
+#' `"body"` is the analyses of `output_id`, ending in
 #' `ard` -- without a header or `saveRDS()`.
 #'
 #' @param spec An [tfl_ard_spec()] (or the path of one).
@@ -1154,9 +1252,16 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
         identical(keys$call[k], "(code)") || .names_data(r)
       den <- .den_code(r$denominator, xo, pop, subj,
                        population = if (bind) "population" else pop_name)
-      body <- if (bind) .analysis_body(r, keys, subj, has, den) else
+      fmt <- c(if (!is.na(k)) .parse_formats(keys$formats[k]),
+               .parse_formats(r$formats))
+      fmt <- fmt[!duplicated(names(fmt), fromLast = TRUE)]
+      # the formats in the call (fmt_fun), when the function takes them and
+      # nothing changes the ARD after it; else after it (.fmt())
+      fmt_fun <- .call_fmt_fun(r, keys, given, fmt)
+      body <- if (bind) .analysis_body(r, keys, subj, has, den,
+                                       fmt_fun = fmt_fun) else
         .analysis_body(r, keys, subj, has, den, data = data_name[[as.character(i)]],
-                       population = pop_name)
+                       population = pop_name, fmt_fun = fmt_fun)
       core <- strsplit(body, "\n", fixed = TRUE)[[1L]]
       if (bind) {
         core <- c("local({",
@@ -1168,9 +1273,6 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
       keep <- if (!kind %in% c("continuous", "categorical", "missing") &&
                   !identical(keys$call[k], "(subjects)"))
         .split_bar(r$statistics)
-      fmt <- c(if (!is.na(k)) .parse_formats(keys$formats[k]),
-               .parse_formats(r$formats))
-      fmt <- fmt[!duplicated(names(fmt), fromLast = TRUE)]
       core[1L] <- paste("ard <-", core[1L])
       code <- c(code,
                 sprintf("# %s / %s%s", r$output_id, r$analysis_id,
@@ -1179,8 +1281,8 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
                 if (length(keep)) sprintf("ard <- .keep(ard, c(%s))",
                                           paste(encodeString(keep, quote = "\""),
                                                 collapse = ", ")),
-                sprintf("ards[[%d]] <- .tag(.fmt(ard%s), %s, %s, %s)", i,
-                        if (length(fmt)) paste0(", ", .fmt_vector(fmt)) else "",
+                sprintf("ards[[%d]] <- .tag(%s, %s, %s, %s)", i,
+                        .fmt_call(fmt, !is.null(fmt_fun)),
                         encodeString(r$output_id, quote = "\""),
                         encodeString(r$analysis_id, quote = "\""),
                         if (is.na(pid)) "NA_character_" else
@@ -1222,6 +1324,39 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
   code
 }
 
+# An analysis's `fmt_fun = ...`, or NULL when its formats go after the call:
+# its function takes no fmt_fun (cardx's tests and models, a study's own,
+# code), its `args` gives one itself, or `post` changes the ARD after it.
+.call_fmt_fun <- function(r, keys, given, fmt) {
+  k <- .method_key(r$method, keys)
+  fn <- if (is.na(k)) r$method else keys$call[k]
+  if (!.takes_fmt_fun(fn) || any(c("fmt_fun", "fmt_fn") %in% given) ||
+      !is.na(r$post)) return(NULL)
+  vars <- if (identical(fn, "(subjects)")) {
+    if (length(.split_bar(r$variables))) .split_bar(r$variables)[1L] else
+      make.names(r$analysis_id)
+  } else if (fn %in% .fmt_fun_every) character() else .split_bar(r$variables)
+  .fmt_fun_arg(fmt, vars)
+}
+
+# Functions whose fmt_fun is for every variable only: ard_hierarchical()
+# formats a column of its own (a variable's formula finds no AEDECOD), and
+# ard_tabulate_rows() has no variables.  A variable's own format: after.
+.fmt_fun_every <- c("cards::ard_hierarchical", "cards::ard_hierarchical_count",
+                    "cards::ard_tabulate_rows")
+
+# What the tagged ARD is: formatted in the call, its stat_fmt filled
+# (cards::apply_fmt_fun()); or formatted after it (.fmt(), the defaults and
+# `fmt`)
+.fmt_call <- function(fmt, in_call, skip = NULL) {
+  if (in_call && is.null(skip)) return("cards::apply_fmt_fun(ard)")
+  sprintf(".fmt(%s)", paste(c("ard",
+    if (length(fmt)) sprintf("list(%s)", .fmt_args(fmt)),
+    if (length(skip)) sprintf("skip = c(%s)", paste(encodeString(skip, quote = "\""),
+                                                     collapse = ", "))),
+    collapse = ", "))
+}
+
 # The functions that run other analyses: an analysis row whose `parent`
 # names a row with one of these as its method is run inside it.
 .ard_wrappers <- c("cards::ard_stack", "cards::ard_strata",
@@ -1238,18 +1373,53 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
   pop <- if (!is.na(pid)) paste0("pop_", .r_name(pid))
   pop_name <- if (is.null(pop)) "NULL" else pop
   stack <- identical(r$method, "cards::ard_stack")
-  child <- function(kr) {
-    given <- c(.args_given(kr$args), if (!is.na(kr$strata)) "strata",
-               if (!is.na(kr$denominator)) "denominator")
+  pairwise <- identical(r$method, "cards::ard_pairwise")
+  # formats: a row's own, for its own variables
+  fmt <- character()
+  for (j in seq_len(nrow(kids))) {
+    kr <- kids[j, ]
+    k <- .method_key(kr$method, keys)
+    f <- c(if (!is.na(k)) .parse_formats(keys$formats[k]),
+           .parse_formats(kr$formats))
+    if (stack && any(!grepl(":", names(f), fixed = TRUE))) {
+      plain <- !grepl(":", names(f), fixed = TRUE)
+      vv <- .split_bar(kr$variables)
+      f <- c(f[!plain], unlist(lapply(vv, function(v)
+        stats::setNames(f[plain], paste0(v, ":", names(f)[plain])))))
+    }
+    fmt <- c(fmt, f)
+  }
+  fmt <- c(.parse_formats(r$formats), fmt)
+  fmt <- fmt[!duplicated(names(fmt), fromLast = TRUE)]
+  given_of <- function(kr) c(.args_given(kr$args), if (!is.na(kr$strata)) "strata",
+                             if (!is.na(kr$denominator)) "denominator")
+  # each analysis's formats in its call (fmt_fun), when every one takes
+  # them; not inside ard_pairwise() (a list of ARDs), nor when `post`
+  # changes the ARD after
+  fmt_funs <- if (!pairwise && is.na(r$post)) lapply(seq_len(nrow(kids)), function(j) {
+    kr <- kids[j, ]
+    kr$post <- NA
+    f <- fmt
+    # in a stack, a variable's own formats go to its analysis's call (the
+    # rest, the stack's own rows, after it)
+    if (stack) f <- f[!grepl(":", names(f), fixed = TRUE) |
+                        sub(":.*$", "", names(f)) %in% .split_bar(kr$variables)]
+    .call_fmt_fun(kr, keys, given_of(kr), f)
+  })
+  in_call <- length(fmt_funs) > 0L && !any(vapply(fmt_funs, is.null, NA))
+  child <- function(kr, fmt_fun) {
+    given <- given_of(kr)
     has <- function(arg) arg %in% given
     den <- .den_code(kr$denominator, x, pop, subj, population = pop_name)
     if (stack) kr$by <- NA
     body <- .analysis_body(kr, keys, subj, has, den,
                            data = if (stack) NULL else ".x",
-                           population = pop_name)
+                           population = pop_name,
+                           fmt_fun = if (in_call) fmt_fun)
     gsub("\n", "\n  ", body, fixed = TRUE)
   }
-  bodies <- vapply(seq_len(nrow(kids)), function(j) child(kids[j, ]), "")
+  bodies <- vapply(seq_len(nrow(kids)), function(j)
+    child(kids[j, ], fmt_funs[[j]]), "")
   args <- c(data,
             if (stack && !is.na(r$by)) paste(".by =", .vars(r$by)),
             if (!stack && identical(r$method, "cards::ard_strata")) c(
@@ -1262,23 +1432,16 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
   call <- sprintf("%s(%s)", r$method, paste(args, collapse = ",\n    "))
   core <- strsplit(call, "\n", fixed = TRUE)[[1L]]
   core[1L] <- paste("ard <-", core[1L])
-  # formats: a row's own, for its own variables
-  fmt <- character()
-  for (j in seq_len(nrow(kids))) {
-    kr <- kids[j, ]
-    k <- .method_key(kr$method, keys)
-    f <- c(if (!is.na(k)) .parse_formats(keys$formats[k]),
-           .parse_formats(kr$formats))
-    if (stack && length(f)) {
-      plain <- !grepl(":", names(f), fixed = TRUE)
-      vv <- .split_bar(kr$variables)
-      f <- c(f[!plain], unlist(lapply(vv, function(v)
-        stats::setNames(f[plain], paste0(v, ":", names(f)[plain])))))
-    }
-    fmt <- c(fmt, f)
+  # ard_stack()'s own rows (the by counts, the total N) take no fmt_fun:
+  # theirs after it, the analyses' variables skipped (formatted in their
+  # calls).  With .missing, the stack's missing rows are of those variables
+  # too: all after it, as in the calls.
+  skip <- if (in_call && stack) {
+    if (".missing" %in% .args_given(r$args)) character() else
+      unique(unlist(lapply(kids$variables, .split_bar)))
   }
-  fmt <- c(.parse_formats(r$formats), fmt)
-  fmt <- fmt[!duplicated(names(fmt), fromLast = TRUE)]
+  post_fmt <- if (length(skip)) fmt[!grepl(":", names(fmt), fixed = TRUE) |
+                                      !sub(":.*$", "", names(fmt)) %in% skip] else fmt
   keep <- if (!stack) {
     k <- .method_key(kids$method[1L], keys)
     kind <- if (is.na(k)) "" else keys$kind[k]
@@ -1302,8 +1465,9 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
     if (length(keep)) sprintf("ard <- .keep(ard, c(%s))",
                               paste(encodeString(keep, quote = "\""),
                                     collapse = ", ")),
-    sprintf("ards[[%d]] <- .tag(.fmt(ard%s), %s, %s, %s)", i,
-            if (length(fmt)) paste0(", ", .fmt_vector(fmt)) else "",
+    sprintf("ards[[%d]] <- .tag(%s, %s, %s, %s)", i,
+            .fmt_call(post_fmt, in_call && !stack,
+                      skip = if (stack && in_call) skip),
             encodeString(r$output_id, quote = "\""), ids,
             if (is.na(pid)) "NA_character_" else
               encodeString(pid, quote = "\"")))
