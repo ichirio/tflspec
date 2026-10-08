@@ -4,7 +4,12 @@
   the whole flow (an ARD spec -> `tfl_ard_code()` / the ARD -> the bundled
   `DM.xlsx` table -> the bundled `report.xlsx` report), articles on the
   ARD spec, the table spec, reports, listings, figures and ARS, and a
-  reference index grouped by the workflow.
+  reference index grouped by the workflow.  The articles follow this
+  version's spec: a report's analysis data and code lists, the variables'
+  labels, the `digits` sheet, `tables$value`, the page sheet's font, the
+  study's setup code (`tfl_report_setup_code()`, `setup = TRUE`), figure
+  code piped with `|>`, and a report's analysis data in ARS.  The README
+  says the same of the font, the setup code and the code lists.
 
 * **A report's own font** (#176).  A report's row of `page` that says its
   `font` (or size) wins over the company's: its program says it, with the

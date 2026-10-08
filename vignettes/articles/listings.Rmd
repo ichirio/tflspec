@@ -66,7 +66,12 @@ cat(tfl_listing_code(spec, "L-16-2-7", datasets = catalog,
 ```
 
 The report around it is the report spec's, as for a table:
-`tfl_report_code(report_spec, "L-16-2-7", content = "content")`.
+`tfl_report_code(report_spec, "L-16-2-7", content = "content")`. In a
+study whose report programs source the setup script
+(`tfl_report_setup_code()`: the company's font, the study's tokens, the
+running header and footer), the listing's program is written with
+`setup = TRUE` and says only its own values, as a table's does (see
+[Reports](reports.html)).
 
 ## The pages
 

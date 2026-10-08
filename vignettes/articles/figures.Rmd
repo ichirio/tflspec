@@ -13,7 +13,10 @@ plot's data, the statistics computed from it, and the layers drawn, in
 order. `tfl_fig_design_code()` writes the ggplot2 script it stands for.
 The script depends on dplyr and ggplot2 (and ggsurvfit / patchwork where
 a layer needs them), not on tflspec: it is the program a study keeps, to
-read and finish by hand.
+read and finish by hand. It is written in the style of a study's other
+programs: the data steps pipe with `|>`, and its parts are marked by one
+line each (`# ---- data ----`, `# ---- the figure ----`,
+`# ---- saving the figure ----`).
 
 ```{r, message = FALSE}
 library(tflspec)
@@ -70,6 +73,24 @@ setwd(old)
 env$fig
 ```
 
+## In a study's programs
+
+Three arguments fit the script into a study's other programs:
+
+- `setup = TRUE` takes the palette from the study's figure setup
+  (`tfl_colours()`, see *One look for the study* below) instead of
+  writing it in the script;
+- `save = FALSE` leaves out the PNG: a report program places the figure
+  itself;
+- `name` is what the figure is called (`"plot"`, for a report program
+  that hands it to rtfreporter).
+
+```{r, opts.label = "code"}
+code <- tfl_fig_design_code(design, "F-14-2-1", setup = TRUE, save = FALSE,
+                            name = "plot")
+cat(code[grep("tfl_colours|^plot <-|ggsave", code)], sep = "\n")   # no ggsave()
+```
+
 ## When the design cannot say it
 
 What a template's fields cannot express is written **in the design**, not
@@ -81,12 +102,17 @@ patched into the script afterwards:
   `scale_*()`, `facet_*()`);
 - `!r` values: `labels: !r scales::label_percent()`.
 
+Written in the style of the script, with `|>`:
+
 ```{r, opts.label = "code"}
-design$layers <- c(design$layers, list(list(
-  layer = "layer_code",
-  code = 'p <- p + annotate("text", x = 1, y = 0.05, label = "Data cut-off: 01JUN2026", hjust = 0, size = 3)')))
+arms <- "df <- df |> mutate(TRT01P = factor(TRT01P, sort(unique(TRT01P))))"
+cutoff <- paste('p <- p + annotate("text", x = 1, y = 0.05,',
+                'label = "Data cut-off: 01JUN2026", hjust = 0, size = 3)')
+design$data <- c(design$data, list(list(step = "data_code", code = arms)))
+design$layers <- c(design$layers,
+                   list(list(layer = "layer_code", code = cutoff)))
 code <- tfl_fig_design_code(design, "F-14-2-1")
-cat(code[grep("your code", code) + 0:1], sep = "\n")
+cat(code[grep("your code|TRT01P = factor|Data cut-off", code)], sep = "\n")
 ```
 
 ## One look for the study

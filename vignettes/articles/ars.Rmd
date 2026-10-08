@@ -73,6 +73,32 @@ cat(readLines(json, n = 20), sep = "\n")
 `tfl_write_ars_xlsx(ars, path)` writes CDISC's Excel template, for people
 to read.
 
+## A report's analysis data
+
+An analysis that reads one of its report's analysis data (`data`, see
+[The ARD spec](ard-spec.html)) is written with that data's conditions:
+the `where` of each row it is made from, joined into one WhereClause on
+the ADaM dataset, and the population of the data it starts from. What a
+WhereClause cannot say -- `subjects`, `derive`, `code` ... -- is listed
+by `tfl_ars_unmapped()`, as above.
+
+```{r}
+adata <- df(output_id = "T-14-3-2",
+            data_id = c("adae_teae", "adae_ser"),
+            from = c("ADAE", "adae_teae"),
+            population_id = c("SAF", NA),
+            where = c('TRTEMFL == "Y"', 'AESER == "Y"'))
+analyses <- df(output_id = "T-14-3-2", analysis_id = "SER",
+               method = "hierarchical", data = "adae_ser", by = "TRTA",
+               variables = "AEBODSYS | AEDECOD",
+               purpose = "PRIMARY OUTCOME MEASURE")
+sheets <- unclass(ard_spec)[c("study", "datasets", "populations")]
+ard_spec2 <- tfl_ard_spec(c(sheets,
+                            list(analysis_data = adata, analyses = analyses)))
+ars2 <- tfl_ars(ard_spec2)
+tfl_check_ars(ars2)
+```
+
 ## Running it with siera
 
 `profile = "siera"` writes ARS that [siera](https://clymbclinical.github.io/siera/)
