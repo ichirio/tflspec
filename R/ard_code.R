@@ -93,11 +93,23 @@
 # keep theirs)
 .rename_symbols <- function(code, map) {
   if (is.na(code) || !nzchar(code)) return(code)
-  tk <- .code_tokens(code)
-  if (is.null(tk)) return(code)
+  pd <- tryCatch(utils::getParseData(parse(text = code, keep.source = TRUE)),
+                 error = function(e) NULL)
+  if (is.null(pd) || !nrow(pd)) return(code)
+  tk <- pd[pd$terminal, , drop = FALSE]
+  tk <- tk[order(tk$line1, tk$col1), , drop = FALSE]
   prev <- c("", tk$token[-nrow(tk)])
   hit <- which(tk$token == "SYMBOL" & tk$text %in% names(map) &
                  !prev %in% c("'$'", "'@'"))
+  # inside a function with an argument of that name: the argument's
+  pos <- function(l, c) l * 1e5 + c
+  for (f in pd$parent[pd$token == "FUNCTION"]) {
+    fm <- pd$text[pd$token == "SYMBOL_FORMALS" & pd$parent == f]
+    e <- pd[pd$id == f, ]
+    inside <- pos(tk$line1[hit], tk$col1[hit]) >= pos(e$line1, e$col1) &
+      pos(tk$line1[hit], tk$col1[hit]) <= pos(e$line2, e$col2)
+    hit <- hit[!(inside & tk$text[hit] %in% fm)]
+  }
   if (!length(hit)) return(code)
   lines <- strsplit(code, "\n", fixed = TRUE)[[1L]]
   hit <- hit[order(tk$line1[hit], -tk$col1[hit])]
@@ -359,7 +371,7 @@
       run <- cumsum(c(TRUE, own[-1L] != own[-length(own)]))
       parts <- lapply(split(seq_along(s), run), function(i) {
         if (own[i[1L]]) .cl("cards::continuous_summary_fns", list(.cl("c", .q(s[i]))))
-        else sprintf("tfl_stats[%s]", .lay(.cl("c", .q(s[i])), width = Inf))
+        else sprintf("tfl_stats[%s]", .lay(.c_str(s[i]), width = Inf))
       })
       if (length(parts) == 1L) {
         p <- parts[[1L]]
@@ -472,7 +484,7 @@
 # `codelists <- list(...)`: the code lists' values of each variable
 .codelists_line <- function(levels) {
   paste("codelists <-", .lay(.cl("list", lapply(levels, function(v)
-    .cl("c", .q(v)))), lead = 13L))
+    .c_str(v))), lead = 13L))
 }
 
 # The datasets and populations analyses `a` (and analysis data `nad`)
@@ -653,7 +665,9 @@
       }
       code <- c(code, if (j > 1L || several) "", lines)
     }
-    bound <- .cl("dplyr::bind_rows", as.list(ard_names))
+    # (one analysis: its ARD as it is)
+    bound <- if (length(ard_names) == 1L) ard_names else
+      .cl("dplyr::bind_rows", as.list(ard_names))
     code <- c(code, "", if (several) {
       .pipe_code("ards[[output_id]]", bound)
     } else if (length(save)) {
@@ -694,6 +708,12 @@
     nm <- sub(" <- .*$", "", code[k])
     if (nm %in% syms) next
     code[k] <- sub(pipe_lv, "", sub(flat_lv, "", code[k], fixed = TRUE), fixed = TRUE)
+    # a pipe of one step left: the call, as .make_code() writes it
+    l <- strsplit(code[k], "\n", fixed = TRUE)[[1L]]
+    if (length(l) == 2L && endsWith(l[1L], " |>") && startsWith(l[2L], "  ")) {
+      src <- sub(" \\|>$", "", sub("^[^ ]+ <- ", "", l[1L]))
+      code[k] <- .make_code(nm, src, trimws(l[2L]))
+    }
   }
   n_lv <- sum(lengths(regmatches(code, gregexpr(.levels_step, code, fixed = TRUE))))
   drop_cl <- function(code) {
@@ -702,7 +722,7 @@
   }
   if (n_lv == 0L) return(drop_cl(code))
   if (n_lv > 1L) return(code)
-  inline <- .lay(.cl("tflspec::set_levels", lapply(levels, function(v) .cl("c", .q(v)))),
+  inline <- .lay(.cl("tflspec::set_levels", lapply(levels, .c_str)),
                  lead = 2L)
   k <- grep(.levels_step, code, fixed = TRUE)
   code[k] <- sub(.levels_step, gsub("\n", "\n  ", inline, fixed = TRUE), code[k],

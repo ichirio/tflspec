@@ -174,7 +174,9 @@ test_that("the manual's survival and model rows run as written, to the hand-writ
   adam <- exact_data()
   dir <- exact_dir(adam)
   on.exit(unlink(dir, recursive = TRUE), add = TRUE)
-  data <- subset(adam$ADTTE, USUBJID %in% subset(adam$ADSL, SAFFL == "Y")$USUBJID)
+  # (as the program makes it: dplyr, a column keeps its label)
+  data <- dplyr::filter(adam$ADTTE,
+                        USUBJID %in% dplyr::filter(adam$ADSL, SAFFL == "Y")$USUBJID)
   hand <- list(
     KM = cardx::ard_survival_survfit(data, y = "survival::Surv(AVAL, 1 - CNSR)",
                                      variables = TRTA, times = c(30, 90)),

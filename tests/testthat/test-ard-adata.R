@@ -42,26 +42,25 @@ test_that("the analysis data is made once, in order, for what a report reads", {
   code <- tfl_ard_code(x, save = FALSE, part = "body")
   # in the sheet's order; the population itself when the data is its dataset
   # (a data made in one statement: its condition, derive, one row per ...)
+  # (the population's columns replace one of the same name)
   at <- match(c("adsl_saf <- pop_saf",
-                "adae_teae <- subset(adae, USUBJID %in% pop_saf$USUBJID & TRTEMFL == \"Y\")",
-                "adae_ser <- adae_teae |>\n  subset(AESER == \"Y\") |>\n  transform(SER = 1)",
-                "adae_subj <- dplyr::distinct(adae_teae, USUBJID, .keep_all = TRUE)"), code)
+                paste0("adae_teae <- adae |>\n",
+                       "  filter(USUBJID %in% pop_saf$USUBJID & TRTEMFL == \"Y\") |>\n",
+                       "  select(-any_of(c(\"TRT01A\", \"AGEGR1\"))) |>\n",
+                       "  left_join(select(pop_saf, USUBJID, TRT01A, AGEGR1), by = \"USUBJID\")"),
+                "adae_ser <- adae_teae |>\n  filter(AESER == \"Y\") |>\n  mutate(SER = 1)",
+                "adae_subj <- distinct(adae_teae, USUBJID, .keep_all = TRUE)"), code)
   expect_false(anyNA(at))
   expect_false(is.unsorted(at))
-  # the population's columns (they replace one of the same name), derived
-  # columns, one row per subject
-  expect_true(any(code == paste0(
-    "adae_teae <- dplyr::left_join(adae_teae[setdiff(names(adae_teae), ",
-    "c(\"TRT01A\", \"AGEGR1\"))], pop_saf[c(\"USUBJID\", \"TRT01A\", ",
-    "\"AGEGR1\")], by = \"USUBJID\")")))
   # an analysis's own condition on top, under a name of its own; the
   # denominator as it is; the analysis set is the data's
-  expect_true(any(code == "adae_ser_1 <- subset(adae_ser, AESEV == \"SEVERE\")"))
-  expect_true(any(grepl("cards::ard_tabulate(adae_ser_1,", code, fixed = TRUE)))
+  expect_true(any(code == "adae_ser_1 <- filter(adae_ser, AESEV == \"SEVERE\")"))
+  expect_true(any(grepl("ard_ser <- adae_ser_1 |>\n  ard_tabulate(", code, fixed = TRUE)))
   expect_true(any(grepl("denominator = adae_subj,", code, fixed = TRUE)))
   expect_true(any(grepl("denominator = adsl_saf,", code, fixed = TRUE)))
   # formatted in the call (cards::ard_tabulate() takes fmt_fun)
-  expect_true(any(code == "ards[[3]] <- .tag(cards::apply_fmt_fun(ard), \"T1\", \"SER\", \"SAF\")"))
+  expect_true(any(grepl("  apply_fmt_fun() |>\n  tag_ard(output_id, \"SER\", population = \"SAF\")",
+                        code, fixed = TRUE)))
   # a report that reads none makes none
   t2 <- tfl_ard_code(x, output_id = "T2", save = FALSE, part = "body")
   expect_false(any(grepl("adae_teae", t2, fixed = TRUE)))
@@ -176,19 +175,28 @@ test_that("a report's own subjects, the columns kept, factors of derived columns
               value = c("F", "75+", "65-74"), order = c(1, 1, 2))
   code <- tfl_ard_code(x, output_id = "T1", save = FALSE, part = "body", codelists = cl)
   # the numerator kept to the denominator's subjects; add from that data
-  expect_true(any(code == "adae_old <- subset(adae, USUBJID %in% adsl_old$USUBJID & TRTEMFL == \"Y\")"))
-  expect_true(any(grepl("adsl_old[c(\"USUBJID\", \"TRT01A\")]", code, fixed = TRUE)))
-  expect_true(any(code == paste0("adae_old <- adae_old |>\n  subset(select = c(USUBJID, TRT01A, AEBODSYS, AEDECOD)) |>\n",
-                                 "  .levels()")))
+  expect_true(any(code == paste0(
+    "adae_old <- adae |>\n",
+    "  filter(USUBJID %in% adsl_old$USUBJID & TRTEMFL == \"Y\") |>\n",
+    "  select(-any_of(\"TRT01A\")) |>\n",
+    "  left_join(select(adsl_old, USUBJID, TRT01A), by = \"USUBJID\") |>\n",
+    "  select(USUBJID, TRT01A, AEBODSYS, AEDECOD) |>\n",
+    "  set_levels(codelists)")))
   # the derived column a factor: the report's own code list rows count
-  expect_true(any(startsWith(code, "adsl_old <- pop_saf |>") & endsWith(code, " |>\n  .levels()")))
-  expect_true(any(grepl("`OLD` = c(\"75+\", \"65-74\")", code, fixed = TRUE)))
+  expect_true(any(code == paste0(
+    "adsl_old <- pop_saf |>\n",
+    "  filter(AGE >= 65) |>\n",
+    "  mutate(OLD = ifelse(AGE >= 75, \"75+\", \"65-74\")) |>\n",
+    "  set_levels(codelists)")))
+  expect_true("codelists <- list(OLD = c(\"75+\", \"65-74\"))" %in% code)
+  # the analysis set the data are made from: as it is
+  expect_true("pop_saf <- filter(adsl, SAFFL == \"Y\")" %in% code)
   # only what the analyses read: no SEX
-  expect_false(any(grepl("`SEX`", code, fixed = TRUE)))
+  expect_false(any(grepl("SEX =", code, fixed = TRUE)))
   # the study's program of its one report: the same
   expect_identical(tfl_ard_code(x, save = FALSE, part = "body", codelists = cl), code)
   # the ARD's analysis set: the one the subjects are of
-  expect_true(any(grepl("\"T1\", \"AE\", \"SAF\")", code, fixed = TRUE)))
+  expect_true(any(grepl("tag_ard(output_id, \"AE\", population = \"SAF\")", code, fixed = TRUE)))
   # a report's rows are part of its fingerprint
   expect_false(identical(tfl_ard_spec_hash(x, "T1", codelists = cl),
                          tfl_ard_spec_hash(x, "T1", codelists = cl[1:2, ])))
@@ -224,7 +232,7 @@ test_that("a data written as R (`code`): made by it, checked, in the fingerprint
   expect_true(any(code == paste0("adae_ser <- local({\n  out <- adae_teae[adae_teae$AESER == \"Y\", ]\n",
                                  "  out$SER <- 1\n  out\n})")))
   # in the sheet's order, after what it reads
-  expect_lt(match("adae_teae <- subset(adae, USUBJID %in% pop_saf$USUBJID & TRTEMFL == \"Y\")", code),
+  expect_lt(grep("^adae_teae <- adae", code),
             grep("^adae_ser <- local", code))
   # checked: R, and the columns that make a data left blank
   bad <- d; bad$code[3L] <- "subset(adae_teae,"
@@ -259,15 +267,15 @@ test_that("an analysis data is a report's: the same name, another meaning elsewh
   x <- ad_spec(ad, an)
   c1 <- tfl_ard_code(x, output_id = "T1", save = FALSE, part = "body")
   c2 <- tfl_ard_code(x, output_id = "T2", save = FALSE, part = "body")
-  expect_true(any(grepl("^adsl_saf <- subset\\(adsl, SAFFL == ", c1)))
+  expect_true(any(grepl("^adsl_saf <- filter\\(adsl, SAFFL == ", c1)))
   expect_false(any(grepl("AGE >= 65", c1, fixed = TRUE)))
   expect_true(any(grepl("AGE >= 65", c2, fixed = TRUE)))
   # the study's program: one part a report, each making its own adsl_saf
   all <- tfl_ard_code(x, save = FALSE, part = "body")
-  expect_identical(sum(all == "# ---- T1"), 1L)
-  expect_identical(sum(all == "# ---- T2"), 1L)
+  expect_identical(sum(all == "# ---- T1 ----"), 1L)
+  expect_identical(sum(all == "# ---- T2 ----"), 1L)
   expect_identical(sum(grepl("^adsl_saf <- ", all)), 2L)
-  expect_lt(which(all == "# ---- T1"), which(all == "# ---- T2"))
+  expect_lt(which(all == "# ---- T1 ----"), which(all == "# ---- T2 ----"))
   expect_identical(sum(all == "ards <- list()"), 1L)
   expect_silent(parse(text = all))
   # the fingerprints: each report's own rows; T2's changes when its adsl_saf does
