@@ -800,25 +800,26 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   own <- grepl(":", names(fmt), fixed = TRUE)
   plain <- fmt[!own]
   spec <- fmt[own]
+  if (!all(sub(":.*$", "", names(spec)) %in% vars)) return(NULL)
+  # a format every variable has, the same (an analysis's own in a stack,
+  # given to each of its variables): one for every variable
+  for (st in unique(sub("^.*:", "", names(spec)))) {
+    k <- paste0(vars, ":", st)
+    if (all(k %in% names(spec)) && length(unique(spec[k])) == 1L) {
+      plain[st] <- spec[[k[1L]]]
+      spec <- spec[!names(spec) %in% k]
+    }
+  }
   sv <- sub(":.*$", "", names(spec))
-  if (!all(sv %in% vars)) return(NULL)
   one <- function(m) if (length(m)) sprintf(".fmts(%s)", .fmt_args(m)) else
     ".fmt_default"
-  own_v <- intersect(vars, sv)
-  lists <- vapply(own_v, function(v) {
+  # each variable's whole list (variables with the same: c(AGE, BMIBL))
+  lists <- vapply(intersect(vars, sv), function(v) {
     m <- plain
     o <- spec[sv == v]
     m[sub("^.*:", "", names(o))] <- o
     one(m)
   }, "")
-  # the same formats for every variable (an analysis's own, in a stack):
-  # one formula; variables with the same list: c(AGE, BMIBL)
-  if (length(lists) && setequal(own_v, vars) && length(unique(lists)) == 1L) {
-    plain <- spec[sv == own_v[1L]]
-    names(plain) <- sub("^.*:", "", names(plain))
-    plain <- c(fmt[!own][setdiff(names(fmt[!own]), names(plain))], plain)
-    lists <- character()
-  }
   parts <- c(paste("everything() ~", one(plain)),
              vapply(unique(lists), function(l) {
                v <- .r_arg_name(names(lists)[lists == l])
