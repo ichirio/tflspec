@@ -1,0 +1,23 @@
+fixture,where,severity,problem
+toc-yaml-flow,,,
+toc-yaml-block,,,
+toc-json,,,
+toc-japanese,,,
+toc-two-blocks,,,
+toc-no-block,answer,error,no answer block found
+toc-wrong-task,tflspec_ai,error,the answer is for the task 'figure'
+toc-version,tflspec_ai,error,version 2 is not known
+toc-unknown-column,toc row 2 field owner,error,is not a column of toc
+toc-nested,toc row 1 field title,error,a mapping or a nested list
+toc-nested,toc row 2,error,is not a mapping
+toc-truncated,block,error,the block is not closed
+toc-syntax,block,error,the block could not be read: YAML
+toc-unknown-key,listings,error,is not a key of a toc answer
+figure-yaml,,,
+figure-json,,,
+figure-unquoted-brace,block,error,the block could not be read: YAML
+figure-no-output-id,tflspec_ai,error,the header has no output_id
+figure-old-shape,design,warning,the 0.0.12 shape
+figure-unknown-key,theme,error,is not a key of a figure answer
+figure-not-pieces,data,error,is a list of pieces
+figure-not-pieces,plot,error,is one mapping of settings

@@ -25,6 +25,20 @@ reference:
     contents:
       - tflspec_ai_manual
       - tflspec_code_options
+  - title: AI-assisted drafting
+    desc: >
+      A prompt for an AI chat that drafts the study's TOC or a figure
+      design from its documents, the answer read and checked by tflspec's
+      own checks, and what it changes; nothing is sent anywhere.
+    contents:
+      - tfl_ai_tasks
+      - tfl_ai_context
+      - tfl_ai_schema
+      - tfl_ai_prompt
+      - tfl_ai_parse
+      - tfl_ai_check
+      - tfl_ai_repair_prompt
+      - tfl_ai_diff
   - title: ARD spec
     desc: >
       The analyses of a study as a workbook: its data, its analysis sets and
