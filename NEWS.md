@@ -1,6 +1,6 @@
 # tflspec (development version)
 
-* **The formats in the cards call** (#PR).  An ARD program says each
+* **The formats in the cards call** (#179).  An ARD program says each
   analysis's formats where its statistics are computed, in the cards
   call's own `fmt_fun`: `fmt_fun = everything() ~ .fmts(mean = 2L)`, a
   variable's own as `BMIBL ~ .fmts(mean = 2L, sd = 3L)`, over the catalog's
