@@ -39,7 +39,14 @@ Status: early development (0.0.x). Discussion and sample code:
 - **Shared setup, per-report values.**  What all reports share (header,
   footer, page style, and study information such as the company name,
   analysis type and protocol ID) is written once as setup code; each
-  report's program carries only its own values.
+  report's program carries only its own values.  The company's font and
+  size are the `page` sheet's study row (a blank `output_id`), and a
+  report's own row wins.  `tfl_report_setup_code()` writes that font, the
+  study's tokens and the running header and footer once, as a setup
+  script (say `report_setup.R`) that every report program written with
+  `tfl_report_code(setup = TRUE)` sources.  Code lists, like analysis data,
+  belong to a report (`output_id` on every `codelists` row), so one
+  report's factor levels and variable labels never reach another's.
 - **Spec -> code, one way.**  The spec is the source (written by
   tflplanner or edited directly) and the program is written from it; the
   program is not edited in place.

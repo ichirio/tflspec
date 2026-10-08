@@ -1,0 +1,144 @@
+---
+title: "Figures"
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+knitr::opts_template$set(code = list(comment = "", class.output = "r"))
+options(knitr.kable.NA = "")
+```
+
+A figure is a **design**, kept as a YAML file: the steps from ADaM to the
+plot's data, the statistics computed from it, and the layers drawn, in
+order. `tfl_fig_design_code()` writes the ggplot2 script it stands for.
+The script depends on dplyr and ggplot2 (and ggsurvfit / patchwork where
+a layer needs them), not on tflspec: it is the program a study keeps, to
+read and finish by hand. It is written in the style of a study's other
+programs: the data steps pipe with `|>`, and its parts are marked by one
+line each (`# ---- data ----`, `# ---- the figure ----`,
+`# ---- saving the figure ----`).
+
+```{r, message = FALSE}
+library(tflspec)
+adam <- tfl_example_adam()   # simulated ADaM: ADSL, ADTTE, ADRS, ADLB ...
+```
+
+## Start from a template
+
+`tfl_fig_templates()` lists the templates, each with its clinical
+category and the data it reads:
+
+```{r}
+tp <- tfl_fig_templates()
+knitr::kable(head(tp[, c("template", "category", "data", "label")], 12))
+```
+
+```{r}
+design <- tfl_fig_template("km_risk_table", param = "OS", group = "TRT01P")
+tfl_check_fig_design(design, adam)   # 0 rows: the data has what it reads
+```
+
+## The design as YAML
+
+`tfl_write_fig_design()` writes one `.yml` a figure; `tfl_read_fig_design()`
+reads it back. It reads top to bottom as the figure is made:
+
+```{r, opts.label = "code"}
+yml <- tfl_write_fig_design(design, file.path(tempdir(), "F-14-2-1.yml"))
+cat(readLines(yml), sep = "\n")
+```
+
+- `data` steps: `read`, `join`, `param`, `flag`, `filter`, `derive`,
+  `time_unit`, `levels`, `rank`, `data_code`;
+- `layers`: layers of the catalog (`tfl_fig_parts()` lists every piece
+  and field), any `geom` by name, a `call` to any function,
+  `layer_code`;
+- raw R inside a value is the `!r` tag (`tfl_fig_r()` in R).
+
+## The script
+
+```{r, opts.label = "code"}
+code <- tfl_fig_design_code(design, "F-14-2-1")
+cat(code, sep = "\n")
+```
+
+Run it where the datasets are (here, objects named as the datasets in
+lower case), and it draws and saves the figure:
+
+```{r, fig.width = 8, fig.height = 4.6, message = FALSE, warning = FALSE}
+env <- list2env(setNames(adam, tolower(names(adam))))
+old <- setwd(tempdir())
+eval(parse(text = code), envir = env)
+setwd(old)
+env$fig
+```
+
+## In a study's programs
+
+Three arguments fit the script into a study's other programs:
+
+- `setup = TRUE` takes the palette from the study's figure setup
+  (`tfl_colours()`, see *One look for the study* below) instead of
+  writing it in the script;
+- `save = FALSE` leaves out the PNG: a report program places the figure
+  itself;
+- `name` is what the figure is called (`"plot"`, for a report program
+  that hands it to rtfreporter).
+
+```{r, opts.label = "code"}
+code <- tfl_fig_design_code(design, "F-14-2-1", setup = TRUE, save = FALSE,
+                            name = "plot")
+cat(code[grep("tfl_colours|^plot <-|ggsave", code)], sep = "\n")   # no ggsave()
+```
+
+## When the design cannot say it
+
+What a template's fields cannot express is written **in the design**, not
+patched into the script afterwards:
+
+- a `data_code` step: R that reworks `df`;
+- a `layer_code` layer: R added to the plot `p`;
+- `plot.add`: calls written after the figure's settings (`theme()`,
+  `scale_*()`, `facet_*()`);
+- `!r` values: `labels: !r scales::label_percent()`.
+
+Written in the style of the script, with `|>`:
+
+```{r, opts.label = "code"}
+arms <- "df <- df |> mutate(TRT01P = factor(TRT01P, sort(unique(TRT01P))))"
+cutoff <- paste('p <- p + annotate("text", x = 1, y = 0.05,',
+                'label = "Data cut-off: 01JUN2026", hjust = 0, size = 3)')
+design$data <- c(design$data, list(list(step = "data_code", code = arms)))
+design$layers <- c(design$layers,
+                   list(list(layer = "layer_code", code = cutoff)))
+code <- tfl_fig_design_code(design, "F-14-2-1")
+cat(code[grep("your code|TRT01P = factor|Data cut-off", code)], sep = "\n")
+```
+
+## One look for the study
+
+`tfl_fig_style()` holds every look-and-feel value of a study's figures
+(fonts, palettes, line widths, the legend); a study sets its own with
+`options(tflspec.fig_style = tfl_read_fig_style(path))`, starting from
+`tfl_fig_style_template()`. `tfl_fig_setup_code()` writes the same values
+as a setup script the figure programs source.
+
+```{r}
+names(tfl_fig_style())
+```
+
+## Composed figures and ggplot2 versions
+
+A design may hold several plots (`plots:`) and a patchwork layout
+(`compose: {layout: km | box}`). `ggplot2_version: "3.5"` or `"4.0"`
+writes the script for that version (`tfl_fig_compat()` lists the
+differences), and `tfl_fig_calls()` lists the extension functions a
+`call` layer may name.
+
+## The older figure spec
+
+The sheet-based figure spec (`tfl_fig_spec()`, `tfl_fig_code()`) and the
+quick figures (`tfl_fig_km()`, `tfl_fig_waterfall()`, ...,
+`tfl_fig_catalog()`) remain while the development team decides between
+the two ([Discussion #63](https://github.com/ichirio/tflspec/discussions/63));
+new work should use the design.

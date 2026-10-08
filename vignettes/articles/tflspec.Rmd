@@ -1,0 +1,234 @@
+---
+title: "Get started with tflspec"
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+# generated code is shown as code
+knitr::opts_template$set(code = list(comment = "", class.output = "r"))
+options(knitr.kable.NA = "")
+```
+
+tflspec reads the specifications of a study's tables, listings and figures
+(Excel workbooks, YAML for figures) and writes the **R program** each one
+stands for. The program is the deliverable: short, readable, written the
+way a person would write it, and needing only cards / cardx and
+[rtfreporter](https://github.com/ichirio/rtfreporter) to run -- not
+tflspec. People copy it into the study, read it, and finish it.
+
+```text
+ADaM ──(ARD spec)──> ARD ──(table spec)──> plan ──(report spec)──> RTF
+          tfl_ard_code()      tfl_table_code()       tfl_report_code()
+          tfl_build_ard()     tfl_table_plan()       tfl_report()
+```
+
+Each spec can be **written out as code** (the `*_code()` functions) or
+**run** (`tfl_build_ard()`, `tfl_table_plan()`, `tfl_report()`). Both come
+from the same list of steps, so the object and the program cannot
+disagree.
+
+This article walks the whole flow for one table, a demographics table
+(`DM`), using the workbooks that come with the package and the ADaM data
+that come with cards.
+
+```{r setup, message = FALSE}
+library(tflspec)
+library(rtfreporter)
+```
+
+## A study folder
+
+Every path in a spec is relative to the study folder, and the generated
+programs run from it. Ours holds two ADaM datasets:
+
+```{r}
+study <- file.path(tempdir(), "study")
+dir.create(file.path(study, "data"), recursive = TRUE, showWarnings = FALSE)
+saveRDS(cards::ADSL, file.path(study, "data", "adsl.rds"))
+saveRDS(cards::ADAE, file.path(study, "data", "adae.rds"))
+```
+
+## 1. The ARD spec: what is analysed
+
+The ARD spec is a workbook of a few sheets: `study` (keys such as the
+subject key), `datasets` (what is read, and columns derived on reading),
+`populations` (the analysis sets), `analysis_data` (named data the analyses
+read, each a report's own; optional) and `analyses`, **one cards / cardx
+call per row**.
+A study normally keeps it as an `.xlsx`; here it is written from R so the
+whole article runs on its own.
+
+```{r}
+df <- function(...) data.frame(..., stringsAsFactors = FALSE)
+
+ard_spec <- tfl_ard_spec(list(
+  study = df(key = c("id", "output"),
+             value = c("USUBJID", "output/ard/ard.rds")),
+  datasets = df(dataset = c("ADSL", "ADAE"),
+                path = c("data/adsl.rds", "data/adae.rds"),
+                derive = c("HTBL = HEIGHTBL", NA)),
+  populations = df(population_id = "SAF", dataset = "ADSL",
+                   where = 'SAFFL == "Y"'),
+  analyses = df(output_id = "DM",
+                analysis_id = c("BIGN", "CONT", "CAT"),
+                method = c("total_n", "continuous", "categorical"),
+                population_id = "SAF",
+                by = c(NA, "TRT01P", "TRT01P"),
+                variables = c(NA, "AGE | HTBL", "AGEGR1 | SEX | ETHNIC"))))
+
+path <- tfl_write_ard_spec(ard_spec, file.path(study, "ard_spec.xlsx"))
+ard_spec <- tfl_read_ard_spec(path)
+ard_spec$analyses[, c("output_id", "analysis_id", "method", "by", "variables")]
+```
+
+`method` is a keyword (`tfl_ard_methods()`), any `pkg::function` of cards
+or cardx, or a function of the study's own. The article
+[The ARD spec](ard-spec.html) goes through every sheet.
+
+### The ARD program
+
+`tfl_ard_code()` writes the program. It reads the data, makes the analysis
+set, and calls cards once per analysis:
+
+```{r, opts.label = "code"}
+cat(tfl_ard_code(ard_spec, part = "body"), sep = "\n")
+```
+
+`part = "body"` leaves out the setup every program starts with (the
+packages, the helpers that tag each result with its `output_id` /
+`analysis_id`); `tfl_ard_code(ard_spec)` writes the whole file, ready to
+save as `programs/ard.R`.
+
+### The ARD
+
+`tfl_build_ard()` runs that same program from the study folder and saves
+the study ARD where the `study` key `output` says:
+
+```{r}
+ard <- tfl_build_ard(ard_spec, dir = study)
+ard[1:6, c("output_id", "analysis_id", "variable", "stat_name", "stat")]
+```
+
+## 2. The table spec: how the ARD becomes a table
+
+The table spec says which keys go across (`cols`) and down (`rows`), the
+labels and order of each variable, the cell templates and digits, the
+pages, the column header. The package's example `DM.xlsx` defines this
+table:
+
+```{r}
+ex <- system.file("extdata", "ard-spec", package = "tflspec")
+spec <- tfl_read_report_spec(file.path(ex, c("report.xlsx", "DM.xlsx")),
+                             output_id = "DM")
+spec$cells[, c("variable", "row", "template", "digits")]
+```
+
+`tfl_read_report_spec()` reads the table sheets and the report sheets
+together (one object serves both); `tfl_read_table_spec()` reads the table
+sheets alone.
+
+### The table program
+
+`tfl_table_code()` writes the rtfreporter plan: the roles in
+`table_plan()`, then one `plan_*()` verb for each thing the sheets say.
+
+```{r, opts.label = "code"}
+cat(tfl_table_code(spec, pipe = "|>"), sep = "\n")
+```
+
+### The table
+
+`tfl_table_plan()` builds that same plan from an ARD. Being a plan, a verb
+piped after it still wins -- one report's own change, in one line, without
+touching the workbook:
+
+```{r}
+data <- normalize_ard(tfl_ard_for(ard, "DM"))
+plan <- tfl_table_plan(data, spec) |>
+  plan_cells(notes = FALSE)
+```
+
+The table it makes (`plan_apply(stage = "table")` stops before the pages):
+
+```{r}
+knitr::kable(plan_apply(plan, stage = "table"))
+```
+
+## 3. The report spec: the document around the table
+
+The report spec dresses the page: paper and margins, the running header
+and footer, titles and footnotes, tokens such as `{PAGE}` and
+`{PROGRAM}`. The study's header is written once, as default rows (a blank
+`output_id`), and each report adds its own lines:
+
+```{r}
+spec$header[, c("line", "left", "center", "right")]
+```
+
+### The report program
+
+```{r, opts.label = "code"}
+cat(tfl_report_code(spec, content = "plan"), sep = "\n")
+```
+
+### The RTF
+
+```{r}
+doc <- tfl_report(spec, content = plan)
+rtf <- file.path(study, tfl_report_path(spec))
+dir.create(dirname(rtf), showWarnings = FALSE)
+generate_rtfreport(doc, rtf, overwrite = TRUE)
+file.exists(rtf)
+```
+
+## The program a study keeps
+
+Put together, the three pieces are one short program per output that a
+person can read top to bottom:
+
+```{r, eval = FALSE}
+library(rtfreporter)
+# 1 DATA    the ARD (programs/ard.R, written by tfl_ard_code())
+ard  <- readRDS("output/ard/ard.rds")
+data <- normalize_ard(ard[ard$output_id == "DM", ])
+# 2 TABLE   tfl_table_code()
+plan <- table_plan(data, cols = "TRT01P", rows = c(group = "variable")) |>
+  plan_labels(AGE = "Age (years) [a]") |>
+  ...
+# 3 REPORT  tfl_report_code()
+doc <- rtf_document(program = "DM")
+doc <- rtf_tables(doc, plan)
+generate_rtfreport(doc, "output/DM.rtf", overwrite = TRUE)
+```
+
+## When the spec cannot say it
+
+A spec says the common things in columns. What it cannot express is
+written as R **in the spec**, in its code columns, so the program is still
+written from the spec and never edited by hand afterwards:
+
+- `analysis_data$code`: R that makes an analysis data;
+- `analyses$code` with method `custom`: R that makes an analysis's ARD
+  (`tfl_ard_as_custom()` writes an existing row as such code, to start
+  from);
+- `args`, `derive`, `where`: R expressions where a value is code;
+- a figure design's `data_code` and `layer_code` steps, and `!r` values.
+
+And what is truly one report's own -- a cell style computed row by row, a
+step after the pages are made -- is one more verb piped after the plan.
+
+## Where next
+
+- [The ARD spec](ard-spec.html): datasets, populations, a report's
+  analysis data (`subjects`, `keep`, `code`), its code lists, the
+  analyses.
+- [The table spec](table-spec.html): the table sheets, numbers or the
+  ARD's text, the decimals written once, a report's code lists and the
+  variables' labels, and a plan written in code back to a workbook.
+- [Reports](reports.html): headers, footers, titles, footnotes and tokens
+  written once for the study, each report's own tokens, the company's
+  font and the setup code the report programs share.
+- [Listings](listings.html), [Figures](figures.html) and
+  [CDISC ARS](ars.html).
+- Working with an AI assistant? Attach `tflspec_ai_manual()`, the manual
+  of the installed version.

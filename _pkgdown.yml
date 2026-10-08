@@ -16,116 +16,123 @@ development:
 
 navbar:
   structure:
-    left: [intro, reference, news]
+    left: [intro, articles, reference, news]
     right: [search, github]
 
-# The chapters are the AI manual's (tflspec_ai_manual(), section 13).
+# The articles follow the one workflow: the ARD spec, the table spec, the
+# report around it; then listings, figures and ARS.  "Get started" is
+# vignettes/articles/tflspec.Rmd (pkgdown's intro).  They are articles, not
+# vignettes: built by pkgdown only, never by R CMD check.
+articles:
+  - title: The workflow
+    navbar: The workflow
+    contents:
+      - articles/ard-spec
+      - articles/table-spec
+      - articles/reports
+  - title: Listings, figures and ARS
+    navbar: Listings, figures and ARS
+    contents:
+      - articles/listings
+      - articles/figures
+      - articles/ars
+
+# Grouped by the workflow: ARD spec -> ARD code, the data, table spec ->
+# table plan, report spec, listings, figures, ARS; then the workbooks, the
+# checks, the AI manual and helpers.  Each help page is listed once.
 reference:
-  - title: Manual
-    contents:
-      - tflspec_ai_manual
-  - title: ARD spec
+  - title: ARD spec and ARD code
     desc: >
-      The analyses of a study as a workbook: its data, its analysis sets and
-      one cards / cardx call per row; the R code it stands for and the one
-      study ARD it makes.
+      The analyses of a study as a workbook -- its datasets, analysis sets,
+      analysis data and one cards / cardx call per `analyses` row -- and
+      the short R program it stands for (`tfl_ard_code()`), or that program
+      run (`tfl_build_ard()`): one study ARD.
     contents:
-      - tfl_ard_spec
       - tfl_read_ard_spec
-      - tfl_write_ard_spec
       - tfl_ard_spec_template
       - tfl_ard_code
       - tfl_build_ard
       - tfl_ard_for
       - tfl_ard_spec_hash
+  - subtitle: Methods, statistics and functions of one's own
+    desc: >
+      What a `method` may name: the keywords, any cards / cardx function
+      and its arguments, an analysis written as R (`custom`), a function
+      of the study's own.
+    contents:
       - tfl_ard_methods
-      - tfl_ard_as_custom
       - tfl_ard_statistics
       - tfl_ard_functions
       - tfl_ard_args
-      - tfl_write_ard
-      - tfl_read_ard
-      - tfl_check_ard
-      - tfl_check_ard_function
+      - tfl_ard_as_custom
       - tfl_ard_function_template
       - tfl_ard_function_info
-      - tfl_ard_conditions
-  - title: CDISC ARS
-    desc: The analyses as CDISC's Analysis Results Standard, and back.
+  - title: Data, analysis data and populations
+    desc: >
+      The `datasets`, `populations` and `analysis_data` sheets of the ARD
+      spec say what is read and how the analysis data are made (see
+      `tfl_read_ard_spec()`); these write the line that reads a dataset
+      and give data to try things on.
     contents:
-      - tfl_ars
-      - tfl_write_ars_json
-      - tfl_check_ars
-      - tfl_ars_unmapped
-      - tfl_ars_ard
-      - tfl_read_ars_json
-      - tfl_ars_to_specs
-      - tfl_write_ars_xlsx
-  - title: Table spec
+      - tfl_read_data_code
+      - tfl_read_adam
+      - tfl_example_adam
+  - title: Table spec and table plan
     desc: >
       A table as a workbook: its roles and the rtfreporter plan verbs it
-      stands for; a plan written in code back to a workbook.
+      stands for, as a plan (`tfl_table_plan()`) or as code
+      (`tfl_table_code()`); a plan written in code back to a workbook.
     contents:
       - tfl_table_spec
-      - tfl_read_table_spec
-      - tfl_write_table_spec
-      - tfl_write_report_spec
-      - tfl_write_specs
-      - tfl_spec_columns
       - tfl_table_spec_template
       - tfl_table_plan
       - tfl_table_code
       - tfl_as_table_spec
-  - title: Report spec
-    desc: The page, the running header and footer, the titles and footnotes.
+  - title: Report spec, titles, footnotes, headers and tokens
+    desc: >
+      The page, the running header and footer, the titles and footnotes,
+      the tokens: the document around a table, a listing or a figure.
     contents:
       - tfl_read_report_spec
-      - tfl_read_toc
       - tfl_report
       - tfl_report_code
       - tfl_report_setup_code
       - tfl_report_tokens
       - tfl_report_path
-  - title: Listing spec
+  - title: Listings
+    desc: Two sheets keyed by `output_id`, the pages and the program.
     contents:
       - tfl_listing_spec
-      - tfl_read_listing_spec
-      - tfl_write_listing_spec
       - tfl_listing
       - tfl_listing_code
       - tfl_as_listing_spec
-      - tfl_read_data_code
-  - title: Figure design
-    desc: A figure as a YAML design, and the ggplot2 script it stands for.
+  - title: Figures
+    desc: >
+      A figure as a YAML design -- its data steps, statistics and layers --
+      and the ggplot2 script it stands for.
     contents:
       - tfl_fig_design
-      - tfl_read_fig_design
-      - tfl_write_fig_design
-      - tfl_fig_design_code
-      - tfl_check_fig_design
-      - tfl_fig_advice
-      - tfl_fig_apply_fix
-      - tfl_fig_template
       - tfl_fig_templates
       - tfl_fig_parts
       - tfl_fig_add_layer
       - tfl_fig_calls
       - tfl_fig_compat
       - tfl_fig_r
-  - title: Figure style
+  - subtitle: Figure style
+    desc: Every look-and-feel value of a study's figures, in one place.
     contents:
       - tfl_fig_style
-      - tfl_fig_style_template
-      - tfl_read_fig_style
       - tfl_fig_setup_code
       - tfl_fig_palettes
-      - tfl_check_fig
-  - title: Figure spec (sheets) and quick figures
+  - subtitle: Figure spec (sheets) and quick figures
+    desc: >
+      The older sheet-based figure spec and its quick figures, kept while
+      the design is decided
+      ([Discussion #63](https://github.com/ichirio/tflspec/discussions/63)).
     contents:
       - tfl_fig_spec
       - tfl_fig_spec_template
       - tfl_read_fig_spec
-      - tfl_check_fig_spec
       - tfl_example_fig_spec
       - tfl_fig_code
       - tfl_write_fig_code
@@ -149,15 +156,53 @@ reference:
       - tfl_fig_edish
       - tfl_fig_sankey
       - tfl_fig_sunburst
-      - print.tfl_code
-  - title: Sankey and sunburst
+  - subtitle: Sankey diagrams and sunbursts
     contents:
       - tfl_plot_sankey
       - tfl_plot_sankey_batch
       - tfl_sankey_data
       - tfl_plot_sunburst
-      - tfl_sunburst_data
-  - title: Data
+  - title: CDISC ARS export and import
+    desc: >
+      The specs as CDISC's Analysis Results Standard (JSON, and CDISC's
+      Excel template to read), run by siera; anyone's ARS back as specs.
     contents:
-      - tfl_read_adam
-      - tfl_example_adam
+      - tfl_ars
+      - tfl_write_ars_json
+      - tfl_write_ars_xlsx
+      - tfl_ars_unmapped
+      - tfl_ars_ard
+      - tfl_read_ars_json
+      - tfl_ars_to_specs
+  - title: Reading and writing workbooks, the TOC
+    desc: >
+      Each spec has its own reader and writer; several specs may share one
+      workbook. A company's table of contents becomes report specs, and an
+      ARD a JSON / YAML / XPT copy.
+    contents:
+      - tfl_write_ard_spec
+      - tfl_read_table_spec
+      - tfl_write_table_spec
+      - tfl_write_specs
+      - tfl_spec_columns
+      - tfl_read_toc
+      - tfl_write_ard
+      - tfl_read_ard
+  - title: Checks
+    desc: >
+      What went wrong, said before a report is made: an ARD and what a
+      table reads from it, a function of one's own, the ARS, a figure.
+    contents:
+      - tfl_check_ard
+      - tfl_check_ard_function
+      - tfl_ard_conditions
+      - tfl_check_ars
+      - tfl_fig_advice
+      - tfl_check_fig_spec
+  - title: AI manual
+    desc: The manual of the installed version, to attach to a chat session.
+    contents:
+      - tflspec_ai_manual
+  - title: Helpers
+    contents:
+      - print.tfl_code

@@ -1,0 +1,276 @@
+---
+title: "The ARD spec"
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+knitr::opts_template$set(code = list(comment = "", class.output = "r"))
+options(knitr.kable.NA = "")
+```
+
+The ARD spec is the study's analyses as a workbook. `tfl_ard_code()`
+writes the R program it stands for -- cards / cardx calls, one per
+analysis row -- and `tfl_build_ard()` runs that program and saves one
+**study ARD** (analysis results data) that every table then reads.
+
+The program is meant to be read. A dataset is read in one line, an
+analysis set is one `subset()`, an analysis data is one pipe, an analysis
+is one call. It is written the way a programmer would write it, so that
+it can be reviewed, copied into a study and finished by hand when needed.
+
+```{r, message = FALSE}
+library(tflspec)
+
+study <- file.path(tempdir(), "ard-study")
+dir.create(file.path(study, "data"), recursive = TRUE, showWarnings = FALSE)
+saveRDS(cards::ADSL, file.path(study, "data", "adsl.rds"))
+saveRDS(cards::ADAE, file.path(study, "data", "adae.rds"))
+
+df <- function(...) data.frame(..., stringsAsFactors = FALSE)
+```
+
+## The sheets
+
+| Sheet | One row per | Holds |
+|---|---|---|
+| `study` | key | `id` (the subject key), `output` (where the ARD goes), `source` (R files of the study's own functions) |
+| `datasets` | dataset | `dataset`, `level`, `path` (relative to the study folder), `derive` (columns made on reading) |
+| `populations` | analysis set | `population_id`, `dataset`, `where`, `derive` |
+| `analysis_data` | named data of a report | `output_id`, `data_id`, `label`, `from`, `population_id`, `subjects`, `where`, `add`, `derive`, `keep`, `distinct`, `code` |
+| `analyses` | analysis | `output_id`, `analysis_id`, `method`, `data` or `dataset` + `population_id`, `where`, `by`, `strata`, `variables`, `statistics`, `denominator`, `formats`, `args`, `code`, `parent`, `post`, ... |
+
+Every column is described on its header cell's comment in the workbook,
+and by `tfl_spec_columns()`:
+
+```{r}
+cols <- tfl_spec_columns("analysis_data")
+knitr::kable(cols[!is.na(cols$column), c("column", "description")])
+```
+
+A new workbook starts from `tfl_ard_spec_template()`; it is read with
+`tfl_read_ard_spec()` and written with `tfl_write_ard_spec()`. The
+examples below build the sheets in R with `tfl_ard_spec()`, which checks
+them exactly as the reader does.
+
+## Datasets and populations
+
+```{r}
+base <- list(
+  study = df(key = c("id", "output"),
+             value = c("USUBJID", "output/ard/ard.rds")),
+  datasets = df(dataset = c("ADSL", "ADAE"),
+                path = c("data/adsl.rds", "data/adae.rds")),
+  populations = df(population_id = "SAF", dataset = "ADSL",
+                   where = 'SAFFL == "Y"'))
+```
+
+A population is an analysis set: the subjects of `dataset` for which
+`where` holds. In the program it is `pop_<population_id>`. An analysis
+row may name a `dataset` and a `population_id`: its data are then that
+dataset's records of the analysis set's subjects.
+
+```{r, opts.label = "code"}
+spec <- tfl_ard_spec(c(base, list(analyses = df(
+  output_id = "T-14-1-1", analysis_id = "AGE", method = "continuous",
+  population_id = "SAF", by = "TRT01A", variables = "AGE"))))
+cat(tfl_ard_code(spec, part = "body"), sep = "\n")
+```
+
+## Analysis data
+
+When several analyses read the same data -- treatment-emergent events of
+the safety set, say -- the sheet `analysis_data` names it once.
+
+**An analysis data is a report's**: `output_id` says whose, and it is
+required. A row's `from` and `subjects` name only its own report's rows
+above it, and an analysis reads only its own report's data. So the same
+`data_id` may mean something else in another report -- the safety set of
+a Phase I table and of a Phase II one -- and a data two reports use is
+copied into each (tflplanner's "copy from another report").
+
+Each row makes one data, in this order:
+
+1. `from` a dataset or an analysis data above it;
+2. kept to the subjects of a population (`population_id`) **or** of an
+   analysis data above (`subjects`: the numerator kept to the
+   denominator's subjects);
+3. the records `where` keeps;
+4. columns of the population's data added by the subject key (`add`);
+5. columns derived (`derive`), and the columns kept (`keep`; with
+   `derive`, a `transmute()`);
+6. one row per set of values (`distinct`).
+
+`data_id` is the object's name in the program. An analysis names it in
+its `data` column instead of `dataset` / `population_id`.
+
+```{r}
+adata <- df(
+  output_id = "T-14-3-1",
+  data_id = c("adsl_saf", "adae_teae", "adae_ser"),
+  label = c("Safety set", "TEAEs of the safety set", "Serious TEAEs"),
+  from = c("ADSL", "ADAE", "adae_teae"),
+  population_id = c("SAF", NA, NA),
+  subjects = c(NA, "adsl_saf", NA),
+  where = c(NA, 'TRTEMFL == "Y"', 'AESER == "Y"'),
+  keep = c(NA, "AEBODSYS | AEDECOD | AESER | TRTA", NA))
+
+analyses <- df(
+  output_id = "T-14-3-1",
+  analysis_id = c("TEAE", "SER"),
+  method = "hierarchical",
+  data = c("adae_teae", "adae_ser"),
+  by = "TRTA",
+  variables = c("AEBODSYS | AEDECOD", "AEDECOD"),
+  denominator = "adsl_saf")
+
+spec <- tfl_ard_spec(c(base, list(analysis_data = adata, analyses = analyses)))
+```
+
+```{r, opts.label = "code"}
+cat(tfl_ard_code(spec, part = "body"), sep = "\n")
+```
+
+### What the columns cannot say: `code`
+
+When the columns cannot say how a data is made, `code` is R whose value is
+the data. The datasets, the `pop_*` analysis sets and the analysis data
+above it are in reach. `from` stays (it says what the data is made from),
+and the other columns that make a data are left blank (this is checked):
+
+```{r, opts.label = "code"}
+adata2 <- adata[1:2, ]
+adata2$output_id <- "T-14-3-2"     # its own copy of the two data
+adata2 <- rbind(adata2, df(
+  output_id = "T-14-3-2",
+  data_id = "adae_first", label = "First TEAE of each subject and term",
+  from = "adae_teae", population_id = NA, subjects = NA, where = NA,
+  keep = NA))
+adata2$code <- c(NA, NA, paste(
+  "adae_teae <- adae_teae[order(adae_teae$USUBJID, adae_teae$AEDECOD), ]",
+  "adae_teae[!duplicated(adae_teae[c(\"USUBJID\", \"AEDECOD\")]), ]",
+  sep = "\n"))
+spec2 <- tfl_ard_spec(c(base, list(
+  analysis_data = adata2,
+  analyses = df(output_id = "T-14-3-2", analysis_id = "FIRST",
+                method = "categorical", data = "adae_first",
+                by = "TRTA", variables = "AEDECOD"))))
+cat(tfl_ard_code(spec2, part = "body"), sep = "\n")
+```
+
+The program carries it as `<data_id> <- local({ ... })`, in the sheet's
+order. The spec keeps the code: the program is written from the spec and
+is never edited afterwards.
+
+## Analyses
+
+One row is one cards / cardx call. Both ids become ARD columns, so a
+table takes its rows with `tfl_ard_for(ard, output_id)`.
+
+- **`method`**: a keyword -- `tfl_ard_methods()` lists them, each with a
+  label a person reads -- or any `pkg::function` of cards / cardx, or a
+  function of the study's own (study key `source`).
+
+```{r}
+knitr::kable(tfl_ard_methods()[, c("method", "label", "call")])
+```
+
+- **`by`, `strata`, `variables`, `statistics`**: `|` between several
+  values. `strata` repeats the analysis within each combination present in
+  the data (a parameter by visit).
+- **`denominator`**: what percentages are of -- `population`, `row`,
+  `column`, `cell`, another population, a dataset or an analysis data.
+- **`formats`**: `mean=xx.x | p=xx.x%` (the `xx` part says the decimals).
+- **`args`**: more arguments, as R (`over_variables = TRUE`). A function
+  that takes a formula gets it here: `formula = survival::Surv(AVAL, 1 -
+  CNSR) ~ TRTA`.
+- **`parent`** and **`post`**: rows run inside `cards::ard_stack()` /
+  `ard_strata()` / `ard_pairwise()`, and steps on the ARD after the call
+  (`cards::sort_ard_hierarchical()`).
+
+`tfl_ard_functions()` lists every installed cards / cardx `ard_*()`
+function by category, and `tfl_ard_args()` says in which column each
+argument of one goes:
+
+```{r}
+a <- tfl_ard_args("cardx::ard_categorical_ci")
+knitr::kable(a[, c("arg", "column", "choices")])
+```
+
+### An analysis written as R: `custom`
+
+What no column can say is written as R in `code`, with `method` `custom`.
+In the code `data` is the analysis data and `population` the analysis
+set's subjects. `tfl_ard_as_custom()` writes an existing row as that code
+(the same ARD), as a starting point:
+
+```{r, opts.label = "code"}
+cat(tfl_ard_as_custom(spec, "T-14-3-1", "SER")$code, sep = "\n")
+```
+
+## Code lists
+
+A table spec's `codelists` sheet (one row a value: `output_id`,
+`variable`, `value`, `label`, `order`) gives the order of a variable's
+values and the text they print as. **A code list is a report's**: every
+row names its report, and a blank `output_id` is an error (a code list two
+reports use is copied into each; the same arm may print one way in one
+table and another way in the next).
+
+Handed to the ARD program, a report's code lists of the variables its
+analyses read (`by`, `strata`, `variables`, and the names in `args`,
+`code` and `post`) make those columns factors before any analysis, so the
+ARD keeps the order and **counts a value no record has** (`n = 0`). A
+variable the table only prints is not made a factor. A data made from
+another -- an analysis set, an analysis data, an analysis's own subset --
+is made factors again as its last step (`|> .levels()`): a value the list
+does not have counts only where the data analysed have it (a table of the
+safety set has no column for the screen failures' arm).
+
+```{r, opts.label = "code"}
+codelists <- df(output_id = "T-14-1-1", variable = "SEX", value = c("M", "F"),
+                label = c("Male", "Female"), order = 1:2)
+spec3 <- tfl_ard_spec(c(base, list(analyses = df(
+  output_id = "T-14-1-1", analysis_id = "SEX", method = "categorical",
+  population_id = "SAF", by = "TRT01A", variables = "SEX"))))
+cat(tfl_ard_code(spec3, part = "body", codelists = codelists), sep = "\n")
+```
+
+The code list of `variable` (its values the variables' names: `variable /
+AGE / Age (years)`) is the variables' labels in the tables; the ARD does
+not read it. See [The table spec](table-spec.html).
+
+## Building the ARD
+
+`tfl_build_ard()` runs the program from the study folder. The ARD carries
+`output_id`, `analysis_id` and `population_id`; `tfl_ard_conditions()`
+lists what went wrong while it was made (cards carries on when one
+analysis fails, leaving the message in the ARD).
+
+```{r}
+ard <- tfl_build_ard(spec, dir = study, save = FALSE)
+table(ard$analysis_id)
+tfl_ard_conditions(ard)
+```
+
+`tfl_check_ard(ard, spec)` checks an ARD made elsewhere (its shape, and
+what the tables read from it); `tfl_write_ard()` writes a copy as JSON,
+YAML or XPT. `tfl_ard_spec_hash()` is the fingerprint of an output's
+definition, saved with the ARD so a screen can tell which outputs are out
+of date.
+
+## The whole program
+
+`tfl_ard_code(spec)` is the whole file: the packages and helpers, the
+data, the analyses, `saveRDS()`. Write it to the study's `programs/` and
+run it there; tflspec is not needed to run it.
+
+`tfl_ard_code(spec, output_id = )` is one report's program, the form a
+study runs (tflplanner writes one per report). The study's program, with
+every report, is one part a report after the datasets and analysis sets:
+each part makes its own analysis data before its analyses, and, when a
+report has code lists, reads its data again with them -- so one report's
+analysis data and factors are never the next report's.
+
+```{r, eval = FALSE}
+writeLines(tfl_ard_code(spec), file.path(study, "programs", "ard.R"))
+```
