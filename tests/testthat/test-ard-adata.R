@@ -26,7 +26,7 @@ ad_rows <- function() ad_df(
 
 an_rows <- function() ad_df(
   output_id = c("T1", "T1", "T1", "T2"),
-  analysis_id = c("BIGN", "AE", "SER", "OLD"),
+  analysis_id = c("GROUPN", "AE", "SER", "OLD"),
   method = c("cards::ard_tabulate", "cards::ard_stack_hierarchical",
              "cards::ard_tabulate", "cards::ard_tabulate"),
   data = c("adsl_saf", "adae_teae", "adae_ser", NA),
@@ -71,7 +71,7 @@ test_that("the analysis data is made once, in order, for what a report reads", {
   saveRDS(cards::ADSL, file.path(dir, "adsl.rds"))
   saveRDS(cards::ADAE, file.path(dir, "adae.rds"))
   a <- tfl_build_ard(x, dir = dir, save = FALSE)
-  expect_setequal(unique(a$analysis_id), c("BIGN", "AE", "SER", "OLD"))
+  expect_setequal(unique(a$analysis_id), c("GROUPN", "AE", "SER", "OLD"))
   expect_identical(unique(a$population_id), "SAF")
   # the denominator: the safety set's subjects per group
   saf <- cards::ADSL[cards::ADSL$SAFFL == "Y", ]

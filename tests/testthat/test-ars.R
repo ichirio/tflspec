@@ -28,7 +28,7 @@ ars_spec <- function(analyses, purpose = "SECONDARY OUTCOME MEASURE") {
 }
 
 dm_ae <- function(...) ars_spec(ars_df(
-  list(output_id = "DM", analysis_id = "BIGN", method = "categorical",
+  list(output_id = "DM", analysis_id = "GROUPN", method = "categorical",
        population_id = "SAF", variables = "TRT01A"),
   list(output_id = "DM", analysis_id = "AGE", method = "continuous",
        population_id = "SAF", by = "TRT01A", variables = "AGE"),
@@ -85,8 +85,8 @@ test_that("the specs become the CDISC model, laid out as CDISC's example", {
   expect_identical(vapply(sex$orderedGroupings, `[[`, "", "groupingId"),
                    c("AG_ADSL_TRT01A", "AG_ADSL_SEX"))
   expect_identical(vapply(sex$referencedAnalysisOperations, `[[`, "",
-                          "analysisId"), c("An_DM_CAT_SEX", "An_DM_BIGN"))
-  expect_identical(an_of(ars, "An_DM_BIGN")$methodId, "Mth_total_n")
+                          "analysisId"), c("An_DM_CAT_SEX", "An_DM_GROUPN"))
+  expect_identical(an_of(ars, "An_DM_GROUPN")$methodId, "Mth_total_n")
   # a continuous variable is the analysis variable
   expect_identical(an_of(ars, "An_DM_AGE")$variable, "AGE")
   # a test has no result per group
@@ -108,7 +108,7 @@ test_that("the specs become the CDISC model, laid out as CDISC's example", {
   # the AE output had no subject count: one is added, first, and said
   expect_identical(ars$analyses[[which(vapply(ars$analyses, `[[`, "", "id") ==
                                          "An_AE_TEAE_ANY") - 1L]]$id,
-                   "An_AE_BIGN_TRTA")
+                   "An_AE_GROUPN_TRTA")
   un <- tfl_ars_unmapped(ars)
   expect_true(any(un$item == "denominator" & un$where == "AE"))
   # the percentage operation names its numerator and denominator
@@ -120,7 +120,7 @@ test_that("the specs become the CDISC model, laid out as CDISC's example", {
   # the list of contents: output -> its analyses
   lc <- ars$mainListOfContents$contentsList$listItems
   expect_identical(lc[[1L]]$outputId, "DM")
-  expect_identical(lc[[1L]]$sublist$listItems[[1L]]$analysisId, "An_DM_BIGN")
+  expect_identical(lc[[1L]]$sublist$listItems[[1L]]$analysisId, "An_DM_GROUPN")
   # and nothing is wrong with it
   expect_identical(nrow(tfl_check_ars(ars, schema = FALSE)), 0L)
 })
@@ -214,24 +214,24 @@ test_that("purpose and reason are columns of the ARD spec workbook", {
 })
 
 test_that("an added subject count never takes an id the output has", {
-  # an output whose BIGN is a categorical without a grouping and whose
+  # an output whose GROUPN is a categorical without a grouping and whose
   # other analysis has no `by`: its percentage needs the count without a
   # grouping, which tfl_ars() adds
   sp <- ars_spec(ars_df(
-    list(output_id = "T-1", analysis_id = "BIGN", method = "categorical",
+    list(output_id = "T-1", analysis_id = "GROUPN", method = "categorical",
          population_id = "SAF", variables = "TRT01A"),
     list(output_id = "T-1", analysis_id = "KM", method = "custom",
          population_id = "SAF", code = "km(data)")))
   ars <- tfl_ars(sp)
   ids <- vapply(ars$analyses, `[[`, "", "id")
   expect_false(anyDuplicated(ids) > 0L)
-  expect_true("An_T-1_BIGN_ALL" %in% ids)
+  expect_true("An_T-1_GROUPN_ALL" %in% ids)
   expect_identical(nrow(tfl_check_ars(ars, schema = FALSE)), 0L)
   # and reading it back leaves the added count out
   f <- withr::local_tempfile(fileext = ".json")
   tfl_write_ars_json(ars, f)
   back <- tfl_ars_to_specs(tfl_read_ars_json(f))$ard$analyses
-  expect_identical(back$analysis_id, c("BIGN", "KM"))
+  expect_identical(back$analysis_id, c("GROUPN", "KM"))
 })
 
 test_that("a blank purpose is named once, not again by the schema", {

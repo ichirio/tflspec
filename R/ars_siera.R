@@ -34,7 +34,7 @@
 # The siera method each tflspec analysis becomes, from its method and role
 # (tfl_ars()'s attr(, "ids")); NA when siera has none.
 .ars_siera_kind <- function(method, role) {
-  ifelse(role == "bign", "total_n",
+  ifelse(role == "groupn", "total_n",
   ifelse(role == "any", "flat",
   ifelse(role == "level", "categorical",
   ifelse(role == "count" & method == "categorical", "categorical",
@@ -240,7 +240,7 @@
 
   # the siera methods, one per kind (and statistics / CI method)
   methods <- list()
-  bign_op <- "Mth_total_n_1_n"
+  groupn_op <- "Mth_total_n_1_n"
   method_for <- function(i) {
     a <- an_by_id[[info$ars_id[i]]]
     kind <- info$kind[i]
@@ -284,7 +284,7 @@
                  description = "the count of this analysis"),
             list(id = paste0(opids[j], "_DEN"),
                  referencedOperationRole = list(controlledTerm = "DENOMINATOR"),
-                 operationId = bign_op,
+                 operationId = groupn_op,
                  description = "the output's subject count by group"))
         }
         o
@@ -330,14 +330,14 @@
            "the siera chi-square template compares one `by` variable")
     }
     analyses[[length(analyses) + 1L]] <- c(a, list(.out = info$output_id[i],
-                                                   .bign = info$role[i] == "bign"))
+                                                   .groupn = info$role[i] == "groupn"))
   }
   # each output's subject count first
   outs <- vapply(ars$outputs, `[[`, "", "id")
   ord <- order(match(vapply(analyses, `[[`, "", ".out"), outs),
-               !vapply(analyses, `[[`, NA, ".bign"))
+               !vapply(analyses, `[[`, NA, ".groupn"))
   analyses <- analyses[ord]
-  for (k in seq_along(analyses)) analyses[[k]]$.out <- analyses[[k]]$.bign <- NULL
+  for (k in seq_along(analyses)) analyses[[k]]$.out <- analyses[[k]]$.groupn <- NULL
 
   # the list of contents: kept analyses, the count first
   kept <- vapply(analyses, `[[`, "", "id")

@@ -46,7 +46,7 @@ test_that("the definition becomes code and the code the study ARD", {
   saveRDS(cards::ADSL, file.path(dir, "adsl.rds"))
   saveRDS(cards::ADAE, file.path(dir, "adae.rds"))
   x <- toy_spec(spec_df(
-    list(output_id = "DM", analysis_id = "BIGN", method = "categorical",
+    list(output_id = "DM", analysis_id = "GROUPN", method = "categorical",
          population_id = "SAF", variables = "TRT01A"),
     list(output_id = "DM", analysis_id = "AGE", method = "continuous",
          population_id = "SAF", by = "TRT01A", variables = "AGE",
@@ -79,7 +79,7 @@ test_that("the definition becomes code and the code the study ARD", {
   expect_false("output_id" %in% names(dm))
   expect_setequal(unique(dm$stat_name), c("n", "N", "p", "mean", "sd"))
   # the population's subjects only
-  n <- a$stat[a$output_id == "DM" & a$analysis_id == "BIGN" &
+  n <- a$stat[a$output_id == "DM" & a$analysis_id == "GROUPN" &
                 a$stat_name == "N"][[1L]]
   expect_equal(n, sum(cards::ADSL$SAFFL == "Y"))
   expect_true(any(a$variable[a$output_id == "AE"] == "AEDECOD"))
@@ -93,7 +93,7 @@ test_that("the definition becomes code and the code the study ARD", {
 
 test_that("a workbook reads back as written", {
   skip_if_not_installed("cards")
-  x <- toy_spec(spec_df(list(output_id = "DM", analysis_id = "BIGN",
+  x <- toy_spec(spec_df(list(output_id = "DM", analysis_id = "GROUPN",
                              method = "categorical", population_id = "SAF",
                              variables = "TRT01A")))
   f <- file.path(withr_tempdir(), "ard_spec.xlsx")

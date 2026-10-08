@@ -10,7 +10,7 @@ test_that("an analysis as R: the same ARD as its columns gave", {
                        population_id = c("SAF", "SAF"), where = c(NA, "TRTEMFL == \"Y\""),
                        add = c(NA, "TRT01A")),
     analyses = df(
-      output_id = "T1", analysis_id = c("BIGN", "AGE", "AE"),
+      output_id = "T1", analysis_id = c("GROUPN", "AGE", "AE"),
       method = c("cards::ard_tabulate", "continuous", "cards::ard_stack_hierarchical"),
       data = c("adsl_saf", "adsl_saf", "adae_teae"),
       by = c(NA, "TRT01A", "TRT01A"),
@@ -50,7 +50,7 @@ test_that("an analysis as R: the same ARD as its columns gave", {
     z[do.call(order, z), , drop = FALSE]
   }
   b <- tfl_build_ard(x, dir = dir, save = FALSE)
-  for (id in c("BIGN", "AGE", "AE")) {
+  for (id in c("GROUPN", "AGE", "AE")) {
     y <- as_custom(x, id)
     a <- tfl_build_ard(y, dir = dir, save = FALSE)
     k1 <- key(a, id); k2 <- key(b, id)
