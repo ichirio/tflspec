@@ -1,5 +1,26 @@
 # tflspec (development version)
 
+* **The formats in the cards call** (#179).  An ARD program says each
+  analysis's formats where its statistics are computed, in the cards
+  call's own `fmt_fun`: `fmt_fun = everything() ~ .fmts(mean = 2L)`, a
+  variable's own as `BMIBL ~ .fmts(mean = 2L, sd = 3L)`, over the catalog's
+  defaults (`.fmt_default`, now a list as `fmt_fun` takes it: `1L`,
+  `cards::label_round(1, scale = 100)`, `.pvalue`); the line that tags it
+  is `.tag(cards::apply_fmt_fun(ard), ...)`.  So for `ard_summary()`,
+  `ard_tabulate()`, `ard_tabulate_value()` (and a subject flag),
+  `ard_missing()`, `ard_hierarchical()` / `_count()`, `ard_mvsummary()`,
+  `ard_tabulate_rows()`, `cardx::ard_tabulate_max()`, and each of them
+  inside `ard_stack()` and `ard_strata()`.  What takes no `fmt_fun` keeps
+  `.fmt()` after the call: cardx's tests, CIs and models,
+  `ard_stack_hierarchical()`, a study's own function, `custom` code,
+  `ard_pairwise()`, `ard_stack()`'s own rows (the by counts, the total N),
+  an analysis whose `args` gives `fmt_fun` or whose `post` changes the ARD,
+  a variable's own format for `ard_hierarchical()` (its `fmt_fun` formats
+  a column of its own) or `ard_tabulate_rows()`.
+  `stat_fmt` is the same as before, row by row (a test builds both ways).
+  A stack's analysis whose formats were all of its own variables
+  (`SEX:p=xx.xx%`) no longer stops the program being written.
+
 * **A report's own font** (#176).  A report's row of `page` that says its
   `font` (or size) wins over the company's: its program says it, with the
   setup and alone, and the file is in it.  A test now holds it; nothing

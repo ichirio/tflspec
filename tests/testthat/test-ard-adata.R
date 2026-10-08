@@ -58,9 +58,10 @@ test_that("the analysis data is made once, in order, for what a report reads", {
   # denominator as it is; the analysis set is the data's
   expect_true(any(code == "adae_ser_1 <- subset(adae_ser, AESEV == \"SEVERE\")"))
   expect_true(any(grepl("cards::ard_tabulate(adae_ser_1,", code, fixed = TRUE)))
-  expect_true(any(grepl("denominator = adae_subj)", code, fixed = TRUE)))
+  expect_true(any(grepl("denominator = adae_subj,", code, fixed = TRUE)))
   expect_true(any(grepl("denominator = adsl_saf,", code, fixed = TRUE)))
-  expect_true(any(code == "ards[[3]] <- .tag(.fmt(ard), \"T1\", \"SER\", \"SAF\")"))
+  # formatted in the call (cards::ard_tabulate() takes fmt_fun)
+  expect_true(any(code == "ards[[3]] <- .tag(cards::apply_fmt_fun(ard), \"T1\", \"SER\", \"SAF\")"))
   # a report that reads none makes none
   t2 <- tfl_ard_code(x, output_id = "T2", save = FALSE, part = "body")
   expect_false(any(grepl("adae_teae", t2, fixed = TRUE)))

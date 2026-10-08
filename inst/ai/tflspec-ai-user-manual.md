@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9063** (the development version,
+**This manual documents tflspec 0.0.24.9064** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -236,7 +236,11 @@ argument is written in one place: a column, or `args`, never both.
 - `args`: more arguments as R (`over_variables = TRUE, overall = TRUE`),
   read as the arguments of a call — any order; refused if not R.
 - `formats`: `mean=xx.x | p=xx.x% | AGE:sd=xx.xx` — the `xx` part says the
-  decimals only.
+  decimals only. The program gives them to the cards call itself
+  (`fmt_fun = everything() ~ .fmts(mean = 1L)`, over the catalog's defaults
+  `.fmt_default`); a function that takes no `fmt_fun` (cardx's tests, CIs
+  and models, a study's own function, `custom` code, `ard_stack()`'s own
+  rows) gets them after the call, `.fmt(ard, list(...))`. Same `stat_fmt`.
 - `custom` takes R in `code`; `args` passes arguments to the method.
   `tfl_ard_as_custom(spec, output_id, analysis_id)` writes an analysis as
   the code of a custom one (the same ARD), to start from when the columns

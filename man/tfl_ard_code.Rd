@@ -53,10 +53,26 @@ saved to the study key \code{output} (default \code{output/ard/ard.rds}).  The c
 runs from the study folder.
 }
 \details{
+The formats (the method's and the row's \code{formats}, over each statistic's
+default in \code{\link[=tfl_ard_statistics]{tfl_ard_statistics()}}) are in the cards call itself, its
+\code{fmt_fun} argument, where a reader sees them next to the statistics:
+\code{fmt_fun = everything() ~ .fmts(mean = 2L)}, a variable's own
+(\code{BMIBL:sd=3}) as \code{BMIBL ~ .fmts(mean = 2L, sd = 3L)}.  An integer is
+that many decimals, \verb{xx.x\%} is \code{label_round(1, scale = 100)} and
+\code{pvalue} the program's \code{.pvalue()} (\verb{<0.001} or 3 decimals);
+\code{cards::apply_fmt_fun()} then fills \code{stat_fmt}.  What takes no \code{fmt_fun}
+gets the same formats after the call, from \code{.fmt()}: cardx's tests, CIs
+and models, \code{cards::ard_stack_hierarchical()}, a study's own function,
+\code{custom} code, \code{ard_pairwise()}, \code{ard_stack()}'s own rows (the by counts,
+the total N), an analysis whose \code{args} gives \code{fmt_fun} or whose \code{post}
+changes the ARD, a variable's own format for \code{ard_hierarchical()} or
+\code{ard_tabulate_rows()}.  \code{stat_fmt} is the same either way.
+
 \code{part} gives a piece of it instead, for a program layout of one's own
 (tflplanner writes one program per output that sources a shared setup):
 \code{"setup"} is what every piece starts with -- \code{library(cards)}, the
 tagging helper, every computed statistic of the catalog and the
-\code{stat_fmt} helpers; \code{"body"} is the analyses of \code{output_id}, ending in
+\code{stat_fmt} helpers (\code{.fmt_default}, \code{.fmts()}, \code{.pvalue()}, \code{.fmt()});
+\code{"body"} is the analyses of \code{output_id}, ending in
 \code{ard} -- without a header or \code{saveRDS()}.
 }
