@@ -53,7 +53,8 @@ saveRDS(cards::ADAE, file.path(study, "data", "adae.rds"))
 The ARD spec is a workbook of a few sheets: `study` (keys such as the
 subject key), `datasets` (what is read, and columns derived on reading),
 `populations` (the analysis sets), `analysis_data` (named data the analyses
-read; optional) and `analyses`, **one cards / cardx call per row**.
+read, each a report's own; optional) and `analyses`, **one cards / cardx
+call per row**.
 A study normally keeps it as an `.xlsx`; here it is written from R so the
 whole article runs on its own.
 
@@ -218,12 +219,15 @@ step after the pages are made -- is one more verb piped after the plan.
 
 ## Where next
 
-- [The ARD spec](ard-spec.html): datasets, populations, analysis data
-  (`subjects`, `keep`, `code`), code lists, the analyses.
-- [The table spec](table-spec.html): the table sheets, and a plan written
-  in code back to a workbook.
-- [Reports](reports.html): headers, footers, titles, footnotes and tokens,
-  written once for the study.
+- [The ARD spec](ard-spec.html): datasets, populations, a report's
+  analysis data (`subjects`, `keep`, `code`), its code lists, the
+  analyses.
+- [The table spec](table-spec.html): the table sheets, numbers or the
+  ARD's text, the decimals written once, a report's code lists and the
+  variables' labels, and a plan written in code back to a workbook.
+- [Reports](reports.html): headers, footers, titles, footnotes and tokens
+  written once for the study, each report's own tokens, the company's
+  font and the setup code the report programs share.
 - [Listings](listings.html), [Figures](figures.html) and
   [CDISC ARS](ars.html).
 - Working with an AI assistant? Attach `tflspec_ai_manual()`, the manual

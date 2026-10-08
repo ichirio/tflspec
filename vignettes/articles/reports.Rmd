@@ -25,7 +25,7 @@ library(rtfreporter)
 | Sheet | One row per | Holds |
 |---|---|---|
 | `report` | report | `type` (`table`, `listing`, `figure`, `user`), `file` (`{output_id}.rtf`), `program`, font sizes, `page_header` / `page_footer`, `watermark`, a figure's size |
-| `page` | report | paper, orientation, margins, the document's text defaults |
+| `page` | report | paper, orientation, margins, the document's text defaults; `font` and `font_size_half_points` (the study's row is the company's) |
 | `header`, `footer`, `titles`, `footnotes` | line | `line`, `left`, `center`, `right` |
 | `tokens` | token | `name`, `value`: a token of one's own, `{STUDY}` in any cell above |
 
@@ -101,6 +101,69 @@ A cell of the header, footer, titles or footnotes may say a token:
 A value that is the same for every report -- the sponsor, the protocol,
 the cut-off -- is written once, as a study row of the `tokens` sheet;
 the header and footer say `{SPONSOR}` and never repeat it.
+
+## Each report's own tokens
+
+A report's header, footer, titles and footnotes may also say its own
+tokens, so that one header serves every report:
+
+- `{OUTPUT_ID}` -- the report's id;
+- `{OUTPUT_LABEL}` -- made from the id: "T-14-1-1" is "Table 14.1.1" (the
+  kind from the first letter, the number from the first digit, separators
+  made dots); `tokens` rows `OUTPUT_KIND_TABLE` / `_LISTING` / `_FIGURE`
+  give other words;
+- `{OUTPUT_TITLE}`, `{OUTPUT_POPULATION}`, `{OUTPUT_SECTION}`, `{STUDY_ID}`
+  -- blank unless the `tokens` sheet gives them (tflplanner writes them
+  from a TOC).
+
+A band line left with nothing but empty tokens (and brackets:
+`<{OUTPUT_POPULATION}>`) is not printed. `tfl_report_tokens()` shows the
+values a report fills them with:
+
+```{r}
+sp <- tfl_table_spec(
+  report = df(output_id = c("T-14-1-1", "T-14-3-1"), type = "table"),
+  page = df(output_id = c(NA, "T-14-3-1"), font = c("Courier New", NA),
+            font_size_half_points = c("18", "16")),
+  header = df(output_id = NA, line = c("1", "2", "3", "4", "5"),
+              left = c("{COMPANY}", "PROTOCOL: {STUDY_ID}", NA, NA, NA),
+              center = c(NA, NA, "{OUTPUT_LABEL}", "{OUTPUT_TITLE}",
+                         "<{OUTPUT_POPULATION}>"),
+              right = c(NA, "Page {PAGE} of {TOTAL_PAGES}", NA, NA, NA)),
+  tokens = df(output_id = c(NA, NA, "T-14-1-1", "T-14-1-1", "T-14-3-1"),
+              name = c("COMPANY", "STUDY_ID", "OUTPUT_TITLE",
+                       "OUTPUT_POPULATION", "OUTPUT_TITLE"),
+              value = c("Sample Pharma", "ABC-123",
+                        "Demographic Characteristics", "Safety Analysis Set",
+                        "Treatment-Emergent Adverse Events")))
+tfl_report_tokens(sp, "T-14-1-1")
+```
+
+## The company's font, and the study's setup written once
+
+The `page` sheet's `font` and `font_size_half_points` set the document's
+font. The study's row (a blank `output_id`) is the company's; a report's
+row that says its own wins (the AE table above is a size smaller). Blank:
+rtfreporter's own (Courier, 9 pt).
+
+What every report shares -- that font, the study's tokens, the running
+header and footer -- `tfl_report_setup_code()` writes once, as the code a
+study's report programs source:
+
+```{r, opts.label = "code"}
+cat(tfl_report_setup_code(sp), sep = "\n")
+```
+
+A report's program written with `tfl_report_code(setup = TRUE)` then says
+only what is its own -- its tokens, a font of its own -- and the study's
+values are in one place, in the definition and in the code:
+
+```{r, opts.label = "code"}
+cat(tfl_report_code(sp, "T-14-3-1", content = "plan", setup = TRUE), sep = "\n")
+```
+
+A program standing alone (`setup = FALSE`, the default) says them itself;
+the file is the same either way.
 
 ## The document
 

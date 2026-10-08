@@ -36,7 +36,7 @@ df <- function(...) data.frame(..., stringsAsFactors = FALSE)
 | `study` | key | `id` (the subject key), `output` (where the ARD goes), `source` (R files of the study's own functions) |
 | `datasets` | dataset | `dataset`, `level`, `path` (relative to the study folder), `derive` (columns made on reading) |
 | `populations` | analysis set | `population_id`, `dataset`, `where`, `derive` |
-| `analysis_data` | named data | `data_id`, `label`, `from`, `population_id`, `subjects`, `where`, `add`, `derive`, `keep`, `distinct`, `code` |
+| `analysis_data` | named data of a report | `output_id`, `data_id`, `label`, `from`, `population_id`, `subjects`, `where`, `add`, `derive`, `keep`, `distinct`, `code` |
 | `analyses` | analysis | `output_id`, `analysis_id`, `method`, `data` or `dataset` + `population_id`, `where`, `by`, `strata`, `variables`, `statistics`, `denominator`, `formats`, `args`, `code`, `parent`, `post`, ... |
 
 Every column is described on its header cell's comment in the workbook,
@@ -79,8 +79,16 @@ cat(tfl_ard_code(spec, part = "body"), sep = "\n")
 ## Analysis data
 
 When several analyses read the same data -- treatment-emergent events of
-the safety set, say -- the sheet `analysis_data` names it once. Each row
-makes one data, in this order:
+the safety set, say -- the sheet `analysis_data` names it once.
+
+**An analysis data is a report's**: `output_id` says whose, and it is
+required. A row's `from` and `subjects` name only its own report's rows
+above it, and an analysis reads only its own report's data. So the same
+`data_id` may mean something else in another report -- the safety set of
+a Phase I table and of a Phase II one -- and a data two reports use is
+copied into each (tflplanner's "copy from another report").
+
+Each row makes one data, in this order:
 
 1. `from` a dataset or an analysis data above it;
 2. kept to the subjects of a population (`population_id`) **or** of an
@@ -97,6 +105,7 @@ its `data` column instead of `dataset` / `population_id`.
 
 ```{r}
 adata <- df(
+  output_id = "T-14-3-1",
   data_id = c("adsl_saf", "adae_teae", "adae_ser"),
   label = c("Safety set", "TEAEs of the safety set", "Serious TEAEs"),
   from = c("ADSL", "ADAE", "adae_teae"),
@@ -129,7 +138,10 @@ above it are in reach. `from` stays (it says what the data is made from),
 and the other columns that make a data are left blank (this is checked):
 
 ```{r, opts.label = "code"}
-adata2 <- rbind(adata[1:2, ], df(
+adata2 <- adata[1:2, ]
+adata2$output_id <- "T-14-3-2"     # its own copy of the two data
+adata2 <- rbind(adata2, df(
+  output_id = "T-14-3-2",
   data_id = "adae_first", label = "First TEAE of each subject and term",
   from = "adae_teae", population_id = NA, subjects = NA, where = NA,
   keep = NA))
@@ -197,21 +209,35 @@ cat(tfl_ard_as_custom(spec, "T-14-3-1", "SER")$code, sep = "\n")
 
 ## Code lists
 
-A table spec's `codelists` sheet (one row a value: `variable`, `value`,
-`label`, `order`) gives the order of a variable's values. Handed to the ARD
-program, each listed column becomes a factor before any analysis, so the
-ARD keeps that order and **counts a value no record has** (`n = 0`).
-Rows with a blank `output_id` are the study's; a report's own rows replace
-them for that report (`output_id =` one report):
+A table spec's `codelists` sheet (one row a value: `output_id`,
+`variable`, `value`, `label`, `order`) gives the order of a variable's
+values and the text they print as. **A code list is a report's**: every
+row names its report, and a blank `output_id` is an error (a code list two
+reports use is copied into each; the same arm may print one way in one
+table and another way in the next).
+
+Handed to the ARD program, a report's code lists of the variables its
+analyses read (`by`, `strata`, `variables`, and the names in `args`,
+`code` and `post`) make those columns factors before any analysis, so the
+ARD keeps the order and **counts a value no record has** (`n = 0`). A
+variable the table only prints is not made a factor. A data made from
+another -- an analysis set, an analysis data, an analysis's own subset --
+is made factors again as its last step (`|> .levels()`): a value the list
+does not have counts only where the data analysed have it (a table of the
+safety set has no column for the screen failures' arm).
 
 ```{r, opts.label = "code"}
-codelists <- df(output_id = NA, variable = "SEX", value = c("M", "F"),
+codelists <- df(output_id = "T-14-1-1", variable = "SEX", value = c("M", "F"),
                 label = c("Male", "Female"), order = 1:2)
 spec3 <- tfl_ard_spec(c(base, list(analyses = df(
   output_id = "T-14-1-1", analysis_id = "SEX", method = "categorical",
   population_id = "SAF", by = "TRT01A", variables = "SEX"))))
 cat(tfl_ard_code(spec3, part = "body", codelists = codelists), sep = "\n")
 ```
+
+The code list of `variable` (its values the variables' names: `variable /
+AGE / Age (years)`) is the variables' labels in the tables; the ARD does
+not read it. See [The table spec](table-spec.html).
 
 ## Building the ARD
 
@@ -237,6 +263,13 @@ of date.
 `tfl_ard_code(spec)` is the whole file: the packages and helpers, the
 data, the analyses, `saveRDS()`. Write it to the study's `programs/` and
 run it there; tflspec is not needed to run it.
+
+`tfl_ard_code(spec, output_id = )` is one report's program, the form a
+study runs (tflplanner writes one per report). The study's program, with
+every report, is one part a report after the datasets and analysis sets:
+each part makes its own analysis data before its analyses, and, when a
+report has code lists, reads its data again with them -- so one report's
+analysis data and factors are never the next report's.
 
 ```{r, eval = FALSE}
 writeLines(tfl_ard_code(spec), file.path(study, "programs", "ard.R"))
