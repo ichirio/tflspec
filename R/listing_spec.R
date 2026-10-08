@@ -37,8 +37,8 @@ tfl_read_data_code <- function(datasets, dataset) {
                    dataset))
   }
   obj <- .r_name(dataset)
-  c(sprintf("%s <- %s", obj, .reader(r$path[1L])),
-    .derive_code(obj, r$derive[1L]))
+  .drop_attached_ns(c(sprintf("%s <- %s", obj, .reader(r$path[1L])),
+                      .derive_code(obj, r$derive[1L])))
 }
 
 .r_sort <- function(obj, sort) {
@@ -369,7 +369,8 @@ tfl_listing_code <- function(spec, output_id = NULL, datasets,
             if (!is.na(l$wrap)) paste0(", wrap = ", l$wrap) else ""),
     sprintf("content <- as_rtftables(data, listing = lst%s)",
             if (!is.na(l$max_rows)) paste0(", max_rows = ", l$max_rows) else
-              ""))
+              "")) |>
+    .drop_attached_ns()
 }
 
 # ---- the pages -------------------------------------------------------------

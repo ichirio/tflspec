@@ -1,5 +1,22 @@
 # tflspec (development version)
 
+* **The generated programs name a study's folders and its attached
+  packages as its setup does** (#178).  Two options, unset by default
+  (the code as before):
+  - `tflspec.paths`, a variable for a folder (`c(path_adam = "data/adam")`):
+    a dataset, the study ARD and a `source` file under one of them are
+    written through it, `readRDS(file.path(path_adam, "adsl.rds"))`;
+  - `tflspec.attached`, the packages the setup attaches (`c("cards",
+    "dplyr")`): their calls are written without `pkg::` (in the parsed
+    code: a string or a comment keeps it), and an ARD program does not
+    write `library(cards)` itself.
+
+  `tfl_ard_code()`, `tfl_table_code()`, `tfl_report_code()`,
+  `tfl_report_setup_code()`, `tfl_listing_code()`, `tfl_read_data_code()`,
+  `tfl_fig_design_code()` and `tfl_fig_setup_code()` read them;
+  `tfl_build_ard()` runs its program by itself and ignores them.  See
+  `?tflspec_code_options`.
+
 * **The formats in the cards call** (#179).  An ARD program says each
   analysis's formats where its statistics are computed, in the cards
   call's own `fmt_fun`: `fmt_fun = everything() ~ .fmts(mean = 2L)`, a

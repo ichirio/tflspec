@@ -354,7 +354,7 @@ tfl_table_code <- function(spec, output_id = NULL, data = "data",
              vapply(steps, function(s) paste0("  ", .spec_call_code(s)), ""))
   lines[-length(lines)] <- paste(lines[-length(lines)], op)
   lines[1L] <- paste(plan, "<-", lines[1L])
-  unlist(strsplit(lines, "\n", fixed = TRUE))
+  .drop_attached_ns(unlist(strsplit(lines, "\n", fixed = TRUE)))
 }
 
 #' A table's plan from its definition
@@ -571,7 +571,7 @@ tfl_report_setup_code <- function(spec) {
     out <- c(out, paste(.setup_band_names[[sheet]], "<-", .spec_call_code(call, 0L)))
   }
   if (!length(out)) return(character())
-  unlist(strsplit(out, "\n", fixed = TRUE))
+  .drop_attached_ns(unlist(strsplit(out, "\n", fixed = TRUE)))
 }
 
 #' A report's tokens
@@ -640,5 +640,5 @@ tfl_report_code <- function(spec, output_id = NULL, content = "content",
     }
     paste(doc, "<-", .spec_call_code(s, 0L))
   }, "")
-  unlist(strsplit(out, "\n", fixed = TRUE))
+  .drop_attached_ns(unlist(strsplit(out, "\n", fixed = TRUE)))
 }

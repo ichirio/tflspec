@@ -945,15 +945,16 @@ tfl_fig_design_code <- function(design, plot_id = "fig", ggplot2_version = NULL,
   design <- if (inherits(design, "tfl_fig_design")) design else .fig_design_from_list(design)
   gg <- .fig_target_version(ggplot2_version, design)
   if (length(design$plots)) {
-    return(.fig_compose_code(design, plot_id, gg, setup = setup, save = save,
-                             name = name))
+    return(.drop_attached_ns(.fig_compose_code(design, plot_id, gg, setup = setup,
+                                               save = save, name = name)))
   }
   whole <- Filter(function(l) identical(l$layer, "figure"), design$layers)
   if (length(whole)) {
     w <- whole[[1L]]
     fn <- getExportedValue("tflspec", .fig_fun(w$type))
     args <- lapply(w$args %||% list(), function(v) if (is.list(v)) unlist(v) else v)
-    return(do.call(fn, c(list(style = w$style %||% NULL, plot_id = plot_id), args)))
+    return(.drop_attached_ns(do.call(fn, c(list(style = w$style %||% NULL,
+                                                plot_id = plot_id), args))))
   }
   b <- .fig_design_body(design, gg, setup = setup, name = name)
   code <- c(
@@ -971,7 +972,7 @@ tfl_fig_design_code <- function(design, plot_id = "fig", ggplot2_version = NULL,
     section("the figure"),
     b$step2,
     if (save) c(name, "", .fig_save_code(design$plot, plot_id, name)))
-  structure(.code_lines(code), class = "tfl_code")
+  structure(.drop_attached_ns(.code_lines(code)), class = "tfl_code")
 }
 
 # ---- the checks -------------------------------------------------------------

@@ -24,6 +24,7 @@ reference:
   - title: Manual
     contents:
       - tflspec_ai_manual
+      - tflspec_code_options
   - title: ARD spec
     desc: >
       The analyses of a study as a workbook: its data, its analysis sets and
