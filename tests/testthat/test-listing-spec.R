@@ -96,8 +96,21 @@ test_that("the code: from the definition or its workbook, one listing at a time"
   sp <- tfl_listing_spec(ls_rows())
   cat <- data.frame(dataset = "ADAE", path = "data/adae.rds", derive = NA)
   code <- tfl_listing_code(sp, "L-1", cat)
-  expect_true("data <- subset(adae, AESEV == 'SEVERE')" %in% code)
-  expect_true(any(grepl("-xtfrm(data$ASTDY)", code, fixed = TRUE)))
+  # its condition and its order, one statement (dplyr)
+  expect_true(paste0("data <- adae |>\n  dplyr::filter(AESEV == 'SEVERE') |>\n",
+                     "  dplyr::arrange(USUBJID, dplyr::desc(ASTDY))") %in% code)
+  # the listing's code lists, on its columns: each a factor, it sorts so
+  cl <- data.frame(output_id = "L-1", variable = "AESEV",
+                   value = c("MILD", "MODERATE", "SEVERE"),
+                   label = c("Mild", "Moderate", "Severe"), order = c("1", "2", "3"))
+  lc <- tfl_listing_code(sp, "L-1", cat, codelists = cl)
+  expect_true("cl_aesev <- c(MILD = \"Mild\", MODERATE = \"Moderate\", SEVERE = \"Severe\")" %in% lc)
+  expect_true(any(grepl("dplyr::filter(AESEV == 'SEVERE') |>\n  set_levels(AESEV = cl_aesev) |>",
+                        lc, fixed = TRUE)))
+  # a rework before the order
+  rw <- tfl_listing_code(sp, "L-1", cat, rework = "data$X <- 1")
+  expect_lt(match("data$X <- 1", rw),
+            match("data <- dplyr::arrange(data, USUBJID, dplyr::desc(ASTDY))", rw))
   expect_true(any(grepl("listing_col(c(\"AEDECOD\", \"AESEV\"), width = 30", code, fixed = TRUE)))
   expect_true(any(grepl("collapse_repeats = TRUE", code, fixed = TRUE)))
   expect_true("content <- as_rtftables(data, listing = lst, max_rows = 4)" %in% code)

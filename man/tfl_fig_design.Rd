@@ -29,7 +29,8 @@ tfl_fig_design_code(
   ggplot2_version = NULL,
   setup = FALSE,
   save = TRUE,
-  name = "fig"
+  name = "fig",
+  codelists = NULL
 )
 
 tfl_check_fig_design(design, adam = NULL, ggplot2_version = NULL)
@@ -74,6 +75,13 @@ figure (\code{wrap_elements()}).}
 figure only (a report program writes it into its RTF).}
 
 \item{name}{The name the figure is given.}
+
+\item{codelists}{The reports' code lists (a table definition's
+\code{codelists} sheet, or a data frame with \code{output_id}, \code{variable},
+\code{value}, \code{label}, \code{order}): the rows of \code{plot_id} are put on the
+figure's data, last of its data steps -- each listed column a factor
+in its list's order, its values as the list has them (\verb{cl_<variable>}
+and \code{set_levels()}, see \code{\link[=tfl_helpers_code]{tfl_helpers_code()}}).}
 
 \item{adam}{The data (\code{\link[=tfl_read_adam]{tfl_read_adam()}}): the variables and PARAMCDs the
 design names are looked for in it.}

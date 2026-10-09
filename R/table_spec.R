@@ -41,6 +41,7 @@
 #   num   a number                    ids   `a | b`, or `1 | 2` (positions)
 #   bool  TRUE / FALSE (yes / no)     flex  TRUE / FALSE, or an `ids` list
 #   text  as written; quote it ("...") to keep leading or trailing spaces
+#   blanks  a named rule (between_groups), or row positions `0 | 5 | -1`
 .ard_spec_types <- list(
   layout = c(
     pages_max_rows = "int", pages_split = "text",
@@ -49,7 +50,7 @@
     pages_page_by = "list",
     group_col = "text", group_mode = "text", group_collapse = "flex",
     group_page = "bool", group_keep = "bool",
-    blank_where = "text", blank_first = "bool", blank_last = "bool",
+    blank_where = "blanks", blank_first = "bool", blank_last = "bool",
     blank_counted = "bool",
     stub_vars = "list", stub_name = "text", stub_indent = "int",
     stub_summary = "text", stub_before = "bool",
@@ -155,6 +156,13 @@
     },
     list = .ard_spec_split(x),
     ids  = ids(x),
+    blanks = {
+      # row positions (0 before the first row, -1 after the last) are
+      # whole numbers, as plan_blanks(where = ) takes them; else a rule
+      p <- .ard_spec_split(x)
+      if (length(p) && all(grepl("^-?[0-9]+$", p))) as.integer(p) else
+        if (length(p) == 1L) p else bad("a named rule (between_groups) or row positions (0 | 5 | -1)")
+    },
     sides = {
       # the rules of one kind of row: the sides drawn, or `none`
       v <- tolower(.ard_spec_split(x))
@@ -772,6 +780,7 @@ tfl_table_spec <- function(tables = NULL, variables = NULL, cells = NULL,
   }
   .ard_spec_check_tokens(sp$tokens)
   .codelists_check(sp$codelists)
+  sp <- .codelist_variable_rows(sp)
   .ard_spec_check_digits(sp$digits)
   chk(t$stats, c("cells", "rows"), "stats")
   chk(t$value, c("stat", "stat_fmt"), "value")
@@ -1058,39 +1067,42 @@ print.tfl_table_spec <- function(x, ...) {
   split(cl, factor(cl$variable, levels = unique(cl$variable)))
 }
 
-# plan_labels(): a variable's label (variables$label) and, from the code
-# list, its values' text -- one entry a variable, since one key cannot hold
-# both: SEX = c(SEX = "Sex", F = "Female"), the variable's own name its
-# label (rtfreporter#514).  The code list of `variable` (the ARD's column:
-# its values the variables' names) gives a variable's label where the
-# variables sheet gives none.
+# plan_labels(): a variable's heading (variables$label) -- what the ARD
+# does not have.  Its values' text is the ARD's own: the ARD program puts
+# the code lists' labels on the data (set_levels()).
 .ard_spec_labels <- function(sp) {
   v <- .ard_spec_variables(sp)
   v <- v[!is.na(v$label), , drop = FALSE]
-  out <- if (nrow(v)) as.list(stats::setNames(v$label, v$variable)) else list()
-  cls <- .ard_spec_codelists(sp)
-  vl <- cls[["variable"]]
-  if (!is.null(vl)) {
-    vl <- vl[!is.na(vl$label), , drop = FALSE]
-    for (i in seq_len(nrow(vl))) {
-      if (is.null(out[[vl$value[i]]])) out[[vl$value[i]]] <- vl$label[i]
+  if (!nrow(v)) return(NULL)
+  stats::setNames(v$label, v$variable)
+}
+
+# The code list of `variable` (an earlier form: the variables' headings,
+# its values the variables' names) as the variables' labels -- a variable's
+# own label in the variables sheet wins -- and out of the code lists.
+.codelist_variable_rows <- function(sp) {
+  cl <- sp$codelists
+  if (is.null(cl) || !nrow(cl)) return(sp)
+  k <- !is.na(cl$variable) & cl$variable == "variable"
+  if (!any(k)) return(sp)
+  v <- sp$variables
+  for (i in which(k & !is.na(cl$label))) {
+    o <- cl$output_id[i]
+    hit <- which(v$variable %in% cl$value[i] &
+                   (if (is.null(v$output_id)) TRUE else v$output_id %in% o))
+    if (!length(hit)) {
+      v[nrow(v) + 1L, ] <- NA
+      hit <- nrow(v)
+      if (!is.null(v$output_id)) v$output_id[hit] <- o
+      v$variable[hit] <- cl$value[i]
     }
-    # in the variables sheet's order (the rows follow it)
-    ord <- .ard_spec_variables(sp)$variable
-    out <- out[order(match(names(out), ord, nomatch = length(ord) + 1L))]
+    if (is.na(v$label[hit[1L]])) v$label[hit[1L]] <- cl$label[i]
   }
-  for (cl in cls[names(cls) != "variable"]) {
-    cl <- cl[!is.na(cl$label), , drop = FALSE]
-    if (!nrow(cl)) next
-    var <- cl$variable[1L]
-    out[[var]] <- c(if (!is.null(out[[var]])) stats::setNames(out[[var]], var),
-                    stats::setNames(cl$label, cl$value))
-  }
-  if (!length(out)) return(NULL)
-  if (all(lengths(out) == 1L) && all(vapply(out, function(x) is.null(names(x)), NA))) {
-    return(unlist(out))
-  }
-  out
+  message("The code lists' rows of `variable` (variables' headings) are the ",
+          "variables sheet's labels now: moved there.")
+  sp$variables <- v
+  sp$codelists <- cl[!k, , drop = FALSE]
+  sp
 }
 
 # plan_levels(.drop_empty = ): the variables whose values no record has
@@ -1104,15 +1116,16 @@ print.tfl_table_spec <- function(x, ...) {
 }
 
 # plan_levels(): a variable's own `levels` (variables sheet), else the code
-# list's order of its values.  (`variable`'s code list is the variables'
-# labels, not an order: the rows' order is the variables sheet's.)
+# list's order of its values -- as the ARD has them: their labels (the ARD
+# program puts them on the data), a value without one itself.
 .ard_spec_levels <- function(sp) {
   v <- sp$variables[!is.na(sp$variables$levels), , drop = FALSE]
   out <- stats::setNames(lapply(v$levels, .ard_spec_split), v$variable)
   cls <- .ard_spec_codelists(sp)
-  for (cl in cls[names(cls) != "variable"]) {
+  for (cl in cls) {
     var <- cl$variable[1L]
-    if (is.null(out[[var]])) out[[var]] <- cl$value
+    lab <- if (is.null(cl$label)) cl$value else ifelse(is.na(cl$label), cl$value, cl$label)
+    if (is.null(out[[var]])) out[[var]] <- lab
   }
   if (!length(out)) return(NULL)
   out
@@ -2137,9 +2150,12 @@ tfl_as_table_spec <- function(x, output_id = NULL, compare = TRUE) {
     if (identical(g$.keep, FALSE)) put("group_keep", FALSE)
   }
   b <- ly[["blanks"]]
-  if (!is.null(b$blank_rows) && !(is.character(b$blank_rows) &&
-                                   length(b$blank_rows) == 1L)) {
-    miss("plan_blanks(where = ): only a named rule (\"between_groups\") converts")
+  if (is.numeric(b$blank_rows) && length(b$blank_rows) &&
+      all(b$blank_rows == round(b$blank_rows))) {
+    put("blank_where", paste(as.integer(b$blank_rows), collapse = " | "))
+  } else if (!is.null(b$blank_rows) && !(is.character(b$blank_rows) &&
+                                         length(b$blank_rows) == 1L)) {
+    miss("plan_blanks(where = ): only a named rule (\"between_groups\") or row positions convert")
   } else put("blank_where", b$blank_rows)
   put("blank_first", b$blank_row_first); put("blank_last", b$blank_row_end)
   put("blank_counted", b$count_blank_rows)

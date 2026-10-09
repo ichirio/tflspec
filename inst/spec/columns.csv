@@ -69,10 +69,10 @@ variables,label,"What prints for its name (plan_labels()); blank: the name.",Age
 variables,order,"Its place among the variables (a number); blank: the data's order.",1
 variables,levels,"Its values in print order, | between them (plan_levels()); blank: the data's order.",Grade 0 | Grade 1 | Total
 variables,empty_levels,"Its values no record has -- a code list's value, counted 0 in every column -- show (a 0 row) or hide (plan_levels(.drop_empty = )); blank: show.",hide
-codelists,,"A report's code lists, one row a value of a variable -- the text it prints as and its place (plan_labels(), plan_levels()). Every row names its report in `output_id` (a blank one is an error: copy the rows into each report that uses them). A variable's `levels` on the variables sheet, when given, is the order in the table instead. The code list of `variable` (its values the variables' names) gives the variables' labels, where the variables sheet's `label` gives none. The ARD too: a report's ARD program makes factors of the columns it lists that its analyses read (by, strata, variables) before any analysis.",
+codelists,,"A report's code lists, one row a value of a variable -- its place and what it is in the data the report's program makes (the ARD, a listing's or a figure's data): the program puts them on the columns it reads (cl_<variable>, set_levels()), each a factor in the list's order, its values the labels. A value the list does not have stops the program. Every row names its report in `output_id` (a blank one is an error: copy the rows into each report that uses them). A variable's `levels` on the variables sheet, when given, is the order in the table instead; a variable's heading is the variables sheet's `label`.",
 codelists,variable,"The variable (an analysis variable or a column key).",SEX
 codelists,value,"A value as the data have it.",F
-codelists,label,"What prints for the value; blank: the value.",Female
+codelists,label,"What the value is in the data the program makes, and so what prints; blank: the value.",Female
 codelists,order,"Its place among the variable's values (a number); blank: after the numbered ones, in the sheet's order.",2
 cells,,"Table: one row a line of a cell (plan_cells()). Rows with the same variable / context / row are one chain, tried top down. With stats = rows, a row with no template is one statistic's digits (plan_digits(.rows = )): row = the statistic as the label column prints it.",
 cells,variable,"What the template is for: a variable, continuous / categorical (every variable of that kind); blank: every variable.",continuous
@@ -98,7 +98,7 @@ layout,group_mode,"How groups print (plan_row_group(mode = )): value / indent / 
 layout,group_collapse,"TRUE, or the columns (names or positions, | between them) whose repeated values print once (plan_row_group(collapse = )); blank: none.",1 | 2
 layout,group_page,"TRUE / FALSE: one page per value of group_col (plan_paginate_group()); blank: FALSE.",TRUE
 layout,group_keep,"TRUE / FALSE: with group_page, FALSE leaves the group column unprinted (plan_paginate_group(keep = )); blank: TRUE.",FALSE
-layout,blank_where,"Where blank rows go: a named rule such as between_groups (plan_blanks(where = )); blank: none.",between_groups
+layout,blank_where,"Where blank rows go: a named rule such as between_groups, or row positions -- a blank after each, 0 before the first row, -1 after the last (0 | 5 | -1) (plan_blanks(where = )); blank: none.",between_groups
 layout,blank_first,"TRUE / FALSE: a blank row before the first row (plan_blanks(first = )); blank: the default.",TRUE
 layout,blank_last,"TRUE / FALSE: a blank row after the last row (plan_blanks(last = )); blank: the default.",TRUE
 layout,blank_counted,"TRUE / FALSE: blank rows count towards pages_max_rows (plan_blanks(counted = )); blank: the default.",TRUE

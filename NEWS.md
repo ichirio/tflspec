@@ -1,5 +1,56 @@
 # tflspec (development version)
 
+* **A report's code lists give the data its labels; the ARD holds them**
+  (#187).  `tfl_ard_code(codelists = )` writes each list at the program's
+  head, `cl_sex <- c(F = "Female", M = "Male")` (a value named by its
+  data value, its label the value it becomes; a list without labels, its
+  values), and puts them on the data the analyses read:
+  `set_levels(SEX = cl_sex, RACE = cl_race)`.  Each listed column is a
+  factor in the list's order with the labels as its values, so the ARD
+  holds `"Female"`.
+  - A value a list does not have (not NA) now stops the program, naming
+    the column and the value -- it was added after the listed ones.
+  - The table follows: `plan_levels()` orders the ARD's values (the
+    labels), and `plan_labels()` gives the variables' headings only (the
+    `variables` sheet's `label`).  The code list of `variable` (an earlier
+    form of the headings) moves to the `variables` sheet's `label` when a
+    table spec is read, with a message.
+  - An analysis's `where` on a listed column it reads is written in its
+    labels: `tfl_ard_code()` stops on `SEX == "F"` and says to write
+    `"Female"`.  `tfl_ars()` writes the data's values back, in a
+    condition and in a grouping's groups (their names the labels).
+  - Listings and designed figures take them too:
+    `tfl_listing_code(codelists = )` (the columns a listing shows or sorts
+    by, after its condition; it sorts in the lists' order) and
+    `tfl_fig_design_code(codelists = )` (the last of the figure's data
+    steps).  A listing's data is now one dplyr pipe: `filter()`,
+    `set_levels()`, `arrange()`.
+
+* **The generated programs run without tflspec** (#187).  The functions
+  they call -- `set_levels()`, `tag_ard()`, `fmt_ard()`, `keep_stats()`,
+  `fmt_pvalue()`, `save_ard()` -- are code a study keeps in a file of its
+  own: `tfl_helpers_code()` gives it, and the whole program
+  (`tfl_ard_code(part = "all")`) carries it.  The six exports of 0.0.24.9066
+  are removed (no aliases); the setup attaches cards and dplyr only.
+
+* **An analysis data that keeps columns (`keep`) keeps the ones its
+  analyses read** (#187): their `by`, `strata` and `variables`, and a
+  denominator's `by` -- they were dropped unless listed, and the analysis
+  stopped.
+
+* **A program's names are never a column's** (#187): the report's id is
+  `report_id` (was `output_id <- "..."`), a code list `cl_<variable>`, a
+  folder `path_<folder>`, an analysis's ARD `ard_<id>`.  A test checks
+  them against the ADaM's and the ARD's columns.
+
+* **A table's blank rows at positions** (#185).  `layout`'s `blank_where`
+  takes row positions as well as a named rule: `0 | 5 | -1` (a blank after
+  each; 0 before the first row, -1 after the last) is written
+  `plan_blanks(where = c(0, -1))` -- it was the text `"0 | -1"`, which
+  stopped the report program -- and `tfl_as_table_spec()` takes a plan's
+  positions back.  Whole numbers in the written code read as a person
+  writes them (`c(0, -1)`, not `0:-1`).
+
 * **The ARD program reads as a person writes it** (#181).  Same ARDs:
   - no function or loop of its own: it calls `set_levels()`, `tag_ard()`,
     `fmt_ard()`, `keep_stats()`, `fmt_pvalue()` and `save_ard()`, new

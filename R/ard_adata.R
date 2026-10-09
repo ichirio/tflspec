@@ -224,8 +224,10 @@
 
 # The lines that make the analysis data `ids` (in their order); `levels`:
 # the code lists, each data made factors again (.derive_steps()); `avoid`:
-# the program's names, which a data's own code does not assign
-.adata_lines <- function(x, ids, subj, levels = NULL, avoid = character()) {
+# the program's names, which a data's own code does not assign; `reads`:
+# each data's columns the analyses read (kept whatever `keep` says)
+.adata_lines <- function(x, ids, subj, levels = NULL, avoid = character(),
+                         reads = list()) {
   ad <- .adata_sheet(x)
   out <- character()
   lv <- if (length(levels)) .levels_step
@@ -243,7 +245,7 @@
         made <- c(sprintf("%s <- local({\n%s\n})", id,
                           paste0("  ", strsplit(code, "\n", fixed = TRUE)[[1L]],
                                  collapse = "\n")),
-                  if (length(lv)) sprintf("%s <- set_levels(%s, codelists)", id, id))
+                  if (length(lv)) .make_code(id, id, lv))
       }
       out <- c(out, made)
       next
@@ -281,8 +283,11 @@
     # what follows the rows: the columns added, derived, the columns kept,
     # one row per ..., its code lists
     steps <- c(base[[2L]], join, .derive_steps(r$derive),
+               # the columns kept: the subject, those the analyses read on
+               # it (their by, strata, variables), and the ones asked for
                if (length(keep)) sprintf("dplyr::select(%s)",
-                                         paste(unique(c(subj, keep)), collapse = ", ")),
+                                         paste(unique(c(subj, keep, reads[[id]])),
+                                               collapse = ", ")),
                if (length(dis)) sprintf("dplyr::distinct(%s, .keep_all = TRUE)",
                                         paste(dis, collapse = ", ")),
                # the same rows as the data it is made from: the same levels
