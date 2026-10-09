@@ -859,13 +859,15 @@ tfl_table_spec <- function(tables = NULL, variables = NULL, cells = NULL,
             i, ifelse(is.na(ch$line[i]), "line", "cols")), ch, "col_header")
   keyed(.ard_spec_cell_style_problems(sp$cell_styles), sp$cell_styles,
         "cell_styles")
-  # where a report's ARD comes from: its ARD definition (blank), or an ARD
-  # made elsewhere and taken in (import:<the file in input/ard/>)
+  # where a report's ARD comes from: its ARD definition (blank, or own),
+  # an ARD made elsewhere and taken in (import:<the file in input/ard/>),
+  # or -- a figure's -- a table's (table:<its output_id>)
   src <- sp$report$ard_source %||% character()
-  i <- which(!is.na(src) & !grepl("^import:[^[:space:]]", src))
+  i <- which(!is.na(src) & !grepl("^(import|table):[^[:space:]]|^own$", src))
   keyed(.pb(sprintf(paste0(
-    "`report$ard_source` is blank (the report's ARD definition) or ",
-    "import:<file> (an ARD taken in); not %s."), sQuote(src[i])), i,
+    "`report$ard_source` is blank or own (the report's ARD definition), ",
+    "import:<file> (an ARD taken in) or table:<output_id> (a figure: ",
+    "that table's ARD); not %s."), sQuote(src[i])), i,
     rep("ard_source", length(i))), sp$report, "report")
   # every cell is what its column takes
   for (sh in names(.ard_spec_types)) {
