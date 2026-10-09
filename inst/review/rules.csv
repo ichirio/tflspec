@@ -1,0 +1,47 @@
+rule,level,area,needs,checked_by,message,hint
+S01,error,spec,spec,tflspec,%s,The definition cannot be used until this is put right.
+R01,hand,report,spec,tflplanner,%s has no title.,Give the report a title line.
+R02,error,report,spec,tflplanner,The report id %s is given twice.,Each report has one row; merge or rename one of them.
+R03,error,report,spec,tflplanner,The report id %s cannot name a file.,"Use letters, digits and - _ . only."
+R04,hand,report,spec,tflplanner,%s has no analysis set.,Set the report's analysis set (population).
+R05,error,report,spec,tflplanner,The analysis set %s of %s is not in the populations.,Add the population or choose one that is defined.
+R06,hand,report,spec,tflplanner,%s has nothing that makes it: %s.,Add what the report is made from.
+R07,error,report,spec,tflplanner,%s and %s write the same %s %s.,Give each report its own file and program.
+R08,check,report,catalog,tflplanner,%s names the dataset %s that the catalog does not have.,Add the dataset to the catalog or correct the name.
+C01,check,codelists,spec,tflspec,The code list of %s is not used by %s.,"Fine when the variable is read by code the review cannot see; else remove the list."
+C02,check,codelists,data,tflspec,"The code list value %s of %s never occurs in the data of %s.","The row prints n = 0; fine when the level is expected, else drop it."
+C03,error,codelists,data,tflspec,"The data value %s of %s is not in the code list of %s.",The program will stop: add the value to the code list.
+C04,check,codelists,spec,tflplanner,The code list of %s in %s differs from the standards.,Copy the code list again from the standards.
+A01,error,ard,data,tflspec,"%s reads the column %s, which %s does not have.",Correct the name or add the column (derive / add).
+A02,error,ard,data,tflspec,"The condition %s on %s cannot be evaluated: %s.",Correct the condition so it names columns the data have and gives TRUE / FALSE.
+A03,check,ard,data,tflspec,"The condition %s on %s keeps no %s.","Fine when nothing is expected yet; else check the values the condition compares with."
+A04,check,ard,data,tflspec,"The population flag %s of %s has the values %s, not Y / N.",Compare with the values the flag has.
+A05,check,ard,data,tflspec,"%s is a %s analysis of %s, a %s column.","A mean of a character column, or percentages of a numeric one, is usually the wrong method."
+A06,check,ard,spec,tflspec,"%s groups by %s and also analyses it.","Fine for a count of the groups themselves; else drop it from one of them."
+A08,check,ard,catalog,tflspec,"%s asks a %s method for %s, which it does not give.",Choose statistics of the method's kind (tfl_ard_statistics()).
+A11,check,ard,spec,tflplanner,The analyses of %s are not on the report list.,Add the report or delete its analyses.
+A12,check,ard,spec,tflplanner,%s reads the analysis set %s; the report's is %s.,Fine when the report mixes sets on purpose.
+A13,check,ard,spec,tflplanner,%s counts the subjects per group twice.,Keep one count of the subjects per group.
+A15,error,ard,spec,tflspec,"%s is named %s, a name the ARD program or the ARD uses itself.",Rename it.
+A16,check,ard,data,tflspec,"The derived column %s replaces the column of %s of the same name.",Fine when the column is meant to be replaced; else give it a new name.
+A17,check,ard_run,ard,tflspec,%s,What the last ARD run said went wrong for this analysis.
+T01,check,table,spec,tflspec,"The table's %s name %s, which no analysis of %s groups by or analyses.","Correct the key, or group an analysis by it."
+T02,check,table,spec,tflspec,"The variables row %s is for a variable no analysis of %s analyses or groups by.","Fine when the ARD is made elsewhere; else remove the row."
+T03,check,table,catalog,tflspec,"The template of %s reads {%s}, a %s statistic, for %s analyses.",Use a statistic of the variable's kind.
+T04,check,table,spec,tflspec,"The cells rows of %s are for a variable %s has no analysis of.",Correct the variable or add its analysis.
+T05,check,table,spec,tflspec,"The digits of %s are for {%s}, which no template of %s reads.",Remove the row or correct the statistic.
+T06,check,table,ard,tflspec,%s,Correct the template or ask the analysis for the statistic.
+T07,check,table,ard,tflspec,%s,Correct the table definition to what the ARD has.
+T08,check,table,ard,tflspec,"The levels of %s name %s, which the ARD has no row for.",Correct the level or remove it.
+T09,hand,table,spec,tflspec,%s has no column key (tables$cols).,Set what the columns are (the treatment variable).
+T10,hand,table,spec,tflspec,%s has analyses but no cells row.,Add the cells rows (templates) of the table.
+L01,hand,listing,spec,tflspec,%s,Set the listing's columns.
+L02,error,listing,data,tflspec,%s,Correct the dataset or the column names.
+F01,hand,figure,spec,tflspec,%s: %s is required.,Set the field.
+F02,check,figure,spec,tflspec,%s,Apply the suggested fix or leave it as it is.
+F03,error,figure,data,tflspec,%s,Correct the dataset or variable the design names.
+D01,error,data,catalog,tflplanner,The dataset %s has no file.,Put the file in place or correct its path.
+P01,check,program,spec,tflplanner,%s,As the programs read the definition.
+C05,check,codelists,data,tflspec,"%s has more than %s values; its code list is not reviewed against the data.",
+D02,check,data,data,tflplanner,%s is not reviewed against the data yet.,Make the data facts (Review with the data).
+review,check,spec,spec,tflspec,"The rule %s could not be run: %s.",This is a fault of the review; please report it.

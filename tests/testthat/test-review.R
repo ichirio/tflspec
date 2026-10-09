@@ -1,0 +1,148 @@
+# tfl_review_spec(): the rules of the catalog, each with a case that makes
+# it fire (fixtures/review-cases.R), on a study it finds nothing wrong with
+# (helper-review.R).
+
+.rv_cases <- function() source(test_path("fixtures", "review-cases.R"))$value
+
+.rv_case_review <- function(cs) {
+  s <- cs$edit(.rv_study())
+  facts <- if (cs$data) do.call(tfl_data_facts, c(list(s$data, populations = s$ard,
+    listings = tfl_listing_spec(s$listings, check = FALSE)), cs$facts))
+  if (!is.null(cs$ard)) {
+    if (is.null(facts)) facts <- list()
+    facts$ard <- cs$ard
+  }
+  tfl_review_spec(s$spec, s$ard, s$listings, s$figures, facts = facts)
+}
+
+test_that("the clean study has nothing to review, with and without its data", {
+  s <- .rv_study()
+  expect_identical(nrow(.rv_review(s, data = FALSE)), 0L)
+  expect_identical(nrow(.rv_review(s)), 0L)
+})
+
+test_that("every rule tflspec runs has a case, and every case gives its row", {
+  cat <- tfl_review_rules()
+  mine <- setdiff(cat$rule[cat$checked_by == "tflspec"], "review")
+  cases <- .rv_cases()
+  expect_identical(setdiff(mine, vapply(cases, `[[`, "", "rule")), character(0),
+                   info = "rules of the catalog no case makes fire")
+  for (cs in cases) {
+    r <- .rv_case_review(cs)
+    hit <- r[r$rule == cs$rule & r$sheet == cs$sheet & r$row == cs$row &
+               r$field == cs$field &
+               ((is.na(cs$output_id) & is.na(r$output_id)) |
+                  (!is.na(r$output_id) & r$output_id %in% cs$output_id)), , drop = FALSE]
+    expect_true(nrow(hit) >= 1L, info = paste(cs$rule, cs$sheet, cs$row, cs$field,
+                                               "--", paste(r$rule, r$sheet, r$row, r$field,
+                                                           collapse = "; ")))
+    if (!is.null(cs$level) && nrow(hit)) {
+      expect_identical(hit$level[1L], cs$level, info = cs$rule)
+    }
+    expect_true(all(r$rule %in% c(cat$rule)), info = cs$rule)
+  }
+})
+
+test_that("the catalog is whole: levels, areas, a message for each rule", {
+  cat <- tfl_review_rules()
+  expect_named(cat, c("rule", "level", "area", "needs", "checked_by", "message", "hint"))
+  expect_false(anyDuplicated(cat$rule) > 0L)
+  expect_true(all(cat$level %in% c("error", "check", "hand")))
+  expect_true(all(cat$needs %in% c("spec", "catalog", "ard", "data")))
+  expect_true(all(cat$checked_by %in% c("tflspec", "tflplanner")))
+  expect_true(all(nzchar(cat$message)))
+  # C03: the programs stop on a data value the code list does not have
+  expect_identical(cat$level[cat$rule == "C03"], "error")
+})
+
+test_that("no rule that needs the data fires without them", {
+  cat <- tfl_review_rules()
+  data_rules <- cat$rule[cat$needs %in% c("data", "ard")]
+  for (cs in .rv_cases()) {
+    cs$data <- FALSE
+    cs$ard <- NULL
+    r <- .rv_case_review(cs)
+    expect_false(any(r$rule %in% data_rules), info = cs$rule)
+  }
+})
+
+test_that("the rows without facts are among those with them", {
+  for (cs in .rv_cases()) {
+    if (!cs$data) next
+    with <- .rv_case_review(cs)
+    cs$data <- FALSE
+    without <- .rv_case_review(cs)
+    k <- function(r) paste(r$rule, r$output_id, r$sheet, r$row, r$field)
+    expect_true(all(k(without) %in% k(with)), info = cs$rule)
+  }
+})
+
+test_that("the shape: columns, sort, summary, print, narrowing", {
+  s <- .rv_study()
+  s$spec$tables$cols[2] <- NA                   # T09, hand
+  s$spec$tables$stats <- c("bogus", NA)         # S01, error
+  s$ard$analyses$variables[3] <- "SEX | TRT01A" # A06, check
+  r <- tfl_review_spec(s$spec, s$ard, s$listings)
+  expect_s3_class(r, "tfl_review")
+  expect_named(r, c("output_id", "level", "area", "sheet", "row", "field",
+                    "message", "hint", "rule", "draft", "args", "fix"))
+  expect_identical(r$level, c("error", "check", "hand"))
+  expect_false(any(r$draft))
+  sm <- summary(r)
+  expect_identical(sm$output_id, c("T-1", "T-2"))
+  expect_identical(sm$error + sm$check + sm$hand, c(2L, 1L))
+  expect_output(print(r), "1 error, 1 to check, 1 to set by hand")
+  expect_identical(tfl_review_spec(s$spec, s$ard, output_id = "T-2")$rule, "T09")
+  expect_identical(tfl_review_spec(s$spec, s$ard, rules = "A06")$rule, "A06")
+  expect_identical(tfl_review_spec(s$spec, s$ard, rules = "table")$rule,
+                   c("S01", "T09"))
+})
+
+test_that("what cannot be read is one row, and a failing rule never loses the review", {
+  r <- tfl_review_spec(spec = "not sheets", ard = 1)
+  expect_identical(r$rule, c("S01", "S01"))
+  expect_identical(r$area, c("spec", "spec"))
+  local_mocked_bindings(.rule_a06 = function(x) stop("boom"))
+  s <- .rv_study()
+  r <- tfl_review_spec(s$spec, s$ard)
+  expect_identical(r$rule, "review")
+  expect_match(r$message, "A06 could not be run: boom")
+})
+
+test_that("an invalid ARD definition is reviewed as its sheets", {
+  s <- .rv_study()
+  s$ard$analyses$analysis_id[2] <- NA
+  s$ard$populations$population_id <- NA
+  expect_error(tfl_ard_spec(s$ard), "not valid")
+  r <- tfl_review_spec(ard = s$ard)
+  expect_true(all(r$rule == "S01"))
+  expect_true(nrow(r) >= 2L)
+})
+
+test_that("the constructors' conditions carry the problems as rows", {
+  s <- .rv_study()
+  s$ard$analyses$method[2] <- "not a method!"
+  s$ard$analyses$population_id <- c(NA, NA, "FAS", NA, NA)
+  s$ard$analyses$data[3] <- NA
+  e <- tryCatch(tfl_ard_spec(s$ard), error = function(e) e)
+  expect_s3_class(e, "tflspec_spec_error")
+  expect_identical(e$problems$row, c("AGE", "SEX"))
+  expect_identical(e$problems$field, c("method", "population_id"))
+  expect_identical(conditionMessage(e), paste(c("The ARD definition is not valid:",
+                                                e$problems$message), collapse = "\n  "))
+  # the table definition stops on its first, as it did
+  sp <- s$spec
+  sp$cells$template[1] <- NA
+  sp$digits$digits[2] <- "x"
+  e <- tryCatch(tfl_table_spec(sp), error = function(e) e)
+  expect_s3_class(e, "tflspec_table_spec_error")
+  expect_identical(conditionMessage(e), e$problems$message[1L])
+  expect_identical(e$problems$sheet, c("digits", "cells"))
+  expect_identical(e$problems$row, c(" / sd", "continuous /  / n"))
+  # the listings, all of them
+  l <- s$listings
+  l$listing_cols$align <- c("middle", "top")
+  e <- tryCatch(tfl_listing_spec(l), error = function(e) e)
+  expect_s3_class(e, "tflspec_listing_spec_error")
+  expect_identical(e$problems$row, c("1", "2"))
+})
