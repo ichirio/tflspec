@@ -11,6 +11,11 @@
   are new.  The docs, tests and NEWS no longer point to discussions by
   number, and their examples use neutral variable names.
 
+* **A `.lintr`, the same as tflplanner's and rtfreporter's** (#193).
+  `lintr::lint_package()` finds nothing: the example ADaM script uses
+  `|>`, three code templates are in double quotes, `d$variable %in% NA` is
+  `is.na()`, and a few spaces.  No change in what the package does.
+
 - R-CMD-check now also runs on R 4.2, the oldest R tested (`Depends: R (>= 4.1)` is kept; cardx, used by the generated ARD code, needs R >= 4.2). That job leaves car out (it needs packages that want R >= 4.4) and lets a suggested package be missing; the tests skip what needs it.
 
 * **A population is an analysis set** (#191).  The README and the AI user
