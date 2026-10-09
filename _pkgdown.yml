@@ -99,6 +99,16 @@ reference:
       - tfl_report_setup_code
       - tfl_report_tokens
       - tfl_report_path
+  - title: Document import
+    desc: >
+      A study's define (Define-XML 2.0 / 2.1, or the workbook it is made
+      from) read by rule: its datasets, variables and code lists, and a
+      report's code lists and labels as `codelists` rows.
+    contents:
+      - tfl_read_define
+      - tfl_read_define_spec
+      - tfl_define_profile
+      - tfl_define_codelists
   - title: Listing spec
     contents:
       - tfl_listing_spec

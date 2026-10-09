@@ -1,5 +1,24 @@
 # tflspec (development version)
 
+* **Document import, level 1: a define read by rule**
+  (ichirio/tflplanner#283).  No AI: a define is standard CDISC XML.
+  - `tfl_read_define()` reads a Define-XML 2.0 or 2.1 (`xml2`, Suggests)
+    into tidy data frames: `datasets` (`ItemGroupDef`), `variables`
+    (`ItemRef` + `ItemDef`: label, type, length, code list ...),
+    `codelists` (`CodeListItem` / `EnumeratedItem`: coded value, decode,
+    order, rank, extended, NCI code), `external` (MedDRA ...) and `study`.
+    Namespaces are found by URI, texts in the language asked for.
+  - `tfl_read_define_spec()` reads the workbook a define is made from
+    through an import profile, `tfl_define_profile()`: the Pinnacle 21
+    layout by default, any sheet or column changed by `map` for a
+    company's own; the same `tfl_define`.
+  - `tfl_define_codelists(define, variables, output_id)` gives a report's
+    `codelists` rows (value = coded value, label = decode, order) and its
+    variables' labels (the code list of `variable`), a `note` saying where
+    each came from; `output_id` is required.  What the define cannot give
+    (no code list, an external dictionary, a variable it lacks) is listed
+    in `attr(, "set_by_hand")`, not guessed.
+
 * **The ARD program reads as a person writes it** (#181).  Same ARDs:
   - no function or loop of its own: it calls `set_levels()`, `tag_ard()`,
     `fmt_ard()`, `keep_stats()`, `fmt_pvalue()` and `save_ard()`, new
