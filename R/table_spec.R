@@ -525,14 +525,14 @@
 #' Explicit [rtfreporter::widen_ard()] arguments win over the spec, and the spec wins
 #' over the defaults.
 #'
-#' Lists inside a cell are `|`-separated (`TR01AG1 | SEROSTAT`).  A column
+#' Lists inside a cell are `|`-separated (`TRTA | SEX`).  A column
 #' called `note` is allowed on any sheet and never read; any other column a
 #' sheet does not know is an error, so a mistyped header cannot become a
 #' setting that silently never applies.
 #'
 #' @section `tables`:
 #' \describe{
-#'   \item{`cols`}{Column keys, outermost first: `TR01AG1 | SEROSTAT`.}
+#'   \item{`cols`}{Column keys, outermost first: `TRTA | SEX`.}
 #'   \item{`rows`}{Row keys, in output order.  `name = column` renames
 #'     (`group1 = AEBODSYS`); a quoted value is a constant heading
 #'     (`group1 = "Worst Post-Baseline Values"`).}
@@ -560,7 +560,7 @@
 #'
 #' @section `variables`:
 #' \describe{
-#'   \item{`variable`}{An analysis variable, or any column key (`BASEGR`,
+#'   \item{`variable`}{An analysis variable, or any column key (`BGRADE`,
 #'     `ATPT`, or the label column's own name).}
 #'   \item{`label`}{Display text replacing the variable's name.}
 #'   \item{`order`}{Number; the order the variables appear in.}
@@ -697,7 +697,7 @@
 #'     (`3`, `3:31`, `3:last`), or `KEY = value` --- the spread columns
 #'     whose column key `KEY` has that value (`variable = n`).}
 #'   \item{`span`}{Blank: one cell over all of `cols`.  `each`: one cell
-#'     per column.  A column key (`TR01AG1`): one cell per value of that
+#'     per column.  A column key (`TRTA`): one cell per value of that
 #'     key, over its columns --- an arm's spanner, however many arms.}
 #'   \item{`text`}{The label.  A line break is Alt+Enter or `\\n`.  The
 #'     tokens of [rtfreporter::plan_col_header()] work: `{col}` (the column's own

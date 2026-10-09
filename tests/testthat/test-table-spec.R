@@ -229,18 +229,18 @@ test_that("rows with the same key are one chain, and `when` guards one", {
 
 test_that("quoted values in `rows` are constant headings; NA drops the label", {
   a <- tflspec:::.ard_spec_table_args(tfl_table_spec(tables = data.frame(
-    cols = "BASEGR", rows = 'LBTOX_LBL | group1 = "Worst Post-Baseline"',
+    cols = "BGRADE", rows = 'PARAM | group1 = "Worst grade"',
     label = "NA", sort = ".overall | group1 | -n")))
-  expect_identical(a$cols, "BASEGR")
+  expect_identical(a$cols, "BGRADE")
   expect_true(is.list(a$rows))
-  expect_identical(names(a$rows), c("LBTOX_LBL", "group1"))  # its own name
-  expect_identical(a$rows[[1L]], "LBTOX_LBL")
+  expect_identical(names(a$rows), c("PARAM", "group1"))  # its own name
+  expect_identical(a$rows[[1L]], "PARAM")
   expect_s3_class(a$rows[[2L]], "formula")
   expect_true(is.na(a$label))
   expect_identical(a$sort, c(".overall", "group1", "-n"))
   b <- tflspec:::.ard_spec_table_args(tfl_table_spec(tables = data.frame(
-    cols = "TR01AG1 | SEROSTAT", label = "label = AEDECOD", sort = "false")))
-  expect_identical(b$cols, c("TR01AG1", "SEROSTAT"))
+    cols = "TRTA | SEX", label = "label = AEDECOD", sort = "false")))
+  expect_identical(b$cols, c("TRTA", "SEX"))
   expect_identical(b$label, c(label = "AEDECOD"))
   expect_false(b$sort)
 })

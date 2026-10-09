@@ -1,5 +1,16 @@
 # tflspec (development version)
 
+* **The example workbooks are made by code of their own** (#195).  The five
+  example reports (`inst/extdata/ard-spec/`: DM, AE, ORR, LB, PK) are
+  built from new example ARDs and plan code in
+  `data-raw/ard-spec-examples/make-examples.R` -- the cards example data
+  and made-up values, the same features as before (two column keys, rows
+  of conditions, a shift table a page per parameter, columns over several
+  pages, significant digits), checked as before against the code and the
+  RTF.  Their contents differ: the reports' variables, labels and titles
+  are new.  The docs, tests and NEWS no longer point to discussions by
+  number, and their examples use neutral variable names.
+
 * **A `.lintr`, the same as tflplanner's and rtfreporter's** (#193).
   `lintr::lint_package()` finds nothing: the example ADaM script uses
   `|>`, three code templates are in double quotes, `d$variable %in% NA` is
@@ -910,7 +921,7 @@
   - The ORR example's derived key is `orr` (it was `orr_ci`): with
     `sep = "_"` a value containing the separator cannot be split back.
 
-* **tflspec is the spec side only** (#29; step 4 of plan E, Discussion #23).
+* **tflspec is the spec side only** (#29; step 4 of plan E).
   The table engine -- the ARD functions and the plan -- now lives in
   rtfreporter (>= 0.8.1.9001) under its names: `normalize_ard()`,
   `spread_ard()`, `pull_ard()`, `list_ard_keys()`, `cell_rows()`,
@@ -927,11 +938,10 @@
   - The former names (`tfl_ard_normalize()`, `tfl_plan()`, `tfl_plan_*()`,
     `tfl_apply_plan()`, `tfl_plan_layers()`, `tfl_plan_template()`,
     `tfl_ard_template()`) are gone from tflspec; no aliases.
-  The five example reports and the Discussion #3 samples are byte-identical
+  The five example reports and the users' sample reports are byte-identical
   across the two packages.
 
-  The move was adopted (rtfreporter's pre-CRAN API review, Discussion
-  #316): the engine is rtfreporter's from its 0.8.2 release on.
+  The move was adopted (rtfreporter's pre-CRAN API review): the engine is rtfreporter's from its 0.8.2 release on.
 
 * tflspec now follows rtfreporter's version scheme: a release is `X.Y.Z`
   (tagged, with a GitHub Release -- v0.0.23 is the first), development is
@@ -1044,11 +1054,11 @@
 
 # tflspec 0.0.20
 
-* **The plan no longer reads the spec** (#29; step 1 of plan E, Discussion
-  #23).  Inside tflspec the ARD / plan code (`R/ard.R`, `R/plan.R`,
+* **The plan no longer reads the spec** (#29; step 1 of plan E).  Inside
+  tflspec the ARD / plan code (`R/ard.R`, `R/plan.R`,
   `R/rtfreporter-glue.R`) references no spec function any more; the spec
   code has its own file, `R/table_spec.R`.  Behaviour is unchanged: the
-  ten example RTFs and the five Discussion #3 samples are byte-identical.
+  ten example RTFs and the five users' sample reports are byte-identical.
   - `tfl_plan()` loses `spec =`.  New **`tfl_table_plan(data, spec,
     output_id)`** builds the plan from a workbook through the public verbs
     (the steps `tfl_table_code()` writes); a role given in the call still
@@ -1115,8 +1125,7 @@
 
 # tflspec 0.0.16
 
-* **`tfl_plan_after()` is the way out, not the way in** (#24, Discussion
-  #23).  The usual reasons to reach for it have declarations, which name
+* **`tfl_plan_after()` is the way out, not the way in** (#24).  The usual reasons to reach for it have declarations, which name
   columns and go into a workbook: `set_decimal_split()` ->
   `tfl_plan_columns(decimal = ".values")`, `paginate_cols()` ->
   `tfl_plan_paginate_cols()`, widths by position ->

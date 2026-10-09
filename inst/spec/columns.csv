@@ -53,7 +53,7 @@ analyses,code,"method = custom only: the R code that gives the ARD (data and pop
 analyses,purpose,"For CDISC ARS (tfl_ars()): PRIMARY / SECONDARY / EXPLORATORY OUTCOME MEASURE; blank: tfl_ars(purpose = ).",PRIMARY OUTCOME MEASURE
 analyses,reason,"For CDISC ARS: SPECIFIED IN PROTOCOL / SPECIFIED IN SAP / DATA DRIVEN / REQUESTED BY REGULATORY AGENCY; blank: SPECIFIED IN SAP.",SPECIFIED IN SAP
 tables,,"Table: one row a report. Its roles (table_plan()) and the table-wide options; a verb written in code afterwards wins.",
-tables,cols,"The key spread across the columns, outermost first, | between them (table_plan(cols = )).",TRT01A | SEROSTAT
+tables,cols,"The key spread across the columns, outermost first, | between them (table_plan(cols = )).",TRTA | SEX
 tables,rows,"The keys down the rows (table_plan(rows = )); name = column renames, a quoted value is a constant heading; | between them.","group1 = AEBODSYS | grp = ""Worst Post-Baseline Values"""
 tables,label,"Where the row label comes from (table_plan(label = )); blank: .label; NA: used to tell rows apart, not printed; NULL: not used.",label = AEDECOD
 tables,stats,"cells (cells built from templates) or rows (one statistic a row, the raw values) (plan_cells(stats = )); blank: cells.",rows
@@ -166,7 +166,7 @@ cell_styles,indent_twips,"Left indent of the cell text in twips (not on the head
 col_header,,"Table: one row a header cell (plan_col_header(header = )). A report's own cells replace the default header whole.",
 col_header,line,"The header row, a whole number (1 = the top).",1
 col_header,cols,"The columns the cell sits on: a name, .values (every value column), a position or range (3, 3:31, 3:last), or KEY = value (the columns whose key has that value); | between them.",.values
-col_header,span,"Blank: one cell over cols; each: one cell a column; a key's name: one cell per value of that key (a spanner).",TR01AG1
+col_header,span,"Blank: one cell over cols; each: one cell a column; a key's name: one cell per value of that key (a spanner).",TRTA
 col_header,text,"What prints; a line break is Alt+Enter or \n. Tokens: {col} {col1} {col2} (the column's keys), {n} {n1} {n2} (the population at that depth, read from the ARD), {n:sum} (the total over the cell's columns). Quote it to keep leading spaces.",{col1}\n(N={n:sum})
 col_header,align,"left / center / right (col_cell()); blank: the default.",center
 col_header,bold,"TRUE / FALSE; blank: FALSE.",TRUE
