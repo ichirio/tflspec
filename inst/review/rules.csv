@@ -42,6 +42,7 @@ F02,check,figure,spec,tflspec,%s,Apply the suggested fix or leave it as it is.
 F03,error,figure,data,tflspec,%s,Correct the dataset or variable the design names.
 D01,error,data,catalog,tflplanner,The dataset %s has no file.,Put the file in place or correct its path.
 P01,check,program,spec,tflplanner,%s,As the programs read the definition.
+P02,error,program,spec,tflplanner,"%s calls %s, which tflspec no longer has.","Write it again (open the study and save), or source programs/study_helpers.R."
 C05,check,codelists,data,tflspec,"%s has more than %s values; its code list is not reviewed against the data.",
 D02,check,data,data,tflplanner,%s is not reviewed against the data yet.,Make the data facts (Review with the data).
 review,check,spec,spec,tflspec,"The rule %s could not be run: %s.",This is a fault of the review; please report it.

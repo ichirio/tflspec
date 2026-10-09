@@ -1,5 +1,38 @@
 # tflspec (development version)
 
+## Upgrading from an earlier version
+
+Update tflspec and tflplanner together, open each study in tflplanner and
+save it, then look at its Review tab.
+
+* **Six exports are gone; a study keeps them in
+  `programs/study_helpers.R`** (#187).  `set_levels()`, `tag_ard()`,
+  `fmt_ard()`, `keep_stats()`, `fmt_pvalue()` and `save_ard()` were
+  tflspec's up to 0.0.24.9066.  The generated programs still call them,
+  from the study's own code: `tfl_helpers_code()`, which tflplanner writes
+  to `programs/study_helpers.R`; the study's setup sources it, so the
+  programs run without tflspec.  A program that calls
+  `tflspec::set_levels()`, or attaches tflspec for these, stops: write it
+  again (open the study and save) or source `programs/study_helpers.R`.
+  tflplanner's review lists such programs (rule P02).
+* **A figure design written before reads as it is** (#201): its `stats:`
+  steps and its `data_code` / `stats_code` read as the one `data:` list,
+  and a save writes the new form.
+* **Figure programs have a new shape, and draw the same figures** (#201):
+  a `# ---- data ----` and a `# ---- plot ----` section, one `+` chain.
+  Saving the study writes them again.
+* **tflplanner 0.0.2.9157 and later need tflspec 0.0.24.9077 or later**:
+  update both together.
+* **The steps:** update both packages; open each study and save it (the
+  programs and `study_helpers.R` are written again; a program edited by
+  hand is copied to `programs/.edited/` first); check the Review tab
+  (P02 names a program that still calls a removed function).
+
+## Changes
+
+* **The review's catalog has P02** (tflplanner's): a study program that
+  calls one of the six removed functions as `tflspec::` or after
+  `library(tflspec)`, without `programs/study_helpers.R` sourced.
 * **The review's sentences can be translated** (tflplanner #288).  Each
   row of `tfl_review_spec()` gains `template`: the sentence its `args`
   fill (`message` is the two put together, unchanged).  It is the rule's
