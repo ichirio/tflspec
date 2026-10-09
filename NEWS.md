@@ -1,5 +1,7 @@
 # tflspec (development version)
 
+- R-CMD-check now also runs on R 4.2, the oldest R tested (`Depends: R (>= 4.1)` is kept; cardx, used by the generated ARD code, needs R >= 4.2).
+
 * **`tfl_ard_as_custom()`: an analysis as R** (#143).  The call an analysis
   row stands for, written as the code of a `custom` analysis (`data` and
   `population` bound), with its method's default formats written out: the

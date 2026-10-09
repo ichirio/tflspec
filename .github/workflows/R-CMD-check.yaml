@@ -34,6 +34,7 @@ jobs:
           - {os: ubuntu-latest,  r: 'devel',     http-user-agent: 'release'}
           - {os: ubuntu-latest,  r: 'release'}
           - {os: ubuntu-latest,  r: 'oldrel-1'}
+          - {os: ubuntu-latest,  r: '4.2'}
           - {os: macos-latest,   r: 'release'}
           - {os: windows-latest, r: 'release'}
           - {os: ubuntu-latest,  r: 'release', gg: 'ggplot2@3.5.2 ggsurvfit@1.1.0', want: '3.5.2'}
