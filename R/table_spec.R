@@ -1090,7 +1090,7 @@ print.tfl_table_spec <- function(x, ...) {
   bad <- function(v) .ard_stop(sprintf(paste0(
     "`tables$header_n`: %s is not a population.  Write `page` (each ",
     "page's own, e.g. the\n  subjects with that lab test), `table` (the ",
-    "analysis set), or several:\n  `n = page | N = table`."), sQuote(v)))
+    "population), or several:\n  `n = page | N = table`."), sQuote(v)))
   named <- grepl("=", items, fixed = TRUE)
   if (!any(named)) {
     if (length(items) != 1L || !items %in% ok) bad(x)

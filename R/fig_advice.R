@@ -185,7 +185,7 @@
       have <- grep("FL$", ctx$vars %||% character(), value = TRUE)
       flag <- c(intersect(c("FASFL", "SAFFL", "ITTFL", "PPROTFL"), have), have, "SAFFL")[1L]
       .adv("pop", "info", "data",
-           "No analysis set: every row of the dataset is used. Keep the analysis set's flag (FASFL, SAFFL ...).",
+           "No population: every row of the dataset is used. Keep the population's flag (FASFL, SAFFL ...).",
            .fix("add_step", step = list(step = "flag", variable = flag)))
     }
   },

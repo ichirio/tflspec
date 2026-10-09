@@ -37,6 +37,12 @@
   reads where a problem is instead of parsing the message.
   `tfl_check_ard()` and the review share its three rules.
 
+* **"Population" everywhere the apps show it** (#197).  The figure
+  designer ("Population flag", "Keep a population"), the figure advice,
+  five column descriptions of `inst/spec/columns.csv` and the `header_n`
+  message no longer say "analysis set".  tflplanner's Japanese for them
+  is keyed on these texts: its matching change goes in right after.
+
 * **The example workbooks are made by code of their own** (#195).  The five
   example reports (`inst/extdata/ard-spec/`: DM, AE, ORR, LB, PK) are
   built from new example ARDs and plan code in
