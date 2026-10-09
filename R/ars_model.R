@@ -480,7 +480,7 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
     # a keyword's function name is the keyword's method
     km <- .method_key(m, keys)
     if (!is.na(km)) m <- keys$method[km]
-    pds <-if (!is.na(r$population_id)) pop_ds[[r$population_id]] else NA
+    pds <- if (!is.na(r$population_id)) pop_ds[[r$population_id]] else NA
     ds <- if (!is.na(r$dataset)) ds_name(r$dataset) else pds
     if (is.na(ds)) {
       miss(tag, "dataset", "no dataset (and no population to take it from)")
@@ -794,7 +794,7 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
   out
 }
 
-`%|NA|%` <- function(a, b) if (is.null(a) || is.na(a)) b else a
+`%|NA|%` <- function(a, b) if (is.null(a) || is.na(a)) b else a  # nolint: object_name_linter.
 
 #' What the ARS does not say
 #'

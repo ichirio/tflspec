@@ -1,5 +1,10 @@
 # tflspec (development version)
 
+* **A `.lintr`, the same as tflplanner's and rtfreporter's** (#193).
+  `lintr::lint_package()` finds nothing: the example ADaM script uses
+  `|>`, three code templates are in double quotes, `d$variable %in% NA` is
+  `is.na()`, and a few spaces.  No change in what the package does.
+
 * **A report's code lists give the data its labels; the ARD holds them**
   (#187).  `tfl_ard_code(codelists = )` writes each list at the program's
   head, `cl_sex <- c(F = "Female", M = "Male")` (a value named by its

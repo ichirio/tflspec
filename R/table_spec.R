@@ -1244,7 +1244,7 @@ print.tfl_table_spec <- function(x, ...) {
   if (identical(.ard_spec_table_args(sp)[["value"]], "stat_fmt")) return(NULL)
   dg <- as.integer(d$digits)
   st <- trimws(d$statistic)
-  all <- d$variable %in% NA
+  all <- is.na(d$variable)
   by <- lapply(split(seq_len(nrow(d))[!all], d$variable[!all]), function(i)
     stats::setNames(dg[i], st[i]))
   list(all = stats::setNames(dg[all], st[all]), by = by)

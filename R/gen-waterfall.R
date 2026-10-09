@@ -55,7 +55,7 @@ pp_gen_waterfall <- function(ctx) {
   if (has_layer(ctx, "ref_lines") && length(refs)) {
     plot <- c(plot, "# ---- layer: ref_lines ----",
               sprintf("ref_y <- %s", vec_code(refs)),
-              sprintf('p <- p + geom_hline(yintercept = ref_y, colour = %s, linetype = %s, linewidth = %s)',
+              sprintf("p <- p + geom_hline(yintercept = ref_y, colour = %s, linetype = %s, linewidth = %s)",
                       q(pp_opt(ctx, "ref_line_colour")), q(pp_opt(ctx, "ref_linetype")),
                       pp_opt(ctx, "ref_line_width")))
   }
