@@ -53,6 +53,7 @@ tfl_review_rules <- function() {
   out <- data.frame(output_id = character(), level = character(),
                     area = character(), sheet = character(), row = character(),
                     field = character(), message = character(),
+                    template = character(),
                     hint = character(), rule = character(), draft = logical(),
                     stringsAsFactors = FALSE)
   out$args <- list()
@@ -61,14 +62,18 @@ tfl_review_rules <- function() {
 }
 
 # One row of the review: the rule's level, area, message and hint from
-# the catalog unless given; `args` fill the message's template
+# the catalog unless given; `args` fill the message's template (the
+# rule's, or `template`: one of tfl_review_templates(), so an app can
+# translate the sentence and put the values in)
 .rv <- function(rule, output_id = NA_character_, sheet = "", row = "",
                 field = "", args = character(), level = NULL, area = NULL,
-                message = NULL, hint = NULL, fix = NULL, cat = .review_cat()) {
+                message = NULL, hint = NULL, fix = NULL, template = NULL,
+                cat = .review_cat()) {
   k <- match(rule, cat$rule)
   args <- as.character(args)
+  template <- template %||% cat$message[k]
   if (is.null(message)) {
-    message <- tryCatch(do.call(sprintf, c(list(cat$message[k]), as.list(args))),
+    message <- tryCatch(do.call(sprintf, c(list(template), as.list(args))),
                         error = function(e) paste(args, collapse = " "))
   }
   out <- data.frame(output_id = as.character(output_id),
@@ -76,12 +81,52 @@ tfl_review_rules <- function() {
                     area = area %||% cat$area[k],
                     sheet = sheet, row = ifelse(is.na(row), "", row),
                     field = ifelse(is.na(field), "", field),
-                    message = message, hint = hint %||% cat$hint[k],
+                    message = message, template = template,
+                    hint = hint %||% cat$hint[k],
                     rule = rule, draft = FALSE, stringsAsFactors = FALSE)
   out$args <- list(args)
   out$fix <- list(fix)
   out
 }
+
+#' The sentences of the review beyond its rules
+#'
+#' A row of [tfl_review_spec()] carries its sentence in `template` and the
+#' values that fill it in `args` (`message` is the two put together).  For
+#' most rows the template is the rule's message ([tfl_review_rules()]);
+#' the rules whose message is the whole sentence (`%s`) take one of these
+#' when the check knows its words: a table against its ARD (T06, T07), a
+#' listing's columns (L01, L02), a figure against the data (F03).  A
+#' figure's advice (F02) carries [tfl_fig_advice()]'s own template.  An
+#' app translates a template once and puts the values in.
+#'
+#' @return A data frame: `rule`, `name`, `template`.
+#' @seealso [tfl_review_spec()], [tfl_review_rules()]
+#' @examples
+#' tfl_review_templates()
+#' @export
+tfl_review_templates <- function() {
+  data.frame(rule = unname(.review_template_rule[names(.review_templates)]),
+             name = names(.review_templates),
+             template = unname(.review_templates), stringsAsFactors = FALSE)
+}
+
+.review_templates <- c(
+  ard_key = "the table's %s name %s, which is neither a group nor a variable of the ARD",
+  ard_cells_var = "the cells are written for %s, which the ARD does not analyse",
+  ard_stat = "a template reads {%s}, a statistic the ARD does not have",
+  listing_cols = "listing %s: no columns in `listing_cols`",
+  listing_vars = "listing %s, column %s: no `vars`",
+  listing_dataset = "The listing %s reads the dataset %s, which is not in the catalog.",
+  listing_sort = "The listing %s sorts by %s, which %s does not have.",
+  listing_col = "Column %s of the listing %s shows %s, which %s does not have.",
+  f03_dataset = "%s %s no dataset %s",
+  f03_variable = "%s %s no variable %s in %s")
+.review_template_rule <- c(
+  ard_key = "T07", ard_cells_var = "T07", ard_stat = "T06",
+  listing_cols = "L01", listing_vars = "L01", listing_dataset = "L02",
+  listing_sort = "L02", listing_col = "L02", f03_dataset = "F03",
+  f03_variable = "F03")
 
 # the catalog, read once a session
 .review_cat <- function() {
@@ -132,10 +177,11 @@ tfl_review_rules <- function() {
 #'   `ard`, `ard_run`, `table`, `listing`, `figure`, `data`, `spec`),
 #'   `sheet`, `row` (the row's key, as the sheet is keyed: the variable,
 #'   the analysis_id, `variable / context / row` on `cells`), `field` (the
-#'   column), `message`, `hint`, `rule`, `draft` (`FALSE`: set by an import
-#'   for the rows it brings), `args` (the values filled into the rule's
-#'   template, for a translation) and `fix` (a one-step fix, where there is
-#'   one: [tfl_fig_apply_fix()]).  Errors first, then checks, then what to
+#'   column), `message`, `template` (the sentence the values fill:
+#'   the rule's message or one of [tfl_review_templates()]), `hint`,
+#'   `rule`, `draft` (`FALSE`: set by an import for the rows it brings),
+#'   `args` (the values that fill `template`, for a translation) and
+#'   `fix` (a one-step fix, where there is one: [tfl_fig_apply_fix()]).  Errors first, then checks, then what to
 #'   set by hand; within a level by report and sheet.
 #' @seealso [tfl_review_rules()], [tfl_data_facts()], [tfl_ard_facts()]
 #' @examples
@@ -303,10 +349,21 @@ summary.tfl_review <- function(object, ...) {
 .rv_listing_problems <- function(lf) {
   p <- .listing_problems(lf)
   hand <- grepl(": no columns in `listing_cols`$|: no `vars`$", p$message)
+  # listing <id>: ... / listing <id>, column <n>: ...
+  pats <- c(listing_vars = "^listing (.+), column ([0-9]+): no `vars`$",
+            listing_cols = "^listing (.+): no columns in `listing_cols`$")
   c(.rv_from_problems(p[!hand, , drop = FALSE], "listing"),
-    lapply(which(hand), function(i)
+    lapply(which(hand), function(i) {
+      for (nm in names(pats)) {
+        at <- regmatches(p$message[i], regexec(pats[[nm]], p$message[i]))[[1L]]
+        if (length(at)) {
+          return(.rv("L01", p$output_id[i], p$sheet[i], p$row[i], p$field[i],
+                     args = at[-1L], template = .review_templates[[nm]]))
+        }
+      }
       .rv("L01", p$output_id[i], p$sheet[i], p$row[i], p$field[i],
-          args = p$message[i])))
+          args = p$message[i])
+    }))
 }
 
 # ---- what a report's analyses read -----------------------------------------
@@ -609,19 +666,18 @@ summary.tfl_review <- function(object, ...) {
 # row each, `check` (cols, rows, cells, statistics), `message`, `sheet`,
 # `row`, `field`.
 .ard_read_problems <- function(tb, ce, have_vars, have_groups, have_stats) {
-  out <- data.frame(check = character(), message = character(),
-                    sheet = character(), row = character(), field = character(),
-                    stringsAsFactors = FALSE)
-  add <- function(check, message, sheet, row, field) {
-    out[nrow(out) + 1L, ] <<- list(check, message, sheet, row, field)
+  rows <- list()
+  # the message is the template with its values (kept apart for a review)
+  add <- function(check, template, args, sheet, row, field) {
+    rows[[length(rows) + 1L]] <<- list(
+      check = check, message = do.call(sprintf, c(list(template), as.list(args))),
+      sheet = sheet, row = row, field = field, template = template, args = args)
   }
   if (NROW(tb)) {
     for (role in intersect(c("cols", "rows"), names(tb))) {
       for (k in .role_keys(tb[[role]][1L])) {
         if (!k %in% c(have_groups, have_vars)) {
-          add(role, sprintf(
-            "the table's %s name %s, which is neither a group nor a variable of the ARD",
-            role, k), "tables", "", role)
+          add(role, .review_templates[["ard_key"]], c(role, k), "tables", "", role)
         }
       }
     }
@@ -630,17 +686,20 @@ summary.tfl_review <- function(object, ...) {
     vv <- setdiff(stats::na.omit(unique(ce$variable)),
                   c("continuous", "categorical"))
     for (v in setdiff(vv, have_vars)) {
-      add("cells", sprintf(
-        "the cells are written for %s, which the ARD does not analyse", v),
-        "cells", .cells_key(ce, which(ce$variable %in% v)[1L]), "variable")
+      add("cells", .review_templates[["ard_cells_var"]], v,
+          "cells", .cells_key(ce, which(ce$variable %in% v)[1L]), "variable")
     }
     for (s in setdiff(.template_stats(ce$template), have_stats)) {
       i <- which(vapply(ce$template, function(t) s %in% .template_stats(t), NA))[1L]
-      add("statistics", sprintf(
-        "a template reads {%s}, a statistic the ARD does not have", s),
-        "cells", .cells_key(ce, i), "template")
+      add("statistics", .review_templates[["ard_stat"]], s,
+          "cells", .cells_key(ce, i), "template")
     }
   }
+  col <- function(nm) vapply(rows, function(r) as.character(r[[nm]]), "")
+  out <- data.frame(check = col("check"), message = col("message"),
+                    sheet = col("sheet"), row = col("row"), field = col("field"),
+                    template = col("template"), stringsAsFactors = FALSE)
+  out$args <- lapply(rows, `[[`, "args")
   out
 }
 
@@ -655,7 +714,7 @@ summary.tfl_review <- function(object, ...) {
   for (i in seq_len(nrow(p))) {
     out[[length(out) + 1L]] <- .rv(if (p$check[i] == "statistics") "T06" else "T07",
                                    o, p$sheet[i], p$row[i], p$field[i],
-                                   args = p$message[i])
+                                   args = p$args[[i]], template = p$template[i])
   }
   vr <- sp$variables[sp$variables$output_id %in% o & !is.na(sp$variables$levels), ,
                      drop = FALSE]
@@ -970,26 +1029,25 @@ summary.tfl_review <- function(object, ...) {
     ds <- l$dataset[i]
     if (is.na(o) || is.na(ds)) next
     if (!toupper(ds) %in% known) {
-      add(.rv("L02", o, "listings", "", "dataset",
-              args = sprintf("The listing %s reads the dataset %s, which is not in the catalog.",
-                             o, ds)))
+      add(.rv("L02", o, "listings", "", "dataset", args = c(o, ds),
+              template = .review_templates[["listing_dataset"]]))
       next
     }
     cols <- .facts_cols(facts, ds)
     if (is.null(cols)) next
     miss <- setdiff(sub("^-", "", .split_bar(l$sort[i])), cols$name)
     if (length(miss)) {
-      add(.rv("L02", o, "listings", "", "sort", args = sprintf(
-        "The listing %s sorts by %s, which %s does not have.", o,
-        paste(miss, collapse = ", "), ds)))
+      add(.rv("L02", o, "listings", "", "sort",
+              args = c(o, paste(miss, collapse = ", "), ds),
+              template = .review_templates[["listing_sort"]]))
     }
     mine <- which(cl$output_id %in% o)
     for (j in seq_along(mine)) {
       miss <- setdiff(.bar_names(cl$vars[mine[j]]), cols$name)
       if (length(miss)) {
-        add(.rv("L02", o, "listing_cols", as.character(j), "vars", args = sprintf(
-          "Column %d of the listing %s shows %s, which %s does not have.", j, o,
-          paste(miss, collapse = ", "), ds)))
+        add(.rv("L02", o, "listing_cols", as.character(j), "vars",
+                args = c(j, o, paste(miss, collapse = ", "), ds),
+                template = .review_templates[["listing_col"]]))
       }
     }
     miss <- .where_missing(l$where[i], cols$name)
@@ -1059,7 +1117,10 @@ summary.tfl_review <- function(object, ...) {
     }
     adv <- tryCatch(tfl_fig_advice(d), error = function(e) NULL)
     for (i in seq_len(NROW(adv))) {
-      add(.rv("F02", o, "design", adv$part[i], "", args = adv$message[i],
+      # the advice's own template and values (tfl_fig_advice())
+      a <- as.character(unlist(adv$args[[i]]))
+      add(.rv("F02", o, "design", adv$part[i], "", args = a,
+              template = adv$template[i], message = adv$message[i],
               fix = adv$fix[[i]]))
     }
     if (!is.null(adam)) {
@@ -1071,14 +1132,26 @@ summary.tfl_review <- function(object, ...) {
         unread <- setdiff(toupper(catalog), names(facts$datasets))
         gone <- toupper(sub("^no dataset ", "", q$problem))
         new <- new & !(grepl("^no dataset ", q$problem) & gone %in% unread)
-        for (i in which(new)) {
-          add(.rv("F03", o, "design", q$part[i], q$field[i],
-                  args = paste(q$part[i], q$field[i], q$problem[i])))
-        }
+        for (i in which(new)) add(.rv_f03(o, q$part[i], q$field[i], q$problem[i]))
       }
     }
   }
   out
+}
+
+# F03: the design check's problem against the data; the ones it says
+# most with their template (the part and field first), others as they are
+.rv_f03 <- function(o, part, field, problem) {
+  pats <- c(f03_dataset = "^no dataset (.+)$",
+            f03_variable = "^no variable (.+) in (.+)$")
+  for (nm in names(pats)) {
+    at <- regmatches(problem, regexec(pats[[nm]], problem))[[1L]]
+    if (length(at)) {
+      return(.rv("F03", o, "design", part, field, args = c(part, field, at[-1L]),
+                 template = .review_templates[[nm]]))
+    }
+  }
+  .rv("F03", o, "design", part, field, args = paste(part, field, problem))
 }
 
 # Frames that hold what the facts know (each column's class and values),

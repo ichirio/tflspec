@@ -1,5 +1,16 @@
 # tflspec (development version)
 
+* **The review's sentences can be translated** (tflplanner #288).  Each
+  row of `tfl_review_spec()` gains `template`: the sentence its `args`
+  fill (`message` is the two put together, unchanged).  It is the rule's
+  message, or, for the rules whose message was the whole sentence, the
+  check's own words: a table against its ARD (T06, T07: a key that is
+  neither a group nor a variable, cells written for a variable the ARD
+  does not analyse, a statistic a template reads), a listing's columns
+  (L01, L02), a figure against the data (F03: no dataset, no variable),
+  and a figure's advice (F02: `tfl_fig_advice()`'s template and values).
+  The new `tfl_review_templates()` lists the sentences beyond the rules',
+  so an app translates each once.  `tfl_check_ard()` says what it said.
 * **An `ard_number`'s label prints several statistics of its address**
   (tflplanner #311).  `{value}` is its `stat`, as before; `{conf.low}`,
   `{conf.high}` ... (any `stat_name`) are those statistics of the same
