@@ -1,5 +1,19 @@
 # tflspec (development version)
 
+* **The review: a figure's dataset not read yet is not missing; a review
+  of many reports in half the time** (#204).  With the ARD definition
+  given, a dataset of its catalog whose facts were not made (a cache that
+  has not read every file yet) is no longer said to be missing by F03.
+  tflspec's own figure style and the installed ggplot2's version are
+  worked out once a session (a review asked for them once a figure), the
+  same `|` cells are split once, and the table rules split each
+  analysis's variables once a report: 200 reports reviewed in about 1 s
+  instead of 2.2 s (installed; the figures' part 0.7 s to 0.1 s).
+  The catalog gains the rules of a figure that prints a table's numbers
+  (tflplanner's: its ARD source is not a table of the study, F04; the
+  design reads an ARD but has no source, F05; an analysis the piece
+  names was dropped, F06; the ARD is not made yet, F07; a piece the ARD
+  cannot answer, F08), so a study review lists them.
 * **A figure can read an ARD** (#293 phase 3, tflplanner #293).  The
   study helpers gain `ard_value()` (one statistic of an ARD, as the ARD
   formatted it or with `digits`; exactly one row or the program stops),

@@ -146,3 +146,33 @@ test_that("the constructors' conditions carry the problems as rows", {
   expect_s3_class(e, "tflspec_listing_spec_error")
   expect_identical(e$problems$row, c("1", "2"))
 })
+
+test_that("a figure's dataset the catalog has but the facts do not is not missing", {
+  s <- .rv_study()
+  s$figures <- list(`F-1` = tfl_fig_design(data = list(list(step = "read", dataset = "ADVS"))))
+  facts <- tfl_data_facts(s$data, populations = s$ard)
+  # ADVS is in no catalog: missing
+  r <- tfl_review_spec(s$spec, s$ard, figures = s$figures, facts = facts)
+  expect_true(any(r$rule == "F03"))
+  # in the catalog, its facts not made yet: not said missing
+  s$ard$datasets <- rbind(s$ard$datasets,
+                          data.frame(dataset = "ADVS", level = "ADaM",
+                                     path = "advs.rds", derive = NA))
+  r <- tfl_review_spec(s$spec, s$ard, figures = s$figures, facts = facts)
+  expect_false(any(r$rule == "F03"))
+})
+
+test_that("the memos give what the work gives", {
+  expect_identical(.split_bar("AGE | SEX "), c("AGE", "SEX"))
+  expect_identical(.split_bar("AGE | SEX "), c("AGE", "SEX"))
+  expect_identical(.split_bar(""), character())
+  expect_identical(.split_bar("  "), character())
+  expect_identical(.split_bar(NA), character())
+  expect_identical(.fig_style_builtin(), .fig_style_builtin_make())
+  # the user's style still over tflspec's own
+  b <- .fig_style_builtin_make()
+  own <- b
+  own$colors$colour[1] <- "#123456"
+  withr::local_options(tflspec.fig_style = own)
+  expect_identical(tfl_fig_style()$colors$colour[1], "#123456")
+})

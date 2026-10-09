@@ -40,9 +40,17 @@
                "code", "purpose", "reason"))
 
 .split_bar <- function(x) {
-  if (is.null(x) || is.na(x) || !nzchar(trimws(x))) return(character())
-  trimws(strsplit(x, "|", fixed = TRUE)[[1L]])
+  if (is.null(x) || is.na(x) || !nzchar(x)) return(character())
+  # the same cells come back many times in a review of many reports
+  hit <- .split_bar_memo[[x]]
+  if (!is.null(hit)) return(hit)
+  out <- if (!nzchar(trimws(x))) character() else
+    trimws(strsplit(x, "|", fixed = TRUE)[[1L]])
+  if (length(.split_bar_memo) > 20000L) rm(list = ls(.split_bar_memo), envir = .split_bar_memo)
+  .split_bar_memo[[x]] <- out
+  out
 }
+.split_bar_memo <- new.env(hash = TRUE, parent = emptyenv())
 
 # The names of the arguments an analysis's `args` gives: `args` read as the
 # arguments of a call, so neither spacing nor an argument of a nested call
