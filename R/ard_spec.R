@@ -200,61 +200,95 @@ tfl_read_ard_spec <- function(path, check = TRUE, statistics = NULL,
 
 #' @rdname tfl_read_ard_spec
 #' @param x A list of the sheets (data frames).
+#' @section Problems: `tfl_ard_spec()` stops with every problem it finds,
+#'   one line each; the condition (class `tflspec_spec_error`) carries them
+#'   as rows too, `cnd$problems`: `output_id`, `sheet`, `row` (the row's key:
+#'   the `analysis_id`, the `data_id`, the `population_id`), `field` and
+#'   `message`.  [tfl_review_spec()] lists them without stopping.
 #' @export
 tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   old <- .set_catalogs(statistics, methods)
   on.exit(options(old), add = TRUE)
-  # a column a definition does not have yet (written before it was added)
-  # is blank
-  # the analysis data in shape (none, written before it was added: empty)
-  x$analysis_data <- .adata_sheet(x)
-  for (s in intersect(names(.ard_spec_sheets), names(x))) {
-    for (c in setdiff(.ard_spec_sheets[[s]], names(x[[s]]))) {
-      x[[s]][[c]] <- rep(NA_character_, nrow(x[[s]]))
-    }
-  }
-  x <- structure(x, class = "tfl_ard_spec")
-  a <- x$analyses
-  err <- character()
-  need <- c("output_id", "analysis_id", "method")
-  for (k in need) {
-    if (any(is.na(a[[k]]))) err <- c(err, sprintf("`analyses$%s` is blank in row(s) %s", k,
-                                                   paste(which(is.na(a[[k]])), collapse = ", ")))
-  }
-  dup <- duplicated(paste(a$output_id, a$analysis_id))
-  if (any(dup)) err <- c(err, sprintf("output_id / analysis_id repeated: %s",
-                                      paste(unique(paste(a$output_id, a$analysis_id)[dup]),
-                                            collapse = ", ")))
-  err <- c(err, .ard_parent_problems(a), .adata_problems(x, a))
-  for (i in which(!is.na(a$post %||% rep(NA, nrow(a))))) {
-    tag <- paste(a$output_id[i], a$analysis_id[i], sep = " / ")
-    if (!is.na(a$parent[i] %||% NA)) {
-      err <- c(err, sprintf(paste(
-        "%s: `post` works on an analysis's ARD; inside %s it goes on the",
-        "parent's row"), tag, a$parent[i]))
-    }
-    for (st in .split_post(a$post[i])) {
-      p <- .post_problem(st)
-      if (!is.null(p)) err <- c(err, sprintf("%s: `post` %s", tag, p))
-    }
-  }
-  m <- stats::na.omit(a$method)
-  known <- m %in% tfl_ard_methods()$method
-  pkgfun <- grepl("^[A-Za-z.][A-Za-z0-9.]*::[A-Za-z._][A-Za-z0-9._]*$", m)
-  own <- !known & !pkgfun & grepl("^[A-Za-z.][A-Za-z0-9._]*$", m)
-  bad <- m[!known & !pkgfun & !own]
-  if (length(bad)) err <- c(err, sprintf(
-    "unknown method(s): %s (a keyword of tfl_ard_methods(), pkg::function, or a function the study key `source` loads)",
-    paste(unique(bad), collapse = ", ")))
+  x <- .ard_spec_shaped(x)
+  m <- stats::na.omit(x$analyses$method)
+  own <- !m %in% tfl_ard_methods()$method &
+    !grepl("^[A-Za-z.][A-Za-z0-9.]*::[A-Za-z._][A-Za-z0-9._]*$", m) &
+    grepl("^[A-Za-z.][A-Za-z0-9._]*$", m)
   if (any(own) && !length(.split_bar(.study_value(x, "source", NA)))) {
     warning(sprintf(paste(
       "method(s) %s: not a keyword of tfl_ard_methods(), so read as your",
       "own function(s) -- which the study key `source` should load"),
       paste(unique(m[own]), collapse = ", ")), call. = FALSE)
   }
+  p <- .ard_spec_problems(x)
+  if (nrow(p)) {
+    .spec_stop(paste(c("The ARD definition is not valid:", p$message),
+                     collapse = "\n  "), p, "tflspec_ard_spec_error")
+  }
+  x
+}
+
+# The sheets as tfl_ard_spec() reads them: the analysis data in shape (none,
+# written before it was added: empty), a column a definition does not have
+# yet (written before it was added) blank
+.ard_spec_shaped <- function(x) {
+  x$analysis_data <- .adata_sheet(x)
+  for (s in intersect(names(.ard_spec_sheets), names(x))) {
+    for (c in setdiff(.ard_spec_sheets[[s]], names(x[[s]]))) {
+      x[[s]][[c]] <- rep(NA_character_, nrow(x[[s]]))
+    }
+  }
+  structure(x, class = "tfl_ard_spec")
+}
+
+# One problem of an analysis (row `i` of `a`), keyed by its analysis_id
+.ard_problem <- function(a, i, field, message) {
+  if (!length(message)) return(.spec_problems_empty())
+  .spec_problem(message, "analyses", a$output_id[i],
+                if (is.na(a$analysis_id[i])) "" else a$analysis_id[i], field)
+}
+
+# Every problem of an ARD definition (.spec_problems_keyed()'s rows), in
+# the order of the lines tfl_ard_spec() stops with
+.ard_spec_problems <- function(x) {
+  a <- x$analyses
+  pr <- list(.spec_problems_empty())
+  add <- function(i, field, message) {
+    pr[[length(pr) + 1L]] <<- .ard_problem(a, i, field, message)
+  }
+  for (k in c("output_id", "analysis_id", "method")) {
+    i <- which(is.na(a[[k]]))
+    if (length(i)) add(i[1L], k, sprintf("`analyses$%s` is blank in row(s) %s",
+                                         k, paste(i, collapse = ", ")))
+  }
+  dup <- duplicated(paste(a$output_id, a$analysis_id))
+  if (any(dup)) add(which(dup)[1L], "analysis_id", sprintf(
+    "output_id / analysis_id repeated: %s",
+    paste(unique(paste(a$output_id, a$analysis_id)[dup]), collapse = ", ")))
+  pr <- c(pr, list(.ard_parent_problems(a), .adata_problems(x, a)))
+  for (i in which(!is.na(a$post %||% rep(NA, nrow(a))))) {
+    tag <- paste(a$output_id[i], a$analysis_id[i], sep = " / ")
+    if (!is.na(a$parent[i] %||% NA)) {
+      add(i, "post", sprintf(paste(
+        "%s: `post` works on an analysis's ARD; inside %s it goes on the",
+        "parent's row"), tag, a$parent[i]))
+    }
+    for (st in .split_post(a$post[i])) {
+      p <- .post_problem(st)
+      if (!is.null(p)) add(i, "post", sprintf("%s: `post` %s", tag, p))
+    }
+  }
+  m <- a$method
+  known <- m %in% tfl_ard_methods()$method
+  pkgfun <- grepl("^[A-Za-z.][A-Za-z0-9.]*::[A-Za-z._][A-Za-z0-9._]*$", m)
+  own <- !known & !pkgfun & grepl("^[A-Za-z.][A-Za-z0-9._]*$", m)
+  bad <- which(!is.na(m) & !known & !pkgfun & !own)
+  if (length(bad)) add(bad[1L], "method", sprintf(
+    "unknown method(s): %s (a keyword of tfl_ard_methods(), pkg::function, or a function the study key `source` loads)",
+    paste(unique(m[bad]), collapse = ", ")))
   for (i in which(!is.na(a$args))) {
     p <- .args_problem(a$args[i])
-    if (!is.null(p)) err <- c(err, sprintf(
+    if (!is.null(p)) add(i, "args", sprintf(
       "%s / %s: `args` does not read as R arguments (%s)", a$output_id[i],
       a$analysis_id[i], gsub("\\s+", " ", p)))
   }
@@ -272,7 +306,7 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
                  statistics = if (passes_stats) "statistic")
     twice <- names(col_arg)[!is.na(unlist(a[i, names(col_arg)])) &
                               col_arg %in% .args_given(a$args[i])]
-    for (cn in twice) err <- c(err, sprintf(
+    for (cn in twice) add(i, cn, sprintf(
       "%s / %s: `%s` is given twice, by the `%s` column and in `args`; write it in one place",
       a$output_id[i], a$analysis_id[i], col_arg[[cn]], cn))
   }
@@ -280,32 +314,40 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
     for (i in which(!is.na(a[[col]] %||% rep(NA, nrow(a))))) {
       tag <- paste(a$output_id[i], a$analysis_id[i], sep = " / ")
       if (identical(a$method[i], "custom")) {
-        err <- c(err, sprintf("%s: a `custom` analysis takes no `%s` (its code says it)",
-                              tag, col))
+        add(i, col, sprintf("%s: a `custom` analysis takes no `%s` (its code says it)",
+                            tag, col))
         next
       }
       f <- .method_fun(a$method[i])
       if (!is.null(f) && !any(c(col, "...") %in% names(formals(f)))) {
-        err <- c(err, sprintf("%s: %s takes no `%s`", tag, a$method[i], col))
+        add(i, col, sprintf("%s: %s takes no `%s`", tag, a$method[i], col))
       }
     }
   }
   den <- a$denominator %||% rep(NA, nrow(a))
-  bad <- unique(stats::na.omit(den[!den %in% c(.den_words,
-                                               x$populations$population_id,
-                                               x$datasets$dataset,
-                                               x$analysis_data$data_id)]))
-  if (length(bad)) err <- c(err, sprintf(
+  bad <- which(!is.na(den) & !den %in% c(.den_words,
+                                         x$populations$population_id,
+                                         x$datasets$dataset,
+                                         x$analysis_data$data_id))
+  if (length(bad)) add(bad[1L], "denominator", sprintf(
     "denominator(s) %s: population, row, column, cell, a population, a dataset or an analysis data",
-    paste(bad, collapse = ", ")))
-  miss <- setdiff(stats::na.omit(c(a$dataset, x$populations$dataset)),
-                  x$datasets$dataset)
-  if (length(miss)) err <- c(err, sprintf("dataset(s) not in `datasets`: %s",
-                                          paste(miss, collapse = ", ")))
-  miss <- setdiff(stats::na.omit(a$population_id),
-                  x$populations$population_id)
-  if (length(miss)) err <- c(err, sprintf("population(s) not in `populations`: %s",
-                                          paste(miss, collapse = ", ")))
+    paste(unique(den[bad]), collapse = ", ")))
+  ds_a <- which(!is.na(a$dataset) & !a$dataset %in% x$datasets$dataset)
+  pops <- x$populations
+  ds_p <- which(!is.na(pops$dataset) & !pops$dataset %in% x$datasets$dataset)
+  miss <- unique(c(a$dataset[ds_a], pops$dataset[ds_p]))
+  if (length(miss)) {
+    msg <- sprintf("dataset(s) not in `datasets`: %s", paste(miss, collapse = ", "))
+    if (length(ds_a)) add(ds_a[1L], "dataset", msg) else
+      pr[[length(pr) + 1L]] <- .spec_problem(msg, "populations", NA_character_,
+                                             .na_or(pops$population_id[ds_p[1L]], ""),
+                                             "dataset")
+  }
+  bad <- which(!is.na(a$population_id) &
+                 !a$population_id %in% x$populations$population_id)
+  if (length(bad)) add(bad[1L], "population_id", sprintf(
+    "population(s) not in `populations`: %s",
+    paste(unique(a$population_id[bad]), collapse = ", ")))
   keys <- tfl_ard_methods()
   st <- tfl_ard_statistics()
   for (i in seq_len(nrow(a))) {
@@ -313,64 +355,70 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
     s <- .split_bar(a$statistics[i])
     if (!is.na(k) && keys$kind[k] == "continuous") {
       bad <- setdiff(s, st$statistic[st$kind == "continuous"])
-      if (length(bad)) err <- c(err, sprintf(
+      if (length(bad)) add(i, "statistics", sprintf(
         "%s / %s: no continuous statistic %s (see tfl_ard_statistics())",
         a$output_id[i], a$analysis_id[i], paste(bad, collapse = ", ")))
     }
     f <- .parse_formats(a$formats[i])
     bad <- names(f)[is.na(f) | !.fmt_ok(f)]
-    if (length(bad)) err <- c(err, sprintf(
+    if (length(bad)) add(i, "formats", sprintf(
       "%s / %s: formats are statistic=format, the format xx.x, xx.x%%, a number of decimals or pvalue (%s)",
       a$output_id[i], a$analysis_id[i], paste(bad, collapse = ", ")))
   }
-  cust <- a$method %in% "custom" & is.na(a$code)
-  if (any(cust)) err <- c(err, "a `custom` analysis needs its `code`")
-  if (length(err)) stop(paste(c("The ARD definition is not valid:", err),
-                              collapse = "\n  "), call. = FALSE)
-  x
+  cust <- which(a$method %in% "custom" & is.na(a$code))
+  if (length(cust)) add(cust[1L], "code", "a `custom` analysis needs its `code`")
+  p <- do.call(rbind, pr)
+  rownames(p) <- NULL
+  p
 }
+
+# `a`, or `b` when it is NA or empty
+.na_or <- function(a, b) if (length(a) && !is.na(a[1L])) a[1L] else b
 
 # An analysis run inside another (`parent`): the parent is an analysis of
 # the same report that runs others (cards::ard_stack(), ard_strata(),
 # ard_pairwise()), and the rows inside take its data -- they say what is
-# computed, not on what.
+# computed, not on what.  The problems as rows (.ard_problem()).
 .ard_parent_problems <- function(a) {
   par <- a$parent %||% rep(NA_character_, nrow(a))
-  err <- character()
+  pr <- list(.spec_problems_empty())
+  add <- function(i, field, message) {
+    pr[[length(pr) + 1L]] <<- .ard_problem(a, i, field, message)
+  }
   tag <- function(i) paste(a$output_id[i], a$analysis_id[i], sep = " / ")
   for (i in which(!is.na(par))) {
     p <- which(a$output_id == a$output_id[i] & a$analysis_id == par[i])
     if (!length(p)) {
-      err <- c(err, sprintf("%s: parent %s is not an analysis of %s", tag(i),
-                            par[i], a$output_id[i]))
+      add(i, "parent", sprintf("%s: parent %s is not an analysis of %s", tag(i),
+                               par[i], a$output_id[i]))
       next
     }
     p <- p[1L]
     if (!a$method[p] %in% .ard_wrappers) {
-      err <- c(err, sprintf(paste(
+      add(i, "parent", sprintf(paste(
         "%s: its parent %s runs no other analyses -- a parent's method is",
         "one of %s"), tag(i), par[i], paste(.ard_wrappers, collapse = ", ")))
       next
     }
     if (!is.na(par[p])) {
-      err <- c(err, sprintf("%s: its parent %s is inside another itself",
-                            tag(i), par[i]))
+      add(i, "parent", sprintf("%s: its parent %s is inside another itself",
+                               tag(i), par[i]))
     }
     own <- c(intersect("data", names(a)), "dataset", "population_id", "where",
              if (identical(a$method[p], "cards::ard_stack")) c("by", "strata"))
     set <- own[!is.na(unlist(a[i, own]))]
     if (length(set)) {
-      err <- c(err, sprintf(
+      add(i, set[1L], sprintf(
         "%s: %s %s the parent's (%s); leave blank", tag(i),
         paste0("`", set, "`", collapse = ", "),
         if (length(set) > 1L) "are" else "is", par[i]))
     }
     if (a$method[i] %in% c("subjects", "custom", .ard_wrappers)) {
-      err <- c(err, sprintf("%s: a `%s` analysis cannot run inside %s",
-                            tag(i), a$method[i], par[i]))
+      add(i, "method", sprintf("%s: a `%s` analysis cannot run inside %s",
+                               tag(i), a$method[i], par[i]))
     }
     if (.names_data(a[i, ])) {
-      err <- c(err, sprintf(paste(
+      add(i, "args", sprintf(paste(
         "%s: inside %s the data is the parent's, so its args may not name",
         "`data` or `population`"), tag(i), par[i]))
     }
@@ -380,19 +428,19 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
                     a$output_id == a$output_id[p])
     if (!length(kids)) next
     if (!identical(a$method[p], "cards::ard_stack") && length(kids) > 1L) {
-      err <- c(err, sprintf("%s: %s runs one analysis; %d name it as parent",
-                            tag(p), a$method[p], length(kids)))
+      add(p, "method", sprintf("%s: %s runs one analysis; %d name it as parent",
+                               tag(p), a$method[p], length(kids)))
     }
     if (identical(a$method[p], "cards::ard_pairwise") &&
         length(.split_bar(a$variables[p])) != 1L) {
-      err <- c(err, sprintf(
+      add(p, "variables", sprintf(
         "%s: ard_pairwise() compares the pairs of ONE column's levels: `variables`",
         tag(p)))
     }
     if (identical(a$method[p], "cards::ard_stack")) {
       v <- unlist(lapply(kids, function(k) .split_bar(a$variables[k])))
       if (anyDuplicated(v)) {
-        err <- c(err, sprintf(paste(
+        add(p, "variables", sprintf(paste(
           "%s: %s is analysed by two of the analyses inside it, whose rows",
           "could not be told apart; make one of them an analysis of its own"),
           tag(p), paste(unique(v[duplicated(v)]), collapse = ", ")))
@@ -403,14 +451,14 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
         kind <- if (is.na(kk)) "" else keys$kind[kk]
         if (!is.na(a$statistics[k]) &&
             !kind %in% c("continuous", "categorical", "missing")) {
-          err <- c(err, sprintf(paste(
+          add(k, "statistics", sprintf(paste(
             "%s: inside a stack, `statistics` cannot keep some of what %s",
             "gives; make it an analysis of its own"), tag(k), a$method[k]))
         }
       }
     }
   }
-  err
+  do.call(rbind, pr)
 }
 
 # The analyses as ARS sees them: an analysis inside another is one of its
@@ -514,21 +562,23 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 
 # Every code list row names its report (no study-wide rows)
 .codelists_check <- function(d) {
-  if (is.null(d) || !nrow(d)) return(invisible(NULL))
-  used <- !is.na(d$variable) | !is.na(d$value)
-  if (!"output_id" %in% names(d)) {
+  if (!is.null(d) && nrow(d) && !"output_id" %in% names(d)) {
     .ard_stop("The code lists have no `output_id` column.\n",
               "  A code list is a report's: give each row its report.")
   }
+  .pb_stop_first(.codelists_problems(d))
+}
+
+.codelists_problems <- function(d) {
+  if (is.null(d) || !nrow(d) || !"output_id" %in% names(d)) return(.pb_none())
+  used <- !is.na(d$variable) | !is.na(d$value)
   blank <- which(used & (is.na(d$output_id) | !nzchar(trimws(d$output_id))))
-  if (length(blank)) {
-    .ard_stop(sprintf(paste0(
-      "Row %d of the code lists (%s) has no `output_id`.\n",
-      "  A code list is a report's: give the report, and copy the rows into ",
-      "each report that uses them."),
-      blank[1L], paste(d$variable[blank[1L]], d$value[blank[1L]], sep = " / ")))
-  }
-  invisible(NULL)
+  .pb(sprintf(paste0(
+    "Row %d of the code lists (%s) has no `output_id`.\n",
+    "  A code list is a report's: give the report, and copy the rows into ",
+    "each report that uses them."),
+    blank, paste(d$variable[blank], d$value[blank], sep = " / ")),
+    blank, rep("output_id", length(blank)))
 }
 
 # The columns a report's analyses read as variables: by, strata, variables,
