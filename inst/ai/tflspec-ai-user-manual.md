@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9075** (the development version,
+**This manual documents tflspec 0.0.24.9077** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -543,7 +543,9 @@ layers:                                 # what is drawn, in order
   `variable`, `stats`, `by`) makes a data frame of statistics, a row per
   group, a column per statistic (`ard_stats(ard, ...)`); the layer
   `ard_number` prints one statistic (`analysis_id`, `variable`, `level`,
-  `stat`, `group: TRT01A = Placebo`, `label: "Median: {value} days"`,
+  `stat`, `group: TRT01A = Placebo`, `label: "Median: {value} days"` --
+  `{conf.low}`, `{conf.high}` ... are other statistics of the same address:
+  `"HR {estimate} (95% CI {conf.low}, {conf.high})"` --,
   `digits`; placed by `x`, `y`, `hjust`, `vjust`, `size`) as
   `annotate("text", label = ard_value(ard, ...))`.  The code's attribute
   `ard` is `TRUE` then; `tfl_check_fig_design(design, ard = <the ARD>)`

@@ -201,7 +201,8 @@
         .ff("level", "text", "Level", help = "The variable's level, e.g. 0.5 for a KM's median"),
         .ff("stat", "ard_stat", "Statistic", "estimate", required = TRUE),
         .ff("group", "text", "Group", help = "TRT01A = Placebo (several: | between them)"),
-        .ff("label", "text", "Label", "{value}", help = "{value} = the number, e.g. Median: {value} days"),
+        .ff("label", "text", "Label", "{value}",
+            help = "{value} = the number; {conf.low}, {conf.high} ... other statistics of the same row, e.g. HR {estimate} (95% CI {conf.low}, {conf.high})"),
         .ff("digits", "number", "Decimals", help = "Empty: the text the ARD has (stat_fmt)"),
         .ff("x", "text", "x", "Inf"),
         .ff("y", "text", "y", "Inf"),
@@ -758,26 +759,47 @@ tfl_read_fig_design <- function(path) {
   stats::setNames(as.list(val), nm)
 }
 
-# An ard_number's text: its label, `{value}` the ARD's statistic
-# (ard_value() of the study helpers)
+# An ard_number's label: `{value}` is its statistic, `{<stat_name>}`
+# another statistic of the same address (`HR {estimate} (95% CI
+# {conf.low}, {conf.high})`), each through ard_value() of the study
+# helpers; no placeholder: the number alone
+.ard_label_parts <- function(l) {
+  lab <- .fv(l, "label", "ard_number") %||% "{value}"
+  m <- gregexpr("[{][A-Za-z.][A-Za-z0-9._]*[}]", lab)
+  keys <- regmatches(lab, m)[[1L]]
+  stats <- substr(keys, 2L, nchar(keys) - 1L)
+  stats[stats == "value"] <- .fv(l, "stat", "ard_number")
+  list(texts = regmatches(lab, m, invert = TRUE)[[1L]], stats = stats)
+}
+
+# the statistics an ard_number prints (its own, and those its label names)
+.ard_label_stats <- function(l) {
+  unique(c(.fv(l, "stat", "ard_number"), .ard_label_parts(l)$stats))
+}
+
 .ard_label_code <- function(l) {
   v <- function(f) .fv(l, f, "ard_number")
   g <- .ard_group(l$group)
-  call <- sprintf("ard_value(%s)", paste(c(
-    "ard", q(v("analysis_id")), q(v("variable")), q(v("stat")),
+  call_of <- function(stat) sprintf("ard_value(%s)", paste(c(
+    "ard", q(v("analysis_id")), q(v("variable")), q(stat),
     if (length(g)) paste(names(g), "=", vapply(g, q, "")),
     if (!is.null(v("level"))) paste("level =", .num_or_q(v("level"))),
     if (!is.null(v("digits"))) paste("digits =", v("digits"))), collapse = ", "))
-  lab <- v("label") %||% "{value}"
-  parts <- strsplit(lab, "{value}", fixed = TRUE)[[1L]]
-  if (endsWith(lab, "{value}")) parts <- c(parts, "")
-  if (length(parts) < 2L) return(call)
-  pieces <- character()
-  for (j in seq_along(parts)) {
-    if (nzchar(parts[[j]])) pieces <- c(pieces, q(parts[[j]]))
-    if (j < length(parts)) pieces <- c(pieces, call)
+  lp <- .ard_label_parts(l)
+  if (!length(lp$stats)) return(call_of(v("stat")))
+  calls <- vapply(lp$stats, call_of, "", USE.NAMES = FALSE)
+  tx <- lp$texts
+  # a piece: the text before a number, and the number; the text after
+  # the last on its own
+  pieces <- c(vapply(seq_along(calls), function(j)
+    paste(c(if (nzchar(tx[[j]])) q(tx[[j]]), calls[[j]]), collapse = ", "), ""),
+    if (nzchar(tx[[length(tx)]])) q(tx[[length(tx)]]))
+  if (length(calls) == 1L) {
+    return(if (length(pieces) == 1L && !nzchar(tx[[1L]])) calls else
+      sprintf("paste0(%s)", paste(pieces, collapse = ", ")))
   }
-  if (length(pieces) == 1L) pieces else sprintf("paste0(%s)", paste(pieces, collapse = ", "))
+  # several numbers: one a line
+  paste0("paste0(\n    ", paste(pieces, collapse = ",\n    "), "\n  )")
 }
 
 # aes(...) of a layer: its variable fields (NULL ones left out)
@@ -1301,8 +1323,10 @@ tfl_fig_design_code <- function(design, plot_id = "fig", ggplot2_version = NULL,
     }
     k <- k & hit
   }
-  if (one && sum(k) > 1L) {
-    bad("group", sprintf("%d rows of the ARD match; name the group (and level) of one", sum(k)))
+  # (one row a statistic: the label may name several of the address)
+  n <- if (length(stat)) max(tabulate(match(ard$stat_name[k], stat), length(stat))) else sum(k)
+  if (one && n > 1L) {
+    bad("group", sprintf("%d rows of the ARD match; name the group (and level) of one", n))
   }
   out
 }
@@ -1488,7 +1512,7 @@ tfl_check_fig_design <- function(design, adam = NULL, ggplot2_version = NULL,
     if (k %in% c("km_ci", "censor_mark") && !"km_curve" %in% kinds) add(part, "layer", "needs the KM curves layer")
     if (k == "ard_number" && !is.null(ard)) {
       for (r in .fig_check_ard(ard, .fv(l, "analysis_id", k), .fv(l, "variable", k),
-                               .fv(l, "stat", k), .ard_group(l$group), .fv(l, "level", k),
+                               .ard_label_stats(l), .ard_group(l$group), .fv(l, "level", k),
                                one = TRUE)) add(part, r[[1L]], r[[2L]])
     }
     fl <- pieces[[k]]$fields

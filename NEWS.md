@@ -1,5 +1,12 @@
 # tflspec (development version)
 
+* **An `ard_number`'s label prints several statistics of its address**
+  (tflplanner #311).  `{value}` is its `stat`, as before; `{conf.low}`,
+  `{conf.high}` ... (any `stat_name`) are those statistics of the same
+  analysis, variable, level and group: `"HR {estimate} (95% CI
+  {conf.low}, {conf.high})"` writes one `paste0()`, a number a line.
+  `tfl_check_fig_design(ard =)` looks for each statistic the label names.
+
 * **A figure can read an ARD** (#293 phase 3, tflplanner #293).  The
   study helpers gain `ard_value()` (one statistic of an ARD, as the ARD
   formatted it or with `digits`; exactly one row or the program stops),
