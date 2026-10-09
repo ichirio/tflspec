@@ -23,6 +23,8 @@ the version you have installed) to the chat session.
 Status: early development (0.0.x). Discussion and sample code:
 [Discussions](https://github.com/ichirio/tflspec/discussions).
 
+R 4.1 or later; analyses that use cardx (e.g. t-tests, confidence intervals) need R 4.2 or later.
+
 ## The one workflow
 
 ```text
