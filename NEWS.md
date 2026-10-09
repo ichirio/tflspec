@@ -1,6 +1,6 @@
 # tflspec (development version)
 
-- R-CMD-check now also runs on R 4.2, the oldest R tested (`Depends: R (>= 4.1)` is kept; cardx, used by the generated ARD code, needs R >= 4.2).
+- R-CMD-check now also runs on R 4.2, the oldest R tested (`Depends: R (>= 4.1)` is kept; cardx, used by the generated ARD code, needs R >= 4.2). That job leaves car out (it needs packages that want R >= 4.4) and lets a suggested package be missing; the tests skip what needs it.
 
 * **A report's code lists give the data its labels; the ARD holds them**
   (#187).  `tfl_ard_code(codelists = )` writes each list at the program's

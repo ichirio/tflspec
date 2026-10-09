@@ -34,7 +34,10 @@ jobs:
           - {os: ubuntu-latest,  r: 'devel',     http-user-agent: 'release'}
           - {os: ubuntu-latest,  r: 'release'}
           - {os: ubuntu-latest,  r: 'oldrel-1'}
-          - {os: ubuntu-latest,  r: '4.2'}
+          # the oldest R tested: a suggested package that cannot be installed
+          # on it (it, or what it needs, wants a newer R) is left out
+          # (`pkgs`), and the check lets a suggested package be missing
+          - {os: ubuntu-latest,  r: '4.2', pkgs: 'car=?ignore-before-r=4.5.0', force-suggests: 'false'}
           - {os: macos-latest,   r: 'release'}
           - {os: windows-latest, r: 'release'}
           - {os: ubuntu-latest,  r: 'release', gg: 'ggplot2@3.5.2 ggsurvfit@1.1.0', want: '3.5.2'}
@@ -61,6 +64,7 @@ jobs:
           extra-packages: |
             any::rcmdcheck
             ${{ matrix.config.gg || 'any::ggplot2' }}
+            ${{ matrix.config.pkgs }}
           needs: check
 
       - name: Confirm the ggplot2 under test
@@ -80,6 +84,7 @@ jobs:
       - uses: r-lib/actions/check-r-package@v2
         env:
           TFLSPEC_GGPLOT2_UNDER_TEST: ${{ matrix.config.want }}
+          _R_CHECK_FORCE_SUGGESTS_: ${{ matrix.config.force-suggests || 'true' }}
         with:
           upload-snapshots: true
           build_args: 'c("--no-manual","--compact-vignettes=gs+qpdf")'
