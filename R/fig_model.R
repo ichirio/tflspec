@@ -154,6 +154,14 @@
         .ff("where", "expr", "Its rows (R)"),
         .ff("from_df", "variables", "Variables taken from df", help = "Joined by the key: the y position of its subject, a colour ..."),
         .ff("by", "variable", "Key", "USUBJID"))),
+    ard_stats = list(section = "data", label = "Statistics from the ARD",
+      help = "Statistics of the figure's ARD (its own, or a table's) as a data frame: a row per group, a column per statistic.",
+      fields = rbind(
+        .ff("name", "text", "Name", "st"),
+        .ff("analysis_id", "analysis", "Analysis", required = TRUE),
+        .ff("variable", "ard_variable", "Variable"),
+        .ff("stats", "ard_stats", "Statistics", required = TRUE, help = "Several: n.risk, estimate"),
+        .ff("by", "variables", "Groups kept", help = "Their columns, by name: TRT01A"))),
     # ---- layers
     km_curve = list(section = "layers", label = "KM curves", base = TRUE,
       help = "The Kaplan-Meier curves (ggsurvfit); the first layer.",
@@ -185,6 +193,21 @@
         .ff("title", "text", "Title", "Number of Patients at Risk"),
         .ff("size", "number", "Text size", 3),
         .ff("height", "number", "Height (share)", 0.167))),
+    ard_number = list(section = "layers", label = "A number from the ARD",
+      help = "One statistic of the figure's ARD printed on the plot: a median, a hazard ratio ... as the ARD has it.",
+      fields = rbind(
+        .ff("analysis_id", "analysis", "Analysis", required = TRUE),
+        .ff("variable", "ard_variable", "Variable", required = TRUE),
+        .ff("level", "text", "Level", help = "The variable's level, e.g. 0.5 for a KM's median"),
+        .ff("stat", "ard_stat", "Statistic", "estimate", required = TRUE),
+        .ff("group", "text", "Group", help = "TRT01A = Placebo (several: | between them)"),
+        .ff("label", "text", "Label", "{value}", help = "{value} = the number, e.g. Median: {value} days"),
+        .ff("digits", "number", "Decimals", help = "Empty: the text the ARD has (stat_fmt)"),
+        .ff("x", "text", "x", "Inf"),
+        .ff("y", "text", "y", "Inf"),
+        .ff("hjust", "number", "Horizontal justification", 1.1),
+        .ff("vjust", "number", "Vertical justification", 1.5),
+        .ff("size", "number", "Size", 3))),
     n_table = list(section = "layers", label = "n by visit (panel)",
       panel = TRUE, help = "The n of each group at each x, below the plot.",
       fields = rbind(
@@ -279,7 +302,9 @@
 #'   `piece`, `piece_label`, `piece_help`, `field`, `kind` (`dataset`,
 #'   `variable`, `variables`, `flag`, `param`, `object` (the data or a
 #'   statistic by name), `choice`, `number`, `logical`, `text`, `expr` (R),
-#'   `code`, `named` (`name = value | ...`)), `label`, `default`,
+#'   `code`, `named` (`name = value | ...`), and of the figure's ARD:
+#'   `analysis`, `ard_variable`, `ard_stat`, `ard_stats` (one or several
+#'   statistics)), `label`, `default`,
 #'   `choices` (`|` between them), `help`, `required`, `of`.
 #' @export
 tfl_fig_parts <- function() .fig_cached("parts", .fig_parts_build)
@@ -508,7 +533,8 @@ tfl_read_fig_design <- function(path) {
 # which the steps after it change; and the datasets it reads.  The
 # figure's code lists go on `df`, last of its steps before the first
 # named object (each listed column a factor in its list's order).
-.fig_named_steps <- c("survfit", "summary", "summary_by", "rate", "count", "subset")
+.fig_named_steps <- c("survfit", "summary", "summary_by", "rate", "count", "subset",
+                      "ard_stats")
 
 .fig_steps_code <- function(steps, levels = NULL) {
   out <- character()
@@ -686,6 +712,16 @@ tfl_read_fig_design <- function(path) {
           if (length(lv)) sprintf(" |>\n  mutate(%s = factor(%s, levels = unique(c(intersect(%s, %s), sort(%s)))))",
                                   cat, cat, vec_code(lv), cat, cat)), "")
       },
+      ard_stats = {
+        st <- .split_vals(v("stats"))
+        by <- .split_vals(v("by"))
+        out <- c(out, paste0(v("name"), " <- ard_stats(",
+          paste(c("ard", .vec_or_q(.split_vals(v("analysis_id")))[[1L]],
+                  if (!is.null(v("variable"))) paste0("variable = ", q(v("variable"))),
+                  paste0("stats = ", .vec_or_q(st)),
+                  if (length(by)) paste0("by = ", .vec_or_q(by))), collapse = ", "),
+          ")"), "")
+      },
       subset = {
         ds <- v("dataset")
         src <- if (toupper(ds) == "DF") "df" else pp_ds_name(toupper(ds))
@@ -699,6 +735,49 @@ tfl_read_fig_design <- function(path) {
       stop("Unknown statistics step: ", k, call. = FALSE))
   }
   list(code = out, libs = libs)
+}
+
+# one value as code: a vector of several (c(...)) or one, each quoted
+.vec_or_q <- function(x) if (length(x) == 1L) q(x) else vec_code(x)
+
+# a number (Inf, -Inf, 0.5) as it is, else quoted
+.num_or_q <- function(x) {
+  x <- as.character(x)
+  if (!is.na(suppressWarnings(as.numeric(x)))) x else q(x)
+}
+
+# An ard_number's group: `TRT01A = Placebo | SEX = F` (or a YAML map) as
+# a named list
+.ard_group <- function(g) {
+  if (is.null(g)) return(list())
+  if (is.list(g)) return(lapply(g, as.character))
+  parts <- trimws(strsplit(paste(g, collapse = "|"), "|", fixed = TRUE)[[1L]])
+  parts <- parts[nzchar(parts)]
+  nm <- trimws(sub("=.*$", "", parts))
+  val <- trimws(sub("^[^=]*=", "", parts))
+  stats::setNames(as.list(val), nm)
+}
+
+# An ard_number's text: its label, `{value}` the ARD's statistic
+# (ard_value() of the study helpers)
+.ard_label_code <- function(l) {
+  v <- function(f) .fv(l, f, "ard_number")
+  g <- .ard_group(l$group)
+  call <- sprintf("ard_value(%s)", paste(c(
+    "ard", q(v("analysis_id")), q(v("variable")), q(v("stat")),
+    if (length(g)) paste(names(g), "=", vapply(g, q, "")),
+    if (!is.null(v("level"))) paste("level =", .num_or_q(v("level"))),
+    if (!is.null(v("digits"))) paste("digits =", v("digits"))), collapse = ", "))
+  lab <- v("label") %||% "{value}"
+  parts <- strsplit(lab, "{value}", fixed = TRUE)[[1L]]
+  if (endsWith(lab, "{value}")) parts <- c(parts, "")
+  if (length(parts) < 2L) return(call)
+  pieces <- character()
+  for (j in seq_along(parts)) {
+    if (nzchar(parts[[j]])) pieces <- c(pieces, q(parts[[j]]))
+    if (j < length(parts)) pieces <- c(pieces, call)
+  }
+  if (length(pieces) == 1L) pieces else sprintf("paste0(%s)", paste(pieces, collapse = ", "))
 }
 
 # aes(...) of a layer: its variable fields (NULL ones left out)
@@ -781,6 +860,13 @@ tfl_read_fig_design <- function(path) {
                    "  plot.title.position = \"plot\",\n",
                    "  axis.text.y         = element_text(hjust = 1, margin = margin(r = 5))\n)"))))
     },
+    ard_number = list(code = c(lbl("a number from the ARD"),
+      sprintf("p <- p + annotate(
+  \"text\", x = %s, y = %s, hjust = %s, vjust = %s, size = %s,
+  label = %s
+)",
+              .num_or_q(v("x")), .num_or_q(v("y")), num("hjust"), num("vjust"), num("size"),
+              .ard_label_code(l)))),
     n_table = list(panel = list(name = paste0("p_n", i), height = as.numeric(v("height"))), libs = "patchwork",
       chain = .fig_chain(paste0("p_n", i), list(
           sprintf("ggplot(%s, aes(x = %s, y = factor(%s, levels = rev(names(pal))), label = %s, colour = %s))",
@@ -1020,7 +1106,9 @@ tfl_read_fig_design <- function(path) {
     libs = libs, needs = needs, guard = guard, guard_v = guard_v, features = features,
     reads = d$reads,
     step1 = c(
-      if (!setup) c(sprintf("# Input data frames: %s", paste(pp_ds_name(d$reads), collapse = ", ")), ""),
+      if (!setup) c(sprintf("# Input data frames: %s", paste(pp_ds_name(d$reads), collapse = ", ")),
+                    if (.fig_uses_ard(design)) "# Input ARD: ard (read with ard_value() / ard_stats(), tfl_helpers_code())",
+                    ""),
       head,
       d$code,
       ax$pre,
@@ -1086,7 +1174,10 @@ tfl_read_fig_design <- function(path) {
 #' palette, then one `+` chain into `name`; a panel below it is a chain of
 #' its own, put under it on the last line).  Its attributes say what it
 #' needs: `reads` (the datasets, upper case), `libs` (the packages to
-#' attach) and `needs` (the packages called as `pkg::fn`).
+#' attach), `needs` (the packages called as `pkg::fn`) and `ard` (`TRUE`:
+#' it reads an ARD as `ard`, through an `ard_stats` step or an
+#' `ard_number` layer, with the study helpers' `ard_value()` /
+#' `ard_stats()`; the program puts the ARD there).
 #' @export
 tfl_fig_design_code <- function(design, plot_id = "fig", ggplot2_version = NULL,
                                 setup = FALSE, save = TRUE, name = "fig",
@@ -1128,19 +1219,93 @@ tfl_fig_design_code <- function(design, plot_id = "fig", ggplot2_version = NULL,
     section("plot"),
     b$step2,
     if (save) c("", name, "", .fig_save_code(design$plot, plot_id, name)))
-  .fig_code_out(code, b$reads, b$libs, b$needs)
+  .fig_code_out(code, b$reads, b$libs, b$needs, ard = .fig_uses_ard(design))
+}
+
+# whether a design reads an ARD (`ard`): an ard_stats step, an ard_number
+# layer (a composed figure: one of its figures)
+.fig_uses_ard <- function(design) {
+  if (length(design$plots)) return(any(vapply(design$plots, .fig_uses_ard, NA)))
+  steps <- unlist(lapply(design$data, `[[`, "step"))
+  layers <- unlist(lapply(design$layers, `[[`, "layer"))
+  any(c(steps, layers) %in% c("ard_stats", "ard_number"))
 }
 
 # the script, with what it needs as attributes
-.fig_code_out <- function(code, reads, libs, needs) {
+.fig_code_out <- function(code, reads, libs, needs, ard = FALSE) {
   code <- .drop_attached_ns(.code_lines(code))
   # (a script made with the setup starts at its first section)
   while (length(code) && identical(code[[1L]], "")) code <- code[-1L]
   structure(code, class = "tfl_code", reads = unique(reads),
-            libs = unique(libs), needs = unique(needs))
+            libs = unique(libs), needs = unique(needs), ard = isTRUE(ard))
 }
 
 # ---- the checks -------------------------------------------------------------
+
+# An ARD piece's address against the ARD: its analyses, variable,
+# statistics, level and groups there; `one`: exactly one row (an
+# ard_number prints one).  The problems, each list(field, problem).
+.fig_check_ard <- function(ard, analysis_id, variable = NULL, stat = NULL,
+                           group = list(), level = NULL, one = FALSE) {
+  chr <- function(x) {
+    if (!is.list(x)) return(as.character(x))
+    vapply(x, function(v) if (length(v)) as.character(v[[1L]]) else NA_character_, "")
+  }
+  out <- list()
+  bad <- function(f, x) out[[length(out) + 1L]] <<- list(f, x)
+  if (!length(analysis_id)) return(out)
+  miss <- setdiff(analysis_id, ard$analysis_id)
+  if (length(miss)) {
+    bad("analysis_id", paste0("no analysis ", paste(miss, collapse = ", "), " in the ARD"))
+    return(out)
+  }
+  k <- ard$analysis_id %in% analysis_id
+  if (!is.null(variable)) {
+    if (!any(k & ard$variable %in% variable)) {
+      bad("variable", paste0("no variable ", variable, " in ", paste(analysis_id, collapse = ", "),
+                             " (it has ", paste(unique(ard$variable[k]), collapse = ", "), ")"))
+      return(out)
+    }
+    k <- k & ard$variable %in% variable
+  }
+  if (length(stat)) {
+    miss <- setdiff(stat, ard$stat_name[k])
+    if (length(miss)) {
+      bad(if (one) "stat" else "stats",
+          paste0("no statistic ", paste(miss, collapse = ", "), " in ",
+                 paste(c(analysis_id, variable), collapse = " / "), " (it has ",
+                 paste(unique(ard$stat_name[k]), collapse = ", "), ")"))
+      return(out)
+    }
+    k <- k & ard$stat_name %in% stat
+  }
+  if (!is.null(level)) {
+    lv <- chr(ard$variable_level)
+    if (!any(k & lv %in% as.character(level))) {
+      bad("level", paste0("no level ", level, " of ", variable, " in the ARD"))
+      return(out)
+    }
+    k <- k & lv %in% as.character(level)
+  }
+  gcols <- grep("^group[0-9]+$", names(ard), value = TRUE)
+  for (g in names(group)) {
+    hit <- rep(FALSE, nrow(ard))
+    for (col in gcols) {
+      hit <- hit | (chr(ard[[col]]) %in% g &
+                      chr(ard[[paste0(col, "_level")]]) %in% as.character(group[[g]]))
+    }
+    if (!any(k & hit)) {
+      bad("group", paste0("no ", g, " = ", group[[g]], " in ",
+                          paste(analysis_id, collapse = ", "), " of the ARD"))
+      return(out)
+    }
+    k <- k & hit
+  }
+  if (one && sum(k) > 1L) {
+    bad("group", sprintf("%d rows of the ARD match; name the group (and level) of one", sum(k)))
+  }
+  out
+}
 
 #' @rdname tfl_fig_design
 #' @param adam The data ([tfl_read_adam()]): the variables and PARAMCDs the
@@ -1150,8 +1315,14 @@ tfl_fig_design_code <- function(design, plot_id = "fig", ggplot2_version = NULL,
 #'   when there are none. With the target ggplot2 (`ggplot2_version`), a
 #'   function or argument of a `call` the target does not have, or drops,
 #'   is one; what it only deprecates is advice ([tfl_fig_advice()]).
+#' @param ard The ARD the figure reads (its own rows, or the table's it
+#'   names; a cards ARD with `analysis_id`): the `ard_stats` steps' and
+#'   `ard_number` layers' analyses, variables, levels, statistics and
+#'   groups are looked for in it, and an `ard_number` must name one row.
+#'   `NULL`: not checked.
 #' @export
-tfl_check_fig_design <- function(design, adam = NULL, ggplot2_version = NULL) {
+tfl_check_fig_design <- function(design, adam = NULL, ggplot2_version = NULL,
+                                 ard = NULL) {
   out <- data.frame(part = character(), field = character(), problem = character(),
                     stringsAsFactors = FALSE)
   add <- function(p, f, x) out[nrow(out) + 1L, ] <<- list(p, f, x)
@@ -1226,6 +1397,13 @@ tfl_check_fig_design <- function(design, adam = NULL, ggplot2_version = NULL) {
           by <- .split_vals(v("by"))
           need_var(part, "by", c(v("category"), by), df_cols)
           c(by, v("category"), "n", "pct", "label")
+        },
+        ard_stats = {
+          if (!is.null(ard)) {
+            for (r in .fig_check_ard(ard, .split_vals(v("analysis_id")), v("variable"),
+                                     .split_vals(v("stats")))) add(part, r[[1L]], r[[2L]])
+          }
+          NULL
         },
         subset = {
           ds <- v("dataset")
@@ -1308,6 +1486,11 @@ tfl_check_fig_design <- function(design, adam = NULL, ggplot2_version = NULL) {
     check_fields(l, part, k)
     if (isTRUE(pieces[[k]]$base) && i != 1L) add(part, "layer", "must be the first layer")
     if (k %in% c("km_ci", "censor_mark") && !"km_curve" %in% kinds) add(part, "layer", "needs the KM curves layer")
+    if (k == "ard_number" && !is.null(ard)) {
+      for (r in .fig_check_ard(ard, .fv(l, "analysis_id", k), .fv(l, "variable", k),
+                               .fv(l, "stat", k), .ard_group(l$group), .fv(l, "level", k),
+                               one = TRUE)) add(part, r[[1L]], r[[2L]])
+    }
     fl <- pieces[[k]]$fields
     obj <- NULL
     if ("data" %in% fl$field) {

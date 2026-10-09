@@ -33,7 +33,7 @@ tfl_fig_design_code(
   codelists = NULL
 )
 
-tfl_check_fig_design(design, adam = NULL, ggplot2_version = NULL)
+tfl_check_fig_design(design, adam = NULL, ggplot2_version = NULL, ard = NULL)
 }
 \arguments{
 \item{data, layers}{Lists of pieces (each a named list).}
@@ -94,10 +94,19 @@ an object; the axis breaks; a panel's data) and \verb{# ---- plot ----} (the
 palette, then one \code{+} chain into \code{name}; a panel below it is a chain of
 its own, put under it on the last line).  Its attributes say what it
 needs: \code{reads} (the datasets, upper case), \code{libs} (the packages to
-attach) and \code{needs} (the packages called as \code{pkg::fn}).}
+attach), \code{needs} (the packages called as \code{pkg::fn}) and \code{ard} (\code{TRUE}:
+it reads an ARD as \code{ard}, through an \code{ard_stats} step or an
+\code{ard_number} layer, with the study helpers' \code{ard_value()} /
+\code{ard_stats()}; the program puts the ARD there).}
 
 \item{adam}{The data (\code{\link[=tfl_read_adam]{tfl_read_adam()}}): the variables and PARAMCDs the
 design names are looked for in it.}
+
+\item{ard}{The ARD the figure reads (its own rows, or the table's it
+names; a cards ARD with \code{analysis_id}): the \code{ard_stats} steps' and
+\code{ard_number} layers' analyses, variables, levels, statistics and
+groups are looked for in it, and an \code{ard_number} must name one row.
+\code{NULL}: not checked.}
 }
 \value{
 \code{tfl_fig_design()} and \code{tfl_read_fig_design()}: a
