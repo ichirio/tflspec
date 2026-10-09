@@ -11,7 +11,9 @@
   `annotate("text")` term of the chain).  The program puts the ARD in
   `ard`; `tfl_fig_design_code()`'s attribute `ard` says the code reads
   it, and `tfl_check_fig_design(ard =)` looks for the pieces' analyses,
-  variables, levels, statistics and groups in it.
+  variables, levels, statistics and groups in it.  The report sheet's
+  `ard_source` takes `own` and `table:<output_id>` (a figure's: its own
+  analyses, or a table's ARD) besides blank and `import:<file>`.
 
 * **A figure's steps are one list; its script two sections and one chain**
   (#201, tflplanner #293 phase 1).  A figure design's `data:` is one
