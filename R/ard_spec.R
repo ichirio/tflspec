@@ -476,11 +476,14 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   NULL
 }
 
-# A report's code lists as each variable's values in their order: the
-# `codelists` sheet of a table definition, or a data frame with
-# `output_id`, `variable`, `value` and `order`.  A code list is a report's:
-# a row without `output_id` stops.  `vars`: only these variables (the ones
-# the report's ARD reads); NULL, all the report's.
+# A report's code lists, each variable's values in their order and what
+# each is in the ARD: the `codelists` sheet of a table definition, or a
+# data frame with `output_id`, `variable`, `value`, `label` and `order`.  A
+# variable's list is the labels named by their values (c(F = "Female"))
+# when any value has a label (one without stays itself), else the values
+# alone.  A code list is a report's: a row without `output_id` stops.
+# `vars`: only these variables (the ones the report's program reads); NULL,
+# all the report's.
 .codelist_levels <- function(codelists, output_id = NULL, vars = NULL) {
   if (is.null(codelists)) return(NULL)
   if (inherits(codelists, "tfl_table_spec") || (is.list(codelists) &&
@@ -497,8 +500,16 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   if (!nrow(d)) return(NULL)
   ord <- suppressWarnings(as.numeric(d$order %||% NA))
   d <- d[order(match(d$variable, unique(d$variable)), is.na(ord), ord), , drop = FALSE]
-  lapply(split(as.character(d$value), factor(d$variable, levels = unique(d$variable))),
-         unique)
+  d <- d[!duplicated(d[c("variable", "value")]), , drop = FALSE]
+  lab <- if (is.null(d$label)) rep(NA_character_, nrow(d)) else as.character(d$label)
+  lab[!is.na(lab) & !nzchar(trimws(lab))] <- NA
+  lapply(split(seq_len(nrow(d)), factor(d$variable, levels = unique(d$variable))),
+         function(i) {
+           v <- as.character(d$value[i])
+           l <- lab[i]
+           if (all(is.na(l))) return(v)
+           stats::setNames(ifelse(is.na(l), v, l), v)
+         })
 }
 
 # Every code list row names its report (no study-wide rows)
@@ -667,8 +678,8 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 #' The formats (the method's and the row's `formats`, over each statistic's
 #' default in [tfl_ard_statistics()]) are in the cards call itself, its
 #' `fmt_fun` argument, where a reader sees them next to the statistics:
-#' `fmt_fun = everything() ~ fmt_with(mean = 2L)`, a variable's own
-#' (`BMIBL:sd=3`) as `BMIBL ~ fmt_with(mean = 2L, sd = 3L)`.  An integer is
+#' `fmt_fun = everything() ~ modifyList(fmt_default, list(mean = 2L))`, a
+#' variable's own (`BMIBL:sd=3`) with its own list.  An integer is
 #' that many decimals, `xx.x%` is `label_round(1, scale = 100)` and
 #' `pvalue` the program's `fmt_pvalue()` (`<0.001` or 3 decimals);
 #' `cards::apply_fmt_fun()` then fills `stat_fmt`.  What takes no `fmt_fun`
@@ -679,37 +690,44 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 #' changes the ARD, a variable's own format for `ard_hierarchical()` or
 #' `ard_tabulate_rows()`.  `stat_fmt` is the same either way.
 #'
+#' The functions the program calls -- `set_levels()`, `tag_ard()`,
+#' `fmt_ard()`, `keep_stats()`, `fmt_pvalue()`, `save_ard()` -- are
+#' [tfl_helpers_code()]'s: the whole program (`part = "all"`) carries them,
+#' and a study keeps them in a file of its own, so its programs run without
+#' tflspec.
+#'
 #' `part` gives a piece of it instead, for a program layout of one's own
 #' (tflplanner writes one program per output that sources a shared setup):
-#' `"setup"` is what every piece starts with -- `library(cards)`, the
-#' tagging helper `tag_ard()`, `set_levels()` (the code lists), every
-#' computed statistic of the catalog (`tfl_stats`) and the `stat_fmt`
-#' helpers (`fmt_default`, `fmt_with()`, `fmt_pvalue()`, `fmt_ard()`,
-#' `keep_stats()`); `"body"` is the analyses of `output_id`, starting with
-#' `output_id <- "..."` and ending in `ard` -- without a header or
-#' `saveRDS()`.
+#' `"setup"` is what every piece starts with -- `library(cards)`,
+#' `library(dplyr)`, every computed statistic of the catalog (`tfl_stats`)
+#' and each statistic's format (`fmt_default`); `"body"` is the analyses of
+#' `output_id`, starting with `report_id <- "..."` and its code lists
+#' (`cl_<variable>`), and ending in `save_ard()` (one report, `save =
+#' TRUE`) or `ard`.
 #'
 #' @param spec An [tfl_ard_spec()] (or the path of one).
 #' @param output_id Only these outputs' analyses; `NULL` for all.
 #' @param save `FALSE` leaves out the final `saveRDS()`.  For one report's
-#'   `"body"`, `TRUE` ends it in `tflspec::save_ard()` (its rows into the
+#'   `"body"`, `TRUE` ends it in `save_ard()` (its rows into the
 #'   study ARD, with the definition's fingerprint), `FALSE` in `ard`.
 #' @param part `"all"` (the whole program), `"setup"` or `"body"`.
 #' @param dir The study folder: the fingerprints saved with the ARD
 #'   ([tfl_ard_spec_hash()]) read the study's own function files from it.
 #' @param codelists The reports' code lists: a table definition (its
 #'   `codelists` sheet) or a data frame with `output_id`, `variable`,
-#'   `value` and `order`.  A code list is a report's: every row names its
-#'   report (a blank `output_id` stops).  A report's rows of the variables
-#'   its analyses read (`by`, `strata`, `variables`, and the names in
-#'   `args`, `code` and `post`) count: each such column of the data the
-#'   report reads, and of the populations and analysis data that derive it,
-#'   becomes a factor in that order before any analysis (a value the list
-#'   does not have comes after, alphabetically), so the ARD keeps the order
-#'   and counts a level no record has (`n = 0`): the program has
-#'   `codelists <- list(...)` and `set_levels(codelists)`.  In the study's program,
-#'   when a report has code lists, each report's part reads its data again
-#'   with its own.  `NULL` (default): the data as read.
+#'   `value`, `label` and `order`.  A code list is a report's: every row
+#'   names its report (a blank `output_id` stops).  A report's rows of the
+#'   variables its analyses read (`by`, `strata`, `variables`, and the
+#'   names in `args`, `code` and `post`) count: the program writes them at
+#'   its head (`cl_sex <- c(F = "Female", M = "Male")`) and puts them on
+#'   the data the analyses read (`set_levels(SEX = cl_sex)`): each column a
+#'   factor in the list's order, its values the labels (a value without one
+#'   stays itself) -- the ARD holds `"Female"`, and counts a level no record
+#'   has (`n = 0`).  A value the list does not have (not NA) stops the
+#'   program.  An analysis's `where` on such a column is written in its
+#'   labels: one that names a value whose label differs stops here.  In the
+#'   study's program, each report's part reads its data again with its own.
+#'   `NULL` (default): the data as read.
 #' @inheritParams tfl_write_ard_spec
 #' @return The code, one element per line.
 #' @export
@@ -723,7 +741,7 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
   x <- .as_spec(spec, "ard", "tfl_ard_code")
   a <- x$analyses
   if (!is.null(output_id)) a <- a[a$output_id %in% output_id, , drop = FALSE]
-  # written for its setup, which attaches cards, dplyr and tflspec (not when
+  # written for its setup, which attaches cards and dplyr (not when
   # tfl_build_ard() runs it: every `pkg::` kept)
   if (!isTRUE(getOption("tflspec.plain_ns"))) {
     user <- .attached()
@@ -737,6 +755,7 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
   }
   # each report's code lists, of the variables its analyses read
   lv <- .codelist_levels_by(codelists, a)
+  .check_where_labels(a, lv)
   if (part == "body") {
     # one report's: its ARD into the study's, with its definition's
     # fingerprint
@@ -756,7 +775,10 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
     paste0("# Generated by tflspec ", utils::packageVersion("tflspec"),
            ", ", format(Sys.Date())),
     "",
-    .ard_common_lines(unlist(lapply(a$statistics, .split_bar)), x),
+    # (with the functions the program calls: a study keeps them in a file
+    # of its own, tfl_helpers_code())
+    .ard_common_lines(unlist(lapply(a$statistics, .split_bar)), x,
+                      helpers = tfl_helpers_code()),
     .ard_body_lines(x, a, lv))
   if (save) {
     ids <- unique(a$output_id)
@@ -941,4 +963,92 @@ tfl_ard_as_custom <- function(spec, output_id, analysis_id) {
   fmt <- if (!length(fmt)) NA_character_ else
     paste(ifelse(is.na(fmt), names(fmt), paste0(names(fmt), "=", fmt)), collapse = " | ")
   list(code = body, formats = fmt, method = "custom")
+}
+
+# An analysis's condition runs on its data after the code lists are put on
+# it (set_levels()): a listed variable's values are their labels there.  A
+# condition that names a value whose label differs (SEX == "F" where F is
+# Female) would keep no row: it stops, and says the label to write.
+.check_where_labels <- function(a, levels) {
+  if (!length(levels)) return(invisible(NULL))
+  for (i in which(!is.na(a$where))) {
+    lv <- levels[[a$output_id[i]]]
+    if (!length(lv)) next
+    bad <- .where_values_not_labels(a$where[i], lv)
+    if (length(bad)) {
+      .ard_stop(sprintf(paste0(
+        "%s / %s: `where` is `%s`, but the analysis's data have the code ",
+        "lists' labels by then -- write %s."),
+        a$output_id[i], a$analysis_id[i], a$where[i],
+        paste(sprintf("%s for %s", encodeString(unname(bad), quote = "\""),
+                      encodeString(names(bad), quote = "\"")), collapse = ", ")))
+    }
+  }
+  invisible(NULL)
+}
+
+# The values a condition compares a listed variable with whose label
+# differs: named vector, label named by the value
+.where_values_not_labels <- function(where, lv) {
+  e <- tryCatch(str2lang(where), error = function(err) NULL)
+  out <- character()
+  walk <- function(x) {
+    if (!is.call(x)) return(invisible())
+    op <- as.character(x[[1L]])[1L]
+    if (op %in% c("==", "!=", "%in%") && length(x) == 3L) {
+      for (k in 2:3) {
+        v <- x[[k]]
+        other <- x[[5L - k]]
+        if (!is.name(v)) next
+        cl <- lv[[as.character(v)]]
+        if (is.null(names(cl))) next
+        vals <- tryCatch(eval(other, baseenv()), error = function(err) NULL)
+        if (!is.character(vals)) next
+        hit <- vals[vals %in% names(cl) & !vals %in% cl]
+        out <<- c(out, stats::setNames(unname(cl[hit]), hit))
+      }
+    }
+    for (y in as.list(x)[-1L]) walk(y)
+  }
+  walk(e)
+  out[!duplicated(names(out))]
+}
+
+# A condition written in the code lists' labels as the data's own values
+# (SEX == "Female" -> SEX == "F"), for what reads the data as they are
+# (ARS); a condition with no listed variable, as it is
+.where_labels_to_values <- function(where, lv) {
+  if (is.na(where) || !length(lv)) return(where)
+  e <- tryCatch(str2lang(where), error = function(err) NULL)
+  if (is.null(e)) return(where)
+  changed <- FALSE
+  back <- function(cl, vals) {
+    to <- stats::setNames(names(cl), unname(cl))
+    ifelse(vals %in% names(to), unname(to[vals]), vals)
+  }
+  walk <- function(x) {
+    if (!is.call(x)) return(x)
+    op <- as.character(x[[1L]])[1L]
+    if (op %in% c("==", "!=", "%in%") && length(x) == 3L) {
+      for (k in 2:3) {
+        v <- x[[k]]
+        if (!is.name(v)) next
+        cl <- lv[[as.character(v)]]
+        if (is.null(names(cl))) next
+        other <- x[[5L - k]]
+        vals <- tryCatch(eval(other, baseenv()), error = function(err) NULL)
+        if (!is.character(vals)) next
+        new <- back(cl, vals)
+        if (identical(new, vals)) next
+        changed <<- TRUE
+        x[[5L - k]] <- if (length(new) == 1L) new else as.call(c(as.name("c"), as.list(new)))
+      }
+      return(x)
+    }
+    for (j in seq_along(x)[-1L]) x[[j]] <- walk(x[[j]])
+    x
+  }
+  e <- walk(e)
+  if (!changed) return(where)
+  paste(deparse(e, width.cutoff = 500L), collapse = " ")
 }

@@ -311,10 +311,15 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
     g <- list(id = id, name = label_of(out, var), groupingDataset = ds,
               groupingVariable = var, dataDriven = !length(lv))
     if (length(lv)) {
+      # a group's name as the table shows it, its condition the data's own
+      # value (a code list's label back to its value)
+      cl <- .codelist_levels(table_spec, out)[[var]]
+      val <- if (is.null(names(cl))) lv else
+        ifelse(lv %in% cl, names(cl)[match(lv, cl)], lv)
       g$groups <- lapply(seq_along(lv), function(k) list(
         id = paste0(id, "_", k), name = lv[k], level = 1L, order = k,
         condition = list(dataset = ds, variable = var, comparator = "EQ",
-                         value = list(lv[k]))))
+                         value = list(val[k]))))
     }
     groupings[[length(groupings) + 1L]] <<- c(list(key = key, base = base),
                                               list(model = g), list(id = id))
@@ -552,7 +557,10 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
       # the statistics: the row's, else the ones the function says it gives
       if (!length(stats)) stats <- own_stats[[m]] %||% character()
     }
-    ss <- subset(r$where, ds, tag)
+    # (the condition runs on the data with the code lists' labels; ARS
+    # compares the data's own values)
+    ss <- subset(.where_labels_to_values(
+      r$where, .codelist_levels(table_spec, out)), ds, tag)
     lbl <- if (!is.na(r$label)) r$label else NULL
     g_by <- vapply(by, grouping, "", ds = ds, out = out)
     aid <- function(...) paste(c("An", out, r$analysis_id, ...),
