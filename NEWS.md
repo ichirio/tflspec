@@ -11,6 +11,13 @@
   and a figure's advice (F02: `tfl_fig_advice()`'s template and values).
   The new `tfl_review_templates()` lists the sentences beyond the rules',
   so an app translates each once.  `tfl_check_ard()` says what it said.
+* **An `ard_number`'s label prints several statistics of its address**
+  (tflplanner #311).  `{value}` is its `stat`, as before; `{conf.low}`,
+  `{conf.high}` ... (any `stat_name`) are those statistics of the same
+  analysis, variable, level and group: `"HR {estimate} (95% CI
+  {conf.low}, {conf.high})"` writes one `paste0()`, a number a line.
+  `tfl_check_fig_design(ard =)` looks for each statistic the label names.
+
 * **The review: a figure's dataset not read yet is not missing; a review
   of many reports in half the time** (#204).  With the ARD definition
   given, a dataset of its catalog whose facts were not made (a cache that

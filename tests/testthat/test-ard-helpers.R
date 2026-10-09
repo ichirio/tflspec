@@ -122,3 +122,46 @@ test_that("the ARD pieces run: the figure prints the number the ARD has", {
   labels <- unlist(lapply(b$data, function(x) x$label))
   expect_true(paste0("Median (B): ", e$ard_value(a, "KM", "prob", "estimate", ARM = "B", level = 0.5)) %in% labels)
 })
+
+test_that("an ard_number's label names other statistics of its address", {
+  a <- km_ard()
+  l <- list(layer = "ard_number", analysis_id = "KM", variable = "prob", level = 0.5,
+            stat = "estimate", group = "ARM = A",
+            label = "Median {value} (95% CI {conf.low}, {conf.high})", digits = 1)
+  d <- tfl_fig_design(
+    data = list(list(step = "read", dataset = "ADTTE"),
+                list(step = "survfit", name = "fit", time = "AVAL", censor = "CNSR", by = "ARM")),
+    plot = list(colour_by = "ARM"),
+    layers = list(list(layer = "km_curve"), l))
+  code <- tfl_fig_design_code(d, "F-1", setup = TRUE, save = FALSE, name = "plot")
+  i <- which(code == "    label = paste0(")
+  expect_length(i, 1L)
+  expect_match(code[i + 1L], "^      \"Median \", ard_value[(]ard, \"KM\", \"prob\", \"estimate\"")
+  expect_match(code[i + 2L], "^      \" [(]95% CI \", ard_value[(]ard, \"KM\", \"prob\", \"conf.low\"")
+  expect_match(code[i + 3L], "^      \", \", ard_value[(]ard, \"KM\", \"prob\", \"conf.high\"")
+  expect_identical(code[i + 4L], "      \")\"")
+  expect_identical(nrow(tfl_check_fig_design(d, ard = a)), 0L)
+  expect_identical(.ard_label_stats(l), c("estimate", "conf.low", "conf.high"))
+  # a statistic the address does not have, named in the label
+  d$layers[[2]]$label <- "{value} ({conf.lo})"
+  p <- tfl_check_fig_design(d, ard = a)
+  expect_match(p$problem, "no statistic conf.lo")
+  # no placeholder: the number alone; one: as before
+  d$layers[[2]]$label <- "the median"
+  expect_true(any(grepl("label = ard_value(ard, \"KM\", \"prob\", \"estimate\"",
+                        tfl_fig_design_code(d, "F-1"), fixed = TRUE)))
+  # the number drawn is the ARD's
+  skip_if_not_installed("ggsurvfit")
+  e <- helper_env()
+  e$ard <- a
+  e$adtte <- data.frame(AVAL = c(5, 8, 12, 20, 25, 3, 9, 15, 30, 40),
+                        CNSR = 1 - c(1, 1, 0, 1, 0, 1, 0, 1, 1, 0),
+                        ARM = rep(c("A", "B"), each = 5))
+  d$layers[[2]]$label <- "Median {value} (95% CI {conf.low}, {conf.high})"
+  suppressMessages(eval(parse(text = tfl_fig_design_code(d, "F-1", save = FALSE)), envir = e))
+  labels <- unlist(lapply(ggplot2::ggplot_build(e$fig)$data, function(x) x$label))
+  want <- paste0("Median ", e$ard_value(a, "KM", "prob", "estimate", ARM = "A", level = 0.5, digits = 1),
+                 " (95% CI ", e$ard_value(a, "KM", "prob", "conf.low", ARM = "A", level = 0.5, digits = 1),
+                 ", ", e$ard_value(a, "KM", "prob", "conf.high", ARM = "A", level = 0.5, digits = 1), ")")
+  expect_true(want %in% labels)
+})
