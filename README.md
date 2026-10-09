@@ -62,7 +62,10 @@ ARD value by value, a table's RTF byte by byte.
 
 A workbook of four sheets: `study` (the subject key, where the ARD goes),
 `datasets` (the data and its derived columns), `populations` (the analysis
-sets) and `analyses`, one cards / cardx call a row:
+sets) and `analyses`, one cards / cardx call a row.  A *population* is what
+ICH E9 and the CDISC Analysis Results Standard call an analysis set:
+`tfl_ars()` writes each one as an ARS `AnalysisSet`, and an analysis's
+`population_id` as its `analysisSetId`.
 
 | output_id | analysis_id | method | dataset | population_id | by | variables | args |
 |---|---|---|---|---|---|---|---|
