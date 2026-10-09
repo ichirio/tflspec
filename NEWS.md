@@ -11,6 +11,8 @@
   are new.  The docs, tests and NEWS no longer point to discussions by
   number, and their examples use neutral variable names.
 
+- R-CMD-check now also runs on R 4.2, the oldest R tested (`Depends: R (>= 4.1)` is kept; cardx, used by the generated ARD code, needs R >= 4.2). That job leaves car out (it needs packages that want R >= 4.4) and lets a suggested package be missing; the tests skip what needs it.
+
 * **A population is an analysis set** (#191).  The README and the AI user
   manual say it once: a population (the `populations` sheet,
   `population_id`) is what ICH E9 and CDISC ARS call an analysis set;
