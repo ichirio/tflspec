@@ -16,8 +16,11 @@ the list's order, its values as the list has them in the ARD; a value
 not listed stops the program), \code{tag_ard()} (the report, analysis and
 analysis set in front of an analysis's ARD), \code{fmt_ard()} and
 \code{fmt_pvalue()} (formats after a call), \code{keep_stats()} (only the
-statistics asked for) and \code{save_ard()} (one report's rows into the
-study ARD, and what was built in \code{ard_status.csv}).  Base R, cards and
+statistics asked for), \code{save_ard()} (one report's rows into the
+study ARD, and what was built in \code{ard_status.csv}), and what a figure
+reads an ARD with: \code{ard_value()} (one statistic, as text),
+\code{ard_stats()} (statistics as a data frame) and \code{ard_fingerprint()} (the
+fingerprint \code{ard_status.csv} recorded for a report).  Base R, cards and
 dplyr only: a study writes them once into a file of its own (tflplanner:
 \code{programs/study_helpers.R}, sourced by its setup) and its programs run
 without tflspec.  \code{\link[=tfl_ard_code]{tfl_ard_code()}}'s whole program (\code{part = "all"})

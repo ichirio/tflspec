@@ -13,11 +13,20 @@ fig_program_cases <- function() {
   km_add <- tfl_fig_template("km_risk_table", data = "ADTTE", param = "OS",
                              pop = "FASFL", group = "TRT01P")
   km_add$layers[[length(km_add$layers)]]$method <- "add_risktable"
+  # the medians printed from a table's ARD (ard_number), as the sample's F-14-2-3
+  km_ard <- tfl_fig_template("km_simple", data = "ADTTE", param = "TTDE",
+                             pop = "SAFFL", group = "TRT01A", time_unit = "days")
+  arms <- c("Placebo", "Xanomeline Low Dose")
+  km_ard$layers <- c(km_ard$layers, lapply(seq_along(arms), function(i)
+    list(layer = "ard_number", analysis_id = "KM", variable = "prob", level = 0.5,
+         stat = "estimate", group = paste("TRT01A =", arms[i]),
+         label = paste0("Median (", arms[i], "): {value} days"), digits = 0, vjust = 1.5 * i)))
   list(
     km_risk_table = list(id = "F-KM",
       design = tfl_fig_template("km_risk_table", data = "ADTTE", param = "OS",
                                 pop = "FASFL", group = "TRT01P")),
     km_add_risktable = list(id = "F-KM", design = km_add),
+    km_ard_number = list(id = "F-KM", design = km_ard),
     km_single_arm = list(id = "F-KM1", design = tfl_fig_template("km_single_arm")),
     mean_se_codelists = list(id = "F-MEAN", codelists = cl,
       design = tfl_fig_template("mean_se", data = "ADVS", param = "SYSBP", group = "TRTA")),
