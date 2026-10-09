@@ -6,8 +6,8 @@
 #                    (plot_layout, plot_annotation, theme ...)
 #   plot:    only the saved size (width, height, dpi, units)
 #
-# Each figure reads its own data (no shared data): its Step1 / Step2 are
-# written as for a figure alone and kept as fig_<name>. A figure that is
+# Each figure reads its own data (no shared data): its data and figure
+# parts are written as for a figure alone, as fig_<name>. A figure that is
 # itself a patchwork (panels below it) or a ggsurvfit with add_risktable is
 # wrapped with wrap_elements(), so the layout and plot_annotation(tag_levels)
 # see it as one figure; add_risktable's table is kept only once the
@@ -40,20 +40,35 @@
 }
 
 # compose$add[[i]]: the call, and "+" or "&"
-.fig_compose_add_code <- function(a, gg) {
+.fig_compose_add_code <- function(a, gg, name = "fig") {
   op <- a$op %||% "+"
   spec <- a[setdiff(names(a), "op")]
-  res <- .fig_call_code(spec, target = "fig", plus = TRUE, ggplot2_version = gg)
-  if (identical(op, "&")) res$line <- sub("^fig <- fig \\+ ", "fig <- fig & ", res$line)
+  res <- .fig_call_code(spec, target = name, plus = TRUE, ggplot2_version = gg)
+  if (identical(op, "&")) {
+    res$line <- sub(sprintf("^%s <- %s \\+ ", name, name),
+                    sprintf("%s <- %s & ", name, name), res$line)
+  }
   res
 }
 
-.fig_compose_code <- function(design, plot_id, gg) {
+.fig_compose_code <- function(design, plot_id, gg, setup = FALSE, save = TRUE,
+                              name = "fig", levels = NULL) {
   nms <- names(design$plots)
-  bodies <- lapply(design$plots, function(p) .fig_design_body(.fig_as_design(p), gg))
+  # each figure is made as fig_<name>; one that is wrapped (a patchwork of
+  # panels, a risk table) is made as `fig` first
+  bodies <- lapply(seq_along(nms), function(i) {
+    d <- .fig_as_design(design$plots[[i]])
+    # (the code lists once, at the head: below)
+    b <- .fig_design_body(d, gg, setup = setup, levels = levels,
+                          codelists_head = FALSE)
+    if (b$risktable || b$patch) b else
+      .fig_design_body(d, gg, setup = setup, name = paste0("fig_", nms[i]),
+                       levels = levels, codelists_head = FALSE)
+  })
   comp <- design$compose %||% list()
   layout <- .fig_layout_code(comp$layout %||% .fig_layout_default(design), nms)
-  adds <- lapply(comp$add %||% list(), .fig_compose_add_code, gg = gg$version)
+  adds <- lapply(comp$add %||% list(), .fig_compose_add_code, gg = gg$version,
+                 name = name)
   libs <- unique(c(unlist(lapply(bodies, `[[`, "libs")), "patchwork",
                    unlist(lapply(adds, `[[`, "libs"))))
   needs <- unique(c(unlist(lapply(bodies, `[[`, "needs")), unlist(lapply(adds, `[[`, "pkgs"))))
@@ -68,10 +83,10 @@
     } else if (b$patch) {
       c("# one figure with its panels, wrapped",
         sprintf("fig_%s <- wrap_elements(full = fig)", nm))
-    } else sprintf("fig_%s <- fig", nm)
-    c(section(sprintf("Figure %d (%s) Step1: Preparing Analysis Data", i, nm)),
+    }
+    c(section(sprintf("figure %d (%s): data", i, nm)),
       b$step1,
-      section(sprintf("Figure %d (%s) Step2: Making a figure", i, nm)),
+      section(sprintf("figure %d (%s): the figure", i, nm)),
       b$step2,
       keep,
       "")
@@ -86,15 +101,13 @@
     if (length(needs)) sprintf("# also needs: %s (called as pkg::fn)", paste(needs, collapse = ", ")),
     if (length(guard)) c("", guard),
     "",
+    if (length(levels)) .codelists_head(levels),
     unlist(lapply(seq_along(nms), one)),
-    section("Step3: Composing the figures"),
-    sprintf("fig <- %s", layout),
+    section("the figures together"),
+    sprintf("%s <- %s", name, layout),
     unlist(lapply(adds, `[[`, "line")),
-    "fig",
-    "",
-    .fig_save_code(design$plot, plot_id, "Step4"))
-  code <- unlist(strsplit(paste(code, collapse = "\n"), "\n", fixed = TRUE))
-  structure(code, class = "tfl_code")
+    if (save) c(name, "", .fig_save_code(design$plot, plot_id, name)))
+  structure(.code_lines(code), class = "tfl_code")
 }
 
 .fig_as_design <- function(x) {

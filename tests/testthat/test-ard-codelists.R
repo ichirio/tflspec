@@ -1,6 +1,6 @@
-# The study's code lists applied to the data before the ARD is made.
+# A report's code lists applied to the data before its ARD is made.
 
-test_that("code lists make the listed columns factors before the analyses", {
+test_that("code lists make the listed columns factors, their labels the ARD's values", {
   skip_on_cran()
   skip_if_not_installed("cards")
   adam <- exact_data()
@@ -8,32 +8,123 @@ test_that("code lists make the listed columns factors before the analyses", {
   sp <- exact_spec(list(method = "categorical", dataset = "ADSL",
                         population_id = "SAF", by = "ARM",
                         variables = "AGEGR1 | SEX"))
-  cl <- data.frame(output_id = NA, variable = c("AGEGR1", "AGEGR1", "AGEGR1", "AGEGR1", "SEX"),
-                   value = c("<65", "65-80", ">80", "Unknown", "M"),
-                   order = c("1", "2", "3", "4", "1"))
+  cl <- data.frame(output_id = "T",
+                   variable = c("AGEGR1", "AGEGR1", "AGEGR1", "AGEGR1", "SEX", "SEX"),
+                   value = c("<65", "65-80", ">80", "Unknown", "M", "F"),
+                   label = c("Under 65", NA, NA, NA, "Male", "Female"),
+                   order = c("1", "2", "3", "4", "1", "2"))
   code <- paste(tfl_ard_code(sp, part = "body", codelists = cl), collapse = "\n")
-  expect_match(code, "adsl <- .levels(adsl)", fixed = TRUE)
-  expect_match(code, "`AGEGR1` = c(\"<65\", \"65-80\", \">80\", \"Unknown\")", fixed = TRUE)
+  # the lists at the program's head, a value named by... -- what it is in
+  # the ARD; put on the data the analysis reads
+  expect_match(code, paste0("cl_agegr1 <- c(
+  \"<65\" = \"Under 65\",
+  \"65-80\" = \"65-80\",
+",
+                            "  \">80\" = \">80\",
+  Unknown = \"Unknown\"
+)"), fixed = TRUE)
+  expect_match(code, "cl_sex <- c(M = \"Male\", F = \"Female\")", fixed = TRUE)
+  expect_match(code, paste0("pop_saf <- adsl |>\n  filter(SAFFL == \"Y\") |>\n",
+                            "  set_levels(AGEGR1 = cl_agegr1, SEX = cl_sex)"), fixed = TRUE)
   ard <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE, codelists = cl))
   ag <- ard[ard$variable == "AGEGR1", ]
   lv <- unique(vapply(ag$variable_level, as.character, ""))
-  expect_identical(lv, c("<65", "65-80", ">80", "Unknown"))   # in order, the empty one too
+  expect_identical(lv, c("Under 65", "65-80", ">80", "Unknown"))   # in order, the empty one too
   n0 <- unlist(ag$stat[ag$stat_name == "n" &
                          vapply(ag$variable_level, as.character, "") == "Unknown"])
   expect_true(all(n0 == 0))
-  # a value the list does not have comes after the listed ones
   sx <- unique(vapply(ard$variable_level[ard$variable == "SEX"], as.character, ""))
-  expect_identical(sx, c("M", "F"))
+  expect_identical(sx, c("Male", "Female"))
+  # a value the list does not have stops the program, and says which
+  short <- cl[cl$value != "F", ]
+  expect_error(suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE, codelists = short)),
+               "SEX has values its code list does not: \"F\"", fixed = TRUE)
+  # a value the population or the condition leave out need not be listed
+  # (a screen failure's arm in a table of the safety population)
+  sp2 <- exact_spec(list(method = "categorical", dataset = "ADSL",
+                         population_id = "SAF", by = "ARM", where = "ARM != \"Placebo\"",
+                         variables = "SEX"))
+  cl2 <- data.frame(output_id = "T", variable = "ARM",
+                    value = c("Xanomeline High Dose", "Xanomeline Low Dose"),
+                    order = c("1", "2"))
+  a2 <- suppressMessages(tfl_build_ard(sp2, dir = dir, save = FALSE, codelists = cl2))
+  arms <- unique(vapply(a2$group1_level, function(v) as.character(v[[1L]]), ""))
+  expect_identical(arms[!is.na(arms)][1:2], c("Xanomeline High Dose", "Xanomeline Low Dose"))
+  expect_false("Placebo" %in% arms)
+  # a condition on a listed variable the analysis reads is written in its
+  # labels: the data have them by then
+  sp3 <- exact_spec(list(method = "categorical", dataset = "ADSL",
+                         population_id = "SAF", by = "ARM", where = "SEX == \"F\"",
+                         variables = "SEX"))
+  expect_error(tfl_ard_code(sp3, codelists = cl), "write \"Female\" for \"F\"", fixed = TRUE)
   # without code lists: as before
   plain <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE))
   expect_false(any(vapply(plain$variable_level[plain$variable == "AGEGR1"],
                           as.character, "") == "Unknown"))
-  # the fingerprint changes with code lists, and not without
+  # the fingerprint changes with code lists, and with a label
   expect_identical(tfl_ard_spec_hash(sp, "T"), tfl_ard_spec_hash(sp, "T", codelists = NULL))
   expect_false(identical(tfl_ard_spec_hash(sp, "T"), tfl_ard_spec_hash(sp, "T", codelists = cl)))
-  # a report's own code list rows are not the study's
-  cl2 <- cl; cl2$output_id <- "T1"
-  expect_null(.codelist_levels(cl2))
+  relabel <- cl
+  relabel$label[5L] <- "Men"
+  expect_false(identical(tfl_ard_spec_hash(sp, "T", codelists = cl),
+                         tfl_ard_spec_hash(sp, "T", codelists = relabel)))
+  # another report's rows are not this one's
+  cl4 <- cl; cl4$output_id <- "T1"
+  expect_null(.codelist_levels(cl4, "T"))
+  expect_false(any(grepl("set_levels", tfl_ard_code(sp, part = "body", codelists = cl4),
+                         fixed = TRUE)))
+  # a code list is a report's: a row without one stops, and so does a
+  # table without the column
+  cl3 <- cl; cl3$output_id[2L] <- NA
+  expect_error(tfl_ard_code(sp, codelists = cl3), "Row 2 of the code lists (AGEGR1 / 65-80)",
+               fixed = TRUE)
+  expect_error(tfl_ard_code(sp, codelists = cl[-1L]), "no `output_id` column", fixed = TRUE)
+})
+
+test_that("only the variables a report's analyses read; the study's program a part a report", {
+  skip_on_cran()
+  skip_if_not_installed("cards")
+  adam <- exact_data()
+  dir <- exact_dir(adam)
+  sp <- exact_spec(list(method = "categorical", dataset = "ADSL",
+                        population_id = "SAF", by = "ARM", variables = "AGEGR1"))
+  b <- sp$analyses
+  b$output_id <- "U"
+  b$analysis_id <- "B"
+  b$variables <- "SEX"
+  sp$analyses <- rbind(sp$analyses, b)
+  cl <- data.frame(output_id = c("T", "T", "T", "T", "U", "U"),
+                   variable = c("AGEGR1", "AGEGR1", "AGEGR1", "SEX", "SEX", "SEX"),
+                   value = c(">80", "<65", "65-80", "F", "M", "F"),
+                   order = c("1", "2", "3", "1", "1", "2"))
+  # one report's program: only what its analyses read (T reads no SEX)
+  t1 <- tfl_ard_code(sp, output_id = "T", part = "body", codelists = cl)
+  expect_true(any(grepl("cl_agegr1 <- c(\">80\", \"<65\", \"65-80\")", t1, fixed = TRUE)))
+  expect_false(any(grepl("cl_sex", t1, fixed = TRUE)))
+  # the fingerprint likewise: T's SEX row is not part of it
+  expect_identical(tfl_ard_spec_hash(sp, "T", codelists = cl),
+                   tfl_ard_spec_hash(sp, "T", codelists = cl[-4L, ]))
+  expect_false(identical(tfl_ard_spec_hash(sp, "T", codelists = cl),
+                         tfl_ard_spec_hash(sp, "T", codelists = cl[-1L, ])))
+  # the study's: each part its code lists and its data read with them
+  all <- tfl_ard_code(sp, save = FALSE, codelists = cl)
+  u <- which(all == "# ---- U ----")
+  expect_true(any(grepl("cl_agegr1 <-", all[seq_len(u)], fixed = TRUE)))
+  expect_true(any(grepl("cl_sex <- c(\"M\", \"F\")", all[u:length(all)], fixed = TRUE)))
+  expect_identical(sum(grepl("^adsl <- readRDS", all)), 2L)
+  ard <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE, codelists = cl))
+  lv <- function(v) unique(vapply(ard$variable_level[ard$variable == v], as.character, ""))
+  expect_identical(lv("AGEGR1"), c(">80", "<65", "65-80"))
+  expect_identical(lv("SEX"), c("M", "F"))
+  # each the same as its own program's
+  for (o in c("T", "U")) {
+    one <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE,
+                                          output_id = o, codelists = cl))
+    expect_equal(one, ard[ard$output_id == o, ], ignore_attr = TRUE)
+  }
+  # no code lists: the study's program reads the data once, as before
+  plain <- tfl_ard_code(sp, save = FALSE)
+  expect_identical(sum(grepl("^adsl <- readRDS", plain)), 1L)
 })
 
 test_that("variables$empty_levels = hide leaves out the values no record has", {

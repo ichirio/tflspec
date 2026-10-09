@@ -14,7 +14,10 @@
 #  the datasets, pop_<population>, the analysis data above), the other
 #  columns but `from` left blank.  An analysis names one in `data` (instead of `dataset` /
 #  `population_id`) and may name one as its `denominator`.  The analysis
-#  data is the study's: one name, one meaning, for every report.
+#  data is a report's (`output_id`): its name means one thing in that
+#  report, and another report may give the same name another meaning (an
+#  adsl_saf of a Phase I table and of a Phase II table).  A report's rows
+#  name only its own rows and the study's datasets.
 # ============================================================================
 
 # the sheet, in shape (none: no rows)
@@ -22,6 +25,11 @@
   d <- x$analysis_data
   if (is.null(d)) d <- data.frame()
   .normalize_ard_sheet(d, "analysis_data")
+}
+
+# a report's rows of the sheet
+.adata_of <- function(ad, output_id) {
+  ad[!is.na(ad$output_id) & ad$output_id %in% output_id, , drop = FALSE]
 }
 
 # an analyses sheet's `data` column (blank when it has none)
@@ -96,14 +104,28 @@
 .adata_problems <- function(x, a) {
   ad <- .adata_sheet(x)
   err <- character()
-  tag <- function(i) sprintf("analysis_data %s", if (is.na(ad$data_id[i]))
-    sprintf("row %d", i) else ad$data_id[i])
+  tag <- function(i) sprintf("analysis_data %s%s",
+    if (is.na(ad$output_id[i])) "" else paste0(ad$output_id[i], " / "),
+    if (is.na(ad$data_id[i])) sprintf("row %d", i) else ad$data_id[i])
   pops <- x$populations$population_id
   dss <- x$datasets$dataset
   # the names the program gives other objects
   taken <- c(.r_name(dss), paste0("pop_", .r_name(pops)),
              "data", "population", "ard", "ards", "status")
-  for (i in seq_len(nrow(ad))) {
+  # an analysis data is a report's: each row names its report, and the
+  # rows above it are those of the same report
+  for (i in which(is.na(ad$output_id))) {
+    err <- c(err, sprintf(paste(
+      "%s: `output_id` is blank -- an analysis data is a report's (one made",
+      "before tflspec 0.0.24.9055 is the study's: give its rows their report)"),
+      tag(i)))
+  }
+  for (o in unique(stats::na.omit(ad$output_id))) {
+  rows <- which(ad$output_id == o)
+  ad_o <- ad[rows, , drop = FALSE]
+  for (k in seq_along(rows)) {
+    i <- rows[k]
+    above <- ad$data_id[rows[seq_len(k - 1L)]]
     id <- ad$data_id[i]
     if (is.na(id)) {
       err <- c(err, sprintf("%s: `data_id` is blank", tag(i)))
@@ -118,15 +140,15 @@
         "%s: `data_id` is the name of another object of the ARD program (a dataset, pop_<population>, data, population, ard ...)",
         tag(i)))
     }
-    if (id %in% ad$data_id[seq_len(i - 1L)]) {
-      err <- c(err, sprintf("%s: `data_id` repeated", tag(i)))
+    if (id %in% above) {
+      err <- c(err, sprintf("%s: `data_id` repeated in the report", tag(i)))
     }
     from <- ad$from[i]
     if (is.na(from)) {
       err <- c(err, sprintf("%s: `from` is blank (a dataset, or an analysis data above)", tag(i)))
-    } else if (!from %in% c(dss, ad$data_id[seq_len(i - 1L)])) {
+    } else if (!from %in% c(dss, above)) {
       err <- c(err, sprintf(
-        "%s: `from` %s is neither a dataset nor an analysis data above it",
+        "%s: `from` %s is neither a dataset nor an analysis data above it in the report",
         tag(i), from))
     }
     p <- ad$population_id[i]
@@ -135,9 +157,9 @@
     }
     s <- ad$subjects[i]
     if (!is.na(s)) {
-      if (!s %in% ad$data_id[seq_len(i - 1L)]) {
+      if (!s %in% above) {
         err <- c(err, sprintf(
-          "%s: `subjects` %s is not an analysis data above it", tag(i), s))
+          "%s: `subjects` %s is not an analysis data above it in the report", tag(i), s))
       }
       if (!is.na(p)) {
         err <- c(err, sprintf(paste(
@@ -160,7 +182,7 @@
       }
       next
     }
-    if (length(.split_bar(ad$add[i])) && is.na(.adata_add_from(ad, id))) {
+    if (length(.split_bar(ad$add[i])) && is.na(.adata_add_from(ad_o, id))) {
       err <- c(err, sprintf(paste(
         "%s: `add` takes columns from the population's data or the data of",
         "`subjects`, and it has neither (here or above)"), tag(i)))
@@ -172,12 +194,24 @@
       }
     }
   }
+  }
+  # an analysis reads (and divides by) its own report's analysis data
   dcol <- .data_col(a)
-  for (i in which(!is.na(dcol))) {
+  den <- a$denominator %||% rep(NA_character_, nrow(a))
+  for (i in which(!is.na(dcol) | den %in% ad$data_id)) {
     t <- paste(a$output_id[i], a$analysis_id[i], sep = " / ")
-    if (!dcol[i] %in% ad$data_id) {
-      err <- c(err, sprintf("%s: data %s is not in `analysis_data`", t, dcol[i]))
+    own <- .adata_of(ad, a$output_id[i])$data_id
+    if (!is.na(dcol[i]) && !dcol[i] %in% own) {
+      err <- c(err, sprintf(paste(
+        "%s: data %s is not an analysis data of %s%s"), t, dcol[i], a$output_id[i],
+        if (dcol[i] %in% ad$data_id) " (another report's: copy it into this one)" else ""))
     }
+    if (!is.na(den[i]) && den[i] %in% ad$data_id && !den[i] %in% own) {
+      err <- c(err, sprintf(
+        "%s: denominator %s is not an analysis data of %s (another report's)",
+        t, den[i], a$output_id[i]))
+    }
+    if (is.na(dcol[i])) next
     both <- c("dataset", "population_id")[!is.na(c(a$dataset[i], a$population_id[i]))]
     if (length(both)) {
       err <- c(err, sprintf(paste(
@@ -189,18 +223,31 @@
 }
 
 # The lines that make the analysis data `ids` (in their order); `levels`:
-# the code lists, made factors of the columns a row derives
-.adata_lines <- function(x, ids, subj, levels = NULL) {
+# the code lists, each data made factors again (.derive_steps()); `avoid`:
+# the program's names, which a data's own code does not assign; `reads`:
+# each data's columns the analyses read (kept whatever `keep` says)
+.adata_lines <- function(x, ids, subj, levels = NULL, avoid = character(),
+                         reads = list()) {
   ad <- .adata_sheet(x)
   out <- character()
+  lv <- if (length(levels)) .levels_step
   for (id in ids) {
     r <- ad[match(id, ad$data_id), ]
-    # written as R: its value is the data (what it makes on the way stays
+    # written as R: its value is the data.  One expression is the data
+    # itself; several run in local() (what they make on the way stays
     # inside)
     if (!is.na(r$code %||% NA)) {
-      out <- c(out, sprintf("%s <- local({\n%s\n})", id,
-                            paste0("  ", strsplit(trimws(r$code), "\n", fixed = TRUE)[[1L]],
-                                   collapse = "\n")))
+      code <- trimws(r$code)
+      one <- tryCatch(length(parse(text = code, keep.source = FALSE)) == 1L,
+                      error = function(e) FALSE)
+      made <- if (one) .code_as_program(code, id, list(lv), c(avoid, ids))
+      if (is.null(made)) {
+        made <- c(sprintf("%s <- local({\n%s\n})", id,
+                          paste0("  ", strsplit(code, "\n", fixed = TRUE)[[1L]],
+                                 collapse = "\n")),
+                  if (length(lv)) .make_code(id, id, lv))
+      }
+      out <- c(out, made)
       next
     }
     from_data <- r$from %in% ad$data_id
@@ -214,36 +261,38 @@
     whr <- if (!is.na(r$where)) r$where
     # as each analysis's data: the population itself when the data is its
     # dataset, else the dataset's records of its subjects
-    expr <- if (is.null(pop)) {
-      if (is.null(whr)) src else sprintf("subset(%s, %s)", src, whr)
+    base <- if (is.null(pop)) {
+      list(src, if (!is.null(whr)) sprintf("dplyr::filter(%s)", whr))
     } else if (!from_data && is.na(r$subjects) && identical(r$from, pop_ds)) {
-      if (is.null(whr)) pop else sprintf("subset(%s, %s)", pop, whr)
+      list(pop, if (!is.null(whr)) sprintf("dplyr::filter(%s)", whr))
     } else {
       cond <- sprintf("%s %%in%% %s$%s", subj, pop, subj)
-      if (!is.null(whr)) cond <- sprintf("%s & (%s)", cond, whr)
-      sprintf("subset(%s, %s)", src, cond)
+      if (!is.null(whr)) cond <- .cond_and(cond, whr)
+      list(src, sprintf("dplyr::filter(%s)", cond))
     }
-    out <- c(out, sprintf("%s <- %s", id, expr))
     add <- .split_bar(r$add)
-    if (length(add)) {
-      p <- .adata_add_from(ad, id)
-      q <- function(v) paste(encodeString(v, quote = "\""), collapse = ", ")
-      # the population's values replace a column of the same name
-      out <- c(out, sprintf(
-        "%s <- dplyr::left_join(%s[setdiff(names(%s), c(%s))], %s[c(%s)], by = %s)",
-        id, id, id, q(add), p, q(c(subj, add)), encodeString(subj, quote = "\"")))
-    }
-    out <- c(out, .derive_code(id, r$derive), .levels_line(id, r$derive, levels))
     keep <- .split_bar(r$keep)
-    if (length(keep)) {
-      out <- c(out, sprintf("%s <- %s[c(%s)]", id, id, paste(
-        encodeString(unique(c(subj, keep)), quote = "\""), collapse = ", ")))
-    }
     dis <- .split_bar(r$distinct)
-    if (length(dis)) {
-      out <- c(out, sprintf("%s <- dplyr::distinct(%s, %s, .keep_all = TRUE)",
-                            id, id, paste(dis, collapse = ", ")))
-    }
+    # columns from the subjects' data: the population's values replace a
+    # column of the same name
+    join <- if (length(add)) c(
+      sprintf("dplyr::select(-dplyr::any_of(%s))", .lay(.c_str(add), width = Inf)),
+      sprintf("dplyr::left_join(dplyr::select(%s, %s), by = %s)",
+              .adata_add_from(ad, id), paste(unique(c(subj, add)), collapse = ", "),
+              .q(subj)))
+    # what follows the rows: the columns added, derived, the columns kept,
+    # one row per ..., its code lists
+    steps <- c(base[[2L]], join, .derive_steps(r$derive),
+               # the columns kept: the subject, those the analyses read on
+               # it (their by, strata, variables), and the ones asked for
+               if (length(keep)) sprintf("dplyr::select(%s)",
+                                         paste(unique(c(subj, keep, reads[[id]])),
+                                               collapse = ", ")),
+               if (length(dis)) sprintf("dplyr::distinct(%s, .keep_all = TRUE)",
+                                        paste(dis, collapse = ", ")),
+               # the same rows as the data it is made from: the same levels
+               if (length(c(base[[2L]], .split_bar(r$derive), dis, add))) lv)
+    out <- c(out, .make_code(id, base[[1L]], steps))
   }
   out
 }

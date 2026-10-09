@@ -105,3 +105,59 @@ test_that("the synthetic TOC of ydisctools' SAP pipeline reads", {
   expect_true(all(sp$report$type == "table"))
   expect_true(all(sp$report$output_id %in% sp$titles$output_id))
 })
+
+test_that("each report's section: the heading row above it, or its own column", {
+  f <- toc_csv(c(
+    "No.,Title",
+    ",14.1 Demographics",
+    "T-14-1-1,Demographic Characteristics",
+    "T-14-1-2,Disposition",
+    ",14.3 Adverse Events",
+    "T-14-3-1,Overview of TEAEs"))
+  sp <- tfl_read_toc(f, map = c(output_id = "No.", title = "Title"))
+  expect_identical(attr(sp, "sections"),
+                   c(`T-14-1-1` = "14.1 Demographics", `T-14-1-2` = "14.1 Demographics",
+                     `T-14-3-1` = "14.3 Adverse Events"))
+  # no heading above: NA
+  f2 <- toc_csv(c("No.,Title", "T-1,One", ",2 Later", "T-2,Two"))
+  expect_identical(unname(attr(tfl_read_toc(f2, map = c(output_id = "No.", title = "Title")),
+                               "sections")), c(NA, "2 Later"))
+  # a section column: its value, over a heading row's
+  f3 <- toc_csv(c("No.,Title,Section",
+                  ",Heading row,",
+                  "T-1,One,14.1 Demographics",
+                  "T-2,Two,"))
+  sp3 <- tfl_read_toc(f3, map = c(output_id = "No.", title = "Title", section = "Section"))
+  expect_identical(unname(attr(sp3, "sections")), c("14.1 Demographics", "Heading row"))
+  # not part of the spec
+  expect_false("section" %in% names(sp3$report))
+})
+
+test_that("a TOC's label, first title and analysis set, for the report's own tokens", {
+  f <- toc_csv(c("No.,Label,Title,Population",
+                 "T-14-1-1,Table 14.1.1,Demographics | Age and sex,Safety Analysis Set",
+                 "T-14-1-2,,Disposition,"))
+  sp <- tfl_read_toc(f, map = c(output_id = "No.", label = "Label", title = "Title",
+                                population = "Population"))
+  expect_identical(unname(attr(sp, "labels")), c("Table 14.1.1", NA))
+  expect_identical(unname(attr(sp, "first_titles")), c("Demographics", "Disposition"))
+  expect_identical(unname(attr(sp, "populations")), c("Safety Analysis Set", NA))
+  expect_identical(names(attr(sp, "labels")), c("T-14-1-1", "T-14-1-2"))
+})
+
+test_that("each report's datasets: its datasets column, as one value", {
+  f <- toc_csv(c("No.,Title,Data",
+                 "T-1,One,\"ADSL, ADAE\"",
+                 "T-2,Two,ADSL / ADVS",
+                 "T-3,Three,"))
+  sp <- tfl_read_toc(f, map = c(output_id = "No.", title = "Title", datasets = "Data"))
+  expect_identical(attr(sp, "datasets"),
+                   c(`T-1` = "ADSL | ADAE", `T-2` = "ADSL | ADVS", `T-3` = NA))
+  expect_false("datasets" %in% names(sp$report))
+  # none mapped: NA for each
+  sp2 <- tfl_read_toc(f, map = c(output_id = "No.", title = "Title"))
+  expect_true(all(is.na(attr(sp2, "datasets"))))
+  expect_identical(.toc_datasets(c("ADSL;ADAE", "ADSL ADSL", NA)), c("ADSL | ADAE", "ADSL", NA))
+  expect_error(tfl_read_toc(f, map = list(output_id = "No.", datasets = c("Data", "Title"))),
+               "one column")
+})

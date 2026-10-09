@@ -79,10 +79,10 @@ tfl_fig_pk <- function(adam = NULL, style = c("mean", "mean_log", "individual"),
                   pp_q_group_pal("pal_grp", df, group, "pk_df", palette))
   if (style != "individual") {
     data_lines <- c(data_lines, paste0(
-      "sum_df <- pk_df %>%\n",
-      sprintf("  group_by(%s, %s) %%>%%\n", group, time),
+      "sum_df <- pk_df |>\n",
+      sprintf("  group_by(%s, %s) |>\n", group, time),
       sprintf("  summarise(n = n(), mean = mean(%s), sd = sd(%s), .groups = \"drop\")", value, value),
-      if (log_y) " %>%\n  mutate(lo = ifelse(mean - sd > 0, mean - sd, NA))  # no lower bar where it would be <= 0" else ""))
+      if (log_y) " |>\n  mutate(lo = ifelse(mean - sd > 0, mean - sd, NA))  # no lower bar where it would be <= 0" else ""))
     plot <- plus_code("p", c(list(
       sprintf("ggplot(sum_df, aes(x = %s, y = mean, colour = %s))", time, group),
       "geom_line()",

@@ -55,7 +55,8 @@ test_that("every tflspec function the manual names exists", {
   lines <- lines[-wrong]
   named <- unique(unlist(regmatches(lines, gregexpr("\\btfl(spec)?_[a-z_]+\\b", lines))))
   named <- setdiff(named, c("tfl_ard_normalize", "tfl_plan", "tfl_apply_plan",
-                            "tfl_plan_"))  # the former names of section 11
+                            "tfl_plan_",   # the former names of section 11
+                            "tfl_stats"))  # a generated program's list
   named <- named[!startsWith(named, "tfl_plan_")]
   expect_identical(setdiff(named, getNamespaceExports("tflspec")), character(0))
 })
@@ -174,7 +175,9 @@ test_that("the manual's survival and model rows run as written, to the hand-writ
   adam <- exact_data()
   dir <- exact_dir(adam)
   on.exit(unlink(dir, recursive = TRUE), add = TRUE)
-  data <- subset(adam$ADTTE, USUBJID %in% subset(adam$ADSL, SAFFL == "Y")$USUBJID)
+  # (as the program makes it: dplyr, a column keeps its label)
+  data <- dplyr::filter(adam$ADTTE,
+                        USUBJID %in% dplyr::filter(adam$ADSL, SAFFL == "Y")$USUBJID)
   hand <- list(
     KM = cardx::ard_survival_survfit(data, y = "survival::Surv(AVAL, 1 - CNSR)",
                                      variables = TRTA, times = c(30, 90)),

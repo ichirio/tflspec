@@ -46,7 +46,7 @@ test_that("the definition becomes code and the code the study ARD", {
   saveRDS(cards::ADSL, file.path(dir, "adsl.rds"))
   saveRDS(cards::ADAE, file.path(dir, "adae.rds"))
   x <- toy_spec(spec_df(
-    list(output_id = "DM", analysis_id = "BIGN", method = "categorical",
+    list(output_id = "DM", analysis_id = "GROUPN", method = "categorical",
          population_id = "SAF", variables = "TRT01A"),
     list(output_id = "DM", analysis_id = "AGE", method = "continuous",
          population_id = "SAF", by = "TRT01A", variables = "AGE",
@@ -63,12 +63,14 @@ test_that("the definition becomes code and the code the study ARD", {
          code = "cardx::ard_stats_t_test(\n  data[data$TRT01A != \"Placebo\", ], by = TRT01A, variables = AGE)")))
   code <- tfl_ard_code(x)
   expect_silent(parse(text = code))
-  expect_true(any(grepl("cards::ard_stack_hierarchical", code, fixed = TRUE)))
+  expect_true(any(grepl("ard_stack_hierarchical(", code, fixed = TRUE)))
   expect_true(any(grepl("denominator = pop_saf", code, fixed = TRUE)))
-  # the analysis data is made once, by name; a custom row binds `data`
+  # the analysis data is made once, by name; a custom row's `data` is the
+  # program's data, by its name
   expect_true(any(code ==
-    "adae_saf <- subset(adae, USUBJID %in% pop_saf$USUBJID & (TRTEMFL == \"Y\"))"))
-  expect_true(any(code == "  data <- pop_saf"))
+    "adae_saf <- filter(adae, USUBJID %in% pop_saf$USUBJID & TRTEMFL == \"Y\")"))
+  expect_true(any(grepl("pop_saf[pop_saf$TRT01A != \"Placebo\", ]", code, fixed = TRUE)))
+  expect_false(any(grepl("local(", code, fixed = TRUE)))
 
   a <- tfl_build_ard(x, dir = dir)
   expect_true(file.exists(file.path(dir, "output", "ard", "ard.rds")))
@@ -79,7 +81,7 @@ test_that("the definition becomes code and the code the study ARD", {
   expect_false("output_id" %in% names(dm))
   expect_setequal(unique(dm$stat_name), c("n", "N", "p", "mean", "sd"))
   # the population's subjects only
-  n <- a$stat[a$output_id == "DM" & a$analysis_id == "BIGN" &
+  n <- a$stat[a$output_id == "DM" & a$analysis_id == "GROUPN" &
                 a$stat_name == "N"][[1L]]
   expect_equal(n, sum(cards::ADSL$SAFFL == "Y"))
   expect_true(any(a$variable[a$output_id == "AE"] == "AEDECOD"))
@@ -93,7 +95,7 @@ test_that("the definition becomes code and the code the study ARD", {
 
 test_that("a workbook reads back as written", {
   skip_if_not_installed("cards")
-  x <- toy_spec(spec_df(list(output_id = "DM", analysis_id = "BIGN",
+  x <- toy_spec(spec_df(list(output_id = "DM", analysis_id = "GROUPN",
                              method = "categorical", population_id = "SAF",
                              variables = "TRT01A")))
   f <- file.path(withr_tempdir(), "ard_spec.xlsx")
@@ -118,9 +120,9 @@ test_that("statistics of the catalog and formats become stat_fmt", {
     list(output_id = "DM", analysis_id = "SEX", method = "categorical",
          population_id = "SAF", by = "TRT01A", variables = "SEX")))
   code <- tfl_ard_code(x)
-  expect_true(any(grepl(".tfl_stats[c(\"cv\", \"geo_mean\")]", code,
+  expect_true(any(grepl("tfl_stats[c(\"cv\", \"geo_mean\")]", code,
                         fixed = TRUE)))
-  expect_false(any(grepl("`p5` = function", code, fixed = TRUE)))
+  expect_false(any(grepl("p5 = function", code, fixed = TRUE)))
   a <- tfl_build_ard(x, dir = dir)
   # the formatted statistics as text (tflplanner's ard_view() shows the same)
   v <- data.frame(analysis_id = a$analysis_id, variable = a$variable,
@@ -177,7 +179,7 @@ test_that("a catalog of one's own is used for the call, then let go", {
                              note = NA))
   expect_s3_class(tfl_ard_spec(x, statistics = st), "tfl_ard_spec")
   code <- tfl_ard_code(x, statistics = st)
-  expect_true(any(grepl("`trimmed` = function(x) mean(x, trim = 0.1)", code,
+  expect_true(any(grepl("trimmed = function(x) mean(x, trim = 0.1)", code,
                         fixed = TRUE)))
   # nothing is left behind: the next call has the built-in catalog again
   expect_null(getOption("tflspec.ard_statistics"))
@@ -214,7 +216,7 @@ test_that("an analysis with no dataset and no population still writes its code",
                              method = "custom", code = "cards::ard_total_n(adsl)")))
   code <- tfl_ard_code(x)
   expect_silent(parse(text = code))
-  expect_true(any(code == "  data <- NULL"))
+  expect_true(any(grepl("ard_a <- ard_total_n(adsl) |>", code, fixed = TRUE)))
 })
 
 test_that("a keyword's function name is the keyword's analysis", {
@@ -251,6 +253,6 @@ test_that("a keyword's function name is the keyword's analysis", {
   own <- toy_spec(spec_df(list(output_id = "T", analysis_id = "N",
                                method = "cards::ard_tabulate_rows",
                                population_id = "SAF", by = "TRT01A")))
-  expect_true(any(grepl("cards::ard_tabulate_rows(", tfl_ard_code(own, save = FALSE),
+  expect_true(any(grepl("ard_tabulate_rows(", tfl_ard_code(own, save = FALSE),
                         fixed = TRUE)))
 })

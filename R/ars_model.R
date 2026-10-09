@@ -311,10 +311,15 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
     g <- list(id = id, name = label_of(out, var), groupingDataset = ds,
               groupingVariable = var, dataDriven = !length(lv))
     if (length(lv)) {
+      # a group's name as the table shows it, its condition the data's own
+      # value (a code list's label back to its value)
+      cl <- .codelist_levels(table_spec, out)[[var]]
+      val <- if (is.null(names(cl))) lv else
+        ifelse(lv %in% cl, names(cl)[match(lv, cl)], lv)
       g$groups <- lapply(seq_along(lv), function(k) list(
         id = paste0(id, "_", k), name = lv[k], level = 1L, order = k,
         condition = list(dataset = ds, variable = var, comparator = "EQ",
-                         value = list(lv[k]))))
+                         value = list(val[k]))))
     }
     groupings[[length(groupings) + 1L]] <<- c(list(key = key, base = base),
                                               list(model = g), list(id = id))
@@ -403,15 +408,17 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
   an <- x$analyses
   ad <- .adata_sheet(x)
   dcol <- .data_col(an)
-  for (i in which(!is.na(dcol) & dcol %in% ad$data_id)) {
+  for (i in which(!is.na(dcol))) {
+    ad_o <- .adata_of(ad, an$output_id[i])
+    if (!dcol[i] %in% ad_o$data_id) next
     tag <- paste(an$output_id[i], an$analysis_id[i], sep = " / ")
-    ch <- .adata_chain(ad, dcol[i])
-    rows <- ad[match(ch, ad$data_id), , drop = FALSE]
+    ch <- .adata_chain(ad_o, dcol[i])
+    rows <- ad_o[match(ch, ad_o$data_id), , drop = FALSE]
     w <- c(stats::na.omit(rows$where), stats::na.omit(an$where[i]))
     an$where[i] <- if (!length(w)) NA_character_ else if (length(w) == 1L) w else
       paste0("(", w, ")", collapse = " & ")
-    an$population_id[i] <- .adata_pop(ad, dcol[i])
-    an$dataset[i] <- .adata_dataset(ad, dcol[i])
+    an$population_id[i] <- .adata_pop(ad_o, dcol[i])
+    an$dataset[i] <- .adata_dataset(ad_o, dcol[i])
     for (cn in c("subjects", "add", "derive", "distinct", "code")) {
       for (j in which(!is.na(rows[[cn]]))) {
         miss(tag, paste0("analysis_data$", cn), sprintf(
@@ -424,14 +431,14 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
   a <- .ard_spec_flat(an)
   analyses <- list()
   # each ARS analysis, what it was written from: the spec row, its method,
-  # its role (bign: the output's subject count; any: subjects with any
+  # its role (groupn: the output's subjects per group; any: subjects with any
   # record; level: a depth of a hierarchy; count / value / test_count /
   # test_value / other: as .ars_method_shape()) and its variable
   ids <- data.frame(output_id = character(), analysis_id = character(),
                     ars_id = character(), method = character(),
                     role = character(), variable = character(),
                     by = character(), stringsAsFactors = FALSE)
-  bign <- list()   # output / population / grouping -> the subject count
+  groupn <- list()   # output / population / grouping -> the subject count
   pending_den <- list()
 
   add_analysis <- function(r, id, name, ds, var, mz, grp, no_res = character(),
@@ -550,7 +557,10 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
       # the statistics: the row's, else the ones the function says it gives
       if (!length(stats)) stats <- own_stats[[m]] %||% character()
     }
-    ss <- subset(r$where, ds, tag)
+    # (the condition runs on the data with the code lists' labels; ARS
+    # compares the data's own values)
+    ss <- subset(.where_labels_to_values(
+      r$where, .codelist_levels(table_spec, out)), ds, tag)
     lbl <- if (!is.na(r$label)) r$label else NULL
     g_by <- vapply(by, grouping, "", ds = ds, out = out)
     aid <- function(...) paste(c("An", out, r$analysis_id, ...),
@@ -578,16 +588,16 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
                length(vars) == 1L &&
                vars %in% unlist(lapply(a$by[a$output_id %in% out],
                                        .split_bar)))) {
-      # the output's subject count by group (its big N): the denominator
-      # of its percentages
+      # the output's subject count by group -- the subjects per group, which
+      # clinical reporting calls big N -- the denominator of its percentages
       mz <- method("total_n", if (m == "total_n") stats else character(),
                    tag = tag)
       bv <- if (m == "total_n") by else vars
       gv <- vapply(bv, grouping, "", ds = ds, out = out)
       id <- add_analysis(r, aid(), lbl %||% "Number of subjects", ds, subj,
-                         mz, gv, ss = ss, pur = pur, rea = rea, role = "bign",
+                         mz, gv, ss = ss, pur = pur, rea = rea, role = "groupn",
                          m = "total_n")
-      bign[[paste(out, r$population_id, paste(bv, collapse = ","),
+      groupn[[paste(out, r$population_id, paste(bv, collapse = ","),
                   sep = "\r")]] <- list(id = id, op = mz$op[["N"]])
     } else if (m == "subjects") {
       # subjects with any record of the data: counted by the grouping alone
@@ -633,15 +643,15 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
   # the same population and grouping, added when the output has none
   for (p in pending_den) {
     key <- paste(p$out, p$pop, paste(p$by, collapse = ","), sep = "\r")
-    b <- bign[[key]]
+    b <- groupn[[key]]
     if (is.null(b)) {
       r <- p$r
-      r$analysis_id <- "BIGN"
+      r$analysis_id <- "GROUPN"
       mz <- method("total_n", character(), tag = p$out)
       gv <- vapply(p$by, grouping, "", ds = p$ds, out = p$out)
-      # An_<output>_BIGN_<by> (_ALL without a grouping), never an id the
+      # An_<output>_GROUPN_<by> (_ALL without a grouping), never an id the
       # output already has
-      id <- paste(c("An", p$out, "BIGN",
+      id <- paste(c("An", p$out, "GROUPN",
                     if (length(p$by)) p$by else "ALL"), collapse = "_")
       taken <- vapply(analyses, function(z) z$model$id, "")
       if (id %in% taken) {
@@ -651,13 +661,13 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
       }
       id <- add_analysis(r, id,
                          "Number of subjects", p$ds, subj, mz, gv,
-                         pur = p$pur, rea = p$rea, role = "bign",
+                         pur = p$pur, rea = p$rea, role = "groupn",
                          m = "total_n")
       # the count comes first in its output
       k <- length(analyses)
       first <- match(p$out, vapply(analyses, `[[`, "", "output"))
       analyses <- append(analyses[-k], analyses[k], after = first - 1L)
-      b <- bign[[key]] <- list(id = id, op = mz$op[["N"]])
+      b <- groupn[[key]] <- list(id = id, op = mz$op[["N"]])
       miss(p$out, "denominator", sprintf(
         "added %s, the subject count by group the percentages divide by", id))
     }

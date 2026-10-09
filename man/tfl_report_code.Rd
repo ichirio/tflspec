@@ -4,7 +4,13 @@
 \alias{tfl_report_code}
 \title{The code of a report's document, from its definition}
 \usage{
-tfl_report_code(spec, output_id = NULL, content = "content", doc = "doc")
+tfl_report_code(
+  spec,
+  output_id = NULL,
+  content = "content",
+  doc = "doc",
+  setup = FALSE
+)
 }
 \arguments{
 \item{spec}{A report definition (\code{\link[=tfl_read_report_spec]{tfl_read_report_spec()}}) narrowed to one
@@ -18,6 +24,16 @@ several.}
 figures.}
 
 \item{doc}{The name the document is assigned to.}
+
+\item{setup}{\code{TRUE}: the program runs after the study's setup code
+(\code{\link[=tfl_report_setup_code]{tfl_report_setup_code()}}), so it leaves out what that defines: the
+study's tokens (rtfreporter fills from the document's first, then
+\code{options(rtfreporter.tokens = )}), and the study's header and footer,
+said by name (\code{study_header}, \code{study_footer}; a line the report's
+tokens leave empty, a blank \verb{<\{OUTPUT_POPULATION\}>}, is left out when
+the file is written) -- unless the report has its own, written here
+as before.
+\code{FALSE} (default): the program stands alone.}
 }
 \value{
 The code, one element per line.

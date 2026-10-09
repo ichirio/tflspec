@@ -37,19 +37,17 @@ tfl_read_data_code <- function(datasets, dataset) {
                    dataset))
   }
   obj <- .r_name(dataset)
-  c(sprintf("%s <- %s", obj, .reader(r$path[1L])),
-    .derive_code(obj, r$derive[1L]))
+  .drop_attached_ns(c(sprintf("%s <- %s", obj, .reader(r$path[1L])),
+                      .derive_code(obj, r$derive[1L])))
 }
 
-.r_sort <- function(obj, sort) {
+.r_sort <- function(sort) {
   s <- .split_bar(sort)
   if (!length(s)) return(NULL)
   keys <- vapply(s, function(k) {
-    if (startsWith(k, "-")) sprintf("-xtfrm(%s$%s)", obj, substring(k, 2L))
-    else sprintf("%s$%s", obj, k)
+    if (startsWith(k, "-")) sprintf("dplyr::desc(%s)", substring(k, 2L)) else k
   }, "")
-  sprintf("%s <- %s[order(%s), , drop = FALSE]", obj, obj,
-          paste(keys, collapse = ", "))
+  sprintf("dplyr::arrange(%s)", paste(keys, collapse = ", "))
 }
 
 # a label as the sheet writes it: `\n` (two characters) is a line break
@@ -327,12 +325,20 @@ print.tfl_listing_spec <- function(x, ...) {
 #' @param rework Code run on `data` before it is sorted, or `NULL`.
 #' @param type The listing type when the listing's `type` is blank (one of
 #'   rtfreporter's `listing_spec()` types).
+#' @param codelists The reports' code lists (a table definition's
+#'   `codelists` sheet, or a data frame with `output_id`, `variable`,
+#'   `value`, `label`, `order`): the listing's rows of the columns it shows
+#'   or sorts by are put on its data after its condition (`cl_<variable>`
+#'   and `set_levels()`, see [tfl_helpers_code()]) -- each such column a
+#'   factor in its list's order (it sorts so), its values as the list has
+#'   them.
 #' @return The code, one element per line; `NULL` when the listing names no
 #'   dataset yet.
 #' @seealso [tfl_listing()] for the pages themselves.
 #' @export
 tfl_listing_code <- function(spec, output_id = NULL, datasets,
-                             rework = NULL, type = "multiline") {
+                             rework = NULL, type = "multiline",
+                             codelists = NULL) {
   x <- .listing_one(spec, output_id, "tfl_listing_code")
   l <- x$listing
   cols <- x$cols
@@ -353,12 +359,26 @@ tfl_listing_code <- function(spec, output_id = NULL, datasets,
     sprintf("  listing_col(%s)", paste(a, collapse = ", "))
   }, "")
   type <- if (is.na(l$type)) type else l$type
-  c(paste0("# the data: ", l$dataset, " (data catalog)"),
+  # the code lists of the columns it shows or sorts by
+  shown <- unique(c(unlist(lapply(cols$vars, .split_bar)),
+                    sub("^-", "", .split_bar(l$sort))))
+  lv <- .codelist_levels(codelists, l$output_id, shown)
+  # the records its condition keeps, its code lists, its order -- in one
+  # statement; a rework (code of its own) before the order
+  sort <- .r_sort(l$sort)
+  steps <- c(if (!is.na(l$where)) sprintf("dplyr::filter(%s)", l$where),
+             if (length(lv)) .levels_call(lv),
+             if (is.null(rework)) sort)
+  c(if (length(lv)) .codelists_head(lv),
+    paste0("# the data: ", l$dataset, " (data catalog)"),
     tfl_read_data_code(datasets, l$dataset),
-    sprintf("data <- %s", if (is.na(l$where)) obj else
-      sprintf("subset(%s, %s)", obj, l$where)),
-    if (!is.null(rework)) c("", "# rework", rework, ""),
-    .r_sort("data", l$sort),
+    if (!length(steps)) sprintf("data <- %s", obj) else
+      if (length(steps) == 1L && !length(lv)) {
+        sprintf("data <- %s(%s, %s)", sub("\\(.*$", "", steps),
+                obj, sub("^[^(]*\\((.*)\\)$", "\\1", steps))
+      } else paste0("data <- ", obj, " |>\n  ", paste(steps, collapse = " |>\n  ")),
+    if (!is.null(rework)) c("", "# rework", rework, "",
+                            if (!is.null(sort)) sprintf("data <- %s", sub("\\(", "(data, ", sort))),
     "# dates as they print",
     "data[] <- lapply(data, function(v) if (inherits(v, c(\"Date\", \"POSIXt\"))) format(v) else v)",
     "",
@@ -369,7 +389,8 @@ tfl_listing_code <- function(spec, output_id = NULL, datasets,
             if (!is.na(l$wrap)) paste0(", wrap = ", l$wrap) else ""),
     sprintf("content <- as_rtftables(data, listing = lst%s)",
             if (!is.na(l$max_rows)) paste0(", max_rows = ", l$max_rows) else
-              ""))
+              "")) |>
+    .drop_attached_ns()
 }
 
 # ---- the pages -------------------------------------------------------------

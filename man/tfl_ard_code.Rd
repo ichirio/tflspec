@@ -20,7 +20,9 @@ tfl_ard_code(
 
 \item{output_id}{Only these outputs' analyses; \code{NULL} for all.}
 
-\item{save}{\code{FALSE} leaves out the final \code{saveRDS()}.}
+\item{save}{\code{FALSE} leaves out the final \code{saveRDS()}.  For one report's
+\code{"body"}, \code{TRUE} ends it in \code{save_ard()} (its rows into the
+study ARD, with the definition's fingerprint), \code{FALSE} in \code{ard}.}
 
 \item{part}{\code{"all"} (the whole program), \code{"setup"} or \code{"body"}.}
 
@@ -30,31 +32,64 @@ tfl_ard_code(
 \item{dir}{The study folder: the fingerprints saved with the ARD
 (\code{\link[=tfl_ard_spec_hash]{tfl_ard_spec_hash()}}) read the study's own function files from it.}
 
-\item{codelists}{The study's code lists: a table definition (its
-\code{codelists} sheet) or a data frame with \code{variable}, \code{value}, \code{order}
-and optionally \code{output_id}.  The study rows (a blank \code{output_id})
-count; for one report (\code{output_id} one value) its own rows too, which
-replace the study's of the same variable and value.  Each listed
-column of every dataset read, and of the populations and analysis
-data that derive it, becomes a factor in that order before any analysis
-(a value the list does not have comes after, alphabetically), so the
-ARD keeps the order and counts a level no record has (\code{n = 0}).
+\item{codelists}{The reports' code lists: a table definition (its
+\code{codelists} sheet) or a data frame with \code{output_id}, \code{variable},
+\code{value}, \code{label} and \code{order}.  A code list is a report's: every row
+names its report (a blank \code{output_id} stops).  A report's rows of the
+variables its analyses read (\code{by}, \code{strata}, \code{variables}, and the
+names in \code{args}, \code{code} and \code{post}) count: the program writes them at
+its head (\code{cl_sex <- c(F = "Female", M = "Male")}) and puts them on
+the data the analyses read (\code{set_levels(SEX = cl_sex)}): each column a
+factor in the list's order, its values the labels (a value without one
+stays itself) -- the ARD holds \code{"Female"}, and counts a level no record
+has (\code{n = 0}).  A value the list does not have (not NA) stops the
+program.  An analysis's \code{where} on such a column is written in its
+labels: one that names a value whose label differs stops here.  In the
+study's program, each report's part reads its data again with its own.
 \code{NULL} (default): the data as read.}
 }
 \value{
 The code, one element per line.
 }
 \description{
-One cards / cardx call per analysis row, each result tagged with its
-\code{output_id}, \code{analysis_id} and \code{population_id}, bound into one ARD and
-saved to the study key \code{output} (default \code{output/ard/ard.rds}).  The code
-runs from the study folder.
+One cards / cardx call per analysis row, each result under a name of its
+own (\verb{ard_<analysis_id>}) and tagged with its \code{output_id}, \code{analysis_id}
+and \code{population_id} (\code{tag_ard()}), bound into one ARD and saved to the
+study key \code{output} (default \code{output/ard/ard.rds}).  The code runs from
+the study folder, and reads as a person writes it: the tidyverse layout
+(a call on one line when it fits in 80 characters, else an argument a
+line), dplyr verbs for the data (\code{filter()}, \code{mutate()}, \code{select()}), and
+a \code{custom} analysis's code with the program's names in place of \code{data}
+and \code{population} (in \code{local()} only when it needs a scope of its own: it
+defines a function, or assigns a name the program has).
 }
 \details{
+The formats (the method's and the row's \code{formats}, over each statistic's
+default in \code{\link[=tfl_ard_statistics]{tfl_ard_statistics()}}) are in the cards call itself, its
+\code{fmt_fun} argument, where a reader sees them next to the statistics:
+\code{fmt_fun = everything() ~ modifyList(fmt_default, list(mean = 2L))}, a
+variable's own (\code{BMIBL:sd=3}) with its own list.  An integer is
+that many decimals, \verb{xx.x\%} is \code{label_round(1, scale = 100)} and
+\code{pvalue} the program's \code{fmt_pvalue()} (\verb{<0.001} or 3 decimals);
+\code{cards::apply_fmt_fun()} then fills \code{stat_fmt}.  What takes no \code{fmt_fun}
+gets the same formats after the call, from \code{fmt_ard()}: cardx's tests, CIs
+and models, \code{cards::ard_stack_hierarchical()}, a study's own function,
+\code{custom} code, \code{ard_pairwise()}, \code{ard_stack()}'s own rows (the by counts,
+the total N), an analysis whose \code{args} gives \code{fmt_fun} or whose \code{post}
+changes the ARD, a variable's own format for \code{ard_hierarchical()} or
+\code{ard_tabulate_rows()}.  \code{stat_fmt} is the same either way.
+
+The functions the program calls -- \code{set_levels()}, \code{tag_ard()},
+\code{fmt_ard()}, \code{keep_stats()}, \code{fmt_pvalue()}, \code{save_ard()} -- are
+\code{\link[=tfl_helpers_code]{tfl_helpers_code()}}'s: the whole program (\code{part = "all"}) carries them,
+and a study keeps them in a file of its own, so its programs run without
+tflspec.
+
 \code{part} gives a piece of it instead, for a program layout of one's own
 (tflplanner writes one program per output that sources a shared setup):
-\code{"setup"} is what every piece starts with -- \code{library(cards)}, the
-tagging helper, every computed statistic of the catalog and the
-\code{stat_fmt} helpers; \code{"body"} is the analyses of \code{output_id}, ending in
-\code{ard} -- without a header or \code{saveRDS()}.
+\code{"setup"} is what every piece starts with -- \code{library(cards)},
+\code{library(dplyr)}, every computed statistic of the catalog (\code{tfl_stats})
+and each statistic's format (\code{fmt_default}); \code{"body"} is the analyses of
+\code{output_id}, starting with \code{report_id <- "..."} and its code lists
+(\verb{cl_<variable>}), and ending in \code{save_ard()} (one report, \code{save = TRUE}) or \code{ard}.
 }

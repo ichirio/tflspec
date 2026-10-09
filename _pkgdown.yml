@@ -24,6 +24,7 @@ reference:
   - title: Manual
     contents:
       - tflspec_ai_manual
+      - tflspec_code_options
   - title: ARD spec
     desc: >
       The analyses of a study as a workbook: its data, its analysis sets and
@@ -50,6 +51,14 @@ reference:
       - tfl_ard_function_template
       - tfl_ard_function_info
       - tfl_ard_conditions
+  - title: The functions the programs call
+    desc: >
+      The code of the functions the generated programs call as they run (the
+      code lists on a data, the ids in front, the formats, the study ARD),
+      which a study keeps in a file of its own: its programs run without
+      tflspec.
+    contents:
+      - tfl_helpers_code
   - title: CDISC ARS
     desc: The analyses as CDISC's Analysis Results Standard, and back.
     contents:
@@ -83,6 +92,8 @@ reference:
       - tfl_read_toc
       - tfl_report
       - tfl_report_code
+      - tfl_report_setup_code
+      - tfl_report_tokens
       - tfl_report_path
   - title: Listing spec
     contents:

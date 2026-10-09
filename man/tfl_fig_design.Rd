@@ -23,7 +23,15 @@ tfl_write_fig_design(design, path)
 
 tfl_read_fig_design(path)
 
-tfl_fig_design_code(design, plot_id = "fig", ggplot2_version = NULL)
+tfl_fig_design_code(
+  design,
+  plot_id = "fig",
+  ggplot2_version = NULL,
+  setup = FALSE,
+  save = TRUE,
+  name = "fig",
+  codelists = NULL
+)
 
 tfl_check_fig_design(design, adam = NULL, ggplot2_version = NULL)
 }
@@ -59,6 +67,21 @@ figure (\code{wrap_elements()}).}
 \item{path}{A \code{.yml} file.}
 
 \item{plot_id}{The figure's ID: the PNG's name.}
+
+\item{setup}{\code{TRUE}: the code runs after the study's figure setup
+(\code{\link[=tfl_fig_setup_code]{tfl_fig_setup_code()}}), so the palette is its \code{tfl_colours()}.}
+
+\item{save}{\code{FALSE} leaves out saving the PNG: the code makes the
+figure only (a report program writes it into its RTF).}
+
+\item{name}{The name the figure is given.}
+
+\item{codelists}{The reports' code lists (a table definition's
+\code{codelists} sheet, or a data frame with \code{output_id}, \code{variable},
+\code{value}, \code{label}, \code{order}): the rows of \code{plot_id} are put on the
+figure's data, last of its data steps -- each listed column a factor
+in its list's order, its values as the list has them (\verb{cl_<variable>}
+and \code{set_levels()}, see \code{\link[=tfl_helpers_code]{tfl_helpers_code()}}).}
 
 \item{adam}{The data (\code{\link[=tfl_read_adam]{tfl_read_adam()}}): the variables and PARAMCDs the
 design names are looked for in it.}

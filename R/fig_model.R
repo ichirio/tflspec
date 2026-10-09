@@ -486,20 +486,30 @@ tfl_read_fig_design <- function(path) {
 }
 
 # the data part: `df`, and the datasets it reads
-.fig_data_code <- function(steps) {
+.fig_data_code <- function(steps, levels = NULL) {
   out <- character()
   pipe <- character()
   reads <- character()
   flush <- function() {
     if (length(pipe)) {
-      out <<- c(out, paste0("df <- ", paste(pipe, collapse = " %>%\n  ")), "")
+      out <<- c(out, paste0("df <- ", paste(pipe, collapse = " |>\n  ")), "")
       pipe <<- character()
     }
   }
   for (s in steps) {
     k <- s$step
     v <- function(f) .fv(s, f, k)
-    add <- function(x) pipe <<- c(if (!length(pipe)) "df" else pipe, x)
+    add <- function(x) {
+      # filter(a) |> filter(b) is filter(a, b)
+      last <- if (length(pipe)) pipe[[length(pipe)]] else ""
+      if (length(x) == 1L && startsWith(x, "filter(") && startsWith(last, "filter(") &&
+          !grepl("\n", last, fixed = TRUE) && !grepl("\n", x, fixed = TRUE)) {
+        pipe[[length(pipe)]] <<- paste0(substr(last, 1L, nchar(last) - 1L), ", ",
+                                        substring(x, 8L))
+        return(invisible())
+      }
+      pipe <<- c(if (!length(pipe)) "df" else pipe, x)
+    }
     switch(k,
       read = {
         flush()
@@ -515,8 +525,8 @@ tfl_read_fig_design <- function(path) {
         w <- v("where")
         sel <- paste(c(by, vars), collapse = ", ")
         add(paste0("left_join(\n    ", pp_ds_name(ds),
-                   if (!is.null(w)) paste0(" %>% filter(", w, ")"),
-                   " %>% select(", sel, "),\n    by = ", q(by), "\n  )"))
+                   if (!is.null(w)) paste0(" |> filter(", w, ")"),
+                   " |> select(", sel, "),\n    by = ", q(by), "\n  )"))
       },
       param = {
         vals <- .split_vals(v("value"))
@@ -553,6 +563,12 @@ tfl_read_fig_design <- function(path) {
       },
       stop("Unknown data step: ", k, call. = FALSE))
   }
+  # the figure's code lists, last: each listed column a factor in its
+  # list's order, its values as the list has them (legend, axis, order)
+  if (length(levels)) {
+    if (!length(pipe)) pipe <- "df"
+    pipe <- c(pipe, .levels_call(levels))
+  }
   flush()
   list(code = out, reads = unique(reads))
 }
@@ -580,12 +596,12 @@ tfl_read_fig_design <- function(path) {
           se = c("mean - se", "mean + se"),
           sd = c("mean - sd", "mean + sd"),
           ci = c("mean - qt(0.975, n - 1) * se", "mean + qt(0.975, n - 1) * se"))
-        out <- c(out, paste0(v("name"), " <- df %>%\n",
-          sprintf("  filter(!is.na(%s)) %%>%%\n", val),
-          sprintf("  group_by(%s) %%>%%\n", paste(by, collapse = ", ")),
-          sprintf("  summarise(n = n(), mean = mean(%s), sd = sd(%s), .groups = \"drop\") %%>%%\n", val, val),
+        out <- c(out, paste0(v("name"), " <- df |>\n",
+          sprintf("  filter(!is.na(%s)) |>\n", val),
+          sprintf("  group_by(%s) |>\n", paste(by, collapse = ", ")),
+          sprintf("  summarise(n = n(), mean = mean(%s), sd = sd(%s), .groups = \"drop\") |>\n", val, val),
           sprintf("  mutate(se = sd / sqrt(n), lo = %s, hi = %s)", lohi[1], lohi[2]),
-          if (.lgl(v("positive"))) " %>%\n  mutate(lo = ifelse(lo > 0, lo, NA))   # log axis: no lower bar at or below 0"), "")
+          if (.lgl(v("positive"))) " |>\n  mutate(lo = ifelse(lo > 0, lo, NA))   # log axis: no lower bar at or below 0"), "")
       },
       summary_by = {
         by <- .split_vals(v("by"))
@@ -594,18 +610,18 @@ tfl_read_fig_design <- function(path) {
           se = c("mean - se", "mean + se"),
           sd = c("mean - sd", "mean + sd"),
           ci = c("mean - qt(0.975, n - 1) * se", "mean + qt(0.975, n - 1) * se"))
-        out <- c(out, paste0(v("name"), " <- df %>%\n",
-          sprintf("  filter(!is.na(%s)) %%>%%\n", val),
-          sprintf("  group_by(%s) %%>%%\n", paste(by, collapse = ", ")),
-          sprintf("  summarise(n = n(), mean = mean(%s), sd = sd(%s), .groups = \"drop\") %%>%%\n", val, val),
+        out <- c(out, paste0(v("name"), " <- df |>\n",
+          sprintf("  filter(!is.na(%s)) |>\n", val),
+          sprintf("  group_by(%s) |>\n", paste(by, collapse = ", ")),
+          sprintf("  summarise(n = n(), mean = mean(%s), sd = sd(%s), .groups = \"drop\") |>\n", val, val),
           sprintf("  mutate(se = sd / sqrt(n), lo = %s, hi = %s)", lohi[1], lohi[2])), "")
       },
       rate = {
         by <- .split_vals(v("by"))
         resp <- .split_vals(v("responders"))
-        out <- c(out, paste0(v("name"), " <- df %>%\n",
-          sprintf("  group_by(%s) %%>%%\n", paste(by, collapse = ", ")),
-          sprintf("  summarise(n = n(), x = sum(%s %%in%% %s), .groups = \"drop\") %%>%%\n", v("category"), vec_code(resp)),
+        out <- c(out, paste0(v("name"), " <- df |>\n",
+          sprintf("  group_by(%s) |>\n", paste(by, collapse = ", ")),
+          sprintf("  summarise(n = n(), x = sum(%s %%in%% %s), .groups = \"drop\") |>\n", v("category"), vec_code(resp)),
           "  mutate(\n",
           "    rate  = 100 * x / n,\n",
           "    lcl   = 100 * mapply(function(x, n) binom.test(x, n)$conf.int[1], x, n),\n",
@@ -617,12 +633,12 @@ tfl_read_fig_design <- function(path) {
         by <- .split_vals(v("by"))
         cat <- v("category")
         lv <- .split_vals(v("levels"))
-        out <- c(out, paste0(v("name"), " <- df %>%\n",
-          sprintf("  count(%s, %s) %%>%%\n", paste(by, collapse = ", "), cat),
-          sprintf("  group_by(%s) %%>%%\n", paste(by, collapse = ", ")),
-          "  mutate(pct = 100 * n / sum(n), label = sprintf(\"%.0f%%\", pct)) %>%\n",
+        out <- c(out, paste0(v("name"), " <- df |>\n",
+          sprintf("  count(%s, %s) |>\n", paste(by, collapse = ", "), cat),
+          sprintf("  group_by(%s) |>\n", paste(by, collapse = ", ")),
+          "  mutate(pct = 100 * n / sum(n), label = sprintf(\"%.0f%%\", pct)) |>\n",
           "  ungroup()",
-          if (length(lv)) sprintf(" %%>%%\n  mutate(%s = factor(%s, levels = unique(c(intersect(%s, %s), sort(%s)))))",
+          if (length(lv)) sprintf(" |>\n  mutate(%s = factor(%s, levels = unique(c(intersect(%s, %s), sort(%s)))))",
                                   cat, cat, vec_code(lv), cat, cat)), "")
       },
       subset = {
@@ -631,8 +647,8 @@ tfl_read_fig_design <- function(path) {
         from <- .split_vals(v("from_df"))
         w <- v("where")
         out <- c(out, paste0(v("name"), " <- ", src,
-          if (!is.null(w)) sprintf(" %%>%%\n  filter(%s)", w),
-          if (length(from)) sprintf(" %%>%%\n  inner_join(df %%>%% select(%s), by = %s)",
+          if (!is.null(w)) sprintf(" |>\n  filter(%s)", w),
+          if (length(from)) sprintf(" |>\n  inner_join(df |> select(%s), by = %s)",
                                     paste(c(v("by"), from), collapse = ", "), q(v("by")))), "")
       },
       stats_code = out <- c(out, "# your code", s$code, ""),
@@ -788,30 +804,40 @@ tfl_read_fig_design <- function(path) {
   list(pre = pre, terms = terms)
 }
 
-.fig_palette_code <- function(plot, reads_df = TRUE) {
+# `setup`: the program sources the study's figure setup
+# (tfl_fig_setup_code()), whose tfl_colours() gives the palette
+.fig_palette_code <- function(plot, setup = FALSE) {
   pname <- .pv(plot, "palette")
   pal <- tfl_fig_palettes()[[pname]]
   if (is.null(pal)) stop("Unknown palette: ", pname, call. = FALSE)
   by <- plot$colour_by
   if (!is.null(names(pal))) {
     return(c(sprintf("# the %s palette: a colour for each value", pname),
-             sprintf("pal <- %s", vec_code(pal))))
+             if (setup) sprintf("pal <- tfl_colours(%s)", q(pname))
+             else sprintf("pal <- %s", vec_code(pal))))
   }
   if (is.null(by)) {
-    return(sprintf("pal <- c(All = %s)", q(pal[[1]])))
+    return(if (setup) sprintf("pal <- c(All = tfl_colours(%s)[[1]])", q(pname))
+           else sprintf("pal <- c(All = %s)", q(pal[[1]])))
   }
+  lv <- sprintf("levels(droplevels(factor(df$%s)))", by)
   c(sprintf("# the %s palette, a colour for each %s", pname, by),
-    sprintf("pal_lv <- if (is.factor(df$%s)) levels(droplevels(df$%s)) else sort(unique(as.character(df$%s)))", by, by, by),
-    sprintf("pal <- setNames(%s[seq_along(pal_lv)], pal_lv)", vec_code(unname(pal))))
+    if (setup) sprintf("pal <- tfl_colours(%s, %s)", q(pname), lv) else c(
+      sprintf("lv <- %s", lv),
+      sprintf("pal <- setNames(%s[seq_along(lv)], lv)", vec_code(unname(pal)))))
 }
 
-# One figure's code, in parts: what to library(), the guard, Step1 (the
-# data, statistics, palette, axes) and Step2 (the figure, assembled as
-# `fig`); `patch`: the figure is itself a patchwork (panels below it);
+# One figure's code, in parts: what to library(), the guard, the data
+# (the data, statistics, palette, axes) and the figure (assembled as
+# `name`); `patch`: the figure is itself a patchwork (panels below it);
 # `risktable`: a ggsurvfit with add_risktable (a patchwork once built).
-.fig_design_body <- function(design, gg) {
+.fig_design_body <- function(design, gg, setup = FALSE, name = "fig",
+                             levels = NULL, codelists_head = TRUE) {
   plot <- design$plot
-  d <- .fig_data_code(design$data)
+  d <- .fig_data_code(design$data, levels)
+  if (length(levels) && codelists_head) {
+    d$code <- c(.codelists_head(levels), d$code)
+  }
   s <- .fig_stats_code(design$stats)
   layers <- design$layers
   kinds <- vapply(layers, function(l) l$layer %||% "", "")
@@ -859,10 +885,10 @@ tfl_read_fig_design <- function(path) {
   panel_code <- unlist(lapply(lc, function(x) if (!is.null(x$panel)) x$code))
   assemble <- if (length(panels)) {
     h <- vapply(panels, `[[`, numeric(1), "height")
-    sprintf("fig <- %s + plot_layout(heights = %s)",
+    sprintf("%s <- %s + plot_layout(heights = %s)", name,
             paste(c("p", vapply(panels, `[[`, "", "name")), collapse = " / "),
             vec_code(round(c(1 - sum(h), h), 3)))
-  } else "fig <- p"
+  } else sprintf("%s <- p", name)
   n <- function(f) .pv(plot, f)
   fnames <- vapply(layers, function(l) if (identical(l$layer, "call")) .fig_bare_fn_name(l$fn) else "", "")
   list(
@@ -872,7 +898,7 @@ tfl_read_fig_design <- function(path) {
       "",
       d$code,
       s$code,
-      .fig_palette_code(plot),
+      .fig_palette_code(plot, setup),
       "",
       ax$pre,
       if (uses_pd) sprintf("pd <- position_dodge(width = %s)", n("dodge")),
@@ -886,15 +912,20 @@ tfl_read_fig_design <- function(path) {
       add_res$lines,
       panel_code,
       "",
-      "# ---- assemble ----",
       assemble),
     patch = length(panels) > 0L, risktable = any(fnames == "add_risktable"))
 }
 
-# StepN: the PNG, at the size in `plot`
-.fig_save_code <- function(plot, plot_id, step) {
+# a script's lines, one an element, no two blank lines in a row
+.code_lines <- function(code) {
+  code <- unlist(strsplit(paste(code, collapse = "\n"), "\n", fixed = TRUE))
+  code[!(code == "" & c(FALSE, utils::head(code, -1L) == ""))]
+}
+
+# saving the PNG, at the size in `plot`
+.fig_save_code <- function(plot, plot_id, name = "fig") {
   n <- function(f) .pv(plot, f)
-  c(section(paste0(step, ": Saving the figure")),
+  c(section("saving the figure"),
     sprintf("fig_path   <- file.path(\"output\", %s)", q(paste0(pp_file_name(plot_id), ".png"))),
     sprintf("fig_width  <- %s", n("width")),
     sprintf("fig_height <- %s", n("height")),
@@ -904,7 +935,7 @@ tfl_read_fig_design <- function(path) {
     "dir.create(dirname(fig_path), showWarnings = FALSE, recursive = TRUE)",
     "ggsave(",
     "  filename = fig_path,",
-    "  plot     = fig,",
+    sprintf("  plot     = %s,", name),
     "  width    = fig_width,",
     "  height   = fig_height,",
     "  dpi      = fig_dpi,",
@@ -913,19 +944,40 @@ tfl_read_fig_design <- function(path) {
 }
 
 #' @rdname tfl_fig_design
+#' @param setup `TRUE`: the code runs after the study's figure setup
+#'   ([tfl_fig_setup_code()]), so the palette is its `tfl_colours()`.
+#' @param save `FALSE` leaves out saving the PNG: the code makes the
+#'   figure only (a report program writes it into its RTF).
+#' @param name The name the figure is given.
+#' @param codelists The reports' code lists (a table definition's
+#'   `codelists` sheet, or a data frame with `output_id`, `variable`,
+#'   `value`, `label`, `order`): the rows of `plot_id` are put on the
+#'   figure's data, last of its data steps -- each listed column a factor
+#'   in its list's order, its values as the list has them (`cl_<variable>`
+#'   and `set_levels()`, see [tfl_helpers_code()]).
 #' @export
-tfl_fig_design_code <- function(design, plot_id = "fig", ggplot2_version = NULL) {
+tfl_fig_design_code <- function(design, plot_id = "fig", ggplot2_version = NULL,
+                                setup = FALSE, save = TRUE, name = "fig",
+                                codelists = NULL) {
   design <- if (inherits(design, "tfl_fig_design")) design else .fig_design_from_list(design)
   gg <- .fig_target_version(ggplot2_version, design)
-  if (length(design$plots)) return(.fig_compose_code(design, plot_id, gg))
+  # the report's code lists (its rows of the codelists sheet): on the
+  # figure's data, last of its data steps
+  lv <- .codelist_levels(codelists, plot_id)
+  if (length(design$plots)) {
+    return(.drop_attached_ns(.fig_compose_code(design, plot_id, gg, setup = setup,
+                                               save = save, name = name,
+                                               levels = lv)))
+  }
   whole <- Filter(function(l) identical(l$layer, "figure"), design$layers)
   if (length(whole)) {
     w <- whole[[1L]]
     fn <- getExportedValue("tflspec", .fig_fun(w$type))
     args <- lapply(w$args %||% list(), function(v) if (is.list(v)) unlist(v) else v)
-    return(do.call(fn, c(list(style = w$style %||% NULL, plot_id = plot_id), args)))
+    return(.drop_attached_ns(do.call(fn, c(list(style = w$style %||% NULL,
+                                                plot_id = plot_id), args))))
   }
-  b <- .fig_design_body(design, gg)
+  b <- .fig_design_body(design, gg, setup = setup, name = name, levels = lv)
   code <- c(
     sprintf("# %s: %s", plot_id, design$template %||% "figure design"),
     sprintf("# Generated by tflspec %s from the figure's design.",
@@ -936,15 +988,12 @@ tfl_fig_design_code <- function(design, plot_id = "fig", ggplot2_version = NULL)
     if (length(b$needs)) sprintf("# also needs: %s (called as pkg::fn)", paste(b$needs, collapse = ", ")),
     if (length(b$guard)) c("", b$guard),
     "",
-    section("Step1: Preparing Analysis Data"),
+    section("data"),
     b$step1,
-    section("Step2: Making a figure"),
+    section("the figure"),
     b$step2,
-    "fig",
-    "",
-    .fig_save_code(design$plot, plot_id, "Step3"))
-  code <- unlist(strsplit(paste(code, collapse = "\n"), "\n", fixed = TRUE))
-  structure(code, class = "tfl_code")
+    if (save) c(name, "", .fig_save_code(design$plot, plot_id, name)))
+  structure(.drop_attached_ns(.code_lines(code)), class = "tfl_code")
 }
 
 # ---- the checks -------------------------------------------------------------
@@ -1375,7 +1424,7 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
           list(step = "subset", name = "ongoing", dataset = "df", where = 'EOSSTT == "ONGOING"'),
           if (assess) list(step = "subset", name = "assess", dataset = response_data,
                            where = sprintf("PARAMCD == %s & !is.na(ADY)", q("OVR")), from_df = "Y_ID"),
-          if (assess && div != 1) list(step = "stats_code", code = sprintf("assess <- assess %%>%% mutate(ADY = ADY / %s)", format(div))))),
+          if (assess && div != 1) list(step = "stats_code", code = sprintf("assess <- assess |> mutate(ADY = ADY / %s)", format(div))))),
         plot = plot_of(x_label = sprintf("Time (%s)", tools::toTitleCase(time_unit)), y_label = "Subject",
                        colour_by = if (resp) "BOR", palette = if (resp) "response_light" else "treatment",
                        legend = if (resp) "right" else "none", x_min = 0,

@@ -21,20 +21,27 @@ tfl_build_ard(
 
 \item{output_id}{Only these outputs' analyses; \code{NULL} for all.}
 
-\item{save}{\code{FALSE} leaves out the final \code{saveRDS()}.}
+\item{save}{\code{FALSE} leaves out the final \code{saveRDS()}.  For one report's
+\code{"body"}, \code{TRUE} ends it in \code{save_ard()} (its rows into the
+study ARD, with the definition's fingerprint), \code{FALSE} in \code{ard}.}
 
 \item{statistics, methods}{The catalogs (\code{\link[=tfl_ard_statistics]{tfl_ard_statistics()}},
 \code{\link[=tfl_ard_methods]{tfl_ard_methods()}}) to use instead of the current ones.}
 
-\item{codelists}{The study's code lists: a table definition (its
-\code{codelists} sheet) or a data frame with \code{variable}, \code{value}, \code{order}
-and optionally \code{output_id}.  The study rows (a blank \code{output_id})
-count; for one report (\code{output_id} one value) its own rows too, which
-replace the study's of the same variable and value.  Each listed
-column of every dataset read, and of the populations and analysis
-data that derive it, becomes a factor in that order before any analysis
-(a value the list does not have comes after, alphabetically), so the
-ARD keeps the order and counts a level no record has (\code{n = 0}).
+\item{codelists}{The reports' code lists: a table definition (its
+\code{codelists} sheet) or a data frame with \code{output_id}, \code{variable},
+\code{value}, \code{label} and \code{order}.  A code list is a report's: every row
+names its report (a blank \code{output_id} stops).  A report's rows of the
+variables its analyses read (\code{by}, \code{strata}, \code{variables}, and the
+names in \code{args}, \code{code} and \code{post}) count: the program writes them at
+its head (\code{cl_sex <- c(F = "Female", M = "Male")}) and puts them on
+the data the analyses read (\code{set_levels(SEX = cl_sex)}): each column a
+factor in the list's order, its values the labels (a value without one
+stays itself) -- the ARD holds \code{"Female"}, and counts a level no record
+has (\code{n = 0}).  A value the list does not have (not NA) stops the
+program.  An analysis's \code{where} on such a column is written in its
+labels: one that names a value whose label differs stops here.  In the
+study's program, each report's part reads its data again with its own.
 \code{NULL} (default): the data as read.}
 }
 \value{
