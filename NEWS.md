@@ -1,5 +1,13 @@
 # tflspec (development version)
 
+* **A table's blank rows at positions** (#185).  `layout`'s `blank_where`
+  takes row positions as well as a named rule: `0 | 5 | -1` (a blank after
+  each; 0 before the first row, -1 after the last) is written
+  `plan_blanks(where = c(0, -1))` -- it was the text `"0 | -1"`, which
+  stopped the report program -- and `tfl_as_table_spec()` takes a plan's
+  positions back.  Whole numbers in the written code read as a person
+  writes them (`c(0, -1)`, not `0:-1`).
+
 * **The ARD program reads as a person writes it** (#181).  Same ARDs:
   - no function or loop of its own: it calls `set_levels()`, `tag_ard()`,
     `fmt_ard()`, `keep_stats()`, `fmt_pvalue()` and `save_ard()`, new
