@@ -1,5 +1,15 @@
 # tflspec (development version)
 
+* **The review: a figure's dataset not read yet is not missing; a review
+  of many reports in half the time** (#204).  With the ARD definition
+  given, a dataset of its catalog whose facts were not made (a cache that
+  has not read every file yet) is no longer said to be missing by F03.
+  tflspec's own figure style and the installed ggplot2's version are
+  worked out once a session (a review asked for them once a figure), the
+  same `|` cells are split once, and the table rules split each
+  analysis's variables once a report: 200 reports reviewed in about 1 s
+  instead of 2.2 s (installed; the figures' part 0.7 s to 0.1 s).
+
 * **A figure's steps are one list; its script two sections and one chain**
   (#201, tflplanner #293 phase 1).  A figure design's `data:` is one
   ordered list: the steps that make an object of their own (`survfit`,
