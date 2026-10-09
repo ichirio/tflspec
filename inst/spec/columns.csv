@@ -15,7 +15,7 @@ datasets,dataset,"A name for the data, used by populations and analyses (and the
 datasets,level,"SDTM or ADaM (for people and ARS; not read by the program).",ADaM
 datasets,path,"Its file, relative to the study folder; the reader follows the extension: .rds, .xpt, .sas7bdat, .csv, .parquet.",data/adam/adsl.xpt
 datasets,derive,"New columns, NAME = R expression, | between them (transform()); blank: none.",AGE65 = AGE >= 65
-populations,,"ARD: the analysis sets, one row a population.",
+populations,,"ARD: the populations, one row a population.",
 populations,population_id,"The population's name, used by analyses.",SAF
 populations,dataset,"The dataset its subjects come from.",ADSL
 populations,where,"An R condition on that dataset choosing the subjects; blank: every row.","SAFFL == ""Y"""
@@ -37,15 +37,15 @@ analyses,analysis_id,"The analysis's id within its report; an ARD column.",AGE
 analyses,parent,"The analysis this one runs inside: an analysis of the same report whose method is cards::ard_stack (several analyses on the same data and by, with the by counts and the total N), cards::ard_strata (within subgroups) or cards::ard_pairwise (each pair of groups). It takes the parent's dataset, population_id and where (and in a stack its by), so leave those blank; blank: an analysis of its own.",DEMO
 analyses,label,"A name a person reads (for ARS and the GUI); blank: none.",Age (years)
 analyses,method,"What is computed: a keyword of tfl_ard_methods() (continuous, categorical, hierarchical ...), any pkg::function (cards::, cardx::), or a function of the study's own that the study key source loads.",continuous
-analyses,data,"The analysis data analysed (a data_id of analysis_data), instead of dataset and population_id: the analysis set is its population; blank: dataset and population_id say it.",adae_teae
+analyses,data,"The analysis data analysed (a data_id of analysis_data), instead of dataset and population_id: the population is its population; blank: dataset and population_id say it.",adae_teae
 analyses,dataset,"The data analysed; blank: the population's own dataset. Blank when `data` is given.",ADAE
-analyses,population_id,"The analysis set: the data is restricted to its subjects; blank: no restriction (population is NULL), or the population of `data`.",SAF
+analyses,population_id,"The population: the data is restricted to its subjects; blank: no restriction (population is NULL), or the population of `data`.",SAF
 analyses,where,"An R condition on the data, applied after the population (on an analysis data: after its own conditions); blank: every row.","TRTEMFL == ""Y"""
 analyses,by,"Grouping variables (cards' by), | between them; blank: none.",TRT01A
 analyses,strata,"Variables the analysis is repeated within (cards' strata: a subgroup, a parameter by visit), | between them; blank: none.",PARAMCD | AVISIT
 analyses,variables,"The variables analysed (cards' variables), | between them.",AGE | BMIBL
 analyses,statistics,"For continuous / categorical / missing: the statistics computed, in order (tfl_ard_statistics()); for other methods: the statistics kept of what the method gives; | between them; blank: the method's default.",N | mean | sd
-analyses,denominator,"What percentages are of: population (the analysis set; hierarchical and max take it anyway), row / column / cell (cards), another population, a dataset (its records of the analysis set's subjects), or an analysis data (as it is: one row a subject and phase gives the N of each phase); blank: the method's default.",row
+analyses,denominator,"What percentages are of: population (hierarchical and max take it anyway), row / column / cell (cards), another population, a dataset (its records of the population's subjects), or an analysis data (as it is: one row a subject and phase gives the N of each phase); blank: the method's default.",row
 analyses,formats,"Display formats, statistic=format, | between them; VAR:statistic=format for one variable. xx.x = one decimal (the x's count only after the point), xx.x% = a proportion as a percent, a number = decimals, pvalue = <0.001 or 3 decimals; blank: the statistic's default.",mean=xx.x | p=xx.x%
 analyses,args,"More arguments of the call, as R (data and population are bound), in any order; refused if not R. An argument a column gives (by, variables, strata, denominator, statistic) may not be given here too; blank: none.",over_variables = TRUE
 analyses,post,"Steps on the ARD after the call, each a call with the ARD left out, | between them: cards::add_calculated_row() (a statistic computed from others), cards::filter_ard_hierarchical() (only the rows that pass), cards::sort_ard_hierarchical(), cards::diff_ard_hierarchical(), or a function of your own that takes an ARD and gives one; blank: none.","cards::add_calculated_row(expr = sd / sqrt(N), stat_name = ""se"")"
@@ -62,7 +62,7 @@ tables,sep,"What joins several column keys into a column name (plan_columns(sep 
 tables,sort,"TRUE, FALSE, or the sort keys in order, - in front for descending (plan_sort()); blank: the data's order.",.overall | group1 | -n | label
 tables,sort_stat,"The statistic totalled across columns for a frequency order (plan_sort(stat = )).",n
 tables,na,"What a cell no template could fill prints (plan_cells(na = )); blank: empty.",-
-tables,header_n,"Which population {n} in the column header is, for a table split by page (a lab parameter): page (those with that page's data), table (the analysis set), or both as n = page | N = table for {n} and {N}; blank: page (warns when both exist and differ). Both must be in the ARD.",n = page | N = table
+tables,header_n,"Which population {n} in the column header is, for a table split by page (a lab parameter): page (those with that page's data), table (the population), or both as n = page | N = table for {n} and {N}; blank: page (warns when both exist and differ). Both must be in the ARD.",n = page | N = table
 variables,,"Table: one row a variable (an analysis variable, a column key or the label column).",
 variables,variable,"The variable's name.",AGEGR1
 variables,label,"What prints for its name (plan_labels()); blank: the name.",Age (years)

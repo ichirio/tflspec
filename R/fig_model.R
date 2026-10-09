@@ -62,7 +62,7 @@
       fields = rbind(
         .ff("value", "param", "PARAMCD", required = TRUE),
         .ff("variable", "variable", "Variable", "PARAMCD"))),
-    flag = list(section = "data", label = "Keep an analysis set",
+    flag = list(section = "data", label = "Keep a population",
       help = "The rows whose flag is \"Y\" (FASFL, SAFFL, ANL01FL ...).",
       fields = rbind(
         .ff("variable", "flag", "Flag", "SAFFL", required = TRUE),
