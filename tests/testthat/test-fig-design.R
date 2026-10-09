@@ -14,7 +14,7 @@ run_design <- function(design, adam = tfl_example_adam()) {
 
 test_that("the pieces are described, the catalog's layers with them", {
   p <- tfl_fig_parts()
-  expect_setequal(unique(p$section), c("data", "stats", "plot", "layers"))
+  expect_setequal(unique(p$section), c("data", "plot", "layers"))
   expect_true(all(c("read", "join", "survfit", "summary", "km_curve", "risk_table",
                     "line", "errorbar", "ribbon", "boxplot", "text_repel") %in% p$piece))
   expect_equal(p$kind[p$piece == "hline" & p$field == "yintercept"], "values")
@@ -179,7 +179,11 @@ test_that("a report program's figure: no save, its own name, the study's palette
   expect_false(any(grepl("%>%", whole, fixed = TRUE)))
   part <- tfl_fig_design_code(d, setup = TRUE, save = FALSE, name = "plot")
   expect_false(any(grepl("ggsave|saving the figure", part)))
-  expect_true("plot <- p" %in% part)
+  # the chain goes into `plot` at once; no library(), no header
+  expect_true(any(startsWith(part, "plot <- ggsurvfit(fit")))
+  expect_false(any(grepl("^library\\(|^# Generated", part)))
+  expect_identical(part[[1L]], "# ---- data ------------------------------------------------------------------")
+  expect_true(any(grepl("^# ---- plot ", part)))
   expect_false(any(grepl("^fig", part)))
   expect_true(any(grepl('pal <- tfl_colours("treatment", levels(droplevels(factor(df$TRT01A))))',
                         part, fixed = TRUE)))

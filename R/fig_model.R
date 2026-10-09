@@ -1,22 +1,31 @@
-# The figure model: a figure as four parts, each a list of small, named
+# The figure model: a figure as three parts, each a list of small, named
 # pieces a GUI can list, add, remove and edit one by one.
 #
-#   data    the steps from ADaM to the plot's data `df`: read a dataset,
-#           join ADSL, keep a PARAMCD or an analysis set, derive a
-#           variable, change a time's unit, order a variable's values,
-#           rank rows ... and, for what has no step, the user's own code;
-#   stats   what is computed from `df`: a Kaplan-Meier fit (survfit2), the
-#           summary statistics by group and visit ... or code;
+#   data    one ordered list of steps from ADaM to what the layers draw:
+#           read a dataset (`df`), join ADSL, keep a PARAMCD or a
+#           population, derive a variable, change a time's unit, order a
+#           variable's values, rank rows; and the steps that make an object
+#           of their own (`name`): a Kaplan-Meier fit (survfit2), summary
+#           statistics by group and visit, a rate, counts, another
+#           dataset's rows ... and, for what has no step, the user's own
+#           code.  Consecutive steps on one object are one pipe.  (Before
+#           0.0.24.9074 the named steps were a list of their own, `stats`;
+#           such a design reads as one list.)
 #   plot    the figure-wide settings: title, axes, colours, theme, legend,
 #           size;
 #   layers  what is drawn, in order: a KM curve, censor marks, lines,
 #           points, error bars, bars, reference lines, text; panels below
 #           (number at risk, n); any ggplot2 geom by name; or code.
 #
-# A template (tfl_fig_template()) fills the four parts at once for a kind
-# of figure (KM with the number at risk, mean over time, waterfall ...),
-# after which each piece is edited on its own.  tfl_fig_parts() describes
-# every piece and its fields; tfl_fig_design_code() writes the script.
+# The script has two sections, `# ---- data ----` (the steps' pipes, the
+# axis breaks, a panel's data) and `# ---- plot ----` (the palette, then
+# one `+` chain into the figure; a panel is a chain of its own, put under
+# it on the last line).
+#
+# A template (tfl_fig_template()) fills the parts at once for a kind of
+# figure (KM with the number at risk, mean over time, waterfall ...), after
+# which each piece is edited on its own.  tfl_fig_parts() describes every
+# piece and its fields; tfl_fig_design_code() writes the script.
 
 # ---- the pieces ------------------------------------------------------------
 
@@ -94,11 +103,11 @@
         .ff("by", "variable", "Sort by", "AVAL", required = TRUE),
         .ff("descending", "logical", "Descending", "TRUE"),
         .ff("variable", "text", "New variable", "INDEX"))),
-    data_code = list(section = "data", label = "R code",
-      help = "What no step does: code that changes `df` (the datasets are there by their lower-case names).",
+    code = list(section = "data", label = "R code",
+      help = "What no step does: code that changes `df` or makes an object of its own (the datasets are there by their lower-case names).",
       fields = rbind(.ff("code", "code", "Code", required = TRUE))),
-    # ---- stats
-    survfit = list(section = "stats", label = "Kaplan-Meier fit",
+    # ---- the steps that make an object of their own (`name`)
+    survfit = list(section = "data", label = "Kaplan-Meier fit",
       help = "survfit2(Surv(time, censor == 0) ~ group).",
       fields = rbind(
         .ff("name", "text", "Name", "fit"),
@@ -107,7 +116,7 @@
         .ff("by", "variable", "Group", help = "Empty = one curve"),
         .ff("conf_type", "choice", "Confidence interval", "log",
             c("log", "log-log", "plain")))),
-    summary = list(section = "stats", label = "Summary statistics",
+    summary = list(section = "data", label = "Summary statistics",
       help = "n, mean, SD, SE and an interval (lo, hi) of a value, by group and visit.",
       fields = rbind(
         .ff("name", "text", "Name", "sm"),
@@ -116,28 +125,28 @@
         .ff("interval", "choice", "Interval (lo, hi)", "se", c("se", "sd", "ci")),
         .ff("positive", "logical", "Lower bound only above 0", "FALSE",
             help = "For a log axis: lo is left blank where it would be <= 0."))),
-    summary_by = list(section = "stats", label = "Summary by group",
+    summary_by = list(section = "data", label = "Summary by group",
       help = "n, mean, SD, SE and an interval of a value by group only (one row a group): a mean marker per box ...",
       fields = rbind(
         .ff("name", "text", "Name", "sg"),
         .ff("value", "variable", "Value", "AVAL", required = TRUE),
         .ff("by", "variables", "By", required = TRUE),
         .ff("interval", "choice", "Interval (lo, hi)", "se", c("se", "sd", "ci")))),
-    rate = list(section = "stats", label = "Rate with 95% CI",
+    rate = list(section = "data", label = "Rate with 95% CI",
       help = "Responders / n by group with the exact binomial interval: rate, lcl, ucl (%), and a label 'rate (x/n)'.",
       fields = rbind(
         .ff("name", "text", "Name", "rt"),
         .ff("category", "variable", "Category", "AVALC", required = TRUE),
         .ff("responders", "text", "Counted as response", "CR, PR", required = TRUE),
         .ff("by", "variables", "By", required = TRUE))),
-    count = list(section = "stats", label = "Counts and percents",
+    count = list(section = "data", label = "Counts and percents",
       help = "n and % of each category within each group: n, pct, and a label 'pct%'.",
       fields = rbind(
         .ff("name", "text", "Name", "ct"),
         .ff("category", "variable", "Category", "AVALC", required = TRUE),
         .ff("by", "variables", "By", required = TRUE),
         .ff("levels", "text", "Categories, in order", help = "| between them; others follow"))),
-    subset = list(section = "stats", label = "Another dataset (as an object)",
+    subset = list(section = "data", label = "Another dataset (as an object)",
       help = "Rows of another dataset (or of `df`), by name, for layers that draw them: the assessments of a swimmer plot, the ongoing subjects ...",
       fields = rbind(
         .ff("name", "text", "Name", required = TRUE),
@@ -145,9 +154,6 @@
         .ff("where", "expr", "Its rows (R)"),
         .ff("from_df", "variables", "Variables taken from df", help = "Joined by the key: the y position of its subject, a colour ..."),
         .ff("by", "variable", "Key", "USUBJID"))),
-    stats_code = list(section = "stats", label = "R code",
-      help = "Code that computes what the layers draw, from `df`.",
-      fields = rbind(.ff("code", "code", "Code", required = TRUE))),
     # ---- layers
     km_curve = list(section = "layers", label = "KM curves", base = TRUE,
       help = "The Kaplan-Meier curves (ggsurvfit); the first layer.",
@@ -169,11 +175,13 @@
         .ff("y", "values", "At y", required = TRUE, help = "Several: 20, -30"),
         .ff("label", "text", "Label", "{y}", help = "{y} = the value, e.g. {y}%"),
         .ff("size", "number", "Size", 3.5))),
-    risk_table = list(section = "layers", label = "Number at risk (panel)",
+    risk_table = list(section = "layers", label = "Number at risk",
       panel = TRUE,
       help = "The number at risk below the curves, at the x axis's breaks.",
       fields = rbind(
         .ff("fit", "object", "Fit", "fit"),
+        .ff("method", "choice", "Drawn as", "panel", c("panel", "add_risktable"),
+            help = "panel: a plot of its own below the curves, the counts from the fit at the x axis's breaks; add_risktable: ggsurvfit's risk table."),
         .ff("title", "text", "Title", "Number of Patients at Risk"),
         .ff("size", "number", "Text size", 3),
         .ff("height", "number", "Height (share)", 0.167))),
@@ -263,10 +271,11 @@
 #' The pieces of a figure design
 #'
 #' Every piece a figure design ([tfl_fig_design()]) is made of -- the data
-#' steps, the statistics, the figure-wide settings and the layers -- with
-#' its fields: what a GUI lists, adds and edits one by one.
+#' steps (those with a `name` make an object of their own: a fit, summary
+#' statistics ...), the figure-wide settings and the layers -- with its
+#' fields: what a GUI lists, adds and edits one by one.
 #'
-#' @return A data frame: `section` (`data`, `stats`, `plot`, `layers`),
+#' @return A data frame: `section` (`data`, `plot`, `layers`),
 #'   `piece`, `piece_label`, `piece_help`, `field`, `kind` (`dataset`,
 #'   `variable`, `variables`, `flag`, `param`, `object` (the data or a
 #'   statistic by name), `choice`, `number`, `logical`, `text`, `expr` (R),
@@ -302,13 +311,15 @@ tfl_fig_types_implemented <- function() {
 
 #' A figure design
 #'
-#' A figure as four parts (see [tfl_fig_parts()] for every piece):
+#' A figure as three parts (see [tfl_fig_parts()] for every piece):
 #'
-#' * `data`: the steps from ADaM to the plot's data `df` -- each a list with
-#'   `step` (`read`, `join`, `param`, `flag`, `filter`, `derive`,
-#'   `time_unit`, `levels`, `rank`, `data_code`) and its fields;
-#' * `stats`: what is computed from `df` (`survfit`, `summary`,
-#'   `stats_code`), each with its `name`;
+#' * `data`: one ordered list of steps, each a list with `step` and its
+#'   fields.  `read` starts `df`; `join`, `param`, `flag`, `filter`,
+#'   `derive`, `time_unit`, `levels`, `rank` change the object above them;
+#'   `survfit`, `summary`, `summary_by`, `rate`, `count`, `subset` make an
+#'   object of their own, by its `name` (a fit, summary statistics ...),
+#'   which the steps after them change; `code` is the user's own code.
+#'   Consecutive steps on one object are one pipe in the script;
 #' * `plot`: the figure-wide settings (title, axes, colours, theme, legend,
 #'   size), plus `add`: a list of `call`s (below) written after the
 #'   figure's settings and before any panels -- for `theme()`, `scale_*`,
@@ -333,7 +344,6 @@ tfl_fig_types_implemented <- function() {
 #' - {step: param, value: OS}
 #' - {step: flag, variable: FASFL}
 #' - {step: time_unit, variable: AVAL, unit: months}
-#' stats:
 #' - {step: survfit, name: fit, time: AVAL, censor: CNSR, by: TRT01A}
 #' plot: {x_label: Time (Months), y_label: Survival Probability, colour_by: TRT01A,
 #'   legend: inside, x_min: 0, y_min: 0, y_max: 1, y_by: 0.2}
@@ -349,7 +359,7 @@ tfl_fig_types_implemented <- function() {
 #' ```yaml
 #' plot: {width: 10, height: 4.5}
 #' plots:
-#'   km:   {data: [...], stats: [...], plot: {...}, layers: [...]}
+#'   km:   {data: [...], plot: {...}, layers: [...]}
 #'   box:  {data: [...], plot: {...}, layers: [...]}
 #' compose:
 #'   layout: km | box
@@ -359,14 +369,17 @@ tfl_fig_types_implemented <- function() {
 #'   - {op: "&", fn: theme, args: {legend.position: bottom}}
 #' ```
 #'
-#' @param data,stats,layers Lists of pieces (each a named list).
+#' @param data,layers Lists of pieces (each a named list).
+#' @param stats A design of before 0.0.24.9074 kept its named steps (a
+#'   fit, summary statistics ...) apart: they are put after `data`, as one
+#'   list (and its `data_code` / `stats_code` steps are `code`).
 #' @param plot A named list of the figure-wide settings.
 #' @param template The template it was made from (a note).
 #' @param plots A composed figure: a named list of figure designs (each
-#'   with its own `data`, `stats`, `plot`, `layers`), put together by
-#'   patchwork as `compose` says. The design's own `plot` then holds only
-#'   the saved size (`width`, `height`, `dpi`, `units`), and it has no
-#'   `data`, `stats` or `layers` of its own.
+#'   with its own `data`, `plot`, `layers`), put together by patchwork as
+#'   `compose` says. The design's own `plot` then holds only the saved size
+#'   (`width`, `height`, `dpi`, `units`), and it has no `data` or `layers`
+#'   of its own.
 #' @param compose With `plots`: `layout`, an expression of the plots' names
 #'   with `|` (side by side), `/` (stacked), `+`, `-` and brackets (default:
 #'   all side by side); `add`, a list of calls written after it, each with
@@ -390,8 +403,13 @@ tfl_fig_design <- function(data = list(), stats = list(), plot = list(),
                            layers = list(), template = NULL, ggplot2_version = NULL,
                            plots = NULL, compose = NULL) {
   clean <- function(x) lapply(x, function(p) as.list(p)[!vapply(p, is.null, logical(1))])
-  structure(list(template = template, data = clean(data),
-                 stats = clean(stats),
+  # one list: the named steps of an older design after its data steps,
+  # and its data_code / stats_code steps as `code`
+  steps <- lapply(c(clean(data), clean(stats)), function(p) {
+    if (identical(p$step, "data_code") || identical(p$step, "stats_code")) p$step <- "code"
+    p
+  })
+  structure(list(template = template, data = steps,
                  plot = as.list(plot)[!vapply(plot, is.null, logical(1))],
                  layers = clean(layers),
                  ggplot2_version = if (!is.null(ggplot2_version)) .fig_norm_version(ggplot2_version),
@@ -408,7 +426,7 @@ print.tfl_fig_design <- function(x, ...) {
 
 .fig_design_list <- function(design) {
   x <- unclass(design)
-  x <- x[intersect(c("template", "ggplot2_version", "data", "stats", "plot", "layers",
+  x <- x[intersect(c("template", "ggplot2_version", "data", "plot", "layers",
                      "plots", "compose"), names(x))]
   if (length(x$plots)) x$plots <- lapply(x$plots, .fig_design_list)
   x[!vapply(x, function(v) is.null(v) || !length(v), logical(1))]
@@ -485,16 +503,34 @@ tfl_read_fig_design <- function(path) {
   paste(paste(names(x), "=", unlist(x)), collapse = ", ")
 }
 
-# the data part: `df`, and the datasets it reads
-.fig_data_code <- function(steps, levels = NULL) {
+# the data part: the steps, in order, as pipes -- one an object: `df` from
+# a read, or the object a named step makes (a fit, summary statistics ...),
+# which the steps after it change; and the datasets it reads.  The
+# figure's code lists go on `df`, last of its steps before the first
+# named object (each listed column a factor in its list's order).
+.fig_named_steps <- c("survfit", "summary", "summary_by", "rate", "count", "subset")
+
+.fig_steps_code <- function(steps, levels = NULL) {
   out <- character()
   pipe <- character()
   reads <- character()
+  libs <- character()
+  cur <- "df"
+  lv_todo <- length(levels) > 0L
   flush <- function() {
     if (length(pipe)) {
-      out <<- c(out, paste0("df <- ", paste(pipe, collapse = " |>\n  ")), "")
+      out <<- c(out, paste0(cur, " <- ", paste(pipe, collapse = " |>\n  ")), "")
       pipe <<- character()
     }
+  }
+  put_levels <- function() {
+    if (!lv_todo) return(invisible())
+    if (!identical(cur, "df")) {
+      flush()
+      cur <<- "df"
+    }
+    pipe <<- c(if (!length(pipe)) "df" else pipe, .levels_call(levels))
+    lv_todo <<- FALSE
   }
   for (s in steps) {
     k <- s$step
@@ -508,13 +544,27 @@ tfl_read_fig_design <- function(path) {
                                         substring(x, 8L))
         return(invisible())
       }
-      pipe <<- c(if (!length(pipe)) "df" else pipe, x)
+      pipe <<- c(if (!length(pipe)) cur else pipe, x)
+    }
+    if (k %in% .fig_named_steps) {
+      # an object of its own: the code lists are on df before it
+      put_levels()
+      flush()
+      r <- .fig_stats_code(list(s))
+      libs <- c(libs, r$libs)
+      nm <- v("name")
+      txt <- r$code[[1L]]
+      lhs <- paste0(nm, " <- ")
+      cur <- nm
+      pipe <- if (startsWith(txt, lhs)) substring(txt, nchar(lhs) + 1L) else txt
+      next
     }
     switch(k,
       read = {
         flush()
         ds <- toupper(v("dataset"))
         reads <- c(reads, ds)
+        cur <- "df"
         pipe <- pp_ds_name(ds)
       },
       join = {
@@ -557,20 +607,15 @@ tfl_read_fig_design <- function(path) {
         add(c(sprintf("arrange(%s)", if (.lgl(v("descending"))) sprintf("desc(%s)", by) else by),
               sprintf("mutate(%s = row_number())", v("variable"))))
       },
-      data_code = {
+      code = {
         flush()
         out <- c(out, "# your code", s$code, "")
       },
       stop("Unknown data step: ", k, call. = FALSE))
   }
-  # the figure's code lists, last: each listed column a factor in its
-  # list's order, its values as the list has them (legend, axis, order)
-  if (length(levels)) {
-    if (!length(pipe)) pipe <- "df"
-    pipe <- c(pipe, .levels_call(levels))
-  }
+  put_levels()
   flush()
-  list(code = out, reads = unique(reads))
+  list(code = out, reads = unique(reads), libs = unique(libs))
 }
 
 .fig_stats_code <- function(steps) {
@@ -651,7 +696,6 @@ tfl_read_fig_design <- function(path) {
           if (length(from)) sprintf(" |>\n  inner_join(df |> select(%s), by = %s)",
                                     paste(c(v("by"), from), collapse = ", "), q(v("by")))), "")
       },
-      stats_code = out <- c(out, "# your code", s$code, ""),
       stop("Unknown statistics step: ", k, call. = FALSE))
   }
   list(code = out, libs = libs)
@@ -704,18 +748,28 @@ tfl_read_fig_design <- function(path) {
     },
     risk_table = {
       fit <- v("fit")
-      single <- is.null(plot$colour_by)
+      by <- plot$colour_by
+      if (identical(v("method"), "add_risktable")) {
+        # ggsurvfit's own risk table, on the chain, at the x axis's breaks
+        return(list(risktable = TRUE, code = c(lbl("number at risk (add_risktable)"),
+          sprintf("p <- p + add_risktable(times = x_breaks, risktable_stats = \"n.risk\", size = %s)",
+                  num("size")))))
+      }
+      # a plot of its own below the curves: the counts from the fit at the
+      # x axis's breaks (data), drawn on the same x scale (plot)
       list(panel = list(name = "p_risk", height = as.numeric(v("height"))), libs = "patchwork",
-        code = c(lbl("number at risk (a panel below)"),
+        data = c("# the number at risk at the x axis's breaks, from the fit",
           sprintf("sr <- summary(%s, times = x_breaks, extend = TRUE)", fit),
-          paste0("risk_df <- data.frame(\n",
+          paste0("risk <- data.frame(\n",
                  "  time   = sr$time,\n",
-                 if (single) "  strata = names(pal)[1],\n"
+                 if (is.null(by)) "  strata = \"All\",\n"
                  else "  strata = sub(\"^[^=]*=\", \"\", as.character(sr$strata)),\n",
-                 "  n_risk = sr$n.risk\n)"),
-          "risk_df$strata <- factor(risk_df$strata, levels = rev(names(pal)))",
-          plus_code("p_risk", list(
-            "ggplot(risk_df, aes(x = time, y = strata, label = n_risk, colour = strata))",
+                 "  n_risk = sr$n.risk\n) |>\n",
+                 if (is.null(by)) "  mutate(strata = factor(strata))"
+                 else sprintf("  mutate(strata = factor(strata, levels = rev(levels(droplevels(factor(df$%s))))))", by)),
+          ""),
+        chain = .fig_chain("p_risk", list(
+            "ggplot(risk, aes(x = time, y = strata, label = n_risk, colour = strata))",
             sprintf("geom_text(size = %s)", num("size")),
             'scale_colour_manual(values = pal, guide = "none")',
             "scale_x_continuous(breaks = x_breaks, expand = expansion(mult = c(0.02, 0.02)))",
@@ -725,18 +779,17 @@ tfl_read_fig_design <- function(path) {
             paste0("theme(\n",
                    "  plot.title          = element_text(hjust = 0, size = rel(0.9)),\n",
                    "  plot.title.position = \"plot\",\n",
-                   "  axis.text.y         = element_text(hjust = 1, margin = margin(r = 5))\n)")))))
+                   "  axis.text.y         = element_text(hjust = 1, margin = margin(r = 5))\n)"))))
     },
     n_table = list(panel = list(name = paste0("p_n", i), height = as.numeric(v("height"))), libs = "patchwork",
-      code = c(lbl("n (a panel below)"),
-        plus_code(paste0("p_n", i), list(
+      chain = .fig_chain(paste0("p_n", i), list(
           sprintf("ggplot(%s, aes(x = %s, y = factor(%s, levels = rev(names(pal))), label = %s, colour = %s))",
                   v("data"), v("x"), v("group"), v("label"), v("group")),
           "geom_text(size = 3)",
           'scale_colour_manual(values = pal, guide = "none")',
           sprintf("labs(title = %s, x = NULL, y = NULL)", q(v("title"))),
           sprintf("theme_void(base_size = %s)", .pv(plot, "base_size")),
-          "theme(axis.text.y = element_text(hjust = 1, margin = margin(r = 5)), plot.title = element_text(size = rel(0.9)))")))),
+          "theme(axis.text.y = element_text(hjust = 1, margin = margin(r = 5)), plot.title = element_text(size = rel(0.9)))"))),
     geom = {
       a <- .named(v("aes"))
       pr <- .named(v("params"))
@@ -827,18 +880,74 @@ tfl_read_fig_design <- function(path) {
       sprintf("pal <- setNames(%s[seq_along(lv)], lv)", vec_code(unname(pal)))))
 }
 
+# A chain of ggplot terms: `target <- first +` then each term on its line;
+# `append`: `target <- target +` then the terms
+.fig_chain <- function(target, terms, append = FALSE) {
+  terms <- unlist(terms[!vapply(terms, is.null, logical(1))])
+  if (!length(terms)) return(character())
+  ind <- function(t) paste(indent(t), collapse = "\n")
+  if (append) {
+    return(paste0(target, " <- ", target, " +\n",
+                  paste(vapply(terms, ind, ""), collapse = " +\n")))
+  }
+  first <- strsplit(terms[[1L]], "\n", fixed = TRUE)[[1L]]
+  head <- paste(c(paste0(target, " <- ", first[1L]),
+                  if (length(first) > 1L) indent(first[-1L])), collapse = "\n")
+  if (length(terms) == 1L) return(head)
+  paste0(head, " +\n", paste(vapply(terms[-1L], ind, ""), collapse = " +\n"))
+}
+
+# A layer's or call's code lines (`p <- p + term`, a `# ---- layer` title)
+# as terms of the chain; a trailing comment goes on its own line above
+.fig_terms <- function(code) {
+  code <- code[!grepl("^# ---- ", code)]
+  lapply(code, function(x) {
+    x <- sub("^p <- p \\+ ", "", x)
+    m <- regmatches(x, regexpr("   # [^\n]*$", x))
+    if (length(m)) x <- paste0(trimws(m), "\n", sub("   # [^\n]*$", "", x))
+    x
+  })
+}
+
+# The figure's chain into `name`: the first layer, the layers, then the
+# items after them.  The user's own layer code (`layer_code`) is a
+# statement on `p`: around it the chain is `p`, and `name <- p` closes it.
+.fig_chain_lines <- function(name, first, items) {
+  stmt <- vapply(items, function(it) !is.null(it$stmt), logical(1))
+  tgt <- if (any(stmt)) "p" else name
+  out <- character()
+  acc <- list(first)
+  started <- FALSE
+  emit <- function() {
+    if (length(acc)) {
+      out <<- c(out, .fig_chain(tgt, acc, append = started))
+      acc <<- list()
+      started <<- TRUE
+    }
+  }
+  for (it in items) {
+    if (!is.null(it$stmt)) {
+      emit()
+      out <- c(out, "# your code", it$stmt)
+    } else {
+      acc <- c(acc, it$term)
+    }
+  }
+  emit()
+  if (any(stmt)) out <- c(out, sprintf("%s <- p", name))
+  out
+}
+
 # One figure's code, in parts: what to library(), the guard, the data
-# (the data, statistics, palette, axes) and the figure (assembled as
-# `name`); `patch`: the figure is itself a patchwork (panels below it);
-# `risktable`: a ggsurvfit with add_risktable (a patchwork once built).
+# section (the steps, the axis breaks, a panel's data), the plot section
+# (the palette, the chain into `name`, the panels under it); `patch`: the
+# figure is itself a patchwork (panels below it); `risktable`: a
+# ggsurvfit with add_risktable (a patchwork once built).
 .fig_design_body <- function(design, gg, setup = FALSE, name = "fig",
                              levels = NULL, codelists_head = TRUE) {
   plot <- design$plot
-  d <- .fig_data_code(design$data, levels)
-  if (length(levels) && codelists_head) {
-    d$code <- c(.codelists_head(levels), d$code)
-  }
-  s <- .fig_stats_code(design$stats)
+  d <- .fig_steps_code(design$data, levels)
+  head <- if (length(levels) && codelists_head) .codelists_head(levels)
   layers <- design$layers
   kinds <- vapply(layers, function(l) l$layer %||% "", "")
   fit_of <- function() {
@@ -848,13 +957,13 @@ tfl_read_fig_design <- function(path) {
   lc <- lapply(seq_along(layers), function(i) .fig_layer_code(layers[[i]], i, plot, gg$version))
   clip <- any(vapply(lc, function(x) isTRUE(x$clip_off), logical(1)))
   ax <- .fig_axis_code(plot, any(kinds == "risk_table"), fit_of(), clip)
-  base <- if (length(lc) && !is.null(lc[[1L]]$base)) lc[[1L]]$base else "p <- ggplot()"
+  first <- if (length(lc) && !is.null(lc[[1L]]$base)) sub("^p <- ", "", lc[[1L]]$base) else "ggplot()"
   panels <- Filter(Negate(is.null), lapply(lc, `[[`, "panel"))
   add_res <- .fig_plot_add_code(plot$add %||% list(), gg$version)
   guard_v <- c(unlist(lapply(lc, `[[`, "guard")), add_res$guard)
   features <- c(unlist(lapply(lc, `[[`, "features")), add_res$features)
   guard <- .fig_guard_code(guard_v, features)
-  libs <- unique(c("dplyr", "ggplot2", s$libs, unlist(lapply(lc, `[[`, "libs")), add_res$libs))
+  libs <- unique(c("dplyr", "ggplot2", d$libs, unlist(lapply(lc, `[[`, "libs")), add_res$libs))
   # a catalog layer of another package is called as pkg::fn; it must be there
   needs <- setdiff(unique(c(unlist(lapply(lc, `[[`, "package")), add_res$pkgs)), "ggplot2")
   if (any(kinds %in% c("km_curve", "km_ci", "censor_mark"))) libs <- unique(c(libs, "ggsurvfit"))
@@ -881,39 +990,53 @@ tfl_read_fig_design <- function(path) {
     as.list(pp_theme_lines(.pv(plot, "theme"), .pv(plot, "base_size"))),
     if (!.lgl(.pv(plot, "x_text"))) "theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())",
     as.list(pp_q_legend(.pv(plot, "legend"))))
-  body_layers <- unlist(lapply(lc, function(x) if (is.null(x$panel)) x$code))
-  panel_code <- unlist(lapply(lc, function(x) if (!is.null(x$panel)) x$code))
+  # the chain: the layers (the user's layer code as a statement), the
+  # figure's settings, what goes after them, the plot.add calls
+  items <- list()
+  for (i in seq_along(lc)) {
+    x <- lc[[i]]
+    if (!is.null(x$panel) || is.null(x$code)) next
+    if (identical(kinds[i], "layer_code")) {
+      items <- c(items, list(list(stmt = layers[[i]]$code)))
+    } else {
+      items <- c(items, lapply(.fig_terms(x$code), function(t) list(term = t)))
+    }
+  }
+  tail_terms <- c(finish, .fig_terms(unlist(lapply(lc, `[[`, "after"))),
+                  .fig_terms(add_res$lines))
+  items <- c(items, lapply(tail_terms, function(t) list(term = t)))
+  chain <- .fig_chain_lines(name, first, items)
+  panel_data <- unlist(lapply(lc, function(x) if (!is.null(x$panel)) x$data))
+  panel_code <- unlist(lapply(lc, function(x) if (!is.null(x$panel)) x$chain))
   assemble <- if (length(panels)) {
     h <- vapply(panels, `[[`, numeric(1), "height")
     sprintf("%s <- %s + plot_layout(heights = %s)", name,
-            paste(c("p", vapply(panels, `[[`, "", "name")), collapse = " / "),
+            paste(c(name, vapply(panels, `[[`, "", "name")), collapse = " / "),
             vec_code(round(c(1 - sum(h), h), 3)))
-  } else sprintf("%s <- p", name)
+  }
   n <- function(f) .pv(plot, f)
   fnames <- vapply(layers, function(l) if (identical(l$layer, "call")) .fig_bare_fn_name(l$fn) else "", "")
   list(
     libs = libs, needs = needs, guard = guard, guard_v = guard_v, features = features,
+    reads = d$reads,
     step1 = c(
-      sprintf("# Input data frames: %s", paste(pp_ds_name(d$reads), collapse = ", ")),
-      "",
+      if (!setup) c(sprintf("# Input data frames: %s", paste(pp_ds_name(d$reads), collapse = ", ")), ""),
+      head,
       d$code,
-      s$code,
-      .fig_palette_code(plot, setup),
-      "",
       ax$pre,
-      if (uses_pd) sprintf("pd <- position_dodge(width = %s)", n("dodge")),
+      if (length(ax$pre)) "",
+      panel_data,
       ""),
     step2 = c(
-      base,
-      body_layers,
-      "# ---- the figure's settings ----",
-      plus_code("p", finish, append = TRUE),
-      unlist(lapply(lc, `[[`, "after")),
-      add_res$lines,
-      panel_code,
+      .fig_palette_code(plot, setup),
+      if (uses_pd) sprintf("pd <- position_dodge(width = %s)", n("dodge")),
       "",
-      assemble),
-    patch = length(panels) > 0L, risktable = any(fnames == "add_risktable"))
+      chain,
+      if (length(panel_code)) c("", panel_code),
+      if (length(assemble)) c("", assemble)),
+    patch = length(panels) > 0L,
+    risktable = any(fnames == "add_risktable") ||
+      any(vapply(lc, function(x) isTRUE(x$risktable), logical(1))))
 }
 
 # a script's lines, one an element, no two blank lines in a row
@@ -945,7 +1068,9 @@ tfl_read_fig_design <- function(path) {
 
 #' @rdname tfl_fig_design
 #' @param setup `TRUE`: the code runs after the study's figure setup
-#'   ([tfl_fig_setup_code()]), so the palette is its `tfl_colours()`.
+#'   ([tfl_fig_setup_code()]), so the palette is its `tfl_colours()`; the
+#'   setup attaches the packages, so the code has no header and no
+#'   `library()` (what it needs is in its attributes: below).
 #' @param save `FALSE` leaves out saving the PNG: the code makes the
 #'   figure only (a report program writes it into its RTF).
 #' @param name The name the figure is given.
@@ -955,6 +1080,13 @@ tfl_read_fig_design <- function(path) {
 #'   figure's data, last of its data steps -- each listed column a factor
 #'   in its list's order, its values as the list has them (`cl_<variable>`
 #'   and `set_levels()`, see [tfl_helpers_code()]).
+#'
+#' The script has two sections: `# ---- data ----` (the steps' pipes, one
+#' an object; the axis breaks; a panel's data) and `# ---- plot ----` (the
+#' palette, then one `+` chain into `name`; a panel below it is a chain of
+#' its own, put under it on the last line).  Its attributes say what it
+#' needs: `reads` (the datasets, upper case), `libs` (the packages to
+#' attach) and `needs` (the packages called as `pkg::fn`).
 #' @export
 tfl_fig_design_code <- function(design, plot_id = "fig", ggplot2_version = NULL,
                                 setup = FALSE, save = TRUE, name = "fig",
@@ -965,9 +1097,8 @@ tfl_fig_design_code <- function(design, plot_id = "fig", ggplot2_version = NULL,
   # figure's data, last of its data steps
   lv <- .codelist_levels(codelists, plot_id)
   if (length(design$plots)) {
-    return(.drop_attached_ns(.fig_compose_code(design, plot_id, gg, setup = setup,
-                                               save = save, name = name,
-                                               levels = lv)))
+    return(.fig_compose_code(design, plot_id, gg, setup = setup,
+                             save = save, name = name, levels = lv))
   }
   whole <- Filter(function(l) identical(l$layer, "figure"), design$layers)
   if (length(whole)) {
@@ -979,21 +1110,34 @@ tfl_fig_design_code <- function(design, plot_id = "fig", ggplot2_version = NULL,
   }
   b <- .fig_design_body(design, gg, setup = setup, name = name, levels = lv)
   code <- c(
-    sprintf("# %s: %s", plot_id, design$template %||% "figure design"),
-    sprintf("# Generated by tflspec %s from the figure's design.",
-            utils::packageVersion("tflspec")),
-    if (gg$explicit) sprintf("# Written for ggplot2 %s", gg$version),
-    "",
-    paste0("library(", b$libs, ")"),
-    if (length(b$needs)) sprintf("# also needs: %s (called as pkg::fn)", paste(b$needs, collapse = ", ")),
+    # a script of its own says what it is and attaches its packages; with
+    # the study's setup, the program around it does both
+    if (!setup) c(
+      sprintf("# %s: %s", plot_id, design$template %||% "figure design"),
+      sprintf("# Generated by tflspec %s from the figure's design.",
+              utils::packageVersion("tflspec")),
+      if (gg$explicit) sprintf("# Written for ggplot2 %s", gg$version),
+      "",
+      paste0("library(", b$libs, ")"),
+      if (length(b$needs)) sprintf("# also needs: %s (called as pkg::fn)", paste(b$needs, collapse = ", "))),
+    if (setup && gg$explicit) sprintf("# Written for ggplot2 %s", gg$version),
     if (length(b$guard)) c("", b$guard),
     "",
     section("data"),
     b$step1,
-    section("the figure"),
+    section("plot"),
     b$step2,
-    if (save) c(name, "", .fig_save_code(design$plot, plot_id, name)))
-  structure(.drop_attached_ns(.code_lines(code)), class = "tfl_code")
+    if (save) c("", name, "", .fig_save_code(design$plot, plot_id, name)))
+  .fig_code_out(code, b$reads, b$libs, b$needs)
+}
+
+# the script, with what it needs as attributes
+.fig_code_out <- function(code, reads, libs, needs) {
+  code <- .drop_attached_ns(.code_lines(code))
+  # (a script made with the setup starts at its first section)
+  while (length(code) && identical(code[[1L]], "")) code <- code[-1L]
+  structure(code, class = "tfl_code", reads = unique(reads),
+            libs = unique(libs), needs = unique(needs))
 }
 
 # ---- the checks -------------------------------------------------------------
@@ -1046,6 +1190,9 @@ tfl_check_fig_design <- function(design, adam = NULL, ggplot2_version = NULL) {
     miss <- setdiff(vars, where)
     if (length(miss)) add(part, field, paste0("no variable ", paste(miss, collapse = ", "), " in ", what))
   }
+  # the steps, in order: a data step changes the object above it (`df`
+  # after a read), a named step makes one (its columns as far as known)
+  cur <- "df"
   for (i in seq_along(design$data)) {
     s <- design$data[[i]]
     k <- s$step %||% ""
@@ -1056,8 +1203,48 @@ tfl_check_fig_design <- function(design, adam = NULL, ggplot2_version = NULL) {
     }
     check_fields(s, part, k)
     v <- function(f) .fv(s, f, k)
+    if (k %in% .fig_named_steps) {
+      # the object above is done: keep its columns
+      objects[cur] <- list(cols)
+      df_cols <- if (identical(cur, "df")) cols else objects[["df"]]
+      new_cols <- switch(k,
+        survfit = {
+          need_var(part, "time", c(v("time"), v("censor"), v("by")), df_cols)
+          character()
+        },
+        summary = , summary_by = {
+          by <- .split_vals(v("by"))
+          need_var(part, "by", c(v("value"), by), df_cols)
+          c(by, "n", "mean", "sd", "se", "lo", "hi")
+        },
+        rate = {
+          by <- .split_vals(v("by"))
+          need_var(part, "by", c(v("category"), by), df_cols)
+          c(by, "n", "x", "rate", "lcl", "ucl", "label")
+        },
+        count = {
+          by <- .split_vals(v("by"))
+          need_var(part, "by", c(v("category"), by), df_cols)
+          c(by, v("category"), "n", "pct", "label")
+        },
+        subset = {
+          ds <- v("dataset")
+          d <- if (toupper(ds) == "DF") df_cols else if (!is.null(adam)) names(adam[[toupper(ds)]])
+          if (!is.null(adam) && toupper(ds) != "DF" && is.null(adam[[toupper(ds)]])) {
+            add(part, "dataset", paste0("no dataset ", ds))
+          }
+          from <- .split_vals(v("from_df"))
+          need_var(part, "from_df", from, df_cols)
+          if (is.null(d)) NULL else union(d, from)
+        })
+      cur <- v("name")
+      cols <- new_cols
+      next
+    }
     switch(k,
       read = {
+        objects[cur] <- list(cols)
+        cur <- "df"
         d <- ds(v("dataset"))
         if (!is.null(adam) && is.null(d)) add(part, "dataset", paste0("no dataset ", v("dataset")))
         cols <- if (!is.null(d)) names(d)
@@ -1089,51 +1276,14 @@ tfl_check_fig_design <- function(design, adam = NULL, ggplot2_version = NULL) {
         if (!is.null(cols)) cols <- union(cols, v("variable"))
       },
       derive = if (!is.null(cols)) cols <- union(cols, v("variable")),
-      data_code = cols <- NULL)
+      # the user's code: what it makes is not known
+      code = {
+        cols <- NULL
+        objects["?"] <- list(NULL)
+      })
   }
-  objects["df"] <- list(cols)   # NULL (unknown columns) keeps the name
-  for (i in seq_along(design$stats)) {
-    s <- design$stats[[i]]
-    k <- s$step %||% ""
-    part <- sprintf("stats[%d] %s", i, k)
-    if (!k %in% names(pieces) || pieces[[k]]$section != "stats") {
-      add(part, "step", "unknown statistics step")
-      next
-    }
-    check_fields(s, part, k)
-    v <- function(f) .fv(s, f, k)
-    switch(k,
-      survfit = {
-        need_var(part, "time", c(v("time"), v("censor"), v("by")))
-        objects[[v("name")]] <- character()
-      },
-      summary = , summary_by = {
-        by <- .split_vals(v("by"))
-        need_var(part, "by", c(v("value"), by))
-        objects[[v("name")]] <- c(by, "n", "mean", "sd", "se", "lo", "hi")
-      },
-      rate = {
-        by <- .split_vals(v("by"))
-        need_var(part, "by", c(v("category"), by))
-        objects[[v("name")]] <- c(by, "n", "x", "rate", "lcl", "ucl", "label")
-      },
-      count = {
-        by <- .split_vals(v("by"))
-        need_var(part, "by", c(v("category"), by))
-        objects[[v("name")]] <- c(by, v("category"), "n", "pct", "label")
-      },
-      subset = {
-        ds <- v("dataset")
-        d <- if (toupper(ds) == "DF") cols else if (!is.null(adam)) names(adam[[toupper(ds)]])
-        if (!is.null(adam) && toupper(ds) != "DF" && is.null(adam[[toupper(ds)]])) {
-          add(part, "dataset", paste0("no dataset ", ds))
-        }
-        from <- .split_vals(v("from_df"))
-        need_var(part, "from_df", from)
-        objects[[v("name")]] <- if (is.null(d)) NULL else union(d, from)
-      },
-      stats_code = objects["?"] <- list(NULL))
-  }
+  objects[cur] <- list(cols)   # NULL (unknown columns) keeps the name
+  cols <- objects[["df"]]
   f <- .fig_plot_fields()
   for (nm in names(design$plot)) {
     r <- f[f$field == nm, , drop = FALSE]
@@ -1424,7 +1574,8 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
           list(step = "subset", name = "ongoing", dataset = "df", where = 'EOSSTT == "ONGOING"'),
           if (assess) list(step = "subset", name = "assess", dataset = response_data,
                            where = sprintf("PARAMCD == %s & !is.na(ADY)", q("OVR")), from_df = "Y_ID"),
-          if (assess && div != 1) list(step = "stats_code", code = sprintf("assess <- assess |> mutate(ADY = ADY / %s)", format(div))))),
+          # (a step after `assess` changes assess: in its pipe)
+          if (assess && div != 1) list(step = "derive", variable = "ADY", expr = sprintf("ADY / %s", format(div))))),
         plot = plot_of(x_label = sprintf("Time (%s)", tools::toTitleCase(time_unit)), y_label = "Subject",
                        colour_by = if (resp) "BOR", palette = if (resp) "response_light" else "treatment",
                        legend = if (resp) "right" else "none", x_min = 0,

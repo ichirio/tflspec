@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9073** (the development version,
+**This manual documents tflspec 0.0.24.9074** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -509,20 +509,35 @@ the clinical category of `tfl_fig_catalog()` -- and the `data` it reads:
 
 ```yaml
 template: km_risk_table
-data:                                   # ADaM -> df
-- {step: read, dataset: ADTTE}
+data:                                   # one ordered list of steps
+- {step: read, dataset: ADTTE}          # -> df
 - {step: param, value: OS}
 - {step: flag, variable: FASFL}
-stats:                                  # computed from df
-- {step: survfit, name: fit, time: AVAL, censor: CNSR, by: TRT01A}
+- {step: survfit, name: fit, time: AVAL, censor: CNSR, by: TRT01A}   # -> fit
 plot: {x_label: Time (Months), colour_by: TRT01A, legend: inside}
 layers:                                 # what is drawn, in order
 - {layer: km_curve}
-- {layer: risk_table}
+- {layer: risk_table}                   # method: panel (default) | add_risktable
 ```
 
-- `data` steps: `read`, `join`, `param`, `flag`, `filter`, `derive`,
-  `time_unit`, `levels`, `rank`, `data_code`.
+- `data`: one list, in order. `read` starts `df`; `join`, `param`,
+  `flag`, `filter`, `derive`, `time_unit`, `levels`, `rank` change the
+  object above them; `survfit`, `summary`, `summary_by`, `rate`, `count`,
+  `subset` make an object of their own by `name` (the steps after one
+  change it, in its pipe); `code` is your own code.  A design written
+  before 0.0.24.9074 (`data:` and `stats:`, `data_code` / `stats_code`)
+  reads as this one list and is written back in this form.
+- The script (`tfl_fig_design_code()`) has two sections: `# ---- data ----`
+  (one pipe an object, the code lists on `df`, the axis breaks, a panel's
+  data) and `# ---- plot ----` (the palette, then one `+` chain into the
+  figure; a panel under it is a chain of its own, joined on the last
+  line: `plot <- plot / p_risk + plot_layout(heights = )`).  With
+  `setup = TRUE` (a report program, after the study's figure setup) it has
+  no header and no `library()`; its attributes `reads`, `libs`, `needs`
+  say what it needs.
+- The number at risk (`risk_table`): by default a panel of its own from
+  the figure's fit (`summary(fit, times = x_breaks)`); `method:
+  add_risktable` puts ggsurvfit's `add_risktable()` on the chain.
 - `layers`: catalog layers (`line`, `point`, `errorbar`, `boxplot` … see
   `tfl_fig_add_layer()`), `geom` (any geom by name), `call` (any function:
   `fn`, `package`, `data`, `aes`, `pos`, `args`), `layer_code`, `figure`.
