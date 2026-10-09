@@ -221,7 +221,9 @@ tfl_review_spec <- function(spec = NULL, ard = NULL, listings = NULL,
     run("T", .rules_table(sp, x, facts))
     if (!is.null(x)) run("C01", .rule_c01(sp, x))
   }
-  if (length(figures)) run("F", .rules_figures(figures, facts))
+  if (length(figures)) {
+    run("F", .rules_figures(figures, facts, catalog = x$datasets$dataset))
+  }
   if (!is.null(facts)) {
     if (!is.null(x)) {
       run("A01", .rules_data_ard(x, facts))
@@ -546,7 +548,8 @@ summary.tfl_review <- function(object, ...) {
     # T03: a statistic of the other kind (when the ARD is there, T06 says
     # what it really has: D11)
     if (!have_ard) {
-      analyses_of <- function(v) vapply(a$variables, function(z) v %in% .bar_names(z), NA)
+      a_vars <- lapply(a$variables, .bar_names)
+      analyses_of <- function(v) vapply(a_vars, function(z) v %in% z, NA)
       var_kind <- function(v) {
         k <- unique(kinds[analyses_of(v)])
         k[!is.na(k)]
@@ -1031,7 +1034,7 @@ summary.tfl_review <- function(object, ...) {
 # ---- figures ---------------------------------------------------------------
 
 # F01 / F02 / F03 and the design's own problems (S01)
-.rules_figures <- function(figures, facts) {
+.rules_figures <- function(figures, facts, catalog = NULL) {
   out <- list()
   add <- function(r) out[[length(out) + 1L]] <<- r
   adam <- if (!is.null(facts)) .facts_frames(facts)
@@ -1063,6 +1066,11 @@ summary.tfl_review <- function(object, ...) {
       q <- tryCatch(tfl_check_fig_design(d, adam), error = function(e) NULL)
       if (NROW(q)) {
         new <- !paste(q$part, q$field, q$problem) %in% paste(p$part, p$field, p$problem)
+        # a dataset the catalog has whose facts were not made (not read
+        # yet) is not missing: nothing of it is known
+        unread <- setdiff(toupper(catalog), names(facts$datasets))
+        gone <- toupper(sub("^no dataset ", "", q$problem))
+        new <- new & !(grepl("^no dataset ", q$problem) & gone %in% unread)
         for (i in which(new)) {
           add(.rv("F03", o, "design", q$part[i], q$field[i],
                   args = paste(q$part[i], q$field[i], q$problem[i])))

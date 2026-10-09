@@ -45,3 +45,8 @@ P01,check,program,spec,tflplanner,%s,As the programs read the definition.
 C05,check,codelists,data,tflspec,"%s has more than %s values; its code list is not reviewed against the data.",
 D02,check,data,data,tflplanner,%s is not reviewed against the data yet.,Make the data facts (Review with the data).
 review,check,spec,spec,tflspec,"The rule %s could not be run: %s.",This is a fault of the review; please report it.
+F04,error,figure,spec,tflplanner,%s,"Choose a table of the study as the figure's ARD source (its step 2), or take the ARD in."
+F05,hand,figure,spec,tflplanner,%s,"The design reads an ARD: choose where it comes from (the figure's step 2)."
+F06,error,figure,spec,tflplanner,%s,"Give the piece an analysis the table still has, or add the analysis again."
+F07,check,figure,ard,tflplanner,%s,"Make the ARD (its table's step 2, or take it in): the figure prints from it."
+F08,error,figure,ard,tflplanner,%s,"Correct the piece to a row the ARD has (its analysis, variable, group or statistic)."
