@@ -635,7 +635,16 @@
     # analysis that reads it
     taken <- c(.r_name(used_ds), paste0("pop_", .r_name(pops)), ad_o$data_id)
     data_of <- character()
-    made <- .adata_lines(xo, named[[o]], subj, lv, avoid = taken)
+    # the columns each analysis data's analyses read (by, strata,
+    # variables; a denominator's by): kept by a data that keeps columns
+    rd <- a[rows, , drop = FALSE]
+    reads <- lapply(stats::setNames(named[[o]], named[[o]]), function(d) {
+      on <- !is.na(dcol[rows]) & dcol[rows] == d
+      den <- !is.na(rd$denominator) & rd$denominator == d
+      unique(c(unlist(lapply(c(rd$by[on], rd$strata[on], rd$variables[on]), .split_bar)),
+               unlist(lapply(rd$by[den], .split_bar))))
+    })
+    made <- .adata_lines(xo, named[[o]], subj, lv, avoid = taken, reads = reads)
     data_name <- vapply(rows, function(i) {
       r <- a[i, ]
       # on an analysis data: it, or its records the analysis's condition keeps

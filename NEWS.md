@@ -33,6 +33,11 @@
   (`tfl_ard_code(part = "all")`) carries it.  The six exports of 0.0.24.9066
   are removed (no aliases); the setup attaches cards and dplyr only.
 
+* **An analysis data that keeps columns (`keep`) keeps the ones its
+  analyses read** (#187): their `by`, `strata` and `variables`, and a
+  denominator's `by` -- they were dropped unless listed, and the analysis
+  stopped.
+
 * **A program's names are never a column's** (#187): the report's id is
   `report_id` (was `output_id <- "..."`), a code list `cl_<variable>`, a
   folder `path_<folder>`, an analysis's ARD `ard_<id>`.  A test checks

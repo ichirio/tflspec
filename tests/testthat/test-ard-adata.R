@@ -309,3 +309,14 @@ test_that("a report's analysis data name only its own rows; a blank output_id is
   ad4 <- ad_df(output_id = NA_character_, data_id = "adsl_saf", from = "ADSL", population_id = "SAF")
   expect_error(ad_spec(ad4, an_rows()[1L, ]), "`output_id` is blank", fixed = TRUE)
 })
+
+test_that("a data that keeps columns keeps the ones its analyses read", {
+  ad <- ad_rows()
+  ad$keep <- NA
+  ad$keep[2L] <- "AEDECOD"
+  code <- tfl_ard_code(ad_spec(ad, an_rows()), output_id = "T1", save = FALSE,
+                       part = "body")
+  # AE reads adae_teae by TRT01A, its variables AEBODSYS | AEDECOD: kept
+  # after the ones asked for
+  expect_true(any(grepl("  select(USUBJID, AEDECOD, TRT01A, AEBODSYS)", code, fixed = TRUE)))
+})
