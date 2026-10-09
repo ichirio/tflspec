@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9069** (the development version,
+**This manual documents tflspec 0.0.24.9071** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -335,7 +335,7 @@ once. The `study` sheet has `key` / `value` (`rounding`: `sas` / `iec` /
 
 | Column | Goes to | Notes |
 |---|---|---|
-| `cols` | `table_plan(cols = )` | column keys, outermost first: `TR01AG1 \| SEROSTAT` |
+| `cols` | `table_plan(cols = )` | column keys, outermost first: `TRTA \| SEX` |
 | `rows` | `table_plan(rows = )` | `name = column`; a quoted value is a constant heading |
 | `label` | `table_plan(label = )` | blank keeps `.label`; `NA` builds then drops; `NULL` leaves out |
 | `stats` | `plan_cells(stats = )` | `cells` (default: a cell from a template) or `rows` (one statistic a row, the raw values) |

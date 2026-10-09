@@ -144,8 +144,7 @@ cat(tfl_fig_design_code(d), sep = "\n")
 `tfl_fig_style()` holds every look-and-feel value of a study's figures.
 The older sheet-based figure spec and its quick figures (`tfl_fig_km()`,
 `tfl_fig_waterfall()`, ... `tfl_fig_catalog()`) remain while the
-development team decides between the two
-([Discussion #63](https://github.com/ichirio/tflspec/discussions/63)).
+development team decides between the two.
 
 ## CDISC ARS
 

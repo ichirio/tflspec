@@ -644,17 +644,17 @@ two_pop <- function() {
   set.seed(1)
   lb <- expand.grid(USUBJID = cards::ADSL$USUBJID,
                     PARAM = c("ALT", "HGB"), stringsAsFactors = FALSE)
-  lb$BASEGR <- sample(c("G0", "G1"), nrow(lb), TRUE)
-  lb$WORSTGR <- sample(c("G0", "G1", "G2"), nrow(lb), TRUE)
+  lb$BGRADE <- sample(c("G0", "G1"), nrow(lb), TRUE)
+  lb$WGRADE <- sample(c("G0", "G1", "G2"), nrow(lb), TRUE)
   lb <- lb[!(lb$PARAM == "HGB" & seq_len(nrow(lb)) %% 10 == 0), ]
   d <- normalize_ard(cards::bind_ard(
-    cards::ard_categorical(lb, by = c(PARAM, BASEGR), variables = WORSTGR),
-    cards::ard_categorical(lb, by = PARAM, variables = BASEGR),
+    cards::ard_categorical(lb, by = c(PARAM, BGRADE), variables = WGRADE),
+    cards::ard_categorical(lb, by = PARAM, variables = BGRADE),
     cards::ard_total_n(cards::ADSL)), drop_contexts = "attributes")
   list(d = d, tested = table(lb$PARAM), set = nrow(cards::ADSL))
 }
 two_pop_plan <- function(d, n, text = "T (N={n})") {
-  table_plan(d, cols = "BASEGR", rows = c(PARAM = "PARAM"),
+  table_plan(d, cols = "BGRADE", rows = c(PARAM = "PARAM"),
            label = c(label = ".label")) |>
     plan_cells("{n}", notes = FALSE) |>
     plan_paginate_group(keep = FALSE) |>
@@ -677,7 +677,7 @@ test_that("both populations in one header, from code and from a workbook", {
     "pages")))
   expect_identical(unname(spanner(pg)), want)
   sp <- tfl_table_spec(
-    tables = data.frame(cols = "BASEGR", rows = "PARAM = PARAM",
+    tables = data.frame(cols = "BGRADE", rows = "PARAM = PARAM",
                         label = "label = .label",
                         header_n = "n = page | N = table"),
     cells = data.frame(template = "{n}"),
@@ -695,7 +695,7 @@ test_that("both populations in one header, from code and from a workbook", {
   }, "")
   expect_identical(unname(lab), want)
   expect_error(tfl_table_spec(tables = data.frame(
-    cols = "BASEGR", header_n = "tested")) |>
+    cols = "BGRADE", header_n = "tested")) |>
       tflspec:::.ard_spec_table_args(), "not a population")
   expect_error(rtfreporter:::.plan_n_values(two_pop_plan(x$d, "x"), "x"),
                "a population is")

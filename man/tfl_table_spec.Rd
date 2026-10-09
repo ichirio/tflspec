@@ -85,7 +85,7 @@ it.  \code{\link[=tfl_read_table_spec]{tfl_read_table_spec()}} narrows it to one
 Explicit \code{\link[rtfreporter:widen_ard]{rtfreporter::widen_ard()}} arguments win over the spec, and the spec wins
 over the defaults.
 
-Lists inside a cell are \code{|}-separated (\code{TR01AG1 | SEROSTAT}).  A column
+Lists inside a cell are \code{|}-separated (\code{TRTA | SEX}).  A column
 called \code{note} is allowed on any sheet and never read; any other column a
 sheet does not know is an error, so a mistyped header cannot become a
 setting that silently never applies.
@@ -94,7 +94,7 @@ setting that silently never applies.
 \section{\code{tables}}{
 
 \describe{
-\item{\code{cols}}{Column keys, outermost first: \code{TR01AG1 | SEROSTAT}.}
+\item{\code{cols}}{Column keys, outermost first: \code{TRTA | SEX}.}
 \item{\code{rows}}{Row keys, in output order.  \code{name = column} renames
 (\code{group1 = AEBODSYS}); a quoted value is a constant heading
 (\code{group1 = "Worst Post-Baseline Values"}).}
@@ -124,7 +124,7 @@ page's, with a warning when the ARD states both.  See
 \section{\code{variables}}{
 
 \describe{
-\item{\code{variable}}{An analysis variable, or any column key (\code{BASEGR},
+\item{\code{variable}}{An analysis variable, or any column key (\code{BGRADE},
 \code{ATPT}, or the label column's own name).}
 \item{\code{label}}{Display text replacing the variable's name.}
 \item{\code{order}}{Number; the order the variables appear in.}
@@ -275,7 +275,7 @@ column name, \code{.values} (every spread column), a position or range
 (\code{3}, \code{3:31}, \code{3:last}), or \code{KEY = value} --- the spread columns
 whose column key \code{KEY} has that value (\code{variable = n}).}
 \item{\code{span}}{Blank: one cell over all of \code{cols}.  \code{each}: one cell
-per column.  A column key (\code{TR01AG1}): one cell per value of that
+per column.  A column key (\code{TRTA}): one cell per value of that
 key, over its columns --- an arm's spanner, however many arms.}
 \item{\code{text}}{The label.  A line break is Alt+Enter or \verb{\\\\n}.  The
 tokens of \code{\link[rtfreporter:plan_verbs]{rtfreporter::plan_col_header()}} work: \code{{col}} (the column's own
