@@ -36,7 +36,11 @@ tfl_fig_design_code(
 tfl_check_fig_design(design, adam = NULL, ggplot2_version = NULL)
 }
 \arguments{
-\item{data, stats, layers}{Lists of pieces (each a named list).}
+\item{data, layers}{Lists of pieces (each a named list).}
+
+\item{stats}{A design of before 0.0.24.9074 kept its named steps (a
+fit, summary statistics ...) apart: they are put after \code{data}, as one
+list (and its \code{data_code} / \code{stats_code} steps are \code{code}).}
 
 \item{plot}{A named list of the figure-wide settings.}
 
@@ -49,10 +53,10 @@ installed ggplot2's. Set (anywhere but the installed version), the
 script's header says \verb{# Written for ggplot2 X}.}
 
 \item{plots}{A composed figure: a named list of figure designs (each
-with its own \code{data}, \code{stats}, \code{plot}, \code{layers}), put together by
-patchwork as \code{compose} says. The design's own \code{plot} then holds only
-the saved size (\code{width}, \code{height}, \code{dpi}, \code{units}), and it has no
-\code{data}, \code{stats} or \code{layers} of its own.}
+with its own \code{data}, \code{plot}, \code{layers}), put together by patchwork as
+\code{compose} says. The design's own \code{plot} then holds only the saved size
+(\code{width}, \code{height}, \code{dpi}, \code{units}), and it has no \code{data} or \code{layers}
+of its own.}
 
 \item{compose}{With \code{plots}: \code{layout}, an expression of the plots' names
 with \code{|} (side by side), \code{/} (stacked), \code{+}, \code{-} and brackets (default:
@@ -69,7 +73,9 @@ figure (\code{wrap_elements()}).}
 \item{plot_id}{The figure's ID: the PNG's name.}
 
 \item{setup}{\code{TRUE}: the code runs after the study's figure setup
-(\code{\link[=tfl_fig_setup_code]{tfl_fig_setup_code()}}), so the palette is its \code{tfl_colours()}.}
+(\code{\link[=tfl_fig_setup_code]{tfl_fig_setup_code()}}), so the palette is its \code{tfl_colours()}; the
+setup attaches the packages, so the code has no header and no
+\code{library()} (what it needs is in its attributes: below).}
 
 \item{save}{\code{FALSE} leaves out saving the PNG: the code makes the
 figure only (a report program writes it into its RTF).}
@@ -81,7 +87,14 @@ figure only (a report program writes it into its RTF).}
 \code{value}, \code{label}, \code{order}): the rows of \code{plot_id} are put on the
 figure's data, last of its data steps -- each listed column a factor
 in its list's order, its values as the list has them (\verb{cl_<variable>}
-and \code{set_levels()}, see \code{\link[=tfl_helpers_code]{tfl_helpers_code()}}).}
+and \code{set_levels()}, see \code{\link[=tfl_helpers_code]{tfl_helpers_code()}}).
+
+The script has two sections: \verb{# ---- data ----} (the steps' pipes, one
+an object; the axis breaks; a panel's data) and \verb{# ---- plot ----} (the
+palette, then one \code{+} chain into \code{name}; a panel below it is a chain of
+its own, put under it on the last line).  Its attributes say what it
+needs: \code{reads} (the datasets, upper case), \code{libs} (the packages to
+attach) and \code{needs} (the packages called as \code{pkg::fn}).}
 
 \item{adam}{The data (\code{\link[=tfl_read_adam]{tfl_read_adam()}}): the variables and PARAMCDs the
 design names are looked for in it.}
@@ -98,15 +111,17 @@ function or argument of a \code{call} the target does not have, or drops,
 is one; what it only deprecates is advice (\code{\link[=tfl_fig_advice]{tfl_fig_advice()}}).
 }
 \description{
-A figure as four parts (see \code{\link[=tfl_fig_parts]{tfl_fig_parts()}} for every piece):
+A figure as three parts (see \code{\link[=tfl_fig_parts]{tfl_fig_parts()}} for every piece):
 }
 \details{
 \itemize{
-\item \code{data}: the steps from ADaM to the plot's data \code{df} -- each a list with
-\code{step} (\code{read}, \code{join}, \code{param}, \code{flag}, \code{filter}, \code{derive},
-\code{time_unit}, \code{levels}, \code{rank}, \code{data_code}) and its fields;
-\item \code{stats}: what is computed from \code{df} (\code{survfit}, \code{summary},
-\code{stats_code}), each with its \code{name};
+\item \code{data}: one ordered list of steps, each a list with \code{step} and its
+fields.  \code{read} starts \code{df}; \code{join}, \code{param}, \code{flag}, \code{filter},
+\code{derive}, \code{time_unit}, \code{levels}, \code{rank} change the object above them;
+\code{survfit}, \code{summary}, \code{summary_by}, \code{rate}, \code{count}, \code{subset} make an
+object of their own, by its \code{name} (a fit, summary statistics ...),
+which the steps after them change; \code{code} is the user's own code.
+Consecutive steps on one object are one pipe in the script;
 \item \code{plot}: the figure-wide settings (title, axes, colours, theme, legend,
 size), plus \code{add}: a list of \code{call}s (below) written after the
 figure's settings and before any panels -- for \code{theme()}, \verb{scale_*},
@@ -131,7 +146,6 @@ data:
 - \{step: param, value: OS\}
 - \{step: flag, variable: FASFL\}
 - \{step: time_unit, variable: AVAL, unit: months\}
-stats:
 - \{step: survfit, name: fit, time: AVAL, censor: CNSR, by: TRT01A\}
 plot: \{x_label: Time (Months), y_label: Survival Probability, colour_by: TRT01A,
   legend: inside, x_min: 0, y_min: 0, y_max: 1, y_by: 0.2\}
@@ -146,7 +160,7 @@ A composed figure (two figures, each with its own data):
 
 \if{html}{\out{<div class="sourceCode yaml">}}\preformatted{plot: \{width: 10, height: 4.5\}
 plots:
-  km:   \{data: [...], stats: [...], plot: \{...\}, layers: [...]\}
+  km:   \{data: [...], plot: \{...\}, layers: [...]\}
   box:  \{data: [...], plot: \{...\}, layers: [...]\}
 compose:
   layout: km | box

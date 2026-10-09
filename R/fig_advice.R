@@ -78,7 +78,7 @@
       "Set X max and X step, so the breaks (and the number at risk's columns) fall on round times.")
   },
   km_unit = function(d, ctx) {
-    sf <- Filter(function(s) identical(s$step, "survfit"), d$stats)
+    sf <- Filter(function(s) identical(s$step, "survfit"), d$data)
     if (length(sf) && !.has_step(d, "time_unit")) .adv(
       "km_unit", "info", "data",
       "The time is in days; a KM axis is usually in months (or weeks).",
@@ -133,7 +133,7 @@
   },
   # ---- mean over time
   mean_n = function(d, ctx) {
-    sm <- Filter(function(s) identical(s$step, "summary") && grepl("VISIT", toupper(s$by %||% "")), d$stats)
+    sm <- Filter(function(s) identical(s$step, "summary") && grepl("VISIT", toupper(s$by %||% "")), d$data)
     if (length(sm) && .has_layer(d, "errorbar") && !.has_layer(d, "n_table")) {
       by <- .split_vals(sm[[1L]]$by)
       eb <- d$layers[[.layer_i(d, "errorbar")[1L]]]
@@ -180,7 +180,7 @@
                                     .fix("add_step", step = list(step = "read", dataset = "ADSL"), first = TRUE))
   },
   pop = function(d, ctx) {
-    if (.has_step(d, "read") && !.has_step(d, "flag") && !.has_step(d, "data_code")) {
+    if (.has_step(d, "read") && !.has_step(d, "flag") && !.has_step(d, "code")) {
       # the flag the data has: the usual ones first, else any *FL
       have <- grep("FL$", ctx$vars %||% character(), value = TRUE)
       flag <- c(intersect(c("FASFL", "SAFFL", "ITTFL", "PPROTFL"), have), have, "SAFFL")[1L]
@@ -307,8 +307,12 @@ tfl_fig_apply_fix <- function(design, fix) {
         design$data <- append(design$data, list(fix$step),
                               after = min(which(.step_kinds(design) == fix$before)) - 1L)
       } else {
-        # after the last keep-rows step, before any derive of the same variable
-        design$data <- c(design$data, list(fix$step))
+        # a step on `df`: before the first step that makes an object of
+        # its own (a fit, summary statistics ...), else last
+        named <- which(.step_kinds(design) %in% .fig_named_steps)
+        design$data <- if (length(named)) {
+          append(design$data, list(fix$step), after = min(named) - 1L)
+        } else c(design$data, list(fix$step))
       }
     },
     set_plot = {

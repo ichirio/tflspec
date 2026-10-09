@@ -1,5 +1,25 @@
 # tflspec (development version)
 
+* **A figure's steps are one list; its script two sections and one chain**
+  (#201, tflplanner #293 phase 1).  A figure design's `data:` is one
+  ordered list: the steps that make an object of their own (`survfit`,
+  `summary`, `summary_by`, `rate`, `count`, `subset`), which were `stats:`,
+  are in it, and a step after one changes that object, in its pipe;
+  `data_code` and `stats_code` are `code`.  A design written before reads
+  as the one list (and is written back without `stats:`).
+  `tfl_fig_design_code()` writes `# ---- data ----` (one pipe an object,
+  the code lists on `df`, the axis breaks, a panel's data) and
+  `# ---- plot ----` (the palette first, then one `+` chain into the
+  figure; a panel below it is a chain of its own, joined on the last
+  line); with `setup = TRUE` there is no header and no `library()`, and
+  the attributes `reads`, `libs`, `needs` say what it needs.  The number
+  at risk is by default a panel from the figure's own fit; the
+  `risk_table` layer's `method: add_risktable` draws ggsurvfit's table
+  instead.  The swimmer template's months for the assessments are a step
+  of `assess`.  The drawn figures are the same (test-fig-exact); the
+  template snapshots change once; the generated programs are fixed byte
+  for byte (`tests/testthat/fixtures/fig-programs/`).
+
 * **"Population" everywhere the apps show it** (#197).  The figure
   designer ("Population flag", "Keep a population"), the figure advice,
   five column descriptions of `inst/spec/columns.csv` and the `header_n`
