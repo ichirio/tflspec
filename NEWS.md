@@ -1,5 +1,12 @@
 # tflspec (development version)
 
+* **A population is an analysis set** (#191).  The README and the AI user
+  manual say it once: a population (the `populations` sheet,
+  `population_id`) is what ICH E9 and CDISC ARS call an analysis set;
+  `tfl_ars()` writes it as an `AnalysisSet` and an analysis's
+  `population_id` as `analysisSetId`.  The argument hints
+  (`inst/ard/args.csv`) say "population" throughout.
+
 * **A report's code lists give the data its labels; the ARD holds them**
   (#187).  `tfl_ard_code(codelists = )` writes each list at the program's
   head, `cl_sex <- c(F = "Female", M = "Male")` (a value named by its
