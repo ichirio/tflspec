@@ -19,6 +19,42 @@
   of `assess`.  The drawn figures are the same (test-fig-exact); the
   template snapshots change once; the generated programs are fixed byte
   for byte (`tests/testthat/fixtures/fig-programs/`).
+* **A review of the whole definition** (#199, tflplanner#288, phase 0).
+  `tfl_review_spec(spec, ard, listings, figures)` lists, for every report,
+  what cannot be used (`error`), what is valid but probably wrong
+  (`check`) and what is missing and has to be set by hand (`hand`), one
+  row each: the report, the sheet, the row's key (the variable, the
+  analysis_id, `variable / context / row` on `cells`), the column, the
+  message, a hint and the rule.  Nothing stops: an ARD definition that
+  cannot be built is reviewed as its sheets.  The rules are a catalog,
+  `tfl_review_rules()` (`inst/review/rules.csv`): what the constructors
+  find (S01); a grouping variable also analysed, statistics of the wrong
+  kind, a name the ARD uses itself (A06, A08, A15); a column or row key no
+  analysis groups by, a variables or cells row for a variable not
+  analysed, a template statistic of the other kind, digits no template
+  reads, no column key, no cells (T01-T05, T09, T10); a listing without
+  columns (L01); a figure's required field blank and its advice (F01,
+  F02); a code list of a variable the report does not read (C01).  With
+  the facts of the data, `tfl_data_facts(data, populations = ard)` --
+  each column's class and values, each analysis set's subjects, each
+  condition's rows, small and with no records, so they can be kept --
+  also a column the data do not have, a condition that cannot be
+  evaluated or keeps nothing, a flag that is not Y / N, a mean of a
+  character column, a derived column that replaces one (A01-A05, A16), a
+  code list value no record has (C02) and a data value the code list does
+  not have (C03, an error: the program stops on it), a listing's columns
+  (L02), a figure's dataset and variables (F03).  With what each report's
+  ARD holds (`tfl_ard_facts()`, in `facts$ard`): the statistics, keys and
+  levels the table reads (T06-T08) and what went wrong while it was made
+  (A17).
+* **The constructors collect their problems** (tflplanner#274 D11).
+  `tfl_table_spec()`, `tfl_ard_spec()` and `tfl_listing_spec()` find every
+  problem, as rows, and stop as before -- the table definition on its
+  first, the others with all of them, the messages unchanged -- with a
+  condition of class `tflspec_spec_error` that carries the rows as
+  `problems` (`output_id`, `sheet`, `row`, `field`, `message`), so a GUI
+  reads where a problem is instead of parsing the message.
+  `tfl_check_ard()` and the review share its three rules.
 
 * **"Population" everywhere the apps show it** (#197).  The figure
   designer ("Population flag", "Keep a population"), the figure advice,

@@ -161,6 +161,7 @@ going and leaves the message in the `error` / `warning` column.
 | the document / its code / its file | `tfl_report(spec, output_id, content = plan)` / `tfl_report_code(spec)` / `tfl_report_path(spec)` |
 | a listing's program / its pages | `tfl_listing_code(spec)` / `tfl_listing(data, spec)` |
 | a figure: start / check / write the script | `tfl_fig_template()` / `tfl_check_fig_design()` / `tfl_fig_design_code()` |
+| review the whole definition: errors, what is probably wrong, what to set by hand | `tfl_review_spec(spec, ard, listings, figures)`; against the data: `facts = tfl_data_facts(data, populations = ard)`; the rules: `tfl_review_rules()` |
 | attach this manual to a chat session | `tflspec_ai_manual(file = )` |
 
 ### 4.1 How the columns are named
@@ -702,6 +703,9 @@ back): rename the value or choose another separator.
 `tfl_sankey_data` `tfl_plot_sunburst` `tfl_sunburst_data`
 
 **Data:** `tfl_read_adam` `tfl_example_adam`
+
+**Review:** `tfl_review_spec` `tfl_review_rules` `tfl_data_facts`
+`tfl_ard_facts`
 
 ---
 
