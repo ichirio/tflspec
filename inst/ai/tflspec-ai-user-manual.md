@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9066** (the development version,
+**This manual documents tflspec 0.0.24.9068** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -472,6 +472,25 @@ tfl_write_specs("spec/report.xlsx", report = sp)
   `"ADSL | ADAE"`. Not part of the spec either.
 - `attr(, "labels")` (the map's `label`: the ID as printed), `attr(, "first_titles")`, `attr(, "populations")`: for a report list to write the report's own tokens.
 
+A study's define gives a report's code lists and its variables' labels,
+by rule (Define-XML 2.0 / 2.1 through `xml2`; or the define spec workbook
+through an import profile, Pinnacle 21's by default):
+
+```r
+def <- tfl_read_define("define.xml")   # or tfl_read_define_spec("define.xlsx")
+cl <- tfl_define_codelists(def, c("SEX", "AGEGR1"), output_id = "T-14-1-1",
+                           datasets = "ADSL")
+attr(cl, "set_by_hand")   # what the define could not give
+```
+
+- The rows are the `codelists` sheet's (`value` = coded value, `label` =
+  decode, `order` = order number) plus `note` (`define: CL.SEX`); with
+  `labels = TRUE` (default) also the code list of `variable` (the
+  variables' labels). `output_id` is required: code lists are per report.
+- A variable with different code lists in two datasets is an error: give
+  `datasets`. A company layout: `tfl_read_define_spec(path, map =
+  list(variables = list(label = "Variable Label")))`.
+
 ---
 
 ## 8. Listing spec
@@ -646,6 +665,9 @@ back): rename the value or choose another separator.
 
 **Report spec:** `tfl_read_report_spec` `tfl_read_toc` `tfl_report` `tfl_report_code`
 `tfl_report_path` `tfl_report_setup_code` `tfl_report_tokens`
+
+**Document import (a define, by rule):** `tfl_read_define`
+`tfl_read_define_spec` `tfl_define_profile` `tfl_define_codelists`
 
 **Listing spec:** `tfl_listing_spec` `tfl_read_listing_spec`
 `tfl_write_listing_spec` `tfl_listing` `tfl_listing_code`
