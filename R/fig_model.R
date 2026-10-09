@@ -175,7 +175,7 @@
         .ff("y", "values", "At y", required = TRUE, help = "Several: 20, -30"),
         .ff("label", "text", "Label", "{y}", help = "{y} = the value, e.g. {y}%"),
         .ff("size", "number", "Size", 3.5))),
-    risk_table = list(section = "layers", label = "Number at risk (panel)",
+    risk_table = list(section = "layers", label = "Number at risk",
       panel = TRUE,
       help = "The number at risk below the curves, at the x axis's breaks.",
       fields = rbind(
