@@ -77,6 +77,60 @@ test_that("the rows without facts are among those with them", {
   }
 })
 
+test_that("each row's message is its template filled with its values", {
+  cat <- tfl_review_rules()
+  tp <- tfl_review_templates()
+  expect_named(tp, c("rule", "name", "template"))
+  expect_true(all(tp$rule %in% cat$rule))
+  expect_false(anyDuplicated(tp$template) > 0L)
+  # the rules whose message is the whole sentence, with words of their own
+  own <- c("T06", "T07", "L01", "L02", "F02", "F03")
+  for (cs in .rv_cases()) {
+    r <- .rv_case_review(cs)
+    for (i in seq_len(nrow(r))) {
+      expect_identical(r$message[i], do.call(sprintf, c(list(r$template[i]), as.list(r$args[[i]]))),
+                       info = paste(r$rule[i], r$message[i]))
+      if (r$rule[i] %in% own) {
+        expect_false(identical(r$template[i], "%s"), info = paste(r$rule[i], r$message[i]))
+        if (r$rule[i] != "F02") {
+          expect_true(r$template[i] %in% tp$template[tp$rule == r$rule[i]],
+                      info = paste(r$rule[i], r$message[i]))
+        }
+      } else if (r$rule[i] %in% cat$rule) {
+        expect_identical(r$template[i], cat$message[cat$rule == r$rule[i]], info = r$rule[i])
+      }
+    }
+  }
+  # the ones the cases do not make: a column without vars, cells for a
+  # variable the ARD does not analyse, a variable the design's data lack
+  s <- .rv_study()
+  s$listings$listing_cols$vars[2] <- NA
+  r <- tfl_review_spec(s$spec, s$ard, s$listings)
+  expect_identical(r$template[r$rule == "L01"], "listing %s, column %s: no `vars`")
+  expect_identical(r$args[r$rule == "L01"], list(c("L-1", "2")))
+  s <- .rv_study()
+  s$spec$cells <- rbind(s$spec$cells, data.frame(output_id = "T-1", variable = "WEIGHT",
+                                                 row = "n", template = "{N}"))
+  f <- list(`T-1` = list(groups = list(TRT01A = c("Drug", "Placebo")),
+                         variables = list(AGE = list(levels = character(),
+                                                     stats = c("N", "mean", "sd"),
+                                                     contexts = "continuous")),
+                         stats = c("N", "mean", "sd")))
+  r <- tfl_review_spec(s$spec, s$ard, facts = list(ard = f))
+  t7 <- r[r$rule == "T07", ]
+  expect_true("the cells are written for %s, which the ARD does not analyse" %in% t7$template)
+  # tfl_check_ard() says the same sentences
+  expect_identical(r$message[r$rule == "T07"][1L],
+                   sprintf(t7$template[1L], t7$args[[1L]]))
+  s$figures <- list(`F-1` = tfl_fig_design(data = list(list(step = "read", dataset = "ADSL"),
+                                                       list(step = "flag", variable = "NOPE"))))
+  facts <- tfl_data_facts(s$data, populations = s$ard)
+  r <- tfl_review_spec(s$spec, s$ard, figures = s$figures, facts = facts)
+  f3 <- r[r$rule == "F03", ]
+  expect_identical(f3$template, "%s %s no variable %s in %s")
+  expect_identical(f3$args[[1L]], c("data[2] flag", "variable", "NOPE", "df"))
+})
+
 test_that("the shape: columns, sort, summary, print, narrowing", {
   s <- .rv_study()
   s$spec$tables$cols[2] <- NA                   # T09, hand
@@ -85,7 +139,7 @@ test_that("the shape: columns, sort, summary, print, narrowing", {
   r <- tfl_review_spec(s$spec, s$ard, s$listings)
   expect_s3_class(r, "tfl_review")
   expect_named(r, c("output_id", "level", "area", "sheet", "row", "field",
-                    "message", "hint", "rule", "draft", "args", "fix"))
+                    "message", "template", "hint", "rule", "draft", "args", "fix"))
   expect_identical(r$level, c("error", "check", "hand"))
   expect_false(any(r$draft))
   sm <- summary(r)

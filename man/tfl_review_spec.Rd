@@ -43,10 +43,11 @@ A \code{tfl_review}: a data frame, one row per item -- \code{output_id},
 \code{ard}, \code{ard_run}, \code{table}, \code{listing}, \code{figure}, \code{data}, \code{spec}),
 \code{sheet}, \code{row} (the row's key, as the sheet is keyed: the variable,
 the analysis_id, \code{variable / context / row} on \code{cells}), \code{field} (the
-column), \code{message}, \code{hint}, \code{rule}, \code{draft} (\code{FALSE}: set by an import
-for the rows it brings), \code{args} (the values filled into the rule's
-template, for a translation) and \code{fix} (a one-step fix, where there is
-one: \code{\link[=tfl_fig_apply_fix]{tfl_fig_apply_fix()}}).  Errors first, then checks, then what to
+column), \code{message}, \code{template} (the sentence the values fill:
+the rule's message or one of \code{\link[=tfl_review_templates]{tfl_review_templates()}}), \code{hint},
+\code{rule}, \code{draft} (\code{FALSE}: set by an import for the rows it brings),
+\code{args} (the values that fill \code{template}, for a translation) and
+\code{fix} (a one-step fix, where there is one: \code{\link[=tfl_fig_apply_fix]{tfl_fig_apply_fix()}}).  Errors first, then checks, then what to
 set by hand; within a level by report and sheet.
 }
 \description{
