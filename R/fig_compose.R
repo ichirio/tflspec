@@ -109,7 +109,8 @@
     sprintf("%s <- %s", name, layout),
     unlist(lapply(adds, `[[`, "line")),
     if (save) c("", name, "", .fig_save_code(design$plot, plot_id, name)))
-  .fig_code_out(code, unlist(lapply(bodies, `[[`, "reads")), libs, needs)
+  .fig_code_out(code, unlist(lapply(bodies, `[[`, "reads")), libs, needs,
+                ard = .fig_uses_ard(design))
 }
 
 .fig_as_design <- function(x) {

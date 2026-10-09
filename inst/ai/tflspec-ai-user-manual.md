@@ -538,6 +538,17 @@ layers:                                 # what is drawn, in order
 - The number at risk (`risk_table`): by default a panel of its own from
   the figure's fit (`summary(fit, times = x_breaks)`); `method:
   add_risktable` puts ggsurvfit's `add_risktable()` on the chain.
+- A figure can read an ARD -- its own, or a table's (the program puts it
+  in `ard`): the data step `ard_stats` (`name`, `analysis_id`,
+  `variable`, `stats`, `by`) makes a data frame of statistics, a row per
+  group, a column per statistic (`ard_stats(ard, ...)`); the layer
+  `ard_number` prints one statistic (`analysis_id`, `variable`, `level`,
+  `stat`, `group: TRT01A = Placebo`, `label: "Median: {value} days"`,
+  `digits`; placed by `x`, `y`, `hjust`, `vjust`, `size`) as
+  `annotate("text", label = ard_value(ard, ...))`.  The code's attribute
+  `ard` is `TRUE` then; `tfl_check_fig_design(design, ard = <the ARD>)`
+  looks for each address in it.  `ard_value()`, `ard_stats()` and
+  `ard_fingerprint()` are study helpers (`tfl_helpers_code()`).
 - `layers`: catalog layers (`line`, `point`, `errorbar`, `boxplot` … see
   `tfl_fig_add_layer()`), `geom` (any geom by name), `call` (any function:
   `fn`, `package`, `data`, `aes`, `pos`, `args`), `layer_code`, `figure`.

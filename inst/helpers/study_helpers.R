@@ -1,6 +1,8 @@
 # The functions a study's generated programs call: the code lists on a
 # data, the ids in front of an analysis's ARD, the formats after a call,
-# the statistics asked for, and one report's rows into the study ARD.
+# the statistics asked for, one report's rows into the study ARD, and a
+# figure's reading of an ARD (one statistic, statistics as a data frame,
+# the fingerprint of what was built).
 # Base R, cards and dplyr only: the programs run without tflspec.
 
 # The code lists on a data: each listed column a factor, in its list's
@@ -78,6 +80,109 @@ fmt_ard <- function(ard, formats = list(), skip = character()) {
 keep_stats <- function(ard, stats) {
   if (is.list(ard) && !is.data.frame(ard)) return(lapply(ard, keep_stats, stats))
   ard[ard$stat_name %in% stats, , drop = FALSE]
+}
+
+# One statistic of an ARD, as text: the row of the analysis, the variable
+# (and its level), the statistic and the groups named (`TRT01A =
+# "Placebo"`); exactly one row, or the program stops and says how many.
+# The text is the ARD's own (stat_fmt), or the value with `digits`
+# decimals; a missing value is `na`.
+#   ard_value(ard, "KM", "prob", "estimate", TRT01A = "Placebo", level = 0.5)
+ard_value <- function(ard, analysis_id, variable, stat, ..., level = NULL,
+                      digits = NULL, na = "NE") {
+  chr <- function(x) {
+    if (!is.list(x)) return(as.character(x))
+    vapply(x, function(v) if (length(v)) as.character(v[[1L]]) else NA_character_, "")
+  }
+  k <- ard$analysis_id %in% analysis_id & ard$variable %in% variable &
+    ard$stat_name %in% stat
+  if (!is.null(level)) k <- k & chr(ard$variable_level) %in% as.character(level)
+  groups <- list(...)
+  for (g in names(groups)) {
+    hit <- rep(FALSE, nrow(ard))
+    for (col in grep("^group[0-9]+$", names(ard), value = TRUE)) {
+      hit <- hit | (chr(ard[[col]]) %in% g &
+                      chr(ard[[paste0(col, "_level")]]) %in% as.character(groups[[g]]))
+    }
+    k <- k & hit
+  }
+  if (sum(k) != 1L) {
+    what <- paste(c(analysis_id, variable, if (!is.null(level)) paste("level", level), stat,
+                    if (length(groups)) paste0(names(groups), " = ", unlist(groups))),
+                  collapse = ", ")
+    stop(sprintf("ard_value(): %d rows of the ARD are %s, not one.", sum(k), what),
+         call. = FALSE)
+  }
+  i <- which(k)
+  v <- if (is.list(ard$stat)) ard$stat[[i]] else ard$stat[i]
+  if (!length(v) || is.na(v[[1L]])) return(na)
+  if (!is.null(digits)) return(formatC(as.numeric(v[[1L]]), format = "f", digits = digits))
+  f <- if ("stat_fmt" %in% names(ard)) {
+    if (is.list(ard$stat_fmt)) ard$stat_fmt[[i]] else ard$stat_fmt[i]
+  }
+  if (!length(f) || is.na(f[[1L]])) as.character(v[[1L]]) else as.character(f[[1L]])
+}
+
+# Statistics of an ARD as a data frame: a row per group (and level of the
+# variable), a column per statistic (its value).  `by` names the group
+# columns kept (by their variables' names: TRT01A); the variable's levels
+# are a column of the variable's name; several analyses or variables add
+# their columns `analysis_id`, `variable`.
+#   ard_stats(ard, "KM", "time", "n.risk", by = "TRT01A")  # TRT01A, time, n.risk
+ard_stats <- function(ard, analysis_id, variable = NULL, stats, by = NULL) {
+  chr <- function(x) {
+    if (!is.list(x)) return(as.character(x))
+    vapply(x, function(v) if (length(v)) as.character(v[[1L]]) else NA_character_, "")
+  }
+  num <- function(x) suppressWarnings(as.numeric(chr(x)))
+  k <- ard$analysis_id %in% analysis_id & ard$stat_name %in% stats
+  if (!is.null(variable)) k <- k & ard$variable %in% variable
+  a <- ard[k, , drop = FALSE]
+  if (!nrow(a)) {
+    stop(sprintf("ard_stats(): the ARD has no rows of %s, %s.",
+                 paste(analysis_id, collapse = ", "), paste(stats, collapse = ", ")),
+         call. = FALSE)
+  }
+  gcols <- grep("^group[0-9]+$", names(a), value = TRUE)
+  if (is.null(by)) by <- unique(stats::na.omit(unlist(lapply(gcols, function(g) chr(a[[g]])))))
+  keys <- data.frame(row.names = seq_len(nrow(a)))
+  if (length(unique(a$analysis_id)) > 1L) keys$analysis_id <- a$analysis_id
+  for (g in by) {
+    v <- rep(NA_character_, nrow(a))
+    for (col in gcols) {
+      at <- chr(a[[col]]) %in% g
+      v[at] <- chr(a[[paste0(col, "_level")]])[at]
+    }
+    keys[[g]] <- v
+  }
+  vars <- unique(a$variable)
+  if (length(vars) > 1L) keys$variable <- a$variable
+  if ("variable_level" %in% names(a)) {
+    lv <- chr(a$variable_level)
+    if (!all(is.na(lv))) {
+      nm <- if (length(vars) == 1L) vars else "level"
+      keys[[nm]] <- if (all(is.na(lv) | !is.na(num(a$variable_level)))) num(a$variable_level) else lv
+    }
+  }
+  id <- do.call(paste, c(lapply(keys, as.character), list(sep = "\r")))
+  if (!ncol(keys)) id <- rep("", nrow(a))
+  first <- !duplicated(id)
+  out <- keys[first, , drop = FALSE]
+  for (s in stats) {
+    at <- a$stat_name == s
+    out[[s]] <- num(a$stat)[at][match(id[first], id[at])]
+  }
+  rownames(out) <- NULL
+  out
+}
+
+# The fingerprint of a report's ARD definition as ard_status.csv recorded it
+# when its rows were built ("" when none were)
+ard_fingerprint <- function(report_id, path = "output/ard/ard_status.csv") {
+  if (!file.exists(path)) return("")
+  st <- utils::read.csv(path, colClasses = "character")
+  d <- st$definition[st$output_id == report_id]
+  if (!length(d) || is.na(d[1L])) "" else d[1L]
 }
 
 # One report's rows into the study ARD (the other reports' left as they

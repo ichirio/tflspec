@@ -9,6 +9,20 @@
   same `|` cells are split once, and the table rules split each
   analysis's variables once a report: 200 reports reviewed in about 1 s
   instead of 2.2 s (installed; the figures' part 0.7 s to 0.1 s).
+* **A figure can read an ARD** (#293 phase 3, tflplanner #293).  The
+  study helpers gain `ard_value()` (one statistic of an ARD, as the ARD
+  formatted it or with `digits`; exactly one row or the program stops),
+  `ard_stats()` (statistics as a data frame: a row per group and level, a
+  column per statistic) and `ard_fingerprint()` (the definition
+  `ard_status.csv` recorded for a report).  Two pieces use them: the data
+  step `ard_stats` (an object of its own) and the layer `ard_number`
+  (prints one statistic -- a median, a hazard ratio -- as an
+  `annotate("text")` term of the chain).  The program puts the ARD in
+  `ard`; `tfl_fig_design_code()`'s attribute `ard` says the code reads
+  it, and `tfl_check_fig_design(ard =)` looks for the pieces' analyses,
+  variables, levels, statistics and groups in it.  The report sheet's
+  `ard_source` takes `own` and `table:<output_id>` (a figure's: its own
+  analyses, or a table's ARD) besides blank and `import:<file>`.
 
 * **A figure's steps are one list; its script two sections and one chain**
   (#201, tflplanner #293 phase 1).  A figure design's `data:` is one
