@@ -177,10 +177,12 @@ test_that("an analysis's formats are in its cards call; the rest after it", {
   skip_if_not_installed("cardx")
   code <- tfl_ard_code(fmt_spec(fmt_rows), save = FALSE)
   txt <- paste(code, collapse = "\n")
-  # the setup: the defaults as fmt_fun takes them, no function of its own
-  expect_match(txt, "p.value = tflspec::fmt_pvalue|p.value = fmt_pvalue")
+  # the setup: the defaults as fmt_fun takes them; the program itself (its
+  # body) defines no function -- the helpers are a file of their own
+  expect_match(txt, "p.value = fmt_pvalue", fixed = TRUE)
   expect_match(txt, "p = label_round(1, scale = 100)", fixed = TRUE)
-  expect_false(any(grepl("<- function(", code, fixed = TRUE)))
+  body <- tfl_ard_code(fmt_spec(fmt_rows), save = FALSE, part = "body")
+  expect_false(any(grepl("<- function(", body, fixed = TRUE)))
   # in the call: cards' summaries, counts, missing, a subject flag
   expect_match(txt, paste0(
     "    fmt_fun = list(\n",
@@ -201,16 +203,16 @@ test_that("an analysis's formats are in its cards call; the rest after it", {
     "  ) |>"), fixed = TRUE)
   expect_match(txt, paste0(
     "  apply_fmt_fun() |>\n",
-    "  tag_ard(output_id, \"AGE\", population = \"SAF\")"), fixed = TRUE)
+    "  tag_ard(report_id, \"AGE\", population = \"SAF\")"), fixed = TRUE)
   # after it: cardx, a fmt_fun of the analysis's own, post, ard_stack_hierarchical()
-  after <- function(id) paste0("  fmt_ard(fmt_default) |>\n  tag_ard(output_id, \"",
+  after <- function(id) paste0("  fmt_ard(fmt_default) |>\n  tag_ard(report_id, \"",
                                id, "\", population = \"SAF\")")
   expect_match(txt, after("TT"), fixed = TRUE)
   expect_match(txt, after("OWN"), fixed = TRUE)
   expect_match(txt, after("POST"), fixed = TRUE)
   expect_match(txt, paste0(
     "  fmt_ard(modifyList(fmt_default, list(p = label_round(2, scale = 100)))) |>\n",
-    "  tag_ard(output_id, \"AE\", population = \"SAF\")"), fixed = TRUE)
+    "  tag_ard(report_id, \"AE\", population = \"SAF\")"), fixed = TRUE)
   # a stack: in each call, and the stack's own rows after it
   expect_match(txt, paste0(
     "    ard_summary(\n",
@@ -225,7 +227,7 @@ test_that("an analysis's formats are in its cards call; the rest after it", {
     "    skip = c(\"AGE\", \"BMIBL\", \"SEX\")\n",
     "  ) |>\n",
     "  tag_ard(\n",
-    "    output_id,\n",
+    "    report_id,\n",
     "    \"DEMO\",\n",
     "    population = \"SAF\",\n",
     "    analyses = list(S_CONT = c(\"AGE\", \"BMIBL\"), S_CAT = \"SEX\")\n",
@@ -235,7 +237,7 @@ test_that("an analysis's formats are in its cards call; the rest after it", {
     "  fmt_ard(\n",
     "    modifyList(fmt_default, list(`AEDECOD:p` = label_round(2, scale = 100)))\n",
     "  ) |>\n",
-    "  tag_ard(output_id, \"H2\", population = \"SAF\")"), fixed = TRUE)
+    "  tag_ard(report_id, \"H2\", population = \"SAF\")"), fixed = TRUE)
   expect_match(txt, paste0(
     "ard_rows <- adae_saf_1 |>\n",
     "  ard_tabulate_rows(\n",
@@ -244,7 +246,7 @@ test_that("an analysis's formats are in its cards call; the rest after it", {
     "  ) |>"), fixed = TRUE)
   expect_match(txt, paste0(
     "  apply_fmt_fun() |>\n",
-    "  tag_ard(output_id, \"MX\", population = \"SAF\")"), fixed = TRUE)
+    "  tag_ard(report_id, \"MX\", population = \"SAF\")"), fixed = TRUE)
   expect_match(txt, paste0(
     "      everything() ~ modifyList(fmt_default, list(corr = 2L)),\n",
     "      BMIBL ~ modifyList(fmt_default, list(corr = 3L))"), fixed = TRUE)
@@ -252,5 +254,5 @@ test_that("an analysis's formats are in its cards call; the rest after it", {
   expect_match(txt, ".f = ~ ard_summary(\n      .x,", fixed = TRUE)
   expect_match(txt, paste0(
     "  apply_fmt_fun() |>\n",
-    "  tag_ard(output_id, \"ST\", population = \"SAF\")"), fixed = TRUE)
+    "  tag_ard(report_id, \"ST\", population = \"SAF\")"), fixed = TRUE)
 })

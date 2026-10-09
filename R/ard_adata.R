@@ -243,7 +243,7 @@
         made <- c(sprintf("%s <- local({\n%s\n})", id,
                           paste0("  ", strsplit(code, "\n", fixed = TRUE)[[1L]],
                                  collapse = "\n")),
-                  if (length(lv)) sprintf("%s <- set_levels(%s, codelists)", id, id))
+                  if (length(lv)) .make_code(id, id, lv))
       }
       out <- c(out, made)
       next

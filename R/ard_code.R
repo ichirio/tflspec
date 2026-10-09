@@ -175,19 +175,19 @@
 # ---- the setup ------------------------------------------------------------
 
 # the names the setup and tflspec give (a study's code does not assign them)
-.ard_helper_names <- c("tag_ard", "set_levels", "fmt_default", "fmt_pvalue",
-                       "fmt_ard", "keep_stats", "save_ard", "tfl_stats")
+.ard_helper_names <- c("set_levels", "tag_ard", "fmt_pvalue", "fmt_ard",
+                       "keep_stats", "save_ard", "fmt_default", "tfl_stats")
 
 # the packages an ARD program attaches (its setup's library() calls), and
 # those R attaches itself: their functions without `pkg::`
-.ard_pkgs <- c("cards", "dplyr", "tflspec")
+.ard_pkgs <- c("cards", "dplyr")
 .ard_base_pkgs <- c("stats", "utils")
 
 # The setup every ARD program starts with: the packages, the study's own
 # functions (its key `source`), the statistics cards does not compute
 # (those `used` of the company standards) and each statistic's format.
 # Values only: what the programs call is cards', dplyr's and tflspec's.
-.ard_common_lines <- function(used, x = NULL) {
+.ard_common_lines <- function(used, x = NULL, helpers = NULL) {
   src <- .split_bar(.study_value(x, "source", NA))
   libs <- if (isTRUE(getOption("tflspec.plain_ns"))) "cards" else
     setdiff(.ard_pkgs, getOption("tflspec.user_attached"))
@@ -197,6 +197,8 @@
       "# the study's own analysis functions (study key `source`)",
       sprintf("source(%s)", vapply(src, .path_code, ""))),
     "",
+    if (length(helpers)) c("# ---- the functions the program calls ----",
+                           helpers, ""),
     .ard_helpers(used))
 }
 
@@ -226,7 +228,7 @@
 # many decimals (cards::label_round(d)), xx.x% a proportion as a percent,
 # pvalue the program's fmt_pvalue()
 .fmt_r <- function(f) {
-  if (identical(f, "pvalue")) return("tflspec::fmt_pvalue")
+  if (identical(f, "pvalue")) return("fmt_pvalue")
   d <- if (grepl("^[0-9]+$", f)) as.integer(f) else
     nchar(sub("^[^.]*[.]?", "", sub("%$", "", f)))
   if (endsWith(f, "%")) sprintf("cards::label_round(%d, scale = 100)", d) else
@@ -319,15 +321,15 @@
   formats <- if (length(fmt)) {
     .cl("utils::modifyList", list("fmt_default", .cl("list", .fmt_list(fmt))))
   } else "fmt_default"
-  .cl("tflspec::fmt_ard", c(list(formats),
+  .cl("fmt_ard", c(list(formats),
                             if (length(skip)) list(skip = .cl("c", .q(skip)))))
 }
 
 # The step that tags the ARD: tag_ard(output_id, "ID", population = "SAF"),
 # with the analyses a stack runs and their variables
 .tag_step <- function(analysis_id, population_id, analyses = NULL) {
-  .cl("tflspec::tag_ard", c(
-    list("output_id", .q(analysis_id)),
+  .cl("tag_ard", c(
+    list("report_id", .q(analysis_id)),
     if (!is.na(population_id)) list(population = .q(population_id)),
     if (length(analyses)) list(analyses = .cl("list", lapply(analyses, .c_str)))))
 }
@@ -444,9 +446,9 @@
 # ---- the data ------------------------------------------------------------
 
 # `obj` made from `src` by `steps` (calls without their data:
-# "dplyr::filter(X)", "dplyr::mutate(A = B)", "set_levels(codelists)") in
-# one statement, the way a person writes it: no step, `obj <- src`; one
-# step on a name, `obj <- dplyr::filter(src, X)`; else a pipe, a step a line
+# "dplyr::filter(X)", "dplyr::mutate(A = B)", the code lists' step) in one
+# statement, the way a person writes it: no step, `obj <- src`; one step on
+# a name, `obj <- dplyr::filter(src, X)`; else a pipe, a step a line
 .make_code <- function(obj, src, steps) {
   steps <- steps[!is.na(steps) & nzchar(steps)]
   if (!length(steps)) return(sprintf("%s <- %s", obj, src))
@@ -461,8 +463,49 @@
   paste0(obj, " <- ", src, " |>\n  ", paste(steps, collapse = " |>\n  "))
 }
 
-# the code lists' step
-.levels_step <- "tflspec::set_levels(codelists)"
+# the code lists' step: a mark, until the report's lists are known
+# (.levels_call() takes its place)
+.levels_step <- "set_levels(.codelists.)"
+
+# a code list's variable in the program: cl_<variable> (a program's
+# variable is never a data's or an ARD's column)
+.cl_name <- function(v) paste0("cl_", gsub("[^a-z0-9]+", "_", tolower(v)))
+
+# The report's code lists at its program's head: `cl_sex <- c(F =
+# "Female", M = "Male")`, the values named by... -- each value (a name) and
+# what it is in the ARD; a list without labels, its values
+.codelists_lines <- function(levels) {
+  nm <- function(v) ifelse(make.names(v) == v, v, encodeString(v, quote = "\""))
+  unlist(lapply(names(levels), function(v) {
+    cl <- levels[[v]]
+    to <- .cl_name(v)
+    if (is.null(names(cl)) && length(cl) == 1L) return(paste(to, "<-", .q(cl)))
+    items <- if (is.null(names(cl))) .q(cl) else
+      paste(nm(names(cl)), "=", .q(unname(cl)))
+    paste(to, "<-", .lay(.cl("c", as.list(items)), lead = nchar(to) + 4L))
+  }))
+}
+
+# The code lists' head of a program: a heading, a line, `cl_<variable>`
+.codelists_head <- function(levels) {
+  c("# ---- code lists: each value in its order, as it is in the data ----",
+    "# (a value a list does not have stops the program: add it to the list)",
+    .codelists_lines(levels), "")
+}
+
+# The step that puts the report's code lists on a data:
+# set_levels(SEX = cl_sex, ...), laid out as a step of a pipe
+.levels_call <- function(levels) {
+  step <- .lay(.cl("set_levels", stats::setNames(as.list(.cl_name(names(levels))),
+                                                 names(levels))), lead = 2L)
+  gsub("\n", "\n  ", step, fixed = TRUE)
+}
+
+# a report's code (`code`) with the mark of the code lists' step replaced
+.levels_put <- function(code, levels) {
+  if (!length(levels)) return(code)
+  gsub(.levels_step, .levels_call(levels), code, fixed = TRUE)
+}
 
 # the steps of a derive and of the code lists: dplyr::mutate(...),
 # set_levels().  With code lists, a data made from another is made factors
@@ -479,12 +522,6 @@
 .made_line <- function(nm, src, cond, levels = NULL) {
   .make_code(nm, src, c(sprintf("dplyr::filter(%s)", cond),
                         if (length(levels)) .levels_step))
-}
-
-# `codelists <- list(...)`: the code lists' values of each variable
-.codelists_line <- function(levels) {
-  paste("codelists <-", .lay(.cl("list", lapply(levels, function(v)
-    .c_str(v))), lead = 13L))
 }
 
 # The datasets and populations analyses `a` (and analysis data `nad`)
@@ -559,7 +596,7 @@
   own_data <- several && length(levels) > 0L
   lv_of <- function(o) if (is.null(levels)) NULL else levels[[o]]
   lv1 <- if (!several) lv_of(outs[1L])
-  code <- if (!several) c(sprintf("output_id <- %s", .q(outs[1L])), "")
+  code <- if (!several) c(sprintf("report_id <- %s", .q(outs[1L])), "")
   if (own_data) {
     used_ds <- character()
     pops <- character()
@@ -567,7 +604,12 @@
     dl <- .ard_data_lines(x, a, nad, lv1)
     used_ds <- dl$used_ds
     pops <- dl$pops_id
-    code <- c(code, "# ---- data ----", if (length(lv1)) .codelists_line(lv1),
+    code <- c(code,
+              if (length(lv1)) c(
+                "# ---- code lists: each value in its order, as it is in the ARD ----",
+                "# (a value a list does not have stops the program: add it to the list)",
+                .codelists_lines(lv1), ""),
+              "# ---- data ----",
               dl$data,
               if (length(dl$pops)) c("", "# ---- populations ----", dl$pops))
   }
@@ -585,7 +627,7 @@
       dl <- .ard_data_lines(x, a[rows, , drop = FALSE], nad_of(o), lv)
       used_ds <- dl$used_ds
       pops <- dl$pops_id
-      part <- c(if (length(lv)) .codelists_line(lv), dl$data, dl$pops)
+      part <- c(if (length(lv)) .codelists_lines(lv), dl$data, dl$pops)
     }
     # each analysis's data: the dataset, restricted to the population's
     # subjects (or the population itself when it is that dataset), and to
@@ -639,7 +681,7 @@
     names(data_name) <- as.character(rows)
     if (several) {
       code <- c(code, "", sprintf("# ---- %s ----", o),
-                sprintf("output_id <- %s", .q(o)), part, made)
+                sprintf("report_id <- %s", .q(o)), .levels_put(c(part, made), lv))
     } else if (length(made)) {
       code <- c(code, "", "# ---- analysis data ----", made)
     }
@@ -649,7 +691,7 @@
     ard_names <- make.unique(c(taken, paste0("ard_", gsub("[^a-z0-9]+", "_",
                                                          tolower(a$analysis_id[top])))),
                              sep = "_")[-seq_along(taken)]
-    avoid <- c(taken, ard_names, "ard", "ards", "output_id", "codelists",
+    avoid <- c(taken, ard_names, "ard", "ards", "report_id", if (length(lv)) .cl_name(names(lv)),
                .ard_helper_names)
     for (j in seq_along(top)) {
       i <- top[j]
@@ -669,12 +711,12 @@
     bound <- if (length(ard_names) == 1L) ard_names else
       .cl("dplyr::bind_rows", as.list(ard_names))
     code <- c(code, "", if (several) {
-      .pipe_code("ards[[output_id]]", bound)
+      .pipe_code("ards[[report_id]]", bound)
     } else if (length(save)) {
       # the report's ARD into the study's
       c(if (!is.null(save$comment)) save$comment,
-        .pipe_code(NULL, bound, list(.cl("tflspec::save_ard", c(
-          list("output_id"), save$args)))))
+        .pipe_code(NULL, bound, list(.cl("save_ard", c(
+          list("report_id"), save$args)))))
     } else .pipe_code("ard", bound))
   }
   # dplyr::bind_rows(), not cards::bind_ard(): bind_ard() does not count
@@ -690,9 +732,8 @@
 
 # One report's program: the code lists put on the data the analyses read
 # (and those R reads by its own names), not on what they are made from --
-# the levels are the same, a data's made again from its own records.  Put
-# on one data, they are its set_levels()'s arguments; on more, the list
-# `codelists` once.
+# the levels are the same, a data's made again from its own records:
+# set_levels(SEX = cl_sex, ...).
 .levels_where_read <- function(code, levels) {
   if (!length(levels)) return(code)
   pipe_lv <- paste0(" |>\n  ", .levels_step)
@@ -715,19 +756,7 @@
       code[k] <- .make_code(nm, src, trimws(l[2L]))
     }
   }
-  n_lv <- sum(lengths(regmatches(code, gregexpr(.levels_step, code, fixed = TRUE))))
-  drop_cl <- function(code) {
-    cl <- grep("^codelists <- ", code)
-    if (length(cl)) code[-cl] else code
-  }
-  if (n_lv == 0L) return(drop_cl(code))
-  if (n_lv > 1L) return(code)
-  inline <- .lay(.cl("tflspec::set_levels", lapply(levels, .c_str)),
-                 lead = 2L)
-  k <- grep(.levels_step, code, fixed = TRUE)
-  code[k] <- sub(.levels_step, gsub("\n", "\n  ", inline, fixed = TRUE), code[k],
-                 fixed = TRUE)
-  drop_cl(code)
+  .levels_put(code, levels)
 }
 
 # `name <- data |> call(...) |> steps`: the data piped into the call that
@@ -767,7 +796,7 @@
               !identical(call_fn, "(subjects)"))
     .split_bar(r$statistics)
   steps <- c(as.list(.split_post(r$post)),
-             if (length(keep)) list(.cl("tflspec::keep_stats", list(.cl("c", .q(keep))))),
+             if (length(keep)) list(.cl("keep_stats", list(.cl("c", .q(keep))))),
              list(.fmt_step(fmt, !is.null(fmt_fun)),
                   .tag_step(r$analysis_id, pid)))
   comment <- if (!is.na(r$label)) sprintf("# %s: %s", r$analysis_id, r$label)
@@ -918,7 +947,7 @@
     .tag_step(r$analysis_id, pid, an)
   } else .tag_step(kids$analysis_id[1L], pid)
   steps <- c(as.list(.split_post(r$post)),
-             if (length(keep)) list(.cl("tflspec::keep_stats", list(.cl("c", .q(keep))))),
+             if (length(keep)) list(.cl("keep_stats", list(.cl("c", .q(keep))))),
              list(.fmt_step(post_fmt, in_call && !stack,
                             skip = if (stack && in_call) skip),
                   tag))

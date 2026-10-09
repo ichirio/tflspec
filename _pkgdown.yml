@@ -51,18 +51,14 @@ reference:
       - tfl_ard_function_template
       - tfl_ard_function_info
       - tfl_ard_conditions
-  - title: Called by an ARD program
+  - title: The functions the programs call
     desc: >
-      What a generated ARD program calls as it runs: the code lists on its
-      data, the ids in front, the formats, the statistics asked for, the
-      report's rows into the study ARD.
+      The code of the functions the generated programs call as they run (the
+      code lists on a data, the ids in front, the formats, the study ARD),
+      which a study keeps in a file of its own: its programs run without
+      tflspec.
     contents:
-      - set_levels
-      - tag_ard
-      - fmt_ard
-      - keep_stats
-      - fmt_pvalue
-      - save_ard
+      - tfl_helpers_code
   - title: CDISC ARS
     desc: The analyses as CDISC's Analysis Results Standard, and back.
     contents:

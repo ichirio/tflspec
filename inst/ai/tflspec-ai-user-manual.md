@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9066** (the development version,
+**This manual documents tflspec 0.0.24.9068** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -32,10 +32,12 @@ differ, trust the package, not this file, and fetch the matching copy with
    (`table_plan()`, the `plan_*()` verbs, `plan_apply()`) and the RTF
    rendering are **rtfreporter's**. A program that runs a table spec starts
    with `library(rtfreporter)`.
-3. **Every tflspec function is `tfl_*`** (and `tflspec_ai_manual()`),
-   except the six a generated ARD program calls as it runs:
-   `set_levels()`, `tag_ard()`, `fmt_ard()`, `keep_stats()`,
-   `fmt_pvalue()`, `save_ard()` (short, as a person writes them there).
+3. **Every tflspec function is `tfl_*`** (and `tflspec_ai_manual()`).
+   The functions the generated programs call as they run (`set_levels()`,
+   `tag_ard()`, `fmt_ard()`, `keep_stats()`, `fmt_pvalue()`, `save_ard()`)
+   are not tflspec's exports: `tfl_helpers_code()` gives their code, which a
+   study keeps in a file of its own (tflplanner: `programs/study_helpers.R`),
+   so the programs run without tflspec.
    `table_plan()`, the `plan_*()` verbs, `plan_apply()`, `normalize_ard()`
    are **rtfreporter's**, never `tfl_`-prefixed; there are no aliases for
    former names (§12).
@@ -347,7 +349,7 @@ once. The `study` sheet has `key` / `value` (`rounding`: `sas` / `iec` /
 **variables**: `variable`, `label`, `order`, `levels` (`Grade 0 | Grade 1`), `empty_levels` (`hide`: no row for a value no record has; blank: a 0 row)
 → `plan_labels()`, `plan_levels()`.
 
-**codelists** (a report's code lists, one row a value): `output_id`, `variable`, `value`, `label`, `order` → `plan_labels(SEX = c(SEX = "Sex", F = "Female"))` and `plan_levels(SEX = c("M", "F"))`. Every row names its report: a blank `output_id` is an error (no study-wide rows; copy the rows into each report). A variable's `levels` on the `variables` sheet, when given, is the order instead. The code list of `variable` (the ARD's column; `value` a variable's name, `label` its label: `variable / AGE / Age (years)`) gives the variables' labels where the `variables` sheet's `label` is blank; it is not an order. `tfl_ard_code(codelists = )` makes factors, before any analysis, of the listed columns the report's analyses read (`by`, `strata`, `variables`, names in `args` / `code` / `post`; derived columns too); the program puts them on the data the analyses read with `set_levels()` (the lists as its arguments, or `codelists <- list(...)` once when more than one data takes them); in the study's program each report's part has its own `codelists`.
+**codelists** (a report's code lists, one row a value): `output_id`, `variable`, `value`, `label`, `order`. Each value's place and **what it is in the data the report's program makes** (`label`; blank: the value itself): `tfl_ard_code(codelists = )`, `tfl_listing_code(codelists = )` and `tfl_fig_design_code(codelists = )` write `cl_sex <- c(F = "Female", M = "Male")` at the program's head and `set_levels(SEX = cl_sex, ...)` on the data the program reads (the ARD's analyses: the columns they read -- `by`, `strata`, `variables`, names in `args` / `code` / `post`; a listing: the columns it shows or sorts by; a figure: last of its data steps). Each listed column becomes a factor in the list's order with the labels as its values, so **the ARD holds "Female"**; a value the list does not have (not NA) stops the program with the column and the value. The table then orders the ARD's values (`plan_levels(SEX = c("Male", "Female"))`, the labels) and `plan_labels()` gives only the variables' headings (the `variables` sheet's `label`). A condition on a listed column the analysis reads is written in its labels (`SEX == "Female"`; `tfl_ard_code()` stops on `SEX == "F"` and says so); ARS writes the data's values back (`SEX == "F"`). Every row names its report: a blank `output_id` is an error (no study-wide rows; copy the rows into each report). A variable's `levels` on the `variables` sheet, when given, is the order instead (in the labels). The code list of `variable` (an earlier form of the headings) is moved to the `variables` sheet's `label` when the table spec is read, with a message.
 
 **digits** (each statistic's decimals, once): `variable` (blank: every analysis variable; a name: its exception), `statistic` (`mean`, `sd`, `p` a percent ...), `digits` → written into the templates' tokens that say no format (`{mean} ({sd})` → `{mean:.1f} ({sd:.2f})`). A template's own format or a `cells` row's `digits` wins; a table of `tables$value = stat_fmt` (the ARD's own text) is not rounded here.
 
@@ -578,6 +580,18 @@ those packages in the code (a string or comment keeps it) and the ARD
 program's own `library(cards)`. Unset, the code is as before.
 `tfl_build_ard()` runs the program by itself and ignores both.
 
+### Names in the generated programs
+
+A program's own variables are never a data's or an ARD's column: ADaM
+columns are upper case (`USUBJID`, `TRT01A`), ARD and spec columns lower
+case with underscores (`output_id`, `analysis_id`, `stat_name`), and the
+program's names are
+`report_id` (the report's id, in the ARD and the report programs), `cl_<variable>` (a code
+list), `path_<folder>` (a folder of the study's setup), `ard_<analysis id>`
+(an analysis's ARD), `pop_<set>` / `<dataset>_<set>` (data), `fmt_default`
+and `tfl_stats` (the company standards' values).  The ARD has no method
+column: ARS's `methodId` comes from the spec.
+
 ---
 
 ## 12. Names that do NOT exist
@@ -627,8 +641,7 @@ back): rename the value or choose another separator.
 
 **Manual:** `tflspec_ai_manual`
 
-**Called by a generated ARD program:** `set_levels` `tag_ard` `fmt_ard`
-`keep_stats` `fmt_pvalue` `save_ard`
+**The functions the generated programs call (their code):** `tfl_helpers_code`
 
 **ARD spec:** `tfl_ard_spec` `tfl_read_ard_spec` `tfl_write_ard_spec`
 `tfl_ard_spec_template` `tfl_ard_code` `tfl_build_ard` `tfl_ard_for`
