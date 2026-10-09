@@ -288,6 +288,30 @@ test_that("layout / columns / style give the pages the verbs give", {
                  plan_cells(notes = FALSE), "pages"), by_code)))
 })
 
+test_that("blank rows at positions: whole numbers to plan_blanks(), and back", {
+  d <- spec_pages_ard()
+  lay <- function(where) tfl_table_spec(
+    tables = data.frame(cols = "TRT", rows = "group = variable"),
+    layout = data.frame(blank_where = where))
+  sp <- lay("0 | -1")
+  expect_identical(sp$layout$blank_where[[1L]], "0 | -1")
+  by_spec <- plan_apply(tfl_table_plan(d, sp), "pages")
+  by_code <- table_plan(d, cols = "TRT", rows = c(group = "variable")) |>
+    plan_blanks(where = c(0L, -1L)) |>
+    plan_apply("pages")
+  expect_equal(by_spec, by_code)
+  # written as a person writes them
+  expect_true(any(grepl("plan_blanks(where = c(0, -1))",
+                        tfl_table_code(sp, "T1"), fixed = TRUE)))
+  # a plan's positions back to the sheet
+  back <- suppressMessages(tfl_as_table_spec(
+    table_plan(d, cols = "TRT", rows = c(group = "variable")) |>
+      plan_blanks(where = c(0L, -1L)), "T1"))
+  expect_identical(back$layout$blank_where[[1L]], "0 | -1")
+  # neither a rule nor positions
+  expect_error(lay("between_groups | 2"), "row positions")
+})
+
 test_that("a verb written after tfl_table_plan() still wins", {
   skip_if_no_cards2()
   d <- spec_pages_ard()

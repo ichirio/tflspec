@@ -126,6 +126,10 @@
              .spec_code_line(p$items[[i]])), "")
     return(paste0(p$open, "(", paste(el, collapse = ", "), ")"))
   }
+  # whole numbers as a person writes them: c(0, -1), not 0:-1 or c(0L, -1L)
+  if (is.integer(x) && length(x) > 1L && is.null(names(x)) && !anyNA(x)) {
+    return(paste0("c(", paste(x, collapse = ", "), ")"))
+  }
   paste(deparse(x, width.cutoff = 500L,
                 control = c("keepNA", "keepInteger", "niceNames",
                             "showAttributes")),

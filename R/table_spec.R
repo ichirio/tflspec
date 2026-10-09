@@ -41,6 +41,7 @@
 #   num   a number                    ids   `a | b`, or `1 | 2` (positions)
 #   bool  TRUE / FALSE (yes / no)     flex  TRUE / FALSE, or an `ids` list
 #   text  as written; quote it ("...") to keep leading or trailing spaces
+#   blanks  a named rule (between_groups), or row positions `0 | 5 | -1`
 .ard_spec_types <- list(
   layout = c(
     pages_max_rows = "int", pages_split = "text",
@@ -49,7 +50,7 @@
     pages_page_by = "list",
     group_col = "text", group_mode = "text", group_collapse = "flex",
     group_page = "bool", group_keep = "bool",
-    blank_where = "text", blank_first = "bool", blank_last = "bool",
+    blank_where = "blanks", blank_first = "bool", blank_last = "bool",
     blank_counted = "bool",
     stub_vars = "list", stub_name = "text", stub_indent = "int",
     stub_summary = "text", stub_before = "bool",
@@ -155,6 +156,13 @@
     },
     list = .ard_spec_split(x),
     ids  = ids(x),
+    blanks = {
+      # row positions (0 before the first row, -1 after the last) are
+      # whole numbers, as plan_blanks(where = ) takes them; else a rule
+      p <- .ard_spec_split(x)
+      if (length(p) && all(grepl("^-?[0-9]+$", p))) as.integer(p) else
+        if (length(p) == 1L) p else bad("a named rule (between_groups) or row positions (0 | 5 | -1)")
+    },
     sides = {
       # the rules of one kind of row: the sides drawn, or `none`
       v <- tolower(.ard_spec_split(x))
@@ -2142,9 +2150,12 @@ tfl_as_table_spec <- function(x, output_id = NULL, compare = TRUE) {
     if (identical(g$.keep, FALSE)) put("group_keep", FALSE)
   }
   b <- ly[["blanks"]]
-  if (!is.null(b$blank_rows) && !(is.character(b$blank_rows) &&
-                                   length(b$blank_rows) == 1L)) {
-    miss("plan_blanks(where = ): only a named rule (\"between_groups\") converts")
+  if (is.numeric(b$blank_rows) && length(b$blank_rows) &&
+      all(b$blank_rows == round(b$blank_rows))) {
+    put("blank_where", paste(as.integer(b$blank_rows), collapse = " | "))
+  } else if (!is.null(b$blank_rows) && !(is.character(b$blank_rows) &&
+                                         length(b$blank_rows) == 1L)) {
+    miss("plan_blanks(where = ): only a named rule (\"between_groups\") or row positions convert")
   } else put("blank_where", b$blank_rows)
   put("blank_first", b$blank_row_first); put("blank_last", b$blank_row_end)
   put("blank_counted", b$count_blank_rows)
