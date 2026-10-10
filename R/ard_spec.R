@@ -35,7 +35,7 @@
                     "where", "add", "derive", "keep", "distinct", "code"),
   analyses = c("output_id", "analysis_id", "parent", "label", "method",
                "data", "dataset",
-               "population_id", "where", "by", "strata", "variables",
+               "population_id", "where", "by", "overall", "strata", "variables",
                "statistics", "denominator", "formats", "args", "post",
                "code", "purpose", "reason"))
 
@@ -51,6 +51,15 @@
   out
 }
 .split_bar_memo <- new.env(hash = TRUE, parent = emptyenv())
+
+# A yes / no cell: TRUE, FALSE, or NA (blank, or not one of the words)
+.ard_yes <- function(x) {
+  if (is.null(x) || is.na(x) || !nzchar(trimws(x))) return(NA)
+  v <- toupper(trimws(x))
+  if (v %in% c("TRUE", "YES", "Y", "1")) return(TRUE)
+  if (v %in% c("FALSE", "NO", "N", "0")) return(FALSE)
+  NA
+}
 
 # The names of the arguments an analysis's `args` gives: `args` read as the
 # arguments of a call, so neither spacing nor an argument of a nested call
@@ -332,6 +341,37 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
       }
     }
   }
+  # overall: the analysis again without its by (a Total column); a call's
+  # own analysis with a by, or a stack's (.overall = TRUE)
+  ov <- a$overall %||% rep(NA_character_, nrow(a))
+  for (i in which(!is.na(ov))) {
+    tag <- paste(a$output_id[i], a$analysis_id[i], sep = " / ")
+    if (is.na(.ard_yes(ov[i]))) {
+      add(i, "overall", sprintf("%s: `overall` is TRUE or FALSE; got %s",
+                                tag, sQuote(ov[i])))
+      next
+    }
+    if (!isTRUE(.ard_yes(ov[i]))) next
+    if (!is.na(a$parent[i] %||% NA)) {
+      add(i, "overall", sprintf(paste(
+        "%s: inside %s the overall is the parent's: set `overall` on its row"),
+        tag, a$parent[i]))
+    } else if (a$method[i] %in% c("custom", "subjects", "cards::ard_strata",
+                                  "cards::ard_pairwise")) {
+      add(i, "overall", sprintf("%s: a `%s` analysis takes no `overall`%s",
+                                tag, a$method[i],
+                                if (identical(a$method[i], "custom"))
+                                  " (its code says it)" else ""))
+    } else if (is.na(a$by[i])) {
+      add(i, "overall", sprintf(
+        "%s: `overall` repeats the analysis without its `by`, and it has none",
+        tag))
+    } else if (".overall" %in% .args_given(a$args[i])) {
+      add(i, "overall", sprintf(
+        "%s: `.overall` is given twice, by the `overall` column and in `args`; write it in one place",
+        tag))
+    }
+  }
   den <- a$denominator %||% rep(NA, nrow(a))
   bad <- which(!is.na(den) & !den %in% c(.den_words,
                                          x$populations$population_id,
@@ -481,6 +521,10 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
     p <- which(a$output_id == a$output_id[i] & a$analysis_id == par[i])[1L]
     if (is.na(p)) next
     for (cn in c("dataset", "population_id", "where")) a[[cn]][i] <- a[[cn]][p]
+    # a stack's overall (.overall = TRUE) is each of its analyses'
+    if (identical(a$method[p], "cards::ard_stack") && !is.null(a$overall)) {
+      a$overall[i] <- a$overall[p]
+    }
     grp <- c(.split_bar(a$by[p]),
              if (!identical(a$method[p], "cards::ard_stack"))
                c(.split_bar(a$strata[p]), .split_bar(a$by[i])))

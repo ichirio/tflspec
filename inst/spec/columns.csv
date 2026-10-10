@@ -42,6 +42,7 @@ analyses,dataset,"The data analysed; blank: the population's own dataset. Blank 
 analyses,population_id,"The population: the data is restricted to its subjects; blank: no restriction (population is NULL), or the population of `data`.",SAF
 analyses,where,"An R condition on the data, applied after the population (on an analysis data: after its own conditions); blank: every row.","TRTEMFL == ""Y"""
 analyses,by,"Grouping variables (cards' by), | between them; blank: none.",TRT01A
+analyses,overall,"TRUE: the analysis again without its by, over all its subjects (cards' overall rows, no group): what a table shows as its Total column (tables$total). On a cards::ard_stack row: .overall = TRUE. Blank: by groups only.",TRUE
 analyses,strata,"Variables the analysis is repeated within (cards' strata: a subgroup, a parameter by visit), | between them; blank: none.",PARAMCD | AVISIT
 analyses,variables,"The variables analysed (cards' variables), | between them.",AGE | BMIBL
 analyses,statistics,"For continuous / categorical / missing: the statistics computed, in order (tfl_ard_statistics()); for other methods: the statistics kept of what the method gives; | between them; blank: the method's default.",N | mean | sd
@@ -63,6 +64,8 @@ tables,sort,"TRUE, FALSE, or the sort keys in order, - in front for descending (
 tables,sort_stat,"The statistic totalled across columns for a frequency order (plan_sort(stat = )).",n
 tables,na,"What a cell no template could fill prints (plan_cells(na = )); blank: empty.",-
 tables,header_n,"Which population {n} in the column header is, for a table split by page (a lab parameter): page (those with that page's data), table (the population), or both as n = page | N = table for {n} and {N}; blank: page (warns when both exist and differ). Both must be in the ARD.",n = page | N = table
+tables,total,"The heading of a Total column (plan_total()): the ARD's overall rows, its analyses run again without their by (analyses$overall), as one more column; its {n} is the study total. Blank: none.",Total
+tables,total_position,"Where the Total column goes among the column key's values: last or first; blank: last.",first
 variables,,"Table: one row a variable (an analysis variable, a column key or the label column).",
 variables,variable,"The variable's name.",AGEGR1
 variables,label,"What prints for its name (plan_labels()); blank: the name.",Age (years)

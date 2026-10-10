@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9082** (the development version,
+**This manual documents tflspec 0.0.24.9083** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -188,7 +188,7 @@ argument is written in one place: a column, or `args`, never both.
 | `datasets` | `dataset`, `level`, `path`, `derive` | a name for the data, its level (`SDTM` / `ADaM`), its file relative to the study folder, new columns (`NAME = R expression`, `|` between them) |
 | `populations` | `population_id`, `dataset`, `where`, `derive` | an analysis set: the subjects of `dataset` for which `where` (R) holds; `derive` adds columns (`TRTA = TRT01A`). "Population" is tflspec's word for what ICH E9 and CDISC ARS call an analysis set: `tfl_ars()` writes it as an `AnalysisSet`, an analysis's `population_id` as `analysisSetId` |
 | `analysis_data` | `output_id`, `data_id`, `label`, `from`, `population_id`, `subjects`, `where`, `add`, `derive`, `keep`, `distinct`, `code` | named data a report's analyses read (a report's, by `output_id`: the same `data_id` may mean something else in another report; a row names only its own report's rows above it): made `from` a dataset or an analysis data above, kept to a population's subjects and the records `where` keeps, with columns of the population's data added by the subject key (`add`), columns derived, and one row per set of values (`distinct`: `USUBJID | APHASE`, a denominator per subject and phase) -- in that order; `subjects` (instead of `population_id`) keeps the subjects of an analysis data above, a report's own subjects (the numerator kept to the denominator's), and `keep` the columns kept (with `derive`, transmute()). `data_id` is the object's name in the ARD program (lower case, not a dataset's or `pop_*`). When the columns cannot say it, `code` is R that makes the data itself (its value is the data; the datasets, `pop_*` and the analysis data above are in reach); then the other columns but `from` stay blank |
-| `analyses` | `output_id`, `analysis_id`, `label`, `method`, `data`, `dataset`, `population_id`, `where`, `by`, `strata`, `variables`, `statistics`, `denominator`, `formats`, `args`, `code`, `purpose`, `reason` | one analysis a row; both ids become ARD columns; `purpose` / `reason` (CDISC terms) only for `tfl_ars()` |
+| `analyses` | `output_id`, `analysis_id`, `label`, `method`, `data`, `dataset`, `population_id`, `where`, `by`, `overall`, `strata`, `variables`, `statistics`, `denominator`, `formats`, `args`, `code`, `purpose`, `reason` | one analysis a row; both ids become ARD columns; `purpose` / `reason` (CDISC terms) only for `tfl_ars()` |
 
 - `method`: a keyword — `continuous`, `categorical`, `dichotomous`,
   `missing`, `hierarchical`, `max`, `subjects`, `total_n`, `proportion_ci`,
@@ -219,6 +219,14 @@ argument is written in one place: a column, or `args`, never both.
 - `by`, `strata`, `variables`, `statistics`: `|` between several. `strata`:
   the analysis repeated within them (cards' `strata`: a subgroup, a
   parameter by visit).
+- `overall`: `TRUE` repeats the analysis without its `by`, over all its
+  subjects — cards' own overall rows, with no group — bound under the
+  grouped call (`bind_rows(ard_tabulate(adsl, by = ARM, ...),
+  ard_tabulate(adsl, ...))`; on a `cards::ard_stack` row, `.overall =
+  TRUE`). This is the ARD of a **Total column**: no `ARM = "Total"` value
+  the data does not have, so the ARS stays true (`tfl_ars()` writes it as
+  an analysis `..._TOTAL` without the grouping). Not inside a parent (put
+  it on the parent), not on `custom` / `subjects`.
 - `parent`: the analysis this one runs inside, when that one's method is
   `cards::ard_stack` (several analyses on the same data and `by`, plus the
   by counts and the total N with `args` `.total_n = TRUE`),
