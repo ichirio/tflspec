@@ -1,5 +1,13 @@
 # tflspec (development version)
 
+* **`tfl_read_toc()` reads a data frame** (tflplanner #299, D10).  `path`
+  may be a data frame of the TOC's rows (its names the column names) in
+  place of a file; `sheet` and `skip` do not apply, and a row with no
+  output id is named by its row in the data frame.  The rows go through
+  the one reader as a file's do -- tflplanner's import by company rules
+  hands it the rows it has read, one report a phase, without a temporary
+  file.
+
 * **A variable's rows under one level of another** (tflplanner's RACE
   sample, rtfreporter #598).  The `variables` sheet's new column `under`
   (`RACE: Asian`: that variable, a colon, the level as the table shows

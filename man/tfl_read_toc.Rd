@@ -7,7 +7,10 @@
 tfl_read_toc(path, map, sheet = NULL, skip = 0L, type_from_id = TRUE)
 }
 \arguments{
-\item{path}{An \code{.xlsx} or \code{.csv} file.}
+\item{path}{An \code{.xlsx} or \code{.csv} file, or a data frame holding the TOC's
+rows (its names are the column names; \code{sheet} and \code{skip} are then
+ignored).  A data frame lets a caller that has read and reshaped the
+rows itself (tflplanner's import by company rules) use the one reader.}
 
 \item{map}{Which column is what: a named character vector or list, the
 names among \code{output_id} (required), \code{type}, \code{title}, \code{population},
