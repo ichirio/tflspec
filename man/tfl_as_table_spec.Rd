@@ -55,12 +55,16 @@ and whether it gives \strong{the same pages} is reported.
 }
 
 \examples{
-\dontrun{
-p <- ard |> normalize_ard() |> table_plan(cols = "TRT01P") |> ...
-tfl_as_table_spec(p, output_id = "T14-1-1") |> tfl_write_table_spec("study.xlsx")
+if (requireNamespace("cards", quietly = TRUE)) {
+  ard <- cards::ard_stack(cards::ADSL, .by = TRT01A,
+                          cards::ard_continuous(variables = AGE))
+  p <- rtfreporter::table_plan(rtfreporter::normalize_ard(ard), cols = "TRT01A")
+  spec <- tfl_as_table_spec(p, output_id = "T14-1-1")
+  f <- tempfile(fileext = ".xlsx")
+  tfl_write_table_spec(spec, f)
 
-# a whole study at once
-tfl_as_table_spec(list(DM = p_dm, AE = p_ae)) |> tfl_write_table_spec("study.xlsx")
+  # a whole study at once
+  tfl_as_table_spec(list(DM = p, AGE = p))
 }
 }
 \seealso{

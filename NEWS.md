@@ -67,6 +67,21 @@ save it, then look at its Review tab.
 
 ## Changes
 
+* **Ready for CRAN's review, the parts that are not the submission itself**
+  (#218).  `rtfreporter` and `readxl` move from Suggests to Imports: the
+  table functions call rtfreporter and reading the Excel specifications is
+  the package's job, so neither was ever optional.  `haven` and `writexl`
+  stay in Suggests; every function that uses them now says what to install
+  when they are missing (`tfl_fig_style_template()`, `tfl_read_ard()` of an
+  .xpt file, reading .xpt / .sas7bdat data).  The 14 quick-API figure
+  functions and `print.tfl_code()` document what they return; the examples
+  of `tfl_table_plan()` and `tfl_as_table_spec()` run (on a bundled
+  specification and a small cards ARD) instead of `\dontrun{}`.  The five
+  tests that draw every figure type skip on CRAN (CI still runs them).  The
+  15 README-unused figures stay out of the built package; the Title quotes
+  'Excel' and the Description spells out TFL; the WORDLIST knows the
+  package's terms.
+
 * **D02 in plain words** (tflplanner): "%s: the checks against the data
   have not run yet." and "Press [Review with the data]: it reads the
   datasets once (not again until a file changes)." -- "the data facts"

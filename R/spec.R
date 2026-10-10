@@ -33,8 +33,14 @@ tfl_read_adam <- function(x) {
     ext <- tolower(tools::file_ext(f))
     switch(ext,
       rds = readRDS(f),
-      xpt = haven::read_xpt(f),
-      sas7bdat = haven::read_sas(f),
+      xpt = {
+        .ard_need("haven", "reading an .xpt file")
+        haven::read_xpt(f)
+      },
+      sas7bdat = {
+        .ard_need("haven", "reading a .sas7bdat file")
+        haven::read_sas(f)
+      },
       rda = , rdata = local({
         e <- new.env()
         load(f, envir = e)

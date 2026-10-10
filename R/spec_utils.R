@@ -16,14 +16,6 @@
   invisible(TRUE)
 }
 
-.ard_need <- function(pkg, what) {
-  if (!requireNamespace(pkg, quietly = TRUE)) {
-    .ard_stop(sprintf("%s needs the '%s' package (install it, or see ?%s).",
-                      what, pkg, "tflspec-spec"))
-  }
-  invisible(TRUE)
-}
-
 # stable order of first appearance
 .ard_first_seen <- function(x) {
   u <- unique(as.character(x))

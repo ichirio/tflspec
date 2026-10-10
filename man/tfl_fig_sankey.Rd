@@ -50,6 +50,11 @@ variables.}
 
 \item{plot_id}{Used in the output file name.}
 }
+\value{
+A \code{tfl_code} object: the figure's 'ggplot2' script, a character
+vector of class \code{tfl_code} with its specification in attribute \code{spec};
+printing it shows the script.
+}
 \description{
 The script builds nodes and links with \code{\link[=tfl_sankey_data]{tfl_sankey_data()}} and draws them with
 \code{\link[=tfl_plot_sankey]{tfl_plot_sankey()}}.
