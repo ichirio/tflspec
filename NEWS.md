@@ -19,7 +19,9 @@
 * **Review rule A01 checks an analysis data's `add` columns in the
   population's data** (ADSL), where `add` takes them from by the
   subject, not in the analysis data's own dataset: an ADTTE data adding
-  SEX was said to read a column ADTTE has not got.
+  SEX was said to read a column ADTTE has not got.  And a figure with
+  analyses of its own (`figures` given) is not reviewed as a table: no
+  "no column key" (T09) for a forest plot.
 
 * **A Total column, read from cards' overall rows** (#212, rtfreporter
   `plan_total()`).  The `analyses` sheet's new column `overall` (`TRUE`)

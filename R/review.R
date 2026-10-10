@@ -264,7 +264,7 @@ tfl_review_spec <- function(spec = NULL, ard = NULL, listings = NULL,
     run("A15", .rule_a15(x))
   }
   if (!is.null(sp)) {
-    run("T", .rules_table(sp, x, facts))
+    run("T", .rules_table(sp, x, facts, figures = names(figures)))
     if (!is.null(x)) run("C01", .rule_c01(sp, x))
   }
   if (length(figures)) {
@@ -537,7 +537,7 @@ summary.tfl_review <- function(object, ...) {
 }
 
 # The table rules, report by report
-.rules_table <- function(sp, x, facts) {
+.rules_table <- function(sp, x, facts, figures = character()) {
   a_all <- if (!is.null(x)) .review_flat(x$analyses) else NULL
   ids <- .ard_first_seen(c(sp$tables$output_id, sp$cells$output_id,
                            sp$variables$output_id, sp$digits$output_id,
@@ -552,8 +552,9 @@ summary.tfl_review <- function(object, ...) {
     a <- if (is.null(a_all)) NULL else a_all[a_all$output_id == o, , drop = FALSE]
     has_a <- !is.null(a) && nrow(a) > 0L
     tb <- .review_rows(sp$tables, o)
-    # a table report: its own tables row, or analyses
-    is_table <- has_a || any(sp$tables$output_id %in% o)
+    # a table report: its own tables row, or analyses -- not a figure
+    # with analyses of its own (a forest plot's, #293 P6)
+    is_table <- (has_a || any(sp$tables$output_id %in% o)) && !o %in% figures
     if (!is_table) next
     cells_own <- sp$cells[sp$cells$output_id %in% o, , drop = FALSE]
     cells_def <- sp$cells[is.na(sp$cells$output_id), , drop = FALSE]
