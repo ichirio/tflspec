@@ -76,7 +76,9 @@ test_that("the forest template is in parts, with its analyses, and its design ch
   d2 <- tfl_fig_template("forest_hr", subgroups = "")
   expect_false(grepl("filter(TRT01P ==", paste(tfl_fig_design_code(d2, "F1", save = FALSE), collapse = "\n"), fixed = TRUE))
   expect_identical(attr(d2, "analyses")$analyses$analysis_id, "HR")
-  expect_match(.forest_est_code("TRT01P", character()), 'level = "All subjects"', fixed = TRUE)
+  # no arm chosen: every other arm, each row saying which
+  expect_match(.forest_est_code("TRT01P", character()), 'level = paste("All subjects", TRT01P, sep = ": ")', fixed = TRUE)
+  expect_match(.forest_est_code("TRT01P", character(), "B"), 'level = "All subjects"', fixed = TRUE)
   expect_false(grepl("heading row", .forest_est_code("TRT01P", character()), fixed = TRUE))
   expect_match(.forest_est_code("TRT01P", "SEX"), "a heading row above each subgroup", fixed = TRUE)
 })

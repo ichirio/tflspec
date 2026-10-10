@@ -2112,7 +2112,7 @@
         mutate(subgroup = case_when(!is.na(SEX) ~ "SEX",
                                  !is.na(AGEGR1) ~ "AGEGR1",
                                  TRUE ~ "All subjects"),
-               level = coalesce(SEX, AGEGR1, "All subjects"),
+               level = paste(coalesce(SEX, AGEGR1, "All subjects"), TRT01P, sep = ": "),
                ok = is.finite(estimate) & is.finite(conf.low) & is.finite(conf.high) & conf.high < 1000,
                txt = ifelse(ok, sprintf("%.2f (%.2f, %.2f)", estimate, conf.low, conf.high), "NE"),
                across(c(estimate, conf.low, conf.high), ~ ifelse(ok, .x, NA)))

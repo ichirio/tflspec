@@ -2075,6 +2075,8 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
     ",\n", ind, "TRUE ~ \"All subjects\")") else "\"All subjects\""
   lvl <- if (length(subgroups)) sprintf("coalesce(%s, \"All subjects\")",
                                         paste(subgroups, collapse = ", ")) else "\"All subjects\""
+  # no arm chosen: every other arm, and each row says which
+  if (is.null(comparison)) lvl <- sprintf("paste(%s, %s, sep = \": \")", lvl, group)
   paste(c(
     "est <- est |>",
     "  # the reference arm has no interval; a subgroup whose model did not",
