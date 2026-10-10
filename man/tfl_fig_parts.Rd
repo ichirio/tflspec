@@ -7,15 +7,18 @@
 tfl_fig_parts()
 }
 \value{
-A data frame: \code{section} (\code{data}, \code{stats}, \code{plot}, \code{layers}),
+A data frame: \code{section} (\code{data}, \code{plot}, \code{layers}),
 \code{piece}, \code{piece_label}, \code{piece_help}, \code{field}, \code{kind} (\code{dataset},
 \code{variable}, \code{variables}, \code{flag}, \code{param}, \code{object} (the data or a
 statistic by name), \code{choice}, \code{number}, \code{logical}, \code{text}, \code{expr} (R),
-\code{code}, \code{named} (\code{name = value | ...})), \code{label}, \code{default},
+\code{code}, \code{named} (\code{name = value | ...}), and of the figure's ARD:
+\code{analysis}, \code{ard_variable}, \code{ard_stat}, \code{ard_stats} (one or several
+statistics)), \code{label}, \code{default},
 \code{choices} (\code{|} between them), \code{help}, \code{required}, \code{of}.
 }
 \description{
 Every piece a figure design (\code{\link[=tfl_fig_design]{tfl_fig_design()}}) is made of -- the data
-steps, the statistics, the figure-wide settings and the layers -- with
-its fields: what a GUI lists, adds and edits one by one.
+steps (those with a \code{name} make an object of their own: a fit, summary
+statistics ...), the figure-wide settings and the layers -- with its
+fields: what a GUI lists, adds and edits one by one.
 }

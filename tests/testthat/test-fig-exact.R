@@ -66,7 +66,10 @@ test_that("five templates' scripts make the figures written by hand", {
     e <- fx_run(cases[[nm]][[1L]], adam)
     want <- cases[[nm]][[2L]]
     for (g in names(want)) {
-      got <- fx_said(e[[g]])
+      # the figure's chain goes into `fig` (a whole-script figure keeps
+      # `p`); with a panel under it, `fig` is a patchwork: its first plot
+      main <- if (!is.null(e$p)) e$p else if (inherits(e$fig, "patchwork")) e$fig[[1L]] else e$fig
+      got <- fx_said(if (identical(g, "p")) main else e[[g]])
       exp <- fx_said(want[[g]])
       expect_identical(length(got$layers), length(exp$layers),
                        label = paste(nm, g, "layers"))

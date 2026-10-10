@@ -1,7 +1,7 @@
 # The generic `call` piece: `p <- p + fn(data = ..., aes(...), pos..., args...)`
 # for any ggplot2 (or extension package) function -- the escape hatch for
 # what the curated geom catalog (fig_geoms.R) does not cover, without going
-# all the way to free-form R code (layer_code / data_code / stats_code).
+# all the way to free-form R code (layer_code / a data step's code).
 #
 # Used in two places, both written the same way (see tfl_fig_parts()):
 #   layers:  {layer: call, fn, package, data, aes, pos, args, base}

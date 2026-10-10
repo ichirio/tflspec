@@ -27,3 +27,11 @@ without \code{analysis_data}, written before it was added, reads it empty).
 \description{
 Read and check an ARD definition workbook
 }
+\section{Problems}{
+ \code{tfl_ard_spec()} stops with every problem it finds,
+one line each; the condition (class \code{tflspec_spec_error}) carries them
+as rows too, \code{cnd$problems}: \code{output_id}, \code{sheet}, \code{row} (the row's key:
+the \code{analysis_id}, the \code{data_id}, the \code{population_id}), \code{field} and
+\code{message}.  \code{\link[=tfl_review_spec]{tfl_review_spec()}} lists them without stopping.
+}
+

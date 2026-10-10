@@ -41,6 +41,7 @@
 #   num   a number                    ids   `a | b`, or `1 | 2` (positions)
 #   bool  TRUE / FALSE (yes / no)     flex  TRUE / FALSE, or an `ids` list
 #   text  as written; quote it ("...") to keep leading or trailing spaces
+#   blanks  a named rule (between_groups), or row positions `0 | 5 | -1`
 .ard_spec_types <- list(
   layout = c(
     pages_max_rows = "int", pages_split = "text",
@@ -49,7 +50,7 @@
     pages_page_by = "list",
     group_col = "text", group_mode = "text", group_collapse = "flex",
     group_page = "bool", group_keep = "bool",
-    blank_where = "text", blank_first = "bool", blank_last = "bool",
+    blank_where = "blanks", blank_first = "bool", blank_last = "bool",
     blank_counted = "bool",
     stub_vars = "list", stub_name = "text", stub_indent = "int",
     stub_summary = "text", stub_before = "bool",
@@ -155,6 +156,13 @@
     },
     list = .ard_spec_split(x),
     ids  = ids(x),
+    blanks = {
+      # row positions (0 before the first row, -1 after the last) are
+      # whole numbers, as plan_blanks(where = ) takes them; else a rule
+      p <- .ard_spec_split(x)
+      if (length(p) && all(grepl("^-?[0-9]+$", p))) as.integer(p) else
+        if (length(p) == 1L) p else bad("a named rule (between_groups) or row positions (0 | 5 | -1)")
+    },
     sides = {
       # the rules of one kind of row: the sides drawn, or `none`
       v <- tolower(.ard_spec_split(x))
@@ -185,9 +193,10 @@
 .ard_spec_schema <- function() {
   list(
     tables    = c("output_id", "cols", "rows", "label", "stats", "value",
-                  "sep", "sort", "sort_stat", "na", "header_n"),
+                  "sep", "sort", "sort_stat", "na", "header_n", "total",
+                  "total_position"),
     variables = c("output_id", "variable", "label", "order", "levels",
-                  "empty_levels"),
+                  "empty_levels", "under"),
     # the study's code list: a value's text and place
     codelists = c("output_id", "variable", "value", "label", "order"),
     cells     = c("output_id", "variable", "context", "row", "when",
@@ -321,16 +330,23 @@
 # Two rows for one key in one scope.  In `cells` that is a chain (the rows
 # are tried in sheet order), so only `tables` and `variables` can clash.
 .ard_spec_dupes <- function(sp) {
+  p <- .ard_spec_dupe_problems(sp)
+  if (nrow(p)) .ard_stop(p$message[1L])
+  invisible(NULL)
+}
+
+# every repeated key, one row each (keyed as the sheet is)
+.ard_spec_dupe_problems <- function(sp) {
+  out <- list()
   # one row per report on the sheets keyed by the report alone
   for (sh in c("tables", "layout", "style", "report", "page")) {
     t <- sp[[sh]]
-    dup <- duplicated(t$output_id)
-    if (any(dup)) {
-      id <- t$output_id[dup][1L]
-      .ard_stop(paste0(
+    for (i in which(duplicated(t$output_id))) {
+      id <- t$output_id[i]
+      out[[length(out) + 1L]] <- .spec_problems_keyed(.pb(paste0(
         "The `", sh, "` sheet has two rows for ",
         if (is.na(id)) "the default (blank `output_id`)" else sQuote(id),
-        ".\n  One row per report; merge them."))
+        ".\n  One row per report; merge them."), i), t, sh)
     }
   }
   for (sh in c("variables", "codelists", "digits", "columns", "header",
@@ -340,16 +356,16 @@
     key <- .ard_spec_keys[[sh]]
     kv <- do.call(paste, c(lapply(key, function(k) v[[k]]), sep = " / "))
     k <- paste(v$output_id, kv, sep = "\r")
-    if (any(duplicated(k))) {
-      i <- which(duplicated(k))[1L]
-      .ard_stop(paste0(
+    for (i in which(duplicated(k))) {
+      out[[length(out) + 1L]] <- .spec_problems_keyed(.pb(paste0(
         "The `", sh, "` sheet has two rows for ", sQuote(kv[i]),
         if (!is.na(v$output_id[i])) paste0(" in ", sQuote(v$output_id[i]))
         else " among the defaults",
-        ".\n  One row per ", paste(key, collapse = " / "), "; merge them."))
+        ".\n  One row per ", paste(key, collapse = " / "), "; merge them."), i),
+        v, sh)
     }
   }
-  invisible(NULL)
+  if (length(out)) do.call(rbind, out) else .spec_problems_empty()
 }
 
 # The `cell_styles` rows as plan_cell_style() takes them: something to
@@ -357,40 +373,50 @@
 # -- as rtfreporter keeps one conditional rule per look -- one `where` row
 # per look and report.
 .ard_spec_check_cell_styles <- function(d) {
+  .pb_stop_first(.ard_spec_cell_style_problems(d))
+}
+
+.ard_spec_cell_style_problems <- function(d) {
+  out <- .pb_none()
+  add <- function(m, i, f = "") out <<- rbind(out, .pb(m, i, f))
   looks <- c("bold", "italic", "align", "color", "background", "underline",
              "indent_twips")
   for (i in seq_len(nrow(d))) {
     r <- d[i, , drop = FALSE]
     at <- sprintf("`cell_styles` row %d", i)
     if (all(is.na(unlist(r[intersect(looks, names(r))])))) {
-      .ard_stop(paste0(at, " styles nothing: give bold, italic, underline, ",
-                       "align, indent_twips, color or background."))
+      add(paste0(at, " styles nothing: give bold, italic, underline, ",
+                 "align, indent_twips, color or background."), i)
     }
     if (!is.na(r$where)) {
       ok <- tryCatch(is.call(str2lang(r$where)) || is.name(str2lang(r$where)),
                      error = function(e) FALSE)
-      if (!ok) .ard_stop(sprintf("%s: `where` is not an R condition: %s", at,
-                                 sQuote(r$where)))
-      if (isTRUE(.ard_spec_value(r$header, "bool", at))) {
-        .ard_stop(paste0(at, ": the header has no rows for `where` to ",
-                         "choose; leave one of them blank."))
+      if (!ok) {
+        add(sprintf("%s: `where` is not an R condition: %s", at,
+                    sQuote(r$where)), i, "where")
+        next
+      }
+      hdr <- tryCatch(.ard_spec_value(r$header, "bool", at),
+                      error = function(e) NULL)
+      if (isTRUE(hdr)) {
+        add(paste0(at, ": the header has no rows for `where` to ",
+                   "choose; leave one of them blank."), i, "header")
       }
     }
   }
-  w <- d[!is.na(d$where), , drop = FALSE]
+  w <- which(!is.na(d$where))
   for (k in looks) {
-    v <- w[!is.na(w[[k]]), , drop = FALSE]
-    dup <- duplicated(ifelse(is.na(v$output_id), "", v$output_id))
-    if (any(dup)) {
-      .ard_stop(sprintf(paste0(
+    v <- w[!is.na(d[[k]][w])]
+    dup <- duplicated(ifelse(is.na(d$output_id[v]), "", d$output_id[v]))
+    for (j in v[dup]) {
+      add(sprintf(paste0(
         "`cell_styles`: two rows with a `where` set `%s` for %s; a plan keeps ",
-        "one conditional rule per look.
-  Join the conditions with | in ",
-        "one row."), k, if (is.na(v$output_id[dup][1L])) "the defaults"
-        else sQuote(v$output_id[dup][1L])))
+        "one conditional rule per look.\n  Join the conditions with | in ",
+        "one row."), k, if (is.na(d$output_id[j])) "the defaults"
+        else sQuote(d$output_id[j])), j, k)
     }
   }
-  invisible(NULL)
+  out
 }
 
 # The `study` sheet: `key` / `value`, one row per fact.  A named vector or
@@ -517,14 +543,14 @@
 #' Explicit [rtfreporter::widen_ard()] arguments win over the spec, and the spec wins
 #' over the defaults.
 #'
-#' Lists inside a cell are `|`-separated (`TR01AG1 | SEROSTAT`).  A column
+#' Lists inside a cell are `|`-separated (`TRTA | SEX`).  A column
 #' called `note` is allowed on any sheet and never read; any other column a
 #' sheet does not know is an error, so a mistyped header cannot become a
 #' setting that silently never applies.
 #'
 #' @section `tables`:
 #' \describe{
-#'   \item{`cols`}{Column keys, outermost first: `TR01AG1 | SEROSTAT`.}
+#'   \item{`cols`}{Column keys, outermost first: `TRTA | SEX`.}
 #'   \item{`rows`}{Row keys, in output order.  `name = column` renames
 #'     (`group1 = AEBODSYS`); a quoted value is a constant heading
 #'     (`group1 = "Worst Post-Baseline Values"`).}
@@ -548,11 +574,19 @@
 #'     tokens: `n = page | N = table` gives `{n}` and `{N}`.  Blank: the
 #'     page's, with a warning when the ARD states both.  See
 #'     [rtfreporter::plan_col_header()]'s `values`.}
+#'   \item{`total`}{The heading of a **Total column** (`Total`): the ARD's
+#'     overall rows --- the analyses run again without their `by`
+#'     (`analyses$overall`) --- as one more column, its `{n}` the study
+#'     total ([rtfreporter::plan_total()]).  Blank: none.  No `ARM =
+#'     "Total"` in the data: the ARD and the ARS keep only what the data
+#'     has.}
+#'   \item{`total_position`}{Where the Total column goes among the column
+#'     key's values: `last` (blank) or `first`.}
 #' }
 #'
 #' @section `variables`:
 #' \describe{
-#'   \item{`variable`}{An analysis variable, or any column key (`BASEGR`,
+#'   \item{`variable`}{An analysis variable, or any column key (`BGRADE`,
 #'     `ATPT`, or the label column's own name).}
 #'   \item{`label`}{Display text replacing the variable's name.}
 #'   \item{`order`}{Number; the order the variables appear in.}
@@ -561,6 +595,11 @@
 #'     its values that no record has -- a code list's value, counted 0 in
 #'     every column of an ARD made with the study's code lists -- get a row
 #'     (`plan_levels(.drop_empty = )`).}
+#'   \item{`under`}{Its rows under one level of another variable,
+#'     `RACE: Asian` (that variable, a colon, the level as the table shows
+#'     it): after that row, one stub indent deeper, its own heading dropped
+#'     (`plan_nest()`); the sub-categories of a race from a second analysis
+#'     on the same data.}
 #' }
 #'
 #' @section `cells`:
@@ -689,7 +728,7 @@
 #'     (`3`, `3:31`, `3:last`), or `KEY = value` --- the spread columns
 #'     whose column key `KEY` has that value (`variable = n`).}
 #'   \item{`span`}{Blank: one cell over all of `cols`.  `each`: one cell
-#'     per column.  A column key (`TR01AG1`): one cell per value of that
+#'     per column.  A column key (`TRTA`): one cell per value of that
 #'     key, over its columns --- an arm's spanner, however many arms.}
 #'   \item{`text`}{The label.  A line break is Alt+Enter or `\\n`.  The
 #'     tokens of [rtfreporter::plan_col_header()] work: `{col}` (the column's own
@@ -747,79 +786,128 @@ tfl_table_spec <- function(tables = NULL, variables = NULL, cells = NULL,
                page = page, header = header, footer = footer,
                titles = titles, footnotes = footnotes, tokens = tokens,
                digits = digits)
-  if (is.list(tables) && !is.data.frame(tables)) {
-    x <- tables
-    bad <- setdiff(names(x), c("study", names(.ard_spec_schema())))
-    if (length(bad) || is.null(names(x))) {
-      .ard_stop(paste0("A spec list holds the sheets ",
-                       paste(c("study", names(.ard_spec_schema())),
-                             collapse = ", "), "; it also had: ",
-                       paste(sQuote(bad), collapse = ", ")))
-    }
-    args <- x
-  }
-  sp <- c(list(study = .ard_spec_study(args$study)),
-          stats::setNames(lapply(names(.ard_spec_schema()), function(sh)
-            .ard_spec_sheet(args[[sh]], sh)), names(.ard_spec_schema())))
-  t <- sp$tables
-  chk <- function(v, ok, what) {
-    bad <- !is.na(v) & !v %in% ok
-    if (any(bad)) {
-      .ard_stop(sprintf("`tables$%s` must be %s; got %s.", what,
-                        paste(sQuote(ok), collapse = " or "),
-                        sQuote(v[bad][1L])))
-    }
-  }
-  .ard_spec_check_tokens(sp$tokens)
-  .codelists_check(sp$codelists)
-  .ard_spec_check_digits(sp$digits)
-  chk(t$stats, c("cells", "rows"), "stats")
-  chk(t$value, c("stat", "stat_fmt"), "value")
-  if (any(is.na(sp$variables$variable))) {
-    .ard_stop("Every `variables` row needs a `variable`.")
-  }
-  el <- tolower(trimws(sp$variables$empty_levels))
-  if (any(!is.na(el) & !el %in% c("show", "hide"))) {
-    .ard_stop(sprintf("`variables$empty_levels` must be 'show' or 'hide'; got %s.",
-                      sQuote(sp$variables$empty_levels[!is.na(el) &
-                        !el %in% c("show", "hide")][1L])))
-  }
-  # a row with no template is a stats = rows display format, which needs
-  # the format it is there to give
-  nofmt <- is.na(sp$cells$template) & is.na(sp$cells$digits) &
-    is.na(sp$cells$signif)
-  if (any(nofmt)) {
-    i <- which(nofmt)[1L]
-    .ard_stop(sprintf(paste0(
-      "`cells` row %d has no `template`, and no `digits` / `signif` ",
-      "either.\n  A row is a template, or -- for a stats = rows table -- ",
-      "the format of one statistic."), i))
-  }
-  if (any(is.na(sp$columns$column))) {
-    .ard_stop("Every `columns` row needs a `column`.")
-  }
-  if (any(is.na(sp$col_header$line) | is.na(sp$col_header$cols))) {
-    .ard_stop("Every `col_header` row needs a `line` and `cols`.")
-  }
-  .ard_spec_check_cell_styles(sp$cell_styles)
-  # where a report's ARD comes from: its ARD definition (blank), or an ARD
-  # made elsewhere and taken in (import:<the file in input/ard/>)
-  src <- sp$report$ard_source %||% character()
-  bad <- !is.na(src) & !grepl("^import:[^[:space:]]", src)
-  if (any(bad)) {
-    .ard_stop(sprintf(paste0(
-      "`report$ard_source` is blank (the report's ARD definition) or ",
-      "import:<file> (an ARD taken in); not %s."),
-      paste(sQuote(unique(src[bad])), collapse = ", ")))
-  }
-  for (sh in names(.ard_spec_types)) {
-    for (i in seq_len(nrow(sp[[sh]]))) {
-      .ard_spec_typed(sp[[sh]][i, , drop = FALSE], sh)
-    }
-  }
-  .ard_spec_dupes(sp)
+  if (is.list(tables) && !is.data.frame(tables)) args <- tables
+  res <- .table_spec_problems(args)
+  p <- res$problems
+  if (nrow(p)) .spec_stop(p$message[1L], p, "tflspec_table_spec_error")
+  sp <- res$sp
   class(sp) <- "tfl_table_spec"
   sp
+}
+
+# The sheets of a table definition in shape, and every problem of them
+# (.spec_problems_keyed()'s rows) in the order tfl_table_spec() meets them:
+# it stops on the first.  A sheet that cannot be read is one problem, and
+# is then read without the columns it does not read; a cell that is not
+# what its column takes is one problem.
+.table_spec_problems <- function(args) {
+  pr <- list()
+  put <- function(p) pr[[length(pr) + 1L]] <<- p
+  keyed <- function(p, d, sheet) put(.spec_problems_keyed(p, d, sheet))
+  sheets <- c("study", names(.ard_spec_schema()))
+  bad <- setdiff(names(args), sheets)
+  if (length(bad) || (length(args) && is.null(names(args)))) {
+    put(.spec_problem(paste0("A spec list holds the sheets ",
+                             paste(sheets, collapse = ", "), "; it also had: ",
+                             paste(sQuote(bad), collapse = ", "))))
+    args <- if (is.null(names(args))) list() else args[intersect(names(args), sheets)]
+  }
+  study <- tryCatch(.ard_spec_study(args$study), error = function(e) {
+    put(.spec_problem(conditionMessage(e), "study"))
+    .ard_spec_study(NULL)
+  })
+  read_sheet <- function(sh) {
+    tryCatch(.ard_spec_sheet(args[[sh]], sh), error = function(e) {
+      d <- tryCatch(as.data.frame(args[[sh]], stringsAsFactors = FALSE,
+                                  check.names = FALSE), error = function(e) NULL)
+      extra <- if (is.null(d)) character() else
+        setdiff(trimws(names(d)), c(.ard_spec_schema()[[sh]], "note"))
+      put(.spec_problem(conditionMessage(e), sh,
+                        field = if (length(extra)) extra[1L] else ""))
+      if (!is.null(d)) {
+        names(d) <- trimws(names(d))
+        d <- d[intersect(names(d), c(.ard_spec_schema()[[sh]], "note"))]
+      }
+      tryCatch(.ard_spec_sheet(d, sh), error = function(e) .ard_spec_sheet(NULL, sh))
+    })
+  }
+  sp <- c(list(study = study),
+          stats::setNames(lapply(names(.ard_spec_schema()), read_sheet),
+                          names(.ard_spec_schema())))
+  keyed(.ard_spec_token_problems(sp$tokens), sp$tokens, "tokens")
+  keyed(.codelists_problems(sp$codelists), sp$codelists, "codelists")
+  sp <- .codelist_variable_rows(sp)
+  keyed(.ard_spec_digit_problems(sp$digits), sp$digits, "digits")
+  t <- sp$tables
+  for (what in c("stats", "value")) {
+    ok <- switch(what, stats = c("cells", "rows"), value = c("stat", "stat_fmt"))
+    i <- which(!is.na(t[[what]]) & !t[[what]] %in% ok)
+    keyed(.pb(sprintf("`tables$%s` must be %s; got %s.", what,
+                      paste(sQuote(ok), collapse = " or "), sQuote(t[[what]][i])),
+              i, rep(what, length(i))), t, "tables")
+  }
+  v <- sp$variables
+  i <- which(is.na(v$variable))
+  keyed(.pb(rep("Every `variables` row needs a `variable`.", length(i)), i,
+            rep("variable", length(i))), v, "variables")
+  el <- tolower(trimws(v$empty_levels))
+  i <- which(!is.na(el) & !el %in% c("show", "hide"))
+  keyed(.pb(sprintf("`variables$empty_levels` must be 'show' or 'hide'; got %s.",
+                    sQuote(v$empty_levels[i])), i,
+            rep("empty_levels", length(i))), v, "variables")
+  # under: another variable, a colon, one of its levels
+  un <- v$under %||% rep(NA_character_, nrow(v))
+  i <- which(!is.na(un) & !grepl("^[^:]+:\\s*\\S", un))
+  keyed(.pb(sprintf("`variables$under` is a variable, a colon and one of its levels (RACE: Asian); got %s.",
+                    sQuote(un[i])), i, rep("under", length(i))), v, "variables")
+  # a row with no template is a stats = rows display format, which needs
+  # the format it is there to give
+  ce <- sp$cells
+  i <- which(is.na(ce$template) & is.na(ce$digits) & is.na(ce$signif))
+  keyed(.pb(sprintf(paste0(
+    "`cells` row %d has no `template`, and no `digits` / `signif` ",
+    "either.\n  A row is a template, or -- for a stats = rows table -- ",
+    "the format of one statistic."), i), i, rep("template", length(i))),
+    ce, "cells")
+  i <- which(is.na(sp$columns$column))
+  keyed(.pb(rep("Every `columns` row needs a `column`.", length(i)), i,
+            rep("column", length(i))), sp$columns, "columns")
+  ch <- sp$col_header
+  i <- which(is.na(ch$line) | is.na(ch$cols))
+  keyed(.pb(rep("Every `col_header` row needs a `line` and `cols`.", length(i)),
+            i, ifelse(is.na(ch$line[i]), "line", "cols")), ch, "col_header")
+  keyed(.ard_spec_cell_style_problems(sp$cell_styles), sp$cell_styles,
+        "cell_styles")
+  # where a report's ARD comes from: its ARD definition (blank, or own),
+  # an ARD made elsewhere and taken in (import:<the file in input/ard/>),
+  # or -- a figure's -- a table's (table:<its output_id>)
+  src <- sp$report$ard_source %||% character()
+  i <- which(!is.na(src) & !grepl("^(import|table):[^[:space:]]|^own$", src))
+  keyed(.pb(sprintf(paste0(
+    "`report$ard_source` is blank or own (the report's ARD definition), ",
+    "import:<file> (an ARD taken in) or table:<output_id> (a figure: ",
+    "that table's ARD); not %s."), sQuote(src[i])), i,
+    rep("ard_source", length(i))), sp$report, "report")
+  # every cell is what its column takes
+  for (sh in names(.ard_spec_types)) {
+    d <- sp[[sh]]
+    ty <- .ard_spec_types[[sh]]
+    out <- .pb_none()
+    for (i in seq_len(nrow(d))) {
+      for (cn in names(ty)) {
+        m <- tryCatch({
+          .ard_spec_value(d[[cn]][i], ty[[cn]], sprintf("`%s$%s`", sh, cn))
+          NULL
+        }, error = function(e) conditionMessage(e))
+        if (!is.null(m)) out <- rbind(out, .pb(m, i, cn))
+      }
+    }
+    keyed(out, d, sh)
+  }
+  put(.ard_spec_dupe_problems(sp))
+  p <- do.call(rbind, c(list(.spec_problems_empty()), pr))
+  rownames(p) <- NULL
+  list(sp = sp, problems = p)
 }
 
 #' @export
@@ -1012,6 +1100,19 @@ print.tfl_table_spec <- function(x, ...) {
   if ("header_n" %in% names(t) && !is.na(t$header_n)) {
     out$header_n <- .ard_spec_header_n(t$header_n)
   }
+  # a Total column: its heading, and its place (plan_total())
+  if ("total" %in% names(t) && !is.na(t$total) && nzchar(trimws(t$total))) {
+    out$total <- trimws(t$total)
+    pos <- if ("total_position" %in% names(t)) t$total_position else NA
+    if (!is.na(pos)) {
+      pos <- tolower(trimws(pos))
+      if (!pos %in% c("first", "last")) {
+        .ard_stop(sprintf(
+          "`tables$total_position` is first or last; got %s.", sQuote(pos)))
+      }
+      out$total_position <- pos
+    }
+  }
   out
 }
 
@@ -1023,7 +1124,7 @@ print.tfl_table_spec <- function(x, ...) {
   bad <- function(v) .ard_stop(sprintf(paste0(
     "`tables$header_n`: %s is not a population.  Write `page` (each ",
     "page's own, e.g. the\n  subjects with that lab test), `table` (the ",
-    "analysis set), or several:\n  `n = page | N = table`."), sQuote(v)))
+    "population), or several:\n  `n = page | N = table`."), sQuote(v)))
   named <- grepl("=", items, fixed = TRUE)
   if (!any(named)) {
     if (length(items) != 1L || !items %in% ok) bad(x)
@@ -1058,39 +1159,42 @@ print.tfl_table_spec <- function(x, ...) {
   split(cl, factor(cl$variable, levels = unique(cl$variable)))
 }
 
-# plan_labels(): a variable's label (variables$label) and, from the code
-# list, its values' text -- one entry a variable, since one key cannot hold
-# both: SEX = c(SEX = "Sex", F = "Female"), the variable's own name its
-# label (rtfreporter#514).  The code list of `variable` (the ARD's column:
-# its values the variables' names) gives a variable's label where the
-# variables sheet gives none.
+# plan_labels(): a variable's heading (variables$label) -- what the ARD
+# does not have.  Its values' text is the ARD's own: the ARD program puts
+# the code lists' labels on the data (set_levels()).
 .ard_spec_labels <- function(sp) {
   v <- .ard_spec_variables(sp)
   v <- v[!is.na(v$label), , drop = FALSE]
-  out <- if (nrow(v)) as.list(stats::setNames(v$label, v$variable)) else list()
-  cls <- .ard_spec_codelists(sp)
-  vl <- cls[["variable"]]
-  if (!is.null(vl)) {
-    vl <- vl[!is.na(vl$label), , drop = FALSE]
-    for (i in seq_len(nrow(vl))) {
-      if (is.null(out[[vl$value[i]]])) out[[vl$value[i]]] <- vl$label[i]
+  if (!nrow(v)) return(NULL)
+  stats::setNames(v$label, v$variable)
+}
+
+# The code list of `variable` (an earlier form: the variables' headings,
+# its values the variables' names) as the variables' labels -- a variable's
+# own label in the variables sheet wins -- and out of the code lists.
+.codelist_variable_rows <- function(sp) {
+  cl <- sp$codelists
+  if (is.null(cl) || !nrow(cl)) return(sp)
+  k <- !is.na(cl$variable) & cl$variable == "variable"
+  if (!any(k)) return(sp)
+  v <- sp$variables
+  for (i in which(k & !is.na(cl$label))) {
+    o <- cl$output_id[i]
+    hit <- which(v$variable %in% cl$value[i] &
+                   (if (is.null(v$output_id)) TRUE else v$output_id %in% o))
+    if (!length(hit)) {
+      v[nrow(v) + 1L, ] <- NA
+      hit <- nrow(v)
+      if (!is.null(v$output_id)) v$output_id[hit] <- o
+      v$variable[hit] <- cl$value[i]
     }
-    # in the variables sheet's order (the rows follow it)
-    ord <- .ard_spec_variables(sp)$variable
-    out <- out[order(match(names(out), ord, nomatch = length(ord) + 1L))]
+    if (is.na(v$label[hit[1L]])) v$label[hit[1L]] <- cl$label[i]
   }
-  for (cl in cls[names(cls) != "variable"]) {
-    cl <- cl[!is.na(cl$label), , drop = FALSE]
-    if (!nrow(cl)) next
-    var <- cl$variable[1L]
-    out[[var]] <- c(if (!is.null(out[[var]])) stats::setNames(out[[var]], var),
-                    stats::setNames(cl$label, cl$value))
-  }
-  if (!length(out)) return(NULL)
-  if (all(lengths(out) == 1L) && all(vapply(out, function(x) is.null(names(x)), NA))) {
-    return(unlist(out))
-  }
-  out
+  message("The code lists' rows of `variable` (variables' headings) are the ",
+          "variables sheet's labels now: moved there.")
+  sp$variables <- v
+  sp$codelists <- cl[!k, , drop = FALSE]
+  sp
 }
 
 # plan_levels(.drop_empty = ): the variables whose values no record has
@@ -1103,16 +1207,29 @@ print.tfl_table_spec <- function(x, ...) {
   if (length(out)) out
 }
 
+# plan_nest(): the variables whose rows go under one level of another
+# (variables$under = "RACE: Asian"), as c(RACE = "Asian") by the nested one
+.ard_spec_nest <- function(sp) {
+  v <- sp$variables
+  if (is.null(v$under)) return(list())
+  k <- !is.na(v$under) & nzchar(trimws(v$under))
+  out <- lapply(v$under[k], function(u) {
+    stats::setNames(trimws(sub("^[^:]*:", "", u)), trimws(sub(":.*$", "", u)))
+  })
+  stats::setNames(out, v$variable[k])
+}
+
 # plan_levels(): a variable's own `levels` (variables sheet), else the code
-# list's order of its values.  (`variable`'s code list is the variables'
-# labels, not an order: the rows' order is the variables sheet's.)
+# list's order of its values -- as the ARD has them: their labels (the ARD
+# program puts them on the data), a value without one itself.
 .ard_spec_levels <- function(sp) {
   v <- sp$variables[!is.na(sp$variables$levels), , drop = FALSE]
   out <- stats::setNames(lapply(v$levels, .ard_spec_split), v$variable)
   cls <- .ard_spec_codelists(sp)
-  for (cl in cls[names(cls) != "variable"]) {
+  for (cl in cls) {
     var <- cl$variable[1L]
-    if (is.null(out[[var]])) out[[var]] <- cl$value
+    lab <- if (is.null(cl$label)) cl$value else ifelse(is.na(cl$label), cl$value, cl$label)
+    if (is.null(out[[var]])) out[[var]] <- lab
   }
   if (!length(out)) return(NULL)
   out
@@ -1231,7 +1348,7 @@ print.tfl_table_spec <- function(x, ...) {
   if (identical(.ard_spec_table_args(sp)[["value"]], "stat_fmt")) return(NULL)
   dg <- as.integer(d$digits)
   st <- trimws(d$statistic)
-  all <- d$variable %in% NA
+  all <- is.na(d$variable)
   by <- lapply(split(seq_len(nrow(d))[!all], d$variable[!all]), function(i)
     stats::setNames(dg[i], st[i]))
   list(all = stats::setNames(dg[all], st[all]), by = by)
@@ -1248,19 +1365,20 @@ print.tfl_table_spec <- function(x, ...) {
 }
 
 .ard_spec_check_digits <- function(d) {
-  if (is.null(d) || !nrow(d)) return(invisible(NULL))
-  if (any(is.na(d$statistic) | !nzchar(trimws(d$statistic)))) {
-    .ard_stop("Every `digits` row needs a `statistic` (mean, sd, p ...).")
-  }
+  .pb_stop_first(.ard_spec_digit_problems(d))
+}
+
+.ard_spec_digit_problems <- function(d) {
+  if (is.null(d) || !nrow(d)) return(.pb_none())
+  blank <- which(is.na(d$statistic) | !nzchar(trimws(d$statistic)))
+  out <- .pb(rep("Every `digits` row needs a `statistic` (mean, sd, p ...).",
+                 length(blank)), blank, rep("statistic", length(blank)))
   n <- suppressWarnings(as.numeric(d$digits))
-  bad <- is.na(n) | n < 0 | n != round(n)
-  if (any(bad)) {
-    .ard_stop(sprintf(paste0(
-      "`digits$digits` is a whole number of decimals (0, 1, 2 ...); ",
-      "got %s for %s."), sQuote(d$digits[bad][1L]),
-      sQuote(d$statistic[bad][1L])))
-  }
-  invisible(NULL)
+  bad <- which(is.na(n) | n < 0 | n != round(n))
+  rbind(out, .pb(sprintf(paste0(
+    "`digits$digits` is a whole number of decimals (0, 1, 2 ...); ",
+    "got %s for %s."), sQuote(d$digits[bad]), sQuote(d$statistic[bad])),
+    bad, rep("digits", length(bad))))
 }
 
 # a statistic that is a proportion prints as a percent ("{p:.1f%}")
@@ -1570,24 +1688,24 @@ tfl_table_spec_template <- function(ard, path = NULL, cols = NULL,
                           "DATETIME")
 
 .ard_spec_check_tokens <- function(d) {
-  if (is.null(d) || !nrow(d)) return(invisible(NULL))
+  .pb_stop_first(.ard_spec_token_problems(d))
+}
+
+.ard_spec_token_problems <- function(d) {
+  if (is.null(d) || !nrow(d)) return(.pb_none())
   nm <- trimws(d$name)
-  if (any(is.na(nm) | !nzchar(nm))) {
-    .ard_stop("Every `tokens` row needs a `name` (STUDY, DATA_CUTOFF ...).")
-  }
-  bad <- nm[!grepl(.ard_spec_own_rx, nm)]
-  if (length(bad)) {
-    .ard_stop(paste0(
-      "`tokens$name` is upper case -- a letter, then letters, digits or _ ",
-      "(STUDY, DATA_CUTOFF): not ", paste(sQuote(unique(bad)), collapse = ", "), "."))
-  }
-  own <- intersect(nm, .ard_spec_rtf_tokens)
-  if (length(own)) {
-    .ard_stop(paste0(
-      "`tokens`: ", paste0("{", own, "}", collapse = ", "),
-      " is rtfreporter's own token; give yours another name."))
-  }
-  invisible(NULL)
+  blank <- which(is.na(nm) | !nzchar(nm))
+  out <- .pb(rep("Every `tokens` row needs a `name` (STUDY, DATA_CUTOFF ...).",
+                 length(blank)), blank, rep("name", length(blank)))
+  bad <- setdiff(which(!grepl(.ard_spec_own_rx, nm)), blank)
+  out <- rbind(out, .pb(sprintf(paste0(
+    "`tokens$name` is upper case -- a letter, then letters, digits or _ ",
+    "(STUDY, DATA_CUTOFF): not %s."), sQuote(nm[bad])), bad,
+    rep("name", length(bad))))
+  own <- which(nm %in% .ard_spec_rtf_tokens)
+  rbind(out, .pb(sprintf(paste0(
+    "`tokens`: {%s} is rtfreporter's own token; give yours ",
+    "another name."), nm[own]), own, rep("name", length(own))))
 }
 
 # The report's own tokens, there for any report: its ID, its label as
@@ -2084,6 +2202,16 @@ tfl_as_table_spec <- function(x, output_id = NULL, compare = TRUE) {
       if (is.null(s$levels[[v]])) NA_character_ else bar(s$levels[[v]]), ""),
     empty_levels = ifelse(vars %in% hide, "hide", NA_character_),
     stringsAsFactors = FALSE)
+  # plan_nest(): a variable's rows under a level of another
+  nest <- ly$nest$nest
+  if (length(nest)) {
+    for (child in setdiff(names(nest), variables$variable)) {
+      variables[nrow(variables) + 1L, ] <- list(id, child, NA, NA, NA, NA)
+    }
+    variables$under <- vapply(variables$variable, function(v)
+      if (is.null(nest[[v]])) NA_character_
+      else paste0(nest[[v]]$parent, ": ", nest[[v]]$level), "")
+  }
 
   # -- cells ------------------------------------------------------------------
   crow <- function(var, ctx, row, when, tpl, digits = NA, signif = NA)
@@ -2137,9 +2265,12 @@ tfl_as_table_spec <- function(x, output_id = NULL, compare = TRUE) {
     if (identical(g$.keep, FALSE)) put("group_keep", FALSE)
   }
   b <- ly[["blanks"]]
-  if (!is.null(b$blank_rows) && !(is.character(b$blank_rows) &&
-                                   length(b$blank_rows) == 1L)) {
-    miss("plan_blanks(where = ): only a named rule (\"between_groups\") converts")
+  if (is.numeric(b$blank_rows) && length(b$blank_rows) &&
+      all(b$blank_rows == round(b$blank_rows))) {
+    put("blank_where", paste(as.integer(b$blank_rows), collapse = " | "))
+  } else if (!is.null(b$blank_rows) && !(is.character(b$blank_rows) &&
+                                         length(b$blank_rows) == 1L)) {
+    miss("plan_blanks(where = ): only a named rule (\"between_groups\") or row positions convert")
   } else put("blank_where", b$blank_rows)
   put("blank_first", b$blank_row_first); put("blank_last", b$blank_row_end)
   put("blank_counted", b$count_blank_rows)
@@ -2318,6 +2449,11 @@ tfl_as_table_spec <- function(x, output_id = NULL, compare = TRUE) {
     miss("plan_col_header(values = ): a literal N stays in code (use {n})")
   }
   tables$header_n <- H$n_text %||% NA_character_
+  # plan_total(): the Total column
+  tt <- ly$total
+  tables$total <- tt$label %||% NA_character_
+  tables$total_position <- if (identical(tt$position, "first")) "first" else
+    NA_character_
 
   # -- titles / footnotes -----------------------------------------------------
   # a plan's titles and footnotes are the report's: they go to the

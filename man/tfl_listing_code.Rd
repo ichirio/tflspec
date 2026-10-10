@@ -9,7 +9,8 @@ tfl_listing_code(
   output_id = NULL,
   datasets,
   rework = NULL,
-  type = "multiline"
+  type = "multiline",
+  codelists = NULL
 )
 }
 \arguments{
@@ -23,6 +24,14 @@ tfl_listing_code(
 
 \item{type}{The listing type when the listing's \code{type} is blank (one of
 rtfreporter's \code{listing_spec()} types).}
+
+\item{codelists}{The reports' code lists (a table definition's
+\code{codelists} sheet, or a data frame with \code{output_id}, \code{variable},
+\code{value}, \code{label}, \code{order}): the listing's rows of the columns it shows
+or sorts by are put on its data after its condition (\verb{cl_<variable>}
+and \code{set_levels()}, see \code{\link[=tfl_helpers_code]{tfl_helpers_code()}}) -- each such column a
+factor in its list's order (it sorts so), its values as the list has
+them.}
 }
 \value{
 The code, one element per line; \code{NULL} when the listing names no

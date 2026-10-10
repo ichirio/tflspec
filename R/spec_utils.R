@@ -1,6 +1,6 @@
 # ============================================================================
 #  Small helpers the spec code shares with the engine that moved to
-#  rtfreporter (plan E, tflspec Discussion #23): kept here so tflspec needs
+#  rtfreporter (plan E of the design discussion): kept here so tflspec needs
 #  nothing of rtfreporter's internals.
 # ============================================================================
 

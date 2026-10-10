@@ -21,7 +21,7 @@ library(pharmaverseadam)
 
 arm_order <- c("Placebo", "Xanomeline Low Dose", "Xanomeline High Dose")
 
-adsl_x <- adsl %>%
+adsl_x <- adsl |>
   mutate(
     TRT01PN = match(TRT01P, arm_order),
     TRT01AN = match(TRT01A, arm_order),
@@ -29,25 +29,25 @@ adsl_x <- adsl %>%
   )
 
 # ADSL variables copied into the BDS datasets that lack them
-adsl_vars <- adsl_x %>%
+adsl_vars <- adsl_x |>
   select(USUBJID, TRT01P, TRT01PN, TRT01A, TRT01AN, SAFFL, SEX, AGEGR1)
 add_adsl <- function(d) {
-  d %>%
-    select(-any_of(setdiff(names(adsl_vars), "USUBJID"))) %>%
+  d |>
+    select(-any_of(setdiff(names(adsl_vars), "USUBJID"))) |>
     left_join(adsl_vars, by = "USUBJID")
 }
 
-adrs_x <- adrs_onco %>%
-  mutate(ADY = as.numeric(ADT - TRTSDT) + 1) %>%
+adrs_x <- adrs_onco |>
+  mutate(ADY = as.numeric(ADT - TRTSDT) + 1) |>
   add_adsl()
 
-adtr_best <- adtr_onco %>%
-  filter(PARAMCD == "SDIAM", ADY > 1, !is.na(PCHG)) %>%
-  group_by(USUBJID) %>%
-  summarise(AVAL = min(PCHG), .groups = "drop") %>%
+adtr_best <- adtr_onco |>
+  filter(PARAMCD == "SDIAM", ADY > 1, !is.na(PCHG)) |>
+  group_by(USUBJID) |>
+  summarise(AVAL = min(PCHG), .groups = "drop") |>
   mutate(PARAMCD = "BPCHG", PARAM = "Best Percent Change from Baseline in Sum of Diameters")
 
-adtr_x <- bind_rows(adtr_onco, adtr_best) %>%
+adtr_x <- bind_rows(adtr_onco, adtr_best) |>
   add_adsl()
 
 adam <- list(

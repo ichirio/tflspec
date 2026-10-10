@@ -15,7 +15,7 @@ datasets,dataset,"A name for the data, used by populations and analyses (and the
 datasets,level,"SDTM or ADaM (for people and ARS; not read by the program).",ADaM
 datasets,path,"Its file, relative to the study folder; the reader follows the extension: .rds, .xpt, .sas7bdat, .csv, .parquet.",data/adam/adsl.xpt
 datasets,derive,"New columns, NAME = R expression, | between them (transform()); blank: none.",AGE65 = AGE >= 65
-populations,,"ARD: the analysis sets, one row a population.",
+populations,,"ARD: the populations, one row a population.",
 populations,population_id,"The population's name, used by analyses.",SAF
 populations,dataset,"The dataset its subjects come from.",ADSL
 populations,where,"An R condition on that dataset choosing the subjects; blank: every row.","SAFFL == ""Y"""
@@ -37,15 +37,16 @@ analyses,analysis_id,"The analysis's id within its report; an ARD column.",AGE
 analyses,parent,"The analysis this one runs inside: an analysis of the same report whose method is cards::ard_stack (several analyses on the same data and by, with the by counts and the total N), cards::ard_strata (within subgroups) or cards::ard_pairwise (each pair of groups). It takes the parent's dataset, population_id and where (and in a stack its by), so leave those blank; blank: an analysis of its own.",DEMO
 analyses,label,"A name a person reads (for ARS and the GUI); blank: none.",Age (years)
 analyses,method,"What is computed: a keyword of tfl_ard_methods() (continuous, categorical, hierarchical ...), any pkg::function (cards::, cardx::), or a function of the study's own that the study key source loads.",continuous
-analyses,data,"The analysis data analysed (a data_id of analysis_data), instead of dataset and population_id: the analysis set is its population; blank: dataset and population_id say it.",adae_teae
+analyses,data,"The analysis data analysed (a data_id of analysis_data), instead of dataset and population_id: the population is its population; blank: dataset and population_id say it.",adae_teae
 analyses,dataset,"The data analysed; blank: the population's own dataset. Blank when `data` is given.",ADAE
-analyses,population_id,"The analysis set: the data is restricted to its subjects; blank: no restriction (population is NULL), or the population of `data`.",SAF
+analyses,population_id,"The population: the data is restricted to its subjects; blank: no restriction (population is NULL), or the population of `data`.",SAF
 analyses,where,"An R condition on the data, applied after the population (on an analysis data: after its own conditions); blank: every row.","TRTEMFL == ""Y"""
 analyses,by,"Grouping variables (cards' by), | between them; blank: none.",TRT01A
+analyses,overall,"TRUE: the analysis again without its by, over all its subjects (cards' overall rows, no group): what a table shows as its Total column (tables$total). On a cards::ard_stack row: .overall = TRUE. Blank: by groups only.",TRUE
 analyses,strata,"Variables the analysis is repeated within (cards' strata: a subgroup, a parameter by visit), | between them; blank: none.",PARAMCD | AVISIT
 analyses,variables,"The variables analysed (cards' variables), | between them.",AGE | BMIBL
 analyses,statistics,"For continuous / categorical / missing: the statistics computed, in order (tfl_ard_statistics()); for other methods: the statistics kept of what the method gives; | between them; blank: the method's default.",N | mean | sd
-analyses,denominator,"What percentages are of: population (the analysis set; hierarchical and max take it anyway), row / column / cell (cards), another population, a dataset (its records of the analysis set's subjects), or an analysis data (as it is: one row a subject and phase gives the N of each phase); blank: the method's default.",row
+analyses,denominator,"What percentages are of: population (hierarchical and max take it anyway), row / column / cell (cards), another population, a dataset (its records of the population's subjects), or an analysis data (as it is: one row a subject and phase gives the N of each phase); blank: the method's default.",row
 analyses,formats,"Display formats, statistic=format, | between them; VAR:statistic=format for one variable. xx.x = one decimal (the x's count only after the point), xx.x% = a proportion as a percent, a number = decimals, pvalue = <0.001 or 3 decimals; blank: the statistic's default.",mean=xx.x | p=xx.x%
 analyses,args,"More arguments of the call, as R (data and population are bound), in any order; refused if not R. An argument a column gives (by, variables, strata, denominator, statistic) may not be given here too; blank: none.",over_variables = TRUE
 analyses,post,"Steps on the ARD after the call, each a call with the ARD left out, | between them: cards::add_calculated_row() (a statistic computed from others), cards::filter_ard_hierarchical() (only the rows that pass), cards::sort_ard_hierarchical(), cards::diff_ard_hierarchical(), or a function of your own that takes an ARD and gives one; blank: none.","cards::add_calculated_row(expr = sd / sqrt(N), stat_name = ""se"")"
@@ -53,7 +54,7 @@ analyses,code,"method = custom only: the R code that gives the ARD (data and pop
 analyses,purpose,"For CDISC ARS (tfl_ars()): PRIMARY / SECONDARY / EXPLORATORY OUTCOME MEASURE; blank: tfl_ars(purpose = ).",PRIMARY OUTCOME MEASURE
 analyses,reason,"For CDISC ARS: SPECIFIED IN PROTOCOL / SPECIFIED IN SAP / DATA DRIVEN / REQUESTED BY REGULATORY AGENCY; blank: SPECIFIED IN SAP.",SPECIFIED IN SAP
 tables,,"Table: one row a report. Its roles (table_plan()) and the table-wide options; a verb written in code afterwards wins.",
-tables,cols,"The key spread across the columns, outermost first, | between them (table_plan(cols = )).",TRT01A | SEROSTAT
+tables,cols,"The key spread across the columns, outermost first, | between them (table_plan(cols = )).",TRTA | SEX
 tables,rows,"The keys down the rows (table_plan(rows = )); name = column renames, a quoted value is a constant heading; | between them.","group1 = AEBODSYS | grp = ""Worst Post-Baseline Values"""
 tables,label,"Where the row label comes from (table_plan(label = )); blank: .label; NA: used to tell rows apart, not printed; NULL: not used.",label = AEDECOD
 tables,stats,"cells (cells built from templates) or rows (one statistic a row, the raw values) (plan_cells(stats = )); blank: cells.",rows
@@ -62,17 +63,20 @@ tables,sep,"What joins several column keys into a column name (plan_columns(sep 
 tables,sort,"TRUE, FALSE, or the sort keys in order, - in front for descending (plan_sort()); blank: the data's order.",.overall | group1 | -n | label
 tables,sort_stat,"The statistic totalled across columns for a frequency order (plan_sort(stat = )).",n
 tables,na,"What a cell no template could fill prints (plan_cells(na = )); blank: empty.",-
-tables,header_n,"Which population {n} in the column header is, for a table split by page (a lab parameter): page (those with that page's data), table (the analysis set), or both as n = page | N = table for {n} and {N}; blank: page (warns when both exist and differ). Both must be in the ARD.",n = page | N = table
+tables,header_n,"Which population {n} in the column header is, for a table split by page (a lab parameter): page (those with that page's data), table (the population), or both as n = page | N = table for {n} and {N}; blank: page (warns when both exist and differ). Both must be in the ARD.",n = page | N = table
+tables,total,"The heading of a Total column (plan_total()): the ARD's overall rows, its analyses run again without their by (analyses$overall), as one more column; its {n} is the study total. Blank: none.",Total
+tables,total_position,"Where the Total column goes among the column key's values: last or first; blank: last.",first
 variables,,"Table: one row a variable (an analysis variable, a column key or the label column).",
 variables,variable,"The variable's name.",AGEGR1
 variables,label,"What prints for its name (plan_labels()); blank: the name.",Age (years)
 variables,order,"Its place among the variables (a number); blank: the data's order.",1
 variables,levels,"Its values in print order, | between them (plan_levels()); blank: the data's order.",Grade 0 | Grade 1 | Total
 variables,empty_levels,"Its values no record has -- a code list's value, counted 0 in every column -- show (a 0 row) or hide (plan_levels(.drop_empty = )); blank: show.",hide
-codelists,,"A report's code lists, one row a value of a variable -- the text it prints as and its place (plan_labels(), plan_levels()). Every row names its report in `output_id` (a blank one is an error: copy the rows into each report that uses them). A variable's `levels` on the variables sheet, when given, is the order in the table instead. The code list of `variable` (its values the variables' names) gives the variables' labels, where the variables sheet's `label` gives none. The ARD too: a report's ARD program makes factors of the columns it lists that its analyses read (by, strata, variables) before any analysis.",
+variables,under,"Its rows under one level of another variable: that variable, a colon, the level as the table shows it (plan_nest()); after that row, one indent deeper, its own heading dropped; blank: its own block.",RACE: Asian
+codelists,,"A report's code lists, one row a value of a variable -- its place and what it is in the data the report's program makes (the ARD, a listing's or a figure's data): the program puts them on the columns it reads (cl_<variable>, set_levels()), each a factor in the list's order, its values the labels. A value the list does not have stops the program. Every row names its report in `output_id` (a blank one is an error: copy the rows into each report that uses them). A variable's `levels` on the variables sheet, when given, is the order in the table instead; a variable's heading is the variables sheet's `label`.",
 codelists,variable,"The variable (an analysis variable or a column key).",SEX
 codelists,value,"A value as the data have it.",F
-codelists,label,"What prints for the value; blank: the value.",Female
+codelists,label,"What the value is in the data the program makes, and so what prints; blank: the value.",Female
 codelists,order,"Its place among the variable's values (a number); blank: after the numbered ones, in the sheet's order.",2
 cells,,"Table: one row a line of a cell (plan_cells()). Rows with the same variable / context / row are one chain, tried top down. With stats = rows, a row with no template is one statistic's digits (plan_digits(.rows = )): row = the statistic as the label column prints it.",
 cells,variable,"What the template is for: a variable, continuous / categorical (every variable of that kind); blank: every variable.",continuous
@@ -98,7 +102,7 @@ layout,group_mode,"How groups print (plan_row_group(mode = )): value / indent / 
 layout,group_collapse,"TRUE, or the columns (names or positions, | between them) whose repeated values print once (plan_row_group(collapse = )); blank: none.",1 | 2
 layout,group_page,"TRUE / FALSE: one page per value of group_col (plan_paginate_group()); blank: FALSE.",TRUE
 layout,group_keep,"TRUE / FALSE: with group_page, FALSE leaves the group column unprinted (plan_paginate_group(keep = )); blank: TRUE.",FALSE
-layout,blank_where,"Where blank rows go: a named rule such as between_groups (plan_blanks(where = )); blank: none.",between_groups
+layout,blank_where,"Where blank rows go: a named rule such as between_groups, or row positions -- a blank after each, 0 before the first row, -1 after the last (0 | 5 | -1) (plan_blanks(where = )); blank: none.",between_groups
 layout,blank_first,"TRUE / FALSE: a blank row before the first row (plan_blanks(first = )); blank: the default.",TRUE
 layout,blank_last,"TRUE / FALSE: a blank row after the last row (plan_blanks(last = )); blank: the default.",TRUE
 layout,blank_counted,"TRUE / FALSE: blank rows count towards pages_max_rows (plan_blanks(counted = )); blank: the default.",TRUE
@@ -166,7 +170,7 @@ cell_styles,indent_twips,"Left indent of the cell text in twips (not on the head
 col_header,,"Table: one row a header cell (plan_col_header(header = )). A report's own cells replace the default header whole.",
 col_header,line,"The header row, a whole number (1 = the top).",1
 col_header,cols,"The columns the cell sits on: a name, .values (every value column), a position or range (3, 3:31, 3:last), or KEY = value (the columns whose key has that value); | between them.",.values
-col_header,span,"Blank: one cell over cols; each: one cell a column; a key's name: one cell per value of that key (a spanner).",TR01AG1
+col_header,span,"Blank: one cell over cols; each: one cell a column; a key's name: one cell per value of that key (a spanner).",TRTA
 col_header,text,"What prints; a line break is Alt+Enter or \n. Tokens: {col} {col1} {col2} (the column's keys), {n} {n1} {n2} (the population at that depth, read from the ARD), {n:sum} (the total over the cell's columns). Quote it to keep leading spaces.",{col1}\n(N={n:sum})
 col_header,align,"left / center / right (col_cell()); blank: the default.",center
 col_header,bold,"TRUE / FALSE; blank: FALSE.",TRUE
@@ -188,7 +192,7 @@ report,page_footer,"TRUE / FALSE: FALSE drops the running page footer, likewise;
 report,watermark,"A word drawn diagonally behind every page (rtf_document(watermark = )); blank: none.",DRAFT
 report,figure_width_in,"A figure report: the figure's width in inches (rtf_figures(width_twips = )); blank: the figure's own.",9
 report,figure_height_in,"A figure report: the figure's height in inches (rtf_figures(height_twips = )); blank: the figure's own.",5
-report,ard_source,"Where the report's ARD comes from: blank, its own ARD definition (the analyses rows of its output_id); import:<file>, an ARD made elsewhere and taken in (the file in the study's input/ard/ folder, read with tfl_read_ard()).",import:t_14_2_1_cro.json
+report,ard_source,"Where the report's ARD comes from: blank (a figure: none), its own ARD definition (the analyses rows of its output_id; a figure: own); import:<file>, an ARD made elsewhere and taken in (the file in the study's input/ard/ folder, read with tfl_read_ard()); table:<output_id>, a figure's: that table's ARD.",import:t_14_2_1_cro.json
 page,,"Report: one row a report; the page (rtf_page()) and the document's text defaults (rtf_default_format()). Blank: rtfreporter's options (landscape Letter, 0.75 in margins).",
 page,paper_size,"letter / legal / A4 / A3 / A5; blank: letter.",A4
 page,orientation,"landscape / portrait; blank: landscape.",portrait

@@ -89,8 +89,10 @@ tfl_fig_compat <- function(ggplot2_version = NULL) {
   numeric_version(paste0(target, ".9999")) >= numeric_version(from)
 }
 
+.gg_memo <- new.env(parent = emptyenv())
 .fig_installed_gg <- function() {
-  v <- utils::packageVersion("ggplot2")
+  # (packageVersion() reads the DESCRIPTION file each time)
+  v <- .gg_memo$v %||% (.gg_memo$v <- utils::packageVersion("ggplot2"))
   mm <- paste(v$major, v$minor, sep = ".")
   if (mm %in% .fig_gg_targets) mm else if (v >= "4.0.0") "4.0" else "3.5"
 }

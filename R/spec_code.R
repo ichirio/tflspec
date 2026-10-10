@@ -126,6 +126,10 @@
              .spec_code_line(p$items[[i]])), "")
     return(paste0(p$open, "(", paste(el, collapse = ", "), ")"))
   }
+  # whole numbers as a person writes them: c(0, -1), not 0:-1 or c(0L, -1L)
+  if (is.integer(x) && length(x) > 1L && is.null(names(x)) && !anyNA(x)) {
+    return(paste0("c(", paste(x, collapse = ", "), ")"))
+  }
   paste(deparse(x, width.cutoff = 500L,
                 control = c("keepNA", "keepInteger", "niceNames",
                             "showAttributes")),
@@ -194,6 +198,11 @@
   }
   lb <- .ard_spec_labels(sp)
   if (length(lb)) do.call(add, c(list("plan_labels"), as.list(lb)))
+  ne <- .ard_spec_nest(sp)
+  if (length(ne)) do.call(add, c(list("plan_nest"), ne))
+  if (!is.null(sa[["total"]])) {
+    add("plan_total", label = sa[["total"]], position = sa[["total_position"]])
+  }
   cm <- .ard_spec_cells(sp)
   how <- sa[intersect(c("stats", "value", "na"), names(sa))]
   if (length(cm) || length(how)) do.call(add, c(list("plan_cells"), cm, how))
