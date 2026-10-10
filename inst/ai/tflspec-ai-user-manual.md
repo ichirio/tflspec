@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9080** (the development version,
+**This manual documents tflspec 0.0.24.9081** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -347,7 +347,7 @@ once. The `study` sheet has `key` / `value` (`rounding`: `sas` / `iec` /
 | `sort_stat` | `plan_sort(stat = )` | the statistic totalled for a frequency order |
 | `header_n` | `plan_col_header(values = list(n = ))` | `page`, `table`, or `n = page \| N = table` |
 
-**variables**: `variable`, `label`, `order`, `levels` (`Grade 0 | Grade 1`), `empty_levels` (`hide`: no row for a value no record has; blank: a 0 row)
+**variables**: `variable`, `label`, `order`, `levels` (`Grade 0 | Grade 1`), `empty_levels` (`hide`: no row for a value no record has; blank: a 0 row), `under` (`RACE: Asian`: its rows under that level of RACE, one indent deeper, its own heading dropped -- `plan_nest()`)
 → `plan_labels()`, `plan_levels()`.
 
 **codelists** (a report's code lists, one row a value): `output_id`, `variable`, `value`, `label`, `order`. Each value's place and **what it is in the data the report's program makes** (`label`; blank: the value itself): `tfl_ard_code(codelists = )`, `tfl_listing_code(codelists = )` and `tfl_fig_design_code(codelists = )` write `cl_sex <- c(F = "Female", M = "Male")` at the program's head and `set_levels(SEX = cl_sex, ...)` on the data the program reads (the ARD's analyses: the columns they read -- `by`, `strata`, `variables`, names in `args` / `code` / `post`; a listing: the columns it shows or sorts by; a figure: last of its data steps). Each listed column becomes a factor in the list's order with the labels as its values, so **the ARD holds "Female"**; a value the list does not have (not NA) stops the program with the column and the value. The table then orders the ARD's values (`plan_levels(SEX = c("Male", "Female"))`, the labels) and `plan_labels()` gives only the variables' headings (the `variables` sheet's `label`). A condition on a listed column the analysis reads is written in its labels (`SEX == "Female"`; `tfl_ard_code()` stops on `SEX == "F"` and says so); ARS writes the data's values back (`SEX == "F"`). Every row names its report: a blank `output_id` is an error (no study-wide rows; copy the rows into each report). A variable's `levels` on the `variables` sheet, when given, is the order instead (in the labels). The code list of `variable` (an earlier form of the headings) is moved to the `variables` sheet's `label` when the table spec is read, with a message.

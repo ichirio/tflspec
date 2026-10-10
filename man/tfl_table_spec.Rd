@@ -133,6 +133,11 @@ page's, with a warning when the ARD states both.  See
 its values that no record has -- a code list's value, counted 0 in
 every column of an ARD made with the study's code lists -- get a row
 (\code{plan_levels(.drop_empty = )}).}
+\item{\code{under}}{Its rows under one level of another variable,
+\code{RACE: Asian} (that variable, a colon, the level as the table shows
+it): after that row, one stub indent deeper, its own heading dropped
+(\code{plan_nest()}); the sub-categories of a race from a second analysis
+on the same data.}
 }
 }
 
