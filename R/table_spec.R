@@ -193,7 +193,8 @@
 .ard_spec_schema <- function() {
   list(
     tables    = c("output_id", "cols", "rows", "label", "stats", "value",
-                  "sep", "sort", "sort_stat", "na", "header_n"),
+                  "sep", "sort", "sort_stat", "na", "header_n", "total",
+                  "total_position"),
     variables = c("output_id", "variable", "label", "order", "levels",
                   "empty_levels", "under"),
     # the study's code list: a value's text and place
@@ -573,6 +574,14 @@
 #'     tokens: `n = page | N = table` gives `{n}` and `{N}`.  Blank: the
 #'     page's, with a warning when the ARD states both.  See
 #'     [rtfreporter::plan_col_header()]'s `values`.}
+#'   \item{`total`}{The heading of a **Total column** (`Total`): the ARD's
+#'     overall rows --- the analyses run again without their `by`
+#'     (`analyses$overall`) --- as one more column, its `{n}` the study
+#'     total ([rtfreporter::plan_total()]).  Blank: none.  No `ARM =
+#'     "Total"` in the data: the ARD and the ARS keep only what the data
+#'     has.}
+#'   \item{`total_position`}{Where the Total column goes among the column
+#'     key's values: `last` (blank) or `first`.}
 #' }
 #'
 #' @section `variables`:
@@ -1090,6 +1099,19 @@ print.tfl_table_spec <- function(x, ...) {
   }
   if ("header_n" %in% names(t) && !is.na(t$header_n)) {
     out$header_n <- .ard_spec_header_n(t$header_n)
+  }
+  # a Total column: its heading, and its place (plan_total())
+  if ("total" %in% names(t) && !is.na(t$total) && nzchar(trimws(t$total))) {
+    out$total <- trimws(t$total)
+    pos <- if ("total_position" %in% names(t)) t$total_position else NA
+    if (!is.na(pos)) {
+      pos <- tolower(trimws(pos))
+      if (!pos %in% c("first", "last")) {
+        .ard_stop(sprintf(
+          "`tables$total_position` is first or last; got %s.", sQuote(pos)))
+      }
+      out$total_position <- pos
+    }
   }
   out
 }
@@ -2427,6 +2449,11 @@ tfl_as_table_spec <- function(x, output_id = NULL, compare = TRUE) {
     miss("plan_col_header(values = ): a literal N stays in code (use {n})")
   }
   tables$header_n <- H$n_text %||% NA_character_
+  # plan_total(): the Total column
+  tt <- ly$total
+  tables$total <- tt$label %||% NA_character_
+  tables$total_position <- if (identical(tt$position, "first")) "first" else
+    NA_character_
 
   # -- titles / footnotes -----------------------------------------------------
   # a plan's titles and footnotes are the report's: they go to the

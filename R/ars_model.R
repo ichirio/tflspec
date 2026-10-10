@@ -480,8 +480,17 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
       ds = ds, r = r, pur = pur, rea = rea)
   }
 
-  for (i in seq_len(nrow(a))) {
+  # an analysis with `overall` is two ARS analyses: by its groups, and
+  # over all its subjects without the grouping (_TOTAL) -- no group value
+  # the data does not have
+  ov <- vapply(a$overall %||% rep(NA_character_, nrow(a)), function(v)
+    isTRUE(.ard_yes(v)), NA) & !is.na(a$by)
+  todo <- unlist(lapply(seq_len(nrow(a)), function(i) if (ov[i]) c(i, -i) else i))
+  for (j in todo) {
+    i <- abs(j)
+    overall <- j < 0L
     r <- a[i, ]
+    if (overall) r$by <- NA_character_
     out <- r$output_id
     tag <- paste(out, r$analysis_id, sep = " / ")
     m <- r$method
@@ -570,8 +579,13 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
     ss <- subset(.where_labels_to_values(
       r$where, .codelist_levels(table_spec, out)), ds, tag)
     lbl <- if (!is.na(r$label)) r$label else NULL
+    # (overall: the name says so)
+    lab_of <- function(o, v) paste(c(label_of(o, v), if (overall) "(overall)"),
+                                   collapse = " ")
+    if (overall && !is.null(lbl)) lbl <- paste(lbl, "(overall)")
     g_by <- vapply(by, grouping, "", ds = ds, out = out)
-    aid <- function(...) paste(c("An", out, r$analysis_id, ...),
+    aid <- function(...) paste(c("An", out, r$analysis_id,
+                                 if (overall) "TOTAL", ...),
                                collapse = "_")
     shape <- .ars_method_shape(m)
     mz <- method(m, stats, opt, code, tag)
@@ -616,7 +630,7 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
       for (v in vars) {
         gv <- c(g_by, grouping(ds, v, out))
         id <- add_analysis(r, if (several) aid(v) else aid(),
-                           lbl %||% label_of(out, v), ds, subj, mz, gv,
+                           lbl %||% lab_of(out, v), ds, subj, mz, gv,
                            ss = ss, pur = pur, rea = rea, role = "count",
                            v = v)
         need_den(id, r, by, mz, pds %|NA|% ds, pur, rea)
@@ -624,7 +638,7 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
     } else if (shape %in% c("value", "test_value")) {
       for (v in vars) {
         add_analysis(r, if (several) aid(v) else aid(),
-                     lbl %||% label_of(out, v), ds, v, mz, g_by,
+                     lbl %||% lab_of(out, v), ds, v, mz, g_by,
                      no_res = if (shape == "test_value") g_by else character(),
                      ss = ss, pur = pur, rea = rea, role = shape, v = v)
       }
@@ -632,7 +646,7 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
       for (v in vars) {
         gv <- c(g_by, grouping(ds, v, out))
         add_analysis(r, if (several) aid(v) else aid(),
-                     lbl %||% label_of(out, v), ds, subj, mz, gv,
+                     lbl %||% lab_of(out, v), ds, subj, mz, gv,
                      no_res = gv, ss = ss, pur = pur, rea = rea,
                      role = "test_count", v = v)
       }
