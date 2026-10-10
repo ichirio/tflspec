@@ -47,7 +47,10 @@
 #'   "ADSL / ADAE" or one a line become `"ADSL | ADAE"`.  Not part of the
 #'   spec either.
 #'
-#' @param path An `.xlsx` or `.csv` file.
+#' @param path An `.xlsx` or `.csv` file, or a data frame holding the TOC's
+#'   rows (its names are the column names; `sheet` and `skip` are then
+#'   ignored).  A data frame lets a caller that has read and reshaped the
+#'   rows itself (tflplanner's import by company rules) use the one reader.
 #' @param map Which column is what: a named character vector or list, the
 #'   names among `output_id` (required), `type`, `title`, `population`,
 #'   `footnote`, `program`, `file`, `note`, `section`, `datasets`, `label`, each the TOC's column name (or
@@ -75,6 +78,9 @@
 tfl_read_toc <- function(path, map, sheet = NULL, skip = 0L,
                          type_from_id = TRUE) {
   d <- .toc_read(path, sheet, skip)
+  # where a row is, as the user would count it: the file's row (under the
+  # header and the rows above it), or the data frame's row
+  row_at <- if (is.data.frame(path)) 0L else skip + 1L
   map <- .toc_map(map, names(d))
   get <- function(field) {
     cols <- map[[field]]
@@ -93,7 +99,7 @@ tfl_read_toc <- function(path, map, sheet = NULL, skip = 0L,
       "tfl_read_toc(): row(s) %s have no output id (column %s) but other ",
       "cells filled.\n  Give them an id, or empty them if they are ",
       "headings."),
-      paste(bad + skip + 1L, collapse = ", "), sQuote(map$output_id)))
+      paste(bad + row_at, collapse = ", "), sQuote(map$output_id)))
   }
   skipped <- d[heading & said > 0L, others, drop = FALSE]
   # each row's section: the text of the last heading row above it (a row
@@ -199,8 +205,20 @@ tfl_read_toc <- function(path, map, sheet = NULL, skip = 0L,
   }, "", USE.NAMES = FALSE)
 }
 
-# The TOC as text: every column character, blanks NA.
+# The TOC as text: every column character, blanks NA.  A data frame is
+# taken as it is (sheet and skip do not apply).
 .toc_read <- function(path, sheet, skip) {
+  if (is.data.frame(path)) {
+    d <- as.data.frame(path, stringsAsFactors = FALSE, optional = TRUE)
+    names(d) <- as.character(names(path))
+    d[] <- lapply(d, function(v) {
+      v <- trimws(as.character(v))
+      v[!is.na(v) & !nzchar(v)] <- NA_character_
+      v
+    })
+    rownames(d) <- NULL
+    return(d[rowSums(!is.na(d)) > 0L, , drop = FALSE])
+  }
   if (!is.character(path) || length(path) != 1L || !file.exists(path)) {
     .ard_stop(sprintf("tfl_read_toc(): no file '%s'.", path))
   }
