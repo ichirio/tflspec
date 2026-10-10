@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9079** (the development version,
+**This manual documents tflspec 0.0.24.9080** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -151,7 +151,7 @@ going and leaves the message in the `error` / `warning` column.
 | scaffold a table spec from an ARD | `tfl_table_spec_template(ard)` |
 | read / write a table (+ report) spec | `tfl_read_table_spec()` / `tfl_read_report_spec()` / `tfl_write_table_spec()` / `tfl_write_report_spec()` |
 | several specs in one workbook; what a column means | `tfl_write_specs(path, ard, table, report, listing)`; `tfl_spec_columns(sheet)` |
-| the specs as CDISC ARS (JSON), and its check | `tfl_ars(ard_spec, table_spec, report_spec)` → `tfl_write_ars_json(ars, path)`; `tfl_check_ars(ars)`; what ARS cannot say: `tfl_ars_unmapped(ars)`; CDISC's Excel template to read: `tfl_write_ars_xlsx(ars, path)` (§5.1) |
+| the specs as CDISC ARS (JSON), and its check | `tfl_ars(ard_spec, table_spec, report_spec)` (a figure printing a table's analyses: `references = data.frame(output_id, source, analysis_id)`) → `tfl_write_ars_json(ars, path)`; `tfl_check_ars(ars)`; what ARS cannot say: `tfl_ars_unmapped(ars)`; CDISC's Excel template to read: `tfl_write_ars_xlsx(ars, path)` (§5.1) |
 | ARS siera can run, and its ARD (round trip) | `tfl_ars(ard_spec, profile = "siera")` → `tfl_ars_ard(ars, adam)` (siera writes and runs one programme per output) |
 | an ARS JSON (anyone's) back as specs | `tfl_read_ars_json(path)` → `tfl_ars_to_specs(ars, table = FALSE)`: `$ard`, `$report` (`$table`: the groupings' levels); fill `datasets$path`; what has no place: `attr(, "unmapped")` |
 | the plan a table spec stands for | `tfl_table_plan(data, spec)` (then any rtfreporter verb: last wins) |

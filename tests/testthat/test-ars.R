@@ -319,3 +319,35 @@ test_that("a function's method carries its call, its file and its statistics", {
                ars0$methods)[[1L]]
   expect_false(grepl("R/ard_mine.R", m0$codeTemplate$code, fixed = TRUE))
 })
+
+test_that("an output printing another's analyses refers to them (references, #293)", {
+  line <- function(o, l, t) list(output_id = o, line = l, center = t)
+  rs <- list(
+    report = ars_df(list(output_id = "DM", file = "t14_1_1.rtf"),
+                    list(output_id = "F1", type = "figure", file = "f14_1_1.rtf"),
+                    list(output_id = "F2", type = "figure")),
+    titles = ars_df(line("F1", "1", "Figure 14.1.1"), line("F1", "2", "Age by arm")))
+  refs <- data.frame(output_id = c("F1", "F1", "F2"), source = "DM",
+                     analysis_id = c("AGE", "PAGE", "NOPE"))
+  ars <- tfl_ars(dm_ae(), report_spec = rs, references = refs)
+  # an Output with its display and file
+  o <- Filter(function(z) identical(z$id, "F1"), ars$outputs)[[1L]]
+  expect_identical(o$name, "Figure 14.1.1 Age by arm")
+  expect_identical(o$fileSpecifications[[1L]]$location, "f14_1_1.rtf")
+  # its list item names the table's analyses, which are not written twice
+  it <- Filter(function(z) identical(z$outputId, "F1"),
+               ars$mainListOfContents$contentsList$listItems)[[1L]]
+  got <- vapply(it$sublist$listItems, `[[`, "", "analysisId")
+  ids <- attr(ars, "ids")
+  want <- ids$ars_id[ids$output_id == "DM" & ids$analysis_id %in% c("AGE", "PAGE")]
+  expect_setequal(got, want)
+  expect_identical(anyDuplicated(vapply(ars$analyses, `[[`, "", "id")), 0L)
+  # one whose analyses the ARS has none of: no Output, and said why
+  expect_false("F2" %in% vapply(ars$outputs, `[[`, "", "id"))
+  u <- tfl_ars_unmapped(ars)
+  expect_match(u$reason[u$where == "F2"], "prints DM NOPE, which the ARS has no analysis of")
+  expect_false("F1" %in% u$where)
+  # still valid CDISC ARS
+  skip_if_not_installed("jsonvalidate")
+  expect_identical(nrow(tfl_check_ars(ars)), 0L)
+})
