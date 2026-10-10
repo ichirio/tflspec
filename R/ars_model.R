@@ -216,6 +216,14 @@
 #' @param dir The study folder: the files of the study key `source` (its
 #'   own ARD functions) are read from it -- not run -- for the statistics a
 #'   function says it gives (`cards::as_cards_fn(stat_names = )`).
+#' @param references The outputs that print another output's analyses (a
+#'   figure printing a table's median and hazard ratio, #293): a data frame
+#'   with `output_id` (the figure), `source` (the table) and `analysis_id`
+#'   (the table's analysis), a row each.  Such an output is an ARS
+#'   `Output` (its displays and file, from the report spec) whose list of
+#'   contents names the source's analyses -- they are not written twice;
+#'   one whose analyses are not in the ARS is listed by
+#'   [tfl_ars_unmapped()].
 #' @return A `tfl_ars`: the reporting event as a nested list, with
 #'   attributes `profile`, `unmapped` (a data frame `where`, `item`,
 #'   `reason`: what the ARS does not say) and `ids` (each spec analysis and
@@ -226,7 +234,7 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
                     profile = c("cdisc", "siera"), study_id = NULL,
                     purpose = NULL,
                     reason = "SPECIFIED IN SAP", dataset_names = NULL,
-                    dir = ".") {
+                    dir = ".", references = NULL) {
   profile <- match.arg(profile)
   if (!inherits(ard_spec, "tfl_ard_spec")) ard_spec <- tfl_ard_spec(ard_spec)
   if (!is.null(purpose)) purpose <- match.arg(toupper(purpose), .ars_purposes)
@@ -699,12 +707,33 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
   rs <- report_spec %||% table_spec
   outs <- unique(c(intersect(rs$report$output_id, a$output_id), a$output_id))
   outs <- outs[outs %in% vapply(analyses, `[[`, "", "output")]
+  # the outputs that print another's analyses: an output each, its list of
+  # contents the source's analyses (those the ARS has)
+  refs <- list()
+  if (!is.null(references) && NROW(references)) {
+    rf <- as.data.frame(references, stringsAsFactors = FALSE)
+    for (o in setdiff(unique(rf$output_id), outs)) {
+      r <- rf[rf$output_id == o, , drop = FALSE]
+      hit <- ids$ars_id[paste(ids$output_id, ids$analysis_id) %in%
+                          paste(r$source, r$analysis_id)]
+      if (length(hit)) {
+        refs[[o]] <- unique(hit)
+      } else {
+        miss(o, "references", sprintf(
+          "it prints %s, which the ARS has no analysis of", paste(
+            unique(paste0(r$source, " ", r$analysis_id)), collapse = ", ")))
+      }
+    }
+    outs <- c(outs, names(refs))
+  }
   # a report with no analyses is not an ARS output: say so, with why
   rep_all <- rs$report
+  # (one that prints another's analyses is said above when none is in it)
+  rf_out <- if (!is.null(references) && NROW(references)) unique(references$output_id) else character()
   if (!is.null(rep_all) && NROW(rep_all)) {
     for (k in seq_len(nrow(rep_all))) {
       o <- rep_all$output_id[k]
-      if (is.na(o) || o %in% outs) next
+      if (is.na(o) || o %in% outs || o %in% rf_out) next
       type <- tolower(rep_all$type[k] %||% NA_character_)
       miss(o, "output", switch(type %|NA|% "",
         user = paste("a report of user code with no analyses in the ARD",
@@ -770,7 +799,8 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
   })
   items <- lapply(seq_along(outs), function(i) {
     o <- outs[i]
-    an <- Filter(function(z) identical(z$output, o), analyses)
+    an <- if (o %in% names(refs)) Filter(function(z) z$model$id %in% refs[[o]], analyses) else
+      Filter(function(z) identical(z$output, o), analyses)
     list(name = outputs[[i]]$name, level = 1L, order = i, outputId = o,
          sublist = list(listItems = lapply(seq_along(an), function(k) list(
            name = an[[k]]$model$name, level = 2L, order = k,

@@ -1,5 +1,15 @@
 # tflspec (development version)
 
+* **An output that prints another's analyses is in the ARS** (#293
+  phase 5, tflplanner #293).  `tfl_ars(references =)` takes the outputs
+  that print another output's analyses -- a figure printing a table's
+  median and hazard ratio -- as `output_id`, `source`, `analysis_id`.
+  Each is an ARS `Output` (its displays and file, from the report spec)
+  whose list-of-contents item names the source's analyses, which are not
+  written twice; one whose analyses the ARS has none of is listed by
+  `tfl_ars_unmapped()` with what it prints.  Before, such a figure was
+  unmapped ("no analyses in the ARD definition").
+
 ## Upgrading from an earlier version
 
 Update tflspec and tflplanner together, open each study in tflplanner and
