@@ -15,6 +15,22 @@
   `errorbar_h` (a horizontal error bar).  A subgroup whose model did not
   converge has no point and prints NE.  The template snapshot of
   `forest_hr` changes from the whole script to the parts.
+* **A Total column, read from cards' overall rows** (#212, rtfreporter
+  `plan_total()`).  The `analyses` sheet's new column `overall` (`TRUE`)
+  runs the analysis again without its `by` and binds it under the grouped
+  call (`bind_rows(ard_tabulate(adsl, by = ARM, ...), ard_tabulate(adsl,
+  ...))`; on a `cards::ard_stack` row, `.overall = TRUE`): cards' own
+  overall rows, with no group.  The `tables` sheet's new `total` (the
+  heading, `Total`) and `total_position` (`last` / `first`) are written as
+  `plan_total(label = "Total")`, whose `{n}` is the study total.
+  `tfl_ars()` writes each such analysis twice, by its groups and over all
+  subjects without the grouping (`An_<output>_<analysis>_TOTAL`), so the
+  ARS names no `ARM = "Total"` the data does not have.  The definition
+  check refuses `overall` without a `by`, on a row inside a parent (it is
+  the parent's), on `custom` / `subjects` / `ard_strata` / `ard_pairwise`,
+  and together with `.overall` in `args`.  A definition without the
+  columns writes the same programs, with the same fingerprints.  Needs
+  rtfreporter >= 0.8.2.9034.
 
 * **A variable's rows under one level of another** (tflplanner's RACE
   sample, rtfreporter #598).  The `variables` sheet's new column `under`
