@@ -15,6 +15,12 @@
   `errorbar_h` (a horizontal error bar).  A subgroup whose model did not
   converge has no point and prints NE.  The template snapshot of
   `forest_hr` changes from the whole script to the parts.
+
+* **Review rule A01 checks an analysis data's `add` columns in the
+  population's data** (ADSL), where `add` takes them from by the
+  subject, not in the analysis data's own dataset: an ADTTE data adding
+  SEX was said to read a column ADTTE has not got.
+
 * **A Total column, read from cards' overall rows** (#212, rtfreporter
   `plan_total()`).  The `analyses` sheet's new column `overall` (`TRUE`)
   runs the analysis again without its `by` and binds it under the grouped
