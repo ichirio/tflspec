@@ -33,9 +33,10 @@ test_that("tfl_check_ard() finds what a report's table reads and an ARD lacks", 
                    character())
 })
 
-test_that("report$ard_source is blank or import:<file>", {
-  ok <- tfl_table_spec(report = data.frame(output_id = c("T1", "T2"),
-                                           ard_source = c(NA, "import:cro.json")))
+test_that("report$ard_source is blank, own, import:<file> or table:<id>", {
+  ok <- tfl_table_spec(report = data.frame(output_id = c("T1", "T2", "F1", "F2"),
+                                           ard_source = c(NA, "import:cro.json",
+                                                          "own", "table:T1")))
   expect_s3_class(ok, "tfl_table_spec")
   expect_error(tfl_table_spec(report = data.frame(output_id = "T1",
                                                   ard_source = "cro.json")),

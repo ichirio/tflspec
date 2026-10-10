@@ -21,20 +21,25 @@
       
       fit <- survfit2(Surv(AVAL, CNSR == 0) ~ TRT01P, data = df)
       
+      x_breaks <- pretty(c(0, max(fit$time)))
+      
+      # the number at risk at the x axis's breaks, from the fit
+      sr <- summary(fit, times = x_breaks, extend = TRUE)
+      risk <- data.frame(
+        time   = sr$time,
+        strata = sub("^[^=]*=", "", as.character(sr$strata)),
+        n_risk = sr$n.risk
+      ) |>
+        mutate(strata = factor(strata, levels = rev(levels(droplevels(factor(df$TRT01P))))))
+      
+      # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01P
       lv <- levels(droplevels(factor(df$TRT01P)))
       pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
       
-      x_breaks <- pretty(c(0, max(fit$time)))
-      
-      # ---- the figure ------------------------------------------------------------
-      p <- ggsurvfit(fit, linewidth = 0.3)
-      # ---- layer 2: censor marks ----
-      p <- p + add_censor_mark(shape = 4, size = 3, stroke = 0.6)
-      # ---- layer 3: Horizontal lines ----
-      p <- p + geom_hline(yintercept = 0.5, linetype = "twodash", colour = "grey50", linewidth = 0.3)
-      # ---- the figure's settings ----
-      p <- p +
+      fig <- ggsurvfit(fit, linewidth = 0.3) +
+        add_censor_mark(shape = 4, size = 3, stroke = 0.6) +
+        geom_hline(yintercept = 0.5, linetype = "twodash", colour = "grey50", linewidth = 0.3) +
         scale_colour_manual(values = pal, breaks = names(pal)) +
         scale_x_continuous(breaks = x_breaks, expand = expansion(mult = c(0.02, 0.02))) +
         scale_y_continuous(breaks = seq(0, 1, by = 0.2)) +
@@ -58,16 +63,8 @@
           legend.background      = element_rect(colour = "black", fill = "white", linewidth = 0.3)
         ) +
         theme(legend.title = element_blank())
-      # ---- layer 4: number at risk (a panel below) ----
-      sr <- summary(fit, times = x_breaks, extend = TRUE)
-      risk_df <- data.frame(
-        time   = sr$time,
-        strata = sub("^[^=]*=", "", as.character(sr$strata)),
-        n_risk = sr$n.risk
-      )
-      risk_df$strata <- factor(risk_df$strata, levels = rev(names(pal)))
-      p_risk <-
-        ggplot(risk_df, aes(x = time, y = strata, label = n_risk, colour = strata)) +
+      
+      p_risk <- ggplot(risk, aes(x = time, y = strata, label = n_risk, colour = strata)) +
         geom_text(size = 3) +
         scale_colour_manual(values = pal, guide = "none") +
         scale_x_continuous(breaks = x_breaks, expand = expansion(mult = c(0.02, 0.02))) +
@@ -80,7 +77,8 @@
           axis.text.y         = element_text(hjust = 1, margin = margin(r = 5))
         )
       
-      fig <- p / p_risk + plot_layout(heights = c(0.833, 0.167))
+      fig <- fig / p_risk + plot_layout(heights = c(0.833, 0.167))
+      
       fig
       
       # ---- saving the figure -----------------------------------------------------
@@ -122,16 +120,13 @@
       
       fit <- survfit2(Surv(AVAL, CNSR == 0) ~ TRT01P, data = df)
       
+      # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01P
       lv <- levels(droplevels(factor(df$TRT01P)))
       pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
       
-      # ---- the figure ------------------------------------------------------------
-      p <- ggsurvfit(fit, linewidth = 0.3)
-      # ---- layer 2: censor marks ----
-      p <- p + add_censor_mark(shape = 4, size = 3, stroke = 0.6)
-      # ---- the figure's settings ----
-      p <- p +
+      fig <- ggsurvfit(fit, linewidth = 0.3) +
+        add_censor_mark(shape = 4, size = 3, stroke = 0.6) +
         scale_colour_manual(values = pal, breaks = names(pal)) +
         scale_y_continuous(breaks = seq(0, 1, by = 0.2)) +
         coord_cartesian(ylim = c(0, 1)) +
@@ -155,7 +150,6 @@
         ) +
         theme(legend.title = element_blank())
       
-      fig <- p
       fig
       
       # ---- saving the figure -----------------------------------------------------
@@ -198,22 +192,26 @@
       
       fit <- survfit2(Surv(AVAL, CNSR == 0) ~ TRT01P, data = df)
       
+      x_breaks <- pretty(c(0, max(fit$time)))
+      
+      # the number at risk at the x axis's breaks, from the fit
+      sr <- summary(fit, times = x_breaks, extend = TRUE)
+      risk <- data.frame(
+        time   = sr$time,
+        strata = sub("^[^=]*=", "", as.character(sr$strata)),
+        n_risk = sr$n.risk
+      ) |>
+        mutate(strata = factor(strata, levels = rev(levels(droplevels(factor(df$TRT01P))))))
+      
+      # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01P
       lv <- levels(droplevels(factor(df$TRT01P)))
       pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
       
-      x_breaks <- pretty(c(0, max(fit$time)))
-      
-      # ---- the figure ------------------------------------------------------------
-      p <- ggsurvfit(fit, linewidth = 0.3)
-      # ---- layer 2: KM confidence bands ----
-      p <- p + add_confidence_interval(alpha = 0.2)
-      # ---- layer 3: censor marks ----
-      p <- p + add_censor_mark(shape = 4, size = 3, stroke = 0.6)
-      # ---- layer 4: Horizontal lines ----
-      p <- p + geom_hline(yintercept = 0.5, linetype = "twodash", colour = "grey50", linewidth = 0.3)
-      # ---- the figure's settings ----
-      p <- p +
+      fig <- ggsurvfit(fit, linewidth = 0.3) +
+        add_confidence_interval(alpha = 0.2) +
+        add_censor_mark(shape = 4, size = 3, stroke = 0.6) +
+        geom_hline(yintercept = 0.5, linetype = "twodash", colour = "grey50", linewidth = 0.3) +
         scale_colour_manual(values = pal, breaks = names(pal)) +
         scale_fill_manual(values = pal, breaks = names(pal), na.value = "grey80") +
         scale_x_continuous(breaks = x_breaks, expand = expansion(mult = c(0.02, 0.02))) +
@@ -238,16 +236,8 @@
           legend.background      = element_rect(colour = "black", fill = "white", linewidth = 0.3)
         ) +
         theme(legend.title = element_blank())
-      # ---- layer 5: number at risk (a panel below) ----
-      sr <- summary(fit, times = x_breaks, extend = TRUE)
-      risk_df <- data.frame(
-        time   = sr$time,
-        strata = sub("^[^=]*=", "", as.character(sr$strata)),
-        n_risk = sr$n.risk
-      )
-      risk_df$strata <- factor(risk_df$strata, levels = rev(names(pal)))
-      p_risk <-
-        ggplot(risk_df, aes(x = time, y = strata, label = n_risk, colour = strata)) +
+      
+      p_risk <- ggplot(risk, aes(x = time, y = strata, label = n_risk, colour = strata)) +
         geom_text(size = 3) +
         scale_colour_manual(values = pal, guide = "none") +
         scale_x_continuous(breaks = x_breaks, expand = expansion(mult = c(0.02, 0.02))) +
@@ -260,7 +250,8 @@
           axis.text.y         = element_text(hjust = 1, margin = margin(r = 5))
         )
       
-      fig <- p / p_risk + plot_layout(heights = c(0.833, 0.167))
+      fig <- fig / p_risk + plot_layout(heights = c(0.833, 0.167))
+      
       fig
       
       # ---- saving the figure -----------------------------------------------------
@@ -303,18 +294,23 @@
       
       fit <- survfit2(Surv(AVAL, CNSR == 0) ~ 1, data = df)
       
-      pal <- c(All = "blue")
-      
       x_breaks <- pretty(c(0, max(fit$time)))
       
-      # ---- the figure ------------------------------------------------------------
-      p <- ggsurvfit(fit, linewidth = 0.3, colour = pal[[1]])
-      # ---- layer 2: censor marks ----
-      p <- p + add_censor_mark(shape = 4, size = 3, stroke = 0.6, colour = pal[[1]])
-      # ---- layer 3: Horizontal lines ----
-      p <- p + geom_hline(yintercept = 0.5, linetype = "twodash", colour = "grey50", linewidth = 0.3)
-      # ---- the figure's settings ----
-      p <- p +
+      # the number at risk at the x axis's breaks, from the fit
+      sr <- summary(fit, times = x_breaks, extend = TRUE)
+      risk <- data.frame(
+        time   = sr$time,
+        strata = "All",
+        n_risk = sr$n.risk
+      ) |>
+        mutate(strata = factor(strata))
+      
+      # ---- plot ------------------------------------------------------------------
+      pal <- c(All = "blue")
+      
+      fig <- ggsurvfit(fit, linewidth = 0.3, colour = pal[[1]]) +
+        add_censor_mark(shape = 4, size = 3, stroke = 0.6, colour = pal[[1]]) +
+        geom_hline(yintercept = 0.5, linetype = "twodash", colour = "grey50", linewidth = 0.3) +
         scale_x_continuous(breaks = x_breaks, expand = expansion(mult = c(0.02, 0.02))) +
         scale_y_continuous(breaks = seq(0, 1, by = 0.2)) +
         coord_cartesian(xlim = range(x_breaks), ylim = c(0, 1)) +
@@ -331,16 +327,8 @@
           axis.ticks.length = unit(2, "mm")
         ) +
         theme(legend.position = "none")
-      # ---- layer 4: number at risk (a panel below) ----
-      sr <- summary(fit, times = x_breaks, extend = TRUE)
-      risk_df <- data.frame(
-        time   = sr$time,
-        strata = names(pal)[1],
-        n_risk = sr$n.risk
-      )
-      risk_df$strata <- factor(risk_df$strata, levels = rev(names(pal)))
-      p_risk <-
-        ggplot(risk_df, aes(x = time, y = strata, label = n_risk, colour = strata)) +
+      
+      p_risk <- ggplot(risk, aes(x = time, y = strata, label = n_risk, colour = strata)) +
         geom_text(size = 3) +
         scale_colour_manual(values = pal, guide = "none") +
         scale_x_continuous(breaks = x_breaks, expand = expansion(mult = c(0.02, 0.02))) +
@@ -353,7 +341,8 @@
           axis.text.y         = element_text(hjust = 1, margin = margin(r = 5))
         )
       
-      fig <- p / p_risk + plot_layout(heights = c(0.833, 0.167))
+      fig <- fig / p_risk + plot_layout(heights = c(0.833, 0.167))
+      
       fig
       
       # ---- saving the figure -----------------------------------------------------
@@ -398,6 +387,7 @@
         mutate(INDEX = row_number()) |>
         mutate(BOR = factor(BOR, levels = c("CR", "PR", "SD", "PD", "NE")))
       
+      # ---- plot ------------------------------------------------------------------
       # the response palette: a colour for each value
       pal <- c(
         "CR" = "#008000",
@@ -408,18 +398,11 @@
         "NON-CR/NON-PD" = "#20B2AA"
       )
       
-      # ---- the figure ------------------------------------------------------------
-      p <- ggplot()
-      # ---- layer 1: Bars ----
-      p <- p + geom_col(data = df, aes(x = INDEX, y = AVAL, fill = BOR), width = 0.8)
-      # ---- layer 2: Horizontal lines ----
-      p <- p + geom_hline(yintercept = 0, linetype = "solid", colour = "black", linewidth = 0.5)
-      # ---- layer 3: Horizontal lines ----
-      p <- p + geom_hline(yintercept = c(20, -30), linetype = "dashed", colour = "grey", linewidth = 0.5)
-      # ---- layer 4: reference line labels ----
-      p <- p + annotate("text", x = Inf, y = c(20, -30), label = paste0("", c(20, -30), "%"), hjust = -0.3, size = 3.5)
-      # ---- the figure's settings ----
-      p <- p +
+      fig <- ggplot() +
+        geom_col(data = df, aes(x = INDEX, y = AVAL, fill = BOR), width = 0.8) +
+        geom_hline(yintercept = 0, linetype = "solid", colour = "black", linewidth = 0.5) +
+        geom_hline(yintercept = c(20, -30), linetype = "dashed", colour = "grey", linewidth = 0.5) +
+        annotate("text", x = Inf, y = c(20, -30), label = paste0("", c(20, -30), "%"), hjust = -0.3, size = 3.5) +
         scale_fill_manual(values = pal, breaks = names(pal), na.value = "grey80") +
         scale_y_continuous(breaks = seq(-100, 100, by = 20)) +
         coord_cartesian(ylim = c(-100, 100), clip = "off") +
@@ -442,10 +425,10 @@
           legend.justification   = c(1, 1),
           legend.background      = element_rect(colour = "black", fill = "white", linewidth = 0.3)
         ) +
-        theme(legend.title = element_blank())
-      p <- p + theme(plot.margin = margin(5.5, 50, 5.5, 5.5))   # room for the labels
+        theme(legend.title = element_blank()) +
+        # room for the labels
+        theme(plot.margin = margin(5.5, 50, 5.5, 5.5))
       
-      fig <- p
       fig
       
       # ---- saving the figure -----------------------------------------------------
@@ -484,20 +467,14 @@
         arrange(desc(AVAL)) |>
         mutate(INDEX = row_number())
       
+      # ---- plot ------------------------------------------------------------------
       pal <- c(All = "blue")
       
-      # ---- the figure ------------------------------------------------------------
-      p <- ggplot()
-      # ---- layer 1: Bars ----
-      p <- p + geom_col(data = df, aes(x = INDEX, y = AVAL), width = 0.8)
-      # ---- layer 2: Horizontal lines ----
-      p <- p + geom_hline(yintercept = 0, linetype = "solid", colour = "black", linewidth = 0.5)
-      # ---- layer 3: Horizontal lines ----
-      p <- p + geom_hline(yintercept = c(20, -30), linetype = "dashed", colour = "grey", linewidth = 0.5)
-      # ---- layer 4: reference line labels ----
-      p <- p + annotate("text", x = Inf, y = c(20, -30), label = paste0("", c(20, -30), "%"), hjust = -0.3, size = 3.5)
-      # ---- the figure's settings ----
-      p <- p +
+      fig <- ggplot() +
+        geom_col(data = df, aes(x = INDEX, y = AVAL), width = 0.8) +
+        geom_hline(yintercept = 0, linetype = "solid", colour = "black", linewidth = 0.5) +
+        geom_hline(yintercept = c(20, -30), linetype = "dashed", colour = "grey", linewidth = 0.5) +
+        annotate("text", x = Inf, y = c(20, -30), label = paste0("", c(20, -30), "%"), hjust = -0.3, size = 3.5) +
         scale_y_continuous(breaks = seq(-100, 100, by = 20)) +
         coord_cartesian(ylim = c(-100, 100), clip = "off") +
         labs(x = "Patients", y = "Best % Change in Sum of Target Lesion Diameters") +
@@ -513,10 +490,10 @@
           axis.ticks.length = unit(2, "mm")
         ) +
         theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
-        theme(legend.position = "none")
-      p <- p + theme(plot.margin = margin(5.5, 50, 5.5, 5.5))   # room for the labels
+        theme(legend.position = "none") +
+        # room for the labels
+        theme(plot.margin = margin(5.5, 50, 5.5, 5.5))
       
-      fig <- p
       fig
       
       # ---- saving the figure -----------------------------------------------------
@@ -561,16 +538,12 @@
       ongoing <- df |>
         filter(EOSSTT == "ONGOING")
       
+      # ---- plot ------------------------------------------------------------------
       pal <- c(All = "blue")
       
-      # ---- the figure ------------------------------------------------------------
-      p <- ggplot()
-      # ---- layer 1: Segments ----
-      p <- p + geom_segment(data = df, aes(x = X0, y = Y_ID, xend = TRTDURD, yend = Y_ID), linewidth = 1.2)
-      # ---- layer 2: Segments ----
-      p <- p + geom_segment(data = ongoing, aes(x = TRTDURD, y = Y_ID, xend = X_ARROW, yend = Y_ID), linewidth = 0.6, arrow = arrow(length = unit(2, 'mm'), type = 'closed'))
-      # ---- the figure's settings ----
-      p <- p +
+      fig <- ggplot() +
+        geom_segment(data = df, aes(x = X0, y = Y_ID, xend = TRTDURD, yend = Y_ID), linewidth = 1.2) +
+        geom_segment(data = ongoing, aes(x = TRTDURD, y = Y_ID, xend = X_ARROW, yend = Y_ID), linewidth = 0.6, arrow = arrow(length = unit(2, 'mm'), type = 'closed')) +
         labs(x = "Time (Months)", y = "Subject") +
         theme_minimal(base_size = 10) +
         theme(
@@ -584,7 +557,6 @@
         ) +
         theme(legend.position = "none")
       
-      fig <- p
       fig
       
       # ---- saving the figure -----------------------------------------------------
@@ -635,6 +607,7 @@
       ongoing <- df |>
         filter(EOSSTT == "ONGOING")
       
+      # ---- plot ------------------------------------------------------------------
       # the response_light palette: a colour for each value
       pal <- c(
         "CR" = "#99CC99",
@@ -645,14 +618,9 @@
         "NON-CR/NON-PD" = "#99D8D3"
       )
       
-      # ---- the figure ------------------------------------------------------------
-      p <- ggplot()
-      # ---- layer 1: Segments ----
-      p <- p + geom_segment(data = df, aes(x = X0, y = Y_ID, xend = TRTDURD, yend = Y_ID, colour = BOR), linewidth = 1.2)
-      # ---- layer 2: Segments ----
-      p <- p + geom_segment(data = ongoing, aes(x = TRTDURD, y = Y_ID, xend = X_ARROW, yend = Y_ID), linewidth = 0.6, arrow = arrow(length = unit(2, 'mm'), type = 'closed'))
-      # ---- the figure's settings ----
-      p <- p +
+      fig <- ggplot() +
+        geom_segment(data = df, aes(x = X0, y = Y_ID, xend = TRTDURD, yend = Y_ID, colour = BOR), linewidth = 1.2) +
+        geom_segment(data = ongoing, aes(x = TRTDURD, y = Y_ID, xend = X_ARROW, yend = Y_ID), linewidth = 0.6, arrow = arrow(length = unit(2, 'mm'), type = 'closed')) +
         scale_colour_manual(values = pal, breaks = names(pal)) +
         labs(x = "Time (Months)", y = "Subject") +
         theme_minimal(base_size = 10) +
@@ -668,7 +636,6 @@
         theme(legend.position = "right") +
         theme(legend.title = element_blank())
       
-      fig <- p
       fig
       
       # ---- saving the figure -----------------------------------------------------
@@ -721,11 +688,10 @@
       
       assess <- adrs |>
         filter(PARAMCD == "OVR" & !is.na(ADY)) |>
-        inner_join(df |> select(USUBJID, Y_ID), by = "USUBJID")
+        inner_join(df |> select(USUBJID, Y_ID), by = "USUBJID") |>
+        mutate(ADY = ADY / 30.4375)
       
-      # your code
-      assess <- assess |> mutate(ADY = ADY / 30.4375)
-      
+      # ---- plot ------------------------------------------------------------------
       # the response_light palette: a colour for each value
       pal <- c(
         "CR" = "#99CC99",
@@ -736,16 +702,10 @@
         "NON-CR/NON-PD" = "#99D8D3"
       )
       
-      # ---- the figure ------------------------------------------------------------
-      p <- ggplot()
-      # ---- layer 1: Segments ----
-      p <- p + geom_segment(data = df, aes(x = X0, y = Y_ID, xend = TRTDURD, yend = Y_ID, colour = BOR), linewidth = 1.2)
-      # ---- layer 2: Segments ----
-      p <- p + geom_segment(data = ongoing, aes(x = TRTDURD, y = Y_ID, xend = X_ARROW, yend = Y_ID), linewidth = 0.6, arrow = arrow(length = unit(2, 'mm'), type = 'closed'))
-      # ---- layer 3: Points ----
-      p <- p + geom_point(data = assess, aes(x = ADY, y = Y_ID, colour = AVALC, group = AVALC), shape = 15, size = 1.5)
-      # ---- the figure's settings ----
-      p <- p +
+      fig <- ggplot() +
+        geom_segment(data = df, aes(x = X0, y = Y_ID, xend = TRTDURD, yend = Y_ID, colour = BOR), linewidth = 1.2) +
+        geom_segment(data = ongoing, aes(x = TRTDURD, y = Y_ID, xend = X_ARROW, yend = Y_ID), linewidth = 0.6, arrow = arrow(length = unit(2, 'mm'), type = 'closed')) +
+        geom_point(data = assess, aes(x = ADY, y = Y_ID, colour = AVALC, group = AVALC), shape = 15, size = 1.5) +
         scale_colour_manual(values = pal, breaks = names(pal)) +
         labs(x = "Time (Months)", y = "Subject") +
         theme_minimal(base_size = 10) +
@@ -761,7 +721,6 @@
         theme(legend.position = "right") +
         theme(legend.title = element_blank())
       
-      fig <- p
       fig
       
       # ---- saving the figure -----------------------------------------------------
@@ -814,11 +773,10 @@
       
       assess <- adrs |>
         filter(PARAMCD == "OVR" & !is.na(ADY)) |>
-        inner_join(df |> select(USUBJID, Y_ID), by = "USUBJID")
+        inner_join(df |> select(USUBJID, Y_ID), by = "USUBJID") |>
+        mutate(ADY = ADY / 30.4375)
       
-      # your code
-      assess <- assess |> mutate(ADY = ADY / 30.4375)
-      
+      # ---- plot ------------------------------------------------------------------
       # the response_light palette: a colour for each value
       pal <- c(
         "CR" = "#99CC99",
@@ -829,18 +787,11 @@
         "NON-CR/NON-PD" = "#99D8D3"
       )
       
-      # ---- the figure ------------------------------------------------------------
-      p <- ggplot()
-      # ---- layer 1: Segments ----
-      p <- p + geom_segment(data = df, aes(x = X0, y = Y_ID, xend = TRTDURD, yend = Y_ID, colour = BOR), linewidth = 1.2)
-      # ---- layer 2: Segments ----
-      p <- p + geom_segment(data = ongoing, aes(x = TRTDURD, y = Y_ID, xend = X_ARROW, yend = Y_ID), linewidth = 0.6, arrow = arrow(length = unit(2, 'mm'), type = 'closed'))
-      # ---- layer 3: Points ----
-      p <- p + geom_point(data = assess, aes(x = ADY, y = Y_ID, colour = AVALC, group = AVALC), shape = 15, size = 1.5)
-      # ---- layer 4: Points ----
-      p <- p + geom_point(data = df, aes(x = DTHADY, y = Y_ID), shape = 17, size = 2.5, na.rm = TRUE)
-      # ---- the figure's settings ----
-      p <- p +
+      fig <- ggplot() +
+        geom_segment(data = df, aes(x = X0, y = Y_ID, xend = TRTDURD, yend = Y_ID, colour = BOR), linewidth = 1.2) +
+        geom_segment(data = ongoing, aes(x = TRTDURD, y = Y_ID, xend = X_ARROW, yend = Y_ID), linewidth = 0.6, arrow = arrow(length = unit(2, 'mm'), type = 'closed')) +
+        geom_point(data = assess, aes(x = ADY, y = Y_ID, colour = AVALC, group = AVALC), shape = 15, size = 1.5) +
+        geom_point(data = df, aes(x = DTHADY, y = Y_ID), shape = 17, size = 2.5, na.rm = TRUE) +
         scale_colour_manual(values = pal, breaks = names(pal)) +
         labs(x = "Time (Months)", y = "Subject") +
         theme_minimal(base_size = 10) +
@@ -856,7 +807,6 @@
         theme(legend.position = "right") +
         theme(legend.title = element_blank())
       
-      fig <- p
       fig
       
       # ---- saving the figure -----------------------------------------------------
@@ -901,6 +851,7 @@
         mutate(ADY = ADY / 30.4375) |>
         mutate(BOR = factor(BOR, levels = c("CR", "PR", "SD", "PD", "NE")))
       
+      # ---- plot ------------------------------------------------------------------
       # the response palette: a colour for each value
       pal <- c(
         "CR" = "#008000",
@@ -911,18 +862,11 @@
         "NON-CR/NON-PD" = "#20B2AA"
       )
       
-      # ---- the figure ------------------------------------------------------------
-      p <- ggplot()
-      # ---- layer 1: Horizontal lines ----
-      p <- p + geom_hline(yintercept = 0, linetype = "solid", colour = "grey40", linewidth = 0.3)
-      # ---- layer 2: Horizontal lines ----
-      p <- p + geom_hline(yintercept = c(20, -30), linetype = "dashed", colour = "grey60", linewidth = 0.3)
-      # ---- layer 3: Lines ----
-      p <- p + geom_line(data = df, aes(x = ADY, y = PCHG, colour = BOR, group = USUBJID), linewidth = 0.5, alpha = 0.8)
-      # ---- layer 4: Points ----
-      p <- p + geom_point(data = df, aes(x = ADY, y = PCHG, colour = BOR, group = BOR), shape = 16, size = 1)
-      # ---- the figure's settings ----
-      p <- p +
+      fig <- ggplot() +
+        geom_hline(yintercept = 0, linetype = "solid", colour = "grey40", linewidth = 0.3) +
+        geom_hline(yintercept = c(20, -30), linetype = "dashed", colour = "grey60", linewidth = 0.3) +
+        geom_line(data = df, aes(x = ADY, y = PCHG, colour = BOR, group = USUBJID), linewidth = 0.5, alpha = 0.8) +
+        geom_point(data = df, aes(x = ADY, y = PCHG, colour = BOR, group = BOR), shape = 16, size = 1) +
         scale_colour_manual(values = pal, breaks = names(pal)) +
         labs(x = "Time (Months)", y = "Change from baseline in sum of diameters (%)") +
         theme_minimal(base_size = 10) +
@@ -939,7 +883,6 @@
         theme(legend.position = "right") +
         theme(legend.title = element_blank())
       
-      fig <- p
       fig
       
       # ---- saving the figure -----------------------------------------------------
@@ -991,20 +934,15 @@
           label = sprintf("%.1f%%\n(%d/%d)", rate, x, n)
         )
       
+      # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01P
       lv <- levels(droplevels(factor(df$TRT01P)))
       pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
       
-      # ---- the figure ------------------------------------------------------------
-      p <- ggplot()
-      # ---- layer 1: Bars ----
-      p <- p + geom_col(data = rt, aes(x = TRT01P, y = rate, fill = TRT01P), width = 0.6)
-      # ---- layer 2: Error bars ----
-      p <- p + geom_errorbar(data = rt, aes(x = TRT01P, ymin = lcl, ymax = ucl), width = 0.15)
-      # ---- layer 3: Text ----
-      p <- p + geom_text(data = rt, aes(x = TRT01P, y = ucl, label = label), size = 3, vjust = -0.3)
-      # ---- the figure's settings ----
-      p <- p +
+      fig <- ggplot() +
+        geom_col(data = rt, aes(x = TRT01P, y = rate, fill = TRT01P), width = 0.6) +
+        geom_errorbar(data = rt, aes(x = TRT01P, ymin = lcl, ymax = ucl), width = 0.15) +
+        geom_text(data = rt, aes(x = TRT01P, y = ucl, label = label), size = 3, vjust = -0.3) +
         scale_fill_manual(values = pal, breaks = names(pal), na.value = "grey80") +
         coord_cartesian(ylim = c(0, 110)) +
         labs(y = "Response rate (%) with 95% CI [CR+PR]") +
@@ -1021,7 +959,6 @@
         ) +
         theme(legend.position = "none")
       
-      fig <- p
       fig
       
       # ---- saving the figure -----------------------------------------------------
@@ -1070,6 +1007,7 @@
         ungroup() |>
         mutate(AVALC = factor(AVALC, levels = unique(c(intersect(c("CR", "PR", "SD", "PD", "NE"), AVALC), sort(AVALC)))))
       
+      # ---- plot ------------------------------------------------------------------
       # the response palette: a colour for each value
       pal <- c(
         "CR" = "#008000",
@@ -1080,14 +1018,9 @@
         "NON-CR/NON-PD" = "#20B2AA"
       )
       
-      # ---- the figure ------------------------------------------------------------
-      p <- ggplot()
-      # ---- layer 1: Bars ----
-      p <- p + geom_col(data = ct, aes(x = TRT01P, y = pct, fill = AVALC), width = 0.6, colour = "white")
-      # ---- layer 2: Text ----
-      p <- p + geom_text(data = ct, aes(x = TRT01P, y = pct, label = label), size = 3, position = position_stack(vjust = 0.5))
-      # ---- the figure's settings ----
-      p <- p +
+      fig <- ggplot() +
+        geom_col(data = ct, aes(x = TRT01P, y = pct, fill = AVALC), width = 0.6, colour = "white") +
+        geom_text(data = ct, aes(x = TRT01P, y = pct, label = label), size = 3, position = position_stack(vjust = 0.5)) +
         scale_fill_manual(values = pal, breaks = names(pal), na.value = "grey80") +
         labs(y = "Subjects (%)") +
         theme_minimal(base_size = 10) +
@@ -1104,7 +1037,6 @@
         theme(legend.position = "right") +
         theme(legend.title = element_blank())
       
-      fig <- p
       fig
       
       # ---- saving the figure -----------------------------------------------------
@@ -1152,18 +1084,14 @@
         mutate(pct = 100 * n / sum(n), label = sprintf("%.0f%%", pct)) |>
         ungroup()
       
+      # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01P
       lv <- levels(droplevels(factor(df$TRT01P)))
       pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
       
-      # ---- the figure ------------------------------------------------------------
-      p <- ggplot()
-      # ---- layer 1: Bars ----
-      p <- p + geom_col(data = ct, aes(x = AVALC, y = pct, fill = TRT01P), width = 0.7, position = position_dodge(width = 0.75))
-      # ---- layer 2: Text ----
-      p <- p + geom_text(data = ct, aes(x = AVALC, y = pct, label = label), size = 2.8, position = position_dodge(width = 0.75), vjust = -0.3)
-      # ---- the figure's settings ----
-      p <- p +
+      fig <- ggplot() +
+        geom_col(data = ct, aes(x = AVALC, y = pct, fill = TRT01P), width = 0.7, position = position_dodge(width = 0.75)) +
+        geom_text(data = ct, aes(x = AVALC, y = pct, label = label), size = 2.8, position = position_dodge(width = 0.75), vjust = -0.3) +
         scale_fill_manual(values = pal, breaks = names(pal), na.value = "grey80") +
         labs(x = "BOR", y = "Subjects (%)") +
         theme_minimal(base_size = 10) +
@@ -1180,7 +1108,6 @@
         theme(legend.position = "right") +
         theme(legend.title = element_blank())
       
-      fig <- p
       fig
       
       # ---- saving the figure -----------------------------------------------------
@@ -1229,22 +1156,16 @@
         summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") |>
         mutate(se = sd / sqrt(n), lo = mean - se, hi = mean + se)
       
+      # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
       lv <- levels(droplevels(factor(df$TRT01A)))
       pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
-      
       pd <- position_dodge(width = 0.3)
       
-      # ---- the figure ------------------------------------------------------------
-      p <- ggplot()
-      # ---- layer 1: Lines ----
-      p <- p + geom_line(data = sm, aes(x = AVISIT, y = mean, colour = TRT01A, group = TRT01A), linewidth = 0.5, position = pd)
-      # ---- layer 2: Points ----
-      p <- p + geom_point(data = sm, aes(x = AVISIT, y = mean, colour = TRT01A, group = TRT01A), shape = 16, size = 2, position = pd)
-      # ---- layer 3: Error bars ----
-      p <- p + geom_errorbar(data = sm, aes(x = AVISIT, ymin = lo, ymax = hi, colour = TRT01A), width = 0.2, position = pd)
-      # ---- the figure's settings ----
-      p <- p +
+      fig <- ggplot() +
+        geom_line(data = sm, aes(x = AVISIT, y = mean, colour = TRT01A, group = TRT01A), linewidth = 0.5, position = pd) +
+        geom_point(data = sm, aes(x = AVISIT, y = mean, colour = TRT01A, group = TRT01A), shape = 16, size = 2, position = pd) +
+        geom_errorbar(data = sm, aes(x = AVISIT, ymin = lo, ymax = hi, colour = TRT01A), width = 0.2, position = pd) +
         scale_colour_manual(values = pal, breaks = names(pal)) +
         labs(x = "Visit", y = "Mean (+/- SE) ALT") +
         theme_minimal(base_size = 10) +
@@ -1261,7 +1182,6 @@
         theme(legend.position = "bottom") +
         theme(legend.title = element_blank())
       
-      fig <- p
       fig
       
       # ---- saving the figure -----------------------------------------------------
@@ -1310,22 +1230,16 @@
         summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") |>
         mutate(se = sd / sqrt(n), lo = mean - sd, hi = mean + sd)
       
+      # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
       lv <- levels(droplevels(factor(df$TRT01A)))
       pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
-      
       pd <- position_dodge(width = 0.3)
       
-      # ---- the figure ------------------------------------------------------------
-      p <- ggplot()
-      # ---- layer 1: Lines ----
-      p <- p + geom_line(data = sm, aes(x = AVISIT, y = mean, colour = TRT01A, group = TRT01A), linewidth = 0.5, position = pd)
-      # ---- layer 2: Points ----
-      p <- p + geom_point(data = sm, aes(x = AVISIT, y = mean, colour = TRT01A, group = TRT01A), shape = 16, size = 2, position = pd)
-      # ---- layer 3: Error bars ----
-      p <- p + geom_errorbar(data = sm, aes(x = AVISIT, ymin = lo, ymax = hi, colour = TRT01A), width = 0.2, position = pd)
-      # ---- the figure's settings ----
-      p <- p +
+      fig <- ggplot() +
+        geom_line(data = sm, aes(x = AVISIT, y = mean, colour = TRT01A, group = TRT01A), linewidth = 0.5, position = pd) +
+        geom_point(data = sm, aes(x = AVISIT, y = mean, colour = TRT01A, group = TRT01A), shape = 16, size = 2, position = pd) +
+        geom_errorbar(data = sm, aes(x = AVISIT, ymin = lo, ymax = hi, colour = TRT01A), width = 0.2, position = pd) +
         scale_colour_manual(values = pal, breaks = names(pal)) +
         labs(x = "Visit", y = "Mean (+/- SD) ALT") +
         theme_minimal(base_size = 10) +
@@ -1342,7 +1256,6 @@
         theme(legend.position = "bottom") +
         theme(legend.title = element_blank())
       
-      fig <- p
       fig
       
       # ---- saving the figure -----------------------------------------------------
@@ -1391,22 +1304,16 @@
         summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") |>
         mutate(se = sd / sqrt(n), lo = mean - qt(0.975, n - 1) * se, hi = mean + qt(0.975, n - 1) * se)
       
+      # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
       lv <- levels(droplevels(factor(df$TRT01A)))
       pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
-      
       pd <- position_dodge(width = 0.3)
       
-      # ---- the figure ------------------------------------------------------------
-      p <- ggplot()
-      # ---- layer 1: Lines ----
-      p <- p + geom_line(data = sm, aes(x = AVISIT, y = mean, colour = TRT01A, group = TRT01A), linewidth = 0.5, position = pd)
-      # ---- layer 2: Points ----
-      p <- p + geom_point(data = sm, aes(x = AVISIT, y = mean, colour = TRT01A, group = TRT01A), shape = 16, size = 2, position = pd)
-      # ---- layer 3: Error bars ----
-      p <- p + geom_errorbar(data = sm, aes(x = AVISIT, ymin = lo, ymax = hi, colour = TRT01A), width = 0.2, position = pd)
-      # ---- the figure's settings ----
-      p <- p +
+      fig <- ggplot() +
+        geom_line(data = sm, aes(x = AVISIT, y = mean, colour = TRT01A, group = TRT01A), linewidth = 0.5, position = pd) +
+        geom_point(data = sm, aes(x = AVISIT, y = mean, colour = TRT01A, group = TRT01A), shape = 16, size = 2, position = pd) +
+        geom_errorbar(data = sm, aes(x = AVISIT, ymin = lo, ymax = hi, colour = TRT01A), width = 0.2, position = pd) +
         scale_colour_manual(values = pal, breaks = names(pal)) +
         labs(x = "Visit", y = "Mean (95% CI) ALT") +
         theme_minimal(base_size = 10) +
@@ -1423,7 +1330,6 @@
         theme(legend.position = "bottom") +
         theme(legend.title = element_blank())
       
-      fig <- p
       fig
       
       # ---- saving the figure -----------------------------------------------------
@@ -1473,22 +1379,16 @@
         summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") |>
         mutate(se = sd / sqrt(n), lo = mean - se, hi = mean + se)
       
+      # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
       lv <- levels(droplevels(factor(df$TRT01A)))
       pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
-      
       pd <- position_dodge(width = 0.3)
       
-      # ---- the figure ------------------------------------------------------------
-      p <- ggplot()
-      # ---- layer 1: Lines ----
-      p <- p + geom_line(data = sm, aes(x = AVISIT, y = mean, colour = TRT01A, group = TRT01A), linewidth = 0.5, position = pd)
-      # ---- layer 2: Points ----
-      p <- p + geom_point(data = sm, aes(x = AVISIT, y = mean, colour = TRT01A, group = TRT01A), shape = 16, size = 2, position = pd)
-      # ---- layer 3: Error bars ----
-      p <- p + geom_errorbar(data = sm, aes(x = AVISIT, ymin = lo, ymax = hi, colour = TRT01A), width = 0.2, position = pd)
-      # ---- the figure's settings ----
-      p <- p +
+      fig <- ggplot() +
+        geom_line(data = sm, aes(x = AVISIT, y = mean, colour = TRT01A, group = TRT01A), linewidth = 0.5, position = pd) +
+        geom_point(data = sm, aes(x = AVISIT, y = mean, colour = TRT01A, group = TRT01A), shape = 16, size = 2, position = pd) +
+        geom_errorbar(data = sm, aes(x = AVISIT, ymin = lo, ymax = hi, colour = TRT01A), width = 0.2, position = pd) +
         scale_colour_manual(values = pal, breaks = names(pal)) +
         labs(x = "Visit", y = "Mean (+/- SE) ALT") +
         theme_minimal(base_size = 10) +
@@ -1504,16 +1404,16 @@
         ) +
         theme(legend.position = "bottom") +
         theme(legend.title = element_blank())
-      # ---- layer 4: n (a panel below) ----
-      p_n4 <-
-        ggplot(sm, aes(x = AVISIT, y = factor(TRT01A, levels = rev(names(pal))), label = n, colour = TRT01A)) +
+      
+      p_n4 <- ggplot(sm, aes(x = AVISIT, y = factor(TRT01A, levels = rev(names(pal))), label = n, colour = TRT01A)) +
         geom_text(size = 3) +
         scale_colour_manual(values = pal, guide = "none") +
         labs(title = "n", x = NULL, y = NULL) +
         theme_void(base_size = 10) +
         theme(axis.text.y = element_text(hjust = 1, margin = margin(r = 5)), plot.title = element_text(size = rel(0.9)))
       
-      fig <- p / p_n4 + plot_layout(heights = c(0.82, 0.18))
+      fig <- fig / p_n4 + plot_layout(heights = c(0.82, 0.18))
+      
       fig
       
       # ---- saving the figure -----------------------------------------------------
@@ -1562,18 +1462,14 @@
         summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") |>
         mutate(se = sd / sqrt(n), lo = mean - se, hi = mean + se)
       
+      # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
       lv <- levels(droplevels(factor(df$TRT01A)))
       pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
       
-      # ---- the figure ------------------------------------------------------------
-      p <- ggplot()
-      # ---- layer 1: Lines ----
-      p <- p + geom_line(data = df, aes(x = AVISIT, y = AVAL, colour = TRT01A, group = USUBJID), linewidth = 0.5, alpha = 0.35)
-      # ---- layer 2: Lines ----
-      p <- p + geom_line(data = sm, aes(x = AVISIT, y = mean, colour = TRT01A, group = TRT01A), linewidth = 1.2)
-      # ---- the figure's settings ----
-      p <- p +
+      fig <- ggplot() +
+        geom_line(data = df, aes(x = AVISIT, y = AVAL, colour = TRT01A, group = USUBJID), linewidth = 0.5, alpha = 0.35) +
+        geom_line(data = sm, aes(x = AVISIT, y = mean, colour = TRT01A, group = TRT01A), linewidth = 1.2) +
         scale_colour_manual(values = pal, breaks = names(pal)) +
         labs(x = "Visit", y = "AVAL") +
         theme_minimal(base_size = 10) +
@@ -1590,7 +1486,6 @@
         theme(legend.position = "right") +
         theme(legend.title = element_blank())
       
-      fig <- p
       fig
       
       # ---- saving the figure -----------------------------------------------------
@@ -1639,20 +1534,15 @@
         summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") |>
         mutate(se = sd / sqrt(n), lo = mean - se, hi = mean + se)
       
+      # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
       lv <- levels(droplevels(factor(df$TRT01A)))
       pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
-      
       pd <- position_dodge(width = 0.8)
       
-      # ---- the figure ------------------------------------------------------------
-      p <- ggplot()
-      # ---- layer 1: Box plots ----
-      p <- p + geom_boxplot(data = df, aes(x = AVISIT, y = AVAL, fill = TRT01A), width = 0.7, outlier.shape = 16, position = pd)
-      # ---- layer 2: Points ----
-      p <- p + geom_point(data = sg, aes(x = AVISIT, y = mean, group = TRT01A), shape = 3, size = 2, position = pd)
-      # ---- the figure's settings ----
-      p <- p +
+      fig <- ggplot() +
+        geom_boxplot(data = df, aes(x = AVISIT, y = AVAL, fill = TRT01A), width = 0.7, outlier.shape = 16, position = pd) +
+        geom_point(data = sg, aes(x = AVISIT, y = mean, group = TRT01A), shape = 3, size = 2, position = pd) +
         scale_fill_manual(values = pal, breaks = names(pal), na.value = "grey80") +
         labs(x = "Visit", y = "ALT") +
         theme_minimal(base_size = 10) +
@@ -1669,7 +1559,6 @@
         theme(legend.position = "bottom") +
         theme(legend.title = element_blank())
       
-      fig <- p
       fig
       
       # ---- saving the figure -----------------------------------------------------
@@ -1717,20 +1606,15 @@
         summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") |>
         mutate(se = sd / sqrt(n), lo = mean - se, hi = mean + se)
       
+      # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
       lv <- levels(droplevels(factor(df$TRT01A)))
       pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
       
-      # ---- the figure ------------------------------------------------------------
-      p <- ggplot()
-      # ---- layer 1: Box plots ----
-      p <- p + geom_boxplot(data = df, aes(x = TRT01A, y = AVAL, fill = TRT01A), width = 0.5, outlier.shape = 1, alpha = 0.6)
-      # ---- layer 2: Jittered points ----
-      p <- p + geom_jitter(data = df, aes(x = TRT01A, y = AVAL), width = 0.12, height = 0, alpha = 0.6, size = 1.2)
-      # ---- layer 3: Points ----
-      p <- p + geom_point(data = sg, aes(x = TRT01A, y = mean), shape = 3, size = 3)
-      # ---- the figure's settings ----
-      p <- p +
+      fig <- ggplot() +
+        geom_boxplot(data = df, aes(x = TRT01A, y = AVAL, fill = TRT01A), width = 0.5, outlier.shape = 1, alpha = 0.6) +
+        geom_jitter(data = df, aes(x = TRT01A, y = AVAL), width = 0.12, height = 0, alpha = 0.6, size = 1.2) +
+        geom_point(data = sg, aes(x = TRT01A, y = mean), shape = 3, size = 3) +
         scale_fill_manual(values = pal, breaks = names(pal), na.value = "grey80") +
         labs(y = "ALT") +
         theme_minimal(base_size = 10) +
@@ -1746,7 +1630,6 @@
         ) +
         theme(legend.position = "none")
       
-      fig <- p
       fig
       
       # ---- saving the figure -----------------------------------------------------
@@ -1795,22 +1678,16 @@
         summarise(n = n(), mean = mean(CHG), sd = sd(CHG), .groups = "drop") |>
         mutate(se = sd / sqrt(n), lo = mean - se, hi = mean + se)
       
+      # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
       lv <- levels(droplevels(factor(df$TRT01A)))
       pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
-      
       pd <- position_dodge(width = 0.8)
       
-      # ---- the figure ------------------------------------------------------------
-      p <- ggplot()
-      # ---- layer 1: Horizontal lines ----
-      p <- p + geom_hline(yintercept = 0, linetype = "solid", colour = "grey60", linewidth = 0.3)
-      # ---- layer 2: Box plots ----
-      p <- p + geom_boxplot(data = df, aes(x = AVISIT, y = CHG, fill = TRT01A), width = 0.7, outlier.shape = 16, position = pd)
-      # ---- layer 3: Points ----
-      p <- p + geom_point(data = sg, aes(x = AVISIT, y = mean, group = TRT01A), shape = 3, size = 2, position = pd)
-      # ---- the figure's settings ----
-      p <- p +
+      fig <- ggplot() +
+        geom_hline(yintercept = 0, linetype = "solid", colour = "grey60", linewidth = 0.3) +
+        geom_boxplot(data = df, aes(x = AVISIT, y = CHG, fill = TRT01A), width = 0.7, outlier.shape = 16, position = pd) +
+        geom_point(data = sg, aes(x = AVISIT, y = mean, group = TRT01A), shape = 3, size = 2, position = pd) +
         scale_fill_manual(values = pal, breaks = names(pal), na.value = "grey80") +
         labs(x = "Visit", y = "CHG of ALT") +
         theme_minimal(base_size = 10) +
@@ -1827,7 +1704,6 @@
         theme(legend.position = "bottom") +
         theme(legend.title = element_blank())
       
-      fig <- p
       fig
       
       # ---- saving the figure -----------------------------------------------------
@@ -1869,18 +1745,14 @@
         ) |>
         filter(SAFFL == "Y", AVISITN > 0 & !is.na(BASE) & !is.na(AVAL), AVISITN == max(AVISITN))
       
+      # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
       lv <- levels(droplevels(factor(df$TRT01A)))
       pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
       
-      # ---- the figure ------------------------------------------------------------
-      p <- ggplot()
-      # ---- layer 1: Diagonal line ----
-      p <- p + geom_abline(intercept = 0, slope = 1, linetype = "dashed", colour = "grey50")
-      # ---- layer 2: Points ----
-      p <- p + geom_point(data = df, aes(x = BASE, y = AVAL, colour = TRT01A, group = TRT01A), shape = 16, size = 1.8, alpha = 0.8)
-      # ---- the figure's settings ----
-      p <- p +
+      fig <- ggplot() +
+        geom_abline(intercept = 0, slope = 1, linetype = "dashed", colour = "grey50") +
+        geom_point(data = df, aes(x = BASE, y = AVAL, colour = TRT01A, group = TRT01A), shape = 16, size = 1.8, alpha = 0.8) +
         scale_colour_manual(values = pal, breaks = names(pal)) +
         labs(x = "Baseline ALT", y = "Post-baseline ALT") +
         theme_minimal(base_size = 10) +
@@ -1902,7 +1774,6 @@
         ) +
         theme(legend.title = element_blank())
       
-      fig <- p
       fig
       
       # ---- saving the figure -----------------------------------------------------
@@ -1944,20 +1815,15 @@
         ) |>
         filter(SAFFL == "Y", AVISITN > 0 & !is.na(BASE) & !is.na(CHG), AVISITN == max(AVISITN))
       
+      # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
       lv <- levels(droplevels(factor(df$TRT01A)))
       pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
       
-      # ---- the figure ------------------------------------------------------------
-      p <- ggplot()
-      # ---- layer 1: Horizontal lines ----
-      p <- p + geom_hline(yintercept = 0, linetype = "solid", colour = "grey60", linewidth = 0.3)
-      # ---- layer 2: Points ----
-      p <- p + geom_point(data = df, aes(x = BASE, y = CHG, colour = TRT01A, group = TRT01A), shape = 16, size = 1.8, alpha = 0.8)
-      # ---- layer 3: Smoothed line ----
-      p <- p + geom_smooth(data = df, aes(x = BASE, y = CHG, colour = TRT01A), method = "lm", se = FALSE)
-      # ---- the figure's settings ----
-      p <- p +
+      fig <- ggplot() +
+        geom_hline(yintercept = 0, linetype = "solid", colour = "grey60", linewidth = 0.3) +
+        geom_point(data = df, aes(x = BASE, y = CHG, colour = TRT01A, group = TRT01A), shape = 16, size = 1.8, alpha = 0.8) +
+        geom_smooth(data = df, aes(x = BASE, y = CHG, colour = TRT01A), method = "lm", se = FALSE) +
         scale_colour_manual(values = pal, breaks = names(pal)) +
         labs(x = "BASE of ALT", y = "CHG of ALT") +
         theme_minimal(base_size = 10) +
@@ -1979,7 +1845,6 @@
         ) +
         theme(legend.title = element_blank())
       
-      fig <- p
       fig
       
       # ---- saving the figure -----------------------------------------------------
@@ -2026,20 +1891,15 @@
         summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") |>
         mutate(se = sd / sqrt(n), lo = mean - sd, hi = mean + sd)
       
+      # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
       lv <- levels(droplevels(factor(df$TRT01A)))
       pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
       
-      # ---- the figure ------------------------------------------------------------
-      p <- ggplot()
-      # ---- layer 1: Lines ----
-      p <- p + geom_line(data = sm, aes(x = NFRLT, y = mean, colour = TRT01A, group = TRT01A), linewidth = 0.5)
-      # ---- layer 2: Points ----
-      p <- p + geom_point(data = sm, aes(x = NFRLT, y = mean, colour = TRT01A, group = TRT01A), shape = 16, size = 1.8)
-      # ---- layer 3: Error bars ----
-      p <- p + geom_errorbar(data = sm, aes(x = NFRLT, ymin = lo, ymax = hi, colour = TRT01A), width = 0.3)
-      # ---- the figure's settings ----
-      p <- p +
+      fig <- ggplot() +
+        geom_line(data = sm, aes(x = NFRLT, y = mean, colour = TRT01A, group = TRT01A), linewidth = 0.5) +
+        geom_point(data = sm, aes(x = NFRLT, y = mean, colour = TRT01A, group = TRT01A), shape = 16, size = 1.8) +
+        geom_errorbar(data = sm, aes(x = NFRLT, ymin = lo, ymax = hi, colour = TRT01A), width = 0.3) +
         scale_colour_manual(values = pal, breaks = names(pal)) +
         labs(x = "Nominal time (h)", y = "Mean (SD) concentration") +
         theme_minimal(base_size = 10) +
@@ -2061,7 +1921,6 @@
         ) +
         theme(legend.title = element_blank())
       
-      fig <- p
       fig
       
       # ---- saving the figure -----------------------------------------------------
@@ -2109,20 +1968,15 @@
         mutate(se = sd / sqrt(n), lo = mean - sd, hi = mean + sd) |>
         mutate(lo = ifelse(lo > 0, lo, NA))   # log axis: no lower bar at or below 0
       
+      # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
       lv <- levels(droplevels(factor(df$TRT01A)))
       pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
       
-      # ---- the figure ------------------------------------------------------------
-      p <- ggplot()
-      # ---- layer 1: Lines ----
-      p <- p + geom_line(data = sm, aes(x = NFRLT, y = mean, colour = TRT01A, group = TRT01A), linewidth = 0.5)
-      # ---- layer 2: Points ----
-      p <- p + geom_point(data = sm, aes(x = NFRLT, y = mean, colour = TRT01A, group = TRT01A), shape = 16, size = 1.8)
-      # ---- layer 3: Error bars ----
-      p <- p + geom_errorbar(data = sm, aes(x = NFRLT, ymin = lo, ymax = hi, colour = TRT01A), width = 0.3)
-      # ---- the figure's settings ----
-      p <- p +
+      fig <- ggplot() +
+        geom_line(data = sm, aes(x = NFRLT, y = mean, colour = TRT01A, group = TRT01A), linewidth = 0.5) +
+        geom_point(data = sm, aes(x = NFRLT, y = mean, colour = TRT01A, group = TRT01A), shape = 16, size = 1.8) +
+        geom_errorbar(data = sm, aes(x = NFRLT, ymin = lo, ymax = hi, colour = TRT01A), width = 0.3) +
         scale_colour_manual(values = pal, breaks = names(pal)) +
         scale_y_log10() +
         labs(x = "Nominal time (h)", y = "Mean (SD) concentration") +
@@ -2145,7 +1999,6 @@
         ) +
         theme(legend.title = element_blank())
       
-      fig <- p
       fig
       
       # ---- saving the figure -----------------------------------------------------
@@ -2186,18 +2039,14 @@
         ) |>
         filter(SAFFL == "Y", !is.na(AVAL), AVAL > 0)
       
+      # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
       lv <- levels(droplevels(factor(df$TRT01A)))
       pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
       
-      # ---- the figure ------------------------------------------------------------
-      p <- ggplot()
-      # ---- layer 1: Lines ----
-      p <- p + geom_line(data = df, aes(x = NFRLT, y = AVAL, colour = TRT01A, group = USUBJID), linewidth = 0.5, alpha = 0.5)
-      # ---- layer 2: Points ----
-      p <- p + geom_point(data = df, aes(x = NFRLT, y = AVAL, colour = TRT01A, group = TRT01A), shape = 16, size = 0.8, alpha = 0.5)
-      # ---- the figure's settings ----
-      p <- p +
+      fig <- ggplot() +
+        geom_line(data = df, aes(x = NFRLT, y = AVAL, colour = TRT01A, group = USUBJID), linewidth = 0.5, alpha = 0.5) +
+        geom_point(data = df, aes(x = NFRLT, y = AVAL, colour = TRT01A, group = TRT01A), shape = 16, size = 0.8, alpha = 0.5) +
         scale_colour_manual(values = pal, breaks = names(pal)) +
         scale_y_log10() +
         facet_wrap(vars(TRT01A)) +
@@ -2215,7 +2064,6 @@
         ) +
         theme(legend.position = "none")
       
-      fig <- p
       fig
       
       # ---- saving the figure -----------------------------------------------------

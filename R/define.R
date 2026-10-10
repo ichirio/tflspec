@@ -609,9 +609,11 @@ tfl_read_define_spec <- function(path, map = NULL, profile = "p21") {
 #' Turns the code lists of the variables a report uses into rows of the
 #' spec's `codelists` sheet: `value` the coded value, `label` its decode
 #' (blank for an enumerated value: it prints as itself), `order` its order
-#' number.  With `labels`, the variables' labels too, as the code list of
-#' `variable` (its values the variables' names): the spec's way of giving a
-#' table its variables' labels.  The rows are a draft: nothing is written.
+#' number.  With `labels`, the variables' labels too, as rows of the
+#' `variables` sheet (`attr(, "variables")`: `output_id`, `variable`,
+#' `label`, `note`): a variable's heading is that sheet's `label` (the code
+#' list of `variable` is an earlier form, moved there when a table spec is
+#' read).  The rows are a draft: nothing is written.
 #'
 #' Code lists are per report: every row carries an `output_id`, so it is
 #' required.  Several output ids give the rows once for each.
@@ -633,10 +635,11 @@ tfl_read_define_spec <- function(path, map = NULL, profile = "p21") {
 #'   every variable of `datasets` that has a code list.
 #' @param output_id The report(s) the rows are for (required).
 #' @param datasets The datasets to look in; `NULL` for all.
-#' @param labels Add the variables' labels (the code list of `variable`).
+#' @param labels Add the variables' labels, as `variables` sheet rows in
+#'   `attr(, "variables")`.
 #' @return A data frame of the `codelists` sheet's columns, all character:
 #'   `output_id`, `variable`, `value`, `label`, `order`, `note`; with
-#'   `attr(, "set_by_hand")`.
+#'   `attr(, "set_by_hand")` and, with `labels`, `attr(, "variables")`.
 #' @examples
 #' if (requireNamespace("xml2", quietly = TRUE)) {
 #'   def <- tfl_read_define(system.file("extdata", "define", "define.xml",
@@ -686,8 +689,7 @@ tfl_define_codelists <- function(define, variables = NULL, output_id,
       if (length(lab)) {
         lab_ds <- here$dataset[!is.na(here$label)]
         lab_rows[[length(lab_rows) + 1L]] <- data.frame(
-          variable = "variable", value = var, label = lab[[1L]],
-          order = NA_character_,
+          variable = var, label = lab[[1L]],
           note = sprintf("define: %s.%s", lab_ds[[1L]], var),
           stringsAsFactors = FALSE)
         if (length(unique(lab)) > 1L) {
@@ -741,12 +743,21 @@ tfl_define_codelists <- function(define, variables = NULL, output_id,
   one <- do.call(rbind, c(list(data.frame(
     variable = character(), value = character(), label = character(),
     order = character(), note = character(), stringsAsFactors = FALSE)),
-    rows, lab_rows))
-  out <- do.call(rbind, lapply(output_id, function(id) {
-    cbind(data.frame(output_id = rep(id, nrow(one)),
-                     stringsAsFactors = FALSE), one)
-  }))
-  rownames(out) <- NULL
+    rows))
+  per_report <- function(x) {
+    x <- do.call(rbind, lapply(output_id, function(id) {
+      cbind(data.frame(output_id = rep(id, nrow(x)),
+                       stringsAsFactors = FALSE), x)
+    }))
+    rownames(x) <- NULL
+    x
+  }
+  out <- per_report(one)
+  if (labels) {
+    attr(out, "variables") <- per_report(do.call(rbind, c(list(data.frame(
+      variable = character(), label = character(), note = character(),
+      stringsAsFactors = FALSE)), lab_rows)))
+  }
   attr(out, "set_by_hand") <- data.frame(
     variable = hand_var, reason = hand_why, stringsAsFactors = FALSE)
   nf <- hand_var[hand_why == "not in the define"]

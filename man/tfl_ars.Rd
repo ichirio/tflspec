@@ -13,7 +13,8 @@ tfl_ars(
   purpose = NULL,
   reason = "SPECIFIED IN SAP",
   dataset_names = NULL,
-  dir = "."
+  dir = ".",
+  references = NULL
 )
 }
 \arguments{
@@ -46,6 +47,15 @@ uses for a spec dataset (default: the spec's name in upper case).}
 \item{dir}{The study folder: the files of the study key \code{source} (its
 own ARD functions) are read from it -- not run -- for the statistics a
 function says it gives (\code{cards::as_cards_fn(stat_names = )}).}
+
+\item{references}{The outputs that print another output's analyses (a
+figure printing a table's median and hazard ratio, #293): a data frame
+with \code{output_id} (the figure), \code{source} (the table) and \code{analysis_id}
+(the table's analysis), a row each.  Such an output is an ARS
+\code{Output} (its displays and file, from the report spec) whose list of
+contents names the source's analyses -- they are not written twice;
+one whose analyses are not in the ARS is listed by
+\code{\link[=tfl_ars_unmapped]{tfl_ars_unmapped()}}.}
 }
 \value{
 A \code{tfl_ars}: the reporting event as a nested list, with

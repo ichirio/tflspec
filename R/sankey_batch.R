@@ -2,7 +2,7 @@
 #'
 #' Create multiple Sankey plots from subgroup-specific filters in one call.
 #' The function supports scaling strategies across subgroups:
-#' 
+#'
 #' 1) Shared scale across all subgroup plots.
 #' 2) First-stage normalization with optional magnification cap, then shared scale.
 #' 3) Shared scale anchored to the first-stage span of a reference subgroup.

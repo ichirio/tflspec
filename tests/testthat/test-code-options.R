@@ -65,8 +65,10 @@ test_that("an ARD program with the setup's folders and packages: the same ARD", 
   calls <- lines[!grepl("^[[:space:]]*#", lines)]
   expect_false(any(grepl("cards::", calls, fixed = TRUE)))
   expect_true(any(grepl("ard_tabulate(", code, fixed = TRUE)))
-  # the ARD program attaches the others it calls itself (dplyr, tflspec)
-  expect_true(all(c("library(dplyr)", "library(tflspec)") %in% code))
+  # the ARD program attaches the other package it calls itself (dplyr);
+  # tflspec it does not need
+  expect_true("library(dplyr)" %in% code)
+  expect_false("library(tflspec)" %in% code)
   expect_true(any(grepl("bind_rows(", code, fixed = TRUE)))
   expect_false(any(grepl("dplyr::", calls, fixed = TRUE)))
   # with save: the study ARD through its folder's variable

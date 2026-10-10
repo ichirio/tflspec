@@ -24,20 +24,23 @@ every variable of \code{datasets} that has a code list.}
 
 \item{datasets}{The datasets to look in; \code{NULL} for all.}
 
-\item{labels}{Add the variables' labels (the code list of \code{variable}).}
+\item{labels}{Add the variables' labels, as \code{variables} sheet rows in
+\code{attr(, "variables")}.}
 }
 \value{
 A data frame of the \code{codelists} sheet's columns, all character:
 \code{output_id}, \code{variable}, \code{value}, \code{label}, \code{order}, \code{note}; with
-\code{attr(, "set_by_hand")}.
+\code{attr(, "set_by_hand")} and, with \code{labels}, \code{attr(, "variables")}.
 }
 \description{
 Turns the code lists of the variables a report uses into rows of the
 spec's \code{codelists} sheet: \code{value} the coded value, \code{label} its decode
 (blank for an enumerated value: it prints as itself), \code{order} its order
-number.  With \code{labels}, the variables' labels too, as the code list of
-\code{variable} (its values the variables' names): the spec's way of giving a
-table its variables' labels.  The rows are a draft: nothing is written.
+number.  With \code{labels}, the variables' labels too, as rows of the
+\code{variables} sheet (\code{attr(, "variables")}: \code{output_id}, \code{variable},
+\code{label}, \code{note}): a variable's heading is that sheet's \code{label} (the code
+list of \code{variable} is an earlier form, moved there when a table spec is
+read).  The rows are a draft: nothing is written.
 }
 \details{
 Code lists are per report: every row carries an \code{output_id}, so it is

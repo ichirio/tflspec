@@ -59,7 +59,7 @@ test_that("the analysis data is made once, in order, for what a report reads", {
   expect_true(any(grepl("denominator = adae_subj,", code, fixed = TRUE)))
   expect_true(any(grepl("denominator = adsl_saf,", code, fixed = TRUE)))
   # formatted in the call (cards::ard_tabulate() takes fmt_fun)
-  expect_true(any(grepl("  apply_fmt_fun() |>\n  tag_ard(output_id, \"SER\", population = \"SAF\")",
+  expect_true(any(grepl("  apply_fmt_fun() |>\n  tag_ard(report_id, \"SER\", population = \"SAF\")",
                         code, fixed = TRUE)))
   # a report that reads none makes none
   t2 <- tfl_ard_code(x, output_id = "T2", save = FALSE, part = "body")
@@ -181,14 +181,14 @@ test_that("a report's own subjects, the columns kept, factors of derived columns
     "  select(-any_of(\"TRT01A\")) |>\n",
     "  left_join(select(adsl_old, USUBJID, TRT01A), by = \"USUBJID\") |>\n",
     "  select(USUBJID, TRT01A, AEBODSYS, AEDECOD) |>\n",
-    "  set_levels(codelists)")))
+    "  set_levels(OLD = cl_old)")))
   # the derived column a factor: the report's own code list rows count
   expect_true(any(code == paste0(
     "adsl_old <- pop_saf |>\n",
     "  filter(AGE >= 65) |>\n",
     "  mutate(OLD = ifelse(AGE >= 75, \"75+\", \"65-74\")) |>\n",
-    "  set_levels(codelists)")))
-  expect_true("codelists <- list(OLD = c(\"75+\", \"65-74\"))" %in% code)
+    "  set_levels(OLD = cl_old)")))
+  expect_true("cl_old <- c(\"75+\", \"65-74\")" %in% code)
   # the analysis set the data are made from: as it is
   expect_true("pop_saf <- filter(adsl, SAFFL == \"Y\")" %in% code)
   # only what the analyses read: no SEX
@@ -196,7 +196,7 @@ test_that("a report's own subjects, the columns kept, factors of derived columns
   # the study's program of its one report: the same
   expect_identical(tfl_ard_code(x, save = FALSE, part = "body", codelists = cl), code)
   # the ARD's analysis set: the one the subjects are of
-  expect_true(any(grepl("tag_ard(output_id, \"AE\", population = \"SAF\")", code, fixed = TRUE)))
+  expect_true(any(grepl("tag_ard(report_id, \"AE\", population = \"SAF\")", code, fixed = TRUE)))
   # a report's rows are part of its fingerprint
   expect_false(identical(tfl_ard_spec_hash(x, "T1", codelists = cl),
                          tfl_ard_spec_hash(x, "T1", codelists = cl[1:2, ])))
@@ -308,4 +308,15 @@ test_that("a report's analysis data name only its own rows; a blank output_id is
   # no report: said, with what to do
   ad4 <- ad_df(output_id = NA_character_, data_id = "adsl_saf", from = "ADSL", population_id = "SAF")
   expect_error(ad_spec(ad4, an_rows()[1L, ]), "`output_id` is blank", fixed = TRUE)
+})
+
+test_that("a data that keeps columns keeps the ones its analyses read", {
+  ad <- ad_rows()
+  ad$keep <- NA
+  ad$keep[2L] <- "AEDECOD"
+  code <- tfl_ard_code(ad_spec(ad, an_rows()), output_id = "T1", save = FALSE,
+                       part = "body")
+  # AE reads adae_teae by TRT01A, its variables AEBODSYS | AEDECOD: kept
+  # after the ones asked for
+  expect_true(any(grepl("  select(USUBJID, AEDECOD, TRT01A, AEBODSYS)", code, fixed = TRUE)))
 })

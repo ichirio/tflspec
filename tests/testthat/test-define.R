@@ -192,10 +192,13 @@ test_that("tfl_define_codelists() gives a report's codelists rows", {
   ag <- cl[cl$variable == "AGEGR1", ]
   expect_identical(ag$value, c("<65", "65-80", ">80"))
   expect_true(all(is.na(ag$label)))     # prints as the value
-  # the labels: the code list of `variable`
-  lab <- cl[cl$variable == "variable", ]
-  expect_identical(lab$value, c("SEX", "AGEGR1", "AGE"))
+  # the labels: rows of the variables sheet, not a code list of `variable`
+  expect_false("variable" %in% cl$variable)
+  lab <- attr(cl, "variables")
+  expect_identical(names(lab), c("output_id", "variable", "label", "note"))
+  expect_identical(lab$variable, c("SEX", "AGEGR1", "AGE"))
   expect_identical(lab$label, c("Sex", "Pooled Age Group 1", "Age"))
+  expect_identical(unique(lab$output_id), "T-14-1-1")
   expect_identical(lab$note[1], "define: ADSL.SEX")
   # AGE has no code list: its label only, and listed to set by hand
   sbh <- attr(cl, "set_by_hand")
@@ -207,6 +210,7 @@ test_that("tfl_define_codelists() gives a report's codelists rows", {
                               labels = FALSE)
   expect_identical(two$output_id, rep(c("T-1", "T-2"), each = 4L))
   expect_false("variable" %in% two$variable)
+  expect_null(attr(two, "variables"))
   expect_identical(two$note[4], "define: CL.AESEV, extended")
 })
 

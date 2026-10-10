@@ -175,7 +175,7 @@ pp_gen_swimmer <- function(ctx) {
   if (grid) {
     plot <- c(plot, "# ---- layer: visit_grid (labels on the top axis) ----",
       plus_code("p", list(
-        sprintf('geom_vline(xintercept = visit_x, linetype = %s, colour = %s)',
+        sprintf("geom_vline(xintercept = visit_x, linetype = %s, colour = %s)",
                 q(pp_opt(ctx, "visit_linetype")), q(pp_opt(ctx, "visit_colour"))),
         "theme(axis.ticks.x.top = element_blank(), axis.line.x.top = element_blank())"
       ), append = TRUE))

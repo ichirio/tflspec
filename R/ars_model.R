@@ -216,6 +216,14 @@
 #' @param dir The study folder: the files of the study key `source` (its
 #'   own ARD functions) are read from it -- not run -- for the statistics a
 #'   function says it gives (`cards::as_cards_fn(stat_names = )`).
+#' @param references The outputs that print another output's analyses (a
+#'   figure printing a table's median and hazard ratio, #293): a data frame
+#'   with `output_id` (the figure), `source` (the table) and `analysis_id`
+#'   (the table's analysis), a row each.  Such an output is an ARS
+#'   `Output` (its displays and file, from the report spec) whose list of
+#'   contents names the source's analyses -- they are not written twice;
+#'   one whose analyses are not in the ARS is listed by
+#'   [tfl_ars_unmapped()].
 #' @return A `tfl_ars`: the reporting event as a nested list, with
 #'   attributes `profile`, `unmapped` (a data frame `where`, `item`,
 #'   `reason`: what the ARS does not say) and `ids` (each spec analysis and
@@ -226,7 +234,7 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
                     profile = c("cdisc", "siera"), study_id = NULL,
                     purpose = NULL,
                     reason = "SPECIFIED IN SAP", dataset_names = NULL,
-                    dir = ".") {
+                    dir = ".", references = NULL) {
   profile <- match.arg(profile)
   if (!inherits(ard_spec, "tfl_ard_spec")) ard_spec <- tfl_ard_spec(ard_spec)
   if (!is.null(purpose)) purpose <- match.arg(toupper(purpose), .ars_purposes)
@@ -311,10 +319,15 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
     g <- list(id = id, name = label_of(out, var), groupingDataset = ds,
               groupingVariable = var, dataDriven = !length(lv))
     if (length(lv)) {
+      # a group's name as the table shows it, its condition the data's own
+      # value (a code list's label back to its value)
+      cl <- .codelist_levels(table_spec, out)[[var]]
+      val <- if (is.null(names(cl))) lv else
+        ifelse(lv %in% cl, names(cl)[match(lv, cl)], lv)
       g$groups <- lapply(seq_along(lv), function(k) list(
         id = paste0(id, "_", k), name = lv[k], level = 1L, order = k,
         condition = list(dataset = ds, variable = var, comparator = "EQ",
-                         value = list(lv[k]))))
+                         value = list(val[k]))))
     }
     groupings[[length(groupings) + 1L]] <<- c(list(key = key, base = base),
                                               list(model = g), list(id = id))
@@ -467,15 +480,24 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
       ds = ds, r = r, pur = pur, rea = rea)
   }
 
-  for (i in seq_len(nrow(a))) {
+  # an analysis with `overall` is two ARS analyses: by its groups, and
+  # over all its subjects without the grouping (_TOTAL) -- no group value
+  # the data does not have
+  ov <- vapply(a$overall %||% rep(NA_character_, nrow(a)), function(v)
+    isTRUE(.ard_yes(v)), NA) & !is.na(a$by)
+  todo <- unlist(lapply(seq_len(nrow(a)), function(i) if (ov[i]) c(i, -i) else i))
+  for (j in todo) {
+    i <- abs(j)
+    overall <- j < 0L
     r <- a[i, ]
+    if (overall) r$by <- NA_character_
     out <- r$output_id
     tag <- paste(out, r$analysis_id, sep = " / ")
     m <- r$method
     # a keyword's function name is the keyword's method
     km <- .method_key(m, keys)
     if (!is.na(km)) m <- keys$method[km]
-    pds <-if (!is.na(r$population_id)) pop_ds[[r$population_id]] else NA
+    pds <- if (!is.na(r$population_id)) pop_ds[[r$population_id]] else NA
     ds <- if (!is.na(r$dataset)) ds_name(r$dataset) else pds
     if (is.na(ds)) {
       miss(tag, "dataset", "no dataset (and no population to take it from)")
@@ -552,10 +574,18 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
       # the statistics: the row's, else the ones the function says it gives
       if (!length(stats)) stats <- own_stats[[m]] %||% character()
     }
-    ss <- subset(r$where, ds, tag)
+    # (the condition runs on the data with the code lists' labels; ARS
+    # compares the data's own values)
+    ss <- subset(.where_labels_to_values(
+      r$where, .codelist_levels(table_spec, out)), ds, tag)
     lbl <- if (!is.na(r$label)) r$label else NULL
+    # (overall: the name says so)
+    lab_of <- function(o, v) paste(c(label_of(o, v), if (overall) "(overall)"),
+                                   collapse = " ")
+    if (overall && !is.null(lbl)) lbl <- paste(lbl, "(overall)")
     g_by <- vapply(by, grouping, "", ds = ds, out = out)
-    aid <- function(...) paste(c("An", out, r$analysis_id, ...),
+    aid <- function(...) paste(c("An", out, r$analysis_id,
+                                 if (overall) "TOTAL", ...),
                                collapse = "_")
     shape <- .ars_method_shape(m)
     mz <- method(m, stats, opt, code, tag)
@@ -600,7 +630,7 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
       for (v in vars) {
         gv <- c(g_by, grouping(ds, v, out))
         id <- add_analysis(r, if (several) aid(v) else aid(),
-                           lbl %||% label_of(out, v), ds, subj, mz, gv,
+                           lbl %||% lab_of(out, v), ds, subj, mz, gv,
                            ss = ss, pur = pur, rea = rea, role = "count",
                            v = v)
         need_den(id, r, by, mz, pds %|NA|% ds, pur, rea)
@@ -608,7 +638,7 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
     } else if (shape %in% c("value", "test_value")) {
       for (v in vars) {
         add_analysis(r, if (several) aid(v) else aid(),
-                     lbl %||% label_of(out, v), ds, v, mz, g_by,
+                     lbl %||% lab_of(out, v), ds, v, mz, g_by,
                      no_res = if (shape == "test_value") g_by else character(),
                      ss = ss, pur = pur, rea = rea, role = shape, v = v)
       }
@@ -616,7 +646,7 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
       for (v in vars) {
         gv <- c(g_by, grouping(ds, v, out))
         add_analysis(r, if (several) aid(v) else aid(),
-                     lbl %||% label_of(out, v), ds, subj, mz, gv,
+                     lbl %||% lab_of(out, v), ds, subj, mz, gv,
                      no_res = gv, ss = ss, pur = pur, rea = rea,
                      role = "test_count", v = v)
       }
@@ -691,12 +721,33 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
   rs <- report_spec %||% table_spec
   outs <- unique(c(intersect(rs$report$output_id, a$output_id), a$output_id))
   outs <- outs[outs %in% vapply(analyses, `[[`, "", "output")]
+  # the outputs that print another's analyses: an output each, its list of
+  # contents the source's analyses (those the ARS has)
+  refs <- list()
+  if (!is.null(references) && NROW(references)) {
+    rf <- as.data.frame(references, stringsAsFactors = FALSE)
+    for (o in setdiff(unique(rf$output_id), outs)) {
+      r <- rf[rf$output_id == o, , drop = FALSE]
+      hit <- ids$ars_id[paste(ids$output_id, ids$analysis_id) %in%
+                          paste(r$source, r$analysis_id)]
+      if (length(hit)) {
+        refs[[o]] <- unique(hit)
+      } else {
+        miss(o, "references", sprintf(
+          "it prints %s, which the ARS has no analysis of", paste(
+            unique(paste0(r$source, " ", r$analysis_id)), collapse = ", ")))
+      }
+    }
+    outs <- c(outs, names(refs))
+  }
   # a report with no analyses is not an ARS output: say so, with why
   rep_all <- rs$report
+  # (one that prints another's analyses is said above when none is in it)
+  rf_out <- if (!is.null(references) && NROW(references)) unique(references$output_id) else character()
   if (!is.null(rep_all) && NROW(rep_all)) {
     for (k in seq_len(nrow(rep_all))) {
       o <- rep_all$output_id[k]
-      if (is.na(o) || o %in% outs) next
+      if (is.na(o) || o %in% outs || o %in% rf_out) next
       type <- tolower(rep_all$type[k] %||% NA_character_)
       miss(o, "output", switch(type %|NA|% "",
         user = paste("a report of user code with no analyses in the ARD",
@@ -762,7 +813,8 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
   })
   items <- lapply(seq_along(outs), function(i) {
     o <- outs[i]
-    an <- Filter(function(z) identical(z$output, o), analyses)
+    an <- if (o %in% names(refs)) Filter(function(z) z$model$id %in% refs[[o]], analyses) else
+      Filter(function(z) identical(z$output, o), analyses)
     list(name = outputs[[i]]$name, level = 1L, order = i, outputId = o,
          sublist = list(listItems = lapply(seq_along(an), function(k) list(
            name = an[[k]]$model$name, level = 2L, order = k,
@@ -786,7 +838,7 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
   out
 }
 
-`%|NA|%` <- function(a, b) if (is.null(a) || is.na(a)) b else a
+`%|NA|%` <- function(a, b) if (is.null(a) || is.na(a)) b else a  # nolint: object_name_linter.
 
 #' What the ARS does not say
 #'

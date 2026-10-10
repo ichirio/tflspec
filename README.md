@@ -23,6 +23,8 @@ the version you have installed) to the chat session.
 Status: early development (0.0.x). Discussion and sample code:
 [Discussions](https://github.com/ichirio/tflspec/discussions).
 
+R 4.1 or later; analyses that use cardx (e.g. t-tests, confidence intervals) need R 4.2 or later.
+
 ## Concept
 
 - **A spec becomes readable code.**  The program tflspec writes from a spec
@@ -62,7 +64,10 @@ ARD value by value, a table's RTF byte by byte.
 
 A workbook of four sheets: `study` (the subject key, where the ARD goes),
 `datasets` (the data and its derived columns), `populations` (the analysis
-sets) and `analyses`, one cards / cardx call a row:
+sets) and `analyses`, one cards / cardx call a row.  A *population* is what
+ICH E9 and the CDISC Analysis Results Standard call an analysis set:
+`tfl_ars()` writes each one as an ARS `AnalysisSet`, and an analysis's
+`population_id` as its `analysisSetId`.
 
 | output_id | analysis_id | method | dataset | population_id | by | variables | args |
 |---|---|---|---|---|---|---|---|
@@ -141,8 +146,7 @@ cat(tfl_fig_design_code(d), sep = "\n")
 `tfl_fig_style()` holds every look-and-feel value of a study's figures.
 The older sheet-based figure spec and its quick figures (`tfl_fig_km()`,
 `tfl_fig_waterfall()`, ... `tfl_fig_catalog()`) remain while the
-development team decides between the two
-([Discussion #63](https://github.com/ichirio/tflspec/discussions/63)).
+development team decides between the two.
 
 ## CDISC ARS
 

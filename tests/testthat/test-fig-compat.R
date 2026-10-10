@@ -133,24 +133,26 @@ label_layer <- list(layer = "call", fn = "geom_label", data = "df",
 
 test_that("renamed arguments are written for the target, with a comment", {
   code40 <- tfl_fig_design_code(compat_design(layers = list(label_layer)), ggplot2_version = "4.0")
-  line <- grep("<- p + geom_label", code40, value = TRUE, fixed = TRUE)
-  expect_match(line, "linewidth = 0.3", fixed = TRUE)
-  expect_match(line, "# ggplot2 4.0: label.size -> linewidth", fixed = TRUE)
+  # a term of the chain; the comment on the line above it
+  i <- which(startsWith(code40, "  geom_label("))
+  expect_match(code40[i], "linewidth = 0.3", fixed = TRUE)
+  expect_match(code40[i - 1L], "# ggplot2 4.0: label.size -> linewidth", fixed = TRUE)
   # 4.0's name for 3.5
   l35 <- label_layer
   l35$args <- list(linewidth = 0.3)
   code35 <- tfl_fig_design_code(compat_design(layers = list(l35)), ggplot2_version = "3.5")
-  line <- grep("<- p + geom_label", code35, value = TRUE, fixed = TRUE)
-  expect_match(line, "label.size = 0.3", fixed = TRUE)
-  expect_match(line, "# ggplot2 3.5: linewidth -> label.size", fixed = TRUE)
+  i <- which(startsWith(code35, "  geom_label("))
+  expect_match(code35[i], "label.size = 0.3", fixed = TRUE)
+  expect_match(code35[i - 1L], "# ggplot2 3.5: linewidth -> label.size", fixed = TRUE)
 })
 
 test_that("renamed functions, nested calls and irregular names use the table", {
   add <- list(list(fn = "coord_trans", args = list(y = "log10")),
               list(fn = "theme", args = list(legend.title = list(fn = "element_blank"))))
   code <- tfl_fig_design_code(compat_design(add = add), ggplot2_version = "4.0")
-  expect_true(any(grepl("p <- p + coord_transform(y = \"log10\")   # ggplot2 4.0: coord_trans -> coord_transform",
-                        code, fixed = TRUE)))
+  i <- grep("coord_transform(y = \"log10\")", code, fixed = TRUE)
+  expect_length(i, 1L)
+  expect_match(code[i - 1L], "# ggplot2 4.0: coord_trans -> coord_transform", fixed = TRUE)
   w <- tflspec:::.fig_compat_walk(list(fn = "layer_scales"), "4.0", "x")
   expect_equal(w$spec$fn, "get_panel_scales")
   w <- tflspec:::.fig_compat_walk(list(fn = "ggplot2::coord_transform"), "3.5", "x")
@@ -264,7 +266,8 @@ test_that("templates' output does not depend on the target", {
     d <- tfl_fig_template(t)
     a <- tfl_fig_design_code(d)
     b <- tfl_fig_design_code(d, ggplot2_version = "3.5")
-    expect_identical(unclass(a), unclass(b)[!grepl("^# Written for ggplot2", b)])
+    bare <- function(x) { x <- unclass(x); attributes(x) <- NULL; x }
+    expect_identical(bare(a), bare(b)[!grepl("^# Written for ggplot2", b)])
   }
 })
 
