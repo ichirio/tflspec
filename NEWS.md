@@ -1,5 +1,15 @@
 # tflspec (development version)
 
+* **A variable's rows under one level of another** (tflplanner's RACE
+  sample, rtfreporter #598).  The `variables` sheet's new column `under`
+  (`RACE: Asian`: that variable, a colon, the level as the table shows
+  it) is written as `plan_nest(RSUB = c(RACE = "Asian"))`: the variable's
+  rows right after that level's row, one indent deeper, its own heading
+  dropped -- the sub-categories of a race from a second analysis on the
+  same data.  The definition check names a value that is not
+  `variable: level`; `tfl_as_table_spec()` reads the column back from a
+  plan.  Needs rtfreporter >= 0.8.2.9032.
+
 * **An output that prints another's analyses is in the ARS** (#293
   phase 5, tflplanner #293).  `tfl_ars(references =)` takes the outputs
   that print another output's analyses -- a figure printing a table's

@@ -159,3 +159,32 @@ test_that("variables$empty_levels = hide leaves out the values no record has", {
     variables = data.frame(variable = "RACE", empty_levels = "no")),
     "empty_levels")
 })
+
+test_that("variables$under puts a variable's rows under a level of another (plan_nest())", {
+  skip_if_not_installed("cards")
+  skip_if(!"plan_nest" %in% getNamespaceExports("rtfreporter"), "rtfreporter has no plan_nest()")
+  adsl <- data.frame(
+    USUBJID = paste0("S", 1:6), TRT = rep(c("A", "B"), 3),
+    RACE = factor(c("WHITE", "WHITE", "ASIAN", "WHITE", "ASIAN", "WHITE"),
+                  levels = c("WHITE", "ASIAN", "OTHER")),
+    RSUB = factor(c(NA, NA, "CHINESE", NA, "JAPANESE", NA),
+                  levels = c("CHINESE", "JAPANESE", "KOREAN")))
+  d <- suppressMessages(rtfreporter::normalize_ard(
+    cards::ard_tabulate(adsl, by = TRT, variables = c(RACE, RSUB), denominator = adsl)))
+  v <- data.frame(variable = c("RACE", "RSUB"), label = c("Race", "Race Sub Asian"),
+                  order = 1:2, under = c(NA, "RACE: ASIAN"))
+  sp <- tfl_table_spec(tables = data.frame(cols = "TRT", rows = "group = variable"), variables = v)
+  code <- tfl_table_code(sp)
+  expect_true(any(grepl("plan_nest(RSUB = c(RACE = \"ASIAN\"))", code, fixed = TRUE)))
+  p <- tfl_table_plan(d, sp) |> rtfreporter::plan_cells(notes = FALSE)
+  tb <- suppressMessages(rtfreporter::plan_apply(p, "table"))
+  pad <- strrep(intToUtf8(160L), 4L)
+  expect_identical(as.character(tb$label),
+                   c("WHITE", "ASIAN", paste0(pad, c("CHINESE", "JAPANESE", "KOREAN")), "OTHER"))
+  expect_identical(unique(as.character(tb$group)), "Race")
+  # a plan gives the column back
+  back <- suppressMessages(tfl_as_table_spec(tfl_table_plan(d, sp), "T1"))
+  expect_identical(back$variables$under[back$variables$variable == "RSUB"], "RACE: ASIAN")
+  expect_error(tfl_table_spec(tables = data.frame(cols = "TRT"),
+    variables = data.frame(variable = "RSUB", under = "RACE")), "variables[$]under")
+})

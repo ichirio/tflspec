@@ -198,6 +198,8 @@
   }
   lb <- .ard_spec_labels(sp)
   if (length(lb)) do.call(add, c(list("plan_labels"), as.list(lb)))
+  ne <- .ard_spec_nest(sp)
+  if (length(ne)) do.call(add, c(list("plan_nest"), ne))
   cm <- .ard_spec_cells(sp)
   how <- sa[intersect(c("stats", "value", "na"), names(sa))]
   if (length(cm) || length(how)) do.call(add, c(list("plan_cells"), cm, how))
