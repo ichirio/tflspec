@@ -9,8 +9,11 @@ test_that("tfl_fig_forest_analyses() gives the rows of the figure's own ARD defi
   expect_identical(an$analysis_data$where, "PARAMCD == \"OS\"")
   expect_identical(an$analyses$analysis_id, c("HR", "HR_SEX", "HR_AGEGR1"))
   expect_true(all(an$analyses$method == "custom"))
-  expect_match(an$analyses$code[1], "cardx::ard_regression(survival::coxph(survival::Surv(AVAL, 1 - CNSR) ~ TRT01P, data = data), exponentiate = TRUE)", fixed = TRUE)
-  expect_match(an$analyses$code[2], "cards::ard_strata(data, .strata = SEX, .f = ~ cardx::ard_regression(", fixed = TRUE)
+  expect_match(an$analyses$code[1], "survival::coxph(survival::Surv(AVAL, 1 - CNSR) ~ TRT01P, data = data),", fixed = TRUE)
+  expect_match(an$analyses$code[1], "^cardx::ard_regression[(]
+")
+  expect_match(an$analyses$code[2], "data, .strata = SEX,
+  .f = ~ cardx::ard_regression(", fixed = TRUE)
   # one string of subgroups reads the same; none: the overall only
   expect_identical(tfl_fig_forest_analyses(subgroups = "SEX, AGEGR1")$analyses$analysis_id,
                    an$analyses$analysis_id)
@@ -73,7 +76,9 @@ test_that("the forest template is in parts, with its analyses, and its design ch
   d2 <- tfl_fig_template("forest_hr", subgroups = "")
   expect_false(grepl("filter(TRT01P ==", paste(tfl_fig_design_code(d2, "F1", save = FALSE), collapse = "\n"), fixed = TRUE))
   expect_identical(attr(d2, "analyses")$analyses$analysis_id, "HR")
-  expect_match(.forest_est_code("TRT01P", character()), 'label = "All subjects"', fixed = TRUE)
+  expect_match(.forest_est_code("TRT01P", character()), 'level = "All subjects"', fixed = TRUE)
+  expect_false(grepl("heading row", .forest_est_code("TRT01P", character()), fixed = TRUE))
+  expect_match(.forest_est_code("TRT01P", "SEX"), "a heading row above each subgroup", fixed = TRUE)
 })
 
 test_that("text_column: its columns, a panel at the right; not with one below", {

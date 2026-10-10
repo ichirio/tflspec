@@ -1810,15 +1810,17 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
                          list(fn = "scale_y_continuous",
                               args = list(breaks = tfl_fig_r("est$y"), labels = tfl_fig_r("est$label"),
                                           expand = tfl_fig_r("expansion(add = 0.6)"))),
-                         list(fn = "labs", args = list(y = NULL)))),
+                         list(fn = "labs", args = list(y = NULL)),
+                         # left-aligned, so a subgroup's levels show indented
+                         list(fn = "theme", args = list(axis.text.y = list(fn = "element_text", args = list(hjust = 0)))))),
         layers = list(
           list(layer = "vline", xintercept = 1, linetype = "dashed", colour = "grey50"),
           list(layer = "errorbar_h", data = "est", y = "y", xmin = "conf.low", xmax = "conf.high",
                width = 0.25),
           list(layer = "point", data = "est", x = "estimate", y = "y", shape = "solid_square",
-               size = 2.5),
+               size = 2.5, na.rm = TRUE),
           list(layer = "text_column", data = "est", y = "y",
-               columns = "N = n_obs | Hazard ratio (95% CI) = txt", width = 0.4)))
+               columns = "N = n | Hazard ratio (95% CI) = txt", width = 0.4)))
       attr(d, "analyses") <- an
       d
     },
@@ -2060,22 +2062,39 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
 # the reference), their label, text and y; a subgroup whose model did not
 # converge has no point (NE)
 .forest_est_code <- function(group, subgroups, comparison = NULL) {
-  lab <- if (length(subgroups)) paste0(
-    "case_when(",
-    paste(sprintf("!is.na(%s) ~ paste(\"%s:\", %s)", subgroups, subgroups, subgroups),
-          collapse = ",\n                    "),
-    ",\n                    TRUE ~ \"All subjects\")") else "\"All subjects\""
+  ind <- "                           "
+  sub <- if (length(subgroups)) paste0(
+    "case_when(", paste(sprintf("!is.na(%s) ~ \"%s\"", subgroups, subgroups),
+                        collapse = paste0(",\n", ind)),
+    ",\n", ind, "TRUE ~ \"All subjects\")") else "\"All subjects\""
+  lvl <- if (length(subgroups)) sprintf("coalesce(%s, \"All subjects\")",
+                                        paste(subgroups, collapse = ", ")) else "\"All subjects\""
   paste(c(
     "est <- est |>",
     "  # the reference arm has no interval; a subgroup whose model did not",
     "  # converge (no events in an arm) has no point: NE",
     "  filter(!is.na(conf.low)) |>",
     if (!is.null(comparison)) sprintf("  filter(%s == %s) |>", group, q(comparison)),
-    sprintf("  mutate(label = %s,", lab),
+    sprintf("  mutate(subgroup = %s,", sub),
+    sprintf("         level = %s,", lvl),
     "         ok = is.finite(estimate) & is.finite(conf.low) & is.finite(conf.high) & conf.high < 1000,",
     "         txt = ifelse(ok, sprintf(\"%.2f (%.2f, %.2f)\", estimate, conf.low, conf.high), \"NE\"),",
-    "         across(c(estimate, conf.low, conf.high), ~ ifelse(ok, .x, NA)),",
-    "         y = rev(row_number()))"), collapse = "\n")
+    "         across(c(estimate, conf.low, conf.high), ~ ifelse(ok, .x, NA)))",
+    if (length(subgroups)) c(
+      "# a heading row above each subgroup's levels, the levels indented",
+      "est <- split(est, factor(est$subgroup, levels = unique(est$subgroup))) |>",
+      "  lapply(function(g) if (g$subgroup[1] == \"All subjects\") mutate(g, head = FALSE) else",
+      "    bind_rows(tibble(subgroup = g$subgroup[1], level = g$subgroup[1], head = TRUE),",
+      "              mutate(g, head = FALSE))) |>",
+      "  bind_rows() |>",
+      "  mutate(label = ifelse(head | subgroup == \"All subjects\", level, paste0(\"    \", level)),",
+      "         n = ifelse(head, \"\", as.character(n_obs)),",
+      "         txt = ifelse(head, \"\", txt),",
+      "         y = rev(row_number()))")
+    else c(
+      "est <- est |>",
+      "  mutate(label = level, n = as.character(n_obs), y = rev(row_number()))")),
+    collapse = "\n")
 }
 
 #' The analyses of a forest plot: the figure's own ARD
@@ -2111,7 +2130,8 @@ tfl_fig_forest_analyses <- function(data = "ADTTE", param = "OS", pop = "FASFL",
   subgroups <- .split_vals(paste(subgroups, collapse = ", "))
   data_id <- tolower(paste0(data, "_", param))
   model <- sprintf("survival::coxph(survival::Surv(%s, 1 - %s) ~ %s, data = %%s)", time, censor, group)
-  reg <- function(d) sprintf("cardx::ard_regression(%s, exponentiate = TRUE)", sprintf(model, d))
+  reg <- function(d, in_ = "") paste0(
+    "cardx::ard_regression(\n", in_, "  ", sprintf(model, d), ",\n", in_, "  exponentiate = TRUE)")
   adata <- data.frame(
     data_id = data_id, label = sprintf("%s of the %s, with the subgroups", param, pop),
     from = toupper(data), population_id = pop, where = sprintf("PARAMCD == %s", q(param)),
@@ -2124,7 +2144,7 @@ tfl_fig_forest_analyses <- function(data = "ADTTE", param = "OS", pop = "FASFL",
     one(id, "Hazard ratio, all subjects", reg("data")),
     do.call(rbind, lapply(subgroups, function(s) one(
       paste(id, s, sep = "_"), paste("Hazard ratio by", s),
-      sprintf("cards::ard_strata(data, .strata = %s, .f = ~ %s)", s, reg(".x"))))))
+      paste0("cards::ard_strata(\n  data, .strata = ", s, ",\n  .f = ~ ", reg(".x", "  "), ")")))))
   rownames(an) <- NULL
   list(analysis_data = adata, analyses = an)
 }
