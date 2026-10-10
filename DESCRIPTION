@@ -34,7 +34,7 @@ Imports:
     stats,
     utils
 Suggests:
-    rtfreporter (>= 0.8.2.9025),
+    rtfreporter (>= 0.8.2.9032),
     broom,
     broom.helpers,
     car,

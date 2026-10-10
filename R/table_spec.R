@@ -195,7 +195,7 @@
     tables    = c("output_id", "cols", "rows", "label", "stats", "value",
                   "sep", "sort", "sort_stat", "na", "header_n"),
     variables = c("output_id", "variable", "label", "order", "levels",
-                  "empty_levels"),
+                  "empty_levels", "under"),
     # the study's code list: a value's text and place
     codelists = c("output_id", "variable", "value", "label", "order"),
     cells     = c("output_id", "variable", "context", "row", "when",
@@ -586,6 +586,11 @@
 #'     its values that no record has -- a code list's value, counted 0 in
 #'     every column of an ARD made with the study's code lists -- get a row
 #'     (`plan_levels(.drop_empty = )`).}
+#'   \item{`under`}{Its rows under one level of another variable,
+#'     `RACE: Asian` (that variable, a colon, the level as the table shows
+#'     it): after that row, one stub indent deeper, its own heading dropped
+#'     (`plan_nest()`); the sub-categories of a race from a second analysis
+#'     on the same data.}
 #' }
 #'
 #' @section `cells`:
@@ -841,6 +846,11 @@ tfl_table_spec <- function(tables = NULL, variables = NULL, cells = NULL,
   keyed(.pb(sprintf("`variables$empty_levels` must be 'show' or 'hide'; got %s.",
                     sQuote(v$empty_levels[i])), i,
             rep("empty_levels", length(i))), v, "variables")
+  # under: another variable, a colon, one of its levels
+  un <- v$under %||% rep(NA_character_, nrow(v))
+  i <- which(!is.na(un) & !grepl("^[^:]+:\\s*\\S", un))
+  keyed(.pb(sprintf("`variables$under` is a variable, a colon and one of its levels (RACE: Asian); got %s.",
+                    sQuote(un[i])), i, rep("under", length(i))), v, "variables")
   # a row with no template is a stats = rows display format, which needs
   # the format it is there to give
   ce <- sp$cells
@@ -1173,6 +1183,18 @@ print.tfl_table_spec <- function(x, ...) {
   hide <- !is.na(v$empty_levels) & tolower(trimws(v$empty_levels)) == "hide"
   out <- unique(v$variable[hide])
   if (length(out)) out
+}
+
+# plan_nest(): the variables whose rows go under one level of another
+# (variables$under = "RACE: Asian"), as c(RACE = "Asian") by the nested one
+.ard_spec_nest <- function(sp) {
+  v <- sp$variables
+  if (is.null(v$under)) return(list())
+  k <- !is.na(v$under) & nzchar(trimws(v$under))
+  out <- lapply(v$under[k], function(u) {
+    stats::setNames(trimws(sub("^[^:]*:", "", u)), trimws(sub(":.*$", "", u)))
+  })
+  stats::setNames(out, v$variable[k])
 }
 
 # plan_levels(): a variable's own `levels` (variables sheet), else the code
@@ -2158,6 +2180,16 @@ tfl_as_table_spec <- function(x, output_id = NULL, compare = TRUE) {
       if (is.null(s$levels[[v]])) NA_character_ else bar(s$levels[[v]]), ""),
     empty_levels = ifelse(vars %in% hide, "hide", NA_character_),
     stringsAsFactors = FALSE)
+  # plan_nest(): a variable's rows under a level of another
+  nest <- ly$nest$nest
+  if (length(nest)) {
+    for (child in setdiff(names(nest), variables$variable)) {
+      variables[nrow(variables) + 1L, ] <- list(id, child, NA, NA, NA, NA)
+    }
+    variables$under <- vapply(variables$variable, function(v)
+      if (is.null(nest[[v]])) NA_character_
+      else paste0(nest[[v]]$parent, ": ", nest[[v]]$level), "")
+  }
 
   # -- cells ------------------------------------------------------------------
   crow <- function(var, ctx, row, when, tpl, digits = NA, signif = NA)
