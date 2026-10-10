@@ -1705,6 +1705,12 @@ tfl_check_fig_design <- function(design, adam = NULL, ggplot2_version = NULL,
 #'   longitudinal kinds; KM, waterfall and swimmer read them from their own
 #'   dataset).
 #' @param title The figure's title.
+#' @param subgroups For `forest_hr`: the subgroup variables (of the
+#'   population's data), one string with `,` between them; each has its
+#'   analysis in the figure's own ARD and its rows on the plot under a
+#'   heading row.  `""`: all subjects only.
+#' @param comparison For `forest_hr`: the arm compared with the reference
+#'   (the group's first level); `NULL`: every other arm.
 #' @param ... For a whole-script template: the type's other arguments.
 #' @return `tfl_fig_templates()`: a data frame (`template`, `kind`,
 #'   `label`, `parts`, `category`, `data`): `category` is the clinical

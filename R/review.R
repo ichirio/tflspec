@@ -835,8 +835,16 @@ summary.tfl_review <- function(object, ...) {
                unlist(lapply(above$add, .split_bar)),
                .derive_names(pops$derive[pops$population_id %in% pop]),
                .derive_names(x$datasets$derive[toupper(x$datasets$dataset) %in% toupper(ds)]))
+    # `add` brings columns of the population's data (ADSL), by the subject
+    pds <- pops$dataset[match(pop, pops$population_id)]
+    pcols <- if (length(pds) && !is.na(pds[1L])) .facts_cols(facts, pds[1L])
+    from_pop <- c(pcols$name, .derive_names(pops$derive[pops$population_id %in% pop]))
     for (cn in c("add", "keep", "distinct")) {
-      for (v in setdiff(.bar_names(ad[[cn]][i]), c(avail, .derive_names(ad$derive[i])))) {
+      have <- if (cn == "add") {
+        if (is.null(pcols)) next
+        from_pop
+      } else c(avail, .derive_names(ad$derive[i]))
+      for (v in setdiff(.bar_names(ad[[cn]][i]), have)) {
         add(.rv("A01", o, "analysis_data", ad$data_id[i], cn,
                 args = c(ad$data_id[i], v, ds)))
       }

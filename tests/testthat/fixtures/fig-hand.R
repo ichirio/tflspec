@@ -93,69 +93,6 @@ list(
     list(p = p)
   },
 
-  # Cox hazard ratio (95% CI) overall and by sex and age group, with the N
-  # and estimate columns beside
-  forest_hr = function(adam, param, subgroups = c("SEX", "AGEGR1")) {
-    d <- adam$ADTTE[adam$ADTTE$PARAMCD == param, ]
-    keep <- c("TRT01P", "FASFL", subgroups)
-    d <- d[setdiff(names(d), keep)]
-    d <- merge(d, adam$ADSL[c("USUBJID", keep)], by = "USUBJID", sort = FALSE)
-    d <- d[d$FASFL == "Y", ]
-    d$TRT01P <- factor(d$TRT01P, levels = sort(unique(d$TRT01P)))
-    d <- droplevels(d)
-    hr <- function(x) {
-      ne <- c(est = NA, lcl = NA, ucl = NA)
-      if (length(unique(x$TRT01P)) < 2 || sum(x$CNSR == 0) < 2) return(ne)
-      fit <- tryCatch(survival::coxph(survival::Surv(AVAL, CNSR == 0) ~ TRT01P,
-                                      data = x), warning = function(w) NULL)
-      if (is.null(fit)) return(ne)
-      ci <- summary(fit)$conf.int
-      c(est = ci[1, 1], lcl = ci[1, 3], ucl = ci[1, 4])
-    }
-    row <- function(label, head, n, e) data.frame(
-      label = label, head = head, n = n, est = e[["est"]], lcl = e[["lcl"]],
-      ucl = e[["ucl"]])
-    rows <- list(row("All subjects", FALSE, nrow(d), hr(d)))
-    for (v in subgroups) {
-      rows[[length(rows) + 1]] <- row(v, TRUE, NA, c(est = NA, lcl = NA, ucl = NA))
-      for (lv in sort(unique(stats::na.omit(d[[v]])))) {
-        s <- d[d[[v]] %in% lv, ]
-        rows[[length(rows) + 1]] <- row(paste0("   ", lv), FALSE, nrow(s), hr(s))
-      }
-    }
-    e <- do.call(rbind, rows)
-    ok <- is.finite(e$est) & is.finite(e$lcl) & is.finite(e$ucl) &
-      e$lcl > 0 & e$ucl < 1000
-    e$txt <- ifelse(e$head, "", ifelse(ok, sprintf("%.2f (%.2f, %.2f)", e$est,
-                                                   e$lcl, e$ucl), "NE"))
-    e$est[!ok] <- NA
-    e$lcl[!ok] <- NA
-    e$ucl[!ok] <- NA
-    e$y <- rev(seq_len(nrow(e)))
-    p <- ggplot2::ggplot(e, ggplot2::aes(y = y)) +
-      ggplot2::geom_vline(xintercept = 1, linetype = "dashed", colour = "grey50") +
-      ggplot2::geom_errorbar(ggplot2::aes(xmin = lcl, xmax = ucl), width = 0.25,
-                             orientation = "y", na.rm = TRUE) +
-      ggplot2::geom_point(ggplot2::aes(x = est), shape = 15, size = 2.5,
-                          na.rm = TRUE) +
-      ggplot2::scale_x_log10() +
-      ggplot2::scale_y_continuous(breaks = e$y, labels = e$label,
-                                  expand = ggplot2::expansion(add = 0.6)) +
-      ggplot2::labs(x = "Hazard Ratio (95% CI)", y = NULL) +
-      ggplot2::theme_minimal(base_size = 10)
-    p_txt <- ggplot2::ggplot(e, ggplot2::aes(y = y)) +
-      ggplot2::geom_text(ggplot2::aes(x = 0, label = ifelse(is.na(n), "", n)),
-                         size = 3) +
-      ggplot2::geom_text(ggplot2::aes(x = 1, label = txt), size = 3) +
-      ggplot2::scale_x_continuous(limits = c(-0.4, 1.6), breaks = c(0, 1),
-                                  labels = c("N", "Estimate (95% CI)"),
-                                  position = "top") +
-      ggplot2::scale_y_continuous(expand = ggplot2::expansion(add = 0.6)) +
-      ggplot2::theme_void(base_size = 10)
-    list(p = p, p_txt = p_txt)
-  },
-
-  # the mean (+/- SE) of a lab parameter by visit and arm
   mean_se = function(adam, param) {
     d <- adam$ADLB[adam$ADLB$PARAMCD == param, ]
     d <- merge(d, adam$ADSL[c("USUBJID", "TRT01A", "SAFFL")], by = "USUBJID",

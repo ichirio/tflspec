@@ -39,7 +39,10 @@ fx_said <- function(g) {
        x = axis("x"), y = axis("y"))
 }
 
-test_that("five templates' scripts make the figures written by hand", {
+# (The forest plot is not here: its template reads the figure's own ARD
+# since #293 phase 6, and test-fig-forest.R checks its hazard ratios
+# against coxph()'s, overall and within each subgroup.)
+test_that("four templates' scripts make the figures written by hand", {
   skip_on_cran()
   skip_if_not_installed("ggplot2")
   skip_if_not_installed("dplyr")
@@ -56,8 +59,6 @@ test_that("five templates' scripts make the figures written by hand", {
                          hand$km_risk_table(adam, os)),
     waterfall_response = list(tfl_fig_template("waterfall_response"),
                               hand$waterfall_response(adam)),
-    forest_hr = list(tfl_fig_template("forest_hr", param = os),
-                     hand$forest_hr(adam, os)),
     mean_se = list(tfl_fig_template("mean_se", param = lb),
                    hand$mean_se(adam, lb)),
     box_by_visit = list(tfl_fig_template("box_by_visit"),

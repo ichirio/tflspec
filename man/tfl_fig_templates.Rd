@@ -65,6 +65,14 @@ dataset).}
 
 \item{title}{The figure's title.}
 
+\item{subgroups}{For \code{forest_hr}: the subgroup variables (of the
+population's data), one string with \verb{,} between them; each has its
+analysis in the figure's own ARD and its rows on the plot under a
+heading row.  \code{""}: all subjects only.}
+
+\item{comparison}{For \code{forest_hr}: the arm compared with the reference
+(the group's first level); \code{NULL}: every other arm.}
+
 \item{...}{For a whole-script template: the type's other arguments.}
 }
 \value{
