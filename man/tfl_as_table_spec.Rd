@@ -55,7 +55,8 @@ and whether it gives \strong{the same pages} is reported.
 }
 
 \examples{
-if (requireNamespace("cards", quietly = TRUE)) {
+if (requireNamespace("cards", quietly = TRUE) &&
+    requireNamespace("rtfreporter", quietly = TRUE)) {
   ard <- cards::ard_stack(cards::ADSL, .by = TRT01A,
                           cards::ard_continuous(variables = AGE))
   p <- rtfreporter::table_plan(rtfreporter::normalize_ard(ard), cols = "TRT01A")

@@ -68,10 +68,11 @@ save it, then look at its Review tab.
 ## Changes
 
 * **Ready for CRAN's review, the parts that are not the submission itself**
-  (#218).  `rtfreporter` and `readxl` move from Suggests to Imports: the
-  table functions call rtfreporter and reading the Excel specifications is
-  the package's job, so neither was ever optional.  `haven` and `writexl`
-  stay in Suggests; every function that uses them now says what to install
+  (#218).  `readxl` moves from Suggests to Imports: reading the Excel
+  specifications is the package's job, so it was never optional
+  (`rtfreporter` follows at the submission, once it is on CRAN; in Imports
+  now the check warns that it is not).  `haven` and `writexl` stay in
+  Suggests; every function that uses them now says what to install
   when they are missing (`tfl_fig_style_template()`, `tfl_read_ard()` of an
   .xpt file, reading .xpt / .sas7bdat data).  The 14 quick-API figure
   functions and `print.tfl_code()` document what they return; the examples

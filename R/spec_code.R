@@ -386,7 +386,8 @@ tfl_table_code <- function(spec, output_id = NULL, data = "data",
 #' @seealso [tfl_table_code()], the same steps as code; [tfl_as_table_spec()],
 #'   the other way round.
 #' @examples
-#' if (requireNamespace("cards", quietly = TRUE)) {
+#' if (requireNamespace("cards", quietly = TRUE) &&
+#'     requireNamespace("rtfreporter", quietly = TRUE)) {
 #'   spec <- tfl_read_table_spec(system.file("extdata", "ard-spec", "DM.xlsx",
 #'                                           package = "tflspec"))
 #'   ard <- cards::ard_stack(cards::ADSL, .by = TRT01A,

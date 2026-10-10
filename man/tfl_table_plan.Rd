@@ -30,7 +30,8 @@ from the study's workbook in a line of code.  Like \code{table_plan()}, the data
 comes first, so it pipes.
 }
 \examples{
-if (requireNamespace("cards", quietly = TRUE)) {
+if (requireNamespace("cards", quietly = TRUE) &&
+    requireNamespace("rtfreporter", quietly = TRUE)) {
   spec <- tfl_read_table_spec(system.file("extdata", "ard-spec", "DM.xlsx",
                                           package = "tflspec"))
   ard <- cards::ard_stack(cards::ADSL, .by = TRT01A,
