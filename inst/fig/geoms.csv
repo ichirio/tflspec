@@ -22,3 +22,4 @@ vline,geom_vline,ggplot2,Vertical lines,,
 abline,geom_abline,ggplot2,Diagonal line,,
 text_repel,geom_text_repel,ggrepel,Text that avoids overlaps,,Labels pushed apart (ggrepel).
 sina,geom_sina,ggforce,Sina plot,,"Points spread by their density, e.g. a distribution per group (instead of box plot + jitter)."
+errorbar_h,geom_errorbar,ggplot2,Error bars (horizontal),,"From xmin to xmax at a y, e.g. a forest plot's interval."
