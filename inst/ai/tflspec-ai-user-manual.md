@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9082** (the development version,
+**This manual documents tflspec 0.0.24.9084** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -551,6 +551,17 @@ layers:                                 # what is drawn, in order
   `ard` is `TRUE` then; `tfl_check_fig_design(design, ard = <the ARD>)`
   looks for each address in it.  `ard_value()`, `ard_stats()` and
   `ard_fingerprint()` are study helpers (`tfl_helpers_code()`).
+- A forest plot's numbers are an ARD of its own: `tfl_fig_template("forest_hr",
+  data, param, pop, group, subgroups = "SEX, AGEGR1", comparison = <the
+  arm against the reference>)` reads `ard_stats` of the analyses `HR`,
+  `HR_SEX`, `HR_AGEGR1` (a Cox model of all subjects, one within each
+  subgroup variable through `cards::ard_strata()`, each a `custom`
+  analysis), which `tfl_fig_forest_analyses()` gives as rows of the
+  `analysis_data` / `analyses` sheets (`attr(design, "analyses")`).  Its
+  text at the right -- N, the estimate (95% CI) -- is the layer
+  `text_column` (`data`, `y`, `columns: "N = n_obs | Hazard ratio (95%
+  CI) = txt"`, `width`), a panel of its own: panels go below the plot or
+  at its right, not both.  `errorbar_h` is the horizontal error bar.
 - `layers`: catalog layers (`line`, `point`, `errorbar`, `boxplot` … see
   `tfl_fig_add_layer()`), `geom` (any geom by name), `call` (any function:
   `fn`, `package`, `data`, `aes`, `pos`, `args`), `layer_code`, `figure`.

@@ -218,6 +218,16 @@
         .ff("label", "variable", "Value", "n", of = "data"),
         .ff("title", "text", "Title", "n"),
         .ff("height", "number", "Height (share)", 0.18))),
+    text_column = list(section = "layers", label = "Text columns (panel at the right)",
+      panel = TRUE,
+      help = "Columns of text at the right of the plot, one row a y: a forest plot's N and estimate (95% CI).",
+      fields = rbind(
+        .ff("data", "object", "Data", "est"),
+        .ff("y", "variable", "Y", "y", required = TRUE, of = "data"),
+        .ff("columns", "text", "Columns", required = TRUE,
+            help = "Heading = variable, | between columns: N = n_obs | Hazard ratio (95% CI) = txt"),
+        .ff("size", "number", "Text size", 3),
+        .ff("width", "number", "Width (share)", 0.4))),
     geom = list(section = "layers", label = "Any ggplot2 layer",
       help = "Any geom or stat by name, with its aesthetics and settings.",
       fields = rbind(
@@ -898,6 +908,23 @@ tfl_read_fig_design <- function(path) {
           sprintf("labs(title = %s, x = NULL, y = NULL)", q(v("title"))),
           sprintf("theme_void(base_size = %s)", .pv(plot, "base_size")),
           "theme(axis.text.y = element_text(hjust = 1, margin = margin(r = 5)), plot.title = element_text(size = rel(0.9)))"))),
+    text_column = {
+      cols <- .text_columns(v("columns"))
+      nc <- length(cols)
+      list(panel = list(name = paste0("p_txt", i), width = as.numeric(v("width")), side = "right"),
+           libs = "patchwork",
+           chain = .fig_chain(paste0("p_txt", i), c(
+             list(sprintf("ggplot(%s, aes(y = %s))", v("data"), v("y"))),
+             lapply(seq_len(nc), function(j)
+               sprintf("geom_text(aes(x = %d, label = %s), size = %s)", j - 1L, cols[[j]], num("size"))),
+             list(
+               sprintf("scale_x_continuous(limits = c(-0.4, %s), breaks = c(%s), labels = c(%s), position = \"top\")",
+                       format(nc - 1 + 0.6), paste(seq_len(nc) - 1L, collapse = ", "),
+                       paste(q(names(cols)), collapse = ", ")),
+               sprintf("scale_y_continuous(breaks = %s$%s, expand = expansion(add = 0.6))", v("data"), v("y")),
+               sprintf("theme_void(base_size = %s)", .pv(plot, "base_size")),
+               "theme(axis.text.x.top = element_text(face = \"bold\"))"))))
+    },
     geom = {
       a <- .named(v("aes"))
       pr <- .named(v("params"))
@@ -1117,10 +1144,23 @@ tfl_read_fig_design <- function(path) {
   panel_data <- unlist(lapply(lc, function(x) if (!is.null(x$panel)) x$data))
   panel_code <- unlist(lapply(lc, function(x) if (!is.null(x$panel)) x$chain))
   assemble <- if (length(panels)) {
-    h <- vapply(panels, `[[`, numeric(1), "height")
-    sprintf("%s <- %s + plot_layout(heights = %s)", name,
-            paste(c(name, vapply(panels, `[[`, "", "name")), collapse = " / "),
-            vec_code(round(c(1 - sum(h), h), 3)))
+    side <- vapply(panels, function(p) p$side %||% "below", "")
+    below <- panels[side == "below"]
+    right <- panels[side == "right"]
+    if (length(below) && length(right)) {
+      stop("A figure has its panels below it or at its right, not both.", call. = FALSE)
+    }
+    if (length(right)) {
+      w <- vapply(right, `[[`, numeric(1), "width")
+      sprintf("%s <- %s + plot_layout(widths = %s)", name,
+              paste(c(name, vapply(right, `[[`, "", "name")), collapse = " + "),
+              vec_code(round(c(1 - sum(w), w), 3)))
+    } else {
+      h <- vapply(below, `[[`, numeric(1), "height")
+      sprintf("%s <- %s + plot_layout(heights = %s)", name,
+              paste(c(name, vapply(below, `[[`, "", "name")), collapse = " / "),
+              vec_code(round(c(1 - sum(h), h), 3)))
+    }
   }
   n <- function(f) .pv(plot, f)
   fnames <- vapply(layers, function(l) if (identical(l$layer, "call")) .fig_bare_fn_name(l$fn) else "", "")
@@ -1593,7 +1633,9 @@ tfl_check_fig_design <- function(design, adam = NULL, ggplot2_version = NULL,
     template = template, kind = kind, label = label, parts = parts, stringsAsFactors = FALSE)
   cat <- tfl_fig_catalog()
   whole <- cat[cat$status == "implemented" & cat$type %in% c("forest", "ae_dot", "butterfly", "edish", "sankey", "sunburst") &
-                 !cat$style %in% c("estimates", "subgroups"), ]
+                 !cat$style %in% c("estimates", "subgroups") &
+                 # the hazard-ratio forest is in parts, from the figure's own ARD
+                 !(cat$type == "forest" & cat$style == "hr"), ]
   tp <- rbind(
     t("km_risk_table", "km", "KM curves + number at risk"),
     t("km_simple", "km", "KM curves"),
@@ -1622,6 +1664,7 @@ tfl_check_fig_design <- function(design, adam = NULL, ggplot2_version = NULL,
     t("pk_mean", "pk", "PK: mean +/- SD concentration by nominal time"),
     t("pk_mean_log", "pk", "PK: mean +/- SD concentration, log axis"),
     t("pk_individual", "pk", "PK: individual profiles, log axis, one panel per group"),
+    t("forest_hr", "forest", "Forest: hazard ratio by subgroup, from the figure's own ARD"),
     if (nrow(whole)) t(paste(whole$type, whole$style, sep = "_"), whole$type,
                        paste0(whole$description, " (whole script)"), parts = FALSE))
   # each template's clinical category and the data it reads, from the
@@ -1683,7 +1726,8 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
                              response_data = "ADRS", response = "BOR",
                              category = "AVALC", responders = "CR, PR",
                              id = "USUBJID", duration = "TRTDURD",
-                             join_adsl = NULL, title = NULL, ...) {
+                             join_adsl = NULL, title = NULL,
+                             subgroups = "SEX, AGEGR1", comparison = NULL, ...) {
   tp <- .fig_templates()
   if (!template %in% tp$template) {
     stop("Unknown template '", template, "': one of ",
@@ -1739,6 +1783,44 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
           if (template != "km_simple") list(layer = "risk_table",
                title = opt("risk_title", "Number of Patients at Risk"),
                size = as.numeric(opt("text_size", 3)), height = as.numeric(opt("risk_height", 0.167))))))
+    },
+    forest = {
+      # the estimates are statistics: the figure's own ARD (cards / cardx),
+      # read with ard_stats(); the analyses it needs come with the design
+      data <- data %||% "ADTTE"; param <- param %||% "OS"; pop <- pop %||% "FASFL"
+      group <- group %||% "TRT01P"; time <- time %||% "AVAL"
+      sub <- .split_vals(subgroups)
+      # the layers read `est` (the ARD), not df; the subgroups are joined
+      # in the ARD's own analysis data
+      join <- join_adsl %||% FALSE
+      an <- tfl_fig_forest_analyses(data = data, param = param, pop = pop, group = group,
+                                    subgroups = sub, time = time, censor = censor)
+      d <- tfl_fig_design(
+        template = template,
+        data = drop(list(read(data), if (join) join_step(c(group, pop)),
+                         keep_param(param), keep_pop(pop))),
+        stats = list(
+          list(step = "ard_stats", name = "est",
+               analysis_id = paste(an$analyses$analysis_id, collapse = ", "),
+               variable = group, stats = "n_obs, estimate, conf.low, conf.high",
+               by = if (length(sub)) paste(sub, collapse = ", ")),
+          list(step = "code", code = .forest_est_code(group, sub, comparison))),
+        plot = plot_of(x_label = "Hazard Ratio (95% CI)", legend = "none", x_log = TRUE,
+                       add = list(
+                         list(fn = "scale_y_continuous",
+                              args = list(breaks = tfl_fig_r("est$y"), labels = tfl_fig_r("est$label"),
+                                          expand = tfl_fig_r("expansion(add = 0.6)"))),
+                         list(fn = "labs", args = list(y = NULL)))),
+        layers = list(
+          list(layer = "vline", xintercept = 1, linetype = "dashed", colour = "grey50"),
+          list(layer = "errorbar_h", data = "est", y = "y", xmin = "conf.low", xmax = "conf.high",
+               width = 0.25),
+          list(layer = "point", data = "est", x = "estimate", y = "y", shape = "solid_square",
+               size = 2.5),
+          list(layer = "text_column", data = "est", y = "y",
+               columns = "N = n_obs | Hazard ratio (95% CI) = txt", width = 0.4)))
+      attr(d, "analyses") <- an
+      d
     },
     waterfall = {
       data <- data %||% "ADTR"; param <- param %||% "BPCHG"; pop <- pop %||% "FASFL"
@@ -1960,4 +2042,89 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
           list(layer = "point", data = "sm", x = time, y = "mean", colour = group, size = 1.8),
           list(layer = "errorbar", data = "sm", x = time, colour = group, width = 0.3)))
     })
+}
+
+# A text_column's columns: "N = n_obs | Hazard ratio (95% CI) = txt" as a
+# character vector of variables named by their headings
+.text_columns <- function(x) {
+  parts <- trimws(strsplit(x %||% "", "|", fixed = TRUE)[[1L]])
+  parts <- parts[nzchar(parts)]
+  if (!length(parts)) stop("text_column: `columns` is required (Heading = variable | ...).", call. = FALSE)
+  at <- regexpr("=[^=]*$", parts)
+  heading <- ifelse(at > 0, trimws(substr(parts, 1L, at - 1L)), parts)
+  var <- ifelse(at > 0, trimws(substring(parts, at + 1L)), parts)
+  stats::setNames(var, heading)
+}
+
+# The code step of a forest plot: the rows to draw (the comparison arm, not
+# the reference), their label, text and y; a subgroup whose model did not
+# converge has no point (NE)
+.forest_est_code <- function(group, subgroups, comparison = NULL) {
+  lab <- if (length(subgroups)) paste0(
+    "case_when(",
+    paste(sprintf("!is.na(%s) ~ paste(\"%s:\", %s)", subgroups, subgroups, subgroups),
+          collapse = ",\n                    "),
+    ",\n                    TRUE ~ \"All subjects\")") else "\"All subjects\""
+  paste(c(
+    "est <- est |>",
+    "  # the reference arm has no interval; a subgroup whose model did not",
+    "  # converge (no events in an arm) has no point: NE",
+    "  filter(!is.na(conf.low)) |>",
+    if (!is.null(comparison)) sprintf("  filter(%s == %s) |>", group, q(comparison)),
+    sprintf("  mutate(label = %s,", lab),
+    "         ok = is.finite(estimate) & is.finite(conf.low) & is.finite(conf.high) & conf.high < 1000,",
+    "         txt = ifelse(ok, sprintf(\"%.2f (%.2f, %.2f)\", estimate, conf.low, conf.high), \"NE\"),",
+    "         across(c(estimate, conf.low, conf.high), ~ ifelse(ok, .x, NA)),",
+    "         y = rev(row_number()))"), collapse = "\n")
+}
+
+#' The analyses of a forest plot: the figure's own ARD
+#'
+#' A forest plot prints numbers -- the hazard ratio, its interval, N -- so
+#' they are statistics of an ARD, computed by cards / cardx and traceable
+#' in ARS, not fitted inside the figure program.  This gives the rows of
+#' an ARD definition the plot needs: one analysis data (the parameter's
+#' records of the population, the subgroup variables added from the
+#' population's data) and one `custom` analysis per estimate -- a Cox
+#' model of all subjects (`cardx::ard_regression()`), and one within each
+#' subgroup variable (`cards::ard_strata()`).  `tfl_fig_template("forest_hr")`
+#' returns them as the design's attribute `analyses`; a study manager
+#' writes them to the figure's ARD definition.
+#'
+#' @param data The time-to-event dataset (`ADTTE`).
+#' @param param Its parameter (`PARAMCD`).
+#' @param pop The population (analysis set), by its id.
+#' @param group The treatment variable; its first level is the reference.
+#' @param subgroups The subgroup variables (of the population's data), a
+#'   character vector or one string with `,` between them.
+#' @param time,censor The time and the censoring indicator (1 = censored).
+#' @param id The analysis id of the overall estimate; a subgroup's is
+#'   `<id>_<variable>`.
+#' @return A list of two data frames, `analysis_data` and `analyses`, with
+#'   the columns of those sheets they fill (no `output_id`).
+#' @examples
+#' tfl_fig_forest_analyses("ADTTE", "OS", "FASFL", "TRT01P", c("SEX", "AGEGR1"))$analyses
+#' @export
+tfl_fig_forest_analyses <- function(data = "ADTTE", param = "OS", pop = "FASFL",
+                                    group = "TRT01P", subgroups = c("SEX", "AGEGR1"),
+                                    time = "AVAL", censor = "CNSR", id = "HR") {
+  subgroups <- .split_vals(paste(subgroups, collapse = ", "))
+  data_id <- tolower(paste0(data, "_", param))
+  model <- sprintf("survival::coxph(survival::Surv(%s, 1 - %s) ~ %s, data = %%s)", time, censor, group)
+  reg <- function(d) sprintf("cardx::ard_regression(%s, exponentiate = TRUE)", sprintf(model, d))
+  adata <- data.frame(
+    data_id = data_id, label = sprintf("%s of the %s, with the subgroups", param, pop),
+    from = toupper(data), population_id = pop, where = sprintf("PARAMCD == %s", q(param)),
+    add = if (length(subgroups)) paste(subgroups, collapse = " | ") else NA_character_,
+    stringsAsFactors = FALSE)
+  one <- function(aid, label, code) data.frame(
+    analysis_id = aid, label = label, method = "custom", data = data_id, code = code,
+    stringsAsFactors = FALSE)
+  an <- rbind(
+    one(id, "Hazard ratio, all subjects", reg("data")),
+    do.call(rbind, lapply(subgroups, function(s) one(
+      paste(id, s, sep = "_"), paste("Hazard ratio by", s),
+      sprintf("cards::ard_strata(data, .strata = %s, .f = ~ %s)", s, reg(".x"))))))
+  rownames(an) <- NULL
+  list(analysis_data = adata, analyses = an)
 }

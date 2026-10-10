@@ -1,7 +1,12 @@
-run_design <- function(design, adam = tfl_example_adam()) {
+run_design <- function(design, adam = tfl_example_adam(), ard = NULL) {
   code <- tfl_fig_design_code(design, "t")
   e <- new.env()
   for (n in names(adam)) assign(tolower(n), adam[[n]], envir = e)
+  # a figure reading an ARD: the ARD, and the study helpers that read it
+  if (!is.null(ard)) {
+    assign("ard", ard, envir = e)
+    eval(parse(text = tfl_helpers_code()), envir = e)
+  }
   dir <- tempfile("fig")
   dir.create(dir)
   owd <- setwd(dir)
@@ -127,7 +132,9 @@ test_that("every template draws on the example data and checks clean", {
                    forest = list(param = prm), list())
     d <- do.call(tfl_fig_template, c(list(t), args))
     expect_equal(nrow(tfl_check_fig_design(d, adam)), 0L, info = t)
-    expect_true(run_design(d, adam)$png, info = t)
+    # the forest plot reads its own ARD: made first, from its analyses
+    ard <- if (!is.null(attr(d, "analyses"))) forest_example_ard(adam, d)
+    expect_true(run_design(d, adam, ard)$png, info = t)
   }
 })
 

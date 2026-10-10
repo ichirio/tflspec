@@ -1,5 +1,21 @@
 # tflspec (development version)
 
+* **The forest plot from the figure's own ARD** (tflplanner #293 phase
+  6).  `forest_hr` is a parts template now: its hazard ratios, intervals
+  and N are statistics of an ARD made by cards / cardx -- one Cox model
+  of all subjects (`cardx::ard_regression()`) and one within each subgroup
+  variable (`cards::ard_strata()`), each a `custom` analysis -- read with
+  `ard_stats()`, not fitted inside the figure program.  The analyses the
+  plot needs come with the design, `attr(design, "analyses")`, from the
+  new `tfl_fig_forest_analyses()`; `tfl_fig_template()` takes `subgroups`
+  and `comparison` (the arm against the reference).  Two new pieces
+  serve it: the layer `text_column` (columns of text at the right of the
+  plot, a panel of its own: N, the estimate and its interval) -- panels
+  now go below the plot or at its right -- and the catalog layer
+  `errorbar_h` (a horizontal error bar).  A subgroup whose model did not
+  converge has no point and prints NE.  The template snapshot of
+  `forest_hr` changes from the whole script to the parts.
+
 * **A variable's rows under one level of another** (tflplanner's RACE
   sample, rtfreporter #598).  The `variables` sheet's new column `under`
   (`RACE: Asian`: that variable, a colon, the level as the table shows

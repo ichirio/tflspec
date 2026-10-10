@@ -30,6 +30,8 @@ tfl_fig_template(
   duration = "TRTDURD",
   join_adsl = NULL,
   title = NULL,
+  subgroups = "SEX, AGEGR1",
+  comparison = NULL,
   ...
 )
 }
