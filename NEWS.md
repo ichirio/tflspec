@@ -50,6 +50,10 @@ save it, then look at its Review tab.
 
 ## Changes
 
+* **D02 in plain words** (tflplanner): "%s: the checks against the data
+  have not run yet." and "Press [Review with the data]: it reads the
+  datasets once (not again until a file changes)." -- "the data facts"
+  was a word of the code.
 * **The review's catalog has P02** (tflplanner's): a study program that
   calls one of the six removed functions as `tflspec::` or after
   `library(tflspec)`, without `programs/study_helpers.R` sourced.
