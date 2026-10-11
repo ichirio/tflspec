@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9089** (the development version,
+**This manual documents tflspec 0.0.24.9090** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -724,7 +724,7 @@ back): rename the value or choose another separator.
 `tfl_fig_r`
 
 **Figure style:** `tfl_fig_style` `tfl_fig_style_template`
-`tfl_read_fig_style` `tfl_fig_setup_code` `tfl_fig_palettes`
+`tfl_read_fig_style` `tfl_fig_setup_code` `tfl_fig_palettes` `tfl_time_unit_days`
 `tfl_check_fig`
 
 **Figure spec (sheets) and quick figures:** `tfl_fig_spec`

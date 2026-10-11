@@ -11,13 +11,16 @@
       library(ggsurvfit)
       library(patchwork)
       
+      # the days in a week, a month, a year (the study's setup may set them)
+      if (!exists("days_per_month")) days_per_month <- 30.4375
+      
       # ---- data ------------------------------------------------------------------
       # Input data frames: adtte
       
       df <- adtte |>
         filter(PARAMCD == "OS", FASFL == "Y") |>
         # days -> months
-        mutate(AVAL = AVAL / 30.4375)
+        mutate(AVAL = AVAL / .env$days_per_month)
       
       fit <- survfit2(Surv(AVAL, CNSR == 0) ~ TRT01P, data = df)
       
@@ -110,13 +113,16 @@
       library(ggplot2)
       library(ggsurvfit)
       
+      # the days in a week, a month, a year (the study's setup may set them)
+      if (!exists("days_per_month")) days_per_month <- 30.4375
+      
       # ---- data ------------------------------------------------------------------
       # Input data frames: adtte
       
       df <- adtte |>
         filter(PARAMCD == "OS", FASFL == "Y") |>
         # days -> months
-        mutate(AVAL = AVAL / 30.4375)
+        mutate(AVAL = AVAL / .env$days_per_month)
       
       fit <- survfit2(Surv(AVAL, CNSR == 0) ~ TRT01P, data = df)
       
@@ -182,13 +188,16 @@
       library(ggsurvfit)
       library(patchwork)
       
+      # the days in a week, a month, a year (the study's setup may set them)
+      if (!exists("days_per_month")) days_per_month <- 30.4375
+      
       # ---- data ------------------------------------------------------------------
       # Input data frames: adtte
       
       df <- adtte |>
         filter(PARAMCD == "OS", FASFL == "Y") |>
         # days -> months
-        mutate(AVAL = AVAL / 30.4375)
+        mutate(AVAL = AVAL / .env$days_per_month)
       
       fit <- survfit2(Surv(AVAL, CNSR == 0) ~ TRT01P, data = df)
       
@@ -284,13 +293,16 @@
       library(ggsurvfit)
       library(patchwork)
       
+      # the days in a week, a month, a year (the study's setup may set them)
+      if (!exists("days_per_month")) days_per_month <- 30.4375
+      
       # ---- data ------------------------------------------------------------------
       # Input data frames: adtte
       
       df <- adtte |>
         filter(PARAMCD == "OS", FASFL == "Y") |>
         # days -> months
-        mutate(AVAL = AVAL / 30.4375)
+        mutate(AVAL = AVAL / .env$days_per_month)
       
       fit <- survfit2(Surv(AVAL, CNSR == 0) ~ 1, data = df)
       
@@ -524,13 +536,16 @@
       library(dplyr)
       library(ggplot2)
       
+      # the days in a week, a month, a year (the study's setup may set them)
+      if (!exists("days_per_month")) days_per_month <- 30.4375
+      
       # ---- data ------------------------------------------------------------------
       # Input data frames: adsl
       
       df <- adsl |>
         filter(FASFL == "Y", !is.na(TRTDURD)) |>
         # days -> months
-        mutate(TRTDURD = TRTDURD / 30.4375) |>
+        mutate(TRTDURD = TRTDURD / .env$days_per_month) |>
         mutate(X0 = 0) |>
         mutate(Y_ID = reorder(USUBJID, TRTDURD)) |>
         mutate(X_ARROW = TRTDURD + max(TRTDURD) * 0.03)
@@ -587,6 +602,9 @@
       library(dplyr)
       library(ggplot2)
       
+      # the days in a week, a month, a year (the study's setup may set them)
+      if (!exists("days_per_month")) days_per_month <- 30.4375
+      
       # ---- data ------------------------------------------------------------------
       # Input data frames: adsl, adrs
       
@@ -598,7 +616,7 @@
         ) |>
         filter(!is.na(TRTDURD)) |>
         # days -> months
-        mutate(TRTDURD = TRTDURD / 30.4375) |>
+        mutate(TRTDURD = TRTDURD / .env$days_per_month) |>
         mutate(X0 = 0) |>
         mutate(Y_ID = reorder(USUBJID, TRTDURD)) |>
         mutate(X_ARROW = TRTDURD + max(TRTDURD) * 0.03) |>
@@ -666,6 +684,9 @@
       library(dplyr)
       library(ggplot2)
       
+      # the days in a week, a month, a year (the study's setup may set them)
+      if (!exists("days_per_month")) days_per_month <- 30.4375
+      
       # ---- data ------------------------------------------------------------------
       # Input data frames: adsl, adrs
       
@@ -677,7 +698,7 @@
         ) |>
         filter(!is.na(TRTDURD)) |>
         # days -> months
-        mutate(TRTDURD = TRTDURD / 30.4375) |>
+        mutate(TRTDURD = TRTDURD / .env$days_per_month) |>
         mutate(X0 = 0) |>
         mutate(Y_ID = reorder(USUBJID, TRTDURD)) |>
         mutate(X_ARROW = TRTDURD + max(TRTDURD) * 0.03) |>
@@ -689,7 +710,7 @@
       assess <- adrs |>
         filter(PARAMCD == "OVR" & !is.na(ADY)) |>
         inner_join(df |> select(USUBJID, Y_ID), by = "USUBJID") |>
-        mutate(ADY = ADY / 30.4375)
+        mutate(ADY = ADY / .env$days_per_month)
       
       # ---- plot ------------------------------------------------------------------
       # the response_light palette: a colour for each value
@@ -751,6 +772,9 @@
       library(dplyr)
       library(ggplot2)
       
+      # the days in a week, a month, a year (the study's setup may set them)
+      if (!exists("days_per_month")) days_per_month <- 30.4375
+      
       # ---- data ------------------------------------------------------------------
       # Input data frames: adsl, adrs
       
@@ -762,7 +786,7 @@
         ) |>
         filter(!is.na(TRTDURD)) |>
         # days -> months
-        mutate(TRTDURD = TRTDURD / 30.4375) |>
+        mutate(TRTDURD = TRTDURD / .env$days_per_month) |>
         mutate(X0 = 0) |>
         mutate(Y_ID = reorder(USUBJID, TRTDURD)) |>
         mutate(X_ARROW = TRTDURD + max(TRTDURD) * 0.03) |>
@@ -774,7 +798,7 @@
       assess <- adrs |>
         filter(PARAMCD == "OVR" & !is.na(ADY)) |>
         inner_join(df |> select(USUBJID, Y_ID), by = "USUBJID") |>
-        mutate(ADY = ADY / 30.4375)
+        mutate(ADY = ADY / .env$days_per_month)
       
       # ---- plot ------------------------------------------------------------------
       # the response_light palette: a colour for each value
@@ -837,6 +861,9 @@
       library(dplyr)
       library(ggplot2)
       
+      # the days in a week, a month, a year (the study's setup may set them)
+      if (!exists("days_per_month")) days_per_month <- 30.4375
+      
       # ---- data ------------------------------------------------------------------
       # Input data frames: adtr, adrs
       
@@ -848,7 +875,7 @@
         ) |>
         filter(!is.na(PCHG) & !is.na(ADY)) |>
         # days -> months
-        mutate(ADY = ADY / 30.4375) |>
+        mutate(ADY = ADY / .env$days_per_month) |>
         mutate(BOR = factor(BOR, levels = c("CR", "PR", "SD", "PD", "NE")))
       
       # ---- plot ------------------------------------------------------------------

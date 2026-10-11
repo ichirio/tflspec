@@ -7,7 +7,7 @@ df <- adsl |>
   ) |>
   filter(!is.na(TRTDURD)) |>
   # days -> months
-  mutate(TRTDURD = TRTDURD / 30.4375) |>
+  mutate(TRTDURD = TRTDURD / .env$days_per_month) |>
   mutate(X0 = 0) |>
   mutate(Y_ID = reorder(USUBJID, TRTDURD)) |>
   mutate(X_ARROW = TRTDURD + max(TRTDURD) * 0.03) |>
@@ -19,7 +19,7 @@ ongoing <- df |>
 assess <- adrs |>
   filter(PARAMCD == "OVR" & !is.na(ADY)) |>
   inner_join(df |> select(USUBJID, Y_ID), by = "USUBJID") |>
-  mutate(ADY = ADY / 30.4375)
+  mutate(ADY = ADY / .env$days_per_month)
 
 # ---- plot ------------------------------------------------------------------
 # the response_light palette: a colour for each value

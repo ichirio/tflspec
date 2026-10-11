@@ -1,5 +1,18 @@
 # tflspec (development version)
 
+* **A time's unit is a named constant, not a number in each program**
+  (tflplanner, the user's request).  A figure's time-unit step (and the
+  swimmer templates' assessment days) divides by `days_per_week`,
+  `days_per_month` or `days_per_year` -- written
+  `mutate(AVAL = AVAL / .env$days_per_month)`, the `.env$` pronoun so a
+  data column of the same name is never taken -- instead of `7`,
+  `30.4375`, `365.25`.  A study's setup sets them (tflplanner: from the
+  company standards); the figure setup (`tfl_fig_setup_code()`) defines
+  each only when it is not defined yet, with the values of the new
+  `tfl_time_unit_days()`, and a figure script of its own defines the ones
+  it uses the same way.  The templates' snapshots and the program fixtures
+  change by that line.
+
 * **Page patterns** (tflplanner's page-patterns design).  The report
   half -- `report`, `page`, `header`, `footer`, `titles`, `footnotes`,
   `tokens` -- holds named page patterns besides the blank rows: rows whose

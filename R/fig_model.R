@@ -41,6 +41,44 @@
 }
 
 .fig_units <- c(days = 1, weeks = 7, months = 30.4375, years = 365.25)
+# a unit's divisor as the programs say it: a constant the study's setup
+# (or, without one, the figure setup) defines -- days_per_month ...
+.fig_unit_const <- c(weeks = "days_per_week", months = "days_per_month",
+                     years = "days_per_year")
+# in a data-masked call (mutate(), filter()): the constant, never a column
+# of the same name
+.fig_unit_ref <- function(unit) paste0(".env$", .fig_unit_const[[unit]])
+
+#' The days in a week, a month and a year
+#'
+#' The figure programs divide a time in days by named constants --
+#' `days_per_week`, `days_per_month`, `days_per_year` -- not by numbers
+#' written in each program, so a company sets them once (a study's
+#' setup: tflplanner writes them from its company standards).  These are
+#' the values used where none is set: the figure setup
+#' ([tfl_fig_setup_code()]) and a figure script of its own define a
+#' constant only when it is not defined yet.
+#'
+#' @return A named numeric vector: `days_per_week` 7, `days_per_month`
+#'   30.4375 (365.25 / 12), `days_per_year` 365.25.
+#' @examples
+#' tfl_time_unit_days()
+#' @export
+tfl_time_unit_days <- function() {
+  stats::setNames(unname(.fig_units[names(.fig_unit_const)]), unname(.fig_unit_const))
+}
+
+# The lines that define the constants a script uses, each only when the
+# study's setup has not (`if (!exists(...))`); all of them when `used` is NULL
+.fig_unit_guard <- function(used = NULL) {
+  d <- tfl_time_unit_days()
+  if (!is.null(used)) d <- d[names(d) %in% used]
+  if (!length(d)) return(character())
+  c("# the days in a week, a month, a year (the study's setup may set them)",
+    sprintf("if (!exists(%s)) %s <- %s", encodeString(names(d), quote = "\""),
+            names(d), vapply(unname(d), format, "")))
+}
+
 .fig_legends <- c("none", "right", "bottom", "top", "inside", "inside_tl",
                   "inside_br", "inside_bl")
 
@@ -626,7 +664,7 @@ tfl_read_fig_design <- function(path) {
       # days: the time stays as it is (ADTTE's AVAL is in days)
       time_unit = if (!identical(v("unit"), "days")) add(sprintf("# days -> %s
   mutate(%s = %s / %s)", v("unit"), v("variable"),
-                              v("variable"), format(.fig_units[[v("unit")]]))),
+                              v("variable"), .fig_unit_ref(v("unit")))),
       levels = {
         var <- v("variable")
         lv <- .split_vals(v("levels"))
@@ -1275,6 +1313,7 @@ tfl_fig_design_code <- function(design, plot_id = "fig", ggplot2_version = NULL,
       if (length(b$needs)) sprintf("# also needs: %s (called as pkg::fn)", paste(b$needs, collapse = ", "))),
     if (setup && gg$explicit) sprintf("# Written for ggplot2 %s", gg$version),
     if (length(b$guard)) c("", b$guard),
+    if (!setup) .fig_units_used(c(b$step1, b$step2)),
     "",
     section("data"),
     b$step1,
@@ -1282,6 +1321,13 @@ tfl_fig_design_code <- function(design, plot_id = "fig", ggplot2_version = NULL,
     b$step2,
     if (save) c("", name, "", .fig_save_code(design$plot, plot_id, name)))
   .fig_code_out(code, b$reads, b$libs, b$needs, ard = .fig_uses_ard(design))
+}
+
+# a script of its own: the time-unit constants its code uses, defined
+# (the figure setup defines them for a study's programs)
+.fig_units_used <- function(code) {
+  used <- unique(unlist(regmatches(code, gregexpr("days_per_(week|month|year)", code))))
+  if (length(used)) c("", .fig_unit_guard(used)) else character()
 }
 
 # whether a design reads an ARD (`ard`): an ard_stats step, an ard_number
@@ -1872,7 +1918,7 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
           if (assess) list(step = "subset", name = "assess", dataset = response_data,
                            where = sprintf("PARAMCD == %s & !is.na(ADY)", q("OVR")), from_df = "Y_ID"),
           # (a step after `assess` changes assess: in its pipe)
-          if (assess && div != 1) list(step = "derive", variable = "ADY", expr = sprintf("ADY / %s", format(div))))),
+          if (assess && div != 1) list(step = "derive", variable = "ADY", expr = sprintf("ADY / %s", .fig_unit_ref(time_unit))))),
         plot = plot_of(x_label = sprintf("Time (%s)", tools::toTitleCase(time_unit)), y_label = "Subject",
                        colour_by = if (resp) "BOR", palette = if (resp) "response_light" else "treatment",
                        legend = if (resp) "right" else "none", x_min = 0,
