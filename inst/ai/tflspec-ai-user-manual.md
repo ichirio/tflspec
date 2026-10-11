@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9088** (the development version,
+**This manual documents tflspec 0.0.24.9089** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -60,6 +60,11 @@ differ, trust the package, not this file, and fetch the matching copy with
 7. **`output_id` is the key.** A row with a blank `output_id` is the study
    default; a report's own row replaces the default row **per sheet** (and,
    on the keyed sheets, per key).
+   On the report half (`report`, `page`, `header`, `footer`, `titles`,
+   `footnotes`, `tokens`) an `output_id` of `@` and a name (`@Compact`) is
+   a **page pattern**: Standard's (blank) changes, chosen by
+   `report$pattern`. A report's own rows go over its pattern's, the
+   pattern's over Standard's; `(none)` takes a line out at either level.
 8. Indices are 1-based (ordinary R).
 
 ---

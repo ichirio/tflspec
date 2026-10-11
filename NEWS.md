@@ -1,5 +1,20 @@
 # tflspec (development version)
 
+* **Page patterns** (tflplanner's page-patterns design).  The report
+  half -- `report`, `page`, `header`, `footer`, `titles`, `footnotes`,
+  `tokens` -- holds named page patterns besides the blank rows: rows whose
+  `output_id` is `@` and a name (`@Compact`), saying only what differs
+  from Standard (the blank rows).  A report chooses one with the new
+  `report$pattern` column (blank: Standard).  A report is resolved in two
+  stages -- its own rows over its pattern's, then over Standard's -- by
+  the rules each sheet already has (cell by cell, by line, by name), and
+  `(none)` takes a line out at either level.  Standard's header, footer,
+  tokens and font stay the study's setup (`tfl_report_setup_code()`);
+  what a pattern changes is written in its reports' programs.  The
+  checks: an `@` row only on those sheets, a pattern's name (a letter,
+  then letters, digits or `_`), a pattern no row defines, a pattern
+  chosen on the blank row or by a pattern.  A workbook without patterns
+  reads and writes as before, with the same programs.
 * **`tfl_read_toc()` reads a data frame** (tflplanner #299, D10).  `path`
   may be a data frame of the TOC's rows (its names the column names) in
   place of a file; `sheet` and `skip` do not apply, and a row with no
