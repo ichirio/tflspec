@@ -2120,7 +2120,10 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
 #'
 #' @param data The time-to-event dataset (`ADTTE`).
 #' @param param Its parameter (`PARAMCD`).
-#' @param pop The population (analysis set), by its id.
+#' @param pop The population (analysis set), by its id or its flag
+#'   (`FASFL`).  The analysis data is named `<data>_<population>_<param>`
+#'   (`adtte_fas_os`), the population without its flag's `FL`: the rule
+#'   tflplanner names a data by.
 #' @param group The treatment variable; its first level is the reference.
 #' @param subgroups The subgroup variables (of the population's data), a
 #'   character vector or one string with `,` between them.
@@ -2136,7 +2139,7 @@ tfl_fig_forest_analyses <- function(data = "ADTTE", param = "OS", pop = "FASFL",
                                     group = "TRT01P", subgroups = c("SEX", "AGEGR1"),
                                     time = "AVAL", censor = "CNSR", id = "HR") {
   subgroups <- .split_vals(paste(subgroups, collapse = ", "))
-  data_id <- tolower(paste0(data, "_", param))
+  data_id <- gsub("[^a-z0-9_.]", "_", tolower(paste(data, sub("FL$", "", pop), param, sep = "_")))
   model <- sprintf("survival::coxph(survival::Surv(%s, 1 - %s) ~ %s, data = %%s)", time, censor, group)
   reg <- function(d, in_ = "") paste0(
     "cardx::ard_regression(\n", in_, "  ", sprintf(model, d), ",\n", in_, "  exponentiate = TRUE)")
