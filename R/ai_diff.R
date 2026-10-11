@@ -15,7 +15,7 @@
 #'
 #' * `toc`: the rows matched by `output_id`; a changed row has one row a
 #'   changed column.
-#' * `figure`: the pieces of each section (`data`, `stats`, `layers`)
+#' * `figure`: the pieces of each section (`data`, `layers`)
 #'   matched by their `step` / `layer` name in order of appearance (the
 #'   second `point` layer with the second); the figure-wide `plot` settings
 #'   as one piece, field by field; the design's `template`,
@@ -147,9 +147,8 @@ tfl_ai_diff <- function(current, answer, task = NULL) {
     paste0(prefix, "design"), "design",
     cur[top], new[top]
   )
-  for (s in c("data", "stats")) {
-    out[[s]] <- .ai_diff_pieces(cur[[s]], new[[s]], "step", paste0(prefix, s))
-  }
+  out$data <- .ai_diff_pieces(cur$data, new$data, "step",
+                              paste0(prefix, "data"))
   out$plot <- .ai_diff_piece(paste0(prefix, "plot"), "plot",
                              cur$plot, new$plot, .ai_piece_defaults("plot"))
   out$layers <- .ai_diff_pieces(cur$layers, new$layers, "layer",

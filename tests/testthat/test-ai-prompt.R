@@ -135,10 +135,11 @@ test_that("the figure schema names every piece and field of tfl_fig_parts()", {
 })
 
 test_that("tfl_ai_schema() describes only the parts asked for", {
-  s <- tfl_ai_schema("figure", c("stats", "censor_mark"))
-  expect_match(s, "### stats", fixed = TRUE)
+  s <- tfl_ai_schema("figure", c("plot", "censor_mark"))
+  expect_match(s, "### plot", fixed = TRUE)
   expect_match(s, "`censor_mark`", fixed = TRUE)
   expect_false(grepl("### data", s, fixed = TRUE))
+  expect_false(grepl("### stats", tfl_ai_schema("figure"), fixed = TRUE))
   expect_false(grepl("`km_curve`", s, fixed = TRUE))
   expect_error(tfl_ai_schema("figure", "colours"), "no part 'colours'")
   expect_error(tfl_ai_schema("toc", "tables"), "no part")

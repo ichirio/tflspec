@@ -48,10 +48,10 @@
 
 # The sections of a figure design, in order, with what each holds.
 .ai_fig_sections <- c(
-  data = paste("the steps from the ADaM datasets to the figure's data `df`,",
-               "in order; each piece starts with `step`"),
-  stats = paste("what is computed from `df`, each with the `name` the layers",
-                "refer to; each piece starts with `step`"),
+  data = paste("one ordered list of steps from the ADaM datasets to what is",
+               "drawn: the figure's data `df`, and the objects made from it,",
+               "each with the `name` the layers refer to (a step after one",
+               "changes that object); each piece starts with `step`"),
   plot = paste("one mapping of the figure-wide settings; `add` is a list of",
                "calls written after them"),
   layers = "what is drawn, in order; each piece starts with `layer`"
@@ -65,7 +65,7 @@
     variables = "variable names, ` | ` between them",
     flag = "a flag variable's name (FASFL, SAFFL ...)",
     param = "a PARAMCD value",
-    object = "`df` or the `name` of a statistics piece",
+    object = "`df` or the `name` of a data step that makes an object",
     choice = "one of the values listed",
     number = "a number",
     logical = "true or false",
@@ -76,6 +76,10 @@
     named = "`name = value` pairs, ` | ` between them",
     raw = "a YAML mapping or list, as the help says",
     pieces = "a list of calls (`fn`, `args` ...)",
+    analysis = "an `analysis_id` of the figure's ARD (its own, or a table's)",
+    ard_variable = "a `variable` of that analysis in the ARD",
+    ard_stat = "a `stat_name` of the ARD (estimate, conf.low, median ...)",
+    ard_stats = "`stat_name`s of the ARD, ` | ` between them",
     shape = paste("a point shape, one of",
                   paste(names(pp_shape_names), collapse = " | "))
   )
@@ -92,14 +96,14 @@
 #'
 #' @param task One of [tfl_ai_tasks()].
 #' @param sheets The parts to describe: for `toc`, `"toc"`; for `figure`,
-#'   sections among `"template"`, `"data"`, `"stats"`, `"plot"`,
+#'   sections among `"template"`, `"data"`, `"plot"`,
 #'   `"layers"`, or single pieces by name (`"censor_mark"`, `"join"`; see
 #'   [tfl_fig_parts()]).  `NULL` for all.  The repair prompt describes only
 #'   the parts with problems.
 #' @return The schema as one string (markdown), of class `tfl_ai_text`.
 #' @examples
 #' cat(tfl_ai_schema("toc"))
-#' cat(substr(tfl_ai_schema("figure", sheets = "stats"), 1, 600))
+#' cat(substr(tfl_ai_schema("figure", sheets = "survfit"), 1, 600))
 #' @export
 tfl_ai_schema <- function(task, sheets = NULL) {
   task <- .ai_task(task, "tfl_ai_schema()")

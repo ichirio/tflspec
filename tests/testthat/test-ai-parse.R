@@ -94,7 +94,12 @@ test_that("a figure answer becomes a design", {
   expect_identical(a$design$plot$x_label, "Time (Months)")
   j <- ai_parse_fixture("figure-json")
   expect_identical(j$design$plot$y_max, 1L)
-  expect_identical(j$design$stats[[1L]]$by, "TRT01P")
+  expect_identical(j$design$data[[3L]]$by, "TRT01P")
+  # a `stats` list (the shape before 0.0.24.9074) is read after `data`
+  s <- ai_parse_fixture("figure-stats-list")
+  expect_identical(vapply(s$design$data, `[[`, "", "step"),
+                   c("read", "param", "survfit"))
+  expect_null(s$design$stats)
   # JSON's "!r ..." is raw R, as YAML's !r tag
   json <- c(
     "```json",

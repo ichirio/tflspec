@@ -232,14 +232,13 @@
       
       ## Your task
       
-      Draft the design of one figure: the description that tflspec turns into a ggplot2 script. A design has four parts:
+      Draft the design of one figure: the description that tflspec turns into a ggplot2 script. A design has three parts:
       
-      - `data`: the steps from the ADaM datasets to the figure's data `df` (read a dataset, keep a parameter and an analysis set, join variables, derive one ...);
-      - `stats`: what is computed from `df` (a Kaplan-Meier fit, summary statistics by visit ...), each with a `name` the layers refer to;
+      - `data`: one ordered list of steps from the ADaM datasets to what is drawn: the figure's data `df` (read a dataset, keep a parameter and an analysis set, join variables, derive one ...), then what is computed from it (a Kaplan-Meier fit, summary statistics by visit ...), each with a `name` the layers refer to; a step after one of these changes that object;
       - `plot`: the figure-wide settings (title, axes, colours, legend, size);
       - `layers`: what is drawn, in the order it is drawn.
       
-      Start from the template that fits the figure best (name it in `template`; its pieces are good defaults), then change what the documents ask for. When the user's message shows the current design, change that one and keep what the documents do not contradict. Write R code (`data_code`, `stats_code`, `layer_code`) only where no piece does the job.
+      Start from the template that fits the figure best (name it in `template`; its pieces are good defaults), then change what the documents ask for. When the user's message shows the current design, change that one and keep what the documents do not contradict. Write R code (a `code` step, a `layer_code` layer) only where no piece does the job.
       
       ## Ground rules
       
@@ -253,7 +252,7 @@
       Return exactly one fenced code block (```yaml). Anything outside the block is not read; keep any remarks short.
       
       - The block starts with the header `tflspec_ai: {task: figure, version: 1, output_id: F-14-2-1}`.
-      - Then the design: `template`, then `data`, `stats` and `layers` as lists of pieces (each piece a mapping that starts with its `step` or `layer`) and `plot` as one mapping.
+      - Then the design: `template`, then `data` and `layers` as lists of pieces (each piece a mapping that starts with its `step` or `layer`) and `plot` as one mapping.
       - Return the whole design, not only what you added or changed.
       - End with `assumptions`: one short line for each guess you made and each conflict between documents, or an empty list when there are none. Write the assumptions in the language of the user's message.
       
@@ -302,7 +301,7 @@
       
       ### data
       
-      The steps from the ADaM datasets to the figure's data `df`, in order; each piece starts with `step`.
+      One ordered list of steps from the ADaM datasets to what is drawn: the figure's data `df`, and the objects made from it, each with the `name` the layers refer to (a step after one changes that object); each piece starts with `step`.
       
       - `read`: Read a dataset. The dataset the figure starts from: `df`. Fields:
         - `dataset`* (dataset; default `ADSL`)
@@ -314,7 +313,7 @@
       - `param`: Keep a parameter. The rows of one (or more) PARAMCD. Fields:
         - `value`* (param)
         - `variable` (variable; default `PARAMCD`)
-      - `flag`: Keep an analysis set. The rows whose flag is "Y" (FASFL, SAFFL, ANL01FL ...). Fields:
+      - `flag`: Keep a population. The rows whose flag is "Y" (FASFL, SAFFL, ANL01FL ...). Fields:
         - `variable`* (flag; default `SAFFL`)
         - `value` (text; default `Y`)
       - `filter`: Keep rows (condition). Any condition, in R. Fields:
@@ -334,13 +333,8 @@
         - `by`* (variable; default `AVAL`)
         - `descending` (logical; default `TRUE`)
         - `variable` (text; default `INDEX`)
-      - `data_code`: R code. What no step does: code that changes `df` (the datasets are there by their lower-case names). Fields:
+      - `code`: R code. What no step does: code that changes `df` or makes an object of its own (the datasets are there by their lower-case names). Fields:
         - `code`* (code)
-      
-      ### stats
-      
-      What is computed from `df`, each with the `name` the layers refer to; each piece starts with `step`.
-      
       - `survfit`: Kaplan-Meier fit. survfit2(Surv(time, censor == 0) ~ group). Fields:
         - `name` (text; default `fit`)
         - `time`* (variable; default `AVAL`)
@@ -374,8 +368,12 @@
         - `where` (expr)
         - `from_df` (variables): Joined by the key: the y position of its subject, a colour ...
         - `by` (variable; default `USUBJID`)
-      - `stats_code`: R code. Code that computes what the layers draw, from `df`. Fields:
-        - `code`* (code)
+      - `ard_stats`: Statistics from the ARD. Statistics of the figure's ARD (its own, or a table's) as a data frame: a row per group, a column per statistic. Fields:
+        - `name` (text; default `st`)
+        - `analysis_id`* (analysis)
+        - `variable` (ard_variable)
+        - `stats`* (ard_stats): Several: n.risk, estimate.
+        - `by` (variables): Their columns, by name: TRT01A.
       
       ### plot
       
@@ -432,11 +430,25 @@
         - `y`* (values): Several: 20, -30.
         - `label` (text; default `{y}`): {y} = the value, e.g. {y}%.
         - `size` (number; default `3.5`)
-      - `risk_table`: Number at risk (panel). The number at risk below the curves, at the x axis's breaks. Fields:
+      - `risk_table`: Number at risk. The number at risk below the curves, at the x axis's breaks. Fields:
         - `fit` (object; default `fit`)
+        - `method` (choice; one of panel | add_risktable; default `panel`): panel: a plot of its own below the curves, the counts from the fit at the x axis's breaks; add_risktable: ggsurvfit's risk table.
         - `title` (text; default `Number of Patients at Risk`)
         - `size` (number; default `3`)
         - `height` (number; default `0.167`)
+      - `ard_number`: A number from the ARD. One statistic of the figure's ARD printed on the plot: a median, a hazard ratio ... as the ARD has it. Fields:
+        - `analysis_id`* (analysis)
+        - `variable`* (ard_variable)
+        - `level` (text): The variable's level, e.g. 0.5 for a KM's median.
+        - `stat`* (ard_stat; default `estimate`)
+        - `group` (text): TRT01A = Placebo (several: | between them)
+        - `label` (text; default `{value}`): {value} = the number; {conf.low}, {conf.high} ... other statistics of the same row, e.g. HR {estimate} (95% CI {conf.low}, {conf.high})
+        - `digits` (number): Empty: the text the ARD has (stat_fmt)
+        - `x` (text; default `Inf`)
+        - `y` (text; default `Inf`)
+        - `hjust` (number; default `1.1`)
+        - `vjust` (number; default `1.5`)
+        - `size` (number; default `3`)
       - `n_table`: n by visit (panel). The n of each group at each x, below the plot. Fields:
         - `data` (object; default `sm`)
         - `x`* (variable)
@@ -637,7 +649,7 @@
       - variables: variable names, ` | ` between them
       - flag: a flag variable's name (FASFL, SAFFL ...)
       - param: a PARAMCD value
-      - object: `df` or the `name` of a statistics piece
+      - object: `df` or the `name` of a data step that makes an object
       - choice: one of the values listed
       - number: a number
       - logical: true or false
@@ -648,6 +660,10 @@
       - named: `name = value` pairs, ` | ` between them
       - raw: a YAML mapping or list, as the help says
       - pieces: a list of calls (`fn`, `args` ...)
+      - analysis: an `analysis_id` of the figure's ARD (its own, or a table's)
+      - ard_variable: a `variable` of that analysis in the ARD
+      - ard_stat: a `stat_name` of the ARD (estimate, conf.low, median ...)
+      - ard_stats: `stat_name`s of the ARD, ` | ` between them
       - shape: a point shape, one of circle | square | diamond | triangle | triangle_down | x | plus | dot | solid_square | solid_triangle | star | open_circle
       
       ## Example
@@ -662,7 +678,6 @@
       - {step: param, value: OS}
       - {step: flag, variable: FASFL}
       - {step: time_unit, variable: AVAL, unit: months}
-      stats:
       - {step: survfit, name: fit, time: AVAL, censor: CNSR, by: TRT01P}
       plot:
         title: Kaplan-Meier Plot of Overall Survival
@@ -765,14 +780,13 @@
       
       ## Your task
       
-      Draft the design of one figure: the description that tflspec turns into a ggplot2 script. A design has four parts:
+      Draft the design of one figure: the description that tflspec turns into a ggplot2 script. A design has three parts:
       
-      - `data`: the steps from the ADaM datasets to the figure's data `df` (read a dataset, keep a parameter and an analysis set, join variables, derive one ...);
-      - `stats`: what is computed from `df` (a Kaplan-Meier fit, summary statistics by visit ...), each with a `name` the layers refer to;
+      - `data`: one ordered list of steps from the ADaM datasets to what is drawn: the figure's data `df` (read a dataset, keep a parameter and an analysis set, join variables, derive one ...), then what is computed from it (a Kaplan-Meier fit, summary statistics by visit ...), each with a `name` the layers refer to; a step after one of these changes that object;
       - `plot`: the figure-wide settings (title, axes, colours, legend, size);
       - `layers`: what is drawn, in the order it is drawn.
       
-      Start from the template that fits the figure best (name it in `template`; its pieces are good defaults), then change what the documents ask for. When the user's message shows the current design, change that one and keep what the documents do not contradict. Write R code (`data_code`, `stats_code`, `layer_code`) only where no piece does the job.
+      Start from the template that fits the figure best (name it in `template`; its pieces are good defaults), then change what the documents ask for. When the user's message shows the current design, change that one and keep what the documents do not contradict. Write R code (a `code` step, a `layer_code` layer) only where no piece does the job.
       
       ## Ground rules
       
@@ -786,7 +800,7 @@
       Return exactly one fenced code block (```yaml). Anything outside the block is not read; keep any remarks short.
       
       - The block starts with the header `tflspec_ai: {task: figure, version: 1, output_id: F-14-2-1}`.
-      - Then the design: `template`, then `data`, `stats` and `layers` as lists of pieces (each piece a mapping that starts with its `step` or `layer`) and `plot` as one mapping.
+      - Then the design: `template`, then `data` and `layers` as lists of pieces (each piece a mapping that starts with its `step` or `layer`) and `plot` as one mapping.
       - Return the whole design, not only what you added or changed.
       - End with `assumptions`: one short line for each guess you made and each conflict between documents, or an empty list when there are none. Write the assumptions in the language of the user's message.
       
@@ -835,7 +849,7 @@
       
       ### data
       
-      The steps from the ADaM datasets to the figure's data `df`, in order; each piece starts with `step`.
+      One ordered list of steps from the ADaM datasets to what is drawn: the figure's data `df`, and the objects made from it, each with the `name` the layers refer to (a step after one changes that object); each piece starts with `step`.
       
       - `read`: Read a dataset. The dataset the figure starts from: `df`. Fields:
         - `dataset`* (dataset; default `ADSL`)
@@ -847,7 +861,7 @@
       - `param`: Keep a parameter. The rows of one (or more) PARAMCD. Fields:
         - `value`* (param)
         - `variable` (variable; default `PARAMCD`)
-      - `flag`: Keep an analysis set. The rows whose flag is "Y" (FASFL, SAFFL, ANL01FL ...). Fields:
+      - `flag`: Keep a population. The rows whose flag is "Y" (FASFL, SAFFL, ANL01FL ...). Fields:
         - `variable`* (flag; default `SAFFL`)
         - `value` (text; default `Y`)
       - `filter`: Keep rows (condition). Any condition, in R. Fields:
@@ -867,13 +881,8 @@
         - `by`* (variable; default `AVAL`)
         - `descending` (logical; default `TRUE`)
         - `variable` (text; default `INDEX`)
-      - `data_code`: R code. What no step does: code that changes `df` (the datasets are there by their lower-case names). Fields:
+      - `code`: R code. What no step does: code that changes `df` or makes an object of its own (the datasets are there by their lower-case names). Fields:
         - `code`* (code)
-      
-      ### stats
-      
-      What is computed from `df`, each with the `name` the layers refer to; each piece starts with `step`.
-      
       - `survfit`: Kaplan-Meier fit. survfit2(Surv(time, censor == 0) ~ group). Fields:
         - `name` (text; default `fit`)
         - `time`* (variable; default `AVAL`)
@@ -907,8 +916,12 @@
         - `where` (expr)
         - `from_df` (variables): Joined by the key: the y position of its subject, a colour ...
         - `by` (variable; default `USUBJID`)
-      - `stats_code`: R code. Code that computes what the layers draw, from `df`. Fields:
-        - `code`* (code)
+      - `ard_stats`: Statistics from the ARD. Statistics of the figure's ARD (its own, or a table's) as a data frame: a row per group, a column per statistic. Fields:
+        - `name` (text; default `st`)
+        - `analysis_id`* (analysis)
+        - `variable` (ard_variable)
+        - `stats`* (ard_stats): Several: n.risk, estimate.
+        - `by` (variables): Their columns, by name: TRT01A.
       
       ### plot
       
@@ -965,11 +978,25 @@
         - `y`* (values): Several: 20, -30.
         - `label` (text; default `{y}`): {y} = the value, e.g. {y}%.
         - `size` (number; default `3.5`)
-      - `risk_table`: Number at risk (panel). The number at risk below the curves, at the x axis's breaks. Fields:
+      - `risk_table`: Number at risk. The number at risk below the curves, at the x axis's breaks. Fields:
         - `fit` (object; default `fit`)
+        - `method` (choice; one of panel | add_risktable; default `panel`): panel: a plot of its own below the curves, the counts from the fit at the x axis's breaks; add_risktable: ggsurvfit's risk table.
         - `title` (text; default `Number of Patients at Risk`)
         - `size` (number; default `3`)
         - `height` (number; default `0.167`)
+      - `ard_number`: A number from the ARD. One statistic of the figure's ARD printed on the plot: a median, a hazard ratio ... as the ARD has it. Fields:
+        - `analysis_id`* (analysis)
+        - `variable`* (ard_variable)
+        - `level` (text): The variable's level, e.g. 0.5 for a KM's median.
+        - `stat`* (ard_stat; default `estimate`)
+        - `group` (text): TRT01A = Placebo (several: | between them)
+        - `label` (text; default `{value}`): {value} = the number; {conf.low}, {conf.high} ... other statistics of the same row, e.g. HR {estimate} (95% CI {conf.low}, {conf.high})
+        - `digits` (number): Empty: the text the ARD has (stat_fmt)
+        - `x` (text; default `Inf`)
+        - `y` (text; default `Inf`)
+        - `hjust` (number; default `1.1`)
+        - `vjust` (number; default `1.5`)
+        - `size` (number; default `3`)
       - `n_table`: n by visit (panel). The n of each group at each x, below the plot. Fields:
         - `data` (object; default `sm`)
         - `x`* (variable)
@@ -1170,7 +1197,7 @@
       - variables: variable names, ` | ` between them
       - flag: a flag variable's name (FASFL, SAFFL ...)
       - param: a PARAMCD value
-      - object: `df` or the `name` of a statistics piece
+      - object: `df` or the `name` of a data step that makes an object
       - choice: one of the values listed
       - number: a number
       - logical: true or false
@@ -1181,6 +1208,10 @@
       - named: `name = value` pairs, ` | ` between them
       - raw: a YAML mapping or list, as the help says
       - pieces: a list of calls (`fn`, `args` ...)
+      - analysis: an `analysis_id` of the figure's ARD (its own, or a table's)
+      - ard_variable: a `variable` of that analysis in the ARD
+      - ard_stat: a `stat_name` of the ARD (estimate, conf.low, median ...)
+      - ard_stats: `stat_name`s of the ARD, ` | ` between them
       - shape: a point shape, one of circle | square | diamond | triangle | triangle_down | x | plus | dot | solid_square | solid_triangle | star | open_circle
       
       
@@ -1250,7 +1281,6 @@
       - {step: param, value: OS}
       - {step: flag, variable: FASFL}
       - {step: time_unit, variable: AVAL, unit: months}
-      stats:
       - {step: survfit, name: fit, time: AVAL, censor: CNSR, by: TRT01P}
       plot:
         x_label: Time (Months)

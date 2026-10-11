@@ -199,7 +199,7 @@ tfl_ai_check <- function(answer, context = NULL, adam = NULL) {
 # The datasets a design reads: part, dataset.
 .ai_fig_datasets <- function(design) {
   rows <- list()
-  for (s in c("data", "stats")) {
+  for (s in "data") {
     for (i in seq_along(design[[s]])) {
       pc <- design[[s]][[i]]
       if (!is.null(pc$dataset) && length(pc$dataset) == 1L) {
@@ -286,7 +286,7 @@ tfl_ai_repair_prompt <- function(answer, problems = NULL, context = NULL) {
   if (task == "toc") {
     return(if (any(grepl("^toc\\b", where))) "toc" else character())
   }
-  re <- "^(template|data|stats|plot|layers)(\\[[0-9]+\\] ([A-Za-z0-9_.]+))?.*$"
+  re <- "^(template|data|plot|layers)(\\[[0-9]+\\] ([A-Za-z0-9_.]+))?.*$"
   hit <- grepl(re, where)
   sec <- sub(re, "\\1", where[hit])
   pc <- sub(re, "\\3", where[hit])

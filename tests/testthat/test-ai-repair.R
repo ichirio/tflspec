@@ -8,7 +8,6 @@ ai_repair_answer <- function() {
     "template: km_simple",
     "data:",
     "- {step: read, dataset: ADTTE}",
-    "stats:",
     "- {step: survfit, name: fit, time: AVAL, censor: CNSR}",
     "layers:",
     "- {layer: km_curve}",

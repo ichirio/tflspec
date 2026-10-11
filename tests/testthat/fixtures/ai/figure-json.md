@@ -4,9 +4,9 @@
   "template": "km_simple",
   "data": [
     {"step": "read", "dataset": "ADTTE"},
-    {"step": "param", "value": "OS"}
+    {"step": "param", "value": "OS"},
+    {"step": "survfit", "name": "fit", "time": "AVAL", "censor": "CNSR", "by": "TRT01P"}
   ],
-  "stats": [{"step": "survfit", "name": "fit", "time": "AVAL", "censor": "CNSR", "by": "TRT01P"}],
   "plot": {"x_label": "Time (Days)", "colour_by": "TRT01P", "y_min": 0, "y_max": 1},
   "layers": [{"layer": "km_curve"}],
   "assumptions": []

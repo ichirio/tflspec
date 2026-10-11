@@ -18,7 +18,6 @@ ai_km <- c(
   "data:",
   "- {step: read, dataset: ADTTE}",
   "- {step: param, value: OS}",
-  "stats:",
   "- {step: survfit, name: fit, time: AVAL, censor: CNSR, by: TRT01P}",
   "layers:",
   "- {layer: km_curve}"

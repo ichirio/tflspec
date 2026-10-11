@@ -38,7 +38,8 @@ off).  The problems go to \code{\link[=tfl_ai_repair_prompt]{tfl_ai_repair_promp
 columns, every value text (numbers as text, a list joined with
 \code{" | "}, missing \code{NA}).
 \item \code{figure}: the design becomes a \code{\link[=tfl_fig_design]{tfl_fig_design()}} (the 0.0.12 shape
-\code{type} / \code{style} / \code{args} is read as one \code{figure} layer, with a
+\code{type} / \code{style} / \code{args} is read as one \code{figure} layer, and a \code{stats}
+list of before 0.0.24.9074 after the \code{data} steps, each with a
 warning); a \code{note} key is kept as the answer's \code{note}.
 }
 }

@@ -99,7 +99,7 @@ test_that("a design from nothing is all added; a parsed answer works", {
   a <- tfl_ai_parse(readLines(test_path("fixtures", "ai", "figure-yaml.md")),
                     "figure")
   d <- tfl_ai_diff(NULL, a)
-  expect_true(all(d$status[d$part %in% c("data", "stats", "layers")] == "added"))
+  expect_true(all(d$status[d$part %in% c("data", "layers")] == "added"))
   expect_identical(d$now[d$part == "design"], "km_risk_table")
   expect_true(all(tfl_ai_diff(a$design, a)$status == "same"))
 })

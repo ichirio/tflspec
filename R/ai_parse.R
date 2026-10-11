@@ -33,7 +33,8 @@
 #'   columns, every value text (numbers as text, a list joined with
 #'   `" | "`, missing `NA`).
 #' * `figure`: the design becomes a [tfl_fig_design()] (the 0.0.12 shape
-#'   `type` / `style` / `args` is read as one `figure` layer, with a
+#'   `type` / `style` / `args` is read as one `figure` layer, and a `stats`
+#'   list of before 0.0.24.9074 after the `data` steps, each with a
 #'   warning); a `note` key is kept as the answer's `note`.
 #'
 #' @param text The answer: a string, or lines of text.
@@ -118,7 +119,7 @@ print.tfl_ai_answer <- function(x, ...) {
     }
   }
   if (!is.null(x$design)) {
-    n <- vapply(x$design[c("data", "stats", "layers")], length, 1L)
+    n <- vapply(x$design[c("data", "layers")], length, 1L)
     cat(sprintf("design: %s\n", paste(names(n), n, sep = " ", collapse = ", ")))
   }
   if (length(x$assumptions)) {
@@ -397,6 +398,14 @@ print.tfl_ai_answer <- function(x, ...) {
   if (!is.null(x$plot) && (!is.list(x$plot) || is.null(names(x$plot)))) {
     p <- .ai_problem(p, "plot", "is one mapping of settings")
     x$plot <- NULL
+  }
+  # `stats`: a design of before 0.0.24.9074 kept its named steps apart;
+  # read as tfl_fig_design() reads it (after `data`), with a warning
+  if (length(x$stats)) {
+    p <- .ai_problem(p, "stats", paste0(
+      "a list of its own before tflspec 0.0.24.9074: its steps were read ",
+      "after the `data` steps; write them in `data`"
+    ), "warning")
   }
   if (!is.null(x$type)) {
     p <- .ai_problem(p, "design", paste0(

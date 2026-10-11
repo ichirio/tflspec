@@ -8,7 +8,6 @@ data:
 - {step: param, value: OS}
 - {step: flag, variable: FASFL}
 - {step: time_unit, variable: AVAL, unit: months}
-stats:
 - {step: survfit, name: fit, time: AVAL, censor: CNSR, by: TRT01P}
 plot:
   title: "Kaplan-Meier Plot of Overall Survival"

@@ -31,7 +31,7 @@ by item, for a review where each item is accepted or rejected.
 \itemize{
 \item \code{toc}: the rows matched by \code{output_id}; a changed row has one row a
 changed column.
-\item \code{figure}: the pieces of each section (\code{data}, \code{stats}, \code{layers})
+\item \code{figure}: the pieces of each section (\code{data}, \code{layers})
 matched by their \code{step} / \code{layer} name in order of appearance (the
 second \code{point} layer with the second); the figure-wide \code{plot} settings
 as one piece, field by field; the design's \code{template},
