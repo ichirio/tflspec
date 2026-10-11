@@ -4,7 +4,9 @@
 test_that("tfl_fig_forest_analyses() gives the rows of the figure's own ARD definition", {
   an <- tfl_fig_forest_analyses("ADTTE", "OS", "FASFL", "TRT01P", c("SEX", "AGEGR1"))
   expect_named(an, c("analysis_data", "analyses"))
-  expect_identical(an$analysis_data$data_id, "adtte_os")
+  # <data>_<population>_<param>, the population without its flag's FL
+  expect_identical(an$analysis_data$data_id, "adtte_fas_os")
+  expect_identical(tfl_fig_forest_analyses(pop = "SAF")$analysis_data$data_id, "adtte_saf_os")
   expect_identical(an$analysis_data$add, "SEX | AGEGR1")
   expect_identical(an$analysis_data$where, "PARAMCD == \"OS\"")
   expect_identical(an$analyses$analysis_id, c("HR", "HR_SEX", "HR_AGEGR1"))

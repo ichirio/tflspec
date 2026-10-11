@@ -20,7 +20,10 @@ tfl_fig_forest_analyses(
 
 \item{param}{Its parameter (\code{PARAMCD}).}
 
-\item{pop}{The population (analysis set), by its id.}
+\item{pop}{The population (analysis set), by its id or its flag
+(\code{FASFL}).  The analysis data is named \verb{<data>_<population>_<param>}
+(\code{adtte_fas_os}), the population without its flag's \code{FL}: the rule
+tflplanner names a data by.}
 
 \item{group}{The treatment variable; its first level is the reference.}
 
