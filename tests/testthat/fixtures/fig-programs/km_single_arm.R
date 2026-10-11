@@ -2,7 +2,7 @@
 df <- adtte |>
   filter(PARAMCD == "OS", FASFL == "Y") |>
   # days -> months
-  mutate(AVAL = AVAL / .env$days_per_month)
+  mutate(AVAL = AVAL / days_per_month)
 
 fit <- survfit2(Surv(AVAL, CNSR == 0) ~ 1, data = df)
 

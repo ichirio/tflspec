@@ -215,20 +215,17 @@ test_that("a time's unit is a named constant of the setup, never a column", {
   d <- tfl_fig_template("km_simple", data = "ADTTE", param = "TTDE", pop = "SAFFL", group = "TRT01A")
   # a study's program: the figure setup defines it (unless the study's setup has)
   prog <- strsplit(paste(tfl_fig_design_code(d, "F1", setup = TRUE), collapse = "\n"), "\n")[[1]]
-  expect_true(any(grepl("mutate(AVAL = AVAL / .env$days_per_month)", prog, fixed = TRUE)))
+  expect_true(any(grepl("mutate(AVAL = AVAL / days_per_month)", prog, fixed = TRUE)))
   expect_false(any(grepl("30.4375", prog, fixed = TRUE)))
   expect_true(any(grepl('if (!exists("days_per_month")) days_per_month <- 30.4375',
                         tfl_fig_setup_code(), fixed = TRUE)))
   # a script of its own: defines the one it uses
   own <- strsplit(paste(tfl_fig_design_code(d, "F1"), collapse = "\n"), "\n")[[1]]
   expect_identical(sum(grepl("^if [(]!exists", own)), 1L)
-  # the study's value wins; a column of the same name is not taken
+  # the study's value wins
   e <- new.env()
   e$days_per_month <- 30
   eval(parse(text = .fig_unit_guard()), envir = e)
   expect_identical(e$days_per_month, 30)
   expect_identical(e$days_per_year, 365.25)
-  x <- data.frame(AVAL = 60, days_per_month = 1)
-  days_per_month <- 30
-  expect_identical(dplyr::mutate(x, AVAL = AVAL / .env$days_per_month)$AVAL, 2)
 })

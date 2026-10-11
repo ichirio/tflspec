@@ -17,7 +17,9 @@ written in each program, so a company sets them once (a study's
 setup: tflplanner writes them from its company standards).  These are
 the values used where none is set: the figure setup
 (\code{\link[=tfl_fig_setup_code]{tfl_fig_setup_code()}}) and a figure script of its own define a
-constant only when it is not defined yet.
+constant only when it is not defined yet.  The programs say the name as
+it is (\code{AVAL / days_per_month}): a data column must not be named like
+one (tflplanner's review says so).
 }
 \examples{
 tfl_time_unit_days()

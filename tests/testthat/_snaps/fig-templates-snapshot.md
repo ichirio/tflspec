@@ -20,7 +20,7 @@
       df <- adtte |>
         filter(PARAMCD == "OS", FASFL == "Y") |>
         # days -> months
-        mutate(AVAL = AVAL / .env$days_per_month)
+        mutate(AVAL = AVAL / days_per_month)
       
       fit <- survfit2(Surv(AVAL, CNSR == 0) ~ TRT01P, data = df)
       
@@ -122,7 +122,7 @@
       df <- adtte |>
         filter(PARAMCD == "OS", FASFL == "Y") |>
         # days -> months
-        mutate(AVAL = AVAL / .env$days_per_month)
+        mutate(AVAL = AVAL / days_per_month)
       
       fit <- survfit2(Surv(AVAL, CNSR == 0) ~ TRT01P, data = df)
       
@@ -197,7 +197,7 @@
       df <- adtte |>
         filter(PARAMCD == "OS", FASFL == "Y") |>
         # days -> months
-        mutate(AVAL = AVAL / .env$days_per_month)
+        mutate(AVAL = AVAL / days_per_month)
       
       fit <- survfit2(Surv(AVAL, CNSR == 0) ~ TRT01P, data = df)
       
@@ -302,7 +302,7 @@
       df <- adtte |>
         filter(PARAMCD == "OS", FASFL == "Y") |>
         # days -> months
-        mutate(AVAL = AVAL / .env$days_per_month)
+        mutate(AVAL = AVAL / days_per_month)
       
       fit <- survfit2(Surv(AVAL, CNSR == 0) ~ 1, data = df)
       
@@ -545,7 +545,7 @@
       df <- adsl |>
         filter(FASFL == "Y", !is.na(TRTDURD)) |>
         # days -> months
-        mutate(TRTDURD = TRTDURD / .env$days_per_month) |>
+        mutate(TRTDURD = TRTDURD / days_per_month) |>
         mutate(X0 = 0) |>
         mutate(Y_ID = reorder(USUBJID, TRTDURD)) |>
         mutate(X_ARROW = TRTDURD + max(TRTDURD) * 0.03)
@@ -616,7 +616,7 @@
         ) |>
         filter(!is.na(TRTDURD)) |>
         # days -> months
-        mutate(TRTDURD = TRTDURD / .env$days_per_month) |>
+        mutate(TRTDURD = TRTDURD / days_per_month) |>
         mutate(X0 = 0) |>
         mutate(Y_ID = reorder(USUBJID, TRTDURD)) |>
         mutate(X_ARROW = TRTDURD + max(TRTDURD) * 0.03) |>
@@ -698,7 +698,7 @@
         ) |>
         filter(!is.na(TRTDURD)) |>
         # days -> months
-        mutate(TRTDURD = TRTDURD / .env$days_per_month) |>
+        mutate(TRTDURD = TRTDURD / days_per_month) |>
         mutate(X0 = 0) |>
         mutate(Y_ID = reorder(USUBJID, TRTDURD)) |>
         mutate(X_ARROW = TRTDURD + max(TRTDURD) * 0.03) |>
@@ -710,7 +710,7 @@
       assess <- adrs |>
         filter(PARAMCD == "OVR" & !is.na(ADY)) |>
         inner_join(df |> select(USUBJID, Y_ID), by = "USUBJID") |>
-        mutate(ADY = ADY / .env$days_per_month)
+        mutate(ADY = ADY / days_per_month)
       
       # ---- plot ------------------------------------------------------------------
       # the response_light palette: a colour for each value
@@ -786,7 +786,7 @@
         ) |>
         filter(!is.na(TRTDURD)) |>
         # days -> months
-        mutate(TRTDURD = TRTDURD / .env$days_per_month) |>
+        mutate(TRTDURD = TRTDURD / days_per_month) |>
         mutate(X0 = 0) |>
         mutate(Y_ID = reorder(USUBJID, TRTDURD)) |>
         mutate(X_ARROW = TRTDURD + max(TRTDURD) * 0.03) |>
@@ -798,7 +798,7 @@
       assess <- adrs |>
         filter(PARAMCD == "OVR" & !is.na(ADY)) |>
         inner_join(df |> select(USUBJID, Y_ID), by = "USUBJID") |>
-        mutate(ADY = ADY / .env$days_per_month)
+        mutate(ADY = ADY / days_per_month)
       
       # ---- plot ------------------------------------------------------------------
       # the response_light palette: a colour for each value
@@ -875,7 +875,7 @@
         ) |>
         filter(!is.na(PCHG) & !is.na(ADY)) |>
         # days -> months
-        mutate(ADY = ADY / .env$days_per_month) |>
+        mutate(ADY = ADY / days_per_month) |>
         mutate(BOR = factor(BOR, levels = c("CR", "PR", "SD", "PD", "NE")))
       
       # ---- plot ------------------------------------------------------------------

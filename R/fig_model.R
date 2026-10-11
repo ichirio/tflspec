@@ -45,9 +45,9 @@
 # (or, without one, the figure setup) defines -- days_per_month ...
 .fig_unit_const <- c(weeks = "days_per_week", months = "days_per_month",
                      years = "days_per_year")
-# in a data-masked call (mutate(), filter()): the constant, never a column
-# of the same name
-.fig_unit_ref <- function(unit) paste0(".env$", .fig_unit_const[[unit]])
+# its name in the programs (no data or ARD column shares a program
+# constant's name: tflplanner's review says so)
+.fig_unit_ref <- function(unit) .fig_unit_const[[unit]]
 
 #' The days in a week, a month and a year
 #'
@@ -57,7 +57,9 @@
 #' setup: tflplanner writes them from its company standards).  These are
 #' the values used where none is set: the figure setup
 #' ([tfl_fig_setup_code()]) and a figure script of its own define a
-#' constant only when it is not defined yet.
+#' constant only when it is not defined yet.  The programs say the name as
+#' it is (`AVAL / days_per_month`): a data column must not be named like
+#' one (tflplanner's review says so).
 #'
 #' @return A named numeric vector: `days_per_week` 7, `days_per_month`
 #'   30.4375 (365.25 / 12), `days_per_year` 365.25.

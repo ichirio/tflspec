@@ -4,8 +4,8 @@
   (tflplanner, the user's request).  A figure's time-unit step (and the
   swimmer templates' assessment days) divides by `days_per_week`,
   `days_per_month` or `days_per_year` -- written
-  `mutate(AVAL = AVAL / .env$days_per_month)`, the `.env$` pronoun so a
-  data column of the same name is never taken -- instead of `7`,
+  `mutate(AVAL = AVAL / days_per_month)` (no data column shares a program
+  constant's name: tflplanner's review checks it) -- instead of `7`,
   `30.4375`, `365.25`.  A study's setup sets them (tflplanner: from the
   company standards); the figure setup (`tfl_fig_setup_code()`) defines
   each only when it is not defined yet, with the values of the new
