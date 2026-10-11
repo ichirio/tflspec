@@ -78,7 +78,7 @@ tfl_time_unit_days <- function() {
   if (!length(d)) return(character())
   c("# the days in a week, a month, a year (the study's setup may set them)",
     sprintf("if (!exists(%s)) %s <- %s", encodeString(names(d), quote = "\""),
-            names(d), vapply(unname(d), format, "")))
+            names(d), as.character(unname(d))))
 }
 
 .fig_legends <- c("none", "right", "bottom", "top", "inside", "inside_tl",
