@@ -176,7 +176,7 @@ test_that("a call layer's code sits at its position among the other layers", {
                   list(layer = "call", fn = "geom_point", aes = list(x = "TRTDURD", y = "AGE")),
                   list(layer = "hline", yintercept = 1)))
   code <- paste(tfl_fig_design_code(d), collapse = "\n")
-  i_geom <- regexpr("p <- p \\+ geom_point", code)
+  i_geom <- regexpr("geom_point(", code, fixed = TRUE)
   i_h0 <- regexpr("yintercept = 0", code)
   i_h1 <- regexpr("yintercept = 1", code)
   expect_true(i_h0 < i_geom && i_geom < i_h1)
@@ -184,11 +184,12 @@ test_that("a call layer's code sits at its position among the other layers", {
 
 test_that("plot.add is written after the figure's settings and before panels", {
   d <- tfl_fig_template("km_risk_table", param = "OS", group = "TRT01P")
-  d$plot$add <- list(list(fn = "theme", args = list(legend.title = list(fn = "element_blank"))))
+  d$plot$add <- list(list(fn = "labs", args = list(caption = "the add")))
   code <- paste(tfl_fig_design_code(d), collapse = "\n")
-  i_settings <- regexpr("# ---- the figure's settings ----", code)
-  i_add <- regexpr("# ---- plot.add ----", code)
-  i_panel <- regexpr("number at risk \\(a panel below\\)", code)
+  # one chain: the settings, then the plot.add call, then the panel's chain
+  i_settings <- regexpr("labs(x = ", code, fixed = TRUE)
+  i_add <- regexpr("labs(caption = \"the add\")", code, fixed = TRUE)
+  i_panel <- regexpr("p_risk <- ", code, fixed = TRUE)
   expect_true(i_settings < i_add && i_add < i_panel)
 })
 
@@ -199,7 +200,7 @@ test_that("base = TRUE on the first layer replaces p <- ggplot()", {
     layers = list(list(layer = "call", fn = "ggsurvfit", package = "ggsurvfit", base = TRUE,
                        pos = list(tfl_fig_r("fit")))))
   code <- paste(tfl_fig_design_code(d), collapse = "\n")
-  expect_match(code, "p <- ggsurvfit(fit)", fixed = TRUE)
+  expect_match(code, "fig <- ggsurvfit(fit) +", fixed = TRUE)
   expect_false(grepl("p <- ggplot()", code, fixed = TRUE))
 })
 

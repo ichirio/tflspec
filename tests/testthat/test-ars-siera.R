@@ -14,7 +14,7 @@ siera_spec <- function() {
     populations = siera_df(list(population_id = "SAF", dataset = "ADSL",
                                 where = "SAFFL == \"Y\"")),
     analyses = siera_df(
-      list(output_id = "DM", analysis_id = "BIGN", method = "categorical",
+      list(output_id = "DM", analysis_id = "GROUPN", method = "categorical",
            population_id = "SAF", variables = "TRT01A"),
       list(output_id = "DM", analysis_id = "AGE", method = "continuous",
            population_id = "SAF", by = "TRT01A", variables = "AGE"),
@@ -29,7 +29,7 @@ siera_spec <- function() {
            dataset = "ADAE", population_id = "SAF",
            where = "TRTEMFL == \"Y\"", by = "TRTA",
            variables = "AEBODSYS | AEDECOD", args = "over_variables = TRUE"),
-      list(output_id = "CI", analysis_id = "BIGN", method = "categorical",
+      list(output_id = "CI", analysis_id = "GROUPN", method = "categorical",
            population_id = "SAF", variables = "TRT01A"),
       list(output_id = "CI", analysis_id = "SEX", method = "proportion_ci",
            population_id = "SAF", by = "TRT01A", variables = "SEX",
@@ -58,7 +58,7 @@ test_that("the siera profile is runnable metadata and still CDISC ARS", {
   # each output's subject count first
   lc <- ars$mainListOfContents$contentsList$listItems
   firsts <- vapply(lc, function(z) z$sublist$listItems[[1L]]$analysisId, "")
-  expect_true(all(grepl("BIGN", firsts)))
+  expect_true(all(grepl("GROUPN", firsts)))
   # the list of outputs siera reads
   expect_identical(
     vapply(ars$otherListsOfContents[[1L]]$contentsList$listItems, `[[`, "",

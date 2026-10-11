@@ -15,7 +15,7 @@ read_spec <- function() {
     populations = read_df(list(population_id = "SAF", dataset = "ADSL",
                                where = "SAFFL == \"Y\"")),
     analyses = read_df(
-      list(output_id = "DM", analysis_id = "BIGN", method = "categorical",
+      list(output_id = "DM", analysis_id = "GROUPN", method = "categorical",
            population_id = "SAF", variables = "TRT01A"),
       list(output_id = "DM", analysis_id = "AGE", method = "continuous",
            population_id = "SAF", by = "TRT01A", variables = "AGE",
@@ -30,7 +30,7 @@ read_spec <- function() {
            where = "TRTEMFL == \"Y\" & AESEV %in% c(\"MILD\", \"MODERATE\")",
            by = "TRTA", variables = "AEBODSYS | AEDECOD",
            args = "over_variables = TRUE"),
-      list(output_id = "CI", analysis_id = "BIGN", method = "categorical",
+      list(output_id = "CI", analysis_id = "GROUPN", method = "categorical",
            population_id = "SAF", variables = "TRT01A"),
       list(output_id = "CI", analysis_id = "SEX", method = "proportion_ci",
            population_id = "SAF", by = "TRT01A", variables = "SEX",

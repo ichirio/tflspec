@@ -37,19 +37,17 @@ tfl_read_data_code <- function(datasets, dataset) {
                    dataset))
   }
   obj <- .r_name(dataset)
-  c(sprintf("%s <- %s", obj, .reader(r$path[1L])),
-    .derive_code(obj, r$derive[1L]))
+  .drop_attached_ns(c(sprintf("%s <- %s", obj, .reader(r$path[1L])),
+                      .derive_code(obj, r$derive[1L])))
 }
 
-.r_sort <- function(obj, sort) {
+.r_sort <- function(sort) {
   s <- .split_bar(sort)
   if (!length(s)) return(NULL)
   keys <- vapply(s, function(k) {
-    if (startsWith(k, "-")) sprintf("-xtfrm(%s$%s)", obj, substring(k, 2L))
-    else sprintf("%s$%s", obj, k)
+    if (startsWith(k, "-")) sprintf("dplyr::desc(%s)", substring(k, 2L)) else k
   }, "")
-  sprintf("%s <- %s[order(%s), , drop = FALSE]", obj, obj,
-          paste(keys, collapse = ", "))
+  sprintf("dplyr::arrange(%s)", paste(keys, collapse = ", "))
 }
 
 # a label as the sheet writes it: `\n` (two characters) is a line break
@@ -147,84 +145,103 @@ tfl_listing_spec <- function(listings = NULL, listing_cols = NULL,
 }
 
 .listing_check <- function(x) {
+  p <- .listing_problems(x)
+  if (nrow(p)) {
+    .spec_stop(paste(c("The listing definition is not valid:",
+                       paste("  *", p$message)), collapse = "\n"), p,
+               "tflspec_listing_spec_error")
+  }
+  invisible(x)
+}
+
+# Every problem of a listing definition, as rows (.spec_problems_keyed()'s):
+# a listing's row is keyed by its report, a column's by its place (1, 2 ...)
+.listing_problems <- function(x) {
   l <- x$listings
   cl <- x$listing_cols
-  err <- character()
+  pr <- list(.spec_problems_empty())
+  add_l <- function(i, field, message) {
+    pr[[length(pr) + 1L]] <<- .spec_problem(message, "listings",
+                                            l$output_id[i], "", field)
+  }
+  add_c <- function(i, field, message) {
+    n <- sum(cl$output_id[seq_len(i)] %in% cl$output_id[i])
+    pr[[length(pr) + 1L]] <<- .spec_problem(message, "listing_cols",
+                                            cl$output_id[i], as.character(n), field)
+  }
   who <- function(id) if (is.na(id)) "a listing with no output_id" else
     paste("listing", id)
   if (any(is.na(l$output_id))) {
-    err <- c(err, "`listings`: a row has no output_id")
+    add_l(which(is.na(l$output_id))[1L], "output_id", "`listings`: a row has no output_id")
   }
   dup <- unique(l$output_id[!is.na(l$output_id) & duplicated(l$output_id)])
   if (length(dup)) {
-    err <- c(err, sprintf("`listings`: output_id repeated: %s",
+    add_l(which(!is.na(l$output_id) & duplicated(l$output_id))[1L], "output_id", sprintf("`listings`: output_id repeated: %s",
                           paste(dup, collapse = ", ")))
   }
   for (i in seq_len(nrow(l))) {
     r <- l[i, ]
-    if (is.na(r$dataset)) err <- c(err, sprintf("%s: no `dataset`", who(r$output_id)))
+    if (is.na(r$dataset)) add_l(i, "dataset", sprintf("%s: no `dataset`", who(r$output_id)))
     if (!is.na(r$where) &&
         inherits(try(str2lang(r$where), silent = TRUE), "try-error")) {
-      err <- c(err, sprintf("%s: `where` is not R code: %s", who(r$output_id),
+      add_l(i, "where", sprintf("%s: `where` is not R code: %s", who(r$output_id),
                             r$where))
     }
     bad <- .split_bar(r$sort)
     bad <- bad[!grepl("^-?[.A-Za-z][.A-Za-z0-9_]*$", bad)]
     if (length(bad)) {
-      err <- c(err, sprintf("%s: `sort` takes variable names (- for descending): %s",
+      add_l(i, "sort", sprintf("%s: `sort` takes variable names (- for descending): %s",
                             who(r$output_id), paste(bad, collapse = ", ")))
     }
     if (!is.na(r$max_rows) && !grepl("^[1-9][0-9]*$", r$max_rows)) {
-      err <- c(err, sprintf("%s: `max_rows` is not a whole number: %s",
+      add_l(i, "max_rows", sprintf("%s: `max_rows` is not a whole number: %s",
                             who(r$output_id), r$max_rows))
     }
     if (!is.na(r$blank_row) && !toupper(r$blank_row) %in% c("TRUE", "FALSE")) {
-      err <- c(err, sprintf("%s: `blank_row` is TRUE or FALSE, not %s",
+      add_l(i, "blank_row", sprintf("%s: `blank_row` is TRUE or FALSE, not %s",
                             who(r$output_id), r$blank_row))
     }
     if (!is.na(r$wrap) && !grepl("^([A-Za-z.][A-Za-z0-9.]*::)?[A-Za-z.][A-Za-z0-9._]*$",
                                  r$wrap)) {
-      err <- c(err, sprintf("%s: `wrap` is the name of an R function, not %s",
+      add_l(i, "wrap", sprintf("%s: `wrap` is the name of an R function, not %s",
                             who(r$output_id), r$wrap))
     }
     if (!is.na(r$output_id) && !r$output_id %in% cl$output_id) {
-      err <- c(err, sprintf("%s: no columns in `listing_cols`", who(r$output_id)))
+      add_l(i, "", sprintf("%s: no columns in `listing_cols`", who(r$output_id)))
     }
   }
   orphan <- setdiff(stats::na.omit(cl$output_id), l$output_id)
   if (length(orphan)) {
-    err <- c(err, sprintf("`listing_cols`: output_id not in `listings`: %s",
+    add_c(which(cl$output_id %in% orphan)[1L], "output_id", sprintf("`listing_cols`: output_id not in `listings`: %s",
                           paste(orphan, collapse = ", ")))
   }
   if (any(is.na(cl$output_id))) {
-    err <- c(err, "`listing_cols`: a row has no output_id")
+    add_c(which(is.na(cl$output_id))[1L], "output_id", "`listing_cols`: a row has no output_id")
   }
   for (i in seq_len(nrow(cl))) {
     r <- cl[i, ]
     at <- sprintf("%s, column %d", who(r$output_id),
                   sum(cl$output_id[seq_len(i)] %in% r$output_id))
-    if (!length(.split_bar(r$vars))) err <- c(err, sprintf("%s: no `vars`", at))
+    if (!length(.split_bar(r$vars))) add_c(i, "vars", sprintf("%s: no `vars`", at))
     if (!is.na(r$width) &&
         (is.na(suppressWarnings(as.numeric(r$width))) ||
          as.numeric(r$width) <= 0)) {
-      err <- c(err, sprintf("%s: `width` is not a positive number: %s", at,
+      add_c(i, "width", sprintf("%s: `width` is not a positive number: %s", at,
                             r$width))
     }
     if (!is.na(r$align) && !r$align %in% c("left", "center", "right")) {
-      err <- c(err, sprintf("%s: `align` is left, center or right, not %s",
+      add_c(i, "align", sprintf("%s: `align` is left, center or right, not %s",
                             at, r$align))
     }
     if (!is.na(r$collapse_repeats) &&
         !toupper(r$collapse_repeats) %in% c("TRUE", "FALSE")) {
-      err <- c(err, sprintf("%s: `collapse_repeats` is TRUE or FALSE, not %s",
+      add_c(i, "collapse_repeats", sprintf("%s: `collapse_repeats` is TRUE or FALSE, not %s",
                             at, r$collapse_repeats))
     }
   }
-  if (length(err)) {
-    .ard_stop(paste(c("The listing definition is not valid:",
-                      paste("  *", err)), collapse = "\n"))
-  }
-  invisible(x)
+  p <- do.call(rbind, pr)
+  rownames(p) <- NULL
+  p
 }
 
 #' @rdname tfl_listing_spec
@@ -327,12 +344,20 @@ print.tfl_listing_spec <- function(x, ...) {
 #' @param rework Code run on `data` before it is sorted, or `NULL`.
 #' @param type The listing type when the listing's `type` is blank (one of
 #'   rtfreporter's `listing_spec()` types).
+#' @param codelists The reports' code lists (a table definition's
+#'   `codelists` sheet, or a data frame with `output_id`, `variable`,
+#'   `value`, `label`, `order`): the listing's rows of the columns it shows
+#'   or sorts by are put on its data after its condition (`cl_<variable>`
+#'   and `set_levels()`, see [tfl_helpers_code()]) -- each such column a
+#'   factor in its list's order (it sorts so), its values as the list has
+#'   them.
 #' @return The code, one element per line; `NULL` when the listing names no
 #'   dataset yet.
 #' @seealso [tfl_listing()] for the pages themselves.
 #' @export
 tfl_listing_code <- function(spec, output_id = NULL, datasets,
-                             rework = NULL, type = "multiline") {
+                             rework = NULL, type = "multiline",
+                             codelists = NULL) {
   x <- .listing_one(spec, output_id, "tfl_listing_code")
   l <- x$listing
   cols <- x$cols
@@ -353,12 +378,26 @@ tfl_listing_code <- function(spec, output_id = NULL, datasets,
     sprintf("  listing_col(%s)", paste(a, collapse = ", "))
   }, "")
   type <- if (is.na(l$type)) type else l$type
-  c(paste0("# the data: ", l$dataset, " (data catalog)"),
+  # the code lists of the columns it shows or sorts by
+  shown <- unique(c(unlist(lapply(cols$vars, .split_bar)),
+                    sub("^-", "", .split_bar(l$sort))))
+  lv <- .codelist_levels(codelists, l$output_id, shown)
+  # the records its condition keeps, its code lists, its order -- in one
+  # statement; a rework (code of its own) before the order
+  sort <- .r_sort(l$sort)
+  steps <- c(if (!is.na(l$where)) sprintf("dplyr::filter(%s)", l$where),
+             if (length(lv)) .levels_call(lv),
+             if (is.null(rework)) sort)
+  c(if (length(lv)) .codelists_head(lv),
+    paste0("# the data: ", l$dataset, " (data catalog)"),
     tfl_read_data_code(datasets, l$dataset),
-    sprintf("data <- %s", if (is.na(l$where)) obj else
-      sprintf("subset(%s, %s)", obj, l$where)),
-    if (!is.null(rework)) c("", "# rework", rework, ""),
-    .r_sort("data", l$sort),
+    if (!length(steps)) sprintf("data <- %s", obj) else
+      if (length(steps) == 1L && !length(lv)) {
+        sprintf("data <- %s(%s, %s)", sub("\\(.*$", "", steps),
+                obj, sub("^[^(]*\\((.*)\\)$", "\\1", steps))
+      } else paste0("data <- ", obj, " |>\n  ", paste(steps, collapse = " |>\n  ")),
+    if (!is.null(rework)) c("", "# rework", rework, "",
+                            if (!is.null(sort)) sprintf("data <- %s", sub("\\(", "(data, ", sort))),
     "# dates as they print",
     "data[] <- lapply(data, function(v) if (inherits(v, c(\"Date\", \"POSIXt\"))) format(v) else v)",
     "",
@@ -369,7 +408,8 @@ tfl_listing_code <- function(spec, output_id = NULL, datasets,
             if (!is.na(l$wrap)) paste0(", wrap = ", l$wrap) else ""),
     sprintf("content <- as_rtftables(data, listing = lst%s)",
             if (!is.na(l$max_rows)) paste0(", max_rows = ", l$max_rows) else
-              ""))
+              "")) |>
+    .drop_attached_ns()
 }
 
 # ---- the pages -------------------------------------------------------------

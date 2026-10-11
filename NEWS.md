@@ -11,6 +11,342 @@
   code piped with `|>`, and a report's analysis data in ARS.  The README
   says the same of the font, the setup code and the code lists.
 
+* **A Total column, read from cards' overall rows** (#212, rtfreporter
+  `plan_total()`).  The `analyses` sheet's new column `overall` (`TRUE`)
+  runs the analysis again without its `by` and binds it under the grouped
+  call (`bind_rows(ard_tabulate(adsl, by = ARM, ...), ard_tabulate(adsl,
+  ...))`; on a `cards::ard_stack` row, `.overall = TRUE`): cards' own
+  overall rows, with no group.  The `tables` sheet's new `total` (the
+  heading, `Total`) and `total_position` (`last` / `first`) are written as
+  `plan_total(label = "Total")`, whose `{n}` is the study total.
+  `tfl_ars()` writes each such analysis twice, by its groups and over all
+  subjects without the grouping (`An_<output>_<analysis>_TOTAL`), so the
+  ARS names no `ARM = "Total"` the data does not have.  The definition
+  check refuses `overall` without a `by`, on a row inside a parent (it is
+  the parent's), on `custom` / `subjects` / `ard_strata` / `ard_pairwise`,
+  and together with `.overall` in `args`.  A definition without the
+  columns writes the same programs, with the same fingerprints.  Needs
+  rtfreporter >= 0.8.2.9034.
+
+* **A variable's rows under one level of another** (tflplanner's RACE
+  sample, rtfreporter #598).  The `variables` sheet's new column `under`
+  (`RACE: Asian`: that variable, a colon, the level as the table shows
+  it) is written as `plan_nest(RSUB = c(RACE = "Asian"))`: the variable's
+  rows right after that level's row, one indent deeper, its own heading
+  dropped -- the sub-categories of a race from a second analysis on the
+  same data.  The definition check names a value that is not
+  `variable: level`; `tfl_as_table_spec()` reads the column back from a
+  plan.  Needs rtfreporter >= 0.8.2.9032.
+
+* **An output that prints another's analyses is in the ARS** (#293
+  phase 5, tflplanner #293).  `tfl_ars(references =)` takes the outputs
+  that print another output's analyses -- a figure printing a table's
+  median and hazard ratio -- as `output_id`, `source`, `analysis_id`.
+  Each is an ARS `Output` (its displays and file, from the report spec)
+  whose list-of-contents item names the source's analyses, which are not
+  written twice; one whose analyses the ARS has none of is listed by
+  `tfl_ars_unmapped()` with what it prints.  Before, such a figure was
+  unmapped ("no analyses in the ARD definition").
+
+## Upgrading from an earlier version
+
+Update tflspec and tflplanner together, open each study in tflplanner and
+save it, then look at its Review tab.
+
+* **Six exports are gone; a study keeps them in
+  `programs/study_helpers.R`** (#187).  `set_levels()`, `tag_ard()`,
+  `fmt_ard()`, `keep_stats()`, `fmt_pvalue()` and `save_ard()` were
+  tflspec's up to 0.0.24.9066.  The generated programs still call them,
+  from the study's own code: `tfl_helpers_code()`, which tflplanner writes
+  to `programs/study_helpers.R`; the study's setup sources it, so the
+  programs run without tflspec.  A program that calls
+  `tflspec::set_levels()`, or attaches tflspec for these, stops: write it
+  again (open the study and save) or source `programs/study_helpers.R`.
+  tflplanner's review lists such programs (rule P02).
+* **A figure design written before reads as it is** (#201): its `stats:`
+  steps and its `data_code` / `stats_code` read as the one `data:` list,
+  and a save writes the new form.
+* **Figure programs have a new shape, and draw the same figures** (#201):
+  a `# ---- data ----` and a `# ---- plot ----` section, one `+` chain.
+  Saving the study writes them again.
+* **tflplanner 0.0.2.9157 and later need tflspec 0.0.24.9077 or later**:
+  update both together.
+* **The steps:** update both packages; open each study and save it (the
+  programs and `study_helpers.R` are written again; a program edited by
+  hand is copied to `programs/.edited/` first); check the Review tab
+  (P02 names a program that still calls a removed function).
+
+## Changes
+
+* **D02 in plain words** (tflplanner): "%s: the checks against the data
+  have not run yet." and "Press [Review with the data]: it reads the
+  datasets once (not again until a file changes)." -- "the data facts"
+  was a word of the code.
+* **The review's catalog has P02** (tflplanner's): a study program that
+  calls one of the six removed functions as `tflspec::` or after
+  `library(tflspec)`, without `programs/study_helpers.R` sourced.
+* **The review's sentences can be translated** (tflplanner #288).  Each
+  row of `tfl_review_spec()` gains `template`: the sentence its `args`
+  fill (`message` is the two put together, unchanged).  It is the rule's
+  message, or, for the rules whose message was the whole sentence, the
+  check's own words: a table against its ARD (T06, T07: a key that is
+  neither a group nor a variable, cells written for a variable the ARD
+  does not analyse, a statistic a template reads), a listing's columns
+  (L01, L02), a figure against the data (F03: no dataset, no variable),
+  and a figure's advice (F02: `tfl_fig_advice()`'s template and values).
+  The new `tfl_review_templates()` lists the sentences beyond the rules',
+  so an app translates each once.  `tfl_check_ard()` says what it said.
+* **An `ard_number`'s label prints several statistics of its address**
+  (tflplanner #311).  `{value}` is its `stat`, as before; `{conf.low}`,
+  `{conf.high}` ... (any `stat_name`) are those statistics of the same
+  analysis, variable, level and group: `"HR {estimate} (95% CI
+  {conf.low}, {conf.high})"` writes one `paste0()`, a number a line.
+  `tfl_check_fig_design(ard =)` looks for each statistic the label names.
+
+* **The review: a figure's dataset not read yet is not missing; a review
+  of many reports in half the time** (#204).  With the ARD definition
+  given, a dataset of its catalog whose facts were not made (a cache that
+  has not read every file yet) is no longer said to be missing by F03.
+  tflspec's own figure style and the installed ggplot2's version are
+  worked out once a session (a review asked for them once a figure), the
+  same `|` cells are split once, and the table rules split each
+  analysis's variables once a report: 200 reports reviewed in about 1 s
+  instead of 2.2 s (installed; the figures' part 0.7 s to 0.1 s).
+  The catalog gains the rules of a figure that prints a table's numbers
+  (tflplanner's: its ARD source is not a table of the study, F04; the
+  design reads an ARD but has no source, F05; an analysis the piece
+  names was dropped, F06; the ARD is not made yet, F07; a piece the ARD
+  cannot answer, F08), so a study review lists them.
+* **A figure can read an ARD** (#293 phase 3, tflplanner #293).  The
+  study helpers gain `ard_value()` (one statistic of an ARD, as the ARD
+  formatted it or with `digits`; exactly one row or the program stops),
+  `ard_stats()` (statistics as a data frame: a row per group and level, a
+  column per statistic) and `ard_fingerprint()` (the definition
+  `ard_status.csv` recorded for a report).  Two pieces use them: the data
+  step `ard_stats` (an object of its own) and the layer `ard_number`
+  (prints one statistic -- a median, a hazard ratio -- as an
+  `annotate("text")` term of the chain).  The program puts the ARD in
+  `ard`; `tfl_fig_design_code()`'s attribute `ard` says the code reads
+  it, and `tfl_check_fig_design(ard =)` looks for the pieces' analyses,
+  variables, levels, statistics and groups in it.  The report sheet's
+  `ard_source` takes `own` and `table:<output_id>` (a figure's: its own
+  analyses, or a table's ARD) besides blank and `import:<file>`.
+
+* **A figure's steps are one list; its script two sections and one chain**
+  (#201, tflplanner #293 phase 1).  A figure design's `data:` is one
+  ordered list: the steps that make an object of their own (`survfit`,
+  `summary`, `summary_by`, `rate`, `count`, `subset`), which were `stats:`,
+  are in it, and a step after one changes that object, in its pipe;
+  `data_code` and `stats_code` are `code`.  A design written before reads
+  as the one list (and is written back without `stats:`).
+  `tfl_fig_design_code()` writes `# ---- data ----` (one pipe an object,
+  the code lists on `df`, the axis breaks, a panel's data) and
+  `# ---- plot ----` (the palette first, then one `+` chain into the
+  figure; a panel below it is a chain of its own, joined on the last
+  line); with `setup = TRUE` there is no header and no `library()`, and
+  the attributes `reads`, `libs`, `needs` say what it needs.  The number
+  at risk is by default a panel from the figure's own fit; the
+  `risk_table` layer's `method: add_risktable` draws ggsurvfit's table
+  instead.  The swimmer template's months for the assessments are a step
+  of `assess`.  The drawn figures are the same (test-fig-exact); the
+  template snapshots change once; the generated programs are fixed byte
+  for byte (`tests/testthat/fixtures/fig-programs/`).
+* **A review of the whole definition** (#199, tflplanner#288, phase 0).
+  `tfl_review_spec(spec, ard, listings, figures)` lists, for every report,
+  what cannot be used (`error`), what is valid but probably wrong
+  (`check`) and what is missing and has to be set by hand (`hand`), one
+  row each: the report, the sheet, the row's key (the variable, the
+  analysis_id, `variable / context / row` on `cells`), the column, the
+  message, a hint and the rule.  Nothing stops: an ARD definition that
+  cannot be built is reviewed as its sheets.  The rules are a catalog,
+  `tfl_review_rules()` (`inst/review/rules.csv`): what the constructors
+  find (S01); a grouping variable also analysed, statistics of the wrong
+  kind, a name the ARD uses itself (A06, A08, A15); a column or row key no
+  analysis groups by, a variables or cells row for a variable not
+  analysed, a template statistic of the other kind, digits no template
+  reads, no column key, no cells (T01-T05, T09, T10); a listing without
+  columns (L01); a figure's required field blank and its advice (F01,
+  F02); a code list of a variable the report does not read (C01).  With
+  the facts of the data, `tfl_data_facts(data, populations = ard)` --
+  each column's class and values, each analysis set's subjects, each
+  condition's rows, small and with no records, so they can be kept --
+  also a column the data do not have, a condition that cannot be
+  evaluated or keeps nothing, a flag that is not Y / N, a mean of a
+  character column, a derived column that replaces one (A01-A05, A16), a
+  code list value no record has (C02) and a data value the code list does
+  not have (C03, an error: the program stops on it), a listing's columns
+  (L02), a figure's dataset and variables (F03).  With what each report's
+  ARD holds (`tfl_ard_facts()`, in `facts$ard`): the statistics, keys and
+  levels the table reads (T06-T08) and what went wrong while it was made
+  (A17).
+* **The constructors collect their problems** (tflplanner#274 D11).
+  `tfl_table_spec()`, `tfl_ard_spec()` and `tfl_listing_spec()` find every
+  problem, as rows, and stop as before -- the table definition on its
+  first, the others with all of them, the messages unchanged -- with a
+  condition of class `tflspec_spec_error` that carries the rows as
+  `problems` (`output_id`, `sheet`, `row`, `field`, `message`), so a GUI
+  reads where a problem is instead of parsing the message.
+  `tfl_check_ard()` and the review share its three rules.
+
+* **"Population" everywhere the apps show it** (#197).  The figure
+  designer ("Population flag", "Keep a population"), the figure advice,
+  five column descriptions of `inst/spec/columns.csv` and the `header_n`
+  message no longer say "analysis set".  tflplanner's Japanese for them
+  is keyed on these texts: its matching change goes in right after.
+
+* **The example workbooks are made by code of their own** (#195).  The five
+  example reports (`inst/extdata/ard-spec/`: DM, AE, ORR, LB, PK) are
+  built from new example ARDs and plan code in
+  `data-raw/ard-spec-examples/make-examples.R` -- the cards example data
+  and made-up values, the same features as before (two column keys, rows
+  of conditions, a shift table a page per parameter, columns over several
+  pages, significant digits), checked as before against the code and the
+  RTF.  Their contents differ: the reports' variables, labels and titles
+  are new.  The docs, tests and NEWS no longer point to discussions by
+  number, and their examples use neutral variable names.
+
+* **A `.lintr`, the same as tflplanner's and rtfreporter's** (#193).
+  `lintr::lint_package()` finds nothing: the example ADaM script uses
+  `|>`, three code templates are in double quotes, `d$variable %in% NA` is
+  `is.na()`, and a few spaces.  No change in what the package does.
+
+- R-CMD-check now also runs on R 4.2, the oldest R tested (`Depends: R (>= 4.1)` is kept; cardx, used by the generated ARD code, needs R >= 4.2). That job leaves car out (it needs packages that want R >= 4.4) and lets a suggested package be missing; the tests skip what needs it.
+
+* **A population is an analysis set** (#191).  The README and the AI user
+  manual say it once: a population (the `populations` sheet,
+  `population_id`) is what ICH E9 and CDISC ARS call an analysis set;
+  `tfl_ars()` writes it as an `AnalysisSet` and an analysis's
+  `population_id` as `analysisSetId`.  The argument hints
+  (`inst/ard/args.csv`) say "population" throughout.
+
+* **A report's code lists give the data its labels; the ARD holds them**
+  (#187).  `tfl_ard_code(codelists = )` writes each list at the program's
+  head, `cl_sex <- c(F = "Female", M = "Male")` (a value named by its
+  data value, its label the value it becomes; a list without labels, its
+  values), and puts them on the data the analyses read:
+  `set_levels(SEX = cl_sex, RACE = cl_race)`.  Each listed column is a
+  factor in the list's order with the labels as its values, so the ARD
+  holds `"Female"`.
+  - A value a list does not have (not NA) now stops the program, naming
+    the column and the value -- it was added after the listed ones.
+  - The table follows: `plan_levels()` orders the ARD's values (the
+    labels), and `plan_labels()` gives the variables' headings only (the
+    `variables` sheet's `label`).  The code list of `variable` (an earlier
+    form of the headings) moves to the `variables` sheet's `label` when a
+    table spec is read, with a message.
+  - An analysis's `where` on a listed column it reads is written in its
+    labels: `tfl_ard_code()` stops on `SEX == "F"` and says to write
+    `"Female"`.  `tfl_ars()` writes the data's values back, in a
+    condition and in a grouping's groups (their names the labels).
+  - Listings and designed figures take them too:
+    `tfl_listing_code(codelists = )` (the columns a listing shows or sorts
+    by, after its condition; it sorts in the lists' order) and
+    `tfl_fig_design_code(codelists = )` (the last of the figure's data
+    steps).  A listing's data is now one dplyr pipe: `filter()`,
+    `set_levels()`, `arrange()`.
+
+* **The generated programs run without tflspec** (#187).  The functions
+  they call -- `set_levels()`, `tag_ard()`, `fmt_ard()`, `keep_stats()`,
+  `fmt_pvalue()`, `save_ard()` -- are code a study keeps in a file of its
+  own: `tfl_helpers_code()` gives it, and the whole program
+  (`tfl_ard_code(part = "all")`) carries it.  The six exports of 0.0.24.9066
+  are removed (no aliases); the setup attaches cards and dplyr only.
+
+* **An analysis data that keeps columns (`keep`) keeps the ones its
+  analyses read** (#187): their `by`, `strata` and `variables`, and a
+  denominator's `by` -- they were dropped unless listed, and the analysis
+  stopped.
+
+* **A program's names are never a column's** (#187): the report's id is
+  `report_id` (was `output_id <- "..."`), a code list `cl_<variable>`, a
+  folder `path_<folder>`, an analysis's ARD `ard_<id>`.  A test checks
+  them against the ADaM's and the ARD's columns.
+
+* **A table's blank rows at positions** (#185).  `layout`'s `blank_where`
+  takes row positions as well as a named rule: `0 | 5 | -1` (a blank after
+  each; 0 before the first row, -1 after the last) is written
+  `plan_blanks(where = c(0, -1))` -- it was the text `"0 | -1"`, which
+  stopped the report program -- and `tfl_as_table_spec()` takes a plan's
+  positions back.  Whole numbers in the written code read as a person
+  writes them (`c(0, -1)`, not `0:-1`).
+
+* **The ARD program reads as a person writes it** (#181).  Same ARDs:
+  - no function or loop of its own: it calls `set_levels()`, `tag_ard()`,
+    `fmt_ard()`, `keep_stats()`, `fmt_pvalue()` and `save_ard()`, new
+    exports named as a program calls them (not `tfl_`); its setup is
+    `library(cards)`, `library(dplyr)`, `library(tflspec)` and the
+    company standards' values (`tfl_stats`, `fmt_default`, which replace
+    `.tfl_stats`, `.fmt_default`; `.fmts(mean = 2L)` is now
+    `modifyList(fmt_default, list(mean = 2L))`);
+  - one pipe an analysis, from its data: `ard_cont <- adsl_saf |>
+    ard_summary(...) |> apply_fmt_fun() |> tag_ard(output_id, "CONT",
+    population = "SAF")`; one report's ends in `bind_rows(...) |>
+    save_ard(output_id, definition = "...")` (`tfl_ard_code(part = "body",
+    save = FALSE)`: in `ard`), with `output_id <- "..."` once at its top --
+    no `ards[[i]]`; in the study's program, a part a report into `ards`;
+  - the tidyverse layout: a call on one line when it fits in 80
+    characters, else an argument a line two spaces in and the closing
+    bracket on its own line, a long vector a value a line;
+  - dplyr's verbs for the data (`filter()`, `mutate()`, `select()`,
+    `left_join()`).  A data frame's column keeps its label through
+    `filter()` (base `subset()` dropped it), so a model's `var_label` in
+    the ARD is the column's label where the data are plain data frames
+    with labels (read as tibbles, as before);
+  - a report's code lists on the data its analyses read, as
+    `set_levels()`'s arguments (`codelists <- list(...)` once when more
+    data take them); an analysis set the data is made from is no longer
+    made factors again, and `adsl_saf` is made in one statement again
+    (#171 left `pop_saf` and `adsl_saf <- .levels(pop_saf)`);
+  - a `custom` analysis's code with the data's names in place of `data`
+    and `population` and its last expression the analysis's ARD; in
+    `local()` only when it defines a function or assigns a name the
+    program has.  An analysis data's `code` of one expression likewise.
+    A function's own `data` argument in `args` stays as it is;
+  - a comment of the analysis's label only; `# ---- data ----` headings.
+
+* **The group count's analysis is GROUPN** (#181): the subjects per group,
+  which clinical reporting calls big N, written by `tfl_ars()` for a
+  percentage's denominator (`An_<output>_GROUPN_<by>`, was `BIGN`).  No
+  alias.
+
+* **The generated programs name a study's folders and its attached
+  packages as its setup does** (#178).  Two options, unset by default
+  (the code as before):
+  - `tflspec.paths`, a variable for a folder (`c(path_adam = "data/adam")`):
+    a dataset, the study ARD and a `source` file under one of them are
+    written through it, `readRDS(file.path(path_adam, "adsl.rds"))`;
+  - `tflspec.attached`, the packages the setup attaches (`c("cards",
+    "dplyr")`): their calls are written without `pkg::` (in the parsed
+    code: a string or a comment keeps it), and an ARD program does not
+    write `library(cards)` itself.
+
+  `tfl_ard_code()`, `tfl_table_code()`, `tfl_report_code()`,
+  `tfl_report_setup_code()`, `tfl_listing_code()`, `tfl_read_data_code()`,
+  `tfl_fig_design_code()` and `tfl_fig_setup_code()` read them;
+  `tfl_build_ard()` runs its program by itself and ignores them.  See
+  `?tflspec_code_options`.
+
+* **The formats in the cards call** (#179).  An ARD program says each
+  analysis's formats where its statistics are computed, in the cards
+  call's own `fmt_fun`: `fmt_fun = everything() ~ .fmts(mean = 2L)`, a
+  variable's own as `BMIBL ~ .fmts(mean = 2L, sd = 3L)`, over the catalog's
+  defaults (`.fmt_default`, now a list as `fmt_fun` takes it: `1L`,
+  `cards::label_round(1, scale = 100)`, `.pvalue`); the line that tags it
+  is `.tag(cards::apply_fmt_fun(ard), ...)`.  So for `ard_summary()`,
+  `ard_tabulate()`, `ard_tabulate_value()` (and a subject flag),
+  `ard_missing()`, `ard_hierarchical()` / `_count()`, `ard_mvsummary()`,
+  `ard_tabulate_rows()`, `cardx::ard_tabulate_max()`, and each of them
+  inside `ard_stack()` and `ard_strata()`.  What takes no `fmt_fun` keeps
+  `.fmt()` after the call: cardx's tests, CIs and models,
+  `ard_stack_hierarchical()`, a study's own function, `custom` code,
+  `ard_pairwise()`, `ard_stack()`'s own rows (the by counts, the total N),
+  an analysis whose `args` gives `fmt_fun` or whose `post` changes the ARD,
+  a variable's own format for `ard_hierarchical()` (its `fmt_fun` formats
+  a column of its own) or `ard_tabulate_rows()`.
+  `stat_fmt` is the same as before, row by row (a test builds both ways).
+  A stack's analysis whose formats were all of its own variables
+  (`SEX:p=xx.xx%`) no longer stops the program being written.
+
 * **A report's own font** (#176).  A report's row of `page` that says its
   `font` (or size) wins over the company's: its program says it, with the
   setup and alone, and the file is in it.  A test now holds it; nothing
@@ -779,7 +1115,7 @@
   - The ORR example's derived key is `orr` (it was `orr_ci`): with
     `sep = "_"` a value containing the separator cannot be split back.
 
-* **tflspec is the spec side only** (#29; step 4 of plan E, Discussion #23).
+* **tflspec is the spec side only** (#29; step 4 of plan E).
   The table engine -- the ARD functions and the plan -- now lives in
   rtfreporter (>= 0.8.1.9001) under its names: `normalize_ard()`,
   `spread_ard()`, `pull_ard()`, `list_ard_keys()`, `cell_rows()`,
@@ -796,11 +1132,10 @@
   - The former names (`tfl_ard_normalize()`, `tfl_plan()`, `tfl_plan_*()`,
     `tfl_apply_plan()`, `tfl_plan_layers()`, `tfl_plan_template()`,
     `tfl_ard_template()`) are gone from tflspec; no aliases.
-  The five example reports and the Discussion #3 samples are byte-identical
+  The five example reports and the users' sample reports are byte-identical
   across the two packages.
 
-  The move was adopted (rtfreporter's pre-CRAN API review, Discussion
-  #316): the engine is rtfreporter's from its 0.8.2 release on.
+  The move was adopted (rtfreporter's pre-CRAN API review): the engine is rtfreporter's from its 0.8.2 release on.
 
 * tflspec now follows rtfreporter's version scheme: a release is `X.Y.Z`
   (tagged, with a GitHub Release -- v0.0.23 is the first), development is
@@ -913,11 +1248,11 @@
 
 # tflspec 0.0.20
 
-* **The plan no longer reads the spec** (#29; step 1 of plan E, Discussion
-  #23).  Inside tflspec the ARD / plan code (`R/ard.R`, `R/plan.R`,
+* **The plan no longer reads the spec** (#29; step 1 of plan E).  Inside
+  tflspec the ARD / plan code (`R/ard.R`, `R/plan.R`,
   `R/rtfreporter-glue.R`) references no spec function any more; the spec
   code has its own file, `R/table_spec.R`.  Behaviour is unchanged: the
-  ten example RTFs and the five Discussion #3 samples are byte-identical.
+  ten example RTFs and the five users' sample reports are byte-identical.
   - `tfl_plan()` loses `spec =`.  New **`tfl_table_plan(data, spec,
     output_id)`** builds the plan from a workbook through the public verbs
     (the steps `tfl_table_code()` writes); a role given in the call still
@@ -984,8 +1319,7 @@
 
 # tflspec 0.0.16
 
-* **`tfl_plan_after()` is the way out, not the way in** (#24, Discussion
-  #23).  The usual reasons to reach for it have declarations, which name
+* **`tfl_plan_after()` is the way out, not the way in** (#24).  The usual reasons to reach for it have declarations, which name
   columns and go into a workbook: `set_decimal_split()` ->
   `tfl_plan_columns(decimal = ".values")`, `paginate_cols()` ->
   `tfl_plan_paginate_cols()`, widths by position ->

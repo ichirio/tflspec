@@ -17,7 +17,15 @@
 
 .fs_df <- function(...) data.frame(..., stringsAsFactors = FALSE)
 
+# tflspec's own style: the same every time it is asked for (a review of
+# many figures asked for it once a figure), made once a session
 .fig_style_builtin <- function() {
+  if (is.null(.fs_memo$builtin)) .fs_memo$builtin <- .fig_style_builtin_make()
+  .fs_memo$builtin
+}
+.fs_memo <- new.env(parent = emptyenv())
+
+.fig_style_builtin_make <- function() {
   s <- function(type, key, value, note) .fs_df(type = type, key = key,
                                                value = value, note = note)
   settings <- rbind(

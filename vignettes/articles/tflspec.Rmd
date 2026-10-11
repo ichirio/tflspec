@@ -212,7 +212,7 @@ written from the spec and never edited by hand afterwards:
   (`tfl_ard_as_custom()` writes an existing row as such code, to start
   from);
 - `args`, `derive`, `where`: R expressions where a value is code;
-- a figure design's `data_code` and `layer_code` steps, and `!r` values.
+- a figure design's `code` steps and `layer_code` layers, and `!r` values.
 
 And what is truly one report's own -- a cell style computed row by row, a
 step after the pages are made -- is one more verb piped after the plan.

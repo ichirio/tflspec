@@ -314,8 +314,8 @@ tfl_ars_to_specs <- function(ars, table = FALSE) {
       own <- if (startsWith(aid, pre)) substring(aid, nchar(pre) + 1L) else aid
       tfl_made <- !identical(own, aid)
       # the subject count tfl_ars() added for a percentage's denominator
-      if (tfl_made && grepl("^BIGN_", own) &&
-          sub("_[0-9]+$", "", sub("^BIGN_", "", own)) %in%
+      if (tfl_made && grepl("^GROUPN_", own) &&
+          sub("_[0-9]+$", "", sub("^GROUPN_", "", own)) %in%
           c(if (length(gv)) paste(gv, collapse = "_") else "ALL")) {
         next
       }

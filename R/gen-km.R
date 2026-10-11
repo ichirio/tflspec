@@ -91,7 +91,7 @@ pp_gen_km <- function(ctx) {
   }
   if (has_layer(ctx, "median_line")) {
     plot <- c(plot, "# ---- layer: median_line ----",
-              sprintf('p <- p + geom_hline(yintercept = 0.5, linetype = %s, colour = %s, linewidth = %s)',
+              sprintf("p <- p + geom_hline(yintercept = 0.5, linetype = %s, colour = %s, linewidth = %s)",
                       q(pp_opt(ctx, "median_linetype")), q(pp_opt(ctx, "median_colour")),
                       pp_opt(ctx, "median_line_width")))
   }

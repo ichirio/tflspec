@@ -28,7 +28,7 @@ ars_spec <- function(analyses, purpose = "SECONDARY OUTCOME MEASURE") {
 }
 
 dm_ae <- function(...) ars_spec(ars_df(
-  list(output_id = "DM", analysis_id = "BIGN", method = "categorical",
+  list(output_id = "DM", analysis_id = "GROUPN", method = "categorical",
        population_id = "SAF", variables = "TRT01A"),
   list(output_id = "DM", analysis_id = "AGE", method = "continuous",
        population_id = "SAF", by = "TRT01A", variables = "AGE"),
@@ -85,8 +85,8 @@ test_that("the specs become the CDISC model, laid out as CDISC's example", {
   expect_identical(vapply(sex$orderedGroupings, `[[`, "", "groupingId"),
                    c("AG_ADSL_TRT01A", "AG_ADSL_SEX"))
   expect_identical(vapply(sex$referencedAnalysisOperations, `[[`, "",
-                          "analysisId"), c("An_DM_CAT_SEX", "An_DM_BIGN"))
-  expect_identical(an_of(ars, "An_DM_BIGN")$methodId, "Mth_total_n")
+                          "analysisId"), c("An_DM_CAT_SEX", "An_DM_GROUPN"))
+  expect_identical(an_of(ars, "An_DM_GROUPN")$methodId, "Mth_total_n")
   # a continuous variable is the analysis variable
   expect_identical(an_of(ars, "An_DM_AGE")$variable, "AGE")
   # a test has no result per group
@@ -108,7 +108,7 @@ test_that("the specs become the CDISC model, laid out as CDISC's example", {
   # the AE output had no subject count: one is added, first, and said
   expect_identical(ars$analyses[[which(vapply(ars$analyses, `[[`, "", "id") ==
                                          "An_AE_TEAE_ANY") - 1L]]$id,
-                   "An_AE_BIGN_TRTA")
+                   "An_AE_GROUPN_TRTA")
   un <- tfl_ars_unmapped(ars)
   expect_true(any(un$item == "denominator" & un$where == "AE"))
   # the percentage operation names its numerator and denominator
@@ -120,7 +120,7 @@ test_that("the specs become the CDISC model, laid out as CDISC's example", {
   # the list of contents: output -> its analyses
   lc <- ars$mainListOfContents$contentsList$listItems
   expect_identical(lc[[1L]]$outputId, "DM")
-  expect_identical(lc[[1L]]$sublist$listItems[[1L]]$analysisId, "An_DM_BIGN")
+  expect_identical(lc[[1L]]$sublist$listItems[[1L]]$analysisId, "An_DM_GROUPN")
   # and nothing is wrong with it
   expect_identical(nrow(tfl_check_ars(ars, schema = FALSE)), 0L)
 })
@@ -214,24 +214,24 @@ test_that("purpose and reason are columns of the ARD spec workbook", {
 })
 
 test_that("an added subject count never takes an id the output has", {
-  # an output whose BIGN is a categorical without a grouping and whose
+  # an output whose GROUPN is a categorical without a grouping and whose
   # other analysis has no `by`: its percentage needs the count without a
   # grouping, which tfl_ars() adds
   sp <- ars_spec(ars_df(
-    list(output_id = "T-1", analysis_id = "BIGN", method = "categorical",
+    list(output_id = "T-1", analysis_id = "GROUPN", method = "categorical",
          population_id = "SAF", variables = "TRT01A"),
     list(output_id = "T-1", analysis_id = "KM", method = "custom",
          population_id = "SAF", code = "km(data)")))
   ars <- tfl_ars(sp)
   ids <- vapply(ars$analyses, `[[`, "", "id")
   expect_false(anyDuplicated(ids) > 0L)
-  expect_true("An_T-1_BIGN_ALL" %in% ids)
+  expect_true("An_T-1_GROUPN_ALL" %in% ids)
   expect_identical(nrow(tfl_check_ars(ars, schema = FALSE)), 0L)
   # and reading it back leaves the added count out
   f <- withr::local_tempfile(fileext = ".json")
   tfl_write_ars_json(ars, f)
   back <- tfl_ars_to_specs(tfl_read_ars_json(f))$ard$analyses
-  expect_identical(back$analysis_id, c("BIGN", "KM"))
+  expect_identical(back$analysis_id, c("GROUPN", "KM"))
 })
 
 test_that("a blank purpose is named once, not again by the schema", {
@@ -318,4 +318,62 @@ test_that("a function's method carries its call, its file and its statistics", {
   m0 <- Filter(function(m) grepl("ard_mine", m$codeTemplate$code %||% ""),
                ars0$methods)[[1L]]
   expect_false(grepl("R/ard_mine.R", m0$codeTemplate$code, fixed = TRUE))
+})
+
+test_that("an output printing another's analyses refers to them (references, #293)", {
+  line <- function(o, l, t) list(output_id = o, line = l, center = t)
+  rs <- list(
+    report = ars_df(list(output_id = "DM", file = "t14_1_1.rtf"),
+                    list(output_id = "F1", type = "figure", file = "f14_1_1.rtf"),
+                    list(output_id = "F2", type = "figure")),
+    titles = ars_df(line("F1", "1", "Figure 14.1.1"), line("F1", "2", "Age by arm")))
+  refs <- data.frame(output_id = c("F1", "F1", "F2"), source = "DM",
+                     analysis_id = c("AGE", "PAGE", "NOPE"))
+  ars <- tfl_ars(dm_ae(), report_spec = rs, references = refs)
+  # an Output with its display and file
+  o <- Filter(function(z) identical(z$id, "F1"), ars$outputs)[[1L]]
+  expect_identical(o$name, "Figure 14.1.1 Age by arm")
+  expect_identical(o$fileSpecifications[[1L]]$location, "f14_1_1.rtf")
+  # its list item names the table's analyses, which are not written twice
+  it <- Filter(function(z) identical(z$outputId, "F1"),
+               ars$mainListOfContents$contentsList$listItems)[[1L]]
+  got <- vapply(it$sublist$listItems, `[[`, "", "analysisId")
+  ids <- attr(ars, "ids")
+  want <- ids$ars_id[ids$output_id == "DM" & ids$analysis_id %in% c("AGE", "PAGE")]
+  expect_setequal(got, want)
+  expect_identical(anyDuplicated(vapply(ars$analyses, `[[`, "", "id")), 0L)
+  # one whose analyses the ARS has none of: no Output, and said why
+  expect_false("F2" %in% vapply(ars$outputs, `[[`, "", "id"))
+  u <- tfl_ars_unmapped(ars)
+  expect_match(u$reason[u$where == "F2"], "prints DM NOPE, which the ARS has no analysis of")
+  expect_false("F1" %in% u$where)
+  # still valid CDISC ARS
+  skip_if_not_installed("jsonvalidate")
+  expect_identical(nrow(tfl_check_ars(ars)), 0L)
+})
+
+test_that("an analysis with overall is also one over all subjects, without the grouping (#212)", {
+  ars <- tfl_ars(ars_spec(ars_df(
+    list(output_id = "DM", analysis_id = "GROUPN", method = "categorical",
+         population_id = "SAF", variables = "TRT01A"),
+    list(output_id = "DM", analysis_id = "CAT", method = "categorical",
+         population_id = "SAF", by = "TRT01A", variables = "SEX",
+         overall = "TRUE"))))
+  ids <- vapply(ars$analyses, `[[`, "", "id")
+  expect_true(all(c("An_DM_CAT", "An_DM_CAT_TOTAL") %in% ids))
+  expect_identical(match("An_DM_CAT_TOTAL", ids), match("An_DM_CAT", ids) + 1L)
+  by <- an_of(ars, "An_DM_CAT")
+  tot <- an_of(ars, "An_DM_CAT_TOTAL")
+  expect_identical(vapply(by$orderedGroupings, `[[`, "", "groupingId"),
+                   c("AG_ADSL_TRT01A", "AG_ADSL_SEX"))
+  # no "Total" group of TRT01A: the grouping is left out
+  expect_identical(vapply(tot$orderedGroupings, `[[`, "", "groupingId"),
+                   "AG_ADSL_SEX")
+  expect_match(tot$name, "(overall)", fixed = TRUE)
+  # its percentages divide by all the subjects
+  den <- vapply(tot$referencedAnalysisOperations, `[[`, "", "analysisId")
+  expect_true("An_DM_GROUPN_ALL" %in% den)
+  trt <- Filter(function(g) g$id == "AG_ADSL_TRT01A", ars$analysisGroupings)[[1L]]
+  expect_false(any(vapply(trt$groups %||% list(), function(g)
+    identical(g$name, "Total"), NA)))
 })

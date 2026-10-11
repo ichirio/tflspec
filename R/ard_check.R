@@ -81,41 +81,9 @@ tfl_check_ard <- function(ard, spec = NULL, output_id = NULL) {
   have_vars <- unique(as.character(unlist(ard$variable)))
   have_groups <- unique(unlist(lapply(g, function(k) as.character(unlist(ard[[k]])))))
   have_stats <- unique(as.character(unlist(ard$stat_name)))
-  # the roles: `KEY` or `role = KEY`, | between them
-  role_cols <- function(x) {
-    p <- .split_bar(x)
-    trimws(sub("^.*=", "", p))
-  }
-  t <- sp$tables
-  if (nrow(t)) {
-    for (role in c("cols", "rows")) {
-      if (!role %in% names(t)) next
-      for (k in role_cols(t[[role]][1L])) {
-        if (k %in% c("variable", "label", "variable_level", "context",
-                     "stat_name")) next
-        if (!k %in% c(have_groups, have_vars)) {
-          add("warning", role, sprintf(
-            "the table's %s name %s, which is neither a group nor a variable of the ARD",
-            role, k))
-        }
-      }
-    }
-  }
-  ce <- sp$cells
-  if (nrow(ce)) {
-    vv <- setdiff(stats::na.omit(unique(ce$variable)),
-                  c("continuous", "categorical"))
-    for (v in setdiff(vv, have_vars)) {
-      add("warning", "cells", sprintf(
-        "the cells are written for %s, which the ARD does not analyse", v))
-    }
-    tok <- unlist(regmatches(ce$template, gregexpr("\\{[^{}]+\\}", ce$template)))
-    st <- unique(sub("[:}].*$", "", sub("^\\{", "", tok)))
-    for (s in setdiff(st, have_stats)) {
-      add("warning", "statistics", sprintf(
-        "a template reads {%s}, a statistic the ARD does not have", s))
-    }
-  }
+  # the review's rules (T07, T06), on the report's rows and defaults
+  p <- .ard_read_problems(sp$tables, sp$cells, have_vars, have_groups, have_stats)
+  for (i in seq_len(nrow(p))) add("warning", p$check[i], p$message[i])
   out
 }
 

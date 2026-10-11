@@ -54,7 +54,8 @@ tfl_fig_setup_code <- function(style = tfl_fig_style(), date = Sys.Date()) {
   }, character(1))
   helpers <- readLines(system.file("fig", "fig_helpers.R", package = "tflspec"),
                        warn = FALSE, encoding = "UTF-8")
-  c("# ============================================================================",
+  .drop_attached_ns(c(
+    "# ============================================================================",
     "#  The figure style standard and the helpers of the figure programs",
     "#  (theme_tfl, scale_colour_tfl, tfl_marker, tfl_save, tfl_check).",
     paste0("#  Generated  : tflspec ", utils::packageVersion("tflspec"), ", ",
@@ -70,7 +71,7 @@ tfl_fig_setup_code <- function(style = tfl_fig_style(), date = Sys.Date()) {
     df_code("tfl_markers", style$markers),
     "",
     helpers,
-    "")
+    ""))
 }
 
 #' @rdname tfl_fig_setup_code

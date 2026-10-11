@@ -39,7 +39,7 @@ articles:
 
 # Grouped by the workflow: ARD spec -> ARD code, the data, table spec ->
 # table plan, report spec, listings, figures, ARS; then the workbooks, the
-# checks, the AI manual and helpers.  Each help page is listed once.
+# checks, the review, the AI manual and helpers.  Each help page is listed once.
 reference:
   - title: ARD spec and ARD code
     desc: >
@@ -67,6 +67,14 @@ reference:
       - tfl_ard_as_custom
       - tfl_ard_function_template
       - tfl_ard_function_info
+  - title: The functions the programs call
+    desc: >
+      The code of the functions the generated programs call as they run (the
+      code lists on a data, the ids in front, the formats, the study ARD),
+      which a study keeps in a file of its own: its programs run without
+      tflspec.
+    contents:
+      - tfl_helpers_code
   - title: Data, analysis data and populations
     desc: >
       The `datasets`, `populations` and `analysis_data` sheets of the ARD
@@ -199,10 +207,22 @@ reference:
       - tfl_check_ars
       - tfl_fig_advice
       - tfl_check_fig_spec
+  - title: Review of the whole definition
+    desc: >
+      Every report's problems at once, one row each: what cannot be used,
+      what is probably wrong and what to set by hand; with the facts of the
+      data and of each report's ARD.
+    contents:
+      - tfl_review_spec
+      - tfl_review_rules
+      - tfl_review_templates
+      - tfl_data_facts
+      - tfl_ard_facts
   - title: AI manual
     desc: The manual of the installed version, to attach to a chat session.
     contents:
       - tflspec_ai_manual
   - title: Helpers
     contents:
+      - tflspec_code_options
       - print.tfl_code

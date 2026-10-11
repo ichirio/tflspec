@@ -25,7 +25,8 @@ test_that("fixes make the change they name", {
   for (f in a$fix) d <- tfl_fig_apply_fix(d, f)
   kinds <- vapply(d$layers, `[[`, "", "layer")
   expect_equal(kinds, c("km_curve", "censor_mark", "risk_table"))
-  expect_equal(vapply(d$data, `[[`, "", "step"), c("read", "param", "time_unit", "flag"))
+  # the data steps before the fit (the named step), which stays last
+  expect_equal(vapply(d$data, `[[`, "", "step"), c("read", "param", "time_unit", "flag", "survfit"))
   expect_equal(d$plot$legend, "bottom")
   # the fixed design draws, and the advice is now only the axis
   expect_equal(nrow(tfl_check_fig_design(d, adam)), 0L)
@@ -58,7 +59,10 @@ test_that("text visits with no order, and a waterfall's usual marks", {
   a <- tfl_fig_advice(d)
   expect_true("visit_order" %in% a$rule)
   d2 <- tfl_fig_apply_fix(d, a$fix[[which(a$rule == "visit_order")]])
-  lv <- d2$data[[length(d2$data)]]
+  # the order is a step on df: before the summary that is made from it
+  k <- vapply(d2$data, `[[`, "", "step")
+  expect_equal(k, c("read", "levels", "summary"))
+  lv <- d2$data[[2L]]
   expect_equal(lv$step, "levels"); expect_equal(lv$order_by, "AVISITN")
   w <- tfl_fig_template("waterfall_plain")
   w$layers <- w$layers[1]

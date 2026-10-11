@@ -8,15 +8,16 @@ knitr::opts_template$set(code = list(comment = "", class.output = "r"))
 options(knitr.kable.NA = "")
 ```
 
-A figure is a **design**, kept as a YAML file: the steps from ADaM to the
-plot's data, the statistics computed from it, and the layers drawn, in
-order. `tfl_fig_design_code()` writes the ggplot2 script it stands for.
+A figure is a **design**, kept as a YAML file: one ordered list of steps
+from ADaM to what is drawn (the plot's data, and the objects made from it:
+a Kaplan-Meier fit, summary statistics ...), the figure-wide settings, and
+the layers drawn, in order. `tfl_fig_design_code()` writes the ggplot2 script it stands for.
 The script depends on dplyr and ggplot2 (and ggsurvfit / patchwork where
 a layer needs them), not on tflspec: it is the program a study keeps, to
 read and finish by hand. It is written in the style of a study's other
-programs: the data steps pipe with `|>`, and its parts are marked by one
-line each (`# ---- data ----`, `# ---- the figure ----`,
-`# ---- saving the figure ----`).
+programs: it has two sections, `# ---- data ----` (one `|>` pipe an
+object) and `# ---- plot ----` (the palette, then one `+` chain into the
+figure).
 
 ```{r, message = FALSE}
 library(tflspec)
@@ -49,7 +50,11 @@ cat(readLines(yml), sep = "\n")
 ```
 
 - `data` steps: `read`, `join`, `param`, `flag`, `filter`, `derive`,
-  `time_unit`, `levels`, `rank`, `data_code`;
+  `time_unit`, `levels`, `rank`; the steps that make an object of their
+  own (`name`): `survfit`, `summary`, `summary_by`, `rate`, `count`,
+  `subset`, `ard_stats`; and `code`. A step after one of these changes
+  that object, in its pipe (a design written before 0.0.24.9074, with a
+  `stats:` list, reads as the one list);
 - `layers`: layers of the catalog (`tfl_fig_parts()` lists every piece
   and field), any `geom` by name, a `call` to any function,
   `layer_code`;
@@ -96,7 +101,7 @@ cat(code[grep("tfl_colours|^plot <-|ggsave", code)], sep = "\n")   # no ggsave()
 What a template's fields cannot express is written **in the design**, not
 patched into the script afterwards:
 
-- a `data_code` step: R that reworks `df`;
+- a `code` step: R that reworks `df` or makes an object of its own;
 - a `layer_code` layer: R added to the plot `p`;
 - `plot.add`: calls written after the figure's settings (`theme()`,
   `scale_*()`, `facet_*()`);
@@ -108,7 +113,8 @@ Written in the style of the script, with `|>`:
 arms <- "df <- df |> mutate(TRT01P = factor(TRT01P, sort(unique(TRT01P))))"
 cutoff <- paste('p <- p + annotate("text", x = 1, y = 0.05,',
                 'label = "Data cut-off: 01JUN2026", hjust = 0, size = 3)')
-design$data <- c(design$data, list(list(step = "data_code", code = arms)))
+design$data <- append(design$data, list(list(step = "code", code = arms)),
+                      after = 3)   # after the read, param and flag steps
 design$layers <- c(design$layers,
                    list(list(layer = "layer_code", code = cutoff)))
 code <- tfl_fig_design_code(design, "F-14-2-1")

@@ -211,16 +211,22 @@ cat(tfl_ard_as_custom(spec, "T-14-3-1", "SER")$code, sep = "\n")
 
 A table spec's `codelists` sheet (one row a value: `output_id`,
 `variable`, `value`, `label`, `order`) gives the order of a variable's
-values and the text they print as. **A code list is a report's**: every
+values and what each value is in the data the report's program makes
+(`label`; blank: the value itself). **A code list is a report's**: every
 row names its report, and a blank `output_id` is an error (a code list two
 reports use is copied into each; the same arm may print one way in one
 table and another way in the next).
 
 Handed to the ARD program, a report's code lists of the variables its
 analyses read (`by`, `strata`, `variables`, and the names in `args`,
-`code` and `post`) make those columns factors before any analysis, so the
-ARD keeps the order and **counts a value no record has** (`n = 0`). A
-variable the table only prints is not made a factor. A data made from
+`code` and `post`) are written at the program's head (`cl_sex <- c(F =
+"Female", M = "Male")`) and put on those columns before any analysis
+(`set_levels(SEX = cl_sex)`): each becomes a factor in the list's order
+with the labels as its values, so **the ARD holds "Female"**, keeps the
+order and **counts a value no record has** (`n = 0`). A value the list
+does not have stops the program, naming the column and the value; a
+condition on such a column is written in its labels (`SEX == "Female"`).
+A variable the table only prints is not made a factor. A data made from
 another -- an analysis set, an analysis data, an analysis's own subset --
 is made factors again as its last step (`|> .levels()`): a value the list
 does not have counts only where the data analysed have it (a table of the
@@ -235,9 +241,11 @@ spec3 <- tfl_ard_spec(c(base, list(analyses = df(
 cat(tfl_ard_code(spec3, part = "body", codelists = codelists), sep = "\n")
 ```
 
-The code list of `variable` (its values the variables' names: `variable /
-AGE / Age (years)`) is the variables' labels in the tables; the ARD does
-not read it. See [The table spec](table-spec.html).
+`set_levels()` and the other functions the program calls are not
+tflspec's exports: `tfl_helpers_code()` gives their code, which a study
+keeps in a file of its own (tflplanner: `programs/study_helpers.R`), so
+the programs run without tflspec. A variable's heading in a table is the
+`variables` sheet's `label`; see [The table spec](table-spec.html).
 
 ## Building the ARD
 

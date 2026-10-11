@@ -32,14 +32,15 @@ test_that("a stack is one ard_stack() call, each variable tagged with its analys
          variables = "SEX")))
   code <- tfl_ard_code(sp, part = "body")
   txt <- paste(code, collapse = "\n")
-  expect_match(txt, "ard <- cards::ard_stack(pop_saf,", fixed = TRUE)
-  expect_match(txt, ".by = ARM", fixed = TRUE)
-  expect_match(txt, "cards::ard_summary(variables = c(AGE, BMIBL)", fixed = TRUE)
-  expect_match(txt, "cards::ard_tabulate(variables = SEX", fixed = TRUE)
-  expect_match(txt, "c(`AGE` = \"CONT\", `BMIBL` = \"CONT\", `SEX` = \"CAT\", `.other` = \"DEMO\")",
+  expect_match(txt, "ard_demo <- pop_saf |>\n  ard_stack(\n    .by = ARM,\n", fixed = TRUE)
+  expect_match(txt, "    ard_summary(\n      variables = c(AGE, BMIBL),", fixed = TRUE)
+  expect_match(txt, "    ard_tabulate(variables = SEX,", fixed = TRUE)
+  # each analysis's variables; the rest the stack's
+  expect_match(txt, paste0("    \"DEMO\",\n    population = \"SAF\",\n",
+                           "    analyses = list(CONT = c(\"AGE\", \"BMIBL\"), CAT = \"SEX\")"),
                fixed = TRUE)
   # one call, not three
-  expect_length(grep("^ard <- cards::", code), 1L)
+  expect_length(grep("^ard_[a-z0-9_]+ <- ", code), 1L)
 
   ard <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE))
   ids <- tapply(ard$analysis_id, ard$variable, unique)
@@ -75,9 +76,9 @@ test_that("ard_strata() and ard_pairwise() run their one analysis with .x", {
     list(analysis_id = "TT", parent = "PAIRS", method = "ttest", by = "ARM",
          variables = "AGE", statistics = "estimate | p.value")))
   txt <- paste(tfl_ard_code(sp, part = "body"), collapse = "\n")
-  expect_match(txt, "cards::ard_strata(pop_saf,\n    .strata = SEX,\n    .f = ~ cards::ard_summary(.x,",
+  expect_match(txt, "pop_saf |>\n  ard_strata(\n    .strata = SEX,\n    .f = ~ ard_summary(\n      .x,",
                fixed = TRUE)
-  expect_match(txt, "cards::ard_pairwise(pop_saf,\n    variable = ARM,\n    .f = ~ cardx::ard_stats_t_test(.x,",
+  expect_match(txt, "pop_saf |>\n  ard_pairwise(\n    variable = ARM,\n    .f = ~ cardx::ard_stats_t_test(.x,",
                fixed = TRUE)
   ard <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE))
   expect_setequal(unique(ard$analysis_id), c("AGE", "TT"))
@@ -161,7 +162,7 @@ test_that("post: steps on the ARD after the call", {
     statistics = "N | mean | sd",
     post = "cards::add_calculated_row(expr = sd / sqrt(N), stat_name = \"se\")")))
   txt <- paste(tfl_ard_code(sp, part = "body"), collapse = "\n")
-  expect_match(txt, "ard <- ard |>\n  cards::add_calculated_row(expr = sd / sqrt(N), stat_name = \"se\")",
+  expect_match(txt, "  ) |>\n  add_calculated_row(expr = sd / sqrt(N), stat_name = \"se\") |>\n  fmt_ard(",
                fixed = TRUE)
   ard <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE))
   se <- unlist(ard$stat[ard$stat_name == "se"])
