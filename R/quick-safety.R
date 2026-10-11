@@ -45,6 +45,9 @@ pp_q_ae_data <- function(adam, data, term, group, pop, tefl, key, top, min_pct, 
 #' @param tefl Treatment-emergent flag (`NULL` for all records).
 #' @param top,min_pct Show at most `top` terms with incidence of at least
 #'   `min_pct` percent in any arm.
+#' @return A `tfl_code` object: the figure's 'ggplot2' script, a character
+#'   vector of class `tfl_code` with its specification in attribute `spec`;
+#'   printing it shows the script.
 #' @export
 tfl_fig_ae_dot <- function(adam = NULL, style = c("risk_diff", "incidence"), data = "ADAE",
                       term = "AEDECOD", group = "TRT01A", pop = "SAFFL", where = NULL, tefl = "TRTEMFL",
@@ -98,6 +101,9 @@ tfl_fig_ae_dot <- function(adam = NULL, style = c("risk_diff", "incidence"), dat
 #'
 #' @inheritParams tfl_fig_ae_dot
 #' @param style `soc` (system organ class) or `pt` (preferred term).
+#' @return A `tfl_code` object: the figure's 'ggplot2' script, a character
+#'   vector of class `tfl_code` with its specification in attribute `spec`;
+#'   printing it shows the script.
 #' @export
 tfl_fig_butterfly <- function(adam = NULL, style = c("soc", "pt"), data = "ADAE", term = NULL,
                          group = "TRT01A", pop = "SAFFL", where = NULL, tefl = "TRTEMFL", top = 20, min_pct = 0,
@@ -134,6 +140,9 @@ tfl_fig_butterfly <- function(adam = NULL, style = c("soc", "pt"), data = "ADAE"
 #' @param alt,ast,bili PARAMCD of ALT, AST and total bilirubin.
 #' @param uln Upper limit of normal variable.
 #' @param post_baseline Condition selecting post-baseline records (R code).
+#' @return A `tfl_code` object: the figure's 'ggplot2' script, a character
+#'   vector of class `tfl_code` with its specification in attribute `spec`;
+#'   printing it shows the script.
 #' @export
 tfl_fig_edish <- function(adam = NULL, style = c("alt", "alt_ast"), data = "ADLB", alt = "ALT", ast = "AST",
                      bili = "BILI", uln = "ANRHI", post_baseline = "AVISITN > 0", group = "TRT01A",

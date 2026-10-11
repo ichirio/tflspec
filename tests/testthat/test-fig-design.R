@@ -122,6 +122,9 @@ test_that("every template has its clinical category and the data it reads", {
 })
 
 test_that("every template draws on the example data and checks clean", {
+  # every figure type drawn with ggplot2: about 20 s on CRAN's machines; CI
+  # runs it on every configuration
+  skip_on_cran()
   skip_if_not_installed("ggsurvfit")
   adam <- tfl_example_adam()
   tp <- tfl_fig_templates()

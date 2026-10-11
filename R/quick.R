@@ -41,6 +41,7 @@ pp_time_units <- c(days = "as_is", weeks = "days_to_weeks", months = "days_to_mo
 #' Code object returned by the quick API
 #' @param x A `tfl_code` object.
 #' @param ... Unused.
+#' @return `x`, invisibly (the script is printed).
 #' @export
 print.tfl_code <- function(x, ...) {
   cat(x, sep = "\n\n")
@@ -171,6 +172,9 @@ tfl_fig_km <- function(adam = NULL, param = "OS", group = "TRT01P",
 #'   (value taken from `AVALC`).
 #' @param response_data Dataset of the response.
 #' @param id Subject key.
+#' @return A `tfl_code` object: the figure's 'ggplot2' script, a character
+#'   vector of class `tfl_code` with its specification in attribute `spec`;
+#'   printing it shows the script.
 #' @export
 tfl_fig_waterfall <- function(adam = NULL, style = c("response", "plain"),
                          param = "BPCHG", value = "AVAL", response = "BOR",
@@ -215,6 +219,9 @@ tfl_fig_waterfall <- function(adam = NULL, style = c("response", "plain"),
 #' @param response_data Dataset with `response` and `assessment`.
 #' @param visit_every Draw dotted visit lines every this many time units.
 #' @param key Join key between datasets.
+#' @return A `tfl_code` object: the figure's 'ggplot2' script, a character
+#'   vector of class `tfl_code` with its specification in attribute `spec`;
+#'   printing it shows the script.
 #' @export
 tfl_fig_swimmer <- function(adam = NULL, style = c("full", "assessment", "response", "bar"),
                        duration = "TRTDURD", start = NULL, end = NULL, id = "SUBJID", response = "BOR",
