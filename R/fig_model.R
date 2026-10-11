@@ -2144,7 +2144,7 @@ tfl_fig_forest_analyses <- function(data = "ADTTE", param = "OS", pop = "FASFL",
   reg <- function(d, in_ = "") paste0(
     "cardx::ard_regression(\n", in_, "  ", sprintf(model, d), ",\n", in_, "  exponentiate = TRUE)")
   adata <- data.frame(
-    data_id = data_id, label = sprintf("%s of the %s, with the subgroups", param, pop),
+    data_id = data_id, label = sprintf("%s of %s, with the subgroups", param, sub("FL$", "", pop)),
     from = toupper(data), population_id = pop, where = sprintf("PARAMCD == %s", q(param)),
     add = if (length(subgroups)) paste(subgroups, collapse = " | ") else NA_character_,
     stringsAsFactors = FALSE)
