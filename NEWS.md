@@ -1,5 +1,10 @@
 # tflspec (development version)
 
+* **The forest plot's analysis data is named by tflplanner's rule**,
+  `<data>_<population>_<param>` (`adtte_fas_os`; was `adtte_os`), the
+  population without its flag's `FL` -- the same rule tflplanner names
+  every analysis data it suggests by (tflplanner #293, its figure work).
+
 * **The forest plot from the figure's own ARD** (tflplanner #293 phase
   6).  `forest_hr` is a parts template now: its hazard ratios, intervals
   and N are statistics of an ARD made by cards / cardx -- one Cox model
