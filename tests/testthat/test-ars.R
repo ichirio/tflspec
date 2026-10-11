@@ -351,3 +351,29 @@ test_that("an output printing another's analyses refers to them (references, #29
   skip_if_not_installed("jsonvalidate")
   expect_identical(nrow(tfl_check_ars(ars)), 0L)
 })
+
+test_that("an analysis with overall is also one over all subjects, without the grouping (#212)", {
+  ars <- tfl_ars(ars_spec(ars_df(
+    list(output_id = "DM", analysis_id = "GROUPN", method = "categorical",
+         population_id = "SAF", variables = "TRT01A"),
+    list(output_id = "DM", analysis_id = "CAT", method = "categorical",
+         population_id = "SAF", by = "TRT01A", variables = "SEX",
+         overall = "TRUE"))))
+  ids <- vapply(ars$analyses, `[[`, "", "id")
+  expect_true(all(c("An_DM_CAT", "An_DM_CAT_TOTAL") %in% ids))
+  expect_identical(match("An_DM_CAT_TOTAL", ids), match("An_DM_CAT", ids) + 1L)
+  by <- an_of(ars, "An_DM_CAT")
+  tot <- an_of(ars, "An_DM_CAT_TOTAL")
+  expect_identical(vapply(by$orderedGroupings, `[[`, "", "groupingId"),
+                   c("AG_ADSL_TRT01A", "AG_ADSL_SEX"))
+  # no "Total" group of TRT01A: the grouping is left out
+  expect_identical(vapply(tot$orderedGroupings, `[[`, "", "groupingId"),
+                   "AG_ADSL_SEX")
+  expect_match(tot$name, "(overall)", fixed = TRUE)
+  # its percentages divide by all the subjects
+  den <- vapply(tot$referencedAnalysisOperations, `[[`, "", "analysisId")
+  expect_true("An_DM_GROUPN_ALL" %in% den)
+  trt <- Filter(function(g) g$id == "AG_ADSL_TRT01A", ars$analysisGroupings)[[1L]]
+  expect_false(any(vapply(trt$groups %||% list(), function(g)
+    identical(g$name, "Total"), NA)))
+})

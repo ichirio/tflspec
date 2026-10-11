@@ -200,6 +200,9 @@
   if (length(lb)) do.call(add, c(list("plan_labels"), as.list(lb)))
   ne <- .ard_spec_nest(sp)
   if (length(ne)) do.call(add, c(list("plan_nest"), ne))
+  if (!is.null(sa[["total"]])) {
+    add("plan_total", label = sa[["total"]], position = sa[["total_position"]])
+  }
   cm <- .ard_spec_cells(sp)
   how <- sa[intersect(c("stats", "value", "na"), names(sa))]
   if (length(cm) || length(how)) do.call(add, c(list("plan_cells"), cm, how))
@@ -383,10 +386,17 @@ tfl_table_code <- function(spec, output_id = NULL, data = "data",
 #' @seealso [tfl_table_code()], the same steps as code; [tfl_as_table_spec()],
 #'   the other way round.
 #' @examples
-#' \dontrun{
-#' spec <- tfl_read_table_spec("study.xlsx", output_id = "DM")
-#' plan <- ard |> normalize_ard() |> tfl_table_plan(spec)
-#' plan |> plan_paginate_rows(max_rows = 40)   # this report's own change
+#' if (requireNamespace("cards", quietly = TRUE) &&
+#'     requireNamespace("rtfreporter", quietly = TRUE)) {
+#'   spec <- tfl_read_table_spec(system.file("extdata", "ard-spec", "DM.xlsx",
+#'                                           package = "tflspec"))
+#'   ard <- cards::ard_stack(cards::ADSL, .by = TRT01A,
+#'                           cards::ard_continuous(variables = AGE),
+#'                           cards::ard_categorical(variables = c(AGEGR1, SEX)))
+#'   plan <- tfl_table_plan(rtfreporter::normalize_ard(ard), spec)
+#'   # this report's own change, under what the spec says
+#'   plan <- rtfreporter::plan_paginate_rows(plan, max_rows = 40)
+#'   head(rtfreporter::plan_apply(plan, "table"))
 #' }
 #' @export
 tfl_table_plan <- function(data, spec, output_id = NULL, ...) {

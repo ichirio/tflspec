@@ -8,6 +8,46 @@
   hands it the rows it has read, one report a phase, without a temporary
   file.
 
+* **The forest plot from the figure's own ARD** (tflplanner #293 phase
+  6).  `forest_hr` is a parts template now: its hazard ratios, intervals
+  and N are statistics of an ARD made by cards / cardx -- one Cox model
+  of all subjects (`cardx::ard_regression()`) and one within each subgroup
+  variable (`cards::ard_strata()`), each a `custom` analysis -- read with
+  `ard_stats()`, not fitted inside the figure program.  The analyses the
+  plot needs come with the design, `attr(design, "analyses")`, from the
+  new `tfl_fig_forest_analyses()`; `tfl_fig_template()` takes `subgroups`
+  and `comparison` (the arm against the reference).  Two new pieces
+  serve it: the layer `text_column` (columns of text at the right of the
+  plot, a panel of its own: N, the estimate and its interval) -- panels
+  now go below the plot or at its right -- and the catalog layer
+  `errorbar_h` (a horizontal error bar).  A subgroup whose model did not
+  converge has no point and prints NE.  The template snapshot of
+  `forest_hr` changes from the whole script to the parts.
+
+* **Review rule A01 checks an analysis data's `add` columns in the
+  population's data** (ADSL), where `add` takes them from by the
+  subject, not in the analysis data's own dataset: an ADTTE data adding
+  SEX was said to read a column ADTTE has not got.  And a figure with
+  analyses of its own (`figures` given) is not reviewed as a table: no
+  "no column key" (T09) for a forest plot.
+
+* **A Total column, read from cards' overall rows** (#212, rtfreporter
+  `plan_total()`).  The `analyses` sheet's new column `overall` (`TRUE`)
+  runs the analysis again without its `by` and binds it under the grouped
+  call (`bind_rows(ard_tabulate(adsl, by = ARM, ...), ard_tabulate(adsl,
+  ...))`; on a `cards::ard_stack` row, `.overall = TRUE`): cards' own
+  overall rows, with no group.  The `tables` sheet's new `total` (the
+  heading, `Total`) and `total_position` (`last` / `first`) are written as
+  `plan_total(label = "Total")`, whose `{n}` is the study total.
+  `tfl_ars()` writes each such analysis twice, by its groups and over all
+  subjects without the grouping (`An_<output>_<analysis>_TOTAL`), so the
+  ARS names no `ARM = "Total"` the data does not have.  The definition
+  check refuses `overall` without a `by`, on a row inside a parent (it is
+  the parent's), on `custom` / `subjects` / `ard_strata` / `ard_pairwise`,
+  and together with `.overall` in `args`.  A definition without the
+  columns writes the same programs, with the same fingerprints.  Needs
+  rtfreporter >= 0.8.2.9034.
+
 * **A variable's rows under one level of another** (tflplanner's RACE
   sample, rtfreporter #598).  The `variables` sheet's new column `under`
   (`RACE: Asian`: that variable, a colon, the level as the table shows
@@ -57,6 +97,22 @@ save it, then look at its Review tab.
   (P02 names a program that still calls a removed function).
 
 ## Changes
+
+* **Ready for CRAN's review, the parts that are not the submission itself**
+  (#218).  `readxl` moves from Suggests to Imports: reading the Excel
+  specifications is the package's job, so it was never optional
+  (`rtfreporter` follows at the submission, once it is on CRAN; in Imports
+  now the check warns that it is not).  `haven` and `writexl` stay in
+  Suggests; every function that uses them now says what to install
+  when they are missing (`tfl_fig_style_template()`, `tfl_read_ard()` of an
+  .xpt file, reading .xpt / .sas7bdat data).  The 14 quick-API figure
+  functions and `print.tfl_code()` document what they return; the examples
+  of `tfl_table_plan()` and `tfl_as_table_spec()` run (on a bundled
+  specification and a small cards ARD) instead of `\dontrun{}`.  The five
+  tests that draw every figure type skip on CRAN (CI still runs them).  The
+  15 README-unused figures stay out of the built package; the Title quotes
+  'Excel' and the Description spells out TFL; the WORDLIST knows the
+  package's terms.
 
 * **D02 in plain words** (tflplanner): "%s: the checks against the data
   have not run yet." and "Press [Review with the data]: it reads the

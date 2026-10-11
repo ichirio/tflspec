@@ -801,6 +801,16 @@
   fmt_fun <- .call_fmt_fun(r, keys, given, fmt)
   node <- .analysis_node(r, keys, subj, has, den, data = data,
                          population = pop_name, fmt_fun = fmt_fun)
+  # overall: the same call without its by too, bound under it -- cards'
+  # overall rows, no group, which a table reads as its Total column
+  if (isTRUE(.ard_yes(r$overall %||% NA)) && !is.na(r$by) &&
+      !call_fn %in% c("(code)", "(subjects)")) {
+    r0 <- r
+    r0$by <- NA
+    node <- .cl("dplyr::bind_rows", list(node, .analysis_node(
+      r0, keys, subj, has, den, data = data, population = pop_name,
+      fmt_fun = fmt_fun)))
+  }
   keep <- if (!kind %in% c("continuous", "categorical", "missing") &&
               !identical(call_fn, "(subjects)"))
     .split_bar(r$statistics)
@@ -931,6 +941,9 @@
       if (!is.na(r$strata)) list(.strata = .vars(r$strata))),
     if (pairwise) list(variable = .vars(r$variables)),
     if (stack) bodies else list(.f = tilde(bodies[[1L]])),
+    # overall: the stack again without its .by (a Total column)
+    if (stack && !is.na(r$by) && isTRUE(.ard_yes(r$overall %||% NA)))
+      list(.overall = "TRUE"),
     as.list(.split_args(r$args))))
   # ard_stack()'s own rows (the by counts, the total N) take no fmt_fun:
   # theirs after it, the analyses' variables skipped (formatted in their

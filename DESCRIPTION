@@ -1,6 +1,6 @@
 Package: tflspec
-Title: Excel Specifications for Clinical Tables, Listings and Figures
-Version: 0.0.24.9082
+Title: 'Excel' Specifications for Clinical Tables, Listings and Figures
+Version: 0.0.24.9086
 Authors@R: c(
     person(given  = "Yoichi",
            family = "Masui",
@@ -8,8 +8,8 @@ Authors@R: c(
            role   = c("aut", "cre", "cph")),
     person("CDISC", role = "cph",
            comment = "JSON Schema of the ARS model, inst/ars/ars_ldm.json (MIT)"))
-Description: Reads study specifications written in Excel and produces what a
-    clinical TFL report is made of. Tables: 'cards'/'cardx' analysis results
+Description: Reads study specifications written in 'Excel' and produces what
+    a clinical report of tables, listings and figures (TFL) is made of. Tables: 'cards'/'cardx' analysis results
     data (ARD) are normalized and laid out through a declarative plan or a
     table specification, then rendered by 'rtfreporter'. Figures: skeleton
     'ggplot2' code is generated from a plot specification; that code depends
@@ -29,12 +29,13 @@ Imports:
     grDevices,
     jsonlite,
     openxlsx,
+    readxl,
     rlang,
     yaml,
     stats,
     utils
 Suggests:
-    rtfreporter (>= 0.8.2.9032),
+    rtfreporter (>= 0.8.2.9034),
     broom,
     broom.helpers,
     car,
@@ -49,7 +50,6 @@ Suggests:
     mmrm,
     parameters,
     patchwork,
-    readxl,
     rstudioapi,
     siera (>= 0.5.6),
     smd,

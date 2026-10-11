@@ -252,7 +252,10 @@ tfl_read_ard <- function(path, format = NULL) {
   } else {
     d <- if (format == "csv") utils::read.csv(path, stringsAsFactors = FALSE,
                                               colClasses = "character")
-         else as.data.frame(haven::read_xpt(path))
+         else {
+           .ard_need("haven", "tfl_read_ard() of an .xpt file")
+           as.data.frame(haven::read_xpt(path))
+         }
     back <- c(OUTID = "output_id", ANID = "analysis_id", POPID = "population_id",
               VARIABLE = "variable", VARLVL = "variable_level",
               CONTEXT = "context", STATNAME = "stat_name",

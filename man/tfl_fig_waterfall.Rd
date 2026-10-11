@@ -55,6 +55,11 @@ best percent change (\code{NULL} when the dataset has no PARAMCD).}
 \item{...}{Engine options, e.g. \code{x_max = 24}, \code{x_by = 3}, \code{palette = "grey"},
 \code{theme = "classic"}, \code{width = 7}, \code{height = 5}.}
 }
+\value{
+A \code{tfl_code} object: the figure's 'ggplot2' script, a character
+vector of class \code{tfl_code} with its specification in attribute \code{spec};
+printing it shows the script.
+}
 \description{
 Waterfall plot code
 }

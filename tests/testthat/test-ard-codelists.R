@@ -188,3 +188,34 @@ test_that("variables$under puts a variable's rows under a level of another (plan
   expect_error(tfl_table_spec(tables = data.frame(cols = "TRT"),
     variables = data.frame(variable = "RSUB", under = "RACE")), "variables[$]under")
 })
+
+test_that("tables$total is a Total column from the overall rows (plan_total(), #212)", {
+  skip_if_not_installed("cards")
+  skip_if(!"plan_total" %in% getNamespaceExports("rtfreporter"), "rtfreporter has no plan_total()")
+  adsl <- data.frame(
+    USUBJID = paste0("S", 1:6), TRT = rep(c("A", "B"), 3),
+    SEX = c("F", "M", "F", "F", "M", "F"))
+  d <- suppressMessages(rtfreporter::normalize_ard(dplyr::bind_rows(
+    cards::ard_tabulate(adsl, variables = TRT),
+    cards::ard_tabulate(adsl, by = TRT, variables = SEX, denominator = adsl),
+    cards::ard_tabulate(adsl, variables = SEX, denominator = adsl))))
+  sp <- tfl_table_spec(tables = data.frame(cols = "TRT", rows = "group = variable",
+                                           total = "Total"))
+  code <- tfl_table_code(sp)
+  expect_true(any(grepl("plan_total(label = \"Total\")", code, fixed = TRUE)))
+  p <- tfl_table_plan(d, sp) |> rtfreporter::plan_cells(categorical = "{n}", notes = FALSE)
+  tb <- suppressMessages(rtfreporter::plan_apply(p, "table"))
+  expect_identical(names(tb)[-(1:2)], c("A", "B", "Total"))
+  expect_identical(as.character(tb$Total), c("4", "2"))
+  # first
+  sp1 <- tfl_table_spec(tables = data.frame(cols = "TRT", rows = "group = variable",
+                                            total = "All", total_position = "first"))
+  expect_true(any(grepl("plan_total(label = \"All\", position = \"first\")",
+                        tfl_table_code(sp1), fixed = TRUE)))
+  # a plan gives the columns back
+  back <- suppressMessages(tfl_as_table_spec(tfl_table_plan(d, sp1), "T1"))
+  expect_identical(back$tables$total, "All")
+  expect_identical(back$tables$total_position, "first")
+  expect_error(tfl_table_code(tfl_table_spec(tables = data.frame(
+    cols = "TRT", total = "Total", total_position = "middle"))), "total_position")
+})
