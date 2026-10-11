@@ -118,6 +118,13 @@ ARD rows without the page key).  Several at once name their
 tokens: \code{n = page | N = table} gives \code{{n}} and \code{{N}}.  Blank: the
 page's, with a warning when the ARD states both.  See
 \code{\link[rtfreporter:plan_verbs]{rtfreporter::plan_col_header()}}'s \code{values}.}
+\item{\code{total}}{The heading of a \strong{Total column} (\code{Total}): the ARD's
+overall rows --- the analyses run again without their \code{by}
+(\code{analyses$overall}) --- as one more column, its \code{{n}} the study
+total (\code{\link[rtfreporter:plan_verbs]{rtfreporter::plan_total()}}).  Blank: none.  No \code{ARM = "Total"} in the data: the ARD and the ARS keep only what the data
+has.}
+\item{\code{total_position}}{Where the Total column goes among the column
+key's values: \code{last} (blank) or \code{first}.}
 }
 }
 

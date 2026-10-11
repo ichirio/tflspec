@@ -115,6 +115,7 @@ reference:
       - tfl_fig_advice
       - tfl_fig_apply_fix
       - tfl_fig_template
+      - tfl_fig_forest_analyses
       - tfl_fig_templates
       - tfl_fig_parts
       - tfl_fig_add_layer

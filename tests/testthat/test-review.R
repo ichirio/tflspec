@@ -230,3 +230,26 @@ test_that("the memos give what the work gives", {
   withr::local_options(tflspec.fig_style = own)
   expect_identical(tfl_fig_style()$colors$colour[1], "#123456")
 })
+
+test_that("A01: columns an analysis data adds are the population's data's, not its own dataset's (#293 P6)", {
+  s <- .rv_study()
+  # the AEs with SEX added from ADSL by the subject: no column missing
+  s$ard$analysis_data$add[3] <- "SEX"
+  r <- .rv_review(s)
+  expect_false(any(r$rule == "A01" & grepl("SEX", r$message, fixed = TRUE)))
+  # a column the population's data has not got is still found
+  s$ard$analysis_data$add[3] <- "NOPE"
+  r <- .rv_review(s)
+  expect_true(any(r$rule == "A01" & grepl("NOPE", r$message, fixed = TRUE)))
+})
+
+test_that("a figure with analyses of its own is not reviewed as a table (#293 P6)", {
+  s <- .rv_study()
+  # T-2's analyses as a figure's own ARD: no table rules for it
+  s$spec$tables <- s$spec$tables[s$spec$tables$output_id != "T-2", , drop = FALSE]
+  r <- .rv_review(s)
+  expect_true(any(r$rule == "T09" & r$output_id == "T-2"))
+  s$figures <- list(`T-2` = tfl_fig_template("km_simple"))
+  r <- .rv_review(s)
+  expect_false(any(grepl("^T", r$rule) & r$output_id %in% "T-2"))
+})
