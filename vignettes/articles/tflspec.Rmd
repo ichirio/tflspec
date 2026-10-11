@@ -70,18 +70,21 @@ ard_spec <- tfl_ard_spec(list(
   populations = df(population_id = "SAF", dataset = "ADSL",
                    where = 'SAFFL == "Y"'),
   analyses = df(output_id = "DM",
-                analysis_id = c("BIGN", "CONT", "CAT"),
-                method = c("total_n", "continuous", "categorical"),
+                analysis_id = c("BIGN", "ARMN", "CONT", "CAT"),
+                method = c("total_n", "categorical", "continuous",
+                           "categorical"),
                 population_id = "SAF",
-                by = c(NA, "TRT01P", "TRT01P"),
-                variables = c(NA, "AGE | HTBL", "AGEGR1 | SEX | ETHNIC"))))
+                by = c(NA, NA, "TRT01A", "TRT01A"),
+                variables = c(NA, "TRT01A", "AGE | WEIGHTBL",
+                              "AGEGR1 | SEX | RACE"))))
 
 path <- tfl_write_ard_spec(ard_spec, file.path(study, "ard_spec.xlsx"))
 ard_spec <- tfl_read_ard_spec(path)
 ard_spec$analyses[, c("output_id", "analysis_id", "method", "by", "variables")]
 ```
 
-`method` is a keyword (`tfl_ard_methods()`), any `pkg::function` of cards
+`ARMN` counts the subjects of each arm: the column header's `(N=xx)` is
+read from it. `method` is a keyword (`tfl_ard_methods()`), any `pkg::function` of cards
 or cardx, or a function of the study's own. The article
 [The ARD spec](ard-spec.html) goes through every sheet.
 
@@ -192,8 +195,8 @@ library(rtfreporter)
 ard  <- readRDS("output/ard/ard.rds")
 data <- normalize_ard(ard[ard$output_id == "DM", ])
 # 2 TABLE   tfl_table_code()
-plan <- table_plan(data, cols = "TRT01P", rows = c(group = "variable")) |>
-  plan_labels(AGE = "Age (years) [a]") |>
+plan <- table_plan(data, cols = "TRT01A", rows = c(group = "variable")) |>
+  plan_labels(AGE = "Age (years)", ...) |>
   ...
 # 3 REPORT  tfl_report_code()
 doc <- rtf_document(program = "DM")
