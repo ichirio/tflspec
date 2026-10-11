@@ -15,6 +15,17 @@
   then letters, digits or `_`), a pattern no row defines, a pattern
   chosen on the blank row or by a pattern.  A workbook without patterns
   reads and writes as before, with the same programs.
+* **`tfl_read_toc()` reads a data frame** (tflplanner #299, D10).  `path`
+  may be a data frame of the TOC's rows (its names the column names) in
+  place of a file; `sheet` and `skip` do not apply, and a row with no
+  output id is named by its row in the data frame.  The rows go through
+  the one reader as a file's do -- tflplanner's import by company rules
+  hands it the rows it has read, one report a phase, without a temporary
+  file.
+* **The forest plot's analysis data is named by tflplanner's rule**,
+  `<data>_<population>_<param>` (`adtte_fas_os`; was `adtte_os`), the
+  population without its flag's `FL` -- the same rule tflplanner names
+  every analysis data it suggests by (tflplanner #293, its figure work).
 
 * **The forest plot from the figure's own ARD** (tflplanner #293 phase
   6).  `forest_hr` is a parts template now: its hazard ratios, intervals
