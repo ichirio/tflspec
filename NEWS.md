@@ -11,7 +11,9 @@
   each only when it is not defined yet, with the values of the new
   `tfl_time_unit_days()`, and a figure script of its own defines the ones
   it uses the same way.  The templates' snapshots and the program fixtures
-  change by that line.
+  change by that line.  The review's catalog has the rule tflplanner
+  checks it with: **D03**, a dataset column named like a program constant
+  (an error: rename the column).
 
 * **Page patterns** (tflplanner's page-patterns design).  The report
   half -- `report`, `page`, `header`, `footer`, `titles`, `footnotes`,
