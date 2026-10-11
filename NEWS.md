@@ -1,5 +1,28 @@
 # tflspec (development version)
 
+* **The forest plot from the figure's own ARD** (tflplanner #293 phase
+  6).  `forest_hr` is a parts template now: its hazard ratios, intervals
+  and N are statistics of an ARD made by cards / cardx -- one Cox model
+  of all subjects (`cardx::ard_regression()`) and one within each subgroup
+  variable (`cards::ard_strata()`), each a `custom` analysis -- read with
+  `ard_stats()`, not fitted inside the figure program.  The analyses the
+  plot needs come with the design, `attr(design, "analyses")`, from the
+  new `tfl_fig_forest_analyses()`; `tfl_fig_template()` takes `subgroups`
+  and `comparison` (the arm against the reference).  Two new pieces
+  serve it: the layer `text_column` (columns of text at the right of the
+  plot, a panel of its own: N, the estimate and its interval) -- panels
+  now go below the plot or at its right -- and the catalog layer
+  `errorbar_h` (a horizontal error bar).  A subgroup whose model did not
+  converge has no point and prints NE.  The template snapshot of
+  `forest_hr` changes from the whole script to the parts.
+
+* **Review rule A01 checks an analysis data's `add` columns in the
+  population's data** (ADSL), where `add` takes them from by the
+  subject, not in the analysis data's own dataset: an ADTTE data adding
+  SEX was said to read a column ADTTE has not got.  And a figure with
+  analyses of its own (`figures` given) is not reviewed as a table: no
+  "no column key" (T09) for a forest plot.
+
 * **A Total column, read from cards' overall rows** (#212, rtfreporter
   `plan_total()`).  The `analyses` sheet's new column `overall` (`TRUE`)
   runs the analysis again without its `by` and binds it under the grouped
