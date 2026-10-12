@@ -148,7 +148,7 @@ cat(tfl_fig_design_code(d), sep = "\n")
 
 | KM with the number at risk | forest plot | mean by visit |
 |---|---|---|
-| ![](man/figures/quick_km_risk.png) | ![](man/figures/type_forest_hr.png) | ![](man/figures/type_mean_se_n.png) |
+| ![A Kaplan-Meier plot by arm with the number at risk under the x axis](man/figures/quick_km_risk.png) | ![A forest plot of hazard ratios by subgroup with their intervals](man/figures/type_forest_hr.png) | ![Mean and standard error by visit, one line per arm, with n under the axis](man/figures/type_mean_se_n.png) |
 
 `tfl_fig_style()` holds every look-and-feel value of a study's figures.
 The older sheet-based figure spec and its quick figures (`tfl_fig_km()`,
