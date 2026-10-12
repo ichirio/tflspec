@@ -65,6 +65,17 @@
   analyses of its own (`figures` given) is not reviewed as a table: no
   "no column key" (T09) for a forest plot.
 
+* **The pkgdown site, tidied** (#162): a "Get started" article that walks
+  the whole flow (an ARD spec -> `tfl_ard_code()` / the ARD -> the bundled
+  `DM.xlsx` table -> the bundled `report.xlsx` report), articles on the
+  ARD spec, the table spec, reports, listings, figures and ARS, and a
+  reference index grouped by the workflow.  The articles follow this
+  version's spec: a report's analysis data and code lists, the variables'
+  labels, the `digits` sheet, `tables$value`, the page sheet's font, the
+  study's setup code (`tfl_report_setup_code()`, `setup = TRUE`), figure
+  code piped with `|>`, and a report's analysis data in ARS.  The README
+  says the same of the font, the setup code and the code lists.
+
 * **A Total column, read from cards' overall rows** (#212, rtfreporter
   `plan_total()`).  The `analyses` sheet's new column `overall` (`TRUE`)
   runs the analysis again without its `by` and binds it under the grouped

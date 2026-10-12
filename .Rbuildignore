@@ -6,6 +6,7 @@
 ^docs$
 ^pkgdown$
 ^LICENSE\.md$
+^vignettes/articles$
 ^CITATION\.cff$
 ^\.lintr$
 ^.*\.Rcheck$
