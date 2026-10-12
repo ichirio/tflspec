@@ -44,7 +44,8 @@ relies on: the datasets it reads are the report's (registered in its
 data step: the program reads them first, by their names in lower case),
 this report's ARD rows are \code{ard} when the report reads its ARD, and the
 step leaves the object the next one reads -- the data step \code{data} (a
-table or a listing) or \code{df} (a figure), the content step \code{content}.
+table or a listing; a table's may leave \code{ard} alone, which the program
+normalizes) or \code{df} (a figure), the content step \code{content}.
 The check reads the code; it does not run it.
 }
 \details{

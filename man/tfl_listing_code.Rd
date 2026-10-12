@@ -10,7 +10,8 @@ tfl_listing_code(
   datasets,
   rework = NULL,
   type = "multiline",
-  codelists = NULL
+  codelists = NULL,
+  part = c("all", "data", "content")
 )
 }
 \arguments{
@@ -32,10 +33,16 @@ or sorts by are put on its data after its condition (\verb{cl_<variable>}
 and \code{set_levels()}, see \code{\link[=tfl_helpers_code]{tfl_helpers_code()}}) -- each such column a
 factor in its list's order (it sorts so), its values as the list has
 them.}
+
+\item{part}{\code{"all"} (the whole of it), \code{"data"} (the data, up to its
+order: what a report's content step of its own code reads as \code{data})
+or \code{"content"} (the listing laid out from a \code{data} made before -- by a
+report's data step of its own code: its code lists, its order, its
+columns).}
 }
 \value{
 The code, one element per line; \code{NULL} when the listing names no
-dataset yet.
+dataset yet (\code{part = "content"}: no columns yet).
 }
 \description{
 Writes the part of a listing program that reads the data, subsets,

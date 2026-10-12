@@ -7,7 +7,8 @@
 #' data step: the program reads them first, by their names in lower case),
 #' this report's ARD rows are `ard` when the report reads its ARD, and the
 #' step leaves the object the next one reads -- the data step `data` (a
-#' table or a listing) or `df` (a figure), the content step `content`.
+#' table or a listing; a table's may leave `ard` alone, which the program
+#' normalizes) or `df` (a figure), the content step `content`.
 #' The check reads the code; it does not run it.
 #'
 #' The rules ([tfl_review_rules()], area `program`):
@@ -84,7 +85,9 @@ tfl_check_code <- function(code, step = c("data", "content"),
   for (d in setdiff(found, toupper(datasets))) add("U02", tolower(d))
   # U03: nothing left for the next step
   leaves <- if (step == "content") "content" else if (type == "figure") "df" else "data"
-  if (!leaves %in% made) add("U03", leaves)
+  # (a table's data step may leave its ARD alone: the program normalizes it)
+  ok <- if (step == "data" && type == "table") c("data", "ard") else leaves
+  if (!any(ok %in% made)) add("U03", leaves)
   # U04: files read, packages attached, the session changed
   calls <- unique(pd$text[pd$token == "SYMBOL_FUNCTION_CALL"])
   bad <- intersect(calls, .code_banned)

@@ -38,6 +38,9 @@ test_that("U02: a dataset of the catalog the report does not register", {
 
 test_that("U03: each step leaves what the next one reads", {
   expect_identical(rules_of(tfl_check_code("x <- 1", "data", "table")), "U03")
+  # a table's data step may leave its ARD alone (the program normalizes it)
+  expect_identical(nrow(tfl_check_code("ard <- my_ard()", "data", "table")), 0L)
+  expect_identical(rules_of(tfl_check_code("ard <- 1", "data", "listing")), "U03")
   expect_identical(nrow(tfl_check_code("data <- 1", "data", "listing")), 0L)
   expect_identical(nrow(tfl_check_code("df = 1", "data", "figure")), 0L)
   expect_identical(rules_of(tfl_check_code("data <- 1", "data", "figure")), "U03")

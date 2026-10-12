@@ -16,6 +16,9 @@
   reading its ARD), and says the catalog's datasets it uses.  A report
   whose content is its own code and has no analyses is not an ARS output
   (said in `tfl_ars_unmapped()`), as a `user` report was.
+  `tfl_listing_code(part = )`: `"data"` (the data up to its order, for a
+  content step of the report's own code) or `"content"` (the listing laid
+  out from a `data` a data step of its own code made); `"all"` as before.
 
 * **A figure's data steps: each reads an object and leaves one**
   (0.0.24.9095, tflplanner's generalised data steps, the user's

@@ -120,6 +120,17 @@ test_that("the code: from the definition or its workbook, one listing at a time"
   draft <- tfl_listing_spec(list(listings = data.frame(output_id = "L-3", sort = "X")),
                             check = FALSE)
   expect_null(tfl_listing_code(draft, "L-3", cat))
+  # in two parts, for a step of the report's own code: the data (up to its
+  # order), and the listing laid out from a `data` made before
+  dp <- tfl_listing_code(sp, "L-1", cat, part = "data")
+  expect_identical(dp, code[seq_along(dp)])
+  expect_false(any(grepl("listing_spec(", dp, fixed = TRUE)))
+  cp <- tfl_listing_code(sp, "L-1", cat, codelists = cl, part = "content")
+  expect_false(any(grepl("adae", cp, fixed = TRUE)))
+  expect_true(paste0("data <- data |>\n  set_levels(AESEV = cl_aesev) |>\n",
+                     "  dplyr::arrange(USUBJID, dplyr::desc(ASTDY))") %in% cp)
+  expect_identical(utils::tail(cp, 1L), utils::tail(code, 1L))
+  expect_null(tfl_listing_code(draft, "L-3", cat, part = "content"))
   skip_if_not_installed("writexl")
   f <- tempfile(fileext = ".xlsx")
   tfl_write_listing_spec(sp, f)
