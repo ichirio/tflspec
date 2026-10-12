@@ -1459,6 +1459,20 @@ tfl_fig_data_name <- function(design) {
   if (length(used)) c("", .fig_unit_guard(used)) else character()
 }
 
+#' Whether a figure's design reads an ARD
+#'
+#' A design reads the figure's ARD (`ard` in its program) when it has an
+#' `ard_stats` step or an `ard_number` layer -- a composed figure, when one
+#' of its figures does: what the script's `attr(, "ard")` says
+#' ([tfl_fig_design_code()]), without writing the script.
+#'
+#' @param design A `tfl_fig_design`.
+#' @return `TRUE` or `FALSE`.
+#' @examples
+#' tfl_fig_uses_ard(tfl_fig_template("km_risk_table"))
+#' @export
+tfl_fig_uses_ard <- function(design) .fig_uses_ard(design)
+
 # whether a design reads an ARD (`ard`): an ard_stats step, an ard_number
 # layer (a composed figure: one of its figures)
 .fig_uses_ard <- function(design) {
