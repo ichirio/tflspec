@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9090** (the development version,
+**This manual documents tflspec 0.0.24.9091** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -518,7 +518,8 @@ dataset of the data catalog (`.rds`, `.xpt`, `.sas7bdat`, `.csv`,
 starts one (`tfl_fig_templates()` lists 38, each with its `category` --
 the clinical category of `tfl_fig_catalog()` -- and the `data` it reads:
 `"ADTR + ADRS"` both, `"ADLB / ADVS + ADSL"` one of ADLB / ADVS and ADSL),
-`tfl_fig_parts()` lists every piece and field.
+`tfl_fig_parts()` lists every piece and field, `tfl_fig_objects()` the
+object each data step reads (`in`) and leaves (`out`).
 
 ```yaml
 template: km_risk_table
@@ -537,7 +538,16 @@ layers:                                 # what is drawn, in order
   `flag`, `filter`, `derive`, `time_unit`, `levels`, `rank` change the
   object above them; `survfit`, `summary`, `summary_by`, `rate`, `count`,
   `subset` make an object of their own by `name` (the steps after one
-  change it, in its pipe); `code` is your own code.  A design written
+  change it, in its pipe); `function` any function's result
+  (`fn: survival::survfit`, `args`, the object it reads as its
+  `data_arg`); `code` is your own code; `ard` an analysis of the figure's
+  ARD (`analysis_id`, `fn: cardx::ard_*`, `in` an analysis data, `args`)
+  -- a row of the ARD definition, no line of the script.  Any step may
+  say the object it reads (`in`) and the one it leaves (`out`): `filter`
+  with `out: df_ev` makes `df_ev <- df |> filter(...)` and keeps `df`; a
+  `survfit` with `in: df_ev` fits it.  Unset, a read makes `df` (then
+  `df2`, `df3`), a step on rows changes the object above it, a named step
+  reads `df`.  A design written
   before 0.0.24.9074 (`data:` and `stats:`, `data_code` / `stats_code`)
   reads as this one list and is written back in this form.
 - The script (`tfl_fig_design_code()`) has two sections: `# ---- data ----`
@@ -720,7 +730,7 @@ back): rename the value or choose another separator.
 **Figure design:** `tfl_fig_design` `tfl_read_fig_design`
 `tfl_write_fig_design` `tfl_fig_design_code` `tfl_check_fig_design`
 `tfl_fig_advice` `tfl_fig_apply_fix` `tfl_fig_template` `tfl_fig_forest_analyses` `tfl_fig_templates`
-`tfl_fig_parts` `tfl_fig_add_layer` `tfl_fig_calls` `tfl_fig_compat`
+`tfl_fig_parts` `tfl_fig_objects` `tfl_fig_add_layer` `tfl_fig_calls` `tfl_fig_compat`
 `tfl_fig_r`
 
 **Figure style:** `tfl_fig_style` `tfl_fig_style_template`

@@ -1,5 +1,26 @@
 # tflspec (development version)
 
+* **A figure's data steps: each reads an object and leaves one**
+  (0.0.24.9091, tflplanner's generalised data steps, the user's
+  questions Q1-Q3).  Any data step may say the object it reads (`in`) and
+  the one it leaves (`out`): `{step: filter, expr: AVAL > 0, out: df_ev}`
+  writes `df_ev <- df |> filter(AVAL > 0)` and keeps `df`;
+  `{step: survfit, in: df_ev}` fits it.  Unset, everything is as before:
+  a read makes `df`, a step on rows changes the object above it, a named
+  step reads `df` -- except that a second read now makes `df2` (then
+  `df3` ...) where it made `df` again.  A dataset by its name
+  (`in: adsl`) is read.  `tfl_fig_objects()` lists each step's `in` and
+  `out`, for a GUI to offer.
+* **Two data steps**: `function`, any function's result
+  (`fn: survival::survfit`, `args` in R, the object it reads given to its
+  `data_arg`, `data` by default), and `ard`, an analysis of the figure's
+  ARD (`analysis_id`, `fn`, `in` an analysis data, `args`): a row of the
+  study's ARD definition the GUI writes, no line of the figure's program
+  (the program reads the ARD).  The specific steps (`survfit`,
+  `summary`, `rate`, `count`) stay.
+* `tfl_check_fig_design()`: an `in` no step made before (and not a
+  dataset) is a problem; the columns follow the object a step reads.
+
 * **A time's unit is a named constant, not a number in each program**
   (tflplanner, the user's request).  A figure's time-unit step (and the
   swimmer templates' assessment days) divides by `days_per_week`,
