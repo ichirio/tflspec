@@ -118,6 +118,7 @@ reference:
       - tfl_fig_forest_analyses
       - tfl_fig_templates
       - tfl_fig_parts
+      - tfl_fig_uses_ard
       - tfl_fig_add_layer
       - tfl_fig_calls
       - tfl_fig_compat
