@@ -41,7 +41,14 @@ R 4.1 or later; analyses that use cardx (e.g. t-tests, confidence intervals) nee
 - **Shared setup, per-report values.**  What all reports share (header,
   footer, page style, and study information such as the company name,
   analysis type and protocol ID) is written once as setup code; each
-  report's program carries only its own values.
+  report's program carries only its own values.  The company's font and
+  size are the `page` sheet's study row (a blank `output_id`), and a
+  report's own row wins.  `tfl_report_setup_code()` writes that font, the
+  study's tokens and the running header and footer once, as a setup
+  script (say `report_setup.R`) that every report program written with
+  `tfl_report_code(setup = TRUE)` sources.  Code lists, like analysis data,
+  belong to a report (`output_id` on every `codelists` row), so one
+  report's factor levels and variable labels never reach another's.
 - **Spec -> code, one way.**  The spec is the source (written by
   tflplanner or edited directly) and the program is written from it; the
   program is not edited in place.
@@ -141,7 +148,7 @@ cat(tfl_fig_design_code(d), sep = "\n")
 
 | KM with the number at risk | forest plot | mean by visit |
 |---|---|---|
-| ![](man/figures/quick_km_risk.png) | ![](man/figures/type_forest_hr.png) | ![](man/figures/type_mean_se_n.png) |
+| ![A Kaplan-Meier plot by arm with the number at risk under the x axis](man/figures/quick_km_risk.png) | ![A forest plot of hazard ratios by subgroup with their intervals](man/figures/type_forest_hr.png) | ![Mean and standard error by visit, one line per arm, with n under the axis](man/figures/type_mean_se_n.png) |
 
 `tfl_fig_style()` holds every look-and-feel value of a study's figures.
 The older sheet-based figure spec and its quick figures (`tfl_fig_km()`,

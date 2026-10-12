@@ -94,6 +94,36 @@
     `changed` field by field, `removed`, `moved`, `same`);
   - `tfl_ai_tasks()` lists the tasks; `table` and `ard` come later.
 
+* **Document import, level 1: a define read by rule**
+  (ichirio/tflplanner#283).  No AI: a define is standard CDISC XML.
+  - `tfl_read_define()` reads a Define-XML 2.0 or 2.1 (`xml2`, Suggests)
+    into tidy data frames: `datasets` (`ItemGroupDef`), `variables`
+    (`ItemRef` + `ItemDef`: label, type, length, code list ...),
+    `codelists` (`CodeListItem` / `EnumeratedItem`: coded value, decode,
+    order, rank, extended, NCI code), `external` (MedDRA ...) and `study`.
+    Namespaces are found by URI, texts in the language asked for.
+  - `tfl_read_define_spec()` reads the workbook a define is made from
+    through an import profile, `tfl_define_profile()`: the Pinnacle 21
+    layout by default, any sheet or column changed by `map` for a
+    company's own; the same `tfl_define`.
+  - `tfl_define_codelists(define, variables, output_id)` gives a report's
+    `codelists` rows (value = coded value, label = decode, order) and its
+    variables' labels (rows of the `variables` sheet, in
+    `attr(, "variables")`), a `note` saying where each came from; `output_id` is required.  What the define cannot give
+    (no code list, an external dictionary, a variable it lacks) is listed
+    in `attr(, "set_by_hand")`, not guessed.
+
+* **The pkgdown site, tidied** (#162): a "Get started" article that walks
+  the whole flow (an ARD spec -> `tfl_ard_code()` / the ARD -> the bundled
+  `DM.xlsx` table -> the bundled `report.xlsx` report), articles on the
+  ARD spec, the table spec, reports, listings, figures and ARS, and a
+  reference index grouped by the workflow.  The articles follow this
+  version's spec: a report's analysis data and code lists, the variables'
+  labels, the `digits` sheet, `tables$value`, the page sheet's font, the
+  study's setup code (`tfl_report_setup_code()`, `setup = TRUE`), figure
+  code piped with `|>`, and a report's analysis data in ARS.  The README
+  says the same of the font, the setup code and the code lists.
+
 * **A Total column, read from cards' overall rows** (#212, rtfreporter
   `plan_total()`).  The `analyses` sheet's new column `overall` (`TRUE`)
   runs the analysis again without its `by` and binds it under the grouped

@@ -58,8 +58,8 @@ Suggests:
     tibble,
     tidyr,
     withr,
-    writexl
+    writexl,
+    xml2
 Remotes:
     ichirio/rtfreporter
 Config/testthat/edition: 3
-RoxygenNote: 7.3.3
