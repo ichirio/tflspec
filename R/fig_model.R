@@ -356,7 +356,7 @@ tfl_time_unit_days <- function() {
 #             a step's own `out` made last -- and leaves its `name`
 #   code      reads the object above it; leaves `out` when said
 #   ard       reads an analysis data, leaves nothing (the ARD's row)
-# A design that says no `in` or `out` is read as before 0.0.24.9091 (but a
+# A design that says no `in` or `out` is read as before 0.0.24.9095 (but a
 # second read makes df2 where it made df again).
 .fig_step_io <- function(steps) {
   cur <- "df"

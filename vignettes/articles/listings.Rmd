@@ -1,0 +1,102 @@
+---
+title: "Listings"
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+knitr::opts_template$set(code = list(comment = "", class.output = "r"))
+```
+
+A listing is two sheets keyed by `output_id`: `listings`, one row a
+listing (its dataset, the records it keeps, the order, rows a page), and
+`listing_cols`, one row a printed column. `tfl_listing_code()` writes the
+program -- read the data, keep, sort, lay out -- and `tfl_listing()` makes
+the pages from data in hand. The layout is rtfreporter's
+`listing_spec()` / `as_rtftables()`.
+
+```{r, message = FALSE}
+library(tflspec)
+library(rtfreporter)
+```
+
+## The sheets
+
+| Sheet | Columns |
+|---|---|
+| `listings` | `output_id`, `type` (an rtfreporter listing type; blank: `multiline`), `dataset`, `where` (R), `sort` (`-` for descending), `max_rows`, `blank_row`, `wrap` |
+| `listing_cols` | `output_id`, `vars` (`|` stacks variables in one column), `label`, `width` (characters), `sep`, `align`, `collapse_repeats` |
+
+```{r}
+spec <- tfl_listing_spec(
+  listings = data.frame(output_id = "L-16-2-7", dataset = "ADAE",
+                        where = 'AESER == "Y"',
+                        sort = "USUBJID | ASTDY", max_rows = "15"),
+  listing_cols = data.frame(
+    output_id = "L-16-2-7",
+    vars  = c("USUBJID", "TRTA", "AEBODSYS | AEDECOD", "ASTDY", "AESEV"),
+    label = c("Subject", "Treatment", "System organ class /\nPreferred term",
+              "Study day", "Severity"),
+    width = c("14", "22", "40", "8", "10"),
+    collapse_repeats = c("TRUE", "TRUE", NA, NA, NA)))
+```
+
+A workbook is read with `tfl_read_listing_spec()` and written with
+`tfl_write_listing_spec()`; `tfl_write_listing_spec(tfl_listing_spec(),
+path)` gives an empty one to fill in.
+
+## The program
+
+The data catalog -- the `datasets` sheet of the ARD spec: each dataset's
+`path` and derived columns -- says how the data is read, so the listing's
+program reads it the same way the ARD program does:
+
+```{r, opts.label = "code"}
+catalog <- data.frame(dataset = "ADAE", path = "data/adae.rds")
+cat(tfl_listing_code(spec, "L-16-2-7", datasets = catalog), sep = "\n")
+```
+
+What the sheets cannot say about the data -- a derived column, a join --
+is `rework`: code run on `data` before it is sorted, written into the
+program by the spec, not added afterwards by hand:
+
+```{r, opts.label = "code"}
+cat(tfl_listing_code(spec, "L-16-2-7", datasets = catalog,
+                     rework = "data$AEDECOD <- tools::toTitleCase(tolower(data$AEDECOD))"),
+    sep = "\n")
+```
+
+The report around it is the report spec's, as for a table:
+`tfl_report_code(report_spec, "L-16-2-7", content = "content")`. In a
+study whose report programs source the setup script
+(`tfl_report_setup_code()`: the company's font, the study's tokens, the
+running header and footer), the listing's program is written with
+`setup = TRUE` and says only its own values, as a table's does (see
+[Reports](reports.html)).
+
+## The pages
+
+`tfl_listing()` does what the program does, on data in hand. The data
+comes first, so it pipes:
+
+```{r}
+pages <- cards::ADAE |> tfl_listing(spec, "L-16-2-7")
+length(pages)
+class(pages[[1]])
+```
+
+The pages go to `tfl_report(report_spec, content = pages)` or
+`rtf_tables()`.
+
+## A listing written in code, back to a spec
+
+`tfl_as_listing_spec()` writes a listing coded with rtfreporter
+(`listing_spec()`, or a `plan_listing()` plan) back as a listing spec,
+listing what the sheets cannot carry (`attr(, "not_converted")`):
+
+```{r}
+lst <- listing_spec(list(
+  listing_col("USUBJID", label = "Subject", width = 14),
+  listing_col(c("AEDECOD", "AESEV"), label = "Term / Severity", width = 30)))
+back <- suppressMessages(tfl_as_listing_spec(lst, "L-16-2-8", dataset = "ADAE"))
+back$listing_cols[, c("vars", "label", "width")]
+```
