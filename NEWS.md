@@ -65,6 +65,25 @@
   analyses of its own (`figures` given) is not reviewed as a table: no
   "no column key" (T09) for a forest plot.
 
+* **Document import, level 1: a define read by rule**
+  (ichirio/tflplanner#283).  No AI: a define is standard CDISC XML.
+  - `tfl_read_define()` reads a Define-XML 2.0 or 2.1 (`xml2`, Suggests)
+    into tidy data frames: `datasets` (`ItemGroupDef`), `variables`
+    (`ItemRef` + `ItemDef`: label, type, length, code list ...),
+    `codelists` (`CodeListItem` / `EnumeratedItem`: coded value, decode,
+    order, rank, extended, NCI code), `external` (MedDRA ...) and `study`.
+    Namespaces are found by URI, texts in the language asked for.
+  - `tfl_read_define_spec()` reads the workbook a define is made from
+    through an import profile, `tfl_define_profile()`: the Pinnacle 21
+    layout by default, any sheet or column changed by `map` for a
+    company's own; the same `tfl_define`.
+  - `tfl_define_codelists(define, variables, output_id)` gives a report's
+    `codelists` rows (value = coded value, label = decode, order) and its
+    variables' labels (rows of the `variables` sheet, in
+    `attr(, "variables")`), a `note` saying where each came from; `output_id` is required.  What the define cannot give
+    (no code list, an external dictionary, a variable it lacks) is listed
+    in `attr(, "set_by_hand")`, not guessed.
+
 * **The pkgdown site, tidied** (#162): a "Get started" article that walks
   the whole flow (an ARD spec -> `tfl_ard_code()` / the ARD -> the bundled
   `DM.xlsx` table -> the bundled `report.xlsx` report), articles on the
