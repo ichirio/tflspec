@@ -1,7 +1,12 @@
-run_design <- function(design, adam = tfl_example_adam()) {
+run_design <- function(design, adam = tfl_example_adam(), ard = NULL) {
   code <- tfl_fig_design_code(design, "t")
   e <- new.env()
   for (n in names(adam)) assign(tolower(n), adam[[n]], envir = e)
+  # a figure reading an ARD: the ARD, and the study helpers that read it
+  if (!is.null(ard)) {
+    assign("ard", ard, envir = e)
+    eval(parse(text = tfl_helpers_code()), envir = e)
+  }
   dir <- tempfile("fig")
   dir.create(dir)
   owd <- setwd(dir)
@@ -117,6 +122,9 @@ test_that("every template has its clinical category and the data it reads", {
 })
 
 test_that("every template draws on the example data and checks clean", {
+  # every figure type drawn with ggplot2: about 20 s on CRAN's machines; CI
+  # runs it on every configuration
+  skip_on_cran()
   skip_if_not_installed("ggsurvfit")
   adam <- tfl_example_adam()
   tp <- tfl_fig_templates()
@@ -127,7 +135,9 @@ test_that("every template draws on the example data and checks clean", {
                    forest = list(param = prm), list())
     d <- do.call(tfl_fig_template, c(list(t), args))
     expect_equal(nrow(tfl_check_fig_design(d, adam)), 0L, info = t)
-    expect_true(run_design(d, adam)$png, info = t)
+    # the forest plot reads its own ARD: made first, from its analyses
+    ard <- if (!is.null(attr(d, "analyses"))) forest_example_ard(adam, d)
+    expect_true(run_design(d, adam, ard)$png, info = t)
   }
 })
 
@@ -197,4 +207,25 @@ test_that("a report program's figure: no save, its own name, the study's palette
   suppressPackageStartupMessages(eval(parse(text = part), e))
   expect_s3_class(e$plot, "ggplot")
   expect_identical(unname(e$pal), unname(e$tfl_colours("treatment", c("A", "B"))))
+})
+
+test_that("a time's unit is a named constant of the setup, never a column", {
+  expect_identical(tfl_time_unit_days(),
+                   c(days_per_week = 7, days_per_month = 30.4375, days_per_year = 365.25))
+  d <- tfl_fig_template("km_simple", data = "ADTTE", param = "TTDE", pop = "SAFFL", group = "TRT01A")
+  # a study's program: the figure setup defines it (unless the study's setup has)
+  prog <- strsplit(paste(tfl_fig_design_code(d, "F1", setup = TRUE), collapse = "\n"), "\n")[[1]]
+  expect_true(any(grepl("mutate(AVAL = AVAL / days_per_month)", prog, fixed = TRUE)))
+  expect_false(any(grepl("30.4375", prog, fixed = TRUE)))
+  expect_true(any(grepl('if (!exists("days_per_month")) days_per_month <- 30.4375',
+                        tfl_fig_setup_code(), fixed = TRUE)))
+  # a script of its own: defines the one it uses
+  own <- strsplit(paste(tfl_fig_design_code(d, "F1"), collapse = "\n"), "\n")[[1]]
+  expect_identical(sum(grepl("^if [(]!exists", own)), 1L)
+  # the study's value wins
+  e <- new.env()
+  e$days_per_month <- 30
+  eval(parse(text = .fig_unit_guard()), envir = e)
+  expect_identical(e$days_per_month, 30)
+  expect_identical(e$days_per_year, 365.25)
 })

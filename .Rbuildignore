@@ -9,3 +9,10 @@
 ^vignettes/articles$
 ^CITATION\.cff$
 ^\.lintr$
+^.*\.Rcheck$
+^.*\.Rproj$
+^\.Rproj\.user$
+^cran-comments\.md$
+^CRAN-SUBMISSION$
+^\.vscode$
+^man/figures/(quick_km_ci|quick_km_single|quick_sankey|quick_sankey_subgroups|quick_sunburst|quick_sw_full|quick_sw_resp|quick_wf_resp|type_ae_dot_risk_diff|type_bar_rate_ci|type_box_by_visit|type_butterfly_soc|type_edish_alt|type_individual_spider|type_pk_mean_log)\.png$

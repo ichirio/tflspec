@@ -7,6 +7,9 @@
 #'   the identity line) or `xy` (any two variables with a linear fit per group).
 #' @param x,y Variables of `xy` (defaults `BASE` and `CHG`).
 #' @param at_visit Visit label kept for `shift` (default: last visit).
+#' @return A `tfl_code` object: the figure's 'ggplot2' script, a character
+#'   vector of class `tfl_code` with its specification in attribute `spec`;
+#'   printing it shows the script.
 #' @export
 tfl_fig_scatter <- function(adam = NULL, style = c("shift", "xy"), param = "ALT", data = "ADLB",
                        x = NULL, y = NULL, visit = "AVISITN", visit_label = "AVISIT", at_visit = NULL,
@@ -56,6 +59,9 @@ tfl_fig_scatter <- function(adam = NULL, style = c("shift", "xy"), param = "ALT"
 #'   subject, log axis, one panel per group).
 #' @param time Nominal time variable.
 #' @param time_label Axis label of `time`.
+#' @return A `tfl_code` object: the figure's 'ggplot2' script, a character
+#'   vector of class `tfl_code` with its specification in attribute `spec`;
+#'   printing it shows the script.
 #' @export
 tfl_fig_pk <- function(adam = NULL, style = c("mean", "mean_log", "individual"), param = NULL,
                   data = "ADPC", value = "AVAL", time = "NFRLT", time_label = "Nominal time (h)",

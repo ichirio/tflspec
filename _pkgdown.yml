@@ -120,6 +120,7 @@ reference:
       and the ggplot2 script it stands for.
     contents:
       - tfl_fig_design
+      - tfl_fig_forest_analyses
       - tfl_fig_templates
       - tfl_fig_parts
       - tfl_fig_add_layer
@@ -131,6 +132,7 @@ reference:
     contents:
       - tfl_fig_style
       - tfl_fig_setup_code
+      - tfl_time_unit_days
       - tfl_fig_palettes
   - subtitle: Figure spec (sheets) and quick figures
     desc: >

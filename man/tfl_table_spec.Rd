@@ -81,6 +81,20 @@ key} --- the whole \code{tables} row for that report, the \code{variables} row
 for that variable, the \code{cells} rows for that variable / context / row.
 So one workbook can hold a house style and every report's own changes to
 it.  \code{\link[=tfl_read_table_spec]{tfl_read_table_spec()}} narrows it to one report with \verb{output_id =}.
+}
+
+\section{Page patterns}{
+
+The report half (\code{report}, \code{page}, \code{header}, \code{footer}, \code{titles},
+\code{footnotes}, \code{tokens}) can hold \strong{named page patterns} besides the
+blank rows: rows whose \code{output_id} is \code{@} and a name (\verb{@Compact}) --- a
+compact page for the PK tables, say.  A pattern says only what differs
+from the blank rows (Standard), by the same rule; a report chooses it
+with \code{report$pattern} (blank: Standard).  A report's own rows go over
+its pattern's, its pattern's over Standard's, and \code{(none)} takes a line
+out at either level.  Standard's header, footer, tokens and font stay
+the study's setup (\code{\link[=tfl_report_setup_code]{tfl_report_setup_code()}}); what a pattern changes is
+written in the program of each report that uses it.
 
 Explicit \code{\link[rtfreporter:widen_ard]{rtfreporter::widen_ard()}} arguments win over the spec, and the spec wins
 over the defaults.
@@ -118,6 +132,13 @@ ARD rows without the page key).  Several at once name their
 tokens: \code{n = page | N = table} gives \code{{n}} and \code{{N}}.  Blank: the
 page's, with a warning when the ARD states both.  See
 \code{\link[rtfreporter:plan_verbs]{rtfreporter::plan_col_header()}}'s \code{values}.}
+\item{\code{total}}{The heading of a \strong{Total column} (\code{Total}): the ARD's
+overall rows --- the analyses run again without their \code{by}
+(\code{analyses$overall}) --- as one more column, its \code{{n}} the study
+total (\code{\link[rtfreporter:plan_verbs]{rtfreporter::plan_total()}}).  Blank: none.  No \code{ARM = "Total"} in the data: the ARD and the ARS keep only what the data
+has.}
+\item{\code{total_position}}{Where the Total column goes among the column
+key's values: \code{last} (blank) or \code{first}.}
 }
 }
 

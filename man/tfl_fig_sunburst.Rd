@@ -48,6 +48,11 @@ variables.}
 
 \item{plot_id}{Used in the output file name.}
 }
+\value{
+A \code{tfl_code} object: the figure's 'ggplot2' script, a character
+vector of class \code{tfl_code} with its specification in attribute \code{spec};
+printing it shows the script.
+}
 \description{
 The script builds paths with \code{\link[=tfl_sunburst_data]{tfl_sunburst_data()}} and draws them with
 \code{\link[=tfl_plot_sunburst]{tfl_plot_sunburst()}}.

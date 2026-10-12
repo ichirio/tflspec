@@ -169,6 +169,7 @@ tfl_fig_style <- function() {
 #' @rdname tfl_fig_style
 #' @export
 tfl_fig_style_template <- function(path) {
+  .ard_need("writexl", "tfl_fig_style_template()")
   writexl::write_xlsx(.fig_style_builtin(), path)
   invisible(path)
 }

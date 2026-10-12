@@ -15,6 +15,9 @@
 #'   `'AVISIT != "Retrieval"'`; `NULL` for none.
 #' @param responders Values of `AVALC` counted as responders (`or`).
 #' @param theme Theme preset.
+#' @return A `tfl_code` object: the figure's 'ggplot2' script, a character
+#'   vector of class `tfl_code` with its specification in attribute `spec`;
+#'   printing it shows the script.
 #' @export
 tfl_fig_forest <- function(adam = NULL, style = c("hr", "or", "estimates"), param = NULL,
                       group = "TRT01P", subgroups = c("SEX", "AGEGR1"), pop = "FASFL", where = NULL,
@@ -129,6 +132,9 @@ tfl_fig_forest <- function(adam = NULL, style = c("hr", "or", "estimates"), para
 #' @param legend Legend preset (`none`, `right`, `bottom`, `top`, `inside`, ...).
 #' @param palette Palette preset of the group (`rate_ci`, `dodged`) or of the
 #'   category (`stacked`, default `response`).
+#' @return A `tfl_code` object: the figure's 'ggplot2' script, a character
+#'   vector of class `tfl_code` with its specification in attribute `spec`;
+#'   printing it shows the script.
 #' @export
 tfl_fig_bar <- function(adam = NULL, style = c("rate_ci", "stacked", "dodged"), param = "BOR",
                    data = "ADRS", category = "AVALC", group = "TRT01P", pop = "FASFL", where = NULL,

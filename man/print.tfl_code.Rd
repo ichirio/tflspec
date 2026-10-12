@@ -11,6 +11,9 @@
 
 \item{...}{Unused.}
 }
+\value{
+\code{x}, invisibly (the script is printed).
+}
 \description{
 Code object returned by the quick API
 }
