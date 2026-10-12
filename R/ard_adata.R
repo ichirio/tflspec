@@ -249,6 +249,10 @@
   lv <- if (length(levels)) .levels_step
   for (id in ids) {
     r <- ad[match(id, ad$data_id), ]
+    # what it is, as the definition says, above it (a reviewer maps the SAP
+    # to the code by it)
+    lbl <- r$label %||% NA
+    if (!is.na(lbl) && nzchar(trimws(lbl))) out <- c(out, sprintf("# %s: %s", id, lbl))
     # written as R: its value is the data.  One expression is the data
     # itself; several run in local() (what they make on the way stays
     # inside)

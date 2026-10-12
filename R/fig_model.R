@@ -145,7 +145,8 @@ tfl_time_unit_days <- function() {
         .ff("variable", "text", "New variable", "INDEX"))),
     code = list(section = "data", label = "R code",
       help = "What no step does: code that changes `df` or makes an object of its own (the datasets are there by their lower-case names).",
-      fields = rbind(.ff("code", "code", "Code", required = TRUE))),
+      fields = rbind(.ff("code", "code", "Code", required = TRUE),
+                     .ff("label", "text", "What it does", help = "The comment above the code in the program."))),
     # ---- the steps that make an object of their own (`name`)
     survfit = list(section = "data", label = "Kaplan-Meier fit",
       help = "survfit2(Surv(time, censor == 0) ~ group).",
@@ -278,7 +279,8 @@ tfl_time_unit_days <- function() {
         .ff("params", "named", "Settings (R)", help = "alpha = 0.3 | size = 2"))),
     layer_code = list(section = "layers", label = "R code",
       help = "Code that adds to the plot `p` (e.g. p <- p + annotate(...)).",
-      fields = rbind(.ff("code", "code", "Code", required = TRUE))),
+      fields = rbind(.ff("code", "code", "Code", required = TRUE),
+                     .ff("label", "text", "What it does", help = "The comment above the code in the program."))),
     call = list(section = "layers", label = "Any function (call)",
       help = "p <- p + fn(data, aes(...), args...): any ggplot2 or extension function, checked against its own arguments.",
       fields = rbind(
@@ -686,7 +688,7 @@ tfl_read_fig_design <- function(path) {
       },
       code = {
         flush()
-        out <- c(out, "# your code", s$code, "")
+        out <- c(out, if (!is.null(s$label)) paste("#", s$label), s$code, "")
       },
       stop("Unknown data step: ", k, call. = FALSE))
   }
@@ -766,12 +768,14 @@ tfl_read_fig_design <- function(path) {
       ard_stats = {
         st <- .split_vals(v("stats"))
         by <- .split_vals(v("by"))
-        out <- c(out, paste0(v("name"), " <- ard_stats(",
-          paste(c("ard", .vec_or_q(.split_vals(v("analysis_id")))[[1L]],
-                  if (!is.null(v("variable"))) paste0("variable = ", q(v("variable"))),
-                  paste0("stats = ", .vec_or_q(st)),
-                  if (length(by)) paste0("by = ", .vec_or_q(by))), collapse = ", "),
-          ")"), "")
+        # laid out as the ARD programs' calls: an argument a line past 80
+        call <- .cl("ard_stats", c(
+          list("ard", .vec_or_q(.split_vals(v("analysis_id")))[[1L]]),
+          if (!is.null(v("variable"))) list(variable = q(v("variable"))),
+          list(stats = .vec_or_q(st)),
+          if (length(by)) list(by = .vec_or_q(by))))
+        to <- paste0(v("name"), " <- ")
+        out <- c(out, paste0(to, .lay(call, lead = nchar(to))), "")
       },
       subset = {
         ds <- v("dataset")
@@ -917,7 +921,7 @@ tfl_read_fig_design <- function(path) {
                  else "  strata = sub(\"^[^=]*=\", \"\", as.character(sr$strata)),\n",
                  "  n_risk = sr$n.risk\n) |>\n",
                  if (is.null(by)) "  mutate(strata = factor(strata))"
-                 else sprintf("  mutate(strata = factor(strata, levels = rev(levels(droplevels(factor(df$%s))))))", by)),
+                 else sprintf("  mutate(strata = factor(strata, levels = rev(levels(factor(df$%s)))))", by)),
           ""),
         chain = .fig_chain("p_risk", list(
             "ggplot(risk, aes(x = time, y = strata, label = n_risk, colour = strata))",
@@ -932,13 +936,19 @@ tfl_read_fig_design <- function(path) {
                    "  plot.title.position = \"plot\",\n",
                    "  axis.text.y         = element_text(hjust = 1, margin = margin(r = 5))\n)"))))
     },
-    ard_number = list(code = c(lbl("a number from the ARD"),
+    # its text in the data part, under a name the plot uses (a reviewer
+    # traces the numbers a figure prints there, and prints them)
+    ard_number = list(
+      pre = paste(sprintf(".ARDLABEL%d.", i), "<-",
+                  .lay_fill(.expr_cl(str2lang(.ard_label_code(l))),
+                            lead = 14L)),
+      code = c(lbl("a number from the ARD"),
       sprintf("p <- p + annotate(
   \"text\", x = %s, y = %s, hjust = %s, vjust = %s, size = %s,
   label = %s
 )",
               .num_or_q(v("x")), .num_or_q(v("y")), num("hjust"), num("vjust"), num("size"),
-              .ard_label_code(l)))),
+              sprintf(".ARDLABEL%d.", i)))),
     n_table = list(panel = list(name = paste0("p_n", i), height = as.numeric(v("height"))), libs = "patchwork",
       chain = .fig_chain(paste0("p_n", i), list(
           sprintf("ggplot(%s, aes(x = %s, y = factor(%s, levels = rev(names(pal))), label = %s, colour = %s))",
@@ -974,7 +984,7 @@ tfl_read_fig_design <- function(path) {
         if (length(pr)) paste(names(pr), "=", pr, collapse = ", ")))),
         libs = if (grepl("::", v("geom"), fixed = TRUE)) character() else NULL)
     },
-    layer_code = list(code = c(lbl("your code"), l$code)),
+    layer_code = list(code = c(lbl(l$label %||% "R code"), l$code)),
     call = {
       res <- .fig_call_code(l, target = "p", plus = !isTRUE(l$base), ggplot2_version = ggplot2_version)
       out <- list(libs = res$libs, guard = res$guard, features = res$features)
@@ -1048,11 +1058,26 @@ tfl_read_fig_design <- function(path) {
     return(if (setup) sprintf("pal <- c(All = tfl_colours(%s)[[1]])", q(pname))
            else sprintf("pal <- c(All = %s)", q(pal[[1]])))
   }
-  lv <- sprintf("levels(droplevels(factor(df$%s)))", by)
+  # its values in their order: a column made a factor by the code lists
+  # keeps theirs (factor() drops the levels no record has)
+  lv <- sprintf("levels(factor(df$%s))", by)
   c(sprintf("# the %s palette, a colour for each %s", pname, by),
     if (setup) sprintf("pal <- tfl_colours(%s, %s)", q(pname), lv) else c(
       sprintf("lv <- %s", lv),
       sprintf("pal <- setNames(%s[seq_along(lv)], lv)", vec_code(unname(pal)))))
+}
+
+# The figure's theme: with the study's setup, its theme_tfl() -- a change
+# of the company standard reaches the figure -- when that is the same theme
+# (boxed or L_axis, the standard's base size); else the theme's terms
+.fig_theme_code <- function(plot, setup = FALSE) {
+  th <- .pv(plot, "theme")
+  bs <- .pv(plot, "base_size")
+  if (setup && th %in% c("boxed", "L_axis") &&
+      (is.null(bs) || identical(as.numeric(bs), as.numeric(pp_default_options()$base_size)))) {
+    return(sprintf("theme_tfl(theme = %s)", q(th)))
+  }
+  pp_theme_lines(th, bs)
 }
 
 # A chain of ggplot terms: `target <- first +` then each term on its line;
@@ -1060,6 +1085,14 @@ tfl_read_fig_design <- function(path) {
 .fig_chain <- function(target, terms, append = FALSE) {
   terms <- unlist(terms[!vapply(terms, is.null, logical(1))])
   if (!length(terms)) return(character())
+  # a term on one line too long for 80 (with its indent and " +"): laid out
+  # an argument a line, as the programs' other calls are
+  terms <- vapply(terms, function(t) {
+    if (grepl("\n", t, fixed = TRUE) || nchar(t) <= 75L) return(t)
+    cl <- .step_cl(t)
+    # (measured from the term's own start: the chain indents its lines)
+    if (inherits(cl, "tfl_cl")) .lay_fill(cl, lead = 0L, width = 76L) else t
+  }, "", USE.NAMES = FALSE)
   ind <- function(t) paste(indent(t), collapse = "\n")
   if (append) {
     return(paste0(target, " <- ", target, " +\n",
@@ -1103,7 +1136,7 @@ tfl_read_fig_design <- function(path) {
   for (it in items) {
     if (!is.null(it$stmt)) {
       emit()
-      out <- c(out, "# your code", it$stmt)
+      out <- c(out, paste("#", it$label %||% "the layer's own code"), it$stmt)
     } else {
       acc <- c(acc, it$term)
     }
@@ -1130,6 +1163,16 @@ tfl_read_fig_design <- function(path) {
     if (length(r)) .fv(r[[1L]], "fit", "risk_table") else "fit"
   }
   lc <- lapply(seq_along(layers), function(i) .fig_layer_code(layers[[i]], i, plot, gg$version))
+  # the ARD numbers' texts: ard_label_1, ard_label_2 ... in the plot's order
+  k <- 0L
+  for (i in seq_along(lc)) {
+    if (is.null(lc[[i]]$pre)) next
+    k <- k + 1L
+    mark <- sprintf(".ARDLABEL%d.", i)
+    lc[[i]]$pre <- gsub(mark, paste0("ard_label_", k), lc[[i]]$pre, fixed = TRUE)
+    lc[[i]]$code <- gsub(mark, paste0("ard_label_", k), lc[[i]]$code, fixed = TRUE)
+  }
+  ard_pre <- unlist(lapply(lc, `[[`, "pre"))
   clip <- any(vapply(lc, function(x) isTRUE(x$clip_off), logical(1)))
   ax <- .fig_axis_code(plot, any(kinds == "risk_table"), fit_of(), clip)
   first <- if (length(lc) && !is.null(lc[[1L]]$base)) sub("^p <- ", "", lc[[1L]]$base) else "ggplot()"
@@ -1162,7 +1205,7 @@ tfl_read_fig_design <- function(path) {
       "scale_fill_manual(values = pal, breaks = names(pal), na.value = \"grey80\")")
   finish <- c(scales, ax$terms,
     if (length(labs_args)) sprintf("labs(%s)", paste(labs_args, collapse = ", ")),
-    as.list(pp_theme_lines(.pv(plot, "theme"), .pv(plot, "base_size"))),
+    as.list(.fig_theme_code(plot, setup)),
     if (!.lgl(.pv(plot, "x_text"))) "theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())",
     as.list(pp_q_legend(.pv(plot, "legend"))))
   # the chain: the layers (the user's layer code as a statement), the
@@ -1172,7 +1215,7 @@ tfl_read_fig_design <- function(path) {
     x <- lc[[i]]
     if (!is.null(x$panel) || is.null(x$code)) next
     if (identical(kinds[i], "layer_code")) {
-      items <- c(items, list(list(stmt = layers[[i]]$code)))
+      items <- c(items, list(list(stmt = layers[[i]]$code, label = layers[[i]]$label)))
     } else {
       items <- c(items, lapply(.fig_terms(x$code), function(t) list(term = t)))
     }
@@ -1213,6 +1256,7 @@ tfl_read_fig_design <- function(path) {
                     ""),
       head,
       d$code,
+      if (length(ard_pre)) c("# the numbers it prints, from the ARD", ard_pre, ""),
       ax$pre,
       if (length(ax$pre)) "",
       panel_data,
@@ -1322,7 +1366,90 @@ tfl_fig_design_code <- function(design, plot_id = "fig", ggplot2_version = NULL,
     section("plot"),
     b$step2,
     if (save) c("", name, "", .fig_save_code(design$plot, plot_id, name)))
+  code <- .fig_rename_df(code, tfl_fig_data_name(design))
+  code <- .fig_tidy_names(code)
   .fig_code_out(code, b$reads, b$libs, b$needs, ard = .fig_uses_ard(design))
+}
+
+#' The name of a figure's data in its program
+#'
+#' A designed figure's data steps make one data frame that its layers draw
+#' from.  In the program it is named for what it is, as the ARD programs
+#' name theirs: `<dataset>_<parameter>` (`adtte_ttde`), else
+#' `<dataset>_<population>` (`adsl_saf`).  Code of the design's own (a
+#' `code` step, a `layer_code` layer) says `df` and is written with the
+#' name too.  A design with neither a parameter nor a population keeps
+#' `df`, and so does one whose code has the name already.
+#'
+#' @param design A [tfl_fig_design()].
+#' @return The name, or `NULL` when the program calls it `df`.
+#' @examples
+#' tfl_fig_data_name(tfl_fig_template("km_simple", data = "ADTTE", param = "TTDE",
+#'                                    pop = "SAFFL", group = "TRT01A"))
+#' @export
+tfl_fig_data_name <- function(design) {
+  design <- if (inherits(design, "tfl_fig_design")) design else .fig_design_from_list(design)
+  st <- design$data %||% list()
+  get <- function(k, f) {
+    hit <- Filter(function(x) identical(x$step, k), st)
+    if (length(hit)) .fv(hit[[1L]], f, k)
+  }
+  ds <- get("read", "dataset")
+  if (is.null(ds)) return(NULL)
+  par <- get("param", "value")
+  par <- if (length(.split_vals(par)) == 1L) .split_vals(par)
+  flag <- get("flag", "variable")
+  tail <- par %||% (if (!is.null(flag)) sub("FL$", "", flag, ignore.case = TRUE))
+  if (is.null(tail)) return(NULL)
+  make.names(gsub("[^a-z0-9]+", "_", tolower(paste(ds, tail, sep = "_"))))
+}
+
+# The plot part's names: a palette no term uses goes (with its comment);
+# the panels are named for what they are -- p_text, p_n (one of a kind; two:
+# p_text_1, p_text_2), not after their layer's position (p_txt4).
+.fig_tidy_names <- function(code) {
+  lines <- unlist(strsplit(paste(code, collapse = "\n"), "\n", fixed = TRUE))
+  def <- grep("^pal <- ", lines)
+  uses <- grepl("(^|[^A-Za-z0-9._])pal([^A-Za-z0-9._]|$)", lines)
+  if (length(def) == 1L && sum(uses) == 1L) {
+    drop <- def
+    if (def > 1L && grepl("^# the .* palette", lines[def - 1L])) drop <- c(def - 1L, def)
+    lines <- lines[-drop]
+  }
+  for (pre in c("p_txt", "p_n")) {
+    nm <- unique(regmatches(lines, regexpr(paste0(pre, "[0-9]+"), lines)))
+    nm <- nm[nzchar(nm)]
+    if (!length(nm)) next
+    to <- if (pre == "p_txt") "p_text" else "p_n"
+    new <- if (length(nm) == 1L) to else paste0(to, "_", seq_along(nm))
+    for (j in seq_along(nm)) {
+      lines <- gsub(paste0("(^|[^A-Za-z0-9._])", nm[j], "($|[^A-Za-z0-9._])"),
+                    paste0("\\1", new[j], "\\2"), lines)
+    }
+  }
+  lines
+}
+
+# `df` renamed `to` in the code: the name itself wherever the code uses it
+# (df, df$X, data = df), not an argument called df nor text that says it
+.fig_rename_df <- function(code, to) {
+  if (is.null(to)) return(code)
+  txt <- paste(code, collapse = "\n")
+  pd <- tryCatch(utils::getParseData(parse(text = txt, keep.source = TRUE)),
+                 error = function(e) NULL)
+  if (is.null(pd)) return(code)
+  # a name the code has already: keep df
+  if (to %in% pd$text[pd$token %in% c("SYMBOL", "SYMBOL_FUNCTION_CALL")]) return(code)
+  hit <- pd[pd$token == "SYMBOL" & pd$text == "df", c("line1", "col1", "col2")]
+  if (!nrow(hit)) return(code)
+  lines <- strsplit(txt, "\n", fixed = TRUE)[[1L]]
+  hit <- hit[order(hit$line1, -hit$col1), ]
+  for (i in seq_len(nrow(hit))) {
+    l <- hit$line1[i]
+    lines[l] <- paste0(substr(lines[l], 1L, hit$col1[i] - 1L), to,
+                       substring(lines[l], hit$col2[i] + 1L))
+  }
+  lines
 }
 
 # a script of its own: the time-unit constants its code uses, defined
@@ -1872,13 +1999,16 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
                analysis_id = paste(an$analyses$analysis_id, collapse = ", "),
                variable = group, stats = "n_obs, estimate, conf.low, conf.high",
                by = if (length(sub)) paste(sub, collapse = ", ")),
-          list(step = "code", code = .forest_est_code(group, sub, comparison))),
+          list(step = "code",
+               label = "the rows to draw: the comparison arm, a heading row per subgroup",
+               code = .forest_est_code(group, sub, comparison))),
         plot = plot_of(x_label = "Hazard Ratio (95% CI)", legend = "none", x_log = TRUE,
                        add = list(
                          list(fn = "scale_y_continuous",
                               args = list(breaks = tfl_fig_r("est$y"), labels = tfl_fig_r("est$label"),
                                           expand = tfl_fig_r("expansion(add = 0.6)"))),
-                         list(fn = "labs", args = list(y = NULL)),
+                         # no title on the subgroup axis (a NULL kept as R: it survives YAML)
+                         list(fn = "labs", args = list(y = tfl_fig_r("NULL"))),
                          # left-aligned, so a subgroup's levels show indented
                          list(fn = "theme", args = list(axis.text.y = list(fn = "element_text", args = list(hjust = 0)))))),
         layers = list(
@@ -2130,11 +2260,11 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
 # the reference), their label, text and y; a subgroup whose model did not
 # converge has no point (NE)
 .forest_est_code <- function(group, subgroups, comparison = NULL) {
-  ind <- "                           "
-  sub <- if (length(subgroups)) paste0(
-    "case_when(", paste(sprintf("!is.na(%s) ~ \"%s\"", subgroups, subgroups),
-                        collapse = paste0(",\n", ind)),
-    ",\n", ind, "TRUE ~ \"All subjects\")") else "\"All subjects\""
+  sub <- if (length(subgroups)) c(
+    "    subgroup = case_when(",
+    paste0(sprintf("      !is.na(%s) ~ \"%s\"", subgroups, subgroups), ","),
+    "      TRUE ~ \"All subjects\"",
+    "    ),") else "    subgroup = \"All subjects\","
   lvl <- if (length(subgroups)) sprintf("coalesce(%s, \"All subjects\")",
                                         paste(subgroups, collapse = ", ")) else "\"All subjects\""
   # no arm chosen: every other arm, and each row says which
@@ -2145,22 +2275,31 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
     "  # converge (no events in an arm) has no point: NE",
     "  filter(!is.na(conf.low)) |>",
     if (!is.null(comparison)) sprintf("  filter(%s == %s) |>", group, q(comparison)),
-    sprintf("  mutate(subgroup = %s,", sub),
-    sprintf("         level = %s,", lvl),
-    "         ok = is.finite(estimate) & is.finite(conf.low) & is.finite(conf.high) & conf.high < 1000,",
-    "         txt = ifelse(ok, sprintf(\"%.2f (%.2f, %.2f)\", estimate, conf.low, conf.high), \"NE\"),",
-    "         across(c(estimate, conf.low, conf.high), ~ ifelse(ok, .x, NA)))",
+    "  mutate(",
+    sub,
+    sprintf("    level = %s,", lvl),
+    "    ok = is.finite(estimate) & is.finite(conf.low) & is.finite(conf.high) &",
+    "      conf.high < 1000,",
+    "    txt = ifelse(ok, sprintf(\"%.2f (%.2f, %.2f)\", estimate, conf.low, conf.high),",
+    "                 \"NE\"),",
+    "    across(c(estimate, conf.low, conf.high), ~ ifelse(ok, .x, NA))",
+    "  )",
     if (length(subgroups)) c(
       "# a heading row above each subgroup's levels, the levels indented",
-      "est <- split(est, factor(est$subgroup, levels = unique(est$subgroup))) |>",
-      "  lapply(function(g) if (g$subgroup[1] == \"All subjects\") mutate(g, head = FALSE) else",
-      "    bind_rows(tibble(subgroup = g$subgroup[1], level = g$subgroup[1], head = TRUE),",
-      "              mutate(g, head = FALSE))) |>",
-      "  bind_rows() |>",
-      "  mutate(label = ifelse(head | subgroup == \"All subjects\", level, paste0(\"    \", level)),",
-      "         n = ifelse(head, \"\", as.character(n_obs)),",
-      "         txt = ifelse(head, \"\", txt),",
-      "         y = rev(row_number()))")
+      "heads <- est |>",
+      "  filter(subgroup != \"All subjects\") |>",
+      "  distinct(subgroup) |>",
+      "  mutate(level = subgroup, head = TRUE)",
+      "est <- est |>",
+      "  mutate(head = FALSE) |>",
+      "  bind_rows(heads) |>",
+      "  arrange(factor(subgroup, levels = unique(est$subgroup)), desc(head)) |>",
+      "  mutate(",
+      "    label = ifelse(head | subgroup == \"All subjects\", level, paste0(\"    \", level)),",
+      "    n = ifelse(head, \"\", as.character(n_obs)),",
+      "    txt = ifelse(head, \"\", txt),",
+      "    y = rev(row_number())",
+      "  )")
     else c(
       "est <- est |>",
       "  mutate(label = level, n = as.character(n_obs), y = rev(row_number()))")),
@@ -2202,9 +2341,15 @@ tfl_fig_forest_analyses <- function(data = "ADTTE", param = "OS", pop = "FASFL",
                                     time = "AVAL", censor = "CNSR", id = "HR") {
   subgroups <- .split_vals(paste(subgroups, collapse = ", "))
   data_id <- gsub("[^a-z0-9_.]", "_", tolower(paste(data, sub("FL$", "", pop), param, sep = "_")))
-  model <- sprintf("survival::coxph(survival::Surv(%s, 1 - %s) ~ %s, data = %%s)", time, censor, group)
+  # the event as the KM figures write it: CNSR == 0
+  model <- sprintf("survival::coxph(survival::Surv(%s, %s == 0) ~ %s, data = %%s)", time, censor, group)
+  # all subjects: the model under a name, then its ARD; within a subgroup,
+  # the same inside ard_strata()
+  all <- paste0("cox <- ", sprintf(model, "data"), "\n",
+                "cardx::ard_regression(cox, exponentiate = TRUE)")
   reg <- function(d, in_ = "") paste0(
-    "cardx::ard_regression(\n", in_, "  ", sprintf(model, d), ",\n", in_, "  exponentiate = TRUE)")
+    "cardx::ard_regression(\n", in_, "  ", sprintf(model, d), ",\n", in_,
+    "  exponentiate = TRUE\n", in_, ")")
   adata <- data.frame(
     data_id = data_id, label = sprintf("%s of %s, with the subgroups", param, sub("FL$", "", pop)),
     from = toupper(data), population_id = pop, where = sprintf("PARAMCD == %s", q(param)),
@@ -2214,10 +2359,10 @@ tfl_fig_forest_analyses <- function(data = "ADTTE", param = "OS", pop = "FASFL",
     analysis_id = aid, label = label, method = "custom", data = data_id, code = code,
     stringsAsFactors = FALSE)
   an <- rbind(
-    one(id, "Hazard ratio, all subjects", reg("data")),
+    one(id, "Hazard ratio, all subjects", all),
     do.call(rbind, lapply(subgroups, function(s) one(
       paste(id, s, sep = "_"), paste("Hazard ratio by", s),
-      paste0("cards::ard_strata(\n  data, .strata = ", s, ",\n  .f = ~ ", reg(".x", "  "), ")")))))
+      paste0("cards::ard_strata(\n  data,\n  .strata = ", s, ",\n  .f = ~ ", reg(".x", "  "), "\n)")))))
   rownames(an) <- NULL
   list(analysis_data = adata, analyses = an)
 }

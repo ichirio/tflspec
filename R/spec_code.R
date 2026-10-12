@@ -77,6 +77,8 @@
 # line, indented.  Values read back as what they were (checked by the
 # tests: the written program makes the same pages).
 .spec_code <- function(x, indent = 0L, width = 80L) {
+  tb <- .spec_tribble(x, indent)
+  if (!is.null(tb)) return(tb)
   one <- .spec_code_line(x)
   if (nchar(one) + indent <= width) return(one)
   parts <- .spec_parts(x)
@@ -91,6 +93,29 @@
          strrep(" ", indent), ")")
 }
 
+# A data frame of a few columns as a person writes a grid: tribble() rows,
+# the columns aligned -- when the program attaches dplyr (which exports
+# it); else NULL (data.frame(), a column an argument)
+.spec_tribble <- function(x, indent = 0L) {
+  if (!is.data.frame(x) || !nrow(x) || !"dplyr" %in% .attached()) return(NULL)
+  if (!all(vapply(x, function(v) is.atomic(v) && is.null(dim(v)), NA))) return(NULL)
+  if (!identical(make.names(names(x)), names(x))) return(NULL)
+  cells <- rbind(paste0("~", names(x)), matrix(vapply(x, function(v) {
+    out <- vapply(as.list(v), .spec_code_line, "")
+    if (!all(is.na(v))) out[is.na(v)] <- "NA"
+    out
+  }, character(nrow(x))), nrow = nrow(x)))
+  w <- apply(cells, 2L, function(col) max(nchar(col)))
+  pad <- strrep(" ", indent + 2L)
+  rows <- vapply(seq_len(nrow(cells)), function(i) {
+    cl <- vapply(seq_along(w), function(j)
+      if (j < length(w)) formatC(paste0(cells[i, j], ","), width = -(w[j] + 1L))
+      else paste0(cells[i, j], if (i < nrow(cells)) ","), "")
+    paste0(pad, sub(" +$", "", paste(cl, collapse = " ")))
+  }, "")
+  paste0("tribble(\n", paste(rows, collapse = "\n"), "\n", strrep(" ", indent), ")")
+}
+
 # the head and the elements of a value that can be written over lines
 .spec_parts <- function(x) {
   nm <- function(v) names(v) %||% rep("", length(v))
@@ -102,7 +127,9 @@
     return(list(open = "cell_rows", items = v, names = nm(v)))
   }
   if (is.data.frame(x)) {
-    v <- c(as.list(x), list(check.names = FALSE))
+    # check.names = FALSE only when a name needs it
+    v <- c(as.list(x), if (!identical(make.names(names(x)), names(x)))
+      list(check.names = FALSE))
     return(list(open = "data.frame", items = v, names = nm(v)))
   }
   if (is.list(x) && !is.object(x)) {
@@ -130,6 +157,9 @@
   if (is.integer(x) && length(x) > 1L && is.null(names(x)) && !anyNA(x)) {
     return(paste0("c(", paste(x, collapse = ", "), ")"))
   }
+  if (is.integer(x) && length(x) == 1L && is.null(names(x)) && !is.na(x)) {
+    return(as.character(x))
+  }
   paste(deparse(x, width.cutoff = 500L,
                 control = c("keepNA", "keepInteger", "niceNames",
                             "showAttributes")),
@@ -137,9 +167,11 @@
 }
 
 # a call, on one line when it fits after `indent` characters
-.spec_call_code <- function(cl, indent = 2L) {
+# `lead`: the columns the line has besides the call (the name it is
+# assigned to, a pipe's indent and its " |>")
+.spec_call_code <- function(cl, indent = 2L, lead = indent) {
   one <- .spec_code_line(cl)
-  if (nchar(one) + indent <= 80L) return(one)
+  if (nchar(one) + lead <= 80L) return(one)
   .spec_code(cl, indent)
 }
 
@@ -359,11 +391,25 @@ tfl_table_code <- function(spec, output_id = NULL, data = "data",
   op <- .ard_pipe_op(pipe)
   head <- do.call(.spec_call, c(list("table_plan", .spec_sym(data)), roles))
   steps <- .plan_spec_steps(roles, sp)
+  # the levels as code lists at the head, cl_<variable> as the ARD programs
+  # write them, plan_levels() naming them
+  cl <- character()
+  for (i in seq_along(steps)) {
+    if (!identical(steps[[i]]$fun, "plan_levels")) next
+    a <- steps[[i]]$args
+    v <- setdiff(names(a), ".drop_empty")
+    v <- v[vapply(a[v], is.character, NA)]
+    if (!length(v)) next
+    cl <- c("# the code lists: each value in its order, as the table shows it",
+            .codelists_lines(a[v]), "")
+    for (k in v) a[[k]] <- .spec_sym(.cl_name(k))
+    steps[[i]]$args <- a
+  }
   lines <- c(.spec_call_code(head, 0L),
              vapply(steps, function(s) paste0("  ", .spec_call_code(s)), ""))
   lines[-length(lines)] <- paste(lines[-length(lines)], op)
   lines[1L] <- paste(plan, "<-", lines[1L])
-  .drop_attached_ns(unlist(strsplit(lines, "\n", fixed = TRUE)))
+  .drop_attached_ns(c(cl, unlist(strsplit(lines, "\n", fixed = TRUE))))
 }
 
 #' A table's plan from its definition
@@ -483,14 +529,33 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
     }
     b <- .ard_spec_band(sp, sheet, tokens)
     if (!length(b)) return(NULL)
+    # its own lines with the study's, the study's by the name the setup
+    # gives them (study_footer_lines): a change of the study's lines reaches
+    # the report -- when they are the study's lines as the setup writes them
+    if (setup) {
+      rows <- attr(sp, "bands_study")[[sheet]]
+      st <- stats::setNames(list(rows), sheet)
+      sb <- if (NROW(rows)) .ard_spec_band(st, sheet, tokens)
+      n <- length(sb)
+      if (n && length(b) > n && identical(sb, .ard_spec_band(st, sheet))) {
+        lines <- .spec_sym(paste0(.setup_band_names[[sheet]], "_lines"))
+        if (identical(utils::tail(b, n), sb)) {
+          return(.spec_call(paste0("rtf_", sheet),
+                            .spec_call("c", utils::head(b, -n), lines)))
+        }
+        if (identical(utils::head(b, n), sb)) {
+          return(.spec_call(paste0("rtf_", sheet),
+                            .spec_call("c", lines, utils::tail(b, -n))))
+        }
+      }
+    }
     .spec_call(paste0("rtf_", sheet), b)
   }
   hdr <- band("header")
   ftr <- band("footer")
   if (length(hdr) || length(ftr)) {
-    st[[length(st) + 1L]] <- .spec_call("rtf_section", doc, secinfo = list(
-      header = hdr, footer = ftr)[
-        c(if (length(hdr)) "header", if (length(ftr)) "footer")])
+    st[[length(st) + 1L]] <- .spec_call("rtf_section", doc, header = hdr,
+                                        footer = ftr)
   }
   if (identical(r$type %||% "table", "figure")) {
     twips <- function(v) if (!is.null(v)) as.integer(round(v * 1440))
@@ -582,9 +647,13 @@ tfl_report_setup_code <- function(spec) {
     if (!length(b)) next
     # a line of tokens of one's own goes when a report's are empty
     own <- setdiff(.ard_spec_used_tokens(one[sheet]), .ard_spec_rtf_tokens)
-    call <- .spec_call(paste0("rtf_", sheet), b,
+    nm <- .setup_band_names[[sheet]]
+    lines <- paste0(nm, "_lines")
+    call <- .spec_call(paste0("rtf_", sheet), .spec_sym(lines),
                        drop_empty_rows = if (length(own)) TRUE)
-    out <- c(out, paste(.setup_band_names[[sheet]], "<-", .spec_call_code(call, 0L)))
+    out <- c(out,
+             paste(lines, "<-", .spec_call_code(b, 0L, lead = nchar(lines) + 4L)),
+             paste(nm, "<-", .spec_call_code(call, 0L, lead = nchar(nm) + 4L)))
   }
   if (!length(out)) return(character())
   .drop_attached_ns(unlist(strsplit(out, "\n", fixed = TRUE)))
@@ -649,12 +718,25 @@ tfl_report_code <- function(spec, output_id = NULL, content = "content",
   sp <- .ard_spec_scope(.as_spec(spec, "table", "tfl_report_code",
                                  output_id = output_id), output_id)
   steps <- .report_spec_steps(sp, content, isTRUE(setup))
-  out <- vapply(steps, function(s) {
-    if (length(s$args) && inherits(s$args[[1L]], "tfl_spec_sym") &&
-        identical(s$args[[1L]]$name, "doc")) {
-      s$args[[1L]] <- .spec_sym(doc)
+  # the document's program: its path through the study's path variables
+  # (tflspec.paths), as the program's other paths are
+  for (k in intersect(c("program", "program_fallback"), names(steps[[1L]]$args))) {
+    v <- steps[[1L]]$args[[k]]
+    if (is.character(v) && length(v) == 1L) steps[[1L]]$args[[k]] <- .spec_sym(.path_code(v))
+  }
+  # one object, one pipe: rtf_document() |> rtf_section() |> rtf_tables() ...
+  more <- length(steps) > 1L
+  out <- paste(doc, "<-", .spec_call_code(steps[[1L]], 0L,
+                                          lead = nchar(doc) + 4L + if (more) 3L else 0L))
+  for (i in seq_along(steps)[-1L]) {
+    st <- steps[[i]]
+    if (length(st$args) && inherits(st$args[[1L]], "tfl_spec_sym") &&
+        identical(st$args[[1L]]$name, "doc")) {
+      st$args <- st$args[-1L]
     }
-    paste(doc, "<-", .spec_call_code(s, 0L))
-  }, "")
+    lead <- 2L + if (i < length(steps)) 3L else 0L
+    out <- paste0(out, " |>\n  ", gsub("\n", "\n  ", .spec_call_code(st, 0L, lead = lead),
+                                       fixed = TRUE))
+  }
   .drop_attached_ns(unlist(strsplit(out, "\n", fixed = TRUE)))
 }
