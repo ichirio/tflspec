@@ -1,5 +1,22 @@
 # tflspec (development version)
 
+* **A report is a table, a listing or a figure; any of its steps may be
+  its own code** (tflplanner's user-program design, the user's direction:
+  "user code" was a fourth type forced into line).  The report sheet's
+  `data_code` and `content_code` hold the report's own R for its data
+  step and its content step: a step whose code is not blank is that code,
+  instead of the definition.  The data step leaves `data` (a figure:
+  `df`), the content step `content`; the report's datasets (by their
+  names in lower case) and, when it reads its ARD, `ard` are in reach.
+  `type` takes `table`, `listing` and `figure` only: `user` is an error
+  that says where its code goes.  `tfl_check_code()` checks a step's code
+  against the rules, reading it (rules U01-U05: R that does not parse, a
+  dataset the report does not register, nothing left for the next step,
+  files read or packages attached by the code, `ard` without the report
+  reading its ARD), and says the catalog's datasets it uses.  A report
+  whose content is its own code and has no analyses is not an ARS output
+  (said in `tfl_ars_unmapped()`), as a `user` report was.
+
 * **A figure's data steps: each reads an object and leaves one**
   (0.0.24.9095, tflplanner's generalised data steps, the user's
   questions Q1-Q3).  Any data step may say the object it reads (`in`) and

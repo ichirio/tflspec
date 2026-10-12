@@ -212,9 +212,11 @@ reference:
   - title: Checks
     desc: >
       What went wrong, said before a report is made: an ARD and what a
-      table reads from it, a function of one's own, the ARS, a figure.
+      table reads from it, a function of one's own, the ARS, a figure, a
+      report's own code.
     contents:
       - tfl_check_ard
+      - tfl_check_code
       - tfl_check_ard_function
       - tfl_ard_conditions
       - tfl_check_ars
