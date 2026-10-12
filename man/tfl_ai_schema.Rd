@@ -4,12 +4,12 @@
 \alias{tfl_ai_schema}
 \title{The schema text of a drafting task}
 \usage{
-tfl_ai_schema(task, sheets = NULL)
+tfl_ai_schema(task, parts = NULL)
 }
 \arguments{
 \item{task}{One of \code{\link[=tfl_ai_tasks]{tfl_ai_tasks()}}.}
 
-\item{sheets}{The parts to describe: for \code{toc}, \code{"toc"}; for \code{figure},
+\item{parts}{The parts to describe: for \code{toc}, \code{"toc"}; for \code{figure},
 sections among \code{"template"}, \code{"data"}, \code{"plot"},
 \code{"layers"}, or single pieces by name (\code{"censor_mark"}, \code{"join"}; see
 \code{\link[=tfl_fig_parts]{tfl_fig_parts()}}).  \code{NULL} for all.  The repair prompt describes only
@@ -28,5 +28,5 @@ exist.
 }
 \examples{
 cat(tfl_ai_schema("toc"))
-cat(substr(tfl_ai_schema("figure", sheets = "survfit"), 1, 600))
+cat(substr(tfl_ai_schema("figure", parts = "survfit"), 1, 600))
 }

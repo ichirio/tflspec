@@ -1,7 +1,8 @@
-# The drafting prompts (tfl_ai_prompt()) are text a model reads: what they
-# say is pinned by golden snapshots (a change to the prompt files, to
-# tfl_fig_parts() or to the TOC fields shows as a snapshot change), and
-# their schema is checked against what tflspec reads.
+# The drafting prompts (tfl_ai_prompt()) are text a model reads.  The toc
+# prompts are pinned by golden snapshots (a change to the prompt files or to
+# the TOC fields shows as a snapshot change).  The figure prompts are not:
+# their schema is every piece of tfl_fig_parts(), which grows with each new
+# piece, so they are checked against tfl_fig_parts() instead (below).
 
 ai_toc_context <- function() {
   specs <- list.files(system.file("extdata", "ard-spec", package = "tflspec"),
@@ -29,7 +30,7 @@ ai_figure_context <- function(design = NULL) {
 
 ai_words <- function(x) length(strsplit(trimws(x), "\\s+")[[1L]])
 
-test_that("golden prompts: toc and figure, chat and api", {
+test_that("golden prompts: toc, chat and api", {
   expect_snapshot(cat(format(tfl_ai_prompt("toc", ai_toc_context()))))
   expect_snapshot(cat(format(tfl_ai_prompt(
     "toc", ai_toc_context(), mode = "api", format = "json",
@@ -38,14 +39,21 @@ test_that("golden prompts: toc and figure, chat and api", {
       text = "14.1.1 Demographics (Safety Population)\n14.2.1 Overall survival (FAS)"
     ))
   ))))
-  expect_snapshot(cat(format(tfl_ai_prompt("figure", ai_figure_context()))))
+})
+
+test_that("a figure prompt carries the design, the documents and the schema", {
   design <- tfl_fig_template("km_simple", data = "ADTTE", param = "OS",
                              pop = "FASFL", group = "TRT01P")
-  expect_snapshot(cat(format(tfl_ai_prompt(
+  p <- tfl_ai_prompt(
     "figure", ai_figure_context(design), mode = "api", example = FALSE,
     documents = list(name = "SAP", section = "9.4",
-                     text = "Overall survival is shown by Kaplan-Meier curves by arm.")
-  ))))
+                     text = "Overall survival is shown by Kaplan-Meier curves by arm."))
+  txt <- format(p)
+  expect_match(txt, "km_simple", fixed = TRUE)
+  expect_match(txt, "Overall survival is shown by Kaplan-Meier curves by arm.",
+               fixed = TRUE)
+  expect_match(txt, "<document", fixed = TRUE)
+  expect_match(p$system, tfl_ai_schema("figure"), fixed = TRUE)
 })
 
 test_that("the prompts stay within their size budget", {

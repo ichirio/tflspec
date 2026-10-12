@@ -95,7 +95,7 @@
 #' exist.
 #'
 #' @param task One of [tfl_ai_tasks()].
-#' @param sheets The parts to describe: for `toc`, `"toc"`; for `figure`,
+#' @param parts The parts to describe: for `toc`, `"toc"`; for `figure`,
 #'   sections among `"template"`, `"data"`, `"plot"`,
 #'   `"layers"`, or single pieces by name (`"censor_mark"`, `"join"`; see
 #'   [tfl_fig_parts()]).  `NULL` for all.  The repair prompt describes only
@@ -103,23 +103,23 @@
 #' @return The schema as one string (markdown), of class `tfl_ai_text`.
 #' @examples
 #' cat(tfl_ai_schema("toc"))
-#' cat(substr(tfl_ai_schema("figure", sheets = "survfit"), 1, 600))
+#' cat(substr(tfl_ai_schema("figure", parts = "survfit"), 1, 600))
 #' @export
-tfl_ai_schema <- function(task, sheets = NULL) {
+tfl_ai_schema <- function(task, parts = NULL) {
   task <- .ai_task(task, "tfl_ai_schema()")
-  .ai_text(.ai_schema(task, sheets))
+  .ai_text(.ai_schema(task, parts))
 }
 
 # The schema; `templates` restricts a figure's template list.
-.ai_schema <- function(task, sheets = NULL, templates = NULL) {
+.ai_schema <- function(task, parts = NULL, templates = NULL) {
   known <- .ai_schema_parts(task)
-  sheets <- sheets %||% known
+  parts <- parts %||% known
   pieces <- if (task == "figure") {
     p <- tfl_fig_parts()
     p <- unique(p[!p$piece %in% c("plot", "plot_add"), c("section", "piece")])
-    p[p$piece %in% sheets, , drop = FALSE]
+    p[p$piece %in% parts, , drop = FALSE]
   }
-  bad <- setdiff(sheets, c(known, pieces$piece))
+  bad <- setdiff(parts, c(known, pieces$piece))
   if (length(bad)) {
     .ard_stop(sprintf(
       "tfl_ai_schema(): a %s answer has no part %s; its parts are %s.",
@@ -129,8 +129,8 @@ tfl_ai_schema <- function(task, sheets = NULL) {
   switch(task,
     toc = .ai_schema_toc(),
     figure = .ai_schema_figure(
-      known[known %in% c(sheets, pieces$section)], templates,
-      pieces[!pieces$section %in% sheets, , drop = FALSE]
+      known[known %in% c(parts, pieces$section)], templates,
+      pieces[!pieces$section %in% parts, , drop = FALSE]
     )
   )
 }

@@ -33,7 +33,6 @@ test_that("the repair prompt names each problem and only the offending schema", 
   expect_match(r, "Return the whole block again, corrected", fixed = TRUE)
   # the format's rules only when the block could not be read
   expect_false(grepl("Write the block in YAML", r, fixed = TRUE))
-  expect_snapshot(cat(r))
 })
 
 test_that("an unreadable block gets the format's rules and no schema", {
