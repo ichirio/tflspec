@@ -1,5 +1,70 @@
 # tflspec (development version)
 
+* **A time's unit is a named constant, not a number in each program**
+  (tflplanner, the user's request).  A figure's time-unit step (and the
+  swimmer templates' assessment days) divides by `days_per_week`,
+  `days_per_month` or `days_per_year` -- written
+  `mutate(AVAL = AVAL / days_per_month)` (no data column shares a program
+  constant's name: tflplanner's review checks it) -- instead of `7`,
+  `30.4375`, `365.25`.  A study's setup sets them (tflplanner: from the
+  company standards); the figure setup (`tfl_fig_setup_code()`) defines
+  each only when it is not defined yet, with the values of the new
+  `tfl_time_unit_days()`, and a figure script of its own defines the ones
+  it uses the same way.  The templates' snapshots and the program fixtures
+  change by that line.  The review's catalog has the rule tflplanner
+  checks it with: **D03**, a dataset column named like a program constant
+  (an error: rename the column).
+
+* **Page patterns** (tflplanner's page-patterns design).  The report
+  half -- `report`, `page`, `header`, `footer`, `titles`, `footnotes`,
+  `tokens` -- holds named page patterns besides the blank rows: rows whose
+  `output_id` is `@` and a name (`@Compact`), saying only what differs
+  from Standard (the blank rows).  A report chooses one with the new
+  `report$pattern` column (blank: Standard).  A report is resolved in two
+  stages -- its own rows over its pattern's, then over Standard's -- by
+  the rules each sheet already has (cell by cell, by line, by name), and
+  `(none)` takes a line out at either level.  Standard's header, footer,
+  tokens and font stay the study's setup (`tfl_report_setup_code()`);
+  what a pattern changes is written in its reports' programs.  The
+  checks: an `@` row only on those sheets, a pattern's name (a letter,
+  then letters, digits or `_`), a pattern no row defines, a pattern
+  chosen on the blank row or by a pattern.  A workbook without patterns
+  reads and writes as before, with the same programs.
+* **`tfl_read_toc()` reads a data frame** (tflplanner #299, D10).  `path`
+  may be a data frame of the TOC's rows (its names the column names) in
+  place of a file; `sheet` and `skip` do not apply, and a row with no
+  output id is named by its row in the data frame.  The rows go through
+  the one reader as a file's do -- tflplanner's import by company rules
+  hands it the rows it has read, one report a phase, without a temporary
+  file.
+* **The forest plot's analysis data is named by tflplanner's rule**,
+  `<data>_<population>_<param>` (`adtte_fas_os`; was `adtte_os`), the
+  population without its flag's `FL` -- the same rule tflplanner names
+  every analysis data it suggests by (tflplanner #293, its figure work).
+
+* **The forest plot from the figure's own ARD** (tflplanner #293 phase
+  6).  `forest_hr` is a parts template now: its hazard ratios, intervals
+  and N are statistics of an ARD made by cards / cardx -- one Cox model
+  of all subjects (`cardx::ard_regression()`) and one within each subgroup
+  variable (`cards::ard_strata()`), each a `custom` analysis -- read with
+  `ard_stats()`, not fitted inside the figure program.  The analyses the
+  plot needs come with the design, `attr(design, "analyses")`, from the
+  new `tfl_fig_forest_analyses()`; `tfl_fig_template()` takes `subgroups`
+  and `comparison` (the arm against the reference).  Two new pieces
+  serve it: the layer `text_column` (columns of text at the right of the
+  plot, a panel of its own: N, the estimate and its interval) -- panels
+  now go below the plot or at its right -- and the catalog layer
+  `errorbar_h` (a horizontal error bar).  A subgroup whose model did not
+  converge has no point and prints NE.  The template snapshot of
+  `forest_hr` changes from the whole script to the parts.
+
+* **Review rule A01 checks an analysis data's `add` columns in the
+  population's data** (ADSL), where `add` takes them from by the
+  subject, not in the analysis data's own dataset: an ADTTE data adding
+  SEX was said to read a column ADTTE has not got.  And a figure with
+  analyses of its own (`figures` given) is not reviewed as a table: no
+  "no column key" (T09) for a forest plot.
+
 * **Document import, level 1: a define read by rule**
   (ichirio/tflplanner#283).  No AI: a define is standard CDISC XML.
   - `tfl_read_define()` reads a Define-XML 2.0 or 2.1 (`xml2`, Suggests)
@@ -85,6 +150,22 @@ save it, then look at its Review tab.
   (P02 names a program that still calls a removed function).
 
 ## Changes
+
+* **Ready for CRAN's review, the parts that are not the submission itself**
+  (#218).  `readxl` moves from Suggests to Imports: reading the Excel
+  specifications is the package's job, so it was never optional
+  (`rtfreporter` follows at the submission, once it is on CRAN; in Imports
+  now the check warns that it is not).  `haven` and `writexl` stay in
+  Suggests; every function that uses them now says what to install
+  when they are missing (`tfl_fig_style_template()`, `tfl_read_ard()` of an
+  .xpt file, reading .xpt / .sas7bdat data).  The 14 quick-API figure
+  functions and `print.tfl_code()` document what they return; the examples
+  of `tfl_table_plan()` and `tfl_as_table_spec()` run (on a bundled
+  specification and a small cards ARD) instead of `\dontrun{}`.  The five
+  tests that draw every figure type skip on CRAN (CI still runs them).  The
+  15 README-unused figures stay out of the built package; the Title quotes
+  'Excel' and the Description spells out TFL; the WORDLIST knows the
+  package's terms.
 
 * **D02 in plain words** (tflplanner): "%s: the checks against the data
   have not run yet." and "Press [Review with the data]: it reads the

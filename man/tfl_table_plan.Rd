@@ -30,10 +30,17 @@ from the study's workbook in a line of code.  Like \code{table_plan()}, the data
 comes first, so it pipes.
 }
 \examples{
-\dontrun{
-spec <- tfl_read_table_spec("study.xlsx", output_id = "DM")
-plan <- ard |> normalize_ard() |> tfl_table_plan(spec)
-plan |> plan_paginate_rows(max_rows = 40)   # this report's own change
+if (requireNamespace("cards", quietly = TRUE) &&
+    requireNamespace("rtfreporter", quietly = TRUE)) {
+  spec <- tfl_read_table_spec(system.file("extdata", "ard-spec", "DM.xlsx",
+                                          package = "tflspec"))
+  ard <- cards::ard_stack(cards::ADSL, .by = TRT01A,
+                          cards::ard_continuous(variables = AGE),
+                          cards::ard_categorical(variables = c(AGEGR1, SEX)))
+  plan <- tfl_table_plan(rtfreporter::normalize_ard(ard), spec)
+  # this report's own change, under what the spec says
+  plan <- rtfreporter::plan_paginate_rows(plan, max_rows = 40)
+  head(rtfreporter::plan_apply(plan, "table"))
 }
 }
 \seealso{

@@ -5,6 +5,9 @@ with_variant <- function(spec, type, pos) {
 }
 
 test_that("example spec generates runnable code for every legend variant", {
+  # every figure type drawn with ggplot2: about 20 s on CRAN's machines; CI
+  # runs it on every configuration
+  skip_on_cran()
   skip_if_not_installed("ggsurvfit")
   skip_if_not_installed("patchwork")
   adam <- tfl_example_adam()
@@ -23,6 +26,9 @@ test_that("example spec generates runnable code for every legend variant", {
 })
 
 test_that("a manual legend is drawn for every figure type, without warnings", {
+  # every figure type drawn with ggplot2: about 20 s on CRAN's machines; CI
+  # runs it on every configuration
+  skip_on_cran()
   skip_if_not_installed("ggsurvfit")
   skip_if_not_installed("patchwork")
   for (pos in c("below", "inside_br", "right")) {
