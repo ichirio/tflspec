@@ -1,7 +1,7 @@
 # tflspec (development version)
 
 * **A report is a table, a listing or a figure; any of its steps may be
-  its own code** (tflplanner's user-program design, the user's direction:
+  its own code** (0.0.24.9097, tflplanner's user-program design, the user's direction:
   "user code" was a fourth type forced into line).  The report sheet's
   `data_code` and `content_code` hold the report's own R for its data
   step and its content step: a step whose code is not blank is that code,
