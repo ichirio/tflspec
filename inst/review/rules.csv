@@ -45,6 +45,7 @@ P01,check,program,spec,tflplanner,%s,As the programs read the definition.
 P02,error,program,spec,tflplanner,"%s calls %s, which tflspec no longer has.","Write it again (open the study and save), or source programs/study_helpers.R."
 C05,check,codelists,data,tflspec,"%s has more than %s values; its code list is not reviewed against the data.",
 D02,check,data,data,tflplanner,%s: the checks against the data have not run yet.,Press [Review with the data]: it reads the datasets once (not again until a file changes).
+D03,error,data,data,tflplanner,"The dataset %s has a column %s, the name of a constant of the programs (the days in a week, a month, a year).","Rename the column in the data: a program would read it instead of the constant."
 review,check,spec,spec,tflspec,"The rule %s could not be run: %s.",This is a fault of the review; please report it.
 F04,error,figure,spec,tflplanner,%s,"Choose a table of the study as the figure's ARD source (its step 2), or take the ARD in."
 F05,hand,figure,spec,tflplanner,%s,"The design reads an ARD: choose where it comes from (the figure's step 2)."

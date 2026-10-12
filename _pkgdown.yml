@@ -128,6 +128,7 @@ reference:
       - tfl_fig_style_template
       - tfl_read_fig_style
       - tfl_fig_setup_code
+      - tfl_time_unit_days
       - tfl_fig_palettes
       - tfl_check_fig
   - title: Figure spec (sheets) and quick figures
