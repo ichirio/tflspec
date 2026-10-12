@@ -88,8 +88,8 @@ tflspec.
 \code{part} gives a piece of it instead, for a program layout of one's own
 (tflplanner writes one program per output that sources a shared setup):
 \code{"setup"} is what every piece starts with -- \code{library(cards)},
-\code{library(dplyr)}, the computed statistics the analyses use (\code{tfl_stats})
-and each statistic's format (\code{fmt_default}); \code{"body"} is the analyses of
+\code{library(dplyr)}, the computed statistics the analyses use
+(\code{tfl_stats}) and each statistic's format (\code{fmt_default}); \code{"body"} is the analyses of
 \code{output_id}, starting with \code{report_id <- "..."} and its code lists
 (\verb{cl_<variable>}), and ending in \code{save_ard()} (one report, \code{save = TRUE}) or \code{ard}.
 }

@@ -196,6 +196,8 @@ test_that("a report program's figure: no save, its own name, the study's palette
   expect_true(any(grepl("^# ---- plot ", part)))
   expect_false(any(grepl("^fig", part)))
   # the data under a name that says what it is (adtte_ttde, not df)
+  expect_identical(tfl_fig_data_name(d), "adtte_ttde")
+  expect_null(tfl_fig_data_name(tfl_fig_design(data = list(list(step = "read", dataset = "ADSL")))))
   expect_true(any(grepl('pal <- tfl_colours("treatment", levels(factor(adtte_ttde$TRT01A)))',
                         part, fixed = TRUE)))
   # it runs, after the study's figure setup

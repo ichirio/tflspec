@@ -28,7 +28,8 @@
     (`mutate(across(where(...), format))`, not `data[] <- lapply(...)`), and
     `listing_spec()` laid out as the other calls.
   - *Figures*: the data under a name that says what it is (`adtte_ttde`, not
-    `df`); with the study's setup, `theme_tfl()` instead of the theme's
+    `df`; `tfl_fig_data_name()` gives it, for an app showing the objects);
+    with the study's setup, `theme_tfl()` instead of the theme's
     numbers (boxed and L_axis); the legend in one `theme()`; the numbers an
     `ard_number` prints named in the data part (`ard_label_1 <- ...`) and the
     plot naming them; a palette no layer uses is not written; panels named

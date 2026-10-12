@@ -1366,15 +1366,29 @@ tfl_fig_design_code <- function(design, plot_id = "fig", ggplot2_version = NULL,
     section("plot"),
     b$step2,
     if (save) c("", name, "", .fig_save_code(design$plot, plot_id, name)))
-  code <- .fig_rename_df(code, .fig_data_name(design))
+  code <- .fig_rename_df(code, tfl_fig_data_name(design))
   code <- .fig_tidy_names(code)
   .fig_code_out(code, b$reads, b$libs, b$needs, ard = .fig_uses_ard(design))
 }
 
-# The figure's data under a name that says what it is, as the ARD programs
-# name theirs: <dataset>_<parameter> (adtte_ttde), else
-# <dataset>_<population> (adsl_saf); NULL to keep `df`.
-.fig_data_name <- function(design) {
+#' The name of a figure's data in its program
+#'
+#' A designed figure's data steps make one data frame that its layers draw
+#' from.  In the program it is named for what it is, as the ARD programs
+#' name theirs: `<dataset>_<parameter>` (`adtte_ttde`), else
+#' `<dataset>_<population>` (`adsl_saf`).  Code of the design's own (a
+#' `code` step, a `layer_code` layer) says `df` and is written with the
+#' name too.  A design with neither a parameter nor a population keeps
+#' `df`, and so does one whose code has the name already.
+#'
+#' @param design A [tfl_fig_design()].
+#' @return The name, or `NULL` when the program calls it `df`.
+#' @examples
+#' tfl_fig_data_name(tfl_fig_template("km_simple", data = "ADTTE", param = "TTDE",
+#'                                    pop = "SAFFL", group = "TRT01A"))
+#' @export
+tfl_fig_data_name <- function(design) {
+  design <- if (inherits(design, "tfl_fig_design")) design else .fig_design_from_list(design)
   st <- design$data %||% list()
   get <- function(k, f) {
     hit <- Filter(function(x) identical(x$step, k), st)

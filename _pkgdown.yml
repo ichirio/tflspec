@@ -136,6 +136,7 @@ reference:
       - tfl_fig_add_layer
       - tfl_fig_calls
       - tfl_fig_compat
+      - tfl_fig_data_name
       - tfl_fig_r
   - subtitle: Figure style
     desc: Every look-and-feel value of a study's figures, in one place.
