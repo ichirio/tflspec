@@ -11,11 +11,15 @@ test_that("tfl_fig_forest_analyses() gives the rows of the figure's own ARD defi
   expect_identical(an$analysis_data$where, "PARAMCD == \"OS\"")
   expect_identical(an$analyses$analysis_id, c("HR", "HR_SEX", "HR_AGEGR1"))
   expect_true(all(an$analyses$method == "custom"))
-  expect_match(an$analyses$code[1], "survival::coxph(survival::Surv(AVAL, 1 - CNSR) ~ TRT01P, data = data),", fixed = TRUE)
-  expect_match(an$analyses$code[1], "^cardx::ard_regression[(]
-")
-  expect_match(an$analyses$code[2], "data, .strata = SEX,
-  .f = ~ cardx::ard_regression(", fixed = TRUE)
+  # the model under a name, the event written as the KM figures write it
+  expect_identical(an$analyses$code[1], paste0(
+    "cox <- survival::coxph(survival::Surv(AVAL, CNSR == 0) ~ TRT01P, data = data)
+",
+    "cardx::ard_regression(cox, exponentiate = TRUE)"))
+  expect_match(an$analyses$code[2], "  data,
+  .strata = SEX,
+  .f = ~ cardx::ard_regression(",
+               fixed = TRUE)
   # one string of subgroups reads the same; none: the overall only
   expect_identical(tfl_fig_forest_analyses(subgroups = "SEX, AGEGR1")$analyses$analysis_id,
                    an$analyses$analysis_id)
@@ -72,8 +76,15 @@ test_that("the forest template is in parts, with its analyses, and its design ch
   expect_equal(nrow(pr), 0L)
   code <- paste(tfl_fig_design_code(d, "F1", setup = TRUE, save = FALSE, name = "plot"), collapse = "\n")
   expect_match(code, 'filter(TRT01A == "Xanomeline High Dose")', fixed = TRUE)
-  expect_match(code, "plot <- plot + p_txt4 + plot_layout(widths = c(0.6, 0.4))", fixed = TRUE)
-  expect_match(code, "geom_errorbar(data = est, aes(y = y, xmin = conf.low, xmax = conf.high), width = 0.25, na.rm = TRUE)", fixed = TRUE)
+  # the text column named for what it is, not its layer's position
+  expect_match(code, "plot <- plot + p_text + plot_layout(widths = c(0.6, 0.4))", fixed = TRUE)
+  expect_match(code, "geom_errorbar(
+    data = est,
+    aes(y = y, xmin = conf.low, xmax = conf.high),",
+               fixed = TRUE)
+  # no title on the subgroup axis; no palette nothing uses
+  expect_match(code, "labs(y = NULL)", fixed = TRUE)
+  expect_false(grepl("pal <- ", code, fixed = TRUE))
   # no comparison: every arm but the reference; no subgroups: all subjects
   d2 <- tfl_fig_template("forest_hr", subgroups = "")
   expect_false(grepl("filter(TRT01P ==", paste(tfl_fig_design_code(d2, "F1", save = FALSE), collapse = "\n"), fixed = TRUE))

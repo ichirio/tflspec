@@ -1,5 +1,44 @@
 # tflspec (development version)
 
+* **The generated programs, reviewed again** (tflplanner #347).  What the
+  programs say is the same -- the sample study's tables and listing are the
+  same RTF byte for byte -- and they read as a person writes them:
+  - *ARD programs*: an ARD object never takes a function's name
+    (`ard_stack_1`, not `ard_stack <- ... ard_stack(`); an analysis set that is
+    its dataset as it is (`pop_enr <- adsl`) is the dataset; a `filter()`'s
+    conditions are its arguments (`filter(A, B)`, not `A & B`); a long step
+    (a `derive`'s `case_when()`, a `filter()`) is laid out an argument a line,
+    and a pipe step leaves room for its ` |>` in 80 columns; every analysis
+    says its id above it, and an analysis data its label; a custom analysis
+    over several lines ends its call before the pipe goes on; a Total column's
+    two calls are piped from their data, with a comment saying why there are
+    two; `ard_setup.R` writes only the computed statistics the analyses use
+    (`var = stats::var`, `sum`; a long one as a block).
+  - *Table and report programs*: the report is one pipe (`rtf_document() |>
+    rtf_section() |> rtf_tables()`), the section as `rtf_section(header = ,
+    footer = )` (needs rtfreporter >= 0.8.2.9040); a report's footer that is
+    its own lines and the study's names the study's (`c(list(...),
+    study_footer_lines)`, which the setup now defines with
+    `study_header_lines`); the program's path through the study's path
+    variables; the levels as code lists at the head (`cl_sex <- c(...)`,
+    `plan_levels(SEX = cl_sex)`), as the ARD programs have them; a header grid
+    as `tribble()` rows (when the program attaches dplyr); whole numbers
+    without `L`.
+  - *Listings*: the records, order and dates in one pipe
+    (`mutate(across(where(...), format))`, not `data[] <- lapply(...)`), and
+    `listing_spec()` laid out as the other calls.
+  - *Figures*: the data under a name that says what it is (`adtte_ttde`, not
+    `df`); with the study's setup, `theme_tfl()` instead of the theme's
+    numbers (boxed and L_axis); the legend in one `theme()`; the numbers an
+    `ard_number` prints named in the data part (`ard_label_1 <- ...`) and the
+    plot naming them; a palette no layer uses is not written; panels named
+    for what they are (`p_text`, not `p_txt4`); long terms wrapped; a code
+    step says its `label` (a new field of `code` and `layer_code`) instead of
+    "your code".  The forest template: no title on its subgroup axis
+    (`labs(y = NULL)` survives YAML), its rows made with dplyr (no
+    `split() |> lapply()`), its Cox model named and its event written
+    `CNSR == 0`, as the KM figures write it.
+
 * **A time's unit is a named constant, not a number in each program**
   (tflplanner, the user's request).  A figure's time-unit step (and the
   swimmer templates' assessment days) divides by `days_per_week`,

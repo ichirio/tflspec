@@ -45,7 +45,7 @@ test_that("the analysis data is made once, in order, for what a report reads", {
   # (the population's columns replace one of the same name)
   at <- match(c("adsl_saf <- pop_saf",
                 paste0("adae_teae <- adae |>\n",
-                       "  filter(USUBJID %in% pop_saf$USUBJID & TRTEMFL == \"Y\") |>\n",
+                       "  filter(USUBJID %in% pop_saf$USUBJID, TRTEMFL == \"Y\") |>\n",
                        "  select(-any_of(c(\"TRT01A\", \"AGEGR1\"))) |>\n",
                        "  left_join(select(pop_saf, USUBJID, TRT01A, AGEGR1), by = \"USUBJID\")"),
                 "adae_ser <- adae_teae |>\n  filter(AESER == \"Y\") |>\n  mutate(SER = 1)",
@@ -177,7 +177,7 @@ test_that("a report's own subjects, the columns kept, factors of derived columns
   # the numerator kept to the denominator's subjects; add from that data
   expect_true(any(code == paste0(
     "adae_old <- adae |>\n",
-    "  filter(USUBJID %in% adsl_old$USUBJID & TRTEMFL == \"Y\") |>\n",
+    "  filter(USUBJID %in% adsl_old$USUBJID, TRTEMFL == \"Y\") |>\n",
     "  select(-any_of(\"TRT01A\")) |>\n",
     "  left_join(select(adsl_old, USUBJID, TRT01A), by = \"USUBJID\") |>\n",
     "  select(USUBJID, TRT01A, AEBODSYS, AEDECOD) |>\n",

@@ -45,7 +45,7 @@ test_that("tfl_table_code() writes the plan the definition makes", {
   d <- sc_ard()
   sp <- suppressMessages(tfl_as_table_spec(sc_plan(d), output_id = "T1"))
   code <- tfl_table_code(sp, pipe = "|>")
-  expect_match(code[1L], "^plan <- table_plan\\(data, cols = \"TRT\"")
+  expect_match(code[grep("<- table_plan", code)[1L]], "^plan <- table_plan\\(data, cols = \"TRT\"")
   expect_true(any(grepl("plan_digits(rounding = \"sas\")", code, fixed = TRUE)))
   expect_true(any(grepl("plan_col_header(", code, fixed = TRUE)))
   expect_true(any(grepl("data.frame(", code, fixed = TRUE)))
@@ -60,7 +60,7 @@ test_that("tfl_table_code() writes the plan the definition makes", {
 
   # the names and the pipe are the caller's
   code2 <- tfl_table_code(sp, data = "dm", plan = "tbl", pipe = "%>%")
-  expect_match(code2[1L], "^tbl <- table_plan\\(dm,")
+  expect_match(code2[grep("<- table_plan", code2)[1L]], "^tbl <- table_plan\\(dm,")
   expect_true(any(grepl("%>%$", code2)))
   expect_false(any(grepl("|>", code2, fixed = TRUE)))
   expect_error(tfl_table_code(tfl_table_spec(tables = data.frame(
@@ -148,7 +148,8 @@ test_that("tfl_report_code() writes the document tfl_report() makes", {
   code <- tfl_report_code(sp, content = "pages", doc = "rtf")
   expect_false(any(grepl("rtf_footer", code)))             # no running footer
   expect_true(any(grepl("rtf_header", code)))
-  expect_true(any(grepl("rtf_titles(rtf, ", code, fixed = TRUE)))
+  # one pipe from rtf_document(): the steps take the document from it
+  expect_true(any(grepl("  rtf_titles(", code, fixed = TRUE)))
   expect_true(any(grepl("font_size_half_points = 20", code, fixed = TRUE)))
   expect_true(any(grepl("rtf_default_format(font_size_half_points = 18", code,
                         fixed = TRUE)))
@@ -157,7 +158,7 @@ test_that("tfl_report_code() writes the document tfl_report() makes", {
 test_that("a figure report writes rtf_figures()", {
   sp <- tfl_table_spec(report = data.frame(output_id = "F1", type = "figure"))
   code <- tfl_report_code(sp, content = "plots")
-  expect_true(any(grepl("rtf_figures(doc, plots)", code, fixed = TRUE)))
+  expect_true(any(grepl("rtf_figures(plots)", code, fixed = TRUE)))
 })
 
 test_that("a table and its report, written out, make the report the objects make", {
@@ -184,7 +185,7 @@ test_that("a report's watermark and a figure's size are report columns", {
                                            figure_height_in = "5.5"))
   code <- paste(tfl_report_code(sp, content = "plots"), collapse = "\n")
   expect_match(code, "watermark = \"DRAFT\"", fixed = TRUE)
-  expect_match(code, "rtf_figures(doc, plots, width_twips = 12960L, height_twips = 7920L)",
+  expect_match(code, "rtf_figures(plots, width_twips = 12960, height_twips = 7920)",
                fixed = TRUE)
   # the document tfl_report() makes carries them too
   skip_if_not_installed("ggplot2")

@@ -797,7 +797,7 @@ test_that("break_before, cut_by, fit and allow_span_break are layout keys", {
   expect_identical(sp$layout$colpages_fit, "FALSE")
   expect_identical(sp$layout$colpages_allow_span_break, "FALSE")
   code <- paste(tfl_table_code(sp), collapse = "\n")
-  expect_match(code, "break_before = 4L", fixed = TRUE)
+  expect_match(code, "break_before = 4", fixed = TRUE)
   # a separator in the column names
   p2 <- code_plan() |> plan_paginate_cols(cut_by = "____")
   sp2 <- suppressMessages(tfl_as_table_spec(p2, output_id = "T1",
@@ -856,7 +856,9 @@ test_that("the codelists sheet: the values' place, as the ARD has them (plan_lev
                    c("Male", "Female", "Under 65", "65-80", ">80"))
   expect_identical(unique(as.character(x$group)), c("Sex", "Age group"))
   code <- tfl_table_code(sp, output_id = "T1")
-  expect_true(any(grepl('SEX = c("Male", "Female")', code, fixed = TRUE)))
+  # the levels as code lists at the head, plan_levels() naming them
+  expect_true('cl_sex <- c("Male", "Female")' %in% code)
+  expect_true(any(grepl("SEX = cl_sex", code, fixed = TRUE)))
   # plan_labels(): the variables' headings only -- the values' text is the ARD's
   expect_true(any(grepl('plan_labels(SEX = "Sex", AGEGR1 = "Age group")', code, fixed = TRUE)))
   e <- new.env()

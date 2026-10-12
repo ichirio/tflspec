@@ -205,6 +205,10 @@ tfl_fig_calls <- function() .fig_calls()
 .fig_plot_add_code <- function(add, ggplot2_version = NULL) {
   if (!length(add)) return(list(lines = character(), libs = character(), pkgs = character()))
   libs <- character(); pkgs <- character(); guard <- character(); features <- character()
+  # labs() or theme() with nothing in it says nothing: left out
+  add <- Filter(function(a) !(.fig_bare_fn_name(a$fn) %in% c("labs", "theme") &&
+                                !length(a$args)), add)
+  if (!length(add)) return(list(lines = character(), libs = character(), pkgs = character()))
   lines <- unlist(lapply(add, function(a) {
     res <- .fig_call_code(a, ggplot2_version = ggplot2_version)
     libs <<- union(libs, res$libs)

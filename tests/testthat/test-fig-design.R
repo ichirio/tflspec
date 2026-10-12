@@ -153,7 +153,7 @@ test_that("the new statistics and settings write what they say", {
   d <- tfl_fig_template("swimmer_assessment")
   code <- paste(tfl_fig_design_code(d), collapse = "\n")
   expect_match(code, "assess <- adrs |>", fixed = TRUE)
-  expect_match(code, "inner_join(df |> select(USUBJID, Y_ID)", fixed = TRUE)
+  expect_match(code, "inner_join(adsl_fas |> select(USUBJID, Y_ID)", fixed = TRUE)
   expect_match(code, "arrow = arrow(", fixed = TRUE)
   # a whole-script template is one figure layer
   d <- tfl_fig_template("edish_alt")
@@ -195,7 +195,8 @@ test_that("a report program's figure: no save, its own name, the study's palette
   expect_identical(part[[1L]], "# ---- data ------------------------------------------------------------------")
   expect_true(any(grepl("^# ---- plot ", part)))
   expect_false(any(grepl("^fig", part)))
-  expect_true(any(grepl('pal <- tfl_colours("treatment", levels(droplevels(factor(df$TRT01A))))',
+  # the data under a name that says what it is (adtte_ttde, not df)
+  expect_true(any(grepl('pal <- tfl_colours("treatment", levels(factor(adtte_ttde$TRT01A)))',
                         part, fixed = TRUE)))
   # it runs, after the study's figure setup
   skip_if_not_installed("ggsurvfit")
