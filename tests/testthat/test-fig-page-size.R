@@ -28,7 +28,7 @@ test_that("blank: the page's body; a number: that size", {
 
 test_that("the report step places the figure at that size", {
   code <- tfl_report_code(sz_spec(), "F-1", content = "plot")
-  expect_true(any(grepl("rtf_figures(doc, plot, width_twips = 13680L, height_twips = 9216L)",
+  expect_true(any(grepl("rtf_figures(plot, width_twips = 13680, height_twips = 9216)",
                         code, fixed = TRUE)))
 })
 

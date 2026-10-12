@@ -131,8 +131,9 @@ test_that("the code: from the definition or its workbook, one listing at a time"
   expect_false(any(grepl("listing_spec(", dp, fixed = TRUE)))
   cp <- tfl_listing_code(sp, "L-1", cat, codelists = cl, part = "content")
   expect_false(any(grepl("adae", cp, fixed = TRUE)))
-  expect_true(paste0("data <- data |>\n  set_levels(AESEV = cl_aesev) |>\n",
-                     "  dplyr::arrange(USUBJID, dplyr::desc(ASTDY))") %in% cp)
+  expect_true(any(startsWith(cp, paste0(
+    "data <- data |>\n  set_levels(AESEV = cl_aesev) |>\n",
+    "  dplyr::arrange(USUBJID, dplyr::desc(ASTDY)) |>\n  dplyr::mutate("))))
   expect_identical(utils::tail(cp, 1L), utils::tail(code, 1L))
   expect_null(tfl_listing_code(draft, "L-3", cat, part = "content"))
   skip_if_not_installed("writexl")

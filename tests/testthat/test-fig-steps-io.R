@@ -13,7 +13,8 @@ test_that("no in or out: the steps' objects as before", {
   o <- tfl_fig_objects(d)
   expect_identical(o$out, c("df", "df", "fit"))
   expect_identical(o[["in"]], c(NA, "df", "df"))
-  expect_match(code_of(d), "fit <- survfit2(Surv(AVAL, CNSR == 0) ~ 1, data = df)", fixed = TRUE)
+  # (the program names df after its data: adtte_os)
+  expect_match(code_of(d), "fit <- survfit2(Surv(AVAL, CNSR == 0) ~ 1, data = adtte_os)", fixed = TRUE)
 })
 
 test_that("a step into another object: an assignment of its own; a named step reads it", {
@@ -22,8 +23,8 @@ test_that("a step into another object: an assignment of its own; a named step re
                       list(step = "filter", expr = "AVAL > 0", out = "df_ev"),
                       list(step = "survfit", time = "AVAL", censor = "CNSR", `in` = "df_ev")))
   code <- code_of(d)
-  expect_match(code, "df <- adtte |>\n  filter(PARAMCD == \"OS\")", fixed = TRUE)
-  expect_match(code, "df_ev <- df |>\n  filter(AVAL > 0)", fixed = TRUE)
+  expect_match(code, "adtte_os <- adtte |>\n  filter(PARAMCD == \"OS\")", fixed = TRUE)
+  expect_match(code, "df_ev <- adtte_os |>\n  filter(AVAL > 0)", fixed = TRUE)
   expect_match(code, "data = df_ev)", fixed = TRUE)
   # the steps after it go on df_ev (the object above them)
   d2 <- io_design(c(d$data, list(list(step = "derive", variable = "M", expr = "AVAL / 30"))))
@@ -40,7 +41,7 @@ test_that("a second read makes df2; df is kept", {
                       list(step = "flag", variable = "SAFFL")))
   expect_identical(tfl_fig_objects(d)$out, c("df", "df2", "df2"))
   code <- code_of(d)
-  expect_match(code, "df <- adtte", fixed = TRUE)
+  expect_match(code, "adtte_saf <- adtte", fixed = TRUE)
   expect_match(code, "df2 <- adsl |>\n  filter(SAFFL == \"Y\")", fixed = TRUE)
 })
 
