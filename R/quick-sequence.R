@@ -52,7 +52,7 @@ pp_seq_data <- function(adam, data, pop, id, stage, category, palette) {
     sprintf("pal_cat <- %s", vec_code(stats::setNames(pal[(seq_along(lv) - 1) %% length(pal) + 1], lv)))
   } else {
     paste0("cat_levels <- unique(seq_df$", category, "[order(seq_df$", stage, ")])\n",
-           "pal_cat <- setNames(", vec_code(pal), "[seq_along(cat_levels)], cat_levels)")
+           "pal_cat <- setNames(rep_len(", vec_code(pal), ", length(cat_levels)), cat_levels)")
   }
   c(section("data"),
     if (rhs != ds) sprintf("%s <- %s", ds, rhs) else sprintf("# Input data frame: %s (one row per subject and %s)", ds, stage),

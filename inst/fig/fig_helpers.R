@@ -39,15 +39,43 @@ theme_tfl <- function(type = NA, theme = tfl_setting("theme", type)) {
 
 # The colours of a palette of the standard.  A named palette (response:
 # CR, PR ...) colours the values it names; an ordered one (treatment) is
-# given the values in order: tfl_colours("treatment", levels(adsl$TRT01A)).
+# given the values in order -- its rows' order in the standard is the
+# groups' -- tfl_colours("treatment", levels(adsl$TRT01A)).  More values
+# than colours: the colours repeat, with a warning.
 tfl_colours <- function(palette, values = NULL) {
   pal <- tfl_palettes[[palette]]
   if (is.null(pal)) stop("No palette '", palette, "' in the figure style.")
   if (is.null(names(pal)) && !is.null(values)) {
-    pal <- stats::setNames(rep_len(pal, length(values)), values)
+    pal <- tfl_in_order(pal, values, sprintf("palette '%s'", palette), "colours")
   }
   pal
 }
+
+# An ordered list of the standard (a palette, the treatment shapes or line
+# types) given the values in order; more values than it has: it repeats,
+# with a warning
+tfl_in_order <- function(x, values, what, things) {
+  if (length(values) > length(x)) {
+    warning(sprintf(
+      "The figure style's %s has %d %s for %d groups: they repeat (%s). Add rows to the standard.",
+      what, length(x), things, length(values),
+      paste(values[-seq_along(x)], collapse = ", ")), call. = FALSE)
+  }
+  stats::setNames(rep_len(x, length(values)), values)
+}
+
+# The treatment groups' shapes and line types of the standard
+# (treatment_shapes, treatment_linetypes: blank = not used, NULL), given
+# the groups in order: tfl_shapes(levels(adsl$TRT01A)).
+tfl_treatment_values <- function(key, values, things) {
+  v <- tfl_setting(key)
+  if (is.na(v) || !nzchar(trimws(v))) return(NULL)
+  v <- trimws(strsplit(v, ",", fixed = TRUE)[[1]])
+  if (key == "treatment_shapes") v <- as.numeric(v)
+  tfl_in_order(v, values, key, things)
+}
+tfl_shapes <- function(values) tfl_treatment_values("treatment_shapes", values, "shapes")
+tfl_linetypes <- function(values) tfl_treatment_values("treatment_linetypes", values, "line types")
 scale_colour_tfl <- function(palette, values = NULL, ...) {
   pal <- tfl_colours(palette, values)
   if (is.null(names(pal))) ggplot2::scale_colour_manual(values = pal, ...)
@@ -84,7 +112,8 @@ tfl_save <- function(plot, file, type = NA,
 #   - rows ggplot2 dropped (missing or out-of-scale values)
 #   - data beyond the visible axes (a note: often deliberate, e.g. an axis
 #     cut at 12 months)
-#   - legend colours against the standard: a value a named palette of the
+#   - legend colours against the standard: two values drawn the same colour
+#     (more groups than colours), and a value a named palette of the
 #     standard colours (CR, PR ...) must be drawn in that colour
 #   - `levels`: the legend shows these values, in this order
 # A problem is a warning starting "Figure check:", so the run's log counts
@@ -158,6 +187,13 @@ tfl_check <- function(plot, levels = NULL, quiet = FALSE) {
       br <- br[!is.na(br)]
       if (!length(br)) next
       got <- sc$map(br)
+      # two values drawn the same colour: a palette shorter than the groups
+      same <- !is.na(got) & (duplicated(got) | duplicated(got, fromLast = TRUE))
+      if (any(same)) {
+        problems <- c(problems, sprintf(
+          "panel %d: the %s legend has %d values and %d colours (%s share one)",
+          k, aes, length(br), length(unique(got)), paste(br[same], collapse = ", ")))
+      }
       # a value some named palette colours must be drawn in one of the
       # colours the standard gives it (response, response_light ...)
       for (j in seq_along(br)) {

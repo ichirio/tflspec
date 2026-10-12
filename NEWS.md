@@ -1,7 +1,7 @@
 # tflspec (development version)
 
 * **A figure's size is its report's: set on its page, blank fits the
-  page's body** (0.0.24.9098, the user's request on tflplanner's step 3).
+  page's body** (0.0.24.9099, the user's request on tflplanner's step 3).
   The report sheet's `figure_width_in` / `figure_height_in` say it; blank,
   the page's body -- the page (or paper in its orientation) less its
   margins, its height less the report's title and footnote lines --
@@ -15,7 +15,7 @@
   change by those lines.
 
 * **A report is a table, a listing or a figure; any of its steps may be
-  its own code** (0.0.24.9098, tflplanner's user-program design, the user's direction:
+  its own code** (0.0.24.9099, tflplanner's user-program design, the user's direction:
   "user code" was a fourth type forced into line).  The report sheet's
   `data_code` and `content_code` hold the report's own R for its data
   step and its content step: a step whose code is not blank is that code,
@@ -35,7 +35,7 @@
   out from a `data` a data step of its own code made); `"all"` as before.
 
 * **A figure's data steps: each reads an object and leaves one**
-  (0.0.24.9098, tflplanner's generalised data steps, the user's
+  (0.0.24.9099, tflplanner's generalised data steps, the user's
   questions Q1-Q3).  Any data step may say the object it reads (`in`) and
   the one it leaves (`out`): `{step: filter, expr: AVAL > 0, out: df_ev}`
   writes `df_ev <- df |> filter(AVAL > 0)` and keeps `df`;
@@ -54,6 +54,25 @@
   `summary`, `rate`, `count`) stay.
 * `tfl_check_fig_design()`: an `in` no step made before (and not a
   dataset) is a problem; the columns follow the object a step reads.
+
+* **The treatment colours** (#233).
+  - The order of the `treatment` palette's rows in the figure style standard
+    is the arms' colour order (now said in `?tfl_fig_style`).  Its first
+    colour is Okabe-Ito blue `#0072B2` (was `"blue"`), so the six built-in
+    colours are all Okabe-Ito, in a colour-blind-safe order.
+  - More arms than colours: the setup's `tfl_colours()` repeats them with a
+    warning naming the arms, and `tfl_check()` / `tfl_check_fig()` say which
+    arms of a legend share a colour.  A program written without the setup,
+    and the quick figures' (`tfl_fig_*()`), repeat them too (they drew the
+    extra arms grey).
+  - Optional `treatment_shapes` / `treatment_linetypes` settings (blank by
+    default: no figure changes) give the arms point shapes and line types in
+    the same order, for print in black and white.  A designed figure that
+    colours by the arms maps them too -- a line's `linetype`, a point's
+    `shape`, the KM curves' `linetype_aes = TRUE` -- with
+    `scale_linetype_manual()` / `scale_shape_manual()` and legend keys long
+    enough to show the line types; the setup's `tfl_shapes()` /
+    `tfl_linetypes()` give them.
 
 * **The generated programs, reviewed again** (tflplanner #347).  What the
   programs say is the same -- the sample study's tables and listing are the

@@ -43,7 +43,7 @@ test_that("ADSL variables are joined from ADSL", {
 
 test_that("codelists are literal with ADaM data", {
   adam <- tfl_example_adam()
-  expect_match(tfl_fig_box(adam), 'pal_grp <- c("Drug A" = "blue", "Drug B" = "#D55E00")', fixed = TRUE)
+  expect_match(tfl_fig_box(adam), 'pal_grp <- c("Drug A" = "#0072B2", "Drug B" = "#D55E00")', fixed = TRUE)
   expect_match(tfl_fig_forest(adam), 'levels = c("Drug A", "Drug B")', fixed = TRUE)
 })
 
@@ -85,7 +85,7 @@ test_that("where adds a record condition and groups follow the paired numeric co
   adam$ADSL$TRT01AN <- ifelse(adam$ADSL$TRT01A == "Drug B", 1, 2)   # Drug B first
   code <- tfl_fig_mean(adam, where = 'AVISITN <= 8')
   expect_match(code, "filter(AVISITN <= 8)", fixed = TRUE)
-  expect_match(code, 'pal_grp <- c("Drug B" = "blue", "Drug A" = "#D55E00")', fixed = TRUE)
+  expect_match(code, 'pal_grp <- c("Drug B" = "#0072B2", "Drug A" = "#D55E00")', fixed = TRUE)
   expect_match(code, "mutate(TRT01A = factor(TRT01A, levels = names(pal_grp)))", fixed = TRUE)
   env <- run_code(code)
   expect_equal(max(env$sum_df$AVISITN), 8)

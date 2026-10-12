@@ -19,7 +19,7 @@
 
 pal_of <- function(x) {
   lv <- if (is.factor(x)) levels(droplevels(x)) else sort(unique(as.character(x)))
-  stats::setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00",
+  stats::setNames(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00",
                     "#56B4E9")[seq_along(lv)], lv)
 }
 

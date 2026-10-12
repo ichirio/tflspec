@@ -221,7 +221,7 @@ pp_scale_values <- function(ctx, obj, var, data_values, df_name, default_palette
     given <- rep(NA_character_, length(values))
     labels <- values
   } else {
-    code <- sprintf("%s <- %s\n%s <- setNames(%s[seq_along(%s)], %s)",
+    code <- sprintf("%s <- %s\n%s <- setNames(rep_len(%s, length(%s)), %s)",
                     obj, sprintf("unique(na.omit(as.character(%s$%s)))", df_name, var), obj,
                     vec_code(unname(pal)), obj, obj)
     return(list(code = code, name = obj, values = NULL, colours = NULL, labels = NULL))
