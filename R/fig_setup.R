@@ -70,6 +70,8 @@ tfl_fig_setup_code <- function(style = tfl_fig_style(), date = Sys.Date()) {
     "",
     df_code("tfl_markers", style$markers),
     "",
+    .fig_unit_guard(),
+    "",
     helpers,
     ""))
 }

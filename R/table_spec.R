@@ -94,7 +94,7 @@
     table_font_size_half_points = "int", title_font_size_half_points = "int",
     footnote_font_size_half_points = "int", page_header = "bool",
     page_footer = "bool", watermark = "text", figure_width_in = "num",
-    figure_height_in = "num", ard_source = "text"),
+    figure_height_in = "num", ard_source = "text", pattern = "text"),
   page = c(
     paper_size = "text", orientation = "text", width_in = "num",
     height_in = "num", margin_top_in = "num", margin_bottom_in = "num",
@@ -253,6 +253,16 @@
                        footnotes = "line",
                        # a report's own value replaces the default of its name
                        tokens    = "name")
+
+# Page patterns: a named set of the report half's default rows -- the
+# rows of these sheets whose output_id is "@<name>" (@Compact) -- that a
+# report chooses with report$pattern.  A pattern says only what differs
+# from the blank rows (Standard); a report's own rows go over its pattern's
+# (.ard_spec_scope()).  An "@" is not a report's ID, so they never mix.
+.ard_spec_pattern_sheets <- c("report", "page", "header", "footer",
+                              "titles", "footnotes", "tokens")
+.ard_spec_pattern_rx <- "^[A-Za-z][A-Za-z0-9_]*$"
+.ard_spec_is_pattern <- function(id) !is.na(id) & startsWith(id, "@")
 
 # Sheets a later version will read (the rest of the RTF deliverable).  A
 # workbook that already carries one is told so, not refused: the file can be
@@ -539,6 +549,18 @@
 #' for that variable, the `cells` rows for that variable / context / row.
 #' So one workbook can hold a house style and every report's own changes to
 #' it.  [tfl_read_table_spec()] narrows it to one report with `output_id =`.
+#'
+#' @section Page patterns:
+#' The report half (`report`, `page`, `header`, `footer`, `titles`,
+#' `footnotes`, `tokens`) can hold **named page patterns** besides the
+#' blank rows: rows whose `output_id` is `@` and a name (`@Compact`) --- a
+#' compact page for the PK tables, say.  A pattern says only what differs
+#' from the blank rows (Standard), by the same rule; a report chooses it
+#' with `report$pattern` (blank: Standard).  A report's own rows go over
+#' its pattern's, its pattern's over Standard's, and `(none)` takes a line
+#' out at either level.  Standard's header, footer, tokens and font stay
+#' the study's setup ([tfl_report_setup_code()]); what a pattern changes is
+#' written in the program of each report that uses it.
 #'
 #' Explicit [rtfreporter::widen_ard()] arguments win over the spec, and the spec wins
 #' over the defaults.
@@ -878,6 +900,8 @@ tfl_table_spec <- function(tables = NULL, variables = NULL, cells = NULL,
             i, ifelse(is.na(ch$line[i]), "line", "cols")), ch, "col_header")
   keyed(.ard_spec_cell_style_problems(sp$cell_styles), sp$cell_styles,
         "cell_styles")
+  for (sh in names(.ard_spec_schema())) keyed(.ard_spec_pattern_problems(sp, sh),
+                                              sp[[sh]], sh)
   # where a report's ARD comes from: its ARD definition (blank, or own),
   # an ARD made elsewhere and taken in (import:<the file in input/ard/>),
   # or -- a figure's -- a table's (table:<its output_id>)
@@ -913,6 +937,7 @@ tfl_table_spec <- function(tables = NULL, variables = NULL, cells = NULL,
 #' @export
 print.tfl_table_spec <- function(x, ...) {
   ids <- .ard_first_seen(stats::na.omit(unlist(lapply(x, `[[`, "output_id"))))
+  ids <- ids[!.ard_spec_is_pattern(ids)]
   cat("<tfl_table_spec>",
       if (!is.null(attr(x, "output_id"))) paste0(" for ",
         sQuote(attr(x, "output_id")))
@@ -933,6 +958,49 @@ print.tfl_table_spec <- function(x, ...) {
   invisible(x)
 }
 
+# The problems of the page patterns on one sheet: an "@" row on a sheet a
+# pattern has no rows of, a name not a pattern's, a report choosing a
+# pattern no row defines, a pattern or the blank row choosing one.
+.ard_spec_pattern_problems <- function(sp, sheet) {
+  d <- sp[[sheet]]
+  if (is.null(d) || !nrow(d)) return(.pb_none())
+  id <- d$output_id
+  at <- which(.ard_spec_is_pattern(id))
+  if (!sheet %in% .ard_spec_pattern_sheets) {
+    return(.pb(sprintf(paste0(
+      "`%s`: %s is a page pattern's row; a pattern has rows of %s only."),
+      sheet, sQuote(id[at]), paste(.ard_spec_pattern_sheets, collapse = ", ")),
+      at, rep("output_id", length(at))))
+  }
+  nm <- substring(id[at], 2L)
+  bad <- at[!grepl(.ard_spec_pattern_rx, nm)]
+  out <- .pb(sprintf(paste0(
+    "`%s$output_id` %s: a page pattern is @ and a name -- a letter, then ",
+    "letters, digits or _ (@Compact)."), sheet, sQuote(id[bad])),
+    bad, rep("output_id", length(bad)))
+  if (!identical(sheet, "report")) return(out)
+  p <- d$pattern %||% rep(NA_character_, nrow(d))
+  p <- sub("^@", "", trimws(p))
+  said <- which(!is.na(p) & nzchar(p))
+  defined <- unique(substring(unlist(lapply(sp[.ard_spec_pattern_sheets], function(x)
+    x$output_id[.ard_spec_is_pattern(x$output_id)])), 2L))
+  i <- said[is.na(id[said])]
+  out <- rbind(out, .pb(rep(paste0(
+    "`report$pattern` on the default row (blank output_id): the default rows ",
+    "are Standard; a report chooses its pattern on its own row."), length(i)),
+    i, rep("pattern", length(i))))
+  i <- said[.ard_spec_is_pattern(id[said])]
+  out <- rbind(out, .pb(sprintf(paste0(
+    "`report$pattern` on %s: a pattern is the blank rows' changes, it ",
+    "chooses no other."), sQuote(id[i])), i, rep("pattern", length(i))))
+  i <- said[!is.na(id[said]) & !.ard_spec_is_pattern(id[said]) & !p[said] %in% defined]
+  rbind(out, .pb(sprintf(paste0(
+    "`report$pattern` %s: no page pattern of that name (no row's output_id ",
+    "is %s).%s"), sQuote(p[i]), sQuote(paste0("@", p[i])),
+    if (length(defined)) paste0(" The patterns: ", paste(defined, collapse = ", "), ".") else ""),
+    i, rep("pattern", length(i))))
+}
+
 # Narrow a workbook to one report, applying the one rule on every sheet.
 # `NULL` is fine for a workbook that defines one report (or none, only
 # defaults); for several it has to be said which.
@@ -944,6 +1012,7 @@ print.tfl_table_spec <- function(x, ...) {
   }
   ids <- .ard_first_seen(stats::na.omit(unlist(
     lapply(sp[names(.ard_spec_schema())], `[[`, "output_id"))))
+  ids <- ids[!.ard_spec_is_pattern(ids)]
   if (is.null(output_id)) {
     if (length(ids) > 1L) {
       .ard_stop(paste0(
@@ -986,9 +1055,16 @@ print.tfl_table_spec <- function(x, ...) {
   tokens_study <- character()
   page_study <- character()
   bands_own <- c(header = FALSE, footer = FALSE)
+  # the report's page pattern: its rows go under the report's own, over
+  # the blank rows (Standard) -- as if the report had written them, merged
+  # first with its own by the same rule
+  pat <- .ard_spec_report_pattern(sp$report, output_id)
   for (s in names(.ard_spec_schema())) {
     d <- sp[[s]]
+    prow <- if (!is.na(pat) && s %in% .ard_spec_pattern_sheets)
+      d[d$output_id %in% paste0("@", pat), , drop = FALSE]
     d <- d[is.na(d$output_id) | d$output_id == output_id, , drop = FALSE]
+    if (NROW(prow)) d <- .ard_spec_over_pattern(d, prow, s, output_id)
     mine <- !is.na(d$output_id)
     # a header or footer of the report's own (not the study's): written in
     # its program, not left to the study's setup (tfl_report_setup_code())
@@ -1012,16 +1088,53 @@ print.tfl_table_spec <- function(x, ...) {
     if (identical(s, "tokens")) tokens_study <- trimws(d$name[is.na(d$output_id)])
     # the page's font and size the study's row gives and the report's does
     # not: left to the setup's options() (tfl_report_setup_code())
-    if (identical(s, "page")) page_study <- .page_study_cols(sp[[s]], output_id)
+    if (identical(s, "page")) {
+      pg <- sp[[s]]
+      if (!is.na(pat)) pg$output_id[pg$output_id %in% paste0("@", pat)] <- output_id
+      page_study <- .page_study_cols(pg, output_id)
+    }
     d$output_id <- rep(output_id, nrow(d))
     rownames(d) <- NULL
     sp[[s]] <- d
   }
   attr(sp, "output_id") <- output_id
+  attr(sp, "pattern") <- pat
   attr(sp, "tokens_study") <- tokens_study
   attr(sp, "page_study") <- page_study
   attr(sp, "bands_own") <- bands_own
   sp
+}
+
+# The page pattern a report chooses (its own report row's `pattern`), NA
+# for Standard (blank)
+.ard_spec_report_pattern <- function(report, output_id) {
+  p <- report$pattern
+  if (is.null(p)) return(NA_character_)
+  p <- p[report$output_id %in% output_id]
+  p <- trimws(p[!is.na(p)])
+  p <- p[nzchar(p)]
+  if (length(p)) sub("^@", "", p[1L]) else NA_character_
+}
+
+# A report's own rows of one sheet over its pattern's (the first of the two
+# stages: the result is the report's own, then put over the blank rows as
+# always).  One-row sheets cell by cell, line sheets and tokens by their key
+# -- a report's "(none)" line takes the pattern's line out, as the
+# pattern's takes Standard's out.
+.ard_spec_over_pattern <- function(d, prow, sheet, output_id) {
+  own <- d[!is.na(d$output_id), , drop = FALSE]
+  base <- d[is.na(d$output_id), , drop = FALSE]
+  if (!length(.ard_spec_keys[[sheet]])) {
+    row <- prow[1L, , drop = FALSE]
+    if (nrow(own)) for (cn in names(own)) if (!is.na(own[[cn]][1L])) row[[cn]] <- own[[cn]][1L]
+    mine <- row
+  } else {
+    kp <- .ard_spec_rowkey(prow, sheet)
+    ko <- if (nrow(own)) .ard_spec_rowkey(own, sheet) else character()
+    mine <- rbind(own, prow[!kp %in% ko, , drop = FALSE])
+  }
+  mine$output_id <- rep(output_id, nrow(mine))
+  rbind(base, mine)
 }
 
 # The study-wide options of the page sheet, rtfreporter's options they are
@@ -2051,12 +2164,17 @@ tfl_report_path <- function(spec, output_id = NULL) {
 #' **Spike.**  See [rtfreporter::table_plan()].
 #'
 #' @examples
-#' \dontrun{
-#' p <- ard |> normalize_ard() |> table_plan(cols = "TRT01P") |> ...
-#' tfl_as_table_spec(p, output_id = "T14-1-1") |> tfl_write_table_spec("study.xlsx")
+#' if (requireNamespace("cards", quietly = TRUE) &&
+#'     requireNamespace("rtfreporter", quietly = TRUE)) {
+#'   ard <- cards::ard_stack(cards::ADSL, .by = TRT01A,
+#'                           cards::ard_continuous(variables = AGE))
+#'   p <- rtfreporter::table_plan(rtfreporter::normalize_ard(ard), cols = "TRT01A")
+#'   spec <- tfl_as_table_spec(p, output_id = "T14-1-1")
+#'   f <- tempfile(fileext = ".xlsx")
+#'   tfl_write_table_spec(spec, f)
 #'
-#' # a whole study at once
-#' tfl_as_table_spec(list(DM = p_dm, AE = p_ae)) |> tfl_write_table_spec("study.xlsx")
+#'   # a whole study at once
+#'   tfl_as_table_spec(list(DM = p, AGE = p))
 #' }
 #' @seealso [tfl_table_spec()], [tfl_write_table_spec()], [rtfreporter::table_plan()]
 #' @export

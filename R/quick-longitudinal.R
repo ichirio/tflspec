@@ -15,6 +15,9 @@ pp_q_visit_step <- function(visit, visit_label) {
 #' @param value Analysis variable (`AVAL`, `CHG`, `PCHG`, ...).
 #' @param visit,visit_label Visit order variable and its label.
 #' @param flag Optional record flag (`== "Y"`), e.g. `ANL01FL`.
+#' @return A `tfl_code` object: the figure's 'ggplot2' script, a character
+#'   vector of class `tfl_code` with its specification in attribute `spec`;
+#'   printing it shows the script.
 #' @export
 tfl_fig_mean <- function(adam = NULL, style = c("se", "sd", "ci", "se_n"), param = "ALT", data = "ADLB",
                     value = "AVAL", visit = "AVISITN", visit_label = "AVISIT", group = "TRT01A",
@@ -85,6 +88,9 @@ tfl_fig_mean <- function(adam = NULL, style = c("se", "sd", "ci", "se_n"), param
 #' @param time_unit Unit shown for a day-based `x` (`days`, `weeks`,
 #'   `months`).
 #' @param response PARAMCD of the best overall response in `ADRS` (spider).
+#' @return A `tfl_code` object: the figure's 'ggplot2' script, a character
+#'   vector of class `tfl_code` with its specification in attribute `spec`;
+#'   printing it shows the script.
 #' @export
 tfl_fig_individual <- function(adam = NULL, style = c("spaghetti", "spider"), param = NULL, data = NULL,
                           value = NULL, x = NULL, group = NULL, pop = NULL, where = NULL,
@@ -147,6 +153,9 @@ tfl_fig_individual <- function(adam = NULL, style = c("spaghetti", "spider"), pa
 #'   per group at one visit, with the data points) or `change` (change from
 #'   baseline by visit and group, with a zero line).
 #' @param at_visit Visit label kept for `by_group` (default: last visit).
+#' @return A `tfl_code` object: the figure's 'ggplot2' script, a character
+#'   vector of class `tfl_code` with its specification in attribute `spec`;
+#'   printing it shows the script.
 #' @export
 tfl_fig_box <- function(adam = NULL, style = c("by_visit", "by_group", "change"), param = "ALT", data = "ADLB",
                    value = NULL, visit = "AVISITN", visit_label = "AVISIT", at_visit = NULL,

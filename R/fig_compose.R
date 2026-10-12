@@ -102,6 +102,7 @@
       if (length(needs)) sprintf("# also needs: %s (called as pkg::fn)", paste(needs, collapse = ", "))),
     if (setup && gg$explicit) sprintf("# Written for ggplot2 %s", gg$version),
     if (length(guard)) c("", guard),
+    if (!setup) .fig_units_used(unlist(lapply(bodies, function(b) c(b$step1, b$step2)))),
     "",
     if (length(levels)) .codelists_head(levels),
     unlist(lapply(seq_along(nms), one)),

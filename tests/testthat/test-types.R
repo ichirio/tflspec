@@ -15,6 +15,9 @@ test_that("the catalogue classifies every type and marks the defaults", {
 })
 
 test_that("every style of the template types generates runnable code", {
+  # every figure type drawn with ggplot2: about 20 s on CRAN's machines; CI
+  # runs it on every configuration
+  skip_on_cran()
   skip_if_not_installed("patchwork")
   adam <- tfl_example_adam()
   impl <- tfl_fig_catalog("implemented")

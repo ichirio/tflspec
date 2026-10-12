@@ -31,7 +31,12 @@ fig_program_cases <- function() {
     mean_se_codelists = list(id = "F-MEAN", codelists = cl,
       design = tfl_fig_template("mean_se", data = "ADVS", param = "SYSBP", group = "TRTA")),
     waterfall_response = list(id = "F-WF", design = tfl_fig_template("waterfall_response")),
-    swimmer_full = list(id = "F-SW", design = tfl_fig_template("swimmer_full")))
+    swimmer_full = list(id = "F-SW", design = tfl_fig_template("swimmer_full")),
+    # the forest plot from the figure's own ARD (#293 phase 6)
+    forest_hr = list(id = "F-FOREST",
+      design = tfl_fig_template("forest_hr", data = "ADTTE", param = "TTDE", pop = "SAFFL",
+                                group = "TRT01A", subgroups = "SEX, AGEGR1",
+                                comparison = "Xanomeline High Dose")))
 }
 
 fig_program_code <- function(case) {

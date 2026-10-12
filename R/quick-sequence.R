@@ -77,6 +77,9 @@ pp_seq_data <- function(adam, data, pop, id, stage, category, palette) {
 #' @param by Subgroup variable for `style = "subgroups"`.
 #' @param palette Palette preset for the categories.
 #' @param width,height,dpi,units Figure size.
+#' @return A `tfl_code` object: the figure's 'ggplot2' script, a character
+#'   vector of class `tfl_code` with its specification in attribute `spec`;
+#'   printing it shows the script.
 #' @export
 tfl_fig_sankey <- function(adam = NULL, style = c("grey_links", "colored_links", "subgroups"),
                       data = "ADLOT", id = "USUBJID", stage = "LINE", category = "TRT",
@@ -140,6 +143,9 @@ tfl_fig_sankey <- function(adam = NULL, style = c("grey_links", "colored_links",
 #' @inheritParams tfl_fig_sankey
 #' @param style `rings` (one ring per line, inner = first line).
 #' @param legend `right`, `bottom` or `none`.
+#' @return A `tfl_code` object: the figure's 'ggplot2' script, a character
+#'   vector of class `tfl_code` with its specification in attribute `spec`;
+#'   printing it shows the script.
 #' @export
 tfl_fig_sunburst <- function(adam = NULL, style = "rings",
                         data = "ADLOT", id = "USUBJID", stage = "LINE", category = "TRT",

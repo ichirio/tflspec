@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9083** (the development version,
+**This manual documents tflspec 0.0.24.9090** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -60,6 +60,11 @@ differ, trust the package, not this file, and fetch the matching copy with
 7. **`output_id` is the key.** A row with a blank `output_id` is the study
    default; a report's own row replaces the default row **per sheet** (and,
    on the keyed sheets, per key).
+   On the report half (`report`, `page`, `header`, `footer`, `titles`,
+   `footnotes`, `tokens`) an `output_id` of `@` and a name (`@Compact`) is
+   a **page pattern**: Standard's (blank) changes, chosen by
+   `report$pattern`. A report's own rows go over its pattern's, the
+   pattern's over Standard's; `(none)` takes a line out at either level.
 8. Indices are 1-based (ordinary R).
 
 ---
@@ -560,6 +565,17 @@ layers:                                 # what is drawn, in order
   `ard` is `TRUE` then; `tfl_check_fig_design(design, ard = <the ARD>)`
   looks for each address in it.  `ard_value()`, `ard_stats()` and
   `ard_fingerprint()` are study helpers (`tfl_helpers_code()`).
+- A forest plot's numbers are an ARD of its own: `tfl_fig_template("forest_hr",
+  data, param, pop, group, subgroups = "SEX, AGEGR1", comparison = <the
+  arm against the reference>)` reads `ard_stats` of the analyses `HR`,
+  `HR_SEX`, `HR_AGEGR1` (a Cox model of all subjects, one within each
+  subgroup variable through `cards::ard_strata()`, each a `custom`
+  analysis), which `tfl_fig_forest_analyses()` gives as rows of the
+  `analysis_data` / `analyses` sheets (`attr(design, "analyses")`).  Its
+  text at the right -- N, the estimate (95% CI) -- is the layer
+  `text_column` (`data`, `y`, `columns: "N = n_obs | Hazard ratio (95%
+  CI) = txt"`, `width`), a panel of its own: panels go below the plot or
+  at its right, not both.  `errorbar_h` is the horizontal error bar.
 - `layers`: catalog layers (`line`, `point`, `errorbar`, `boxplot` … see
   `tfl_fig_add_layer()`), `geom` (any geom by name), `call` (any function:
   `fn`, `package`, `data`, `aes`, `pos`, `args`), `layer_code`, `figure`.
@@ -728,12 +744,12 @@ back): rename the value or choose another separator.
 
 **Figure design:** `tfl_fig_design` `tfl_read_fig_design`
 `tfl_write_fig_design` `tfl_fig_design_code` `tfl_check_fig_design`
-`tfl_fig_advice` `tfl_fig_apply_fix` `tfl_fig_template` `tfl_fig_templates`
+`tfl_fig_advice` `tfl_fig_apply_fix` `tfl_fig_template` `tfl_fig_forest_analyses` `tfl_fig_templates`
 `tfl_fig_parts` `tfl_fig_add_layer` `tfl_fig_calls` `tfl_fig_compat`
 `tfl_fig_r`
 
 **Figure style:** `tfl_fig_style` `tfl_fig_style_template`
-`tfl_read_fig_style` `tfl_fig_setup_code` `tfl_fig_palettes`
+`tfl_read_fig_style` `tfl_fig_setup_code` `tfl_fig_palettes` `tfl_time_unit_days`
 `tfl_check_fig`
 
 **Figure spec (sheets) and quick figures:** `tfl_fig_spec`

@@ -161,3 +161,34 @@ test_that("each report's datasets: its datasets column, as one value", {
   expect_error(tfl_read_toc(f, map = list(output_id = "No.", datasets = c("Data", "Title"))),
                "one column")
 })
+
+test_that("a data frame in place of a file reads as the file of the same rows", {
+  f <- toc_csv(c(
+    "No.,Kind,Title,Population",
+    ",14.1 Demographics,,",
+    "T-14-1-1,Table,Demographic Characteristics,Safety Population",
+    ",,,",
+    "F-14-2-1,, Mean SBP | Mean (SE) ,Safety Population"))
+  map <- c(output_id = "No.", type = "Kind", title = "Title",
+           population = "Population")
+  from_file <- tfl_read_toc(f, map = map)
+  d <- utils::read.csv(f, colClasses = "character", check.names = FALSE)
+  # sheet and skip do not apply to a data frame
+  from_df <- tfl_read_toc(d, map = map, sheet = "ignored", skip = 3L)
+  expect_identical(from_df$report, from_file$report)
+  expect_identical(from_df$titles, from_file$titles)
+  expect_identical(attr(from_df, "sections"), attr(from_file, "sections"))
+  expect_identical(attr(from_df, "guessed"), attr(from_file, "guessed"))
+  # a tibble too, and the closest-name error still names its columns
+  if (requireNamespace("tibble", quietly = TRUE)) {
+    expect_identical(tfl_read_toc(tibble::as_tibble(d), map = map)$report,
+                     from_file$report)
+  }
+  expect_error(tfl_read_toc(d, map = c(output_id = "Number")), "Closest")
+  # a row with no id but other cells is named by its data frame row
+  g <- data.frame(No. = c("T1", NA), Title = c("A", "B"), Pop = c(NA, "SAF"),
+                  check.names = FALSE)
+  expect_error(tfl_read_toc(g, map = c(output_id = "No.", title = "Title",
+                                       population = "Pop")),
+               "row\\(s\\) 2 have no output id")
+})
