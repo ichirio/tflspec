@@ -38,7 +38,7 @@
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01P
       lv <- levels(factor(adtte_os$TRT01P))
-      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
+      pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       
       fig <- ggsurvfit(fit, linewidth = 0.3) +
         add_censor_mark(shape = 4, size = 3, stroke = 0.6) +
@@ -136,7 +136,7 @@
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01P
       lv <- levels(factor(adtte_os$TRT01P))
-      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
+      pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       
       fig <- ggsurvfit(fit, linewidth = 0.3) +
         add_censor_mark(shape = 4, size = 3, stroke = 0.6) +
@@ -222,7 +222,7 @@
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01P
       lv <- levels(factor(adtte_os$TRT01P))
-      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
+      pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       
       fig <- ggsurvfit(fit, linewidth = 0.3) +
         add_confidence_interval(alpha = 0.2) +
@@ -332,7 +332,7 @@
         mutate(strata = factor(strata))
       
       # ---- plot ------------------------------------------------------------------
-      pal <- c(All = "blue")
+      pal <- c(All = "#0072B2")
       
       fig <- ggsurvfit(fit, linewidth = 0.3, colour = pal[[1]]) +
         add_censor_mark(shape = 4, size = 3, stroke = 0.6, colour = pal[[1]]) +
@@ -1074,7 +1074,7 @@
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01P
       lv <- levels(factor(adrs_bor$TRT01P))
-      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
+      pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       
       fig <- ggplot() +
         geom_col(data = rt, aes(x = TRT01P, y = rate, fill = TRT01P), width = 0.6) +
@@ -1242,7 +1242,7 @@
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01P
       lv <- levels(factor(adrs_bor$TRT01P))
-      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
+      pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       
       fig <- ggplot() +
         geom_col(
@@ -1324,7 +1324,7 @@
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
       lv <- levels(factor(adlb_alt$TRT01A))
-      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
+      pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       pd <- position_dodge(width = 0.3)
       
       fig <- ggplot() +
@@ -1413,7 +1413,7 @@
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
       lv <- levels(factor(adlb_alt$TRT01A))
-      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
+      pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       pd <- position_dodge(width = 0.3)
       
       fig <- ggplot() +
@@ -1502,7 +1502,7 @@
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
       lv <- levels(factor(adlb_alt$TRT01A))
-      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
+      pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       pd <- position_dodge(width = 0.3)
       
       fig <- ggplot() +
@@ -1592,7 +1592,7 @@
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
       lv <- levels(factor(adlb_alt$TRT01A))
-      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
+      pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       pd <- position_dodge(width = 0.3)
       
       fig <- ggplot() +
@@ -1701,7 +1701,7 @@
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
       lv <- levels(factor(adlb_alt$TRT01A))
-      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
+      pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       
       fig <- ggplot() +
         geom_line(
@@ -1781,7 +1781,7 @@
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
       lv <- levels(factor(adlb_alt$TRT01A))
-      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
+      pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       pd <- position_dodge(width = 0.8)
       
       fig <- ggplot() +
@@ -1864,7 +1864,7 @@
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
       lv <- levels(factor(adlb_alt$TRT01A))
-      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
+      pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       
       fig <- ggplot() +
         geom_boxplot(
@@ -1949,7 +1949,7 @@
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
       lv <- levels(factor(adlb_alt$TRT01A))
-      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
+      pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       pd <- position_dodge(width = 0.8)
       
       fig <- ggplot() +
@@ -2028,7 +2028,7 @@
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
       lv <- levels(factor(adlb_alt$TRT01A))
-      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
+      pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       
       fig <- ggplot() +
         geom_abline(intercept = 0, slope = 1, linetype = "dashed",
@@ -2105,7 +2105,7 @@
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
       lv <- levels(factor(adlb_alt$TRT01A))
-      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
+      pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       
       fig <- ggplot() +
         geom_hline(yintercept = 0, linetype = "solid", colour = "grey60",
@@ -2193,7 +2193,7 @@
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
       lv <- levels(factor(adpc_saf$TRT01A))
-      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
+      pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       
       fig <- ggplot() +
         geom_line(
@@ -2283,7 +2283,7 @@
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
       lv <- levels(factor(adpc_saf$TRT01A))
-      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
+      pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       
       fig <- ggplot() +
         geom_line(
@@ -2367,7 +2367,7 @@
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
       lv <- levels(factor(adpc_saf$TRT01A))
-      pal <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(lv)], lv)
+      pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       
       fig <- ggplot() +
         geom_line(
@@ -2678,7 +2678,7 @@
         filter(SAFFL == "Y")
       
       pal_grp_lv <- if (is.factor(pop_df$TRT01A)) levels(pop_df$TRT01A) else sort(unique(na.omit(pop_df$TRT01A)))
-      pal_grp <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(pal_grp_lv)], pal_grp_lv)
+      pal_grp <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(pal_grp_lv)), pal_grp_lv)
       
       arms <- names(pal_grp)[1:2]  # reference first; only two arms are compared
       
@@ -2725,7 +2725,7 @@
         ggplot(inc_df, aes(x = pct, y = AEDECOD, colour = TRT01A, shape = TRT01A)) +
         geom_point(size = 2.5) +
         scale_colour_manual(values = pal_grp) +
-        scale_shape_manual(values = setNames(c(16, 17, 15, 18)[seq_along(pal_grp)], names(pal_grp))) +
+        scale_shape_manual(values = setNames(rep_len(c(16, 17, 15, 18), length(pal_grp)), names(pal_grp))) +
         labs(x = "Incidence (%)", y = NULL) +
         theme_minimal(base_size = 10) +
         theme(
@@ -2797,7 +2797,7 @@
         filter(SAFFL == "Y")
       
       pal_grp_lv <- if (is.factor(pop_df$TRT01A)) levels(pop_df$TRT01A) else sort(unique(na.omit(pop_df$TRT01A)))
-      pal_grp <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(pal_grp_lv)], pal_grp_lv)
+      pal_grp <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(pal_grp_lv)), pal_grp_lv)
       
       arms <- names(pal_grp)[1:2]  # reference first; only two arms are compared
       
@@ -2833,7 +2833,7 @@
         ggplot(inc_df, aes(x = pct, y = AEDECOD, colour = TRT01A, shape = TRT01A)) +
         geom_point(size = 2.5) +
         scale_colour_manual(values = pal_grp) +
-        scale_shape_manual(values = setNames(c(16, 17, 15, 18)[seq_along(pal_grp)], names(pal_grp))) +
+        scale_shape_manual(values = setNames(rep_len(c(16, 17, 15, 18), length(pal_grp)), names(pal_grp))) +
         labs(x = "Incidence (%)", y = NULL) +
         theme_minimal(base_size = 10) +
         theme(
@@ -2886,7 +2886,7 @@
         filter(SAFFL == "Y")
       
       pal_grp_lv <- if (is.factor(pop_df$TRT01A)) levels(pop_df$TRT01A) else sort(unique(na.omit(pop_df$TRT01A)))
-      pal_grp <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(pal_grp_lv)], pal_grp_lv)
+      pal_grp <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(pal_grp_lv)), pal_grp_lv)
       
       arms <- names(pal_grp)[1:2]  # reference first; only two arms are compared
       
@@ -2981,7 +2981,7 @@
         filter(SAFFL == "Y")
       
       pal_grp_lv <- if (is.factor(pop_df$TRT01A)) levels(pop_df$TRT01A) else sort(unique(na.omit(pop_df$TRT01A)))
-      pal_grp <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(pal_grp_lv)], pal_grp_lv)
+      pal_grp <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(pal_grp_lv)), pal_grp_lv)
       
       arms <- names(pal_grp)[1:2]  # reference first; only two arms are compared
       
@@ -3082,7 +3082,7 @@
         filter(!is.na(XULN))
       
       pal_grp_lv <- if (is.factor(lb_df$TRT01A)) levels(lb_df$TRT01A) else sort(unique(na.omit(lb_df$TRT01A)))
-      pal_grp <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(pal_grp_lv)], pal_grp_lv)
+      pal_grp <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(pal_grp_lv)), pal_grp_lv)
       
       lb_df <- lb_df |> mutate(TRT01A = factor(TRT01A, levels = names(pal_grp)))
       
@@ -3172,7 +3172,7 @@
         filter(!is.na(XULN))
       
       pal_grp_lv <- if (is.factor(lb_df$TRT01A)) levels(lb_df$TRT01A) else sort(unique(na.omit(lb_df$TRT01A)))
-      pal_grp <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(pal_grp_lv)], pal_grp_lv)
+      pal_grp <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(pal_grp_lv)), pal_grp_lv)
       
       lb_df <- lb_df |> mutate(TRT01A = factor(TRT01A, levels = names(pal_grp)))
       
@@ -3257,7 +3257,7 @@
         filter(FASFL == "Y")
       
       cat_levels <- unique(seq_df$TRT[order(seq_df$LINE)])
-      pal_cat <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(cat_levels)], cat_levels)
+      pal_cat <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(cat_levels)), cat_levels)
       
       # ---- the figure ------------------------------------------------------------
       # nodes: one per line x category (n = subjects); links: subjects moving to the next line
@@ -3311,7 +3311,7 @@
         filter(FASFL == "Y")
       
       cat_levels <- unique(seq_df$TRT[order(seq_df$LINE)])
-      pal_cat <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(cat_levels)], cat_levels)
+      pal_cat <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(cat_levels)), cat_levels)
       
       # ---- the figure ------------------------------------------------------------
       # nodes: one per line x category (n = subjects); links: subjects moving to the next line
@@ -3366,7 +3366,7 @@
         filter(FASFL == "Y")
       
       cat_levels <- unique(seq_df$TRT[order(seq_df$LINE)])
-      pal_cat <- setNames(c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9")[seq_along(cat_levels)], cat_levels)
+      pal_cat <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(cat_levels)), cat_levels)
       
       # ---- the figure ------------------------------------------------------------
       # one row per treatment sequence (L1, L2, ...) with its number of subjects

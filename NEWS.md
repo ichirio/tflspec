@@ -1,5 +1,24 @@
 # tflspec (development version)
 
+* **The treatment colours** (#233).
+  - The order of the `treatment` palette's rows in the figure style standard
+    is the arms' colour order (now said in `?tfl_fig_style`).  Its first
+    colour is Okabe-Ito blue `#0072B2` (was `"blue"`), so the six built-in
+    colours are all Okabe-Ito, in a colour-blind-safe order.
+  - More arms than colours: the setup's `tfl_colours()` repeats them with a
+    warning naming the arms, and `tfl_check()` / `tfl_check_fig()` say which
+    arms of a legend share a colour.  A program written without the setup,
+    and the quick figures' (`tfl_fig_*()`), repeat them too (they drew the
+    extra arms grey).
+  - Optional `treatment_shapes` / `treatment_linetypes` settings (blank by
+    default: no figure changes) give the arms point shapes and line types in
+    the same order, for print in black and white.  A designed figure that
+    colours by the arms maps them too -- a line's `linetype`, a point's
+    `shape`, the KM curves' `linetype_aes = TRUE` -- with
+    `scale_linetype_manual()` / `scale_shape_manual()` and legend keys long
+    enough to show the line types; the setup's `tfl_shapes()` /
+    `tfl_linetypes()` give them.
+
 * **The generated programs, reviewed again** (tflplanner #347).  What the
   programs say is the same -- the sample study's tables and listing are the
   same RTF byte for byte -- and they read as a person writes them:

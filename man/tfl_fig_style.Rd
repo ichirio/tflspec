@@ -39,7 +39,17 @@ applies to every figure, \code{km} / \code{waterfall} / \code{swimmer} to that t
 (and wins over the blank row).
 \item \code{colors} (\code{palette}, \code{value}, \code{colour}): a palette whose rows name a
 data \code{value} colours that value (\code{response}: CR, PR ...); one whose
-\code{value} is blank is used in order (\code{treatment}).
+\code{value} is blank is used in order (\code{treatment}): \strong{the order of its
+rows is the arms' colour order} -- the first row colours the first
+arm (its code list's first value), and so on.  The built-in
+\code{treatment} palette is Okabe-Ito's, in a colour-blind-safe order
+(\verb{#0072B2}, \verb{#D55E00}, \verb{#009E73}, \verb{#CC79A7}, \verb{#E69F00}, \verb{#56B4E9});
+more arms than rows repeat the colours, with a warning, and
+\code{\link[=tfl_check_fig]{tfl_check_fig()}} says which arms share one.
+\item \code{settings} \code{treatment_shapes} / \code{treatment_linetypes} (optional, blank
+by default): the arms' point shapes (\verb{16, 17, 15}) and line types
+(\verb{solid, dashed, dotted}) in the same order, for print in black and
+white; a designed figure that colours by the arms maps them too.
 \item \code{markers} (\code{marker}, \code{shape}, \code{fill}, \code{colour}, \code{size}): event markers
 by label (a swimmer event named \code{Death} takes the \code{Death} row) and the
 figures' own symbols (\code{censor}, \code{assessment}).

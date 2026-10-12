@@ -12,7 +12,11 @@
 #'
 #' * `theme_tfl(type)` -- the standard's theme, font sizes, lines and ticks;
 #' * `scale_colour_tfl(palette)` / `scale_fill_tfl()` / `tfl_colours()` --
-#'   the standard's palettes;
+#'   the standard's palettes (an ordered one given more groups than it has
+#'   colours repeats them, with a warning);
+#' * `tfl_shapes(values)` / `tfl_linetypes(values)` -- the arms' shapes and
+#'   line types of the standard (`treatment_shapes`, `treatment_linetypes`;
+#'   `NULL` when it has none);
 #' * `tfl_marker(name)` -- an event or symbol marker (`Death`, `censor` ...);
 #' * `tfl_save(plot, file, type)` -- `ggsave()` at the standard's size;
 #' * `tfl_km_risk(ard, fit)` -- a KM figure's number at risk from the KM
