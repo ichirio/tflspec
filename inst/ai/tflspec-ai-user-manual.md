@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9097** (the development version,
+**This manual documents tflspec 0.0.24.9098** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -165,7 +165,7 @@ going and leaves the message in the `error` / `warning` column.
 | a listing written in code (`listing_spec()` / `plan_listing()`), back to a listing spec | `tfl_as_listing_spec(x, output_id, dataset = )` |
 | the document / its code / its file | `tfl_report(spec, output_id, content = plan)` / `tfl_report_code(spec)` / `tfl_report_path(spec)` |
 | a listing's program / its pages | `tfl_listing_code(spec)` / `tfl_listing(data, spec)` |
-| a figure: start / check / write the script | `tfl_fig_template()` / `tfl_check_fig_design()` / `tfl_fig_design_code()` |
+| a figure: start / check / write the script / its size on the page | `tfl_fig_template()` / `tfl_check_fig_design()` / `tfl_fig_design_code()` / `tfl_fig_page_size()` |
 | review the whole definition: errors, what is probably wrong, what to set by hand | `tfl_review_spec(spec, ard, listings, figures)`; against the data: `facts = tfl_data_facts(data, populations = ard)`; the rules: `tfl_review_rules()`; each row's sentence is `template` filled with `args` (`message` is the two put together; the sentences beyond the rules': `tfl_review_templates()`) |
 | attach this manual to a chat session | `tflspec_ai_manual(file = )` |
 | draft a TOC or a figure design with an AI chat | `tfl_ai_context()` → `tfl_ai_prompt()` → the chat → `tfl_ai_parse()` → `tfl_ai_check()` (problems: `tfl_ai_repair_prompt()`) → `tfl_ai_diff()` (§11.1) |
@@ -444,7 +444,7 @@ file.
 
 | Sheet | Columns |
 |---|---|
-| `report` | `type` (`table` / `listing` / `figure`), `file` (`{output_id}.rtf`), `program`, `auto_section`, `section_align`, `auto_title`, `title_align`, `table_font_size_half_points`, `title_font_size_half_points`, `footnote_font_size_half_points`, `page_header`, `page_footer`, `watermark` (`DRAFT`), `figure_width_in`, `figure_height_in`, `ard_source`, `pattern`, `data_code` and `content_code` (a step that is the report's own R instead of the definition: the data step leaves `data`, a figure's `df`; the content step leaves `content`; the report's datasets by their names in lower case, and `ard` when it reads its ARD, are in reach -- `tfl_check_code()`) |
+| `report` | `type` (`table` / `listing` / `figure`), `file` (`{output_id}.rtf`), `program`, `auto_section`, `section_align`, `auto_title`, `title_align`, `table_font_size_half_points`, `title_font_size_half_points`, `footnote_font_size_half_points`, `page_header`, `page_footer`, `watermark` (`DRAFT`), `figure_width_in`, `figure_height_in` (a figure's size on the page; blank: the page's body -- `tfl_fig_page_size()`; a design's `plot` has only `dpi`), `ard_source`, `pattern`, `data_code` and `content_code` (a step that is the report's own R instead of the definition: the data step leaves `data`, a figure's `df`; the content step leaves `content`; the report's datasets by their names in lower case, and `ard` when it reads its ARD, are in reach -- `tfl_check_code()`) |
 | `page` | `paper_size`, `orientation`, `width_in`, `height_in`, margins `margin_*_in`, `header_dist_in`, `footer_dist_in`, `font` (the document's font; the study's row goes to the setup's `options()`), `font_size_half_points`, `title_format`, `footnote_format`, `title_width`, `footnote_width`, `markup` |
 | `header`, `footer`, `titles`, `footnotes` | `line`, `left`, `center`, `right` — a report's line replaces the default line of the same number; a report's line that says `(none)` takes it out |
 | `tokens` | `name`, `value` — a token of one's own, `{STUDY}` in any of the cells above (`rtf_document(tokens = )`); a report's row replaces the default of the same name, `(none)` takes it out; names upper case, not rtfreporter's own. A report's own tokens work without a row: `{OUTPUT_ID}`, `{OUTPUT_LABEL}` ("Table 14.1.1" from the ID; rows `OUTPUT_KIND_TABLE` / `_LISTING` / `_FIGURE` change the words), `{OUTPUT_TITLE}` `{OUTPUT_POPULATION}` `{OUTPUT_SECTION}` `{STUDY_ID}` (blank unless a row gives them); a line left with only empty tokens is not printed. What every report shares (the default token rows, the default header / footer) can be written once: `tfl_report_setup_code(spec)` (`options(rtfreporter.tokens = )`, `study_header`, `study_footer`), and each program with `tfl_report_code(..., setup = TRUE)` |
@@ -778,7 +778,7 @@ back): rename the value or choose another separator.
 **Figure design:** `tfl_fig_design` `tfl_read_fig_design`
 `tfl_write_fig_design` `tfl_fig_design_code` `tfl_check_fig_design`
 `tfl_fig_advice` `tfl_fig_apply_fix` `tfl_fig_template` `tfl_fig_forest_analyses` `tfl_fig_templates`
-`tfl_fig_parts` `tfl_fig_objects` `tfl_fig_add_layer` `tfl_fig_calls` `tfl_fig_compat`
+`tfl_fig_parts` `tfl_fig_objects` `tfl_fig_page_size` `tfl_fig_add_layer` `tfl_fig_calls` `tfl_fig_compat`
 `tfl_fig_r`
 
 **Figure style:** `tfl_fig_style` `tfl_fig_style_template`

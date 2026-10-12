@@ -1,5 +1,19 @@
 # tflspec (development version)
 
+* **A figure's size is its report's: set on its page, blank fits the
+  page's body** (0.0.24.9098, the user's request on tflplanner's step 3).
+  The report sheet's `figure_width_in` / `figure_height_in` say it; blank,
+  the page's body -- the page (or paper in its orientation) less its
+  margins, its height less the report's title and footnote lines --
+  `tfl_fig_page_size()`.  The report step places the figure at that size
+  (`rtf_figures(width_twips = , height_twips = )`, always), and a report
+  program draws it so.  A figure design's `plot` keeps only `dpi`: its
+  `width`, `height` and `units` go (an old design's are read as nothing).
+  A script of its own (`tfl_fig_design_code(save = TRUE)`) saves its PNG
+  at `width_in` x `height_in` (7.5 x 4.5 by default; the KM templates'
+  8.33 x 4.79 of the style options no longer): the templates' snapshots
+  change by those lines.
+
 * **A report is a table, a listing or a figure; any of its steps may be
   its own code** (0.0.24.9097, tflplanner's user-program design, the user's direction:
   "user code" was a fourth type forced into line).  The report sheet's

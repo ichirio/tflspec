@@ -154,10 +154,12 @@ test_that("tfl_report_code() writes the document tfl_report() makes", {
                         fixed = TRUE)))
 })
 
-test_that("a figure report writes rtf_figures()", {
+test_that("a figure report writes rtf_figures(), at its size on the page", {
   sp <- tfl_table_spec(report = data.frame(output_id = "F1", type = "figure"))
   code <- tfl_report_code(sp, content = "plots")
-  expect_true(any(grepl("rtf_figures(doc, plots)", code, fixed = TRUE)))
+  # letter landscape's body: 9.5 x 6.7 in (two spacing lines)
+  expect_true(any(grepl("rtf_figures(doc, plots, width_twips = 13680L, height_twips = 9648L)",
+                        code, fixed = TRUE)))
 })
 
 test_that("a table and its report, written out, make the report the objects make", {

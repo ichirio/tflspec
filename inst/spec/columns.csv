@@ -190,8 +190,8 @@ report,footnote_font_size_half_points,"The footnotes' font size in half-points; 
 report,page_header,"TRUE / FALSE: FALSE drops the running page header for this report, the study's default lines included; blank: TRUE.",FALSE
 report,page_footer,"TRUE / FALSE: FALSE drops the running page footer, likewise; blank: TRUE.",FALSE
 report,watermark,"A word drawn diagonally behind every page (rtf_document(watermark = )); blank: none.",DRAFT
-report,figure_width_in,"A figure report: the figure's width in inches (rtf_figures(width_twips = )); blank: the figure's own.",9
-report,figure_height_in,"A figure report: the figure's height in inches (rtf_figures(height_twips = )); blank: the figure's own.",5
+report,figure_width_in,"A figure report: the figure's width in inches, drawn and placed so (rtf_figures(width_twips = )); blank: the page's body width (tfl_fig_page_size()).",9
+report,figure_height_in,"A figure report: the figure's height in inches, drawn and placed so; blank: the page's body height less its title and footnote lines (tfl_fig_page_size()).",5
 report,ard_source,"Where the report's ARD comes from: blank (a figure: none), its own ARD definition (the analyses rows of its output_id; a figure: own); import:<file>, an ARD made elsewhere and taken in (the file in the study's input/ard/ folder, read with tfl_read_ard()); table:<output_id>, a figure's: that table's ARD.",import:t_14_2_1_cro.json
 report,pattern,"The page pattern the report uses: blank, Standard (the blank rows of report, page, header, footer, titles, footnotes and tokens); a name, that pattern -- the rows whose output_id is @<name>, which say only what differs from Standard. The report's own rows go over its pattern's.",Compact
 report,data_code,"The report's own code for its data step, instead of the definition: R that leaves data (a table, a listing) or df (a figure); the datasets the report registers and, when it reads its ARD, ard are in reach (tfl_check_code()). Blank: the definition makes the data.","df <- advs |> dplyr::filter(PARAMCD == ""SYSBP"")"

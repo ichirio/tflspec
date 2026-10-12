@@ -454,10 +454,10 @@ tfl_fig_objects <- function(design) {
     .ff("theme", "choice", "Theme", "boxed", pp_themes),
     .ff("base_size", "number", "Base font size", 10),
     .ff("legend", "choice", "Legend", "bottom", .fig_legends),
-    .ff("width", "number", "Width", 7.5),
-    .ff("height", "number", "Height", 4.5),
-    .ff("units", "choice", "Units", "in", c("in", "cm", "px")),
-    .ff("dpi", "number", "DPI", 300),
+    # (its size is its report's: the report sheet's figure_width_in /
+    # figure_height_in, blank the page's body -- tfl_fig_page_size())
+    .ff("dpi", "number", "DPI", 300,
+        help = "The resolution it is drawn at; its size is its report's (the page step)."),
     .ff("add", "pieces", "Additional calls (plot.add)", of = "plot_add",
         help = "Any ggplot2/extension call, after the figure's settings and before any panels."))
 }
@@ -573,9 +573,9 @@ tfl_fig_types_implemented <- function() {
 #' @param template The template it was made from (a note).
 #' @param plots A composed figure: a named list of figure designs (each
 #'   with its own `data`, `plot`, `layers`), put together by patchwork as
-#'   `compose` says. The design's own `plot` then holds only the saved size
-#'   (`width`, `height`, `dpi`, `units`), and it has no `data` or `layers`
-#'   of its own.
+#'   `compose` says. The design's own `plot` then holds only its `dpi`
+#'   (its size is its report's), and it has no `data` or `layers` of its
+#'   own.
 #' @param compose With `plots`: `layout`, an expression of the plots' names
 #'   with `|` (side by side), `/` (stacked), `+`, `-` and brackets (default:
 #'   all side by side); `add`, a list of calls written after it, each with
@@ -649,6 +649,8 @@ tfl_read_fig_design <- function(path) {
     return(tfl_fig_design(layers = list(list(
       layer = "figure", type = x$type, style = x$style, args = x$args %||% list()))))
   }
+  # its size (before 0.0.24.9098 the design's): its report's now
+  if (!is.null(x$plot)) x$plot[c("width", "height", "units")] <- NULL
   tfl_fig_design(x$data %||% list(), x$stats %||% list(), x$plot %||% list(),
                  x$layers %||% list(), x$template, x$ggplot2_version,
                  x$plots, x$compose)
@@ -1379,15 +1381,15 @@ tfl_read_fig_design <- function(path) {
   code[!(code == "" & c(FALSE, utils::head(code, -1L) == ""))]
 }
 
-# saving the PNG, at the size in `plot`
-.fig_save_code <- function(plot, plot_id, name = "fig") {
+# saving the PNG, at the size given (inches) and the design's dpi
+.fig_save_code <- function(plot, plot_id, name = "fig", width_in = 7.5, height_in = 4.5) {
   n <- function(f) .pv(plot, f)
   c(section("saving the figure"),
     sprintf("fig_path   <- file.path(\"output\", %s)", q(paste0(pp_file_name(plot_id), ".png"))),
-    sprintf("fig_width  <- %s", n("width")),
-    sprintf("fig_height <- %s", n("height")),
+    sprintf("fig_width  <- %s", width_in),
+    sprintf("fig_height <- %s", height_in),
     sprintf("fig_dpi    <- %s", n("dpi")),
-    sprintf("fig_units  <- %s", q(n("units"))),
+    sprintf("fig_units  <- %s", q("in")),
     "",
     "dir.create(dirname(fig_path), showWarnings = FALSE, recursive = TRUE)",
     "ggsave(",
@@ -1406,7 +1408,10 @@ tfl_read_fig_design <- function(path) {
 #'   setup attaches the packages, so the code has no header and no
 #'   `library()` (what it needs is in its attributes: below).
 #' @param save `FALSE` leaves out saving the PNG: the code makes the
-#'   figure only (a report program writes it into its RTF).
+#'   figure only (a report program writes it into its RTF, at its size on
+#'   the page: [tfl_fig_page_size()]).
+#' @param width_in,height_in The saved PNG's size in inches (`save`): a
+#'   report's figure is its page's ([tfl_fig_page_size()]).
 #' @param name The name the figure is given.
 #' @param codelists The reports' code lists (a table definition's
 #'   `codelists` sheet, or a data frame with `output_id`, `variable`,
@@ -1427,7 +1432,7 @@ tfl_read_fig_design <- function(path) {
 #' @export
 tfl_fig_design_code <- function(design, plot_id = "fig", ggplot2_version = NULL,
                                 setup = FALSE, save = TRUE, name = "fig",
-                                codelists = NULL) {
+                                codelists = NULL, width_in = 7.5, height_in = 4.5) {
   design <- if (inherits(design, "tfl_fig_design")) design else .fig_design_from_list(design)
   gg <- .fig_target_version(ggplot2_version, design)
   # the report's code lists (its rows of the codelists sheet): on the
@@ -1435,7 +1440,8 @@ tfl_fig_design_code <- function(design, plot_id = "fig", ggplot2_version = NULL,
   lv <- .codelist_levels(codelists, plot_id)
   if (length(design$plots)) {
     return(.fig_compose_code(design, plot_id, gg, setup = setup,
-                             save = save, name = name, levels = lv))
+                             save = save, name = name, levels = lv,
+                             width_in = width_in, height_in = height_in))
   }
   whole <- Filter(function(l) identical(l$layer, "figure"), design$layers)
   if (length(whole)) {
@@ -1465,7 +1471,7 @@ tfl_fig_design_code <- function(design, plot_id = "fig", ggplot2_version = NULL,
     b$step1,
     section("plot"),
     b$step2,
-    if (save) c("", name, "", .fig_save_code(design$plot, plot_id, name)))
+    if (save) c("", name, "", .fig_save_code(design$plot, plot_id, name, width_in, height_in)))
   .fig_code_out(code, b$reads, b$libs, b$needs, ard = .fig_uses_ard(design))
 }
 
@@ -1950,8 +1956,8 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
   kind <- tp$kind[tp$template == template]
   o <- pp_default_options(kind)
   opt <- function(k, d) { x <- o[[k]]; if (is.null(x) || identical(x, "")) d else x }
-  size <- list(width = as.numeric(opt("width", 7.5)), height = as.numeric(opt("height", 4.5)),
-               dpi = as.numeric(opt("dpi", 300)), units = opt("units", "in"),
+  # (its size is its report's: tfl_fig_page_size())
+  size <- list(dpi = as.numeric(opt("dpi", 300)),
                base_size = as.numeric(opt("base_size", 10)), theme = opt("theme", "boxed"))
   # the design of a whole-script template: the type's function and its arguments
   if (!tp$parts[tp$template == template]) {
@@ -2083,8 +2089,7 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
           if (assess && div != 1) list(step = "derive", variable = "ADY", expr = sprintf("ADY / %s", .fig_unit_ref(time_unit))))),
         plot = plot_of(x_label = sprintf("Time (%s)", tools::toTitleCase(time_unit)), y_label = "Subject",
                        colour_by = if (resp) "BOR", palette = if (resp) "response_light" else "treatment",
-                       legend = if (resp) "right" else "none", x_min = 0,
-                       height = as.numeric(opt("height", 6))),
+                       legend = if (resp) "right" else "none", x_min = 0),
         layers = drop(list(
           list(layer = "segment", data = "df", x = "X0", y = "Y_ID", xend = duration, yend = "Y_ID",
                colour = if (resp) "BOR", linewidth = as.numeric(opt("bar_width", 4))),
@@ -2225,8 +2230,7 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
                                                       else sprintf("%s == max(%s)", visit, visit)))),
         plot = plot_of(x_label = if (shift) paste("Baseline", param) else paste(x, "of", param),
                        y_label = if (shift) paste("Post-baseline", param) else paste(y, "of", param),
-                       colour_by = group, palette = "treatment", legend = "inside_tl",
-                       width = as.numeric(opt("width", 6)), height = as.numeric(opt("height", 5.5))),
+                       colour_by = group, palette = "treatment", legend = "inside_tl"),
         layers = drop(list(
           if (shift) list(layer = "abline", intercept = 0, slope = 1, linetype = "dashed", colour = "grey50"),
           if (!shift && y %in% c("CHG", "PCHG")) list(layer = "hline", yintercept = 0, linetype = "solid", colour = "grey60"),

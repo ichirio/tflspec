@@ -14,7 +14,7 @@
 # ggsurvfit is built (ggsurvfit_build()).
 
 .fig_compose_fields <- c("layout", "add")
-.fig_compose_plot_fields <- c("width", "height", "dpi", "units")
+.fig_compose_plot_fields <- c("dpi")
 
 # the layout's tokens: names, the operators, brackets; NULL if another
 # character is in it
@@ -52,7 +52,8 @@
 }
 
 .fig_compose_code <- function(design, plot_id, gg, setup = FALSE, save = TRUE,
-                              name = "fig", levels = NULL) {
+                              name = "fig", levels = NULL,
+                              width_in = 7.5, height_in = 4.5) {
   nms <- names(design$plots)
   # each figure is made as fig_<name>; one that is wrapped (a patchwork of
   # panels, a risk table) is made as `fig` first
@@ -109,7 +110,7 @@
     section("the figures together"),
     sprintf("%s <- %s", name, layout),
     unlist(lapply(adds, `[[`, "line")),
-    if (save) c("", name, "", .fig_save_code(design$plot, plot_id, name)))
+    if (save) c("", name, "", .fig_save_code(design$plot, plot_id, name, width_in, height_in)))
   .fig_code_out(code, unlist(lapply(bodies, `[[`, "reads")), libs, needs,
                 ard = .fig_uses_ard(design))
 }
