@@ -877,8 +877,9 @@ tfl_read_fig_design <- function(path) {
   kv <- function(name, val) if (!is.null(val)) paste(name, "=", val)
   lbl <- function(title) paste0("# ---- layer ", i, ": ", title, " ----")
   switch(k,
-    km_curve = list(base = sprintf("p <- ggsurvfit(%s, linewidth = %s%s)", v("fit"), num("linewidth"),
-                                   if (is.null(plot$colour_by)) ", colour = pal[[1]]" else "")),
+    km_curve = list(base = sprintf("p <- ggsurvfit(%s, linewidth = %s%s%s)", v("fit"), num("linewidth"),
+                                   if (is.null(plot$colour_by)) ", colour = pal[[1]]" else "",
+                                   if (isTRUE(l$.linetype_by)) ", linetype_aes = TRUE" else "")),
     km_ci = list(code = c(lbl("KM confidence bands"),
       sprintf("p <- p + add_confidence_interval(alpha = %s%s)", num("alpha"),
               if (is.null(plot$colour_by)) ", fill = pal[[1]]" else ""))),
@@ -1042,9 +1043,40 @@ tfl_read_fig_design <- function(path) {
   list(pre = pre, terms = terms)
 }
 
+# The arms' shapes and line types of the figure style standard
+# (treatment_shapes, treatment_linetypes): used when the standard has them
+# and the figure colours by the arms (the treatment palette)
+.fig_arm_marks <- function(plot) {
+  on <- function(key) {
+    v <- .fs_get(key)
+    !is.null(plot$colour_by) && identical(.pv(plot, "palette"), "treatment") &&
+      length(v) == 1L && !is.na(v) && nzchar(trimws(v))
+  }
+  c(shape = on("treatment_shapes"), linetype = on("treatment_linetypes"))
+}
+
+# The layers that colour by the arms map them to line types (a line, the KM
+# curves) and shapes (a point) too, unless they say their own
+.fig_arm_layers <- function(layers, by, arm) {
+  pieces <- .fig_pieces()
+  lapply(layers, function(l) {
+    k <- l$layer %||% ""
+    if (identical(k, "km_curve")) {
+      if (arm[["linetype"]]) l$.linetype_by <- TRUE
+      return(l)
+    }
+    g <- pieces[[k]]$geom
+    if (is.null(g) || !identical(l$colour, by)) return(l)
+    if (arm[["linetype"]] && "linetype" %in% g$aes && is.null(l$linetype)) l$linetype <- by
+    if (arm[["shape"]] && "shape" %in% g$param) l$.shape_by <- by
+    l
+  })
+}
+
 # `setup`: the program sources the study's figure setup
-# (tfl_fig_setup_code()), whose tfl_colours() gives the palette
-.fig_palette_code <- function(plot, setup = FALSE) {
+# (tfl_fig_setup_code()), whose tfl_colours() gives the palette (and
+# tfl_shapes() / tfl_linetypes() the arms' shapes and line types, `arm`)
+.fig_palette_code <- function(plot, setup = FALSE, arm = c(shape = FALSE, linetype = FALSE)) {
   pname <- .pv(plot, "palette")
   pal <- tfl_fig_palettes()[[pname]]
   if (is.null(pal)) stop("Unknown palette: ", pname, call. = FALSE)
@@ -1061,10 +1093,19 @@ tfl_read_fig_design <- function(path) {
   # its values in their order: a column made a factor by the code lists
   # keeps theirs (factor() drops the levels no record has)
   lv <- sprintf("levels(factor(df$%s))", by)
+  marks <- function(key, obj, fn) {
+    if (!arm[[sub("treatment_", "", sub("s$", "", key))]]) return(NULL)
+    v <- trimws(strsplit(.fs_get(key), ",", fixed = TRUE)[[1L]])
+    if (setup) return(sprintf("%s <- %s(%s)", obj, fn, lv))
+    code <- if (key == "treatment_shapes") sprintf("c(%s)", paste(v, collapse = ", ")) else vec_code(v)
+    sprintf("%s <- setNames(rep_len(%s, length(lv)), lv)", obj, code)
+  }
   c(sprintf("# the %s palette, a colour for each %s", pname, by),
     if (setup) sprintf("pal <- tfl_colours(%s, %s)", q(pname), lv) else c(
       sprintf("lv <- %s", lv),
-      sprintf("pal <- setNames(%s[seq_along(lv)], lv)", vec_code(unname(pal)))))
+      sprintf("pal <- setNames(rep_len(%s, length(lv)), lv)", vec_code(unname(pal)))),
+    marks("treatment_linetypes", "lty", "tfl_linetypes"),
+    marks("treatment_shapes", "shp", "tfl_shapes"))
 }
 
 # The figure's theme: with the study's setup, its theme_tfl() -- a change
@@ -1157,6 +1198,9 @@ tfl_read_fig_design <- function(path) {
   d <- .fig_steps_code(design$data, levels)
   head <- if (length(levels) && codelists_head) .codelists_head(levels)
   layers <- design$layers
+  # the arms' shapes and line types, when the standard has them
+  arm <- .fig_arm_marks(plot)
+  if (any(arm)) layers <- .fig_arm_layers(layers, plot$colour_by, arm)
   kinds <- vapply(layers, function(l) l$layer %||% "", "")
   fit_of <- function() {
     r <- layers[kinds == "risk_table"]
@@ -1198,14 +1242,21 @@ tfl_read_fig_design <- function(path) {
     if (identical(l$layer, "geom")) return(aes %in% names(.named(l$aes)))
     identical(l$layer, "n_table") && aes == "colour"
   }, logical(1)))
+  # the arms' marks a layer uses: their scales and objects (lty, shp)
+  arm <- c(shape = arm[["shape"]] && any(vapply(layers, function(l) !is.null(l$.shape_by), NA)),
+           linetype = arm[["linetype"]] && (maps("linetype") || any(kinds == "km_curve")))
   scales <- if (!is.null(plot$colour_by)) list(
     if (maps("colour") || any(kinds == "km_curve"))
       "scale_colour_manual(values = pal, breaks = names(pal))",
     if (maps("fill") || any(kinds == "km_ci"))
-      "scale_fill_manual(values = pal, breaks = names(pal), na.value = \"grey80\")")
+      "scale_fill_manual(values = pal, breaks = names(pal), na.value = \"grey80\")",
+    if (arm[["linetype"]]) "scale_linetype_manual(values = lty, breaks = names(lty))",
+    if (arm[["shape"]]) "scale_shape_manual(values = shp, breaks = names(shp))")
   finish <- c(scales, ax$terms,
     if (length(labs_args)) sprintf("labs(%s)", paste(labs_args, collapse = ", ")),
     as.list(.fig_theme_code(plot, setup)),
+    # keys long enough to show the arms' line types
+    if (arm[["linetype"]]) 'theme(legend.key.width = unit(2.5, "lines"))',
     if (!.lgl(.pv(plot, "x_text"))) "theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())",
     as.list(pp_q_legend(.pv(plot, "legend"))))
   # the chain: the layers (the user's layer code as a statement), the
@@ -1262,7 +1313,7 @@ tfl_read_fig_design <- function(path) {
       panel_data,
       ""),
     step2 = c(
-      .fig_palette_code(plot, setup),
+      .fig_palette_code(plot, setup, arm),
       if (uses_pd) sprintf("pd <- position_dodge(width = %s)", n("dodge")),
       "",
       chain,

@@ -35,7 +35,11 @@ helpers in plain ggplot2:
 \itemize{
 \item \code{theme_tfl(type)} -- the standard's theme, font sizes, lines and ticks;
 \item \code{scale_colour_tfl(palette)} / \code{scale_fill_tfl()} / \code{tfl_colours()} --
-the standard's palettes;
+the standard's palettes (an ordered one given more groups than it has
+colours repeats them, with a warning);
+\item \code{tfl_shapes(values)} / \code{tfl_linetypes(values)} -- the arms' shapes and
+line types of the standard (\code{treatment_shapes}, \code{treatment_linetypes};
+\code{NULL} when it has none);
 \item \code{tfl_marker(name)} -- an event or symbol marker (\code{Death}, \code{censor} ...);
 \item \code{tfl_save(plot, file, type)} -- \code{ggsave()} at the standard's size;
 \item \code{tfl_km_risk(ard, fit)} -- a KM figure's number at risk from the KM

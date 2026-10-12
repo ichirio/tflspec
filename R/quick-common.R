@@ -165,7 +165,7 @@ pp_q_pal <- function(obj, df, var, df_name, palette = "treatment", values = NULL
     if (!is.null(names(pal))) {
       return(sprintf("%s <- %s", obj, vec_code(pal)))
     }
-    return(sprintf("%s_lv <- if (is.factor(%s$%s)) levels(%s$%s) else sort(unique(na.omit(%s$%s)))\n%s <- setNames(%s[seq_along(%s_lv)], %s_lv)",
+    return(sprintf("%s_lv <- if (is.factor(%s$%s)) levels(%s$%s) else sort(unique(na.omit(%s$%s)))\n%s <- setNames(rep_len(%s, length(%s_lv)), %s_lv)",
                    obj, df_name, var, df_name, var, df_name, var, obj, vec_code(unname(fallback)), obj, obj))
   }
   k <- 0

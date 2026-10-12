@@ -82,8 +82,10 @@
   a <- stats::setNames(lapply(g$aes, v), g$aes)
   # lines group by their colour unless told otherwise
   if ("group" %in% g$aes && is.null(a$group) && !is.null(a$colour)) a$group <- a$colour
+  # a point that colours by the arms takes their shapes (the standard's)
+  if (!is.null(l$.shape_by)) a$shape <- l$.shape_by
   a <- a[!vapply(a, is.null, logical(1))]
-  pr <- lapply(g$param, function(x) {
+  pr <- lapply(setdiff(g$param, if (!is.null(l$.shape_by)) "shape"), function(x) {
     val <- v(x)
     if (is.null(val)) return(NULL)
     paste(x, "=", .fig_param_code(f$kind[f$field == x], val))

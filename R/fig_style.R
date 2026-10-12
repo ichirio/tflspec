@@ -54,6 +54,10 @@
     s(NA, "height", "4.2", ""),
     s(NA, "units", "in", "in | cm | px"),
     s(NA, "dpi", "300", ""),
+    s(NA, "treatment_shapes", NA,
+      "optional: the arms' point shapes in order, e.g. 16, 17, 15 (blank = one shape)"),
+    s(NA, "treatment_linetypes", NA,
+      "optional: the arms' line types in order, e.g. solid, dashed, dotted (blank = solid)"),
     # ---- KM
     s("km", "censor_shape", "x", "censor mark"),
     s("km", "censor_size", "3", ""),
@@ -97,9 +101,10 @@
     .fs_df(palette = palette, value = value, colour = colour, note = note)
   }
   colors <- rbind(
-    pal("treatment", NA, c("blue", "#D55E00", "#009E73", "#CC79A7", "#E69F00",
+    # the arms in order (their rows' order): Okabe-Ito, colour-blind safe
+    pal("treatment", NA, c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00",
                            "#56B4E9"),
-        c("KM sample (single arm)", rep("", 5))),
+        c("the arms in order: the first arm's colour", rep("", 5))),
     pal("response", c("CR", "PR", "SD", "PD", "NE", "NON-CR/NON-PD"),
         c("#008000", "#0000FF", "#FFA500", "#800080", "#A0A0A0", "#20B2AA"),
         c(rep("waterfall sample", 4), "", "")),
@@ -149,7 +154,17 @@
 #'   (and wins over the blank row).
 #' * `colors` (`palette`, `value`, `colour`): a palette whose rows name a
 #'   data `value` colours that value (`response`: CR, PR ...); one whose
-#'   `value` is blank is used in order (`treatment`).
+#'   `value` is blank is used in order (`treatment`): **the order of its
+#'   rows is the arms' colour order** -- the first row colours the first
+#'   arm (its code list's first value), and so on.  The built-in
+#'   `treatment` palette is Okabe-Ito's, in a colour-blind-safe order
+#'   (`#0072B2`, `#D55E00`, `#009E73`, `#CC79A7`, `#E69F00`, `#56B4E9`);
+#'   more arms than rows repeat the colours, with a warning, and
+#'   [tfl_check_fig()] says which arms share one.
+#' * `settings` `treatment_shapes` / `treatment_linetypes` (optional, blank
+#'   by default): the arms' point shapes (`16, 17, 15`) and line types
+#'   (`solid, dashed, dotted`) in the same order, for print in black and
+#'   white; a designed figure that colours by the arms maps them too.
 #' * `markers` (`marker`, `shape`, `fill`, `colour`, `size`): event markers
 #'   by label (a swimmer event named `Death` takes the `Death` row) and the
 #'   figures' own symbols (`censor`, `assessment`).

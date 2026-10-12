@@ -61,7 +61,7 @@ tfl_fig_ae_dot <- function(adam = NULL, style = c("risk_diff", "incidence"), dat
     sprintf("ggplot(inc_df, aes(x = pct, y = %s, colour = %s, shape = %s))", term, group, group),
     "geom_point(size = 2.5)",
     "scale_colour_manual(values = pal_grp)",
-    "scale_shape_manual(values = setNames(c(16, 17, 15, 18)[seq_along(pal_grp)], names(pal_grp)))",
+    "scale_shape_manual(values = setNames(rep_len(c(16, 17, 15, 18), length(pal_grp)), names(pal_grp)))",
     sprintf("labs(x = \"Incidence (%%)\", y = NULL%s)", if (!is.null(title)) paste0(", title = ", q(title)) else "")),
     as.list(pp_theme_lines(theme)), as.list(pp_q_legend(legend))))
   if (style == "incidence") {
