@@ -1,0 +1,1 @@
+Write the block in JSON: one object holding the header, the content and `assumptions`. Write text as strings, numbers and `true` / `false` as they are, a list as an array, and nothing JSON does not allow (no comments, no trailing commas).
