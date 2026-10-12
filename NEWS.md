@@ -1,5 +1,18 @@
 # tflspec (development version)
 
+* **Figures checked and written faster** (0.0.24.9096, #229; tflplanner's
+  study opening).  The ggplot2 compatibility walk works out once per
+  target which versions it reaches and compiles each name pattern once,
+  instead of for every piece: `tfl_check_fig_design()` about 2.5 times
+  faster, `tfl_fig_design_code()` 1.5 times, the same results.
+  `tfl_fig_uses_ard()` says whether a design reads an ARD without writing
+  its script (what the script's `attr(, "ard")` says).  A report's ARD
+  fingerprint (`tfl_ard_spec_hash()`, asked for every report as a study
+  opens) writes one file of the session's over instead of making and
+  deleting one each time, the analysis data sheet is normalized once
+  while it is the same, and the code lists are checked once while they
+  are the same (bad ones fail every call): the same fingerprints.
+
 * **A time's unit is a named constant, not a number in each program**
   (tflplanner, the user's request).  A figure's time-unit step (and the
   swimmer templates' assessment days) divides by `days_per_week`,

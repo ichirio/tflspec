@@ -90,6 +90,7 @@ tfl_fig_compat <- function(ggplot2_version = NULL) {
 }
 
 .gg_memo <- new.env(parent = emptyenv())
+.gg_memo$glob <- list()
 .fig_installed_gg <- function() {
   # (packageVersion() reads the DESCRIPTION file each time)
   v <- .gg_memo$v %||% (.gg_memo$v <- utils::packageVersion("ggplot2"))
@@ -120,7 +121,12 @@ tfl_fig_compat <- function(ggplot2_version = NULL) {
     return(vapply(pattern, function(p) any(.fig_glob(p, x)), logical(1), USE.NAMES = FALSE))
   }
   if (is.na(pattern) || !nzchar(pattern)) return(rep(FALSE, length(x)))
-  grepl(utils::glob2rx(pattern), x)
+  rx <- .gg_memo$glob[[pattern]]
+  if (is.null(rx)) {
+    rx <- utils::glob2rx(pattern)
+    .gg_memo$glob[[pattern]] <- rx
+  }
+  grepl(rx, x)
 }
 
 # replacement "geom_errorbar(orientation = \"y\")" -> list(fn, args)
@@ -175,7 +181,13 @@ tfl_fig_compat <- function(ggplot2_version = NULL) {
   if (!is.null(rf$pkg) && !identical(rf$pkg, "ggplot2")) fn <- ""
   pkg_prefix <- if (grepl("::", spec$fn %||% "", fixed = TRUE)) "ggplot2::" else ""
   cp <- .fig_compat()
-  ge <- vapply(cp$from, function(f) .fig_ver_ge(target, f), logical(1))
+  # (the same for every piece of a target: worked out once)
+  key <- paste0("ge:", target, ":", paste(cp$from, collapse = "|"))
+  ge <- .gg_memo[[key]]
+  if (is.null(ge)) {
+    ge <- vapply(cp$from, function(f) .fig_ver_ge(target, f), logical(1))
+    .gg_memo[[key]] <- ge
+  }
   if (nzchar(fn)) {
     # the function
     fr <- which(is.na(cp$arg) & cp$package == "ggplot2")
