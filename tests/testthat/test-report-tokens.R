@@ -245,7 +245,7 @@ test_that("the company's font and size are the setup's options(), once", {
   sp <- font_spec()
   set <- tfl_report_setup_code(sp)
   expect_identical(set[1:4], c("options(", '  rtfreporter.font = "Courier New",',
-                               "  rtfreporter.font_size_half_points = 20L", ")"))
+                               "  rtfreporter.font_size_half_points = 20", ")"))
   # a report says none of the study's; its own size it says
   t <- paste(tfl_report_code(sp, "T-14-1-1", content = "pages", setup = TRUE),
              collapse = "\n")
@@ -253,11 +253,11 @@ test_that("the company's font and size are the setup's options(), once", {
   l <- paste(tfl_report_code(sp, "L-16-2-7", content = "pages", setup = TRUE),
              collapse = "\n")
   expect_false(grepl("font_table", l, fixed = TRUE))
-  expect_match(l, "font_size_half_points = 16L", fixed = TRUE)
+  expect_match(l, "font_size_half_points = 16", fixed = TRUE)
   # standing alone: in its program
   a <- paste(tfl_report_code(sp, "T-14-1-1", content = "pages"), collapse = "\n")
   expect_match(a, 'font_table = list(list(name = "Courier New"))', fixed = TRUE)
-  expect_match(a, "font_size_half_points = 20L", fixed = TRUE)
+  expect_match(a, "font_size_half_points = 20", fixed = TRUE)
   # none said: no line
   expect_false(any(grepl("rtfreporter.font", tfl_report_setup_code(own_spec()),
                          fixed = TRUE)))

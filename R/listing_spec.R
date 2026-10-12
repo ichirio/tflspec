@@ -384,7 +384,7 @@ tfl_listing_code <- function(spec, output_id = NULL, datasets,
            if (!is.na(c$align)) paste("align =", encodeString(c$align, quote = "\"")),
            if (identical(toupper(c$collapse_repeats), "TRUE"))
              "collapse_repeats = TRUE")
-    sprintf("  listing_col(%s)", paste(a, collapse = ", "))
+    sprintf("listing_col(%s)", paste(a, collapse = ", "))
   }, "")
   type <- if (is.na(l$type)) type else l$type
   # the code lists of the columns it shows or sorts by
@@ -394,41 +394,40 @@ tfl_listing_code <- function(spec, output_id = NULL, datasets,
   # the records its condition keeps, its code lists, its order -- in one
   # statement; a rework (code of its own) before the order
   sort <- .r_sort(l$sort)
+  # dates as they print: a column of dates becomes its text
+  dates <- paste0("dplyr::mutate(dplyr::across(dplyr::where(~ inherits(.x, c(",
+                  "\"Date\", \"POSIXt\"", "))), format))")
+  steps <- c(if (!is.na(l$where)) sprintf("dplyr::filter(%s)", l$where),
+             if (length(lv)) .levels_call(lv),
+             if (is.null(rework)) c(sort, dates))
+  # the columns it prints: listing_spec(list(listing_col(...), ...), type =)
+  spec <- .cl("listing_spec", c(
+    list(.cl("list", lapply(col_code, .step_cl))),
+    list(type = encodeString(type, quote = "\"")),
+    if (!is.na(l$blank_row)) list(blank_row = toupper(l$blank_row)),
+    if (!is.na(l$wrap)) list(wrap = as.character(l$wrap))))
   lay_out <- c(
-    "# dates as they print",
-    "data[] <- lapply(data, function(v) if (inherits(v, c(\"Date\", \"POSIXt\"))) format(v) else v)",
     "",
-    sprintf("lst <- listing_spec(list(\n%s),\n  type = %s%s%s)",
-            paste(col_code, collapse = ",\n"),
-            encodeString(type, quote = "\""),
-            if (!is.na(l$blank_row)) paste0(", blank_row = ", toupper(l$blank_row)) else "",
-            if (!is.na(l$wrap)) paste0(", wrap = ", l$wrap) else ""),
+    paste("lst <-", .lay(spec, lead = 7L)),
     sprintf("content <- as_rtftables(data, listing = lst%s)",
             if (!is.na(l$max_rows)) paste0(", max_rows = ", l$max_rows) else
               ""))
   # on a `data` made before (a data step of the report's own code): its
-  # code lists and its order, then laid out
+  # code lists, its order and its dates, then laid out
   if (identical(part, "content")) {
-    on_data <- c(if (length(lv)) .levels_call(lv), sort)
     return(c(if (length(lv)) .codelists_head(lv),
-             if (length(on_data)) c(paste0("data <- data |>\n  ",
-                                           paste(on_data, collapse = " |>\n  ")), ""),
+             "# its order; dates as they print",
+             .make_code("data", "data", c(if (length(lv)) .levels_call(lv), sort, dates)),
              lay_out) |>
              .drop_attached_ns())
   }
-  steps <- c(if (!is.na(l$where)) sprintf("dplyr::filter(%s)", l$where),
-             if (length(lv)) .levels_call(lv),
-             if (is.null(rework)) sort)
   c(if (length(lv)) .codelists_head(lv),
     paste0("# the data: ", l$dataset, " (data catalog)"),
     tfl_read_data_code(datasets, l$dataset),
-    if (!length(steps)) sprintf("data <- %s", obj) else
-      if (length(steps) == 1L && !length(lv)) {
-        sprintf("data <- %s(%s, %s)", sub("\\(.*$", "", steps),
-                obj, sub("^[^(]*\\((.*)\\)$", "\\1", steps))
-      } else paste0("data <- ", obj, " |>\n  ", paste(steps, collapse = " |>\n  ")),
-    if (!is.null(rework)) c("", "# rework", rework, "",
-                            if (!is.null(sort)) sprintf("data <- %s", sub("\\(", "(data, ", sort))),
+    if (is.null(rework)) "# its records, in its order; dates as they print",
+    .make_code("data", obj, steps),
+    if (!is.null(rework)) c("", "# rework", rework, "", "# in its order; dates as they print",
+                            .make_code("data", "data", c(sort, dates))),
     if (identical(part, "all")) lay_out) |>
     .drop_attached_ns()
 }

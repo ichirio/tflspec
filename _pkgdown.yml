@@ -135,9 +135,11 @@ reference:
       - tfl_fig_parts
       - tfl_fig_objects
       - tfl_fig_page_size
+      - tfl_fig_uses_ard
       - tfl_fig_add_layer
       - tfl_fig_calls
       - tfl_fig_compat
+      - tfl_fig_data_name
       - tfl_fig_r
   - subtitle: Figure style
     desc: Every look-and-feel value of a study's figures, in one place.

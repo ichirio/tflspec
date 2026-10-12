@@ -45,7 +45,7 @@ test_that("the analysis data is made once, in order, for what a report reads", {
   # (the population's columns replace one of the same name)
   at <- match(c("adsl_saf <- pop_saf",
                 paste0("adae_teae <- adae |>\n",
-                       "  filter(USUBJID %in% pop_saf$USUBJID & TRTEMFL == \"Y\") |>\n",
+                       "  filter(USUBJID %in% pop_saf$USUBJID, TRTEMFL == \"Y\") |>\n",
                        "  select(-any_of(c(\"TRT01A\", \"AGEGR1\"))) |>\n",
                        "  left_join(select(pop_saf, USUBJID, TRT01A, AGEGR1), by = \"USUBJID\")"),
                 "adae_ser <- adae_teae |>\n  filter(AESER == \"Y\") |>\n  mutate(SER = 1)",
@@ -177,7 +177,7 @@ test_that("a report's own subjects, the columns kept, factors of derived columns
   # the numerator kept to the denominator's subjects; add from that data
   expect_true(any(code == paste0(
     "adae_old <- adae |>\n",
-    "  filter(USUBJID %in% adsl_old$USUBJID & TRTEMFL == \"Y\") |>\n",
+    "  filter(USUBJID %in% adsl_old$USUBJID, TRTEMFL == \"Y\") |>\n",
     "  select(-any_of(\"TRT01A\")) |>\n",
     "  left_join(select(adsl_old, USUBJID, TRT01A), by = \"USUBJID\") |>\n",
     "  select(USUBJID, TRT01A, AEBODSYS, AEDECOD) |>\n",
@@ -319,4 +319,29 @@ test_that("a data that keeps columns keeps the ones its analyses read", {
   # AE reads adae_teae by TRT01A, its variables AEBODSYS | AEDECOD: kept
   # after the ones asked for
   expect_true(any(grepl("  select(USUBJID, AEDECOD, TRT01A, AEBODSYS)", code, fixed = TRUE)))
+})
+
+test_that("asked twice, the fingerprint, the analysis data sheet and the code lists are the same (memos)", {
+  x <- ad_spec(ad_rows(), an_rows())
+  expect_identical(tfl_ard_spec_hash(x, "T1"), tfl_ard_spec_hash(x, "T1"))
+  # the analysis data sheet normalized once while it is the same; a change
+  # is seen, and the first sheet again
+  s1 <- .adata_sheet(x)
+  expect_identical(.adata_sheet(x), s1)
+  y <- x
+  y$analysis_data$where[2L] <- "AGE >= 75"
+  s2 <- .adata_sheet(y)
+  expect_false(identical(s2, s1))
+  expect_identical(s2$where[2L], "AGE >= 75")
+  expect_identical(.adata_sheet(x), s1)
+  # bad code lists fail every call; good ones are checked once
+  bad <- data.frame(variable = "SEX", value = "M", stringsAsFactors = FALSE)
+  expect_error(.codelist_levels(bad, "T1"), "output_id")
+  expect_error(.codelist_levels(bad, "T1"), "output_id")
+  cl <- data.frame(output_id = "T1", variable = "SEX", value = c("M", "F"),
+                   label = c("Male", "Female"), order = c(1, 2), stringsAsFactors = FALSE)
+  lv <- .codelist_levels(cl, "T1")
+  expect_identical(lv$SEX, c(M = "Male", F = "Female"))
+  expect_identical(.codelist_levels(cl, "T1"), lv)
+  expect_error(.codelist_levels(bad, "T1"), "output_id")
 })

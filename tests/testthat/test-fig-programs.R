@@ -66,8 +66,9 @@ test_that("a program has its two sections, one chain, no library()", {
     expect_identical(sum(code == section("plot")), 1L)
     expect_false(any(grepl("^library\\(|^p <- p \\+|^# Generated", code)))
     expect_true(any(startsWith(code, "plot <- ")))
-    # the palette first in the plot section
-    expect_match(code[which(code == section("plot")) + 1L], "^# the .* palette|^pal <- ")
+    # the palette first in the plot section, when a layer uses it
+    nxt <- code[which(code == section("plot")) + 1L]
+    if (any(grepl("pal", code, fixed = TRUE))) expect_match(nxt, "^# the .* palette|^pal <- ")
     expect_false(inherits(tryCatch(parse(text = code), error = function(e) e), "error"))
   }
 })

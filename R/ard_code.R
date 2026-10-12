@@ -39,15 +39,54 @@
   paste0(x$fn, "(\n  ", paste(parts, collapse = ",\n  "), "\n)")
 }
 
+# A call laid out filling its lines: when it does not fit, a call of plain
+# arguments (no call among them) wraps them under its opening bracket, as
+# many a line as fit (ard_value(ard, "KM", "prob", "estimate",
+#           level = 0.5)); one with calls among them puts an argument a
+# line, each laid out the same way.
+.lay_fill <- function(x, lead = 0L, width = 80L) {
+  # `lead`: the column the call starts at, on its first line; the lines
+  # after it are written from the line's start
+  if (!inherits(x, "tfl_cl")) return(x)
+  one <- .lay(x, lead, Inf)
+  if (!grepl("\n", one, fixed = TRUE) && lead + .vis_width(one) <= width) return(one)
+  a <- x$args
+  nm <- names(a) %||% rep("", length(a))
+  pre <- ifelse(nzchar(nm), paste0(.r_arg_name(nm), " = "), "")
+  plain <- !vapply(a, inherits, NA, "tfl_cl")
+  if (all(plain)) {
+    parts <- paste0(pre, unlist(a))
+    pad <- lead + nchar(x$fn) + 1L
+    rows <- character()
+    cur <- ""
+    for (k in seq_along(parts)) {
+      piece <- paste0(parts[k], if (k < length(parts)) "," else ")")
+      try <- if (nzchar(cur)) paste(cur, piece) else piece
+      if (nzchar(cur) && pad + nchar(try) > width) {
+        rows <- c(rows, cur)
+        cur <- piece
+      } else cur <- try
+    }
+    rows <- c(rows, cur)
+    return(paste0(x$fn, "(", paste(rows, collapse = paste0("\n", strrep(" ", pad)))))
+  }
+  ps <- vapply(seq_along(a), function(i)
+    paste0("  ", pre[i], .lay_fill(a[[i]], 2L + nchar(pre[i]), width)), "")
+  paste0(x$fn, "(\n", paste(ps, collapse = ",\n"), "\n)")
+}
+
 # `name <- head |> step |> ...`: a step a line, two spaces in (no name:
 # the pipe alone)
 .pipe_code <- function(name, head, steps = list()) {
   steps <- Filter(Negate(is.null), steps)
   to <- if (!is.null(name)) paste(name, "<- ") else ""
-  first <- .lay(head, lead = nchar(to))
+  # every line but the last ends in " |>": 3 columns of its 80
+  first <- .lay(head, lead = nchar(to), width = if (length(steps)) 77L else 80L)
   if (!length(steps)) return(paste0(to, first))
-  s <- vapply(steps, function(st)
-    gsub("\n", "\n  ", .lay(st, lead = 2L), fixed = TRUE), "")
+  last <- length(steps)
+  s <- vapply(seq_along(steps), function(i)
+    gsub("\n", "\n  ", .lay(steps[[i]], lead = 2L,
+                             width = if (i < last) 77L else 80L), fixed = TRUE), "")
   paste0(to, first, " |>\n  ", paste(s, collapse = " |>\n  "))
 }
 
@@ -165,6 +204,12 @@
   plain <- is.name(last) || (is.call(last) && (is.call(fn) ||
     (is.name(fn) && grepl("^[A-Za-z.]", as.character(fn)))))
   if (!plain) head <- paste0("(", head, ")")
+  # a call over several lines, its pipe going on from its last argument's
+  # line: laid out as the program's own calls are (its closing bracket on a
+  # line of its own); one with a comment inside stays as it is
+  if (plain && is.call(last) && l2 > l1 && !grepl("#", head, fixed = TRUE)) {
+    head <- .expr_cl(last)
+  }
   # what follows it (a comment) goes above
   c(if (l1 > 1L) lines[seq_len(l1 - 1L)],
     if (nzchar(after)) after,
@@ -182,6 +227,14 @@
 # those R attaches itself: their functions without `pkg::`
 .ard_pkgs <- c("cards", "dplyr")
 .ard_base_pkgs <- c("stats", "utils")
+
+# The functions an ARD program calls by name: an object never takes one of
+# them (`ard_stack <- adsl |> ard_stack(...)` runs, and stops every reader)
+.ard_fun_names <- function() {
+  pk <- c(.ard_pkgs, "cardx", "rtfreporter")
+  pk <- pk[vapply(pk, requireNamespace, NA, quietly = TRUE)]
+  unique(c(.ard_helper_names, unlist(lapply(pk, getNamespaceExports))))
+}
 
 # The setup every ARD program starts with: the packages, the study's own
 # functions (its key `source`), the statistics cards does not compute
@@ -210,9 +263,9 @@
   dflt <- stats::setNames(dflt$fmt, dflt$statistic)
   c(if (nrow(cst)) c(
       "# statistics cards does not compute itself (company standards)",
-      paste("tfl_stats <-", .lay(.cl("list", stats::setNames(as.list(cst$fun),
-                                                             cst$statistic)),
-                                 lead = 13L)),
+      paste("tfl_stats <-", .lay(.cl("list", stats::setNames(
+        as.list(.fun_block(cst$fun, nchar(cst$statistic) + 5L)), cst$statistic)),
+        lead = 13L)),
       ""),
     "# each statistic's format (company standards), as cards' fmt_fun takes",
     "# it: an integer is that many decimals, label_round(1, scale = 100) a",
@@ -220,6 +273,22 @@
     paste("fmt_default <-", .lay(.cl("list", stats::setNames(
       as.list(vapply(dflt, .fmt_r, "")), names(dflt))), lead = 15L)),
     "")
+}
+
+# A statistic's function as the setup writes it: on its line when it fits
+# in 80 characters (`lead`: what comes before it), else its body a block of
+# its own, `function(x) {` ... `}`
+.fun_block <- function(f, lead) {
+  vapply(seq_along(f), function(i) {
+    if (lead[i] + nchar(f[i]) <= 78L || !startsWith(f[i], "function(x) ")) return(f[i])
+    body <- trimws(substring(f[i], nchar("function(x) ") + 1L))
+    if (startsWith(body, "(") && endsWith(body, ")")) {
+      inner <- substr(body, 2L, nchar(body) - 1L)
+      ok <- tryCatch(identical(str2lang(body)[[1L]], as.name("(")), error = function(e) FALSE)
+      if (ok) body <- inner
+    }
+    paste0("function(x) {\n  ", body, "\n}")
+  }, "")
 }
 
 # ---- the formats ---------------------------------------------------------
@@ -452,15 +521,72 @@
 .make_code <- function(obj, src, steps) {
   steps <- steps[!is.na(steps) & nzchar(steps)]
   if (!length(steps)) return(sprintf("%s <- %s", obj, src))
+  st <- lapply(steps, .step_cl)
   if (length(steps) == 1L && grepl("^[A-Za-z.][A-Za-z0-9._]*$", src) &&
       !identical(steps[[1L]], .levels_step)) {
+    s1 <- st[[1L]]
+    if (inherits(s1, "tfl_cl")) {
+      to <- paste0(obj, " <- ")
+      return(paste0(to, .lay(.cl(s1$fn, c(list(src), s1$args)), lead = nchar(to))))
+    }
     s <- steps[[1L]]
     inner <- sub("^[^(]*\\((.*)\\)$", "\\1", s)
     fn <- sub("\\(.*$", "", s)
     return(sprintf("%s <- %s(%s%s)", obj, fn, src, if (nzchar(inner)) paste0(", ", inner) else ""))
   }
-  if (length(steps) == 1L) return(sprintf("%s <- %s |> %s", obj, src, steps[[1L]]))
-  paste0(obj, " <- ", src, " |>\n  ", paste(steps, collapse = " |>\n  "))
+  if (length(steps) == 1L && !inherits(st[[1L]], "tfl_cl")) {
+    return(sprintf("%s <- %s |> %s", obj, src, steps[[1L]]))
+  }
+  .pipe_code(obj, src, st)
+}
+
+# A step as written ("dplyr::filter(A & B)") as a call to lay out: a
+# filter()'s conditions joined by `&` become its arguments, one each (the
+# dplyr idiom); a step longer than a line is laid out an argument a line.
+# A short step, and one that does not read as R, stay as they are.
+.step_cl <- function(s) {
+  if (identical(s, .levels_step)) return(s)
+  e <- tryCatch(str2lang(s), error = function(err) NULL)
+  if (!is.call(e)) return(s)
+  fn <- paste(deparse(e[[1L]]), collapse = "")
+  is_filter <- fn %in% c("filter", "dplyr::filter")
+  unnamed <- is.null(names(e)) || !nzchar(names(e)[2L])
+  if (is_filter && length(e) == 2L && unnamed &&
+      .and_parts_n(e[[2L]]) > 1L) {
+    return(.cl(fn, lapply(.and_parts(e[[2L]]), .expr_text)))
+  }
+  if (nchar(s) <= 76L) return(s)
+  .expr_cl(e)
+}
+
+# a condition `A & B & C` as its parts (a part in brackets stays one)
+.and_parts <- function(e) {
+  if (is.call(e) && identical(e[[1L]], as.name("&"))) {
+    return(c(.and_parts(e[[2L]]), .and_parts(e[[3L]])))
+  }
+  list(e)
+}
+.and_parts_n <- function(e) length(.and_parts(e))
+
+# an expression as one line of R
+.expr_text <- function(e) {
+  # a one-sided formula as a person writes it: `~ x`, not `~x`
+  if (is.call(e) && identical(e[[1L]], as.name("~")) && length(e) == 2L) {
+    return(paste("~", .expr_text(e[[2L]])))
+  }
+  paste(deparse(e, width.cutoff = 500L), collapse = " ")
+}
+
+# An R expression as a call to lay out (.cl()): a function's arguments laid
+# out in turn; an operator, a formula, a name or a value as it reads
+.expr_cl <- function(e) {
+  if (!is.call(e)) return(.expr_text(e))
+  fn <- paste(deparse(e[[1L]]), collapse = "")
+  if (!grepl("^([A-Za-z.][A-Za-z0-9._]*::)?[A-Za-z.][A-Za-z0-9._]*$", fn)) {
+    return(.expr_text(e))
+  }
+  args <- as.list(e)[-1L]
+  .cl(fn, lapply(args, .expr_cl))
 }
 
 # the code lists' step: a mark, until the report's lists are known
@@ -697,9 +823,11 @@
     if (!several) code <- c(code, "", "# ---- analyses ----")
     # each analysis's ARD under a name of its own: ard_<id>
     top <- rows[is.na(par[rows])]
-    ard_names <- make.unique(c(taken, paste0("ard_", gsub("[^a-z0-9]+", "_",
-                                                         tolower(a$analysis_id[top])))),
-                             sep = "_")[-seq_along(taken)]
+    fun_names <- .ard_fun_names()
+    ard_names <- make.unique(c(taken, fun_names,
+                               paste0("ard_", gsub("[^a-z0-9]+", "_",
+                                                   tolower(a$analysis_id[top])))),
+                             sep = "_")[-seq_along(c(taken, fun_names))]
     avoid <- c(taken, ard_names, "ard", "ards", "report_id", if (length(lv)) .cl_name(names(lv)),
                .ard_helper_names)
     for (j in seq_along(top)) {
@@ -736,7 +864,7 @@
   # (one report's program: an analysis set that is only its adsl_<set> is
   # made once, under that name; the study's keeps pop_* for every report)
   if (several) return(code)
-  .levels_where_read(.pop_as_adata(code, ad$data_id), lv1)
+  .levels_where_read(.pop_identity(.pop_as_adata(code, ad$data_id)), lv1)
 }
 
 # One report's program: the code lists put on the data the analyses read
@@ -780,6 +908,16 @@
   .pipe_code(name, node, steps)
 }
 
+# `data |> call(...)`: a call on the data, piped (an argument of
+# bind_rows(), a call a line)
+.piped <- function(node, data) {
+  a <- if (inherits(node, "tfl_cl")) node$args
+  first <- if (length(a)) names(a)[1L] %||% ""
+  if (!identical(first, "") || !identical(a[[1L]], data)) return(node)
+  node$args <- a[-1L]
+  paste0(data, " |>\n  ", gsub("\n", "\n  ", .lay(node, lead = 4L), fixed = TRUE))
+}
+
 # One analysis: `ard_<id> <- call |> ... |> tag_ard(...)`, its label a
 # comment above it
 .ard_analysis_lines <- function(x, r, keys, subj, data, name, avoid) {
@@ -807,9 +945,12 @@
       !call_fn %in% c("(code)", "(subjects)")) {
     r0 <- r
     r0$by <- NA
-    node <- .cl("dplyr::bind_rows", list(node, .analysis_node(
+    total <- TRUE
+    node <- .cl("dplyr::bind_rows", list(.piped(node, data), .piped(.analysis_node(
       r0, keys, subj, has, den, data = data, population = pop_name,
-      fmt_fun = fmt_fun)))
+      fmt_fun = fmt_fun), data)))
+  } else {
+    total <- FALSE
   }
   keep <- if (!kind %in% c("continuous", "categorical", "missing") &&
               !identical(call_fn, "(subjects)"))
@@ -818,7 +959,10 @@
              if (length(keep)) list(.cl("keep_stats", list(.cl("c", .q(keep))))),
              list(.fmt_step(fmt, !is.null(fmt_fun)),
                   .tag_step(r$analysis_id, pid)))
-  comment <- if (!is.na(r$label)) sprintf("# %s: %s", r$analysis_id, r$label)
+  # every analysis says its id above it; its label too when it has one
+  comment <- if (!is.na(r$label)) sprintf("# %s: %s", r$analysis_id, r$label) else
+    sprintf("# %s", r$analysis_id)
+  if (total) comment <- c(comment, "# (and the Total column: the same call without `by`)")
   if (identical(call_fn, "(subjects)")) {
     # a subject-level flag: has the subject any record of the data?
     flag <- if (length(.split_bar(r$variables))) .split_bar(r$variables)[1L] else
@@ -865,6 +1009,30 @@
   h <- which(code == "# ---- populations ----")
   if (length(h) && (h == length(code) || !nzchar(code[h + 1L]))) {
     code <- code[-c(if (h > 1L && !nzchar(code[h - 1L])) h - 1L, h)]
+  }
+  code
+}
+
+# An analysis set that is its dataset as it is (`pop_enr <- adsl`: no
+# condition, nothing derived) is not an object of its own: the dataset is
+# read under its name, and a populations section left empty goes.
+.pop_identity <- function(code) {
+  rx <- "^(pop_[A-Za-z0-9._]+) <- ([A-Za-z.][A-Za-z0-9._]*)$"
+  for (k in rev(grep(rx, code))) {
+    # a pipe goes on below it: not the dataset as it is
+    if (k < length(code) && grepl("^ ", code[k + 1L])) next
+    p <- sub(rx, "\\1", code[k])
+    d <- sub(rx, "\\2", code[k])
+    word <- paste0("(^|[^A-Za-z0-9._])", gsub(".", "\\.", p, fixed = TRUE),
+                   "(?=$|[^A-Za-z0-9._])")
+    code <- code[-k]
+    code <- gsub(word, paste0("\\1", d), code, perl = TRUE)
+  }
+  h <- which(code == "# ---- populations ----")
+  for (i in rev(h)) {
+    if (i == length(code) || !nzchar(code[i + 1L])) {
+      code <- code[-c(if (i > 1L && !nzchar(code[i - 1L])) i - 1L, i)]
+    }
   }
   code
 }

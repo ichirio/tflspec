@@ -1068,6 +1068,9 @@ print.tfl_table_spec <- function(x, ...) {
   tokens_study <- character()
   page_study <- character()
   bands_own <- c(header = FALSE, footer = FALSE)
+  # the study's own header and footer rows (Standard): a report's program
+  # names the lines it shares with them (tfl_report_code(setup = TRUE))
+  bands_study <- list()
   # the report's page pattern: its rows go under the report's own, over
   # the blank rows (Standard) -- as if the report had written them, merged
   # first with its own by the same rule
@@ -1081,7 +1084,10 @@ print.tfl_table_spec <- function(x, ...) {
     mine <- !is.na(d$output_id)
     # a header or footer of the report's own (not the study's): written in
     # its program, not left to the study's setup (tfl_report_setup_code())
-    if (s %in% names(bands_own)) bands_own[[s]] <- any(mine)
+    if (s %in% names(bands_own)) {
+      bands_own[[s]] <- any(mine)
+      bands_study[[s]] <- d[!mine, , drop = FALSE]
+    }
     if (!length(.ard_spec_keys[[s]])) {
       # one row: the report's own values over the defaults, column by column
       if (sum(mine) && sum(!mine)) {
@@ -1115,6 +1121,7 @@ print.tfl_table_spec <- function(x, ...) {
   attr(sp, "tokens_study") <- tokens_study
   attr(sp, "page_study") <- page_study
   attr(sp, "bands_own") <- bands_own
+  attr(sp, "bands_study") <- bands_study
   sp
 }
 

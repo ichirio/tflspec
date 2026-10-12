@@ -24,8 +24,15 @@
 .adata_sheet <- function(x) {
   d <- x$analysis_data
   if (is.null(d)) d <- data.frame()
-  .normalize_ard_sheet(d, "analysis_data")
+  # (normalized once while the sheet is the same: every report's
+  # fingerprint and check asks for it as a study opens)
+  hit <- .adata_memo$sheet
+  if (!is.null(hit) && identical(hit$raw, d)) return(hit$out)
+  out <- .normalize_ard_sheet(d, "analysis_data")
+  .adata_memo$sheet <- list(raw = d, out = out)
+  out
 }
+.adata_memo <- new.env(parent = emptyenv())
 
 # a report's rows of the sheet
 .adata_of <- function(ad, output_id) {
@@ -242,6 +249,10 @@
   lv <- if (length(levels)) .levels_step
   for (id in ids) {
     r <- ad[match(id, ad$data_id), ]
+    # what it is, as the definition says, above it (a reviewer maps the SAP
+    # to the code by it)
+    lbl <- r$label %||% NA
+    if (!is.na(lbl) && nzchar(trimws(lbl))) out <- c(out, sprintf("# %s: %s", id, lbl))
     # written as R: its value is the data.  One expression is the data
     # itself; several run in local() (what they make on the way stays
     # inside)

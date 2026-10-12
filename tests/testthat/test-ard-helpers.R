@@ -81,8 +81,12 @@ test_that("a figure's ARD pieces: the code reads `ard`, the checks look in it", 
   expect_true(attr(code, "ard"))
   expect_false(attr(tfl_fig_design_code(tfl_fig_template("km_simple"), setup = TRUE), "ard"))
   expect_true("nr <- ard_stats(ard, \"KM\", variable = \"time\", stats = \"n.risk\", by = \"ARM\")" %in% code)
-  expect_true(any(grepl("label = paste0(\"Median (A): \", ard_value(ard, \"KM\", \"prob\", \"estimate\", ARM = \"A\", level = 0.5))",
-                        code, fixed = TRUE)))
+  # the number's text in the data part, under a name the plot uses
+  i <- which(code == "ard_label_1 <- paste0(")
+  expect_length(i, 1L)
+  expect_identical(code[i + 1:3], c("  \"Median (A): \",",
+    "  ard_value(ard, \"KM\", \"prob\", \"estimate\", ARM = \"A\", level = 0.5)", ")"))
+  expect_true(any(grepl("label = ard_label_1", code, fixed = TRUE)))
   # a script of its own says it needs the ARD
   expect_true(any(startsWith(tfl_fig_design_code(d, "F-1"), "# Input ARD: ard")))
   expect_identical(nrow(tfl_check_fig_design(d, ard = a)), 0L)
@@ -134,12 +138,15 @@ test_that("an ard_number's label names other statistics of its address", {
     plot = list(colour_by = "ARM"),
     layers = list(list(layer = "km_curve"), l))
   code <- tfl_fig_design_code(d, "F-1", setup = TRUE, save = FALSE, name = "plot")
-  i <- which(code == "    label = paste0(")
+  # a text and a number a line, in the data part
+  i <- which(code == "ard_label_1 <- paste0(")
   expect_length(i, 1L)
-  expect_match(code[i + 1L], "^      \"Median \", ard_value[(]ard, \"KM\", \"prob\", \"estimate\"")
-  expect_match(code[i + 2L], "^      \" [(]95% CI \", ard_value[(]ard, \"KM\", \"prob\", \"conf.low\"")
-  expect_match(code[i + 3L], "^      \", \", ard_value[(]ard, \"KM\", \"prob\", \"conf.high\"")
-  expect_identical(code[i + 4L], "      \")\"")
+  expect_identical(code[i + 1L], "  \"Median \",")
+  expect_match(code[i + 2L], "^  ard_value[(]ard, \"KM\", \"prob\", \"estimate\"")
+  expect_identical(code[i + 3L], "  \" (95% CI \",")
+  expect_match(code[i + 4L], "^  ard_value[(]ard, \"KM\", \"prob\", \"conf.low\"")
+  expect_match(code[i + 6L], "^  ard_value[(]ard, \"KM\", \"prob\", \"conf.high\"")
+  expect_identical(code[i + 7:8], c("  \")\"", ")"))
   expect_identical(nrow(tfl_check_fig_design(d, ard = a)), 0L)
   expect_identical(.ard_label_stats(l), c("estimate", "conf.low", "conf.high"))
   # a statistic the address does not have, named in the label
@@ -148,7 +155,7 @@ test_that("an ard_number's label names other statistics of its address", {
   expect_match(p$problem, "no statistic conf.lo")
   # no placeholder: the number alone; one: as before
   d$layers[[2]]$label <- "the median"
-  expect_true(any(grepl("label = ard_value(ard, \"KM\", \"prob\", \"estimate\"",
+  expect_true(any(grepl("ard_label_1 <- ard_value(ard, \"KM\", \"prob\", \"estimate\"",
                         tfl_fig_design_code(d, "F-1"), fixed = TRUE)))
   # the number drawn is the ARD's
   skip_if_not_installed("ggsurvfit")

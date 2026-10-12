@@ -72,12 +72,16 @@ pp_q_legend <- function(legend, title_blank = TRUE) {
                    "  legend.position        = \"inside\",\n",
                    "  legend.position.inside = %s,\n",
                    "  legend.justification   = %s,\n",
-                   "  legend.background      = element_rect(colour = \"black\", fill = \"white\", linewidth = 0.3)\n)"),
+                   "  legend.background      = element_rect(colour = \"black\", fill = \"white\", linewidth = 0.3)",
+                   # the legend's title in the same theme()
+                   if (title_blank) ",\n  legend.title           = element_blank()",
+                   "\n)"),
             vec_code(abs(j - 0.02)), vec_code(j))
+  } else if (title_blank) {
+    sprintf('theme(legend.position = "%s", legend.title = element_blank())', legend)
   } else {
     sprintf('theme(legend.position = "%s")', legend)
   }
-  if (title_blank && legend != "none") out <- c(out, "theme(legend.title = element_blank())")
   out
 }
 

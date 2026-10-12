@@ -592,7 +592,12 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   }
   if (!is.data.frame(codelists) || !nrow(codelists)) return(NULL)
   d <- as.data.frame(codelists, stringsAsFactors = FALSE)
-  .codelists_check(d)
+  # (checked once while the code lists are the same: a call for every
+  # report as a study opens; bad ones fail every call, nothing is kept)
+  if (!identical(.codelist_memo$checked, d)) {
+    .codelists_check(d)
+    .codelist_memo$checked <- d
+  }
   if (length(output_id) != 1L || is.na(output_id)) return(NULL)
   d <- d[d$output_id == output_id & !is.na(d$variable) & !is.na(d$value), ,
          drop = FALSE]
@@ -611,6 +616,7 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
            stats::setNames(ifelse(is.na(l), v, l), v)
          })
 }
+.codelist_memo <- new.env(parent = emptyenv())
 
 # Every code list row names its report (no study-wide rows)
 .codelists_check <- function(d) {
@@ -801,8 +807,8 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 #' `part` gives a piece of it instead, for a program layout of one's own
 #' (tflplanner writes one program per output that sources a shared setup):
 #' `"setup"` is what every piece starts with -- `library(cards)`,
-#' `library(dplyr)`, every computed statistic of the catalog (`tfl_stats`)
-#' and each statistic's format (`fmt_default`); `"body"` is the analyses of
+#' `library(dplyr)`, the computed statistics the analyses use
+#' (`tfl_stats`) and each statistic's format (`fmt_default`); `"body"` is the analyses of
 #' `output_id`, starting with `report_id <- "..."` and its code lists
 #' (`cl_<variable>`), and ending in `save_ard()` (one report, `save =
 #' TRUE`) or `ard`.
@@ -852,8 +858,9 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
     on.exit(options(old_att), add = TRUE)
   }
   if (part == "setup") {
-    st <- tfl_ard_statistics("continuous")
-    return(.drop_attached_ns(.ard_common_lines(st$statistic[!is.na(st$fun)], x)))
+    # the statistics the analyses use (as the whole program's setup): a
+    # setup written again on every save keeps up with them
+    return(.drop_attached_ns(.ard_common_lines(unlist(lapply(a$statistics, .split_bar)), x)))
   }
   # each report's code lists, of the variables its analyses read
   lv <- .codelist_levels_by(codelists, a)
@@ -956,11 +963,15 @@ tfl_ard_spec_hash <- function(spec, output_id, dir = ".", codelists = NULL) {
                                                    .ard_read_vars(a))))
                    utils::capture.output(print(lv))),
                collapse = "\n")
-  f <- tempfile()
-  on.exit(unlink(f))
+  # (md5sum() reads a file: one file of the session's, written over each
+  # time -- a file made and deleted for every report made a study's open
+  # slow; the same bytes, the same fingerprint)
+  f <- .hash_memo$path
+  if (is.null(f)) f <- .hash_memo$path <- tempfile("tflspec-hash-")
   writeLines(enc2utf8(txt), f, useBytes = TRUE)
   unname(tools::md5sum(f))
 }
+.hash_memo <- new.env(parent = emptyenv())
 
 #' Make the study's ARD from its definition
 #'

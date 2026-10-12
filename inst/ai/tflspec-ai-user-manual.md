@@ -778,7 +778,8 @@ back): rename the value or choose another separator.
 **Figure design:** `tfl_fig_design` `tfl_read_fig_design`
 `tfl_write_fig_design` `tfl_fig_design_code` `tfl_check_fig_design`
 `tfl_fig_advice` `tfl_fig_apply_fix` `tfl_fig_template` `tfl_fig_forest_analyses` `tfl_fig_templates`
-`tfl_fig_parts` `tfl_fig_objects` `tfl_fig_page_size` `tfl_fig_add_layer` `tfl_fig_calls` `tfl_fig_compat`
+`tfl_fig_parts` `tfl_fig_objects` `tfl_fig_page_size` `tfl_fig_uses_ard` `tfl_fig_add_layer` `tfl_fig_calls` `tfl_fig_compat`
+`tfl_fig_data_name`
 `tfl_fig_r`
 
 **Figure style:** `tfl_fig_style` `tfl_fig_style_template`

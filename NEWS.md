@@ -15,7 +15,7 @@
   change by those lines.
 
 * **A report is a table, a listing or a figure; any of its steps may be
-  its own code** (0.0.24.9097, tflplanner's user-program design, the user's direction:
+  its own code** (0.0.24.9098, tflplanner's user-program design, the user's direction:
   "user code" was a fourth type forced into line).  The report sheet's
   `data_code` and `content_code` hold the report's own R for its data
   step and its content step: a step whose code is not blank is that code,
@@ -35,7 +35,7 @@
   out from a `data` a data step of its own code made); `"all"` as before.
 
 * **A figure's data steps: each reads an object and leaves one**
-  (0.0.24.9095, tflplanner's generalised data steps, the user's
+  (0.0.24.9098, tflplanner's generalised data steps, the user's
   questions Q1-Q3).  Any data step may say the object it reads (`in`) and
   the one it leaves (`out`): `{step: filter, expr: AVAL > 0, out: df_ev}`
   writes `df_ev <- df |> filter(AVAL > 0)` and keeps `df`;
@@ -54,6 +54,58 @@
   `summary`, `rate`, `count`) stay.
 * `tfl_check_fig_design()`: an `in` no step made before (and not a
   dataset) is a problem; the columns follow the object a step reads.
+
+* **The generated programs, reviewed again** (tflplanner #347).  What the
+  programs say is the same -- the sample study's tables and listing are the
+  same RTF byte for byte -- and they read as a person writes them:
+  - *ARD programs*: an ARD object never takes a function's name
+    (`ard_stack_1`, not `ard_stack <- ... ard_stack(`); an analysis set that is
+    its dataset as it is (`pop_enr <- adsl`) is the dataset; a `filter()`'s
+    conditions are its arguments (`filter(A, B)`, not `A & B`); a long step
+    (a `derive`'s `case_when()`, a `filter()`) is laid out an argument a line,
+    and a pipe step leaves room for its ` |>` in 80 columns; every analysis
+    says its id above it, and an analysis data its label; a custom analysis
+    over several lines ends its call before the pipe goes on; a Total column's
+    two calls are piped from their data, with a comment saying why there are
+    two; `ard_setup.R` writes only the computed statistics the analyses use
+    (`var = stats::var`, `sum`; a long one as a block).
+  - *Table and report programs*: the report is one pipe (`rtf_document() |>
+    rtf_section() |> rtf_tables()`), the section as `rtf_section(header = ,
+    footer = )` (needs rtfreporter >= 0.8.2.9040); a report's footer that is
+    its own lines and the study's names the study's (`c(list(...),
+    study_footer_lines)`, which the setup now defines with
+    `study_header_lines`); the program's path through the study's path
+    variables; the levels as code lists at the head (`cl_sex <- c(...)`,
+    `plan_levels(SEX = cl_sex)`), as the ARD programs have them; a header grid
+    as `tribble()` rows (when the program attaches dplyr); whole numbers
+    without `L`.
+  - *Listings*: the records, order and dates in one pipe
+    (`mutate(across(where(...), format))`, not `data[] <- lapply(...)`), and
+    `listing_spec()` laid out as the other calls.
+  - *Figures*: the data under a name that says what it is (`adtte_ttde`, not
+    `df`; `tfl_fig_data_name()` gives it, for an app showing the objects);
+    with the study's setup, `theme_tfl()` instead of the theme's
+    numbers (boxed and L_axis); the legend in one `theme()`; the numbers an
+    `ard_number` prints named in the data part (`ard_label_1 <- ...`) and the
+    plot naming them; a palette no layer uses is not written; panels named
+    for what they are (`p_text`, not `p_txt4`); long terms wrapped; a code
+    step says its `label` (a new field of `code` and `layer_code`) instead of
+    "your code".  The forest template: no title on its subgroup axis
+    (`labs(y = NULL)` survives YAML), its rows made with dplyr (no
+    `split() |> lapply()`), its Cox model named and its event written
+    `CNSR == 0`, as the KM figures write it.
+* **Figures checked and written faster** (0.0.24.9096, #229; tflplanner's
+  study opening).  The ggplot2 compatibility walk works out once per
+  target which versions it reaches and compiles each name pattern once,
+  instead of for every piece: `tfl_check_fig_design()` about 2.5 times
+  faster, `tfl_fig_design_code()` 1.5 times, the same results.
+  `tfl_fig_uses_ard()` says whether a design reads an ARD without writing
+  its script (what the script's `attr(, "ard")` says).  A report's ARD
+  fingerprint (`tfl_ard_spec_hash()`, asked for every report as a study
+  opens) writes one file of the session's over instead of making and
+  deleting one each time, the analysis data sheet is normalized once
+  while it is the same, and the code lists are checked once while they
+  are the same (bad ones fail every call): the same fingerprints.
 
 * **A time's unit is a named constant, not a number in each program**
   (tflplanner, the user's request).  A figure's time-unit step (and the
