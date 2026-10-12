@@ -336,15 +336,15 @@ tfl_time_unit_days <- function() {
 .fig_row_steps <- c("join", "param", "flag", "filter", "derive", "time_unit",
                     "levels", "rank")
 .fig_io_fields <- function(pcs) {
-  f_in <- .ff("in", "object", "From", help = "The object it reads; empty: the one above")
-  f_out <- .ff("out", "text", "Into", help = "The object it leaves; empty: the one it reads")
+  f_in <- .ff("in", "object", "In", help = "The object it reads; empty: the one above")
+  f_out <- .ff("out", "text", "Out", help = "The object it leaves; empty: the one it reads")
   for (k in c(.fig_row_steps, "code")) pcs[[k]]$fields <- rbind(pcs[[k]]$fields, f_in, f_out)
   for (k in c("survfit", "summary", "summary_by", "rate", "count", "function")) {
     pcs[[k]]$fields <- rbind(pcs[[k]]$fields,
-      .ff("in", "object", "From", help = "The data it reads; empty: df (or the data a step put into an object of its own)"))
+      .ff("in", "object", "In", help = "The data it reads; empty: df (or the data a step put into an object of its own)"))
   }
   pcs$read$fields <- rbind(pcs$read$fields,
-    .ff("out", "text", "Into", help = "The data frame it makes; empty: df, then df2, df3 ..."))
+    .ff("out", "text", "Out", help = "The data frame it makes; empty: df, then df2, df3 ..."))
   pcs
 }
 
