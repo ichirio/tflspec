@@ -99,6 +99,15 @@ ars2 <- tfl_ars(ard_spec2)
 tfl_check_ars(ars2)
 ```
 
+## An output that prints another's analyses
+
+A figure that prints a table's median and hazard ratio has no analyses of
+its own. `tfl_ars(references = )` names such outputs -- `output_id`,
+`source` (the output whose analyses it prints) and `analysis_id` -- and
+writes each as an ARS `Output` whose list-of-contents item points at the
+source's analyses, which are not written twice. One whose source the ARS
+does not have is listed by `tfl_ars_unmapped()`.
+
 ## Running it with siera
 
 `profile = "siera"` writes ARS that [siera](https://clymbclinical.github.io/siera/)

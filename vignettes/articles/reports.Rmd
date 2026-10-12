@@ -165,6 +165,19 @@ cat(tfl_report_code(sp, "T-14-3-1", content = "plan", setup = TRUE), sep = "\n")
 A program standing alone (`setup = FALSE`, the default) says them itself;
 the file is the same either way.
 
+## Page patterns
+
+Some reports want a page that differs from the study's: a compact
+landscape page, another footer. The report sheets (`report`, `page`,
+`header`, `footer`, `titles`, `footnotes`, `tokens`) hold **named page
+patterns** besides the blank rows: rows whose `output_id` is `@` and a
+name (`@Compact`), saying only what differs from Standard (the blank
+rows). A report chooses one in `report$pattern` (blank: Standard). Its
+own rows win over its pattern's, and the pattern's over Standard's, by
+each sheet's usual rules; `(none)` takes a line out at either level. What
+a pattern changes is written in its reports' programs; Standard stays in
+the study's setup.
+
 ## The document
 
 `tfl_report()` makes the document from the content -- a plan, `rtftable`

@@ -97,6 +97,17 @@ spec$cells[spec$cells$output_id %in% "ORR",
 A template may say otherwise for one value: `{mean:stat_fmt}`,
 `{mean:.2f}`.
 
+## A Total column
+
+A column for all subjects comes from cards' own overall rows, not from a
+group the data does not have. On the `analyses` sheet, `overall = TRUE`
+runs the analysis again without its `by` and binds it under the grouped
+one; on the `tables` sheet, `total` is the column's heading (`Total`) and
+`total_position` puts it `last` (the default) or `first`. The table is
+written with rtfreporter's `plan_total()`, whose `(N={n})` is the study
+total. In the ARS the analysis is written twice, by its groups and over
+all subjects.
+
 ## Decimals, written once: the `digits` sheet
 
 The `digits` sheet gives each statistic's decimals once, for every

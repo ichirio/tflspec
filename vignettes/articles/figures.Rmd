@@ -133,6 +133,27 @@ as a setup script the figure programs source.
 names(tfl_fig_style())
 ```
 
+A time on a figure's axis is divided by a named constant, not by a number
+in each program: `mutate(AVAL = AVAL / days_per_month)`, with
+`days_per_week`, `days_per_month` and `days_per_year`. The study's setup
+sets them; `tfl_fig_setup_code()` defines each one that is not defined
+yet, with the values of `tfl_time_unit_days()`.
+
+```{r}
+tfl_time_unit_days()
+```
+
+## A forest plot from the figure's own ARD
+
+The `forest_hr` template draws hazard ratios that are statistics of an
+ARD -- one Cox model of all subjects and one within each subgroup,
+made by cards / cardx -- rather than fitting the models in the figure
+program. `tfl_fig_template("forest_hr", subgroups = , comparison = )`
+gives the design, and `attr(design, "analyses")` the analyses the ARD
+needs (`tfl_fig_forest_analyses()`), ready for the ARD spec. Its text
+columns (N, the estimate and its interval) are a panel at the right of
+the plot.
+
 ## Composed figures and ggplot2 versions
 
 A design may hold several plots (`plots:`) and a patchwork layout
