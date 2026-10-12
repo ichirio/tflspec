@@ -94,7 +94,8 @@
     table_font_size_half_points = "int", title_font_size_half_points = "int",
     footnote_font_size_half_points = "int", page_header = "bool",
     page_footer = "bool", watermark = "text", figure_width_in = "num",
-    figure_height_in = "num", ard_source = "text", pattern = "text"),
+    figure_height_in = "num", ard_source = "text", pattern = "text",
+    user_output = "text"),
   page = c(
     paper_size = "text", orientation = "text", width_in = "num",
     height_in = "num", margin_top_in = "num", margin_bottom_in = "num",

@@ -20,6 +20,9 @@
   `summary`, `rate`, `count`) stay.
 * `tfl_check_fig_design()`: an `in` no step made before (and not a
   dataset) is a problem; the columns follow the object a step reads.
+* The report sheet's `user_output`: what a user-code report makes, table
+  or figure (blank: from its output_id, F... a figure) -- for tflplanner's
+  step names and TOC compare.
 
 * **A time's unit is a named constant, not a number in each program**
   (tflplanner, the user's request).  A figure's time-unit step (and the
