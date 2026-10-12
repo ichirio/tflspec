@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A small Define-XML 2.1 made for tflspec's examples and tests: an ADSL
+     and an ADAE of a made-up study.  Not a full define (no methods,
+     comments, documents or value-level metadata). -->
+<ODM xmlns="http://www.cdisc.org/ns/odm/v1.3"
+     xmlns:xlink="http://www.w3.org/1999/xlink"
+     xmlns:def="http://www.cdisc.org/ns/def/v2.1"
+     ODMVersion="1.3.2"
+     FileType="Snapshot"
+     FileOID="DEF.TFLSPEC.EXAMPLE"
+     CreationDateTime="2026-10-09T00:00:00"
+     def:Context="Other">
+  <Study OID="ST.TFLSPEC.EXAMPLE">
+    <GlobalVariables>
+      <StudyName>TFLSPEC-EXAMPLE</StudyName>
+      <StudyDescription>A made-up study for tflspec's examples</StudyDescription>
+      <ProtocolName>TFLSPEC-EXAMPLE-01</ProtocolName>
+    </GlobalVariables>
+    <MetaDataVersion OID="MDV.TFLSPEC.EXAMPLE" Name="Study TFLSPEC-EXAMPLE, ADaM"
+                     def:DefineVersion="2.1.0">
+      <def:Standards>
+        <def:Standard OID="STD.ADAMIG.1.1" Name="ADaMIG" Type="IG" Version="1.1" Status="Final"/>
+        <def:Standard OID="STD.CT.ADAM" Name="CDISC/NCI" Type="CT" PublishingSet="ADaM" Version="2024-03-29" Status="Final"/>
+      </def:Standards>
+
+      <ItemGroupDef OID="IG.ADSL" Name="ADSL" SASDatasetName="ADSL" Repeating="No"
+                    IsReferenceData="No" Purpose="Analysis" def:Structure="One record per subject"
+                    def:StandardOID="STD.ADAMIG.1.1" def:ArchiveLocationID="LF.ADSL">
+        <Description>
+          <TranslatedText xml:lang="en">Subject-Level Analysis Dataset</TranslatedText>
+          <TranslatedText xml:lang="ja">被験者レベル解析データセット</TranslatedText>
+        </Description>
+        <ItemRef ItemOID="IT.ADSL.USUBJID" OrderNumber="1" Mandatory="Yes" KeySequence="1"/>
+        <ItemRef ItemOID="IT.ADSL.AGE" OrderNumber="2" Mandatory="No"/>
+        <ItemRef ItemOID="IT.ADSL.AGEGR1" OrderNumber="3" Mandatory="No"/>
+        <ItemRef ItemOID="IT.ADSL.SEX" OrderNumber="4" Mandatory="No"/>
+        <ItemRef ItemOID="IT.ADSL.TRT01A" OrderNumber="5" Mandatory="No"/>
+        <ItemRef ItemOID="IT.ADSL.SAFFL" OrderNumber="6" Mandatory="No"/>
+        <def:Class Name="SUBJECT LEVEL ANALYSIS DATASET"/>
+        <def:leaf ID="LF.ADSL" xlink:href="adsl.xpt">
+          <def:title>adsl.xpt</def:title>
+        </def:leaf>
+      </ItemGroupDef>
+
+      <ItemGroupDef OID="IG.ADAE" Name="ADAE" SASDatasetName="ADAE" Repeating="Yes"
+                    IsReferenceData="No" Purpose="Analysis"
+                    def:Structure="One record per subject per adverse event"
+                    def:StandardOID="STD.ADAMIG.1.1" def:ArchiveLocationID="LF.ADAE">
+        <Description>
+          <TranslatedText xml:lang="en">Adverse Events Analysis Dataset</TranslatedText>
+        </Description>
+        <ItemRef ItemOID="IT.ADAE.USUBJID" OrderNumber="1" Mandatory="Yes" KeySequence="1"/>
+        <ItemRef ItemOID="IT.ADAE.AEBODSYS" OrderNumber="2" Mandatory="No" KeySequence="2"/>
+        <ItemRef ItemOID="IT.ADAE.AESEV" OrderNumber="3" Mandatory="No"/>
+        <ItemRef ItemOID="IT.ADAE.SEX" OrderNumber="4" Mandatory="No"/>
+        <ItemRef ItemOID="IT.ADAE.TRTEMFL" OrderNumber="5" Mandatory="No"/>
+        <def:Class Name="OCCURRENCE DATA STRUCTURE">
+          <def:SubClass Name="ADVERSE EVENT"/>
+        </def:Class>
+        <def:leaf ID="LF.ADAE" xlink:href="adae.xpt">
+          <def:title>adae.xpt</def:title>
+        </def:leaf>
+      </ItemGroupDef>
+
+      <ItemDef OID="IT.ADSL.USUBJID" Name="USUBJID" SASFieldName="USUBJID" DataType="text" Length="20">
+        <Description><TranslatedText xml:lang="en">Unique Subject Identifier</TranslatedText></Description>
+        <def:Origin Type="Predecessor"><Description><TranslatedText xml:lang="en">DM.USUBJID</TranslatedText></Description></def:Origin>
+      </ItemDef>
+      <ItemDef OID="IT.ADSL.AGE" Name="AGE" SASFieldName="AGE" DataType="integer" Length="3">
+        <Description>
+          <TranslatedText xml:lang="en">Age</TranslatedText>
+          <TranslatedText xml:lang="ja">年齢</TranslatedText>
+        </Description>
+        <def:Origin Type="Predecessor"/>
+      </ItemDef>
+      <ItemDef OID="IT.ADSL.AGEGR1" Name="AGEGR1" SASFieldName="AGEGR1" DataType="text" Length="5">
+        <Description><TranslatedText xml:lang="en">Pooled Age Group 1</TranslatedText></Description>
+        <CodeListRef CodeListOID="CL.AGEGR1"/>
+        <def:Origin Type="Derived"/>
+      </ItemDef>
+      <ItemDef OID="IT.ADSL.SEX" Name="SEX" SASFieldName="SEX" DataType="text" Length="1">
+        <Description><TranslatedText xml:lang="en">Sex</TranslatedText></Description>
+        <CodeListRef CodeListOID="CL.SEX"/>
+        <def:Origin Type="Predecessor"/>
+      </ItemDef>
+      <ItemDef OID="IT.ADSL.TRT01A" Name="TRT01A" SASFieldName="TRT01A" DataType="text" Length="20">
+        <Description><TranslatedText xml:lang="en">Actual Treatment for Period 01</TranslatedText></Description>
+        <CodeListRef CodeListOID="CL.TRT01A"/>
+        <def:Origin Type="Derived"/>
+      </ItemDef>
+      <ItemDef OID="IT.ADSL.SAFFL" Name="SAFFL" SASFieldName="SAFFL" DataType="text" Length="1">
+        <Description><TranslatedText xml:lang="en">Safety Population Flag</TranslatedText></Description>
+        <CodeListRef CodeListOID="CL.NY"/>
+        <def:Origin Type="Derived"/>
+      </ItemDef>
+      <ItemDef OID="IT.ADAE.USUBJID" Name="USUBJID" SASFieldName="USUBJID" DataType="text" Length="20">
+        <Description><TranslatedText xml:lang="en">Unique Subject Identifier</TranslatedText></Description>
+        <def:Origin Type="Predecessor"/>
+      </ItemDef>
+      <ItemDef OID="IT.ADAE.AEBODSYS" Name="AEBODSYS" SASFieldName="AEBODSYS" DataType="text" Length="67">
+        <Description><TranslatedText xml:lang="en">Body System or Organ Class</TranslatedText></Description>
+        <CodeListRef CodeListOID="CL.MEDDRA"/>
+        <def:Origin Type="Predecessor"/>
+      </ItemDef>
+      <ItemDef OID="IT.ADAE.AESEV" Name="AESEV" SASFieldName="AESEV" DataType="text" Length="8">
+        <Description><TranslatedText xml:lang="en">Severity/Intensity</TranslatedText></Description>
+        <CodeListRef CodeListOID="CL.AESEV"/>
+        <def:Origin Type="Predecessor"/>
+      </ItemDef>
+      <ItemDef OID="IT.ADAE.SEX" Name="SEX" SASFieldName="SEX" DataType="text" Length="1">
+        <Description><TranslatedText xml:lang="en">Sex</TranslatedText></Description>
+        <CodeListRef CodeListOID="CL.SEX"/>
+        <def:Origin Type="Predecessor"/>
+      </ItemDef>
+      <ItemDef OID="IT.ADAE.TRTEMFL" Name="TRTEMFL" SASFieldName="TRTEMFL" DataType="text" Length="1">
+        <Description><TranslatedText xml:lang="en">Treatment Emergent Analysis Flag</TranslatedText></Description>
+        <CodeListRef CodeListOID="CL.Y"/>
+        <def:Origin Type="Derived"/>
+      </ItemDef>
+
+      <CodeList OID="CL.AGEGR1" Name="Pooled Age Group 1" DataType="text">
+        <EnumeratedItem CodedValue="&lt;65" OrderNumber="1"/>
+        <EnumeratedItem CodedValue="65-80" OrderNumber="2"/>
+        <EnumeratedItem CodedValue="&gt;80" OrderNumber="3"/>
+      </CodeList>
+      <CodeList OID="CL.SEX" Name="Sex" DataType="text" def:StandardOID="STD.CT.ADAM">
+        <CodeListItem CodedValue="F" OrderNumber="2">
+          <Decode><TranslatedText xml:lang="en">Female</TranslatedText><TranslatedText xml:lang="ja">女性</TranslatedText></Decode>
+          <Alias Context="nci:ExtCodeID" Name="C16576"/>
+        </CodeListItem>
+        <CodeListItem CodedValue="M" OrderNumber="1">
+          <Decode><TranslatedText xml:lang="en">Male</TranslatedText><TranslatedText xml:lang="ja">男性</TranslatedText></Decode>
+          <Alias Context="nci:ExtCodeID" Name="C20197"/>
+        </CodeListItem>
+        <Alias Context="nci:ExtCodeID" Name="C66731"/>
+      </CodeList>
+      <CodeList OID="CL.TRT01A" Name="Actual Treatment for Period 01" DataType="text">
+        <EnumeratedItem CodedValue="Placebo" OrderNumber="1"/>
+        <EnumeratedItem CodedValue="Xanomeline Low Dose" OrderNumber="2"/>
+        <EnumeratedItem CodedValue="Xanomeline High Dose" OrderNumber="3"/>
+      </CodeList>
+      <CodeList OID="CL.NY" Name="No Yes Response" DataType="text" def:StandardOID="STD.CT.ADAM">
+        <CodeListItem CodedValue="Y">
+          <Decode><TranslatedText xml:lang="en">Yes</TranslatedText></Decode>
+          <Alias Context="nci:ExtCodeID" Name="C49488"/>
+        </CodeListItem>
+        <CodeListItem CodedValue="N">
+          <Decode><TranslatedText xml:lang="en">No</TranslatedText></Decode>
+          <Alias Context="nci:ExtCodeID" Name="C49487"/>
+        </CodeListItem>
+        <Alias Context="nci:ExtCodeID" Name="C66742"/>
+      </CodeList>
+      <CodeList OID="CL.Y" Name="Yes Response" DataType="text">
+        <EnumeratedItem CodedValue="Y"/>
+      </CodeList>
+      <CodeList OID="CL.AESEV" Name="Severity/Intensity Scale for Adverse Events" DataType="text"
+                def:StandardOID="STD.CT.ADAM">
+        <CodeListItem CodedValue="MILD" OrderNumber="1" Rank="1">
+          <Decode><TranslatedText xml:lang="en">Mild</TranslatedText></Decode>
+          <Alias Context="nci:ExtCodeID" Name="C70666"/>
+        </CodeListItem>
+        <CodeListItem CodedValue="MODERATE" OrderNumber="2" Rank="2">
+          <Decode><TranslatedText xml:lang="en">Moderate</TranslatedText></Decode>
+          <Alias Context="nci:ExtCodeID" Name="C70667"/>
+        </CodeListItem>
+        <CodeListItem CodedValue="SEVERE" OrderNumber="3" Rank="3">
+          <Decode><TranslatedText xml:lang="en">Severe</TranslatedText></Decode>
+          <Alias Context="nci:ExtCodeID" Name="C70668"/>
+        </CodeListItem>
+        <CodeListItem CodedValue="LIFE THREATENING" OrderNumber="4" Rank="4" def:ExtendedValue="Yes">
+          <Decode><TranslatedText xml:lang="en">Life threatening</TranslatedText></Decode>
+        </CodeListItem>
+        <Alias Context="nci:ExtCodeID" Name="C66769"/>
+      </CodeList>
+      <CodeList OID="CL.MEDDRA" Name="Adverse Event Dictionary" DataType="text">
+        <ExternalCodeList Dictionary="MedDRA" Version="27.0"/>
+      </CodeList>
+    </MetaDataVersion>
+  </Study>
+</ODM>

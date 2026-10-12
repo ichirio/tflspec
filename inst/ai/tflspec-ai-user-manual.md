@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9092** (the development version,
+**This manual documents tflspec 0.0.24.9096** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -168,6 +168,7 @@ going and leaves the message in the `error` / `warning` column.
 | a figure: start / check / write the script | `tfl_fig_template()` / `tfl_check_fig_design()` / `tfl_fig_design_code()` |
 | review the whole definition: errors, what is probably wrong, what to set by hand | `tfl_review_spec(spec, ard, listings, figures)`; against the data: `facts = tfl_data_facts(data, populations = ard)`; the rules: `tfl_review_rules()`; each row's sentence is `template` filled with `args` (`message` is the two put together; the sentences beyond the rules': `tfl_review_templates()`) |
 | attach this manual to a chat session | `tflspec_ai_manual(file = )` |
+| draft a TOC or a figure design with an AI chat | `tfl_ai_context()` → `tfl_ai_prompt()` → the chat → `tfl_ai_parse()` → `tfl_ai_check()` (problems: `tfl_ai_repair_prompt()`) → `tfl_ai_diff()` (§11.1) |
 
 ### 4.1 How the columns are named
 
@@ -488,6 +489,26 @@ tfl_write_specs("spec/report.xlsx", report = sp)
   `"ADSL | ADAE"`. Not part of the spec either.
 - `attr(, "labels")` (the map's `label`: the ID as printed), `attr(, "first_titles")`, `attr(, "populations")`: for a report list to write the report's own tokens.
 
+A study's define gives a report's code lists and its variables' labels,
+by rule (Define-XML 2.0 / 2.1 through `xml2`; or the define spec workbook
+through an import profile, Pinnacle 21's by default):
+
+```r
+def <- tfl_read_define("define.xml")   # or tfl_read_define_spec("define.xlsx")
+cl <- tfl_define_codelists(def, c("SEX", "AGEGR1"), output_id = "T-14-1-1",
+                           datasets = "ADSL")
+attr(cl, "set_by_hand")   # what the define could not give
+```
+
+- The rows are the `codelists` sheet's (`value` = coded value, `label` =
+  decode, `order` = order number) plus `note` (`define: CL.SEX`); with
+  `labels = TRUE` (default) the variables' labels are `variables` sheet
+  rows in `attr(, "variables")` (`output_id`, `variable`, `label`,
+  `note`). `output_id` is required: code lists are per report.
+- A variable with different code lists in two datasets is an error: give
+  `datasets`. A company layout: `tfl_read_define_spec(path, map =
+  list(variables = list(label = "Variable Label")))`.
+
 ---
 
 ## 8. Listing spec
@@ -633,6 +654,26 @@ those packages in the code (a string or comment keeps it) and the ARD
 program's own `library(cards)`. Unset, the code is as before.
 `tfl_build_ard()` runs the program by itself and ignores both.
 
+### 11.1 Drafting with an AI chat
+
+tflspec makes the prompt and reads the answer; it sends nothing (no HTTP
+client, no key). `tfl_ai_tasks()` lists what can be drafted: `toc` (the
+study's list of outputs, read through `tfl_read_toc()`) and `figure` (one
+report's whole design, checked by `tfl_check_fig_design()`). The prompt
+carries the schema (`tfl_ai_schema()`, generated from what tflspec reads)
+and the study's names and labels (`tfl_ai_context()`), never the data's
+values; the answer is one fenced YAML (or JSON) block that starts with a
+header naming its task and version. The result is always a draft: a
+person reviews `tfl_ai_diff()` item by item before anything is applied.
+
+```r
+ctx <- tfl_ai_context("figure", output_id = "F-14-2-1",
+                      titles = "Kaplan-Meier Plot of Overall Survival")
+prompt <- tfl_ai_prompt("figure", ctx)    # format(prompt): paste into the chat
+answer <- tfl_ai_parse(reply_text, "figure")
+problems <- tfl_ai_check(answer, ctx)     # errors: send tfl_ai_repair_prompt(answer, problems)
+tfl_ai_diff(current_design, answer)       # what to accept, piece by piece
+```
 ### Names in the generated programs
 
 A program's own variables are never a data's or an ARD's column: ADaM
@@ -696,6 +737,10 @@ back): rename the value or choose another separator.
 
 **The functions the generated programs call (their code):** `tfl_helpers_code`
 
+**AI-assisted drafting:** `tfl_ai_tasks` `tfl_ai_context` `tfl_ai_schema`
+`tfl_ai_prompt` `tfl_ai_parse` `tfl_ai_check` `tfl_ai_repair_prompt`
+`tfl_ai_diff`
+
 **ARD spec:** `tfl_ard_spec` `tfl_read_ard_spec` `tfl_write_ard_spec`
 `tfl_ard_spec_template` `tfl_ard_code` `tfl_build_ard` `tfl_ard_for`
 `tfl_ard_spec_hash` `tfl_ard_methods` `tfl_ard_as_custom` `tfl_ard_statistics`
@@ -712,6 +757,9 @@ back): rename the value or choose another separator.
 
 **Report spec:** `tfl_read_report_spec` `tfl_read_toc` `tfl_report` `tfl_report_code`
 `tfl_report_path` `tfl_report_setup_code` `tfl_report_tokens`
+
+**Document import (a define, by rule):** `tfl_read_define`
+`tfl_read_define_spec` `tfl_define_profile` `tfl_define_codelists`
 
 **Listing spec:** `tfl_listing_spec` `tfl_read_listing_spec`
 `tfl_write_listing_spec` `tfl_listing` `tfl_listing_code`

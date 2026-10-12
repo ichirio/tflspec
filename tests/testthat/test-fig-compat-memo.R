@@ -1,4 +1,4 @@
-# The compat walk's versions and patterns worked out once (0.0.24.9092):
+# The compat walk's versions and patterns worked out once (0.0.24.9096):
 # the same answers as worked out each time, for every target, and after
 # the compat table changes
 

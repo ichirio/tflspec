@@ -1,6 +1,6 @@
 # tflspec (development version)
 
-* **Figures checked and written faster** (0.0.24.9092; tflplanner's
+* **Figures checked and written faster** (0.0.24.9096, #229; tflplanner's
   study opening).  The ggplot2 compatibility walk works out once per
   target which versions it reaches and compiles each name pattern once,
   instead of for every piece: `tfl_check_fig_design()` about 2.5 times
@@ -77,6 +77,65 @@
   SEX was said to read a column ADTTE has not got.  And a figure with
   analyses of its own (`figures` given) is not reviewed as a table: no
   "no column key" (T09) for a forest plot.
+
+* **AI-assisted drafting, the network-free core** (#182, part 1: the `toc`
+  and `figure` tasks).  tflspec writes the prompt and reads the answer; it
+  sends nothing (no HTTP client, no key):
+  - `tfl_ai_context()`: the study facts a prompt carries, checked (the
+    study, the report, its titles and analysis set, the datasets' names,
+    labels and kinds -- never their values -- the current design, the
+    TOC's columns and reports);
+  - `tfl_ai_prompt()`: the prompt, `system` + `user` (+ `attach` in chat
+    mode, the documents' text between `<document>` fences in API mode,
+    `messages` for a client), one text to copy with `format()`.  English,
+    with the assumptions asked in the user's language; the fixed wording
+    is in `inst/ai/prompts/*.md`;
+  - `tfl_ai_schema()`: the columns or pieces the answer may write,
+    generated from what tflspec reads (`tfl_read_toc()`'s fields;
+    `tfl_fig_parts()`, `tfl_fig_templates()`), so the prompt cannot drift;
+  - `tfl_ai_parse()`: the answer's block, YAML by default and JSON too,
+    with the header `tflspec_ai: {task, version, output_id}`; nothing is
+    repaired silently: a block that does not read, an unknown column or
+    key, a header of another task or version, a block cut off are problems
+    with their place;
+  - `tfl_ai_check()`: the answer through `tfl_read_toc()` /
+    `tfl_check_fig_design()` in its context (`where`, `problem`,
+    `severity`); `tfl_ai_repair_prompt()`: the problems sent back with the
+    schema of the offending parts only;
+  - `tfl_ai_diff()`: what the answer changes, a TOC's rows by
+    `output_id`, a figure's pieces by name and position (`added`,
+    `changed` field by field, `removed`, `moved`, `same`);
+  - `tfl_ai_tasks()` lists the tasks; `table` and `ard` come later.
+
+* **Document import, level 1: a define read by rule**
+  (ichirio/tflplanner#283).  No AI: a define is standard CDISC XML.
+  - `tfl_read_define()` reads a Define-XML 2.0 or 2.1 (`xml2`, Suggests)
+    into tidy data frames: `datasets` (`ItemGroupDef`), `variables`
+    (`ItemRef` + `ItemDef`: label, type, length, code list ...),
+    `codelists` (`CodeListItem` / `EnumeratedItem`: coded value, decode,
+    order, rank, extended, NCI code), `external` (MedDRA ...) and `study`.
+    Namespaces are found by URI, texts in the language asked for.
+  - `tfl_read_define_spec()` reads the workbook a define is made from
+    through an import profile, `tfl_define_profile()`: the Pinnacle 21
+    layout by default, any sheet or column changed by `map` for a
+    company's own; the same `tfl_define`.
+  - `tfl_define_codelists(define, variables, output_id)` gives a report's
+    `codelists` rows (value = coded value, label = decode, order) and its
+    variables' labels (rows of the `variables` sheet, in
+    `attr(, "variables")`), a `note` saying where each came from; `output_id` is required.  What the define cannot give
+    (no code list, an external dictionary, a variable it lacks) is listed
+    in `attr(, "set_by_hand")`, not guessed.
+
+* **The pkgdown site, tidied** (#162): a "Get started" article that walks
+  the whole flow (an ARD spec -> `tfl_ard_code()` / the ARD -> the bundled
+  `DM.xlsx` table -> the bundled `report.xlsx` report), articles on the
+  ARD spec, the table spec, reports, listings, figures and ARS, and a
+  reference index grouped by the workflow.  The articles follow this
+  version's spec: a report's analysis data and code lists, the variables'
+  labels, the `digits` sheet, `tables$value`, the page sheet's font, the
+  study's setup code (`tfl_report_setup_code()`, `setup = TRUE`), figure
+  code piped with `|>`, and a report's analysis data in ARS.  The README
+  says the same of the font, the setup code and the code lists.
 
 * **A Total column, read from cards' overall rows** (#212, rtfreporter
   `plan_total()`).  The `analyses` sheet's new column `overall` (`TRUE`)
