@@ -80,6 +80,8 @@
     ard_variable = "a `variable` of that analysis in the ARD",
     ard_stat = "a `stat_name` of the ARD (estimate, conf.low, median ...)",
     ard_stats = "`stat_name`s of the ARD, ` | ` between them",
+    ard_function = "an ARD function as `package::name` (cards::ard_continuous, cardx::ard_survival_survfit ...)",
+    analysis_data = "a `data_id` of the ARD definition's analysis data",
     shape = paste("a point shape, one of",
                   paste(names(pp_shape_names), collapse = " | "))
   )
