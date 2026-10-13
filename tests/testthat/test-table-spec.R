@@ -557,3 +557,29 @@ test_that("a report's line that says (none) takes the study's line of that numbe
   expect_null(band(f2, "T2"))
   expect_identical(band(f2, "T1"), list(c(l = "{PROGRAM}")))
 })
+
+test_that("the shipped AE example runs on an ARD normalized as its definitions say (#237)", {
+  skip_on_cran()
+  skip_if_not_installed("cards")
+  skip_if_not_installed("rtfreporter")
+  f <- system.file("extdata", "ard-spec", "AE.xlsx", package = "tflspec")
+  skip_if(!nzchar(f), "examples not installed")
+  sp <- tfl_read_table_spec(f)
+  ard <- cards::ard_stack_hierarchical(cards::ADAE, variables = c(AEBODSYS, AEDECOD),
+                                       by = c(TRTA, SEX), denominator = cards::ADSL,
+                                       id = USUBJID)
+  a <- tfl_ard_spec(list(
+    datasets = data.frame(dataset = "ADAE", path = "adae.rds"),
+    analyses = data.frame(output_id = "AE", analysis_id = "AE", method = "hierarchical",
+                          dataset = "ADAE", by = "TRTA | SEX",
+                          variables = "AEBODSYS | AEDECOD")))
+  line <- tfl_normalize_code(sp, a, "AE")
+  expect_identical(line, "data <- normalize_ard(ard, hierarchy = c(\"AEBODSYS\", \"AEDECOD\"))")
+  data <- eval(parse(text = sub("^data <- ", "", line)), list(ard = ard, normalize_ard = rtfreporter::normalize_ard))
+  tab <- rtfreporter::plan_apply(tfl_table_plan(data, sp), "table")
+  tab <- as.data.frame(if (is.data.frame(tab)) tab else tab[[1L]])
+  expect_identical(tab$group1[1L], tab$group1[2L])            # a SOC, then its PTs
+  expect_true(is.na(tab$label[1L]) && !is.na(tab$label[2L]))
+  # without the hierarchy the PT has no column of its own: the error says so
+  expect_error(tfl_table_plan(rtfreporter::normalize_ard(ard), sp), "AEDECOD")
+})

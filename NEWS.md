@@ -9,7 +9,10 @@
   overall = "Subjects with at least one TEAE")` -- with the hierarchy of
   the report's hierarchical analysis, so each SOC row has its counts too;
   a report with neither stays `data <- normalize_ard(ard)`.  The AI kit's
-  example T-2 and the TOC / shell guide now show the row.
+  example T-2 and the TOC / shell guide now show the row.  The shipped AE
+  example (`extdata/ard-spec/AE.xlsx`, `label = AEDECOD`) needs that
+  hierarchy too: without it the PT has no column of its own; a test now
+  runs it on an ARD normalized as `tfl_normalize_code()` writes (#237).
 
 * **An AI kit to draft a study's specs from its TOC and shells**
   (`tflspec_ai_manual(dir)`).  A chat cannot read the disk, and most take
