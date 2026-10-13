@@ -236,10 +236,15 @@ reference:
       - tfl_review_templates
       - tfl_data_facts
       - tfl_ard_facts
-  - title: AI manual
-    desc: The manual of the installed version, to attach to a chat session.
+  - title: AI manual and kit
+    desc: >
+      The manual of the installed version, and the kit to attach to a chat
+      that drafts a study's specs from its TOC and shells; each file it
+      returns reviewed, what the AI can correct apart from what the person
+      decides.
     contents:
       - tflspec_ai_manual
+      - tfl_ai_review
   - title: AI-assisted drafting
     desc: >
       A prompt for an AI chat that drafts the study's TOC or a figure

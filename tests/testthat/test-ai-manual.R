@@ -72,19 +72,18 @@ test_that("its code never calls a former name", {
   expect_false(any(grepl("\\b(stub_into|group_show|colpages_carry|pages_by)\\b", code)))
 })
 
-test_that("tflspec_ai_manual(file = ) copies it out", {
-  dest <- tempfile(fileext = ".md")
-  on.exit(unlink(dest), add = TRUE)
-  expect_identical(tflspec_ai_manual(file = dest), dest)
-  expect_identical(readLines(dest, warn = FALSE),
-                   readLines(.ai_file(), warn = FALSE))
-  expect_error(tflspec_ai_manual(file = dest), "overwrite")
-  expect_no_error(tflspec_ai_manual(file = dest, overwrite = TRUE))
+test_that("tflspec_ai_manual(dir) writes the kit, the manual as it is installed", {
   d <- file.path(tempdir(), "ai-copy")
-  dir.create(d, showWarnings = FALSE)
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
-  expect_identical(basename(tflspec_ai_manual(file = d)),
-                   "tflspec-ai-user-manual.md")
+  kit <- suppressMessages(tflspec_ai_manual(d))
+  man <- kit[basename(kit) == "01_tflspec-ai-user-manual.md"]
+  expect_length(man, 1L)
+  expect_identical(readLines(man, warn = FALSE), readLines(.ai_file(), warn = FALSE))
+  expect_error(suppressMessages(tflspec_ai_manual(d)), "overwrite")
+  expect_no_error(suppressMessages(tflspec_ai_manual(d, overwrite = TRUE)))
+  # a file is not a folder
+  f <- tempfile(fileext = ".md"); writeLines("x", f); on.exit(unlink(f), add = TRUE)
+  expect_error(tflspec_ai_manual(f), "is a file")
 })
 
 # the R code blocks only (```r), not the text / yaml ones

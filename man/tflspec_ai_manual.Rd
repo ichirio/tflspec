@@ -4,18 +4,21 @@
 \alias{tflspec_ai_manual}
 \title{The AI assistant manual that ships with this package}
 \usage{
-tflspec_ai_manual(file = NULL, overwrite = FALSE)
+tflspec_ai_manual(dir = NULL, split = FALSE, overwrite = FALSE)
 }
 \arguments{
-\item{file}{Optional destination.  When given, the manual is copied there
-(ready to attach to a chat session) and the destination is returned
-invisibly.  A directory is accepted, and the file keeps its own name.}
+\item{dir}{Optional folder.  When given, the kit is written there (the
+folder is made if need be) and the paths of its files are returned
+invisibly; the files, their sizes and what to attach are printed.}
 
-\item{overwrite}{Overwrite \code{file} if it already exists.  Default \code{FALSE}.}
+\item{split}{With \code{dir}: one blank workbook a spec instead of one for
+all.}
+
+\item{overwrite}{Write over a kit already in \code{dir}.  Default \code{FALSE}.}
 }
 \value{
-The path to the manual -- the installed file when \code{file} is \code{NULL},
-otherwise the copy, returned invisibly.
+The path to the manual when \code{dir} is \code{NULL}; otherwise the kit's
+files, invisibly.
 }
 \description{
 tflspec is too new to be in any chat model's training data: asked for a
@@ -32,12 +35,44 @@ sit in one chat session.
 package}, so the manual you attach always describes the version you
 actually have.  For the rendering side attach rtfreporter's own manual
 instead (\code{rtfreporter::rtfreporter_ai_manual()}).
+
+With \code{dir}, it writes everything a chat needs to draft a study's specs
+from the company's TOC and shells into one flat folder -- eight files,
+a few hundred KB, under the ten files most chats take:
+\itemize{
+\item \verb{00_START_HERE.md} -- the request to paste, and what to attach;
+\item \verb{01_tflspec-ai-user-manual.md} -- this manual;
+\item \verb{02_tflspec-ai-toc-shell-guide.md} -- how to read a TOC and shells
+into specs, the checklist the assistant runs, the assumptions it must
+list;
+\item \verb{03_blank_specs.xlsx} -- every sheet of the ARD, table, report and
+listing specs, empty, with a \verb{_columns} sheet saying what each column
+means (written now from the column catalog, \code{\link[=tfl_spec_columns]{tfl_spec_columns()}}, so
+it is always this version's); \code{split = TRUE} writes one workbook a
+spec instead (\verb{03a_} ... \verb{03d_}, eleven files);
+\item \verb{04_blank_figure.yml} -- a figure design, every field as a comment;
+\item \verb{05_example_toc_shell.xlsx}, \verb{06_example_specs.xlsx},
+\verb{07_example_figure.yml} -- a made-up study end to end: its TOC and four
+shells (a demographics table, an AE table by SOC and PT, a listing of
+serious AEs, a figure of mean blood pressure), and the specs written
+from them, with the \verb{_assumptions} sheet the guide asks for.  The
+example runs on the CDISC pilot data (pharmaverseadam).
+}
+
+What the assistant returns is checked file by file with
+\code{\link[=tfl_ai_review]{tfl_ai_review()}}.
 }
 \examples{
 # where the manual lives
 tflspec_ai_manual()
-
-# read it here, or copy it out to attach to a chat session
 writeLines(head(readLines(tflspec_ai_manual()), 3))
-tflspec_ai_manual(file = tempfile(fileext = ".md"))
+
+# the kit to attach to a chat
+\donttest{
+kit <- tflspec_ai_manual(file.path(tempdir(), "ai-kit"))
+basename(kit)
+}
+}
+\seealso{
+\code{\link[=tfl_ai_review]{tfl_ai_review()}} for the files the assistant returns.
 }

@@ -1,6 +1,6 @@
 Package: tflspec
 Title: 'Excel' Specifications for Clinical Tables, Listings and Figures
-Version: 0.0.24.9099
+Version: 0.0.24.9101
 Authors@R: c(
     person(given  = "Yoichi",
            family = "Masui",
@@ -50,6 +50,7 @@ Suggests:
     mmrm,
     parameters,
     patchwork,
+    pharmaverseadam,
     rstudioapi,
     siera (>= 0.5.6),
     smd,
