@@ -153,6 +153,14 @@ writes it with \code{\link[=tfl_normalize_code]{tfl_normalize_code()}}.  Blank: 
 came in.  Blank: none.}
 \item{\code{stack_sep}}{What joins a crossed layer's names and levels
 (\code{AGEGR1 / SEX}, \code{65-80 / F}).  Blank: \code{/}.}
+\item{\code{compare}, \code{compare_by}, \code{compare_position}}{Comparison columns
+(\code{\link[rtfreporter:plan_verbs]{rtfreporter::plan_compare()}}): their names (\code{p | diff}), each
+reading the ARD's comparison records -- a test's p-value, a
+difference and its CI, the column key with no value -- onto the row
+of their variable.  A column's templates are the \code{cells} rows whose
+\code{variable} is its name (one a \code{context} when a test prints another
+way).  \code{compare_by} splits the comparisons into columns, one a
+level; \code{compare_position} is \code{last} (blank) or \code{first}.}
 \item{\code{stat_groups}}{One record's statistics in named groups, \code{|}
 between groups, \verb{,} between a group's statistics: \verb{n = N | orr_ci = n, estimate, conf.low, conf.high} (\code{\link[rtfreporter:plan_verbs]{rtfreporter::plan_stat_groups()}}).
 The key \code{.stat_group} then names them in \code{cols} (\code{TRT01A | .stat_group}: N in one column, the rate and CI in the next), and a

@@ -241,6 +241,11 @@
   cm <- .ard_spec_cells(sp)
   how <- sa[intersect(c("stats", "value", "na"), names(sa))]
   if (length(cm) || length(how)) do.call(add, c(list("plan_cells"), cm, how))
+  cp <- .ard_spec_compare(sp)
+  if (!is.null(cp)) {
+    do.call(add, c(list("plan_compare"), cp$cols,
+                   list(by = cp$by, position = cp$position)))
+  }
 
   # rows with no template: the display format of one statistic, for a
   # table that lays the statistics out as rows
