@@ -477,6 +477,8 @@ tfl_normalize_code <- function(spec, ard_spec = NULL, output_id = NULL,
   }
   sep <- if (nrow(t) && "stack_sep" %in% names(t)) t$stack_sep[1L] else NA
   sep <- if (!is.na(sep) && nzchar(sep)) .ard_spec_unquote(sep)
+  nest <- nrow(t) && "stack_nest" %in% names(t) &&
+    toupper(trimws(as.character(t$stack_nest[1L]))) %in% "TRUE"
   hier <- character()
   if (!is.null(ard_spec)) {
     an <- ard_spec$analyses
@@ -499,7 +501,8 @@ tfl_normalize_code <- function(spec, ard_spec = NULL, output_id = NULL,
               sprintf("%s = %s", names(stk), vapply(stk, layers_code, "")),
               collapse = ", "), ")"),
             if (!is.null(stk) && !is.null(sep))
-              paste("stack_sep =", encodeString(sep, quote = "\"")))
+              paste("stack_sep =", encodeString(sep, quote = "\"")),
+            if (!is.null(stk) && isTRUE(nest)) "stack_nest = TRUE")
   sprintf("%s <- normalize_ard(%s)", data, paste(args, collapse = ", "))
 }
 

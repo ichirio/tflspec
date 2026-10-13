@@ -196,7 +196,7 @@
     tables    = c("output_id", "cols", "rows", "label", "stats", "value",
                   "sep", "sort", "sort_stat", "na", "header_n", "total",
                   "total_position", "overall_label", "stat_groups", "stack",
-                  "stack_sep", "compare", "compare_by", "compare_position"),
+                  "stack_sep", "stack_nest", "compare", "compare_by", "compare_position"),
     variables = c("output_id", "variable", "label", "order", "levels",
                   "empty_levels", "under"),
     # the study's code list: a value's text and place
@@ -621,6 +621,10 @@
 #'     came in.  Blank: none.}
 #'   \item{`stack_sep`}{What joins a crossed layer's names and levels
 #'     (`AGEGR1 / SEX`, `65-80 / F`).  Blank: ` / `.}
+#'   \item{`stack_nest`}{`TRUE`: a crossed layer's outer levels in a key of
+#'     their own, `<name>_outer`, its innermost in `<name>_level`, so `rows`
+#'     `grp = subgroup | outer = subgroup_outer | lvl = subgroup_level` with
+#'     a stub prints the outer level as a heading.  Blank: `FALSE`.}
 #'   \item{`compare`, `compare_by`, `compare_position`}{Comparison columns
 #'     ([rtfreporter::plan_compare()]): their names (`p | diff`), each
 #'     reading the ARD's comparison records -- a test's p-value, a

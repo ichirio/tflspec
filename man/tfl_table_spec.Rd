@@ -153,6 +153,10 @@ writes it with \code{\link[=tfl_normalize_code]{tfl_normalize_code()}}.  Blank: 
 came in.  Blank: none.}
 \item{\code{stack_sep}}{What joins a crossed layer's names and levels
 (\code{AGEGR1 / SEX}, \code{65-80 / F}).  Blank: \code{/}.}
+\item{\code{stack_nest}}{\code{TRUE}: a crossed layer's outer levels in a key of
+their own, \verb{<name>_outer}, its innermost in \verb{<name>_level}, so \code{rows}
+\code{grp = subgroup | outer = subgroup_outer | lvl = subgroup_level} with
+a stub prints the outer level as a heading.  Blank: \code{FALSE}.}
 \item{\code{compare}, \code{compare_by}, \code{compare_position}}{Comparison columns
 (\code{\link[rtfreporter:plan_verbs]{rtfreporter::plan_compare()}}): their names (\code{p | diff}), each
 reading the ARD's comparison records -- a test's p-value, a
