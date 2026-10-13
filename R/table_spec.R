@@ -197,7 +197,7 @@
                   "sep", "sort", "sort_stat", "na", "header_n", "total",
                   "total_position", "overall_label", "stat_groups", "stack",
                   "stack_sep", "stack_nest", "compare", "compare_by", "compare_position",
-                  "show_keys"),
+                  "show_keys", "keep_where", "keep_any", "keep_parents"),
     variables = c("output_id", "variable", "label", "order", "levels",
                   "empty_levels", "under"),
     # the study's code list: a value's text and place
@@ -634,6 +634,12 @@
 #'     `variable` is its name (one a `context` when a test prints another
 #'     way).  `compare_by` splits the comparisons into columns, one a
 #'     level; `compare_position` is `last` (blank) or `first`.}
+#'   \item{`keep_where`, `keep_any`, `keep_parents`}{Rows kept by a
+#'     condition over the record ([rtfreporter::plan_filter()]): one R
+#'     condition in its guard language (`p >= 0.05`; several joined by `&`);
+#'     `keep_any = FALSE` asks it of every column, not any; `keep_parents =
+#'     drop` judges a parent row (a SOC) by its own counts instead of
+#'     keeping it with its children.  Blank: every row.}
 #'   \item{`show_keys`}{Row keys the table also shows as variables, `|`
 #'     between them (`SEX | AGEGR1`): their own counts stay in the body,
 #'     a block of their own beside a subgroup layer
@@ -1539,6 +1545,27 @@ print.tfl_table_spec <- function(x, ...) {
     }
   }
   out
+}
+
+# `tables$keep_where` / `keep_any` / `keep_parents`: plan_filter() from the
+# sheet.  The condition is R over the record's statistics and keys, checked
+# here for being R, so a typo is said at the sheet and not in the program.
+.ard_spec_filter <- function(sp) {
+  t <- sp$tables
+  if (!nrow(t) || !"keep_where" %in% names(t) || is.na(t$keep_where[1L]) ||
+      !nzchar(trimws(t$keep_where[1L]))) return(NULL)
+  w <- trimws(t$keep_where[1L])
+  ok <- tryCatch({ str2lang(w); TRUE }, error = function(e) conditionMessage(e))
+  if (!isTRUE(ok)) {
+    .ard_stop(sprintf("`tables$keep_where`: %s is not R: %s", sQuote(w), ok))
+  }
+  get1 <- function(k) if (k %in% names(t) && !is.na(t[[k]][1L]) &&
+                          nzchar(trimws(t[[k]][1L]))) trimws(t[[k]][1L])
+  any <- get1("keep_any")
+  par <- get1("keep_parents")
+  list(where = w,
+       any = if (!is.null(any) && identical(toupper(any), "FALSE")) FALSE,
+       parents = if (identical(par, "drop")) "drop")
 }
 
 # `tables$compare`: the comparison columns' names, `p | diff`
@@ -2523,6 +2550,13 @@ tfl_as_table_spec <- function(x, output_id = NULL, compare = TRUE) {
       }
     }
   }
+  # plan_filter(): its conditions, one R condition (several joined by &)
+  fl <- ly$filter$filter
+  tables$keep_where <- if (length(fl$conds))
+    paste(vapply(fl$conds, function(e) paste(deparse(e), collapse = " "), ""),
+          collapse = " & ") else NA_character_
+  tables$keep_any <- if (isFALSE(fl$any)) "FALSE" else NA_character_
+  tables$keep_parents <- if (identical(fl$parents, "drop")) "drop" else NA_character_
   tables$compare <- if (length(cmp$cols))
     paste(unique(vapply(cmp$cols, `[[`, "", "column")), collapse = " | ") else NA_character_
   tables$compare_by <- cmp$by %||% NA_character_

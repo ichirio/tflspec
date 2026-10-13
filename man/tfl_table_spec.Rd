@@ -165,6 +165,11 @@ of their variable.  A column's templates are the \code{cells} rows whose
 \code{variable} is its name (one a \code{context} when a test prints another
 way).  \code{compare_by} splits the comparisons into columns, one a
 level; \code{compare_position} is \code{last} (blank) or \code{first}.}
+\item{\code{keep_where}, \code{keep_any}, \code{keep_parents}}{Rows kept by a
+condition over the record (\code{\link[rtfreporter:plan_verbs]{rtfreporter::plan_filter()}}): one R
+condition in its guard language (\code{p >= 0.05}; several joined by \code{&});
+\code{keep_any = FALSE} asks it of every column, not any; \code{keep_parents = drop} judges a parent row (a SOC) by its own counts instead of
+keeping it with its children.  Blank: every row.}
 \item{\code{show_keys}}{Row keys the table also shows as variables, \code{|}
 between them (\code{SEX | AGEGR1}): their own counts stay in the body,
 a block of their own beside a subgroup layer

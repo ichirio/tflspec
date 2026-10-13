@@ -1,5 +1,11 @@
 # tflspec (development version)
 
+* **`tables$keep_where`, `keep_any`, `keep_parents`**: rows kept by a
+  condition, as rtfreporter's `plan_filter()` (rtfreporter #620, needs
+  0.8.2.9050): `p >= 0.05` keeps the PTs with 5% or more in any arm. The
+  condition is checked for being R at the sheet; `tfl_as_table_spec()`
+  writes it back.
+
 * **`tables$show_keys`, and `.variables` / `.others` in `tables$stat_groups`**
   (rtfreporter #621, needs 0.8.2.9049): a subgroup's own n (%) beside its
   ORR. `SEX | AGEGR1` becomes `table_plan(show_keys = )`; `n = N | orr_ci =
