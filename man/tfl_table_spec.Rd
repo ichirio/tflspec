@@ -145,6 +145,18 @@ subjects with at least one event, from a \code{hierarchical} analysis with
 at least one TEAE").  It is the normalization's
 (\code{\link[rtfreporter:normalize_ard]{rtfreporter::normalize_ard()}}'s \code{overall}): the report's program
 writes it with \code{\link[=tfl_normalize_code]{tfl_normalize_code()}}.  Blank: no such row.}
+\item{\code{stack}}{Subgroups as one pair of keys, its layers after \code{=}:
+\verb{subgroup = ALL, SEX, AGEGR1, AGEGR1 * SEX} (\code{*} crosses variables,
+\code{|} between several keys), or the strata slots, \verb{subgroup = group2, group3}: the normalization's (\code{\link[rtfreporter:normalize_ard]{rtfreporter::normalize_ard()}}'s
+\code{stack}), written by \code{\link[=tfl_normalize_code]{tfl_normalize_code()}}.  \code{rows} then names
+\code{subgroup} and \code{subgroup_level}, whatever group slot each variable
+came in.  Blank: none.}
+\item{\code{stack_sep}}{What joins a crossed layer's names and levels
+(\code{AGEGR1 / SEX}, \code{65-80 / F}).  Blank: \code{/}.}
+\item{\code{stat_groups}}{One record's statistics in named groups, \code{|}
+between groups, \verb{,} between a group's statistics: \verb{n = N | orr_ci = n, estimate, conf.low, conf.high} (\code{\link[rtfreporter:plan_verbs]{rtfreporter::plan_stat_groups()}}).
+The key \code{.stat_group} then names them in \code{cols} (\code{TRT01A | .stat_group}: N in one column, the rate and CI in the next), and a
+\code{cells} row's \code{variable} may be a group's name.  Blank: none.}
 }
 }
 
@@ -221,11 +233,13 @@ prefix names:
 \code{break_before} (row positions to cut before, \code{20 | 40}, with
 \code{split = rows}), \code{min_group_rows}, \code{cont_label}, \code{page_by} (BY
 pages: the column(s) partitioning the body first, the row budget
-inside each).}
+inside each), \code{heading} (each BY page's name from a template,
+\code{Treatment: {value} (N={n})}).}
 \item{\verb{group_*}}{\code{mode} and \code{collapse} of \code{\link[rtfreporter:plan_verbs]{rtfreporter::plan_row_group()}}.
 \code{group_page = TRUE} is \code{\link[rtfreporter:plan_verbs]{rtfreporter::plan_paginate_group()}}: one page per
 value of \code{group_col} (blank: the outermost row key), and
-\code{group_keep = FALSE} leaves that column unprinted.}
+\code{group_keep = FALSE} leaves that column unprinted, and
+\code{group_heading} names each page from a template (\code{{value}}, \code{{n}}).}
 \item{\verb{blank_*}}{\code{\link[rtfreporter:plan_verbs]{rtfreporter::plan_blanks()}}: \code{where}, \code{first}, \code{last},
 \code{counted}.}
 \item{\verb{stub_*}}{\code{\link[rtfreporter:plan_verbs]{rtfreporter::plan_stub()}}: \code{vars}, \code{name}, \code{indent}, \code{summary},

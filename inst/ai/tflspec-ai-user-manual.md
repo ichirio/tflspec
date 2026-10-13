@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9104** (the development version,
+**This manual documents tflspec 0.0.24.9105** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -361,6 +361,8 @@ once. The `study` sheet has `key` / `value` (`rounding`: `sas` / `iec` /
 | `sort` | `plan_sort()` | `TRUE`, `FALSE`, or keys in order, `-` for descending |
 | `sort_stat` | `plan_sort(stat = )` | the statistic totalled for a frequency order |
 | `header_n` | `plan_col_header(values = list(n = ))` | `page`, `table`, or `n = page \| N = table` |
+| `stat_groups` | `plan_stat_groups()` | one record's statistics in named groups, `n = N \| orr_ci = n, estimate, conf.low, conf.high`; the key `.stat_group` in `cols` puts N in one column and the rate and CI in the next, in `rows` one group under another; a `cells` row's `variable` may be a group's name, its template one row or several (n rows x m columns of one record). Keep the ARD as it is: no `mutate()` of `variable` |
+| `stack`, `stack_sep` | `normalize_ard(stack = , stack_sep = )` | subgroups as one pair of keys, `subgroup = ALL, SEX, AGEGR1, AGEGR1 * SEX` (`*` crosses; or the slots `subgroup = group2, group3`); `rows` then names `subgroup` / `subgroup_level`, never `group2` / `group2_level`; written by `tfl_normalize_code()` |
 | `overall_label` | `normalize_ard(overall = )` | the any-event row of a hierarchy ("Subjects with at least one TEAE"; its analysis `args` `over_variables = TRUE`): the program's normalization, written by `tfl_normalize_code(spec, ard_spec)` (with the `hierarchy` of its `hierarchical` analysis) |
 
 **variables**: `variable`, `label`, `order`, `levels` (`Grade 0 | Grade 1`), `empty_levels` (`hide`: no row for a value no record has; blank: a 0 row), `under` (`RACE: Asian`: its rows under that level of RACE, one indent deeper, its own heading dropped -- `plan_nest()`)
@@ -392,7 +394,8 @@ cells  <- data.frame(output_id = "T-14-3-1", template = "{n} ({p:.1f%})")
 |---|---|
 | `pages_max_rows`, `pages_split`, `pages_break_before`, `pages_min_group_rows`, `pages_cont_label`, `pages_page_by` | `plan_paginate_rows()` (`page_by`: BY pages, the row budget inside each) |
 | `group_mode`, `group_collapse` | `plan_row_group()` |
-| `group_page`, `group_col`, `group_keep` | `plan_paginate_group(col, keep)` — one page per value |
+| `group_page`, `group_col`, `group_keep`, `group_heading` | `plan_paginate_group(col, keep, heading)` — one page per value; `group_heading = Treatment: {value} (N={n})` names each page (the `auto_section` heading) with the value and its N from the ARD (bind `cards::ard_tabulate(adsl, variables = TRT01A)`) |
+| `pages_heading` | `plan_paginate_rows(page_by, heading)` | each BY page named like `group_heading`, a page per arm with a row budget inside |
 | `blank_where`, `blank_first`, `blank_last`, `blank_counted` | `plan_blanks()` |
 | `stub_vars`, `stub_name`, `stub_indent`, `stub_summary`, `stub_before` | `plan_stub()` |
 | `colpages_every`, `colpages_at`, `colpages_cut_by`, `colpages_keep`, `colpages_fit`, `colpages_allow_span_break`, `colpages_order` | `plan_paginate_cols()` |

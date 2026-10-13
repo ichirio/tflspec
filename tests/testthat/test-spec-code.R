@@ -234,3 +234,114 @@ test_that("tfl_normalize_code(): the hierarchy and the any-event row the definit
   tfl_write_table_spec(sp, f)
   expect_identical(tfl_read_table_spec(f)$tables$overall_label[2L], "Subjects with at least one TEAE")
 })
+
+test_that("tables$stat_groups: one record's statistics in two columns, as plan_stat_groups() (rtfreporter #619)", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("broom", minimum_version = "1.0.8")
+  skip_if_not(utils::packageVersion("rtfreporter") >= "0.8.2.9046")
+  adsl <- cards::ADSL
+  adsl$RESP <- factor(ifelse(adsl$AGE > 75, "Y", "N"), levels = c("Y", "N"))
+  ard <- cards::ard_strata(adsl, .by = ARM, .strata = SEX, .f = ~ cardx::ard_categorical_ci(
+    .x, variables = RESP, value = RESP ~ "Y", method = "clopper-pearson", conf.level = 0.90))
+  sp <- tfl_table_spec(
+    tables = data.frame(output_id = "ORR", cols = "ARM | .stat_group",
+                        rows = "grp1 = group2 | grp2 = group2_level", label = "NA", sort = "FALSE",
+                        stat_groups = "n = N | orr_ci = n, estimate, conf.low, conf.high"),
+    cells = data.frame(output_id = "ORR", variable = c("n", "orr_ci", "orr_ci"),
+                       row = c("1", "1", "2"),
+                       template = c("{N:.0f}", "{n:.0f} ({estimate:.1f%})",
+                                    "{conf.low:.1f%}, {conf.high:.1f%}")))
+  code <- paste(tfl_table_code(sp, "ORR"), collapse = "
+")
+  expect_match(code, "plan_stat_groups(", fixed = TRUE)
+  expect_match(code, "orr_ci = c(\"n\", \"estimate\", \"conf.low\", \"conf.high\")", fixed = TRUE)
+  tab <- suppressMessages(rtfreporter::plan_apply(
+    tfl_table_plan(rtfreporter::normalize_ard(ard), sp, "ORR"), "table"))
+  tab <- as.data.frame(if (is.data.frame(tab)) tab else tab[[1L]])
+  expect_true(all(c("Placebo____n", "Placebo____orr_ci") %in% names(tab)))
+  # a plan says it back
+  back <- tfl_as_table_spec(tfl_table_plan(rtfreporter::normalize_ard(ard), sp, "ORR"),
+                            output_id = "ORR", compare = FALSE)
+  expect_identical(back$tables$stat_groups, "n = N | orr_ci = n, estimate, conf.low, conf.high")
+  expect_error(tfl_table_spec(tables = data.frame(output_id = "X", cols = "ARM", stat_groups = "n N")) |>
+                 tfl_table_code("X"), "not `name = statistic")
+})
+
+test_that("layout$group_heading: a page per arm named with the arm and its N, as plan_paginate_group(heading = ) (rtfreporter #619)", {
+  skip_if_not_installed("cards")
+  skip_if_not(utils::packageVersion("rtfreporter") >= "0.8.2.9046")
+  skip_if_not("heading" %in% names(formals(rtfreporter::plan_paginate_group)))
+  adsl <- cards::ADSL
+  ard <- cards::bind_ard(cards::ard_tabulate(adsl, variables = ARM),
+                         cards::ard_tabulate(adsl, by = ARM, variables = SEX))
+  sp <- tfl_table_spec(
+    tables = data.frame(output_id = "T", cols = ".stat_group",
+                        rows = "arm = ARM | label = variable_level", label = "NA",
+                        stat_groups = "n = n | pct = p"),
+    cells = data.frame(output_id = "T", variable = c("n", "pct"),
+                       template = c("{n}", "{p:.1f%}")),
+    layout = data.frame(output_id = "T", group_page = "TRUE", group_col = "arm",
+                        group_keep = "FALSE", group_heading = "Treatment: {value} (N={n})"))
+  code <- paste(tfl_table_code(sp, "T"), collapse = "\n")
+  expect_match(code, "heading = \"Treatment: {value} (N={n})\"", fixed = TRUE)
+  p <- tfl_table_plan(rtfreporter::normalize_ard(ard), sp, "T")
+  pages <- suppressMessages(rtfreporter::plan_apply(p))
+  n_arm <- table(adsl$ARM)
+  expect_identical(names(pages), sprintf("Treatment: %s (N=%d)", names(n_arm), as.integer(n_arm)))
+  back <- tfl_as_table_spec(p, output_id = "T", compare = FALSE)
+  expect_identical(back$layout$group_heading, "Treatment: {value} (N={n})")
+})
+
+test_that("tables$stack and layout$pages_heading: subgroups as one pair of keys, BY pages named (rtfreporter #619)", {
+  skip_if_not_installed("cards")
+  skip_if_not("stack" %in% names(formals(rtfreporter::normalize_ard)))
+  adsl <- cards::ADSL
+  adsl$ALL <- "All"
+  ard <- cards::bind_ard(
+    cards::ard_tabulate(adsl, variables = ARM),
+    cards::ard_tabulate(adsl, by = c(ARM, ALL), variables = DISCONFL),
+    cards::ard_tabulate(adsl, by = c(SEX, ARM), variables = DISCONFL))
+  sp <- tfl_table_spec(
+    tables = data.frame(output_id = "T", cols = ".stat_group",
+                        rows = "arm = ARM | grp = subgroup | lvl = subgroup_level",
+                        label = "NA", stat_groups = "n = n | pct = p",
+                        stack = "subgroup = ALL, SEX"),
+    cells = data.frame(output_id = "T", variable = c("n", "pct"),
+                       template = c("{n}", "{p:.1f%}")),
+    layout = data.frame(output_id = "T", pages_page_by = "arm", pages_max_rows = "20",
+                        pages_heading = "Treatment: {value} (N={n})"))
+  line <- tfl_normalize_code(sp, output_id = "T")
+  expect_identical(line, "data <- normalize_ard(ard, stack = list(subgroup = c(\"ALL\", \"SEX\")))")
+  data <- eval(parse(text = sub("normalize_ard", "rtfreporter::normalize_ard", line, fixed = TRUE)))
+  code <- paste(tfl_table_code(sp, "T"), collapse = "\n")
+  expect_match(code, "heading = \"Treatment: {value} (N={n})\"", fixed = TRUE)
+  p <- tfl_table_plan(data, sp, "T")
+  pages <- suppressMessages(rtfreporter::plan_apply(p))
+  n_arm <- table(adsl$ARM)
+  expect_identical(names(pages), sprintf("Treatment: %s (N=%d)", names(n_arm), as.integer(n_arm)))
+  back <- tfl_as_table_spec(p, output_id = "T", compare = FALSE)
+  expect_identical(back$layout$pages_heading, "Treatment: {value} (N={n})")
+  expect_error(tfl_normalize_code(tfl_table_spec(tables = data.frame(output_id = "X", cols = "ARM",
+                                                                     stack = "SEX")), output_id = "X"),
+               "tables$stack", fixed = TRUE)
+})
+
+test_that("tables$stack: crossed layers (AGEGR1 * SEX), the slots, stack_sep (rtfreporter #619)", {
+  skip_if_not("stack_sep" %in% names(formals(rtfreporter::normalize_ard)))
+  line <- function(stack, sep = NA) tfl_normalize_code(tfl_table_spec(tables = data.frame(
+    output_id = "X", cols = "ARM", stack = stack, stack_sep = sep)), output_id = "X")
+  expect_identical(line("subgroup = ALL, SEX, AGEGR1 * SEX"),
+                   "data <- normalize_ard(ard, stack = list(subgroup = list(\"ALL\", \"SEX\", c(\"AGEGR1\", \"SEX\"))))")
+  expect_identical(line("subgroup = group2, group3"),
+                   "data <- normalize_ard(ard, stack = list(subgroup = c(\"group2\", \"group3\")))")
+  expect_identical(line("subgroup = SEX, AGEGR1 * SEX", "\" x \""),
+                   "data <- normalize_ard(ard, stack = list(subgroup = list(\"SEX\", c(\"AGEGR1\", \"SEX\"))), stack_sep = \" x \")")
+  skip_if_not_installed("cards")
+  adsl <- cards::ADSL
+  ard <- cards::bind_ard(cards::ard_tabulate(adsl, by = c(ARM, SEX), variables = DISCONFL),
+                         cards::ard_tabulate(adsl, by = c(ARM, AGEGR1, SEX), variables = DISCONFL))
+  data <- eval(parse(text = sub("normalize_ard", "rtfreporter::normalize_ard",
+                                line("subgroup = SEX, AGEGR1 * SEX"), fixed = TRUE)))
+  expect_identical(levels(data$subgroup), c("SEX", "AGEGR1 / SEX"))
+})

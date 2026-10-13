@@ -47,9 +47,9 @@
     pages_max_rows = "int", pages_split = "text",
     pages_break_before = "ids",
     pages_min_group_rows = "int", pages_cont_label = "text",
-    pages_page_by = "list",
+    pages_page_by = "list", pages_heading = "text",
     group_col = "text", group_mode = "text", group_collapse = "flex",
-    group_page = "bool", group_keep = "bool",
+    group_page = "bool", group_keep = "bool", group_heading = "text",
     blank_where = "blanks", blank_first = "bool", blank_last = "bool",
     blank_counted = "bool",
     stub_vars = "list", stub_name = "text", stub_indent = "int",
@@ -195,7 +195,8 @@
   list(
     tables    = c("output_id", "cols", "rows", "label", "stats", "value",
                   "sep", "sort", "sort_stat", "na", "header_n", "total",
-                  "total_position", "overall_label"),
+                  "total_position", "overall_label", "stat_groups", "stack",
+                  "stack_sep"),
     variables = c("output_id", "variable", "label", "order", "levels",
                   "empty_levels", "under"),
     # the study's code list: a value's text and place
@@ -611,6 +612,21 @@
 #'     at least one TEAE").  It is the normalization's
 #'     ([rtfreporter::normalize_ard()]'s `overall`): the report's program
 #'     writes it with [tfl_normalize_code()].  Blank: no such row.}
+#'   \item{`stack`}{Subgroups as one pair of keys, its layers after `=`:
+#'     `subgroup = ALL, SEX, AGEGR1, AGEGR1 * SEX` (`*` crosses variables,
+#'     `|` between several keys), or the strata slots, `subgroup = group2,
+#'     group3`: the normalization's ([rtfreporter::normalize_ard()]'s
+#'     `stack`), written by [tfl_normalize_code()].  `rows` then names
+#'     `subgroup` and `subgroup_level`, whatever group slot each variable
+#'     came in.  Blank: none.}
+#'   \item{`stack_sep`}{What joins a crossed layer's names and levels
+#'     (`AGEGR1 / SEX`, `65-80 / F`).  Blank: ` / `.}
+#'   \item{`stat_groups`}{One record's statistics in named groups, `|`
+#'     between groups, `,` between a group's statistics: `n = N | orr_ci =
+#'     n, estimate, conf.low, conf.high` ([rtfreporter::plan_stat_groups()]).
+#'     The key `.stat_group` then names them in `cols` (`TRT01A |
+#'     .stat_group`: N in one column, the rate and CI in the next), and a
+#'     `cells` row's `variable` may be a group's name.  Blank: none.}
 #' }
 #'
 #' @section `variables`:
@@ -679,11 +695,13 @@
 #'     `break_before` (row positions to cut before, `20 | 40`, with
 #'     `split = rows`), `min_group_rows`, `cont_label`, `page_by` (BY
 #'     pages: the column(s) partitioning the body first, the row budget
-#'     inside each).}
+#'     inside each), `heading` (each BY page's name from a template,
+#'     `Treatment: {value} (N={n})`).}
 #'   \item{`group_*`}{`mode` and `collapse` of [rtfreporter::plan_row_group()].
 #'     `group_page = TRUE` is [rtfreporter::plan_paginate_group()]: one page per
 #'     value of `group_col` (blank: the outermost row key), and
-#'     `group_keep = FALSE` leaves that column unprinted.}
+#'     `group_keep = FALSE` leaves that column unprinted, and
+#'     `group_heading` names each page from a template (`{value}`, `{n}`).}
 #'   \item{`blank_*`}{[rtfreporter::plan_blanks()]: `where`, `first`, `last`,
 #'     `counted`.}
 #'   \item{`stub_*`}{[rtfreporter::plan_stub()]: `vars`, `name`, `indent`, `summary`,
@@ -1246,6 +1264,10 @@ print.tfl_table_spec <- function(x, ...) {
   if ("header_n" %in% names(t) && !is.na(t$header_n)) {
     out$header_n <- .ard_spec_header_n(t$header_n)
   }
+  # a record's statistics in groups (plan_stat_groups())
+  if ("stat_groups" %in% names(t) && !is.na(t$stat_groups) && nzchar(trimws(t$stat_groups))) {
+    out$stat_groups <- .ard_spec_stat_groups(t$stat_groups)
+  }
   # a Total column: its heading, and its place (plan_total())
   if ("total" %in% names(t) && !is.na(t$total) && nzchar(trimws(t$total))) {
     out$total <- trimws(t$total)
@@ -1260,6 +1282,23 @@ print.tfl_table_spec <- function(x, ...) {
     }
   }
   out
+}
+
+# `stat_groups`: "n = N | orr_ci = n, estimate, conf.low" as plan_stat_groups()
+# takes it, list(n = "N", orr_ci = c("n", "estimate", "conf.low"))
+.ard_spec_stat_groups <- function(x, col = "stat_groups", what = "statistic",
+                                  example = "n = N | orr_ci = n, estimate, conf.low, conf.high") {
+  parts <- .split_bar(x)
+  bad <- parts[!grepl("^[^=]+=.+$", parts)]
+  if (length(bad)) {
+    .ard_stop(sprintf(paste0(
+      "`tables$%s`: %s is not `name = %s, %s`.  ",
+      "Write the groups as `%s`."),
+      col, paste(sQuote(bad), collapse = ", "), what, what, example))
+  }
+  nm <- trimws(sub("=.*$", "", parts))
+  st <- lapply(sub("^[^=]+=", "", parts), function(v) trimws(strsplit(v, ",", fixed = TRUE)[[1L]]))
+  stats::setNames(st, nm)
 }
 
 # `header_n`: which population a header's {n} is -- `page` or `table` --
@@ -2414,6 +2453,7 @@ tfl_as_table_spec <- function(x, output_id = NULL, compare = TRUE) {
   if (isTRUE(g$.page)) {
     put("group_page", TRUE); put("group_col", g$group_col)
     if (identical(g$.keep, FALSE)) put("group_keep", FALSE)
+    put("group_heading", g$.heading)
   }
   b <- ly[["blanks"]]
   if (is.numeric(b$blank_rows) && length(b$blank_rows) &&
@@ -2431,6 +2471,7 @@ tfl_as_table_spec <- function(x, output_id = NULL, compare = TRUE) {
   put("pages_cont_label", pg$cont_label)
   put("pages_break_before", pg$split_rows)
   put("pages_page_by", pg$page_by)
+  put("pages_heading", pg$.heading)
   cp <- ly[["colpages"]]
   put("colpages_every", cp$every); put("colpages_at", cp$at)
   put("colpages_keep", cp$keep); put("colpages_order", cp$order)
@@ -2600,6 +2641,10 @@ tfl_as_table_spec <- function(x, output_id = NULL, compare = TRUE) {
     miss("plan_col_header(values = ): a literal N stays in code (use {n})")
   }
   tables$header_n <- H$n_text %||% NA_character_
+  # plan_stat_groups(): the statistics in groups
+  sg <- ly$stat_groups$stat_groups
+  tables$stat_groups <- if (length(sg)) paste(sprintf("%s = %s", names(sg),
+    vapply(sg, paste, "", collapse = ", ")), collapse = " | ") else NA_character_
   # plan_total(): the Total column
   tt <- ly$total
   tables$total <- tt$label %||% NA_character_
