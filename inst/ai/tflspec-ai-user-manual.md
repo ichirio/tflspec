@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9100** (the development version,
+**This manual documents tflspec 0.0.24.9102** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -361,6 +361,7 @@ once. The `study` sheet has `key` / `value` (`rounding`: `sas` / `iec` /
 | `sort` | `plan_sort()` | `TRUE`, `FALSE`, or keys in order, `-` for descending |
 | `sort_stat` | `plan_sort(stat = )` | the statistic totalled for a frequency order |
 | `header_n` | `plan_col_header(values = list(n = ))` | `page`, `table`, or `n = page \| N = table` |
+| `overall_label` | `normalize_ard(overall = )` | the any-event row of a hierarchy ("Subjects with at least one TEAE"; its analysis `args` `over_variables = TRUE`): the program's normalization, written by `tfl_normalize_code(spec, ard_spec)` (with the `hierarchy` of its `hierarchical` analysis) |
 
 **variables**: `variable`, `label`, `order`, `levels` (`Grade 0 | Grade 1`), `empty_levels` (`hide`: no row for a value no record has; blank: a 0 row), `under` (`RACE: Asian`: its rows under that level of RACE, one indent deeper, its own heading dropped -- `plan_nest()`)
 → `plan_labels()`, `plan_levels()`.
@@ -785,7 +786,7 @@ back): rename the value or choose another separator.
 `tfl_ars_unmapped` `tfl_ars_ard` `tfl_read_ars_json` `tfl_ars_to_specs`
 `tfl_write_ars_xlsx`
 
-**Table spec:** `tfl_table_spec` `tfl_read_table_spec` `tfl_write_table_spec`
+**Table spec:** `tfl_normalize_code` `tfl_table_spec` `tfl_read_table_spec` `tfl_write_table_spec`
 `tfl_write_report_spec` `tfl_write_specs` `tfl_spec_columns`
 `tfl_table_spec_template` `tfl_table_plan` `tfl_table_code`
 `tfl_as_table_spec`

@@ -1,5 +1,16 @@
 # tflspec (development version)
 
+* **An AE table's "Subjects with at least one TEAE" row from the sheets**
+  (#236).  The `tables` sheet's new column `overall_label` is that row's
+  text; its `hierarchical` analysis computes it (`args` `over_variables =
+  TRUE`).  The row is the normalization's, so the new
+  `tfl_normalize_code(spec, ard_spec, output_id)` writes the report's line
+  -- `data <- normalize_ard(ard, hierarchy = c("AEBODSYS", "AEDECOD"),
+  overall = "Subjects with at least one TEAE")` -- with the hierarchy of
+  the report's hierarchical analysis, so each SOC row has its counts too;
+  a report with neither stays `data <- normalize_ard(ard)`.  The AI kit's
+  example T-2 and the TOC / shell guide now show the row.
+
 * **An AI kit to draft a study's specs from its TOC and shells**
   (`tflspec_ai_manual(dir)`).  A chat cannot read the disk, and most take
   ten files at most: `tflspec_ai_manual(dir)` writes one flat folder of

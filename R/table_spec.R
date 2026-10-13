@@ -194,7 +194,7 @@
   list(
     tables    = c("output_id", "cols", "rows", "label", "stats", "value",
                   "sep", "sort", "sort_stat", "na", "header_n", "total",
-                  "total_position"),
+                  "total_position", "overall_label"),
     variables = c("output_id", "variable", "label", "order", "levels",
                   "empty_levels", "under"),
     # the study's code list: a value's text and place
@@ -604,6 +604,12 @@
 #'     has.}
 #'   \item{`total_position`}{Where the Total column goes among the column
 #'     key's values: `last` (blank) or `first`.}
+#'   \item{`overall_label`}{The row of a hierarchy's overall counts -- the
+#'     subjects with at least one event, from a `hierarchical` analysis with
+#'     `args` `over_variables = TRUE` -- and what it prints ("Subjects with
+#'     at least one TEAE").  It is the normalization's
+#'     ([rtfreporter::normalize_ard()]'s `overall`): the report's program
+#'     writes it with [tfl_normalize_code()].  Blank: no such row.}
 #' }
 #'
 #' @section `variables`:

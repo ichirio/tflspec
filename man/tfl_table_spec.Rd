@@ -139,6 +139,12 @@ total (\code{\link[rtfreporter:plan_verbs]{rtfreporter::plan_total()}}).  Blank:
 has.}
 \item{\code{total_position}}{Where the Total column goes among the column
 key's values: \code{last} (blank) or \code{first}.}
+\item{\code{overall_label}}{The row of a hierarchy's overall counts -- the
+subjects with at least one event, from a \code{hierarchical} analysis with
+\code{args} \code{over_variables = TRUE} -- and what it prints ("Subjects with
+at least one TEAE").  It is the normalization's
+(\code{\link[rtfreporter:normalize_ard]{rtfreporter::normalize_ard()}}'s \code{overall}): the report's program
+writes it with \code{\link[=tfl_normalize_code]{tfl_normalize_code()}}.  Blank: no such row.}
 }
 }
 

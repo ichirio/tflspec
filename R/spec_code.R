@@ -412,6 +412,67 @@ tfl_table_code <- function(spec, output_id = NULL, data = "data",
   .drop_attached_ns(c(cl, unlist(strsplit(lines, "\n", fixed = TRUE))))
 }
 
+#' The line that normalizes a table's ARD
+#'
+#' A table's program makes `data` from its rows of the study ARD with
+#' [rtfreporter::normalize_ard()] before the plan.  What the normalization
+#' needs to know is the report's, so it is written from its definitions:
+#' the nested variables of its `hierarchical` analysis (the ARD
+#' definition's `variables`, `AEBODSYS | AEDECOD`) as its `hierarchy` --
+#' each level's own row, SOC and PT, with its counts -- and the row of the
+#' hierarchy's overall counts (the table definition's
+#' `tables$overall_label`, "Subjects with at least one TEAE", from the
+#' analysis's `args` `over_variables = TRUE`) as its `overall`.  A report
+#' with neither: `data <- normalize_ard(ard)`.
+#'
+#' @param spec A table definition ([tfl_read_table_spec()]), or the path(s)
+#'   of its workbook(s).
+#' @param ard_spec The ARD definition ([tfl_read_ard_spec()]), for the
+#'   hierarchy; `NULL` for none.
+#' @param output_id The table, when the definitions have several.
+#' @param ard,data The names of the ARD and of the normalized data.
+#' @return The line, one string.
+#' @examples
+#' sp <- tfl_table_spec(tables = data.frame(
+#'   output_id = "T-2", cols = "TRTA", rows = "group1 = AEBODSYS",
+#'   overall_label = "Subjects with at least one TEAE"))
+#' ard <- tfl_ard_spec(list(
+#'   datasets = data.frame(dataset = "ADAE", path = "adae.rds"),
+#'   analyses = data.frame(output_id = "T-2", analysis_id = "AE",
+#'                         method = "hierarchical", dataset = "ADAE", by = "TRTA",
+#'                         variables = "AEBODSYS | AEDECOD",
+#'                         args = "over_variables = TRUE")))
+#' tfl_normalize_code(sp, ard, "T-2")
+#' @export
+tfl_normalize_code <- function(spec, ard_spec = NULL, output_id = NULL,
+                               ard = "ard", data = "data") {
+  sp <- .ard_spec_scope(.as_spec(spec, "table", "tfl_normalize_code",
+                                 output_id = output_id), output_id)
+  id <- output_id %||% attr(sp, "output_id")
+  t <- sp$tables
+  lab <- if (nrow(t) && "overall_label" %in% names(t)) t$overall_label[1L] else NA
+  lab <- if (!is.na(lab) && nzchar(trimws(lab))) trimws(lab)
+  hier <- character()
+  if (!is.null(ard_spec)) {
+    an <- ard_spec$analyses
+    an <- an[!is.na(an$output_id) & an$output_id %in% id &
+               an$method %in% c("hierarchical", "cards::ard_stack_hierarchical",
+                                "cards::ard_stack_hierarchical_count"), , drop = FALSE]
+    if (nrow(an)) hier <- .split_bar(an$variables[1L])
+  }
+  if (!is.null(lab) && !length(hier)) {
+    .ard_stop(sprintf(paste0(
+      "tfl_normalize_code(): %s has an `overall_label` (%s) but no ",
+      "hierarchical analysis%s: the overall row is a hierarchy's."),
+      id %||% "the table", sQuote(lab),
+      if (is.null(ard_spec)) " (give `ard_spec`)" else " in the ARD definition"))
+  }
+  args <- c(ard,
+            if (length(hier)) paste("hierarchy =", vec_code(hier)),
+            if (!is.null(lab)) paste("overall =", encodeString(lab, quote = "\"")))
+  sprintf("%s <- normalize_ard(%s)", data, paste(args, collapse = ", "))
+}
+
 #' A table's plan from its definition
 #'
 #' Builds the [rtfreporter::table_plan()] a table definition stands for: the roles of its

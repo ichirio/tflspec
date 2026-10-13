@@ -155,7 +155,8 @@
       by = c("", "TRT01A", "TRT01A", "TRT01A"),
       overall = c("", "TRUE", "TRUE", ""),
       variables = c("", "AGE", "SEX | AGEGR1", "AEBODSYS | AEDECOD"),
-      args = ""))
+      # the subjects with at least one TEAE: the row above the SOCs
+      args = c("", "", "", "over_variables = TRUE")))
 }
 
 .ai_example_table <- function() {
@@ -170,10 +171,12 @@
     tables = .ai_df(output_id = c("T-1", "T-2"), cols = "TRT01A",
                     rows = c("group = variable", "group1 = AEBODSYS"),
                     label = "",
+                    # the any-TEAE row first, then the SOCs alphabetically,
                     # PTs by the total of the arms within a SOC (the
                     # carrier .sort_stat hidden on the columns sheet)
-                    sort = c("", "group1 | .depth | -.sort_stat | label"),
+                    sort = c("", ".overall | group1 | .depth | -.sort_stat | label"),
                     sort_stat = c("", "n"),
+                    overall_label = c("", "Subjects with at least one TEAE"),
                     total = c("Total", "")),
     # the arms in the shells' order (a column key's levels), then T-1's
     # variables
@@ -330,11 +333,12 @@
   t2 <- g(c("T-2", "Table 14.3.1  Treatment-Emergent Adverse Events by System Organ Class and Preferred Term  (Safety Analysis Set)"),
           c("System Organ Class", arms),
           c("  Preferred Term", rep("(N=xx)", 3)),
-          "SYSTEM ORGAN CLASS 1",
+          c("Subjects with at least one TEAE", rep(pct, 3)),
+          c("SYSTEM ORGAN CLASS 1", rep(pct, 3)),
           c("  Preferred term 1", rep(pct, 3)),
           c("  Preferred term 2", rep(pct, 3)),
           "",
-          "SYSTEM ORGAN CLASS 2",
+          c("SYSTEM ORGAN CLASS 2", rep(pct, 3)),
           c("  Preferred term 1", rep(pct, 3)),
           "",
           "SOCs alphabetically; PTs by decreasing frequency in the total of the arms within a SOC.",
