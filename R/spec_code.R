@@ -180,7 +180,7 @@
 # The roles a table definition gives table_plan() (its `tables` sheet):
 # which column goes across, which go down, which carries the row text.
 # Everything else on that sheet is a layer, said by the verb it belongs to.
-.plan_role_names <- c("cols", "rows", "label", "stat")
+.plan_role_names <- c("cols", "rows", "label", "stat", "show_keys")
 .plan_spec_roles <- function(sp) {
   sa <- .ard_spec_table_args(sp)
   sa[intersect(.plan_role_names, names(sa))]

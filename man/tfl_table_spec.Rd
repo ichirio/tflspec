@@ -165,6 +165,10 @@ of their variable.  A column's templates are the \code{cells} rows whose
 \code{variable} is its name (one a \code{context} when a test prints another
 way).  \code{compare_by} splits the comparisons into columns, one a
 level; \code{compare_position} is \code{last} (blank) or \code{first}.}
+\item{\code{show_keys}}{Row keys the table also shows as variables, \code{|}
+between them (\code{SEX | AGEGR1}): their own counts stay in the body,
+a block of their own beside a subgroup layer
+(\code{\link[rtfreporter:table_plan]{rtfreporter::table_plan()}}'s \code{show_keys}).  Blank: none.}
 \item{\code{stat_groups}}{One record's statistics in named groups, \code{|}
 between groups, \verb{,} between a group's statistics: \verb{n = N | orr_ci = n, estimate, conf.low, conf.high} (\code{\link[rtfreporter:plan_verbs]{rtfreporter::plan_stat_groups()}}).
 The key \code{.stat_group} then names them in \code{cols} (\code{TRT01A | .stat_group}: N in one column, the rate and CI in the next), and a
