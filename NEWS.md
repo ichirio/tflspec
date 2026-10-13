@@ -1,5 +1,13 @@
 # tflspec (development version)
 
+* **The study's ARD program puts a code list on a data once** (#235).
+  With code lists that relabel (`M` = Male), `tfl_ard_code()` for the
+  whole study (no `output_id`) put them on the dataset as it was read and
+  again on the analysis set made from it; the second found "Male" where
+  it expected `M` and stopped the program.  Each report's part now puts
+  them, as one report's program always did, only on the data its
+  analyses read: the study's ARD is the reports' ARDs bound together.
+
 * **An AI kit to draft a study's specs from its TOC and shells**
   (`tflspec_ai_manual(dir)`).  A chat cannot read the disk, and most take
   ten files at most: `tflspec_ai_manual(dir)` writes one flat folder of

@@ -96,6 +96,9 @@ test_that("only the variables a report's analyses read; the study's program a pa
   cl <- data.frame(output_id = c("T", "T", "T", "T", "U", "U"),
                    variable = c("AGEGR1", "AGEGR1", "AGEGR1", "SEX", "SEX", "SEX"),
                    value = c(">80", "<65", "65-80", "F", "M", "F"),
+                   # U's with labels: a list put twice on the same data
+                   # stopped the study's program (#235)
+                   label = c(NA, NA, NA, NA, "Male", "Female"),
                    order = c("1", "2", "3", "1", "1", "2"))
   # one report's program: only what its analyses read (T reads no SEX)
   t1 <- tfl_ard_code(sp, output_id = "T", part = "body", codelists = cl)
@@ -110,12 +113,14 @@ test_that("only the variables a report's analyses read; the study's program a pa
   all <- tfl_ard_code(sp, save = FALSE, codelists = cl)
   u <- which(all == "# ---- U ----")
   expect_true(any(grepl("cl_agegr1 <-", all[seq_len(u)], fixed = TRUE)))
-  expect_true(any(grepl("cl_sex <- c(\"M\", \"F\")", all[u:length(all)], fixed = TRUE)))
+  expect_true(any(grepl("cl_sex <- c(M = \"Male\", F = \"Female\")", all[u:length(all)], fixed = TRUE)))
+  # put once, on what the analyses read: not on the dataset as well (#235)
+  expect_identical(sum(grepl("set_levels(SEX = cl_sex)", all[u:length(all)], fixed = TRUE)), 1L)
   expect_identical(sum(grepl("^adsl <- readRDS", all)), 2L)
   ard <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE, codelists = cl))
   lv <- function(v) unique(vapply(ard$variable_level[ard$variable == v], as.character, ""))
   expect_identical(lv("AGEGR1"), c(">80", "<65", "65-80"))
-  expect_identical(lv("SEX"), c("M", "F"))
+  expect_identical(lv("SEX"), c("Male", "Female"))
   # each the same as its own program's
   for (o in c("T", "U")) {
     one <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE,
