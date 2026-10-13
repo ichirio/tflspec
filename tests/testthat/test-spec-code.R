@@ -368,3 +368,14 @@ test_that("tables$compare: comparison columns from the sheets, as plan_compare()
   expect_error(tfl_table_code(tfl_table_spec(tables = data.frame(output_id = "X", cols = "ARM", compare = "p")), "X"),
                "no `cells` row")
 })
+
+test_that("tables$compare: a column's lines from the cells rows' `row` (rtfreporter #625)", {
+  skip_if_not("plan_compare" %in% getNamespaceExports("rtfreporter"))
+  sp <- tfl_table_spec(
+    tables = data.frame(output_id = "ORR", cols = "ARM", compare = "diff | p"),
+    cells = data.frame(output_id = "ORR", variable = c("diff", "diff", "p"), row = c("1", "2", "1"),
+                       template = c("{estimate:.1f%}", "({conf.low:.1f%}, {conf.high:.1f%})", "{p.value:.3f}")))
+  code <- paste(tfl_table_code(sp, "ORR"), collapse = "\n")
+  expect_match(code, "diff = cell_rows(", fixed = TRUE)
+  expect_match(code, "p = cell_rows(", fixed = TRUE)
+})

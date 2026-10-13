@@ -1525,9 +1525,19 @@ print.tfl_table_spec <- function(x, ...) {
   s <- sp$cells
   s <- s[!is.na(s$template) & s$variable %in% nm, , drop = FALSE]
   rule <- .ard_spec_rule_for(.ard_spec_digit_rules(sp), NA_character_)
-  chain <- function(idx) {
+  one <- function(idx) {
     els <- lapply(idx, function(i) .ard_spec_chain_el(s[i, , drop = FALSE], i, rule))
     if (all(vapply(els, is.character, NA))) unlist(els) else els
+  }
+  # rows with a `row` are lines (cell_rows()), each beside the body's line
+  # of that label
+  chain <- function(idx) {
+    rw <- s$row[idx]
+    if (all(is.na(rw))) return(one(idx))
+    rw[is.na(rw)] <- ""
+    labs <- .ard_first_seen(rw)
+    do.call(rtfreporter::cell_rows, stats::setNames(
+      lapply(labs, function(lb) one(idx[rw == lb])), labs))
   }
   cols <- lapply(nm, function(v) {
     idx <- which(s$variable == v)
@@ -2469,10 +2479,14 @@ tfl_as_table_spec <- function(x, output_id = NULL, compare = TRUE) {
   # plan_compare(): its columns' templates, `variable` the column's name
   cmp <- L$compare
   for (ce in cmp$cols) {
-    for (el in ce$entry$chains[[1L]]) {
-      wh <- if (is.null(el$cond)) NA_character_
-            else paste(deparse(el$cond), collapse = " ")
-      cl[[length(cl) + 1L]] <- crow(ce$column, ce$context, NA_character_, wh, el$tpl)
+    e <- ce$entry
+    for (i in seq_along(e$chains)) {
+      rw <- if (is.null(e$labels) || !nzchar(e$labels[i])) NA_character_ else e$labels[i]
+      for (el in e$chains[[i]]) {
+        wh <- if (is.null(el$cond)) NA_character_
+              else paste(deparse(el$cond), collapse = " ")
+        cl[[length(cl) + 1L]] <- crow(ce$column, ce$context, rw, wh, el$tpl)
+      }
     }
   }
   tables$compare <- if (length(cmp$cols))
