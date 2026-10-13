@@ -461,7 +461,17 @@ tfl_normalize_code <- function(spec, ard_spec = NULL, output_id = NULL,
   lab <- if (!is.na(lab) && nzchar(trimws(lab))) trimws(lab)
   stk <- if (nrow(t) && "stack" %in% names(t)) t$stack[1L] else NA
   stk <- if (!is.na(stk) && nzchar(trimws(stk)))
-    .ard_spec_stat_groups(stk, "stack", "variable", "subgroup = ALL, SEX, AGEGR1")
+    .ard_spec_stat_groups(stk, "stack", "layer", "subgroup = ALL, SEX, AGEGR1, AGEGR1 * SEX")
+  # a layer `AGEGR1 * SEX` is the variables crossed: then the layers are a list
+  layers_code <- function(v) {
+    parts <- lapply(strsplit(v, "*", fixed = TRUE), trimws)
+    if (all(lengths(parts) == 1L)) return(vec_code(v))
+    paste0("list(", paste(vapply(parts, function(p)
+      if (length(p) == 1L) encodeString(p, quote = "\"") else vec_code(p), ""),
+      collapse = ", "), ")")
+  }
+  sep <- if (nrow(t) && "stack_sep" %in% names(t)) t$stack_sep[1L] else NA
+  sep <- if (!is.na(sep) && nzchar(sep)) .ard_spec_unquote(sep)
   hier <- character()
   if (!is.null(ard_spec)) {
     an <- ard_spec$analyses
@@ -481,8 +491,10 @@ tfl_normalize_code <- function(spec, ard_spec = NULL, output_id = NULL,
             if (length(hier)) paste("hierarchy =", vec_code(hier)),
             if (!is.null(lab)) paste("overall =", encodeString(lab, quote = "\"")),
             if (!is.null(stk)) paste0("stack = list(", paste(
-              sprintf("%s = %s", names(stk), vapply(stk, vec_code, "")),
-              collapse = ", "), ")"))
+              sprintf("%s = %s", names(stk), vapply(stk, layers_code, "")),
+              collapse = ", "), ")"),
+            if (!is.null(stk) && !is.null(sep))
+              paste("stack_sep =", encodeString(sep, quote = "\"")))
   sprintf("%s <- normalize_ard(%s)", data, paste(args, collapse = ", "))
 }
 

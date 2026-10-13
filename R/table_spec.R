@@ -194,7 +194,8 @@
   list(
     tables    = c("output_id", "cols", "rows", "label", "stats", "value",
                   "sep", "sort", "sort_stat", "na", "header_n", "total",
-                  "total_position", "overall_label", "stat_groups", "stack"),
+                  "total_position", "overall_label", "stat_groups", "stack",
+                  "stack_sep"),
     variables = c("output_id", "variable", "label", "order", "levels",
                   "empty_levels", "under"),
     # the study's code list: a value's text and place
@@ -610,12 +611,15 @@
 #'     at least one TEAE").  It is the normalization's
 #'     ([rtfreporter::normalize_ard()]'s `overall`): the report's program
 #'     writes it with [tfl_normalize_code()].  Blank: no such row.}
-#'   \item{`stack`}{Parallel subgroups as one pair of keys, `subgroup =
-#'     ALL, SEX, AGEGR1` (`|` between several): the normalization's
-#'     ([rtfreporter::normalize_ard()]'s `stack`), written by
-#'     [tfl_normalize_code()].  `rows` then names `subgroup` and
-#'     `subgroup_level`, whatever group slot each variable came in.
-#'     Blank: none.}
+#'   \item{`stack`}{Subgroups as one pair of keys, its layers after `=`:
+#'     `subgroup = ALL, SEX, AGEGR1, AGEGR1 * SEX` (`*` crosses variables,
+#'     `|` between several keys), or the strata slots, `subgroup = group2,
+#'     group3`: the normalization's ([rtfreporter::normalize_ard()]'s
+#'     `stack`), written by [tfl_normalize_code()].  `rows` then names
+#'     `subgroup` and `subgroup_level`, whatever group slot each variable
+#'     came in.  Blank: none.}
+#'   \item{`stack_sep`}{What joins a crossed layer's names and levels
+#'     (`AGEGR1 / SEX`, `65-80 / F`).  Blank: ` / `.}
 #'   \item{`stat_groups`}{One record's statistics in named groups, `|`
 #'     between groups, `,` between a group's statistics: `n = N | orr_ci =
 #'     n, estimate, conf.low, conf.high` ([rtfreporter::plan_stat_groups()]).

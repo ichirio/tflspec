@@ -145,11 +145,14 @@ subjects with at least one event, from a \code{hierarchical} analysis with
 at least one TEAE").  It is the normalization's
 (\code{\link[rtfreporter:normalize_ard]{rtfreporter::normalize_ard()}}'s \code{overall}): the report's program
 writes it with \code{\link[=tfl_normalize_code]{tfl_normalize_code()}}.  Blank: no such row.}
-\item{\code{stack}}{Parallel subgroups as one pair of keys, \verb{subgroup = ALL, SEX, AGEGR1} (\code{|} between several): the normalization's
-(\code{\link[rtfreporter:normalize_ard]{rtfreporter::normalize_ard()}}'s \code{stack}), written by
-\code{\link[=tfl_normalize_code]{tfl_normalize_code()}}.  \code{rows} then names \code{subgroup} and
-\code{subgroup_level}, whatever group slot each variable came in.
-Blank: none.}
+\item{\code{stack}}{Subgroups as one pair of keys, its layers after \code{=}:
+\verb{subgroup = ALL, SEX, AGEGR1, AGEGR1 * SEX} (\code{*} crosses variables,
+\code{|} between several keys), or the strata slots, \verb{subgroup = group2, group3}: the normalization's (\code{\link[rtfreporter:normalize_ard]{rtfreporter::normalize_ard()}}'s
+\code{stack}), written by \code{\link[=tfl_normalize_code]{tfl_normalize_code()}}.  \code{rows} then names
+\code{subgroup} and \code{subgroup_level}, whatever group slot each variable
+came in.  Blank: none.}
+\item{\code{stack_sep}}{What joins a crossed layer's names and levels
+(\code{AGEGR1 / SEX}, \code{65-80 / F}).  Blank: \code{/}.}
 \item{\code{stat_groups}}{One record's statistics in named groups, \code{|}
 between groups, \verb{,} between a group's statistics: \verb{n = N | orr_ci = n, estimate, conf.low, conf.high} (\code{\link[rtfreporter:plan_verbs]{rtfreporter::plan_stat_groups()}}).
 The key \code{.stat_group} then names them in \code{cols} (\code{TRT01A | .stat_group}: N in one column, the rate and CI in the next), and a

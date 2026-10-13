@@ -319,3 +319,22 @@ test_that("tables$stack and layout$pages_heading: subgroups as one pair of keys,
                                                                      stack = "SEX")), output_id = "X"),
                "tables$stack", fixed = TRUE)
 })
+
+test_that("tables$stack: crossed layers (AGEGR1 * SEX), the slots, stack_sep (rtfreporter #619)", {
+  skip_if_not("stack_sep" %in% names(formals(rtfreporter::normalize_ard)))
+  line <- function(stack, sep = NA) tfl_normalize_code(tfl_table_spec(tables = data.frame(
+    output_id = "X", cols = "ARM", stack = stack, stack_sep = sep)), output_id = "X")
+  expect_identical(line("subgroup = ALL, SEX, AGEGR1 * SEX"),
+                   "data <- normalize_ard(ard, stack = list(subgroup = list(\"ALL\", \"SEX\", c(\"AGEGR1\", \"SEX\"))))")
+  expect_identical(line("subgroup = group2, group3"),
+                   "data <- normalize_ard(ard, stack = list(subgroup = c(\"group2\", \"group3\")))")
+  expect_identical(line("subgroup = SEX, AGEGR1 * SEX", "\" x \""),
+                   "data <- normalize_ard(ard, stack = list(subgroup = list(\"SEX\", c(\"AGEGR1\", \"SEX\"))), stack_sep = \" x \")")
+  skip_if_not_installed("cards")
+  adsl <- cards::ADSL
+  ard <- cards::bind_ard(cards::ard_tabulate(adsl, by = c(ARM, SEX), variables = DISCONFL),
+                         cards::ard_tabulate(adsl, by = c(ARM, AGEGR1, SEX), variables = DISCONFL))
+  data <- eval(parse(text = sub("normalize_ard", "rtfreporter::normalize_ard",
+                                line("subgroup = SEX, AGEGR1 * SEX"), fixed = TRUE)))
+  expect_identical(levels(data$subgroup), c("SEX", "AGEGR1 / SEX"))
+})

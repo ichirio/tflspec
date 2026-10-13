@@ -11,7 +11,10 @@
   #619).  `subgroup = ALL, SEX, AGEGR1` makes `tfl_normalize_code()` write
   `normalize_ard(stack = list(subgroup = c("ALL", "SEX", "AGEGR1")))`, so
   `rows` names `subgroup` / `subgroup_level` whatever group slot each
-  variable came in, instead of `group2` / `group2_level`.
+  variable came in, instead of `group2` / `group2_level`.  A layer may be
+  crossed, `AGEGR1 * SEX` (rows `AGEGR1 / SEX` | `65-80 / F`, joined by
+  `tables$stack_sep`), and the strata slots stand for what the ARD has
+  there: `subgroup = group2, group3`.
 
 * **`tables$stat_groups`: one record's statistics in two columns from the
   sheet** (rtfreporter #619, needs rtfreporter 0.8.2.9046).  `n = N |
