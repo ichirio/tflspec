@@ -177,7 +177,7 @@ col_header,bold,"TRUE / FALSE; blank: FALSE.",TRUE
 col_header,border_top,"The cell's top rule: single / double / none ... (rtf_border()); blank: the header's.",single
 col_header,border_bottom,"The cell's bottom rule, as border_top.",single
 report,,"Report: one row a report; blank output_id: the study's default.",
-report,type,"table / listing / figure / user (the report's own code leaves `content`: a data frame, rtftable pages, rtfplot figures or a list of them); blank: table.",listing
+report,type,"table / listing / figure; blank: table. A step of the report may be its own code instead (data_code, content_code).",listing
 report,file,"The RTF file, relative to the study key output_path; {output_id} is the report's id; blank: {output_id}.rtf.",{output_id}.rtf
 report,program,"The program's name, joined to program_dir for {PROGRAM}; blank: the file name of the program that runs, {output_id} only when none is found.",t_14_1_1.R
 report,auto_section,"TRUE / FALSE: each named table a section with its name in the page header (rtf_tables(auto_section = )); blank: FALSE.",TRUE
@@ -190,10 +190,12 @@ report,footnote_font_size_half_points,"The footnotes' font size in half-points; 
 report,page_header,"TRUE / FALSE: FALSE drops the running page header for this report, the study's default lines included; blank: TRUE.",FALSE
 report,page_footer,"TRUE / FALSE: FALSE drops the running page footer, likewise; blank: TRUE.",FALSE
 report,watermark,"A word drawn diagonally behind every page (rtf_document(watermark = )); blank: none.",DRAFT
-report,figure_width_in,"A figure report: the figure's width in inches (rtf_figures(width_twips = )); blank: the figure's own.",9
-report,figure_height_in,"A figure report: the figure's height in inches (rtf_figures(height_twips = )); blank: the figure's own.",5
+report,figure_width_in,"A figure report: the figure's width on the page -- a number of inches, or fit (the page's body); drawn and placed so (rtf_figures(width_twips = )). Blank: the figure's own size, as rtfreporter places it (tfl_fig_page_size()).",fit
+report,figure_height_in,"A figure report: the figure's height on the page -- a number of inches, or fit (the page's body less its title and footnote lines); drawn and placed so. Blank: the figure's own size (tfl_fig_page_size()).",5
 report,ard_source,"Where the report's ARD comes from: blank (a figure: none), its own ARD definition (the analyses rows of its output_id; a figure: own); import:<file>, an ARD made elsewhere and taken in (the file in the study's input/ard/ folder, read with tfl_read_ard()); table:<output_id>, a figure's: that table's ARD.",import:t_14_2_1_cro.json
 report,pattern,"The page pattern the report uses: blank, Standard (the blank rows of report, page, header, footer, titles, footnotes and tokens); a name, that pattern -- the rows whose output_id is @<name>, which say only what differs from Standard. The report's own rows go over its pattern's.",Compact
+report,data_code,"The report's own code for its data step, instead of the definition: R that leaves data (a table, a listing) or df (a figure); the datasets the report registers and, when it reads its ARD, ard are in reach (tfl_check_code()). Blank: the definition makes the data.","df <- advs |> dplyr::filter(PARAMCD == ""SYSBP"")"
+report,content_code,"The report's own code for its content step, instead of the definition: R that leaves content -- a table plan, a data frame, rtftable pages, a ggplot or rtfplot figure, or a list of them -- for the report step to dress. Blank: the definition makes the content.",content <- ggplot2::ggplot(df) + ggplot2::geom_line()
 page,,"Report: one row a report; the page (rtf_page()) and the document's text defaults (rtf_default_format()). Blank: rtfreporter's options (landscape Letter, 0.75 in margins).",
 page,paper_size,"letter / legal / A4 / A3 / A5; blank: letter.",A4
 page,orientation,"landscape / portrait; blank: landscape.",portrait

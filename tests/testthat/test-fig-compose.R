@@ -24,7 +24,7 @@ km_part <- function(risk = "panel") {
 
 two_up <- function(km = km_part()) {
   tfl_fig_design(
-    plot = list(width = 10, height = 4.5),
+    plot = list(dpi = 300),
     plots = list(km = km, box = tfl_fig_template("box_by_group")),
     compose = list(layout = "km | box",
                    add = list(list(fn = "plot_layout", args = list(widths = list(3, 2))),
@@ -33,7 +33,7 @@ two_up <- function(km = km_part()) {
 }
 
 test_that("a composed figure's script: each figure, the layout, one save", {
-  code <- tfl_fig_design_code(two_up(), "c")
+  code <- tfl_fig_design_code(two_up(), "c", width_in = 10)
   expect_equal(code[1], "# c: composed figure (km, box)")
   expect_true("library(patchwork)" %in% code)
   expect_true(any(grepl("# ---- figure 1 (km): data", code, fixed = TRUE)))

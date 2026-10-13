@@ -749,10 +749,13 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
       o <- rep_all$output_id[k]
       if (is.na(o) || o %in% outs || o %in% rf_out) next
       type <- tolower(rep_all$type[k] %||% NA_character_)
+      # (a report whose content is its own code: "user")
+      cc <- rep_all$content_code[k] %||% NA_character_
+      if (!is.na(cc) && nzchar(trimws(cc))) type <- "user"
       miss(o, "output", switch(type %|NA|% "",
-        user = paste("a report of user code with no analyses in the ARD",
-                     "definition: what it shows is made by its own code,",
-                     "which ARS does not hold"),
+        user = paste("a report whose content is its own code, with no",
+                     "analyses in the ARD definition: what it shows is made",
+                     "by that code, which ARS does not hold"),
         listing = paste("a listing: ARS describes analyses and their",
                         "results, and a listing has none"),
         paste("no analyses in the ARD definition, so nothing for ARS to",
