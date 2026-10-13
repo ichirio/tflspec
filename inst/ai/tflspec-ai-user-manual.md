@@ -165,7 +165,7 @@ going and leaves the message in the `error` / `warning` column.
 | a listing written in code (`listing_spec()` / `plan_listing()`), back to a listing spec | `tfl_as_listing_spec(x, output_id, dataset = )` |
 | the document / its code / its file | `tfl_report(spec, output_id, content = plan)` / `tfl_report_code(spec)` / `tfl_report_path(spec)` |
 | a listing's program / its pages | `tfl_listing_code(spec)` / `tfl_listing(data, spec)` |
-| a figure: start / check / write the script | `tfl_fig_template()` / `tfl_check_fig_design()` / `tfl_fig_design_code()` |
+| a figure: start / check / write the script / its size on the page | `tfl_fig_template()` / `tfl_check_fig_design()` / `tfl_fig_design_code()` / `tfl_fig_page_size()` |
 | review the whole definition: errors, what is probably wrong, what to set by hand | `tfl_review_spec(spec, ard, listings, figures)`; against the data: `facts = tfl_data_facts(data, populations = ard)`; the rules: `tfl_review_rules()`; each row's sentence is `template` filled with `args` (`message` is the two put together; the sentences beyond the rules': `tfl_review_templates()`) |
 | attach this manual to a chat session | `tflspec_ai_manual()` (its path) |
 | draft a study's specs from its TOC and shells in an AI chat | `tflspec_ai_manual(dir)` writes the kit to attach; `tfl_ai_review(file, toc = )` checks each file returned (§11.2) |
@@ -445,7 +445,7 @@ file.
 
 | Sheet | Columns |
 |---|---|
-| `report` | `type` (`table` / `listing` / `figure` / `user`: the report's own code leaves `content`), `file` (`{output_id}.rtf`), `program`, `auto_section`, `section_align`, `auto_title`, `title_align`, `table_font_size_half_points`, `title_font_size_half_points`, `footnote_font_size_half_points`, `page_header`, `page_footer`, `watermark` (`DRAFT`), `figure_width_in`, `figure_height_in` |
+| `report` | `type` (`table` / `listing` / `figure`), `file` (`{output_id}.rtf`), `program`, `auto_section`, `section_align`, `auto_title`, `title_align`, `table_font_size_half_points`, `title_font_size_half_points`, `footnote_font_size_half_points`, `page_header`, `page_footer`, `watermark` (`DRAFT`), `figure_width_in`, `figure_height_in` (a figure's size on the page: a number of inches, `fit` -- the page's body -- or blank, the figure's own size as rtfreporter places it -- `tfl_fig_page_size()`; a design's `plot` has only `dpi`, the resolution), `ard_source`, `pattern`, `data_code` and `content_code` (a step that is the report's own R instead of the definition: the data step leaves `data`, a figure's `df`; the content step leaves `content`; the report's datasets by their names in lower case, and `ard` when it reads its ARD, are in reach -- `tfl_check_code()`) |
 | `page` | `paper_size`, `orientation`, `width_in`, `height_in`, margins `margin_*_in`, `header_dist_in`, `footer_dist_in`, `font` (the document's font; the study's row goes to the setup's `options()`), `font_size_half_points`, `title_format`, `footnote_format`, `title_width`, `footnote_width`, `markup` |
 | `header`, `footer`, `titles`, `footnotes` | `line`, `left`, `center`, `right` — a report's line replaces the default line of the same number; a report's line that says `(none)` takes it out |
 | `tokens` | `name`, `value` — a token of one's own, `{STUDY}` in any of the cells above (`rtf_document(tokens = )`); a report's row replaces the default of the same name, `(none)` takes it out; names upper case, not rtfreporter's own. A report's own tokens work without a row: `{OUTPUT_ID}`, `{OUTPUT_LABEL}` ("Table 14.1.1" from the ID; rows `OUTPUT_KIND_TABLE` / `_LISTING` / `_FIGURE` change the words), `{OUTPUT_TITLE}` `{OUTPUT_POPULATION}` `{OUTPUT_SECTION}` `{STUDY_ID}` (blank unless a row gives them); a line left with only empty tokens is not printed. What every report shares (the default token rows, the default header / footer) can be written once: `tfl_report_setup_code(spec)` (`options(rtfreporter.tokens = )`, `study_header`, `study_footer`), and each program with `tfl_report_code(..., setup = TRUE)` |
@@ -540,7 +540,8 @@ dataset of the data catalog (`.rds`, `.xpt`, `.sas7bdat`, `.csv`,
 starts one (`tfl_fig_templates()` lists 38, each with its `category` --
 the clinical category of `tfl_fig_catalog()` -- and the `data` it reads:
 `"ADTR + ADRS"` both, `"ADLB / ADVS + ADSL"` one of ADLB / ADVS and ADSL),
-`tfl_fig_parts()` lists every piece and field.
+`tfl_fig_parts()` lists every piece and field, `tfl_fig_objects()` the
+object each data step reads (`in`) and leaves (`out`).
 
 ```yaml
 template: km_risk_table
@@ -559,7 +560,16 @@ layers:                                 # what is drawn, in order
   `flag`, `filter`, `derive`, `time_unit`, `levels`, `rank` change the
   object above them; `survfit`, `summary`, `summary_by`, `rate`, `count`,
   `subset` make an object of their own by `name` (the steps after one
-  change it, in its pipe); `code` is your own code.  A design written
+  change it, in its pipe); `function` any function's result
+  (`fn: survival::survfit`, `args`, the object it reads as its
+  `data_arg`); `code` is your own code; `ard` an analysis of the figure's
+  ARD (`analysis_id`, `fn: cardx::ard_*`, `in` an analysis data, `args`)
+  -- a row of the ARD definition, no line of the script.  Any step may
+  say the object it reads (`in`) and the one it leaves (`out`): `filter`
+  with `out: df_ev` makes `df_ev <- df |> filter(...)` and keeps `df`; a
+  `survfit` with `in: df_ev` fits it.  Unset, a read makes `df` (then
+  `df2`, `df3`), a step on rows changes the object above it, a named step
+  reads `df`.  A design written
   before 0.0.24.9074 (`data:` and `stats:`, `data_code` / `stats_code`)
   reads as this one list and is written back in this form.
 - The script (`tfl_fig_design_code()`) has two sections: `# ---- data ----`
@@ -791,7 +801,7 @@ back): rename the value or choose another separator.
 `tfl_as_table_spec`
 
 **Report spec:** `tfl_read_report_spec` `tfl_read_toc` `tfl_report` `tfl_report_code`
-`tfl_report_path` `tfl_report_setup_code` `tfl_report_tokens`
+`tfl_report_path` `tfl_report_setup_code` `tfl_report_tokens` `tfl_check_code`
 
 **Document import (a define, by rule):** `tfl_read_define`
 `tfl_read_define_spec` `tfl_define_profile` `tfl_define_codelists`
@@ -803,7 +813,7 @@ back): rename the value or choose another separator.
 **Figure design:** `tfl_fig_design` `tfl_read_fig_design`
 `tfl_write_fig_design` `tfl_fig_design_code` `tfl_check_fig_design`
 `tfl_fig_advice` `tfl_fig_apply_fix` `tfl_fig_template` `tfl_fig_forest_analyses` `tfl_fig_templates`
-`tfl_fig_parts` `tfl_fig_uses_ard` `tfl_fig_add_layer` `tfl_fig_calls` `tfl_fig_compat`
+`tfl_fig_parts` `tfl_fig_objects` `tfl_fig_page_size` `tfl_fig_uses_ard` `tfl_fig_add_layer` `tfl_fig_calls` `tfl_fig_compat`
 `tfl_fig_data_name`
 `tfl_fig_r`
 

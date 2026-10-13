@@ -133,6 +133,8 @@ reference:
       - tfl_fig_forest_analyses
       - tfl_fig_templates
       - tfl_fig_parts
+      - tfl_fig_objects
+      - tfl_fig_page_size
       - tfl_fig_uses_ard
       - tfl_fig_add_layer
       - tfl_fig_calls
@@ -213,9 +215,11 @@ reference:
   - title: Checks
     desc: >
       What went wrong, said before a report is made: an ARD and what a
-      table reads from it, a function of one's own, the ARS, a figure.
+      table reads from it, a function of one's own, the ARS, a figure, a
+      report's own code.
     contents:
       - tfl_check_ard
+      - tfl_check_code
       - tfl_check_ard_function
       - tfl_ard_conditions
       - tfl_check_ars

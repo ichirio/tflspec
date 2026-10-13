@@ -30,7 +30,9 @@ tfl_fig_design_code(
   setup = FALSE,
   save = TRUE,
   name = "fig",
-  codelists = NULL
+  codelists = NULL,
+  width_in = 7.5,
+  height_in = 4.5
 )
 
 tfl_check_fig_design(design, adam = NULL, ggplot2_version = NULL, ard = NULL)
@@ -54,9 +56,9 @@ script's header says \verb{# Written for ggplot2 X}.}
 
 \item{plots}{A composed figure: a named list of figure designs (each
 with its own \code{data}, \code{plot}, \code{layers}), put together by patchwork as
-\code{compose} says. The design's own \code{plot} then holds only the saved size
-(\code{width}, \code{height}, \code{dpi}, \code{units}), and it has no \code{data} or \code{layers}
-of its own.}
+\code{compose} says. The design's own \code{plot} then holds only its \code{dpi}
+(its size is its report's), and it has no \code{data} or \code{layers} of its
+own.}
 
 \item{compose}{With \code{plots}: \code{layout}, an expression of the plots' names
 with \code{|} (side by side), \code{/} (stacked), \code{+}, \code{-} and brackets (default:
@@ -78,7 +80,8 @@ setup attaches the packages, so the code has no header and no
 \code{library()} (what it needs is in its attributes: below).}
 
 \item{save}{\code{FALSE} leaves out saving the PNG: the code makes the
-figure only (a report program writes it into its RTF).}
+figure only (a report program writes it into its RTF, at its size on
+the page: \code{\link[=tfl_fig_page_size]{tfl_fig_page_size()}}).}
 
 \item{name}{The name the figure is given.}
 
@@ -98,6 +101,9 @@ attach), \code{needs} (the packages called as \code{pkg::fn}) and \code{ard} (\c
 it reads an ARD as \code{ard}, through an \code{ard_stats} step or an
 \code{ard_number} layer, with the study helpers' \code{ard_value()} /
 \code{ard_stats()}; the program puts the ARD there).}
+
+\item{width_in, height_in}{The saved PNG's size in inches (\code{save}): a
+report's figure is its page's (\code{\link[=tfl_fig_page_size]{tfl_fig_page_size()}}).}
 
 \item{adam}{The data (\code{\link[=tfl_read_adam]{tfl_read_adam()}}): the variables and PARAMCDs the
 design names are looked for in it.}
