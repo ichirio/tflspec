@@ -1,5 +1,6 @@
-# A figure's size on its report's page (tfl_fig_page_size()): its own, or
-# the page's body; the report step places it so
+# A figure's size on its report's page (tfl_fig_page_size()): a number,
+# fit (the page's body) or blank (its own size); the report step places it
+# so; a design's plot keeps only its dpi
 sz_spec <- function(report = data.frame(output_id = "F-1", type = "figure"),
                     page = data.frame(output_id = NA, paper_size = "letter",
                                       orientation = "landscape"),
@@ -8,28 +9,38 @@ sz_spec <- function(report = data.frame(output_id = "F-1", type = "figure"),
   tfl_table_spec(report = report, page = page, titles = titles)
 }
 
-test_that("blank: the page's body; a number: that size", {
+test_that("blank: its own size; fit: the page's body; a number: that size", {
   s <- tfl_fig_page_size(sz_spec(), "F-1")
-  # letter landscape 11 x 8.5, margins 0.75: 9.5 wide
-  expect_equal(s$width_in, 9.5)
-  # 7 high less 2 titles and 2 spacing lines at 9 pt (0.15 in each)
-  expect_equal(s$height_in, 6.4)
-  expect_identical(s$fit, c(width = TRUE, height = TRUE))
+  expect_equal(c(s$width_in, s$height_in), c(6.5, 4.5))
+  expect_identical(s$mode, c(width = "native", height = "native"))
+  expect_equal(tfl_fig_page_size(sz_spec(), "F-1", native = c(7.3, 4.2))$width_in, 7.3)
+  fit <- data.frame(output_id = "F-1", type = "figure", figure_width_in = "fit",
+                    figure_height_in = "FIT")
+  s <- tfl_fig_page_size(sz_spec(report = fit), "F-1")
+  # letter landscape 11 x 8.5, margins 0.75: 9.5 wide; 7 high less 2 titles
+  # and 2 spacing lines at 9 pt (0.15 in each)
+  expect_equal(c(s$width_in, s$height_in), c(9.5, 6.4))
+  expect_identical(s$mode, c(width = "fit", height = "fit"))
   # portrait A4, margins of its own
   pg <- data.frame(output_id = NA, paper_size = "A4", orientation = "portrait",
                    margin_left_in = 1, margin_right_in = 1)
-  expect_equal(tfl_fig_page_size(sz_spec(page = pg), "F-1")$width_in, 6.27)
-  # one given: kept; the other the body's
-  rep <- data.frame(output_id = "F-1", type = "figure", figure_width_in = 6)
+  expect_equal(tfl_fig_page_size(sz_spec(report = fit, page = pg), "F-1")$width_in, 6.27)
+  # one a number, the other its own
+  rep <- data.frame(output_id = "F-1", type = "figure", figure_width_in = "6")
   s <- tfl_fig_page_size(sz_spec(report = rep), "F-1")
-  expect_equal(s$width_in, 6)
-  expect_identical(s$fit, c(width = FALSE, height = TRUE))
+  expect_equal(c(s$width_in, s$height_in), c(6, 4.5))
+  expect_identical(s$mode, c(width = "fixed", height = "native"))
+  # anything else: a problem of the spec
+  bad <- data.frame(output_id = "F-1", type = "figure", figure_width_in = "-2")
+  expect_error(sz_spec(report = bad), "a number of inches or fit")
 })
 
-test_that("the report step places the figure at that size", {
+test_that("the report step sizes only what is said", {
   code <- tfl_report_code(sz_spec(), "F-1", content = "plot")
-  expect_true(any(grepl("rtf_figures(plot, width_twips = 13680, height_twips = 9216)",
-                        code, fixed = TRUE)))
+  expect_true(any(grepl("rtf_figures(plot)", code, fixed = TRUE)))
+  rep <- data.frame(output_id = "F-1", type = "figure", figure_width_in = "fit")
+  code <- tfl_report_code(sz_spec(report = rep), "F-1", content = "plot")
+  expect_true(any(grepl("rtf_figures(plot, width_twips = 13680)", code, fixed = TRUE)))
 })
 
 test_that("an old design's size is read as nothing: its report's now", {

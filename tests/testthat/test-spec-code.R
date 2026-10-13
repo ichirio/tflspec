@@ -156,9 +156,14 @@ test_that("tfl_report_code() writes the document tfl_report() makes", {
 })
 
 test_that("a figure report writes rtf_figures(), at its size on the page", {
+  # blank: the figure's own size, as rtfreporter places it
   sp <- tfl_table_spec(report = data.frame(output_id = "F1", type = "figure"))
   code <- tfl_report_code(sp, content = "plots")
-  # letter landscape's body: 9.5 x 6.7 in (two spacing lines)
+  expect_true(any(grepl("rtf_figures(plots)", code, fixed = TRUE)))
+  # fit: letter landscape's body, 9.5 x 6.7 in (two spacing lines)
+  sp <- tfl_table_spec(report = data.frame(output_id = "F1", type = "figure",
+                                           figure_width_in = "fit", figure_height_in = "fit"))
+  code <- tfl_report_code(sp, content = "plots")
   expect_true(any(grepl("rtf_figures(plots, width_twips = 13680, height_twips = 9648)",
                         code, fixed = TRUE)))
 })

@@ -93,8 +93,8 @@
     section_align = "text", auto_title = "bool", title_align = "text",
     table_font_size_half_points = "int", title_font_size_half_points = "int",
     footnote_font_size_half_points = "int", page_header = "bool",
-    page_footer = "bool", watermark = "text", figure_width_in = "num",
-    figure_height_in = "num", ard_source = "text", pattern = "text",
+    page_footer = "bool", watermark = "text", figure_width_in = "text",
+    figure_height_in = "text", ard_source = "text", pattern = "text",
     data_code = "text", content_code = "text"),
   page = c(
     paper_size = "text", orientation = "text", width_in = "num",
@@ -890,6 +890,13 @@ tfl_table_spec <- function(tables = NULL, variables = NULL, cells = NULL,
                    sprintf("`report$type` must be table, listing or figure; got %s.",
                            sQuote(rp$type[i])))),
             i, rep("type", length(i))), rp, "report")
+  # a figure's size: a number of inches, fit (the page's body) or blank
+  for (cn in c("figure_width_in", "figure_height_in")) {
+    fv <- rp[[cn]] %||% rep(NA_character_, nrow(rp))
+    bad <- which(vapply(fv, function(x) inherits(tryCatch(.fig_size_cell(x), error = function(e) e), "error"), NA))
+    keyed(.pb(sprintf("`report$%s` is a number of inches or fit; got %s.", cn, sQuote(fv[bad])),
+              bad, rep(cn, length(bad))), rp, "report")
+  }
   # under: another variable, a colon, one of its levels
   un <- v$under %||% rep(NA_character_, nrow(v))
   i <- which(!is.na(un) & !grepl("^[^:]+:\\s*\\S", un))

@@ -560,14 +560,14 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
                                         footer = ftr)
   }
   if (identical(r$type %||% "table", "figure")) {
-    # its size on the page: the report's, or the page's body
-    # (tfl_fig_page_size())
+    # its size on the page (tfl_fig_page_size()): a number or the page's
+    # body (fit) said; blank, the figure's own size (rtfreporter's)
     twips <- function(v) as.integer(round(v * 1440))
     lines <- length(.ard_spec_band(sp, "titles")) + length(.ard_spec_band(sp, "footnotes"))
     sz <- .fig_page_size(r, pg_all, lines)
     st[[length(st) + 1L]] <- .spec_call("rtf_figures", doc, .spec_sym(content),
-      width_twips = twips(sz$width_in),
-      height_twips = twips(sz$height_in))
+      width_twips = if (sz$mode[["width"]] != "native") twips(sz$width_in),
+      height_twips = if (sz$mode[["height"]] != "native") twips(sz$height_in))
   } else {
     st[[length(st) + 1L]] <- .spec_call("rtf_tables", doc, .spec_sym(content),
       auto_section = r$auto_section,

@@ -4,31 +4,38 @@
 \alias{tfl_fig_page_size}
 \title{A figure's size on its report's page}
 \usage{
-tfl_fig_page_size(spec, output_id = NULL)
+tfl_fig_page_size(spec, output_id = NULL, native = c(6.5, 4.5))
 }
 \arguments{
 \item{spec}{A report definition (\code{\link[=tfl_read_report_spec]{tfl_read_report_spec()}}), or the
 path(s) to read it from.}
 
 \item{output_id}{The report, when \code{spec} defines several.}
+
+\item{native}{The figure's own size in inches, \code{c(width, height)}: what
+a blank gives (a study's figure style says it by the figure's kind;
+rtfreporter draws a plot at 6.5 x 4.5).}
 }
 \value{
-A list: \code{width_in}, \code{height_in} (inches, two decimals) and \code{fit}
-(\code{c(width = , height = )}: \code{TRUE} where the size is the body's).
+A list: \code{width_in}, \code{height_in} (inches, two decimals) and
+\code{mode} (\code{c(width = , height = )}: \code{"native"}, \code{"fit"} or \code{"fixed"}).
 }
 \description{
-Where a figure report's figure goes and how big it is drawn: the report
-sheet's \code{figure_width_in} / \code{figure_height_in}, or -- blank -- the page's
-body.  The body is the page (the page sheet's \code{width_in} / \code{height_in},
-else its \code{paper_size} in its \code{orientation}) less its margins; its height
-less, too, the report's title and footnote lines (and a line between
-each and the figure), at the page's font size.  One of the two blank
-keeps the other given.  A report program draws the figure at this size
-(so its text is the size its theme says) and the report places it so.
+How big a figure report's figure is drawn and placed: the report sheet's
+\code{figure_width_in} / \code{figure_height_in}, each a number of inches (that
+size), \code{fit} (the page's body) or blank (the figure's own size, as
+rtfreporter places an image: \code{native}).  The body is the page (the page
+sheet's \code{width_in} / \code{height_in}, else its \code{paper_size} in its
+\code{orientation}) less its margins; its height less, too, the report's
+title and footnote lines (and a line between each and the figure), at
+the page's font size.  A report program draws the figure at this size
+(its text the size its theme says) and the report places it so; the
+dpi only sets how many pixels it has.
 }
 \examples{
 sp <- tfl_table_spec(
-  report = data.frame(output_id = "F-1", type = "figure"),
+  report = data.frame(output_id = "F-1", type = "figure",
+                      figure_width_in = "fit"),
   page = data.frame(output_id = NA, paper_size = "letter",
                     orientation = "landscape"),
   titles = data.frame(output_id = "F-1", line = c("1", "2"),

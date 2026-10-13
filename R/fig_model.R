@@ -459,7 +459,7 @@ tfl_fig_objects <- function(design) {
     # (its size is its report's: the report sheet's figure_width_in /
     # figure_height_in, blank the page's body -- tfl_fig_page_size())
     .ff("dpi", "number", "DPI", 300,
-        help = "The resolution it is drawn at; its size is its report's (the page step)."),
+        help = "The resolution only: pixels = inches x dpi. Its size on the page is step 3's (its own size, fit to the page, or inches); the dpi does not change it."),
     .ff("add", "pieces", "Additional calls (plot.add)", of = "plot_add",
         help = "Any ggplot2/extension call, after the figure's settings and before any panels."))
 }
