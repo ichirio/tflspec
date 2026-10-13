@@ -1,0 +1,67 @@
+rule,who,level,message,hint
+S01,ai,,,
+R01,human,,,
+R02,ai,,,
+R03,ai,,,
+R04,human,,,
+R05,ai,,,
+R06,human,,,
+R07,ai,,,
+R08,ai,,,
+C01,ai,,,
+C02,ai,,,
+C03,ai,,,
+C04,human,,,
+A01,ai,,,
+A02,ai,,,
+A03,ai,,,
+A04,ai,,,
+A05,ai,,,
+A06,ai,,,
+A08,ai,,,
+A11,ai,,,
+A12,human,,,
+A13,ai,,,
+A15,ai,,,
+A16,ai,,,
+A17,human,,,
+T01,ai,,,
+T02,ai,,,
+T03,ai,,,
+T04,ai,,,
+T05,ai,,,
+T06,ai,,,
+T07,ai,,,
+T08,ai,,,
+T09,human,,,
+T10,human,,,
+L01,human,,,
+L02,ai,,,
+F01,human,,,
+F02,human,,,
+F03,ai,,,
+D01,ai,,,
+P01,human,,,
+P02,human,,,
+C05,ai,,,
+D02,human,,,
+D03,ai,,,
+review,human,,,
+F04,ai,,,
+F05,human,,,
+F06,ai,,,
+F07,ai,,,
+F08,ai,,,
+K01,ai,error,%s: the sheet %s is not a sheet of the spec.,"Rename it to one of the blank workbook's sheets (%s), or start its name with _ to keep it as a note."
+K02,ai,error,%s: the column %s is not a column of the sheet.,Use the blank workbook's headers exactly: %s.
+K03,ai,error,%s is not an output of the TOC.,"Use the TOC's output ids, character for character."
+K04,ai,error,The TOC's output %s has no row on the %s sheet.,"Add the output, or say in _assumptions why it is left out."
+K05,ai,check,"%s: the %s line %s is ""%s""; the TOC has ""%s"".",Copy the TOC's text exactly.
+K06,ai,check,"%s: %s writes a number the specs cannot know: ""%s"".","Use the token ({n}, {PAGE}, {DATETIME}) instead of the number."
+K07,ai,check,The analyses of %s are used by no table of the workbook.,"Add the table's rows, or remove the analyses."
+K08,ai,error,The file has no assumptions: %s.,"List every decision taken without being told: a sheet _assumptions (output_id, sheet, item, assumption, question), or assumptions: in a .yml."
+K09,human,hand,%s,"Answer the question, or confirm the assumption."
+K10,human,hand,%s: the percentages of %s are of %s.,"Confirm the denominator, or say what it is."
+K11,human,hand,The analysis set %s is the subjects of %s with %s.,Confirm the flag and its value.
+K12,human,hand,%s: %s is computed with %s.,"Confirm the method (the test, the model and its terms)."
+K13,human,hand,%s: %s prints in the order %s.,"Confirm the order, or give the code list."

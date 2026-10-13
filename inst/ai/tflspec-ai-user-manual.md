@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9098** (the development version,
+**This manual documents tflspec 0.0.24.9100** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -167,7 +167,8 @@ going and leaves the message in the `error` / `warning` column.
 | a listing's program / its pages | `tfl_listing_code(spec)` / `tfl_listing(data, spec)` |
 | a figure: start / check / write the script | `tfl_fig_template()` / `tfl_check_fig_design()` / `tfl_fig_design_code()` |
 | review the whole definition: errors, what is probably wrong, what to set by hand | `tfl_review_spec(spec, ard, listings, figures)`; against the data: `facts = tfl_data_facts(data, populations = ard)`; the rules: `tfl_review_rules()`; each row's sentence is `template` filled with `args` (`message` is the two put together; the sentences beyond the rules': `tfl_review_templates()`) |
-| attach this manual to a chat session | `tflspec_ai_manual(file = )` |
+| attach this manual to a chat session | `tflspec_ai_manual()` (its path) |
+| draft a study's specs from its TOC and shells in an AI chat | `tflspec_ai_manual(dir)` writes the kit to attach; `tfl_ai_review(file, toc = )` checks each file returned (§11.2) |
 | draft a TOC or a figure design with an AI chat | `tfl_ai_context()` → `tfl_ai_prompt()` → the chat → `tfl_ai_parse()` → `tfl_ai_check()` (problems: `tfl_ai_repair_prompt()`) → `tfl_ai_diff()` (§11.1) |
 
 ### 4.1 How the columns are named
@@ -674,6 +675,40 @@ answer <- tfl_ai_parse(reply_text, "figure")
 problems <- tfl_ai_check(answer, ctx)     # errors: send tfl_ai_repair_prompt(answer, problems)
 tfl_ai_diff(current_design, answer)       # what to accept, piece by piece
 ```
+### 11.2 Drafting a study's specs from its TOC and shells
+
+`tflspec_ai_manual(dir)` writes one flat folder to attach to a chat:
+the request (`00_START_HERE.md`), this manual, the TOC / shell guide
+(`02_tflspec-ai-toc-shell-guide.md`: how to read a company's TOC and
+shells into specs, the checklist, the assumptions to list), every spec
+sheet blank with a `_columns` sheet (`03_blank_specs.xlsx`; `split =
+TRUE`: one workbook a spec), a blank figure design, and a made-up study
+end to end (its TOC and shells, the specs written from them).  The
+assistant returns a workbook and a `.yml` a figure, with its guesses in
+a sheet `_assumptions` (`output_id`, `sheet`, `item`, `assumption`,
+`question`) and a key `assumptions:`.
+
+`tfl_ai_review(file, toc = , adam = , others = )` checks one returned
+file and splits what it finds by who acts: **the AI** (a sheet or column
+not the spec's, an output or a title not the TOC's, `(N=86)` where
+`(N={n})` belongs, analyses no table uses, no `_assumptions`, every
+error and check of `tfl_review_spec()` / `tfl_check_fig_design()`) and
+**the person** (each assumption; each analysis set's flag, percentage's
+denominator, test or model, fixed order of levels).  It writes
+`<file>_repair.md` (paste into the chat) and `<file>_questions.md`
+(answer, then paste); `who` and the kit's rules K01-K13 are
+`inst/review/ai_rules.csv`.
+
+```r
+kit <- tflspec_ai_manual("ai-kit")                       # attach every file
+toc <- tfl_read_toc("TOC.xlsx", sheet = "TOC", skip = 1,
+                    map = list(output_id = "Shell Number",
+                               title = c("Title1", "Title2"),
+                               population = "Population"))
+r <- tfl_ai_review("XYZ-001_specs.xlsx", toc = toc)     # writes the two prompts
+summary(r)                                               # who x level
+```
+
 ### Names in the generated programs
 
 A program's own variables are never a data's or an ARD's column: ADaM
@@ -733,7 +768,7 @@ back): rename the value or choose another separator.
 
 ## 13. Complete public API (nothing outside this list exists)
 
-**Manual:** `tflspec_ai_manual`
+**Manual:** `tflspec_ai_manual` `tfl_ai_review`
 
 **The functions the generated programs call (their code):** `tfl_helpers_code`
 
