@@ -361,7 +361,7 @@ once. The `study` sheet has `key` / `value` (`rounding`: `sas` / `iec` /
 | `sort` | `plan_sort()` | `TRUE`, `FALSE`, or keys in order, `-` for descending |
 | `sort_stat` | `plan_sort(stat = )` | the statistic totalled for a frequency order |
 | `header_n` | `plan_col_header(values = list(n = ))` | `page`, `table`, or `n = page \| N = table` |
-| `stat_groups` | `plan_stat_groups()` | one record's statistics in named groups, `n = N \| orr_ci = n, estimate, conf.low, conf.high`; the key `.stat_group` in `cols` puts N in one column and the rate and CI in the next; a `cells` row's `variable` may be a group's name |
+| `stat_groups` | `plan_stat_groups()` | one record's statistics in named groups, `n = N \| orr_ci = n, estimate, conf.low, conf.high`; the key `.stat_group` in `cols` puts N in one column and the rate and CI in the next, in `rows` one group under another; a `cells` row's `variable` may be a group's name, its template one row or several (n rows x m columns of one record). Keep the ARD as it is: no `mutate()` of `variable` |
 | `overall_label` | `normalize_ard(overall = )` | the any-event row of a hierarchy ("Subjects with at least one TEAE"; its analysis `args` `over_variables = TRUE`): the program's normalization, written by `tfl_normalize_code(spec, ard_spec)` (with the `hierarchy` of its `hierarchical` analysis) |
 
 **variables**: `variable`, `label`, `order`, `levels` (`Grade 0 | Grade 1`), `empty_levels` (`hide`: no row for a value no record has; blank: a 0 row), `under` (`RACE: Asian`: its rows under that level of RACE, one indent deeper, its own heading dropped -- `plan_nest()`)
