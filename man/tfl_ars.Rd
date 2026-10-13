@@ -14,7 +14,8 @@ tfl_ars(
   reason = "SPECIFIED IN SAP",
   dataset_names = NULL,
   dir = ".",
-  references = NULL
+  references = NULL,
+  columns = NULL
 )
 }
 \arguments{
@@ -56,6 +57,11 @@ with \code{output_id} (the figure), \code{source} (the table) and \code{analysis
 contents names the source's analyses -- they are not written twice;
 one whose analyses are not in the ARS is listed by
 \code{\link[=tfl_ars_unmapped]{tfl_ars_unmapped()}}.}
+
+\item{columns}{\code{profile = "siera"}: the datasets' columns, a named list
+(\code{list(ADSL = names(adsl), ...)}); with it, an output grouped by a
+column its dataset does not have (one the spec derives: ARS has no
+derivation) is one siera cannot run.  \code{NULL}: not checked.}
 }
 \value{
 A \code{tfl_ars}: the reporting event as a nested list, with

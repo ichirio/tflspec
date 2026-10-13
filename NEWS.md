@@ -1,5 +1,16 @@
 # tflspec (development version)
 
+* **The siera profile's file runs in siera** (#239).  siera stops on the
+  first output it cannot handle, so the sample's siera file gave no
+  programme at all.  `tfl_ars(profile = "siera")` now leaves out the
+  outputs siera cannot run -- fewer than three analyses (it applies the
+  analysis set from an output's third), an analysis without a grouping (a
+  Total column, a study total), a grouping on a column its dataset does not
+  have (one the spec derives; needs the new `columns =`, the datasets'
+  column names) -- and lists each in `tfl_ars_unmapped()` (item `siera`,
+  with why).  Checked on tflplanner's sample: siera reads the whole file and
+  runs the other five outputs, whose 1,721 numbers equal the study ARD's.
+
 * **A figure's size is its report's: its own size, fit to the page, or
   inches** (0.0.24.9102, the user's request on tflplanner's step 3).  The
   report sheet's `figure_width_in` / `figure_height_in` take a number of
