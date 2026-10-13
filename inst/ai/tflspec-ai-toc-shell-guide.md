@@ -178,21 +178,29 @@ One row, `output_id` the table's.
 
 - `cols`: the variable whose values are the columns -- the arm.  Its
   name is not in the shell; take the dataset's treatment variable
-  (`TRT01A` on ADSL, `TRTA` on ADAE; §4.1) and say so.  Two header rows
+  (`TRT01A` on ADSL; `TRTA` on most event datasets, but check: the
+  pilot data's ADAE has only `TRT01A`; §4.1) and say so.  The arms'
+  order is the shell's: a `variables` row for the arm with `levels`
+  (`Placebo | Drug X 10 mg | Drug X 20 mg`), else they come out
+  alphabetically.  Two header rows
   of keys ("Drug X" over doses, or arms over `SEX`) are two keys,
   outermost first: `TRTA | SEX`.
 - `rows`: the keys down the stub.  A demographics table has one row key
   (the variable): write `group = variable` (the ARD's variable column),
-  as the examples do, and leave `label` blank (the ARD's own `.label`).  A hierarchy (SOC, then PT) is `group1 = AEBODSYS` with `label =
-  AEDECOD`.
+  as the examples do, and leave `label` blank (the ARD's own `.label`).
+  A hierarchy (SOC, then PT) is `rows` `group1 = AEBODSYS` with `label`
+  blank: after `normalize_ard()` the PT is the `.label`, not an
+  `AEDECOD` column.
 - `total`: the heading the shell gives the Total column ("Total", "All
   Subjects"); `total_position` `first` when it is the first column.  Its
   numbers come from the analysis's `overall` (§4.5); no `total` when the
   shell has no such column.
-- `sort`: the shell's row order when it is not the data's.  "Most
-  frequent first within a SOC" is `.overall | group1 | .depth | -n |
-  label` with `sort_stat` `n` (the examples' AE table).  A fixed order of
-  levels is not a sort; it is `variables$levels` / the code lists (§3.7).
+- `sort`: the shell's row order when it is not the data's.  "SOCs
+  alphabetically, PTs by decreasing frequency in the total of the arms"
+  is `group1 | .depth | -.sort_stat | label` with `sort_stat` `n`: the
+  total goes into a column `.sort_stat`, which the `columns` sheet hides
+  (`column` `.sort_stat`, `hide` `TRUE`).  A fixed order of levels is not
+  a sort; it is `variables$levels` / the code lists (§3.7).
 - `stats`, `value`, `sep`, `na`, `header_n`: leave blank unless the shell
   demands it (`na`: what an empty cell shows, "-" or "0 (0.0%)" -- the
   latter is a cells row with `when: n == 0`, not `na`).
@@ -268,6 +276,10 @@ two-line header -- the arm, then `(N=xx)` -- is:
 
 ### 3.5 Indentation, groups, pages → `layout` and `variables$under`
 
+- The stub: `layout` `stub_name` `row_label` and `stub_before` `TRUE` (as
+  in the example) fold the row keys into one first column, `row_label`,
+  which the `col_header` and `columns` sheets name.  A long PT wraps in a
+  narrow stub: give `columns` `rel_width` (`row_label` 3, `.values` 1).
 - Levels indented under a heading, PTs under a SOC: the default.  A
   deeper nesting the shell shows ("Asian" with sub-categories under it)
   is `variables$under` (`RACE: Asian`).
@@ -294,10 +306,10 @@ in the analysis set" is a footnote too, not an instruction.
 ### 3.7 Levels in a fixed order → code lists
 
 A categorical variable whose levels the shell lists in an order that is
-not alphabetical ("<65", "65-80", ">80"; "Male", "Female") needs that
+not alphabetical ("18-64", ">64"; "Male", "Female") needs that
 order written:
 
-- `variables$levels` (`<65 | 65-80 | >80`) when the shell's words are the
+- `variables$levels` (`18-64 | >64`) when the shell's words are the
   data's values; or
 - `codelists` rows (`variable`, `value`, `label`, `order`) when the shell
   shows labels ("Male") for coded values ("M").  One row per value, per
@@ -349,7 +361,7 @@ its statistics for the right `by`.  Group the shell's blocks by method:
 | SOC / PT counted by subject | `hierarchical` | `AEBODSYS \| AEDECOD` | |
 | worst grade / severity by subject | `max` | `AESEV` (ordered) | |
 | missing counts | `missing` | | |
-| number of subjects (N= in the header) | the header's `{n}` reads it from the ARD: no analysis needed when some analysis of the report has the same `by`; else `total_n` | | |
+| number of subjects (N= in the header) | the header's `{n}` reads the arms' N from the ARD; a Total column's N needs a `total_n` analysis (no `by`) | | |
 | a p-value row | `ttest` / `wilcox` / `chisq` / `fisher` | the variable; `by` the arm | |
 | a mean with a CI | `mean_ci` | | |
 | a response rate with a CI | `proportion_ci` | | |
@@ -381,9 +393,8 @@ Write the denominator you chose in the assumptions, every time.
 
 ### 4.4 Adverse events by subject (SOC / PT)
 
-The standard AE table -- "Any TEAE" first, then each SOC with its PTs,
-subjects counted once per SOC and once per PT, `n (%)` of the analysis
-set, most frequent first:
+The standard AE table -- each SOC with its PTs, subjects counted once
+per SOC and once per PT, `n (%)` of the analysis set:
 
 | column | value |
 |---|---|
@@ -392,22 +403,27 @@ set, most frequent first:
 | `dataset` | `ADAE` |
 | `population_id` | `SAF` |
 | `where` | `TRTEMFL == "Y"` |
-| `by` | `TRTA` |
+| `by` | the arm on ADAE (`TRTA`, or `TRT01A` when ADAE has no `TRTA`) |
 | `overall` | `TRUE` (when the shell has a Total column) |
 | `variables` | `AEBODSYS \| AEDECOD` |
-| `args` | `over_variables = TRUE` (the "Any TEAE" row across both levels) |
 
-The table spec's side: `rows` `group1 = AEBODSYS`, `label` `label =
-AEDECOD`, `sort` `.overall | group1 | .depth | -n | label`, `sort_stat`
-`n`, one default `cells` row `{n} ({p:.1f%})`, `layout$blank_where`
-`between_groups`.  The "Any TEAE" row is the `over_variables` row; its
-label is the shell's ("Subjects with at least one TEAE") -- give it on
-the `variables` sheet when the shell's wording differs from cards'.
+The table spec's side (the example's T-2): `rows` `group1 = AEBODSYS`,
+`label` blank, `sort` `group1 | .depth | -.sort_stat | label` with
+`sort_stat` `n` and `.sort_stat` hidden on the `columns` sheet, one
+default `cells` row `{n} ({p:.1f%})`, `layout` `blank_where`
+`between_groups`, `stub_name` `row_label`, `stub_before` `TRUE`.
+
+**"Subjects with at least one TEAE"**, the row many shells put first:
+the analysis can compute it (`args` `over_variables = TRUE`), but the
+table prints it only when the report's program names it
+(`normalize_ard(overall = "Subjects with at least one TEAE")`), and no
+sheet column says that yet.  Leave `over_variables` out, and put the
+row in the assumptions ("the any-TEAE row needs a line in the program").
 
 Variants: serious AEs (`where` `TRTEMFL == "Y" & AESER == "Y"`), related
 AEs (`AREL`), AEs leading to discontinuation (`AEACN`), by severity
-(`max` on `AESEV`, `by` the arm, one analysis per SOC/PT level is a
-`strata`).  Event counts instead of subject counts (`cards::ard_stack_hierarchical_count`) when the shell says "events".
+(`max` on `AESEV`).  Event counts instead of subject counts
+(`cards::ard_stack_hierarchical_count`) when the shell says "events".
 
 ### 4.5 `by`, Total, and repeats
 
@@ -451,7 +467,7 @@ widths when they are drawn, else leave blank), `collapse_repeats` `TRUE`
 on the subject column when the shell prints the subject once for several
 rows.
 
-The variable names: `USUBJID`, the arm (`TRTA`), `AEBODSYS`, `AEDECOD`,
+The variable names: `USUBJID`, the arm (`TRTA`, or `TRT01A`), `AEBODSYS`, `AEDECOD`,
 `AESTDTC` / `ASTDY`, `AESEV`, `AESER`, `AEREL`, `AEOUT`, `AEACN` for an AE
 listing.  Say which you assumed for each shell column.  The population
 of a listing is the `where` on the dataset's flag (`SAFFL == "Y"`) or the
@@ -535,8 +551,8 @@ Run through it; the review will.
   | output_id | sheet | item | assumption | question |
   |---|---|---|---|---|
   | | populations | SAF | SAFFL == "Y" | Is the safety set flagged by SAFFL? |
-  | T-2 | analyses | AE denominator | the analysis set per column | Should percentages be of the analysis set or of subjects with any AE? |
-  | T-1 | variables | AGEGR1 levels | "<65", "65-80", ">80" are the data's values | Please give the code list. |
+  | T-2 | analyses | AE denominator | the analysis set per column (SAF) | Percentages of the analysis set, or of subjects with any AE? |
+  | T-1 | codelists | SEX | the data code sex as M / F | Please give the code list of SEX. |
 
   A figure's `.yml` carries the same list under a top-level
   `assumptions:` key (a list of strings), as the manual's drafting
@@ -557,121 +573,141 @@ Run through it; the review will.
 A made-up study, XYZ-001, four outputs, on the CDISC pilot data
 (pharmaverseadam: arms Placebo, Xanomeline Low Dose, Xanomeline High
 Dose).  Open the files beside this guide; this section says what was
-read where.
+read where.  The specs run as they are: the ARD, the two tables, the
+listing and the figure are made from them in tflspec's own tests.
 
 ### The TOC sheet
 
 Row 1 is a title ("XYZ-001 -- Table of contents, v0.3"); the header is
 row 2: `Shell Number`, `Phase`, `Title1`, `Title2`, `Population`,
-`Footnote1`, `Footnote2`.  Headings ("14.1 Demographics") sit on rows
-with no shell number.
+`Footnote1`, `Footnote2`.  Headings ("14.1 Demographic and baseline
+characteristics") sit on rows with no shell number.
 
 | Shell Number | Phase | Title1 | Title2 | Population | Footnote1 | Footnote2 |
 |---|---|---|---|---|---|---|
 | | | 14.1 Demographic and baseline characteristics | | | | |
 | T-1 | | Table 14.1.1 | Demographic Characteristics | Safety Analysis Set | | |
+| | | 14.2 Vital signs | | | | |
+| F-1 | | Figure 14.2.1 | Mean (SE) Systolic Blood Pressure by Visit | Safety Analysis Set | | |
 | | | 14.3 Adverse events | | | | |
 | T-2 | | Table 14.3.1 | Treatment-Emergent Adverse Events by System Organ Class and Preferred Term | Safety Analysis Set | A subject is counted once in a system organ class and once in a preferred term. | Coded with MedDRA. |
+| | | 16.2 Subject data listings | | | | |
 | L-1 | | Listing 16.2.7 | Serious Adverse Events | Safety Analysis Set | | |
-| F-1 | | Figure 14.2.1 | Kaplan-Meier Plot of Time to First Dermatologic Event | Safety Analysis Set | | |
 
-Read as: `map = c(output_id = "Shell Number", title = c("Title1",
-"Title2"), population = "Population", footnote = c("Footnote1",
-"Footnote2"))`, `skip = 1`; `type` from the id.  The `Phase` column is
-empty: nothing to do.  "Safety Analysis Set" → `SAF`, `SAFFL == "Y"`
-(assumption).
+Read as `tfl_read_toc(path, sheet = "TOC", skip = 1, map = list(output_id =
+"Shell Number", title = c("Title1", "Title2"), population = "Population",
+footnote = c("Footnote1", "Footnote2")))`; the kind from the id.  The
+`Phase` column is empty: nothing to do.  "Safety Analysis Set" → `SAF`,
+`SAFFL == "Y"` (an assumption).
+
+→ report spec: `report` four rows (`table`, `table`, `listing`,
+`figure`); `titles` three lines each, `center` (Title1, Title2, the
+population); `footnotes` T-2's two lines, `left`; study-wide `header`
+line 1 (`left` "XYZ-001", `right` "Page {PAGE} of {TOTAL_PAGES}") and
+`footer` line 1 (`left` "{PROGRAM}", `right` "Generated on:
+{DATETIME}"), as the shells' page shows.
 
 ### Shell T-1
 
 ```
-                      Placebo    Xanomeline   Xanomeline    Total
-                                 Low Dose     High Dose
-Parameter             (N=xx)     (N=xx)       (N=xx)        (N=xx)
+                  Placebo       Xanomeline    Xanomeline    Total
+                                Low Dose      High Dose
+Parameter         (N=xx)        (N=xx)        (N=xx)        (N=xx)
 Age (years)
-  n                   xx         xx           xx            xx
-  Mean (SD)           xx.x (x.xx) ...
-  Median              xx.x
-  Min, Max            xx, xx
+  n               xx            xx            xx            xx
+  Mean (SD)       xx.x (xx.xx)  ...
+  Median          xx.x
+  Min, Max        xx, xx
 Sex, n (%)
-  Male                xx (xx.x%)
-  Female              xx (xx.x%)
+  Male            xx (xx.x%)
+  Female          xx (xx.x%)
 Age group, n (%)
-  <65                 xx (xx.x%)
-  65-80               xx (xx.x%)
-  >80                 xx (xx.x%)
+  18-64           xx (xx.x%)
+  >64             xx (xx.x%)
 ```
 
 → `tables`: `cols` `TRT01A`, `rows` `group = variable`, `total` `Total`.
-→ `variables`: `AGE` "Age (years)" 1; `SEX` "Sex, n (%)" 2, `levels` `M |
-F` with `codelists` M = Male, F = Female (the shell shows words; the
-data's codes are assumed -- a question); `AGEGR1` "Age group, n (%)" 3,
-`levels` `<65 | 65-80 | >80`.
+→ `variables`: `TRT01A` with `levels` `Placebo | Xanomeline Low Dose |
+Xanomeline High Dose` (the arms in the shell's order); `AGE` "Age
+(years)" 1; `SEX` "Sex, n (%)" 2; `AGEGR1` "Age group, n (%)" 3 with
+`levels` `18-64 | >64`.
+→ `codelists`: `SEX` `M` → Male (order 1), `F` → Female (2): the shell
+shows words, the data codes; the codes are an assumption.
 → `cells`: the four `continuous` rows of §3.3 (`{N}` 0; `{mean} ({sd})`
 `1,2`; `{median}` 1; `{min}, {max}` 0) and one `categorical` row
 `{n} ({p:.1f%})`.
-→ `col_header`: the four rows of §3.4 with `Parameter` on line 2.
-→ `analyses`: `AGE` `continuous` ADSL SAF `by` TRT01A `overall` TRUE
-`variables` AGE; `CAT` `categorical` ADSL SAF `by` TRT01A `overall` TRUE
-`variables` `SEX | AGEGR1`.
-→ `footnotes`: none.  `titles`: "Table 14.1.1", "Demographic
-Characteristics", "Safety Analysis Set".
+→ `layout`: `blank_where` `between_groups`, `stub_name` `row_label`,
+`stub_before` `TRUE`.
+→ `col_header`: the four rows of §3.4, `Parameter` on line 2.
+→ `analyses`: `N` `total_n` ADSL SAF (the Total column's N); `AGE`
+`continuous` ADSL SAF `by` TRT01A `overall` TRUE `variables` AGE; `CAT`
+`categorical` ADSL SAF `by` TRT01A `overall` TRUE `variables`
+`SEX | AGEGR1`.
 
 ### Shell T-2
 
 ```
-                                    Placebo   Xanomeline   Xanomeline
-System Organ Class                            Low Dose     High Dose
-  Preferred Term                    (N=xx)    (N=xx)       (N=xx)
-Subjects with at least one TEAE     xx (xx.x%)
-Cardiac disorders                   xx (xx.x%)
-  Atrial fibrillation               xx (xx.x%)
-  ...
+                                Placebo      Xanomeline   Xanomeline
+System Organ Class                           Low Dose     High Dose
+  Preferred Term                (N=xx)       (N=xx)       (N=xx)
+SYSTEM ORGAN CLASS 1
+  Preferred term 1              xx (xx.x%)
+  Preferred term 2              xx (xx.x%)
+
+SYSTEM ORGAN CLASS 2
+  Preferred term 1              xx (xx.x%)
 ```
 
-No Total column; PTs sorted by decreasing frequency within a SOC, SOCs
-by decreasing frequency.
-→ `tables`: `cols` `TRTA`, `rows` `group1 = AEBODSYS`, `label` `label =
-AEDECOD`, `sort` `.overall | group1 | .depth | -n | label` (`.overall`
-keeps the "Any TEAE" row first), `sort_stat` `n`.
+No Total column; SOCs alphabetically, PTs by decreasing frequency in
+the total of the arms within a SOC; the SOC rows carry no numbers.
+→ `tables`: `cols` `TRT01A`, `rows` `group1 = AEBODSYS`, `label` blank,
+`sort` `group1 | .depth | -.sort_stat | label`, `sort_stat` `n`.
+→ `variables`: `TRT01A` `levels` as T-1.
 → `cells`: one row, `{n} ({p:.1f%})`.
-→ `layout`: `blank_where` `between_groups`.
+→ `layout`: as T-1.  `columns`: `row_label` `rel_width` 3, `.values` 1,
+`.sort_stat` `hide` TRUE.
 → `col_header`: line 1 `row_label` "System Organ Class", `.values` `each`
 `{col}`; line 2 `row_label` "  Preferred Term", `.values` `each`
 `(N={n})`.
 → `analyses`: `AE` `hierarchical` ADAE SAF `where` `TRTEMFL == "Y"` `by`
-TRTA `variables` `AEBODSYS | AEDECOD` `args` `over_variables = TRUE`.
+TRT01A `variables` `AEBODSYS | AEDECOD`.
 Assumptions: the denominator is the analysis set per column; TEAE is
-`TRTEMFL`; the arm on ADAE is `TRTA`.
-→ `footnotes`: lines 1 and 2 from the TOC.
+`TRTEMFL`; the arm on ADAE is `TRT01A` (the pilot ADAE has no `TRTA`).
 
 ### Shell L-1
 
 ```
-Subject   Treatment   System Organ Class /   Start   Severity   Outcome
-                      Preferred Term         Day
-xxxx      xxxx        xxxx / xxxx            xx      xxxx       xxxx
+Subject       Treatment   System Organ Class /   Start   Severity   Outcome
+                          Preferred Term         Day
+xxxx-xx-xxxx  xxxxxxxx    XXXXXXXX /             xx      xxxxxx     xxxxxxxx
+                          xxxxxxxx
 ```
 
-→ `listings`: `dataset` ADAE, `where` `SAFFL == "Y" & AESER == "Y"`,
-`sort` `USUBJID | ASTDY`.
-→ `listing_cols`: `USUBJID` "Subject" `collapse_repeats` TRUE; `TRTA`
-"Treatment"; `AEBODSYS | AEDECOD` "System Organ Class /" + backslash-n +
-"Preferred Term" `sep` `" / "`; `ASTDY` "Start" + backslash-n + "Day";
-`AESEV` "Severity"; `AEOUT` "Outcome".  Assumptions: the variables
-behind each column; `SAFFL` is on ADAE.
+"Sorted by subject and start day; the subject printed once."
+→ `listings`: `type` `multiline`, `dataset` ADAE, `where` `SAFFL == "Y" &
+AESER == "Y"`, `sort` `USUBJID | ASTDY`.
+→ `listing_cols`, in order: `USUBJID` "Subject" `collapse_repeats` TRUE;
+`TRT01A` "Treatment"; `AEBODSYS | AEDECOD` "System Organ Class /" +
+backslash-n + "Preferred Term", `sep` `" / "`; `ASTDY` "Start" +
+backslash-n + "Day"; `AESEV` "Severity"; `AEOUT` "Outcome".
+Assumptions: the variables behind each column; serious is `AESER`;
+`SAFFL` is on ADAE.
 
 ### Shell F-1
 
-A sketch: three stepped curves, censor marks, a legend with the arms,
-"Days since first dose" under the x axis, "Probability without a
-dermatologic event" at the y axis, a number-at-risk table below.
-→ `07_example_figure.yml`: `template` `km_risk_table`; `data`: `read`
-ADTTE, `param` `TTDE` (assumed from the title: a question), `flag`
-`SAFFL`, `survfit` `fit` (`AVAL`, `CNSR`, `by` TRT01A); `plot`:
-`x_label` "Days since first dose", `y_label` "Probability without a
-dermatologic event", `colour_by` TRT01A, `legend` `bottom`; `layers`:
-`km_curve`, `censor_mark`, `risk_table`.  `report$type` `figure`;
-titles from the TOC.
+A description, not a picture: a line per arm through the mean at each
+visit, an error bar of one standard error, the arms side by side; x:
+Visit in visit order; y: "Mean (SE) Systolic Blood Pressure (mmHg)";
+the legend below.
+→ `07_example_figure.yml`: `template` `mean_se`; `data`: `read` ADVS,
+`param` `SYSBP` (assumed: a question), `flag` `SAFFL`, `filter` the
+non-missing values, `levels` `AVISIT` by `AVISITN`, `summary` `sm` (`AVAL`
+by `TRTA`, `AVISITN`, `AVISIT`, interval `se`); `plot`: `x_label`
+"Visit", `y_label` "Mean (SE) Systolic Blood Pressure (mmHg)",
+`colour_by` TRTA, `legend` `bottom`; `layers`: `line`, `point`,
+`errorbar`; then `assumptions:` (the parameter code; AVAL rather than
+CHG).  The template's `join` step is gone: ADVS has `TRTA` and `SAFFL`
+itself.
 
 ### The `_assumptions` sheet of `06`
 

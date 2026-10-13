@@ -24,23 +24,52 @@
 #' actually have.  For the rendering side attach rtfreporter's own manual
 #' instead (`rtfreporter::rtfreporter_ai_manual()`).
 #'
-#' @param file Optional destination.  When given, the manual is copied there
-#'   (ready to attach to a chat session) and the destination is returned
-#'   invisibly.  A directory is accepted, and the file keeps its own name.
-#' @param overwrite Overwrite `file` if it already exists.  Default `FALSE`.
+#' With `dir`, it writes everything a chat needs to draft a study's specs
+#' from the company's TOC and shells into one flat folder -- eight files,
+#' a few hundred KB, under the ten files most chats take:
 #'
-#' @return The path to the manual -- the installed file when `file` is `NULL`,
-#'   otherwise the copy, returned invisibly.
+#' * `00_START_HERE.md` -- the request to paste, and what to attach;
+#' * `01_tflspec-ai-user-manual.md` -- this manual;
+#' * `02_tflspec-ai-toc-shell-guide.md` -- how to read a TOC and shells
+#'   into specs, the checklist the assistant runs, the assumptions it must
+#'   list;
+#' * `03_blank_specs.xlsx` -- every sheet of the ARD, table, report and
+#'   listing specs, empty, with a `_columns` sheet saying what each column
+#'   means (written now from the column catalog, [tfl_spec_columns()], so
+#'   it is always this version's); `split = TRUE` writes one workbook a
+#'   spec instead (`03a_` ... `03d_`, eleven files);
+#' * `04_blank_figure.yml` -- a figure design, every field as a comment;
+#' * `05_example_toc_shell.xlsx`, `06_example_specs.xlsx`,
+#'   `07_example_figure.yml` -- a made-up study end to end: its TOC and four
+#'   shells (a demographics table, an AE table by SOC and PT, a listing of
+#'   serious AEs, a figure of mean blood pressure), and the specs written
+#'   from them, with the `_assumptions` sheet the guide asks for.  The
+#'   example runs on the CDISC pilot data (pharmaverseadam).
+#'
+#' What the assistant returns is checked file by file with
+#' [tfl_ai_review()].
+#'
+#' @param dir Optional folder.  When given, the kit is written there (the
+#'   folder is made if need be) and the paths of its files are returned
+#'   invisibly; the files, their sizes and what to attach are printed.
+#' @param split With `dir`: one blank workbook a spec instead of one for
+#'   all.
+#' @param overwrite Write over a kit already in `dir`.  Default `FALSE`.
+#'
+#' @return The path to the manual when `dir` is `NULL`; otherwise the kit's
+#'   files, invisibly.
 #'
 #' @examples
 #' # where the manual lives
 #' tflspec_ai_manual()
-#'
-#' # read it here, or copy it out to attach to a chat session
 #' writeLines(head(readLines(tflspec_ai_manual()), 3))
-#' tflspec_ai_manual(file = tempfile(fileext = ".md"))
+#'
+#' # the kit to attach to a chat
+#' kit <- tflspec_ai_manual(file.path(tempdir(), "ai-kit"))
+#' basename(kit)
+#' @seealso [tfl_ai_review()] for the files the assistant returns.
 #' @export
-tflspec_ai_manual <- function(file = NULL, overwrite = FALSE) {
+tflspec_ai_manual <- function(dir = NULL, split = FALSE, overwrite = FALSE) {
   name <- "tflspec-ai-user-manual.md"
   src  <- system.file("ai", name, package = "tflspec")
   if (!nzchar(src) || !file.exists(src)) {
@@ -49,17 +78,11 @@ tflspec_ai_manual <- function(file = NULL, overwrite = FALSE) {
       "  It ships in inst/ai/ from tflspec 0.0.24 on: reinstall."), name),
       call. = FALSE)
   }
-  if (is.null(file)) return(src)
-
-  dest <- if (dir.exists(file)) file.path(file, name) else file
-  if (file.exists(dest) && !isTRUE(overwrite)) {
+  if (is.null(dir)) return(src)
+  if (file.exists(dir) && !dir.exists(dir)) {
     stop(sprintf(paste0(
-      "`tflspec_ai_manual()`: '%s' already exists; pass `overwrite = TRUE` ",
-      "to replace it."), dest), call. = FALSE)
+      "`tflspec_ai_manual()`: '%s' is a file; give a folder (the kit is ",
+      "several files)."), dir), call. = FALSE)
   }
-  if (!file.copy(src, dest, overwrite = isTRUE(overwrite))) {
-    stop(sprintf("`tflspec_ai_manual()`: could not write '%s'.", dest),
-         call. = FALSE)
-  }
-  invisible(dest)
+  .ai_write_kit(dir, split = isTRUE(split), overwrite = isTRUE(overwrite))
 }

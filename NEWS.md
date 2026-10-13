@@ -1,5 +1,33 @@
 # tflspec (development version)
 
+* **An AI kit to draft a study's specs from its TOC and shells**
+  (`tflspec_ai_manual(dir)`).  A chat cannot read the disk, and most take
+  ten files at most: `tflspec_ai_manual(dir)` writes one flat folder of
+  eight -- the request to paste (`00_START_HERE.md`), the manual, a new
+  guide for the assistant (`02_tflspec-ai-toc-shell-guide.md`: reading a
+  company's TOC and shells -- header rows, Title1-3, populations,
+  footnotes, column headers and `(N=xx)`, decimals, indentation, pages --
+  into the ARD, table, report and listing specs and a figure design; a
+  checklist; an `_assumptions` sheet for every guess), every spec sheet
+  blank with a `_columns` sheet (written now from the column catalog;
+  `split = TRUE`: one workbook a spec), a blank figure design, and a
+  made-up study end to end (its TOC and four shells -- demographics, AEs by
+  SOC and PT, a listing of serious AEs, mean blood pressure by visit --
+  and the specs written from them, which run on the pilot data in the
+  tests).  With no `dir` it returns the manual's path, as before; the
+  former `file =` (one copy of the manual) is gone.
+* **`tfl_ai_review(file, toc, adam, others)`**: one file an assistant
+  returned, checked and split by who acts on it.  For the AI: a sheet or
+  column that is not the spec's, an output or title that is not the TOC's,
+  `(N=86)` where `(N={n})` belongs, analyses no table uses, a missing
+  `_assumptions` sheet, and the review's errors and checks
+  (`tfl_review_spec()`, `tfl_check_fig_design()`).  For the person: each
+  assumption, each analysis set's flag, each denominator, each test or
+  model, each fixed order of levels.  It writes `<file>_repair.md` (paste
+  into the chat) and `<file>_questions.md` (answer and paste back).  The
+  kit's rules K01-K13 and who acts on each review rule are
+  `inst/review/ai_rules.csv`.
+
 * **The treatment colours** (#233).
   - The order of the `treatment` palette's rows in the figure style standard
     is the arms' colour order (now said in `?tfl_fig_style`).  Its first
