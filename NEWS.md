@@ -1,5 +1,12 @@
 # tflspec (development version)
 
+* **`tables$compare`, `compare_by`, `compare_position`: comparison columns
+  from the sheets** (rtfreporter #625, needs rtfreporter 0.8.2.9047).  `p |
+  diff` becomes `plan_compare(p = ..., diff = ...)`, each column's templates
+  the `cells` rows whose `variable` is its name; a test's p-value, a
+  difference and its CI go on their variable's row, from the ARD.
+  `tfl_as_table_spec()` writes them back.
+
 * **`layout$group_heading`: each page's name from a template**, as
   rtfreporter's `plan_paginate_group(heading = )` (rtfreporter #619):
   `Treatment: {value} (N={n})` gives a section per arm that says the arm and

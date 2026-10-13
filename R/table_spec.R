@@ -195,7 +195,7 @@
     tables    = c("output_id", "cols", "rows", "label", "stats", "value",
                   "sep", "sort", "sort_stat", "na", "header_n", "total",
                   "total_position", "overall_label", "stat_groups", "stack",
-                  "stack_sep"),
+                  "stack_sep", "compare", "compare_by", "compare_position"),
     variables = c("output_id", "variable", "label", "order", "levels",
                   "empty_levels", "under"),
     # the study's code list: a value's text and place
@@ -620,6 +620,14 @@
 #'     came in.  Blank: none.}
 #'   \item{`stack_sep`}{What joins a crossed layer's names and levels
 #'     (`AGEGR1 / SEX`, `65-80 / F`).  Blank: ` / `.}
+#'   \item{`compare`, `compare_by`, `compare_position`}{Comparison columns
+#'     ([rtfreporter::plan_compare()]): their names (`p | diff`), each
+#'     reading the ARD's comparison records -- a test's p-value, a
+#'     difference and its CI, the column key with no value -- onto the row
+#'     of their variable.  A column's templates are the `cells` rows whose
+#'     `variable` is its name (one a `context` when a test prints another
+#'     way).  `compare_by` splits the comparisons into columns, one a
+#'     level; `compare_position` is `last` (blank) or `first`.}
 #'   \item{`stat_groups`}{One record's statistics in named groups, `|`
 #'     between groups, `,` between a group's statistics: `n = N | orr_ci =
 #'     n, estimate, conf.low, conf.high` ([rtfreporter::plan_stat_groups()]).
@@ -1449,6 +1457,8 @@ print.tfl_table_spec <- function(x, ...) {
 .ard_spec_cells <- function(sp) {
   s <- sp$cells
   s <- s[!is.na(s$template), , drop = FALSE]    # the rest are rows formats
+  # a row for a comparison column (tables$compare) is plan_compare()'s
+  s <- s[!(s$variable %in% .ard_spec_compare_names(sp)), , drop = FALSE]
   if (!nrow(s)) return(NULL)
   rules <- .ard_spec_digit_rules(sp)
   ord <- .ard_spec_variables(sp)$variable
@@ -1496,6 +1506,50 @@ print.tfl_table_spec <- function(x, ...) {
     }
   }
   out
+}
+
+# `tables$compare`: the comparison columns' names, `p | diff`
+.ard_spec_compare_names <- function(sp) {
+  t <- sp$tables
+  if (!nrow(t) || !"compare" %in% names(t) || is.na(t$compare[1L]) ||
+      !nzchar(trimws(t$compare[1L]))) return(character(0))
+  .split_bar(t$compare[1L])
+}
+
+# plan_compare() from the sheets: each column's templates are the `cells`
+# rows whose `variable` is its name -- one chain, or one a context (a
+# Fisher test printed another way) with the rows of no context the default.
+.ard_spec_compare <- function(sp) {
+  nm <- .ard_spec_compare_names(sp)
+  if (!length(nm)) return(NULL)
+  s <- sp$cells
+  s <- s[!is.na(s$template) & s$variable %in% nm, , drop = FALSE]
+  rule <- .ard_spec_rule_for(.ard_spec_digit_rules(sp), NA_character_)
+  chain <- function(idx) {
+    els <- lapply(idx, function(i) .ard_spec_chain_el(s[i, , drop = FALSE], i, rule))
+    if (all(vapply(els, is.character, NA))) unlist(els) else els
+  }
+  cols <- lapply(nm, function(v) {
+    idx <- which(s$variable == v)
+    if (!length(idx)) {
+      .ard_stop(sprintf(paste0(
+        "`tables$compare` names %s, and no `cells` row has `variable` = %s:
+",
+        "  write its template there (`{p.value:.3f}`)."), sQuote(v), v))
+    }
+    ctx <- s$context[idx]
+    if (all(is.na(ctx))) return(chain(idx))
+    keys <- .ard_first_seen(ifelse(is.na(ctx), "default", ctx))
+    stats::setNames(lapply(keys, function(k)
+      chain(idx[ifelse(is.na(ctx), "default", ctx) == k])), keys)
+  })
+  names(cols) <- nm
+  t <- sp$tables
+  by <- if ("compare_by" %in% names(t) && !is.na(t$compare_by[1L]) &&
+              nzchar(trimws(t$compare_by[1L]))) trimws(t$compare_by[1L])
+  pos <- if ("compare_position" %in% names(t) && !is.na(t$compare_position[1L]) &&
+               identical(trimws(t$compare_position[1L]), "first")) "first"
+  list(cols = cols, by = by, position = pos)
 }
 
 # The statistics a template names: "{mean} ({sd:.2f})" -> mean, sd
@@ -2412,6 +2466,19 @@ tfl_as_table_spec <- function(x, output_id = NULL, compare = TRUE) {
     cl[[length(cl) + 1L]] <- crow(NA, NA, st, NA, NA,
       if (!sig) v else NA, if (sig) sub("s$", "", v) else NA)
   }
+  # plan_compare(): its columns' templates, `variable` the column's name
+  cmp <- L$compare
+  for (ce in cmp$cols) {
+    for (el in ce$entry$chains[[1L]]) {
+      wh <- if (is.null(el$cond)) NA_character_
+            else paste(deparse(el$cond), collapse = " ")
+      cl[[length(cl) + 1L]] <- crow(ce$column, ce$context, NA_character_, wh, el$tpl)
+    }
+  }
+  tables$compare <- if (length(cmp$cols))
+    paste(unique(vapply(cmp$cols, `[[`, "", "column")), collapse = " | ") else NA_character_
+  tables$compare_by <- cmp$by %||% NA_character_
+  tables$compare_position <- if (identical(cmp$position, "first")) "first" else NA_character_
   cells <- if (length(cl)) do.call(rbind, cl) else NULL
 
   # -- layout -----------------------------------------------------------------

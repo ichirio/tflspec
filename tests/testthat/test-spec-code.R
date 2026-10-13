@@ -338,3 +338,33 @@ test_that("tables$stack: crossed layers (AGEGR1 * SEX), the slots, stack_sep (rt
                                 line("subgroup = SEX, AGEGR1 * SEX"), fixed = TRUE)))
   expect_identical(levels(data$subgroup), c("SEX", "AGEGR1 / SEX"))
 })
+
+test_that("tables$compare: comparison columns from the sheets, as plan_compare() (rtfreporter #625)", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  skip_if_not("plan_compare" %in% getNamespaceExports("rtfreporter"))
+  adsl <- cards::ADSL
+  ard <- cards::bind_ard(
+    cards::ard_stack(adsl, .by = ARM, cards::ard_summary(variables = AGE),
+                     cards::ard_tabulate(variables = SEX)),
+    cardx::ard_stats_kruskal_test(adsl, by = ARM, variables = AGE),
+    cardx::ard_stats_chisq_test(adsl, by = ARM, variables = SEX))
+  sp <- tfl_table_spec(
+    tables = data.frame(output_id = "DM", cols = "ARM", rows = "grp = variable",
+                        label = "variable_level", compare = "p"),
+    cells = data.frame(output_id = "DM", variable = c("continuous", "categorical", "p", "p"),
+                       when = c(NA, NA, "p.value < 0.001", NA),
+                       template = c("{mean:.1f}", "{n}", "<0.001", "{p.value:.3f}")))
+  code <- paste(tfl_table_code(sp, "DM"), collapse = "\n")
+  expect_match(code, "plan_compare(", fixed = TRUE)
+  p <- tfl_table_plan(rtfreporter::normalize_ard(ard), sp, "DM")
+  tab <- suppressMessages(rtfreporter::plan_apply(rtfreporter::plan_cells(p, notes = FALSE), "table"))
+  tab <- as.data.frame(if (is.data.frame(tab)) tab else tab[[1L]])
+  expect_true("p" %in% names(tab))
+  expect_false(anyNA(tab$p[match(c("AGE", "SEX"), tab$grp)]))
+  back <- tfl_as_table_spec(p, output_id = "DM", compare = FALSE)
+  expect_identical(back$tables$compare, "p")
+  expect_true(all(c("<0.001", "{p.value:.3f}") %in% back$cells$template[back$cells$variable %in% "p"]))
+  expect_error(tfl_table_code(tfl_table_spec(tables = data.frame(output_id = "X", cols = "ARM", compare = "p")), "X"),
+               "no `cells` row")
+})
