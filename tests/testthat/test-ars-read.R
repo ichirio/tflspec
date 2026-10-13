@@ -99,17 +99,22 @@ test_that("tfl_ars()'s own JSON comes back as the spec it was written from", {
 })
 
 test_that("the siera profile's JSON comes back too", {
-  back <- tfl_ars_to_specs(through_json(tfl_ars(read_spec(),
-                                                profile = "siera")))
+  ars <- tfl_ars(read_spec(), profile = "siera")
+  back <- tfl_ars_to_specs(through_json(ars))
   a <- back$ard$analyses
+  # an output of fewer than three analyses is one siera cannot run: left
+  # out of the file, said in the unmapped list (#239)
   expect_identical(a$method, c("categorical", "continuous", "categorical",
-                               "chisq", "hierarchical", "categorical",
-                               "proportion_ci"))
+                               "chisq", "hierarchical"))
+  un <- tfl_ars_unmapped(ars)
+  expect_true(any(un$item == "siera" & grepl("2 analyses", un$reason, fixed = TRUE)))
   ae <- a[a$method == "hierarchical", ]
   expect_identical(ae$variables, "AEBODSYS | AEDECOD")
   expect_identical(ae$by, "TRTA")
   expect_identical(ae$args, "over_variables = TRUE")
-  ci <- a[a$method == "proportion_ci", ]
+  # the cdisc profile keeps it, and reads back whole
+  cd <- tfl_ars_to_specs(through_json(tfl_ars(read_spec())))$ard$analyses
+  ci <- cd[cd$method == "proportion_ci", ]
   expect_identical(ci$variables, "SEX")
   expect_identical(ci$args, "method = \"wilson\"")
 })
