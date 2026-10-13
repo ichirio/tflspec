@@ -68,8 +68,10 @@ tflspec_ai_manual()
 writeLines(head(readLines(tflspec_ai_manual()), 3))
 
 # the kit to attach to a chat
+\donttest{
 kit <- tflspec_ai_manual(file.path(tempdir(), "ai-kit"))
 basename(kit)
+}
 }
 \seealso{
 \code{\link[=tfl_ai_review]{tfl_ai_review()}} for the files the assistant returns.

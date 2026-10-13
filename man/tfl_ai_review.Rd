@@ -64,10 +64,12 @@ pastes back (\verb{<file>_questions.md}), next to the file.  The kit's rules
 and who acts on each review rule are \code{inst/review/ai_rules.csv}.
 }
 \examples{
+\donttest{
 kit <- tflspec_ai_manual(file.path(tempdir(), "kit-review"), overwrite = TRUE)
 r <- tfl_ai_review(kit[grepl("06_example_specs", kit)], write = FALSE)
 summary(r)
 head(r[r$who == "human", c("output_id", "rule", "message")])
+}
 }
 \seealso{
 \code{\link[=tflspec_ai_manual]{tflspec_ai_manual()}} for the kit the assistant works from.

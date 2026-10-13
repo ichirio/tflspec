@@ -65,8 +65,10 @@
 #' writeLines(head(readLines(tflspec_ai_manual()), 3))
 #'
 #' # the kit to attach to a chat
+#' \donttest{
 #' kit <- tflspec_ai_manual(file.path(tempdir(), "ai-kit"))
 #' basename(kit)
+#' }
 #' @seealso [tfl_ai_review()] for the files the assistant returns.
 #' @export
 tflspec_ai_manual <- function(dir = NULL, split = FALSE, overwrite = FALSE) {

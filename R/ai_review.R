@@ -91,7 +91,7 @@
 # The assumptions the AI wrote: a workbook's `_assumptions` sheet, a
 # design's `assumptions:` list.  A data frame output_id / sheet / item /
 # assumption / question.
-.ai_assumptions <- function(sheets = NULL, yml = NULL) {
+.ai_review_assumptions <- function(sheets = NULL, yml = NULL) {
   cols <- c("output_id", "sheet", "item", "assumption", "question")
   empty <- stats::setNames(as.data.frame(matrix(character(), 0, 5),
                                          stringsAsFactors = FALSE), cols)
@@ -257,7 +257,7 @@
     }
   }
   # K08 / K09: the AI's own assumptions
-  a <- .ai_assumptions(sheets)
+  a <- .ai_review_assumptions(sheets)
   if (is.null(a) || !nrow(a)) {
     add(.ai_rv("K08", args = if (is.null(a)) "no sheet _assumptions" else "the sheet _assumptions is empty",
                cat = cat))
@@ -340,7 +340,7 @@
         }
       }
     }
-    a <- .ai_assumptions(yml = yml)
+    a <- .ai_review_assumptions(yml = yml)
     if (!nrow(a)) {
       add(.ai_rv("K08", args = "no assumptions: list in the design", cat = cat))
     } else {
@@ -451,10 +451,12 @@
 #'   assistant's own list), `repair` and `questions` (the two texts) and
 #'   `paths` (the files written).  Invisibly when `write = TRUE`.
 #' @examples
+#' \donttest{
 #' kit <- tflspec_ai_manual(file.path(tempdir(), "kit-review"), overwrite = TRUE)
 #' r <- tfl_ai_review(kit[grepl("06_example_specs", kit)], write = FALSE)
 #' summary(r)
 #' head(r[r$who == "human", c("output_id", "rule", "message")])
+#' }
 #' @seealso [tflspec_ai_manual()] for the kit the assistant works from.
 #' @export
 tfl_ai_review <- function(file, toc = NULL, adam = NULL, others = NULL,
@@ -491,9 +493,9 @@ tfl_ai_review <- function(file, toc = NULL, adam = NULL, others = NULL,
     writeLines(rep_txt, paths[["repair"]], useBytes = TRUE)
     writeLines(q_txt, paths[["questions"]], useBytes = TRUE)
   }
-  structure(r, class = c("tfl_ai_review", "data.frame"), file = base,
-            kinds = res$kinds, assumptions = res$assumptions,
-            repair = rep_txt, questions = q_txt, paths = paths) -> out
+  out <- structure(r, class = c("tfl_ai_review", "data.frame"), file = base,
+                   kinds = res$kinds, assumptions = res$assumptions,
+                   repair = rep_txt, questions = q_txt, paths = paths)
   if (isTRUE(write)) {
     print(out)
     return(invisible(out))
