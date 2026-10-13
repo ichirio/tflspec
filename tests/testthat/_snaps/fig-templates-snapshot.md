@@ -93,8 +93,8 @@
       
       # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "km_risk_table.png")
-      fig_width  <- 8.33
-      fig_height <- 4.79
+      fig_width  <- 7.5
+      fig_height <- 4.5
       fig_dpi    <- 300
       fig_units  <- "in"
       
@@ -167,8 +167,8 @@
       
       # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "km_simple.png")
-      fig_width  <- 8.33
-      fig_height <- 4.79
+      fig_width  <- 7.5
+      fig_height <- 4.5
       fig_dpi    <- 300
       fig_units  <- "in"
       
@@ -279,8 +279,8 @@
       
       # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "km_ci.png")
-      fig_width  <- 8.33
-      fig_height <- 4.79
+      fig_width  <- 7.5
+      fig_height <- 4.5
       fig_dpi    <- 300
       fig_units  <- "in"
       
@@ -380,8 +380,8 @@
       
       # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "km_single_arm.png")
-      fig_width  <- 8.33
-      fig_height <- 4.79
+      fig_width  <- 7.5
+      fig_height <- 4.5
       fig_dpi    <- 300
       fig_units  <- "in"
       
@@ -479,8 +479,8 @@
       
       # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "waterfall_response.png")
-      fig_width  <- 7.3
-      fig_height <- 4.2
+      fig_width  <- 7.5
+      fig_height <- 4.5
       fig_dpi    <- 300
       fig_units  <- "in"
       
@@ -556,8 +556,8 @@
       
       # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "waterfall_plain.png")
-      fig_width  <- 7.3
-      fig_height <- 4.2
+      fig_width  <- 7.5
+      fig_height <- 4.5
       fig_dpi    <- 300
       fig_units  <- "in"
       
@@ -630,8 +630,8 @@
       
       # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "swimmer_bar.png")
-      fig_width  <- 7.71
-      fig_height <- 4.17
+      fig_width  <- 7.5
+      fig_height <- 4.5
       fig_dpi    <- 300
       fig_units  <- "in"
       
@@ -720,8 +720,8 @@
       
       # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "swimmer_response.png")
-      fig_width  <- 7.71
-      fig_height <- 4.17
+      fig_width  <- 7.5
+      fig_height <- 4.5
       fig_dpi    <- 300
       fig_units  <- "in"
       
@@ -821,8 +821,8 @@
       
       # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "swimmer_assessment.png")
-      fig_width  <- 7.71
-      fig_height <- 4.17
+      fig_width  <- 7.5
+      fig_height <- 4.5
       fig_dpi    <- 300
       fig_units  <- "in"
       
@@ -929,8 +929,8 @@
       
       # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "swimmer_full.png")
-      fig_width  <- 7.71
-      fig_height <- 4.17
+      fig_width  <- 7.5
+      fig_height <- 4.5
       fig_dpi    <- 300
       fig_units  <- "in"
       
@@ -1024,8 +1024,8 @@
       
       # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "individual_spider.png")
-      fig_width  <- 7.3
-      fig_height <- 4.2
+      fig_width  <- 7.5
+      fig_height <- 4.5
       fig_dpi    <- 300
       fig_units  <- "in"
       
@@ -1109,8 +1109,8 @@
       
       # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "bar_rate_ci.png")
-      fig_width  <- 7.3
-      fig_height <- 4.2
+      fig_width  <- 7.5
+      fig_height <- 4.5
       fig_dpi    <- 300
       fig_units  <- "in"
       
@@ -1196,8 +1196,8 @@
       
       # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "bar_stacked.png")
-      fig_width  <- 7.3
-      fig_height <- 4.2
+      fig_width  <- 7.5
+      fig_height <- 4.5
       fig_dpi    <- 300
       fig_units  <- "in"
       
@@ -1277,8 +1277,8 @@
       
       # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "bar_dodged.png")
-      fig_width  <- 7.3
-      fig_height <- 4.2
+      fig_width  <- 7.5
+      fig_height <- 4.5
       fig_dpi    <- 300
       fig_units  <- "in"
       
@@ -1366,8 +1366,8 @@
       
       # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "mean_se.png")
-      fig_width  <- 7.3
-      fig_height <- 4.2
+      fig_width  <- 7.5
+      fig_height <- 4.5
       fig_dpi    <- 300
       fig_units  <- "in"
       
@@ -1455,8 +1455,8 @@
       
       # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "mean_sd.png")
-      fig_width  <- 7.3
-      fig_height <- 4.2
+      fig_width  <- 7.5
+      fig_height <- 4.5
       fig_dpi    <- 300
       fig_units  <- "in"
       
@@ -1544,8 +1544,8 @@
       
       # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "mean_ci.png")
-      fig_width  <- 7.3
-      fig_height <- 4.2
+      fig_width  <- 7.5
+      fig_height <- 4.5
       fig_dpi    <- 300
       fig_units  <- "in"
       
@@ -1654,8 +1654,8 @@
       
       # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "mean_se_n.png")
-      fig_width  <- 7.3
-      fig_height <- 4.2
+      fig_width  <- 7.5
+      fig_height <- 4.5
       fig_dpi    <- 300
       fig_units  <- "in"
       
@@ -1734,8 +1734,8 @@
       
       # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "individual_spaghetti.png")
-      fig_width  <- 7.3
-      fig_height <- 4.2
+      fig_width  <- 7.5
+      fig_height <- 4.5
       fig_dpi    <- 300
       fig_units  <- "in"
       
@@ -1818,8 +1818,8 @@
       
       # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "box_by_visit.png")
-      fig_width  <- 7.3
-      fig_height <- 4.2
+      fig_width  <- 7.5
+      fig_height <- 4.5
       fig_dpi    <- 300
       fig_units  <- "in"
       
@@ -1902,8 +1902,8 @@
       
       # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "box_by_group.png")
-      fig_width  <- 7.3
-      fig_height <- 4.2
+      fig_width  <- 7.5
+      fig_height <- 4.5
       fig_dpi    <- 300
       fig_units  <- "in"
       
@@ -1988,8 +1988,8 @@
       
       # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "box_change.png")
-      fig_width  <- 7.3
-      fig_height <- 4.2
+      fig_width  <- 7.5
+      fig_height <- 4.5
       fig_dpi    <- 300
       fig_units  <- "in"
       
@@ -2065,8 +2065,8 @@
       
       # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "scatter_shift.png")
-      fig_width  <- 7.3
-      fig_height <- 4.2
+      fig_width  <- 7.5
+      fig_height <- 4.5
       fig_dpi    <- 300
       fig_units  <- "in"
       
@@ -2148,8 +2148,8 @@
       
       # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "scatter_xy.png")
-      fig_width  <- 7.3
-      fig_height <- 4.2
+      fig_width  <- 7.5
+      fig_height <- 4.5
       fig_dpi    <- 300
       fig_units  <- "in"
       
@@ -2237,8 +2237,8 @@
       
       # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "pk_mean.png")
-      fig_width  <- 7.3
-      fig_height <- 4.2
+      fig_width  <- 7.5
+      fig_height <- 4.5
       fig_dpi    <- 300
       fig_units  <- "in"
       
@@ -2328,8 +2328,8 @@
       
       # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "pk_mean_log.png")
-      fig_width  <- 7.3
-      fig_height <- 4.2
+      fig_width  <- 7.5
+      fig_height <- 4.5
       fig_dpi    <- 300
       fig_units  <- "in"
       
@@ -2404,8 +2404,8 @@
       
       # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "pk_individual.png")
-      fig_width  <- 7.3
-      fig_height <- 4.2
+      fig_width  <- 7.5
+      fig_height <- 4.5
       fig_dpi    <- 300
       fig_units  <- "in"
       
@@ -2539,8 +2539,8 @@
       
       # ---- saving the figure -----------------------------------------------------
       fig_path   <- file.path("output", "forest_hr.png")
-      fig_width  <- 7.3
-      fig_height <- 4.2
+      fig_width  <- 7.5
+      fig_height <- 4.5
       fig_dpi    <- 300
       fig_units  <- "in"
       

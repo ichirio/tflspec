@@ -37,6 +37,82 @@
   hierarchy too: without it the PT has no column of its own; a test now
   runs it on an ARD normalized as `tfl_normalize_code()` writes (#237).
 
+* **The siera profile's file runs in siera** (#239).  siera stops on the
+  first output it cannot handle, so the sample's siera file gave no
+  programme at all.  `tfl_ars(profile = "siera")` now leaves out the
+  outputs siera cannot run -- fewer than three analyses (it applies the
+  analysis set from an output's third), an analysis without a grouping (a
+  Total column, a study total), a grouping on a column its dataset does not
+  have (one the spec derives; needs the new `columns =`, the datasets'
+  column names) -- and lists each in `tfl_ars_unmapped()` (item `siera`,
+  with why).  Checked on tflplanner's sample: siera reads the whole file and
+  runs the other five outputs, whose 1,721 numbers equal the study ARD's.
+
+* **A figure's size is its report's: its own size, fit to the page, or
+  inches** (0.0.24.9102, the user's request on tflplanner's step 3).  The
+  report sheet's `figure_width_in` / `figure_height_in` take a number of
+  inches, `fit` (the page's body: the page or paper in its orientation
+  less its margins, its height less the report's title and footnote
+  lines) or blank -- the figure's own size, as rtfreporter places an
+  image: `tfl_fig_page_size(native = )` says each.  The report step sizes
+  only what is said (`rtf_figures(width_twips = , height_twips = )`), and a
+  report program draws the figure at that size.  A design's `plot` keeps
+  only `dpi`, the resolution (pixels = inches x dpi; it does not change
+  the size); its `width`, `height` and `units` go (an old design's are
+  read as nothing).  A script of its own (`tfl_fig_design_code(save = TRUE)`)
+  saves its PNG at `width_in` x `height_in` (7.5 x 4.5 by default; the KM
+  templates' 8.33 x 4.79 of the style options no longer): the templates'
+  snapshots change by those lines.
+
+* **A report is a table, a listing or a figure; any of its steps may be
+  its own code** (0.0.24.9102, tflplanner's user-program design, the user's direction:
+  "user code" was a fourth type forced into line).  The report sheet's
+  `data_code` and `content_code` hold the report's own R for its data
+  step and its content step: a step whose code is not blank is that code,
+  instead of the definition.  The data step leaves `data` (a figure:
+  `df`), the content step `content`; the report's datasets (by their
+  names in lower case) and, when it reads its ARD, `ard` are in reach.
+  `type` takes `table`, `listing` and `figure` only: `user` is an error
+  that says where its code goes.  `tfl_check_code()` checks a step's code
+  against the rules, reading it (rules U01-U05: R that does not parse, a
+  dataset the report does not register, nothing left for the next step,
+  files read or packages attached by the code, `ard` without the report
+  reading its ARD), and says the catalog's datasets it uses.  A report
+  whose content is its own code and has no analyses is not an ARS output
+  (said in `tfl_ars_unmapped()`), as a `user` report was.
+  `tfl_listing_code(part = )`: `"data"` (the data up to its order, for a
+  content step of the report's own code) or `"content"` (the listing laid
+  out from a `data` a data step of its own code made); `"all"` as before.
+
+* **A figure's data steps: each reads an object and leaves one**
+  (0.0.24.9102, tflplanner's generalised data steps, the user's
+  questions Q1-Q3).  Any data step may say the object it reads (`in`) and
+  the one it leaves (`out`): `{step: filter, expr: AVAL > 0, out: df_ev}`
+  writes `df_ev <- df |> filter(AVAL > 0)` and keeps `df`;
+  `{step: survfit, in: df_ev}` fits it.  Unset, everything is as before:
+  a read makes `df`, a step on rows changes the object above it, a named
+  step reads `df` -- except that a second read now makes `df2` (then
+  `df3` ...) where it made `df` again.  A dataset by its name
+  (`in: adsl`) is read.  `tfl_fig_objects()` lists each step's `in` and
+  `out`, for a GUI to offer.
+* **Two data steps**: `function`, any function's result
+  (`fn: survival::survfit`, `args` in R, the object it reads given to its
+  `data_arg`, `data` by default), and `ard`, an analysis of the figure's
+  ARD (`analysis_id`, `fn`, `in` an analysis data, `args`): a row of the
+  study's ARD definition the GUI writes, no line of the figure's program
+  (the program reads the ARD).  The specific steps (`survfit`,
+  `summary`, `rate`, `count`) stay.
+* `tfl_check_fig_design()`: an `in` no step made before (and not a
+  dataset) is a problem; the columns follow the object a step reads.
+
+* **The study's ARD program puts a code list on a data once** (#235).
+  With code lists that relabel (`M` = Male), `tfl_ard_code()` for the
+  whole study (no `output_id`) put them on the dataset as it was read and
+  again on the analysis set made from it; the second found "Male" where
+  it expected `M` and stopped the program.  Each report's part now puts
+  them, as one report's program always did, only on the data its
+  analyses read: the study's ARD is the reports' ARDs bound together.
+
 * **An AI kit to draft a study's specs from its TOC and shells**
   (`tflspec_ai_manual(dir)`).  A chat cannot read the disk, and most take
   ten files at most: `tflspec_ai_manual(dir)` writes one flat folder of

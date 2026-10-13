@@ -815,8 +815,12 @@
     }, "")
     names(data_name) <- as.character(rows)
     if (several) {
+      # the report's part, its code lists put on what its analyses read
+      # once the analyses are written (below), as in one report's program
+      seg_from <- length(code) + 1L
       code <- c(code, "", sprintf("# ---- %s ----", o),
-                sprintf("report_id <- %s", .q(o)), .levels_put(c(part, made), lv))
+                sprintf("report_id <- %s", .q(o)), part, made)
+      seg_an <- length(code) + 1L
     } else if (length(made)) {
       code <- c(code, "", "# ---- analysis data ----", made)
     }
@@ -847,6 +851,11 @@
     # (one analysis: its ARD as it is)
     bound <- if (length(ard_names) == 1L) ard_names else
       .cl("dplyr::bind_rows", as.list(ard_names))
+    if (several) {
+      seg <- seq.int(seg_from, length(code))
+      code <- c(code[seq_len(seg_from - 1L)],
+                .levels_where_read(code[seg], lv, first_an = seg_an - seg_from + 1L))
+    }
     code <- c(code, "", if (several) {
       .pipe_code("ards[[report_id]]", bound)
     } else if (length(save)) {
@@ -871,18 +880,18 @@
 # (and those R reads by its own names), not on what they are made from --
 # the levels are the same, a data's made again from its own records:
 # set_levels(SEX = cl_sex, ...).
-.levels_where_read <- function(code, levels) {
+.levels_where_read <- function(code, levels,
+                               first_an = match("# ---- analyses ----", code)) {
   if (!length(levels)) return(code)
   pipe_lv <- paste0(" |>\n  ", .levels_step)
   flat_lv <- paste0(" |> ", .levels_step)
   def <- grepl("^[A-Za-z.][A-Za-z0-9._]* <- ", code)
   # the names the analyses read
-  first_an <- match("# ---- analyses ----", code)
   rest <- code[seq.int(first_an, length(code))]
   syms <- unique(unlist(lapply(rest, function(l)
     tryCatch(all.names(parse(text = l, keep.source = FALSE)),
              error = function(e) character()))))
-  for (k in which(def)) {
+  for (k in which(def & seq_along(code) < first_an)) {
     nm <- sub(" <- .*$", "", code[k])
     if (nm %in% syms) next
     code[k] <- sub(pipe_lv, "", sub(flat_lv, "", code[k], fixed = TRUE), fixed = TRUE)

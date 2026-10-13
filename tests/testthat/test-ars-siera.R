@@ -93,8 +93,14 @@ test_that("what siera needs beyond the model is checked", {
   sp$populations$where <- "SAFFL == \"Y\" & AGE >= 18"
   ars <- tfl_ars(sp, profile = "siera")
   ck <- tfl_check_ars(ars, schema = FALSE)
-  expect_true(any(ck$field == "analyses" & grepl("three", ck$problem)))
   expect_true(any(ck$field == "condition"))
+  # the profile leaves out the output siera cannot run, and says why (#239);
+  # a file written elsewhere is still checked for it
+  un <- tfl_ars_unmapped(ars)
+  expect_true(any(un$item == "siera" & grepl("third analysis", un$reason, fixed = TRUE)))
+  expect_length(ars$outputs, 0L)
+  ck2 <- tfl_check_ars(tfl_ars(sp), schema = FALSE, profile = "siera")
+  expect_true(any(ck2$field == "analyses" & grepl("three", ck2$problem)))
   # the same model checked as cdisc has no such rows
   expect_false(any(tfl_check_ars(ars, schema = FALSE,
                                  profile = "cdisc")$field == "analyses"))
@@ -174,4 +180,26 @@ test_that("tfl_ars_ard() needs the siera profile and the data it reads", {
   ars <- tfl_ars(siera_spec(), profile = "siera")
   expect_error(tfl_ars_ard(ars, list(ADSL = data.frame(USUBJID = "1"))),
                "ADAE")
+})
+
+test_that("the siera profile leaves out what siera cannot run, so the file runs (#239)", {
+  sp <- siera_spec()
+  dm <- sp$analyses$output_id == "DM"
+  # a Total column: the analysis again without its by -- no grouping
+  sp$analyses$overall[sp$analyses$output_id == "DM" & sp$analyses$analysis_id == "AGE"] <- "TRUE"
+  ars <- tfl_ars(sp, profile = "siera")
+  un <- tfl_ars_unmapped(ars)
+  why <- un$reason[un$item == "siera" & un$where == "DM"]
+  expect_match(why, "an analysis without a grouping", fixed = TRUE)
+  expect_false("DM" %in% vapply(ars$outputs, `[[`, "", "id"))
+  # the CDISC profile keeps it
+  expect_true("DM" %in% vapply(tfl_ars(sp)$outputs, `[[`, "", "id"))
+  # a grouping on a column its dataset does not have: with `columns` only
+  sp <- siera_spec()
+  adae_cols <- c("USUBJID", "TRTEMFL", "AEBODSYS", "AEDECOD")   # no TRTA
+  a1 <- tfl_ars(sp, profile = "siera")
+  expect_false(any(tfl_ars_unmapped(a1)$where == "T-AE" & tfl_ars_unmapped(a1)$item == "siera"))
+  a2 <- tfl_ars(sp, profile = "siera", columns = list(ADAE = adae_cols))
+  u2 <- tfl_ars_unmapped(a2)
+  expect_match(u2$reason[u2$item == "siera" & u2$where == "T-AE"], "ADAE.TRTA", fixed = TRUE)
 })
