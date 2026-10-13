@@ -297,7 +297,8 @@
   a <- pick("pages_", c(max_rows = "max_rows", split = "split",
                         break_before = "break_before",
                         min_group_rows = "min_group_rows",
-                        cont_label = "cont_label", page_by = "page_by"))
+                        cont_label = "cont_label", page_by = "page_by",
+                        heading = "heading"))
   if (length(a)) do.call(add, c(list("plan_paginate_rows"), a))
   a <- pick("colpages_", c(at = "at", cut_by = "cut_by", every = "every",
                            keep = "keep", fit = "fit",
@@ -426,8 +427,10 @@ tfl_table_code <- function(spec, output_id = NULL, data = "data",
 #' each level's own row, SOC and PT, with its counts -- and the row of the
 #' hierarchy's overall counts (the table definition's
 #' `tables$overall_label`, "Subjects with at least one TEAE", from the
-#' analysis's `args` `over_variables = TRUE`) as its `overall`.  A report
-#' with neither: `data <- normalize_ard(ard)`.
+#' analysis's `args` `over_variables = TRUE`) as its `overall`; and the
+#' parallel subgroups stacked into one pair of keys (`tables$stack`,
+#' `subgroup = ALL, SEX, AGEGR1`) as its `stack`.  A report with none:
+#' `data <- normalize_ard(ard)`.
 #'
 #' @param spec A table definition ([tfl_read_table_spec()]), or the path(s)
 #'   of its workbook(s).
@@ -456,6 +459,9 @@ tfl_normalize_code <- function(spec, ard_spec = NULL, output_id = NULL,
   t <- sp$tables
   lab <- if (nrow(t) && "overall_label" %in% names(t)) t$overall_label[1L] else NA
   lab <- if (!is.na(lab) && nzchar(trimws(lab))) trimws(lab)
+  stk <- if (nrow(t) && "stack" %in% names(t)) t$stack[1L] else NA
+  stk <- if (!is.na(stk) && nzchar(trimws(stk)))
+    .ard_spec_stat_groups(stk, "stack", "variable", "subgroup = ALL, SEX, AGEGR1")
   hier <- character()
   if (!is.null(ard_spec)) {
     an <- ard_spec$analyses
@@ -473,7 +479,10 @@ tfl_normalize_code <- function(spec, ard_spec = NULL, output_id = NULL,
   }
   args <- c(ard,
             if (length(hier)) paste("hierarchy =", vec_code(hier)),
-            if (!is.null(lab)) paste("overall =", encodeString(lab, quote = "\"")))
+            if (!is.null(lab)) paste("overall =", encodeString(lab, quote = "\"")),
+            if (!is.null(stk)) paste0("stack = list(", paste(
+              sprintf("%s = %s", names(stk), vapply(stk, vec_code, "")),
+              collapse = ", "), ")"))
   sprintf("%s <- normalize_ard(%s)", data, paste(args, collapse = ", "))
 }
 

@@ -4,6 +4,14 @@
   rtfreporter's `plan_paginate_group(heading = )` (rtfreporter #619):
   `Treatment: {value} (N={n})` gives a section per arm that says the arm and
   its N from the ARD.  `tfl_as_table_spec()` writes it back.
+  `layout$pages_heading` does the same for BY pages (`pages_page_by`), a
+  page per arm with a row budget inside.
+
+* **`tables$stack`: parallel subgroups as one pair of keys** (rtfreporter
+  #619).  `subgroup = ALL, SEX, AGEGR1` makes `tfl_normalize_code()` write
+  `normalize_ard(stack = list(subgroup = c("ALL", "SEX", "AGEGR1")))`, so
+  `rows` names `subgroup` / `subgroup_level` whatever group slot each
+  variable came in, instead of `group2` / `group2_level`.
 
 * **`tables$stat_groups`: one record's statistics in two columns from the
   sheet** (rtfreporter #619, needs rtfreporter 0.8.2.9046).  `n = N |

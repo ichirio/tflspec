@@ -285,3 +285,37 @@ test_that("layout$group_heading: a page per arm named with the arm and its N, as
   back <- tfl_as_table_spec(p, output_id = "T", compare = FALSE)
   expect_identical(back$layout$group_heading, "Treatment: {value} (N={n})")
 })
+
+test_that("tables$stack and layout$pages_heading: subgroups as one pair of keys, BY pages named (rtfreporter #619)", {
+  skip_if_not_installed("cards")
+  skip_if_not("stack" %in% names(formals(rtfreporter::normalize_ard)))
+  adsl <- cards::ADSL
+  adsl$ALL <- "All"
+  ard <- cards::bind_ard(
+    cards::ard_tabulate(adsl, variables = ARM),
+    cards::ard_tabulate(adsl, by = c(ARM, ALL), variables = DISCONFL),
+    cards::ard_tabulate(adsl, by = c(SEX, ARM), variables = DISCONFL))
+  sp <- tfl_table_spec(
+    tables = data.frame(output_id = "T", cols = ".stat_group",
+                        rows = "arm = ARM | grp = subgroup | lvl = subgroup_level",
+                        label = "NA", stat_groups = "n = n | pct = p",
+                        stack = "subgroup = ALL, SEX"),
+    cells = data.frame(output_id = "T", variable = c("n", "pct"),
+                       template = c("{n}", "{p:.1f%}")),
+    layout = data.frame(output_id = "T", pages_page_by = "arm", pages_max_rows = "20",
+                        pages_heading = "Treatment: {value} (N={n})"))
+  line <- tfl_normalize_code(sp, output_id = "T")
+  expect_identical(line, "data <- normalize_ard(ard, stack = list(subgroup = c(\"ALL\", \"SEX\")))")
+  data <- eval(parse(text = sub("normalize_ard", "rtfreporter::normalize_ard", line, fixed = TRUE)))
+  code <- paste(tfl_table_code(sp, "T"), collapse = "\n")
+  expect_match(code, "heading = \"Treatment: {value} (N={n})\"", fixed = TRUE)
+  p <- tfl_table_plan(data, sp, "T")
+  pages <- suppressMessages(rtfreporter::plan_apply(p))
+  n_arm <- table(adsl$ARM)
+  expect_identical(names(pages), sprintf("Treatment: %s (N=%d)", names(n_arm), as.integer(n_arm)))
+  back <- tfl_as_table_spec(p, output_id = "T", compare = FALSE)
+  expect_identical(back$layout$pages_heading, "Treatment: {value} (N={n})")
+  expect_error(tfl_normalize_code(tfl_table_spec(tables = data.frame(output_id = "X", cols = "ARM",
+                                                                     stack = "SEX")), output_id = "X"),
+               "tables$stack", fixed = TRUE)
+})

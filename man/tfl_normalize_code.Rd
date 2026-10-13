@@ -35,8 +35,10 @@ definition's \code{variables}, \code{AEBODSYS | AEDECOD}) as its \code{hierarchy
 each level's own row, SOC and PT, with its counts -- and the row of the
 hierarchy's overall counts (the table definition's
 \code{tables$overall_label}, "Subjects with at least one TEAE", from the
-analysis's \code{args} \code{over_variables = TRUE}) as its \code{overall}.  A report
-with neither: \code{data <- normalize_ard(ard)}.
+analysis's \code{args} \code{over_variables = TRUE}) as its \code{overall}; and the
+parallel subgroups stacked into one pair of keys (\code{tables$stack},
+\verb{subgroup = ALL, SEX, AGEGR1}) as its \code{stack}.  A report with none:
+\code{data <- normalize_ard(ard)}.
 }
 \examples{
 sp <- tfl_table_spec(tables = data.frame(
