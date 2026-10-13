@@ -396,3 +396,15 @@ test_that("tables$stack_nest: a crossed layer's outer level as a key of its own 
   sp$tables$stack_nest <- NA
   expect_false(grepl("stack_nest", tfl_normalize_code(sp, output_id = "X")))
 })
+
+test_that("tables$show_keys and stat_groups' .variables / .others (rtfreporter #621)", {
+  skip_if_not("show_keys" %in% names(formals(rtfreporter::table_plan)))
+  sp <- tfl_table_spec(tables = data.frame(
+    output_id = "T", cols = "TRT | .stat_group", rows = "block = variable | grp = subgroup | lvl = subgroup_level",
+    label = "NA", show_keys = "SEX | AGEGR1",
+    stat_groups = "n = N | orr_ci = n, estimate, conf.low, conf.high | .variables = RESP | .others = n"))
+  code <- paste(tfl_table_code(sp, "T"), collapse = "\n")
+  expect_match(code, "show_keys = c(\"SEX\", \"AGEGR1\")", fixed = TRUE)
+  expect_match(code, ".variables = \"RESP\"", fixed = TRUE)
+  expect_match(code, ".others = \"n\"", fixed = TRUE)
+})

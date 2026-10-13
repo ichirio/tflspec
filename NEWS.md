@@ -1,5 +1,11 @@
 # tflspec (development version)
 
+* **`tables$show_keys`, and `.variables` / `.others` in `tables$stat_groups`**
+  (rtfreporter #621, needs 0.8.2.9049): a subgroup's own n (%) beside its
+  ORR. `SEX | AGEGR1` becomes `table_plan(show_keys = )`; `n = N | orr_ci =
+  n, estimate | .variables = RESP | .others = n` becomes
+  `plan_stat_groups(..., .variables = "RESP", .others = "n")`.
+
 * **`tables$stack_nest`**: `TRUE` writes `normalize_ard(stack_nest = TRUE)`
   (rtfreporter #623, needs 0.8.2.9048), a crossed layer's outer level as a
   heading row.

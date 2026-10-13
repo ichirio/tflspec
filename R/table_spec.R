@@ -196,7 +196,8 @@
     tables    = c("output_id", "cols", "rows", "label", "stats", "value",
                   "sep", "sort", "sort_stat", "na", "header_n", "total",
                   "total_position", "overall_label", "stat_groups", "stack",
-                  "stack_sep", "stack_nest", "compare", "compare_by", "compare_position"),
+                  "stack_sep", "stack_nest", "compare", "compare_by", "compare_position",
+                  "show_keys"),
     variables = c("output_id", "variable", "label", "order", "levels",
                   "empty_levels", "under"),
     # the study's code list: a value's text and place
@@ -633,6 +634,10 @@
 #'     `variable` is its name (one a `context` when a test prints another
 #'     way).  `compare_by` splits the comparisons into columns, one a
 #'     level; `compare_position` is `last` (blank) or `first`.}
+#'   \item{`show_keys`}{Row keys the table also shows as variables, `|`
+#'     between them (`SEX | AGEGR1`): their own counts stay in the body,
+#'     a block of their own beside a subgroup layer
+#'     ([rtfreporter::table_plan()]'s `show_keys`).  Blank: none.}
 #'   \item{`stat_groups`}{One record's statistics in named groups, `|`
 #'     between groups, `,` between a group's statistics: `n = N | orr_ci =
 #'     n, estimate, conf.low, conf.high` ([rtfreporter::plan_stat_groups()]).
@@ -1261,6 +1266,10 @@ print.tfl_table_spec <- function(x, ...) {
   if (!nrow(t)) return(out)
   t <- t[1L, , drop = FALSE]
   if (!is.na(t$cols)) out$cols <- .ard_spec_split(t$cols)
+  # row keys the table also shows as variables (table_plan(show_keys = ))
+  if ("show_keys" %in% names(t) && !is.na(t$show_keys) && nzchar(trimws(t$show_keys))) {
+    out$show_keys <- .split_bar(t$show_keys)
+  }
   if (!is.na(t$rows)) out$rows <- .ard_spec_refs(t$rows)
   if (!is.na(t$label)) {
     out["label"] <- list(switch(t$label, "NA" = NA, "NULL" = NULL,
@@ -2438,6 +2447,7 @@ tfl_as_table_spec <- function(x, output_id = NULL, compare = TRUE) {
            else if (is.logical(srt)) as.character(srt) else bar(srt),
     sort_stat = s$sort_stat %||% NA_character_,
     na = if (is.null(s$na) || is.na(s$na)) NA_character_ else q(s$na),
+    show_keys = if (length(s$show_keys)) bar(s$show_keys) else NA_character_,
     stringsAsFactors = FALSE)
 
   # -- variables --------------------------------------------------------------
