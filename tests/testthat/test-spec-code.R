@@ -260,3 +260,28 @@ test_that("tables$stat_groups: one record's statistics in two columns, as plan_s
   expect_error(tfl_table_spec(tables = data.frame(output_id = "X", cols = "ARM", stat_groups = "n N")) |>
                  tfl_table_code("X"), "not `name = statistic")
 })
+
+test_that("layout$group_heading: a page per arm named with the arm and its N, as plan_paginate_group(heading = ) (rtfreporter #619)", {
+  skip_if_not_installed("cards")
+  skip_if_not(utils::packageVersion("rtfreporter") >= "0.8.2.9046")
+  skip_if_not("heading" %in% names(formals(rtfreporter::plan_paginate_group)))
+  adsl <- cards::ADSL
+  ard <- cards::bind_ard(cards::ard_tabulate(adsl, variables = ARM),
+                         cards::ard_tabulate(adsl, by = ARM, variables = SEX))
+  sp <- tfl_table_spec(
+    tables = data.frame(output_id = "T", cols = ".stat_group",
+                        rows = "arm = ARM | label = variable_level", label = "NA",
+                        stat_groups = "n = n | pct = p"),
+    cells = data.frame(output_id = "T", variable = c("n", "pct"),
+                       template = c("{n}", "{p:.1f%}")),
+    layout = data.frame(output_id = "T", group_page = "TRUE", group_col = "arm",
+                        group_keep = "FALSE", group_heading = "Treatment: {value} (N={n})"))
+  code <- paste(tfl_table_code(sp, "T"), collapse = "\n")
+  expect_match(code, "heading = \"Treatment: {value} (N={n})\"", fixed = TRUE)
+  p <- tfl_table_plan(rtfreporter::normalize_ard(ard), sp, "T")
+  pages <- suppressMessages(rtfreporter::plan_apply(p))
+  n_arm <- table(adsl$ARM)
+  expect_identical(names(pages), sprintf("Treatment: %s (N=%d)", names(n_arm), as.integer(n_arm)))
+  back <- tfl_as_table_spec(p, output_id = "T", compare = FALSE)
+  expect_identical(back$layout$group_heading, "Treatment: {value} (N={n})")
+})

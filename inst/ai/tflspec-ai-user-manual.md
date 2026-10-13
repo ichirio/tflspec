@@ -393,7 +393,7 @@ cells  <- data.frame(output_id = "T-14-3-1", template = "{n} ({p:.1f%})")
 |---|---|
 | `pages_max_rows`, `pages_split`, `pages_break_before`, `pages_min_group_rows`, `pages_cont_label`, `pages_page_by` | `plan_paginate_rows()` (`page_by`: BY pages, the row budget inside each) |
 | `group_mode`, `group_collapse` | `plan_row_group()` |
-| `group_page`, `group_col`, `group_keep` | `plan_paginate_group(col, keep)` — one page per value |
+| `group_page`, `group_col`, `group_keep`, `group_heading` | `plan_paginate_group(col, keep, heading)` — one page per value; `group_heading = Treatment: {value} (N={n})` names each page (the `auto_section` heading) with the value and its N from the ARD (bind `cards::ard_tabulate(adsl, variables = TRT01A)`) |
 | `blank_where`, `blank_first`, `blank_last`, `blank_counted` | `plan_blanks()` |
 | `stub_vars`, `stub_name`, `stub_indent`, `stub_summary`, `stub_before` | `plan_stub()` |
 | `colpages_every`, `colpages_at`, `colpages_cut_by`, `colpages_keep`, `colpages_fit`, `colpages_allow_span_break`, `colpages_order` | `plan_paginate_cols()` |

@@ -49,7 +49,7 @@
     pages_min_group_rows = "int", pages_cont_label = "text",
     pages_page_by = "list",
     group_col = "text", group_mode = "text", group_collapse = "flex",
-    group_page = "bool", group_keep = "bool",
+    group_page = "bool", group_keep = "bool", group_heading = "text",
     blank_where = "blanks", blank_first = "bool", blank_last = "bool",
     blank_counted = "bool",
     stub_vars = "list", stub_name = "text", stub_indent = "int",
@@ -2420,6 +2420,7 @@ tfl_as_table_spec <- function(x, output_id = NULL, compare = TRUE) {
   if (isTRUE(g$.page)) {
     put("group_page", TRUE); put("group_col", g$group_col)
     if (identical(g$.keep, FALSE)) put("group_keep", FALSE)
+    put("group_heading", g$.heading)
   }
   b <- ly[["blanks"]]
   if (is.numeric(b$blank_rows) && length(b$blank_rows) &&

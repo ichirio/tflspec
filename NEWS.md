@@ -1,5 +1,10 @@
 # tflspec (development version)
 
+* **`layout$group_heading`: each page's name from a template**, as
+  rtfreporter's `plan_paginate_group(heading = )` (rtfreporter #619):
+  `Treatment: {value} (N={n})` gives a section per arm that says the arm and
+  its N from the ARD.  `tfl_as_table_spec()` writes it back.
+
 * **`tables$stat_groups`: one record's statistics in two columns from the
   sheet** (rtfreporter #619, needs rtfreporter 0.8.2.9046).  `n = N |
   orr_ci = n, estimate, conf.low, conf.high` becomes

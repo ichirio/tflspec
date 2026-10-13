@@ -286,7 +286,8 @@
   if (length(a)) do.call(add, c(list("plan_stub"), a))
   if (isTRUE(lay[["group_page"]])) {
     add("plan_paginate_group", col = lay[["group_col"]],
-        keep = if (identical(lay[["group_keep"]], FALSE)) FALSE)
+        keep = if (identical(lay[["group_keep"]], FALSE)) FALSE,
+        heading = lay[["group_heading"]])
   }
   a <- pick("group_", c(mode = "mode", collapse = "collapse"))
   if (length(a)) do.call(add, c(list("plan_row_group"), a))

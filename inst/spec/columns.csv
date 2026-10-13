@@ -104,6 +104,7 @@ layout,group_mode,"How groups print (plan_row_group(mode = )): value / indent / 
 layout,group_collapse,"TRUE, or the columns (names or positions, | between them) whose repeated values print once (plan_row_group(collapse = )); blank: none.",1 | 2
 layout,group_page,"TRUE / FALSE: one page per value of group_col (plan_paginate_group()); blank: FALSE.",TRUE
 layout,group_keep,"TRUE / FALSE: with group_page, FALSE leaves the group column unprinted (plan_paginate_group(keep = )); blank: TRUE.",FALSE
+layout,group_heading,"With group_page = TRUE: each page's name, the heading rtf_tables(auto_section = TRUE) prints, from a template: {value} the page's value, {n} its N as the ARD states it (the page variable's own tabulation, cards::ard_tabulate(adsl, variables = TRT01A)) (plan_paginate_group(heading = )); blank: the value.","Treatment: {value} (N={n})"
 layout,blank_where,"Where blank rows go: a named rule such as between_groups, or row positions -- a blank after each, 0 before the first row, -1 after the last (0 | 5 | -1) (plan_blanks(where = )); blank: none.",between_groups
 layout,blank_first,"TRUE / FALSE: a blank row before the first row (plan_blanks(first = )); blank: the default.",TRUE
 layout,blank_last,"TRUE / FALSE: a blank row after the last row (plan_blanks(last = )); blank: the default.",TRUE
