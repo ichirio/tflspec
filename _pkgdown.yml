@@ -104,6 +104,7 @@ reference:
       - tfl_table_spec
       - tfl_table_spec_template
       - tfl_table_plan
+      - tfl_normalize_code
       - tfl_table_code
       - tfl_as_table_spec
   - title: Report spec, titles, footnotes, headers and tokens

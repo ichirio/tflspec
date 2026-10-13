@@ -1,5 +1,19 @@
 # tflspec (development version)
 
+* **An AE table's "Subjects with at least one TEAE" row from the sheets**
+  (#236).  The `tables` sheet's new column `overall_label` is that row's
+  text; its `hierarchical` analysis computes it (`args` `over_variables =
+  TRUE`).  The row is the normalization's, so the new
+  `tfl_normalize_code(spec, ard_spec, output_id)` writes the report's line
+  -- `data <- normalize_ard(ard, hierarchy = c("AEBODSYS", "AEDECOD"),
+  overall = "Subjects with at least one TEAE")` -- with the hierarchy of
+  the report's hierarchical analysis, so each SOC row has its counts too;
+  a report with neither stays `data <- normalize_ard(ard)`.  The AI kit's
+  example T-2 and the TOC / shell guide now show the row.  The shipped AE
+  example (`extdata/ard-spec/AE.xlsx`, `label = AEDECOD`) needs that
+  hierarchy too: without it the PT has no column of its own; a test now
+  runs it on an ARD normalized as `tfl_normalize_code()` writes (#237).
+
 * **The siera profile's file runs in siera** (#239).  siera stops on the
   first output it cannot handle, so the sample's siera file gave no
   programme at all.  `tfl_ars(profile = "siera")` now leaves out the

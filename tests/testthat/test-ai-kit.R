@@ -106,12 +106,22 @@ test_that("the example runs on the pilot data: the ARD, the tables, the listing,
   expect_identical(levels(unlist(sex$variable_level)), c("Male", "Female"))
   for (id in c("T-1", "T-2")) {
     sp <- tfl_read_report_spec(f, output_id = id)
-    plan <- tfl_table_plan(rtfreporter::normalize_ard(ard[ard$output_id == id, ]), sp)
+    # the normalization the definitions say (T-2: the hierarchy, the
+    # any-TEAE row)
+    norm <- tfl_normalize_code(sp, a, id, ard = "x")
+    data <- eval(parse(text = sub("^data <- ", "", norm)),
+                 list(x = ard[ard$output_id == id, ], normalize_ard = rtfreporter::normalize_ard))
+    if (id == "T-2") {
+      expect_identical(norm, paste0("data <- normalize_ard(x, hierarchy = c(\"AEBODSYS\", \"AEDECOD\"), ",
+                                    "overall = \"Subjects with at least one TEAE\")"))
+    }
+    plan <- tfl_table_plan(data, sp)
     out <- file.path(st, paste0(id, ".rtf"))
     expect_no_warning(suppressMessages(
       rtfreporter::generate_rtfreport(tfl_report(sp, content = plan), out, overwrite = TRUE)))
     txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
     expect_match(txt, "(N=86)", fixed = TRUE)
+    if (id == "T-2") expect_match(txt, "Subjects with at least one TEAE", fixed = TRUE)
     expect_false(grepl("NA", gsub("[A-Za-z]NA|NA[A-Za-z]", "", txt), fixed = TRUE), info = id)
   }
   ls <- tfl_read_listing_spec(f, output_id = "L-1")

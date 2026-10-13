@@ -208,3 +208,29 @@ test_that("a report's watermark and a figure's size are report columns", {
                                                   figure_width_in = "wide")),
                "a number")
 })
+
+test_that("tfl_normalize_code(): the hierarchy and the any-event row the definitions say (#236)", {
+  sp <- tfl_table_spec(tables = data.frame(
+    output_id = c("T-1", "T-2"), cols = "TRTA", rows = c(NA, "group1 = AEBODSYS"),
+    overall_label = c(NA, "Subjects with at least one TEAE")))
+  ard <- tfl_ard_spec(list(
+    datasets = data.frame(dataset = c("ADSL", "ADAE"), path = c("adsl.rds", "adae.rds")),
+    analyses = data.frame(output_id = c("T-1", "T-2"), analysis_id = c("AGE", "AE"),
+                          method = c("continuous", "hierarchical"),
+                          dataset = c("ADSL", "ADAE"), by = "TRTA",
+                          variables = c("AGE", "AEBODSYS | AEDECOD"),
+                          args = c(NA, "over_variables = TRUE"))))
+  expect_identical(tfl_normalize_code(sp, ard, "T-1"), "data <- normalize_ard(ard)")
+  expect_identical(tfl_normalize_code(sp, ard, "T-2"),
+                   paste0("data <- normalize_ard(ard, hierarchy = c(\"AEBODSYS\", \"AEDECOD\"), ",
+                          "overall = \"Subjects with at least one TEAE\")"))
+  expect_identical(tfl_normalize_code(sp, ard, "T-2", ard = "x", data = "d"),
+                   paste0("d <- normalize_ard(x, hierarchy = c(\"AEBODSYS\", \"AEDECOD\"), ",
+                          "overall = \"Subjects with at least one TEAE\")"))
+  # the row is a hierarchy's: without one, say so
+  expect_error(tfl_normalize_code(sp, NULL, "T-2"), "give `ard_spec`")
+  # the column reads and writes back
+  f <- tempfile(fileext = ".xlsx"); on.exit(unlink(f), add = TRUE)
+  tfl_write_table_spec(sp, f)
+  expect_identical(tfl_read_table_spec(f)$tables$overall_label[2L], "Subjects with at least one TEAE")
+})

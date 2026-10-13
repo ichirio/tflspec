@@ -197,7 +197,8 @@ One row, `output_id` the table's.
   shell has no such column.
 - `sort`: the shell's row order when it is not the data's.  "SOCs
   alphabetically, PTs by decreasing frequency in the total of the arms"
-  is `group1 | .depth | -.sort_stat | label` with `sort_stat` `n`: the
+  is `.overall | group1 | .depth | -.sort_stat | label` with `sort_stat`
+  `n` (`.overall` first keeps an any-event row on top): the
   total goes into a column `.sort_stat`, which the `columns` sheet hides
   (`column` `.sort_stat`, `hide` `TRUE`).  A fixed order of levels is not
   a sort; it is `variables$levels` / the code lists (§3.7).
@@ -406,19 +407,22 @@ per SOC and once per PT, `n (%)` of the analysis set:
 | `by` | the arm on ADAE (`TRTA`, or `TRT01A` when ADAE has no `TRTA`) |
 | `overall` | `TRUE` (when the shell has a Total column) |
 | `variables` | `AEBODSYS \| AEDECOD` |
+| `args` | `over_variables = TRUE` (the shell's "Subjects with at least one TEAE" row) |
 
 The table spec's side (the example's T-2): `rows` `group1 = AEBODSYS`,
-`label` blank, `sort` `group1 | .depth | -.sort_stat | label` with
-`sort_stat` `n` and `.sort_stat` hidden on the `columns` sheet, one
-default `cells` row `{n} ({p:.1f%})`, `layout` `blank_where`
-`between_groups`, `stub_name` `row_label`, `stub_before` `TRUE`.
+`label` blank, `sort` `.overall | group1 | .depth | -.sort_stat |
+label` with `sort_stat` `n` and `.sort_stat` hidden on the `columns`
+sheet, `overall_label` the any-event row's text, exactly as the shell
+has it ("Subjects with at least one TEAE"), one default `cells` row
+`{n} ({p:.1f%})`, `layout` `blank_where` `between_groups`, `stub_name`
+`row_label`, `stub_before` `TRUE`.  The SOC rows carry their own counts.
 
-**"Subjects with at least one TEAE"**, the row many shells put first:
-the analysis can compute it (`args` `over_variables = TRUE`), but the
-table prints it only when the report's program names it
-(`normalize_ard(overall = "Subjects with at least one TEAE")`), and no
-sheet column says that yet.  Leave `over_variables` out, and put the
-row in the assumptions ("the any-TEAE row needs a line in the program").
+The report's program normalizes the ARD with the hierarchy and that row
+(`tfl_normalize_code(spec, ard_spec)` writes the line: `data <-
+normalize_ard(ard, hierarchy = c("AEBODSYS", "AEDECOD"), overall =
+"Subjects with at least one TEAE")`); no row of yours is needed for it.
+No any-event row in the shell: leave `over_variables` and
+`overall_label` out.
 
 Variants: serious AEs (`where` `TRTEMFL == "Y" & AESER == "Y"`), related
 AEs (`AREL`), AEs leading to discontinuation (`AEACN`), by severity
@@ -650,18 +654,20 @@ shows words, the data codes; the codes are an assumption.
                                 Placebo      Xanomeline   Xanomeline
 System Organ Class                           Low Dose     High Dose
   Preferred Term                (N=xx)       (N=xx)       (N=xx)
-SYSTEM ORGAN CLASS 1
+Subjects with at least one TEAE xx (xx.x%)
+SYSTEM ORGAN CLASS 1            xx (xx.x%)
   Preferred term 1              xx (xx.x%)
   Preferred term 2              xx (xx.x%)
 
-SYSTEM ORGAN CLASS 2
+SYSTEM ORGAN CLASS 2            xx (xx.x%)
   Preferred term 1              xx (xx.x%)
 ```
 
-No Total column; SOCs alphabetically, PTs by decreasing frequency in
-the total of the arms within a SOC; the SOC rows carry no numbers.
+No Total column; the any-TEAE row first, SOCs alphabetically, PTs by
+decreasing frequency in the total of the arms within a SOC.
 → `tables`: `cols` `TRT01A`, `rows` `group1 = AEBODSYS`, `label` blank,
-`sort` `group1 | .depth | -.sort_stat | label`, `sort_stat` `n`.
+`sort` `.overall | group1 | .depth | -.sort_stat | label`, `sort_stat`
+`n`, `overall_label` "Subjects with at least one TEAE".
 → `variables`: `TRT01A` `levels` as T-1.
 → `cells`: one row, `{n} ({p:.1f%})`.
 → `layout`: as T-1.  `columns`: `row_label` `rel_width` 3, `.values` 1,
@@ -670,7 +676,7 @@ the total of the arms within a SOC; the SOC rows carry no numbers.
 `{col}`; line 2 `row_label` "  Preferred Term", `.values` `each`
 `(N={n})`.
 → `analyses`: `AE` `hierarchical` ADAE SAF `where` `TRTEMFL == "Y"` `by`
-TRT01A `variables` `AEBODSYS | AEDECOD`.
+TRT01A `variables` `AEBODSYS | AEDECOD` `args` `over_variables = TRUE`.
 Assumptions: the denominator is the analysis set per column; TEAE is
 `TRTEMFL`; the arm on ADAE is `TRT01A` (the pilot ADAE has no `TRTA`).
 

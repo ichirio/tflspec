@@ -66,6 +66,7 @@ tables,na,"What a cell no template could fill prints (plan_cells(na = )); blank:
 tables,header_n,"Which population {n} in the column header is, for a table split by page (a lab parameter): page (those with that page's data), table (the population), or both as n = page | N = table for {n} and {N}; blank: page (warns when both exist and differ). Both must be in the ARD.",n = page | N = table
 tables,total,"The heading of a Total column (plan_total()): the ARD's overall rows, its analyses run again without their by (analyses$overall), as one more column; its {n} is the study total. Blank: none.",Total
 tables,total_position,"Where the Total column goes among the column key's values: last or first; blank: last.",first
+tables,overall_label,"The row of a hierarchy's overall counts (a hierarchical analysis with args over_variables = TRUE) and what it prints: normalize_ard(overall = ), written by tfl_normalize_code(). Blank: no such row.",Subjects with at least one TEAE
 variables,,"Table: one row a variable (an analysis variable, a column key or the label column).",
 variables,variable,"The variable's name.",AGEGR1
 variables,label,"What prints for its name (plan_labels()); blank: the name.",Age (years)
