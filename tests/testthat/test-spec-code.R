@@ -408,3 +408,28 @@ test_that("tables$show_keys and stat_groups' .variables / .others (rtfreporter #
   expect_match(code, ".variables = \"RESP\"", fixed = TRUE)
   expect_match(code, ".others = \"n\"", fixed = TRUE)
 })
+
+test_that("tables$keep_where / keep_any / keep_parents: plan_filter() from the sheet (rtfreporter #620)", {
+  skip_if_not_installed("cards")
+  skip_if_not("plan_filter" %in% getNamespaceExports("rtfreporter"))
+  ard <- cards::ard_stack_hierarchical(cards::ADAE, variables = c(AESOC, AEDECOD), by = TRTA,
+                                       denominator = cards::ADSL, id = USUBJID)
+  d <- rtfreporter::normalize_ard(ard, hierarchy = c("AESOC", "AEDECOD"))
+  sp <- tfl_table_spec(
+    tables = data.frame(output_id = "AE", cols = "TRTA", rows = "soc = AESOC | pt = AEDECOD",
+                        label = "NA", keep_where = "p >= 0.05", keep_any = "FALSE"),
+    cells = data.frame(output_id = "AE", variable = NA, template = "{n}"))
+  code <- paste(tfl_table_code(sp, "AE"), collapse = "\n")
+  expect_match(code, "plan_filter(p >= 0.05, any = FALSE)", fixed = TRUE)
+  p <- tfl_table_plan(d, sp, "AE")
+  by_spec <- suppressMessages(rtfreporter::plan_apply(p, "table"))
+  by_code <- suppressMessages(rtfreporter::plan_apply(
+    rtfreporter::table_plan(d, cols = "TRTA", rows = c(soc = "AESOC", pt = "AEDECOD"), label = NA) |>
+      rtfreporter::plan_cells("{n}") |> rtfreporter::plan_filter(p >= 0.05, any = FALSE), "table"))
+  expect_identical(by_spec, by_code)
+  back <- tfl_as_table_spec(p, output_id = "AE", compare = FALSE)
+  expect_identical(back$tables$keep_where, "p >= 0.05")
+  expect_identical(back$tables$keep_any, "FALSE")
+  expect_error(tfl_table_code(tfl_table_spec(tables = data.frame(output_id = "X", cols = "TRTA",
+                                                                 keep_where = "p >= ")), "X"), "is not R")
+})

@@ -24,6 +24,10 @@
 # a name in the program (`doc`, `plan`): its value comes from `env` when run
 .spec_sym <- function(name) structure(list(name = name), class = "tfl_spec_sym")
 
+# an R expression written in a workbook (`tables$keep_where`): as it is in
+# the program, the language object when run (plan_filter() reads it unevaluated)
+.spec_expr <- function(text) structure(list(text = text), class = "tfl_spec_expr")
+
 # a one-sided formula written in a workbook (`where` of a cell style):
 # `~ <text>` in the program, a formula when run
 .spec_formula <- function(text) {
@@ -50,6 +54,7 @@
 
 .spec_eval <- function(x, env) {
   if (inherits(x, "tfl_spec_sym")) return(get(x$name, envir = env))
+  if (inherits(x, "tfl_spec_expr")) return(str2lang(x$text))
   if (inherits(x, "tfl_spec_formula")) {
     # over the table's columns, with base R (the program's own objects
     # are its code's, tfl_table_code())
@@ -145,6 +150,7 @@
 
 .spec_code_line <- function(x) {
   if (inherits(x, "tfl_spec_sym")) return(x$name)
+  if (inherits(x, "tfl_spec_expr")) return(x$text)
   if (inherits(x, "tfl_spec_formula")) return(paste("~", x$text))
   p <- .spec_parts(x)
   if (!is.null(p) && !(is.atomic(x) && !is.list(x))) {
@@ -241,6 +247,11 @@
   cm <- .ard_spec_cells(sp)
   how <- sa[intersect(c("stats", "value", "na"), names(sa))]
   if (length(cm) || length(how)) do.call(add, c(list("plan_cells"), cm, how))
+  fw <- .ard_spec_filter(sp)
+  if (!is.null(fw)) {
+    do.call(add, c(list("plan_filter", .spec_expr(fw$where)),
+                   list(any = fw$any, parents = fw$parents)))
+  }
   cp <- .ard_spec_compare(sp)
   if (!is.null(cp)) {
     do.call(add, c(list("plan_compare"), cp$cols,
