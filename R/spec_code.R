@@ -570,6 +570,8 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
 .report_spec_steps <- function(sp, content = "content", setup = FALSE) {
   r <- .ard_spec_report_row(sp)
   pg <- if (nrow(sp$page)) .ard_spec_typed(sp$page[1L, ], "page") else list()
+  # (all of it for a figure's size: its font's lines too)
+  pg_all <- pg
   # the study's font and size: the setup's options() say them
   if (setup) pg[attr(sp, "page_study")] <- NULL
   geo <- c("paper_size", "orientation", "width_in", "height_in",
@@ -649,10 +651,14 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
                                         footer = ftr)
   }
   if (identical(r$type %||% "table", "figure")) {
-    twips <- function(v) if (!is.null(v)) as.integer(round(v * 1440))
+    # its size on the page (tfl_fig_page_size()): a number or the page's
+    # body (fit) said; blank, the figure's own size (rtfreporter's)
+    twips <- function(v) as.integer(round(v * 1440))
+    lines <- length(.ard_spec_band(sp, "titles")) + length(.ard_spec_band(sp, "footnotes"))
+    sz <- .fig_page_size(r, pg_all, lines)
     st[[length(st) + 1L]] <- .spec_call("rtf_figures", doc, .spec_sym(content),
-      width_twips = twips(r$figure_width_in),
-      height_twips = twips(r$figure_height_in))
+      width_twips = if (sz$mode[["width"]] != "native") twips(sz$width_in),
+      height_twips = if (sz$mode[["height"]] != "native") twips(sz$height_in))
   } else {
     st[[length(st) + 1L]] <- .spec_call("rtf_tables", doc, .spec_sym(content),
       auto_section = r$auto_section,

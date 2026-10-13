@@ -216,6 +216,10 @@
 #' @param dir The study folder: the files of the study key `source` (its
 #'   own ARD functions) are read from it -- not run -- for the statistics a
 #'   function says it gives (`cards::as_cards_fn(stat_names = )`).
+#' @param columns `profile = "siera"`: the datasets' columns, a named list
+#'   (`list(ADSL = names(adsl), ...)`); with it, an output grouped by a
+#'   column its dataset does not have (one the spec derives: ARS has no
+#'   derivation) is one siera cannot run.  `NULL`: not checked.
 #' @param references The outputs that print another output's analyses (a
 #'   figure printing a table's median and hazard ratio, #293): a data frame
 #'   with `output_id` (the figure), `source` (the table) and `analysis_id`
@@ -234,7 +238,7 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
                     profile = c("cdisc", "siera"), study_id = NULL,
                     purpose = NULL,
                     reason = "SPECIFIED IN SAP", dataset_names = NULL,
-                    dir = ".", references = NULL) {
+                    dir = ".", references = NULL, columns = NULL) {
   profile <- match.arg(profile)
   if (!inherits(ard_spec, "tfl_ard_spec")) ard_spec <- tfl_ard_spec(ard_spec)
   if (!is.null(purpose)) purpose <- match.arg(toupper(purpose), .ars_purposes)
@@ -749,10 +753,13 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
       o <- rep_all$output_id[k]
       if (is.na(o) || o %in% outs || o %in% rf_out) next
       type <- tolower(rep_all$type[k] %||% NA_character_)
+      # (a report whose content is its own code: "user")
+      cc <- rep_all$content_code[k] %||% NA_character_
+      if (!is.na(cc) && nzchar(trimws(cc))) type <- "user"
       miss(o, "output", switch(type %|NA|% "",
-        user = paste("a report of user code with no analyses in the ARD",
-                     "definition: what it shows is made by its own code,",
-                     "which ARS does not hold"),
+        user = paste("a report whose content is its own code, with no",
+                     "analyses in the ARD definition: what it shows is made",
+                     "by that code, which ARS does not hold"),
         listing = paste("a listing: ARS describes analyses and their",
                         "results, and a listing has none"),
         paste("no analyses in the ARD definition, so nothing for ARS to",
@@ -834,7 +841,7 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
   if (length(outputs)) re$outputs <- outputs
   out <- structure(re, class = "tfl_ars", profile = profile,
                    unmapped = unique(un), ids = ids)
-  if (profile == "siera") out <- .ars_siera(out)
+  if (profile == "siera") out <- .ars_siera(out, columns = columns)
   out
 }
 

@@ -52,3 +52,8 @@ F05,hand,figure,spec,tflplanner,%s,"The design reads an ARD: choose where it com
 F06,error,figure,spec,tflplanner,%s,"Give the piece an analysis the table still has, or add the analysis again."
 F07,check,figure,ard,tflplanner,%s,"Make the ARD (its table's step 2, or take it in): the figure prints from it."
 F08,error,figure,ard,tflplanner,%s,"Correct the piece to a row the ARD has (its analysis, variable, group or statistic)."
+U01,error,program,spec,tflplanner,"The %s code of %s does not read as R (line %s): %s.",Correct the code where R says.
+U02,error,program,spec,tflplanner,"The %s code of %s reads %s, which the report does not register.",Add the dataset to the report's data (its step 1) or correct the name: the program reads only the datasets the report registers.
+U03,error,program,spec,tflplanner,"The %s code of %s leaves no %s.","Assign what the next step reads: the data step data (a figure: df), the content step content."
+U04,check,program,spec,tflplanner,"The %s code of %s calls %s.","Read data through the report's datasets and its ARD switch, and call packages as pkg::fn(): the program reads the data and owns the session."
+U05,error,program,spec,tflplanner,"The %s code of %s uses ard, but the report does not read its ARD.",Turn its ARD on (step 1) or take ard out of the code.

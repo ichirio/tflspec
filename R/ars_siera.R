@@ -207,7 +207,9 @@
 }
 
 # tfl_ars(profile = "siera"): the cdisc model, made runnable by siera.
-.ars_siera <- function(ars) {
+# `columns`: the datasets' columns (tfl_ars(columns = )), for the
+# groupings on a column a dataset does not have; NULL: not checked.
+.ars_siera <- function(ars, columns = NULL) {
   info <- attr(ars, "ids")
   un <- attr(ars, "unmapped")
   miss <- function(where, item, why) {
@@ -332,6 +334,49 @@
     analyses[[length(analyses) + 1L]] <- c(a, list(.out = info$output_id[i],
                                                    .groupn = info$role[i] == "groupn"))
   }
+  # the outputs siera cannot run, left out of the profile so the file as a
+  # whole runs (siera stops on the first such output): fewer than three
+  # analyses (siera 0.5.6 joins the analysis set to the dataset of the
+  # output's third analysis, anas[3, ], and has none to join), an
+  # analysis without a grouping (siera's templates group by one), a
+  # grouping on a column its dataset does not have (one the spec derives).
+  # Each is a row of the unmapped list, item "siera", with why.
+  gr <- ars$analysisGroupings %||% list()
+  gr_ids <- vapply(gr, `[[`, "", "id")
+  var_of <- stats::setNames(vapply(gr, function(g) g$groupingVariable %||% "", ""), gr_ids)
+  ds_of <- stats::setNames(vapply(gr, function(g) g$groupingDataset %||% "", ""), gr_ids)
+  out_of <- vapply(analyses, `[[`, "", ".out")
+  cannot <- character()
+  for (o in unique(out_of)) {
+    aa <- analyses[out_of == o]
+    why <- c(
+      if (length(aa) < 3L) sprintf(paste(
+        "%d analyses: siera joins the analysis set to the dataset of the",
+        "output's third analysis (anas[3, ] in its",
+        ".generate_analysis_set_code(), siera 0.5.6) and stops without one"),
+        length(aa)),
+      if (any(vapply(aa, function(a) !length(a$orderedGroupings), NA))) paste(
+        "an analysis without a grouping (a Total column, a study total):",
+        "siera's templates group by one"),
+      {
+        gid <- unique(unlist(lapply(aa, function(a)
+          vapply(a$orderedGroupings %||% list(), `[[`, "", "groupingId"))))
+        lack <- if (length(columns)) gid[vapply(gid, function(g) {
+          have <- columns[[ds_of[[g]]]]
+          !is.null(have) && !var_of[[g]] %in% have
+        }, NA)]
+        if (length(lack)) sprintf(paste(
+          "grouped by %s, a column its dataset does not have (one the spec",
+          "derives: ARS has no derivation)"),
+          paste(unique(paste0(ds_of[lack], ".", var_of[lack])), collapse = ", "))
+      })
+    if (length(why)) {
+      miss(o, "siera", paste0("siera cannot run it: ", paste(why, collapse = "; ")))
+      cannot <- c(cannot, o)
+    }
+  }
+  analyses <- analyses[!out_of %in% cannot]
+
   # each output's subject count first
   outs <- vapply(ars$outputs, `[[`, "", "id")
   ord <- order(match(vapply(analyses, `[[`, "", ".out"), outs),
@@ -423,8 +468,9 @@
     part <- paste("Output", it$outputId)
     if (length(a) < 3L) {
       add(part, "analyses", paste(
-        "siera applies the analysis set from the output's third analysis:",
-        "an output needs three analyses at least"))
+        "siera joins the analysis set to the dataset of the output's third",
+        "analysis (anas[3, ] in its .generate_analysis_set_code(), siera",
+        "0.5.6): an output needs three analyses at least"))
     }
     sets <- unique(vapply(an[a], function(z) z$analysisSetId %||% "", ""))
     if (length(sets) > 1L) {
