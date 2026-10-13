@@ -1,7 +1,7 @@
 # tflspec (development version)
 
 * **A figure's size is its report's: its own size, fit to the page, or
-  inches** (0.0.24.9101, the user's request on tflplanner's step 3).  The
+  inches** (0.0.24.9102, the user's request on tflplanner's step 3).  The
   report sheet's `figure_width_in` / `figure_height_in` take a number of
   inches, `fit` (the page's body: the page or paper in its orientation
   less its margins, its height less the report's title and footnote
@@ -17,7 +17,7 @@
   snapshots change by those lines.
 
 * **A report is a table, a listing or a figure; any of its steps may be
-  its own code** (0.0.24.9101, tflplanner's user-program design, the user's direction:
+  its own code** (0.0.24.9102, tflplanner's user-program design, the user's direction:
   "user code" was a fourth type forced into line).  The report sheet's
   `data_code` and `content_code` hold the report's own R for its data
   step and its content step: a step whose code is not blank is that code,
@@ -37,7 +37,7 @@
   out from a `data` a data step of its own code made); `"all"` as before.
 
 * **A figure's data steps: each reads an object and leaves one**
-  (0.0.24.9101, tflplanner's generalised data steps, the user's
+  (0.0.24.9102, tflplanner's generalised data steps, the user's
   questions Q1-Q3).  Any data step may say the object it reads (`in`) and
   the one it leaves (`out`): `{step: filter, expr: AVAL > 0, out: df_ev}`
   writes `df_ev <- df |> filter(AVAL > 0)` and keeps `df`;
@@ -56,6 +56,15 @@
   `summary`, `rate`, `count`) stay.
 * `tfl_check_fig_design()`: an `in` no step made before (and not a
   dataset) is a problem; the columns follow the object a step reads.
+
+* **The study's ARD program puts a code list on a data once** (#235).
+  With code lists that relabel (`M` = Male), `tfl_ard_code()` for the
+  whole study (no `output_id`) put them on the dataset as it was read and
+  again on the analysis set made from it; the second found "Male" where
+  it expected `M` and stopped the program.  Each report's part now puts
+  them, as one report's program always did, only on the data its
+  analyses read: the study's ARD is the reports' ARDs bound together.
+
 * **An AI kit to draft a study's specs from its TOC and shells**
   (`tflspec_ai_manual(dir)`).  A chat cannot read the disk, and most take
   ten files at most: `tflspec_ai_manual(dir)` writes one flat folder of

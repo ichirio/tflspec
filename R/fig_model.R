@@ -358,7 +358,7 @@ tfl_time_unit_days <- function() {
 #             a step's own `out` made last -- and leaves its `name`
 #   code      reads the object above it; leaves `out` when said
 #   ard       reads an analysis data, leaves nothing (the ARD's row)
-# A design that says no `in` or `out` is read as before 0.0.24.9101 (but a
+# A design that says no `in` or `out` is read as before 0.0.24.9102 (but a
 # second read makes df2 where it made df again).
 .fig_step_io <- function(steps) {
   cur <- "df"
@@ -651,7 +651,7 @@ tfl_read_fig_design <- function(path) {
     return(tfl_fig_design(layers = list(list(
       layer = "figure", type = x$type, style = x$style, args = x$args %||% list()))))
   }
-  # its size (before 0.0.24.9101 the design's): its report's now
+  # its size (before 0.0.24.9102 the design's): its report's now
   if (!is.null(x$plot)) x$plot[c("width", "height", "units")] <- NULL
   tfl_fig_design(x$data %||% list(), x$stats %||% list(), x$plot %||% list(),
                  x$layers %||% list(), x$template, x$ggplot2_version,
