@@ -1,5 +1,12 @@
 # tflspec (development version)
 
+* **`tables$stat_groups`: one record's statistics in two columns from the
+  sheet** (rtfreporter #619, needs rtfreporter 0.8.2.9046).  `n = N |
+  orr_ci = n, estimate, conf.low, conf.high` becomes
+  `plan_stat_groups(n = "N", orr_ci = c(...))`, its key `.stat_group`
+  named in `cols` (`TRT01A | .stat_group`), a `cells` row's `variable` a
+  group's name; `tfl_as_table_spec()` writes it back.
+
 * **An AE table's "Subjects with at least one TEAE" row from the sheets**
   (#236).  The `tables` sheet's new column `overall_label` is that row's
   text; its `hierarchical` analysis computes it (`args` `over_variables =

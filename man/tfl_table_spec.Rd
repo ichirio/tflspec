@@ -145,6 +145,10 @@ subjects with at least one event, from a \code{hierarchical} analysis with
 at least one TEAE").  It is the normalization's
 (\code{\link[rtfreporter:normalize_ard]{rtfreporter::normalize_ard()}}'s \code{overall}): the report's program
 writes it with \code{\link[=tfl_normalize_code]{tfl_normalize_code()}}.  Blank: no such row.}
+\item{\code{stat_groups}}{One record's statistics in named groups, \code{|}
+between groups, \verb{,} between a group's statistics: \verb{n = N | orr_ci = n, estimate, conf.low, conf.high} (\code{\link[rtfreporter:plan_verbs]{rtfreporter::plan_stat_groups()}}).
+The key \code{.stat_group} then names them in \code{cols} (\code{TRT01A | .stat_group}: N in one column, the rate and CI in the next), and a
+\code{cells} row's \code{variable} may be a group's name.  Blank: none.}
 }
 }
 

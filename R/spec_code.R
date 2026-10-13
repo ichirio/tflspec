@@ -235,6 +235,9 @@
   if (!is.null(sa[["total"]])) {
     add("plan_total", label = sa[["total"]], position = sa[["total_position"]])
   }
+  if (!is.null(sa[["stat_groups"]])) {
+    do.call(add, c(list("plan_stat_groups"), sa[["stat_groups"]]))
+  }
   cm <- .ard_spec_cells(sp)
   how <- sa[intersect(c("stats", "value", "na"), names(sa))]
   if (length(cm) || length(how)) do.call(add, c(list("plan_cells"), cm, how))

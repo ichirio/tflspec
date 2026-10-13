@@ -194,7 +194,7 @@
   list(
     tables    = c("output_id", "cols", "rows", "label", "stats", "value",
                   "sep", "sort", "sort_stat", "na", "header_n", "total",
-                  "total_position", "overall_label"),
+                  "total_position", "overall_label", "stat_groups"),
     variables = c("output_id", "variable", "label", "order", "levels",
                   "empty_levels", "under"),
     # the study's code list: a value's text and place
@@ -610,6 +610,12 @@
 #'     at least one TEAE").  It is the normalization's
 #'     ([rtfreporter::normalize_ard()]'s `overall`): the report's program
 #'     writes it with [tfl_normalize_code()].  Blank: no such row.}
+#'   \item{`stat_groups`}{One record's statistics in named groups, `|`
+#'     between groups, `,` between a group's statistics: `n = N | orr_ci =
+#'     n, estimate, conf.low, conf.high` ([rtfreporter::plan_stat_groups()]).
+#'     The key `.stat_group` then names them in `cols` (`TRT01A |
+#'     .stat_group`: N in one column, the rate and CI in the next), and a
+#'     `cells` row's `variable` may be a group's name.  Blank: none.}
 #' }
 #'
 #' @section `variables`:
@@ -1226,6 +1232,10 @@ print.tfl_table_spec <- function(x, ...) {
   if ("header_n" %in% names(t) && !is.na(t$header_n)) {
     out$header_n <- .ard_spec_header_n(t$header_n)
   }
+  # a record's statistics in groups (plan_stat_groups())
+  if ("stat_groups" %in% names(t) && !is.na(t$stat_groups) && nzchar(trimws(t$stat_groups))) {
+    out$stat_groups <- .ard_spec_stat_groups(t$stat_groups)
+  }
   # a Total column: its heading, and its place (plan_total())
   if ("total" %in% names(t) && !is.na(t$total) && nzchar(trimws(t$total))) {
     out$total <- trimws(t$total)
@@ -1240,6 +1250,22 @@ print.tfl_table_spec <- function(x, ...) {
     }
   }
   out
+}
+
+# `stat_groups`: "n = N | orr_ci = n, estimate, conf.low" as plan_stat_groups()
+# takes it, list(n = "N", orr_ci = c("n", "estimate", "conf.low"))
+.ard_spec_stat_groups <- function(x) {
+  parts <- .split_bar(x)
+  bad <- parts[!grepl("^[^=]+=.+$", parts)]
+  if (length(bad)) {
+    .ard_stop(sprintf(paste0(
+      "`tables$stat_groups`: %s is not `name = statistic, statistic`.  ",
+      "Write the groups as `n = N | orr_ci = n, estimate, conf.low, conf.high`."),
+      paste(sQuote(bad), collapse = ", ")))
+  }
+  nm <- trimws(sub("=.*$", "", parts))
+  st <- lapply(sub("^[^=]+=", "", parts), function(v) trimws(strsplit(v, ",", fixed = TRUE)[[1L]]))
+  stats::setNames(st, nm)
 }
 
 # `header_n`: which population a header's {n} is -- `page` or `table` --
@@ -2580,6 +2606,10 @@ tfl_as_table_spec <- function(x, output_id = NULL, compare = TRUE) {
     miss("plan_col_header(values = ): a literal N stays in code (use {n})")
   }
   tables$header_n <- H$n_text %||% NA_character_
+  # plan_stat_groups(): the statistics in groups
+  sg <- ly$stat_groups$stat_groups
+  tables$stat_groups <- if (length(sg)) paste(sprintf("%s = %s", names(sg),
+    vapply(sg, paste, "", collapse = ", ")), collapse = " | ") else NA_character_
   # plan_total(): the Total column
   tt <- ly$total
   tables$total <- tt$label %||% NA_character_

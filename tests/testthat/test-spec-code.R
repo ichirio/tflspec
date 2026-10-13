@@ -227,3 +227,36 @@ test_that("tfl_normalize_code(): the hierarchy and the any-event row the definit
   tfl_write_table_spec(sp, f)
   expect_identical(tfl_read_table_spec(f)$tables$overall_label[2L], "Subjects with at least one TEAE")
 })
+
+test_that("tables$stat_groups: one record's statistics in two columns, as plan_stat_groups() (rtfreporter #619)", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("broom", minimum_version = "1.0.8")
+  skip_if_not(utils::packageVersion("rtfreporter") >= "0.8.2.9046")
+  adsl <- cards::ADSL
+  adsl$RESP <- factor(ifelse(adsl$AGE > 75, "Y", "N"), levels = c("Y", "N"))
+  ard <- cards::ard_strata(adsl, .by = ARM, .strata = SEX, .f = ~ cardx::ard_categorical_ci(
+    .x, variables = RESP, value = RESP ~ "Y", method = "clopper-pearson", conf.level = 0.90))
+  sp <- tfl_table_spec(
+    tables = data.frame(output_id = "ORR", cols = "ARM | .stat_group",
+                        rows = "grp1 = group2 | grp2 = group2_level", label = "NA", sort = "FALSE",
+                        stat_groups = "n = N | orr_ci = n, estimate, conf.low, conf.high"),
+    cells = data.frame(output_id = "ORR", variable = c("n", "orr_ci", "orr_ci"),
+                       row = c("1", "1", "2"),
+                       template = c("{N:.0f}", "{n:.0f} ({estimate:.1f%})",
+                                    "{conf.low:.1f%}, {conf.high:.1f%}")))
+  code <- paste(tfl_table_code(sp, "ORR"), collapse = "
+")
+  expect_match(code, "plan_stat_groups(", fixed = TRUE)
+  expect_match(code, "orr_ci = c(\"n\", \"estimate\", \"conf.low\", \"conf.high\")", fixed = TRUE)
+  tab <- suppressMessages(rtfreporter::plan_apply(
+    tfl_table_plan(rtfreporter::normalize_ard(ard), sp, "ORR"), "table"))
+  tab <- as.data.frame(if (is.data.frame(tab)) tab else tab[[1L]])
+  expect_true(all(c("Placebo____n", "Placebo____orr_ci") %in% names(tab)))
+  # a plan says it back
+  back <- tfl_as_table_spec(tfl_table_plan(rtfreporter::normalize_ard(ard), sp, "ORR"),
+                            output_id = "ORR", compare = FALSE)
+  expect_identical(back$tables$stat_groups, "n = N | orr_ci = n, estimate, conf.low, conf.high")
+  expect_error(tfl_table_spec(tables = data.frame(output_id = "X", cols = "ARM", stat_groups = "n N")) |>
+                 tfl_table_code("X"), "not `name = statistic")
+})
