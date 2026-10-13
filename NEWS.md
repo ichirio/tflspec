@@ -1,5 +1,9 @@
 # tflspec (development version)
 
+* **`tables$stack_nest`**: `TRUE` writes `normalize_ard(stack_nest = TRUE)`
+  (rtfreporter #623, needs 0.8.2.9048), a crossed layer's outer level as a
+  heading row.
+
 * **`tables$compare`, `compare_by`, `compare_position`: comparison columns
   from the sheets** (rtfreporter #625, needs rtfreporter 0.8.2.9047).  `p |
   diff` becomes `plan_compare(p = ..., diff = ...)`, each column's templates

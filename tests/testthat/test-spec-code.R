@@ -386,3 +386,13 @@ test_that("tables$compare: a column's lines from the cells rows' `row` (rtfrepor
   expect_match(code, "diff = cell_rows(", fixed = TRUE)
   expect_match(code, "p = cell_rows(", fixed = TRUE)
 })
+
+test_that("tables$stack_nest: a crossed layer's outer level as a key of its own (rtfreporter #623)", {
+  skip_if_not("stack_nest" %in% names(formals(rtfreporter::normalize_ard)))
+  sp <- tfl_table_spec(tables = data.frame(output_id = "X", cols = "ARM",
+                                           stack = "subgroup = SEX, AGEGR1 * SEX", stack_nest = "TRUE"))
+  expect_identical(tfl_normalize_code(sp, output_id = "X"),
+                   "data <- normalize_ard(ard, stack = list(subgroup = list(\"SEX\", c(\"AGEGR1\", \"SEX\"))), stack_nest = TRUE)")
+  sp$tables$stack_nest <- NA
+  expect_false(grepl("stack_nest", tfl_normalize_code(sp, output_id = "X")))
+})

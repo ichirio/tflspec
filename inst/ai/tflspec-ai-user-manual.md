@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9106** (the development version,
+**This manual documents tflspec 0.0.24.9107** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -363,7 +363,7 @@ once. The `study` sheet has `key` / `value` (`rounding`: `sas` / `iec` /
 | `header_n` | `plan_col_header(values = list(n = ))` | `page`, `table`, or `n = page \| N = table` |
 | `stat_groups` | `plan_stat_groups()` | one record's statistics in named groups, `n = N \| orr_ci = n, estimate, conf.low, conf.high`; the key `.stat_group` in `cols` puts N in one column and the rate and CI in the next, in `rows` one group under another; a `cells` row's `variable` may be a group's name, its template one row or several (n rows x m columns of one record). Keep the ARD as it is: no `mutate()` of `variable` |
 | `compare`, `compare_by`, `compare_position` | `plan_compare()` | comparison columns, `p | diff`; each column's templates are `cells` rows with `variable` = its name (`{p.value:.3f}`, `{estimate:.2f} ({conf.low:.2f}, {conf.high:.2f})`); the ARD needs the test records (`cardx::ard_stats_t_test()`, `ard_stats_chisq_test()`, ...) |
-| `stack`, `stack_sep` | `normalize_ard(stack = , stack_sep = )` | subgroups as one pair of keys, `subgroup = ALL, SEX, AGEGR1, AGEGR1 * SEX` (`*` crosses; or the slots `subgroup = group2, group3`); `rows` then names `subgroup` / `subgroup_level`, never `group2` / `group2_level`; written by `tfl_normalize_code()` |
+| `stack`, `stack_sep`, `stack_nest` | `normalize_ard(stack = , stack_sep = , stack_nest = )` | subgroups as one pair of keys, `subgroup = ALL, SEX, AGEGR1, AGEGR1 * SEX` (`*` crosses; or the slots `subgroup = group2, group3`); `rows` then names `subgroup` / `subgroup_level`, never `group2` / `group2_level`; written by `tfl_normalize_code()` |
 | `overall_label` | `normalize_ard(overall = )` | the any-event row of a hierarchy ("Subjects with at least one TEAE"; its analysis `args` `over_variables = TRUE`): the program's normalization, written by `tfl_normalize_code(spec, ard_spec)` (with the `hierarchy` of its `hierarchical` analysis) |
 
 **variables**: `variable`, `label`, `order`, `levels` (`Grade 0 | Grade 1`), `empty_levels` (`hide`: no row for a value no record has; blank: a 0 row), `under` (`RACE: Asian`: its rows under that level of RACE, one indent deeper, its own heading dropped -- `plan_nest()`)
