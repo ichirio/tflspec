@@ -112,6 +112,7 @@ reference:
       - tfl_convert_sheets_to_yaml
       - tfl_write_spec_xlsx
       - tfl_import_spec_xlsx
+      - tfl_sheets_from_yaml
   - title: Table spec and table plan
     desc: >
       A table as a workbook: its roles and the rtfreporter plan verbs it

@@ -801,7 +801,7 @@ back): rename the value or choose another separator.
 `tfl_unset` `tfl_read_output` `tfl_write_output` `tfl_read_study_spec`
 `tfl_read_outputs` `tfl_resolve_output` `tfl_convert_sheets_to_yaml`
 `tfl_yaml_from_sheets` `tfl_sheets_from_yaml` `tfl_write_spec_xlsx`
-`tfl_import_spec_xlsx` `tfl_schema` `tfl_schema_check` `tfl_content_code`
+`tfl_import_spec_xlsx` `tfl_schema` `tfl_schema_check` `tfl_content_code` `tfl_content_run`
 
 **Manual:** `tflspec_ai_manual` `tfl_adam_metadata` `tfl_ai_review`
 
