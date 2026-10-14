@@ -422,8 +422,13 @@ tfl_table_code <- function(spec, output_id = NULL, data = "data",
 # table_plan(), and the layers -- each a call as R takes it.  What
 # tfl_content_code() writes and tfl_content_run() runs: the one list both
 # read, so the two cannot differ.
-.content_table_pipeline <- function(content) {
+.content_table_pipeline <- function(content, kind = "table") {
   fns <- vapply(content, function(it) .schema_fn_name(it$fn), "")
+  # a listing has no roles: its plan is table_plan(data) with none
+  if (identical(kind, "listing") && !"table_plan" %in% fns) {
+    content <- c(list(tfl_item("table_plan", list())), content)
+    fns <- c("table_plan", fns)
+  }
   is_head <- fns == "table_plan"
   if (sum(is_head) != 1L) {
     .ard_stop(paste0("A table's content has one table_plan() item (its roles); ",
@@ -445,9 +450,9 @@ tfl_table_code <- function(spec, output_id = NULL, data = "data",
 .content_data_steps <- c("normalize_ard")
 
 .content_table_code <- function(content, data = "data", plan = "plan",
-                                pipe = NULL) {
+                                pipe = NULL, kind = "table") {
   op <- .ard_pipe_op(pipe)
-  pl <- .content_table_pipeline(content)
+  pl <- .content_table_pipeline(content, kind)
   head <- pl$head
   steps <- pl$steps
   from <- pl$from
@@ -908,17 +913,17 @@ tfl_content_run <- function(output, data) {
   if (!inherits(output, "tfl_output")) {
     .ard_stop("tfl_content_run(): `output` is a report, tfl_output().")
   }
-  if (!identical(output$kind, "table")) {
+  if (!output$kind %in% c("table", "listing")) {
     .ard_stop(sprintf(paste0("tfl_content_run(): a %s's content is not run ",
-                             "yet; tables only, for now."), output$kind))
+                             "yet; tables and listings, for now."), output$kind))
   }
   .spec_need_rtfreporter()
   for (it in output$content) .schema_need_version(it)
-  .content_table_run(output$content, data)
+  .content_table_run(output$content, data, kind = output$kind)
 }
 
-.content_table_run <- function(content, data) {
-  pl <- .content_table_pipeline(content)
+.content_table_run <- function(content, data, kind = "table") {
+  pl <- .content_table_pipeline(content, kind)
   x <- data
   run <- function(cl, first) {
     f <- .spec_fun(cl$fun)
@@ -961,9 +966,9 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL) {
   if (!inherits(output, "tfl_output")) {
     .ard_stop("tfl_content_code(): `output` is a report, tfl_output().")
   }
-  if (!identical(output$kind, "table")) {
+  if (!output$kind %in% c("table", "listing")) {
     .ard_stop(sprintf(paste0("tfl_content_code(): a %s's content is not written ",
-                             "yet; tables only, for now."), output$kind))
+                             "yet; tables and listings, for now."), output$kind))
   }
   for (it in output$content) .schema_need_version(it)
   # the object the pipe starts from: the output's own name for it, else
@@ -973,7 +978,8 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL) {
       .schema_fn_name(it$fn) %in% .content_data_steps, NA))
     data <- output$data$object %||% if (pre) "ard" else "data"
   }
-  .content_table_code(output$content, data = data, plan = plan, pipe = pipe)
+  .content_table_code(output$content, data = data, plan = plan, pipe = pipe,
+                      kind = output$kind)
 }
 
 #' The line that normalizes a table's ARD
