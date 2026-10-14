@@ -17,6 +17,24 @@
   `tfl_fig_r()` is `tfl_r()` now, for every kind (no alias).  The
   generators follow (design: `_archive/spec-format-redesign-2026-10-14.md`).
 
+* **The YAML spec, stage 1: the schema and the content's code.**
+  `inst/spec/schema.yml` types each argument a spec item gives -- a YAML
+  map for a named vector, rows for a data frame, `!r` for an expression, a
+  formula or a guard, `{fn:, args:}` for a nested call -- and the grammar of
+  `...` for the 13 plan verbs whose body it is (`plan_cells()`,
+  `plan_digits()`, `plan_sort()`, ...); `tfl_schema()` returns it and
+  `tfl_schema_check()` checks one item (an unknown argument warns, the
+  installed package's formals have the last word).  `tfl_content_code()`
+  writes a table's `content:` as its code, one line an item in the items'
+  order (`ard |> normalize_ard() |> table_plan() |> plan_*()`), an item from
+  the study's defaults or a pattern marked `# (study default)`; and
+  `tfl_content_run()` makes the same plan from the same calls without the
+  code (the written code, run, gives the same table).  `tfl_table_code()`
+  and `tfl_table_plan()` now go through the same items, from a workbook's
+  sheets by a bridge that also goes back (content to sheets), so a workbook
+  and a spec file write the same code: byte for byte the same as before for
+  every bundled workbook, the tflplanner sample and the table cases.
+
 * **`populations` has a `label` column**: the text a header or footnote
   prints for the analysis set (`Safety Analysis Set`), also its name in CDISC
   ARS (`tfl_ars()` writes it as the analysis set's `name`, `tfl_ars_to_specs()`
