@@ -20,8 +20,10 @@
   Filter(function(s) !is.null(s$fn) || !is.null(s$code), res$steps)
 }
 
-# a step as the program writes it: a call, or R as it was written
+# a step as the program writes it: as it was written (a post step), a call,
+# or R as it was written
 .ard_step_cl <- function(s) {
+  if (!is.null(s$text)) return(s$text)
   if (is.null(s$fn)) as.character(s$code) else .call_as_cl(s)
 }
 
