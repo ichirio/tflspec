@@ -408,10 +408,31 @@ tfl_table_code <- function(spec, output_id = NULL, data = "data",
                            plan = "plan", pipe = NULL) {
   sp <- .ard_spec_scope(.as_spec(spec, "table", "tfl_table_code",
                                  output_id = output_id), output_id)
-  roles <- .plan_spec_roles(sp)
+  .content_table_code(.plan_content_items(sp), data = data, plan = plan,
+                      pipe = pipe)
+}
+
+# A table's content -- its items, in order (tfl_item()) -- as the program:
+# `plan <- data |> table_plan(...) |> plan_*() ...`, the code lists of
+# plan_levels() at the head.  An item from the study's defaults or a
+# pattern carries a comment saying so.  What tfl_table_code() writes from
+# a workbook, and tfl_content_code() from a spec file.
+.content_table_code <- function(content, data = "data", plan = "plan",
+                                pipe = NULL) {
   op <- .ard_pipe_op(pipe)
-  head <- do.call(.spec_call, c(list("table_plan", .spec_sym(data)), roles))
-  steps <- .plan_spec_steps(roles, sp)
+  # table_plan() is the head (the roles), not a layer: wherever the
+  # layering put it, it starts the pipe; the layers keep their order
+  is_head <- vapply(content, function(it) identical(.schema_fn_name(it$fn), "table_plan"), NA)
+  if (sum(is_head) != 1L) {
+    .ard_stop(paste0("A table's content has one table_plan() item (its roles); ",
+                     "this one has ", sum(is_head), "."))
+  }
+  content <- c(content[is_head], content[!is_head])
+  calls <- .content_calls(content)
+  head <- calls[[1L]]
+  head$args <- c(list(.spec_sym(data)), head$args)
+  steps <- calls[-1L]
+  from <- vapply(content[-1L], function(it) it$from %||% "own", "")
   # the levels as code lists at the head, cl_<variable> as the ARD programs
   # write them, plan_levels() naming them
   cl <- character()
@@ -430,7 +451,89 @@ tfl_table_code <- function(spec, output_id = NULL, data = "data",
              vapply(steps, function(s) paste0("  ", .spec_call_code(s)), ""))
   lines[-length(lines)] <- paste(lines[-length(lines)], op)
   lines[1L] <- paste(plan, "<-", lines[1L])
+  # an item the report does not say itself: where it comes from
+  note <- c("", vapply(from, function(f) {
+    if (identical(f, "own")) return("")
+    if (identical(f, "defaults")) return("  # (study default)")
+    paste0("  # (pattern ", sub("^pattern:", "", f), ")")
+  }, ""))
+  lines <- unlist(lapply(seq_along(lines), function(i)
+    c(if (nzchar(note[i])) note[i], lines[i])))
   .drop_attached_ns(c(cl, unlist(strsplit(lines, "\n", fixed = TRUE))))
+}
+
+# ---- content: the items of a spec, one a function call -----------------------
+
+# A table workbook's content: its roles as the table_plan() item, then one
+# item a verb (.plan_spec_steps()), each argument as a spec file holds it
+# (.schema_from_r()).  The bridge from the sheets: a workbook and a spec
+# file reach the same code through it, and the converter to spec files
+# writes its result.
+.plan_content_items <- function(sp) {
+  roles <- .plan_spec_roles(sp)
+  steps <- .plan_spec_steps(roles, sp)
+  c(list(tfl_item("table_plan", .schema_from_r("table_plan", roles))),
+    lapply(steps, function(st) tfl_item(st$fun, .schema_from_r(st$fun, st$args))))
+}
+
+#' The content of a table workbook as spec items
+#'
+#' @param spec A table definition ([tfl_read_table_spec()], [tfl_table_spec()])
+#'   or the path(s) of its workbook(s).
+#' @param output_id The table, when the definition has several.
+#' @return The items ([tfl_item()]), in the order the plan applies them:
+#'   `table_plan()` with the roles first.
+#' @keywords internal
+#' @noRd
+.plan_content_from_sheets <- function(spec, output_id = NULL) {
+  sp <- .ard_spec_scope(.as_spec(spec, "table", ".plan_content_from_sheets",
+                                 output_id = output_id), output_id)
+  .plan_content_items(sp)
+}
+
+# The items as the calls they stand for (.spec_call()), their arguments as
+# R takes them (.schema_to_r()).
+.content_calls <- function(content) {
+  lapply(content, function(it) {
+    do.call(.spec_call, c(list(.schema_fn_name(it$fn)),
+                          .schema_to_r(it$fn, it$args %||% list())))
+  })
+}
+
+#' The code of a report's content, from its spec file
+#'
+#' Writes the program a report's `content:` stands for -- for a table, the
+#' `table_plan()` pipeline: one line an item, in the items' order, with
+#' their arguments as R takes them (`!r` as code, `{fn:, args:}` as the call
+#' it names, maps and sequences as the vectors and lists each argument
+#' takes; [tfl_schema()]).  An item the report takes from the study's
+#' defaults or a pattern says so in a comment above it.  The output is the
+#' report after its `extends` are applied (`tfl_resolve_output()`), so no
+#' `!unset` is left.
+#'
+#' @param output A report ([tfl_output()]), resolved.
+#' @param data The name of the normalized ARD in the program.
+#' @param plan The name the plan is assigned to.
+#' @param pipe `"|>"` or `"%>%"`; `NULL` follows
+#'   `getOption("rtfreporter.ard_pipe")`.
+#' @return The code, one element a line.
+#' @examples
+#' out <- tfl_output("T-1", "table", content = list(
+#'   tfl_item("table_plan", list(cols = "TRTA", rows = list(group = "variable"))),
+#'   tfl_item("plan_cells", list(categorical = "{n} ({p:.1f%})")),
+#'   tfl_item("plan_sort", list(keys = c("-n")), from = "defaults")))
+#' cat(tfl_content_code(out), sep = "\n")
+#' @seealso [tfl_table_code()] for a table workbook; [tfl_schema()].
+#' @export
+tfl_content_code <- function(output, data = "data", plan = "plan", pipe = NULL) {
+  if (!inherits(output, "tfl_output")) {
+    .ard_stop("tfl_content_code(): `output` is a report, tfl_output().")
+  }
+  if (!identical(output$kind, "table")) {
+    .ard_stop(sprintf(paste0("tfl_content_code(): a %s's content is not written ",
+                             "yet; tables only, for now."), output$kind))
+  }
+  .content_table_code(output$content, data = data, plan = plan, pipe = pipe)
 }
 
 #' The line that normalizes a table's ARD
@@ -569,7 +672,8 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
   }
   for (r in names(dots)) if (!is.null(dots[[r]])) roles[[r]] <- dots[[r]]
   p <- do.call(rtfreporter::table_plan, c(list(data), roles))
-  for (st in .plan_spec_steps(roles, sp)) {
+  items <- .plan_content_items(sp)[-1L]
+  for (st in .content_calls(items)) {
     f <- .spec_fun(st$fun)
     p <- do.call(f, c(list(p), lapply(st$args, .spec_eval, env = emptyenv())))
   }

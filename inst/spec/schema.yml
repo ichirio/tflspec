@@ -1,0 +1,239 @@
+# tflspec's spec schema: the value of each argument a spec item may give.
+#
+# A spec's `content:` is a list of items, one a function call: the function,
+# its arguments by name (tfl_item()).  An argument a function names in its
+# formals is checked against them; what this file adds is the TYPE of a value,
+# where the spec writes it differently from R (a YAML map for a named vector,
+# rows for a data frame, `!r` for an expression or a formula), and the
+# grammar of `...` for the functions whose body is `...`.  It is what
+# tfl_schema() returns and tfl_schema_check() checks; the GUI's `?` and the
+# AI kit's schema are read from it too.
+#
+# Types (a short notation):
+#   string, integer, number, logical, enum[a|b]
+#   column (a column name), stat (a statistic name), template (a cell
+#   template, "{n} ({p:.1f%})"), r (`!r`, an R expression), formula
+#   (`!r`, written as `~ <text>`), guard (`!r`, a two-sided `cond ~ "text"`),
+#   call (`{fn:, args:}`), call<fn> (that
+#   function's call)
+#   list<T>       a YAML sequence; in R an unnamed vector (a list when T is
+#                 not a scalar)
+#   vec<K, V>     a YAML map of scalars; in R a named vector
+#   map<K, V>     a YAML map; in R a named list
+#   rows<f1, f2, ...>  a YAML sequence of maps; in R a data frame with those
+#                 columns, in that order (a cell's missing field is NA)
+#   T|U           either (the first that fits)
+#
+# `dots:` says what `...` takes.  `style: named`: the item's other keys are
+# its entries, by name (plan_labels: {AGE: Age}).  `style: positional`: the
+# entries are the value of the one key `key:` (plan_sort: {keys: [-n]}).
+
+table_plan:
+  package: rtfreporter
+  description: The roles -- what goes across, what goes down, which column carries the row text.
+  args:
+    cols: {type: "list<column>", description: The key(s) that go across.}
+    rows: {type: "vec<string, column>|list<column>", description: "The keys that go down, named as the table calls them."}
+    label: {type: "vec<string, column>|list<column>|logical", description: "The column the row text comes from; false for none."}
+    stat: {type: "vec<string, column>", description: The columns that hold the statistic name and value.}
+    show_keys: {type: "list<column>", description: Row keys also shown as variables.}
+
+plan_sort:
+  package: rtfreporter
+  description: The row order, key by key.
+  dots: {style: positional, key: keys, type: "list<string>|logical", description: "The keys to sort by, most important first; a minus for descending; false for the data's order.", example: [".overall", "-n@SOC", "SOC", ".depth", "-n", "PT"]}
+  args:
+    stat: {type: stat, description: The statistic a key sorts by.}
+    keep: {type: logical}
+
+plan_digits:
+  package: rtfreporter
+  description: The digits of each statistic, as a house rule.
+  dots: {style: named, type: "number|string|vec<stat, number|string>", description: "By variable, kind (continuous / categorical) or `default`: one number for every statistic, or one a statistic; \"3s\" for three significant digits.", example: {continuous: {mean: 1, sd: 2}, AGE: 0}}
+  args:
+    rounding: {type: "enum[sas|r|iec60559]", description: The tie-breaking family.}
+    .rows: {type: "vec<string, integer|string>", description: "The digits of a statistic row (a table with stats = rows), by its label."}
+
+plan_levels:
+  package: rtfreporter
+  description: The order (and the subset) of a variable's values.
+  dots: {style: named, type: "list<string>", description: A variable's values in their order.}
+  args:
+    .drop_empty: {type: "list<column>", description: Variables whose levels with no data are left out.}
+
+plan_labels:
+  package: rtfreporter
+  description: The printed text of variables and values.
+  dots: {style: named, type: "string|vec<string, string>", description: "A variable's label, or its values' labels."}
+
+plan_nest:
+  package: rtfreporter
+  description: Rows that belong under one level of another variable.
+  dots: {style: named, type: "map<string, string>|string", description: The nesting, as rtfreporter's plan_nest() takes it.}
+
+plan_total:
+  package: rtfreporter
+  description: A Total column from the ARD's overall rows.
+  args:
+    label: {type: string}
+    position: {type: "enum[last|first]"}
+
+plan_stat_groups:
+  package: rtfreporter
+  description: Columns made of groups of statistics.
+  dots: {style: named, type: "list<stat>", description: "A group's name and its statistics.", example: {n: N, orr_ci: [n, estimate, conf.low, conf.high]}}
+  args:
+    .variables: {type: "list<column>"}
+    .others: {type: string}
+
+plan_cells:
+  package: rtfreporter
+  description: How the statistics become cell text.
+  dots: {style: named, type: "template|map<string, template>|call<cell_rows>|list<guard|template>", description: "By variable, context, kind (continuous / categorical), stat group or `default`: one template, one a printed row (named by its label), cell_rows() for a cell of several lines, or guards (`!r \"n == 0 ~ '0'\"`) before the template.", example: {categorical: "{n:.0f} ({p:.1f%})", continuous: {"Mean (SD)": "{mean:.1f} ({sd:.2f})"}}}
+  args:
+    stats: {type: "enum[columns|rows]"}
+    value: {type: string}
+    na: {type: string}
+    notes: {type: logical}
+
+plan_filter:
+  package: rtfreporter
+  description: The rows kept by a condition on the ARD's statistics.
+  dots: {style: positional, key: where, type: "list<r>|r", description: "The conditions, R over a record's statistics and keys.", example: "!r p >= 0.05"}
+  args:
+    any: {type: logical}
+    parents: {type: "enum[keep|drop]"}
+    by: {type: column}
+
+plan_compare:
+  package: rtfreporter
+  description: Columns from the comparison records (tests, differences).
+  dots: {style: named, type: "template|vec<string, template>|call<cell_rows>|list<guard|template>", description: "A comparison column's name and its template."}
+  args:
+    by: {type: column}
+    position: {type: "enum[last|first]"}
+
+plan_stub:
+  package: rtfreporter
+  args:
+    vars: {type: "list<column>"}
+    name: {type: string}
+    indent: {type: integer}
+    group_summary: {type: "enum[empty|parent]"}
+    before: {type: logical}
+
+plan_paginate_group:
+  package: rtfreporter
+  args:
+    col: {type: column}
+    keep: {type: logical}
+    heading: {type: string}
+
+plan_row_group:
+  package: rtfreporter
+  args:
+    mode: {type: "enum[auto|indent|value|filled]"}
+    collapse: {type: "list<integer>|list<column>|logical"}
+    group_col: {type: column}
+
+plan_blanks:
+  package: rtfreporter
+  args:
+    where: {type: "string|list<integer>"}
+    first: {type: logical}
+    last: {type: logical}
+    counted: {type: logical}
+
+plan_paginate_rows:
+  package: rtfreporter
+  args:
+    max_rows: {type: integer}
+    split: {type: "enum[none|rows|group_safe|group_force|by_value]"}
+    break_before: {type: "list<integer>"}
+    min_group_rows: {type: integer}
+    cont_label: {type: string}
+    page_by: {type: "list<column>"}
+    heading: {type: string}
+
+plan_paginate_cols:
+  package: rtfreporter
+  args:
+    at: {type: "list<integer>|list<column>"}
+    cut_by: {type: string}
+    every: {type: integer}
+    keep: {type: "list<integer>|list<column>"}
+    fit: {type: logical}
+    allow_span_break: {type: logical}
+    order: {type: string}
+
+plan_style:
+  package: rtfreporter
+  args:
+    table_width_pct: {type: number}
+    table_width_pct_of_writable: {type: number}
+    table_width_twips: {type: integer}
+    row_height_twips: {type: integer}
+    border_header: {type: "call<rtf_border>"}
+    border_spanning: {type: "call<rtf_border>"}
+    border_body: {type: "call<rtf_border>"}
+    border_first_row: {type: "call<rtf_border>"}
+    border_last_row: {type: "call<rtf_border>"}
+
+plan_cell_style:
+  package: rtfreporter
+  args:
+    cols: {type: "list<column>"}
+    header: {type: logical}
+    where: {type: formula, description: "The rows it applies to, R over the table's columns: `!r \"p > 0.5\"`."}
+    indent_twips: {type: integer}
+    border: {type: "call<rtf_border>"}
+
+plan_hide:
+  package: rtfreporter
+  description: Columns kept in the data but not printed.
+  dots: {style: positional, key: cols, type: "list<column>"}
+
+plan_col_header:
+  package: rtfreporter
+  args:
+    header: {type: "rows<line, cols, span, text, align, bold, italic, border_top, border_bottom>", description: "The header's cells, one a row: `line` (the header row), `cols` (the columns it sits on), `span`, `text`."}
+    lines: {type: "list<vec<string, string>>", description: "The header a row at a time: each row a map, a cell's name the columns it sits on."}
+    values: {type: "map<string, logical|vec<string, number>>"}
+    col_header_align: {type: string}
+
+plan_columns:
+  package: rtfreporter
+  args:
+    widths: {type: "vec<column, number>|list<number>"}
+    decimal: {type: "list<column>"}
+    row_title: {type: "list<column>|list<integer>"}
+    auto_width: {type: logical}
+    sep: {type: string}
+
+plan_titles:
+  package: rtfreporter
+  dots: {style: positional, key: titles, type: "list<string>"}
+  args:
+    pages: {type: "list<string>"}
+
+plan_footnotes:
+  package: rtfreporter
+  dots: {style: positional, key: footnotes, type: "list<string>"}
+  args:
+    pages: {type: "list<string>"}
+
+plan_after:
+  package: rtfreporter
+  dots: {style: positional, key: steps, type: "list<r>"}
+
+rtf_border:
+  package: rtfreporter
+  args:
+    top: {type: "logical|string"}
+    bottom: {type: "logical|string"}
+    left: {type: "logical|string"}
+    right: {type: "logical|string"}
+
+cell_rows:
+  package: rtfreporter
+  dots: {style: named, type: "template|list<guard|template>", description: "A cell's lines, by the label of the row each sits on."}

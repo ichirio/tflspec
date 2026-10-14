@@ -7,9 +7,9 @@ content:
   - plan_stub: {name: row_label, before: true}
   - plan_col_header:
       lines:
-        1: {row_label: ~, .values: "{col}"}
-        2: {row_label: Characteristic, .values: "(N={n})"}
-  - plan_style: {border: {fn: rtf_border, args: {top: single, bottom: single}}}
+        - {row_label: "", .values: "{col}"}
+        - {row_label: Characteristic, .values: "(N={n})"}
+  - plan_style: {border_header: {fn: rtf_border, args: {top: true, bottom: true}}}
 page:
   header:
     1: {left: "Sample Pharma (tflplanner sample)", right: DRAFT}

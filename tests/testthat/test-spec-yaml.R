@@ -41,7 +41,7 @@ test_that("a report file reads: tags, nested calls, content items", {
   expect_identical(as.character(w), "p > 0.5")
   # nested maps kept as they are
   expect_identical(out$content[[3L]]$args$continuous[["Mean (SD)"]], "{mean} ({sd})")
-  expect_identical(out$content[[4L]]$args$continuous[["Mean (SD)"]], c(1L, 2L))
+  expect_identical(out$content[[4L]]$args$continuous$sd, 2L)    # plan_digits: by statistic
   # data and page
   expect_identical(out$data$source, "ard")
   expect_identical(out$data$analyses[[2L]]$statistic$AGE[[2L]], "mean")
@@ -54,9 +54,9 @@ test_that("the defaults file reads with the same reader's pieces: a nested call"
   items <- lapply(y$content, tflspec:::.item_from_list)
   st <- items[[5L]]
   expect_identical(st$fn, "plan_style")
-  expect_s3_class(st$args$border, "tfl_call")
-  expect_identical(st$args$border$fn, "rtf_border")
-  expect_identical(st$args$border$args$top, "single")
+  expect_s3_class(st$args$border_header, "tfl_call")
+  expect_identical(st$args$border_header$fn, "rtf_border")
+  expect_identical(st$args$border_header$args$top, TRUE)
 })
 
 test_that("a report written and read again is the same", {
