@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9111** (the development version,
+**This manual documents tflspec 0.0.24.9112** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -796,6 +796,12 @@ back): rename the value or choose another separator.
   `<function>(): no file '<path>'`.
 
 ## 13. Complete public API (nothing outside this list exists)
+
+**Spec files (YAML, one file a report):** `tfl_output` `tfl_item` `tfl_call` `tfl_r`
+`tfl_unset` `tfl_read_output` `tfl_write_output` `tfl_read_study_spec`
+`tfl_read_outputs` `tfl_resolve_output` `tfl_convert_sheets_to_yaml`
+`tfl_yaml_from_sheets` `tfl_sheets_from_yaml` `tfl_write_spec_xlsx`
+`tfl_import_spec_xlsx` `tfl_schema` `tfl_schema_check` `tfl_content_code`
 
 **Manual:** `tflspec_ai_manual` `tfl_adam_metadata` `tfl_ai_review`
 
