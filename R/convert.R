@@ -48,7 +48,12 @@ tfl_convert_sheets_to_yaml <- function(from, to, content_fn = NULL, overwrite = 
     stop("tfl_convert_sheets_to_yaml(): ", to, " is not empty (overwrite = TRUE to write over it).",
          call. = FALSE)
   }
-  if (is.null(content_fn)) content_fn <- get0(".plan_content_from_sheets", mode = "function", inherits = FALSE)
+  if (is.null(content_fn)) content_fn <- .bridge_fn(".plan_content_from_sheets")
+  # (the defaults' scope is output_id = NULL to the bridge, NA here)
+  if (!is.null(content_fn)) {
+    cf <- content_fn
+    content_fn <- function(sp, id) cf(sp, if (is.null(id) || is.na(id)) NULL else id)
+  }
   nc <- .nc_new()
   note <- function(output, sheet, row, column, reason, value = NA) {
     nc$rows[[length(nc$rows) + 1L]] <<- data.frame(
@@ -119,7 +124,7 @@ tfl_convert_sheets_to_yaml <- function(from, to, content_fn = NULL, overwrite = 
   # spec/defaults.yml
   defaults <- list()
   if (!is.null(sp)) {
-    if (!is.null(content_fn)) defaults$content <- .conv_items(content_fn(sp, NA_character_))
+    if (!is.null(content_fn)) defaults$content <- .items_to_list(.conv_items(content_fn(sp, NA_character_)))
     else if (any(vapply(c("tables", "variables", "cells", "layout", "columns", "style", "col_header", "cell_styles"),
                         function(s) nrow(scope(sp[[s]], NA)) > 0L, NA))) {
       note(NA, "table sheets", "(defaults)", NA, "content: not converted -- no sheets-to-content bridge given (content_fn)")
@@ -149,7 +154,13 @@ tfl_convert_sheets_to_yaml <- function(from, to, content_fn = NULL, overwrite = 
   # spec/toc.yml and spec/outputs/<id>.yml
   ids <- character()
   if (!is.null(plan)) ids <- plan$output_id[!is.na(plan$output_id) & nzchar(plan$output_id)]
+  table_ids <- unlist(lapply(names(.ard_spec_schema()), function(s) {
+    d <- sp[[s]]
+    if (is.null(d) || !nrow(d) || is.null(d$output_id)) return(character())
+    d$output_id[!is.na(d$output_id) & !startsWith(d$output_id, "@")]
+  }))
   ids <- unique(c(ids, if (!is.null(sp$report)) sp$report$output_id[!is.na(sp$report$output_id) & !startsWith(sp$report$output_id, "@")],
+                  table_ids,
                   if (!is.null(ard)) ard$analyses$output_id, if (!is.null(lf)) lf$listings$output_id,
                   names(src$figs)))
   ids <- ids[!is.na(ids) & nzchar(ids)]
@@ -420,4 +431,10 @@ tfl_convert_sheets_to_yaml <- function(from, to, content_fn = NULL, overwrite = 
                       stringsAsFactors = FALSE))
   }
   do.call(rbind, nc$rows)
+}
+
+# the package's own bridge between the sheets and the layers, when it is
+# there (NULL before it is)
+.bridge_fn <- function(name) {
+  get0(name, envir = topenv(environment()), mode = "function", inherits = FALSE)
 }

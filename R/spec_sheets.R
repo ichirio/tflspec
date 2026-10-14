@@ -23,7 +23,7 @@
 tfl_sheets_from_yaml <- function(dir) {
   s <- tfl_read_study_spec(dir)
   outs <- tfl_read_outputs(dir)
-  bridge <- get0(".plan_sheets_from_content", mode = "function", inherits = FALSE)
+  bridge <- .bridge_fn(".plan_sheets_from_content")
   nc <- list()
   note <- function(output, part, reason) nc[[length(nc) + 1L]] <<- data.frame(
     output = .na_scalar(output), part = part, reason = reason, stringsAsFactors = FALSE)

@@ -288,9 +288,7 @@ tfl_write_output <- function(x, path) {
   y$extends <- as.list(x$extends)
   if (!is.null(x$data)) y$data <- .calls_out(x$data)
   if (length(x$codelists)) y$codelists <- x$codelists
-  y$content <- lapply(x$content, function(it) {
-    stats::setNames(list(.calls_out(it$args)), it$fn)
-  })
+  y$content <- .items_to_list(x$content)
   if (length(x$page)) y$page <- .calls_out(x$page)
   # a kind's own parts beside the common ones (a figure's template, plot,
   # plots, compose)
@@ -302,6 +300,9 @@ tfl_write_output <- function(x, path) {
                     "content", "page")
 
 .calls_out <- function(x) {
+  # an R object (a formula, a call) that found its way in: written as !r
+  if (is.language(x) || inherits(x, "formula")) return(tfl_r(paste(deparse(x), collapse = "
+")))
   if (inherits(x, "tfl_call")) {
     out <- list(fn = x$fn)
     if (!is.null(x$package)) out$package <- x$package
@@ -311,4 +312,9 @@ tfl_write_output <- function(x, path) {
   if (!is.list(x) || inherits(x, c("tfl_r", "tfl_unset"))) return(x)
   x[] <- lapply(x, .calls_out)
   x
+}
+
+# content items as they are written: `- fn: {args}`
+.items_to_list <- function(items) {
+  lapply(items, function(it) stats::setNames(list(.calls_out(it$args)), it$fn))
 }
