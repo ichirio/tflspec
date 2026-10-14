@@ -20,7 +20,11 @@
 .schema_all <- function(figure = TRUE) {
   if (is.null(.schema_cache$all)) {
     f <- system.file("spec", "schema.yml", package = "tflspec")
-    .schema_cache$all <- yaml::read_yaml(f)
+    all <- yaml::read_yaml(f)
+    # the sheets' columns are no function: kept apart (.schema_sheets())
+    .schema_cache$sheets <- all$.sheets
+    all$.sheets <- NULL
+    .schema_cache$all <- all
   }
   all <- .schema_cache$all
   if (!figure) return(all)
@@ -490,4 +494,37 @@ tfl_schema_check <- function(item) {
     v)
   names(out) <- nm
   out
+}
+
+# The spec sheets' columns, as the schema file says them: one entry a sheet
+# (its description, its columns in order, each a description and an
+# example, and `at:` the argument it is)
+.schema_sheets <- function() {
+  if (is.null(.schema_cache$all)) .schema_all(figure = FALSE)
+  .schema_cache$sheets
+}
+
+#' The help of a spec item's argument
+#'
+#' What the GUI's `?` and the AI kit say about one argument of a spec item:
+#' the schema's description of it, or, for an argument a spec sheet's
+#' column also holds (`rtf_page(paper_size = )` is the `page` sheet's
+#' `paper_size`), that column's help -- one text, wherever it is read.
+#'
+#' @param fn A function of the spec (`"rtf_page"`, `"plan_cells"`).
+#' @param arg One of its arguments.
+#' @return The text, or `NA` when the schema says nothing of it.
+#' @examples
+#' tfl_schema_help("rtf_page", "orientation")
+#' @seealso [tfl_schema()], [tfl_spec_columns()]
+#' @export
+tfl_schema_help <- function(fn, arg) {
+  ent <- tfl_schema(fn)
+  d <- ent$args[[arg]]$description
+  if (!is.null(d)) return(d)
+  key <- paste0(.schema_fn_name(fn), ".", arg)
+  for (sh in .schema_sheets()) {
+    for (cl in sh$columns) if (identical(cl$at, key)) return(cl$description)
+  }
+  NA_character_
 }

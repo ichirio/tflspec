@@ -8,8 +8,8 @@
 #  every spec sheet blank, a blank figure design, and a made-up study end to
 #  end (its TOC and shells, the specs written from them, its figure).
 #  Everything is written when asked: the blank sheets come from the column
-#  catalog (inst/spec/columns.csv) and the example from the code below, so
-#  neither can drift from what this version reads.
+#  catalog (the `.sheets` of inst/spec/schema.yml) and the example from the
+#  code below, so neither can drift from what this version reads.
 
 .ai_kit_files <- c(
   start    = "00_START_HERE.md",
