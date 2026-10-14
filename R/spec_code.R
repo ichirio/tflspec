@@ -1021,7 +1021,7 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL) {
                       output$kind %||% "table", paste(which(bad), collapse = ", ")))
   }
   unlist(strsplit(vapply(st, as.character, ""), "
-"))
+", fixed = TRUE))
 }
 
 #' The line that normalizes a table's ARD
