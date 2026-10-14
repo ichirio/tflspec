@@ -1,5 +1,13 @@
 # tflspec (development version)
 
+* **`populations` has a `label` column**: the text a header or footnote
+  prints for the analysis set (`Safety Analysis Set`), also its name in CDISC
+  ARS (`tfl_ars()` writes it as the analysis set's `name`, `tfl_ars_to_specs()`
+  reads a name that differs from the id back into it).  Blank: the id, as
+  before.  A workbook with no `label` column still reads; one with it does
+  not read on an earlier tflspec (an unknown column), so tflplanner asks for
+  this version.  (#252; part 3 of tflplanner#388.)
+
 * **The AI kit takes the study's ADaM metadata**: `tflspec_ai_manual(dir,
   define = , adam_spec = , datasets = )` writes `08_adam_metadata.csv`, so
   the assistant names the study's own datasets, variables and levels instead

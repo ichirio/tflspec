@@ -252,7 +252,7 @@ tfl_ars_to_specs <- function(ars, table = FALSE) {
 
   # populations
   pops <- data.frame(population_id = character(), dataset = character(),
-                     where = character(), stringsAsFactors = FALSE)
+                     where = character(), label = character(), stringsAsFactors = FALSE)
   for (s in sets) {
     w <- if (is.null(s$condition) && is.null(s$compoundExpression)) {
       NA_character_
@@ -266,7 +266,10 @@ tfl_ars_to_specs <- function(ars, table = FALSE) {
         "conditions on several datasets (%s): a population is of one",
         paste(ds, collapse = ", ")))
     }
-    pops[nrow(pops) + 1L, ] <- list(s$id, ds[1L] %||% NA_character_, w)
+    # the set's name when it says more than its id: the population's label
+    lab <- if (is.character(s$name) && length(s$name) == 1L && nzchar(s$name) &&
+               !identical(s$name, s$id)) s$name else NA_character_
+    pops[nrow(pops) + 1L, ] <- list(s$id, ds[1L] %||% NA_character_, w, lab)
   }
 
   # outputs in the list of contents' order, each with its analyses
@@ -528,7 +531,8 @@ tfl_ars_to_specs <- function(ars, table = FALSE) {
                       stringsAsFactors = FALSE)
   pop <- data.frame(population_id = pops$population_id,
                     dataset = pops$dataset, where = pops$where,
-                    derive = NA_character_, stringsAsFactors = FALSE)
+                    derive = NA_character_, label = pops$label,
+                    stringsAsFactors = FALSE)
   # a column ARS has no place for is blank
   for (cn in setdiff(.ard_spec_sheets$analyses, names(an))) {
     an[[cn]] <- rep(NA_character_, nrow(an))

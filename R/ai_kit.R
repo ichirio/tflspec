@@ -143,7 +143,7 @@
                       path = c("data/adam/adsl.rds", "data/adam/adae.rds",
                                "data/adam/advs.rds")),
     populations = .ai_df(population_id = "SAF", dataset = "ADSL",
-                         where = "SAFFL == \"Y\""),
+                         where = "SAFFL == \"Y\"", label = "Safety Analysis Set"),
     # T-1: the Total column's N is the analysis set's (total_n)
     analyses = .ai_df(
       output_id = c("T-1", "T-1", "T-1", "T-2"),

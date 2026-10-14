@@ -276,7 +276,8 @@ tfl_ars <- function(ard_spec, table_spec = NULL, report_spec = NULL,
   for (i in seq_len(nrow(pops))) {
     pid <- pops$population_id[i]
     ds <- ds_name(pops$dataset[i])
-    s <- list(id = pid, name = pid, level = 1L, order = i)
+    lab <- if (!is.null(pops$label)) pops$label[i] else NA_character_
+    s <- list(id = pid, name = if (is.na(lab)) pid else lab, level = 1L, order = i)
     w <- .ars_where(pops$where[i], ds)
     if (is.null(w)) {
       miss(pid, "populations$where", sprintf(
