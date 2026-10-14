@@ -399,6 +399,8 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     watermark = "rtf_document.watermark"))
 
 .page_put <- function(page, sheet, col, v, note, id) {
+  # (the data's and the content's code are not the page's: .conv_output())
+  if (identical(sheet, "report") && col %in% c("data_code", "content_code")) return(page)
   if (identical(sheet, "page") && identical(col, "font")) {
     page$rtf_document$font_table <- list(list(name = v))
     return(page)
@@ -518,6 +520,25 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
                           function(s) nrow(scope(sp[[s]], id)) > 0L, NA))) {
         note(id, "table sheets", id, NA, "content: not converted -- no sheets-to-content bridge given (content_fn)")
       }
+    }
+  }
+  # a report whose data or content is its R code (the report row's
+  # data_code / content_code): the data as code, the content as one !r
+  if (nrow(rrow)) {
+    dc <- if ("data_code" %in% names(rrow)) rrow$data_code[1L] else NA
+    cc <- if ("content_code" %in% names(rrow)) rrow$content_code[1L] else NA
+    if (!is.na(dc) && nzchar(trimws(dc))) {
+      # the data as code; what else the data stage says (a figure's steps)
+      # is kept beside it, and said
+      if (length(setdiff(names(data), "source"))) {
+        note(id, "report", id, "data_code", "the data is its code; the data stage's other parts are kept beside it")
+      }
+      data$source <- "code"
+      data$code <- tfl_r(gsub("\r\n?", "\n", dc))
+    }
+    if (!is.na(cc) && nzchar(trimws(cc))) {
+      if (length(content)) note(id, "report", id, "content_code", "the content is its code: the layers made from the sheets are not used")
+      content <- tfl_r(gsub("\r\n?", "\n", cc))
     }
   }
   out <- tfl_output(id, kind, label = entry$label %||% NA, population = entry$population %||% NA,

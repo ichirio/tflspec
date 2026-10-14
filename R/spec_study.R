@@ -66,8 +66,10 @@ tfl_read_study_spec <- function(dir) {
 # rest (data, codelists, page) as plain lists with calls resolved
 .layer_from_list <- function(y, from) {
   if (is.null(y)) y <- list()
-  items <- lapply(y$content %||% list(), .item_from_list)
-  items <- lapply(items, function(it) { it$from <- from; it })
+  items <- if (inherits(y$content, "tfl_r")) y$content else {
+    its <- lapply(y$content %||% list(), .item_from_list)
+    lapply(its, function(it) { it$from <- from; it })
+  }
   list(data = .calls_in(y$data %||% list()), codelists = y$codelists %||% list(),
        content = items, page = .calls_in(y$page %||% list()))
 }
@@ -199,6 +201,9 @@ tfl_resolve_output <- function(output, study) {
 # * a verb only the report has goes where the generators' order puts it
 #   (the schema's `rank`), else last.
 .merge_content <- function(base, over) {
+  # the content as R code (one !r): the later one wins whole
+  if (inherits(over, "tfl_r")) return(over)
+  if (inherits(base, "tfl_r")) return(if (length(over)) .table_plan_first(over) else base)
   if (!length(over)) return(.table_plan_first(base))
   if (!length(base)) return(.table_plan_first(over))
   fns_over <- unique(vapply(over, `[[`, "", "fn"))

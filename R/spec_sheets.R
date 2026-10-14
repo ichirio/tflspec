@@ -120,13 +120,16 @@ tfl_sheets_from_yaml <- function(dir) {
       for (k in setdiff(names(extra), "output_id")) rr[[k]] <- extra[[k]]
       rows$report <- after[-length(after)]
     }
+    if (inherits(o$content, "tfl_r")) rr$content_code <- cell(o$content)
+    if (identical(o$data$source, "code") && !is.null(o$data$code)) rr$data_code <- cell(o$data$code)
     add("report", rr)
     for (v in names(o$codelists)) for (i in seq_along(o$codelists[[v]])) {
       cl <- o$codelists[[v]][[i]]
       add("codelists", list(output_id = id, variable = v, value = cell(cl$value), label = cell(cl$label), order = as.character(i)))
     }
+    code_content <- inherits(o$content, "tfl_r")
     if (o$kind == "table") {
-      table_rows(o$content, id)
+      if (!code_content) table_rows(o$content, id)
       for (a in o$data$analysis_data %||% list()) {
         m <- lapply(a, cell); m$data_id <- m$id; m$id <- NULL
         if (!is.null(m$population)) { m$population_id <- m$population; m$population <- NULL }
@@ -138,11 +141,10 @@ tfl_sheets_from_yaml <- function(dir) {
         if (!is.null(a$ref)) note(id, paste0("analyses.", a$id), "a reference to another report's analysis (ref) has no sheet")
         analyses[[length(analyses) + 1L]] <- c(list(output_id = id), m)
       }
-      if (!is.null(o$data$code)) note(id, "data.code", "a report whose data is its code: kept as the table's data step is not a sheet")
     } else if (o$kind == "listing") {
       lr <- list(output_id = id)
       for (k in c("dataset", "where", "sort")) if (!is.null(o$data[[k]])) lr[[k]] <- cell(o$data[[k]])
-      for (it in o$content) {
+      for (it in if (code_content) list() else o$content) {
         if (identical(it$fn, "plan_listing")) {
           for (cl in it$args$cols %||% list()) {
             if (inherits(cl, "tfl_call")) listing_cols[[length(listing_cols) + 1L]] <- c(list(output_id = id), lapply(cl$args, cell))
@@ -161,7 +163,7 @@ tfl_sheets_from_yaml <- function(dir) {
       if (!is.null(o$data$steps)) fd$data <- o$data$steps
       if (!is.null(o$data$stats)) fd$stats <- o$data$stats
       if (!is.null(o$plot)) fd$plot <- o$plot
-      fd$layers <- lapply(o$content, function(it) c(list(layer = it$fn), it$args))
+      fd$layers <- if (code_content) list() else lapply(o$content, function(it) c(list(layer = it$fn), it$args))
       for (k in c("plots", "compose")) if (!is.null(o[[k]])) fd[[k]] <- o[[k]]
       figures[[id]] <- fd
     }

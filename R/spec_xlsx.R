@@ -55,7 +55,8 @@ tfl_write_spec_xlsx <- function(dir, path) {
   # each report
   for (id in names(outs)) {
     o <- outs[[id]]
-    if (length(o$content)) note(id, "content", "the layers (content) are not rows")
+    if (inherits(o$content, "tfl_r")) note(id, "content", "the content as R code is not rows")
+    else if (length(o$content)) note(id, "content", "the layers (content) are not rows")
     if (!is.null(o$data)) {
       for (e in o$data$analysis_data %||% list()) add_rows("analysis_data", list(.flat_map(c(list(output_id = id), e), "analysis_data", id, note)))
       for (e in o$data$analyses %||% list()) add_rows("analyses", list(.flat_map(c(list(output_id = id), e), "analyses", id, note)))
@@ -68,11 +69,11 @@ tfl_write_spec_xlsx <- function(dir, path) {
     }
     .flat_page(o$page, id, add_rows, note)
     if (o$kind == "listing") {
-      pl <- Filter(function(it) identical(it$fn, "plan_listing"), o$content)
+      pl <- if (inherits(o$content, "tfl_r")) list() else Filter(function(it) identical(it$fn, "plan_listing"), o$content)
       cols <- if (length(pl)) Filter(function(cl) inherits(cl, "tfl_call"), pl[[1L]]$args$cols %||% list()) else list()
       add_rows("listing_cols", lapply(cols, function(cl) .flat_map(c(list(output_id = id), cl$args), "listing_cols", id, note)))
       nx <- Filter(function(r) !(identical(r$output, id) && identical(r$part, "content")), nx)
-      if (length(o$content) > 1L || (length(pl) && length(setdiff(names(pl[[1L]]$args), "cols")))) note(id, "content", "the listing's plan (type, blanks, pages) is not rows")
+      if ((!inherits(o$content, "tfl_r") && length(o$content) > 1L) || (length(pl) && length(setdiff(names(pl[[1L]]$args), "cols")))) note(id, "content", "the listing's plan (type, blanks, pages) is not rows")
     }
     for (k in setdiff(names(o), c(.output_fields))) note(id, k, "a figure's own part (plot, plots, compose, template)")
   }
