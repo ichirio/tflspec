@@ -1,5 +1,16 @@
 # tflspec (development version)
 
+* **The YAML spec, stage 0** (0.0.24.9112; the user's decision of
+  2026-10-14 to make YAML the source of a study's definition, one file a
+  report): the R objects `tfl_r()` (the `!r` tag), `tfl_unset()` (the
+  `!unset` tag), `tfl_call()` (a nested `{fn:, args:}` call), `tfl_item()`
+  (one layer of `content:`, a function and its arguments by name) and
+  `tfl_output()` (one report), with `tfl_read_output()` /
+  `tfl_write_output()` for `spec/outputs/<id>.yml` and the fixtures
+  `inst/extdata/spec-yaml/`.  The layering of `defaults` and patterns,
+  the other files and the generators follow (design:
+  `_archive/spec-format-redesign-2026-10-14.md`).
+
 * **`populations` has a `label` column**: the text a header or footnote
   prints for the analysis set (`Safety Analysis Set`), also its name in CDISC
   ARS (`tfl_ars()` writes it as the analysis set's `name`, `tfl_ars_to_specs()`

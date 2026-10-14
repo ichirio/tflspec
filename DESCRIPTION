@@ -1,6 +1,6 @@
 Package: tflspec
 Title: 'Excel' Specifications for Clinical Tables, Listings and Figures
-Version: 0.0.24.9111
+Version: 0.0.24.9112
 Authors@R: c(
     person(given  = "Yoichi",
            family = "Masui",
@@ -64,3 +64,4 @@ Suggests:
 Remotes:
     ichirio/rtfreporter
 Config/testthat/edition: 3
+Config/roxygen2/version: 8.1.0

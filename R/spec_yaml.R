@@ -1,0 +1,293 @@
+# The YAML spec (design: _archive/spec-format-redesign-2026-10-14.md).
+#
+# A study is study.yml and spec/: data.yml, defaults.yml, codelists.yml,
+# patterns/<name>.yml, toc.yml and outputs/<id>.yml -- one file a report.
+# A report file is `data:` (what it reads), `content:` (an ordered list of
+# layers, one item one call of the target package: a plan verb, a listing
+# column, a ggplot2 piece) and `page:` (the rtfreporter document).  Every
+# item's keys are the function's arguments, so a reader can check them.
+#
+# Stage 0 (shared with S1): the R objects and a reader / writer of one
+# report file.  `extends` is read, not resolved yet (stage 1).
+
+#' R objects of the YAML spec
+#'
+#' The values a spec may hold that are not plain data, and the pieces a
+#' report is made of:
+#'
+#' * `tfl_r()`: a string of R code, written as the `!r` tag (`where: !r
+#'   "p > 0.5"`); kept as it is and put into the program unquoted.
+#' * `tfl_unset()`: the `!unset` tag -- a value a report sets to nothing,
+#'   overriding its defaults (writing nothing leaves the default).  It is
+#'   resolved when the defaults are layered; the generators never see one.
+#' * `tfl_call()`: a nested call (`{fn: rtf_border, args: {top: single}}`),
+#'   for an argument that is itself a constructor's result.
+#' * `tfl_item()`: one layer of `content:` -- a function (`fn`), its
+#'   arguments by name (`args`), and where it came from (`from`: `"own"`,
+#'   `"defaults"` or `"pattern:<name>"`).
+#' * `tfl_output()`: one report: `id`, `kind`, `label`, `population`,
+#'   `extends`, `data`, `codelists`, `content` (a list of `tfl_item`) and
+#'   `page`.
+#'
+#' @param code One string of R code.
+#' @param fn A function's name (`plan_cells`, `cards::ard_summary`,
+#'   `rtf_border`).
+#' @param args The arguments, a named list.
+#' @param package The package `fn` is in, when its name does not say.
+#' @param from Where an item came from: `"own"`, `"defaults"`,
+#'   `"pattern:<name>"`.
+#' @param id The report's id (letters, digits, `.`, `_`, `-`); the file is
+#'   `spec/outputs/<id>.yml`.
+#' @param kind `"table"`, `"figure"` or `"listing"`.
+#' @param label,population The report's label and analysis set (`NA`: none).
+#' @param extends The files layered under this one, nearest first
+#'   (`"defaults"`, `"patterns/<name>"`); `"none"` for none.
+#' @param data What the report reads (a list: `source`, `analysis_data`,
+#'   `analyses`, `code`, `objects`).
+#' @param codelists The report's code lists, by variable.
+#' @param content The layers, a list of `tfl_item`.
+#' @param page The document: `titles`, `footnotes`, `header`, `footer`
+#'   (maps by line), `tokens`, and the `rtf_*` calls' arguments.
+#' @return `tfl_r()`: a string of class `tfl_r`; `tfl_unset()`: an object
+#'   of class `tfl_unset`; the rest: lists of class `tfl_call`, `tfl_item`,
+#'   `tfl_output`.
+#' @examples
+#' it <- tfl_item("plan_cells", list(continuous = list(n = "{N}")))
+#' out <- tfl_output("T-1", "table", content = list(it))
+#' out$content[[1]]$fn
+#' @export
+tfl_r <- function(code) {
+  if (!is.character(code) || length(code) != 1L || is.na(code)) {
+    stop("tfl_r(): `code` is one string of R.", call. = FALSE)
+  }
+  structure(code, class = "tfl_r", tag = "!r")
+}
+
+#' @rdname tfl_r
+#' @export
+tfl_unset <- function() structure("", class = "tfl_unset", tag = "!unset")
+
+#' @rdname tfl_r
+#' @export
+tfl_call <- function(fn, args = list(), package = NULL) {
+  .check_fn(fn, "tfl_call()")
+  .check_args(args, "tfl_call()")
+  structure(list(fn = fn, package = package, args = args), class = "tfl_call")
+}
+
+#' @rdname tfl_r
+#' @export
+tfl_item <- function(fn, args = list(), from = "own") {
+  .check_fn(fn, "tfl_item()")
+  .check_args(args, "tfl_item()")
+  if (!is.character(from) || length(from) != 1L ||
+      !(from %in% c("own", "defaults") || startsWith(from, "pattern:"))) {
+    stop("tfl_item(): `from` is \"own\", \"defaults\" or \"pattern:<name>\".",
+         call. = FALSE)
+  }
+  structure(list(fn = fn, args = args, from = from), class = "tfl_item")
+}
+
+#' @rdname tfl_r
+#' @export
+tfl_output <- function(id, kind = c("table", "figure", "listing"),
+                       label = NA_character_, population = NA_character_,
+                       extends = "defaults", data = NULL, codelists = list(),
+                       content = list(), page = list()) {
+  if (!is.character(id) || length(id) != 1L || is.na(id) ||
+      !grepl("^[A-Za-z0-9][A-Za-z0-9._-]*$", id)) {
+    stop("tfl_output(): `id` is letters, digits, '.', '_' or '-' (T-14-1-1).",
+         call. = FALSE)
+  }
+  kind <- match.arg(kind)
+  if (!is.list(content) || !all(vapply(content, inherits, NA, "tfl_item"))) {
+    stop("tfl_output(): `content` is a list of tfl_item().", call. = FALSE)
+  }
+  if (!is.character(extends) || !length(extends)) {
+    stop("tfl_output(): `extends` is a character vector (\"defaults\", \"patterns/<name>\", \"none\").",
+         call. = FALSE)
+  }
+  structure(list(id = id, kind = kind,
+                 label = .na_scalar(label), population = .na_scalar(population),
+                 extends = extends, data = data, codelists = codelists,
+                 content = content, page = page),
+            class = "tfl_output")
+}
+
+.check_fn <- function(fn, who) {
+  if (!is.character(fn) || length(fn) != 1L || is.na(fn) || !nzchar(fn)) {
+    stop(who, ": `fn` is a function's name.", call. = FALSE)
+  }
+}
+.check_args <- function(args, who) {
+  if (!is.list(args) || (length(args) && (is.null(names(args)) || any(!nzchar(names(args)))))) {
+    stop(who, ": `args` is a named list.", call. = FALSE)
+  }
+}
+.na_scalar <- function(x) {
+  if (is.null(x) || !length(x) || is.na(x[1L]) || !nzchar(x[1L])) NA_character_ else as.character(x[1L])
+}
+
+#' @export
+print.tfl_output <- function(x, ...) {
+  cat("<tfl_output> ", x$id, " (", x$kind, ")",
+      if (!is.na(x$label)) paste0(": ", x$label), "\n", sep = "")
+  cat("  extends: ", paste(x$extends, collapse = ", "), "\n", sep = "")
+  if (length(x$content)) {
+    cat("  content:\n")
+    for (it in x$content) {
+      cat("    - ", it$fn, "(", paste(names(it$args), collapse = ", "), ")",
+          if (it$from != "own") paste0("  # ", it$from), "\n", sep = "")
+    }
+  }
+  invisible(x)
+}
+
+#' @export
+print.tfl_item <- function(x, ...) {
+  cat("<tfl_item> ", x$fn, "(", paste(names(x$args), collapse = ", "), ")",
+      if (x$from != "own") paste0("  # ", x$from), "\n", sep = "")
+  invisible(x)
+}
+
+# -- reading ----------------------------------------------------------------
+
+#' Read and write a report's YAML file
+#'
+#' `tfl_read_output()` reads `spec/outputs/<id>.yml`: the `!r` and `!unset`
+#' tags become [tfl_r()] and [tfl_unset()], a `{fn:, args:}` map a
+#' [tfl_call()], and each item of `content:` (`- plan_cells: {...}`) a
+#' [tfl_item()] with `from = "own"`.  A file whose top is `outputs:` holds
+#' several reports (a family written in one go): a list of them comes
+#' back, each with the file's `base:` merged under it as a plain list (the
+#' layering with `defaults` is not done here).  `tfl_write_output()`
+#' writes one report back in the same form.
+#'
+#' @param path The file.
+#' @param x A `tfl_output`.
+#' @return `tfl_read_output()`: a `tfl_output`, or a list of them.
+#'   `tfl_write_output()`: `path`, invisibly.
+#' @examples
+#' f <- system.file("extdata", "spec-yaml", "outputs", "T-14-1-1.yml", package = "tflspec")
+#' out <- tfl_read_output(f)
+#' out$content[[1]]
+#' @export
+tfl_read_output <- function(path) {
+  if (!is.character(path) || length(path) != 1L || !file.exists(path)) {
+    stop("tfl_read_output(): no file ", path, call. = FALSE)
+  }
+  y <- yaml::read_yaml(path, handlers = .yaml_handlers())
+  if (!is.list(y)) stop("tfl_read_output(): ", path, " is not a map.", call. = FALSE)
+  if (!is.null(y$outputs)) {
+    base <- y$base %||% list()
+    return(lapply(y$outputs, function(o) .output_from_list(.merge_plain(base, o), path)))
+  }
+  .output_from_list(y, path)
+}
+
+.yaml_handlers <- function() {
+  list(r = function(x) tfl_r(as.character(x)),
+       unset = function(x) tfl_unset())
+}
+
+# the plain list of a report file as a tfl_output
+.output_from_list <- function(y, path = "") {
+  need <- c("id", "kind")
+  miss <- need[!need %in% names(y)]
+  if (length(miss)) {
+    stop("tfl_read_output(): ", path, " lacks ", paste(miss, collapse = ", "), ".",
+         call. = FALSE)
+  }
+  if (nzchar(path) && is.null(attr(y, "multi")) &&
+      !identical(tools::file_path_sans_ext(basename(path)), y$id) &&
+      !grepl("^outputs?$", basename(path))) {
+    # (a multi-report file is named as its author likes)
+  }
+  content <- lapply(y$content %||% list(), .item_from_list)
+  extends <- y$extends %||% "defaults"
+  tfl_output(
+    id = y$id, kind = y$kind, label = y$label, population = y$population,
+    extends = as.character(unlist(extends)),
+    data = .calls_in(y$data), codelists = y$codelists %||% list(),
+    content = content, page = .calls_in(y$page %||% list()))
+}
+
+# `- plan_cells: {...}` (a map of one key) as a tfl_item
+.item_from_list <- function(el) {
+  if (is.list(el) && length(el) == 1L && !is.null(names(el)) && nzchar(names(el))) {
+    args <- el[[1L]]
+    if (is.null(args)) args <- list()
+    if (!is.list(args)) {
+      stop("A content item is `- fn: {args}`; `", names(el), "` has a value that is not a map.",
+           call. = FALSE)
+    }
+    return(tfl_item(names(el), .calls_in(args), "own"))
+  }
+  if (is.list(el) && !is.null(el$fn)) {
+    return(tfl_item(el$fn, .calls_in(el$args %||% list()), el$from %||% "own"))
+  }
+  stop("A content item is `- fn: {args}`.", call. = FALSE)
+}
+
+# every `{fn:, args:}` map inside a value as a tfl_call (recursively)
+.calls_in <- function(x) {
+  if (!is.list(x) || inherits(x, c("tfl_call", "tfl_item"))) return(x)
+  if (!is.null(names(x)) && "fn" %in% names(x) && all(names(x) %in% c("fn", "args", "package"))) {
+    return(tfl_call(x$fn, .calls_in(x$args %||% list()), x$package))
+  }
+  x[] <- lapply(x, .calls_in)
+  x
+}
+
+# a report's own keys over a family's base (plain lists, no layering rules
+# yet: a key the report has replaces the base's)
+.merge_plain <- function(base, own) {
+  for (k in names(own)) base[[k]] <- own[[k]]
+  base
+}
+
+# -- writing ----------------------------------------------------------------
+
+#' @rdname tfl_read_output
+#' @export
+tfl_write_output <- function(x, path) {
+  if (!inherits(x, "tfl_output")) stop("tfl_write_output(): `x` is a tfl_output.", call. = FALSE)
+  y <- .output_to_list(x)
+  txt <- yaml::as.yaml(y, indent.mapping.sequence = TRUE, handlers = .yaml_out_handlers())
+  dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
+  writeLines(txt, path, useBytes = TRUE)
+  invisible(path)
+}
+
+.yaml_out_handlers <- function() {
+  list(tfl_r = function(x) structure(as.character(x), tag = "!r"),
+       tfl_unset = function(x) structure("", tag = "!unset"))
+}
+
+# the plain list a tfl_output is written as (NA scalars left out; a
+# tfl_call as {fn, args}; an item as `- fn: {args}`)
+.output_to_list <- function(x) {
+  y <- list(id = x$id, kind = x$kind)
+  if (!is.na(x$label)) y$label <- x$label
+  if (!is.na(x$population)) y$population <- x$population
+  y$extends <- as.list(x$extends)
+  if (!is.null(x$data)) y$data <- .calls_out(x$data)
+  if (length(x$codelists)) y$codelists <- x$codelists
+  y$content <- lapply(x$content, function(it) {
+    stats::setNames(list(.calls_out(it$args)), it$fn)
+  })
+  if (length(x$page)) y$page <- .calls_out(x$page)
+  y
+}
+
+.calls_out <- function(x) {
+  if (inherits(x, "tfl_call")) {
+    out <- list(fn = x$fn)
+    if (!is.null(x$package)) out$package <- x$package
+    out$args <- .calls_out(x$args)
+    return(out)
+  }
+  if (!is.list(x) || inherits(x, c("tfl_r", "tfl_unset"))) return(x)
+  x[] <- lapply(x, .calls_out)
+  x
+}
