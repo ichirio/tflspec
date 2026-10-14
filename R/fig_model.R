@@ -528,7 +528,7 @@ tfl_fig_types_implemented <- function() {
 #'   `errorbar`, `col`, `text`, `hline`, `ribbon`, `boxplot` ... see
 #'   [tfl_fig_add_layer()]; `geom` (any function by name), `call` (any
 #'   function, by `fn`, `package`, `data`, `aes`, `pos`, `args` -- checked
-#'   against its own arguments; see [tfl_fig_r()] for raw R in `aes`/`args`),
+#'   against its own arguments; see [tfl_r()] for raw R in `aes`/`args`),
 #'   `layer_code`, or `figure`: a figure type's whole script) and its fields.
 #'
 #' [tfl_fig_template()] makes one for a kind of figure; it is kept as one
@@ -641,7 +641,7 @@ tfl_write_fig_design <- function(design, path) {
 #' @rdname tfl_fig_design
 #' @export
 tfl_read_fig_design <- function(path) {
-  x <- yaml::read_yaml(path, handlers = list(r = tfl_fig_r))
+  x <- yaml::read_yaml(path, handlers = list(r = tfl_r))
   .fig_design_from_list(x)
 }
 
@@ -2002,7 +2002,7 @@ tfl_check_fig_design <- function(design, adam = NULL, ggplot2_version = NULL,
       if (!is.null(l$aes) && !is.null(obj) && obj %in% names(objects) && !is.null(objects[[obj]])) {
         for (nm in names(l$aes)) {
           val <- l$aes[[nm]]
-          if (is.character(val) && length(val) == 1L && !.is_fig_r(val)) need_var(part, paste0("aes$", nm), val, objects[[obj]], obj)
+          if (is.character(val) && length(val) == 1L && !.is_r(val)) need_var(part, paste0("aes$", nm), val, objects[[obj]], obj)
         }
       }
     }
@@ -2222,10 +2222,10 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
         plot = plot_of(x_label = "Hazard Ratio (95% CI)", legend = "none", x_log = TRUE,
                        add = list(
                          list(fn = "scale_y_continuous",
-                              args = list(breaks = tfl_fig_r("est$y"), labels = tfl_fig_r("est$label"),
-                                          expand = tfl_fig_r("expansion(add = 0.6)"))),
+                              args = list(breaks = tfl_r("est$y"), labels = tfl_r("est$label"),
+                                          expand = tfl_r("expansion(add = 0.6)"))),
                          # no title on the subgroup axis (a NULL kept as R: it survives YAML)
-                         list(fn = "labs", args = list(y = tfl_fig_r("NULL"))),
+                         list(fn = "labs", args = list(y = tfl_r("NULL"))),
                          # left-aligned, so a subgroup's levels show indented
                          list(fn = "theme", args = list(axis.text.y = list(fn = "element_text", args = list(hjust = 0)))))),
         layers = list(

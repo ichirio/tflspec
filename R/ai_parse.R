@@ -242,7 +242,7 @@ print.tfl_ai_answer <- function(x, ...) {
     }
     return(list(value = .ai_from_json(v), format = "json"))
   }
-  handlers <- if (task == "figure") list(r = tfl_fig_r)
+  handlers <- if (task == "figure") list(r = tfl_r)
   v <- tryCatch(
     yaml::yaml.load(text, handlers = handlers),
     error = function(e) e, warning = function(w) w
@@ -255,13 +255,13 @@ print.tfl_ai_answer <- function(x, ...) {
 
 .ai_one_line <- function(x) trimws(gsub("\\s+", " ", x))
 
-# JSON's "!r code" strings as raw R (tfl_fig_r), as YAML's !r tag.
+# JSON's "!r code" strings as raw R (tfl_r), as YAML's !r tag.
 .ai_from_json <- function(v) {
   if (is.list(v)) return(lapply(v, .ai_from_json))
   tagged <- is.character(v) && length(v) == 1L && !is.na(v) &&
     startsWith(v, "!r ")
   if (tagged) {
-    return(tfl_fig_r(substring(v, 4L)))
+    return(tfl_r(substring(v, 4L)))
   }
   v
 }

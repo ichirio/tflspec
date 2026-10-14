@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9111** (the development version,
+**This manual documents tflspec 0.0.24.9112** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -620,7 +620,7 @@ layers:                                 # what is drawn, in order
 - `plot.add`: `call`s written after the figure's settings (`theme()`,
   `scale_*()`, `facet_*()`, `labs()` …).
 - Raw R inside a value is the `!r` tag: `labels: !r scales::label_number()`
-  (`tfl_fig_r()` in R).
+  (`tfl_r()` in R).
 - Composed figures: `plots:` (name → a whole design) and `compose:`
   (`layout: km | box`, `add:` patchwork calls).
 - `ggplot2_version: "3.5"` or `"4.0"` writes the script for that version
@@ -797,6 +797,12 @@ back): rename the value or choose another separator.
 
 ## 13. Complete public API (nothing outside this list exists)
 
+**Spec files (YAML, one file a report):** `tfl_output` `tfl_item` `tfl_call` `tfl_r`
+`tfl_unset` `tfl_read_output` `tfl_write_output` `tfl_read_study_spec`
+`tfl_read_outputs` `tfl_resolve_output` `tfl_convert_sheets_to_yaml`
+`tfl_yaml_from_sheets` `tfl_sheets_from_yaml` `tfl_write_spec_xlsx`
+`tfl_import_spec_xlsx` `tfl_schema` `tfl_schema_check` `tfl_content_code` `tfl_content_run`
+
 **Manual:** `tflspec_ai_manual` `tfl_adam_metadata` `tfl_ai_review`
 
 **The functions the generated programs call (their code):** `tfl_helpers_code`
@@ -834,7 +840,7 @@ back): rename the value or choose another separator.
 `tfl_fig_advice` `tfl_fig_apply_fix` `tfl_fig_template` `tfl_fig_forest_analyses` `tfl_fig_templates`
 `tfl_fig_parts` `tfl_fig_objects` `tfl_fig_page_size` `tfl_fig_uses_ard` `tfl_fig_add_layer` `tfl_fig_calls` `tfl_fig_compat`
 `tfl_fig_data_name`
-`tfl_fig_r`
+`tfl_r`
 
 **Figure style:** `tfl_fig_style` `tfl_fig_style_template`
 `tfl_read_fig_style` `tfl_fig_setup_code` `tfl_fig_palettes` `tfl_time_unit_days`

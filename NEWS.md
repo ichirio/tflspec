@@ -1,5 +1,48 @@
 # tflspec (development version)
 
+* **The YAML spec, stage 0** (0.0.24.9112; the user's decision of
+  2026-10-14 to make YAML the source of a study's definition, one file a
+  report): the R objects `tfl_r()` (the `!r` tag), `tfl_unset()` (the
+  `!unset` tag), `tfl_call()` (a nested `{fn:, args:}` call), `tfl_item()`
+  (one layer of `content:`, a function and its arguments by name) and
+  `tfl_output()` (one report), with `tfl_read_output()` /
+  `tfl_write_output()` for `spec/outputs/<id>.yml` and the fixtures
+  `inst/extdata/spec-yaml/`.  Stage 1 (part): the study's files
+  (`tfl_read_study_spec()`, `tfl_read_outputs()`), the layering of a
+  report over `defaults` and `patterns/<name>` (`tfl_resolve_output()`:
+  the later wins: maps by key and `!unset` removes a key; a verb whose
+  `...` is named (plan_cells, plan_labels, plan_levels, plan_digits,
+  plan_stat_groups, plan_compare) merges by key, any other verb's items
+  replace the layers' items of it, a verb only the report has goes where
+  the generators' order puts it (the schema's `rank`); a repeated item is
+  written as it is), the one-time conversion of a study's sheets
+  (`tfl_convert_sheets_to_yaml()`, `tfl_yaml_from_sheets()`, with
+  `_not_converted.yml`; a table's `content:` through the bridge), the sheets
+  back from the YAML (`tfl_sheets_from_yaml()`), and the flat view as a
+  workbook (`tfl_write_spec_xlsx()`, `tfl_import_spec_xlsx()`, best-effort).
+  study.yml carries `spec_version` and the packages' versions it was
+  written with (a newer `spec_version` is refused).
+  `tfl_fig_r()` is `tfl_r()` now, for every kind (no alias).  The
+  generators follow (design: `_archive/spec-format-redesign-2026-10-14.md`).
+
+* **The YAML spec, stage 1: the schema and the content's code.**
+  `inst/spec/schema.yml` types each argument a spec item gives -- a YAML
+  map for a named vector, rows for a data frame, `!r` for an expression, a
+  formula or a guard, `{fn:, args:}` for a nested call -- and the grammar of
+  `...` for the 13 plan verbs whose body it is (`plan_cells()`,
+  `plan_digits()`, `plan_sort()`, ...); `tfl_schema()` returns it and
+  `tfl_schema_check()` checks one item (an unknown argument warns, the
+  installed package's formals have the last word).  `tfl_content_code()`
+  writes a table's `content:` as its code, one line an item in the items'
+  order (`ard |> normalize_ard() |> table_plan() |> plan_*()`), an item from
+  the study's defaults or a pattern marked `# (study default)`; and
+  `tfl_content_run()` makes the same plan from the same calls without the
+  code (the written code, run, gives the same table).  `tfl_table_code()`
+  and `tfl_table_plan()` now go through the same items, from a workbook's
+  sheets by a bridge that also goes back (content to sheets), so a workbook
+  and a spec file write the same code: byte for byte the same as before for
+  every bundled workbook, the tflplanner sample and the table cases.
+
 * **`populations` has a `label` column**: the text a header or footnote
   prints for the analysis set (`Safety Analysis Set`), also its name in CDISC
   ARS (`tfl_ars()` writes it as the analysis set's `name`, `tfl_ars_to_specs()`

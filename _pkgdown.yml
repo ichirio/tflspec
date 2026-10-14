@@ -95,6 +95,24 @@ reference:
       - tfl_read_define_spec
       - tfl_define_profile
       - tfl_define_codelists
+  - title: Spec files (YAML)
+    desc: >
+      A study's spec as files: one report a file, its `content:` a list of
+      items, one function call each; read, layered over the study's
+      defaults, checked against the schema, written as code, and converted
+      from the workbooks.
+    contents:
+      - tfl_read_study_spec
+      - tfl_read_output
+      - tfl_resolve_output
+      - tfl_schema
+      - tfl_schema_check
+      - tfl_content_code
+      - tfl_content_run
+      - tfl_convert_sheets_to_yaml
+      - tfl_write_spec_xlsx
+      - tfl_import_spec_xlsx
+      - tfl_sheets_from_yaml
   - title: Table spec and table plan
     desc: >
       A table as a workbook: its roles and the rtfreporter plan verbs it
@@ -141,7 +159,7 @@ reference:
       - tfl_fig_calls
       - tfl_fig_compat
       - tfl_fig_data_name
-      - tfl_fig_r
+      - tfl_r
   - subtitle: Figure style
     desc: Every look-and-feel value of a study's figures, in one place.
     contents:
@@ -199,6 +217,21 @@ reference:
       - tfl_ars_ard
       - tfl_read_ars_json
       - tfl_ars_to_specs
+  - title: The YAML spec (one file a report)
+    desc: >
+      The study's definition as YAML -- `study.yml`, `spec/data.yml`,
+      `spec/defaults.yml`, `spec/patterns/`, `spec/toc.yml`, one
+      `spec/outputs/<id>.yml` a report -- its objects, the layering of a
+      report over its defaults, the one-time conversion of the sheets, and
+      the flat view as a workbook.
+    contents:
+      - tfl_output
+      - tfl_read_output
+      - tfl_read_study_spec
+      - tfl_resolve_output
+      - tfl_convert_sheets_to_yaml
+      - tfl_write_spec_xlsx
+      - tfl_import_spec_xlsx
   - title: Reading and writing workbooks, the TOC
     desc: >
       Each spec has its own reader and writer; several specs may share one

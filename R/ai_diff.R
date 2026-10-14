@@ -202,7 +202,7 @@ tfl_ai_diff <- function(current, answer, task = NULL) {
   x <- x[!vapply(x, function(v) is.null(v) || !length(v), NA)]
   if (!length(x)) return(stats::setNames(character(), character()))
   v <- vapply(x, function(z) {
-    if (is.list(z) || length(z) != 1L || .is_fig_r(z)) .ai_yaml_flow(z)
+    if (is.list(z) || length(z) != 1L || .is_r(z)) .ai_yaml_flow(z)
     else as.character(z)
   }, "")
   stats::setNames(.ai_norm(v), names(x))
