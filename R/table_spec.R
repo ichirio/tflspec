@@ -2235,11 +2235,19 @@ tfl_read_report_spec <- function(path, output_id = NULL) {
 #' ```
 #'
 #' @param spec A report definition ([tfl_read_report_spec()]) narrowed to one
-#'   report, or the path(s) to read it from.
+#'   report, or the path(s) to read it from; or a report of the YAML spec
+#'   ([tfl_output()], resolved: [tfl_resolve_output()]), its `page:` the
+#'   calls -- `rtf_page`, `rtf_default_format`, `rtf_document`,
+#'   `rtf_tables` / `rtf_figures`, `rtf_titles`, `rtf_footnotes`, each its
+#'   arguments, and the lines of `header`, `footer`, `titles`, `footnotes`
+#'   and the `tokens`.
 #' @param output_id The report, when `spec` is a path or still defines
 #'   several.
 #' @param content The report's content: an [rtfreporter::table_plan()] or `rtftable`
 #'   pages for a table or listing, figures for a `type = figure` report.
+#' @param study For a YAML report: the study ([tfl_read_study_spec()]), for
+#'   its program (the TOC's `program`, else `settings: program`, in
+#'   `settings: program_dir`).
 #'
 #' @return An [rtfreporter::rtf_document()].
 #'
@@ -2249,7 +2257,7 @@ tfl_read_report_spec <- function(path, output_id = NULL) {
 #'
 #' @seealso [tfl_read_report_spec()], [tfl_report_path()]
 #' @export
-tfl_report <- function(spec, output_id = NULL, content) {
+tfl_report <- function(spec, output_id = NULL, content, study = NULL) {
   .spec_need_rtfreporter()
   if (!is.null(output_id) && !(is.character(output_id) &&
                                length(output_id) == 1L)) {
@@ -2261,13 +2269,18 @@ tfl_report <- function(spec, output_id = NULL, content) {
   if (missing(content)) {
     .ard_stop("tfl_report(): give the report's `content` (a plan, pages or figures).")
   }
-  sp <- .ard_spec_scope(.as_spec(spec, "table", "tfl_report",
-                                 output_id = output_id), output_id)
   # the rtfreporter calls the definition stands for (R/spec_code.R): run
   # here, written out by tfl_report_code() -- one list, so the two agree
+  steps <- if (inherits(spec, "tfl_output")) {
+    .page_report_steps(spec, study, "content")
+  } else {
+    .report_spec_steps(.ard_spec_scope(.as_spec(spec, "table", "tfl_report",
+                                                output_id = output_id), output_id),
+                       "content")
+  }
   env <- new.env(parent = emptyenv())
   env$content <- content
-  for (st in .report_spec_steps(sp, "content")) {
+  for (st in steps) {
     env$doc <- .spec_eval(st, env)
   }
   env$doc
@@ -2278,6 +2291,8 @@ tfl_report <- function(spec, output_id = NULL, content) {
 #' `file.path(study$output_path, report$file)`, with `{output_id}` filled:
 #' the path [rtfreporter::generate_rtfreport()] writes to.
 #'
+#' @param spec A report definition ([tfl_read_report_spec()]) narrowed to one
+#'   report, or the path(s) to read it from.
 #' @inheritParams tfl_report
 #' @return A single path.
 #'

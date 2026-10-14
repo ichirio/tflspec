@@ -1369,6 +1369,8 @@ tfl_report_setup_code <- function(spec) {
 #' [tfl_report_code()] gives them to `rtf_document(tokens = )`: for a
 #' preview of the page.
 #'
+#' @param spec A report definition ([tfl_read_report_spec()]) narrowed to one
+#'   report, or the path(s) to read it from.
 #' @inheritParams tfl_report
 #' @return A named character vector (none: empty).
 #' @examples
@@ -1407,7 +1409,8 @@ tfl_report_tokens <- function(spec, output_id = NULL) {
 #'   tokens leave empty, a blank `<{OUTPUT_POPULATION}>`, is left out when
 #'   the file is written) -- unless the report has its own, written here
 #'   as before.
-#'   `FALSE` (default): the program stands alone.
+#'   `FALSE` (default): the program stands alone.  (A YAML report: `FALSE`
+#'   only, for now.)
 #' @return The code, one element per line.
 #' @examples
 #' spec <- tfl_read_report_spec(
@@ -1416,10 +1419,21 @@ tfl_report_tokens <- function(spec, output_id = NULL) {
 #' cat(tfl_report_code(spec, content = "plan"), sep = "\n")
 #' @export
 tfl_report_code <- function(spec, output_id = NULL, content = "content",
-                            doc = "doc", setup = FALSE) {
+                            doc = "doc", setup = FALSE, study = NULL) {
+  if (inherits(spec, "tfl_output")) {
+    if (isTRUE(setup)) {
+      .ard_stop("tfl_report_code(): a YAML report's code with `setup = TRUE` is not written yet.")
+    }
+    return(.report_steps_code(.page_report_steps(spec, study, content), doc))
+  }
   sp <- .ard_spec_scope(.as_spec(spec, "table", "tfl_report_code",
                                  output_id = output_id), output_id)
-  steps <- .report_spec_steps(sp, content, isTRUE(setup))
+  .report_steps_code(.report_spec_steps(sp, content, isTRUE(setup)), doc)
+}
+
+# the document's calls as one pipe: rtf_document() |> rtf_section() |>
+# rtf_tables() ...
+.report_steps_code <- function(steps, doc) {
   # the document's program: its path through the study's path variables
   # (tflspec.paths), as the program's other paths are
   for (k in intersect(c("program", "program_fallback"), names(steps[[1L]]$args))) {
