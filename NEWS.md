@@ -10,10 +10,18 @@
   `inst/extdata/spec-yaml/`.  Stage 1 (part): the study's files
   (`tfl_read_study_spec()`, `tfl_read_outputs()`), the layering of a
   report over `defaults` and `patterns/<name>` (`tfl_resolve_output()`:
-  maps by key, `!unset` removes, a report's items of a function replace
-  the layers' items of it), and the one-time conversion of a study's
-  sheets (`tfl_convert_sheets_to_yaml()`, with `_not_converted.yml`; a
-  table's `content:` through the sheets-to-layers bridge, `content_fn`).
+  the later wins: maps by key and `!unset` removes a key; a verb whose
+  `...` is named (plan_cells, plan_labels, plan_levels, plan_digits,
+  plan_stat_groups, plan_compare) merges by key, any other verb's items
+  replace the layers' items of it, a verb only the report has goes where
+  the generators' order puts it (the schema's `rank`); a repeated item is
+  written as it is), the one-time conversion of a study's sheets
+  (`tfl_convert_sheets_to_yaml()`, `tfl_yaml_from_sheets()`, with
+  `_not_converted.yml`; a table's `content:` through the bridge), the sheets
+  back from the YAML (`tfl_sheets_from_yaml()`), and the flat view as a
+  workbook (`tfl_write_spec_xlsx()`, `tfl_import_spec_xlsx()`, best-effort).
+  study.yml carries `spec_version` and the packages' versions it was
+  written with (a newer `spec_version` is refused).
   `tfl_fig_r()` is `tfl_r()` now, for every kind (no alias).  The
   generators follow (design: `_archive/spec-format-redesign-2026-10-14.md`).
 
