@@ -479,3 +479,84 @@ ard_stats_oneway_test:
   package: cardx
   args:
     formula: {type: r}
+
+# ---- a report's page: the document's calls -----------------------------------
+# A report's `page:` says each of these by its name, its arguments a map
+# (`rtf_page: {orientation: portrait}`); the lines of `header`, `footer`,
+# `titles` and `footnotes` and the `tokens` are page:'s own keys.
+
+rtf_page:
+  package: rtfreporter
+  description: The page -- paper, orientation, margins (inches).
+  args:
+    paper_size: {type: "enum[letter|legal|A4|A3|A5]"}
+    orientation: {type: "enum[landscape|portrait]"}
+    width_in: {type: number}
+    height_in: {type: number}
+    margin_top_in: {type: number}
+    margin_bottom_in: {type: number}
+    margin_left_in: {type: number}
+    margin_right_in: {type: number}
+    header_dist_in: {type: number}
+    footer_dist_in: {type: number}
+
+rtf_default_format:
+  package: rtfreporter
+  description: The document's text defaults.
+  args:
+    font_size_half_points: {type: integer}
+    row_height_twips: {type: integer}
+    cell_padding_left_twips: {type: integer}
+    cell_padding_right_twips: {type: integer}
+    markup: {type: logical}
+    title_format: {type: string}
+    footnote_format: {type: string}
+    title_width: {type: "number|string"}
+    footnote_width: {type: "number|string"}
+
+rtf_document:
+  package: rtfreporter
+  description: The document -- its font, watermark and program.
+  args:
+    font_table: {type: "list<map<string, string>>", description: "The fonts, the first the document's: [{name: Arial}]."}
+    watermark: {type: string}
+    program: {type: string}
+    program_fallback: {type: string}
+
+rtf_tables:
+  package: rtfreporter
+  description: A table's or a listing's pages in the document.
+  args:
+    auto_section: {type: logical}
+    section_label_align: {type: "enum[left|center|right]"}
+    auto_title: {type: logical}
+    title_label_align: {type: "enum[left|center|right]"}
+    font_size_half_points: {type: integer}
+
+rtf_figures:
+  package: rtfreporter
+  description: A figure in the document, its size in twips (an inch is 1440), or fit (the page's body).
+  args:
+    width_twips: {type: "integer|enum[fit]"}
+    height_twips: {type: "integer|enum[fit]"}
+    align: {type: "enum[left|center|right]"}
+
+rtf_titles:
+  package: rtfreporter
+  description: The titles above the content.
+  args:
+    font_size_half_points: {type: integer}
+    row_height_twips: {type: integer}
+    markup: {type: logical}
+    font: {type: string}
+    align: {type: "enum[left|center|right]"}
+
+rtf_footnotes:
+  package: rtfreporter
+  description: The footnotes below the content.
+  args:
+    font_size_half_points: {type: integer}
+    row_height_twips: {type: integer}
+    markup: {type: logical}
+    font: {type: string}
+    align: {type: "enum[left|center|right]"}

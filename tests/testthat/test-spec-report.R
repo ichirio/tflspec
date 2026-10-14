@@ -63,3 +63,19 @@ test_that("a report's page: makes the document its sheets make", {
   d_yaml <- tfl_report(rp_output(), content = pages, study = rp_study())
   expect_identical(d_yaml, d_sheets)
 })
+
+test_that("page:'s calls check against their schema", {
+  pg <- rp_output()$page
+  for (fn in c("rtf_page", "rtf_default_format", "rtf_document", "rtf_tables", "rtf_titles")) {
+    p <- tfl_schema_check(tfl_item(fn, pg[[fn]]))
+    expect_identical(nrow(p), 0L, info = fn)
+  }
+  typo <- tfl_schema_check(tfl_item("rtf_page", list(orientaton = "portrait")))
+  expect_identical(typo$level, "warning")
+  skip_if_not_installed("rtfreporter")
+  for (fn in c("rtf_page", "rtf_default_format", "rtf_document", "rtf_tables",
+               "rtf_figures", "rtf_titles", "rtf_footnotes")) {
+    expect_true(all(names(tfl_schema(fn)$args) %in%
+                      names(formals(getExportedValue("rtfreporter", fn)))), info = fn)
+  }
+})
