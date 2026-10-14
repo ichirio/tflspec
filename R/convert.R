@@ -74,11 +74,16 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     stop("tfl_yaml_from_sheets(): ", to, " is not empty (overwrite = TRUE to write over it).",
          call. = FALSE)
   }
-  if (is.null(content_fn)) content_fn <- .bridge_fn(".plan_content_from_sheets")
-  # (the defaults' scope is output_id = NULL to the bridge, NA here)
-  if (!is.null(content_fn)) {
-    cf <- content_fn
-    content_fn <- function(sp, id) cf(sp, if (is.null(id) || is.na(id)) NULL else id)
+  # the package's bridge: the defaults' rows alone for output_id = NA, a
+  # report's own rows (own = TRUE) for an id -- a report's file says only
+  # what is its own; a content_fn given is called (spec, output_id)
+  if (is.null(content_fn)) {
+    bridge <- .bridge_fn(".plan_content_from_sheets")
+    if (!is.null(bridge)) {
+      content_fn <- function(sp, id) {
+        if (is.null(id) || is.na(id)) bridge(sp, NA) else bridge(sp, id, own = TRUE)
+      }
+    }
   }
   nc <- .nc_new()
   note <- function(output, sheet, row, column, reason, value = NA) {
