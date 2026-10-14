@@ -113,8 +113,34 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
                                                             r_cols = c("where", "derive", "code"), list_cols = c("add", "keep", "distinct"), get_file = get_file, set_file = set_file))
   by_scope("analyses", function(id, part) .imp_rows_of(st, part, "analyses", scope_rel(id), c("data", "analyses"), "id",
                                                         r_cols = c("where", "args", "post", "code"), list_cols = c("by", "strata", "variables", "statistics", "formats"), get_file = get_file, set_file = set_file))
-  by_scope("listing_cols", function(id, part) .imp_rows_of(st, part, "listing_cols", scope_rel(id), NULL, "vars",
-                                                            list_cols = "vars", get_file = get_file, set_file = set_file, content_fn = "listing_col"))
+  by_scope("listing_cols", function(id, part) {
+    # best-effort: the listing_col calls of plan_listing, by vars
+    rel <- scope_rel(id)
+    y <- get_file(rel)
+    k <- which(vapply(y$content %||% list(), function(it) is.list(it) && identical(names(it), "plan_listing"), NA))
+    if (!length(k)) { st$missing <- c(st$missing, paste0("listing_cols: ", id, " (no plan_listing)")); return() }
+    pl <- y$content[[k[1L]]]$plan_listing
+    rows <- lapply(pl$cols %||% list(), function(cl) cl$args %||% list())
+    for (i in seq_len(nrow(part))) {
+      m <- list()
+      for (cn in setdiff(names(part), "output_id")) {
+        v <- .conv_cell(part[[cn]][i], cn, character(), "vars", function(...) NULL, NA, "listing_cols", i)
+        if (!is.null(v)) m[[cn]] <- v
+      }
+      kv <- .flat_text(m$vars)
+      j <- .find_row(rows, list("vars"), kv)
+      key <- paste(id, kv, sep = " / ")
+      if (is.na(j)) { rows[[length(rows) + 1L]] <- m; st$added <- c(st$added, paste0("listing_cols: ", key)) }
+      else for (nm in names(m)) if (!identical(.flat_text(rows[[j]][[nm]]), .flat_text(m[[nm]]))) {
+        st$changes[[length(st$changes) + 1L]] <- data.frame(sheet = "listing_cols", key = key, column = nm,
+                                                          from = .flat_text(rows[[j]][[nm]]), to = .flat_text(m[[nm]]), stringsAsFactors = FALSE)
+        rows[[j]][[nm]] <- m[[nm]]
+      }
+    }
+    pl$cols <- lapply(rows, function(r) list(fn = "listing_col", args = r))
+    y$content[[k[1L]]]$plan_listing <- pl
+    set_file(rel, y)
+  })
   by_scope("codelists", function(id, part) {
     rel <- if (is.na(id)) "codelists.yml" else scope_rel(id)
     y <- get_file(rel)

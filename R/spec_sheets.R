@@ -137,10 +137,16 @@ tfl_sheets_from_yaml <- function(dir) {
       lr <- list(output_id = id)
       for (k in c("dataset", "where", "sort")) if (!is.null(o$data[[k]])) lr[[k]] <- cell(o$data[[k]])
       for (it in o$content) {
-        if (identical(it$fn, "listing_col")) listing_cols[[length(listing_cols) + 1L]] <- c(list(output_id = id), lapply(it$args, cell))
-        else if (identical(it$fn, "listing_spec")) for (k in names(it$args)) lr[[k]] <- cell(it$args[[k]])
-        else if (identical(it$fn, "paginate")) { if (!is.null(it$args$max_rows)) lr$max_rows <- cell(it$args$max_rows) }
-        else note(id, paste0("content.", it$fn), "a listing item the listing sheets do not hold")
+        if (identical(it$fn, "plan_listing")) {
+          for (cl in it$args$cols %||% list()) {
+            if (inherits(cl, "tfl_call")) listing_cols[[length(listing_cols) + 1L]] <- c(list(output_id = id), lapply(cl$args, cell))
+          }
+          for (k in setdiff(names(it$args), "cols")) lr[[k]] <- cell(it$args[[k]])
+        } else if (identical(it$fn, "plan_blanks")) {
+          if (identical(it$args$where, "records")) lr$blank_row <- "TRUE"
+        } else if (identical(it$fn, "plan_paginate_rows")) {
+          if (!is.null(it$args$max_rows)) lr$max_rows <- cell(it$args$max_rows)
+        } else note(id, paste0("content.", it$fn), "a listing item the listing sheets do not hold")
       }
       listings[[length(listings) + 1L]] <- lr
     } else if (o$kind == "figure") {

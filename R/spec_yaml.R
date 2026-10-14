@@ -197,7 +197,20 @@ tfl_read_output <- function(path) {
   }
   list(r = function(x) tfl_r(as.character(x)),
        unset = function(x) tfl_unset(),
-       `bool#yes` = keep, `bool#no` = keep)
+       `bool#yes` = keep, `bool#no` = keep,
+       seq = .yaml_seq)
+}
+
+# A sequence: the reader folds one of scalars into a vector (as the yaml
+# package does), but one holding an !r, a call or a map stays a list, so
+# that a guard's R keeps its class
+.yaml_seq <- function(x) {
+  if (!length(x)) return(list())
+  keep <- any(vapply(x, function(e) inherits(e, c("tfl_r", "tfl_call", "tfl_unset")) || is.list(e), NA))
+  if (keep) return(x)
+  if (all(vapply(x, function(e) is.atomic(e) && length(e) == 1L, NA)) &&
+      length(unique(vapply(x, function(e) class(e)[1L], ""))) == 1L) return(unlist(x))
+  x
 }
 
 # the plain list of a report file as a tfl_output

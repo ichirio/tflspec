@@ -52,7 +52,7 @@ test_that("a report file reads: tags, nested calls, content items", {
 test_that("the defaults file reads with the same reader's pieces: a nested call", {
   y <- yaml::read_yaml(yml_fixture("defaults.yml"), handlers = tflspec:::.yaml_handlers())
   items <- lapply(y$content, tflspec:::.item_from_list)
-  st <- items[[5L]]
+  st <- items[[which(vapply(items, `[[`, "", "fn") == "plan_style")]]
   expect_identical(st$fn, "plan_style")
   expect_s3_class(st$args$border_header, "tfl_call")
   expect_identical(st$args$border_header$fn, "rtf_border")
@@ -117,6 +117,27 @@ test_that("n, N, y, yes, no, off stay text as keys and values; only true / false
   expect_identical(a[["off"]], "no")
   expect_identical(a$shown, TRUE)
   expect_identical(a$hidden, FALSE)
+  # and back
+  g <- withr::local_tempfile(fileext = ".yml")
+  tfl_write_output(o, g)
+  expect_equal(tfl_read_output(g)$content, o$content)
+})
+
+test_that("a sequence holding an !r or a call stays a list; one of scalars is a vector", {
+  f <- withr::local_tempfile(fileext = ".yml")
+  writeLines(c("id: T-1", "kind: table", "content:",
+               "  - plan_cells: {prob: [!r 'is.na(estimate) ~ \"NE\"', '{estimate}'], vars: [AGE, SEX], n: [1, 2]}",
+               "  - plan_style: {borders: [{fn: rtf_border, args: {top: true}}, {fn: rtf_border, args: {bottom: true}}]}"), f)
+  o <- tfl_read_output(f)
+  a <- o$content[[1L]]$args
+  expect_type(a$prob, "list")
+  expect_s3_class(a$prob[[1L]], "tfl_r")
+  expect_identical(a$prob[[2L]], "{estimate}")
+  expect_identical(a$vars, c("AGE", "SEX"))
+  expect_identical(a$n, c(1L, 2L))
+  b <- o$content[[2L]]$args$borders
+  expect_type(b, "list")
+  expect_s3_class(b[[2L]], "tfl_call")
   # and back
   g <- withr::local_tempfile(fileext = ".yml")
   tfl_write_output(o, g)

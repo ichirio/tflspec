@@ -411,13 +411,21 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
       if (!is.na(lr$where[1L])) { data$where <- tfl_r(lr$where[1L]); note(id, "listings", 1, "where", "kept as R text (!r)", lr$where[1L]) }
       if (!is.na(lr$sort[1L])) data$sort <- as.list(.conv_split(lr$sort[1L]))
     }
+    # rtfreporter's chain: plan_listing(listing_col(...), ..., type, sep ...)
+    # |> plan_blanks(where = "records") |> plan_paginate_rows(max_rows)
     cols <- .conv_rows(lc, note, id, "listing_cols", list_cols = "vars")
-    content <- lapply(cols, function(m) tfl_item("listing_col", m))
+    args <- list(cols = lapply(cols, function(m) tfl_call("listing_col", m)))
+    blank_row <- NULL
     if (nrow(lr)) {
-      spec_args <- .conv_rows(lr[1L, , drop = FALSE], note, id, "listings",
-                              drop = c("output_id", "note", "dataset", "where", "sort", "max_rows"))[[1L]]
-      if (length(spec_args)) content <- c(content, list(tfl_item("listing_spec", spec_args)))
-      if (!is.na(lr$max_rows[1L])) content <- c(content, list(tfl_item("paginate", list(max_rows = as.integer(lr$max_rows[1L])))))
+      more <- .conv_rows(lr[1L, , drop = FALSE], note, id, "listings",
+                         drop = c("output_id", "note", "dataset", "where", "sort", "max_rows", "blank_row"))[[1L]]
+      args <- c(args, more)
+      if (!is.na(lr$blank_row[1L]) && identical(lr$blank_row[1L], "TRUE")) blank_row <- TRUE
+    }
+    content <- list(tfl_item("plan_listing", args))
+    if (isTRUE(blank_row)) content <- c(content, list(tfl_item("plan_blanks", list(where = "records"))))
+    if (nrow(lr) && !is.na(lr$max_rows[1L])) {
+      content <- c(content, list(tfl_item("plan_paginate_rows", list(max_rows = as.integer(lr$max_rows[1L])))))
     }
   } else {
     # the data stage of a table: the study ARD (`object`), then its steps

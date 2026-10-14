@@ -6,9 +6,9 @@ test_that("the study spec reads its files; missing ones are empty", {
   s <- tfl_read_study_spec(yml_dir())
   expect_s3_class(s, "tfl_study_spec")
   fns <- vapply(s$defaults$content, `[[`, "", "fn")
-  expect_identical(fns, c("plan_cells", "plan_blanks", "plan_stub", "plan_col_header", "plan_style"))
+  expect_identical(fns, c("plan_cells", "plan_stub", "plan_blanks", "plan_style", "plan_col_header"))
   expect_true(all(vapply(s$defaults$content, `[[`, "", "from") == "defaults"))
-  expect_s3_class(s$defaults$content[[5L]]$args$border, "tfl_call")
+  expect_s3_class(s$defaults$content[[which(fns == "plan_style")]]$args$border_header, "tfl_call")
   expect_identical(s$defaults$page$header[["2"]]$left, "Protocol: {STUDY_ID}")
   expect_identical(s$patterns, stats::setNames(list(), character()))
   expect_identical(s$toc, list())
@@ -32,16 +32,21 @@ test_that("a report over the defaults: maps by key, items by function, order kep
   from <- vapply(out$content, `[[`, "", "from")
   # the defaults' plan_cells replaced by the report's (in the defaults' place),
   # the other defaults kept in order, the report's own functions after them
-  # table_plan first (the table itself), the defaults' plan_cells replaced by
-  # the report's in the defaults' place, the other defaults kept in order,
-  # the report's own functions after them
-  expect_identical(fns, c("table_plan", "plan_cells", "plan_blanks", "plan_stub", "plan_col_header",
-                          "plan_style", "plan_labels", "plan_digits", "plan_paginate_rows",
-                          "plan_cell_style"))
-  expect_identical(from, c("own", "own", "defaults", "defaults", "defaults", "defaults",
-                           rep("own", 4L)))
+  # table_plan first (the table itself); the defaults' plan_cells merged with
+  # the report's by key; the other defaults kept; the report's own functions
+  # in the generators' order (the schema's rank), so the whole is in rank order
+  expect_identical(fns[1L], "table_plan")
+  expect_setequal(fns, c("table_plan", "plan_cells", "plan_blanks", "plan_stub", "plan_col_header",
+                         "plan_style", "plan_labels", "plan_digits", "plan_paginate_rows",
+                         "plan_cell_style"))
+  ranks <- vapply(fns[-1L], function(f) tflspec:::.verb_rank(f), 1)
+  expect_false(is.unsorted(ranks, na.rm = TRUE))
+  expect_identical(from[fns %in% c("plan_blanks", "plan_stub", "plan_col_header", "plan_style")], rep("defaults", 4L))
+  expect_identical(from[!fns %in% c("plan_blanks", "plan_stub", "plan_col_header", "plan_style")], rep("own", 6L))
   # plan_cells merges by key: the defaults' categorical cell stays beside the report's continuous
-  expect_identical(out$content[[2L]]$args$categorical, "{n:.0f} ({p:.1f%})")
+  cells <- out$content[[which(fns == "plan_cells")]]$args
+  expect_identical(cells$categorical, "{n:.0f} ({p:.1f%})")
+  expect_identical(names(cells$continuous)[1L], "n")
   # page: the defaults' header lines stay, the report's titles and tokens join
   expect_identical(out$page$header[["1"]]$right, "DRAFT")
   expect_identical(out$page$titles[["2"]]$center, "Demographic Characteristics")

@@ -130,10 +130,15 @@ test_that("a study's sheets convert to the YAML files, the rest is listed", {
   expect_identical(l1$data$dataset, "ADAE")
   expect_identical(l1$data$sort, c("USUBJID", "ASTDT"))
   fns <- vapply(l1$content, `[[`, "", "fn")
-  expect_identical(fns, c("listing_col", "listing_col", "listing_spec", "paginate"))
-  expect_identical(l1$content[[2L]]$args$vars, c("AEBODSYS", "AEDECOD"))
-  expect_identical(l1$content[[1L]]$args$collapse_repeats, TRUE)
-  expect_identical(l1$content[[4L]]$args$max_rows, 22L)
+  expect_identical(fns, c("plan_listing", "plan_paginate_rows"))
+  cols <- l1$content[[1L]]$args$cols
+  expect_length(cols, 2L)
+  expect_s3_class(cols[[2L]], "tfl_call")
+  expect_identical(cols[[2L]]$fn, "listing_col")
+  expect_identical(cols[[2L]]$args$vars, c("AEBODSYS", "AEDECOD"))
+  expect_identical(cols[[1L]]$args$collapse_repeats, TRUE)
+  expect_identical(l1$content[[1L]]$args$type, "multiline")
+  expect_identical(l1$content[[2L]]$args$max_rows, 22L)
   # the figure: its steps under data, its layers as items, plot beside
   f1 <- outs[["F-1"]]
   expect_identical(f1$kind, "figure")

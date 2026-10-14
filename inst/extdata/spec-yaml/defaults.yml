@@ -3,13 +3,13 @@
 # report's own file says only what differs (extends: [defaults]).
 content:
   - plan_cells: {categorical: "{n:.0f} ({p:.1f%})"}
-  - plan_blanks: {where: between_groups, first: true, last: true, counted: true}
   - plan_stub: {name: row_label, before: true}
+  - plan_blanks: {where: between_groups, first: true, last: true, counted: true}
+  - plan_style: {border_header: {fn: rtf_border, args: {top: true, bottom: true}}}
   - plan_col_header:
       lines:
         - {row_label: "", .values: "{col}"}
         - {row_label: Characteristic, .values: "(N={n})"}
-  - plan_style: {border_header: {fn: rtf_border, args: {top: true, bottom: true}}}
 page:
   header:
     1: {left: "Sample Pharma (tflplanner sample)", right: DRAFT}
