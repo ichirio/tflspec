@@ -244,6 +244,33 @@ plan_columns:
     auto_width: {type: logical}
     sep: {type: string}
 
+plan_listing:
+  package: rtfreporter
+  rank: 225
+  description: A listing -- records, not statistics -- its columns one listing_col() each.
+  dots: {style: positional, key: cols, type: "list<call<listing_col>>", description: "The listing's columns, in order: each a listing_col() of one or more variables."}
+  args:
+    type: {type: "enum[multiline|wide]"}
+    sep: {type: string}
+    spacer: {type: string}
+    spacer_rel_width: {type: number}
+    layout: {type: string}
+    wrap: {type: "logical|string"}
+
+listing_col:
+  package: rtfreporter
+  description: One column of a listing.
+  args:
+    vars: {type: "list<column>", description: "The variable(s) the column prints; several stack (or flow) in one cell."}
+    sep: {type: string}
+    width: {type: number}
+    label: {type: string}
+    name: {type: string}
+    rel_width: {type: number}
+    align: {type: "enum[left|center|right]"}
+    layout: {type: "enum[stack|flow]"}
+    collapse_repeats: {type: logical}
+
 plan_titles:
   package: rtfreporter
   rank: 240
