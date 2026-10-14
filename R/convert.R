@@ -73,8 +73,11 @@ tfl_convert_sheets_to_yaml <- function(from, to, content_fn = NULL, overwrite = 
     files <<- c(files, f)
   }
 
-  # study.yml: the meta, the ARD's study keys, the setup code
+  # study.yml: the meta, the ARD's study keys, the setup code, and the
+  # version stamp (the spec's version, the packages' when written)
   study <- meta[setdiff(names(meta), c("created", "updated", "tflplanner"))]
+  study$spec_version <- .spec_version
+  study$packages <- .spec_packages()
   if (!is.null(ard$study) && nrow(ard$study)) {
     keys <- stats::setNames(as.list(ard$study$value), ard$study$key)
     keys <- keys[!vapply(keys, is.na, NA)]

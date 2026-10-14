@@ -80,6 +80,8 @@ test_that("a study's sheets convert to the YAML files, the rest is listed", {
   expect_identical(st$study_id, "CV-1")
   expect_null(st$tflplanner)
   expect_identical(st$keys$output, "output/ard/ard.rds")
+  expect_identical(st$spec_version, 1L)
+  expect_true("tflspec" %in% names(st$packages))
   expect_s3_class(st$setup, "tfl_r")
   # data.yml: the catalog, where as !r, label kept
   dt <- yaml::read_yaml(file.path(to, "spec", "data.yml"), handlers = tflspec:::.yaml_handlers())
