@@ -480,15 +480,38 @@ tfl_table_code <- function(spec, output_id = NULL, data = "data",
 #'
 #' @param spec A table definition ([tfl_read_table_spec()], [tfl_table_spec()])
 #'   or the path(s) of its workbook(s).
-#' @param output_id The table, when the definition has several.
+#' @param output_id The table, when the definition has several; `NA` for the
+#'   workbook's defaults alone (the rows with no output_id, and the study's
+#'   rounding): the study's `defaults.yml` content, with no table_plan() item.
+#' @param own With `output_id`: `TRUE` for the table's own rows alone, the
+#'   defaults left out -- what its spec file says itself (a value equal to
+#'   the default is kept, as it was written).  `FALSE`: the defaults and the
+#'   table's rows together, as the plan applies them.
 #' @return The items ([tfl_item()]), in the order the plan applies them:
 #'   `table_plan()` with the roles first.
 #' @keywords internal
 #' @noRd
-.plan_content_from_sheets <- function(spec, output_id = NULL) {
-  sp <- .ard_spec_scope(.as_spec(spec, "table", ".plan_content_from_sheets",
-                                 output_id = output_id), output_id)
-  .plan_content_items(sp)
+.plan_content_from_sheets <- function(spec, output_id = NULL, own = FALSE) {
+  defaults <- length(output_id) == 1L && is.na(output_id)
+  sp <- .as_spec(spec, "table", ".plan_content_from_sheets",
+                 output_id = if (defaults || isTRUE(own)) NULL else output_id)
+  if (defaults || isTRUE(own)) {
+    keep <- if (defaults) function(id) is.na(id) else function(id) !is.na(id) & id == output_id
+    for (nm in names(.ard_spec_schema())) {
+      d <- sp[[nm]]
+      if (is.data.frame(d) && "output_id" %in% names(d)) {
+        sp[[nm]] <- d[keep(d$output_id), , drop = FALSE]
+      }
+    }
+    # the study's rounding is the defaults', not a table's own
+    if (!defaults) sp$study <- sp$study[0L]
+    attr(sp, "output_id") <- if (defaults) NULL else output_id
+  } else {
+    sp <- .ard_spec_scope(sp, output_id)
+  }
+  items <- .plan_content_items(sp)
+  if (defaults && !length(items[[1L]]$args)) items <- items[-1L]
+  items
 }
 
 # The items as the calls they stand for (.spec_call()), their arguments as

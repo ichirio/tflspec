@@ -134,3 +134,14 @@ test_that("versions: an unknown argument warns, a renamed one says its new name,
     tfl_item("plan_total", list(label = "Total"))))
   expect_error(tfl_content_code(out), "needs rtfreporter >= 99.0.0")
 })
+
+test_that("the bridge reads a workbook's defaults alone (NA), or a table's own rows (own = TRUE)", {
+  sp <- tfl_read_table_spec(ext_spec("study.xlsx"))
+  ids <- unique(stats::na.omit(sp$tables$output_id))
+  d <- tflspec:::.plan_content_from_sheets(sp, NA)
+  expect_false("table_plan" %in% vapply(d, `[[`, "", "fn"))
+  o <- tflspec:::.plan_content_from_sheets(sp, ids[1L], own = TRUE)
+  expect_identical(o[[1L]]$fn, "table_plan")
+  a <- tflspec:::.plan_content_from_sheets(sp, ids[1L])
+  expect_true(length(a) >= length(o))
+})
