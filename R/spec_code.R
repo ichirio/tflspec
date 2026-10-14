@@ -1020,8 +1020,7 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL) {
     .ard_stop(sprintf(paste0("A %s's data.steps are R (`!r`); step %s is not."),
                       output$kind %||% "table", paste(which(bad), collapse = ", ")))
   }
-  unlist(strsplit(vapply(st, as.character, ""), "
-"))
+  unlist(strsplit(vapply(st, as.character, ""), "\n", fixed = TRUE))
 }
 
 #' The line that normalizes a table's ARD
