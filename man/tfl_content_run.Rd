@@ -10,7 +10,9 @@ tfl_content_run(output, data)
 \item{output}{A report (\code{\link[=tfl_output]{tfl_output()}}), resolved.}
 
 \item{data}{The data the content starts from: the ARD (or the normalized
-ARD when the content has no \code{normalize_ard()} item).}
+ARD when the content has no \code{normalize_ard()} item).  With
+\code{data.steps} (R that makes \code{data} from the output's \code{data.object},
+\code{ard} by default), the object the steps start from.}
 }
 \value{
 For a table, the \code{\link[rtfreporter:table_plan]{rtfreporter::table_plan()}}.

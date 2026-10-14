@@ -146,3 +146,27 @@ test_that("the bridge reads a workbook's defaults alone (NA), or a table's own r
   a <- tflspec:::.plan_content_from_sheets(sp, ids[1L])
   expect_true(length(a) >= length(o))
 })
+
+test_that("data.steps come before the plan, as written, and run the same", {
+  skip_if_not_installed("cards")
+  out <- tfl_output("T-1", "table",
+    data = list(source = "ard", object = "ard", steps = list(tfl_r(
+      "data <- normalize_ard(ard)\ndata <- data[data$variable != \"RACE\", ]"))),
+    content = list(
+      tfl_item("table_plan", list(cols = "ARM", rows = list(group = "variable"))),
+      tfl_item("plan_cells", list(categorical = "{n} ({p:.1f%})"))))
+  code <- tfl_content_code(out, pipe = "|>")
+  expect_identical(code[1:4], c("data <- normalize_ard(ard)",
+                                "data <- data[data$variable != \"RACE\", ]", "",
+                                "plan <- table_plan(data, cols = \"ARM\", rows = c(group = \"variable\")) |>"))
+  ard <- cards::ard_stack(cards::ADSL, .by = ARM,
+                          cards::ard_tabulate(variables = c(SEX, RACE)))
+  env <- new.env()
+  env$ard <- ard
+  eval(parse(text = c("library(rtfreporter)", code)), env)
+  pages <- function(p) suppressMessages(rtfreporter::plan_apply(p, "table"))
+  expect_identical(pages(env$plan), pages(tfl_content_run(out, ard)))
+  bad <- out
+  bad$data$steps <- list(list(fn = "geom_point"))
+  expect_error(tfl_content_code(bad), "are R")
+})

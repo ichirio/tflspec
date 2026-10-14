@@ -897,7 +897,9 @@ tfl_table_code <- function(spec, output_id = NULL, data = "data",
 #'
 #' @param output A report ([tfl_output()]), resolved.
 #' @param data The data the content starts from: the ARD (or the normalized
-#'   ARD when the content has no `normalize_ard()` item).
+#'   ARD when the content has no `normalize_ard()` item).  With
+#'   `data.steps` (R that makes `data` from the output's `data.object`,
+#'   `ard` by default), the object the steps start from.
 #' @return For a table, the [rtfreporter::table_plan()].
 #' @examples
 #' if (requireNamespace("cards", quietly = TRUE)) {
@@ -922,6 +924,18 @@ tfl_content_run <- function(output, data) {
   }
   .spec_need_rtfreporter()
   for (it in output$content) .schema_need_version(it)
+  steps <- .content_r_steps(output)
+  if (length(steps)) {
+    # the steps run as the program runs them: the output's object bound
+    # to `data`, and what they leave in `data` is the plan's data
+    env <- new.env(parent = globalenv())
+    assign(output$data$object %||% "ard", data, envir = env)
+    eval(parse(text = steps), env)
+    if (!exists("data", envir = env, inherits = FALSE)) {
+      .ard_stop("tfl_content_run(): the data.steps leave no `data`, the data the plan is made from.")
+    }
+    data <- get("data", envir = env, inherits = FALSE)
+  }
   .content_table_run(output$content, data, kind = output$kind)
 }
 
@@ -952,7 +966,9 @@ tfl_content_run <- function(output, data) {
 #' @param output A report ([tfl_output()]), resolved.
 #' @param data The name of the object the pipe starts from; `NULL`: the
 #'   output's `data$object`, else `ard` when the content normalizes it
-#'   (a `normalize_ard()` item), else `data`.
+#'   (a `normalize_ard()` item), else `data`.  With `data.steps` (R that
+#'   makes `data` from the output's object, the old process_code), the
+#'   steps come first, as they are written, and the pipe starts from `data`.
 #' @param plan The name the plan is assigned to.
 #' @param pipe `"|>"` or `"%>%"`; `NULL` follows
 #'   `getOption("rtfreporter.ard_pipe")`.
@@ -976,6 +992,13 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL) {
   for (it in output$content) .schema_need_version(it)
   # the object the pipe starts from: the output's own name for it, else
   # the ARD when the content normalizes it, else the normalized data
+  # the data's steps (`data.steps`, the old process_code): R that makes
+  # `data` from the output's object, written as it is, before the plan
+  steps <- .content_r_steps(output)
+  if (length(steps)) {
+    return(c(steps, "", .content_table_code(output$content, data = data %||% "data",
+                                            plan = plan, pipe = pipe, kind = output$kind)))
+  }
   if (is.null(data)) {
     pre <- any(vapply(output$content, function(it)
       .schema_fn_name(it$fn) %in% .content_data_steps, NA))
@@ -983,6 +1006,22 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL) {
   }
   .content_table_code(output$content, data = data, plan = plan, pipe = pipe,
                       kind = output$kind)
+}
+
+# A table's or a listing's data steps as code, one element a line: each
+# `!r` step of `data.steps` as it is written.  A step that is not R (a
+# figure's step map) is not a table's.
+.content_r_steps <- function(output) {
+  st <- output$data$steps
+  if (is.null(st) || !length(st)) return(character())
+  if (inherits(st, "tfl_r") || is.character(st)) st <- as.list(st)
+  bad <- !vapply(st, function(x) is.character(x) && length(x) == 1L, NA)
+  if (any(bad)) {
+    .ard_stop(sprintf(paste0("A %s's data.steps are R (`!r`); step %s is not."),
+                      output$kind %||% "table", paste(which(bad), collapse = ", ")))
+  }
+  unlist(strsplit(vapply(st, as.character, ""), "
+"))
 }
 
 #' The line that normalizes a table's ARD
