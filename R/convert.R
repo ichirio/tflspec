@@ -78,6 +78,12 @@ tfl_convert_sheets_to_yaml <- function(from, to, content_fn = NULL, overwrite = 
   study <- meta[setdiff(names(meta), c("created", "updated", "tflplanner"))]
   study$spec_version <- .spec_version
   study$packages <- .spec_packages()
+  # the table / report workbooks' study sheet (rounding, output_path,
+  # program_dir): the study's settings
+  if (!is.null(sp$study) && nrow(sp$study)) {
+    st <- sp$study[!is.na(sp$study$key) & !is.na(sp$study$value), , drop = FALSE]
+    if (nrow(st)) study$settings <- stats::setNames(as.list(st$value), st$key)
+  }
   if (!is.null(ard$study) && nrow(ard$study)) {
     keys <- stats::setNames(as.list(ard$study$value), ard$study$key)
     keys <- keys[!vapply(keys, is.na, NA)]
