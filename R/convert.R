@@ -420,7 +420,9 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
       if (!is.na(lr$max_rows[1L])) content <- c(content, list(tfl_item("paginate", list(max_rows = as.integer(lr$max_rows[1L])))))
     }
   } else {
-    data <- list(source = "ard")
+    # the data stage of a table: the study ARD (`object`), then its steps
+    # (the rework step of the sheets, R as it was)
+    data <- list(source = "ard", object = "ard")
     if (!is.null(ard)) {
       ad <- ard$analysis_data
       if (!is.null(ad$output_id)) ad <- ad[!is.na(ad$output_id) & ad$output_id == id, , drop = FALSE]
@@ -432,8 +434,8 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
                                                  rename = c(analysis_id = "id", population_id = "population"))
     }
     if (!is.null(prow) && nrow(prow) && !is.na(prow$process_code[1L])) {
-      data$process <- tfl_r(prow$process_code[1L])
-      note(id, "_tflplanner", id, "process_code", "the table's rework step kept as R text (data.process)", prow$process_code[1L])
+      data$steps <- list(tfl_r(prow$process_code[1L]))
+      note(id, "_tflplanner", id, "process_code", "the table's rework step kept as R text (data.steps)", prow$process_code[1L])
     }
     if (!is.null(sp)) {
       cl <- scope(sp$codelists, id)

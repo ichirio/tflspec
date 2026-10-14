@@ -111,7 +111,8 @@ test_that("a study's sheets convert to the YAML files, the rest is listed", {
   expect_identical(t1$data$analyses[[2L]]$id, "AGE")
   expect_identical(t1$data$analyses[[2L]]$statistics, c("N", "mean", "sd"))
   expect_s3_class(t1$data$analyses[[2L]]$args, "tfl_r")
-  expect_s3_class(t1$data$process, "tfl_r")
+  expect_identical(t1$data$object, "ard")
+  expect_s3_class(t1$data$steps[[1L]], "tfl_r")
   expect_identical(t1$codelists$ARM[[2L]]$label, "Arm B")
   expect_identical(t1$codelists$SEX[[1L]]$label, "Female")
   # the content through the package's bridge from the sheets

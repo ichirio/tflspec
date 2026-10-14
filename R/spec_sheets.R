@@ -102,7 +102,7 @@ tfl_sheets_from_yaml <- function(dir) {
     e <- toc_index[[id]] %||% list()
     planner[[length(planner) + 1L]] <- list(
       output_id = id, description = cell(e$label %||% o$label), setup_code = NA_character_,
-      process_code = if (!is.null(o$data$process)) cell(o$data$process) else NA_character_,
+      process_code = .first_r_step(o$data$steps),
       section = cell(e$section), population = cell(e$population %||% o$population),
       datasets = cell(e$datasets), batches = cell(e$sets))
     # the report row: its kind, its pattern, its file and program
@@ -218,4 +218,11 @@ tfl_sheets_from_yaml <- function(dir) {
   }, "")), stringsAsFactors = FALSE)
   names(d) <- cols
   d
+}
+
+# a table's rework step: the first `!r` among its data steps (a figure's
+# steps are maps, not R)
+.first_r_step <- function(steps) {
+  for (s in steps %||% list()) if (inherits(s, "tfl_r")) return(as.character(s))
+  NA_character_
 }
