@@ -11,7 +11,9 @@ tfl_content_code(output, data = NULL, plan = "plan", pipe = NULL)
 
 \item{data}{The name of the object the pipe starts from; \code{NULL}: the
 output's \code{data$object}, else \code{ard} when the content normalizes it
-(a \code{normalize_ard()} item), else \code{data}.}
+(a \code{normalize_ard()} item), else \code{data}.  With \code{data.steps} (R that
+makes \code{data} from the output's object, the old process_code), the
+steps come first, as they are written, and the pipe starts from \code{data}.}
 
 \item{plan}{The name the plan is assigned to.}
 
