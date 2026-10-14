@@ -360,7 +360,7 @@ tfl_schema_check <- function(item) {
       .spec_need_rtfreporter()
       return(do.call(rtfreporter::cell_rows, lapply(a, .schema_eval_guards)))
     }
-    return(do.call(.spec_call, c(list(.schema_fn_name(v$fn)), a)))
+    return(do.call(.spec_call, c(list(.schema_call_fun(v)), a)))
   }
   if (is.null(ty)) return(v)
   k <- ty$kind
@@ -429,6 +429,20 @@ tfl_schema_check <- function(item) {
   if (k == "list" && is.list(v) && !is.object(v)) return(lapply(v, .schema_value_from_r, ty = ty$args[[1L]]))
   if (k == "map" && is.list(v)) return(lapply(v, .schema_value_from_r, ty = ty$args[[2L]]))
   v
+}
+
+# A call's function as the code writes it: bare for rtfreporter's and
+# tflspec's (the program attaches rtfreporter), `pkg::fn` for another
+# package's (cards::continuous_summary_fns), as the call or its schema
+# entry names the package.
+.schema_call_fun <- function(v) {
+  fn <- .schema_fn_name(v$fn)
+  if (grepl("::", v$fn, fixed = TRUE)) {
+    pkg <- sub("::.*$", "", v$fn)
+  } else {
+    pkg <- v$package %||% tfl_schema(fn)$package %||% "rtfreporter"
+  }
+  if (pkg %in% c("rtfreporter", "tflspec")) fn else paste0(pkg, "::", fn)
 }
 
 # guards inside cell_rows(): a `!r` there is a formula object, as R writes them
