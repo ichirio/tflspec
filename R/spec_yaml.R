@@ -186,9 +186,18 @@ tfl_read_output <- function(path) {
   .output_from_list(y, path)
 }
 
+# The tags: !r, !unset; and YAML 1.1's implicit booleans (n, N, y, Y, yes,
+# no, on, off) kept as the text they are -- a statistic is called n or N --
+# so that only true / false become logical, as keys and as values
 .yaml_handlers <- function() {
+  keep <- function(x) {
+    x <- as.character(x)
+    if (tolower(x) %in% c("true", "false")) return(identical(tolower(x), "true"))
+    x
+  }
   list(r = function(x) tfl_r(as.character(x)),
-       unset = function(x) tfl_unset())
+       unset = function(x) tfl_unset(),
+       `bool#yes` = keep, `bool#no` = keep)
 }
 
 # the plain list of a report file as a tfl_output
@@ -262,9 +271,12 @@ tfl_write_output <- function(x, path) {
   invisible(path)
 }
 
+# written: !r and !unset by their tags; a logical as true / false (not
+# yes / no, which the reader keeps as text)
 .yaml_out_handlers <- function() {
   list(tfl_r = function(x) structure(as.character(x), tag = "!r"),
-       tfl_unset = function(x) structure("", tag = "!unset"))
+       tfl_unset = function(x) structure("", tag = "!unset"),
+       logical = yaml::verbatim_logical)
 }
 
 # the plain list a tfl_output is written as (NA scalars left out; a

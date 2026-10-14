@@ -32,12 +32,15 @@ test_that("a report over the defaults: maps by key, items by function, order kep
   from <- vapply(out$content, `[[`, "", "from")
   # the defaults' plan_cells replaced by the report's (in the defaults' place),
   # the other defaults kept in order, the report's own functions after them
-  expect_identical(fns, c("plan_cells", "plan_blanks", "plan_stub", "plan_col_header", "plan_style",
-                          "table_plan", "plan_labels", "plan_digits", "plan_paginate_rows",
+  # table_plan first (the table itself), the defaults' plan_cells replaced by
+  # the report's in the defaults' place, the other defaults kept in order,
+  # the report's own functions after them
+  expect_identical(fns, c("table_plan", "plan_cells", "plan_blanks", "plan_stub", "plan_col_header",
+                          "plan_style", "plan_labels", "plan_digits", "plan_paginate_rows",
                           "plan_cell_style"))
-  expect_identical(from, c("own", "defaults", "defaults", "defaults", "defaults",
-                           rep("own", 5L)))
-  expect_null(out$content[[1L]]$args$categorical)   # the defaults' categorical cell is gone with its item
+  expect_identical(from, c("own", "own", "defaults", "defaults", "defaults", "defaults",
+                           rep("own", 4L)))
+  expect_null(out$content[[2L]]$args$categorical)   # the defaults' categorical cell is gone with its item
   # page: the defaults' header lines stay, the report's titles and tokens join
   expect_identical(out$page$header[["1"]]$right, "DRAFT")
   expect_identical(out$page$titles[["2"]]$center, "Demographic Characteristics")
@@ -75,8 +78,8 @@ test_that("a pattern between the defaults and the report, nearest last", {
   s <- tfl_read_study_spec(d)
   r <- tfl_resolve_output(tfl_read_outputs(d)[["T-1"]], s)
   expect_identical(vapply(r$content, function(it) paste(it$fn, it$from), ""),
-                   c("plan_stub defaults", "plan_blanks pattern:compact", "table_plan own"))
-  expect_identical(r$content[[2L]]$args, list(first = FALSE, last = TRUE))
+                   c("table_plan own", "plan_stub defaults", "plan_blanks pattern:compact"))
+  expect_identical(r$content[[3L]]$args, list(first = FALSE, last = TRUE))
   expect_identical(r$page$tokens, list(A = "defaults", B = "pattern", C = "own"))
   expect_error(tfl_resolve_output(tfl_output("T-2", "table", extends = "patterns/nope"), s), "No pattern")
 })

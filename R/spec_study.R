@@ -190,8 +190,8 @@ tfl_resolve_output <- function(output, study) {
 # of it, in the place the first of them had; the rest stay; a new function
 # goes last
 .merge_content <- function(base, over) {
-  if (!length(over)) return(base)
-  if (!length(base)) return(over)
+  if (!length(over)) return(.table_plan_first(base))
+  if (!length(base)) return(.table_plan_first(over))
   fns_over <- unique(vapply(over, `[[`, "", "fn"))
   out <- list()
   placed <- character()
@@ -206,5 +206,11 @@ tfl_resolve_output <- function(output, study) {
     }
   }
   rest <- Filter(function(o) !o$fn %in% placed, over)
-  c(out, rest)
+  .table_plan_first(c(out, rest))
+}
+
+# table_plan is the table itself, not a layer: first, wherever a file put it
+.table_plan_first <- function(items) {
+  is_tp <- vapply(items, function(it) identical(it$fn, "table_plan"), NA)
+  c(items[is_tp], items[!is_tp])
 }
