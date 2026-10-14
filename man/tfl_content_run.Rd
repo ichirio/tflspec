@@ -22,7 +22,9 @@ Runs what \code{\link[=tfl_content_code]{tfl_content_code()}} writes: the same i
 each applied with \code{do.call()} -- for a table, the data's steps
 (\code{normalize_ard()}), \code{table_plan()} and its layers.  The two read one
 list of calls, so running the written code gives the same object; it is
-the quick way for a preview, the app or an assistant's check.
+the quick way for a preview, the app or an assistant's check.  A report
+whose content is its own code (\code{content: !r}) runs it, after the
+data's steps, and gives what it leaves in \code{content}.
 }
 \examples{
 if (requireNamespace("cards", quietly = TRUE)) {

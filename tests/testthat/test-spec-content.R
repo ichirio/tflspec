@@ -170,3 +170,15 @@ test_that("data.steps come before the plan, as written, and run the same", {
   bad$data$steps <- list(list(fn = "geom_point"))
   expect_error(tfl_content_code(bad), "are R")
 })
+
+test_that("the content as the report's own code is written as it is and runs to `content`", {
+  out <- tfl_output("F-1", "figure",
+                    data = list(source = "ard", object = "ard",
+                                steps = list(tfl_r("data <- ard[ard$x > 1, , drop = FALSE]"))))
+  out$content <- tfl_r("content <- nrow(data)\ncontent <- content * 10")
+  expect_identical(tfl_content_code(out), c("data <- ard[ard$x > 1, , drop = FALSE]", "",
+                                            "content <- nrow(data)", "content <- content * 10"))
+  expect_identical(tfl_content_run(out, data.frame(x = 1:3)), 20)
+  out$content <- tfl_r("plan <- 1")
+  expect_error(tfl_content_run(out, data.frame(x = 1)), "leaves no `content`")
+})

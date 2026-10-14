@@ -33,6 +33,10 @@ defaults or a pattern says so in a comment above it.  The output is the
 report after its \code{extends} are applied (\code{tfl_resolve_output()}), so no
 \code{!unset} is left.
 }
+\details{
+A report whose content is its own code (\code{content: !r}, any kind: the
+code leaves \code{content}) is that code, after the data's steps.
+}
 \examples{
 out <- tfl_output("T-1", "table", content = list(
   tfl_item("table_plan", list(cols = "TRTA", rows = list(group = "variable"))),

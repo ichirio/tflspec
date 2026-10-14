@@ -893,7 +893,9 @@ tfl_table_code <- function(spec, output_id = NULL, data = "data",
 #' each applied with `do.call()` -- for a table, the data's steps
 #' (`normalize_ard()`), `table_plan()` and its layers.  The two read one
 #' list of calls, so running the written code gives the same object; it is
-#' the quick way for a preview, the app or an assistant's check.
+#' the quick way for a preview, the app or an assistant's check.  A report
+#' whose content is its own code (`content: !r`) runs it, after the
+#' data's steps, and gives what it leaves in `content`.
 #'
 #' @param output A report ([tfl_output()]), resolved.
 #' @param data The data the content starts from: the ARD (or the normalized
@@ -918,6 +920,7 @@ tfl_content_run <- function(output, data) {
   if (!inherits(output, "tfl_output")) {
     .ard_stop("tfl_content_run(): `output` is a report, tfl_output().")
   }
+  if (inherits(output$content, "tfl_r")) return(.content_own_run(output, data))
   if (!output$kind %in% c("table", "listing")) {
     .ard_stop(sprintf(paste0("tfl_content_run(): a %s's content is not run ",
                              "yet; tables and listings, for now."), output$kind))
@@ -937,6 +940,21 @@ tfl_content_run <- function(output, data) {
     data <- get("data", envir = env, inherits = FALSE)
   }
   .content_table_run(output$content, data, kind = output$kind)
+}
+
+# the content as the report's own code, run as the program runs it: the
+# output's object bound, the data's steps, then the code; what it leaves
+# in `content` is the content
+.content_own_run <- function(output, data) {
+  env <- new.env(parent = globalenv())
+  assign(output$data$object %||% "ard", data, envir = env)
+  steps <- .content_r_steps(output)
+  if (length(steps)) eval(parse(text = steps), env)
+  eval(parse(text = as.character(output$content)), env)
+  if (!exists("content", envir = env, inherits = FALSE)) {
+    .ard_stop("tfl_content_run(): the report's own code leaves no `content`.")
+  }
+  get("content", envir = env, inherits = FALSE)
 }
 
 .content_table_run <- function(content, data, kind = "table") {
@@ -963,6 +981,9 @@ tfl_content_run <- function(output, data) {
 #' report after its `extends` are applied (`tfl_resolve_output()`), so no
 #' `!unset` is left.
 #'
+#' A report whose content is its own code (`content: !r`, any kind: the
+#' code leaves `content`) is that code, after the data's steps.
+#'
 #' @param output A report ([tfl_output()]), resolved.
 #' @param data The name of the object the pipe starts from; `NULL`: the
 #'   output's `data$object`, else `ard` when the content normalizes it
@@ -984,6 +1005,14 @@ tfl_content_run <- function(output, data) {
 tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL) {
   if (!inherits(output, "tfl_output")) {
     .ard_stop("tfl_content_code(): `output` is a report, tfl_output().")
+  }
+  # the content as the report's own code (`content: !r`, the old
+  # content_code): written as it is, after the data's steps; it leaves
+  # `content`
+  if (inherits(output$content, "tfl_r")) {
+    steps <- .content_r_steps(output)
+    own <- unlist(strsplit(as.character(output$content), "\n", fixed = TRUE))
+    return(c(steps, if (length(steps)) "", own))
   }
   if (!output$kind %in% c("table", "listing")) {
     .ard_stop(sprintf(paste0("tfl_content_code(): a %s's content is not written ",
