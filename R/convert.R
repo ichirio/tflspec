@@ -49,7 +49,7 @@ tfl_convert_sheets_to_yaml <- function(from, to, content_fn = NULL, overwrite = 
     planner = .conv_read_planner_sheet(src$books),
     ard = if (!is.null(src$ard)) .conv_read_ard(src$ard),
     listing = if (!is.null(src$lf)) .conv_read_lf(src$lf),
-    figures = lapply(src$figs, function(f) yaml::read_yaml(f, handlers = .yaml_handlers())),
+    figures = lapply(src$figs, .conv_read_fig),
     study = if (!is.null(src$study)) yaml::read_yaml(src$study) else list())
   tfl_yaml_from_sheets(sheets, to, content_fn = content_fn, overwrite = overwrite)
 }
@@ -458,7 +458,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   codelists <- list()
   extra <- list()
   if (kind == "figure" && !is.null(fig)) {
-    y <- if (is.character(fig)) yaml::read_yaml(fig, handlers = .yaml_handlers()) else fig
+    y <- if (is.character(fig)) .conv_read_fig(fig) else fig
     data <- list(source = "code")
     if (!is.null(y$data)) data$steps <- y$data
     if (!is.null(y$stats)) data$stats <- y$stats
@@ -600,3 +600,8 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   }
   out
 }
+
+# An old figure design (spec/figures/<id>.yml) read as the designer wrote and
+# read it (tfl_read_fig_design()): YAML 1.1, so its yes / no are TRUE / FALSE
+# (x_log: yes, na.rm: yes), unlike the new spec's reader
+.conv_read_fig <- function(path) yaml::read_yaml(path, handlers = list(r = tfl_r))

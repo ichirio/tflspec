@@ -60,7 +60,7 @@ conv_study <- function(dir) {
                                                      collapse_repeats = c("TRUE", NA), stringsAsFactors = FALSE), keepNA = FALSE)
   openxlsx::addWorksheet(wb, "figures")
   openxlsx::saveWorkbook(wb, file.path(spec, "listing_figure_spec.xlsx"))
-  writeLines(c("template: km_simple", "data:", "- step: read", "  dataset: ADTTE", "plot:", "  x_label: Time",
+  writeLines(c("template: km_simple", "data:", "- step: read", "  dataset: ADTTE", "plot:", "  x_label: Time", "  x_log: yes",
                "layers:", "- layer: km_curve", "  linewidth: 0.3", "- layer: hline", "  yintercept: 0.5"),
              file.path(spec, "figures", "F-1.yml"))
   dir
@@ -148,6 +148,8 @@ test_that("a study's sheets convert to the YAML files, the rest is listed", {
   expect_identical(f1$data$steps[[1L]]$dataset, "ADTTE")
   expect_identical(vapply(f1$content, `[[`, "", "fn"), c("km_curve", "hline"))
   expect_identical(f1$plot$x_label, "Time")
+  # an old design is read as the designer read it (YAML 1.1: yes is TRUE)
+  expect_identical(f1$plot$x_log, TRUE)
   # what was not converted is listed: the contents without a bridge, the R cells
   nc <- r$not_converted
   expect_true(any(nc$column == "args" & nc$output == "T-1"))
