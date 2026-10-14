@@ -65,3 +65,5 @@ K10,human,hand,%s: the percentages of %s are of %s.,"Confirm the denominator, or
 K11,human,hand,The analysis set %s is the subjects of %s with %s.,Confirm the flag and its value.
 K12,human,hand,%s: %s is computed with %s.,"Confirm the method (the test, the model and its terms)."
 K13,human,hand,%s: %s prints in the order %s.,"Confirm the order, or give the code list."
+K14,ai,error,"%s: %s %s is not in the ADaM metadata.","Use a name from 08_adam_metadata.csv (the nearest: %s), or write the row in _assumptions."
+K15,ai,error,"%s: the value %s is not among its levels in the ADaM metadata.","Use one of its levels: %s."

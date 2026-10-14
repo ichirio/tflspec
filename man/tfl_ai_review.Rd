@@ -9,6 +9,7 @@ tfl_ai_review(
   toc = NULL,
   adam = NULL,
   others = NULL,
+  metadata = NULL,
   write = TRUE,
   overwrite = FALSE
 )
@@ -27,6 +28,12 @@ the data; \code{NULL} for none.}
 across specs when the file holds only some: a list with any of \code{ard}
 (\code{\link[=tfl_read_ard_spec]{tfl_read_ard_spec()}}), \code{table} (\code{\link[=tfl_read_report_spec]{tfl_read_report_spec()}}) and
 \code{listing} (\code{\link[=tfl_read_listing_spec]{tfl_read_listing_spec()}}).}
+
+\item{metadata}{The study's ADaM metadata (\code{\link[=tfl_adam_metadata]{tfl_adam_metadata()}}, or
+the kit's \verb{08_adam_metadata.csv} read back), for the checks of the
+names a workbook writes: a dataset or variable it does not have is the
+AI's to fix (K14, with the nearest names), and so is a code list value
+that is not among a variable's levels (K15).  \code{NULL} for none.}
 
 \item{write}{Write \verb{<file>_repair.md} and \verb{<file>_questions.md} next to
 the file.}

@@ -19,7 +19,8 @@
   blank_fig = "04_blank_figure.yml",
   toc      = "05_example_toc_shell.xlsx",
   specs    = "06_example_specs.xlsx",
-  figure   = "07_example_figure.yml")
+  figure   = "07_example_figure.yml",
+  metadata = "08_adam_metadata.csv")
 
 # ---- the column catalog as a sheet ------------------------------------------
 
@@ -401,15 +402,59 @@
   invisible(path)
 }
 
+# ---- what to give the AI --------------------------------------------------------
+
+# What to attach, what to give through the function, and what never: the
+# same table in 00_START_HERE.md (for the person) and, as text, in the guide
+# (for the assistant).
+.ai_what_to_give <- function(meta = FALSE) {
+  c("## What to give the AI",
+    "",
+    "| | Input | How | What it improves |",
+    "|---|---|---|---|",
+    "| **Required** | The TOC (or the study's list of outputs) | attach it as it is (Excel, CSV, Word, PDF) | the output ids, titles, populations and footnotes, copied exactly |",
+    "| **Required** | The shells of the outputs you want | attach them | the rows, columns, statistics and layout of each table, listing and figure |",
+    sprintf("| **Strongly recommended** | The ADaM metadata, **one** source | through the function, not as an attachment: `tflspec_ai_manual(dir, define = )`, or `adam_spec = `, or `datasets = ` | real dataset and variable names, labels and code list values instead of guesses%s |",
+            if (meta) " (here: `08_adam_metadata.csv`)" else "; not given for this kit"),
+    "| Nice to have | The SAP sections on the analysis sets and the methods | attach those pages, not the whole SAP | the ARD spec's methods (test, CI, model), denominators and analysis sets |",
+    "| Nice to have | Company standards: code lists, display conventions (decimals, `n (%)`, sort order) | attach them | the house style without being told each time |",
+    "| Nice to have | A previous study's specs | attach one workbook | the same choices as last time |",
+    "",
+    "**The TOC and the shells: one file or several, both are fine.** Many",
+    "companies keep them in one workbook, a TOC sheet and a sheet a shell; others",
+    "have a TOC file and a shells file. Attach them as they are. One file is",
+    "simplest when the chat limits how many files you can upload; add the",
+    "nice-to-haves when there is room.",
+    "",
+    "**ADaM metadata: one source, in this order.** `define.xml`; else the ADaM",
+    "spec (also when the define is older than the data); else the datasets",
+    "themselves, of which only the column information goes into the kit (names,",
+    "labels, kinds, short code lists; never a subject's values). Give one: two",
+    "that disagree leave the assistant to choose, without saying it did. With",
+    "several, the function uses the first of this order and says which.",
+    "",
+    "**Do not give** patient-level data (the ADaM or SDTM datasets, listings with",
+    "real values), results from the study unless your company allows it, files",
+    "that are not about these outputs, or several versions of one document.",
+    "Follow your company's rules on what may be sent to an AI service; this kit",
+    "sends nothing by itself.",
+    "",
+    "**When something is missing**, the assistant works with what is there and",
+    "lists every choice it made in `_assumptions`. Without ADaM metadata it names",
+    "datasets and variables after the ADaM IG, and each of those is a row there.")
+}
+
 # ---- 00_START_HERE.md --------------------------------------------------------------
 
-.ai_start_here <- function(split = FALSE) {
+.ai_start_here <- function(split = FALSE, meta = FALSE) {
   blank <- if (split) "`03a_blank_ard_spec.xlsx` ... `03d_blank_listing_spec.xlsx`" else
     paste0("`", .ai_kit_files[["blank"]], "`")
   c(sprintf("# Start here -- tflspec %s AI kit", utils::packageVersion("tflspec")),
     "",
     "Paste the request below into the chat, attach every file of this folder, and",
     "attach your own TOC and shells (Excel, Word or PDF).",
+    "",
+    .ai_what_to_give(meta),
     "",
     "## The request",
     "",
@@ -432,6 +477,11 @@
     ">    being told -- datasets, flags, variables, denominators, methods, the",
     ">    order of levels -- and an `assumptions:` list in each `.yml`.",
     ">",
+    if (meta) c(
+    "> `08_adam_metadata.csv` is the study's ADaM metadata: take every dataset,",
+    "> variable and level you write from it, and only from it.  A shell row with",
+    "> no variable there is a row of `_assumptions`, not a guess.",
+    ">"),
     "> Copy titles, footnotes and labels exactly.  Return the files for",
     "> download; if you cannot write `.xlsx`, return one CSV block a sheet,",
     "> titled with the sheet's name.  After the files, list the assumptions",
@@ -449,6 +499,7 @@
     "| `05_example_toc_shell.xlsx` | a made-up TOC (sheet `TOC`) and four shells |",
     "| `06_example_specs.xlsx` | the specs written from them, with `_assumptions` |",
     "| `07_example_figure.yml` | the figure design written from shell F-1 |",
+    if (meta) "| `08_adam_metadata.csv` | the study's ADaM metadata: datasets, variables, labels, kinds, levels |",
     "",
     "## Back in R",
     "",
@@ -458,6 +509,7 @@
     "                    map = list(output_id = \"Shell Number\", title = c(\"Title1\", \"Title2\"),",
     "                               population = \"Population\"))",
     "tfl_ai_review(\"XYZ-001_specs.xlsx\", toc = toc)   # each file the AI returned",
+    if (meta) "# with the metadata: tfl_ai_review(..., metadata = read.csv(\"08_adam_metadata.csv\"))",
     "```",
     "",
     "It writes, next to the file, `<file>_repair.md` (what the AI can correct:",
@@ -469,7 +521,7 @@
 
 # ---- the kit -----------------------------------------------------------------------
 
-.ai_write_kit <- function(dir, split = FALSE, overwrite = FALSE) {
+.ai_write_kit <- function(dir, split = FALSE, overwrite = FALSE, meta = NULL) {
   if (!dir.exists(dir)) dir.create(dir, recursive = TRUE)
   names_out <- .ai_kit_files
   if (split) names_out <- names_out[names(names_out) != "blank"]
@@ -481,9 +533,11 @@
       "to write the kit again."),
       paste(basename(have), collapse = ", "), dir), call. = FALSE)
   }
+  # a kit written again without metadata keeps no metadata of the last one
+  if (is.null(meta)) unlink(file.path(dir, .ai_kit_files[["metadata"]]))
   src <- function(name) system.file("ai", name, package = "tflspec")
   f <- function(k) file.path(dir, .ai_kit_files[[k]])
-  writeLines(.ai_start_here(split), f("start"), useBytes = TRUE)
+  writeLines(.ai_start_here(split, meta = !is.null(meta)), f("start"), useBytes = TRUE)
   file.copy(src("tflspec-ai-user-manual.md"), f("manual"), overwrite = TRUE)
   file.copy(src("tflspec-ai-toc-shell-guide.md"), f("guide"), overwrite = TRUE)
   blank <- .ai_write_blank(dir, split)
@@ -493,6 +547,11 @@
   .ai_write_example_figure(f("figure"))
   out <- c(f("start"), f("manual"), f("guide"), blank, f("blank_fig"), f("toc"),
            f("specs"), f("figure"))
+  if (!is.null(meta)) {
+    utils::write.csv(meta, f("metadata"), row.names = FALSE, na = "",
+                     fileEncoding = "UTF-8")
+    out <- c(out, f("metadata"))
+  }
   out <- normalizePath(out, winslash = "/")
   size <- sum(file.size(out))
   message(sprintf("tflspec AI kit: %d files, %s KB, in %s", length(out),

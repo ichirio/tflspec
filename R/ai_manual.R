@@ -25,8 +25,9 @@
 #' instead (`rtfreporter::rtfreporter_ai_manual()`).
 #'
 #' With `dir`, it writes everything a chat needs to draft a study's specs
-#' from the company's TOC and shells into one flat folder -- eight files,
-#' a few hundred KB, under the ten files most chats take:
+#' from the company's TOC and shells into one flat folder -- eight files
+#' (nine with the ADaM metadata), a few hundred KB, under the ten files most
+#' chats take:
 #'
 #' * `00_START_HERE.md` -- the request to paste, and what to attach;
 #' * `01_tflspec-ai-user-manual.md` -- this manual;
@@ -46,8 +47,15 @@
 #'   from them, with the `_assumptions` sheet the guide asks for.  The
 #'   example runs on the CDISC pilot data (pharmaverseadam).
 #'
+#' With `define`, `adam_spec` or `datasets` it also writes
+#' `08_adam_metadata.csv`, the study's ADaM metadata ([tfl_adam_metadata()]:
+#' one row a variable, its label, kind and levels; never the data), and the
+#' request tells the assistant to take every dataset, variable and level
+#' from it.  Give one; with several, the first of `define`, `adam_spec`,
+#' `datasets` is used.
+#'
 #' What the assistant returns is checked file by file with
-#' [tfl_ai_review()].
+#' [tfl_ai_review()] (`metadata =` checks its names against the same file).
 #'
 #' @param dir Optional folder.  When given, the kit is written there (the
 #'   folder is made if need be) and the paths of its files are returned
@@ -55,6 +63,10 @@
 #' @param split With `dir`: one blank workbook a spec instead of one for
 #'   all.
 #' @param overwrite Write over a kit already in `dir`.  Default `FALSE`.
+#' @param define,adam_spec,datasets With `dir`: the study's ADaM metadata,
+#'   from its `define.xml`, its ADaM spec workbook or the datasets'
+#'   column information (see [tfl_adam_metadata()]); written as
+#'   `08_adam_metadata.csv`.
 #'
 #' @return The path to the manual when `dir` is `NULL`; otherwise the kit's
 #'   files, invisibly.
@@ -71,7 +83,9 @@
 #' }
 #' @seealso [tfl_ai_review()] for the files the assistant returns.
 #' @export
-tflspec_ai_manual <- function(dir = NULL, split = FALSE, overwrite = FALSE) {
+tflspec_ai_manual <- function(dir = NULL, split = FALSE, overwrite = FALSE,
+                              define = NULL, adam_spec = NULL,
+                              datasets = NULL) {
   name <- "tflspec-ai-user-manual.md"
   src  <- system.file("ai", name, package = "tflspec")
   if (!nzchar(src) || !file.exists(src)) {
@@ -86,5 +100,10 @@ tflspec_ai_manual <- function(dir = NULL, split = FALSE, overwrite = FALSE) {
       "`tflspec_ai_manual()`: '%s' is a file; give a folder (the kit is ",
       "several files)."), dir), call. = FALSE)
   }
-  .ai_write_kit(dir, split = isTRUE(split), overwrite = isTRUE(overwrite))
+  meta <- if (!is.null(define) || !is.null(adam_spec) || !is.null(datasets)) {
+    tfl_adam_metadata(define = define, adam_spec = adam_spec,
+                      datasets = datasets)
+  }
+  .ai_write_kit(dir, split = isTRUE(split), overwrite = isTRUE(overwrite),
+                meta = meta)
 }

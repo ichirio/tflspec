@@ -529,7 +529,11 @@ print.tfl_ai_text <- function(x, ...) {
     ),
     "",
     "## Reports already in the TOC", "",
-    .ai_reports_text(rep)
+    .ai_reports_text(rep),
+    if (!is.null(ctx$datasets)) c(
+      "", "## The datasets", "",
+      "Name only these datasets in `datasets`.", "",
+      .ai_datasets_text(ctx$datasets))
   )
 }
 

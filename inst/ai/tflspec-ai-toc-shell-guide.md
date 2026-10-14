@@ -40,6 +40,17 @@ The folder the user attached (`tflspec_ai_manual(dir)`) is flat:
 | `05_example_toc_shell.xlsx` | a made-up TOC and four shells (§10) |
 | `06_example_specs.xlsx` | the specs written from them, in one workbook |
 | `07_example_figure.yml` | the figure design written from the figure shell |
+| `08_adam_metadata.csv` | when given: the study's ADaM metadata, one row a variable (`dataset`, `dataset_label`, `variable`, `label`, `kind`, `levels` with ` \| ` between them, `codelist`, `source`) |
+
+**When `08_adam_metadata.csv` is there, every dataset, variable and level
+you write must be one of its rows.**  A shell row with no variable there is
+a row of `_assumptions` (its `item` the shell row, its `question` which
+variable it is), not a guess.  Without it, name datasets and variables
+after the ADaM IG (`ADSL`, `TRT01A`, `SAFFL`, ...), and make each of them a
+row of `_assumptions`.  The user gives you the TOC and the shells (one
+file or several), and may give the SAP's sections on analysis sets and
+methods, company standards and a previous study's specs; use them, and
+never ask for patient-level data.
 
 Return files, not prose: one workbook with the ARD, table, report and
 listing specs (the sheets of `03_blank_specs.xlsx`, filled), and one
@@ -535,6 +546,8 @@ Run through it; the review will.
    `dataset` in `datasets`.
 7. The decimals of every template are the shell's.
 8. Levels in a fixed order are written (`levels` or `codelists`).
+   With `08_adam_metadata.csv`, every dataset, variable and level is one
+   of its rows (in its `levels`), or a row of `_assumptions`.
 9. Sheet names and column headers are the blank workbook's; nothing
    added but `note` and `_` sheets; every cell is text; `|` between
    several values; `TRUE` / `FALSE` in capitals.
