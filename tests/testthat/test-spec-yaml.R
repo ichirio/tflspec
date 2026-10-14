@@ -98,3 +98,27 @@ test_that("a file of several reports gives a list, each over the file's base", {
   expect_identical(outs[[2L]]$population, "ITT")
   expect_identical(outs[[2L]]$content[[1L]]$fn, "table_plan")
 })
+
+test_that("n, N, y, yes, no, off stay text as keys and values; only true / false are logical", {
+  f <- withr::local_tempfile(fileext = ".yml")
+  writeLines(c("id: T-1", "kind: table", "content:",
+               "  - plan_cells: {continuous: {n: '{N}', N: '{N}'}}",
+               "  - plan_digits: {AGE: {n: 0, N: 0, mean: 1}}",
+               "  - plan_sort: {keys: [n, N], stat: n}",
+               "  - plan_total: {label: Y, on: yes, off: no, shown: true, hidden: false}"), f)
+  o <- tfl_read_output(f)
+  expect_identical(names(o$content[[1L]]$args$continuous), c("n", "N"))
+  expect_identical(names(o$content[[2L]]$args$AGE), c("n", "N", "mean"))
+  expect_identical(o$content[[3L]]$args$keys, c("n", "N"))
+  expect_identical(o$content[[3L]]$args$stat, "n")
+  a <- o$content[[4L]]$args
+  expect_identical(a$label, "Y")
+  expect_identical(a[["on"]], "yes")
+  expect_identical(a[["off"]], "no")
+  expect_identical(a$shown, TRUE)
+  expect_identical(a$hidden, FALSE)
+  # and back
+  g <- withr::local_tempfile(fileext = ".yml")
+  tfl_write_output(o, g)
+  expect_equal(tfl_read_output(g)$content, o$content)
+})
