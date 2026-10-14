@@ -1041,6 +1041,11 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL) {
 # `!r` step of `data.steps` as it is written.  A step that is not R (a
 # figure's step map) is not a table's.
 .content_r_steps <- function(output) {
+  # the data step as the report's own code (`data: {source: code, code:
+  # !r}`, the old data_code): that code is the step, whatever else data says
+  if (identical(output$data$source, "code") && !is.null(output$data$code)) {
+    return(unlist(strsplit(as.character(output$data$code), "\n", fixed = TRUE)))
+  }
   st <- output$data$steps
   if (is.null(st) || !length(st)) return(character())
   if (inherits(st, "tfl_r") || is.character(st)) st <- as.list(st)

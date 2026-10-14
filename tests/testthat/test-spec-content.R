@@ -182,3 +182,13 @@ test_that("the content as the report's own code is written as it is and runs to 
   out$content <- tfl_r("plan <- 1")
   expect_error(tfl_content_run(out, data.frame(x = 1)), "leaves no `content`")
 })
+
+test_that("a data step of the report's own code is that code, whatever else data says", {
+  out <- tfl_output("F-1", "figure", data = list(
+    source = "code", code = tfl_r("df <- ard\ndata <- df[df$x > 1, , drop = FALSE]"),
+    steps = list(list(fn = "geom_point"))))
+  out$content <- tfl_r("content <- nrow(data)")
+  expect_identical(tfl_content_code(out), c("df <- ard", "data <- df[df$x > 1, , drop = FALSE]",
+                                            "", "content <- nrow(data)"))
+  expect_identical(tfl_content_run(out, data.frame(x = 1:3)), 2L)
+})
