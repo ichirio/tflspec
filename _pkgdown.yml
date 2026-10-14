@@ -245,6 +245,7 @@ reference:
       decides.
     contents:
       - tflspec_ai_manual
+      - tfl_adam_metadata
       - tfl_ai_review
   - title: AI-assisted drafting
     desc: >

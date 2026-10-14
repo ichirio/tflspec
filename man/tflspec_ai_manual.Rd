@@ -4,7 +4,14 @@
 \alias{tflspec_ai_manual}
 \title{The AI assistant manual that ships with this package}
 \usage{
-tflspec_ai_manual(dir = NULL, split = FALSE, overwrite = FALSE)
+tflspec_ai_manual(
+  dir = NULL,
+  split = FALSE,
+  overwrite = FALSE,
+  define = NULL,
+  adam_spec = NULL,
+  datasets = NULL
+)
 }
 \arguments{
 \item{dir}{Optional folder.  When given, the kit is written there (the
@@ -15,6 +22,11 @@ invisibly; the files, their sizes and what to attach are printed.}
 all.}
 
 \item{overwrite}{Write over a kit already in \code{dir}.  Default \code{FALSE}.}
+
+\item{define, adam_spec, datasets}{With \code{dir}: the study's ADaM metadata,
+from its \code{define.xml}, its ADaM spec workbook or the datasets'
+column information (see \code{\link[=tfl_adam_metadata]{tfl_adam_metadata()}}); written as
+\verb{08_adam_metadata.csv}.}
 }
 \value{
 The path to the manual when \code{dir} is \code{NULL}; otherwise the kit's
@@ -37,8 +49,9 @@ actually have.  For the rendering side attach rtfreporter's own manual
 instead (\code{rtfreporter::rtfreporter_ai_manual()}).
 
 With \code{dir}, it writes everything a chat needs to draft a study's specs
-from the company's TOC and shells into one flat folder -- eight files,
-a few hundred KB, under the ten files most chats take:
+from the company's TOC and shells into one flat folder -- eight files
+(nine with the ADaM metadata), a few hundred KB, under the ten files most
+chats take:
 \itemize{
 \item \verb{00_START_HERE.md} -- the request to paste, and what to attach;
 \item \verb{01_tflspec-ai-user-manual.md} -- this manual;
@@ -59,8 +72,15 @@ from them, with the \verb{_assumptions} sheet the guide asks for.  The
 example runs on the CDISC pilot data (pharmaverseadam).
 }
 
+With \code{define}, \code{adam_spec} or \code{datasets} it also writes
+\verb{08_adam_metadata.csv}, the study's ADaM metadata (\code{\link[=tfl_adam_metadata]{tfl_adam_metadata()}}:
+one row a variable, its label, kind and levels; never the data), and the
+request tells the assistant to take every dataset, variable and level
+from it.  Give one; with several, the first of \code{define}, \code{adam_spec},
+\code{datasets} is used.
+
 What the assistant returns is checked file by file with
-\code{\link[=tfl_ai_review]{tfl_ai_review()}}.
+\code{\link[=tfl_ai_review]{tfl_ai_review()}} (\verb{metadata =} checks its names against the same file).
 }
 \examples{
 # where the manual lives

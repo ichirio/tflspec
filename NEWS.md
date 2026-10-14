@@ -1,5 +1,21 @@
 # tflspec (development version)
 
+* **The AI kit takes the study's ADaM metadata**: `tflspec_ai_manual(dir,
+  define = , adam_spec = , datasets = )` writes `08_adam_metadata.csv`, so
+  the assistant names the study's own datasets, variables and levels instead
+  of guessing them from the ADaM IG; the request and the guide tell it to
+  take them only from there and to list in `_assumptions` any it could not.
+  New `tfl_adam_metadata()` builds it, one row a variable, from one source
+  in this order: the define.xml, the ADaM spec, the datasets' column
+  information (names, labels, kinds, short code lists; never a subject's
+  values).  `00_START_HERE.md` says what to give the AI (required, strongly
+  recommended, nice to have), what never, and what happens when something
+  is missing.  `tfl_ai_context("toc", datasets = )` takes the same frame, as
+  the figure task did, and `tfl_ai_review(metadata = )` checks a workbook's
+  names against it: an unknown dataset or variable (K14, with the nearest
+  names) or a code list value not among a variable's levels (K15) is the
+  AI's to fix.
+
 * **`tables$keep_where`, `keep_any`, `keep_parents`**: rows kept by a
   condition, as rtfreporter's `plan_filter()` (rtfreporter #620, needs
   0.8.2.9050): `p >= 0.05` keeps the PTs with 5% or more in any arm. The

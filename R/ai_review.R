@@ -43,6 +43,95 @@
   r
 }
 
+# The metadata as tfl_adam_metadata() gives it, from the frame or the
+# kit's CSV read back (where an empty level is "", not NA).
+.ai_review_md <- function(x) {
+  if (is.null(x)) return(NULL)
+  if (is.character(x) && length(x) == 1L && file.exists(x)) {
+    x <- utils::read.csv(x, colClasses = "character", na.strings = "")
+  }
+  if (!is.data.frame(x) || !all(c("dataset", "variable") %in% names(x))) {
+    .ard_stop(paste0("tfl_ai_review(): `metadata` is tfl_adam_metadata()'s ",
+                     "result, or the kit's 08_adam_metadata.csv."))
+  }
+  x$dataset <- toupper(trimws(as.character(x$dataset)))
+  x$variable <- trimws(as.character(x$variable))
+  if (!"levels" %in% names(x)) x$levels <- NA_character_
+  x
+}
+
+# The names a workbook writes, checked against the metadata: datasets
+# (datasets, populations, analyses, listings), variables (an analysis's
+# variables, by and strata in its dataset; the variables and codelists
+# sheets' own) and code list values (among the variable's levels).
+.ai_review_metadata <- function(sheets, md, add, cat) {
+  sh <- stats::setNames(sheets, tolower(names(sheets)))
+  known_ds <- unique(md$dataset)
+  near <- function(x, pool) {
+    d <- utils::adist(toupper(x), toupper(pool))
+    paste(utils::head(pool[order(d)], 3L), collapse = ", ")
+  }
+  split_names <- function(v) {
+    v <- unlist(strsplit(as.character(v[!is.na(v)]), "[|,]"))
+    v <- trimws(v)
+    unique(v[nzchar(v)])
+  }
+  for (nm in intersect(c("datasets", "populations", "analyses", "listings"), names(sh))) {
+    d <- sh[[nm]]
+    if (!"dataset" %in% names(d)) next
+    for (i in which(!is.na(d$dataset) & nzchar(trimws(d$dataset)))) {
+      ds <- toupper(trimws(d$dataset[i]))
+      if (!ds %in% known_ds) {
+        add(.ai_rv("K14", output_id = d$output_id[i] %||% NA_character_,
+                   sheet = nm, row = as.character(i), field = "dataset",
+                   args = c(nm, "the dataset", ds), hint_args = near(ds, known_ds),
+                   cat = cat))
+      }
+    }
+  }
+  an <- sh[["analyses"]]
+  if (!is.null(an)) {
+    for (i in seq_len(nrow(an))) {
+      ds <- toupper(trimws(an$dataset[i] %||% NA_character_))
+      pool <- if (!is.na(ds) && ds %in% known_ds) md$variable[md$dataset == ds]
+              else unique(md$variable)
+      for (col in intersect(c("variables", "by", "strata"), names(an))) {
+        for (v in setdiff(split_names(an[[col]][i]), pool)) {
+          add(.ai_rv("K14", output_id = an$output_id[i], sheet = "analyses",
+                     row = an$analysis_id[i] %||% as.character(i), field = col,
+                     args = c("analyses", "the variable", v),
+                     hint_args = near(v, pool), cat = cat))
+        }
+      }
+    }
+  }
+  vs <- sh[["variables"]]
+  if (!is.null(vs) && "variable" %in% names(vs)) {
+    pool <- unique(md$variable)
+    for (i in which(!is.na(vs$variable) & !vs$variable %in% pool)) {
+      add(.ai_rv("K14", output_id = vs$output_id[i], sheet = "variables",
+                 row = as.character(i), field = "variable",
+                 args = c("variables", "the variable", vs$variable[i]),
+                 hint_args = near(vs$variable[i], pool), cat = cat))
+    }
+  }
+  cl <- sh[["codelists"]]
+  if (!is.null(cl) && all(c("variable", "value") %in% names(cl))) {
+    for (i in seq_len(nrow(cl))) {
+      lv <- md$levels[md$variable %in% cl$variable[i] & !is.na(md$levels)]
+      if (!length(lv)) next
+      lv <- unique(trimws(unlist(strsplit(lv, "|", fixed = TRUE))))
+      if (!is.na(cl$value[i]) && !trimws(cl$value[i]) %in% lv) {
+        add(.ai_rv("K15", output_id = cl$output_id[i], sheet = "codelists",
+                   row = as.character(i), field = "value",
+                   args = c(cl$variable[i], cl$value[i]),
+                   hint_args = paste(lv, collapse = " | "), cat = cat))
+      }
+    }
+  }
+  invisible(NULL)
+}
+
 # ---- reading the file --------------------------------------------------------------
 
 # The columns of each sheet the specs read: the blank specs' own.
@@ -138,7 +227,7 @@
 
 # ---- the checks --------------------------------------------------------------------
 
-.ai_review_book <- function(path, toc, adam, others, cat) {
+.ai_review_book <- function(path, toc, adam, others, cat, metadata = NULL) {
   sheets <- .ai_read_sheets(path)
   known <- .ai_sheet_columns()
   rows <- list()
@@ -256,6 +345,8 @@
       add(.ai_rv("K07", output_id = id, sheet = "analyses", args = id, cat = cat))
     }
   }
+  # K14 / K15: the names and levels the ADaM metadata does not have
+  if (!is.null(metadata)) .ai_review_metadata(sheets, metadata, add, cat)
   # K08 / K09: the AI's own assumptions
   a <- .ai_review_assumptions(sheets)
   if (is.null(a) || !nrow(a)) {
@@ -439,6 +530,11 @@
 #'   With it, the outputs, titles and footnotes are checked against it.
 #' @param adam The study's data ([tfl_read_adam()]), for the checks against
 #'   the data; `NULL` for none.
+#' @param metadata The study's ADaM metadata ([tfl_adam_metadata()], or
+#'   the kit's `08_adam_metadata.csv` read back), for the checks of the
+#'   names a workbook writes: a dataset or variable it does not have is the
+#'   AI's to fix (K14, with the nearest names), and so is a code list value
+#'   that is not among a variable's levels (K15).  `NULL` for none.
 #' @param others Specs of the same study already read, for the checks
 #'   across specs when the file holds only some: a list with any of `ard`
 #'   ([tfl_read_ard_spec()]), `table` ([tfl_read_report_spec()]) and
@@ -460,14 +556,15 @@
 #' @seealso [tflspec_ai_manual()] for the kit the assistant works from.
 #' @export
 tfl_ai_review <- function(file, toc = NULL, adam = NULL, others = NULL,
-                          write = TRUE, overwrite = FALSE) {
+                          metadata = NULL, write = TRUE, overwrite = FALSE) {
   if (!is.character(file) || length(file) != 1L || !file.exists(file)) {
     .ard_stop("tfl_ai_review(): `file` is one spec file that exists (.xlsx or .yml).")
   }
   cat <- .ai_cat()
   ext <- tolower(tools::file_ext(file))
   res <- switch(ext,
-    xlsx = .ai_review_book(file, toc, adam, others, cat),
+    xlsx = .ai_review_book(file, toc, adam, others, cat,
+                           metadata = .ai_review_md(metadata)),
     yml = , yaml = .ai_review_yml(file, adam, cat),
     .ard_stop("tfl_ai_review(): `file` is a workbook (.xlsx) or a figure design (.yml)."))
   rows <- res$rows

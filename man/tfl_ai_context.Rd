@@ -32,12 +32,13 @@ tfl_ai_context(
 or vector with \code{id}, \code{label} and \code{where} (the condition, such as
 \code{FASFL == "Y"}).}
 
-\item{datasets}{\code{figure}: the datasets and variables the design may
-name.  Either a data frame, one row a variable, with \code{dataset} and
-\code{variable} and optionally \code{label}, \code{kind}, \code{levels} (\code{|} between the
-values) and \code{dataset_label}; or the ADaM datasets themselves, a named
-list of data frames, of which only the names, the labels (the
-\code{label} attribute) and the kinds are taken.}
+\item{datasets}{\code{figure} and \code{toc}: the datasets and variables the
+answer may name.  Either a data frame, one row a variable, with
+\code{dataset} and \code{variable} and optionally \code{label}, \code{kind}, \code{levels} (\code{|}
+between the values) and \code{dataset_label} -- \code{\link[=tfl_adam_metadata]{tfl_adam_metadata()}}'s
+result is one (its \code{codelist} and \code{source} are not sent); or the ADaM
+datasets themselves, a named list of data frames, of which only the
+names, the labels (the \code{label} attribute) and the kinds are taken.}
 
 \item{design}{\code{figure}: the current design (a \code{\link[=tfl_fig_design]{tfl_fig_design()}}), when
 there is one: the prompt shows it and asks for it whole, changed.}

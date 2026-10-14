@@ -84,7 +84,7 @@ tfl_ai_tasks <- function() .ai_task_table()
 
 # The context's fields a task reads.
 .ai_context_fields <- list(
-  toc = c("study", "toc_fields", "reports", "language"),
+  toc = c("study", "toc_fields", "reports", "datasets", "language"),
   figure = c(
     "study", "output_id", "titles", "population", "datasets", "design",
     "templates", "language"
@@ -119,12 +119,13 @@ tfl_ai_tasks <- function() .ai_task_table()
 #' @param population `figure`: its analysis set: one label, or a named list
 #'   or vector with `id`, `label` and `where` (the condition, such as
 #'   `FASFL == "Y"`).
-#' @param datasets `figure`: the datasets and variables the design may
-#'   name.  Either a data frame, one row a variable, with `dataset` and
-#'   `variable` and optionally `label`, `kind`, `levels` (` | ` between the
-#'   values) and `dataset_label`; or the ADaM datasets themselves, a named
-#'   list of data frames, of which only the names, the labels (the
-#'   `label` attribute) and the kinds are taken.
+#' @param datasets `figure` and `toc`: the datasets and variables the
+#'   answer may name.  Either a data frame, one row a variable, with
+#'   `dataset` and `variable` and optionally `label`, `kind`, `levels` (` | `
+#'   between the values) and `dataset_label` -- [tfl_adam_metadata()]'s
+#'   result is one (its `codelist` and `source` are not sent); or the ADaM
+#'   datasets themselves, a named list of data frames, of which only the
+#'   names, the labels (the `label` attribute) and the kinds are taken.
 #' @param design `figure`: the current design (a [tfl_fig_design()]), when
 #'   there is one: the prompt shows it and asks for it whole, changed.
 #' @param templates `figure`: the templates the answer may start from
@@ -270,6 +271,8 @@ print.tfl_ai_context <- function(x, ...) {
   if (is.null(x)) return(NULL)
   cols <- c("dataset", "dataset_label", "variable", "label", "kind", "levels")
   if (is.data.frame(x)) {
+    # tfl_adam_metadata()'s own columns, which the prompt does not need
+    x <- x[setdiff(names(x), c("codelist", "source"))]
     bad <- setdiff(names(x), cols)
     if (length(bad) || !all(c("dataset", "variable") %in% names(x))) {
       .ard_stop(sprintf(paste0(

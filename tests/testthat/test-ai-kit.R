@@ -23,8 +23,9 @@ test_that("the kit is eight flat files, small enough to attach", {
   d <- file.path(tempdir(), "ai-kit-files")
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   expect_message(kit <- tflspec_ai_manual(d), "Attach all files in")
-  expect_identical(basename(kit), unname(tflspec:::.ai_kit_files))
-  expect_identical(list.files(d), sort(unname(tflspec:::.ai_kit_files)))
+  files <- unname(tflspec:::.ai_kit_files[names(tflspec:::.ai_kit_files) != "metadata"])
+  expect_identical(basename(kit), files)       # 08_adam_metadata.csv only when given
+  expect_identical(list.files(d), sort(files))
   expect_false(any(dir.exists(file.path(d, list.files(d)))))
   expect_lt(sum(file.size(kit)), 1024^2)
   # split: one blank workbook a spec

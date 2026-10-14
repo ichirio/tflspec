@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9109** (the development version,
+**This manual documents tflspec 0.0.24.9110** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -705,7 +705,17 @@ assistant returns a workbook and a `.yml` a figure, with its guesses in
 a sheet `_assumptions` (`output_id`, `sheet`, `item`, `assumption`,
 `question`) and a key `assumptions:`.
 
-`tfl_ai_review(file, toc = , adam = , others = )` checks one returned
+With `define =` (a `define.xml`), `adam_spec =` (an ADaM spec workbook) or
+`datasets =` (the datasets, of which only their column information is
+taken), the kit also holds `08_adam_metadata.csv`: `tfl_adam_metadata()`'s
+result, one row a variable (`dataset`, `dataset_label`, `variable`,
+`label`, `kind`, `levels` with ` | ` between them, `codelist`, `source`).
+One source is used, the first of that order.  The assistant takes every
+dataset, variable and level from it, and lists in `_assumptions` any it
+could not.  `tfl_ai_context("toc", datasets = )` and `("figure", datasets
+= )` take the same frame.
+
+`tfl_ai_review(file, toc = , adam = , others = , metadata = )` checks one returned
 file and splits what it finds by who acts: **the AI** (a sheet or column
 not the spec's, an output or a title not the TOC's, `(N=86)` where
 `(N={n})` belongs, analyses no table uses, no `_assumptions`, every
@@ -713,11 +723,13 @@ error and check of `tfl_review_spec()` / `tfl_check_fig_design()`) and
 **the person** (each assumption; each analysis set's flag, percentage's
 denominator, test or model, fixed order of levels).  It writes
 `<file>_repair.md` (paste into the chat) and `<file>_questions.md`
-(answer, then paste); `who` and the kit's rules K01-K13 are
-`inst/review/ai_rules.csv`.
+(answer, then paste); `who` and the kit's rules K01-K15 are
+`inst/review/ai_rules.csv`.  With `metadata =` (the frame, or the kit's
+CSV), a dataset or variable the metadata has not (K14) and a code list
+value that is not among a variable's levels (K15) are the AI's to fix.
 
 ```r
-kit <- tflspec_ai_manual("ai-kit")                       # attach every file
+kit <- tflspec_ai_manual("ai-kit", define = "define.xml")   # attach every file
 toc <- tfl_read_toc("TOC.xlsx", sheet = "TOC", skip = 1,
                     map = list(output_id = "Shell Number",
                                title = c("Title1", "Title2"),
@@ -785,7 +797,7 @@ back): rename the value or choose another separator.
 
 ## 13. Complete public API (nothing outside this list exists)
 
-**Manual:** `tflspec_ai_manual` `tfl_ai_review`
+**Manual:** `tflspec_ai_manual` `tfl_adam_metadata` `tfl_ai_review`
 
 **The functions the generated programs call (their code):** `tfl_helpers_code`
 
