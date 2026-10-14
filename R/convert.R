@@ -155,7 +155,11 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
       items <- tryCatch(.conv_items(content_fn(sp, NA_character_)), error = function(e) e)
       if (inherits(items, "error")) {
         note(NA, "table sheets", "(defaults)", NA, paste0("defaults content: not converted -- ", conditionMessage(items)))
-      } else defaults$content <- .items_to_list(items)
+      } else {
+        # every table starts from the ARD made a table's rows (the program's
+        # normalize_ard()): once, for all of them
+        defaults$content <- .items_to_list(c(list(tfl_item("normalize_ard", list())), items))
+      }
     } else if (any(vapply(c("tables", "variables", "cells", "layout", "columns", "style", "col_header", "cell_styles"),
                         function(s) nrow(scope(sp[[s]], NA)) > 0L, NA))) {
       note(NA, "table sheets", "(defaults)", NA, "content: not converted -- no sheets-to-content bridge given (content_fn)")
@@ -448,7 +452,11 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     if (!is.null(sp)) {
       cl <- scope(sp$codelists, id)
       if (!is.null(cl) && nrow(cl)) codelists <- .conv_codelists(cl)
-      if (!is.null(content_fn)) content <- .conv_items(content_fn(sp, id))
+      if (!is.null(content_fn)) {
+        content <- .conv_items(content_fn(sp, id))
+        nz <- .conv_normalize_args(sp, ard, id)
+        if (length(nz)) content <- c(list(tfl_item("normalize_ard", nz)), content)
+      }
       else if (any(vapply(c("tables", "variables", "cells", "digits", "layout", "columns", "style", "col_header", "cell_styles"),
                           function(s) nrow(scope(sp[[s]], id)) > 0L, NA))) {
         note(id, "table sheets", id, NA, "content: not converted -- no sheets-to-content bridge given (content_fn)")
@@ -478,4 +486,39 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
 # there (NULL before it is)
 .bridge_fn <- function(name) {
   get0(name, envir = topenv(environment()), mode = "function", inherits = FALSE)
+}
+
+# A table's normalize_ard() arguments, as tfl_normalize_code() reads them:
+# its tables row (overall_label, stack, stack_sep, stack_nest) and its
+# hierarchical analysis (hierarchy).  Nothing: the defaults' normalize_ard().
+.conv_normalize_args <- function(sp, ard, id) {
+  t <- sp$tables
+  t <- if (is.null(t)) NULL else t[!is.na(t$output_id) & t$output_id == id, , drop = FALSE]
+  val <- function(col) {
+    if (is.null(t) || !nrow(t) || !col %in% names(t)) return(NULL)
+    v <- t[[col]][1L]
+    if (is.na(v) || !nzchar(trimws(v))) NULL else trimws(v)
+  }
+  out <- list()
+  if (!is.null(ard)) {
+    an <- ard$analyses
+    an <- an[!is.na(an$output_id) & an$output_id == id &
+               an$method %in% c("hierarchical", "cards::ard_stack_hierarchical",
+                                "cards::ard_stack_hierarchical_count"), , drop = FALSE]
+    if (nrow(an)) out$hierarchy <- .split_bar(an$variables[1L])
+  }
+  lab <- val("overall_label")
+  if (!is.null(lab)) out$overall <- lab
+  stk <- val("stack")
+  if (!is.null(stk)) {
+    g <- .ard_spec_stat_groups(stk, "stack", "layer", "subgroup = ALL, SEX, AGEGR1, AGEGR1 * SEX")
+    out$stack <- lapply(g, function(v) {
+      parts <- lapply(strsplit(v, "*", fixed = TRUE), trimws)
+      if (all(lengths(parts) == 1L)) unlist(parts) else parts
+    })
+    sep <- val("stack_sep")
+    if (!is.null(sep)) out$stack_sep <- .ard_spec_unquote(sep)
+    if (identical(toupper(val("stack_nest") %||% ""), "TRUE")) out$stack_nest <- TRUE
+  }
+  out
 }

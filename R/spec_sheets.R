@@ -33,6 +33,11 @@ tfl_sheets_from_yaml <- function(dir) {
 
   # -- the table sheets: the bridge, scope by scope --------------------------
   table_rows <- function(items, id) {
+    # normalize_ard() is the tables row's overall_label / stack columns (its
+    # hierarchy is the ARD's analysis): taken out before the bridge
+    nz <- Filter(function(it) identical(it$fn, "normalize_ard"), items)
+    items <- Filter(function(it) !identical(it$fn, "normalize_ard"), items)
+    if (length(nz) && !is.na(id) && length(nz[[1L]]$args)) norm_rows[[id]] <<- nz[[1L]]$args
     if (!length(items)) return()
     if (is.null(bridge)) { note(id, "content", "no bridge from the layers to the sheets (tflspec's .plan_sheets_from_content)"); return() }
     sp <- bridge(items, if (is.na(id)) NULL else id)
@@ -45,6 +50,7 @@ tfl_sheets_from_yaml <- function(dir) {
     }
     for (x in attr(sp, "not_converted") %||% character()) note(id, "content", x)
   }
+  norm_rows <- list()
   table_rows(s$defaults$content, NA_character_)
   for (nm in names(s$patterns)) table_rows(s$patterns[[nm]]$content, paste0("@", nm))
 
@@ -174,6 +180,25 @@ tfl_sheets_from_yaml <- function(dir) {
   table$study <- data.frame(key = names(settings), value = vapply(settings, cell, ""), stringsAsFactors = FALSE)
   for (sh in c(names(.ard_spec_schema()), .ard_spec_pattern_sheets)) {
     table[[sh]] <- .rows_df(rows[[sh]] %||% list(), c("output_id", setdiff(.sheet_columns(sh), "output_id")))
+  }
+  # a table's normalize_ard() arguments on its tables row
+  for (id in names(norm_rows)) {
+    a <- norm_rows[[id]]
+    tb <- table$tables
+    i <- match(id, tb$output_id)
+    if (is.na(i)) { tb[nrow(tb) + 1L, ] <- NA; i <- nrow(tb); tb$output_id[i] <- id }
+    put <- function(col, v) { if (!col %in% names(tb)) tb[[col]] <<- NA_character_; tb[[col]][i] <<- v }
+    if (!is.null(a$overall)) put("overall_label", as.character(a$overall))
+    if (!is.null(a$stack)) {
+      put("stack", paste(vapply(names(a$stack), function(n) {
+        v <- a$stack[[n]]
+        parts <- if (is.list(v)) vapply(v, function(p) paste(unlist(p), collapse = " * "), "") else v
+        paste0(n, " = ", paste(parts, collapse = ", "))
+      }, ""), collapse = " | "))
+      if (!is.null(a$stack_sep)) put("stack_sep", encodeString(as.character(a$stack_sep), quote = "\""))
+      if (isTRUE(a$stack_nest)) put("stack_nest", "TRUE")
+    }
+    table$tables <- tb
   }
   list(table = table, planner = .rows_df(planner, c("output_id", "description", "setup_code", "process_code",
                                                      "section", "population", "datasets", "batches")),
