@@ -417,22 +417,48 @@ tfl_table_code <- function(spec, output_id = NULL, data = "data",
 # plan_levels() at the head.  An item from the study's defaults or a
 # pattern carries a comment saying so.  What tfl_table_code() writes from
 # a workbook, and tfl_content_code() from a spec file.
-.content_table_code <- function(content, data = "data", plan = "plan",
-                                pipe = NULL) {
-  op <- .ard_pipe_op(pipe)
-  # table_plan() is the head (the roles), not a layer: wherever the
-  # layering put it, it starts the pipe; the layers keep their order
-  is_head <- vapply(content, function(it) identical(.schema_fn_name(it$fn), "table_plan"), NA)
+# A table's content as its pipeline: the steps on the data before the
+# plan (normalize_ard(), the items before table_plan()), the head
+# table_plan(), and the layers -- each a call as R takes it.  What
+# tfl_content_code() writes and tfl_content_run() runs: the one list both
+# read, so the two cannot differ.
+.content_table_pipeline <- function(content) {
+  fns <- vapply(content, function(it) .schema_fn_name(it$fn), "")
+  is_head <- fns == "table_plan"
   if (sum(is_head) != 1L) {
     .ard_stop(paste0("A table's content has one table_plan() item (its roles); ",
                      "this one has ", sum(is_head), "."))
   }
-  content <- c(content[is_head], content[!is_head])
+  pre <- fns %in% .content_data_steps
+  # table_plan() is the head (the roles), not a layer: wherever the
+  # layering put it, it starts the plan; the data's steps come before it,
+  # the layers after, each keeping its order
+  content <- c(content[pre], content[is_head], content[!pre & !is_head])
   calls <- .content_calls(content)
-  head <- calls[[1L]]
-  head$args <- c(list(.spec_sym(data)), head$args)
-  steps <- calls[-1L]
-  from <- vapply(content[-1L], function(it) it$from %||% "own", "")
+  n_pre <- sum(pre)
+  list(pre = calls[seq_len(n_pre)], head = calls[[n_pre + 1L]],
+       steps = calls[-seq_len(n_pre + 1L)],
+       from = vapply(content[-seq_len(n_pre + 1L)], function(it) it$from %||% "own", ""))
+}
+
+# the functions a table's content may apply to the data before its plan
+.content_data_steps <- c("normalize_ard")
+
+.content_table_code <- function(content, data = "data", plan = "plan",
+                                pipe = NULL) {
+  op <- .ard_pipe_op(pipe)
+  pl <- .content_table_pipeline(content)
+  head <- pl$head
+  steps <- pl$steps
+  from <- pl$from
+  # the data's own steps make a pipe of their own into table_plan()
+  if (length(pl$pre)) {
+    steps <- c(list(head), steps)
+    from <- c("own", from)
+    head <- NULL
+  } else {
+    head$args <- c(list(.spec_sym(data)), head$args)
+  }
   # the levels as code lists at the head, cl_<variable> as the ARD programs
   # write them, plan_levels() naming them
   cl <- character()
@@ -447,10 +473,13 @@ tfl_table_code <- function(spec, output_id = NULL, data = "data",
     for (k in v) a[[k]] <- .spec_sym(.cl_name(k))
     steps[[i]]$args <- a
   }
-  lines <- c(.spec_call_code(head, 0L),
-             vapply(steps, function(s) paste0("  ", .spec_call_code(s)), ""))
+  first <- if (is.null(head)) data else .spec_call_code(.content_print(head), 0L)
+  pre_lines <- vapply(pl$pre, function(s) paste0("  ", .spec_call_code(.content_print(s))), "")
+  lines <- c(first, pre_lines,
+             vapply(steps, function(s) paste0("  ", .spec_call_code(.content_print(s))), ""))
   lines[-length(lines)] <- paste(lines[-length(lines)], op)
   lines[1L] <- paste(plan, "<-", lines[1L])
+  from <- c(rep("own", length(pre_lines)), from)
   # an item the report does not say itself: where it comes from
   note <- c("", vapply(from, function(f) {
     if (identical(f, "own")) return("")
@@ -512,6 +541,20 @@ tfl_table_code <- function(spec, output_id = NULL, data = "data",
   items <- .plan_content_items(sp)
   if (defaults && !length(items[[1L]]$args)) items <- items[-1L]
   items
+}
+
+# A call as the program writes it: an argument the schema marks
+# `print: unnamed` (plan_col_header()'s header) goes without its name, as
+# a person writes it -- the value is the same, by position.
+.content_print <- function(cl) {
+  ent <- tfl_schema(cl$fun)
+  if (is.null(ent$args) || !length(cl$args)) return(cl)
+  nm <- names(cl$args)
+  for (a in names(ent$args)) {
+    if (identical(ent$args[[a]]$print, "unnamed") && a %in% nm) nm[nm == a] <- ""
+  }
+  names(cl$args) <- nm
+  cl
 }
 
 # The items as the calls they stand for (.spec_call()), their arguments as
@@ -834,6 +877,57 @@ tfl_table_code <- function(spec, output_id = NULL, data = "data",
   sp <- do.call(tfl_table_spec, Filter(Negate(is.null), sheets))
   attr(sp, "not_converted") <- lost
   sp
+}
+
+#' Make a report's content, from its spec file, without its code
+#'
+#' Runs what [tfl_content_code()] writes: the same items, in the same order,
+#' each applied with `do.call()` -- for a table, the data's steps
+#' (`normalize_ard()`), `table_plan()` and its layers.  The two read one
+#' list of calls, so running the written code gives the same object; it is
+#' the quick way for a preview, the app or an assistant's check.
+#'
+#' @param output A report ([tfl_output()]), resolved.
+#' @param data The data the content starts from: the ARD (or the normalized
+#'   ARD when the content has no `normalize_ard()` item).
+#' @return For a table, the [rtfreporter::table_plan()].
+#' @examples
+#' if (requireNamespace("cards", quietly = TRUE)) {
+#'   ard <- cards::ard_stack(cards::ADSL, .by = ARM,
+#'                           cards::ard_tabulate(variables = SEX))
+#'   out <- tfl_output("T-1", "table", content = list(
+#'     tfl_item("normalize_ard", list()),
+#'     tfl_item("table_plan", list(cols = "ARM", rows = list(group = "variable"))),
+#'     tfl_item("plan_cells", list(categorical = "{n} ({p:.1f%})"))))
+#'   p <- tfl_content_run(out, ard)
+#'   class(p)
+#' }
+#' @seealso [tfl_content_code()]
+#' @export
+tfl_content_run <- function(output, data) {
+  if (!inherits(output, "tfl_output")) {
+    .ard_stop("tfl_content_run(): `output` is a report, tfl_output().")
+  }
+  if (!identical(output$kind, "table")) {
+    .ard_stop(sprintf(paste0("tfl_content_run(): a %s's content is not run ",
+                             "yet; tables only, for now."), output$kind))
+  }
+  .spec_need_rtfreporter()
+  for (it in output$content) .schema_need_version(it)
+  .content_table_run(output$content, data)
+}
+
+.content_table_run <- function(content, data) {
+  pl <- .content_table_pipeline(content)
+  x <- data
+  run <- function(cl, first) {
+    f <- .spec_fun(cl$fun)
+    do.call(f, c(list(first), lapply(cl$args, .spec_eval, env = emptyenv())))
+  }
+  for (cl in pl$pre) x <- run(cl, x)
+  p <- run(pl$head, x)
+  for (cl in pl$steps) p <- run(cl, p)
+  p
 }
 
 #' The code of a report's content, from its spec file
