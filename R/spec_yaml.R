@@ -218,7 +218,7 @@ tfl_read_output <- function(path) {
   out <- tfl_output(
     id = y$id, kind = y$kind, label = y$label, population = y$population,
     extends = as.character(unlist(extends)),
-    data = .calls_in(y$data), codelists = y$codelists %||% list(),
+    data = .data_steps_in(.calls_in(y$data)), codelists = y$codelists %||% list(),
     content = content, page = .calls_in(y$page %||% list()))
   for (k in setdiff(names(y), c(.output_fields, "outputs", "base"))) out[[k]] <- .calls_in(y[[k]])
   out
@@ -317,4 +317,17 @@ tfl_write_output <- function(x, path) {
 # content items as they are written: `- fn: {args}`
 .items_to_list <- function(items) {
   lapply(items, function(it) stats::setNames(list(.calls_out(it$args)), it$fn))
+}
+
+# the data stage's steps as a list: an `!r` step (or a sequence of them,
+# which the YAML reader folds into a character vector) as tfl_r, a
+# figure's step maps as they are
+.data_steps_in <- function(data) {
+  if (is.null(data) || is.null(data$steps)) return(data)
+  st <- data$steps
+  if (inherits(st, "tfl_r")) st <- list(st)
+  else if (is.character(st)) st <- lapply(st, tfl_r)
+  else if (is.list(st)) st <- lapply(st, function(s) if (is.character(s) && !inherits(s, "tfl_r") && length(s) == 1L) tfl_r(s) else s)
+  data$steps <- st
+  data
 }
