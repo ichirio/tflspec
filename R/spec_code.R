@@ -1438,8 +1438,10 @@ tfl_report_tokens <- function(spec, output_id = NULL) {
 #'   tokens leave empty, a blank `<{OUTPUT_POPULATION}>`, is left out when
 #'   the file is written) -- unless the report has its own, written here
 #'   as before.
-#'   `FALSE` (default): the program stands alone.  (A YAML report: `FALSE`
-#'   only, for now.)
+#'   `FALSE` (default): the program stands alone.  For a YAML report, the
+#'   study's are its defaults (`spec/defaults.yml`), the report's its
+#'   pattern and its own: give the report as read ([tfl_read_output()]) and
+#'   its `study`.
 #' @return The code, one element per line.
 #' @examples
 #' spec <- tfl_read_report_spec(
@@ -1450,10 +1452,7 @@ tfl_report_tokens <- function(spec, output_id = NULL) {
 tfl_report_code <- function(spec, output_id = NULL, content = "content",
                             doc = "doc", setup = FALSE, study = NULL) {
   if (inherits(spec, "tfl_output")) {
-    if (isTRUE(setup)) {
-      .ard_stop("tfl_report_code(): a YAML report's code with `setup = TRUE` is not written yet.")
-    }
-    return(.report_steps_code(.page_report_steps(spec, study, content), doc))
+    return(.report_steps_code(.page_report_steps(spec, study, content, isTRUE(setup)), doc))
   }
   sp <- .ard_spec_scope(.as_spec(spec, "table", "tfl_report_code",
                                  output_id = output_id), output_id)

@@ -46,7 +46,7 @@ test_that("a report's page: writes the code its sheets write", {
   yaml <- tfl_report_code(rp_output(), content = "plan", study = rp_study())
   expect_identical(yaml, sheets)
   expect_match(paste(yaml, collapse = "\n"), "rtf_titles(", fixed = TRUE)
-  expect_error(tfl_report_code(rp_output(), setup = TRUE), "not written yet")
+  expect_error(tfl_report_code(rp_output(), setup = TRUE), "its `study`")
 })
 
 test_that("a line its tokens leave empty is left out, the program falls back to the ID", {
@@ -78,4 +78,20 @@ test_that("page:'s calls check against their schema", {
     expect_true(all(names(tfl_schema(fn)$args) %in%
                       names(formals(getExportedValue("rtfreporter", fn)))), info = fn)
   }
+})
+
+test_that("after the study's setup code, a YAML report says what its sheets say", {
+  full <- rp_output()$page
+  study_keys <- c("rtf_page", "rtf_default_format", "rtf_document", "header", "footer", "tokens")
+  study <- rp_study()
+  study$defaults <- list(page = full[study_keys])
+  study$patterns <- list()
+  o <- tfl_output("T-1", "table", extends = "defaults",
+                  page = full[setdiff(names(full), study_keys)])
+  sheets <- tfl_report_code(rp_sheets(), "T-1", content = "plan", setup = TRUE)
+  yaml <- tfl_report_code(o, content = "plan", setup = TRUE, study = study)
+  expect_identical(yaml, sheets)
+  expect_true(any(grepl("header = study_header", yaml, fixed = TRUE)))
+  expect_error(tfl_report_code(tfl_resolve_output(o, study), setup = TRUE, study = study),
+               "as read")
 })

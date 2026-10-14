@@ -39,8 +39,10 @@ said by name (\code{study_header}, \code{study_footer}; a line the report's
 tokens leave empty, a blank \verb{<\{OUTPUT_POPULATION\}>}, is left out when
 the file is written) -- unless the report has its own, written here
 as before.
-\code{FALSE} (default): the program stands alone.  (A YAML report: \code{FALSE}
-only, for now.)}
+\code{FALSE} (default): the program stands alone.  For a YAML report, the
+study's are its defaults (\code{spec/defaults.yml}), the report's its
+pattern and its own: give the report as read (\code{\link[=tfl_read_output]{tfl_read_output()}}) and
+its \code{study}.}
 
 \item{study}{For a YAML report: the study (\code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}), for
 its program (the TOC's \code{program}, else \code{settings: program}, in
