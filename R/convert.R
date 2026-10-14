@@ -494,23 +494,11 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     # the data stage of a table: the study ARD (`object`), then its steps
     # (the rework step of the sheets, R as it was)
     data <- list(source = "ard", object = "ard")
-    if (!is.null(ard)) {
-      ad <- ard$analysis_data
-      if (!is.null(ad$output_id)) ad <- ad[!is.na(ad$output_id) & ad$output_id == id, , drop = FALSE]
-      if (nrow(ad)) data$analysis_data <- .conv_rows(ad, note, id, "analysis_data", r_cols = c("where", "derive", "code"),
-                                                      list_cols = c("add", "keep", "distinct"), rename = c(data_id = "id", population_id = "population"))
-      an <- ard$analyses[!is.na(ard$analyses$output_id) & ard$analyses$output_id == id, , drop = FALSE]
-      if (nrow(an)) data$analyses <- .conv_rows(an, note, id, "analyses", r_cols = c("where", "args", "post", "code"),
-                                                 list_cols = c("by", "strata", "variables", "statistics", "formats"),
-                                                 rename = c(analysis_id = "id", population_id = "population"))
-    }
     if (!is.null(prow) && nrow(prow) && !is.na(prow$process_code[1L])) {
       data$steps <- list(tfl_r(prow$process_code[1L]))
       note(id, "_tflplanner", id, "process_code", "the table's rework step kept as R text (data.steps)", prow$process_code[1L])
     }
     if (!is.null(sp)) {
-      cl <- scope(sp$codelists, id)
-      if (!is.null(cl) && nrow(cl)) codelists <- .conv_codelists(cl)
       if (!is.null(content_fn)) {
         content <- .conv_items(content_fn(sp, id))
         nz <- .conv_normalize_args(sp, ard, id)
@@ -521,6 +509,23 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
         note(id, "table sheets", id, NA, "content: not converted -- no sheets-to-content bridge given (content_fn)")
       }
     }
+  }
+  # its code lists (a figure's ARD values too)
+  if (!is.null(sp)) {
+    cl <- scope(sp$codelists, id)
+    if (!is.null(cl) && nrow(cl)) codelists <- .conv_codelists(cl)
+  }
+  # the report's ARD analyses and their analysis data, whatever its kind (a
+  # figure's hazard ratios too): beside its data's source
+  if (!is.null(ard)) {
+    ad <- ard$analysis_data
+    if (!is.null(ad$output_id)) ad <- ad[!is.na(ad$output_id) & ad$output_id == id, , drop = FALSE]
+    if (nrow(ad)) data$analysis_data <- .conv_rows(ad, note, id, "analysis_data", r_cols = c("where", "derive", "code"),
+                                                    list_cols = c("add", "keep", "distinct"), rename = c(data_id = "id", population_id = "population"))
+    an <- ard$analyses[!is.na(ard$analyses$output_id) & ard$analyses$output_id == id, , drop = FALSE]
+    if (nrow(an)) data$analyses <- .conv_rows(an, note, id, "analyses", r_cols = c("where", "args", "post", "code"),
+                                               list_cols = c("by", "strata", "variables", "statistics", "formats"),
+                                               rename = c(analysis_id = "id", population_id = "population"))
   }
   # a report whose data or content is its R code (the report row's
   # data_code / content_code): the data as code, the content as one !r
