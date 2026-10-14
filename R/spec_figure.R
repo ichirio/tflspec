@@ -90,3 +90,58 @@
   eval(parse(text = .content_fig_code(output)), env)
   get("content", envir = env, inherits = FALSE)
 }
+
+# ---- a ggplot2 layer the figure names itself: its schema from ggplot2 -------
+
+# A layer function of ggplot2 or an extension (`geom_area`, `stat_ecdf`,
+# `ggrepel::geom_text_repel`) as a schema entry, from the installed
+# package itself: `aes`, the aesthetics its geom and its stat know; `args`,
+# what it takes as parameters -- its own arguments, its geom's and stat's
+# parameters, and the aesthetics given a fixed value (`size = 2`).  NULL
+# when the name is no layer function.
+.schema_ggplot_entry <- function(fn) {
+  pkg <- if (grepl("::", fn, fixed = TRUE)) sub("::.*$", "", fn) else "ggplot2"
+  nm <- sub("^.*::", "", fn)
+  if (!requireNamespace(pkg, quietly = TRUE)) return(NULL)
+  f <- tryCatch(getExportedValue(pkg, nm), error = function(e) NULL)
+  if (!is.function(f)) return(NULL)
+  l <- tryCatch(suppressWarnings(suppressMessages(f())), error = function(e) NULL)
+  if (!inherits(l, "Layer")) return(NULL)
+  aes <- unique(c(l$geom$aesthetics(), l$stat$aesthetics()))
+  own <- setdiff(names(formals(f)), c("mapping", "data", "..."))
+  params <- unique(c(own, l$geom$parameters(TRUE), l$stat$parameters(TRUE), aes))
+  list(package = pkg, figure = "ggplot layer",
+       description = sprintf("The ggplot2 layer %s::%s().", pkg, nm),
+       aes = sort(setdiff(aes, "group")) |> c("group"),
+       args = stats::setNames(lapply(params, function(p) list(type = "r|string|number|logical")), params))
+}
+
+# A figure's `geom` layer (`geom: geom_area`, `aes:`, `params:`) checked
+# against the layer function's own schema: the function exists, each
+# aesthetic and each parameter is one it knows (an unknown one warns, as
+# every other item's does)
+.schema_check_geom <- function(item, bad) {
+  a <- item$args %||% list()
+  g <- a$geom
+  if (is.null(g) || !is.character(g) || length(g) != 1L) {
+    bad("geom", "the geom layer names no layer function (geom: geom_area)")
+    return(invisible())
+  }
+  ent <- .schema_ggplot_entry(g)
+  if (is.null(ent)) {
+    bad("geom", sprintf("%s is no ggplot2 layer function the installed packages have", g))
+    return(invisible())
+  }
+  for (k in names(a$aes %||% list())) {
+    if (!k %in% ent$aes) {
+      bad("aes", sprintf("%s has no aesthetic `%s` (it has: %s)", g, k, paste(ent$aes, collapse = ", ")),
+          "warning")
+    }
+  }
+  for (k in names(a$params %||% list())) {
+    if (!k %in% names(ent$args)) {
+      bad("params", sprintf("%s takes no parameter `%s`", g, k), "warning")
+    }
+  }
+  invisible()
+}

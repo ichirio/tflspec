@@ -63,7 +63,10 @@ tfl_schema <- function(fn = NULL) {
   nm <- .schema_fn_name(fn)
   # the file's entries first; a figure's layer, made from the designer's
   # catalog, only for a name the file does not have
-  .schema_all(figure = FALSE)[[nm]] %||% .schema_fig_entries()[[nm]]
+  .schema_all(figure = FALSE)[[nm]] %||% .schema_fig_entries()[[nm]] %||%
+    # a ggplot2 layer function (geom_area, ggrepel::geom_text_repel): from
+    # the installed package itself
+    (if (grepl("^(geom|stat)_", nm)) .schema_ggplot_entry(fn))
 }
 
 # `rtfreporter::plan_cells` and `plan_cells` are one entry
@@ -152,6 +155,9 @@ tfl_schema_check <- function(item) {
     return(out)
   }
   ent <- tfl_schema(fn)
+  # a figure's own ggplot2 layer: the layer function's aesthetics and
+  # parameters (R/spec_figure.R)
+  if (identical(fn, "geom") && identical(ent$figure, "layer")) .schema_check_geom(item, bad)
   f <- .schema_formals(fn, ent)
   if (is.null(ent) && is.null(f)) {
     bad("", sprintf("%s is a function neither the schema nor its package has", fn))
