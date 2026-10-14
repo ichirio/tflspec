@@ -19,7 +19,8 @@
 #                the ARD goes)
 #   datasets     dataset, path, derive           the analysis data
 #   populations  population_id, dataset, where,  analysis sets (and the
-#                derive                          denominators)
+#                derive, label                   denominators; `label`: the
+#                                                text a header prints)
 #   analyses     output_id, analysis_id, parent, method, dataset,
 #                population_id, where, by, variables, statistics, formats,
 #                args, code
@@ -30,7 +31,7 @@
 .ard_spec_sheets <- list(
   study = c("key", "value"),
   datasets = c("dataset", "level", "path", "derive"),
-  populations = c("population_id", "dataset", "where", "derive"),
+  populations = c("population_id", "dataset", "where", "derive", "label"),
   analysis_data = c("output_id", "data_id", "label", "from", "population_id", "subjects",
                     "where", "add", "derive", "keep", "distinct", "code"),
   analyses = c("output_id", "analysis_id", "parent", "label", "method",

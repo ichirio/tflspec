@@ -20,6 +20,7 @@ populations,population_id,"The population's name, used by analyses.",SAF
 populations,dataset,"The dataset its subjects come from.",ADSL
 populations,where,"An R condition on that dataset choosing the subjects; blank: every row.","SAFFL == ""Y"""
 populations,derive,"Columns added to the population, NAME = R expression, | between them; blank: none.",TRTA = TRT01A
+populations,label,"The population as a header or footnote prints it, and its name in CDISC ARS; blank: the population_id.",Safety Analysis Set
 analysis_data,,"ARD: named data the analyses read (the study's, one row a data): from a dataset or an analysis data above it, the subjects of a population, the records a condition keeps, columns of the population added, columns derived, one row per set of values. In that order. An analysis names one in `data`, or as its `denominator`.",
 analysis_data,data_id,"The data's name, and its object's name in the ARD program: a lower-case letter first, then letters, digits, _ or . -- not a dataset's, pop_<population>'s or another data's.",adae_teae
 analysis_data,label,"A name a person reads; blank: none.",Treatment-emergent AEs
