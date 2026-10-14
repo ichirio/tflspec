@@ -12,10 +12,13 @@ tfl_content_run(output, data)
 \item{data}{The data the content starts from: the ARD (or the normalized
 ARD when the content has no \code{normalize_ard()} item).  With
 \code{data.steps} (R that makes \code{data} from the output's \code{data.object},
-\code{ard} by default), the object the steps start from.}
+\code{ard} by default), the object the steps start from.  For a figure, a
+named list of the objects its code reads: the datasets by their names
+in lower case (\code{adtte}), and \code{ard}.}
 }
 \value{
-For a table, the \code{\link[rtfreporter:table_plan]{rtfreporter::table_plan()}}.
+For a table, the \code{\link[rtfreporter:table_plan]{rtfreporter::table_plan()}}; for a figure, the
+ggplot.
 }
 \description{
 Runs what \code{\link[=tfl_content_code]{tfl_content_code()}} writes: the same items, in the same order,

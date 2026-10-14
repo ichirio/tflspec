@@ -901,8 +901,11 @@ tfl_table_code <- function(spec, output_id = NULL, data = "data",
 #' @param data The data the content starts from: the ARD (or the normalized
 #'   ARD when the content has no `normalize_ard()` item).  With
 #'   `data.steps` (R that makes `data` from the output's `data.object`,
-#'   `ard` by default), the object the steps start from.
-#' @return For a table, the [rtfreporter::table_plan()].
+#'   `ard` by default), the object the steps start from.  For a figure, a
+#'   named list of the objects its code reads: the datasets by their names
+#'   in lower case (`adtte`), and `ard`.
+#' @return For a table, the [rtfreporter::table_plan()]; for a figure, the
+#'   ggplot.
 #' @examples
 #' if (requireNamespace("cards", quietly = TRUE)) {
 #'   ard <- cards::ard_stack(cards::ADSL, .by = ARM,
@@ -921,9 +924,10 @@ tfl_content_run <- function(output, data) {
     .ard_stop("tfl_content_run(): `output` is a report, tfl_output().")
   }
   if (inherits(output$content, "tfl_r")) return(.content_own_run(output, data))
+  if (identical(output$kind, "figure")) return(.content_fig_run(output, data))
   if (!output$kind %in% c("table", "listing")) {
     .ard_stop(sprintf(paste0("tfl_content_run(): a %s's content is not run ",
-                             "yet; tables and listings, for now."), output$kind))
+                             "yet; tables, listings and figures, for now."), output$kind))
   }
   .spec_need_rtfreporter()
   for (it in output$content) .schema_need_version(it)
@@ -982,7 +986,11 @@ tfl_content_run <- function(output, data) {
 #' `!unset` is left.
 #'
 #' A report whose content is its own code (`content: !r`, any kind: the
-#' code leaves `content`) is that code, after the data's steps.
+#' code leaves `content`) is that code, after the data's steps.  A figure's
+#' content is its layers, as the figure designer has them
+#' ([tfl_fig_design_code()] of the design the report stands for: its
+#' `data` steps and statistics, the layers, its code lists): the figure
+#' in `content`, not saved.
 #'
 #' @param output A report ([tfl_output()]), resolved.
 #' @param data The name of the object the pipe starts from; `NULL`: the
@@ -1014,9 +1022,11 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL) {
     own <- unlist(strsplit(as.character(output$content), "\n", fixed = TRUE))
     return(c(steps, if (length(steps)) "", own))
   }
+  # a figure: its layers, as the figure designer writes them
+  if (identical(output$kind, "figure")) return(.content_fig_code(output))
   if (!output$kind %in% c("table", "listing")) {
     .ard_stop(sprintf(paste0("tfl_content_code(): a %s's content is not written ",
-                             "yet; tables and listings, for now."), output$kind))
+                             "yet; tables, listings and figures, for now."), output$kind))
   }
   for (it in output$content) .schema_need_version(it)
   # the object the pipe starts from: the output's own name for it, else

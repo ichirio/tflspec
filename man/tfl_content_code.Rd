@@ -35,7 +35,11 @@ report after its \code{extends} are applied (\code{tfl_resolve_output()}), so no
 }
 \details{
 A report whose content is its own code (\code{content: !r}, any kind: the
-code leaves \code{content}) is that code, after the data's steps.
+code leaves \code{content}) is that code, after the data's steps.  A figure's
+content is its layers, as the figure designer has them
+(\code{\link[=tfl_fig_design_code]{tfl_fig_design_code()}} of the design the report stands for: its
+\code{data} steps and statistics, the layers, its code lists): the figure
+in \code{content}, not saved.
 }
 \examples{
 out <- tfl_output("T-1", "table", content = list(

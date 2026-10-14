@@ -20,7 +20,10 @@
 .schema_all <- function() {
   if (is.null(.schema_cache$all)) {
     f <- system.file("spec", "schema.yml", package = "tflspec")
-    .schema_cache$all <- yaml::read_yaml(f)
+    all <- yaml::read_yaml(f)
+    # a figure's layers: from the figure designer's catalog (R/spec_figure.R)
+    fig <- .schema_fig_entries()
+    .schema_cache$all <- c(all, fig[setdiff(names(fig), names(all))])
   }
   .schema_cache$all
 }
