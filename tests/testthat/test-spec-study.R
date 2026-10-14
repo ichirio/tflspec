@@ -83,3 +83,16 @@ test_that("a pattern between the defaults and the report, nearest last", {
   expect_identical(r$page$tokens, list(A = "defaults", B = "pattern", C = "own"))
   expect_error(tfl_resolve_output(tfl_output("T-2", "table", extends = "patterns/nope"), s), "No pattern")
 })
+
+test_that("study.yml's spec_version: this reader's is read, a newer one is refused", {
+  d <- withr::local_tempdir()
+  writeLines(c("study_id: V-1", "spec_version: 1"), file.path(d, "study.yml"))
+  expect_identical(tfl_read_study_spec(d)$study$spec_version, 1L)
+  writeLines(c("study_id: V-1", "spec_version: 99"), file.path(d, "study.yml"))
+  expect_error(tfl_read_study_spec(d), "Update tflspec")
+  writeLines(c("study_id: V-1", "spec_version: new"), file.path(d, "study.yml"))
+  expect_error(tfl_read_study_spec(d), "not a number")
+  # none: an old study.yml reads
+  writeLines("study_id: V-1", file.path(d, "study.yml"))
+  expect_identical(tfl_read_study_spec(d)$study$study_id, "V-1")
+})

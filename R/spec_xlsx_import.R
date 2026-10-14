@@ -89,7 +89,8 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
       nm <- if (k %in% names(rename)) rename[[k]] else k
       .flat_text(r[[nm]]) }, ""), collapse = " / "), "")
     keyed_seen <- vapply(seen, function(k) sub("^[^/]* / ", "", k), "")
-    st$missing <- c(st$missing, paste0(sheet, ": ", setdiff(have, c(keyed_seen, seen))))
+    gone <- setdiff(have, c(keyed_seen, seen))
+    if (length(gone)) st$missing <- c(st$missing, paste0(sheet, ": ", gone))
     y <- .set_in(y, path_in, rows)
     set_file(rel, y)
   }
@@ -109,11 +110,11 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
     }
   }
   by_scope("analysis_data", function(id, part) .imp_rows_of(st, part, "analysis_data", scope_rel(id), c("data", "analysis_data"), "id",
-                                                            r_cols = c("where", "derive", "code"), list_cols = c("add", "keep", "distinct"), get_file, set_file))
+                                                            r_cols = c("where", "derive", "code"), list_cols = c("add", "keep", "distinct"), get_file = get_file, set_file = set_file))
   by_scope("analyses", function(id, part) .imp_rows_of(st, part, "analyses", scope_rel(id), c("data", "analyses"), "id",
-                                                        r_cols = c("where", "args", "post", "code"), list_cols = c("by", "strata", "variables", "statistics", "formats"), get_file, set_file))
+                                                        r_cols = c("where", "args", "post", "code"), list_cols = c("by", "strata", "variables", "statistics", "formats"), get_file = get_file, set_file = set_file))
   by_scope("listing_cols", function(id, part) .imp_rows_of(st, part, "listing_cols", scope_rel(id), NULL, "vars",
-                                                            list_cols = "vars", get_file, set_file, content_fn = "listing_col"))
+                                                            list_cols = "vars", get_file = get_file, set_file = set_file, content_fn = "listing_col"))
   by_scope("codelists", function(id, part) {
     rel <- if (is.na(id)) "codelists.yml" else scope_rel(id)
     y <- get_file(rel)

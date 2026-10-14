@@ -80,6 +80,8 @@ test_that("a study's sheets convert to the YAML files, the rest is listed", {
   expect_identical(st$study_id, "CV-1")
   expect_null(st$tflplanner)
   expect_identical(st$keys$output, "output/ard/ard.rds")
+  expect_identical(st$spec_version, 1L)
+  expect_true("tflspec" %in% names(st$packages))
   expect_s3_class(st$setup, "tfl_r")
   # data.yml: the catalog, where as !r, label kept
   dt <- yaml::read_yaml(file.path(to, "spec", "data.yml"), handlers = tflspec:::.yaml_handlers())
@@ -112,7 +114,9 @@ test_that("a study's sheets convert to the YAML files, the rest is listed", {
   expect_s3_class(t1$data$process, "tfl_r")
   expect_identical(t1$codelists$ARM[[2L]]$label, "Arm B")
   expect_identical(t1$codelists$SEX[[1L]]$label, "Female")
-  expect_length(t1$content, 0L)            # no bridge given
+  # the content through the package's bridge from the sheets
+  expect_true(length(t1$content) > 0L)
+  expect_identical(t1$content[[1L]]$fn, "table_plan")
   # the report's header line 2 is (none): an unset, resolved to nothing
   expect_s3_class(t1$page$header[["2"]], "tfl_unset")
   r1 <- tfl_resolve_output(t1, s)
@@ -138,14 +142,34 @@ test_that("a study's sheets convert to the YAML files, the rest is listed", {
   expect_identical(f1$plot$x_label, "Time")
   # what was not converted is listed: the contents without a bridge, the R cells
   nc <- r$not_converted
-  expect_true(any(grepl("bridge", nc$reason)))
   expect_true(any(nc$column == "args" & nc$output == "T-1"))
   expect_true(file.exists(file.path(to, "spec", "_not_converted.yml")))
   # a bridge fills the content
   r2 <- tfl_convert_sheets_to_yaml(from, to, overwrite = TRUE,
     content_fn = function(sp, id) list(tfl_item("table_plan", list(cols = "ARM"))))
   expect_identical(tfl_read_outputs(to)[["T-1"]]$content[[1L]]$fn, "table_plan")
-  expect_false(any(grepl("bridge", r2$not_converted$reason)))
+  expect_length(tfl_read_outputs(to)[["T-1"]]$content, 1L)
   # not written over by accident
   expect_error(tfl_convert_sheets_to_yaml(from, to), "not empty")
+})
+
+test_that("the objects route writes what the files route writes", {
+  skip_if_not_installed("openxlsx")
+  from <- conv_study(withr::local_tempdir())
+  a <- withr::local_tempdir(); b <- withr::local_tempdir()
+  tfl_convert_sheets_to_yaml(from, a, overwrite = TRUE)
+  books <- file.path(from, "spec", c("table_spec.xlsx", "report_spec.xlsx"))
+  sheets <- list(
+    table = tfl_read_table_spec(books),
+    planner = tflspec:::.conv_read_planner_sheet(books),
+    ard = tflspec:::.conv_read_ard(file.path(from, "spec", "ard_definition.json")),
+    listing = tflspec:::.conv_read_lf(file.path(from, "spec", "listing_figure_spec.xlsx")),
+    figures = list(`F-1` = yaml::read_yaml(file.path(from, "spec", "figures", "F-1.yml"))),
+    study = yaml::read_yaml(file.path(from, "study.yml")))
+  tfl_yaml_from_sheets(sheets, b, overwrite = TRUE)
+  fa <- list.files(a, recursive = TRUE); fb <- list.files(b, recursive = TRUE)
+  expect_setequal(fb, fa)
+  for (f in setdiff(fa, "spec/_not_converted.yml")) {
+    expect_identical(readLines(file.path(b, f)), readLines(file.path(a, f)), info = f)
+  }
 })

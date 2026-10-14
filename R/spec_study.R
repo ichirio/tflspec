@@ -43,8 +43,10 @@ tfl_read_study_spec <- function(dir) {
     lapply(pat_files, function(f) .layer_from_list(
       rd(f), paste0("pattern:", tools::file_path_sans_ext(basename(f))))),
     tools::file_path_sans_ext(basename(pat_files)))
+  study <- rd(file.path(dir, "study.yml"))
+  .check_spec_version(study$spec_version, file.path(dir, "study.yml"))
   structure(list(
-    study = rd(file.path(dir, "study.yml")),
+    study = study,
     data = .calls_in(rd(file.path(spec, "data.yml")) %||% list()),
     defaults = .layer_from_list(rd(file.path(spec, "defaults.yml")), "defaults"),
     codelists = rd(file.path(spec, "codelists.yml")) %||% list(),
@@ -213,4 +215,34 @@ tfl_resolve_output <- function(output, study) {
 .table_plan_first <- function(items) {
   is_tp <- vapply(items, function(it) identical(it$fn, "table_plan"), NA)
   c(items[is_tp], items[!is_tp])
+}
+
+# -- the spec's version --------------------------------------------------------
+
+# The version of the YAML spec's form (study.yml's `spec_version`): this
+# reader's.  A study of a newer form is refused (update tflspec); an older
+# one is converted (tfl_convert_spec_version(), when there is one).
+.spec_version <- 1L
+
+# the packages a spec is written with: their versions, stamped into
+# study.yml by whatever writes it (the app, the converter, the AI kit)
+.spec_packages <- function() {
+  pk <- c("tflspec", "rtfreporter", "cards", "cardx", "ggplot2")
+  out <- list()
+  for (p in pk) {
+    v <- tryCatch(as.character(utils::packageVersion(p)), error = function(e) NULL)
+    if (!is.null(v)) out[[p]] <- v
+  }
+  out
+}
+
+.check_spec_version <- function(v, file) {
+  if (is.null(v)) return(invisible())
+  v <- suppressWarnings(as.integer(v))
+  if (is.na(v)) stop("tfl_read_study_spec(): ", file, " has a spec_version that is not a number.", call. = FALSE)
+  if (v > .spec_version) {
+    stop("tfl_read_study_spec(): ", file, " is of spec_version ", v, "; this tflspec reads up to ",
+         .spec_version, ". Update tflspec.", call. = FALSE)
+  }
+  invisible()
 }
