@@ -15,7 +15,9 @@ tfl_ai_review(
 )
 }
 \arguments{
-\item{file}{A spec workbook (\code{.xlsx}) or a figure design (\code{.yml}).}
+\item{file}{A spec workbook (\code{.xlsx}), a figure design (\code{.yml}), or a
+report of the YAML spec (\verb{spec/outputs/<id>.yml}: its items against
+the schema, and its \code{!r} where the schema has a form of its own).}
 
 \item{toc}{The TOC the specs were written from: a \code{\link[=tfl_read_toc]{tfl_read_toc()}}
 result, or a list of its arguments (\code{path}, \code{map}, \code{sheet}, \code{skip}).

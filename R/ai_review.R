@@ -413,6 +413,10 @@
     add(.ai_rv("S01", sheet = "design", args = conditionMessage(e), cat = cat))
     NULL
   })
+  # a report of the YAML spec (spec/outputs/<id>.yml), not a figure design
+  if (is.list(yml) && !is.null(yml$id) && !is.null(yml$kind)) {
+    return(.ai_review_report(path, cat))
+  }
   a <- NULL
   if (!is.null(yml)) {
     d <- tryCatch(tfl_read_fig_design(path), error = function(e) {
@@ -441,6 +445,54 @@
     }
   }
   list(rows = rows, kinds = "figure", assumptions = a)
+}
+
+# A report of the YAML spec: each content item against the schema (K16 an
+# error, K17 a warning: an unknown argument, a version), and the R code it
+# holds where the spec has a form of its own for the value (K18: decision 7
+# of the YAML spec -- !r only where R is needed)
+.ai_review_report <- function(path, cat) {
+  rows <- list()
+  add <- function(r) rows[[length(rows) + 1L]] <<- r
+  o <- tryCatch(tfl_read_output(path), error = function(e) {
+    add(.ai_rv("S01", sheet = "report", args = conditionMessage(e), cat = cat))
+    NULL
+  })
+  if (is.null(o)) return(list(rows = rows, kinds = "report", assumptions = NULL))
+  id <- o$id
+  items <- if (inherits(o$content, "tfl_r")) list() else o$content
+  for (i in seq_along(items)) {
+    it <- items[[i]]
+    p <- tfl_schema_check(it)
+    for (j in seq_len(nrow(p))) {
+      rule <- if (identical(p$level[j], "error")) "K16" else "K17"
+      add(.ai_rv(rule, output_id = id, sheet = "content", row = as.character(i),
+                 field = p$arg[j], args = c(id, it$fn, p$message[j]), hint_args = it$fn,
+                 cat = cat))
+    }
+    ent <- tfl_schema(it$fn)
+    for (a in names(it$args)) {
+      if (!inherits(it$args[[a]], "tfl_r")) next
+      # (an argument of `...`: the type the schema gives its values)
+      ty <- ent$args[[a]]$type %||%
+        if (identical(ent$dots$style, "named")) ent$dots$type
+      if (is.null(ty)) next
+      own <- .ai_r_alternatives(ty)
+      if (length(own)) {
+        add(.ai_rv("K18", output_id = id, sheet = "content", row = as.character(i), field = a,
+                   args = c(id, paste0(it$fn, "(", a, " = )"), paste(own, collapse = " or ")),
+                   cat = cat))
+      }
+    }
+  }
+  list(rows = rows, kinds = "report", assumptions = NULL)
+}
+
+# the forms other than R code a schema type takes (`map<column, ...>|r` ->
+# "map<column, ...>"); none when R is all it takes
+.ai_r_alternatives <- function(type) {
+  alt <- trimws(.schema_split(type, "|"))
+  alt[!alt %in% c("r", "formula", "guard", "call")]
 }
 
 # ---- the two prompts -----------------------------------------------------------------
@@ -524,7 +576,9 @@
 #' pastes back (`<file>_questions.md`), next to the file.  The kit's rules
 #' and who acts on each review rule are `inst/review/ai_rules.csv`.
 #'
-#' @param file A spec workbook (`.xlsx`) or a figure design (`.yml`).
+#' @param file A spec workbook (`.xlsx`), a figure design (`.yml`), or a
+#'   report of the YAML spec (`spec/outputs/<id>.yml`: its items against
+#'   the schema, and its `!r` where the schema has a form of its own).
 #' @param toc The TOC the specs were written from: a [tfl_read_toc()]
 #'   result, or a list of its arguments (`path`, `map`, `sheet`, `skip`).
 #'   With it, the outputs, titles and footnotes are checked against it.
@@ -566,7 +620,7 @@ tfl_ai_review <- function(file, toc = NULL, adam = NULL, others = NULL,
     xlsx = .ai_review_book(file, toc, adam, others, cat,
                            metadata = .ai_review_md(metadata)),
     yml = , yaml = .ai_review_yml(file, adam, cat),
-    .ard_stop("tfl_ai_review(): `file` is a workbook (.xlsx) or a figure design (.yml)."))
+    .ard_stop("tfl_ai_review(): `file` is a workbook (.xlsx), or a figure design or a report (.yml)."))
   rows <- res$rows
   r <- if (length(rows)) do.call(rbind, rows) else .review_empty()
   r <- r[!duplicated(paste(r$rule, r$output_id, r$message)), , drop = FALSE]

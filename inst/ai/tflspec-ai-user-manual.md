@@ -723,10 +723,14 @@ error and check of `tfl_review_spec()` / `tfl_check_fig_design()`) and
 **the person** (each assumption; each analysis set's flag, percentage's
 denominator, test or model, fixed order of levels).  It writes
 `<file>_repair.md` (paste into the chat) and `<file>_questions.md`
-(answer, then paste); `who` and the kit's rules K01-K15 are
+(answer, then paste); `who` and the kit's rules K01-K18 are
 `inst/review/ai_rules.csv`.  With `metadata =` (the frame, or the kit's
 CSV), a dataset or variable the metadata has not (K14) and a code list
 value that is not among a variable's levels (K15) are the AI's to fix.
+A report file of the YAML spec (`spec/outputs/<id>.yml`) is checked item
+by item against the schema (K16 an error, K17 an unknown argument), and
+an `!r` where the schema has a form of its own for the value -- a map, a
+list, a column name -- is listed (K18): keep `!r` for what only R can say.
 
 ```r
 kit <- tflspec_ai_manual("ai-kit", define = "define.xml")   # attach every file
