@@ -192,9 +192,10 @@ tfl_schema_check <- function(item) {
           if (!is.null(since)) paste0(" (since ", since, ")") else "")
 }
 
-# An item the installed packages cannot run: an argument the schema says
-# arrived in a later version than the one installed (`since:
-# "rtfreporter 0.8.2.9047"`), said before any code is written.
+# An argument the schema says arrived in a later version than the one
+# installed (`since: "rtfreporter 0.8.2.9047"`): said as a warning before
+# the code is written, never a stop -- the last word is the installed
+# package's own formals when the code runs.
 .schema_need_version <- function(item) {
   ent <- tfl_schema(item$fn)
   if (is.null(ent)) return(invisible(NULL))
@@ -204,10 +205,10 @@ tfl_schema_check <- function(item) {
     pv <- strsplit(trimws(since), "[[:space:]]+")[[1L]]
     if (length(pv) != 2L || !requireNamespace(pv[1L], quietly = TRUE)) next
     if (utils::packageVersion(pv[1L]) < pv[2L]) {
-      .ard_stop(sprintf(paste0(
-        "%s(%s = ) needs %s >= %s; this one is %s.  Update it, or leave ",
-        "`%s` out."), item$fn, a, pv[1L], pv[2L],
-        as.character(utils::packageVersion(pv[1L])), a))
+      warning(sprintf(paste0(
+        "%s(%s = ) is in %s >= %s; this one is %s, so the code may not run ",
+        "until it is updated."), item$fn, a, pv[1L], pv[2L],
+        as.character(utils::packageVersion(pv[1L]))), call. = FALSE)
     }
   }
   invisible(NULL)

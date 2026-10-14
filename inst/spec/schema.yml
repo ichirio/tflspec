@@ -31,10 +31,10 @@
 # (plan_col_header()'s header, as a person writes it); its value is the
 # same by position.
 #
-# An argument may also say its version: `since: "rtfreporter 0.8.2.9047"`
-# (the first version that has it; tfl_content_code() stops before writing
-# code for an older one), and `renamed_to: <new name>` with `until:` (the
-# version that renamed it; tfl_schema_check() says so).
+# An argument may also say its version, as a hint: `since: "rtfreporter
+# 0.8.2.9047"` (the first version that has it; tfl_content_code() warns for
+# an older one), and `renamed_to: <new name>` (tfl_schema_check() says the
+# new name).  The last word is the installed package's formals.
 #
 # `dots:` says what `...` takes.  `style: named`: the item's other keys are
 # its entries, by name (plan_labels: {AGE: Age}).  `style: positional`: the

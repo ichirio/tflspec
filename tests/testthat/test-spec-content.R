@@ -118,7 +118,7 @@ test_that("the sheets say what they cannot hold, and leave it out", {
   expect_identical(sp$tables$cols, "TRT")
 })
 
-test_that("versions: an unknown argument warns, a renamed one says its new name, a newer one stops", {
+test_that("versions: an unknown argument warns, a renamed one says its new name, a newer one warns", {
   old <- tflspec:::.schema_cache$all
   on.exit(assign("all", old, envir = tflspec:::.schema_cache), add = TRUE)
   s <- tfl_schema()
@@ -132,7 +132,8 @@ test_that("versions: an unknown argument warns, a renamed one says its new name,
   out <- tfl_output("T-1", "table", content = list(
     tfl_item("table_plan", list(cols = "ARM")),
     tfl_item("plan_total", list(label = "Total"))))
-  expect_error(tfl_content_code(out), "needs rtfreporter >= 99.0.0")
+  expect_warning(code <- tfl_content_code(out), "rtfreporter >= 99.0.0")
+  expect_true(length(code) > 0L)                 # warned, not stopped
 })
 
 test_that("the bridge reads a workbook's defaults alone (NA), or a table's own rows (own = TRUE)", {
