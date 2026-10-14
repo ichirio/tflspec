@@ -122,7 +122,7 @@ tfl_write_spec_xlsx <- function(dir, path) {
   if (is.null(page) || !length(page)) return()
   for (s in c("header", "footer", "titles", "footnotes")) {
     m <- page[[s]]
-    if (is.null(m) || !length(m)) next
+    if (is.null(m) || !length(m) || inherits(m, "tfl_unset")) next
     rows <- lapply(names(m), function(line) {
       cells <- m[[line]]
       r <- list(output_id = id, line = line)
@@ -141,11 +141,12 @@ tfl_write_spec_xlsx <- function(dir, path) {
       list(output_id = id, name = n, value = if (inherits(v, "tfl_unset")) "(none)" else as.character(v))
     }))
   }
+  pr <- .page_columns(page)
   for (s in c("page", "report")) {
-    if (length(page[[s]])) add_rows(s, list(.flat_map(c(list(output_id = id), page[[s]]), s, id, note)))
+    if (length(pr[[s]])) add_rows(s, list(c(list(output_id = id), pr[[s]])))
   }
-  for (k in setdiff(names(page), c("header", "footer", "titles", "footnotes", "tokens", "page", "report"))) {
-    note(id, paste0("page.", k), "the document's calls (rtf_*) are not rows")
+  for (k in setdiff(names(page), .page_known)) {
+    note(id, paste0("page.", k), "no sheet for it")
   }
 }
 

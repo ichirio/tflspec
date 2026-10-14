@@ -364,9 +364,59 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   for (s in c("page", "report")) {
     d <- scope(sp[[s]], id)
     if (is.null(d) || !nrow(d)) next
-    rows <- .conv_rows(d[1L, , drop = FALSE], note, id, s, drop = c("output_id", "note", "type", "pattern"))
-    if (length(rows[[1L]])) page[[s]] <- rows[[1L]]
+    rows <- .conv_rows(d[1L, , drop = FALSE], note, id, s,
+                       drop = c("output_id", "note", "type", "pattern", "file", "program"))
+    for (k in names(rows[[1L]])) page <- .page_put(page, s, k, rows[[1L]][[k]], note, id)
   }
+  page
+}
+
+# The page and report sheets' columns as the rtfreporter functions' arguments
+# they are (design: page: by function; S1's table, 2026-10-15): a column ->
+# list(fn, arg, how)
+.page_map <- list(
+  page = c(
+    paper_size = "rtf_page", orientation = "rtf_page", width_in = "rtf_page",
+    height_in = "rtf_page", margin_top_in = "rtf_page", margin_bottom_in = "rtf_page",
+    margin_left_in = "rtf_page", margin_right_in = "rtf_page",
+    header_dist_in = "rtf_page", footer_dist_in = "rtf_page",
+    font_size_half_points = "rtf_default_format", title_format = "rtf_default_format",
+    footnote_format = "rtf_default_format", title_width = "rtf_default_format",
+    footnote_width = "rtf_default_format", markup = "rtf_default_format"),
+  report = c(
+    auto_section = "rtf_tables.auto_section", section_align = "rtf_tables.section_label_align",
+    auto_title = "rtf_tables.auto_title", title_align = "rtf_tables.title_label_align",
+    table_font_size_half_points = "rtf_tables.font_size_half_points",
+    title_font_size_half_points = "rtf_titles.font_size_half_points",
+    footnote_font_size_half_points = "rtf_footnotes.font_size_half_points",
+    watermark = "rtf_document.watermark"))
+
+.page_put <- function(page, sheet, col, v, note, id) {
+  if (identical(sheet, "page") && identical(col, "font")) {
+    page$rtf_document$font_table <- list(list(name = v))
+    return(page)
+  }
+  if (identical(sheet, "report") && col %in% c("page_header", "page_footer")) {
+    if (identical(v, FALSE)) page[[if (col == "page_header") "header" else "footer"]] <- tfl_unset()
+    return(page)
+  }
+  if (identical(sheet, "report") && col %in% c("figure_width_in", "figure_height_in")) {
+    n <- suppressWarnings(as.numeric(v))
+    arg <- if (col == "figure_width_in") "width_twips" else "height_twips"
+    page$rtf_figures[[arg]] <- if (is.na(n)) v else as.integer(round(n * 1440))
+    return(page)
+  }
+  m <- .page_map[[sheet]][col]
+  if (is.na(m)) {
+    # a column that is no rtfreporter argument (content_code, data_code,
+    # ard_source): kept under report, said
+    page$report[[col]] <- v
+    note(id, sheet, 1, col, "kept under page.report (not an rtfreporter argument)", v)
+    return(page)
+  }
+  fn <- sub("[.].*$", "", m)
+  arg <- if (grepl(".", m, fixed = TRUE)) sub("^[^.]*[.]", "", m) else col
+  page[[fn]][[arg]] <- v
   page
 }
 

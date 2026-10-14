@@ -329,7 +329,12 @@ tfl_write_output <- function(x, path) {
 
 # content items as they are written: `- fn: {args}`
 .items_to_list <- function(items) {
-  lapply(items, function(it) stats::setNames(list(.calls_out(it$args)), it$fn))
+  lapply(items, function(it) {
+    a <- .calls_out(it$args)
+    # no arguments: an empty map ({}), not an empty sequence
+    if (!length(a)) a <- stats::setNames(list(), character())
+    stats::setNames(list(a), it$fn)
+  })
 }
 
 # the data stage's steps as a list: an `!r` step (or a sequence of them,

@@ -30,5 +30,7 @@ test_that("the rows of a YAML spec go to a workbook; the rest is listed", {
   expect_true(any(nx$output %in% "T-14-1-1" & nx$part == "content"))
   expect_true(any(is.na(nx$output) & nx$part == "content"))
   expect_true(any(nx$part == "analyses.statistic"))
-  expect_true(any(nx$part == "page.rtf_tables"))
+  # rtf_tables(auto_section) is a column of the report sheet now
+  rp <- rd("report")
+  expect_identical(rp$auto_section[is.na(rp$output_id)], "TRUE")
 })

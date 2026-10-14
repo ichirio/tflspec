@@ -96,7 +96,7 @@ test_that("a study's sheets convert to the YAML files, the rest is listed", {
   expect_identical(s$defaults$page$tokens$COMPANY, "Acme")
   expect_identical(s$codelists, list())        # a code list is a report's (no templates here)
   expect_identical(names(s$patterns), "Compact")
-  expect_identical(s$patterns$Compact$page$page$margin_top_in, 0.5)
+  expect_identical(s$patterns$Compact$page$rtf_page$margin_top_in, 0.5)
   expect_identical(vapply(s$toc$outputs, `[[`, "", "id"), c("T-1", "L-1", "F-1"))
   expect_identical(s$toc$outputs[[1L]]$sets, c("Topline", "Final"))
   expect_identical(s$toc$outputs[[1L]]$section, "14.1")

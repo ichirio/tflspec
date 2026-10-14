@@ -58,6 +58,7 @@ tfl_sheets_from_yaml <- function(dir) {
   page_rows <- function(page, id) {
     for (band in c("header", "footer", "titles", "footnotes")) {
       m <- page[[band]]
+      if (inherits(m, "tfl_unset")) next
       for (line in names(m)) {
         cells <- m[[line]]
         r <- list(output_id = id, line = line)
@@ -67,17 +68,10 @@ tfl_sheets_from_yaml <- function(dir) {
       }
     }
     for (nm in names(page$tokens)) add("tokens", list(output_id = id, name = nm, value = cell(page$tokens[[nm]])))
-    for (sh in c("page", "report")) {
-      m <- page[[sh]]
-      if (length(m)) {
-        r <- list(output_id = id)
-        for (k in names(m)) r[[k]] <- cell(m[[k]])
-        add(sh, r)
-      }
-    }
-    for (k in setdiff(names(page), c("header", "footer", "titles", "footnotes", "tokens", "page", "report"))) {
-      note(id, paste0("page.", k), "the document's calls (rtf_*) have no sheet yet")
-    }
+    # the rtfreporter functions' arguments back as the page and report columns
+    pr <- .page_columns(page)
+    for (sh in c("page", "report")) if (length(pr[[sh]])) add(sh, c(list(output_id = id), pr[[sh]]))
+    for (k in setdiff(names(page), .page_known)) note(id, paste0("page.", k), "no sheet for it")
   }
   page_rows(s$defaults$page, NA_character_)
   for (nm in names(s$patterns)) page_rows(s$patterns[[nm]]$page, paste0("@", nm))
@@ -116,11 +110,17 @@ tfl_sheets_from_yaml <- function(dir) {
     pat <- grep("^patterns/", o$extends, value = TRUE)
     if (length(pat)) rr$pattern <- paste0("@", substring(pat[1L], 10L))
     for (k in c("file", "program")) if (!is.null(e[[k]])) rr[[k]] <- cell(e[[k]])
-    own_report <- o$page$report
-    o$page$report <- NULL
-    for (k in names(own_report)) rr[[k]] <- cell(own_report[[k]])
-    add("report", rr)
+    # the report row: its kind, pattern, file and program here, its
+    # rtfreporter arguments from page_rows() -- one row
+    before <- length(rows$report %||% list())
     page_rows(o$page, id)
+    after <- rows$report %||% list()
+    if (length(after) > before) {
+      extra <- after[[length(after)]]
+      for (k in setdiff(names(extra), "output_id")) rr[[k]] <- extra[[k]]
+      rows$report <- after[-length(after)]
+    }
+    add("report", rr)
     for (v in names(o$codelists)) for (i in seq_along(o$codelists[[v]])) {
       cl <- o$codelists[[v]][[i]]
       add("codelists", list(output_id = id, variable = v, value = cell(cl$value), label = cell(cl$label), order = as.character(i)))
@@ -256,4 +256,36 @@ tfl_sheets_from_yaml <- function(dir) {
 .first_r_step <- function(steps) {
   for (s in steps %||% list()) if (inherits(s, "tfl_r")) return(as.character(s))
   NA_character_
+}
+
+.page_known <- c("header", "footer", "titles", "footnotes", "tokens", "page", "report",
+                 "rtf_page", "rtf_default_format", "rtf_document", "rtf_tables", "rtf_titles",
+                 "rtf_footnotes", "rtf_figures")
+
+# `page:`'s rtfreporter arguments as the page and report sheets' columns
+# (the inverse of the converter's .page_put()): list(page = , report = ),
+# each a named list of cells
+.page_columns <- function(page) {
+  cell <- .sheet_cell
+  pr <- list(page = list(), report = list())
+  for (sh in names(.page_map)) {
+    m <- .page_map[[sh]]
+    for (col in names(m)) {
+      fn <- sub("[.].*$", "", m[[col]])
+      arg <- if (grepl(".", m[[col]], fixed = TRUE)) sub("^[^.]*[.]", "", m[[col]]) else col
+      v <- page[[fn]][[arg]]
+      if (!is.null(v)) pr[[sh]][[col]] <- cell(v)
+    }
+  }
+  ft <- page$rtf_document$font_table
+  if (length(ft) && !is.null(ft[[1L]]$name)) pr$page$font <- cell(ft[[1L]]$name)
+  if (inherits(page$header, "tfl_unset")) pr$report$page_header <- "FALSE"
+  if (inherits(page$footer, "tfl_unset")) pr$report$page_footer <- "FALSE"
+  for (a in c("width_twips", "height_twips")) {
+    v <- page$rtf_figures[[a]]
+    if (!is.null(v)) pr$report[[if (a == "width_twips") "figure_width_in" else "figure_height_in"]] <-
+      if (is.numeric(v)) format(v / 1440) else cell(v)
+  }
+  for (k in names(page$report)) pr$report[[k]] <- cell(page$report[[k]])
+  pr
 }
