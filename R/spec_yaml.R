@@ -206,11 +206,13 @@ tfl_read_output <- function(path) {
   }
   content <- lapply(y$content %||% list(), .item_from_list)
   extends <- y$extends %||% "defaults"
-  tfl_output(
+  out <- tfl_output(
     id = y$id, kind = y$kind, label = y$label, population = y$population,
     extends = as.character(unlist(extends)),
     data = .calls_in(y$data), codelists = y$codelists %||% list(),
     content = content, page = .calls_in(y$page %||% list()))
+  for (k in setdiff(names(y), c(.output_fields, "outputs", "base"))) out[[k]] <- .calls_in(y[[k]])
+  out
 }
 
 # `- plan_cells: {...}` (a map of one key) as a tfl_item
@@ -278,8 +280,14 @@ tfl_write_output <- function(x, path) {
     stats::setNames(list(.calls_out(it$args)), it$fn)
   })
   if (length(x$page)) y$page <- .calls_out(x$page)
+  # a kind's own parts beside the common ones (a figure's template, plot,
+  # plots, compose)
+  for (k in setdiff(names(x), .output_fields)) if (!is.null(x[[k]])) y[[k]] <- .calls_out(x[[k]])
   y
 }
+
+.output_fields <- c("id", "kind", "label", "population", "extends", "data", "codelists",
+                    "content", "page")
 
 .calls_out <- function(x) {
   if (inherits(x, "tfl_call")) {

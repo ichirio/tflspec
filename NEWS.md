@@ -7,9 +7,15 @@
   (one layer of `content:`, a function and its arguments by name) and
   `tfl_output()` (one report), with `tfl_read_output()` /
   `tfl_write_output()` for `spec/outputs/<id>.yml` and the fixtures
-  `inst/extdata/spec-yaml/`.  The layering of `defaults` and patterns,
-  the other files and the generators follow (design:
-  `_archive/spec-format-redesign-2026-10-14.md`).
+  `inst/extdata/spec-yaml/`.  Stage 1 (part): the study's files
+  (`tfl_read_study_spec()`, `tfl_read_outputs()`), the layering of a
+  report over `defaults` and `patterns/<name>` (`tfl_resolve_output()`:
+  maps by key, `!unset` removes, a report's items of a function replace
+  the layers' items of it), and the one-time conversion of a study's
+  sheets (`tfl_convert_sheets_to_yaml()`, with `_not_converted.yml`; a
+  table's `content:` through the sheets-to-layers bridge, `content_fn`).
+  `tfl_fig_r()` is `tfl_r()` now, for every kind (no alias).  The
+  generators follow (design: `_archive/spec-format-redesign-2026-10-14.md`).
 
 * **`populations` has a `label` column**: the text a header or footnote
   prints for the analysis set (`Safety Analysis Set`), also its name in CDISC
