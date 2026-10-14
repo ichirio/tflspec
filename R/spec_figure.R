@@ -20,7 +20,6 @@
 # choices an enum; `package: tflspec`, `figure: layer` (no function of
 # that name: the designer writes the layer's code)
 .schema_fig_entries <- function() {
-  if (!is.null(.schema_cache$fig)) return(.schema_cache$fig)
   p <- tfl_fig_parts()
   p <- p[p$section == "layers" & !is.na(p$field), , drop = FALSE]
   out <- list()
@@ -39,7 +38,6 @@
     out[[pc]] <- list(package = "tflspec", figure = "layer",
                       description = rows$piece_label[1L], args = args)
   }
-  .schema_cache$fig <- out
   out
 }
 

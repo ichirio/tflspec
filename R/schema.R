@@ -17,15 +17,17 @@
 
 .schema_cache <- new.env(parent = emptyenv())
 
-.schema_all <- function() {
+.schema_all <- function(figure = TRUE) {
   if (is.null(.schema_cache$all)) {
     f <- system.file("spec", "schema.yml", package = "tflspec")
-    all <- yaml::read_yaml(f)
-    # a figure's layers: from the figure designer's catalog (R/spec_figure.R)
-    fig <- .schema_fig_entries()
-    .schema_cache$all <- c(all, fig[setdiff(names(fig), names(all))])
+    .schema_cache$all <- yaml::read_yaml(f)
   }
-  .schema_cache$all
+  all <- .schema_cache$all
+  if (!figure) return(all)
+  # a figure's layers: from the figure designer's catalog as it is now (a
+  # layer added with tfl_fig_add_layer() too; R/spec_figure.R)
+  fig <- .schema_fig_entries()
+  c(all, fig[setdiff(names(fig), names(all))])
 }
 
 #' The spec schema: the arguments a spec item may give, and their types
@@ -57,9 +59,11 @@
 #' @seealso [tfl_schema_check()]
 #' @export
 tfl_schema <- function(fn = NULL) {
-  s <- .schema_all()
-  if (is.null(fn)) return(s)
-  s[[.schema_fn_name(fn)]]
+  if (is.null(fn)) return(.schema_all())
+  nm <- .schema_fn_name(fn)
+  # the file's entries first; a figure's layer, made from the designer's
+  # catalog, only for a name the file does not have
+  .schema_all(figure = FALSE)[[nm]] %||% .schema_fig_entries()[[nm]]
 }
 
 # `rtfreporter::plan_cells` and `plan_cells` are one entry
