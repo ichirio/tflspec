@@ -42,7 +42,7 @@ content:
         Mean (SD): "{mean} ({sd})"
         Median: "{median}"
         Min, Max: "{min}, {max}"
-  - plan_digits: {continuous: {n: 0, "Mean (SD)": [1, 2], Median: 1, "Min, Max": 0}}
+  - plan_digits: {continuous: {N: 0, mean: 1, sd: 2, median: 1, min: 0, max: 0}}
   - plan_paginate_rows: {max_rows: 30, split: group_safe}
   - plan_cell_style: {where: !r "p > 0.5", bold: true}
 page:
