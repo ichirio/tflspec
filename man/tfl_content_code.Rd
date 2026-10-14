@@ -4,12 +4,14 @@
 \alias{tfl_content_code}
 \title{The code of a report's content, from its spec file}
 \usage{
-tfl_content_code(output, data = "data", plan = "plan", pipe = NULL)
+tfl_content_code(output, data = NULL, plan = "plan", pipe = NULL)
 }
 \arguments{
 \item{output}{A report (\code{\link[=tfl_output]{tfl_output()}}), resolved.}
 
-\item{data}{The name of the normalized ARD in the program.}
+\item{data}{The name of the object the pipe starts from; \code{NULL}: the
+output's \code{data$object}, else \code{ard} when the content normalizes it
+(a \code{normalize_ard()} item), else \code{data}.}
 
 \item{plan}{The name the plan is assigned to.}
 
