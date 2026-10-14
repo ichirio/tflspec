@@ -942,7 +942,9 @@ tfl_content_run <- function(output, data) {
 #' `!unset` is left.
 #'
 #' @param output A report ([tfl_output()]), resolved.
-#' @param data The name of the normalized ARD in the program.
+#' @param data The name of the object the pipe starts from; `NULL`: the
+#'   output's `data$object`, else `ard` when the content normalizes it
+#'   (a `normalize_ard()` item), else `data`.
 #' @param plan The name the plan is assigned to.
 #' @param pipe `"|>"` or `"%>%"`; `NULL` follows
 #'   `getOption("rtfreporter.ard_pipe")`.
@@ -955,7 +957,7 @@ tfl_content_run <- function(output, data) {
 #' cat(tfl_content_code(out), sep = "\n")
 #' @seealso [tfl_table_code()] for a table workbook; [tfl_schema()].
 #' @export
-tfl_content_code <- function(output, data = "data", plan = "plan", pipe = NULL) {
+tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL) {
   if (!inherits(output, "tfl_output")) {
     .ard_stop("tfl_content_code(): `output` is a report, tfl_output().")
   }
@@ -964,6 +966,13 @@ tfl_content_code <- function(output, data = "data", plan = "plan", pipe = NULL) 
                              "yet; tables only, for now."), output$kind))
   }
   for (it in output$content) .schema_need_version(it)
+  # the object the pipe starts from: the output's own name for it, else
+  # the ARD when the content normalizes it, else the normalized data
+  if (is.null(data)) {
+    pre <- any(vapply(output$content, function(it)
+      .schema_fn_name(it$fn) %in% .content_data_steps, NA))
+    data <- output$data$object %||% if (pre) "ard" else "data"
+  }
   .content_table_code(output$content, data = data, plan = plan, pipe = pipe)
 }
 
