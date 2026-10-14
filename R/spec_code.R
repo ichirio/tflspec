@@ -500,6 +500,319 @@ tfl_table_code <- function(spec, output_id = NULL, data = "data",
   })
 }
 
+# ---- content -> sheets (the bridge's other way) -----------------------------
+
+# A table's content written to the sheets a workbook has -- the inverse of
+# .plan_content_items(), verb by verb, in the sheets' own forms (`a | b`,
+# `name = value`, a newline as \n).  What a sheet cannot say (plan_after(),
+# a second plan_digits(), an expression as a label ...) is listed in
+# attr(, "not_converted") and left out, never written approximately.  The
+# app reads its grids from this while the workbook form is still its own.
+.plan_sheets_from_content <- function(items, output_id = NULL) {
+  id <- if (is.null(output_id)) NA_character_ else output_id
+  lost <- character()
+  miss <- function(fn, what) lost <<- c(lost, sprintf("%s: %s", fn, what))
+  bar <- function(x) paste(as.character(x), collapse = " | ")
+  # the sheets read raw text (tables, variables, cells, col_header) take a
+  # value as it is; a leading or trailing blank is kept by quoting it
+  esc <- function(x) {
+    x <- as.character(x)
+    ifelse(grepl("^\\s|\\s$", x), paste0("\"", x, "\""), x)
+  }
+  # roles: `name = column`, a constant heading as its quoted text
+  refs <- function(x) {
+    nm <- names(x) %||% rep("", length(x))
+    v <- vapply(seq_along(x), function(i) {
+      e <- x[[i]]
+      if (inherits(e, "formula")) paste0("\"", eval(e[[2L]], baseenv()), "\"")
+      else as.character(e)
+    }, "")
+    bar(ifelse(nzchar(nm) & nm != v, paste(nm, "=", v), v))
+  }
+  lgl <- function(x) if (isTRUE(x)) "TRUE" else if (identical(x, FALSE)) "FALSE"
+  tb <- list(); study <- list()
+  vars <- list(); cells <- list(); lay <- list(); sty <- list()
+  cols <- list(); cstyles <- list(); hdr <- list()
+  var_row <- function(v) if (is.null(vars[[v]])) vars[[v]] <<- list(variable = v)
+  col_row <- function(cn) if (is.null(cols[[cn]])) cols[[cn]] <<- list(column = cn)
+  cell <- function(variable = NA_character_, context = NA_character_,
+                   row = NA_character_, when = NA_character_, template = NA_character_,
+                   digits = NA_character_, signif = NA_character_) {
+    cells[[length(cells) + 1L]] <<- list(variable = variable, context = context,
+      row = row, when = when, template = template, digits = digits, signif = signif)
+  }
+  # a chain: templates, guards (cond ~ "text") among them
+  chain_rows <- function(v, variable, context = NA_character_, row = NA_character_) {
+    els <- if (is.list(v)) v else as.list(v)
+    for (e in els) {
+      if (inherits(e, "formula") && length(e) == 3L) {
+        cell(variable, context, row, paste(deparse(e[[2L]]), collapse = " "), eval(e[[3L]], baseenv()))
+      } else if (is.character(e) && length(e) == 1L) {
+        cell(variable, context, row, template = e)
+      } else {
+        return(FALSE)
+      }
+    }
+    TRUE
+  }
+  # one plan_cells() / plan_compare() entry as `cells` rows of its key
+  entry_rows <- function(fn, k, v) {
+    parts <- strsplit(k, "\r", fixed = TRUE)[[1L]]
+    var <- if (identical(k, "default")) NA_character_ else parts[1L]
+    ctx <- if (length(parts) > 1L) parts[2L] else NA_character_
+    if (inherits(v, "cell_rows")) {
+      v <- unclass(v)
+      for (lb in names(v)) {
+        if (!chain_rows(v[[lb]], var, ctx, if (nzchar(lb)) lb else NA_character_)) {
+          miss(fn, sprintf("%s: a line that is not templates and guards", k)); return()
+        }
+      }
+      return()
+    }
+    if (is.character(v) && !is.null(names(v)) && all(nzchar(names(v))) &&
+        !identical(fn, "plan_compare")) {
+      for (lb in names(v)) cell(var, ctx, lb, template = v[[lb]])
+      return()
+    }
+    if (is.list(v) && !is.null(names(v)) && all(nzchar(names(v)))) {
+      for (lb in names(v)) {
+        if (!chain_rows(v[[lb]], var, ctx, lb)) {
+          miss(fn, sprintf("%s: a row that is not templates and guards", k)); return()
+        }
+      }
+      return()
+    }
+    if (!chain_rows(v, var, ctx)) miss(fn, sprintf("%s: not templates and guards", k))
+  }
+  seen <- character()
+  for (cl in .content_calls(items)) {
+    fn <- cl$fun
+    a <- cl$args
+    nm <- names(a) %||% rep("", length(a))
+    pos <- a[!nzchar(nm)]
+    named <- a[nzchar(nm)]
+    if (fn %in% seen && !fn %in% c("plan_cell_style", "plan_levels", "plan_labels",
+                                   "plan_digits")) {
+      miss(fn, "a second call (a sheet holds one)"); next
+    }
+    seen <- c(seen, fn)
+    switch(fn,
+      table_plan = {
+        if (!is.null(named$cols)) tb$cols <- bar(named$cols)
+        if (!is.null(named$rows)) tb$rows <- refs(named$rows)
+        if ("label" %in% names(named)) {
+          lb <- named$label
+          tb$label <- if (length(lb) == 1L && !is.list(lb) && is.na(lb)) "NA" else refs(lb)
+        }
+        if (!is.null(named$show_keys)) tb$show_keys <- bar(named$show_keys)
+        if (!is.null(named$stat)) miss(fn, "stat (your statistic columns) stays in code")
+      },
+      plan_sort = {
+        if (length(pos)) {
+          v <- unlist(pos, use.names = FALSE)
+          tb$sort <- if (is.logical(v)) lgl(v) else bar(v)
+        }
+        if (!is.null(named$stat)) tb$sort_stat <- named$stat
+        if (!is.null(named$keep)) miss(fn, "keep")
+      },
+      plan_digits = {
+        if (!is.null(named$rounding)) study$rounding <- named$rounding
+        if (!is.null(named$.rows)) {
+          r <- named$.rows
+          for (lb in names(r)) {
+            v <- as.character(r[[lb]])
+            if (grepl("s$", v)) cell(row = lb, signif = sub("s$", "", v))
+            else cell(row = lb, digits = v)
+          }
+        }
+        other <- setdiff(names(named), c("rounding", ".rows"))
+        if (length(other)) miss(fn, paste0("digits by ", paste(other, collapse = ", "),
+                                           " (write them into the templates)"))
+      },
+      plan_levels = {
+        for (v in setdiff(names(named), ".drop_empty")) {
+          if (!is.character(named[[v]])) { miss(fn, v); next }
+          var_row(v); vars[[v]]$levels <- bar(named[[v]])
+        }
+        for (v in named$.drop_empty) { var_row(v); vars[[v]]$empty_levels <- "hide" }
+      },
+      plan_labels = {
+        for (v in names(named)) {
+          x <- named[[v]]
+          if (!is.character(x) || length(x) != 1L || !is.null(names(x))) {
+            miss(fn, sprintf("%s: a value's labels stay in code", v)); next
+          }
+          var_row(v); vars[[v]]$label <- x
+          vars[[v]]$order <- length(Filter(function(r) !is.null(r$label), vars))
+        }
+      },
+      plan_nest = {
+        for (v in names(named)) {
+          x <- named[[v]]
+          if (is.list(x) && length(x) == 1L && is.character(x[[1L]])) x <- unlist(x)
+          if (!is.character(x) || length(x) != 1L || is.null(names(x))) { miss(fn, v); next }
+          var_row(v); vars[[v]]$under <- paste0(names(x), ": ", x)
+        }
+      },
+      plan_total = {
+        tb$total <- named$label %||% "Total"
+        if (!is.null(named$position)) tb$total_position <- named$position
+      },
+      plan_stat_groups = {
+        tb$stat_groups <- paste(vapply(names(named), function(g)
+          paste(g, "=", paste(named[[g]], collapse = ", ")), ""), collapse = " | ")
+      },
+      plan_cells = {
+        for (k in c("stats", "value")) if (!is.null(named[[k]])) tb[[k]] <- named[[k]]
+        if (!is.null(named$na)) tb$na <- esc(named$na)
+        if (!is.null(named$notes)) miss(fn, "notes")
+        for (k in setdiff(names(named), c("stats", "value", "na", "notes"))) {
+          entry_rows(fn, k, named[[k]])
+        }
+        if (length(pos)) {
+          if (length(pos) == 1L) entry_rows(fn, "default", pos[[1L]])
+          else miss(fn, "several unnamed entries")
+        }
+      },
+      plan_filter = {
+        w <- vapply(pos, function(e) if (inherits(e, "tfl_spec_expr")) e$text
+                    else paste(deparse(e), collapse = " "), "")
+        tb$keep_where <- if (length(w) > 1L) paste0("(", w, ")", collapse = " & ") else w
+        if (identical(named$any, FALSE)) tb$keep_any <- "FALSE"
+        if (identical(named$parents, "drop")) tb$keep_parents <- "drop"
+        if (!is.null(named$by)) miss(fn, "by")
+      },
+      plan_compare = {
+        cn <- setdiff(names(named), c("by", "position"))
+        tb$compare <- bar(cn)
+        if (!is.null(named$by)) tb$compare_by <- named$by
+        if (!is.null(named$position)) tb$compare_position <- named$position
+        for (k in cn) {
+          v <- named[[k]]
+          if (is.character(v) && !is.null(names(v))) {
+            for (ctx in names(v)) cell(k, if (ctx == "default") NA_character_ else ctx, template = v[[ctx]])
+          } else {
+            entry_rows(fn, k, v)
+          }
+        }
+      },
+      plan_stub = {
+        map <- c(vars = "stub_vars", name = "stub_name", indent = "stub_indent",
+                 group_summary = "stub_summary", before = "stub_before")
+        for (k in intersect(names(named), names(map))) lay[[map[[k]]]] <- named[[k]]
+      },
+      plan_paginate_group = {
+        lay$group_page <- TRUE
+        if (!is.null(named$col)) lay$group_col <- named$col
+        if (!is.null(named$keep)) lay$group_keep <- named$keep
+        if (!is.null(named$heading)) lay$group_heading <- named$heading
+      },
+      plan_row_group = {
+        if (!is.null(named$mode)) lay$group_mode <- named$mode
+        if (!is.null(named$collapse)) lay$group_collapse <- named$collapse
+        if (!is.null(named$group_col)) miss(fn, "group_col")
+      },
+      plan_blanks = {
+        map <- c(where = "blank_where", first = "blank_first", last = "blank_last",
+                 counted = "blank_counted")
+        for (k in intersect(names(named), names(map))) lay[[map[[k]]]] <- named[[k]]
+      },
+      plan_paginate_rows = {
+        for (k in names(named)) lay[[paste0("pages_", k)]] <- named[[k]]
+      },
+      plan_paginate_cols = {
+        for (k in names(named)) lay[[paste0("colpages_", k)]] <- named[[k]]
+      },
+      plan_style = {
+        for (k in names(named)) {
+          v <- named[[k]]
+          if (startsWith(k, "border_")) {
+            if (!inherits(v, "tfl_spec_call") || !identical(v$fun, "rtf_border") ||
+                !all(vapply(v$args, isTRUE, NA))) {
+              miss(fn, sprintf("%s: a border with more than its sides", k)); next
+            }
+            sty[[k]] <- if (length(v$args)) bar(names(v$args)) else "none"
+          } else sty[[k]] <- v
+        }
+      },
+      plan_cell_style = {
+        r <- named
+        if (!is.null(r$where)) r$where <- if (inherits(r$where, "tfl_spec_formula")) r$where$text
+                                         else paste(deparse(r$where), collapse = " ")
+        if (!is.null(r$border)) { miss(fn, "border"); r$border <- NULL }
+        cstyles[[length(cstyles) + 1L]] <- r
+      },
+      plan_hide = {
+        for (cn in unlist(pos, use.names = FALSE)) { col_row(cn); cols[[cn]]$hide <- TRUE }
+      },
+      plan_col_header = {
+        h <- named$header
+        if (!is.null(named$lines)) {
+          h <- do.call(rbind, lapply(seq_along(named$lines), function(i) {
+            l <- named$lines[[i]]
+            data.frame(line = as.character(i), cols = names(l), text = unname(l),
+                       stringsAsFactors = FALSE)
+          }))
+        }
+        if (is.data.frame(h)) {
+          for (i in seq_len(nrow(h))) {
+            r <- as.list(h[i, , drop = FALSE])
+            hdr[[length(hdr) + 1L]] <- r
+          }
+        }
+        if (!is.null(named$values)) {
+          v <- named$values
+          if (all(vapply(v, function(e) is.character(e) && length(e) == 1L, NA))) {
+            tb$header_n <- if (identical(names(v), "n")) v$n
+                           else paste(paste(names(v), "=", unlist(v)), collapse = " | ")
+          } else miss(fn, "values other than page / table")
+        }
+        if (!is.null(named$col_header_align)) sty$col_header_align <- named$col_header_align
+      },
+      plan_columns = {
+        w <- named$widths
+        if (!is.null(w)) {
+          if (is.null(names(w))) miss(fn, "widths by position (a sheet names its columns)")
+          else for (cn in names(w)) { col_row(cn); cols[[cn]]$rel_width <- w[[cn]] }
+        }
+        for (cn in named$decimal) { col_row(cn); cols[[cn]]$decimal_split <- TRUE }
+        rt <- named$row_title
+        if (is.numeric(rt)) miss(fn, "row_title by position")
+        else for (cn in rt) { col_row(cn); cols[[cn]]$row_title <- TRUE }
+        if (!is.null(named$auto_width)) sty$auto_width <- named$auto_width
+        if (!is.null(named$sep)) tb$sep <- named$sep
+      },
+      miss(fn, "a verb no sheet holds"))
+  }
+  # one sheet's rows as text, the way a workbook holds them
+  txt <- function(v) {
+    if (is.null(v)) return(NA_character_)
+    if (is.logical(v)) return(lgl(v) %||% NA_character_)
+    if (length(v) > 1L) return(bar(v))
+    as.character(v)
+  }
+  frame <- function(rows) {
+    if (!length(rows)) return(NULL)
+    keys <- unique(unlist(lapply(rows, names)))
+    df <- as.data.frame(lapply(stats::setNames(keys, keys), function(k)
+      vapply(rows, function(r) txt(r[[k]]), "")), stringsAsFactors = FALSE)
+    cbind(output_id = rep(id, nrow(df)), df, stringsAsFactors = FALSE)
+  }
+  sheets <- list(
+    tables = frame(list(lapply(tb, txt))),
+    variables = frame(unname(vars)),
+    cells = frame(cells),
+    layout = if (length(lay)) frame(list(lay)),
+    style = if (length(sty)) frame(list(sty)),
+    columns = frame(unname(cols)),
+    cell_styles = frame(cstyles),
+    col_header = frame(hdr),
+    study = if (length(study)) unlist(study))
+  sp <- do.call(tfl_table_spec, Filter(Negate(is.null), sheets))
+  attr(sp, "not_converted") <- lost
+  sp
+}
+
 #' The code of a report's content, from its spec file
 #'
 #' Writes the program a report's `content:` stands for -- for a table, the
@@ -533,6 +846,7 @@ tfl_content_code <- function(output, data = "data", plan = "plan", pipe = NULL) 
     .ard_stop(sprintf(paste0("tfl_content_code(): a %s's content is not written ",
                              "yet; tables only, for now."), output$kind))
   }
+  for (it in output$content) .schema_need_version(it)
   .content_table_code(output$content, data = data, plan = plan, pipe = pipe)
 }
 

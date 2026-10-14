@@ -119,9 +119,15 @@ tfl_schema <- function(fn = NULL) {
 #' type.  What the reader of a spec file calls on every item, and what the
 #' AI review reports.
 #'
+#' An argument the function does not have is a **warning**, not an error:
+#' the last word is the installed package's formals when the code runs (a
+#' newer package may have it).  An argument the schema marks `renamed_to`
+#' says what it is now and since which version, in the words the GUI's
+#' suggestion and the AI review also use.
+#'
 #' @param item A [tfl_item()] (or a list with `fn` and `args`).
-#' @return The problems: a data frame (`fn`, `arg`, `message`), no rows
-#'   when the item is fine.
+#' @return The problems: a data frame (`fn`, `arg`, `level` -- `"error"` or
+#'   `"warning"` -- and `message`), no rows when the item is fine.
 #' @examples
 #' tfl_schema_check(tfl_item("plan_sort", list(keys = c("-n", "SOC"))))
 #' tfl_schema_check(tfl_item("plan_sort", list(keys = c("-n"), sort = 1)))
@@ -129,10 +135,10 @@ tfl_schema <- function(fn = NULL) {
 #' @export
 tfl_schema_check <- function(item) {
   fn <- item$fn
-  out <- data.frame(fn = character(), arg = character(), message = character(),
-                    stringsAsFactors = FALSE)
-  bad <- function(arg, msg) {
-    out[nrow(out) + 1L, ] <<- list(fn, arg, msg)
+  out <- data.frame(fn = character(), arg = character(), level = character(),
+                    message = character(), stringsAsFactors = FALSE)
+  bad <- function(arg, msg, level = "error") {
+    out[nrow(out) + 1L, ] <<- list(fn, arg, level, msg)
   }
   if (!is.character(fn) || length(fn) != 1L || !nzchar(fn)) {
     bad("", "the item names no function")
@@ -152,6 +158,10 @@ tfl_schema_check <- function(item) {
   for (a in names(args)) {
     v <- args[[a]]
     if (inherits(v, "tfl_unset")) next
+    if (!is.null(ent$args[[a]]$renamed_to)) {
+      bad(a, .schema_renamed_text(fn, a, ent$args[[a]]), "warning")
+      next
+    }
     if (a %in% names(ent$args) && !is.null(ent$args[[a]]$type)) {
       msg <- .schema_fits(v, .schema_type(ent$args[[a]]$type))
       if (!is.null(msg)) bad(a, msg)
@@ -166,11 +176,41 @@ tfl_schema_check <- function(item) {
         next                                 # a function of `...` the schema does not cover
       } else {
         bad(a, sprintf("%s has no argument `%s`%s", fn, a,
-                       if (length(known)) paste0(" (it has: ", paste(known, collapse = ", "), ")") else ""))
+                       if (length(known)) paste0(" (it has: ", paste(known, collapse = ", "), ")") else ""),
+            "warning")
       }
     }
   }
   out
+}
+
+# The one wording of a renamed argument: what the check, the GUI's
+# suggestion and the AI review all say.
+.schema_renamed_text <- function(fn, arg, a) {
+  since <- a$until %||% a$since
+  sprintf("%s(%s = ) is now `%s`%s.", fn, arg, a$renamed_to,
+          if (!is.null(since)) paste0(" (since ", since, ")") else "")
+}
+
+# An item the installed packages cannot run: an argument the schema says
+# arrived in a later version than the one installed (`since:
+# "rtfreporter 0.8.2.9047"`), said before any code is written.
+.schema_need_version <- function(item) {
+  ent <- tfl_schema(item$fn)
+  if (is.null(ent)) return(invisible(NULL))
+  for (a in intersect(names(item$args), names(ent$args))) {
+    since <- ent$args[[a]]$since
+    if (is.null(since)) next
+    pv <- strsplit(trimws(since), "[[:space:]]+")[[1L]]
+    if (length(pv) != 2L || !requireNamespace(pv[1L], quietly = TRUE)) next
+    if (utils::packageVersion(pv[1L]) < pv[2L]) {
+      .ard_stop(sprintf(paste0(
+        "%s(%s = ) needs %s >= %s; this one is %s.  Update it, or leave ",
+        "`%s` out."), item$fn, a, pv[1L], pv[2L],
+        as.character(utils::packageVersion(pv[1L])), a))
+    }
+  }
+  invisible(NULL)
 }
 
 # the function's formals, from its package (NULL when it is not installed)

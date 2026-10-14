@@ -95,6 +95,22 @@ reference:
       - tfl_read_define_spec
       - tfl_define_profile
       - tfl_define_codelists
+  - title: Spec files (YAML)
+    desc: >
+      A study's spec as files: one report a file, its `content:` a list of
+      items, one function call each; read, layered over the study's
+      defaults, checked against the schema, written as code, and converted
+      from the workbooks.
+    contents:
+      - tfl_read_study_spec
+      - tfl_read_output
+      - tfl_resolve_output
+      - tfl_schema
+      - tfl_schema_check
+      - tfl_content_code
+      - tfl_convert_sheets_to_yaml
+      - tfl_write_spec_xlsx
+      - tfl_import_spec_xlsx
   - title: Table spec and table plan
     desc: >
       A table as a workbook: its roles and the rtfreporter plan verbs it
@@ -141,7 +157,7 @@ reference:
       - tfl_fig_calls
       - tfl_fig_compat
       - tfl_fig_data_name
-      - tfl_fig_r
+      - tfl_r
   - subtitle: Figure style
     desc: Every look-and-feel value of a study's figures, in one place.
     contents:
