@@ -4,17 +4,26 @@
 \alias{tfl_report}
 \title{Build a report's RTF document from its definition}
 \usage{
-tfl_report(spec, output_id = NULL, content)
+tfl_report(spec, output_id = NULL, content, study = NULL)
 }
 \arguments{
 \item{spec}{A report definition (\code{\link[=tfl_read_report_spec]{tfl_read_report_spec()}}) narrowed to one
-report, or the path(s) to read it from.}
+report, or the path(s) to read it from; or a report of the YAML spec
+(\code{\link[=tfl_output]{tfl_output()}}, resolved: \code{\link[=tfl_resolve_output]{tfl_resolve_output()}}), its \verb{page:} the
+calls -- \code{rtf_page}, \code{rtf_default_format}, \code{rtf_document},
+\code{rtf_tables} / \code{rtf_figures}, \code{rtf_titles}, \code{rtf_footnotes}, each its
+arguments, and the lines of \code{header}, \code{footer}, \code{titles}, \code{footnotes}
+and the \code{tokens}.}
 
 \item{output_id}{The report, when \code{spec} is a path or still defines
 several.}
 
 \item{content}{The report's content: an \code{\link[rtfreporter:table_plan]{rtfreporter::table_plan()}} or \code{rtftable}
 pages for a table or listing, figures for a \code{type = figure} report.}
+
+\item{study}{For a YAML report: the study (\code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}), for
+its program (the TOC's \code{program}, else \code{settings: program}, in
+\code{settings: program_dir}).}
 }
 \value{
 An \code{\link[rtfreporter:rtf_document]{rtfreporter::rtf_document()}}.

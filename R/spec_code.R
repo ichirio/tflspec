@@ -37,6 +37,9 @@
 # A function a step names: tflspec's own, else rtfreporter's (the plan
 # verbs, rtf_document() and friends).
 .spec_fun <- function(name) {
+  if (grepl("::", name, fixed = TRUE)) {
+    return(getExportedValue(sub("::.*$", "", name), sub("^.*::", "", name)))
+  }
   if (exists(name, envir = asNamespace("tflspec"), inherits = FALSE)) {
     return(get(name, envir = asNamespace("tflspec"), mode = "function"))
   }
@@ -422,8 +425,13 @@ tfl_table_code <- function(spec, output_id = NULL, data = "data",
 # table_plan(), and the layers -- each a call as R takes it.  What
 # tfl_content_code() writes and tfl_content_run() runs: the one list both
 # read, so the two cannot differ.
-.content_table_pipeline <- function(content) {
+.content_table_pipeline <- function(content, kind = "table") {
   fns <- vapply(content, function(it) .schema_fn_name(it$fn), "")
+  # a listing has no roles: its plan is table_plan(data) with none
+  if (identical(kind, "listing") && !"table_plan" %in% fns) {
+    content <- c(list(tfl_item("table_plan", list())), content)
+    fns <- c("table_plan", fns)
+  }
   is_head <- fns == "table_plan"
   if (sum(is_head) != 1L) {
     .ard_stop(paste0("A table's content has one table_plan() item (its roles); ",
@@ -445,9 +453,9 @@ tfl_table_code <- function(spec, output_id = NULL, data = "data",
 .content_data_steps <- c("normalize_ard")
 
 .content_table_code <- function(content, data = "data", plan = "plan",
-                                pipe = NULL) {
+                                pipe = NULL, kind = "table") {
   op <- .ard_pipe_op(pipe)
-  pl <- .content_table_pipeline(content)
+  pl <- .content_table_pipeline(content, kind)
   head <- pl$head
   steps <- pl$steps
   from <- pl$from
@@ -885,12 +893,19 @@ tfl_table_code <- function(spec, output_id = NULL, data = "data",
 #' each applied with `do.call()` -- for a table, the data's steps
 #' (`normalize_ard()`), `table_plan()` and its layers.  The two read one
 #' list of calls, so running the written code gives the same object; it is
-#' the quick way for a preview, the app or an assistant's check.
+#' the quick way for a preview, the app or an assistant's check.  A report
+#' whose content is its own code (`content: !r`) runs it, after the
+#' data's steps, and gives what it leaves in `content`.
 #'
 #' @param output A report ([tfl_output()]), resolved.
 #' @param data The data the content starts from: the ARD (or the normalized
-#'   ARD when the content has no `normalize_ard()` item).
-#' @return For a table, the [rtfreporter::table_plan()].
+#'   ARD when the content has no `normalize_ard()` item).  With
+#'   `data.steps` (R that makes `data` from the output's `data.object`,
+#'   `ard` by default), the object the steps start from.  For a figure, a
+#'   named list of the objects its code reads: the datasets by their names
+#'   in lower case (`adtte`), and `ard`.
+#' @return For a table, the [rtfreporter::table_plan()]; for a figure, the
+#'   ggplot.
 #' @examples
 #' if (requireNamespace("cards", quietly = TRUE)) {
 #'   ard <- cards::ard_stack(cards::ADSL, .by = ARM,
@@ -908,17 +923,46 @@ tfl_content_run <- function(output, data) {
   if (!inherits(output, "tfl_output")) {
     .ard_stop("tfl_content_run(): `output` is a report, tfl_output().")
   }
-  if (!identical(output$kind, "table")) {
+  if (inherits(output$content, "tfl_r")) return(.content_own_run(output, data))
+  if (identical(output$kind, "figure")) return(.content_fig_run(output, data))
+  if (!output$kind %in% c("table", "listing")) {
     .ard_stop(sprintf(paste0("tfl_content_run(): a %s's content is not run ",
-                             "yet; tables only, for now."), output$kind))
+                             "yet; tables, listings and figures, for now."), output$kind))
   }
   .spec_need_rtfreporter()
   for (it in output$content) .schema_need_version(it)
-  .content_table_run(output$content, data)
+  steps <- .content_r_steps(output)
+  if (length(steps)) {
+    # the steps run as the program runs them: the output's object bound
+    # to `data`, and what they leave in `data` is the plan's data
+    env <- new.env(parent = globalenv())
+    assign(output$data$object %||% "ard", data, envir = env)
+    eval(parse(text = steps), env)
+    if (!exists("data", envir = env, inherits = FALSE)) {
+      .ard_stop("tfl_content_run(): the data.steps leave no `data`, the data the plan is made from.")
+    }
+    data <- get("data", envir = env, inherits = FALSE)
+  }
+  .content_table_run(output$content, data, kind = output$kind)
 }
 
-.content_table_run <- function(content, data) {
-  pl <- .content_table_pipeline(content)
+# the content as the report's own code, run as the program runs it: the
+# output's object bound, the data's steps, then the code; what it leaves
+# in `content` is the content
+.content_own_run <- function(output, data) {
+  env <- new.env(parent = globalenv())
+  assign(output$data$object %||% "ard", data, envir = env)
+  steps <- .content_r_steps(output)
+  if (length(steps)) eval(parse(text = steps), env)
+  eval(parse(text = as.character(output$content)), env)
+  if (!exists("content", envir = env, inherits = FALSE)) {
+    .ard_stop("tfl_content_run(): the report's own code leaves no `content`.")
+  }
+  get("content", envir = env, inherits = FALSE)
+}
+
+.content_table_run <- function(content, data, kind = "table") {
+  pl <- .content_table_pipeline(content, kind)
   x <- data
   run <- function(cl, first) {
     f <- .spec_fun(cl$fun)
@@ -941,10 +985,19 @@ tfl_content_run <- function(output, data) {
 #' report after its `extends` are applied (`tfl_resolve_output()`), so no
 #' `!unset` is left.
 #'
+#' A report whose content is its own code (`content: !r`, any kind: the
+#' code leaves `content`) is that code, after the data's steps.  A figure's
+#' content is its layers, as the figure designer has them
+#' ([tfl_fig_design_code()] of the design the report stands for: its
+#' `data` steps and statistics, the layers, its code lists): the figure
+#' in `content`, not saved.
+#'
 #' @param output A report ([tfl_output()]), resolved.
 #' @param data The name of the object the pipe starts from; `NULL`: the
 #'   output's `data$object`, else `ard` when the content normalizes it
-#'   (a `normalize_ard()` item), else `data`.
+#'   (a `normalize_ard()` item), else `data`.  With `data.steps` (R that
+#'   makes `data` from the output's object, the old process_code), the
+#'   steps come first, as they are written, and the pipe starts from `data`.
 #' @param plan The name the plan is assigned to.
 #' @param pipe `"|>"` or `"%>%"`; `NULL` follows
 #'   `getOption("rtfreporter.ard_pipe")`.
@@ -961,19 +1014,57 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL) {
   if (!inherits(output, "tfl_output")) {
     .ard_stop("tfl_content_code(): `output` is a report, tfl_output().")
   }
-  if (!identical(output$kind, "table")) {
+  # the content as the report's own code (`content: !r`, the old
+  # content_code): written as it is, after the data's steps; it leaves
+  # `content`
+  if (inherits(output$content, "tfl_r")) {
+    steps <- .content_r_steps(output)
+    own <- unlist(strsplit(as.character(output$content), "\n", fixed = TRUE))
+    return(c(steps, if (length(steps)) "", own))
+  }
+  # a figure: its layers, as the figure designer writes them
+  if (identical(output$kind, "figure")) return(.content_fig_code(output))
+  if (!output$kind %in% c("table", "listing")) {
     .ard_stop(sprintf(paste0("tfl_content_code(): a %s's content is not written ",
-                             "yet; tables only, for now."), output$kind))
+                             "yet; tables, listings and figures, for now."), output$kind))
   }
   for (it in output$content) .schema_need_version(it)
   # the object the pipe starts from: the output's own name for it, else
   # the ARD when the content normalizes it, else the normalized data
+  # the data's steps (`data.steps`, the old process_code): R that makes
+  # `data` from the output's object, written as it is, before the plan
+  steps <- .content_r_steps(output)
+  if (length(steps)) {
+    return(c(steps, "", .content_table_code(output$content, data = data %||% "data",
+                                            plan = plan, pipe = pipe, kind = output$kind)))
+  }
   if (is.null(data)) {
     pre <- any(vapply(output$content, function(it)
       .schema_fn_name(it$fn) %in% .content_data_steps, NA))
     data <- output$data$object %||% if (pre) "ard" else "data"
   }
-  .content_table_code(output$content, data = data, plan = plan, pipe = pipe)
+  .content_table_code(output$content, data = data, plan = plan, pipe = pipe,
+                      kind = output$kind)
+}
+
+# A table's or a listing's data steps as code, one element a line: each
+# `!r` step of `data.steps` as it is written.  A step that is not R (a
+# figure's step map) is not a table's.
+.content_r_steps <- function(output) {
+  # the data step as the report's own code (`data: {source: code, code:
+  # !r}`, the old data_code): that code is the step, whatever else data says
+  if (identical(output$data$source, "code") && !is.null(output$data$code)) {
+    return(unlist(strsplit(as.character(output$data$code), "\n", fixed = TRUE)))
+  }
+  st <- output$data$steps
+  if (is.null(st) || !length(st)) return(character())
+  if (inherits(st, "tfl_r") || is.character(st)) st <- as.list(st)
+  bad <- !vapply(st, function(x) is.character(x) && length(x) == 1L, NA)
+  if (any(bad)) {
+    .ard_stop(sprintf(paste0("A %s's data.steps are R (`!r`); step %s is not."),
+                      output$kind %||% "table", paste(which(bad), collapse = ", ")))
+  }
+  unlist(strsplit(vapply(st, as.character, ""), "\n", fixed = TRUE))
 }
 
 #' The line that normalizes a table's ARD
@@ -1322,6 +1413,8 @@ tfl_report_setup_code <- function(spec) {
 #' [tfl_report_code()] gives them to `rtf_document(tokens = )`: for a
 #' preview of the page.
 #'
+#' @param spec A report definition ([tfl_read_report_spec()]) narrowed to one
+#'   report, or the path(s) to read it from.
 #' @inheritParams tfl_report
 #' @return A named character vector (none: empty).
 #' @examples
@@ -1360,7 +1453,10 @@ tfl_report_tokens <- function(spec, output_id = NULL) {
 #'   tokens leave empty, a blank `<{OUTPUT_POPULATION}>`, is left out when
 #'   the file is written) -- unless the report has its own, written here
 #'   as before.
-#'   `FALSE` (default): the program stands alone.
+#'   `FALSE` (default): the program stands alone.  For a YAML report, the
+#'   study's are its defaults (`spec/defaults.yml`), the report's its
+#'   pattern and its own: give the report as read ([tfl_read_output()]) and
+#'   its `study`.
 #' @return The code, one element per line.
 #' @examples
 #' spec <- tfl_read_report_spec(
@@ -1369,10 +1465,18 @@ tfl_report_tokens <- function(spec, output_id = NULL) {
 #' cat(tfl_report_code(spec, content = "plan"), sep = "\n")
 #' @export
 tfl_report_code <- function(spec, output_id = NULL, content = "content",
-                            doc = "doc", setup = FALSE) {
+                            doc = "doc", setup = FALSE, study = NULL) {
+  if (inherits(spec, "tfl_output")) {
+    return(.report_steps_code(.page_report_steps(spec, study, content, isTRUE(setup)), doc))
+  }
   sp <- .ard_spec_scope(.as_spec(spec, "table", "tfl_report_code",
                                  output_id = output_id), output_id)
-  steps <- .report_spec_steps(sp, content, isTRUE(setup))
+  .report_steps_code(.report_spec_steps(sp, content, isTRUE(setup)), doc)
+}
+
+# the document's calls as one pipe: rtf_document() |> rtf_section() |>
+# rtf_tables() ...
+.report_steps_code <- function(steps, doc) {
   # the document's program: its path through the study's path variables
   # (tflspec.paths), as the program's other paths are
   for (k in intersect(c("program", "program_fallback"), names(steps[[1L]]$args))) {

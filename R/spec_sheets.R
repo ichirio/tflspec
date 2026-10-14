@@ -33,6 +33,11 @@ tfl_sheets_from_yaml <- function(dir) {
 
   # -- the table sheets: the bridge, scope by scope --------------------------
   table_rows <- function(items, id) {
+    # normalize_ard() is the tables row's overall_label / stack columns (its
+    # hierarchy is the ARD's analysis): taken out before the bridge
+    nz <- Filter(function(it) identical(it$fn, "normalize_ard"), items)
+    items <- Filter(function(it) !identical(it$fn, "normalize_ard"), items)
+    if (length(nz) && !is.na(id) && length(nz[[1L]]$args)) norm_rows[[id]] <<- nz[[1L]]$args
     if (!length(items)) return()
     if (is.null(bridge)) { note(id, "content", "no bridge from the layers to the sheets (tflspec's .plan_sheets_from_content)"); return() }
     sp <- bridge(items, if (is.na(id)) NULL else id)
@@ -45,6 +50,7 @@ tfl_sheets_from_yaml <- function(dir) {
     }
     for (x in attr(sp, "not_converted") %||% character()) note(id, "content", x)
   }
+  norm_rows <- list()
   table_rows(s$defaults$content, NA_character_)
   for (nm in names(s$patterns)) table_rows(s$patterns[[nm]]$content, paste0("@", nm))
 
@@ -52,6 +58,7 @@ tfl_sheets_from_yaml <- function(dir) {
   page_rows <- function(page, id) {
     for (band in c("header", "footer", "titles", "footnotes")) {
       m <- page[[band]]
+      if (inherits(m, "tfl_unset")) next
       for (line in names(m)) {
         cells <- m[[line]]
         r <- list(output_id = id, line = line)
@@ -61,17 +68,10 @@ tfl_sheets_from_yaml <- function(dir) {
       }
     }
     for (nm in names(page$tokens)) add("tokens", list(output_id = id, name = nm, value = cell(page$tokens[[nm]])))
-    for (sh in c("page", "report")) {
-      m <- page[[sh]]
-      if (length(m)) {
-        r <- list(output_id = id)
-        for (k in names(m)) r[[k]] <- cell(m[[k]])
-        add(sh, r)
-      }
-    }
-    for (k in setdiff(names(page), c("header", "footer", "titles", "footnotes", "tokens", "page", "report"))) {
-      note(id, paste0("page.", k), "the document's calls (rtf_*) have no sheet yet")
-    }
+    # the rtfreporter functions' arguments back as the page and report columns
+    pr <- .page_columns(page)
+    for (sh in c("page", "report")) if (length(pr[[sh]])) add(sh, c(list(output_id = id), pr[[sh]]))
+    for (k in setdiff(names(page), .page_known)) note(id, paste0("page.", k), "no sheet for it")
   }
   page_rows(s$defaults$page, NA_character_)
   for (nm in names(s$patterns)) page_rows(s$patterns[[nm]]$page, paste0("@", nm))
@@ -110,17 +110,26 @@ tfl_sheets_from_yaml <- function(dir) {
     pat <- grep("^patterns/", o$extends, value = TRUE)
     if (length(pat)) rr$pattern <- paste0("@", substring(pat[1L], 10L))
     for (k in c("file", "program")) if (!is.null(e[[k]])) rr[[k]] <- cell(e[[k]])
-    own_report <- o$page$report
-    o$page$report <- NULL
-    for (k in names(own_report)) rr[[k]] <- cell(own_report[[k]])
-    add("report", rr)
+    # the report row: its kind, pattern, file and program here, its
+    # rtfreporter arguments from page_rows() -- one row
+    before <- length(rows$report %||% list())
     page_rows(o$page, id)
+    after <- rows$report %||% list()
+    if (length(after) > before) {
+      extra <- after[[length(after)]]
+      for (k in setdiff(names(extra), "output_id")) rr[[k]] <- extra[[k]]
+      rows$report <- after[-length(after)]
+    }
+    if (inherits(o$content, "tfl_r")) rr$content_code <- cell(o$content)
+    if (identical(o$data$source, "code") && !is.null(o$data$code)) rr$data_code <- cell(o$data$code)
+    add("report", rr)
     for (v in names(o$codelists)) for (i in seq_along(o$codelists[[v]])) {
       cl <- o$codelists[[v]][[i]]
       add("codelists", list(output_id = id, variable = v, value = cell(cl$value), label = cell(cl$label), order = as.character(i)))
     }
+    code_content <- inherits(o$content, "tfl_r")
     if (o$kind == "table") {
-      table_rows(o$content, id)
+      if (!code_content) table_rows(o$content, id)
       for (a in o$data$analysis_data %||% list()) {
         m <- lapply(a, cell); m$data_id <- m$id; m$id <- NULL
         if (!is.null(m$population)) { m$population_id <- m$population; m$population <- NULL }
@@ -132,11 +141,10 @@ tfl_sheets_from_yaml <- function(dir) {
         if (!is.null(a$ref)) note(id, paste0("analyses.", a$id), "a reference to another report's analysis (ref) has no sheet")
         analyses[[length(analyses) + 1L]] <- c(list(output_id = id), m)
       }
-      if (!is.null(o$data$code)) note(id, "data.code", "a report whose data is its code: kept as the table's data step is not a sheet")
     } else if (o$kind == "listing") {
       lr <- list(output_id = id)
       for (k in c("dataset", "where", "sort")) if (!is.null(o$data[[k]])) lr[[k]] <- cell(o$data[[k]])
-      for (it in o$content) {
+      for (it in if (code_content) list() else o$content) {
         if (identical(it$fn, "plan_listing")) {
           for (cl in it$args$cols %||% list()) {
             if (inherits(cl, "tfl_call")) listing_cols[[length(listing_cols) + 1L]] <- c(list(output_id = id), lapply(cl$args, cell))
@@ -155,7 +163,7 @@ tfl_sheets_from_yaml <- function(dir) {
       if (!is.null(o$data$steps)) fd$data <- o$data$steps
       if (!is.null(o$data$stats)) fd$stats <- o$data$stats
       if (!is.null(o$plot)) fd$plot <- o$plot
-      fd$layers <- lapply(o$content, function(it) c(list(layer = it$fn), it$args))
+      fd$layers <- if (code_content) list() else lapply(o$content, function(it) c(list(layer = it$fn), it$args))
       for (k in c("plots", "compose")) if (!is.null(o[[k]])) fd[[k]] <- o[[k]]
       figures[[id]] <- fd
     }
@@ -171,9 +179,38 @@ tfl_sheets_from_yaml <- function(dir) {
   # the table and report sheets as data frames (the study sheet from study.yml's settings)
   table <- list()
   settings <- s$study$settings %||% list()
+  # every report's file and program go back to the report sheet's study row
+  fp <- settings[intersect(c("file", "program"), names(settings))]
+  settings <- settings[setdiff(names(settings), c("file", "program"))]
   table$study <- data.frame(key = names(settings), value = vapply(settings, cell, ""), stringsAsFactors = FALSE)
   for (sh in c(names(.ard_spec_schema()), .ard_spec_pattern_sheets)) {
     table[[sh]] <- .rows_df(rows[[sh]] %||% list(), c("output_id", setdiff(.sheet_columns(sh), "output_id")))
+  }
+  if (length(fp)) {
+    rp <- table$report
+    i <- which(is.na(rp$output_id))
+    if (!length(i)) { rp[nrow(rp) + 1L, ] <- NA; i <- nrow(rp) }
+    for (k in names(fp)) { if (!k %in% names(rp)) rp[[k]] <- NA_character_; rp[[k]][i[1L]] <- cell(fp[[k]]) }
+    table$report <- rp
+  }
+  # a table's normalize_ard() arguments on its tables row
+  for (id in names(norm_rows)) {
+    a <- norm_rows[[id]]
+    tb <- table$tables
+    i <- match(id, tb$output_id)
+    if (is.na(i)) { tb[nrow(tb) + 1L, ] <- NA; i <- nrow(tb); tb$output_id[i] <- id }
+    put <- function(col, v) { if (!col %in% names(tb)) tb[[col]] <<- NA_character_; tb[[col]][i] <<- v }
+    if (!is.null(a$overall)) put("overall_label", as.character(a$overall))
+    if (!is.null(a$stack)) {
+      put("stack", paste(vapply(names(a$stack), function(n) {
+        v <- a$stack[[n]]
+        parts <- if (is.list(v)) vapply(v, function(p) paste(unlist(p), collapse = " * "), "") else v
+        paste0(n, " = ", paste(parts, collapse = ", "))
+      }, ""), collapse = " | "))
+      if (!is.null(a$stack_sep)) put("stack_sep", encodeString(as.character(a$stack_sep), quote = "\""))
+      if (isTRUE(a$stack_nest)) put("stack_nest", "TRUE")
+    }
+    table$tables <- tb
   }
   list(table = table, planner = .rows_df(planner, c("output_id", "description", "setup_code", "process_code",
                                                      "section", "population", "datasets", "batches")),
@@ -231,4 +268,36 @@ tfl_sheets_from_yaml <- function(dir) {
 .first_r_step <- function(steps) {
   for (s in steps %||% list()) if (inherits(s, "tfl_r")) return(as.character(s))
   NA_character_
+}
+
+.page_known <- c("header", "footer", "titles", "footnotes", "tokens", "page", "report",
+                 "rtf_page", "rtf_default_format", "rtf_document", "rtf_tables", "rtf_titles",
+                 "rtf_footnotes", "rtf_figures")
+
+# `page:`'s rtfreporter arguments as the page and report sheets' columns
+# (the inverse of the converter's .page_put()): list(page = , report = ),
+# each a named list of cells
+.page_columns <- function(page) {
+  cell <- .sheet_cell
+  pr <- list(page = list(), report = list())
+  for (sh in names(.page_map)) {
+    m <- .page_map[[sh]]
+    for (col in names(m)) {
+      fn <- sub("[.].*$", "", m[[col]])
+      arg <- if (grepl(".", m[[col]], fixed = TRUE)) sub("^[^.]*[.]", "", m[[col]]) else col
+      v <- page[[fn]][[arg]]
+      if (!is.null(v)) pr[[sh]][[col]] <- cell(v)
+    }
+  }
+  ft <- page$rtf_document$font_table
+  if (length(ft) && !is.null(ft[[1L]]$name)) pr$page$font <- cell(ft[[1L]]$name)
+  if (inherits(page$header, "tfl_unset")) pr$report$page_header <- "FALSE"
+  if (inherits(page$footer, "tfl_unset")) pr$report$page_footer <- "FALSE"
+  for (a in c("width_twips", "height_twips")) {
+    v <- page$rtf_figures[[a]]
+    if (!is.null(v)) pr$report[[if (a == "width_twips") "figure_width_in" else "figure_height_in"]] <-
+      if (is.numeric(v)) format(v / 1440) else cell(v)
+  }
+  for (k in names(page$report)) pr$report[[k]] <- cell(page$report[[k]])
+  pr
 }

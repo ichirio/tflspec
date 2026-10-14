@@ -210,19 +210,22 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
     by_scope(sh, function(id, part) {
       rel <- scope_rel(id)
       y <- get_file(rel)
-      m <- y$page[[sh]] %||% list()
+      page <- y$page %||% list()
+      before <- .page_columns(page)[[sh]]
       for (cn in setdiff(names(part), "output_id")) {
         v <- .conv_cell(part[[cn]][1L], cn, character(), character(), function(...) NULL, NA, sh, 1L)
-        if (!identical(.flat_text(m[[cn]]), .flat_text(v))) {
+        if (is.null(v)) next
+        if (!identical(.flat_text(before[[cn]]), .flat_text(v))) {
           st$changes[[length(st$changes) + 1L]] <- data.frame(sheet = sh, key = if (is.na(id)) "" else id, column = cn,
-                                                            from = .flat_text(m[[cn]]), to = .flat_text(v), stringsAsFactors = FALSE)
-          m[[cn]] <- v
+                                                            from = .flat_text(before[[cn]]), to = .flat_text(v), stringsAsFactors = FALSE)
+          page <- .page_put(page, sh, cn, v, function(...) NULL, id)
         }
       }
-      y$page[[sh]] <- m
+      y$page <- page
       set_file(rel, y)
     })
   }
+
 
   written <- character()
   if (write) {

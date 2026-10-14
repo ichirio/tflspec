@@ -10,17 +10,24 @@ tfl_content_run(output, data)
 \item{output}{A report (\code{\link[=tfl_output]{tfl_output()}}), resolved.}
 
 \item{data}{The data the content starts from: the ARD (or the normalized
-ARD when the content has no \code{normalize_ard()} item).}
+ARD when the content has no \code{normalize_ard()} item).  With
+\code{data.steps} (R that makes \code{data} from the output's \code{data.object},
+\code{ard} by default), the object the steps start from.  For a figure, a
+named list of the objects its code reads: the datasets by their names
+in lower case (\code{adtte}), and \code{ard}.}
 }
 \value{
-For a table, the \code{\link[rtfreporter:table_plan]{rtfreporter::table_plan()}}.
+For a table, the \code{\link[rtfreporter:table_plan]{rtfreporter::table_plan()}}; for a figure, the
+ggplot.
 }
 \description{
 Runs what \code{\link[=tfl_content_code]{tfl_content_code()}} writes: the same items, in the same order,
 each applied with \code{do.call()} -- for a table, the data's steps
 (\code{normalize_ard()}), \code{table_plan()} and its layers.  The two read one
 list of calls, so running the written code gives the same object; it is
-the quick way for a preview, the app or an assistant's check.
+the quick way for a preview, the app or an assistant's check.  A report
+whose content is its own code (\code{content: !r}) runs it, after the
+data's steps, and gives what it leaves in \code{content}.
 }
 \examples{
 if (requireNamespace("cards", quietly = TRUE)) {

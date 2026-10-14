@@ -101,8 +101,10 @@ tfl_output <- function(id, kind = c("table", "figure", "listing"),
          call. = FALSE)
   }
   kind <- match.arg(kind)
-  if (!is.list(content) || !all(vapply(content, inherits, NA, "tfl_item"))) {
-    stop("tfl_output(): `content` is a list of tfl_item().", call. = FALSE)
+  if (!inherits(content, "tfl_r") &&
+      (!is.list(content) || !all(vapply(content, inherits, NA, "tfl_item")))) {
+    stop("tfl_output(): `content` is a list of tfl_item(), or one tfl_r() (the content as code).",
+         call. = FALSE)
   }
   if (!is.character(extends) || !length(extends)) {
     stop("tfl_output(): `extends` is a character vector (\"defaults\", \"patterns/<name>\", \"none\").",
@@ -134,7 +136,9 @@ print.tfl_output <- function(x, ...) {
   cat("<tfl_output> ", x$id, " (", x$kind, ")",
       if (!is.na(x$label)) paste0(": ", x$label), "\n", sep = "")
   cat("  extends: ", paste(x$extends, collapse = ", "), "\n", sep = "")
-  if (length(x$content)) {
+  if (inherits(x$content, "tfl_r")) {
+    cat("  content: (R code)\n")
+  } else if (length(x$content)) {
     cat("  content:\n")
     for (it in x$content) {
       cat("    - ", it$fn, "(", paste(names(it$args), collapse = ", "), ")",
@@ -226,7 +230,8 @@ tfl_read_output <- function(path) {
       !grepl("^outputs?$", basename(path))) {
     # (a multi-report file is named as its author likes)
   }
-  content <- lapply(y$content %||% list(), .item_from_list)
+  content <- if (inherits(y$content, "tfl_r")) y$content else
+    lapply(y$content %||% list(), .item_from_list)
   extends <- y$extends %||% "defaults"
   out <- tfl_output(
     id = y$id, kind = y$kind, label = y$label, population = y$population,
@@ -301,7 +306,7 @@ tfl_write_output <- function(x, path) {
   y$extends <- as.list(x$extends)
   if (!is.null(x$data)) y$data <- .calls_out(x$data)
   if (length(x$codelists)) y$codelists <- x$codelists
-  y$content <- .items_to_list(x$content)
+  y$content <- if (inherits(x$content, "tfl_r")) x$content else .items_to_list(x$content)
   if (length(x$page)) y$page <- .calls_out(x$page)
   # a kind's own parts beside the common ones (a figure's template, plot,
   # plots, compose)
@@ -329,7 +334,12 @@ tfl_write_output <- function(x, path) {
 
 # content items as they are written: `- fn: {args}`
 .items_to_list <- function(items) {
-  lapply(items, function(it) stats::setNames(list(.calls_out(it$args)), it$fn))
+  lapply(items, function(it) {
+    a <- .calls_out(it$args)
+    # no arguments: an empty map ({}), not an empty sequence
+    if (!length(a)) a <- stats::setNames(list(), character())
+    stats::setNames(list(a), it$fn)
+  })
 }
 
 # the data stage's steps as a list: an `!r` step (or a sequence of them,

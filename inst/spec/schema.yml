@@ -244,6 +244,33 @@ plan_columns:
     auto_width: {type: logical}
     sep: {type: string}
 
+plan_listing:
+  package: rtfreporter
+  rank: 225
+  description: A listing -- records, not statistics -- its columns one listing_col() each.
+  dots: {style: positional, key: cols, type: "list<call<listing_col>>", description: "The listing's columns, in order: each a listing_col() of one or more variables."}
+  args:
+    type: {type: "enum[multiline|wide]"}
+    sep: {type: string}
+    spacer: {type: string}
+    spacer_rel_width: {type: number}
+    layout: {type: string}
+    wrap: {type: "logical|string"}
+
+listing_col:
+  package: rtfreporter
+  description: One column of a listing.
+  args:
+    vars: {type: "list<column>", description: "The variable(s) the column prints; several stack (or flow) in one cell."}
+    sep: {type: string}
+    width: {type: number}
+    label: {type: string}
+    name: {type: string}
+    rel_width: {type: number}
+    align: {type: "enum[left|center|right]"}
+    layout: {type: "enum[stack|flow]"}
+    collapse_repeats: {type: logical}
+
 plan_titles:
   package: rtfreporter
   rank: 240
@@ -293,3 +320,243 @@ rtf_col_header:
 cell_rows:
   package: rtfreporter
   dots: {style: named, type: "template|list<guard|template>", description: "A cell's lines, by the label of the row each sits on."}
+
+# ---- the ARD's analyses: cards and cardx calls -------------------------------
+# One analysis of a spec's `data.analyses` is one of these calls.  `data` is
+# the analysis data the spec names (`data: adsl_saf`), not an argument here.
+# A tidyselect argument (`variables`, `by`) is a column or a sequence of
+# them; `statistic`, `fmt_fun` and `stat_label` are maps by variable (the
+# list form cards takes), or `!r` for a selector formula
+# (`!r "everything() ~ continuous_summary_fns()"`).
+
+ard_summary:
+  package: cards
+  description: Summary statistics of continuous variables.
+  args:
+    variables: {type: "list<column>|column"}
+    by: {type: "list<column>|column"}
+    strata: {type: "list<column>|column"}
+    statistic: {type: "map<column, call<continuous_summary_fns>>|r", description: "The statistics by variable, each a function list: {AGE: {fn: cards::continuous_summary_fns, args: {summaries: [N, mean, sd]}}}, or !r for a formula."}
+    fmt_fun: {type: "map<column, map<stat, integer>>|r", description: "Digits by variable and statistic: {AGE: {mean: 1, sd: 2}}."}
+    stat_label: {type: "map<column, map<stat, string>>|r"}
+
+ard_tabulate:
+  package: cards
+  description: Counts and percentages of categorical variables.
+  args:
+    variables: {type: "list<column>|column"}
+    by: {type: "list<column>|column"}
+    strata: {type: "list<column>|column"}
+    statistic: {type: "map<column, list<stat>>|r"}
+    denominator: {type: "string|r", description: "\"column\", \"row\", \"cell\", or the data of the population (`!r adsl`)."}
+    fmt_fun: {type: "map<column, map<stat, integer>>|r"}
+    stat_label: {type: "map<column, map<stat, string>>|r"}
+
+ard_tabulate_value:
+  package: cards
+  description: Counts of one value of each variable (a flag's "Y").
+  args:
+    variables: {type: "list<column>|column"}
+    by: {type: "list<column>|column"}
+    strata: {type: "list<column>|column"}
+    value: {type: "map<column, string|logical|number>|r"}
+    statistic: {type: "map<column, list<stat>>|r"}
+    denominator: {type: "string|r"}
+    fmt_fun: {type: "map<column, map<stat, integer>>|r"}
+    stat_label: {type: "map<column, map<stat, string>>|r"}
+
+ard_hierarchical:
+  package: cards
+  description: Counts in a hierarchy (SOC and PT).
+  args:
+    variables: {type: "list<column>"}
+    by: {type: "list<column>|column"}
+    statistic: {type: "map<column, list<stat>>|r"}
+    denominator: {type: "string|r"}
+    id: {type: column}
+    fmt_fun: {type: "map<column, map<stat, integer>>|r"}
+    stat_label: {type: "map<column, map<stat, string>>|r"}
+
+ard_stack_hierarchical:
+  package: cards
+  description: Counts in a hierarchy, each level's own and the overall rows.
+  args:
+    variables: {type: "list<column>"}
+    by: {type: "list<column>|column"}
+    id: {type: column}
+    denominator: {type: "r|string"}
+    include: {type: "list<column>"}
+    statistic: {type: "map<column, list<stat>>|r"}
+    overall: {type: logical}
+    over_variables: {type: logical}
+    attributes: {type: logical}
+    total_n: {type: logical}
+    shuffle: {type: logical}
+
+continuous_summary_fns:
+  package: cards
+  description: The summary functions of ard_summary(), by their names.
+  args:
+    summaries: {type: "list<stat>"}
+
+ard_missing:
+  package: cards
+  args:
+    variables: {type: "list<column>|column"}
+    by: {type: "list<column>|column"}
+    statistic: {type: "map<column, list<stat>>|r"}
+
+ard_total_n:
+  package: cards
+  description: The number of subjects in the data.
+
+ard_stack:
+  package: cards
+  description: Several analyses stacked, by the same `by`, with the overall rows.
+  dots: {style: positional, key: analyses, type: "list<call>", description: "The analyses, each a cards call without its data."}
+  args:
+    .by: {type: "list<column>|column"}
+    .overall: {type: logical}
+    .missing: {type: logical}
+    .attributes: {type: logical}
+    .total_n: {type: logical}
+    .shuffle: {type: logical}
+
+ard_strata:
+  package: cards
+  description: One analysis repeated within each level of the strata.
+  args:
+    .by: {type: "list<column>|column"}
+    .strata: {type: "list<column>|column"}
+    .f: {type: "r|call"}
+
+ard_categorical_ci:
+  package: cardx
+  description: A proportion's confidence interval.
+  args:
+    variables: {type: "list<column>|column"}
+    by: {type: "list<column>|column"}
+    strata: {type: "list<column>|column"}
+    method: {type: "enum[waldcc|wald|clopper-pearson|wilson|wilsoncc|strat_wilson|strat_wilsoncc|agresti-coull|jeffreys]"}
+    denominator: {type: "string|r"}
+    conf.level: {type: number}
+    value: {type: "map<column, string|logical|number>|r"}
+
+ard_stats_t_test:
+  package: cardx
+  args:
+    variables: {type: "list<column>|column"}
+    by: {type: column}
+    conf.level: {type: number}
+
+ard_stats_wilcox_test:
+  package: cardx
+  args:
+    variables: {type: "list<column>|column"}
+    by: {type: column}
+    conf.level: {type: number}
+
+ard_stats_chisq_test:
+  package: cardx
+  args:
+    variables: {type: "list<column>|column"}
+    by: {type: column}
+
+ard_stats_fisher_test:
+  package: cardx
+  args:
+    variables: {type: "list<column>|column"}
+    by: {type: column}
+    conf.level: {type: number}
+
+ard_stats_kruskal_test:
+  package: cardx
+  args:
+    variables: {type: "list<column>|column"}
+    by: {type: column}
+
+ard_stats_oneway_test:
+  package: cardx
+  args:
+    formula: {type: r}
+
+# ---- a report's page: the document's calls -----------------------------------
+# A report's `page:` says each of these by its name, its arguments a map
+# (`rtf_page: {orientation: portrait}`); the lines of `header`, `footer`,
+# `titles` and `footnotes` and the `tokens` are page:'s own keys.
+
+rtf_page:
+  package: rtfreporter
+  description: The page -- paper, orientation, margins (inches).
+  args:
+    paper_size: {type: "enum[letter|legal|A4|A3|A5]"}
+    orientation: {type: "enum[landscape|portrait]"}
+    width_in: {type: number}
+    height_in: {type: number}
+    margin_top_in: {type: number}
+    margin_bottom_in: {type: number}
+    margin_left_in: {type: number}
+    margin_right_in: {type: number}
+    header_dist_in: {type: number}
+    footer_dist_in: {type: number}
+
+rtf_default_format:
+  package: rtfreporter
+  description: The document's text defaults.
+  args:
+    font_size_half_points: {type: integer}
+    row_height_twips: {type: integer}
+    cell_padding_left_twips: {type: integer}
+    cell_padding_right_twips: {type: integer}
+    markup: {type: logical}
+    title_format: {type: string}
+    footnote_format: {type: string}
+    title_width: {type: "number|string"}
+    footnote_width: {type: "number|string"}
+
+rtf_document:
+  package: rtfreporter
+  description: The document -- its font, watermark and program.
+  args:
+    font_table: {type: "list<map<string, string>>", description: "The fonts, the first the document's: [{name: Arial}]."}
+    watermark: {type: string}
+    program: {type: string}
+    program_fallback: {type: string}
+
+rtf_tables:
+  package: rtfreporter
+  description: A table's or a listing's pages in the document.
+  args:
+    auto_section: {type: logical}
+    section_label_align: {type: "enum[left|center|right]"}
+    auto_title: {type: logical}
+    title_label_align: {type: "enum[left|center|right]"}
+    font_size_half_points: {type: integer}
+
+rtf_figures:
+  package: rtfreporter
+  description: A figure in the document, its size in twips (an inch is 1440), or fit (the page's body).
+  args:
+    width_twips: {type: "integer|enum[fit]"}
+    height_twips: {type: "integer|enum[fit]"}
+    align: {type: "enum[left|center|right]"}
+
+rtf_titles:
+  package: rtfreporter
+  description: The titles above the content.
+  args:
+    font_size_half_points: {type: integer}
+    row_height_twips: {type: integer}
+    markup: {type: logical}
+    font: {type: string}
+    align: {type: "enum[left|center|right]"}
+
+rtf_footnotes:
+  package: rtfreporter
+  description: The footnotes below the content.
+  args:
+    font_size_half_points: {type: integer}
+    row_height_twips: {type: integer}
+    markup: {type: logical}
+    font: {type: string}
+    align: {type: "enum[left|center|right]"}

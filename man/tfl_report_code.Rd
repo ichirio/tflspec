@@ -9,12 +9,18 @@ tfl_report_code(
   output_id = NULL,
   content = "content",
   doc = "doc",
-  setup = FALSE
+  setup = FALSE,
+  study = NULL
 )
 }
 \arguments{
 \item{spec}{A report definition (\code{\link[=tfl_read_report_spec]{tfl_read_report_spec()}}) narrowed to one
-report, or the path(s) to read it from.}
+report, or the path(s) to read it from; or a report of the YAML spec
+(\code{\link[=tfl_output]{tfl_output()}}, resolved: \code{\link[=tfl_resolve_output]{tfl_resolve_output()}}), its \verb{page:} the
+calls -- \code{rtf_page}, \code{rtf_default_format}, \code{rtf_document},
+\code{rtf_tables} / \code{rtf_figures}, \code{rtf_titles}, \code{rtf_footnotes}, each its
+arguments, and the lines of \code{header}, \code{footer}, \code{titles}, \code{footnotes}
+and the \code{tokens}.}
 
 \item{output_id}{The report, when \code{spec} is a path or still defines
 several.}
@@ -33,7 +39,14 @@ said by name (\code{study_header}, \code{study_footer}; a line the report's
 tokens leave empty, a blank \verb{<\{OUTPUT_POPULATION\}>}, is left out when
 the file is written) -- unless the report has its own, written here
 as before.
-\code{FALSE} (default): the program stands alone.}
+\code{FALSE} (default): the program stands alone.  For a YAML report, the
+study's are its defaults (\code{spec/defaults.yml}), the report's its
+pattern and its own: give the report as read (\code{\link[=tfl_read_output]{tfl_read_output()}}) and
+its \code{study}.}
+
+\item{study}{For a YAML report: the study (\code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}), for
+its program (the TOC's \code{program}, else \code{settings: program}, in
+\code{settings: program_dir}).}
 }
 \value{
 The code, one element per line.

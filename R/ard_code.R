@@ -1155,3 +1155,76 @@
             paste(kids$analysis_id, collapse = ", ")),
     .data_pipe(name, node, data, steps))
 }
+
+# ---- an analysis as calls (the YAML spec's generators) -----------------------
+
+# One analysis as the calls the program makes of it, for the generators of
+# the YAML spec (S1's pipeline; the same pieces .ard_analysis_lines() writes
+# as text): `call`, the analysis's call on the data -- `fn` ("cards::
+# ard_summary", or the method as given) and `args` (named; a value is the
+# R text it is written as, a tfl_r, or a nested call); `steps`, the calls
+# after it in the pipe (post, keep_stats, fmt_ard, tag_ard), each the same
+# shape; `overall` TRUE when the call is bound with itself without `by`
+# (the Total column); `code`, the row's own R (a tfl_r) for a `custom`
+# method, with `call` NULL.
+.ard_analysis_call <- function(x, r, keys, subj, data = "data") {
+  pid <- r$population_id
+  pop <- if (!is.na(pid)) paste0("pop_", .r_name(pid))
+  pop_name <- if (is.null(pop)) "NULL" else pop
+  given <- c(.args_given(r$args), if (!is.na(r$strata)) "strata",
+             if (!is.na(r$denominator)) "denominator")
+  has <- function(arg) arg %in% given
+  k <- .method_key(r$method, keys)
+  kind <- if (is.na(k)) "" else keys$kind[k]
+  call_fn <- if (is.na(k)) r$method else keys$call[k]
+  den <- .den_code(r$denominator, x, pop, subj, population = pop_name)
+  fmt <- c(if (!is.na(k)) .parse_formats(keys$formats[k]),
+           .parse_formats(r$formats))
+  fmt <- fmt[!duplicated(names(fmt), fromLast = TRUE)]
+  fmt_fun <- .call_fmt_fun(r, keys, given, fmt)
+  node <- .analysis_node(r, keys, subj, has, den, data = data,
+                         population = pop_name, fmt_fun = fmt_fun)
+  overall <- isTRUE(.ard_yes(r$overall %||% NA)) && !is.na(r$by) &&
+    !call_fn %in% c("(code)", "(subjects)")
+  keep <- if (!kind %in% c("continuous", "categorical", "missing") &&
+              !identical(call_fn, "(subjects)"))
+    .split_bar(r$statistics)
+  steps <- c(as.list(.split_post(r$post)),
+             if (length(keep)) list(.cl("keep_stats", list(.cl("c", .q(keep))))),
+             list(.fmt_step(fmt, !is.null(fmt_fun)),
+                  .tag_step(r$analysis_id, pid)))
+  steps <- lapply(steps, .cl_as_call)
+  if (identical(call_fn, "(code)")) {
+    return(list(call = NULL, code = tfl_r(as.character(node)), steps = steps,
+                overall = FALSE, population = pop_name))
+  }
+  list(call = .cl_as_call(node), code = NULL, steps = steps, overall = overall,
+       population = pop_name)
+}
+
+# a .cl() node as list(fn, args): an argument that is R text becomes a
+# tfl_r, a nested node a list(fn, args) of its own; a step written as text
+# ("dplyr::filter(x)") is parsed into one
+.cl_as_call <- function(node) {
+  if (is.character(node) && length(node) == 1L) {
+    e <- tryCatch(str2lang(node), error = function(e) NULL)
+    if (is.call(e)) {
+      fn <- paste(deparse(e[[1L]]), collapse = "")
+      a <- as.list(e)[-1L]
+      args <- lapply(a, function(v) tfl_r(paste(deparse(v), collapse = "\n")))
+      return(list(fn = fn, args = args))
+    }
+    return(list(fn = NULL, args = list(), code = tfl_r(node)))
+  }
+  args <- lapply(node$args, function(a) {
+    if (inherits(a, "tfl_cl")) .cl_as_call(a) else tfl_r(as.character(a))
+  })
+  list(fn = node$fn, args = args)
+}
+
+# the call back as a .cl() node (for checking: its layout is the program's)
+.call_as_cl <- function(cl) {
+  .cl(cl$fn, lapply(cl$args, function(a) {
+    if (is.list(a) && !inherits(a, "tfl_r") && !is.null(a$fn)) .call_as_cl(a) else as.character(a)
+  }))
+}

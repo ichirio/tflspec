@@ -128,3 +128,25 @@ test_that("a named-dots verb (plan_cells) merges by key; another verb is replace
   # plan_labels by key: AGE stays, SEX is the report's
   expect_identical(r$content[[4L]]$args, list(AGE = "Age", SEX = "Gender"))
 })
+
+test_that("a report's content as R code (one !r) is read, written and wins whole", {
+  d <- withr::local_tempdir()
+  dir.create(file.path(d, "outputs"))
+  writeLines(c("content:", "  - plan_stub: {name: row_label}"), file.path(d, "defaults.yml"))
+  writeLines(c("id: T-1", "kind: table",
+               "data: {source: code, code: !r 'data <- head(adsl)'}",
+               "content: !r |", "  plan <- table_plan(data, cols = \"ARM\")"), file.path(d, "outputs", "T-1.yml"))
+  o <- tfl_read_outputs(d)[["T-1"]]
+  expect_s3_class(o$content, "tfl_r")
+  expect_s3_class(o$data$code, "tfl_r")
+  expect_output(print(o), "R code")
+  r <- tfl_resolve_output(o, tfl_read_study_spec(d))
+  expect_s3_class(r$content, "tfl_r")
+  f <- withr::local_tempfile(fileext = ".yml")
+  tfl_write_output(o, f)
+  expect_identical(as.character(tfl_read_output(f)$content), as.character(o$content))
+  sh <- tfl_sheets_from_yaml(d)
+  rp <- sh$table$report
+  expect_match(rp$content_code[rp$output_id %in% "T-1"], "table_plan(data", fixed = TRUE)
+  expect_identical(rp$data_code[rp$output_id %in% "T-1"], "data <- head(adsl)")
+})

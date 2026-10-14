@@ -17,12 +17,17 @@
 
 .schema_cache <- new.env(parent = emptyenv())
 
-.schema_all <- function() {
+.schema_all <- function(figure = TRUE) {
   if (is.null(.schema_cache$all)) {
     f <- system.file("spec", "schema.yml", package = "tflspec")
     .schema_cache$all <- yaml::read_yaml(f)
   }
-  .schema_cache$all
+  all <- .schema_cache$all
+  if (!figure) return(all)
+  # a figure's layers: from the figure designer's catalog as it is now (a
+  # layer added with tfl_fig_add_layer() too; R/spec_figure.R)
+  fig <- .schema_fig_entries()
+  c(all, fig[setdiff(names(fig), names(all))])
 }
 
 #' The spec schema: the arguments a spec item may give, and their types
@@ -54,9 +59,11 @@
 #' @seealso [tfl_schema_check()]
 #' @export
 tfl_schema <- function(fn = NULL) {
-  s <- .schema_all()
-  if (is.null(fn)) return(s)
-  s[[.schema_fn_name(fn)]]
+  if (is.null(fn)) return(.schema_all())
+  nm <- .schema_fn_name(fn)
+  # the file's entries first; a figure's layer, made from the designer's
+  # catalog, only for a name the file does not have
+  .schema_all(figure = FALSE)[[nm]] %||% .schema_fig_entries()[[nm]]
 }
 
 # `rtfreporter::plan_cells` and `plan_cells` are one entry
@@ -360,7 +367,7 @@ tfl_schema_check <- function(item) {
       .spec_need_rtfreporter()
       return(do.call(rtfreporter::cell_rows, lapply(a, .schema_eval_guards)))
     }
-    return(do.call(.spec_call, c(list(.schema_fn_name(v$fn)), a)))
+    return(do.call(.spec_call, c(list(.schema_call_fun(v)), a)))
   }
   if (is.null(ty)) return(v)
   k <- ty$kind
@@ -429,6 +436,20 @@ tfl_schema_check <- function(item) {
   if (k == "list" && is.list(v) && !is.object(v)) return(lapply(v, .schema_value_from_r, ty = ty$args[[1L]]))
   if (k == "map" && is.list(v)) return(lapply(v, .schema_value_from_r, ty = ty$args[[2L]]))
   v
+}
+
+# A call's function as the code writes it: bare for rtfreporter's and
+# tflspec's (the program attaches rtfreporter), `pkg::fn` for another
+# package's (cards::continuous_summary_fns), as the call or its schema
+# entry names the package.
+.schema_call_fun <- function(v) {
+  fn <- .schema_fn_name(v$fn)
+  if (grepl("::", v$fn, fixed = TRUE)) {
+    pkg <- sub("::.*$", "", v$fn)
+  } else {
+    pkg <- v$package %||% tfl_schema(fn)$package %||% "rtfreporter"
+  }
+  if (pkg %in% c("rtfreporter", "tflspec")) fn else paste0(pkg, "::", fn)
 }
 
 # guards inside cell_rows(): a `!r` there is a formula object, as R writes them

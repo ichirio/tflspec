@@ -43,6 +43,30 @@
   and a spec file write the same code: byte for byte the same as before for
   every bundled workbook, the tflplanner sample and the table cases.
 
+* **The YAML spec, stage 2: every kind's code from its spec file**
+  (0.0.24.9113).  `tfl_content_code()` / `tfl_content_run()` write and run
+  a listing (`plan_listing()` with `listing_col()`, the same RTF as
+  `listing_spec()`), a figure (its layers as the figure designer has
+  them: `tfl_fig_design_code()` of the design the report stands for) and
+  a report whose content is its own code (`content: !r`, the old
+  `content_code`; `data: {source: code}` for the old `data_code`); a
+  table's or a listing's `data.steps` (the old `process_code`) come before
+  the plan.  `tfl_report()` and `tfl_report_code()` take a report of the
+  YAML spec: its `page:` is the document's calls by name (`rtf_page`,
+  `rtf_default_format`, `rtf_document`, `rtf_tables` / `rtf_figures`,
+  `rtf_titles`, `rtf_footnotes`) with the lines of `header`, `footer`,
+  `titles` and `footnotes` and the `tokens`; `setup = TRUE` leaves the
+  study's (its defaults) to the setup code.  An ARD analysis is its calls
+  (`cards::ard_summary()` and the pipe after it), written and run from the
+  same list.  The schema covers the cards and cardx analyses, `page:`'s
+  calls and the figure designer's layers (made from `tfl_fig_parts()`); a
+  call of another package is written `pkg::fn`.  The conversion puts
+  `normalize_ard` in the defaults' content, the report's file and program
+  in `settings:`, `page:` in the new shape, and reads an old figure design
+  as the designer did (YAML 1.1: `yes` is TRUE).  On the tflplanner sample,
+  the code is byte for byte as before: 12 tables, 17 report documents
+  (with and without `setup`), 27 analyses, the designer's figures.
+
 * **`populations` has a `label` column**: the text a header or footnote
   prints for the analysis set (`Safety Analysis Set`), also its name in CDISC
   ARS (`tfl_ars()` writes it as the analysis set's `name`, `tfl_ars_to_specs()`

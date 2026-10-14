@@ -60,7 +60,7 @@ conv_study <- function(dir) {
                                                      collapse_repeats = c("TRUE", NA), stringsAsFactors = FALSE), keepNA = FALSE)
   openxlsx::addWorksheet(wb, "figures")
   openxlsx::saveWorkbook(wb, file.path(spec, "listing_figure_spec.xlsx"))
-  writeLines(c("template: km_simple", "data:", "- step: read", "  dataset: ADTTE", "plot:", "  x_label: Time",
+  writeLines(c("template: km_simple", "data:", "- step: read", "  dataset: ADTTE", "plot:", "  x_label: Time", "  x_log: yes",
                "layers:", "- layer: km_curve", "  linewidth: 0.3", "- layer: hline", "  yintercept: 0.5"),
              file.path(spec, "figures", "F-1.yml"))
   dir
@@ -81,6 +81,8 @@ test_that("a study's sheets convert to the YAML files, the rest is listed", {
   expect_null(st$tflplanner)
   expect_identical(st$keys$output, "output/ard/ard.rds")
   expect_identical(st$spec_version, 1L)
+  # every report's file: the report sheet's study row
+  expect_identical(st$settings$file, "{output_id}.rtf")
   expect_true("tflspec" %in% names(st$packages))
   expect_s3_class(st$setup, "tfl_r")
   # data.yml: the catalog, where as !r, label kept
@@ -96,7 +98,7 @@ test_that("a study's sheets convert to the YAML files, the rest is listed", {
   expect_identical(s$defaults$page$tokens$COMPANY, "Acme")
   expect_identical(s$codelists, list())        # a code list is a report's (no templates here)
   expect_identical(names(s$patterns), "Compact")
-  expect_identical(s$patterns$Compact$page$page$margin_top_in, 0.5)
+  expect_identical(s$patterns$Compact$page$rtf_page$margin_top_in, 0.5)
   expect_identical(vapply(s$toc$outputs, `[[`, "", "id"), c("T-1", "L-1", "F-1"))
   expect_identical(s$toc$outputs[[1L]]$sets, c("Topline", "Final"))
   expect_identical(s$toc$outputs[[1L]]$section, "14.1")
@@ -146,6 +148,8 @@ test_that("a study's sheets convert to the YAML files, the rest is listed", {
   expect_identical(f1$data$steps[[1L]]$dataset, "ADTTE")
   expect_identical(vapply(f1$content, `[[`, "", "fn"), c("km_curve", "hline"))
   expect_identical(f1$plot$x_label, "Time")
+  # an old design is read as the designer read it (YAML 1.1: yes is TRUE)
+  expect_identical(f1$plot$x_log, TRUE)
   # what was not converted is listed: the contents without a bridge, the R cells
   nc <- r$not_converted
   expect_true(any(nc$column == "args" & nc$output == "T-1"))

@@ -11,7 +11,9 @@ tfl_content_code(output, data = NULL, plan = "plan", pipe = NULL)
 
 \item{data}{The name of the object the pipe starts from; \code{NULL}: the
 output's \code{data$object}, else \code{ard} when the content normalizes it
-(a \code{normalize_ard()} item), else \code{data}.}
+(a \code{normalize_ard()} item), else \code{data}.  With \code{data.steps} (R that
+makes \code{data} from the output's object, the old process_code), the
+steps come first, as they are written, and the pipe starts from \code{data}.}
 
 \item{plan}{The name the plan is assigned to.}
 
@@ -30,6 +32,14 @@ takes; \code{\link[=tfl_schema]{tfl_schema()}}).  An item the report takes from 
 defaults or a pattern says so in a comment above it.  The output is the
 report after its \code{extends} are applied (\code{tfl_resolve_output()}), so no
 \code{!unset} is left.
+}
+\details{
+A report whose content is its own code (\code{content: !r}, any kind: the
+code leaves \code{content}) is that code, after the data's steps.  A figure's
+content is its layers, as the figure designer has them
+(\code{\link[=tfl_fig_design_code]{tfl_fig_design_code()}} of the design the report stands for: its
+\code{data} steps and statistics, the layers, its code lists): the figure
+in \code{content}, not saved.
 }
 \examples{
 out <- tfl_output("T-1", "table", content = list(

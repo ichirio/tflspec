@@ -30,7 +30,10 @@ test_that("the sheets of the fixture study come back: the report list, the page 
   sh <- tfl_sheets_from_yaml(d)
   expect_identical(sh$planner$output_id, c(NA, "T-14-1-1"))
   expect_identical(sh$planner$population[2L], "SAF")
-  expect_identical(sh$table$report$type, "table")
+  rp <- sh$table$report
+  expect_identical(rp$type[rp$output_id %in% "T-14-1-1"], "table")
+  # the defaults' rtf_tables(auto_section = TRUE) as the report sheet's study row
+  expect_identical(rp$auto_section[is.na(rp$output_id)], "TRUE")
   h <- sh$table$header
   expect_true(all(is.na(h$output_id)))
   expect_identical(h$left[h$line == "2"], "Protocol: {STUDY_ID}")
