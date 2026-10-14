@@ -67,6 +67,21 @@
   the code is byte for byte as before: 12 tables, 17 report documents
   (with and without `setup`), 27 analyses, the designer's figures.
 
+* **The YAML spec, stage 3: one schema for the help, the AI and the
+  figures** (0.0.24.9115).  `inst/spec/columns.csv` is gone: the spec
+  sheets' columns are the schema file's (`.sheets` of `inst/spec/schema.yml`),
+  and `tfl_spec_columns()` returns them as before, every text and order the
+  same (the xlsx header comments, the GUI's `?`, the AI kit).  A column that
+  is a function's argument says which (`at: rtf_page.paper_size`), and the
+  new `tfl_schema_help(fn, arg)` reads that one text for the YAML spec's
+  item.  A figure's own ggplot2 layer (`geom: geom_area`, `aes:`, `params:`)
+  is checked against the installed package's layer function -- its
+  aesthetics and parameters, an unknown one a warning -- and
+  `tfl_schema("geom_point")` (or `"ggrepel::geom_text_repel"`) describes it.
+  `tfl_ai_review()` reviews a report of the YAML spec
+  (`spec/outputs/<id>.yml`): each item against the schema (K16, K17) and
+  each `!r` where the schema has a form of its own for the value (K18).
+
 * **The YAML spec: the ARD program from a study's spec files**
   (0.0.24.9114).  `tfl_ard_code()` and `tfl_build_ard()` take a YAML study
   (`tfl_read_study_spec()`): its data catalog and each report's
