@@ -37,6 +37,9 @@
 # A function a step names: tflspec's own, else rtfreporter's (the plan
 # verbs, rtf_document() and friends).
 .spec_fun <- function(name) {
+  if (grepl("::", name, fixed = TRUE)) {
+    return(getExportedValue(sub("::.*$", "", name), sub("^.*::", "", name)))
+  }
   if (exists(name, envir = asNamespace("tflspec"), inherits = FALSE)) {
     return(get(name, envir = asNamespace("tflspec"), mode = "function"))
   }

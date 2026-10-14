@@ -320,3 +320,162 @@ rtf_col_header:
 cell_rows:
   package: rtfreporter
   dots: {style: named, type: "template|list<guard|template>", description: "A cell's lines, by the label of the row each sits on."}
+
+# ---- the ARD's analyses: cards and cardx calls -------------------------------
+# One analysis of a spec's `data.analyses` is one of these calls.  `data` is
+# the analysis data the spec names (`data: adsl_saf`), not an argument here.
+# A tidyselect argument (`variables`, `by`) is a column or a sequence of
+# them; `statistic`, `fmt_fun` and `stat_label` are maps by variable (the
+# list form cards takes), or `!r` for a selector formula
+# (`!r "everything() ~ continuous_summary_fns()"`).
+
+ard_summary:
+  package: cards
+  description: Summary statistics of continuous variables.
+  args:
+    variables: {type: "list<column>|column"}
+    by: {type: "list<column>|column"}
+    strata: {type: "list<column>|column"}
+    statistic: {type: "map<column, call<continuous_summary_fns>>|r", description: "The statistics by variable, each a function list: {AGE: {fn: cards::continuous_summary_fns, args: {summaries: [N, mean, sd]}}}, or !r for a formula."}
+    fmt_fun: {type: "map<column, map<stat, integer>>|r", description: "Digits by variable and statistic: {AGE: {mean: 1, sd: 2}}."}
+    stat_label: {type: "map<column, map<stat, string>>|r"}
+
+ard_tabulate:
+  package: cards
+  description: Counts and percentages of categorical variables.
+  args:
+    variables: {type: "list<column>|column"}
+    by: {type: "list<column>|column"}
+    strata: {type: "list<column>|column"}
+    statistic: {type: "map<column, list<stat>>|r"}
+    denominator: {type: "string|r", description: "\"column\", \"row\", \"cell\", or the data of the population (`!r adsl`)."}
+    fmt_fun: {type: "map<column, map<stat, integer>>|r"}
+    stat_label: {type: "map<column, map<stat, string>>|r"}
+
+ard_tabulate_value:
+  package: cards
+  description: Counts of one value of each variable (a flag's "Y").
+  args:
+    variables: {type: "list<column>|column"}
+    by: {type: "list<column>|column"}
+    strata: {type: "list<column>|column"}
+    value: {type: "map<column, string|logical|number>|r"}
+    statistic: {type: "map<column, list<stat>>|r"}
+    denominator: {type: "string|r"}
+    fmt_fun: {type: "map<column, map<stat, integer>>|r"}
+    stat_label: {type: "map<column, map<stat, string>>|r"}
+
+ard_hierarchical:
+  package: cards
+  description: Counts in a hierarchy (SOC and PT).
+  args:
+    variables: {type: "list<column>"}
+    by: {type: "list<column>|column"}
+    statistic: {type: "map<column, list<stat>>|r"}
+    denominator: {type: "string|r"}
+    id: {type: column}
+    fmt_fun: {type: "map<column, map<stat, integer>>|r"}
+    stat_label: {type: "map<column, map<stat, string>>|r"}
+
+ard_stack_hierarchical:
+  package: cards
+  description: Counts in a hierarchy, each level's own and the overall rows.
+  args:
+    variables: {type: "list<column>"}
+    by: {type: "list<column>|column"}
+    id: {type: column}
+    denominator: {type: "r|string"}
+    include: {type: "list<column>"}
+    statistic: {type: "map<column, list<stat>>|r"}
+    overall: {type: logical}
+    over_variables: {type: logical}
+    attributes: {type: logical}
+    total_n: {type: logical}
+    shuffle: {type: logical}
+
+continuous_summary_fns:
+  package: cards
+  description: The summary functions of ard_summary(), by their names.
+  args:
+    summaries: {type: "list<stat>"}
+
+ard_missing:
+  package: cards
+  args:
+    variables: {type: "list<column>|column"}
+    by: {type: "list<column>|column"}
+    statistic: {type: "map<column, list<stat>>|r"}
+
+ard_total_n:
+  package: cards
+  description: The number of subjects in the data.
+
+ard_stack:
+  package: cards
+  description: Several analyses stacked, by the same `by`, with the overall rows.
+  dots: {style: positional, key: analyses, type: "list<call>", description: "The analyses, each a cards call without its data."}
+  args:
+    .by: {type: "list<column>|column"}
+    .overall: {type: logical}
+    .missing: {type: logical}
+    .attributes: {type: logical}
+    .total_n: {type: logical}
+    .shuffle: {type: logical}
+
+ard_strata:
+  package: cards
+  description: One analysis repeated within each level of the strata.
+  args:
+    .by: {type: "list<column>|column"}
+    .strata: {type: "list<column>|column"}
+    .f: {type: "r|call"}
+
+ard_categorical_ci:
+  package: cardx
+  description: A proportion's confidence interval.
+  args:
+    variables: {type: "list<column>|column"}
+    by: {type: "list<column>|column"}
+    strata: {type: "list<column>|column"}
+    method: {type: "enum[waldcc|wald|clopper-pearson|wilson|wilsoncc|strat_wilson|strat_wilsoncc|agresti-coull|jeffreys]"}
+    denominator: {type: "string|r"}
+    conf.level: {type: number}
+    value: {type: "map<column, string|logical|number>|r"}
+
+ard_stats_t_test:
+  package: cardx
+  args:
+    variables: {type: "list<column>|column"}
+    by: {type: column}
+    conf.level: {type: number}
+
+ard_stats_wilcox_test:
+  package: cardx
+  args:
+    variables: {type: "list<column>|column"}
+    by: {type: column}
+    conf.level: {type: number}
+
+ard_stats_chisq_test:
+  package: cardx
+  args:
+    variables: {type: "list<column>|column"}
+    by: {type: column}
+
+ard_stats_fisher_test:
+  package: cardx
+  args:
+    variables: {type: "list<column>|column"}
+    by: {type: column}
+    conf.level: {type: number}
+
+ard_stats_kruskal_test:
+  package: cardx
+  args:
+    variables: {type: "list<column>|column"}
+    by: {type: column}
+
+ard_stats_oneway_test:
+  package: cardx
+  args:
+    formula: {type: r}
