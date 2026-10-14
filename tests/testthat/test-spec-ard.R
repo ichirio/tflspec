@@ -66,3 +66,37 @@ test_that("an analysis's code, run, is what its calls make", {
     expect_identical(plain(run_env$ard_x), plain(direct), info = r$analysis_id)
   }
 })
+
+# a YAML study of two tables, the TOC listing the second first
+sa_yaml_study <- function(dir) {
+  dir.create(file.path(dir, "spec", "outputs"), recursive = TRUE)
+  writeLines(c("study_id: SA-1", "keys:", "  id: USUBJID", "  output: output/ard/ard.rds"),
+             file.path(dir, "study.yml"))
+  writeLines(c("datasets:", "  - dataset: ADSL", "    level: ADaM", "    path: data/adam/adsl.rds",
+               "populations:", "  - id: SAF", "    dataset: ADSL", "    where: !r SAFFL == \"Y\""),
+             file.path(dir, "spec", "data.yml"))
+  writeLines(c("outputs:", "  - id: T-2", "    kind: table", "  - id: T-1", "    kind: table"),
+             file.path(dir, "spec", "toc.yml"))
+  one <- function(id, an, method, vars) {
+    writeLines(c(paste("id:", id), "kind: table", "extends: none", "data:", "  source: ard",
+                 "  object: ard", "  analyses:", paste("    - id:", an), paste("      method:", method),
+                 "      population: SAF", "      by: [ARM]", paste0("      variables: [", vars, "]"),
+                 "content:", "  - table_plan: {cols: ARM}"),
+               file.path(dir, "spec", "outputs", paste0(id, ".yml")))
+  }
+  one("T-1", "AGE", "continuous", "AGE")
+  one("T-2", "SEX", "categorical", "SEX")
+  dir
+}
+
+test_that("a YAML study's ARD program: its reports' analyses, in the TOC's order", {
+  dir <- sa_yaml_study(withr::local_tempdir())
+  st <- tfl_read_study_spec(dir)
+  code <- tfl_ard_code(st)
+  at <- function(id) grep(paste0("report_id <- \"", id, "\""), code, fixed = TRUE)
+  expect_length(at("T-1"), 1L)
+  expect_lt(at("T-2"), at("T-1"))
+  expect_true(any(grepl("ard_summary(", code, fixed = TRUE)))
+  expect_identical(tfl_ard_code(st, "T-1", part = "body"),
+                   tfl_ard_code(.ard_spec_of_study(st)$spec, "T-1", part = "body"))
+})

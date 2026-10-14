@@ -23,6 +23,10 @@
 tfl_sheets_from_yaml <- function(dir) {
   s <- tfl_read_study_spec(dir)
   outs <- tfl_read_outputs(dir)
+  # the TOC's order (the sheets' rows, the ARD program's sections), then the rest
+  toc_ids <- vapply(s$toc$outputs %||% list(), function(e) e$id %||% NA_character_, "")
+  ids <- vapply(outs, function(o) o$id, "")
+  outs <- outs[order(match(ids, toc_ids, nomatch = length(toc_ids) + 1L), seq_along(ids))]
   bridge <- .bridge_fn(".plan_sheets_from_content")
   nc <- list()
   note <- function(output, part, reason) nc[[length(nc) + 1L]] <<- data.frame(
@@ -128,19 +132,20 @@ tfl_sheets_from_yaml <- function(dir) {
       add("codelists", list(output_id = id, variable = v, value = cell(cl$value), label = cell(cl$label), order = as.character(i)))
     }
     code_content <- inherits(o$content, "tfl_r")
+    # the report's ARD analyses and analysis data, whatever its kind
+    for (a in o$data$analysis_data %||% list()) {
+      m <- lapply(a, cell); m$data_id <- m$id; m$id <- NULL
+      if (!is.null(m$population)) { m$population_id <- m$population; m$population <- NULL }
+      adata[[length(adata) + 1L]] <- c(list(output_id = id), m)
+    }
+    for (a in o$data$analyses %||% list()) {
+      m <- lapply(a, cell); m$analysis_id <- m$id; m$id <- NULL
+      if (!is.null(m$population)) { m$population_id <- m$population; m$population <- NULL }
+      if (!is.null(a$ref)) note(id, paste0("analyses.", a$id), "a reference to another report's analysis (ref) has no sheet")
+      analyses[[length(analyses) + 1L]] <- c(list(output_id = id), m)
+    }
     if (o$kind == "table") {
       if (!code_content) table_rows(o$content, id)
-      for (a in o$data$analysis_data %||% list()) {
-        m <- lapply(a, cell); m$data_id <- m$id; m$id <- NULL
-        if (!is.null(m$population)) { m$population_id <- m$population; m$population <- NULL }
-        adata[[length(adata) + 1L]] <- c(list(output_id = id), m)
-      }
-      for (a in o$data$analyses %||% list()) {
-        m <- lapply(a, cell); m$analysis_id <- m$id; m$id <- NULL
-        if (!is.null(m$population)) { m$population_id <- m$population; m$population <- NULL }
-        if (!is.null(a$ref)) note(id, paste0("analyses.", a$id), "a reference to another report's analysis (ref) has no sheet")
-        analyses[[length(analyses) + 1L]] <- c(list(output_id = id), m)
-      }
     } else if (o$kind == "listing") {
       lr <- list(output_id = id)
       for (k in c("dataset", "where", "sort")) if (!is.null(o$data[[k]])) lr[[k]] <- cell(o$data[[k]])

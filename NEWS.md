@@ -67,6 +67,16 @@
   the code is byte for byte as before: 12 tables, 17 report documents
   (with and without `setup`), 27 analyses, the designer's figures.
 
+* **The YAML spec: the ARD program from a study's spec files**
+  (0.0.24.9114).  `tfl_ard_code()` and `tfl_build_ard()` take a YAML study
+  (`tfl_read_study_spec()`): its data catalog and each report's
+  `data.analysis_data` / `data.analyses`, whatever the report's kind (a
+  figure's hazard ratios too), the reports' own code lists, the reports in
+  the TOC's order.  Each analysis that is a call is written from its calls
+  (`.ard_analysis_call()`), the list the run reads.  On the tflplanner
+  sample the program is byte for byte the definition's (in the TOC's order)
+  and the ARD it builds the same, row for row.
+
 * **`populations` has a `label` column**: the text a header or footnote
   prints for the analysis set (`Safety Analysis Set`), also its name in CDISC
   ARS (`tfl_ars()` writes it as the analysis set's `name`, `tfl_ars_to_specs()`

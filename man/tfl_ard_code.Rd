@@ -16,7 +16,10 @@ tfl_ard_code(
 )
 }
 \arguments{
-\item{spec}{An \code{\link[=tfl_ard_spec]{tfl_ard_spec()}} (or the path of one).}
+\item{spec}{An \code{\link[=tfl_ard_spec]{tfl_ard_spec()}} (or the path of one), or a study of the
+YAML spec (\code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}): its data catalog and its reports'
+\code{data.analysis_data} / \code{data.analyses}, the reports in the TOC's order,
+its code lists the reports' own (when \code{codelists} is \code{NULL}).}
 
 \item{output_id}{Only these outputs' analyses; \code{NULL} for all.}
 

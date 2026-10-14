@@ -994,7 +994,9 @@
     }
     return(c(comment, out))
   }
-  c(comment, .data_pipe(name, node, data, steps))
+  # an analysis that is a call: written from its calls (.ard_analysis_call(),
+  # the list the YAML spec's run reads too: R/spec_ard.R)
+  .ard_call_lines(.ard_analysis_call(x, r, keys, subj, data = data), r, data, name)
 }
 
 # An analysis data that is an analysis set and nothing else (`adsl_saf <-
@@ -1212,7 +1214,8 @@
       fn <- paste(deparse(e[[1L]]), collapse = "")
       a <- as.list(e)[-1L]
       args <- lapply(a, function(v) tfl_r(paste(deparse(v), collapse = "\n")))
-      return(list(fn = fn, args = args))
+      # (`text`: the step as it was written, which the program writes)
+      return(list(fn = fn, args = args, text = node))
     }
     return(list(fn = NULL, args = list(), code = tfl_r(node)))
   }
