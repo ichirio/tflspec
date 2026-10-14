@@ -814,7 +814,10 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 #' (`cl_<variable>`), and ending in `save_ard()` (one report, `save =
 #' TRUE`) or `ard`.
 #'
-#' @param spec An [tfl_ard_spec()] (or the path of one).
+#' @param spec An [tfl_ard_spec()] (or the path of one), or a study of the
+#'   YAML spec ([tfl_read_study_spec()]): its data catalog and its reports'
+#'   `data.analysis_data` / `data.analyses`, the reports in the TOC's order,
+#'   its code lists the reports' own (when `codelists` is `NULL`).
 #' @param output_id Only these outputs' analyses; `NULL` for all.
 #' @param save `FALSE` leaves out the final `saveRDS()`.  For one report's
 #'   `"body"`, `TRUE` ends it in `save_ard()` (its rows into the
@@ -845,6 +848,13 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
                           statistics = NULL, methods = NULL, dir = ".",
                           codelists = NULL) {
   part <- match.arg(part)
+  # a study of the YAML spec: its ARD definition and code lists from its
+  # files (R/spec_ard.R)
+  if (inherits(spec, "tfl_study_spec")) {
+    st <- .ard_spec_of_study(spec)
+    spec <- st$spec
+    codelists <- codelists %||% st$codelists
+  }
   old <- .set_catalogs(statistics, methods)
   on.exit(options(old), add = TRUE)
   x <- .as_spec(spec, "ard", "tfl_ard_code")

@@ -96,3 +96,28 @@
   }
   get(fn, envir = env, mode = "function")
 }
+
+# ---- the study's ARD definition from its spec files ------------------------
+
+# A YAML study's ARD definition (its data catalog and each report's
+# `data.analysis_data` / `data.analyses`) as the definition the ARD program
+# is written from, and the reports' code lists.  The reports in the order
+# of the TOC (toc.yml): the program's sections follow it.
+.ard_spec_of_study <- function(study) {
+  if (is.null(study$dir)) {
+    .ard_stop("A YAML study's ARD: read the study with tfl_read_study_spec(dir).")
+  }
+  b <- tfl_sheets_from_yaml(study$dir)
+  ids <- vapply(study$toc$outputs %||% list(), function(e) e$id %||% NA_character_, "")
+  in_toc <- function(d) {
+    if (is.null(d) || !nrow(d) || is.null(d$output_id)) return(d)
+    k <- match(d$output_id, ids)
+    # (a row of no report first, a report the TOC does not list last)
+    k[is.na(d$output_id)] <- 0L
+    k[is.na(k)] <- length(ids) + 1L
+    d[order(k, seq_len(nrow(d))), , drop = FALSE]
+  }
+  ard <- b$ard
+  for (s in c("analysis_data", "analyses")) ard[[s]] <- in_toc(ard[[s]])
+  list(spec = tfl_ard_spec(ard), codelists = b$table$codelists)
+}
