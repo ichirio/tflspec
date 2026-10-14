@@ -12,8 +12,9 @@ tfl_convert_sheets_to_yaml(from, to, content_fn = NULL, overwrite = FALSE)
 \item{to}{The folder to write to (made if missing; \verb{spec/} under it).}
 
 \item{content_fn}{A function \verb{(spec, output_id)} returning a list of
-\code{\link[=tfl_item]{tfl_item()}} for a table (\code{output_id = NA} for the defaults); \code{NULL}:
-none yet.}
+\code{\link[=tfl_item]{tfl_item()}} for a table (\code{output_id = NA} for the defaults).  \code{NULL}:
+the package's own bridge from the sheets to the layers
+(\code{.plan_content_from_sheets()}) when it is there, else none.}
 
 \item{overwrite}{Write over files already in \code{to}?}
 }

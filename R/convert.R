@@ -31,8 +31,9 @@
 #' @param from The study folder (or a folder of the definition files).
 #' @param to The folder to write to (made if missing; `spec/` under it).
 #' @param content_fn A function `(spec, output_id)` returning a list of
-#'   [tfl_item()] for a table (`output_id = NA` for the defaults); `NULL`:
-#'   none yet.
+#'   [tfl_item()] for a table (`output_id = NA` for the defaults).  `NULL`:
+#'   the package's own bridge from the sheets to the layers
+#'   (`.plan_content_from_sheets()`) when it is there, else none.
 #' @param overwrite Write over files already in `to`?
 #' @return Invisibly, a list: `to`, `files` (paths written), `not_converted`
 #'   (a data frame: `output`, `sheet`, `row`, `column`, `reason`, `value`).
@@ -47,6 +48,7 @@ tfl_convert_sheets_to_yaml <- function(from, to, content_fn = NULL, overwrite = 
     stop("tfl_convert_sheets_to_yaml(): ", to, " is not empty (overwrite = TRUE to write over it).",
          call. = FALSE)
   }
+  if (is.null(content_fn)) content_fn <- get0(".plan_content_from_sheets", mode = "function", inherits = FALSE)
   nc <- .nc_new()
   note <- function(output, sheet, row, column, reason, value = NA) {
     nc$rows[[length(nc$rows) + 1L]] <<- data.frame(
