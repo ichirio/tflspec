@@ -188,9 +188,16 @@ tfl_resolve_output <- function(output, study) {
   x
 }
 
-# the content: the report's items of a function replace the layers' items
-# of it, in the place the first of them had; the rest stay; a new function
-# goes last
+# The content, a layer over the layers below (S1's finding on the sample's
+# 12 tables, 2026-10-14):
+# * a verb whose `...` is named (plan_cells, plan_labels, plan_levels,
+#   plan_digits, plan_stat_groups, plan_compare: the schema's dots style
+#   "named") merges by key -- the report's keys win, the layers' others
+#   stay, in the layers' order first -- as the sheets layered them;
+# * any other verb: the report's items replace every item of that verb
+#   below, in the place the first of them had;
+# * a verb only the report has goes where the generators' order puts it
+#   (the schema's `rank`), else last.
 .merge_content <- function(base, over) {
   if (!length(over)) return(.table_plan_first(base))
   if (!length(base)) return(.table_plan_first(over))
@@ -200,7 +207,14 @@ tfl_resolve_output <- function(output, study) {
   for (it in base) {
     if (it$fn %in% fns_over) {
       if (!it$fn %in% placed) {
-        out <- c(out, Filter(function(o) identical(o$fn, it$fn), over))
+        own <- Filter(function(o) identical(o$fn, it$fn), over)
+        if (.dots_named(it$fn) && length(own) == 1L) {
+          merged <- own[[1L]]
+          merged$args <- .merge_map(it$args, own[[1L]]$args)
+          out <- c(out, list(merged))
+        } else {
+          out <- c(out, own)
+        }
         placed <- c(placed, it$fn)
       }
     } else {
@@ -208,7 +222,31 @@ tfl_resolve_output <- function(output, study) {
     }
   }
   rest <- Filter(function(o) !o$fn %in% placed, over)
-  .table_plan_first(c(out, rest))
+  for (o in rest) out <- .insert_by_rank(out, o)
+  .table_plan_first(out)
+}
+
+# a verb whose `...` is a map by name (the schema says); FALSE without a schema
+.dots_named <- function(fn) {
+  sc <- tryCatch(tfl_schema(fn), error = function(e) NULL)
+  identical(sc$dots$style %||% "", "named")
+}
+
+# the generators' order of a verb (the schema's `rank`); NA without one
+.verb_rank <- function(fn) {
+  sc <- tryCatch(tfl_schema(fn), error = function(e) NULL)
+  r <- sc$rank
+  if (is.null(r) || !length(r)) NA_real_ else as.numeric(r[1L])
+}
+
+# an item put after the last item whose rank is not above its own; last
+# when ranks are not known
+.insert_by_rank <- function(items, it) {
+  r <- .verb_rank(it$fn)
+  if (is.na(r) || !length(items)) return(c(items, list(it)))
+  ranks <- vapply(items, function(x) .verb_rank(x$fn), 1)
+  at <- max(c(0L, which(!is.na(ranks) & ranks <= r)))
+  append(items, list(it), after = at)
 }
 
 # table_plan is the table itself, not a layer: first, wherever a file put it

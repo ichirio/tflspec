@@ -40,7 +40,8 @@ test_that("a report over the defaults: maps by key, items by function, order kep
                           "plan_cell_style"))
   expect_identical(from, c("own", "own", "defaults", "defaults", "defaults", "defaults",
                            rep("own", 4L)))
-  expect_null(out$content[[2L]]$args$categorical)   # the defaults' categorical cell is gone with its item
+  # plan_cells merges by key: the defaults' categorical cell stays beside the report's continuous
+  expect_identical(out$content[[2L]]$args$categorical, "{n:.0f} ({p:.1f%})")
   # page: the defaults' header lines stay, the report's titles and tokens join
   expect_identical(out$page$header[["1"]]$right, "DRAFT")
   expect_identical(out$page$titles[["2"]]$center, "Demographic Characteristics")
@@ -95,4 +96,30 @@ test_that("study.yml's spec_version: this reader's is read, a newer one is refus
   # none: an old study.yml reads
   writeLines("study_id: V-1", file.path(d, "study.yml"))
   expect_identical(tfl_read_study_spec(d)$study$study_id, "V-1")
+})
+
+test_that("a named-dots verb (plan_cells) merges by key; another verb is replaced whole", {
+  d <- withr::local_tempdir()
+  dir.create(file.path(d, "outputs"))
+  writeLines(c("content:",
+               "  - plan_cells: {default: '{n} ({p}%)', continuous: {n: '{N}'}}",
+               "  - plan_blanks: {first: true, last: true}",
+               "  - plan_labels: {AGE: Age, SEX: Sex}"), file.path(d, "defaults.yml"))
+  writeLines(c("id: T-1", "kind: table", "content:",
+               "  - table_plan: {cols: ARM}",
+               "  - plan_cells: {continuous: {n: '{N}', Mean: '{mean}'}}",
+               "  - plan_blanks: {last: false}",
+               "  - plan_labels: {SEX: Gender}"), file.path(d, "outputs", "T-1.yml"))
+  s <- tfl_read_study_spec(d)
+  r <- tfl_resolve_output(tfl_read_outputs(d)[["T-1"]], s)
+  fns <- vapply(r$content, `[[`, "", "fn")
+  expect_identical(fns, c("table_plan", "plan_cells", "plan_blanks", "plan_labels"))
+  cells <- r$content[[2L]]$args
+  # the layers' `default` stays, the report's `continuous` map merges by key
+  expect_identical(names(cells), c("default", "continuous"))
+  expect_identical(cells$continuous, list(n = "{N}", Mean = "{mean}"))
+  # plan_blanks is replaced whole: no `first` any more
+  expect_identical(r$content[[3L]]$args, list(last = FALSE))
+  # plan_labels by key: AGE stays, SEX is the report's
+  expect_identical(r$content[[4L]]$args, list(AGE = "Age", SEX = "Gender"))
 })
