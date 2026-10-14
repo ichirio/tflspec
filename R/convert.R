@@ -115,6 +115,13 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     st <- sp$study[!is.na(sp$study$key) & !is.na(sp$study$value), , drop = FALSE]
     if (nrow(st)) study$settings <- stats::setNames(as.list(st$value), st$key)
   }
+  # every report's file and program (the report sheet's study row: "{output_id}.rtf")
+  if (!is.null(sp$report) && nrow(sp$report)) {
+    dr <- sp$report[is.na(sp$report$output_id) | !nzchar(sp$report$output_id), , drop = FALSE]
+    for (k in c("file", "program")) {
+      if (nrow(dr) && k %in% names(dr) && !is.na(dr[[k]][1L])) study$settings[[k]] <- dr[[k]][1L]
+    }
+  }
   if (!is.null(ard$study) && nrow(ard$study)) {
     keys <- stats::setNames(as.list(ard$study$value), ard$study$key)
     keys <- keys[!vapply(keys, is.na, NA)]

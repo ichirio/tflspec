@@ -81,6 +81,8 @@ test_that("a study's sheets convert to the YAML files, the rest is listed", {
   expect_null(st$tflplanner)
   expect_identical(st$keys$output, "output/ard/ard.rds")
   expect_identical(st$spec_version, 1L)
+  # every report's file: the report sheet's study row
+  expect_identical(st$settings$file, "{output_id}.rtf")
   expect_true("tflspec" %in% names(st$packages))
   expect_s3_class(st$setup, "tfl_r")
   # data.yml: the catalog, where as !r, label kept

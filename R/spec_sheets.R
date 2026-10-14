@@ -177,9 +177,19 @@ tfl_sheets_from_yaml <- function(dir) {
   # the table and report sheets as data frames (the study sheet from study.yml's settings)
   table <- list()
   settings <- s$study$settings %||% list()
+  # every report's file and program go back to the report sheet's study row
+  fp <- settings[intersect(c("file", "program"), names(settings))]
+  settings <- settings[setdiff(names(settings), c("file", "program"))]
   table$study <- data.frame(key = names(settings), value = vapply(settings, cell, ""), stringsAsFactors = FALSE)
   for (sh in c(names(.ard_spec_schema()), .ard_spec_pattern_sheets)) {
     table[[sh]] <- .rows_df(rows[[sh]] %||% list(), c("output_id", setdiff(.sheet_columns(sh), "output_id")))
+  }
+  if (length(fp)) {
+    rp <- table$report
+    i <- which(is.na(rp$output_id))
+    if (!length(i)) { rp[nrow(rp) + 1L, ] <- NA; i <- nrow(rp) }
+    for (k in names(fp)) { if (!k %in% names(rp)) rp[[k]] <- NA_character_; rp[[k]][i[1L]] <- cell(fp[[k]]) }
+    table$report <- rp
   }
   # a table's normalize_ard() arguments on its tables row
   for (id in names(norm_rows)) {
