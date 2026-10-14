@@ -2,9 +2,12 @@
 % Please edit documentation in R/convert.R
 \name{tfl_convert_sheets_to_yaml}
 \alias{tfl_convert_sheets_to_yaml}
+\alias{tfl_yaml_from_sheets}
 \title{Convert a study's definition sheets to the YAML spec}
 \usage{
 tfl_convert_sheets_to_yaml(from, to, content_fn = NULL, overwrite = FALSE)
+
+tfl_yaml_from_sheets(sheets, to, content_fn = NULL, overwrite = FALSE)
 }
 \arguments{
 \item{from}{The study folder (or a folder of the definition files).}
@@ -17,6 +20,14 @@ the package's own bridge from the sheets to the layers
 (\code{.plan_content_from_sheets()}) when it is there, else none.}
 
 \item{overwrite}{Write over files already in \code{to}?}
+
+\item{sheets}{The definition as objects, a list: \code{table} (a
+\code{tfl_table_spec}, or its sheets; the report sheets with them),
+\code{planner} (tflplanner's \verb{_tflplanner} sheet: the report list and the
+setup code), \code{ard} (the ARD sheets), \code{listing} (\code{listings},
+\code{listing_cols}), \code{figures} (a figure's design list, by id), \code{study}
+(study.yml's fields).  What the app holds, or what the workbooks read
+as.}
 }
 \value{
 Invisibly, a list: \code{to}, \code{files} (paths written), \code{not_converted}

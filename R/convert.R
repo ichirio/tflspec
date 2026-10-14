@@ -44,8 +44,34 @@ tfl_convert_sheets_to_yaml <- function(from, to, content_fn = NULL, overwrite = 
   if (!length(src$books) && is.null(src$ard) && is.null(src$lf) && !length(src$figs)) {
     stop("tfl_convert_sheets_to_yaml(): no definition file in ", from, call. = FALSE)
   }
+  sheets <- list(
+    table = if (length(src$books)) tfl_read_table_spec(src$books),
+    planner = .conv_read_planner_sheet(src$books),
+    ard = if (!is.null(src$ard)) .conv_read_ard(src$ard),
+    listing = if (!is.null(src$lf)) .conv_read_lf(src$lf),
+    figures = lapply(src$figs, function(f) yaml::read_yaml(f, handlers = .yaml_handlers())),
+    study = if (!is.null(src$study)) yaml::read_yaml(src$study) else list())
+  tfl_yaml_from_sheets(sheets, to, content_fn = content_fn, overwrite = overwrite)
+}
+
+#' @rdname tfl_convert_sheets_to_yaml
+#' @param sheets The definition as objects, a list: `table` (a
+#'   `tfl_table_spec`, or its sheets; the report sheets with them),
+#'   `planner` (tflplanner's `_tflplanner` sheet: the report list and the
+#'   setup code), `ard` (the ARD sheets), `listing` (`listings`,
+#'   `listing_cols`), `figures` (a figure's design list, by id), `study`
+#'   (study.yml's fields).  What the app holds, or what the workbooks read
+#'   as.
+#' @export
+tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALSE) {
+  sp <- sheets$table
+  plan <- sheets$planner
+  ard <- sheets$ard
+  lf <- sheets$listing
+  figs <- sheets$figures %||% list()
+  meta <- sheets$study %||% list()
   if (dir.exists(to) && !overwrite && length(list.files(to, recursive = TRUE))) {
-    stop("tfl_convert_sheets_to_yaml(): ", to, " is not empty (overwrite = TRUE to write over it).",
+    stop("tfl_yaml_from_sheets(): ", to, " is not empty (overwrite = TRUE to write over it).",
          call. = FALSE)
   }
   if (is.null(content_fn)) content_fn <- .bridge_fn(".plan_content_from_sheets")
@@ -63,11 +89,6 @@ tfl_convert_sheets_to_yaml <- function(from, to, content_fn = NULL, overwrite = 
       stringsAsFactors = FALSE)
   }
 
-  sp <- if (length(src$books)) tfl_read_table_spec(src$books) else NULL
-  plan <- .conv_read_planner_sheet(src$books)
-  ard <- if (!is.null(src$ard)) .conv_read_ard(src$ard) else NULL
-  lf <- if (!is.null(src$lf)) .conv_read_lf(src$lf) else NULL
-  meta <- if (!is.null(src$study)) yaml::read_yaml(src$study) else list()
 
   files <- character()
   put <- function(rel, x) {
@@ -167,14 +188,14 @@ tfl_convert_sheets_to_yaml <- function(from, to, content_fn = NULL, overwrite = 
   ids <- unique(c(ids, if (!is.null(sp$report)) sp$report$output_id[!is.na(sp$report$output_id) & !startsWith(sp$report$output_id, "@")],
                   table_ids,
                   if (!is.null(ard)) ard$analyses$output_id, if (!is.null(lf)) lf$listings$output_id,
-                  names(src$figs)))
+                  names(figs)))
   ids <- ids[!is.na(ids) & nzchar(ids)]
   toc <- list()
   for (id in ids) {
     prow <- if (!is.null(plan)) plan[!is.na(plan$output_id) & plan$output_id == id, , drop = FALSE] else NULL
     rrow <- scope(sp$report, id)
     kind <- if (nrow(rrow) && !is.na(rrow$type[1L])) rrow$type[1L] else
-      if (id %in% names(src$figs)) "figure" else if (!is.null(lf) && id %in% lf$listings$output_id) "listing" else "table"
+      if (id %in% names(figs)) "figure" else if (!is.null(lf) && id %in% lf$listings$output_id) "listing" else "table"
     if (identical(kind, "user")) { note(id, "report", id, "type", "a report of type user is converted as a table whose data is its code"); kind <- "table" }
     entry <- list(id = id, kind = kind)
     if (!is.null(prow) && nrow(prow)) {
@@ -187,7 +208,7 @@ tfl_convert_sheets_to_yaml <- function(from, to, content_fn = NULL, overwrite = 
     if (nrow(rrow)) for (k in c("file", "program")) if (!is.na(rrow[[k]][1L])) entry[[k]] <- rrow[[k]][1L]
     toc[[length(toc) + 1L]] <- entry
 
-    out <- .conv_output(id, kind, entry, sp, ard, lf, src$figs[[id]], prow, scope, page_of, content_fn, note)
+    out <- .conv_output(id, kind, entry, sp, ard, lf, figs[[id]], prow, scope, page_of, content_fn, note)
     f <- file.path(to, "spec", "outputs", paste0(id, ".yml"))
     tfl_write_output(out, f)
     files <- c(files, f)
@@ -369,7 +390,7 @@ tfl_convert_sheets_to_yaml <- function(from, to, content_fn = NULL, overwrite = 
   codelists <- list()
   extra <- list()
   if (kind == "figure" && !is.null(fig)) {
-    y <- yaml::read_yaml(fig, handlers = .yaml_handlers())
+    y <- if (is.character(fig)) yaml::read_yaml(fig, handlers = .yaml_handlers()) else fig
     data <- list(source = "code")
     if (!is.null(y$data)) data$steps <- y$data
     if (!is.null(y$stats)) data$stats <- y$stats
