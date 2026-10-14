@@ -124,8 +124,13 @@ tfl_convert_sheets_to_yaml <- function(from, to, content_fn = NULL, overwrite = 
   # spec/defaults.yml
   defaults <- list()
   if (!is.null(sp)) {
-    if (!is.null(content_fn)) defaults$content <- .items_to_list(.conv_items(content_fn(sp, NA_character_)))
-    else if (any(vapply(c("tables", "variables", "cells", "layout", "columns", "style", "col_header", "cell_styles"),
+    if (!is.null(content_fn)) {
+      # (the bridge's scope of the defaults: the rows with no report)
+      items <- tryCatch(.conv_items(content_fn(sp, NA_character_)), error = function(e) e)
+      if (inherits(items, "error")) {
+        note(NA, "table sheets", "(defaults)", NA, paste0("defaults content: not converted -- ", conditionMessage(items)))
+      } else defaults$content <- .items_to_list(items)
+    } else if (any(vapply(c("tables", "variables", "cells", "layout", "columns", "style", "col_header", "cell_styles"),
                         function(s) nrow(scope(sp[[s]], NA)) > 0L, NA))) {
       note(NA, "table sheets", "(defaults)", NA, "content: not converted -- no sheets-to-content bridge given (content_fn)")
     }
