@@ -5,7 +5,8 @@ yml_fixture <- function(...) system.file("extdata", "spec-yaml", ..., package = 
 test_that("the objects check their parts", {
   expect_s3_class(tfl_r("p > 0.5"), "tfl_r")
   expect_identical(attr(tfl_r("x"), "tag"), "!r")
-  expect_error(tfl_r(c("a", "b")), "one string")
+  expect_identical(as.character(tfl_r(c("a", "b"))), "a
+b")
   expect_s3_class(tfl_unset(), "tfl_unset")
   cl <- tfl_call("rtf_border", list(top = "single"))
   expect_identical(cl$fn, "rtf_border")

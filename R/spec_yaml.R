@@ -57,10 +57,11 @@
 #' out$content[[1]]$fn
 #' @export
 tfl_r <- function(code) {
-  if (!is.character(code) || length(code) != 1L || is.na(code)) {
-    stop("tfl_r(): `code` is one string of R.", call. = FALSE)
+  if (!is.character(code) || !length(code) || anyNA(code)) {
+    stop("tfl_r(): `code` is a string of R.", call. = FALSE)
   }
-  structure(code, class = "tfl_r", tag = "!r")
+  structure(paste(code, collapse = "
+"), class = "tfl_r", tag = "!r")
 }
 
 #' @rdname tfl_r

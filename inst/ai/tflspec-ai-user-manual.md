@@ -620,7 +620,7 @@ layers:                                 # what is drawn, in order
 - `plot.add`: `call`s written after the figure's settings (`theme()`,
   `scale_*()`, `facet_*()`, `labs()` …).
 - Raw R inside a value is the `!r` tag: `labels: !r scales::label_number()`
-  (`tfl_fig_r()` in R).
+  (`tfl_r()` in R).
 - Composed figures: `plots:` (name → a whole design) and `compose:`
   (`layout: km | box`, `add:` patchwork calls).
 - `ggplot2_version: "3.5"` or `"4.0"` writes the script for that version
@@ -834,7 +834,7 @@ back): rename the value or choose another separator.
 `tfl_fig_advice` `tfl_fig_apply_fix` `tfl_fig_template` `tfl_fig_forest_analyses` `tfl_fig_templates`
 `tfl_fig_parts` `tfl_fig_objects` `tfl_fig_page_size` `tfl_fig_uses_ard` `tfl_fig_add_layer` `tfl_fig_calls` `tfl_fig_compat`
 `tfl_fig_data_name`
-`tfl_fig_r`
+`tfl_r`
 
 **Figure style:** `tfl_fig_style` `tfl_fig_style_template`
 `tfl_read_fig_style` `tfl_fig_setup_code` `tfl_fig_palettes` `tfl_time_unit_days`

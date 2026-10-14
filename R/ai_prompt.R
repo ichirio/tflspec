@@ -740,7 +740,7 @@ print.tfl_ai_text <- function(x, ...) {
 
 # Raw R (!r) as the string "!r <code>" for JSON; vectors kept as arrays.
 .ai_json_ready <- function(v) {
-  if (.is_fig_r(v)) return(paste("!r", unclass(v)))
+  if (.is_r(v)) return(paste("!r", unclass(v)))
   if (is.list(v)) return(lapply(v, .ai_json_ready))
   if (is.atomic(v) && length(v) > 1L) return(I(v))
   v
@@ -750,7 +750,7 @@ print.tfl_ai_text <- function(x, ...) {
 # as the prompt asks (a character of `.ai_yaml_special`, a blank at either
 # end) or where YAML would not read it back as the same text.
 .ai_yaml_flow <- function(v) {
-  if (.is_fig_r(v)) return(paste("!r", .ai_yaml_quote(unclass(v))))
+  if (.is_r(v)) return(paste("!r", .ai_yaml_quote(unclass(v))))
   if (is.list(v)) {
     items <- vapply(v, .ai_yaml_flow, "")
     if (!is.null(names(v)) && all(nzchar(names(v)))) {

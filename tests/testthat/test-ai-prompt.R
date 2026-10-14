@@ -224,7 +224,7 @@ test_that("the YAML written follows the prompt's quoting rule and reads back", {
   expect_identical(w(1.5), "1.5")
   expect_identical(w(TRUE), "true")
   expect_identical(w(list(a = "x", b = c(1, 2))), "{a: x, b: [1, 2]}")
-  expect_identical(w(tfl_fig_r("scales::percent")), "!r \"scales::percent\"")
+  expect_identical(w(tfl_r("scales::percent")), "!r \"scales::percent\"")
   vals <- list("a: b", "say \"hi\"", "line\nbreak", " pad", "%d", "-30")
   for (v in vals) {
     expect_identical(yaml::yaml.load(paste0("x: ", w(v)))$x, v)

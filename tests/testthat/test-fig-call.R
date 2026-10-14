@@ -35,10 +35,10 @@ test_that("a string is quoted (escaped) unless it is an expression", {
 })
 
 test_that("!r is raw R, verbatim, and parses", {
-  r <- tfl_fig_r("vars(PARAM)")
-  expect_s3_class(r, "tfl_fig_r")
+  r <- tfl_r("vars(PARAM)")
+  expect_s3_class(r, "tfl_r")
   expect_equal(tflspec:::.fig_arg_code(r), "vars(PARAM)")
-  expect_equal(tflspec:::.fig_arg_code(tfl_fig_r("NA")), "NA")
+  expect_equal(tflspec:::.fig_arg_code(tfl_r("NA")), "NA")
 })
 
 test_that("a sequence writes as c(), even of length 1", {
@@ -87,7 +87,7 @@ test_that("ggsurvfit/patchwork calls are bare and added to library()", {
 })
 
 test_that("a bad call does not parse and errors at generation time", {
-  expect_error(tflspec:::.fig_call_code(list(fn = "f", args = list(bad = tfl_fig_r("f(")))))
+  expect_error(tflspec:::.fig_call_code(list(fn = "f", args = list(bad = tfl_r("f(")))))
 })
 
 # ---- YAML round trip ---------------------------------------------------------
@@ -96,16 +96,16 @@ test_that("!r round-trips through write/read, and generates the same code", {
   d <- tfl_fig_design(
     data = list(list(step = "read", dataset = "ADLB")),
     plot = list(add = list(list(fn = "facet_grid", args = list(
-      rows = tfl_fig_r("vars(PARAM)"), labeller = tfl_fig_r("label_wrap_gen(width = 25)"))))),
+      rows = tfl_r("vars(PARAM)"), labeller = tfl_r("label_wrap_gen(width = 25)"))))),
     layers = list(list(layer = "call", fn = "add_risktable", package = "ggsurvfit",
                        args = list(risktable_stats = list("n.risk", "n.event"),
-                                  theme = tfl_fig_r("theme_risktable_default()")))))
+                                  theme = tfl_r("theme_risktable_default()")))))
   f <- tempfile(fileext = ".yml")
   tfl_write_fig_design(d, f)
   back <- tfl_read_fig_design(f)
-  expect_s3_class(back$plot$add[[1]]$args$rows, "tfl_fig_r")
+  expect_s3_class(back$plot$add[[1]]$args$rows, "tfl_r")
   expect_equal(as.character(back$plot$add[[1]]$args$rows), "vars(PARAM)")
-  expect_s3_class(back$layers[[1]]$args$theme, "tfl_fig_r")
+  expect_s3_class(back$layers[[1]]$args$theme, "tfl_r")
   # a plain (non-!r) sequence read back may be an atomic vector rather than a
   # list (a YAML round trip, not our writer): the *generated code* is what
   # must be identical.
@@ -150,7 +150,7 @@ test_that("a plot-wide function in layers warns to use plot.add instead", {
 test_that("plot.add overriding facet_by/colour_by/x_log warns", {
   d <- tfl_fig_design(
     plot = list(facet_by = "TRT01A", colour_by = "TRT01A", x_log = TRUE,
-               add = list(list(fn = "facet_wrap", args = list(facets = tfl_fig_r("vars(PARAM)"))),
+               add = list(list(fn = "facet_wrap", args = list(facets = tfl_r("vars(PARAM)"))),
                           list(fn = "scale_colour_manual", args = list(values = list("red"))),
                           list(fn = "scale_x_log10"))))
   p <- tfl_check_fig_design(d)
@@ -198,7 +198,7 @@ test_that("base = TRUE on the first layer replaces p <- ggplot()", {
     data = list(list(step = "read", dataset = "ADTTE")),
     stats = list(list(step = "survfit", name = "fit", time = "AVAL", censor = "CNSR")),
     layers = list(list(layer = "call", fn = "ggsurvfit", package = "ggsurvfit", base = TRUE,
-                       pos = list(tfl_fig_r("fit")))))
+                       pos = list(tfl_r("fit")))))
   code <- paste(tfl_fig_design_code(d), collapse = "\n")
   expect_match(code, "fig <- ggsurvfit(fit) +", fixed = TRUE)
   expect_false(grepl("p <- ggplot()", code, fixed = TRUE))
@@ -225,7 +225,7 @@ test_that("design doc example 1 (KM + add_* as calls) renders", {
                       args = list(y_value = 0.5, linetype = "dotted")),
                  list(layer = "call", fn = "add_risktable", package = "ggsurvfit",
                       args = list(risktable_stats = list("n.risk"), size = 3,
-                                 theme = tfl_fig_r("theme_risktable_default(axis.text.y.size = 9)")))))
+                                 theme = tfl_r("theme_risktable_default(axis.text.y.size = 9)")))))
   expect_equal(nrow(tfl_check_fig_design(d, adam)), 0L)
   r <- fig_call_run(d, adam)
   expect_true(r$png)
@@ -242,7 +242,7 @@ test_that("design doc example 2 (facet_grid + theme via plot.add, geom_text via 
                       by = "PARAM, TRT01A, AVISITN, AVISIT", interval = "se")),
     plot = list(x_label = "Visit", y_label = "Mean (+/- SE)", colour_by = "TRT01A", legend = "bottom",
                add = list(
-                 list(fn = "facet_grid", args = list(rows = tfl_fig_r("vars(PARAM)"), scales = "free_y")),
+                 list(fn = "facet_grid", args = list(rows = tfl_r("vars(PARAM)"), scales = "free_y")),
                  list(fn = "theme", args = list(
                    strip.background = list(fn = "element_rect", args = list(fill = "grey90")),
                    panel.grid.minor = list(fn = "element_blank"))))),
@@ -267,7 +267,7 @@ test_that("design doc example 3 (forest plot via calls: coord_flip, scale_y_log1
     plot = list(y_label = "Hazard ratio (95% CI)", x_label = "", legend = "none",
                add = list(
                  list(fn = "scale_y_log10", args = list(breaks = list(0.25, 0.5, 1, 2, 4))),
-                 list(fn = "scale_x_discrete", args = list(limits = tfl_fig_r("rev"))),
+                 list(fn = "scale_x_discrete", args = list(limits = tfl_r("rev"))),
                  list(fn = "coord_flip"),
                  list(fn = "labs", args = list(caption = "HR < 1 favours treatment")))),
     layers = list(list(layer = "hline", yintercept = 1, linetype = "dashed", colour = "grey50"),

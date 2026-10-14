@@ -110,7 +110,7 @@ test_that("a figure answer becomes a design", {
     "```"
   )
   r <- tfl_ai_parse(json, "figure")
-  expect_true(tflspec:::.is_fig_r(r$design$plot$add[[1L]]$args$labels))
+  expect_true(tflspec:::.is_r(r$design$plot$add[[1L]]$args$labels))
 })
 
 test_that("the 0.0.12 shape reads as one figure layer; a note is kept", {

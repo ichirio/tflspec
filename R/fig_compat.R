@@ -133,7 +133,7 @@ tfl_fig_compat <- function(ggplot2_version = NULL) {
 .fig_parse_repl <- function(repl) {
   e <- tryCatch(str2lang(repl), error = function(e) NULL)
   if (is.call(e)) {
-    args <- lapply(as.list(e)[-1L], function(a) if (is.language(a)) tfl_fig_r(deparse(a)) else a)
+    args <- lapply(as.list(e)[-1L], function(a) if (is.language(a)) tfl_r(deparse(a)) else a)
     return(list(fn = as.character(e[[1L]]), args = args))
   }
   list(fn = repl, args = list())
@@ -141,7 +141,7 @@ tfl_fig_compat <- function(ggplot2_version = NULL) {
 
 # a deprecated value: legend.position = c(x, y); guide = FALSE
 .fig_value_deprecated <- function(arg, val) {
-  if (.is_fig_r(val)) return(FALSE)
+  if (.is_r(val)) return(FALSE)
   switch(arg,
     legend.position = is.numeric(unlist(val)) && length(unlist(val)) == 2L,
     guide = isFALSE(val),
@@ -268,7 +268,7 @@ tfl_fig_compat <- function(ggplot2_version = NULL) {
   }
   # nested calls
   sub_walk <- function(x, where) {
-    if (is.null(x) || .is_fig_r(x) || !is.list(x)) return(x)
+    if (is.null(x) || .is_r(x) || !is.list(x)) return(x)
     nms <- names(x)
     if (!is.null(nms) && "fn" %in% nms) {
       s <- .fig_compat_walk(x, target, paste0(part, " > ", x$fn %||% "?"), fix)

@@ -12,25 +12,7 @@
 # argument's value per the YAML -> R table in the design doc.  Every call
 # this writes is checked with parse() before being handed back.
 
-#' Raw R code in a figure design
-#'
-#' A figure design's YAML is mostly declarative (numbers, strings, small
-#' maps) written out as R by [tfl_fig_design_code()]; `tfl_fig_r()` marks a
-#' string that is already R code and must be emitted verbatim (e.g.
-#' `vars(PARAM)`, `scales::label_number()`, a bare `NA`) instead of being
-#' quoted as a string. In YAML this is the `!r` tag: `theme: !r
-#' theme_risktable_default(axis.text.y.size = 9)`.
-#'
-#' @param code One string of R code.
-#' @return A length-1 character vector of class `tfl_fig_r`.
-#' @export
-tfl_fig_r <- function(code) {
-  x <- structure(as.character(code)[1L], class = "tfl_fig_r")
-  attr(x, "tag") <- "!r"
-  x
-}
-
-.is_fig_r <- function(x) inherits(x, "tfl_fig_r")
+.is_r <- function(x) inherits(x, "tfl_r")
 
 # packages a generated call is always free to call bare (already library()'d
 # by every generated script, or by the ones the call mechanism itself adds).
@@ -115,7 +97,7 @@ tfl_fig_calls <- function() .fig_calls()
 # expression (unquoted) instead of a quoted string.
 .fig_arg_code <- function(x, expr = FALSE, needs_env = NULL) {
   if (is.null(x)) return("NULL")
-  if (.is_fig_r(x)) return(as.character(x)[1L])
+  if (.is_r(x)) return(as.character(x)[1L])
   if (is.list(x)) {
     nms <- names(x)
     if (!is.null(nms) && "fn" %in% nms) return(.fig_build_call(x, needs_env))
@@ -327,7 +309,7 @@ tfl_fig_calls <- function() .fig_calls()
 .fig_check_nested <- function(spec, part, out_env) {
   walk <- function(x, where) {
     if (is.null(x)) return()
-    if (.is_fig_r(x)) {
+    if (.is_r(x)) {
       p <- tryCatch(parse(text = as.character(x)), error = function(e) e)
       if (inherits(p, "error")) out_env$add(part, where, paste0("!r does not parse: ", conditionMessage(p)))
       return()

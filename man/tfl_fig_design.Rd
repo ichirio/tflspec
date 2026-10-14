@@ -147,7 +147,7 @@ figure's settings and before any panels -- for \code{theme()}, \verb{scale_*},
 \code{errorbar}, \code{col}, \code{text}, \code{hline}, \code{ribbon}, \code{boxplot} ... see
 \code{\link[=tfl_fig_add_layer]{tfl_fig_add_layer()}}; \code{geom} (any function by name), \code{call} (any
 function, by \code{fn}, \code{package}, \code{data}, \code{aes}, \code{pos}, \code{args} -- checked
-against its own arguments; see \code{\link[=tfl_fig_r]{tfl_fig_r()}} for raw R in \code{aes}/\code{args}),
+against its own arguments; see \code{\link[=tfl_r]{tfl_r()}} for raw R in \code{aes}/\code{args}),
 \code{layer_code}, or \code{figure}: a figure type's whole script) and its fields.
 }
 
