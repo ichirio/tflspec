@@ -89,7 +89,8 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
       nm <- if (k %in% names(rename)) rename[[k]] else k
       .flat_text(r[[nm]]) }, ""), collapse = " / "), "")
     keyed_seen <- vapply(seen, function(k) sub("^[^/]* / ", "", k), "")
-    st$missing <- c(st$missing, paste0(sheet, ": ", setdiff(have, c(keyed_seen, seen))))
+    gone <- setdiff(have, c(keyed_seen, seen))
+    if (length(gone)) st$missing <- c(st$missing, paste0(sheet, ": ", gone))
     y <- .set_in(y, path_in, rows)
     set_file(rel, y)
   }

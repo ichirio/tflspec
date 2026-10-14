@@ -102,7 +102,7 @@ tfl_write_spec_xlsx <- function(dir, path) {
   out <- list()
   for (k in names(m)) {
     v <- m[[k]]
-    if (is.null(v)) next
+    if (is.null(v) || (is.atomic(v) && length(v) == 1L && is.na(v))) next
     if (inherits(v, "tfl_unset")) { out[[k]] <- "(none)"; next }
     if (inherits(v, "tfl_r")) { out[[k]] <- as.character(v); next }
     if (inherits(v, "tfl_call")) { note(output, paste0(sheet, ".", k), "a nested call"); next }

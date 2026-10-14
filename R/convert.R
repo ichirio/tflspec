@@ -246,6 +246,8 @@ tfl_convert_sheets_to_yaml <- function(from, to, content_fn = NULL, overwrite = 
 # one cell: NA left out, "(none)" an unset, R text an !r (noted), "|" lists split
 .conv_cell <- function(v, col, r_cols, list_cols, note, output, sheet, row) {
   if (is.null(v) || is.na(v) || !nzchar(trimws(v))) return(NULL)
+  v <- gsub("\r\n", "\n", v, fixed = TRUE)   # a cell's line ends as the YAML's
+  v <- gsub("\r", "\n", v, fixed = TRUE)
   if (identical(trimws(v), "(none)")) return(tfl_unset())
   if (col %in% r_cols) {
     note(output, sheet, row, col, "kept as R text (!r)", v)
