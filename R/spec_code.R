@@ -582,6 +582,30 @@ tfl_table_code <- function(spec, output_id = NULL, data = "data",
 
 # ---- content -> sheets (the bridge's other way) -----------------------------
 
+# The variables rows' order with each nested one placed after its parent:
+# `vars` a named list of rows (`order` from plan_labels, `under` "RACE:
+# Asian" from plan_nest); a nested row with no order goes after its parent
+# and the parent's children already placed, and the orders are renumbered.
+.nest_order <- function(vars) {
+  has <- Filter(function(r) !is.null(r$order), vars)
+  if (!length(has)) return(vars)
+  parent_of <- function(v) {
+    u <- vars[[v]]$under
+    if (is.null(u)) NA_character_ else trimws(sub(":.*$", "", u))
+  }
+  seq_v <- names(has)[order(vapply(has, function(r) as.numeric(r$order), 0))]
+  for (v in names(vars)) {
+    p <- parent_of(v)
+    if (!is.null(vars[[v]]$order) || is.na(p)) next
+    at <- match(p, seq_v)
+    if (is.na(at)) next
+    while (at < length(seq_v) && identical(parent_of(seq_v[at + 1L]), p)) at <- at + 1L
+    seq_v <- append(seq_v, v, after = at)
+  }
+  for (i in seq_along(seq_v)) vars[[seq_v[i]]]$order <- i
+  vars
+}
+
 # A table's content written to the sheets a workbook has -- the inverse of
 # .plan_content_items(), verb by verb, in the sheets' own forms (`a | b`,
 # `name = value`, a newline as \n).  What a sheet cannot say (plan_after(),
@@ -878,6 +902,10 @@ tfl_table_code <- function(spec, output_id = NULL, data = "data",
       vapply(rows, function(r) txt(r[[k]]), "")), stringsAsFactors = FALSE)
     cbind(output_id = rep(id, nrow(df)), df, stringsAsFactors = FALSE)
   }
+  # a nested variable (plan_nest) with no heading of its own is not in
+  # plan_labels, whose order is the variables' order: its place is right
+  # after the variable it goes under (and that one's children before it)
+  vars <- .nest_order(vars)
   sheets <- list(
     tables = frame(list(lapply(tb, txt))),
     variables = frame(unname(vars)),

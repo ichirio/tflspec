@@ -192,3 +192,24 @@ test_that("a data step of the report's own code is that code, whatever else data
                                             "", "content <- nrow(data)"))
   expect_identical(tfl_content_run(out, data.frame(x = 1:3)), 2L)
 })
+
+test_that("a nested variable with no heading keeps its place after its parent, back from the content (#273)", {
+  sp <- tfl_table_spec(
+    tables = data.frame(output_id = "T-1", cols = "TRT01A", rows = "group = variable"),
+    variables = data.frame(output_id = "T-1",
+                           variable = c("AGE", "RACE", "ASIANSUB", "ETHNIC"),
+                           label = c("Age", "Race", NA, "Ethnicity"),
+                           order = c("1", "2", "3", "4"),
+                           under = c(NA, NA, "RACE: Asian", NA)),
+    cells = data.frame(output_id = "T-1", template = "{n}"))
+  items <- .plan_content_from_sheets(sp, "T-1", own = TRUE)
+  back <- .plan_sheets_from_content(items, "T-1")$variables
+  ord <- stats::setNames(as.character(back$order), back$variable)
+  expect_identical(unname(ord[c("AGE", "RACE", "ASIANSUB", "ETHNIC")]), c("1", "2", "3", "4"))
+  expect_identical(back$under[back$variable == "ASIANSUB"], "RACE: Asian")
+  # two children of one parent: in plan_nest's order, both after it
+  v <- list(A = list(variable = "A", order = 1L), B = list(variable = "B", order = 2L),
+            C1 = list(variable = "C1", under = "A: x"), C2 = list(variable = "C2", under = "A: y"))
+  o <- .nest_order(v)
+  expect_identical(vapply(o, `[[`, 0L, "order"), c(A = 1L, B = 4L, C1 = 2L, C2 = 3L))
+})
