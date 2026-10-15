@@ -1,6 +1,6 @@
 # tflspec (development version)
 
-* **The converter keeps what tflplanner's study has** (#270, 0.0.24.9121; for
+* **The converter keeps what tflplanner's study has** (#270, 0.0.24.9122; for
   tflplanner reading and writing the YAML spec).  The listing / figure
   workbook's `figures` sheet (the datasets a figure or report written by
   hand reads, and whether it reads its ARD) is the report's
@@ -8,6 +8,43 @@
   note is its report's; R text keeps `\n` line ends.  The sheets back
   (`tfl_sheets_from_yaml()`) give them, a blank field as a blank cell (not
   `"NA"`), and no figure design for a figure that is its own code.
+
+* **A report's document says its RTF file** (#268, 0.0.24.9121; rtfreporter's
+  `rtf_document(file = )`, >= 0.8.2.9063).  `tfl_report()` and
+  `tfl_report_code()` give the document the path `tfl_report_path()` says
+  (a YAML report's with its `study`), so `generate_rtfreport(doc)` writes
+  it and the program says its output once, beside its program.  A path
+  given to `generate_rtfreport()` still wins.
+
+* **`tfl_report_path()` takes a YAML report** (#264, 0.0.24.9120).  With
+  `study =` (as `tfl_report()`): its TOC entry's `file`, else
+  `study.yml`'s `settings: file` (`"{output_id}.rtf"` when neither says
+  it), in `settings: output_path`.
+
+* **The AI kit asks for the study's YAML files, in one answer** (#265,
+  0.0.24.9119).  `tflspec_ai_manual(dir)` writes seven files (eight with
+  the ADaM metadata, now `07_adam_metadata.csv`): the request, the
+  manual, the guide, the schema (`03_spec_schema.yml`, the installed
+  `inst/spec/schema.yml`), every file of a study blank
+  (`04_blank_spec.md`), the example TOC and shells and the answer written
+  from them (`06_example_spec.md`, made through `tfl_yaml_from_sheets()`).
+  The chat answers with one Markdown text, a `### <path>` heading and a
+  `yaml` block a file; the new `tfl_ai_unpack(answer, dir)` writes it
+  into a study folder (only `study.yml` and `spec/**.yml`; nothing is
+  written when a path, a duplicate or a block is wrong).
+  `tfl_ai_review(dir)` reviews a study folder: each report file against
+  the schema (K16-K18), the definition through the workbook's checks with
+  each finding named by its file and key, `spec/_assumptions.yml` (K08,
+  K09), the figures; the two prompts go into the folder.  A workbook or
+  one report file is reviewed as before.  `tflspec_ai_manual()` loses
+  `split` (there are no blank workbooks).  The manual gains §5, the study
+  folder; the guide is rewritten for the YAML files.
+
+* **The defaults' content is a table's** (#263, 0.0.24.9117; found by the
+  AI kit).  `tfl_resolve_output()` layers `defaults.yml`'s `content`
+  (normalize_ard, the digits ...) onto a table only: a figure or a
+  listing takes the defaults' page and code lists, not those layers
+  (a figure's code stopped at "Unknown layer: normalize_ard").
 
 * **A report's ARD analyses are its `ard:` section** (#261, 0.0.24.9116;
   the user's decision of 2026-10-15: the ARD is made in a stage of its

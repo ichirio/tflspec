@@ -1249,6 +1249,8 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
   # the study's tokens left to options(rtfreporter.tokens = ): the
   # document's own then (rtfreporter fills from both, the document's first)
   doc_tokens <- if (setup) .ard_spec_tokens(sp, r, study = FALSE) else tokens
+  # the RTF file the document is written to (tfl_report_path())
+  file <- .rtf_file_said(.sheet_rtf_path(sp))
   st <- list(.spec_call("rtf_document",
                         font_table = if (!is.null(pg[["font"]])) list(list(name = pg[["font"]])),
                         page = if (length(page)) page,
@@ -1257,7 +1259,8 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
                         watermark = r$watermark,
                         program = prog,
                         program_fallback = fallback,
-                        tokens = doc_tokens))
+                        tokens = doc_tokens,
+                        file = file))
   # a report may go without the study's running header or footer -- one
   # that puts its run line under the table instead, say
   band <- function(sheet) {
@@ -1437,8 +1440,8 @@ tfl_report_tokens <- function(spec, output_id = NULL) {
 #' page, the running header and footer, the content, the titles and
 #' footnotes -- as `doc <- rtf_document(...)` and one `doc <- rtf_*(doc, ...)`
 #' a step: what [tfl_report()] does, as a program that needs only
-#' rtfreporter.  Write it out with
-#' `generate_rtfreport(doc, "<file>.rtf")` ([tfl_report_path()] says which).
+#' rtfreporter.  The document says its file, `rtf_document(file = )` --
+#' [tfl_report_path()]'s path -- so `generate_rtfreport(doc)` writes it.
 #'
 #' @inheritParams tfl_report
 #' @param content The name of the report's content in the program: a plan

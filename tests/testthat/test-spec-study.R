@@ -150,3 +150,51 @@ test_that("a report's content as R code (one !r) is read, written and wins whole
   expect_match(rp$content_code[rp$output_id %in% "T-1"], "table_plan(data", fixed = TRUE)
   expect_identical(rp$data_code[rp$output_id %in% "T-1"], "data <- head(adsl)")
 })
+
+test_that("a YAML report's RTF path: the TOC's file, else the study's, in output_path", {
+  dir <- withr::local_tempdir()
+  dir.create(file.path(dir, "spec", "outputs"), recursive = TRUE)
+  writeLines(c("study_id: S-1", "settings:", "  output_path: output/tfl",
+               "  file: '{output_id}.rtf'"), file.path(dir, "study.yml"))
+  writeLines(c("outputs:", "  - id: T-1", "    kind: table",
+               "  - id: T-2", "    kind: table", "    file: t2_{output_id}.rtf"),
+             file.path(dir, "spec", "toc.yml"))
+  s <- tfl_read_study_spec(dir)
+  expect_identical(tfl_report_path(tfl_output("T-1", "table"), study = s), "output/tfl/T-1.rtf")
+  expect_identical(tfl_report_path(tfl_output("T-2", "table"), study = s), "output/tfl/t2_T-2.rtf")
+  # no settings: the report's id, no folder
+  s$study$settings <- NULL
+  expect_identical(tfl_report_path(tfl_output("T-1", "table"), study = s), "T-1.rtf")
+  expect_error(tfl_report_path(tfl_output("T-1", "table")), "study")
+})
+
+test_that("a YAML report's RTF path: a file of the report's own, the study's output_path as it is", {
+  dir <- withr::local_tempdir()
+  dir.create(file.path(dir, "spec", "outputs"), recursive = TRUE)
+  # (as a study converted from sheets with no default file: each report's
+  # own file in the TOC, the study's output_path relative)
+  writeLines(c("study_id: S-1", "settings:", "  output_path: ../tables"), file.path(dir, "study.yml"))
+  writeLines(c("outputs:", "  - id: T-1", "    kind: table", "    file: t_{output_id}.rtf",
+               "  - id: T-2", "    kind: table"), file.path(dir, "spec", "toc.yml"))
+  s <- tfl_read_study_spec(dir)
+  expect_identical(tfl_report_path(tfl_output("T-1", "table"), study = s), "../tables/t_T-1.rtf")
+  expect_identical(tfl_report_path(tfl_output("T-2", "table"), study = s), "../tables/T-2.rtf")
+  # the report's own settings: file first
+  o <- tfl_output("T-2", "table")
+  o$settings <- list(file = "own_{output_id}.rtf")
+  expect_identical(tfl_report_path(o, study = s), "../tables/own_T-2.rtf")
+})
+
+test_that("the defaults' content is a table's: a figure or a listing takes their page, not it", {
+  s <- tfl_read_study_spec(yml_dir())
+  for (kind in c("figure", "listing")) {
+    o <- tfl_output("X-1", kind, content = list(tfl_item("plan_listing", list())))
+    r <- tfl_resolve_output(o, s)
+    expect_identical(vapply(r$content, `[[`, "", "fn"), "plan_listing", info = kind)
+    # the page still comes from the defaults
+    expect_identical(r$page$header[["1"]]$right, "DRAFT", info = kind)
+  }
+  # a table keeps them
+  o <- tfl_output("X-1", "table", content = list(tfl_item("table_plan", list())))
+  expect_gt(length(tfl_resolve_output(o, s)$content), 1L)
+})
