@@ -673,11 +673,13 @@
 
 # ---- the function ----------------------------------------------------------------------
 
-#' Review a spec file an AI assistant wrote
+#' Review the spec an AI assistant wrote
 #'
-#' Checks one file the assistant returned -- a workbook holding any of the
-#' ARD, table, report and listing specs, or a figure design `.yml` -- and
-#' sorts what it finds by **who acts on it**:
+#' Checks what the assistant returned -- a study folder its answer was
+#' unpacked into ([tfl_ai_unpack()]), or one file: a workbook holding any of
+#' the ARD, table, report and listing specs, a figure design `.yml`, a
+#' report file of the YAML spec -- and sorts what it finds by **who acts on
+#' it**:
 #'
 #' * **the AI**: what it can correct from the kit ([tflspec_ai_manual()])
 #'   and the TOC: a sheet or column that is not the spec's, an output that
@@ -692,12 +694,16 @@
 #'
 #' The first half is written as a prompt to paste back into the same chat
 #' (`<file>_repair.md`), the second as a checklist the person answers and
-#' pastes back (`<file>_questions.md`), next to the file.  The kit's rules
+#' pastes back (`<file>_questions.md`), next to the file -- a study
+#' folder's in the folder, named after it.  The kit's rules
 #' and who acts on each review rule are `inst/review/ai_rules.csv`.
 #'
-#' @param file A spec workbook (`.xlsx`), a figure design (`.yml`), or a
-#'   report of the YAML spec (`spec/outputs/<id>.yml`: its items against
-#'   the schema, and its `!r` where the schema has a form of its own).
+#' @param file A study folder of the YAML spec (each report file against
+#'   the schema; the definition through the workbook's checks, each finding
+#'   named by its file and key; `spec/_assumptions.yml`), a spec workbook
+#'   (`.xlsx`), a figure design (`.yml`), or one report of the YAML spec
+#'   (`spec/outputs/<id>.yml`: its items against the schema, and its `!r`
+#'   where the schema has a form of its own).
 #' @param toc The TOC the specs were written from: a [tfl_read_toc()]
 #'   result, or a list of its arguments (`path`, `map`, `sheet`, `skip`).
 #'   With it, the outputs, titles and footnotes are checked against it.
@@ -722,9 +728,12 @@
 #' @examples
 #' \donttest{
 #' kit <- tflspec_ai_manual(file.path(tempdir(), "kit-review"), overwrite = TRUE)
-#' r <- tfl_ai_review(kit[grepl("06_example_specs", kit)], write = FALSE)
+#' # the example's answer, unpacked into a study folder
+#' st <- file.path(tempdir(), "XYZ-001")
+#' tfl_ai_unpack(kit[basename(kit) == "06_example_spec.md"], st, overwrite = TRUE)
+#' r <- tfl_ai_review(st, write = FALSE)
 #' summary(r)
-#' head(r[r$who == "human", c("output_id", "rule", "message")])
+#' head(as.data.frame(r)[r$who == "human", c("output_id", "rule", "message")])
 #' }
 #' @seealso [tflspec_ai_manual()] for the kit the assistant works from.
 #' @export
