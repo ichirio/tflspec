@@ -571,7 +571,7 @@
 # rest) or study.yml
 .ai_yaml_place <- function(sheet, output_id) {
   key <- c(datasets = "datasets", populations = "populations",
-           analysis_data = "data.analysis_data", analyses = "data.analyses",
+           analysis_data = "ard.analysis_data", analyses = "ard.analyses",
            tables = "content", variables = "content", codelists = "codelists",
            cells = "content: plan_cells", digits = "content: plan_digits",
            layout = "content", columns = "content: plan_columns", style = "content: plan_style",
