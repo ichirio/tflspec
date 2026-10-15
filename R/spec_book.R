@@ -52,10 +52,18 @@
 #' tfl_spec_columns("analyses")
 #' @export
 tfl_spec_columns <- function(sheet = NULL) {
-  f <- system.file("spec", "columns.csv", package = "tflspec")
-  d <- utils::read.csv(f, stringsAsFactors = FALSE, fileEncoding = "UTF-8",
-                       colClasses = "character", na.strings = "")
-  d <- d[c("sheet", "column", "description", "example")]
+  # the sheets' columns of the schema file (inst/spec/schema.yml, `.sheets`):
+  # a sheet's own row first, then its columns, in their order
+  rows <- list()
+  row <- function(sh, column, e) {
+    data.frame(sheet = sh, column = column, description = e$description %||% NA_character_,
+               example = e$example %||% NA_character_, stringsAsFactors = FALSE)
+  }
+  for (sh in .schema_sheets()) {
+    if (!is.null(sh$description)) rows[[length(rows) + 1L]] <- row(sh$sheet, NA_character_, sh)
+    for (cl in sh$columns) rows[[length(rows) + 1L]] <- row(sh$sheet, cl$column, cl)
+  }
+  d <- do.call(rbind, rows)
   rownames(d) <- NULL
   if (is.null(sheet)) return(d)
   keep <- vapply(strsplit(d$sheet, " / ", fixed = TRUE),

@@ -20,7 +20,11 @@
 .schema_all <- function(figure = TRUE) {
   if (is.null(.schema_cache$all)) {
     f <- system.file("spec", "schema.yml", package = "tflspec")
-    .schema_cache$all <- yaml::read_yaml(f)
+    all <- yaml::read_yaml(f)
+    # the sheets' columns are no function: kept apart (.schema_sheets())
+    .schema_cache$sheets <- all$.sheets
+    all$.sheets <- NULL
+    .schema_cache$all <- all
   }
   all <- .schema_cache$all
   if (!figure) return(all)
@@ -63,7 +67,10 @@ tfl_schema <- function(fn = NULL) {
   nm <- .schema_fn_name(fn)
   # the file's entries first; a figure's layer, made from the designer's
   # catalog, only for a name the file does not have
-  .schema_all(figure = FALSE)[[nm]] %||% .schema_fig_entries()[[nm]]
+  .schema_all(figure = FALSE)[[nm]] %||% .schema_fig_entries()[[nm]] %||%
+    # a ggplot2 layer function (geom_area, ggrepel::geom_text_repel): from
+    # the installed package itself
+    (if (grepl("^(geom|stat)_", nm)) .schema_ggplot_entry(fn))
 }
 
 # `rtfreporter::plan_cells` and `plan_cells` are one entry
@@ -152,6 +159,9 @@ tfl_schema_check <- function(item) {
     return(out)
   }
   ent <- tfl_schema(fn)
+  # a figure's own ggplot2 layer: the layer function's aesthetics and
+  # parameters (R/spec_figure.R)
+  if (identical(fn, "geom") && identical(ent$figure, "layer")) .schema_check_geom(item, bad)
   f <- .schema_formals(fn, ent)
   if (is.null(ent) && is.null(f)) {
     bad("", sprintf("%s is a function neither the schema nor its package has", fn))
@@ -484,4 +494,37 @@ tfl_schema_check <- function(item) {
     v)
   names(out) <- nm
   out
+}
+
+# The spec sheets' columns, as the schema file says them: one entry a sheet
+# (its description, its columns in order, each a description and an
+# example, and `at:` the argument it is)
+.schema_sheets <- function() {
+  if (is.null(.schema_cache$all)) .schema_all(figure = FALSE)
+  .schema_cache$sheets
+}
+
+#' The help of a spec item's argument
+#'
+#' What the GUI's `?` and the AI kit say about one argument of a spec item:
+#' the schema's description of it, or, for an argument a spec sheet's
+#' column also holds (`rtf_page(paper_size = )` is the `page` sheet's
+#' `paper_size`), that column's help -- one text, wherever it is read.
+#'
+#' @param fn A function of the spec (`"rtf_page"`, `"plan_cells"`).
+#' @param arg One of its arguments.
+#' @return The text, or `NA` when the schema says nothing of it.
+#' @examples
+#' tfl_schema_help("rtf_page", "orientation")
+#' @seealso [tfl_schema()], [tfl_spec_columns()]
+#' @export
+tfl_schema_help <- function(fn, arg) {
+  ent <- tfl_schema(fn)
+  d <- ent$args[[arg]]$description
+  if (!is.null(d)) return(d)
+  key <- paste0(.schema_fn_name(fn), ".", arg)
+  for (sh in .schema_sheets()) {
+    for (cl in sh$columns) if (identical(cl$at, key)) return(cl$description)
+  }
+  NA_character_
 }

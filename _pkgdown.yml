@@ -107,6 +107,7 @@ reference:
       - tfl_resolve_output
       - tfl_schema
       - tfl_schema_check
+      - tfl_schema_help
       - tfl_content_code
       - tfl_content_run
       - tfl_convert_sheets_to_yaml
