@@ -214,3 +214,23 @@ test_that("tfl_image: the figure drawn at its size on the page and its dpi, save
   expect_match(paste(tfl_report_code(o2, study = st, content = "content"), collapse = "\n"),
                "render_width = 6.5, render_height = 4.5, render_dpi = 300", fixed = TRUE)
 })
+
+test_that("tfl_fig_template(form = \"items\"): the content of calls, marked as the template's, with its arguments", {
+  x <- tfl_fig_template("km_risk_table", param = "OS", group = "TRT01P", form = "items")
+  expect_identical(x$template, "km_risk_table")
+  expect_identical(x$args, list(param = "OS", group = "TRT01P"))
+  expect_identical(x$data$source, "code")
+  expect_true(length(x$data$steps) > 0L)
+  froms <- unlist(lapply(x$content, function(it) c(it$from, vapply(it$items %||% list(), `[[`, "", "from"))))
+  expect_true(all(froms == "template:km_risk_table"))
+  expect_identical(vapply(x$content, `[[`, "", "fn"), c("plot", "risk", "wrap_plots", "tfl_image"))
+  # the same figure as the design converted
+  d <- tfl_fig_template("km_risk_table", param = "OS", group = "TRT01P")
+  expect_identical(lapply(.fig_mark_from(tfl_fig_content_from_design(d)$content, "own"), `[[`, "fn"),
+                   lapply(x$content, `[[`, "fn"))
+  # a template of its own ARD keeps its analyses; a figure type of its own is R
+  expect_false(is.null(tfl_fig_template("forest_hr", param = "OS", form = "items")$analyses))
+  expect_s3_class(tfl_fig_template("sankey_grey_links", form = "items")$content, "tfl_r")
+  # the design stays the default
+  expect_s3_class(tfl_fig_template("mean_se"), "tfl_fig_design")
+})

@@ -1,5 +1,12 @@
 # tflspec (development version)
 
+* **`tfl_fig_template(form = "items")`** (#284, 0.0.24.9127): a template
+  as a figure report's content of function calls -- `template`, `args`
+  (what it was given), `data` (the report's `data:`), `content` (each
+  item, a named plot's too, `from = "template:<name>"`, the builder's
+  mark) and, for a template of its own ARD (`forest_hr`), `analyses`.
+  The designer's design stays the default.
+
 * **`tfl_image`: a figure drawn at its size on the page** (#282,
   0.0.24.9126).  A figure of items' `tfl_image` gives its size on the page
   (`width_in` / `height_in`: inches, or `fit`, the page's body) and its

@@ -2117,6 +2117,12 @@ tfl_check_fig_design <- function(design, adam = NULL, ggplot2_version = NULL,
 #'   heading row.  `""`: all subjects only.
 #' @param comparison For `forest_hr`: the arm compared with the reference
 #'   (the group's first level); `NULL`: every other arm.
+#' @param form `"design"` (default): the figure designer's design
+#'   ([tfl_fig_design()]).  `"items"`: the figure report's `data:` and
+#'   `content:` of function calls ([tfl_fig_content_from_design()]): a
+#'   list of `template`, `args` (the arguments the template was given),
+#'   `data`, `content` (each item `from = "template:<name>"`) and, for a
+#'   template that makes its own ARD (`forest_hr`), `analyses`.
 #' @param ... For a whole-script template: the type's other arguments.
 #' @return `tfl_fig_templates()`: a data frame (`template`, `kind`,
 #'   `label`, `parts`, `category`, `data`): `category` is the clinical
@@ -2139,7 +2145,24 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
                              category = "AVALC", responders = "CR, PR",
                              id = "USUBJID", duration = "TRTDURD",
                              join_adsl = NULL, title = NULL,
-                             subgroups = "SEX, AGEGR1", comparison = NULL, ...) {
+                             subgroups = "SEX, AGEGR1", comparison = NULL,
+                             form = c("design", "items"), ...) {
+  form <- match.arg(form)
+  if (identical(form, "items")) {
+    # the design, then its content of function calls, marked as the
+    # template's (the builder shows the mark, and puts it back)
+    cl <- match.call()
+    cl$form <- NULL
+    cl[[1L]] <- tfl_fig_template
+    d <- eval(cl, parent.frame())
+    x <- tfl_fig_content_from_design(d)
+    mark <- paste0("template:", template)
+    args <- lapply(as.list(cl)[-c(1L, 2L)], eval, envir = parent.frame())
+    out <- list(template = template, args = args, data = x$data,
+                content = .fig_mark_from(x$content, mark))
+    if (!is.null(attr(d, "analyses"))) out$analyses <- attr(d, "analyses")
+    return(out)
+  }
   tp <- .fig_templates()
   if (!template %in% tp$template) {
     stop("Unknown template '", template, "': one of ",
@@ -2580,4 +2603,14 @@ tfl_fig_forest_analyses <- function(data = "ADTTE", param = "OS", pop = "FASFL",
       paste0("cards::ard_strata(\n  data,\n  .strata = ", s, ",\n  .f = ~ ", reg(".x", "  "), "\n)")))))
   rownames(an) <- NULL
   list(analysis_data = adata, analyses = an)
+}
+
+# a content's items (a named plot's too) marked as coming from `from`
+.fig_mark_from <- function(content, from) {
+  if (inherits(content, "tfl_r")) return(content)
+  lapply(content, function(it) {
+    it$from <- from
+    if (inherits(it, "tfl_plot")) it$items <- .fig_mark_from(it$items, from)
+    it
+  })
 }
