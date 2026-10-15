@@ -1689,7 +1689,7 @@ rtf_footnotes:
 # function that makes a plot first, then its layers and its settings, then
 # the items that arrange the plots and the image's.  `figure:` says which
 # (plot | layer | ggsurvfit_layer | scale | coord | facet | labs | theme |
-# guide | compose | image); `rank` their order on the screen; `label` the
+# guide | element | compose | image); `rank` their order on the screen; `label` the
 # function's meaning in English and Japanese; `visible` the arguments a
 # card shows (the rest are the installed function's formals); `aes` a
 # layer's aesthetics, `required` those it needs.  A function the catalog
@@ -2331,6 +2331,89 @@ guides:
   rank: 800
   label: {en: Legends, ja: 凡例}
   dots: {style: named, type: "call|string|r", description: "A guide by aesthetic: {fn: guide_legend, args: {nrow: 1}}, or none."}
+
+# -- extension packages (Suggests; the code calls them as pkg::fn) --
+
+geom_label_repel:
+  package: ggrepel
+  figure: layer
+  rank: 223
+  label: {en: Labels that avoid overlaps, ja: "重ならない枠付きの文字"}
+  description: "Labels in boxes, moved apart so they do not overlap (a waterfall's or a spider plot's subject ids)."
+  aes: {x: {required: true}, "y": {required: true}, label: {required: true}, colour: {}}
+  visible: [mapping, size, max.overlaps, box.padding]
+  args:
+    mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
+    data: {type: object, label: {en: Data, ja: データ}}
+    max.overlaps: {type: number, label: {en: Overlaps allowed, ja: 許す重なりの数}}
+
+geom_richtext:
+  package: ggtext
+  figure: layer
+  rank: 224
+  label: {en: Formatted text, ja: "書式付きの文字"}
+  description: "Text with markdown and HTML (**bold**, <sup>superscript</sup>), in a box."
+  aes: {x: {required: true}, "y": {required: true}, label: {required: true}, colour: {}}
+  visible: [mapping, size, label.padding]
+  args:
+    mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
+    data: {type: object, label: {en: Data, ja: データ}}
+
+new_scale_fill:
+  package: ggnewscale
+  figure: layer
+  rank: 296
+  label: {en: New fill scale, ja: 新しい塗りのスケール}
+  description: "Between layers -- the layers after it get their own fill scale and legend."
+
+facet_nested:
+  package: ggh4x
+  figure: facet
+  rank: 502
+  label: {en: Nested panels, ja: 入れ子の面}
+  description: "Panels with nested strips (SOC over PT)."
+  visible: [rows, cols, scales, nest_line]
+  args:
+    rows: {type: r, label: {en: Rows (vars()), ja: 行（vars()）}}
+    cols: {type: r, label: {en: Columns (vars()), ja: 列（vars()）}}
+    scales: {type: "enum[fixed|free|free_x|free_y]", label: {en: Axes, ja: 軸}}
+
+facet_nested_wrap:
+  package: ggh4x
+  figure: facet
+  rank: 503
+  label: {en: Nested panels (wrapped), ja: 入れ子の面（折り返し）}
+  visible: [facets, ncol, scales]
+  args:
+    facets: {type: r, label: {en: Variables (vars()), ja: 変数（vars()）}}
+    scales: {type: "enum[fixed|free|free_x|free_y]", label: {en: Axes, ja: 軸}}
+
+facetted_pos_scales:
+  package: ggh4x
+  figure: scale
+  rank: 320
+  label: {en: Scales by panel, ja: 面ごとの軸}
+  description: "A different x or y scale for each panel: y = list(scale_y_continuous(...), ...)."
+  visible: [x, "y"]
+  args:
+    x: {type: r, label: {en: X scales, ja: x の軸}}
+    "y": {type: r, label: {en: Y scales, ja: y の軸}}
+
+element_markdown:
+  package: ggtext
+  figure: element
+  rank: 750
+  label: {en: Markdown text, ja: "Markdown の文字"}
+  description: "In theme() or labs(): text with **bold**, *italic*, <sup>superscript</sup> -- {fn: element_markdown} as a theme setting's value."
+  visible: [size, colour, hjust]
+
+element_textbox_simple:
+  package: ggtext
+  figure: element
+  rank: 751
+  label: {en: Markdown text box, ja: "Markdown の文字の箱"}
+  description: "A title or caption that wraps inside a box: {fn: element_textbox_simple} as a theme setting's value."
+  visible: [size, width, padding]
 
 # -- the plots arranged, and the image --
 

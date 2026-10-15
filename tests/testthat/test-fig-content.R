@@ -214,3 +214,27 @@ test_that("tfl_image: the figure drawn at its size on the page and its dpi, save
   expect_match(paste(tfl_report_code(o2, study = st, content = "content"), collapse = "\n"),
                "render_width = 6.5, render_height = 4.5, render_dpi = 300", fixed = TRUE)
 })
+
+test_that("the extension packages' functions: in the catalog, called as pkg::fn", {
+  for (fn in c("geom_text_repel", "geom_label_repel", "geom_richtext", "new_scale_colour", "new_scale_fill",
+               "facet_nested", "facet_nested_wrap", "facetted_pos_scales", "element_markdown",
+               "element_textbox_simple")) {
+    expect_false(is.null(tfl_schema(fn)$figure), info = fn)
+  }
+  it <- tfl_item("theme", list(axis.title.y = tfl_call("element_markdown", list(size = 9))))
+  expect_identical(.fig_deparse(.fig_item_lang(it)), "theme(axis.title.y = ggtext::element_markdown(size = 9))")
+  expect_identical(.fig_deparse(.fig_item_lang(tfl_item("new_scale_colour", list()))),
+                   "ggnewscale::new_scale_colour()")
+  o <- tfl_output("F-1", "figure", data = list(source = "code", steps = list(list(step = "read", dataset = "ADSL"))),
+                  content = list(tfl_item("ggplot", list(data = "df", mapping = list(x = "AGE", y = "WEIGHTBL", label = "USUBJID"))),
+                                 tfl_item("geom_point", list()),
+                                 tfl_item("geom_text_repel", list(size = 2, max.overlaps = 5)),
+                                 tfl_item("tfl_image", list())))
+  code <- tfl_content_code(o)
+  expect_true(any(grepl("ggrepel::geom_text_repel(size = 2, max.overlaps = 5)", code, fixed = TRUE)))
+  expect_true("ggrepel" %in% attr(.fig_content_code(o), "needs"))
+  skip_if_not_installed("ggrepel")
+  adsl <- tfl_example_adam()$ADSL
+  p <- suppressWarnings(tfl_content_run(o, list(adsl = adsl[1:20, ])))
+  expect_s3_class(p, "ggplot")
+})

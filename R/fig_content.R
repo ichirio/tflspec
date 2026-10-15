@@ -150,11 +150,23 @@ tfl_plot <- function(name, items = list(), from = "own") {
   as.call(c(list(as.name("c")), as.list(v)))
 }
 
+# a function as the code calls it: bare for the packages the figure's
+# program attaches (ggplot2, ggsurvfit, patchwork) and tflspec's own,
+# pkg::fn for another package's (the schema says which: ggrepel's
+# geom_text_repel)
 .fig_fn_sym <- function(fn) {
-  if (grepl("::", fn, fixed = TRUE)) {
-    return(call("::", as.name(sub("::.*$", "", fn)), as.name(sub("^.*::", "", fn))))
-  }
-  as.name(fn)
+  pkg <- if (grepl("::", fn, fixed = TRUE)) sub("::.*$", "", fn) else .fig_fn_package(fn)
+  nm <- sub("^.*::", "", fn)
+  if (!is.null(pkg) && !pkg %in% .fig_attached) return(call("::", as.name(pkg), as.name(nm)))
+  as.name(nm)
+}
+
+.fig_attached <- c("ggplot2", "ggsurvfit", "patchwork", "tflspec", "dplyr")
+
+.fig_fn_package <- function(fn) {
+  ent <- .schema_all(figure = FALSE)[[fn]]
+  if (is.null(ent$figure)) return(NULL)
+  ent$package
 }
 
 # An item as its call
@@ -219,7 +231,7 @@ tfl_plot <- function(name, items = list(), from = "own") {
                        "position_nudge", "position_stack", "position_fill",
                        "element_text", "element_line", "element_rect", "element_blank",
                        "margin", "unit", "expansion", "guide_legend", "guide_none",
-                       "arrow", "rel")
+                       "arrow", "rel", "element_markdown", "element_textbox_simple")
 
 # A term of a ggplot chain (a call) as an item: its function, its
 # arguments by name (positional ones named by the function's formals)
@@ -307,7 +319,8 @@ tfl_plot <- function(name, items = list(), from = "own") {
           next
         }
         terms <- c(terms, .fig_term_text(.fig_item_lang(it)))
-        if (grepl("::", it$fn, fixed = TRUE)) needs <- c(needs, sub("::.*$", "", it$fn))
+        pk <- if (grepl("::", it$fn, fixed = TRUE)) sub("::.*$", "", it$fn) else .fig_fn_package(fn)
+        if (!is.null(pk) && !pk %in% .fig_attached) needs <- c(needs, pk)
         if (fn %in% c("ggsurvfit", "ggcuminc") || startsWith(fn, "add_")) libs <- c(libs, "ggsurvfit")
       }
       lines <- .fig_plus_chain(target, terms)
