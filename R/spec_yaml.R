@@ -259,9 +259,16 @@ tfl_read_output <- function(path) {
 
 # `- plan_cells: {...}` (a map of one key) as a tfl_item
 .item_from_list <- function(el) {
+  # a figure's item that is R (`- !r p + annotate(...)`)
+  if (inherits(el, "tfl_r")) return(tfl_item(".r", list(code = el), "own"))
   if (is.list(el) && length(el) == 1L && !is.null(names(el)) && nzchar(names(el))) {
     args <- el[[1L]]
     if (is.null(args)) args <- list()
+    # a figure's named plot: `- km: [items]`, a sequence of items
+    if (is.list(args) && length(args) && is.null(names(args)) &&
+        all(vapply(args, function(a) is.list(a) || inherits(a, "tfl_r"), NA))) {
+      return(tfl_plot(names(el), lapply(args, .item_from_list)))
+    }
     if (!is.list(args)) {
       stop("A content item is `- fn: {args}`; `", names(el), "` has a value that is not a map.",
            call. = FALSE)
@@ -351,6 +358,8 @@ tfl_write_output <- function(x, path) {
 # content items as they are written: `- fn: {args}`
 .items_to_list <- function(items) {
   lapply(items, function(it) {
+    if (inherits(it, "tfl_plot")) return(stats::setNames(list(.items_to_list(it$items)), it$fn))
+    if (identical(it$fn, ".r")) return(it$args$code)
     a <- .calls_out(it$args)
     # no arguments: an empty map ({}), not an empty sequence
     if (!length(a)) a <- stats::setNames(list(), character())
