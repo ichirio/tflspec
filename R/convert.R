@@ -35,10 +35,17 @@
 #'   the package's own bridge from the sheets to the layers
 #'   (`.plan_content_from_sheets()`) when it is there, else none.
 #' @param overwrite Write over files already in `to`?
+#' @param figures How a figure is written: `"design"` (default) its
+#'   designer's pieces as the content's items, as the figure designer reads
+#'   them; `"items"` its content of function calls, plot by plot
+#'   ([tfl_fig_content_from_design()]: `ggplot`, `geom_line`, ...,
+#'   `tfl_image`), the form the designer is moving to.
 #' @return Invisibly, a list: `to`, `files` (paths written), `not_converted`
 #'   (a data frame: `output`, `sheet`, `row`, `column`, `reason`, `value`).
 #' @export
-tfl_convert_sheets_to_yaml <- function(from, to, content_fn = NULL, overwrite = FALSE) {
+tfl_convert_sheets_to_yaml <- function(from, to, content_fn = NULL, overwrite = FALSE,
+                                       figures = c("design", "items")) {
+  figures <- match.arg(figures)
   if (!dir.exists(from)) stop("tfl_convert_sheets_to_yaml(): no folder ", from, call. = FALSE)
   src <- .conv_sources(from)
   if (!length(src$books) && is.null(src$ard) && is.null(src$lf) && !length(src$figs)) {
@@ -51,7 +58,8 @@ tfl_convert_sheets_to_yaml <- function(from, to, content_fn = NULL, overwrite = 
     listing = if (!is.null(src$lf)) .conv_read_lf(src$lf),
     figures = lapply(src$figs, .conv_read_fig),
     study = if (!is.null(src$study)) yaml::read_yaml(src$study) else list())
-  tfl_yaml_from_sheets(sheets, to, content_fn = content_fn, overwrite = overwrite)
+  tfl_yaml_from_sheets(sheets, to, content_fn = content_fn, overwrite = overwrite,
+                       figures = figures)
 }
 
 #' @rdname tfl_convert_sheets_to_yaml
@@ -63,7 +71,9 @@ tfl_convert_sheets_to_yaml <- function(from, to, content_fn = NULL, overwrite = 
 #'   (study.yml's fields).  What the app holds, or what the workbooks read
 #'   as.
 #' @export
-tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALSE) {
+tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALSE,
+                                 figures = c("design", "items")) {
+  figures <- match.arg(figures)
   # a cell's line breaks as the YAML's (Excel keeps a cell's as CRLF): every
   # sheet's text, before the bridge reads it (a header's "{col}\r\n(N={n})")
   sheets[c("table", "ard", "listing")] <- lapply(sheets[c("table", "ard", "listing")], .conv_lf_sheets)
@@ -231,7 +241,8 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     if (nrow(rrow)) for (k in c("file", "program")) if (!is.na(rrow[[k]][1L])) entry[[k]] <- rrow[[k]][1L]
     toc[[length(toc) + 1L]] <- entry
 
-    out <- .conv_output(id, kind, entry, sp, ard, lf, figs[[id]], prow, scope, page_of, content_fn, note)
+    out <- .conv_output(id, kind, entry, sp, ard, lf, figs[[id]], prow, scope, page_of, content_fn, note,
+                        figures = figures)
     f <- file.path(to, "spec", "outputs", paste0(id, ".yml"))
     tfl_write_output(out, f)
     files <- c(files, f)
@@ -458,7 +469,8 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
 }
 
 # one report's file
-.conv_output <- function(id, kind, entry, sp, ard, lf, fig, prow, scope, page_of, content_fn, note) {
+.conv_output <- function(id, kind, entry, sp, ard, lf, fig, prow, scope, page_of, content_fn, note,
+                         figures = "design") {
   rrow <- scope(sp$report, id)
   pattern <- if (nrow(rrow) && !is.null(rrow$pattern) && !is.na(rrow$pattern[1L])) rrow$pattern[1L]
   extends <- c(if (!is.null(pattern)) paste0("patterns/", sub("^@", "", pattern)), "defaults")
@@ -466,7 +478,22 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   content <- list()
   codelists <- list()
   extra <- list()
-  if (kind == "figure" && !is.null(fig)) {
+  items <- NULL
+  if (kind == "figure" && !is.null(fig) && identical(figures, "items")) {
+    # the design's content of function calls (R/fig_content.R); a design
+    # it cannot convert stays the designer's, said
+    y <- if (is.character(fig)) .conv_read_fig(fig) else fig
+    items <- tryCatch(tfl_fig_content_from_design(y), error = function(e) {
+      note(id, "figure", id, NA, paste("kept as the designer's pieces:", conditionMessage(e)))
+      NULL
+    })
+  }
+  if (!is.null(items)) {
+    data <- items$data
+    content <- items$content
+    if (!is.null(items$template)) extra$template <- items$template
+    if (!is.null(y$ggplot2_version)) extra$ggplot2_version <- y$ggplot2_version
+  } else if (kind == "figure" && !is.null(fig)) {
     y <- if (is.character(fig)) .conv_read_fig(fig) else fig
     data <- list(source = "code")
     if (!is.null(y$data)) data$steps <- y$data

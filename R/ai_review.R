@@ -461,6 +461,9 @@
   if (is.null(o)) return(list(rows = rows, kinds = "report", assumptions = NULL))
   id <- o$id
   items <- if (inherits(o$content, "tfl_r")) list() else o$content
+  # a figure's named plots: their items, each
+  items <- unlist(lapply(items, function(it) if (inherits(it, "tfl_plot")) it$items else list(it)),
+                  recursive = FALSE)
   for (i in seq_along(items)) {
     it <- items[[i]]
     p <- tfl_schema_check(it)
@@ -546,6 +549,8 @@
       }
     }
     for (id in names(b$figures)) {
+      # a figure of items is checked item by item against the schema (K16-K18)
+      if (!is.null(b$figures[[id]]$content)) next
       pr <- tryCatch(tfl_check_fig_design(.fig_design_from_list(b$figures[[id]]), adam = adam),
                      error = function(e) NULL)
       for (i in seq_len(NROW(pr))) {

@@ -1,5 +1,31 @@
 # tflspec (development version)
 
+* **A figure's content as function calls, plot by plot** (#280,
+  0.0.24.9125; the figure designer's redesign, stage F1).  A figure
+  report's `content:` is its plot's items, one a call: the function that
+  makes the plot first (`ggplot`, `ggsurvfit`, `ggcuminc`, or tflspec's
+  own `tfl_risk_panel`, `tfl_text_column`, `tfl_n_panel`), then its layers
+  (`geom_*`, `annotate`, ggsurvfit's `add_*`, `tfl_ard_number`) and its
+  settings (`scale_*`, `coord_*`, `facet_*`, `labs`, `theme_tfl` /
+  `theme`, `guides`); several plots are named (`- km: [items]`,
+  `tfl_plot()`) and arranged by patchwork's items (`wrap_plots`,
+  `plot_layout`, `plot_annotation`); `tfl_image` is the last item.
+  `tfl_content_code()` writes it (`p_<name>` a plot, `content <-
+  wrap_plots(...)`, a `position_dodge()` said twice as `pd`) and
+  `tfl_content_run()` runs it, after the study's figure setup.  The
+  schema has a figure catalog (61 functions: `figure:`, `rank`, `label` in
+  English and Japanese, `visible`, `aes`; a catalog geom takes its
+  parameters from the installed layer).  `tfl_fig_content_from_design()`
+  converts a designer's design once -- the 28 templates of ggplot2 and
+  tflplanner's two designed sample figures draw the same figure (layer
+  data, labels, axis ranges); the 10 figure types of their own become R.
+  `tfl_yaml_from_sheets()` / `tfl_convert_sheets_to_yaml()` gain `figures
+  = c("design", "items")` (the designer's form stays the default until
+  the designer works in items).  `tfl_args_to_r()` / `tfl_args_from_r()`
+  write an item's arguments as R text and read them back (the builder's
+  R form).  The AI kit's blank and example figure, the manual's §10.1 and
+  the guide's figure section are in the new form.
+
 * **A table's font size is its plan's** (#279, 0.0.24.9124; a user's PK
   table warned `rtf_tables(font_size_half_points = ) is deprecated`).  The
   report sheet's `table_font_size_half_points` is the table's

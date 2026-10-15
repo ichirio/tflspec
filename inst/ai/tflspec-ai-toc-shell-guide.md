@@ -527,30 +527,40 @@ flag in `where` and ask.
 
 ## 6. A figure shell → its report file
 
-A figure's file holds its design (the manual §10): `template`, `data:
-{source: code, steps: [...]}` (the design's data steps), `content:` its
-layers, one item a layer (`- line: {...}`), and `plot:`.  Start from a
-template (`tfl_fig_templates()`) that matches the shell, and fill its
-fields from the shell.  The usual shells:
+A figure's file holds its data steps and its plot as function calls (the
+manual §10.1): `template` (the one it started from), `data: {source:
+code, steps: [...]}`, and `content:` -- the function that makes the plot
+first, then its layers, then its settings, `tfl_image` last.  Start from
+the template (`tfl_fig_templates()`) that matches the shell; the usual
+shells:
 
-| Shell | `template` | What to read off the shell |
-|---|---|---|
-| Kaplan-Meier curves, number at risk below | `km_risk_table` (no risk table: `km_simple`) | the time axis's unit and label; the groups (the legend); `PARAMCD` from the title ("Time to First Dermatologic Event" → ask for the code); censor marks; a median line |
-| mean over visits with error bars | `mean_se` / `mean_sd` / `mean_ci` | the parameter; the visits (the axis); SE vs SD vs CI from the title or the legend |
-| boxplots by arm | `box` | the parameter, the visit |
-| waterfall of best change | `waterfall` | the parameter; reference lines (20 %, -30 %) |
-| swimmer | `swimmer` | the events in the legend |
-| forest plot of subgroups | `forest_hr` / `forest_or` | the subgroups listed; the comparison arm |
+| Shell | `template` | The plot's items | What to read off the shell |
+|---|---|---|---|
+| Kaplan-Meier curves, number at risk below | `km_risk_table` (no risk table: `km_simple`) | `ggsurvfit`, `add_censor_mark`, `geom_hline` (the median line), the axes, `labs`; the number at risk a plot of its own, `tfl_risk_panel`, under it (`wrap_plots`) -- or `add_risktable` on the curves | the time axis's unit and label; the groups (the legend); `PARAMCD` from the title ("Time to First Dermatologic Event" → ask for the code); censor marks; a median line |
+| mean over visits with error bars | `mean_se` / `mean_sd` / `mean_ci` | `ggplot`, `geom_line`, `geom_point`, `geom_errorbar` (dodged) | the parameter; the visits (the axis); SE vs SD vs CI from the title or the legend |
+| boxplots by arm | `box_by_visit` / `box_by_group` / `box_change` | `ggplot`, `geom_boxplot` | the parameter, the visit |
+| waterfall of best change | `waterfall_response` / `waterfall_plain` | `ggplot`, `geom_col`, `geom_hline` (20 %, -30 %) | the parameter; the reference lines |
+| swimmer | `swimmer_*` | `ggplot`, `geom_segment`, `geom_point` | the events in the legend |
+| forest plot of subgroups | `forest_hr` / `forest_or` | `ggplot`, `geom_vline`, `geom_errorbar`, `geom_point`, `scale_x_log10`; the text at its right a plot of its own, `tfl_text_column` (`wrap_plots`) | the subgroups listed; the comparison arm |
 
-The steps: `read` the dataset, `param` the `PARAMCD`, `flag` the
-population flag, `filter`, `levels`, `summary` / `survfit` (an object of
-its own by `name`).  `plot:` `x_label`, `y_label` (the shell's, exactly),
-`colour_by` the arm, `legend`.  The time unit: a KM shell in months over
-an `AVAL` in days needs a `time_unit` step; say which you assumed.  A
-figure that prints a table's numbers (a median, a hazard ratio) reads
-that table's ARD (`ard_number`); name the table in the assumptions.  A
-figure's own analyses (a forest plot's models) are its `ard:`, as a
-table's.
+- The data steps: `read` the dataset, `param` the `PARAMCD`, `flag` the
+  population flag, `filter`, `levels`, `summary` / `survfit` (an object
+  of its own by `name`: `sm`, `fit`).  The time unit: a KM shell in
+  months over an `AVAL` in days needs a `time_unit` step; say which you
+  assumed.
+- The axes' titles are `labs: {x: ..., 'y': ...}`, the shell's text
+  exactly; the legend `theme: {legend.position: bottom}`; the arms'
+  colours `scale_colour_tfl: {palette: treatment}`, the theme `theme_tfl:
+  {}` (the company standard).  The axes' ranges and breaks are
+  `scale_x_continuous` / `scale_y_continuous` and `coord_cartesian`.
+- `mapping:` holds columns only (`colour: TRTA`); a fixed colour or size is
+  the function's own argument (`colour: grey50`), never in `mapping:`.
+- A figure that prints a table's numbers (a median, a hazard ratio) reads
+  that table's ARD: `tfl_ard_number` (`analysis_id`, `variable`, `level`,
+  `stat`, `group`, `label: "Median: {value}"`); name the table in the
+  assumptions.  A figure's own analyses (a forest plot's models) are its
+  `ard:`, as a table's.
+- Write `y` as `'y'` (quoted): YAML reads a bare y as true.
 
 The figure's titles and footnotes are its `page:`, as a table's.
 
@@ -784,11 +794,14 @@ the legend below.
 → `template: mean_se`; `data: {source: code, steps: [...]}`: `read`
 ADVS, `param` `SYSBP` (assumed: a question), `flag` `SAFFL`, `filter`
 the non-missing values, `levels` `AVISIT` by `AVISITN`, `summary` `sm`
-(`AVAL` by `TRTA, AVISITN, AVISIT`, interval `se`); `content`: `line`,
-`point`, `errorbar` on `sm`; `plot`: `x_label` "Visit", `y_label` "Mean
-(SE) Systolic Blood Pressure (mmHg)", `colour_by` TRTA, `legend`
-`bottom`.  The template's `join` step is gone: ADVS has `TRTA` and
-`SAFFL` itself.
+(`AVAL` by `TRTA, AVISITN, AVISIT`, interval `se`).  The template's
+`join` step is gone: ADVS has `TRTA` and `SAFFL` itself.
+→ `content`: `ggplot: {}`, then `geom_line`, `geom_point` and
+`geom_errorbar` on `sm` (`data: sm`, their `mapping`, dodged by
+`position_dodge(width = 0.3)`), `scale_colour_tfl` (the treatment
+palette), `labs: {x: Visit, 'y': Mean (SE) Systolic Blood Pressure
+(mmHg)}`, `theme_tfl`, `theme: {legend.position: bottom}`, and
+`tfl_image: {dpi: 300}`.
 
 ### `spec/_assumptions.yml` of `06`
 

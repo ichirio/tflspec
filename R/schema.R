@@ -67,7 +67,21 @@ tfl_schema <- function(fn = NULL) {
   nm <- .schema_fn_name(fn)
   # the file's entries first; a figure's layer, made from the designer's
   # catalog, only for a name the file does not have
-  .schema_all(figure = FALSE)[[nm]] %||% .schema_fig_entries()[[nm]] %||%
+  ent <- .schema_all(figure = FALSE)[[nm]]
+  # a catalog layer of ggplot2 (geom_line): its own entry over what the
+  # installed layer takes -- its geom's and stat's parameters, its
+  # aesthetics (they come through `...`)
+  if (!is.null(ent) && identical(ent$figure, "layer") && grepl("^(geom|stat)_", nm)) {
+    gg <- .schema_ggplot_entry(if (identical(ent$package, "ggplot2")) nm else paste0(ent$package, "::", nm))
+    if (!is.null(gg)) {
+      for (k in setdiff(names(gg$args), names(ent$args))) ent$args[[k]] <- gg$args[[k]]
+      # the catalog's aesthetics (those it needs marked) and the layer's own
+      cat_aes <- ent$aes %||% list()
+      ent$aes_required <- names(Filter(function(a) isTRUE(a$required), cat_aes))
+      ent$aes <- unique(c(names(cat_aes), gg$aes))
+    }
+  }
+  ent %||% .schema_fig_entries()[[nm]] %||%
     # a ggplot2 layer function (geom_area, ggrepel::geom_text_repel): from
     # the installed package itself
     (if (grepl("^(geom|stat)_", nm)) .schema_ggplot_entry(fn))
@@ -151,6 +165,11 @@ tfl_schema_check <- function(item) {
   fn <- item$fn
   out <- data.frame(fn = character(), arg = character(), level = character(),
                     message = character(), stringsAsFactors = FALSE)
+  # a figure's named plot: its items, each; a figure's R item: R
+  if (inherits(item, "tfl_plot")) {
+    return(do.call(rbind, c(list(out), lapply(item$items, tfl_schema_check))))
+  }
+  if (identical(fn, ".r")) return(out)
   bad <- function(arg, msg, level = "error") {
     out[nrow(out) + 1L, ] <<- list(fn, arg, level, msg)
   }

@@ -169,6 +169,10 @@ tfl_sheets_from_yaml <- function(dir) {
         } else note(id, paste0("content.", it$fn), "a listing item the listing sheets do not hold")
       }
       listings[[length(listings) + 1L]] <- lr
+    } else if (o$kind == "figure" && .fig_new_content(o$content)) {
+      # a figure of items (R/fig_content.R): its data and items as they are
+      figures[[id]] <- list(template = o$template, data = o$data$steps,
+                            content = .items_to_list(o$content))
     } else if (o$kind == "figure") {
       fd <- list()
       for (k in c("template", "ggplot2_version")) if (!is.null(o[[k]])) fd[[k]] <- o[[k]]

@@ -107,7 +107,9 @@ test_that("the example runs on the pilot data: the ARD, the tables, the listing,
   skip_if_not_installed("ggplot2")
   # the figure over its defaults (their page, not the tables' content)
   f1 <- tfl_resolve_output(outs[["F-1"]], st)
-  expect_identical(vapply(f1$content, `[[`, "", "fn"), c("line", "point", "errorbar"))
+  expect_identical(vapply(f1$content, `[[`, "", "fn"),
+                   c("ggplot", "geom_line", "geom_point", "geom_errorbar", "scale_colour_tfl",
+                     "labs", "theme_tfl", "theme", "tfl_image"))
   p <- suppressMessages(tfl_content_run(f1,
                                         list(advs = readRDS(file.path(d, "data", "adam", "advs.rds")))))
   expect_s3_class(p, "ggplot")

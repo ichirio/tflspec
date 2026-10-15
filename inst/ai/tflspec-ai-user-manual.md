@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9124** (the development version,
+**This manual documents tflspec 0.0.24.9125** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -178,6 +178,8 @@ going and leaves the message in the `error` / `warning` column.
 | the document / its code / its file | `tfl_report(spec, output_id, content = plan)` / `tfl_report_code(spec)` / `tfl_report_path(spec)` |
 | a listing's program / its pages | `tfl_listing_code(spec)` / `tfl_listing(data, spec)` |
 | a figure: start / check / write the script / its size on the page | `tfl_fig_template()` / `tfl_check_fig_design()` / `tfl_fig_design_code()` / `tfl_fig_page_size()` |
+| a figure report's content of function calls; a design as one | `tfl_content_code(report)` / `tfl_content_run(report, data)` (§10.1); `tfl_fig_content_from_design(design)`; a named plot `tfl_plot(name, items)` |
+| an item's arguments as R text, and back (the builder's R form) | `tfl_args_to_r(fn, args)` / `tfl_args_from_r(fn, text)` |
 | review the whole definition: errors, what is probably wrong, what to set by hand | `tfl_review_spec(spec, ard, listings, figures)`; against the data: `facts = tfl_data_facts(data, populations = ard)`; the rules: `tfl_review_rules()`; each row's sentence is `template` filled with `args` (`message` is the two put together; the sentences beyond the rules': `tfl_review_templates()`) |
 | attach this manual to a chat session | `tflspec_ai_manual()` (its path) |
 | draft a study's specs from its TOC and shells in an AI chat | `tflspec_ai_manual(dir)` writes the kit to attach; `tfl_ai_unpack(answer, dir)` writes the answer into a study folder; `tfl_ai_review(dir, toc = )` checks it (§12.2) |
@@ -250,9 +252,9 @@ sections follow this order.
 | `ard` | the report's part of the study ARD: `analyses:` (the `analyses` sheet's rows, `analysis_id` as `id`, `population_id` as `population`) and `analysis_data:` (`data_id` as `id`) -- §6 |
 | `data` | what the report reads.  `source: ard` (a table: the study ARD, `object: ard`; `steps:` R on it); `source: dataset` (a listing: `dataset`, `where`, `sort`); `source: code` (a figure: `steps:`, the design's data steps of §10; or `code: !r ...`, the report's own R) |
 | `codelists` | by variable, a list of `{value, label}` in the order printed (the `codelists` sheet) |
-| `content` | the report, a list of items, each one call: `- plan_cells: {categorical: '{n} ({p:.1f%})'}`.  A table's items are rtfreporter's `normalize_ard()`, `table_plan()` and `plan_*()` verbs; a listing's `plan_listing()` (its columns `listing_col()` calls); a figure's the design's layers (`- line: {...}`).  Or `content: !r ...`, the report's own R |
+| `content` | the report, a list of items, each one call: `- plan_cells: {categorical: '{n} ({p:.1f%})'}`.  A table's items are rtfreporter's `normalize_ard()`, `table_plan()` and `plan_*()` verbs; a listing's `plan_listing()` (its columns `listing_col()` calls); a figure's the calls of its plot -- `ggplot`, `geom_*`, `scale_*`, `labs`, `theme` ..., and `tfl_image` last (§10.1).  Or `content: !r ...`, the report's own R |
 | `page` | the document: `titles`, `footnotes`, `header`, `footer` (maps by line number: `'1': {center: Table 14.1.1}`), `tokens`, and rtfreporter's calls by name (`rtf_page: {orientation: landscape}`, `rtf_tables: {auto_section: true}`, `rtf_document: {watermark: DRAFT}`) |
-| `template`, `plot`, `plots`, `compose` | a figure's, as in its design (§10) |
+| `template` | a figure's template (`km_simple` ...); the designer's `plot`, `plots`, `compose` are its old form (§10) |
 
 **An item's keys are the function's arguments** (§7's tables say which
 sheet column is which verb's argument: `pages_max_rows` is
@@ -633,6 +635,69 @@ dataset of the data catalog (`.rds`, `.xpt`, `.sas7bdat`, `.csv`,
 
 ## 10. Figure design (YAML)
 
+A figure report's `content:` is written as **function calls** (§10.1).
+The figure designer's design below -- its pieces (`km_curve`, `line` ...)
+and `plot:` settings -- is the old form: still read and written, until the
+designer works in function calls; `tfl_fig_content_from_design(design)`
+converts one (the same figure: its layers' data, labels and axes).
+
+### 10.1 A figure report's content: one item a call
+
+```yaml
+content:
+  - ggplot: {data: sm, mapping: {x: AVISIT, 'y': mean, colour: TRTA}}   # makes the plot
+  - geom_line: {position: {fn: position_dodge, args: {width: 0.3}}}     # its layers ...
+  - geom_errorbar: {mapping: {ymin: lo, ymax: hi}, width: 0.2,
+                    position: {fn: position_dodge, args: {width: 0.3}}}
+  - scale_colour_tfl: {palette: treatment, values: !r levels(factor(df$TRTA))}   # ... its settings
+  - labs: {x: Visit, 'y': Mean (SE), colour: !r NULL}
+  - theme_tfl: {theme: boxed}
+  - theme: {legend.position: bottom}
+  - tfl_image: {dpi: 300}                                               # the image: always last
+```
+
+- The first item **makes the plot**: `ggplot` (data, mapping), `ggsurvfit`
+  (`x` = the fit of a `survfit` data step), `ggcuminc`, or one of
+  tflspec's own -- `tfl_risk_panel` (the number at risk under KM curves),
+  `tfl_text_column` (a forest plot's text), `tfl_n_panel` -- or `!r`.  The
+  items after it are its **layers** (`geom_*`, `annotate`, ggsurvfit's
+  `add_*` on a `ggsurvfit` plot, `tfl_ard_number` -- a statistic of the
+  ARD as a text) and its **settings** (`scale_*`, `coord_*`, `facet_*`,
+  `labs`, `theme_tfl` / `theme`, `guides`), `+`-ed in their order.  An
+  item's keys are the function's arguments (`tfl_schema("geom_line")`,
+  the schema's figure catalog; a function it does not have, `pkg::fn`,
+  is written by its formals).
+- `mapping:` is `aes()`: a map of columns (`!r` for an expression); a
+  constant is the function's argument, not the mapping (`colour: grey50`).
+  `data:` and a fit name an object of the data steps.  `NULL` is `!r
+  NULL`; `!unset` removes what a layer below set.  `scale_colour_tfl`,
+  `scale_fill_tfl` and `theme_tfl` are the study's figure setup's
+  (`tfl_fig_setup_code()`): the company standard's colours and theme.
+- **Several plots** are named, each a sequence of its items, then the
+  patchwork items that arrange them and `tfl_image`:
+
+```yaml
+content:
+  - km:
+      - ggsurvfit: {x: fit, linewidth: 0.3}
+      - add_censor_mark: {shape: 4, size: 3}
+      - labs: {x: Time (Months), 'y': Survival Probability}
+  - risk:
+      - tfl_risk_panel: {fit: fit, title: Number of Patients at Risk, size: 3, by: TRT01P, palette: treatment}
+  - wrap_plots: {plots: [km, risk], ncol: 1, heights: [0.833, 0.167]}
+  - tfl_image: {dpi: 300}
+```
+
+  A content with named plots holds nothing else but the arrangement
+  (`wrap_plots`, `plot_layout`, `plot_annotation`) and `tfl_image`; a
+  plot's first item makes it; a plot is not named as a function;
+  `tfl_image` is the last item.  The code is each plot as `p_<name>`, then
+  `content <- wrap_plots(p_km, p_risk, ...)`; one plot is `content`.  A
+  `position_dodge()` said twice is written once as `pd`.
+- The data steps (`data: {source: code, steps: [...]}`) are the
+  designer's, below; the x axis's breaks a figure shares with its panel
+  (`x_breaks`) are a `code` step.
+
 `tfl_fig_design()`, `tfl_read_fig_design()` / `tfl_write_fig_design()`
 (one `.yml` a figure), `tfl_fig_design_code()` writes the ggplot2 script,
 `tfl_check_fig_design()` / `tfl_fig_advice()` check it, `tfl_fig_template()`
@@ -902,12 +967,12 @@ back): rename the value or choose another separator.
 
 ## 14. Complete public API (nothing outside this list exists)
 
-**Spec files (YAML, one file a report):** `tfl_output` `tfl_item` `tfl_call` `tfl_r`
+**Spec files (YAML, one file a report):** `tfl_output` `tfl_item` `tfl_plot` `tfl_call` `tfl_r`
 `tfl_unset` `tfl_read_output` `tfl_write_output` `tfl_read_study_spec`
 `tfl_read_outputs` `tfl_resolve_output` `tfl_convert_sheets_to_yaml`
 `tfl_yaml_from_sheets` `tfl_sheets_from_yaml` `tfl_write_spec_xlsx`
 `tfl_import_spec_xlsx` `tfl_schema` `tfl_schema_check` `tfl_schema_help` `tfl_content_code` `tfl_content_run`
-`tfl_ai_unpack`
+`tfl_ai_unpack` `tfl_args_to_r` `tfl_args_from_r` `tfl_fig_content_from_design`
 
 **Manual:** `tflspec_ai_manual` `tfl_adam_metadata` `tfl_ai_review`
 

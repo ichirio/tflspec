@@ -106,6 +106,7 @@ reference:
       - tfl_read_output
       - tfl_resolve_output
       - tfl_schema
+      - tfl_args_to_r
       - tfl_schema_check
       - tfl_schema_help
       - tfl_content_code
@@ -150,6 +151,7 @@ reference:
       and the ggplot2 script it stands for.
     contents:
       - tfl_fig_design
+      - tfl_fig_content_from_design
       - tfl_fig_forest_analyses
       - tfl_fig_templates
       - tfl_fig_parts
@@ -227,6 +229,7 @@ reference:
       the flat view as a workbook.
     contents:
       - tfl_output
+      - tfl_plot
       - tfl_read_output
       - tfl_read_study_spec
       - tfl_resolve_output
