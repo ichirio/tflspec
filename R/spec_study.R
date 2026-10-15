@@ -107,7 +107,10 @@ tfl_read_outputs <- function(dir) {
 #' report's items of one function replace every item of that function in
 #' the layers below, in the place the first of them had; a function the
 #' report does not have keeps the layers' items; a function only the
-#' report has goes after them.  `extends: none` uses no layer.  Each item's
+#' report has goes after them.  The `content` of `defaults` is a table's
+#' (normalize_ard, the digits ...): a figure or a listing takes its other
+#' parts (`page`, `codelists`), not its content.  `extends: none` uses no
+#' layer.  Each item's
 #' `from` says where it came from.  The result holds no `tfl_unset`.
 #'
 #' @param output A `tfl_output` as read from its file.
@@ -124,7 +127,12 @@ tfl_resolve_output <- function(output, study) {
   if (!inherits(study, "tfl_study_spec")) stop("tfl_resolve_output(): `study` is a tfl_study_spec.", call. = FALSE)
   chain <- output$extends
   if (identical(chain, "none")) chain <- character()
-  layers <- lapply(chain, function(nm) .layer_of(nm, study))
+  layers <- lapply(chain, function(nm) {
+    l <- .layer_of(nm, study)
+    # the defaults' content is a table's: not a figure's or a listing's layers
+    if (identical(nm, "defaults") && !identical(output$kind, "table")) l$content <- list()
+    l
+  })
   # the farthest first, the report's own last
   acc <- list(data = list(), codelists = list(), content = list(), page = list())
   for (l in rev(layers)) acc <- .layer_over(acc, l)

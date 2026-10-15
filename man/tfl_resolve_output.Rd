@@ -22,7 +22,10 @@ merge by key, and an \code{\link[=tfl_unset]{tfl_unset()}} removes the key.  In 
 report's items of one function replace every item of that function in
 the layers below, in the place the first of them had; a function the
 report does not have keeps the layers' items; a function only the
-report has goes after them.  \code{extends: none} uses no layer.  Each item's
+report has goes after them.  The \code{content} of \code{defaults} is a table's
+(normalize_ard, the digits ...): a figure or a listing takes its other
+parts (\code{page}, \code{codelists}), not its content.  \code{extends: none} uses no
+layer.  Each item's
 \code{from} says where it came from.  The result holds no \code{tfl_unset}.
 }
 \examples{

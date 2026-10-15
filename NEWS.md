@@ -1,5 +1,11 @@
 # tflspec (development version)
 
+* **The defaults' content is a table's** (#263, 0.0.24.9117; found by the
+  AI kit).  `tfl_resolve_output()` layers `defaults.yml`'s `content`
+  (normalize_ard, the digits ...) onto a table only: a figure or a
+  listing takes the defaults' page and code lists, not those layers
+  (a figure's code stopped at "Unknown layer: normalize_ard").
+
 * **The YAML spec, stage 0** (0.0.24.9112; the user's decision of
   2026-10-14 to make YAML the source of a study's definition, one file a
   report): the R objects `tfl_r()` (the `!r` tag), `tfl_unset()` (the
