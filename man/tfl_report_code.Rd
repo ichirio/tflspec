@@ -56,8 +56,8 @@ Writes the rtfreporter calls a report definition stands for -- the
 page, the running header and footer, the content, the titles and
 footnotes -- as \code{doc <- rtf_document(...)} and one \verb{doc <- rtf_*(doc, ...)}
 a step: what \code{\link[=tfl_report]{tfl_report()}} does, as a program that needs only
-rtfreporter.  Write it out with
-\code{generate_rtfreport(doc, "<file>.rtf")} (\code{\link[=tfl_report_path]{tfl_report_path()}} says which).
+rtfreporter.  The document says its file, \code{rtf_document(file = )} --
+\code{\link[=tfl_report_path]{tfl_report_path()}}'s path -- so \code{generate_rtfreport(doc)} writes it.
 }
 \examples{
 spec <- tfl_read_report_spec(

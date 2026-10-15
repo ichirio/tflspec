@@ -2225,13 +2225,15 @@ tfl_read_report_spec <- function(path, output_id = NULL) {
 #' the running header and footer, the titles and footnotes, and the
 #' table's pages --- an [rtfreporter::table_plan()] or anything [rtfreporter::rtf_tables()] takes ---
 #' in one [rtfreporter::rtf_document()] ready for [rtfreporter::generate_rtfreport()].  The document
-#' carries its program, so `{PROGRAM}` needs nothing more.
+#' carries its program, so `{PROGRAM}` needs nothing more, and its file
+#' ([tfl_report_path()]: `rtf_document(file = )`), so `generate_rtfreport(doc)`
+#' writes there; a path given to it wins.  A YAML report's file needs its
+#' `study`.
 #'
 #' ```r
 #' spec <- tfl_read_report_spec(c("report.xlsx", "tables.xlsx"), output_id = id)
 #' plan <- ard |> normalize_ard() |> tfl_table_plan(spec)
-#' generate_rtfreport(tfl_report(spec, content = plan), tfl_report_path(spec),
-#'                    overwrite = TRUE)
+#' generate_rtfreport(tfl_report(spec, content = plan))   # to tfl_report_path(spec)
 #' ```
 #'
 #' @param spec A report definition ([tfl_read_report_spec()]) narrowed to one
@@ -2318,6 +2320,14 @@ tfl_report_path <- function(spec, output_id = NULL, study = NULL) {
   }
   .sheet_rtf_path(.ard_spec_scope(.as_spec(spec, "table", "tfl_report_path",
                                           output_id = output_id), output_id))
+}
+
+# The document's file, rtf_document(file = ): the report's path, unless it
+# still has an `{output_id}` no report filled (a definition of no one report)
+.rtf_file_said <- function(path) {
+  if (is.null(path) || length(path) != 1L || is.na(path) || !nzchar(path) ||
+      grepl("{output_id}", path, fixed = TRUE)) return(NULL)
+  path
 }
 
 # A report's RTF path from the sheets (a definition narrowed to one
