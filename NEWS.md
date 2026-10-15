@@ -1,5 +1,12 @@
 # tflspec (development version)
 
+* **`tfl_fig_template(form = "items")`** (#284, 0.0.24.9127): a template
+  as a figure report's content of function calls -- `template`, `args`
+  (what it was given), `data` (the report's `data:`), `content` (each
+  item, a named plot's too, `from = "template:<name>"`, the builder's
+  mark) and, for a template of its own ARD (`forest_hr`), `analyses`.
+  The designer's design stays the default.
+
 * **A figure's content as function calls, plot by plot** (#280,
   0.0.24.9125; the figure designer's redesign, stage F1).  A figure
   report's `content:` is its plot's items, one a call: the function that

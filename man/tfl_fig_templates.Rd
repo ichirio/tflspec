@@ -32,6 +32,7 @@ tfl_fig_template(
   title = NULL,
   subgroups = "SEX, AGEGR1",
   comparison = NULL,
+  form = c("design", "items"),
   ...
 )
 }
@@ -72,6 +73,13 @@ heading row.  \code{""}: all subjects only.}
 
 \item{comparison}{For \code{forest_hr}: the arm compared with the reference
 (the group's first level); \code{NULL}: every other arm.}
+
+\item{form}{\code{"design"} (default): the figure designer's design
+(\code{\link[=tfl_fig_design]{tfl_fig_design()}}).  \code{"items"}: the figure report's \verb{data:} and
+\verb{content:} of function calls (\code{\link[=tfl_fig_content_from_design]{tfl_fig_content_from_design()}}): a
+list of \code{template}, \code{args} (the arguments the template was given),
+\code{data}, \code{content} (each item \code{from = "template:<name>"}) and, for a
+template that makes its own ARD (\code{forest_hr}), \code{analyses}.}
 
 \item{...}{For a whole-script template: the type's other arguments.}
 }
