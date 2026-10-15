@@ -34,8 +34,8 @@ test_that("the manual states the version it documents", {
 
 test_that("its API list is exactly the package's exports", {
   lines <- .ai_lines()
-  from <- grep("^## 13\\. Complete public API", lines)
-  to   <- grep("^## 14\\.", lines)
+  from <- grep("^## 14\\. Complete public API", lines)
+  to   <- grep("^## 15\\.", lines)
   expect_length(from, 1L)
   expect_length(to, 1L)
   block <- lines[seq(from + 1L, to - 1L)]
@@ -51,7 +51,7 @@ test_that("its API list is exactly the package's exports", {
 test_that("every tflspec function the manual names exists", {
   lines <- .ai_lines()
   # but for the table of names that do not
-  wrong <- seq(grep("^## 12\\.", lines), grep("^## 13\\.", lines) - 1L)
+  wrong <- seq(grep("^## 13\\.", lines), grep("^## 14\\.", lines) - 1L)
   lines <- lines[-wrong]
   named <- unique(unlist(regmatches(lines, gregexpr("\\btfl(spec)?_[a-z_]+\\b", lines))))
   named <- setdiff(named, c("tfl_ard_normalize", "tfl_plan", "tfl_apply_plan",
@@ -100,8 +100,8 @@ test_that("tflspec_ai_manual(dir) writes the kit, the manual as it is installed"
 
 # the "Names that do NOT exist" table: its left column
 .ai_wrong_names <- function(lines) {
-  from <- grep("^## 12\\. Names that do NOT exist", lines)
-  to   <- grep("^## 13\\.", lines)
+  from <- grep("^## 13\\. Names that do NOT exist", lines)
+  to   <- grep("^## 14\\.", lines)
   expect_length(from, 1L)
   block <- lines[seq(from + 1L, to - 1L)]
   rows <- grep("^\\|", block, value = TRUE)[-(1:2)]
