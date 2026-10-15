@@ -24,8 +24,9 @@ the layers below, in the place the first of them had; a function the
 report does not have keeps the layers' items; a function only the
 report has goes after them.  The \code{content} of \code{defaults} is a table's
 (normalize_ard, the digits ...): a figure or a listing takes its other
-parts (\code{page}, \code{codelists}), not its content.  \code{extends: none} uses no
-layer.  Each item's
+parts (\code{page}, \code{codelists}), not its content.  A pattern's content
+(\verb{patterns/<name>}, chosen report by report) layers onto any kind.
+\code{extends: none} uses no layer.  Each item's
 \code{from} says where it came from.  The result holds no \code{tfl_unset}.
 }
 \examples{

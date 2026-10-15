@@ -109,8 +109,9 @@ tfl_read_outputs <- function(dir) {
 #' report does not have keeps the layers' items; a function only the
 #' report has goes after them.  The `content` of `defaults` is a table's
 #' (normalize_ard, the digits ...): a figure or a listing takes its other
-#' parts (`page`, `codelists`), not its content.  `extends: none` uses no
-#' layer.  Each item's
+#' parts (`page`, `codelists`), not its content.  A pattern's content
+#' (`patterns/<name>`, chosen report by report) layers onto any kind.
+#' `extends: none` uses no layer.  Each item's
 #' `from` says where it came from.  The result holds no `tfl_unset`.
 #'
 #' @param output A `tfl_output` as read from its file.
