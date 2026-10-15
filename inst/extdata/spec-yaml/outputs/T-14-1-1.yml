@@ -6,8 +6,7 @@ kind: table
 label: Demographics
 population: SAF
 extends: [defaults]
-data:
-  source: ard
+ard:
   analysis_data:
     - id: adsl_saf
       from: ADSL
@@ -28,6 +27,8 @@ data:
       data: adsl_saf
       by: [TRT01A]
       variables: [AGEGR1, SEX, RACE, ETHNIC]
+data:
+  source: ard
 codelists:
   TRT01A:
     - {value: Placebo, label: Placebo}

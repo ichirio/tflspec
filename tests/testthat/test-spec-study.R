@@ -184,3 +184,17 @@ test_that("a YAML report's RTF path: a file of the report's own, the study's out
   o$settings <- list(file = "own_{output_id}.rtf")
   expect_identical(tfl_report_path(o, study = s), "../tables/own_T-2.rtf")
 })
+
+test_that("the defaults' content is a table's: a figure or a listing takes their page, not it", {
+  s <- tfl_read_study_spec(yml_dir())
+  for (kind in c("figure", "listing")) {
+    o <- tfl_output("X-1", kind, content = list(tfl_item("plan_listing", list())))
+    r <- tfl_resolve_output(o, s)
+    expect_identical(vapply(r$content, `[[`, "", "fn"), "plan_listing", info = kind)
+    # the page still comes from the defaults
+    expect_identical(r$page$header[["1"]]$right, "DRAFT", info = kind)
+  }
+  # a table keeps them
+  o <- tfl_output("X-1", "table", content = list(tfl_item("table_plan", list())))
+  expect_gt(length(tfl_resolve_output(o, s)$content), 1L)
+})

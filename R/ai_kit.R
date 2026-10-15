@@ -4,127 +4,31 @@
 #
 #  A chat model cannot read the user's disk: the user attaches files, and
 #  many chats take ten at most and no folders.  So the kit is one flat
-#  folder of eight files -- the request, the manual, the TOC / shell guide,
-#  every spec sheet blank, a blank figure design, and a made-up study end to
-#  end (its TOC and shells, the specs written from them, its figure).
-#  Everything is written when asked: the blank sheets come from the column
-#  catalog (the `.sheets` of inst/spec/schema.yml) and the example from the
-#  code below, so neither can drift from what this version reads.
-
+#  folder of seven files -- the request, the manual, the TOC / shell guide,
+#  the spec's schema, a blank study in the answer's form, and a made-up study
+#  end to end (its TOC and shells, the spec files written from them).  The
+#  answer is one Markdown text holding every file of the study's YAML spec
+#  (R/ai_answer.R: tfl_ai_unpack() writes it into a study folder).
+#  Everything is written when asked: the schema is the installed one, and
+#  the example comes from the code below through the one-time conversion,
+#  so neither can drift from what this version reads.
 .ai_kit_files <- c(
   start    = "00_START_HERE.md",
   manual   = "01_tflspec-ai-user-manual.md",
   guide    = "02_tflspec-ai-toc-shell-guide.md",
-  blank    = "03_blank_specs.xlsx",
-  blank_fig = "04_blank_figure.yml",
+  schema   = "03_spec_schema.yml",
+  blank    = "04_blank_spec.md",
   toc      = "05_example_toc_shell.xlsx",
-  specs    = "06_example_specs.xlsx",
-  figure   = "07_example_figure.yml",
-  metadata = "08_adam_metadata.csv")
+  example  = "06_example_spec.md",
+  metadata = "07_adam_metadata.csv")
 
-# ---- the column catalog as a sheet ------------------------------------------
-
-# What each column of the kit's sheets means, one row a column: the spec it
-# belongs to first, so a reader of one workbook holding every spec can tell
-# them apart.  `kinds`: the specs the workbook holds.
-.ai_columns_sheet <- function(kinds = c("ard", "table", "report", "listing")) {
-  ks <- .spec_kind_sheets()
-  cols <- tfl_spec_columns()
-  out <- list()
-  for (k in kinds) for (sh in ks[[k]]) {
-    d <- tfl_spec_columns(sh)
-    d <- d[!is.na(d$column) & nzchar(d$column), , drop = FALSE]
-    if (!nrow(d)) next
-    out[[length(out) + 1L]] <- data.frame(
-      spec = k, sheet = sh, column = d$column, description = d$description,
-      example = ifelse(is.na(d$example), "", d$example), stringsAsFactors = FALSE)
-  }
-  wb <- cols[cols$sheet %in% c("(workbook)", "study", "about") &
-               !is.na(cols$column) & nzchar(cols$column), , drop = FALSE]
-  common <- data.frame(spec = "every", sheet = wb$sheet, column = wb$column,
-                       description = wb$description,
-                       example = ifelse(is.na(wb$example), "", wb$example),
-                       stringsAsFactors = FALSE)
-  rbind(common, do.call(rbind, out))
-}
-
-# Adds sheets after the spec sheets of a workbook tflspec wrote (`_columns`,
-# `_assumptions` ...): their names start with _, so no reader takes them
-# as part of the definition.
-.ai_add_sheets <- function(path, sheets) {
-  wb <- openxlsx::loadWorkbook(path)
-  for (nm in names(sheets)) {
-    openxlsx::addWorksheet(wb, nm)
-    openxlsx::writeData(wb, nm, sheets[[nm]], keepNA = FALSE)
-    openxlsx::freezePane(wb, nm, firstRow = TRUE)
-    openxlsx::setColWidths(wb, nm, seq_along(sheets[[nm]]), "auto")
-  }
-  openxlsx::saveWorkbook(wb, path, overwrite = TRUE)
-  invisible(path)
-}
-
-# ---- the blank specs ----------------------------------------------------------
+# ---- the blank specs (what the workbook review reads) -------------------
 
 .ai_blank_specs <- function() {
   list(ard = tfl_ard_spec_template(), table = tfl_table_spec(),
        report = tfl_table_spec(), listing = tfl_listing_spec())
 }
 
-# Writes the blank specs: one workbook (`03_blank_specs.xlsx`), or with
-# `split` one a spec (`03a_blank_ard_spec.xlsx` ...).  Returns the paths.
-.ai_write_blank <- function(dir, split = FALSE) {
-  b <- .ai_blank_specs()
-  if (!split) {
-    p <- file.path(dir, .ai_kit_files[["blank"]])
-    tfl_write_specs(p, ard = b$ard, table = b$table, report = b$report,
-                    listing = b$listing)
-    .ai_add_sheets(p, list(`_columns` = .ai_columns_sheet()))
-    return(p)
-  }
-  out <- character()
-  for (i in seq_along(b)) {
-    k <- names(b)[i]
-    p <- file.path(dir, sprintf("03%s_blank_%s_spec.xlsx", letters[i], k))
-    args <- list(p); args[[k]] <- b[[k]]
-    do.call(tfl_write_specs, args)
-    .ai_add_sheets(p, list(`_columns` = .ai_columns_sheet(k)))
-    out <- c(out, p)
-  }
-  out
-}
-
-# The blank figure design: every piece and field of tfl_fig_parts(), as
-# comments under the four keys a design has.
-.ai_blank_figure <- function() {
-  p <- tfl_fig_parts()
-  one <- function(x) gsub("[\r\n]+", " ", x)
-  block <- function(sec, key) {
-    d <- p[p$section == sec, , drop = FALSE]
-    out <- character()
-    for (pc in unique(d$piece)) {
-      f <- d[d$piece == pc, , drop = FALSE]
-      out <- c(out, sprintf("# - %s: %s -- %s", key, pc, one(f$piece_label[1L])),
-               sprintf("#     %s: %s%s%s", f$field, one(f$label),
-                       ifelse(is.na(f$default) | !nzchar(f$default), "",
-                              paste0(" (default ", f$default, ")")),
-                       ifelse(is.na(f$choices) | !nzchar(f$choices), "",
-                              paste0(" [", f$choices, "]"))))
-    }
-    out
-  }
-  c("# A figure design, blank: one .yml a figure (tfl_read_fig_design()).",
-    "# Start from a template (tfl_fig_templates()) and write only the fields",
-    "# you set; every field is listed below as a comment.",
-    "# Your guesses go under `assumptions:` (a list of strings) at the end.",
-    "template:",
-    "data:            # the steps, in order; `read` first",
-    block("data", "step"),
-    "plot:            # the figure's settings",
-    sprintf("#   %s: %s", p$field[p$section == "plot"], one(p$label[p$section == "plot"])),
-    "layers:          # what is drawn, in order",
-    block("layers", "layer"),
-    "assumptions: []")
-}
 
 # ---- the example: a made-up study, XYZ-001 ------------------------------------
 #
@@ -385,21 +289,201 @@
   invisible(path)
 }
 
-.ai_write_example_specs <- function(path) {
-  tfl_write_specs(path, ard = .ai_example_ard(),
-                  table = .ai_example_table(), report = .ai_example_report(),
-                  listing = .ai_example_listing())
-  .ai_add_sheets(path, list(`_assumptions` = .ai_example_assumptions()))
+# ---- the example as the YAML spec ------------------------------------------------
+
+# "" is how the example's sheets say "blank"; a workbook read back says NA
+.ai_blank_na <- function(x) {
+  lapply(x, function(d) {
+    if (is.data.frame(d)) d[] <- lapply(d, function(v) { v[!is.na(v) & v == ""] <- NA; v })
+    d
+  })
 }
 
-.ai_write_example_figure <- function(path) {
-  tfl_write_fig_design(.ai_example_figure(), path)
+# The made-up study as the files of its YAML spec, in a folder (made here):
+# the example's sheets through the one-time conversion, so the example is
+# always what this version reads and writes; and the assumptions the guide
+# asks for, as spec/_assumptions.yml.
+.ai_example_study <- function(dir) {
+  na <- .ai_blank_na
+  rep_ <- .ai_example_report()
+  titles <- rep_$titles
+  title_of <- function(id, k) titles$center[titles$output_id == id & titles$line == k]
+  ids <- rep_$report$output_id
+  planner <- .ai_df(
+    output_id = ids,
+    description = vapply(ids, function(id) title_of(id, "2"), ""),
+    setup_code = NA_character_, process_code = NA_character_,
+    section = c("14.1", "14.3", "16.2", "14.2"),
+    population = "SAF", datasets = NA_character_, batches = NA_character_)
+  sheets <- list(
+    table = tfl_table_spec(c(na(.ai_example_table()), na(rep_))),
+    planner = planner,
+    ard = tfl_ard_spec(na(.ai_example_ard())),
+    listing = unclass(tfl_listing_spec(na(.ai_example_listing()))),
+    figures = list(`F-1` = unclass(.ai_example_figure())),
+    study = list(study_id = "XYZ-001",
+                 title = "A made-up study (CDISC pilot data)"))
+  suppressMessages(tfl_yaml_from_sheets(sheets, dir, overwrite = TRUE))
+  unlink(file.path(dir, "spec", "_not_converted.yml"))
   a <- .ai_example_assumptions()
-  a <- a[a$output_id == "F-1", , drop = FALSE]
-  cat(c("assumptions:",
-        sprintf("- %s", encodeString(paste0(a$assumption, ". ", a$question), quote = "'"))),
-      file = path, sep = "\n", append = TRUE)
-  invisible(path)
+  where <- c(populations = "spec/data.yml populations", datasets = "spec/data.yml datasets",
+             variables = "content", codelists = "codelists", tables = "content",
+             analyses = "ard.analyses", listing_cols = "content", listings = "data",
+             data = "data")
+  rows <- lapply(seq_len(nrow(a)), function(i) {
+    r <- list(output_id = if (nzchar(a$output_id[i])) a$output_id[i],
+              where = unname(where[a$sheet[i]]), item = a$item[i],
+              assumption = a$assumption[i], question = a$question[i])
+    Filter(Negate(is.null), r)
+  })
+  writeLines(yaml::as.yaml(rows, indent.mapping.sequence = TRUE),
+             file.path(dir, "spec", "_assumptions.yml"), useBytes = TRUE)
+  invisible(dir)
+}
+
+# 06_example_spec.md: the example study's files in the answer's form
+.ai_example_spec_md <- function() {
+  d <- file.path(tempfile("ai-example-"))
+  on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  .ai_example_study(d)
+  c("# The example's answer -- study XYZ-001",
+    "",
+    "The specs written from `05_example_toc_shell.xlsx`, in the form of the answer:",
+    "each file of the study a heading with its path and a `yaml` block.  The",
+    "study's files first (`study.yml`, `spec/data.yml`, `spec/defaults.yml`,",
+    "`spec/toc.yml`), then one file a report (`spec/outputs/<id>.yml`), then the",
+    "assumptions (`spec/_assumptions.yml`).  `tfl_ai_unpack()` writes an answer",
+    "of this form into a study folder.",
+    "",
+    .ai_answer_md(d))
+}
+
+# 04_blank_spec.md: every file of a study, its keys said in comments, in
+# the answer's form
+.ai_blank_spec_md <- function() {
+  blk <- function(path, ...) c(paste("###", path), "", "```yaml", c(...), "```", "")
+  c("# The files to write -- a blank study",
+    "",
+    "Every file of a study's YAML spec, in the form of the answer: a heading",
+    "with the file's path, then a `yaml` block.  Write each file the study",
+    "needs, replace the values, keep the keys; a key you have nothing for is",
+    "left out.  `!r` marks R code (a condition, an expression) -- write it only",
+    "where the value is R; a list, a map or a column name is written as YAML.",
+    "What each function's arguments take is `03_spec_schema.yml`.",
+    "",
+    blk("study.yml",
+        "study_id: XYZ-001              # the study's id, as the TOC writes it",
+        "title: A study title",
+        "settings:",
+        "  rounding: sas                # sas: half away from zero; r: half to even",
+        "  program_dir: programs/tfl    # where the report programs are",
+        "  program: \"{output_id}.R\"     # each report's program",
+        "  file: \"{output_id}.rtf\"      # each report's RTF file",
+        "keys:",
+        "  id: USUBJID                  # the subject key of the data"),
+    blk("spec/data.yml",
+        "datasets:                      # every dataset a report reads",
+        "  - dataset: ADSL",
+        "    level: ADaM",
+        "    path: data/adam/adsl.rds",
+        "populations:                   # the analysis sets",
+        "  - id: SAF",
+        "    dataset: ADSL",
+        "    where: !r SAFFL == \"Y\"     # R: which subjects are in it",
+        "    label: Safety Analysis Set"),
+    blk("spec/toc.yml",
+        "outputs:                       # every report, in the TOC's order",
+        "  - id: T-1",
+        "    kind: table                # table | listing | figure",
+        "    label: Demographic Characteristics",
+        "    population: SAF"),
+    blk("spec/defaults.yml",
+        "content:                       # what every table starts from",
+        "  - normalize_ard: {}",
+        "page:",
+        "  header:                      # the running header, by line",
+        "    '1': {left: XYZ-001, right: 'Page {PAGE} of {TOTAL_PAGES}'}",
+        "  footer:",
+        "    '1': {left: '{PROGRAM}', right: 'Generated on: {DATETIME}'}"),
+    blk("spec/outputs/T-1.yml",
+        "id: T-1",
+        "kind: table",
+        "extends: [defaults]            # the study's defaults under this report",
+        "ard:                           # the report's part of the study ARD",
+        "  analyses:",
+        "    - id: AGE",
+        "      method: continuous       # continuous | categorical | hierarchical | ...",
+        "      dataset: ADSL",
+        "      population: SAF",
+        "      by: [TRT01A]",
+        "      variables: [AGE]",
+        "data:                          # what the table reads: the study ARD",
+        "  source: ard",
+        "  object: ard",
+        "codelists:                     # a variable's values, in the order printed",
+        "  SEX:",
+        "    - {value: M, label: Male}",
+        "    - {value: F, label: Female}",
+        "content:                       # the table: one item a plan verb",
+        "  - table_plan: {cols: TRT01A, rows: {group: variable}}",
+        "  - plan_cells:",
+        "      continuous: {Mean (SD): '{mean:.1f} ({sd:.2f})'}",
+        "      categorical: '{n} ({p:.1f%})'",
+        "  - plan_labels: {AGE: Age (years)}",
+        "  - plan_col_header:",
+        "      header:",
+        "        - {line: '1', cols: .values, span: each, text: '{col}'}",
+        "        - {line: '2', cols: .values, span: each, text: '(N={n})'}",
+        "page:",
+        "  titles:",
+        "    '1': {center: Table 14.1.1}",
+        "    '2': {center: Demographic Characteristics}",
+        "  footnotes:",
+        "    '1': {left: A footnote of this table.}"),
+    blk("spec/outputs/L-1.yml",
+        "id: L-1",
+        "kind: listing",
+        "extends: [defaults]",
+        "data:",
+        "  source: dataset",
+        "  dataset: ADAE",
+        "  where: !r AESER == \"Y\"",
+        "  sort: [USUBJID, ASTDY]",
+        "content:",
+        "  - plan_listing:",
+        "      type: multiline",
+        "      cols:                    # one listing_col() a printed column",
+        "        - {fn: listing_col, args: {vars: [USUBJID], label: Subject}}",
+        "        - {fn: listing_col, args: {vars: [AEBODSYS, AEDECOD], label: 'SOC /\\nPT'}}",
+        "page:",
+        "  titles:",
+        "    '1': {center: Listing 16.2.7}"),
+    blk("spec/outputs/F-1.yml",
+        "id: F-1",
+        "kind: figure",
+        "extends: [defaults]",
+        "data:",
+        "  source: code",
+        "  steps:                       # the figure's data, a step each",
+        "    - {step: read, dataset: ADVS}",
+        "    - {step: param, value: SYSBP}",
+        "    - {step: summary, name: sm, value: AVAL, by: 'TRTA, AVISIT', interval: se}",
+        "content:                       # the figure's layers, a layer each",
+        "  - line: {data: sm, x: AVISIT, 'y': mean, colour: TRTA}",
+        "  - errorbar: {data: sm, x: AVISIT, colour: TRTA}",
+        "plot:",
+        "  x_label: Visit",
+        "  y_label: Mean (SE)",
+        "page:",
+        "  titles:",
+        "    '1': {center: Figure 14.2.1}"),
+    blk("spec/_assumptions.yml",
+        "# one item for everything decided without being told",
+        "- output_id: T-1",
+        "  where: ard.analyses",
+        "  item: AGE",
+        "  assumption: the arm is TRT01A (actual treatment)",
+        "  question: Actual or planned treatment?"))
 }
 
 # ---- what to give the AI --------------------------------------------------------
@@ -415,10 +499,10 @@
     "| **Required** | The TOC (or the study's list of outputs) | attach it as it is (Excel, CSV, Word, PDF) | the output ids, titles, populations and footnotes, copied exactly |",
     "| **Required** | The shells of the outputs you want | attach them | the rows, columns, statistics and layout of each table, listing and figure |",
     sprintf("| **Strongly recommended** | The ADaM metadata, **one** source | through the function, not as an attachment: `tflspec_ai_manual(dir, define = )`, or `adam_spec = `, or `datasets = ` | real dataset and variable names, labels and code list values instead of guesses%s |",
-            if (meta) " (here: `08_adam_metadata.csv`)" else "; not given for this kit"),
+            if (meta) " (here: `07_adam_metadata.csv`)" else "; not given for this kit"),
     "| Nice to have | The SAP sections on the analysis sets and the methods | attach those pages, not the whole SAP | the ARD spec's methods (test, CI, model), denominators and analysis sets |",
     "| Nice to have | Company standards: code lists, display conventions (decimals, `n (%)`, sort order) | attach them | the house style without being told each time |",
-    "| Nice to have | A previous study's specs | attach one workbook | the same choices as last time |",
+    "| Nice to have | A previous study's specs | attach its spec files (or its workbook) | the same choices as last time |",
     "",
     "**The TOC and the shells: one file or several, both are fine.** Many",
     "companies keep them in one workbook, a TOC sheet and a sheet a shell; others",
@@ -440,15 +524,14 @@
     "sends nothing by itself.",
     "",
     "**When something is missing**, the assistant works with what is there and",
-    "lists every choice it made in `_assumptions`. Without ADaM metadata it names",
-    "datasets and variables after the ADaM IG, and each of those is a row there.")
+    "lists every choice it made in `spec/_assumptions.yml`. Without ADaM metadata it names",
+    "datasets and variables after the ADaM IG, and each of those is an item there.")
 }
 
 # ---- 00_START_HERE.md --------------------------------------------------------------
 
-.ai_start_here <- function(split = FALSE, meta = FALSE) {
-  blank <- if (split) "`03a_blank_ard_spec.xlsx` ... `03d_blank_listing_spec.xlsx`" else
-    paste0("`", .ai_kit_files[["blank"]], "`")
+.ai_start_here <- function(meta = FALSE) {
+  f <- function(k) paste0("`", .ai_kit_files[[k]], "`")
   c(sprintf("# Start here -- tflspec %s AI kit", utils::packageVersion("tflspec")),
     "",
     "Paste the request below into the chat, attach every file of this folder, and",
@@ -458,74 +541,79 @@
     "",
     "## The request",
     "",
-    "> You are writing specification files for the R package tflspec, which",
-    "> turns them into the programs that make clinical tables, listings and",
-    "> figures.  Read `01_tflspec-ai-user-manual.md` (what each file and column",
-    "> is) and `02_tflspec-ai-toc-shell-guide.md` (how to read a TOC and shells)",
-    "> first, and look at the example: `05_example_toc_shell.xlsx` is a TOC and",
-    "> shells, `06_example_specs.xlsx` and `07_example_figure.yml` the files",
-    "> written from them.",
+    "> You are writing the specification files of a study for the R package",
+    "> tflspec, which turns them into the programs that make clinical tables,",
+    sprintf("> listings and figures.  Read %s (what each file and key is) and",
+            f("manual")),
+    sprintf("> %s (how to read a TOC and shells) first; %s says",
+            f("guide"), f("schema")),
+    "> what every function's arguments take.  Look at the example:",
+    sprintf("> %s is a TOC and shells, %s the files written from them.",
+            f("toc"), f("example")),
     ">",
-    "> Then write the same files for the TOC and shells I attached:",
+    "> Then write the same files for the TOC and shells I attached, as ONE",
+    sprintf("> answer in the form of %s and %s: each file a heading", f("blank"), f("example")),
+    "> with its path (`### spec/outputs/T-1.yml`) and its content in a `yaml`",
+    "> block --",
     ">",
-    sprintf("> 1. one workbook with exactly the sheets and columns of %s", blank),
-    ">    (the ARD, table, report and listing specs; fill what the TOC and",
-    ">    shells say, leave the rest empty; add nothing but `note` columns);",
-    "> 2. one `.yml` a figure, in the form of `04_blank_figure.yml`;",
-    "> 3. a sheet `_assumptions` in the workbook (`output_id`, `sheet`, `item`,",
-    ">    `assumption`, `question`), one row for everything you decided without",
+    "> 1. `study.yml`, `spec/data.yml` (the datasets and the analysis sets) and",
+    ">    `spec/toc.yml` (the reports, in the TOC's order);",
+    "> 2. `spec/defaults.yml` when the reports share a page header, footer or",
+    ">    table layout;",
+    "> 3. one `spec/outputs/<id>.yml` a report the TOC lists, with what its",
+    ">    shell says;",
+    "> 4. `spec/_assumptions.yml`: one item for everything you decided without",
     ">    being told -- datasets, flags, variables, denominators, methods, the",
-    ">    order of levels -- and an `assumptions:` list in each `.yml`.",
+    ">    order of levels -- each its `output_id`, `where`, `item`,",
+    ">    `assumption` and `question`.",
     ">",
     if (meta) c(
-    "> `08_adam_metadata.csv` is the study's ADaM metadata: take every dataset,",
+    sprintf("> %s is the study's ADaM metadata: take every dataset,", f("metadata")),
     "> variable and level you write from it, and only from it.  A shell row with",
-    "> no variable there is a row of `_assumptions`, not a guess.",
+    "> no variable there is an item of `_assumptions.yml`, not a guess.",
     ">"),
-    "> Copy titles, footnotes and labels exactly.  Return the files for",
-    "> download; if you cannot write `.xlsx`, return one CSV block a sheet,",
-    "> titled with the sheet's name.  After the files, list the assumptions",
-    "> and questions as text.  Nothing else.",
+    "> Copy titles, footnotes and labels exactly.  Write `!r` only where the",
+    "> value is R code; a list, a map or a column name is written as YAML.",
+    "> After the files, list the assumptions and questions as text.  Nothing",
+    "> else.",
     "",
     "## The files",
     "",
     "| File | What it is |",
     "|---|---|",
     "| `00_START_HERE.md` | this request |",
-    "| `01_tflspec-ai-user-manual.md` | the manual: sheets, columns, values, functions |",
-    "| `02_tflspec-ai-toc-shell-guide.md` | how to read a TOC and shells into specs |",
-    sprintf("| %s | every spec sheet, empty; `_columns` says what each column means |", blank),
-    "| `04_blank_figure.yml` | a figure design, every field as a comment |",
+    "| `01_tflspec-ai-user-manual.md` | the manual: the files, their keys and values, the functions |",
+    "| `02_tflspec-ai-toc-shell-guide.md` | how to read a TOC and shells into the spec files |",
+    "| `03_spec_schema.yml` | every function a spec item calls, its arguments and their types; the spec sheets' columns |",
+    "| `04_blank_spec.md` | every file of a study, blank, in the answer's form, its keys said in comments |",
     "| `05_example_toc_shell.xlsx` | a made-up TOC (sheet `TOC`) and four shells |",
-    "| `06_example_specs.xlsx` | the specs written from them, with `_assumptions` |",
-    "| `07_example_figure.yml` | the figure design written from shell F-1 |",
-    if (meta) "| `08_adam_metadata.csv` | the study's ADaM metadata: datasets, variables, labels, kinds, levels |",
+    "| `06_example_spec.md` | the files written from them, in the answer's form, with `_assumptions.yml` |",
+    if (meta) "| `07_adam_metadata.csv` | the study's ADaM metadata: datasets, variables, labels, kinds, levels |",
     "",
     "## Back in R",
     "",
     "```r",
     "library(tflspec)",
+    "tfl_ai_unpack(\"answer.md\", \"XYZ-001\")      # the answer, saved as a file (or its text)",
     "toc <- tfl_read_toc(\"TOC.xlsx\", sheet = \"TOC\", skip = 1,          # your TOC's layout",
     "                    map = list(output_id = \"Shell Number\", title = c(\"Title1\", \"Title2\"),",
     "                               population = \"Population\"))",
-    "tfl_ai_review(\"XYZ-001_specs.xlsx\", toc = toc)   # each file the AI returned",
-    if (meta) "# with the metadata: tfl_ai_review(..., metadata = read.csv(\"08_adam_metadata.csv\"))",
+    "tfl_ai_review(\"XYZ-001\", toc = toc)            # the study folder",
+    if (meta) "# with the metadata: tfl_ai_review(..., metadata = read.csv(\"07_adam_metadata.csv\"))",
     "```",
     "",
-    "It writes, next to the file, `<file>_repair.md` (what the AI can correct:",
-    "paste it into the same chat) and `<file>_questions.md` (what you decide:",
-    "answer each item and paste it back).  Then read the files with",
-    "`tfl_read_ard_spec()`, `tfl_read_table_spec()`, `tfl_read_report_spec()`,",
-    "`tfl_read_listing_spec()` and `tfl_read_fig_design()`.")
+    "It writes, in the folder, `XYZ-001_repair.md` (what the AI can correct:",
+    "paste it into the same chat) and `XYZ-001_questions.md` (what you decide:",
+    "answer each item and paste it back).  Then the study is read with",
+    "`tfl_read_study_spec()` and `tfl_read_outputs()`, and its programs are",
+    "written from it.")
 }
 
 # ---- the kit -----------------------------------------------------------------------
 
-.ai_write_kit <- function(dir, split = FALSE, overwrite = FALSE, meta = NULL) {
+.ai_write_kit <- function(dir, overwrite = FALSE, meta = NULL) {
   if (!dir.exists(dir)) dir.create(dir, recursive = TRUE)
-  names_out <- .ai_kit_files
-  if (split) names_out <- names_out[names(names_out) != "blank"]
-  have <- file.path(dir, names_out)
+  have <- file.path(dir, .ai_kit_files)
   have <- have[file.exists(have)]
   if (length(have) && !isTRUE(overwrite)) {
     stop(sprintf(paste0(
@@ -535,18 +623,16 @@
   }
   # a kit written again without metadata keeps no metadata of the last one
   if (is.null(meta)) unlink(file.path(dir, .ai_kit_files[["metadata"]]))
-  src <- function(name) system.file("ai", name, package = "tflspec")
+  src <- function(name) system.file(name, package = "tflspec")
   f <- function(k) file.path(dir, .ai_kit_files[[k]])
-  writeLines(.ai_start_here(split, meta = !is.null(meta)), f("start"), useBytes = TRUE)
-  file.copy(src("tflspec-ai-user-manual.md"), f("manual"), overwrite = TRUE)
-  file.copy(src("tflspec-ai-toc-shell-guide.md"), f("guide"), overwrite = TRUE)
-  blank <- .ai_write_blank(dir, split)
-  writeLines(.ai_blank_figure(), f("blank_fig"), useBytes = TRUE)
+  writeLines(.ai_start_here(meta = !is.null(meta)), f("start"), useBytes = TRUE)
+  file.copy(src(file.path("ai", "tflspec-ai-user-manual.md")), f("manual"), overwrite = TRUE)
+  file.copy(src(file.path("ai", "tflspec-ai-toc-shell-guide.md")), f("guide"), overwrite = TRUE)
+  file.copy(src(file.path("spec", "schema.yml")), f("schema"), overwrite = TRUE)
+  writeLines(.ai_blank_spec_md(), f("blank"), useBytes = TRUE)
   .ai_write_example_toc(f("toc"))
-  .ai_write_example_specs(f("specs"))
-  .ai_write_example_figure(f("figure"))
-  out <- c(f("start"), f("manual"), f("guide"), blank, f("blank_fig"), f("toc"),
-           f("specs"), f("figure"))
+  writeLines(.ai_example_spec_md(), f("example"), useBytes = TRUE)
+  out <- c(f("start"), f("manual"), f("guide"), f("schema"), f("blank"), f("toc"), f("example"))
   if (!is.null(meta)) {
     utils::write.csv(meta, f("metadata"), row.names = FALSE, na = "",
                      fileEncoding = "UTF-8")

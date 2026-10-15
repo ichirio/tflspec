@@ -2,7 +2,7 @@
 % Please edit documentation in R/ai_review.R
 \name{tfl_ai_review}
 \alias{tfl_ai_review}
-\title{Review a spec file an AI assistant wrote}
+\title{Review the spec an AI assistant wrote}
 \usage{
 tfl_ai_review(
   file,
@@ -15,9 +15,12 @@ tfl_ai_review(
 )
 }
 \arguments{
-\item{file}{A spec workbook (\code{.xlsx}), a figure design (\code{.yml}), or a
-report of the YAML spec (\verb{spec/outputs/<id>.yml}: its items against
-the schema, and its \code{!r} where the schema has a form of its own).}
+\item{file}{A study folder of the YAML spec (each report file against
+the schema; the definition through the workbook's checks, each finding
+named by its file and key; \verb{spec/_assumptions.yml}), a spec workbook
+(\code{.xlsx}), a figure design (\code{.yml}), or one report of the YAML spec
+(\verb{spec/outputs/<id>.yml}: its items against the schema, and its \code{!r}
+where the schema has a form of its own).}
 
 \item{toc}{The TOC the specs were written from: a \code{\link[=tfl_read_toc]{tfl_read_toc()}}
 result, or a list of its arguments (\code{path}, \code{map}, \code{sheet}, \code{skip}).
@@ -49,9 +52,11 @@ assistant's own list), \code{repair} and \code{questions} (the two texts) and
 \code{paths} (the files written).  Invisibly when \code{write = TRUE}.
 }
 \description{
-Checks one file the assistant returned -- a workbook holding any of the
-ARD, table, report and listing specs, or a figure design \code{.yml} -- and
-sorts what it finds by \strong{who acts on it}:
+Checks what the assistant returned -- a study folder its answer was
+unpacked into (\code{\link[=tfl_ai_unpack]{tfl_ai_unpack()}}), or one file: a workbook holding any of
+the ARD, table, report and listing specs, a figure design \code{.yml}, a
+report file of the YAML spec -- and sorts what it finds by \strong{who acts on
+it}:
 }
 \details{
 \itemize{
@@ -69,15 +74,19 @@ the review's items that are set by hand.
 
 The first half is written as a prompt to paste back into the same chat
 (\verb{<file>_repair.md}), the second as a checklist the person answers and
-pastes back (\verb{<file>_questions.md}), next to the file.  The kit's rules
+pastes back (\verb{<file>_questions.md}), next to the file -- a study
+folder's in the folder, named after it.  The kit's rules
 and who acts on each review rule are \code{inst/review/ai_rules.csv}.
 }
 \examples{
 \donttest{
 kit <- tflspec_ai_manual(file.path(tempdir(), "kit-review"), overwrite = TRUE)
-r <- tfl_ai_review(kit[grepl("06_example_specs", kit)], write = FALSE)
+# the example's answer, unpacked into a study folder
+st <- file.path(tempdir(), "XYZ-001")
+tfl_ai_unpack(kit[basename(kit) == "06_example_spec.md"], st, overwrite = TRUE)
+r <- tfl_ai_review(st, write = FALSE)
 summary(r)
-head(r[r$who == "human", c("output_id", "rule", "message")])
+head(as.data.frame(r)[r$who == "human", c("output_id", "rule", "message")])
 }
 }
 \seealso{
