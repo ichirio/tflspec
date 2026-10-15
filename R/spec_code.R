@@ -386,7 +386,12 @@
         row_title = if (any(flag("row_title"))) cl$column[flag("row_title")],
         auto_width = auto_width, sep = sa[["sep"]])
   }
-  st
+  # in the recommended order -- the schema's ranks: the mapping (cells,
+  # totals, comparisons, the rows kept), then the finishing (labels,
+  # levels, digits, sort, header, stub, pages, columns, style); a verb said
+  # twice (plan_digits' rounding, then its rows) keeps its order
+  rank <- vapply(st, function(x) as.numeric(tfl_schema(x$fun)$rank %||% 1000), 0)
+  st[order(rank, seq_along(st))]
 }
 
 #' The code of a table's plan, from its definition
