@@ -183,6 +183,7 @@ test_that("a YAML report's RTF path: a file of the report's own, the study's out
   o <- tfl_output("T-2", "table")
   o$settings <- list(file = "own_{output_id}.rtf")
   expect_identical(tfl_report_path(o, study = s), "../tables/own_T-2.rtf")
+})
 
 test_that("the defaults' content is a table's: a figure or a listing takes their page, not it", {
   s <- tfl_read_study_spec(yml_dir())
