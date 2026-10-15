@@ -95,7 +95,7 @@ tfl_sheets_from_yaml <- function(dir) {
     m <- lapply(e, cell); if (!is.null(m$id)) { m$population_id <- m$id; m$id <- NULL }; m
   }), .ard_spec_sheets$populations)
   adata <- list(); analyses <- list()
-  listings <- list(); listing_cols <- list()
+  listings <- list(); listing_cols <- list(); fig_rows <- list()
   figures <- list()
   toc_index <- stats::setNames(s$toc$outputs %||% list(), vapply(s$toc$outputs %||% list(), function(e) e$id %||% "", ""))
 
@@ -132,6 +132,13 @@ tfl_sheets_from_yaml <- function(dir) {
       add("codelists", list(output_id = id, variable = v, value = cell(cl$value), label = cell(cl$label), order = as.character(i)))
     }
     code_content <- inherits(o$content, "tfl_r")
+    # the datasets a report written by hand reads, and whether it reads its
+    # ARD: the listing/figure workbook's figures row
+    if (!is.null(o$data$datasets) || isTRUE(o$data$ard)) {
+      fig_rows[[length(fig_rows) + 1L]] <- list(
+        output_id = id, datasets = if (!is.null(o$data$datasets)) paste(unlist(o$data$datasets), collapse = " | ") else NA_character_,
+        ard = if (isTRUE(o$data$ard)) "TRUE" else NA_character_)
+    }
     # the report's ARD analyses and analysis data, whatever its kind
     for (a in o$ard$analysis_data %||% list()) {
       m <- lapply(a, cell); m$data_id <- m$id; m$id <- NULL
@@ -170,7 +177,9 @@ tfl_sheets_from_yaml <- function(dir) {
       if (!is.null(o$plot)) fd$plot <- o$plot
       fd$layers <- if (code_content) list() else lapply(o$content, function(it) c(list(layer = it$fn), it$args))
       for (k in c("plots", "compose")) if (!is.null(o[[k]])) fd[[k]] <- o[[k]]
-      figures[[id]] <- fd
+      # a figure that is its own code and nothing of the designer's has no
+      # design
+      if (!(code_content && identical(names(fd), "layers"))) figures[[id]] <- fd
     }
   }
   # the setup code on the planner sheet's study row
@@ -198,6 +207,17 @@ tfl_sheets_from_yaml <- function(dir) {
     for (k in names(fp)) { if (!k %in% names(rp)) rp[[k]] <- NA_character_; rp[[k]][i[1L]] <- cell(fp[[k]]) }
     table$report <- rp
   }
+  # a report's note: its tables row's
+  for (id in names(outs)) {
+    nt <- outs[[id]]$note
+    if (is.null(nt) || !identical(outs[[id]]$kind, "table")) next
+    tb <- table$tables
+    i <- match(id, tb$output_id)
+    if (is.na(i)) { tb[nrow(tb) + 1L, ] <- NA; i <- nrow(tb); tb$output_id[i] <- id }
+    if (!"note" %in% names(tb)) tb$note <- NA_character_
+    tb$note[i] <- as.character(nt)
+    table$tables <- tb
+  }
   # a table's normalize_ard() arguments on its tables row
   for (id in names(norm_rows)) {
     a <- norm_rows[[id]]
@@ -221,7 +241,8 @@ tfl_sheets_from_yaml <- function(dir) {
                                                      "section", "population", "datasets", "batches")),
        ard = ard,
        listing = list(listings = .rows_df(listings, c("output_id", .listing_sheets$listings)),
-                      listing_cols = .rows_df(listing_cols, c("output_id", .listing_sheets$listing_cols))),
+                      listing_cols = .rows_df(listing_cols, c("output_id", .listing_sheets$listing_cols)),
+                      figures = .rows_df(fig_rows, c("output_id", "datasets", "ard"))),
        figures = figures, study = s$study,
        not_converted = if (length(nc)) do.call(rbind, nc) else
          data.frame(output = character(), part = character(), reason = character(), stringsAsFactors = FALSE))
@@ -247,6 +268,8 @@ tfl_sheets_from_yaml <- function(dir) {
   if (inherits(v, "tfl_unset")) return("(none)")
   if (inherits(v, "tfl_r")) return(as.character(v))
   if (inherits(v, "tfl_call")) return(NA_character_)
+  # (a field left blank: a blank cell, not the text NA)
+  if (is.atomic(v) && length(v) == 1L && is.na(v)) return(NA_character_)
   if (is.list(v)) {
     if (!is.null(names(v))) return(NA_character_)
     v <- unlist(v)
