@@ -105,9 +105,10 @@ test_that("the example runs on the pilot data: the ARD, the tables, the listing,
     if (id == "T-2") expect_match(txt, "Subjects with at least one TEAE", fixed = TRUE)
   }
   skip_if_not_installed("ggplot2")
-  # (the figure as written: the defaults' table items are no figure's --
-  # S2's layering keeps them to tables)
-  p <- suppressMessages(tfl_content_run(outs[["F-1"]],
+  # the figure over its defaults (their page, not the tables' content)
+  f1 <- tfl_resolve_output(outs[["F-1"]], st)
+  expect_identical(vapply(f1$content, `[[`, "", "fn"), c("line", "point", "errorbar"))
+  p <- suppressMessages(tfl_content_run(f1,
                                         list(advs = readRDS(file.path(d, "data", "adam", "advs.rds")))))
   expect_s3_class(p, "ggplot")
 })
