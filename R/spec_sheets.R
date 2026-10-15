@@ -95,7 +95,7 @@ tfl_sheets_from_yaml <- function(dir) {
     m <- lapply(e, cell); if (!is.null(m$id)) { m$population_id <- m$id; m$id <- NULL }; m
   }), .ard_spec_sheets$populations)
   adata <- list(); analyses <- list()
-  listings <- list(); listing_cols <- list()
+  listings <- list(); listing_cols <- list(); fig_rows <- list()
   figures <- list()
   toc_index <- stats::setNames(s$toc$outputs %||% list(), vapply(s$toc$outputs %||% list(), function(e) e$id %||% "", ""))
 
@@ -132,6 +132,13 @@ tfl_sheets_from_yaml <- function(dir) {
       add("codelists", list(output_id = id, variable = v, value = cell(cl$value), label = cell(cl$label), order = as.character(i)))
     }
     code_content <- inherits(o$content, "tfl_r")
+    # the datasets a report written by hand reads, and whether it reads its
+    # ARD: the listing/figure workbook's figures row
+    if (!is.null(o$data$datasets) || isTRUE(o$data$ard)) {
+      fig_rows[[length(fig_rows) + 1L]] <- list(
+        output_id = id, datasets = if (!is.null(o$data$datasets)) paste(unlist(o$data$datasets), collapse = " | ") else NA_character_,
+        ard = if (isTRUE(o$data$ard)) "TRUE" else NA_character_)
+    }
     # the report's ARD analyses and analysis data, whatever its kind
     for (a in o$ard$analysis_data %||% list()) {
       m <- lapply(a, cell); m$data_id <- m$id; m$id <- NULL
@@ -221,7 +228,8 @@ tfl_sheets_from_yaml <- function(dir) {
                                                      "section", "population", "datasets", "batches")),
        ard = ard,
        listing = list(listings = .rows_df(listings, c("output_id", .listing_sheets$listings)),
-                      listing_cols = .rows_df(listing_cols, c("output_id", .listing_sheets$listing_cols))),
+                      listing_cols = .rows_df(listing_cols, c("output_id", .listing_sheets$listing_cols)),
+                      figures = .rows_df(fig_rows, c("output_id", "datasets", "ard"))),
        figures = figures, study = s$study,
        not_converted = if (length(nc)) do.call(rbind, nc) else
          data.frame(output = character(), part = character(), reason = character(), stringsAsFactors = FALSE))

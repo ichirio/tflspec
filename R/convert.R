@@ -324,10 +324,13 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
 
 # the rows of a sheet as a list of maps (column -> value), NA cells left out
 .conv_rows <- function(d, note, output, sheet, r_cols = character(), list_cols = character(),
-                       rename = character(), drop = c("output_id", "note")) {
+                       rename = character(), drop = "output_id") {
   if (is.null(d) || !nrow(d)) return(list())
   cols <- setdiff(names(d), drop)
   lapply(seq_len(nrow(d)), function(i) {
+    if ("note" %in% drop && "note" %in% names(d) && !is.na(d$note[i]) && nzchar(trimws(d$note[i]))) {
+      note(output, sheet, i, "note", "a row's note is not kept here (its row is a call's arguments)", d$note[i])
+    }
     m <- list()
     for (cn in cols) {
       v <- .conv_cell(d[[cn]][i], cn, r_cols, list_cols, note, output, sheet, i)
@@ -476,7 +479,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     }
     # rtfreporter's chain: plan_listing(listing_col(...), ..., type, sep ...)
     # |> plan_blanks(where = "records") |> plan_paginate_rows(max_rows)
-    cols <- .conv_rows(lc, note, id, "listing_cols", list_cols = "vars")
+    cols <- .conv_rows(lc, note, id, "listing_cols", list_cols = "vars", drop = c("output_id", "note"))
     args <- list(cols = lapply(cols, function(m) tfl_call("listing_col", m)))
     blank_row <- NULL
     if (nrow(lr)) {
@@ -514,6 +517,16 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   if (!is.null(sp)) {
     cl <- scope(sp$codelists, id)
     if (!is.null(cl) && nrow(cl)) codelists <- .conv_codelists(cl)
+  }
+  # the listing/figure workbook's figures row: the datasets a report written
+  # by hand reads, and whether it reads its ARD (ard TRUE)
+  fr <- lf$figures
+  fr <- if (is.null(fr) || !nrow(fr)) NULL else fr[!is.na(fr$output_id) & fr$output_id == id, , drop = FALSE]
+  if (!is.null(fr) && nrow(fr)) {
+    if ("datasets" %in% names(fr) && !is.na(fr$datasets[1L]) && nzchar(trimws(fr$datasets[1L]))) {
+      data$datasets <- as.list(.conv_split(fr$datasets[1L]))
+    }
+    if ("ard" %in% names(fr) && identical(toupper(trimws(fr$ard[1L] %||% "")), "TRUE")) data$ard <- TRUE
   }
   # the report's ARD analyses and their analysis data, whatever its kind (a
   # figure's hazard ratios too): its ard: section, the ARD stage's

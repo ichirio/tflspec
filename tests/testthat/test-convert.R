@@ -183,3 +183,30 @@ test_that("the objects route writes what the files route writes", {
     expect_identical(readLines(file.path(b, f)), readLines(file.path(a, f)), info = f)
   }
 })
+
+test_that("a hand-written figure's datasets and ARD, and a row's note, go to YAML and back", {
+  skip_if_not_installed("openxlsx")
+  from <- conv_study(withr::local_tempdir())
+  books <- file.path(from, "spec", c("table_spec.xlsx", "report_spec.xlsx"))
+  sheets <- list(
+    table = tfl_read_table_spec(books),
+    planner = tflspec:::.conv_read_planner_sheet(books),
+    ard = tflspec:::.conv_read_ard(file.path(from, "spec", "ard_definition.json")),
+    listing = tflspec:::.conv_read_lf(file.path(from, "spec", "listing_figure_spec.xlsx")),
+    figures = list(`F-1` = yaml::read_yaml(file.path(from, "spec", "figures", "F-1.yml"))),
+    study = yaml::read_yaml(file.path(from, "study.yml")))
+  sheets$listing$figures <- data.frame(output_id = "F-1", datasets = "ADSL | ADTTE", ard = "TRUE",
+                                       stringsAsFactors = FALSE)
+  sheets$ard$analyses$note <- c("why this analysis", rep(NA, nrow(sheets$ard$analyses) - 1L))
+  to <- withr::local_tempdir()
+  tfl_yaml_from_sheets(sheets, to, overwrite = TRUE)
+  f1 <- tfl_read_outputs(to)[["F-1"]]
+  expect_identical(unlist(f1$data$datasets), c("ADSL", "ADTTE"))
+  expect_true(isTRUE(f1$data$ard))
+  t1 <- tfl_read_outputs(to)[[sheets$ard$analyses$output_id[1L]]]
+  expect_identical(t1$ard$analyses[[1L]]$note, "why this analysis")
+  back <- tfl_sheets_from_yaml(to)
+  expect_identical(back$listing$figures$datasets, "ADSL | ADTTE")
+  expect_identical(back$listing$figures$ard, "TRUE")
+  expect_identical(back$ard$analyses$note[1L], "why this analysis")
+})
