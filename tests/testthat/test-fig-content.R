@@ -250,6 +250,8 @@ test_that("a figure type of its own converts to its R, the same figure; a compos
     b <- suppressWarnings(suppressMessages(ggplot2::ggplot_build(p)))
     lapply(b$data, function(x) { x$group <- NULL; x$PANEL <- NULL; x })
   }
+  # (the old script of a figure type saves its PNG: in a folder of its own)
+  withr::local_dir(withr::local_tempdir())
   run_old <- function(d) {
     e <- new.env(parent = globalenv())
     for (n in names(data)) assign(n, data[[n]], envir = e)
@@ -267,6 +269,8 @@ test_that("a figure type of its own converts to its R, the same figure; a compos
     d <- tfl_fig_template(t)
     x <- tfl_fig_content_from_design(d)
     expect_s3_class(x$content, "tfl_r")
+    # the report's content saves nothing and prints nothing
+    expect_false(grepl("ggsave|fig_path", x$content), info = t)
     o <- tfl_output("F-1", "figure", data = x$data, content = x$content)
     set.seed(1)
     new <- suppressWarnings(suppressMessages(tfl_content_run(o, data)))

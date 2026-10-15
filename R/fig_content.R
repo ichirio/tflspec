@@ -476,9 +476,16 @@ tfl_fig_content_from_design <- function(design) {
   if (length(whole)) {
     # a figure type of its own (ae_dot, sankey ...): its function's code,
     # the report's own (content: !r)
-    code <- tfl_fig_design_code(design, setup = TRUE, save = FALSE, name = "content")
+    code <- unlist(strsplit(paste(as.character(tfl_fig_design_code(
+      design, setup = TRUE, save = FALSE, name = "content")), collapse = "\n"), "\n", fixed = TRUE))
+    # (the type's script saves its PNG and prints the figure: the report's
+    # content does neither -- its program writes the figure into its RTF)
+    cut <- grep("^# ---- saving the figure", code)
+    if (length(cut)) code <- code[seq_len(cut[1L] - 1L)]
+    code <- code[code != "fig"]
+    while (length(code) && !nzchar(trimws(code[length(code)]))) code <- code[-length(code)]
     return(list(data = list(source = "code", steps = steps),
-                content = tfl_r(paste(c(as.character(code), "content <- fig"), collapse = "\n")),
+                content = tfl_r(paste(c(code, "content <- fig"), collapse = "\n")),
                 template = design$template))
   }
   gg <- .fig_target_version(NULL, design)
