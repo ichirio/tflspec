@@ -133,12 +133,12 @@ tfl_sheets_from_yaml <- function(dir) {
     }
     code_content <- inherits(o$content, "tfl_r")
     # the report's ARD analyses and analysis data, whatever its kind
-    for (a in o$data$analysis_data %||% list()) {
+    for (a in o$ard$analysis_data %||% list()) {
       m <- lapply(a, cell); m$data_id <- m$id; m$id <- NULL
       if (!is.null(m$population)) { m$population_id <- m$population; m$population <- NULL }
       adata[[length(adata) + 1L]] <- c(list(output_id = id), m)
     }
-    for (a in o$data$analyses %||% list()) {
+    for (a in o$ard$analyses %||% list()) {
       m <- lapply(a, cell); m$analysis_id <- m$id; m$id <- NULL
       if (!is.null(m$population)) { m$population_id <- m$population; m$population <- NULL }
       if (!is.null(a$ref)) note(id, paste0("analyses.", a$id), "a reference to another report's analysis (ref) has no sheet")

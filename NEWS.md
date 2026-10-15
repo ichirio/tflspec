@@ -1,5 +1,15 @@
 # tflspec (development version)
 
+* **A report's ARD analyses are its `ard:` section** (#261, 0.0.24.9116;
+  the user's decision of 2026-10-15: the ARD is made in a stage of its
+  own, before the reports, and every report has the same three steps --
+  1 data, 2 content, 3 page and output).  A report file's
+  `data.analysis_data` / `data.analyses` move to `ard: {analysis_data,
+  analyses}` (in the report's own file), and `data:` keeps what the
+  report reads (`source: ard | code | dataset`).  `tfl_output(ard = )`;
+  the reader, the writer, the converter, `tfl_sheets_from_yaml()`, the
+  flat xlsx and its import follow.  The generated code is unchanged.
+
 * **The YAML spec, stage 0** (0.0.24.9112; the user's decision of
   2026-10-14 to make YAML the source of a study's definition, one file a
   report): the R objects `tfl_r()` (the `!r` tag), `tfl_unset()` (the
