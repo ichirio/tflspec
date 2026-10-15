@@ -144,6 +144,7 @@ tfl_resolve_output <- function(output, study) {
   output$codelists <- acc$codelists
   output$content <- acc$content
   output$page <- acc$page
+  output <- .page_font_to_plan(output)
   attr(output, "resolved") <- TRUE
   output
 }
@@ -317,4 +318,26 @@ tfl_resolve_output <- function(output, study) {
     }
   }
   .merge_map(base, over)
+}
+
+# page: rtf_tables's font_size_half_points (written by a converter before
+# 0.0.24.9124): a table's font size is its plan's -- moved to the content's
+# plan_style(font_size_half_points = ), the report's own plan_style key
+# winning; a content that is R code keeps it on the page
+.page_font_to_plan <- function(output) {
+  fs <- output$page$rtf_tables$font_size_half_points
+  if (is.null(fs) || inherits(output$content, "tfl_r") ||
+      !output$kind %in% c("table", "listing")) return(output)
+  output$page$rtf_tables$font_size_half_points <- NULL
+  if (!length(output$page$rtf_tables)) output$page$rtf_tables <- NULL
+  k <- which(vapply(output$content, function(it) identical(it$fn, "plan_style"), NA))
+  if (length(k)) {
+    a <- output$content[[k[1L]]]$args
+    if (is.null(a$font_size_half_points)) a$font_size_half_points <- fs
+    output$content[[k[1L]]]$args <- a
+  } else {
+    output$content <- .insert_by_rank(output$content,
+                                      tfl_item("plan_style", list(font_size_half_points = fs), from = "own"))
+  }
+  output
 }

@@ -198,3 +198,19 @@ test_that("the defaults' content is a table's: a figure or a listing takes their
   o <- tfl_output("X-1", "table", content = list(tfl_item("table_plan", list())))
   expect_gt(length(tfl_resolve_output(o, s)$content), 1L)
 })
+
+test_that("page: rtf_tables' font size (an earlier converter's) is the plan's on resolve", {
+  s <- tfl_read_study_spec(yml_dir())
+  o <- tfl_output("T-5", "table", content = list(tfl_item("table_plan", list(cols = "TRT"))),
+                  page = list(rtf_tables = list(font_size_half_points = 16L, auto_title = TRUE)))
+  r <- tfl_resolve_output(o, s)
+  sty <- Filter(function(it) identical(it$fn, "plan_style"), r$content)
+  expect_identical(sty[[1L]]$args$font_size_half_points, 16L)
+  expect_null(r$page$rtf_tables$font_size_half_points)
+  expect_true(isTRUE(r$page$rtf_tables$auto_title))
+  # the report's own plan_style key wins
+  o$content <- c(o$content, list(tfl_item("plan_style", list(font_size_half_points = 18L))))
+  r <- tfl_resolve_output(o, s)
+  sty <- Filter(function(it) identical(it$fn, "plan_style"), r$content)
+  expect_identical(sty[[1L]]$args$font_size_half_points, 18L)
+})

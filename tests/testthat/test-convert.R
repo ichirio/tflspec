@@ -241,12 +241,12 @@ test_that("a figure with no design gets nothing of a table's", {
 })
 
 test_that("a table of label NA, rows by name over a default template, row groups: YAML code = the sheets'", {
-  # (the shape of a user's study: dev-rep Discussion #7)
+  # (a study converted from the workbooks: a label NA, rows by name)
   tb <- list(
-    tables = data.frame(output_id = "T-9", cols = "TR01AG1", rows = "group = variable", label = "NA",
+    tables = data.frame(output_id = "T-9", cols = "TRT01A", rows = "group = variable", label = "NA",
                         sort = "group | .label", stringsAsFactors = FALSE),
     cells = data.frame(output_id = c(NA, "T-9", "T-9"), variable = NA_character_,
-                       row = c(NA, "n", "orr_ci"),
+                       row = c(NA, "n", "ci"),
                        template = c("{n} ({p:.1f%})", "{n}", "{estimate:.1f} ({conf.low:.1f}, {conf.high:.1f})"),
                        stringsAsFactors = FALSE),
     layout = data.frame(output_id = "T-9", group_col = "variable", group_mode = "row",
@@ -277,8 +277,7 @@ test_that("a table of label NA, rows by name over a default template, row groups
 
 test_that("an AE table with no ARD definition: its hierarchy from its rows and label, and it runs", {
   skip_if_not_installed("cards")
-  # (the shape of a user's AE table, its ARD made by its own program:
-  # dev-rep Discussion #7)
+  # (an AE table whose ARD is made by its own program)
   tb <- list(
     tables = data.frame(output_id = "AE-1", cols = "TRTA", rows = "group1 = AEBODSYS",
                         label = "label = AEDECOD", overall_label = "Any TEAE",
@@ -326,7 +325,7 @@ test_that("an AE table with no ARD definition: its hierarchy from its rows and l
 })
 
 test_that("a table's font size (the report sheet's) is its plan's plan_style(), not rtf_tables()'s", {
-  # (a user's PK table: rtf_tables(font_size_half_points = ) is deprecated)
+  # (rtf_tables(font_size_half_points = ) is deprecated)
   sp <- tfl_table_spec(list(
     tables = data.frame(output_id = "T-8", cols = "TRT", rows = "group = variable",
                         stringsAsFactors = FALSE),

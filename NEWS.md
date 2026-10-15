@@ -5,7 +5,10 @@
   report sheet's `table_font_size_half_points` is the table's
   `plan_style(font_size_half_points = )` (the sheets' table code, the
   converter's content via the style sheet), no longer `rtf_tables()`'s (a
-  listing's pages, made apart by the sheets, still pass it there).
+  listing's pages, made apart by the sheets, still pass it there).  A YAML
+  written before, with `page: rtf_tables: font_size_half_points`, has it moved
+  to the content's `plan_style()` by `tfl_resolve_output()` (the report's own
+  `plan_style` key wins): the table keeps its size.
 
 * **An AE table with no ARD definition gets its hierarchy** (#278,
   0.0.24.9124; a user's AE table stopped at `table_plan(label = ): no
