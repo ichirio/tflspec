@@ -2315,8 +2315,13 @@ tfl_report_path <- function(spec, output_id = NULL, study = NULL) {
     }
     return(.output_rtf_path(spec, study))
   }
-  sp <- .ard_spec_scope(.as_spec(spec, "table", "tfl_report_path",
-                                 output_id = output_id), output_id)
+  .sheet_rtf_path(.ard_spec_scope(.as_spec(spec, "table", "tfl_report_path",
+                                          output_id = output_id), output_id))
+}
+
+# A report's RTF path from the sheets (a definition narrowed to one
+# report): its report row's file, in the study's output_path
+.sheet_rtf_path <- function(sp) {
   r <- .ard_spec_report_row(sp)
   out <- .ard_spec_study_value(sp, "output_path")
   if (is.na(out)) r$file else file.path(out, r$file)
