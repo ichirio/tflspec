@@ -508,7 +508,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     if (!is.null(sp)) {
       if (!is.null(content_fn)) {
         content <- .conv_items(content_fn(sp, id))
-        nz <- .conv_normalize_args(sp, ard, id)
+        nz <- .conv_normalize_args(sp, ard, id, note)
         if (length(nz)) content <- c(list(tfl_item("normalize_ard", nz)), content)
       }
       else if (any(vapply(c("tables", "variables", "cells", "digits", "layout", "columns", "style", "col_header", "cell_styles"),
@@ -598,7 +598,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
 # A table's normalize_ard() arguments, as tfl_normalize_code() reads them:
 # its tables row (overall_label, stack, stack_sep, stack_nest) and its
 # hierarchical analysis (hierarchy).  Nothing: the defaults' normalize_ard().
-.conv_normalize_args <- function(sp, ard, id) {
+.conv_normalize_args <- function(sp, ard, id, note = function(...) NULL) {
   t <- sp$tables
   t <- if (is.null(t)) NULL else t[!is.na(t$output_id) & t$output_id == id, , drop = FALSE]
   val <- function(col) {
@@ -613,6 +613,34 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
                an$method %in% c("hierarchical", "cards::ard_stack_hierarchical",
                                 "cards::ard_stack_hierarchical_count"), , drop = FALSE]
     if (nrow(an)) out$hierarchy <- .split_bar(an$variables[1L])
+  }
+  # no ARD definition to say it (an ARD made elsewhere): a table whose rows
+  # are groups and whose label is a variable is a hierarchy -- its groups,
+  # then the label's variable (rows `group1 = AEBODSYS`, label `label =
+  # AEDECOD`: SOC / PT); said, to check
+  has_ard <- !is.null(ard) && any(!is.na(ard$analyses$output_id) & ard$analyses$output_id == id)
+  if (is.null(out$hierarchy) && !has_ard) {
+    rows <- val("rows")
+    lv <- val("label")
+    grp <- character()
+    if (!is.null(rows)) {
+      for (p in trimws(strsplit(rows, "|", fixed = TRUE)[[1L]])) {
+        kv <- trimws(strsplit(p, "=", fixed = TRUE)[[1L]])
+        if (length(kv) == 2L && grepl("^group[0-9]+$", kv[1L])) grp[kv[1L]] <- kv[2L]
+      }
+    }
+    lab_var <- if (!is.null(lv)) {
+      kv <- trimws(strsplit(lv, "=", fixed = TRUE)[[1L]])
+      v <- kv[length(kv)]
+      if (length(kv) %in% 1:2 && grepl("^[A-Za-z][A-Za-z0-9_.]*$", v) && !v %in% c(".label", "NA")) v
+    }
+    if (length(grp) && !is.null(lab_var)) {
+      grp <- grp[order(as.integer(sub("^group", "", names(grp))))]
+      out$hierarchy <- unname(c(grp, lab_var))
+      note(id, "tables", 1, "rows", paste0(
+        "normalize_ard()'s hierarchy taken from the table's rows and label (no hierarchical ",
+        "analysis in an ARD definition): check it"), paste(out$hierarchy, collapse = " | "))
+    }
   }
   lab <- val("overall_label")
   if (!is.null(lab)) out$overall <- lab

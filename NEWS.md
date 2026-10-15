@@ -1,5 +1,15 @@
 # tflspec (development version)
 
+* **An AE table with no ARD definition gets its hierarchy** (#278,
+  0.0.24.9124; a user's AE table stopped at `table_plan(label = ): no
+  column 'AEDECOD'`).  The sheets knew a table's hierarchy only from the
+  ARD definition's hierarchical analysis; a study whose ARD is made by its
+  own program has none.  For a report with no ARD definition, the
+  converter takes `normalize_ard()`'s hierarchy from the table's rows and
+  label (`group1 = AEBODSYS`, `label = AEDECOD`: `hierarchy = c("AEBODSYS",
+  "AEDECOD")`), its `overall` from `overall_label`, and lists it in
+  `_not_converted.yml` to check.
+
 * **An NA argument stays NA; a default template and a report's rows by
   name are both kept** (#276, 0.0.24.9124; a user's study converted from
   the workbooks stopped at `table_plan(label = ): no column 'NA'`).  A

@@ -274,3 +274,49 @@ test_that("a table of label NA, rows by name over a default template, row groups
   s1 <- trimws(y[-(1:2)])
   expect_identical(s1, s0)
 })
+
+test_that("an AE table with no ARD definition: its hierarchy from its rows and label, and it runs", {
+  skip_if_not_installed("cards")
+  # (the shape of a user's AE table, its ARD made by its own program:
+  # dev-rep Discussion #7)
+  tb <- list(
+    tables = data.frame(output_id = "AE-1", cols = "TRTA", rows = "group1 = AEBODSYS",
+                        label = "label = AEDECOD", overall_label = "Any TEAE",
+                        sort = ".overall | group1 | .depth | -n | label", header_n = "table",
+                        stringsAsFactors = FALSE),
+    cells = data.frame(output_id = "AE-1", variable = NA, row = NA, template = "{n:d} ({p:.1f%})",
+                       stringsAsFactors = FALSE),
+    layout = data.frame(output_id = "AE-1", stub_name = "row_label", stub_before = "TRUE",
+                        blank_where = "between_groups", blank_first = "TRUE", blank_last = "TRUE",
+                        blank_counted = "TRUE", pages_max_rows = "26", pages_split = "group_force",
+                        stringsAsFactors = FALSE),
+    style = data.frame(output_id = "AE-1", align_count_pct = "TRUE", row_height_twips = "210",
+                       stringsAsFactors = FALSE),
+    col_header = data.frame(output_id = "AE-1", line = c("1", "1", "2", "2"),
+                            cols = c("row_label", ".values", "row_label", ".values"),
+                            text = c("", "{col}\n(N={n:sum})\n n (%)", "System Organ Class", "(N={n})"),
+                            border_top = c(NA, "single", NA, NA), stringsAsFactors = FALSE))
+  sp <- tfl_table_spec(tb)
+  sheets <- list(table = unclass(sp),
+                 planner = data.frame(output_id = c(NA, "AE-1"), description = c("(every report)", "ae"),
+                                      setup_code = NA_character_, process_code = NA_character_,
+                                      section = NA_character_, population = NA_character_,
+                                      datasets = NA_character_, batches = NA_character_,
+                                      stringsAsFactors = FALSE),
+                 study = list(study_id = "U-1"))
+  to <- withr::local_tempdir()
+  r <- tfl_yaml_from_sheets(sheets, to, overwrite = TRUE)
+  expect_true(any(grepl("hierarchy taken from the table's rows", r$not_converted$reason)))
+  o <- tfl_resolve_output(tfl_read_outputs(to)[["AE-1"]], tfl_read_study_spec(to))
+  code <- tfl_content_code(o)
+  expect_true(any(grepl('normalize_ard(hierarchy = c("AEBODSYS", "AEDECOD"), overall = "Any TEAE")',
+                        code, fixed = TRUE)))
+  # the plan's verbs as the sheets write them
+  s0 <- trimws(tfl_table_code(sp, "AE-1"))
+  s1 <- trimws(code)
+  expect_identical(s1[grep("^plan_sort", s1):length(s1)], s0[grep("^plan_sort", s0):length(s0)])
+  # and it runs on an ARD of that shape
+  ard <- cards::ard_stack_hierarchical(cards::ADAE, variables = c(AEBODSYS, AEDECOD), by = TRTA,
+                                       denominator = cards::ADSL, id = USUBJID, over_variables = TRUE)
+  expect_s3_class(tfl_content_run(o, ard), "table_plan")
+})
