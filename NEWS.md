@@ -1,5 +1,10 @@
 # tflspec (development version)
 
+* **A figure with no design gets nothing of a table's** (#274, 0.0.24.9124).
+  The converter gave a figure with no design (and no code of its own),
+  and a listing with no rows, a table's data and content (`table_plan: {}`):
+  its data is its own code now (`source: code`), a listing's a dataset.
+
 * **The converter keeps what tflplanner's study has** (#270, 0.0.24.9122; for
   tflplanner reading and writing the YAML spec).  The listing / figure
   workbook's `figures` sheet (the datasets a figure or report written by

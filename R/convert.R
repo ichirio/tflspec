@@ -493,6 +493,10 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     if (nrow(lr) && !is.na(lr$max_rows[1L])) {
       content <- c(content, list(tfl_item("plan_paginate_rows", list(max_rows = as.integer(lr$max_rows[1L])))))
     }
+  } else if (kind %in% c("figure", "listing")) {
+    # a figure with no design, a listing with no rows yet: nothing of a
+    # table's (its data its own code, or a dataset)
+    data <- list(source = if (kind == "figure") "code" else "dataset")
   } else {
     # the data stage of a table: the study ARD (`object`), then its steps
     # (the rework step of the sheets, R as it was)

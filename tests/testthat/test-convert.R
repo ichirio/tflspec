@@ -210,3 +210,32 @@ test_that("a hand-written figure's datasets and ARD, and a row's note, go to YAM
   expect_identical(back$listing$figures$ard, "TRUE")
   expect_identical(back$ard$analyses$note[1L], "why this analysis")
 })
+
+test_that("a figure with no design gets nothing of a table's", {
+  skip_if_not_installed("openxlsx")
+  from <- conv_study(withr::local_tempdir())
+  books <- file.path(from, "spec", c("table_spec.xlsx", "report_spec.xlsx"))
+  sheets <- list(
+    table = tfl_read_table_spec(books),
+    planner = tflspec:::.conv_read_planner_sheet(books),
+    ard = tflspec:::.conv_read_ard(file.path(from, "spec", "ard_definition.json")),
+    listing = tflspec:::.conv_read_lf(file.path(from, "spec", "listing_figure_spec.xlsx")),
+    figures = list(),
+    study = yaml::read_yaml(file.path(from, "study.yml")))
+  # F-1 without its design file: a figure of no design yet
+  sheets$planner[nrow(sheets$planner) + 1L, ] <- NA
+  sheets$planner$output_id[nrow(sheets$planner)] <- "F-1"
+  r <- sheets$table$report
+  r[nrow(r) + 1L, ] <- NA
+  r$output_id[nrow(r)] <- "F-1"
+  r$type[nrow(r)] <- "figure"
+  sheets$table$report <- r
+  to <- withr::local_tempdir()
+  tfl_yaml_from_sheets(sheets, to, overwrite = TRUE)
+  f1 <- tfl_read_outputs(to)[["F-1"]]
+  expect_identical(f1$kind, "figure")
+  expect_identical(f1$data$source, "code")
+  expect_length(f1$content, 0L)
+  # and back: no figure design for it
+  expect_null(tfl_sheets_from_yaml(to)$figures[["F-1"]]$template)
+})
