@@ -1,5 +1,11 @@
 # tflspec (development version)
 
+* **The defaults' content is a table's** (#263, 0.0.24.9117; found by the
+  AI kit).  `tfl_resolve_output()` layers `defaults.yml`'s `content`
+  (normalize_ard, the digits ...) onto a table only: a figure or a
+  listing takes the defaults' page and code lists, not those layers
+  (a figure's code stopped at "Unknown layer: normalize_ard").
+
 * **A report's ARD analyses are its `ard:` section** (#261, 0.0.24.9116;
   the user's decision of 2026-10-15: the ARD is made in a stage of its
   own, before the reports, and every report has the same three steps --

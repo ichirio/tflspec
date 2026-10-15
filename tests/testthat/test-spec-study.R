@@ -150,3 +150,17 @@ test_that("a report's content as R code (one !r) is read, written and wins whole
   expect_match(rp$content_code[rp$output_id %in% "T-1"], "table_plan(data", fixed = TRUE)
   expect_identical(rp$data_code[rp$output_id %in% "T-1"], "data <- head(adsl)")
 })
+
+test_that("the defaults' content is a table's: a figure or a listing takes their page, not it", {
+  s <- tfl_read_study_spec(yml_dir())
+  for (kind in c("figure", "listing")) {
+    o <- tfl_output("X-1", kind, content = list(tfl_item("plan_listing", list())))
+    r <- tfl_resolve_output(o, s)
+    expect_identical(vapply(r$content, `[[`, "", "fn"), "plan_listing", info = kind)
+    # the page still comes from the defaults
+    expect_identical(r$page$header[["1"]]$right, "DRAFT", info = kind)
+  }
+  # a table keeps them
+  o <- tfl_output("X-1", "table", content = list(tfl_item("table_plan", list())))
+  expect_gt(length(tfl_resolve_output(o, s)$content), 1L)
+})
