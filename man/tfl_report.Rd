@@ -33,13 +33,15 @@ An \code{\link[rtfreporter:rtf_document]{rtfreporter::rtf_document()}}.
 the running header and footer, the titles and footnotes, and the
 table's pages --- an \code{\link[rtfreporter:table_plan]{rtfreporter::table_plan()}} or anything \code{\link[rtfreporter:rtf_tables]{rtfreporter::rtf_tables()}} takes ---
 in one \code{\link[rtfreporter:rtf_document]{rtfreporter::rtf_document()}} ready for \code{\link[rtfreporter:generate_rtfreport]{rtfreporter::generate_rtfreport()}}.  The document
-carries its program, so \code{{PROGRAM}} needs nothing more.
+carries its program, so \code{{PROGRAM}} needs nothing more, and its file
+(\code{\link[=tfl_report_path]{tfl_report_path()}}: \code{rtf_document(file = )}), so \code{generate_rtfreport(doc)}
+writes there; a path given to it wins.  A YAML report's file needs its
+\code{study}.
 }
 \details{
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{spec <- tfl_read_report_spec(c("report.xlsx", "tables.xlsx"), output_id = id)
 plan <- ard |> normalize_ard() |> tfl_table_plan(spec)
-generate_rtfreport(tfl_report(spec, content = plan), tfl_report_path(spec),
-                   overwrite = TRUE)
+generate_rtfreport(tfl_report(spec, content = plan))   # to tfl_report_path(spec)
 }\if{html}{\out{</div>}}
 }
 \section{The table engine}{

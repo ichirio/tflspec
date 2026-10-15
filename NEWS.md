@@ -1,5 +1,12 @@
 # tflspec (development version)
 
+* **A report's document says its RTF file** (#268, 0.0.24.9121; rtfreporter's
+  `rtf_document(file = )`, >= 0.8.2.9063).  `tfl_report()` and
+  `tfl_report_code()` give the document the path `tfl_report_path()` says
+  (a YAML report's with its `study`), so `generate_rtfreport(doc)` writes
+  it and the program says its output once, beside its program.  A path
+  given to `generate_rtfreport()` still wins.
+
 * **`tfl_report_path()` takes a YAML report** (#264, 0.0.24.9120).  With
   `study =` (as `tfl_report()`): its TOC entry's `file`, else
   `study.yml`'s `settings: file` (`"{output_id}.rtf"` when neither says

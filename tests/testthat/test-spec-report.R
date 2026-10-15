@@ -95,3 +95,32 @@ test_that("after the study's setup code, a YAML report says what its sheets say"
   expect_error(tfl_report_code(tfl_resolve_output(o, study), setup = TRUE, study = study),
                "as read")
 })
+
+test_that("the document says its RTF file: tfl_report_path()'s, in the run and in the code (#268)", {
+  skip_if_not_installed("rtfreporter")
+  # the sheets: the report row's file under the study's output_path
+  sp <- rp_sheets()
+  sp$study <- rbind(sp$study, data.frame(key = "output_path", value = "output/tfl"))
+  doc <- tfl_report(sp, "T-1", content = rtfreporter::as_rtftables(data.frame(a = 1)))
+  expect_identical(doc$document$file, tfl_report_path(sp, "T-1"))
+  expect_identical(doc$document$file, file.path("output/tfl", "T-1.rtf"))
+  code <- paste(tfl_report_code(sp, "T-1"), collapse = "\n")
+  expect_match(code, 'file = "output/tfl/T-1.rtf"', fixed = TRUE)
+  # a definition of no one report: no file said
+  expect_null(.rtf_file_said("{output_id}.rtf"))
+  # a YAML report: its file with its study; none without one
+  y <- system.file("extdata", "spec-yaml", package = "tflspec")
+  s <- tfl_read_study_spec(y)
+  o <- tfl_read_outputs(y)[["T-14-1-1"]]
+  doc <- tfl_report(o, content = rtfreporter::as_rtftables(data.frame(a = 1)), study = s)
+  expect_identical(doc$document$file, tfl_report_path(o, study = s))
+  expect_match(paste(tfl_report_code(o, study = s), collapse = "\n"),
+               paste0('file = "', tfl_report_path(o, study = s), '"'), fixed = TRUE)
+  doc0 <- tfl_report(tfl_resolve_output(o, s), content = rtfreporter::as_rtftables(data.frame(a = 1)))
+  expect_null(doc0$document$file)
+  # generate_rtfreport(doc) writes there
+  d <- withr::local_tempdir()
+  withr::local_dir(d)
+  expect_identical(suppressMessages(rtfreporter::generate_rtfreport(doc)), tfl_report_path(o, study = s))
+  expect_true(file.exists(tfl_report_path(o, study = s)))
+})

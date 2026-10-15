@@ -58,6 +58,8 @@
     sep <- if (grepl("\\", dir, fixed = TRUE)) "\\" else "/"
     paste(sub("[\\\\/]+$", "", dir), p, sep = sep)
   }
+  # the RTF file the document is written to (tfl_report_path()), with a study
+  file <- if (inherits(study, "tfl_study_spec")) .rtf_file_said(.output_rtf_path(output, study))
   doc <- .spec_sym("doc")
   st <- list(.spec_call("rtf_document",
                         font_table = doc_a$font_table,
@@ -67,7 +69,8 @@
                         watermark = doc_a$watermark,
                         program = in_dir(prog),
                         program_fallback = if (is.null(prog) && !is.na(id)) id,
-                        tokens = doc_tokens))
+                        tokens = doc_tokens,
+                        file = file))
   hdr <- .page_section_band(pg, "header", tokens, split)
   ftr <- .page_section_band(pg, "footer", tokens, split)
   if (length(hdr) || length(ftr)) {
