@@ -1,5 +1,13 @@
 # tflspec (development version)
 
+* **A nested variable keeps its place in the round trip** (#273,
+  0.0.24.9123; found by S2 with tflplanner's SAMPLE-01).  A variable under
+  another's level (`under`, `plan_nest()`) with no heading of its own is
+  not in `plan_labels()`, whose order is the variables' order: read back
+  from the content (a YAML report to the sheets), it now goes right after
+  the variable it is under, so the variables keep the order they were
+  written in.
+
 * **A report's document says its RTF file** (#268, 0.0.24.9121; rtfreporter's
   `rtf_document(file = )`, >= 0.8.2.9063).  `tfl_report()` and
   `tfl_report_code()` give the document the path `tfl_report_path()` says
