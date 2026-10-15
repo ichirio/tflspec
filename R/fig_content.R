@@ -241,8 +241,23 @@ tfl_plot <- function(name, items = list(), from = "own") {
 .fig_lang_item <- function(e, env = NULL) {
   f <- .fig_deparse(e[[1L]])
   fun <- .fig_find_fun(f, env)
+  given <- names(as.list(e)[-1L]) %||% rep("", length(e) - 1L)
   if (!is.null(fun) && is.function(fun) && !is.primitive(fun)) {
-    e <- tryCatch(match.call(fun, e, expand.dots = TRUE), error = function(err) e)
+    m <- tryCatch(match.call(fun, e, expand.dots = TRUE), error = function(err) NULL)
+    if (!is.null(m)) {
+      # the arguments in the order they were written: match.call() puts
+      # them in the formals' order and names the positional ones -- those
+      # (not named as given) take the positional places, in their order
+      mn <- names(as.list(m)[-1L])
+      pos <- setdiff(mn, given[nzchar(given)])
+      ord <- given
+      ord[!nzchar(ord)] <- pos[seq_len(sum(!nzchar(ord)))]
+      if (!anyNA(ord) && setequal(ord, mn)) {
+        e <- as.call(c(list(m[[1L]]), as.list(m)[-1L][ord]))
+      } else {
+        e <- m
+      }
+    }
   }
   a <- as.list(e)[-1L]
   nm <- names(a) %||% rep("", length(a))
@@ -680,6 +695,17 @@ tfl_args_from_r <- function(fn, text) {
     vals <- lapply(a, .args_value_of)
     args <- .schema_from_r(fn, vals)
   }
+  # a whole number where the schema takes an integer, as one (26, not 26.0):
+  # the text and the item agree both ways
+  ent <- tfl_schema(fn)
+  for (k in names(args)) {
+    ty <- .schema_arg_type(ent, k)
+    v <- args[[k]]
+    if (!is.null(ty) && .schema_int_type(ty) && is.numeric(v) && !is.integer(v) &&
+        all(!is.na(v) & v == round(v))) {
+      args[[k]] <- as.integer(v)
+    }
+  }
   attr(args, "problems") <- tfl_schema_check(tfl_item(fn, args))
   args
 }
@@ -827,4 +853,13 @@ tfl_args_from_r <- function(fn, text) {
     }
     v
   })
+}
+
+# Is a type an integer, or a sequence of them (list<integer>), first of its
+# alternatives?
+.schema_int_type <- function(ty) {
+  if (identical(ty$kind, "integer")) return(TRUE)
+  if (identical(ty$kind, "list")) return(.schema_int_type(ty$args[[1L]]))
+  if (identical(ty$kind, "either")) return(.schema_int_type(ty$args[[1L]]))
+  FALSE
 }

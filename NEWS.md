@@ -1,5 +1,10 @@
 # tflspec (development version)
 
+* **`tfl_args_from_r()` round trips** (#288, 0.0.24.9129; found by S2):
+  an argument the schema takes as an integer comes back an integer (`26`,
+  not `26.0`), and a figure function's arguments keep the order they were
+  written in (the positional ones named in their places).
+
 * **Every design converts; four extension packages in the figure catalog**
   (#286, 0.0.24.9128).  `tfl_fig_content_from_design()` converts a figure
   type of its own (ae_dot, butterfly, edish, sankey, sunburst, forest_or)
