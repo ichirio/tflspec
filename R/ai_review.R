@@ -495,13 +495,132 @@
   alt[!alt %in% c("r", "formula", "guard", "call")]
 }
 
+# A study folder of the YAML spec (an answer, through tfl_ai_unpack()):
+# each report file against the schema (K16-K18); the definition as the
+# sheets it stands for (tfl_sheets_from_yaml()) through the workbook's
+# review -- the checks against the TOC, the data and the metadata, and the
+# person's decisions (K10-K13) -- each finding then named by the file and
+# key it is in; the assumptions from spec/_assumptions.yml (K08, K09); the
+# figures through the figure designer's check.
+.ai_review_folder <- function(dir, toc, adam, others, cat, metadata = NULL) {
+  rows <- list()
+  add <- function(r) rows[[length(rows) + 1L]] <<- r
+  outs <- list.files(file.path(dir, "spec", "outputs"), pattern = "[.]ya?ml$", full.names = TRUE)
+  for (f in outs) {
+    rr <- .ai_review_report(f, cat)$rows
+    for (r in rr) {
+      r$sheet <- file.path("spec", "outputs", basename(f))
+      add(r)
+    }
+  }
+  b <- tryCatch(suppressMessages(tfl_sheets_from_yaml(dir)), error = function(e) {
+    add(.ai_rv("S01", sheet = "spec", args = conditionMessage(e), cat = cat))
+    NULL
+  })
+  kinds <- "study"
+  if (!is.null(b)) {
+    kinds <- c(if (length(b$ard$analyses) && nrow(b$ard$analyses)) "ard",
+               if (nrow(b$table$tables %||% data.frame())) "table",
+               if (nrow(b$table$report %||% data.frame())) "report",
+               if (nrow(b$listing$listings %||% data.frame())) "listing",
+               if (length(b$figures)) "figure")
+    f <- tempfile(fileext = ".xlsx")
+    on.exit(unlink(f), add = TRUE)
+    ok <- tryCatch({
+      tfl_write_specs(f, ard = tfl_ard_spec(b$ard), table = tfl_table_spec(b$table),
+                      report = tfl_table_spec(b$table), listing = tfl_listing_spec(b$listing))
+      TRUE
+    }, error = function(e) {
+      add(.ai_rv("S01", sheet = "spec", args = conditionMessage(e), cat = cat))
+      FALSE
+    })
+    if (ok) {
+      br <- .ai_review_book(f, toc, adam, others, cat, metadata = metadata)$rows
+      for (r in br) {
+        # the assumptions are the folder's own file
+        r <- r[!r$rule %in% c("K01", "K02", "K08", "K09"), , drop = FALSE]
+        if (!nrow(r)) next
+        r$sheet <- vapply(seq_len(nrow(r)), function(i)
+          .ai_yaml_place(r$sheet[i], r$output_id[i]), "")
+        add(r)
+      }
+    }
+    for (id in names(b$figures)) {
+      pr <- tryCatch(tfl_check_fig_design(.fig_design_from_list(b$figures[[id]]), adam = adam),
+                     error = function(e) NULL)
+      for (i in seq_len(NROW(pr))) {
+        add(.ai_rv("S01", output_id = id, sheet = file.path("spec", "outputs", paste0(id, ".yml")),
+                   row = pr$part[i], field = pr$field[i], args = pr$problem[i], cat = cat))
+      }
+    }
+  }
+  a <- .ai_folder_assumptions(dir)
+  if (!nrow(a)) {
+    add(.ai_rv("K08", args = "no spec/_assumptions.yml, or it lists nothing", cat = cat))
+  } else {
+    for (i in seq_len(nrow(a))) {
+      add(.ai_rv("K09", output_id = a$output_id[i], sheet = "spec/_assumptions.yml",
+                 row = a$item[i], args = a$assumption[i], cat = cat))
+    }
+  }
+  list(rows = rows, kinds = kinds, assumptions = a)
+}
+
+# The file (and key) of a study folder a sheet's row is in: a report's row
+# is in its own file, the study's in data.yml (the data), defaults.yml (the
+# rest) or study.yml
+.ai_yaml_place <- function(sheet, output_id) {
+  key <- c(datasets = "datasets", populations = "populations",
+           analysis_data = "data.analysis_data", analyses = "data.analyses",
+           tables = "content", variables = "content", codelists = "codelists",
+           cells = "content: plan_cells", digits = "content: plan_digits",
+           layout = "content", columns = "content: plan_columns", style = "content: plan_style",
+           cell_styles = "content: plan_cell_style", col_header = "content: plan_col_header",
+           report = "page", page = "page", header = "page.header", footer = "page.footer",
+           titles = "page.titles", footnotes = "page.footnotes", tokens = "page.tokens",
+           listings = "data", listing_cols = "content: plan_listing", study = "")
+  k <- if (!is.na(sheet) && sheet %in% names(key)) key[[sheet]] else sheet %||% ""
+  own <- !is.na(output_id) && nzchar(output_id)
+  file <- if (own) file.path("spec", "outputs", paste0(output_id, ".yml"))
+          else if (sheet %in% c("datasets", "populations", "analysis_data")) "spec/data.yml"
+          else if (sheet %in% c("study", "")) "study.yml"
+          else "spec/defaults.yml"
+  if (nzchar(k)) paste0(file, ": ", k) else file
+}
+
+# spec/_assumptions.yml as the review's frame: output_id, sheet (where),
+# item, assumption, question
+.ai_folder_assumptions <- function(dir) {
+  empty <- data.frame(output_id = character(), sheet = character(), item = character(),
+                      assumption = character(), question = character(),
+                      stringsAsFactors = FALSE)
+  f <- file.path(dir, "spec", "_assumptions.yml")
+  if (!file.exists(f)) return(empty)
+  y <- tryCatch(yaml::read_yaml(f), error = function(e) NULL)
+  if (!is.list(y) || !length(y)) return(empty)
+  if (!is.null(y$assumptions)) y <- y$assumptions
+  cell <- function(e, k) {
+    v <- e[[k]]
+    if (is.null(v) || !length(v)) NA_character_ else as.character(v[[1L]])
+  }
+  rows <- lapply(y, function(e) {
+    if (is.character(e)) e <- list(assumption = e)
+    data.frame(output_id = cell(e, "output_id"), sheet = cell(e, "where"), item = cell(e, "item"),
+               assumption = cell(e, "assumption"), question = cell(e, "question"),
+               stringsAsFactors = FALSE)
+  })
+  do.call(rbind, rows)
+}
+
 # ---- the two prompts -----------------------------------------------------------------
 
 .ai_where <- function(r) {
-  x <- c(if (!is.na(r$output_id) && nzchar(r$output_id)) r$output_id,
-         if (nzchar(r$sheet)) paste("sheet", r$sheet),
-         if (nzchar(r$row)) paste("row", r$row),
-         if (nzchar(r$field)) paste("column", r$field))
+  # (a study folder's finding names its file and key, not a sheet)
+  yml <- grepl("[.]ya?ml", r$sheet)
+  x <- c(if (!is.na(r$output_id) && nzchar(r$output_id) && !yml) r$output_id,
+         if (nzchar(r$sheet)) if (yml) r$sheet else paste("sheet", r$sheet),
+         if (nzchar(r$row)) paste(if (yml) "item" else "row", r$row),
+         if (nzchar(r$field)) paste(if (yml) "key" else "column", r$field))
   if (length(x)) paste(x, collapse = ", ") else "the file"
 }
 
@@ -612,11 +731,14 @@
 tfl_ai_review <- function(file, toc = NULL, adam = NULL, others = NULL,
                           metadata = NULL, write = TRUE, overwrite = FALSE) {
   if (!is.character(file) || length(file) != 1L || !file.exists(file)) {
-    .ard_stop("tfl_ai_review(): `file` is one spec file that exists (.xlsx or .yml).")
+    .ard_stop("tfl_ai_review(): `file` is one spec file that exists (.xlsx or .yml), or a study folder.")
   }
   cat <- .ai_cat()
   ext <- tolower(tools::file_ext(file))
+  if (dir.exists(file)) ext <- "folder"
   res <- switch(ext,
+    folder = .ai_review_folder(file, toc, adam, others, cat,
+                               metadata = .ai_review_md(metadata)),
     xlsx = .ai_review_book(file, toc, adam, others, cat,
                            metadata = .ai_review_md(metadata)),
     yml = , yaml = .ai_review_yml(file, adam, cat),
@@ -634,7 +756,9 @@ tfl_ai_review <- function(file, toc = NULL, adam = NULL, others = NULL,
   q_txt <- .ai_questions_text(r, base)
   paths <- character()
   if (isTRUE(write)) {
-    stem <- sub("[.][^.]+$", "", file)
+    # a study folder's prompts in the folder, named after it
+    stem <- if (identical(ext, "folder")) file.path(file, basename(normalizePath(file)))
+            else sub("[.][^.]+$", "", file)
     paths <- c(repair = paste0(stem, "_repair.md"), questions = paste0(stem, "_questions.md"))
     there <- paths[file.exists(paths)]
     if (length(there) && !isTRUE(overwrite)) {
