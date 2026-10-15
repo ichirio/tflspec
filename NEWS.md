@@ -1,6 +1,6 @@
 # tflspec (development version)
 
-* **The converter keeps what tflplanner's study has** (#270, 0.0.24.9120; for
+* **The converter keeps what tflplanner's study has** (#270, 0.0.24.9121; for
   tflplanner reading and writing the YAML spec).  The listing / figure
   workbook's `figures` sheet (the datasets a figure or report written by
   hand reads, and whether it reads its ARD) is the report's
