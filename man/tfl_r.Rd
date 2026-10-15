@@ -25,7 +25,8 @@ tfl_output(
   data = NULL,
   codelists = list(),
   content = list(),
-  page = list()
+  page = list(),
+  ard = NULL
 )
 }
 \arguments{
@@ -51,8 +52,9 @@ tfl_output(
 \item{extends}{The files layered under this one, nearest first
 (\code{"defaults"}, \code{"patterns/<name>"}); \code{"none"} for none.}
 
-\item{data}{What the report reads (a list: \code{source}, \code{analysis_data},
-\code{analyses}, \code{code}, \code{objects}).}
+\item{data}{What the report reads, its step 1 (a list: \code{source} --
+\code{"ard"}, \code{"code"} or \code{"dataset"} -- and \code{object}, \code{steps}, \code{code},
+\code{dataset} ...).}
 
 \item{codelists}{The report's code lists, by variable.}
 
@@ -60,6 +62,9 @@ tfl_output(
 
 \item{page}{The document: \code{titles}, \code{footnotes}, \code{header}, \code{footer}
 (maps by line), \code{tokens}, and the \verb{rtf_*} calls' arguments.}
+
+\item{ard}{The report's part of the study ARD, made in the ARD stage
+before any report (a list: \code{analysis_data}, \code{analyses}); \code{NULL} none.}
 }
 \value{
 \code{tfl_r()}: a string of class \code{tfl_r}; \code{tfl_unset()}: an object
