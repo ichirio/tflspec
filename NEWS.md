@@ -1,5 +1,10 @@
 # tflspec (development version)
 
+* **`tfl_report_path()` takes a YAML report** (#264, 0.0.24.9120).  With
+  `study =` (as `tfl_report()`): its TOC entry's `file`, else
+  `study.yml`'s `settings: file` (`"{output_id}.rtf"` when neither says
+  it), in `settings: output_path`.
+
 * **The AI kit asks for the study's YAML files, in one answer** (#265,
   0.0.24.9119).  `tflspec_ai_manual(dir)` writes seven files (eight with
   the ADaM metadata, now `07_adam_metadata.csv`): the request, the

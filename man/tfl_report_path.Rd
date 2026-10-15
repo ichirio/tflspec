@@ -4,21 +4,29 @@
 \alias{tfl_report_path}
 \title{Where a report's RTF file goes}
 \usage{
-tfl_report_path(spec, output_id = NULL)
+tfl_report_path(spec, output_id = NULL, study = NULL)
 }
 \arguments{
 \item{spec}{A report definition (\code{\link[=tfl_read_report_spec]{tfl_read_report_spec()}}) narrowed to one
-report, or the path(s) to read it from.}
+report, or the path(s) to read it from; or a report of the YAML spec
+(\code{\link[=tfl_output]{tfl_output()}}).}
 
 \item{output_id}{The report, when \code{spec} is a path or still defines
 several.}
+
+\item{study}{For a YAML report: the study (\code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}), for
+its settings and TOC.}
 }
 \value{
 A single path.
 }
 \description{
 \code{file.path(study$output_path, report$file)}, with \code{{output_id}} filled:
-the path \code{\link[rtfreporter:generate_rtfreport]{rtfreporter::generate_rtfreport()}} writes to.
+the path \code{\link[rtfreporter:generate_rtfreport]{rtfreporter::generate_rtfreport()}} writes to.  For a report of
+the YAML spec (\code{\link[=tfl_output]{tfl_output()}}): its own \code{file} (its \code{settings: file},
+else its TOC entry's), else \code{study.yml}'s \code{settings: file}
+(\code{"{output_id}.rtf"} when none says it), in \code{settings: output_path} as
+it is written (a relative one from the working directory).
 }
 \section{The table engine}{
 

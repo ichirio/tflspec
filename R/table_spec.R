@@ -2289,10 +2289,17 @@ tfl_report <- function(spec, output_id = NULL, content, study = NULL) {
 #' Where a report's RTF file goes
 #'
 #' `file.path(study$output_path, report$file)`, with `{output_id}` filled:
-#' the path [rtfreporter::generate_rtfreport()] writes to.
+#' the path [rtfreporter::generate_rtfreport()] writes to.  For a report of
+#' the YAML spec ([tfl_output()]): its own `file` (its `settings: file`,
+#' else its TOC entry's), else `study.yml`'s `settings: file`
+#' (`"{output_id}.rtf"` when none says it), in `settings: output_path` as
+#' it is written (a relative one from the working directory).
 #'
 #' @param spec A report definition ([tfl_read_report_spec()]) narrowed to one
-#'   report, or the path(s) to read it from.
+#'   report, or the path(s) to read it from; or a report of the YAML spec
+#'   ([tfl_output()]).
+#' @param study For a YAML report: the study ([tfl_read_study_spec()]), for
+#'   its settings and TOC.
 #' @inheritParams tfl_report
 #' @return A single path.
 #'
@@ -2302,9 +2309,20 @@ tfl_report <- function(spec, output_id = NULL, content, study = NULL) {
 #'
 #' @seealso [tfl_report()]
 #' @export
-tfl_report_path <- function(spec, output_id = NULL) {
-  sp <- .ard_spec_scope(.as_spec(spec, "table", "tfl_report_path",
-                                 output_id = output_id), output_id)
+tfl_report_path <- function(spec, output_id = NULL, study = NULL) {
+  if (inherits(spec, "tfl_output")) {
+    if (!inherits(study, "tfl_study_spec")) {
+      .ard_stop("tfl_report_path(): a YAML report needs its `study` (tfl_read_study_spec()).")
+    }
+    return(.output_rtf_path(spec, study))
+  }
+  .sheet_rtf_path(.ard_spec_scope(.as_spec(spec, "table", "tfl_report_path",
+                                          output_id = output_id), output_id))
+}
+
+# A report's RTF path from the sheets (a definition narrowed to one
+# report): its report row's file, in the study's output_path
+.sheet_rtf_path <- function(sp) {
   r <- .ard_spec_report_row(sp)
   out <- .ard_spec_study_value(sp, "output_path")
   if (is.na(out)) r$file else file.path(out, r$file)
@@ -2860,4 +2878,19 @@ tfl_as_table_spec <- function(x, output_id = NULL, compare = TRUE) {
   attr(sp, "not_converted") <- unique(lost)
   attr(sp, "same_pages") <- same
   sp
+}
+
+# A YAML report's RTF path (tfl_report_path(); the document's file too):
+# the report's own file (its settings: file, else its TOC entry's -- where
+# the converter puts a report row's file), else the study's settings: file,
+# else "{output_id}.rtf"; in the study's output_path (as it is: a relative
+# one from the working directory), or bare when it has none
+.output_rtf_path <- function(output, study) {
+  id <- output$id
+  set <- study$study$settings
+  entry <- .page_toc_entry(study, id)
+  file <- .ard_spec_fill_id(output$settings$file %||% entry[["file"]] %||% set$file %||%
+                              "{output_id}.rtf", id)
+  out <- set$output_path %||% NA_character_
+  if (is.na(out)) file else file.path(out, file)
 }
