@@ -57,10 +57,10 @@ tfl_write_spec_xlsx <- function(dir, path) {
     o <- outs[[id]]
     if (inherits(o$content, "tfl_r")) note(id, "content", "the content as R code is not rows")
     else if (length(o$content)) note(id, "content", "the layers (content) are not rows")
+    for (e in o$ard$analysis_data %||% list()) add_rows("analysis_data", list(.flat_map(c(list(output_id = id), e), "analysis_data", id, note)))
+    for (e in o$ard$analyses %||% list()) add_rows("analyses", list(.flat_map(c(list(output_id = id), e), "analyses", id, note)))
     if (!is.null(o$data)) {
-      for (e in o$data$analysis_data %||% list()) add_rows("analysis_data", list(.flat_map(c(list(output_id = id), e), "analysis_data", id, note)))
-      for (e in o$data$analyses %||% list()) add_rows("analyses", list(.flat_map(c(list(output_id = id), e), "analyses", id, note)))
-      for (k in setdiff(names(o$data), c("source", "analysis_data", "analyses", "dataset", "where", "sort"))) {
+      for (k in setdiff(names(o$data), c("source", "dataset", "where", "sort"))) {
         note(id, paste0("data.", k), "not rows (code, steps, objects)")
       }
     }

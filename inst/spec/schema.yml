@@ -322,7 +322,7 @@ cell_rows:
   dots: {style: named, type: "template|list<guard|template>", description: "A cell's lines, by the label of the row each sits on."}
 
 # ---- the ARD's analyses: cards and cardx calls -------------------------------
-# One analysis of a spec's `data.analyses` is one of these calls.  `data` is
+# One analysis of a spec's `ard.analyses` is one of these calls.  `data` is
 # the analysis data the spec names (`data: adsl_saf`), not an argument here.
 # A tidyselect argument (`variables`, `by`) is a column or a sequence of
 # them; `statistic`, `fmt_fun` and `stat_label` are maps by variable (the

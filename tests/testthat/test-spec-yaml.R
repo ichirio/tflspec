@@ -44,7 +44,7 @@ test_that("a report file reads: tags, nested calls, content items", {
   expect_identical(out$content[[4L]]$args$continuous$sd, 2L)    # plan_digits: by statistic
   # data and page
   expect_identical(out$data$source, "ard")
-  expect_identical(out$data$analyses[[2L]]$statistic$AGE[[2L]], "mean")
+  expect_identical(out$ard$analyses[[2L]]$statistic$AGE[[2L]], "mean")
   expect_identical(out$page$titles[["1"]]$center, "Table 14.1.1")
   expect_identical(out$codelists$TRT01A[[2L]]$label, "Low Dose")
 })
@@ -142,4 +142,11 @@ test_that("a sequence holding an !r or a call stays a list; one of scalars is a 
   g <- withr::local_tempfile(fileext = ".yml")
   tfl_write_output(o, g)
   expect_equal(tfl_read_output(g)$content, o$content)
+})
+
+test_that("analyses under data: (the old place) stop the read, naming ard:", {
+  f <- withr::local_tempfile(fileext = ".yml")
+  writeLines(c("id: T-1", "kind: table", "data:", "  source: ard", "  analyses:",
+               "    - id: A", "      method: categorical"), f)
+  expect_error(tfl_read_output(f), "ard: section")
 })
