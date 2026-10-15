@@ -64,6 +64,9 @@ tfl_convert_sheets_to_yaml <- function(from, to, content_fn = NULL, overwrite = 
 #'   as.
 #' @export
 tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALSE) {
+  # a cell's line breaks as the YAML's (Excel keeps a cell's as CRLF): every
+  # sheet's text, before the bridge reads it (a header's "{col}\r\n(N={n})")
+  sheets[c("table", "ard", "listing")] <- lapply(sheets[c("table", "ard", "listing")], .conv_lf_sheets)
   sp <- sheets$table
   plan <- sheets$planner
   ard <- sheets$ard
@@ -662,3 +665,16 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
 # read it (tfl_read_fig_design()): YAML 1.1, so its yes / no are TRUE / FALSE
 # (x_log: yes, na.rm: yes), unlike the new spec's reader
 .conv_read_fig <- function(path) yaml::read_yaml(path, handlers = list(r = tfl_r))
+
+# the data frames of a list of sheets with their text's CRLF / CR as LF
+.conv_lf_sheets <- function(x) {
+  if (is.null(x)) return(x)
+  cls <- class(x)
+  x <- lapply(unclass(x), function(d) {
+    if (!is.data.frame(d)) return(d)
+    for (j in seq_along(d)) if (is.character(d[[j]])) d[[j]] <- gsub("\r\n?", "\n", d[[j]])
+    d
+  })
+  class(x) <- cls
+  x
+}

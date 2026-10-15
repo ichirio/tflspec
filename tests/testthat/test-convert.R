@@ -294,7 +294,7 @@ test_that("an AE table with no ARD definition: its hierarchy from its rows and l
                        stringsAsFactors = FALSE),
     col_header = data.frame(output_id = "AE-1", line = c("1", "1", "2", "2"),
                             cols = c("row_label", ".values", "row_label", ".values"),
-                            text = c("", "{col}\n(N={n:sum})\n n (%)", "System Organ Class", "(N={n})"),
+                            text = c("", "{col}\r\n(N={n:sum})\r\n n (%)", "System Organ Class", "(N={n})"),
                             border_top = c(NA, "single", NA, NA), stringsAsFactors = FALSE))
   sp <- tfl_table_spec(tb)
   sheets <- list(table = unclass(sp),
@@ -311,8 +311,12 @@ test_that("an AE table with no ARD definition: its hierarchy from its rows and l
   code <- tfl_content_code(o)
   expect_true(any(grepl('normalize_ard(hierarchy = c("AEBODSYS", "AEDECOD"), overall = "Any TEAE")',
                         code, fixed = TRUE)))
+  # (a cell's Excel line breaks, CRLF, as the YAML's)
+  expect_false(any(grepl("\r", code, fixed = TRUE)))
+  expect_true(any(grepl("(N={n:sum})", code, fixed = TRUE)))
   # the plan's verbs as the sheets write them
-  s0 <- trimws(tfl_table_code(sp, "AE-1"))
+  # (the sheets' code keeps the cells' CRLF; the YAML's is LF)
+  s0 <- gsub("\\r", "", trimws(tfl_table_code(sp, "AE-1")), fixed = TRUE)
   s1 <- trimws(code)
   expect_identical(s1[grep("^plan_sort", s1):length(s1)], s0[grep("^plan_sort", s0):length(s0)])
   # and it runs on an ARD of that shape

@@ -8,7 +8,8 @@
   converter takes `normalize_ard()`'s hierarchy from the table's rows and
   label (`group1 = AEBODSYS`, `label = AEDECOD`: `hierarchy = c("AEBODSYS",
   "AEDECOD")`), its `overall` from `overall_label`, and lists it in
-  `_not_converted.yml` to check.
+  `_not_converted.yml` to check.  A cell's line breaks (Excel keeps them
+  as CRLF) are LF in the YAML.
 
 * **An NA argument stays NA; a default template and a report's rows by
   name are both kept** (#276, 0.0.24.9124; a user's study converted from
