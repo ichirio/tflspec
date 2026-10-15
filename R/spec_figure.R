@@ -71,9 +71,11 @@
   do.call(rbind, rows)
 }
 
-# the figure's code: the designer's, the figure in `content`, not saved
-# (the report's program writes it into its RTF)
+# the figure's code, the figure in `content`, not saved (the report's
+# program writes it into its RTF): of its items (R/fig_content.R), or of
+# the designer's design the old content stands for
 .content_fig_code <- function(output) {
+  if (.fig_new_content(output$content)) return(as.character(.fig_content_code(output)))
   # (the design as its list: tfl_fig_design_code() reads it as a design)
   design <- .fig_design_of_output(output)
   as.character(tfl_fig_design_code(design, plot_id = output$id, save = FALSE,
@@ -87,6 +89,16 @@
   env <- new.env(parent = globalenv())
   if (is.data.frame(data)) data <- list(df = data)
   for (n in names(data)) assign(n, data[[n]], envir = env)
+  # a figure of items runs after the study's figure setup (theme_tfl(),
+  # scale_colour_tfl(), tfl_colours()), as its program does
+  if (.fig_new_content(output$content)) {
+    eval(parse(text = tfl_fig_setup_code()), env)
+    if (!is.null(data$ard)) eval(parse(text = tfl_helpers_code()), env)
+    code <- .fig_content_code(output)
+    libs <- attr(code, "libs")
+    eval(parse(text = c(sprintf("suppressPackageStartupMessages(library(%s))", libs), code)), env)
+    return(get("content", envir = env, inherits = FALSE))
+  }
   eval(parse(text = .content_fig_code(output)), env)
   get("content", envir = env, inherits = FALSE)
 }

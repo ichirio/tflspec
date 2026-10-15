@@ -1684,3 +1684,694 @@ rtf_footnotes:
           FALSE.'
         example: 'TRUE'
 
+# ---- figures: the functions a figure's content calls -------------------------
+# A figure report's `content:` is its plots' items (R/fig_content.R): the
+# function that makes a plot first, then its layers and its settings, then
+# the items that arrange the plots and the image's.  `figure:` says which
+# (plot | layer | ggsurvfit_layer | scale | coord | facet | labs | theme |
+# guide | compose | image); `rank` their order on the screen; `label` the
+# function's meaning in English and Japanese; `visible` the arguments a
+# card shows (the rest are the installed function's formals); `aes` a
+# layer's aesthetics, `required` those it needs.  A function the catalog
+# does not have (pkg::fn) is written by its formals alone.
+
+# -- the functions that make a plot (a plot's first item) --
+
+ggplot:
+  package: ggplot2
+  figure: plot
+  rank: 100
+  label: {en: Standard plot, ja: Plot 作成}
+  description: "A plot of ggplot2; its layers and settings follow."
+  layers: [layer]
+  visible: [data, mapping]
+  args:
+    data: {type: object, label: {en: Data, ja: データ}}
+    mapping: {type: "map<string, column|r>", label: {en: Mapping shared by the layers, ja: レイヤー共通のマッピング}}
+
+ggsurvfit:
+  package: ggsurvfit
+  figure: plot
+  rank: 101
+  label: {en: Kaplan-Meier curves, ja: KM 曲線}
+  description: "Survival curves of a survfit2() fit (a data step of the figure)."
+  layers: [ggsurvfit_layer, layer]
+  visible: [x, linewidth, type]
+  dots: {style: named, type: "string|number|logical|list<number|string>|call|r", description: "Passed on to the layer (colour, linewidth, alpha ...)."}
+  args:
+    x: {type: object, label: {en: Fit, ja: 当てはめ}}
+    type: {type: "enum[survival|risk|cumhaz|cloglog]", label: {en: Scale, ja: 縦軸}}
+
+ggcuminc:
+  package: ggsurvfit
+  figure: plot
+  rank: 102
+  label: {en: Cumulative incidence, ja: 累積発生}
+  description: "Cumulative incidence curves of a tidycmprsk::cuminc() fit."
+  layers: [ggsurvfit_layer, layer]
+  visible: [x, outcome, linewidth]
+  dots: {style: named, type: "string|number|logical|list<number|string>|call|r", description: "Passed on to the layer (colour, linewidth, alpha ...)."}
+  args:
+    x: {type: object, label: {en: Fit, ja: 当てはめ}}
+    outcome: {type: "string|list<string>", label: {en: Outcome, ja: イベント}}
+
+tfl_risk_panel:
+  package: tflspec
+  figure: plot
+  rank: 103
+  label: {en: Number at risk, ja: number at risk の表}
+  description: "The number at risk at the x axis's breaks, from the fit, as a plot of its own under the curves (tflspec writes its code)."
+  layers: []
+  visible: [fit, title, size]
+  args:
+    fit: {type: object, label: {en: Fit, ja: 当てはめ}}
+    title: {type: string, label: {en: Title, ja: 題}}
+    size: {type: number, label: {en: Text size, ja: 文字の大きさ}}
+    by: {type: column, label: {en: Colour variable, ja: 色の変数}}
+    palette: {type: string, label: {en: Palette, ja: パレット}}
+    base_size: {type: number, label: {en: Base font size, ja: 基本の文字の大きさ}}
+
+tfl_text_column:
+  package: tflspec
+  figure: plot
+  rank: 104
+  label: {en: Text column, ja: 右のテキスト列}
+  description: "Columns of text beside a plot (a forest plot's N and estimate), as a plot of its own (tflspec writes its code)."
+  layers: []
+  visible: [data, y, columns, size]
+  args:
+    data: {type: object, label: {en: Data, ja: データ}}
+    "y": {type: column, label: {en: Row position, ja: 行の位置}}
+    columns: {type: string, label: {en: Columns (Heading = column | ...), ja: 列（見出し = 列 | ...）}}
+    size: {type: number, label: {en: Text size, ja: 文字の大きさ}}
+    base_size: {type: number, label: {en: Base font size, ja: 基本の文字の大きさ}}
+
+tfl_n_panel:
+  package: tflspec
+  figure: plot
+  rank: 105
+  label: {en: Table of n, ja: n の表}
+  description: "The n of each group at each x, as a plot of its own under the figure (tflspec writes its code)."
+  layers: []
+  visible: [data, x, group, label, title]
+  args:
+    data: {type: object, label: {en: Data, ja: データ}}
+    x: {type: column, label: {en: X, ja: x}}
+    group: {type: column, label: {en: Group, ja: 群}}
+    label: {type: column, label: {en: The n, ja: n の列}}
+    title: {type: string, label: {en: Title, ja: 題}}
+    by: {type: column, label: {en: Colour variable, ja: 色の変数}}
+    palette: {type: string, label: {en: Palette, ja: パレット}}
+    base_size: {type: number, label: {en: Base font size, ja: 基本の文字の大きさ}}
+
+# -- ggplot2's layers (inst/fig/geoms.csv) --
+
+geom_line:
+  package: ggplot2
+  figure: layer
+  rank: 200
+  label: {en: Lines, ja: "線"}
+  description: "Lines through the points of each group."
+  aes: {x: {required: true}, y: {required: true}, colour: {}, group: {}, linetype: {}}
+  visible: [mapping, linewidth, alpha, position]
+  args:
+    mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
+    data: {type: object, label: {en: Data, ja: データ}}
+    position: {type: "call|string|r", label: {en: Position, ja: 位置}}
+
+geom_point:
+  package: ggplot2
+  figure: layer
+  rank: 201
+  label: {en: Points, ja: "点"}
+  aes: {x: {required: true}, y: {required: true}, colour: {}, group: {}}
+  visible: [mapping, shape, size, alpha, na.rm, position]
+  args:
+    mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
+    data: {type: object, label: {en: Data, ja: データ}}
+    position: {type: "call|string|r", label: {en: Position, ja: 位置}}
+
+geom_errorbar:
+  package: ggplot2
+  figure: layer
+  rank: 202
+  label: {en: "Error bars", ja: "エラーバー"}
+  description: "From ymin to ymax, e.g. the summary's lo and hi."
+  aes: {x: {required: true}, ymin: {required: true}, ymax: {required: true}, colour: {}}
+  visible: [mapping, width, position]
+  args:
+    mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
+    data: {type: object, label: {en: Data, ja: データ}}
+    position: {type: "call|string|r", label: {en: Position, ja: 位置}}
+
+geom_pointrange:
+  package: ggplot2
+  figure: layer
+  rank: 203
+  label: {en: "Point and range", ja: "点と範囲"}
+  description: "A point with its interval."
+  aes: {x: {required: true}, y: {required: true}, ymin: {required: true}, ymax: {required: true}, colour: {}}
+  visible: [mapping, position]
+  args:
+    mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
+    data: {type: object, label: {en: Data, ja: データ}}
+    position: {type: "call|string|r", label: {en: Position, ja: 位置}}
+
+geom_col:
+  package: ggplot2
+  figure: layer
+  rank: 204
+  label: {en: Bars, ja: "棒"}
+  description: "Bars of height y."
+  aes: {x: {required: true}, y: {required: true}, fill: {}}
+  visible: [mapping, width, position, colour, position]
+  args:
+    mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
+    data: {type: object, label: {en: Data, ja: データ}}
+    position: {type: "call|string|r", label: {en: Position, ja: 位置}}
+
+geom_text:
+  package: ggplot2
+  figure: layer
+  rank: 205
+  label: {en: Text, ja: "文字"}
+  aes: {x: {required: true}, y: {required: true}, label: {required: true}, colour: {}}
+  visible: [mapping, size, position, vjust, position]
+  args:
+    mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
+    data: {type: object, label: {en: Data, ja: データ}}
+    position: {type: "call|string|r", label: {en: Position, ja: 位置}}
+
+geom_label:
+  package: ggplot2
+  figure: layer
+  rank: 206
+  label: {en: "Text in boxes", ja: "枠付きの文字"}
+  aes: {x: {required: true}, y: {required: true}, label: {required: true}}
+  visible: [mapping, size, position]
+  args:
+    mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
+    data: {type: object, label: {en: Data, ja: データ}}
+    position: {type: "call|string|r", label: {en: Position, ja: 位置}}
+
+geom_step:
+  package: ggplot2
+  figure: layer
+  rank: 207
+  label: {en: Steps, ja: "階段"}
+  aes: {x: {required: true}, y: {required: true}, colour: {}}
+  visible: [mapping]
+  args:
+    mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
+    data: {type: object, label: {en: Data, ja: データ}}
+
+geom_area:
+  package: ggplot2
+  figure: layer
+  rank: 208
+  label: {en: Area, ja: "面"}
+  aes: {x: {required: true}, y: {required: true}, fill: {}}
+  visible: [mapping, alpha]
+  args:
+    mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
+    data: {type: object, label: {en: Data, ja: データ}}
+
+geom_ribbon:
+  package: ggplot2
+  figure: layer
+  rank: 209
+  label: {en: Ribbon, ja: "帯"}
+  description: "A band from ymin to ymax."
+  aes: {x: {required: true}, ymin: {required: true}, ymax: {required: true}, fill: {}}
+  visible: [mapping, alpha]
+  args:
+    mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
+    data: {type: object, label: {en: Data, ja: データ}}
+
+geom_segment:
+  package: ggplot2
+  figure: layer
+  rank: 210
+  label: {en: Segments, ja: "線分"}
+  description: "Lines from (x, y) to (xend, yend), e.g. the bars of a swimmer plot."
+  aes: {x: {required: true}, y: {required: true}, xend: {required: true}, yend: {required: true}, colour: {}}
+  visible: [mapping, linewidth, arrow, alpha]
+  args:
+    mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
+    data: {type: object, label: {en: Data, ja: データ}}
+
+geom_tile:
+  package: ggplot2
+  figure: layer
+  rank: 211
+  label: {en: Tiles, ja: "タイル"}
+  description: "A heat map."
+  aes: {x: {required: true}, y: {required: true}, fill: {required: true}}
+  visible: [mapping]
+  args:
+    mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
+    data: {type: object, label: {en: Data, ja: データ}}
+
+geom_boxplot:
+  package: ggplot2
+  figure: layer
+  rank: 212
+  label: {en: "Box plots", ja: "箱ひげ"}
+  aes: {x: {required: true}, y: {required: true}, fill: {}}
+  visible: [mapping, width, outlier.shape, alpha, position, position]
+  args:
+    mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
+    data: {type: object, label: {en: Data, ja: データ}}
+    position: {type: "call|string|r", label: {en: Position, ja: 位置}}
+
+geom_violin:
+  package: ggplot2
+  figure: layer
+  rank: 213
+  label: {en: Violins, ja: "バイオリン"}
+  aes: {x: {required: true}, y: {required: true}, fill: {}}
+  visible: [mapping, position]
+  args:
+    mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
+    data: {type: object, label: {en: Data, ja: データ}}
+    position: {type: "call|string|r", label: {en: Position, ja: 位置}}
+
+geom_histogram:
+  package: ggplot2
+  figure: layer
+  rank: 214
+  label: {en: Histogram, ja: "ヒストグラム"}
+  aes: {x: {required: true}, fill: {}}
+  visible: [mapping, bins]
+  args:
+    mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
+    data: {type: object, label: {en: Data, ja: データ}}
+
+geom_density:
+  package: ggplot2
+  figure: layer
+  rank: 215
+  label: {en: Density, ja: "密度"}
+  aes: {x: {required: true}, colour: {}}
+  visible: [mapping]
+  args:
+    mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
+    data: {type: object, label: {en: Data, ja: データ}}
+
+geom_jitter:
+  package: ggplot2
+  figure: layer
+  rank: 216
+  label: {en: "Jittered points", ja: "ばらした点"}
+  aes: {x: {required: true}, y: {required: true}, colour: {}}
+  visible: [mapping, width, height, alpha, size]
+  args:
+    mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
+    data: {type: object, label: {en: Data, ja: データ}}
+
+geom_smooth:
+  package: ggplot2
+  figure: layer
+  rank: 217
+  label: {en: "Smoothed line", ja: "平滑線"}
+  description: "A fitted line and its band."
+  aes: {x: {required: true}, y: {required: true}, colour: {}}
+  visible: [mapping, method, se]
+  args:
+    mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
+    data: {type: object, label: {en: Data, ja: データ}}
+
+geom_hline:
+  package: ggplot2
+  figure: layer
+  rank: 218
+  label: {en: "Horizontal lines", ja: "水平線"}
+  description: "Reference lines, e.g. y = 0.5 (median), 0, or 20 and -30."
+  visible: [mapping, yintercept, linetype, colour, linewidth]
+  args:
+    mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
+    data: {type: object, label: {en: Data, ja: データ}}
+
+geom_vline:
+  package: ggplot2
+  figure: layer
+  rank: 219
+  label: {en: "Vertical lines", ja: "垂直線"}
+  visible: [mapping, xintercept, linetype, colour, linewidth]
+  args:
+    mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
+    data: {type: object, label: {en: Data, ja: データ}}
+
+geom_abline:
+  package: ggplot2
+  figure: layer
+  rank: 220
+  label: {en: "Diagonal line", ja: "直線"}
+  visible: [mapping, intercept, slope, linetype, colour]
+  args:
+    mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
+    data: {type: object, label: {en: Data, ja: データ}}
+
+geom_text_repel:
+  package: ggrepel
+  figure: layer
+  rank: 221
+  label: {en: "Text that avoids overlaps", ja: "重ならない文字"}
+  description: "Labels pushed apart (ggrepel)."
+  aes: {x: {required: true}, y: {required: true}, label: {required: true}, colour: {}}
+  visible: [mapping, size]
+  args:
+    mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
+    data: {type: object, label: {en: Data, ja: データ}}
+
+geom_sina:
+  package: ggforce
+  figure: layer
+  rank: 222
+  label: {en: "Sina plot", ja: "シナ"}
+  description: "Points spread by their density, e.g. a distribution per group (instead of box plot + jitter)."
+  aes: {x: {required: true}, y: {required: true}, colour: {}}
+  visible: [mapping, size, alpha]
+  args:
+    mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
+    data: {type: object, label: {en: Data, ja: データ}}
+
+
+# -- layers beyond the geoms --
+
+annotate:
+  package: ggplot2
+  figure: layer
+  rank: 290
+  label: {en: Annotation, ja: 注記}
+  visible: [geom, x, y, label]
+  dots: {style: named, type: "string|number|logical|list<number|string>|call|r", description: "The geom's parameters (size, colour, hjust ...)."}
+  args:
+    geom: {type: string, label: {en: Geom, ja: 種類}}
+    label: {type: "string|r", label: {en: Text, ja: 文字}}
+
+tfl_ard_number:
+  package: tflspec
+  figure: layer
+  rank: 291
+  label: {en: A number from the ARD, ja: ARD の数値の注記}
+  description: "A statistic of the ARD printed in the plot, as annotate() with ard_value() (tflspec writes its code)."
+  visible: [analysis_id, variable, level, stat, group, label, x, y]
+  args:
+    analysis_id: {type: string, label: {en: Analysis, ja: 解析}}
+    variable: {type: string, label: {en: Variable, ja: 変数}}
+    level: {type: "string|number", label: {en: Level, ja: 水準}}
+    stat: {type: string, label: {en: Statistic, ja: 統計量}}
+    group: {type: "string|map<string, string>", label: {en: Group, ja: 群}}
+    label: {type: string, label: {en: "Text ({value})", ja: "文字（{value}）"}}
+    digits: {type: number, label: {en: Digits, ja: 桁}}
+    x: {type: "number|string", label: {en: X, ja: x}}
+    "y": {type: "number|string", label: {en: Y, ja: y}}
+    hjust: {type: number, label: {en: Horizontal justification, ja: 横の位置合わせ}}
+    vjust: {type: number, label: {en: Vertical justification, ja: 縦の位置合わせ}}
+    size: {type: number, label: {en: Text size, ja: 文字の大きさ}}
+
+new_scale_colour:
+  package: ggnewscale
+  figure: layer
+  rank: 295
+  label: {en: New colour scale, ja: 新しい色のスケール}
+  description: "Between layers -- the layers after it get their own colour scale and legend."
+
+# -- ggsurvfit's layers (on a ggsurvfit or ggcuminc plot) --
+
+add_censor_mark:
+  package: ggsurvfit
+  figure: ggsurvfit_layer
+  rank: 250
+  label: {en: Censor marks, ja: 打ち切りの印}
+  visible: [shape, size, stroke]
+  dots: {style: named, type: "string|number|logical|list<number|string>|call|r", description: "Passed on to the layer (colour, linewidth, alpha ...)."}
+
+add_confidence_interval:
+  package: ggsurvfit
+  figure: ggsurvfit_layer
+  rank: 251
+  label: {en: Confidence bands, ja: 信頼帯}
+  visible: [type, alpha]
+  dots: {style: named, type: "string|number|logical|list<number|string>|call|r", description: "Passed on to the layer (colour, linewidth, alpha ...)."}
+
+add_risktable:
+  package: ggsurvfit
+  figure: ggsurvfit_layer
+  rank: 252
+  label: {en: Number at risk (ggsurvfit), ja: number at risk（ggsurvfit）}
+  visible: [times, risktable_stats, size]
+  dots: {style: named, type: "string|number|logical|list<number|string>|call|r", description: "Passed on to the layer (colour, linewidth, alpha ...)."}
+  args:
+    times: {type: "list<number>|r", label: {en: Times, ja: 時点}}
+
+add_quantile:
+  package: ggsurvfit
+  figure: ggsurvfit_layer
+  rank: 253
+  label: {en: Median line, ja: 中央値の線}
+  visible: [y_value, linetype]
+  dots: {style: named, type: "string|number|logical|list<number|string>|call|r", description: "Passed on to the layer (colour, linewidth, alpha ...)."}
+
+add_pvalue:
+  package: ggsurvfit
+  figure: ggsurvfit_layer
+  rank: 254
+  label: {en: p-value, ja: p 値}
+  visible: [location, caption]
+  dots: {style: named, type: "string|number|logical|list<number|string>|call|r", description: "Passed on to the layer (colour, linewidth, alpha ...)."}
+
+# -- the plot's settings --
+
+scale_x_continuous:
+  package: ggplot2
+  figure: scale
+  rank: 300
+  label: {en: X axis, ja: x 軸}
+  visible: [limits, breaks, labels]
+  groups:
+    - {label: {en: Range and breaks, ja: 範囲と刻み}, args: [limits, breaks]}
+  args:
+    limits: {type: "list<number>|r", label: {en: Range, ja: 範囲}}
+    breaks: {type: "list<number>|r", label: {en: Breaks, ja: 目盛り}}
+    labels: {type: "list<string>|r", label: {en: Tick labels, ja: 目盛りのラベル}}
+    expand: {type: "call|r", label: {en: Expansion, ja: 余白}}
+
+scale_y_continuous:
+  package: ggplot2
+  figure: scale
+  rank: 301
+  label: {en: Y axis, ja: y 軸}
+  visible: [limits, breaks, labels]
+  groups:
+    - {label: {en: Range and breaks, ja: 範囲と刻み}, args: [limits, breaks]}
+  args:
+    limits: {type: "list<number>|r", label: {en: Range, ja: 範囲}}
+    breaks: {type: "list<number>|r", label: {en: Breaks, ja: 目盛り}}
+    labels: {type: "list<string>|r", label: {en: Tick labels, ja: 目盛りのラベル}}
+    expand: {type: "call|r", label: {en: Expansion, ja: 余白}}
+
+scale_x_log10:
+  package: ggplot2
+  figure: scale
+  rank: 302
+  label: {en: X axis (log), ja: x 軸（対数）}
+  visible: [breaks, labels]
+
+scale_y_log10:
+  package: ggplot2
+  figure: scale
+  rank: 303
+  label: {en: Y axis (log), ja: y 軸（対数）}
+  visible: [breaks, labels]
+
+scale_x_discrete:
+  package: ggplot2
+  figure: scale
+  rank: 304
+  label: {en: X axis (groups), ja: x 軸（群）}
+  visible: [limits, labels]
+
+scale_colour_tfl:
+  package: tflspec
+  figure: scale
+  rank: 310
+  label: {en: Colours (company standard), ja: 色の割り当て（会社標準）}
+  description: "The colours of a palette of the study's figure style, scale_colour_tfl() of the study's figure setup."
+  visible: [palette, values]
+  args:
+    palette: {type: string, label: {en: Palette, ja: パレット}}
+    values: {type: "list<string>|r", label: {en: Groups in order, ja: 群（順に）}}
+    na.value: {type: string, label: {en: Colour of missing, ja: 欠測の色}}
+
+scale_fill_tfl:
+  package: tflspec
+  figure: scale
+  rank: 311
+  label: {en: Fill colours (company standard), ja: 塗りの割り当て（会社標準）}
+  visible: [palette, values]
+  args:
+    palette: {type: string, label: {en: Palette, ja: パレット}}
+    values: {type: "list<string>|r", label: {en: Groups in order, ja: 群（順に）}}
+    na.value: {type: string, label: {en: Colour of missing, ja: 欠測の色}}
+
+scale_colour_manual:
+  package: ggplot2
+  figure: scale
+  rank: 312
+  label: {en: Colours, ja: 色の割り当て}
+  visible: [values, breaks]
+  args:
+    values: {type: "vec<string, string>|list<string>|r", label: {en: Colours, ja: 色}}
+
+scale_fill_manual:
+  package: ggplot2
+  figure: scale
+  rank: 313
+  label: {en: Fill colours, ja: 塗りの割り当て}
+  visible: [values, breaks]
+  args:
+    values: {type: "vec<string, string>|list<string>|r", label: {en: Colours, ja: 色}}
+
+scale_shape_manual:
+  package: ggplot2
+  figure: scale
+  rank: 314
+  label: {en: Shapes, ja: 形の割り当て}
+  visible: [values, breaks]
+
+scale_linetype_manual:
+  package: ggplot2
+  figure: scale
+  rank: 315
+  label: {en: Line types, ja: 線種の割り当て}
+  visible: [values, breaks]
+
+coord_cartesian:
+  package: ggplot2
+  figure: coord
+  rank: 400
+  label: {en: Visible range, ja: 表示の範囲}
+  visible: [xlim, ylim, clip]
+  args:
+    xlim: {type: "list<number>|r", label: {en: X range, ja: x の範囲}}
+    ylim: {type: "list<number>|r", label: {en: Y range, ja: y の範囲}}
+    clip: {type: "enum[on|off]", label: {en: Clip, ja: はみ出し}}
+
+coord_equal:
+  package: ggplot2
+  figure: coord
+  rank: 401
+  label: {en: Equal axes, ja: 縦横同じ縮尺}
+  visible: [xlim, ylim]
+
+coord_flip:
+  package: ggplot2
+  figure: coord
+  rank: 402
+  label: {en: Flip axes, ja: 縦横の入れ替え}
+
+facet_wrap:
+  package: ggplot2
+  figure: facet
+  rank: 500
+  label: {en: Panels, ja: 面}
+  visible: [facets, ncol, scales]
+  args:
+    facets: {type: r, label: {en: Variables (vars()), ja: 変数（vars()）}}
+    scales: {type: "enum[fixed|free|free_x|free_y]", label: {en: Axes, ja: 軸}}
+
+facet_grid:
+  package: ggplot2
+  figure: facet
+  rank: 501
+  label: {en: Panel grid, ja: 面（格子）}
+  visible: [rows, cols, scales]
+  args:
+    rows: {type: r, label: {en: Rows (vars()), ja: 行（vars()）}}
+    cols: {type: r, label: {en: Columns (vars()), ja: 列（vars()）}}
+
+labs:
+  package: ggplot2
+  figure: labs
+  rank: 600
+  label: {en: Labels, ja: ラベル}
+  visible: [x, "y", title, colour]
+  dots: {style: named, type: "string|r", description: "The labels by aesthetic (x, y, colour, fill ...); !r NULL for none."}
+  args:
+    title: {type: "string|r", label: {en: Title, ja: 題}}
+    subtitle: {type: "string|r", label: {en: Subtitle, ja: 副題}}
+    caption: {type: "string|r", label: {en: Caption, ja: 注}}
+
+theme_tfl:
+  package: tflspec
+  figure: theme
+  rank: 700
+  label: {en: Theme (company standard), ja: テーマ（会社標準）}
+  description: "The study's figure style's theme, theme_tfl() of the study's figure setup."
+  visible: [theme]
+  args:
+    type: {type: string, label: {en: Figure type, ja: 図の種類}}
+    theme: {type: "enum[boxed|L_axis|classic]|string", label: {en: Theme, ja: テーマ}}
+
+theme:
+  package: ggplot2
+  figure: theme
+  rank: 701
+  label: {en: Theme settings, ja: テーマの設定}
+  description: "Settings added one by one (legend.position, axis.text.x ...); a text, a line or a rectangle as {fn: element_text, args}, none as {fn: element_blank}."
+  add_setting: true
+  args:
+    legend.position: {type: "enum[bottom|right|top|left|none|inside]|r", label: {en: Legend position, ja: 凡例の位置}}
+
+guides:
+  package: ggplot2
+  figure: guide
+  rank: 800
+  label: {en: Legends, ja: 凡例}
+  dots: {style: named, type: "call|string|r", description: "A guide by aesthetic: {fn: guide_legend, args: {nrow: 1}}, or none."}
+
+# -- the plots arranged, and the image --
+
+wrap_plots:
+  package: patchwork
+  figure: compose
+  rank: 850
+  label: {en: Arrangement, ja: 配置}
+  visible: [plots, ncol, nrow, heights, widths, guides]
+  args:
+    plots: {type: "list<string>", label: {en: Plots (by name), ja: plot（名前）}}
+    ncol: {type: integer, label: {en: Columns, ja: 列の数}}
+    nrow: {type: integer, label: {en: Rows, ja: 行の数}}
+    heights: {type: "list<number>", label: {en: Heights, ja: 高さ}}
+    widths: {type: "list<number>", label: {en: Widths, ja: 幅}}
+    guides: {type: "enum[keep|collect|auto]", label: {en: Legends, ja: 凡例}}
+
+plot_layout:
+  package: patchwork
+  figure: compose
+  rank: 851
+  label: {en: Layout, ja: レイアウト}
+  visible: [heights, widths, guides]
+
+plot_annotation:
+  package: patchwork
+  figure: compose
+  rank: 852
+  label: {en: Annotation of the whole, ja: 全体の注記}
+  visible: [title, tag_levels]
+
+tfl_image:
+  package: tflspec
+  figure: image
+  rank: 900
+  label: {en: Image, ja: 画像}
+  description: "The image the figure is written as -- its size on the page, resolution, format and file; always the content's last item."
+  visible: [width_in, height_in, dpi, format, file]
+  args:
+    width_in: {type: "number|enum[fit]", label: {en: Width (in), ja: 幅（インチ）}}
+    height_in: {type: "number|enum[fit]", label: {en: Height (in), ja: 高さ（インチ）}}
+    dpi: {type: integer, label: {en: Resolution (dpi), ja: 解像度（dpi）}}
+    format: {type: "enum[png|svg|pdf]", label: {en: Format, ja: 形式}}
+    file: {type: string, label: {en: File, ja: ファイル}}

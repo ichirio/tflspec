@@ -113,8 +113,21 @@ tfl_plot <- function(name, items = list(), from = "own") {
 # the arguments that name an object of the figure's data (written bare)
 .fig_object_args <- c("data", "fit")
 
+# the arguments of `fn` that name an object of the figure's data: the
+# schema's of type `object` (ggsurvfit's x), and data / fit
+.fig_objects_of <- function(fn) {
+  ent <- tfl_schema(fn)
+  own <- names(Filter(function(a) identical(a$type, "object"), ent$args %||% list()))
+  unique(c(.fig_object_args, own))
+}
+
 # A value of an item as the R it stands for (a language object)
-.fig_value_lang <- function(v, arg = "") {
+.fig_value_lang <- function(v, arg = "", objects = .fig_object_args) {
+  if (inherits(v, "tfl_unset")) {
+    warning(sprintf(paste0("A figure's `%s` is !unset, which removes a key in the layering; ",
+                           "NULL is !r NULL: written as NULL."), arg), call. = FALSE)
+    return(NULL)
+  }
   if (inherits(v, "tfl_r")) return(str2lang(as.character(unclass(v))))
   if (inherits(v, "tfl_call")) {
     a <- lapply(stats::setNames(names(v$args %||% list()), names(v$args %||% list())),
@@ -126,7 +139,7 @@ tfl_plot <- function(name, items = list(), from = "own") {
                                else as.name(e))
     return(as.call(c(list(as.name("aes")), a)))
   }
-  if (arg %in% .fig_object_args && is.character(v) && length(v) == 1L) return(as.name(v))
+  if (arg %in% objects && is.character(v) && length(v) == 1L) return(as.name(v))
   if (is.list(v)) {
     el <- lapply(v, .fig_value_lang)
     return(as.call(c(list(as.name("c")), el)))
@@ -147,7 +160,8 @@ tfl_plot <- function(name, items = list(), from = "own") {
 # An item as its call
 .fig_item_lang <- function(it) {
   a <- it$args %||% list()
-  args <- lapply(stats::setNames(names(a), names(a)), function(k) .fig_value_lang(a[[k]], k))
+  obj <- .fig_objects_of(it$fn)
+  args <- lapply(stats::setNames(names(a), names(a)), function(k) .fig_value_lang(a[[k]], k, obj))
   as.call(c(list(.fig_fn_sym(it$fn)), args))
 }
 
@@ -171,11 +185,11 @@ tfl_plot <- function(name, items = list(), from = "own") {
 # aes() by its name, an object (data, fit) by its name, a constructor of
 # constants (position_dodge, element_text ...) as {fn:, args:}, anything
 # else as R (!r)
-.fig_lang_value <- function(x, arg = "") {
+.fig_lang_value <- function(x, arg = "", objects = .fig_object_args) {
   if (is.null(x)) return(tfl_r("NULL"))
   if (is.atomic(x) && length(x) == 1L) return(x)
   if (is.name(x)) {
-    if (arg %in% .fig_object_args) return(as.character(x))
+    if (arg %in% objects) return(as.character(x))
     return(tfl_r(as.character(x)))
   }
   if (is.call(x)) {
@@ -226,7 +240,8 @@ tfl_plot <- function(name, items = list(), from = "own") {
     return(tfl_item(".r", list(code = tfl_r(.fig_deparse(e)))))
   }
   names(a) <- nm
-  tfl_item(f, lapply(stats::setNames(nm, nm), function(k) .fig_lang_value(a[[k]], k)))
+  obj <- .fig_objects_of(f)
+  tfl_item(f, lapply(stats::setNames(nm, nm), function(k) .fig_lang_value(a[[k]], k, obj)))
 }
 
 .fig_find_fun <- function(f, env = NULL) {
@@ -539,7 +554,7 @@ tfl_fig_content_from_design <- function(design) {
   k <- l$layer
   for (f in c("layer", "method", "height", "width", "side")) l[[f]] <- NULL
   common <- list(base_size = .pv(plot, "base_size"))
-  colours <- list(by = plot$colour_by, palette = .pv(plot, "palette"))
+  colours <- Filter(Negate(is.null), list(by = plot$colour_by, palette = .pv(plot, "palette")))
   switch(k,
     risk_table = list(name = "risk", item = tfl_item("tfl_risk_panel",
                                                      c(.fig_plain_args(l), colours, common))),
