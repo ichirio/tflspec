@@ -64,6 +64,13 @@ tfl_convert_sheets_to_yaml <- function(from, to, content_fn = NULL, overwrite = 
 #'   as.
 #' @export
 tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALSE) {
+  # a cell's line breaks as the YAML's (Excel keeps a cell's as CRLF): every
+  # sheet's text, before the bridge reads it (a header's "{col}\r\n(N={n})")
+  sheets[c("table", "ard", "listing")] <- lapply(sheets[c("table", "ard", "listing")], .conv_lf_sheets)
+  # a table's font size is its plan's (plan_style()), not the document's
+  # rtf_tables(): the report sheet's table_font_size_half_points onto the
+  # style sheet (where it is blank)
+  if (!is.null(sheets$table)) sheets$table <- .conv_font_to_style(sheets$table)
   sp <- sheets$table
   plan <- sheets$planner
   ard <- sheets$ard
@@ -396,7 +403,6 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   report = c(
     auto_section = "rtf_tables.auto_section", section_align = "rtf_tables.section_label_align",
     auto_title = "rtf_tables.auto_title", title_align = "rtf_tables.title_label_align",
-    table_font_size_half_points = "rtf_tables.font_size_half_points",
     title_font_size_half_points = "rtf_titles.font_size_half_points",
     footnote_font_size_half_points = "rtf_footnotes.font_size_half_points",
     watermark = "rtf_document.watermark"))
@@ -489,10 +495,20 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
       if (!is.na(lr$blank_row[1L]) && identical(lr$blank_row[1L], "TRUE")) blank_row <- TRUE
     }
     content <- list(tfl_item("plan_listing", args))
+    # its font size (the report sheet's, on the style sheet): the plan's
+    fs <- if (!is.null(sp$style) && nrow(sp$style) && "font_size_half_points" %in% names(sp$style)) {
+      v <- sp$style$font_size_half_points[!is.na(sp$style$output_id) & sp$style$output_id == id]
+      v[!is.na(v) & nzchar(v)]
+    }
+    if (length(fs)) content <- c(content, list(tfl_item("plan_style", list(font_size_half_points = as.integer(fs[1L])))))
     if (isTRUE(blank_row)) content <- c(content, list(tfl_item("plan_blanks", list(where = "records"))))
     if (nrow(lr) && !is.na(lr$max_rows[1L])) {
       content <- c(content, list(tfl_item("plan_paginate_rows", list(max_rows = as.integer(lr$max_rows[1L])))))
     }
+  } else if (kind %in% c("figure", "listing")) {
+    # a figure with no design, a listing with no rows yet: nothing of a
+    # table's (its data its own code, or a dataset)
+    data <- list(source = if (kind == "figure") "code" else "dataset")
   } else {
     # the data stage of a table: the study ARD (`object`), then its steps
     # (the rework step of the sheets, R as it was)
@@ -504,7 +520,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     if (!is.null(sp)) {
       if (!is.null(content_fn)) {
         content <- .conv_items(content_fn(sp, id))
-        nz <- .conv_normalize_args(sp, ard, id)
+        nz <- .conv_normalize_args(sp, ard, id, note)
         if (length(nz)) content <- c(list(tfl_item("normalize_ard", nz)), content)
       }
       else if (any(vapply(c("tables", "variables", "cells", "digits", "layout", "columns", "style", "col_header", "cell_styles"),
@@ -594,7 +610,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
 # A table's normalize_ard() arguments, as tfl_normalize_code() reads them:
 # its tables row (overall_label, stack, stack_sep, stack_nest) and its
 # hierarchical analysis (hierarchy).  Nothing: the defaults' normalize_ard().
-.conv_normalize_args <- function(sp, ard, id) {
+.conv_normalize_args <- function(sp, ard, id, note = function(...) NULL) {
   t <- sp$tables
   t <- if (is.null(t)) NULL else t[!is.na(t$output_id) & t$output_id == id, , drop = FALSE]
   val <- function(col) {
@@ -609,6 +625,34 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
                an$method %in% c("hierarchical", "cards::ard_stack_hierarchical",
                                 "cards::ard_stack_hierarchical_count"), , drop = FALSE]
     if (nrow(an)) out$hierarchy <- .split_bar(an$variables[1L])
+  }
+  # no ARD definition to say it (an ARD made elsewhere): a table whose rows
+  # are groups and whose label is a variable is a hierarchy -- its groups,
+  # then the label's variable (rows `group1 = AEBODSYS`, label `label =
+  # AEDECOD`: SOC / PT); said, to check
+  has_ard <- !is.null(ard) && any(!is.na(ard$analyses$output_id) & ard$analyses$output_id == id)
+  if (is.null(out$hierarchy) && !has_ard) {
+    rows <- val("rows")
+    lv <- val("label")
+    grp <- character()
+    if (!is.null(rows)) {
+      for (p in trimws(strsplit(rows, "|", fixed = TRUE)[[1L]])) {
+        kv <- trimws(strsplit(p, "=", fixed = TRUE)[[1L]])
+        if (length(kv) == 2L && grepl("^group[0-9]+$", kv[1L])) grp[kv[1L]] <- kv[2L]
+      }
+    }
+    lab_var <- if (!is.null(lv)) {
+      kv <- trimws(strsplit(lv, "=", fixed = TRUE)[[1L]])
+      v <- kv[length(kv)]
+      if (length(kv) %in% 1:2 && grepl("^[A-Za-z][A-Za-z0-9_.]*$", v) && !v %in% c(".label", "NA")) v
+    }
+    if (length(grp) && !is.null(lab_var)) {
+      grp <- grp[order(as.integer(sub("^group", "", names(grp))))]
+      out$hierarchy <- unname(c(grp, lab_var))
+      note(id, "tables", 1, "rows", paste0(
+        "normalize_ard()'s hierarchy taken from the table's rows and label (no hierarchical ",
+        "analysis in an ARD definition): check it"), paste(out$hierarchy, collapse = " | "))
+    }
   }
   lab <- val("overall_label")
   if (!is.null(lab)) out$overall <- lab
@@ -630,3 +674,52 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
 # read it (tfl_read_fig_design()): YAML 1.1, so its yes / no are TRUE / FALSE
 # (x_log: yes, na.rm: yes), unlike the new spec's reader
 .conv_read_fig <- function(path) yaml::read_yaml(path, handlers = list(r = tfl_r))
+
+# the data frames of a list of sheets with their text's CRLF / CR as LF
+.conv_lf_sheets <- function(x) {
+  if (is.null(x)) return(x)
+  cls <- class(x)
+  x <- lapply(unclass(x), function(d) {
+    if (!is.data.frame(d)) return(d)
+    for (j in seq_along(d)) if (is.character(d[[j]])) d[[j]] <- gsub("\r\n?", "\n", d[[j]])
+    d
+  })
+  class(x) <- cls
+  x
+}
+
+# The report sheet's table_font_size_half_points as the style sheet's
+# font_size_half_points of the same report (or the study's row), where that
+# is blank; the report column then blank
+.conv_font_to_style <- function(sp) {
+  r <- sp$report
+  if (is.null(r) || !nrow(r) || !"table_font_size_half_points" %in% names(r)) return(sp)
+  cls <- class(sp)
+  st <- sp$style
+  if (is.null(st)) st <- data.frame(output_id = character(), stringsAsFactors = FALSE)
+  if (!"font_size_half_points" %in% names(st)) st$font_size_half_points <- rep(NA_character_, nrow(st))
+  if (!"output_id" %in% names(st)) st$output_id <- rep(NA_character_, nrow(st))
+  same <- function(a, b) (is.na(a) & is.na(b)) | (!is.na(a) & !is.na(b) & a == b)
+  for (i in seq_len(nrow(r))) {
+    v <- r$table_font_size_half_points[i]
+    if (is.na(v) || !nzchar(trimws(v))) next
+    if (identical(r$type[i] %||% NA_character_, "figure")) next
+    id <- r$output_id[i]
+    if (!is.na(id) && !nzchar(id)) id <- NA_character_
+    k <- which(same(st$output_id, id))
+    if (!length(k)) {
+      st[nrow(st) + 1L, ] <- NA
+      k <- nrow(st)
+      st$output_id[k] <- id
+    }
+    k <- k[1L]
+    if (is.na(st$font_size_half_points[k]) || !nzchar(st$font_size_half_points[k])) {
+      st$font_size_half_points[k] <- as.character(v)
+    }
+    r$table_font_size_half_points[i] <- NA_character_
+  }
+  sp$report <- r
+  sp$style <- st
+  class(sp) <- cls
+  sp
+}

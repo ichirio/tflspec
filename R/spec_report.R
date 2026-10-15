@@ -93,7 +93,7 @@
     ta <- args_of("rtf_tables")
     st[[length(st) + 1L]] <- do.call(.spec_call, c(list("rtf_tables", doc, .spec_sym(content)),
       ta[intersect(c("auto_section", "section_label_align", "auto_title",
-                     "title_label_align", "font_size_half_points"), names(ta))]))
+                     "title_label_align"), names(ta))]))
   }
   if (length(tt)) {
     st[[length(st) + 1L]] <- .spec_call("rtf_titles", doc, list(tt),

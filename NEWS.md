@@ -1,5 +1,40 @@
 # tflspec (development version)
 
+* **A table's font size is its plan's** (#279, 0.0.24.9124; a user's PK
+  table warned `rtf_tables(font_size_half_points = ) is deprecated`).  The
+  report sheet's `table_font_size_half_points` is the table's
+  `plan_style(font_size_half_points = )` (the sheets' table code, the
+  converter's content via the style sheet), no longer `rtf_tables()`'s (a
+  listing's pages, made apart by the sheets, still pass it there).  A YAML
+  written before, with `page: rtf_tables: font_size_half_points`, has it moved
+  to the content's `plan_style()` by `tfl_resolve_output()` (the report's own
+  `plan_style` key wins): the table keeps its size.
+
+* **An AE table with no ARD definition gets its hierarchy** (#278,
+  0.0.24.9124; a user's AE table stopped at `table_plan(label = ): no
+  column 'AEDECOD'`).  The sheets knew a table's hierarchy only from the
+  ARD definition's hierarchical analysis; a study whose ARD is made by its
+  own program has none.  For a report with no ARD definition, the
+  converter takes `normalize_ard()`'s hierarchy from the table's rows and
+  label (`group1 = AEBODSYS`, `label = AEDECOD`: `hierarchy = c("AEBODSYS",
+  "AEDECOD")`), its `overall` from `overall_label`, and lists it in
+  `_not_converted.yml` to check.  A cell's line breaks (Excel keeps them
+  as CRLF) are LF in the YAML.
+
+* **An NA argument stays NA; a default template and a report's rows by
+  name are both kept** (#276, 0.0.24.9124; a user's study converted from
+  the workbooks stopped at `table_plan(label = ): no column 'NA'`).  A
+  logical NA (`table_plan(label = NA)`) is written `.na` and read back NA,
+  not the text "NA".  The layering of a named-dots verb keeps a key that is
+  one template in the defaults and rows by name in the report (or the
+  other way) as both, the template first: `plan_cells(default = list("{n}
+  ({p}%)", n = ..., orr_ci = ...))`, as the sheets make it.
+
+* **A figure with no design gets nothing of a table's** (#274, 0.0.24.9124).
+  The converter gave a figure with no design (and no code of its own),
+  and a listing with no rows, a table's data and content (`table_plan: {}`):
+  its data is its own code now (`source: code`), a listing's a dataset.
+
 * **A nested variable keeps its place in the round trip** (#273,
   0.0.24.9123; found by S2 with tflplanner's SAMPLE-01).  A variable under
   another's level (`under`, `plan_nest()`) with no heading of its own is

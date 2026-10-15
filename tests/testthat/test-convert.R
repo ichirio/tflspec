@@ -210,3 +210,147 @@ test_that("a hand-written figure's datasets and ARD, and a row's note, go to YAM
   expect_identical(back$listing$figures$ard, "TRUE")
   expect_identical(back$ard$analyses$note[1L], "why this analysis")
 })
+
+test_that("a figure with no design gets nothing of a table's", {
+  skip_if_not_installed("openxlsx")
+  from <- conv_study(withr::local_tempdir())
+  books <- file.path(from, "spec", c("table_spec.xlsx", "report_spec.xlsx"))
+  sheets <- list(
+    table = tfl_read_table_spec(books),
+    planner = tflspec:::.conv_read_planner_sheet(books),
+    ard = tflspec:::.conv_read_ard(file.path(from, "spec", "ard_definition.json")),
+    listing = tflspec:::.conv_read_lf(file.path(from, "spec", "listing_figure_spec.xlsx")),
+    figures = list(),
+    study = yaml::read_yaml(file.path(from, "study.yml")))
+  # F-1 without its design file: a figure of no design yet
+  sheets$planner[nrow(sheets$planner) + 1L, ] <- NA
+  sheets$planner$output_id[nrow(sheets$planner)] <- "F-1"
+  r <- sheets$table$report
+  r[nrow(r) + 1L, ] <- NA
+  r$output_id[nrow(r)] <- "F-1"
+  r$type[nrow(r)] <- "figure"
+  sheets$table$report <- r
+  to <- withr::local_tempdir()
+  tfl_yaml_from_sheets(sheets, to, overwrite = TRUE)
+  f1 <- tfl_read_outputs(to)[["F-1"]]
+  expect_identical(f1$kind, "figure")
+  expect_identical(f1$data$source, "code")
+  expect_length(f1$content, 0L)
+  # and back: no figure design for it
+  expect_null(tfl_sheets_from_yaml(to)$figures[["F-1"]]$template)
+})
+
+test_that("a table of label NA, rows by name over a default template, row groups: YAML code = the sheets'", {
+  # (a study converted from the workbooks: a label NA, rows by name)
+  tb <- list(
+    tables = data.frame(output_id = "T-9", cols = "TRT01A", rows = "group = variable", label = "NA",
+                        sort = "group | .label", stringsAsFactors = FALSE),
+    cells = data.frame(output_id = c(NA, "T-9", "T-9"), variable = NA_character_,
+                       row = c(NA, "n", "ci"),
+                       template = c("{n} ({p:.1f%})", "{n}", "{estimate:.1f} ({conf.low:.1f}, {conf.high:.1f})"),
+                       stringsAsFactors = FALSE),
+    layout = data.frame(output_id = "T-9", group_col = "variable", group_mode = "row",
+                        group_collapse = "TRUE", blank_where = "groups", blank_first = "FALSE",
+                        blank_last = "FALSE", pages_max_rows = "30", pages_split = "rows",
+                        stringsAsFactors = FALSE),
+    columns = data.frame(output_id = "T-9", column = c("row_label", ".values"), rel_width = c("30", "10"),
+                         row_title = c("TRUE", NA), stringsAsFactors = FALSE),
+    style = data.frame(output_id = "T-9", align_count_pct = "TRUE", stringsAsFactors = FALSE))
+  sp <- tfl_table_spec(tb)
+  sheets <- list(table = unclass(sp),
+                 planner = data.frame(output_id = c(NA, "T-9"), description = c("(every report)", "t"),
+                                      setup_code = NA_character_, process_code = NA_character_,
+                                      section = NA_character_, population = NA_character_,
+                                      datasets = NA_character_, batches = NA_character_,
+                                      stringsAsFactors = FALSE),
+                 study = list(study_id = "U-1"))
+  to <- withr::local_tempdir()
+  tfl_yaml_from_sheets(sheets, to, overwrite = TRUE)
+  o <- tfl_resolve_output(tfl_read_outputs(to)[["T-9"]], tfl_read_study_spec(to))
+  expect_identical(o$content[[1L]]$args$label, NA)
+  y <- tfl_content_code(o)
+  # the same plan as the sheets' (its data normalized first, a step of its own)
+  s0 <- trimws(sub("^plan <- table_plan[(]data, ", "table_plan(", tfl_table_code(sp, "T-9")))
+  s1 <- trimws(y[-(1:2)])
+  expect_identical(s1, s0)
+})
+
+test_that("an AE table with no ARD definition: its hierarchy from its rows and label, and it runs", {
+  skip_if_not_installed("cards")
+  # (an AE table whose ARD is made by its own program)
+  tb <- list(
+    tables = data.frame(output_id = "AE-1", cols = "TRTA", rows = "group1 = AEBODSYS",
+                        label = "label = AEDECOD", overall_label = "Any TEAE",
+                        sort = ".overall | group1 | .depth | -n | label", header_n = "table",
+                        stringsAsFactors = FALSE),
+    cells = data.frame(output_id = "AE-1", variable = NA, row = NA, template = "{n:d} ({p:.1f%})",
+                       stringsAsFactors = FALSE),
+    layout = data.frame(output_id = "AE-1", stub_name = "row_label", stub_before = "TRUE",
+                        blank_where = "between_groups", blank_first = "TRUE", blank_last = "TRUE",
+                        blank_counted = "TRUE", pages_max_rows = "26", pages_split = "group_force",
+                        stringsAsFactors = FALSE),
+    style = data.frame(output_id = "AE-1", align_count_pct = "TRUE", row_height_twips = "210",
+                       stringsAsFactors = FALSE),
+    col_header = data.frame(output_id = "AE-1", line = c("1", "1", "2", "2"),
+                            cols = c("row_label", ".values", "row_label", ".values"),
+                            text = c("", "{col}\r\n(N={n:sum})\r\n n (%)", "System Organ Class", "(N={n})"),
+                            border_top = c(NA, "single", NA, NA), stringsAsFactors = FALSE))
+  sp <- tfl_table_spec(tb)
+  sheets <- list(table = unclass(sp),
+                 planner = data.frame(output_id = c(NA, "AE-1"), description = c("(every report)", "ae"),
+                                      setup_code = NA_character_, process_code = NA_character_,
+                                      section = NA_character_, population = NA_character_,
+                                      datasets = NA_character_, batches = NA_character_,
+                                      stringsAsFactors = FALSE),
+                 study = list(study_id = "U-1"))
+  to <- withr::local_tempdir()
+  r <- tfl_yaml_from_sheets(sheets, to, overwrite = TRUE)
+  expect_true(any(grepl("hierarchy taken from the table's rows", r$not_converted$reason)))
+  o <- tfl_resolve_output(tfl_read_outputs(to)[["AE-1"]], tfl_read_study_spec(to))
+  code <- tfl_content_code(o)
+  expect_true(any(grepl('normalize_ard(hierarchy = c("AEBODSYS", "AEDECOD"), overall = "Any TEAE")',
+                        code, fixed = TRUE)))
+  # (a cell's Excel line breaks, CRLF, as the YAML's)
+  expect_false(any(grepl("\r", code, fixed = TRUE)))
+  expect_true(any(grepl("(N={n:sum})", code, fixed = TRUE)))
+  # the plan's verbs as the sheets write them
+  # (the sheets' code keeps the cells' CRLF; the YAML's is LF)
+  s0 <- gsub("\\r", "", trimws(tfl_table_code(sp, "AE-1")), fixed = TRUE)
+  s1 <- trimws(code)
+  expect_identical(s1[grep("^plan_sort", s1):length(s1)], s0[grep("^plan_sort", s0):length(s0)])
+  # and it runs on an ARD of that shape
+  ard <- cards::ard_stack_hierarchical(cards::ADAE, variables = c(AEBODSYS, AEDECOD), by = TRTA,
+                                       denominator = cards::ADSL, id = USUBJID, over_variables = TRUE)
+  expect_s3_class(tfl_content_run(o, ard), "table_plan")
+})
+
+test_that("a table's font size (the report sheet's) is its plan's plan_style(), not rtf_tables()'s", {
+  # (rtf_tables(font_size_half_points = ) is deprecated)
+  sp <- tfl_table_spec(list(
+    tables = data.frame(output_id = "T-8", cols = "TRT", rows = "group = variable",
+                        stringsAsFactors = FALSE),
+    report = data.frame(output_id = "T-8", type = "table", table_font_size_half_points = "16",
+                        stringsAsFactors = FALSE)))
+  # the sheets: the plan says it, the document does not
+  expect_true(any(grepl("plan_style(font_size_half_points = 16", tfl_table_code(sp, "T-8"), fixed = TRUE)))
+  rc <- tfl_report_code(sp, "T-8", content = "plan")
+  expect_false(any(grepl("font_size_half_points", rc, fixed = TRUE)))
+  # the YAML: the same, in the report's content
+  sheets <- list(table = unclass(sp),
+                 planner = data.frame(output_id = c(NA, "T-8"), description = c("(every report)", "t"),
+                                      setup_code = NA_character_, process_code = NA_character_,
+                                      section = NA_character_, population = NA_character_,
+                                      datasets = NA_character_, batches = NA_character_,
+                                      stringsAsFactors = FALSE),
+                 study = list(study_id = "U-1"))
+  to <- withr::local_tempdir()
+  tfl_yaml_from_sheets(sheets, to, overwrite = TRUE)
+  st <- tfl_read_study_spec(to)
+  o <- tfl_resolve_output(tfl_read_outputs(to)[["T-8"]], st)
+  expect_identical(Filter(function(it) identical(it$fn, "plan_style"), o$content)[[1L]]$args$font_size_half_points, 16L)
+  expect_null(o$page$rtf_tables$font_size_half_points)
+  expect_false(any(grepl("font_size_half_points", tfl_report_code(o, content = "plan", study = st), fixed = TRUE)))
+  # and back: the style sheet's
+  st2 <- tfl_sheets_from_yaml(to)$table$style
+  expect_identical(st2$font_size_half_points[st2$output_id %in% "T-8"], "16")
+})
