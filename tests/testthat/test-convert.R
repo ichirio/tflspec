@@ -324,3 +324,34 @@ test_that("an AE table with no ARD definition: its hierarchy from its rows and l
                                        denominator = cards::ADSL, id = USUBJID, over_variables = TRUE)
   expect_s3_class(tfl_content_run(o, ard), "table_plan")
 })
+
+test_that("a table's font size (the report sheet's) is its plan's plan_style(), not rtf_tables()'s", {
+  # (a user's PK table: rtf_tables(font_size_half_points = ) is deprecated)
+  sp <- tfl_table_spec(list(
+    tables = data.frame(output_id = "T-8", cols = "TRT", rows = "group = variable",
+                        stringsAsFactors = FALSE),
+    report = data.frame(output_id = "T-8", type = "table", table_font_size_half_points = "16",
+                        stringsAsFactors = FALSE)))
+  # the sheets: the plan says it, the document does not
+  expect_true(any(grepl("plan_style(font_size_half_points = 16", tfl_table_code(sp, "T-8"), fixed = TRUE)))
+  rc <- tfl_report_code(sp, "T-8", content = "plan")
+  expect_false(any(grepl("font_size_half_points", rc, fixed = TRUE)))
+  # the YAML: the same, in the report's content
+  sheets <- list(table = unclass(sp),
+                 planner = data.frame(output_id = c(NA, "T-8"), description = c("(every report)", "t"),
+                                      setup_code = NA_character_, process_code = NA_character_,
+                                      section = NA_character_, population = NA_character_,
+                                      datasets = NA_character_, batches = NA_character_,
+                                      stringsAsFactors = FALSE),
+                 study = list(study_id = "U-1"))
+  to <- withr::local_tempdir()
+  tfl_yaml_from_sheets(sheets, to, overwrite = TRUE)
+  st <- tfl_read_study_spec(to)
+  o <- tfl_resolve_output(tfl_read_outputs(to)[["T-8"]], st)
+  expect_identical(Filter(function(it) identical(it$fn, "plan_style"), o$content)[[1L]]$args$font_size_half_points, 16L)
+  expect_null(o$page$rtf_tables$font_size_half_points)
+  expect_false(any(grepl("font_size_half_points", tfl_report_code(o, content = "plan", study = st), fixed = TRUE)))
+  # and back: the style sheet's
+  st2 <- tfl_sheets_from_yaml(to)$table$style
+  expect_identical(st2$font_size_half_points[st2$output_id %in% "T-8"], "16")
+})

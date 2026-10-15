@@ -327,6 +327,12 @@
 
   sty <- if (nrow(sp$style)) .ard_spec_typed(sp$style[1L, ], "style")
          else list()
+  # the report sheet's table_font_size_half_points: the table's own font size
+  # (rtfreporter: a table's appearance is its plan's, not rtf_tables()'s)
+  if (is.null(sty[["font_size_half_points"]])) {
+    rp <- .ard_spec_report_font(sp)
+    if (!is.null(rp)) sty[["font_size_half_points"]] <- rp
+  }
   cl <- sp$columns
   ct <- lapply(seq_len(nrow(cl)), function(i)
     .ard_spec_typed(cl[i, , drop = FALSE], "columns"))
@@ -1312,12 +1318,15 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
       width_twips = if (sz$mode[["width"]] != "native") twips(sz$width_in),
       height_twips = if (sz$mode[["height"]] != "native") twips(sz$height_in))
   } else {
+    # (a table's font size is its plan's, plan_style(): .plan_spec_steps();
+    # a listing's pages are made apart, so it is still said here)
     st[[length(st) + 1L]] <- .spec_call("rtf_tables", doc, .spec_sym(content),
       auto_section = r$auto_section,
       section_label_align = r$section_align,
       auto_title = r$auto_title,
       title_label_align = r$title_align,
-      font_size_half_points = r$table_font_size_half_points)
+      font_size_half_points = if (identical(r$type %||% "table", "listing"))
+        r$table_font_size_half_points)
   }
   tt <- .ard_spec_band(sp, "titles", tokens)
   if (length(tt)) {
@@ -1501,4 +1510,20 @@ tfl_report_code <- function(spec, output_id = NULL, content = "content",
                                        fixed = TRUE))
   }
   .drop_attached_ns(unlist(strsplit(out, "\n", fixed = TRUE)))
+}
+
+# The report sheet's table_font_size_half_points of a definition narrowed to
+# one report (its own row, else the study's), an integer; NULL when it says
+# none or has no report sheet
+.ard_spec_report_font <- function(sp) {
+  r <- sp$report
+  if (is.null(r) || !nrow(r) || !"table_font_size_half_points" %in% names(r)) return(NULL)
+  v <- r$table_font_size_half_points
+  id <- attr(sp, "output_id")
+  own <- if (!is.null(id)) v[!is.na(r$output_id) & r$output_id == id] else character()
+  dflt <- v[is.na(r$output_id) | !nzchar(r$output_id)]
+  x <- c(own[!is.na(own) & nzchar(own)], dflt[!is.na(dflt) & nzchar(dflt)])
+  if (!length(x)) return(NULL)
+  n <- suppressWarnings(as.integer(x[1L]))
+  if (is.na(n)) NULL else n
 }

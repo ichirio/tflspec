@@ -67,6 +67,10 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   # a cell's line breaks as the YAML's (Excel keeps a cell's as CRLF): every
   # sheet's text, before the bridge reads it (a header's "{col}\r\n(N={n})")
   sheets[c("table", "ard", "listing")] <- lapply(sheets[c("table", "ard", "listing")], .conv_lf_sheets)
+  # a table's font size is its plan's (plan_style()), not the document's
+  # rtf_tables(): the report sheet's table_font_size_half_points onto the
+  # style sheet (where it is blank)
+  if (!is.null(sheets$table)) sheets$table <- .conv_font_to_style(sheets$table)
   sp <- sheets$table
   plan <- sheets$planner
   ard <- sheets$ard
@@ -399,7 +403,6 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   report = c(
     auto_section = "rtf_tables.auto_section", section_align = "rtf_tables.section_label_align",
     auto_title = "rtf_tables.auto_title", title_align = "rtf_tables.title_label_align",
-    table_font_size_half_points = "rtf_tables.font_size_half_points",
     title_font_size_half_points = "rtf_titles.font_size_half_points",
     footnote_font_size_half_points = "rtf_footnotes.font_size_half_points",
     watermark = "rtf_document.watermark"))
@@ -492,6 +495,12 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
       if (!is.na(lr$blank_row[1L]) && identical(lr$blank_row[1L], "TRUE")) blank_row <- TRUE
     }
     content <- list(tfl_item("plan_listing", args))
+    # its font size (the report sheet's, on the style sheet): the plan's
+    fs <- if (!is.null(sp$style) && nrow(sp$style) && "font_size_half_points" %in% names(sp$style)) {
+      v <- sp$style$font_size_half_points[!is.na(sp$style$output_id) & sp$style$output_id == id]
+      v[!is.na(v) & nzchar(v)]
+    }
+    if (length(fs)) content <- c(content, list(tfl_item("plan_style", list(font_size_half_points = as.integer(fs[1L])))))
     if (isTRUE(blank_row)) content <- c(content, list(tfl_item("plan_blanks", list(where = "records"))))
     if (nrow(lr) && !is.na(lr$max_rows[1L])) {
       content <- c(content, list(tfl_item("plan_paginate_rows", list(max_rows = as.integer(lr$max_rows[1L])))))
@@ -677,4 +686,40 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   })
   class(x) <- cls
   x
+}
+
+# The report sheet's table_font_size_half_points as the style sheet's
+# font_size_half_points of the same report (or the study's row), where that
+# is blank; the report column then blank
+.conv_font_to_style <- function(sp) {
+  r <- sp$report
+  if (is.null(r) || !nrow(r) || !"table_font_size_half_points" %in% names(r)) return(sp)
+  cls <- class(sp)
+  st <- sp$style
+  if (is.null(st)) st <- data.frame(output_id = character(), stringsAsFactors = FALSE)
+  if (!"font_size_half_points" %in% names(st)) st$font_size_half_points <- rep(NA_character_, nrow(st))
+  if (!"output_id" %in% names(st)) st$output_id <- rep(NA_character_, nrow(st))
+  same <- function(a, b) (is.na(a) & is.na(b)) | (!is.na(a) & !is.na(b) & a == b)
+  for (i in seq_len(nrow(r))) {
+    v <- r$table_font_size_half_points[i]
+    if (is.na(v) || !nzchar(trimws(v))) next
+    if (identical(r$type[i] %||% NA_character_, "figure")) next
+    id <- r$output_id[i]
+    if (!is.na(id) && !nzchar(id)) id <- NA_character_
+    k <- which(same(st$output_id, id))
+    if (!length(k)) {
+      st[nrow(st) + 1L, ] <- NA
+      k <- nrow(st)
+      st$output_id[k] <- id
+    }
+    k <- k[1L]
+    if (is.na(st$font_size_half_points[k]) || !nzchar(st$font_size_half_points[k])) {
+      st$font_size_half_points[k] <- as.character(v)
+    }
+    r$table_font_size_half_points[i] <- NA_character_
+  }
+  sp$report <- r
+  sp$style <- st
+  class(sp) <- cls
+  sp
 }

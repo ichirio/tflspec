@@ -1,5 +1,12 @@
 # tflspec (development version)
 
+* **A table's font size is its plan's** (#279, 0.0.24.9124; a user's PK
+  table warned `rtf_tables(font_size_half_points = ) is deprecated`).  The
+  report sheet's `table_font_size_half_points` is the table's
+  `plan_style(font_size_half_points = )` (the sheets' table code, the
+  converter's content via the style sheet), no longer `rtf_tables()`'s (a
+  listing's pages, made apart by the sheets, still pass it there).
+
 * **An AE table with no ARD definition gets its hierarchy** (#278,
   0.0.24.9124; a user's AE table stopped at `table_plan(label = ): no
   column 'AEDECOD'`).  The sheets knew a table's hierarchy only from the
