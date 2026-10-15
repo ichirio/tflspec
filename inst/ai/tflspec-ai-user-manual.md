@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9127** (the development version,
+**This manual documents tflspec 0.0.24.9128** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -665,8 +665,9 @@ content:
   ARD as a text) and its **settings** (`scale_*`, `coord_*`, `facet_*`,
   `labs`, `theme_tfl` / `theme`, `guides`), `+`-ed in their order.  An
   item's keys are the function's arguments (`tfl_schema("geom_line")`,
-  the schema's figure catalog; a function it does not have, `pkg::fn`,
-  is written by its formals).
+  the schema's figure catalog -- ggplot2, ggsurvfit, patchwork, and
+  ggrepel, ggnewscale, ggh4x, ggtext, written `pkg::fn` in the code; a
+  function it does not have, `pkg::fn`, is written by its formals).
 - `mapping:` is `aes()`: a map of columns (`!r` for an expression); a
   constant is the function's argument, not the mapping (`colour: grey50`).
   `data:` and a fit name an object of the data steps.  `NULL` is `!r

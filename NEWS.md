@@ -1,5 +1,20 @@
 # tflspec (development version)
 
+* **Every design converts; four extension packages in the figure catalog**
+  (#286, 0.0.24.9128).  `tfl_fig_content_from_design()` converts a figure
+  type of its own (ae_dot, butterfly, edish, sankey, sunburst, forest_or)
+  to its R (`content: !r`), which `tfl_content_run()` runs with the
+  datasets by their names after the figure setup -- the same figure; and a
+  composed design (`plots:` + `compose:`) to named plots sharing one data
+  part (each plot's objects renamed after it, `df_km`, `fit_km`),
+  `compose.layout` to `wrap_plots()` (one row or one column),
+  `compose.add` to items (`&` kept as the item's `op`), `plot.dpi` to
+  `tfl_image`.  The figure catalog adds ggrepel's `geom_label_repel`,
+  ggtext's `geom_richtext`, `element_markdown`, `element_textbox_simple`,
+  ggnewscale's `new_scale_fill` and ggh4x's `facet_nested`,
+  `facet_nested_wrap`, `facetted_pos_scales` (in Suggests); a function of
+  a package the program does not attach is written `pkg::fn`.
+
 * **`tfl_fig_template(form = "items")`** (#284, 0.0.24.9127): a template
   as a figure report's content of function calls -- `template`, `args`
   (what it was given), `data` (the report's `data:`), `content` (each

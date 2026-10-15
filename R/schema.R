@@ -194,6 +194,11 @@ tfl_schema_check <- function(item) {
   for (a in names(args)) {
     v <- args[[a]]
     if (inherits(v, "tfl_unset")) next
+    # a figure's arrangement item says how it joins the plots (op: "&")
+    if (identical(a, "op") && !is.null(ent$figure)) {
+      if (!v %in% c("+", "&")) bad(a, "op is + or &")
+      next
+    }
     if (!is.null(ent$args[[a]]$renamed_to)) {
       bad(a, .schema_renamed_text(fn, a, ent$args[[a]]), "warning")
       next
