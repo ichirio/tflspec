@@ -56,7 +56,10 @@ test_that("every tflspec function the manual names exists", {
   named <- unique(unlist(regmatches(lines, gregexpr("\\btfl(spec)?_[a-z_]+\\b", lines))))
   named <- setdiff(named, c("tfl_ard_normalize", "tfl_plan", "tfl_apply_plan",
                             "tfl_plan_",   # the former names of section 11
-                            "tfl_stats"))  # a generated program's list
+                            "tfl_stats",   # a generated program's list
+                            # a figure's content items tflspec writes the code of
+                            "tfl_ard_number", "tfl_risk_panel", "tfl_text_column",
+                            "tfl_n_panel", "tfl_image"))
   named <- named[!startsWith(named, "tfl_plan_")]
   expect_identical(setdiff(named, getNamespaceExports("tflspec")), character(0))
 })

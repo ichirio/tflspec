@@ -75,7 +75,10 @@ tfl_schema <- function(fn = NULL) {
     gg <- .schema_ggplot_entry(if (identical(ent$package, "ggplot2")) nm else paste0(ent$package, "::", nm))
     if (!is.null(gg)) {
       for (k in setdiff(names(gg$args), names(ent$args))) ent$args[[k]] <- gg$args[[k]]
-      ent$aes_all <- gg$aes
+      # the catalog's aesthetics (those it needs marked) and the layer's own
+      cat_aes <- ent$aes %||% list()
+      ent$aes_required <- names(Filter(function(a) isTRUE(a$required), cat_aes))
+      ent$aes <- unique(c(names(cat_aes), gg$aes))
     }
   }
   ent %||% .schema_fig_entries()[[nm]] %||%
@@ -162,6 +165,11 @@ tfl_schema_check <- function(item) {
   fn <- item$fn
   out <- data.frame(fn = character(), arg = character(), level = character(),
                     message = character(), stringsAsFactors = FALSE)
+  # a figure's named plot: its items, each; a figure's R item: R
+  if (inherits(item, "tfl_plot")) {
+    return(do.call(rbind, c(list(out), lapply(item$items, tfl_schema_check))))
+  }
+  if (identical(fn, ".r")) return(out)
   bad <- function(arg, msg, level = "error") {
     out[nrow(out) + 1L, ] <<- list(fn, arg, level, msg)
   }

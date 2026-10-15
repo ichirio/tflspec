@@ -5,9 +5,21 @@
 \alias{tfl_yaml_from_sheets}
 \title{Convert a study's definition sheets to the YAML spec}
 \usage{
-tfl_convert_sheets_to_yaml(from, to, content_fn = NULL, overwrite = FALSE)
+tfl_convert_sheets_to_yaml(
+  from,
+  to,
+  content_fn = NULL,
+  overwrite = FALSE,
+  figures = c("design", "items")
+)
 
-tfl_yaml_from_sheets(sheets, to, content_fn = NULL, overwrite = FALSE)
+tfl_yaml_from_sheets(
+  sheets,
+  to,
+  content_fn = NULL,
+  overwrite = FALSE,
+  figures = c("design", "items")
+)
 }
 \arguments{
 \item{from}{The study folder (or a folder of the definition files).}
@@ -20,6 +32,12 @@ the package's own bridge from the sheets to the layers
 (\code{.plan_content_from_sheets()}) when it is there, else none.}
 
 \item{overwrite}{Write over files already in \code{to}?}
+
+\item{figures}{How a figure is written: \code{"design"} (default) its
+designer's pieces as the content's items, as the figure designer reads
+them; \code{"items"} its content of function calls, plot by plot
+(\code{\link[=tfl_fig_content_from_design]{tfl_fig_content_from_design()}}: \code{ggplot}, \code{geom_line}, ...,
+\code{tfl_image}), the form the designer is moving to.}
 
 \item{sheets}{The definition as objects, a list: \code{table} (a
 \code{tfl_table_spec}, or its sheets; the report sheets with them),

@@ -480,9 +480,7 @@ tfl_fig_content_from_design <- function(design) {
   layers <- design$layers
   kinds <- vapply(layers, function(l) l$layer %||% "", "")
   ard_layers <- layers[kinds == "ard_number"]
-  by <- plot$colour_by
   pname <- .pv(plot, "palette")
-  levels_of <- if (!is.null(by)) tfl_r(sprintf("levels(factor(df$%s))", by))
   items <- list()
   for (t in .fig_split_plus(main)) {
     txt <- .fig_deparse(t)
@@ -494,7 +492,7 @@ tfl_fig_content_from_design <- function(design) {
       items <- c(items, list(tfl_item("tfl_ard_number", .fig_plain_args(l))))
       next
     }
-    pal_scale <- .fig_pal_scale(t, pname, levels_of)
+    pal_scale <- .fig_pal_scale(t, pname)
     if (!is.null(pal_scale)) {
       items <- c(items, list(pal_scale))
       next
@@ -531,15 +529,16 @@ tfl_fig_content_from_design <- function(design) {
 
 # the design's palette scale (scale_colour_manual(values = pal, breaks =
 # names(pal))) as the setup's own scale: scale_colour_tfl()
-.fig_pal_scale <- function(t, pname, levels_of) {
+.fig_pal_scale <- function(t, pname) {
   if (!is.call(t)) return(NULL)
   f <- .fig_deparse(t[[1L]])
   if (!f %in% c("scale_colour_manual", "scale_fill_manual")) return(NULL)
   a <- as.list(t)[-1L]
   if (!identical(a$values, as.name("pal"))) return(NULL)
   rest <- a[setdiff(names(a), c("values", "breaks"))]
-  args <- c(list(palette = pname), if (!is.null(levels_of)) list(values = levels_of),
-            lapply(rest, .fig_lang_value))
+  # (the colours in the order of the scale's values: the groups' order,
+  # as the design's names gave them)
+  args <- c(list(palette = pname), lapply(rest, .fig_lang_value))
   tfl_item(sub("_manual$", "_tfl", f), args)
 }
 
@@ -585,4 +584,106 @@ tfl_fig_content_from_design <- function(design) {
   nm <- vapply(syms, function(s) names(names_of)[match(s, names_of)], "")
   args <- c(list(plots = unname(nm)), if (below) list(ncol = 1L) else list(nrow = 1L), lay)
   tfl_item("wrap_plots", args)
+}
+
+# ---- an item's arguments as R text, and back ---------------------------------
+
+#' An item's arguments as R, and R as an item's arguments
+#'
+#' A card of the builder can be edited as the R a function takes:
+#' `tfl_args_to_r()` writes an item's arguments (its `args`, as the spec
+#' holds them) as the text of a call's arguments -- `cols = "TRTA", rows =
+#' c(group = "variable")`; `tfl_args_from_r()` reads that text back into
+#' the item's arguments, each value in the form the spec file holds it
+#' (the schema's types: a map for a named vector, `!r` for an expression,
+#' `{fn:, args:}` for a call of constants), and checks them
+#' ([tfl_schema_check()]).  A figure's functions (`ggplot`, `geom_line`,
+#' `labs` ...) are read as the figure's content reads them: `aes()` as a
+#' map of columns, the plot's data by its name.
+#'
+#' @param fn The function's name (`plan_cells`, `geom_line`).
+#' @param args The item's arguments, a named list.
+#' @param text The arguments as R: what goes between the call's
+#'   parentheses.
+#' @return `tfl_args_to_r()`: one string.  `tfl_args_from_r()`: the
+#'   arguments, a named list, with the problems of the check as the
+#'   attribute `problems` (none: no rows).
+#' @examples
+#' tfl_args_to_r("plan_cells", list(categorical = "{n} ({p:.1f%})"))
+#' a <- tfl_args_from_r("geom_line", "aes(x = AVISIT, y = mean), linewidth = 0.5")
+#' str(a)
+#' tfl_args_to_r("geom_line", a)
+#' @export
+tfl_args_to_r <- function(fn, args) {
+  if (!is.character(fn) || length(fn) != 1L) .ard_stop("tfl_args_to_r(): `fn` is a function's name.")
+  args <- args %||% list()
+  if (.fig_is_figure_fn(fn)) {
+    e <- .fig_item_lang(tfl_item(fn, args))
+    return(sub("\\)$", "", sub("^[^(]*\\(", "", .fig_deparse(e))))
+  }
+  vals <- .schema_to_r(fn, args)
+  nm <- names(vals) %||% rep("", length(vals))
+  paste(vapply(seq_along(vals), function(i) {
+    v <- .spec_code_line(vals[[i]])
+    if (nzchar(nm[i])) paste(.spec_name(nm[i]), "=", v) else v
+  }, ""), collapse = ", ")
+}
+
+#' @rdname tfl_args_to_r
+#' @export
+tfl_args_from_r <- function(fn, text) {
+  if (!is.character(fn) || length(fn) != 1L) .ard_stop("tfl_args_from_r(): `fn` is a function's name.")
+  e <- tryCatch(str2lang(sprintf("%s(%s)", .schema_fn_name(fn), paste(text, collapse = "\n"))),
+                error = function(err) .ard_stop(sprintf("tfl_args_from_r(): not R: %s", conditionMessage(err))))
+  if (.fig_is_figure_fn(fn)) {
+    e[[1L]] <- .fig_fn_sym(fn)
+    it <- .fig_lang_item(e)
+    if (identical(it$fn, ".r")) {
+      .ard_stop(sprintf("tfl_args_from_r(): an argument of %s() with no name its formals can give it.", fn))
+    }
+    args <- it$args
+  } else {
+    a <- as.list(e)[-1L]
+    vals <- lapply(a, .args_value_of)
+    args <- .schema_from_r(fn, vals)
+  }
+  attr(args, "problems") <- tfl_schema_check(tfl_item(fn, args))
+  args
+}
+
+# a call's argument as R holds it: what evaluates on its own (a constant,
+# c(group = "variable"), cell_rows() of templates and guards) as its
+# value, anything else (a column, an expression) as an expression
+.args_value_of <- function(x) {
+  if (is.name(x)) return(.spec_expr(as.character(x)))
+  if (is.atomic(x)) return(x)
+  env <- new.env(parent = if (requireNamespace("rtfreporter", quietly = TRUE))
+    asNamespace("rtfreporter") else baseenv())
+  v <- tryCatch(eval(x, env), error = function(e) NULL)
+  if (!is.null(v) && !is.function(v)) return(v)
+  .spec_expr(.fig_deparse(x))
+}
+
+# a function of a figure's content (the catalog's, or a ggplot2 layer or
+# setting the catalog has not)
+.fig_is_figure_fn <- function(fn) {
+  nm <- .schema_fn_name(fn)
+  ent <- .schema_all(figure = FALSE)[[nm]]
+  if (!is.null(ent$figure)) return(TRUE)
+  is.null(ent) && grepl("^(geom|stat|scale|coord|facet|theme|guide|position|element)_", nm)
+}
+
+# A figure report of the designer's pieces as one of function calls: its
+# design (the data steps, the layers, `plot:`) converted, the rest of the
+# report as it is (its page, code lists, ARD)
+.fig_output_to_items <- function(output) {
+  if (.fig_new_content(output$content) || inherits(output$content, "tfl_r")) return(output)
+  x <- tfl_fig_content_from_design(.fig_design_of_output(output))
+  output$data <- c(x$data, output$data[setdiff(names(output$data), c("source", "steps", "stats"))])
+  output$content <- x$content
+  output$plot <- NULL
+  output$plots <- NULL
+  output$compose <- NULL
+  if (!is.null(x$template)) output$template <- x$template
+  output
 }

@@ -323,7 +323,7 @@
     figures = list(`F-1` = unclass(.ai_example_figure())),
     study = list(study_id = "XYZ-001",
                  title = "A made-up study (CDISC pilot data)"))
-  suppressMessages(tfl_yaml_from_sheets(sheets, dir, overwrite = TRUE))
+  suppressMessages(tfl_yaml_from_sheets(sheets, dir, overwrite = TRUE, figures = "items"))
   unlink(file.path(dir, "spec", "_not_converted.yml"))
   a <- .ai_example_assumptions()
   where <- c(populations = "spec/data.yml populations", datasets = "spec/data.yml datasets",
@@ -468,12 +468,15 @@
         "    - {step: read, dataset: ADVS}",
         "    - {step: param, value: SYSBP}",
         "    - {step: summary, name: sm, value: AVAL, by: 'TRTA, AVISIT', interval: se}",
-        "content:                       # the figure's layers, a layer each",
-        "  - line: {data: sm, x: AVISIT, 'y': mean, colour: TRTA}",
-        "  - errorbar: {data: sm, x: AVISIT, colour: TRTA}",
-        "plot:",
-        "  x_label: Visit",
-        "  y_label: Mean (SE)",
+        "content:                       # the function that makes the plot, its layers, its settings",
+        "  - ggplot: {data: sm, mapping: {x: AVISIT, 'y': mean, colour: TRTA}}",
+        "  - geom_line: {position: {fn: position_dodge, args: {width: 0.3}}}",
+        "  - geom_errorbar: {mapping: {ymin: lo, ymax: hi}, width: 0.2,",
+        "                   position: {fn: position_dodge, args: {width: 0.3}}}",
+        "  - scale_colour_tfl: {palette: treatment}   # the company standard's colours",
+        "  - labs: {x: Visit, 'y': Mean (SE)}",
+        "  - theme_tfl: {}                            # the company standard's theme",
+        "  - tfl_image: {dpi: 300}                    # the image: always the last item",
         "page:",
         "  titles:",
         "    '1': {center: Figure 14.2.1}"),
