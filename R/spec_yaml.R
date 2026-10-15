@@ -42,8 +42,11 @@
 #' @param label,population The report's label and analysis set (`NA`: none).
 #' @param extends The files layered under this one, nearest first
 #'   (`"defaults"`, `"patterns/<name>"`); `"none"` for none.
-#' @param data What the report reads (a list: `source`, `analysis_data`,
-#'   `analyses`, `code`, `objects`).
+#' @param data What the report reads, its step 1 (a list: `source` --
+#'   `"ard"`, `"code"` or `"dataset"` -- and `object`, `steps`, `code`,
+#'   `dataset` ...).
+#' @param ard The report's part of the study ARD, made in the ARD stage
+#'   before any report (a list: `analysis_data`, `analyses`); `NULL` none.
 #' @param codelists The report's code lists, by variable.
 #' @param content The layers, a list of `tfl_item`.
 #' @param page The document: `titles`, `footnotes`, `header`, `footer`
@@ -94,7 +97,7 @@ tfl_item <- function(fn, args = list(), from = "own") {
 tfl_output <- function(id, kind = c("table", "figure", "listing"),
                        label = NA_character_, population = NA_character_,
                        extends = "defaults", data = NULL, codelists = list(),
-                       content = list(), page = list()) {
+                       content = list(), page = list(), ard = NULL) {
   if (!is.character(id) || length(id) != 1L || is.na(id) ||
       !grepl("^[A-Za-z0-9][A-Za-z0-9._-]*$", id)) {
     stop("tfl_output(): `id` is letters, digits, '.', '_' or '-' (T-14-1-1).",
@@ -112,7 +115,7 @@ tfl_output <- function(id, kind = c("table", "figure", "listing"),
   }
   structure(list(id = id, kind = kind,
                  label = .na_scalar(label), population = .na_scalar(population),
-                 extends = extends, data = data, codelists = codelists,
+                 extends = extends, ard = ard, data = data, codelists = codelists,
                  content = content, page = page),
             class = "tfl_output")
 }
@@ -136,6 +139,10 @@ print.tfl_output <- function(x, ...) {
   cat("<tfl_output> ", x$id, " (", x$kind, ")",
       if (!is.na(x$label)) paste0(": ", x$label), "\n", sep = "")
   cat("  extends: ", paste(x$extends, collapse = ", "), "\n", sep = "")
+  if (length(x$ard$analyses)) {
+    cat("  ard: ", paste(vapply(x$ard$analyses, function(a) a$id %||% "?", ""), collapse = ", "),
+        "\n", sep = "")
+  }
   if (inherits(x$content, "tfl_r")) {
     cat("  content: (R code)\n")
   } else if (length(x$content)) {
@@ -236,6 +243,7 @@ tfl_read_output <- function(path) {
   out <- tfl_output(
     id = y$id, kind = y$kind, label = y$label, population = y$population,
     extends = as.character(unlist(extends)),
+    ard = if (!is.null(y$ard)) .calls_in(y$ard),
     data = .data_steps_in(.calls_in(y$data)), codelists = y$codelists %||% list(),
     content = content, page = .calls_in(y$page %||% list()))
   for (k in setdiff(names(y), c(.output_fields, "outputs", "base"))) out[[k]] <- .calls_in(y[[k]])
@@ -304,6 +312,7 @@ tfl_write_output <- function(x, path) {
   if (!is.na(x$label)) y$label <- x$label
   if (!is.na(x$population)) y$population <- x$population
   y$extends <- as.list(x$extends)
+  if (length(x$ard)) y$ard <- .calls_out(x$ard)
   if (!is.null(x$data)) y$data <- .calls_out(x$data)
   if (length(x$codelists)) y$codelists <- x$codelists
   y$content <- if (inherits(x$content, "tfl_r")) x$content else .items_to_list(x$content)
@@ -314,7 +323,7 @@ tfl_write_output <- function(x, path) {
   y
 }
 
-.output_fields <- c("id", "kind", "label", "population", "extends", "data", "codelists",
+.output_fields <- c("id", "kind", "label", "population", "extends", "ard", "data", "codelists",
                     "content", "page")
 
 .calls_out <- function(x) {

@@ -44,7 +44,7 @@ test_that("a report file reads: tags, nested calls, content items", {
   expect_identical(out$content[[4L]]$args$continuous$sd, 2L)    # plan_digits: by statistic
   # data and page
   expect_identical(out$data$source, "ard")
-  expect_identical(out$data$analyses[[2L]]$statistic$AGE[[2L]], "mean")
+  expect_identical(out$ard$analyses[[2L]]$statistic$AGE[[2L]], "mean")
   expect_identical(out$page$titles[["1"]]$center, "Table 14.1.1")
   expect_identical(out$codelists$TRT01A[[2L]]$label, "Low Dose")
 })

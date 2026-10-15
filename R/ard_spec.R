@@ -816,7 +816,7 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 #'
 #' @param spec An [tfl_ard_spec()] (or the path of one), or a study of the
 #'   YAML spec ([tfl_read_study_spec()]): its data catalog and its reports'
-#'   `data.analysis_data` / `data.analyses`, the reports in the TOC's order,
+#'   `ard.analysis_data` / `ard.analyses`, the reports in the TOC's order,
 #'   its code lists the reports' own (when `codelists` is `NULL`).
 #' @param output_id Only these outputs' analyses; `NULL` for all.
 #' @param save `FALSE` leaves out the final `saveRDS()`.  For one report's
