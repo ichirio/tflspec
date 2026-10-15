@@ -1,5 +1,16 @@
 # tflspec (development version)
 
+* **`tfl_image`: a figure drawn at its size on the page** (#282,
+  0.0.24.9126).  A figure of items' `tfl_image` gives its size on the page
+  (`width_in` / `height_in`: inches, or `fit`, the page's body) and its
+  resolution (`dpi`, 300 when not said): the report draws the figure at
+  that size and resolution -- `rtf_figures(doc, rtfplot(content,
+  render_width =, render_height =, render_dpi =))` -- where it drew it at
+  6.5 x 4.5 in and scaled it into its box (a box of another shape
+  stretched it).  With `file` (`{output_id}` filled) the figure's code
+  also saves the image (`ggsave()`, the same size, in `format`).  A figure
+  of the designer's pieces is placed as before.
+
 * **A figure's content as function calls, plot by plot** (#280,
   0.0.24.9125; the figure designer's redesign, stage F1).  A figure
   report's `content:` is its plot's items, one a call: the function that

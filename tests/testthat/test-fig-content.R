@@ -187,3 +187,30 @@ test_that("an item's arguments as R text and back (the builder's R form)", {
   expect_true(any(attr(tfl_args_from_r("geom_line", "linewidht = 1"), "problems")$level == "warning"))
   expect_error(tfl_args_from_r("labs", "x = ("), "not R")
 })
+
+test_that("tfl_image: the figure drawn at its size on the page and its dpi, saved when it names a file", {
+  skip_if_not_installed("rtfreporter")
+  x <- tfl_fig_content_from_design(fc_template("mean_se"))
+  n <- length(x$content)
+  x$content[[n]] <- tfl_item("tfl_image", list(width_in = "fit", height_in = 4, dpi = 150,
+                                               file = "{output_id}.png"))
+  o <- tfl_output("F-1", "figure", data = x$data, content = x$content,
+                  page = list(rtf_page = list(orientation = "landscape"),
+                              titles = list(`1` = list(center = "Figure 1"))))
+  st <- structure(list(study = list(), data = list(),
+                       defaults = list(content = list(), page = list()), codelists = list(),
+                       patterns = list(), toc = list(), dir = tempdir()), class = "tfl_study_spec")
+  code <- paste(tfl_report_code(o, study = st, content = "content"), collapse = "\n")
+  # the body of a landscape letter page (11 - 2 x 0.75), at 4 in and 150 dpi
+  expect_match(code, "rtfplot(content, render_width = 9.5, render_height = 4, render_dpi = 150)",
+               fixed = TRUE)
+  cc <- tfl_content_code(o)
+  expect_identical(utils::tail(cc, 1L),
+                   'ggsave("F-1.png", content, width = 9.5, height = 4, dpi = 150, device = "png")')
+  # no file: nothing saved; no tfl_image: drawn at the figure's own size, 300 dpi
+  x$content[[n]] <- tfl_item("tfl_image", list(dpi = 300))
+  o2 <- tfl_output("F-1", "figure", data = x$data, content = x$content)
+  expect_false(any(grepl("ggsave", tfl_content_code(o2))))
+  expect_match(paste(tfl_report_code(o2, study = st, content = "content"), collapse = "\n"),
+               "render_width = 6.5, render_height = 4.5, render_dpi = 300", fixed = TRUE)
+})

@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9125** (the development version,
+**This manual documents tflspec 0.0.24.9126** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -694,6 +694,14 @@ content:
   `tfl_image` is the last item.  The code is each plot as `p_<name>`, then
   `content <- wrap_plots(p_km, p_risk, ...)`; one plot is `content`.  A
   `position_dodge()` said twice is written once as `pd`.
+- `tfl_image: {width_in, height_in, dpi, format, file}` is the image:
+  its size on the page (inches, or `fit` -- the page's body; left out: the
+  page's `rtf_figures` size, else the figure's own 6.5 x 4.5 in) and its
+  resolution (300 dpi when not said).  The report draws the figure at that
+  size and resolution (`rtf_figures(doc, rtfplot(content, render_width =,
+  render_height =, render_dpi =))`), so it is never stretched into its box;
+  with `file` (`{output_id}.png`) the figure's code saves the image there
+  too, in `format` (png, svg, pdf).
 - The data steps (`data: {source: code, steps: [...]}`) are the
   designer's, below; the x axis's breaks a figure shares with its panel
   (`x_breaks`) are a `code` step.
