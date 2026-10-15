@@ -17,7 +17,7 @@ tfl_build_ard(
 \arguments{
 \item{spec}{An \code{\link[=tfl_ard_spec]{tfl_ard_spec()}} (or the path of one), or a study of the
 YAML spec (\code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}): its data catalog and its reports'
-\code{data.analysis_data} / \code{data.analyses}, the reports in the TOC's order,
+\code{ard.analysis_data} / \code{ard.analyses}, the reports in the TOC's order,
 its code lists the reports' own (when \code{codelists} is \code{NULL}).}
 
 \item{dir}{The study folder (the code's working directory).}

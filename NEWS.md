@@ -1,9 +1,44 @@
 # tflspec (development version)
 
-* **`tfl_report_path()` takes a YAML report** (#264, 0.0.24.9118).  With
+* **`tfl_report_path()` takes a YAML report** (#264, 0.0.24.9120).  With
   `study =` (as `tfl_report()`): its TOC entry's `file`, else
   `study.yml`'s `settings: file` (`"{output_id}.rtf"` when neither says
   it), in `settings: output_path`.
+
+* **The AI kit asks for the study's YAML files, in one answer** (#265,
+  0.0.24.9119).  `tflspec_ai_manual(dir)` writes seven files (eight with
+  the ADaM metadata, now `07_adam_metadata.csv`): the request, the
+  manual, the guide, the schema (`03_spec_schema.yml`, the installed
+  `inst/spec/schema.yml`), every file of a study blank
+  (`04_blank_spec.md`), the example TOC and shells and the answer written
+  from them (`06_example_spec.md`, made through `tfl_yaml_from_sheets()`).
+  The chat answers with one Markdown text, a `### <path>` heading and a
+  `yaml` block a file; the new `tfl_ai_unpack(answer, dir)` writes it
+  into a study folder (only `study.yml` and `spec/**.yml`; nothing is
+  written when a path, a duplicate or a block is wrong).
+  `tfl_ai_review(dir)` reviews a study folder: each report file against
+  the schema (K16-K18), the definition through the workbook's checks with
+  each finding named by its file and key, `spec/_assumptions.yml` (K08,
+  K09), the figures; the two prompts go into the folder.  A workbook or
+  one report file is reviewed as before.  `tflspec_ai_manual()` loses
+  `split` (there are no blank workbooks).  The manual gains §5, the study
+  folder; the guide is rewritten for the YAML files.
+
+* **The defaults' content is a table's** (#263, 0.0.24.9117; found by the
+  AI kit).  `tfl_resolve_output()` layers `defaults.yml`'s `content`
+  (normalize_ard, the digits ...) onto a table only: a figure or a
+  listing takes the defaults' page and code lists, not those layers
+  (a figure's code stopped at "Unknown layer: normalize_ard").
+
+* **A report's ARD analyses are its `ard:` section** (#261, 0.0.24.9116;
+  the user's decision of 2026-10-15: the ARD is made in a stage of its
+  own, before the reports, and every report has the same three steps --
+  1 data, 2 content, 3 page and output).  A report file's
+  `data.analysis_data` / `data.analyses` move to `ard: {analysis_data,
+  analyses}` (in the report's own file), and `data:` keeps what the
+  report reads (`source: ard | code | dataset`).  `tfl_output(ard = )`;
+  the reader, the writer, the converter, `tfl_sheets_from_yaml()`, the
+  flat xlsx and its import follow.  The generated code is unchanged.
 
 * **The YAML spec, stage 0** (0.0.24.9112; the user's decision of
   2026-10-14 to make YAML the source of a study's definition, one file a

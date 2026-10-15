@@ -516,14 +516,15 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     if (!is.null(cl) && nrow(cl)) codelists <- .conv_codelists(cl)
   }
   # the report's ARD analyses and their analysis data, whatever its kind (a
-  # figure's hazard ratios too): beside its data's source
+  # figure's hazard ratios too): its ard: section, the ARD stage's
+  ard_part <- NULL
   if (!is.null(ard)) {
     ad <- ard$analysis_data
     if (!is.null(ad$output_id)) ad <- ad[!is.na(ad$output_id) & ad$output_id == id, , drop = FALSE]
-    if (nrow(ad)) data$analysis_data <- .conv_rows(ad, note, id, "analysis_data", r_cols = c("where", "derive", "code"),
+    if (nrow(ad)) ard_part$analysis_data <- .conv_rows(ad, note, id, "analysis_data", r_cols = c("where", "derive", "code"),
                                                     list_cols = c("add", "keep", "distinct"), rename = c(data_id = "id", population_id = "population"))
     an <- ard$analyses[!is.na(ard$analyses$output_id) & ard$analyses$output_id == id, , drop = FALSE]
-    if (nrow(an)) data$analyses <- .conv_rows(an, note, id, "analyses", r_cols = c("where", "args", "post", "code"),
+    if (nrow(an)) ard_part$analyses <- .conv_rows(an, note, id, "analyses", r_cols = c("where", "args", "post", "code"),
                                                list_cols = c("by", "strata", "variables", "statistics", "formats"),
                                                rename = c(analysis_id = "id", population_id = "population"))
   }
@@ -548,7 +549,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   }
   out <- tfl_output(id, kind, label = entry$label %||% NA, population = entry$population %||% NA,
                     extends = extends, data = data, codelists = codelists, content = content,
-                    page = page_of(id))
+                    page = page_of(id), ard = ard_part)
   for (k in names(extra)) out[[k]] <- extra[[k]]
   out
 }

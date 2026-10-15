@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9118** (the development version,
+**This manual documents tflspec 0.0.24.9120** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -23,7 +23,7 @@ differ, trust the package, not this file, and fetch the matching copy with
 
 ## 0. Ground rules for the assistant
 
-1. **Only call functions listed in §13**, and rtfreporter's functions from
+1. **Only call functions listed in §14**, and rtfreporter's functions from
    rtfreporter's manual. tflspec is young and almost certainly *not* in your
    training data. If a requested feature has no function, say so plainly
    instead of inventing a name or an argument.
@@ -40,7 +40,7 @@ differ, trust the package, not this file, and fetch the matching copy with
    so the programs run without tflspec.
    `table_plan()`, the `plan_*()` verbs, `plan_apply()`, `normalize_ard()`
    are **rtfreporter's**, never `tfl_`-prefixed; there are no aliases for
-   former names (§12).
+   former names (§13).
 4. **A specification is data.** Workbooks are read with `col_types = "text"`:
    write every cell as text; `TRUE` / `FALSE`, numbers and `|`-lists are
    parsed and checked where they are written, with an error naming the
@@ -65,7 +65,12 @@ differ, trust the package, not this file, and fetch the matching copy with
    a **page pattern**: Standard's (blank) changes, chosen by
    `report$pattern`. A report's own rows go over its pattern's, the
    pattern's over Standard's; `(none)` takes a line out at either level.
-8. Indices are 1-based (ordinary R).
+8. **A study keeps its spec as YAML files** (§5): one file a report, its
+   `content:` one item a function call whose keys are that function's
+   arguments (`tfl_schema()`).  An argument the function does not have is
+   an error, as an unknown column is.  Rules 4–7 are the workbooks'
+   (§6–§9), which hold the same definition.
+9. Indices are 1-based (ordinary R).
 
 ---
 
@@ -85,6 +90,10 @@ study keeps: it needs rtfreporter (and cards), not tflspec.
 
 Listings (`tfl_listing_spec()` → `tfl_listing_code()` / `tfl_listing()`)
 and figures (figure design YAML → `tfl_fig_design_code()`) are the same idea.
+A study folder (§5) holds all of it, a report a file: `tfl_build_ard(study)`
+makes the study ARD from every report's `ard:`, `tfl_content_code(report)`
+/ `tfl_content_run(report, data)` write / run its content, and
+`tfl_report(report, content, study = )` its document.
 
 ---
 
@@ -131,7 +140,7 @@ doc <- rtf_tables(doc, plan)
 generate_rtfreport(doc, "output/DM.rtf", overwrite = TRUE)
 ```
 
-The ARD comes from the ARD spec (§5): `tfl_ard_code(spec, output_id)`
+The ARD comes from the ARD spec (§6): `tfl_ard_code(spec, output_id)`
 writes the cards code; `tfl_build_ard()` runs it and saves one study ARD;
 `tfl_ard_for(ard, output_id)` takes one output's rows.
 `tfl_write_ard(ard, "ard.json")` writes a copy as JSON / YAML (one record
@@ -150,13 +159,16 @@ going and leaves the message in the `error` / `warning` column.
 
 | I want to … | Call |
 |---|---|
+| read a study folder (YAML); a report over its layers | `tfl_read_study_spec(dir)`, `tfl_read_outputs(dir)`; `tfl_resolve_output(report, study)` (§5) |
+| a report file's content as code / run it | `tfl_content_code(report)` / `tfl_content_run(report, data)`; an item's arguments: `tfl_schema(fn)`, `tfl_schema_check(item)`, `tfl_schema_help(fn, arg)` |
+| the study folder as workbooks and back; workbooks to a folder once | `tfl_sheets_from_yaml(dir)`, `tfl_write_spec_xlsx(dir, path)` / `tfl_import_spec_xlsx(dir, path)`; `tfl_convert_sheets_to_yaml(from, to)` |
 | start an ARD spec / read / write it | `tfl_ard_spec_template()` / `tfl_read_ard_spec()` / `tfl_write_ard_spec()` |
 | write the cards code of one output | `tfl_ard_code(spec, output_id)` |
 | run the ARD spec, one study ARD | `tfl_build_ard(spec)`; one output's rows: `tfl_ard_for(ard, output_id)` |
 | scaffold a table spec from an ARD | `tfl_table_spec_template(ard)` |
 | read / write a table (+ report) spec | `tfl_read_table_spec()` / `tfl_read_report_spec()` / `tfl_write_table_spec()` / `tfl_write_report_spec()` |
 | several specs in one workbook; what a column means | `tfl_write_specs(path, ard, table, report, listing)`; `tfl_spec_columns(sheet)` |
-| the specs as CDISC ARS (JSON), and its check | `tfl_ars(ard_spec, table_spec, report_spec)` (a figure printing a table's analyses: `references = data.frame(output_id, source, analysis_id)`) → `tfl_write_ars_json(ars, path)`; `tfl_check_ars(ars)`; what ARS cannot say: `tfl_ars_unmapped(ars)`; CDISC's Excel template to read: `tfl_write_ars_xlsx(ars, path)` (§5.1) |
+| the specs as CDISC ARS (JSON), and its check | `tfl_ars(ard_spec, table_spec, report_spec)` (a figure printing a table's analyses: `references = data.frame(output_id, source, analysis_id)`) → `tfl_write_ars_json(ars, path)`; `tfl_check_ars(ars)`; what ARS cannot say: `tfl_ars_unmapped(ars)`; CDISC's Excel template to read: `tfl_write_ars_xlsx(ars, path)` (§6.1) |
 | ARS siera can run, and its ARD (round trip) | `tfl_ars(ard_spec, profile = "siera")` → `tfl_ars_ard(ars, adam)` (siera writes and runs one programme per output) |
 | an ARS JSON (anyone's) back as specs | `tfl_read_ars_json(path)` → `tfl_ars_to_specs(ars, table = FALSE)`: `$ard`, `$report` (`$table`: the groupings' levels); fill `datasets$path`; what has no place: `attr(, "unmapped")` |
 | the plan a table spec stands for | `tfl_table_plan(data, spec)` (then any rtfreporter verb: last wins) |
@@ -168,8 +180,8 @@ going and leaves the message in the `error` / `warning` column.
 | a figure: start / check / write the script / its size on the page | `tfl_fig_template()` / `tfl_check_fig_design()` / `tfl_fig_design_code()` / `tfl_fig_page_size()` |
 | review the whole definition: errors, what is probably wrong, what to set by hand | `tfl_review_spec(spec, ard, listings, figures)`; against the data: `facts = tfl_data_facts(data, populations = ard)`; the rules: `tfl_review_rules()`; each row's sentence is `template` filled with `args` (`message` is the two put together; the sentences beyond the rules': `tfl_review_templates()`) |
 | attach this manual to a chat session | `tflspec_ai_manual()` (its path) |
-| draft a study's specs from its TOC and shells in an AI chat | `tflspec_ai_manual(dir)` writes the kit to attach; `tfl_ai_review(file, toc = )` checks each file returned (§11.2) |
-| draft a TOC or a figure design with an AI chat | `tfl_ai_context()` → `tfl_ai_prompt()` → the chat → `tfl_ai_parse()` → `tfl_ai_check()` (problems: `tfl_ai_repair_prompt()`) → `tfl_ai_diff()` (§11.1) |
+| draft a study's specs from its TOC and shells in an AI chat | `tflspec_ai_manual(dir)` writes the kit to attach; `tfl_ai_unpack(answer, dir)` writes the answer into a study folder; `tfl_ai_review(dir, toc = )` checks it (§12.2) |
+| draft a TOC or a figure design with an AI chat | `tfl_ai_context()` → `tfl_ai_prompt()` → the chat → `tfl_ai_parse()` → `tfl_ai_check()` (problems: `tfl_ai_repair_prompt()`) → `tfl_ai_diff()` (§12.1) |
 
 ### 4.1 How the columns are named
 
@@ -184,7 +196,87 @@ argument is written in one place: a column, or `args`, never both.
 
 ---
 
-## 5. ARD spec — five sheets
+## 5. The study folder — the YAML spec
+
+A study's spec is a folder of YAML files, one file a report.  It holds
+what the workbooks of §6–§9 hold, in the form a study keeps (tflplanner
+saves it; the workbooks are written from it and read back into it:
+`tfl_write_spec_xlsx()` / `tfl_import_spec_xlsx()`; a study still in
+workbooks converts once: `tfl_convert_sheets_to_yaml()`).
+
+```text
+study.yml                   the study: id, title, settings, keys
+spec/data.yml               the data catalog: datasets, populations
+spec/toc.yml                the reports, in order
+spec/defaults.yml           what every report starts from
+spec/patterns/<name>.yml    a layer a report may extend
+spec/codelists.yml          code lists to copy from (optional)
+spec/outputs/<id>.yml       one report a file
+spec/_<name>.yml            a note, never read (_assumptions.yml)
+```
+
+```r
+st   <- tfl_read_study_spec("XYZ-001")          # the study's files
+outs <- tfl_read_outputs("XYZ-001")             # the reports, by id
+o    <- tfl_resolve_output(outs[["T-1"]], st)   # the report over its layers
+ard  <- tfl_build_ard(st, dir = "XYZ-001")      # the study ARD: every report's ard:
+cat(tfl_content_code(o), sep = "\n")            # the table's plan, as code
+plan <- tfl_content_run(o, tfl_ard_for(ard, "T-1"))
+generate_rtfreport(tfl_report(o, content = plan, study = st), "T-1.rtf")
+```
+
+**study.yml** — `study_id`, `title`; `settings:` the table and report
+study keys (`rounding`: `sas` / `iec` / `r`; `program_dir`; `program` and
+`file`, each report's program and RTF file, `{output_id}.R` /
+`{output_id}.rtf`); `keys:` the ARD's (`id`: the subject key, `USUBJID`;
+`output`: where the study ARD goes; `source`: R files of the study's own
+analysis functions).
+
+**spec/data.yml** — `datasets:` (`dataset`, `level`, `path`, `derive`)
+and `populations:` (`id`, `dataset`, `where`, `derive`, `label`): the
+`datasets` and `populations` sheets of §6, a population's id under `id`.
+
+**spec/toc.yml** — `outputs:`, one entry a report in the TOC's order:
+`id`, `kind` (`table` / `listing` / `figure`), `label` (its title),
+`section`, `population` (a population's `id`).  The ARD program's
+sections follow this order.
+
+**A report file** (`spec/outputs/<id>.yml`):
+
+| Key | What it holds |
+|---|---|
+| `id`, `kind`, `label`, `population` | as in the TOC; the file is named after `id` |
+| `extends` | the layers under it, nearest first: `[defaults]` (the usual), `[patterns/<name>, defaults]`, or `none` |
+| `ard` | the report's part of the study ARD: `analyses:` (the `analyses` sheet's rows, `analysis_id` as `id`, `population_id` as `population`) and `analysis_data:` (`data_id` as `id`) -- §6 |
+| `data` | what the report reads.  `source: ard` (a table: the study ARD, `object: ard`; `steps:` R on it); `source: dataset` (a listing: `dataset`, `where`, `sort`); `source: code` (a figure: `steps:`, the design's data steps of §10; or `code: !r ...`, the report's own R) |
+| `codelists` | by variable, a list of `{value, label}` in the order printed (the `codelists` sheet) |
+| `content` | the report, a list of items, each one call: `- plan_cells: {categorical: '{n} ({p:.1f%})'}`.  A table's items are rtfreporter's `normalize_ard()`, `table_plan()` and `plan_*()` verbs; a listing's `plan_listing()` (its columns `listing_col()` calls); a figure's the design's layers (`- line: {...}`).  Or `content: !r ...`, the report's own R |
+| `page` | the document: `titles`, `footnotes`, `header`, `footer` (maps by line number: `'1': {center: Table 14.1.1}`), `tokens`, and rtfreporter's calls by name (`rtf_page: {orientation: landscape}`, `rtf_tables: {auto_section: true}`, `rtf_document: {watermark: DRAFT}`) |
+| `template`, `plot`, `plots`, `compose` | a figure's, as in its design (§10) |
+
+**An item's keys are the function's arguments** (§7's tables say which
+sheet column is which verb's argument: `pages_max_rows` is
+`plan_paginate_rows: {max_rows: 40}`).  What each argument takes is
+`tfl_schema(fn)` (the file `inst/spec/schema.yml`); `tfl_schema_check(item)`
+checks one item; an argument the function does not have is an error.
+Write values as YAML: a list `[TRT01A, SEX]`, a map `{AGE: Age (years)}`,
+a number, `true` / `false`.  `!r` marks R code (`where: !r SAFFL == "Y"`,
+`args: !r over_variables = TRUE`) and is kept for what only R can say;
+`{fn: rtf_border, args: {top: single}}` is a nested call; `!unset`
+removes what a layer below set.
+
+**The layers.**  A report says only what differs from what it extends
+(`tfl_resolve_output()`): `page` lines, `tokens`, `codelists` and a call's
+arguments merge by key; in `content`, the report's items of one function
+replace every item of that function below it, in the place the first had;
+a function only the report has goes after them.  `defaults.yml` holds the
+study-wide content and page (the running header and footer, the
+rounding); a pattern (`@Compact` of the report sheets) is
+`patterns/<name>.yml`.
+
+---
+
+## 6. ARD spec — five sheets
 
 `tfl_ard_spec()`, `tfl_read_ard_spec()`, `tfl_write_ard_spec()`,
 `tfl_ard_spec_template()`.
@@ -301,7 +393,7 @@ cox <- list(output_id = "T-14-2-2", analysis_id = "HR", population_id = "SAF",
             args = 'formula = survival::Surv(AVAL, 1 - CNSR) ~ TRTA, method = "coxph", package = "survival"')
 ```
 
-### 5.1 CDISC ARS — writing and reading the analyses as the standard
+### 6.1 CDISC ARS — writing and reading the analyses as the standard
 
 The specs stay the source; ARS (CDISC Analysis Results Standard v1.0) is
 written from them, and read back into them.  The JSON is the form to
@@ -339,7 +431,7 @@ sp$ard; sp$report; sp$table       # fill sp$ard$datasets$path before running
 
 ---
 
-## 6. Table spec — sheets and columns
+## 7. Table spec — sheets and columns
 
 `tfl_table_spec()`, `tfl_read_table_spec()`, `tfl_write_table_spec()`,
 `tfl_table_spec_template(ard)` (scaffolds `tables` / `variables` / `cells`
@@ -444,7 +536,7 @@ row (`bold = ~ ...`), `plan_after()` steps, guarded labels stay in code.
 
 ---
 
-## 7. Report spec — the document
+## 8. Report spec — the document
 
 `tfl_read_report_spec()` reads the table sheets **and** these; `tfl_report()`
 runs them, `tfl_report_code()` writes them, `tfl_report_path()` gives the
@@ -460,7 +552,7 @@ file.
 Page tokens in the running header / footer: `{PAGE}`, `{TOTAL_PAGES}`,
 `{PROGRAM}` (or `{PROGRAM_FULL}`, its absolute path), `{DATETIME}`.
 
-### 7.1 A company's TOC as report specs
+### 8.1 A company's TOC as report specs
 
 A study's list of outputs in the company's own workbook (or `.csv`) is
 read through a map of its columns into the `report`, `titles` and
@@ -519,7 +611,7 @@ attr(cl, "set_by_hand")   # what the define could not give
 
 ---
 
-## 8. Listing spec
+## 9. Listing spec
 
 `tfl_listing_spec()`, `tfl_read_listing_spec()`, `tfl_write_listing_spec()`;
 `tfl_listing_code()` writes the program, `tfl_listing()` makes the pages.
@@ -539,7 +631,7 @@ dataset of the data catalog (`.rds`, `.xpt`, `.sas7bdat`, `.csv`,
 
 ---
 
-## 9. Figure design (YAML)
+## 10. Figure design (YAML)
 
 `tfl_fig_design()`, `tfl_read_fig_design()` / `tfl_write_fig_design()`
 (one `.yml` a figure), `tfl_fig_design_code()` writes the ggplot2 script,
@@ -633,7 +725,7 @@ remain; new work should use the design.
 
 ---
 
-## 10. What the written code looks like — the plan
+## 11. What the written code looks like — the plan
 
 The plan is rtfreporter's (its manual §17). In its words: `table_plan()`
 declares the **roles** once; each `plan_*()` **verb** adds a layer; a later
@@ -656,7 +748,7 @@ and `plan_apply(plan, stage = "args")` shows the calls it amounts to.
 
 ---
 
-## 11. Composing with tflplanner
+## 12. Composing with tflplanner
 
 tflplanner is the GUI over these specs (one study folder: `spec/`,
 `programs/`, `output/`). What it saves is these workbooks and YAML files;
@@ -672,7 +764,7 @@ those packages in the code (a string or comment keeps it) and the ARD
 program's own `library(cards)`. Unset, the code is as before.
 `tfl_build_ard()` runs the program by itself and ignores both.
 
-### 11.1 Drafting with an AI chat
+### 12.1 Drafting with an AI chat
 
 tflspec makes the prompt and reads the answer; it sends nothing (no HTTP
 client, no key). `tfl_ai_tasks()` lists what can be drafted: `toc` (the
@@ -692,54 +784,63 @@ answer <- tfl_ai_parse(reply_text, "figure")
 problems <- tfl_ai_check(answer, ctx)     # errors: send tfl_ai_repair_prompt(answer, problems)
 tfl_ai_diff(current_design, answer)       # what to accept, piece by piece
 ```
-### 11.2 Drafting a study's specs from its TOC and shells
+### 12.2 Drafting a study's specs from its TOC and shells
 
 `tflspec_ai_manual(dir)` writes one flat folder to attach to a chat:
 the request (`00_START_HERE.md`), this manual, the TOC / shell guide
 (`02_tflspec-ai-toc-shell-guide.md`: how to read a company's TOC and
-shells into specs, the checklist, the assumptions to list), every spec
-sheet blank with a `_columns` sheet (`03_blank_specs.xlsx`; `split =
-TRUE`: one workbook a spec), a blank figure design, and a made-up study
-end to end (its TOC and shells, the specs written from them).  The
-assistant returns a workbook and a `.yml` a figure, with its guesses in
-a sheet `_assumptions` (`output_id`, `sheet`, `item`, `assumption`,
-`question`) and a key `assumptions:`.
+shells into the study's files, the checklist, the assumptions to list),
+the schema (`03_spec_schema.yml`, every function a content item calls and
+its arguments), every file of a study blank (`04_blank_spec.md`) and a
+made-up study end to end (its TOC and shells, `05_example_toc_shell.xlsx`,
+and the files written from them, `06_example_spec.md`).
+
+The assistant answers with **one Markdown text holding every file**: a
+heading with the file's path (`### spec/outputs/T-1.yml`), then a `yaml`
+block, for `study.yml`, `spec/data.yml`, `spec/toc.yml`,
+`spec/defaults.yml`, one `spec/outputs/<id>.yml` a report, and
+`spec/_assumptions.yml` -- its guesses, a list of `output_id`, `where`,
+`item`, `assumption`, `question`.  `tfl_ai_unpack(answer, dir)` checks the
+paths (only `study.yml` and `spec/**.yml`) and that every block is YAML,
+then writes the files; it writes nothing when one is wrong, and over
+existing files only with `overwrite = TRUE`.
 
 With `define =` (a `define.xml`), `adam_spec =` (an ADaM spec workbook) or
 `datasets =` (the datasets, of which only their column information is
-taken), the kit also holds `08_adam_metadata.csv`: `tfl_adam_metadata()`'s
+taken), the kit also holds `07_adam_metadata.csv`: `tfl_adam_metadata()`'s
 result, one row a variable (`dataset`, `dataset_label`, `variable`,
 `label`, `kind`, `levels` with ` | ` between them, `codelist`, `source`).
 One source is used, the first of that order.  The assistant takes every
-dataset, variable and level from it, and lists in `_assumptions` any it
-could not.  `tfl_ai_context("toc", datasets = )` and `("figure", datasets
-= )` take the same frame.
+dataset, variable and level from it, and lists in `_assumptions.yml` any
+it could not.  `tfl_ai_context("toc", datasets = )` and `("figure",
+datasets = )` take the same frame.
 
-`tfl_ai_review(file, toc = , adam = , others = , metadata = )` checks one returned
-file and splits what it finds by who acts: **the AI** (a sheet or column
-not the spec's, an output or a title not the TOC's, `(N=86)` where
-`(N={n})` belongs, analyses no table uses, no `_assumptions`, every
-error and check of `tfl_review_spec()` / `tfl_check_fig_design()`) and
-**the person** (each assumption; each analysis set's flag, percentage's
-denominator, test or model, fixed order of levels).  It writes
-`<file>_repair.md` (paste into the chat) and `<file>_questions.md`
-(answer, then paste); `who` and the kit's rules K01-K18 are
-`inst/review/ai_rules.csv`.  With `metadata =` (the frame, or the kit's
-CSV), a dataset or variable the metadata has not (K14) and a code list
-value that is not among a variable's levels (K15) are the AI's to fix.
-A report file of the YAML spec (`spec/outputs/<id>.yml`) is checked item
-by item against the schema (K16 an error, K17 an unknown argument), and
-an `!r` where the schema has a form of its own for the value -- a map, a
-list, a column name -- is listed (K18): keep `!r` for what only R can say.
+`tfl_ai_review(dir, toc = , adam = , others = , metadata = )` checks the
+study folder and splits what it finds by who acts: **the AI** (an output
+or a title not the TOC's, `(N=86)` where `(N={n})` belongs, analyses no
+table uses, no `_assumptions.yml`, every error and check of
+`tfl_review_spec()` / `tfl_check_fig_design()`, each report file's items
+against the schema: K16 an error, K17 an argument the function does not
+have, K18 an `!r` where the schema has a form of its own) and **the
+person** (each assumption; each analysis set's flag, percentage's
+denominator, test or model, fixed order of levels).  Each finding names
+the file and key it is in.  It writes `<dir>/<name>_repair.md` (paste into
+the chat) and `<dir>/<name>_questions.md` (answer, then paste); `who` and
+the kit's rules K01-K18 are `inst/review/ai_rules.csv`.  With `metadata =`
+(the frame, or the kit's CSV), a dataset or variable the metadata has not
+(K14) and a code list value that is not among a variable's levels (K15)
+are the AI's to fix.  `tfl_ai_review(file)` still checks one workbook or
+one report file.
 
 ```r
 kit <- tflspec_ai_manual("ai-kit", define = "define.xml")   # attach every file
+tfl_ai_unpack("answer.md", "XYZ-001")                       # the chat's answer, saved
 toc <- tfl_read_toc("TOC.xlsx", sheet = "TOC", skip = 1,
                     map = list(output_id = "Shell Number",
                                title = c("Title1", "Title2"),
                                population = "Population"))
-r <- tfl_ai_review("XYZ-001_specs.xlsx", toc = toc)     # writes the two prompts
-summary(r)                                               # who x level
+r <- tfl_ai_review("XYZ-001", toc = toc)                    # writes the two prompts
+summary(r)                                                  # who x level
 ```
 
 ### Names in the generated programs
@@ -756,7 +857,7 @@ column: ARS's `methodId` comes from the spec.
 
 ---
 
-## 12. Names that do NOT exist
+## 13. Names that do NOT exist
 
 | Wrong | Right |
 |---|---|
@@ -777,7 +878,7 @@ back): rename the value or choose another separator.
 
 ---
 
-### 12.1 How the functions are named and take their arguments
+### 13.1 How the functions are named and take their arguments
 
 - Every function starts with `tfl_`, except `tflspec_ai_manual()` (the
   same form as rtfreporter's `rtfreporter_ai_manual()`).
@@ -799,13 +900,14 @@ back): rename the value or choose another separator.
   wants and what it got; a file that is not there is
   `<function>(): no file '<path>'`.
 
-## 13. Complete public API (nothing outside this list exists)
+## 14. Complete public API (nothing outside this list exists)
 
 **Spec files (YAML, one file a report):** `tfl_output` `tfl_item` `tfl_call` `tfl_r`
 `tfl_unset` `tfl_read_output` `tfl_write_output` `tfl_read_study_spec`
 `tfl_read_outputs` `tfl_resolve_output` `tfl_convert_sheets_to_yaml`
 `tfl_yaml_from_sheets` `tfl_sheets_from_yaml` `tfl_write_spec_xlsx`
 `tfl_import_spec_xlsx` `tfl_schema` `tfl_schema_check` `tfl_schema_help` `tfl_content_code` `tfl_content_run`
+`tfl_ai_unpack`
 
 **Manual:** `tflspec_ai_manual` `tfl_adam_metadata` `tfl_ai_review`
 
@@ -869,11 +971,11 @@ back): rename the value or choose another separator.
 
 ---
 
-## 14. Troubleshooting
+## 15. Troubleshooting
 
 | Message | Cause | Fix |
 |---|---|---|
-| `The \`layout\` sheet has a column it does not read: 'stub_into' (renamed \`stub_name\`)` | a workbook from before 0.0.24 | rename the column as the message says (§12) |
+| `The \`layout\` sheet has a column it does not read: 'stub_into' (renamed \`stub_name\`)` | a workbook from before 0.0.24 | rename the column as the message says (§13) |
 | `tfl_table_plan(): 'notes' is not a role` | table-wide options passed to `tfl_table_plan()` | pipe into the verb: `plan_cells(notes = FALSE)` |
 | `could not find function "table_plan"` | the program did not attach rtfreporter | `library(rtfreporter)` first |
 | `... has a value containing the key separator "_"` | `sep = "_"` and a key value with `_` | rename the value, or `plan_columns(sep = )` / `tables$sep` |

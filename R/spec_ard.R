@@ -100,7 +100,7 @@
 # ---- the study's ARD definition from its spec files ------------------------
 
 # A YAML study's ARD definition (its data catalog and each report's
-# `data.analysis_data` / `data.analyses`) as the definition the ARD program
+# `ard.analysis_data` / `ard.analyses`) as the definition the ARD program
 # is written from, and the reports' code lists.  The reports in the order
 # of the TOC (toc.yml): the program's sections follow it.
 .ard_spec_of_study <- function(study) {
