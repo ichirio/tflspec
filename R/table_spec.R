@@ -2290,9 +2290,10 @@ tfl_report <- function(spec, output_id = NULL, content, study = NULL) {
 #'
 #' `file.path(study$output_path, report$file)`, with `{output_id}` filled:
 #' the path [rtfreporter::generate_rtfreport()] writes to.  For a report of
-#' the YAML spec ([tfl_output()]): its TOC entry's `file`, else
-#' `study.yml`'s `settings: file` (`"{output_id}.rtf"` when neither says
-#' it), in `settings: output_path`.
+#' the YAML spec ([tfl_output()]): its own `file` (its `settings: file`,
+#' else its TOC entry's), else `study.yml`'s `settings: file`
+#' (`"{output_id}.rtf"` when none says it), in `settings: output_path` as
+#' it is written (a relative one from the working directory).
 #'
 #' @param spec A report definition ([tfl_read_report_spec()]) narrowed to one
 #'   report, or the path(s) to read it from; or a report of the YAML spec
@@ -2880,12 +2881,16 @@ tfl_as_table_spec <- function(x, output_id = NULL, compare = TRUE) {
 }
 
 # A YAML report's RTF path (tfl_report_path(); the document's file too):
-# its TOC entry's file, else the study's settings: file, in output_path
+# the report's own file (its settings: file, else its TOC entry's -- where
+# the converter puts a report row's file), else the study's settings: file,
+# else "{output_id}.rtf"; in the study's output_path (as it is: a relative
+# one from the working directory), or bare when it has none
 .output_rtf_path <- function(output, study) {
   id <- output$id
   set <- study$study$settings
   entry <- .page_toc_entry(study, id)
-  file <- .ard_spec_fill_id(entry[["file"]] %||% set$file %||% "{output_id}.rtf", id)
+  file <- .ard_spec_fill_id(output$settings$file %||% entry[["file"]] %||% set$file %||%
+                              "{output_id}.rtf", id)
   out <- set$output_path %||% NA_character_
   if (is.na(out)) file else file.path(out, file)
 }

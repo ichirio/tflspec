@@ -167,3 +167,20 @@ test_that("a YAML report's RTF path: the TOC's file, else the study's, in output
   expect_identical(tfl_report_path(tfl_output("T-1", "table"), study = s), "T-1.rtf")
   expect_error(tfl_report_path(tfl_output("T-1", "table")), "study")
 })
+
+test_that("a YAML report's RTF path: a file of the report's own, the study's output_path as it is", {
+  dir <- withr::local_tempdir()
+  dir.create(file.path(dir, "spec", "outputs"), recursive = TRUE)
+  # (as a study converted from sheets with no default file: each report's
+  # own file in the TOC, the study's output_path relative)
+  writeLines(c("study_id: S-1", "settings:", "  output_path: ../tables"), file.path(dir, "study.yml"))
+  writeLines(c("outputs:", "  - id: T-1", "    kind: table", "    file: t_{output_id}.rtf",
+               "  - id: T-2", "    kind: table"), file.path(dir, "spec", "toc.yml"))
+  s <- tfl_read_study_spec(dir)
+  expect_identical(tfl_report_path(tfl_output("T-1", "table"), study = s), "../tables/t_T-1.rtf")
+  expect_identical(tfl_report_path(tfl_output("T-2", "table"), study = s), "../tables/T-2.rtf")
+  # the report's own settings: file first
+  o <- tfl_output("T-2", "table")
+  o$settings <- list(file = "own_{output_id}.rtf")
+  expect_identical(tfl_report_path(o, study = s), "../tables/own_T-2.rtf")
+})

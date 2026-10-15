@@ -23,9 +23,10 @@ A single path.
 \description{
 \code{file.path(study$output_path, report$file)}, with \code{{output_id}} filled:
 the path \code{\link[rtfreporter:generate_rtfreport]{rtfreporter::generate_rtfreport()}} writes to.  For a report of
-the YAML spec (\code{\link[=tfl_output]{tfl_output()}}): its TOC entry's \code{file}, else
-\code{study.yml}'s \code{settings: file} (\code{"{output_id}.rtf"} when neither says
-it), in \code{settings: output_path}.
+the YAML spec (\code{\link[=tfl_output]{tfl_output()}}): its own \code{file} (its \code{settings: file},
+else its TOC entry's), else \code{study.yml}'s \code{settings: file}
+(\code{"{output_id}.rtf"} when none says it), in \code{settings: output_path} as
+it is written (a relative one from the working directory).
 }
 \section{The table engine}{
 
