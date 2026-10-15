@@ -2313,12 +2313,7 @@ tfl_report_path <- function(spec, output_id = NULL, study = NULL) {
     if (!inherits(study, "tfl_study_spec")) {
       .ard_stop("tfl_report_path(): a YAML report needs its `study` (tfl_read_study_spec()).")
     }
-    id <- spec$id
-    set <- study$study$settings
-    entry <- .page_toc_entry(study, id)
-    file <- .ard_spec_fill_id(entry[["file"]] %||% set$file %||% "{output_id}.rtf", id)
-    out <- set$output_path %||% NA_character_
-    return(if (is.na(out)) file else file.path(out, file))
+    return(.output_rtf_path(spec, study))
   }
   sp <- .ard_spec_scope(.as_spec(spec, "table", "tfl_report_path",
                                  output_id = output_id), output_id)
@@ -2877,4 +2872,15 @@ tfl_as_table_spec <- function(x, output_id = NULL, compare = TRUE) {
   attr(sp, "not_converted") <- unique(lost)
   attr(sp, "same_pages") <- same
   sp
+}
+
+# A YAML report's RTF path (tfl_report_path(); the document's file too):
+# its TOC entry's file, else the study's settings: file, in output_path
+.output_rtf_path <- function(output, study) {
+  id <- output$id
+  set <- study$study$settings
+  entry <- .page_toc_entry(study, id)
+  file <- .ard_spec_fill_id(entry[["file"]] %||% set$file %||% "{output_id}.rtf", id)
+  out <- set$output_path %||% NA_character_
+  if (is.na(out)) file else file.path(out, file)
 }
