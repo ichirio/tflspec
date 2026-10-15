@@ -2289,10 +2289,16 @@ tfl_report <- function(spec, output_id = NULL, content, study = NULL) {
 #' Where a report's RTF file goes
 #'
 #' `file.path(study$output_path, report$file)`, with `{output_id}` filled:
-#' the path [rtfreporter::generate_rtfreport()] writes to.
+#' the path [rtfreporter::generate_rtfreport()] writes to.  For a report of
+#' the YAML spec ([tfl_output()]): its TOC entry's `file`, else
+#' `study.yml`'s `settings: file` (`"{output_id}.rtf"` when neither says
+#' it), in `settings: output_path`.
 #'
 #' @param spec A report definition ([tfl_read_report_spec()]) narrowed to one
-#'   report, or the path(s) to read it from.
+#'   report, or the path(s) to read it from; or a report of the YAML spec
+#'   ([tfl_output()]).
+#' @param study For a YAML report: the study ([tfl_read_study_spec()]), for
+#'   its settings and TOC.
 #' @inheritParams tfl_report
 #' @return A single path.
 #'
@@ -2302,7 +2308,18 @@ tfl_report <- function(spec, output_id = NULL, content, study = NULL) {
 #'
 #' @seealso [tfl_report()]
 #' @export
-tfl_report_path <- function(spec, output_id = NULL) {
+tfl_report_path <- function(spec, output_id = NULL, study = NULL) {
+  if (inherits(spec, "tfl_output")) {
+    if (!inherits(study, "tfl_study_spec")) {
+      .ard_stop("tfl_report_path(): a YAML report needs its `study` (tfl_read_study_spec()).")
+    }
+    id <- spec$id
+    set <- study$study$settings
+    entry <- .page_toc_entry(study, id)
+    file <- .ard_spec_fill_id(entry[["file"]] %||% set$file %||% "{output_id}.rtf", id)
+    out <- set$output_path %||% NA_character_
+    return(if (is.na(out)) file else file.path(out, file))
+  }
   sp <- .ard_spec_scope(.as_spec(spec, "table", "tfl_report_path",
                                  output_id = output_id), output_id)
   r <- .ard_spec_report_row(sp)

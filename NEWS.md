@@ -1,5 +1,10 @@
 # tflspec (development version)
 
+* **`tfl_report_path()` takes a YAML report** (#264, 0.0.24.9118).  With
+  `study =` (as `tfl_report()`): its TOC entry's `file`, else
+  `study.yml`'s `settings: file` (`"{output_id}.rtf"` when neither says
+  it), in `settings: output_path`.
+
 * **The YAML spec, stage 0** (0.0.24.9112; the user's decision of
   2026-10-14 to make YAML the source of a study's definition, one file a
   report): the R objects `tfl_r()` (the `!r` tag), `tfl_unset()` (the

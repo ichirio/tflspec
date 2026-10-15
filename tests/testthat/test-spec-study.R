@@ -150,3 +150,20 @@ test_that("a report's content as R code (one !r) is read, written and wins whole
   expect_match(rp$content_code[rp$output_id %in% "T-1"], "table_plan(data", fixed = TRUE)
   expect_identical(rp$data_code[rp$output_id %in% "T-1"], "data <- head(adsl)")
 })
+
+test_that("a YAML report's RTF path: the TOC's file, else the study's, in output_path", {
+  dir <- withr::local_tempdir()
+  dir.create(file.path(dir, "spec", "outputs"), recursive = TRUE)
+  writeLines(c("study_id: S-1", "settings:", "  output_path: output/tfl",
+               "  file: '{output_id}.rtf'"), file.path(dir, "study.yml"))
+  writeLines(c("outputs:", "  - id: T-1", "    kind: table",
+               "  - id: T-2", "    kind: table", "    file: t2_{output_id}.rtf"),
+             file.path(dir, "spec", "toc.yml"))
+  s <- tfl_read_study_spec(dir)
+  expect_identical(tfl_report_path(tfl_output("T-1", "table"), study = s), "output/tfl/T-1.rtf")
+  expect_identical(tfl_report_path(tfl_output("T-2", "table"), study = s), "output/tfl/t2_T-2.rtf")
+  # no settings: the report's id, no folder
+  s$study$settings <- NULL
+  expect_identical(tfl_report_path(tfl_output("T-1", "table"), study = s), "T-1.rtf")
+  expect_error(tfl_report_path(tfl_output("T-1", "table")), "study")
+})
