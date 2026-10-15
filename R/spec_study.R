@@ -224,7 +224,7 @@ tfl_resolve_output <- function(output, study) {
         own <- Filter(function(o) identical(o$fn, it$fn), over)
         if (.dots_named(it$fn) && length(own) == 1L) {
           merged <- own[[1L]]
-          merged$args <- .merge_map(it$args, own[[1L]]$args)
+          merged$args <- .merge_dots(it$args, own[[1L]]$args)
           out <- c(out, list(merged))
         } else {
           out <- c(out, own)
@@ -297,4 +297,24 @@ tfl_resolve_output <- function(output, study) {
          .spec_version, ". Update tflspec.", call. = FALSE)
   }
   invisible()
+}
+
+# A named-dots verb's arguments over the layers' (plan_cells ...): by key,
+# as .merge_map(); and a key that is one template in one layer and rows by
+# name in the other (`default: "{n} ({p}%)"` in the defaults, `default:
+# {n: ..., orr_ci: ...}` in the report) is both -- the template first, the
+# rows after (what the sheets' default row and a report's rows make)
+.merge_dots <- function(base, over) {
+  tpl <- function(v) is.character(v) && length(v) == 1L && !inherits(v, c("tfl_r", "tfl_unset"))
+  rows <- function(v) .is_map(v)
+  for (k in intersect(names(base), names(over))) {
+    b <- base[[k]]
+    o <- over[[k]]
+    if (tpl(b) && rows(o)) {
+      over[[k]] <- c(list(b), o)
+    } else if (rows(b) && tpl(o)) {
+      over[[k]] <- c(list(o), b)
+    }
+  }
+  .merge_map(base, over)
 }

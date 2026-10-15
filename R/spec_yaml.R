@@ -309,7 +309,7 @@ tfl_write_output <- function(x, path) {
 .yaml_out_handlers <- function() {
   list(tfl_r = function(x) structure(as.character(x), tag = "!r"),
        tfl_unset = function(x) structure("", tag = "!unset"),
-       logical = yaml::verbatim_logical)
+       logical = .yaml_logical)
 }
 
 # the plain list a tfl_output is written as (NA scalars left out; a
@@ -369,4 +369,13 @@ tfl_write_output <- function(x, path) {
   else if (is.list(st)) st <- lapply(st, function(s) if (is.character(s) && !inherits(s, "tfl_r") && length(s) == 1L) tfl_r(s) else s)
   data$steps <- st
   data
+}
+
+# A logical as YAML: true / false, and NA as `.na` -- what the reader reads
+# as NA again (`NA` would come back as the text "NA": a table_plan()'s
+# `label = NA`, a label built to tell rows apart and dropped, is NA)
+.yaml_logical <- function(x) {
+  v <- ifelse(is.na(x), ".na", ifelse(x, "true", "false"))
+  class(v) <- "verbatim"
+  v
 }

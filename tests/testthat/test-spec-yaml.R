@@ -150,3 +150,14 @@ test_that("analyses under data: (the old place) stop the read, naming ard:", {
                "    - id: A", "      method: categorical"), f)
   expect_error(tfl_read_output(f), "ard: section")
 })
+
+test_that("an NA argument (table_plan(label = NA)) is written .na and read back NA", {
+  o <- tfl_output("T-1", "table", content = list(tfl_item("table_plan",
+    list(cols = "TRT", rows = list(group = "variable"), label = NA))))
+  f <- withr::local_tempfile(fileext = ".yml")
+  tfl_write_output(o, f)
+  expect_true(any(grepl("label: .na", readLines(f), fixed = TRUE)))
+  r <- tfl_read_output(f)
+  expect_identical(r$content[[1L]]$args$label, NA)
+  expect_true(any(grepl("label = NA", tfl_content_code(r), fixed = TRUE)))
+})

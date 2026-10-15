@@ -1,5 +1,14 @@
 # tflspec (development version)
 
+* **An NA argument stays NA; a default template and a report's rows by
+  name are both kept** (#276, 0.0.24.9124; a user's study converted from
+  the workbooks stopped at `table_plan(label = ): no column 'NA'`).  A
+  logical NA (`table_plan(label = NA)`) is written `.na` and read back NA,
+  not the text "NA".  The layering of a named-dots verb keeps a key that is
+  one template in the defaults and rows by name in the report (or the
+  other way) as both, the template first: `plan_cells(default = list("{n}
+  ({p}%)", n = ..., orr_ci = ...))`, as the sheets make it.
+
 * **A figure with no design gets nothing of a table's** (#274, 0.0.24.9124).
   The converter gave a figure with no design (and no code of its own),
   and a listing with no rows, a table's data and content (`table_plan: {}`):

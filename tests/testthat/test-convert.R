@@ -239,3 +239,38 @@ test_that("a figure with no design gets nothing of a table's", {
   # and back: no figure design for it
   expect_null(tfl_sheets_from_yaml(to)$figures[["F-1"]]$template)
 })
+
+test_that("a table of label NA, rows by name over a default template, row groups: YAML code = the sheets'", {
+  # (the shape of a user's study: dev-rep Discussion #7)
+  tb <- list(
+    tables = data.frame(output_id = "T-9", cols = "TR01AG1", rows = "group = variable", label = "NA",
+                        sort = "group | .label", stringsAsFactors = FALSE),
+    cells = data.frame(output_id = c(NA, "T-9", "T-9"), variable = NA_character_,
+                       row = c(NA, "n", "orr_ci"),
+                       template = c("{n} ({p:.1f%})", "{n}", "{estimate:.1f} ({conf.low:.1f}, {conf.high:.1f})"),
+                       stringsAsFactors = FALSE),
+    layout = data.frame(output_id = "T-9", group_col = "variable", group_mode = "row",
+                        group_collapse = "TRUE", blank_where = "groups", blank_first = "FALSE",
+                        blank_last = "FALSE", pages_max_rows = "30", pages_split = "rows",
+                        stringsAsFactors = FALSE),
+    columns = data.frame(output_id = "T-9", column = c("row_label", ".values"), rel_width = c("30", "10"),
+                         row_title = c("TRUE", NA), stringsAsFactors = FALSE),
+    style = data.frame(output_id = "T-9", align_count_pct = "TRUE", stringsAsFactors = FALSE))
+  sp <- tfl_table_spec(tb)
+  sheets <- list(table = unclass(sp),
+                 planner = data.frame(output_id = c(NA, "T-9"), description = c("(every report)", "t"),
+                                      setup_code = NA_character_, process_code = NA_character_,
+                                      section = NA_character_, population = NA_character_,
+                                      datasets = NA_character_, batches = NA_character_,
+                                      stringsAsFactors = FALSE),
+                 study = list(study_id = "U-1"))
+  to <- withr::local_tempdir()
+  tfl_yaml_from_sheets(sheets, to, overwrite = TRUE)
+  o <- tfl_resolve_output(tfl_read_outputs(to)[["T-9"]], tfl_read_study_spec(to))
+  expect_identical(o$content[[1L]]$args$label, NA)
+  y <- tfl_content_code(o)
+  # the same plan as the sheets' (its data normalized first, a step of its own)
+  s0 <- trimws(sub("^plan <- table_plan[(]data, ", "table_plan(", tfl_table_code(sp, "T-9")))
+  s1 <- trimws(y[-(1:2)])
+  expect_identical(s1, s0)
+})
