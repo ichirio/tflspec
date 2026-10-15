@@ -1,5 +1,13 @@
 # tflspec (development version)
 
+* **A nested variable keeps its place in the round trip** (#273,
+  0.0.24.9123; found by S2 with tflplanner's SAMPLE-01).  A variable under
+  another's level (`under`, `plan_nest()`) with no heading of its own is
+  not in `plan_labels()`, whose order is the variables' order: read back
+  from the content (a YAML report to the sheets), it now goes right after
+  the variable it is under, so the variables keep the order they were
+  written in.
+
 * **The converter keeps what tflplanner's study has** (#270, 0.0.24.9122; for
   tflplanner reading and writing the YAML spec).  The listing / figure
   workbook's `figures` sheet (the datasets a figure or report written by
