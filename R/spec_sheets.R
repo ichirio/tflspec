@@ -177,7 +177,9 @@ tfl_sheets_from_yaml <- function(dir) {
       if (!is.null(o$plot)) fd$plot <- o$plot
       fd$layers <- if (code_content) list() else lapply(o$content, function(it) c(list(layer = it$fn), it$args))
       for (k in c("plots", "compose")) if (!is.null(o[[k]])) fd[[k]] <- o[[k]]
-      figures[[id]] <- fd
+      # a figure that is its own code and nothing of the designer's has no
+      # design
+      if (!(code_content && identical(names(fd), "layers"))) figures[[id]] <- fd
     }
   }
   # the setup code on the planner sheet's study row
@@ -204,6 +206,17 @@ tfl_sheets_from_yaml <- function(dir) {
     if (!length(i)) { rp[nrow(rp) + 1L, ] <- NA; i <- nrow(rp) }
     for (k in names(fp)) { if (!k %in% names(rp)) rp[[k]] <- NA_character_; rp[[k]][i[1L]] <- cell(fp[[k]]) }
     table$report <- rp
+  }
+  # a report's note: its tables row's
+  for (id in names(outs)) {
+    nt <- outs[[id]]$note
+    if (is.null(nt) || !identical(outs[[id]]$kind, "table")) next
+    tb <- table$tables
+    i <- match(id, tb$output_id)
+    if (is.na(i)) { tb[nrow(tb) + 1L, ] <- NA; i <- nrow(tb); tb$output_id[i] <- id }
+    if (!"note" %in% names(tb)) tb$note <- NA_character_
+    tb$note[i] <- as.character(nt)
+    table$tables <- tb
   }
   # a table's normalize_ard() arguments on its tables row
   for (id in names(norm_rows)) {
@@ -255,6 +268,8 @@ tfl_sheets_from_yaml <- function(dir) {
   if (inherits(v, "tfl_unset")) return("(none)")
   if (inherits(v, "tfl_r")) return(as.character(v))
   if (inherits(v, "tfl_call")) return(NA_character_)
+  # (a field left blank: a blank cell, not the text NA)
+  if (is.atomic(v) && length(v) == 1L && is.na(v)) return(NA_character_)
   if (is.list(v)) {
     if (!is.null(names(v))) return(NA_character_)
     v <- unlist(v)

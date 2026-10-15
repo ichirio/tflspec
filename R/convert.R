@@ -129,7 +129,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   }
   if (!is.null(plan)) {
     srow <- plan[is.na(plan$output_id) | !nzchar(plan$output_id), , drop = FALSE]
-    if (nrow(srow) && !is.na(srow$setup_code[1L])) study$setup <- tfl_r(srow$setup_code[1L])
+    if (nrow(srow) && !is.na(srow$setup_code[1L])) study$setup <- tfl_r(gsub("\r\n?", "\n", srow$setup_code[1L]))
   }
   put("study.yml", study)
 
@@ -474,7 +474,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     data <- list(source = "dataset")
     if (nrow(lr)) {
       for (k in c("dataset")) if (!is.na(lr[[k]][1L])) data[[k]] <- lr[[k]][1L]
-      if (!is.na(lr$where[1L])) { data$where <- tfl_r(lr$where[1L]); note(id, "listings", 1, "where", "kept as R text (!r)", lr$where[1L]) }
+      if (!is.na(lr$where[1L])) { data$where <- tfl_r(gsub("\r\n?", "\n", lr$where[1L])); note(id, "listings", 1, "where", "kept as R text (!r)", lr$where[1L]) }
       if (!is.na(lr$sort[1L])) data$sort <- as.list(.conv_split(lr$sort[1L]))
     }
     # rtfreporter's chain: plan_listing(listing_col(...), ..., type, sep ...)
@@ -498,7 +498,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     # (the rework step of the sheets, R as it was)
     data <- list(source = "ard", object = "ard")
     if (!is.null(prow) && nrow(prow) && !is.na(prow$process_code[1L])) {
-      data$steps <- list(tfl_r(prow$process_code[1L]))
+      data$steps <- list(tfl_r(gsub("\r\n?", "\n", prow$process_code[1L])))
       note(id, "_tflplanner", id, "process_code", "the table's rework step kept as R text (data.steps)", prow$process_code[1L])
     }
     if (!is.null(sp)) {
@@ -560,10 +560,16 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
       content <- tfl_r(gsub("\r\n?", "\n", cc))
     }
   }
+  # the note of a table's tables row (free text): the report's
+  tnote <- if (!is.null(sp$tables) && "note" %in% names(sp$tables)) {
+    tr <- sp$tables[!is.na(sp$tables$output_id) & sp$tables$output_id == id, , drop = FALSE]
+    if (nrow(tr) && !is.na(tr$note[1L]) && nzchar(trimws(tr$note[1L]))) tr$note[1L]
+  }
   out <- tfl_output(id, kind, label = entry$label %||% NA, population = entry$population %||% NA,
                     extends = extends, data = data, codelists = codelists, content = content,
                     page = page_of(id), ard = ard_part)
   for (k in names(extra)) out[[k]] <- extra[[k]]
+  if (!is.null(tnote)) out$note <- tnote
   out
 }
 
