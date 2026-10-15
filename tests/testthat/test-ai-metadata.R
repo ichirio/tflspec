@@ -57,18 +57,18 @@ test_that("tflspec_ai_manual(define = ): the kit holds the metadata and the requ
   d <- file.path(tempdir(), "ai-kit-metadata")
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   kit <- suppressMessages(tflspec_ai_manual(d, define = md_define()))
-  expect_identical(basename(kit)[length(kit)], "08_adam_metadata.csv")
-  expect_length(kit, 9L)
-  csv <- utils::read.csv(file.path(d, "08_adam_metadata.csv"), colClasses = "character")
+  expect_identical(basename(kit)[length(kit)], "07_adam_metadata.csv")
+  expect_length(kit, 8L)
+  csv <- utils::read.csv(file.path(d, "07_adam_metadata.csv"), colClasses = "character")
   expect_identical(names(csv)[1:3], c("dataset", "dataset_label", "variable"))
   start <- readLines(file.path(d, "00_START_HERE.md"))
   expect_true(any(grepl("## What to give the AI", start, fixed = TRUE)))
   expect_true(any(grepl("take every dataset,", start, fixed = TRUE)))
-  expect_true(any(grepl("08_adam_metadata.csv", start, fixed = TRUE)))
+  expect_true(any(grepl("07_adam_metadata.csv", start, fixed = TRUE)))
   # written again without metadata, the kit keeps none of the last one
   kit2 <- suppressMessages(tflspec_ai_manual(d, overwrite = TRUE))
-  expect_false(file.exists(file.path(d, "08_adam_metadata.csv")))
-  expect_length(kit2, 8L)
+  expect_false(file.exists(file.path(d, "07_adam_metadata.csv")))
+  expect_length(kit2, 7L)
   expect_false(any(grepl("take every dataset,", readLines(file.path(d, "00_START_HERE.md")),
                          fixed = TRUE)))
 })
@@ -85,43 +85,35 @@ test_that("tfl_ai_context('toc', datasets = ) takes the metadata frame", {
 })
 
 test_that("tfl_ai_review(metadata = ): unknown names and levels are the AI's to fix", {
-  skip_if_not_installed("readxl")
+  skip_if_not_installed("pharmaverseadam")
   d <- file.path(tempdir(), "ai-review-metadata")
-  dir.create(d, showWarnings = FALSE)
+  unlink(d, recursive = TRUE)
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   kit <- suppressMessages(tflspec_ai_manual(file.path(d, "kit"), overwrite = TRUE))
-  specs <- kit[basename(kit) == "06_example_specs.xlsx"]
-  adsl <- pharmaverseadam::adsl
-  adae <- pharmaverseadam::adae
-  advs <- pharmaverseadam::advs
-  md <- tfl_adam_metadata(datasets = list(ADSL = adsl, ADAE = adae, ADVS = advs))
+  st <- file.path(d, "XYZ-001")
+  tfl_ai_unpack(kit[basename(kit) == "06_example_spec.md"], st)
+  md <- tfl_adam_metadata(datasets = list(ADSL = pharmaverseadam::adsl,
+                                          ADAE = pharmaverseadam::adae,
+                                          ADVS = pharmaverseadam::advs))
   # the example, against the pilot data's own metadata: nothing unknown
-  r0 <- tfl_ai_review(specs, metadata = md, write = FALSE)
+  r0 <- tfl_ai_review(st, metadata = md, write = FALSE)
   expect_false(any(r0$rule %in% c("K14", "K15")))
   # a renamed variable and an invented level
-  f <- file.path(d, "XYZ_specs.xlsx")
-  wb <- openxlsx::loadWorkbook(specs)
-  an <- openxlsx::readWorkbook(wb, "analyses")
-  i <- which(an$variables == "AGE")[1L]
-  openxlsx::writeData(wb, "analyses", "AGEYRS", startCol = which(names(an) == "variables"),
-                      startRow = i + 1L)
-  cl <- openxlsx::readWorkbook(wb, "codelists")
-  j <- which(cl$variable == "SEX")[1L]
-  if (!is.na(j)) {
-    openxlsx::writeData(wb, "codelists", "Female", startCol = which(names(cl) == "value"),
-                        startRow = j + 1L)
-  }
-  openxlsx::saveWorkbook(wb, f, overwrite = TRUE)
-  r <- tfl_ai_review(f, metadata = md, write = FALSE)
+  t1 <- file.path(st, "spec", "outputs", "T-1.yml")
+  x <- readLines(t1)
+  x[which(x == "        - AGE")[1L]] <- "        - AGEYRS"
+  x <- sub("    - value: M", "    - value: Female", x, fixed = TRUE)
+  writeLines(x, t1)
+  r <- tfl_ai_review(st, metadata = md, write = FALSE)
   k14 <- r[r$rule == "K14", ]
   expect_true(any(grepl("AGEYRS", k14$message, fixed = TRUE)))
   expect_true(all(k14$who == "ai"))
   expect_match(k14$hint[grepl("AGEYRS", k14$message)][1L], "AGE", fixed = TRUE)
-  if (!is.na(j)) expect_true(any(r$rule == "K15" & grepl("Female", r$message, fixed = TRUE)))
+  expect_true(any(r$rule == "K15" & grepl("Female", r$message, fixed = TRUE)))
   # the kit's CSV read back works the same
   csv <- file.path(d, "md.csv")
   utils::write.csv(md, csv, row.names = FALSE, na = "")
-  r2 <- tfl_ai_review(f, metadata = csv, write = FALSE)
+  r2 <- tfl_ai_review(st, metadata = csv, write = FALSE)
   expect_identical(sum(r2$rule == "K14"), sum(r$rule == "K14"))
-  expect_error(tfl_ai_review(f, metadata = 1:3, write = FALSE), "tfl_adam_metadata")
+  expect_error(tfl_ai_review(st, metadata = 1:3, write = FALSE), "tfl_adam_metadata")
 })

@@ -6,7 +6,6 @@
 \usage{
 tflspec_ai_manual(
   dir = NULL,
-  split = FALSE,
   overwrite = FALSE,
   define = NULL,
   adam_spec = NULL,
@@ -18,15 +17,12 @@ tflspec_ai_manual(
 folder is made if need be) and the paths of its files are returned
 invisibly; the files, their sizes and what to attach are printed.}
 
-\item{split}{With \code{dir}: one blank workbook a spec instead of one for
-all.}
-
 \item{overwrite}{Write over a kit already in \code{dir}.  Default \code{FALSE}.}
 
 \item{define, adam_spec, datasets}{With \code{dir}: the study's ADaM metadata,
 from its \code{define.xml}, its ADaM spec workbook or the datasets'
 column information (see \code{\link[=tfl_adam_metadata]{tfl_adam_metadata()}}); written as
-\verb{08_adam_metadata.csv}.}
+\verb{07_adam_metadata.csv}.}
 }
 \value{
 The path to the manual when \code{dir} is \code{NULL}; otherwise the kit's
@@ -49,38 +45,38 @@ actually have.  For the rendering side attach rtfreporter's own manual
 instead (\code{rtfreporter::rtfreporter_ai_manual()}).
 
 With \code{dir}, it writes everything a chat needs to draft a study's specs
-from the company's TOC and shells into one flat folder -- eight files
-(nine with the ADaM metadata), a few hundred KB, under the ten files most
-chats take:
+from the company's TOC and shells into one flat folder -- seven files
+(eight with the ADaM metadata), under the ten files most chats take:
 \itemize{
 \item \verb{00_START_HERE.md} -- the request to paste, and what to attach;
 \item \verb{01_tflspec-ai-user-manual.md} -- this manual;
 \item \verb{02_tflspec-ai-toc-shell-guide.md} -- how to read a TOC and shells
-into specs, the checklist the assistant runs, the assumptions it must
-list;
-\item \verb{03_blank_specs.xlsx} -- every sheet of the ARD, table, report and
-listing specs, empty, with a \verb{_columns} sheet saying what each column
-means (written now from the column catalog, \code{\link[=tfl_spec_columns]{tfl_spec_columns()}}, so
-it is always this version's); \code{split = TRUE} writes one workbook a
-spec instead (\verb{03a_} ... \verb{03d_}, eleven files);
-\item \verb{04_blank_figure.yml} -- a figure design, every field as a comment;
-\item \verb{05_example_toc_shell.xlsx}, \verb{06_example_specs.xlsx},
-\verb{07_example_figure.yml} -- a made-up study end to end: its TOC and four
-shells (a demographics table, an AE table by SOC and PT, a listing of
-serious AEs, a figure of mean blood pressure), and the specs written
-from them, with the \verb{_assumptions} sheet the guide asks for.  The
-example runs on the CDISC pilot data (pharmaverseadam).
+into the spec files, the checklist the assistant runs, the assumptions
+it must list;
+\item \verb{03_spec_schema.yml} -- the installed \code{inst/spec/schema.yml}: every
+function a spec item calls, its arguments and their types
+(\code{\link[=tfl_schema]{tfl_schema()}}), and the spec sheets' columns (\code{\link[=tfl_spec_columns]{tfl_spec_columns()}});
+\item \verb{04_blank_spec.md} -- every file of a study's YAML spec, blank, its
+keys said in comments, in the form of the answer;
+\item \verb{05_example_toc_shell.xlsx}, \verb{06_example_spec.md} -- a made-up study
+end to end: its TOC and four shells (a demographics table, an AE table
+by SOC and PT, a listing of serious AEs, a figure of mean blood
+pressure), and the spec files written from them, with the
+\verb{spec/_assumptions.yml} the guide asks for.  The example is written now
+through the one-time conversion (\code{\link[=tfl_yaml_from_sheets]{tfl_yaml_from_sheets()}}), so it is
+this version's.
 }
 
+The assistant answers with ONE text holding every file, each a heading
+with its path and a \code{yaml} block; \code{\link[=tfl_ai_unpack]{tfl_ai_unpack()}} writes it into a
+study folder and \code{\link[=tfl_ai_review]{tfl_ai_review()}} checks the folder.
+
 With \code{define}, \code{adam_spec} or \code{datasets} it also writes
-\verb{08_adam_metadata.csv}, the study's ADaM metadata (\code{\link[=tfl_adam_metadata]{tfl_adam_metadata()}}:
+\verb{07_adam_metadata.csv}, the study's ADaM metadata (\code{\link[=tfl_adam_metadata]{tfl_adam_metadata()}}:
 one row a variable, its label, kind and levels; never the data), and the
 request tells the assistant to take every dataset, variable and level
 from it.  Give one; with several, the first of \code{define}, \code{adam_spec},
 \code{datasets} is used.
-
-What the assistant returns is checked file by file with
-\code{\link[=tfl_ai_review]{tfl_ai_review()}} (\verb{metadata =} checks its names against the same file).
 }
 \examples{
 # where the manual lives

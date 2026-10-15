@@ -25,48 +25,46 @@
 #' instead (`rtfreporter::rtfreporter_ai_manual()`).
 #'
 #' With `dir`, it writes everything a chat needs to draft a study's specs
-#' from the company's TOC and shells into one flat folder -- eight files
-#' (nine with the ADaM metadata), a few hundred KB, under the ten files most
-#' chats take:
+#' from the company's TOC and shells into one flat folder -- seven files
+#' (eight with the ADaM metadata), under the ten files most chats take:
 #'
 #' * `00_START_HERE.md` -- the request to paste, and what to attach;
 #' * `01_tflspec-ai-user-manual.md` -- this manual;
 #' * `02_tflspec-ai-toc-shell-guide.md` -- how to read a TOC and shells
-#'   into specs, the checklist the assistant runs, the assumptions it must
-#'   list;
-#' * `03_blank_specs.xlsx` -- every sheet of the ARD, table, report and
-#'   listing specs, empty, with a `_columns` sheet saying what each column
-#'   means (written now from the column catalog, [tfl_spec_columns()], so
-#'   it is always this version's); `split = TRUE` writes one workbook a
-#'   spec instead (`03a_` ... `03d_`, eleven files);
-#' * `04_blank_figure.yml` -- a figure design, every field as a comment;
-#' * `05_example_toc_shell.xlsx`, `06_example_specs.xlsx`,
-#'   `07_example_figure.yml` -- a made-up study end to end: its TOC and four
-#'   shells (a demographics table, an AE table by SOC and PT, a listing of
-#'   serious AEs, a figure of mean blood pressure), and the specs written
-#'   from them, with the `_assumptions` sheet the guide asks for.  The
-#'   example runs on the CDISC pilot data (pharmaverseadam).
+#'   into the spec files, the checklist the assistant runs, the assumptions
+#'   it must list;
+#' * `03_spec_schema.yml` -- the installed `inst/spec/schema.yml`: every
+#'   function a spec item calls, its arguments and their types
+#'   ([tfl_schema()]), and the spec sheets' columns ([tfl_spec_columns()]);
+#' * `04_blank_spec.md` -- every file of a study's YAML spec, blank, its
+#'   keys said in comments, in the form of the answer;
+#' * `05_example_toc_shell.xlsx`, `06_example_spec.md` -- a made-up study
+#'   end to end: its TOC and four shells (a demographics table, an AE table
+#'   by SOC and PT, a listing of serious AEs, a figure of mean blood
+#'   pressure), and the spec files written from them, with the
+#'   `spec/_assumptions.yml` the guide asks for.  The example is written now
+#'   through the one-time conversion ([tfl_yaml_from_sheets()]), so it is
+#'   this version's.
+#'
+#' The assistant answers with ONE text holding every file, each a heading
+#' with its path and a `yaml` block; [tfl_ai_unpack()] writes it into a
+#' study folder and [tfl_ai_review()] checks the folder.
 #'
 #' With `define`, `adam_spec` or `datasets` it also writes
-#' `08_adam_metadata.csv`, the study's ADaM metadata ([tfl_adam_metadata()]:
+#' `07_adam_metadata.csv`, the study's ADaM metadata ([tfl_adam_metadata()]:
 #' one row a variable, its label, kind and levels; never the data), and the
 #' request tells the assistant to take every dataset, variable and level
 #' from it.  Give one; with several, the first of `define`, `adam_spec`,
 #' `datasets` is used.
 #'
-#' What the assistant returns is checked file by file with
-#' [tfl_ai_review()] (`metadata =` checks its names against the same file).
-#'
 #' @param dir Optional folder.  When given, the kit is written there (the
 #'   folder is made if need be) and the paths of its files are returned
 #'   invisibly; the files, their sizes and what to attach are printed.
-#' @param split With `dir`: one blank workbook a spec instead of one for
-#'   all.
 #' @param overwrite Write over a kit already in `dir`.  Default `FALSE`.
 #' @param define,adam_spec,datasets With `dir`: the study's ADaM metadata,
 #'   from its `define.xml`, its ADaM spec workbook or the datasets'
 #'   column information (see [tfl_adam_metadata()]); written as
-#'   `08_adam_metadata.csv`.
+#'   `07_adam_metadata.csv`.
 #'
 #' @return The path to the manual when `dir` is `NULL`; otherwise the kit's
 #'   files, invisibly.
@@ -83,7 +81,7 @@
 #' }
 #' @seealso [tfl_ai_review()] for the files the assistant returns.
 #' @export
-tflspec_ai_manual <- function(dir = NULL, split = FALSE, overwrite = FALSE,
+tflspec_ai_manual <- function(dir = NULL, overwrite = FALSE,
                               define = NULL, adam_spec = NULL,
                               datasets = NULL) {
   name <- "tflspec-ai-user-manual.md"
@@ -104,6 +102,5 @@ tflspec_ai_manual <- function(dir = NULL, split = FALSE, overwrite = FALSE,
     tfl_adam_metadata(define = define, adam_spec = adam_spec,
                       datasets = datasets)
   }
-  .ai_write_kit(dir, split = isTRUE(split), overwrite = isTRUE(overwrite),
-                meta = meta)
+  .ai_write_kit(dir, overwrite = isTRUE(overwrite), meta = meta)
 }

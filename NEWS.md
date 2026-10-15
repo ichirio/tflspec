@@ -1,5 +1,24 @@
 # tflspec (development version)
 
+* **The AI kit asks for the study's YAML files, in one answer** (#265,
+  0.0.24.9119).  `tflspec_ai_manual(dir)` writes seven files (eight with
+  the ADaM metadata, now `07_adam_metadata.csv`): the request, the
+  manual, the guide, the schema (`03_spec_schema.yml`, the installed
+  `inst/spec/schema.yml`), every file of a study blank
+  (`04_blank_spec.md`), the example TOC and shells and the answer written
+  from them (`06_example_spec.md`, made through `tfl_yaml_from_sheets()`).
+  The chat answers with one Markdown text, a `### <path>` heading and a
+  `yaml` block a file; the new `tfl_ai_unpack(answer, dir)` writes it
+  into a study folder (only `study.yml` and `spec/**.yml`; nothing is
+  written when a path, a duplicate or a block is wrong).
+  `tfl_ai_review(dir)` reviews a study folder: each report file against
+  the schema (K16-K18), the definition through the workbook's checks with
+  each finding named by its file and key, `spec/_assumptions.yml` (K08,
+  K09), the figures; the two prompts go into the folder.  A workbook or
+  one report file is reviewed as before.  `tflspec_ai_manual()` loses
+  `split` (there are no blank workbooks).  The manual gains §5, the study
+  folder; the guide is rewritten for the YAML files.
+
 * **The defaults' content is a table's** (#263, 0.0.24.9117; found by the
   AI kit).  `tfl_resolve_output()` layers `defaults.yml`'s `content`
   (normalize_ard, the digits ...) onto a table only: a figure or a
