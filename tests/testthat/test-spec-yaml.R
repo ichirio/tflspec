@@ -143,3 +143,10 @@ test_that("a sequence holding an !r or a call stays a list; one of scalars is a 
   tfl_write_output(o, g)
   expect_equal(tfl_read_output(g)$content, o$content)
 })
+
+test_that("analyses under data: (the old place) stop the read, naming ard:", {
+  f <- withr::local_tempfile(fileext = ".yml")
+  writeLines(c("id: T-1", "kind: table", "data:", "  source: ard", "  analyses:",
+               "    - id: A", "      method: categorical"), f)
+  expect_error(tfl_read_output(f), "ard: section")
+})

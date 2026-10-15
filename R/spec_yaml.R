@@ -237,6 +237,13 @@ tfl_read_output <- function(path) {
       !grepl("^outputs?$", basename(path))) {
     # (a multi-report file is named as its author likes)
   }
+  # the ARD's analyses are the report's ard: section (2026-10-15), not data:'s
+  old <- intersect(c("analysis_data", "analyses"), names(y$data))
+  if (length(old)) {
+    stop("tfl_read_output(): ", y$id, "'s data: has ", paste(old, collapse = " and "),
+         "; a report's ARD analyses are its ard: section (ard: {analysis_data, analyses}).",
+         call. = FALSE)
+  }
   content <- if (inherits(y$content, "tfl_r")) y$content else
     lapply(y$content %||% list(), .item_from_list)
   extends <- y$extends %||% "defaults"
