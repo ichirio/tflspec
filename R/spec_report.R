@@ -80,15 +80,24 @@
   fn <- .page_band(pg, "footnotes", tokens)
   if (identical(kind, "figure")) {
     fa <- args_of("rtf_figures")
+    # a figure of items: its image is its tfl_image item (R/fig_content.R)
+    img <- if (.fig_new_content(output$content)) .fig_split_content(output$content)$image
     # its size on the page: inches as twips, or the page's body (fit)
     # worked out from the page; blank, the figure's own size
-    r <- list(figure_width_in = .page_twips_in(fa$width_twips),
-              figure_height_in = .page_twips_in(fa$height_twips))
-    sz <- .fig_page_size(r, c(page, fmt_all), length(tt) + length(fn))
+    sz <- .fig_image_size(img, pg, length(tt) + length(fn))
     twips <- function(v) as.integer(round(v * 1440))
-    st[[length(st) + 1L]] <- .spec_call("rtf_figures", doc, .spec_sym(content),
-      width_twips = if (sz$mode[["width"]] != "native") twips(sz$width_in),
-      height_twips = if (sz$mode[["height"]] != "native") twips(sz$height_in))
+    if (!is.null(img)) {
+      # drawn at its size on the page, at its resolution: what the page
+      # shows is the plot as drawn, never stretched into the box
+      fig <- .spec_call("rtfplot", .spec_sym(content),
+                        render_width = sz$width_in, render_height = sz$height_in,
+                        render_dpi = as.numeric(img$dpi %||% 300))
+      st[[length(st) + 1L]] <- .spec_call("rtf_figures", doc, fig)
+    } else {
+      st[[length(st) + 1L]] <- .spec_call("rtf_figures", doc, .spec_sym(content),
+        width_twips = if (sz$mode[["width"]] != "native") twips(sz$width_in),
+        height_twips = if (sz$mode[["height"]] != "native") twips(sz$height_in))
+    }
   } else {
     ta <- args_of("rtf_tables")
     st[[length(st) + 1L]] <- do.call(.spec_call, c(list("rtf_tables", doc, .spec_sym(content)),
@@ -187,6 +196,18 @@
   if (is.null(v)) return(NULL)
   n <- suppressWarnings(as.numeric(v))
   if (is.na(n)) v else n / 1440
+}
+
+# A figure's size on the page (inches): its tfl_image's width_in /
+# height_in (a number, or fit: the page's body), else the page's
+# rtf_figures (twips), else the figure's own; `page` the report's page:
+# (resolved), `lines` its titles' and footnotes' lines
+.fig_image_size <- function(img, page, lines = 0L) {
+  fa <- .page_args(page$rtf_figures)
+  pg <- c(.page_args(page$rtf_page), .page_args(page$rtf_default_format))
+  r <- list(figure_width_in = img$width_in %||% .page_twips_in(fa$width_twips),
+            figure_height_in = img$height_in %||% .page_twips_in(fa$height_twips))
+  .fig_page_size(r, pg, lines)
 }
 
 # the report's entry of the study's TOC

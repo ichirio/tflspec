@@ -323,7 +323,8 @@ tfl_plot <- function(name, items = list(), from = "own") {
     head, d$code,
     if (length(pre)) c(pre, ""),
     section("plot"),
-    .fig_factor_dodge(body))
+    .fig_factor_dodge(body),
+    .fig_image_save(output, parts$image, name))
   code <- .code_lines(code)
   design_like <- list(data = output$data$steps %||% list())
   code <- .fig_rename_df(code, tfl_fig_data_name(design_like))
@@ -686,4 +687,20 @@ tfl_args_from_r <- function(fn, text) {
   output$compose <- NULL
   if (!is.null(x$template)) output$template <- x$template
   output
+}
+
+# The image saved, when its tfl_image names a file: at its size on the page
+# and its resolution, in its format (`{output_id}` filled)
+.fig_image_save <- function(output, img, name = "content") {
+  if (is.null(img$file) || !nzchar(img$file)) return(character())
+  pg <- output$page %||% list()
+  lines <- length(pg$titles %||% list()) + length(pg$footnotes %||% list())
+  sz <- .fig_image_size(img, pg, lines)
+  file <- gsub("{output_id}", output$id %||% "figure", img$file, fixed = TRUE)
+  fmt <- img$format %||% tools::file_ext(file)
+  if (!nzchar(fmt)) fmt <- "png"
+  c("", "# the image's file",
+    sprintf("ggsave(%s, %s, width = %s, height = %s, dpi = %s, device = %s)",
+            q(file), name, format(sz$width_in), format(sz$height_in),
+            format(as.numeric(img$dpi %||% 300)), q(fmt)))
 }
