@@ -1,5 +1,14 @@
 # tflspec (development version)
 
+* **The converter keeps what tflplanner's study has** (#270, 0.0.24.9122; for
+  tflplanner reading and writing the YAML spec).  The listing / figure
+  workbook's `figures` sheet (the datasets a figure or report written by
+  hand reads, and whether it reads its ARD) is the report's
+  `data.datasets` / `data.ard`; a row's `note` stays (`note:`), a table's
+  note is its report's; R text keeps `\n` line ends.  The sheets back
+  (`tfl_sheets_from_yaml()`) give them, a blank field as a blank cell (not
+  `"NA"`), and no figure design for a figure that is its own code.
+
 * **A report's document says its RTF file** (#268, 0.0.24.9121; rtfreporter's
   `rtf_document(file = )`, >= 0.8.2.9063).  `tfl_report()` and
   `tfl_report_code()` give the document the path `tfl_report_path()` says
