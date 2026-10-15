@@ -238,3 +238,59 @@ test_that("the extension packages' functions: in the catalog, called as pkg::fn"
   p <- suppressWarnings(tfl_content_run(o, list(adsl = adsl[1:20, ])))
   expect_s3_class(p, "ggplot")
 })
+
+test_that("a figure type of its own converts to its R, the same figure; a composed design to named plots", {
+  skip_on_cran()
+  skip_if_not_installed("patchwork")
+  adam <- tfl_example_adam()
+  data <- stats::setNames(adam, tolower(names(adam)))
+  built <- function(p) {
+    if (inherits(p, "patchwork")) return(lapply(seq_len(length(p$patches$plots) + 1L), function(i) built(p[[i]])))
+    set.seed(2)
+    b <- suppressWarnings(suppressMessages(ggplot2::ggplot_build(p)))
+    lapply(b$data, function(x) { x$group <- NULL; x$PANEL <- NULL; x })
+  }
+  run_old <- function(d) {
+    e <- new.env(parent = globalenv())
+    for (n in names(data)) assign(n, data[[n]], envir = e)
+    eval(parse(text = tfl_fig_setup_code()), e)
+    grDevices::pdf(NULL)
+    on.exit(grDevices::dev.off())
+    set.seed(1)
+    suppressPackageStartupMessages(suppressWarnings(suppressMessages(eval(parse(text = c(
+      "library(dplyr)", "library(ggplot2)", "library(patchwork)",
+      tfl_fig_design_code(d, setup = TRUE, save = FALSE, name = "content"))), e))))
+    e$fig %||% e$content
+  }
+  tp <- tfl_fig_templates()
+  for (t in tp$template[!tp$parts]) {
+    d <- tfl_fig_template(t)
+    x <- tfl_fig_content_from_design(d)
+    expect_s3_class(x$content, "tfl_r")
+    o <- tfl_output("F-1", "figure", data = x$data, content = x$content)
+    set.seed(1)
+    new <- suppressWarnings(suppressMessages(tfl_content_run(o, data)))
+    expect_equal(built(new), built(run_old(d)), ignore_attr = TRUE, info = t)
+  }
+  # several designs, one data part: each plot's objects renamed after it
+  skip_if_not_installed("ggsurvfit")
+  km <- tfl_fig_template("km_simple", param = unique(adam$ADTTE$PARAMCD)[1], group = "TRT01P")
+  d <- tfl_fig_design(plots = list(km = km, box = tfl_fig_template("box_by_group")),
+                      compose = list(layout = "km | box",
+                                     add = list(list(fn = "plot_annotation", args = list(tag_levels = "A")),
+                                                list(fn = "theme", args = list(legend.position = "bottom"), op = "&"))),
+                      plot = list(dpi = 300))
+  x <- tfl_fig_content_from_design(d)
+  expect_identical(vapply(x$content, `[[`, "", "fn"), c("km", "box", "wrap_plots", "plot_annotation", "theme", "tfl_image"))
+  o <- fc_output(x)
+  code <- tfl_content_code(o)
+  expect_true(any(grepl("^content <- wrap_plots\\(p_km, p_box, nrow = 1\\) \\+$", code)))
+  expect_true(any(grepl("plot_annotation(tag_levels = \"A\") &", code, fixed = TRUE)))
+  expect_true(any(grepl("fit_km <- survfit2", code, fixed = TRUE)))
+  for (it in o$content) expect_identical(nrow(tfl_schema_check(it)), 0L, info = it$fn)
+  new <- suppressWarnings(tfl_content_run(o, data))
+  expect_equal(built(new), built(run_old(d)), ignore_attr = TRUE)
+  # a layout of more than one row or column is not converted
+  d$compose$layout <- "(km | box) / km"
+  expect_error(tfl_fig_content_from_design(d), "one row")
+})

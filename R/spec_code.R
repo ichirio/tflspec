@@ -985,7 +985,16 @@ tfl_content_run <- function(output, data) {
 # in `content` is the content
 .content_own_run <- function(output, data) {
   env <- new.env(parent = globalenv())
-  assign(output$data$object %||% "ard", data, envir = env)
+  if (identical(output$kind, "figure") && is.list(data) && !is.data.frame(data) &&
+      !is.null(names(data))) {
+    # a figure's own code reads the datasets by their names (adsl, adae),
+    # after the study's figure setup, as its program does
+    for (n in names(data)) assign(n, data[[n]], envir = env)
+    eval(parse(text = tfl_fig_setup_code()), env)
+    if (!is.null(data$ard)) eval(parse(text = tfl_helpers_code()), env)
+  } else {
+    assign(output$data$object %||% "ard", data, envir = env)
+  }
   steps <- .content_r_steps(output)
   if (length(steps)) eval(parse(text = steps), env)
   eval(parse(text = as.character(output$content)), env)

@@ -76,7 +76,10 @@ tfl_plot <- function(name, items = list(), from = "own") {
 .fig_split_content <- function(content) {
   is_plot <- vapply(content, inherits, NA, "tfl_plot")
   fns <- vapply(content, function(it) .schema_fn_name(it$fn %||% ""), "")
-  tail <- !is_plot & fns %in% c(.fig_compose_fns, "tfl_image")
+  # after the named plots: what arranges them -- patchwork's items, and any
+  # item said with its operator (`op: "&"`, a theme for every plot)
+  has_op <- vapply(content, function(it) !is.null(it$args$op), NA)
+  tail <- !is_plot & (fns %in% c(.fig_compose_fns, "tfl_image") | (any(is_plot) & has_op))
   if (any(is_plot)) {
     if (any(!is_plot & !tail)) {
       .ard_stop(paste0("A figure's content is its items, or its named plots (- km: [items]) ",
@@ -371,8 +374,15 @@ tfl_plot <- function(name, items = list(), from = "own") {
     sprintf("wrap_plots(%s)", paste(c(pl, rest[nzchar(rest %||% "")]), collapse = ", "))
   } else paste(syms, collapse = " / ")
   others <- compose[fns != "wrap_plots"]
-  terms <- c(first, vapply(others, function(it) .fig_deparse(.fig_item_lang(it)), ""))
-  .fig_plus_chain(name, terms)
+  if (!length(others)) return(.fig_plus_chain(name, first))
+  # each item `+`-ed, or `&`-ed when it says so (op: "&": a theme for every plot)
+  ops <- vapply(others, function(it) if (identical(it$args$op, "&")) "&" else "+", "")
+  terms <- vapply(others, function(it) {
+    it$args$op <- NULL
+    .fig_deparse(.fig_item_lang(it))
+  }, "")
+  c(paste0(name, " <- ", first, " ", ops[1L]),
+    paste0("  ", terms, c(paste0(" ", ops[-1L]), "")))
 }
 
 # a position_dodge() said twice or more: once, as `pd`
@@ -457,7 +467,9 @@ tfl_plot <- function(name, items = list(), from = "own") {
 tfl_fig_content_from_design <- function(design) {
   design <- if (inherits(design, "tfl_fig_design")) design else .fig_design_from_list(design)
   if (length(design$plots)) {
-    .ard_stop("tfl_fig_content_from_design(): a design of several designs (plots:) is not converted yet.")
+    return(tryCatch(.fig_compose_to_items(design), error = function(e) {
+      .ard_stop(paste("tfl_fig_content_from_design():", conditionMessage(e)))
+    }))
   }
   steps <- design$data %||% list()
   whole <- Filter(function(l) identical(l$layer, "figure"), design$layers)
@@ -716,4 +728,96 @@ tfl_args_from_r <- function(fn, text) {
     sprintf("ggsave(%s, %s, width = %s, height = %s, dpi = %s, device = %s)",
             q(file), name, format(sz$width_in), format(sz$height_in),
             format(as.numeric(img$dpi %||% 300)), q(fmt)))
+}
+
+# ---- a composed design (plots: + compose:) as named plots --------------------
+
+# A design of several designs, each its own data (`plots:`), arranged by
+# `compose:` -- as named plots sharing one data part: each plot's objects
+# renamed after it (df -> df_<name>, sm -> sm_<name>), its items with them;
+# `compose.layout` a wrap_plots() (one row `a | b`, one column `a / b`),
+# `compose.add` items (an `&` kept as the item's `op`), `plot.dpi` tfl_image.
+.fig_compose_to_items <- function(design) {
+  nms <- names(design$plots)
+  steps <- list()
+  out <- list()
+  for (nm in nms) {
+    sub <- design$plots[[nm]]
+    sub <- if (inherits(sub, "tfl_fig_design")) sub else .fig_design_from_list(sub)
+    if (length(sub$plots)) .ard_stop("a composed figure inside a composed figure is not converted.")
+    x <- tfl_fig_content_from_design(sub)
+    if (inherits(x$content, "tfl_r") || any(vapply(x$content, inherits, NA, "tfl_plot"))) {
+      .ard_stop(sprintf("the composed figure's plot `%s` is a figure of its own or has panels: not converted.", nm))
+    }
+    st <- x$data$steps %||% list()
+    io <- .fig_step_io(st)
+    objs <- unique(stats::na.omit(unlist(lapply(io, function(z) c(z[["in"]], z[["out"]])))))
+    objs <- setdiff(objs, c("ard", tolower(vapply(st, function(s) s$dataset %||% "", ""))))
+    # the x axis's breaks, a code step's object, are the plot's too
+    if (any(vapply(st, function(s) identical(s$step, "code") && grepl("^x_breaks <-", s$code %||% ""), NA))) {
+      objs <- c(objs, "x_breaks")
+    }
+    ren <- function(v) if (!is.null(v) && length(v) == 1L && v %in% objs) paste0(v, "_", nm) else v
+    txt <- function(v) {
+      for (o in objs) v <- gsub(paste0("\\b", o, "\\b"), paste0(o, "_", nm), v, perl = TRUE)
+      v
+    }
+    for (i in seq_along(st)) {
+      s <- st[[i]]
+      k <- s$step
+      if (identical(k, "read")) s$out <- ren(io[[i]]$out)
+      else if (k %in% c(.fig_row_steps, "code")) {
+        s$`in` <- ren(io[[i]][["in"]])
+        if (!is.na(io[[i]]$out)) s$out <- ren(io[[i]]$out)
+        if (identical(k, "code")) s$code <- txt(s$code)
+      } else if (k %in% c("survfit", "summary", "summary_by", "rate", "count", "function")) {
+        s$`in` <- ren(io[[i]][["in"]])
+        s$name <- ren(io[[i]]$out)
+      } else if (identical(k, "subset")) {
+        s$name <- ren(io[[i]]$out)
+        if (!is.null(s$dataset)) s$dataset <- ren(s$dataset)
+      }
+      # an expression of the step that names an object (a derive's)
+      for (f in c("expr", "where")) if (is.character(s[[f]])) s[[f]] <- txt(s[[f]])
+      st[[i]] <- s
+    }
+    steps <- c(steps, st)
+    items <- Filter(function(it) !identical(it$fn, "tfl_image"), x$content)
+    items <- lapply(items, function(it) {
+      it$args <- .fig_rename_args(it$args, ren, txt)
+      it
+    })
+    out <- c(out, list(tfl_plot(nm, items)))
+  }
+  layout <- design$compose$layout %||% .fig_layout_default(design)
+  tok <- .fig_layout_tokens(layout)
+  ops <- unique(tok[!grepl("^[A-Za-z]", tok)])
+  if (is.null(tok) || length(ops) > 1L || any(ops %in% c("(", ")", "-"))) {
+    .ard_stop(sprintf("compose.layout `%s`: only one row (a | b) or one column (a / b) is converted.", layout))
+  }
+  wrap <- c(list(plots = tok[grepl("^[A-Za-z]", tok)]),
+            if (identical(ops, "/")) list(ncol = 1L) else list(nrow = 1L))
+  out <- c(out, list(tfl_item("wrap_plots", wrap)))
+  for (a in design$compose$add %||% list()) {
+    args <- a$args %||% list()
+    if (identical(a$op, "&")) args$op <- "&"
+    out <- c(out, list(tfl_item(a$fn, args)))
+  }
+  out <- c(out, list(tfl_item("tfl_image", list(dpi = .pv(design$plot %||% list(), "dpi")))))
+  list(data = list(source = "code", steps = steps), content = out, template = design$template)
+}
+
+# an item's arguments with a plot's objects renamed: an object argument by
+# its name, R text by its words, a call's arguments in turn
+.fig_rename_args <- function(a, ren, txt) {
+  lapply(stats::setNames(names(a), names(a)), function(k) {
+    v <- a[[k]]
+    if (inherits(v, "tfl_r")) return(tfl_r(txt(as.character(unclass(v)))))
+    if (inherits(v, "tfl_call")) { v$args <- .fig_rename_args(v$args, ren, txt); return(v) }
+    if (k %in% .fig_object_args || k == "x") return(ren(v))
+    if (identical(k, "mapping") && is.list(v)) {
+      return(lapply(v, function(e) if (inherits(e, "tfl_r")) tfl_r(txt(as.character(unclass(e)))) else e))
+    }
+    v
+  })
 }
