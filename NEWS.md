@@ -1,5 +1,11 @@
 # tflspec (development version)
 
+- **`tfl_as_table_spec()` takes the variables' order from
+  `plan_levels(variable = )`** (#311, 0.0.24.9140), not from the order of
+  `plan_labels()`: a label sets only the text (rtfreporter #666).  A plan's
+  `plan_levels(variable = )` no longer becomes a variables row named
+  `variable`.
+
 * **The sheets from a spec in memory: `tfl_sheets_from_spec(study,
   outputs)`** (#304, 0.0.24.9139).  What `tfl_sheets_from_yaml(dir)` does,
   from a study and its reports already read (`tfl_read_study_spec()`,
