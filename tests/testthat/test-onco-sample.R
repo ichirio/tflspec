@@ -40,7 +40,8 @@ test_that("data-raw/gen_onco.R: the same seed gives the shipped data; the caller
 
 test_that("every subject is in ADSL and every date is within randomisation .. cut-off", {
   adsl <- onco$ADSL
-  expect_equal(nrow(adsl), 160)
+  expect_equal(nrow(adsl), 200)                                  # screened
+  expect_equal(sum(adsl$ITTFL == "Y"), 160)                       # randomised
   expect_false(anyDuplicated(adsl$USUBJID) > 0)
   m <- function(d) match(d$USUBJID, adsl$USUBJID)
   for (nm in setdiff(names(onco), "ADSL")) {
@@ -52,10 +53,12 @@ test_that("every subject is in ADSL and every date is within randomisation .. cu
       expect_true(all(ok), label = paste(nm, v))
     }
   }
-  for (v in c("TRTSDT", "TRTEDT", "DTHDT", "LSTALVDT")) {
-    x <- adsl[[v]]
-    expect_true(all(is.na(x) | (x >= adsl$RANDDT & x <= dco)), label = v)
+  itt <- adsl[adsl$ITTFL == "Y", ]
+  for (v in c("TRTSDT", "TRTEDT", "DTHDT", "LSTALVDT", "EOSDT")) {
+    x <- itt[[v]]
+    expect_true(all(is.na(x) | (x >= itt$RANDDT & x <= dco)), label = v)
   }
+  expect_true(all(itt$RFICDT < itt$RANDDT))
   expect_true(all(adsl$TRTEDT >= adsl$TRTSDT, na.rm = TRUE))
   expect_identical(is.na(adsl$TRTSDT), adsl$SAFFL == "N")
 
@@ -88,7 +91,7 @@ test_that("responses follow the tumour sizes; nothing after progression; PFS and
   tr <- onco$ADTR
   ovr <- rs[rs$PARAMCD == "OVR", ]
   bor <- rs[rs$PARAMCD == "BOR", ]
-  expect_setequal(bor$USUBJID, adsl$USUBJID)
+  expect_setequal(bor$USUBJID, adsl$USUBJID[adsl$ITTFL == "Y"])
   post <- tr[tr$ABLFL != "Y", ]
   # the same assessments in ADRS and ADTR
   expect_identical(paste(ovr$USUBJID, ovr$ADT), paste(post$USUBJID, post$ADT))
@@ -157,11 +160,59 @@ test_that("the numbers are those of a plausible phase 2/3 study", {
   os$DRUG <- os$TRT01P == "Drug X"
   hr <- exp(stats::coef(survival::coxph(survival::Surv(AVAL, 1 - CNSR) ~ DRUG, data = os)))
   expect_true(hr >= 0.65 && hr <= 0.85)
-  deaths <- mean(adsl$DTHFL == "Y")
+  deaths <- mean(adsl$DTHFL[adsl$ITTFL == "Y"] == "Y")
   expect_true(deaths >= 0.40 && deaths <= 0.60)
 })
 
-test_that("160 subjects make well under 1 MB", {
+test_that("ADSL holds the screened subjects: the screen failures have no arm and no other records", {
+  adsl <- onco$ADSL
+  sf <- adsl[adsl$ENRLFL == "N", ]
+  expect_equal(nrow(sf), 40)
+  expect_identical(as.vector(adsl$ENRLFL), as.vector(adsl$ITTFL))
+  expect_true(all(is.na(sf$ARM) & is.na(sf$ARMCD) & is.na(sf$ACTARM) & is.na(sf$TRT01P) &
+                    is.na(sf$TRT01A) & is.na(sf$RANDDT) & is.na(sf$TRTSDT)))
+  expect_true(all(sf$ARMNRS == "SCREEN FAILURE"))
+  expect_identical(levels(sf$ARM), c("Drug X", "Control"))
+  expect_true(all(sf$ITTFL == "N" & sf$SAFFL == "N" & sf$EFFFL == "N"))
+  expect_true(all(sf$EOSSTT == "DISCONTINUED" & sf$DCSREAS == "SCREEN FAILURE" & !is.na(sf$DCSREASP)))
+  expect_true(all(sf$RFICDT < sf$EOSDT & sf$EOSDT == sf$LSTALVDT & sf$DTHFL == "N"))
+  for (nm in setdiff(names(onco), "ADSL")) {
+    expect_false(any(onco[[nm]]$USUBJID %in% sf$USUBJID), label = nm)
+  }
+  # the randomised subjects' study status: in follow-up until death
+  itt <- adsl[adsl$ITTFL == "Y", ]
+  expect_identical(itt$EOSSTT == "DISCONTINUED", itt$DTHFL == "Y")
+  expect_true(all(itt$DCSREAS[itt$DTHFL == "Y"] == "DEATH"))
+  expect_true(all(is.na(itt$DCSREAS[itt$DTHFL == "N"])))
+  expect_equal(itt$EOSDT, itt$DTHDT)
+  expect_identical(is.na(itt$ARMNRS), itt$SAFFL == "Y")
+  expect_true(all(itt$ARMNRS[itt$SAFFL == "N"] == "ASSIGNED, NOT TREATED"))
+  # ethnicity for every subject, CDISC's terms
+  expect_true(all(adsl$ETHNIC %in% c("HISPANIC OR LATINO", "NOT HISPANIC OR LATINO", "NOT REPORTED")))
+})
+
+test_that("TTSKIN: the time to the first treatment-emergent skin disorder of the safety set", {
+  adsl <- onco$ADSL
+  ae <- onco$ADAE
+  t <- onco$ADTTE[onco$ADTTE$PARAMCD == "TTSKIN", ]
+  expect_setequal(t$USUBJID, adsl$USUBJID[adsl$SAFFL == "Y"])
+  expect_true(all(t$AVALU == "DAYS"))
+  i <- match(t$USUBJID, adsl$USUBJID)
+  expect_equal(t$STARTDT, adsl$TRTSDT[i])
+  skin <- ae[ae$TRTEMFL == "Y" & ae$AEBODSYS == "SKIN AND SUBCUTANEOUS TISSUE DISORDERS", ]
+  first <- tapply(skin$ASTDT, skin$USUBJID, min)
+  ev <- t$CNSR == 0
+  expect_identical(ev, t$USUBJID %in% skin$USUBJID)
+  expect_equal(as.numeric(t$ADT[ev]), as.numeric(first[t$USUBJID[ev]]))
+  end <- pmin(adsl$TRTEDT[i] + 30, adsl$DTHDT[i], dco, na.rm = TRUE)
+  expect_equal(t$ADT[!ev], end[!ev])
+  expect_equal(t$AVAL, as.numeric(t$ADT - t$STARTDT) + 1)
+  # Drug X has more skin events than Control
+  rate <- tapply(ev, t$TRT01A, mean)
+  expect_gt(rate[["Drug X"]], rate[["Control"]])
+})
+
+test_that("200 subjects make well under 1 MB", {
   f <- withr::local_tempfile(fileext = ".rds")
   saveRDS(onco, f)
   expect_lt(file.size(f), 1e6)

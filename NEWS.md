@@ -1,5 +1,23 @@
 # tflspec (development version)
 
+* **The onco sample study: screen failures, ethnicity, study disposition,
+  an AE time-to-event endpoint** (#298, 0.0.24.9135).  `adsl` holds every
+  screened subject: the 160 randomised and 40 screen failures, who have no
+  arm (`ARM`, `TRT01P` ... `NA`, `ARMNRS` "SCREEN FAILURE", as SDTMIG 3.3
+  has it; the factors keep their two levels) and no records in the other
+  datasets.  New ADSL variables: `ETHNIC`, `RFICDT` (informed consent),
+  `ENRLFL` (enrolled: randomised), `ARMNRS`, and the study disposition
+  `EOSSTT`, `EOSDT`, `DCSREAS`, `DCSREASP` (a randomised subject is in
+  follow-up until death; a screen failure ends at screening).  `adtte` has
+  a safety endpoint, `TTSKIN`: the time to the first treatment-emergent
+  skin and subcutaneous tissue disorder of the safety set, in days from
+  the first dose, censored at the end of the treatment-emergent period.
+  The new values are drawn after the old ones (same seed): every existing
+  record keeps its values, and the other six datasets are unchanged.  An
+  analysis of the randomised subjects selects them (`ITTFL`, `SAFFL`,
+  `EFFFL`): `adsl` now has 200 rows.  The SAP and CRF outline in
+  `system.file("sample", "onco", package = "tflspec")` say the same.
+
 * **The samples run on the oncology sample study** (#295, 0.0.24.9134).
   tflspec's examples, articles, README and AI kit use `adsl`, `adae`,
   `adrs` ... (study XYZ-ONC-01, Drug X vs Control) instead of the CDISC

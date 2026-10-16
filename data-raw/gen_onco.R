@@ -6,7 +6,8 @@
 # at the end save each one under its plain ADaM name (adsl, adex, ...).
 #
 # Drug X vs Control, randomised 1:1 (stratified by ECOG and region),
-# RECIST 1.1 every 6 weeks, a fixed data cut-off.  Every dataset is made
+# RECIST 1.1 every 6 weeks, a fixed data cut-off.  ADSL holds every screened
+# subject: the randomised, and the screen failures (no arm; ARMNRS).  Every dataset is made
 # from ONE set of latent subject histories (tumour course, new lesion,
 # toxicity, death before / after progression), so the datasets agree: the
 # best response follows the tumour sizes, there is no assessment after
@@ -472,6 +473,58 @@ gen_onco <- function(n = 160, seed = 20261016, dco = as.Date("2026-06-30")) {
   adtte$AVALU <- "MONTHS"
   adtte <- adtte[order(adtte$tte_i, adtte$PARAMN), ]
 
+  # ---- screening, ethnicity, study disposition -------------------------------
+  # Drawn after everything above, so the records above keep the values the
+  # seed gave them before these were added.  Every subject of ADSL was
+  # screened (signed the informed consent); the randomised are the enrolled
+  # (ENRLFL); the screen failures (about one in five screened) have no arm
+  # (ARM, TRT01P ... null, ARMNRS "SCREEN FAILURE", as SDTMIG 3.3 has it).
+  eth_lv <- c("HISPANIC OR LATINO", "NOT HISPANIC OR LATINO", "NOT REPORTED")
+  eth_p <- list("NORTH AMERICA" = c(0.16, 0.80, 0.04), "EUROPE" = c(0.04, 0.90, 0.06),
+                "ASIA" = c(0, 0.97, 0.03))
+  ethnic <- vapply(region, function(r) pick(eth_lv, 1, eth_p[[r]]), "")
+  rficdt <- randdt - sample(7:28, n, TRUE)
+  n_sf <- round(n / 4)
+  sf_region <- pick(region_lv, n_sf, c(0.3, 0.4, 0.3))
+  sf <- data.frame(
+    SITEID = vapply(sf_region, function(r) as.character(pick(sites[[r]], 1)), ""),
+    COUNTRY = vapply(sf_region, function(r) pick(country[[r]], 1), ""),
+    RACE = vapply(sf_region, function(r) pick(race_lv, 1, race_p[[r]]), ""),
+    ETHNIC = vapply(sf_region, function(r) pick(eth_lv, 1, eth_p[[r]]), ""),
+    AGE = round(pmin(pmax(rnorm(n_sf, 64, 11), 28), 85)),
+    SEX = pick(c("M", "F"), n_sf, c(0.55, 0.45)),
+    ECOGBL = as.character(pick(0:2, n_sf, c(0.3, 0.4, 0.3))),
+    RFICDT = as.Date("2024-06-10") + sort(sample.int(386, n_sf, TRUE) - 1),
+    DCSREASP = pick(c("INCLUSION/EXCLUSION CRITERIA NOT MET", "WITHDRAWAL BY SUBJECT", "OTHER"),
+                    n_sf, c(0.75, 0.15, 0.10))
+  )
+  sf$REGION1 <- unname(sf_region)
+  sf$EOSDT <- sf$RFICDT + sample(5:28, n_sf, TRUE)
+
+  # ---- ADTTE: time to the first treatment-emergent skin disorder -------------
+  # safety set, from the first dose (days); censored at the end of the
+  # treatment-emergent period (30 days after the last dose, death or cut-off)
+  skin <- ae$teae & dict$soc[ae$k] == "SKIN AND SUBCUTANEOUS TISSUE DISORDERS"
+  skin_dt <- tapply(ae$astdt[skin], factor(ae$i[skin], levels = seq_len(n)), min)
+  skin_dt <- as.Date(as.numeric(skin_dt), origin = "1970-01-01")
+  saf <- which(treated)
+  skin_cn <- ifelse(teae_end[saf] == dco, "DATA CUT-OFF",
+                    ifelse(!is.na(dthdt[saf]) & teae_end[saf] == dthdt[saf], "DEATH",
+                           "END OF TREATMENT-EMERGENT PERIOD"))
+  ttskin <- data.frame(
+    tte_i = saf, PARAMCD = "TTSKIN",
+    PARAM = "Time to First Treatment-Emergent Skin and Subcutaneous Tissue Disorder (days)",
+    PARAMN = 4, STARTDT = trtsdt[saf],
+    ADT = as.Date(ifelse(is.na(skin_dt[saf]), teae_end[saf], skin_dt[saf]), origin = "1970-01-01"),
+    CNSR = ifelse(is.na(skin_dt[saf]), 1L, 0L),
+    EVNTDESC = ifelse(is.na(skin_dt[saf]), NA_character_, "SKIN AND SUBCUTANEOUS TISSUE DISORDER"),
+    CNSDTDSC = ifelse(is.na(skin_dt[saf]), skin_cn, NA_character_)
+  )
+  ttskin$AVAL <- as.numeric(ttskin$ADT - ttskin$STARTDT) + 1
+  ttskin$AVALU <- "DAYS"
+  adtte <- rbind(adtte, ttskin[names(adtte)])
+  adtte <- adtte[order(adtte$tte_i, adtte$PARAMN), ]
+
   # ---- ADSL ------------------------------------------------------------------
   subjid <- sprintf("%04d", seq_len(n))
   usubjid <- sprintf("%s-%s-%s", study, siteid, subjid)
@@ -483,20 +536,41 @@ gen_onco <- function(n = 160, seed = 20261016, dco = as.Date("2026-06-30")) {
   adsl <- data.frame(
     STUDYID = study, USUBJID = usubjid, SUBJID = subjid, SITEID = siteid, COUNTRY = unname(cntry),
     REGION1 = unname(region), AGE = age, AGEU = "YEARS", AGEGR1 = ifelse(age < 65, "<65", ">=65"),
-    AGEGR1N = ifelse(age < 65, 1, 2), SEX = sex, RACE = unname(race),
+    AGEGR1N = ifelse(age < 65, 1, 2), SEX = sex, RACE = unname(race), ETHNIC = unname(ethnic),
     ECOGBL = as.character(ecog), STRATA1 = paste0("ECOG ", ecog, " / ", region),
     ARM = factor(arm, levels = arms), ARMCD = armcd, ACTARM = ifelse(treated, arm, "Not Treated"),
     ACTARMCD = ifelse(treated, armcd, "NOTTRT"),
+    ARMNRS = ifelse(treated, NA_character_, "ASSIGNED, NOT TREATED"),
     TRT01P = factor(arm, levels = arms), TRT01PN = ifelse(drug, 1, 2),
     TRT01A = factor(ifelse(treated, arm, NA_character_), levels = arms), TRT01AN = ifelse(treated, ifelse(drug, 1, 2), NA_real_),
-    RANDDT = randdt, TRTSDT = trtsdt, TRTEDT = trtedt,
+    RFICDT = rficdt, RANDDT = randdt, TRTSDT = trtsdt, TRTEDT = trtedt,
     TRTDURD = as.numeric(trtedt - trtsdt) + 1,
-    ITTFL = "Y", SAFFL = ifelse(treated, "Y", "N"), EFFFL = ifelse(eff, "Y", "N"),
+    ENRLFL = "Y", ITTFL = "Y", SAFFL = ifelse(treated, "Y", "N"), EFFFL = ifelse(eff, "Y", "N"),
     EOTSTT = ifelse(!treated, "NOT STARTED", ifelse(hist$stop == "ONGOING", "ONGOING", "DISCONTINUED")),
     DCTREAS = ifelse(!treated | hist$stop == "ONGOING", NA_character_, hist$stop),
+    EOSSTT = ifelse(dthfl == "Y", "DISCONTINUED", "ONGOING"),
+    EOSDT = dthdt, DCSREAS = ifelse(dthfl == "Y", "DEATH", NA_character_), DCSREASP = NA_character_,
     DTHFL = dthfl, DTHDT = dthdt, DTHCAUS = dthcaus, LSTALVDT = lstalvdt, DCUTDT = dco,
     BSLD = base
   )
+  na_chr <- rep(NA_character_, n_sf)
+  na_fct <- factor(na_chr, levels = arms)
+  sf_id <- sprintf("%04d", n + seq_len(n_sf))
+  adsl_sf <- data.frame(
+    STUDYID = study, USUBJID = sprintf("%s-%s-%s", study, sf$SITEID, sf_id), SUBJID = sf_id,
+    SITEID = sf$SITEID, COUNTRY = sf$COUNTRY, REGION1 = sf$REGION1, AGE = sf$AGE, AGEU = "YEARS",
+    AGEGR1 = ifelse(sf$AGE < 65, "<65", ">=65"), AGEGR1N = ifelse(sf$AGE < 65, 1, 2),
+    SEX = sf$SEX, RACE = sf$RACE, ETHNIC = sf$ETHNIC, ECOGBL = sf$ECOGBL, STRATA1 = na_chr,
+    ARM = na_fct, ARMCD = na_chr, ACTARM = na_chr, ACTARMCD = na_chr, ARMNRS = "SCREEN FAILURE",
+    TRT01P = na_fct, TRT01PN = NA_real_, TRT01A = na_fct, TRT01AN = NA_real_,
+    RFICDT = sf$RFICDT, RANDDT = na_date, TRTSDT = na_date, TRTEDT = na_date, TRTDURD = NA_real_,
+    ENRLFL = "N", ITTFL = "N", SAFFL = "N", EFFFL = "N",
+    EOTSTT = na_chr, DCTREAS = na_chr,
+    EOSSTT = "DISCONTINUED", EOSDT = sf$EOSDT, DCSREAS = "SCREEN FAILURE", DCSREASP = sf$DCSREASP,
+    DTHFL = "N", DTHDT = na_date, DTHCAUS = na_chr, LSTALVDT = sf$EOSDT, DCUTDT = dco,
+    BSLD = NA_real_
+  )
+  adsl <- rbind(adsl, adsl_sf[names(adsl)])
 
   # ---- subject keys and labels -----------------------------------------------
   keys <- c("STUDYID", "USUBJID", "TRT01P", "TRT01PN", "TRT01A", "TRT01AN")
@@ -525,16 +599,20 @@ gen_onco <- function(n = 160, seed = 20261016, dco = as.Date("2026-06-30")) {
     STUDYID = "Study Identifier", USUBJID = "Unique Subject Identifier", SUBJID = "Subject Identifier for the Study",
     SITEID = "Study Site Identifier", COUNTRY = "Country", REGION1 = "Geographic Region 1",
     AGE = "Age", AGEU = "Age Units", AGEGR1 = "Pooled Age Group 1", AGEGR1N = "Pooled Age Group 1 (N)",
-    SEX = "Sex", RACE = "Race", ECOGBL = "Baseline ECOG Performance Status",
+    SEX = "Sex", RACE = "Race", ETHNIC = "Ethnicity", ECOGBL = "Baseline ECOG Performance Status",
     STRATA1 = "Randomization Stratum", ARM = "Description of Planned Arm", ARMCD = "Planned Arm Code",
     ACTARM = "Description of Actual Arm", ACTARMCD = "Actual Arm Code",
+    ARMNRS = "Reason Arm and/or Actual Arm is Null", RFICDT = "Date of Informed Consent",
     TRT01P = "Planned Treatment for Period 01", TRT01PN = "Planned Treatment for Period 01 (N)",
     TRT01A = "Actual Treatment for Period 01", TRT01AN = "Actual Treatment for Period 01 (N)",
     RANDDT = "Date of Randomization", TRTSDT = "Date of First Exposure to Treatment",
     TRTEDT = "Date of Last Exposure to Treatment", TRTDURD = "Total Treatment Duration (Days)",
+    ENRLFL = "Enrolled Population Flag",
     ITTFL = "Intent-To-Treat Population Flag", SAFFL = "Safety Population Flag",
     EFFFL = "Efficacy Evaluable Population Flag", EOTSTT = "End of Treatment Status",
-    DCTREAS = "Reason for Discontinuation of Treatment", DTHFL = "Subject Death Flag",
+    DCTREAS = "Reason for Discontinuation of Treatment", EOSSTT = "End of Study Status",
+    EOSDT = "End of Study Date", DCSREAS = "Reason for Discontinuation from Study",
+    DCSREASP = "Reason Spec for Discont from Study", DTHFL = "Subject Death Flag",
     DTHDT = "Date of Death", DTHCAUS = "Cause of Death", LSTALVDT = "Date Last Known Alive",
     DCUTDT = "Data Cutoff Date", BSLD = "Baseline Sum of Diameters (mm)",
     PARAMCD = "Parameter Code", PARAM = "Parameter", PARAMN = "Parameter (N)", PARCAT1 = "Parameter Category 1",

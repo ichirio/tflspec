@@ -19,8 +19,9 @@ tumours and measurable disease (RECIST 1.1).  Subjects are randomised 1:1
 to **Drug X** (200 mg every 21 days) or **Control** (100 mg every 21 days),
 stratified by baseline ECOG performance status (0, 1) and region (North
 America, Europe, Asia), in permuted blocks of 4.  Treatment continues until
-progression, unacceptable toxicity or death.  Enrolment ran from July 2024
-to June 2025.
+progression, unacceptable toxicity or death; subjects are then followed for
+survival.  Enrolment ran from July 2024 to June 2025: 200 subjects were
+screened, 40 failed screening and 160 were randomised.
 
 - Primary objective: progression-free survival (PFS) of Drug X vs Control.
 - Secondary: overall survival (OS), objective response rate (ORR), disease
@@ -30,12 +31,21 @@ to June 2025.
 
 | Population | Definition | ADSL flag |
 |---|---|---|
+| Screened | every subject who signed the informed consent (all of ADSL); screen failures have no arm (`ARMNRS` "SCREEN FAILURE") | -- |
+| Enrolled | the screened subjects who were randomised | `ENRLFL` |
 | Intent-to-treat (ITT) | all randomised subjects, by planned treatment | `ITTFL` |
 | Safety (SAF) | subjects who received at least one dose, by actual treatment | `SAFFL` |
 | Efficacy evaluable (EE) | SAF subjects with at least one post-baseline tumour assessment | `EFFFL` |
 
 Efficacy is analysed in the ITT population (EE as sensitivity), safety in
-the SAF population.
+the SAF population; disposition and screen failures in the screened subjects.
+
+**Disposition.**  End of treatment (`EOTSTT`, `DCTREAS`): ongoing at the
+cut-off, or discontinued for progressive disease, an adverse event or
+death.  End of study (`EOSSTT`, `EOSDT`, `DCSREAS`): a randomised subject
+is in follow-up (`ONGOING`) until death (`DISCONTINUED`, `DEATH`); a screen
+failure ends the study at screening (`SCREEN FAILURE`, its reason in
+`DCSREASP`).
 
 ## 3. Tumour assessments
 
@@ -64,8 +74,9 @@ post-baseline assessment is NE.
 | PFS | randomisation to PD or death, whichever first; censored at the last adequate tumour assessment (at randomisation without one) | ADTTE `PFS` |
 | OS | randomisation to death; censored at the cut-off (date last known alive) | ADTTE `OS` |
 | DoR | first confirmed CR/PR to PD or death; censored as PFS | ADTTE `DOR` |
+| Time to first skin disorder (safety) | first dose to the first treatment-emergent AE of the SOC "Skin and subcutaneous tissue disorders"; censored at the end of the treatment-emergent period (30 days after the last dose, death or the cut-off) | ADTTE `TTSKIN` |
 
-Times are in months (days / 30.4375).
+Times are in months (days / 30.4375), the safety endpoint's in days.
 
 ## 5. Methods
 
@@ -89,7 +100,7 @@ All data up to **30 June 2026** (`DCUTDT`): nothing after it is in the data.
 
 | No. | Title | Population | Data |
 |---|---|---|---|
-| T-1 | Subject disposition | ITT | ADSL |
+| T-1 | Subject disposition (screened, randomised, treated; end of treatment and of study) | Screened | ADSL |
 | T-2 | Demographics and baseline characteristics | ITT | ADSL |
 | T-3 | Study drug exposure | SAF | ADEX |
 | T-4 | Best overall response, ORR and DCR with 95% CI | ITT | ADRS |
@@ -100,6 +111,7 @@ All data up to **30 June 2026** (`DCUTDT`): nothing after it is in the data.
 | T-9 | Treatment-emergent AEs by SOC, PT and worst grade | SAF | ADAE |
 | T-10 | Serious AEs, AEs leading to discontinuation, deaths | SAF | ADAE, ADSL |
 | T-11 | Shift from baseline to worst CTCAE grade (laboratory) | SAF | ADLB |
+| T-12 | Time to first treatment-emergent skin disorder (Kaplan-Meier) | SAF | ADTTE |
 | F-1 | Kaplan-Meier plot of PFS (with numbers at risk) | ITT | ADTTE |
 | F-2 | Kaplan-Meier plot of OS | ITT | ADTTE |
 | F-3 | Forest plot of the PFS hazard ratio by subgroup | ITT | ADTTE |

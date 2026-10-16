@@ -8,7 +8,9 @@ in the ADaM data.
 | CRF page | Item | Values | ADaM |
 |---|---|---|---|
 | Enrolment | Site, subject number | 101-104, 201-205, 301-303; 0001- | ADSL `SITEID`, `SUBJID`, `USUBJID` |
-| Demographics | Age, sex, race, country | years; M/F; CDISC race; ISO 3166 alpha-3 | `AGE`, `SEX`, `RACE`, `COUNTRY` (`REGION1`, `AGEGR1` derived) |
+| Informed consent | Date | | ADSL `RFICDT` |
+| Demographics | Age, sex, race, ethnicity, country | years; M/F; CDISC race; CDISC ethnicity; ISO 3166 alpha-3 | `AGE`, `SEX`, `RACE`, `ETHNIC`, `COUNTRY` (`REGION1`, `AGEGR1` derived) |
+| Screening outcome | Eligible, or the reason for the screen failure | inclusion / exclusion criteria not met, withdrawal by subject, other | ADSL `ARMNRS`, `DCSREAS`, `DCSREASP`, `EOSDT` |
 | Baseline | ECOG performance status | 0, 1 | `ECOGBL` |
 | Randomisation (IWRS) | Date, arm, stratum | Drug X / Control; ECOG x region | `RANDDT`, `ARM`, `TRT01P`, `STRATA1` |
 | Study drug | Date, dose given, planned dose, reason for reduction | mg, every 21 days | ADEX `DOSE` (`ASTDT`, `AVAL`, `EXPLDOS`, `EXDOSRFL`); ADSL `TRTSDT`, `TRTEDT` |
@@ -20,4 +22,5 @@ in the ADaM data.
 | Laboratory | Date, ALT, AST, bilirubin, haemoglobin, neutrophils, platelets | units in `PARAM`; on day 1 of each cycle | ADLB (`ANRIND`, `ATOXGR` derived) |
 | Vital signs | Date, weight, blood pressure, pulse | kg, mmHg, beats/min; day 1 of each cycle | ADVS |
 | Death | Date, cause | progressive disease, adverse event, other | ADSL `DTHDT`, `DTHCAUS`, `DTHFL` |
+| End of study | Status, date, reason | death, screen failure | ADSL `EOSSTT`, `EOSDT`, `DCSREAS` |
 | Survival follow-up | Date last known alive | up to the cut-off | ADSL `LSTALVDT` |

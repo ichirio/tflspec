@@ -5,20 +5,28 @@
 \alias{adsl}
 \title{Oncology sample study XYZ-ONC-01: subject level (ADSL)}
 \format{
-\code{adsl}: a data frame, one row per subject (160 rows), with
+\code{adsl}: a data frame, one row per screened subject (200 rows), with
 \describe{
 \item{STUDYID, USUBJID, SUBJID, SITEID}{identifiers}
 \item{COUNTRY, REGION1}{country; region (North America, Europe, Asia)}
-\item{AGE, AGEGR1, SEX, RACE}{demographics (\code{AGEGR1}: \verb{<65}, \verb{>=65})}
-\item{ECOGBL, STRATA1}{baseline ECOG (0, 1); randomisation stratum}
+\item{AGE, AGEGR1, SEX, RACE, ETHNIC}{demographics (\code{AGEGR1}: \verb{<65},
+\verb{>=65})}
+\item{ECOGBL, STRATA1}{baseline ECOG (0, 1; 2 in some screen
+failures); randomisation stratum}
 \item{ARM, TRT01P, TRT01A}{planned / actual treatment (factors, Drug X
-first; \code{TRT01A} is \code{NA} for the subjects never treated)}
+first; \code{TRT01A} is \code{NA} for the subjects never treated, all three for
+the screen failures)}
+\item{ARMCD, ACTARM, ACTARMCD, ARMNRS}{arm codes; why an arm is null
+(\verb{SCREEN FAILURE}, \verb{ASSIGNED, NOT TREATED})}
 \item{TRT01PN, TRT01AN}{their numeric codes (1 Drug X, 2 Control)}
-\item{RANDDT, TRTSDT, TRTEDT, TRTDURD}{randomisation, first and last
-dose dates, treatment duration (days)}
-\item{ITTFL, SAFFL, EFFFL}{intent-to-treat, safety and efficacy
-evaluable population flags}
+\item{RFICDT, RANDDT, TRTSDT, TRTEDT, TRTDURD}{informed consent,
+randomisation, first and last dose dates, treatment duration (days)}
+\item{ENRLFL, ITTFL, SAFFL, EFFFL}{enrolled (randomised),
+intent-to-treat, safety and efficacy evaluable population flags}
 \item{EOTSTT, DCTREAS}{end of treatment status and reason}
+\item{EOSSTT, EOSDT, DCSREAS, DCSREASP}{end of study status
+(\code{ONGOING} in follow-up at the cut-off, \code{DISCONTINUED}), its date,
+reason (\code{DEATH}, \verb{SCREEN FAILURE}) and the screen failure's reason}
 \item{DTHFL, DTHDT, DTHCAUS, LSTALVDT, DCUTDT}{death; date last known
 alive; data cut-off date}
 \item{BSLD}{baseline sum of diameters of target lesions (mm)}
@@ -34,7 +42,8 @@ adsl
 \description{
 One of the eight ADaM datasets of a simulated oncology study: Drug X vs
 Control, randomised 1:1 (stratified by baseline ECOG and region), RECIST
-1.1 every 6 weeks, data cut-off 30 June 2026; 160 subjects.  The datasets
+1.1 every 6 weeks, data cut-off 30 June 2026; 200 subjects screened, 160
+randomised.  The datasets
 agree with one another: they are made from one set of simulated subject
 histories, so a confirmed CR/PR has its tumour sizes at least 30\% below
 baseline, nothing is assessed after progression, the PFS and OS events
@@ -43,13 +52,21 @@ toxicity, death or the cut-off.  \code{TRT01P}, \code{TRT01A} and \code{ARM} are
 factors with Drug X first.
 }
 \details{
+ADSL holds every screened subject: the 160 randomised (\code{ENRLFL}, \code{ITTFL})
+and 40 screen failures, who have no arm (\code{ARM}, \code{TRT01P} ... \code{NA},
+\code{ARMNRS} "SCREEN FAILURE", as SDTMIG 3.3 has it) and no records in the
+other datasets.  An analysis of the randomised subjects selects them
+(\code{ITTFL == "Y"}, or \code{SAFFL} / \code{EFFFL}).
+
 The study's mini SAP (populations, endpoints, a display list) and CRF
 outline are installed with the package:
 \code{system.file("sample", "onco", "SAP.md", package = "tflspec")} and
 \code{"CRF.md"}.  Variables carry CDISC labels (\code{attr(x, "label")}).
 }
 \examples{
-table(adsl$TRT01P, adsl$DTHFL)
+table(adsl$ARMNRS, useNA = "ifany")
+itt <- adsl[adsl$ITTFL == "Y", ]
+table(itt$TRT01P, itt$DTHFL)
 }
 \seealso{
 The other datasets of the study: \link{adex}, \link{adae}, \link{adlb}, \link{advs},
