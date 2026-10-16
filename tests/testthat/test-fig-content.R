@@ -183,7 +183,7 @@ test_that("an item's arguments as R text and back (the builder's R form)", {
   g <- tfl_args_from_r("geom_line", "aes(x = AVISIT, y = mean), linewidth = 0.5, position = position_dodge(width = 0.3)")
   expect_identical(g$mapping, list(x = "AVISIT", y = "mean"))
   expect_identical(tfl_args_to_r("geom_line", g),
-                   "mapping = aes(x = AVISIT, y = mean), position = position_dodge(width = 0.3), linewidth = 0.5")
+                   "mapping = aes(x = AVISIT, y = mean), linewidth = 0.5, position = position_dodge(width = 0.3)")
   expect_true(any(attr(tfl_args_from_r("geom_line", "linewidht = 1"), "problems")$level == "warning"))
   expect_error(tfl_args_from_r("labs", "x = ("), "not R")
 })
@@ -317,4 +317,13 @@ test_that("a figure type of its own converts to its R, the same figure; a compos
   # a layout of more than one row or column is not converted
   d$compose$layout <- "(km | box) / km"
   expect_error(tfl_fig_content_from_design(d), "one row")
+})
+
+test_that("tfl_args_from_r(): an integer of the schema back as one, the arguments in their written order", {
+  a <- tfl_args_from_r("plan_paginate_rows", "max_rows = 26")
+  expect_identical(a$max_rows, 26L)
+  expect_identical(tfl_args_from_r("plan_paginate_rows", tfl_args_to_r("plan_paginate_rows", list(max_rows = 26L)))$max_rows, 26L)
+  g <- tfl_args_from_r("geom_line", "linewidth = 0.5, aes(x = AVISIT, y = mean), position = position_dodge(width = 0.3)")
+  expect_identical(names(g), c("linewidth", "mapping", "position"))
+  expect_identical(names(tfl_args_from_r("geom_line", tfl_args_to_r("geom_line", g))), names(g))
 })

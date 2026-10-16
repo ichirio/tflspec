@@ -1,5 +1,10 @@
 # tflspec (development version)
 
+* **`tfl_args_from_r()` round trips** (#288, 0.0.24.9131; found by S2):
+  an argument the schema takes as an integer comes back an integer (`26`,
+  not `26.0`), and a figure function's arguments keep the order they were
+  written in (the positional ones named in their places).
+
 * **The plan verbs in one recommended order** (#289, 0.0.24.9130; the
   user's decision of 2026-10-16): the order a person designs a table in --
   `normalize_ard`, then the mapping (`table_plan`, `plan_cells`,
