@@ -33,7 +33,7 @@ spec <- tfl_listing_spec(
                         sort = "USUBJID | ASTDY", max_rows = "15"),
   listing_cols = data.frame(
     output_id = "L-16-2-7",
-    vars  = c("USUBJID", "TRTA", "AEBODSYS | AEDECOD", "ASTDY", "AESEV"),
+    vars  = c("USUBJID", "TRT01A", "AEBODSYS | AEDECOD", "ASTDY", "AESEV"),
     label = c("Subject", "Treatment", "System organ class /\nPreferred term",
               "Study day", "Severity"),
     width = c("14", "22", "40", "8", "10"),
@@ -61,7 +61,7 @@ program by the spec, not added afterwards by hand:
 
 ```{r, opts.label = "code"}
 cat(tfl_listing_code(spec, "L-16-2-7", datasets = catalog,
-                     rework = "data$AEDECOD <- tools::toTitleCase(tolower(data$AEDECOD))"),
+                     rework = "data$AESEV <- tools::toTitleCase(tolower(data$AESEV))"),
     sep = "\n")
 ```
 
@@ -79,7 +79,7 @@ running header and footer), the listing's program is written with
 comes first, so it pipes:
 
 ```{r}
-pages <- cards::ADAE |> tfl_listing(spec, "L-16-2-7")
+pages <- adae |> tfl_listing(spec, "L-16-2-7")   # the sample study's ADAE
 length(pages)
 class(pages[[1]])
 ```

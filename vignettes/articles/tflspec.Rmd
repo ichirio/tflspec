@@ -28,8 +28,8 @@ from the same list of steps, so the object and the program cannot
 disagree.
 
 This article walks the whole flow for one table, a demographics table
-(`DM`), using the workbooks that come with the package and the ADaM data
-that come with cards.
+(`DM`), using the workbooks that come with the package and its oncology
+sample study's ADaM data (`adsl`, `adae` ...; see `?adsl`).
 
 ```{r setup, message = FALSE}
 library(tflspec)
@@ -44,8 +44,8 @@ programs run from it. Ours holds two ADaM datasets:
 ```{r}
 study <- file.path(tempdir(), "study")
 dir.create(file.path(study, "data"), recursive = TRUE, showWarnings = FALSE)
-saveRDS(cards::ADSL, file.path(study, "data", "adsl.rds"))
-saveRDS(cards::ADAE, file.path(study, "data", "adae.rds"))
+saveRDS(adsl, file.path(study, "data", "adsl.rds"))
+saveRDS(adae, file.path(study, "data", "adae.rds"))
 ```
 
 ## 1. The ARD spec: what is analysed
@@ -66,7 +66,7 @@ ard_spec <- tfl_ard_spec(list(
              value = c("USUBJID", "output/ard/ard.rds")),
   datasets = df(dataset = c("ADSL", "ADAE"),
                 path = c("data/adsl.rds", "data/adae.rds"),
-                derive = c("HTBL = HEIGHTBL", NA)),
+                derive = c('BSLDGR1 = ifelse(BSLD < 60, "<60 mm", ">=60 mm")', NA)),
   populations = df(population_id = "SAF", dataset = "ADSL",
                    where = 'SAFFL == "Y"'),
   analyses = df(output_id = "DM",
@@ -75,8 +75,8 @@ ard_spec <- tfl_ard_spec(list(
                            "categorical"),
                 population_id = "SAF",
                 by = c(NA, NA, "TRT01A", "TRT01A"),
-                variables = c(NA, "TRT01A", "AGE | WEIGHTBL",
-                              "AGEGR1 | SEX | RACE"))))
+                variables = c(NA, "TRT01A", "AGE | BSLD",
+                              "AGEGR1 | SEX | RACE | ECOGBL"))))
 
 path <- tfl_write_ard_spec(ard_spec, file.path(study, "ard_spec.xlsx"))
 ard_spec <- tfl_read_ard_spec(path)

@@ -20,6 +20,12 @@ rtfreporter  the RTF renderer; usable on its own
 Working with an AI assistant? Attach `tflspec_ai_manual()` (the manual of
 the version you have installed) to the chat session.
 
+The examples use the package's oncology sample study, XYZ-ONC-01 (Drug X
+vs Control): simulated ADaM datasets `adsl`, `adex`, `adae`, `adlb`,
+`advs`, `adrs`, `adtr` and `adtte` (`?adsl`), and an example study folder
+that writes and runs its programs, `system.file("examples", "onco",
+package = "tflspec")`.
+
 Status: early development (0.0.x). Discussion and sample code:
 [Discussions](https://github.com/ichirio/tflspec/discussions).
 
@@ -79,8 +85,8 @@ ICH E9 and the CDISC Analysis Results Standard call an analysis set:
 | output_id | analysis_id | method | dataset | population_id | by | variables | args |
 |---|---|---|---|---|---|---|---|
 | T-14-1-1 | AGE | continuous | | SAF | TRT01A | AGE | |
-| T-14-3-1 | TEAE | hierarchical | ADAE | SAF | TRTA | AESOC \| AEDECOD | over_variables = TRUE |
-| T-14-2-2 | KM | cardx::ard_survival_survfit | ADTTE | SAF | | TRTA | y = "survival::Surv(AVAL, 1 - CNSR)", times = c(30, 90) |
+| T-14-3-1 | TEAE | hierarchical | ADAE | SAF | TRT01A | AEBODSYS \| AEDECOD | over_variables = TRUE |
+| T-14-2-2 | KM | cardx::ard_survival_survfit | ADTTE | ITT | | TRT01P | y = "survival::Surv(AVAL, 1 - CNSR)", times = c(6, 12) |
 
 ```r
 spec <- tfl_read_ard_spec("spec/ard_spec.xlsx")
@@ -201,8 +207,6 @@ authors.
 - **[CDISC](https://www.cdisc.org/)**: the Analysis Results Standard, whose
   JSON Schema is included unchanged (`inst/ars/`, MIT; see `inst/COPYRIGHTS`),
   and **[siera](https://clymbclinical.github.io/siera/)**, which reads ARS.
-- **[pharmaverseadam](https://pharmaverse.github.io/pharmaverseadam/)**: the
-  ADaM data (from the CDISC pilot study) of the examples.
 
 tflspec is an independent project and is not affiliated with, or endorsed by,
 the authors of these packages or CDISC.

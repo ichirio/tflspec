@@ -23,8 +23,8 @@ library(tflspec)
 
 study <- file.path(tempdir(), "ard-study")
 dir.create(file.path(study, "data"), recursive = TRUE, showWarnings = FALSE)
-saveRDS(cards::ADSL, file.path(study, "data", "adsl.rds"))
-saveRDS(cards::ADAE, file.path(study, "data", "adae.rds"))
+saveRDS(adsl, file.path(study, "data", "adsl.rds"))   # the sample study's ADaM
+saveRDS(adae, file.path(study, "data", "adae.rds"))
 
 df <- function(...) data.frame(..., stringsAsFactors = FALSE)
 ```
@@ -112,14 +112,14 @@ adata <- df(
   population_id = c("SAF", NA, NA),
   subjects = c(NA, "adsl_saf", NA),
   where = c(NA, 'TRTEMFL == "Y"', 'AESER == "Y"'),
-  keep = c(NA, "AEBODSYS | AEDECOD | AESER | TRTA", NA))
+  keep = c(NA, "AEBODSYS | AEDECOD | AESER | TRT01A", NA))
 
 analyses <- df(
   output_id = "T-14-3-1",
   analysis_id = c("TEAE", "SER"),
   method = "hierarchical",
   data = c("adae_teae", "adae_ser"),
-  by = "TRTA",
+  by = "TRT01A",
   variables = c("AEBODSYS | AEDECOD", "AEDECOD"),
   denominator = "adsl_saf")
 
@@ -153,7 +153,7 @@ spec2 <- tfl_ard_spec(c(base, list(
   analysis_data = adata2,
   analyses = df(output_id = "T-14-3-2", analysis_id = "FIRST",
                 method = "categorical", data = "adae_first",
-                by = "TRTA", variables = "AEDECOD"))))
+                by = "TRT01A", variables = "AEDECOD"))))
 cat(tfl_ard_code(spec2, part = "body"), sep = "\n")
 ```
 
@@ -182,7 +182,7 @@ knitr::kable(tfl_ard_methods()[, c("method", "label", "call")])
 - **`formats`**: `mean=xx.x | p=xx.x%` (the `xx` part says the decimals).
 - **`args`**: more arguments, as R (`over_variables = TRUE`). A function
   that takes a formula gets it here: `formula = survival::Surv(AVAL, 1 -
-  CNSR) ~ TRTA`.
+  CNSR) ~ TRT01P`.
 - **`parent`** and **`post`**: rows run inside `cards::ard_stack()` /
   `ard_strata()` / `ard_pairwise()`, and steps on the ARD after the call
   (`cards::sort_ard_hierarchical()`).
