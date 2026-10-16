@@ -1,5 +1,15 @@
 # tflspec (development version)
 
+* **The variables' order is `plan_levels(variable = )`** (#300,
+  0.0.24.9136).  The `variables` sheet's `order` is written as
+  `plan_levels(variable = c("AGE", "SEX", ...))` (the values of the ARD's
+  `variable` column; a variable nested with `under` has its place from
+  `plan_nest()`), and read back from it.  It used to reach the table only
+  through the order of the names in `plan_labels()`, and a variable with an
+  order but no label was not ordered.  `plan_labels()` sets no order now
+  and comes back in the order it was written: SAMPLE-01's tables are
+  byte-identical, from the YAML and through the sheets.
+
 * **The onco sample study: screen failures, ethnicity, study disposition,
   an AE time-to-event endpoint** (#298, 0.0.24.9135).  `adsl` holds every
   screened subject: the 160 randomised and 40 screen failures, who have no

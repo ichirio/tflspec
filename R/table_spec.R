@@ -657,7 +657,9 @@
 #'   \item{`variable`}{An analysis variable, or any column key (`BGRADE`,
 #'     `ATPT`, or the label column's own name).}
 #'   \item{`label`}{Display text replacing the variable's name.}
-#'   \item{`order`}{Number; the order the variables appear in.}
+#'   \item{`order`}{Number; the order the variables appear in
+#'     (`plan_levels(variable = c("AGE", "SEX"))`: the values of the ARD's
+#'     `variable` column; one not numbered comes after, in the ARD's order).}
 #'   \item{`levels`}{The order of its values: `Grade 0 | Grade 1 | Total`.}
 #'   \item{`empty_levels`}{`show` (blank, the default) or `hide`: whether
 #'     its values that no record has -- a code list's value, counted 0 in
@@ -1462,6 +1464,18 @@ print.tfl_table_spec <- function(x, ...) {
   }
   if (!length(out)) return(NULL)
   out
+}
+
+# plan_levels(variable = ): the variables' order (the variables sheet's
+# `order`), as the rows show them.  A variable nested under another's level
+# (`under`) has its place from plan_nest(), and a column the plan makes is
+# not a value of `variable`.
+.ard_spec_variable_order <- function(sp) {
+  v <- .ard_spec_variables(sp)
+  k <- !is.na(v$order) & !v$variable %in% .ard_spec_plan_cols(sp)
+  if (!is.null(v$under)) k <- k & (is.na(v$under) | !nzchar(trimws(v$under)))
+  if (!any(k)) return(NULL)
+  unique(v$variable[k])
 }
 
 # plan_labels() of a column the plan makes: its code list's labels, by value
