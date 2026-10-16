@@ -6,7 +6,7 @@ test_that("the study spec reads its files; missing ones are empty", {
   s <- tfl_read_study_spec(yml_dir())
   expect_s3_class(s, "tfl_study_spec")
   fns <- vapply(s$defaults$content, `[[`, "", "fn")
-  expect_identical(fns, c("plan_cells", "plan_stub", "plan_blanks", "plan_style", "plan_col_header"))
+  expect_identical(fns, c("plan_cells", "plan_col_header", "plan_stub", "plan_blanks", "plan_style"))
   expect_true(all(vapply(s$defaults$content, `[[`, "", "from") == "defaults"))
   expect_s3_class(s$defaults$content[[which(fns == "plan_style")]]$args$border_header, "tfl_call")
   expect_identical(s$defaults$page$header[["2"]]$left, "Protocol: {STUDY_ID}")

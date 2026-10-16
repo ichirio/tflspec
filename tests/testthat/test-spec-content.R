@@ -213,3 +213,34 @@ test_that("a nested variable with no heading keeps its place after its parent, b
   o <- .nest_order(v)
   expect_identical(vapply(o, `[[`, 0L, "order"), c(A = 1L, B = 4L, C1 = 2L, C2 = 3L))
 })
+
+test_that("the recommended order: the mapping first, then the finishing (rank and stage)", {
+  s <- .schema_all(figure = FALSE)
+  verbs <- c("normalize_ard", "table_plan", "plan_cells", "plan_stat_groups", "plan_total",
+             "plan_compare", "plan_filter", "plan_labels", "plan_levels", "plan_nest",
+             "plan_digits", "plan_sort", "plan_col_header", "plan_stub", "plan_blanks",
+             "plan_paginate_rows", "plan_paginate_group", "plan_paginate_cols", "plan_row_group",
+             "plan_hide", "plan_columns", "plan_style", "plan_cell_style")
+  ranks <- vapply(verbs, function(v) as.numeric(s[[v]]$rank), 0)
+  expect_false(is.unsorted(ranks, strictly = TRUE))
+  st <- vapply(verbs, function(v) tfl_schema(v)$stage, "")
+  expect_true(all(st[1:7] == "mapping"))
+  expect_true(all(st[-(1:7)] == "finishing"))
+  # every figure function says its stage: the plot and layers, the settings, the output
+  fig <- Filter(function(e) !is.null(e$figure), s)
+  expect_true(all(vapply(fig, function(e) e$stage %in% c("mapping", "finishing", "output"), NA)))
+  expect_identical(tfl_schema("tfl_image")$stage, "output")
+  expect_identical(tfl_schema("scale_x_continuous")$stage, "finishing")
+  expect_identical(tfl_schema("geom_line")$stage, "mapping")
+  # the bridge writes the verbs in that order
+  sp <- tfl_table_spec(
+    tables = data.frame(output_id = "T", cols = "TRT", rows = "group = variable", sort = "-n",
+                        total = "Total"),
+    variables = data.frame(output_id = "T", variable = "AGE", label = "Age"),
+    cells = data.frame(output_id = "T", template = "{n}"))
+  fns <- vapply(.plan_content_from_sheets(sp, "T"), `[[`, "", "fn")
+  r <- vapply(fns, function(f) as.numeric(s[[f]]$rank), 0)
+  expect_false(is.unsorted(r))
+  expect_true(match("plan_cells", fns) < match("plan_labels", fns))
+  expect_true(match("plan_total", fns) < match("plan_sort", fns))
+})

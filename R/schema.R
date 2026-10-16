@@ -54,7 +54,9 @@
 #' (either).
 #'
 #' @param fn A function's name (`"plan_cells"`), or `NULL` for all.
-#' @return The function's entry (`package`, `description`, `dots`, `args`),
+#' @return The function's entry (`package`, `description`, `dots`, `args`;
+#'   `rank`, its place in the recommended order, and `stage`, `"mapping"`,
+#'   `"finishing"` or `"output"`),
 #'   or the whole schema, a list by function; `NULL` for a function the
 #'   schema does not have.
 #' @examples
