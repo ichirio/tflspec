@@ -214,6 +214,48 @@ test_that("a nested variable with no heading keeps its place after its parent, b
   expect_identical(vapply(o, `[[`, 0L, "order"), c(A = 1L, B = 4L, C1 = 2L, C2 = 3L))
 })
 
+test_that("the variables' order is plan_levels(variable = ), both ways; the labels keep their order", {
+  sp <- tfl_table_spec(
+    tables = data.frame(output_id = "T-1", cols = "TRT01A", rows = "group = variable"),
+    variables = data.frame(output_id = "T-1", variable = c("SEX", "AGE", "RACE", "ASIANSUB"),
+                           label = c("Sex", "Age", NA, NA), order = c("2", "1", "3", NA),
+                           under = c(NA, NA, NA, "RACE: Asian")),
+    cells = data.frame(output_id = "T-1", template = "{n}"))
+  code <- tfl_table_code(sp)
+  # the nested one has its place from plan_nest(); a code list of it no
+  expect_true(any(grepl('plan_levels(variable = c("AGE", "SEX", "RACE"))', code, fixed = TRUE)))
+  expect_false(any(grepl("cl_variable", code, fixed = TRUE)))
+  expect_true(any(grepl('plan_labels(AGE = "Age", SEX = "Sex")', code, fixed = TRUE)))
+  back <- .plan_sheets_from_content(.plan_content_from_sheets(sp, "T-1", own = TRUE), "T-1")
+  ord <- stats::setNames(as.character(back$variables$order), back$variables$variable)
+  expect_identical(unname(ord[c("AGE", "SEX", "RACE", "ASIANSUB")]), c("1", "2", "3", "4"))
+  expect_length(attr(back, "not_converted"), 0L)
+  # labels alone set no order, and come back in their order
+  items <- list(tfl_item("table_plan", list(cols = "TRT01A", rows = c(group = "variable"))),
+                tfl_item("plan_cells", list(default = "{n}")),
+                tfl_item("plan_levels", list(TRT01A = c("B", "A"))),
+                tfl_item("plan_labels", list(SEX = "Sex", AGE = "Age")))
+  sh <- .plan_sheets_from_content(items, "T-1")
+  expect_true(all(is.na(sh$variables$order)))
+  expect_true(any(grepl('plan_labels(SEX = "Sex", AGE = "Age")', tfl_table_code(sh), fixed = TRUE)))
+  expect_false(any(grepl("plan_levels(variable", tfl_table_code(sh), fixed = TRUE)))
+  # plan_levels() is read first wherever it is written (the recommended
+  # order puts plan_labels() first): the rows, and so the code lists, keep
+  # their place
+  sp2 <- tfl_table_spec(
+    tables = data.frame(output_id = "T-1", cols = "TRT01A", rows = "group = variable"),
+    variables = data.frame(output_id = "T-1", variable = c("TRT01A", "SEX", "AGE"),
+                           label = c(NA, "Sex", "Age"), order = c(NA, "2", "1"),
+                           levels = c("B | A", "F | M", NA)),
+    cells = data.frame(output_id = "T-1", template = "{n}"))
+  items2 <- .plan_content_from_sheets(sp2, "T-1", own = TRUE)
+  fns <- vapply(items2, `[[`, "", "fn")
+  expect_lt(match("plan_labels", fns), match("plan_levels", fns))
+  back2 <- .plan_sheets_from_content(items2, "T-1")
+  expect_identical(back2$variables$variable, c("TRT01A", "SEX", "AGE"))
+  expect_identical(tfl_table_code(back2), tfl_table_code(sp2))
+})
+
 test_that("the recommended order: the mapping first, then the finishing (rank and stage)", {
   s <- .schema_all(figure = FALSE)
   verbs <- c("normalize_ard", "table_plan", "plan_cells", "plan_stat_groups", "plan_total",

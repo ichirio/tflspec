@@ -232,6 +232,9 @@
   }
   if (!is.null(sa[["rounding"]])) add("plan_digits", rounding = sa[["rounding"]])
   lv <- .ard_spec_levels(sp)
+  # the variables' order: the values of the ARD's `variable` column
+  vo <- .ard_spec_variable_order(sp)
+  if (length(vo) && is.null(lv[["variable"]])) lv <- c(list(variable = vo), lv)
   de <- .ard_spec_drop_empty(sp)
   if (length(lv) || length(de)) {
     do.call(add, c(list("plan_levels"), as.list(lv),
@@ -485,7 +488,8 @@ tfl_table_code <- function(spec, output_id = NULL, data = "data",
   for (i in seq_along(steps)) {
     if (!identical(steps[[i]]$fun, "plan_levels")) next
     a <- steps[[i]]$args
-    v <- setdiff(names(a), ".drop_empty")
+    # (the variables' order stays as it is: `variable` is no data variable)
+    v <- setdiff(names(a), c(".drop_empty", "variable"))
     v <- v[vapply(a[v], is.character, NA)]
     if (!length(v)) next
     cl <- c("# the code lists: each value in its order, as the table shows it",
@@ -642,6 +646,7 @@ tfl_table_code <- function(spec, output_id = NULL, data = "data",
   lgl <- function(x) if (isTRUE(x)) "TRUE" else if (identical(x, FALSE)) "FALSE"
   tb <- list(); study <- list()
   vars <- list(); cells <- list(); lay <- list(); sty <- list()
+  labelled <- character()
   cols <- list(); cstyles <- list(); hdr <- list()
   var_row <- function(v) if (is.null(vars[[v]])) vars[[v]] <<- list(variable = v)
   col_row <- function(cn) if (is.null(cols[[cn]])) cols[[cn]] <<- list(column = cn)
@@ -703,7 +708,18 @@ tfl_table_code <- function(spec, output_id = NULL, data = "data",
   items <- Filter(function(it) !identical(it$fn, "normalize_ard"), items)
   codes <- list()
   seen <- character()
-  for (cl in .content_calls(items)) {
+  # the variables' rows as the sheet had them: the code writes
+  # plan_levels() in the rows' order and plan_labels() in `order`'s, and the
+  # recommended order puts plan_labels() first -- so plan_levels() is read
+  # first, wherever it is written
+  calls <- .content_calls(items)
+  fns <- vapply(calls, function(cl) cl$fun, "")
+  first <- match("plan_labels", fns)
+  if (!is.na(first) && any(fns[-seq_len(first)] == "plan_levels")) {
+    lv <- which(fns == "plan_levels" & seq_along(fns) > first)
+    calls <- append(calls[-lv], calls[lv], after = first - 1L)
+  }
+  for (cl in calls) {
     fn <- cl$fun
     a <- cl$args
     nm <- names(a) %||% rep("", length(a))
@@ -748,11 +764,17 @@ tfl_table_code <- function(spec, output_id = NULL, data = "data",
                                            " (write them into the templates)"))
       },
       plan_levels = {
+        # the variables' order: the variables sheet's `order` (read after
+        # the values' levels, whose rows keep the sheet's place)
+        vo <- named$variable
+        if (is.list(vo) && all(vapply(vo, is.character, NA))) vo <- unlist(vo)
+        if (is.character(vo)) named$variable <- NULL else vo <- NULL
         for (v in setdiff(names(named), ".drop_empty")) {
           if (!is.character(named[[v]])) { miss(fn, v); next }
           var_row(v); vars[[v]]$levels <- bar(named[[v]])
         }
         for (v in named$.drop_empty) { var_row(v); vars[[v]]$empty_levels <- "hide" }
+        for (k in seq_along(vo)) { var_row(vo[k]); vars[[vo[k]]]$order <- k }
       },
       plan_labels = {
         for (v in names(named)) {
@@ -779,7 +801,7 @@ tfl_table_code <- function(spec, output_id = NULL, data = "data",
             miss(fn, sprintf("%s: a value's labels stay in code", v)); next
           }
           var_row(v); vars[[v]]$label <- x
-          vars[[v]]$order <- length(Filter(function(r) !is.null(r$label), vars))
+          labelled <- c(labelled, v)
         }
       },
       plan_nest = {
@@ -934,9 +956,15 @@ tfl_table_code <- function(spec, output_id = NULL, data = "data",
       vapply(rows, function(r) txt(r[[k]]), "")), stringsAsFactors = FALSE)
     cbind(output_id = rep(id, nrow(df)), df, stringsAsFactors = FALSE)
   }
-  # a nested variable (plan_nest) with no heading of its own is not in
-  # plan_labels, whose order is the variables' order: its place is right
-  # after the variable it goes under (and that one's children before it)
+  # with no `order` (no plan_levels(variable = )), the labelled variables'
+  # rows in plan_labels()'s order, so the labels come back as written
+  if (!any(vapply(vars, function(r) !is.null(r$order), NA))) {
+    at <- which(names(vars) %in% labelled)
+    vars[at] <- vars[unique(labelled)]
+    names(vars)[at] <- unique(labelled)
+  }
+  # a nested variable (plan_nest) with no heading of its own: its place is
+  # right after the variable it goes under (and that one's children before it)
   vars <- .nest_order(vars)
   sheets <- list(
     tables = frame(list(lapply(tb, txt))),
