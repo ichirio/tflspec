@@ -1,5 +1,9 @@
 # tflspec (development version)
 
+- **`tfl_args_from_r()` keeps a `NULL` argument on R < 4.4** (#305,
+  0.0.24.9138).  `label = NULL` read as no argument on R 4.2 (`is.atomic(NULL)`
+  is TRUE there); it is `tfl_r("NULL")` on every R now.
+
 * **The table's code is one pipe from the ARD** (#302, 0.0.24.9137).
   `tfl_table_code()` writes `plan <- ard |> normalize_ard(...) |>
   table_plan(...) |> plan_*()`: `normalize_ard()`'s `hierarchy`,
