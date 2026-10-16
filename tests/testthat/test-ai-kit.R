@@ -78,15 +78,14 @@ test_that("the example's answer reads, reviews clean, and is the example TOC's",
                    toc$titles$center[toc$titles$output_id == "T-2" & toc$titles$line == 2])
 })
 
-test_that("the example runs on the pilot data: the ARD, the tables, the listing, the figure", {
+test_that("the example runs on the sample data: the ARD, the tables, the listing, the figure", {
   skip_on_cran()
-  skip_if_not_installed("pharmaverseadam")
   skip_if_not_installed("rtfreporter")
   d <- kit_study("ai-kit-run")
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   dir.create(file.path(d, "data", "adam"), recursive = TRUE, showWarnings = FALSE)
   for (x in c("adsl", "adae", "advs")) {
-    saveRDS(getExportedValue("pharmaverseadam", x), file.path(d, "data", "adam", paste0(x, ".rds")))
+    saveRDS(getExportedValue("tflspec", x), file.path(d, "data", "adam", paste0(x, ".rds")))
   }
   st <- tfl_read_study_spec(d)
   ard <- suppressMessages(tfl_build_ard(st, dir = d, save = FALSE))
@@ -101,7 +100,7 @@ test_that("the example runs on the pilot data: the ARD, the tables, the listing,
     expect_no_warning(suppressMessages(
       rtfreporter::generate_rtfreport(tfl_report(o, content = plan, study = st), out, overwrite = TRUE)))
     txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
-    expect_match(txt, "(N=86)", fixed = TRUE)
+    expect_match(txt, "(N=80)", fixed = TRUE)          # Drug X, safety set
     if (id == "T-2") expect_match(txt, "Subjects with at least one TEAE", fixed = TRUE)
   }
   skip_if_not_installed("ggplot2")

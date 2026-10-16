@@ -891,7 +891,7 @@ datasets = )` take the same frame.
 
 `tfl_ai_review(dir, toc = , adam = , others = , metadata = )` checks the
 study folder and splits what it finds by who acts: **the AI** (an output
-or a title not the TOC's, `(N=86)` where `(N={n})` belongs, analyses no
+or a title not the TOC's, `(N=80)` where `(N={n})` belongs, analyses no
 table uses, no `_assumptions.yml`, every error and check of
 `tfl_review_spec()` / `tfl_check_fig_design()`, each report file's items
 against the schema: K16 an error, K17 an argument the function does not

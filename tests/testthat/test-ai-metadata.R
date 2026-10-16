@@ -85,17 +85,16 @@ test_that("tfl_ai_context('toc', datasets = ) takes the metadata frame", {
 })
 
 test_that("tfl_ai_review(metadata = ): unknown names and levels are the AI's to fix", {
-  skip_if_not_installed("pharmaverseadam")
   d <- file.path(tempdir(), "ai-review-metadata")
   unlink(d, recursive = TRUE)
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   kit <- suppressMessages(tflspec_ai_manual(file.path(d, "kit"), overwrite = TRUE))
   st <- file.path(d, "XYZ-001")
   tfl_ai_unpack(kit[basename(kit) == "06_example_spec.md"], st)
-  md <- tfl_adam_metadata(datasets = list(ADSL = pharmaverseadam::adsl,
-                                          ADAE = pharmaverseadam::adae,
-                                          ADVS = pharmaverseadam::advs))
-  # the example, against the pilot data's own metadata: nothing unknown
+  md <- tfl_adam_metadata(datasets = list(ADSL = tflspec::adsl,
+                                          ADAE = tflspec::adae,
+                                          ADVS = tflspec::advs))
+  # the example, against the sample data's own metadata: nothing unknown
   r0 <- tfl_ai_review(st, metadata = md, write = FALSE)
   expect_false(any(r0$rule %in% c("K14", "K15")))
   # a renamed variable and an invented level
