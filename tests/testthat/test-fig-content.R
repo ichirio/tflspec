@@ -178,6 +178,9 @@ test_that("an item's arguments as R text and back (the builder's R form)", {
   a <- tfl_args_from_r("table_plan", 'cols = "TRT", rows = c(group = "variable")')
   expect_identical(a$rows, list(group = "variable"))
   expect_identical(nrow(attr(a, "problems")), 0L)
+  # a NULL argument is kept as the R text NULL, on every R (#305)
+  expect_identical(unclass(tfl_args_from_r("plan_total", "label = NULL")$label),
+                   unclass(tfl_r("NULL")))
   a <- tfl_args_from_r("plan_filter", "p >= 0.05")
   expect_s3_class(a$where, "tfl_r")
   g <- tfl_args_from_r("geom_line", "aes(x = AVISIT, y = mean), linewidth = 0.5, position = position_dodge(width = 0.3)")

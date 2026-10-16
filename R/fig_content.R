@@ -715,6 +715,8 @@ tfl_args_from_r <- function(fn, text) {
 # value, anything else (a column, an expression) as an expression
 .args_value_of <- function(x) {
   if (is.name(x)) return(.spec_expr(as.character(x)))
+  # (NULL is the R text NULL: before is.atomic(), TRUE for NULL before R 4.4)
+  if (is.null(x)) return(.spec_expr("NULL"))
   if (is.atomic(x)) return(x)
   env <- new.env(parent = if (requireNamespace("rtfreporter", quietly = TRUE))
     asNamespace("rtfreporter") else baseenv())
