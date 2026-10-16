@@ -950,7 +950,7 @@ tfl_table_code <- function(spec, output_id = NULL, data = "data",
     study = if (length(study)) unlist(study))
   sp <- do.call(tfl_table_spec, Filter(Negate(is.null), sheets))
   if (length(codes)) {
-    ord <-stats::ave(seq_along(codes), vapply(codes, `[[`, "", "variable"), FUN = seq_along)
+    ord <- stats::ave(seq_along(codes), vapply(codes, `[[`, "", "variable"), FUN = seq_along)
     for (i in seq_along(codes)) codes[[i]]$order <- ord[i]
     sp$codelists <- frame(codes)
   }
