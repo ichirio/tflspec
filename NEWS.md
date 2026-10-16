@@ -8,7 +8,12 @@
   through the order of the names in `plan_labels()`, and a variable with an
   order but no label was not ordered.  `plan_labels()` sets no order now
   and comes back in the order it was written: SAMPLE-01's tables are
-  byte-identical, from the YAML and through the sheets.
+  byte-identical, from the YAML and through the sheets.  The sheets read
+  back from content keep the variables' rows in their place:
+  `plan_levels()` is read before `plan_labels()` wherever it is written
+  (the recommended order of #290 puts the labels first, which moved a
+  variable with levels but no label, e.g. `TRT01A`, to the end -- and its
+  code list with it in tflplanner's programs).
 
 * **The onco sample study: screen failures, ethnicity, study disposition,
   an AE time-to-event endpoint** (#298, 0.0.24.9135).  `adsl` holds every

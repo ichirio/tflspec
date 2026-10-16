@@ -239,6 +239,21 @@ test_that("the variables' order is plan_levels(variable = ), both ways; the labe
   expect_true(all(is.na(sh$variables$order)))
   expect_true(any(grepl('plan_labels(SEX = "Sex", AGE = "Age")', tfl_table_code(sh), fixed = TRUE)))
   expect_false(any(grepl("plan_levels(variable", tfl_table_code(sh), fixed = TRUE)))
+  # plan_levels() is read first wherever it is written (the recommended
+  # order puts plan_labels() first): the rows, and so the code lists, keep
+  # their place
+  sp2 <- tfl_table_spec(
+    tables = data.frame(output_id = "T-1", cols = "TRT01A", rows = "group = variable"),
+    variables = data.frame(output_id = "T-1", variable = c("TRT01A", "SEX", "AGE"),
+                           label = c(NA, "Sex", "Age"), order = c(NA, "2", "1"),
+                           levels = c("B | A", "F | M", NA)),
+    cells = data.frame(output_id = "T-1", template = "{n}"))
+  items2 <- .plan_content_from_sheets(sp2, "T-1", own = TRUE)
+  fns <- vapply(items2, `[[`, "", "fn")
+  expect_lt(match("plan_labels", fns), match("plan_levels", fns))
+  back2 <- .plan_sheets_from_content(items2, "T-1")
+  expect_identical(back2$variables$variable, c("TRT01A", "SEX", "AGE"))
+  expect_identical(tfl_table_code(back2), tfl_table_code(sp2))
 })
 
 test_that("the recommended order: the mapping first, then the finishing (rank and stage)", {
