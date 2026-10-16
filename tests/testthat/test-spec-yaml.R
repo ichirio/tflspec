@@ -46,7 +46,7 @@ test_that("a report file reads: tags, nested calls, content items", {
   expect_identical(out$data$source, "ard")
   expect_identical(out$ard$analyses[[2L]]$statistic$AGE[[2L]], "mean")
   expect_identical(out$page$titles[["1"]]$center, "Table 14.1.1")
-  expect_identical(out$codelists$TRT01A[[2L]]$label, "Low Dose")
+  expect_identical(out$codelists$TRT01A[[2L]]$label, "Control 100 mg")
 })
 
 test_that("the defaults file reads with the same reader's pieces: a nested call", {

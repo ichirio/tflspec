@@ -12,7 +12,7 @@ content:
   - plan_style: {border_header: {fn: rtf_border, args: {top: true, bottom: true}}}
 page:
   header:
-    1: {left: "Sample Pharma (tflplanner sample)", right: DRAFT}
+    1: {left: "Sample Pharma", right: DRAFT}
     2: {left: "Protocol: {STUDY_ID}", right: "Page {PAGE} of {TOTAL_PAGES}"}
     4: {center: "{OUTPUT_LABEL}"}
     5: {center: "{OUTPUT_TITLE}"}

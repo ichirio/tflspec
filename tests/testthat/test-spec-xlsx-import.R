@@ -21,7 +21,7 @@ test_that("edited rows update their items by key; new rows add; the rest is unto
   ed("titles", function(x) { x$center[x$line == "2"] <- "Demographics (edited)"; x })
   ed("analyses", function(x) { x$variables[x$id == "CAT"] <- "AGEGR1 | SEX"; x })
   ed("footnotes", function(x) rbind(x, data.frame(output_id = "T-14-1-1", line = "2", left = "New note.", stringsAsFactors = FALSE)))
-  ed("codelists", function(x) { x$label[x$value == "Xanomeline Low Dose"] <- "Low"; x })
+  ed("codelists", function(x) { x$label[x$value == "Control"] <- "Ctrl"; x })
   openxlsx::saveWorkbook(wb, f, overwrite = TRUE)
 
   r <- tfl_import_spec_xlsx(d, f)
@@ -29,7 +29,7 @@ test_that("edited rows update their items by key; new rows add; the rest is unto
   expect_true(any(r$changes$sheet == "titles" & r$changes$key == "T-14-1-1 / 2"))
   expect_true(any(r$changes$sheet == "analyses" & r$changes$column == "variables"))
   expect_true(any(grepl("^footnotes: T-14-1-1 / 2", r$added)))
-  expect_true(any(r$changes$sheet == "codelists" & r$changes$to == "Low"))
+  expect_true(any(r$changes$sheet == "codelists" & r$changes$to == "Ctrl"))
   # the files: the defaults' token, the report's title, analyses, footnote, code list
   s <- tfl_read_study_spec(d)
   expect_identical(s$defaults$page$tokens$COMPANY, "Acme Pharma")
@@ -38,7 +38,7 @@ test_that("edited rows update their items by key; new rows add; the rest is unto
   expect_identical(o$page$titles[["2"]]$center, "Demographics (edited)")
   expect_identical(o$page$footnotes[["2"]]$left, "New note.")
   expect_identical(o$ard$analyses[[3L]]$variables, c("AGEGR1", "SEX"))
-  expect_identical(o$codelists$TRT01A[[2L]]$label, "Low")
+  expect_identical(o$codelists$TRT01A[[2L]]$label, "Ctrl")
   # what the workbook cannot hold is as it was
   expect_identical(vapply(o$content, `[[`, "", "fn")[6L], "plan_cell_style")
   expect_s3_class(o$content[[6L]]$args$where, "tfl_r")

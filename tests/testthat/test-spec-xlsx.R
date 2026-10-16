@@ -12,7 +12,7 @@ test_that("the rows of a YAML spec go to a workbook; the rest is listed", {
   an <- rd("analyses")
   expect_identical(an$output_id, rep("T-14-1-1", 3L))
   expect_identical(an$id, c("GROUPN", "CONT", "CAT"))
-  expect_identical(an$variables[3L], "AGEGR1 | SEX | RACE | ETHNIC")
+  expect_identical(an$variables[3L], "AGEGR1 | SEX | RACE | ECOGBL")
   # the defaults' header lines keyed blank, the report's titles by its id
   h <- rd("header")
   expect_true(all(is.na(h$output_id)))
@@ -24,7 +24,7 @@ test_that("the rows of a YAML spec go to a workbook; the rest is listed", {
   expect_true("COMPANY" %in% tk$name[is.na(tk$output_id)])
   expect_true("OUTPUT_POPULATION" %in% tk$name[tk$output_id %in% "T-14-1-1"])
   cl <- rd("codelists")
-  expect_identical(cl$variable, rep("TRT01A", 3L))
+  expect_identical(cl$variable, rep("TRT01A", 2L))
   # the maps that are not one cell, the layers, the calls: listed
   nx <- r$not_in_xlsx
   expect_true(any(nx$output %in% "T-14-1-1" & nx$part == "content"))

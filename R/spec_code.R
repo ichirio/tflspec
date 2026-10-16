@@ -1223,7 +1223,7 @@ tfl_normalize_code <- function(spec, ard_spec = NULL, output_id = NULL,
 #'     requireNamespace("rtfreporter", quietly = TRUE)) {
 #'   spec <- tfl_read_table_spec(system.file("extdata", "ard-spec", "DM.xlsx",
 #'                                           package = "tflspec"))
-#'   ard <- cards::ard_stack(cards::ADSL, .by = TRT01A,
+#'   ard <- cards::ard_stack(adsl[adsl$SAFFL == "Y", ], .by = TRT01A,
 #'                           cards::ard_continuous(variables = AGE),
 #'                           cards::ard_categorical(variables = c(AGEGR1, SEX)))
 #'   plan <- tfl_table_plan(rtfreporter::normalize_ard(ard), spec)
