@@ -12,7 +12,8 @@
 .ai_answer_keys <- list(
   toc = "toc",
   figure = c("template", "ggplot2_version", "data", "stats", "plot",
-             "layers", "plots", "compose", "note")
+             "layers", "plots", "compose", "note"),
+  table = "outputs"
 )
 
 #' Read a drafting answer
@@ -32,6 +33,11 @@
 #' * `toc`: the rows become a data frame with [tfl_read_toc()]'s fields as
 #'   columns, every value text (numbers as text, a list joined with
 #'   `" | "`, missing `NA`).
+#' * `table`: each report of `outputs` is read as [tfl_read_output()]
+#'   reads a report file, into `outputs` (a list of `tfl_output` by id); a
+#'   key a report file does not have is a problem.  The assumptions (text,
+#'   or mappings with `output_id`, `where`, `item`, `assumption`,
+#'   `question`) are kept as rows too, in `assumption_rows`.
 #' * `figure`: the design becomes a [tfl_fig_design()] (the 0.0.12 shape
 #'   `type` / `style` / `args` is read as one `figure` layer, and a `stats`
 #'   list of before 0.0.24.9074 after the `data` steps, each with a
@@ -74,6 +80,10 @@ tfl_ai_parse <- function(text, task) {
     design = NULL, note = NULL, assumptions = character(),
     problems = .ai_problems(), format = NA_character_, raw = NA_character_
   )
+  if (task == "table") {
+    out$outputs <- list()
+    out$assumption_rows <- .ai_assumption_rows(NULL)
+  }
   found <- .ai_find_answer(text, task)
   out$problems <- found$problems
   if (is.null(found$value)) return(structure(out, class = "tfl_ai_answer"))
@@ -95,7 +105,17 @@ tfl_ai_parse <- function(text, task) {
     ))
   }
   out$assumptions <- .ai_assumptions(x$assumptions)
-  if (task == "toc") {
+  if (task == "table") {
+    tb <- .ai_read_table(x)
+    prob <- rbind(prob, tb$problems)
+    out$outputs <- tb$outputs
+    out$assumption_rows <- .ai_assumption_rows(x$assumptions)
+    a <- out$assumption_rows
+    out$assumptions <- trimws(paste0(
+      ifelse(is.na(a$output_id), "", paste0(a$output_id, ": ")),
+      ifelse(is.na(a$assumption), "", a$assumption),
+      ifelse(is.na(a$question), "", paste0(" -- ", a$question))))
+  } else if (task == "toc") {
     toc <- .ai_rows(x$toc, "toc", .toc_fields)
     prob <- rbind(prob, toc$problems)
     out$sheets <- list(toc = toc$rows)
@@ -117,6 +137,9 @@ print.tfl_ai_answer <- function(x, ...) {
     for (nm in names(x$sheets)) {
       cat(sprintf("%s: %d row(s)\n", nm, nrow(x$sheets[[nm]])))
     }
+  }
+  if (length(x$outputs)) {
+    cat(sprintf("outputs: %s\n", paste(names(x$outputs), collapse = ", ")))
   }
   if (!is.null(x$design)) {
     n <- vapply(x$design[c("data", "layers")], length, 1L)
@@ -242,7 +265,7 @@ print.tfl_ai_answer <- function(x, ...) {
     }
     return(list(value = .ai_from_json(v), format = "json"))
   }
-  handlers <- if (task == "figure") list(r = tfl_r)
+  handlers <- if (task == "figure") list(r = tfl_r) else if (task == "table") .yaml_handlers()
   v <- tryCatch(
     yaml::yaml.load(text, handlers = handlers),
     error = function(e) e, warning = function(w) w

@@ -8,7 +8,8 @@ tfl_ai_tasks()
 }
 \value{
 A data frame: \code{task}, \code{fills}, \code{checked_by}, \code{keyed_by}, \code{per}
-(\code{study} or \code{report}: one prompt a study, or one a report).
+(\code{study}, \code{report} or \code{batch}: one prompt a study, a report, or a few
+reports).
 }
 \description{
 What each task of the drafting functions (\code{\link[=tfl_ai_prompt]{tfl_ai_prompt()}},
@@ -21,9 +22,16 @@ tflspec's checks reads its answer, and what its items are matched by.
 \code{\link[=tfl_read_toc]{tfl_read_toc()}} (one prompt for the study).
 \item \code{figure}: one report's whole figure design (\code{\link[=tfl_fig_design]{tfl_fig_design()}}),
 checked by \code{\link[=tfl_check_fig_design]{tfl_check_fig_design()}}.
+\item \code{table}: the report files of the YAML spec (\verb{spec/outputs/<id>.yml})
+of a batch of 5 to 10 tables -- each its \verb{ard:} analyses, \verb{data:},
+\verb{codelists:}, \verb{content:} items (one call each: \code{normalize_ard},
+\code{table_plan}, \verb{plan_*}) and \verb{page:} -- over the study's defaults; read
+by \code{\link[=tfl_read_output]{tfl_read_output()}}, checked item by item against the schema
+(\code{\link[=tfl_schema_check]{tfl_schema_check()}}) and the ADaM summary, and written as files by
+\code{\link[=tfl_ai_unpack]{tfl_ai_unpack()}}.
 }
 
-The \code{ard} and \code{table} tasks come in a later version.
+The \code{ard} task (the ARD definition alone) comes in a later version.
 }
 \examples{
 tfl_ai_tasks()

@@ -1,5 +1,33 @@
 # tflspec (development version)
 
+* **AI drafting of tables' code spec from a company's TOC / SHELL
+  workbook** (#307, 0.0.24.9140).  A new drafting task, `table`: a batch of
+  5 to 10 tables becomes report files of the YAML spec
+  (`spec/outputs/<id>.yml`: `ard:` analyses, `data:`, `codelists:`,
+  `content:` items, `page:`) over the study's defaults.
+  `tfl_ai_context("table", outputs, shell, datasets, study_dir, examples)`,
+  `tfl_ai_prompt("table")` (the schema from `tfl_schema()`,
+  `tfl_spec_columns()` and `tfl_ard_methods()`; a reviewed report of the
+  family as the model with `examples =`), `tfl_ai_parse()` (one YAML block,
+  `outputs:` read as `tfl_read_output()` reads a file),
+  `tfl_ai_check()` (the schema: unknown functions and arguments, types,
+  required arguments; the ARD's fields and methods; the analysis sets; the
+  datasets and variables of the ADaM summary; the ARD program and the
+  table code written from a copy of the study folder, nothing run) and
+  `tfl_ai_unpack()` (one file a report; the assumptions join
+  `spec/_assumptions.yml`, batch by batch).  New helpers:
+  `tfl_ai_read_shell()` (any workbook layout as compact text: every sheet,
+  non-empty cells in reading order, merged cells once, indents; pick reports
+  by number or sheets; a size cap), `tfl_ai_adam_summary()` (a folder of
+  XPT: variables, labels, types, short value lists, no records),
+  `tfl_ai_batches()` (the TOC's tables by family) and
+  `tfl_ai_study_init()` (study.yml, spec/data.yml with ADSL's analysis
+  sets, spec/defaults.yml).  The AI user manual takes the code spec as its
+  main path (the sheet spec is Appendix A), and a tester guide in English
+  and Japanese ships in `inst/ai/` (articles "Drafting tables' code spec
+  with an AI chat").  A sample TOC / SHELL workbook and a stored answer
+  are in `inst/ai/example/`.
+
 - **`tfl_args_from_r()` keeps a `NULL` argument on R < 4.4** (#305,
   0.0.24.9138).  `label = NULL` read as no argument on R 4.2 (`is.atomic(NULL)`
   is TRUE there); it is `tfl_r("NULL")` on every R now.

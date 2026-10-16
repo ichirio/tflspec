@@ -8,7 +8,8 @@ tfl_ai_unpack(answer, dir, overwrite = FALSE)
 }
 \arguments{
 \item{answer}{The answer: its text (a character vector, one element a
-line or the whole text), or the path of a \code{.md} / \code{.txt} file holding it.}
+line or the whole text), the path of a \code{.md} / \code{.txt} file holding it,
+or a \code{table} answer read by \code{\link[=tfl_ai_parse]{tfl_ai_parse()}}.}
 
 \item{dir}{The study folder to write into.}
 
@@ -27,6 +28,15 @@ block, the way the kit's example (\verb{06_example_spec.md}) is written.
 (\code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}, \code{\link[=tfl_read_outputs]{tfl_read_outputs()}}).
 }
 \details{
+The answer to a \code{table} prompt (\code{\link[=tfl_ai_prompt]{tfl_ai_prompt()}}) -- one block, its
+\verb{outputs:} the report files of a batch -- is written too: give the
+answer read by \code{\link[=tfl_ai_parse]{tfl_ai_parse()}} (or its text).  Each report becomes
+\verb{spec/outputs/<id>.yml}, written as \code{\link[=tfl_write_output]{tfl_write_output()}} writes one,
+and its assumptions join \verb{spec/_assumptions.yml} (the items of these
+reports replaced, the others kept), so the batches of a study add up in
+one folder.  Check the answer first (\code{\link[=tfl_ai_check]{tfl_ai_check()}}): a report that
+could not be read is not written.
+
 Only spec files are written: \code{study.yml}, and \code{.yml} files under \verb{spec/}
 (\code{spec/data.yml}, \code{spec/toc.yml}, \code{spec/defaults.yml},
 \verb{spec/patterns/<name>.yml}, \verb{spec/outputs/<id>.yml},

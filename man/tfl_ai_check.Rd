@@ -33,6 +33,17 @@ cells filled, an id twice -- become problems on their rows); a kind
 it had to guess, and a row with no id it passes over as a heading,
 are warnings; a column outside the context's \code{toc_fields} is an
 error.
+\item \code{table}: each report against the schema -- a key a report file does
+not have, a content function that is not a table's, an argument the
+function does not have (\code{\link[=tfl_schema_check]{tfl_schema_check()}}, an error here: the AI's
+invention), a value of the wrong type, a required argument missing; its
+\verb{ard:} fields and method; the analysis sets of \code{spec/data.yml} (with
+\code{study_dir}); with the context's \code{datasets} (the ADaM summary), every
+dataset and variable an analysis names (made by \code{derive} or \code{add}
+aside); a report asked for and missing.  Then the answer is put in a
+copy of the study folder and its ARD program (\code{\link[=tfl_ard_code]{tfl_ard_code()}}) and
+each table's code (\code{\link[=tfl_content_code]{tfl_content_code()}}) are written: what fails there
+is a problem too.  Nothing is run.
 \item \code{figure}: \code{\link[=tfl_check_fig_design]{tfl_check_fig_design()}} on the design (with \code{adam}, the
 data-aware checks too: the variables and PARAMCDs it names); an
 \code{output_id} other than the context's is an error; a template not

@@ -51,6 +51,10 @@ tfl_ai_diff <- function(current, answer, task = NULL) {
     ))
   }
   task <- .ai_task(task, "tfl_ai_diff()")
+  if (task == "table") {
+    .ard_stop(paste("tfl_ai_diff(): the table task writes report files; compare them with",
+                    "the files already there (or review them with tfl_ai_review())."))
+  }
   get <- function(x, what) {
     if (!inherits(x, "tfl_ai_answer")) return(x)
     if (task == "toc") x$sheets$toc else x$design

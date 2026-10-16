@@ -37,6 +37,11 @@ off).  The problems go to \code{\link[=tfl_ai_repair_prompt]{tfl_ai_repair_promp
 \item \code{toc}: the rows become a data frame with \code{\link[=tfl_read_toc]{tfl_read_toc()}}'s fields as
 columns, every value text (numbers as text, a list joined with
 \code{" | "}, missing \code{NA}).
+\item \code{table}: each report of \code{outputs} is read as \code{\link[=tfl_read_output]{tfl_read_output()}}
+reads a report file, into \code{outputs} (a list of \code{tfl_output} by id); a
+key a report file does not have is a problem.  The assumptions (text,
+or mappings with \code{output_id}, \code{where}, \code{item}, \code{assumption},
+\code{question}) are kept as rows too, in \code{assumption_rows}.
 \item \code{figure}: the design becomes a \code{\link[=tfl_fig_design]{tfl_fig_design()}} (the 0.0.12 shape
 \code{type} / \code{style} / \code{args} is read as one \code{figure} layer, and a \code{stats}
 list of before 0.0.24.9074 after the \code{data} steps, each with a

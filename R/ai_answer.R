@@ -65,6 +65,15 @@
 #' [tfl_ai_review()] and the study's other functions
 #' ([tfl_read_study_spec()], [tfl_read_outputs()]).
 #'
+#' The answer to a `table` prompt ([tfl_ai_prompt()]) -- one block, its
+#' `outputs:` the report files of a batch -- is written too: give the
+#' answer read by [tfl_ai_parse()] (or its text).  Each report becomes
+#' `spec/outputs/<id>.yml`, written as [tfl_write_output()] writes one,
+#' and its assumptions join `spec/_assumptions.yml` (the items of these
+#' reports replaced, the others kept), so the batches of a study add up in
+#' one folder.  Check the answer first ([tfl_ai_check()]): a report that
+#' could not be read is not written.
+#'
 #' Only spec files are written: `study.yml`, and `.yml` files under `spec/`
 #' (`spec/data.yml`, `spec/toc.yml`, `spec/defaults.yml`,
 #' `spec/patterns/<name>.yml`, `spec/outputs/<id>.yml`,
@@ -73,7 +82,8 @@
 #' is written.  Each file is checked as YAML before any is written.
 #'
 #' @param answer The answer: its text (a character vector, one element a
-#'   line or the whole text), or the path of a `.md` / `.txt` file holding it.
+#'   line or the whole text), the path of a `.md` / `.txt` file holding it,
+#'   or a `table` answer read by [tfl_ai_parse()].
 #' @param dir The study folder to write into.
 #' @param overwrite Write over files already there?
 #' @return Invisibly, the paths written.
@@ -86,6 +96,13 @@
 #' @seealso [tflspec_ai_manual()], [tfl_ai_review()]
 #' @export
 tfl_ai_unpack <- function(answer, dir, overwrite = FALSE) {
+  if (inherits(answer, "tfl_ai_answer")) {
+    if (!identical(answer$task, "table")) {
+      .ard_stop(sprintf(paste0("tfl_ai_unpack(): a %s answer is not files; apply it as ",
+                               "the task's own functions say (tfl_ai_diff())."), answer$task))
+    }
+    return(.ai_unpack_table(answer, dir, overwrite))
+  }
   if (!is.character(answer) || !length(answer)) {
     .ard_stop("tfl_ai_unpack(): `answer` is the answer's text, or the path of a file holding it.")
   }
@@ -94,6 +111,10 @@ tfl_ai_unpack <- function(answer, dir, overwrite = FALSE) {
   }
   x <- unlist(strsplit(paste(answer, collapse = "\n"), "\n", fixed = TRUE))
   blocks <- .ai_answer_blocks(x)
+  # a table answer (one block, the tflspec_ai header, `outputs:`)
+  if (!length(blocks) && any(grepl("^\\s*tflspec_ai:.*\\btable\\b", x))) {
+    return(.ai_unpack_table(tfl_ai_parse(x, "table"), dir, overwrite))
+  }
   if (!length(blocks)) {
     .ard_stop(paste0("tfl_ai_unpack(): the answer holds no file -- each is a heading with its ",
                      "path (### spec/outputs/T-1.yml) and a ```yaml block under it."))

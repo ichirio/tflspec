@@ -36,6 +36,11 @@ articles:
       - articles/listings
       - articles/figures
       - articles/ars
+  - title: Drafting with an AI chat
+    navbar: Drafting with an AI chat
+    contents:
+      - articles/ai-table-drafting
+      - articles/ai-table-drafting-ja
 
 # Grouped by the workflow: ARD spec -> ARD code, the data, table spec ->
 # table plan, report spec, listings, figures, ARS; then the workbooks, the
@@ -301,10 +306,16 @@ reference:
       - tfl_ai_review
   - title: AI-assisted drafting
     desc: >
-      A prompt for an AI chat that drafts the study's TOC or a figure
-      design from its documents, the answer read and checked by tflspec's
-      own checks, and what it changes; nothing is sent anywhere.
+      A prompt for an AI chat that drafts tables' report files (the code
+      spec) from a company's TOC / SHELL workbook and an ADaM summary, the
+      study's TOC, or a figure design; the answer read and checked by
+      tflspec's own checks, and written as files or shown as what it
+      changes; nothing is sent anywhere.
     contents:
+      - tfl_ai_read_shell
+      - tfl_ai_adam_summary
+      - tfl_ai_batches
+      - tfl_ai_study_init
       - tfl_ai_tasks
       - tfl_ai_context
       - tfl_ai_schema

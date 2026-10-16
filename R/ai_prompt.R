@@ -93,14 +93,18 @@
 #' every column or field, what it means and an example, generated from the
 #' definitions tflspec's own readers and checks use -- [tfl_read_toc()]'s
 #' fields for `toc`; [tfl_fig_parts()] and [tfl_fig_templates()] for
-#' `figure` -- so the prompt cannot name a column or a piece that does not
+#' `figure`; the spec's schema ([tfl_schema()]), the ARD's columns
+#' ([tfl_spec_columns()]) and methods ([tfl_ard_methods()]) for `table` --
+#' so the prompt cannot name a column, a piece or a function that does not
 #' exist.
 #'
 #' @param task One of [tfl_ai_tasks()].
 #' @param parts The parts to describe: for `toc`, `"toc"`; for `figure`,
 #'   sections among `"template"`, `"data"`, `"plot"`,
 #'   `"layers"`, or single pieces by name (`"censor_mark"`, `"join"`; see
-#'   [tfl_fig_parts()]).  `NULL` for all.  The repair prompt describes only
+#'   [tfl_fig_parts()]); for `table`, `"report"` (the report file's keys),
+#'   `"ard"` (the analyses) or content functions by name (`"plan_cells"`;
+#'   from [tfl_schema()]).  `NULL` for all.  The repair prompt describes only
 #'   the parts with problems.
 #' @return The schema as one string (markdown), of class `tfl_ai_text`.
 #' @examples
@@ -133,14 +137,16 @@ tfl_ai_schema <- function(task, parts = NULL) {
     figure = .ai_schema_figure(
       known[known %in% c(parts, pieces$section)], templates,
       pieces[!pieces$section %in% parts, , drop = FALSE]
-    )
+    ),
+    table = .ai_schema_table(parts)
   )
 }
 
 .ai_schema_parts <- function(task) {
   switch(task,
     toc = "toc",
-    figure = c("template", names(.ai_fig_sections))
+    figure = c("template", names(.ai_fig_sections)),
+    table = c("report", "ard", .ai_table_functions())
   )
 }
 
@@ -242,8 +248,10 @@ tfl_ai_schema <- function(task, parts = NULL) {
 #'
 #' The prompt that asks a chat model to draft part of a specification from
 #' the study's documents: the study's table of contents (`toc`) or one
-#' figure's design (`figure`).  tflspec sends nothing: the prompt is text,
-#' and so is the answer, which [tfl_ai_parse()] reads.
+#' figure's design (`figure`), or the report files of a batch of tables
+#' (`table`: 5 to 10 tables of one family, [tfl_ai_batches()]).  tflspec
+#' sends nothing: the prompt is text, and so is the answer, which
+#' [tfl_ai_parse()] reads.
 #'
 #' The `system` part holds the ground rules (only the names given, nothing
 #' invented, a draft that a person reviews), the task's instructions, the
@@ -309,11 +317,11 @@ tfl_ai_prompt <- function(task, context = NULL, mode = c("chat", "api"),
     task = parts$task,
     values = parts$values,
     format = format,
-    header = .ai_header_text(task, context$output_id, format),
+    header = .ai_header_text(task, context$output_id, format, context$outputs),
     content = parts$content,
     whole = parts$whole,
     language = .ai_language_line(context$language),
-    format_rules = .ai_format_rules(format),
+    format_rules = .ai_format_rules(format, task),
     schema = .ai_schema(task, templates = context$templates),
     example = if (isTRUE(example)) .ai_example_text(task, format) else ""
   )
@@ -415,14 +423,15 @@ print.tfl_ai_text <- function(x, ...) {
   gsub("\n{3,}", "\n\n", text)
 }
 
-.ai_header <- function(task, output_id = NULL) {
+.ai_header <- function(task, output_id = NULL, outputs = NULL) {
   h <- list(task = task, version = .ai_version)
-  if (task != "toc") h$output_id <- output_id %||% "<output_id>"
+  if (task == "figure") h$output_id <- output_id %||% "<output_id>"
+  if (task == "table") h$outputs <- as.list(outputs %||% c("<id>", "<id>"))
   h
 }
 
-.ai_header_text <- function(task, output_id, format) {
-  h <- .ai_header(task, output_id)
+.ai_header_text <- function(task, output_id, format, outputs = NULL) {
+  h <- .ai_header(task, output_id, outputs)
   if (format == "yaml") {
     paste0("tflspec_ai: ", .ai_yaml_flow(h))
   } else {
@@ -438,7 +447,13 @@ print.tfl_ai_text <- function(x, ...) {
   }
 }
 
-.ai_format_rules <- function(format) .ai_prompt_file(paste0("format-", format))
+.ai_format_rules <- function(format, task = NULL) {
+  own <- paste0("format-", format, "-", task)
+  if (!is.null(task) && nzchar(system.file("ai", "prompts", paste0(own, ".md"), package = "tflspec"))) {
+    return(.ai_prompt_file(own))
+  }
+  .ai_prompt_file(paste0("format-", format))
+}
 
 .ai_attach <- function(task, context) {
   switch(task,
@@ -449,7 +464,12 @@ print.tfl_ai_text <- function(x, ...) {
     figure = c(
       "the statistical analysis plan (SAP)",
       sprintf("the shell (mock-up) of %s, if there is one", context$output_id)
-    )
+    ),
+    table = if (is.null(context$shell)) {
+      "the TOC / SHELL workbook (or its text, tfl_ai_read_shell())"
+    } else {
+      character()
+    }
   )
 }
 
@@ -507,12 +527,13 @@ print.tfl_ai_text <- function(x, ...) {
 .ai_context_text <- function(ctx, format = "yaml") {
   switch(ctx$task,
     toc = .ai_context_toc(ctx),
-    figure = .ai_context_figure(ctx, format)
+    figure = .ai_context_figure(ctx, format),
+    table = .ai_context_table(ctx)
   )
 }
 
 .ai_context_study <- function(ctx) {
-  s <- ctx$study
+  s <- ctx[["study"]]
   if (!length(s)) return(character())
   txt <- paste(c(s$study_id, s$title), collapse = ": ")
   c("## The study", "", txt, "")
@@ -631,6 +652,7 @@ print.tfl_ai_text <- function(x, ...) {
 
 # An answer from the sample study, as the answer's format writes it.
 .ai_example_text <- function(task, format) {
+  if (task == "table") return(.ai_example_table_text(format))
   x <- .ai_example(task)
   c(
     "\n## Example\n\n",
