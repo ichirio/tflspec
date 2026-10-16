@@ -706,7 +706,8 @@
 #'     variable: its exception, over the rule.}
 #'   \item{`statistic`}{The statistic, as the ARD names it: `mean`, `sd`,
 #'     `p` (a percent: `1` prints `61.6`) ...}
-#'   \item{`digits`}{Its decimals, a whole number.}
+#'   \item{`digits`}{Its decimals, a whole number; or significant digits,
+#'     `3s` (`{mean:.3s}`).}
 #' }
 #' A token of a template that says its own format (`{mean:.2f}`) or the
 #' row's `digits` win.  A table of `tables$value = stat_fmt` prints the
@@ -1673,14 +1674,17 @@ print.tfl_table_spec <- function(x, ...) {
          USE.NAMES = FALSE)
 }
 
-# The `digits` sheet as rules: `all` (statistic -> decimals) and `by`
-# (variable -> its own); NULL when there is none, or when the table prints
-# the ARD's own text (tables$value = stat_fmt), which has no decimals to set.
+# The `digits` sheet as rules: `all` (statistic -> decimals, or "3s" for
+# three significant digits) and `by` (variable -> its own); NULL when there
+# is none, or when the table prints the ARD's own text (tables$value =
+# stat_fmt), which has no decimals to set.
 .ard_spec_digit_rules <- function(sp) {
   d <- sp$digits
   if (is.null(d) || !nrow(d)) return(NULL)
   if (identical(.ard_spec_table_args(sp)[["value"]], "stat_fmt")) return(NULL)
-  dg <- as.integer(d$digits)
+  dg <- tolower(trimws(as.character(d$digits)))
+  num <- grepl("^[0-9]+$", dg)
+  dg[num] <- as.character(as.integer(dg[num]))
   st <- trimws(d$statistic)
   all <- is.na(d$variable)
   by <- lapply(split(seq_len(nrow(d))[!all], d$variable[!all]), function(i)
@@ -1707,11 +1711,14 @@ print.tfl_table_spec <- function(x, ...) {
   blank <- which(is.na(d$statistic) | !nzchar(trimws(d$statistic)))
   out <- .pb(rep("Every `digits` row needs a `statistic` (mean, sd, p ...).",
                  length(blank)), blank, rep("statistic", length(blank)))
-  n <- suppressWarnings(as.numeric(d$digits))
-  bad <- which(is.na(n) | n < 0 | n != round(n))
+  dg <- trimws(as.character(d$digits))
+  n <- suppressWarnings(as.numeric(dg))
+  sig <- grepl("^[1-9][0-9]*[sS]$", dg)
+  bad <- which(!sig & (is.na(n) | n < 0 | n != round(n)))
   rbind(out, .pb(sprintf(paste0(
-    "`digits$digits` is a whole number of decimals (0, 1, 2 ...); ",
-    "got %s for %s."), sQuote(d$digits[bad]), sQuote(d$statistic[bad])),
+    "`digits$digits` is a whole number of decimals (0, 1, 2 ...) or ",
+    "significant digits (\"3s\"); got %s for %s."),
+    sQuote(d$digits[bad]), sQuote(d$statistic[bad])),
     bad, rep("digits", length(bad))))
 }
 
@@ -1719,14 +1726,16 @@ print.tfl_table_spec <- function(x, ...) {
 .ard_pct_stats <- c("p", "p_cum", "p_miss", "p_nonmiss")
 
 # The tokens a template leaves without a format, given their statistic's
-# decimals: "{mean} ({sd})" + c(mean = 1, sd = 2) -> "{mean:.1f} ({sd:.2f})"
+# decimals: "{mean} ({sd})" + c(mean = 1, sd = 2) -> "{mean:.1f} ({sd:.2f})",
+# and c(mean = "3s") -> "{mean:.3s}" (three significant digits)
 .ard_apply_rules <- function(tpl, rule) {
   if (!length(rule)) return(tpl)
   out <- tpl
   for (tok in .ard_tokens(tpl)) {
     p <- .ard_token_parts(tok)
     if (nzchar(p$spec) || is.na(rule[p$name])) next
-    spec <- paste0(".", rule[[p$name]], "f",
+    r <- as.character(rule[[p$name]])
+    spec <- paste0(".", r, if (!grepl("s$", r)) "f",
                    if (p$name %in% .ard_pct_stats) "%")
     out <- sub(tok, paste0("{", p$name, ":", spec, "}"), out, fixed = TRUE)
   }

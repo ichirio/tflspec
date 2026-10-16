@@ -240,7 +240,8 @@ The decimals of each statistic, so that a template is written once
 variable: its exception, over the rule.}
 \item{\code{statistic}}{The statistic, as the ARD names it: \code{mean}, \code{sd},
 \code{p} (a percent: \code{1} prints \code{61.6}) ...}
-\item{\code{digits}}{Its decimals, a whole number.}
+\item{\code{digits}}{Its decimals, a whole number; or significant digits,
+\code{3s} (\code{{mean:.3s}}).}
 }
 A token of a template that says its own format (\verb{\{mean:.2f\}}) or the
 row's \code{digits} win.  A table of \code{tables$value = stat_fmt} prints the

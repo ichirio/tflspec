@@ -54,7 +54,7 @@ test_that("a plan through its spec and a workbook gives the same RTF", {
     plan_b <- plan_cells(tfl_table_plan(data, back), notes = FALSE)
     code_env <- new.env(parent = globalenv())
     code_env$data <- data
-    eval(parse(text = tfl_table_code(back, data = "data", plan = "plan_c")),
+    eval(parse(text = tfl_table_code(back, data = "data", plan = "plan_c", normalize = FALSE)),
          code_env)
     plan_c <- plan_cells(code_env$plan_c, notes = FALSE)
     if (nm %in% report) {

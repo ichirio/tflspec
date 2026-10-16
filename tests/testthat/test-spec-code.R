@@ -44,7 +44,7 @@ test_that("tfl_table_code() writes the plan the definition makes", {
   skip_if_not_installed("cards")
   d <- sc_ard()
   sp <- suppressMessages(tfl_as_table_spec(sc_plan(d), output_id = "T1"))
-  code <- tfl_table_code(sp, pipe = "|>")
+  code <- tfl_table_code(sp, data = "data", pipe = "|>", normalize = FALSE)
   expect_match(code[grep("<- table_plan", code)[1L]], "^plan <- table_plan\\(data, cols = \"TRT\"")
   expect_true(any(grepl("plan_digits(rounding = \"sas\")", code, fixed = TRUE)))
   expect_true(any(grepl("plan_col_header(", code, fixed = TRUE)))
@@ -59,7 +59,7 @@ test_that("tfl_table_code() writes the plan the definition makes", {
   expect_equal(sc_pages(by_code), sc_pages(sc_plan(d)))
 
   # the names and the pipe are the caller's
-  code2 <- tfl_table_code(sp, data = "dm", plan = "tbl", pipe = "%>%")
+  code2 <- tfl_table_code(sp, data = "dm", plan = "tbl", pipe = "%>%", normalize = FALSE)
   expect_match(code2[grep("<- table_plan", code2)[1L]], "^tbl <- table_plan\\(dm,")
   expect_true(any(grepl("%>%$", code2)))
   expect_false(any(grepl("|>", code2, fixed = TRUE)))
@@ -88,7 +88,7 @@ test_that("a spanning header, widths by name and a hidden column go over too", {
       span = c(NA, "TRT", NA, "each", "each"),
       text = c(NA, "{col1}", "Sex", "<70", ">=70"),
       border_bottom = c(NA, "single", NA, NA, NA)))
-  code <- tfl_table_code(sp, pipe = "|>")
+  code <- tfl_table_code(sp, data = "data", pipe = "|>", normalize = FALSE)
   expect_true(any(grepl("plan_columns(", code, fixed = TRUE)))
   expect_true(any(grepl("plan_sort(TRUE)", code, fixed = TRUE)))
   expect_equal(sc_pages(sc_run(code, d)),
@@ -175,7 +175,7 @@ test_that("a table and its report, written out, make the report the objects make
   d <- sc_ard()
   tsp <- suppressMessages(tfl_as_table_spec(sc_plan(d), output_id = "T1"))
   rsp <- suppressMessages(tflspec:::.ard_spec_scope(sc_rep_spec(), "T1"))
-  code <- c(tfl_table_code(tsp, pipe = "|>"),
+  code <- c(tfl_table_code(tsp, data = "data", pipe = "|>", normalize = FALSE),
             tfl_report_code(rsp, content = "plan"))
   env <- new.env(parent = asNamespace("tflspec"))
   env$data <- d
@@ -432,4 +432,42 @@ test_that("tables$keep_where / keep_any / keep_parents: plan_filter() from the s
   expect_identical(back$tables$keep_any, "FALSE")
   expect_error(tfl_table_code(tfl_table_spec(tables = data.frame(output_id = "X", cols = "TRTA",
                                                                  keep_where = "p >= ")), "X"), "is not R")
+})
+
+test_that("tfl_table_code(): one pipe from the ARD, normalize_ard() its first step (#302)", {
+  sp <- tfl_table_spec(tables = data.frame(
+    output_id = c("T-1", "T-2"), cols = "TRTA", rows = c("group = variable", "group1 = AEBODSYS"),
+    label = c(NA, "label = AEDECOD"),
+    overall_label = c(NA, "Subjects with at least one TEAE")))
+  ard <- tfl_ard_spec(list(
+    datasets = data.frame(dataset = c("ADSL", "ADAE"), path = c("adsl.rds", "adae.rds")),
+    analyses = data.frame(output_id = c("T-1", "T-2"), analysis_id = c("AGE", "AE"),
+                          method = c("continuous", "hierarchical"),
+                          dataset = c("ADSL", "ADAE"), by = "TRTA",
+                          variables = c("AGE", "AEBODSYS | AEDECOD"),
+                          args = c(NA, "over_variables = TRUE"))))
+  c1 <- tfl_table_code(sp, "T-1", pipe = "|>")
+  expect_identical(c1[1:3], c("plan <- ard |>", "  normalize_ard() |>",
+                              "  table_plan(cols = \"TRTA\", rows = c(group = \"variable\"))"))
+  flat <- function(x) gsub("[[:space:]]+", " ", paste(x, collapse = " "))
+  c2 <- tfl_table_code(sp, "T-2", pipe = "|>", ard_spec = ard)
+  expect_match(flat(c2), paste0("plan <- ard |> normalize_ard( hierarchy = c(\"AEBODSYS\", \"AEDECOD\"), ",
+                                "overall = \"Subjects with at least one TEAE\" ) |> table_plan("),
+               fixed = TRUE)
+  # no ARD definition: the hierarchy its rows and label say, as the spec files take it
+  expect_identical(tfl_table_code(sp, "T-2", pipe = "|>"), c2)
+  # the program normalizes the ARD itself
+  c3 <- tfl_table_code(sp, "T-1", data = "data", pipe = "|>", normalize = FALSE)
+  expect_match(c3[1L], "^plan <- table_plan[(]data, cols")
+})
+
+test_that("plan_levels()'s names: variable, the column keys, the row keys, then the variables (#302)", {
+  sp <- tfl_table_spec(
+    tables = data.frame(output_id = "T", cols = "TRT01A", rows = "group = variable"),
+    variables = data.frame(variable = c("SEX", "TRT01A", "AGEGR1"), order = c(1, NA, 2),
+                           levels = c("F | M", "Drug X | Placebo", "<65 | >=65")))
+  code <- paste(tfl_table_code(sp, "T", pipe = "|>"), collapse = "\n")
+  expect_match(code, paste0("plan_levels(\n    variable = c(\"SEX\", \"AGEGR1\"),\n",
+                            "    TRT01A = cl_trt01a,\n    SEX = cl_sex,\n    AGEGR1 = cl_agegr1"),
+               fixed = TRUE)
 })

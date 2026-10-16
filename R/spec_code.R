@@ -219,6 +219,23 @@
   if (!anyNA(n)) n else as.character(x)
 }
 
+# plan_levels()'s names in one order, whatever the sheets' rows: the
+# variables' order (`variable`), the column keys, the row keys and a
+# stack's, then the categorical variables -- each group as the roles name it
+.spec_levels_order <- function(lv, roles, sp) {
+  if (length(lv) < 2L) return(lv)
+  flat <- function(x) {
+    x <- unlist(x)
+    if (is.null(x)) return(character())
+    c(rbind(names(x) %||% rep("", length(x)), unname(x)))
+  }
+  keys <- unique(c("variable", flat(roles[["cols"]]), flat(roles[["rows"]]),
+                   .ard_spec_plan_cols(sp)))
+  keys <- keys[nzchar(keys)]
+  rank <- match(names(lv), keys)
+  lv[order(is.na(rank), rank)]
+}
+
 # The verbs a table definition stands for, in the order a report is built:
 # what tfl_table_plan() runs, and what tfl_table_code() writes.  `roles` are
 # the plan's (the workbook's, and any given in the call), which decide the
@@ -235,6 +252,7 @@
   # the variables' order: the values of the ARD's `variable` column
   vo <- .ard_spec_variable_order(sp)
   if (length(vo) && is.null(lv[["variable"]])) lv <- c(list(variable = vo), lv)
+  lv <- .spec_levels_order(lv, roles, sp)
   de <- .ard_spec_drop_empty(sp)
   if (length(lv) || length(de)) {
     do.call(add, c(list("plan_levels"), as.list(lv),
@@ -400,7 +418,9 @@
 
 #' The code of a table's plan, from its definition
 #'
-#' Writes the [rtfreporter::table_plan()] pipeline a table definition stands for: the
+#' Writes the [rtfreporter::table_plan()] pipeline a table definition stands
+#' for, one pipe from the ARD: [rtfreporter::normalize_ard()] (the hierarchy,
+#' the overall row and the stack the definitions say), the
 #' roles of its `tables` sheet in `table_plan()`, and one `plan_*()` verb
 #' for each thing the other sheets say -- the same verbs, with the same
 #' values, that `tfl_table_plan(data, spec)` applies.  The program then no
@@ -411,10 +431,18 @@
 #' @param spec A table definition ([tfl_read_table_spec()],
 #'   [tfl_table_spec()]), or the path(s) of its workbook(s).
 #' @param output_id The table, when the definition has several.
-#' @param data The name of the normalized ARD in the program.
+#' @param data The name of the ARD in the program: the pipe starts from it
+#'   (`plan <- ard |> normalize_ard(...) |> table_plan(...)`).  With
+#'   `normalize = FALSE`, the name of the data already normalized.
 #' @param plan The name the plan is assigned to.
 #' @param pipe `"|>"` or `"%>%"`; `NULL` follows
 #'   `getOption("rtfreporter.ard_pipe")` (see [rtfreporter::plan_template()]).
+#' @param ard_spec The ARD definition ([tfl_read_ard_spec()]), for
+#'   [rtfreporter::normalize_ard()]'s `hierarchy`; `NULL` for none.
+#' @param normalize `TRUE` to write [rtfreporter::normalize_ard()] at the
+#'   head of the pipe (its `hierarchy`, `overall` and `stack` from the
+#'   definitions); `FALSE` when the program normalizes the ARD itself
+#'   ([tfl_normalize_code()]).
 #' @return The code, one element per line.
 #' @seealso [tfl_report_code()] for the report around it.
 #' @examples
@@ -422,12 +450,18 @@
 #'   system.file("extdata", "ard-spec", "DM.xlsx", package = "tflspec"))
 #' cat(tfl_table_code(spec), sep = "\n")
 #' @export
-tfl_table_code <- function(spec, output_id = NULL, data = "data",
-                           plan = "plan", pipe = NULL) {
+tfl_table_code <- function(spec, output_id = NULL, data = "ard",
+                           plan = "plan", pipe = NULL, ard_spec = NULL,
+                           normalize = TRUE) {
   sp <- .ard_spec_scope(.as_spec(spec, "table", "tfl_table_code",
                                  output_id = output_id), output_id)
-  .content_table_code(.plan_content_items(sp), data = data, plan = plan,
-                      pipe = pipe)
+  items <- .plan_content_items(sp)
+  if (isTRUE(normalize)) {
+    nz <- .normalize_spec_args(sp, ard_spec, output_id %||% attr(sp, "output_id"),
+                               "tfl_table_code", guess = TRUE)
+    items <- c(list(tfl_item("normalize_ard", nz)), items)
+  }
+  .content_table_code(items, data = data, plan = plan, pipe = pipe)
 }
 
 # A table's content -- its items, in order (tfl_item()) -- as the program:
@@ -1213,7 +1247,33 @@ tfl_normalize_code <- function(spec, ard_spec = NULL, output_id = NULL,
                                ard = "ard", data = "data") {
   sp <- .ard_spec_scope(.as_spec(spec, "table", "tfl_normalize_code",
                                  output_id = output_id), output_id)
-  id <- output_id %||% attr(sp, "output_id")
+  a <- .normalize_spec_args(sp, ard_spec, output_id %||% attr(sp, "output_id"),
+                            "tfl_normalize_code")
+  layers_code <- function(v) {
+    if (!is.list(v)) return(vec_code(v))
+    paste0("list(", paste(vapply(v, function(p)
+      if (length(p) == 1L) encodeString(p, quote = "\"") else vec_code(p), ""),
+      collapse = ", "), ")")
+  }
+  args <- c(ard,
+            if (!is.null(a$hierarchy)) paste("hierarchy =", vec_code(a$hierarchy)),
+            if (!is.null(a$overall)) paste("overall =", encodeString(a$overall, quote = "\"")),
+            if (!is.null(a$stack)) paste0("stack = list(", paste(
+              sprintf("%s = %s", names(a$stack), vapply(a$stack, layers_code, "")),
+              collapse = ", "), ")"),
+            if (!is.null(a$stack_sep))
+              paste("stack_sep =", encodeString(a$stack_sep, quote = "\"")),
+            if (isTRUE(a$stack_nest)) "stack_nest = TRUE")
+  sprintf("%s <- normalize_ard(%s)", data, paste(args, collapse = ", "))
+}
+
+# A table's normalize_ard() arguments from its definition: its tables row
+# (overall_label, stack, stack_sep, stack_nest) and its hierarchical
+# analysis in the ARD definition (hierarchy), as R values; none given, an
+# empty list (normalize_ard() with its defaults).  `guess`: with no ARD
+# definition for the table, the hierarchy its rows and label say, as the
+# spec files' converter takes it (.conv_normalize_args()).
+.normalize_spec_args <- function(sp, ard_spec, id, fn, guess = FALSE) {
   t <- sp$tables
   lab <- if (nrow(t) && "overall_label" %in% names(t)) t$overall_label[1L] else NA
   lab <- if (!is.na(lab) && nzchar(trimws(lab))) trimws(lab)
@@ -1221,13 +1281,10 @@ tfl_normalize_code <- function(spec, ard_spec = NULL, output_id = NULL,
   stk <- if (!is.na(stk) && nzchar(trimws(stk)))
     .ard_spec_stat_groups(stk, "stack", "layer", "subgroup = ALL, SEX, AGEGR1, AGEGR1 * SEX")
   # a layer `AGEGR1 * SEX` is the variables crossed: then the layers are a list
-  layers_code <- function(v) {
+  if (!is.null(stk)) stk <- lapply(stk, function(v) {
     parts <- lapply(strsplit(v, "*", fixed = TRUE), trimws)
-    if (all(lengths(parts) == 1L)) return(vec_code(v))
-    paste0("list(", paste(vapply(parts, function(p)
-      if (length(p) == 1L) encodeString(p, quote = "\"") else vec_code(p), ""),
-      collapse = ", "), ")")
-  }
+    if (all(lengths(parts) == 1L)) unlist(parts) else parts
+  })
   sep <- if (nrow(t) && "stack_sep" %in% names(t)) t$stack_sep[1L] else NA
   sep <- if (!is.na(sep) && nzchar(sep)) .ard_spec_unquote(sep)
   nest <- nrow(t) && "stack_nest" %in% names(t) &&
@@ -1240,23 +1297,26 @@ tfl_normalize_code <- function(spec, ard_spec = NULL, output_id = NULL,
                                 "cards::ard_stack_hierarchical_count"), , drop = FALSE]
     if (nrow(an)) hier <- .split_bar(an$variables[1L])
   }
+  if (guess && !length(hier) && length(id) == 1L) {
+    g <- .conv_normalize_args(sp, ard_spec, id)$hierarchy
+    if (length(g)) hier <- g
+  }
   if (!is.null(lab) && !length(hier)) {
     .ard_stop(sprintf(paste0(
-      "tfl_normalize_code(): %s has an `overall_label` (%s) but no ",
+      "%s(): %s has an `overall_label` (%s) but no ",
       "hierarchical analysis%s: the overall row is a hierarchy's."),
-      id %||% "the table", sQuote(lab),
+      fn, id %||% "the table", sQuote(lab),
       if (is.null(ard_spec)) " (give `ard_spec`)" else " in the ARD definition"))
   }
-  args <- c(ard,
-            if (length(hier)) paste("hierarchy =", vec_code(hier)),
-            if (!is.null(lab)) paste("overall =", encodeString(lab, quote = "\"")),
-            if (!is.null(stk)) paste0("stack = list(", paste(
-              sprintf("%s = %s", names(stk), vapply(stk, layers_code, "")),
-              collapse = ", "), ")"),
-            if (!is.null(stk) && !is.null(sep))
-              paste("stack_sep =", encodeString(sep, quote = "\"")),
-            if (!is.null(stk) && isTRUE(nest)) "stack_nest = TRUE")
-  sprintf("%s <- normalize_ard(%s)", data, paste(args, collapse = ", "))
+  out <- list()
+  if (length(hier)) out$hierarchy <- hier
+  if (!is.null(lab)) out$overall <- lab
+  if (!is.null(stk)) {
+    out$stack <- stk
+    if (!is.null(sep)) out$stack_sep <- sep
+    if (isTRUE(nest)) out$stack_nest <- TRUE
+  }
+  out
 }
 
 #' A table's plan from its definition

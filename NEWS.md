@@ -1,5 +1,18 @@
 # tflspec (development version)
 
+* **The table's code is one pipe from the ARD** (#302, 0.0.24.9137).
+  `tfl_table_code()` writes `plan <- ard |> normalize_ard(...) |>
+  table_plan(...) |> plan_*()`: `normalize_ard()`'s `hierarchy`,
+  `overall` and `stack` are the ones `tfl_normalize_code()` writes (new
+  `ard_spec`; with no ARD definition, the hierarchy the rows and label
+  say, as the spec files take it).  `data` is now the ARD's name
+  (`"ard"`); `normalize = FALSE` writes `plan <- table_plan(data, ...)` as
+  before, for a program that normalizes the ARD itself.
+* `plan_levels()`'s names come in one order, whatever the sheets' rows:
+  `variable`, the column keys, the row and stack keys, then the
+  categorical variables.
+* The `digits` sheet takes significant digits: `3s` is `{mean:.3s}`.
+
 * **The variables' order is `plan_levels(variable = )`** (#300,
   0.0.24.9136).  The `variables` sheet's `order` is written as
   `plan_levels(variable = c("AGE", "SEX", ...))` (the values of the ARD's

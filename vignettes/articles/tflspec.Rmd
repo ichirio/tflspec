@@ -192,10 +192,12 @@ person can read top to bottom:
 ```{r, eval = FALSE}
 library(rtfreporter)
 # 1 DATA    the ARD (programs/ard.R, written by tfl_ard_code())
-ard  <- readRDS("output/ard/ard.rds")
-data <- normalize_ard(ard[ard$output_id == "DM", ])
-# 2 TABLE   tfl_table_code()
-plan <- table_plan(data, cols = "TRT01A", rows = c(group = "variable")) |>
+ard <- readRDS("output/ard/ard.rds")
+ard <- ard[ard$output_id == "DM", ]
+# 2 TABLE   tfl_table_code(): the ARD normalized, then the plan
+plan <- ard |>
+  normalize_ard() |>
+  table_plan(cols = "TRT01A", rows = c(group = "variable")) |>
   plan_labels(AGE = "Age (years)", ...) |>
   ...
 # 3 REPORT  tfl_report_code()
