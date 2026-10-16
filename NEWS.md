@@ -1,5 +1,20 @@
 # tflspec (development version)
 
+* **A value's labels in the report's code list** (#294, 0.0.24.9133; the
+  user's decision of 2026-10-16).  The key columns a plan makes itself --
+  a stack's pair (`tables$stack`: `subgroup`, `subgroup_level`) and the
+  groups of statistics (`.stat_group`) -- are not in the data, so the ARD
+  program cannot put a code list on them: the bridge writes their code
+  list rows as `plan_labels(subgroup = c(ALL = "All Subjects"))` and
+  reads that call back as code list rows (`tfl_sheets_from_yaml()` passes
+  it the report's `normalize_ard()`).  Their order stays the plan's (no
+  `plan_levels()` from the list, so a list naming some values drops
+  none).  A data variable's value labels stay its code list's, which the
+  ARD program puts on the data; `plan_labels()` of one is listed in
+  `not_converted` with where they go.  `tfl_args_from_r()` reads
+  `plan_labels(c(AGE = "Age"))` and `plan_levels()` given one named
+  vector, as rtfreporter does (the schema's `map: true`).
+
 * **`tfl_args_from_r()` round trips** (#288, 0.0.24.9131; found by S2):
   an argument the schema takes as an integer comes back an integer (`26`,
   not `26.0`), and a figure function's arguments keep the order they were

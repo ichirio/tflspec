@@ -362,6 +362,15 @@ tfl_schema_check <- function(item) {
   nm <- names(args) %||% rep("", length(args))
   pos <- args[!nzchar(nm)]
   out <- list()
+  # a verb that takes its entries as one named vector (`map: true`:
+  # plan_labels(c(AGE = "Age")), as rtfreporter reads it): the entries
+  if (length(pos) == 1L && !is.null(dots) && isTRUE(dots$map) &&
+      length(pos[[1L]]) && !is.null(names(pos[[1L]])) && all(nzchar(names(pos[[1L]])))) {
+    m <- as.list(pos[[1L]])
+    args <- c(m, args[nzchar(nm)])
+    nm <- names(args)
+    pos <- list()
+  }
   if (length(pos)) {
     if (is.null(dots) || !identical(dots$style, "positional")) {
       .ard_stop(sprintf("%s: an argument with no name, which the schema cannot place.", fn))

@@ -44,7 +44,8 @@ tfl_sheets_from_yaml <- function(dir) {
     if (length(nz) && !is.na(id) && length(nz[[1L]]$args)) norm_rows[[id]] <<- nz[[1L]]$args
     if (!length(items)) return()
     if (is.null(bridge)) { note(id, "content", "no bridge from the layers to the sheets (tflspec's .plan_sheets_from_content)"); return() }
-    sp <- bridge(items, if (is.na(id)) NULL else id)
+    # (the bridge reads normalize_ard()'s stack: the columns the plan makes)
+    sp <- bridge(c(nz, items), if (is.na(id)) NULL else id)
     for (sh in names(sp)) {
       d <- sp[[sh]]
       if (!is.data.frame(d) || !nrow(d)) next
