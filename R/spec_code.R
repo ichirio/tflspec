@@ -238,7 +238,8 @@
                    if (length(de)) list(.drop_empty = de)))
   }
   lb <- .ard_spec_labels(sp)
-  if (length(lb)) do.call(add, c(list("plan_labels"), as.list(lb)))
+  vl <- .ard_spec_value_labels(sp)
+  if (length(lb) || length(vl)) do.call(add, c(list("plan_labels"), as.list(lb), vl))
   ne <- .ard_spec_nest(sp)
   if (length(ne)) do.call(add, c(list("plan_nest"), ne))
   if (!is.null(sa[["total"]])) {
@@ -693,6 +694,14 @@ tfl_table_code <- function(spec, output_id = NULL, data = "data",
     }
     if (!chain_rows(v, var, ctx)) miss(fn, sprintf("%s: not templates and guards", k))
   }
+  # the key columns the plan makes (a stack's pair, the statistics' groups):
+  # their values' labels are the report's code list rows
+  own <- ".stat_group"
+  for (it in items) if (identical(it$fn, "normalize_ard") && length(it$args$stack)) {
+    own <- c(own, names(it$args$stack), paste0(names(it$args$stack), "_level"))
+  }
+  items <- Filter(function(it) !identical(it$fn, "normalize_ard"), items)
+  codes <- list()
   seen <- character()
   for (cl in .content_calls(items)) {
     fn <- cl$fun
@@ -748,7 +757,25 @@ tfl_table_code <- function(spec, output_id = NULL, data = "data",
       plan_labels = {
         for (v in names(named)) {
           x <- named[[v]]
-          if (!is.character(x) || length(x) != 1L || !is.null(names(x))) {
+          if (is.list(x) && length(x) &&
+              all(vapply(x, function(e) is.character(e) && length(e) == 1L, NA))) {
+            x <- unlist(x)
+          }
+          # a value's labels: a column the plan makes, its code list rows; a
+          # data variable's are its code list's already (the ARD has them)
+          if (is.character(x) && !is.null(names(x)) && all(nzchar(names(x)))) {
+            if (!v %in% own) {
+              miss(fn, sprintf(paste0("%s: a data variable's value labels go in the ",
+                                      "report's code list (the ARD program puts them on the data)"), v))
+              next
+            }
+            for (k in seq_along(x)) {
+              codes[[length(codes) + 1L]] <- list(variable = v, value = names(x)[k],
+                                                  label = unname(x[k]))
+            }
+            next
+          }
+          if (!is.character(x) || length(x) != 1L) {
             miss(fn, sprintf("%s: a value's labels stay in code", v)); next
           }
           var_row(v); vars[[v]]$label <- x
@@ -922,6 +949,11 @@ tfl_table_code <- function(spec, output_id = NULL, data = "data",
     col_header = frame(hdr),
     study = if (length(study)) unlist(study))
   sp <- do.call(tfl_table_spec, Filter(Negate(is.null), sheets))
+  if (length(codes)) {
+    ord <- stats::ave(seq_along(codes), vapply(codes, `[[`, "", "variable"), FUN = seq_along)
+    for (i in seq_along(codes)) codes[[i]]$order <- ord[i]
+    sp$codelists <- frame(codes)
+  }
   attr(sp, "not_converted") <- lost
   sp
 }

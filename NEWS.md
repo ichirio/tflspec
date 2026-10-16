@@ -1,6 +1,6 @@
 # tflspec (development version)
 
-* **The samples run on the oncology sample study** (#295, 0.0.24.9133).
+* **The samples run on the oncology sample study** (#295, 0.0.24.9134).
   tflspec's examples, articles, README and AI kit use `adsl`, `adae`,
   `adrs` ... (study XYZ-ONC-01, Drug X vs Control) instead of the CDISC
   pilot data (`cards::ADSL`, pharmaverseadam), which is dropped from
@@ -17,6 +17,20 @@
   made-up study XYZ-001 reads the same data.  The datasets' help pages
   link to each other (they linked to pharmaverseadam's and ggsurvfit's
   topics of the same names).  No function changes.
+* **A value's labels in the report's code list** (#294, 0.0.24.9133; the
+  user's decision of 2026-10-16).  The key columns a plan makes itself --
+  a stack's pair (`tables$stack`: `subgroup`, `subgroup_level`) and the
+  groups of statistics (`.stat_group`) -- are not in the data, so the ARD
+  program cannot put a code list on them: the bridge writes their code
+  list rows as `plan_labels(subgroup = c(ALL = "All Subjects"))` and
+  reads that call back as code list rows (`tfl_sheets_from_yaml()` passes
+  it the report's `normalize_ard()`).  Their order stays the plan's (no
+  `plan_levels()` from the list, so a list naming some values drops
+  none).  A data variable's value labels stay its code list's, which the
+  ARD program puts on the data; `plan_labels()` of one is listed in
+  `not_converted` with where they go.  `tfl_args_from_r()` reads
+  `plan_labels(c(AGE = "Age"))` and `plan_levels()` given one named
+  vector, as rtfreporter does (the schema's `map: true`).
 
 * **An oncology sample study: `adsl`, `adex`, `adae`, `adlb`, `advs`,
   `adrs`, `adtr`, `adtte`** (#291, 0.0.24.9132).  Simulated ADaM datasets
