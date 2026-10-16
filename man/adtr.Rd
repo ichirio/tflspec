@@ -24,7 +24,7 @@ adtr
 }
 \description{
 The sum of diameters of target lesions of the simulated study
-XYZ-ONC-01 (see \link[pharmaverseadam:adsl]{adsl}) at baseline (at randomisation) and at each
+XYZ-ONC-01 (see \link{adsl}) at baseline (at randomisation) and at each
 assessment, every 6 weeks until progression, death or the cut-off: the
 data of a waterfall or spider plot.
 }

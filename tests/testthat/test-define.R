@@ -94,7 +94,7 @@ test_that("tfl_read_define() reads a Define-XML 2.1", {
   expect_identical(sex$code, c("C16576", "C20197"))
   expect_identical(unique(sex$kind), "item")
   agegr <- cl[cl$codelist == "CL.AGEGR1", ]
-  expect_identical(agegr$value, c("<65", "65-80", ">80"))
+  expect_identical(agegr$value, c("<65", ">=65"))
   expect_true(all(is.na(agegr$decode)))
   expect_identical(unique(agegr$kind), "enumerated")
   sev <- cl[cl$codelist == "CL.AESEV", ]
@@ -190,7 +190,7 @@ test_that("tfl_define_codelists() gives a report's codelists rows", {
   expect_identical(sex$order, c("2", "1"))
   expect_identical(unique(sex$note), "define: CL.SEX")
   ag <- cl[cl$variable == "AGEGR1", ]
-  expect_identical(ag$value, c("<65", "65-80", ">80"))
+  expect_identical(ag$value, c("<65", ">=65"))
   expect_true(all(is.na(ag$label)))     # prints as the value
   # the labels: rows of the variables sheet, not a code list of `variable`
   expect_false("variable" %in% cl$variable)

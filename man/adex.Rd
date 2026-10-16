@@ -25,10 +25,10 @@ seed 20261016; not real patient data.
 adex
 }
 \description{
-Study drug exposure of the simulated study XYZ-ONC-01 (see \link[pharmaverseadam:adsl]{adsl}): one
+Study drug exposure of the simulated study XYZ-ONC-01 (see \link{adsl}): one
 dose every 21 days from the first to the last dose; a reduced dose
 follows a related grade >= 3 adverse event (\code{AEACN = "DOSE REDUCED"} in
-\link[pharmaverseadam:adae]{adae}).
+\link{adae}).
 }
 \seealso{
 Other oncology sample data:

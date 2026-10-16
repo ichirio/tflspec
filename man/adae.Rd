@@ -6,7 +6,7 @@
 \title{Oncology sample study XYZ-ONC-01: adverse events (ADAE)}
 \format{
 \code{adae}: a data frame, one row per event, with the subject keys
-(as in \link[pharmaverseadam:adex]{adex}) and
+(as in \link{adex}) and
 \describe{
 \item{AESEQ, AETERM, AEDECOD, AEBODSYS, AESOC}{the event and its coding}
 \item{AETOXGR, ATOXGR, AESEV}{CTCAE grade (1-5); severity}
@@ -24,7 +24,7 @@ seed 20261016; not real patient data.
 adae
 }
 \description{
-Adverse events of the simulated study XYZ-ONC-01 (see \link[pharmaverseadam:adsl]{adsl}), coded
+Adverse events of the simulated study XYZ-ONC-01 (see \link{adsl}), coded
 with a small MedDRA-like dictionary (31 preferred terms in 12 system
 organ classes) and graded by CTCAE.  Treatment-emergent events start
 from the first dose to 30 days after the last; a few start between

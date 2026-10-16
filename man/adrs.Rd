@@ -23,7 +23,7 @@ seed 20261016; not real patient data.
 adrs
 }
 \description{
-RECIST 1.1 responses of the simulated study XYZ-ONC-01 (see \link[pharmaverseadam:adsl]{adsl}):
+RECIST 1.1 responses of the simulated study XYZ-ONC-01 (see \link{adsl}):
 the investigator's overall response at each assessment (\code{OVR}: CR when
 the sum of diameters is 0 mm, PR at least 30\% below baseline, PD at
 least 20\% and 5 mm above the nadir or a new lesion, else SD) and the

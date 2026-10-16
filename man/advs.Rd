@@ -6,7 +6,7 @@
 \title{Oncology sample study XYZ-ONC-01: vital signs (ADVS)}
 \format{
 \code{advs}: a data frame, one row per subject, parameter and visit,
-with the subject keys (as in \link[pharmaverseadam:adex]{adex}) and \code{PARAMCD} (\code{WEIGHT}, \code{SYSBP},
+with the subject keys (as in \link{adex}) and \code{PARAMCD} (\code{WEIGHT}, \code{SYSBP},
 \code{DIABP}, \code{PULSE}), \code{PARAM}, \code{AVISIT}, \code{AVISITN}, \code{ADT}, \code{ADY}, \code{AVAL},
 \code{BASE}, \code{CHG}, \code{ABLFL}, \code{ONTRTFL}.
 }
@@ -19,7 +19,7 @@ advs
 }
 \description{
 Weight, blood pressure and pulse of the simulated study XYZ-ONC-01 (see
-\link[pharmaverseadam:adsl]{adsl}) on day 1 of each cycle.
+\link{adsl}) on day 1 of each cycle.
 }
 \seealso{
 Other oncology sample data:
