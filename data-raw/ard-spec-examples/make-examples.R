@@ -7,8 +7,9 @@
 #      Rscript data-raw/ard-spec-examples/make-examples.R
 #
 #  For each report this script
-#    1. builds an example ARD from the cards example data (and made-up
-#       values where cards has none),
+#    1. builds an example ARD from tflspec's oncology sample study
+#       XYZ-ONC-01 (adsl, adae, adrs, adlb; made-up concentrations for PK,
+#       which the study has none of),
 #    2. writes its definition workbook to inst/extdata/ard-spec/<id>.xlsx,
 #    3. reads the workbook back and runs tfl_table_plan() on the ARD,
 #    4. checks the table data frame is IDENTICAL to widen_ard() written
@@ -91,31 +92,33 @@ specs <- list()
 
 
 # ============================================================================
-#  The five reports.  Each one: its ARD, made from the cards example data
-#  (and made-up values where cards has none); its definition (tables /
+#  The five reports.  Each one: its ARD, made from the sample study's data
+#  (made-up concentrations for PK); its definition (tables /
 #  variables / cells, then layout / columns / style / col_header); the
 #  table written as code twice -- widen_ard() at once, and the plan -- for
 #  check() to compare with what the workbook gives.
 # ============================================================================
 
-arms <- c("Placebo", "Xanomeline Low Dose", "Xanomeline High Dose")
+arms <- levels(tflspec::adsl$TRT01A)     # Drug X, Control
+adsl_saf <- tflspec::adsl |> filter(SAFFL == "Y")
 
 # ---------------------------------------------------------------- 1. DM
-# Demographics by actual arm: age and baseline weight summarised; age group,
-# sex and race counted.
+# Demographics by actual arm: age and the baseline sum of diameters
+# summarised; age group, sex, race and baseline ECOG counted.
 ard_dm <- ard_stack(
-  cards::ADSL, .by = TRT01A,
-  ard_continuous(variables = c(AGE, WEIGHTBL),
+  adsl_saf, .by = TRT01A,
+  ard_continuous(variables = c(AGE, BSLD),
                  statistic = ~ continuous_summary_fns(
                    c("N", "mean", "sd", "median", "min", "max"))),
-  ard_categorical(variables = c(AGEGR1, SEX, RACE)),
+  ard_categorical(variables = c(AGEGR1, SEX, RACE, ECOGBL)),
   .total_n = TRUE)
 
-dm_labels <- c(AGE      = "Age (years)",
-               AGEGR1   = "Age group, n (%)",
-               SEX      = "Sex, n (%)",
-               RACE     = "Race, n (%)",
-               WEIGHTBL = "Weight at baseline (kg)")
+dm_labels <- c(AGE    = "Age (years)",
+               AGEGR1 = "Age group, n (%)",
+               SEX    = "Sex, n (%)",
+               RACE   = "Race, n (%)",
+               ECOGBL = "Baseline ECOG performance status, n (%)",
+               BSLD   = "Baseline sum of diameters (mm)")
 dm_cont <- c("n"         = "{N:.0f}",
              "Mean (SD)" = "{mean:.1f} ({sd:.2f})",
              "Median"    = "{median:.1f}",
@@ -127,11 +130,12 @@ specs$DM <- tfl_table_spec(
     list(output_id = "DM", cols = "TRT01A", rows = "group = variable",
          label = "", sort = "", note = "Demographics, one column per arm")),
   variables = tbl(
-    list(output_id = "DM", variable = "AGE",      label = dm_labels[["AGE"]],      order = 1, levels = ""),
-    list(output_id = "DM", variable = "AGEGR1",   label = dm_labels[["AGEGR1"]],   order = 2, levels = "<65 | 65-80 | >80"),
-    list(output_id = "DM", variable = "SEX",      label = dm_labels[["SEX"]],      order = 3, levels = "F | M"),
-    list(output_id = "DM", variable = "RACE",     label = dm_labels[["RACE"]],     order = 4, levels = ""),
-    list(output_id = "DM", variable = "WEIGHTBL", label = dm_labels[["WEIGHTBL"]], order = 5, levels = "")),
+    list(output_id = "DM", variable = "AGE",    label = dm_labels[["AGE"]],    order = 1, levels = ""),
+    list(output_id = "DM", variable = "AGEGR1", label = dm_labels[["AGEGR1"]], order = 2, levels = "<65 | >=65"),
+    list(output_id = "DM", variable = "SEX",    label = dm_labels[["SEX"]],    order = 3, levels = "F | M"),
+    list(output_id = "DM", variable = "RACE",   label = dm_labels[["RACE"]],   order = 4, levels = ""),
+    list(output_id = "DM", variable = "ECOGBL", label = dm_labels[["ECOGBL"]], order = 5, levels = "0 | 1"),
+    list(output_id = "DM", variable = "BSLD",   label = dm_labels[["BSLD"]],   order = 6, levels = "")),
   cells = tbl(
     list(output_id = "DM", variable = "continuous",  context = "", row = "n",         when = "", template = "{N}",                digits = "0",   signif = ""),
     list(output_id = "DM", variable = "continuous",  context = "", row = "Mean (SD)", when = "", template = "{mean} ({sd})",      digits = "1,2", signif = ""),
@@ -153,7 +157,7 @@ specs$DM <- with_pages(specs$DM,
     hc("DM", 2, ".values", "(N={n})", span = "each")))
 
 dm_n <- normalize_ard(ard_dm)
-dm_levels <- list(AGEGR1 = c("<65", "65-80", ">80"), SEX = c("F", "M"))
+dm_levels <- list(AGEGR1 = c("<65", ">=65"), SEX = c("F", "M"), ECOGBL = c("0", "1"))
 dm_code <- widen_ard(
   dm_n, cols = "TRT01A", rows = c(group = "variable"),
   labels = dm_labels, levels = dm_levels,
@@ -165,7 +169,8 @@ dm_header <- function(p) plan_col_header(p, values = list(n = TRUE), rtf_col_hea
 dm_plan <- table_plan(dm_n, cols = "TRT01A", rows = c(group = "variable")) |>
   plan_cells(notes = FALSE) |>
   plan_labels(dm_labels) |>
-  plan_levels(AGEGR1 = dm_levels$AGEGR1, SEX = dm_levels$SEX) |>
+  plan_levels(AGEGR1 = dm_levels$AGEGR1, SEX = dm_levels$SEX,
+              ECOGBL = dm_levels$ECOGBL) |>
   plan_cells(continuous = dm_cont, categorical = "{n:.0f} ({p:.1f%})") |>
   plan_digits(rounding = "sas") |>
   plan_stub(name = "row_label", before = TRUE) |>
@@ -177,26 +182,28 @@ dm_plan <- table_plan(dm_n, cols = "TRT01A", rows = c(group = "variable")) |>
 
 # ---------------------------------------------------------------- 2. AE
 # Treatment-emergent adverse events by system organ class and preferred
-# term, in a column for each arm and sex; the subjects of ADSL are the
-# denominators.  The ARD's own tabulation of the column variables (its
-# `tabulate` rows) is not a row of the table.
-adae <- cards::ADAE |> filter(TRTEMFL == "Y")
+# term, in a column for each arm and sex; the subjects of the safety set
+# are the denominators.  The ARD's own tabulation of the column variables
+# (its `tabulate` rows) is not a row of the table.
+adae <- tflspec::adae |>
+  filter(SAFFL == "Y", TRTEMFL == "Y") |>
+  left_join(select(adsl_saf, USUBJID, SEX), by = "USUBJID")
 ard_ae <- ard_stack_hierarchical(
-  adae, variables = c(AEBODSYS, AEDECOD), by = c(TRTA, SEX),
-  denominator = cards::ADSL, id = USUBJID, over_variables = TRUE)
+  adae, variables = c(AEBODSYS, AEDECOD), by = c(TRT01A, SEX),
+  denominator = adsl_saf, id = USUBJID, over_variables = TRUE)
 ard_ae <- ard_ae[ard_ae$context != "tabulate", ]
 
-ae_levels <- list(TRTA = arms, SEX = c("F", "M"))
+ae_levels <- list(TRT01A = arms, SEX = c("F", "M"))
 ae_sort <- c(".overall", "group1", ".depth", "-n", "label")
 specs$AE <- tfl_table_spec(
   study = c(rounding = "sas"),
   tables = tbl(
-    list(output_id = "AE", cols = "TRTA | SEX",
+    list(output_id = "AE", cols = "TRT01A | SEX",
          rows = "group1 = AEBODSYS", label = "label = AEDECOD",
          sort = paste(ae_sort, collapse = " | "),
          note = "TEAEs by SOC and PT; the most frequent first within a SOC")),
   variables = tbl(
-    list(output_id = "AE", variable = "TRTA", label = "", order = NA,
+    list(output_id = "AE", variable = "TRT01A", label = "", order = NA,
          levels = paste(arms, collapse = " | ")),
     list(output_id = "AE", variable = "SEX",  label = "", order = NA,
          levels = "F | M")),
@@ -215,7 +222,7 @@ specs$AE <- with_pages(specs$AE,
                    row_height_twips = "220")),
   col_header = tbl(
     hc("AE", 1, "row_label"),
-    hc("AE", 1, ".values", "{col1} (N={n:sum})", span = "TRTA",
+    hc("AE", 1, ".values", "{col1} (N={n:sum})", span = "TRT01A",
        border_bottom = "single"),
     hc("AE", 2, "row_label", "System organ class
   Preferred term"),
@@ -226,7 +233,7 @@ n (%)", span = "each")))
 ae_n <- normalize_ard(ard_ae, hierarchy = c("AEBODSYS", "AEDECOD"),
                       overall = "Subjects with any TEAE")
 ae_code <- widen_ard(
-  ae_n, cols = c("TRTA", "SEX"), rows = c(group1 = "AEBODSYS"),
+  ae_n, cols = c("TRT01A", "SEX"), rows = c(group1 = "AEBODSYS"),
   label = c(label = "AEDECOD"), levels = ae_levels,
   cells = "{n:.0f} ({p:.1f%})", sort = ae_sort,
   rounding = "sas", notes = FALSE)
@@ -236,11 +243,11 @@ ae_header <- function(p) plan_col_header(p, values = list(n = TRUE), rtf_col_hea
       col_cell(c(2 * i, 2 * i + 1), "{col1} (N={n:sum})",
                border = rtf_border(bottom = "single")))),
   c("System organ class\n  Preferred term", "{col2}\n(N={n})\nn (%)")))
-ae_plan <- table_plan(ae_n, cols = c("TRTA", "SEX"),
+ae_plan <- table_plan(ae_n, cols = c("TRT01A", "SEX"),
                       rows = c(group1 = "AEBODSYS"),
                       label = c(label = "AEDECOD")) |>
   plan_cells(notes = FALSE) |>
-  plan_levels(TRTA = ae_levels$TRTA, SEX = ae_levels$SEX) |>
+  plan_levels(TRT01A = ae_levels$TRT01A, SEX = ae_levels$SEX) |>
   plan_sort(".overall", "group1", ".depth", "-n", "label") |>
   plan_cells("{n:.0f} ({p:.1f%})") |>
   plan_digits(rounding = "sas") |>
@@ -253,16 +260,16 @@ ae_plan <- table_plan(ae_n, cols = c("TRTA", "SEX"),
   ae_header()
 
 # ---------------------------------------------------------------- 3. ORR
-# The response rate (made up) with its exact 95% CI, by arm, in two
-# subgroup families -- age group and sex.  Each arm has two columns: the
-# subjects (N) and the responders with the CI under them; a subgroup
-# without responders prints 0, one where all responded (100).
-set.seed(2026)
-resp <- cards::ADSL |>
+# The objective response rate (a confirmed CR or PR as the best overall
+# response) with its exact 95% CI, by arm, in two subgroup families -- age
+# group and sex -- of the efficacy evaluable set.  Each arm has two
+# columns: the subjects (N) and the responders with the CI under them; a
+# subgroup without responders prints 0, one where all responded (100).
+bor <- tflspec::adrs |> filter(PARAMCD == "BOR")
+resp <- tflspec::adsl |>
+  filter(EFFFL == "Y") |>
   select(USUBJID, TRT01A, AGEGR1, SEX) |>
-  mutate(RESP = runif(n()) < c(Placebo = 0.2, "Xanomeline Low Dose" = 0.4,
-                               "Xanomeline High Dose" = 0.55)[TRT01A])
-resp$RESP[resp$TRT01A == "Placebo" & resp$AGEGR1 == ">80"] <- FALSE
+  mutate(RESP = USUBJID %in% bor$USUBJID[bor$AVALC %in% c("CR", "PR")])
 ard_resp <- bind_rows(
   resp |> group_by(TRT01A, AGEGR1) |>
     cardx::ard_categorical_ci(variables = RESP, method = "clopper-pearson"),
@@ -349,20 +356,19 @@ resp_plan <- table_plan(resp_n, cols = c("TRT01A", "variable"),
   resp_header()
 
 # ---------------------------------------------------------------- 4. LB
-# A shift table (made-up grades): baseline grade across, worst grade after
-# baseline down, one page per parameter with its own subjects.  The "All"
-# row and column are tabulations of their own; the subjects per baseline
-# grade -- the header's N -- are the column variable's tabulation (#482).
-set.seed(41)
-lab <- cards::ADSL |>
-  select(USUBJID) |>
-  tidyr::crossing(PARAM = c("Alanine aminotransferase", "Platelet count")) |>
-  mutate(BGRADE = sample(c("Grade 0", "Grade 1", "Grade 2"), n(), TRUE,
-                         c(.7, .2, .1)),
-         WGRADE = sample(c("Grade 0", "Grade 1", "Grade 2", "Grade 3"),
-                         n(), TRUE, c(.5, .3, .15, .05))) |>
-  # fewer subjects have a platelet count: the two pages differ in N
-  filter(!(PARAM == "Platelet count" & row_number() %% 15 == 0))
+# A shift table of CTCAE grades: baseline grade across, worst grade after
+# baseline down, one page per parameter with its own subjects (those with
+# a value after baseline).  The "All" row and column are tabulations of
+# their own; the subjects per baseline grade -- the header's N -- are the
+# column variable's tabulation (#482).
+grades <- function(g, lv) factor(paste("Grade", g), levels = lv)
+lab <- tflspec::adlb |>
+  filter(SAFFL == "Y", PARAMCD %in% c("ALT", "HGB"), ONTRTFL == "Y") |>
+  group_by(USUBJID, PARAM) |>
+  summarise(BGRADE = first(BTOXGR), WGRADE = max(as.integer(ATOXGR)),
+            .groups = "drop") |>
+  mutate(BGRADE = grades(BGRADE, paste("Grade", 0:2)),
+         WGRADE = grades(WGRADE, paste("Grade", 0:3)))
 ard_lb <- bind_rows(
   ard_categorical(lab, by = c(PARAM, BGRADE), variables = WGRADE),
   ard_categorical(mutate(lab, WGRADE = "All"), by = c(PARAM, BGRADE), variables = WGRADE),
@@ -427,7 +433,8 @@ lb_plan <- table_plan(lb_pages_n, cols = "BGRADE",
   lb_header()
 
 # ---------------------------------------------------------------- 5. PK
-# Concentrations (made up) of a parent drug and its metabolite at 24
+# Concentrations (made up: the sample study has no PK) of Drug X and its
+# metabolite in the subjects on Drug X, at 24
 # nominal times: one statistic a row, one time a column, too many columns
 # for a page -- they continue on the next pages, the first two columns
 # repeated.  Each statistic has its own digits: decimals, or "<k>s" for k
@@ -436,10 +443,11 @@ set.seed(5)
 pk_times <- c("Pre-dose", paste(c(0.25, 0.5, 1, 1.5, 2, 3, 4, 6, 8, 10, 12, 16,
                                   24, 36, 48, 72, 96, 120, 144, 168, 192, 216,
                                   240), "h"))
-pk <- cards::ADSL |>
+pk <- adsl_saf |>
+  filter(TRT01A == "Drug X") |>
   select(USUBJID) |>
-  tidyr::crossing(ANALYTE = c("Parent drug", "Metabolite M1"), NOMTIME = pk_times) |>
-  mutate(CONC = rlnorm(n(), log(ifelse(ANALYTE == "Parent drug", 80, 15)), 0.6))
+  tidyr::crossing(ANALYTE = c("Drug X", "Metabolite M1"), NOMTIME = pk_times) |>
+  mutate(CONC = rlnorm(n(), log(ifelse(ANALYTE == "Drug X", 80, 15)), 0.6))
 ard_pk <- ard_stack(
   pk, .by = c(ANALYTE, NOMTIME),
   ard_continuous(variables = CONC,
@@ -580,18 +588,18 @@ cat("\nwritten to", normalizePath(out_dir), "\n")
 options(rtfreporter.render_time = as.POSIXct("2026-01-01 09:00:00"))
 prog_dir <- "C:\\study\\tfl"
 page_header <- list(c("Example Pharma", "Clinical Study Report"),
-                    c("Study EX-001", "Page {PAGE} of {TOTAL_PAGES}"))
+                    c("Study XYZ-ONC-01", "Page {PAGE} of {TOTAL_PAGES}"))
 run_line <- "{PROGRAM}       Generated on: {DATETIME}"
 rpt_titles <- list(
   DM  = c("", "Table 14.1.2", "Demographics and Baseline Characteristics", "Safety Population"),
   AE  = c("", "Table 14.3.1.2", "Treatment-Emergent Adverse Events by System Organ Class, Preferred Term and Sex", "Safety Population"),
-  ORR = c("", "Table 14.2.3", "Response Rate by Subgroup", "Efficacy Population"),
+  ORR = c("", "Table 14.2.3", "Objective Response Rate by Subgroup", "Efficacy Evaluable Population"),
   LB  = c("", "Table 14.3.4", "Laboratory Toxicity Grade: Shift from Baseline", "Safety Population", ""),
   PK  = c("", "Table 14.5.1", "Summary of Concentrations by Nominal Time", "Pharmacokinetic Population"))
 rpt_notes <- list(
-  DM  = c("SD: standard deviation; Min: minimum; Max: maximum."),
+  DM  = c("SD: standard deviation; Min: minimum; Max: maximum; ECOG: Eastern Cooperative Oncology Group."),
   AE  = c("A subject is counted once in a system organ class and once in a preferred term.", "Coded with MedDRA."),
-  ORR = c("Response: complete or partial response.", "CI: exact (Clopper-Pearson) confidence interval."),
+  ORR = c("Response: a confirmed complete or partial response (RECIST 1.1).", "CI: exact (Clopper-Pearson) confidence interval."),
   LB  = c("Each column is a baseline grade; each row the worst grade after baseline."),
   PK  = c("SD: standard deviation", "Concentrations below the lower limit of quantification are set to zero."))
 # ---- the same five documents written as code

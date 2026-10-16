@@ -120,8 +120,7 @@
 
       <CodeList OID="CL.AGEGR1" Name="Pooled Age Group 1" DataType="text">
         <EnumeratedItem CodedValue="&lt;65" OrderNumber="1"/>
-        <EnumeratedItem CodedValue="65-80" OrderNumber="2"/>
-        <EnumeratedItem CodedValue="&gt;80" OrderNumber="3"/>
+        <EnumeratedItem CodedValue="&gt;=65" OrderNumber="2"/>
       </CodeList>
       <CodeList OID="CL.SEX" Name="Sex" DataType="text" def:StandardOID="STD.CT.ADAM">
         <CodeListItem CodedValue="F" OrderNumber="2">
@@ -135,9 +134,8 @@
         <Alias Context="nci:ExtCodeID" Name="C66731"/>
       </CodeList>
       <CodeList OID="CL.TRT01A" Name="Actual Treatment for Period 01" DataType="text">
-        <EnumeratedItem CodedValue="Placebo" OrderNumber="1"/>
-        <EnumeratedItem CodedValue="Xanomeline Low Dose" OrderNumber="2"/>
-        <EnumeratedItem CodedValue="Xanomeline High Dose" OrderNumber="3"/>
+        <EnumeratedItem CodedValue="Drug X" OrderNumber="1"/>
+        <EnumeratedItem CodedValue="Control" OrderNumber="2"/>
       </CodeList>
       <CodeList OID="CL.NY" Name="No Yes Response" DataType="text" def:StandardOID="STD.CT.ADAM">
         <CodeListItem CodedValue="Y">

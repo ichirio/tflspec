@@ -1,6 +1,6 @@
 # One report of a study: spec/outputs/<id>.yml (tflspec's YAML spec, stage 0 fixture).
-# The sample study's T-14-1-1 (demographics), as the sheets of
-# inst/sample/SAMPLE-01/spec/table_spec.xlsx say it.
+# The oncology sample study's T-14-1-1 (demographics) on tflspec's sample
+# data (adsl: Drug X vs Control).
 id: T-14-1-1
 kind: table
 label: Demographics
@@ -26,17 +26,16 @@ ard:
       method: cards::ard_tabulate
       data: adsl_saf
       by: [TRT01A]
-      variables: [AGEGR1, SEX, RACE, ETHNIC]
+      variables: [AGEGR1, SEX, RACE, ECOGBL]
 data:
   source: ard
 codelists:
   TRT01A:
-    - {value: Placebo, label: Placebo}
-    - {value: Xanomeline Low Dose, label: Low Dose}
-    - {value: Xanomeline High Dose, label: High Dose}
+    - {value: Drug X, label: Drug X 200 mg}
+    - {value: Control, label: Control 100 mg}
 content:
   - table_plan: {cols: TRT01A, rows: {group: variable}}
-  - plan_labels: {AGE: "Age (years)", AGEGR1: "Age group, n (%)", SEX: "Sex, n (%)", RACE: "Race, n (%)", ETHNIC: "Ethnicity, n (%)"}
+  - plan_labels: {AGE: "Age (years)", AGEGR1: "Age group, n (%)", SEX: "Sex, n (%)", RACE: "Race, n (%)", ECOGBL: "Baseline ECOG, n (%)"}
   - plan_cells:
       continuous:
         n: "{N}"

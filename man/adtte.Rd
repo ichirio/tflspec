@@ -24,7 +24,7 @@ adtte
 }
 \description{
 Progression-free survival, overall survival and duration of response of
-the simulated study XYZ-ONC-01 (see \link[pharmaverseadam:adsl]{adsl}), in months.  PFS: to
+the simulated study XYZ-ONC-01 (see \link{adsl}), in months.  PFS: to
 progression or death, censored at the last tumour assessment; OS: to
 death, censored at the cut-off; DOR: from the first confirmed CR / PR.
 }

@@ -52,8 +52,8 @@ outline are installed with the package:
 table(adsl$TRT01P, adsl$DTHFL)
 }
 \seealso{
-The other datasets of the study: \link[pharmaverseadam:adex]{adex}, \link[pharmaverseadam:adae]{adae}, \link[pharmaverseadam:adlb]{adlb}, \link[pharmaverseadam:advs]{advs},
-\link{adrs}, \link{adtr}, \link[ggsurvfit:adtte]{adtte}; the study's SAP and CRF outline,
+The other datasets of the study: \link{adex}, \link{adae}, \link{adlb}, \link{advs},
+\link{adrs}, \link{adtr}, \link{adtte}; the study's SAP and CRF outline,
 \code{system.file("sample", "onco", package = "tflspec")}.
 
 Other oncology sample data:

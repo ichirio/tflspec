@@ -144,7 +144,7 @@ tfl_ai_tasks <- function() .ai_task_table()
 #' @seealso [tfl_ai_prompt()].
 #' @examples
 #' tfl_ai_context("toc", study = list(
-#'   study_id = "CDISCPILOT01", title = "Xanomeline in Alzheimer's disease"
+#'   study_id = "XYZ-ONC-01", title = "Drug X versus control in advanced solid tumours"
 #' ))
 #'
 #' adam <- tfl_example_adam()

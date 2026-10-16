@@ -6,7 +6,7 @@
 \title{Oncology sample study XYZ-ONC-01: laboratory (ADLB)}
 \format{
 \code{adlb}: a data frame, one row per subject, parameter and visit,
-with the subject keys (as in \link[pharmaverseadam:adex]{adex}) and
+with the subject keys (as in \link{adex}) and
 \describe{
 \item{PARAMCD, PARAM, PARCAT1}{\code{ALT}, \code{AST}, \code{BILI}, \code{HGB}, \code{NEUT},
 \code{PLAT}; chemistry or haematology}
@@ -27,7 +27,7 @@ adlb
 }
 \description{
 Six laboratory parameters of the simulated study XYZ-ONC-01 (see
-\link[pharmaverseadam:adsl]{adsl}) on day 1 of each cycle (cycle 1 is the baseline): ALT, AST,
+\link{adsl}) on day 1 of each cycle (cycle 1 is the baseline): ALT, AST,
 bilirubin, haemoglobin, neutrophils, platelets, with normal ranges and
 CTCAE grades for shift tables.
 }

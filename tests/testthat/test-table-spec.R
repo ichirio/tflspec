@@ -565,13 +565,16 @@ test_that("the shipped AE example runs on an ARD normalized as its definitions s
   f <- system.file("extdata", "ard-spec", "AE.xlsx", package = "tflspec")
   skip_if(!nzchar(f), "examples not installed")
   sp <- tfl_read_table_spec(f)
-  ard <- cards::ard_stack_hierarchical(cards::ADAE, variables = c(AEBODSYS, AEDECOD),
-                                       by = c(TRTA, SEX), denominator = cards::ADSL,
+  # the sample study's TEAEs, with the subject's sex from ADSL
+  adae <- merge(tflspec::adae[tflspec::adae$TRTEMFL == "Y", ],
+                tflspec::adsl[, c("USUBJID", "SEX")], by = "USUBJID")
+  ard <- cards::ard_stack_hierarchical(adae, variables = c(AEBODSYS, AEDECOD),
+                                       by = c(TRT01A, SEX), denominator = tflspec::adsl,
                                        id = USUBJID)
   a <- tfl_ard_spec(list(
     datasets = data.frame(dataset = "ADAE", path = "adae.rds"),
     analyses = data.frame(output_id = "AE", analysis_id = "AE", method = "hierarchical",
-                          dataset = "ADAE", by = "TRTA | SEX",
+                          dataset = "ADAE", by = "TRT01A | SEX",
                           variables = "AEBODSYS | AEDECOD")))
   line <- tfl_normalize_code(sp, a, "AE")
   expect_identical(line, "data <- normalize_ard(ard, hierarchy = c(\"AEBODSYS\", \"AEDECOD\"))")

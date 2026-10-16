@@ -92,10 +92,26 @@ test_that("where adds a record condition and groups follow the paired numeric co
   expect_equal(levels(env$sum_df$TRT01A), c("Drug B", "Drug A"))
 })
 
-test_that("pharmaverseadam example files are shipped", {
-  d <- system.file("examples", "pharmaverseadam", package = "tflspec")
-  expect_true(all(file.exists(file.path(d, c("prepare_adam.R", "plot_list.xlsx", "run_all.R")))))
-  rows <- openxlsx::read.xlsx(file.path(d, "plot_list.xlsx"), sheet = "plots")
+test_that("the onco example study is shipped, and runs: specs -> programs -> outputs", {
+  d <- system.file("examples", "onco", package = "tflspec")
+  expect_true(all(file.exists(file.path(d, c("README.md", "prepare_data.R", "make_specs.R", "run_all.R",
+                                             file.path("spec", c("ard_spec.xlsx", "tables.xlsx",
+                                                                 "report.xlsx", "plot_list.xlsx")))))))
+  rows <- openxlsx::read.xlsx(file.path(d, "spec", "plot_list.xlsx"), sheet = "plots")
   expect_true(all(rows$type %in% tfl_fig_catalog("implemented")$type))
   expect_false(any(rows$type %in% c("sankey", "sunburst")))
+  skip_on_cran()
+  for (p in c("cards", "cardx", "rtfreporter", "dplyr", "ggplot2", "ggsurvfit", "patchwork", "survival")) {
+    skip_if_not_installed(p)
+  }
+  w <- withr::local_tempdir()
+  file.copy(d, w, recursive = TRUE)
+  withr::local_dir(file.path(w, "onco"))
+  withr::local_options(tflspec.data_expr = NULL, tflspec.fig_path = NULL)
+  suppressMessages(suppressWarnings(utils::capture.output(source("run_all.R", local = new.env()))))
+  out <- c(paste0("T-14-", c("1-1", "2-1", "3-1"), ".rtf"), paste0("F-14-2-", 1:6, ".png"))
+  expect_true(all(file.exists(file.path("output", out))), label = paste(out, collapse = ", "))
+  rtf <- paste(readLines(file.path("output", "T-14-2-1.rtf"), warn = FALSE), collapse = "\n")
+  expect_match(rtf, "Objective response rate (CR + PR)", fixed = TRUE)
+  expect_match(rtf, "Drug X", fixed = TRUE)
 })

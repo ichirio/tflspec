@@ -32,9 +32,9 @@
 
 # ---- the example: a made-up study, XYZ-001 ------------------------------------
 #
-# Four outputs on the CDISC pilot data (pharmaverseadam): T-1 demographics,
-# T-2 treatment-emergent AEs by SOC and PT, L-1 serious AEs, F-1 mean
-# systolic blood pressure by visit.  The TOC and shells are what a company
+# Four outputs on tflspec's oncology sample data (adsl, adae, advs; arms
+# Drug X and Control): T-1 demographics, T-2 treatment-emergent AEs by SOC
+# and PT, L-1 serious AEs, F-1 mean systolic blood pressure by visit.  The TOC and shells are what a company
 # would hand over; the specs are what the guide says to write from them.
 
 .ai_df <- function(...) data.frame(..., stringsAsFactors = FALSE, check.names = FALSE)
@@ -65,7 +65,7 @@
 }
 
 .ai_example_table <- function() {
-  arms <- "Placebo | Xanomeline Low Dose | Xanomeline High Dose"
+  arms <- "Drug X | Control"
   hdr <- function(id, stub1, stub2) .ai_df(
     output_id = id, line = c("1", "1", "2", "2"),
     cols = c("row_label", ".values", "row_label", ".values"),
@@ -89,7 +89,7 @@
                        variable = c("TRT01A", "TRT01A", "AGE", "SEX", "AGEGR1"),
                        label = c("", "", "Age (years)", "Sex, n (%)", "Age group, n (%)"),
                        order = c("", "", "1", "2", "3"),
-                       levels = c(rep(arms, 2), "", "", "18-64 | >64")),
+                       levels = c(rep(arms, 2), "", "", "<65 | >=65")),
     codelists = .ai_df(output_id = "T-1", variable = "SEX", value = c("M", "F"),
                        label = c("Male", "Female"), order = c("1", "2")),
     cells = .ai_df(
@@ -143,9 +143,13 @@
 
 .ai_example_figure <- function() {
   d <- tfl_fig_template("mean_se", data = "ADVS", param = "SYSBP", pop = "SAFFL",
-                        group = "TRTA")
-  # ADVS has the arm and the flag itself: no join
+                        group = "TRT01A")
+  # ADVS has the arm and the flag itself: no join; the shell's visits are
+  # baseline to cycle 9 (AVISITN 0 to 8)
   d$data <- Filter(function(s) !identical(s$step, "join"), d$data)
+  for (i in seq_along(d$data)) {
+    if (identical(d$data[[i]]$step, "filter")) d$data[[i]]$expr <- "!is.na(AVAL) & AVISITN <= 8"
+  }
   d$plot$x_label <- "Visit"
   d$plot$y_label <- "Mean (SE) Systolic Blood Pressure (mmHg)"
   d
@@ -214,37 +218,38 @@
 }
 
 .ai_example_shells <- function() {
-  arms <- c("Placebo", "Xanomeline Low Dose", "Xanomeline High Dose")
+  arms <- c("Drug X", "Control")
   g <- function(...) {
     r <- list(...)
     w <- max(lengths(r))
     do.call(rbind, lapply(r, function(x) c(x, rep("", w - length(x)))))
   }
   pct <- "xx (xx.x%)"
+  k <- length(arms)
   t1 <- g(c("T-1", "Table 14.1.1  Demographic Characteristics  (Safety Analysis Set)"),
           c("", arms, "Total"),
-          c("Parameter", rep("(N=xx)", 4)),
+          c("Parameter", rep("(N=xx)", k + 1)),
           "Age (years)",
-          c("  n", rep("xx", 4)),
-          c("  Mean (SD)", rep("xx.x (xx.xx)", 4)),
-          c("  Median", rep("xx.x", 4)),
-          c("  Min, Max", rep("xx, xx", 4)),
+          c("  n", rep("xx", k + 1)),
+          c("  Mean (SD)", rep("xx.x (xx.xx)", k + 1)),
+          c("  Median", rep("xx.x", k + 1)),
+          c("  Min, Max", rep("xx, xx", k + 1)),
           "Sex, n (%)",
-          c("  Male", rep(pct, 4)),
-          c("  Female", rep(pct, 4)),
+          c("  Male", rep(pct, k + 1)),
+          c("  Female", rep(pct, k + 1)),
           "Age group, n (%)",
-          c("  18-64", rep(pct, 4)),
-          c("  >64", rep(pct, 4)))
+          c("  <65", rep(pct, k + 1)),
+          c("  >=65", rep(pct, k + 1)))
   t2 <- g(c("T-2", "Table 14.3.1  Treatment-Emergent Adverse Events by System Organ Class and Preferred Term  (Safety Analysis Set)"),
           c("System Organ Class", arms),
-          c("  Preferred Term", rep("(N=xx)", 3)),
-          c("Subjects with at least one TEAE", rep(pct, 3)),
-          c("SYSTEM ORGAN CLASS 1", rep(pct, 3)),
-          c("  Preferred term 1", rep(pct, 3)),
-          c("  Preferred term 2", rep(pct, 3)),
+          c("  Preferred Term", rep("(N=xx)", k)),
+          c("Subjects with at least one TEAE", rep(pct, k)),
+          c("SYSTEM ORGAN CLASS 1", rep(pct, k)),
+          c("  Preferred term 1", rep(pct, k)),
+          c("  Preferred term 2", rep(pct, k)),
           "",
-          c("SYSTEM ORGAN CLASS 2", rep(pct, 3)),
-          c("  Preferred term 1", rep(pct, 3)),
+          c("SYSTEM ORGAN CLASS 2", rep(pct, k)),
+          c("  Preferred term 1", rep(pct, k)),
           "",
           "SOCs alphabetically; PTs by decreasing frequency in the total of the arms within a SOC.",
           "A subject is counted once in a system organ class and once in a preferred term.",
@@ -258,9 +263,9 @@
           "Sorted by subject and start day; the subject printed once.")
   f1 <- g(c("F-1", "Figure 14.2.1  Mean (SE) Systolic Blood Pressure by Visit  (Safety Analysis Set)"),
           "A line per arm through the mean at each visit, an error bar of one standard error, the arms side by side at each visit.",
-          "x axis: Visit (Baseline, Week 2, Week 4 ... End of Treatment), in visit order.",
+          "x axis: Visit (Baseline, Cycle 2 Day 1 ... Cycle 9 Day 1), in visit order.",
           "y axis: Mean (SE) Systolic Blood Pressure (mmHg).",
-          "Legend below the plot: the three arms, in the order Placebo, Low Dose, High Dose.")
+          "Legend below the plot: the two arms, in the order Drug X, Control.")
   lapply(list(`T-1` = t1, `T-2` = t2, `L-1` = l1, `F-1` = f1), function(m) {
     d <- as.data.frame(m, stringsAsFactors = FALSE)
     names(d) <- paste0("c", seq_len(ncol(d)))
@@ -322,7 +327,7 @@
     listing = unclass(tfl_listing_spec(na(.ai_example_listing()))),
     figures = list(`F-1` = unclass(.ai_example_figure())),
     study = list(study_id = "XYZ-001",
-                 title = "A made-up study (CDISC pilot data)"))
+                 title = "A made-up study (tflspec's oncology sample data)"))
   suppressMessages(tfl_yaml_from_sheets(sheets, dir, overwrite = TRUE, figures = "items"))
   unlink(file.path(dir, "spec", "_not_converted.yml"))
   a <- .ai_example_assumptions()

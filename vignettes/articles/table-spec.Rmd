@@ -129,7 +129,7 @@ is read, with a message. Labels are a report's, like the rest of its code
 lists.
 
 ```{r, message = FALSE}
-adsl <- cards::ADSL
+adsl <- adsl[adsl$SAFFL == "Y", ]    # the sample study's ADSL, safety set
 adsl$SEX <- factor(adsl$SEX, c("F", "M"), c("Female", "Male"))  # as set_levels()
 ard2 <- cards::ard_stack(
   adsl, .by = TRT01A,
@@ -165,7 +165,7 @@ template for each kind of row -- to be edited:
 
 ```{r}
 ard <- cards::ard_stack(
-  cards::ADSL, .by = TRT01A,
+  adsl, .by = TRT01A,
   cards::ard_summary(variables = AGE),
   cards::ard_tabulate(variables = AGEGR1))
 tmpl <- tfl_table_spec_template(ard, cols = "TRT01A", output_id = "T-DM")

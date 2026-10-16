@@ -1,5 +1,22 @@
 # tflspec (development version)
 
+* **The samples run on the oncology sample study** (#295, 0.0.24.9134).
+  tflspec's examples, articles, README and AI kit use `adsl`, `adae`,
+  `adrs` ... (study XYZ-ONC-01, Drug X vs Control) instead of the CDISC
+  pilot data (`cards::ADSL`, pharmaverseadam), which is dropped from
+  Suggests.  `inst/examples/onco/` replaces `inst/examples/pharmaverseadam/`:
+  a study folder whose specs (ARD spec, table and report specs, plot list)
+  are written into programs and run -- demographics, best overall response
+  with ORR and DCR, TEAEs by SOC and PT, PFS and OS Kaplan-Meier plots, a
+  PFS forest plot, waterfall, swimmer and spider plots.  The example
+  workbooks of `inst/extdata/ard-spec` (made by
+  `data-raw/ard-spec-examples/make-examples.R`) are built from the sample
+  study: the response rate from its best overall response, the
+  laboratory shift from its CTCAE grades.  `inst/extdata/spec-yaml` and
+  the define's code lists use its arms and age groups.  The AI kit's
+  made-up study XYZ-001 reads the same data.  The datasets' help pages
+  link to each other (they linked to pharmaverseadam's and ggsurvfit's
+  topics of the same names).  No function changes.
 * **A value's labels in the report's code list** (#294, 0.0.24.9133; the
   user's decision of 2026-10-16).  The key columns a plan makes itself --
   a stack's pair (`tables$stack`: `subgroup`, `subgroup_level`) and the

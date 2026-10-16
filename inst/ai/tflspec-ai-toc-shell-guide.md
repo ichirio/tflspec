@@ -194,7 +194,7 @@ in this order -- and its `page:`.
 - `cols`: the variable whose values are the columns -- the arm.  Its
   name is not in the shell; take the dataset's treatment variable
   (`TRT01A` on ADSL; `TRTA` on most event datasets, but check: the
-  pilot data's ADAE has only `TRT01A`; §4.1) and say so.  Two header
+  sample data's ADAE has only `TRT01A`; §4.1) and say so.  Two header
   rows of keys ("Drug X" over doses, or arms over sex) are two keys,
   outermost first: `cols: [TRTA, SEX]`.
 - `rows`: the keys down the stub.  A demographics table has one row key,
@@ -647,7 +647,7 @@ Run through it; the review will.
   can answer without opening the files.  Nothing else: no summary of the
   files, no code.
 - **Do not**: invent a key or a function; write a value you were not
-  given ("N=86"); translate a title; set a `program` or `file` the TOC
+  given ("N=80"); translate a title; set a `program` or `file` the TOC
   does not give; drop a footnote; write a `Total` level into the data;
   write a list or a map as `!r` R code; leave a guess out of the
   assumptions.
@@ -656,9 +656,8 @@ Run through it; the review will.
 
 ## 10. Worked example: `05_example_toc_shell.xlsx` → `06_example_spec.md`
 
-A made-up study, XYZ-001, four outputs, on the CDISC pilot data
-(pharmaverseadam: arms Placebo, Xanomeline Low Dose, Xanomeline High
-Dose).  Open the files beside this guide; this section says what was
+A made-up study, XYZ-001, four outputs, on tflspec's oncology sample
+data (`adsl`, `adae`, `advs`: arms Drug X and Control).  Open the files beside this guide; this section says what was
 read where.  The answer runs as it is: the ARD, the two tables, the
 listing and the figure are made from it in tflspec's own tests.
 
@@ -696,11 +695,10 @@ shows.
 ### Shell T-1
 
 ```
-                  Placebo       Xanomeline    Xanomeline    Total
-                                Low Dose      High Dose
-Parameter         (N=xx)        (N=xx)        (N=xx)        (N=xx)
+                  Drug X        Control       Total
+Parameter         (N=xx)        (N=xx)        (N=xx)
 Age (years)
-  n               xx            xx            xx            xx
+  n               xx            xx            xx
   Mean (SD)       xx.x (xx.xx)  ...
   Median          xx.x
   Min, Max        xx, xx
@@ -708,14 +706,14 @@ Sex, n (%)
   Male            xx (xx.x%)
   Female          xx (xx.x%)
 Age group, n (%)
-  18-64           xx (xx.x%)
-  >64             xx (xx.x%)
+  <65             xx (xx.x%)
+  >=65            xx (xx.x%)
 ```
 
 → `table_plan: {cols: TRT01A, rows: {group: variable}}`;
 `plan_total: {label: Total}`.
 → `plan_levels`: `TRT01A` the arms in the shell's order; `AGEGR1`
-`['18-64', '>64']`; `SEX` `[Male, Female]`.
+`['<65', '>=65']`; `SEX` `[Male, Female]`.
 → `plan_labels`: `AGE` "Age (years)", `SEX` "Sex, n (%)", `AGEGR1` "Age
 group, n (%)", in that order.
 → `codelists`: `SEX` `M` → Male, `F` → Female: the shell shows words, the
@@ -733,9 +731,8 @@ between_groups}`.
 ### Shell T-2
 
 ```
-                                Placebo      Xanomeline   Xanomeline
-System Organ Class                           Low Dose     High Dose
-  Preferred Term                (N=xx)       (N=xx)       (N=xx)
+System Organ Class              Drug X       Control
+  Preferred Term                (N=xx)       (N=xx)
 Subjects with at least one TEAE xx (xx.x%)
 SYSTEM ORGAN CLASS 1            xx (xx.x%)
   Preferred term 1              xx (xx.x%)
@@ -763,7 +760,7 @@ with at least one TEAE}`.
 `by: [TRT01A]` `variables: [AEBODSYS, AEDECOD]` `args: !r over_variables
 = TRUE`.
 Assumptions: the denominator is the analysis set per column; TEAE is
-`TRTEMFL`; the arm on ADAE is `TRT01A` (the pilot ADAE has no `TRTA`).
+`TRTEMFL`; the arm on ADAE is `TRT01A` (the sample ADAE has no `TRTA`).
 
 ### Shell L-1
 
@@ -789,13 +786,14 @@ Assumptions: the variables behind each column; serious is `AESER`;
 
 A description, not a picture: a line per arm through the mean at each
 visit, an error bar of one standard error, the arms side by side; x:
-Visit in visit order; y: "Mean (SE) Systolic Blood Pressure (mmHg)";
+Visit in visit order, baseline to cycle 9; y: "Mean (SE) Systolic Blood Pressure (mmHg)";
 the legend below.
 → `template: mean_se`; `data: {source: code, steps: [...]}`: `read`
 ADVS, `param` `SYSBP` (assumed: a question), `flag` `SAFFL`, `filter`
-the non-missing values, `levels` `AVISIT` by `AVISITN`, `summary` `sm`
-(`AVAL` by `TRTA, AVISITN, AVISIT`, interval `se`).  The template's
-`join` step is gone: ADVS has `TRTA` and `SAFFL` itself.
+the non-missing values of the shell's visits (`AVISITN <= 8`), `levels`
+`AVISIT` by `AVISITN`, `summary` `sm` (`AVAL` by `TRT01A, AVISITN,
+AVISIT`, interval `se`).  The template's `join` step is gone: ADVS has
+`TRT01A` and `SAFFL` itself.
 → `content`: `ggplot: {}`, then `geom_line`, `geom_point` and
 `geom_errorbar` on `sm` (`data: sm`, their `mapping`, dodged by
 `position_dodge(width = 0.3)`), `scale_colour_tfl` (the treatment

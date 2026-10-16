@@ -185,7 +185,7 @@ pages, or a plain data frame as here; `tfl_report_path()` says where it
 goes (`output_path` and the report's `file`):
 
 ```{r}
-content <- data.frame(Statistic = "n", Placebo = "86", Active = "84")
+content <- data.frame(Statistic = "n", `Drug X` = "80", Control = "78", check.names = FALSE)
 doc <- tfl_report(spec, "T-14-1-1", content = content)
 tfl_report_path(spec, "T-14-1-1")
 ```
