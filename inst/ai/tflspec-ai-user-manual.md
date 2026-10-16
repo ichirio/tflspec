@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9136** (the development version,
+**This manual documents tflspec 0.0.24.9137** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -111,12 +111,13 @@ sp <- tfl_read_table_spec(c(file.path(d, "study.xlsx"),
 cat(tfl_table_code(sp, pipe = "|>"), sep = "\n")
 cat(tfl_report_code(sp, content = "plan"), sep = "\n")
 
-# or run it: `data` is a normalized ARD (rtfreporter::normalize_ard())
-# plan <- tfl_table_plan(data, sp)
+# or run it on a normalized ARD (rtfreporter::normalize_ard())
+# plan <- tfl_table_plan(normalize_ard(ard), sp)
 # generate_rtfreport(tfl_report(sp, content = plan), tfl_report_path(sp), overwrite = TRUE)
 ```
 
-`tfl_table_code()` writes `plan <- table_plan(data, ...) |> plan_*(...)`;
+`tfl_table_code()` writes `plan <- ard |> normalize_ard(...) |> table_plan(...) |> plan_*(...)`
+(`normalize = FALSE`: `plan <- table_plan(data, ...)`, the data normalized already);
 `tfl_report_code()` writes `doc <- rtf_document(...)`,
 `rtf_section(...)`, `rtf_tables(doc, plan)`.
 
@@ -128,10 +129,12 @@ A table program written from the specs has three parts:
 
 ```r
 library(rtfreporter)
-# 1 DATA    make `data`: an ARD, normalized
-data <- normalize_ard(ard)
+# 1 DATA    the ARD (this table's rows of the study ARD)
+ard <- readRDS("output/ard/ard.rds")
 # 2 TABLE   the table spec as plan verbs      (tfl_table_code())
-plan <- table_plan(data, cols = "TRT01P", rows = c(group = "variable")) |>
+plan <- ard |>
+  normalize_ard() |>
+  table_plan(cols = "TRT01P", rows = c(group = "variable")) |>
   plan_cells(continuous = c("Mean (SD)" = "{mean} ({sd})")) |>
   plan_stub(name = "row_label", before = TRUE)
 # 3 REPORT  the report spec as the document  (tfl_report_code())
@@ -459,8 +462,8 @@ once. The `study` sheet has `key` / `value` (`rounding`: `sas` / `iec` /
 | `show_keys` | `table_plan(show_keys = )` | row keys also shown as variables, `SEX | AGEGR1`: their own n (%) a block beside the subgroup ORR; with `stat_groups` add `.variables = RESP | .others = n` |
 | `keep_where`, `keep_any`, `keep_parents` | `plan_filter()` | rows kept by an R condition over the record (`p >= 0.05`: PTs with 5% or more in any arm; a SOC with its PTs) |
 | `compare`, `compare_by`, `compare_position` | `plan_compare()` | comparison columns, `p | diff`; each column's templates are `cells` rows with `variable` = its name (`{p.value:.3f}`, `{estimate:.2f} ({conf.low:.2f}, {conf.high:.2f})`); the ARD needs the test records (`cardx::ard_stats_t_test()`, `ard_stats_chisq_test()`, ...) |
-| `stack`, `stack_sep`, `stack_nest` | `normalize_ard(stack = , stack_sep = , stack_nest = )` | subgroups as one pair of keys, `subgroup = ALL, SEX, AGEGR1, AGEGR1 * SEX` (`*` crosses; or the slots `subgroup = group2, group3`); `rows` then names `subgroup` / `subgroup_level`, never `group2` / `group2_level`; written by `tfl_normalize_code()` |
-| `overall_label` | `normalize_ard(overall = )` | the any-event row of a hierarchy ("Subjects with at least one TEAE"; its analysis `args` `over_variables = TRUE`): the program's normalization, written by `tfl_normalize_code(spec, ard_spec)` (with the `hierarchy` of its `hierarchical` analysis) |
+| `stack`, `stack_sep`, `stack_nest` | `normalize_ard(stack = , stack_sep = , stack_nest = )` | subgroups as one pair of keys, `subgroup = ALL, SEX, AGEGR1, AGEGR1 * SEX` (`*` crosses; or the slots `subgroup = group2, group3`); `rows` then names `subgroup` / `subgroup_level`, never `group2` / `group2_level`; written by `tfl_table_code()` at the head of the pipe (`tfl_normalize_code()`: the line alone) |
+| `overall_label` | `normalize_ard(overall = )` | the any-event row of a hierarchy ("Subjects with at least one TEAE"; its analysis `args` `over_variables = TRUE`): the program's normalization, written by `tfl_table_code(spec, ard_spec = )` (with the `hierarchy` of its `hierarchical` analysis) |
 
 **variables**: `variable`, `label`, `order` (the variables' order: `plan_levels(variable = c("AGE", "SEX"))`), `levels` (`Grade 0 | Grade 1`), `empty_levels` (`hide`: no row for a value no record has; blank: a 0 row), `under` (`RACE: Asian`: its rows under that level of RACE, one indent deeper, its own heading dropped -- `plan_nest()`)
 → `plan_labels()`, `plan_levels()`.

@@ -7,9 +7,11 @@
 tfl_table_code(
   spec,
   output_id = NULL,
-  data = "data",
+  data = "ard",
   plan = "plan",
-  pipe = NULL
+  pipe = NULL,
+  ard_spec = NULL,
+  normalize = TRUE
 )
 }
 \arguments{
@@ -18,18 +20,30 @@ tfl_table_code(
 
 \item{output_id}{The table, when the definition has several.}
 
-\item{data}{The name of the normalized ARD in the program.}
+\item{data}{The name of the ARD in the program: the pipe starts from it
+(\verb{plan <- ard |> normalize_ard(...) |> table_plan(...)}).  With
+\code{normalize = FALSE}, the name of the data already normalized.}
 
 \item{plan}{The name the plan is assigned to.}
 
 \item{pipe}{\code{"|>"} or \code{"\%>\%"}; \code{NULL} follows
 \code{getOption("rtfreporter.ard_pipe")} (see \code{\link[rtfreporter:plan_template]{rtfreporter::plan_template()}}).}
+
+\item{ard_spec}{The ARD definition (\code{\link[=tfl_read_ard_spec]{tfl_read_ard_spec()}}), for
+\code{\link[rtfreporter:normalize_ard]{rtfreporter::normalize_ard()}}'s \code{hierarchy}; \code{NULL} for none.}
+
+\item{normalize}{\code{TRUE} to write \code{\link[rtfreporter:normalize_ard]{rtfreporter::normalize_ard()}} at the
+head of the pipe (its \code{hierarchy}, \code{overall} and \code{stack} from the
+definitions); \code{FALSE} when the program normalizes the ARD itself
+(\code{\link[=tfl_normalize_code]{tfl_normalize_code()}}).}
 }
 \value{
 The code, one element per line.
 }
 \description{
-Writes the \code{\link[rtfreporter:table_plan]{rtfreporter::table_plan()}} pipeline a table definition stands for: the
+Writes the \code{\link[rtfreporter:table_plan]{rtfreporter::table_plan()}} pipeline a table definition stands
+for, one pipe from the ARD: \code{\link[rtfreporter:normalize_ard]{rtfreporter::normalize_ard()}} (the hierarchy,
+the overall row and the stack the definitions say), the
 roles of its \code{tables} sheet in \code{table_plan()}, and one \verb{plan_*()} verb
 for each thing the other sheets say -- the same verbs, with the same
 values, that \code{tfl_table_plan(data, spec)} applies.  The program then no

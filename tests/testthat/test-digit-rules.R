@@ -90,3 +90,14 @@ test_that("the rules print in the table", {
   expect_true(all(grepl("^[0-9]+\\.[0-9] \\([0-9]+\\.[0-9]{2}\\)$", age)))
   expect_true(all(grepl("^[0-9]+\\.[0-9]{3} \\([0-9]+\\.[0-9]{2}\\)$", bmi)))
 })
+
+test_that("significant digits: \"3s\" in the digits sheet is {mean:.3s} (#302)", {
+  sp <- dg_spec(data.frame(output_id = NA, variable = NA,
+                           statistic = c("mean", "sd", "p"), digits = c("3s", "4S", "2")))
+  code <- code_of(sp)
+  expect_match(code, '"Mean (SD)" = "{mean:.3s} ({sd:.4s})"', fixed = TRUE)
+  expect_match(code, "{p:.2f%}", fixed = TRUE)
+  expect_silent(tflspec:::.ard_spec_check_digits(sp$digits))
+  expect_error(dg_spec(data.frame(output_id = NA, variable = NA, statistic = "mean",
+                                  digits = "s3")), "significant digits")
+})

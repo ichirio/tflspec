@@ -270,7 +270,7 @@ test_that("a table of label NA, rows by name over a default template, row groups
   expect_identical(o$content[[1L]]$args$label, NA)
   y <- tfl_content_code(o)
   # the same plan as the sheets' (its data normalized first, a step of its own)
-  s0 <- trimws(sub("^plan <- table_plan[(]data, ", "table_plan(", tfl_table_code(sp, "T-9")))
+  s0 <- trimws(sub("^plan <- table_plan[(]data, ", "table_plan(", tfl_table_code(sp, "T-9", data = "data", normalize = FALSE)))
   s1 <- trimws(y[-(1:2)])
   expect_identical(s1, s0)
 })
