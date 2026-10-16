@@ -85,6 +85,20 @@ reference:
       - tfl_read_data_code
       - tfl_read_adam
       - tfl_example_adam
+  - subtitle: An oncology sample study
+    desc: >
+      Simulated ADaM datasets of one oncology study, XYZ-ONC-01 (Drug X vs
+      Control), that agree with one another; its SAP and CRF outline are in
+      `system.file("sample", "onco", package = "tflspec")`.
+    contents:
+      - adsl
+      - adex
+      - adae
+      - adlb
+      - advs
+      - adrs
+      - adtr
+      - adtte
   - title: Document import
     desc: >
       A study's define (Define-XML 2.0 / 2.1, or the workbook it is made

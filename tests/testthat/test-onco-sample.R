@@ -1,23 +1,41 @@
-# The oncology sample generator, inst/sample/onco/gen_onco.R: seeded,
-# consistent across datasets, plausible numbers.
+# The oncology sample study XYZ-ONC-01 shipped in data/ (adsl ... adtte):
+# consistent across datasets, plausible numbers; and its recipe,
+# data-raw/gen_onco.R, seeded and current (where the source tree is here).
 
-onco_env <- new.env()
-sys.source(system.file("sample", "onco", "gen_onco.R", package = "tflspec"), envir = onco_env)
-onco <- onco_env$gen_onco()
+onco <- list(ADSL = tflspec::adsl, ADEX = tflspec::adex, ADAE = tflspec::adae,
+             ADLB = tflspec::adlb, ADVS = tflspec::advs, ADRS = tflspec::adrs,
+             ADTR = tflspec::adtr, ADTTE = tflspec::adtte)
 dco <- as.Date("2026-06-30")
 
-test_that("the same seed gives the same data, and the caller's random numbers are untouched", {
+test_that("the datasets carry labels, and the treatment is a factor with Drug X first", {
+  for (nm in names(onco)) {
+    d <- onco[[nm]]
+    expect_s3_class(d, "data.frame")
+    lab <- vapply(d, function(x) if (is.null(attr(x, "label"))) "" else attr(x, "label"), "")
+    expect_true(all(nzchar(lab)), label = paste(nm, paste(names(lab)[!nzchar(lab)], collapse = ", ")))
+    for (v in intersect(c("TRT01P", "TRT01A", "ARM"), names(d))) {
+      expect_s3_class(d[[v]], "factor")
+      expect_identical(levels(d[[v]]), c("Drug X", "Control"), label = paste(nm, v))
+    }
+    expect_true("TRT01PN" %in% names(d), label = nm)
+  }
+  expect_identical(as.integer(onco$ADSL$TRT01P), as.integer(onco$ADSL$TRT01PN))
+})
+
+test_that("data-raw/gen_onco.R: the same seed gives the shipped data; the caller's random numbers are untouched", {
+  gen <- test_path("..", "..", "data-raw", "gen_onco.R")
+  skip_if_not(file.exists(gen), "data-raw/ is not installed (only in the source tree)")
+  env <- new.env()
+  sys.source(gen, envir = env)
   set.seed(1)
   before <- .Random.seed
-  again <- onco_env$gen_onco()
+  again <- env$gen_onco()
   expect_identical(.Random.seed, before)
+  expect_named(again, names(onco))
   expect_identical(again, onco)
-  expect_false(identical(onco_env$gen_onco(seed = 1)$ADSL, onco$ADSL))
-  expect_named(onco, c("ADSL", "ADEX", "ADAE", "ADLB", "ADVS", "ADRS", "ADTR", "ADTTE"))
-  for (d in onco) {
-    lab <- vapply(d, function(x) if (is.null(attr(x, "label"))) "" else attr(x, "label"), "")
-    expect_true(all(nzchar(lab)), label = paste(names(lab)[!nzchar(lab)], collapse = ", "))
-  }
+  expect_false(identical(env$gen_onco(seed = 1)$ADSL, onco$ADSL))
+  skip_on_cran()
+  expect_lt(system.time(env$gen_onco())[["elapsed"]], 5)
 })
 
 test_that("every subject is in ADSL and every date is within randomisation .. cut-off", {
@@ -143,10 +161,8 @@ test_that("the numbers are those of a plausible phase 2/3 study", {
   expect_true(deaths >= 0.40 && deaths <= 0.60)
 })
 
-test_that("160 subjects make well under 1 MB, in under 5 seconds", {
+test_that("160 subjects make well under 1 MB", {
   f <- withr::local_tempfile(fileext = ".rds")
   saveRDS(onco, f)
   expect_lt(file.size(f), 1e6)
-  skip_on_cran()
-  expect_lt(system.time(onco_env$gen_onco())[["elapsed"]], 5)
 })

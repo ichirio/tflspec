@@ -1,7 +1,9 @@
-# Oncology ADaM sample data for study XYZ-ONC-01 (see SAP.md and CRF.md).
+# The oncology sample datasets of study XYZ-ONC-01 (data/adsl.rda ...
+# data/adtte.rda; see R/data.R and inst/sample/onco/SAP.md, CRF.md).
 #
-#   source(system.file("sample", "onco", "gen_onco.R", package = "tflspec"))
-#   onco <- gen_onco()            # a named list: ADSL, ADEX, ADAE, ...
+# From the package's source folder, source("data-raw/gen_onco.R") remakes
+# them: gen_onco() returns a named list (ADSL, ADEX, ADAE, ...) and the lines
+# at the end save each one under its plain ADaM name (adsl, adex, ...).
 #
 # Drug X vs Control, randomised 1:1 (stratified by ECOG and region),
 # RECIST 1.1 every 6 weeks, a fixed data cut-off.  Every dataset is made
@@ -483,10 +485,10 @@ gen_onco <- function(n = 160, seed = 20261016, dco = as.Date("2026-06-30")) {
     REGION1 = unname(region), AGE = age, AGEU = "YEARS", AGEGR1 = ifelse(age < 65, "<65", ">=65"),
     AGEGR1N = ifelse(age < 65, 1, 2), SEX = sex, RACE = unname(race),
     ECOGBL = as.character(ecog), STRATA1 = paste0("ECOG ", ecog, " / ", region),
-    ARM = arm, ARMCD = armcd, ACTARM = ifelse(treated, arm, "Not Treated"),
+    ARM = factor(arm, levels = arms), ARMCD = armcd, ACTARM = ifelse(treated, arm, "Not Treated"),
     ACTARMCD = ifelse(treated, armcd, "NOTTRT"),
-    TRT01P = arm, TRT01PN = ifelse(drug, 1, 2),
-    TRT01A = ifelse(treated, arm, NA_character_), TRT01AN = ifelse(treated, ifelse(drug, 1, 2), NA_real_),
+    TRT01P = factor(arm, levels = arms), TRT01PN = ifelse(drug, 1, 2),
+    TRT01A = factor(ifelse(treated, arm, NA_character_), levels = arms), TRT01AN = ifelse(treated, ifelse(drug, 1, 2), NA_real_),
     RANDDT = randdt, TRTSDT = trtsdt, TRTEDT = trtedt,
     TRTDURD = as.numeric(trtedt - trtsdt) + 1,
     ITTFL = "Y", SAFFL = ifelse(treated, "Y", "N"), EFFFL = ifelse(eff, "Y", "N"),
@@ -556,5 +558,20 @@ gen_onco <- function(n = 160, seed = 20261016, dco = as.Date("2026-06-30")) {
   lapply(out, function(d) {
     for (v in intersect(names(d), names(labels))) attr(d[[v]], "label") <- unname(labels[v])
     d
+  })
+}
+
+# Run as a script (sourced into the global environment, from the package's
+# folder): save the datasets to data/ under their plain ADaM names.  Sourced
+# anywhere else (the tests do), it only defines gen_onco().
+if (identical(environment(), globalenv()) && file.exists("DESCRIPTION") && dir.exists("data-raw")) {
+  local({
+    onco <- gen_onco()
+    dir.create("data", showWarnings = FALSE)
+    for (nm in names(onco)) {
+      obj <- tolower(nm)
+      assign(obj, onco[[nm]])
+      save(list = obj, file = file.path("data", paste0(obj, ".rda")), compress = "xz", version = 2)
+    }
   })
 }

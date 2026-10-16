@@ -1,12 +1,15 @@
 # Study XYZ-ONC-01: statistical analysis plan (sample)
 
-A fictitious study for the samples of the tfl series.  Its data are made by
-`gen_onco()` (`gen_onco.R` in this folder); nothing here describes a real
-drug or a real study.
+A fictitious study for the samples of the tfl series.  Its ADaM datasets
+ship with tflspec as `adsl`, `adex`, `adae`, `adlb`, `advs`, `adrs`, `adtr`
+and `adtte` (see `?adsl`); they were simulated by `data-raw/gen_onco.R` in
+the package's source (seed 20261016).  Nothing here describes a real drug,
+a real study or real patients.
 
 ```r
-source(system.file("sample", "onco", "gen_onco.R", package = "tflspec"))
-onco <- gen_onco()   # n = 160, seed = 20261016, dco = as.Date("2026-06-30")
+library(tflspec)
+table(adsl$TRT01P)                         # Drug X first: a factor
+adrs[adrs$PARAMCD == "BOR", c("USUBJID", "TRT01P", "AVALC")]
 ```
 
 ## 1. Design and objectives

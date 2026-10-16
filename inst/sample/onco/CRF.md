@@ -1,8 +1,9 @@
 # Study XYZ-ONC-01: CRF outline (sample)
 
-Only what the sample's ADaM data need (see `SAP.md`; the data are made by
-`gen_onco()`, not collected).  One line per collected item: the CRF page,
-the item, and where it ends up in the ADaM data.
+Only what the sample's ADaM data need (see `SAP.md`; the data, `adsl` ...
+`adtte` in tflspec, are simulated by `data-raw/gen_onco.R`, not collected).
+One line per collected item: the CRF page, the item, and where it ends up
+in the ADaM data.
 
 | CRF page | Item | Values | ADaM |
 |---|---|---|---|
