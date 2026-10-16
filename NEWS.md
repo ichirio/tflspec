@@ -1,5 +1,20 @@
 # tflspec (development version)
 
+* **An oncology sample study: `adsl`, `adex`, `adae`, `adlb`, `advs`,
+  `adrs`, `adtr`, `adtte`** (#291, 0.0.24.9132).  Simulated ADaM datasets
+  of study XYZ-ONC-01 (Drug X vs Control, 1:1, RECIST 1.1 every 6 weeks,
+  cut-off 30 June 2026; 160 subjects; not real patient data), with CDISC
+  names and labels; `TRT01P`, `TRT01A` and `ARM` are factors with Drug X
+  first.  They agree with one another, being made from one set of
+  simulated subject histories: a confirmed CR/PR has its tumour sizes 30%
+  (CR: 0 mm) below baseline, nothing is assessed after progression, the
+  PFS and OS events are the progressions and the deaths (`DTHFL`,
+  `DTHDT`), doses stop at progression, toxicity, death or the cut-off, and
+  a reduced dose follows a grade >= 3 adverse event.  The recipe is
+  `data-raw/gen_onco.R` (seeded, base R); the study's mini SAP (populations,
+  endpoints, a display list) and CRF outline are installed in
+  `system.file("sample", "onco", package = "tflspec")`.  `LazyData: true`.
+
 * **`tfl_args_from_r()` round trips** (#288, 0.0.24.9131; found by S2):
   an argument the schema takes as an integer comes back an integer (`26`,
   not `26.0`), and a figure function's arguments keep the order they were
