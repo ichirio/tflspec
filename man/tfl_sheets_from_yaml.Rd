@@ -2,12 +2,20 @@
 % Please edit documentation in R/spec_sheets.R
 \name{tfl_sheets_from_yaml}
 \alias{tfl_sheets_from_yaml}
+\alias{tfl_sheets_from_spec}
 \title{The YAML spec as sheets}
 \usage{
 tfl_sheets_from_yaml(dir)
+
+tfl_sheets_from_spec(study, outputs)
 }
 \arguments{
 \item{dir}{The study folder (or its \verb{spec/}).}
+
+\item{study}{The study's spec, as \code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}} reads it.}
+
+\item{outputs}{The reports, as \code{\link[=tfl_read_outputs]{tfl_read_outputs()}} reads them: a list of
+\code{tfl_output} (as written, not resolved), named by id.}
 }
 \value{
 A list: \code{table} (the table and report sheets, with \code{study}),
@@ -17,9 +25,22 @@ A list: \code{table} (the table and report sheets, with \code{study}),
 fields), \code{not_converted} (what the sheets cannot hold).
 }
 \description{
-Reads a study's YAML spec and gives the sheets the workbooks held: for
-the app's grids and for the generators that still read sheets.  The
-study's defaults are the rows with a blank \code{output_id}, a pattern's the
-\verb{@<name>} rows, a report's its own rows (the files as written, not
-layered -- the sheets' readers layer them as they always did).
+\code{tfl_sheets_from_yaml()} reads a study's YAML spec and gives the sheets
+the workbooks held: for the app's grids and for the generators that
+still read sheets.  The study's defaults are the rows with a blank
+\code{output_id}, a pattern's the \verb{@<name>} rows, a report's its own rows (the
+files as written, not layered -- the sheets' readers layer them as they
+always did).  \code{tfl_sheets_from_spec()} does the same from a spec already
+read (or changed in memory, not written yet): \code{tfl_sheets_from_yaml(dir)}
+is \code{tfl_sheets_from_spec(tfl_read_study_spec(dir), tfl_read_outputs(dir))}.
+}
+\examples{
+d <- system.file("extdata", "spec-yaml", package = "tflspec")
+sh <- tfl_sheets_from_yaml(d)
+sh$planner$output_id
+# the same from the spec in memory, a title changed and not written
+s <- tfl_read_study_spec(d)
+outs <- tfl_read_outputs(d)
+outs[["T-14-1-1"]]$label <- "Demographics (draft)"
+tfl_sheets_from_spec(s, outs)$planner$description
 }

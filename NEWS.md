@@ -6,6 +6,19 @@
   `plan_levels(variable = )` no longer becomes a variables row named
   `variable`.
 
+* **The sheets from a spec in memory: `tfl_sheets_from_spec(study,
+  outputs)`** (#304, 0.0.24.9139).  What `tfl_sheets_from_yaml(dir)` does,
+  from a study and its reports already read (`tfl_read_study_spec()`,
+  `tfl_read_outputs()`) or changed in memory and not written yet;
+  `tfl_sheets_from_yaml(dir)` is now `tfl_sheets_from_spec()` of what it
+  reads, its result unchanged.
+* A test compares a listing's content code (`tfl_content_code()`) with
+  the sheets' `tfl_listing_code()`: the same pages (RTF) on the data the
+  sheets' program makes.  `tfl_content_code()` does not write the
+  listing's data part (dataset, `where`, `sort`, dates), and writes a
+  label's `\n` as it is where the sheets make it a line break (a skipped
+  test until it does).
+
 - **`tfl_args_from_r()` keeps a `NULL` argument on R < 4.4** (#305,
   0.0.24.9138).  `label = NULL` read as no argument on R 4.2 (`is.atomic(NULL)`
   is TRUE there); it is `tfl_r("NULL")` on every R now.
