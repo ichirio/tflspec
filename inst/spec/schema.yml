@@ -47,6 +47,8 @@
 # `dots:` says what `...` takes.  `style: named`: the item's other keys are
 # its entries, by name (plan_labels: {AGE: Age}).  `style: positional`: the
 # entries are the value of the one key `key:` (plan_sort: {keys: [-n]}).
+# `map: true`: R code may also give the entries as one named vector
+# (plan_labels(c(AGE = "Age"))), read as the same keys.
 
 table_plan:
   package: rtfreporter
@@ -85,7 +87,7 @@ plan_levels:
   rank: 90
   stage: finishing
   description: The order (and the subset) of a variable's values.
-  dots: {style: named, type: "list<string>", description: A variable's values in their order.}
+  dots: {style: named, map: true, type: "list<string>", description: A variable's values in their order.}
   args:
     .drop_empty: {type: "list<column>", description: Variables whose levels with no data are left out.}
 
@@ -94,7 +96,7 @@ plan_labels:
   rank: 80
   stage: finishing
   description: The printed text of variables and values.
-  dots: {style: named, type: "string|vec<string, string>", description: "A variable's label, or its values' labels."}
+  dots: {style: named, map: true, type: "string|vec<string, string>", description: "A variable's label, or its values' labels."}
 
 plan_nest:
   package: rtfreporter

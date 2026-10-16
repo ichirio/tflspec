@@ -244,3 +244,34 @@ test_that("the recommended order: the mapping first, then the finishing (rank an
   expect_true(match("plan_cells", fns) < match("plan_labels", fns))
   expect_true(match("plan_total", fns) < match("plan_sort", fns))
 })
+
+test_that("a value's labels: a column the plan makes, by its code list; one named vector as the map", {
+  # plan_labels(c(AGE = ...)) -- one named vector, as rtfreporter takes it
+  a <- tfl_args_from_r("plan_labels", 'c(AGE = "Age (years)", SEX = "Sex, n (%)")')
+  expect_identical(unclass(a)[c("AGE", "SEX")], list(AGE = "Age (years)", SEX = "Sex, n (%)"))
+  expect_identical(tfl_args_to_r("plan_labels", a), 'AGE = "Age (years)", SEX = "Sex, n (%)"')
+  # a stack's column: its labels are the report's code list rows, and back
+  items <- list(
+    tfl_item("normalize_ard", list(stack = list(subgroup = c("ALL", "SEX", "AGEGR1")))),
+    tfl_item("table_plan", list(cols = ".stat_group",
+                                rows = c(arm = "TRT01A", grp1 = "subgroup", grp2 = "subgroup_level"),
+                                label = NA)),
+    tfl_item("plan_labels", list(subgroup = c(ALL = "All Subjects", SEX = "Sex"))))
+  sh <- tflspec:::.plan_sheets_from_content(items, "T-1")
+  expect_length(attr(sh, "not_converted"), 0L)
+  expect_identical(sh$codelists$variable, c("subgroup", "subgroup"))
+  expect_identical(sh$codelists$value, c("ALL", "SEX"))
+  expect_identical(sh$codelists$label, c("All Subjects", "Sex"))
+  sh$tables$stack <- "subgroup = ALL, SEX, AGEGR1"
+  back <- tflspec:::.plan_content_from_sheets(sh, "T-1")
+  fns <- vapply(back, `[[`, "", "fn")
+  # labels only: a list naming some values does not drop the others (no plan_levels)
+  expect_false("plan_levels" %in% fns)
+  lb <- back[[which(fns == "plan_labels")]]$args
+  expect_identical(unlist(lb$subgroup), c(ALL = "All Subjects", SEX = "Sex"))
+  # a data variable's value labels are its code list's (the ARD program's): not here
+  items[[3L]] <- tfl_item("plan_labels", list(TRT01A = c(Placebo = "PBO")))
+  sh2 <- tflspec:::.plan_sheets_from_content(items, "T-1")
+  expect_match(attr(sh2, "not_converted"), "TRT01A: a data variable's value labels go in the report's code list")
+  expect_equal(NROW(sh2$codelists), 0L)
+})

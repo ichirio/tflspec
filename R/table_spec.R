@@ -1431,19 +1431,50 @@ print.tfl_table_spec <- function(x, ...) {
   stats::setNames(out, v$variable[k])
 }
 
+# The key columns the plan itself makes, not the data: a stack's pair
+# (`tables$stack`: `subgroup` and `subgroup_level`) and the groups of
+# statistics (`.stat_group`).  The ARD program cannot put a code list on
+# them (they are not in the data), so the plan does: their values' order
+# (plan_levels) and text (plan_labels).
+.ard_spec_plan_cols <- function(sp) {
+  t <- sp$tables
+  stk <- if (!is.null(t) && nrow(t) && "stack" %in% names(t)) t$stack[1L] else NA
+  nm <- if (!is.na(stk) && nzchar(trimws(stk))) names(.ard_spec_stat_groups(stk, "stack", "layer"))
+  c(nm, if (length(nm)) paste0(nm, "_level"), ".stat_group")
+}
+
 # plan_levels(): a variable's own `levels` (variables sheet), else the code
 # list's order of its values -- as the ARD has them: their labels (the ARD
-# program puts them on the data), a value without one itself.
+# program puts them on the data), a value without one itself.  A column the
+# plan makes takes its order from the plan (the stack's layers), and its
+# code list only its labels (plan_labels()): a list that names some of its
+# values does not drop the others.
 .ard_spec_levels <- function(sp) {
   v <- sp$variables[!is.na(sp$variables$levels), , drop = FALSE]
   out <- stats::setNames(lapply(v$levels, .ard_spec_split), v$variable)
   cls <- .ard_spec_codelists(sp)
+  own <- .ard_spec_plan_cols(sp)
   for (cl in cls) {
     var <- cl$variable[1L]
+    if (var %in% own) next
     lab <- if (is.null(cl$label)) cl$value else ifelse(is.na(cl$label), cl$value, cl$label)
     if (is.null(out[[var]])) out[[var]] <- lab
   }
   if (!length(out)) return(NULL)
+  out
+}
+
+# plan_labels() of a column the plan makes: its code list's labels, by value
+# (`subgroup = c(ALL = "All Subjects", SEX = "Sex")`)
+.ard_spec_value_labels <- function(sp) {
+  own <- .ard_spec_plan_cols(sp)
+  out <- list()
+  for (cl in .ard_spec_codelists(sp)) {
+    var <- cl$variable[1L]
+    if (!var %in% own || is.null(cl$label) || all(is.na(cl$label))) next
+    k <- !is.na(cl$label)
+    out[[var]] <- stats::setNames(cl$label[k], cl$value[k])
+  }
   out
 }
 
