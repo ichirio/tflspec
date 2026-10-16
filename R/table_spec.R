@@ -2585,13 +2585,18 @@ tfl_as_table_spec <- function(x, output_id = NULL, compare = TRUE) {
     lbl <- unlist(lbl[plain])
   }
   hide <- unique(unlist(ly$levels$drop_empty))
-  vars <- unique(c(names(lbl), names(s$levels), hide))
+  # the variables' order is plan_levels(variable = )'s (a label sets no
+  # order); `variable` itself is no data variable
+  vo <- s$levels[["variable"]]
+  vo <- if (is.character(vo)) vo else character()
+  lev <- s$levels[setdiff(names(s$levels), "variable")]
+  vars <- unique(c(vo, names(lbl), names(lev), hide))
   variables <- data.frame(
     output_id = rep(id, length(vars)), variable = vars,
     label = unname(ifelse(vars %in% names(lbl), lbl[vars], NA_character_)),
-    order = ifelse(vars %in% names(lbl), match(vars, names(lbl)), NA),
+    order = ifelse(vars %in% vo, match(vars, vo), NA),
     levels = vapply(vars, function(v)
-      if (is.null(s$levels[[v]])) NA_character_ else bar(s$levels[[v]]), ""),
+      if (is.null(lev[[v]])) NA_character_ else bar(lev[[v]]), ""),
     empty_levels = ifelse(vars %in% hide, "hide", NA_character_),
     stringsAsFactors = FALSE)
   # plan_nest(): a variable's rows under a level of another

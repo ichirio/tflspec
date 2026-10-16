@@ -1,7 +1,7 @@
 # tflspec (development version)
 
 * **AI drafting of tables' code spec from a company's TOC / SHELL
-  workbook** (#307, 0.0.24.9140).  A new drafting task, `table`: a batch of
+  workbook** (#307, 0.0.24.9141).  A new drafting task, `table`: a batch of
   5 to 10 tables becomes report files of the YAML spec
   (`spec/outputs/<id>.yml`: `ard:` analyses, `data:`, `codelists:`,
   `content:` items, `page:`) over the study's defaults.
@@ -27,6 +27,12 @@
   and Japanese ships in `inst/ai/` (articles "Drafting tables' code spec
   with an AI chat").  A sample TOC / SHELL workbook and a stored answer
   are in `inst/ai/example/`.
+
+- **`tfl_as_table_spec()` takes the variables' order from
+  `plan_levels(variable = )`** (#311, 0.0.24.9140), not from the order of
+  `plan_labels()`: a label sets only the text (rtfreporter #666).  A plan's
+  `plan_levels(variable = )` no longer becomes a variables row named
+  `variable`.
 
 * **The sheets from a spec in memory: `tfl_sheets_from_spec(study,
   outputs)`** (#304, 0.0.24.9139).  What `tfl_sheets_from_yaml(dir)` does,
