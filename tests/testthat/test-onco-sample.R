@@ -101,7 +101,7 @@ test_that("responses follow the tumour sizes; nothing after progression; PFS and
   i <- match(pfs$USUBJID, adsl$USUBJID)
   pd_dt <- pd$ADT[match(pfs$USUBJID, pd$USUBJID)]
   ev <- pmin(pd_dt, adsl$DTHDT[i], na.rm = TRUE)
-  last_ass <- as.Date(as.numeric(last[pfs$USUBJID]))
+  last_ass <- as.Date(as.numeric(last[pfs$USUBJID]), origin = "1970-01-01")
   expect_identical(pfs$CNSR == 0, !is.na(ev))
   expect_equal(pfs$ADT[!is.na(ev)], ev[!is.na(ev)])
   cn <- is.na(ev)
