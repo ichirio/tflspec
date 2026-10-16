@@ -7,22 +7,50 @@
 
 #' The YAML spec as sheets
 #'
-#' Reads a study's YAML spec and gives the sheets the workbooks held: for
-#' the app's grids and for the generators that still read sheets.  The
-#' study's defaults are the rows with a blank `output_id`, a pattern's the
-#' `@<name>` rows, a report's its own rows (the files as written, not
-#' layered -- the sheets' readers layer them as they always did).
+#' `tfl_sheets_from_yaml()` reads a study's YAML spec and gives the sheets
+#' the workbooks held: for the app's grids and for the generators that
+#' still read sheets.  The study's defaults are the rows with a blank
+#' `output_id`, a pattern's the `@<name>` rows, a report's its own rows (the
+#' files as written, not layered -- the sheets' readers layer them as they
+#' always did).  `tfl_sheets_from_spec()` does the same from a spec already
+#' read (or changed in memory, not written yet): `tfl_sheets_from_yaml(dir)`
+#' is `tfl_sheets_from_spec(tfl_read_study_spec(dir), tfl_read_outputs(dir))`.
 #'
 #' @param dir The study folder (or its `spec/`).
+#' @param study The study's spec, as [tfl_read_study_spec()] reads it.
+#' @param outputs The reports, as [tfl_read_outputs()] reads them: a list of
+#'   `tfl_output` (as written, not resolved), named by id.
 #' @return A list: `table` (the table and report sheets, with `study`),
 #'   `planner` (the `_tflplanner` sheet: the report list and the setup),
 #'   `ard` (the ARD sheets), `listing` (`listings`, `listing_cols`),
 #'   `figures` (a figure's design list, by id), `study` (study.yml's
 #'   fields), `not_converted` (what the sheets cannot hold).
+#' @examples
+#' d <- system.file("extdata", "spec-yaml", package = "tflspec")
+#' sh <- tfl_sheets_from_yaml(d)
+#' sh$planner$output_id
+#' # the same from the spec in memory, a title changed and not written
+#' s <- tfl_read_study_spec(d)
+#' outs <- tfl_read_outputs(d)
+#' outs[["T-14-1-1"]]$label <- "Demographics (draft)"
+#' tfl_sheets_from_spec(s, outs)$planner$description
 #' @export
 tfl_sheets_from_yaml <- function(dir) {
-  s <- tfl_read_study_spec(dir)
-  outs <- tfl_read_outputs(dir)
+  tfl_sheets_from_spec(tfl_read_study_spec(dir), tfl_read_outputs(dir))
+}
+
+#' @rdname tfl_sheets_from_yaml
+#' @export
+tfl_sheets_from_spec <- function(study, outputs) {
+  if (!inherits(study, "tfl_study_spec")) {
+    .ard_stop("tfl_sheets_from_spec(): `study` is a study's spec, tfl_read_study_spec().")
+  }
+  if (!is.list(outputs) || inherits(outputs, "tfl_output") ||
+      !all(vapply(outputs, inherits, NA, "tfl_output"))) {
+    .ard_stop("tfl_sheets_from_spec(): `outputs` is a list of reports, tfl_read_outputs().")
+  }
+  s <- study
+  outs <- outputs
   # the TOC's order (the sheets' rows, the ARD program's sections), then the rest
   toc_ids <- vapply(s$toc$outputs %||% list(), function(e) e$id %||% NA_character_, "")
   ids <- vapply(outs, function(o) o$id, "")
