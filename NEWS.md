@@ -1,5 +1,21 @@
 # tflspec (development version)
 
+* **The plan verbs in one recommended order** (#289, 0.0.24.9130; the
+  user's decision of 2026-10-16): the order a person designs a table in --
+  `normalize_ard`, then the mapping (`table_plan`, `plan_cells`,
+  `plan_stat_groups`, `plan_total`, `plan_compare`, `plan_filter`), then
+  the finishing (`plan_labels`, `plan_levels`, `plan_nest`,
+  `plan_digits`, `plan_sort`, `plan_col_header`, `plan_stub`,
+  `plan_blanks`, the pages, `plan_row_group`, `plan_hide`,
+  `plan_columns`, `plan_style`, `plan_cell_style`).  The schema's `rank`
+  follows it, and every plan verb and figure function says its `stage`
+  (`mapping`, `finishing`, or a figure's `output`: `tfl_schema(fn)$stage`);
+  the code a table workbook stands for (`tfl_table_code()`,
+  `tfl_content_code()`, the converter) writes its verbs in that order.
+  The tables are the same: SAMPLE-01's 12 tables give the same RTF byte
+  for byte, and every table case through its workbook and its code the
+  same RTF as its plan.
+
 * **Every design converts; four extension packages in the figure catalog**
   (#286, 0.0.24.9128).  `tfl_fig_content_from_design()` converts a figure
   type of its own (ae_dot, butterfly, edish, sankey, sunburst, forest_or)
