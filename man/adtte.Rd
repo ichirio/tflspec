@@ -9,9 +9,9 @@
 the subject keys (as in \link{adrs}), the subgroups of a forest plot
 (\code{AGEGR1}, \code{SEX}, \code{RACE}, \code{ECOGBL}, \code{REGION1}, \code{STRATA1}) and
 \describe{
-\item{PARAMCD, PARAM, PARAMN}{\code{PFS}, \code{OS}, \code{DOR}}
+\item{PARAMCD, PARAM, PARAMN}{\code{PFS}, \code{OS}, \code{DOR}, \code{TTSKIN}}
 \item{STARTDT, ADT, ADY}{origin and event / censoring dates}
-\item{AVAL, AVALU}{time (months)}
+\item{AVAL, AVALU}{time (\code{MONTHS}; \code{DAYS} for \code{TTSKIN})}
 \item{CNSR, EVNTDESC, CNSDTDSC}{censor (1) or event (0) and why}
 }
 }
@@ -24,9 +24,13 @@ adtte
 }
 \description{
 Progression-free survival, overall survival and duration of response of
-the simulated study XYZ-ONC-01 (see \link{adsl}), in months.  PFS: to
-progression or death, censored at the last tumour assessment; OS: to
-death, censored at the cut-off; DOR: from the first confirmed CR / PR.
+the simulated study XYZ-ONC-01 (see \link{adsl}), in months; and a safety
+endpoint, the time to the first treatment-emergent skin and subcutaneous
+tissue disorder, in days.  PFS: to progression or death, censored at the
+last tumour assessment; OS: to death, censored at the cut-off; DOR: from
+the first confirmed CR / PR; TTSKIN: the safety set, from the first dose,
+censored at the end of the treatment-emergent period (30 days after the
+last dose, death or the cut-off).
 }
 \examples{
 pfs <- adtte[adtte$PARAMCD == "PFS", ]
