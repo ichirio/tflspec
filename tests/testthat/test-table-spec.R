@@ -586,3 +586,22 @@ test_that("the shipped AE example runs on an ARD normalized as its definitions s
   # without the hierarchy the PT has no column of its own: the error says so
   expect_error(tfl_table_plan(rtfreporter::normalize_ard(ard), sp), "AEDECOD")
 })
+
+test_that("tfl_as_table_spec(): the variables' order is plan_levels(variable = )'s, not the labels' (#311)", {
+  skip_if_not_installed("cards")
+  ard <- cards::ard_stack(cards::ADSL, .by = ARM,
+                          cards::ard_tabulate(variables = c(SEX, AGEGR1, RACE)))
+  base <- rtfreporter::table_plan(rtfreporter::normalize_ard(ard), cols = "ARM",
+                                  rows = c(group = "variable"))
+  sp <- suppressMessages(tfl_as_table_spec(
+    base |> rtfreporter::plan_labels(RACE = "Race", SEX = "Sex"), output_id = "T"))
+  v <- sp$variables
+  expect_true(all(is.na(v$order)))
+  expect_identical(v$label[match(c("RACE", "SEX"), v$variable)], c("Race", "Sex"))
+  sp2 <- suppressMessages(tfl_as_table_spec(
+    base |> rtfreporter::plan_levels(variable = c("RACE", "SEX", "AGEGR1")) |>
+      rtfreporter::plan_labels(SEX = "Sex"), output_id = "T"))
+  v2 <- sp2$variables
+  expect_false("variable" %in% v2$variable)
+  expect_equal(v2$order[match(c("RACE", "SEX", "AGEGR1"), v2$variable)], 1:3)
+})

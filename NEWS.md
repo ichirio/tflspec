@@ -1,5 +1,11 @@
 # tflspec (development version)
 
+- **`tfl_as_table_spec()` takes the variables' order from
+  `plan_levels(variable = )`** (#311, 0.0.24.9140), not from the order of
+  `plan_labels()`: a label sets only the text (rtfreporter #666).  A plan's
+  `plan_levels(variable = )` no longer becomes a variables row named
+  `variable`.
+
 - **`tfl_args_from_r()` keeps a `NULL` argument on R < 4.4** (#305,
   0.0.24.9138).  `label = NULL` read as no argument on R 4.2 (`is.atomic(NULL)`
   is TRUE there); it is `tfl_r("NULL")` on every R now.
