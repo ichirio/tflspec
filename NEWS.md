@@ -1,5 +1,20 @@
 # tflspec (development version)
 
+* **An oncology ADaM sample: `gen_onco()`** (#291, 0.0.24.9129).
+  `inst/sample/onco/gen_onco.R` makes study XYZ-ONC-01 (Drug X vs Control,
+  1:1, RECIST 1.1 every 6 weeks, a fixed cut-off) as a named list of ADSL,
+  ADEX, ADAE, ADLB, ADVS, ADRS, ADTR and ADTTE, with CDISC names and labels:
+  `source(system.file("sample", "onco", "gen_onco.R", package = "tflspec"));
+  gen_onco(n = 160, seed = 20261016, dco = as.Date("2026-06-30"))`.  Every
+  dataset is made from one set of latent subject histories, so they agree:
+  a confirmed CR/PR has its tumour sizes 30% (CR: 0 mm) below baseline,
+  there is no assessment after progression, PFS and OS events are the
+  progressions and deaths (`DTHFL`, `DTHDT`), doses stop at progression,
+  toxicity, death or the cut-off, and a reduced dose follows a grade >= 3
+  adverse event.  Base R only; seeded (the caller's random numbers are left
+  as they were).  `SAP.md` and `CRF.md` beside it give the populations,
+  endpoints and a display list of the samples to come.
+
 * **Every design converts; four extension packages in the figure catalog**
   (#286, 0.0.24.9128).  `tfl_fig_content_from_design()` converts a figure
   type of its own (ae_dot, butterfly, edish, sankey, sunburst, forest_or)
