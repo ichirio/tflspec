@@ -10,7 +10,9 @@ tfl_schema(fn = NULL)
 \item{fn}{A function's name (\code{"plan_cells"}), or \code{NULL} for all.}
 }
 \value{
-The function's entry (\code{package}, \code{description}, \code{dots}, \code{args}),
+The function's entry (\code{package}, \code{description}, \code{dots}, \code{args};
+\code{rank}, its place in the recommended order, and \code{stage}, \code{"mapping"},
+\code{"finishing"} or \code{"output"}),
 or the whole schema, a list by function; \code{NULL} for a function the
 schema does not have.
 }
