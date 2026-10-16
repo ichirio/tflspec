@@ -106,7 +106,7 @@ d <- file.path(tempdir(), "XYZ-ONC-01")
 dir.create(file.path(d, "adam"), recursive = TRUE, showWarnings = FALSE)
 for (x in c("adsl", "adae", "adrs", "adlb")) {
   df <- getExportedValue("tflspec", x)
-  df[] <- lapply(df, function(v) if (is.factor(v)) as.character(v) else v)
+  for (v in names(df)) if (is.factor(df[[v]])) df[[v]] <- as.character(df[[v]])
   haven::write_xpt(df, file.path(d, "adam", paste0(x, ".xpt")))
 }
 tfl_ai_study_init(d, adam = "adam", study_id = "XYZ-ONC-01", overwrite = TRUE)
@@ -121,7 +121,7 @@ outs <- tfl_read_outputs(d)
 ard  <- tfl_build_ard(st, dir = d, save = FALSE)
 for (id in names(outs)) {
   o    <- tfl_resolve_output(outs[[id]], st)
-  plan <- tfl_content_run(o, ard[ard$output_id == id, ])
+  plan <- tfl_content_run(o, subset(ard, output_id == id))
   generate_rtfreport(tfl_report(o, content = plan, study = st),
                      file.path(d, paste0(id, ".rtf")), overwrite = TRUE)
 }
@@ -570,8 +570,8 @@ tfl_ai_unpack(a, "study")                           # spec/outputs/<id>.yml, spe
 * `tfl_ai_context("table", examples = "study/spec/outputs/T-14-3-1.yml")`
   gives a reviewed report of the family: the prompt asks for the rest of the
   family written the same way.
-* The answer is one YAML block: the header
-  `tflspec_ai: {task: table, version: 1, outputs: [...]}`, `outputs:` (one
+* The answer is one YAML block: the header line (its task `table`, version
+  1 and the reports), `outputs:` (one
   report file each, as §6), `assumptions:` (`output_id`, `where`, `item`,
   `assumption`, `question`).  `tfl_ai_check()` reads every report as
   `tfl_read_output()` does, checks each content item against the schema (an

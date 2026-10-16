@@ -41,7 +41,7 @@ d <- file.path(tempdir(), "sample-study")
 dir.create(file.path(d, "adam"), recursive = TRUE, showWarnings = FALSE)
 for (x in c("adsl", "adae", "adrs", "adlb")) {
   df <- getExportedValue("tflspec", x)
-  df[] <- lapply(df, function(v) if (is.factor(v)) as.character(v) else v)
+  for (v in names(df)) if (is.factor(df[[v]])) df[[v]] <- as.character(df[[v]])
   haven::write_xpt(df, file.path(d, "adam", paste0(x, ".xpt")))
 }
 xlsx <- system.file("ai", "example", "onco_toc_shell.xlsx", package = "tflspec")
@@ -62,7 +62,7 @@ outs <- tfl_read_outputs(d)
 ard  <- tfl_build_ard(st, dir = d, save = FALSE)
 for (id in names(outs)) {
   o    <- tfl_resolve_output(outs[[id]], st)
-  plan <- tfl_content_run(o, ard[ard$output_id == id, ])
+  plan <- tfl_content_run(o, subset(ard, output_id == id))
   rtfreporter::generate_rtfreport(tfl_report(o, content = plan, study = st),
                                   file.path(d, paste0(id, ".rtf")), overwrite = TRUE)
 }
@@ -197,7 +197,7 @@ ard  <- tfl_build_ard(st, dir = ".", save = FALSE)
 dir.create("output", showWarnings = FALSE)
 for (id in ids) {
   o    <- tfl_resolve_output(outs[[id]], st)
-  plan <- tfl_content_run(o, ard[ard$output_id == id, ])
+  plan <- tfl_content_run(o, subset(ard, output_id == id))
   rtfreporter::generate_rtfreport(tfl_report(o, content = plan, study = st),
                                   file.path("output", paste0(id, ".rtf")), overwrite = TRUE)
 }
