@@ -72,3 +72,23 @@ test_that("tpl_demog() / tpl_summary(): the object is the items run on the ARD",
   tab <- suppressMessages(rtfreporter::plan_apply(s, "table"))
   expect_true(all(c("Drug X", "Control") %in% names(tab)))
 })
+
+test_that("tfl_read_template_sheets(): the Excel example, as report files", {
+  skip_if_not_installed("readxl")
+  f <- system.file("extdata", "template-spec", "templates.xlsx", package = "tflspec")
+  r <- tfl_read_template_sheets(f)
+  expect_identical(names(r), c("T-14-1-1", "T-14-3-1"))
+  a <- r[["T-14-1-1"]]$template$args
+  expect_identical(a$categorical, c("AGEGR1", "SEX", "RACE", "ETHNIC"))
+  expect_identical(a$labels[["AGE"]], "Age (years)")
+  expect_identical(r[["T-14-3-1"]]$template$args$overall, "Any TEAE")
+  # the same expansion as the template's own defaults (they are the example's values)
+  x <- tfl_template_expand("demog", a)
+  y <- tfl_template_expand("demog", list(population = "SAF"))
+  expect_identical(x$content, y$content)
+  out <- withr::local_tempfile(fileext = ".yml")
+  tfl_write_template_yaml(r[["T-14-1-1"]], out)
+  back <- yaml::read_yaml(out)
+  expect_identical(back$template$name, "demog")
+  expect_identical(unlist(back$template$args$categorical), a$categorical)
+})
