@@ -188,3 +188,58 @@ tpl_demog <- function(ard, population, ..., codelists = NULL) {
   .tpl_object("demog", ard, c(list(population = population), list(...)),
               codelists = codelists)
 }
+
+# ---- summary: continuous variables by a column key, the layout ------------------
+
+.tfl_template("summary", kind = "table", layout = "summary",
+  params = list(
+    tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
+    tfl_param("variables", required = TRUE, doc = "the continuous variables, in order"),
+    tfl_param("by", "TRT01A", doc = "the column variable"),
+    tfl_param("data", "ADSL", doc = "the dataset"),
+    tfl_param("where", NULL, doc = "the records kept (R), for a dataset other than ADSL"),
+    tfl_param("data_id", NULL, doc = "the analysis data's id; NULL: <data>_<population>"),
+    tfl_param("data_label", NULL, doc = "the analysis data's label"),
+    tfl_param("analysis_id", "CONT", doc = "the analysis's id"),
+    tfl_param("analysis_label", "Continuous", doc = "the analysis's label"),
+    tfl_param("statistics", c("N", "mean", "sd", "median", "min", "max"),
+              doc = "the statistics the ARD has"),
+    tfl_param("cells", list(n = "{N:.0f}", `Mean (SD)` = "{mean:.1f} ({sd:.2f})",
+                            Median = "{median:.1f}", `Min, Max` = "{min:.0f}, {max:.0f}"),
+              doc = "the rows of each variable"),
+    tfl_param("labels", NULL, doc = "each variable's heading")
+  ),
+  body = function(a, ctx) {
+    pop <- a$population
+    subj <- paste0("adsl_", tolower(pop))
+    sets <- list(list(id = subj, label = .tpl_set_label(pop, ctx$population),
+                      from = "ADSL", population = pop))
+    set <- subj
+    if (!identical(toupper(a$data), "ADSL")) {
+      set <- a$data_id %||% paste0(tolower(a$data), "_", tolower(pop))
+      d <- list(id = set, label = a$data_label, from = a$data, subjects = subj,
+                where = if (!is.null(a$where)) tfl_r(a$where))
+      sets <- c(sets, list(Filter(Negate(is.null), d)))
+    }
+    ard <- list(
+      analysis_data = sets,
+      analyses = list(
+        list(id = "GROUPN", method = "categorical", data = subj, variables = a$by,
+             purpose = "PRIMARY OUTCOME MEASURE"),
+        list(id = a$analysis_id, label = a$analysis_label, method = "continuous",
+             data = set, by = a$by, variables = a$variables, statistics = a$statistics,
+             purpose = "PRIMARY OUTCOME MEASURE")))
+    content <- c(
+      list(tfl_item("table_plan", list(cols = a$by, rows = list(group = "variable"))),
+           tfl_item("plan_cells", list(continuous = as.list(a$cells)))),
+      if (length(a$labels)) list(tfl_item("plan_labels", as.list(a$labels[a$variables]))),
+      list(tfl_item("plan_levels", c(list(variable = a$variables),
+                                     .tpl_levels(a$by, ctx$codelists))),
+           tfl_item("plan_paginate_rows", list(max_rows = 30L, split = "group_safe"))))
+    list(ard = ard, data = list(source = "ard", object = "ard"), content = content)
+  })
+
+tpl_summary <- function(ard, population, variables, ..., codelists = NULL) {
+  .tpl_object("summary", ard, c(list(population = population, variables = variables),
+                                list(...)), codelists = codelists)
+}
