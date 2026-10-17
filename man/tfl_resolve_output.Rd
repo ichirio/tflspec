@@ -4,12 +4,20 @@
 \alias{tfl_resolve_output}
 \title{A report over the layers it extends}
 \usage{
-tfl_resolve_output(output, study)
+tfl_resolve_output(output, study, provenance = FALSE)
 }
 \arguments{
 \item{output}{A \code{tfl_output} as read from its file.}
 
 \item{study}{A \code{tfl_study_spec} (its \code{defaults} and \code{patterns}).}
+
+\item{provenance}{\code{TRUE} to say where each content item's arguments come
+from: each item gets \code{arg_from} (a named character vector, one an
+argument: \code{"own"}, \code{"defaults"} or \code{"pattern:<name>"}; a verb whose
+\code{...} is named, such as \code{plan_cells()}, by top-level key, any other verb
+one layer's whole) and \code{below} (the same verb's item with the report's
+own layer left out, \code{NULL} when no layer has it: what a revert goes
+back to).  \code{FALSE} (default): the items as they are.}
 }
 \value{
 The \code{tfl_output}, resolved (attribute \code{resolved} = \code{TRUE}).

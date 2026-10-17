@@ -1,5 +1,18 @@
 # tflspec (development version)
 
+* **For a builder of the YAML's items** (#329, 0.0.24.9152; tflplanner B3).
+  `tfl_resolve_output(provenance = TRUE)` says where each item's arguments
+  come from (`arg_from`: `own`, `defaults`, `pattern:<name>`, by argument --
+  a verb whose `...` is named by top-level key) and gives the item `below`
+  it (without the report's own layer: what a revert goes back to);
+  `provenance = FALSE` is as before.  One item: `tfl_item_code()` (its call),
+  `tfl_item_written()` (the arguments its code writes), `tfl_item_own()`
+  (what the report's own layer holds of it over `below`).
+  `tfl_schema(fn)` has the function's `formals` (the data's arguments left
+  out) and the `required` ones.  `tfl_write_study_part()` writes the
+  study's defaults, a pattern, its code lists, data or TOC back to its file
+  (the sample study's files written back are byte-identical).
+
 * **A report file reads and writes back as the same text** (#327, 0.0.24.9151).
   `tfl_write_output()` writes the list-valued keys of the `ard:` part
   (`analysis_data` add/keep/distinct; `analyses` by/strata/variables/

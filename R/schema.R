@@ -56,7 +56,9 @@
 #' @param fn A function's name (`"plan_cells"`), or `NULL` for all.
 #' @return The function's entry (`package`, `description`, `dots`, `args`;
 #'   `rank`, its place in the recommended order, and `stage`, `"mapping"`,
-#'   `"finishing"` or `"output"`),
+#'   `"finishing"` or `"output"`; `formals`, the function's own arguments
+#'   but the data's (`x`, `plan`, `.plan`, `data`, `mapping`), and
+#'   `required`, those of them with no default value),
 #'   or the whole schema, a list by function; `NULL` for a function the
 #'   schema does not have.
 #' @examples
@@ -83,10 +85,30 @@ tfl_schema <- function(fn = NULL) {
       ent$aes <- unique(c(names(cat_aes), gg$aes))
     }
   }
-  ent %||% .schema_fig_entries()[[nm]] %||%
+  ent <- ent %||% .schema_fig_entries()[[nm]] %||%
     # a ggplot2 layer function (geom_area, ggrepel::geom_text_repel): from
     # the installed package itself
     (if (grepl("^(geom|stat)_", nm)) .schema_ggplot_entry(fn))
+  if (is.null(ent)) return(NULL)
+  .schema_add_formals(ent, nm)
+}
+
+# The function's own formals, the data's arguments left out (`x`, `plan`,
+# `.plan`, `data`, `mapping`), and `required`: those with no default value
+# (`...` is never required).  From the installed package; none when it is
+# not installed or has no such function.
+.schema_data_args <- c("x", "plan", ".plan", "data", "mapping")
+.schema_add_formals <- function(ent, nm) {
+  pkg <- ent$package %||% "rtfreporter"
+  f <- if (requireNamespace(pkg, quietly = TRUE)) {
+    tryCatch(formals(getExportedValue(pkg, nm)), error = function(e) NULL)
+  }
+  if (is.null(f)) return(ent)
+  f <- f[setdiff(names(f), .schema_data_args)]
+  ent$formals <- names(f)
+  ent$required <- names(f)[vapply(f, function(v) is.symbol(v) && !nzchar(as.character(v)), NA) &
+                             names(f) != "..."]
+  ent
 }
 
 # `rtfreporter::plan_cells` and `plan_cells` are one entry
