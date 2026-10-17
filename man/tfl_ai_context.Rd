@@ -15,11 +15,15 @@ tfl_ai_context(
   templates = NULL,
   toc_fields = NULL,
   reports = NULL,
-  language = NULL
+  language = NULL,
+  outputs = NULL,
+  shell = NULL,
+  study_dir = NULL,
+  examples = NULL
 )
 }
 \arguments{
-\item{task}{One of \code{\link[=tfl_ai_tasks]{tfl_ai_tasks()}}: \code{"toc"} or \code{"figure"}.}
+\item{task}{One of \code{\link[=tfl_ai_tasks]{tfl_ai_tasks()}}: \code{"toc"}, \code{"figure"} or \code{"table"}.}
 
 \item{study}{The study: a named list or character vector with
 \code{study_id} and \code{title} (either may be missing).}
@@ -32,8 +36,9 @@ tfl_ai_context(
 or vector with \code{id}, \code{label} and \code{where} (the condition, such as
 \code{FASFL == "Y"}).}
 
-\item{datasets}{\code{figure} and \code{toc}: the datasets and variables the
-answer may name.  Either a data frame, one row a variable, with
+\item{datasets}{\code{figure}, \code{toc} and \code{table}: the datasets and variables
+the answer may name.  A \code{\link[=tfl_ai_adam_summary]{tfl_ai_adam_summary()}} (its \code{variables});
+or a data frame, one row a variable, with
 \code{dataset} and \code{variable} and optionally \code{label}, \code{kind}, \code{levels} (\code{|}
 between the values) and \code{dataset_label} -- \code{\link[=tfl_adam_metadata]{tfl_adam_metadata()}}'s
 result is one (its \code{codelist} and \code{source} are not sent); or the ADaM
@@ -58,6 +63,22 @@ data frame with \code{output_id} and optionally \code{title}.}
 \item{language}{The language the model writes its assumptions in, such
 as \code{"Japanese"}; \code{NULL}: the language of the user's message.  The
 prompt itself is English.}
+
+\item{outputs}{\code{table}: the reports to draft (5 to 10: one batch of
+\code{\link[=tfl_ai_batches]{tfl_ai_batches()}}), as the TOC numbers them.}
+
+\item{shell}{\code{table}: the TOC and shells as text -- a
+\code{\link[=tfl_ai_read_shell]{tfl_ai_read_shell()}} result (read again for \code{outputs} alone when it
+holds the whole workbook) or a string; \code{NULL} when the workbook is
+attached to the chat instead.}
+
+\item{study_dir}{\code{table}: the study folder (\code{\link[=tfl_ai_study_init]{tfl_ai_study_init()}}): its
+\code{spec/data.yml} (the analysis sets the reports name) and
+\code{spec/defaults.yml} (what every report extends) go into the prompt.}
+
+\item{examples}{\code{table}: reviewed report files of this study
+(\verb{spec/outputs/<id>.yml} paths) that the new reports follow -- a
+family's first table, corrected by hand, for the rest of the family.}
 }
 \value{
 A \code{tfl_ai_context}: a list with \code{task} and the fields given.

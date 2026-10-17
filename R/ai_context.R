@@ -11,6 +11,11 @@
 #    tfl_ai_check()          its problems                 (R/ai_check.R)
 #    tfl_ai_repair_prompt()  the problems sent back       (R/ai_check.R)
 #    tfl_ai_diff()           what it changes              (R/ai_diff.R)
+#    tfl_ai_unpack()         a table answer as files      (R/ai_answer.R)
+#
+#  The `table` task drafts report files of the YAML spec (R/ai_table.R)
+#  from the TOC / SHELL workbook (R/ai_shell.R) and an ADaM summary
+#  (R/ai_adam.R).
 #
 #  The design: issues 182 of tflspec and 283 of tflplanner.
 # ============================================================================
@@ -21,23 +26,31 @@
 # The tasks: what each fills, what checks it, what keys its items.
 .ai_task_table <- function() {
   data.frame(
-    task = c("toc", "figure"),
+    task = c("toc", "figure", "table"),
     fills = c(
       paste(
         "TOC rows: output_id, type, title lines, population, footnote lines,",
         "section, datasets, label"
       ),
-      "one figure's whole design (data, stats, plot, layers)"
+      "one figure's whole design (data, stats, plot, layers)",
+      paste(
+        "the report files (spec/outputs/<id>.yml) of a batch of tables:",
+        "ard, data, codelists, content items, page"
+      )
     ),
-    checked_by = c("tfl_read_toc()", "tfl_check_fig_design()"),
-    keyed_by = c("output_id", "section, then step / layer and position"),
-    per = c("study", "report"),
+    checked_by = c(
+      "tfl_read_toc()", "tfl_check_fig_design()",
+      "tfl_read_output(), tfl_schema_check(), tfl_ard_code(), tfl_content_code()"
+    ),
+    keyed_by = c("output_id", "section, then step / layer and position",
+                 "output_id"),
+    per = c("study", "report", "batch"),
     stringsAsFactors = FALSE
   )
 }
 
 # The tasks designed for a later version (ichirio/tflspec#182).
-.ai_tasks_later <- c("ard", "table")
+.ai_tasks_later <- "ard"
 
 #' The tasks AI-assisted drafting knows
 #'
@@ -49,11 +62,19 @@
 #'   [tfl_read_toc()] (one prompt for the study).
 #' * `figure`: one report's whole figure design ([tfl_fig_design()]),
 #'   checked by [tfl_check_fig_design()].
+#' * `table`: the report files of the YAML spec (`spec/outputs/<id>.yml`)
+#'   of a batch of 5 to 10 tables -- each its `ard:` analyses, `data:`,
+#'   `codelists:`, `content:` items (one call each: `normalize_ard`,
+#'   `table_plan`, `plan_*`) and `page:` -- over the study's defaults; read
+#'   by [tfl_read_output()], checked item by item against the schema
+#'   ([tfl_schema_check()]) and the ADaM summary, and written as files by
+#'   [tfl_ai_unpack()].
 #'
-#' The `ard` and `table` tasks come in a later version.
+#' The `ard` task (the ARD definition alone) comes in a later version.
 #'
 #' @return A data frame: `task`, `fills`, `checked_by`, `keyed_by`, `per`
-#'   (`study` or `report`: one prompt a study, or one a report).
+#'   (`study`, `report` or `batch`: one prompt a study, a report, or a few
+#'   reports).
 #' @examples
 #' tfl_ai_tasks()
 #' @export
@@ -88,6 +109,10 @@ tfl_ai_tasks <- function() .ai_task_table()
   figure = c(
     "study", "output_id", "titles", "population", "datasets", "design",
     "templates", "language"
+  ),
+  table = c(
+    "study", "outputs", "shell", "datasets", "study_dir", "examples",
+    "language"
   )
 )
 
@@ -111,7 +136,7 @@ tfl_ai_tasks <- function() .ai_task_table()
 #' carried, never the data's values: a dataset's `levels` (a variable's
 #' values, such as its PARAMCDs) are there only when the caller gives them.
 #'
-#' @param task One of [tfl_ai_tasks()]: `"toc"` or `"figure"`.
+#' @param task One of [tfl_ai_tasks()]: `"toc"`, `"figure"` or `"table"`.
 #' @param study The study: a named list or character vector with
 #'   `study_id` and `title` (either may be missing).
 #' @param output_id `figure`: the report's id (required).
@@ -119,8 +144,9 @@ tfl_ai_tasks <- function() .ai_task_table()
 #' @param population `figure`: its analysis set: one label, or a named list
 #'   or vector with `id`, `label` and `where` (the condition, such as
 #'   `FASFL == "Y"`).
-#' @param datasets `figure` and `toc`: the datasets and variables the
-#'   answer may name.  Either a data frame, one row a variable, with
+#' @param datasets `figure`, `toc` and `table`: the datasets and variables
+#'   the answer may name.  A [tfl_ai_adam_summary()] (its `variables`);
+#'   or a data frame, one row a variable, with
 #'   `dataset` and `variable` and optionally `label`, `kind`, `levels` (` | `
 #'   between the values) and `dataset_label` -- [tfl_adam_metadata()]'s
 #'   result is one (its `codelist` and `source` are not sent); or the ADaM
@@ -137,6 +163,18 @@ tfl_ai_tasks <- function() .ai_task_table()
 #'   `population`, `footnote`, `section`, `datasets`, `label`.
 #' @param reports `toc`: the reports already in the TOC: their ids, or a
 #'   data frame with `output_id` and optionally `title`.
+#' @param outputs `table`: the reports to draft (5 to 10: one batch of
+#'   [tfl_ai_batches()]), as the TOC numbers them.
+#' @param shell `table`: the TOC and shells as text -- a
+#'   [tfl_ai_read_shell()] result (read again for `outputs` alone when it
+#'   holds the whole workbook) or a string; `NULL` when the workbook is
+#'   attached to the chat instead.
+#' @param study_dir `table`: the study folder ([tfl_ai_study_init()]): its
+#'   `spec/data.yml` (the analysis sets the reports name) and
+#'   `spec/defaults.yml` (what every report extends) go into the prompt.
+#' @param examples `table`: reviewed report files of this study
+#'   (`spec/outputs/<id>.yml` paths) that the new reports follow -- a
+#'   family's first table, corrected by hand, for the rest of the family.
 #' @param language The language the model writes its assumptions in, such
 #'   as `"Japanese"`; `NULL`: the language of the user's message.  The
 #'   prompt itself is English.
@@ -157,14 +195,16 @@ tfl_ai_tasks <- function() .ai_task_table()
 tfl_ai_context <- function(task, study = NULL, output_id = NULL,
                            titles = NULL, population = NULL, datasets = NULL,
                            design = NULL, templates = NULL, toc_fields = NULL,
-                           reports = NULL, language = NULL) {
+                           reports = NULL, language = NULL, outputs = NULL,
+                           shell = NULL, study_dir = NULL, examples = NULL) {
   fn <- "tfl_ai_context()"
   task <- .ai_task(task, fn)
   given <- list(
     study = study, output_id = output_id, titles = titles,
     population = population, datasets = datasets, design = design,
     templates = templates, toc_fields = toc_fields, reports = reports,
-    language = language
+    language = language, outputs = outputs, shell = shell,
+    study_dir = study_dir, examples = examples
   )
   given <- given[!vapply(given, is.null, NA)]
   other <- setdiff(names(given), .ai_context_fields[[task]])
@@ -176,7 +216,7 @@ tfl_ai_context <- function(task, study = NULL, output_id = NULL,
     ))
   }
   out <- list(task = task)
-  out$study <- .ai_ctx_study(given$study, fn)
+  out[["study"]] <- .ai_ctx_study(given[["study"]], fn)
   out$output_id <- .ai_ctx_string(given$output_id, "output_id", fn)
   if (task == "figure" && is.null(out$output_id)) {
     .ard_stop(sprintf("%s: a figure context needs the `output_id`.", fn))
@@ -198,6 +238,7 @@ tfl_ai_context <- function(task, study = NULL, output_id = NULL,
   }
   out$reports <- .ai_ctx_reports(given$reports, fn)
   out$language <- .ai_ctx_string(given$language, "language", fn)
+  if (task == "table") out <- .ai_ctx_table(out, given, fn)
   out <- out[!vapply(out, is.null, NA)]
   structure(out, class = "tfl_ai_context")
 }
@@ -270,6 +311,7 @@ print.tfl_ai_context <- function(x, ...) {
 .ai_ctx_datasets <- function(x, fn) {
   if (is.null(x)) return(NULL)
   cols <- c("dataset", "dataset_label", "variable", "label", "kind", "levels")
+  if (inherits(x, "tfl_ai_adam")) x <- x$variables
   if (is.data.frame(x)) {
     # tfl_adam_metadata()'s own columns, which the prompt does not need
     x <- x[setdiff(names(x), c("codelist", "source"))]
@@ -285,8 +327,8 @@ print.tfl_ai_context <- function(x, ...) {
     d <- .ai_ctx_from_data(x)
   } else {
     .ard_stop(sprintf(paste0(
-      "%s: `datasets` is a data frame (one row a variable) or a named list ",
-      "of data frames (the datasets)."
+      "%s: `datasets` is a tfl_ai_adam_summary(), a data frame (one row a ",
+      "variable) or a named list of data frames (the datasets)."
     ), fn))
   }
   for (cn in setdiff(cols, names(d))) d[[cn]] <- NA_character_

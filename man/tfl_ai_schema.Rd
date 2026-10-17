@@ -12,7 +12,9 @@ tfl_ai_schema(task, parts = NULL)
 \item{parts}{The parts to describe: for \code{toc}, \code{"toc"}; for \code{figure},
 sections among \code{"template"}, \code{"data"}, \code{"plot"},
 \code{"layers"}, or single pieces by name (\code{"censor_mark"}, \code{"join"}; see
-\code{\link[=tfl_fig_parts]{tfl_fig_parts()}}).  \code{NULL} for all.  The repair prompt describes only
+\code{\link[=tfl_fig_parts]{tfl_fig_parts()}}); for \code{table}, \code{"report"} (the report file's keys),
+\code{"ard"} (the analyses) or content functions by name (\code{"plan_cells"};
+from \code{\link[=tfl_schema]{tfl_schema()}}).  \code{NULL} for all.  The repair prompt describes only
 the parts with problems.}
 }
 \value{
@@ -23,7 +25,9 @@ What a drafting prompt (\code{\link[=tfl_ai_prompt]{tfl_ai_prompt()}}) tells the
 every column or field, what it means and an example, generated from the
 definitions tflspec's own readers and checks use -- \code{\link[=tfl_read_toc]{tfl_read_toc()}}'s
 fields for \code{toc}; \code{\link[=tfl_fig_parts]{tfl_fig_parts()}} and \code{\link[=tfl_fig_templates]{tfl_fig_templates()}} for
-\code{figure} -- so the prompt cannot name a column or a piece that does not
+\code{figure}; the spec's schema (\code{\link[=tfl_schema]{tfl_schema()}}), the ARD's columns
+(\code{\link[=tfl_spec_columns]{tfl_spec_columns()}}) and methods (\code{\link[=tfl_ard_methods]{tfl_ard_methods()}}) for \code{table} --
+so the prompt cannot name a column, a piece or a function that does not
 exist.
 }
 \examples{

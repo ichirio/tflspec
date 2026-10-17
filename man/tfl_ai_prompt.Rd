@@ -40,8 +40,10 @@ one text to copy.
 \description{
 The prompt that asks a chat model to draft part of a specification from
 the study's documents: the study's table of contents (\code{toc}) or one
-figure's design (\code{figure}).  tflspec sends nothing: the prompt is text,
-and so is the answer, which \code{\link[=tfl_ai_parse]{tfl_ai_parse()}} reads.
+figure's design (\code{figure}), or the report files of a batch of tables
+(\code{table}: 5 to 10 tables of one family, \code{\link[=tfl_ai_batches]{tfl_ai_batches()}}).  tflspec
+sends nothing: the prompt is text, and so is the answer, which
+\code{\link[=tfl_ai_parse]{tfl_ai_parse()}} reads.
 }
 \details{
 The \code{system} part holds the ground rules (only the names given, nothing

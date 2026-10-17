@@ -1,0 +1,14 @@
+---
+title: "AI チャットで表の code SPEC を作る"
+---
+
+<!-- The text is inst/ai/tflspec-ai-table-guide-ja.md, installed with the
+package (system.file("ai", "tflspec-ai-table-guide-ja.md", package =
+"tflspec")). -->
+
+```{r, include = FALSE}
+guide <- system.file("ai", "tflspec-ai-table-guide-ja.md", package = "tflspec")
+```
+
+```{r, child = guide}
+```

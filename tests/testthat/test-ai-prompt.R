@@ -65,7 +65,8 @@ test_that("the prompts stay within their size budget", {
 
 test_that("a prompt has its parts, every placeholder filled", {
   for (task in tfl_ai_tasks()$task) {
-    ctx <- if (task == "toc") ai_toc_context() else ai_figure_context()
+    ctx <- switch(task, toc = ai_toc_context(), figure = ai_figure_context(),
+                  table = tfl_ai_context("table", outputs = "T-14-1-1"))
     for (mode in c("chat", "api")) {
       for (fmt in c("yaml", "json")) {
         p <- tfl_ai_prompt(task, ctx, mode = mode, format = fmt)
@@ -155,8 +156,8 @@ test_that("tfl_ai_schema() describes only the parts asked for", {
 
 test_that("tfl_ai_tasks() lists the tasks; the later ones are refused", {
   t <- tfl_ai_tasks()
-  expect_identical(t$task, c("toc", "figure"))
-  expect_error(tfl_ai_prompt("table"), "not available yet")
+  expect_identical(t$task, c("toc", "figure", "table"))
+  expect_error(tfl_ai_prompt("ard"), "not available yet")
   expect_error(tfl_ai_prompt("tables"), "no task 'tables'")
 })
 

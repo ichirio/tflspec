@@ -1,0 +1,14 @@
+---
+title: "Drafting tables' code spec with an AI chat"
+---
+
+<!-- The text is inst/ai/tflspec-ai-table-guide.md, installed with the
+package (system.file("ai", "tflspec-ai-table-guide.md", package =
+"tflspec")): the tester reads the same file offline. -->
+
+```{r, include = FALSE}
+guide <- system.file("ai", "tflspec-ai-table-guide.md", package = "tflspec")
+```
+
+```{r, child = guide}
+```

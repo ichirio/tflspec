@@ -19,6 +19,17 @@
 #'   it had to guess, and a row with no id it passes over as a heading,
 #'   are warnings; a column outside the context's `toc_fields` is an
 #'   error.
+#' * `table`: each report against the schema -- a key a report file does
+#'   not have, a content function that is not a table's, an argument the
+#'   function does not have ([tfl_schema_check()], an error here: the AI's
+#'   invention), a value of the wrong type, a required argument missing; its
+#'   `ard:` fields and method; the analysis sets of `spec/data.yml` (with
+#'   `study_dir`); with the context's `datasets` (the ADaM summary), every
+#'   dataset and variable an analysis names (made by `derive` or `add`
+#'   aside); a report asked for and missing.  Then the answer is put in a
+#'   copy of the study folder and its ARD program ([tfl_ard_code()]) and
+#'   each table's code ([tfl_content_code()]) are written: what fails there
+#'   is a problem too.  Nothing is run.
 #' * `figure`: [tfl_check_fig_design()] on the design (with `adam`, the
 #'   data-aware checks too: the variables and PARAMCDs it names); an
 #'   `output_id` other than the context's is an error; a template not
@@ -66,7 +77,8 @@ tfl_ai_check <- function(answer, context = NULL, adam = NULL) {
     toc = if (!is.null(answer$sheets)) .ai_check_toc(answer, context),
     figure = if (!is.null(answer$design)) {
       .ai_check_figure(answer, context, adam)
-    }
+    },
+    table = if (!is.null(answer$header)) .ai_check_table(answer, context)
   )
   p <- rbind(p, more %||% .ai_problems())
   p <- p[!duplicated(p), , drop = FALSE]
@@ -283,6 +295,7 @@ tfl_ai_repair_prompt <- function(answer, problems = NULL, context = NULL) {
 # pieces named (`layers[2] point field size` -> point), or the whole section
 # when the piece is not known (`unknown layer`); `plot.add[1]` -> plot.
 .ai_problem_parts <- function(where, task) {
+  if (task == "table") return(.ai_problem_parts_table(where))
   if (task == "toc") {
     return(if (any(grepl("^toc\\b", where))) "toc" else character())
   }
