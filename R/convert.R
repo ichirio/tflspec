@@ -358,6 +358,16 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   })
 }
 
+# a page text cell as the sheets mean it, so the YAML says what the sheets
+# say: a written \n a line break; a line's left / center / right cell
+# quoted its text, spaces kept ("  Indented") (.ard_spec_value(type =
+# "text")); a token's value keeps its quotes (.ard_spec_tokens())
+.conv_text <- function(v, unquote = TRUE) {
+  if (!is.character(v) || length(v) != 1L || is.na(v) || inherits(v, "tfl_r")) return(v)
+  if (unquote) v <- .ard_spec_unquote(v)
+  gsub("\\n", "\n", v, fixed = TRUE)
+}
+
 # the report half of one scope as `page:`: lines by number, tokens by name,
 # the page and report rows as maps
 .conv_page <- function(sp, id, scope, note) {
@@ -371,7 +381,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
       line <- as.character(d$line[i])
       cells <- list()
       for (cn in intersect(c("left", "center", "right"), names(d))) {
-        v <- .conv_cell(d[[cn]][i], cn, character(), character(), note, id, s, i)
+        v <- .conv_text(.conv_cell(d[[cn]][i], cn, character(), character(), note, id, s, i))
         if (!is.null(v)) cells[[cn]] <- v
       }
       # a line of (none) in every cell: the line itself unset
@@ -384,7 +394,8 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   if (!is.null(d) && nrow(d)) {
     m <- list()
     for (i in seq_len(nrow(d))) {
-      v <- .conv_cell(d$value[i], "value", character(), character(), note, id, "tokens", i)
+      v <- .conv_text(.conv_cell(d$value[i], "value", character(), character(), note, id, "tokens", i),
+                      unquote = FALSE)
       if (!is.null(v)) m[[d$name[i]]] <- v
     }
     page$tokens <- m

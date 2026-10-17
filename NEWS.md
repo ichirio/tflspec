@@ -19,6 +19,21 @@
   (`inst/extdata/template-spec/`, DM and AE, the workbook and the same as
   YAML) gives the sample study's items exactly.
 
+* **A table whose data steps normalize the ARD: the sheets' code** (#323,
+  0.0.24.9149).  `tfl_content_code()` and `tfl_content_run()` no longer
+  write or run the study defaults' `normalize_ard()` after a report's
+  `data.steps` (the steps make the data; normalizing it again dropped what
+  they did, such as their row labels).  With no data steps, `normalize_ard()`
+  stays first in the one pipe (#303).  `plan_cells()`'s entries come in the
+  sheets' order: the table's variables first, `default` after.
+
+* **The converter reads a page cell as the sheets do** (#321, 0.0.24.9148).
+  `tfl_yaml_from_sheets()` writes a header, footer, title or footnote cell
+  that is quoted as its text (`"  Indented"`: the spaces kept, the quotes
+  not), and a written `\n` in those cells and in a token's value as a line
+  break -- what the sheets path reads them as.  A converted report's
+  program is the sheets'.
+
 * **The study's report setup and a report's tokens from the YAML spec**
   (#317, 0.0.24.9147).  `tfl_report_setup_code()` also takes a study's
   spec (`tfl_read_study_spec()`): its defaults' `page:` -- the first font of
