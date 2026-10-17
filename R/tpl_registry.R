@@ -113,6 +113,8 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
     tfl_param("cells", list(n = "{N:.0f}", `Mean (SD)` = "{mean:.1f} ({sd:.2f})",
                             Median = "{median:.1f}", `Min, Max` = "{min:.0f}, {max:.0f}"),
               doc = "the continuous variables' rows")
+ ,
+    tfl_param("stack", FALSE, doc = "TRUE: the ARD as one cards::ard_stack() call")
   ),
   body = function(a, ctx) {
     pop <- a$population
@@ -121,7 +123,19 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
     ard <- list(
       analysis_data = list(list(id = set, label = .tpl_set_label(pop, ctx$population),
                                 from = a$data, population = pop)),
-      analyses = list(
+      analyses = if (isTRUE(a$stack)) list(
+        # one cards::ard_stack() call: its children name it as their parent
+        list(id = "DEMOG", label = "Demographics, run together",
+             method = "cards::ard_stack", data = set, by = a$by,
+             purpose = "PRIMARY OUTCOME MEASURE"),
+        list(id = "CONT", parent = "DEMOG", label = "Continuous", method = "continuous",
+             variables = a$continuous,
+             statistics = c("N", "mean", "sd", "median", "min", "max"),
+             purpose = "PRIMARY OUTCOME MEASURE"),
+        list(id = "CAT", parent = "DEMOG", label = "Categorical", method = "categorical",
+             variables = a$categorical, statistics = c("n", "p"),
+             purpose = "PRIMARY OUTCOME MEASURE"))
+      else list(
         list(id = "GROUPN", label = "Subjects per group", method = "categorical",
              data = set, variables = a$by, purpose = "PRIMARY OUTCOME MEASURE"),
         list(id = "CONT", label = "Continuous", method = "continuous", data = set,
