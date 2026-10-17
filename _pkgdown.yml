@@ -194,6 +194,8 @@ reference:
       - tfl_template_expand
       - tpl_demog
       - tpl_summary
+      - tpl_ae_soc_pt
+      - tpl_hierarchical
   - title: Report spec, titles, footnotes, headers and tokens
     desc: >
       The page, the running header and footer, the titles and footnotes,

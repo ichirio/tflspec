@@ -6,9 +6,11 @@
   study's defaults written after it), `tfl_template_expand()` the report's
   items (B: saved into its YAML, marked `template:<name>`).  The layout
   template `summary` (continuous variables by a column key) and the display
-  template `demog` on it; `tfl_templates()` lists them.  On the sample study
-  T-14-1-1, T-14-1-1S (`demog(stack = TRUE)`) and T-14-2-1 (`summary`) give
-  the same RTF by A, by B and by their spec files.
+  template `demog` on it; the layout `hierarchical` and `ae_soc_pt` on it
+  (`tpl_ae_soc_pt()`, `tpl_hierarchical()`); `tfl_templates()` lists them.
+  On the sample study T-14-1-1, T-14-1-1S (`demog(stack = TRUE)`), T-14-2-1
+  (`summary`) and T-14-3-1 (`ae_soc_pt`) give the same RTF by A, by B and
+  by their spec files.
 
 * **The study's report setup and a report's tokens from the YAML spec**
   (#317, 0.0.24.9147).  `tfl_report_setup_code()` also takes a study's

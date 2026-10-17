@@ -37,6 +37,20 @@ test_that("tfl_template_expand(): the items, marked as the template's", {
   expect_s3_class(z$ard$analysis_data[[2L]]$where, "tfl_r")
 })
 
+test_that("ae_soc_pt: the hierarchical layout with its own defaults", {
+  x <- tfl_template_expand("ae_soc_pt", list(population = "SAF"))
+  expect_identical(x$ard$analyses[[1L]]$variables, c("AEBODSYS", "AEDECOD"))
+  expect_s3_class(x$ard$analysis_data[[2L]]$where, "tfl_r")
+  expect_identical(x$content[[1L]]$args$overall, "Any TEAE")
+  expect_identical(x$content[[2L]]$args$rows, list(group1 = "AEBODSYS"))
+  # the layout itself: no overall row, no where
+  h <- tfl_template_expand("hierarchical", list(population = "SAF",
+                                                hierarchy = c("AEBODSYS", "AEDECOD")))
+  expect_null(h$content[[1L]]$args$overall)
+  expect_null(h$ard$analyses[[1L]]$args)
+  expect_true(all(c("hierarchical", "ae_soc_pt") %in% tfl_templates()$name))
+})
+
 test_that("tfl_template_expand(): an unknown or missing parameter is said", {
   expect_error(tfl_template_expand("demog", list(population = "SAF", nope = 1)), "no parameter")
   expect_error(tfl_template_expand("demog", list()), "needs")

@@ -296,3 +296,104 @@ tfl_templates <- function() {
              params = vapply(t, function(x) paste(names(x$params), collapse = ", "), ""),
              stringsAsFactors = FALSE)
 }
+
+# ---- hierarchical: a hierarchy's counts (SOC / PT), the layout ------------------
+
+.tpl_hier_params <- list(
+  tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
+  tfl_param("hierarchy", required = TRUE, doc = "the levels, outer first"),
+  tfl_param("by", "TRT01A", doc = "the column variable"),
+  tfl_param("data", "ADAE", doc = "the dataset of records"),
+  tfl_param("where", NULL, doc = "the records kept (R)"),
+  tfl_param("data_id", NULL, doc = "the analysis data's id; NULL: <data>_<population>"),
+  tfl_param("data_label", NULL, doc = "the analysis data's label"),
+  tfl_param("analysis_id", "AE", doc = "the analysis's id"),
+  tfl_param("analysis_label", NULL, doc = "the analysis's label"),
+  tfl_param("overall", NULL, doc = "the any-record row's label; NULL: none"),
+  tfl_param("sort", c(".overall", "group1", ".depth", "-n", "label"),
+            doc = "the rows' order (plan_sort())"),
+  tfl_param("heading", c("System Organ Class", "   Preferred Term"),
+            doc = "the label column's heading, a line a level")
+)
+names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
+
+.tpl_hier_body <- function(a, ctx) {
+  pop <- a$population
+  subj <- paste0("adsl_", tolower(pop))
+  set <- a$data_id %||% paste0(tolower(a$data), "_", tolower(pop))
+  d <- list(id = set, label = a$data_label, from = a$data, subjects = subj,
+            where = if (!is.null(a$where)) tfl_r(a$where))
+  ard <- list(
+    analysis_data = list(
+      list(id = subj, label = .tpl_set_label(pop, ctx$population), from = "ADSL",
+           population = pop),
+      Filter(Negate(is.null), d)),
+    analyses = list(Filter(Negate(is.null), list(
+      id = a$analysis_id, label = a$analysis_label, method = "hierarchical", data = set,
+      by = a$by, variables = a$hierarchy, denominator = subj,
+      args = if (!is.null(a$overall)) tfl_r("over_variables = TRUE"),
+      purpose = "PRIMARY OUTCOME MEASURE"))))
+  n <- length(a$hierarchy)
+  content <- list(
+    tfl_item("normalize_ard", Filter(Negate(is.null),
+                                     list(hierarchy = a$hierarchy, overall = a$overall))),
+    tfl_item("table_plan", list(
+      cols = a$by,
+      rows = stats::setNames(as.list(a$hierarchy[-n]), paste0("group", seq_len(n - 1L))),
+      label = list(label = a$hierarchy[n]))),
+    tfl_item("plan_levels", .tpl_levels(a$by, ctx$codelists)),
+    tfl_item("plan_sort", list(keys = a$sort)),
+    tfl_item("plan_col_header", list(header = list(
+      list(line = "1", cols = "row_label"),
+      list(line = "1", cols = ".values", span = "each", text = "{col}\n(N={n})\nn (%)"),
+      list(line = "2", cols = "row_label", text = paste(a$heading, collapse = "\n")),
+      list(line = "2", cols = ".values")))),
+    tfl_item("plan_paginate_rows", list(max_rows = 22L, split = "group_force")))
+  list(ard = ard, data = list(source = "ard", object = "ard"), content = content)
+}
+
+.tfl_template("hierarchical", kind = "table", layout = "hierarchical",
+              params = .tpl_hier_params, body = .tpl_hier_body)
+
+# ae_soc_pt: treatment-emergent AEs by SOC and PT, on the hierarchical layout
+.tfl_template("ae_soc_pt", kind = "table", layout = "hierarchical",
+  params = c(list(tfl_param("population", required = TRUE,
+                            doc = "the analysis set's id (SAF)")),
+             lapply(list(
+               list("hierarchy", c("AEBODSYS", "AEDECOD")),
+               list("where", "TRTEMFL == \"Y\""),
+               list("data_label", "Treatment-emergent AEs of the safety set"),
+               list("analysis_id", "TEAE"),
+               list("analysis_label", "TEAE by SOC / PT"),
+               list("overall", "Any TEAE")),
+               function(x) tfl_param(x[[1L]], x[[2L]])),
+             .tpl_hier_params[c("by", "data", "data_id", "sort", "heading")]),
+  body = .tpl_hier_body)
+
+#' Adverse events by SOC and PT: a table plan from the template `ae_soc_pt`
+#'
+#' A display template on the `hierarchical` layout: treatment-emergent
+#' events (`TRTEMFL == "Y"`), the subjects with any event first.
+#'
+#' @inheritParams tpl_demog
+#' @param ... The template's other parameters: `hierarchy`, `where`,
+#'   `overall`, `by`, `sort`, `heading` ...
+#' @return A [rtfreporter::table_plan()].
+#' @export
+tpl_ae_soc_pt <- function(ard, population, ..., codelists = NULL) {
+  .tpl_object("ae_soc_pt", ard, c(list(population = population), list(...)),
+              codelists = codelists)
+}
+
+#' A hierarchy's counts: a table plan from the layout `hierarchical`
+#'
+#' @inheritParams tpl_demog
+#' @param hierarchy The levels, outer first (`c("AEBODSYS", "AEDECOD")`).
+#' @param ... The template's other parameters: `by`, `data`, `where`,
+#'   `overall`, `sort`, `heading` ...
+#' @return A [rtfreporter::table_plan()].
+#' @export
+tpl_hierarchical <- function(ard, population, hierarchy, ..., codelists = NULL) {
+  .tpl_object("hierarchical", ard, c(list(population = population, hierarchy = hierarchy),
+                                     list(...)), codelists = codelists)
+}
