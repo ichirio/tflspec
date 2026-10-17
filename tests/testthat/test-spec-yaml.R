@@ -161,3 +161,20 @@ test_that("an NA argument (table_plan(label = NA)) is written .na and read back 
   expect_identical(r$content[[1L]]$args$label, NA)
   expect_true(any(grepl("label = NA", tfl_content_code(r), fixed = TRUE)))
 })
+
+test_that("one-element sequences of ard: and listing_col vars stay sequences (text round trip)", {
+  txt <- c(
+    "id: T-1", "kind: table", "extends:", "  - defaults",
+    "ard:", "  analysis_data:", "    - id: adsl", "      from: ADSL",
+    "      keep:", "        - USUBJID",
+    "  analyses:", "    - id: DEM", "      method: categorical", "      data: adsl",
+    "      by:", "        - TRT01A", "      variables:", "        - SEX",
+    "content:", "  - table_plan:", "      cols: TRT01A",
+    "  - plan_listing:", "      cols:", "        - fn: listing_col", "          args:",
+    "            vars:", "              - USUBJID", "            label: Subject", "")
+  f <- withr::local_tempfile(fileext = ".yml")
+  g <- withr::local_tempfile(fileext = ".yml")
+  writeLines(txt, f)
+  tfl_write_output(tfl_read_output(f), g)
+  expect_identical(readLines(g), txt)
+})
