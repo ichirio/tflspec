@@ -10,5 +10,9 @@ package (system.file("ai", "tflspec-ai-table-guide.md", package =
 guide <- system.file("ai", "tflspec-ai-table-guide.md", package = "tflspec")
 ```
 
+<p align="right">
+  <a class="btn btn-outline-secondary btn-sm" href="ai-table-drafting-ja.html">In Japanese</a>
+</p>
+
 ```{r, child = guide}
 ```

@@ -16,8 +16,34 @@ development:
 
 navbar:
   structure:
-    left: [intro, articles, reference, news]
+    left: [intro, reference, articles, news]
     right: [search, github]
+  # The Articles menu written out, as rtfreporter's: the English articles
+  # only; a Japanese one is reached from the toggle at the top of its
+  # English page.
+  components:
+    articles:
+      text: Articles
+      menu:
+        - text: "The workflow"
+        - text: "The ARD spec"
+          href: articles/ard-spec.html
+        - text: "The table spec"
+          href: articles/table-spec.html
+        - text: "Reports: headers, footers, titles, footnotes and tokens"
+          href: articles/reports.html
+        - text: -------
+        - text: "Listings, figures and ARS"
+        - text: "Listings"
+          href: articles/listings.html
+        - text: "Figures"
+          href: articles/figures.html
+        - text: "CDISC ARS export and import"
+          href: articles/ars.html
+        - text: -------
+        - text: "Drafting with an AI chat"
+        - text: "Drafting tables' code spec with an AI chat"
+          href: articles/ai-table-drafting.html
 
 # The articles follow the one workflow: the ARD spec, the table spec, the
 # report around it; then listings, figures and ARS.  "Get started" is
@@ -38,8 +64,19 @@ articles:
       - articles/ars
   - title: Drafting with an AI chat
     navbar: Drafting with an AI chat
+    desc: >
+      The article opens in English with an "In Japanese" toggle at the top.
     contents:
       - articles/ai-table-drafting
+
+  # As rtfreporter: a Japanese article is reached from the toggle at the
+  # top of its English page, not from the navbar menu.
+  - title: 日本語の記事 / Japanese
+    desc: >
+      Japanese versions, reachable from the "In Japanese" toggle at the top
+      of each English page.  英語の記事の頭の切り替えから開く日本語版です。
+    navbar: ~
+    contents:
       - articles/ai-table-drafting-ja
 
 # Grouped by the workflow: ARD spec -> ARD code, the data, table spec ->
