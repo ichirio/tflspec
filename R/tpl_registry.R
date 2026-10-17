@@ -477,3 +477,94 @@ tpl_disposition <- function(ard, population, ..., codelists = NULL) {
   .tpl_object("disposition", ard, c(list(population = population), list(...)),
               codelists = codelists)
 }
+
+# ---- shift: a category at baseline by the same after it, the layout -------------
+
+.tpl_shift_params <- list(
+  tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
+  tfl_param("by", "TRT01A", doc = "the column variable"),
+  tfl_param("data", "ADLB", doc = "the dataset of records"),
+  tfl_param("where", NULL, doc = "the records kept (R): the visit, the parameters"),
+  tfl_param("data_id", NULL, doc = "the analysis data's id; NULL: <data>_<population>"),
+  tfl_param("analysis_id", "SHIFT", doc = "the analysis's id"),
+  tfl_param("param", "PARAMCD", doc = "the parameter's variable (a block of rows each)"),
+  tfl_param("baseline", "BNRIND", doc = "the category at baseline (the rows)"),
+  tfl_param("post", "ANRIND", doc = "the category after it (the columns under each arm)"),
+  tfl_param("levels", c("LOW", "NORMAL", "HIGH"), doc = "the categories, in order"),
+  tfl_param("by_levels", NULL,
+            doc = "the column variable's values in order; NULL: its code list's"),
+  tfl_param("param_labels", NULL, doc = "each parameter's heading (a named vector)"),
+  tfl_param("cell", "{n}", doc = "a cell's template"),
+  tfl_param("heading", "Parameter / Baseline", doc = "the label column's heading")
+)
+names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
+
+.tpl_shift_body <- function(a, ctx) {
+  set <- a$data_id %||% paste0(tolower(a$data), "_", tolower(a$population))
+  ard <- list(
+    analysis_data = list(Filter(Negate(is.null), list(
+      id = set, from = a$data, population = a$population,
+      where = if (!is.null(a$where)) tfl_r(a$where)))),
+    analyses = list(list(id = a$analysis_id, method = "categorical", data = set,
+                         by = c(a$by, a$param, a$baseline), variables = a$post)))
+  by_lv <- a$by_levels %||% .tpl_levels(a$by, ctx$codelists)[[a$by]]
+  lv <- c(if (length(by_lv)) stats::setNames(list(by_lv), a$by),
+          stats::setNames(list(a$levels, a$levels), c(a$baseline, ".label")))
+  content <- c(
+    list(tfl_item("table_plan", list(cols = c(a$by, ".label"),
+                                     rows = list(group = a$param), label = a$baseline)),
+         tfl_item("plan_cells", list(categorical = a$cell)),
+         tfl_item("plan_levels", lv)),
+    if (length(a$param_labels)) list(tfl_item("plan_labels", stats::setNames(
+      list(as.list(a$param_labels)), a$param))),
+    list(tfl_item("plan_stub", list(vars = c("group", a$baseline), name = "row_label",
+                                    before = TRUE)),
+         tfl_item("plan_col_header", list(header = list(
+           list(line = "1", cols = ".values", span = a$by, text = "{col1}"),
+           list(line = "2", cols = "row_label", text = a$heading),
+           list(line = "2", cols = ".values", span = "each", text = "{col}"))))))
+  list(ard = ard, data = list(source = "ard"), content = content)
+}
+
+.tfl_template("shift", kind = "table", layout = "shift",
+              params = .tpl_shift_params, body = .tpl_shift_body)
+
+# lab_shift: the normal range indicator at baseline by a visit's, on shift
+.tfl_template("lab_shift", kind = "table", layout = "shift",
+  params = c(.tpl_shift_params["population"],
+             list(tfl_param("visit", required = TRUE, doc = "the visit (AVISIT)"),
+                  tfl_param("params", required = TRUE, doc = "the PARAMCD values")),
+             .tpl_shift_params[c("by", "data_id", "by_levels", "param_labels", "levels")]),
+  body = function(a, ctx) {
+    b <- lapply(.tpl_shift_params, `[[`, "default")
+    for (k in intersect(names(a), names(b))) b[k] <- list(a[[k]])
+    b$where <- sprintf("AVISIT == \"%s\" & PARAMCD %%in%% c(%s)", a$visit,
+                       paste(sprintf("\"%s\"", a$params), collapse = ", "))
+    .tpl_shift_body(b, ctx)
+  })
+
+#' Shift tables: table plans from the templates `shift` and `lab_shift`
+#'
+#' `shift` is the layout: a category at baseline (the rows, a block a
+#' parameter) by the same category after it (the columns, under each arm).
+#' `lab_shift` is the display template on it: the laboratory normal range
+#' indicator (`BNRIND` by `ANRIND`) at one visit, for some parameters.
+#'
+#' @inheritParams tpl_demog
+#' @param ... The template's other parameters (`tpl_shift()`: `by`, `data`,
+#'   `where`, `param`, `baseline`, `post`, `levels`, `param_labels`,
+#'   `heading` ...; `tpl_lab_shift()`: `visit`, `params`, `by`,
+#'   `param_labels` ...).
+#' @return A [rtfreporter::table_plan()].
+#' @export
+tpl_shift <- function(ard, population, ..., codelists = NULL) {
+  .tpl_object("shift", ard, c(list(population = population), list(...)),
+              codelists = codelists)
+}
+
+#' @rdname tpl_shift
+#' @export
+tpl_lab_shift <- function(ard, population, ..., codelists = NULL) {
+  .tpl_object("lab_shift", ard, c(list(population = population), list(...)),
+              codelists = codelists)
+}

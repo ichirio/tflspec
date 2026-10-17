@@ -791,6 +791,7 @@ back): rename the value or choose another separator.
 
 **Template SPEC (prototype):** `tfl_templates` `tfl_template_expand`
 `tpl_demog` `tpl_summary` `tpl_disposition` `tpl_ae_soc_pt` `tpl_hierarchical`
+`tpl_shift` `tpl_lab_shift`
 `tfl_read_template_sheets` `tfl_write_template_yaml`
 
 **AI-assisted drafting:** `tfl_ai_tasks` `tfl_ai_context` `tfl_ai_schema`

@@ -109,3 +109,16 @@ test_that("summary: categorical variables too; disposition on it", {
   p <- suppressMessages(tpl_summary(ard, population = "SAF", categorical = c("AGEGR1", "SEX")))
   expect_s3_class(p, "table_plan")
 })
+
+test_that("shift and lab_shift: baseline by post category, a block a parameter", {
+  x <- tfl_template_expand("lab_shift", list(population = "SAF", visit = "CYCLE 2 DAY 1",
+                                             params = c("ALT", "AST")))
+  expect_identical(as.character(x$ard$analysis_data[[1L]]$where),
+                   'AVISIT == "CYCLE 2 DAY 1" & PARAMCD %in% c("ALT", "AST")')
+  expect_identical(x$ard$analyses[[1L]]$by, c("TRT01A", "PARAMCD", "BNRIND"))
+  expect_identical(x$content[[1L]]$args$cols, c("TRT01A", ".label"))
+  s <- tfl_template_expand("shift", list(population = "SAF", by_levels = c("A", "B")))
+  expect_identical(s$content[[3L]]$args$TRT01A, c("A", "B"))
+  expect_error(tfl_template_expand("lab_shift", list(population = "SAF")), "needs")
+  expect_true(all(c("shift", "lab_shift") %in% tfl_templates()$name))
+})

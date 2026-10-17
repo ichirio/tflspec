@@ -9,7 +9,10 @@
   `disposition` (`tpl_disposition()`) on it: the status at the end of the
   study.  On the sample study T-14-1-2 (`disposition`), T-14-1-3 and
   T-14-1-4 (`summary`) give the same items and RTF by A, by B and by their
-  spec files, and T-14-2-1 still does.
+  spec files, and T-14-2-1 still does.  The layout `shift` (a category at
+  baseline by the same after it, a block a parameter) and the display
+  template `lab_shift` on it (`tpl_shift()`, `tpl_lab_shift()`): the AI
+  example's T-14-3-5 gives the same items and RTF by both.
 
 * **For a builder of the YAML's items** (#329, 0.0.24.9152; tflplanner B3).
   `tfl_resolve_output(provenance = TRUE)` says where each item's arguments
