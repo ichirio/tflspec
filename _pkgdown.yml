@@ -161,6 +161,8 @@ reference:
       - tfl_read_study_spec
       - tfl_read_output
       - tfl_resolve_output
+      - tfl_write_study_part
+      - tfl_item_code
       - tfl_schema
       - tfl_args_to_r
       - tfl_schema_check

@@ -116,6 +116,13 @@ tfl_read_outputs <- function(dir) {
 #'
 #' @param output A `tfl_output` as read from its file.
 #' @param study A `tfl_study_spec` (its `defaults` and `patterns`).
+#' @param provenance `TRUE` to say where each content item's arguments come
+#'   from: each item gets `arg_from` (a named character vector, one an
+#'   argument: `"own"`, `"defaults"` or `"pattern:<name>"`; a verb whose
+#'   `...` is named, such as `plan_cells()`, by top-level key, any other verb
+#'   one layer's whole) and `below` (the same verb's item with the report's
+#'   own layer left out, `NULL` when no layer has it: what a revert goes
+#'   back to).  `FALSE` (default): the items as they are.
 #' @return The `tfl_output`, resolved (attribute `resolved` = `TRUE`).
 #' @examples
 #' d <- system.file("extdata", "spec-yaml", package = "tflspec")
@@ -123,7 +130,7 @@ tfl_read_outputs <- function(dir) {
 #' out <- tfl_resolve_output(tfl_read_outputs(d)[["T-14-1-1"]], s)
 #' vapply(out$content, function(it) paste(it$fn, it$from), "")
 #' @export
-tfl_resolve_output <- function(output, study) {
+tfl_resolve_output <- function(output, study, provenance = FALSE) {
   if (!inherits(output, "tfl_output")) stop("tfl_resolve_output(): `output` is a tfl_output.", call. = FALSE)
   if (!inherits(study, "tfl_study_spec")) stop("tfl_resolve_output(): `study` is a tfl_study_spec.", call. = FALSE)
   chain <- output$extends
@@ -139,7 +146,11 @@ tfl_resolve_output <- function(output, study) {
   for (l in rev(layers)) acc <- .layer_over(acc, l)
   own <- list(data = output$data %||% list(), codelists = output$codelists,
               content = output$content, page = output$page)
+  below <- acc$content
   acc <- .layer_over(acc, own)
+  if (isTRUE(provenance) && !inherits(acc$content, "tfl_r")) {
+    acc$content <- .content_provenance(acc$content, output$content, layers, below)
+  }
   output$data <- if (length(acc$data)) acc$data else output$data
   output$codelists <- acc$codelists
   output$content <- acc$content
@@ -147,6 +158,45 @@ tfl_resolve_output <- function(output, study) {
   output <- .page_font_to_plan(output)
   attr(output, "resolved") <- TRUE
   output
+}
+
+# Each resolved item's provenance, argument by argument (`arg_from`: "own",
+# "defaults", "pattern:<name>", in the order of its args), and `below`: the
+# same verb's item with the report's own layer left out (the k-th of that
+# verb), NULL when no layer has it.  A named-dots verb (plan_cells ...)
+# takes each top-level key from the nearest layer that has it; any other
+# verb is one layer's whole.
+.content_provenance <- function(items, own, layers, below) {
+  own <- if (inherits(own, "tfl_r")) list() else own %||% list()
+  # the layers from the nearest: the report's own, then `extends` in order
+  stack <- c(list(own), lapply(layers, function(l) {
+    c <- l$content
+    if (inherits(c, "tfl_r")) list() else c %||% list()
+  }))
+  below <- if (inherits(below, "tfl_r")) list() else below
+  seen <- list()
+  for (i in seq_along(items)) {
+    it <- items[[i]]
+    k <- (seen[[it$fn]] %||% 0L) + 1L
+    seen[[it$fn]] <- k
+    keys <- names(it$args) %||% character()
+    if (.dots_named(it$fn) && length(keys)) {
+      from <- vapply(keys, function(key) {
+        for (layer in stack) {
+          hit <- Filter(function(x) identical(x$fn, it$fn) && key %in% names(x$args), layer)
+          if (length(hit)) return(hit[[1L]]$from %||% "own")
+        }
+        it$from %||% "own"
+      }, "")
+    } else {
+      from <- rep(it$from %||% "own", length(keys))
+    }
+    it$arg_from <- stats::setNames(from, keys)
+    same <- Filter(function(x) identical(x$fn, it$fn), below)
+    it$below <- if (length(same) >= k) same[[k]] else NULL
+    items[[i]] <- it
+  }
+  items
 }
 
 .layer_of <- function(nm, study) {
@@ -340,4 +390,63 @@ tfl_resolve_output <- function(output, study) {
                                       tfl_item("plan_style", list(font_size_half_points = fs), from = "own"))
   }
   output
+}
+
+#' Write one part of a study's YAML spec
+#'
+#' Writes the study-level file of one part of a [tfl_read_study_spec()]
+#' result -- what a builder changes for the whole study (the rounding of
+#' every table, a pattern, a code list) -- in the form the reader reads.
+#'
+#' @param study A `tfl_study_spec`.
+#' @param part `"defaults"`, `"patterns"` (one, by `name`), `"codelists"`,
+#'   `"data"` or `"toc"`.
+#' @param path The file; `NULL`: the study's own (`spec/defaults.yml`,
+#'   `spec/patterns/<name>.yml` ...).
+#' @param name For `part = "patterns"`: the pattern.
+#' @return `path`, invisibly.
+#' @examples
+#' d <- system.file("extdata", "spec-yaml", package = "tflspec")
+#' s <- tfl_read_study_spec(d)
+#' f <- tempfile(fileext = ".yml")
+#' tfl_write_study_part(s, "defaults", f)
+#' identical(tfl_read_study_spec(d)$defaults$content[[1]]$fn,
+#'           yaml::read_yaml(f)$content[[1]] |> names())
+#' @export
+tfl_write_study_part <- function(study, part = c("defaults", "patterns", "codelists", "data", "toc"),
+                                 path = NULL, name = NULL) {
+  fn <- "tfl_write_study_part()"
+  if (!inherits(study, "tfl_study_spec")) .ard_stop(sprintf("%s: `study` is a tfl_study_spec.", fn))
+  part <- match.arg(part)
+  layer_out <- function(l) {
+    y <- list()
+    if (length(l$content)) {
+      y$content <- if (inherits(l$content, "tfl_r")) l$content else .items_to_list(l$content)
+    }
+    if (length(l$page)) y$page <- .calls_out(l$page)
+    if (length(l$data)) y$data <- .calls_out(l$data)
+    if (length(l$codelists)) y$codelists <- l$codelists
+    y
+  }
+  y <- switch(part,
+    defaults = layer_out(study$defaults),
+    patterns = {
+      if (is.null(name) || is.null(study$patterns[[name]])) {
+        .ard_stop(sprintf("%s: `name` is one of the study's patterns: %s.", fn,
+                          paste(names(study$patterns), collapse = ", ")))
+      }
+      layer_out(study$patterns[[name]])
+    },
+    codelists = study$codelists,
+    data = .calls_out(study$data),
+    toc = study$toc)
+  if (is.null(path)) {
+    spec <- .spec_dir(study$dir)
+    path <- switch(part, patterns = file.path(spec, "patterns", paste0(name, ".yml")),
+                   file.path(spec, paste0(part, ".yml")))
+  }
+  dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
+  writeLines(yaml::as.yaml(y, indent.mapping.sequence = TRUE, handlers = .yaml_out_handlers()),
+             path, useBytes = TRUE)
+  invisible(path)
 }

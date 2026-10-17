@@ -12,7 +12,9 @@ tfl_schema(fn = NULL)
 \value{
 The function's entry (\code{package}, \code{description}, \code{dots}, \code{args};
 \code{rank}, its place in the recommended order, and \code{stage}, \code{"mapping"},
-\code{"finishing"} or \code{"output"}),
+\code{"finishing"} or \code{"output"}; \code{formals}, the function's own arguments
+but the data's (\code{x}, \code{plan}, \code{.plan}, \code{data}, \code{mapping}), and
+\code{required}, those of them with no default value),
 or the whole schema, a list by function; \code{NULL} for a function the
 schema does not have.
 }
