@@ -142,3 +142,24 @@ test_that("listing: one row a record, a column's width part of its definition", 
                                     columns = list(list(vars = "USUBJID", label = "Subject"))))
   expect_s3_class(p, "table_plan")
 })
+
+test_that("summary's mean (CI); km_table, vs_change and orr", {
+  x <- tfl_template_expand("summary", list(population = "SAF", variables = "CHG", statistics = "N",
+                                           ci_label = "Mean change (95% CI)"))
+  expect_identical(vapply(x$ard$analyses, `[[`, "", "method"),
+                   c("categorical", "continuous", "mean_ci"))
+  k <- tfl_template_expand("km_table", list(by_levels = c("A", "B")))
+  expect_null(k$ard)   # the survival analyses are the report's own
+  expect_s3_class(k$data$steps[[1L]], "tfl_r")
+  expect_match(k$data$steps[[1L]], "Median (95% CI)", fixed = TRUE)
+  expect_false(grepl("== \"0\"", tfl_template_expand("km_table", list(drop_time_0 = FALSE))$data$steps[[1L]]))
+  v <- tfl_template_expand("vs_change", list(population = "SAF", param = "SYSBP", visit = "V1",
+    param_label = "Systolic BP", when = "week 1", visit_label = "Week 1", unit = "mmHg"))
+  expect_identical(v$ard$analyses[[2L]]$variables, c("BASE", "AVAL", "CHG"))
+  expect_identical(v$content[[3L]]$args$CHG, "Change from baseline (mmHg)")
+  o <- tfl_template_expand("orr", list(responders = c("CR", "PR", "SD")))
+  expect_identical(as.character(o$ard$analysis_data[[1L]]$derive),
+                   'RESP = AVALC %in% c("CR", "PR", "SD")')
+  expect_identical(o$content[[3L]]$args$RESP, "Objective response rate (CR + PR + SD)")
+  expect_true(all(c("km_table", "vs_change", "orr") %in% tfl_templates()$name))
+})

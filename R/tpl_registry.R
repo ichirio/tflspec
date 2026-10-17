@@ -225,6 +225,10 @@ tpl_demog <- function(ard, population, ..., codelists = NULL) {
   tfl_param("analysis_label", "Continuous", doc = "the continuous analysis' label"),
   tfl_param("statistics", c("N", "mean", "sd", "median", "min", "max"),
             doc = "the continuous statistics the ARD has"),
+  tfl_param("ci_id", "CI", doc = "the confidence-interval analysis' id"),
+  tfl_param("ci_label", NULL,
+            doc = "the continuous variables' mean (CI) analysis' label; NULL: none"),
+  tfl_param("ci_method", "mean_ci", doc = "its method (mean_ci: a one-sample t-test)"),
   tfl_param("cat_id", "CAT", doc = "the categorical analysis' id"),
   tfl_param("cat_label", "Categorical", doc = "the categorical analysis' label"),
   tfl_param("cat_statistics", c("n", "p"),
@@ -260,6 +264,9 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
       id = a$analysis_id, label = a$analysis_label, method = "continuous", data = set,
       by = a$by, variables = a$variables, statistics = a$statistics,
       purpose = "PRIMARY OUTCOME MEASURE")),
+    if (length(a$variables) && !is.null(a$ci_label)) list(list(
+      id = a$ci_id, label = a$ci_label, method = a$ci_method, data = set, by = a$by,
+      variables = a$variables, purpose = "SECONDARY OUTCOME MEASURE")),
     if (length(a$categorical)) list(nn(list(
       id = a$cat_id, label = a$cat_label, method = "categorical", data = set,
       by = a$by, variables = a$categorical, statistics = a$cat_statistics,
@@ -623,4 +630,179 @@ tpl_listing <- function(x, ...) {
   o <- tfl_output("tpl-listing", kind = "listing", extends = "none",
                   data = it$data, content = it$content)
   tfl_content_run(o, x)
+}
+
+# ---- km_table: Kaplan-Meier estimates (median, rates by time), from the ARD -----
+# The ARD's survival analyses are the report's own (`ard:`, cardx's
+# ard_survival_survfit()): the template does ARD -> table only.
+
+.tfl_template("km_table", kind = "table", layout = "km_table",
+  params = list(
+    tfl_param("by", "TRT01A", doc = "the column variable"),
+    tfl_param("by_levels", NULL, doc = "its values in order; NULL: its code list's"),
+    tfl_param("median_label", "Median (95% CI)", doc = "the median's row"),
+    tfl_param("time_prefix", "Day", doc = "a rate's row: <prefix> <time>"),
+    tfl_param("time_unit", "days", doc = "the times' unit, in the median block's heading"),
+    tfl_param("drop_time_0", TRUE, doc = "leave out the rate at time 0")
+  ),
+  body = function(a, ctx) {
+    step <- paste(c(
+      "data <- normalize_ard(ard)",
+      sprintf("# row labels: the median, and the event-free probability by %s%s",
+              tolower(a$time_prefix), if (isTRUE(a$drop_time_0)) " (day 0 left out)" else ""),
+      "is_time <- data$variable == \"time\"",
+      sprintf("data$.label[data$variable == \"prob\"] <- \"%s\"", a$median_label),
+      sprintf("data$.label[is_time] <- paste(\"%s\", as.character(data$variable_level[is_time]))",
+              a$time_prefix),
+      if (isTRUE(a$drop_time_0))
+        "data <- data[!(is_time & as.character(data$variable_level) == \"0\"), ]"),
+      collapse = "\n")
+    by_lv <- a$by_levels %||% .tpl_levels(a$by, ctx$codelists)[[a$by]]
+    content <- list(
+      tfl_item("table_plan", list(cols = a$by, rows = list(group = "variable"))),
+      tfl_item("plan_cells", list(
+        prob = list(tfl_r("is.na(estimate) ~ \"NE\""),
+                    tfl_r("is.na(conf.high) ~ \"{estimate:.0f} ({conf.low:.0f}, NE)\""),
+                    "{estimate:.0f} ({conf.low:.0f}, {conf.high:.0f})"),
+        time = "{estimate:.1f%} ({conf.low:.1f%}, {conf.high:.1f%})")),
+      tfl_item("plan_labels", list(prob = sprintf("Time to first event (%s)", a$time_unit),
+                                   time = "Event-free probability (95% CI)")),
+      tfl_item("plan_levels", c(list(variable = c("prob", "time")),
+                                if (length(by_lv)) stats::setNames(list(by_lv), a$by))),
+      tfl_item("plan_col_header", list(header = list(
+        list(line = "1", cols = "row_label"),
+        list(line = "1", cols = ".values", span = "each", text = "{col}"),
+        list(line = "2", cols = "row_label"),
+        list(line = "2", cols = ".values", span = "each", text = "(N={n})")))))
+    list(data = list(source = "ard", object = "ard", steps = list(tfl_r(step))),
+         content = content)
+  })
+
+#' Kaplan-Meier estimates: a table plan from the template `km_table`
+#'
+#' The median time to the event (95% CI) and the event-free probability
+#' (95% CI) at each time, by arm, from an ARD of cardx's
+#' `ard_survival_survfit()` (`probs = 0.5` and `times = `): the analyses are
+#' the report's own, the template is the ARD to the table.
+#'
+#' @param ard The study ARD's rows of this report (not normalized: the
+#'   template's data step normalizes it).
+#' @param ... The template's parameters: `by`, `by_levels`, `median_label`,
+#'   `time_prefix`, `time_unit`, `drop_time_0`.
+#' @param codelists The report's code lists; `NULL` takes the ARD's.
+#' @return A [rtfreporter::table_plan()].
+#' @export
+tpl_km_table <- function(ard, ..., codelists = NULL) {
+  .tpl_object("km_table", ard, list(...), codelists = codelists)
+}
+
+# vs_change: a vital sign's baseline, value and change at one visit, on summary
+.tfl_template("vs_change", kind = "table", layout = "summary",
+  params = list(
+    tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
+    tfl_param("param", required = TRUE, doc = "the PARAMCD (SYSBP)"),
+    tfl_param("visit", required = TRUE, doc = "the AVISIT (CYCLE 9 DAY 1)"),
+    tfl_param("param_label", required = TRUE, doc = "the parameter in words"),
+    tfl_param("when", required = TRUE, doc = "the visit in words, short (week 24)"),
+    tfl_param("visit_label", required = TRUE, doc = "the value's row heading's visit"),
+    tfl_param("unit", required = TRUE, doc = "the unit (mmHg)"),
+    tfl_param("by", "TRTA", doc = "the column variable")
+  ),
+  body = function(a, ctx) {
+    b <- lapply(.tpl_summary_params, `[[`, "default")
+    set_lab <- tolower(.tpl_set_label(a$population, ctx$population))
+    b[c("population", "by", "data", "where", "data_id", "data_label", "analysis_id",
+        "analysis_label", "variables", "statistics", "cells", "labels")] <- list(
+      a$population, a$by, "ADVS",
+      sprintf("PARAMCD == \"%s\" & AVISIT == \"%s\"", a$param, a$visit),
+      paste0("advs_", tolower(a$population), "_", tolower(a$param)),
+      sprintf("%s at %s, %s", a$param_label, a$when, set_lab),
+      a$param, sprintf("%s at %s", a$param, a$when),
+      c("BASE", "AVAL", "CHG"),
+      c("N", "mean", "sd", "se", "mean_lcl", "mean_ucl", "median", "min", "max"),
+      list(n = "{N:.0f}", `Mean (SD)` = "{mean:.1f} ({sd:.2f})", SE = "{se:.2f}",
+           `95% CI of the mean` = "{mean_lcl:.1f}, {mean_ucl:.1f}", Median = "{median:.1f}",
+           `Min, Max` = "{min:.0f}, {max:.0f}"),
+      c(BASE = sprintf("Baseline (%s)", a$unit),
+        AVAL = sprintf("%s (%s)", a$visit_label, a$unit),
+        CHG = sprintf("Change from baseline (%s)", a$unit)))
+    .tpl_summary_body(b, ctx)
+  })
+
+#' A vital sign's change: a table plan from the template `vs_change`
+#'
+#' A display template on the `summary` layout: a parameter's baseline,
+#' value and change from baseline at one visit (n, mean (SD), SE, 95% CI of
+#' the mean, median, min, max).
+#'
+#' @inheritParams tpl_demog
+#' @param ... The template's parameters: `param`, `visit`, `param_label`,
+#'   `when`, `visit_label`, `unit`, `by`.
+#' @return A [rtfreporter::table_plan()].
+#' @export
+tpl_vs_change <- function(ard, population, ..., codelists = NULL) {
+  .tpl_object("vs_change", ard, c(list(population = population), list(...)),
+              codelists = codelists)
+}
+
+# ---- orr: best overall response and the objective response rate (95% CI) --------
+
+.tfl_template("orr", kind = "table", layout = "summary",
+  params = list(
+    tfl_param("population", "ITT", doc = "the analysis set's id"),
+    tfl_param("by", "TRT01P", doc = "the column variable"),
+    tfl_param("by_levels", NULL, doc = "its values in order; NULL: its code list's"),
+    tfl_param("data", "ADRS", doc = "the response dataset"),
+    tfl_param("param", "BOR", doc = "the PARAMCD of the best overall response"),
+    tfl_param("category", "AVALC", doc = "the response category's variable"),
+    tfl_param("responders", c("CR", "PR"), doc = "the categories that respond"),
+    tfl_param("data_id", NULL, doc = "the analysis data's id; NULL: <data>_<param>"),
+    tfl_param("ci_method", "clopper-pearson", doc = "the rate's CI (cardx's method)"),
+    tfl_param("heading", "Response", doc = "the label column's heading")
+  ),
+  body = function(a, ctx) {
+    set <- a$data_id %||% paste0(tolower(a$data), "_", tolower(a$param))
+    resp <- paste(a$responders, collapse = " + ")
+    ard <- list(
+      analysis_data = list(list(
+        id = set, from = a$data, population = a$population,
+        where = tfl_r(sprintf("PARAMCD == \"%s\"", a$param)),
+        derive = tfl_r(sprintf("RESP = %s %%in%% c(%s)", a$category,
+                               paste(sprintf("\"%s\"", a$responders), collapse = ", "))))),
+      analyses = list(
+        list(id = a$param, method = "categorical", data = set, by = a$by,
+             variables = a$category),
+        list(id = "ORR", method = "proportion_ci", data = set, by = a$by,
+             variables = "RESP", args = tfl_r(sprintf("method = \"%s\"", a$ci_method)))))
+    by_lv <- a$by_levels %||% .tpl_levels(a$by, ctx$codelists)[[a$by]]
+    content <- list(
+      tfl_item("table_plan", list(cols = a$by, rows = list(group = "variable"))),
+      tfl_item("plan_cells", list(proportion_ci = list(
+        `n (%)` = "{n} ({estimate:.1f%})", `95% CI` = "[{conf.low:.1f%}, {conf.high:.1f%}]"))),
+      tfl_item("plan_labels", stats::setNames(
+        list("Best overall response, n (%)", sprintf("Objective response rate (%s)", resp)),
+        c(a$category, "RESP"))),
+      # (the categories' order is the ARD's: its code list, applied in the ARD program)
+      tfl_item("plan_levels", c(list(variable = c(a$category, "RESP")),
+                                if (length(by_lv)) stats::setNames(list(by_lv), a$by))),
+      tfl_item("plan_col_header", list(header = list(
+        list(line = "1", cols = ".values", span = "each", text = "{col}"),
+        list(line = "2", cols = "row_label", text = a$heading),
+        list(line = "2", cols = ".values", span = "each", text = "(N={n})")))))
+    list(ard = ard, data = list(source = "ard"), content = content)
+  })
+
+#' Objective response: a table plan from the template `orr`
+#'
+#' The best overall response (n (%)) and the objective response rate with
+#' its 95% CI, by arm.
+#'
+#' @inheritParams tpl_demog
+#' @param ... The template's other parameters: `by`, `by_levels`, `data`,
+#'   `param`, `category`, `responders`, `ci_method`, `heading`.
+#' @return A [rtfreporter::table_plan()].
+#' @export
+tpl_orr <- function(ard, population = "ITT", ..., codelists = NULL) {
+  .tpl_object("orr", ard, c(list(population = population), list(...)),
+              codelists = codelists)
 }
