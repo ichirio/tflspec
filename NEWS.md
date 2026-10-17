@@ -1,6 +1,6 @@
 # tflspec (development version)
 
-* **Template SPEC, a first prototype** (0.0.24.9150).  A report kind from
+* **Template SPEC, a first prototype** (#325, 0.0.24.9150).  A report kind from
   a few parameters, one definition for two uses: `tpl_demog()` /
   `tpl_summary()` give the table plan (A: the program's one call, the
   study's defaults written after it), `tfl_template_expand()` the report's
