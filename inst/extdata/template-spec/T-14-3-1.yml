@@ -1,0 +1,16 @@
+id: T-14-3-1
+kind: table
+label: TEAEs by SOC / PT
+population: SAF
+extends: defaults
+template:
+  name: ae_soc_pt
+  args:
+    population: SAF
+    by: TRT01A
+    where: TRTEMFL == "Y"
+    overall: Any TEAE
+    hierarchy:
+      - AEBODSYS
+      - AEDECOD
+

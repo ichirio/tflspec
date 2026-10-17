@@ -487,6 +487,7 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
                      "this one has ", sum(is_head), "."))
   }
   pre <- fns %in% .content_data_steps
+  content <- .content_cells_order(content, fns)
   # table_plan() is the head (the roles), not a layer: wherever the
   # layering put it, it starts the plan; the data's steps come before it,
   # the layers after, each keeping its order
@@ -500,6 +501,42 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
 
 # the functions a table's content may apply to the data before its plan
 .content_data_steps <- c("normalize_ard")
+
+# The content without its data steps (normalize_ard()): when the report's
+# `data.steps` make the data, the normalization is theirs, not the
+# study defaults' as well
+.content_drop_data_steps <- function(content) {
+  Filter(function(it) !.schema_fn_name(it$fn) %in% .content_data_steps, content)
+}
+
+# plan_cells()'s entries in the order the sheets path writes them
+# (.ard_spec_cells()): the keys of the variables the content names (its
+# `variables` sheet, in that sheet's order) first, then the others (the
+# kinds, the contexts, `default`) as they come; stats / value / na after.
+# A layered content has the study default's keys first, which the sheets
+# give after the table's own variables.
+.content_cells_order <- function(content, fns) {
+  i <- which(fns == "plan_cells")
+  if (length(i) != 1L) return(content)
+  args <- content[[i]]$args
+  nm <- names(args)
+  if (is.null(nm) || length(args) < 2L) return(content)
+  sh <- tryCatch(.plan_sheets_from_content(content), error = function(e) NULL)
+  v <- sh$variables
+  ord <- if (is.data.frame(v) && nrow(v)) {
+    if ("order" %in% names(v) && any(!is.na(v$order))) {
+      v <- v[order(suppressWarnings(as.numeric(v$order)), na.last = TRUE), , drop = FALSE]
+    }
+    as.character(v$variable)
+  } else character()
+  how <- nm %in% c("stats", "value", "na", "notes") | !nzchar(nm)
+  rank <- match(sub("\r.*$", "", nm), ord)
+  rank[nm == "default" | how] <- NA
+  o <- order(how, is.na(rank), rank)
+  if (identical(o, seq_along(args))) return(content)
+  content[[i]]$args <- args[o]
+  content
+}
 
 .content_table_code <- function(content, data = "data", plan = "plan",
                                 pipe = NULL, kind = "table") {
@@ -1075,6 +1112,8 @@ tfl_content_run <- function(output, data) {
       .ard_stop("tfl_content_run(): the data.steps leave no `data`, the data the plan is made from.")
     }
     data <- get("data", envir = env, inherits = FALSE)
+    return(.content_table_run(.content_drop_data_steps(output$content), data,
+                              kind = output$kind))
   }
   .content_table_run(output$content, data, kind = output$kind)
 }
@@ -1177,7 +1216,9 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL) {
   # `data` from the output's object, written as it is, before the plan
   steps <- .content_r_steps(output)
   if (length(steps)) {
-    return(c(steps, "", .content_table_code(output$content, data = data %||% "data",
+    # the steps make the data: no normalize_ard() of the defaults after them
+    return(c(steps, "", .content_table_code(.content_drop_data_steps(output$content),
+                                            data = data %||% "data",
                                             plan = plan, pipe = pipe, kind = output$kind)))
   }
   if (is.null(data)) {

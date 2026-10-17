@@ -1,0 +1,23 @@
+id: T-14-1-1
+kind: table
+label: Demographic characteristics
+population: SAF
+extends: defaults
+template:
+  name: demog
+  args:
+    population: SAF
+    by: TRT01A
+    continuous: AGE
+    labels:
+      AGE: Age (years)
+      AGEGR1: Age group, n (%)
+      SEX: Sex, n (%)
+      RACE: Race, n (%)
+      ETHNIC: Ethnicity, n (%)
+    categorical:
+      - AGEGR1
+      - SEX
+      - RACE
+      - ETHNIC
+

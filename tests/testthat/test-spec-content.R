@@ -171,6 +171,39 @@ test_that("data.steps come before the plan, as written, and run the same", {
   expect_error(tfl_content_code(bad), "are R")
 })
 
+test_that("data.steps that make the data: no second normalize_ard(), the sheets' code", {
+  # the study defaults' normalize_ard() and plan_cells(default =) layered
+  # under a table whose data.steps normalize the ARD themselves
+  defaults <- list(
+    tfl_item("normalize_ard", list(), from = "defaults"),
+    tfl_item("plan_cells", list(default = "{n} ({p:.1f%})"), from = "defaults"))
+  own <- list(
+    tfl_item("table_plan", list(cols = "ARM", rows = list(group = "variable"))),
+    tfl_item("plan_cells", list(SEX = "{n}")),
+    tfl_item("plan_labels", list(SEX = "Sex")))
+  out <- tfl_output("T-1", "table",
+    data = list(source = "ard", object = "ard", steps = list(tfl_r(paste0(
+      "data <- normalize_ard(ard)
+",
+      "data$.label[data$variable == \"SEX\"] <- \"Sex (n)\"")))),
+    content = tflspec:::.merge_content(defaults, own))
+  code <- tfl_content_code(out, pipe = "|>")
+  expect_identical(sum(grepl("normalize_ard", code, fixed = TRUE)), 1L)
+  plan <- code[which(startsWith(code, "plan <-")):length(code)]
+  plan <- plan[!grepl("# (study default)", plan, fixed = TRUE)]
+  # the sheets path: the same content through the workbook's sheets
+  # (the defaults' cells row first, as the sheets list it)
+  sp <- tflspec:::.plan_sheets_from_content(
+    tflspec:::.content_drop_data_steps(out$content), "T-1")
+  expect_identical(plan, tfl_table_code(sp, "T-1", data = "data", pipe = "|>",
+                                        normalize = FALSE))
+  skip_if_not_installed("cards")
+  ard <- cards::ard_stack(cards::ADSL, .by = ARM, cards::ard_tabulate(variables = SEX))
+  p <- suppressMessages(tfl_content_run(out, ard))
+  # the steps' labels stay: the data is not normalized again
+  expect_true("Sex (n)" %in% p$data$.label)
+})
+
 test_that("the content as the report's own code is written as it is and runs to `content`", {
   out <- tfl_output("F-1", "figure",
                     data = list(source = "ard", object = "ard",

@@ -6,6 +6,33 @@
   statistics/formats) and listing_col `vars` as a sequence even when they
   hold one name, as the sheets bridge does; they were written as a scalar.
 
+* **Template SPEC, a first prototype** (#325, 0.0.24.9150).  A report kind from
+  a few parameters, one definition for two uses: `tpl_demog()` /
+  `tpl_summary()` give the table plan (A: the program's one call, the
+  study's defaults written after it), `tfl_template_expand()` the report's
+  items (B: saved into its YAML, marked `template:<name>`).  The layout
+  template `summary` (continuous variables by a column key) and the display
+  template `demog` on it; the layout `hierarchical` and `ae_soc_pt` on it
+  (`tpl_ae_soc_pt()`, `tpl_hierarchical()`); `tfl_templates()` lists them.
+  On the sample study T-14-1-1, T-14-1-1S (`demog(stack = TRUE)`), T-14-2-1
+  (`summary`) and T-14-3-1 (`ae_soc_pt`) give the same RTF by A, by B and
+  by their spec files.  `km_simple` (the figure template) is on the
+  registry too: the sample study's F-14-2-3, written as the template and its
+  own items after it (a median line, three `tfl_ard_number()`, the y axis'
+  title), draws the same PNG as its design-form file.  Many reports at once in Excel: `tfl_read_template_sheets()`
+  reads a workbook of two sheets (`templates`, `template_rows`) and
+  `tfl_write_template_yaml()` writes each report's file; the example
+  (`inst/extdata/template-spec/`, DM and AE, the workbook and the same as
+  YAML) gives the sample study's items exactly.
+
+* **A table whose data steps normalize the ARD: the sheets' code** (#323,
+  0.0.24.9149).  `tfl_content_code()` and `tfl_content_run()` no longer
+  write or run the study defaults' `normalize_ard()` after a report's
+  `data.steps` (the steps make the data; normalizing it again dropped what
+  they did, such as their row labels).  With no data steps, `normalize_ard()`
+  stays first in the one pipe (#303).  `plan_cells()`'s entries come in the
+  sheets' order: the table's variables first, `default` after.
+
 * **The converter reads a page cell as the sheets do** (#321, 0.0.24.9148).
   `tfl_yaml_from_sheets()` writes a header, footer, title or footnote cell
   that is quoted as its text (`"  Indented"`: the spaces kept, the quotes

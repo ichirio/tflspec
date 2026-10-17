@@ -788,6 +788,10 @@ back): rename the value or choose another separator.
 
 **The functions the generated programs call (their code):** `tfl_helpers_code`
 
+**Template SPEC (prototype):** `tfl_templates` `tfl_template_expand`
+`tpl_demog` `tpl_summary` `tpl_ae_soc_pt` `tpl_hierarchical`
+`tfl_read_template_sheets` `tfl_write_template_yaml`
+
 **AI-assisted drafting:** `tfl_ai_tasks` `tfl_ai_context` `tfl_ai_schema`
 `tfl_ai_prompt` `tfl_ai_parse` `tfl_ai_check` `tfl_ai_repair_prompt`
 `tfl_ai_diff` `tfl_ai_read_shell` `tfl_ai_adam_summary` `tfl_ai_batches`
