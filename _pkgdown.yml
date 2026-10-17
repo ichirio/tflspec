@@ -198,6 +198,7 @@ reference:
       - tpl_summary
       - tpl_ae_soc_pt
       - tpl_hierarchical
+      - tpl_disposition
       - tfl_read_template_sheets
       - tfl_write_template_yaml
   - title: Report spec, titles, footnotes, headers and tokens

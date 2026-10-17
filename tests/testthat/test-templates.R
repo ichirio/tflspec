@@ -92,3 +92,20 @@ test_that("tfl_read_template_sheets(): the Excel example, as report files", {
   expect_identical(back$template$name, "demog")
   expect_identical(unlist(back$template$args$categorical), a$categorical)
 })
+
+test_that("summary: categorical variables too; disposition on it", {
+  x <- tfl_template_expand("summary", list(population = "SAF", categorical = c("AGEGR1", "SEX"),
+                                           cat_statistics = NULL, split = NULL))
+  expect_identical(vapply(x$ard$analyses, `[[`, "", "id"), c("GROUPN", "CAT"))
+  expect_null(x$ard$analyses[[2L]]$statistics)
+  expect_false("plan_cells" %in% vapply(x$content, `[[`, "", "fn"))
+  expect_identical(x$content[[length(x$content)]]$args, list(max_rows = 30L))
+  expect_error(tfl_template_expand("summary", list(population = "SAF")), "categorical")
+  d <- tfl_template_expand("disposition", list(population = "SAF"))
+  expect_identical(d$ard$analyses[[2L]]$id, "DISP")
+  expect_identical(d$content[[2L]]$args, list(EOSSTT = "Status at end of study, n (%)"))
+  expect_true("disposition" %in% tfl_templates()$name)
+  ard <- tpl_ard()
+  p <- suppressMessages(tpl_summary(ard, population = "SAF", categorical = c("AGEGR1", "SEX")))
+  expect_s3_class(p, "table_plan")
+})

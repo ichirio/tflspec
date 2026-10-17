@@ -39,14 +39,15 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL) {
   t
 }
 
-# The arguments as the body sees them: given > the template's default.
+# The arguments as the body sees them: given (NULL too) > the template's default.
 .tpl_args <- function(t, args, fn) {
   unknown <- setdiff(names(args), names(t$params))
   if (length(unknown)) {
     .ard_stop(sprintf("%s: template %s has no parameter %s.", fn, t$name,
                       paste(sQuote(unknown, FALSE), collapse = ", ")))
   }
-  out <- lapply(t$params, function(p) args[[p$name]] %||% p$default)
+  # a parameter given, NULL too ("none"), else the template's default
+  out <- lapply(t$params, function(p) if (p$name %in% names(args)) args[[p$name]] else p$default)
   miss <- vapply(t$params, function(p) p$required && is.null(out[[p$name]]), NA)
   if (any(miss)) {
     .ard_stop(sprintf("%s: template %s needs %s.", fn, t$name,
@@ -210,61 +211,106 @@ tpl_demog <- function(ard, population, ..., codelists = NULL) {
 
 # ---- summary: continuous variables by a column key, the layout ------------------
 
+.tpl_summary_params <- list(
+  tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
+  tfl_param("variables", NULL, doc = "the continuous variables, in order"),
+  tfl_param("categorical", NULL, doc = "the categorical variables, in order"),
+  tfl_param("by", "TRT01A", doc = "the column variable"),
+  tfl_param("data", "ADSL", doc = "the dataset"),
+  tfl_param("where", NULL, doc = "the records kept (R), for a dataset other than ADSL"),
+  tfl_param("data_id", NULL, doc = "the analysis data's id; NULL: <data>_<population>"),
+  tfl_param("data_label", NULL, doc = "the analysis data's label"),
+  tfl_param("groupn_label", NULL, doc = "the subjects-per-group analysis' label"),
+  tfl_param("analysis_id", "CONT", doc = "the continuous analysis' id"),
+  tfl_param("analysis_label", "Continuous", doc = "the continuous analysis' label"),
+  tfl_param("statistics", c("N", "mean", "sd", "median", "min", "max"),
+            doc = "the continuous statistics the ARD has"),
+  tfl_param("cat_id", "CAT", doc = "the categorical analysis' id"),
+  tfl_param("cat_label", "Categorical", doc = "the categorical analysis' label"),
+  tfl_param("cat_statistics", c("n", "p"),
+            doc = "the categorical statistics the ARD has; NULL: cards' own"),
+  tfl_param("cells", list(n = "{N:.0f}", `Mean (SD)` = "{mean:.1f} ({sd:.2f})",
+                          Median = "{median:.1f}", `Min, Max` = "{min:.0f}, {max:.0f}"),
+            doc = "the rows of each continuous variable"),
+  tfl_param("labels", NULL, doc = "each variable's heading"),
+  tfl_param("max_rows", 30L, doc = "the body's rows a page"),
+  tfl_param("split", "group_safe", doc = "the page break's rule; NULL: rtfreporter's")
+)
+names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
+
+.tpl_summary_body <- function(a, ctx) {
+  if (!length(a$variables) && !length(a$categorical)) {
+    .ard_stop("template summary: give `variables` (continuous) or `categorical`, or both.")
+  }
+  pop <- a$population
+  subj <- paste0("adsl_", tolower(pop))
+  sets <- list(list(id = subj, label = .tpl_set_label(pop, ctx$population),
+                    from = "ADSL", population = pop))
+  set <- subj
+  if (!identical(toupper(a$data), "ADSL")) {
+    set <- a$data_id %||% paste0(tolower(a$data), "_", tolower(pop))
+    d <- list(id = set, label = a$data_label, from = a$data, subjects = subj,
+              where = if (!is.null(a$where)) tfl_r(a$where))
+    sets <- c(sets, list(Filter(Negate(is.null), d)))
+  }
+  if (!is.null(a$data_label) && identical(set, subj)) sets[[1L]]$label <- a$data_label
+  nn <- function(x) Filter(Negate(is.null), x)
+  analyses <- c(
+    list(nn(list(id = "GROUPN", label = a$groupn_label, method = "categorical", data = subj,
+                 variables = a$by, purpose = "PRIMARY OUTCOME MEASURE"))),
+    if (length(a$variables)) list(list(
+      id = a$analysis_id, label = a$analysis_label, method = "continuous", data = set,
+      by = a$by, variables = a$variables, statistics = a$statistics,
+      purpose = "PRIMARY OUTCOME MEASURE")),
+    if (length(a$categorical)) list(nn(list(
+      id = a$cat_id, label = a$cat_label, method = "categorical", data = set,
+      by = a$by, variables = a$categorical, statistics = a$cat_statistics,
+      purpose = "PRIMARY OUTCOME MEASURE"))))
+  vars <- c(a$variables, a$categorical)
+  content <- c(
+    list(tfl_item("table_plan", list(cols = a$by, rows = list(group = "variable")))),
+    if (length(a$variables)) list(tfl_item("plan_cells", list(continuous = as.list(a$cells)))),
+    if (length(a$labels)) list(tfl_item("plan_labels", as.list(a$labels[vars]))),
+    list(tfl_item("plan_levels", c(list(variable = vars),
+                                   .tpl_levels(c(a$by, a$categorical), ctx$codelists))),
+         tfl_item("plan_paginate_rows", nn(list(max_rows = as.integer(a$max_rows),
+                                                split = a$split)))))
+  list(ard = list(analysis_data = sets, analyses = analyses),
+       data = list(source = "ard", object = "ard"), content = content)
+}
+
 .tfl_template("summary", kind = "table", layout = "summary",
-  params = list(
-    tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
-    tfl_param("variables", required = TRUE, doc = "the continuous variables, in order"),
-    tfl_param("by", "TRT01A", doc = "the column variable"),
-    tfl_param("data", "ADSL", doc = "the dataset"),
-    tfl_param("where", NULL, doc = "the records kept (R), for a dataset other than ADSL"),
-    tfl_param("data_id", NULL, doc = "the analysis data's id; NULL: <data>_<population>"),
-    tfl_param("data_label", NULL, doc = "the analysis data's label"),
-    tfl_param("analysis_id", "CONT", doc = "the analysis's id"),
-    tfl_param("analysis_label", "Continuous", doc = "the analysis's label"),
-    tfl_param("statistics", c("N", "mean", "sd", "median", "min", "max"),
-              doc = "the statistics the ARD has"),
-    tfl_param("cells", list(n = "{N:.0f}", `Mean (SD)` = "{mean:.1f} ({sd:.2f})",
-                            Median = "{median:.1f}", `Min, Max` = "{min:.0f}, {max:.0f}"),
-              doc = "the rows of each variable"),
-    tfl_param("labels", NULL, doc = "each variable's heading")
-  ),
+              params = .tpl_summary_params, body = .tpl_summary_body)
+
+# disposition: the subjects' status at the end of the study, on summary
+.tfl_template("disposition", kind = "table", layout = "summary",
+  params = c(.tpl_summary_params["population"],
+             lapply(list(
+               list("categorical", "EOSSTT"),
+               list("cat_id", "DISP"),
+               list("cat_label", "Status at end of study"),
+               list("labels", c(EOSSTT = "Status at end of study, n (%)")),
+               list("max_rows", 24L),
+               list("split", NULL)),
+               function(x) tfl_param(x[[1L]], x[[2L]])),
+             .tpl_summary_params[c("by", "cat_statistics", "groupn_label")]),
   body = function(a, ctx) {
-    pop <- a$population
-    subj <- paste0("adsl_", tolower(pop))
-    sets <- list(list(id = subj, label = .tpl_set_label(pop, ctx$population),
-                      from = "ADSL", population = pop))
-    set <- subj
-    if (!identical(toupper(a$data), "ADSL")) {
-      set <- a$data_id %||% paste0(tolower(a$data), "_", tolower(pop))
-      d <- list(id = set, label = a$data_label, from = a$data, subjects = subj,
-                where = if (!is.null(a$where)) tfl_r(a$where))
-      sets <- c(sets, list(Filter(Negate(is.null), d)))
-    }
-    ard <- list(
-      analysis_data = sets,
-      analyses = list(
-        list(id = "GROUPN", method = "categorical", data = subj, variables = a$by,
-             purpose = "PRIMARY OUTCOME MEASURE"),
-        list(id = a$analysis_id, label = a$analysis_label, method = "continuous",
-             data = set, by = a$by, variables = a$variables, statistics = a$statistics,
-             purpose = "PRIMARY OUTCOME MEASURE")))
-    content <- c(
-      list(tfl_item("table_plan", list(cols = a$by, rows = list(group = "variable"))),
-           tfl_item("plan_cells", list(continuous = as.list(a$cells)))),
-      if (length(a$labels)) list(tfl_item("plan_labels", as.list(a$labels[a$variables]))),
-      list(tfl_item("plan_levels", c(list(variable = a$variables),
-                                     .tpl_levels(a$by, ctx$codelists))),
-           tfl_item("plan_paginate_rows", list(max_rows = 30L, split = "group_safe"))))
-    list(ard = ard, data = list(source = "ard", object = "ard"), content = content)
+    b <- lapply(.tpl_summary_params, `[[`, "default")
+    b[names(a)] <- a
+    # the template's own defaults are the summary's NULLs where it says so
+    for (k in names(a)) if (is.null(a[[k]])) b[k] <- list(NULL)
+    .tpl_summary_body(b, ctx)
   })
+
 
 #' Continuous variables by a column key: a table plan from the layout `summary`
 #'
 #' @inheritParams tpl_demog
-#' @param variables The continuous variables, in order.
-#' @param ... The template's other parameters: `by`, `data`, `where`,
-#'   `data_id`, `data_label`, `analysis_id`, `analysis_label`,
-#'   `statistics`, `cells`, `labels`.
+#' @param variables The continuous variables, in order; `NULL` for none.
+#' @param ... The template's other parameters: `categorical` (the
+#'   categorical variables), `by`, `data`, `where`, `data_id`, `data_label`,
+#'   `groupn_label`, `analysis_id`, `analysis_label`, `statistics`, `cat_id`,
+#'   `cat_label`, `cat_statistics`, `cells`, `labels`, `max_rows`, `split`.
 #' @return A [rtfreporter::table_plan()].
 #' @examples
 #' if (requireNamespace("cards", quietly = TRUE)) {
@@ -276,7 +322,7 @@ tpl_demog <- function(ard, population, ..., codelists = NULL) {
 #'   head(rtfreporter::plan_apply(plan, "table"))
 #' }
 #' @export
-tpl_summary <- function(ard, population, variables, ..., codelists = NULL) {
+tpl_summary <- function(ard, population, variables = NULL, ..., codelists = NULL) {
   .tpl_object("summary", ard, c(list(population = population, variables = variables),
                                 list(...)), codelists = codelists)
 }
@@ -416,3 +462,18 @@ tpl_hierarchical <- function(ard, population, hierarchy, ..., codelists = NULL) 
                           time_unit = a$time_unit, form = "items")
     list(data = f$data, content = f$content)
   })
+
+#' Disposition: a table plan from the template `disposition`
+#'
+#' A display template on the `summary` layout: the subjects' status at the
+#' end of the study (`EOSSTT`), n (%).
+#'
+#' @inheritParams tpl_demog
+#' @param ... The template's other parameters: `categorical`, `by`,
+#'   `cat_statistics` ...
+#' @return A [rtfreporter::table_plan()].
+#' @export
+tpl_disposition <- function(ard, population, ..., codelists = NULL) {
+  .tpl_object("disposition", ard, c(list(population = population), list(...)),
+              codelists = codelists)
+}

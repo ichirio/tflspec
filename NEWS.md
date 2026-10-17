@@ -1,5 +1,16 @@
 # tflspec (development version)
 
+* **Template SPEC: `summary` takes categorical variables, and `disposition`**
+  (#331, 0.0.24.9153).  The layout `summary` takes `categorical` beside the
+  continuous `variables` (either or both), the subjects-per-group and
+  categorical analyses' labels, the categorical statistics (`NULL`: cards'
+  own) and the page rows (`max_rows`, `split`); a parameter given as `NULL`
+  is "none", not the template's default.  The display template
+  `disposition` (`tpl_disposition()`) on it: the status at the end of the
+  study.  On the sample study T-14-1-2 (`disposition`), T-14-1-3 and
+  T-14-1-4 (`summary`) give the same items and RTF by A, by B and by their
+  spec files, and T-14-2-1 still does.
+
 * **For a builder of the YAML's items** (#329, 0.0.24.9152; tflplanner B3).
   `tfl_resolve_output(provenance = TRUE)` says where each item's arguments
   come from (`arg_from`: `own`, `defaults`, `pattern:<name>`, by argument --
