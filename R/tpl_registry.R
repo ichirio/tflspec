@@ -1,0 +1,142 @@
+# Template SPEC: a report kind's items from a few parameters.  One
+# definition (an R function of declared parameters that builds code-spec
+# items) gives both uses: (A) the object, tpl_<name>(), and (B) the items,
+# tfl_template_expand(), saved into a report's YAML.  Prototype (10/18):
+# the registry and `demog`; see _archive/template-preset-spec-design.
+
+.tpl_registry <- new.env(parent = emptyenv())
+
+#' A template parameter
+#'
+#' @param name The parameter's name.
+#' @param default Its default value; `NULL` for none.
+#' @param required `TRUE` when a report must give it.
+#' @param doc One line saying what it is.
+#' @return A `tfl_param`.
+#' @keywords internal
+#' @noRd
+tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL) {
+  structure(list(name = name, default = default, required = isTRUE(required),
+                 doc = doc), class = "tfl_param")
+}
+
+# Register a template: its kind, layout, parameters and body.  The body is
+# function(args, context) returning list(ard = , data = , content = ): the
+# report's items, `content` a list of tfl_item().
+.tfl_template <- function(name, kind, layout, params, body) {
+  names(params) <- vapply(params, `[[`, "", "name")
+  assign(name, list(name = name, kind = kind, layout = layout,
+                    params = params, body = body), envir = .tpl_registry)
+  invisible(name)
+}
+
+.tpl_get <- function(name, fn) {
+  t <- get0(name, envir = .tpl_registry, inherits = FALSE)
+  if (is.null(t)) {
+    .ard_stop(sprintf("%s: no template %s; the templates: %s.", fn, sQuote(name, FALSE),
+                      paste(sort(ls(.tpl_registry)), collapse = ", ")))
+  }
+  t
+}
+
+# The arguments as the body sees them: given > the template's default.
+.tpl_args <- function(t, args, fn) {
+  unknown <- setdiff(names(args), names(t$params))
+  if (length(unknown)) {
+    .ard_stop(sprintf("%s: template %s has no parameter %s.", fn, t$name,
+                      paste(sQuote(unknown, FALSE), collapse = ", ")))
+  }
+  out <- lapply(t$params, function(p) args[[p$name]] %||% p$default)
+  miss <- vapply(t$params, function(p) p$required && is.null(out[[p$name]]), NA)
+  if (any(miss)) {
+    .ard_stop(sprintf("%s: template %s needs %s.", fn, t$name,
+                      paste(sQuote(names(miss)[miss], FALSE), collapse = ", ")))
+  }
+  out
+}
+
+#' Expand a template into a report's items
+#'
+#' The B use of a template SPEC: the items its parameters stand for, to
+#' save in a report's YAML (each item marked `template:<name>`) or to run.
+#'
+#' @param name The template's name (`"demog"`).
+#' @param args Its parameters, a named list.
+#' @param codelists The report's code lists (as [tfl_read_output()] reads
+#'   them), for the order and labels of values.
+#' @param population The study's analysis sets (`data.yml`'s populations),
+#'   for their labels; `NULL` for none.
+#' @return A list: `ard`, `data`, `content` (a list of [tfl_item()]).
+#' @keywords internal
+#' @noRd
+tfl_template_expand <- function(name, args = list(), codelists = NULL,
+                                population = NULL) {
+  fn <- "tfl_template_expand()"
+  t <- .tpl_get(name, fn)
+  a <- .tpl_args(t, args, fn)
+  out <- t$body(a, list(codelists = codelists, population = population))
+  out$content <- lapply(out$content, function(it) {
+    it$from <- paste0("template:", name)
+    it
+  })
+  out
+}
+
+# ---- demog: demographics, on the summary layout --------------------------------
+
+.tpl_set_label <- function(pop, population) {
+  p <- Filter(function(x) identical(x$id, pop), population %||% list())
+  lab <- if (length(p)) p[[1L]]$label %||% pop else pop
+  sub(" Analysis Set$", " set", lab)
+}
+
+.tpl_levels <- function(vars, codelists) {
+  out <- list()
+  for (v in intersect(names(codelists), vars)) {
+    out[[v]] <- vapply(codelists[[v]], function(r) r$label %||% r$value, "")
+  }
+  out
+}
+
+.tfl_template("demog", kind = "table", layout = "summary",
+  params = list(
+    tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
+    tfl_param("data", "ADSL", doc = "the dataset"),
+    tfl_param("by", "TRT01A", doc = "the column variable"),
+    tfl_param("continuous", "AGE", doc = "continuous variables"),
+    tfl_param("categorical", c("AGEGR1", "SEX", "RACE", "ETHNIC"),
+              doc = "categorical variables"),
+    tfl_param("labels", c(AGE = "Age (years)", AGEGR1 = "Age group, n (%)",
+                          SEX = "Sex, n (%)", RACE = "Race, n (%)",
+                          ETHNIC = "Ethnicity, n (%)"),
+              doc = "each variable's heading"),
+    tfl_param("cells", list(n = "{N:.0f}", `Mean (SD)` = "{mean:.1f} ({sd:.2f})",
+                            Median = "{median:.1f}", `Min, Max` = "{min:.0f}, {max:.0f}"),
+              doc = "the continuous variables' rows")
+  ),
+  body = function(a, ctx) {
+    pop <- a$population
+    set <- paste0(tolower(a$data), "_", tolower(pop))
+    vars <- c(a$continuous, a$categorical)
+    ard <- list(
+      analysis_data = list(list(id = set, label = .tpl_set_label(pop, ctx$population),
+                                from = a$data, population = pop)),
+      analyses = list(
+        list(id = "GROUPN", label = "Subjects per group", method = "categorical",
+             data = set, variables = a$by, purpose = "PRIMARY OUTCOME MEASURE"),
+        list(id = "CONT", label = "Continuous", method = "continuous", data = set,
+             by = a$by, variables = a$continuous,
+             statistics = c("N", "mean", "sd", "median", "min", "max"),
+             purpose = "PRIMARY OUTCOME MEASURE"),
+        list(id = "CAT", label = "Categorical", method = "categorical", data = set,
+             by = a$by, variables = a$categorical, statistics = c("n", "p"),
+             purpose = "PRIMARY OUTCOME MEASURE")))
+    lv <- c(list(variable = vars), .tpl_levels(c(a$by, a$categorical), ctx$codelists))
+    content <- list(
+      tfl_item("table_plan", list(cols = a$by, rows = list(group = "variable"))),
+      tfl_item("plan_cells", list(continuous = as.list(a$cells))),
+      tfl_item("plan_labels", as.list(a$labels[vars])),
+      tfl_item("plan_levels", lv),
+      tfl_item("plan_paginate_rows", list(max_rows = 30L, split = "group_safe")))
+    list(ard = ard, data = list(source = "ard", object = "ard"), content = content)
+  })
