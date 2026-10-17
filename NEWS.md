@@ -1,7 +1,7 @@
 # tflspec (development version)
 
 * **The study's report setup and a report's tokens from the YAML spec**
-  (#317, 0.0.24.9144).  `tfl_report_setup_code()` also takes a study's
+  (#317, 0.0.24.9147).  `tfl_report_setup_code()` also takes a study's
   spec (`tfl_read_study_spec()`): its defaults' `page:` -- the first font of
   `rtf_document: font_table`, `rtf_default_format: font_size_half_points`,
   `tokens`, `header`, `footer` -- written as the sheets saying the same
@@ -12,6 +12,11 @@
   `settings: program` no longer takes its `program_dir` for it (partial
   matching), and the report's id as `program_fallback` is in the study's
   `program_dir`, as the sheets' path writes it.
+
+* Docs: the AI table-drafting guide says plainly what to try first: one
+  request as it is; when the chat will not take it, the requests again with
+  `instructions = "once"` (`00-instructions.md` first in a new chat, then the
+  request) (#318, 0.0.24.9145).
 
 * **A whole study's AI requests as files** (#315, 0.0.24.9142).
   `tfl_ai_write_requests(study_dir, shell, adam, size = )` writes one prompt
