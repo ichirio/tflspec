@@ -1,5 +1,18 @@
 # tflspec (development version)
 
+* **The study's report setup and a report's tokens from the YAML spec**
+  (#317, 0.0.24.9147).  `tfl_report_setup_code()` also takes a study's
+  spec (`tfl_read_study_spec()`): its defaults' `page:` -- the first font of
+  `rtf_document: font_table`, `rtf_default_format: font_size_half_points`,
+  `tokens`, `header`, `footer` -- written as the sheets saying the same
+  write them, with the names `tfl_report_code(output, setup = TRUE, study
+  = )` refers to (`study_header`, `study_header_lines` ...).
+  `tfl_report_tokens()` takes a report of the YAML spec and its `study`.
+  A YAML report's program (`rtf_document(program = )`): a study with no
+  `settings: program` no longer takes its `program_dir` for it (partial
+  matching), and the report's id as `program_fallback` is in the study's
+  `program_dir`, as the sheets' path writes it.
+
 * Docs: the Pages' top bar is the package icon's colour, green `#1d5e47` (#313, 0.0.24.9146),
   as rtfreporter's bar is its icon's navy.  As rtfreporter's, the menu puts
   Reference before Articles, and lists the English articles only: the

@@ -8,7 +8,7 @@ tfl_report_setup_code(spec)
 }
 \arguments{
 \item{spec}{A report definition (the study's default rows: one with
-several reports serves).}
+several reports serves), or a study's spec (\code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}).}
 }
 \value{
 The code, one element per line; none when the study has no
@@ -29,6 +29,14 @@ A study's report programs source it and are written with
 \code{tfl_report_code(setup = TRUE)}: each then says only its own tokens
 (\code{OUTPUT_LABEL}, \code{OUTPUT_TITLE} ...), and the study's values are in one
 place, in the definition and in the code.
+}
+\details{
+For a study of the YAML spec, give the study (\code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}):
+its defaults' \verb{page:} (\code{spec/defaults.yml}) are the study's --
+\code{rtf_document: font_table} (the first font's name) and
+\code{rtf_default_format: font_size_half_points}, \code{tokens}, \code{header} and
+\code{footer} -- and the lines are the ones
+\code{tfl_report_code(output, setup = TRUE, study = )} refers to.
 }
 \examples{
 sp <- tfl_table_spec(
