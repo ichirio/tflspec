@@ -1,0 +1,192 @@
+# AI チャットで表の code SPEC を作る
+
+[In
+English](https://ichirio.github.io/tflspec/articles/ai-table-drafting.md)
+
+## AI チャットで表の code SPEC を作る
+
+### 1. 何をする機能か
+
+試験の **TOC/SHELL ワークブック**と **ADaM（XPT）**から、チャット AI
+が各表の **code SPEC**（`spec/outputs/<id>.yml`）を書き、tflspec
+がそれを確かめて **RTF** を 作ります。すべて手元の PC の R
+で動き、tflspec は何も送信しません。依頼を
+チャットに貼り、回答を保存するだけです。
+
+英語版: 同じフォルダの
+`tflspec-ai-table-guide.md`（`system.file("ai", package = "tflspec")`）。
+
+### 2. どこに何を置くか
+
+``` text
+mystudy/
+  TOC_SHELL.xlsx        TOC とシェル（1 つのワークブック）
+  adam/                 adsl.xpt, adae.xpt, adlb.xpt ...
+  ai/requests/          tflspec が書く: 1 依頼 1 ファイル（手順 3）
+  ai/answers/           AI の回答をここに保存する（手順 5）
+  ai/repairs/           tflspec が書く: 送り返す直しの依頼（手順 6）
+```
+
+インストール（初回のみ）:
+`remotes::install_github(c("ichirio/rtfreporter", "ichirio/tflspec"))`
+と `install.packages(c("cards", "cardx", "haven"))`。
+
+### 3. 何を実行するか
+
+``` r
+
+library(tflspec)
+setwd("mystudy")
+# study.yml, spec/data.yml, spec/defaults.yml を書く
+tfl_ai_study_init(".", adam = "adam", study_id = "ABC-123")
+adam  <- tfl_ai_adam_summary("adam", file = "ai/adam_summary.md")
+shell <- tfl_ai_read_shell("TOC_SHELL.xlsx", file = "ai/toc_shell.md")
+
+r <- tfl_ai_write_requests(".", shell, adam, size = 3, language = "Japanese")
+r                                   # 依頼名・帳票・文字数
+```
+
+`ai/requests/<依頼名>.md`（`demographics-1.md`、`ae-1.md` …、1
+つの種類ごと）と 一覧 `ai/requests/index.md` ができます。
+
+最初の依頼の前に見るもの:
+
+| 見るもの | 理由 |
+|----|----|
+| `spec/data.yml` | 解析対象集団（ADSL のフラグ `SAFFL`・`FASFL` … ごとに 1 つ）。AI は id で呼ぶ |
+| `shell$toc` | 見つかった帳票。TOC のシートが見つからないとき: `tfl_ai_read_shell(..., toc_sheet = "Index")` |
+| `shell$toc$shell` | `NA`＝シェルのシートが見つからない: `tfl_ai_read_shell(..., sheets = c("DM shells", ...))` |
+| `ai/adam_summary.md` | レコードは無いが、短い値の一覧（15 個まで）が出る。社内で送れないものは消す |
+
+### 4. AI に何を渡すか
+
+| 渡すもの | 渡さないもの |
+|----|----|
+| `ai/requests/<依頼名>.md` を 1 つ、全文を**新しいチャット**に 1 通で貼る | **XPT ファイル**、レコードを含むデータ全般（被験者 ID、日付、結果） |
+
+各依頼には、指示、その帳票の TOC の行とシェル、ADaM
+サマリー、`spec/data.yml` と `spec/defaults.yml` がもう入っています。
+
+**まず、そのままの形で 1 依頼**。1 つの依頼は、指示が約 23,000
+文字＋その帳票の分 （帳票 1 つで約 33,000 文字）です。
+
+1.  依頼を 1 つ、そのまま新しいチャットに貼る。
+
+2.  **入らないとき**（長すぎると言われる、途中で切れる）は、指示を分けて依頼を
+    書き直す:
+
+    ``` r
+
+    r <- tfl_ai_write_requests(".", shell, adam, size = 3, instructions = "once",
+                               overwrite = TRUE)
+    ```
+
+    依頼ごとに**新しいチャット**で、先に
+    `ai/requests/00-instructions.md` を貼り、 次にその依頼を貼る（約
+    10,000 文字）。
+
+3.  それでも長いときは、`size`
+    を小さくするか、`max_chars = 20000`（超えた依頼を分ける）。
+
+### 5. AI の回答をどこに置くか
+
+回答の**全文**（`yaml` のブロック 1 つ）を
+`ai/answers/<同じ名前>.md`（UTF-8）に 保存します。`ae-1.md` への回答は
+`ai/answers/ae-1.md`。
+
+### 6. 確かめる・YAML にする・RTF を作る
+
+``` r
+
+res <- tfl_ai_collect_answers(".")   # 読む・確かめる・spec/outputs/<id>.yml を書く
+res                                  # 帳票ごとに ok / warning / error / no answer
+```
+
+エラーのある回答はファイルを書かず、直しの依頼を
+`ai/repairs/<依頼名>.md` に
+書きます。それを**同じチャット**に貼り、新しい回答で
+`ai/answers/<依頼名>.md` を 上書きして、もう一度
+`tfl_ai_collect_answers(".")`（2〜3 往復がふつう）。
+
+``` r
+
+st   <- tfl_read_study_spec(".")
+outs <- tfl_read_outputs(".")
+ard  <- tfl_build_ard(st, dir = ".", save = FALSE)
+dir.create("output", showWarnings = FALSE)
+for (id in res$output_id[res$status %in% c("ok", "warning")]) {
+  o    <- tfl_resolve_output(outs[[id]], st)
+  plan <- tfl_content_run(o, subset(ard, output_id == id))
+  rtfreporter::generate_rtfreport(tfl_report(o, content = plan, study = st),
+                                  file.path("output", paste0(id, ".rtf")), overwrite = TRUE)
+}
+```
+
+| 関数 | すること |
+|----|----|
+| [`tfl_ai_write_requests()`](https://ichirio.github.io/tflspec/reference/tfl_ai_write_requests.md) | 1 依頼 1 ファイル（`size`、`max_chars`、`instructions`） |
+| [`tfl_ai_collect_answers()`](https://ichirio.github.io/tflspec/reference/tfl_ai_collect_answers.md) | `ai/answers/` を読み、依頼ごとに確かめ、帳票ファイルを書く |
+| [`tfl_build_ard()`](https://ichirio.github.io/tflspec/reference/tfl_build_ard.md) | ARD。エラーの帳票を探すときは 1 本ずつ: `output_id = "T-14-1-1"` |
+| [`tfl_content_run()`](https://ichirio.github.io/tflspec/reference/tfl_content_run.md), [`tfl_report()`](https://ichirio.github.io/tflspec/reference/tfl_report.md) | 表とページ → RTF |
+
+**`spec/_assumptions.yml` を読む**: AI
+の推測（群の変数、フラグ、来院、分母）。 `tfl_content_code(o)` と
+`tfl_ard_code(st, output_id = id)` でコードを見られます。
+
+### 1 試験分（200 帳票くらいまで）を回す
+
+1.  **小さく始める**: `size = 2` か
+    `3`。種類ごと（`demographics-1`、`ae-1`、 `labs-1` …）に 1
+    依頼ずつ回し、RTF をシェルと見比べる。
+2.  **種類ごとに 1
+    本を手で直し**、それを見本にして依頼を書き直す。見本は種類の名前を
+    付けて渡すと、その種類の依頼にだけ入り、AI はそれに倣う:
+    `tfl_ai_write_requests(..., examples = c(demographics = "spec/outputs/T-14-1-1.yml", ae = "spec/outputs/T-14-3-1.yml"), overwrite = TRUE)`。
+3.  回答が正しいうちは **`size` を上げる**（5〜8）。
+4.  **依頼の回数の目安**: 種類ごとに 帳票数 ÷ `size` の切り上げ。200
+    帳票なら `size = 5` で 40〜45 回、`size = 8` で 25〜30 回。`nrow(r)`
+    で分かる。
+5.  `tfl_ai_collect_answers(".")`
+    はいつ実行してもよい。そこにある回答を全部読み、
+    残り（`no answer`、`error`）を一覧にする。
+
+### 見本で試す（10 分）
+
+tflspec 同梱のファイル（4 表の TOC/SHELL ワークブック、XPT にした見本
+ADaM、 保存済みの回答）で一通り動かします。最後にその帳票の行が `ok` か
+`warning` なら 準備完了です。
+
+``` r
+
+library(tflspec)
+d <- file.path(tempdir(), "sample-study")
+dir.create(file.path(d, "adam"), recursive = TRUE, showWarnings = FALSE)
+for (x in c("adsl", "adae", "adrs", "adlb")) {
+  df <- getExportedValue("tflspec", x)
+  for (v in names(df)) if (is.factor(df[[v]])) df[[v]] <- as.character(df[[v]])
+  haven::write_xpt(df, file.path(d, "adam", paste0(x, ".xpt")))
+}
+tfl_ai_study_init(d, adam = "adam", study_id = "XYZ-ONC-01", overwrite = TRUE)
+ex    <- system.file("ai", "example", package = "tflspec")
+shell <- tfl_ai_read_shell(file.path(ex, "onco_toc_shell.xlsx"))
+r     <- tfl_ai_write_requests(d, shell, tfl_ai_adam_summary(file.path(d, "adam")),
+                               overwrite = TRUE)
+# 保存済みの回答を、最初の依頼へのチャットの回答の代わりに置く
+dir.create(file.path(d, "ai", "answers"), showWarnings = FALSE)
+file.copy(file.path(ex, "onco-answer.md"),
+          file.path(d, "ai", "answers", paste0(r$request[1], ".md")), overwrite = TRUE)
+tfl_ai_collect_answers(d)
+```
+
+`ai/` フォルダ（依頼と回答）は残してください。共有は社内だけに。
+
+### うまくいかない時
+
+| 見えたもの | すること |
+|----|----|
+| `shell$toc` が空: TOC のシートが見つからない | `tfl_ai_read_shell("TOC_SHELL.xlsx", toc_sheet = "<TOC のシート名>")` |
+| `shell$toc$shell` が `NA`: 帳票番号でシェルが見つからない | そのシートを足す: `tfl_ai_read_shell("TOC_SHELL.xlsx", sheets = c("<シェルのシート>", ...))` |
+| チャットがメッセージが長すぎると言う | `tfl_ai_write_requests(..., instructions = "once")`、`size` を小さく、または `max_chars = 20000` |
+| [`tfl_ai_collect_answers()`](https://ichirio.github.io/tflspec/reference/tfl_ai_collect_answers.md) で `error`（“no answer block found”） | 回答を全部コピーしていない: 最初の ```` ``` ```` から最後までコピーし直す |
+| 2〜3 回直しても同じエラー | `spec/outputs/<id>.yml` を手で直し、手順 6 を実行 |
+| [`tfl_build_ard()`](https://ichirio.github.io/tflspec/reference/tfl_build_ard.md) が止まる | 帳票を絞って探す: `tfl_build_ard(st, dir = ".", output_id = "T-14-1-1", save = FALSE)` |
