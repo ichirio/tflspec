@@ -567,6 +567,14 @@ tfl_ai_unpack(a, "study")                           # spec/outputs/<id>.yml, spe
   `$variables` frame is the context's `datasets`.
 * `tfl_ai_batches(x, size = 8)` splits the TOC's tables by the words of
   their titles (English or Japanese); `families =` adds a company's own.
+* A whole study: `tfl_ai_write_requests(study_dir, shell, adam, size = 3)`
+  writes one file a request to `ai/requests/` (one paste each; `max_chars`
+  splits a long one, `instructions = "once"` writes the instructions to
+  `00-instructions.md` and the requests without them).  The answers go to
+  `ai/answers/<request>.md`; `tfl_ai_collect_answers(study_dir)` parses,
+  checks and writes them, one row a report (`ok` / `warning` / `error` /
+  `no answer`), an answer with errors leaving its repair prompt in
+  `ai/repairs/`.
 * `tfl_ai_context("table", examples = "study/spec/outputs/T-14-3-1.yml")`
   gives a reviewed report of the family: the prompt asks for the rest of the
   family written the same way.
@@ -783,7 +791,7 @@ back): rename the value or choose another separator.
 **AI-assisted drafting:** `tfl_ai_tasks` `tfl_ai_context` `tfl_ai_schema`
 `tfl_ai_prompt` `tfl_ai_parse` `tfl_ai_check` `tfl_ai_repair_prompt`
 `tfl_ai_diff` `tfl_ai_read_shell` `tfl_ai_adam_summary` `tfl_ai_batches`
-`tfl_ai_study_init`
+`tfl_ai_write_requests` `tfl_ai_collect_answers` `tfl_ai_study_init`
 
 **ARD spec:** `tfl_ard_spec` `tfl_read_ard_spec` `tfl_write_ard_spec`
 `tfl_ard_spec_template` `tfl_ard_code` `tfl_build_ard` `tfl_ard_for`

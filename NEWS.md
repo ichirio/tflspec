@@ -6,6 +6,28 @@
   Japanese one opens from the "In Japanese" toggle at the top of its English
   page (and back with "In English").
 
+* Docs: the AI table-drafting guide says plainly what to try first: one
+  request as it is; when the chat will not take it, the requests again with
+  `instructions = "once"` (`00-instructions.md` first in a new chat, then the
+  request) (#318, 0.0.24.9145).
+
+* **A whole study's AI requests as files** (#315, 0.0.24.9142).
+  `tfl_ai_write_requests(study_dir, shell, adam, size = )` writes one prompt
+  a request to `ai/requests/` -- one paste each, no attachment -- with an
+  `index.md` of their reports and lengths; `max_chars` splits a request too
+  long, `instructions = "once"` writes the instructions (about 23,000
+  characters) once to `00-instructions.md`.  The answers saved as
+  `ai/answers/<request>.md` are read by `tfl_ai_collect_answers(study_dir)`:
+  each checked against its own request and, with no error, written as report
+  files (only the reports it asked for); one row a report, `ok` /
+  `warning` / `error` / `no answer`, and the repair prompt of an answer with
+  errors in `ai/repairs/`.
+* Docs: the AI table-drafting guide (English and Japanese, the article and
+  `inst/ai/tflspec-ai-table-guide*.md`) rewritten short and practical: what
+  it does, what goes where, what to run, what to give the AI, where its
+  answer goes, and the functions that check it, write the YAML and make the
+  RTF; a whole study with the two functions above; the sample run short.
+
 * **AI drafting of tables' code spec from a company's TOC / SHELL
   workbook** (#307, 0.0.24.9141).  A new drafting task, `table`: a batch of
   5 to 10 tables becomes report files of the YAML spec
