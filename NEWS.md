@@ -1,5 +1,15 @@
 # tflspec (development version)
 
+* **Template SPEC, a first prototype** (0.0.24.9149).  A report kind from
+  a few parameters, one definition for two uses: `tpl_demog()` /
+  `tpl_summary()` give the table plan (A: the program's one call, the
+  study's defaults written after it), `tfl_template_expand()` the report's
+  items (B: saved into its YAML, marked `template:<name>`).  The layout
+  template `summary` (continuous variables by a column key) and the display
+  template `demog` on it; `tfl_templates()` lists them.  On the sample study
+  T-14-1-1, T-14-1-1S (`demog(stack = TRUE)`) and T-14-2-1 (`summary`) give
+  the same RTF by A, by B and by their spec files.
+
 * **The study's report setup and a report's tokens from the YAML spec**
   (#317, 0.0.24.9147).  `tfl_report_setup_code()` also takes a study's
   spec (`tfl_read_study_spec()`): its defaults' `page:` -- the first font of

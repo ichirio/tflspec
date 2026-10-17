@@ -67,8 +67,12 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL) {
 #' @param population The study's analysis sets (`data.yml`'s populations),
 #'   for their labels; `NULL` for none.
 #' @return A list: `ard`, `data`, `content` (a list of [tfl_item()]).
-#' @keywords internal
-#' @noRd
+#' @seealso [tfl_templates()]; [tpl_demog()] and [tpl_summary()] for the
+#'   objects (the A use).
+#' @examples
+#' x <- tfl_template_expand("demog", list(population = "SAF"))
+#' vapply(x$content, function(it) it$fn, "")
+#' @export
 tfl_template_expand <- function(name, args = list(), codelists = NULL,
                                 population = NULL) {
   fn <- "tfl_template_expand()"
@@ -174,6 +178,10 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
 
 #' Demographics: a table plan from the template `demog`
 #'
+#' The A use of a template SPEC: one call for the report's table plan.  The
+#' template `demog` is a display template on the `summary` layout:
+#' continuous variables as rows of statistics, categorical ones as n (%).
+#'
 #' @param ard The normalized ARD's source: the study ARD's rows of this
 #'   report.
 #' @param population The analysis set's id (`"SAF"`).
@@ -181,9 +189,20 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
 #'   `categorical`, `labels`, `cells`.
 #' @param codelists The report's code lists, for the order and labels of
 #'   values; `NULL` takes the ARD's.
-#' @return A [rtfreporter::table_plan()].
-#' @keywords internal
-#' @noRd
+#' @return A [rtfreporter::table_plan()]: the template's items run on the
+#'   ARD.  A study's defaults are not in it; add them after the call.
+#' @seealso [tfl_template_expand()] for the items (the B use).
+#' @examples
+#' if (requireNamespace("cards", quietly = TRUE)) {
+#'   saf <- adsl[adsl$SAFFL == "Y", ]
+#'   ard <- cards::bind_ard(
+#'     cards::ard_tabulate(saf, variables = TRT01A),
+#'     cards::ard_summary(saf, by = TRT01A, variables = AGE),
+#'     cards::ard_tabulate(saf, by = TRT01A, variables = c(AGEGR1, SEX, RACE, ETHNIC)))
+#'   plan <- tpl_demog(ard, population = "SAF")
+#'   head(rtfreporter::plan_apply(plan, "table"))
+#' }
+#' @export
 tpl_demog <- function(ard, population, ..., codelists = NULL) {
   .tpl_object("demog", ard, c(list(population = population), list(...)),
               codelists = codelists)
@@ -239,7 +258,41 @@ tpl_demog <- function(ard, population, ..., codelists = NULL) {
     list(ard = ard, data = list(source = "ard", object = "ard"), content = content)
   })
 
+#' Continuous variables by a column key: a table plan from the layout `summary`
+#'
+#' @inheritParams tpl_demog
+#' @param variables The continuous variables, in order.
+#' @param ... The template's other parameters: `by`, `data`, `where`,
+#'   `data_id`, `data_label`, `analysis_id`, `analysis_label`,
+#'   `statistics`, `cells`, `labels`.
+#' @return A [rtfreporter::table_plan()].
+#' @examples
+#' if (requireNamespace("cards", quietly = TRUE)) {
+#'   saf <- adsl[adsl$SAFFL == "Y", ]
+#'   ard <- cards::bind_ard(
+#'     cards::ard_tabulate(saf, variables = TRT01A),
+#'     cards::ard_summary(saf, by = TRT01A, variables = c(AGE, TRTDURD)))
+#'   plan <- tpl_summary(ard, population = "SAF", variables = c("AGE", "TRTDURD"))
+#'   head(rtfreporter::plan_apply(plan, "table"))
+#' }
+#' @export
 tpl_summary <- function(ard, population, variables, ..., codelists = NULL) {
   .tpl_object("summary", ard, c(list(population = population, variables = variables),
                                 list(...)), codelists = codelists)
+}
+
+#' The templates
+#'
+#' @return A data frame, one row a template: `name`, `kind`, `layout`,
+#'   `params` (its parameters, comma-separated).
+#' @examples
+#' tfl_templates()
+#' @export
+tfl_templates <- function() {
+  nm <- sort(ls(.tpl_registry))
+  t <- lapply(nm, get, envir = .tpl_registry)
+  data.frame(name = nm, kind = vapply(t, `[[`, "", "kind"),
+             layout = vapply(t, `[[`, "", "layout"),
+             params = vapply(t, function(x) paste(names(x$params), collapse = ", "), ""),
+             stringsAsFactors = FALSE)
 }
