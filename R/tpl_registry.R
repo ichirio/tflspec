@@ -225,6 +225,10 @@ tpl_demog <- function(ard, population, ..., codelists = NULL) {
   tfl_param("analysis_label", "Continuous", doc = "the continuous analysis' label"),
   tfl_param("statistics", c("N", "mean", "sd", "median", "min", "max"),
             doc = "the continuous statistics the ARD has"),
+  tfl_param("ci_id", "CI", doc = "the confidence-interval analysis' id"),
+  tfl_param("ci_label", NULL,
+            doc = "the continuous variables' mean (CI) analysis' label; NULL: none"),
+  tfl_param("ci_method", "mean_ci", doc = "its method (mean_ci: a one-sample t-test)"),
   tfl_param("cat_id", "CAT", doc = "the categorical analysis' id"),
   tfl_param("cat_label", "Categorical", doc = "the categorical analysis' label"),
   tfl_param("cat_statistics", c("n", "p"),
@@ -260,6 +264,9 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
       id = a$analysis_id, label = a$analysis_label, method = "continuous", data = set,
       by = a$by, variables = a$variables, statistics = a$statistics,
       purpose = "PRIMARY OUTCOME MEASURE")),
+    if (length(a$variables) && !is.null(a$ci_label)) list(list(
+      id = a$ci_id, label = a$ci_label, method = a$ci_method, data = set, by = a$by,
+      variables = a$variables, purpose = "SECONDARY OUTCOME MEASURE")),
     if (length(a$categorical)) list(nn(list(
       id = a$cat_id, label = a$cat_label, method = "categorical", data = set,
       by = a$by, variables = a$categorical, statistics = a$cat_statistics,
