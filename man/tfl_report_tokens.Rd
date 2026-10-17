@@ -4,14 +4,18 @@
 \alias{tfl_report_tokens}
 \title{A report's tokens}
 \usage{
-tfl_report_tokens(spec, output_id = NULL)
+tfl_report_tokens(spec, output_id = NULL, study = NULL)
 }
 \arguments{
 \item{spec}{A report definition (\code{\link[=tfl_read_report_spec]{tfl_read_report_spec()}}) narrowed to one
-report, or the path(s) to read it from.}
+report, or the path(s) to read it from; or a report of the YAML spec
+(\code{\link[=tfl_output]{tfl_output()}}), as read or resolved.}
 
 \item{output_id}{The report, when \code{spec} is a path or still defines
 several.}
+
+\item{study}{For a YAML report as read: the study
+(\code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}), its defaults and patterns.}
 }
 \value{
 A named character vector (none: empty).

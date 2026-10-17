@@ -1,5 +1,18 @@
 # tflspec (development version)
 
+* **The study's report setup and a report's tokens from the YAML spec**
+  (#317, 0.0.24.9144).  `tfl_report_setup_code()` also takes a study's
+  spec (`tfl_read_study_spec()`): its defaults' `page:` -- the first font of
+  `rtf_document: font_table`, `rtf_default_format: font_size_half_points`,
+  `tokens`, `header`, `footer` -- written as the sheets saying the same
+  write them, with the names `tfl_report_code(output, setup = TRUE, study
+  = )` refers to (`study_header`, `study_header_lines` ...).
+  `tfl_report_tokens()` takes a report of the YAML spec and its `study`.
+  A YAML report's program (`rtf_document(program = )`): a study with no
+  `settings: program` no longer takes its `program_dir` for it (partial
+  matching), and the report's id as `program_fallback` is in the study's
+  `program_dir`, as the sheets' path writes it.
+
 * **AI drafting of tables' code spec from a company's TOC / SHELL
   workbook** (#307, 0.0.24.9141).  A new drafting task, `table`: a batch of
   5 to 10 tables becomes report files of the YAML spec

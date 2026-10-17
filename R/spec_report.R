@@ -51,7 +51,7 @@
   # "{output_id}.R"), in the study's program folder; with none, the
   # report's ID is rtfreporter's last resort (program_fallback)
   entry <- .page_toc_entry(study, id)
-  prog <- .ard_spec_fill_id(entry[["program"]] %||% study$study$settings$program, id)
+  prog <- .ard_spec_fill_id(entry[["program"]] %||% study$study$settings[["program"]], id)
   dir <- study$study$settings$program_dir %||% NA_character_
   in_dir <- function(p) {
     if (is.null(p) || is.na(dir)) return(p)
@@ -68,7 +68,7 @@
                           do.call(.spec_call, c(list("rtf_default_format"), fmt)),
                         watermark = doc_a$watermark,
                         program = in_dir(prog),
-                        program_fallback = if (is.null(prog) && !is.na(id)) id,
+                        program_fallback = if (is.null(prog) && !is.na(id)) in_dir(id),
                         tokens = doc_tokens,
                         file = file))
   hdr <- .page_section_band(pg, "header", tokens, split)

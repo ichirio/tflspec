@@ -1524,8 +1524,15 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
 #' (`OUTPUT_LABEL`, `OUTPUT_TITLE` ...), and the study's values are in one
 #' place, in the definition and in the code.
 #'
+#' For a study of the YAML spec, give the study ([tfl_read_study_spec()]):
+#' its defaults' `page:` (`spec/defaults.yml`) are the study's --
+#' `rtf_document: font_table` (the first font's name) and
+#' `rtf_default_format: font_size_half_points`, `tokens`, `header` and
+#' `footer` -- and the lines are the ones
+#' `tfl_report_code(output, setup = TRUE, study = )` refers to.
+#'
 #' @param spec A report definition (the study's default rows: one with
-#'   several reports serves).
+#'   several reports serves), or a study's spec ([tfl_read_study_spec()]).
 #' @return The code, one element per line; none when the study has no
 #'   tokens, header or footer.
 #' @examples
@@ -1538,6 +1545,7 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
 #' cat(tfl_report_setup_code(sp), sep = "\n")
 #' @export
 tfl_report_setup_code <- function(spec) {
+  if (inherits(spec, "tfl_study_spec")) return(.study_setup_code(spec))
   sp <- .as_spec(spec, "table", "tfl_report_setup_code")
   study <- function(d) if (!is.null(d)) d[is.na(d$output_id), , drop = FALSE]
   out <- character()
@@ -1588,7 +1596,10 @@ tfl_report_setup_code <- function(spec) {
 #' preview of the page.
 #'
 #' @param spec A report definition ([tfl_read_report_spec()]) narrowed to one
-#'   report, or the path(s) to read it from.
+#'   report, or the path(s) to read it from; or a report of the YAML spec
+#'   ([tfl_output()]), as read or resolved.
+#' @param study For a YAML report as read: the study
+#'   ([tfl_read_study_spec()]), its defaults and patterns.
 #' @inheritParams tfl_report
 #' @return A named character vector (none: empty).
 #' @examples
@@ -1597,7 +1608,8 @@ tfl_report_setup_code <- function(spec) {
 #'   header = data.frame(output_id = NA, line = "1", center = "{OUTPUT_LABEL}"))
 #' tfl_report_tokens(sp, "T-14-1-1")
 #' @export
-tfl_report_tokens <- function(spec, output_id = NULL) {
+tfl_report_tokens <- function(spec, output_id = NULL, study = NULL) {
+  if (inherits(spec, "tfl_output")) return(.output_tokens(spec, study))
   sp <- .ard_spec_scope(.as_spec(spec, "table", "tfl_report_tokens",
                                  output_id = output_id), output_id)
   tk <- .ard_spec_tokens(sp, .ard_spec_report_row(sp))
