@@ -315,6 +315,8 @@ reference:
       - tfl_ai_read_shell
       - tfl_ai_adam_summary
       - tfl_ai_batches
+      - tfl_ai_write_requests
+      - tfl_ai_collect_answers
       - tfl_ai_study_init
       - tfl_ai_tasks
       - tfl_ai_context
