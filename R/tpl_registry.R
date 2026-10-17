@@ -397,3 +397,22 @@ tpl_hierarchical <- function(ard, population, hierarchy, ..., codelists = NULL) 
   .tpl_object("hierarchical", ard, c(list(population = population, hierarchy = hierarchy),
                                      list(...)), codelists = codelists)
 }
+
+# ---- km_simple: the figure template of tfl_fig_template(), on the registry ------
+
+.tfl_template("km_simple", kind = "figure", layout = "km",
+  params = list(
+    tfl_param("param", required = TRUE, doc = "the PARAMCD of ADTTE"),
+    tfl_param("pop", NULL, doc = "the population flag (SAFFL)"),
+    tfl_param("group", NULL, doc = "the curves' variable (TRT01A)"),
+    tfl_param("time", NULL, doc = "the time variable; NULL: AVAL"),
+    tfl_param("censor", "CNSR", doc = "the censoring variable"),
+    tfl_param("time_unit", "months", doc = "the time axis' unit"),
+    tfl_param("data", NULL, doc = "the dataset; NULL: ADTTE")
+  ),
+  body = function(a, ctx) {
+    f <- tfl_fig_template("km_simple", data = a$data, param = a$param, pop = a$pop,
+                          group = a$group, time = a$time, censor = a$censor,
+                          time_unit = a$time_unit, form = "items")
+    list(data = f$data, content = f$content)
+  })
