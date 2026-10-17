@@ -183,6 +183,21 @@ reference:
       - tfl_normalize_code
       - tfl_table_code
       - tfl_as_table_spec
+  - title: Template SPEC
+    desc: >
+      A report kind from a few parameters: one definition gives the table
+      plan (`tpl_*()`, the A use) and the report's items
+      (`tfl_template_expand()`, the B use).  Layout templates (`summary`)
+      and display templates on them (`demog`).
+    contents:
+      - tfl_templates
+      - tfl_template_expand
+      - tpl_demog
+      - tpl_summary
+      - tpl_ae_soc_pt
+      - tpl_hierarchical
+      - tfl_read_template_sheets
+      - tfl_write_template_yaml
   - title: Report spec, titles, footnotes, headers and tokens
     desc: >
       The page, the running header and footer, the titles and footnotes,
