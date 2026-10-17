@@ -151,3 +151,14 @@ tfl_ai_collect_answers(d)
 ```
 
 Keep the `ai/` folder (requests, answers) — share it only within your company.
+
+## When it does not work
+
+| What you see | Do |
+|---|---|
+| `shell$toc` is empty: the TOC sheet was not found | `tfl_ai_read_shell("TOC_SHELL.xlsx", toc_sheet = "<the TOC sheet's name>")` |
+| `shell$toc$shell` is `NA`: no shell found by the report's number | add that sheet: `tfl_ai_read_shell("TOC_SHELL.xlsx", sheets = c("<shell sheet>", ...))` |
+| the chat says the message is too long | `tfl_ai_write_requests(..., instructions = "once")`, or a smaller `size`, or `max_chars = 20000` |
+| `error`, "no answer block found", in `tfl_ai_collect_answers()` | the answer was not copied whole: copy it again, from the first ```` ``` ```` to the last |
+| the same error after 2-3 repairs | correct `spec/outputs/<id>.yml` by hand, then run step 6 |
+| `tfl_build_ard()` stops | find the report: `tfl_build_ard(st, dir = ".", output_id = "T-14-1-1", save = FALSE)` |

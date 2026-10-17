@@ -143,3 +143,14 @@ tfl_ai_collect_answers(d)
 ```
 
 `ai/` フォルダ（依頼と回答）は残してください。共有は社内だけに。
+
+## うまくいかない時
+
+| 見えたもの | すること |
+|---|---|
+| `shell$toc` が空: TOC のシートが見つからない | `tfl_ai_read_shell("TOC_SHELL.xlsx", toc_sheet = "<TOC のシート名>")` |
+| `shell$toc$shell` が `NA`: 帳票番号でシェルが見つからない | そのシートを足す: `tfl_ai_read_shell("TOC_SHELL.xlsx", sheets = c("<シェルのシート>", ...))` |
+| チャットがメッセージが長すぎると言う | `tfl_ai_write_requests(..., instructions = "once")`、`size` を小さく、または `max_chars = 20000` |
+| `tfl_ai_collect_answers()` で `error`（"no answer block found"） | 回答を全部コピーしていない: 最初の ```` ``` ```` から最後までコピーし直す |
+| 2〜3 回直しても同じエラー | `spec/outputs/<id>.yml` を手で直し、手順 6 を実行 |
+| `tfl_build_ard()` が止まる | 帳票を絞って探す: `tfl_build_ard(st, dir = ".", output_id = "T-14-1-1", save = FALSE)` |
