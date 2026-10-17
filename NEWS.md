@@ -11,7 +11,9 @@
   On the sample study T-14-1-1, T-14-1-1S (`demog(stack = TRUE)`), T-14-2-1
   (`summary`) and T-14-3-1 (`ae_soc_pt`) give the same RTF by A, by B and
   by their spec files.  `km_simple` (the figure template) is on the
-  registry too.  Many reports at once in Excel: `tfl_read_template_sheets()`
+  registry too: the sample study's F-14-2-3, written as the template and its
+  own items after it (a median line, three `tfl_ard_number()`, the y axis'
+  title), draws the same PNG as its design-form file.  Many reports at once in Excel: `tfl_read_template_sheets()`
   reads a workbook of two sheets (`templates`, `template_rows`) and
   `tfl_write_template_yaml()` writes each report's file; the example
   (`inst/extdata/template-spec/`, DM and AE, the workbook and the same as

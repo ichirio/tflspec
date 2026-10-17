@@ -1,0 +1,30 @@
+# F-14-2-3 as a template SPEC: the template km_simple, and the report's own
+# items after it (the median line, three numbers from T-14-2-2's ARD, the
+# y axis' title).  Its PNG is the same as the sample study's design-form
+# F-14-2-3 (data-raw/check of 2026-10-17).
+id: F-14-2-3
+kind: figure
+label: KM curves of the time to first skin disorder
+extends: defaults
+template:
+  name: km_simple
+  args:
+    param: TTSKIN
+    pop: SAFFL
+    group: TRT01A
+    time_unit: days
+content:
+  - geom_hline: {yintercept: 0.5, linetype: dashed, colour: grey50, linewidth: 0.3}
+  - tfl_ard_number: {analysis_id: KM, variable: prob, level: 0.5, stat: estimate,
+      group: TRT01A = Drug X, label: 'Median (days), Drug X: {value}', digits: 0,
+      x: 0, y: -Inf, hjust: 0, vjust: -2.1}
+  - tfl_ard_number: {analysis_id: KM, variable: prob, level: 0.5, stat: estimate,
+      group: TRT01A = Control, label: 'Median (days), Control: {value}', digits: 0,
+      x: 0, y: -Inf, hjust: 0, vjust: -0.6}
+  - tfl_ard_number: {analysis_id: HR, variable: TRT01A, level: Drug X, stat: estimate,
+      label: 'HR, Drug X vs Control: {value} (95% CI {conf.low}, {conf.high})',
+      digits: 2, x: Inf, y: 0.15, hjust: 1.02, vjust: -0.6}
+  - labs: {y: Probability of No Skin Disorder}
+page:
+  report:
+    ard_source: table:T-14-2-2
