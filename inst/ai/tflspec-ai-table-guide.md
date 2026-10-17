@@ -59,11 +59,22 @@ Check before the first request:
 Each request already holds the instructions, its reports' TOC rows and
 shells, the ADaM summary, `spec/data.yml` and `spec/defaults.yml`.
 
-A request is about 23,000 characters of instructions plus its own reports.
-If the chat cannot take it in one message:
-`tfl_ai_write_requests(..., instructions = "once")` writes the instructions
-to `ai/requests/00-instructions.md`; paste that first in a new chat, then the
-request. `max_chars = 30000` splits a long request further.
+**First, one request as it is.** A request is about 23,000 characters of
+instructions plus its own reports (about 33,000 with one report).
+
+1. Paste one request, as it is, into a new chat.
+2. **If the chat will not take it** (the message is too long, or is cut),
+   write the requests again with the instructions apart:
+
+   ```r
+   r <- tfl_ai_write_requests(".", shell, adam, size = 3, instructions = "once",
+                              overwrite = TRUE)
+   ```
+
+   Then for each request: a **new chat**, paste `ai/requests/00-instructions.md`
+   first, then the request (about 10,000 characters).
+3. Still too long: a smaller `size`, or `max_chars = 20000` (a request over
+   it is split).
 
 ## 5. Where to put the AI's answer
 

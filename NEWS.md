@@ -1,5 +1,10 @@
 # tflspec (development version)
 
+* Docs: the AI table-drafting guide says plainly what to try first: one
+  request as it is; when the chat will not take it, the requests again with
+  `instructions = "once"` (`00-instructions.md` first in a new chat, then the
+  request) (#318, 0.0.24.9145).
+
 * **A whole study's AI requests as files** (#315, 0.0.24.9142).
   `tfl_ai_write_requests(study_dir, shell, adam, size = )` writes one prompt
   a request to `ai/requests/` -- one paste each, no attachment -- with an
