@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9153** (the development version,
+**This manual documents tflspec 0.0.24.9154** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -791,7 +791,7 @@ back): rename the value or choose another separator.
 
 **Template SPEC (prototype):** `tfl_templates` `tfl_template_expand`
 `tpl_demog` `tpl_summary` `tpl_disposition` `tpl_ae_soc_pt` `tpl_hierarchical`
-`tpl_shift` `tpl_lab_shift` `tpl_listing`
+`tpl_shift` `tpl_lab_shift` `tpl_listing` `tpl_km_table` `tpl_vs_change` `tpl_orr`
 `tfl_read_template_sheets` `tfl_write_template_yaml`
 
 **AI-assisted drafting:** `tfl_ai_tasks` `tfl_ai_context` `tfl_ai_schema`

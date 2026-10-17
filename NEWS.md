@@ -1,5 +1,15 @@
 # tflspec (development version)
 
+* **Template SPEC: four more** (#333, 0.0.24.9154).  `summary` takes an
+  optional mean (95% CI) analysis of its continuous variables (`ci_label`;
+  T-14-2-3).  `km_table` (`tpl_km_table()`): the Kaplan-Meier median and
+  event-free rates, from the ARD -- its survival analyses stay the report's
+  own, as decided (T-14-2-2).  `vs_change` on `summary` (`tpl_vs_change()`):
+  a vital sign's baseline, value and change at one visit (T-14-2-1).  `orr`
+  (`tpl_orr()`): the best overall response and the objective response rate
+  with its CI (the AI example's T-14-2-1).  Each gives the same items and
+  RTF by A, by B and by its spec file.
+
 * **Template SPEC: `summary` takes categorical variables, and `disposition`**
   (#331, 0.0.24.9153).  The layout `summary` takes `categorical` beside the
   continuous `variables` (either or both), the subjects-per-group and

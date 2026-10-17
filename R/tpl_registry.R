@@ -744,3 +744,65 @@ tpl_vs_change <- function(ard, population, ..., codelists = NULL) {
   .tpl_object("vs_change", ard, c(list(population = population), list(...)),
               codelists = codelists)
 }
+
+# ---- orr: best overall response and the objective response rate (95% CI) --------
+
+.tfl_template("orr", kind = "table", layout = "summary",
+  params = list(
+    tfl_param("population", "ITT", doc = "the analysis set's id"),
+    tfl_param("by", "TRT01P", doc = "the column variable"),
+    tfl_param("by_levels", NULL, doc = "its values in order; NULL: its code list's"),
+    tfl_param("data", "ADRS", doc = "the response dataset"),
+    tfl_param("param", "BOR", doc = "the PARAMCD of the best overall response"),
+    tfl_param("category", "AVALC", doc = "the response category's variable"),
+    tfl_param("responders", c("CR", "PR"), doc = "the categories that respond"),
+    tfl_param("data_id", NULL, doc = "the analysis data's id; NULL: <data>_<param>"),
+    tfl_param("ci_method", "clopper-pearson", doc = "the rate's CI (cardx's method)"),
+    tfl_param("heading", "Response", doc = "the label column's heading")
+  ),
+  body = function(a, ctx) {
+    set <- a$data_id %||% paste0(tolower(a$data), "_", tolower(a$param))
+    resp <- paste(a$responders, collapse = " + ")
+    ard <- list(
+      analysis_data = list(list(
+        id = set, from = a$data, population = a$population,
+        where = tfl_r(sprintf("PARAMCD == \"%s\"", a$param)),
+        derive = tfl_r(sprintf("RESP = %s %%in%% c(%s)", a$category,
+                               paste(sprintf("\"%s\"", a$responders), collapse = ", "))))),
+      analyses = list(
+        list(id = a$param, method = "categorical", data = set, by = a$by,
+             variables = a$category),
+        list(id = "ORR", method = "proportion_ci", data = set, by = a$by,
+             variables = "RESP", args = tfl_r(sprintf("method = \"%s\"", a$ci_method)))))
+    by_lv <- a$by_levels %||% .tpl_levels(a$by, ctx$codelists)[[a$by]]
+    content <- list(
+      tfl_item("table_plan", list(cols = a$by, rows = list(group = "variable"))),
+      tfl_item("plan_cells", list(proportion_ci = list(
+        `n (%)` = "{n} ({estimate:.1f%})", `95% CI` = "[{conf.low:.1f%}, {conf.high:.1f%}]"))),
+      tfl_item("plan_labels", stats::setNames(
+        list("Best overall response, n (%)", sprintf("Objective response rate (%s)", resp)),
+        c(a$category, "RESP"))),
+      # (the categories' order is the ARD's: its code list, applied in the ARD program)
+      tfl_item("plan_levels", c(list(variable = c(a$category, "RESP")),
+                                if (length(by_lv)) stats::setNames(list(by_lv), a$by))),
+      tfl_item("plan_col_header", list(header = list(
+        list(line = "1", cols = ".values", span = "each", text = "{col}"),
+        list(line = "2", cols = "row_label", text = a$heading),
+        list(line = "2", cols = ".values", span = "each", text = "(N={n})")))))
+    list(ard = ard, data = list(source = "ard"), content = content)
+  })
+
+#' Objective response: a table plan from the template `orr`
+#'
+#' The best overall response (n (%)) and the objective response rate with
+#' its 95% CI, by arm.
+#'
+#' @inheritParams tpl_demog
+#' @param ... The template's other parameters: `by`, `by_levels`, `data`,
+#'   `param`, `category`, `responders`, `ci_method`, `heading`.
+#' @return A [rtfreporter::table_plan()].
+#' @export
+tpl_orr <- function(ard, population = "ITT", ..., codelists = NULL) {
+  .tpl_object("orr", ard, c(list(population = population), list(...)),
+              codelists = codelists)
+}
