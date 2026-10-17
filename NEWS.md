@@ -1,15 +1,10 @@
 # tflspec (development version)
 
-* Docs: the Pages' top bar is the package icon's colour, green `#1d5e47` (#313, 0.0.24.9142),
+* Docs: the Pages' top bar is the package icon's colour, green `#1d5e47` (#313, 0.0.24.9143),
   as rtfreporter's bar is its icon's navy.  As rtfreporter's, the menu puts
   Reference before Articles, and lists the English articles only: the
   Japanese one opens from the "In Japanese" toggle at the top of its English
   page (and back with "In English").
-* Docs: the AI table-drafting guide (English and Japanese, the article and
-  `inst/ai/tflspec-ai-table-guide*.md`) rewritten short and practical: what
-  it does, what goes where, what to run, what to give the AI, where its
-  answer goes, and the functions that check it, write the YAML and make the
-  RTF -- steps, code and tables; the sample run kept short.
 
 * **AI drafting of tables' code spec from a company's TOC / SHELL
   workbook** (#307, 0.0.24.9141).  A new drafting task, `table`: a batch of

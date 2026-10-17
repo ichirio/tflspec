@@ -1,80 +1,201 @@
-# Drafting tables' code spec with an AI chat
+# Drafting tables' code spec with an AI chat -- a guide for the tester
 
-## 1. What it does
+This guide takes a study's **TOC/SHELL workbook** and its **ADaM (XPT)** to
+**report files** (`spec/outputs/<id>.yml`, the code spec) and from them to
+**RTF tables**, with a chat AI your company allows. Every step runs in R on
+your PC; tflspec sends nothing anywhere -- you copy text into the chat and
+copy the answer back.
 
-From a study's **TOC/SHELL workbook** and its **ADaM (XPT)**, a chat AI
-writes each table's **code spec** (`spec/outputs/<id>.yml`). tflspec checks
-it and makes the **RTF**. Everything runs in R on your PC; tflspec sends
-nothing — you copy a prompt into the chat and the answer back.
+The same guide in Japanese: `tflspec-ai-table-guide-ja.md` in the same
+folder (`system.file("ai", package = "tflspec")`).
 
-Japanese: `tflspec-ai-table-guide-ja.md` in the same folder
-(`system.file("ai", package = "tflspec")`).
+## What goes to the AI, and what never does
 
-## 2. What goes where
+| Goes into the chat | Never |
+|---|---|
+| the prompt `tfl_ai_prompt()` writes: the instructions and schema, the **text of the TOC and shells** (or the workbook itself, if your chat reads Excel and you prefer it), the **ADaM summary** (dataset and variable names, labels, types, and the values of short code lists such as SEX or PARAMCD), your study's `spec/data.yml` and `spec/defaults.yml` | the **XPT files** or any other data with records; subject ids, dates, results |
+
+Read `ai/adam_summary.md` once before the first request: it lists no
+record, but a short list of values (up to 15, each under 40 characters) is
+shown for character variables. Remove anything your company does not allow
+to be sent.
+
+## 0. Install (once)
+
+```r
+# from GitHub (or your company's mirror of it)
+remotes::install_github("ichirio/rtfreporter")
+remotes::install_github("ichirio/tflspec")
+install.packages(c("cards", "cardx", "haven"))   # the ARD and the XPT reader
+```
+
+## 1. Try it on the sample first (10 minutes)
+
+This runs the whole path with the files that come with tflspec: a made-up
+TOC/SHELL workbook of four tables (demographics, best overall response and
+ORR, AEs by SOC/PT, a laboratory shift), the sample ADaM written as XPT,
+and a stored answer of the AI. If it ends with four RTF files, the
+installation is ready.
+
+```r
+library(tflspec)
+d <- file.path(tempdir(), "sample-study")
+dir.create(file.path(d, "adam"), recursive = TRUE, showWarnings = FALSE)
+for (x in c("adsl", "adae", "adrs", "adlb")) {
+  df <- getExportedValue("tflspec", x)
+  for (v in names(df)) if (is.factor(df[[v]])) df[[v]] <- as.character(df[[v]])
+  haven::write_xpt(df, file.path(d, "adam", paste0(x, ".xpt")))
+}
+xlsx <- system.file("ai", "example", "onco_toc_shell.xlsx", package = "tflspec")
+
+tfl_ai_study_init(d, adam = "adam", study_id = "XYZ-ONC-01", overwrite = TRUE)
+adam  <- tfl_ai_adam_summary(file.path(d, "adam"))
+shell <- tfl_ai_read_shell(xlsx)
+ctx   <- tfl_ai_context("table", outputs = shell$toc$output_id, shell = shell,
+                        datasets = adam, study_dir = d)
+p     <- tfl_ai_prompt("table", ctx)          # what you would paste
+answer <- readLines(system.file("ai", "example", "onco-answer.md", package = "tflspec"))
+a <- tfl_ai_parse(answer, "table")
+tfl_ai_check(a, ctx)                          # no rows: no problems
+tfl_ai_unpack(a, d, overwrite = TRUE)
+
+st   <- tfl_read_study_spec(d)
+outs <- tfl_read_outputs(d)
+ard  <- tfl_build_ard(st, dir = d, save = FALSE)
+for (id in names(outs)) {
+  o    <- tfl_resolve_output(outs[[id]], st)
+  plan <- tfl_content_run(o, subset(ard, output_id == id))
+  rtfreporter::generate_rtfreport(tfl_report(o, content = plan, study = st),
+                                  file.path(d, paste0(id, ".rtf")), overwrite = TRUE)
+}
+list.files(d, pattern = "rtf$")
+```
+
+## 2. Make the study folder
 
 ```text
 mystudy/
-  TOC_SHELL.xlsx        your TOC and shells (one workbook)
-  adam/                 adsl.xpt, adae.xpt, adlb.xpt ...
+  TOC_SHELL.xlsx        your company's TOC and shells (one workbook)
+  adam/                 the ADaM as XPT: adsl.xpt, adae.xpt, adlb.xpt ...
 ```
-
-Install once: `remotes::install_github(c("ichirio/rtfreporter", "ichirio/tflspec"))`
-and `install.packages(c("cards", "cardx", "haven"))`.
-
-## 3. What to run
 
 ```r
 library(tflspec)
 setwd("mystudy")
-dir.create("ai", showWarnings = FALSE)
-
-# writes study.yml, spec/data.yml, spec/defaults.yml
+dir.create("ai", showWarnings = FALSE)        # the prompts and answers
 tfl_ai_study_init(".", adam = "adam", study_id = "ABC-123")
+```
+
+`tfl_ai_study_init()` writes `study.yml`, `spec/data.yml` (each XPT as a
+dataset; an analysis set for each population flag of ADSL -- SAFFL, FASFL,
+ITTFL ... -- as `<flag> == "Y"`) and `spec/defaults.yml` (the page header
+and footer, the cell of a count). **Open `spec/data.yml` and check the
+analysis sets** (their ids and labels): the AI names them by id.
+
+## 3. Summarise the ADaM, read the workbook
+
+```r
 adam  <- tfl_ai_adam_summary("adam", file = "ai/adam_summary.md")
 shell <- tfl_ai_read_shell("TOC_SHELL.xlsx", file = "ai/toc_shell.md")
-b     <- tfl_ai_batches(shell, size = 8)          # 5-10 tables of one family a request
+shell                       # the sheets, the reports found in the TOC, their shells
+shell$toc[c("output_id", "title", "shell")]
+```
 
+Check what it found:
+
+* **The TOC's reports** (`shell$toc`). If the TOC sheet was not found, say
+  which it is: `tfl_ai_read_shell("TOC_SHELL.xlsx", toc_sheet = "Index")`.
+* **Each report's shell** (`shell` column). `NA` means no sheet names the
+  report's number; give the sheets yourself in step 5 (`sheets =`).
+* `ai/toc_shell.md` is the text the AI reads: one line a row,
+  `<row>: <column>=<text> | ...`, a merged cell once (`A1:E1=`), the indent
+  as spaces.
+
+## 4. Split the tables into batches
+
+The prompt is made for **5 to 10 tables a request**, of one family:
+
+```r
+b <- tfl_ai_batches(shell, size = 8)
+b                           # output_id, title, family, batch
+table(b$batch)
+```
+
+Families: disposition, demographics, exposure, ae, labs, vitals, efficacy,
+pk, other -- by the words of the title, English or Japanese. A family of
+your company's own: `tfl_ai_batches(shell, families = c(pro = "(?i)EQ-5D|QLQ"))`.
+
+## 5. Make the prompt of one batch
+
+```r
 ids <- b$output_id[b$batch == "demographics-1"]
 ctx <- tfl_ai_context("table", outputs = ids, shell = shell, datasets = adam,
                       study_dir = ".", language = "Japanese")
-writeLines(format(tfl_ai_prompt("table", ctx)), "ai/prompt_demographics-1.md",
-           useBytes = TRUE)
+p <- tfl_ai_prompt("table", ctx)
+p$nchar                                   # its size
+writeLines(format(p), "ai/prompt_demographics-1.md", useBytes = TRUE)
 ```
 
-Check before the first request:
+* The prompt holds only these reports' rows of the TOC and their shells.
+  When a shell was not found, add its sheet:
+  `tfl_ai_read_shell("TOC_SHELL.xlsx", outputs = ids, sheets = "DM shells")`
+  and pass that as `shell`.
+* `language = "Japanese"`: the AI writes its assumptions in Japanese (the
+  prompt itself is English).
+* **A reviewed example of the family.** Once the first table of a family
+  is right (corrected by hand if need be), make the rest follow it:
+  `tfl_ai_context("table", outputs = rest, ..., examples = "spec/outputs/T-14-3-1.yml")`.
 
-| Look at | Why |
-|---|---|
-| `spec/data.yml` | the analysis sets (one per ADSL flag `SAFFL`, `FASFL` ...): the AI names them by id |
-| `shell$toc` | the reports found; a TOC sheet not found: `tfl_ai_read_shell(..., toc_sheet = "Index")` |
-| `shell$toc$shell` | `NA` = no shell sheet found: `tfl_ai_read_shell(..., outputs = ids, sheets = "DM shells")` |
-| `ai/adam_summary.md` | no records, but short value lists (up to 15): remove what your company does not allow |
+## 6. Paste it into the chat, save the answer
 
-## 4. What to give the AI
+1. Open `ai/prompt_demographics-1.md`, copy everything, paste it as one
+   message into a **new chat**. If the message box is too small, attach the
+   file and write "Follow the attached instructions."; or put the part
+   before the line `---` into the chat's system / custom instructions and
+   send the rest.
+2. The AI answers with one `yaml` block. Copy the **whole answer** into a
+   text file, `ai/answer_demographics-1.md` (UTF-8).
 
-| Give | Never |
-|---|---|
-| `ai/prompt_<batch>.md` — the whole file, as one message in a **new chat** (too long: attach it and write "Follow the attached instructions.") | the **XPT files**, or any data with records: subject ids, dates, results |
-
-The prompt already holds the instructions, the TOC and shell text of these
-reports, the ADaM summary, `spec/data.yml` and `spec/defaults.yml`.
-
-## 5. Where to put the AI's answer
-
-Copy the **whole answer** (one `yaml` block) into `ai/answer_<batch>.md` (UTF-8).
-
-## 6. Check it, write the YAML, make the RTF
+## 7. Check the answer
 
 ```r
 a  <- tfl_ai_parse(readLines("ai/answer_demographics-1.md", encoding = "UTF-8"), "table")
-pr <- tfl_ai_check(a, ctx)                 # schema, analyses, variables; nothing is run
-pr                                         # no rows: no problems
+a                                         # the reports read, the assumptions
+pr <- tfl_ai_check(a, ctx)
+pr                                        # where, problem, severity
+```
 
-# errors: send them back in the same chat, save the new answer over the old, check again
+`tfl_ai_check()` reads each report file as tflspec does, checks every
+content item against the schema (an unknown function or argument, a wrong
+type, a required argument missing), every analysis's fields and method,
+the analysis sets, every dataset and variable against the ADaM summary,
+and writes the ARD program and each table's code (nothing is run).
+
+**When there are errors**, send them back in the same chat:
+
+```r
 writeLines(tfl_ai_repair_prompt(a, pr), "ai/repair_demographics-1.md", useBytes = TRUE)
+```
 
-tfl_ai_unpack(a, ".")                      # spec/outputs/<id>.yml, spec/_assumptions.yml
+Paste the file as the next message, save the new answer over
+`ai/answer_demographics-1.md`, and check again. Two or three rounds are
+usual; warnings are worth a look but do not block. If the same error comes
+back, correct the YAML by hand after step 8.
 
+## 8. Write the report files
+
+```r
+tfl_ai_unpack(a, ".")                     # spec/outputs/<id>.yml, spec/_assumptions.yml
+```
+
+Each batch adds its files; its assumptions join `spec/_assumptions.yml`
+(each item: `output_id`, `where`, `item`, `assumption`, `question`).
+**Read the assumptions**: they are the AI's guesses (the arm variable, a
+flag, a visit, a denominator). `overwrite = TRUE` writes a batch again.
+
+## 9. Run the tables
+
+```r
 st   <- tfl_read_study_spec(".")
 outs <- tfl_read_outputs(".")
 ard  <- tfl_build_ard(st, dir = ".", save = FALSE)
@@ -87,46 +208,16 @@ for (id in ids) {
 }
 ```
 
-| Function | Does |
-|---|---|
-| `tfl_ai_parse()` | reads the answer: the reports and the AI's assumptions |
-| `tfl_ai_check()` | checks every item against the schema, the analysis sets and the ADaM summary |
-| `tfl_ai_repair_prompt()` | the errors as the next message (2-3 rounds are usual) |
-| `tfl_ai_unpack()` | writes `spec/outputs/<id>.yml`; `overwrite = TRUE` writes a batch again |
-| `tfl_build_ard()` | the ARD; one report at a time to find an error: `output_id = "T-14-1-1"` |
-| `tfl_content_run()`, `tfl_report()` | the table and its page → RTF |
+* An error in `tfl_build_ard()`: run the reports one at a time to find it,
+  `tfl_build_ard(st, dir = ".", output_id = "T-14-1-1", save = FALSE)`;
+  paste the error message into the chat ("this error came from T-14-1-1;
+  correct its file") or correct the file by hand.
+* `cat(tfl_content_code(o), sep = "\n")` shows the table's code, and
+  `tfl_ard_code(st, output_id = id)` the ARD program, to read or keep.
 
-**Read `spec/_assumptions.yml`**: the AI's guesses (arm variable, flag,
-visit, denominator). `tfl_content_code(o)` and `tfl_ard_code(st, output_id = id)`
-show the code, to read or keep.
+## 10. What to note for the feedback
 
-**The next tables of a family** follow a reviewed one:
-`tfl_ai_context("table", outputs = rest, ..., examples = "spec/outputs/T-14-3-1.yml")`.
-
-## Try it on the sample (10 minutes)
-
-The files that come with tflspec: a TOC/SHELL workbook of four tables, the
-sample ADaM as XPT, and a stored answer. Four RTF files at the end mean the
-installation is ready.
-
-```r
-library(tflspec)
-d <- file.path(tempdir(), "sample-study")
-dir.create(file.path(d, "adam"), recursive = TRUE, showWarnings = FALSE)
-for (x in c("adsl", "adae", "adrs", "adlb")) {
-  df <- getExportedValue("tflspec", x)
-  for (v in names(df)) if (is.factor(df[[v]])) df[[v]] <- as.character(df[[v]])
-  haven::write_xpt(df, file.path(d, "adam", paste0(x, ".xpt")))
-}
-tfl_ai_study_init(d, adam = "adam", study_id = "XYZ-ONC-01", overwrite = TRUE)
-ex    <- system.file("ai", "example", package = "tflspec")
-shell <- tfl_ai_read_shell(file.path(ex, "onco_toc_shell.xlsx"))
-ctx   <- tfl_ai_context("table", outputs = shell$toc$output_id, shell = shell,
-                        datasets = tfl_ai_adam_summary(file.path(d, "adam")), study_dir = d)
-a <- tfl_ai_parse(readLines(file.path(ex, "onco-answer.md")), "table")
-tfl_ai_check(a, ctx)
-tfl_ai_unpack(a, d, overwrite = TRUE)
-# then step 6 from `st <- tfl_read_study_spec(d)`, with ids <- names(outs) and the RTF in d
-```
-
-Keep the `ai/` folder (prompts, answers) — share it only within your company.
+For each batch: the family and the number of tables; how many check rounds;
+the errors that came back more than once; what you corrected by hand; how
+long it took; and whether the RTF matched the shell. Keep the `ai/` folder
+(prompts, answers, repair prompts) -- but share it only within your company.
