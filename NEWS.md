@@ -1,5 +1,13 @@
 # tflspec (development version)
 
+* **A table whose data steps normalize the ARD: the sheets' code** (#323,
+  0.0.24.9149).  `tfl_content_code()` and `tfl_content_run()` no longer
+  write or run the study defaults' `normalize_ard()` after a report's
+  `data.steps` (the steps make the data; normalizing it again dropped what
+  they did, such as their row labels).  With no data steps, `normalize_ard()`
+  stays first in the one pipe (#303).  `plan_cells()`'s entries come in the
+  sheets' order: the table's variables first, `default` after.
+
 * **The study's report setup and a report's tokens from the YAML spec**
   (#317, 0.0.24.9147).  `tfl_report_setup_code()` also takes a study's
   spec (`tfl_read_study_spec()`): its defaults' `page:` -- the first font of
