@@ -140,3 +140,37 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
       tfl_item("plan_paginate_rows", list(max_rows = 30L, split = "group_safe")))
     list(ard = ard, data = list(source = "ard", object = "ard"), content = content)
   })
+
+# The A use: the template's object.  Its items run on the ARD as a report's
+# content does; a study's defaults are not in it -- the program writes them
+# after the call (`# (study default)`), as plan_*() lines.
+.tpl_object <- function(name, ard, args, codelists = NULL, population = NULL) {
+  x <- tfl_template_expand(name, args, codelists = codelists, population = population)
+  t <- .tpl_get(name, "tpl")
+  # (the ARD is normalized first, as a report's content with no step of its
+  # own: normalize_ard() with its defaults)
+  content <- x$content
+  if (!any(vapply(content, function(it) identical(it$fn, "normalize_ard"), NA))) {
+    content <- c(list(tfl_item("normalize_ard", list())), content)
+  }
+  o <- tfl_output(paste0("tpl-", name), kind = t$kind, extends = "none",
+                  data = x$data, content = content)
+  tfl_content_run(o, ard)
+}
+
+#' Demographics: a table plan from the template `demog`
+#'
+#' @param ard The normalized ARD's source: the study ARD's rows of this
+#'   report.
+#' @param population The analysis set's id (`"SAF"`).
+#' @param ... The template's other parameters: `data`, `by`, `continuous`,
+#'   `categorical`, `labels`, `cells`.
+#' @param codelists The report's code lists, for the order and labels of
+#'   values; `NULL` takes the ARD's.
+#' @return A [rtfreporter::table_plan()].
+#' @keywords internal
+#' @noRd
+tpl_demog <- function(ard, population, ..., codelists = NULL) {
+  .tpl_object("demog", ard, c(list(population = population), list(...)),
+              codelists = codelists)
+}
