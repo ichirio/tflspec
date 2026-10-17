@@ -17,7 +17,8 @@ report.}
 \item{...}{The template's other parameters: \code{categorical} (the
 categorical variables), \code{by}, \code{data}, \code{where}, \code{data_id}, \code{data_label},
 \code{groupn_label}, \code{analysis_id}, \code{analysis_label}, \code{statistics}, \code{cat_id},
-\code{cat_label}, \code{cat_statistics}, \code{cells}, \code{labels}, \code{max_rows}, \code{split}.}
+\code{cat_label}, \code{cat_statistics}, \code{cells}, \code{labels}.  The look (the rows a
+page ...) is the template's; a report changes it with an item of its own.}
 
 \item{codelists}{The report's code lists, for the order and labels of
 values; \code{NULL} takes the ARD's.}

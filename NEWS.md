@@ -3,9 +3,10 @@
 * **Template SPEC: `summary` takes categorical variables, and `disposition`**
   (#331, 0.0.24.9153).  The layout `summary` takes `categorical` beside the
   continuous `variables` (either or both), the subjects-per-group and
-  categorical analyses' labels, the categorical statistics (`NULL`: cards'
-  own) and the page rows (`max_rows`, `split`); a parameter given as `NULL`
-  is "none", not the template's default.  The display template
+  categorical analyses' labels and the categorical statistics (`NULL`:
+  cards' own); a parameter given as `NULL` is "none", not the template's
+  default.  The look (the rows a page) is no parameter: a report changes it
+  with an item of its own (T-14-1-3's `plan_paginate_rows(max_rows = 24)`).  The display template
   `disposition` (`tpl_disposition()`) on it: the status at the end of the
   study.  On the sample study T-14-1-2 (`disposition`), T-14-1-3 and
   T-14-1-4 (`summary`) give the same items and RTF by A, by B and by their

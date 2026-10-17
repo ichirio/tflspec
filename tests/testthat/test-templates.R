@@ -95,11 +95,14 @@ test_that("tfl_read_template_sheets(): the Excel example, as report files", {
 
 test_that("summary: categorical variables too; disposition on it", {
   x <- tfl_template_expand("summary", list(population = "SAF", categorical = c("AGEGR1", "SEX"),
-                                           cat_statistics = NULL, split = NULL))
+                                           cat_statistics = NULL))
   expect_identical(vapply(x$ard$analyses, `[[`, "", "id"), c("GROUPN", "CAT"))
   expect_null(x$ard$analyses[[2L]]$statistics)
   expect_false("plan_cells" %in% vapply(x$content, `[[`, "", "fn"))
-  expect_identical(x$content[[length(x$content)]]$args, list(max_rows = 30L))
+  expect_identical(x$content[[length(x$content)]]$args, list(max_rows = 30L, split = "group_safe"))
+  # the look is no parameter
+  expect_error(tfl_template_expand("summary", list(population = "SAF", variables = "AGE",
+                                                   max_rows = 24)), "no parameter")
   expect_error(tfl_template_expand("summary", list(population = "SAF")), "categorical")
   d <- tfl_template_expand("disposition", list(population = "SAF"))
   expect_identical(d$ard$analyses[[2L]]$id, "DISP")

@@ -232,9 +232,7 @@ tpl_demog <- function(ard, population, ..., codelists = NULL) {
   tfl_param("cells", list(n = "{N:.0f}", `Mean (SD)` = "{mean:.1f} ({sd:.2f})",
                           Median = "{median:.1f}", `Min, Max` = "{min:.0f}, {max:.0f}"),
             doc = "the rows of each continuous variable"),
-  tfl_param("labels", NULL, doc = "each variable's heading"),
-  tfl_param("max_rows", 30L, doc = "the body's rows a page"),
-  tfl_param("split", "group_safe", doc = "the page break's rule; NULL: rtfreporter's")
+  tfl_param("labels", NULL, doc = "each variable's heading")
 )
 names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
 
@@ -273,8 +271,9 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
     if (length(a$labels)) list(tfl_item("plan_labels", as.list(a$labels[vars]))),
     list(tfl_item("plan_levels", c(list(variable = vars),
                                    .tpl_levels(c(a$by, a$categorical), ctx$codelists))),
-         tfl_item("plan_paginate_rows", nn(list(max_rows = as.integer(a$max_rows),
-                                                split = a$split)))))
+         # the look is the template's, not a parameter: a report changes it
+         # with an item of its own (content:) or the study's style
+         tfl_item("plan_paginate_rows", list(max_rows = 30L, split = "group_safe"))))
   list(ard = list(analysis_data = sets, analyses = analyses),
        data = list(source = "ard", object = "ard"), content = content)
 }
@@ -289,9 +288,7 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
                list("categorical", "EOSSTT"),
                list("cat_id", "DISP"),
                list("cat_label", "Status at end of study"),
-               list("labels", c(EOSSTT = "Status at end of study, n (%)")),
-               list("max_rows", 24L),
-               list("split", NULL)),
+               list("labels", c(EOSSTT = "Status at end of study, n (%)"))),
                function(x) tfl_param(x[[1L]], x[[2L]])),
              .tpl_summary_params[c("by", "cat_statistics", "groupn_label")]),
   body = function(a, ctx) {
@@ -299,7 +296,11 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
     b[names(a)] <- a
     # the template's own defaults are the summary's NULLs where it says so
     for (k in names(a)) if (is.null(a[[k]])) b[k] <- list(NULL)
-    .tpl_summary_body(b, ctx)
+    out <- .tpl_summary_body(b, ctx)
+    # its own look: 24 rows a page, rtfreporter's page break
+    k <- which(vapply(out$content, `[[`, "", "fn") == "plan_paginate_rows")
+    out$content[[k]]$args <- list(max_rows = 24L)
+    out
   })
 
 
@@ -310,7 +311,8 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
 #' @param ... The template's other parameters: `categorical` (the
 #'   categorical variables), `by`, `data`, `where`, `data_id`, `data_label`,
 #'   `groupn_label`, `analysis_id`, `analysis_label`, `statistics`, `cat_id`,
-#'   `cat_label`, `cat_statistics`, `cells`, `labels`, `max_rows`, `split`.
+#'   `cat_label`, `cat_statistics`, `cells`, `labels`.  The look (the rows a
+#'   page ...) is the template's; a report changes it with an item of its own.
 #' @return A [rtfreporter::table_plan()].
 #' @examples
 #' if (requireNamespace("cards", quietly = TRUE)) {
