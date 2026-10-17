@@ -570,3 +570,57 @@ tpl_lab_shift <- function(ard, population, ..., codelists = NULL) {
   .tpl_object("lab_shift", ard, c(list(population = population), list(...)),
               codelists = codelists)
 }
+
+# ---- listing: one row a record, the layout ---------------------------------------
+
+.tfl_template("listing", kind = "listing", layout = "listing",
+  params = list(
+    tfl_param("data", required = TRUE, doc = "the dataset (ADAE)"),
+    tfl_param("columns", required = TRUE,
+              doc = paste("the columns, in order: each a list of vars (one or more),",
+                          "label, width and collapse_repeats")),
+    tfl_param("where", NULL, doc = "the records kept (R)"),
+    tfl_param("sort", NULL, doc = "the records' order (variables)")
+  ),
+  body = function(a, ctx) {
+    # a column's width is part of its definition (each column its own), the
+    # one look a listing template takes; the rest of the look is the
+    # template's (multiline, 22 rows a page) or the study's style
+    cols <- lapply(a$columns, function(cl) {
+      args <- Filter(Negate(is.null), list(
+        vars = as.character(unlist(cl$vars)), label = cl$label,
+        width = if (!is.null(cl$width)) as.integer(cl$width),
+        collapse_repeats = if (isTRUE(cl$collapse_repeats)) TRUE))
+      tfl_call("listing_col", args)
+    })
+    data <- Filter(Negate(is.null), list(
+      source = "dataset", dataset = a$data,
+      where = if (!is.null(a$where)) tfl_r(a$where), sort = a$sort))
+    content <- list(
+      tfl_item("plan_listing", list(cols = cols, type = "multiline")),
+      tfl_item("plan_paginate_rows", list(max_rows = 22L)))
+    list(data = data, content = content)
+  })
+
+#' A listing: a listing plan from the layout `listing`
+#'
+#' One row a record of a dataset: the records kept (`where`), their order
+#' (`sort`) and the columns, each its variables (one or more, stacked in the
+#' cell), its heading, its width and whether a repeated value is printed
+#' once.  The look is the template's: one record over lines as needed
+#' (`multiline`) and 22 rows a page, which a study's style or a report's own
+#' item changes.
+#'
+#' @param x The dataset (a data frame), the listing's source.
+#' @param ... The template's parameters: `columns` (a list of columns, each
+#'   `list(vars = , label = , width = , collapse_repeats = )`), `where`,
+#'   `sort`; `data` names the dataset in the spec (`"ADAE"`).
+#' @return A [rtfreporter::table_plan()] of a listing.
+#' @export
+tpl_listing <- function(x, ...) {
+  a <- list(...)
+  it <- tfl_template_expand("listing", a)
+  o <- tfl_output("tpl-listing", kind = "listing", extends = "none",
+                  data = it$data, content = it$content)
+  tfl_content_run(o, x)
+}

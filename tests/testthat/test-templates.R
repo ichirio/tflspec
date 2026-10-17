@@ -125,3 +125,20 @@ test_that("shift and lab_shift: baseline by post category, a block a parameter",
   expect_error(tfl_template_expand("lab_shift", list(population = "SAF")), "needs")
   expect_true(all(c("shift", "lab_shift") %in% tfl_templates()$name))
 })
+
+test_that("listing: one row a record, a column's width part of its definition", {
+  x <- tfl_template_expand("listing", list(data = "ADAE", where = 'AESEV == "SEVERE"',
+    sort = "USUBJID", columns = list(list(vars = "USUBJID", label = "Subject", width = 14,
+                                          collapse_repeats = TRUE),
+                                     list(vars = c("AEBODSYS", "AEDECOD"), label = "SOC/PT"))))
+  expect_identical(x$data$dataset, "ADAE")
+  cols <- x$content[[1L]]$args$cols
+  expect_s3_class(cols[[1L]], "tfl_call")
+  expect_identical(cols[[1L]]$args$width, 14L)
+  expect_null(cols[[2L]]$args$width)
+  expect_identical(x$content[[1L]]$args$type, "multiline")
+  expect_error(tfl_template_expand("listing", list(data = "ADAE")), "needs")
+  p <- suppressMessages(tpl_listing(adae[seq_len(20), ], data = "ADAE",
+                                    columns = list(list(vars = "USUBJID", label = "Subject"))))
+  expect_s3_class(p, "table_plan")
+})

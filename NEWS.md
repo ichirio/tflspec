@@ -13,7 +13,11 @@
   spec files, and T-14-2-1 still does.  The layout `shift` (a category at
   baseline by the same after it, a block a parameter) and the display
   template `lab_shift` on it (`tpl_shift()`, `tpl_lab_shift()`): the AI
-  example's T-14-3-5 gives the same items and RTF by both.
+  example's T-14-3-5 gives the same items and RTF by both.  The layout
+  `listing` (`tpl_listing()`): a dataset's records, their order and the
+  columns -- a column's width is part of its definition, the one look a
+  template takes; the sample study's L-16-2-7 gives the same data, items
+  and RTF by A and by B.
 
 * **For a builder of the YAML's items** (#329, 0.0.24.9152; tflplanner B3).
   `tfl_resolve_output(provenance = TRUE)` says where each item's arguments
