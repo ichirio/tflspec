@@ -354,3 +354,39 @@ test_that("a table's font size (the report sheet's) is its plan's plan_style(), 
   st2 <- tfl_sheets_from_yaml(to)$table$style
   expect_identical(st2$font_size_half_points[st2$output_id %in% "T-8"], "16")
 })
+
+test_that("a quoted page cell and a written \n mean in the YAML what they mean in the sheets", {
+  sp <- tfl_table_spec(list(
+    tables = data.frame(output_id = "T-7", cols = "TRT", rows = "group = variable",
+                        stringsAsFactors = FALSE),
+    report = data.frame(output_id = "T-7", type = "table", stringsAsFactors = FALSE),
+    titles = data.frame(output_id = "T-7", line = c("1", "2"),
+                        center = c("Table 7\nDemographics", "\"  Indented\""),
+                        stringsAsFactors = FALSE),
+    footnotes = data.frame(output_id = "T-7", line = "1", left = "'  Note: {NOTE}'",
+                           stringsAsFactors = FALSE),
+    tokens = data.frame(output_id = "T-7", name = "NOTE", value = "\" a\nb \"",
+                        stringsAsFactors = FALSE)))
+  sheets <- list(table = unclass(sp),
+                 planner = data.frame(output_id = c(NA, "T-7"), description = c("(every report)", "t"),
+                                      setup_code = NA_character_, process_code = NA_character_,
+                                      section = NA_character_, population = NA_character_,
+                                      datasets = NA_character_, batches = NA_character_,
+                                      stringsAsFactors = FALSE),
+                 study = list(study_id = "U-1"))
+  to <- withr::local_tempdir()
+  tfl_yaml_from_sheets(sheets, to, overwrite = TRUE)
+  st <- tfl_read_study_spec(to)
+  o <- tfl_read_outputs(to)[["T-7"]]
+  # the YAML holds the text itself
+  expect_identical(o$page$titles[["1"]]$center, "Table 7\nDemographics")
+  expect_identical(o$page$titles[["2"]]$center, "  Indented")
+  expect_identical(o$page$footnotes[["1"]]$left, "  Note: {NOTE}")
+  # (a token's value keeps its quotes, as the sheets' tokens do)
+  expect_identical(o$page$tokens$NOTE, "\" a\nb \"")
+  # and its program is the sheets'
+  rs <- tfl_report_code(sp, "T-7", content = "plan")
+  ry <- tfl_report_code(tfl_resolve_output(o, st), content = "plan", study = st)
+  expect_true(any(grepl("  Indented", rs, fixed = TRUE)))
+  expect_identical(ry, rs)
+})
