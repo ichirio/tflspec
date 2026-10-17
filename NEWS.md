@@ -1,5 +1,8 @@
 # tflspec (development version)
 
+* Docs: the Pages' top bar is the package icon's colour, green `#1d5e47` (#313, 0.0.24.9142),
+  as rtfreporter's bar is its icon's navy.
+
 * **AI drafting of tables' code spec from a company's TOC / SHELL
   workbook** (#307, 0.0.24.9141).  A new drafting task, `table`: a batch of
   5 to 10 tables becomes report files of the YAML spec
