@@ -4,7 +4,7 @@
 \alias{tpl_summary}
 \title{Continuous variables by a column key: a table plan from the layout \code{summary}}
 \usage{
-tpl_summary(ard, population, variables, ..., codelists = NULL)
+tpl_summary(ard, population, variables = NULL, ..., codelists = NULL)
 }
 \arguments{
 \item{ard}{The normalized ARD's source: the study ARD's rows of this
@@ -12,11 +12,13 @@ report.}
 
 \item{population}{The analysis set's id (\code{"SAF"}).}
 
-\item{variables}{The continuous variables, in order.}
+\item{variables}{The continuous variables, in order; \code{NULL} for none.}
 
-\item{...}{The template's other parameters: \code{by}, \code{data}, \code{where},
-\code{data_id}, \code{data_label}, \code{analysis_id}, \code{analysis_label},
-\code{statistics}, \code{cells}, \code{labels}.}
+\item{...}{The template's other parameters: \code{categorical} (the
+categorical variables), \code{by}, \code{data}, \code{where}, \code{data_id}, \code{data_label},
+\code{groupn_label}, \code{analysis_id}, \code{analysis_label}, \code{statistics}, \code{cat_id},
+\code{cat_label}, \code{cat_statistics}, \code{cells}, \code{labels}.  The look (the rows a
+page ...) is the template's; a report changes it with an item of its own.}
 
 \item{codelists}{The report's code lists, for the order and labels of
 values; \code{NULL} takes the ARD's.}

@@ -92,3 +92,53 @@ test_that("tfl_read_template_sheets(): the Excel example, as report files", {
   expect_identical(back$template$name, "demog")
   expect_identical(unlist(back$template$args$categorical), a$categorical)
 })
+
+test_that("summary: categorical variables too; disposition on it", {
+  x <- tfl_template_expand("summary", list(population = "SAF", categorical = c("AGEGR1", "SEX"),
+                                           cat_statistics = NULL))
+  expect_identical(vapply(x$ard$analyses, `[[`, "", "id"), c("GROUPN", "CAT"))
+  expect_null(x$ard$analyses[[2L]]$statistics)
+  expect_false("plan_cells" %in% vapply(x$content, `[[`, "", "fn"))
+  expect_identical(x$content[[length(x$content)]]$args, list(max_rows = 30L, split = "group_safe"))
+  # the look is no parameter
+  expect_error(tfl_template_expand("summary", list(population = "SAF", variables = "AGE",
+                                                   max_rows = 24)), "no parameter")
+  expect_error(tfl_template_expand("summary", list(population = "SAF")), "categorical")
+  d <- tfl_template_expand("disposition", list(population = "SAF"))
+  expect_identical(d$ard$analyses[[2L]]$id, "DISP")
+  expect_identical(d$content[[2L]]$args, list(EOSSTT = "Status at end of study, n (%)"))
+  expect_true("disposition" %in% tfl_templates()$name)
+  ard <- tpl_ard()
+  p <- suppressMessages(tpl_summary(ard, population = "SAF", categorical = c("AGEGR1", "SEX")))
+  expect_s3_class(p, "table_plan")
+})
+
+test_that("shift and lab_shift: baseline by post category, a block a parameter", {
+  x <- tfl_template_expand("lab_shift", list(population = "SAF", visit = "CYCLE 2 DAY 1",
+                                             params = c("ALT", "AST")))
+  expect_identical(as.character(x$ard$analysis_data[[1L]]$where),
+                   'AVISIT == "CYCLE 2 DAY 1" & PARAMCD %in% c("ALT", "AST")')
+  expect_identical(x$ard$analyses[[1L]]$by, c("TRT01A", "PARAMCD", "BNRIND"))
+  expect_identical(x$content[[1L]]$args$cols, c("TRT01A", ".label"))
+  s <- tfl_template_expand("shift", list(population = "SAF", by_levels = c("A", "B")))
+  expect_identical(s$content[[3L]]$args$TRT01A, c("A", "B"))
+  expect_error(tfl_template_expand("lab_shift", list(population = "SAF")), "needs")
+  expect_true(all(c("shift", "lab_shift") %in% tfl_templates()$name))
+})
+
+test_that("listing: one row a record, a column's width part of its definition", {
+  x <- tfl_template_expand("listing", list(data = "ADAE", where = 'AESEV == "SEVERE"',
+    sort = "USUBJID", columns = list(list(vars = "USUBJID", label = "Subject", width = 14,
+                                          collapse_repeats = TRUE),
+                                     list(vars = c("AEBODSYS", "AEDECOD"), label = "SOC/PT"))))
+  expect_identical(x$data$dataset, "ADAE")
+  cols <- x$content[[1L]]$args$cols
+  expect_s3_class(cols[[1L]], "tfl_call")
+  expect_identical(cols[[1L]]$args$width, 14L)
+  expect_null(cols[[2L]]$args$width)
+  expect_identical(x$content[[1L]]$args$type, "multiline")
+  expect_error(tfl_template_expand("listing", list(data = "ADAE")), "needs")
+  p <- suppressMessages(tpl_listing(adae[seq_len(20), ], data = "ADAE",
+                                    columns = list(list(vars = "USUBJID", label = "Subject"))))
+  expect_s3_class(p, "table_plan")
+})
