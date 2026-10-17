@@ -1,6 +1,6 @@
 # tflspec (development version)
 
-* Docs: the Pages' top bar is the package icon's colour, green `#1d5e47` (#313, 0.0.24.9143),
+* Docs: the Pages' top bar is the package icon's colour, green `#1d5e47` (#313, 0.0.24.9146),
   as rtfreporter's bar is its icon's navy.  As rtfreporter's, the menu puts
   Reference before Articles, and lists the English articles only: the
   Japanese one opens from the "In Japanese" toggle at the top of its English
