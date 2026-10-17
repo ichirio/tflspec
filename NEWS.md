@@ -1,5 +1,11 @@
 # tflspec (development version)
 
+* **A report file reads and writes back as the same text** (#327, 0.0.24.9151).
+  `tfl_write_output()` writes the list-valued keys of the `ard:` part
+  (`analysis_data` add/keep/distinct; `analyses` by/strata/variables/
+  statistics/formats) and listing_col `vars` as a sequence even when they
+  hold one name, as the sheets bridge does; they were written as a scalar.
+
 * **The converter reads a page cell as the sheets do** (#321, 0.0.24.9148).
   `tfl_yaml_from_sheets()` writes a header, footer, title or footnote cell
   that is quoted as its text (`"  Indented"`: the spaces kept, the quotes

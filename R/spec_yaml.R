@@ -326,7 +326,7 @@ tfl_write_output <- function(x, path) {
   if (!is.na(x$label)) y$label <- x$label
   if (!is.na(x$population)) y$population <- x$population
   y$extends <- as.list(x$extends)
-  if (length(x$ard)) y$ard <- .calls_out(x$ard)
+  if (length(x$ard)) y$ard <- .ard_seqs_out(.calls_out(x$ard))
   if (!is.null(x$data)) y$data <- .calls_out(x$data)
   if (length(x$codelists)) y$codelists <- x$codelists
   y$content <- if (inherits(x$content, "tfl_r")) x$content else .items_to_list(x$content)
@@ -348,11 +348,41 @@ tfl_write_output <- function(x, path) {
     out <- list(fn = x$fn)
     if (!is.null(x$package)) out$package <- x$package
     out$args <- .calls_out(x$args)
+    if (x$fn %in% c("listing_col", "rtfreporter::listing_col")) out$args <- .seqs_out(out$args, .seq_keys$listing_col)
     return(out)
   }
   if (!is.list(x) || inherits(x, c("tfl_r", "tfl_unset"))) return(x)
   x[] <- lapply(x, .calls_out)
   x
+}
+
+# The keys whose value is a list of names (what the sheets bridge writes as
+# a sequence): written as a sequence even when it holds one name, as the
+# reader read it (`by: [TRT01A]` read is "TRT01A", written `- TRT01A`)
+.seq_keys <- list(
+  analysis_data = c("add", "keep", "distinct"),
+  analyses = c("by", "strata", "variables", "statistics", "formats"),
+  listing_col = "vars")
+
+.seqs_out <- function(x, keys) {
+  if (!is.list(x)) return(x)
+  for (k in intersect(keys, names(x))) {
+    v <- x[[k]]
+    if (is.atomic(v) && is.null(names(v)) && length(v) == 1L && !inherits(v, c("tfl_r", "tfl_unset"))) {
+      x[[k]] <- as.list(v)
+    }
+  }
+  x
+}
+
+.ard_seqs_out <- function(ard) {
+  if (!is.list(ard)) return(ard)
+  for (part in c("analysis_data", "analyses")) {
+    if (is.list(ard[[part]]) && is.null(names(ard[[part]]))) {
+      ard[[part]] <- lapply(ard[[part]], .seqs_out, .seq_keys[[part]])
+    }
+  }
+  ard
 }
 
 # content items as they are written: `- fn: {args}`
