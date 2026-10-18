@@ -47,9 +47,10 @@
     pages_max_rows = "int", pages_split = "text",
     pages_break_before = "ids",
     pages_min_group_rows = "int", pages_cont_label = "text",
-    pages_page_by = "list", pages_heading = "text",
+    pages_page_by = "list", pages_heading = "text", pages_heading_at = "text",
     group_col = "text", group_mode = "text", group_collapse = "flex",
     group_page = "bool", group_keep = "bool", group_heading = "text",
+    group_heading_at = "text",
     blank_where = "blanks", blank_first = "bool", blank_last = "bool",
     blank_counted = "bool",
     stub_vars = "list", stub_name = "text", stub_indent = "int",
@@ -722,12 +723,16 @@
 #'     `split = rows`), `min_group_rows`, `cont_label`, `page_by` (BY
 #'     pages: the column(s) partitioning the body first, the row budget
 #'     inside each), `heading` (each BY page's name from a template,
-#'     `Treatment: {value} (N={n})`).}
+#'     `Treatment: {value} (N={n})`), `heading_at` (where that name prints:
+#'     `section`, `title` or `none`).}
 #'   \item{`group_*`}{`mode` and `collapse` of [rtfreporter::plan_row_group()].
 #'     `group_page = TRUE` is [rtfreporter::plan_paginate_group()]: one page per
 #'     value of `group_col` (blank: the outermost row key), and
 #'     `group_keep = FALSE` leaves that column unprinted, and
-#'     `group_heading` names each page from a template (`{value}`, `{n}`).}
+#'     `group_heading` names each page from a template (`{value}`, `{n}`),
+#'     and `group_heading_at` says where the name prints (`section`, the
+#'     section header; `title`, under the titles; `none`): the default of
+#'     the report's `rtf_tables(auto_section = , auto_title = )`.}
 #'   \item{`blank_*`}{[rtfreporter::plan_blanks()]: `where`, `first`, `last`,
 #'     `counted`.}
 #'   \item{`stub_*`}{[rtfreporter::plan_stub()]: `vars`, `name`, `indent`, `summary`,
@@ -2684,7 +2689,8 @@ tfl_as_table_spec <- function(x, output_id = NULL, compare = TRUE) {
   if (isTRUE(g$.page)) {
     put("group_page", TRUE); put("group_col", g$group_col)
     if (identical(g$.keep, FALSE)) put("group_keep", FALSE)
-    put("group_heading", g$.heading)
+    put("group_heading", g[[".heading"]])
+    put("group_heading_at", g[[".heading_at"]])
   }
   b <- ly[["blanks"]]
   if (is.numeric(b$blank_rows) && length(b$blank_rows) &&
@@ -2702,7 +2708,8 @@ tfl_as_table_spec <- function(x, output_id = NULL, compare = TRUE) {
   put("pages_cont_label", pg$cont_label)
   put("pages_break_before", pg$split_rows)
   put("pages_page_by", pg$page_by)
-  put("pages_heading", pg$.heading)
+  put("pages_heading", pg[[".heading"]])
+  put("pages_heading_at", pg[[".heading_at"]])
   cp <- ly[["colpages"]]
   put("colpages_every", cp$every); put("colpages_at", cp$at)
   put("colpages_keep", cp$keep); put("colpages_order", cp$order)

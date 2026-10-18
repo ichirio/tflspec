@@ -258,12 +258,16 @@ prefix names:
 \code{split = rows}), \code{min_group_rows}, \code{cont_label}, \code{page_by} (BY
 pages: the column(s) partitioning the body first, the row budget
 inside each), \code{heading} (each BY page's name from a template,
-\code{Treatment: {value} (N={n})}).}
+\code{Treatment: {value} (N={n})}), \code{heading_at} (where that name prints:
+\code{section}, \code{title} or \code{none}).}
 \item{\verb{group_*}}{\code{mode} and \code{collapse} of \code{\link[rtfreporter:plan_row_group]{rtfreporter::plan_row_group()}}.
 \code{group_page = TRUE} is \code{\link[rtfreporter:plan_paginate_group]{rtfreporter::plan_paginate_group()}}: one page per
 value of \code{group_col} (blank: the outermost row key), and
 \code{group_keep = FALSE} leaves that column unprinted, and
-\code{group_heading} names each page from a template (\code{{value}}, \code{{n}}).}
+\code{group_heading} names each page from a template (\code{{value}}, \code{{n}}),
+and \code{group_heading_at} says where the name prints (\code{section}, the
+section header; \code{title}, under the titles; \code{none}): the default of
+the report's \code{rtf_tables(auto_section = , auto_title = )}.}
 \item{\verb{blank_*}}{\code{\link[rtfreporter:plan_blanks]{rtfreporter::plan_blanks()}}: \code{where}, \code{first}, \code{last},
 \code{counted}.}
 \item{\verb{stub_*}}{\code{\link[rtfreporter:plan_stub]{rtfreporter::plan_stub()}}: \code{vars}, \code{name}, \code{indent}, \code{summary},

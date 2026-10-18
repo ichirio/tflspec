@@ -176,6 +176,7 @@ plan_paginate_group:
     col: {type: column}
     keep: {type: logical}
     heading: {type: string}
+    heading_at: {type: "enum[section|title|none]"}
 
 plan_row_group:
   package: rtfreporter
@@ -208,6 +209,7 @@ plan_paginate_rows:
     cont_label: {type: string}
     page_by: {type: "list<column>"}
     heading: {type: string}
+    heading_at: {type: "enum[section|title|none]"}
 
 plan_paginate_cols:
   package: rtfreporter
@@ -1114,6 +1116,10 @@ rtf_footnotes:
           template, as group_heading: {value} the page''s value, {n} its N as the
           ARD states it (plan_paginate_rows(heading = )); blank: the value.'
         example: 'Treatment: {value} (N={n})'
+      - column: pages_heading_at
+        description: 'With pages_page_by: where each BY page''s name prints, as group_heading_at
+          (plan_paginate_rows(heading_at = )); blank: as the report says.'
+        example: section
       - column: group_col
         description: 'With group_page = TRUE: the column whose values each start a
           page (plan_paginate_group(col = )); blank: the outermost row key.'
@@ -1140,6 +1146,12 @@ rtf_footnotes:
           the ARD states it (the page variable''s own tabulation, cards::ard_tabulate(adsl,
           variables = TRT01A)) (plan_paginate_group(heading = )); blank: the value.'
         example: 'Treatment: {value} (N={n})'
+      - column: group_heading_at
+        description: 'With group_page = TRUE: where each page''s name prints -- section
+          (the section header), title (the last line of the titles) or none
+          (plan_paginate_group(heading_at = )); the default of the report''s rtf_tables(auto_section
+          = , auto_title = ), whose own setting wins; blank: as the report says.'
+        example: section
       - column: blank_where
         description: 'Where blank rows go: a named rule such as between_groups, or
           row positions -- a blank after each, 0 before the first row, -1 after the

@@ -328,7 +328,7 @@
   if (isTRUE(lay[["group_page"]])) {
     add("plan_paginate_group", col = lay[["group_col"]],
         keep = if (identical(lay[["group_keep"]], FALSE)) FALSE,
-        heading = lay[["group_heading"]])
+        heading = lay[["group_heading"]], heading_at = lay[["group_heading_at"]])
   }
   a <- pick("group_", c(mode = "mode", collapse = "collapse"))
   if (length(a)) do.call(add, c(list("plan_row_group"), a))
@@ -339,7 +339,7 @@
                         break_before = "break_before",
                         min_group_rows = "min_group_rows",
                         cont_label = "cont_label", page_by = "page_by",
-                        heading = "heading"))
+                        heading = "heading", heading_at = "heading_at"))
   if (length(a)) do.call(add, c(list("plan_paginate_rows"), a))
   a <- pick("colpages_", c(at = "at", cut_by = "cut_by", every = "every",
                            keep = "keep", fit = "fit",
@@ -935,7 +935,8 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
         lay$group_page <- TRUE
         if (!is.null(named$col)) lay$group_col <- named$col
         if (!is.null(named$keep)) lay$group_keep <- named$keep
-        if (!is.null(named$heading)) lay$group_heading <- named$heading
+        if (!is.null(named[["heading"]])) lay$group_heading <- named[["heading"]]
+        if (!is.null(named[["heading_at"]])) lay$group_heading_at <- named[["heading_at"]]
       },
       plan_row_group = {
         if (!is.null(named$mode)) lay$group_mode <- named$mode
