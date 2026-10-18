@@ -81,7 +81,9 @@ tfl_ai_read_shell <- function(path, outputs = NULL, sheets = NULL,
                               file = NULL) {
   fn <- "tfl_ai_read_shell()"
   if (!is.character(path) || length(path) != 1L || !file.exists(path)) {
-    .ard_stop(sprintf("%s: no file %s.", fn, sQuote(path, FALSE)))
+    .ard_stop(sprintf(paste0("%s: no file %s in %s; give the workbook's path from that ",
+                             "folder, or its full path."), fn, sQuote(path, FALSE),
+                      sQuote(getwd(), FALSE)))
   }
   wb <- .xl_read(path, fn)
   cells <- wb$cells

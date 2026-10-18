@@ -72,8 +72,10 @@
   sh <- given$shell
   if (inherits(sh, "tfl_ai_shell")) {
     if (!is.null(out$outputs) && !length(sh$outputs)) {
-      # as the workbook was read: its TOC sheet and sheets as given
-      sh <- do.call(tfl_ai_read_shell, c(list(sh$path, outputs = out$outputs),
+      # as the workbook was read: its TOC sheet and sheets as given; never
+      # cut (a shell cut in half misleads; a request too long is split by
+      # tfl_ai_write_requests(max_chars =), a report at a time)
+      sh <- do.call(tfl_ai_read_shell, c(list(sh$path, outputs = out$outputs, max_chars = Inf),
                                          Filter(Negate(is.null), sh$args)))
     }
     toc <- sh$toc

@@ -23,7 +23,10 @@
     names(x) <- toupper(names(x))
   } else {
     if (!is.character(path) || length(path) != 1L || !file.exists(path)) {
-      .ard_stop(sprintf("%s: `path` is a folder of ADaM files (.xpt), a file, or a named list of data frames.", fn))
+      .ard_stop(sprintf(paste0("%s: no folder or file %s in %s; `path` is the folder of the ",
+                               "ADaM files (.xpt), one file, or a named list of data frames."),
+                        fn, sQuote(paste(format(path), collapse = " "), FALSE),
+                        sQuote(getwd(), FALSE)))
     }
     files <- if (dir.exists(path)) {
       list.files(path, pattern = "[.](xpt|sas7bdat|rds)$", ignore.case = TRUE, full.names = TRUE)
@@ -31,7 +34,8 @@
       path
     }
     if (!length(files)) {
-      .ard_stop(sprintf("%s: no .xpt, .sas7bdat or .rds file in %s.", fn, sQuote(path, FALSE)))
+      .ard_stop(sprintf("%s: no .xpt, .sas7bdat or .rds file in %s; copy the ADaM files there.",
+                        fn, sQuote(path, FALSE)))
     }
     nm <- toupper(tools::file_path_sans_ext(basename(files)))
     if (!is.null(datasets)) {
@@ -204,7 +208,9 @@ tfl_ai_study_init <- function(dir, adam = "adam", study_id = "STUDY-01", title =
   adam_dir <- if (grepl("^(/|[A-Za-z]:)", adam)) adam else file.path(dir, adam)
   files <- list.files(adam_dir, pattern = "[.](xpt|sas7bdat|rds)$", ignore.case = TRUE)
   if (!length(files)) {
-    .ard_stop(sprintf("%s: no .xpt, .sas7bdat or .rds file in %s.", fn, sQuote(adam_dir, FALSE)))
+    .ard_stop(sprintf(paste0("%s: no .xpt, .sas7bdat or .rds file in %s; copy the ADaM files ",
+                             "there, or give `adam` as their folder from %s."), fn,
+                      sQuote(adam_dir, FALSE), sQuote(dir, FALSE)))
   }
   paths <- file.path(dir, c("study.yml", "spec/data.yml", "spec/defaults.yml"))
   there <- paths[file.exists(paths)]

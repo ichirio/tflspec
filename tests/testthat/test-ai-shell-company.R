@@ -73,6 +73,21 @@ test_that("a Japanese TOC: its own sheet name, headers off row 1, merged title",
   Encoding(txt) <- "UTF-8"
   expect_true(validUTF8(txt))
   expect_true(grepl(jp$dm, txt, fixed = TRUE))
+  # the Japanese titles go into the request, in UTF-8
+  d <- withr::local_tempdir()
+  dir.create(file.path(d, "adam"))
+  saveRDS(tflspec::adsl[1:5, c("USUBJID", "SAFFL")], file.path(d, "adam", "adsl.rds"))
+  tfl_ai_study_init(d)
+  r <- suppressMessages(tfl_ai_write_requests(d, x, tfl_ai_adam_summary(file.path(d, "adam")),
+                                              size = 1))
+  req <- vapply(file.path(d, r$file), function(z) {
+    t <- rawToChar(readBin(z, "raw", file.size(z)))
+    Encoding(t) <- "UTF-8"
+    t
+  }, "")
+  expect_true(all(validUTF8(req)))
+  expect_true(any(grepl(jp$dm, req, fixed = TRUE)))
+  expect_true(any(grepl(jp$ae, req, fixed = TRUE)))
   # one report's parts
   y <- tfl_ai_read_shell(f, outputs = "T-14-3-1")
   expect_true(grepl(jp$ae, format(y), fixed = TRUE))
@@ -153,4 +168,44 @@ test_that("a sheet named by a report number and a TOC word is a shell, not the T
   x <- tfl_ai_read_shell(f)
   expect_identical(x$toc$sheet[1L], "Index")
   expect_identical(x$toc$shell[1L], "L-16-2-1 一覧")
+})
+
+test_that("a request never cuts a shell; max_chars splits between reports", {
+  skip_if_not_installed("haven")
+  # three long shells (about 15,000 characters each), one sheet each
+  long <- function(id) {
+    c(list(cl("A1", id), cl("A2", "Adverse events")),
+      lapply(3:302, function(i) cl(paste0("A", i), sprintf("  Preferred term %03d of %s", i, id))),
+      list(cl("A303", paste("END OF", id))))
+  }
+  ids <- c("T-14-3-1", "T-14-3-2", "T-14-3-3")
+  toc <- list(cl("A1", ids[1]), cl("B1", "Adverse events by SOC"),
+              cl("A2", ids[2]), cl("B2", "Serious adverse events"),
+              cl("A3", ids[3]), cl("B3", "Adverse events leading to death"))
+  f <- company_book(c(list(TOC = toc), stats::setNames(lapply(ids, long), ids)))
+  d <- withr::local_tempdir()
+  dir.create(file.path(d, "adam"))
+  adae <- tflspec::adae[1:5, c("USUBJID", "AEDECOD")]
+  saveRDS(tflspec::adsl[1:5, c("USUBJID", "SAFFL")], file.path(d, "adam", "adsl.rds"))
+  saveRDS(adae, file.path(d, "adam", "adae.rds"))
+  tfl_ai_study_init(d)
+  sh <- tfl_ai_read_shell(f)
+  adam <- tfl_ai_adam_summary(file.path(d, "adam"))
+  r <- suppressMessages(tfl_ai_write_requests(d, sh, adam, size = 3))
+  expect_identical(nrow(r), 1L)
+  txt <- paste(readLines(file.path(d, r$file), encoding = "UTF-8"), collapse = "\n")
+  expect_false(grepl("[... cut at", txt, fixed = TRUE))
+  expect_true(all(vapply(ids, function(id) grepl(paste("END OF", id), txt, fixed = TRUE), NA)))
+  # over max_chars: split between reports, each request holding its shells whole
+  r2 <- suppressMessages(tfl_ai_write_requests(d, sh, adam, size = 3, overwrite = TRUE,
+                                               max_chars = r$chars - 5000))
+  expect_gt(nrow(r2), 1L)
+  expect_setequal(unlist(strsplit(r2$outputs, ", ")), ids)
+  for (i in seq_len(nrow(r2))) {
+    t2 <- paste(readLines(file.path(d, r2$file[i]), encoding = "UTF-8"), collapse = "\n")
+    own <- strsplit(r2$outputs[i], ", ")[[1L]]
+    expect_true(all(vapply(own, function(id) grepl(paste("END OF", id), t2, fixed = TRUE), NA)))
+    expect_false(any(vapply(setdiff(ids, own), function(id) grepl(paste("END OF", id), t2,
+                                                                  fixed = TRUE), NA)))
+  }
 })
