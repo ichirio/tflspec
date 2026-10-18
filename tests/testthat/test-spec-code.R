@@ -596,3 +596,17 @@ test_that("a workbook's table leaves out the plan_levels() its ARD says, as its 
   expect_match(own, "SEX = cl_sex", fixed = TRUE)
   expect_false(grepl("TRT01A = cl_trt01a", own, fixed = TRUE))
 })
+
+test_that("one heading keeps its variable through a file: plan_labels(variable = c(EOSSTT = ))", {
+  sp <- tfl_table_spec(list(
+    tables = data.frame(output_id = "T", cols = "TRT01A", rows = "group = variable"),
+    variables = data.frame(output_id = "T", variable = "EOSSTT", label = "End of study status")))
+  items <- tflspec:::.plan_content_from_sheets(sp, "T", own = TRUE)
+  f <- tempfile(fileext = ".yml")
+  tfl_write_output(tfl_output("T", "table", content = items), f)
+  back <- tfl_read_output(f)
+  lb <- Filter(function(it) it$fn == "plan_labels", back$content)[[1L]]$args
+  expect_identical(unlist(lb$variable), c(EOSSTT = "End of study status"))
+  expect_match(paste(tfl_content_code(back, pipe = "|>"), collapse = "\n"),
+               'plan_labels(variable = c(EOSSTT = "End of study status"))', fixed = TRUE)
+})

@@ -266,7 +266,8 @@
   lbv <- lb[!names(lb) %in% keycols]
   lbk <- lb[names(lb) %in% keycols]
   if (length(lb) || length(vl)) {
-    do.call(add, c(list("plan_labels"), if (length(lbv)) list(variable = lbv), as.list(lbk), vl))
+    # (a list: one heading is a map in the file too, its variable named)
+    do.call(add, c(list("plan_labels"), if (length(lbv)) list(variable = as.list(lbv)), as.list(lbk), vl))
   }
   ne <- .ard_spec_nest(sp)
   if (length(ne)) do.call(add, c(list("plan_nest"), ne))
