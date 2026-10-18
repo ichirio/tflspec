@@ -468,6 +468,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     out[[v]] <- lapply(seq_len(nrow(r)), function(i) {
       m <- list(value = r$value[i])
       if (!is.na(r$label[i])) m$label <- r$label[i]
+      if (!is.null(r$under) && !is.na(r$under[i]) && nzchar(r$under[i])) m$under <- r$under[i]
       m
     })
   }

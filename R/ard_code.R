@@ -221,7 +221,8 @@
 
 # the names the setup and tflspec give (a study's code does not assign them)
 .ard_helper_names <- c("set_levels", "tag_ard", "fmt_pvalue", "fmt_ard",
-                       "keep_stats", "save_ard", "fmt_default", "tfl_stats")
+                       "keep_stats", "save_ard", "fmt_default", "tfl_stats",
+                       "complete_hierarchy")
 
 # the packages an ARD program attaches (its setup's library() calls), and
 # those R attaches itself: their functions without `pkg::`
@@ -633,6 +634,45 @@
   gsub(.levels_step, .levels_call(levels), code, fixed = TRUE)
 }
 
+# An analysis's `post` steps.  complete_hierarchy() is written in full:
+# `variables =` the row's, `under =` from its report's code lists (the
+# values and their parents as they are in the ARD, the lists' labels),
+# whichever of them the step does not give itself.
+.post_steps <- function(x, r) {
+  steps <- as.list(.split_post(r$post))
+  lv <- attr(x, "levels")[[r$output_id]]
+  un <- attr(x, "under")[[r$output_id]]
+  in_ard <- function(v, values) {
+    cl <- lv[[v]]
+    if (is.null(names(cl))) return(values)
+    ifelse(values %in% names(cl), unname(cl[values]), values)
+  }
+  lapply(steps, function(s) {
+    e <- tryCatch(str2lang(s), error = function(err) NULL)
+    if (!is.call(e) || !identical(e[[1L]], quote(complete_hierarchy))) return(s)
+    given <- as.list(e)[-1L]
+    vars <- .split_bar(r$variables)
+    args <- lapply(given, function(g) paste(deparse(g, width.cutoff = 500L), collapse = " "))
+    nm_given <- names(given) %||% rep("", length(given))
+    # (the first argument without a name is `variables`)
+    if (!"variables" %in% nm_given && !(length(given) && !nzchar(nm_given[1L]))) {
+      args <- c(list(variables = .c_str(vars)), args)
+    }
+    if (!"under" %in% names(given)) {
+      pairs <- list()
+      for (k in seq_along(vars)[-1L]) {
+        u <- un[[vars[k]]]
+        if (!length(u)) next
+        child <- in_ard(vars[k], names(u))
+        nm <- ifelse(make.names(child) == child, child, .q(child))
+        pairs[[vars[k]]] <- .cl("c", as.list(paste(nm, "=", .q(in_ard(vars[k - 1L], unname(u))))))
+      }
+      if (length(pairs)) args$under <- .cl("list", pairs)
+    }
+    .cl("complete_hierarchy", args)
+  })
+}
+
 # the steps of a derive and of the code lists: dplyr::mutate(...),
 # set_levels().  With code lists, a data made from another is made factors
 # again: the columns it derives, and the values its rows no longer have that
@@ -964,7 +1004,7 @@
   keep <- if (!kind %in% c("continuous", "categorical", "missing") &&
               !identical(call_fn, "(subjects)"))
     .split_bar(r$statistics)
-  steps <- c(as.list(.split_post(r$post)),
+  steps <- c(.post_steps(x, r),
              if (length(keep)) list(.cl("keep_stats", list(.cl("c", .q(keep))))),
              list(.fmt_step(fmt, !is.null(fmt_fun)),
                   .tag_step(r$analysis_id, pid)))
@@ -1147,7 +1187,7 @@
                  function(j) unlist(lapply(kids$variables[j], .split_bar)))
     .tag_step(r$analysis_id, pid, an)
   } else .tag_step(kids$analysis_id[1L], pid)
-  steps <- c(as.list(.split_post(r$post)),
+  steps <- c(.post_steps(x, r),
              if (length(keep)) list(.cl("keep_stats", list(.cl("c", .q(keep))))),
              list(.fmt_step(post_fmt, in_call && !stack,
                             skip = if (stack && in_call) skip),
@@ -1191,7 +1231,7 @@
   keep <- if (!kind %in% c("continuous", "categorical", "missing") &&
               !identical(call_fn, "(subjects)"))
     .split_bar(r$statistics)
-  steps <- c(as.list(.split_post(r$post)),
+  steps <- c(.post_steps(x, r),
              if (length(keep)) list(.cl("keep_stats", list(.cl("c", .q(keep))))),
              list(.fmt_step(fmt, !is.null(fmt_fun)),
                   .tag_step(r$analysis_id, pid)))

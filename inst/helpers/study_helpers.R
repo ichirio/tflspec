@@ -82,6 +82,90 @@ keep_stats <- function(ard, stats) {
   ard[ard$stat_name %in% stats, , drop = FALSE]
 }
 
+# A hierarchical ARD (cards::ard_stack_hierarchical(), SOC / PT) with its
+# code lists' values no subject has, counted 0 -- cards counts only the
+# values some group has.  The outermost variable: each level of its factor
+# (its code list) without a row gets one in every group, n = 0 and p = 0,
+# N the group's.  An inner variable's value: only where `under` names the
+# value one level out it sits under (as they are in the ARD); one without
+# is not added, and a message says which.  The rows keep the factors'
+# levels: the table's order is the code lists'.
+#   complete_hierarchy(ard, c("AEBODSYS", "AEDECOD"),
+#                      under = list(AEDECOD = c("Blurred vision" = "EYE DISORDERS")))
+complete_hierarchy <- function(ard, variables, under = list()) {
+  hier <- ard[ard$variable %in% variables & ard$context %in% "hierarchical", , drop = FALSE]
+  if (!nrow(hier)) return(ard)
+  gcols <- grep("^group[0-9]+$", names(ard), value = TRUE)
+  one <- function(x) if (is.null(x) || !length(x) || is.na(x[[1L]])) NA_character_ else as.character(x[[1L]])
+  # a row's groups that are not the hierarchy's (the by columns), and its statistic
+  key_of <- function(d) vapply(seq_len(nrow(d)), function(i) {
+    g <- vapply(gcols, function(k) one(d[[k]][i]), "")
+    gl <- vapply(gcols, function(k) one(d[[paste0(k, "_level")]][[i]]), "")
+    on <- !is.na(g) & !g %in% variables
+    paste(c(g[on], gl[on], d$stat_name[i]), collapse = "\r")
+  }, "")
+  as_level <- function(v, levels) if (is.null(levels)) v else factor(v, levels = levels)
+  added <- list()
+  for (d in seq_along(variables)) {
+    v <- variables[d]
+    rows <- hier[hier$variable == v, , drop = FALSE]
+    if (!nrow(rows)) next
+    lv <- levels(rows$variable_level[[1L]])
+    seen <- unique(vapply(rows$variable_level, one, ""))
+    parent <- if (d > 1L) under[[v]]
+    if (d == 1L) {
+      miss <- setdiff(lv, seen)
+    } else {
+      cand <- if (is.null(lv)) names(parent) else lv
+      miss <- setdiff(cand, seen)
+      lost <- setdiff(miss, names(parent))
+      if (length(lost)) {
+        message(sprintf("complete_hierarchy(): %s: %s not added (`under` does not say its %s).",
+                        v, paste0("\"", lost, "\"", collapse = ", "), variables[d - 1L]))
+      }
+      miss <- intersect(miss, names(parent))
+    }
+    if (!length(miss)) next
+    # a row of each group and statistic, as the rows of the new values
+    tmpl <- rows[!duplicated(key_of(rows)), , drop = FALSE]
+    for (m in miss) {
+      r <- tmpl
+      r$variable_level <- rep(list(as_level(m, lv)), nrow(r))
+      if (d > 1L) {
+        # its parent's row: the parent, and the parent's own levels out
+        p <- unname(parent[[m]])
+        prow <- hier[hier$variable == variables[d - 1L] &
+                       vapply(hier$variable_level, one, "") %in% p, , drop = FALSE]
+        if (!nrow(prow)) {
+          message(sprintf("complete_hierarchy(): %s: \"%s\" not added (no %s \"%s\").",
+                          v, m, variables[d - 1L], p))
+          next
+        }
+        up <- list()
+        for (k in gcols) {
+          g <- one(prow[[k]][1L])
+          if (!is.na(g) && g %in% variables) up[[g]] <- prow[[paste0(k, "_level")]][[1L]]
+        }
+        up[[variables[d - 1L]]] <- prow$variable_level[[1L]]
+        for (k in gcols) {
+          g <- vapply(r[[k]], one, "")
+          on <- !is.na(g) & g %in% names(up)
+          if (any(on)) r[[paste0(k, "_level")]][on] <- up[g[on]]
+        }
+      }
+      r$stat[r$stat_name == "n"] <- list(0L)
+      r$stat[r$stat_name == "p"] <- list(0)
+      if ("stat_fmt" %in% names(r)) r$stat_fmt <- rep(list(NULL), nrow(r))
+      added[[length(added) + 1L]] <- r
+      hier <- dplyr::bind_rows(hier, r)
+    }
+  }
+  if (!length(added)) return(ard)
+  out <- dplyr::bind_rows(ard, added)
+  class(out) <- class(ard)
+  out
+}
+
 # One statistic of an ARD, as text: the row of the analysis, the variable
 # (and its level), the statistic and the groups named (`TRT01A =
 # "Placebo"`); exactly one row, or the program stops and says how many.

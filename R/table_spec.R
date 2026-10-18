@@ -202,7 +202,7 @@
     variables = c("output_id", "variable", "label", "order", "levels",
                   "empty_levels", "under"),
     # the study's code list: a value's text and place
-    codelists = c("output_id", "variable", "value", "label", "order"),
+    codelists = c("output_id", "variable", "value", "label", "order", "under"),
     cells     = c("output_id", "variable", "context", "row", "when",
                   "template", "digits", "signif"),
     # the statistics' decimals: every analysis variable's (variable blank),

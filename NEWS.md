@@ -1,5 +1,18 @@
 # tflspec (development version)
 
+* **A nested count's code-list values counted 0: `complete_hierarchy()`**
+  (#357, 0.0.24.9167).  cards' `ard_stack_hierarchical()` counts only the
+  values some group has, so a fixed SOC / PT no subject has could not be
+  shown.  `complete_hierarchy()` in an analysis's `post` adds them, n = 0
+  and p = 0 in every group (the Total column too), N the group's: the
+  outermost variable's from its code list, an inner one's where the
+  `codelists` sheet's new column `under` names its parent (a value
+  without one is not added, and the program says so).  The rows keep the
+  code lists' order.  The generated code writes it in full (`variables =`
+  the row's, `under =` the lists', as they are in the ARD); it is one of
+  the study helpers (`tfl_helpers_code()`).  Without it nothing changes,
+  and a study whose code lists have no `under` keeps its fingerprints.
+
 * **A named order, and the variables' headings under `variable =`** (#356,
   0.0.24.9166; rtfreporter #679, 0.8.2.9075).  `plan_levels()` may name its
   values' text, as `factor(levels, labels)` (`plan_levels(SEX = c(F =

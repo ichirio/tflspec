@@ -16,7 +16,8 @@ the list's order, its values as the list has them in the ARD; a value
 not listed stops the program), \code{tag_ard()} (the report, analysis and
 analysis set in front of an analysis's ARD), \code{fmt_ard()} and
 \code{fmt_pvalue()} (formats after a call), \code{keep_stats()} (only the
-statistics asked for), \code{save_ard()} (one report's rows into the
+statistics asked for), \code{complete_hierarchy()} (a nested count's
+code-list values no subject has, counted 0), \code{save_ard()} (one report's rows into the
 study ARD, and what was built in \code{ard_status.csv}), and what a figure
 reads an ARD with: \code{ard_value()} (one statistic, as text),
 \code{ard_stats()} (statistics as a data frame) and \code{ard_fingerprint()} (the
