@@ -1,5 +1,15 @@
 # tflspec (development version)
 
+* **Fix: the study's ARD program puts a report's code lists on its data**
+  (#353, 0.0.24.9164).  When a report's analysis data was its population
+  under a name (`adsl_saf <- pop_saf`), the study's program wrote the code
+  lists but did not apply them (`set_levels()` was taken off `pop_saf`, as
+  a data the analyses do not read), so the ARD kept the raw codes:
+  SAMPLE-01's T-14-1-1 printed "F" / "M" where its code list says
+  "Female" / "Male".  One report's program was right.  Now each report's
+  ARD is the same from the study's program as from its own; the tables
+  show the code lists' labels, order and 0-count levels.
+
 * **`plan_levels()` before `plan_labels()`** (#349, 0.0.24.9163): the
   values' order first, then their names and the variables'.  The schema's
   ranks swap (`plan_levels` 80, `plan_labels` 90), the cards' and the
