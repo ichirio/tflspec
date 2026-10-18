@@ -224,3 +224,33 @@ test_that("tables$total is a Total column from the overall rows (plan_total(), #
   expect_error(tfl_table_code(tfl_table_spec(tables = data.frame(
     cols = "TRT", total = "Total", total_position = "middle"))), "total_position")
 })
+
+test_that("the study's program: an analysis data that is its population under a name gets the code lists too", {
+  skip_on_cran()
+  skip_if_not_installed("cards")
+  adam <- exact_data()
+  dir <- exact_dir(adam)
+  base <- exact_spec(list(method = "categorical", dataset = "ADSL", population_id = "SAF",
+                          by = "ARM", variables = "SEX"))
+  S <- .ard_spec_sheets
+  sp <- tfl_ard_spec(list(
+    study = base$study, datasets = base$datasets, populations = base$populations,
+    analysis_data = exact_sheet(lapply(c("T", "U"), function(o)
+      list(output_id = o, data_id = "adsl_saf", from = "ADSL", population_id = "SAF")),
+      S$analysis_data),
+    analyses = exact_sheet(lapply(c("T", "U"), function(o)
+      list(output_id = o, analysis_id = "A", method = "categorical", data = "adsl_saf",
+           by = "ARM", variables = "SEX")), S$analyses)))
+  cl <- data.frame(output_id = c("T", "T", "U", "U"), variable = "SEX", value = c("M", "F", "M", "F"),
+                   label = c("Male", "Female", "Male", "Female"), order = c("1", "2", "1", "2"))
+  all <- tfl_ard_code(sp, save = FALSE, codelists = cl)
+  # (the study's part: adsl_saf <- pop_saf, the code lists on pop_saf)
+  expect_true(any(grepl("adsl_saf <- pop_saf", all, fixed = TRUE)))
+  ard <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE, codelists = cl))
+  sx <- unique(vapply(ard$variable_level[ard$variable == "SEX"], as.character, ""))
+  expect_identical(sx, c("Male", "Female"))
+  for (o in c("T", "U")) {
+    one <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE, output_id = o, codelists = cl))
+    expect_equal(one, ard[ard$output_id == o, ], ignore_attr = TRUE)
+  }
+})
