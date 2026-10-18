@@ -79,17 +79,24 @@ instructions plus its own reports (about 33,000 with one report).
 ## 5. Where to put the AI's answer
 
 Copy the **whole answer** (one `yaml` block) into
-`ai/answers/<the same name>.md` (UTF-8): the answer to `ae-1.md` is
-`ai/answers/ae-1.md`.
+`ai/answers/<the same name>.md`: the answer to `ae-1.md` is
+`ai/answers/ae-1.md` (the folder is made by `tfl_ai_write_requests()`).
+
+Save it as **UTF-8** (with or without BOM; Windows line ends are fine). In
+Notepad: *File > Save As*, *Encoding: UTF-8*, *Save as type: All files*
+(otherwise Notepad adds `.txt`; `ae-1.md.txt` is read too). A file saved
+as ANSI / Shift-JIS is reported as an `error` saying so.
 
 ## 6. Check it, write the YAML, make the RTF
 
 ```r
 res <- tfl_ai_collect_answers(".")   # parse, check, write spec/outputs/<id>.yml
-res                                  # one row a report: ok / warning / error / no answer
+res                                  # each request: its status, reports and next step
 ```
 
-An answer with errors writes no file; its repair prompt is
+The print gives, for each request, its status (`ok`, `warning`, `error`,
+`no answer`), its reports and **the next step**, then the first problem of
+each report. An answer with errors writes no file; its repair prompt is
 `ai/repairs/<request>.md`. Paste it into **the same chat**, save the new
 answer over `ai/answers/<request>.md`, and run `tfl_ai_collect_answers(".")`
 again (2-3 rounds are usual).
@@ -137,8 +144,8 @@ show the code.
 ## Try it on the sample (10 minutes)
 
 The files that come with tflspec: a TOC/SHELL workbook of four tables, the
-sample ADaM as XPT, and a stored answer. A row `ok` or `warning` for the
-report at the end means the installation is ready.
+sample ADaM as XPT, and a stored answer for each of its four requests. The
+installation is ready when the last line prints `ok` for all four reports.
 
 ```r
 library(tflspec)
@@ -154,11 +161,10 @@ ex    <- system.file("ai", "example", package = "tflspec")
 shell <- tfl_ai_read_shell(file.path(ex, "onco_toc_shell.xlsx"))
 r     <- tfl_ai_write_requests(d, shell, tfl_ai_adam_summary(file.path(d, "adam")),
                                overwrite = TRUE)
-# the stored answer stands in for the chat's answer to the first request
-dir.create(file.path(d, "ai", "answers"), showWarnings = FALSE)
-file.copy(file.path(ex, "onco-answer.md"),
-          file.path(d, "ai", "answers", paste0(r$request[1], ".md")), overwrite = TRUE)
-tfl_ai_collect_answers(d)
+# the stored answers stand in for the chat's: one a request
+invisible(file.copy(list.files(file.path(ex, "answers"), full.names = TRUE),
+                    file.path(d, "ai", "answers"), overwrite = TRUE))
+tfl_ai_collect_answers(d)            # 4 reports in 4 requests: ok 4 ...
 ```
 
 Keep the `ai/` folder (requests, answers) — share it only within your company.
@@ -171,5 +177,8 @@ Keep the `ai/` folder (requests, answers) — share it only within your company.
 | `shell$toc$shell` is `NA`: no shell found by the report's number | add that sheet: `tfl_ai_read_shell("TOC_SHELL.xlsx", sheets = c("<shell sheet>", ...))` |
 | the chat says the message is too long | `tfl_ai_write_requests(..., instructions = "once")`, or a smaller `size`, or `max_chars = 20000` |
 | `error`, "no answer block found", in `tfl_ai_collect_answers()` | the answer was not copied whole: copy it again, from the first ```` ``` ```` to the last |
+| `error`, "is not UTF-8" | save the answer again as UTF-8 (Notepad: *Save As*, *Encoding: UTF-8*) |
+| "Not read (no request of that name)" | rename the answer to the request's name (`ai/requests/index.md`): `ae-1.md` |
+| `print(shell)` ends with "Next: no TOC found" or "no shell found" | pass what it names: `toc_sheet = "<sheet>"` or `sheets = c(...)` |
 | the same error after 2-3 repairs | correct `spec/outputs/<id>.yml` by hand, then run step 6 |
 | `tfl_build_ard()` stops | find the report: `tfl_build_ard(st, dir = ".", output_id = "T-14-1-1", save = FALSE)` |

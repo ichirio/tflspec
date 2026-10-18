@@ -47,7 +47,8 @@ family's requests; unnamed, to every request.}
 instructions, one paste a request.  \code{"once"}: the instructions in
 \code{00-instructions.md}, the requests without them.}
 
-\item{overwrite}{\code{TRUE} to write over the requests already there.}
+\item{overwrite}{\code{TRUE} to write over the requests already there.
+The folder the answers go to (\code{ai/answers}, beside \code{dir}) is made too.}
 }
 \value{
 A data frame, one row a request: \code{request} (the file's name,

@@ -56,7 +56,7 @@ test_that("tfl_ai_write_requests(max_chars = ): a request too long is split", {
 test_that("tfl_ai_collect_answers(): checked, written, one row a report", {
   s <- req_study()
   r <- suppressMessages(tfl_ai_write_requests(s$dir, s$shell, s$adam, size = 8))
-  dir.create(file.path(s$dir, "ai", "answers"))
+  dir.create(file.path(s$dir, "ai", "answers"), showWarnings = FALSE)
   # the sample's answer holds all four reports; given as the first request's
   first <- r$request[1L]
   file.copy(file.path(s$ex, "onco-answer.md"),
@@ -80,7 +80,7 @@ test_that("tfl_ai_collect_answers(): checked, written, one row a report", {
 test_that("tfl_ai_write_requests(examples = ): named by family, only to that family", {
   s <- req_study()
   r <- suppressMessages(tfl_ai_write_requests(s$dir, s$shell, s$adam, size = 8))
-  dir.create(file.path(s$dir, "ai", "answers"))
+  dir.create(file.path(s$dir, "ai", "answers"), showWarnings = FALSE)
   file.copy(file.path(s$ex, "onco-answer.md"),
             file.path(s$dir, "ai", "answers", paste0(r$request[1L], ".md")))
   res <- tfl_ai_collect_answers(s$dir)

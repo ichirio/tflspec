@@ -37,8 +37,10 @@ frame, one row a report the TOC lists: \code{output_id} as written, \code{key},
 the sheet of its shell, \code{NA} for none found), \code{sheets} (\code{sheet},
 \code{role} -- \code{toc}, \code{shell} or \code{other} -- \code{rows}, \code{cells}, \code{hidden}),
 \code{cells} (every non-empty cell: \code{sheet}, \code{row}, \code{col}, \code{ref}, \code{text}),
-\code{outputs} (the reports kept), \code{truncated} and \code{path}.  \code{format()} gives
-the text; \code{print()} a summary.
+\code{outputs} (the reports kept), \code{truncated}, \code{path} and \code{args} (the
+\code{toc_sheet} and \code{sheets} given: \code{\link[=tfl_ai_context]{tfl_ai_context()}} reads each request's
+reports with them again).  \code{format()} gives the text; \code{print()} a
+summary, and what to pass when no TOC or a report's shell was found.
 }
 \description{
 Reads a company's TOC and shells from one Excel workbook without knowing
@@ -53,9 +55,12 @@ when the chat reads Excel.
 \details{
 The report numbers are found as they are written -- \code{T-14-1-1},
 \verb{Table 14.1.1}, \verb{14.1.1}, \code{F14.2.1} -- and matched whatever the
-punctuation (\code{T-14-1-1} is \verb{Table 14.1.1}).  The TOC is the sheet named
-like one (TOC, contents, index, list ...) or else the sheet listing the
-most report numbers.  A shell is a sheet named by its report's number, or
+punctuation (\code{T-14-1-1} is \verb{Table 14.1.1}; full-width digits too).  The
+TOC is the sheet named like one (TOC, contents, index, list, the Japanese
+words for them ...) that lists report numbers, or else the sheet listing
+the most report numbers; a header cell saying title (Title, Output
+Title, or the Japanese words for it) above the first report names the
+title column.  A shell is a sheet named by its report's number, or
 the rows of a sheet from the row that names its number to the row before
 the next number.
 \itemize{

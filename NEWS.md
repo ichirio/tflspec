@@ -1,6 +1,6 @@
 # tflspec (development version)
 
-* **Template SPEC in a report's YAML** (#341, 0.0.24.9157).  A report's file
+* **Template SPEC in a report's YAML** (#341, 0.0.24.9158).  A report's file
   may be `template: {name, args}`, its `ard:` / `data:` / `content:`
   holding only what it adds or changes (`tfl_output(template = )`; read and
   written, a named vector in `args` as a map; a figure designer's
@@ -19,6 +19,31 @@
   items and analyses.  SAMPLE-01's nine template reports, written as
   template SPECs, give the same ARD and the same RTF now, by B and by A.
 
+* **AI kit: the first try on a Japanese Windows PC** (#338, 0.0.24.9157).
+  `tfl_ai_collect_answers()` and `tfl_ai_unpack()` read an answer saved as
+  UTF-8 with or without a BOM, with CRLF line ends, or as UTF-16 (Notepad's
+  "Unicode"). They also read an answer Notepad saved as `<request>.md.txt`.
+  An answer saved in Shift-JIS / CP932 is an `error` that says how to save
+  it again as UTF-8. Every file the kit writes (requests, index, ADaM
+  summary, TOC/shell text, repairs, the study's YAML, the report files) is
+  UTF-8 whatever the session's locale, and the folder of
+  `file = "ai/..."` is made when it is missing. `tfl_ai_write_requests()`
+  makes `ai/answers` and says what to paste first. The print of
+  `tfl_ai_collect_answers()` gives each request's status, its reports and
+  the next step (paste the repair into the same chat, the request into a
+  new one ...). It also names answers whose file name matches no request.
+  An error when writing one request's reports no longer stops the other
+  requests. `tfl_ai_read_shell()` on a company's own workbook: a sheet
+  named like a TOC must list report numbers and must not be named by one
+  (a shell sheet named `L-16-2-1 <list>` is not taken for the TOC). A
+  header cell saying title (Title, or the Japanese words for it) gives the
+  title column, so a longer analysis-set column is not taken for the
+  title. Full-width digits in a report number are read. The print says
+  what to pass when no TOC or a report's shell was found (`toc_sheet =`,
+  `sheets =`). A request's own read of the workbook keeps the `toc_sheet`
+  and `sheets` given. The table guides' sample block uses one stored answer
+  per request (`inst/ai/example/answers/`), so all four reports print `ok`.
+  The block and the guide's steps 3 and 6 are run as tests.
 * **Where a table's page names print, said in its content** (#337,
   0.0.24.9156; rtfreporter #672).  `plan_paginate_group(heading_at = )` and
   `plan_paginate_rows(heading_at = )` (`section`, `title`, `none`) are in
