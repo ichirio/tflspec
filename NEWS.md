@@ -52,7 +52,8 @@
   has no `codelists =` either.  Kept: an order of the report's own, a
   column no analysis reads, one a cardx analysis reads (survfit names the
   arms from the strata: T-14-2-2) and a report whose data steps make its
-  data.  The RTF is the same.
+  data.  A workbook's table (`tfl_table_code(ard_spec = )`) leaves out the
+  same, so it and its YAML file write one program.  The RTF is the same.
 
 * **The AI table guide's install lines** (#360, 0.0.24.9165).  A new R has
   no `remotes`, and the sample's efficacy table needs `broom` (cardx's

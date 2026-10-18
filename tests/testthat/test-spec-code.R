@@ -568,3 +568,35 @@ test_that("a named order (plan_levels(SEX = c(F = \"Female\"))): the schema, the
     tfl_item("plan_levels", list(SEX = list(Male = "Men", Female = "Women")))))
   expect_match(paste(tfl_content_code(p), collapse = "\n"), 'Male = "Men"', fixed = TRUE)
 })
+
+test_that("a workbook's table leaves out the plan_levels() its ARD says, as its YAML file does", {
+  S <- .ard_spec_sheets
+  ard <- tfl_ard_spec(list(
+    study = exact_sheet(list(list(key = "id", value = "USUBJID")), S$study),
+    datasets = exact_sheet(list(list(dataset = "ADSL", path = "adam/ADSL.rds")), S$datasets),
+    populations = exact_sheet(list(list(population_id = "SAF", dataset = "ADSL",
+                                        where = "SAFFL == \"Y\"")), S$populations),
+    analyses = exact_sheet(list(
+      list(output_id = "T", analysis_id = "CONT", method = "continuous", dataset = "ADSL",
+           population_id = "SAF", by = "TRT01A", variables = "AGE"),
+      list(output_id = "T", analysis_id = "CAT", method = "categorical", dataset = "ADSL",
+           population_id = "SAF", by = "TRT01A", variables = "SEX")), S$analyses)))
+  sp <- tfl_table_spec(list(
+    tables = data.frame(output_id = "T", cols = "TRT01A", rows = "group = variable"),
+    variables = data.frame(output_id = NA, variable = c("AGE", "SEX"), order = c("1", "2"),
+                           label = c("Age", "Sex")),
+    codelists = data.frame(output_id = "T", variable = c("TRT01A", "TRT01A", "SEX", "SEX"),
+                           value = c("A", "B", "F", "M"), label = c(NA, NA, "Female", "Male"),
+                           order = c("1", "2", "1", "2"))))
+  with_ard <- paste(tfl_table_code(sp, "T", pipe = "|>", ard_spec = ard), collapse = "\n")
+  expect_false(grepl("plan_levels", with_ard, fixed = TRUE))
+  expect_false(grepl("cl_", with_ard, fixed = TRUE))
+  # without the ARD definition: as before
+  bare <- paste(tfl_table_code(sp, "T", pipe = "|>"), collapse = "\n")
+  expect_match(bare, "SEX = cl_sex", fixed = TRUE)
+  # a report's own order (the variables sheet's levels) stays
+  sp$variables$levels <- c(NA, "Male | Female")
+  own <- paste(tfl_table_code(sp, "T", pipe = "|>", ard_spec = ard), collapse = "\n")
+  expect_match(own, "SEX = cl_sex", fixed = TRUE)
+  expect_false(grepl("TRT01A = cl_trt01a", own, fixed = TRUE))
+})

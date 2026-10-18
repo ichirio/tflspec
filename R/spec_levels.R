@@ -82,3 +82,31 @@
   }
   out
 }
+
+# The sheets' path (tfl_table_code()) leaves out the same: its report's
+# analyses from the ARD definition, its code lists from the table spec's
+# `codelists` -- so a workbook's table and its YAML file write one
+# program.  Nothing without the ARD definition (as a report whose ARD the
+# report does not define).
+.levels_prune_sheets <- function(items, sp, ard_spec, output_id) {
+  if (is.null(ard_spec) || length(output_id) != 1L || is.na(output_id)) return(items)
+  an <- ard_spec$analyses
+  an <- an[!is.na(an$output_id) & an$output_id %in% output_id, , drop = FALSE]
+  if (!nrow(an)) return(items)
+  cell <- function(col, i) {
+    v <- an[[col]]
+    if (is.null(v) || is.na(v[i])) NULL else v[i]
+  }
+  analyses <- lapply(seq_len(nrow(an)), function(i) {
+    list(id = an$analysis_id[i], method = cell("method", i) %||% "",
+         by = .split_bar(cell("by", i)), strata = .split_bar(cell("strata", i)),
+         variables = .split_bar(cell("variables", i)), parent = cell("parent", i))
+  })
+  cl <- sp$codelists
+  if (!is.null(cl) && nrow(cl)) {
+    cl <- cl[!is.na(cl$output_id) & cl$output_id %in% output_id, , drop = FALSE]
+  }
+  output <- list(ard = list(analyses = analyses),
+                 codelists = if (!is.null(cl) && nrow(cl)) .conv_codelists(cl))
+  .levels_prune(items, output)
+}

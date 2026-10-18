@@ -464,9 +464,11 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
                                  output_id = output_id), output_id)
   items <- .plan_content_items(sp)
   if (isTRUE(normalize)) {
-    nz <- .normalize_spec_args(sp, ard_spec, output_id %||% attr(sp, "output_id"),
-                               "tfl_table_code", guess = TRUE)
-    items <- c(list(tfl_item("normalize_ard", nz)), items)
+    id <- output_id %||% attr(sp, "output_id")
+    nz <- .normalize_spec_args(sp, ard_spec, id, "tfl_table_code", guess = TRUE)
+    # plan_levels() the ARD already says, left out as from a YAML file
+    # (.levels_prune()); not when the program's data part makes the data
+    items <- c(list(tfl_item("normalize_ard", nz)), .levels_prune_sheets(items, sp, ard_spec, id))
   }
   .content_table_code(items, data = data, plan = plan, pipe = pipe)
 }
