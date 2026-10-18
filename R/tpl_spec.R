@@ -179,7 +179,7 @@ tfl_template_to_spec <- function(output, study) {
   levels <- .tpl_levels(vars, output$codelists)
   cl <- if (length(levels)) c("# the code lists: each value in its order, as the table shows it",
                               .codelists_lines(levels), "")
-  call <- do.call(.spec_call, c(list(paste0("tpl_", tp$name), .spec_sym(data)), args,
+  call <- do.call(.spec_call, c(list(t$call %||% paste0("tpl_", tp$name), .spec_sym(data)), args,
                                 if (length(levels)) list(codelists = stats::setNames(
                                   lapply(names(levels), function(v) .spec_sym(.cl_name(v))),
                                   names(levels)))))

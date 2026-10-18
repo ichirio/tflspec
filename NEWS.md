@@ -1,5 +1,22 @@
 # tflspec (development version)
 
+* **Template SPEC: a company's templates** (#343, 0.0.24.9159).  A
+  company's templates are an R package of its own (decided 2026-10-17).
+  `tfl_template()` registers a template from outside (its kind, layout,
+  parameters, body, the function its program calls and an example); a name
+  already registered is replaced with a message, and a parameter that
+  changes the look (the rows a page, widths, digits, blank rows, the style)
+  is warned about.  `tfl_param()` is exported; `tfl_template_params()`
+  gives a template's parameters to start from; `tfl_template_run()` is the
+  A use of any template, what a company's exported functions call.
+  `tfl_test_templates()` runs each template with one parameter at a time
+  changed and lists those that change the look -- tflspec's own have none.
+  `tfl_use_company_templates()` writes a company's package to start from:
+  a thin wrapper of each tflspec template chosen (the same parameters, the
+  company's defaults, tflspec's body), registered on load, its function,
+  tests, the company's study defaults and a README; it installs and its
+  tests pass.  `tfl_templates()` gains `package` and `call`.
+
 * **Template SPEC in a report's YAML** (#341, 0.0.24.9158).  A report's file
   may be `template: {name, args}`, its `ard:` / `data:` / `content:`
   holding only what it adds or changes (`tfl_output(template = )`; read and
