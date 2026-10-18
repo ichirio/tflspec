@@ -127,12 +127,35 @@ tfl_template_to_spec <- function(output, study) {
   below <- .layers_below(output, study)
   e <- .tpl_expand_for(output, study, below$acc$content,
                        .merge_map(below$acc$codelists, output$codelists))
-  own <- if (inherits(output$content, "tfl_r")) list() else output$content
+  # the content: what the resolved report has from the template and its own
+  # file, argument by argument -- the study's layers (a template's look they
+  # win over among them) stay the layers', so the report resolves the same
+  ro <- tfl_resolve_output(output, study, provenance = TRUE)
   output$ard <- .merge_ard(e$x$ard, output$ard)
   output$data <- .merge_map(e$x$data %||% list(), output$data %||% list())
-  output$content <- .merge_content(e$x$content, own)
+  output$content <- if (inherits(ro$content, "tfl_r")) ro$content else .tpl_own_part(ro$content)
   output$template <- NULL
   output
+}
+
+# The resolved items' part from the template and the report's own file:
+# a named-dots verb's keys from them, any other verb's item when it is
+# theirs (its provenance, `arg_from`, dropped)
+.tpl_own_part <- function(items) {
+  mine <- function(f) startsWith(f, "template:") || identical(f, "own")
+  out <- list()
+  for (it in items) {
+    keys <- names(it$args) %||% character()
+    af <- it$arg_from %||% stats::setNames(rep(it$from %||% "own", length(keys)), keys)
+    k <- if (.dots_named(it$fn) && length(keys)) keys[vapply(af[keys], mine, NA)] else NULL
+    keep <- if (is.null(k)) mine(it$from %||% "own") else length(k) > 0L
+    if (!keep) next
+    if (!is.null(k)) it$args <- it$args[k]
+    it$arg_from <- NULL
+    it$below <- NULL
+    out <- c(out, list(it))
+  }
+  out
 }
 
 # The A use's lines after the template's call: what the resolved items have
@@ -179,7 +202,7 @@ tfl_template_to_spec <- function(output, study) {
   levels <- .tpl_levels(vars, output$codelists)
   cl <- if (length(levels)) c("# the code lists: each value in its order, as the table shows it",
                               .codelists_lines(levels), "")
-  call <- do.call(.spec_call, c(list(paste0("tpl_", tp$name), .spec_sym(data)), args,
+  call <- do.call(.spec_call, c(list(t$call %||% paste0("tpl_", tp$name), .spec_sym(data)), args,
                                 if (length(levels)) list(codelists = stats::setNames(
                                   lapply(names(levels), function(v) .spec_sym(.cl_name(v))),
                                   names(levels)))))
@@ -195,6 +218,7 @@ tfl_template_to_spec <- function(output, study) {
   note <- vapply(from, function(f) {
     if (identical(f, "own")) return("  # (own)")
     if (identical(f, "defaults")) return("  # (study default)")
+    if (startsWith(f, "style:")) return(paste0("  # (study style: ", sub("^style:", "", f), ")"))
     paste0("  # (pattern ", sub("^pattern:", "", f), ")")
   }, "")
   body <- c(head[2L], unlist(lapply(seq_along(lines), function(i) c(note[i], lines[i]))))

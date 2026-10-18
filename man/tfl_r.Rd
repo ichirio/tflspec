@@ -27,7 +27,8 @@ tfl_output(
   content = list(),
   page = list(),
   ard = NULL,
-  template = NULL
+  template = NULL,
+  style = NULL
 )
 }
 \arguments{
@@ -41,7 +42,7 @@ tfl_output(
 \item{package}{The package \code{fn} is in, when its name does not say.}
 
 \item{from}{Where an item came from: \code{"own"}, \code{"defaults"},
-\code{"pattern:<name>"}, \code{"template:<name>"}.}
+\code{"pattern:<name>"}, \code{"style:<name>"}, \code{"template:<name>"}.}
 
 \item{id}{The report's id (letters, digits, \code{.}, \verb{_}, \code{-}); the file is
 \verb{spec/outputs/<id>.yml}.}
@@ -71,6 +72,10 @@ before any report (a list: \code{analysis_data}, \code{analyses}); \code{NULL} n
 is the template's items (\code{\link[=tfl_templates]{tfl_templates()}}) with \code{ard}, \code{data} and
 \code{content} adding to them or changing them (\code{\link[=tfl_resolve_output]{tfl_resolve_output()}},
 \code{\link[=tfl_template_to_spec]{tfl_template_to_spec()}}); \code{NULL} none.}
+
+\item{style}{The study's style the report picks (\code{"compact"}: a set of
+\code{defaults.yml}'s \verb{styles:}, its look -- page and table details);
+\code{NULL}: \code{standard}.}
 }
 \value{
 \code{tfl_r()}: a string of class \code{tfl_r}; \code{tfl_unset()}: an object

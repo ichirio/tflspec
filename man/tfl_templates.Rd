@@ -8,7 +8,9 @@ tfl_templates()
 }
 \value{
 A data frame, one row a template: \code{name}, \code{kind}, \code{layout},
-\code{params} (its parameters, comma-separated).
+\code{params} (its parameters, comma-separated), \code{package} (the package
+that registered it: tflspec, or a company's, \code{\link[=tfl_template]{tfl_template()}}) and
+\code{call} (the function its program calls, the A use).
 }
 \description{
 The templates
