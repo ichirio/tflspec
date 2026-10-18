@@ -163,3 +163,28 @@ test_that("summary's mean (CI); km_table, vs_change and orr", {
   expect_identical(o$content[[3L]]$args$RESP, "Objective response rate (CR + PR + SD)")
   expect_true(all(c("km_table", "vs_change", "orr") %in% tfl_templates()$name))
 })
+
+test_that("ae_overview: a subjects analysis and a row a flag", {
+  x <- tfl_template_expand("ae_overview")
+  expect_identical(vapply(x$ard$analyses, `[[`, "", "method"), c("categorical", rep("subjects", 6)))
+  expect_null(x$ard$analyses[[2L]]$where)   # ANY: every event kept
+  expect_identical(as.character(x$ard$analyses[[5L]]$where), 'AESER == "Y"')
+  expect_identical(as.character(x$ard$analysis_data[[2L]]$where), 'TRTEMFL == "Y"')
+  expect_identical(x$content[[1L]]$args$label, NA)   # no label column
+  ser <- list(list(id = "SER", label = "Serious", where = 'AESER == "Y"'))
+  f <- tfl_template_expand("ae_overview", list(flags = ser, population = "ITT"))
+  expect_identical(f$content[[2L]]$args, list(SER = "Serious"))
+  expect_identical(f$ard$analysis_data[[2L]]$id, "adae_itt")
+  skip_if_not_installed("cards")
+  saf <- adsl[adsl$SAFFL == "Y", ]
+  te <- adae[adae$TRTEMFL == "Y", ]
+  saf$SER <- saf$USUBJID %in% te$USUBJID[te$AESER == "Y"]
+  ard <- cards::bind_ard(
+    cards::ard_tabulate(saf, variables = TRT01A),
+    cards::ard_tabulate_value(saf, by = TRT01A, variables = SER, value = list(SER = TRUE)))
+  p <- suppressMessages(tpl_ae_overview(ard, flags = ser))
+  expect_s3_class(p, "table_plan")
+  tab <- suppressMessages(rtfreporter::plan_apply(p, "table"))
+  expect_identical(nrow(tab), 1L)
+  expect_identical(as.character(tab[[1L]]), "Serious")
+})
