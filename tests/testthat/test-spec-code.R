@@ -594,9 +594,36 @@ test_that("a workbook's table leaves out the plan_levels() its ARD says, as its 
   # without the ARD definition: as before
   bare <- paste(tfl_table_code(sp, "T", pipe = "|>"), collapse = "\n")
   expect_match(bare, "SEX = cl_sex", fixed = TRUE)
+  # the bridge with the ARD definition: a report's own items (what its file
+  # and the builder write back) without the orders its code lists give
+  lv_of <- function(items) {
+    i <- which(vapply(items, function(it) it$fn, "") == "plan_levels")
+    if (length(i)) items[[i]]$args
+  }
+  expect_false(is.null(lv_of(tflspec:::.plan_content_from_sheets(sp, "T", own = TRUE))$TRT01A))
+  own <- tflspec:::.plan_content_from_sheets(sp, "T", own = TRUE, ard_spec = ard)
+  expect_null(lv_of(own)$TRT01A)
+  expect_null(lv_of(own)$SEX)
   # a report's own order (the variables sheet's levels) stays
   sp$variables$levels <- c(NA, "Male | Female")
+  sp$variables$output_id <- "T"
+  expect_identical(lv_of(tflspec:::.plan_content_from_sheets(sp, "T", own = TRUE, ard_spec = ard))$SEX,
+                   c("Male", "Female"))
   own <- paste(tfl_table_code(sp, "T", pipe = "|>", ard_spec = ard), collapse = "\n")
   expect_match(own, "SEX = cl_sex", fixed = TRUE)
   expect_false(grepl("TRT01A = cl_trt01a", own, fixed = TRUE))
+})
+
+test_that("one heading keeps its variable through a file: plan_labels(variable = c(EOSSTT = ))", {
+  sp <- tfl_table_spec(list(
+    tables = data.frame(output_id = "T", cols = "TRT01A", rows = "group = variable"),
+    variables = data.frame(output_id = "T", variable = "EOSSTT", label = "End of study status")))
+  items <- tflspec:::.plan_content_from_sheets(sp, "T", own = TRUE)
+  f <- tempfile(fileext = ".yml")
+  tfl_write_output(tfl_output("T", "table", content = items), f)
+  back <- tfl_read_output(f)
+  lb <- Filter(function(it) it$fn == "plan_labels", back$content)[[1L]]$args
+  expect_identical(unlist(lb$variable), c(EOSSTT = "End of study status"))
+  expect_match(paste(tfl_content_code(back, pipe = "|>"), collapse = "\n"),
+               'plan_labels(variable = c(EOSSTT = "End of study status"))', fixed = TRUE)
 })
