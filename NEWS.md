@@ -1,5 +1,14 @@
 # tflspec (development version)
 
+* **`plan_levels()` before `plan_labels()`** (#349, 0.0.24.9162): the
+  values' order first, then their names and the variables'.  The schema's
+  ranks swap (`plan_levels` 80, `plan_labels` 90), the cards' and the
+  generated code's order, and the templates write them so.  The table is
+  the same: rtfreporter applies the two together, whatever their order
+  (checked for the variables' order and headings, value labels, and a
+  column the plan makes).  A file that writes `plan_labels()` first reads
+  as before.
+
 * **Template SPEC: the study's styles, a template's look under them, and
   where titles and footnotes print** (#344, 0.0.24.9160).
   - `defaults.yml` may hold named styles, `styles: {compact: {content:,

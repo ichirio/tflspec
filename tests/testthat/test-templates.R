@@ -1,3 +1,6 @@
+# a template's item of one function (wherever the template puts it)
+tpl_item <- function(x, fn) x$content[[match(fn, vapply(x$content, `[[`, "", "fn"))]]
+
 # Template SPEC: one definition, its items (B) and its object (A).
 
 tpl_ard <- function() {
@@ -18,7 +21,7 @@ test_that("tfl_templates() lists demog and summary", {
 test_that("tfl_template_expand(): the items, marked as the template's", {
   x <- tfl_template_expand("demog", list(population = "SAF"))
   expect_identical(vapply(x$content, `[[`, "", "fn"),
-                   c("table_plan", "plan_cells", "plan_labels", "plan_levels",
+                   c("table_plan", "plan_cells", "plan_levels", "plan_labels",
                      "plan_paginate_rows"))
   expect_true(all(vapply(x$content, `[[`, "", "from") == "template:demog"))
   expect_identical(x$ard$analysis_data[[1L]]$id, "adsl_saf")
@@ -29,7 +32,7 @@ test_that("tfl_template_expand(): the items, marked as the template's", {
   # the code lists give the values' order, as text
   cl <- list(SEX = list(list(value = "F", label = "Female"), list(value = "M", label = "Male")))
   y <- tfl_template_expand("demog", list(population = "SAF"), codelists = cl)
-  expect_identical(y$content[[4L]]$args$SEX, c("Female", "Male"))
+  expect_identical(tpl_item(y, "plan_levels")$args$SEX, c("Female", "Male"))
   # a dataset other than ADSL: its own analysis data, its records kept by `where`
   z <- tfl_template_expand("summary", list(population = "SAF", variables = "AVAL",
                                            data = "ADVS", where = 'PARAMCD == "SYSBP"'))
@@ -106,7 +109,7 @@ test_that("summary: categorical variables too; disposition on it", {
   expect_error(tfl_template_expand("summary", list(population = "SAF")), "categorical")
   d <- tfl_template_expand("disposition", list(population = "SAF"))
   expect_identical(d$ard$analyses[[2L]]$id, "DISP")
-  expect_identical(d$content[[2L]]$args, list(EOSSTT = "Status at end of study, n (%)"))
+  expect_identical(tpl_item(d, "plan_labels")$args, list(EOSSTT = "Status at end of study, n (%)"))
   expect_true("disposition" %in% tfl_templates()$name)
   ard <- tpl_ard()
   p <- suppressMessages(tpl_summary(ard, population = "SAF", categorical = c("AGEGR1", "SEX")))
@@ -156,11 +159,11 @@ test_that("summary's mean (CI); km_table, vs_change and orr", {
   v <- tfl_template_expand("vs_change", list(population = "SAF", param = "SYSBP", visit = "V1",
     param_label = "Systolic BP", when = "week 1", visit_label = "Week 1", unit = "mmHg"))
   expect_identical(v$ard$analyses[[2L]]$variables, c("BASE", "AVAL", "CHG"))
-  expect_identical(v$content[[3L]]$args$CHG, "Change from baseline (mmHg)")
+  expect_identical(tpl_item(v, "plan_labels")$args$CHG, "Change from baseline (mmHg)")
   o <- tfl_template_expand("orr", list(responders = c("CR", "PR", "SD")))
   expect_identical(as.character(o$ard$analysis_data[[1L]]$derive),
                    'RESP = AVALC %in% c("CR", "PR", "SD")')
-  expect_identical(o$content[[3L]]$args$RESP, "Objective response rate (CR + PR + SD)")
+  expect_identical(tpl_item(o, "plan_labels")$args$RESP, "Objective response rate (CR + PR + SD)")
   expect_true(all(c("km_table", "vs_change", "orr") %in% tfl_templates()$name))
 })
 
@@ -173,7 +176,7 @@ test_that("ae_overview: a subjects analysis and a row a flag", {
   expect_identical(x$content[[1L]]$args$label, NA)   # no label column
   ser <- list(list(id = "SER", label = "Serious", where = 'AESER == "Y"'))
   f <- tfl_template_expand("ae_overview", list(flags = ser, population = "ITT"))
-  expect_identical(f$content[[2L]]$args, list(SER = "Serious"))
+  expect_identical(tpl_item(f, "plan_labels")$args, list(SER = "Serious"))
   expect_identical(f$ard$analysis_data[[2L]]$id, "adae_itt")
   skip_if_not_installed("cards")
   saf <- adsl[adsl$SAFFL == "Y", ]
