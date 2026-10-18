@@ -1,5 +1,14 @@
 # tflspec (development version)
 
+* **`plan_levels()` before `plan_labels()`** (#349, 0.0.24.9163): the
+  values' order first, then their names and the variables'.  The schema's
+  ranks swap (`plan_levels` 80, `plan_labels` 90), the cards' and the
+  generated code's order, and the templates write them so.  The table is
+  the same: rtfreporter applies the two together, whatever their order
+  (checked for the variables' order and headings, value labels, and a
+  column the plan makes).  A file that writes `plan_labels()` first reads
+  as before.
+
 * **The rounding in either case** (#347, 0.0.24.9162; rtfreporter #676).
   The `study` sheet's `rounding` and a YAML file's `plan_digits: {rounding:
   }` (a report, defaults.yml, a pattern, a style) are read in lower case:

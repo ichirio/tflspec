@@ -277,9 +277,10 @@ test_that("the variables' order is plan_levels(variable = ), both ways; the labe
   expect_true(all(is.na(sh$variables$order)))
   expect_true(any(grepl('plan_labels(SEX = "Sex", AGE = "Age")', tfl_table_code(sh), fixed = TRUE)))
   expect_false(any(grepl("plan_levels(variable", tfl_table_code(sh), fixed = TRUE)))
-  # plan_levels() is read first wherever it is written (the recommended
-  # order puts plan_labels() first): the rows, and so the code lists, keep
-  # their place
+  # the recommended order puts plan_levels() first (the values' order, then
+  # their names); plan_levels() is read first wherever a file writes it
+  # (an older file: plan_labels() first): the rows, and so the code lists,
+  # keep their place
   sp2 <- tfl_table_spec(
     tables = data.frame(output_id = "T-1", cols = "TRT01A", rows = "group = variable"),
     variables = data.frame(output_id = "T-1", variable = c("TRT01A", "SEX", "AGE"),
@@ -288,16 +289,23 @@ test_that("the variables' order is plan_levels(variable = ), both ways; the labe
     cells = data.frame(output_id = "T-1", template = "{n}"))
   items2 <- .plan_content_from_sheets(sp2, "T-1", own = TRUE)
   fns <- vapply(items2, `[[`, "", "fn")
-  expect_lt(match("plan_labels", fns), match("plan_levels", fns))
+  expect_lt(match("plan_levels", fns), match("plan_labels", fns))
   back2 <- .plan_sheets_from_content(items2, "T-1")
   expect_identical(back2$variables$variable, c("TRT01A", "SEX", "AGE"))
   expect_identical(tfl_table_code(back2), tfl_table_code(sp2))
+  old <- c(items2[fns != "plan_levels" & seq_along(fns) <= match("plan_labels", fns)],
+           items2[fns == "plan_levels"],
+           items2[fns != "plan_levels" & seq_along(fns) > match("plan_labels", fns)])
+  expect_lt(match("plan_labels", vapply(old, `[[`, "", "fn")), match("plan_levels", vapply(old, `[[`, "", "fn")))
+  back3 <- .plan_sheets_from_content(old, "T-1")
+  expect_identical(back3$variables$variable, c("TRT01A", "SEX", "AGE"))
+  expect_identical(tfl_table_code(back3), tfl_table_code(sp2))
 })
 
 test_that("the recommended order: the mapping first, then the finishing (rank and stage)", {
   s <- .schema_all(figure = FALSE)
   verbs <- c("normalize_ard", "table_plan", "plan_cells", "plan_stat_groups", "plan_total",
-             "plan_compare", "plan_filter", "plan_labels", "plan_levels", "plan_nest",
+             "plan_compare", "plan_filter", "plan_levels", "plan_labels", "plan_nest",
              "plan_digits", "plan_sort", "plan_col_header", "plan_stub", "plan_blanks",
              "plan_paginate_rows", "plan_paginate_group", "plan_paginate_cols", "plan_row_group",
              "plan_hide", "plan_columns", "plan_style", "plan_cell_style")

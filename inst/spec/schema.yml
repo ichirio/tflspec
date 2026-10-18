@@ -84,7 +84,7 @@ plan_digits:
 
 plan_levels:
   package: rtfreporter
-  rank: 90
+  rank: 80
   stage: finishing
   description: The order (and the subset) of a variable's values.
   dots: {style: named, map: true, type: "list<string>", description: A variable's values in their order.}
@@ -93,7 +93,7 @@ plan_levels:
 
 plan_labels:
   package: rtfreporter
-  rank: 80
+  rank: 90
   stage: finishing
   description: The printed text of variables and values.
   dots: {style: named, map: true, type: "string|vec<string, string>", description: "A variable's label, or its values' labels."}
