@@ -1,6 +1,6 @@
 # tflspec (development version)
 
-* **`plan_levels()` before `plan_labels()`** (#349, 0.0.24.9162): the
+* **`plan_levels()` before `plan_labels()`** (#349, 0.0.24.9163): the
   values' order first, then their names and the variables'.  The schema's
   ranks swap (`plan_levels` 80, `plan_labels` 90), the cards' and the
   generated code's order, and the templates write them so.  The table is
