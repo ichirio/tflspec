@@ -860,7 +860,7 @@ test_that("the codelists sheet: the values' place, as the ARD has them (plan_lev
   expect_true('cl_sex <- c("Male", "Female")' %in% code)
   expect_true(any(grepl("SEX = cl_sex", code, fixed = TRUE)))
   # plan_labels(): the variables' headings only -- the values' text is the ARD's
-  expect_true(any(grepl('plan_labels(SEX = "Sex", AGEGR1 = "Age group")', code, fixed = TRUE)))
+  expect_true(any(grepl('plan_labels(variable = c(SEX = "Sex", AGEGR1 = "Age group"))', code, fixed = TRUE)))
   e <- new.env()
   e$data <- d
   suppressMessages(eval(parse(text = code), envir = e))
