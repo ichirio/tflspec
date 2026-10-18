@@ -806,3 +806,83 @@ tpl_orr <- function(ard, population = "ITT", ..., codelists = NULL) {
   .tpl_object("orr", ard, c(list(population = population), list(...)),
               codelists = codelists)
 }
+
+# ---- ae_overview: the subjects with a TEAE of each kind, on summary ------------
+
+.tpl_ae_flags <- list(
+  list(id = "ANY", label = "Any TEAE"),
+  list(id = "REL", label = "Any treatment-related TEAE", where = "AEREL == \"RELATED\""),
+  list(id = "G3", label = "Any TEAE of CTCAE grade 3 or higher",
+       where = "AETOXGR %in% c(\"3\", \"4\", \"5\")"),
+  list(id = "SER", label = "Any serious TEAE", where = "AESER == \"Y\""),
+  list(id = "DISC", label = "Any TEAE leading to discontinuation of study drug",
+       where = "AEACN == \"DRUG WITHDRAWN\""),
+  list(id = "DTH", label = "Any TEAE leading to death", where = "AEOUT == \"FATAL\""))
+
+.tfl_template("ae_overview", kind = "table", layout = "summary",
+  params = list(
+    tfl_param("population", "SAF", doc = "the analysis set's id"),
+    tfl_param("by", "TRT01A", doc = "the column variable"),
+    tfl_param("data", "ADAE", doc = "the dataset of events"),
+    tfl_param("where", "TRTEMFL == \"Y\"", doc = "the events kept (R): the treatment-emergent"),
+    tfl_param("data_id", NULL, doc = "the events' analysis data's id; NULL: <data>_<population>"),
+    tfl_param("flags", .tpl_ae_flags, doc = paste(
+      "the rows, in order: each `id` (the flag's name), `label` (the row's text)",
+      "and `where` (R: the events it counts; none: every event kept)")),
+    tfl_param("heading", "Subjects with", doc = "the label column's heading")
+  ),
+  body = function(a, ctx) {
+    pop <- a$population
+    subj <- paste0("adsl_", tolower(pop))
+    set <- a$data_id %||% paste0(tolower(a$data), "_", tolower(pop))
+    ids <- vapply(a$flags, `[[`, "", "id")
+    # one `subjects` analysis a row: has the subject an event of the data
+    # that the row's `where` keeps?
+    flag <- function(f) Filter(Negate(is.null), list(
+      id = f$id, label = f$label, method = "subjects", data = set,
+      where = if (!is.null(f$where)) tfl_r(f$where), by = a$by, variables = f$id,
+      purpose = "PRIMARY OUTCOME MEASURE"))
+    ard <- list(
+      analysis_data = list(
+        list(id = subj, label = .tpl_set_label(pop, ctx$population), from = "ADSL",
+             population = pop),
+        Filter(Negate(is.null), list(id = set, from = a$data, subjects = subj,
+                                     where = if (!is.null(a$where)) tfl_r(a$where)))),
+      analyses = c(
+        list(list(id = "GROUPN", method = "categorical", data = subj, variables = a$by,
+                  purpose = "PRIMARY OUTCOME MEASURE")),
+        lapply(a$flags, flag)))
+    content <- list(
+      # one row a flag: no label column (the flag's TRUE is the row)
+      tfl_item("table_plan", list(cols = a$by, rows = list(group = "variable"), label = NA)),
+      tfl_item("plan_labels", stats::setNames(lapply(a$flags, `[[`, "label"), ids)),
+      tfl_item("plan_levels", c(list(variable = ids), .tpl_levels(a$by, ctx$codelists))),
+      tfl_item("plan_col_header", list(header = list(
+        list(line = "1", cols = "group"),
+        list(line = "1", cols = ".values", span = "each", text = "{col}"),
+        list(line = "2", cols = "group", text = a$heading),
+        list(line = "2", cols = ".values", span = "each", text = "(N={n})")))),
+      # the look is the template's (a report changes it with an item of its own)
+      tfl_item("plan_paginate_rows", list(max_rows = 30L, split = "group_safe")))
+    list(ard = ard, data = list(source = "ard", object = "ard"), content = content)
+  })
+
+#' Overview of adverse events: a table plan from the template `ae_overview`
+#'
+#' A display template on the `summary` layout: the subjects with a
+#' treatment-emergent adverse event of each kind (any, related, grade 3 or
+#' higher, serious, leading to discontinuation, leading to death), n (%) by
+#' arm, one row a kind.
+#'
+#' @inheritParams tpl_demog
+#' @param ... The template's other parameters: `by`, `data`, `where`,
+#'   `data_id`, `flags` (the rows: a list, each `id`, `label` and `where`),
+#'   `heading`.
+#' @return A [rtfreporter::table_plan()].
+#' @examples
+#' tfl_template_expand("ae_overview")$ard$analyses[[3]]
+#' @export
+tpl_ae_overview <- function(ard, population = "SAF", ..., codelists = NULL) {
+  .tpl_object("ae_overview", ard, c(list(population = population), list(...)),
+              codelists = codelists)
+}

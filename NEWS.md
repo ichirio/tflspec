@@ -25,6 +25,25 @@
   and `sheets` given. The table guides' sample block uses one stored answer
   per request (`inst/ai/example/answers/`), so all four reports print `ok`.
   The block and the guide's steps 3 and 6 are run as tests.
+* **Where a table's page names print, said in its content** (#337,
+  0.0.24.9156; rtfreporter #672).  `plan_paginate_group(heading_at = )` and
+  `plan_paginate_rows(heading_at = )` (`section`, `title`, `none`) are in
+  the schema, and the sheets' `layout` gains `group_heading_at` and
+  `pages_heading_at`, both ways.  It is the default of the report's
+  `rtf_tables(auto_section = , auto_title = )`: a report's own setting
+  (the page's `rtf_tables: {auto_section: }`, the report sheet's
+  `auto_section`) wins, and a blank one does not undo it.  Needs
+  rtfreporter 0.8.2.9072.
+
+* **Template SPEC: `ae_overview`** (#335, 0.0.24.9155).  A display template
+  on `summary` (`tpl_ae_overview()`): the subjects with a treatment-emergent
+  adverse event of each kind -- any, related, grade 3 or higher, serious,
+  leading to discontinuation, leading to death -- n (%) by arm, a row a
+  kind.  Each row is a `subjects` analysis of the events its `where` keeps;
+  `flags` changes the rows.  The onco example study gains the report it is
+  checked against (T-14-3-2, Overview of Treatment-Emergent Adverse
+  Events); the template gives the same items and RTF by A, by B and by
+  its spec.
 
 * **Template SPEC: four more** (#333, 0.0.24.9154).  `summary` takes an
   optional mean (95% CI) analysis of its continuous variables (`ci_label`;

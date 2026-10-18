@@ -293,6 +293,46 @@ test_that("layout$group_heading: a page per arm named with the arm and its N, as
   expect_identical(back$layout$group_heading, "Treatment: {value} (N={n})")
 })
 
+test_that("layout$group_heading_at: where the page names print, said in the plan; a report's auto_section given wins (rtfreporter #672)", {
+  skip_if_not_installed("cards")
+  skip_if_not("heading_at" %in% names(formals(rtfreporter::plan_paginate_group)))
+  adsl <- cards::ADSL
+  ard <- rtfreporter::normalize_ard(cards::bind_ard(cards::ard_tabulate(adsl, variables = ARM),
+                                                    cards::ard_tabulate(adsl, by = ARM, variables = SEX)))
+  sp <- function(at = NA, auto = NA) tfl_table_spec(
+    tables = data.frame(output_id = "T", cols = ".stat_group",
+                        rows = "arm = ARM | label = variable_level", label = "NA",
+                        stat_groups = "n = n | pct = p"),
+    cells = data.frame(output_id = "T", variable = c("n", "pct"),
+                       template = c("{n}", "{p:.1f%}")),
+    layout = data.frame(output_id = "T", group_page = "TRUE", group_col = "arm",
+                        group_keep = "FALSE", group_heading = "Arm: {value}",
+                        group_heading_at = at),
+    report = data.frame(output_id = "T", auto_section = auto),
+    header = data.frame(output_id = "T", line = 1, left = "Table 1"))
+  code <- paste(tfl_table_code(sp("section"), "T"), collapse = "
+")
+  expect_match(code, 'heading_at = "section"', fixed = TRUE)
+  rtf <- function(s) {
+    s <- suppressMessages(tflspec:::.ard_spec_scope(s, "T"))
+    p <- tfl_table_plan(ard, s, "T")
+    f <- tempfile(fileext = ".rtf"); on.exit(unlink(f))
+    suppressMessages(rtfreporter::generate_rtfreport(tfl_report(s, content = p), f, overwrite = TRUE))
+    unname(tools::md5sum(f))
+  }
+  withr::local_options(rtfreporter.render_time = as.POSIXct("2000-01-01", tz = "UTC"))
+  # the plan's word gives the report's auto_section = TRUE, and a blank
+  # report setting does not undo it
+  expect_identical(rtf(sp("section")), rtf(sp(auto = "TRUE")))
+  expect_false(identical(rtf(sp("section")), rtf(sp())))
+  # the report's own setting wins
+  expect_identical(rtf(sp("section", auto = "FALSE")), rtf(sp()))
+  p <- tfl_table_plan(ard, sp("title"), "T")
+  back <- tfl_as_table_spec(p, output_id = "T", compare = FALSE)
+  expect_identical(back$layout$group_heading_at, "title")
+  expect_identical(back$layout$group_heading, "Arm: {value}")
+})
+
 test_that("tables$stack and layout$pages_heading: subgroups as one pair of keys, BY pages named (rtfreporter #619)", {
   skip_if_not_installed("cards")
   skip_if_not("stack" %in% names(formals(rtfreporter::normalize_ard)))

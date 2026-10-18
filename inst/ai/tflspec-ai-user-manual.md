@@ -262,7 +262,7 @@ sections follow this order.
 | `data` | what the report reads.  `source: ard` (a table: the study ARD, `object: ard`; `steps:` R on it); `source: dataset` (a listing: `dataset`, `where`, `sort`); `source: code` (a figure: `steps:`, the design's data steps of §7; or `code: !r ...`, the report's own R) |
 | `codelists` | by variable, a list of `{value, label}` in the order printed (the `codelists` sheet) |
 | `content` | the report, a list of items, each one call: `- plan_cells: {categorical: '{n} ({p:.1f%})'}`.  A table's items are rtfreporter's `normalize_ard()`, `table_plan()` and `plan_*()` verbs; a listing's `plan_listing()` (its columns `listing_col()` calls); a figure's the calls of its plot -- `ggplot`, `geom_*`, `scale_*`, `labs`, `theme` ..., and `tfl_image` last (§7.1).  Or `content: !r ...`, the report's own R |
-| `page` | the document: `titles`, `footnotes`, `header`, `footer` (maps by line number: `'1': {center: Table 14.1.1}`), `tokens`, and rtfreporter's calls by name (`rtf_page: {orientation: landscape}`, `rtf_tables: {auto_section: true}`, `rtf_document: {watermark: DRAFT}`) |
+| `page` | the document: `titles`, `footnotes`, `header`, `footer` (maps by line number: `'1': {center: Table 14.1.1}`), `tokens`, and rtfreporter's calls by name (`rtf_page: {orientation: landscape}`, `rtf_tables: {auto_section: true}`, `rtf_document: {watermark: DRAFT}`); where a table's page names print is better said in its content, `plan_paginate_group: {heading_at: section}` -- a page's `rtf_tables: {auto_section: }` given wins |
 | `template` | a figure's template (`km_simple` ...); the designer's `plot`, `plots`, `compose` are its old form (§7) |
 
 **An item's keys are the function's arguments** (§A.2's tables say which
@@ -791,7 +791,7 @@ back): rename the value or choose another separator.
 
 **Template SPEC (prototype):** `tfl_templates` `tfl_template_expand`
 `tpl_demog` `tpl_summary` `tpl_disposition` `tpl_ae_soc_pt` `tpl_hierarchical`
-`tpl_shift` `tpl_lab_shift` `tpl_listing` `tpl_km_table` `tpl_vs_change` `tpl_orr`
+`tpl_shift` `tpl_lab_shift` `tpl_listing` `tpl_km_table` `tpl_vs_change` `tpl_orr` `tpl_ae_overview`
 `tfl_read_template_sheets` `tfl_write_template_yaml`
 
 **AI-assisted drafting:** `tfl_ai_tasks` `tfl_ai_context` `tfl_ai_schema`
@@ -1104,8 +1104,8 @@ cells  <- data.frame(output_id = "T-14-3-1", template = "{n} ({p:.1f%})")
 |---|---|
 | `pages_max_rows`, `pages_split`, `pages_break_before`, `pages_min_group_rows`, `pages_cont_label`, `pages_page_by` | `plan_paginate_rows()` (`page_by`: BY pages, the row budget inside each) |
 | `group_mode`, `group_collapse` | `plan_row_group()` |
-| `group_page`, `group_col`, `group_keep`, `group_heading` | `plan_paginate_group(col, keep, heading)` — one page per value; `group_heading = Treatment: {value} (N={n})` names each page (the `auto_section` heading) with the value and its N from the ARD (bind `cards::ard_tabulate(adsl, variables = TRT01A)`) |
-| `pages_heading` | `plan_paginate_rows(page_by, heading)` | each BY page named like `group_heading`, a page per arm with a row budget inside |
+| `group_page`, `group_col`, `group_keep`, `group_heading`, `group_heading_at` | `plan_paginate_group(col, keep, heading, heading_at)` — one page per value; `group_heading = Treatment: {value} (N={n})` names each page (the `auto_section` heading) with the value and its N from the ARD (bind `cards::ard_tabulate(adsl, variables = TRT01A)`); `group_heading_at = section` prints it in the section header (`title`: under the titles), so the report needs no `auto_section` |
+| `pages_heading`, `pages_heading_at` | `plan_paginate_rows(page_by, heading, heading_at)` | each BY page named like `group_heading`, and printed where `pages_heading_at` says, a page per arm with a row budget inside |
 | `blank_where`, `blank_first`, `blank_last`, `blank_counted` | `plan_blanks()` |
 | `stub_vars`, `stub_name`, `stub_indent`, `stub_summary`, `stub_before` | `plan_stub()` |
 | `colpages_every`, `colpages_at`, `colpages_cut_by`, `colpages_keep`, `colpages_fit`, `colpages_allow_span_break`, `colpages_order` | `plan_paginate_cols()` |
