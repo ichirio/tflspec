@@ -1,5 +1,11 @@
 # tflspec (development version)
 
+* **The rounding in either case** (#347, 0.0.24.9161; rtfreporter #676).
+  The `study` sheet's `rounding` and a YAML file's `plan_digits: {rounding:
+  }` (a report, defaults.yml, a pattern, a style) are read in lower case:
+  "SAS" is "sas".  The generated code writes "sas" / "r" as before, so it
+  needs no newer rtfreporter.
+
 * **AI kit: the first try on a Japanese Windows PC** (#338, 0.0.24.9157).
   `tfl_ai_collect_answers()` and `tfl_ai_unpack()` read an answer saved as
   UTF-8 with or without a BOM, with CRLF line ends, or as UTF-16 (Notepad's
