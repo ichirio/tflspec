@@ -1,5 +1,20 @@
 # tflspec (development version)
 
+* **`plan_levels()` the ARD already says is not written** (#352,
+  0.0.24.9166).  A table's program (`tfl_content_code()`) and its run
+  (`tfl_content_run()`) leave out a column's order that is the report's
+  code list -- applied when the ARD is made, a factor cards keeps in its
+  order -- when every analysis reading the column is cards', and
+  `variable =` when it is the order of the ARD's analyses.  T-14-1-1's
+  program loses its `plan_levels()` and the code lists at its head.  The
+  templates of cards' analyses (demog, summary and those on it,
+  hierarchical, ae_overview; shift's columns) write none, so their call
+  has no `codelists =` either.  Kept: an order of the report's own, a
+  column no analysis reads, one a cardx analysis reads (survfit names the
+  arms from the strata: T-14-2-2) and a report whose data steps make its
+  data.  A workbook's table (`tfl_table_code(ard_spec = )`) leaves out the
+  same, so it and its YAML file write one program.  The RTF is the same.
+
 * **The AI table guide's install lines** (#360, 0.0.24.9165).  A new R has
   no `remotes`, and the sample's efficacy table needs `broom` (cardx's
   confidence intervals): the guide (English and Japanese) now installs

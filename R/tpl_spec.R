@@ -210,7 +210,7 @@ tfl_template_to_spec <- function(output, study) {
                     if (length(tp$study)) paste0("; study defaults: ", paste(tp$study, collapse = ", "))
                     else ""),
             paste(plan, "<-", .spec_call_code(call, 0L, nchar(plan) + 4L)))
-  rest <- tp$rest
+  rest <- .levels_prune(tp$rest, output)
   if (!length(rest)) return(.drop_attached_ns(c(cl, head)))
   steps <- .content_calls(rest)
   from <- vapply(rest, function(it) it$from %||% "own", "")

@@ -511,3 +511,77 @@ test_that("plan_levels()'s names: variable, the column keys, the row keys, then 
                             "    TRT01A = cl_trt01a,\n    SEX = cl_sex,\n    AGEGR1 = cl_agegr1"),
                fixed = TRUE)
 })
+
+test_that("plan_levels() the ARD already says is left out of the program and the run (the owner, 10/18)", {
+  cl <- list(TRT01A = list(list(value = "A"), list(value = "B")),
+             SEX = list(list(value = "F", label = "Female"), list(value = "M", label = "Male")))
+  ard <- list(analyses = list(
+    list(id = "N", method = "categorical", data = "adsl_saf", variables = "TRT01A"),
+    list(id = "CONT", method = "continuous", data = "adsl_saf", by = "TRT01A", variables = "AGE"),
+    list(id = "CAT", method = "categorical", data = "adsl_saf", by = "TRT01A", variables = "SEX")))
+  lv <- function(args) tfl_output("T-1", "table", codelists = cl, ard = ard, content = list(
+    tfl_item("table_plan", list(cols = "TRT01A", rows = list(group = "variable"))),
+    tfl_item("plan_levels", args)))
+  code <- function(o) paste(tfl_content_code(o, pipe = "|>"), collapse = "\n")
+  # the code lists and the variables in the ARD's order: nothing to say
+  c1 <- code(lv(list(variable = c("AGE", "SEX"), TRT01A = c("A", "B"), SEX = c("Female", "Male"))))
+  expect_false(grepl("plan_levels", c1, fixed = TRUE))
+  expect_false(grepl("cl_", c1, fixed = TRUE))
+  # a report's own order is kept: another order of the values, of the variables
+  c2 <- code(lv(list(variable = c("SEX", "AGE"), SEX = c("Male", "Female"))))
+  expect_match(c2, 'variable = c("SEX", "AGE")', fixed = TRUE)
+  expect_match(c2, "SEX = cl_sex", fixed = TRUE)
+  # the first variables in the ARD's order (the rest after them): nothing to say
+  expect_false(grepl("plan_levels", code(lv(list(variable = "AGE"))), fixed = TRUE))
+  # an analysis that is not cards' (cardx's survfit names the arms from the strata): kept
+  ard$analyses[[2L]]$method <- "cardx::ard_survival_survfit"
+  o3 <- tfl_output("T-1", "table", codelists = cl, ard = ard, content = lv(list(TRT01A = c("A", "B")))$content)
+  expect_match(code(o3), "TRT01A = cl_trt01a", fixed = TRUE)
+  # .drop_empty alone stays
+  expect_match(code(lv(list(TRT01A = c("A", "B"), .drop_empty = "SEX"))), ".drop_empty", fixed = TRUE)
+})
+
+test_that("a workbook's table leaves out the plan_levels() its ARD says, as its YAML file does", {
+  S <- .ard_spec_sheets
+  ard <- tfl_ard_spec(list(
+    study = exact_sheet(list(list(key = "id", value = "USUBJID")), S$study),
+    datasets = exact_sheet(list(list(dataset = "ADSL", path = "adam/ADSL.rds")), S$datasets),
+    populations = exact_sheet(list(list(population_id = "SAF", dataset = "ADSL",
+                                        where = "SAFFL == \"Y\"")), S$populations),
+    analyses = exact_sheet(list(
+      list(output_id = "T", analysis_id = "CONT", method = "continuous", dataset = "ADSL",
+           population_id = "SAF", by = "TRT01A", variables = "AGE"),
+      list(output_id = "T", analysis_id = "CAT", method = "categorical", dataset = "ADSL",
+           population_id = "SAF", by = "TRT01A", variables = "SEX")), S$analyses)))
+  sp <- tfl_table_spec(list(
+    tables = data.frame(output_id = "T", cols = "TRT01A", rows = "group = variable"),
+    variables = data.frame(output_id = NA, variable = c("AGE", "SEX"), order = c("1", "2"),
+                           label = c("Age", "Sex")),
+    codelists = data.frame(output_id = "T", variable = c("TRT01A", "TRT01A", "SEX", "SEX"),
+                           value = c("A", "B", "F", "M"), label = c(NA, NA, "Female", "Male"),
+                           order = c("1", "2", "1", "2"))))
+  with_ard <- paste(tfl_table_code(sp, "T", pipe = "|>", ard_spec = ard), collapse = "\n")
+  expect_false(grepl("plan_levels", with_ard, fixed = TRUE))
+  expect_false(grepl("cl_", with_ard, fixed = TRUE))
+  # without the ARD definition: as before
+  bare <- paste(tfl_table_code(sp, "T", pipe = "|>"), collapse = "\n")
+  expect_match(bare, "SEX = cl_sex", fixed = TRUE)
+  # the bridge with the ARD definition: a report's own items (what its file
+  # and the builder write back) without the orders its code lists give
+  lv_of <- function(items) {
+    i <- which(vapply(items, function(it) it$fn, "") == "plan_levels")
+    if (length(i)) items[[i]]$args
+  }
+  expect_false(is.null(lv_of(tflspec:::.plan_content_from_sheets(sp, "T", own = TRUE))$TRT01A))
+  own <- tflspec:::.plan_content_from_sheets(sp, "T", own = TRUE, ard_spec = ard)
+  expect_null(lv_of(own)$TRT01A)
+  expect_null(lv_of(own)$SEX)
+  # a report's own order (the variables sheet's levels) stays
+  sp$variables$levels <- c(NA, "Male | Female")
+  sp$variables$output_id <- "T"
+  expect_identical(lv_of(tflspec:::.plan_content_from_sheets(sp, "T", own = TRUE, ard_spec = ard))$SEX,
+                   c("Male", "Female"))
+  own <- paste(tfl_table_code(sp, "T", pipe = "|>", ard_spec = ard), collapse = "\n")
+  expect_match(own, "SEX = cl_sex", fixed = TRUE)
+  expect_false(grepl("TRT01A = cl_trt01a", own, fixed = TRUE))
+})

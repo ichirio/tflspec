@@ -457,9 +457,11 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
                                  output_id = output_id), output_id)
   items <- .plan_content_items(sp)
   if (isTRUE(normalize)) {
-    nz <- .normalize_spec_args(sp, ard_spec, output_id %||% attr(sp, "output_id"),
-                               "tfl_table_code", guess = TRUE)
-    items <- c(list(tfl_item("normalize_ard", nz)), items)
+    id <- output_id %||% attr(sp, "output_id")
+    nz <- .normalize_spec_args(sp, ard_spec, id, "tfl_table_code", guess = TRUE)
+    # plan_levels() the ARD already says, left out as from a YAML file
+    # (.levels_prune()); not when the program's data part makes the data
+    items <- c(list(tfl_item("normalize_ard", nz)), .levels_prune_sheets(items, sp, ard_spec, id))
   }
   .content_table_code(items, data = data, plan = plan, pipe = pipe)
 }
@@ -613,11 +615,14 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
 #'   defaults left out -- what its spec file says itself (a value equal to
 #'   the default is kept, as it was written).  `FALSE`: the defaults and the
 #'   table's rows together, as the plan applies them.
+#' @param ard_spec The ARD definition ([tfl_read_ard_spec()]): with it, the
+#'   plan_levels() its ARD already says are left out (.levels_prune()) --
+#'   with `own`, only the orders the code lists give.  `NULL`: none left out.
 #' @return The items ([tfl_item()]), in the order the plan applies them:
 #'   `table_plan()` with the roles first.
 #' @keywords internal
 #' @noRd
-.plan_content_from_sheets <- function(spec, output_id = NULL, own = FALSE) {
+.plan_content_from_sheets <- function(spec, output_id = NULL, own = FALSE, ard_spec = NULL) {
   defaults <- length(output_id) == 1L && is.na(output_id)
   sp <- .as_spec(spec, "table", ".plan_content_from_sheets",
                  output_id = if (defaults || isTRUE(own)) NULL else output_id)
@@ -637,6 +642,10 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
   }
   items <- .plan_content_items(sp)
   if (defaults && !length(items[[1L]]$args)) items <- items[-1L]
+  if (!defaults && !is.null(ard_spec)) {
+    items <- .levels_prune_sheets(items, sp, ard_spec, output_id %||% attr(sp, "output_id"),
+                                  own = isTRUE(own))
+  }
   items
 }
 
@@ -1104,6 +1113,8 @@ tfl_content_run <- function(output, data) {
   }
   .spec_need_rtfreporter()
   for (it in output$content) .schema_need_version(it)
+  # plan_levels() the ARD already says: left out, as the program does
+  if (identical(output$kind, "table")) output$content <- .levels_prune(output$content, output)
   steps <- .content_r_steps(output)
   if (length(steps)) {
     # the steps run as the program runs them: the output's object bound
@@ -1169,6 +1180,14 @@ tfl_content_run <- function(output, data) {
 #' report after its `extends` are applied (`tfl_resolve_output()`), so no
 #' `!unset` is left.
 #'
+#' A table's `plan_levels()` that says what its ARD already says is left
+#' out, here and in [tfl_content_run()]: a column's order that is the
+#' report's code list (applied when the ARD is made, a factor cards keeps
+#' in its order), and the variables in the order of the ARD's analyses.
+#' An order of the report's own, a column no analysis reads, a column an
+#' analysis that is not cards' reads (cardx's survfit names the arms from
+#' the strata) and a report whose data steps make its data keep theirs.
+#'
 #' A report whose content is its own code (`content: !r`, any kind: the
 #' code leaves `content`) is that code, after the data's steps.  A figure's
 #' content is its layers, as the figure designer has them
@@ -1222,6 +1241,9 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
                              "yet; tables, listings and figures, for now."), output$kind))
   }
   for (it in output$content) .schema_need_version(it)
+  # plan_levels() the ARD already says (a code list applied when the ARD is
+  # made, the variables in its order): not written (R/spec_levels.R)
+  if (identical(output$kind, "table")) output$content <- .levels_prune(output$content, output)
   # a template SPEC (resolved): the template's call and the lines after it
   # (the A use); `template = "items"` writes the items it stands for (B)
   tp <- attr(output, "template")
