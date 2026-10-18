@@ -341,8 +341,8 @@
               assumption = a$assumption[i], question = a$question[i])
     Filter(Negate(is.null), r)
   })
-  writeLines(yaml::as.yaml(rows, indent.mapping.sequence = TRUE),
-             file.path(dir, "spec", "_assumptions.yml"), useBytes = TRUE)
+  .ai_write_text(yaml::as.yaml(rows, indent.mapping.sequence = TRUE),
+                 file.path(dir, "spec", "_assumptions.yml"))
   invisible(dir)
 }
 
@@ -633,13 +633,13 @@
   if (is.null(meta)) unlink(file.path(dir, .ai_kit_files[["metadata"]]))
   src <- function(name) system.file(name, package = "tflspec")
   f <- function(k) file.path(dir, .ai_kit_files[[k]])
-  writeLines(.ai_start_here(meta = !is.null(meta)), f("start"), useBytes = TRUE)
+  .ai_write_text(.ai_start_here(meta = !is.null(meta)), f("start"))
   file.copy(src(file.path("ai", "tflspec-ai-user-manual.md")), f("manual"), overwrite = TRUE)
   file.copy(src(file.path("ai", "tflspec-ai-toc-shell-guide.md")), f("guide"), overwrite = TRUE)
   file.copy(src(file.path("spec", "schema.yml")), f("schema"), overwrite = TRUE)
-  writeLines(.ai_blank_spec_md(), f("blank"), useBytes = TRUE)
+  .ai_write_text(.ai_blank_spec_md(), f("blank"))
   .ai_write_example_toc(f("toc"))
-  writeLines(.ai_example_spec_md(), f("example"), useBytes = TRUE)
+  .ai_write_text(.ai_example_spec_md(), f("example"))
   out <- c(f("start"), f("manual"), f("guide"), f("schema"), f("blank"), f("toc"), f("example"))
   if (!is.null(meta)) {
     utils::write.csv(meta, f("metadata"), row.names = FALSE, na = "",

@@ -72,7 +72,11 @@
   sh <- given$shell
   if (inherits(sh, "tfl_ai_shell")) {
     if (!is.null(out$outputs) && !length(sh$outputs)) {
-      sh <- tfl_ai_read_shell(sh$path, outputs = out$outputs)
+      # as the workbook was read: its TOC sheet and sheets as given; never
+      # cut (a shell cut in half misleads; a request too long is split by
+      # tfl_ai_write_requests(max_chars =), a report at a time)
+      sh <- do.call(tfl_ai_read_shell, c(list(sh$path, outputs = out$outputs, max_chars = Inf),
+                                         Filter(Negate(is.null), sh$args)))
     }
     toc <- sh$toc
     if (!is.null(out$outputs)) {
@@ -116,7 +120,7 @@
       .ard_stop(sprintf("%s: `examples` are the paths of reviewed report files (spec/outputs/<id>.yml).", fn))
     }
     out$examples <- stats::setNames(
-      vapply(ex, function(f) paste(readLines(f, warn = FALSE, encoding = "UTF-8"), collapse = "\n"), ""),
+      vapply(ex, function(f) paste(.ai_read_lines(f, fn), collapse = "\n"), ""),
       basename(ex))
   }
   out
@@ -375,7 +379,8 @@
     for (id in names(outs)) {
       k <- .ai_id_key(id)
       if (!id %in% want && (is.na(k) || !length(.ai_id_match(k, wk)))) {
-        p <- .ai_problem(p, paste("outputs", id), "was not asked for", "warning")
+        p <- .ai_problem(p, paste("outputs", id),
+                         "was not asked for: not written (its own request drafts it)", "warning")
       }
     }
   }
@@ -683,7 +688,7 @@
       r <- as.list(rows[i, , drop = FALSE])
       r[!vapply(r, function(z) is.na(z[1L]), NA)]
     })
-    writeLines(yaml::as.yaml(lst, indent.mapping.sequence = TRUE), f, useBytes = TRUE)
+    .ai_write_text(yaml::as.yaml(lst, indent.mapping.sequence = TRUE), f)
     out <- c(out, f)
   }
   invisible(normalizePath(out, winslash = "/"))
