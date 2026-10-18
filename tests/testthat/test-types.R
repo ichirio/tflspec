@@ -109,9 +109,12 @@ test_that("the onco example study is shipped, and runs: specs -> programs -> out
   withr::local_dir(file.path(w, "onco"))
   withr::local_options(tflspec.data_expr = NULL, tflspec.fig_path = NULL)
   suppressMessages(suppressWarnings(utils::capture.output(source("run_all.R", local = new.env()))))
-  out <- c(paste0("T-14-", c("1-1", "2-1", "3-1"), ".rtf"), paste0("F-14-2-", 1:6, ".png"))
+  out <- c(paste0("T-14-", c("1-1", "2-1", "3-1", "3-2"), ".rtf"), paste0("F-14-2-", 1:6, ".png"))
   expect_true(all(file.exists(file.path("output", out))), label = paste(out, collapse = ", "))
   rtf <- paste(readLines(file.path("output", "T-14-2-1.rtf"), warn = FALSE), collapse = "\n")
   expect_match(rtf, "Objective response rate (CR + PR)", fixed = TRUE)
   expect_match(rtf, "Drug X", fixed = TRUE)
+  rtf <- paste(readLines(file.path("output", "T-14-3-2.rtf"), warn = FALSE), collapse = "
+")
+  expect_match(rtf, "Any TEAE leading to death", fixed = TRUE)
 })
