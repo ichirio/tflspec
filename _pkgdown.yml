@@ -190,10 +190,14 @@ reference:
       A report kind from a few parameters: one definition gives the table
       plan (`tpl_*()`, the A use) and the report's items
       (`tfl_template_expand()`, the B use).  Layout templates (`summary`)
-      and display templates on them (`demog`).
+      and display templates on them (`demog`).  A report's YAML file may be
+      a template SPEC, `template: {name, args}`: `tfl_resolve_output()`
+      resolves it, its program is the template's call, and
+      `tfl_template_to_spec()` writes it out as its items.
     contents:
       - tfl_templates
       - tfl_template_expand
+      - tfl_template_to_spec
       - tpl_demog
       - tpl_summary
       - tpl_ae_soc_pt

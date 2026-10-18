@@ -26,7 +26,8 @@ tfl_output(
   codelists = list(),
   content = list(),
   page = list(),
-  ard = NULL
+  ard = NULL,
+  template = NULL
 )
 }
 \arguments{
@@ -40,7 +41,7 @@ tfl_output(
 \item{package}{The package \code{fn} is in, when its name does not say.}
 
 \item{from}{Where an item came from: \code{"own"}, \code{"defaults"},
-\code{"pattern:<name>"}.}
+\code{"pattern:<name>"}, \code{"template:<name>"}.}
 
 \item{id}{The report's id (letters, digits, \code{.}, \verb{_}, \code{-}); the file is
 \verb{spec/outputs/<id>.yml}.}
@@ -65,6 +66,11 @@ tfl_output(
 
 \item{ard}{The report's part of the study ARD, made in the ARD stage
 before any report (a list: \code{analysis_data}, \code{analyses}); \code{NULL} none.}
+
+\item{template}{A template SPEC, \code{list(name = , args = )}: the report
+is the template's items (\code{\link[=tfl_templates]{tfl_templates()}}) with \code{ard}, \code{data} and
+\code{content} adding to them or changing them (\code{\link[=tfl_resolve_output]{tfl_resolve_output()}},
+\code{\link[=tfl_template_to_spec]{tfl_template_to_spec()}}); \code{NULL} none.}
 }
 \value{
 \code{tfl_r()}: a string of class \code{tfl_r}; \code{tfl_unset()}: an object

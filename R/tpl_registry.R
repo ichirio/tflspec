@@ -12,12 +12,16 @@
 #' @param default Its default value; `NULL` for none.
 #' @param required `TRUE` when a report must give it.
 #' @param doc One line saying what it is.
+#' @param study Where a study's default for it is, `"<verb>.<argument>"`
+#'   (`"plan_cells.continuous"`): the value of the study's defaults (and
+#'   pattern) item, when the report's template SPEC does not give it.
+#'   `NULL`: the template's own default only.
 #' @return A `tfl_param`.
 #' @keywords internal
 #' @noRd
-tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL) {
+tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study = NULL) {
   structure(list(name = name, default = default, required = isTRUE(required),
-                 doc = doc), class = "tfl_param")
+                 doc = doc, study = study), class = "tfl_param")
 }
 
 # Register a template: its kind, layout, parameters and body.  The body is
@@ -95,10 +99,16 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
   sub(" Analysis Set$", " set", lab)
 }
 
+# A code list's values in its order: from a report's code lists as the
+# YAML holds them (rows of value / label), or from a list of the values
+# themselves (`list(TRT01A = c("Drug X", "Control"))`, what a program
+# passes to tpl_*())
 .tpl_levels <- function(vars, codelists) {
   out <- list()
   for (v in intersect(names(codelists), vars)) {
-    out[[v]] <- vapply(codelists[[v]], function(r) r$label %||% r$value, "")
+    cl <- codelists[[v]]
+    out[[v]] <- if (is.character(cl)) unname(cl) else
+      vapply(cl, function(r) r$label %||% r$value, "")
   }
   out
 }
@@ -117,7 +127,7 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
               doc = "each variable's heading"),
     tfl_param("cells", list(n = "{N:.0f}", `Mean (SD)` = "{mean:.1f} ({sd:.2f})",
                             Median = "{median:.1f}", `Min, Max` = "{min:.0f}, {max:.0f}"),
-              doc = "the continuous variables' rows")
+              doc = "the continuous variables' rows", study = "plan_cells.continuous")
  ,
     tfl_param("stack", FALSE, doc = "TRUE: the ARD as one cards::ard_stack() call")
   ),
@@ -235,7 +245,7 @@ tpl_demog <- function(ard, population, ..., codelists = NULL) {
             doc = "the categorical statistics the ARD has; NULL: cards' own"),
   tfl_param("cells", list(n = "{N:.0f}", `Mean (SD)` = "{mean:.1f} ({sd:.2f})",
                           Median = "{median:.1f}", `Min, Max` = "{min:.0f}, {max:.0f}"),
-            doc = "the rows of each continuous variable"),
+            doc = "the rows of each continuous variable", study = "plan_cells.continuous"),
   tfl_param("labels", NULL, doc = "each variable's heading")
 )
 names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")

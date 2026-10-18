@@ -34,7 +34,12 @@ report has goes after them.  The \code{content} of \code{defaults} is a table's
 (normalize_ard, the digits ...): a figure or a listing takes its other
 parts (\code{page}, \code{codelists}), not its content.  A pattern's content
 (\verb{patterns/<name>}, chosen report by report) layers onto any kind.
-\code{extends: none} uses no layer.  Each item's
+\code{extends: none} uses no layer.  A template SPEC (\verb{template: \{name, args\}}) puts the template's items (\code{\link[=tfl_template_expand]{tfl_template_expand()}}, marked
+\verb{template:<name>}) between the layers and the report's own, and its
+\verb{ard:} under the report's (an entry of the report's replaces the
+template's of the same id); a template parameter that says where its
+study default is takes it from the layers when the SPEC does not give
+it, and a SPEC value over a different one says so.  Each item's
 \code{from} says where it came from.  The result holds no \code{tfl_unset}.
 }
 \examples{
