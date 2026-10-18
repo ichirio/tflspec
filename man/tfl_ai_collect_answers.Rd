@@ -23,7 +23,8 @@ there: an answer collected again replaces its reports.}
 \value{
 A data frame, one row a report: \code{request}, \code{output_id},
 \code{status} (\code{ok}, \code{warning}, \code{error}, \verb{no answer}), \code{problems} (how
-many), \code{first} (the first problem).  Its print is a summary.
+many), \code{first} (the first problem).  Its print is a summary: each
+request's status, its reports and the next step.
 }
 \description{
 Reads each \verb{<request>.md} in \code{answers} (the AI's whole answer to the
@@ -33,6 +34,13 @@ error, writes its report files (\code{\link[=tfl_ai_unpack]{tfl_ai_unpack()}}). 
 errors writes no file: its repair prompt (\code{\link[=tfl_ai_repair_prompt]{tfl_ai_repair_prompt()}}) goes
 to \code{repairs}, to paste into the same chat; save the new answer over the
 old and collect again.
+}
+\details{
+An answer is read as UTF-8, with or without the byte-order mark Windows
+Notepad writes, and with any line ends; an answer saved in another
+encoding (Shift-JIS / CP932, "ANSI") is an \code{error} that says how to save
+it again.  An answer saved as \verb{<request>.md.txt} or \verb{<request>.txt} (Notepad
+adds \code{.txt}) is read too.
 }
 \seealso{
 \code{\link[=tfl_ai_write_requests]{tfl_ai_write_requests()}}

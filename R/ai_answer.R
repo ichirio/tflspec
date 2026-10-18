@@ -17,6 +17,45 @@
 #  template); tfl_ai_unpack() writes the files of an answer back into a
 #  study folder.
 
+# A text file a person saved (an AI's answer, a report file edited by
+# hand) as its lines: UTF-8 with or without the byte-order mark Windows
+# Notepad writes, any line ends (CRLF, LF, CR).  Notepad's "Unicode"
+# (UTF-16) is read too.  Text in another encoding -- "ANSI", Shift-JIS /
+# CP932 on a Japanese PC -- is an error that says how to save it again.
+.ai_read_lines <- function(f, fn) {
+  raw <- readBin(f, "raw", n = max(file.info(f)$size, 0, na.rm = TRUE))
+  bom <- function(...) {
+    b <- as.raw(c(...))
+    length(raw) >= length(b) && identical(raw[seq_along(b)], b)
+  }
+  again <- paste0(
+    " -- save it again as UTF-8 (Notepad: File > Save As, Encoding: UTF-8; ",
+    "\u30e1\u30e2\u5e33: \u540d\u524d\u3092\u4ed8\u3051\u3066\u4fdd\u5b58 ",
+    "\u2192 \u6587\u5b57\u30b3\u30fc\u30c9 UTF-8), then run %s again.")
+  if (bom(0xff, 0xfe) || bom(0xfe, 0xff)) {
+    x <- iconv(list(raw[-(1:2)]), if (bom(0xff, 0xfe)) "UTF-16LE" else "UTF-16BE", "UTF-8")
+  } else {
+    if (bom(0xef, 0xbb, 0xbf)) raw <- raw[-(1:3)]
+    if (any(raw == as.raw(0L))) {
+      x <- NA_character_
+    } else {
+      x <- rawToChar(raw)
+      Encoding(x) <- "UTF-8"
+      if (!validUTF8(x)) {
+        .ard_stop(sprintf(paste0("%s: %s is not UTF-8 (it looks like Shift-JIS / CP932, ",
+                                 "Notepad's \"ANSI\")", again),
+                          fn, sQuote(f, FALSE), fn))
+      }
+    }
+  }
+  if (is.na(x)) {
+    .ard_stop(sprintf(paste0("%s: %s is not text in UTF-8", again), fn, sQuote(f, FALSE), fn))
+  }
+  x <- gsub("\r\n?", "\n", x)
+  if (!nzchar(x)) return(character())
+  strsplit(x, "\n", fixed = TRUE)[[1L]]
+}
+
 # The files an answer may hold: study.yml at the top, the spec's .yml files
 # under spec/.  Anything else (another folder, another kind of file, a path
 # out of the study) is not a spec file.
@@ -107,7 +146,7 @@ tfl_ai_unpack <- function(answer, dir, overwrite = FALSE) {
     .ard_stop("tfl_ai_unpack(): `answer` is the answer's text, or the path of a file holding it.")
   }
   if (length(answer) == 1L && !grepl("\n", answer, fixed = TRUE) && file.exists(answer)) {
-    answer <- readLines(answer, warn = FALSE, encoding = "UTF-8")
+    answer <- .ai_read_lines(answer, "tfl_ai_unpack()")
   }
   x <- unlist(strsplit(paste(answer, collapse = "\n"), "\n", fixed = TRUE))
   blocks <- .ai_answer_blocks(x)
@@ -146,7 +185,7 @@ tfl_ai_unpack <- function(answer, dir, overwrite = FALSE) {
   }
   for (i in seq_along(paths)) {
     dir.create(dirname(out[i]), showWarnings = FALSE, recursive = TRUE)
-    writeLines(blocks[[i]], out[i], useBytes = TRUE)
+    .ai_write_text(blocks[[i]], out[i])
   }
   invisible(normalizePath(out, winslash = "/"))
 }

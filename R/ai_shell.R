@@ -34,9 +34,12 @@
 #'
 #' The report numbers are found as they are written -- `T-14-1-1`,
 #' `Table 14.1.1`, `14.1.1`, `F14.2.1` -- and matched whatever the
-#' punctuation (`T-14-1-1` is `Table 14.1.1`).  The TOC is the sheet named
-#' like one (TOC, contents, index, list ...) or else the sheet listing the
-#' most report numbers.  A shell is a sheet named by its report's number, or
+#' punctuation (`T-14-1-1` is `Table 14.1.1`; full-width digits too).  The
+#' TOC is the sheet named like one (TOC, contents, index, list, the Japanese
+#' words for them ...) that lists report numbers, or else the sheet listing
+#' the most report numbers; a header cell saying title (Title, Output
+#' Title, or the Japanese words for it) above the first report names the
+#' title column.  A shell is a sheet named by its report's number, or
 #' the rows of a sheet from the row that names its number to the row before
 #' the next number.
 #'
@@ -60,8 +63,10 @@
 #'   the sheet of its shell, `NA` for none found), `sheets` (`sheet`,
 #'   `role` -- `toc`, `shell` or `other` -- `rows`, `cells`, `hidden`),
 #'   `cells` (every non-empty cell: `sheet`, `row`, `col`, `ref`, `text`),
-#'   `outputs` (the reports kept), `truncated` and `path`.  `format()` gives
-#'   the text; `print()` a summary.
+#'   `outputs` (the reports kept), `truncated`, `path` and `args` (the
+#'   `toc_sheet` and `sheets` given: [tfl_ai_context()] reads each request's
+#'   reports with them again).  `format()` gives the text; `print()` a
+#'   summary, and what to pass when no TOC or a report's shell was found.
 #' @seealso [tfl_ai_batches()] to split the TOC into requests,
 #'   [tfl_ai_adam_summary()], [tfl_ai_context()] (`shell =`).
 #' @examples
@@ -103,7 +108,9 @@ tfl_ai_read_shell <- function(path, outputs = NULL, sheets = NULL,
     text = text, toc = toc,
     sheets = info[c("sheet", "role", "rows", "cells", "hidden")],
     cells = cells, outputs = keep$outputs, truncated = truncated,
-    path = normalizePath(path, winslash = "/")
+    path = normalizePath(path, winslash = "/"),
+    # what a request's own read of the workbook passes again
+    args = list(toc_sheet = toc_sheet, sheets = sheets)
   ), class = "tfl_ai_shell")
   if (!is.null(file)) .ai_write_text(text, file)
   out
@@ -125,7 +132,29 @@ print.tfl_ai_shell <- function(x, ...) {
   }
   cat(sprintf("text: %d characters%s; format(x) gives it\n", nchar(x$text),
               if (isTRUE(x$truncated)) " (cut)" else ""))
+  hint <- .ai_shell_hint(x)
+  if (length(hint)) cat(paste0("Next: ", hint, "\n"), sep = "")
   invisible(x)
+}
+
+# What to pass when the guess missed: no TOC, or reports with no shell.
+.ai_shell_hint <- function(x) {
+  file <- basename(x$path)
+  others <- x$sheets$sheet[x$sheets$role != "toc"]
+  q <- function(v) paste0("\"", v, "\"")
+  if (!nrow(x$toc)) {
+    return(sprintf(paste0("no TOC found: name the TOC sheet, ",
+                          "tfl_ai_read_shell(\"%s\", toc_sheet = %s) (the sheets: %s)."),
+                   file, q(x$sheets$sheet[1L]), paste(q(x$sheets$sheet), collapse = ", ")))
+  }
+  miss <- x$toc$output_id[is.na(x$toc$shell)]
+  if (!length(miss)) return(character())
+  cand <- setdiff(others, x$toc$shell)
+  sprintf(paste0("no shell found for %d report(s) (%s): add the sheets that hold them, ",
+                 "tfl_ai_read_shell(\"%s\", sheets = c(%s)); their requests then ",
+                 "carry those sheets whole."),
+          length(miss), paste(utils::head(miss, 8L), collapse = ", "), file,
+          paste(q(utils::head(if (length(cand)) cand else others, 5L)), collapse = ", "))
 }
 
 # ---- the workbook's XML ------------------------------------------------------
@@ -330,8 +359,24 @@ print.tfl_ai_shell <- function(x, ...) {
   "\u8868|\u56f3|\u4e00\u89a7)[ ._-]?)?",
   "([0-9]{1,3}(?:[._-][0-9]{1,3}){1,5}[a-z]?)(?![0-9])")
 
+# Full-width letters, digits and punctuation (\uff01-\uff5e, as Japanese
+# workbooks may write a number: \uff14.1.1) as their ASCII ones; the
+# ideographic space as a space.
+.ai_half_width <- function(x) {
+  if (!length(x) || !any(grepl("[\uff01-\uff5e\u3000]", x, perl = TRUE))) return(x)
+  vapply(x, function(z) {
+    if (is.na(z)) return(z)
+    u <- utf8ToInt(z)
+    w <- u >= 0xff01L & u <= 0xff5eL
+    u[w] <- u[w] - 0xfee0L
+    u[u == 0x3000L] <- 32L
+    intToUtf8(u)
+  }, "", USE.NAMES = FALSE)
+}
+
 # The report numbers a text names: the text as written, their key and kind.
 .ai_ids_in <- function(text) {
+  text <- .ai_half_width(text)
   m <- gregexpr(.ai_id_regex, text, perl = TRUE)
   hits <- regmatches(text, m)
   lapply(hits, function(h) {
@@ -344,7 +389,7 @@ print.tfl_ai_shell <- function(x, ...) {
 # A report number's key: the kind's letter (T, F, L; none when not said),
 # then its numbers joined with dots.
 .ai_id_key <- function(x) {
-  x <- trimws(x)
+  x <- trimws(.ai_half_width(x))
   out <- rep(NA_character_, length(x))
   ok <- grepl(.ai_id_regex, x, perl = TRUE)
   num <- vapply(x, function(z) {
@@ -395,16 +440,20 @@ print.tfl_ai_shell <- function(x, ...) {
     }
     return(toc_sheet)
   }
-  named <- info$sheet[grepl(paste0(
-    "(?i)^(toc|contents?|index|list|outputs?|tfl|tlf)\\b|table of contents|",
-    "\u76ee\u6b21|\u4e00\u89a7|\u5e33\u7968"), info$sheet, perl = TRUE)]
-  if (length(named)) return(named[1L])
-  # else: the sheet with the most rows naming a report number (three at least)
+  # the rows of each sheet naming a report number
   n <- vapply(info$sheet, function(s) {
     d <- cells[cells$sheet == s, , drop = FALSE]
     hit <- vapply(.ai_ids_in(d$text), nrow, 1L) > 0L
     length(unique(d$row[hit]))
   }, 1L)
+  # a sheet named like a TOC (not one named by a report number: "L-16-2-1
+  # \u4e00\u89a7" is a shell) that lists report numbers; the one listing most
+  named <- grepl(paste0(
+    "(?i)^(toc|contents?|index|list|outputs?|tfl|tlf)\\b|table of contents|",
+    "\u76ee\u6b21|\u4e00\u89a7|\u5e33\u7968|\u30ea\u30b9\u30c8"), info$sheet, perl = TRUE) &
+    vapply(.ai_ids_in(info$sheet), nrow, 1L) == 0L & n > 0L
+  if (any(named)) return(info$sheet[named][which.max(n[named])])
+  # else: the sheet with the most rows naming a report number (three at least)
   if (!length(n) || max(n) < 3L) return(character())
   info$sheet[which.max(n)]
 }
@@ -438,22 +487,42 @@ print.tfl_ai_shell <- function(x, ...) {
   }, NA)
   if (!any(is_id)) return(empty)
   id_col <- as.integer(names(which.max(table(d$col[is_id]))))
+  title_col <- .ai_toc_title_col(d, min(d$row[is_id & d$col == id_col]))
   out <- list()
   for (r in unique(d$row[is_id & d$col == id_col])) {
     x <- d[d$row == r, , drop = FALSE]
     k <- which(x$col == id_col)[1L]
     id <- .ai_ids_in(x$text[k])[[1L]][1L, ]
-    shown <- trimws(x$text[k])
+    shown <- trimws(.ai_half_width(x$text[k]))
     others <- x$text[-k]
     tp <- id$type
     if (is.na(tp)) tp <- .ai_type_word(paste(x$text, collapse = " "))
+    ttl <- if (!is.na(title_col) && any(x$col == title_col)) {
+      trimws(gsub("\\s+", " ", x$text[x$col == title_col][1L]))
+    } else {
+      .ai_title_of(others, id$id)
+    }
     out[[length(out) + 1L]] <- data.frame(
       output_id = shown, key = id$key, type = tp,
-      title = .ai_title_of(others, id$id), text = paste(trimws(x$text), collapse = " | "),
+      title = ttl, text = paste(trimws(x$text), collapse = " | "),
       sheet = toc_name, row = r, stringsAsFactors = FALSE)
   }
   toc <- do.call(rbind, c(list(empty), out))
   toc[!duplicated(toc$key), , drop = FALSE]
+}
+
+# The TOC's title column: the cell of a header row above the first report
+# (the last such row) that says title -- Title, Output Title, \u30bf\u30a4\u30c8\u30eb,
+# \u8868\u984c, \u5e33\u7968\u540d ...; NA when no header says so.
+.ai_toc_title_col <- function(d, first_row) {
+  h <- d[d$row < first_row, , drop = FALSE]
+  re <- paste0("(?i)^\\s*((output|table|report)\\s+)?(title|name)s?\\s*$|",
+               "^\\s*(\u30bf\u30a4\u30c8\u30eb|\u8868\u984c|\u6a19\u984c|",
+               "\u5e33\u7968\u540d|\u5e33\u7968\u30bf\u30a4\u30c8\u30eb|",
+               "\u540d\u79f0)\\s*$")
+  hit <- h[grepl(re, h$text, perl = TRUE), , drop = FALSE]
+  if (!nrow(hit)) return(NA_integer_)
+  hit$col[hit$row == max(hit$row)][1L]
 }
 
 # The title of a TOC row: its longest text that is not a number, a kind or a
@@ -600,7 +669,12 @@ print.tfl_ai_shell <- function(x, ...) {
   x
 }
 
+# Text (one string, or lines) to a file as UTF-8 bytes whatever the
+# session's locale (a Japanese Windows R in CP932 too), "\n" line ends.
 .ai_write_text <- function(text, file) {
+  text <- paste(enc2utf8(as.character(text)), collapse = "\n")
+  # its folder made if need be (file = "ai/toc_shell.md" in a new study)
+  dir.create(dirname(file), recursive = TRUE, showWarnings = FALSE)
   con <- file(file, open = "wb")
   on.exit(close(con), add = TRUE)
   writeBin(charToRaw(enc2utf8(paste0(text, "\n"))), con)
@@ -668,6 +742,10 @@ tfl_ai_batches <- function(x, size = 8L, types = "table", families = NULL) {
   }
   if (!is.null(families) && (!is.character(families) || is.null(names(families)))) {
     .ard_stop(sprintf("%s: `families` is a named character vector of regular expressions.", fn))
+  }
+  if (!nrow(toc)) {
+    return(data.frame(output_id = character(), title = character(), family = character(),
+                      batch = character(), stringsAsFactors = FALSE))
   }
   if (!"type" %in% names(toc)) toc$type <- NA_character_
   if (!is.null(types)) toc <- toc[is.na(toc$type) | toc$type %in% types, , drop = FALSE]

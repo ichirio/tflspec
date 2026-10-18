@@ -226,9 +226,9 @@ tfl_ai_study_init <- function(dir, adam = "adam", study_id = "STUDY-01", title =
     populations = lapply(seq_len(nrow(pops)), function(i) list(
       id = pops$id[i], dataset = "ADSL", where = tfl_r(sprintf("%s == \"Y\"", pops$flag[i])),
       label = pops$label[i])))
-  writeLines(.ai_yaml_text(study), paths[1L], useBytes = TRUE)
-  writeLines(.ai_yaml_text(data), paths[2L], useBytes = TRUE)
-  writeLines(.ai_defaults_yml(study_id), paths[3L], useBytes = TRUE)
+  .ai_write_text(.ai_yaml_text(study), paths[1L])
+  .ai_write_text(.ai_yaml_text(data), paths[2L])
+  .ai_write_text(.ai_defaults_yml(study_id), paths[3L])
   invisible(normalizePath(paths, winslash = "/"))
 }
 
