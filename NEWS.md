@@ -10,6 +10,32 @@
   ARD is the same from the study's program as from its own; the tables
   show the code lists' labels, order and 0-count levels.
 
+* **The rounding in either case** (#347, 0.0.24.9162; rtfreporter #676).
+  The `study` sheet's `rounding` and a YAML file's `plan_digits: {rounding:
+  }` (a report, defaults.yml, a pattern, a style) are read in lower case:
+  "SAS" is "sas".  The generated code writes "sas" / "r" as before, so it
+  needs no newer rtfreporter.
+
+* **Template SPEC: the study's styles, a template's look under them, and
+  where titles and footnotes print** (#344, 0.0.24.9160).
+  - `defaults.yml` may hold named styles, `styles: {compact: {content:,
+    page:}}`: the look a report picks with `style: compact` (none named:
+    `standard`).  The style is the nearest layer below the report's own;
+    its items are marked `style:<name>` and the program says `# (study
+    style: compact)`.  `tfl_write_study_part("defaults")` writes them.
+    SAMPLE-01's `patterns/Compact` moved to `styles: compact` gives the same
+    RTF for all its tables.
+  - A template's look (plan_style, plan_blanks, plan_columns, plan_digits,
+    the rows a page ...) is under the study's layers, which say the look
+    and win (decided 10/17); its shape stays over them.  The template's
+    call (A) has the study's lines after it, and `tfl_template_to_spec()`
+    (B) leaves the study's look to the layers: the same table.
+  - study.yml's `settings: titles_at: header | titles` and `footnotes_at:
+    footer | footnotes` (decided 10/17): `header` puts a report's titles
+    (`page.titles`) in the running header after the study's lines,
+    `footer` its footnotes in the running footer before them; `titles` /
+    `footnotes`, or no setting, keep them above and below the table.
+
 * **Template SPEC: a company's templates** (#343, 0.0.24.9159).  A
   company's templates are an R package of its own (decided 2026-10-17).
   `tfl_template()` registers a template from outside (its kind, layout,

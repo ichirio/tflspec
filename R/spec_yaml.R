@@ -35,7 +35,7 @@
 #' @param args The arguments, a named list.
 #' @param package The package `fn` is in, when its name does not say.
 #' @param from Where an item came from: `"own"`, `"defaults"`,
-#'   `"pattern:<name>"`, `"template:<name>"`.
+#'   `"pattern:<name>"`, `"style:<name>"`, `"template:<name>"`.
 #' @param id The report's id (letters, digits, `.`, `_`, `-`); the file is
 #'   `spec/outputs/<id>.yml`.
 #' @param kind `"table"`, `"figure"` or `"listing"`.
@@ -55,6 +55,9 @@
 #'   is the template's items ([tfl_templates()]) with `ard`, `data` and
 #'   `content` adding to them or changing them ([tfl_resolve_output()],
 #'   [tfl_template_to_spec()]); `NULL` none.
+#' @param style The study's style the report picks (`"compact"`: a set of
+#'   `defaults.yml`'s `styles:`, its look -- page and table details);
+#'   `NULL`: `standard`.
 #' @return `tfl_r()`: a string of class `tfl_r`; `tfl_unset()`: an object
 #'   of class `tfl_unset`; the rest: lists of class `tfl_call`, `tfl_item`,
 #'   `tfl_output`.
@@ -90,9 +93,9 @@ tfl_item <- function(fn, args = list(), from = "own") {
   .check_args(args, "tfl_item()")
   if (!is.character(from) || length(from) != 1L ||
       !(from %in% c("own", "defaults") || startsWith(from, "pattern:") ||
-        startsWith(from, "template:"))) {
-    stop("tfl_item(): `from` is \"own\", \"defaults\", \"pattern:<name>\" or \"template:<name>\".",
-         call. = FALSE)
+        startsWith(from, "template:") || startsWith(from, "style:"))) {
+    stop(paste0("tfl_item(): `from` is \"own\", \"defaults\", \"pattern:<name>\", ",
+                "\"style:<name>\" or \"template:<name>\"."), call. = FALSE)
   }
   structure(list(fn = fn, args = args, from = from), class = "tfl_item")
 }
@@ -102,7 +105,8 @@ tfl_item <- function(fn, args = list(), from = "own") {
 tfl_output <- function(id, kind = c("table", "figure", "listing"),
                        label = NA_character_, population = NA_character_,
                        extends = "defaults", data = NULL, codelists = list(),
-                       content = list(), page = list(), ard = NULL, template = NULL) {
+                       content = list(), page = list(), ard = NULL, template = NULL,
+                       style = NULL) {
   if (!is.character(id) || length(id) != 1L || is.na(id) ||
       !grepl("^[A-Za-z0-9][A-Za-z0-9._-]*$", id)) {
     stop("tfl_output(): `id` is letters, digits, '.', '_' or '-' (T-14-1-1).",
@@ -124,6 +128,7 @@ tfl_output <- function(id, kind = c("table", "figure", "listing"),
                         content = content, page = page),
                    class = "tfl_output")
   if (!is.null(template)) out$template <- template
+  if (!is.null(style)) out$style <- style
   out
 }
 
@@ -281,12 +286,22 @@ tfl_read_output <- function(path) {
       stop("A content item is `- fn: {args}`; `", names(el), "` has a value that is not a map.",
            call. = FALSE)
     }
-    return(tfl_item(names(el), .calls_in(args), "own"))
+    return(tfl_item(names(el), .rounding_lower(names(el), .calls_in(args)), "own"))
   }
   if (is.list(el) && !is.null(el$fn)) {
     return(tfl_item(el$fn, .calls_in(el$args %||% list()), el$from %||% "own"))
   }
   stop("A content item is `- fn: {args}`.", call. = FALSE)
+}
+
+# plan_digits()'s rounding in either case ("SAS" is "sas"), held in lower
+# case: what the program writes, whatever rtfreporter reads it
+.rounding_lower <- function(fn, args) {
+  r <- args$rounding
+  if (identical(.schema_fn_name(fn), "plan_digits") && is.character(r) && length(r) == 1L) {
+    args$rounding <- tolower(r)
+  }
+  args
 }
 
 # every `{fn:, args:}` map inside a value as a tfl_call (recursively)

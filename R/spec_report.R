@@ -25,7 +25,7 @@
   if (!isTRUE(attr(output, "resolved")) && !is.null(study)) {
     output <- tfl_resolve_output(output, study)
   }
-  pg <- output$page %||% list()
+  pg <- .page_place(output$page %||% list(), study$study$settings, output$id)
   id <- output$id %||% NA_character_
   kind <- output$kind %||% "table"
   tokens <- .page_tokens(pg, id, kind)
@@ -113,6 +113,45 @@
       font_size_half_points = args_of("rtf_footnotes")$font_size_half_points)
   }
   st
+}
+
+# Where a report's titles and footnotes print: the study's settings
+# `titles_at: header | titles` and `footnotes_at: footer | footnotes`
+# (decided 10/17).  The words are the report's, in its `page.titles` /
+# `page.footnotes`; `header` puts the titles' lines in the running header
+# after the study's lines, `footer` the footnotes' lines in the running
+# footer before them; `titles` / `footnotes` (and no setting) keep them
+# above and below the table (rtf_titles(), rtf_footnotes()).
+.page_place <- function(pg, settings, id = NA_character_) {
+  at <- function(key, ok) {
+    v <- settings[[key]]
+    if (is.null(v)) return(NULL)
+    if (!is.character(v) || length(v) != 1L || !v %in% ok) {
+      .ard_stop(sprintf("study.yml's settings: %s is %s.", key,
+                        paste(sprintf("\"%s\"", ok), collapse = " or ")))
+    }
+    v
+  }
+  move <- function(pg, from, to, after) {
+    lines <- .page_args(pg[[from]])
+    if (!length(lines)) return(pg)
+    lines <- lines[order(suppressWarnings(as.numeric(names(lines))))]
+    band <- .page_args(pg[[to]])
+    num <- suppressWarnings(as.numeric(names(band)))
+    num <- num[!is.na(num)]
+    keys <- if (after) max(c(0, num)) + seq_along(lines)
+            else min(c(1, num)) - rev(seq_along(lines)) / (length(lines) + 1)
+    pg[[to]] <- c(band, stats::setNames(unname(lines), format(keys, trim = TRUE)))
+    pg[[from]] <- NULL
+    pg
+  }
+  if (identical(at("titles_at", c("header", "titles")), "header")) {
+    pg <- move(pg, "titles", "header", after = TRUE)
+  }
+  if (identical(at("footnotes_at", c("footer", "footnotes")), "footer")) {
+    pg <- move(pg, "footnotes", "footer", after = FALSE)
+  }
+  pg
 }
 
 # The running header or footer as rtf_section() takes it: rtf_header(lines).

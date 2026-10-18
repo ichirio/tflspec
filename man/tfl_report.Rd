@@ -23,7 +23,11 @@ pages for a table or listing, figures for a \code{type = figure} report.}
 
 \item{study}{For a YAML report: the study (\code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}), for
 its program (the TOC's \code{program}, else \code{settings: program}, in
-\code{settings: program_dir}).}
+\code{settings: program_dir}), and where the report's titles and footnotes
+print: \code{settings: titles_at} \code{header} (the running header, after the
+study's lines) or \code{titles} (above the table), \code{footnotes_at} \code{footer}
+(the running footer, before the study's lines) or \code{footnotes} (below
+the table); not set, above and below the table.}
 }
 \value{
 An \code{\link[rtfreporter:rtf_document]{rtfreporter::rtf_document()}}.
