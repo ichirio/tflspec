@@ -4,7 +4,13 @@
 \alias{tfl_content_code}
 \title{The code of a report's content, from its spec file}
 \usage{
-tfl_content_code(output, data = NULL, plan = "plan", pipe = NULL)
+tfl_content_code(
+  output,
+  data = NULL,
+  plan = "plan",
+  pipe = NULL,
+  template = c("call", "items")
+)
 }
 \arguments{
 \item{output}{A report (\code{\link[=tfl_output]{tfl_output()}}), resolved.}
@@ -19,6 +25,14 @@ steps come first, as they are written, and the pipe starts from \code{data}.}
 
 \item{pipe}{\code{"|>"} or \code{"\%>\%"}; \code{NULL} follows
 \code{getOption("rtfreporter.ard_pipe")}.}
+
+\item{template}{For a resolved template report (\verb{template: \{name, args\}}, \code{\link[=tfl_resolve_output]{tfl_resolve_output()}}): \code{"call"} (default) writes the
+template's call, \verb{plan <- tpl_<name>(ard, ...)} with the arguments its
+SPEC gives and the study's defaults it took, then the study's and the
+report's own lines after it, each marked; \code{"items"} writes the items
+it stands for, as for any report (and so does \code{"call"}, with a message,
+when the call cannot say the report's own table roles, data or
+normalization).}
 }
 \value{
 The code, one element a line.

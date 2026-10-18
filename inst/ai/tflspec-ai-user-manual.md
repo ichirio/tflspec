@@ -789,7 +789,7 @@ back): rename the value or choose another separator.
 
 **The functions the generated programs call (their code):** `tfl_helpers_code`
 
-**Template SPEC (prototype):** `tfl_templates` `tfl_template_expand`
+**Template SPEC (prototype):** `tfl_templates` `tfl_template_expand` `tfl_template_to_spec`
 `tpl_demog` `tpl_summary` `tpl_disposition` `tpl_ae_soc_pt` `tpl_hierarchical`
 `tpl_shift` `tpl_lab_shift` `tpl_listing` `tpl_km_table` `tpl_vs_change` `tpl_orr` `tpl_ae_overview`
 `tfl_read_template_sheets` `tfl_write_template_yaml`

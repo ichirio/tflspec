@@ -35,7 +35,7 @@
 #' @param args The arguments, a named list.
 #' @param package The package `fn` is in, when its name does not say.
 #' @param from Where an item came from: `"own"`, `"defaults"`,
-#'   `"pattern:<name>"`.
+#'   `"pattern:<name>"`, `"template:<name>"`.
 #' @param id The report's id (letters, digits, `.`, `_`, `-`); the file is
 #'   `spec/outputs/<id>.yml`.
 #' @param kind `"table"`, `"figure"` or `"listing"`.
@@ -51,6 +51,10 @@
 #' @param content The layers, a list of `tfl_item`.
 #' @param page The document: `titles`, `footnotes`, `header`, `footer`
 #'   (maps by line), `tokens`, and the `rtf_*` calls' arguments.
+#' @param template A template SPEC, `list(name = , args = )`: the report
+#'   is the template's items ([tfl_templates()]) with `ard`, `data` and
+#'   `content` adding to them or changing them ([tfl_resolve_output()],
+#'   [tfl_template_to_spec()]); `NULL` none.
 #' @return `tfl_r()`: a string of class `tfl_r`; `tfl_unset()`: an object
 #'   of class `tfl_unset`; the rest: lists of class `tfl_call`, `tfl_item`,
 #'   `tfl_output`.
@@ -85,8 +89,9 @@ tfl_item <- function(fn, args = list(), from = "own") {
   .check_fn(fn, "tfl_item()")
   .check_args(args, "tfl_item()")
   if (!is.character(from) || length(from) != 1L ||
-      !(from %in% c("own", "defaults") || startsWith(from, "pattern:"))) {
-    stop("tfl_item(): `from` is \"own\", \"defaults\" or \"pattern:<name>\".",
+      !(from %in% c("own", "defaults") || startsWith(from, "pattern:") ||
+        startsWith(from, "template:"))) {
+    stop("tfl_item(): `from` is \"own\", \"defaults\", \"pattern:<name>\" or \"template:<name>\".",
          call. = FALSE)
   }
   structure(list(fn = fn, args = args, from = from), class = "tfl_item")
@@ -97,7 +102,7 @@ tfl_item <- function(fn, args = list(), from = "own") {
 tfl_output <- function(id, kind = c("table", "figure", "listing"),
                        label = NA_character_, population = NA_character_,
                        extends = "defaults", data = NULL, codelists = list(),
-                       content = list(), page = list(), ard = NULL) {
+                       content = list(), page = list(), ard = NULL, template = NULL) {
   if (!is.character(id) || length(id) != 1L || is.na(id) ||
       !grepl("^[A-Za-z0-9][A-Za-z0-9._-]*$", id)) {
     stop("tfl_output(): `id` is letters, digits, '.', '_' or '-' (T-14-1-1).",
@@ -113,11 +118,13 @@ tfl_output <- function(id, kind = c("table", "figure", "listing"),
     stop("tfl_output(): `extends` is a character vector (\"defaults\", \"patterns/<name>\", \"none\").",
          call. = FALSE)
   }
-  structure(list(id = id, kind = kind,
-                 label = .na_scalar(label), population = .na_scalar(population),
-                 extends = extends, ard = ard, data = data, codelists = codelists,
-                 content = content, page = page),
-            class = "tfl_output")
+  out <- structure(list(id = id, kind = kind,
+                        label = .na_scalar(label), population = .na_scalar(population),
+                        extends = extends, ard = ard, data = data, codelists = codelists,
+                        content = content, page = page),
+                   class = "tfl_output")
+  if (!is.null(template)) out$template <- template
+  out
 }
 
 .check_fn <- function(fn, who) {
@@ -143,6 +150,7 @@ print.tfl_output <- function(x, ...) {
     cat("  ard: ", paste(vapply(x$ard$analyses, function(a) a$id %||% "?", ""), collapse = ", "),
         "\n", sep = "")
   }
+  if (!is.null(.tpl_spec_of(x))) cat("  template: ", x$template$name, "\n", sep = "")
   if (inherits(x$content, "tfl_r")) {
     cat("  content: (R code)\n")
   } else if (length(x$content)) {
@@ -344,7 +352,17 @@ tfl_write_output <- function(x, path) {
   # a kind's own parts beside the common ones (a figure's template, plot,
   # plots, compose)
   for (k in setdiff(names(x), .output_fields)) if (!is.null(x[[k]])) y[[k]] <- .calls_out(x[[k]])
+  # a template SPEC's arguments: a named vector as a map (`labels: {AGE: ...}`)
+  if (!is.null(.tpl_spec_of(x))) y$template <- .named_as_map(y$template)
   y
+}
+
+# a value's named vectors as maps, through lists
+.named_as_map <- function(x) {
+  if (inherits(x, c("tfl_r", "tfl_unset"))) return(x)
+  if (is.atomic(x) && length(names(x))) return(as.list(x))
+  if (is.list(x)) x[] <- lapply(x, .named_as_map)
+  x
 }
 
 .output_fields <- c("id", "kind", "label", "population", "extends", "ard", "data", "codelists",
