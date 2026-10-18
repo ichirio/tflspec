@@ -1,7 +1,7 @@
 # tflspec (development version)
 
 * **`plan_levels()` the ARD already says is not written** (#352,
-  0.0.24.9163).  A table's program (`tfl_content_code()`) and its run
+  0.0.24.9165).  A table's program (`tfl_content_code()`) and its run
   (`tfl_content_run()`) leave out a column's order that is the report's
   code list -- applied when the ARD is made, a factor cards keeps in its
   order -- when every analysis reading the column is cards', and
@@ -14,7 +14,7 @@
   arms from the strata: T-14-2-2) and a report whose data steps make its
   data.  The RTF is the same.
 
-* **`plan_levels()` before `plan_labels()`** (#349, 0.0.24.9162): the
+* **`plan_levels()` before `plan_labels()`** (#349, 0.0.24.9163): the
   values' order first, then their names and the variables'.  The schema's
   ranks swap (`plan_levels` 80, `plan_labels` 90), the cards' and the
   generated code's order, and the templates write them so.  The table is
@@ -22,6 +22,12 @@
   (checked for the variables' order and headings, value labels, and a
   column the plan makes).  A file that writes `plan_labels()` first reads
   as before.
+
+* **The rounding in either case** (#347, 0.0.24.9162; rtfreporter #676).
+  The `study` sheet's `rounding` and a YAML file's `plan_digits: {rounding:
+  }` (a report, defaults.yml, a pattern, a style) are read in lower case:
+  "SAS" is "sas".  The generated code writes "sas" / "r" as before, so it
+  needs no newer rtfreporter.
 
 * **Template SPEC: the study's styles, a template's look under them, and
   where titles and footnotes print** (#344, 0.0.24.9160).
