@@ -1,7 +1,7 @@
 # tflspec (development version)
 
 * **A nested count's code-list values counted 0: `complete_hierarchy()`**
-  (#357, 0.0.24.9167).  cards' `ard_stack_hierarchical()` counts only the
+  (#357, 0.0.24.9168).  cards' `ard_stack_hierarchical()` counts only the
   values some group has, so a fixed SOC / PT no subject has could not be
   shown.  `complete_hierarchy()` in an analysis's `post` adds them, n = 0
   and p = 0 in every group (the Total column too), N the group's: the
