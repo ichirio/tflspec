@@ -14,8 +14,9 @@ tfl_read_outputs(dir)
 }
 \value{
 \code{tfl_read_study_spec()}: a list of class \code{tfl_study_spec} --
-\code{study}, \code{data}, \code{defaults}, \code{codelists}, \code{patterns} (by name), \code{toc},
-\code{dir}.  \code{tfl_read_outputs()}: a named list of \code{tfl_output}, by id.
+\code{study}, \code{data}, \code{defaults}, \code{styles} (by name: \code{defaults.yml}'s
+\verb{styles:}, the look a report picks with \verb{style:}), \code{codelists},
+\code{patterns} (by name), \code{toc}, \code{dir}.  \code{tfl_read_outputs()}: a named list of \code{tfl_output}, by id.
 }
 \description{
 \code{tfl_read_study_spec()} reads the study-level files (every one optional)

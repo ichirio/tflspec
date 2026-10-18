@@ -580,6 +580,7 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
     if (identical(f, "own")) return("")
     if (identical(f, "defaults")) return("  # (study default)")
     if (startsWith(f, "template:")) return(paste0("  # (template ", sub("^template:", "", f), ")"))
+    if (startsWith(f, "style:")) return(paste0("  # (study style: ", sub("^style:", "", f), ")"))
     paste0("  # (pattern ", sub("^pattern:", "", f), ")")
   }, ""))
   lines <- unlist(lapply(seq_along(lines), function(i)
