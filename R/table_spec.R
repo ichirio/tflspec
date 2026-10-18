@@ -455,6 +455,9 @@
                     value = trimws(as.character(d$value)),
                     stringsAsFactors = FALSE)
   out$value[!is.na(out$value) & !nzchar(out$value)] <- NA_character_
+  # the rounding in either case ("SAS" is "sas"), held in lower case
+  k <- !is.na(out$key) & out$key == "rounding" & !is.na(out$value)
+  out$value[k] <- tolower(out$value[k])
   if ("note" %in% names(d)) out$note <- as.character(d$note)
   out <- out[!is.na(out$key) & nzchar(out$key), , drop = FALSE]
   # the keys of an ARD spec sharing the workbook are the ARD spec's

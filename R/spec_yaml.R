@@ -286,12 +286,22 @@ tfl_read_output <- function(path) {
       stop("A content item is `- fn: {args}`; `", names(el), "` has a value that is not a map.",
            call. = FALSE)
     }
-    return(tfl_item(names(el), .calls_in(args), "own"))
+    return(tfl_item(names(el), .rounding_lower(names(el), .calls_in(args)), "own"))
   }
   if (is.list(el) && !is.null(el$fn)) {
     return(tfl_item(el$fn, .calls_in(el$args %||% list()), el$from %||% "own"))
   }
   stop("A content item is `- fn: {args}`.", call. = FALSE)
+}
+
+# plan_digits()'s rounding in either case ("SAS" is "sas"), held in lower
+# case: what the program writes, whatever rtfreporter reads it
+.rounding_lower <- function(fn, args) {
+  r <- args$rounding
+  if (identical(.schema_fn_name(fn), "plan_digits") && is.character(r) && length(r) == 1L) {
+    args$rounding <- tolower(r)
+  }
+  args
 }
 
 # every `{fn:, args:}` map inside a value as a tfl_call (recursively)
