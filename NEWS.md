@@ -1,5 +1,19 @@
 # tflspec (development version)
 
+* **`plan_levels()` the ARD already says is not written** (#352,
+  0.0.24.9163).  A table's program (`tfl_content_code()`) and its run
+  (`tfl_content_run()`) leave out a column's order that is the report's
+  code list -- applied when the ARD is made, a factor cards keeps in its
+  order -- when every analysis reading the column is cards', and
+  `variable =` when it is the order of the ARD's analyses.  T-14-1-1's
+  program loses its `plan_levels()` and the code lists at its head.  The
+  templates of cards' analyses (demog, summary and those on it,
+  hierarchical, ae_overview; shift's columns) write none, so their call
+  has no `codelists =` either.  Kept: an order of the report's own, a
+  column no analysis reads, one a cardx analysis reads (survfit names the
+  arms from the strata: T-14-2-2) and a report whose data steps make its
+  data.  The RTF is the same.
+
 * **`plan_levels()` before `plan_labels()`** (#349, 0.0.24.9162): the
   values' order first, then their names and the variables'.  The schema's
   ranks swap (`plan_levels` 80, `plan_labels` 90), the cards' and the

@@ -1104,6 +1104,8 @@ tfl_content_run <- function(output, data) {
   }
   .spec_need_rtfreporter()
   for (it in output$content) .schema_need_version(it)
+  # plan_levels() the ARD already says: left out, as the program does
+  if (identical(output$kind, "table")) output$content <- .levels_prune(output$content, output)
   steps <- .content_r_steps(output)
   if (length(steps)) {
     # the steps run as the program runs them: the output's object bound
@@ -1169,6 +1171,14 @@ tfl_content_run <- function(output, data) {
 #' report after its `extends` are applied (`tfl_resolve_output()`), so no
 #' `!unset` is left.
 #'
+#' A table's `plan_levels()` that says what its ARD already says is left
+#' out, here and in [tfl_content_run()]: a column's order that is the
+#' report's code list (applied when the ARD is made, a factor cards keeps
+#' in its order), and the variables in the order of the ARD's analyses.
+#' An order of the report's own, a column no analysis reads, a column an
+#' analysis that is not cards' reads (cardx's survfit names the arms from
+#' the strata) and a report whose data steps make its data keep theirs.
+#'
 #' A report whose content is its own code (`content: !r`, any kind: the
 #' code leaves `content`) is that code, after the data's steps.  A figure's
 #' content is its layers, as the figure designer has them
@@ -1222,6 +1232,9 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
                              "yet; tables, listings and figures, for now."), output$kind))
   }
   for (it in output$content) .schema_need_version(it)
+  # plan_levels() the ARD already says (a code list applied when the ARD is
+  # made, the variables in its order): not written (R/spec_levels.R)
+  if (identical(output$kind, "table")) output$content <- .levels_prune(output$content, output)
   # a template SPEC (resolved): the template's call and the lines after it
   # (the A use); `template = "items"` writes the items it stands for (B)
   tp <- attr(output, "template")

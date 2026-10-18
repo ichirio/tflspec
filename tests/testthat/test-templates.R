@@ -21,18 +21,17 @@ test_that("tfl_templates() lists demog and summary", {
 test_that("tfl_template_expand(): the items, marked as the template's", {
   x <- tfl_template_expand("demog", list(population = "SAF"))
   expect_identical(vapply(x$content, `[[`, "", "fn"),
-                   c("table_plan", "plan_cells", "plan_levels", "plan_labels",
-                     "plan_paginate_rows"))
+                   c("table_plan", "plan_cells", "plan_labels", "plan_paginate_rows"))
   expect_true(all(vapply(x$content, `[[`, "", "from") == "template:demog"))
   expect_identical(x$ard$analysis_data[[1L]]$id, "adsl_saf")
   expect_identical(vapply(x$ard$analyses, `[[`, "", "id"), c("GROUPN", "CONT", "CAT"))
   s <- tfl_template_expand("demog", list(population = "SAF", stack = TRUE))
   expect_identical(vapply(s$ard$analyses, `[[`, "", "id"), c("DEMOG", "CONT", "CAT"))
   expect_identical(s$ard$analyses[[2L]]$parent, "DEMOG")
-  # the code lists give the values' order, as text
+  # the code lists are the ARD's (applied when it is made): no plan_levels()
   cl <- list(SEX = list(list(value = "F", label = "Female"), list(value = "M", label = "Male")))
   y <- tfl_template_expand("demog", list(population = "SAF"), codelists = cl)
-  expect_identical(tpl_item(y, "plan_levels")$args$SEX, c("Female", "Male"))
+  expect_null(tpl_item(y, "plan_levels"))
   # a dataset other than ADSL: its own analysis data, its records kept by `where`
   z <- tfl_template_expand("summary", list(population = "SAF", variables = "AVAL",
                                            data = "ADVS", where = 'PARAMCD == "SYSBP"'))

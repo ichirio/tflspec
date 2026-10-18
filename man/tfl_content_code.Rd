@@ -48,6 +48,14 @@ report after its \code{extends} are applied (\code{tfl_resolve_output()}), so no
 \code{!unset} is left.
 }
 \details{
+A table's \code{plan_levels()} that says what its ARD already says is left
+out, here and in \code{\link[=tfl_content_run]{tfl_content_run()}}: a column's order that is the
+report's code list (applied when the ARD is made, a factor cards keeps
+in its order), and the variables in the order of the ARD's analyses.
+An order of the report's own, a column no analysis reads, a column an
+analysis that is not cards' reads (cardx's survfit names the arms from
+the strata) and a report whose data steps make its data keep theirs.
+
 A report whose content is its own code (\code{content: !r}, any kind: the
 code leaves \code{content}) is that code, after the data's steps.  A figure's
 content is its layers, as the figure designer has them

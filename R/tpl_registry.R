@@ -168,11 +168,11 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
         list(id = "CAT", label = "Categorical", method = "categorical", data = set,
              by = a$by, variables = a$categorical, statistics = c("n", "p"),
              purpose = "PRIMARY OUTCOME MEASURE")))
-    lv <- c(list(variable = vars), .tpl_levels(c(a$by, a$categorical), ctx$codelists))
+    # (no plan_levels(): the ARD says the order -- the code lists applied
+    # when it is made, the variables in its analyses' order)
     content <- list(
       tfl_item("table_plan", list(cols = a$by, rows = list(group = "variable"))),
       tfl_item("plan_cells", list(continuous = as.list(a$cells))),
-      tfl_item("plan_levels", lv),
       tfl_item("plan_labels", as.list(a$labels[vars])),
       tfl_item("plan_paginate_rows", list(max_rows = 30L, split = "group_safe")))
     list(ard = ard, data = list(source = "ard", object = "ard"), content = content)
@@ -293,8 +293,7 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
   content <- c(
     list(tfl_item("table_plan", list(cols = a$by, rows = list(group = "variable")))),
     if (length(a$variables)) list(tfl_item("plan_cells", list(continuous = as.list(a$cells)))),
-    list(tfl_item("plan_levels", c(list(variable = vars),
-                                   .tpl_levels(c(a$by, a$categorical), ctx$codelists)))),
+    # (no plan_levels(): the ARD says the order, as for demog)
     if (length(a$labels)) list(tfl_item("plan_labels", as.list(a$labels[vars]))),
     # the look is the template's, not a parameter: a report changes it
     # with an item of its own (content:) or the study's style
@@ -418,7 +417,7 @@ names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
       cols = a$by,
       rows = stats::setNames(as.list(a$hierarchy[-n]), paste0("group", seq_len(n - 1L))),
       label = list(label = a$hierarchy[n]))),
-    tfl_item("plan_levels", .tpl_levels(a$by, ctx$codelists)),
+    # (the columns' order is the ARD's: the code list applied when it is made)
     tfl_item("plan_sort", list(keys = a$sort)),
     tfl_item("plan_col_header", list(header = list(
       list(line = "1", cols = "row_label"),
@@ -524,7 +523,7 @@ tpl_disposition <- function(ard, population, ..., codelists = NULL) {
   tfl_param("post", "ANRIND", doc = "the category after it (the columns under each arm)"),
   tfl_param("levels", c("LOW", "NORMAL", "HIGH"), doc = "the categories, in order"),
   tfl_param("by_levels", NULL,
-            doc = "the column variable's values in order; NULL: its code list's"),
+            doc = "the column variable's values in order; NULL: the ARD's (its code list)"),
   tfl_param("param_labels", NULL, doc = "each parameter's heading (a named vector)"),
   tfl_param("cell", "{n}", doc = "a cell's template"),
   tfl_param("heading", "Parameter / Baseline", doc = "the label column's heading")
@@ -539,7 +538,9 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
       where = if (!is.null(a$where)) tfl_r(a$where)))),
     analyses = list(list(id = a$analysis_id, method = "categorical", data = set,
                          by = c(a$by, a$param, a$baseline), variables = a$post)))
-  by_lv <- a$by_levels %||% .tpl_levels(a$by, ctx$codelists)[[a$by]]
+  # the columns: the ARD's order (the code list applied when it is made),
+  # or `by_levels` when the report says them
+  by_lv <- a$by_levels
   lv <- c(if (length(by_lv)) stats::setNames(list(by_lv), a$by),
           stats::setNames(list(a$levels, a$levels), c(a$baseline, ".label")))
   content <- c(
@@ -878,7 +879,8 @@ tpl_orr <- function(ard, population = "ITT", ..., codelists = NULL) {
     content <- list(
       # one row a flag: no label column (the flag's TRUE is the row)
       tfl_item("table_plan", list(cols = a$by, rows = list(group = "variable"), label = NA)),
-      tfl_item("plan_levels", c(list(variable = ids), .tpl_levels(a$by, ctx$codelists))),
+      # (no plan_levels(): the rows are the flags in their analyses' order, the
+      # columns the code list's, applied when the ARD is made)
       tfl_item("plan_labels", stats::setNames(lapply(a$flags, `[[`, "label"), ids)),
       tfl_item("plan_col_header", list(header = list(
         list(line = "1", cols = "group"),
