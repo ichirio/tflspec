@@ -8,6 +8,10 @@
 
 #' A template parameter
 #'
+#' One parameter of a template ([tfl_template()]): its name, default and
+#' what it is.  A template has few, and none of them is the look (a font,
+#' a width, the rows a page): the study's styles and defaults say that.
+#'
 #' @param name The parameter's name.
 #' @param default Its default value; `NULL` for none.
 #' @param required `TRUE` when a report must give it.
@@ -17,8 +21,9 @@
 #'   pattern) item, when the report's template SPEC does not give it.
 #'   `NULL`: the template's own default only.
 #' @return A `tfl_param`.
-#' @keywords internal
-#' @noRd
+#' @examples
+#' tfl_param("population", "SAF", doc = "the analysis set's id")
+#' @export
 tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study = NULL) {
   structure(list(name = name, default = default, required = isTRUE(required),
                  doc = doc, study = study), class = "tfl_param")
@@ -27,10 +32,13 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
 # Register a template: its kind, layout, parameters and body.  The body is
 # function(args, context) returning list(ard = , data = , content = ): the
 # report's items, `content` a list of tfl_item().
-.tfl_template <- function(name, kind, layout, params, body) {
+.tfl_template <- function(name, kind, layout, params, body, label = NULL, call = NULL,
+                          package = "tflspec", example = NULL) {
   names(params) <- vapply(params, `[[`, "", "name")
-  assign(name, list(name = name, kind = kind, layout = layout,
-                    params = params, body = body), envir = .tpl_registry)
+  assign(name, list(name = name, kind = kind, layout = layout, params = params, body = body,
+                    label = label, call = call %||% paste0("tpl_", name), package = package,
+                    example = example),
+         envir = .tpl_registry)
   invisible(name)
 }
 
@@ -349,7 +357,9 @@ tpl_summary <- function(ard, population, variables = NULL, ..., codelists = NULL
 #' The templates
 #'
 #' @return A data frame, one row a template: `name`, `kind`, `layout`,
-#'   `params` (its parameters, comma-separated).
+#'   `params` (its parameters, comma-separated), `package` (the package
+#'   that registered it: tflspec, or a company's, [tfl_template()]) and
+#'   `call` (the function its program calls, the A use).
 #' @examples
 #' tfl_templates()
 #' @export
@@ -359,6 +369,8 @@ tfl_templates <- function() {
   data.frame(name = nm, kind = vapply(t, `[[`, "", "kind"),
              layout = vapply(t, `[[`, "", "layout"),
              params = vapply(t, function(x) paste(names(x$params), collapse = ", "), ""),
+             package = vapply(t, function(x) x$package %||% "tflspec", ""),
+             call = vapply(t, function(x) x$call %||% paste0("tpl_", x$name), ""),
              stringsAsFactors = FALSE)
 }
 
@@ -465,7 +477,8 @@ tpl_hierarchical <- function(ard, population, hierarchy, ..., codelists = NULL) 
 
 # ---- km_simple: the figure template of tfl_fig_template(), on the registry ------
 
-.tfl_template("km_simple", kind = "figure", layout = "km",
+# (no tpl_km_simple() yet: a figure's program is its items)
+.tfl_template("km_simple", kind = "figure", layout = "km", call = NA_character_,
   params = list(
     tfl_param("param", required = TRUE, doc = "the PARAMCD of ADTTE"),
     tfl_param("pop", NULL, doc = "the population flag (SAFFL)"),

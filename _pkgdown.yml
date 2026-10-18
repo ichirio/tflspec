@@ -211,6 +211,21 @@ reference:
       - tpl_ae_overview
       - tfl_read_template_sheets
       - tfl_write_template_yaml
+  - title: Template SPEC, a company's templates
+    desc: >
+      A company's templates are an R package of its own: it registers them
+      when it is loaded (`tfl_template()`, usually a tflspec template with
+      the company's defaults), exports the function its reports' programs
+      call (`tfl_template_run()`) and tests that no parameter is the look
+      (`tfl_test_templates()`).  `tfl_use_company_templates()` writes one to
+      start from.
+    contents:
+      - tfl_template
+      - tfl_param
+      - tfl_template_params
+      - tfl_template_run
+      - tfl_test_templates
+      - tfl_use_company_templates
   - title: Report spec, titles, footnotes, headers and tokens
     desc: >
       The page, the running header and footer, the titles and footnotes,
