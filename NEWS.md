@@ -1,5 +1,20 @@
 # tflspec (development version)
 
+* **An ARD that is not cards' in the code lists' order: `relevel_ard()`**
+  (#362, 0.0.24.9169).  cardx's survfit keeps its rows in the arms' order
+  but makes their factor again, in alphabetical order, so a survfit
+  table's arms came out alphabetical unless the report said
+  `plan_levels(TRT01A = )`.  The ARD program now writes
+  `relevel_ard(TRT01A = cl_trt01a)` after an analysis that is not cards'
+  (custom code, cardx, a study's own function) reading a column with a
+  code list: the column's levels in the list's order, its values and rows
+  as they were (a study helper, `tfl_helpers_code()`).  So #352 leaves out
+  a `plan_levels()` entry equal to the code list whatever analysis reads
+  it, and the km_table and orr templates write none for the arms (an order
+  given, `by_levels`, stays).  The tables are the same; SAMPLE-01's
+  T-14-2-2 gives the same RTF without its `plan_levels(TRT01A = )`.  Such a
+  report's ARD fingerprint changes, so an ARD made before is made again.
+
 * **A nested count's code-list values counted 0: `complete_hierarchy()`**
   (#357, 0.0.24.9168).  cards' `ard_stack_hierarchical()` counts only the
   values some group has, so a fixed SOC / PT no subject has could not be

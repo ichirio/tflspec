@@ -82,6 +82,31 @@ keep_stats <- function(ard, stats) {
   ard[ard$stat_name %in% stats, , drop = FALSE]
 }
 
+# An ARD's columns in their code lists' order: the rows of a listed
+# variable (as `variable` or a group) get its list's levels (as the ARD has
+# them, the labels).  For what does not keep its data's factor order --
+# cardx's survfit makes the arms' factor again, in alphabetical order.
+# Values and rows are as they were; a value the list does not have stays.
+#   relevel_ard(ard, TRT01A = cl_trt01a)
+relevel_ard <- function(ard, ...) {
+  if (is.list(ard) && !is.data.frame(ard)) return(lapply(ard, relevel_ard, ...))
+  lists <- list(...)
+  cols <- c("variable", grep("^group[0-9]+$", names(ard), value = TRUE))
+  for (k in cols) {
+    kl <- if (k == "variable") "variable_level" else paste0(k, "_level")
+    if (!kl %in% names(ard)) next
+    for (v in intersect(names(lists), unique(ard[[k]]))) {
+      levs <- unname(lists[[v]])
+      on <- which(ard[[k]] %in% v)
+      ard[[kl]][on] <- lapply(ard[[kl]][on], function(x) {
+        if (length(x) != 1L || is.na(x) || !as.character(x) %in% levs) return(x)
+        factor(as.character(x), levels = levs)
+      })
+    }
+  }
+  ard
+}
+
 # A hierarchical ARD (cards::ard_stack_hierarchical(), SOC / PT) with its
 # code lists' values no subject has, counted 0 -- cards counts only the
 # values some group has.  The outermost variable: each level of its factor

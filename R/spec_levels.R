@@ -7,11 +7,14 @@
 # the table does not already have: the program leaves it out, and so does
 # the run (the two read one list, .content_table_pipeline()).
 #
-# Kept: an entry that differs from the code list (a report's own order), a
-# key no analysis of the report reads (a column the plan makes), a key an
-# analysis that is not cards' reads (cardx's survfit names the arms from
-# the strata, in their alphabetical order), and everything of a report whose
-# data steps make its data or whose ARD the report does not define.
+# An analysis that is not cards' (cardx's survfit names the arms from the
+# strata, in their alphabetical order) gets relevel_ard() in the ARD
+# program, so a column with a code list is in the list's order whatever
+# made it.  Kept: an entry that differs from the code list (a report's own
+# order), a key no analysis of the report reads (a column the plan makes),
+# the variables' order when an analysis is not cards', and everything of a
+# report whose data steps make its data or whose ARD the report does not
+# define.
 
 # Does an analysis's ARD keep its data's factor order?  cards' functions do;
 # a cardx one, a study's own or code is not known to.
@@ -63,7 +66,7 @@
       if (named_order(a[[k]])) next
       by_k <- vapply(an, function(x) k %in% reads(x), NA)
       cl <- output$codelists[[k]]
-      if (any(by_k) && all(keeps[by_k]) && !is.null(cl) && !inherits(a[[k]], "tfl_r") &&
+      if (any(by_k) && !is.null(cl) && !inherits(a[[k]], "tfl_r") &&
           identical(unname(as.character(unlist(a[[k]]))), .cl_values(cl))) {
         a[[k]] <- NULL
       }

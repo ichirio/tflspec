@@ -681,7 +681,9 @@ tpl_listing <- function(x, ...) {
       if (isTRUE(a$drop_time_0))
         "data <- data[!(is_time & as.character(data$variable_level) == \"0\"), ]"),
       collapse = "\n")
-    by_lv <- a$by_levels %||% .tpl_levels(a$by, ctx$codelists)[[a$by]]
+    # (the arms' order: an order given, else the code list's, which the ARD
+    # program puts on the survfit / CI analysis too, relevel_ard())
+    by_lv <- a$by_levels
     content <- list(
       tfl_item("table_plan", list(cols = a$by, rows = list(group = "variable"))),
       tfl_item("plan_cells", list(
@@ -799,7 +801,9 @@ tpl_vs_change <- function(ard, population, ..., codelists = NULL) {
              variables = a$category),
         list(id = "ORR", method = "proportion_ci", data = set, by = a$by,
              variables = "RESP", args = tfl_r(sprintf("method = \"%s\"", a$ci_method)))))
-    by_lv <- a$by_levels %||% .tpl_levels(a$by, ctx$codelists)[[a$by]]
+    # (the arms' order: an order given, else the code list's, which the ARD
+    # program puts on the survfit / CI analysis too, relevel_ard())
+    by_lv <- a$by_levels
     content <- list(
       tfl_item("table_plan", list(cols = a$by, rows = list(group = "variable"))),
       tfl_item("plan_cells", list(proportion_ci = list(

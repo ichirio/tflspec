@@ -222,7 +222,7 @@
 # the names the setup and tflspec give (a study's code does not assign them)
 .ard_helper_names <- c("set_levels", "tag_ard", "fmt_pvalue", "fmt_ard",
                        "keep_stats", "save_ard", "fmt_default", "tfl_stats",
-                       "complete_hierarchy")
+                       "complete_hierarchy", "relevel_ard")
 
 # the packages an ARD program attaches (its setup's library() calls), and
 # those R attaches itself: their functions without `pkg::`
@@ -673,6 +673,18 @@
   })
 }
 
+# A step that puts the ARD of an analysis that is not cards' in its code
+# lists' order (relevel_ard()): cardx's survfit makes the arms' factor
+# again, alphabetical.  The code lists' columns the analysis reads; none
+# for cards' own, which keep the data's order.
+.relevel_step <- function(x, r) {
+  lv <- attr(x, "levels")[[r$output_id]]
+  if (!length(lv) || .ard_keeps_order(r)) return(list())
+  v <- intersect(names(lv), .ard_read_vars(r))
+  if (!length(v)) return(list())
+  list(.cl("relevel_ard", stats::setNames(as.list(.cl_name(v)), v)))
+}
+
 # the steps of a derive and of the code lists: dplyr::mutate(...),
 # set_levels().  With code lists, a data made from another is made factors
 # again: the columns it derives, and the values its rows no longer have that
@@ -1016,8 +1028,8 @@
     .split_bar(r$statistics)
   steps <- c(.post_steps(x, r),
              if (length(keep)) list(.cl("keep_stats", list(.cl("c", .q(keep))))),
-             list(.fmt_step(fmt, !is.null(fmt_fun)),
-                  .tag_step(r$analysis_id, pid)))
+             list(.fmt_step(fmt, !is.null(fmt_fun))), .relevel_step(x, r),
+             list(.tag_step(r$analysis_id, pid)))
   # every analysis says its id above it; its label too when it has one
   comment <- if (!is.na(r$label)) sprintf("# %s: %s", r$analysis_id, r$label) else
     sprintf("# %s", r$analysis_id)
@@ -1200,8 +1212,8 @@
   steps <- c(.post_steps(x, r),
              if (length(keep)) list(.cl("keep_stats", list(.cl("c", .q(keep))))),
              list(.fmt_step(post_fmt, in_call && !stack,
-                            skip = if (stack && in_call) skip),
-                  tag))
+                            skip = if (stack && in_call) skip)),
+             .relevel_step(x, r), list(tag))
   lbl <- if (!is.na(r$label)) paste0(": ", r$label) else ""
   c(sprintf("# %s%s (runs %s)", r$analysis_id, lbl,
             paste(kids$analysis_id, collapse = ", ")),
@@ -1243,8 +1255,8 @@
     .split_bar(r$statistics)
   steps <- c(.post_steps(x, r),
              if (length(keep)) list(.cl("keep_stats", list(.cl("c", .q(keep))))),
-             list(.fmt_step(fmt, !is.null(fmt_fun)),
-                  .tag_step(r$analysis_id, pid)))
+             list(.fmt_step(fmt, !is.null(fmt_fun))), .relevel_step(x, r),
+             list(.tag_step(r$analysis_id, pid)))
   steps <- lapply(steps, .cl_as_call)
   if (identical(call_fn, "(code)")) {
     return(list(call = NULL, code = tfl_r(as.character(node)), steps = steps,
