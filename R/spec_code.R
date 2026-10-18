@@ -579,6 +579,7 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
   note <- c("", vapply(from, function(f) {
     if (identical(f, "own")) return("")
     if (identical(f, "defaults")) return("  # (study default)")
+    if (startsWith(f, "template:")) return(paste0("  # (template ", sub("^template:", "", f), ")"))
     paste0("  # (pattern ", sub("^pattern:", "", f), ")")
   }, ""))
   lines <- unlist(lapply(seq_along(lines), function(i)
@@ -1182,6 +1183,14 @@ tfl_content_run <- function(output, data) {
 #' @param plan The name the plan is assigned to.
 #' @param pipe `"|>"` or `"%>%"`; `NULL` follows
 #'   `getOption("rtfreporter.ard_pipe")`.
+#' @param template For a resolved template report (`template: {name,
+#'   args}`, [tfl_resolve_output()]): `"call"` (default) writes the
+#'   template's call, `plan <- tpl_<name>(ard, ...)` with the arguments its
+#'   SPEC gives and the study's defaults it took, then the study's and the
+#'   report's own lines after it, each marked; `"items"` writes the items
+#'   it stands for, as for any report (and so does `"call"`, with a message,
+#'   when the call cannot say the report's own table roles, data or
+#'   normalization).
 #' @return The code, one element a line.
 #' @examples
 #' out <- tfl_output("T-1", "table", content = list(
@@ -1191,7 +1200,8 @@ tfl_content_run <- function(output, data) {
 #' cat(tfl_content_code(out), sep = "\n")
 #' @seealso [tfl_table_code()] for a table workbook; [tfl_schema()].
 #' @export
-tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL) {
+tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
+                             template = c("call", "items")) {
   if (!inherits(output, "tfl_output")) {
     .ard_stop("tfl_content_code(): `output` is a report, tfl_output().")
   }
@@ -1210,6 +1220,17 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL) {
                              "yet; tables, listings and figures, for now."), output$kind))
   }
   for (it in output$content) .schema_need_version(it)
+  # a template SPEC (resolved): the template's call and the lines after it
+  # (the A use); `template = "items"` writes the items it stands for (B)
+  tp <- attr(output, "template")
+  if (!is.null(tp) && identical(match.arg(template), "call") && identical(output$kind, "table")) {
+    if (isTRUE(tp$ok)) {
+      return(.content_tpl_code(output, data = data %||% output$data$object %||% "ard",
+                               plan = plan, pipe = pipe))
+    }
+    message(sprintf(paste0("%s: the template's call cannot say this report's own data, table ",
+                           "roles or normalize_ard() arguments; its items are written."), output$id))
+  }
   # the object the pipe starts from: the output's own name for it, else
   # the ARD when the content normalizes it, else the normalized data
   # the data's steps (`data.steps`, the old process_code): R that makes

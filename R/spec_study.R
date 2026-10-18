@@ -111,7 +111,13 @@ tfl_read_outputs <- function(dir) {
 #' (normalize_ard, the digits ...): a figure or a listing takes its other
 #' parts (`page`, `codelists`), not its content.  A pattern's content
 #' (`patterns/<name>`, chosen report by report) layers onto any kind.
-#' `extends: none` uses no layer.  Each item's
+#' `extends: none` uses no layer.  A template SPEC (`template: {name,
+#' args}`) puts the template's items ([tfl_template_expand()], marked
+#' `template:<name>`) between the layers and the report's own, and its
+#' `ard:` under the report's (an entry of the report's replaces the
+#' template's of the same id); a template parameter that says where its
+#' study default is takes it from the layers when the SPEC does not give
+#' it, and a SPEC value over a different one says so.  Each item's
 #' `from` says where it came from.  The result holds no `tfl_unset`.
 #'
 #' @param output A `tfl_output` as read from its file.
@@ -133,23 +139,36 @@ tfl_read_outputs <- function(dir) {
 tfl_resolve_output <- function(output, study, provenance = FALSE) {
   if (!inherits(output, "tfl_output")) stop("tfl_resolve_output(): `output` is a tfl_output.", call. = FALSE)
   if (!inherits(study, "tfl_study_spec")) stop("tfl_resolve_output(): `study` is a tfl_study_spec.", call. = FALSE)
-  chain <- output$extends
-  if (identical(chain, "none")) chain <- character()
-  layers <- lapply(chain, function(nm) {
-    l <- .layer_of(nm, study)
-    # the defaults' content is a table's: not a figure's or a listing's layers
-    if (identical(nm, "defaults") && !identical(output$kind, "table")) l$content <- list()
-    l
-  })
-  # the farthest first, the report's own last
-  acc <- list(data = list(), codelists = list(), content = list(), page = list())
-  for (l in rev(layers)) acc <- .layer_over(acc, l)
+  lb <- .layers_below(output, study)
+  layers <- lb$layers
+  acc <- lb$acc
+  # a template SPEC: the template's items between the layers and the
+  # report's own (its ard: under the report's ard:)
+  tpl <- NULL
+  if (!is.null(.tpl_spec_of(output))) {
+    tpl <- .tpl_expand_for(output, study, acc$content,
+                           .merge_map(acc$codelists, output$codelists))
+    tl <- list(data = tpl$x$data %||% list(), codelists = list(),
+               content = tpl$x$content, page = list())
+    acc <- .layer_over(acc, tl)
+    layers <- c(list(tl), layers)
+    output$ard <- .merge_ard(tpl$x$ard, output$ard)
+  }
   own <- list(data = output$data %||% list(), codelists = output$codelists,
               content = output$content, page = output$page)
   below <- acc$content
   acc <- .layer_over(acc, own)
-  if (isTRUE(provenance) && !inherits(acc$content, "tfl_r")) {
-    acc$content <- .content_provenance(acc$content, output$content, layers, below)
+  if ((isTRUE(provenance) || !is.null(tpl)) && !inherits(acc$content, "tfl_r")) {
+    prov <- .content_provenance(acc$content, output$content, layers, below)
+    if (!is.null(tpl)) {
+      # what the program writes after the template's call (the A use)
+      r <- .tpl_rest(prov, tpl$name)
+      # (a report's own data: the call's data step is the template's)
+      attr(output, "template") <- list(name = tpl$name, args = tpl$args, study = tpl$study,
+                                       items = tpl$x$content, rest = r$items,
+                                       ok = r$ok && !length(own$data))
+    }
+    if (isTRUE(provenance)) acc$content <- prov
   }
   output$data <- if (length(acc$data)) acc$data else output$data
   output$codelists <- acc$codelists
@@ -197,6 +216,22 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
     items[[i]] <- it
   }
   items
+}
+
+# The layers a report extends (nearest first) and their content, data,
+# code lists and page put together (the farthest first)
+.layers_below <- function(output, study) {
+  chain <- output$extends
+  if (identical(chain, "none")) chain <- character()
+  layers <- lapply(chain, function(nm) {
+    l <- .layer_of(nm, study)
+    # the defaults' content is a table's: not a figure's or a listing's layers
+    if (identical(nm, "defaults") && !identical(output$kind, "table")) l$content <- list()
+    l
+  })
+  acc <- list(data = list(), codelists = list(), content = list(), page = list())
+  for (l in rev(layers)) acc <- .layer_over(acc, l)
+  list(layers = layers, acc = acc)
 }
 
 .layer_of <- function(nm, study) {

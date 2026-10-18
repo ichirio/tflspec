@@ -55,6 +55,9 @@ tfl_sheets_from_spec <- function(study, outputs) {
   toc_ids <- vapply(s$toc$outputs %||% list(), function(e) e$id %||% NA_character_, "")
   ids <- vapply(outs, function(o) o$id, "")
   outs <- outs[order(match(ids, toc_ids, nomatch = length(toc_ids) + 1L), seq_along(ids))]
+  # a template SPEC: the sheets hold its items (tfl_template_to_spec()),
+  # the ARD's analyses among them
+  outs <- lapply(outs, function(o) if (is.null(.tpl_spec_of(o))) o else tfl_template_to_spec(o, s))
   bridge <- .bridge_fn(".plan_sheets_from_content")
   nc <- list()
   note <- function(output, part, reason) nc[[length(nc) + 1L]] <<- data.frame(

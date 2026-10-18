@@ -1,5 +1,24 @@
 # tflspec (development version)
 
+* **Template SPEC in a report's YAML** (#341, 0.0.24.9157).  A report's file
+  may be `template: {name, args}`, its `ard:` / `data:` / `content:`
+  holding only what it adds or changes (`tfl_output(template = )`; read and
+  written, a named vector in `args` as a map; a figure designer's
+  `template: km_simple`, a name, is not one).  `tfl_resolve_output()` puts
+  the template's items between the study's layers and the report's own
+  (each marked `template:<name>`), and its `ard:` under the report's; a
+  parameter that says where its study default is
+  (`plan_cells.continuous` for `summary` / `demog`'s `cells`) takes it, and
+  a SPEC value over a different one says so.  The program
+  (`tfl_content_code()`) is the template's call, `plan <- tpl_x(ard, ...)`,
+  with the study's and the report's own lines after it, each marked (A);
+  `template = "items"` writes the items instead, as it does when the call
+  cannot say the report's own table roles, data or normalization.
+  `tfl_template_to_spec()` writes a template report out as its items (B).
+  The sheets, and so the study's ARD program, take a template report's
+  items and analyses.  SAMPLE-01's nine template reports, written as
+  template SPECs, give the same ARD and the same RTF now, by B and by A.
+
 * **Template SPEC: `ae_overview`** (#335, 0.0.24.9155).  A display template
   on `summary` (`tpl_ae_overview()`): the subjects with a treatment-emergent
   adverse event of each kind -- any, related, grade 3 or higher, serious,
