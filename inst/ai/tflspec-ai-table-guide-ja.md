@@ -76,16 +76,24 @@ r                                   # 依頼名・帳票・文字数
 
 ## 5. AI の回答をどこに置くか
 
-回答の**全文**（`yaml` のブロック 1 つ）を `ai/answers/<同じ名前>.md`（UTF-8）に
-保存します。`ae-1.md` への回答は `ai/answers/ae-1.md`。
+回答の**全文**（`yaml` のブロック 1 つ）を `ai/answers/<同じ名前>.md` に
+保存します。`ae-1.md` への回答は `ai/answers/ae-1.md`（フォルダは
+`tfl_ai_write_requests()` が作ります）。
+
+文字コードは **UTF-8**（BOM の有無、Windows の改行はどちらでもよい）。メモ帳では
+「名前を付けて保存」で「文字コード: UTF-8」「ファイルの種類: すべてのファイル」
+（そうしないと `.txt` が付く。`ae-1.md.txt` も読みます）。ANSI（Shift-JIS）で
+保存したファイルは、そう書いた `error` になります。
 
 ## 6. 確かめる・YAML にする・RTF を作る
 
 ```r
 res <- tfl_ai_collect_answers(".")   # 読む・確かめる・spec/outputs/<id>.yml を書く
-res                                  # 帳票ごとに ok / warning / error / no answer
+res                                  # 依頼ごとに状態・帳票・次にすること
 ```
 
+表示は、依頼ごとの状態（`ok`、`warning`、`error`、`no answer`）、帳票、
+**次にすること**（next_step）と、帳票ごとの最初の問題です。
 エラーのある回答はファイルを書かず、直しの依頼を `ai/repairs/<依頼名>.md` に
 書きます。それを**同じチャット**に貼り、新しい回答で `ai/answers/<依頼名>.md` を
 上書きして、もう一度 `tfl_ai_collect_answers(".")`（2〜3 往復がふつう）。
@@ -129,8 +137,8 @@ for (id in res$output_id[res$status %in% c("ok", "warning")]) {
 ## 見本で試す（10 分）
 
 tflspec 同梱のファイル（4 表の TOC/SHELL ワークブック、XPT にした見本 ADaM、
-保存済みの回答）で一通り動かします。最後にその帳票の行が `ok` か `warning` なら
-準備完了です。
+4 つの依頼それぞれへの保存済みの回答）で一通り動かします。最後に 4 帳票すべてが
+`ok` なら準備完了です。
 
 ```r
 library(tflspec)
@@ -146,11 +154,10 @@ ex    <- system.file("ai", "example", package = "tflspec")
 shell <- tfl_ai_read_shell(file.path(ex, "onco_toc_shell.xlsx"))
 r     <- tfl_ai_write_requests(d, shell, tfl_ai_adam_summary(file.path(d, "adam")),
                                overwrite = TRUE)
-# 保存済みの回答を、最初の依頼へのチャットの回答の代わりに置く
-dir.create(file.path(d, "ai", "answers"), showWarnings = FALSE)
-file.copy(file.path(ex, "onco-answer.md"),
-          file.path(d, "ai", "answers", paste0(r$request[1], ".md")), overwrite = TRUE)
-tfl_ai_collect_answers(d)
+# 保存済みの回答を、チャットの回答の代わりに置く（1 依頼に 1 つ）
+invisible(file.copy(list.files(file.path(ex, "answers"), full.names = TRUE),
+                    file.path(d, "ai", "answers"), overwrite = TRUE))
+tfl_ai_collect_answers(d)            # 4 reports in 4 requests: ok 4 ...
 ```
 
 `ai/` フォルダ（依頼と回答）は残してください。共有は社内だけに。
@@ -163,5 +170,8 @@ tfl_ai_collect_answers(d)
 | `shell$toc$shell` が `NA`: 帳票番号でシェルが見つからない | そのシートを足す: `tfl_ai_read_shell("TOC_SHELL.xlsx", sheets = c("<シェルのシート>", ...))` |
 | チャットがメッセージが長すぎると言う | `tfl_ai_write_requests(..., instructions = "once")`、`size` を小さく、または `max_chars = 20000` |
 | `tfl_ai_collect_answers()` で `error`（"no answer block found"） | 回答を全部コピーしていない: 最初の ```` ``` ```` から最後までコピーし直す |
+| `error`（"is not UTF-8"） | 回答を UTF-8 で保存し直す（メモ帳: 名前を付けて保存 → 文字コード: UTF-8） |
+| "Not read (no request of that name)" | 回答のファイル名を依頼の名前にする（`ai/requests/index.md`）: `ae-1.md` |
+| `print(shell)` の最後が "Next: no TOC found" か "no shell found" | 書かれているとおりに渡す: `toc_sheet = "<シート名>"` か `sheets = c(...)` |
 | 2〜3 回直しても同じエラー | `spec/outputs/<id>.yml` を手で直し、手順 6 を実行 |
 | `tfl_build_ard()` が止まる | 帳票を絞って探す: `tfl_build_ard(st, dir = ".", output_id = "T-14-1-1", save = FALSE)` |

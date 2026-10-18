@@ -779,8 +779,8 @@ tfl_ai_review <- function(file, toc = NULL, adam = NULL, others = NULL,
       .ard_stop(sprintf("tfl_ai_review(): %s already there; pass `overwrite = TRUE`.",
                         paste(basename(there), collapse = ", ")))
     }
-    writeLines(rep_txt, paths[["repair"]], useBytes = TRUE)
-    writeLines(q_txt, paths[["questions"]], useBytes = TRUE)
+    .ai_write_text(rep_txt, paths[["repair"]])
+    .ai_write_text(q_txt, paths[["questions"]])
   }
   out <- structure(r, class = c("tfl_ai_review", "data.frame"), file = base,
                    kinds = res$kinds, assumptions = res$assumptions,
