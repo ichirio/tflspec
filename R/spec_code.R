@@ -409,8 +409,8 @@
         auto_width = auto_width, sep = sa[["sep"]])
   }
   # in the recommended order -- the schema's ranks: the mapping (cells,
-  # totals, comparisons, the rows kept), then the finishing (labels,
-  # levels, digits, sort, header, stub, pages, columns, style); a verb said
+  # totals, comparisons, the rows kept), then the finishing (levels,
+  # labels, digits, sort, header, stub, pages, columns, style); a verb said
   # twice (plan_digits' rounding, then its rows) keeps its order
   rank <- vapply(st, function(x) as.numeric(tfl_schema(x$fun)$rank %||% 1000), 0)
   st[order(rank, seq_along(st))]
@@ -782,9 +782,9 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
   codes <- list()
   seen <- character()
   # the variables' rows as the sheet had them: the code writes
-  # plan_levels() in the rows' order and plan_labels() in `order`'s, and the
-  # recommended order puts plan_labels() first -- so plan_levels() is read
-  # first, wherever it is written
+  # plan_levels() in the rows' order and plan_labels() in `order`'s; the
+  # recommended order puts plan_levels() first, and plan_levels() is read
+  # first wherever a file writes it
   calls <- .content_calls(items)
   fns <- vapply(calls, function(cl) cl$fun, "")
   first <- match("plan_labels", fns)

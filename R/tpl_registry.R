@@ -172,8 +172,8 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
     content <- list(
       tfl_item("table_plan", list(cols = a$by, rows = list(group = "variable"))),
       tfl_item("plan_cells", list(continuous = as.list(a$cells))),
-      tfl_item("plan_labels", as.list(a$labels[vars])),
       tfl_item("plan_levels", lv),
+      tfl_item("plan_labels", as.list(a$labels[vars])),
       tfl_item("plan_paginate_rows", list(max_rows = 30L, split = "group_safe")))
     list(ard = ard, data = list(source = "ard", object = "ard"), content = content)
   })
@@ -293,12 +293,12 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
   content <- c(
     list(tfl_item("table_plan", list(cols = a$by, rows = list(group = "variable")))),
     if (length(a$variables)) list(tfl_item("plan_cells", list(continuous = as.list(a$cells)))),
-    if (length(a$labels)) list(tfl_item("plan_labels", as.list(a$labels[vars]))),
     list(tfl_item("plan_levels", c(list(variable = vars),
-                                   .tpl_levels(c(a$by, a$categorical), ctx$codelists))),
-         # the look is the template's, not a parameter: a report changes it
-         # with an item of its own (content:) or the study's style
-         tfl_item("plan_paginate_rows", list(max_rows = 30L, split = "group_safe"))))
+                                   .tpl_levels(c(a$by, a$categorical), ctx$codelists)))),
+    if (length(a$labels)) list(tfl_item("plan_labels", as.list(a$labels[vars]))),
+    # the look is the template's, not a parameter: a report changes it
+    # with an item of its own (content:) or the study's style
+    list(tfl_item("plan_paginate_rows", list(max_rows = 30L, split = "group_safe"))))
   list(ard = list(analysis_data = sets, analyses = analyses),
        data = list(source = "ard", object = "ard"), content = content)
 }
@@ -688,10 +688,10 @@ tpl_listing <- function(x, ...) {
                     tfl_r("is.na(conf.high) ~ \"{estimate:.0f} ({conf.low:.0f}, NE)\""),
                     "{estimate:.0f} ({conf.low:.0f}, {conf.high:.0f})"),
         time = "{estimate:.1f%} ({conf.low:.1f%}, {conf.high:.1f%})")),
-      tfl_item("plan_labels", list(prob = sprintf("Time to first event (%s)", a$time_unit),
-                                   time = "Event-free probability (95% CI)")),
       tfl_item("plan_levels", c(list(variable = c("prob", "time")),
                                 if (length(by_lv)) stats::setNames(list(by_lv), a$by))),
+      tfl_item("plan_labels", list(prob = sprintf("Time to first event (%s)", a$time_unit),
+                                   time = "Event-free probability (95% CI)")),
       tfl_item("plan_col_header", list(header = list(
         list(line = "1", cols = "row_label"),
         list(line = "1", cols = ".values", span = "each", text = "{col}"),
@@ -802,12 +802,12 @@ tpl_vs_change <- function(ard, population, ..., codelists = NULL) {
       tfl_item("table_plan", list(cols = a$by, rows = list(group = "variable"))),
       tfl_item("plan_cells", list(proportion_ci = list(
         `n (%)` = "{n} ({estimate:.1f%})", `95% CI` = "[{conf.low:.1f%}, {conf.high:.1f%}]"))),
-      tfl_item("plan_labels", stats::setNames(
-        list("Best overall response, n (%)", sprintf("Objective response rate (%s)", resp)),
-        c(a$category, "RESP"))),
       # (the categories' order is the ARD's: its code list, applied in the ARD program)
       tfl_item("plan_levels", c(list(variable = c(a$category, "RESP")),
                                 if (length(by_lv)) stats::setNames(list(by_lv), a$by))),
+      tfl_item("plan_labels", stats::setNames(
+        list("Best overall response, n (%)", sprintf("Objective response rate (%s)", resp)),
+        c(a$category, "RESP"))),
       tfl_item("plan_col_header", list(header = list(
         list(line = "1", cols = ".values", span = "each", text = "{col}"),
         list(line = "2", cols = "row_label", text = a$heading),
@@ -878,8 +878,8 @@ tpl_orr <- function(ard, population = "ITT", ..., codelists = NULL) {
     content <- list(
       # one row a flag: no label column (the flag's TRUE is the row)
       tfl_item("table_plan", list(cols = a$by, rows = list(group = "variable"), label = NA)),
-      tfl_item("plan_labels", stats::setNames(lapply(a$flags, `[[`, "label"), ids)),
       tfl_item("plan_levels", c(list(variable = ids), .tpl_levels(a$by, ctx$codelists))),
+      tfl_item("plan_labels", stats::setNames(lapply(a$flags, `[[`, "label"), ids)),
       tfl_item("plan_col_header", list(header = list(
         list(line = "1", cols = "group"),
         list(line = "1", cols = ".values", span = "each", text = "{col}"),
