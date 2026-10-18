@@ -39,6 +39,14 @@
   arms from the strata: T-14-2-2) and a report whose data steps make its
   data.  The RTF is the same.
 
+* **The AI table guide's install lines** (#360, 0.0.24.9165).  A new R has
+  no `remotes`, and the sample's efficacy table needs `broom` (cardx's
+  confidence intervals): the guide (English and Japanese) now installs
+  `remotes`, `cards`, `cardx`, `haven` and `broom` first, then the two
+  packages from GitHub.  It also says that the `widen_ard()` notes printed
+  while making the RTF are information, and what to do when
+  `tfl_build_ard()` asks for a package.
+
 * **Fix: the study's ARD program puts a report's code lists on its data**
   (#353, 0.0.24.9164).  When a report's analysis data was its population
   under a name (`adsl_saf <- pop_saf`), the study's program wrote the code

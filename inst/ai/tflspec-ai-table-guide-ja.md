@@ -20,8 +20,13 @@ mystudy/
   ai/repairs/           tflspec が書く: 送り返す直しの依頼（手順 6）
 ```
 
-インストール（初回のみ）: `remotes::install_github(c("ichirio/rtfreporter", "ichirio/tflspec"))`
-と `install.packages(c("cards", "cardx", "haven"))`。
+インストール（初回のみ。新しい R には `remotes` がありません。`broom` は cardx の
+信頼区間に要ります）:
+
+```r
+install.packages(c("remotes", "cards", "cardx", "haven", "broom"))
+remotes::install_github(c("ichirio/rtfreporter", "ichirio/tflspec"))
+```
 
 ## 3. 何を実行するか
 
@@ -111,6 +116,9 @@ for (id in res$output_id[res$status %in% c("ok", "warning")]) {
 }
 ```
 
+途中に出る `widen_ard(): 31 ARD rows were not used.` とその下の一覧は、エラーでは
+なくお知らせです（ARD にあって表に出さない統計量）。
+
 | 関数 | すること |
 |---|---|
 | `tfl_ai_write_requests()` | 1 依頼 1 ファイル（`size`、`max_chars`、`instructions`） |
@@ -174,4 +182,5 @@ tfl_ai_collect_answers(d)            # 4 reports in 4 requests: ok 4 ...
 | "Not read (no request of that name)" | 回答のファイル名を依頼の名前にする（`ai/requests/index.md`）: `ae-1.md` |
 | `print(shell)` の最後が "Next: no TOC found" か "no shell found" | 書かれているとおりに渡す: `toc_sheet = "<シート名>"` か `sheets = c(...)` |
 | 2〜3 回直しても同じエラー | `spec/outputs/<id>.yml` を手で直し、手順 6 を実行 |
+| `tfl_build_ard()` が止まる: `The package "broom" (>= 1.0.8) is required.` | `install.packages("broom")`（ほかのパッケージの名前が出たときも、それを入れる） |
 | `tfl_build_ard()` が止まる | 帳票を絞って探す: `tfl_build_ard(st, dir = ".", output_id = "T-14-1-1", save = FALSE)` |
