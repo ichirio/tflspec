@@ -21,8 +21,13 @@ mystudy/
   ai/repairs/           written by tflspec: what to send back (step 6)
 ```
 
-Install once: `remotes::install_github(c("ichirio/rtfreporter", "ichirio/tflspec"))`
-and `install.packages(c("cards", "cardx", "haven"))`.
+Install once (a new R has no `remotes`; `broom` is what cardx's confidence
+intervals need):
+
+```r
+install.packages(c("remotes", "cards", "cardx", "haven", "broom"))
+remotes::install_github(c("ichirio/rtfreporter", "ichirio/tflspec"))
+```
 
 ## 3. What to run
 
@@ -114,6 +119,10 @@ for (id in res$output_id[res$status %in% c("ok", "warning")]) {
 }
 ```
 
+The notes printed on the way (`widen_ard(): 31 ARD rows were not used.` and
+the list under it) are information, not errors: the ARD's statistics the
+table does not show.
+
 | Function | Does |
 |---|---|
 | `tfl_ai_write_requests()` | one file a request (`size`, `max_chars`, `instructions`) |
@@ -181,4 +190,5 @@ Keep the `ai/` folder (requests, answers) — share it only within your company.
 | "Not read (no request of that name)" | rename the answer to the request's name (`ai/requests/index.md`): `ae-1.md` |
 | `print(shell)` ends with "Next: no TOC found" or "no shell found" | pass what it names: `toc_sheet = "<sheet>"` or `sheets = c(...)` |
 | the same error after 2-3 repairs | correct `spec/outputs/<id>.yml` by hand, then run step 6 |
+| `tfl_build_ard()` stops: `The package "broom" (>= 1.0.8) is required.` | `install.packages("broom")` (another package named so: install it too) |
 | `tfl_build_ard()` stops | find the report: `tfl_build_ard(st, dir = ".", output_id = "T-14-1-1", save = FALSE)` |
