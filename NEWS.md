@@ -1,5 +1,11 @@
 # tflspec (development version)
 
+* **The rounding in either case** (#347, 0.0.24.9162; rtfreporter #676).
+  The `study` sheet's `rounding` and a YAML file's `plan_digits: {rounding:
+  }` (a report, defaults.yml, a pattern, a style) are read in lower case:
+  "SAS" is "sas".  The generated code writes "sas" / "r" as before, so it
+  needs no newer rtfreporter.
+
 * **Template SPEC: the study's styles, a template's look under them, and
   where titles and footnotes print** (#344, 0.0.24.9160).
   - `defaults.yml` may hold named styles, `styles: {compact: {content:,
