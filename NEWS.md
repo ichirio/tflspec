@@ -14,7 +14,7 @@
   and a study whose code lists have no `under` keeps its fingerprints.
 
 * **A named order, and the variables' headings under `variable =`** (#356,
-  0.0.24.9166; rtfreporter #679, 0.8.2.9075).  `plan_levels()` may name its
+  0.0.24.9167; rtfreporter #679, 0.8.2.9075).  `plan_levels()` may name its
   values' text, as `factor(levels, labels)` (`plan_levels(SEX = c(F =
   "Female", M = "Male"))`): the schema takes a map (value: text), the
   sheets' `levels` cell `F = Female | M = Male`, both ways, and a named
@@ -26,7 +26,7 @@
   the same.
 
 * **`plan_levels()` the ARD already says is not written** (#352,
-  0.0.24.9165).  A table's program (`tfl_content_code()`) and its run
+  0.0.24.9166).  A table's program (`tfl_content_code()`) and its run
   (`tfl_content_run()`) leave out a column's order that is the report's
   code list -- applied when the ARD is made, a factor cards keeps in its
   order -- when every analysis reading the column is cards', and
@@ -38,6 +38,16 @@
   column no analysis reads, one a cardx analysis reads (survfit names the
   arms from the strata: T-14-2-2) and a report whose data steps make its
   data.  The RTF is the same.
+
+* **Fix: the study's ARD program puts a report's code lists on its data**
+  (#353, 0.0.24.9164).  When a report's analysis data was its population
+  under a name (`adsl_saf <- pop_saf`), the study's program wrote the code
+  lists but did not apply them (`set_levels()` was taken off `pop_saf`, as
+  a data the analyses do not read), so the ARD kept the raw codes:
+  SAMPLE-01's T-14-1-1 printed "F" / "M" where its code list says
+  "Female" / "Male".  One report's program was right.  Now each report's
+  ARD is the same from the study's program as from its own; the tables
+  show the code lists' labels, order and 0-count levels.
 
 * **`plan_levels()` before `plan_labels()`** (#349, 0.0.24.9163): the
   values' order first, then their names and the variables'.  The schema's

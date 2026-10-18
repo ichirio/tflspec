@@ -931,6 +931,16 @@
   syms <- unique(unlist(lapply(rest, function(l)
     tryCatch(all.names(parse(text = l, keep.source = FALSE)),
              error = function(e) character()))))
+  # a data that is another under a name of its own (`adsl_saf <- pop_saf`,
+  # the study's program keeps pop_* for every report): what it names is
+  # read too -- it has no step of its own to put the code lists on
+  alias <- "^([A-Za-z.][A-Za-z0-9._]*) <- ([A-Za-z.][A-Za-z0-9._]*)$"
+  repeat {
+    hit <- grepl(alias, code) & seq_along(code) < first_an &
+      sub(alias, "\\1", code) %in% syms & !sub(alias, "\\2", code) %in% syms
+    if (!any(hit)) break
+    syms <- c(syms, sub(alias, "\\2", code[hit]))
+  }
   for (k in which(def & seq_along(code) < first_an)) {
     nm <- sub(" <- .*$", "", code[k])
     if (nm %in% syms) next
