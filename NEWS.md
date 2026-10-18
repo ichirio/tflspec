@@ -1,7 +1,7 @@
 # tflspec (development version)
 
 * **A named order, and the variables' headings under `variable =`** (#356,
-  0.0.24.9166; rtfreporter #679, 0.8.2.9075).  `plan_levels()` may name its
+  0.0.24.9167; rtfreporter #679, 0.8.2.9075).  `plan_levels()` may name its
   values' text, as `factor(levels, labels)` (`plan_levels(SEX = c(F =
   "Female", M = "Male"))`): the schema takes a map (value: text), the
   sheets' `levels` cell `F = Female | M = Male`, both ways, and a named
