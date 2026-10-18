@@ -1,5 +1,15 @@
 # tflspec (development version)
 
+* **Where a table's page names print, said in its content** (#337,
+  0.0.24.9156; rtfreporter #672).  `plan_paginate_group(heading_at = )` and
+  `plan_paginate_rows(heading_at = )` (`section`, `title`, `none`) are in
+  the schema, and the sheets' `layout` gains `group_heading_at` and
+  `pages_heading_at`, both ways.  It is the default of the report's
+  `rtf_tables(auto_section = , auto_title = )`: a report's own setting
+  (the page's `rtf_tables: {auto_section: }`, the report sheet's
+  `auto_section`) wins, and a blank one does not undo it.  Needs
+  rtfreporter 0.8.2.9072.
+
 * **Template SPEC: four more** (#333, 0.0.24.9154).  `summary` takes an
   optional mean (95% CI) analysis of its continuous variables (`ci_label`;
   T-14-2-3).  `km_table` (`tpl_km_table()`): the Kaplan-Meier median and

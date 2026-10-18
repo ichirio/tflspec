@@ -104,6 +104,11 @@ test_that("tfl_schema_check(): a wrong argument or value is said, a right one pa
     list(border_header = tfl_call("rtf_border", list(top = TRUE)))))), 0L)
   p <- tfl_schema_check(tfl_item("no_such_fn", list()))
   expect_match(p$message, "neither the schema nor its package")
+  # where the page names print (rtfreporter #672): one of three words
+  expect_identical(nrow(tfl_schema_check(tfl_item("plan_paginate_group",
+    list(heading_at = "section")))), 0L)
+  expect_identical(tfl_schema_check(tfl_item("plan_paginate_rows",
+    list(page_by = "arm", heading_at = "header")))$arg, "heading_at")
 })
 
 test_that("the sheets say what they cannot hold, and leave it out", {
