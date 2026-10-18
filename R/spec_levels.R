@@ -54,7 +54,13 @@
       next
     }
     a <- it$args
+    named_order <- function(x) {
+      nm <- names(unlist(x))
+      !is.null(nm) && any(!is.na(nm) & nzchar(nm))
+    }
     for (k in setdiff(names(a), c("variable", ".drop_empty"))) {
+      # (a named order gives its values' text: a change the ARD does not say)
+      if (named_order(a[[k]])) next
       by_k <- vapply(an, function(x) k %in% reads(x), NA)
       cl <- output$codelists[[k]]
       if (any(by_k) && all(keeps[by_k]) && !is.null(cl) && !inherits(a[[k]], "tfl_r") &&
@@ -63,7 +69,7 @@
       }
     }
     v <- a$variable
-    if (!is.null(v) && all(keeps)) {
+    if (!is.null(v) && all(keeps) && !named_order(v)) {
       v <- as.character(unlist(v))
       if (length(v) <= length(ard_vars) && identical(v, ard_vars[seq_along(v)])) a$variable <- NULL
     }

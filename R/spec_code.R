@@ -260,7 +260,14 @@
   }
   lb <- .ard_spec_labels(sp)
   vl <- .ard_spec_value_labels(sp)
-  if (length(lb) || length(vl)) do.call(add, c(list("plan_labels"), as.list(lb), vl))
+  # the variables' headings under `variable` (they never meet a variable's
+  # value labels, SEX = c(F = )); a key column's label under its own key
+  keycols <- unique(as.character(unlist(roles[c("cols", "rows")], use.names = FALSE)))
+  lbv <- lb[!names(lb) %in% keycols]
+  lbk <- lb[names(lb) %in% keycols]
+  if (length(lb) || length(vl)) {
+    do.call(add, c(list("plan_labels"), if (length(lbv)) list(variable = lbv), as.list(lbk), vl))
+  }
   ne <- .ard_spec_nest(sp)
   if (length(ne)) do.call(add, c(list("plan_nest"), ne))
   if (!is.null(sa[["total"]])) {
@@ -842,12 +849,27 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
         vo <- named$variable
         if (is.list(vo) && all(vapply(vo, is.character, NA))) vo <- unlist(vo)
         if (is.character(vo)) named$variable <- NULL else vo <- NULL
+        # a named order (value = text): its text in the cell, `F = Female`
+        lv_cell <- function(x) {
+          nm <- names(x)
+          if (is.null(nm)) return(bar(x))
+          bar(ifelse(!is.na(nm) & nzchar(nm), paste(nm, "=", unname(x)), unname(x)))
+        }
         for (v in setdiff(names(named), ".drop_empty")) {
-          if (!is.character(named[[v]])) { miss(fn, v); next }
-          var_row(v); vars[[v]]$levels <- bar(named[[v]])
+          x <- named[[v]]
+          if (is.list(x) && all(vapply(x, function(e) is.character(e) && length(e) == 1L, NA))) x <- unlist(x)
+          if (!is.character(x)) { miss(fn, v); next }
+          var_row(v); vars[[v]]$levels <- lv_cell(x)
         }
         for (v in named$.drop_empty) { var_row(v); vars[[v]]$empty_levels <- "hide" }
-        for (k in seq_along(vo)) { var_row(vo[k]); vars[[vo[k]]]$order <- k }
+        # the variables: their order, and a heading a named element gives
+        # (plan_labels(), read after, has the last word)
+        vnm <- names(vo)
+        for (k in seq_along(vo)) {
+          nk <- if (!is.null(vnm) && !is.na(vnm[k]) && nzchar(vnm[k])) vnm[k] else unname(vo[k])
+          var_row(nk); vars[[nk]]$order <- k
+          if (!identical(nk, unname(vo[k]))) vars[[nk]]$label <- unname(vo[k])
+        }
       },
       plan_labels = {
         for (v in names(named)) {
@@ -855,6 +877,15 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
           if (is.list(x) && length(x) &&
               all(vapply(x, function(e) is.character(e) && length(e) == 1L, NA))) {
             x <- unlist(x)
+          }
+          # the variables' headings, plan_labels(variable = c(AGE = ...))
+          if (identical(v, "variable") && is.character(x) && !is.null(names(x)) &&
+              all(nzchar(names(x)))) {
+            for (n in names(x)) {
+              var_row(n); vars[[n]]$label <- unname(x[[n]])
+              labelled <- c(labelled, n)
+            }
+            next
           }
           # a value's labels: a column the plan makes, its code list rows; a
           # data variable's are its code list's already (the ARD has them)

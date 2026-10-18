@@ -540,3 +540,27 @@ test_that("plan_levels() the ARD already says is left out of the program and the
   # .drop_empty alone stays
   expect_match(code(lv(list(TRT01A = c("A", "B"), .drop_empty = "SEX"))), ".drop_empty", fixed = TRUE)
 })
+
+test_that("a named order (plan_levels(SEX = c(F = \"Female\"))): the schema, the code, the sheets both ways; never pruned", {
+  # the schema takes a map (value: text) as well as a sequence
+  expect_identical(nrow(tfl_schema_check(tfl_item("plan_levels", list(SEX = list(F = "Female", M = "Male"))))), 0L)
+  o <- tfl_output("T-1", "table", content = list(
+    tfl_item("table_plan", list(cols = "TRT01A", rows = list(group = "variable"))),
+    tfl_item("plan_levels", list(SEX = list(M = "Male", F = "Female"), variable = list(AGE = "Age (years)", SEX = "SEX")))))
+  code <- paste(tfl_content_code(o, pipe = "|>"), collapse = "\n")
+  expect_match(code, 'cl_sex <- c(M = "Male", F = "Female")', fixed = TRUE)
+  expect_match(code, 'variable = c(AGE = "Age (years)", SEX = "SEX")', fixed = TRUE)
+  # the sheets: `M = Male | F = Female` in the levels cell, a heading from the order's name
+  sh <- .plan_sheets_from_content(o$content, "T-1")
+  expect_identical(sh$variables$levels[sh$variables$variable == "SEX"], "M = Male | F = Female")
+  expect_identical(sh$variables$label[sh$variables$variable == "AGE"], "Age (years)")
+  lv <- tflspec:::.ard_spec_levels(sh)
+  expect_identical(lv$SEX, c(M = "Male", F = "Female"))
+  # a code list's order given with text is a change the ARD does not say: kept
+  cl <- list(SEX = list(list(value = "M", label = "Male"), list(value = "F", label = "Female")))
+  ard <- list(analyses = list(list(id = "CAT", method = "categorical", data = "adsl", by = "TRT01A", variables = "SEX")))
+  p <- tfl_output("T-1", "table", codelists = cl, ard = ard, content = list(
+    tfl_item("table_plan", list(cols = "TRT01A", rows = list(group = "variable"))),
+    tfl_item("plan_levels", list(SEX = list(Male = "Men", Female = "Women")))))
+  expect_match(paste(tfl_content_code(p), collapse = "\n"), 'Male = "Men"', fixed = TRUE)
+})

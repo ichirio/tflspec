@@ -1,5 +1,17 @@
 # tflspec (development version)
 
+* **A named order, and the variables' headings under `variable =`** (#356,
+  0.0.24.9166; rtfreporter #679, 0.8.2.9075).  `plan_levels()` may name its
+  values' text, as `factor(levels, labels)` (`plan_levels(SEX = c(F =
+  "Female", M = "Male"))`): the schema takes a map (value: text), the
+  sheets' `levels` cell `F = Female | M = Male`, both ways, and a named
+  order is never left out as the ARD's own.  The variables' headings are
+  written `plan_labels(variable = c(AGE = "Age (years)", ...))` (the sheets'
+  bridge and the templates), so they never meet a variable's value labels;
+  a report that says `plan_labels(AGE = )` reads as before, and a named
+  `plan_levels(variable = )` comes back as the headings.  The tables are
+  the same.
+
 * **`plan_levels()` the ARD already says is not written** (#352,
   0.0.24.9165).  A table's program (`tfl_content_code()`) and its run
   (`tfl_content_run()`) leave out a column's order that is the report's

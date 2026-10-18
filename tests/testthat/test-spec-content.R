@@ -185,7 +185,7 @@ test_that("data.steps that make the data: no second normalize_ard(), the sheets'
   own <- list(
     tfl_item("table_plan", list(cols = "ARM", rows = list(group = "variable"))),
     tfl_item("plan_cells", list(SEX = "{n}")),
-    tfl_item("plan_labels", list(SEX = "Sex")))
+    tfl_item("plan_labels", list(variable = list(SEX = "Sex"))))
   out <- tfl_output("T-1", "table",
     data = list(source = "ard", object = "ard", steps = list(tfl_r(paste0(
       "data <- normalize_ard(ard)
@@ -263,7 +263,7 @@ test_that("the variables' order is plan_levels(variable = ), both ways; the labe
   # the nested one has its place from plan_nest(); a code list of it no
   expect_true(any(grepl('plan_levels(variable = c("AGE", "SEX", "RACE"))', code, fixed = TRUE)))
   expect_false(any(grepl("cl_variable", code, fixed = TRUE)))
-  expect_true(any(grepl('plan_labels(AGE = "Age", SEX = "Sex")', code, fixed = TRUE)))
+  expect_true(any(grepl('plan_labels(variable = c(AGE = "Age", SEX = "Sex"))', code, fixed = TRUE)))
   back <- .plan_sheets_from_content(.plan_content_from_sheets(sp, "T-1", own = TRUE), "T-1")
   ord <- stats::setNames(as.character(back$variables$order), back$variables$variable)
   expect_identical(unname(ord[c("AGE", "SEX", "RACE", "ASIANSUB")]), c("1", "2", "3", "4"))
@@ -275,7 +275,7 @@ test_that("the variables' order is plan_levels(variable = ), both ways; the labe
                 tfl_item("plan_labels", list(SEX = "Sex", AGE = "Age")))
   sh <- .plan_sheets_from_content(items, "T-1")
   expect_true(all(is.na(sh$variables$order)))
-  expect_true(any(grepl('plan_labels(SEX = "Sex", AGE = "Age")', tfl_table_code(sh), fixed = TRUE)))
+  expect_true(any(grepl('plan_labels(variable = c(SEX = "Sex", AGE = "Age"))', tfl_table_code(sh), fixed = TRUE)))
   expect_false(any(grepl("plan_levels(variable", tfl_table_code(sh), fixed = TRUE)))
   # the recommended order puts plan_levels() first (the values' order, then
   # their names); plan_levels() is read first wherever a file writes it
