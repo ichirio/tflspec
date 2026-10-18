@@ -30,7 +30,9 @@
   vapply(cl, function(r) as.character(r$label %||% r$value), "")
 }
 
-.levels_prune <- function(content, output) {
+# `keys`: only these keys may go (NULL: any); `variables = FALSE`: the
+# variables' order stays (a report's own items, written back to its sheets)
+.levels_prune <- function(content, output, keys = NULL, variables = TRUE) {
   ard <- output$ard
   if (inherits(content, "tfl_r") || !length(ard$analyses) || length(.content_r_steps(output))) {
     return(content)
@@ -55,6 +57,7 @@
     }
     a <- it$args
     for (k in setdiff(names(a), c("variable", ".drop_empty"))) {
+      if (!is.null(keys) && !k %in% keys) next
       by_k <- vapply(an, function(x) k %in% reads(x), NA)
       cl <- output$codelists[[k]]
       if (any(by_k) && all(keeps[by_k]) && !is.null(cl) && !inherits(a[[k]], "tfl_r") &&
@@ -63,7 +66,7 @@
       }
     }
     v <- a$variable
-    if (!is.null(v) && all(keeps)) {
+    if (isTRUE(variables) && !is.null(v) && all(keeps)) {
       v <- as.character(unlist(v))
       if (length(v) <= length(ard_vars) && identical(v, ard_vars[seq_along(v)])) a$variable <- NULL
     }
@@ -79,7 +82,10 @@
 # `codelists` -- so a workbook's table and its YAML file write one
 # program.  Nothing without the ARD definition (as a report whose ARD the
 # report does not define).
-.levels_prune_sheets <- function(items, sp, ard_spec, output_id) {
+# `own`: a report's own items (.plan_content_from_sheets(own = TRUE)):
+# only the orders its code lists give go (a `levels` cell and the variables'
+# `order` are what the report says, and stay).
+.levels_prune_sheets <- function(items, sp, ard_spec, output_id, own = FALSE) {
   if (is.null(ard_spec) || length(output_id) != 1L || is.na(output_id)) return(items)
   an <- ard_spec$analyses
   an <- an[!is.na(an$output_id) & an$output_id %in% output_id, , drop = FALSE]
@@ -99,5 +105,8 @@
   }
   output <- list(ard = list(analyses = analyses),
                  codelists = if (!is.null(cl) && nrow(cl)) .conv_codelists(cl))
-  .levels_prune(items, output)
+  if (!isTRUE(own)) return(.levels_prune(items, output))
+  v <- sp$variables
+  said <- if (!is.null(v$levels)) unique(v$variable[!is.na(v$levels) & nzchar(trimws(v$levels))])
+  .levels_prune(items, output, keys = setdiff(names(output$codelists), said), variables = FALSE)
 }

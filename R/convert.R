@@ -97,8 +97,11 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   if (is.null(content_fn)) {
     bridge <- .bridge_fn(".plan_content_from_sheets")
     if (!is.null(bridge)) {
+      # (with the ARD definition: the orders the code lists give, which the
+      # ARD already has, are not written into the report's file)
       content_fn <- function(sp, id) {
-        if (is.null(id) || is.na(id)) bridge(sp, NA) else bridge(sp, id, own = TRUE)
+        if (is.null(id) || is.na(id)) bridge(sp, NA) else
+          bridge(sp, id, own = TRUE, ard_spec = if (length(ard$analyses)) ard)
       }
     }
   }

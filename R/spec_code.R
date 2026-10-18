@@ -615,11 +615,14 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
 #'   defaults left out -- what its spec file says itself (a value equal to
 #'   the default is kept, as it was written).  `FALSE`: the defaults and the
 #'   table's rows together, as the plan applies them.
+#' @param ard_spec The ARD definition ([tfl_read_ard_spec()]): with it, the
+#'   plan_levels() its ARD already says are left out (.levels_prune()) --
+#'   with `own`, only the orders the code lists give.  `NULL`: none left out.
 #' @return The items ([tfl_item()]), in the order the plan applies them:
 #'   `table_plan()` with the roles first.
 #' @keywords internal
 #' @noRd
-.plan_content_from_sheets <- function(spec, output_id = NULL, own = FALSE) {
+.plan_content_from_sheets <- function(spec, output_id = NULL, own = FALSE, ard_spec = NULL) {
   defaults <- length(output_id) == 1L && is.na(output_id)
   sp <- .as_spec(spec, "table", ".plan_content_from_sheets",
                  output_id = if (defaults || isTRUE(own)) NULL else output_id)
@@ -639,6 +642,10 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
   }
   items <- .plan_content_items(sp)
   if (defaults && !length(items[[1L]]$args)) items <- items[-1L]
+  if (!defaults && !is.null(ard_spec)) {
+    items <- .levels_prune_sheets(items, sp, ard_spec, output_id %||% attr(sp, "output_id"),
+                                  own = isTRUE(own))
+  }
   items
 }
 
