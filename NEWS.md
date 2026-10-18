@@ -1,5 +1,15 @@
 # tflspec (development version)
 
+* **Template SPEC: `ae_overview`** (#335, 0.0.24.9155).  A display template
+  on `summary` (`tpl_ae_overview()`): the subjects with a treatment-emergent
+  adverse event of each kind -- any, related, grade 3 or higher, serious,
+  leading to discontinuation, leading to death -- n (%) by arm, a row a
+  kind.  Each row is a `subjects` analysis of the events its `where` keeps;
+  `flags` changes the rows.  The onco example study gains the report it is
+  checked against (T-14-3-2, Overview of Treatment-Emergent Adverse
+  Events); the template gives the same items and RTF by A, by B and by
+  its spec.
+
 * **Template SPEC: four more** (#333, 0.0.24.9154).  `summary` takes an
   optional mean (95% CI) analysis of its continuous variables (`ci_label`;
   T-14-2-3).  `km_table` (`tpl_km_table()`): the Kaplan-Meier median and

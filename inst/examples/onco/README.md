@@ -23,6 +23,7 @@ The outputs:
 | T-14-1-1 | Demographic and Baseline Characteristics | Safety |
 | T-14-2-1 | Best Overall Response, Objective Response Rate and Disease Control Rate | ITT |
 | T-14-3-1 | Treatment-Emergent Adverse Events by System Organ Class and Preferred Term | Safety |
+| T-14-3-2 | Overview of Treatment-Emergent Adverse Events | Safety |
 | F-14-2-1 | Kaplan-Meier Plot of Progression-Free Survival | ITT |
 | F-14-2-2 | Kaplan-Meier Plot of Overall Survival | ITT |
 | F-14-2-3 | Progression-Free Survival: Hazard Ratio by Subgroup | ITT |
