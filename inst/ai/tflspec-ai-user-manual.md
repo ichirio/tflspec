@@ -574,7 +574,12 @@ tfl_ai_unpack(a, "study")                           # spec/outputs/<id>.yml, spe
   `ai/answers/<request>.md`; `tfl_ai_collect_answers(study_dir)` parses,
   checks and writes them, one row a report (`ok` / `warning` / `error` /
   `no answer`), an answer with errors leaving its repair prompt in
-  `ai/repairs/`.
+  `ai/repairs/`.  `tfl_ai_prepare(dir, toc, ...)` does the steps before
+  (the study folder when there is none, the ADaM summary, the workbook
+  read, the requests) in one call; `workbook = "attach"` / `"both"` has
+  each request say where its reports' shells are in the attached TOC /
+  SHELL workbook (with the text too for `"both"`, the attachment right
+  where they differ).
 * `tfl_ai_context("table", examples = "study/spec/outputs/T-14-3-1.yml")`
   gives a reviewed report of the family: the prompt asks for the rest of the
   family written the same way.
@@ -797,7 +802,7 @@ back): rename the value or choose another separator.
 **AI-assisted drafting:** `tfl_ai_tasks` `tfl_ai_context` `tfl_ai_schema`
 `tfl_ai_prompt` `tfl_ai_parse` `tfl_ai_check` `tfl_ai_repair_prompt`
 `tfl_ai_diff` `tfl_ai_read_shell` `tfl_ai_adam_summary` `tfl_ai_batches`
-`tfl_ai_write_requests` `tfl_ai_collect_answers` `tfl_ai_study_init`
+`tfl_ai_write_requests` `tfl_ai_collect_answers` `tfl_ai_study_init` `tfl_ai_prepare`
 
 **ARD spec:** `tfl_ard_spec` `tfl_read_ard_spec` `tfl_write_ard_spec`
 `tfl_ard_spec_template` `tfl_ard_code` `tfl_build_ard` `tfl_ard_for`
