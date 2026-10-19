@@ -1,5 +1,13 @@
 # tflspec (development version)
 
+* **A line break inside a cell no longer shifts the shells' text**
+  (#370, 0.0.24.9174).  `tfl_ai_read_shell()` missed a cell whose text
+  holds a line break (Alt+Enter in Excel: a column header like
+  "Placebo" over "(N=xx)"), and every later cell of the workbook took the
+  text of the one before it -- the shells and the TOC titles the AI read
+  were wrong.  The workbook reader now reads such a cell as one (`\n` in
+  the text), and the cells after it keep their own text.
+
 * **An ARD that is not cards' in the code lists' order: `relevel_ard()`**
   (#362, 0.0.24.9169).  cardx's survfit keeps its rows in the arms' order
   but makes their factor again, in alphabetical order, so a survfit
