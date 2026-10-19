@@ -108,7 +108,7 @@ test_that("summary: categorical variables too; disposition on it", {
   expect_error(tfl_template_expand("summary", list(population = "SAF")), "categorical")
   d <- tfl_template_expand("disposition", list(population = "SAF"))
   expect_identical(d$ard$analyses[[2L]]$id, "DISP")
-  expect_identical(tpl_item(d, "plan_labels")$args, list(EOSSTT = "Status at end of study, n (%)"))
+  expect_identical(tpl_item(d, "plan_labels")$args, list(variable = list(EOSSTT = "Status at end of study, n (%)")))
   expect_true("disposition" %in% tfl_templates()$name)
   ard <- tpl_ard()
   p <- suppressMessages(tpl_summary(ard, population = "SAF", categorical = c("AGEGR1", "SEX")))
@@ -158,11 +158,11 @@ test_that("summary's mean (CI); km_table, vs_change and orr", {
   v <- tfl_template_expand("vs_change", list(population = "SAF", param = "SYSBP", visit = "V1",
     param_label = "Systolic BP", when = "week 1", visit_label = "Week 1", unit = "mmHg"))
   expect_identical(v$ard$analyses[[2L]]$variables, c("BASE", "AVAL", "CHG"))
-  expect_identical(tpl_item(v, "plan_labels")$args$CHG, "Change from baseline (mmHg)")
+  expect_identical(tpl_item(v, "plan_labels")$args$variable$CHG, "Change from baseline (mmHg)")
   o <- tfl_template_expand("orr", list(responders = c("CR", "PR", "SD")))
   expect_identical(as.character(o$ard$analysis_data[[1L]]$derive),
                    'RESP = AVALC %in% c("CR", "PR", "SD")')
-  expect_identical(tpl_item(o, "plan_labels")$args$RESP, "Objective response rate (CR + PR + SD)")
+  expect_identical(tpl_item(o, "plan_labels")$args$variable$RESP, "Objective response rate (CR + PR + SD)")
   expect_true(all(c("km_table", "vs_change", "orr") %in% tfl_templates()$name))
 })
 
@@ -175,7 +175,7 @@ test_that("ae_overview: a subjects analysis and a row a flag", {
   expect_identical(x$content[[1L]]$args$label, NA)   # no label column
   ser <- list(list(id = "SER", label = "Serious", where = 'AESER == "Y"'))
   f <- tfl_template_expand("ae_overview", list(flags = ser, population = "ITT"))
-  expect_identical(tpl_item(f, "plan_labels")$args, list(SER = "Serious"))
+  expect_identical(tpl_item(f, "plan_labels")$args, list(variable = list(SER = "Serious")))
   expect_identical(f$ard$analysis_data[[2L]]$id, "adae_itt")
   skip_if_not_installed("cards")
   saf <- adsl[adsl$SAFFL == "Y", ]

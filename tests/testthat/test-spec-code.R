@@ -541,6 +541,30 @@ test_that("plan_levels() the ARD already says is left out of the program and the
   expect_match(code(lv(list(TRT01A = c("A", "B"), .drop_empty = "SEX"))), ".drop_empty", fixed = TRUE)
 })
 
+test_that("a named order (plan_levels(SEX = c(F = \"Female\"))): the schema, the code, the sheets both ways; never pruned", {
+  # the schema takes a map (value: text) as well as a sequence
+  expect_identical(nrow(tfl_schema_check(tfl_item("plan_levels", list(SEX = list(F = "Female", M = "Male"))))), 0L)
+  o <- tfl_output("T-1", "table", content = list(
+    tfl_item("table_plan", list(cols = "TRT01A", rows = list(group = "variable"))),
+    tfl_item("plan_levels", list(SEX = list(M = "Male", F = "Female"), variable = list(AGE = "Age (years)", SEX = "SEX")))))
+  code <- paste(tfl_content_code(o, pipe = "|>"), collapse = "\n")
+  expect_match(code, 'cl_sex <- c(M = "Male", F = "Female")', fixed = TRUE)
+  expect_match(code, 'variable = c(AGE = "Age (years)", SEX = "SEX")', fixed = TRUE)
+  # the sheets: `M = Male | F = Female` in the levels cell, a heading from the order's name
+  sh <- .plan_sheets_from_content(o$content, "T-1")
+  expect_identical(sh$variables$levels[sh$variables$variable == "SEX"], "M = Male | F = Female")
+  expect_identical(sh$variables$label[sh$variables$variable == "AGE"], "Age (years)")
+  lv <- tflspec:::.ard_spec_levels(sh)
+  expect_identical(lv$SEX, c(M = "Male", F = "Female"))
+  # a code list's order given with text is a change the ARD does not say: kept
+  cl <- list(SEX = list(list(value = "M", label = "Male"), list(value = "F", label = "Female")))
+  ard <- list(analyses = list(list(id = "CAT", method = "categorical", data = "adsl", by = "TRT01A", variables = "SEX")))
+  p <- tfl_output("T-1", "table", codelists = cl, ard = ard, content = list(
+    tfl_item("table_plan", list(cols = "TRT01A", rows = list(group = "variable"))),
+    tfl_item("plan_levels", list(SEX = list(Male = "Men", Female = "Women")))))
+  expect_match(paste(tfl_content_code(p), collapse = "\n"), 'Male = "Men"', fixed = TRUE)
+})
+
 test_that("a workbook's table leaves out the plan_levels() its ARD says, as its YAML file does", {
   S <- .ard_spec_sheets
   ard <- tfl_ard_spec(list(
@@ -584,4 +608,18 @@ test_that("a workbook's table leaves out the plan_levels() its ARD says, as its 
   own <- paste(tfl_table_code(sp, "T", pipe = "|>", ard_spec = ard), collapse = "\n")
   expect_match(own, "SEX = cl_sex", fixed = TRUE)
   expect_false(grepl("TRT01A = cl_trt01a", own, fixed = TRUE))
+})
+
+test_that("one heading keeps its variable through a file: plan_labels(variable = c(EOSSTT = ))", {
+  sp <- tfl_table_spec(list(
+    tables = data.frame(output_id = "T", cols = "TRT01A", rows = "group = variable"),
+    variables = data.frame(output_id = "T", variable = "EOSSTT", label = "End of study status")))
+  items <- tflspec:::.plan_content_from_sheets(sp, "T", own = TRUE)
+  f <- tempfile(fileext = ".yml")
+  tfl_write_output(tfl_output("T", "table", content = items), f)
+  back <- tfl_read_output(f)
+  lb <- Filter(function(it) it$fn == "plan_labels", back$content)[[1L]]$args
+  expect_identical(unlist(lb$variable), c(EOSSTT = "End of study status"))
+  expect_match(paste(tfl_content_code(back, pipe = "|>"), collapse = "\n"),
+               'plan_labels(variable = c(EOSSTT = "End of study status"))', fixed = TRUE)
 })

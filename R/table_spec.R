@@ -664,7 +664,9 @@
 #'   \item{`order`}{Number; the order the variables appear in
 #'     (`plan_levels(variable = c("AGE", "SEX"))`: the values of the ARD's
 #'     `variable` column; one not numbered comes after, in the ARD's order).}
-#'   \item{`levels`}{The order of its values: `Grade 0 | Grade 1 | Total`.}
+#'   \item{`levels`}{The order of its values: `Grade 0 | Grade 1 | Total`;
+#'     `F = Female | M = Male` gives each value its text too (a named order,
+#'     `plan_levels(SEX = c(F = "Female", M = "Male"))`).}
 #'   \item{`empty_levels`}{`show` (blank, the default) or `hide`: whether
 #'     its values that no record has -- a code list's value, counted 0 in
 #'     every column of an ARD made with the study's code lists -- get a row
@@ -1462,7 +1464,7 @@ print.tfl_table_spec <- function(x, ...) {
 # values does not drop the others.
 .ard_spec_levels <- function(sp) {
   v <- sp$variables[!is.na(sp$variables$levels), , drop = FALSE]
-  out <- stats::setNames(lapply(v$levels, .ard_spec_split), v$variable)
+  out <- stats::setNames(lapply(v$levels, function(x) .levels_named(.ard_spec_split(x))), v$variable)
   cls <- .ard_spec_codelists(sp)
   own <- .ard_spec_plan_cols(sp)
   for (cl in cls) {
@@ -1472,6 +1474,16 @@ print.tfl_table_spec <- function(x, ...) {
     if (is.null(out[[var]])) out[[var]] <- lab
   }
   if (!length(out)) return(NULL)
+  out
+}
+
+# A levels cell's entries: `F = Female` a value and its text (plan_levels()
+# takes it so, rtfreporter 0.8.2.9075), any other entry the value as it is
+.levels_named <- function(x) {
+  k <- grepl(" = ", x, fixed = TRUE)
+  if (!any(k)) return(x)
+  out <- ifelse(k, sub("^.*? = ", "", x, perl = TRUE), x)
+  names(out) <- ifelse(k, sub(" = .*$", "", x), "")
   out
 }
 

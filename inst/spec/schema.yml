@@ -87,7 +87,7 @@ plan_levels:
   rank: 80
   stage: finishing
   description: The order (and the subset) of a variable's values.
-  dots: {style: named, map: true, type: "list<string>", description: A variable's values in their order.}
+  dots: {style: named, map: true, type: "vec<string, string>|list<string>", description: "A variable's values in their order; a map (value: text) names their text too."}
   args:
     .drop_empty: {type: "list<column>", description: Variables whose levels with no data are left out.}
 
