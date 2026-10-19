@@ -37,6 +37,14 @@
 #' @param instructions `"each"` (default): every request holds the
 #'   instructions, one paste a request.  `"once"`: the instructions in
 #'   `00-instructions.md`, the requests without them.
+#' @param workbook How the TOC / SHELL workbook reaches the chat:
+#'   `"text"` (default) the shells as text in each request
+#'   ([tfl_ai_read_shell()]); `"attach"` the workbook attached to each chat,
+#'   the request saying where each report's shell is in it (its sheet,
+#'   cells and TOC row) instead of the text; `"both"` the places and the
+#'   text, the attachment right where the two differ -- for a workbook whose
+#'   text is not read right.  A chat that takes no Excel file needs
+#'   `"text"`.
 #' @param overwrite `TRUE` to write over the requests already there.
 #' The folder the answers go to (`ai/answers`, beside `dir`) is made too.
 #'
@@ -64,9 +72,12 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = 8L,
                                   types = "table", language = NULL,
                                   examples = NULL,
                                   instructions = c("each", "once"),
+                                  workbook = c("text", "attach", "both"),
                                   overwrite = FALSE) {
   fn <- "tfl_ai_write_requests()"
   instructions <- match.arg(instructions)
+  workbook <- match.arg(workbook)
+  book <- basename(shell$path %||% "the workbook")
   if (!inherits(shell, "tfl_ai_shell")) {
     .ard_stop(sprintf("%s: `shell` is a tfl_ai_read_shell() result.", fn))
   }
@@ -103,6 +114,18 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = 8L,
     ctx <- tfl_ai_context("table", outputs = ids, shell = shell, datasets = adam,
                           study_dir = study_dir, language = language,
                           examples = ex)
+    if (!identical(workbook, "text")) {
+      # the workbook attached: where each report's shell is in it, with the
+      # text ("both") or instead of it ("attach")
+      where <- c(sprintf(paste("The TOC / SHELL workbook `%s` is attached to this message.",
+                               "The reports' shells in it:"), book), "",
+                 .ai_shell_where(shell, ids),
+                 if (identical(workbook, "both"))
+                   c("", paste("The text below is read from that workbook; where the two",
+                               "differ, the attached workbook is right.")))
+      ctx$shell <- paste(c(where, if (identical(workbook, "both")) c("", ctx$shell)),
+                         collapse = "\n")
+    }
     p <- tfl_ai_prompt("table", ctx)
     text <- if (identical(instructions, "each")) format(p) else
       paste(c("(Follow the instructions of my first message in this chat.)", "",
@@ -153,6 +176,8 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = 8L,
     "",
     if (identical(instructions, "once"))
       c("Paste `00-instructions.md` first in a new chat, then one request.", ""),
+    if (!identical(workbook, "text"))
+      c(sprintf("Attach `%s` (the TOC / SHELL workbook) to each chat with its request.", book), ""),
     "Paste each file into a new chat as one message; save the whole answer as",
     sprintf("`ai/answers/<request>.md`, then run `tfl_ai_collect_answers(\"%s\")`.",
             "."),
@@ -163,10 +188,11 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = 8L,
     collapse = "\n"), file.path(out_dir, "index.md"))
   ans <- gsub("\\\\", "/", file.path(dirname(dir), "answers"))
   message(sprintf(paste0("%d requests (%d reports) in %s; the longest %d characters.\n",
-                         "Next: paste %s into a new chat%s; save the whole answer as ",
+                         "Next: paste %s into a new chat%s%s; save the whole answer as ",
                          "%s/%s.md, then run tfl_ai_collect_answers()."),
                   nrow(idx), sum(idx$n), dir, max(idx$chars), idx$file[1L],
                   if (identical(instructions, "once")) " after 00-instructions.md" else "",
+                  if (!identical(workbook, "text")) sprintf(", attaching %s", book) else "",
                   ans, idx$request[1L]))
   idx
 }
@@ -217,7 +243,7 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
   rel <- function(...) gsub("\\\\", "/", file.path(...))
   nxt <- character()
   for (nm in names(ctxs)) {
-    ids <- ctxs[[nm]]$ids
+    ids <- .ai_file_id(ctxs[[nm]]$ids)
     f <- .ai_answer_file(file.path(study_dir, answers), nm)
     if (is.na(f)) {
       rows[[nm]] <- row(nm, ids, "no answer")
@@ -234,6 +260,7 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
                          rel(answers, basename(f)))
       next
     }
+    a <- .ai_answer_as_asked(a, ids)
     pr <- tryCatch(tfl_ai_check(a, ctxs[[nm]]$context), error = function(e) e)
     if (inherits(pr, "error")) {
       rows[[nm]] <- row(nm, ids, "error", 1L, conditionMessage(pr))
@@ -288,6 +315,13 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
       nxt[nm] <- sprintf("ask the same chat for %s too; save the whole answer over %s",
                          paste(setdiff(ids, names(a$outputs)), collapse = ", "),
                          rel(answers, basename(f)))
+    } else if (!any(names(a$outputs) %in% ids) && !nrow(err)) {
+      # none of the reports asked for: nothing was written
+      nxt[nm] <- sprintf(paste0("the answer has none of %s (it has %s): ask the same chat ",
+                                "for them; save the whole answer over %s"),
+                         paste(ids, collapse = ", "),
+                         if (length(a$outputs)) paste(names(a$outputs), collapse = ", ") else "no report",
+                         rel(answers, basename(f)))
     }
   }
   out <- do.call(rbind, rows)
@@ -300,6 +334,29 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
   attr(out, "stray") <- rel(answers, stray)
   attr(out, "requests") <- requests
   out
+}
+
+# An answer's reports under the ids its request asked for: a report named
+# another way (T-14-1-1 where the TOC writes Table 14.1.1) is the one whose
+# number it is; its assumptions follow it
+.ai_answer_as_asked <- function(a, ids) {
+  if (!length(a$outputs)) return(a)
+  ik <- .ai_id_key(ids)
+  nm <- names(a$outputs)
+  for (i in seq_along(nm)) {
+    if (nm[i] %in% ids) next
+    k <- .ai_id_key(nm[i])
+    j <- if (!is.na(k)) .ai_id_match(k, ik) else integer()
+    if (length(j) != 1L || ids[j] %in% nm) next
+    new <- ids[j]
+    a$outputs[[i]]$id <- new
+    r <- a$assumption_rows
+    if (!is.null(r)) r$output_id[r$output_id %in% nm[i]] <- new
+    a$assumption_rows <- r
+    nm[i] <- new
+  }
+  names(a$outputs) <- nm
+  a
 }
 
 # The answer file of a request: <request>.md; else the names Notepad saves
