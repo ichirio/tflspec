@@ -7,7 +7,9 @@
 #' analysis set in front of an analysis's ARD), `fmt_ard()` and
 #' `fmt_pvalue()` (formats after a call), `keep_stats()` (only the
 #' statistics asked for), `complete_hierarchy()` (a nested count's
-#' code-list values no subject has, counted 0), `save_ard()` (one report's rows into the
+#' code-list values no subject has, counted 0), `relevel_ard()` (an ARD's
+#' columns in their code lists' order, after an analysis that is not
+#' cards'), `save_ard()` (one report's rows into the
 #' study ARD, and what was built in `ard_status.csv`), and what a figure
 #' reads an ARD with: `ard_value()` (one statistic, as text),
 #' `ard_stats()` (statistics as a data frame) and `ard_fingerprint()` (the

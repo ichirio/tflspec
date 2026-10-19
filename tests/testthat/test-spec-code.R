@@ -533,10 +533,14 @@ test_that("plan_levels() the ARD already says is left out of the program and the
   expect_match(c2, "SEX = cl_sex", fixed = TRUE)
   # the first variables in the ARD's order (the rest after them): nothing to say
   expect_false(grepl("plan_levels", code(lv(list(variable = "AGE"))), fixed = TRUE))
-  # an analysis that is not cards' (cardx's survfit names the arms from the strata): kept
+  # an analysis that is not cards' (cardx's survfit names the arms from the
+  # strata): its ARD program puts the code lists' order back (relevel_ard(),
+  # #362), so the code list's order goes too; the variables' order stays
   ard$analyses[[2L]]$method <- "cardx::ard_survival_survfit"
-  o3 <- tfl_output("T-1", "table", codelists = cl, ard = ard, content = lv(list(TRT01A = c("A", "B")))$content)
-  expect_match(code(o3), "TRT01A = cl_trt01a", fixed = TRUE)
+  o3 <- tfl_output("T-1", "table", codelists = cl, ard = ard,
+                   content = lv(list(variable = c("AGE", "SEX"), TRT01A = c("A", "B")))$content)
+  expect_false(grepl("TRT01A = cl_trt01a", code(o3), fixed = TRUE))
+  expect_match(code(o3), 'variable = c("AGE", "SEX")', fixed = TRUE)
   # .drop_empty alone stays
   expect_match(code(lv(list(TRT01A = c("A", "B"), .drop_empty = "SEX"))), ".drop_empty", fixed = TRUE)
 })
