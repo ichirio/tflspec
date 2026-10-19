@@ -19,7 +19,6 @@
   call (`tfl_ai_study_init()` only when there is no `study.yml`, the ADaM
   summary, the workbook read, the requests).  The AI table guide (English
   and Japanese) shows both.
-
 * **AI answers as a tester's chat writes them** (#365, 0.0.24.9170).  A
   report number as the TOC writes it (`Table 15.3.1.3.13.a`, as the prompt
   asks) is the report file's id with letters, digits, `.`, `_` and `-`
@@ -201,7 +200,6 @@
   and `sheets` given. The table guides' sample block uses one stored answer
   per request (`inst/ai/example/answers/`), so all four reports print `ok`.
   The block and the guide's steps 3 and 6 are run as tests.
-
 * **Where a table's page names print, said in its content** (#337,
   0.0.24.9156; rtfreporter #672).  `plan_paginate_group(heading_at = )` and
   `plan_paginate_rows(heading_at = )` (`section`, `title`, `none`) are in
@@ -459,7 +457,6 @@
   made-up study XYZ-001 reads the same data.  The datasets' help pages
   link to each other (they linked to pharmaverseadam's and ggsurvfit's
   topics of the same names).  No function changes.
-
 * **A value's labels in the report's code list** (#294, 0.0.24.9133; the
   user's decision of 2026-10-16).  The key columns a plan makes itself --
   a stack's pair (`tables$stack`: `subgroup`, `subgroup_level`) and the
@@ -903,7 +900,6 @@
   `df3` ...) where it made `df` again.  A dataset by its name
   (`in: adsl`) is read.  `tfl_fig_objects()` lists each step's `in` and
   `out`, for a GUI to offer.
-
 * **Two data steps**: `function`, any function's result
   (`fn: survival::survfit`, `args` in R, the object it reads given to its
   `data_arg`, `data` by default), and `ard`, an analysis of the figure's
@@ -938,7 +934,6 @@
   and the specs written from them, which run on the pilot data in the
   tests).  With no `dir` it returns the manual's path, as before; the
   former `file =` (one copy of the manual) is gone.
-
 * **`tfl_ai_review(file, toc, adam, others)`**: one file an assistant
   returned, checked and split by who acts on it.  For the AI: a sheet or
   column that is not the spec's, an output or title that is not the TOC's,
@@ -1009,7 +1004,6 @@
     (`labs(y = NULL)` survives YAML), its rows made with dplyr (no
     `split() |> lapply()`), its Cox model named and its event written
     `CNSR == 0`, as the KM figures write it.
-
 * **Figures checked and written faster** (0.0.24.9096, #229; tflplanner's
   study opening).  The ggplot2 compatibility walk works out once per
   target which versions it reaches and compiles each name pattern once,
@@ -1053,7 +1047,6 @@
   then letters, digits or `_`), a pattern no row defines, a pattern
   chosen on the blank row or by a pattern.  A workbook without patterns
   reads and writes as before, with the same programs.
-
 * **`tfl_read_toc()` reads a data frame** (tflplanner #299, D10).  `path`
   may be a data frame of the TOC's rows (its names the column names) in
   place of a file; `sheet` and `skip` do not apply, and a row with no
@@ -1061,7 +1054,6 @@
   the one reader as a file's do -- tflplanner's import by company rules
   hands it the rows it has read, one report a phase, without a temporary
   file.
-
 * **The forest plot's analysis data is named by tflplanner's rule**,
   `<data>_<population>_<param>` (`adtte_fas_os`; was `adtte_os`), the
   population without its flag's `FL` -- the same rule tflplanner names
@@ -1201,18 +1193,14 @@ save it, then look at its Review tab.
   `tflspec::set_levels()`, or attaches tflspec for these, stops: write it
   again (open the study and save) or source `programs/study_helpers.R`.
   tflplanner's review lists such programs (rule P02).
-
 * **A figure design written before reads as it is** (#201): its `stats:`
   steps and its `data_code` / `stats_code` read as the one `data:` list,
   and a save writes the new form.
-
 * **Figure programs have a new shape, and draw the same figures** (#201):
   a `# ---- data ----` and a `# ---- plot ----` section, one `+` chain.
   Saving the study writes them again.
-
 * **tflplanner 0.0.2.9157 and later need tflspec 0.0.24.9077 or later**:
   update both together.
-
 * **The steps:** update both packages; open each study and save it (the
   programs and `study_helpers.R` are written again; a program edited by
   hand is copied to `programs/.edited/` first); check the Review tab
@@ -1240,11 +1228,9 @@ save it, then look at its Review tab.
   have not run yet." and "Press [Review with the data]: it reads the
   datasets once (not again until a file changes)." -- "the data facts"
   was a word of the code.
-
 * **The review's catalog has P02** (tflplanner's): a study program that
   calls one of the six removed functions as `tflspec::` or after
   `library(tflspec)`, without `programs/study_helpers.R` sourced.
-
 * **The review's sentences can be translated** (tflplanner #288).  Each
   row of `tfl_review_spec()` gains `template`: the sentence its `args`
   fill (`message` is the two put together, unchanged).  It is the rule's
@@ -1256,7 +1242,6 @@ save it, then look at its Review tab.
   and a figure's advice (F02: `tfl_fig_advice()`'s template and values).
   The new `tfl_review_templates()` lists the sentences beyond the rules',
   so an app translates each once.  `tfl_check_ard()` says what it said.
-
 * **An `ard_number`'s label prints several statistics of its address**
   (tflplanner #311).  `{value}` is its `stat`, as before; `{conf.low}`,
   `{conf.high}` ... (any `stat_name`) are those statistics of the same
@@ -1278,7 +1263,6 @@ save it, then look at its Review tab.
   design reads an ARD but has no source, F05; an analysis the piece
   names was dropped, F06; the ARD is not made yet, F07; a piece the ARD
   cannot answer, F08), so a study review lists them.
-
 * **A figure can read an ARD** (#293 phase 3, tflplanner #293).  The
   study helpers gain `ard_value()` (one statistic of an ARD, as the ARD
   formatted it or with `digits`; exactly one row or the program stops),
@@ -1313,7 +1297,6 @@ save it, then look at its Review tab.
   of `assess`.  The drawn figures are the same (test-fig-exact); the
   template snapshots change once; the generated programs are fixed byte
   for byte (`tests/testthat/fixtures/fig-programs/`).
-
 * **A review of the whole definition** (#199, tflplanner#288, phase 0).
   `tfl_review_spec(spec, ard, listings, figures)` lists, for every report,
   what cannot be used (`error`), what is valid but probably wrong
@@ -1342,7 +1325,6 @@ save it, then look at its Review tab.
   ARD holds (`tfl_ard_facts()`, in `facts$ard`): the statistics, keys and
   levels the table reads (T06-T08) and what went wrong while it was made
   (A17).
-
 * **The constructors collect their problems** (tflplanner#274 D11).
   `tfl_table_spec()`, `tfl_ard_spec()` and `tfl_listing_spec()` find every
   problem, as rows, and stop as before -- the table definition on its
@@ -1525,7 +1507,6 @@ save it, then look at its Review tab.
   report's own it still says).  Blank: no line, rtfreporter's own
   (Courier, 9 pt).  A program standing alone says them itself; the file
   is the same either way.
-
 * **Figure code in the style of a study's other programs** (#164).  Every
   generated figure script (the designer's templates, the `pp_*` types)
   pipes with `|>` (the dplyr verbs stay); its parts are one line each
@@ -1537,7 +1518,6 @@ save it, then look at its Review tab.
   (what the figure is called): a report program gets its figure as
   `plot` directly.  A composed figure's panels are made as `fig_<name>`.
   The figures drawn are the same (all 38 templates).
-
 * **A code list of `variable`: the variables' labels** (#172).  Its
   values are the variables' names (the ARD's `variable` column) and its
   labels what they print as: `variable / AGE / Age (years)`.  The variables
@@ -1559,7 +1539,6 @@ save it, then look at its Review tab.
   (`|> .levels()`): a value the lists do not have counts only where the
   data analysed have it (a table of the safety population has no column
   for the screen failures' arm).
-
 * **Decimals written once: the `digits` sheet** (#168).  Each statistic's
   decimals (`statistic`, `digits`), for every analysis variable (`variable`
   blank) or a variable's exception (`variable` = its name); a report's rows
@@ -1715,7 +1694,6 @@ save it, then look at its Review tab.
   (`denominator`, `id`) and its formats, so the code is the same either
   way; `tfl_ars()` gives it the keyword's method (`Mth_categorical` ...).
   A function the catalog does not know stays as written.
-
 * **A blank `program` is the file name of the program that runs** (#131).
   The report sheet's `program` is said to rtfreporter only when it is
   written; blank, `tfl_report()` / `tfl_report_code()` pass
@@ -1723,7 +1701,6 @@ save it, then look at its Review tab.
   `{PROGRAM}` names the program that runs (sourced, run by Rscript ...) and
   the report's ID only when no file name is found.  Needs rtfreporter
   0.8.2.9024.
-
 * **A `tokens` sheet** (#129): tokens of one's own for a report's
   header, footer, titles and footnotes -- `name` `STUDY`, `value`
   `ABC-123`, written `{STUDY}` -- like the `titles` sheet: a blank
@@ -1737,7 +1714,6 @@ save it, then look at its Review tab.
 * The workbook's tokens help names **`{PROGRAM_FULL}`**, the program's
   absolute path (rtfreporter #560; #127).  rtfreporter fills it, so it
   needs rtfreporter 0.8.2.9021: the floor is raised.
-
 * **`tfl_ard_function_info(files)`** (#125): what the ARD functions of one's own in
   some R files are, read without running them -- one row per function an
   analysis could name (`name <- function(...)`, or `name <-
@@ -1812,7 +1788,6 @@ save it, then look at its Review tab.
   leaves `content` (a data frame, rtftable pages, rtfplot figures or a
   list of them), dressed by the report spec as a table is (`rtf_tables()`
   takes all of these).  Only the column help and the AI manual change.
-
 * **The study's code lists, before the ARD** (#105): `tfl_ard_code()`,
   `tfl_build_ard()` and `tfl_ard_spec_hash()` take `codelists` (a table
   definition's `codelists` sheet, its study rows).  Each listed character
@@ -1912,7 +1887,6 @@ save it, then look at its Review tab.
   `titles` or `footnotes` sheet takes the study's line of that number out,
   instead of replacing it (a line with no text is still a blank line).  The
   run-information line 99 a report does without, for example.
-
 * **tflspec is now licensed under the Apache License 2.0** (#90), like
   rtfreporter and tflplanner, instead of MIT.  `LICENSE` (the MIT template)
   is replaced by `LICENSE.md` (the licence text); the README has the licence
@@ -2332,7 +2306,6 @@ save it, then look at its Review tab.
   layer, and reports `add_risktable()` together with the `risk_table`
   layer (the number at risk twice) or with an `n_table` panel. Alone,
   `add_risktable()` needs nothing more: `ggsave()` keeps its table.
-
 * **Extension functions by name**: `tfl_fig_calls()` lists ggh4x
   (`facet_nested`, `facet_nested_wrap`, `facetted_pos_scales`), ggtext
   (`element_markdown`, `element_textbox_simple`), ggforce (`facet_zoom`)
@@ -2516,13 +2489,11 @@ save it, then look at its Review tab.
     and n panels, reference line labels, **any layer of the geom catalog**,
     `geom` (any function by name), `layer_code`, or `figure` (a figure
     type's whole script, for the types not yet in parts).
-
 * **The geom catalog** (`inst/fig/geoms.csv`, `inst/fig/geom_fields.csv`):
   ggplot2's common geoms and ggrepel's text, each with the aesthetics it
   maps and the settings it takes; one generic writer makes the code, so a
   geom is added by adding rows.  `tfl_fig_add_layer()` adds one for the
   session (another package's geom, a company's own layer).
-
 * **Templates**: `tfl_fig_template()` fills the four parts at once --
   `km_risk_table`, `km_simple`, `km_ci`, `km_single_arm`, `mean_se`,
   `mean_sd`, `mean_ci`, `mean_se_n`, `waterfall_response`,
@@ -2636,7 +2607,6 @@ save it, then look at its Review tab.
   S3 classes follow: `tfl_plan`, `tfl_table_spec`, `tfl_ard_spec`,
   `tfl_ard_cells`, `tfl_ard_overall`, `tfl_fig_spec` (was `pp_spec`),
   `tfl_code` (was `pp_code`).
-
 * **The former names still work**: each is the same function as its new
   name (see `?tflspec-superseded` for the table).  They are superseded --
   no warning -- and will be removed before the first CRAN release.
@@ -2658,13 +2628,11 @@ save it, then look at its Review tab.
   shown as NE; eDISH drops records without a ULN.
 * `write_plot_code()` / `plot_list_code(dir =)` keep plot ids in file names
   (`F-01.R`, not `F.01.R`).
-
 * **Catalogue of clinical figure types**: `pp_catalog()` classifies every type
   and style (subtype) by category (efficacy: time to event / tumour response /
   subgroups and rates, longitudinal, safety, PK / PD, distribution, treatment
   patterns), with planned types recorded for later. `pp_styles()` and the
   Excel plot list are derived from it.
-
 * **Ten new figure types**, each with styles: `pp_forest()` (hr, or,
   estimates), `pp_bar()` (rate_ci, stacked, dodged), `pp_mean()` (se, sd, ci,
   se_n), `pp_individual()` (spaghetti, spider), `pp_box()` (by_visit,
@@ -2677,7 +2645,6 @@ save it, then look at its Review tab.
 * `pp_example_adam()` gains `ADAE`, `ADLB`, `ADPC`, tumour size over time in
   `ADTR`, and `SEX` / `AGEGR1` / `TRT01A` / start and end days in `ADSL`
   (drawn from a separate random stream: existing values are unchanged).
-
 * **Treatment-sequence figures moved here from ydisctools**: `plot_sankey()`
   (nodes laid out from the node table, baseline-aware ribbon stacking,
   shared / adaptive scales), `plot_sankey_subgroups_batch()` and
@@ -2715,7 +2682,6 @@ save it, then look at its Review tab.
   generated scripts change: e.g. the KM line is 0.3, the censor mark size 3
   / stroke 0.6, the 50% line `twodash`; a swimmer event named like a marker
   of the style -- `Death`, `Discontinued` -- takes its shape and colour).
-
 * **Figure checks** (`fig_setup_code()`, `check_figure()`): the style as
   data plus `theme_tfl()`, `scale_colour_tfl()` / `scale_fill_tfl()`,
   `tfl_marker()`, `tfl_save()` and `tfl_check()` as plain ggplot2 code, for
@@ -2723,7 +2689,6 @@ save it, then look at its Review tab.
   ("Figure check: ...") about rows ggplot2 dropped, legend colours that are
   not the standard's and a legend not in the expected order, notes data
   beyond the visible axes, and returns a fingerprint of the drawn data.
-
 * **KM number at risk from the table's ARD**: `pp_km(ard = )` reads the
   number at risk from the KM table's `cardx::ard_survival_survfit()` ARD, so
   the figure and the table agree, and warns when it differs from the
@@ -2753,7 +2718,6 @@ save it, then look at its Review tab.
   `statistics =` / `methods =` to the functions that use them (tflplanner
   passes its company standards), or set with
   `options(tflspec.ard_statistics =, tflspec.ard_methods =)`.
-
 * **Listing code** moved from tflplanner too: `listing_spec_code()` writes a
   listing's program from its definition rows, and `read_data_code()` the
   lines that read a dataset of the data catalog.  The layout itself stays
@@ -2768,7 +2732,6 @@ save it, then look at its Review tab.
   when the table half joined, so one package holds the Excel specifications
   for tables, listings and figures.  Options `plotplanner.*` are now
   `tflspec.*`.
-
 * **The ARD / plan / spec family moved here from rtfreporter**
   (ichirio/rtfreporter#474, branch `feat/474-ard-experimental` at 2d608cc):
   `ard_*()`, `rtf_plan()` and the `plan_*()` verbs, `apply_plan()`,
