@@ -619,6 +619,33 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 }
 .codelist_memo <- new.env(parent = emptyenv())
 
+# A report's code lists' `under`: each variable's values with one, named,
+# the value one level out they sit under (complete_hierarchy()), as the
+# data have them.  NULL when none has one.
+.codelist_under <- function(codelists, output_id = NULL, vars = NULL) {
+  if (inherits(codelists, "tfl_table_spec") || (is.list(codelists) &&
+                                                !is.data.frame(codelists))) {
+    codelists <- codelists$codelists
+  }
+  if (!is.data.frame(codelists) || is.null(codelists$under) ||
+      length(output_id) != 1L || is.na(output_id)) return(NULL)
+  d <- as.data.frame(codelists, stringsAsFactors = FALSE)
+  d <- d[d$output_id %in% output_id & !is.na(d$variable) & !is.na(d$value) &
+           !is.na(d$under) & nzchar(trimws(d$under)), , drop = FALSE]
+  if (!is.null(vars)) d <- d[d$variable %in% vars, , drop = FALSE]
+  if (!nrow(d)) return(NULL)
+  lapply(split(seq_len(nrow(d)), factor(d$variable, levels = unique(d$variable))),
+         function(i) stats::setNames(trimws(as.character(d$under[i])), as.character(d$value[i])))
+}
+
+# Each report's `under` (NULL when no report has any)
+.codelist_under_by <- function(codelists, a) {
+  outs <- unique(a$output_id)
+  un <- lapply(stats::setNames(outs, outs), function(o)
+    .codelist_under(codelists, o, .ard_read_vars(a[a$output_id == o, , drop = FALSE])))
+  if (all(lengths(un) == 0L)) NULL else un
+}
+
 # Every code list row names its report (no study-wide rows)
 .codelists_check <- function(d) {
   if (!is.null(d) && nrow(d) && !"output_id" %in% names(d)) {
@@ -876,6 +903,10 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
   # each report's code lists, of the variables its analyses read
   lv <- .codelist_levels_by(codelists, a)
   .check_where_labels(a, lv)
+  # (what complete_hierarchy() in `post` is written with: the lists and
+  # their `under`)
+  attr(x, "levels") <- lv
+  attr(x, "under") <- .codelist_under_by(codelists, a)
   if (part == "body") {
     # one report's: its ARD into the study's, with its definition's
     # fingerprint
@@ -972,7 +1003,11 @@ tfl_ard_spec_hash <- function(spec, output_id, dir = ".", codelists = NULL) {
                  # keeps the fingerprints it had
                  if (length(lv <- .codelist_levels(codelists, output_id,
                                                    .ard_read_vars(a))))
-                   utils::capture.output(print(lv))),
+                   utils::capture.output(print(lv)),
+                 # (and their `under`, only when some value has one)
+                 if (length(un <- .codelist_under(codelists, output_id,
+                                                  .ard_read_vars(a))))
+                   utils::capture.output(print(un))),
                collapse = "\n")
   # (md5sum() reads a file: one file of the session's, written over each
   # time -- a file made and deleted for every report made a study's open

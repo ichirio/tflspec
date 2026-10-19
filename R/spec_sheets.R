@@ -115,7 +115,8 @@ tfl_sheets_from_spec <- function(study, outputs) {
   # -- the code list templates --------------------------------------------------
   for (v in names(s$codelists)) for (i in seq_along(s$codelists[[v]])) {
     e <- s$codelists[[v]][[i]]
-    add("codelists", list(output_id = NA_character_, variable = v, value = cell(e$value), label = cell(e$label), order = as.character(i)))
+    add("codelists", list(output_id = NA_character_, variable = v, value = cell(e$value), label = cell(e$label), order = as.character(i),
+                          under = cell(e$under)))
   }
 
   # -- the ARD's study-wide sheets ----------------------------------------------
@@ -161,7 +162,8 @@ tfl_sheets_from_spec <- function(study, outputs) {
     add("report", rr)
     for (v in names(o$codelists)) for (i in seq_along(o$codelists[[v]])) {
       cl <- o$codelists[[v]][[i]]
-      add("codelists", list(output_id = id, variable = v, value = cell(cl$value), label = cell(cl$label), order = as.character(i)))
+      add("codelists", list(output_id = id, variable = v, value = cell(cl$value), label = cell(cl$label), order = as.character(i),
+                            under = cell(cl$under)))
     }
     code_content <- inherits(o$content, "tfl_r")
     # the datasets a report written by hand reads, and whether it reads its

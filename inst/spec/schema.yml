@@ -837,8 +837,10 @@ rtf_footnotes:
         description: 'Steps on the ARD after the call, each a call with the ARD left
           out, | between them: cards::add_calculated_row() (a statistic computed from
           others), cards::filter_ard_hierarchical() (only the rows that pass), cards::sort_ard_hierarchical(),
-          cards::diff_ard_hierarchical(), or a function of your own that takes an
-          ARD and gives one; blank: none.'
+          cards::diff_ard_hierarchical(), complete_hierarchy() (a code list''s values no
+          subject has, counted 0: written with the row''s variables and the code lists''
+          `under`), or a function of your own that takes an ARD and gives one; blank:
+          none.'
         example: cards::add_calculated_row(expr = sd / sqrt(N), stat_name = "se")
       - column: code
         description: 'method = custom only: the R code that gives the ARD (data and
@@ -1036,6 +1038,12 @@ rtf_footnotes:
         description: 'Its place among the variable''s values (a number); blank: after
           the numbered ones, in the sheet''s order.'
         example: '2'
+      - column: under
+        description: 'A nested count''s (SOC / PT) inner value: the value, as the data
+          have it, of the variable one level out it sits under, so that complete_hierarchy()
+          in the analysis''s `post` shows it with 0 counts when no subject has it; blank:
+          none (an outer value is shown without it).'
+        example: EYE DISORDERS
   - sheet: cells
     description: 'Table: one row a line of a cell (plan_cells()). Rows with the same
       variable / context / row are one chain, tried top down. With stats = rows, a

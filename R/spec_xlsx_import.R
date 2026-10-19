@@ -152,12 +152,19 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
         j <- .find_row(rows, list("value"), pv$value[i])
         m <- list(value = pv$value[i])
         if (!is.na(pv$label[i])) m$label <- pv$label[i]
+        un <- if (is.null(pv$under) || is.na(pv$under[i]) || !nzchar(pv$under[i])) NULL else pv$under[i]
+        if (!is.null(un)) m$under <- un
         key <- paste(if (is.na(id)) "" else id, v, pv$value[i], sep = " / ")
         if (is.na(j)) { rows[[length(rows) + 1L]] <- m; st$added <- c(st$added, paste0("codelists: ", key)) }
         else if (!identical(.flat_text(rows[[j]]$label), .flat_text(m$label))) {
           st$changes[[length(st$changes) + 1L]] <- data.frame(sheet = "codelists", key = key, column = "label",
                                                             from = .flat_text(rows[[j]]$label), to = .flat_text(m$label), stringsAsFactors = FALSE)
           rows[[j]]$label <- m$label
+        }
+        if (!is.na(j) && !identical(.flat_text(rows[[j]]$under), .flat_text(un))) {
+          st$changes[[length(st$changes) + 1L]] <- data.frame(sheet = "codelists", key = key, column = "under",
+                                                            from = .flat_text(rows[[j]]$under), to = .flat_text(un), stringsAsFactors = FALSE)
+          rows[[j]]$under <- un
         }
       }
       if (is.na(id)) y[[v]] <- rows else y$codelists[[v]] <- rows

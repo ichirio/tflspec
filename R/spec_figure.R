@@ -66,7 +66,9 @@
     data.frame(output_id = id, variable = v,
                value = vapply(l, function(e) as.character(e$value %||% NA), ""),
                label = vapply(l, function(e) as.character(e$label %||% NA), ""),
-               order = seq_along(l), stringsAsFactors = FALSE)
+               order = seq_along(l),
+               under = vapply(l, function(e) as.character(e$under %||% NA), ""),
+               stringsAsFactors = FALSE)
   })
   do.call(rbind, rows)
 }

@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9167** (the development version,
+**This manual documents tflspec 0.0.24.9168** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -260,7 +260,7 @@ sections follow this order.
 | `extends` | the layers under it, nearest first: `[defaults]` (the usual), `[patterns/<name>, defaults]`, or `none` |
 | `ard` | the report's part of the study ARD: `analyses:` (the `analyses` sheet's rows, `analysis_id` as `id`, `population_id` as `population`) and `analysis_data:` (`data_id` as `id`) -- §A.1 |
 | `data` | what the report reads.  `source: ard` (a table: the study ARD, `object: ard`; `steps:` R on it); `source: dataset` (a listing: `dataset`, `where`, `sort`); `source: code` (a figure: `steps:`, the design's data steps of §7; or `code: !r ...`, the report's own R) |
-| `codelists` | by variable, a list of `{value, label}` in the order printed (the `codelists` sheet) |
+| `codelists` | by variable, a list of `{value, label}` in the order printed (the `codelists` sheet); a nested count's inner value may say `under:` (its parent's value, for `complete_hierarchy()`) |
 | `content` | the report, a list of items, each one call: `- plan_cells: {categorical: '{n} ({p:.1f%})'}`.  A table's items are rtfreporter's `normalize_ard()`, `table_plan()` and `plan_*()` verbs; a listing's `plan_listing()` (its columns `listing_col()` calls); a figure's the calls of its plot -- `ggplot`, `geom_*`, `scale_*`, `labs`, `theme` ..., and `tfl_image` last (§7.1).  Or `content: !r ...`, the report's own R |
 | `page` | the document: `titles`, `footnotes`, `header`, `footer` (maps by line number: `'1': {center: Table 14.1.1}`), `tokens`, and rtfreporter's calls by name (`rtf_page: {orientation: landscape}`, `rtf_tables: {auto_section: true}`, `rtf_document: {watermark: DRAFT}`); where a table's page names print is better said in its content, `plan_paginate_group: {heading_at: section}` -- a page's `rtf_tables: {auto_section: }` given wins |
 | `template` | a figure's template (`km_simple` ...); the designer's `plot`, `plots`, `compose` are its old form (§7) |
@@ -956,7 +956,12 @@ cat(tfl_report_code(sp, content = "plan"), sep = "\n")
   parent's id). ARS gets each row inside as an analysis of its own.
 - `post`: steps on the ARD after the call, the ARD left out, `|` between
   them — `cards::add_calculated_row(expr = sd / sqrt(N), stat_name = "se")`,
-  `cards::filter_ard_hierarchical(p > 0.05)`, `cards::sort_ard_hierarchical()`.
+  `cards::filter_ard_hierarchical(p > 0.05)`, `cards::sort_ard_hierarchical()`,
+  `complete_hierarchy()` (a nested count's code-list values no subject has,
+  counted 0: cards counts only the values some group has; the outermost
+  variable's from its code list, an inner one's where the code list's
+  `under` says its parent; written with the row's `variables` and those
+  `under`; put it before a filter or a sort).
   Written as `ard <- ard |> step1 |> step2`. Not on a row inside a parent
   (put it on the parent).
 - `denominator`: what percentages are of — `population` (the analysis
@@ -1078,7 +1083,7 @@ once. The `study` sheet has `key` / `value` (`rounding`: `sas` / `iec` /
 **variables**: `variable`, `label`, `order` (the variables' order: `plan_levels(variable = c("AGE", "SEX"))`), `levels` (`Grade 0 | Grade 1`; `F = Female | M = Male` gives each value its text too, `plan_levels(SEX = c(F = "Female", M = "Male"))` -- rarely needed: the ARD has the code list's labels already), `empty_levels` (`hide`: no row for a value no record has; blank: a 0 row), `under` (`RACE: Asian`: its rows under that level of RACE, one indent deeper, its own heading dropped -- `plan_nest()`)
 → `plan_labels()`, `plan_levels()`.
 
-**codelists** (a report's code lists, one row a value): `output_id`, `variable`, `value`, `label`, `order`. Each value's place and **what it is in the data the report's program makes** (`label`; blank: the value itself): `tfl_ard_code(codelists = )`, `tfl_listing_code(codelists = )` and `tfl_fig_design_code(codelists = )` write `cl_sex <- c(F = "Female", M = "Male")` at the program's head and `set_levels(SEX = cl_sex, ...)` on the data the program reads (the ARD's analyses: the columns they read -- `by`, `strata`, `variables`, names in `args` / `code` / `post`; a listing: the columns it shows or sorts by; a figure: last of its data steps). Each listed column becomes a factor in the list's order with the labels as its values, so **the ARD holds "Female"**; a value the list does not have (not NA) stops the program with the column and the value. The table then orders the ARD's values (`plan_levels(SEX = c("Male", "Female"))`, the labels) and `plan_labels()` gives only the variables' headings (the `variables` sheet's `label`), written `plan_labels(variable = c(AGE = "Age (years)", SEX = "Sex"))` so they never meet a variable's value labels. A condition on a listed column the analysis reads is written in its labels (`SEX == "Female"`; `tfl_ard_code()` stops on `SEX == "F"` and says so); ARS writes the data's values back (`SEX == "F"`). Every row names its report: a blank `output_id` is an error (no study-wide rows; copy the rows into each report). A variable's `levels` on the `variables` sheet, when given, is the order instead (in the labels). The code list of `variable` (an earlier form of the headings) is moved to the `variables` sheet's `label` when the table spec is read, with a message.
+**codelists** (a report's code lists, one row a value): `output_id`, `variable`, `value`, `label`, `order`, `under` (a nested count's inner value: its parent's value as the data have it, `EYE DISORDERS` for a PT; `complete_hierarchy()` in the analysis's `post` then shows it 0 when no subject has it). Each value's place and **what it is in the data the report's program makes** (`label`; blank: the value itself): `tfl_ard_code(codelists = )`, `tfl_listing_code(codelists = )` and `tfl_fig_design_code(codelists = )` write `cl_sex <- c(F = "Female", M = "Male")` at the program's head and `set_levels(SEX = cl_sex, ...)` on the data the program reads (the ARD's analyses: the columns they read -- `by`, `strata`, `variables`, names in `args` / `code` / `post`; a listing: the columns it shows or sorts by; a figure: last of its data steps). Each listed column becomes a factor in the list's order with the labels as its values, so **the ARD holds "Female"**; a value the list does not have (not NA) stops the program with the column and the value. The table then orders the ARD's values (`plan_levels(SEX = c("Male", "Female"))`, the labels) and `plan_labels()` gives only the variables' headings (the `variables` sheet's `label`), written `plan_labels(variable = c(AGE = "Age (years)", SEX = "Sex"))` so they never meet a variable's value labels. A condition on a listed column the analysis reads is written in its labels (`SEX == "Female"`; `tfl_ard_code()` stops on `SEX == "F"` and says so); ARS writes the data's values back (`SEX == "F"`). Every row names its report: a blank `output_id` is an error (no study-wide rows; copy the rows into each report). A variable's `levels` on the `variables` sheet, when given, is the order instead (in the labels). The code list of `variable` (an earlier form of the headings) is moved to the `variables` sheet's `label` when the table spec is read, with a message.
 
 **digits** (each statistic's decimals, once): `variable` (blank: every analysis variable; a name: its exception), `statistic` (`mean`, `sd`, `p` a percent ...), `digits` → written into the templates' tokens that say no format (`{mean} ({sd})` → `{mean:.1f} ({sd:.2f})`). A template's own format or a `cells` row's `digits` wins; a table of `tables$value = stat_fmt` (the ARD's own text) is not rounded here.
 
