@@ -243,7 +243,7 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
   rel <- function(...) gsub("\\\\", "/", file.path(...))
   nxt <- character()
   for (nm in names(ctxs)) {
-    ids <- ctxs[[nm]]$ids
+    ids <- .ai_file_id(ctxs[[nm]]$ids)
     f <- .ai_answer_file(file.path(study_dir, answers), nm)
     if (is.na(f)) {
       rows[[nm]] <- row(nm, ids, "no answer")
@@ -260,6 +260,7 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
                          rel(answers, basename(f)))
       next
     }
+    a <- .ai_answer_as_asked(a, ids)
     pr <- tryCatch(tfl_ai_check(a, ctxs[[nm]]$context), error = function(e) e)
     if (inherits(pr, "error")) {
       rows[[nm]] <- row(nm, ids, "error", 1L, conditionMessage(pr))
@@ -314,6 +315,13 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
       nxt[nm] <- sprintf("ask the same chat for %s too; save the whole answer over %s",
                          paste(setdiff(ids, names(a$outputs)), collapse = ", "),
                          rel(answers, basename(f)))
+    } else if (!any(names(a$outputs) %in% ids) && !nrow(err)) {
+      # none of the reports asked for: nothing was written
+      nxt[nm] <- sprintf(paste0("the answer has none of %s (it has %s): ask the same chat ",
+                                "for them; save the whole answer over %s"),
+                         paste(ids, collapse = ", "),
+                         if (length(a$outputs)) paste(names(a$outputs), collapse = ", ") else "no report",
+                         rel(answers, basename(f)))
     }
   }
   out <- do.call(rbind, rows)
@@ -326,6 +334,29 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
   attr(out, "stray") <- rel(answers, stray)
   attr(out, "requests") <- requests
   out
+}
+
+# An answer's reports under the ids its request asked for: a report named
+# another way (T-14-1-1 where the TOC writes Table 14.1.1) is the one whose
+# number it is; its assumptions follow it
+.ai_answer_as_asked <- function(a, ids) {
+  if (!length(a$outputs)) return(a)
+  ik <- .ai_id_key(ids)
+  nm <- names(a$outputs)
+  for (i in seq_along(nm)) {
+    if (nm[i] %in% ids) next
+    k <- .ai_id_key(nm[i])
+    j <- if (!is.na(k)) .ai_id_match(k, ik) else integer()
+    if (length(j) != 1L || ids[j] %in% nm) next
+    new <- ids[j]
+    a$outputs[[i]]$id <- new
+    r <- a$assumption_rows
+    if (!is.null(r)) r$output_id[r$output_id %in% nm[i]] <- new
+    a$assumption_rows <- r
+    nm[i] <- new
+  }
+  names(a$outputs) <- nm
+  a
 }
 
 # The answer file of a request: <request>.md; else the names Notepad saves
