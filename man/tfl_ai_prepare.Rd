@@ -77,8 +77,9 @@ TOC: \code{output_id}, \code{title}, \code{type}, \code{shell} -- the sheet of i
 \code{sheets} (the workbook's sheets and their roles), \code{adam} (the
 \code{\link[=tfl_ai_adam_summary]{tfl_ai_adam_summary()}}: \code{datasets}, \code{variables}, \code{text}), \code{files} (the
 files written, relative to \code{dir}), \code{hint} (what the workbook's reading
-could not find -- no TOC, a report with no shell -- and what to pass)
-and \code{next_steps} (what to do next).
+could not find -- no TOC, a report with no shell -- and what to pass),
+\code{next_steps} (what to do next) and \code{agent_prompt} (with \code{mode = "agent"}:
+the first message to the agent, the study's paths in it; else \code{NA}).
 Its print is the workbook's summary and the next step.  The files are
 UTF-8.
 }
@@ -117,7 +118,7 @@ ex <- system.file("ai", "example", package = "tflspec")
 d <- file.path(tempdir(), "prepare-study")
 dir.create(file.path(d, "adam"), recursive = TRUE, showWarnings = FALSE)
 if (requireNamespace("haven", quietly = TRUE)) {
-  for (x in c("adsl", "adae", "adrs", "adlb")) {
+  for (x in c("adsl", "adae", "adrs", "adlb", "adtte")) {
     df <- getExportedValue("tflspec", x)
     for (v in names(df)) if (is.factor(df[[v]])) df[[v]] <- as.character(df[[v]])
     haven::write_xpt(df, file.path(d, "adam", paste0(x, ".xpt")))

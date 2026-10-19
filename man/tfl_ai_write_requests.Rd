@@ -12,7 +12,7 @@ tfl_ai_write_requests(
   dir = file.path("ai", "requests"),
   max_chars = NULL,
   families = NULL,
-  types = "table",
+  types = c("table", "figure"),
   language = NULL,
   examples = NULL,
   instructions = c("each", "once"),
@@ -34,7 +34,10 @@ tfl_ai_write_requests(
 \item{max_chars}{A request's length at most, in characters; \code{NULL} for
 no limit.}
 
-\item{families, types}{As \code{\link[=tfl_ai_batches]{tfl_ai_batches()}}.}
+\item{families, types}{As \code{\link[=tfl_ai_batches]{tfl_ai_batches()}}: the tables in batches.  A
+figure (\code{"figure"} in \code{types}, the default) is a request of its own,
+\code{figure-1}, \code{figure-2} ... (family \code{figure}): its shell, the ADaM's
+summary, the figure templates; its answer a figure design.}
 
 \item{language}{As \code{\link[=tfl_ai_context]{tfl_ai_context()}}: the language of the AI's
 assumptions.}

@@ -44,7 +44,8 @@ r                                   # request, outputs, characters
 ```
 
 This writes `ai/requests/<request>.md` (`demographics-1.md`, `ae-1.md` ...,
-one family each) and `ai/requests/index.md`.
+one family each) and `ai/requests/index.md`. A figure of the TOC is a request of
+its own (`figure-1.md` ...): its shell, and a figure design to answer.
 
 The same in one call (an existing `study.yml` is kept, so it can be run
 again; it prints what the workbook read found):
@@ -187,9 +188,10 @@ study (its `spec/toc.yml` lists the reports).
 
 ## Try it on the sample (10 minutes)
 
-The files that come with tflspec: a TOC/SHELL workbook of four tables, the
-sample ADaM as XPT, and a stored answer for each of its four requests. The
-installation is ready when the last line prints `ok` for all four reports.
+The files that come with tflspec: a TOC/SHELL workbook of four tables and a
+Kaplan-Meier figure, the sample ADaM as XPT, and a stored answer for each of
+its five requests (`figure-1` is the figure's). The installation is ready
+when the last line prints `ok` for all five reports.
 
 ```r
 library(tflspec)
@@ -208,7 +210,7 @@ r     <- tfl_ai_write_requests(d, shell, tfl_ai_adam_summary(file.path(d, "adam"
 # the stored answers stand in for the chat's: one a request
 invisible(file.copy(list.files(file.path(ex, "answers"), full.names = TRUE),
                     file.path(d, "ai", "answers"), overwrite = TRUE))
-tfl_ai_collect_answers(d)            # 4 reports in 4 requests: ok 4 ...
+tfl_ai_collect_answers(d)            # 5 reports in 5 requests: ok 5 ...
 ```
 
 Keep the `ai/` folder (requests, answers) — share it only within your company.

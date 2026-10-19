@@ -187,6 +187,7 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE) {
 .ai_questions_read <- function(lines) {
   at <- grep("^## Q[0-9]+[.] ", lines)
   none <- data.frame(n = integer(), question = character(), reports = character(),
+                     where = character(), provisional = character(),
                      status = character(), answer = character(), start = integer(),
                      end = integer(), stringsAsFactors = FALSE)
   if (!length(at)) return(none)
@@ -196,7 +197,8 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE) {
     field <- function(k) {
       j <- grep(sprintf("^- %s:", k), b)
       if (!length(j)) return(NA_character_)
-      trimws(sub(sprintf("^- %s:", k), "", b[j[1L]]))
+      v <- trimws(sub(sprintf("^- %s:", k), "", b[j[1L]]))
+      if (nzchar(v)) v else NA_character_
     }
     ans <- grep("^- Answer:", b)
     answer <- if (length(ans)) {
@@ -206,7 +208,9 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE) {
     } else NA_character_
     data.frame(n = as.integer(sub("^## Q([0-9]+)[.] .*$", "\\1", b[1L])),
                question = trimws(sub("^## Q[0-9]+[.] ", "", b[1L])),
-               reports = field("Reports"), status = tolower(field("Status") %||% NA_character_),
+               reports = field("Reports"), where = field("Where"),
+               provisional = field("The agent took, for now"),
+               status = tolower(field("Status") %||% NA_character_),
                answer = answer, start = at[i], end = end[i], stringsAsFactors = FALSE)
   })
   do.call(rbind, c(list(none), rows))
@@ -245,6 +249,8 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE) {
                    sprintf("## Q%d. %s", n, trimws(a$question[g[1L]])),
                    "",
                    sprintf("- Reports: %s", paste(ids, collapse = ", ")),
+                   sprintf("- Where: %s", paste(unique(stats::na.omit(c(a$where[g], a$item[g]))),
+                                                collapse = ", ")),
                    sprintf("- The agent took, for now: %s", trimws(a$assumption[g[1L]] %||% "")),
                    "- Status: open",
                    "- Answer:")
@@ -257,7 +263,7 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE) {
   q <- .ai_questions_read(lines)
   q$status[is.na(q$status)] <- "open"
   rownames(q) <- NULL
-  q[c("n", "question", "reports", "status", "answer")]
+  q[c("n", "question", "reports", "where", "provisional", "status", "answer")]
 }
 
 # ---- spec/toc.yml -------------------------------------------------------------------
@@ -307,4 +313,94 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE) {
   p <- pops[[which(hit)]]
   out <- list(id = p$id, label = p$label, where = if (!is.null(p$where)) as.character(p$where))
   out[!vapply(out, is.null, NA)]
+}
+
+#' The questions of a study's AI drafts, and the person's answers to them
+#'
+#' `ai/questions.md` holds what the AI could not settle -- an assumption's
+#' `question`, gathered by [tfl_ai_run()]: one question asked by several
+#' reports once, the reports listed.  `tfl_ai_questions()` reads it; a
+#' screen shows the questions and takes the answers, and
+#' `tfl_ai_answer_questions()` writes them back -- each into its question's
+#' `- Answer:`, everything else as it is.  The agent (or the person) then
+#' moves an answered question to `ai/decisions.md`, sets its status to
+#' `decided`, and redoes the reports it touches.
+#'
+#' The file: each question a block from its heading `## Q<n>. <question>`
+#' to the next heading, holding `- Reports:`, `- Where:`, `- The agent
+#' took, for now:`, `- Status: open` (or `decided`) and `- Answer:` (one
+#' line or more, to the block's end).
+#'
+#' @param study_dir The study folder.
+#' @param answers The answers: a data frame with `id` (`"Q1"`) and
+#'   `answer`, or a character vector named by the ids.  `NA` or `""`
+#'   empties an answer.
+#' @return `tfl_ai_questions()`: a data frame, one row a question: `id`,
+#'   `output_id` (the reports it touches, comma-separated), `where`,
+#'   `question`, `provisional` (what the AI took for now), `answer` (`NA`
+#'   when none), `status` (`open`, `decided`); no row when there is no
+#'   question.  `tfl_ai_answer_questions()`: the file's path, invisibly.
+#' @seealso [tfl_ai_run()], [tfl_ai_prepare()] (`mode = "agent"`).
+#' @export
+tfl_ai_questions <- function(study_dir) {
+  f <- file.path(study_dir, "ai", "questions.md")
+  lines <- if (file.exists(f)) .ai_read_lines(f, "tfl_ai_questions()") else character()
+  q <- .ai_questions_read(lines)
+  status <- q$status
+  status[is.na(status)] <- "open"
+  out <- data.frame(id = if (nrow(q)) paste0("Q", q$n) else character(),
+                    output_id = q$reports, where = q$where, question = q$question,
+                    provisional = q$provisional, answer = q$answer, status = status,
+                    stringsAsFactors = FALSE)
+  rownames(out) <- NULL
+  out
+}
+
+#' @rdname tfl_ai_questions
+#' @export
+tfl_ai_answer_questions <- function(study_dir, answers) {
+  fn <- "tfl_ai_answer_questions()"
+  f <- file.path(study_dir, "ai", "questions.md")
+  if (!file.exists(f)) .ard_stop(sprintf("%s: %s has no ai/questions.md.", fn, study_dir))
+  if (is.data.frame(answers)) {
+    if (!all(c("id", "answer") %in% names(answers))) {
+      .ard_stop(sprintf("%s: `answers` as a data frame has the columns `id` and `answer`.", fn))
+    }
+    answers <- stats::setNames(as.character(answers$answer), as.character(answers$id))
+  }
+  if (!is.character(answers) || is.null(names(answers)) || any(!nzchar(names(answers)))) {
+    .ard_stop(sprintf("%s: `answers` is a data frame (id, answer) or text named by the ids.", fn))
+  }
+  lines <- .ai_read_lines(f, fn)
+  q <- .ai_questions_read(lines)
+  ids <- paste0("Q", q$n)
+  bad <- setdiff(names(answers), ids)
+  if (length(bad)) {
+    .ard_stop(sprintf("%s: no question %s in ai/questions.md (it has %s).", fn,
+                      paste(bad, collapse = ", "),
+                      if (length(ids)) paste(ids, collapse = ", ") else "none"))
+  }
+  # the blocks from the last, so the line numbers of the others hold
+  for (k in rev(match(names(answers), ids))) {
+    b <- q$start[k]:q$end[k]
+    j <- b[grep("^- Answer:", lines[b])]
+    txt <- answers[[ids[k]]]
+    new <- if (is.na(txt) || !nzchar(trimws(txt))) character() else
+      strsplit(gsub("\r\n?", "\n", txt), "\n", fixed = TRUE)[[1L]]
+    new <- c(paste(c("- Answer:", new[1L][length(new) > 0L]), collapse = " "), new[-1L])
+    if (!length(j)) {
+      # no answer line: one after the block's last line of text
+      last <- max(b[nzchar(trimws(lines[b]))])
+      lines <- append(lines, new, after = last)
+      next
+    }
+    j <- j[1L]
+    # the old answer: from its line to the block's last line of text (the
+    # blank lines before the next question stay)
+    text_at <- b[b >= j & nzchar(trimws(lines[b]))]
+    to <- max(text_at)
+    lines <- c(lines[seq_len(j - 1L)], new, lines[-seq_len(to)])
+  }
+  .ai_write_text(lines, f)
+  invisible(normalizePath(f, winslash = "/"))
 }
