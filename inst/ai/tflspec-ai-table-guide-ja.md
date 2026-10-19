@@ -164,7 +164,7 @@ tfl_ai_run(".")   # もう一度読み、帳票ごとに ARD と RTF: output/tfl
    送るのは ADaM の要約だけ。エージェントは試験フォルダで作業し、要約で決まらない
    こと（データの値の書き方、変数の有無、群の水準）を確かめるときだけ、R で ADaM を
    読む（データのファイルをエディタで開かない）。
-2. `r <- tfl_ai_prepare("mystudy", "mystudy/TOC_SHELL.xlsx", adam = "C:/data/ABC-123/adam", study_id = "ABC-123", mode = "agent")`。
+2. `tfl_ai_prepare("mystudy", "mystudy/TOC_SHELL.xlsx", adam = "C:/data/ABC-123/adam", study_id = "ABC-123", mode = "agent")`。
    依頼のほかに、`AGENTS.md` と `.github/copilot-instructions.md`（エージェント
    への指示）、`run.R`（`tfl_ai_run()`）、`ai/questions.md`、`ai/decisions.md` が
    できます。

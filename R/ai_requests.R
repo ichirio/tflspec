@@ -363,7 +363,7 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
   rel <- function(...) gsub("\\\\", "/", file.path(...))
   nxt <- character()
   for (nm in names(ctxs)) {
-    ids <- ctxs[[nm]]$ids
+    ids <- .ai_file_id(ctxs[[nm]]$ids)
     f <- .ai_answer_file(file.path(study_dir, answers), nm)
     if (is.na(f)) {
       rows[[nm]] <- row(nm, ids, "no answer")
@@ -381,6 +381,8 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
                          rel(answers, basename(f)))
       next
     }
+    a <- .ai_answer_as_asked(a, ids)
+    a <- .ai_answer_overall(a)
     pr <- tryCatch(tfl_ai_check(a, ctxs[[nm]]$context), error = function(e) e)
     # a figure's design under its report, as a table answer's reports
     if (identical(task, "figure") && !inherits(pr, "error")) {
@@ -448,6 +450,13 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
       nxt[nm] <- sprintf("ask the same chat for %s too; save the whole answer over %s",
                          paste(setdiff(ids, names(a$outputs)), collapse = ", "),
                          rel(answers, basename(f)))
+    } else if (!any(names(a$outputs) %in% ids) && !nrow(err)) {
+      # none of the reports asked for: nothing was written
+      nxt[nm] <- sprintf(paste0("the answer has none of %s (it has %s): ask the same chat ",
+                                "for them; save the whole answer over %s"),
+                         paste(ids, collapse = ", "),
+                         if (length(a$outputs)) paste(names(a$outputs), collapse = ", ") else "no report",
+                         rel(answers, basename(f)))
     }
   }
   out <- do.call(rbind, rows)
@@ -471,6 +480,63 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
   structure(list(reports = out, next_steps = nxt[unique(out$request)], assumptions = asm,
                  stray = rel(answers, stray), requests = requests),
             class = "tfl_ai_collected")
+}
+
+# An answer's reports under the ids its request asked for: a report named
+# another way (T-14-1-1 where the TOC writes Table 14.1.1) is the one whose
+# number it is; its assumptions follow it
+.ai_answer_as_asked <- function(a, ids) {
+  if (!length(a$outputs)) return(a)
+  ik <- .ai_id_key(ids)
+  nm <- names(a$outputs)
+  for (i in seq_along(nm)) {
+    if (nm[i] %in% ids) next
+    k <- .ai_id_key(nm[i])
+    j <- if (!is.na(k)) .ai_id_match(k, ik) else integer()
+    if (length(j) != 1L || ids[j] %in% nm) next
+    new <- ids[j]
+    a$outputs[[i]]$id <- new
+    r <- a$assumption_rows
+    if (!is.null(r)) r$output_id[r$output_id %in% nm[i]] <- new
+    a$assumption_rows <- r
+    nm[i] <- new
+  }
+  names(a$outputs) <- nm
+  a
+}
+
+# An overall row (normalize_ard(overall = )) is made by a hierarchical
+# analysis with over_variables = TRUE: an answer that names the row and not
+# that gets it written into its analyses (the report file says it, so the
+# ARD and the file agree), and an assumption says so
+.ai_answer_overall <- function(a) {
+  for (i in seq_along(a$outputs)) {
+    o <- a$outputs[[i]]
+    nz <- Filter(function(it) identical(it$fn, "normalize_ard"), o$content %||% list())
+    if (!length(nz) || is.null(nz[[1L]]$args$overall)) next
+    an <- o$ard$analyses %||% list()
+    hier <- which(vapply(an, function(x) {
+      is.list(x) && isTRUE(.ai_scalar_text(x[["method"]]) %in%
+                             c("hierarchical", "cards::ard_stack_hierarchical"))
+    }, NA))
+    if (!length(hier)) next
+    has <- vapply(an[hier], function(x) {
+      grepl("over_variables[[:space:]]*=[[:space:]]*TRUE", paste(unlist(x[["args"]]), collapse = " "))
+    }, NA)
+    if (any(has)) next
+    j <- hier[1L]
+    old <- an[[j]][["args"]]
+    an[[j]][["args"]] <- tfl_r(if (is.null(old) || !length(old)) "over_variables = TRUE" else
+      paste0(paste(unlist(old), collapse = ", "), ", over_variables = TRUE"))
+    a$outputs[[i]]$ard$analyses <- an
+    row <- data.frame(output_id = names(a$outputs)[i], where = "ard.analyses",
+                      item = an[[j]][["id"]] %||% "over_variables",
+                      assumption = paste("tflspec added over_variables = TRUE: the overall row",
+                                         "(normalize_ard overall) needs it"),
+                      question = NA_character_, stringsAsFactors = FALSE)
+    a$assumption_rows <- rbind(a$assumption_rows %||% row[0L, , drop = FALSE], row)
+  }
+  a
 }
 
 # The answer file of a request: <request>.md; else the names Notepad saves

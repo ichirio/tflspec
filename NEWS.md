@@ -75,6 +75,32 @@
   `spec/data.yml` names each dataset's file alone (`path: adsl.xpt`), the
   study's own file keeping the full path.
 
+* **A line break inside a cell no longer shifts the shells' text**
+  (#370, 0.0.24.9174).  `tfl_ai_read_shell()` missed a cell whose text
+  holds a line break (Alt+Enter in Excel: a column header like
+  "Placebo" over "(N=xx)"), and every later cell of the workbook took the
+  text of the one before it -- the shells and the TOC titles the AI read
+  were wrong.  The workbook reader now reads such a cell as one (`\n` in
+  the text), and the cells after it keep their own text.
+
+* **A nested count with no records: the overall row 0, not a stop**
+  (#367, 0.0.24.9173).  `cards::ard_stack_hierarchical()` stops on data
+  with no record ("all missing"), so a table of zero events -- common in a
+  study -- could not be made.  The ARD program now calls the study helper
+  `ard_hierarchical_or_none()` with the same arguments: cards' ARD with
+  records; with none, the overall row (with `over_variables = TRUE`) n = 0
+  and p = 0 with each group's N, and the groups' counts.  The table is
+  "Any ... 0 (0.0)" alone.  `complete_hierarchy()` adds nothing under an
+  overall row of 0 unless `when_none = TRUE`.  ARS still shows cards'
+  function.
+
+* **An AI answer's overall row made** (#366, 0.0.24.9172).  An answer that
+  names an overall row (`normalize_ard: {overall: ...}`) without
+  `over_variables = TRUE` on its hierarchical analysis had no such row;
+  `tfl_ai_collect_answers()` now writes `over_variables = TRUE` into that
+  analysis in the report file and adds an assumption saying tflspec added
+  it.  A spec written by hand keeps the check's warning.
+
 * **AI requests with the TOC / SHELL workbook attached, and
   `tfl_ai_prepare()`** (#364, 0.0.24.9171).
   `tfl_ai_write_requests(workbook = )`: `"text"` (default) as before;
@@ -86,6 +112,17 @@
   call (`tfl_ai_study_init()` only when there is no `study.yml`, the ADaM
   summary, the workbook read, the requests).  The AI table guide (English
   and Japanese) shows both.
+* **AI answers as a tester's chat writes them** (#365, 0.0.24.9170).  A
+  report number as the TOC writes it (`Table 15.3.1.3.13.a`, as the prompt
+  asks) is the report file's id with letters, digits, `.`, `_` and `-`
+  only (`Table-15.3.1.3.13.a`), its assumptions too; it could not be read
+  before.  `tfl_ai_collect_answers()` takes an answer's report named
+  another way (`T-15.3.1.3.13.a`) as the one whose number it is.  The
+  check now says what stopped later: a table with no column key (an
+  error: one arm too, the arm as `by` and `cols`) and an overall row no
+  hierarchical analysis makes (a warning: `over_variables = TRUE`); the
+  table prompt says both.  An answer with none of its request's reports no
+  longer says "done".
 
 * **An ARD that is not cards' in the code lists' order: `relevel_ard()`**
   (#362, 0.0.24.9169).  cardx's survfit keeps its rows in the arms' order

@@ -204,6 +204,9 @@ print.tfl_ai_shell <- function(x, ...) {
 }
 
 # ---- the workbook's XML ------------------------------------------------------
+#  Every pattern that spans text is `(?s)`: a cell's text may hold a line
+#  break ("Placebo\n(N=xx)", Alt+Enter in Excel), and without it the string
+#  item is missed and every later shared string shifts by one.
 
 # A member of the zip as one UTF-8 string ("" when it is not there).
 .xl_member <- function(path, member, members) {
@@ -248,10 +251,10 @@ print.tfl_ai_shell <- function(x, ...) {
 # The text of a string item (<si> or <is>): its <t> runs, without the
 # phonetic runs (<rPh>) Japanese Excel keeps beside the text.
 .xl_si_text <- function(x) {
-  x <- gsub("<rPh\\b.*?</rPh>", "", x, perl = TRUE)
-  t <- regmatches(x, gregexpr("<t(\\s[^>]*)?>.*?</t>", x, perl = TRUE))
+  x <- gsub("(?s)<rPh\\b.*?</rPh>", "", x, perl = TRUE)
+  t <- regmatches(x, gregexpr("(?s)<t(\\s[^>]*)?>.*?</t>", x, perl = TRUE))
   vapply(t, function(z) {
-    .xl_unescape(paste(sub("^<t(\\s[^>]*)?>(.*)</t>$", "\\2", z, perl = TRUE),
+    .xl_unescape(paste(sub("(?s)^<t(\\s[^>]*)?>(.*)</t>$", "\\2", z, perl = TRUE),
                        collapse = ""))
   }, "")
 }
@@ -299,7 +302,7 @@ print.tfl_ai_shell <- function(x, ...) {
   info <- info[grepl("worksheets/", info$member, fixed = TRUE) & info$member %in% members, ,
                drop = FALSE]
   sst <- .xl_member(path, "xl/sharedStrings.xml", members)
-  shared <- .xl_si_text(regmatches(sst, gregexpr("<si>.*?</si>|<si/>", sst, perl = TRUE))[[1L]])
+  shared <- .xl_si_text(regmatches(sst, gregexpr("(?s)<si>.*?</si>|<si/>", sst, perl = TRUE))[[1L]])
   indent <- .xl_indents(.xl_member(path, "xl/styles.xml", members))
   cells <- lapply(seq_len(nrow(info)), function(i) {
     .xl_sheet_cells(.xl_member(path, info$member[i], members), info$sheet[i], shared, indent)
@@ -318,9 +321,9 @@ print.tfl_ai_shell <- function(x, ...) {
 
 # The indent level of each cell style (cellXfs, by position from 0).
 .xl_indents <- function(styles) {
-  xfs <- regmatches(styles, regexpr("<cellXfs\\b.*?</cellXfs>", styles, perl = TRUE))
+  xfs <- regmatches(styles, regexpr("(?s)<cellXfs\\b.*?</cellXfs>", styles, perl = TRUE))
   if (!length(xfs)) return(integer())
-  xf <- regmatches(xfs, gregexpr("<xf\\b[^>]*/>|<xf\\b.*?</xf>", xfs, perl = TRUE))[[1L]]
+  xf <- regmatches(xfs, gregexpr("(?s)<xf\\b[^>]*/>|<xf\\b.*?</xf>", xfs, perl = TRUE))[[1L]]
   vapply(seq_along(xf), function(i) {
     a <- regmatches(xf[i], regexpr("<alignment\\b[^>]*>", xf[i], perl = TRUE))
     if (!length(a)) return(0L)
@@ -333,7 +336,7 @@ print.tfl_ai_shell <- function(x, ...) {
 # with the range as the ref).
 .xl_sheet_cells <- function(x, sheet, shared, indent) {
   if (!nzchar(x)) return(.xl_no_cells())
-  rows <- regmatches(x, gregexpr("<row\\b[^>]*?(/>|>.*?</row>)", x, perl = TRUE))[[1L]]
+  rows <- regmatches(x, gregexpr("(?s)<row\\b[^>]*?(/>|>.*?</row>)", x, perl = TRUE))[[1L]]
   out <- vector("list", length(rows))
   last_row <- 0L
   for (i in seq_along(rows)) {
@@ -341,7 +344,7 @@ print.tfl_ai_shell <- function(x, ...) {
     r <- suppressWarnings(as.integer(.xl_attr(rtag, "r")))
     if (is.na(r)) r <- last_row + 1L
     last_row <- r
-    cs <- regmatches(rows[i], gregexpr("<c\\b[^>]*?(/>|>.*?</c>)", rows[i], perl = TRUE))[[1L]]
+    cs <- regmatches(rows[i], gregexpr("(?s)<c\\b[^>]*?(/>|>.*?</c>)", rows[i], perl = TRUE))[[1L]]
     if (!length(cs)) next
     ctag <- regmatches(cs, regexpr("<c\\b[^>]*>", cs, perl = TRUE))
     ref <- .xl_attr(ctag, "r")
@@ -353,7 +356,7 @@ print.tfl_ai_shell <- function(x, ...) {
     }
     type <- .xl_attr(ctag, "t")
     style <- suppressWarnings(as.integer(.xl_attr(ctag, "s")))
-    v <- regmatches(cs, regexec("<v>(.*?)</v>", cs))
+    v <- regmatches(cs, regexec("(?s)<v>(.*?)</v>", cs, perl = TRUE))
     v <- vapply(v, function(z) if (length(z) == 2L) .xl_unescape(z[2L]) else NA_character_, "")
     txt <- character(length(cs))
     for (j in seq_along(cs)) {
@@ -440,7 +443,7 @@ print.tfl_ai_shell <- function(x, ...) {
   ok <- grepl(.ai_id_regex, x, perl = TRUE)
   num <- vapply(x, function(z) {
     if (!grepl(.ai_id_regex, z, perl = TRUE)) return(NA_character_)
-    n <- sub(paste0("^.*?", .ai_id_regex, ".*$"), "\\2", z, perl = TRUE)
+    n <- sub(paste0("(?s)^.*?", .ai_id_regex, ".*$"), "\\2", z, perl = TRUE)
     toupper(gsub("[._-]", ".", n))
   }, "", USE.NAMES = FALSE)
   tp <- .ai_id_type(x)
@@ -452,7 +455,7 @@ print.tfl_ai_shell <- function(x, ...) {
 .ai_id_type <- function(x) {
   k <- tolower(vapply(x, function(z) {
     if (!grepl(.ai_id_regex, z, perl = TRUE)) return("")
-    sub(paste0("^.*?", .ai_id_regex, ".*$"), "\\1", z, perl = TRUE)
+    sub(paste0("(?s)^.*?", .ai_id_regex, ".*$"), "\\1", z, perl = TRUE)
   }, "", USE.NAMES = FALSE))
   out <- rep(NA_character_, length(k))
   out[k %in% c("table", "tab", "t", "\u8868")] <- "table"
@@ -849,4 +852,14 @@ tfl_ai_batches <- function(x, size = 8L, types = "table", families = NULL) {
     }
     sprintf("- %s: sheet '%s', %s%s.", id, r$shell, where, at_toc)
   }, "", USE.NAMES = FALSE)
+}
+
+# A report's id for its file, from its number as a TOC writes it: letters,
+# digits, '.', '_' and '-' only ("Table 15.3.1.a" -> "Table-15.3.1.a");
+# an id that is one already stays as it is
+.ai_file_id <- function(x) {
+  x <- trimws(.ai_half_width(as.character(x)))
+  ok <- grepl("^[A-Za-z0-9._-]+$", x)
+  y <- gsub("^-+|-+$", "", gsub("[^A-Za-z0-9._-]+", "-", x))
+  ifelse(ok | is.na(x), x, y)
 }
