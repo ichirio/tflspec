@@ -6,7 +6,7 @@ enc_study <- function() {
   skip_if_not_installed("haven")
   d <- withr::local_tempdir(.local_envir = parent.frame())
   dir.create(file.path(d, "adam"))
-  for (x in c("adsl", "adae", "adrs", "adlb")) {
+  for (x in c("adsl", "adae", "adrs", "adlb", "adtte")) {
     df <- getExportedValue("tflspec", x)
     for (v in names(df)) if (is.factor(df[[v]])) df[[v]] <- as.character(df[[v]])
     haven::write_xpt(df, file.path(d, "adam", paste0(x, ".xpt")))
@@ -59,7 +59,7 @@ test_that("answers saved by Notepad: UTF-8 with BOM and CRLF, UTF-16, .md.txt", 
                    jp_label)
   # the print: each request's status, reports and next step
   out <- capture.output(print(res))
-  expect_true(any(grepl("4 reports in 4 requests: ok 3", out, fixed = TRUE)))
+  expect_true(any(grepl("5 reports in 5 requests: ok 3", out, fixed = TRUE)))
   expect_true(any(grepl("^labs-1 +no answer +T-14-3-5$", out)))
   expect_true(any(grepl("next: paste ai/requests/labs-1.md into a new chat", out, fixed = TRUE)))
   expect_true(any(grepl("next: done", out, fixed = TRUE)))

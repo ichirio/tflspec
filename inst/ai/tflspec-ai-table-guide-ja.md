@@ -43,7 +43,8 @@ r                                   # 依頼名・帳票・文字数
 ```
 
 `ai/requests/<依頼名>.md`（`demographics-1.md`、`ae-1.md` …、1 つの種類ごと）と
-一覧 `ai/requests/index.md` ができます。
+一覧 `ai/requests/index.md` ができます。TOC の図は 1 図 1 依頼（`figure-1.md` …）で、
+シェルを入れ、図の design で答えてもらいます。
 
 同じことを 1 行で（`study.yml` が既にあれば消さないので、何度でも実行できます。
 ワークブックの読み取りの結果も表示します）:
@@ -176,15 +177,15 @@ RTF は `output/tfl/` にできます。このフォルダは tflplanner で試�
 
 ## 見本で試す（10 分）
 
-tflspec 同梱のファイル（4 表の TOC/SHELL ワークブック、XPT にした見本 ADaM、
-4 つの依頼それぞれへの保存済みの回答）で一通り動かします。最後に 4 帳票すべてが
-`ok` なら準備完了です。
+tflspec 同梱のファイル（4 表と KM 図 1 つの TOC/SHELL ワークブック、XPT にした
+見本 ADaM、5 つの依頼それぞれへの保存済みの回答。`figure-1` が図の依頼）で
+一通り動かします。最後に 5 帳票すべてが `ok` なら準備完了です。
 
 ```r
 library(tflspec)
 d <- file.path(tempdir(), "sample-study")
 dir.create(file.path(d, "adam"), recursive = TRUE, showWarnings = FALSE)
-for (x in c("adsl", "adae", "adrs", "adlb")) {
+for (x in c("adsl", "adae", "adrs", "adlb", "adtte")) {
   df <- getExportedValue("tflspec", x)
   for (v in names(df)) if (is.factor(df[[v]])) df[[v]] <- as.character(df[[v]])
   haven::write_xpt(df, file.path(d, "adam", paste0(x, ".xpt")))
@@ -197,7 +198,7 @@ r     <- tfl_ai_write_requests(d, shell, tfl_ai_adam_summary(file.path(d, "adam"
 # 保存済みの回答を、チャットの回答の代わりに置く（1 依頼に 1 つ）
 invisible(file.copy(list.files(file.path(ex, "answers"), full.names = TRUE),
                     file.path(d, "ai", "answers"), overwrite = TRUE))
-tfl_ai_collect_answers(d)            # 4 reports in 4 requests: ok 4 ...
+tfl_ai_collect_answers(d)            # 5 reports in 5 requests: ok 5 ...
 ```
 
 `ai/` フォルダ（依頼と回答）は残してください。共有は社内だけに。

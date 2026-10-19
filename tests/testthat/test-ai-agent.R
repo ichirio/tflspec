@@ -5,7 +5,7 @@
 agent_study <- function(root, adam_inside = FALSE) {
   ad <- if (adam_inside) file.path(root, "study", "adam") else file.path(root, "adam")
   dir.create(ad, recursive = TRUE, showWarnings = FALSE)
-  for (x in c("adsl", "adae", "adrs", "adlb")) {
+  for (x in c("adsl", "adae", "adrs", "adlb", "adtte")) {
     df <- getExportedValue("tflspec", x)
     for (v in names(df)) if (is.factor(df[[v]])) df[[v]] <- as.character(df[[v]])
     haven::write_xpt(df, file.path(ad, paste0(x, ".xpt")))
@@ -94,7 +94,7 @@ test_that("tfl_ai_run(): the RTFs, ai/status.md, the questions; a second round k
   expect_true(all(file.exists(file.path(d, rp$rtf))))
   expect_true(all(startsWith(rp$rtf, "output/tfl/")))
   status <- readLines(file.path(d, "ai", "status.md"), encoding = "UTF-8")
-  expect_true(any(grepl("4 of 4 reports have an RTF", status, fixed = TRUE)))
+  expect_true(any(grepl("5 of 5 reports have an RTF", status, fixed = TRUE)))
   q <- res$questions
   expect_gt(nrow(q), 0L)
   expect_true(all(q$status == "open"))

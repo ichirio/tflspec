@@ -1,5 +1,22 @@
 # tflspec (development version)
 
+* **Figures in the AI steps** (#376, 0.0.24.9177).  A figure of the TOC
+  is a request of its own (`figure-1` ...: its shell from the workbook,
+  its analysis set, the ADaM summary, the figure templates); its answer, a
+  figure design, is checked and written as the figure's report file in the
+  design's form -- the same design back for tflplanner's figure designer
+  -- and `tfl_ai_run()` draws it as tflplanner does
+  (`tfl_fig_design_code()`): its PNG and its RTF.  The requests and the
+  reports have a `type` column (`table`, `figure`), the run's reports a
+  `png`.  A figure's assumptions with their questions join
+  `ai/questions.md`.  `tfl_ai_write_requests(types = )` now defaults to
+  tables and figures.  New `tfl_ai_questions()` and
+  `tfl_ai_answer_questions()` read the questions and write the person's
+  answers (each into its `- Answer:`, the rest as it is), and
+  `tfl_ai_prepare(mode = "agent")` returns `agent_prompt`, the agent's
+  first message, also written to `ai/agent_prompt.md`.  The example workbook has a Kaplan-Meier figure, with its
+  stored answer.
+
 * **`tfl_ai_prepare(mode = "agent")`: the study's requests for a coding
   agent** (#374, 0.0.24.9176), GitHub Copilot's agent in VS Code and the
   like.  The agent works through every request without stopping: it saves

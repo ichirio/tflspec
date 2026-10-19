@@ -50,7 +50,7 @@ and `ai/`. If the workspace is a folder above it, use the paths from here.
    several reports ask once, with the reports listed. A question about the
    work rather than a report (a shell you cannot find, a file missing): add
    it to `ai/questions.md` yourself, in the same form (`## Q<n>. ...`,
-   `- Reports:`, `- The agent took, for now:`, `- Status: open`,
+   `- Reports:`, `- Where:`, `- The agent took, for now:`, `- Status: open`,
    `- Answer:`).
 6. When every request is done (`ok`, `warning`, or left after three tries),
    stop and tell the person: how many reports have an RTF, which do not and

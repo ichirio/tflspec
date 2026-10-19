@@ -5,7 +5,7 @@ req_study <- function() {
   skip_if_not_installed("readxl")
   d <- withr::local_tempdir(.local_envir = parent.frame())
   dir.create(file.path(d, "adam"))
-  for (x in c("adsl", "adae", "adrs", "adlb")) {
+  for (x in c("adsl", "adae", "adrs", "adlb", "adtte")) {
     df <- getExportedValue("tflspec", x)
     for (v in names(df)) if (is.factor(df[[v]])) df[[v]] <- as.character(df[[v]])
     haven::write_xpt(df, file.path(d, "adam", paste0(x, ".xpt")))
@@ -34,23 +34,24 @@ test_that("tfl_ai_write_requests(): one file a request, an index, the contexts",
   r1 <- suppressMessages(tfl_ai_write_requests(s$dir, s$shell, s$adam,
                                                instructions = "once", overwrite = TRUE))
   expect_true(file.exists(file.path(s$dir, "ai", "requests", "00-instructions.md")))
-  expect_true(all(r1$chars < r$chars - 15000))
+  # (a figure's request keeps its own instructions)
+  expect_true(all((r1$chars < r$chars - 15000)[r$type == "table"]))
 })
 
 test_that("tfl_ai_write_requests(max_chars = ): a request too long is split", {
   s <- req_study()
   shell <- s$shell
   shell$toc$family <- "demographics"         # one family: one request of four
-  r <- suppressMessages(tfl_ai_write_requests(s$dir, shell, s$adam, size = 8))
+  r <- suppressMessages(tfl_ai_write_requests(s$dir, shell, s$adam, size = 8, types = "table"))
   expect_identical(nrow(r), 1L)
   lim <- r$chars - 500
   r2 <- suppressMessages(suppressWarnings(tfl_ai_write_requests(
-    s$dir, shell, s$adam, size = 8, max_chars = lim, overwrite = TRUE)))
+    s$dir, shell, s$adam, size = 8, max_chars = lim, types = "table", overwrite = TRUE)))
   expect_gt(nrow(r2), 1L)
   expect_true(all(r2$request %in% c("demographics-1a", "demographics-1b",
                                     "demographics-1aa", "demographics-1ab",
                                     "demographics-1ba", "demographics-1bb")))
-  expect_setequal(unlist(strsplit(r2$outputs, ", ")), shell$toc$output_id)
+  expect_setequal(unlist(strsplit(r2$outputs, ", ")), shell$toc$output_id[shell$toc$type == "table"])
 })
 
 test_that("tfl_ai_collect_answers(): checked, written, one row a report", {

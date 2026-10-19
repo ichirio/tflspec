@@ -67,8 +67,10 @@
 #'   `sheets` (the workbook's sheets and their roles), `adam` (the
 #'   [tfl_ai_adam_summary()]: `datasets`, `variables`, `text`), `files` (the
 #'   files written, relative to `dir`), `hint` (what the workbook's reading
-#'   could not find -- no TOC, a report with no shell -- and what to pass)
-#'   and `next_steps` (what to do next).
+#'   could not find -- no TOC, a report with no shell -- and what to pass),
+#'   `next_steps` (what to do next) and `agent_prompt` (with `mode = "agent"`:
+#'   the first message to the agent, the study's paths in it, also written
+#'   to `ai/agent_prompt.md`; else `NA`).
 #'   Its print is the workbook's summary and the next step.  The files are
 #'   UTF-8.
 #' @seealso The AI table guide: `system.file("ai", "tflspec-ai-table-guide.md",
@@ -78,7 +80,7 @@
 #' d <- file.path(tempdir(), "prepare-study")
 #' dir.create(file.path(d, "adam"), recursive = TRUE, showWarnings = FALSE)
 #' if (requireNamespace("haven", quietly = TRUE)) {
-#'   for (x in c("adsl", "adae", "adrs", "adlb")) {
+#'   for (x in c("adsl", "adae", "adrs", "adlb", "adtte")) {
 #'     df <- getExportedValue("tflspec", x)
 #'     for (v in names(df)) if (is.factor(df[[v]])) df[[v]] <- as.character(df[[v]])
 #'     haven::write_xpt(df, file.path(d, "adam", paste0(x, ".xpt")))
@@ -134,11 +136,20 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
     toc_sheet = toc_sheet, sheets = sheets))))
   hint <- .ai_shell_hint(shell)
   if (dry) {
+    # the tables in batches, each figure a request of its own (as written)
     b <- if (nrow(shell$toc)) tfl_ai_batches(shell, size = size) else
       data.frame(output_id = character(), family = character(), batch = character())
+    figs <- shell$toc$output_id[shell$toc$type %in% "figure"]
+    if (length(figs)) {
+      b <- b[!b$output_id %in% figs, , drop = FALSE]
+      b <- rbind(b[c("output_id", "family", "batch")],
+                 data.frame(output_id = figs, family = "figure",
+                            batch = paste0("figure-", seq_along(figs)), stringsAsFactors = FALSE))
+    }
     bt <- unique(b$batch)
     req <- data.frame(
-      request = bt, family = b$family[match(bt, b$batch)],
+      request = bt, type = ifelse(startsWith(bt, "figure-"), "figure", "table"),
+      family = b$family[match(bt, b$batch)],
       outputs = vapply(bt, function(x) paste(b$output_id[b$batch == x], collapse = ", "), ""),
       n = vapply(bt, function(x) sum(b$batch == x), 0L),
       chars = rep(NA_integer_, length(bt)), file = rep(NA_character_, length(bt)),
@@ -192,9 +203,23 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
   files <- normalizePath(files, winslash = "/")
   inside <- startsWith(files, root)
   files[inside] <- substring(files[inside], nchar(root) + 1L)
+  # the agent's first message: where its instructions, requests and run.R are
+  agent_prompt <- if (identical(mode, "agent")) {
+    at <- normalizePath(dir, winslash = "/", mustWork = FALSE)
+    paste0("Follow ", at, "/AGENTS.md. Do every request of ", at, "/ai/requests/index.md, ",
+           "in its order: save each answer as ", at, "/ai/answers/<request>.md and run ",
+           "`Rscript ", at, "/run.R` after it, then read ", at, "/ai/status.md and repair. ",
+           "Do not stop to ask; when every request is done, tell me which reports have an ",
+           "RTF and that ", at, "/ai/questions.md waits for my answers.")
+  } else NA_character_
+  # and as a file, to copy from
+  if (identical(mode, "agent") && !dry) {
+    .ai_write_text(agent_prompt, file.path(ai, "agent_prompt.md"))
+    files <- c(files, "ai/agent_prompt.md")
+  }
   structure(list(requests = req, toc = tc, sheets = shell$sheets, adam = ad,
                  files = unique(files), hint = hint, next_steps = nxt, dry_run = dry,
-                 mode = mode,
+                 mode = mode, agent_prompt = agent_prompt,
                  workbook = basename(toc)),
             class = "tfl_ai_prepared")
 }

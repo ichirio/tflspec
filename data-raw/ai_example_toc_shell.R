@@ -5,7 +5,9 @@
 # columns, a column header of two rows, the stub indented by the cell's
 # alignment, the footnotes under the table.  Two shells share one sheet
 # (the AE table and the laboratory shift), as some companies keep them.
-# The reports are tables of tflspec's oncology sample study.  Run from the
+# The reports are tables of tflspec's oncology sample study, and one
+# figure (a Kaplan-Meier plot, its shell a mock-up described in cells, as
+# companies draw a figure's shell).  Run from the
 # package's root:  source("data-raw/ai_example_toc_shell.R")
 
 library(openxlsx)
@@ -23,16 +25,18 @@ writeData(wb, "TOC", "XYZ-ONC-01 Table of Contents (draft 0.2)", startRow = 1)
 mergeCells(wb, "TOC", cols = 1:5, rows = 1)
 addStyle(wb, "TOC", title, rows = 1, cols = 1)
 toc <- data.frame(
-  `No.` = c("", "T-14-1-1", "", "T-14-2-1", "", "T-14-3-1", "T-14-3-5"),
-  Type = c("", "Table", "", "Table", "", "Table", "Table"),
+  `No.` = c("", "T-14-1-1", "", "T-14-2-1", "F-14-2-2", "", "T-14-3-1", "T-14-3-5"),
+  Type = c("", "Table", "", "Table", "Figure", "", "Table", "Table"),
   Title = c("14.1 Demographic Data", "Demographic and Baseline Characteristics",
             "14.2 Efficacy Data", "Best Overall Response and Objective Response Rate",
+            "Kaplan-Meier Plot of Overall Survival",
             "14.3 Safety Data",
             "Treatment-Emergent Adverse Events by System Organ Class and Preferred Term",
             "Shift from Baseline in Laboratory Normal Range Indicator at Cycle 2 Day 1"),
-  Population = c("", "Safety Population", "", "Intent-To-Treat Population", "",
-                 "Safety Population", "Safety Population"),
-  Program = c("", "t_dm.sas", "", "t_orr.sas", "", "t_ae_socpt.sas", "t_lb_shift.sas"),
+  Population = c("", "Safety Population", "", "Intent-To-Treat Population",
+                 "Intent-To-Treat Population", "", "Safety Population", "Safety Population"),
+  Program = c("", "t_dm.sas", "", "t_orr.sas", "f_km_os.sas", "", "t_ae_socpt.sas",
+              "t_lb_shift.sas"),
   check.names = FALSE, stringsAsFactors = FALSE)
 writeData(wb, "TOC", toc, startRow = 3, headerStyle = bold)
 setColWidths(wb, "TOC", 1:5, c(12, 8, 70, 26, 16))
@@ -102,6 +106,22 @@ shell("T14.2.1", 1, "Table 14.2.1", "Best Overall Response and Objective Respons
       c("Best overall response per RECIST 1.1 (parameter BOR).",
         "95% CI: Clopper-Pearson exact confidence interval."))
 setColWidths(wb, "T14.2.1", 1:3, c(40, 18, 18))
+
+# a figure's shell: what the plot shows, in words
+addWorksheet(wb, "F14.2.2")
+fig <- c("Figure 14.2.2", "Kaplan-Meier Plot of Overall Survival",
+         "(Intent-To-Treat Population)", "",
+         "[Kaplan-Meier curves, one per arm: Drug X, Control]",
+         "X axis: Time (Months), from 0",
+         "Y axis: Survival Probability, 0 to 1 by 0.2",
+         "Censored subjects marked on the curves (+)",
+         "Legend inside the plot, top right", "",
+         "Overall survival: ADTTE, PARAMCD = OS; censored when CNSR = 1.")
+writeData(wb, "F14.2.2", fig, startRow = 1, startCol = 1)
+mergeCells(wb, "F14.2.2", cols = 1:4, rows = 2)
+mergeCells(wb, "F14.2.2", cols = 1:4, rows = 3)
+addStyle(wb, "F14.2.2", title, rows = 2:3, cols = 1)
+setColWidths(wb, "F14.2.2", 1, 70)
 
 addWorksheet(wb, "Safety")
 nxt <- shell("Safety", 1, "Table 14.3.1",

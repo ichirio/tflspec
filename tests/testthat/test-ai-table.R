@@ -13,7 +13,7 @@ ai_table_study <- function(env = parent.frame()) {
   testthat::skip_if_not_installed("haven")
   d <- withr::local_tempdir(.local_envir = env)
   dir.create(file.path(d, "adam"))
-  for (x in c("adsl", "adae", "adrs", "adlb")) {
+  for (x in c("adsl", "adae", "adrs", "adlb", "adtte")) {
     haven::write_xpt(tflspec:::.ai_chr(getExportedValue("tflspec", x)),
                      file.path(d, "adam", paste0(x, ".xpt")))
   }
@@ -26,18 +26,18 @@ ai_table_study <- function(env = parent.frame()) {
 test_that("the workbook is read whatever its layout: the TOC, the shells, merges, indents", {
   x <- tfl_ai_read_shell(ai_xlsx())
   expect_s3_class(x, "tfl_ai_shell")
-  expect_identical(x$sheets$sheet, c("TOC", "T14.1.1", "T14.2.1", "Safety"))
-  expect_identical(x$sheets$role, c("toc", "shell", "shell", "shell"))
+  expect_identical(x$sheets$sheet, c("TOC", "T14.1.1", "T14.2.1", "F14.2.2", "Safety"))
+  expect_identical(x$sheets$role, c("toc", "shell", "shell", "shell", "shell"))
   # the TOC's report numbers, not the version in its title nor its sections
-  expect_identical(x$toc$output_id, c("T-14-1-1", "T-14-2-1", "T-14-3-1", "T-14-3-5"))
-  expect_identical(x$toc$type, rep("table", 4L))
-  expect_identical(x$toc$shell, c("T14.1.1", "T14.2.1", "Safety", "Safety"))
-  expect_match(x$toc$title[3L], "^Treatment-Emergent Adverse Events")
+  expect_identical(x$toc$output_id, c("T-14-1-1", "T-14-2-1", "F-14-2-2", "T-14-3-1", "T-14-3-5"))
+  expect_identical(x$toc$type, c("table", "table", "figure", "table", "table"))
+  expect_identical(x$toc$shell, c("T14.1.1", "T14.2.1", "F14.2.2", "Safety", "Safety"))
+  expect_match(x$toc$title[4L], "^Treatment-Emergent Adverse Events")
   txt <- format(x)
   expect_match(txt, "## Sheet \"TOC\" (the TOC)", fixed = TRUE)
   expect_match(txt, "2: A2:C2=Demographic and Baseline Characteristics", fixed = TRUE)
   expect_match(txt, "8: A=  n | B=xx | C=xx | D=xx", fixed = TRUE)   # the alignment's indent
-  expect_output(print(x), "4 report(s) in the TOC, 4 with a shell found", fixed = TRUE)
+  expect_output(print(x), "5 report(s) in the TOC, 5 with a shell found", fixed = TRUE)
 })
 
 test_that("outputs keep the TOC's header and their own rows and shells; numbers match loosely", {
@@ -98,7 +98,7 @@ test_that("the ADaM summary: variables, labels, types, short value lists, no rec
   d <- ai_table_study()
   s <- tfl_ai_adam_summary(file.path(d, "adam"))
   expect_s3_class(s, "tfl_ai_adam")
-  expect_identical(s$datasets$dataset, c("ADAE", "ADLB", "ADRS", "ADSL"))
+  expect_identical(s$datasets$dataset, c("ADAE", "ADLB", "ADRS", "ADSL", "ADTTE"))
   v <- s$variables
   expect_identical(v$levels[v$dataset == "ADSL" & v$variable == "SEX"], "F | M")
   expect_identical(v$levels[v$dataset == "ADLB" & v$variable == "PARAMCD"],
@@ -112,7 +112,7 @@ test_that("the ADaM summary: variables, labels, types, short value lists, no rec
   expect_identical(tfl_ai_adam_summary(file.path(d, "adam"), datasets = "adsl")$datasets$dataset,
                    "ADSL")
   expect_error(tfl_ai_adam_summary(file.path(d, "adam"), datasets = "ADXX"), "no dataset ADXX")
-  expect_output(print(s), "4 dataset(s)", fixed = TRUE)
+  expect_output(print(s), "5 dataset(s)", fixed = TRUE)
 })
 
 test_that("tfl_ai_study_init(): the datasets, ADSL's analysis sets, the defaults", {
@@ -173,7 +173,8 @@ test_that("the table context and prompt: the reports, the study's files, the dat
 
 test_that("the stored answer reads, checks clean in its context, and unpacks", {
   d <- ai_table_study()
-  ctx <- tfl_ai_context("table", outputs = tfl_ai_read_shell(ai_xlsx())$toc$output_id,
+  toc <- tfl_ai_read_shell(ai_xlsx())$toc
+  ctx <- tfl_ai_context("table", outputs = toc$output_id[toc$type == "table"],
                         datasets = tfl_ai_adam_summary(file.path(d, "adam")), study_dir = d)
   a <- tfl_ai_parse(ai_answer(), "table")
   expect_s3_class(a, "tfl_ai_answer")

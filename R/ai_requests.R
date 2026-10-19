@@ -27,7 +27,10 @@
 #' @param dir The folder the requests go to, under `study_dir`.
 #' @param max_chars A request's length at most, in characters; `NULL` for
 #'   no limit.
-#' @param families,types As [tfl_ai_batches()].
+#' @param families,types As [tfl_ai_batches()]: the tables in batches.  A
+#'   figure (`"figure"` in `types`, the default) is a request of its own,
+#'   `figure-1`, `figure-2` ... (family `figure`): its shell, the ADaM's
+#'   summary, the figure templates; its answer a figure design.
 #' @param language As [tfl_ai_context()]: the language of the AI's
 #'   assumptions.
 #' @param examples Reviewed report files for the AI to follow
@@ -72,7 +75,7 @@
 tfl_ai_write_requests <- function(study_dir, shell, adam, size = 8L,
                                   dir = file.path("ai", "requests"),
                                   max_chars = NULL, families = NULL,
-                                  types = "table", language = NULL,
+                                  types = c("table", "figure"), language = NULL,
                                   examples = NULL,
                                   instructions = c("each", "once"),
                                   workbook = c("text", "attach", "both", "file"),
@@ -99,8 +102,13 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = 8L,
                              "(the sheets: %s)."), fn, basename(shell$path), basename(shell$path),
                       paste(shell$sheets$sheet, collapse = ", ")))
   }
-  b <- tfl_ai_batches(shell, size = size, types = types, families = families)
-  if (!nrow(b)) {
+  # the tables in batches; each figure a request of its own (figure-1 ...)
+  tab_types <- setdiff(types, "figure")
+  b <- if (length(tab_types)) {
+    tfl_ai_batches(shell, size = size, types = tab_types, families = families)
+  } else data.frame(output_id = character(), family = character(), batch = character())
+  figs <- if ("figure" %in% types) shell$toc$output_id[shell$toc$type %in% "figure"] else character()
+  if (!nrow(b) && !length(figs)) {
     .ard_stop(sprintf(paste0("%s: none of the TOC's %d reports is a %s (shell$toc$type); ",
                              "pass `types` or `families` that pick them."), fn, nrow(shell$toc),
                       paste(types, collapse = " or ")))
@@ -113,15 +121,10 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = 8L,
   dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
   unlink(list.files(out_dir, "[.]md$", full.names = TRUE))
 
-  prompt_of <- function(ids, family) {
-    ex <- if (is.null(names(examples))) examples
-          else unname(examples[names(examples) == family])
-    if (!length(ex)) ex <- NULL
-    # a path of the study's own (spec/outputs/<id>.yml), from anywhere
-    if (!is.null(ex)) ex <- ifelse(file.exists(ex), ex, file.path(study_dir, ex))
-    ctx <- tfl_ai_context("table", outputs = ids, shell = shell, datasets = adam,
-                          study_dir = study_dir, language = language,
-                          examples = ex)
+  # the shells' text as the workbook reaches the chat: the text alone; with
+  # where each report's shell is in the attached workbook ("attach",
+  # "both"); or in the workbook file an agent reads ("file")
+  placed <- function(text, ids) {
     if (identical(workbook, "file")) {
       # an agent that reads files: the text, and where each report's shell
       # is in the workbook file -- to read that place alone when the text
@@ -135,19 +138,42 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = 8L,
                        "or `readxl::read_excel(<file>, sheet = <sheet>, range = <cells>)`. Never",
                        "read another sheet on a guess; when the place looks wrong, ask it as a",
                        "question."))
-      ctx$shell <- paste(c(where, "", ctx$shell), collapse = "\n")
-    } else if (!identical(workbook, "text")) {
-      # the workbook attached: where each report's shell is in it, with the
-      # text ("both") or instead of it ("attach")
-      where <- c(sprintf(paste("The TOC / SHELL workbook `%s` is attached to this message.",
-                               "The reports' shells in it:"), book), "",
-                 .ai_shell_where(shell, ids),
-                 if (identical(workbook, "both"))
-                   c("", paste("The text below is read from that workbook; where the two",
-                               "differ, the attached workbook is right.")))
-      ctx$shell <- paste(c(where, if (identical(workbook, "both")) c("", ctx$shell)),
-                         collapse = "\n")
+      return(paste(c(where, "", text), collapse = "\n"))
     }
+    if (identical(workbook, "text")) return(text)
+    # the workbook attached: where each report's shell is in it, with the
+    # text ("both") or instead of it ("attach")
+    where <- c(sprintf(paste("The TOC / SHELL workbook `%s` is attached to this message.",
+                             "The reports' shells in it:"), book), "",
+               .ai_shell_where(shell, ids),
+               if (identical(workbook, "both"))
+                 c("", paste("The text below is read from that workbook; where the two",
+                             "differ, the attached workbook is right.")))
+    paste(c(where, if (identical(workbook, "both")) c("", text)), collapse = "\n")
+  }
+  # a figure: a request of its own, its shell, its analysis set when the
+  # TOC row names one of spec/data.yml's
+  fig_prompt_of <- function(id) {
+    i <- match(id, shell$toc$output_id)
+    ttl <- shell$toc$title[i]
+    ctx <- tfl_ai_context("figure", output_id = id,
+                          titles = if (!is.na(ttl)) ttl, datasets = adam,
+                          population = .ai_population_of(study_dir, shell$toc$text[i]),
+                          shell = shell, language = language)
+    ctx$shell <- placed(ctx$shell, id)
+    p <- tfl_ai_prompt("figure", ctx)
+    list(context = ctx, text = format(p), system = p$system)
+  }
+  prompt_of <- function(ids, family) {
+    ex <- if (is.null(names(examples))) examples
+          else unname(examples[names(examples) == family])
+    if (!length(ex)) ex <- NULL
+    # a path of the study's own (spec/outputs/<id>.yml), from anywhere
+    if (!is.null(ex)) ex <- ifelse(file.exists(ex), ex, file.path(study_dir, ex))
+    ctx <- tfl_ai_context("table", outputs = ids, shell = shell, datasets = adam,
+                          study_dir = study_dir, language = language,
+                          examples = ex)
+    ctx$shell <- placed(ctx$shell, ids)
     p <- tfl_ai_prompt("table", ctx)
     text <- if (identical(instructions, "each")) format(p) else
       paste(c("(Follow the instructions of my first message in this chat.)", "",
@@ -176,6 +202,10 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = 8L,
     req <- c(req, r)
     fam <- c(fam, rep(b$family[match(bt, b$batch)], length(r)))
   }
+  for (k in seq_along(figs)) {
+    req[[paste0("figure-", k)]] <- c(fig_prompt_of(figs[k]), list(ids = figs[k]))
+    fam <- c(fam, "figure")
+  }
   for (nm in names(req)) .ai_write_text(req[[nm]]$text, file.path(out_dir, paste0(nm, ".md")))
   if (identical(instructions, "once")) {
     .ai_write_text(req[[1L]]$system, file.path(out_dir, "00-instructions.md"))
@@ -187,7 +217,7 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = 8L,
     list(ids = req[[i]]$ids, context = req[[i]]$context, family = fam[i])
   }), names(req)), file.path(out_dir, "_contexts.rds"))
   idx <- data.frame(
-    request = names(req), family = fam,
+    request = names(req), type = ifelse(fam == "figure", "figure", "table"), family = fam,
     outputs = vapply(req, function(r) paste(r$ids, collapse = ", "), ""),
     n = vapply(req, function(r) length(r$ids), 0L),
     chars = vapply(req, function(r) nchar(r$text), 0L),
@@ -282,7 +312,8 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
                          rel(requests, paste0(nm, ".md")), rel(answers, paste0(nm, ".md")))
       next
     }
-    a <- tryCatch(tfl_ai_parse(.ai_read_lines(f, fn), "table"),
+    task <- ctxs[[nm]]$context$task %||% "table"
+    a <- tryCatch(tfl_ai_parse(.ai_read_lines(f, fn), task),
                   error = function(e) e)
     if (inherits(a, "error")) {
       rows[[nm]] <- row(nm, ids, "error", 1L, conditionMessage(a))
@@ -294,6 +325,10 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
     a <- .ai_answer_as_asked(a, ids)
     a <- .ai_answer_overall(a)
     pr <- tryCatch(tfl_ai_check(a, ctxs[[nm]]$context), error = function(e) e)
+    # a figure's design under its report, as a table answer's reports
+    if (identical(task, "figure") && !inherits(pr, "error")) {
+      a$outputs <- stats::setNames(list(a$design), a$output_id %||% ids[1L])
+    }
     if (inherits(pr, "error")) {
       rows[[nm]] <- row(nm, ids, "error", 1L, conditionMessage(pr))
       nxt[nm] <- sprintf("ask the chat for the answer again; save it over %s",
@@ -316,10 +351,16 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
         r <- keep$assumption_rows
         keep$assumption_rows <- r[is.na(r$output_id) | r$output_id %in% ids, , drop = FALSE]
       }
-      wrote <- tryCatch({
-        if (length(keep$outputs)) tfl_ai_unpack(keep, study_dir, overwrite = overwrite)
-        NULL
-      }, error = function(e) conditionMessage(e))
+      if (identical(task, "figure")) {
+        keep <- .ai_fig_as_files(a, ids, ctxs[[nm]]$context)
+        if (!is.null(keep$error)) wrote <- keep$error
+      }
+      if (is.null(wrote)) {
+        wrote <- tryCatch({
+          if (length(keep$outputs)) tfl_ai_unpack(keep, study_dir, overwrite = overwrite)
+          NULL
+        }, error = function(e) conditionMessage(e))
+      }
       if (is.null(wrote)) unlink(file.path(study_dir, repairs, paste0(nm, ".md")))
       nxt[nm] <- if (!is.null(wrote)) "see the problem below, then collect again"
                  else if (nrow(pr)) "read the warnings; the report files are written"
@@ -361,6 +402,9 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
   }
   out <- do.call(rbind, rows)
   rownames(out) <- NULL
+  out$type <- vapply(out$request, function(r) ctxs[[r]]$context$task %||% "table", "",
+                     USE.NAMES = FALSE)
+  out <- out[c("request", "type", setdiff(names(out), c("request", "type")))]
   # answers that match no request (a name typed differently)
   got <- list.files(file.path(study_dir, answers), "[.](md|txt)$", ignore.case = TRUE)
   stray <- got[!sub("([.]md)?([.]txt)?$", "", got, ignore.case = TRUE) %in% names(ctxs)]
@@ -461,7 +505,8 @@ tfl_ai_requests <- function(study_dir, requests = file.path("ai", "requests")) {
   cf <- file.path(study_dir, requests, "_contexts.rds")
   rel <- function(...) gsub("\\\\", "/", file.path(...))
   if (!file.exists(cf)) {
-    return(data.frame(request = character(), family = character(), outputs = character(),
+    return(data.frame(request = character(), type = character(), family = character(),
+                      outputs = character(),
                       n = integer(), chars = integer(), file = character(),
                       stringsAsFactors = FALSE))
   }
@@ -474,6 +519,7 @@ tfl_ai_requests <- function(study_dir, requests = file.path("ai", "requests")) {
   }, 0L, USE.NAMES = FALSE)
   out <- data.frame(
     request = nm,
+    type = vapply(ctxs, function(x) x$context$task %||% "table", "", USE.NAMES = FALSE),
     family = vapply(ctxs, function(x) x$family %||% NA_character_, "", USE.NAMES = FALSE),
     outputs = vapply(ctxs, function(x) paste(x$ids, collapse = ", "), "", USE.NAMES = FALSE),
     n = vapply(ctxs, function(x) length(x$ids), 0L, USE.NAMES = FALSE),
