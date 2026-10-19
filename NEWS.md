@@ -1,5 +1,25 @@
 # tflspec (development version)
 
+* **The AI steps return what a screen needs** (#371, 0.0.24.9175), for
+  tflplanner's AI page.  `tfl_ai_prepare()` returns a `tfl_ai_prepared`
+  list: `requests`, `toc` (each report of the TOC, its shell found or not,
+  the request asking for it), `sheets`, `adam` (the ADaM summary),
+  `files` (written, relative to the study) and `next_steps`.
+  `dry_run = TRUE` reads the workbook and the ADaM and writes nothing (to
+  look before the requests are written); `adam_summary =` reuses a call's
+  `$adam`.  `tfl_ai_collect_answers()` returns a `tfl_ai_collected` list:
+  `reports` (the data frame it returned, with `problems_text` -- every
+  problem --, `file` and `repair`), `next_steps`, `assumptions`, `stray`;
+  its print is as before.  `res$status` is now `res$reports$status`.  New
+  `tfl_ai_save_answer(study_dir, request, text)` writes a pasted answer
+  where the collect reads it (`ai/answers/<request>.md`, UTF-8), and
+  `tfl_ai_requests(study_dir)` reads the requests written again.
+  `tfl_ai_prepare()` also takes `datasets` and `max_levels` (the ADaM
+  summary's) and `quiet`, and returns the workbook reading's notes as
+  `hint`.  A request no longer shows where the ADaM is: its copy of
+  `spec/data.yml` names each dataset's file alone (`path: adsl.xpt`), the
+  study's own file keeping the full path.
+
 * **A line break inside a cell no longer shifts the shells' text**
   (#370, 0.0.24.9174).  `tfl_ai_read_shell()` missed a cell whose text
   holds a line break (Alt+Enter in Excel: a column header like

@@ -21,9 +21,17 @@ tfl_ai_collect_answers(
 there: an answer collected again replaces its reports.}
 }
 \value{
-A data frame, one row a report: \code{request}, \code{output_id},
-\code{status} (\code{ok}, \code{warning}, \code{error}, \verb{no answer}), \code{problems} (how
-many), \code{first} (the first problem).  Its print is a summary: each
+A \code{tfl_ai_collected}: a list with \code{reports} (a data frame, one
+row a report: \code{request}, \code{output_id}, \code{status} -- \code{ok}, \code{warning},
+\code{error}, \verb{no answer} --, \code{problems} (how many), \code{first} (the first
+problem), \code{problems_text} (all of them, one a line), \code{file} (the
+report's \verb{spec/outputs/<id>.yml} when written, else \code{NA}), \code{repair}
+(the request's repair prompt to paste into the same chat, else \code{NA})),
+\code{next_steps} (a request's next step, named by the request),
+\code{assumptions} (the study's \verb{spec/_assumptions.yml} for these reports:
+\code{output_id}, \code{where}, \code{item}, \code{assumption}, \code{question}), \code{stray} (answer
+files named after no request) and \code{requests} (the requests' folder).
+The paths are relative to \code{study_dir}.  Its print is a summary: each
 request's status, its reports and the next step.
 }
 \description{

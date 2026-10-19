@@ -23,7 +23,7 @@ answer_of <- function(name) {
 put <- function(d, name, lines) {
   writeLines(enc2utf8(lines), file.path(d, "ai", "answers", paste0(name, ".md")), useBytes = TRUE)
 }
-row_of <- function(res, id) res[res$output_id == id, , drop = FALSE]
+row_of <- function(res, id) res$reports[res$reports$output_id == id, , drop = FALSE]
 
 test_that(".ai_file_id(): letters, digits, . _ - only; an id that is one stays", {
   expect_identical(tflspec:::.ai_file_id(c("T-14-1-1", "Table 15.3.1.3.13.a", " Table  14.1.1 ")),
@@ -46,8 +46,8 @@ test_that("an answer's report number as the TOC writes it, or another way, is th
   put(d, "demographics-1", gsub("T-14-1-1", "T-99-9-9", a, fixed = TRUE))
   res <- suppressMessages(tfl_ai_collect_answers(d))
   expect_identical(row_of(res, "T-14-1-1")$status, "error")
-  expect_match(attr(res, "next")[["demographics-1"]], "repairs/demographics-1.md", fixed = TRUE)
-  expect_false(grepl("done", attr(res, "next")[["demographics-1"]], fixed = TRUE))
+  expect_match(res$next_steps[["demographics-1"]], "repairs/demographics-1.md", fixed = TRUE)
+  expect_false(grepl("done", res$next_steps[["demographics-1"]], fixed = TRUE))
 })
 
 test_that("check: a table with no column key is an error; an overall row no analysis makes, a warning", {
@@ -58,7 +58,7 @@ test_that("check: a table with no column key is an error; an overall row no anal
   # no cols in table_plan
   put(d, "ae-1", sub("table_plan: {cols: TRT01A, rows:", "table_plan: {rows:", ae, fixed = TRUE))
   res <- suppressMessages(tfl_ai_collect_answers(d))
-  r <- res[res$request == "ae-1", , drop = FALSE]
+  r <- res$reports[res$reports$request == "ae-1", , drop = FALSE]
   expect_identical(unique(r$status), "error")
   expect_match(r$first[1L], "has no `cols`", fixed = TRUE)
   rep <- paste(readLines(file.path(d, "ai", "repairs", "ae-1.md"), encoding = "UTF-8"), collapse = "\n")
@@ -67,7 +67,7 @@ test_that("check: a table with no column key is an error; an overall row no anal
   # (#366), and an assumption says so
   put(d, "ae-1", sub(", args: !r over_variables = TRUE}", "}", ae, fixed = TRUE))
   res <- suppressMessages(tfl_ai_collect_answers(d))
-  r <- res[res$request == "ae-1", , drop = FALSE]
+  r <- res$reports[res$reports$request == "ae-1", , drop = FALSE]
   expect_identical(unique(r$status), "ok")
   f <- readLines(file.path(d, "spec", "outputs", "T-14-3-1.yml"), encoding = "UTF-8")
   expect_true(any(grepl("over_variables = TRUE", f, fixed = TRUE)))
@@ -82,5 +82,5 @@ test_that("check: a table with no column key is an error; an overall row no anal
   # as the example has it: ok
   put(d, "ae-1", ae)
   res <- suppressMessages(tfl_ai_collect_answers(d))
-  expect_identical(unique(res$status[res$request == "ae-1"]), "ok")
+  expect_identical(unique(res$reports$status[res$reports$request == "ae-1"]), "ok")
 })

@@ -17,7 +17,12 @@ tfl_ai_prepare(
   workbook = c("text", "attach", "both"),
   instructions = c("each", "once"),
   max_chars = NULL,
-  overwrite = FALSE
+  overwrite = FALSE,
+  dry_run = FALSE,
+  adam_summary = NULL,
+  datasets = NULL,
+  max_levels = 15L,
+  quiet = FALSE
 )
 }
 \arguments{
@@ -41,9 +46,36 @@ request's length at most.}
 \item{overwrite}{\code{TRUE} to start the study folder again
 (\code{\link[=tfl_ai_study_init]{tfl_ai_study_init()}} over its \code{study.yml} and \verb{spec/}).  The requests
 are written again on every call (the answers are kept).}
+
+\item{dry_run}{\code{TRUE} to read the workbook and the ADaM and write
+nothing: the same result, to look at before the requests are written
+(its \code{requests} are the TOC's batches, without \code{chars} and \code{file};
+\code{files} is empty).}
+
+\item{adam_summary}{A \code{\link[=tfl_ai_adam_summary]{tfl_ai_adam_summary()}} result to use instead of
+reading the ADaM again (a previous call's \verb{$adam}); read again when
+\code{datasets} names others than it has.}
+
+\item{datasets, max_levels}{As \code{\link[=tfl_ai_adam_summary]{tfl_ai_adam_summary()}}: the ADaM datasets
+the requests describe (\code{NULL}: all), the values listed of a variable.
+Fewer datasets, shorter requests.}
+
+\item{quiet}{\code{TRUE} to say nothing (the steps' messages): a screen shows
+the result's \code{hint} and \code{next_steps} itself.}
 }
 \value{
-The requests, as \code{\link[=tfl_ai_write_requests]{tfl_ai_write_requests()}} gives them.
+A \code{tfl_ai_prepared}: a list with \code{requests} (one row a request:
+\code{request}, \code{family}, \code{outputs}, \code{n}, \code{chars}, \code{file} -- as
+\code{\link[=tfl_ai_write_requests]{tfl_ai_write_requests()}} gives them), \code{toc} (one row a report of the
+TOC: \code{output_id}, \code{title}, \code{type}, \code{shell} -- the sheet of its shell --,
+\code{shell_found}, \code{request} -- the request that asks for it, \code{NA} for none),
+\code{sheets} (the workbook's sheets and their roles), \code{adam} (the
+\code{\link[=tfl_ai_adam_summary]{tfl_ai_adam_summary()}}: \code{datasets}, \code{variables}, \code{text}), \code{files} (the
+files written, relative to \code{dir}), \code{hint} (what the workbook's reading
+could not find -- no TOC, a report with no shell -- and what to pass)
+and \code{next_steps} (what to do next).
+Its print is the workbook's summary and the next step.  The files are
+UTF-8.
 }
 \description{
 The steps before the first request, one after the other:
@@ -66,7 +98,7 @@ if (requireNamespace("haven", quietly = TRUE)) {
   }
   r <- tfl_ai_prepare(d, file.path(ex, "onco_toc_shell.xlsx"),
                       study_id = "XYZ-ONC-01", overwrite = TRUE)
-  r[c("request", "outputs", "chars")]
+  r$requests[c("request", "outputs", "chars")]
 }
 }
 \seealso{

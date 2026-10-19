@@ -109,7 +109,7 @@
       f <- file.path(.spec_dir(d), f)
       if (file.exists(f)) paste(readLines(f, warn = FALSE, encoding = "UTF-8"), collapse = "\n")
     }
-    out$data_yml <- rd("data.yml")
+    out$data_yml <- .ai_data_yml_names(rd("data.yml"))
     out$defaults_yml <- rd("defaults.yml")
     out$populations <- vapply(st$data$populations %||% list(), function(p) p$id %||% "", "")
     out$patterns <- names(st$patterns)
@@ -344,6 +344,22 @@
     outs[[r$id]] <- r
   }
   list(outputs = outs, problems = p)
+}
+
+# spec/data.yml for a prompt: each dataset's `path:` as its file's name
+# alone.  The ADaM folder may be a server's (\\server\study\adam, C:/...):
+# where it is is no business of the chat's, and the file stays as it is.
+.ai_data_yml_names <- function(x) {
+  if (is.null(x)) return(x)
+  lines <- strsplit(x, "\n", fixed = TRUE)[[1L]]
+  at <- grepl("^\\s*(-\\s+)?path:\\s*\\S", lines, perl = TRUE)
+  if (!any(at)) return(x)
+  head <- sub("^(\\s*(-\\s+)?path:\\s*).*$", "\\1", lines[at], perl = TRUE)
+  val <- trimws(substring(lines[at], nchar(head) + 1L))
+  val <- sub("\\s+#.*$", "", val, perl = TRUE)
+  val <- gsub("^[\"']|[\"']$", "", val, perl = TRUE)
+  lines[at] <- paste0(head, basename(gsub("\\\\", "/", val)))
+  paste(lines, collapse = "\n")
 }
 
 .ai_assumption_rows <- function(x) {

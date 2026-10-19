@@ -11,14 +11,16 @@ prep_study <- function(d) {
   d
 }
 book <- function() system.file("ai", "example", "onco_toc_shell.xlsx", package = "tflspec")
-req_text <- function(d, r) paste(readLines(file.path(d, r$file[1L]), encoding = "UTF-8"), collapse = "\n")
+req_text <- function(d, r) {
+  paste(readLines(file.path(d, r$requests$file[1L]), encoding = "UTF-8"), collapse = "\n")
+}
 
 test_that("tfl_ai_prepare(): the guide's step 3 in one call; a study.yml there is kept", {
   skip_on_cran()
   skip_if_not_installed("haven")
   d <- prep_study(withr::local_tempdir())
   r <- suppressMessages(tfl_ai_prepare(d, book(), study_id = "XYZ-ONC-01"))
-  expect_identical(nrow(r), 4L)
+  expect_identical(nrow(r$requests), 4L)
   expect_true(all(file.exists(file.path(d, c("study.yml", "spec/data.yml", "ai/adam_summary.md",
                                              "ai/toc_shell.md", "ai/requests/index.md")))))
   # again: the study's settings are kept, the requests written again
@@ -26,12 +28,12 @@ test_that("tfl_ai_prepare(): the guide's step 3 in one call; a study.yml there i
   writeLines(c(readLines(y), "# kept"), y)
   r2 <- suppressMessages(tfl_ai_prepare(d, book(), study_id = "OTHER", size = 1L))
   expect_true("# kept" %in% readLines(y))
-  expect_identical(nrow(r2), 4L)
+  expect_identical(nrow(r2$requests), 4L)
   # and the answers of the example still pass, as in the guide
   ex <- system.file("ai", "example", "answers", package = "tflspec")
   file.copy(list.files(ex, full.names = TRUE), file.path(d, "ai", "answers"), overwrite = TRUE)
   res <- suppressMessages(tfl_ai_collect_answers(d))
-  expect_identical(unique(res$status), "ok")
+  expect_identical(unique(res$reports$status), "ok")
   expect_error(tfl_ai_prepare(d, file.path(d, "nope.xlsx")), "workbook's path")
 })
 
@@ -47,7 +49,7 @@ test_that("workbook = \"attach\" / \"both\": where each shell is in the attached
   t_att <- req_text(d, r_att)
   expect_match(t_att, "The TOC / SHELL workbook `onco_toc_shell.xlsx` is attached to this message.",
                fixed = TRUE)
-  expect_match(t_att, sprintf("- %s: sheet '", r_att$outputs[1L]), fixed = TRUE)
+  expect_match(t_att, sprintf("- %s: sheet '", r_att$requests$outputs[1L]), fixed = TRUE)
   expect_match(t_att, "its TOC row: sheet '", fixed = TRUE)
   expect_false(grepl("# Workbook onco_toc_shell.xlsx", t_att, fixed = TRUE))   # no text
   expect_lt(nchar(t_att), nchar(t_text))
@@ -79,4 +81,104 @@ test_that("the places: a report's rows of a sheet with several, else the whole s
   expect_match(w[2L], "sheet 'Shells', cells A5:A6", fixed = TRUE)
   expect_match(w[3L], "sheet 'T14.3.1', the whole sheet", fixed = TRUE)
   expect_match(w[1L], "its TOC row: sheet 'TOC', row 2", fixed = TRUE)
+})
+
+test_that("tfl_ai_prepare(): a list for a screen; dry_run writes nothing; the ADaM summary reused", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  d <- prep_study(withr::local_tempdir())
+  dry <- suppressMessages(tfl_ai_prepare(d, book(), study_id = "XYZ-ONC-01", dry_run = TRUE))
+  expect_s3_class(dry, "tfl_ai_prepared")
+  expect_named(dry, c("requests", "toc", "sheets", "adam", "files", "hint", "next_steps", "dry_run",
+                      "workbook"))
+  expect_false(file.exists(file.path(d, "study.yml")))
+  expect_false(dir.exists(file.path(d, "ai")))
+  expect_length(dry$files, 0L)
+  expect_true(all(is.na(dry$requests$file)))
+  expect_match(dry$next_steps[length(dry$next_steps)], "dry_run = FALSE")
+  expect_named(dry$toc, c("output_id", "title", "type", "shell", "shell_found", "request"))
+  expect_true(all(dry$toc$shell_found))
+  expect_setequal(dry$toc$request, dry$requests$request)
+  expect_s3_class(dry$adam, "tfl_ai_adam")
+  expect_output(print(dry), "dry run")
+  # written, the ADaM summary of the look before passed back
+  r <- suppressMessages(tfl_ai_prepare(d, book(), study_id = "XYZ-ONC-01",
+                                       adam_summary = dry$adam))
+  expect_identical(r$requests$request, dry$requests$request)
+  expect_identical(r$toc$request, dry$toc$request)
+  expect_true(all(c("study.yml", "ai/adam_summary.md", "ai/toc_shell.md",
+                    "ai/requests/index.md", r$requests$file) %in% r$files))
+  expect_true(all(file.exists(file.path(d, r$files))))
+  expect_match(r$next_steps[length(r$next_steps)], "tfl_ai_save_answer()", fixed = TRUE)
+  expect_error(tfl_ai_prepare(d, book(), adam_summary = list()), "tfl_ai_adam_summary")
+})
+
+test_that("tfl_ai_save_answer() and tfl_ai_collect_answers(): the files, the repairs, the assumptions", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  d <- prep_study(withr::local_tempdir())
+  r <- suppressMessages(tfl_ai_prepare(d, book(), study_id = "XYZ-ONC-01"))
+  ex <- system.file("ai", "example", "answers", package = "tflspec")
+  one <- r$requests$request[1L]
+  txt <- readLines(file.path(ex, paste0(one, ".md")), encoding = "UTF-8")
+  f <- tfl_ai_save_answer(d, one, txt)
+  expect_identical(basename(f), paste0(one, ".md"))
+  expect_error(tfl_ai_save_answer(d, one, txt, overwrite = FALSE), "already there")
+  expect_error(tfl_ai_save_answer(d, "nope-1", txt), "one of the study's requests")
+  expect_error(tfl_ai_save_answer(d, one, ""), "not empty")
+  res <- suppressMessages(tfl_ai_collect_answers(d))
+  expect_s3_class(res, "tfl_ai_collected")
+  expect_named(res, c("reports", "next_steps", "assumptions", "stray", "requests"))
+  rp <- res$reports
+  expect_true(all(c("problems_text", "file", "repair") %in% names(rp)))
+  done <- rp$request == one
+  expect_true(all(file.exists(file.path(d, rp$file[done]))))
+  expect_true(all(is.na(rp$file[!done])))
+  expect_true(all(rp$status[!done] == "no answer"))
+  expect_identical(names(res$next_steps), r$requests$request)
+  expect_named(res$assumptions, c("output_id", "where", "item", "assumption", "question"))
+  expect_output(print(res), "no answer")
+  # an answer with an error: its repair prompt, every problem
+  bad <- sub("population: [A-Z]+", "population: NOPE", txt)
+  tfl_ai_save_answer(d, one, bad)
+  res2 <- suppressMessages(tfl_ai_collect_answers(d))
+  rp2 <- res2$reports[res2$reports$request == one, ]
+  expect_true(all(rp2$status == "error"))
+  expect_true(all(rp2$repair == paste0("ai/repairs/", one, ".md")))
+  expect_true(file.exists(file.path(d, rp2$repair[1L])))
+  expect_true(any(grepl("NOPE", rp2$problems_text)))
+})
+
+test_that("tfl_ai_prepare(quiet, datasets); tfl_ai_requests(); no ADaM folder in the requests", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  root <- withr::local_tempdir()
+  d <- file.path(root, "study")
+  # the ADaM outside the study, by its full path
+  ad <- file.path(prep_study(file.path(root, "secret-server")), "adam")
+  ad <- normalizePath(ad, winslash = "/")
+  expect_no_message(dry <- tfl_ai_prepare(d, book(), adam = ad, dry_run = TRUE, quiet = TRUE))
+  expect_type(dry$hint, "character")
+  expect_setequal(dry$adam$datasets$dataset, c("ADAE", "ADLB", "ADRS", "ADSL"))
+  expect_no_message(r <- tfl_ai_prepare(d, book(), adam = ad, adam_summary = dry$adam,
+                                        datasets = c("ADSL", "ADAE"), max_levels = 5L,
+                                        quiet = TRUE))
+  expect_setequal(r$adam$datasets$dataset, c("ADSL", "ADAE"))
+  txt <- unlist(lapply(file.path(d, r$requests$file), readLines, encoding = "UTF-8"))
+  expect_false(any(grepl("secret-server", txt, fixed = TRUE)))
+  expect_true(any(grepl("path: adsl.xpt", txt, fixed = TRUE)))
+  # the study's own file keeps the full path
+  expect_true(any(grepl("secret-server", readLines(file.path(d, "spec", "data.yml")), fixed = TRUE)))
+  # read again, as written
+  expect_identical(tfl_ai_requests(d), r$requests)
+  expect_identical(nrow(tfl_ai_requests(file.path(root, "none"))), 0L)
+})
+
+test_that(".ai_data_yml_names(): a dataset's path as its file's name", {
+  y <- paste("datasets:", "  - dataset: ADSL", "    path: //server/study/adam/adsl.xpt",
+             "  - dataset: ADAE", "    path: 'C:/adam/adae.xpt'  # the server copy",
+             "  - {dataset: ADLB, level: ADaM}", sep = "\n")
+  out <- strsplit(.ai_data_yml_names(y), "\n", fixed = TRUE)[[1L]]
+  expect_identical(out[3:5], c("    path: adsl.xpt", "  - dataset: ADAE", "    path: adae.xpt"))
+  expect_null(.ai_data_yml_names(NULL))
 })

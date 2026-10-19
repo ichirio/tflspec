@@ -161,8 +161,9 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = 8L,
   # the folder the answers are saved in, beside the requests (ai/answers)
   dir.create(file.path(study_dir, dirname(dir), "answers"), recursive = TRUE,
              showWarnings = FALSE)
-  saveRDS(lapply(req, function(r) list(ids = r$ids, context = r$context)),
-          file.path(out_dir, "_contexts.rds"))
+  saveRDS(stats::setNames(lapply(seq_along(req), function(i) {
+    list(ids = req[[i]]$ids, context = req[[i]]$context, family = fam[i])
+  }), names(req)), file.path(out_dir, "_contexts.rds"))
   idx <- data.frame(
     request = names(req), family = fam,
     outputs = vapply(req, function(r) paste(r$ids, collapse = ", "), ""),
@@ -217,9 +218,17 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = 8L,
 #' @param requests,answers,repairs The folders, under `study_dir`.
 #' @param overwrite `TRUE` (default) to write over report files already
 #'   there: an answer collected again replaces its reports.
-#' @return A data frame, one row a report: `request`, `output_id`,
-#'   `status` (`ok`, `warning`, `error`, `no answer`), `problems` (how
-#'   many), `first` (the first problem).  Its print is a summary: each
+#' @return A `tfl_ai_collected`: a list with `reports` (a data frame, one
+#'   row a report: `request`, `output_id`, `status` -- `ok`, `warning`,
+#'   `error`, `no answer` --, `problems` (how many), `first` (the first
+#'   problem), `problems_text` (all of them, one a line), `file` (the
+#'   report's `spec/outputs/<id>.yml` when written, else `NA`), `repair`
+#'   (the request's repair prompt to paste into the same chat, else `NA`)),
+#'   `next_steps` (a request's next step, named by the request),
+#'   `assumptions` (the study's `spec/_assumptions.yml` for these reports:
+#'   `output_id`, `where`, `item`, `assumption`, `question`), `stray` (answer
+#'   files named after no request) and `requests` (the requests' folder).
+#'   The paths are relative to `study_dir`.  Its print is a summary: each
 #'   request's status, its reports and the next step.
 #' @seealso [tfl_ai_write_requests()]
 #' @export
@@ -236,9 +245,9 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
   }
   ctxs <- readRDS(cf)
   rows <- list()
-  row <- function(req, ids, status, n = 0L, first = NA_character_) {
+  row <- function(req, ids, status, n = 0L, first = NA_character_, all = first) {
     data.frame(request = req, output_id = ids, status = status, problems = n,
-               first = first, stringsAsFactors = FALSE)
+               first = first, problems_text = all, stringsAsFactors = FALSE)
   }
   rel <- function(...) gsub("\\\\", "/", file.path(...))
   nxt <- character()
@@ -308,7 +317,10 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
                                     else "no report")
                else if (!is.null(wrote)) wrote
                else if (nrow(p)) paste0(p$where[1L], ": ", p$problem[1L]) else NA_character_
-      row(nm, id, st, nrow(p) + missing, first)
+      all <- c(if (missing || !is.null(wrote)) first,
+               if (nrow(p)) paste0(p$where, ": ", p$problem))
+      row(nm, id, st, nrow(p) + missing, first,
+          if (length(all)) paste(all, collapse = "\n") else NA_character_)
     })
     rows[[nm]] <- do.call(rbind, per)
     if (any(names(a$outputs) %in% ids) && !all(ids %in% names(a$outputs)) && !nrow(err) &&
@@ -330,11 +342,19 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
   # answers that match no request (a name typed differently)
   got <- list.files(file.path(study_dir, answers), "[.](md|txt)$", ignore.case = TRUE)
   stray <- got[!sub("([.]md)?([.]txt)?$", "", got, ignore.case = TRUE) %in% names(ctxs)]
-  class(out) <- c("tfl_ai_collected", class(out))
-  attr(out, "next") <- nxt
-  attr(out, "stray") <- rel(answers, stray)
-  attr(out, "requests") <- requests
-  out
+  # each report's file (when written) and its request's repair prompt (when one waits)
+  yml <- rel("spec", "outputs", paste0(out$output_id, ".yml"))
+  out$file <- ifelse(out$status %in% c("ok", "warning") & file.exists(file.path(study_dir, yml)),
+                     yml, NA_character_)
+  rp <- rel(repairs, paste0(out$request, ".md"))
+  out$repair <- ifelse(file.exists(file.path(study_dir, rp)), rp, NA_character_)
+  asm <- .ai_folder_assumptions(study_dir)
+  names(asm)[names(asm) == "sheet"] <- "where"
+  asm <- asm[is.na(asm$output_id) | asm$output_id %in% out$output_id, , drop = FALSE]
+  rownames(asm) <- NULL
+  structure(list(reports = out, next_steps = nxt[unique(out$request)], assumptions = asm,
+                 stray = rel(answers, stray), requests = requests),
+            class = "tfl_ai_collected")
 }
 
 # An answer's reports under the ids its request asked for: a report named
@@ -402,8 +422,92 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
   if (length(f)) f[1L] else NA_character_
 }
 
+#' A study's requests, read again
+#'
+#' The requests [tfl_ai_prepare()] / [tfl_ai_write_requests()] wrote to
+#' `ai/requests`, as they returned them -- for a screen opened again,
+#' without preparing them anew.
+#'
+#' @param study_dir The study folder.
+#' @param requests The requests' folder, under `study_dir`.
+#' @return A data frame, one row a request: `request`, `family`, `outputs`
+#'   (the report ids, comma-separated), `n`, `chars`, `file` (relative to
+#'   `study_dir`); no row when none were written.
+#' @seealso [tfl_ai_collect_answers()] for their answers.
+#' @export
+tfl_ai_requests <- function(study_dir, requests = file.path("ai", "requests")) {
+  cf <- file.path(study_dir, requests, "_contexts.rds")
+  rel <- function(...) gsub("\\\\", "/", file.path(...))
+  if (!file.exists(cf)) {
+    return(data.frame(request = character(), family = character(), outputs = character(),
+                      n = integer(), chars = integer(), file = character(),
+                      stringsAsFactors = FALSE))
+  }
+  ctxs <- readRDS(cf)
+  nm <- names(ctxs)
+  file <- rel(requests, paste0(nm, ".md"))
+  chars <- vapply(file.path(study_dir, file), function(f) {
+    if (!file.exists(f)) return(NA_integer_)
+    nchar(paste(readLines(f, warn = FALSE, encoding = "UTF-8"), collapse = "\n"))
+  }, 0L, USE.NAMES = FALSE)
+  out <- data.frame(
+    request = nm,
+    family = vapply(ctxs, function(x) x$family %||% NA_character_, "", USE.NAMES = FALSE),
+    outputs = vapply(ctxs, function(x) paste(x$ids, collapse = ", "), "", USE.NAMES = FALSE),
+    n = vapply(ctxs, function(x) length(x$ids), 0L, USE.NAMES = FALSE),
+    chars = chars, file = file, stringsAsFactors = FALSE)
+  rownames(out) <- NULL
+  out
+}
+
+#' Save a chat's answer to a request where tfl_ai_collect_answers() reads it
+#'
+#' Writes the answer (the chat's whole reply, as copied) to
+#' `ai/answers/<request>.md` in UTF-8 -- the name and the encoding
+#' [tfl_ai_collect_answers()] reads -- for a program or a screen that takes
+#' the pasted text, rather than the person saving a file.
+#'
+#' @param study_dir The study folder.
+#' @param request The request's name (`ae-1`: a row of the requests'
+#'   `request`, `ai/requests/index.md`).
+#' @param text The answer: one string, or lines.
+#' @param overwrite `TRUE` (default) to write over an answer saved before
+#'   (a repaired answer replaces the first).
+#' @param requests,answers The folders, under `study_dir`.
+#' @return The file's path, invisibly.
+#' @seealso [tfl_ai_collect_answers()], [tfl_ai_prepare()].
+#' @export
+tfl_ai_save_answer <- function(study_dir, request, text, overwrite = TRUE,
+                               requests = file.path("ai", "requests"),
+                               answers = file.path("ai", "answers")) {
+  fn <- "tfl_ai_save_answer()"
+  cf <- file.path(study_dir, requests, "_contexts.rds")
+  if (!file.exists(cf)) {
+    .ard_stop(sprintf("%s: no requests in %s; write them first (tfl_ai_prepare()).", fn,
+                      sQuote(file.path(study_dir, requests), FALSE)))
+  }
+  known <- names(readRDS(cf))
+  if (!is.character(request) || length(request) != 1L || !request %in% known) {
+    .ard_stop(sprintf("%s: `request` is one of the study's requests: %s.", fn,
+                      paste(known, collapse = ", ")))
+  }
+  if (!is.character(text) || !length(text) || anyNA(text) || !any(nzchar(trimws(text)))) {
+    .ard_stop(sprintf("%s: `text` is the chat's answer (text, not empty).", fn))
+  }
+  f <- file.path(study_dir, answers, paste0(request, ".md"))
+  if (file.exists(f) && !isTRUE(overwrite)) {
+    .ard_stop(sprintf("%s: %s already there; pass `overwrite = TRUE`.", fn,
+                      sQuote(file.path(answers, basename(f)), FALSE)))
+  }
+  # (<request>.md is read before a .md.txt / .txt Notepad may have left)
+  .ai_write_text(gsub("\r\n?", "\n", enc2utf8(paste(text, collapse = "\n"))), f)
+  invisible(normalizePath(f, winslash = "/"))
+}
+
 #' @export
 print.tfl_ai_collected <- function(x, ...) {
+  obj <- x
+  x <- obj$reports
   tab <- table(factor(x$status, c("ok", "warning", "error", "no answer")))
   req <- unique(x$request)
   cat(sprintf("%d reports in %d requests: %s\n", nrow(x), length(req),
@@ -414,7 +518,7 @@ print.tfl_ai_collected <- function(x, ...) {
     s <- x$status[x$request == r]
     s[which.max(rank[s])]
   }, "")
-  nxt <- attr(x, "next")
+  nxt <- obj$next_steps
   outs <- vapply(req, function(r) paste(x$output_id[x$request == r], collapse = ", "), "")
   w <- max(nchar(req))
   cat("\n")
@@ -429,16 +533,16 @@ print.tfl_ai_collected <- function(x, ...) {
     print(as.data.frame(todo[c("request", "output_id", "status", "first")]),
           row.names = FALSE, right = FALSE)
   }
-  stray <- attr(x, "stray")
+  stray <- obj$stray
   if (length(stray)) {
     cat(sprintf(paste0("\nNot read (no request of that name): %s -- rename each to ",
                        "<request>.md, the names in %s/index.md.\n"),
-                paste(stray, collapse = ", "), attr(x, "requests") %||% "ai/requests"))
+                paste(stray, collapse = ", "), obj$requests %||% "ai/requests"))
   }
   if (all(x$status %in% c("ok", "warning"))) {
     cat("\nAll answers read: next, build the RTF files (the guide's step 6).\n")
   } else if (any(x$status == "error")) {
     cat("\nAfter each fix, run tfl_ai_collect_answers() again: it reads every answer anew.\n")
   }
-  invisible(x)
+  invisible(obj)
 }

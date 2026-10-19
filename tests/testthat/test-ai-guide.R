@@ -31,10 +31,10 @@ for (g in c("tflspec-ai-table-guide.md", "tflspec-ai-table-guide-ja.md")) {
     out <- capture.output(res <- suppressMessages(withVisible(
       eval(parse(text = sample[[1L]]$code), env)))$value)
     expect_s3_class(res, "tfl_ai_collected")
-    expect_setequal(res$output_id, c("T-14-1-1", "T-14-2-1", "T-14-3-1", "T-14-3-5"))
-    expect_identical(unique(res$status), "ok")
+    expect_setequal(res$reports$output_id, c("T-14-1-1", "T-14-2-1", "T-14-3-1", "T-14-3-5"))
+    expect_identical(unique(res$reports$status), "ok")
     expect_true(all(file.exists(file.path(td, "sample-study", "spec", "outputs",
-                                          paste0(res$output_id, ".yml")))))
+                                          paste0(res$reports$output_id, ".yml")))))
   })
 }
 
@@ -68,7 +68,7 @@ test_that("the guide's steps 3 and 6 run on the bundled example, RTF and all", {
   file.copy(list.files(file.path(ex, "answers"), full.names = TRUE), "ai/answers")
   step6 <- b[vapply(b, function(z) grepl("^## 6", z$heading), NA)]
   run(step6[[1L]]$code)
-  expect_identical(unique(env$res$status), "ok")
+  expect_identical(unique(env$res$reports$status), "ok")
   run(step6[[2L]]$code)
-  expect_true(all(file.exists(file.path("output", paste0(env$res$output_id, ".rtf")))))
+  expect_true(all(file.exists(file.path("output", paste0(env$res$reports$output_id, ".rtf")))))
 })

@@ -63,10 +63,10 @@ test_that("tfl_ai_collect_answers(): checked, written, one row a report", {
             file.path(s$dir, "ai", "answers", paste0(first, ".md")))
   res <- tfl_ai_collect_answers(s$dir)
   expect_s3_class(res, "tfl_ai_collected")
-  expect_setequal(res$output_id, s$shell$toc$output_id)
+  expect_setequal(res$reports$output_id, s$shell$toc$output_id)
   mine <- strsplit(r$outputs[1L], ", ")[[1L]]
-  expect_true(all(res$status[res$output_id %in% mine] %in% c("ok", "warning")))
-  expect_true(all(res$status[!res$output_id %in% mine] == "no answer"))
+  expect_true(all(res$reports$status[res$reports$output_id %in% mine] %in% c("ok", "warning")))
+  expect_true(all(res$reports$status[!res$reports$output_id %in% mine] == "no answer"))
   # only the reports it asked for are written
   expect_setequal(sub("[.]yml$", "", list.files(file.path(s$dir, "spec", "outputs"))), mine)
   expect_output(print(res), "no answer")
@@ -74,7 +74,7 @@ test_that("tfl_ai_collect_answers(): checked, written, one row a report", {
   # an answer that does not read: an error, a repair prompt, no file
   writeLines("no yaml here", file.path(s$dir, "ai", "answers", paste0(r$request[2L], ".md")))
   res2 <- tfl_ai_collect_answers(s$dir)
-  expect_true(all(res2$status[res2$request == r$request[2L]] == "error"))
+  expect_true(all(res2$reports$status[res2$reports$request == r$request[2L]] == "error"))
 })
 
 test_that("tfl_ai_write_requests(examples = ): named by family, only to that family", {
