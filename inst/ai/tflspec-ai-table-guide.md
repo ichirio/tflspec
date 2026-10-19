@@ -46,6 +46,10 @@ r                                   # request, outputs, characters
 This writes `ai/requests/<request>.md` (`demographics-1.md`, `ae-1.md` ...,
 one family each) and `ai/requests/index.md`. A figure of the TOC is a request of
 its own (`figure-1.md` ...): its shell, and a figure design to answer.
+The TOC and the shells in workbooks apart: `tfl_ai_prepare("mystudy",
+"TOC.xlsx", shells = "SHELLS.xlsx", ...)`; another workbook later (the
+listings, a book of PK figures): the same call with `add = TRUE` -- the
+requests and answers there are kept, the new requests added beside them.
 
 The same in one call (an existing `study.yml` is kept, so it can be run
 again; it prints what the workbook read found):

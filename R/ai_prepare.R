@@ -59,6 +59,18 @@
 #'   the result's `hint` and `next_steps` itself.
 #' @param mode `"chat"` (default): requests to paste into a chat, one at a
 #'   time.  `"agent"`: for a coding agent -- see *For a coding agent*.
+#' @param shells Workbooks holding the shells when `toc` holds the TOC
+#'   alone (as [tfl_ai_read_shell()]): each report's shell is looked for in
+#'   them; the requests and the `toc` say each report's `book`.
+#' @param add `TRUE` to add this workbook's reports to the study's requests
+#'   and answers already there (a TOC of listings, a book of PK figures,
+#'   one at a time): the new requests are named after those there
+#'   (`ae-2`), a report asked for already stops the call (`overwrite =
+#'   TRUE` asks for it again), `spec/toc.yml` gets the new reports at its
+#'   end, and the workbook's text is `ai/toc_shell-<workbook>.md`.  With
+#'   `add`, `overwrite` is about the requests alone: the study's
+#'   `study.yml`, `spec/data.yml`, `spec/defaults.yml` and the agent's
+#'   files are kept as they are.
 #' @return A `tfl_ai_prepared`: a list with `requests` (one row a request:
 #'   `request`, `family`, `outputs`, `n`, `chars`, `file` -- as
 #'   [tfl_ai_write_requests()] gives them), `toc` (one row a report of the
@@ -96,7 +108,7 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
                            instructions = c("each", "once"), max_chars = NULL,
                            overwrite = FALSE, dry_run = FALSE, adam_summary = NULL,
                            datasets = NULL, max_levels = 15L, quiet = FALSE,
-                           mode = c("chat", "agent")) {
+                           mode = c("chat", "agent"), shells = NULL, add = FALSE) {
   if (isTRUE(quiet)) {
     cl <- match.call()
     cl$quiet <- FALSE
@@ -120,7 +132,9 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
   files <- character()
   if (!dry) {
     dir.create(dir, recursive = TRUE, showWarnings = FALSE)
-    if (!file.exists(file.path(dir, "study.yml")) || isTRUE(overwrite)) {
+    # (added to a study: its study.yml and spec/ as they are, whatever
+    # `overwrite`, which then says only the requests)
+    if (!file.exists(file.path(dir, "study.yml")) || (isTRUE(overwrite) && !isTRUE(add))) {
       files <- tfl_ai_study_init(dir, adam = adam, study_id = study_id, title = title,
                                  overwrite = overwrite)
     }
@@ -133,7 +147,7 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
     ad <- tfl_ai_adam_summary(adam_dir, datasets = datasets, max_levels = max_levels)
   }
   shell <- do.call(tfl_ai_read_shell, c(list(toc), Filter(Negate(is.null), list(
-    toc_sheet = toc_sheet, sheets = sheets))))
+    toc_sheet = toc_sheet, sheets = sheets, shells = shells))))
   hint <- .ai_shell_hint(shell)
   if (dry) {
     # the tables in batches, each figure a request of its own (as written)
@@ -158,13 +172,18 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
     nxt <- "look at the TOC and the requests; then run again with dry_run = FALSE to write them"
   } else {
     .ai_write_text(format(ad), file.path(ai, "adam_summary.md"))
-    .ai_write_text(format(shell), file.path(ai, "toc_shell.md"))
+    # a workbook added: its text beside the first's
+    shell_md <- if (isTRUE(add)) {
+      paste0("toc_shell-", tools::file_path_sans_ext(basename(toc)), ".md")
+    } else "toc_shell.md"
+    .ai_write_text(format(shell), file.path(ai, shell_md))
     req <- tfl_ai_write_requests(dir, shell, ad, size = size, language = language,
                                  instructions = instructions, max_chars = max_chars,
-                                 workbook = workbook, overwrite = TRUE)
+                                 workbook = workbook,
+                                 overwrite = if (isTRUE(add)) overwrite else TRUE, add = add)
     rq <- file.path(dir, "ai", "requests")
-    files <- c(files, file.path(ai, c("adam_summary.md", "toc_shell.md")),
-               .ai_toc_yml(dir, shell, overwrite = overwrite))
+    files <- c(files, file.path(ai, c("adam_summary.md", shell_md)),
+               .ai_toc_yml(dir, shell, overwrite = overwrite, add = add))
     if (identical(mode, "agent")) {
       # each request says the agent's steps at its head
       for (i in seq_len(nrow(req))) {
@@ -174,7 +193,7 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
         .ai_write_text(txt, f)
         req$chars[i] <- nchar(paste(txt, collapse = "\n"))
       }
-      files <- c(files, .ai_agent_files(dir, overwrite = overwrite))
+      files <- c(files, .ai_agent_files(dir, overwrite = overwrite && !isTRUE(add)))
     }
     files <- c(files, list.files(rq, "[.](md|rds)$", full.names = TRUE))
     nxt <- if (identical(mode, "agent")) {
@@ -197,6 +216,7 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
   tc <- data.frame(output_id = t$output_id, title = t$title, type = t$type,
                    shell = t$shell, shell_found = !is.na(t$shell),
                    request = who[match(t$output_id, unlist(asked))],
+                   book = t$book %||% rep(basename(toc), nrow(t)),
                    stringsAsFactors = FALSE)
   # the files written, relative to the study folder
   root <- paste0(normalizePath(dir, winslash = "/"), "/")

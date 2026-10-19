@@ -57,6 +57,11 @@
 #' @param max_chars The text's length at most; the rest is cut and the text
 #'   says so (pick fewer `outputs`).
 #' @param file A file to write the text to (UTF-8), or `NULL`.
+#' @param shells Workbooks of shells apart from the TOC's (`path`): their
+#'   sheets join the TOC workbook's -- a sheet named as one already there
+#'   becomes `"<sheet> [<workbook>]"` -- and each report's shell is looked
+#'   for in all of them.  The TOC is `path`'s.  The text has a part a
+#'   workbook.
 #' @return A `tfl_ai_shell`: a list with `text` (one string), `toc` (a data
 #'   frame, one row a report the TOC lists: `output_id` as written, `key`,
 #'   `type`, `title`, `text` -- the row's text -- `sheet`, `row`, `shell` --
@@ -78,7 +83,7 @@
 #' @export
 tfl_ai_read_shell <- function(path, outputs = NULL, sheets = NULL,
                               toc_sheet = NULL, max_chars = .ai_shell_max_chars,
-                              file = NULL) {
+                              file = NULL, shells = NULL) {
   fn <- "tfl_ai_read_shell()"
   if (!is.character(path) || length(path) != 1L || !file.exists(path)) {
     .ard_stop(sprintf(paste0("%s: no file %s in %s; give the workbook's path from that ",
@@ -88,13 +93,45 @@ tfl_ai_read_shell <- function(path, outputs = NULL, sheets = NULL,
   wb <- .xl_read(path, fn)
   cells <- wb$cells
   info <- wb$sheets
-  toc_name <- .ai_shell_toc_sheet(info, cells, toc_sheet, fn)
+  info$book <- basename(path)
+  info$book_path <- normalizePath(path, winslash = "/")
+  info$name <- info$sheet
+  # the shells in workbooks of their own: their sheets join the TOC's (a
+  # sheet's name another has already: "<sheet> [<book>]")
+  for (f in shells %||% character()) {
+    if (!is.character(f) || length(f) != 1L || !file.exists(f)) {
+      .ard_stop(sprintf("%s: `shells`: no file %s.", fn, sQuote(f, FALSE)))
+    }
+    w <- .xl_read(f, fn)
+    s <- w$sheets
+    s$name <- s$sheet
+    new <- ifelse(s$sheet %in% info$sheet, sprintf("%s [%s]", s$sheet, basename(f)), s$sheet)
+    w$cells$sheet <- new[match(w$cells$sheet, s$sheet)]
+    s$sheet <- new
+    s$book <- basename(f)
+    s$book_path <- normalizePath(f, winslash = "/")
+    info <- rbind(info, s)
+    cells <- rbind(cells, w$cells)
+  }
+  # the TOC is the TOC workbook's
+  toc_name <- .ai_shell_toc_sheet(info[info$book_path == info$book_path[1L], , drop = FALSE],
+                                  cells, toc_sheet, fn)
   toc <- .ai_shell_toc(cells, toc_name)
   toc$shell <- .ai_shell_find(toc, info, cells, toc_name)
   info$role <- ifelse(info$sheet %in% toc_name, "toc",
                       ifelse(info$sheet %in% toc$shell, "shell", "other"))
+  # the workbook each report's shell is in (its TOC's when none was found)
+  toc$book <- info$book[match(toc$shell, info$sheet)]
+  toc$book[is.na(toc$book)] <- info$book[1L]
   keep <- .ai_shell_keep(cells, info, toc, toc_name, outputs, sheets, fn)
-  text <- .ai_shell_text(basename(path), info, keep$cells, keep$outputs)
+  # one part a workbook
+  books <- unique(info$book_path)
+  text <- paste(unlist(lapply(books, function(b) {
+    bi <- info[info$book_path == b, , drop = FALSE]
+    bc <- keep$cells[keep$cells$sheet %in% bi$sheet, , drop = FALSE]
+    if (!nrow(bc) && !identical(b, books[1L])) return(NULL)
+    .ai_shell_text(bi$book[1L], bi, bc, keep$outputs)
+  })), collapse = "\n\n")
   truncated <- FALSE
   if (is.numeric(max_chars) && length(max_chars) == 1L && nchar(text) > max_chars) {
     cut <- max(which(cumsum(nchar(strsplit(text, "\n", fixed = TRUE)[[1L]]) + 1L) <= max_chars),
@@ -108,11 +145,14 @@ tfl_ai_read_shell <- function(path, outputs = NULL, sheets = NULL,
   }
   out <- structure(list(
     text = text, toc = toc,
-    sheets = info[c("sheet", "role", "rows", "cells", "hidden")],
+    sheets = info[c("sheet", "role", "rows", "cells", "hidden", "book", "name")],
     cells = cells, outputs = keep$outputs, truncated = truncated,
     path = normalizePath(path, winslash = "/"),
+    books = data.frame(book = unique(info$book), path = books,
+                       role = c("toc", rep("shells", length(books) - 1L)),
+                       stringsAsFactors = FALSE),
     # what a request's own read of the workbook passes again
-    args = list(toc_sheet = toc_sheet, sheets = sheets)
+    args = list(toc_sheet = toc_sheet, sheets = sheets, shells = shells)
   ), class = "tfl_ai_shell")
   if (!is.null(file)) .ai_write_text(text, file)
   out
@@ -125,6 +165,10 @@ format.tfl_ai_shell <- function(x, ...) x$text
 print.tfl_ai_shell <- function(x, ...) {
   cat(sprintf("<tfl_ai_shell: %s>\n", basename(x$path)))
   s <- x$sheets
+  if (length(x$books$book) > 1L) {
+    cat(sprintf("%d workbooks: %s (the TOC), %s\n", nrow(x$books), x$books$book[1L],
+                paste(x$books$book[-1L], collapse = ", ")))
+  }
   cat(sprintf("%d sheet(s): %s\n", nrow(s),
               paste(sprintf("%s (%s)", s$sheet, s$role), collapse = ", ")))
   cat(sprintf("%d report(s) in the TOC, %d with a shell found\n",
@@ -784,8 +828,11 @@ tfl_ai_batches <- function(x, size = 8L, types = "table", families = NULL) {
     i <- .ai_id_match(.ai_id_key(id), toc$key)
     if (!length(i)) return(sprintf("- %s: not in the TOC; look for it in the workbook.", id))
     r <- toc[i[1L], , drop = FALSE]
+    several <- !is.null(x$sheets$book) && length(unique(x$sheets$book)) > 1L
     at_toc <- if (!is.na(r$sheet) && !is.na(r$row)) {
-      sprintf(" (its TOC row: sheet '%s', row %d)", r$sheet, as.integer(r$row))
+      sprintf(" (its TOC row: %ssheet '%s', row %d)",
+              if (several) sprintf("workbook `%s`, ", x$sheets$book[1L]) else "",
+              r$sheet, as.integer(r$row))
     } else ""
     if (is.na(r$shell)) {
       return(sprintf("- %s: no shell was found by its number; look for it in the workbook%s.",
@@ -796,6 +843,13 @@ tfl_ai_batches <- function(x, size = 8L, types = "table", families = NULL) {
     where <- if (!nrow(b) || nrow(b) == nrow(d)) "the whole sheet" else
       sprintf("cells %s%d:%s%d", .xl_col_letter(min(b$col)), as.integer(min(b$row)),
               .xl_col_letter(max(b$col)), as.integer(max(b$row)))
+    sh <- x$sheets
+    if (several) {
+      # several workbooks: which, and the sheet's own name in it
+      k <- match(r$shell, sh$sheet)
+      return(sprintf("- %s: workbook `%s`, sheet '%s', %s%s.", id, sh$book[k], sh$name[k],
+                     where, at_toc))
+    }
     sprintf("- %s: sheet '%s', %s%s.", id, r$shell, where, at_toc)
   }, "", USE.NAMES = FALSE)
 }

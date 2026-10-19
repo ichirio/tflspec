@@ -1,5 +1,19 @@
 # tflspec (development version)
 
+* **The AI steps over several workbooks** (#378, 0.0.24.9178).
+  `tfl_ai_read_shell(path, shells = )` reads a TOC in one workbook and
+  its shells in others: each report's shell is looked for in all of them
+  (a sheet named as one already there is `"<sheet> [<workbook>]"`, its own
+  name kept), the text has a part a workbook, and each report's place names
+  its workbook.  `tfl_ai_prepare(toc, shells = , add = TRUE)` (and
+  `tfl_ai_write_requests(add = TRUE)`) adds a workbook's reports to the
+  study's requests and answers already there -- tables and figures, then
+  listings, then a book of PK figures, one at a time: the new requests are
+  named after those there (`ae-2`), a report asked for already stops the
+  call (`overwrite = TRUE` asks for it again), `spec/toc.yml` gets the new
+  reports at its end.  The requests (`tfl_ai_requests()` too) and
+  `tfl_ai_prepare()`'s `toc` have a `book` column.
+
 * **Figures in the AI steps** (#376, 0.0.24.9177).  A figure of the TOC
   is a request of its own (`figure-1` ...: its shell from the workbook,
   its analysis set, the ADaM summary, the figure templates); its answer, a

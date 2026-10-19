@@ -23,7 +23,9 @@ tfl_ai_prepare(
   datasets = NULL,
   max_levels = 15L,
   quiet = FALSE,
-  mode = c("chat", "agent")
+  mode = c("chat", "agent"),
+  shells = NULL,
+  add = FALSE
 )
 }
 \arguments{
@@ -67,6 +69,19 @@ the result's \code{hint} and \code{next_steps} itself.}
 
 \item{mode}{\code{"chat"} (default): requests to paste into a chat, one at a
 time.  \code{"agent"}: for a coding agent -- see \emph{For a coding agent}.}
+
+\item{shells}{Workbooks holding the shells when \code{toc} holds the TOC
+alone (as \code{\link[=tfl_ai_read_shell]{tfl_ai_read_shell()}}): each report's shell is looked for in
+them; the requests and the \code{toc} say each report's \code{book}.}
+
+\item{add}{\code{TRUE} to add this workbook's reports to the study's requests
+and answers already there (a TOC of listings, a book of PK figures,
+one at a time): the new requests are named after those there
+(\code{ae-2}), a report asked for already stops the call (\code{overwrite = TRUE} asks for it again), \code{spec/toc.yml} gets the new reports at its
+end, and the workbook's text is \verb{ai/toc_shell-<workbook>.md}.  With
+\code{add}, \code{overwrite} is about the requests alone: the study's
+\code{study.yml}, \code{spec/data.yml}, \code{spec/defaults.yml} and the agent's
+files are kept as they are.}
 }
 \value{
 A \code{tfl_ai_prepared}: a list with \code{requests} (one row a request:

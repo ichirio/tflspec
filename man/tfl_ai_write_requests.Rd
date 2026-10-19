@@ -17,7 +17,8 @@ tfl_ai_write_requests(
   examples = NULL,
   instructions = c("each", "once"),
   workbook = c("text", "attach", "both", "file"),
-  overwrite = FALSE
+  overwrite = FALSE,
+  add = FALSE
 )
 }
 \arguments{
@@ -63,7 +64,14 @@ text is not read right.  A chat that takes no Excel file needs
 path with each report's place in it, to read that place alone when the
 text looks cut, never another sheet.}
 
-\item{overwrite}{\code{TRUE} to write over the requests already there.
+\item{overwrite}{\code{TRUE} to write over the requests already there; with
+\code{add}, to ask again for a report asked for already (its request is
+written anew).}
+
+\item{add}{\code{TRUE} to keep the requests already there and add these: the
+new ones named after them (\code{ae-2} when \code{ae-1} is there, \code{figure-3}
+...), the index listing all of them, each request's \code{book} the
+workbook its reports' shells are in.
 The folder the answers go to (\code{ai/answers}, beside \code{dir}) is made too.}
 }
 \value{
