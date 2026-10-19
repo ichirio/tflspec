@@ -48,7 +48,7 @@ test_that("answers saved by Notepad: UTF-8 with BOM and CRLF, UTF-16, .md.txt", 
   # Notepad added .txt
   writeLines(answer_text(s, "ae-1"), file.path(s$ans, "ae-1.md.txt"), useBytes = TRUE)
   res <- tfl_ai_collect_answers(s$dir)
-  st <- stats::setNames(res$status, res$output_id)
+  st <- stats::setNames(res$reports$status, res$reports$output_id)
   expect_identical(unname(st[c("T-14-1-1", "T-14-2-1", "T-14-3-1")]), rep("ok", 3L))
   expect_identical(unname(st["T-14-3-5"]), "no answer")
   # the Japanese label is in the YAML, in UTF-8
@@ -72,7 +72,7 @@ test_that("an answer in Shift-JIS (CP932) is an error that says how to save it",
   skip_if(is.null(sj), "no CP932 converter")
   write_raw(sj, file.path(s$ans, "demographics-1.md"))
   res <- tfl_ai_collect_answers(s$dir)
-  r1 <- res[res$request == "demographics-1", ]
+  r1 <- res$reports[res$reports$request == "demographics-1", ]
   expect_identical(r1$status, "error")
   expect_match(r1$first, "is not UTF-8", fixed = TRUE)
   expect_match(r1$first, "Encoding: UTF-8", fixed = TRUE)
@@ -85,7 +85,7 @@ test_that("an answer under a name that is no request is pointed out", {
   s <- enc_study()
   writeLines(answer_text(s, "ae-1"), file.path(s$ans, "AE answer.md"), useBytes = TRUE)
   res <- tfl_ai_collect_answers(s$dir)
-  expect_identical(unique(res$status), "no answer")
+  expect_identical(unique(res$reports$status), "no answer")
   out <- capture.output(print(res))
   expect_true(any(grepl("Not read (no request of that name): ai/answers/AE answer.md", out,
                         fixed = TRUE)))
@@ -97,7 +97,7 @@ test_that("an answer of a request with its errors: the repair and the next step"
   x <- sub("dataset: ADAE", "dataset: ADXX", x, fixed = TRUE)
   writeLines(x, file.path(s$ans, "ae-1.md"), useBytes = TRUE)
   res <- tfl_ai_collect_answers(s$dir)
-  expect_identical(res$status[res$output_id == "T-14-3-1"], "error")
+  expect_identical(res$reports$status[res$reports$output_id == "T-14-3-1"], "error")
   expect_true(file.exists(file.path(s$dir, "ai", "repairs", "ae-1.md")))
   out <- capture.output(print(res))
   expect_true(any(grepl("paste ai/repairs/ae-1.md into the SAME chat", out, fixed = TRUE)))

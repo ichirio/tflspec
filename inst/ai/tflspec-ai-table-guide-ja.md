@@ -122,7 +122,7 @@ st   <- tfl_read_study_spec(".")
 outs <- tfl_read_outputs(".")
 ard  <- tfl_build_ard(st, dir = ".", save = FALSE)
 dir.create("output", showWarnings = FALSE)
-for (id in res$output_id[res$status %in% c("ok", "warning")]) {
+for (id in res$reports$output_id[res$reports$status %in% c("ok", "warning")]) {
   o    <- tfl_resolve_output(outs[[id]], st)
   plan <- tfl_content_run(o, subset(ard, output_id == id))
   rtfreporter::generate_rtfreport(tfl_report(o, content = plan, study = st),

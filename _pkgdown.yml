@@ -398,6 +398,8 @@ reference:
       - tfl_ai_write_requests
       - tfl_ai_prepare
       - tfl_ai_collect_answers
+      - tfl_ai_save_answer
+      - tfl_ai_requests
       - tfl_ai_study_init
       - tfl_ai_tasks
       - tfl_ai_context
