@@ -14,7 +14,7 @@
   `tfl_ai_answer_questions()` read the questions and write the person's
   answers (each into its `- Answer:`, the rest as it is), and
   `tfl_ai_prepare(mode = "agent")` returns `agent_prompt`, the agent's
-  first message.  The example workbook has a Kaplan-Meier figure, with its
+  first message, also written to `ai/agent_prompt.md`.  The example workbook has a Kaplan-Meier figure, with its
   stored answer.
 
 * **`tfl_ai_prepare(mode = "agent")`: the study's requests for a coding

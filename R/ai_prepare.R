@@ -69,7 +69,8 @@
 #'   files written, relative to `dir`), `hint` (what the workbook's reading
 #'   could not find -- no TOC, a report with no shell -- and what to pass),
 #'   `next_steps` (what to do next) and `agent_prompt` (with `mode = "agent"`:
-#'   the first message to the agent, the study's paths in it; else `NA`).
+#'   the first message to the agent, the study's paths in it, also written
+#'   to `ai/agent_prompt.md`; else `NA`).
 #'   Its print is the workbook's summary and the next step.  The files are
 #'   UTF-8.
 #' @seealso The AI table guide: `system.file("ai", "tflspec-ai-table-guide.md",
@@ -211,6 +212,11 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
            "Do not stop to ask; when every request is done, tell me which reports have an ",
            "RTF and that ", at, "/ai/questions.md waits for my answers.")
   } else NA_character_
+  # and as a file, to copy from
+  if (identical(mode, "agent") && !dry) {
+    .ai_write_text(agent_prompt, file.path(ai, "agent_prompt.md"))
+    files <- c(files, "ai/agent_prompt.md")
+  }
   structure(list(requests = req, toc = tc, sheets = shell$sheets, adam = ad,
                  files = unique(files), hint = hint, next_steps = nxt, dry_run = dry,
                  mode = mode, agent_prompt = agent_prompt,

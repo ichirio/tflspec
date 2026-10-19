@@ -95,6 +95,9 @@ test_that("tfl_ai_run(): the figure drawn, its PNG and RTF; agent_prompt", {
   expect_match(r$agent_prompt, "/AGENTS.md", fixed = TRUE)
   expect_match(r$agent_prompt, "/ai/requests/index.md", fixed = TRUE)
   expect_match(r$agent_prompt, "/run.R", fixed = TRUE)
+  expect_true("ai/agent_prompt.md" %in% r$files)
+  expect_identical(paste(readLines(file.path(d, "ai", "agent_prompt.md"), encoding = "UTF-8"),
+                         collapse = "\n"), r$agent_prompt)
   ex <- system.file("ai", "example", "answers", package = "tflspec")
   file.copy(list.files(ex, full.names = TRUE), file.path(d, "ai", "answers"))
   res <- suppressMessages(tfl_ai_run(d))
