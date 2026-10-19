@@ -770,3 +770,13 @@ tfl_ai_batches <- function(x, size = 8L, types = "table", families = NULL) {
   rownames(out) <- NULL
   out
 }
+
+# A report's id for its file, from its number as a TOC writes it: letters,
+# digits, '.', '_' and '-' only ("Table 15.3.1.a" -> "Table-15.3.1.a");
+# an id that is one already stays as it is
+.ai_file_id <- function(x) {
+  x <- trimws(.ai_half_width(as.character(x)))
+  ok <- grepl("^[A-Za-z0-9._-]+$", x)
+  y <- gsub("^-+|-+$", "", gsub("[^A-Za-z0-9._-]+", "-", x))
+  ifelse(ok | is.na(x), x, y)
+}
