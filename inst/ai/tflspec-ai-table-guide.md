@@ -170,7 +170,7 @@ cannot settle into one file for you.
    study folder and may read the ADaM with R -- only to settle a question
    the summary does not (a value as the data write it, a variable, an
    arm's levels), never opening a data file in the editor.
-2. `r <- tfl_ai_prepare("mystudy", "mystudy/TOC_SHELL.xlsx", adam = "C:/data/ABC-123/adam", study_id = "ABC-123", mode = "agent")`.
+2. `tfl_ai_prepare("mystudy", "mystudy/TOC_SHELL.xlsx", adam = "C:/data/ABC-123/adam", study_id = "ABC-123", mode = "agent")`.
    Besides the requests, the folder gets `AGENTS.md` and
    `.github/copilot-instructions.md` (the agent's instructions), `run.R`
    (`tfl_ai_run()`), `ai/questions.md` and `ai/decisions.md`.

@@ -206,7 +206,7 @@
   if ("report" %in% parts) {
     out <- c(out, "### The report file", "",
       "One mapping a report, with these keys (a key marked * is required):", "",
-      "- `id`*: the report's number as the user's message writes it.",
+      "- `id`*: the report's number as the user's message writes it (its file's name keeps letters, digits, '.', '_' and '-').",
       "- `kind`*: `table`.",
       "- `label`: the report's title, without its number and analysis set.",
       "- `population`: the analysis set's `id` (spec/data.yml).",
@@ -323,6 +323,9 @@
       next
     }
     id <- .ai_scalar_text(o$id)
+    # the report's number as the TOC writes it ("Table 14.1.1", as the
+    # prompt asks): its file's id has letters, digits, . _ - only
+    if (!is.null(id) && !grepl("^[A-Za-z0-9._-]+$", id)) o$id <- id <- .ai_file_id(id)
     if (!is.null(id)) at <- paste(at, id)
     for (k in setdiff(names(o), .ai_table_keys)) {
       p <- .ai_problem(p, paste(at, k), sprintf(
@@ -370,6 +373,9 @@
   }
   rows <- lapply(x, function(e) {
     if (!is.list(e)) e <- list(assumption = as.character(e))
+    if (!is.null(e$output_id) && length(e$output_id) == 1L && !is.list(e$output_id)) {
+      e$output_id <- .ai_file_id(e$output_id)
+    }
     data.frame(output_id = cell(e, "output_id"), where = cell(e, "where"),
                item = cell(e, "item"), assumption = cell(e, "assumption"),
                question = cell(e, "question"), stringsAsFactors = FALSE)
@@ -552,6 +558,35 @@
     }
     for (a in .ai_required_args(it$fn)) {
       if (!a %in% names(it$args)) add(w, sprintf("%s needs `%s`", it$fn, a))
+    }
+  }
+  # the column key: a table has one, one arm too (the arm by the analyses,
+  # and as the columns)
+  item_of <- function(fn) {
+    hit <- Filter(function(it) identical(it$fn, fn), o[["content"]])
+    if (length(hit)) hit[[1L]]
+  }
+  tp <- item_of("table_plan")
+  if (!is.null(tp) && is.null(tp$args$cols)) {
+    add("content table_plan", paste(
+      "has no `cols` (the column key); a table has one, one arm too: give the",
+      "analyses `by: [<the arm>]` and table_plan `cols: <the arm>`"))
+  }
+  # normalize_ard(overall = ): the overall row is made by a hierarchical
+  # analysis with over_variables = TRUE; without it, it is not there
+  nz <- item_of("normalize_ard")
+  if (!is.null(nz) && !is.null(nz$args$overall)) {
+    hier <- Filter(function(a) {
+      is.list(a) && isTRUE(.ai_scalar_text(a[["method"]]) %in%
+                             c("hierarchical", "cards::ard_stack_hierarchical"))
+    }, an)
+    over <- vapply(hier, function(a) {
+      grepl("over_variables\\s*=\\s*TRUE", paste(unlist(a[["args"]]), collapse = " "))
+    }, NA)
+    if (length(hier) && !any(over)) {
+      add("content normalize_ard overall", paste(
+        "names an overall row, but no hierarchical analysis makes one: give it",
+        "`args: over_variables = TRUE`"), "warning")
     }
   }
   if (!length(o[["page"]]$titles)) add("page", "has no titles", "warning")
