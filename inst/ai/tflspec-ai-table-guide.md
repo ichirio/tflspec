@@ -54,8 +54,9 @@ r <- tfl_ai_prepare("mystudy", "mystudy/TOC_SHELL.xlsx", study_id = "ABC-123",
                     size = 3, language = "Japanese")
 ```
 
-When the workbook's text is not read right and the chat takes an Excel
-file: `workbook = "both"` (or `"attach"`) -- each request says where its
+When the workbook's text is not read right, **and only when the chat reads
+an attached Excel file** (a chat that takes pasted text only needs the
+default `"text"`): `workbook = "both"` (or `"attach"`) -- each request says where its
 reports' shells are in the workbook (sheet, cells, TOC row), and you attach
 `TOC_SHELL.xlsx` to each chat with the request; with `"both"` the text is
 there too, the attachment right where they differ.
@@ -202,7 +203,7 @@ Keep the `ai/` folder (requests, answers) — share it only within your company.
 | `error`, "no answer block found", in `tfl_ai_collect_answers()` | the answer was not copied whole: copy it again, from the first ```` ``` ```` to the last |
 | `error`, "is not UTF-8" | save the answer again as UTF-8 (Notepad: *Save As*, *Encoding: UTF-8*) |
 | "Not read (no request of that name)" | rename the answer to the request's name (`ai/requests/index.md`): `ae-1.md` |
-| The shells as text look wrong (cells missed or out of order) | attach the workbook: `tfl_ai_prepare(..., workbook = "both")` or `tfl_ai_write_requests(..., workbook = "both")`, and attach `TOC_SHELL.xlsx` to each chat |
+| The shells as text look wrong (cells missed or out of order) | when the chat reads an attached Excel file only, attach the workbook: `tfl_ai_prepare(..., workbook = "both")` or `tfl_ai_write_requests(..., workbook = "both")`, and attach `TOC_SHELL.xlsx` to each chat |
 | `print(shell)` ends with "Next: no TOC found" or "no shell found" | pass what it names: `toc_sheet = "<sheet>"` or `sheets = c(...)` |
 | the same error after 2-3 repairs | correct `spec/outputs/<id>.yml` by hand, then run step 6 |
 | `tfl_build_ard()` stops: `The package "broom" (>= 1.0.8) is required.` | `install.packages("broom")` (another package named so: install it too) |
