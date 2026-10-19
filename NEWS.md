@@ -1,5 +1,16 @@
 # tflspec (development version)
 
+* **AI requests with the TOC / SHELL workbook attached, and
+  `tfl_ai_prepare()`** (#364, 0.0.24.9171).
+  `tfl_ai_write_requests(workbook = )`: `"text"` (default) as before;
+  `"attach"` -- each request says where its reports' shells are in the
+  attached workbook (sheet, cells, TOC row) instead of their text; `"both"`
+  -- the places and the text, the attachment right where they differ.  For
+  a workbook whose text is not read right, when the chat takes an Excel
+  file.  `tfl_ai_prepare(dir, toc, ...)` runs the guide's step 3 in one
+  call (`tfl_ai_study_init()` only when there is no `study.yml`, the ADaM
+  summary, the workbook read, the requests).  The AI table guide (English
+  and Japanese) shows both.
 * **AI answers as a tester's chat writes them** (#365, 0.0.24.9170).  A
   report number as the TOC writes it (`Table 15.3.1.3.13.a`, as the prompt
   asks) is the report file's id with letters, digits, `.`, `_` and `-`

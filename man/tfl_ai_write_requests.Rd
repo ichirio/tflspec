@@ -16,6 +16,7 @@ tfl_ai_write_requests(
   language = NULL,
   examples = NULL,
   instructions = c("each", "once"),
+  workbook = c("text", "attach", "both"),
   overwrite = FALSE
 )
 }
@@ -46,6 +47,15 @@ family's requests; unnamed, to every request.}
 \item{instructions}{\code{"each"} (default): every request holds the
 instructions, one paste a request.  \code{"once"}: the instructions in
 \code{00-instructions.md}, the requests without them.}
+
+\item{workbook}{How the TOC / SHELL workbook reaches the chat:
+\code{"text"} (default) the shells as text in each request
+(\code{\link[=tfl_ai_read_shell]{tfl_ai_read_shell()}}); \code{"attach"} the workbook attached to each chat,
+the request saying where each report's shell is in it (its sheet,
+cells and TOC row) instead of the text; \code{"both"} the places and the
+text, the attachment right where the two differ -- for a workbook whose
+text is not read right.  A chat that takes no Excel file needs
+\code{"text"}.}
 
 \item{overwrite}{\code{TRUE} to write over the requests already there.
 The folder the answers go to (\code{ai/answers}, beside \code{dir}) is made too.}

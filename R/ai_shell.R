@@ -771,6 +771,32 @@ tfl_ai_batches <- function(x, size = 8L, types = "table", families = NULL) {
   out
 }
 
+# Where each report's shell is in the workbook -- its sheet and cells (a
+# sheet holding several reports: the report's rows, as .ai_shell_block()
+# cuts them) and its TOC row -- what a request says when the workbook is
+# attached (tfl_ai_write_requests(workbook = )).  One line a report.
+.ai_shell_where <- function(x, ids) {
+  toc <- x$toc
+  vapply(ids, function(id) {
+    i <- .ai_id_match(.ai_id_key(id), toc$key)
+    if (!length(i)) return(sprintf("- %s: not in the TOC; look for it in the workbook.", id))
+    r <- toc[i[1L], , drop = FALSE]
+    at_toc <- if (!is.na(r$sheet) && !is.na(r$row)) {
+      sprintf(" (its TOC row: sheet '%s', row %d)", r$sheet, as.integer(r$row))
+    } else ""
+    if (is.na(r$shell)) {
+      return(sprintf("- %s: no shell was found by its number; look for it in the workbook%s.",
+                     id, at_toc))
+    }
+    d <- x$cells[x$cells$sheet == r$shell, , drop = FALSE]
+    b <- .ai_shell_block(d, r$key, toc$key)
+    where <- if (!nrow(b) || nrow(b) == nrow(d)) "the whole sheet" else
+      sprintf("cells %s%d:%s%d", .xl_col_letter(min(b$col)), as.integer(min(b$row)),
+              .xl_col_letter(max(b$col)), as.integer(max(b$row)))
+    sprintf("- %s: sheet '%s', %s%s.", id, r$shell, where, at_toc)
+  }, "", USE.NAMES = FALSE)
+}
+
 # A report's id for its file, from its number as a TOC writes it: letters,
 # digits, '.', '_' and '-' only ("Table 15.3.1.a" -> "Table-15.3.1.a");
 # an id that is one already stays as it is
