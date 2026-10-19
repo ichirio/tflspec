@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9172** (the development version,
+**This manual documents tflspec 0.0.24.9173** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -966,7 +966,10 @@ cat(tfl_report_code(sp, content = "plan"), sep = "\n")
   counted 0: cards counts only the values some group has; the outermost
   variable's from its code list, an inner one's where the code list's
   `under` says its parent; written with the row's `variables` and those
-  `under`; put it before a filter or a sort).
+  `under`; put it before a filter or a sort; nothing under an overall row
+  of 0 unless `when_none = TRUE`).  A nested count with no records is not a
+  stop: the program's `ard_hierarchical_or_none()` gives the overall row 0
+  and each group's N, and the table is that row alone.
   Written as `ard <- ard |> step1 |> step2`. Not on a row inside a parent
   (put it on the parent).
 - `denominator`: what percentages are of — `population` (the analysis

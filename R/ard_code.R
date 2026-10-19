@@ -222,7 +222,8 @@
 # the names the setup and tflspec give (a study's code does not assign them)
 .ard_helper_names <- c("set_levels", "tag_ard", "fmt_pvalue", "fmt_ard",
                        "keep_stats", "save_ard", "fmt_default", "tfl_stats",
-                       "complete_hierarchy", "relevel_ard")
+                       "complete_hierarchy", "relevel_ard",
+                       "ard_hierarchical_or_none")
 
 # the packages an ARD program attaches (its setup's library() calls), and
 # those R attaches itself: their functions without `pkg::`
@@ -459,7 +460,8 @@
 # What the row writes itself (its args, its code) names them `data` and
 # `population`: written as the program's names.  A `custom` row: its code.
 .analysis_node <- function(r, keys, subj, has, den = NULL, data = "data",
-                           population = "population", fmt_fun = NULL) {
+                           population = "population", fmt_fun = NULL,
+                           program = TRUE) {
   m <- r$method
   k <- .method_key(m, keys)
   fn <- if (is.na(k)) m else keys$call[k]
@@ -495,7 +497,12 @@
   }
   first <- .data_arg(fn, has)
   if (!is.null(first)) first <- data
-  .cl(fn, c(
+  # a program's nested counts: through the study helper that makes the ARD
+  # of no records too (cards stops on none); the call as ARS shows it: cards'
+  call_as <- if (isTRUE(program) && identical(fn, "cards::ard_stack_hierarchical")) {
+    "ard_hierarchical_or_none"
+  } else fn
+  .cl(call_as, c(
     as.list(first),
     if (!is.null(by)) list(by = by),
     if (!identical(fn, "cards::ard_total_n") && !is.null(vars))
@@ -510,7 +517,8 @@
 # The call as code (the ARS model shows it)
 .analysis_body <- function(r, keys, subj, has, den = NULL, data = "data",
                            population = "population", fmt_fun = NULL) {
-  .lay(.analysis_node(r, keys, subj, has, den, data, population, fmt_fun))
+  .lay(.analysis_node(r, keys, subj, has, den, data, population, fmt_fun,
+                      program = FALSE))
 }
 
 # ---- the data ------------------------------------------------------------
