@@ -1,5 +1,16 @@
 # tflspec (development version)
 
+* **A nested count with no records: the overall row 0, not a stop**
+  (#367, 0.0.24.9173).  `cards::ard_stack_hierarchical()` stops on data
+  with no record ("all missing"), so a table of zero events -- common in a
+  study -- could not be made.  The ARD program now calls the study helper
+  `ard_hierarchical_or_none()` with the same arguments: cards' ARD with
+  records; with none, the overall row (with `over_variables = TRUE`) n = 0
+  and p = 0 with each group's N, and the groups' counts.  The table is
+  "Any ... 0 (0.0)" alone.  `complete_hierarchy()` adds nothing under an
+  overall row of 0 unless `when_none = TRUE`.  ARS still shows cards'
+  function.
+
 * **An ARD that is not cards' in the code lists' order: `relevel_ard()`**
   (#362, 0.0.24.9169).  cardx's survfit keeps its rows in the arms' order
   but makes their factor again, in alphabetical order, so a survfit

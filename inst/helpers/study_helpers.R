@@ -107,6 +107,40 @@ relevel_ard <- function(ard, ...) {
   ard
 }
 
+# cards::ard_stack_hierarchical(), and the ARD of no records: cards stops
+# on data with none ("all missing"), and a table of zero events is common.
+# With none: the overall row (when over_variables = TRUE) n = 0 and p = 0
+# with each group's N, and the by variable's counts (a header's N) -- no
+# SOC / PT rows.  The same arguments as cards::ard_stack_hierarchical().
+ard_hierarchical_or_none <- function(data, ...) {
+  if (nrow(data)) return(cards::ard_stack_hierarchical(data, ...))
+  cl <- match.call()
+  env <- parent.frame()
+  den <- eval(cl$denominator, env)
+  if (!is.data.frame(den) || !nrow(den)) {
+    stop("ard_hierarchical_or_none(): no records, and no `denominator` data to count ",
+         "the groups' N from.", call. = FALSE)
+  }
+  over <- isTRUE(eval(cl$over_variables, env))
+  by <- all.vars(cl$by)
+  # a stand-in record of the denominator for each group gives the ARD its
+  # shape (every group's N)
+  stand_in <- den[!duplicated(den[intersect(by, names(den))]), , drop = FALSE]
+  for (v in all.vars(cl$variables)) stand_in[[v]] <- "(none)"
+  e <- new.env(parent = env)
+  e$.stand_in <- stand_in
+  cl[[1L]] <- quote(cards::ard_stack_hierarchical)
+  cl$data <- quote(.stand_in)
+  cl$over_variables <- TRUE
+  ard <- eval(cl, e)
+  keep <- (over & ard$variable %in% "..ard_hierarchical_overall..") | ard$variable %in% by
+  ard <- ard[keep, , drop = FALSE]
+  ov <- ard$variable %in% "..ard_hierarchical_overall.."
+  ard$stat[ov & ard$stat_name == "n"] <- list(0L)
+  ard$stat[ov & ard$stat_name == "p"] <- list(0)
+  ard
+}
+
 # A hierarchical ARD (cards::ard_stack_hierarchical(), SOC / PT) with its
 # code lists' values no subject has, counted 0 -- cards counts only the
 # values some group has.  The outermost variable: each level of its factor
@@ -115,9 +149,16 @@ relevel_ard <- function(ard, ...) {
 # value one level out it sits under (as they are in the ARD); one without
 # is not added, and a message says which.  The rows keep the factors'
 # levels: the table's order is the code lists'.
+# Under an overall row of 0 (no subject has any event) nothing is added:
+# such a table shows its overall row alone; `when_none = TRUE` adds the
+# code lists' values all the same.
 #   complete_hierarchy(ard, c("AEBODSYS", "AEDECOD"),
 #                      under = list(AEDECOD = c("Blurred vision" = "EYE DISORDERS")))
-complete_hierarchy <- function(ard, variables, under = list()) {
+complete_hierarchy <- function(ard, variables, under = list(), when_none = FALSE) {
+  ov <- ard$variable %in% "..ard_hierarchical_overall.." & ard$stat_name %in% "n"
+  none <- !any(ard$variable %in% variables & ard$context %in% "hierarchical") ||
+    (any(ov) && all(suppressWarnings(as.numeric(unlist(ard$stat[ov]))) %in% 0))
+  if (none && !isTRUE(when_none)) return(ard)
   hier <- ard[ard$variable %in% variables & ard$context %in% "hierarchical", , drop = FALSE]
   if (!nrow(hier)) return(ard)
   gcols <- grep("^group[0-9]+$", names(ard), value = TRUE)
