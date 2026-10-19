@@ -22,7 +22,8 @@ tfl_ai_prepare(
   adam_summary = NULL,
   datasets = NULL,
   max_levels = 15L,
-  quiet = FALSE
+  quiet = FALSE,
+  mode = c("chat", "agent")
 )
 }
 \arguments{
@@ -62,6 +63,9 @@ Fewer datasets, shorter requests.}
 
 \item{quiet}{\code{TRUE} to say nothing (the steps' messages): a screen shows
 the result's \code{hint} and \code{next_steps} itself.}
+
+\item{mode}{\code{"chat"} (default): requests to paste into a chat, one at a
+time.  \code{"agent"}: for a coding agent -- see \emph{For a coding agent}.}
 }
 \value{
 A \code{tfl_ai_prepared}: a list with \code{requests} (one row a request:
@@ -82,10 +86,29 @@ The steps before the first request, one after the other:
 \code{\link[=tfl_ai_study_init]{tfl_ai_study_init()}} (only when the study has no \code{study.yml} yet -- one
 that is there is kept, so the call can be run again),
 \code{\link[=tfl_ai_adam_summary]{tfl_ai_adam_summary()}} (to \code{ai/adam_summary.md}),
-\code{\link[=tfl_ai_read_shell]{tfl_ai_read_shell()}} (to \code{ai/toc_shell.md}; its summary is printed,
-with what to pass when no TOC or a report's shell was found) and
-\code{\link[=tfl_ai_write_requests]{tfl_ai_write_requests()}}.  Nothing is sent anywhere.
+\code{\link[=tfl_ai_read_shell]{tfl_ai_read_shell()}} (to \code{ai/toc_shell.md}; what it could not find is
+the result's \code{hint}), \code{spec/toc.yml} (the TOC's reports in order, with
+their section and analysis set, as tflplanner reads it; when the study
+has none) and \code{\link[=tfl_ai_write_requests]{tfl_ai_write_requests()}}.  Nothing is sent anywhere.
 }
+\section{For a coding agent}{
+ \code{mode = "agent"}:
+The requests for an agent (GitHub Copilot's agent in VS Code, and the
+like) that works through all of them without stopping.  Besides the
+requests (each starting with the agent's steps), the study folder gets
+\code{AGENTS.md} and \code{.github/copilot-instructions.md} (the same
+instructions: answer each request into \verb{ai/answers/}, run \code{run.R}, read
+\code{ai/status.md}, repair; a question it cannot settle taken as an
+assumption with its \code{question}, never a stop; the ADaM never opened),
+\code{run.R} (\code{\link[=tfl_ai_run]{tfl_ai_run()}}: collect, ARD, RTF, \code{ai/status.md}, the
+questions gathered into \code{ai/questions.md}), \code{ai/questions.md} (for the
+person's answers) and \code{ai/decisions.md} (what the reports follow; the
+agent moves an answered question there, then redoes the reports it
+touches -- the second round).  \code{questions.md} and \code{decisions.md} are never
+written over.  Keep the ADaM folder outside the folder opened in VS Code:
+the result's \code{hint} says so when it is inside the study folder.
+}
+
 \examples{
 ex <- system.file("ai", "example", package = "tflspec")
 d <- file.path(tempdir(), "prepare-study")

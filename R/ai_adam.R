@@ -179,7 +179,9 @@ print.tfl_ai_adam <- function(x, ...) {
 #' Start a study folder for drafted report files
 #'
 #' Writes what every drafted report file stands on, so that the AI writes
-#' only the reports: `study.yml` (the study's id and settings),
+#' only the reports: `study.yml` (the study's id and settings: the RTF
+#' files to `output/tfl`, the programs to `programs/tfl`, as tflplanner
+#' keeps them, so the folder opens there as a study),
 #' `spec/data.yml` (each ADaM file as a dataset, and an analysis set for
 #' each population flag of ADSL -- `SAFFL`, `FASFL`, `ITTFL`, `PPROTFL` ...
 #' -- as `<flag> == "Y"`) and `spec/defaults.yml` (the page every report
@@ -223,8 +225,8 @@ tfl_ai_study_init <- function(dir, adam = "adam", study_id = "STUDY-01", title =
   rel <- gsub("\\\\", "/", file.path(adam, files))
   pops <- .ai_adam_populations(file.path(adam_dir, files[nm == "ADSL"]), fn)
   study <- list(study_id = study_id, title = title %||% study_id,
-                settings = list(rounding = "sas", output_path = "output",
-                                file = "{output_id}.rtf"),
+                settings = list(rounding = "sas", output_path = "output/tfl",
+                                program_dir = "programs/tfl", file = "{output_id}.rtf"),
                 keys = list(id = "USUBJID"))
   data <- list(
     datasets = lapply(seq_along(nm), function(i) list(dataset = nm[i], level = "ADaM",

@@ -89,7 +89,7 @@ test_that("tfl_ai_prepare(): a list for a screen; dry_run writes nothing; the AD
   d <- prep_study(withr::local_tempdir())
   dry <- suppressMessages(tfl_ai_prepare(d, book(), study_id = "XYZ-ONC-01", dry_run = TRUE))
   expect_s3_class(dry, "tfl_ai_prepared")
-  expect_named(dry, c("requests", "toc", "sheets", "adam", "files", "hint", "next_steps", "dry_run",
+  expect_named(dry, c("requests", "toc", "sheets", "adam", "files", "hint", "next_steps", "dry_run", "mode",
                       "workbook"))
   expect_false(file.exists(file.path(d, "study.yml")))
   expect_false(dir.exists(file.path(d, "ai")))

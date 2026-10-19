@@ -7,9 +7,26 @@
 #' [tfl_ai_study_init()] (only when the study has no `study.yml` yet -- one
 #' that is there is kept, so the call can be run again),
 #' [tfl_ai_adam_summary()] (to `ai/adam_summary.md`),
-#' [tfl_ai_read_shell()] (to `ai/toc_shell.md`; its summary is printed,
-#' with what to pass when no TOC or a report's shell was found) and
-#' [tfl_ai_write_requests()].  Nothing is sent anywhere.
+#' [tfl_ai_read_shell()] (to `ai/toc_shell.md`; what it could not find is
+#' the result's `hint`), `spec/toc.yml` (the TOC's reports in order, with
+#' their section and analysis set, as tflplanner reads it; when the study
+#' has none) and [tfl_ai_write_requests()].  Nothing is sent anywhere.
+#'
+#' @section For a coding agent: `mode = "agent"`:
+#' The requests for an agent (GitHub Copilot's agent in VS Code, and the
+#' like) that works through all of them without stopping.  Besides the
+#' requests (each starting with the agent's steps), the study folder gets
+#' `AGENTS.md` and `.github/copilot-instructions.md` (the same
+#' instructions: answer each request into `ai/answers/`, run `run.R`, read
+#' `ai/status.md`, repair; a question it cannot settle taken as an
+#' assumption with its `question`, never a stop; the ADaM never opened),
+#' `run.R` ([tfl_ai_run()]: collect, ARD, RTF, `ai/status.md`, the
+#' questions gathered into `ai/questions.md`), `ai/questions.md` (for the
+#' person's answers) and `ai/decisions.md` (what the reports follow; the
+#' agent moves an answered question there, then redoes the reports it
+#' touches -- the second round).  `questions.md` and `decisions.md` are never
+#' written over.  Keep the ADaM folder outside the folder opened in VS Code:
+#' the result's `hint` says so when it is inside the study folder.
 #'
 #' @param dir The study folder.
 #' @param toc The TOC / SHELL workbook (`.xlsx` or `.xlsm`).
@@ -37,6 +54,8 @@
 #'   Fewer datasets, shorter requests.
 #' @param quiet `TRUE` to say nothing (the steps' messages): a screen shows
 #'   the result's `hint` and `next_steps` itself.
+#' @param mode `"chat"` (default): requests to paste into a chat, one at a
+#'   time.  `"agent"`: for a coding agent -- see *For a coding agent*.
 #' @return A `tfl_ai_prepared`: a list with `requests` (one row a request:
 #'   `request`, `family`, `outputs`, `n`, `chars`, `file` -- as
 #'   [tfl_ai_write_requests()] gives them), `toc` (one row a report of the
@@ -71,7 +90,8 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
                            workbook = c("text", "attach", "both"),
                            instructions = c("each", "once"), max_chars = NULL,
                            overwrite = FALSE, dry_run = FALSE, adam_summary = NULL,
-                           datasets = NULL, max_levels = 15L, quiet = FALSE) {
+                           datasets = NULL, max_levels = 15L, quiet = FALSE,
+                           mode = c("chat", "agent")) {
   if (isTRUE(quiet)) {
     cl <- match.call()
     cl$quiet <- FALSE
@@ -87,6 +107,7 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
     .ard_stop(sprintf("%s: `adam_summary` is a tfl_ai_adam_summary() result (a call's `$adam`).",
                       fn))
   }
+  mode <- match.arg(mode)
   dry <- isTRUE(dry_run)
   ai <- file.path(dir, "ai")
   files <- character()
@@ -127,10 +148,40 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
                                  workbook = workbook, overwrite = TRUE)
     rq <- file.path(dir, "ai", "requests")
     files <- c(files, file.path(ai, c("adam_summary.md", "toc_shell.md")),
-               list.files(rq, "[.](md|rds)$", full.names = TRUE))
-    nxt <- c(sprintf(paste0("paste %s into a new chat; save the whole answer as ",
-                                  "ai/answers/%s.md (tfl_ai_save_answer()), then ",
-                                  "tfl_ai_collect_answers()"), req$file[1L], req$request[1L]))
+               .ai_toc_yml(dir, shell, overwrite = overwrite))
+    if (identical(mode, "agent")) {
+      # each request says the agent's steps at its head
+      for (i in seq_len(nrow(req))) {
+        f <- file.path(dir, req$file[i])
+        txt <- c(.ai_agent_request_head(req$request[i]),
+                 readLines(f, warn = FALSE, encoding = "UTF-8"))
+        .ai_write_text(txt, f)
+        req$chars[i] <- nchar(paste(txt, collapse = "\n"))
+      }
+      files <- c(files, .ai_agent_files(dir, overwrite = overwrite))
+    }
+    files <- c(files, list.files(rq, "[.](md|rds)$", full.names = TRUE))
+    nxt <- if (identical(mode, "agent")) {
+      c(sprintf(paste0("open %s in VS Code (that folder: the agent reads its AGENTS.md); keep ",
+                       "the ADaM folder outside the folder you open"),
+                normalizePath(dir, winslash = "/")),
+        paste0("in the agent's chat: \"Follow AGENTS.md: do every request of ",
+               "ai/requests/index.md.\" (a folder above it open: \"Follow <the study ",
+               "folder>/AGENTS.md ...\")"),
+        "then answer ai/questions.md and tell the agent \"the questions are answered\"")
+    } else {
+      sprintf(paste0("paste %s into a new chat; save the whole answer as ",
+                     "ai/answers/%s.md (tfl_ai_save_answer()), then ",
+                     "tfl_ai_collect_answers()"), req$file[1L], req$request[1L])
+    }
+  }
+  # the ADaM inside the study folder: an agent given the folder sees it
+  root_dir <- normalizePath(dir, winslash = "/", mustWork = FALSE)
+  adam_abs <- normalizePath(adam_dir, winslash = "/", mustWork = FALSE)
+  if (identical(mode, "agent") && startsWith(paste0(adam_abs, "/"), paste0(root_dir, "/"))) {
+    hint <- c(hint, sprintf(paste0("the ADaM (%s) is inside the study folder: move it out, ",
+                                   "so the folder you open in VS Code (or attach) holds no ",
+                                   "subject's data"), adam))
   }
   # each report of the TOC, its shell and the request asking for it
   t <- shell$toc
@@ -147,6 +198,7 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
   files[inside] <- substring(files[inside], nchar(root) + 1L)
   structure(list(requests = req, toc = tc, sheets = shell$sheets, adam = ad,
                  files = unique(files), hint = hint, next_steps = nxt, dry_run = dry,
+                 mode = mode,
                  workbook = basename(toc)),
             class = "tfl_ai_prepared")
 }

@@ -121,27 +121,21 @@ each report. An answer with errors writes no file; its repair prompt is
 answer over `ai/answers/<request>.md`, and run `tfl_ai_collect_answers(".")`
 again (2-3 rounds are usual).
 
+Then the RTF of every report written:
+
 ```r
-st   <- tfl_read_study_spec(".")
-outs <- tfl_read_outputs(".")
-ard  <- tfl_build_ard(st, dir = ".", save = FALSE)
-dir.create("output", showWarnings = FALSE)
-for (id in res$reports$output_id[res$reports$status %in% c("ok", "warning")]) {
-  o    <- tfl_resolve_output(outs[[id]], st)
-  plan <- tfl_content_run(o, subset(ard, output_id == id))
-  rtfreporter::generate_rtfreport(tfl_report(o, content = plan, study = st),
-                                  file.path("output", paste0(id, ".rtf")), overwrite = TRUE)
-}
+tfl_ai_run(".")   # collect again, then each report's ARD and RTF: output/tfl/<id>.rtf
 ```
 
-The notes printed on the way (`widen_ard(): 31 ARD rows were not used.` and
-the list under it) are information, not errors: the ARD's statistics the
-table does not show.
+It writes `ai/status.md` (each report: its status, its RTF or why none, the
+next step) and gathers the answers' questions into `ai/questions.md`. One
+report's failure does not stop the others.
 
 | Function | Does |
 |---|---|
 | `tfl_ai_write_requests()` | one file a request (`size`, `max_chars`, `instructions`) |
 | `tfl_ai_collect_answers()` | reads `ai/answers/`, checks each against its request, writes the report files |
+| `tfl_ai_run()` | collects, then each report's ARD and RTF; `ai/status.md`, `ai/questions.md` |
 | `tfl_build_ard()` | the ARD; one report at a time to find an error: `output_id = "T-14-1-1"` |
 | `tfl_content_run()`, `tfl_report()` | the table and its page → RTF |
 
@@ -161,9 +155,32 @@ show the code.
 3. **Raise `size`** (5 to 8) while the answers stay right.
 4. **How many requests**: the reports ÷ `size`, rounded up within each
    family — 200 tables at `size = 5` is about 40-45 requests, at `size = 8`
-   about 25-30. `nrow(r)` says it.
+   about 25-30. `nrow(r$requests)` says it.
 5. `tfl_ai_collect_answers(".")` any time: it reads every answer there and
    lists what is left (`no answer`, `error`).
+
+## With a coding agent (GitHub Copilot in VS Code)
+
+An agent works through every request without stopping, and gathers what it
+cannot settle into one file for you.
+
+1. Keep the ADaM folder **outside** the folder you will open in VS Code
+   (`adam = "C:/data/ABC-123/adam"`): the agent must not see subject data.
+2. `r <- tfl_ai_prepare("mystudy", "mystudy/TOC_SHELL.xlsx", adam = "C:/data/ABC-123/adam", study_id = "ABC-123", mode = "agent")`.
+   Besides the requests, the folder gets `AGENTS.md` and
+   `.github/copilot-instructions.md` (the agent's instructions), `run.R`
+   (`tfl_ai_run()`), `ai/questions.md` and `ai/decisions.md`.
+3. Open `mystudy` in VS Code, and in the agent's chat: *"Follow AGENTS.md:
+   do every request of ai/requests/index.md."* (A folder above it open:
+   *"Follow mystudy/AGENTS.md ..."*.) For each request it saves an answer,
+   runs `run.R`, reads `ai/status.md` and repairs, then goes on.
+4. When it is done, answer `ai/questions.md` (one question asked by several
+   reports is there once, with the reports), and tell the agent *"the
+   questions are answered"*: it moves each answer to `ai/decisions.md` and
+   redoes the reports it touches.
+
+The RTF files are in `output/tfl/`; the folder opens in tflplanner as a
+study (its `spec/toc.yml` lists the reports).
 
 ## Try it on the sample (10 minutes)
 
