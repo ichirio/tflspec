@@ -1,5 +1,29 @@
 # tflspec (development version)
 
+* **`tfl_ai_prepare(mode = "agent")`: the study's requests for a coding
+  agent** (#374, 0.0.24.9176), GitHub Copilot's agent in VS Code and the
+  like.  The agent works through every request without stopping: it saves
+  an answer, runs `run.R`, reads `ai/status.md` and repairs.  What it
+  cannot settle it takes a guess on and asks as an assumption's
+  `question`.  The new `tfl_ai_run()` (what `run.R` calls) collects the
+  answers, builds each report's ARD and RTF -- one report's failure not
+  stopping the others -- and writes `ai/status.md`.  It also gathers the
+  questions into `ai/questions.md`: one question asked by several reports
+  once, the reports listed, an answer there kept.  The person answers it;
+  the agent moves the answers to `ai/decisions.md` and redoes the reports
+  they touch.  The instructions (`AGENTS.md`, `.github/copilot-instructions.md`)
+  tell the agent to work from the ADaM summary and read the ADaM with R
+  only to settle a question the summary does not (with the company's
+  approved AI; a chat is sent the summary only).  Each request gives the shells'
+  text and where each report's shell is in the TOC / SHELL workbook file
+  (`tfl_ai_write_requests(workbook = "file")`: the file, the sheet, the
+  cells, the TOC row); the agent reads that place alone with R when the
+  text looks cut, never another sheet on a guess.  For tflplanner: a new study's
+  RTF files go to `output/tfl`, its programs to `programs/tfl`, and
+  `tfl_ai_prepare()` writes `spec/toc.yml` (the TOC's reports in order,
+  with their section and analysis set) when the study has none.  The
+  guide's step 6 is now `tfl_ai_run(".")`.
+
 * **The AI steps return what a screen needs** (#371, 0.0.24.9175), for
   tflplanner's AI page.  `tfl_ai_prepare()` returns a `tfl_ai_prepared`
   list: `requests`, `toc` (each report of the TOC, its shell found or not,

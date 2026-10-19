@@ -28,7 +28,9 @@ The paths written, invisibly.
 }
 \description{
 Writes what every drafted report file stands on, so that the AI writes
-only the reports: \code{study.yml} (the study's id and settings),
+only the reports: \code{study.yml} (the study's id and settings: the RTF
+files to \code{output/tfl}, the programs to \code{programs/tfl}, as tflplanner
+keeps them, so the folder opens there as a study),
 \code{spec/data.yml} (each ADaM file as a dataset, and an analysis set for
 each population flag of ADSL -- \code{SAFFL}, \code{FASFL}, \code{ITTFL}, \code{PPROTFL} ...
 -- as \verb{<flag> == "Y"}) and \code{spec/defaults.yml} (the page every report

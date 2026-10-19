@@ -117,26 +117,20 @@ res                                  # 依頼ごとに状態・帳票・次に�
 書きます。それを**同じチャット**に貼り、新しい回答で `ai/answers/<依頼名>.md` を
 上書きして、もう一度 `tfl_ai_collect_answers(".")`（2〜3 往復がふつう）。
 
+続けて、書けた帳票すべての RTF を作ります:
+
 ```r
-st   <- tfl_read_study_spec(".")
-outs <- tfl_read_outputs(".")
-ard  <- tfl_build_ard(st, dir = ".", save = FALSE)
-dir.create("output", showWarnings = FALSE)
-for (id in res$reports$output_id[res$reports$status %in% c("ok", "warning")]) {
-  o    <- tfl_resolve_output(outs[[id]], st)
-  plan <- tfl_content_run(o, subset(ard, output_id == id))
-  rtfreporter::generate_rtfreport(tfl_report(o, content = plan, study = st),
-                                  file.path("output", paste0(id, ".rtf")), overwrite = TRUE)
-}
+tfl_ai_run(".")   # もう一度読み、帳票ごとに ARD と RTF: output/tfl/<id>.rtf
 ```
 
-途中に出る `widen_ard(): 31 ARD rows were not used.` とその下の一覧は、エラーでは
-なくお知らせです（ARD にあって表に出さない統計量）。
+`ai/status.md`（帳票ごとの状態、RTF かできなかった理由、次にすること）を書き、
+回答の疑問を `ai/questions.md` にまとめます。1 本が失敗しても、ほかは作ります。
 
 | 関数 | すること |
 |---|---|
 | `tfl_ai_write_requests()` | 1 依頼 1 ファイル（`size`、`max_chars`、`instructions`） |
 | `tfl_ai_collect_answers()` | `ai/answers/` を読み、依頼ごとに確かめ、帳票ファイルを書く |
+| `tfl_ai_run()` | 読んだ後、帳票ごとに ARD と RTF。`ai/status.md`・`ai/questions.md` |
 | `tfl_build_ard()` | ARD。エラーの帳票を探すときは 1 本ずつ: `output_id = "T-14-1-1"` |
 | `tfl_content_run()`, `tfl_report()` | 表とページ → RTF |
 
@@ -152,9 +146,33 @@ for (id in res$reports$output_id[res$reports$status %in% c("ok", "warning")]) {
    `tfl_ai_write_requests(..., examples = c(demographics = "spec/outputs/T-14-1-1.yml", ae = "spec/outputs/T-14-3-1.yml"), overwrite = TRUE)`。
 3. 回答が正しいうちは **`size` を上げる**（5〜8）。
 4. **依頼の回数の目安**: 種類ごとに 帳票数 ÷ `size` の切り上げ。200 帳票なら
-   `size = 5` で 40〜45 回、`size = 8` で 25〜30 回。`nrow(r)` で分かる。
+   `size = 5` で 40〜45 回、`size = 8` で 25〜30 回。`nrow(r$requests)` で分かる。
 5. `tfl_ai_collect_answers(".")` はいつ実行してもよい。そこにある回答を全部読み、
    残り（`no answer`、`error`）を一覧にする。
+
+## コーディングエージェントで（VS Code の GitHub Copilot）
+
+エージェントが依頼を止まらずに全部こなし、自分で決められないことは 1 つの
+ファイルにまとめます。
+
+1. 会社が試験データに使うことを認めた AI を使う。チャット（`mode = "chat"`）に
+   送るのは ADaM の要約だけ。エージェントは試験フォルダで作業し、要約で決まらない
+   こと（データの値の書き方、変数の有無、群の水準）を確かめるときだけ、R で ADaM を
+   読む（データのファイルをエディタで開かない）。
+2. `tfl_ai_prepare("mystudy", "mystudy/TOC_SHELL.xlsx", adam = "C:/data/ABC-123/adam", study_id = "ABC-123", mode = "agent")`。
+   依頼のほかに、`AGENTS.md` と `.github/copilot-instructions.md`（エージェント
+   への指示）、`run.R`（`tfl_ai_run()`）、`ai/questions.md`、`ai/decisions.md` が
+   できます。
+3. VS Code で `mystudy` を開き、エージェントのチャットに「Follow AGENTS.md: do
+   every request of ai/requests/index.md.」（上のフォルダを開いたときは
+   「Follow mystudy/AGENTS.md ...」）。依頼ごとに回答を保存し、`run.R` を実行し、
+   `ai/status.md` を読んで直し、次へ進みます。
+4. 終わったら `ai/questions.md` に答える（複数の帳票の同じ疑問は 1 つにまとまり、
+   関わる帳票が並びます）。エージェントに「the questions are answered」と伝える
+   と、回答を `ai/decisions.md` に移し、関わる帳票を作り直します。
+
+RTF は `output/tfl/` にできます。このフォルダは tflplanner で試験として開けます
+（`spec/toc.yml` に帳票の一覧）。
 
 ## 見本で試す（10 分）
 

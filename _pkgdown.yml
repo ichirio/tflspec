@@ -400,6 +400,7 @@ reference:
       - tfl_ai_collect_answers
       - tfl_ai_save_answer
       - tfl_ai_requests
+      - tfl_ai_run
       - tfl_ai_study_init
       - tfl_ai_tasks
       - tfl_ai_context

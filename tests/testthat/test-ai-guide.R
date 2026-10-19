@@ -70,5 +70,5 @@ test_that("the guide's steps 3 and 6 run on the bundled example, RTF and all", {
   run(step6[[1L]]$code)
   expect_identical(unique(env$res$reports$status), "ok")
   run(step6[[2L]]$code)
-  expect_true(all(file.exists(file.path("output", paste0(env$res$reports$output_id, ".rtf")))))
+  expect_true(all(file.exists(file.path("output", "tfl", paste0(env$res$reports$output_id, ".rtf")))))
 })
