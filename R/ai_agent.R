@@ -82,6 +82,7 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE) {
   res <- tfl_ai_collect_answers(study_dir)
   r <- res$reports
   r$rtf <- NA_character_
+  r$png <- NA_character_
   r$rtf_problem <- NA_character_
   todo <- which(r$status %in% c("ok", "warning") & !is.na(r$file))
   if (length(todo)) {
@@ -98,21 +99,32 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE) {
         id <- r$output_id[i]
         made <- tryCatch({
           o <- tfl_resolve_output(outs[[id]], st)
-          ard <- suppressMessages(tfl_build_ard(st, dir = ".", output_id = id, save = FALSE))
-          if (!is.null(ard$output_id)) ard <- ard[ard$output_id %in% id, , drop = FALSE]
-          if (isTRUE(rtf)) {
-            plan <- suppressMessages(tfl_content_run(o, ard))
-            dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
-            f <- file.path(out_dir, paste0(id, ".rtf"))
-            suppressMessages(rtfreporter::generate_rtfreport(
-              tfl_report(o, content = plan, study = st), f, overwrite = TRUE))
-            gsub("\\\\", "/", f)
-          } else NA_character_
+          dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+          f <- file.path(out_dir, paste0(id, ".rtf"))
+          if (identical(o$kind, "figure")) {
+            # drawn by its program, as tflplanner draws it: the PNG, then the RTF
+            fig <- .ai_fig_draw(st, id, out_dir)
+            if (isTRUE(rtf)) {
+              suppressMessages(rtfreporter::generate_rtfreport(
+                tfl_report(o, content = fig$plot, study = st), f, overwrite = TRUE))
+            }
+            list(rtf = if (isTRUE(rtf)) f, png = fig$png)
+          } else {
+            ard <- suppressMessages(tfl_build_ard(st, dir = ".", output_id = id, save = FALSE))
+            if (!is.null(ard$output_id)) ard <- ard[ard$output_id %in% id, , drop = FALSE]
+            if (isTRUE(rtf)) {
+              plan <- suppressMessages(tfl_content_run(o, ard))
+              suppressMessages(rtfreporter::generate_rtfreport(
+                tfl_report(o, content = plan, study = st), f, overwrite = TRUE))
+            }
+            list(rtf = if (isTRUE(rtf)) f)
+          }
         }, error = function(e) structure(.ai_one_line(conditionMessage(e)), class = "failed"))
         if (inherits(made, "failed")) {
           r$rtf_problem[i] <- unclass(made)
         } else {
-          r$rtf[i] <- made
+          if (!is.null(made$rtf)) r$rtf[i] <- gsub("\\\\", "/", made$rtf)
+          if (!is.null(made$png)) r$png[i] <- gsub("\\\\", "/", made$png)
         }
       }
     }
@@ -259,19 +271,7 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE) {
   f <- file.path(dir, "spec", "toc.yml")
   t <- shell$toc
   if (!nrow(t) || (file.exists(f) && !isTRUE(overwrite))) return(character())
-  dy <- file.path(dir, "spec", "data.yml")
-  pops <- if (file.exists(dy)) tryCatch(yaml::read_yaml(dy)$populations, error = function(e) NULL)
-  pid <- vapply(pops %||% list(), function(p) p$id %||% NA_character_, "")
-  plab <- vapply(pops %||% list(), function(p) p$label %||% NA_character_, "")
-  pop_of <- function(txt) {
-    if (!length(pid) || is.na(txt)) return(NA_character_)
-    low <- tolower(txt)
-    hit <- vapply(seq_along(pid), function(i) {
-      (!is.na(plab[i]) && grepl(tolower(plab[i]), low, fixed = TRUE)) ||
-        (!is.na(pid[i]) && grepl(sprintf("(^|[^a-z0-9])%s([^a-z0-9]|$)", tolower(pid[i])), low))
-    }, NA)
-    if (sum(hit) == 1L) pid[hit] else NA_character_
-  }
+  pop_of <- function(txt) .ai_population_of(dir, txt)$id %||% NA_character_
   outs <- lapply(seq_len(nrow(t)), function(i) {
     num <- sub("^[A-Z]*", "", t$key[i] %||% "")
     parts <- strsplit(num, ".", fixed = TRUE)[[1L]]
@@ -285,4 +285,26 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE) {
   dir.create(dirname(f), recursive = TRUE, showWarnings = FALSE)
   .ai_write_text(yaml::as.yaml(list(outputs = outs), indent.mapping.sequence = TRUE), f)
   f
+}
+
+# The analysis set a TOC row names: the one of spec/data.yml whose label or
+# id the row's text holds, and no other; NULL when none or several.  As
+# tfl_ai_context(population = ): id, label and where.
+.ai_population_of <- function(dir, txt) {
+  dy <- file.path(dir, "spec", "data.yml")
+  if (is.null(txt) || is.na(txt) || !file.exists(dy)) return(NULL)
+  pops <- tryCatch(yaml::read_yaml(dy, handlers = list(r = function(x) x))$populations,
+                   error = function(e) NULL)
+  if (!length(pops)) return(NULL)
+  low <- tolower(txt)
+  hit <- vapply(pops, function(p) {
+    lab <- p$label %||% NA_character_
+    id <- p$id %||% NA_character_
+    (!is.na(lab) && grepl(tolower(lab), low, fixed = TRUE)) ||
+      (!is.na(id) && grepl(sprintf("(^|[^a-z0-9])%s([^a-z0-9]|$)", tolower(id)), low))
+  }, NA)
+  if (sum(hit) != 1L) return(NULL)
+  p <- pops[[which(hit)]]
+  out <- list(id = p$id, label = p$label, where = if (!is.null(p$where)) as.character(p$where))
+  out[!vapply(out, is.null, NA)]
 }

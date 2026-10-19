@@ -184,7 +184,7 @@ tflspec 同梱のファイル（4 表の TOC/SHELL ワークブック、XPT に�
 library(tflspec)
 d <- file.path(tempdir(), "sample-study")
 dir.create(file.path(d, "adam"), recursive = TRUE, showWarnings = FALSE)
-for (x in c("adsl", "adae", "adrs", "adlb")) {
+for (x in c("adsl", "adae", "adrs", "adlb", "adtte")) {
   df <- getExportedValue("tflspec", x)
   for (v in names(df)) if (is.factor(df[[v]])) df[[v]] <- as.character(df[[v]])
   haven::write_xpt(df, file.path(d, "adam", paste0(x, ".xpt")))

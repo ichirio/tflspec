@@ -108,7 +108,7 @@ tfl_ai_tasks <- function() .ai_task_table()
   toc = c("study", "toc_fields", "reports", "datasets", "language"),
   figure = c(
     "study", "output_id", "titles", "population", "datasets", "design",
-    "templates", "language"
+    "templates", "language", "shell"
   ),
   table = c(
     "study", "outputs", "shell", "datasets", "study_dir", "examples",
@@ -239,6 +239,7 @@ tfl_ai_context <- function(task, study = NULL, output_id = NULL,
   out$reports <- .ai_ctx_reports(given$reports, fn)
   out$language <- .ai_ctx_string(given$language, "language", fn)
   if (task == "table") out <- .ai_ctx_table(out, given, fn)
+  if (task == "figure" && !is.null(given$shell)) out$shell <- .ai_ctx_fig_shell(given$shell, out$output_id, fn)
   out <- out[!vapply(out, is.null, NA)]
   structure(out, class = "tfl_ai_context")
 }
@@ -248,6 +249,22 @@ print.tfl_ai_context <- function(x, ...) {
   cat(sprintf("<tfl_ai_context: %s>\n", x$task))
   cat(.ai_context_text(x), sep = "\n")
   invisible(x)
+}
+
+# A figure's shell as text: the workbook read for its report alone (as
+# tfl_ai_read_shell() reads it, never cut), or the text given.
+.ai_ctx_fig_shell <- function(sh, output_id, fn) {
+  if (inherits(sh, "tfl_ai_shell")) {
+    if (!length(sh$outputs)) {
+      sh <- do.call(tfl_ai_read_shell, c(list(sh$path, outputs = output_id, max_chars = Inf),
+                                         Filter(Negate(is.null), sh$args)))
+    }
+    return(sh$text)
+  }
+  if (!is.character(sh)) {
+    .ard_stop(sprintf("%s: `shell` is a tfl_ai_read_shell() result or text.", fn))
+  }
+  paste(sh, collapse = "\n")
 }
 
 # one non-blank string, or NULL

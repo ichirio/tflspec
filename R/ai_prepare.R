@@ -78,7 +78,7 @@
 #' d <- file.path(tempdir(), "prepare-study")
 #' dir.create(file.path(d, "adam"), recursive = TRUE, showWarnings = FALSE)
 #' if (requireNamespace("haven", quietly = TRUE)) {
-#'   for (x in c("adsl", "adae", "adrs", "adlb")) {
+#'   for (x in c("adsl", "adae", "adrs", "adlb", "adtte")) {
 #'     df <- getExportedValue("tflspec", x)
 #'     for (v in names(df)) if (is.factor(df[[v]])) df[[v]] <- as.character(df[[v]])
 #'     haven::write_xpt(df, file.path(d, "adam", paste0(x, ".xpt")))
@@ -134,11 +134,20 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
     toc_sheet = toc_sheet, sheets = sheets))))
   hint <- .ai_shell_hint(shell)
   if (dry) {
+    # the tables in batches, each figure a request of its own (as written)
     b <- if (nrow(shell$toc)) tfl_ai_batches(shell, size = size) else
       data.frame(output_id = character(), family = character(), batch = character())
+    figs <- shell$toc$output_id[shell$toc$type %in% "figure"]
+    if (length(figs)) {
+      b <- b[!b$output_id %in% figs, , drop = FALSE]
+      b <- rbind(b[c("output_id", "family", "batch")],
+                 data.frame(output_id = figs, family = "figure",
+                            batch = paste0("figure-", seq_along(figs)), stringsAsFactors = FALSE))
+    }
     bt <- unique(b$batch)
     req <- data.frame(
-      request = bt, family = b$family[match(bt, b$batch)],
+      request = bt, type = ifelse(startsWith(bt, "figure-"), "figure", "table"),
+      family = b$family[match(bt, b$batch)],
       outputs = vapply(bt, function(x) paste(b$output_id[b$batch == x], collapse = ", "), ""),
       n = vapply(bt, function(x) sum(b$batch == x), 0L),
       chars = rep(NA_integer_, length(bt)), file = rep(NA_character_, length(bt)),

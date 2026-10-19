@@ -3,7 +3,7 @@
 
 prep_study <- function(d) {
   dir.create(file.path(d, "adam"), recursive = TRUE, showWarnings = FALSE)
-  for (x in c("adsl", "adae", "adrs", "adlb")) {
+  for (x in c("adsl", "adae", "adrs", "adlb", "adtte")) {
     df <- getExportedValue("tflspec", x)
     for (v in names(df)) if (is.factor(df[[v]])) df[[v]] <- as.character(df[[v]])
     haven::write_xpt(df, file.path(d, "adam", paste0(x, ".xpt")))
@@ -20,7 +20,7 @@ test_that("tfl_ai_prepare(): the guide's step 3 in one call; a study.yml there i
   skip_if_not_installed("haven")
   d <- prep_study(withr::local_tempdir())
   r <- suppressMessages(tfl_ai_prepare(d, book(), study_id = "XYZ-ONC-01"))
-  expect_identical(nrow(r$requests), 4L)
+  expect_identical(nrow(r$requests), 5L)
   expect_true(all(file.exists(file.path(d, c("study.yml", "spec/data.yml", "ai/adam_summary.md",
                                              "ai/toc_shell.md", "ai/requests/index.md")))))
   # again: the study's settings are kept, the requests written again
@@ -28,7 +28,7 @@ test_that("tfl_ai_prepare(): the guide's step 3 in one call; a study.yml there i
   writeLines(c(readLines(y), "# kept"), y)
   r2 <- suppressMessages(tfl_ai_prepare(d, book(), study_id = "OTHER", size = 1L))
   expect_true("# kept" %in% readLines(y))
-  expect_identical(nrow(r2$requests), 4L)
+  expect_identical(nrow(r2$requests), 5L)
   # and the answers of the example still pass, as in the guide
   ex <- system.file("ai", "example", "answers", package = "tflspec")
   file.copy(list.files(ex, full.names = TRUE), file.path(d, "ai", "answers"), overwrite = TRUE)
@@ -159,7 +159,7 @@ test_that("tfl_ai_prepare(quiet, datasets); tfl_ai_requests(); no ADaM folder in
   ad <- normalizePath(ad, winslash = "/")
   expect_no_message(dry <- tfl_ai_prepare(d, book(), adam = ad, dry_run = TRUE, quiet = TRUE))
   expect_type(dry$hint, "character")
-  expect_setequal(dry$adam$datasets$dataset, c("ADAE", "ADLB", "ADRS", "ADSL"))
+  expect_setequal(dry$adam$datasets$dataset, c("ADAE", "ADLB", "ADRS", "ADSL", "ADTTE"))
   expect_no_message(r <- tfl_ai_prepare(d, book(), adam = ad, adam_summary = dry$adam,
                                         datasets = c("ADSL", "ADAE"), max_levels = 5L,
                                         quiet = TRUE))

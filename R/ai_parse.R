@@ -124,6 +124,16 @@ tfl_ai_parse <- function(text, task) {
     prob <- rbind(prob, fig$problems)
     out$design <- fig$design
     out$note <- .ai_scalar_text(x$note)
+    # assumptions written as mappings (a study's request asks so): rows too,
+    # their questions gathered with the tables' (tfl_ai_run())
+    if (length(x$assumptions) && any(vapply(x$assumptions, is.list, NA))) {
+      a <- .ai_assumption_rows(x$assumptions)
+      a$output_id[is.na(a$output_id)] <- out$output_id %||% NA_character_
+      out$assumption_rows <- a
+      out$assumptions <- trimws(paste0(
+        ifelse(is.na(a$assumption), "", a$assumption),
+        ifelse(is.na(a$question), "", paste0(" -- ", a$question))))
+    }
   }
   out$problems <- rbind(out$problems, prob)
   structure(out, class = "tfl_ai_answer")

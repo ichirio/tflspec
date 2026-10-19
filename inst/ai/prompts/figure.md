@@ -22,3 +22,7 @@ In the attached statistical analysis plan, find what it says about this figure: 
 ## What to do
 
 In the documents below, find what they say about this figure: the analysis set, the parameter, the groups, the time axis and what is estimated; in a shell (mock-up), the axes, their labels and ranges, the legend and any panels below the plot. Then write the answer block as the instructions above describe.
+<!-- shell -->
+## What to do
+
+Read the figure's shell and its TOC row above: the analysis set, the parameter, the groups, the axes, their labels and ranges, the legend and any panels below the plot. Start from the template that fits best, and write the answer block as the instructions above describe. Write the assumptions as mappings: `- {output_id: <id>, where: <key>, item: <what>, assumption: <what you took>, question: <what the reviewer should confirm>}`.

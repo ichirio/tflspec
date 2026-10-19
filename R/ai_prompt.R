@@ -326,8 +326,12 @@ tfl_ai_prompt <- function(task, context = NULL, mode = c("chat", "api"),
     example = if (isTRUE(example)) .ai_example_text(task, format) else ""
   )
   system <- .ai_fill(.ai_prompt_file("system"), fill)
+  # a figure whose shell is in the message (a study's request): what to do
+  # reads it, nothing attached
+  ask <- if (task == "figure" && mode == "chat" && !is.null(context$shell) &&
+               !is.null(parts$shell)) parts$shell else parts[[mode]]
   user <- paste(c(
-    .ai_context_text(context, format), "", parts[[mode]],
+    .ai_context_text(context, format), "", ask,
     if (mode == "api") c("", .ai_documents_text(docs))
   ), collapse = "\n")
   attach <- if (mode == "chat") .ai_attach(task, context) else character()
@@ -461,10 +465,12 @@ print.tfl_ai_text <- function(x, ...) {
       "the statistical analysis plan (SAP)",
       "the study's list of planned outputs, if it is a separate document"
     ),
-    figure = c(
-      "the statistical analysis plan (SAP)",
-      sprintf("the shell (mock-up) of %s, if there is one", context$output_id)
-    ),
+    figure = if (is.null(context$shell)) {
+      c("the statistical analysis plan (SAP)",
+        sprintf("the shell (mock-up) of %s, if there is one", context$output_id))
+    } else {
+      character()
+    },
     table = if (is.null(context$shell)) {
       "the TOC / SHELL workbook (or its text, tfl_ai_read_shell())"
     } else {
@@ -590,6 +596,11 @@ print.tfl_ai_text <- function(x, ...) {
     out <- c(out, "## The datasets", "",
              "Name only these datasets and variables.", "",
              .ai_datasets_text(ctx$datasets))
+  }
+  if (!is.null(ctx$shell)) {
+    out <- c(out, "## The shell", "",
+             "The figure's mock-up (from the TOC / SHELL workbook): draw what it shows.", "",
+             ctx$shell, "")
   }
   if (!is.null(ctx$templates)) {
     tp <- paste(sprintf("`%s`", ctx$templates), collapse = ", ")
