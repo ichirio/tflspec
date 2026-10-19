@@ -972,7 +972,10 @@ cat(tfl_report_code(sp, content = "plan"), sep = "\n")
   counted 0: cards counts only the values some group has; the outermost
   variable's from its code list, an inner one's where the code list's
   `under` says its parent; written with the row's `variables` and those
-  `under`; put it before a filter or a sort).
+  `under`; put it before a filter or a sort; nothing under an overall row
+  of 0 unless `when_none = TRUE`).  A nested count with no records is not a
+  stop: the program's `ard_hierarchical_or_none()` gives the overall row 0
+  and each group's N, and the table is that row alone.
   Written as `ard <- ard |> step1 |> step2`. Not on a row inside a parent
   (put it on the parent).
 - `denominator`: what percentages are of — `population` (the analysis
