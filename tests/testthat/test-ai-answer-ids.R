@@ -63,12 +63,22 @@ test_that("check: a table with no column key is an error; an overall row no anal
   expect_match(r$first[1L], "has no `cols`", fixed = TRUE)
   rep <- paste(readLines(file.path(d, "ai", "repairs", "ae-1.md"), encoding = "UTF-8"), collapse = "\n")
   expect_match(rep, "one arm too", fixed = TRUE)
-  # the overall row without over_variables
+  # the overall row without over_variables: written into the report file
+  # (#366), and an assumption says so
   put(d, "ae-1", sub(", args: !r over_variables = TRUE}", "}", ae, fixed = TRUE))
   res <- suppressMessages(tfl_ai_collect_answers(d))
   r <- res[res$request == "ae-1", , drop = FALSE]
-  expect_identical(unique(r$status), "warning")
-  expect_match(r$first[1L], "over_variables = TRUE", fixed = TRUE)
+  expect_identical(unique(r$status), "ok")
+  f <- readLines(file.path(d, "spec", "outputs", "T-14-3-1.yml"), encoding = "UTF-8")
+  expect_true(any(grepl("over_variables = TRUE", f, fixed = TRUE)))
+  asm <- readLines(file.path(d, "spec", "_assumptions.yml"), encoding = "UTF-8")
+  expect_true(any(grepl("tflspec added over_variables = TRUE", asm, fixed = TRUE)))
+  # a hand-written spec keeps the check's warning (tfl_ai_check() alone)
+  ctx <- readRDS(file.path(d, "ai", "requests", "_contexts.rds"))[["ae-1"]]$context
+  a <- tfl_ai_parse(paste(sub(", args: !r over_variables = TRUE}", "}", ae, fixed = TRUE),
+                          collapse = "\n"), "table")
+  pr <- tfl_ai_check(a, ctx)
+  expect_true(any(pr$severity == "warning" & grepl("over_variables", pr$problem, fixed = TRUE)))
   # as the example has it: ok
   put(d, "ae-1", ae)
   res <- suppressMessages(tfl_ai_collect_answers(d))
