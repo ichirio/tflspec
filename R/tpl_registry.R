@@ -474,6 +474,98 @@ tpl_hierarchical <- function(ard, population, hierarchy, ..., codelists = NULL) 
                                      list(...)), codelists = codelists)
 }
 
+# ---- ae_pt_freq: PTs alone, by decreasing frequency (>= x%) -----------------
+
+.tpl_pt_params <- list(
+  tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
+  tfl_param("term", "AEDECOD", doc = "the term variable (the PT)"),
+  tfl_param("by", "TRT01A", doc = "the column variable"),
+  tfl_param("data", "ADAE", doc = "the dataset of records"),
+  tfl_param("where", "TRTEMFL == \"Y\"", doc = "the records kept (R)"),
+  tfl_param("data_id", NULL, doc = "the analysis data's id; NULL: <data>_<population>"),
+  tfl_param("data_label", "Treatment-emergent AEs of the safety set",
+            doc = "the analysis data's label"),
+  tfl_param("analysis_id", "TEAE_PT", doc = "the analysis's id"),
+  tfl_param("analysis_label", "TEAE by PT", doc = "the analysis's label"),
+  tfl_param("overall", "Any TEAE", doc = "the any-record row's label; NULL: none"),
+  tfl_param("min_pct", NULL, doc = "the PTs kept: this % of subjects or more; NULL: all"),
+  tfl_param("min_pct_in", "any",
+            doc = "where min_pct is met: \"any\" column, \"all\" of them, or the \"total\" column"),
+  tfl_param("sort_by", NULL,
+            doc = "the column (a value of `by`) whose counts order the PTs; NULL: the Total column with min_pct_in = \"total\", else the code list's first value of `by`, else all the columns"),
+  tfl_param("heading", "Preferred Term", doc = "the label column's heading")
+)
+names(.tpl_pt_params) <- vapply(.tpl_pt_params, `[[`, "", "name")
+
+.tpl_pt_body <- function(a, ctx) {
+  in_ <- match.arg(a$min_pct_in, c("any", "all", "total"))
+  pop <- a$population
+  subj <- paste0("adsl_", tolower(pop))
+  set <- a$data_id %||% paste0(tolower(a$data), "_", tolower(pop))
+  d <- list(id = set, label = a$data_label, from = a$data, subjects = subj,
+            where = if (!is.null(a$where)) tfl_r(a$where))
+  ard <- list(
+    analysis_data = list(
+      list(id = subj, label = .tpl_set_label(pop, ctx$population), from = "ADSL",
+           population = pop),
+      Filter(Negate(is.null), d)),
+    analyses = list(Filter(Negate(is.null), list(
+      id = a$analysis_id, label = a$analysis_label, method = "hierarchical", data = set,
+      by = a$by, variables = a$term, denominator = subj,
+      args = if (!is.null(a$overall)) tfl_r("over_variables = TRUE"),
+      purpose = "PRIMARY OUTCOME MEASURE"))))
+  # the order: a column's subjects, most first (the PT's name when equal)
+  col <- a$sort_by %||%
+    (if (identical(in_, "total")) "Total" else .tpl_levels(a$by, ctx$codelists)[[a$by]][1L])
+  key <- if (length(col) && !is.na(col)) sprintf("-n[%s]", col) else "-n"
+  keep <- if (!is.null(a$min_pct)) {
+    cond <- sprintf("p >= %s", format(a$min_pct / 100))
+    if (identical(in_, "total")) cond <- sprintf("%s & %s == \"Total\"", cond, a$by)
+    list(tfl_item("plan_filter", c(list(where = tfl_r(cond)),
+                                   if (identical(in_, "all")) list(any = FALSE))))
+  }
+  content <- c(list(
+    tfl_item("normalize_ard", Filter(Negate(is.null),
+                                     list(hierarchy = a$term, overall = a$overall))),
+    tfl_item("table_plan", list(cols = a$by, label = list(label = a$term))),
+    tfl_item("plan_sort", list(keys = c(".overall", key, "label")))),
+    keep,
+    list(
+      tfl_item("plan_col_header", list(header = list(
+        list(line = "1", cols = "row_label"),
+        list(line = "1", cols = ".values", span = "each", text = "{col}\n(N={n})\nn (%)"),
+        list(line = "2", cols = "row_label", text = a$heading),
+        list(line = "2", cols = ".values")))),
+      tfl_item("plan_paginate_rows", list(max_rows = 22L))))
+  list(ard = ard, data = list(source = "ard", object = "ard"), content = content)
+}
+
+.tfl_template("ae_pt_freq", kind = "table", layout = "hierarchical",
+              params = .tpl_pt_params, body = .tpl_pt_body)
+
+#' Adverse events by preferred term, most frequent first: the template `ae_pt_freq`
+#'
+#' A display template on the `hierarchical` layout with one level: the
+#' treatment-emergent events' preferred terms (`AEDECOD`), the subjects
+#' with any event first, then the terms by decreasing frequency -- in the
+#' first group of the code list of `by`, or the column `sort_by` names --
+#' and, with `min_pct`, only the terms of that percentage of subjects or
+#' more: in any column (`min_pct_in = "any"`, as FDA's tables of common
+#' adverse events), in every column (`"all"`) or in the Total column
+#' (`"total"`).
+#'
+#' @inheritParams tpl_demog
+#' @param ... The template's other parameters: `term`, `by`, `where`,
+#'   `overall`, `min_pct`, `min_pct_in`, `sort_by`, `heading` ...
+#' @return A [rtfreporter::table_plan()].
+#' @examples
+#' tfl_template_expand("ae_pt_freq", list(population = "SAF", min_pct = 5))$content
+#' @export
+tpl_ae_pt_freq <- function(ard, population, ..., codelists = NULL) {
+  .tpl_object("ae_pt_freq", ard, c(list(population = population), list(...)),
+              codelists = codelists)
+}
+
 # ---- km_simple: the figure template of tfl_fig_template(), on the registry ------
 
 # (no tpl_km_simple() yet: a figure's program is its items)

@@ -1,5 +1,14 @@
 # tflspec (development version)
 
+* **Template `ae_pt_freq`: adverse events by preferred term, most frequent
+  first** (#383, 0.0.24.9180), the first of the safety templates.  The
+  treatment-emergent events' preferred terms, the subjects with any event
+  first, then the terms by decreasing frequency in the first group of the
+  code list of `by` (`sort_by` names another column).  `min_pct` keeps the
+  terms of that percentage of subjects or more, in any column (as FDA's
+  tables of common adverse events), in all (`min_pct_in = "all"`) or in
+  the Total column (`"total"`).  `tpl_ae_pt_freq()` is its call.
+
 * **The AI steps over several workbooks** (#378, 0.0.24.9178).
   `tfl_ai_read_shell(path, shells = )` reads a TOC in one workbook and
   its shells in others: each report's shell is looked for in all of them
