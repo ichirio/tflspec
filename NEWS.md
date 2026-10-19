@@ -1,5 +1,17 @@
 # tflspec (development version)
 
+* **AI answers as a tester's chat writes them** (#365, 0.0.24.9170).  A
+  report number as the TOC writes it (`Table 15.3.1.3.13.a`, as the prompt
+  asks) is the report file's id with letters, digits, `.`, `_` and `-`
+  only (`Table-15.3.1.3.13.a`), its assumptions too; it could not be read
+  before.  `tfl_ai_collect_answers()` takes an answer's report named
+  another way (`T-15.3.1.3.13.a`) as the one whose number it is.  The
+  check now says what stopped later: a table with no column key (an
+  error: one arm too, the arm as `by` and `cols`) and an overall row no
+  hierarchical analysis makes (a warning: `over_variables = TRUE`); the
+  table prompt says both.  An answer with none of its request's reports no
+  longer says "done".
+
 * **An ARD that is not cards' in the code lists' order: `relevel_ard()`**
   (#362, 0.0.24.9169).  cardx's survfit keeps its rows in the arms' order
   but makes their factor again, in alphabetical order, so a survfit
