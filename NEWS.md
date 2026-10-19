@@ -1,5 +1,13 @@
 # tflspec (development version)
 
+* **A line break inside a cell no longer shifts the shells' text**
+  (#370, 0.0.24.9174).  `tfl_ai_read_shell()` missed a cell whose text
+  holds a line break (Alt+Enter in Excel: a column header like
+  "Placebo" over "(N=xx)"), and every later cell of the workbook took the
+  text of the one before it -- the shells and the TOC titles the AI read
+  were wrong.  The workbook reader now reads such a cell as one (`\n` in
+  the text), and the cells after it keep their own text.
+
 * **A nested count with no records: the overall row 0, not a stop**
   (#367, 0.0.24.9173).  `cards::ard_stack_hierarchical()` stops on data
   with no record ("all missing"), so a table of zero events -- common in a
