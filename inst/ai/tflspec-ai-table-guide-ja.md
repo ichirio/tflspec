@@ -45,6 +45,20 @@ r                                   # 依頼名・帳票・文字数
 `ai/requests/<依頼名>.md`（`demographics-1.md`、`ae-1.md` …、1 つの種類ごと）と
 一覧 `ai/requests/index.md` ができます。
 
+同じことを 1 行で（`study.yml` が既にあれば消さないので、何度でも実行できます。
+ワークブックの読み取りの結果も表示します）:
+
+```r
+r <- tfl_ai_prepare("mystudy", "mystudy/TOC_SHELL.xlsx", study_id = "ABC-123",
+                    size = 3, language = "Japanese")
+```
+
+ワークブックの文字がうまく読み取れず、チャットに Excel を添付できるとき:
+`workbook = "both"`（または `"attach"`）。各依頼に、帳票のシェルがワークブックの
+どこにあるか（シート・セル・TOC の行）が書かれるので、依頼と一緒に
+`TOC_SHELL.xlsx` をチャットごとに添付します。`"both"` は文字も入れ、食い違えば
+添付を優先させます。
+
 最初の依頼の前に見るもの:
 
 | 見るもの | 理由 |
@@ -180,6 +194,7 @@ tfl_ai_collect_answers(d)            # 4 reports in 4 requests: ok 4 ...
 | `tfl_ai_collect_answers()` で `error`（"no answer block found"） | 回答を全部コピーしていない: 最初の ```` ``` ```` から最後までコピーし直す |
 | `error`（"is not UTF-8"） | 回答を UTF-8 で保存し直す（メモ帳: 名前を付けて保存 → 文字コード: UTF-8） |
 | "Not read (no request of that name)" | 回答のファイル名を依頼の名前にする（`ai/requests/index.md`）: `ae-1.md` |
+| 文字にしたシェルがおかしい（セルが抜ける、順が違う） | Excel を添付する: `tfl_ai_prepare(..., workbook = "both")` か `tfl_ai_write_requests(..., workbook = "both")` にして、`TOC_SHELL.xlsx` をチャットごとに添付 |
 | `print(shell)` の最後が "Next: no TOC found" か "no shell found" | 書かれているとおりに渡す: `toc_sheet = "<シート名>"` か `sheets = c(...)` |
 | 2〜3 回直しても同じエラー | `spec/outputs/<id>.yml` を手で直し、手順 6 を実行 |
 | `tfl_build_ard()` が止まる: `The package "broom" (>= 1.0.8) is required.` | `install.packages("broom")`（ほかのパッケージの名前が出たときも、それを入れる） |

@@ -1,5 +1,17 @@
 # tflspec (development version)
 
+* **AI requests with the TOC / SHELL workbook attached, and
+  `tfl_ai_prepare()`** (#364, 0.0.24.9170).
+  `tfl_ai_write_requests(workbook = )`: `"text"` (default) as before;
+  `"attach"` -- each request says where its reports' shells are in the
+  attached workbook (sheet, cells, TOC row) instead of their text; `"both"`
+  -- the places and the text, the attachment right where they differ.  For
+  a workbook whose text is not read right, when the chat takes an Excel
+  file.  `tfl_ai_prepare(dir, toc, ...)` runs the guide's step 3 in one
+  call (`tfl_ai_study_init()` only when there is no `study.yml`, the ADaM
+  summary, the workbook read, the requests).  The AI table guide (English
+  and Japanese) shows both.
+
 * **An ARD that is not cards' in the code lists' order: `relevel_ard()`**
   (#362, 0.0.24.9169).  cardx's survfit keeps its rows in the arms' order
   but makes their factor again, in alphabetical order, so a survfit
