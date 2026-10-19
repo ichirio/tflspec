@@ -10,7 +10,8 @@ tfl_ai_read_shell(
   sheets = NULL,
   toc_sheet = NULL,
   max_chars = .ai_shell_max_chars,
-  file = NULL
+  file = NULL,
+  shells = NULL
 )
 }
 \arguments{
@@ -29,6 +30,12 @@ none.}
 says so (pick fewer \code{outputs}).}
 
 \item{file}{A file to write the text to (UTF-8), or \code{NULL}.}
+
+\item{shells}{Workbooks of shells apart from the TOC's (\code{path}): their
+sheets join the TOC workbook's -- a sheet named as one already there
+becomes \code{"<sheet> [<workbook>]"} -- and each report's shell is looked
+for in all of them.  The TOC is \code{path}'s.  The text has a part a
+workbook.}
 }
 \value{
 A \code{tfl_ai_shell}: a list with \code{text} (one string), \code{toc} (a data

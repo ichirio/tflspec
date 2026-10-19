@@ -45,6 +45,10 @@ r                                   # 依頼名・帳票・文字数
 `ai/requests/<依頼名>.md`（`demographics-1.md`、`ae-1.md` …、1 つの種類ごと）と
 一覧 `ai/requests/index.md` ができます。TOC の図は 1 図 1 依頼（`figure-1.md` …）で、
 シェルを入れ、図の design で答えてもらいます。
+TOC とシェルが別のブックのとき: `tfl_ai_prepare("mystudy", "TOC.xlsx",
+shells = "SHELLS.xlsx", ...)`。あとで別のブック（Listing、PK の図のブック）を
+足すとき: 同じ呼び方に `add = TRUE`。そこにある依頼と回答は残り、新しい依頼が
+横に足されます。
 
 同じことを 1 行で（`study.yml` が既にあれば消さないので、何度でも実行できます。
 ワークブックの読み取りの結果も表示します）:

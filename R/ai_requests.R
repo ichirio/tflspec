@@ -51,7 +51,13 @@
 #'   ([tfl_ai_prepare()]`(mode = "agent")`) -- the text, and the workbook's
 #'   path with each report's place in it, to read that place alone when the
 #'   text looks cut, never another sheet.
-#' @param overwrite `TRUE` to write over the requests already there.
+#' @param overwrite `TRUE` to write over the requests already there; with
+#'   `add`, to ask again for a report asked for already (its request is
+#'   written anew).
+#' @param add `TRUE` to keep the requests already there and add these: the
+#'   new ones named after them (`ae-2` when `ae-1` is there, `figure-3`
+#'   ...), the index listing all of them, each request's `book` the
+#'   workbook its reports' shells are in.
 #' The folder the answers go to (`ai/answers`, beside `dir`) is made too.
 #'
 #' @return A data frame, one row a request: `request` (the file's name,
@@ -79,16 +85,19 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = 8L,
                                   examples = NULL,
                                   instructions = c("each", "once"),
                                   workbook = c("text", "attach", "both", "file"),
-                                  overwrite = FALSE) {
+                                  overwrite = FALSE, add = FALSE) {
   fn <- "tfl_ai_write_requests()"
   instructions <- match.arg(instructions)
   workbook <- match.arg(workbook)
   book <- basename(shell$path %||% "the workbook")
   # the workbook's path for an agent: from the study folder when inside it
-  book_path <- if (is.null(shell$path)) book else {
-    root <- paste0(normalizePath(study_dir, winslash = "/", mustWork = FALSE), "/")
-    if (startsWith(shell$path, root)) substring(shell$path, nchar(root) + 1L) else shell$path
-  }
+  root <- paste0(normalizePath(study_dir, winslash = "/", mustWork = FALSE), "/")
+  from_study <- function(p) ifelse(startsWith(p, root), substring(p, nchar(root) + 1L), p)
+  book_path <- if (is.null(shell$path)) book else from_study(shell$path)
+  # the workbooks of shells apart from the TOC's
+  more_books <- if (!is.null(shell$books) && nrow(shell$books) > 1L) {
+    from_study(shell$books$path[-1L])
+  } else character()
   if (!inherits(shell, "tfl_ai_shell")) {
     .ard_stop(sprintf("%s: `shell` is a tfl_ai_read_shell() result.", fn))
   }
@@ -114,12 +123,53 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = 8L,
                       paste(types, collapse = " or ")))
   }
   out_dir <- file.path(study_dir, dir)
-  if (dir.exists(out_dir) && length(list.files(out_dir, "[.]md$")) && !isTRUE(overwrite)) {
-    .ard_stop(sprintf("%s: %s already holds requests; pass `overwrite = TRUE`.", fn,
-                      sQuote(dir, FALSE)))
+  cf <- file.path(out_dir, "_contexts.rds")
+  # add = TRUE: the requests there are kept, these added beside them
+  old <- if (isTRUE(add) && file.exists(cf)) readRDS(cf) else list()
+  if (!isTRUE(add) && dir.exists(out_dir) && length(list.files(out_dir, "[.]md$")) &&
+      !isTRUE(overwrite)) {
+    .ard_stop(sprintf("%s: %s already holds requests; pass `overwrite = TRUE`, or `add = TRUE` to add these.",
+                      fn, sQuote(dir, FALSE)))
+  }
+  if (length(old)) {
+    # a report asked for already: stopped, or (overwrite) its request asked anew
+    had <- unlist(lapply(old, `[[`, "ids"))
+    again <- intersect(c(b$output_id, figs), had)
+    if (length(again) && !isTRUE(overwrite)) {
+      in_req <- names(old)[vapply(old, function(o) any(o$ids %in% again), NA)]
+      .ard_stop(sprintf(paste0("%s: %s already asked for (%s); pass `overwrite = TRUE` to ",
+                               "ask for them again."), fn, paste(again, collapse = ", "),
+                        paste(in_req, collapse = ", ")))
+    }
+    if (length(again)) {
+      drop <- names(old)[vapply(old, function(o) any(o$ids %in% again), NA)]
+      left <- setdiff(unlist(lapply(old[drop], `[[`, "ids")), again)
+      if (length(left)) {
+        message(sprintf("%s: %s no longer asked for (their request %s is written anew).", fn,
+                        paste(left, collapse = ", "), paste(drop, collapse = ", ")))
+      }
+      unlink(file.path(out_dir, paste0(drop, ".md")))
+      old <- old[setdiff(names(old), drop)]
+    }
   }
   dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
-  unlink(list.files(out_dir, "[.]md$", full.names = TRUE))
+  if (!isTRUE(add)) unlink(list.files(out_dir, "[.]md$", full.names = TRUE))
+  # the new requests named after those kept: ae-2 when ae-1 is there
+  next_name <- function(family, taken) {
+    k <- 1L
+    while (paste0(family, "-", k) %in% taken) k <- k + 1L
+    paste0(family, "-", k)
+  }
+  taken <- names(old)
+  if (length(old) && nrow(b)) {
+    to <- character()
+    for (bt in unique(b$batch)) {
+      to[bt] <- next_name(b$family[match(bt, b$batch)], c(taken, to))
+    }
+    b$batch <- unname(to[b$batch])
+  }
+  fig_names <- character()
+  for (k in seq_along(figs)) fig_names[k] <- next_name("figure", c(taken, fig_names))
 
   # the shells' text as the workbook reaches the chat: the text alone; with
   # where each report's shell is in the attached workbook ("attach",
@@ -129,12 +179,20 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = 8L,
       # an agent that reads files: the text, and where each report's shell
       # is in the workbook file -- to read that place alone when the text
       # looks cut, never another sheet
-      where <- c(sprintf("The TOC / SHELL workbook is the file `%s`. The reports' shells in it:",
-                         book_path), "",
+      where <- c(if (length(more_books)) {
+                   sprintf(paste("The TOC is the workbook `%s`; the shells are in %s.",
+                                 "The reports' shells:"), book_path,
+                           paste(sprintf("`%s`", more_books), collapse = ", "))
+                 } else {
+                   sprintf("The TOC / SHELL workbook is the file `%s`. The reports' shells in it:",
+                           book_path)
+                 }, "",
                  .ai_shell_where(shell, ids), "",
                  paste("Use the text below, read from that workbook. Only when it looks cut or",
                        "garbled, read the place above -- that sheet, those cells -- with R:",
-                       sprintf("`tflspec::tfl_ai_read_shell(\"%s\", outputs = \"<id>\")`", book_path),
+                       sprintf("`tflspec::tfl_ai_read_shell(\"%s\", %soutputs = \"<id>\")`", book_path,
+                               if (length(more_books)) sprintf("shells = c(%s), ",
+                                 paste(sprintf("\"%s\"", more_books), collapse = ", ")) else ""),
                        "or `readxl::read_excel(<file>, sheet = <sheet>, range = <cells>)`. Never",
                        "read another sheet on a guess; when the place looks wrong, ask it as a",
                        "question."))
@@ -203,7 +261,7 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = 8L,
     fam <- c(fam, rep(b$family[match(bt, b$batch)], length(r)))
   }
   for (k in seq_along(figs)) {
-    req[[paste0("figure-", k)]] <- c(fig_prompt_of(figs[k]), list(ids = figs[k]))
+    req[[fig_names[k]]] <- c(fig_prompt_of(figs[k]), list(ids = figs[k]))
     fam <- c(fam, "figure")
   }
   for (nm in names(req)) .ai_write_text(req[[nm]]$text, file.path(out_dir, paste0(nm, ".md")))
@@ -213,17 +271,18 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = 8L,
   # the folder the answers are saved in, beside the requests (ai/answers)
   dir.create(file.path(study_dir, dirname(dir), "answers"), recursive = TRUE,
              showWarnings = FALSE)
-  saveRDS(stats::setNames(lapply(seq_along(req), function(i) {
-    list(ids = req[[i]]$ids, context = req[[i]]$context, family = fam[i])
-  }), names(req)), file.path(out_dir, "_contexts.rds"))
-  idx <- data.frame(
-    request = names(req), type = ifelse(fam == "figure", "figure", "table"), family = fam,
-    outputs = vapply(req, function(r) paste(r$ids, collapse = ", "), ""),
-    n = vapply(req, function(r) length(r$ids), 0L),
-    chars = vapply(req, function(r) nchar(r$text), 0L),
-    file = file.path(dir, paste0(names(req), ".md")),
-    stringsAsFactors = FALSE)
-  rownames(idx) <- NULL
+  # each request's workbook: its reports' shells'
+  book_of <- function(ids) {
+    bk <- shell$toc$book[match(ids, shell$toc$output_id)]
+    bk <- unique(bk[!is.na(bk)])
+    if (length(bk)) paste(bk, collapse = ", ") else basename(shell$path %||% NA_character_)
+  }
+  new <- stats::setNames(lapply(seq_along(req), function(i) {
+    list(ids = req[[i]]$ids, context = req[[i]]$context, family = fam[i],
+         book = book_of(req[[i]]$ids))
+  }), names(req))
+  saveRDS(c(old, new), cf)
+  idx <- tfl_ai_requests(study_dir, requests = dir)
   .ai_write_text(paste(c(
     "# Requests",
     "",
@@ -442,11 +501,12 @@ tfl_ai_requests <- function(study_dir, requests = file.path("ai", "requests")) {
     return(data.frame(request = character(), type = character(), family = character(),
                       outputs = character(),
                       n = integer(), chars = integer(), file = character(),
-                      stringsAsFactors = FALSE))
+                      book = character(), stringsAsFactors = FALSE))
   }
   ctxs <- readRDS(cf)
   nm <- names(ctxs)
   file <- rel(requests, paste0(nm, ".md"))
+  book <- vapply(ctxs, function(x) x$book %||% NA_character_, "", USE.NAMES = FALSE)
   chars <- vapply(file.path(study_dir, file), function(f) {
     if (!file.exists(f)) return(NA_integer_)
     nchar(paste(readLines(f, warn = FALSE, encoding = "UTF-8"), collapse = "\n"))
@@ -457,7 +517,7 @@ tfl_ai_requests <- function(study_dir, requests = file.path("ai", "requests")) {
     family = vapply(ctxs, function(x) x$family %||% NA_character_, "", USE.NAMES = FALSE),
     outputs = vapply(ctxs, function(x) paste(x$ids, collapse = ", "), "", USE.NAMES = FALSE),
     n = vapply(ctxs, function(x) length(x$ids), 0L, USE.NAMES = FALSE),
-    chars = chars, file = file, stringsAsFactors = FALSE)
+    chars = chars, file = file, book = book, stringsAsFactors = FALSE)
   rownames(out) <- NULL
   out
 }

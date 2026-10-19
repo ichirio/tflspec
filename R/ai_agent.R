@@ -273,10 +273,18 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE) {
 # (the number's first parts: 14.1 of 14.1.1) and its analysis set when the
 # TOC row names one of spec/data.yml's (its id or its label) and no other.
 # Written when the study has none (or `overwrite`); the path, else nothing.
-.ai_toc_yml <- function(dir, shell, overwrite = FALSE) {
+.ai_toc_yml <- function(dir, shell, overwrite = FALSE, add = FALSE) {
   f <- file.path(dir, "spec", "toc.yml")
   t <- shell$toc
-  if (!nrow(t) || (file.exists(f) && !isTRUE(overwrite))) return(character())
+  # added to a study (add): the TOC there, these reports at its end
+  had <- if (isTRUE(add) && file.exists(f)) {
+    tryCatch(yaml::read_yaml(f)$outputs, error = function(e) NULL)
+  }
+  if (length(had)) {
+    have <- vapply(had, function(e) e$id %||% NA_character_, "")
+    t <- t[!t$output_id %in% have, , drop = FALSE]
+    if (!nrow(t)) return(character())
+  } else if (!nrow(t) || (file.exists(f) && !isTRUE(overwrite))) return(character())
   pop_of <- function(txt) .ai_population_of(dir, txt)$id %||% NA_character_
   outs <- lapply(seq_len(nrow(t)), function(i) {
     num <- sub("^[A-Z]*", "", t$key[i] %||% "")
@@ -289,6 +297,7 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE) {
     e
   })
   dir.create(dirname(f), recursive = TRUE, showWarnings = FALSE)
+  outs <- c(had %||% list(), outs)
   .ai_write_text(yaml::as.yaml(list(outputs = outs), indent.mapping.sequence = TRUE), f)
   f
 }

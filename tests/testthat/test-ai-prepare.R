@@ -97,7 +97,7 @@ test_that("tfl_ai_prepare(): a list for a screen; dry_run writes nothing; the AD
   expect_length(dry$files, 0L)
   expect_true(all(is.na(dry$requests$file)))
   expect_match(dry$next_steps[length(dry$next_steps)], "dry_run = FALSE")
-  expect_named(dry$toc, c("output_id", "title", "type", "shell", "shell_found", "request"))
+  expect_named(dry$toc, c("output_id", "title", "type", "shell", "shell_found", "request", "book"))
   expect_true(all(dry$toc$shell_found))
   expect_setequal(dry$toc$request, dry$requests$request)
   expect_s3_class(dry$adam, "tfl_ai_adam")

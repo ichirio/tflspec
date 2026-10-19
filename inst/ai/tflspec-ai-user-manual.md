@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9177** (the development version,
+**This manual documents tflspec 0.0.24.9178** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -589,7 +589,10 @@ tfl_ai_unpack(a, "study")                           # spec/outputs/<id>.yml, spe
   `ai/questions.md` and `ai/decisions.md` -- every request without a stop,
   then a second round from the person's answers; `tfl_ai_questions(study_dir)`
   reads `ai/questions.md` and `tfl_ai_answer_questions(study_dir, answers)`
-  writes the person's answers into it.  A figure of the TOC is a request
+  writes the person's answers into it.  The TOC and its shells in
+  workbooks apart: `tfl_ai_read_shell(path, shells = )` /
+  `tfl_ai_prepare(toc, shells = )`; another workbook added to the study's
+  requests: `tfl_ai_prepare(..., add = TRUE)`.  A figure of the TOC is a request
   of its own (`figure-1` ...: its shell, a figure design to answer), written
   as the figure's report file in the design's form and drawn by
   `tfl_ai_run()` (PNG and RTF); `workbook = "attach"` / `"both"` has
