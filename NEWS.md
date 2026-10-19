@@ -12,7 +12,13 @@
   problem --, `file` and `repair`), `next_steps`, `assumptions`, `stray`;
   its print is as before.  `res$status` is now `res$reports$status`.  New
   `tfl_ai_save_answer(study_dir, request, text)` writes a pasted answer
-  where the collect reads it (`ai/answers/<request>.md`, UTF-8).
+  where the collect reads it (`ai/answers/<request>.md`, UTF-8), and
+  `tfl_ai_requests(study_dir)` reads the requests written again.
+  `tfl_ai_prepare()` also takes `datasets` and `max_levels` (the ADaM
+  summary's) and `quiet`, and returns the workbook reading's notes as
+  `hint`.  A request no longer shows where the ADaM is: its copy of
+  `spec/data.yml` names each dataset's file alone (`path: adsl.xpt`), the
+  study's own file keeping the full path.
 
 * **AI requests with the TOC / SHELL workbook attached, and
   `tfl_ai_prepare()`** (#364, 0.0.24.9171).
