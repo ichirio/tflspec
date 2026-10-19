@@ -11,6 +11,13 @@
   overall row of 0 unless `when_none = TRUE`.  ARS still shows cards'
   function.
 
+* **An AI answer's overall row made** (#366, 0.0.24.9172).  An answer that
+  names an overall row (`normalize_ard: {overall: ...}`) without
+  `over_variables = TRUE` on its hierarchical analysis had no such row;
+  `tfl_ai_collect_answers()` now writes `over_variables = TRUE` into that
+  analysis in the report file and adds an assumption saying tflspec added
+  it.  A spec written by hand keeps the check's warning.
+
 * **AI requests with the TOC / SHELL workbook attached, and
   `tfl_ai_prepare()`** (#364, 0.0.24.9171).
   `tfl_ai_write_requests(workbook = )`: `"text"` (default) as before;
