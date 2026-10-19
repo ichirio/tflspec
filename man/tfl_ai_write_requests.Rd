@@ -16,7 +16,7 @@ tfl_ai_write_requests(
   language = NULL,
   examples = NULL,
   instructions = c("each", "once"),
-  workbook = c("text", "attach", "both"),
+  workbook = c("text", "attach", "both", "file"),
   overwrite = FALSE
 )
 }
@@ -55,7 +55,10 @@ the request saying where each report's shell is in it (its sheet,
 cells and TOC row) instead of the text; \code{"both"} the places and the
 text, the attachment right where the two differ -- for a workbook whose
 text is not read right.  A chat that takes no Excel file needs
-\code{"text"}.}
+\code{"text"}.  \code{"file"}: for an agent that reads files
+(\code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}}\code{(mode = "agent")}) -- the text, and the workbook's
+path with each report's place in it, to read that place alone when the
+text looks cut, never another sheet.}
 
 \item{overwrite}{\code{TRUE} to write over the requests already there.
 The folder the answers go to (\code{ai/answers}, beside \code{dir}) is made too.}

@@ -14,7 +14,11 @@
   they touch.  The instructions (`AGENTS.md`, `.github/copilot-instructions.md`)
   tell the agent to work from the ADaM summary and read the ADaM with R
   only to settle a question the summary does not (with the company's
-  approved AI; a chat is sent the summary only).  For tflplanner: a new study's
+  approved AI; a chat is sent the summary only).  Each request gives the shells'
+  text and where each report's shell is in the TOC / SHELL workbook file
+  (`tfl_ai_write_requests(workbook = "file")`: the file, the sheet, the
+  cells, the TOC row); the agent reads that place alone with R when the
+  text looks cut, never another sheet on a guess.  For tflplanner: a new study's
   RTF files go to `output/tfl`, its programs to `programs/tfl`, and
   `tfl_ai_prepare()` writes `spec/toc.yml` (the TOC's reports in order,
   with their section and analysis set) when the study has none.  The

@@ -26,7 +26,15 @@ and `ai/`. If the workspace is a folder above it, use the paths from here.
       says, save the whole answer over `ai/answers/<request>.md`, and run
       again. Three tries at most; then leave it, add a question to
       `ai/questions.md` saying what is wrong, and go on.
-3. The variables and their values are in `ai/adam_summary.md`; work from
+3. The shells: use the text each request gives (read from the TOC / SHELL
+   workbook). Each request also says where its reports' shells are in the
+   workbook file -- the file, the sheet, the cells, the TOC row. Only when
+   the text looks cut or garbled, read **that place alone** with R:
+   `Rscript -e "cat(format(tflspec::tfl_ai_read_shell('<file>', outputs = '<id>')))"`
+   or `readxl::read_excel('<file>', sheet = '<sheet>', range = '<cells>')`.
+   Never read another sheet on a guess; when the place looks wrong (another
+   report's shell, an empty range), ask it in `ai/questions.md`.
+4. The variables and their values are in `ai/adam_summary.md`; work from
    it. You may read the ADaM itself (where `spec/data.yml` says, `path:`)
    when a question about the data is not settled by the summary -- a value
    as the data write it, whether a variable is there, an arm's levels.
@@ -35,7 +43,7 @@ and `ai/`. If the workspace is a folder above it, use the paths from here.
    question -- a variable's values, labels, counts -- not subjects'
    records in bulk:
    `Rscript -e "d <- haven::read_xpt('<path>/adae.xpt'); print(table(d$ACNDR, useNA = 'ifany'))"`.
-4. A question you cannot settle from the request, its shell, the summary,
+5. A question you cannot settle from the request, its shell, the summary,
    the data or `ai/decisions.md`: **do not stop**. Take the likeliest
    choice and write it as an assumption with its `question` (the request's answer format says
    how). `run.R` gathers the questions into `ai/questions.md`, a question
@@ -44,7 +52,7 @@ and `ai/`. If the workspace is a folder above it, use the paths from here.
    it to `ai/questions.md` yourself, in the same form (`## Q<n>. ...`,
    `- Reports:`, `- The agent took, for now:`, `- Status: open`,
    `- Answer:`).
-5. When every request is done (`ok`, `warning`, or left after three tries),
+6. When every request is done (`ok`, `warning`, or left after three tries),
    stop and tell the person: how many reports have an RTF, which do not and
    why, and that `ai/questions.md` waits for their answers.
 
@@ -66,7 +74,9 @@ When the person says the questions are answered:
 
 - Do not open a data file (`.xpt`, `.sas7bdat`) in the editor, and do not
   print subjects' records in bulk: read the ADaM with R, only for a
-  question the summary does not settle (round 1, step 3).
+  question the summary does not settle (round 1, step 4).
+- Do not read a sheet of the TOC / SHELL workbook that no request names
+  for its report (round 1, step 3).
 - Do not change `study.yml`, `spec/data.yml`, `spec/defaults.yml`, `run.R`,
   `AGENTS.md` or `.github/copilot-instructions.md`. When one seems wrong,
   ask in `ai/questions.md`.

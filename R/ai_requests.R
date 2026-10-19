@@ -44,7 +44,10 @@
 #'   cells and TOC row) instead of the text; `"both"` the places and the
 #'   text, the attachment right where the two differ -- for a workbook whose
 #'   text is not read right.  A chat that takes no Excel file needs
-#'   `"text"`.
+#'   `"text"`.  `"file"`: for an agent that reads files
+#'   ([tfl_ai_prepare()]`(mode = "agent")`) -- the text, and the workbook's
+#'   path with each report's place in it, to read that place alone when the
+#'   text looks cut, never another sheet.
 #' @param overwrite `TRUE` to write over the requests already there.
 #' The folder the answers go to (`ai/answers`, beside `dir`) is made too.
 #'
@@ -72,12 +75,17 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = 8L,
                                   types = "table", language = NULL,
                                   examples = NULL,
                                   instructions = c("each", "once"),
-                                  workbook = c("text", "attach", "both"),
+                                  workbook = c("text", "attach", "both", "file"),
                                   overwrite = FALSE) {
   fn <- "tfl_ai_write_requests()"
   instructions <- match.arg(instructions)
   workbook <- match.arg(workbook)
   book <- basename(shell$path %||% "the workbook")
+  # the workbook's path for an agent: from the study folder when inside it
+  book_path <- if (is.null(shell$path)) book else {
+    root <- paste0(normalizePath(study_dir, winslash = "/", mustWork = FALSE), "/")
+    if (startsWith(shell$path, root)) substring(shell$path, nchar(root) + 1L) else shell$path
+  }
   if (!inherits(shell, "tfl_ai_shell")) {
     .ard_stop(sprintf("%s: `shell` is a tfl_ai_read_shell() result.", fn))
   }
@@ -114,7 +122,21 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = 8L,
     ctx <- tfl_ai_context("table", outputs = ids, shell = shell, datasets = adam,
                           study_dir = study_dir, language = language,
                           examples = ex)
-    if (!identical(workbook, "text")) {
+    if (identical(workbook, "file")) {
+      # an agent that reads files: the text, and where each report's shell
+      # is in the workbook file -- to read that place alone when the text
+      # looks cut, never another sheet
+      where <- c(sprintf("The TOC / SHELL workbook is the file `%s`. The reports' shells in it:",
+                         book_path), "",
+                 .ai_shell_where(shell, ids), "",
+                 paste("Use the text below, read from that workbook. Only when it looks cut or",
+                       "garbled, read the place above -- that sheet, those cells -- with R:",
+                       sprintf("`tflspec::tfl_ai_read_shell(\"%s\", outputs = \"<id>\")`", book_path),
+                       "or `readxl::read_excel(<file>, sheet = <sheet>, range = <cells>)`. Never",
+                       "read another sheet on a guess; when the place looks wrong, ask it as a",
+                       "question."))
+      ctx$shell <- paste(c(where, "", ctx$shell), collapse = "\n")
+    } else if (!identical(workbook, "text")) {
       # the workbook attached: where each report's shell is in it, with the
       # text ("both") or instead of it ("attach")
       where <- c(sprintf(paste("The TOC / SHELL workbook `%s` is attached to this message.",
@@ -177,7 +199,7 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = 8L,
     "",
     if (identical(instructions, "once"))
       c("Paste `00-instructions.md` first in a new chat, then one request.", ""),
-    if (!identical(workbook, "text"))
+    if (workbook %in% c("attach", "both"))
       c(sprintf("Attach `%s` (the TOC / SHELL workbook) to each chat with its request.", book), ""),
     "Paste each file into a new chat as one message; save the whole answer as",
     sprintf("`ai/answers/<request>.md`, then run `tfl_ai_collect_answers(\"%s\")`.",
@@ -193,7 +215,7 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = 8L,
                          "%s/%s.md, then run tfl_ai_collect_answers()."),
                   nrow(idx), sum(idx$n), dir, max(idx$chars), idx$file[1L],
                   if (identical(instructions, "once")) " after 00-instructions.md" else "",
-                  if (!identical(workbook, "text")) sprintf(", attaching %s", book) else "",
+                  if (workbook %in% c("attach", "both")) sprintf(", attaching %s", book) else "",
                   ans, idx$request[1L]))
   idx
 }

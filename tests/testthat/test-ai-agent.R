@@ -37,6 +37,17 @@ test_that("mode = \"agent\": the instructions, run.R, questions, decisions; toc.
   expect_identical(req1[1L], "<!-- tflspec: agent mode -->")
   expect_match(req1[2L], sprintf("ai/answers/%s.md", r$requests$request[1L]), fixed = TRUE)
   expect_identical(tfl_ai_requests(d)$chars, r$requests$chars)
+  # the shells' text, and where each is in the workbook file (its sheet)
+  txt <- paste(req1, collapse = "\n")
+  expect_match(txt, "The TOC / SHELL workbook is the file `", fixed = TRUE)
+  expect_match(txt, sprintf("- %s: sheet '", strsplit(r$requests$outputs[1L], ", ")[[1L]][1L]),
+               fixed = TRUE)
+  expect_match(txt, "# Workbook onco_toc_shell.xlsx", fixed = TRUE)
+  expect_match(txt, "Never read another sheet on a guess", fixed = TRUE)
+  expect_false(any(grepl("Attach", readLines(file.path(d, "ai", "requests", "index.md")))))
+  for (k in c("read **that place alone** with R", "Never read another sheet on a guess")) {
+    expect_true(any(grepl(k, ag, fixed = TRUE)), info = k)
+  }
   # tflplanner's places, and its TOC
   st <- yaml::read_yaml(file.path(d, "study.yml"))
   expect_identical(st$settings$output_path, "output/tfl")
