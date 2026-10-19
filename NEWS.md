@@ -1,7 +1,7 @@
 # tflspec (development version)
 
 * **AI requests with the TOC / SHELL workbook attached, and
-  `tfl_ai_prepare()`** (#364, 0.0.24.9170).
+  `tfl_ai_prepare()`** (#364, 0.0.24.9171).
   `tfl_ai_write_requests(workbook = )`: `"text"` (default) as before;
   `"attach"` -- each request says where its reports' shells are in the
   attached workbook (sheet, cells, TOC row) instead of their text; `"both"`
