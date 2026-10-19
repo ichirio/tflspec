@@ -1,5 +1,12 @@
 # tflspec (development version)
 
+* **An AI answer's overall row made** (#366, 0.0.24.9172).  An answer that
+  names an overall row (`normalize_ard: {overall: ...}`) without
+  `over_variables = TRUE` on its hierarchical analysis had no such row;
+  `tfl_ai_collect_answers()` now writes `over_variables = TRUE` into that
+  analysis in the report file and adds an assumption saying tflspec added
+  it.  A spec written by hand keeps the check's warning.
+
 * **AI answers as a tester's chat writes them** (#365, 0.0.24.9170).  A
   report number as the TOC writes it (`Table 15.3.1.3.13.a`, as the prompt
   asks) is the report file's id with letters, digits, `.`, `_` and `-`

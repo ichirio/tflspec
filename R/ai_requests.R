@@ -235,6 +235,7 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
       next
     }
     a <- .ai_answer_as_asked(a, ids)
+    a <- .ai_answer_overall(a)
     pr <- tryCatch(tfl_ai_check(a, ctxs[[nm]]$context), error = function(e) e)
     if (inherits(pr, "error")) {
       rows[[nm]] <- row(nm, ids, "error", 1L, conditionMessage(pr))
@@ -330,6 +331,40 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
     nm[i] <- new
   }
   names(a$outputs) <- nm
+  a
+}
+
+# An overall row (normalize_ard(overall = )) is made by a hierarchical
+# analysis with over_variables = TRUE: an answer that names the row and not
+# that gets it written into its analyses (the report file says it, so the
+# ARD and the file agree), and an assumption says so
+.ai_answer_overall <- function(a) {
+  for (i in seq_along(a$outputs)) {
+    o <- a$outputs[[i]]
+    nz <- Filter(function(it) identical(it$fn, "normalize_ard"), o$content %||% list())
+    if (!length(nz) || is.null(nz[[1L]]$args$overall)) next
+    an <- o$ard$analyses %||% list()
+    hier <- which(vapply(an, function(x) {
+      is.list(x) && isTRUE(.ai_scalar_text(x[["method"]]) %in%
+                             c("hierarchical", "cards::ard_stack_hierarchical"))
+    }, NA))
+    if (!length(hier)) next
+    has <- vapply(an[hier], function(x) {
+      grepl("over_variables[[:space:]]*=[[:space:]]*TRUE", paste(unlist(x[["args"]]), collapse = " "))
+    }, NA)
+    if (any(has)) next
+    j <- hier[1L]
+    old <- an[[j]][["args"]]
+    an[[j]][["args"]] <- tfl_r(if (is.null(old) || !length(old)) "over_variables = TRUE" else
+      paste0(paste(unlist(old), collapse = ", "), ", over_variables = TRUE"))
+    a$outputs[[i]]$ard$analyses <- an
+    row <- data.frame(output_id = names(a$outputs)[i], where = "ard.analyses",
+                      item = an[[j]][["id"]] %||% "over_variables",
+                      assumption = paste("tflspec added over_variables = TRUE: the overall row",
+                                         "(normalize_ard overall) needs it"),
+                      question = NA_character_, stringsAsFactors = FALSE)
+    a$assumption_rows <- rbind(a$assumption_rows %||% row[0L, , drop = FALSE], row)
+  }
   a
 }
 
