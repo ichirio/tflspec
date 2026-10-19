@@ -105,7 +105,12 @@ test_that("tfl_ai_prepare(shells = , add = TRUE): one workbook at a time, the re
   # the same workbook again: stopped; asked again with overwrite
   expect_error(tfl_ai_prepare(d, m, adam = ad, quiet = TRUE, add = TRUE),
                "T-14-3-2 already asked for \\(ae-2\\)")
+  # the study's own files kept, whatever overwrite says
+  keep <- c("study.yml", "spec/data.yml", "spec/defaults.yml", "AGENTS.md")
+  for (f in file.path(d, keep)) cat("# the study's own line\n", file = f, append = TRUE)
+  before <- lapply(file.path(d, keep), readLines)
   r3 <- tfl_ai_prepare(d, m, adam = ad, quiet = TRUE, add = TRUE, overwrite = TRUE)
+  expect_identical(lapply(file.path(d, keep), readLines), before)
   expect_identical(sum(r3$requests$outputs == "T-14-3-2"), 1L)
   expect_identical(nrow(r3$requests), nrow(r2$requests))
   # without add, the requests are written anew (as before)

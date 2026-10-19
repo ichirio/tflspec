@@ -78,7 +78,10 @@ them; the requests and the \code{toc} say each report's \code{book}.}
 and answers already there (a TOC of listings, a book of PK figures,
 one at a time): the new requests are named after those there
 (\code{ae-2}), a report asked for already stops the call (\code{overwrite = TRUE} asks for it again), \code{spec/toc.yml} gets the new reports at its
-end, and the workbook's text is \verb{ai/toc_shell-<workbook>.md}.}
+end, and the workbook's text is \verb{ai/toc_shell-<workbook>.md}.  With
+\code{add}, \code{overwrite} is about the requests alone: the study's
+\code{study.yml}, \code{spec/data.yml}, \code{spec/defaults.yml} and the agent's
+files are kept as they are.}
 }
 \value{
 A \code{tfl_ai_prepared}: a list with \code{requests} (one row a request:

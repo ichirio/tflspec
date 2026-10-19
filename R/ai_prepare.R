@@ -67,7 +67,10 @@
 #'   one at a time): the new requests are named after those there
 #'   (`ae-2`), a report asked for already stops the call (`overwrite =
 #'   TRUE` asks for it again), `spec/toc.yml` gets the new reports at its
-#'   end, and the workbook's text is `ai/toc_shell-<workbook>.md`.
+#'   end, and the workbook's text is `ai/toc_shell-<workbook>.md`.  With
+#'   `add`, `overwrite` is about the requests alone: the study's
+#'   `study.yml`, `spec/data.yml`, `spec/defaults.yml` and the agent's
+#'   files are kept as they are.
 #' @return A `tfl_ai_prepared`: a list with `requests` (one row a request:
 #'   `request`, `family`, `outputs`, `n`, `chars`, `file` -- as
 #'   [tfl_ai_write_requests()] gives them), `toc` (one row a report of the
@@ -129,7 +132,9 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
   files <- character()
   if (!dry) {
     dir.create(dir, recursive = TRUE, showWarnings = FALSE)
-    if (!file.exists(file.path(dir, "study.yml")) || isTRUE(overwrite)) {
+    # (added to a study: its study.yml and spec/ as they are, whatever
+    # `overwrite`, which then says only the requests)
+    if (!file.exists(file.path(dir, "study.yml")) || (isTRUE(overwrite) && !isTRUE(add))) {
       files <- tfl_ai_study_init(dir, adam = adam, study_id = study_id, title = title,
                                  overwrite = overwrite)
     }
@@ -188,7 +193,7 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
         .ai_write_text(txt, f)
         req$chars[i] <- nchar(paste(txt, collapse = "\n"))
       }
-      files <- c(files, .ai_agent_files(dir, overwrite = overwrite))
+      files <- c(files, .ai_agent_files(dir, overwrite = overwrite && !isTRUE(add)))
     }
     files <- c(files, list.files(rq, "[.](md|rds)$", full.names = TRUE))
     nxt <- if (identical(mode, "agent")) {
