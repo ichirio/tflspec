@@ -12,8 +12,9 @@
   once, the reports listed, an answer there kept.  The person answers it;
   the agent moves the answers to `ai/decisions.md` and redoes the reports
   they touch.  The instructions (`AGENTS.md`, `.github/copilot-instructions.md`)
-  tell the agent never to open the ADaM; the result's `hint` says when the
-  ADaM folder is inside the study folder.  For tflplanner: a new study's
+  tell the agent to work from the ADaM summary and read the ADaM with R
+  only to settle a question the summary does not (with the company's
+  approved AI; a chat is sent the summary only).  For tflplanner: a new study's
   RTF files go to `output/tfl`, its programs to `programs/tfl`, and
   `tfl_ai_prepare()` writes `spec/toc.yml` (the TOC's reports in order,
   with their section and analysis set) when the study has none.  The

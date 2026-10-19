@@ -164,8 +164,11 @@ show the code.
 An agent works through every request without stopping, and gathers what it
 cannot settle into one file for you.
 
-1. Keep the ADaM folder **outside** the folder you will open in VS Code
-   (`adam = "C:/data/ABC-123/adam"`): the agent must not see subject data.
+1. Use the AI your company approves for the study's data. A chat
+   (`mode = "chat"`) is sent the ADaM's summary only; the agent works in the
+   study folder and may read the ADaM with R -- only to settle a question
+   the summary does not (a value as the data write it, a variable, an
+   arm's levels), never opening a data file in the editor.
 2. `r <- tfl_ai_prepare("mystudy", "mystudy/TOC_SHELL.xlsx", adam = "C:/data/ABC-123/adam", study_id = "ABC-123", mode = "agent")`.
    Besides the requests, the folder gets `AGENTS.md` and
    `.github/copilot-instructions.md` (the agent's instructions), `run.R`

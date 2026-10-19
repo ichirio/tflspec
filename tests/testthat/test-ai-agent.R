@@ -28,7 +28,7 @@ test_that("mode = \"agent\": the instructions, run.R, questions, decisions; toc.
   expect_true(all(file.exists(file.path(d, have))))
   ag <- readLines(file.path(d, "AGENTS.md"), encoding = "UTF-8")
   expect_identical(readLines(file.path(d, ".github", "copilot-instructions.md"), encoding = "UTF-8"), ag)
-  for (k in c("do not stop", "Round 2", "Never open, read or list the ADaM data",
+  for (k in c("do not stop", "Round 2", "read the ADaM itself", "never by opening",
               "ai/questions.md", "ai/decisions.md", "Rscript run.R")) {
     expect_true(any(grepl(k, ag, fixed = TRUE)), info = k)
   }
@@ -49,14 +49,15 @@ test_that("mode = \"agent\": the instructions, run.R, questions, decisions; toc.
   expect_length(r$hint, 0L)
 })
 
-test_that("mode = \"agent\": the ADaM inside the study folder is a hint; chat mode writes no agent file", {
+test_that("mode = \"agent\": the ADaM inside the study folder is fine; chat mode writes no agent file", {
   skip_on_cran()
   skip_if_not_installed("haven")
   root <- withr::local_tempdir()
   d <- file.path(root, "study")
   agent_study(root, adam_inside = TRUE)
   r <- tfl_ai_prepare(d, ex_book(), adam = "adam", quiet = TRUE, mode = "agent")
-  expect_true(any(grepl("inside the study folder: move it out", r$hint, fixed = TRUE)))
+  expect_length(r$hint, 0L)
+  expect_true(file.exists(file.path(d, "AGENTS.md")))
   d2 <- file.path(root, "chat")
   agent_study(file.path(root, "chat-root"))
   r2 <- tfl_ai_prepare(d2, ex_book(), adam = normalizePath(file.path(root, "chat-root", "adam"),

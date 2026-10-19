@@ -26,16 +26,25 @@ and `ai/`. If the workspace is a folder above it, use the paths from here.
       says, save the whole answer over `ai/answers/<request>.md`, and run
       again. Three tries at most; then leave it, add a question to
       `ai/questions.md` saying what is wrong, and go on.
-3. A question you cannot settle from the request, its shell or
-   `ai/decisions.md`: **do not stop**. Take the likeliest choice and write it
-   as an assumption with its `question` (the request's answer format says
+3. The variables and their values are in `ai/adam_summary.md`; work from
+   it. You may read the ADaM itself (where `spec/data.yml` says, `path:`)
+   when a question about the data is not settled by the summary -- a value
+   as the data write it, whether a variable is there, an arm's levels.
+   There is no need to read it otherwise. Read it with R, never by opening
+   a `.xpt` / `.sas7bdat` in the editor, and print only what settles the
+   question -- a variable's values, labels, counts -- not subjects'
+   records in bulk:
+   `Rscript -e "d <- haven::read_xpt('<path>/adae.xpt'); print(table(d$ACNDR, useNA = 'ifany'))"`.
+4. A question you cannot settle from the request, its shell, the summary,
+   the data or `ai/decisions.md`: **do not stop**. Take the likeliest
+   choice and write it as an assumption with its `question` (the request's answer format says
    how). `run.R` gathers the questions into `ai/questions.md`, a question
    several reports ask once, with the reports listed. A question about the
    work rather than a report (a shell you cannot find, a file missing): add
    it to `ai/questions.md` yourself, in the same form (`## Q<n>. ...`,
    `- Reports:`, `- The agent took, for now:`, `- Status: open`,
    `- Answer:`).
-4. When every request is done (`ok`, `warning`, or left after three tries),
+5. When every request is done (`ok`, `warning`, or left after three tries),
    stop and tell the person: how many reports have an RTF, which do not and
    why, and that `ai/questions.md` waits for their answers.
 
@@ -55,11 +64,9 @@ When the person says the questions are answered:
 
 ## Never
 
-- **Never open, read or list the ADaM data**: not the folder
-  `spec/data.yml` names under `path:`, not any data file (`.xpt`,
-  `.sas7bdat`, `.rds`, `.csv`, `.xlsx` of data) anywhere. The variables and
-  their values are in `ai/adam_summary.md`: that is all you need. Do not
-  print data in the terminal either.
+- Do not open a data file (`.xpt`, `.sas7bdat`) in the editor, and do not
+  print subjects' records in bulk: read the ADaM with R, only for a
+  question the summary does not settle (round 1, step 3).
 - Do not change `study.yml`, `spec/data.yml`, `spec/defaults.yml`, `run.R`,
   `AGENTS.md` or `.github/copilot-instructions.md`. When one seems wrong,
   ask in `ai/questions.md`.

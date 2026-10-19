@@ -19,14 +19,16 @@
 #' `AGENTS.md` and `.github/copilot-instructions.md` (the same
 #' instructions: answer each request into `ai/answers/`, run `run.R`, read
 #' `ai/status.md`, repair; a question it cannot settle taken as an
-#' assumption with its `question`, never a stop; the ADaM never opened),
+#' assumption with its `question`, never a stop; the ADaM read with R
+#' only to settle a question the summary does not),
 #' `run.R` ([tfl_ai_run()]: collect, ARD, RTF, `ai/status.md`, the
 #' questions gathered into `ai/questions.md`), `ai/questions.md` (for the
 #' person's answers) and `ai/decisions.md` (what the reports follow; the
 #' agent moves an answered question there, then redoes the reports it
 #' touches -- the second round).  `questions.md` and `decisions.md` are never
-#' written over.  Keep the ADaM folder outside the folder opened in VS Code:
-#' the result's `hint` says so when it is inside the study folder.
+#' written over.  The agent works in the study folder with the company's
+#' approved AI: it may read the ADaM; a chat (`mode = "chat"`) is sent the
+#' ADaM's summary only.
 #'
 #' @param dir The study folder.
 #' @param toc The TOC / SHELL workbook (`.xlsx` or `.xlsm`).
@@ -162,8 +164,7 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
     }
     files <- c(files, list.files(rq, "[.](md|rds)$", full.names = TRUE))
     nxt <- if (identical(mode, "agent")) {
-      c(sprintf(paste0("open %s in VS Code (that folder: the agent reads its AGENTS.md); keep ",
-                       "the ADaM folder outside the folder you open"),
+      c(sprintf("open %s in VS Code (that folder: the agent reads its AGENTS.md)",
                 normalizePath(dir, winslash = "/")),
         paste0("in the agent's chat: \"Follow AGENTS.md: do every request of ",
                "ai/requests/index.md.\" (a folder above it open: \"Follow <the study ",
@@ -174,14 +175,6 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
                      "ai/answers/%s.md (tfl_ai_save_answer()), then ",
                      "tfl_ai_collect_answers()"), req$file[1L], req$request[1L])
     }
-  }
-  # the ADaM inside the study folder: an agent given the folder sees it
-  root_dir <- normalizePath(dir, winslash = "/", mustWork = FALSE)
-  adam_abs <- normalizePath(adam_dir, winslash = "/", mustWork = FALSE)
-  if (identical(mode, "agent") && startsWith(paste0(adam_abs, "/"), paste0(root_dir, "/"))) {
-    hint <- c(hint, sprintf(paste0("the ADaM (%s) is inside the study folder: move it out, ",
-                                   "so the folder you open in VS Code (or attach) holds no ",
-                                   "subject's data"), adam))
   }
   # each report of the TOC, its shell and the request asking for it
   t <- shell$toc

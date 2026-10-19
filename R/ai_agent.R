@@ -46,8 +46,8 @@
     paste0("> **For the agent** (AGENTS.md): answer this request with its one `yaml` block and ",
            "save the whole answer as `ai/answers/", request, ".md`; then run `Rscript run.R` and ",
            "read `ai/status.md`. Read `ai/decisions.md` first and follow it. Do not stop to ask: ",
-           "take the likeliest choice and write it as an assumption with its `question`. Never ",
-           "open the ADaM data (the folder `spec/data.yml` names, any .xpt / .sas7bdat / .rds)."),
+           "take the likeliest choice and write it as an assumption with its `question`. Work from ",
+           "`ai/adam_summary.md`; read the ADaM with R only to settle a question it does not."),
     "", "---", "")
 }
 

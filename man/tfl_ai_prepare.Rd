@@ -99,14 +99,16 @@ requests (each starting with the agent's steps), the study folder gets
 \code{AGENTS.md} and \code{.github/copilot-instructions.md} (the same
 instructions: answer each request into \verb{ai/answers/}, run \code{run.R}, read
 \code{ai/status.md}, repair; a question it cannot settle taken as an
-assumption with its \code{question}, never a stop; the ADaM never opened),
+assumption with its \code{question}, never a stop; the ADaM read with R
+only to settle a question the summary does not),
 \code{run.R} (\code{\link[=tfl_ai_run]{tfl_ai_run()}}: collect, ARD, RTF, \code{ai/status.md}, the
 questions gathered into \code{ai/questions.md}), \code{ai/questions.md} (for the
 person's answers) and \code{ai/decisions.md} (what the reports follow; the
 agent moves an answered question there, then redoes the reports it
 touches -- the second round).  \code{questions.md} and \code{decisions.md} are never
-written over.  Keep the ADaM folder outside the folder opened in VS Code:
-the result's \code{hint} says so when it is inside the study folder.
+written over.  The agent works in the study folder with the company's
+approved AI: it may read the ADaM; a chat (\code{mode = "chat"}) is sent the
+ADaM's summary only.
 }
 
 \examples{
