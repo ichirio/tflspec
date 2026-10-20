@@ -166,6 +166,31 @@ test_that("summary's mean (CI); km_table, vs_change and orr", {
   expect_true(all(c("km_table", "vs_change", "orr") %in% tfl_templates()$name))
 })
 
+test_that("hierarchical of one level; demog and ae_pt_freq on their layouts", {
+  # one level: the term alone, no row keys (it stopped: the keys' names)
+  h <- tfl_template_expand("hierarchical", list(population = "SAF", hierarchy = "AEDECOD"))
+  tp <- h$content[[2L]]$args
+  expect_null(tp$rows)
+  expect_identical(tp$label, list(label = "AEDECOD"))
+  # ae_pt_freq is hierarchical's ARD and items of one level, with its own
+  # order, filter and page
+  p <- tfl_template_expand("ae_pt_freq", list(population = "SAF", min_pct = 5))
+  h1 <- tfl_template_expand("hierarchical", list(population = "SAF", hierarchy = "AEDECOD",
+    where = "TRTEMFL == \"Y\"", data_label = "Treatment-emergent AEs of the safety set",
+    analysis_id = "TEAE_PT", analysis_label = "TEAE by PT", overall = "Any TEAE"))
+  expect_identical(p$ard, h1$ard)
+  expect_identical(vapply(p$content, `[[`, "", "fn"),
+                   c("normalize_ard", "table_plan", "plan_sort", "plan_filter", "plan_col_header",
+                     "plan_paginate_rows"))
+  # demog's usual table is summary's
+  d <- tfl_template_expand("demog", list(population = "SAF", continuous = "AGE", categorical = "SEX"))
+  s <- tfl_template_expand("summary", list(population = "SAF", variables = "AGE", categorical = "SEX",
+    groupn_label = "Subjects per group", labels = list(AGE = "Age (years)", SEX = "Sex, n (%)")))
+  no_from <- function(x) lapply(x, function(i) i[setdiff(names(i), "from")])
+  expect_identical(no_from(d$content), no_from(s$content))   # (each item says its template)
+  expect_identical(d$ard$analysis_data, s$ard$analysis_data)
+})
+
 test_that("ae_overview: a subjects analysis and a row a flag", {
   x <- tfl_template_expand("ae_overview")
   expect_identical(vapply(x$ard$analyses, `[[`, "", "method"), c("categorical", rep("subjects", 6)))
