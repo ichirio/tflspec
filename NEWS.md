@@ -1,5 +1,11 @@
 # tflspec (development version)
 
+* **Generated code pipes with `|>`** (the 3-stage PR).  The report
+  programs' pipe was RStudio's Insert Pipe Operator setting, and `%>%`
+  outside RStudio, while the ARD programs wrote `|>`; now every program
+  writes `|>` unless asked (`pipe = "%>%"` / `"rstudio"`, or the option
+  `rtfreporter.ard_pipe`).
+
 * **Figure templates: the design form, and `tpl_` functions that draw
   only** (#403, 0.0.24.9190).  A template SPEC's figure expands into the
   design form (data steps, plot, layers), as the figure designer and the

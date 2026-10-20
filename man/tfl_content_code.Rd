@@ -23,8 +23,9 @@ steps come first, as they are written, and the pipe starts from \code{data}.}
 
 \item{plan}{The name the plan is assigned to.}
 
-\item{pipe}{\code{"|>"} or \code{"\%>\%"}; \code{NULL} follows
-\code{getOption("rtfreporter.ard_pipe")}.}
+\item{pipe}{\code{"|>"}, \code{"\%>\%"} or \code{"rstudio"} (RStudio's Insert Pipe
+Operator); \code{NULL} follows \code{getOption("rtfreporter.ard_pipe")}, else
+\code{"|>"}.}
 
 \item{template}{For a resolved template report (\verb{template: \{name, args\}}, \code{\link[=tfl_resolve_output]{tfl_resolve_output()}}): \code{"call"} (default) writes the
 template's call, \verb{plan <- tpl_<name>(ard, ...)} with the arguments its
