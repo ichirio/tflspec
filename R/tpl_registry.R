@@ -63,7 +63,7 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
   }
   nv <- c("name", "text")
   c(k(c("by", "baseline", "post", "term", "grade", "category", "censor", "group", "time",
-        "pop", "param_order", "visit_order"), "vars"),
+        "pop", "param_order", "visit_order", "exposure"), "vars"),
     k(c("categorical", "continuous", "variables", "hierarchy"), "vars", TRUE),
     k("by_levels", "levels", TRUE, of = "by"),
     k("levels", "levels", TRUE, of = "post"),
@@ -75,14 +75,15 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
     k("baseline_value", "levels", of = "baseline"),
     k("sort_by", "levels", of = "by"),
     k(c("stack", "drop_time_0", "cumulative", "baseline_normal"), "flag"),
-    k("min_pct", "number"),
+    k(c("min_pct", "per"), "number"),
     k("layout", "choice", choices = c("cols", "rows")),
     k("grade_in", "choice", choices = c("rows", "cols")),
     k("min_pct_in", "choice", choices = c("any", "all", "total")),
     k(c("population", "data", "where", "data_id", "data_label", "analysis_id",
         "analysis_label", "overall", "any_grade", "cat_id", "cat_label", "ci_id", "ci_label",
         "ci_method", "groupn_label", "median_label", "time_prefix", "time_unit", "unit",
-        "when", "visit_label", "param_label", "value_label", "change_label", "cell"), "text"),
+        "when", "visit_label", "param_label", "value_label", "change_label", "cell", "start"),
+      "text"),
     k(c("heading", "statistics", "cat_statistics"), "text", TRUE),
     # a variable's heading each: given by name, merged with the default's
     k(c("labels", "param_labels"), "list", fields = nv, merge = TRUE),
@@ -1406,3 +1407,4 @@ tpl_ae_overview <- function(ard, population = "SAF", ..., codelists = NULL) {
 # ---- the templates in files of their own (R/tpl_<name>.R, read before this one) ----
 
 .tpl_la_register()
+.tpl_eair_register()
