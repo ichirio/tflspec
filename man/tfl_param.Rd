@@ -42,8 +42,8 @@ default.}
 \item{multiple}{\code{TRUE} when it takes several values (\code{hierarchy}),
 \code{FALSE} one (\code{by}); \code{NULL}: as \code{type}.}
 
-\item{of}{For \code{type = "levels"}: whose values they are -- another of
-the template's parameters, the variable it names (\code{by_levels}: \code{of = "by"}), else a variable (\code{params}: \code{of = "PARAMCD"}).}
+\item{of}{For \code{type = "levels"}: whose values they are.  A name of the
+template's parameters first (the variable it names: \code{by_levels}, \code{of = "by"}), else a variable's name (\code{params}, \code{of = "PARAMCD"}).}
 
 \item{choices}{For \code{type = "choice"}: the values it may take.}
 

@@ -29,9 +29,9 @@
 #'   default.
 #' @param multiple `TRUE` when it takes several values (`hierarchy`),
 #'   `FALSE` one (`by`); `NULL`: as `type`.
-#' @param of For `type = "levels"`: whose values they are -- another of
-#'   the template's parameters, the variable it names (`by_levels`: `of =
-#'   "by"`), else a variable (`params`: `of = "PARAMCD"`).
+#' @param of For `type = "levels"`: whose values they are.  A name of the
+#'   template's parameters first (the variable it names: `by_levels`, `of =
+#'   "by"`), else a variable's name (`params`, `of = "PARAMCD"`).
 #' @param choices For `type = "choice"`: the values it may take.
 #' @param fields For `type = "list"`: a record's fields, `c("vars",
 #'   "label", "width")`; a named vector's are `c("name", "text")`.
