@@ -42,11 +42,20 @@ test_that("tfl_ai_write_requests(max_chars = ): a request too long is split", {
   s <- req_study()
   shell <- s$shell
   shell$toc$family <- "demographics"         # one family: one request of four
+  # (with templates, a request over max_chars first shortens their list:
+  # it then fits)
   r <- suppressMessages(tfl_ai_write_requests(s$dir, shell, s$adam, size = 8, types = "table"))
   expect_identical(nrow(r), 1L)
+  r1 <- suppressMessages(tfl_ai_write_requests(s$dir, shell, s$adam, size = 8, types = "table",
+                                               max_chars = r$chars - 500, overwrite = TRUE))
+  expect_identical(nrow(r1), 1L)
+  expect_lte(r1$chars, r$chars - 500)
+  r <- suppressMessages(tfl_ai_write_requests(s$dir, shell, s$adam, size = 8, types = "table",
+                                              templates = FALSE, overwrite = TRUE))
   lim <- r$chars - 500
   r2 <- suppressMessages(suppressWarnings(tfl_ai_write_requests(
-    s$dir, shell, s$adam, size = 8, max_chars = lim, types = "table", overwrite = TRUE)))
+    s$dir, shell, s$adam, size = 8, max_chars = lim, types = "table", overwrite = TRUE,
+    templates = FALSE)))
   expect_gt(nrow(r2), 1L)
   expect_true(all(r2$request %in% c("demographics-1a", "demographics-1b",
                                     "demographics-1aa", "demographics-1ab",
