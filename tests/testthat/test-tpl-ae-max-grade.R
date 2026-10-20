@@ -21,7 +21,6 @@ mg_tab <- function(p) {
 mg_skip <- function() {
   skip_if_not_installed("cards")
   skip_if_not_installed("dplyr")
-  skip_if(utils::packageVersion("rtfreporter") < "0.8.2.9083", "rtfreporter with #695")
 }
 
 test_that("expanded: the highest record overall, in each SOC and PT; the overall block pinned", {
