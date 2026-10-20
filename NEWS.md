@@ -9,6 +9,15 @@
   tables of common adverse events), in all (`min_pct_in = "all"`) or in
   the Total column (`"total"`).  `tpl_ae_pt_freq()` is its call.
 
+* **shift / lab_shift as a template SPEC** (#382, 0.0.24.9179).  Written
+  as `template:` in a report file, they stopped with "`vars` needs at
+  least two columns" in a study whose defaults say
+  `plan_stub: {name, before}` (as SAMPLE-01's do): the template's
+  `plan_stub(vars = )` was taken for the look and the study's replaced it.
+  An item is the look now only when all its arguments are: the stub's
+  columns stay.  Every template's `template:` form is now tested against
+  its written-out items.
+
 * **The AI steps over several workbooks** (#378, 0.0.24.9178).
   `tfl_ai_read_shell(path, shells = )` reads a TOC in one workbook and
   its shells in others: each report's shell is looked for in all of them

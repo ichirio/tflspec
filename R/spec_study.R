@@ -161,7 +161,7 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   if (!is.null(.tpl_spec_of(output))) {
     tpl <- .tpl_expand_for(output, study, acc$content,
                            .merge_map(acc$codelists, output$codelists))
-    look <- vapply(tpl$x$content, function(it) it$fn %in% names(.tpl_look), NA)
+    look <- vapply(tpl$x$content, .tpl_is_look, NA)
     tlook <- list(data = list(), codelists = list(), content = tpl$x$content[look], page = list())
     tl <- list(data = tpl$x$data %||% list(), codelists = list(),
                content = tpl$x$content[!look], page = list())
