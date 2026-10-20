@@ -258,3 +258,35 @@ test_that("a chat's request over max_chars: the templates' arguments by name onl
   expect_false(grepl("(text) = ", ae2, fixed = TRUE))
   expect_match(ae1, "(text) = ", fixed = TRUE)
 })
+
+test_that("tfl_ai_compare(): a study without templates; no answer; a repair counted once", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  root <- withr::local_tempdir()
+  ad <- aitpl_study(root)
+  d <- file.path(root, "study")
+  r <- tfl_ai_prepare(d, aitpl_book(), adam = ad, quiet = TRUE, templates = FALSE)
+  cmp <- tfl_ai_compare(d, file = NULL)
+  expect_false(file.exists(file.path(d, "ai", "compare.csv")))
+  expect_setequal(cmp$output_id, r$toc$output_id)
+  expect_false(any(cmp$templates))
+  expect_true(all(is.na(cmp$answered_with)))
+  expect_true(all(cmp$check == "no answer"))
+  expect_true(all(cmp$repairs == 0L))
+  # an answer with an error: a repair, logged once however often it is read
+  tfl_ai_save_answer(d, "demographics-1", aitpl_answer(
+    "tflspec_ai: {task: table, version: 1, outputs: [T-14-1-1]}",
+    "outputs:",
+    "  - id: T-14-1-1",
+    "    kind: table",
+    "    population: SAF",
+    "    template: {name: demo}",
+    "assumptions: []"))
+  for (i in 1:2) suppressMessages(tfl_ai_collect_answers(d))
+  cmp <- tfl_ai_compare(d)
+  expect_true(file.exists(file.path(d, "ai", "compare.csv")))
+  at <- cmp$output_id == "T-14-1-1"
+  expect_identical(cmp$check[at], "error")
+  expect_identical(cmp$repairs[at], 1L)
+  expect_true(all(cmp$repairs[!at] == 0L))
+})
