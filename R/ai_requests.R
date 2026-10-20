@@ -58,6 +58,11 @@
 #'   new ones named after them (`ae-2` when `ae-1` is there, `figure-3`
 #'   ...), the index listing all of them, each request's `book` the
 #'   workbook its reports' shells are in.
+#' @param templates `TRUE` (default): each request asks the AI to answer a
+#'   report with a template (`template: {name, args}`) where one fits --
+#'   the templates registered when the requests are written listed in it,
+#'   its first line `<!-- templates: TRUE -->` -- else as a code SPEC.
+#'   `FALSE`: the code SPEC only, the requests as they were before templates.
 #' The folder the answers go to (`ai/answers`, beside `dir`) is made too.
 #'
 #' @return A data frame, one row a request: `request` (the file's name,
@@ -85,8 +90,9 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = 8L,
                                   examples = NULL,
                                   instructions = c("each", "once"),
                                   workbook = c("text", "attach", "both", "file"),
-                                  overwrite = FALSE, add = FALSE) {
+                                  overwrite = FALSE, add = FALSE, templates = TRUE) {
   fn <- "tfl_ai_write_requests()"
+  templates <- .ai_templates_flag(templates, fn)
   instructions <- match.arg(instructions)
   workbook <- match.arg(workbook)
   book <- basename(shell$path %||% "the workbook")
@@ -219,6 +225,7 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = 8L,
                           population = .ai_population_of(study_dir, shell$toc$text[i]),
                           shell = shell, language = language)
     ctx$shell <- placed(ctx$shell, id)
+    ctx$ai_templates <- templates
     p <- tfl_ai_prompt("figure", ctx)
     list(context = ctx, text = format(p), system = p$system)
   }
@@ -232,6 +239,7 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = 8L,
                           study_dir = study_dir, language = language,
                           examples = ex)
     ctx$shell <- placed(ctx$shell, ids)
+    ctx$ai_templates <- templates
     p <- tfl_ai_prompt("table", ctx)
     text <- if (identical(instructions, "each")) format(p) else
       paste(c("(Follow the instructions of my first message in this chat.)", "",
@@ -264,7 +272,11 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = 8L,
     req[[fig_names[k]]] <- c(fig_prompt_of(figs[k]), list(ids = figs[k]))
     fam <- c(fam, "figure")
   }
-  for (nm in names(req)) .ai_write_text(req[[nm]]$text, file.path(out_dir, paste0(nm, ".md")))
+  # (with templates: the setting at the request's head)
+  head <- if (templates) paste0("<!-- ", .ai_templates_line(templates), " -->\n")
+  for (nm in names(req)) {
+    .ai_write_text(paste0(head, req[[nm]]$text), file.path(out_dir, paste0(nm, ".md")))
+  }
   if (identical(instructions, "once")) {
     .ai_write_text(req[[1L]]$system, file.path(out_dir, "00-instructions.md"))
   }
@@ -338,7 +350,9 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = 8L,
 #'   `next_steps` (a request's next step, named by the request),
 #'   `assumptions` (the study's `spec/_assumptions.yml` for these reports:
 #'   `output_id`, `where`, `item`, `assumption`, `question`), `stray` (answer
-#'   files named after no request) and `requests` (the requests' folder).
+#'   files named after no request), `requests` (the requests' folder) and
+#'   `templates` (each request's setting, [tfl_ai_prepare()]'s `templates`:
+#'   a logical named by the request).
 #'   The paths are relative to `study_dir`.  Its print is a summary: each
 #'   request's status, its reports and the next step.
 #' @seealso [tfl_ai_write_requests()]
@@ -398,6 +412,8 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
     wrote <- NULL
     if (nrow(err)) {
       dir.create(file.path(study_dir, repairs), recursive = TRUE, showWarnings = FALSE)
+      # each answer that needed a repair, once (tfl_ai_compare() counts them)
+      .ai_repair_log(file.path(study_dir, repairs), nm, f)
       .ai_write_text(format(tfl_ai_repair_prompt(a, pr)),
                      file.path(study_dir, repairs, paste0(nm, ".md")))
       nxt[nm] <- sprintf("paste %s into the SAME chat; save its new answer over %s",
@@ -477,8 +493,10 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
   names(asm)[names(asm) == "sheet"] <- "where"
   asm <- asm[is.na(asm$output_id) | asm$output_id %in% out$output_id, , drop = FALSE]
   rownames(asm) <- NULL
+  # each request's setting: answered with templates where they fit, or not
+  tpl <- vapply(ctxs, function(x) isTRUE(x$context$ai_templates), NA)
   structure(list(reports = out, next_steps = nxt[unique(out$request)], assumptions = asm,
-                 stray = rel(answers, stray), requests = requests),
+                 stray = rel(answers, stray), requests = requests, templates = tpl),
             class = "tfl_ai_collected")
 }
 

@@ -326,6 +326,11 @@ tfl_ai_prompt <- function(task, context = NULL, mode = c("chat", "api"),
     example = if (isTRUE(example)) .ai_example_text(task, format) else ""
   )
   system <- .ai_fill(.ai_prompt_file("system"), fill)
+  # a study's request with templates (tfl_ai_prepare(templates = TRUE)):
+  # answer with one where it fits; the templates, from the registry
+  if (isTRUE(context$ai_templates) && task %in% c("table", "figure")) {
+    system <- paste(system, .ai_templates_text(task), sep = "\n\n")
+  }
   # a figure whose shell is in the message (a study's request): what to do
   # reads it, nothing attached
   ask <- if (task == "figure" && mode == "chat" && !is.null(context$shell) &&
