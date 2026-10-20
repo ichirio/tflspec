@@ -201,9 +201,12 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
       # what the program writes after the template's call (the A use)
       r <- .tpl_rest(prov, tpl$name)
       # (a report's own data: the call's data step is the template's)
+      # (a figure's call draws the template's layers: none of them replaced)
+      ok <- r$ok && !length(own$data) && (!identical(output$kind, "figure") || !length(intersect(
+        vapply(r$items, `[[`, "", "fn"), vapply(tpl$x$content, `[[`, "", "fn"))))
       attr(output, "template") <- list(name = tpl$name, args = tpl$args, study = tpl$study,
-                                       items = tpl$x$content, rest = r$items,
-                                       ok = r$ok && !length(own$data))
+                                       items = tpl$x$content, rest = r$items, ok = ok,
+                                       plot = tpl$x$plot, call_steps = tpl$x$call_steps)
     }
     if (isTRUE(provenance)) acc$content <- prov
   }

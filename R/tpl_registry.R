@@ -117,7 +117,11 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
 # defaults: the one list of their names.  Each is function(output, study).
 .tpl_study_sources <- list(
   # the report's analysis set (its `population:`)
-  output.population = function(output, study) output$population,
+  # (none when the report names none: NA is tfl_output()'s "not given")
+  output.population = function(output, study) {
+    p <- output$population
+    if (length(p) == 1L && !is.na(p)) p
+  },
   # the study's treatment variable (study.yml `settings: treatment:`)
   settings.treatment = function(output, study) study$study$settings$treatment
 )
@@ -838,8 +842,19 @@ tpl_ae_max_grade <- function(ard, population, ..., codelists = NULL) {
 
 # ---- km_simple: the figure template of tfl_fig_template(), on the registry ------
 
-# (no tpl_km_simple() yet: a figure's program is its items)
-.tfl_template("km_simple", kind = "figure", layout = "km", call = NA_character_,
+# The design of km_simple's display: the fit (the data's last step), the
+# layers, the figure's settings.  The template's body puts the data steps
+# before it; tpl_km_simple() draws it on data made already.
+.tpl_km_design <- function(group = NULL, time = NULL, censor = "CNSR", time_unit = "months",
+                           data = NULL, param = NULL) {
+  f <- tfl_fig_template("km_simple", data = data, param = param, group = group,
+                        time = time, censor = censor, time_unit = time_unit)
+  fit <- vapply(f$data, function(s) identical(s$step, "survfit"), NA)
+  list(steps = f$data[!fit], stats = f$data[fit], plot = f$plot,
+       content = lapply(f$layers, function(l) tfl_item(l$layer, l[setdiff(names(l), "layer")])))
+}
+
+.tfl_template("km_simple", kind = "figure", layout = "km",
   params = list(
     tfl_param("param", required = TRUE, type = "levels", of = "PARAMCD",
               doc = "the PARAMCD of ADTTE"),
@@ -854,19 +869,59 @@ tpl_ae_max_grade <- function(ard, population, ..., codelists = NULL) {
   body = function(a, ctx) {
     # the design form, as a designed report has it: the data steps (the
     # fit last), the layers as the content's items, the figure's settings
-    f <- tfl_fig_template("km_simple", data = a$data, param = a$param, group = a$group,
-                          time = a$time, censor = a$censor, time_unit = a$time_unit)
+    f <- .tpl_km_design(a$group, a$time, a$censor, a$time_unit, data = a$data, param = a$param)
     # the analysis set: its subjects (data.yml's definition), in place of
     # a flag on the figure's data
-    steps <- Filter(function(s) !identical(s$step, "flag"), f$data)
+    steps <- Filter(function(s) !identical(s$step, "flag"), f$steps)
     if (!is.null(a$population)) {
       at <- match("read", vapply(steps, `[[`, "", "step"))
       steps <- append(steps, .tpl_population_step(a$population, ctx$population), at)
     }
-    layers <- lapply(f$layers, function(l) tfl_item(l$layer, l[setdiff(names(l), "layer")]))
-    list(data = list(source = "code", steps = c(steps, f$stats)), content = layers,
-         plot = f$plot)
+    # (the fit, the data's last step: tpl_km_simple() makes it in the A use)
+    list(data = list(source = "code", steps = c(steps, f$stats)), content = f$content,
+         plot = f$plot, call_steps = length(f$stats))
   })
+
+#' Kaplan-Meier curves: a figure from the template `km_simple`
+#'
+#' The A use of a figure's template SPEC: the program makes the figure's
+#' data with its own steps (the dataset read, the analysis set's subjects
+#' kept, the parameter, the time's unit), then one call draws it.  The
+#' survival fit is made here, from the data (`ggsurvfit::survfit2()`): the
+#' curves, the censor marks, the treatment palette, the axes and the
+#' study's figure theme.  A report's own layers and settings go after the
+#' call with `+` (`+ geom_hline(...) + labs(...)`).
+#'
+#' @param data The figure's data: one record a subject (the parameter's,
+#'   the analysis set's subjects), its time in `time_unit`.
+#' @param group The curves' variable (`TRT01A`), bare or as text; `NULL`:
+#'   one curve.
+#' @param time The time variable; `NULL`: `AVAL`.
+#' @param censor The censoring variable (1: censored).
+#' @param time_unit The time's unit, for the x axis' title.
+#' @param plot The figure's settings over the template's (`x_label`,
+#'   `y_by`, `legend` ..., as a designed figure's `plot:`).
+#' @return A ggplot.
+#' @seealso [tfl_template_expand()] for the design it draws (the B use).
+#' @examples
+#' if (requireNamespace("ggsurvfit", quietly = TRUE)) {
+#'   saf <- adsl$USUBJID[adsl$SAFFL == "Y"]
+#'   df <- adtte[adtte$PARAMCD == "PFS" & adtte$USUBJID %in% saf, ]
+#'   p <- tpl_km_simple(df, group = TRT01A)
+#'   class(p)
+#' }
+#' @export
+tpl_km_simple <- function(data, group = NULL, time = NULL, censor = "CNSR",
+                          time_unit = "months", plot = NULL) {
+  if (!is.data.frame(data)) .ard_stop("tpl_km_simple(): `data` is the figure's data, a data frame.")
+  col <- function(q) if (rlang::quo_is_null(q)) NULL else rlang::as_name(q)
+  f <- .tpl_km_design(col(rlang::enquo(group)), col(rlang::enquo(time)),
+                      col(rlang::enquo(censor)), time_unit)
+  o <- tfl_output("tpl-km_simple", "figure", extends = "none",
+                  data = list(source = "code", steps = f$stats), content = f$content)
+  o$plot <- .merge_map(f$plot, plot)
+  tfl_content_run(o, data)
+}
 
 #' Disposition: a table plan from the template `disposition`
 #'
