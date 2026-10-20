@@ -77,7 +77,8 @@ replacing the record's, else \code{semi_join()}.  In ADaM, columns copied from
 ADSL should hold the same values, so they are aligned to the
 denominator's ADSL values.  A column the population's
 \code{derive} makes is not taken: a record's TRTA or APERIOD is its own (a
-crossover's differs by record).
+crossover's differs by record).  The analyses reading the same data share
+one object, which takes the union of the ADSL columns they need.
 
 The formats (the method's and the row's \code{formats}, over each statistic's
 default in \code{\link[=tfl_ard_statistics]{tfl_ard_statistics()}}) are in the cards call itself, its

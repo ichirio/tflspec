@@ -877,6 +877,12 @@
     })
     made <- .adata_lines(xo, named[[o]], subj, lv, avoid = taken, reads = reads,
                          needs = needs)
+    # the analyses reading the same records (dataset, analysis set, where)
+    # share one data: it takes the union of the ADSL columns they need
+    grp <- paste(a$dataset[rows], a$population_id[rows], a$where[rows], sep = "\r")
+    own <- is.na(dcol[rows])
+    take_of <- lapply(split(seq_along(rows)[own], grp[own]), function(k)
+      unique(unlist(lapply(rows[k], function(i) .den_needs(a[i, ], keys)))))
     data_name <- vapply(rows, function(i) {
       r <- a[i, ]
       # on an analysis data: it, or its records the analysis's condition keeps
@@ -904,13 +910,14 @@
       } else {
         src <- ds
         # (not a column the population's derive makes: the record's own)
-        join <- .subjects_join(pop, subj, setdiff(.den_needs(r, keys), .derive_names(
+        g <- grp[match(i, rows)]
+        join <- .subjects_join(pop, subj, setdiff(take_of[[g]], .derive_names(
           x$populations$derive[x$populations$population_id %in% pid])))
       }
       # no dataset and no population: no data (as before, `data` is NULL)
       if (is.null(src)) return("NULL")
       if (is.null(whr) && is.null(join) && src %in% taken) return(src)  # a dataset or a population
-      key <- paste(c(src, join, whr), collapse = "\r")
+      key <- paste(c(src, pop, whr), collapse = "\r")
       if (!is.na(data_of[key])) return(data_of[[key]])
       base <- paste(c(if (!is.na(r$dataset)) .r_name(r$dataset) else
         .r_name(pop_ds), if (!is.na(pid)) .r_name(pid)), collapse = "_")

@@ -830,7 +830,8 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 #' ADSL should hold the same values, so they are aligned to the
 #' denominator's ADSL values.  A column the population's
 #' `derive` makes is not taken: a record's TRTA or APERIOD is its own (a
-#' crossover's differs by record).
+#' crossover's differs by record).  The analyses reading the same data share
+#' one object, which takes the union of the ADSL columns they need.
 #'
 #' The formats (the method's and the row's `formats`, over each statistic's
 #' default in [tfl_ard_statistics()]) are in the cards call itself, its
