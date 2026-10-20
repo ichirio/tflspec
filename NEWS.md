@@ -15,6 +15,11 @@
   "USUBJID")`), whatever the figure's data has.  `tfl_fig_template()`'s
   `pop` stays (the figure designer's presets).
 
+* **ae_max_grade's ARD builds in a study** (#394, 0.0.24.9184).  Its
+  analysis data made by code (each subject's highest record) had no
+  `from`, and the ARD definition's check stopped ("`from` is blank"); each
+  says the records it is made from now.
+
 * **`tfl_template_variant()`: a template by its defaults alone** (#388,
   0.0.24.9183).  `tfl_template_variant("demog_jp", from = "demog",
   defaults = list(...))` registers `from`'s parameters, types and body with
