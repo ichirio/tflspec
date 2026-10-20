@@ -4,7 +4,17 @@
 \alias{tfl_param}
 \title{A template parameter}
 \usage{
-tfl_param(name, default = NULL, required = FALSE, doc = NULL, study = NULL)
+tfl_param(
+  name,
+  default = NULL,
+  required = FALSE,
+  doc = NULL,
+  study = NULL,
+  type = NULL,
+  multiple = NULL,
+  choices = NULL,
+  fields = NULL
+)
 }
 \arguments{
 \item{name}{The parameter's name.}
@@ -19,6 +29,21 @@ tfl_param(name, default = NULL, required = FALSE, doc = NULL, study = NULL)
 (\code{"plan_cells.continuous"}): the value of the study's defaults (and
 pattern) item, when the report's template SPEC does not give it.
 \code{NULL}: the template's own default only.}
+
+\item{type}{What its value is, for an input form: \code{"vars"} (variable
+names), \code{"levels"} (values of a variable), \code{"flag"} (\code{TRUE} /
+\code{FALSE}), \code{"number"}, \code{"text"} (also an R condition, an id, a label),
+\code{"choice"} (one of \code{choices}) or \code{"list"} (a named vector or a list
+of records, their \code{fields}).  \code{NULL}: tflspec's type for the name
+(\code{by} is \code{"vars"}, \code{where} \code{"text"} ...), else one read from the
+default.}
+
+\item{multiple}{\code{TRUE} when it takes several values (\code{hierarchy}),
+\code{FALSE} one (\code{by}); \code{NULL}: as \code{type}.}
+
+\item{choices}{For \code{type = "choice"}: the values it may take.}
+
+\item{fields}{For \code{type = "list"}: a record's fields, \code{c("vars", "label", "width")}; a named vector's are \code{c("name", "text")}.}
 }
 \value{
 A \code{tfl_param}.
@@ -30,4 +55,5 @@ a width, the rows a page): the study's styles and defaults say that.
 }
 \examples{
 tfl_param("population", "SAF", doc = "the analysis set's id")
+tfl_param("layout", "cols", type = "choice", choices = c("cols", "rows"))
 }

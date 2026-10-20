@@ -1,5 +1,13 @@
 # tflspec (development version)
 
+* **`tfl_param(type = )`: each template parameter's input type** (#387,
+  0.0.24.9183).  `"vars"`, `"levels"`, `"flag"`, `"number"`, `"text"`,
+  `"choice"` (with `choices`) or `"list"` (with `fields`), and `multiple`,
+  in `tfl_template_params()` -- what tflplanner's template SPEC form reads
+  in place of guessing from the default.  Every tflspec template's
+  parameters have theirs; a company's without one takes tflspec's for its
+  name, else one read from its default.
+
 * **Template `param_change`: parameters' value and change from baseline
   at each visit** (#386, 0.0.24.9182).  Laboratory tests, vital signs or
   ECG parameters (`data`: ADLB, ADVS, ADEG) -- n, mean (SD), median, min,
