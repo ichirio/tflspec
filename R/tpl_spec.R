@@ -22,10 +22,12 @@
   list(name = t$name, args = as.list(t$args %||% list()))
 }
 
-# The study's default of a parameter that says where it is
-# (tfl_param(study = "<verb>.<argument>")): that argument of the verb's
-# item in the layers below the report, NULL when none has it
-.tpl_study_value <- function(src, base) {
+# The study standard's value of a parameter that says where it is
+# (tfl_param(study = )): one of the study's own settings named below, else
+# "<verb>.<argument>", that argument of the verb's item in the layers below
+# the report; NULL when none has it
+.tpl_study_value <- function(src, base, output = NULL, study = NULL) {
+  if (src %in% names(.tpl_study_sources)) return(.tpl_study_sources[[src]](output, study))
   fn <- sub("[.].*$", "", src)
   arg <- sub("^[^.]*[.]", "", src)
   hit <- Filter(function(it) identical(it$fn, fn) && arg %in% names(it$args),
@@ -37,17 +39,17 @@
 # SPEC does not give takes the study's value (tfl_param(study = )); one it
 # gives over a different study value says so (a message).  Returns the
 # arguments and the names the study gave.
-.tpl_study_args <- function(t, args, base, id) {
+.tpl_study_args <- function(t, args, base, id, output = NULL, study = NULL) {
   from_study <- character()
   for (p in t$params) {
     if (is.null(p$study)) next
-    v <- .tpl_study_value(p$study, base)
+    v <- .tpl_study_value(p$study, base, output, study)
     if (is.null(v)) next
     if (!p$name %in% names(args)) {
       args[[p$name]] <- v
       from_study <- c(from_study, p$name)
     } else if (!identical(args[[p$name]], v)) {
-      message(sprintf("%s: template %s's %s overrides the study default (%s).",
+      message(sprintf("%s: template %s's %s overrides the study standard (%s).",
                       id, t$name, p$name, p$study))
     }
   }
@@ -60,7 +62,7 @@
 .tpl_expand_for <- function(output, study, base, codelists) {
   ts <- .tpl_spec_of(output)
   t <- .tpl_get(ts$name, sprintf("%s: template:", output$id))
-  sa <- .tpl_study_args(t, ts$args, base, output$id)
+  sa <- .tpl_study_args(t, ts$args, base, output$id, output, study)
   x <- tfl_template_expand(ts$name, sa$args, codelists = codelists,
                            population = study$data$populations)
   if (!identical(t$kind, output$kind)) {
