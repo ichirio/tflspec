@@ -136,6 +136,8 @@ tfl_template_to_spec <- function(output, study) {
   output$ard <- .merge_ard(e$x$ard, output$ard)
   output$data <- .merge_map(e$x$data %||% list(), output$data %||% list())
   output$content <- if (inherits(ro$content, "tfl_r")) ro$content else .tpl_own_part(ro$content)
+  # a figure's design: its settings, the template's under the report's
+  if (!is.null(ro$plot)) output$plot <- ro$plot
   output$template <- NULL
   output
 }

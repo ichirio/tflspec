@@ -852,18 +852,20 @@ tpl_ae_max_grade <- function(ard, population, ..., codelists = NULL) {
     tfl_param("data", NULL, doc = "the dataset; NULL: ADTTE")
   ),
   body = function(a, ctx) {
+    # the design form, as a designed report has it: the data steps (the
+    # fit last), the layers as the content's items, the figure's settings
     f <- tfl_fig_template("km_simple", data = a$data, param = a$param, group = a$group,
-                          time = a$time, censor = a$censor, time_unit = a$time_unit,
-                          form = "items")
+                          time = a$time, censor = a$censor, time_unit = a$time_unit)
     # the analysis set: its subjects (data.yml's definition), in place of
     # a flag on the figure's data
-    steps <- Filter(function(s) !identical(s$step, "flag"), f$data$steps)
+    steps <- Filter(function(s) !identical(s$step, "flag"), f$data)
     if (!is.null(a$population)) {
       at <- match("read", vapply(steps, `[[`, "", "step"))
       steps <- append(steps, .tpl_population_step(a$population, ctx$population), at)
     }
-    f$data$steps <- steps
-    list(data = f$data, content = f$content)
+    layers <- lapply(f$layers, function(l) tfl_item(l$layer, l[setdiff(names(l), "layer")]))
+    list(data = list(source = "code", steps = c(steps, f$stats)), content = layers,
+         plot = f$plot)
   })
 
 #' Disposition: a table plan from the template `disposition`

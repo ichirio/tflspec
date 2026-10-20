@@ -188,6 +188,8 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
     for (l in rev(c(list(tl), layers, list(tlook)))) acc <- .layer_over(acc, l)
     layers <- c(list(tl), layers, list(tlook))
     output$ard <- .merge_ard(tpl$x$ard, output$ard)
+    # a figure's design: its settings (`plot:`) under the report's own
+    if (!is.null(tpl$x$plot)) output$plot <- .merge_map(tpl$x$plot, output$plot)
   }
   own <- list(data = output$data %||% list(), codelists = output$codelists,
               content = output$content, page = output$page)
@@ -402,7 +404,12 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   r <- .verb_rank(it$fn)
   if (is.na(r) || !length(items)) return(c(items, list(it)))
   ranks <- vapply(items, function(x) .verb_rank(x$fn), 1)
-  at <- max(c(0L, which(!is.na(ranks) & ranks <= r)))
+  # after the last of a rank at or below its own; with none, before the
+  # first ranked above it -- after the items of no rank before that (a
+  # figure designer's layers have none: an item goes after them)
+  below <- which(!is.na(ranks) & ranks <= r)
+  above <- which(!is.na(ranks) & ranks > r)
+  at <- if (length(below)) max(below) else if (length(above)) min(above) - 1L else length(items)
   append(items, list(it), after = at)
 }
 

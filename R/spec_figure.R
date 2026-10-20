@@ -48,12 +48,47 @@
 .fig_design_of_output <- function(output) {
   fd <- list()
   for (k in c("template", "ggplot2_version")) if (!is.null(output[[k]])) fd[[k]] <- output[[k]]
+  # (a template SPEC, {name, args}: the design is its template's)
+  if (is.list(fd$template)) fd$template <- fd$template$name
   if (!is.null(output$data$steps)) fd$data <- output$data$steps
   if (!is.null(output$data$stats)) fd$stats <- output$data$stats
   if (!is.null(output$plot)) fd$plot <- output$plot
-  fd$layers <- lapply(output$content, function(it) c(list(layer = it$fn), it$args))
+  fd$layers <- list()
+  for (it in output$content) {
+    x <- .fig_item_as_piece(it)
+    if (identical(x$to, "add")) {
+      fd$plot$add <- c(fd$plot$add, list(x$piece))
+    } else {
+      fd$layers <- c(fd$layers, list(x$piece))
+    }
+  }
   for (k in c("plots", "compose")) if (!is.null(output[[k]])) fd[[k]] <- output[[k]]
   fd
+}
+
+# A content item as the design's piece: a layer of the designer as it is;
+# an item of a function call (the items form: a template's report adds
+# them after the template's layers) as the design's own pieces for it --
+# tfl_ard_number the `ard_number` layer, a figure-wide function (labs,
+# theme, scale_*) a `plot.add` call, any other a `call` layer
+.fig_item_as_piece <- function(it) {
+  fn <- it$fn
+  pc <- .fig_pieces()[[fn]]
+  if (!is.null(pc) && identical(pc$section, "layers")) {
+    return(list(to = "layer", piece = c(list(layer = fn), it$args)))
+  }
+  if (identical(.schema_fn_name(fn), "tfl_ard_number")) {
+    return(list(to = "layer", piece = c(list(layer = "ard_number"), .fig_args_plain(it$args))))
+  }
+  a <- it$args %||% list()
+  call <- list(fn = fn)
+  if (!is.null(a$data)) call$data <- as.character(a$data)
+  if (!is.null(a$mapping)) call$aes <- a$mapping
+  a$data <- NULL
+  a$mapping <- NULL
+  if (length(a)) call$args <- a
+  if (grepl(.fig_plotwide_re, .fig_bare_fn_name(fn))) return(list(to = "add", piece = call))
+  list(to = "layer", piece = c(list(layer = "call"), call))
 }
 
 # A report's code lists (`codelists:` -- {VARIABLE: [{value, label}]}) as
