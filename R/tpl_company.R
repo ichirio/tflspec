@@ -402,6 +402,7 @@ tfl_test_templates <- function(names = NULL) {
   mean_ci = list(param = "SYSBP", data = "ADVS"),
   waterfall = list(param = "SUMDIAM", where = "AVISIT == \"WEEK 12\""),
   orr = list(),
+  stat_block = list(variable = "RESP", cells = list(N = "{N}", "ORR (%)" = "{n} ({estimate:.1f%})")),
   param_change = list(population = "SAF", data = "ADLB", params = c("ALT", "AST"),
                       where = "ANL01FL == \"Y\""),
   ae_eair = list(population = "SAF"),
