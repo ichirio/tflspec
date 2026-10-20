@@ -21,13 +21,14 @@ tfl_table_code(
 \item{output_id}{The table, when the definition has several.}
 
 \item{data}{The name of the ARD in the program: the pipe starts from it
-(\verb{plan <- ard |> normalize_ard(...) |> table_plan(...)}).  With
+(erb{plan <- ard |> normalize_ard(...) |> table_plan(...)}).  With
 \code{normalize = FALSE}, the name of the data already normalized.}
 
 \item{plan}{The name the plan is assigned to.}
 
-\item{pipe}{\code{"|>"} or \code{"\%>\%"}; \code{NULL} follows
-\code{getOption("rtfreporter.ard_pipe")} (see \code{\link[rtfreporter:plan_template]{rtfreporter::plan_template()}}).}
+\item{pipe}{\code{"|>"}, \code{"\%>\%"} or \code{"rstudio"} (RStudio's Insert Pipe
+Operator); \code{NULL} follows \code{getOption("rtfreporter.ard_pipe")}, else
+\code{"|>"} (see \code{\link[rtfreporter:plan_template]{rtfreporter::plan_template()}}).}
 
 \item{ard_spec}{The ARD definition (\code{\link[=tfl_read_ard_spec]{tfl_read_ard_spec()}}), for
 \code{\link[rtfreporter:normalize_ard]{rtfreporter::normalize_ard()}}'s \code{hierarchy}; \code{NULL} for none.}

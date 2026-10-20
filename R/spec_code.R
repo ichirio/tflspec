@@ -443,8 +443,9 @@
 #'   (`plan <- ard |> normalize_ard(...) |> table_plan(...)`).  With
 #'   `normalize = FALSE`, the name of the data already normalized.
 #' @param plan The name the plan is assigned to.
-#' @param pipe `"|>"` or `"%>%"`; `NULL` follows
-#'   `getOption("rtfreporter.ard_pipe")` (see [rtfreporter::plan_template()]).
+#' @param pipe `"|>"`, `"%>%"` or `"rstudio"` (RStudio's Insert Pipe
+#'   Operator); `NULL` follows `getOption("rtfreporter.ard_pipe")`, else
+#'   `"|>"` (see [rtfreporter::plan_template()]).
 #' @param ard_spec The ARD definition ([tfl_read_ard_spec()]), for
 #'   [rtfreporter::normalize_ard()]'s `hierarchy`; `NULL` for none.
 #' @param normalize `TRUE` to write [rtfreporter::normalize_ard()] at the
@@ -1234,8 +1235,9 @@ tfl_content_run <- function(output, data) {
 #'   makes `data` from the output's object, the old process_code), the
 #'   steps come first, as they are written, and the pipe starts from `data`.
 #' @param plan The name the plan is assigned to.
-#' @param pipe `"|>"` or `"%>%"`; `NULL` follows
-#'   `getOption("rtfreporter.ard_pipe")`.
+#' @param pipe `"|>"`, `"%>%"` or `"rstudio"` (RStudio's Insert Pipe
+#'   Operator); `NULL` follows `getOption("rtfreporter.ard_pipe")`, else
+#'   `"|>"`.
 #' @param template For a resolved template report (`template: {name,
 #'   args}`, [tfl_resolve_output()]): `"call"` (default) writes the
 #'   template's call, `plan <- tpl_<name>(ard, ...)` with the arguments its

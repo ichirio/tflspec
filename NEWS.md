@@ -1,5 +1,11 @@
 # tflspec (development version)
 
+* **Generated code pipes with `|>`** (the 3-stage PR).  The report
+  programs' pipe was RStudio's Insert Pipe Operator setting, and `%>%`
+  outside RStudio, while the ARD programs wrote `|>`; now every program
+  writes `|>` unless asked (`pipe = "%>%"` / `"rstudio"`, or the option
+  `rtfreporter.ard_pipe`).
+
 * **Template `lab_abnormal`: subjects with laboratory values in abnormal
   categories** (#400, 0.0.24.9188).  n/N (%), a block a parameter, in
   `PARAMN`'s order (`param_order`).  The category is an ADaM variable

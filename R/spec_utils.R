@@ -76,7 +76,8 @@
     x <- getOption("rtfreporter.ard_pipe")
     asked <- !is.null(x)
   }
-  if (is.null(x)) x <- "rstudio"
+  # the base R pipe unless asked otherwise: the same in every program
+  if (is.null(x)) x <- "|>"
   if (!is.character(x) || length(x) != 1L ||
         !x %in% c("%>%", "|>", "rstudio")) {
     .ard_stop(paste0(
