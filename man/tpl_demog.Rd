@@ -14,7 +14,7 @@ report.}
 
 \item{...}{The template's other parameters: \code{data}, \code{by}, \code{continuous},
 \code{categorical}, \code{labels}, \code{cells}.  \code{labels} given by name change those
-names only (\verb{labels:} with \code{RACE: "Race, n (\%) [a]"}); \verb{RACE: ~} drops one.
+names only (\code{labels = c(RACE = "Race, n (\%) [a]")}); in YAML, \verb{RACE: ~} drops one.
 The default \code{continuous} and \code{categorical} are the variables the data
 has of them (\code{any_of()}); the report's own are as written.  Every
 table and figure template also takes \code{subset} (which subjects) and,

@@ -1,7 +1,27 @@
 # tflspec (development version)
 
+* **Template `lab_abnormal`: subjects with laboratory values in abnormal
+  categories** (#400, 0.0.24.9188).  n/N (%), a block a parameter, in
+  `PARAMN`'s order (`param_order`).  The category is an ADaM variable
+  (`ANRIND`, or criteria levels such as `MCRIT1ML`), not thresholds;
+  `cumulative = TRUE` counts a level or worse, `baseline_normal = TRUE`
+  only subjects normal at baseline.  Every parameter analysed keeps its
+  rows, 0/N when no subject is in a category.
+
+* **Template `ae_eair`: exposure-adjusted incidence rates by SOC and PT**
+  (#400, 0.0.24.9188).  Each arm's subjects with the event over their
+  time at risk (to the first event, else the whole exposure, `exposure =
+  "TRTDURD"`), per `per` person-years, with `cardx::ard_incidence_rate()`.
+
+* **Template `ancova`: LS means of the change from baseline and their
+  differences** (#400, 0.0.24.9188).  Each arm's LS mean at one visit
+  (`cardx::ard_emmeans_emmeans()`, the model `CHG ~ arm + BASE`,
+  `covariates`) and each other arm's difference against the reference arm
+  (`ref`; NULL: the last in the code list, said) with its 95% CI and
+  p-value (`cardx::ard_emmeans_contrast()`, written by `fmt_pvalue()`).
+
 * **Template `param_change`: parameters' value and change from baseline
-  at each visit** (#386, 0.0.24.9186).  Laboratory tests, vital signs or
+  at each visit** (#386, 0.0.24.9187).  Laboratory tests, vital signs or
   ECG parameters (`data`: ADLB, ADVS, ADEG) -- n, mean (SD), median, min,
   max of `AVAL` and `CHG`, a block a parameter (`PARAM`, its unit in its
   text) and a visit, in the order of `PARAMN` and `AVISITN`.  Each arm's
@@ -11,9 +31,10 @@
   change cells are empty.  `params`, `visits` and `where` are all records
   unless given (`where = 'ANL01FL == "Y"'` in the examples).  Needs
   rtfreporter 0.8.2.9084 (the arm's N over its two columns).
+
 * **Template headings given by name merge with the defaults'; a
   template's default variables are those the data has** (#393,
-  0.0.24.9185).  `labels: {RACE: "Race, n (%) [a]"}` in a template SPEC
+  0.0.24.9186).  `labels: {RACE: "Race, n (%) [a]"}` in a template SPEC
   changed every other heading to NA (the whole default replaced): now
   `labels` and `param_labels` given by name change those names only, and
   `RACE: ~` drops one (`cells` are the rows given).  An ARD analysis may
@@ -24,7 +45,7 @@
   no ETHNIC; a report's own variables are as written (a misspelling
   stops).  ARS export leaves the flag out (tflspec's own).
 
-* **Template parameters from the study standard** (#392, 0.0.24.9184).
+* **Template parameters from the study standard** (#392, 0.0.24.9185).
   `tfl_param(study = )` also takes `"output.population"` (the report's
   `population:`) and `"settings.treatment"` (`study.yml`'s new `settings:
   treatment:`); `population`, `by` and `group` take them by their names,
@@ -38,6 +59,11 @@
   `semi_join(adsl |> filter(SAFFL == "Y") |> select(USUBJID), by =
   "USUBJID")`), whatever the figure's data has.  `tfl_fig_template()`'s
   `pop` stays (the figure designer's presets).
+
+* **ae_max_grade's ARD builds in a study** (#394, 0.0.24.9184).  Its
+  analysis data made by code (each subject's highest record) had no
+  `from`, and the ARD definition's check stopped ("`from` is blank"); each
+  says the records it is made from now.
 
 * **`tfl_template_variant()`: a template by its defaults alone** (#388,
   0.0.24.9183).  `tfl_template_variant("demog_jp", from = "demog",

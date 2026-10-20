@@ -160,3 +160,28 @@ test_that("vs_change's table from param_change: a baseline block, its labels and
                   check.names = FALSE, stringsAsFactors = FALSE)
   expect_identical(p, v)
 })
+
+test_that("in a study: the ARD program runs and the table is made from it", {
+  skip_on_cran()
+  pc_skip()
+  skip_if_not_installed("haven")
+  d <- tempfile()
+  on.exit(unlink(d, recursive = TRUE))
+  dir.create(file.path(d, "adam"), recursive = TRUE)
+  for (x in c("adsl", "adlb")) {
+    haven::write_xpt(tflspec:::.ai_chr(getExportedValue("tflspec", x)),
+                     file.path(d, "adam", paste0(x, ".xpt")))
+  }
+  tfl_ai_study_init(d, adam = "adam", study_id = "PC-1")
+  f <- file.path(d, "spec", "outputs", "T-9-3.yml")
+  tfl_write_output(tfl_output("T-9-3", "table", population = "SAF", label = "Liver tests",
+                              extends = "defaults",
+                              template = list(name = "param_change",
+                                              args = c(pc_args[-1L], list(population = "SAF")))),
+                   f)
+  st <- tfl_read_study_spec(d)
+  ard <- suppressMessages(tfl_build_ard(st, output_id = "T-9-3", dir = d, save = FALSE))
+  t <- pc_tab(suppressMessages(tfl_content_run(tfl_resolve_output(tfl_read_output(f), st), ard)))
+  expect_true(nrow(t) > 0L)
+  expect_identical(unique(t$group2), pc_args$visits)
+})
