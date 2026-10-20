@@ -1,5 +1,24 @@
 # tflspec (development version)
 
+* **Templates: the standard filter pair, `subset` (which subjects) and
+  `where` (which records)** (0.0.24.9193).  Every table and figure
+  template takes `subset`, an R condition on the analysis set's ADSL --
+  the denominator, the header N and, through the three stages, the
+  records -- and every template of records data `where`.  `tfl_param()`
+  gets `group` (`"target"`: `population`, `subset`, `where`, listed
+  first); `tfl_test_templates()` lists a template without them.  A
+  listing keeps ADSL's subjects by a semi join; `km_table` has no data of
+  its own and takes neither.  An analysis set narrowed by a report's own
+  condition is one statement when the set is used for nothing else
+  (`adsl_saf <- filter(adsl, SAFFL == "Y", PART == "Part 1")`).
+
+* **`param_change`: a baseline block** (`baseline = TRUE`,
+  `baseline_label`; 0.0.24.9193).  The baseline's rows (`BASE`) come
+  before the value's.  With vs_change's statistics, cells and labels,
+  param_change gives vs_change's rows and cells; its blocks of the
+  parameter and the visit are the one difference.  `vs_change` stays for
+  now.
+
 * **Generated ARD programs in three stages: the denominator, the target
   subjects, the target records** (0.0.24.9192).  A records dataset is
   joined to its subjects: `inner_join()` when it takes ADSL columns (an
