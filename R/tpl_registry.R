@@ -92,7 +92,7 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
     k(c("data", "data_id", "data_label", "analysis_id",
         "analysis_label", "overall", "any_grade", "cat_id", "cat_label", "ci_id", "ci_label",
         "ci_method", "groupn_label", "median_label", "time_prefix", "time_unit", "unit",
-        "when", "visit_label", "param_label", "value_label", "change_label", "cell", "start"),
+        "when", "visit_label", "param_label", "baseline_label", "value_label", "change_label", "cell", "start"),
       "text"),
     k(c("heading", "statistics", "cat_statistics"), "text", TRUE),
     # a variable's heading each: given by name, merged with the default's
@@ -1270,6 +1270,9 @@ tpl_vs_change <- function(ard, population, ..., codelists = NULL) {
     "rows: the value's rows, then the change's, under each visit")),
   tfl_param("param_order", "PARAMN", doc = "the parameters' order variable; NULL: by name"),
   tfl_param("visit_order", "AVISITN", doc = "the visits' order variable; NULL: by name"),
+  tfl_param("baseline", FALSE, type = "flag",
+            doc = "TRUE: the baseline's rows (BASE) before the value's"),
+  tfl_param("baseline_label", "Baseline", doc = "the baseline's heading"),
   tfl_param("value_label", "Value", doc = "the value's heading"),
   tfl_param("change_label", "Change from baseline", doc = "the change's heading"),
   tfl_param("data_id", NULL, doc = "the analysis data's id; NULL: <data>_<population>"),
@@ -1310,10 +1313,11 @@ names(.tpl_pc_params) <- vapply(.tpl_pc_params, `[[`, "", "name")
   an <- function(id, data, v) list(
     id = id, method = "continuous", data = data, by = c(a$by, "PARAM", "AVISIT"),
     variables = v, statistics = a$statistics, purpose = "PRIMARY OUTCOME MEASURE")
-  analyses <- list(
-    list(id = "GROUPN", method = "categorical", data = subj, variables = a$by,
-         purpose = "PRIMARY OUTCOME MEASURE"),
-    an("VALUE", set, "AVAL"), an("CHANGE", paste0(set, "_chg"), "CHG"))
+  analyses <- c(
+    list(list(id = "GROUPN", method = "categorical", data = subj, variables = a$by,
+              purpose = "PRIMARY OUTCOME MEASURE")),
+    if (isTRUE(a$baseline)) list(an("BASELINE", set, "BASE")),
+    list(an("VALUE", set, "AVAL"), an("CHANGE", paste0(set, "_chg"), "CHG")))
   plan <- if (rows_in) {
     list(tfl_item("table_plan", list(cols = a$by, rows = list(
            group1 = "PARAM", group2 = "AVISIT", group3 = "variable"))),
@@ -1334,8 +1338,9 @@ names(.tpl_pc_params) <- vapply(.tpl_pc_params, `[[`, "", "name")
            list(line = "2", cols = ".values", span = "each", text = "{col}")))))
   }
   content <- c(plan, list(
-    tfl_item("plan_labels", list(variable = list(AVAL = a$value_label,
-                                                 CHG = a$change_label))),
+    tfl_item("plan_labels", list(variable = c(
+      if (isTRUE(a$baseline)) list(BASE = a$baseline_label),
+      list(AVAL = a$value_label, CHG = a$change_label)))),
     tfl_item("plan_paginate_rows", list(max_rows = 30L, split = "group_safe"))))
   list(ard = list(analysis_data = sets, analyses = analyses),
        data = list(source = "ard", object = "ard"), content = content)
@@ -1354,12 +1359,14 @@ names(.tpl_pc_params) <- vapply(.tpl_pc_params, `[[`, "", "name")
 #' that have one: the baseline visit's change cells stay empty.
 #'
 #' `layout = "cols"` puts each arm's value and change side by side;
-#' `"rows"` puts the change's rows under the value's, in one column an arm.
+#' `"rows"` puts the change's rows under the value's, in one column an arm;
+#' `baseline = TRUE` puts the baseline's (`BASE`) before them.
 #'
 #' @inheritParams tpl_demog
 #' @param ... The template's other parameters: `data` (required), `params`,
 #'   `visits`, `where`, `by`, `layout`, `param_order`, `visit_order`,
-#'   `value_label`, `change_label`, `cells` ...
+#'   `baseline`, `baseline_label`, `value_label`, `change_label`, `statistics`,
+#'   `cells` ...
 #' @return A [rtfreporter::table_plan()].
 #' @export
 tpl_param_change <- function(ard, population, ..., codelists = NULL) {
