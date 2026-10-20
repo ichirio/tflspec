@@ -403,11 +403,12 @@ tfl_test_templates <- function(names = NULL) {
   waterfall = list(param = "SUMDIAM", where = "AVISIT == \"WEEK 12\""),
   orr = list(),
   param_change = list(population = "SAF", data = "ADLB", params = c("ALT", "AST"),
-                      where = "ANL01FL == \"Y\""),
+                      where = "ONTRTFL == \"Y\"", param_order = NULL),
   ae_eair = list(population = "SAF"),
   ancova = list(population = "SAF", data = "ADVS", param = "SYSBP", visit = "CYCLE 2 DAY 1"),
-  lab_abnormal = list(population = "SAF", levels = c("LOW", "HIGH"), where = "ONTRTFL == \"Y\""),
-  vs_change = list(population = "SAF", param = "SYSBP", visit = "WEEK 24",
+  lab_abnormal = list(population = "SAF", levels = c("LOW", "HIGH"), where = "ONTRTFL == \"Y\"",
+                      param_order = NULL),
+  vs_change = list(population = "SAF", param = "SYSBP", visit = "CYCLE 9 DAY 1", by = "TRT01A",
                    param_label = "Systolic blood pressure", when = "week 24",
                    visit_label = "Week 24", unit = "mmHg"))
 
