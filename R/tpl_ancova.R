@@ -10,7 +10,8 @@
   tfl_param("by", "TRT01A", doc = "the arm variable (the columns)"),
   tfl_param("response", "CHG", doc = "the response variable"),
   tfl_param("covariates", "BASE", doc = "the model's covariates besides the arm"),
-  tfl_param("where", NULL, doc = "the records kept besides the parameter and visit (R)")
+  tfl_param("where", NULL, doc = "the records kept besides the parameter and visit (R)"),
+  tfl_param("ref", NULL, doc = "the reference arm; NULL: the last arm in the code list's order")
 )
 
 .tpl_ancova_body <- function(a, ctx) {
@@ -38,10 +39,27 @@
       list(id = "GROUPN", method = "categorical", data = subj, variables = a$by,
            purpose = "PRIMARY OUTCOME MEASURE"),
       an("LSMEAN", "emmeans", "LSMEAN", "variable_level"),
-      an("LSDIFF", "contrast", "DIFF",
-         "lapply(variable_level, sub, pattern = \" - .*\", replacement = \"\")",
-         # the p-value as the program's fmt_pvalue() writes it (<0.001)
-         formats = "p.value=pvalue")))
+      # the differences against the reference arm: put last, each pair is
+      # an arm minus it (emmeans' pairwise order)
+      list(id = "LSDIFF", method = "custom", data = set, code = paste(c(
+        if (is.null(a$ref)) sprintf("ref <- tail(levels(factor(data$%s)), 1)", a$by) else
+          sprintf("ref <- \"%s\"", a$ref),
+        "message(\"ancova: the reference arm is \", ref)",
+        "lsdiff <- data |>",
+        "  # the reference arm last: each difference is an arm minus it",
+        sprintf("  dplyr::mutate(%s = factor(%s, levels = c(setdiff(levels(factor(%s)), ref), ref))) |>",
+                a$by, a$by, a$by),
+        sprintf("  cardx::ard_emmeans_contrast(%s)", model),
+        "# one difference a row (with three arms or more, cardx gives them in one)",
+        "rows <- rep(seq_len(nrow(lsdiff)), lengths(lsdiff$stat))",
+        "lsdiff <- dplyr::mutate(lsdiff[rows, ], variable_level = as.list(unlist(lsdiff$variable_level)),",
+        "  stat = unlist(lapply(lsdiff$stat, as.list), recursive = FALSE))",
+        "dplyr::filter(lsdiff, endsWith(unlist(variable_level), paste(\" -\", ref)))"),
+        collapse = "\n"),
+        post = post("DIFF",
+                    "lapply(variable_level, sub, pattern = \" - .*\", replacement = \"\")"),
+        # the p-value as the program's fmt_pvalue() writes it (<0.001)
+        formats = "p.value=pvalue", purpose = "PRIMARY OUTCOME MEASURE")))
   content <- list(
     tfl_item("table_plan", list(cols = a$by, rows = list(group = "variable"))),
     tfl_item("plan_cells", list(
@@ -53,7 +71,7 @@
     tfl_item("plan_levels", list(variable = c("LSMEAN", "DIFF"))),
     tfl_item("plan_labels", list(variable = list(
       LSMEAN = sprintf("%s: LS mean", a$response),
-      DIFF = "Difference in LS means (vs the arm after it)"))),
+      DIFF = sprintf("Difference in LS means (vs %s)", a$ref %||% "the reference arm")))),
     tfl_item("plan_col_header", list(header = list(
       list(line = "1", cols = ".values", span = "each", text = "{col}\n(N={n})")))))
   list(ard = ard, data = list(source = "ard", object = "ard"), content = content)
@@ -69,16 +87,17 @@
 #' A parameter's change from baseline (`CHG`) at one visit, by an analysis
 #' of covariance: `<response> ~ <by> + <covariates>` (`CHG ~ TRT01A +
 #' BASE`), a linear model.  Each arm's n and LS mean (SE, 95% CI), and the
-#' difference in LS means between the arms (SE, 95% CI, p-value) in the
-#' first arm's column of each pair, from cardx's `ard_emmeans_emmeans()`
-#' and `ard_emmeans_contrast()` (emmeans).  The arms' order is the code
-#' list's: the arm compared with comes after the other.  The p-value is
+#' difference in LS means of each other arm minus the reference arm (SE,
+#' 95% CI, p-value) in that arm's column, from cardx's
+#' `ard_emmeans_emmeans()` and `ard_emmeans_contrast()` (emmeans).  The
+#' reference arm is `ref`, else the last arm in the code list's order; the
+#' program says which (a message).  The p-value is
 #' written as the program's `fmt_pvalue()` writes it (`<0.001`, else 3
 #' decimals).
 #'
 #' @inheritParams tpl_demog
 #' @param ... The template's other parameters: `data`, `param`, `visit`
-#'   (required), `by`, `response`, `covariates`, `where`.
+#'   (required), `by`, `response`, `covariates`, `where`, `ref`.
 #' @return A [rtfreporter::table_plan()].
 #' @examples
 #' x <- tfl_template_expand("ancova", list(population = "SAF", data = "ADVS",

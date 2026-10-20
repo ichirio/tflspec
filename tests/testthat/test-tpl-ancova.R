@@ -2,20 +2,31 @@
 
 an_args <- list(population = "SAF", data = "ADVS", param = "SYSBP", visit = "CYCLE 2 DAY 1")
 
-an_data <- function(shift = 0) {
+# a third arm: half of Drug X's subjects as Drug Y
+an_three <- function(x) {
+  ids <- sort(unique(adsl$USUBJID[adsl$TRT01A == "Drug X"]))
+  y <- ids[seq_along(ids) %% 2L == 0L]
+  x$TRT01A <- as.character(x$TRT01A)
+  x$TRT01A[x$USUBJID %in% y] <- "Drug Y"
+  x
+}
+an_arms <- function(three) if (three) c("Drug X", "Drug Y", "Control") else c("Drug X", "Control")
+an_data <- function(shift = 0, three = FALSE) {
   saf <- adsl$USUBJID[adsl$SAFFL == "Y"]
   d <- advs[advs$USUBJID %in% saf & advs$PARAMCD == "SYSBP" & advs$AVISIT == "CYCLE 2 DAY 1", ]
-  # the arms' order of a code list: the arm compared with last
-  d$TRT01A <- factor(d$TRT01A, levels = c("Drug X", "Control"))
+  if (three) d <- an_three(d)
+  # the arms' order of a code list: Control last
+  d$TRT01A <- factor(d$TRT01A, levels = an_arms(three))
   d$CHG[d$TRT01A == "Drug X"] <- d$CHG[d$TRT01A == "Drug X"] + shift
   d
 }
 # the program's fmt_pvalue() (inst/helpers/study_helpers.R)
 an_pvalue <- function(x) ifelse(x < 0.001, "<0.001", sprintf("%.3f", x))
-# the ARD as the study's program makes it: cardx's LS means and their
-# difference, the arm (the difference's first) as the group
-an_ard <- function(shift = 0) {
-  d <- an_data(shift)
+# the ARD as the study's program makes it: cardx's LS means; the
+# differences by the analysis's own code; the arm (the difference's first)
+# as the group
+an_ard <- function(x, shift = 0, three = FALSE) {
+  d <- an_data(shift, three)
   as_arm <- function(a, what, level) {
     a$group1_level <- level
     a$variable <- what
@@ -23,11 +34,14 @@ an_ard <- function(shift = 0) {
     a
   }
   m <- cardx::ard_emmeans_emmeans(d, formula = CHG ~ TRT01A + BASE, method = "lm")
-  k <- cardx::ard_emmeans_contrast(d, formula = CHG ~ TRT01A + BASE, method = "lm")
+  k <- eval(parse(text = x$ard$analyses[[3L]]$code), list(data = d))
   k <- cards::apply_fmt_fun(cards::update_ard_fmt_fun(k, stat_names = "p.value",
                                                       fmt_fun = an_pvalue))
+  sl <- adsl[adsl$SAFFL == "Y", ]
+  if (three) sl <- an_three(sl)
+  sl$TRT01A <- factor(sl$TRT01A, levels = an_arms(three))
   cards::bind_ard(
-    cards::ard_tabulate(adsl[adsl$SAFFL == "Y", ], variables = TRT01A),
+    cards::ard_tabulate(sl, variables = TRT01A),
     as_arm(m, "LSMEAN", m$variable_level),
     as_arm(k, "DIFF", lapply(k$variable_level, sub, pattern = " - .*", replacement = "")))
 }
@@ -50,20 +64,29 @@ test_that("expanded: the records of the parameter and visit, the model by cardx"
                    "PARAMCD == \"SYSBP\" & AVISIT == \"CYCLE 2 DAY 1\"")
   an <- x$ard$analyses
   expect_identical(vapply(an, `[[`, "", "method"),
-                   c("categorical", "cardx::ard_emmeans_emmeans", "cardx::ard_emmeans_contrast"))
+                   c("categorical", "cardx::ard_emmeans_emmeans", "custom"))
+  expect_match(an[[3L]]$code, "ref <- tail(levels(factor(data$TRT01A)), 1)", fixed = TRUE)
+  expect_match(an[[3L]]$code,
+               "cardx::ard_emmeans_contrast(formula = CHG ~ TRT01A + BASE, method = \"lm\")",
+               fixed = TRUE)
   expect_identical(as.character(an[[2L]]$args), "formula = CHG ~ TRT01A + BASE, method = \"lm\"")
   y <- tfl_template_expand("ancova", c(an_args, list(response = "PCHG",
                                                      covariates = c("BASE", "AGE"),
                                                      where = "ANL01FL == \"Y\"")))
-  expect_identical(as.character(y$ard$analyses[[3L]]$args),
-                   "formula = PCHG ~ TRT01A + BASE + AGE, method = \"lm\"")
+  expect_match(y$ard$analyses[[3L]]$code,
+               "formula = PCHG ~ TRT01A + BASE + AGE, method = \"lm\"", fixed = TRUE)
+  z <- tfl_template_expand("ancova", c(an_args, list(ref = "Drug Y")))
+  expect_match(z$ard$analyses[[3L]]$code, "ref <- \"Drug Y\"", fixed = TRUE)
+  expect_identical(tfl_template_params("ancova")$ref[c("type", "of")],
+                   list(type = "levels", of = "by"))
   expect_match(y$ard$analysis_data[[2L]]$where, "& ANL01FL == \"Y\"", fixed = TRUE)
   expect_error(tfl_template_expand("ancova", list(population = "SAF")), "needs")
 })
 
 test_that("the LS means and their difference: as emmeans gives them", {
   an_skip()
-  t <- an_tab(do.call(tpl_ancova, c(list(an_ard()), an_args)))
+  x <- tfl_template_expand("ancova", an_args)
+  t <- an_tab(do.call(tpl_ancova, c(list(suppressMessages(an_ard(x))), an_args)))
   expect_identical(names(t), c("group", "label", "Drug X", "Control"))
   em <- emmeans::emmeans(stats::lm(CHG ~ TRT01A + BASE, data = an_data()), "TRT01A")
   s <- as.data.frame(summary(em))
@@ -85,7 +108,7 @@ test_that("a p-value below 0.0001: as the program's fmt_pvalue() writes it", {
   an_skip()
   x <- tfl_template_expand("ancova", an_args)
   expect_identical(x$ard$analyses[[3L]]$formats, "p.value=pvalue")
-  t <- an_tab(do.call(tpl_ancova, c(list(an_ard(shift = 10)), an_args)))
+  t <- an_tab(do.call(tpl_ancova, c(list(suppressMessages(an_ard(x, shift = 10))), an_args)))
   fit <- stats::lm(CHG ~ TRT01A + BASE, data = an_data(shift = 10))
   expect_lt(summary(fit)$coefficients["TRT01AControl", "Pr(>|t|)"], 1e-4)
   expect_identical(t[["Drug X"]][t$label == "p-value"], "<0.001")
@@ -94,9 +117,33 @@ test_that("a p-value below 0.0001: as the program's fmt_pvalue() writes it", {
 test_that("A (the call) = B (the items as the report's content)", {
   an_skip()
   x <- tfl_template_expand("ancova", an_args)
-  ard <- an_ard()
+  ard <- suppressMessages(an_ard(x))
   ta <- an_tab(do.call(tpl_ancova, c(list(ard), an_args)))
   b <- suppressMessages(tfl_content_run(tfl_output("T-1", "table", content = x$content),
                                         rtfreporter::normalize_ard(ard)))
   expect_identical(an_tab(b), ta)
+})
+
+test_that("three arms: each other arm minus the reference, in its own column", {
+  an_skip()
+  # the reference: the last arm (Control), or `ref`
+  for (ref in list(NULL, "Drug Y")) {
+    a <- c(an_args, list(ref = ref))
+    x <- tfl_template_expand("ancova", a)
+    used <- ref %||% "Control"
+    expect_message(ard <- an_ard(x, three = TRUE),
+                   paste("ancova: the reference arm is", used), fixed = TRUE)
+    t <- an_tab(do.call(tpl_ancova, c(list(ard), a)))
+    expect_identical(names(t), c("group", "label", "Drug X", "Drug Y", "Control"))
+    d <- an_data(three = TRUE)
+    d$TRT01A <- stats::relevel(d$TRT01A, ref = used)
+    fit <- stats::lm(CHG ~ TRT01A + BASE, data = d)
+    diff <- t$label == "Difference (SE)"
+    expect_true(is.na(t[[used]][diff]), info = used)
+    for (arm in setdiff(an_arms(TRUE), used)) {
+      est <- stats::coef(fit)[[paste0("TRT01A", arm)]]
+      se <- sqrt(diag(stats::vcov(fit)))[[paste0("TRT01A", arm)]]
+      expect_identical(t[[arm]][diff], sprintf("%.2f (%.2f)", est, se), info = paste(used, arm))
+    }
+  }
 })

@@ -13,7 +13,7 @@ report.}
 \item{population}{The analysis set's id (\code{"SAF"}).}
 
 \item{...}{The template's other parameters: \code{data}, \code{param}, \code{visit}
-(required), \code{by}, \code{response}, \code{covariates}, \code{where}.}
+(required), \code{by}, \code{response}, \code{covariates}, \code{where}, \code{ref}.}
 
 \item{codelists}{The report's code lists, for the order and labels of
 values; \code{NULL} takes the ARD's.}
@@ -24,10 +24,11 @@ A \code{\link[rtfreporter:table_plan]{rtfreporter::table_plan()}}.
 \description{
 A parameter's change from baseline (\code{CHG}) at one visit, by an analysis
 of covariance: \verb{<response> ~ <by> + <covariates>} (\code{CHG ~ TRT01A + BASE}), a linear model.  Each arm's n and LS mean (SE, 95\% CI), and the
-difference in LS means between the arms (SE, 95\% CI, p-value) in the
-first arm's column of each pair, from cardx's \code{ard_emmeans_emmeans()}
-and \code{ard_emmeans_contrast()} (emmeans).  The arms' order is the code
-list's: the arm compared with comes after the other.  The p-value is
+difference in LS means of each other arm minus the reference arm (SE,
+95\% CI, p-value) in that arm's column, from cardx's
+\code{ard_emmeans_emmeans()} and \code{ard_emmeans_contrast()} (emmeans).  The
+reference arm is \code{ref}, else the last arm in the code list's order; the
+program says which (a message).  The p-value is
 written as the program's \code{fmt_pvalue()} writes it (\verb{<0.001}, else 3
 decimals).
 }
