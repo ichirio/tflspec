@@ -136,6 +136,7 @@ tfl_ai_run(".")   # もう一度読み、帳票ごとに ARD と RTF: output/tfl
 | `tfl_ai_write_requests()` | 1 依頼 1 ファイル（`size`、`max_chars`、`instructions`） |
 | `tfl_ai_collect_answers()` | `ai/answers/` を読み、依頼ごとに確かめ、帳票ファイルを書く |
 | `tfl_ai_run()` | 読んだ後、帳票ごとに ARD と RTF。`ai/status.md`・`ai/questions.md` |
+| `tfl_ai_compare()` | 帳票ごとに 1 行: テンプレートかコード SPEC か、値の数、検査、直しの回数（`ai/compare.csv`） |
 | `tfl_build_ard()` | ARD。エラーの帳票を探すときは 1 本ずつ: `output_id = "T-14-1-1"` |
 | `tfl_content_run()`, `tfl_report()` | 表とページ → RTF |
 
@@ -178,6 +179,27 @@ tfl_ai_run(".")   # もう一度読み、帳票ごとに ARD と RTF: output/tfl
 
 RTF は `output/tfl/` にできます。このフォルダは tflplanner で試験として開けます
 （`spec/toc.yml` に帳票の一覧）。
+
+どの依頼にも入るはずの物は、エージェント用に `ai/` に 1 回だけ書かれます:
+`ai/instructions-table.md` と `ai/instructions-figure.md`（指示と schema）、
+`ai/templates.md`（テンプレート）、それに `ai/adam_summary.md`。依頼はそれらの
+名前を挙げるだけなので、1 本が数千字になります。
+
+## テンプレートかコード SPEC か（`templates`）
+
+`tfl_ai_prepare(templates = TRUE)`（既定）は、合うテンプレートがあればそれで答える
+よう AI に頼みます（`template: {name, args}`、既定と違う引数だけ）。合わなければ
+コード SPEC で答えます。テンプレートの一覧は、依頼を書くときの登録簿から作ります
+（tflspec の物、会社の物、試験の変種）。チャットでは依頼ごとに一覧が入り、
+エージェントでは `ai/templates.md` に 1 回だけ書かれて、各依頼にはその帳票に合い
+そうなテンプレートの名前が入ります。`max_chars` を超えるチャットの依頼では、引数を
+名前だけにした短い一覧になります。`templates = FALSE` はコード SPEC だけを頼みます
+（チャットの依頼はテンプレート以前と同じ）。
+
+2 つを比べるには、同じ TOC を 2 つのフォルダに設定を変えて用意し、それぞれ答えさせ、
+それぞれで `tfl_ai_compare(".")` を実行します。帳票ごとに 1 行（何で答えたか
+`template:<名前>` か `code`、帳票ファイルの値の数、検査の結果、直しの回数）が
+`ai/compare.csv` に書かれます。
 
 ## 見本で試す（10 分）
 

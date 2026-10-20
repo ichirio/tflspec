@@ -141,6 +141,7 @@ report's failure does not stop the others.
 | `tfl_ai_write_requests()` | one file a request (`size`, `max_chars`, `instructions`) |
 | `tfl_ai_collect_answers()` | reads `ai/answers/`, checks each against its request, writes the report files |
 | `tfl_ai_run()` | collects, then each report's ARD and RTF; `ai/status.md`, `ai/questions.md` |
+| `tfl_ai_compare()` | one row a report: answered with a template or a code SPEC, its values, check, repairs (`ai/compare.csv`) |
 | `tfl_build_ard()` | the ARD; one report at a time to find an error: `output_id = "T-14-1-1"` |
 | `tfl_content_run()`, `tfl_report()` | the table and its page → RTF |
 
@@ -189,6 +190,30 @@ cannot settle into one file for you.
 
 The RTF files are in `output/tfl/`; the folder opens in tflplanner as a
 study (its `spec/toc.yml` lists the reports).
+
+What every request would repeat is written once in `ai/` for the agent:
+`ai/instructions-table.md` and `ai/instructions-figure.md` (the
+instructions and the schema), `ai/templates.md` (the templates), next to
+`ai/adam_summary.md`. Each request names them, so a request is a few
+thousand characters.
+
+## Templates or the code SPEC (`templates`)
+
+`tfl_ai_prepare(templates = TRUE)` (the default) asks the AI to answer a
+report with one of the study's templates where one fits
+(`template: {name, args}`, only the arguments that differ), else as a code
+SPEC. The templates are listed from the registry -- tflspec's, the
+company's, the study's variants -- when the requests are written: in each
+chat request, or in `ai/templates.md` for an agent, each request naming
+the templates likely for its reports. A chat request over `max_chars`
+lists the templates' arguments by name only. `templates = FALSE` asks for
+the code SPEC only (the chat requests as before templates).
+
+To set the two side by side, prepare the same TOC in two folders, one with
+each setting, have each answered, then run `tfl_ai_compare(".")` in each:
+one row a report -- what it was answered with (`template:<name>` or
+`code`), how many values its report file holds, its check, its repairs --
+written to `ai/compare.csv`.
 
 ## Try it on the sample (10 minutes)
 

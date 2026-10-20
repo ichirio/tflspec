@@ -822,7 +822,7 @@ back): rename the value or choose another separator.
 `tfl_ai_prompt` `tfl_ai_parse` `tfl_ai_check` `tfl_ai_repair_prompt`
 `tfl_ai_diff` `tfl_ai_read_shell` `tfl_ai_adam_summary` `tfl_ai_batches`
 `tfl_ai_write_requests` `tfl_ai_collect_answers` `tfl_ai_save_answer` `tfl_ai_study_init`
-`tfl_ai_prepare` `tfl_ai_requests` `tfl_ai_run` `tfl_ai_questions`
+`tfl_ai_prepare` `tfl_ai_requests` `tfl_ai_run` `tfl_ai_compare` `tfl_ai_questions`
 `tfl_ai_answer_questions`
 
 **ARD spec:** `tfl_ard_spec` `tfl_read_ard_spec` `tfl_write_ard_spec`

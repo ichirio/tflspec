@@ -163,6 +163,7 @@ tfl_ai_check <- function(answer, context = NULL, adam = NULL) {
 .ai_check_figure <- function(answer, context, adam) {
   p <- .ai_problems()
   design <- answer$design
+  if (inherits(design, "tfl_ai_tpl_figure")) return(.ai_check_tpl_figure(answer, context))
   want <- context$output_id
   other <- !is.null(answer$output_id) && !identical(answer$output_id, want)
   if (!is.null(want) && other) {
