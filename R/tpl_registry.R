@@ -63,8 +63,8 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
   }
   nv <- c("name", "text")
   c(k(c("by", "baseline", "post", "term", "grade", "category", "censor", "group", "time",
-        "pop", "param_order", "visit_order", "exposure"), "vars"),
-    k(c("categorical", "continuous", "variables", "hierarchy"), "vars", TRUE),
+        "pop", "param_order", "visit_order", "exposure", "response"), "vars"),
+    k(c("categorical", "continuous", "variables", "hierarchy", "covariates"), "vars", TRUE),
     k("by_levels", "levels", TRUE, of = "by"),
     k("levels", "levels", TRUE, of = "post"),
     k("grade_levels", "levels", TRUE, of = "grade"),
@@ -1408,3 +1408,4 @@ tpl_ae_overview <- function(ard, population = "SAF", ..., codelists = NULL) {
 
 .tpl_la_register()
 .tpl_eair_register()
+.tpl_ancova_register()
