@@ -3,13 +3,6 @@ km_skip <- function() {
   skip_if_not_installed("dplyr")
 }
 
-km_png <- function(p) {
-  f <- tempfile(fileext = ".png")
-  on.exit(unlink(f))
-  ggplot2::ggsave(f, p, width = 9, height = 5, dpi = 72)
-  unname(tools::md5sum(f))
-}
-
 test_that("tpl_km_simple(): the curves of the data it is given, a column bare or as text", {
   km_skip()
   saf <- adsl$USUBJID[adsl$SAFFL == "Y"]
@@ -17,7 +10,7 @@ test_that("tpl_km_simple(): the curves of the data it is given, a column bare or
   p <- tpl_km_simple(df, group = TRT01A, time_unit = "days")
   expect_s3_class(p, "ggplot")
   expect_identical(p$labels$x, "Time (Days)")
-  expect_identical(km_png(p), km_png(tpl_km_simple(df, group = "TRT01A", time_unit = "days")))
+  expect_identical(tplfig_png(p), tplfig_png(tpl_km_simple(df, group = "TRT01A", time_unit = "days")))
   # the settings over the template's
   q <- tpl_km_simple(df, group = TRT01A, plot = list(x_label = "Days"))
   expect_identical(q$labels$x, "Days")
@@ -39,53 +32,61 @@ test_that("in a study: A (the data steps, the call) = B (the design) = the templ
   skip_if_not_installed("haven")
   d <- tempfile()
   on.exit(unlink(d, recursive = TRUE))
-  dir.create(file.path(d, "adam"), recursive = TRUE)
-  for (x in c("adsl", "adtte")) {
-    haven::write_xpt(tflspec:::.ai_chr(getExportedValue("tflspec", x)),
-                     file.path(d, "adam", paste0(x, ".xpt")))
-  }
-  tfl_ai_study_init(d, adam = "adam", study_id = "KM-1")
+  data <- tplfig_study(d, c("adsl", "adtte"), "KM-1")
   o <- tfl_output("F-9-1", "figure", population = "SAF", label = "KM curves",
                   extends = "defaults",
                   template = list(name = "km_simple",
                                   args = list(param = "PFS", group = "TRT01A", time_unit = "days")),
                   content = list(tfl_item("geom_hline", list(yintercept = 0.5, linetype = "dashed")),
                                  tfl_item("labs", list(y = "Probability of no event"))))
-  f <- file.path(d, "spec", "outputs", "F-9-1.yml")
-  tfl_write_output(o, f)
-  st <- tfl_read_study_spec(d)
-  ro <- tfl_resolve_output(tfl_read_output(f), st)
-  data <- lapply(c(adsl = "adsl", adtte = "adtte"), function(x)
-    as.data.frame(haven::read_xpt(file.path(d, "adam", paste0(x, ".xpt")))))
-  # the template SPEC: its design run
-  p_t <- suppressMessages(tfl_content_run(ro, data))
-  # A: the data steps written out, then the call and the report's own items
-  a <- tfl_content_code(ro)
-  txt <- paste(a, collapse = "\n")
+  x <- tplfig_check(o, d, data)
+  txt <- paste(x$a, collapse = "\n")
   expect_match(txt, "semi_join(", fixed = TRUE)
   expect_match(txt, "filter(PARAMCD == \"PFS\")", fixed = TRUE)
   expect_match(txt, "content <- tpl_km_simple(adtte_pfs, group = TRT01A, time_unit = \"days\") +",
                fixed = TRUE)
   expect_match(txt, "labs(y = \"Probability of no event\")", fixed = TRUE)
-  # (its packages around it, as its program's library() lines attach them)
-  env <- new.env(parent = .fig_pkg_env(c(attr(a, "libs"), "tflspec")))
-  for (n in names(data)) assign(n, data[[n]], envir = env)
-  eval(parse(text = tfl_fig_setup_code()), env)
-  eval(parse(text = a), env)
-  expect_identical(km_png(env$content), km_png(p_t))
-  # B: the written-out report, read back
-  fb <- file.path(d, "spec", "outputs", "F-9-1-B.yml")
-  b <- tfl_template_to_spec(tfl_read_output(f), st)
-  b$id <- "F-9-1-B"
-  tfl_write_output(b, fb)
-  rb <- tfl_resolve_output(tfl_read_output(fb), st)
-  expect_null(attr(rb, "template"))
-  expect_identical(km_png(suppressMessages(tfl_content_run(rb, data))), km_png(p_t))
-  # the program of the design (no call): no tflspec function in it
-  code <- tfl_content_code(ro, template = "items")
-  calls <- unique(all.names(parse(text = code), functions = TRUE))
-  expect_false(any(grepl("tpl_km_simple", code, fixed = TRUE)))
-  expect_length(intersect(calls, getNamespaceExports("tflspec")), 0L)
+})
+
+test_that("the B file in the figure designer: the report's own items seen, saved the same", {
+  skip_on_cran()
+  km_skip()
+  skip_if_not_installed("haven")
+  d <- tempfile()
+  on.exit(unlink(d, recursive = TRUE))
+  tplfig_study(d, c("adsl", "adtte"), "KM-2")
+  st <- tfl_read_study_spec(d)
+  o <- tfl_read_output(system.file("extdata", "template-spec", "F-14-2-3.yml", package = "tflspec"))
+  fb <- file.path(d, "spec", "outputs", "F-14-2-3.yml")
+  tfl_write_output(tfl_template_to_spec(o, st), fb)
+  # the report file keeps the own items' syntax
+  b <- tfl_read_output(fb)
+  expect_identical(vapply(b$content, `[[`, "", "fn"),
+                   c("km_curve", "censor_mark", "geom_hline", rep("tfl_ard_number", 3L), "labs"))
+  # the designer's design of it (the sheets bridge), written and read as
+  # the designer keeps it (spec/figures/<id>.yml)
+  fd <- tfl_sheets_from_yaml(d)$figures[["F-14-2-3"]]
+  design <- do.call(tfl_fig_design, fd[intersect(names(fd), names(formals(tfl_fig_design)))])
+  kinds <- vapply(design$layers, `[[`, "", "layer")
+  expect_identical(kinds, c("km_curve", "censor_mark", "call", rep("ard_number", 3L)))
+  expect_identical(design$layers[[3L]]$fn, "geom_hline")
+  expect_identical(design$layers[[3L]]$args$yintercept, 0.5)
+  expect_identical(design$layers[[4L]]$label, "Median (days), Drug X: {value}")
+  expect_identical(design$layers[[6L]]$analysis_id, "HR")
+  expect_identical(design$plot$add[[1L]], list(fn = "labs", args = list(y = "Probability of No Skin Disorder")))
+  expect_identical(design$plot$x_label, "Time (Days)")
+  f1 <- tempfile(fileext = ".yml")
+  f2 <- tempfile(fileext = ".yml")
+  on.exit(unlink(c(f1, f2)), add = TRUE)
+  tfl_write_fig_design(design, f1)
+  back <- tfl_read_fig_design(f1)
+  tfl_write_fig_design(back, f2)
+  expect_identical(readLines(f2), readLines(f1))
+  expect_identical(unclass(back), unclass(design))
+  # the design read back writes the report's figure
+  expect_identical(as.character(tfl_fig_design_code(back, plot_id = "F-14-2-3", save = FALSE,
+                                                    name = "content")),
+                   tflspec:::.content_fig_code(tfl_resolve_output(b, st)))
 })
 
 test_that("a report that replaces a template's layer: its design, not the call", {
