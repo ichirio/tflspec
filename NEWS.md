@@ -1,6 +1,6 @@
 # tflspec (development version)
 
-* **Template parameters from the study standard** (#392, 0.0.24.9184).
+* **Template parameters from the study standard** (#392, 0.0.24.9185).
   `tfl_param(study = )` also takes `"output.population"` (the report's
   `population:`) and `"settings.treatment"` (`study.yml`'s new `settings:
   treatment:`); `population`, `by` and `group` take them by their names,
