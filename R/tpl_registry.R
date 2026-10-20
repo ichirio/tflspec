@@ -83,7 +83,10 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
         "ci_method", "groupn_label", "median_label", "time_prefix", "time_unit", "unit",
         "when", "visit_label", "param_label", "value_label", "change_label", "cell"), "text"),
     k(c("heading", "statistics", "cat_statistics"), "text", TRUE),
-    k(c("cells", "labels", "param_labels"), "list", fields = nv),
+    # a variable's heading each: given by name, merged with the default's
+    k(c("labels", "param_labels"), "list", fields = nv, merge = TRUE),
+    # the rows: given, they are the rows (no merge)
+    k("cells", "list", fields = c("label", "template")),
     k("flags", "list", TRUE, fields = c("id", "label", "where")),
     k("columns", "list", TRUE, fields = c("vars", "label", "width", "collapse_repeats")))
 })
@@ -171,6 +174,14 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
   t
 }
 
+# A named default and the names given: the default's order, the new names
+# after it, a NULL dropping its name; as a character vector when the
+# default is one
+.tpl_merge_named <- function(default, given) {
+  m <- utils::modifyList(as.list(default), as.list(given))
+  if (is.character(default)) unlist(m) else m
+}
+
 # The arguments as the body sees them: given (NULL too) > the template's default.
 .tpl_args <- function(t, args, fn) {
   unknown <- setdiff(names(args), names(t$params))
@@ -178,8 +189,17 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
     .ard_stop(sprintf("%s: template %s has no parameter %s.", fn, t$name,
                       paste(sQuote(unknown, FALSE), collapse = ", ")))
   }
-  # a parameter given, NULL too ("none"), else the template's default
-  out <- lapply(t$params, function(p) if (p$name %in% names(args)) args[[p$name]] else p$default)
+  # a parameter given, NULL too ("none"), else the template's default; a
+  # map of headings given by name changes those names only (`RACE: ~`, a
+  # NULL, drops one)
+  out <- lapply(t$params, function(p) {
+    if (!p$name %in% names(args)) return(p$default)
+    v <- args[[p$name]]
+    if (isTRUE(p$merge) && length(p$default) && length(v) && !is.null(names(v))) {
+      v <- .tpl_merge_named(p$default, v)
+    }
+    v
+  })
   miss <- vapply(t$params, function(p) p$required && is.null(out[[p$name]]), NA)
   if (any(miss)) {
     .ard_stop(sprintf("%s: template %s needs %s.", fn, t$name,
