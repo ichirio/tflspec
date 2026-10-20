@@ -7,6 +7,7 @@
   tfl_param("params", NULL, doc = "the PARAMCD values; NULL: all"),
   tfl_param("where", NULL, doc = "the records kept (R), e.g. ONTRTFL == \"Y\""),
   tfl_param("by", "TRT01A", doc = "the column variable"),
+  tfl_param("param_order", "PARAMN", doc = "the parameters' order variable; NULL: by name"),
   tfl_param("category", "ANRIND",
             doc = "the category's variable (ANRIND, a criterion's MCRIT1ML)"),
   tfl_param("levels", NULL, type = "levels", multiple = TRUE, of = "category",
@@ -60,9 +61,11 @@
     Filter(Negate(is.null), list(
       id = set, from = a$data, subjects = subj,
       where = if (length(where)) tfl_r(paste(where, collapse = " & ")),
-      # every parameter analysed a level: its rows even with no subject in
-      # a category (0/N)
-      derive = tfl_r("PARAM = factor(PARAM)"))),
+      # every parameter analysed a level (in its order): its rows even with
+      # no subject in a category (0/N)
+      derive = tfl_r(if (length(a$param_order))
+        sprintf("PARAM = reorder(factor(PARAM), %s)", a$param_order) else
+          "PARAM = factor(PARAM)"))),
     # the N
     per("_n", "the subjects with a value of each parameter",
         code = sprintf("dplyr::distinct(%s, %s)", set, keys))), cats)
@@ -102,11 +105,12 @@
 #' (`levels` lowest first: "level 2 or more").  With `baseline_normal =
 #' TRUE`, n and N are the subjects normal at baseline only (`BNRIND ==
 #' "NORMAL"`).  The categories' order is `levels`, or the code list of
-#' `category`.
+#' `category`; the parameters' is `PARAMN` (`param_order`; `NULL`: by
+#' name).
 #'
 #' @inheritParams tpl_demog
 #' @param ... The template's other parameters: `data`, `params`, `where`,
-#'   `by`, `category`, `levels`, `cumulative`, `baseline_normal`,
+#'   `by`, `param_order`, `category`, `levels`, `cumulative`, `baseline_normal`,
 #'   `baseline`, `baseline_value`, `heading` ...
 #' @return A [rtfreporter::table_plan()].
 #' @examples

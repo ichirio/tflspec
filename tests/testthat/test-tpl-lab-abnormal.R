@@ -1,6 +1,8 @@
 # lab_abnormal: subjects with laboratory values in abnormal categories, n/N (%)
 
-la_args <- list(population = "SAF", levels = c("LOW", "HIGH"), where = "ONTRTFL == \"Y\"")
+# (the sample ADLB has no PARAMN: the parameters by name)
+la_args <- list(population = "SAF", levels = c("LOW", "HIGH"), where = "ONTRTFL == \"Y\"",
+                param_order = NULL)
 
 # the ARD as the study's program makes it: the records kept, the N (the
 # subjects with a value of the parameter) and each subject once a category
@@ -9,7 +11,7 @@ la_ard <- function(x, lb = adlb) {
   d <- x$ard$analysis_data
   adlb_saf <- lb[lb$USUBJID %in% saf$USUBJID, ]
   if (length(d[[2L]]$where)) adlb_saf <- adlb_saf[eval(parse(text = d[[2L]]$where), adlb_saf), ]
-  adlb_saf$PARAM <- factor(adlb_saf$PARAM)
+  adlb_saf <- eval(parse(text = sprintf("dplyr::mutate(adlb_saf, %s)", d[[2L]]$derive)))
   adlb_saf_n <- eval(parse(text = d[[3L]]$code))
   adlb_saf_cat <- if (length(d) == 5L) {
     adlb_saf_worst <- eval(parse(text = d[[4L]]$code))
@@ -102,10 +104,26 @@ test_that("a parameter with no subject in any category: its rows, 0/N (0.0)", {
   expect_length(unique(t$group), 6L)
 })
 
+test_that("the parameters in PARAMN's order (param_order), not by name", {
+  la_skip()
+  x0 <- tfl_template_expand("lab_abnormal", list(population = "SAF"))
+  expect_identical(as.character(x0$ard$analysis_data[[2L]]$derive),
+                   "PARAM = reorder(factor(PARAM), PARAMN)")
+  lb <- adlb
+  # PLAT first, ALT last: the reverse of the names' order
+  ord <- c(PLAT = 1, NEUT = 2, HGB = 3, BILI = 4, AST = 5, ALT = 6)
+  lb$PARAMN <- unname(ord[lb$PARAMCD])
+  a <- la_args[names(la_args) != "param_order"]
+  x <- tfl_template_expand("lab_abnormal", a)
+  t <- la_tab(do.call(tpl_lab_abnormal, c(list(la_ard(x, lb)), a)))
+  expect_identical(unique(t$group)[c(1L, 6L)],
+                   c("Platelets (10^9/L)", "Alanine Aminotransferase (U/L)"))
+})
+
 test_that("cumulative: a subject in every level up to their worst", {
   la_skip()
   a <- list(population = "SAF", category = "MCRIT1ML", levels = c("1", "2", "3"),
-            cumulative = TRUE, params = c("ALT", "AST"))
+            cumulative = TRUE, params = c("ALT", "AST"), param_order = NULL)
   lb <- la_crit()
   x <- tfl_template_expand("lab_abnormal", a)
   t <- la_tab(do.call(tpl_lab_abnormal, c(list(la_ard(x, lb)), a)))
@@ -135,7 +153,7 @@ test_that("baseline normal: n and N of the subjects normal at baseline", {
 test_that("A (the call) = B (the items as the report's content)", {
   la_skip()
   cum <- list(population = "SAF", category = "MCRIT1ML", levels = c("1", "2", "3"),
-              cumulative = TRUE)
+              cumulative = TRUE, param_order = NULL)
   for (a in list(la_args, cum)) {
     x <- tfl_template_expand("lab_abnormal", a)
     ard <- la_ard(x, la_crit())

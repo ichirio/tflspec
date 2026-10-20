@@ -13,7 +13,7 @@ report.}
 \item{population}{The analysis set's id (\code{"SAF"}).}
 
 \item{...}{The template's other parameters: \code{data}, \code{params}, \code{where},
-\code{by}, \code{category}, \code{levels}, \code{cumulative}, \code{baseline_normal},
+\code{by}, \code{param_order}, \code{category}, \code{levels}, \code{cumulative}, \code{baseline_normal},
 \code{baseline}, \code{baseline_value}, \code{heading} ...}
 
 \item{codelists}{The report's code lists, for the order and labels of
@@ -31,7 +31,8 @@ those with a value in the category; every parameter analysed has its
 rows, 0/N when no subject is in a category.  A subject is counted once in each
 category; with \code{cumulative = TRUE}, in every level up to their worst
 (\code{levels} lowest first: "level 2 or more").  With \code{baseline_normal = TRUE}, n and N are the subjects normal at baseline only (\code{BNRIND == "NORMAL"}).  The categories' order is \code{levels}, or the code list of
-\code{category}.
+\code{category}; the parameters' is \code{PARAMN} (\code{param_order}; \code{NULL}: by
+name).
 }
 \examples{
 x <- tfl_template_expand("lab_abnormal", list(population = "SAF",
