@@ -1,5 +1,14 @@
 # tflspec (development version)
 
+* **Template `ae_pt_freq`: adverse events by preferred term, most frequent
+  first** (#383, 0.0.24.9180), the first of the safety templates.  The
+  treatment-emergent events' preferred terms, the subjects with any event
+  first, then the terms by decreasing frequency in the first group of the
+  code list of `by` (`sort_by` names another column).  `min_pct` keeps the
+  terms of that percentage of subjects or more, in any column (as FDA's
+  tables of common adverse events), in all (`min_pct_in = "all"`) or in
+  the Total column (`"total"`).  `tpl_ae_pt_freq()` is its call.
+
 * **shift / lab_shift as a template SPEC** (#382, 0.0.24.9179).  Written
   as `template:` in a report file, they stopped with "`vars` needs at
   least two columns" in a study whose defaults say
