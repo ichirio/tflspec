@@ -287,6 +287,15 @@ tfl_template_run <- function(name, x, ..., codelists = NULL, sets = NULL) {
   if (inherits(x0, "error")) {
     row(NA_character_, NA_character_, NA_character_, paste("not checked:", conditionMessage(x0)))
   } else {
+    # the standard pair: which subjects (`subset`) for a template of data of
+    # its own, which records (`where`) for one of records data
+    ds <- .tpl_data_read(x0)
+    if (length(ds) && !"subset" %in% names(t$params)) {
+      row("subset", NA_character_, NA_character_, "no subset")
+    }
+    if (any(toupper(ds) != "ADSL") && !"where" %in% names(t$params)) {
+      row("where", NA_character_, NA_character_, "no where (a records template)")
+    }
     look <- function(items) Filter(function(it) it$fn %in% names(.tpl_look), items %||% list())
     l0 <- look(x0$content)
     for (p in names(t$params)) {
@@ -315,6 +324,18 @@ tfl_template_run <- function(name, x, ..., codelists = NULL, sets = NULL) {
   unique(do.call(rbind, rows))
 }
 
+# The datasets a template's items read: its analysis data's, its data's
+# (a listing's dataset, a figure's read step)
+.tpl_data_read <- function(x) {
+  ad <- x$ard$analysis_data %||% list()
+  ids <- vapply(ad, function(e) e$id %||% "", "")
+  from <- unlist(lapply(ad, function(e) if (is.null(e$code)) e$from))
+  st <- x$data$steps
+  reads <- if (is.list(st) && !inherits(st, "tfl_r")) unlist(lapply(st, function(s)
+    if (is.list(s) && identical(s$step, "read")) s$dataset))
+  unique(c(setdiff(from, ids), x$data$dataset, reads))
+}
+
 # A parameter that is the analysis set or the treatment: by its name, or a
 # treatment variable as its default
 .tpl_study_kind <- function(p) {
@@ -332,7 +353,9 @@ tfl_template_run <- function(name, x, ..., codelists = NULL, sets = NULL) {
 #' a parameter with no type ([tfl_param()]'s `type`, nor tflspec's for its
 #' name): an input form guesses its field from the default; and the analysis
 #' set or the treatment not read from the study standard (no `study =`).
-#' A study's value of them is the study's, not each report's.
+#' A study's value of them is the study's, not each report's.  So is a
+#' template of data of its own without `subset`, and one of records data
+#' without `where` ([tfl_templates()]: the standard pair).
 #' tflspec's own templates have none; a company's package tests its own
 #' with it (one line in its tests, [tfl_use_company_templates()]).
 #'
@@ -340,7 +363,9 @@ tfl_template_run <- function(name, x, ..., codelists = NULL, sets = NULL) {
 #' @return A data frame, one row a parameter that ends in the look
 #'   (`status` `"look"`: `param`, and the verb `fn` and argument `arg` it
 #'   ends in), a parameter with no type (`"no type (guessed: <type>)"`),
-#'   one with no study source (`"no study source (population / treatment)"`)
+#'   one with no study source (`"no study source (population / treatment)"`),
+#'   a template without the standard pair (`"no subset"`, `"no where (a
+#'   records template)"`)
 #'   or a template whose run stopped (`"not checked: ..."`):
 #'   `template`, `param`, `fn`, `arg`, `status`.  No rows: none.
 #' @examples

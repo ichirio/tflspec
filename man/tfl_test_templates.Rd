@@ -13,7 +13,8 @@ tfl_test_templates(names = NULL)
 A data frame, one row a parameter that ends in the look
 (\code{status} \code{"look"}: \code{param}, and the verb \code{fn} and argument \code{arg} it
 ends in), a parameter with no type (\code{"no type (guessed: <type>)"}),
-one with no study source (\code{"no study source (population / treatment)"})
+one with no study source (\code{"no study source (population / treatment)"}),
+a template without the standard pair (\code{"no subset"}, \code{"no where (a records template)"})
 or a template whose run stopped (\code{"not checked: ..."}):
 \code{template}, \code{param}, \code{fn}, \code{arg}, \code{status}.  No rows: none.
 }
@@ -25,7 +26,9 @@ digits, the blank rows, the style, a listing's type) is listed.  So is
 a parameter with no type (\code{\link[=tfl_param]{tfl_param()}}'s \code{type}, nor tflspec's for its
 name): an input form guesses its field from the default; and the analysis
 set or the treatment not read from the study standard (no \verb{study =}).
-A study's value of them is the study's, not each report's.
+A study's value of them is the study's, not each report's.  So is a
+template of data of its own without \code{subset}, and one of records data
+without \code{where} (\code{\link[=tfl_templates]{tfl_templates()}}: the standard pair).
 tflspec's own templates have none; a company's package tests its own
 with it (one line in its tests, \code{\link[=tfl_use_company_templates]{tfl_use_company_templates()}}).
 }

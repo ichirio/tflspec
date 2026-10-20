@@ -29,6 +29,12 @@
     at <- match("read", vapply(steps, `[[`, "", "step"))
     steps <- append(steps, .tpl_population_step(a$population, ctx$population), at)
   }
+  # the records kept besides the parameter (`where`): after it
+  if (!is.null(a$where)) {
+    kinds <- vapply(steps, `[[`, "", "step")
+    at <- match("param", kinds, nomatch = match("read", kinds, nomatch = 0L))
+    steps <- append(steps, list(list(step = "filter", expr = a$where)), at)
+  }
   list(data = list(source = "code", steps = c(steps, f$stats)), content = f$content,
        plot = f$plot, call_steps = length(f$stats))
 }
@@ -85,11 +91,13 @@
             doc = "the PARAMCD of ADTTE"),
   tfl_param("population", NULL, type = "text",
             doc = "the analysis set's id (SAF): its subjects kept; NULL: every record"),
+  .tpl_subset_param(),
   tfl_param("group", NULL, doc = "the curves' variable (TRT01A)"),
   tfl_param("time", NULL, doc = "the time variable; NULL: AVAL"),
   tfl_param("censor", "CNSR", doc = "the censoring variable"),
   tfl_param("time_unit", "months", doc = "the time axis' unit"),
-  tfl_param("data", NULL, doc = "the dataset; NULL: ADTTE")
+  tfl_param("data", NULL, doc = "the dataset; NULL: ADTTE"),
+  .tpl_where_param(doc = "the records kept besides the parameter (R)")
 )
 
 #' Kaplan-Meier curves: a figure from the template `km_simple`
@@ -181,11 +189,13 @@ tpl_km_ci <- function(data, group = NULL, time = NULL, censor = "CNSR",
             doc = "the PARAMCD (SYSBP)"),
   tfl_param("population", NULL, type = "text",
             doc = "the analysis set's id (SAF): its subjects kept; NULL: every record"),
+  .tpl_subset_param(),
   tfl_param("data", "ADLB", type = "text", doc = "the BDS dataset (ADVS, ADLB)"),
   tfl_param("value", "AVAL", type = "vars", doc = "the variable averaged (AVAL, CHG)"),
   tfl_param("group", "TRT01A", type = "vars", doc = "the lines' variable"),
   tfl_param("visit_var", "AVISIT", type = "vars", doc = "the visits on the x axis"),
-  tfl_param("visit_order", "AVISITN", type = "vars", doc = "the visits' order")
+  tfl_param("visit_order", "AVISITN", type = "vars", doc = "the visits' order"),
+  .tpl_where_param(doc = "the records kept besides the parameter (R)")
 )
 
 .tpl_mean_body <- function(interval) {
@@ -257,6 +267,7 @@ tpl_mean_ci <- function(data, group = "TRT01A", value = "AVAL", visit_var = "AVI
             doc = "the PARAMCD of the tumour measurements (SUMDIAM)"),
   tfl_param("population", NULL, type = "text",
             doc = "the analysis set's id (FAS): its subjects kept; NULL: every record"),
+  .tpl_subset_param(),
   tfl_param("data", "ADTR", type = "text", doc = "the dataset"),
   tfl_param("value", "PCHG", type = "vars", doc = "the bars' value (the % change)"),
   tfl_param("where", NULL, type = "text",
@@ -333,6 +344,7 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
   tfl_param("param", required = TRUE, type = "levels", of = "PARAMCD",
             doc = "the PARAMCD of the time to event (PFS)"),
   tfl_param("population", required = TRUE, type = "text", doc = "the analysis set's id (SAF)"),
+  .tpl_subset_param(),
   tfl_param("data", "ADTTE", type = "text", doc = "the dataset"),
   tfl_param("group", "TRT01A", type = "vars", doc = "the arms compared (the Cox model's term)"),
   tfl_param("subgroups", c("SEX", "AGEGR1"), type = "vars", multiple = TRUE,
@@ -340,7 +352,8 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
   tfl_param("comparison", NULL, type = "levels", of = "group",
             doc = "the arm compared with the reference; NULL: every other arm"),
   tfl_param("time", "AVAL", type = "vars", doc = "the time variable"),
-  tfl_param("censor", "CNSR", type = "vars", doc = "the censoring variable")
+  tfl_param("censor", "CNSR", type = "vars", doc = "the censoring variable"),
+  .tpl_where_param(doc = "the records kept besides the parameter (R)")
 )
 
 .tpl_forest_body <- function(a, ctx) {
@@ -352,7 +365,7 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
     analysis_data = list(Filter(Negate(is.null), list(
       id = set, label = sprintf("%s of %s, with the subgroups", a$param, a$population),
       from = a$data, population = a$population,
-      where = tfl_r(sprintf("PARAMCD == %s", q(a$param))),
+      where = tfl_r(.tpl_and(sprintf("PARAMCD == %s", q(a$param)), a$where)),
       add = if (length(a$subgroups)) as.list(a$subgroups)))),
     analyses = lapply(seq_len(nrow(an)), function(i) list(
       id = an$analysis_id[i], label = an$label[i], method = "custom", data = set,
@@ -441,6 +454,6 @@ tpl_forest_layout <- function(fig) {
   .tfl_template("waterfall", kind = "figure", layout = "waterfall", params = .tpl_wf_params(),
     body = function(a, ctx) {
       f <- .tpl_wf_design(a$value, a$by_response, a$param, a$data, a$where)
-      .tpl_fig_body_of(f, a, ctx)
+      .tpl_fig_body_of(f, a[setdiff(names(a), "where")], ctx)
     }, label = "Waterfall of each subject's change")
 }
