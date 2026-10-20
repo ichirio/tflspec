@@ -267,14 +267,18 @@ tfl_template_to_spec <- function(output, study) {
   keep <- intersect(setdiff(names(formals(fun)), c("data", "plot")), names(tp$args))
   arg_code <- vapply(keep, function(k) {
     v <- tp$args[[k]]
-    col <- identical(t$params[[k]]$type, "vars") && is.character(v) && length(v) == 1L
-    paste(k, "=", if (col) v else .fig_arg_code(v))
+    col <- identical(t$params[[k]]$type, "vars") && is.character(v) && length(v) >= 1L
+    paste(k, "=", if (!col) .fig_arg_code(v) else if (length(v) == 1L) v
+                  else sprintf("c(%s)", paste(v, collapse = ", ")))
   }, "")
   own_plot <- Filter(Negate(is.null), lapply(stats::setNames(nm = names(output$plot)), function(k) {
     if (!identical(output$plot[[k]], tp$plot[[k]])) output$plot[[k]]
   }))
   if (length(own_plot)) arg_code <- c(arg_code, paste("plot =", .fig_arg_code(own_plot)))
-  call <- sprintf("%s(%s)", t$call, paste(c("df", arg_code), collapse = ", "))
+  # (a template drawn from the ARD (forest_hr) takes `ard`; one of panels
+  # side by side is assembled after the report's own items, on `fig`)
+  form <- .tpl_fig_forms[[t$from %||% tp$name]] %||% list()
+  call <- sprintf("%s(%s)", t$call, paste(c(form$input %||% "df", arg_code), collapse = ", "))
   # the report's own items after it
   pre <- character()
   terms <- character()
@@ -305,11 +309,13 @@ tfl_template_to_spec <- function(output, study) {
   code <- c(
     sprintf("# template %s%s", tp$name,
             if (length(tp$study)) paste0("; study defaults: ", paste(tp$study, collapse = ", ")) else ""),
-    section("data"),
+    # (no data part: a template drawn from the ARD)
+    if (length(d$code) || length(pre)) section("data"),
     d$code,
     if (length(pre)) c("# the numbers it prints, from the ARD", pre, ""),
     section("plot"),
-    .fig_plus_chain(name, c(call, terms)))
+    if (is.null(form$assemble)) .fig_plus_chain(name, c(call, terms))
+    else c(.fig_plus_chain("fig", c(call, terms)), sprintf("%s <- %s(fig)", name, form$assemble)))
   code <- .code_lines(code)
   code <- .fig_rename_df(code, tfl_fig_data_name(list(data = steps)))
   code <- .fig_tidy_names(code)

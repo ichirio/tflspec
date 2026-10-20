@@ -64,7 +64,9 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
   nv <- c("name", "text")
   c(k(c("by", "baseline", "post", "term", "grade", "category", "censor", "group", "time",
         "pop", "param_order", "visit_order", "exposure", "response", "value", "visit_var"), "vars"),
-    k(c("categorical", "continuous", "variables", "hierarchy", "covariates"), "vars", TRUE),
+    k(c("categorical", "continuous", "variables", "hierarchy", "covariates", "subgroups"),
+      "vars", TRUE),
+    k("comparison", "levels", of = "group"),
     k("by_levels", "levels", TRUE, of = "by"),
     k("levels", "levels", TRUE, of = "post"),
     k("grade_levels", "levels", TRUE, of = "grade"),

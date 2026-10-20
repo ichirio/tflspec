@@ -372,6 +372,7 @@ tfl_test_templates <- function(names = NULL) {
   km_simple = list(param = "PFS", group = "TRT01P"),
   km_risk_table = list(param = "PFS", group = "TRT01P"),
   km_ci = list(param = "PFS", group = "TRT01P"),
+  forest_hr = list(param = "PFS", population = "SAF"),
   mean_se = list(param = "SYSBP", data = "ADVS"),
   mean_ci = list(param = "SYSBP", data = "ADVS"),
   waterfall = list(param = "SUMDIAM", where = "AVISIT == \"WEEK 12\""),

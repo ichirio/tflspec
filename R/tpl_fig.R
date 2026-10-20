@@ -35,14 +35,15 @@
 
 # The figure a tpl_<name>() call draws: the design's own steps and layers
 # on the data the program made, the settings `plot` over the template's
-.tpl_fig_draw <- function(name, f, data, plot = NULL) {
+.tpl_fig_draw <- function(name, f, data, plot = NULL, as = "df") {
   if (!is.data.frame(data)) {
-    .ard_stop(sprintf("tpl_%s(): `data` is the figure's data, a data frame.", name))
+    .ard_stop(sprintf("tpl_%s(): `%s` is the figure's %s, a data frame.", name,
+                      if (as == "ard") "ard" else "data", if (as == "ard") "ARD" else "data"))
   }
   o <- tfl_output(paste0("tpl-", name), "figure", extends = "none",
                   data = list(source = "code", steps = f$stats), content = f$content)
   o$plot <- .merge_map(f$plot, plot)
-  tfl_content_run(o, data)
+  tfl_content_run(o, stats::setNames(list(data), as))
 }
 
 # a column given bare or as text (a quosure), NULL when not given
@@ -291,6 +292,130 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
   .tpl_fig_draw("waterfall", f, data, plot)
 }
 
+# ---- forest_hr: the hazard ratio overall and by subgroup, from the ARD -------------
+
+# The figure templates whose program is not `content <- tpl_<name>(df, ...)`:
+# `input` the object the call takes; `assemble` the function the program
+# calls after the report's own items, on `fig` (the panels side by side)
+.tpl_fig_forms <- list(forest_hr = list(input = "ard", assemble = "tpl_forest_layout"))
+
+# the text column beside the forest (the preset's), its layer
+.tpl_forest_text <- function() {
+  list(layer = "text_column", data = "est", y = "y",
+       columns = "N = n | Hazard ratio (95% CI) = txt", width = 0.4)
+}
+
+# columns given bare or as text, one or c(...) of them (a quosure)
+.tpl_cols <- function(q) {
+  if (rlang::quo_is_null(q)) return(NULL)
+  e <- rlang::quo_get_expr(q)
+  if (is.character(e)) return(e)
+  if (is.call(e) && identical(e[[1L]], as.name("c"))) {
+    return(vapply(as.list(e)[-1L], function(x) if (is.character(x)) x else as.character(x), ""))
+  }
+  if (is.name(e)) return(as.character(e))
+  as.character(rlang::eval_tidy(q))
+}
+
+.tpl_forest_design <- function(group = "TRT01A", subgroups = c("SEX", "AGEGR1"),
+                               comparison = NULL) {
+  d <- tfl_fig_template("forest_hr", group = group,
+                        subgroups = paste(subgroups, collapse = ", "), comparison = comparison)
+  # the ARD read and the rows made: all the call's (no data steps)
+  keep <- vapply(d$data, function(st) st$step %in% c("ard_stats", "code"), NA)
+  layers <- Filter(function(l) !identical(l$layer, "text_column"), d$layers)
+  list(steps = list(), stats = d$data[keep], plot = d$plot,
+       content = lapply(c(layers, list(.tpl_forest_text())),
+                        function(l) tfl_item(l$layer, l[setdiff(names(l), "layer")])))
+}
+
+.tpl_forest_params <- function() list(
+  tfl_param("param", required = TRUE, type = "levels", of = "PARAMCD",
+            doc = "the PARAMCD of the time to event (PFS)"),
+  tfl_param("population", required = TRUE, type = "text", doc = "the analysis set's id (SAF)"),
+  tfl_param("data", "ADTTE", type = "text", doc = "the dataset"),
+  tfl_param("group", "TRT01A", type = "vars", doc = "the arms compared (the Cox model's term)"),
+  tfl_param("subgroups", c("SEX", "AGEGR1"), type = "vars", multiple = TRUE,
+            doc = "the subgroups, each its levels' hazard ratios"),
+  tfl_param("comparison", NULL, type = "levels", of = "group",
+            doc = "the arm compared with the reference; NULL: every other arm"),
+  tfl_param("time", "AVAL", type = "vars", doc = "the time variable"),
+  tfl_param("censor", "CNSR", type = "vars", doc = "the censoring variable")
+)
+
+.tpl_forest_body <- function(a, ctx) {
+  set <- paste(tolower(a$data), tolower(a$population), tolower(a$param), sep = "_")
+  an <- tfl_fig_forest_analyses(data = a$data, param = a$param, pop = a$population,
+                                group = a$group, subgroups = a$subgroups, time = a$time,
+                                censor = a$censor)$analyses
+  ard <- list(
+    analysis_data = list(Filter(Negate(is.null), list(
+      id = set, label = sprintf("%s of %s, with the subgroups", a$param, a$population),
+      from = a$data, population = a$population,
+      where = tfl_r(sprintf("PARAMCD == %s", q(a$param))),
+      add = if (length(a$subgroups)) as.list(a$subgroups)))),
+    analyses = lapply(seq_len(nrow(an)), function(i) list(
+      id = an$analysis_id[i], label = an$label[i], method = "custom", data = set,
+      code = tfl_r(an$code[i]), purpose = "SECONDARY OUTCOME MEASURE")))
+  f <- .tpl_forest_design(a$group, a$subgroups, a$comparison)
+  c(list(ard = ard), .tpl_fig_body_of(f, list(), ctx))
+}
+
+#' Hazard ratio by subgroup: a forest plot from the template `forest_hr`
+#'
+#' The A use of the template SPEC `forest_hr`: the hazard ratios are the
+#' report's ARD (its own analyses: a Cox model overall and within each
+#' subgroup, made by the ARD program), and one call draws the forest from
+#' it: `tpl_forest_hr()` the estimates and their 95% CIs, one row each,
+#' the subgroups' levels under their heading.  The report's own items go
+#' on it with `+`; `tpl_forest_layout()` then puts the text column (N, the
+#' hazard ratio and its CI) at its right.
+#'
+#' @param ard The study ARD's rows of this report.
+#' @param group The arms compared (`TRT01A`), bare or as text.
+#' @param subgroups The subgroups (`c(SEX, AGEGR1)`), bare or as text.
+#' @param comparison The arm compared with the reference; `NULL`: every
+#'   other arm, each row saying which.
+#' @param fig `tpl_forest_layout()`: the forest, with the report's own
+#'   items.
+#' @inheritParams tpl_km_simple
+#' @return `tpl_forest_hr()`: a ggplot; `tpl_forest_layout()`: a patchwork
+#'   of it and its text column.
+#' @seealso [tfl_template_expand()] for its ARD and design (the B use).
+#' @export
+tpl_forest_hr <- function(ard, group = "TRT01A", subgroups = c("SEX", "AGEGR1"),
+                          comparison = NULL, plot = NULL) {
+  f <- .tpl_forest_design(.tpl_col(rlang::enquo(group)), .tpl_cols(rlang::enquo(subgroups)),
+                          comparison)
+  f$content <- Filter(function(it) !identical(it$fn, "text_column"), f$content)
+  .tpl_fig_draw("forest_hr", f, ard, plot, as = "ard")
+}
+
+#' @rdname tpl_forest_hr
+#' @export
+tpl_forest_layout <- function(fig) {
+  # the rows the forest draws: its layers' data
+  est <- NULL
+  for (l in fig$layers) {
+    if (is.data.frame(l$data) && all(c("y", "txt") %in% names(l$data))) {
+      est <- l$data
+      break
+    }
+  }
+  if (is.null(est)) .ard_stop("tpl_forest_layout(): `fig` is a forest of tpl_forest_hr().")
+  l <- .tpl_forest_text()
+  base <- tfl_fig_template("forest_hr")$plot$base_size
+  x <- .fig_layer_code(l, 1L, list(base_size = base))
+  w <- as.numeric(l$width)
+  code <- c(x$chain, sprintf("fig <- fig + %s + plot_layout(widths = %s)", x$panel$name,
+                             vec_code(round(c(1 - w, w), 3))))
+  env <- new.env(parent = .fig_pkg_env(c("ggplot2", "patchwork")))
+  env$est <- est
+  env$fig <- fig
+  eval(parse(text = code), env)
+  env$fig
+}
+
 .tpl_km_body <- function(preset) {
   force(preset)
   function(a, ctx) {
@@ -303,6 +428,8 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
 # ---- registered --------------------------------------------------------------------
 
 .tpl_fig_register <- function() {
+  .tfl_template("forest_hr", kind = "figure", layout = "forest", params = .tpl_forest_params(),
+                body = .tpl_forest_body, label = "Hazard ratio by subgroup (forest)")
   for (nm in c("km_simple", "km_risk_table", "km_ci")) {
     .tfl_template(nm, kind = "figure", layout = "km", params = .tpl_km_simple_params(),
                   body = .tpl_km_body(nm))
