@@ -136,6 +136,8 @@ test_that("the sheets (and the study's ARD program) take a template report's ana
 
 test_that("every template as a template SPEC: resolved as its items written out (B), the study's layers on both", {
   s <- ts_study()
+  # its analysis set, as data.yml defines it (a figure's subjects)
+  s$data$populations <- list(list(id = "SAF", dataset = "ADSL", where = tfl_r("SAFFL == \"Y\"")))
   tp <- tfl_templates()
   for (nm in names(.tpl_examples)) {
     o <- tfl_output(paste0("X-", nm), tp$kind[tp$name == nm], population = "SAF",

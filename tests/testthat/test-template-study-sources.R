@@ -101,7 +101,11 @@ test_that("km_simple: the analysis set's subjects, by data.yml's definition (a s
   expect_true(any(tfl_check_fig_design(tfl_fig_design(data = left))$field %in% "vars"))
   # an id the study does not define
   o$population <- "ITT"
-  expect_error(tfl_resolve_output(o, s), "no analysis set 'ITT'")
+  expect_error(tfl_resolve_output(o, s), "population ITT is not in `populations`")
+  # a study that defines none stops too, as a table's analysis data does
+  s$data$populations <- NULL
+  o$population <- "SAF"
+  expect_error(tfl_resolve_output(o, s), "population SAF is not in `populations`")
   # the semi join keeps the rows of the set's subjects: the same as the flag
   df <- adtte[adtte$PARAMCD == adtte$PARAMCD[1L], ]
   saf <- adsl$USUBJID[adsl$SAFFL == "Y"]
