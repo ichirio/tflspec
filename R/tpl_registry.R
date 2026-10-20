@@ -566,6 +566,127 @@ tpl_ae_pt_freq <- function(ard, population, ..., codelists = NULL) {
               codelists = codelists)
 }
 
+# ---- ae_max_grade: SOC / PT by the maximum severity or grade -----------------
+
+.tpl_mg_params <- list(
+  tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
+  tfl_param("grade", "AESEV", doc = "the severity or grade variable (AESEV, AETOXGR)"),
+  tfl_param("grade_levels", NULL,
+            doc = "its values, lowest first; NULL: the code list of `grade`"),
+  tfl_param("grade_in", "rows", doc = "the grades as \"rows\" under each term, or as \"cols\" in each group"),
+  tfl_param("hierarchy", c("AEBODSYS", "AEDECOD"), doc = "the levels, outer first"),
+  tfl_param("by", "TRT01A", doc = "the column variable"),
+  tfl_param("data", "ADAE", doc = "the dataset of records"),
+  tfl_param("where", "TRTEMFL == \"Y\"", doc = "the records kept (R)"),
+  tfl_param("data_id", NULL, doc = "the analysis data's id; NULL: <data>_<population>"),
+  tfl_param("overall", "Any TEAE", doc = "the any-record row's label"),
+  tfl_param("any_grade", "Any grade", doc = "the label of a term's count at any grade"),
+  tfl_param("sort", "n", doc = "the SOCs and PTs by their count, most first (\"n\"), or by \"name\""),
+  tfl_param("heading", c("System Organ Class", "   Preferred Term"),
+            doc = "the label column's heading, a line a level")
+)
+names(.tpl_mg_params) <- vapply(.tpl_mg_params, `[[`, "", "name")
+
+.tpl_mg_body <- function(a, ctx) {
+  rows_in <- identical(match.arg(a$grade_in, c("rows", "cols")), "rows")
+  pop <- a$population
+  subj <- paste0("adsl_", tolower(pop))
+  set <- a$data_id %||% paste0(tolower(a$data), "_", tolower(pop))
+  g <- a$grade
+  h <- a$hierarchy
+  lv <- a$grade_levels %||% .tpl_levels(g, ctx$codelists)[[g]]
+  # a record's rank: its grade among the levels (lowest first)
+  rank <- if (length(lv)) {
+    sprintf("match(%s, c(%s))", g, paste0("\"", lv, "\"", collapse = ", "))
+  } else sprintf("xtfrm(%s)", g)
+  # each subject's record of the highest grade: overall, in each SOC, in each PT
+  top <- function(suffix, within) {
+    list(id = paste0(set, "_max", suffix),
+         code = sprintf("dplyr::slice_max(%s, %s, by = c(%s), n = 1, with_ties = FALSE)",
+                        set, rank, paste(c("USUBJID", within), collapse = ", ")))
+  }
+  maxes <- list(top("", character()), top("_soc", h[1L]), top("_pt", h))
+  # the overall maximum counted as one more SOC, the overall row's own
+  # value: its grades join that row, as rows or as columns
+  maxes[[1L]]$code <- sprintf("dplyr::mutate(%s, %s = \"%s\")", maxes[[1L]]$code, h[1L],
+                              a$overall)
+  d <- list(id = set, from = a$data, subjects = subj,
+            where = if (!is.null(a$where)) tfl_r(a$where))
+  an <- function(id, data, vars, over = FALSE) Filter(Negate(is.null), list(
+    id = id, method = "hierarchical", data = data, by = a$by, variables = vars,
+    denominator = subj, args = if (over) tfl_r("over_variables = TRUE"),
+    purpose = "PRIMARY OUTCOME MEASURE"))
+  ard <- list(
+    analysis_data = c(list(
+      list(id = subj, label = .tpl_set_label(pop, ctx$population), from = "ADSL",
+           population = pop),
+      Filter(Negate(is.null), d)), lapply(maxes, function(m) Filter(Negate(is.null), m))),
+    analyses = list(
+      an("AE_MAX", maxes[[1L]]$id, c(h[1L], g)),
+      an("AE_MAX_SOC", maxes[[2L]]$id, c(h[1L], g)),
+      an("AE_MAX_PT", maxes[[3L]]$id, c(h, g))))
+  n <- length(h)
+  by_n <- identical(match.arg(a$sort, c("n", "name")), "n")
+  # the terms' row keys (as rows: every level; as columns: all but the PT,
+  # the label); each term after its own count (most first), or by name
+  grp <- paste0("group", seq_len(if (rows_in) n else n - 1L))
+  term_keys <- unlist(lapply(grp, function(k) c(if (by_n) sprintf("-n@%s", k), k)))
+  keys <- c("levels(group1)", term_keys, ".depth",
+            if (!rows_in) c(if (by_n) "-n", "label"))
+  plan <- if (rows_in) {
+    list(tfl_item("table_plan", list(
+      cols = a$by, rows = stats::setNames(as.list(h), grp), label = list(label = g))))
+  } else {
+    list(tfl_item("table_plan", list(
+           cols = c(a$by, g), rows = stats::setNames(as.list(h[-n]), grp),
+           label = list(label = h[n]))),
+         # each group's count at any grade: its records with no grade
+         tfl_item("plan_total", list(label = a$any_grade, position = "first")))
+  }
+  content <- c(
+    list(tfl_item("normalize_ard", list(hierarchy = c(h, g))),
+         # the overall block first, whatever the order of the others
+         tfl_item("plan_levels", stats::setNames(list(a$overall), h[1L]))),
+    plan,
+    list(tfl_item("plan_sort", list(keys = keys))),
+    list(tfl_item("plan_col_header", list(header = list(
+           list(line = "1", cols = "row_label"),
+           list(line = "1", cols = ".values", span = "each", text = "{col}\n(N={n})\nn (%)"),
+           list(line = "2", cols = "row_label", text = paste(a$heading, collapse = "\n")),
+           list(line = "2", cols = ".values")))),
+         tfl_item("plan_paginate_rows", list(max_rows = 22L, split = "group_force"))))
+  list(ard = ard, data = list(source = "ard", object = "ard"), content = content)
+}
+
+.tfl_template("ae_max_grade", kind = "table", layout = "hierarchical",
+              params = .tpl_mg_params, body = .tpl_mg_body)
+
+#' Adverse events by SOC and PT at the maximum severity or grade: the template `ae_max_grade`
+#'
+#' A display template on the `hierarchical` layout: each subject counted
+#' once at the highest severity (`AESEV`) or grade (`AETOXGR`) of their
+#' treatment-emergent events -- overall, in each system organ class and in
+#' each preferred term.  The grades are rows under each term
+#' (`grade_in = "rows"`, as FDA's tables and chevron's AET03), or columns in
+#' each group (`"cols"`); a term's count at any grade is its own row or
+#' column (`any_grade`).  The grades' order is `grade_levels`, or the code
+#' list of `grade`.
+#'
+#' @inheritParams tpl_demog
+#' @param ... The template's other parameters: `grade`, `grade_levels`,
+#'   `grade_in`, `hierarchy`, `by`, `where`, `overall`, `any_grade`,
+#'   `heading` ...
+#' @return A [rtfreporter::table_plan()].
+#' @examples
+#' x <- tfl_template_expand("ae_max_grade", list(population = "SAF",
+#'                          grade_levels = c("MILD", "MODERATE", "SEVERE")))
+#' vapply(x$ard$analysis_data, `[[`, "", "id")
+#' @export
+tpl_ae_max_grade <- function(ard, population, ..., codelists = NULL) {
+  .tpl_object("ae_max_grade", ard, c(list(population = population), list(...)),
+              codelists = codelists)
+}
+
 # ---- km_simple: the figure template of tfl_fig_template(), on the registry ------
 
 # (no tpl_km_simple() yet: a figure's program is its items)

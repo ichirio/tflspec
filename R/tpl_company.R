@@ -245,6 +245,7 @@ tfl_test_templates <- function(names = NULL) {
   hierarchical = list(population = "SAF", hierarchy = c("AEBODSYS", "AEDECOD")),
   ae_soc_pt = list(population = "SAF"),
   ae_pt_freq = list(population = "SAF", min_pct = 5),
+  ae_max_grade = list(population = "SAF", grade_levels = c("MILD", "MODERATE", "SEVERE")),
   ae_overview = list(population = "SAF"),
   shift = list(population = "SAF", data_id = "adlb_shift", by_levels = c("Drug X", "Control")),
   lab_shift = list(population = "SAF", visit = "CYCLE 2 DAY 1", params = c("ALT", "AST")),

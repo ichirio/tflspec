@@ -1,5 +1,14 @@
 # tflspec (development version)
 
+* **Template `ae_max_grade`: adverse events by SOC and PT at the maximum
+  severity or grade** (#385, 0.0.24.9181).  Each subject once, at the
+  highest severity (`AESEV`) or grade (`AETOXGR`) of their events --
+  overall, in each SOC, in each PT (`dplyr::slice_max()` in the ARD
+  program).  The grades are rows under each term (`grade_in = "rows"`, as
+  FDA's tables), or columns in each arm with its "Any grade" column first
+  (`"cols"`).  The overall block is first; the SOCs and PTs by their count
+  (`sort = "n"`) or by name (`"name"`).  Needs rtfreporter 0.8.2.9083.
+
 * **Template `ae_pt_freq`: adverse events by preferred term, most frequent
   first** (#383, 0.0.24.9180), the first of the safety templates.  The
   treatment-emergent events' preferred terms, the subjects with any event
