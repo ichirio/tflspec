@@ -72,8 +72,9 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
     k("params", "levels", TRUE, of = "PARAMCD"),
     k("visits", "levels", TRUE, of = "AVISIT"),
     k("visit", "levels", of = "AVISIT"),
+    k("baseline_value", "levels", of = "baseline"),
     k("sort_by", "levels", of = "by"),
-    k(c("stack", "drop_time_0"), "flag"),
+    k(c("stack", "drop_time_0", "cumulative", "baseline_normal"), "flag"),
     k("min_pct", "number"),
     k("layout", "choice", choices = c("cols", "rows")),
     k("grade_in", "choice", choices = c("rows", "cols")),
@@ -1401,3 +1402,7 @@ tpl_ae_overview <- function(ard, population = "SAF", ..., codelists = NULL) {
   .tpl_object("ae_overview", ard, c(list(population = population), list(...)),
               codelists = codelists)
 }
+
+# ---- the templates in files of their own (R/tpl_<name>.R, read before this one) ----
+
+.tpl_la_register()
