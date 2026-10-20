@@ -82,3 +82,27 @@ test_that("A (the call) = B (the items as the report's content)", {
   hd <- Filter(function(it) it$fn == "plan_col_header", x$content)[[1L]]$args$header
   expect_identical(hd[[4L]]$text, "n (EAIR per 100 PY)")
 })
+
+test_that("in a study: the ARD program runs, the table from its ARD", {
+  skip_on_cran()
+  eair_skip()
+  skip_if_not_installed("haven")
+  d <- tempfile()
+  on.exit(unlink(d, recursive = TRUE))
+  dir.create(file.path(d, "adam"), recursive = TRUE)
+  for (x in c("adsl", "adae")) {
+    haven::write_xpt(tflspec:::.ai_chr(getExportedValue("tflspec", x)),
+                     file.path(d, "adam", paste0(x, ".xpt")))
+  }
+  tfl_ai_study_init(d, adam = "adam", study_id = "EAIR-1")
+  o <- tfl_output("T-9-3", "table", population = "SAF", label = "EAIR by SOC and PT",
+                  extends = "defaults", template = list(name = "ae_eair", args = list(population = "SAF")))
+  tfl_write_output(o, file.path(d, "spec", "outputs", "T-9-3.yml"))
+  st <- tfl_read_study_spec(d)
+  ard <- suppressMessages(tfl_build_ard(st, output_id = "T-9-3", dir = d, save = FALSE))
+  expect_true(nrow(ard) > 0L)
+  ro <- tfl_resolve_output(tfl_read_output(file.path(d, "spec", "outputs", "T-9-3.yml")), st)
+  t <- eair_tab(suppressMessages(tfl_content_run(ro, ard)))
+  expect_true(nrow(t) > 0L)
+  expect_identical(t$group1[1L], "Any TEAE")
+})

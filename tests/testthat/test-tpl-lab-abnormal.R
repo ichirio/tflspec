@@ -159,3 +159,28 @@ test_that("the RTF: the heading, the arm and its N, a parameter over its categor
   expect_match(r, sprintf("Control\\line (N=%d)", n), fixed = TRUE)
   expect_match(r, "Parameter / Category", fixed = TRUE)
 })
+
+test_that("in a study: the ARD program runs, the table from its ARD", {
+  skip_on_cran()
+  la_skip()
+  skip_if_not_installed("haven")
+  d <- tempfile()
+  on.exit(unlink(d, recursive = TRUE))
+  dir.create(file.path(d, "adam"), recursive = TRUE)
+  for (x in c("adsl", "adlb")) {
+    haven::write_xpt(tflspec:::.ai_chr(getExportedValue("tflspec", x)),
+                     file.path(d, "adam", paste0(x, ".xpt")))
+  }
+  tfl_ai_study_init(d, adam = "adam", study_id = "LA-1")
+  o <- tfl_output("T-9-3", "table", population = "SAF", label = "Laboratory abnormalities",
+                  extends = "defaults", template = list(name = "lab_abnormal", args = la_args))
+  tfl_write_output(o, file.path(d, "spec", "outputs", "T-9-3.yml"))
+  st <- tfl_read_study_spec(d)
+  ard <- suppressMessages(tfl_build_ard(st, output_id = "T-9-3", dir = d, save = FALSE))
+  expect_true(nrow(ard) > 0L)
+  ro <- tfl_resolve_output(tfl_read_output(file.path(d, "spec", "outputs", "T-9-3.yml")), st)
+  t <- la_tab(suppressMessages(tfl_content_run(ro, ard)))
+  expect_true(nrow(t) > 0L)
+  expect_identical(unique(t$label), c("LOW", "HIGH"))
+  expect_length(unique(t$group), 6L)
+})
