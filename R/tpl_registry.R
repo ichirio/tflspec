@@ -74,7 +74,7 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
     k("visit", "levels", of = "AVISIT"),
     k("baseline_value", "levels", of = "baseline"),
     k(c("sort_by", "ref"), "levels", of = "by"),
-    k(c("stack", "drop_time_0", "cumulative", "baseline_normal"), "flag"),
+    k(c("stack", "drop_time_0", "cumulative", "baseline_normal", "by_response"), "flag"),
     k(c("min_pct", "per"), "number"),
     k("layout", "choice", choices = c("cols", "rows")),
     k("grade_in", "choice", choices = c("rows", "cols")),

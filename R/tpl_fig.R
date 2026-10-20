@@ -178,6 +178,60 @@ tpl_mean_ci <- function(data, group = "TRT01A", value = "AVAL", visit_var = "AVI
   .tpl_fig_draw("mean_ci", f, data, plot)
 }
 
+# ---- waterfall: each subject's change, one bar, in its order -----------------------
+
+.tpl_wf_design <- function(value = "PCHG", by_response = FALSE, param = NULL, data = NULL,
+                           where = NULL) {
+  f <- .tpl_fig_design(if (isTRUE(by_response)) "waterfall_response" else "waterfall_plain",
+                       list(data = data, param = param, value = value), "rank")
+  # the records kept besides the parameter: one a subject (the best change)
+  if (!is.null(where)) {
+    at <- match("param", vapply(f$steps, `[[`, "", "step"))
+    f$steps <- append(f$steps, list(list(step = "filter", expr = where)), at)
+  }
+  f
+}
+
+.tpl_wf_params <- function() list(
+  tfl_param("param", required = TRUE, type = "levels", of = "PARAMCD",
+            doc = "the PARAMCD of the tumour measurements (SUMDIAM)"),
+  tfl_param("population", NULL, type = "text",
+            doc = "the analysis set's id (FAS): its subjects kept; NULL: every record"),
+  tfl_param("data", "ADTR", type = "text", doc = "the dataset"),
+  tfl_param("value", "PCHG", type = "vars", doc = "the bars' value (the % change)"),
+  tfl_param("where", NULL, type = "text",
+            doc = "the records kept besides the parameter (R): one a subject, its best change"),
+  tfl_param("by_response", FALSE, type = "flag",
+            doc = "TRUE: the bars coloured by the best overall response (ADRS, BOR)")
+)
+
+#' Waterfall: a figure from the template `waterfall`
+#'
+#' The A use of a figure's template SPEC: the program makes the records
+#' (the dataset read, the analysis set's subjects kept, the parameter, the
+#' record of each subject the report keeps (`where`), the best overall
+#' response joined when the bars are coloured by it), then one call draws
+#' them: one bar a subject, the largest change first, the lines at 0, +20%
+#' and -30%.  The bars' order is made here.  A report's own layers and
+#' settings go after the call with `+`.
+#'
+#' @param data The records: one a subject.
+#' @param value The bars' value (`PCHG`), bare or as text.
+#' @param by_response `TRUE`: the bars coloured by `BOR` (the best overall
+#'   response, a column of `data`).
+#' @inheritParams tpl_km_simple
+#' @return A ggplot.
+#' @seealso [tfl_template_expand()] for the design it draws (the B use).
+#' @examples
+#' df <- adtr[adtr$AVISIT == "WEEK 12", ]
+#' p <- tpl_waterfall(df, value = PCHG)
+#' class(p)
+#' @export
+tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL) {
+  f <- .tpl_wf_design(.tpl_col(rlang::enquo(value)), by_response)
+  .tpl_fig_draw("waterfall", f, data, plot)
+}
+
 # ---- registered --------------------------------------------------------------------
 
 .tpl_fig_register <- function() {
@@ -190,4 +244,9 @@ tpl_mean_ci <- function(data, group = "TRT01A", value = "AVAL", visit_var = "AVI
                 body = .tpl_mean_body("se"), label = "Mean +/- SE by visit")
   .tfl_template("mean_ci", kind = "figure", layout = "mean", params = .tpl_mean_params(),
                 body = .tpl_mean_body("ci"), label = "Mean (95% CI) by visit")
+  .tfl_template("waterfall", kind = "figure", layout = "waterfall", params = .tpl_wf_params(),
+    body = function(a, ctx) {
+      f <- .tpl_wf_design(a$value, a$by_response, a$param, a$data, a$where)
+      .tpl_fig_body_of(f, a, ctx)
+    }, label = "Waterfall of each subject's change")
 }

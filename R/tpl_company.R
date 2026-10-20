@@ -372,6 +372,7 @@ tfl_test_templates <- function(names = NULL) {
   km_simple = list(param = "PFS", group = "TRT01P"),
   mean_se = list(param = "SYSBP", data = "ADVS"),
   mean_ci = list(param = "SYSBP", data = "ADVS"),
+  waterfall = list(param = "SUMDIAM", where = "AVISIT == \"WEEK 12\""),
   orr = list(),
   param_change = list(population = "SAF", data = "ADLB", params = c("ALT", "AST"),
                       where = "ANL01FL == \"Y\""),
