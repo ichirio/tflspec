@@ -8,7 +8,7 @@ mg_ard <- function(x, ae = adae[adae$SAFFL == "Y" & adae$TRTEMFL == "Y", ]) {
   saf <- adsl[adsl$SAFFL == "Y", ]
   adae_saf <- ae
   data <- lapply(x$ard$analysis_data[3:5], function(d) eval(parse(text = d$code)))
-  h <- function(d, v) cards::ard_stack_hierarchical(d, variables = tidyselect::all_of(v),
+  h <- function(d, v) cards::ard_stack_hierarchical(d, variables = cards::all_of(v),
                                                     by = TRT01A, denominator = saf, id = USUBJID)
   cards::bind_ard(h(data[[1L]], c("AEBODSYS", "AESEV")), h(data[[2L]], c("AEBODSYS", "AESEV")),
                   h(data[[3L]], c("AEBODSYS", "AEDECOD", "AESEV")), .distinct = TRUE, .quiet = TRUE)
