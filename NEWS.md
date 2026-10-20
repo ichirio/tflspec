@@ -2,7 +2,7 @@
 
 * **Template headings given by name merge with the defaults'; a
   template's default variables are those the data has** (#393,
-  0.0.24.9185).  `labels: {RACE: "Race, n (%) [a]"}` in a template SPEC
+  0.0.24.9186).  `labels: {RACE: "Race, n (%) [a]"}` in a template SPEC
   changed every other heading to NA (the whole default replaced): now
   `labels` and `param_labels` given by name change those names only, and
   `RACE: ~` drops one (`cells` are the rows given).  An ARD analysis may
@@ -13,7 +13,7 @@
   no ETHNIC; a report's own variables are as written (a misspelling
   stops).  ARS export leaves the flag out (tflspec's own).
 
-* **Template parameters from the study standard** (#392, 0.0.24.9184).
+* **Template parameters from the study standard** (#392, 0.0.24.9185).
   `tfl_param(study = )` also takes `"output.population"` (the report's
   `population:`) and `"settings.treatment"` (`study.yml`'s new `settings:
   treatment:`); `population`, `by` and `group` take them by their names,
@@ -27,6 +27,11 @@
   `semi_join(adsl |> filter(SAFFL == "Y") |> select(USUBJID), by =
   "USUBJID")`), whatever the figure's data has.  `tfl_fig_template()`'s
   `pop` stays (the figure designer's presets).
+
+* **ae_max_grade's ARD builds in a study** (#394, 0.0.24.9184).  Its
+  analysis data made by code (each subject's highest record) had no
+  `from`, and the ARD definition's check stopped ("`from` is blank"); each
+  says the records it is made from now.
 
 * **`tfl_template_variant()`: a template by its defaults alone** (#388,
   0.0.24.9183).  `tfl_template_variant("demog_jp", from = "demog",
