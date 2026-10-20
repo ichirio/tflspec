@@ -26,10 +26,13 @@ tfl_param(
 
 \item{doc}{One line saying what it is.}
 
-\item{study}{Where a study's default for it is, \code{"<verb>.<argument>"}
-(\code{"plan_cells.continuous"}): the value of the study's defaults (and
-pattern) item, when the report's template SPEC does not give it.
-\code{NULL}: the template's own default only.}
+\item{study}{Where the study standard's value of it is, taken when the
+report's template SPEC does not give it: \code{"output.population"} (the
+report's \verb{population:}), \code{"settings.treatment"} (\code{study.yml}'s
+\verb{settings: treatment:}), or \code{"<verb>.<argument>"}
+(\code{"plan_cells.continuous"}: that argument of the study's defaults (and
+pattern) item).  \code{NULL}: tflspec's for its name (\code{population}, \code{by},
+\code{group}), else the template's own default only.}
 
 \item{type}{What its value is, for an input form: \code{"vars"} (variable
 names), \code{"levels"} (values of a variable), \code{"flag"} (\code{TRUE} /

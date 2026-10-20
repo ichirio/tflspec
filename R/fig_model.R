@@ -103,13 +103,16 @@ tfl_time_unit_days <- function() {
       help = "The dataset the figure starts from: `df`.",
       fields = rbind(.ff("dataset", "dataset", "Dataset", "ADSL", required = TRUE))),
     join = list(section = "data", label = "Join variables",
-      help = "Variables of another dataset (e.g. ADSL's treatment, ADRS's best response), one row a subject.",
+      help = paste("Variables of another dataset (e.g. ADSL's treatment, ADRS's best response),",
+                   "one row a subject; or only the rows of its subjects (semi: an analysis set's)."),
       fields = rbind(
         .ff("dataset", "dataset", "Dataset", "ADSL", required = TRUE),
         .ff("where", "expr", "Its rows (R)", help = "e.g. PARAMCD == \"BOR\""),
         .ff("vars", "variables", "Variables", required = TRUE, of = "dataset",
             help = "NAME = VAR renames, e.g. BOR = AVALC."),
-        .ff("by", "variable", "By", "USUBJID"))),
+        .ff("by", "variable", "By", "USUBJID"),
+        .ff("how", "choice", "How", "left", c("left", "semi"),
+            help = "left: add the variables; semi: keep only the rows of its subjects (no variables)."))),
     param = list(section = "data", label = "Keep a parameter",
       help = "The rows of one (or more) PARAMCD.",
       fields = rbind(
@@ -788,8 +791,9 @@ tfl_read_fig_design <- function(path) {
         vars <- .split_vals(v("vars"))
         by <- v("by")
         w <- v("where")
-        sel <- paste(c(by, vars), collapse = ", ")
-        add(paste0("left_join(\n    ", pp_ds_name(ds),
+        semi <- identical(v("how"), "semi")
+        sel <- paste(c(by, if (!semi) vars), collapse = ", ")
+        add(paste0(if (semi) "semi_join" else "left_join", "(\n    ", pp_ds_name(ds),
                    if (!is.null(w)) paste0(" |> filter(", w, ")"),
                    " |> select(", sel, "),\n    by = ", q(by), "\n  )"))
       },
@@ -1799,7 +1803,10 @@ tfl_check_fig_design <- function(design, adam = NULL, ggplot2_version = NULL,
     for (i in seq_len(nrow(f))) {
       v <- p[[f$field[i]]]
       set <- !is.null(v) && length(v) && !all(is.na(v)) && !identical(v, "")
-      if (f$required[i] && !set && is.na(f$default[i])) add(part, f$field[i], "is required")
+      semi_vars <- kind == "join" && f$field[i] == "vars" && identical(p$how, "semi")
+      if (f$required[i] && !set && is.na(f$default[i]) && !semi_vars) {
+        add(part, f$field[i], "is required")
+      }
       if (!set) next
       if (f$kind[i] == "choice" && !is.na(f$choices[i]) && kind != "figure") {
         ch <- strsplit(f$choices[i], " | ", fixed = TRUE)[[1L]]

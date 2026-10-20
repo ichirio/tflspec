@@ -16,10 +16,13 @@
 #' @param default Its default value; `NULL` for none.
 #' @param required `TRUE` when a report must give it.
 #' @param doc One line saying what it is.
-#' @param study Where a study's default for it is, `"<verb>.<argument>"`
-#'   (`"plan_cells.continuous"`): the value of the study's defaults (and
-#'   pattern) item, when the report's template SPEC does not give it.
-#'   `NULL`: the template's own default only.
+#' @param study Where the study standard's value of it is, taken when the
+#'   report's template SPEC does not give it: `"output.population"` (the
+#'   report's `population:`), `"settings.treatment"` (`study.yml`'s
+#'   `settings: treatment:`), or `"<verb>.<argument>"`
+#'   (`"plan_cells.continuous"`: that argument of the study's defaults (and
+#'   pattern) item).  `NULL`: tflspec's for its name (`population`, `by`,
+#'   `group`), else the template's own default only.
 #' @param type What its value is, for an input form: `"vars"` (variable
 #'   names), `"levels"` (values of a variable), `"flag"` (`TRUE` /
 #'   `FALSE`), `"number"`, `"text"` (also an R condition, an id, a label),
@@ -85,10 +88,47 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
     k("columns", "list", TRUE, fields = c("vars", "label", "width", "collapse_repeats")))
 })
 
+# A figure's data step keeping an analysis set's subjects: a semi join of
+# its dataset's records (data.yml's definition: dataset, where), so any
+# where works, whatever the figure's data has
+.tpl_population_step <- function(id, populations) {
+  # as a table's analysis data: an analysis set the study does not
+  # define stops (no figure of the wrong subjects)
+  def <- Filter(function(p) identical(p$id, id), populations %||% list())
+  if (!length(def)) {
+    .ard_stop(sprintf("template: population %s is not in `populations` (data.yml: %s).",
+                      id, paste(vapply(populations %||% list(), `[[`, "", "id"),
+                                collapse = ", ")))
+  }
+  def <- def[[1L]]
+  w <- def$where
+  list(Filter(Negate(is.null), list(
+    step = "join", dataset = def$dataset %||% "ADSL",
+    where = if (!is.null(w)) as.character(w), by = "USUBJID", how = "semi")))
+}
+
+# The study's own settings a template parameter may take its value from
+# (tfl_param(study = )), besides "<verb>.<argument>" of the study's
+# defaults: the one list of their names.  Each is function(output, study).
+.tpl_study_sources <- list(
+  # the report's analysis set (its `population:`)
+  output.population = function(output, study) output$population,
+  # the study's treatment variable (study.yml `settings: treatment:`)
+  settings.treatment = function(output, study) study$study$settings$treatment
+)
+
+# tflspec's parameters' study sources by name: the analysis set and the
+# treatment are the study's (a parameter's own `study =` wins)
+.tpl_param_study <- c(population = "output.population", by = "settings.treatment",
+                      group = "settings.treatment")
+
 # A parameter's type filled in: as declared, by its name, else from its
 # default (a company's template that says none: `guessed`, which
 # tfl_test_templates() lists)
 .tpl_param_typed <- function(p) {
+  if (is.null(p$study) && p$name %in% names(.tpl_param_study)) {
+    p$study <- .tpl_param_study[[p$name]]
+  }
   by_name <- .tpl_param_kinds[[p$name]]
   if (is.null(p$type) && !is.null(by_name)) {
     for (f in names(by_name)) if (is.null(p[[f]])) p[f] <- list(by_name[[f]])
@@ -772,7 +812,8 @@ tpl_ae_max_grade <- function(ard, population, ..., codelists = NULL) {
   params = list(
     tfl_param("param", required = TRUE, type = "levels", of = "PARAMCD",
               doc = "the PARAMCD of ADTTE"),
-    tfl_param("pop", NULL, doc = "the population flag (SAFFL)"),
+    tfl_param("population", NULL, type = "text",
+              doc = "the analysis set's id (SAF): its subjects kept; NULL: every record"),
     tfl_param("group", NULL, doc = "the curves' variable (TRT01A)"),
     tfl_param("time", NULL, doc = "the time variable; NULL: AVAL"),
     tfl_param("censor", "CNSR", doc = "the censoring variable"),
@@ -780,9 +821,17 @@ tpl_ae_max_grade <- function(ard, population, ..., codelists = NULL) {
     tfl_param("data", NULL, doc = "the dataset; NULL: ADTTE")
   ),
   body = function(a, ctx) {
-    f <- tfl_fig_template("km_simple", data = a$data, param = a$param, pop = a$pop,
-                          group = a$group, time = a$time, censor = a$censor,
-                          time_unit = a$time_unit, form = "items")
+    f <- tfl_fig_template("km_simple", data = a$data, param = a$param, group = a$group,
+                          time = a$time, censor = a$censor, time_unit = a$time_unit,
+                          form = "items")
+    # the analysis set: its subjects (data.yml's definition), in place of
+    # a flag on the figure's data
+    steps <- Filter(function(s) !identical(s$step, "flag"), f$data$steps)
+    if (!is.null(a$population)) {
+      at <- match("read", vapply(steps, `[[`, "", "step"))
+      steps <- append(steps, .tpl_population_step(a$population, ctx$population), at)
+    }
+    f$data$steps <- steps
     list(data = f$data, content = f$content)
   })
 

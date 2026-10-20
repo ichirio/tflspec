@@ -109,7 +109,7 @@ test_that("a study's default for a parameter that says where it is: taken, and a
   expect_identical(attr(ro, "template")$args$cells, rows)
   expect_match(paste(tfl_content_code(ro), collapse = "\n"), "study defaults: cells", fixed = TRUE)
   expect_message(tfl_resolve_output(ts_output(args = list(cells = list(n = "{N}"))), s),
-                 "overrides the study default")
+                 "overrides the study standard")
 })
 
 test_that("what the call cannot say is written as the items; a wrong template is said", {
@@ -136,6 +136,8 @@ test_that("the sheets (and the study's ARD program) take a template report's ana
 
 test_that("every template as a template SPEC: resolved as its items written out (B), the study's layers on both", {
   s <- ts_study()
+  # its analysis set, as data.yml defines it (a figure's subjects)
+  s$data$populations <- list(list(id = "SAF", dataset = "ADSL", where = tfl_r("SAFFL == \"Y\"")))
   tp <- tfl_templates()
   for (nm in names(.tpl_examples)) {
     o <- tfl_output(paste0("X-", nm), tp$kind[tp$name == nm], population = "SAF",
