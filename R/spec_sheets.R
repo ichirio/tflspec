@@ -208,13 +208,11 @@ tfl_sheets_from_spec <- function(study, outputs) {
       figures[[id]] <- list(template = o$template, data = o$data$steps,
                             content = .items_to_list(o$content))
     } else if (o$kind == "figure") {
-      fd <- list()
-      for (k in c("template", "ggplot2_version")) if (!is.null(o[[k]])) fd[[k]] <- o[[k]]
-      if (!is.null(o$data$steps)) fd$data <- o$data$steps
-      if (!is.null(o$data$stats)) fd$stats <- o$data$stats
-      if (!is.null(o$plot)) fd$plot <- o$plot
-      fd$layers <- if (code_content) list() else lapply(o$content, function(it) c(list(layer = it$fn), it$args))
-      for (k in c("plots", "compose")) if (!is.null(o[[k]])) fd[[k]] <- o[[k]]
+      # (the report's design: an item of a function call its piece)
+      oc <- o
+      if (code_content) oc$content <- list()
+      fd <- .fig_design_of_output(oc)
+      if (!is.null(o$template)) fd$template <- o$template
       # a figure that is its own code and nothing of the designer's has no
       # design
       if (!(code_content && identical(names(fd), "layers"))) figures[[id]] <- fd

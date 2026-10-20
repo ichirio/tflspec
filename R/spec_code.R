@@ -1243,7 +1243,10 @@ tfl_content_run <- function(output, data) {
 #'   report's own lines after it, each marked; `"items"` writes the items
 #'   it stands for, as for any report (and so does `"call"`, with a message,
 #'   when the call cannot say the report's own table roles, data or
-#'   normalization).
+#'   normalization).  A figure's template (`km_simple`): its data steps
+#'   written out, then `content <- tpl_<name>(<data>, ...)` and the
+#'   report's own items `+`-ed after it; `"items"` (or a report that
+#'   replaces one of the template's layers) writes its design.
 #' @return The code, one element a line.
 #' @examples
 #' out <- tfl_output("T-1", "table", content = list(
@@ -1266,8 +1269,18 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
     own <- unlist(strsplit(as.character(output$content), "\n", fixed = TRUE))
     return(c(steps, if (length(steps)) "", own))
   }
-  # a figure: its layers, as the figure designer writes them
-  if (identical(output$kind, "figure")) return(.content_fig_code(output))
+  # a figure: its layers, as the figure designer writes them; a template
+  # SPEC's (resolved), its data steps and the template's call (the A use)
+  if (identical(output$kind, "figure")) {
+    tp <- attr(output, "template")
+    if (!is.null(tp) && identical(match.arg(template), "call")) {
+      if (isTRUE(tp$ok)) return(.content_fig_tpl_code(output))
+      message(sprintf(paste0("%s: the template's call cannot say this report's own data or ",
+                             "a layer of the template it replaces; its design is written."),
+                      output$id))
+    }
+    return(.content_fig_code(output))
+  }
   if (!output$kind %in% c("table", "listing")) {
     .ard_stop(sprintf(paste0("tfl_content_code(): a %s's content is not written ",
                              "yet; tables, listings and figures, for now."), output$kind))

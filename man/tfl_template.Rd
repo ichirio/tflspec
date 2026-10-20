@@ -27,7 +27,11 @@ tfl_template(
 
 \item{body}{\verb{function(a, ctx)}: \code{a} the parameters' values by name (the
 report's, else their defaults), \code{ctx} the report's \code{codelists} and the
-study's \code{population} (its analysis sets); returns \code{list(ard = , data = , content = )}, \code{content} a list of \code{\link[=tfl_item]{tfl_item()}}.}
+study's \code{population} (its analysis sets); returns \code{list(ard = , data = , content = )}, \code{content} a list of \code{\link[=tfl_item]{tfl_item()}}.  A figure's body
+returns its design (\code{data} its steps, \code{content} its layers, \code{plot} its
+settings) and \code{call_steps}: how many of the data's last steps (the
+statistics, the fit) its call makes from the data the steps before
+them make.}
 
 \item{label}{What it makes, in a few words; \code{NULL} none.}
 

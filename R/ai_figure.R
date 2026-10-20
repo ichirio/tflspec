@@ -68,7 +68,8 @@
   code <- tfl_fig_design_code(design, id, setup = TRUE, save = TRUE, name = "fig",
                               codelists = sh$table$codelists)
   reads <- unique(toupper(attr(code, "reads") %||% character()))
-  env <- new.env(parent = globalenv())
+  # (its packages around it, none attached)
+  env <- new.env(parent = .fig_pkg_env(attr(code, "libs")))
   ds <- st$data$datasets %||% list()
   have <- toupper(vapply(ds, function(z) z$dataset %||% NA_character_, ""))
   for (r in reads) {
@@ -76,15 +77,13 @@
     if (is.na(i)) .ard_stop(sprintf("%s reads %s, which spec/data.yml does not list.", id, r))
     assign(tolower(r), .ai_read_dataset(ds[[i]]$path), envir = env)
   }
-  libs <- attr(code, "libs") %||% character()
   code <- as.character(code)
   # the PNG under the study's output path, as the RTF's
   code <- sub(sprintf('file.path("output", "%s.png")', id),
               sprintf('file.path("%s", "%s.png")', out_dir, id), code, fixed = TRUE)
   # after the study's figure setup (theme_tfl(), the palettes, the days in
   # a month), as the program runs after programs/tfl/fig_setup.R
-  code <- c(sprintf("suppressPackageStartupMessages(library(%s))", libs),
-            tfl_fig_setup_code(), code)
+  code <- c(tfl_fig_setup_code(), .fig_strip_library(code))
   suppressMessages(suppressWarnings(eval(parse(text = code), env)))
   list(plot = get("fig", envir = env, inherits = FALSE),
        png = file.path(out_dir, paste0(id, ".png")))

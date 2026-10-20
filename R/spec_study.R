@@ -188,6 +188,8 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
     for (l in rev(c(list(tl), layers, list(tlook)))) acc <- .layer_over(acc, l)
     layers <- c(list(tl), layers, list(tlook))
     output$ard <- .merge_ard(tpl$x$ard, output$ard)
+    # a figure's design: its settings (`plot:`) under the report's own
+    if (!is.null(tpl$x$plot)) output$plot <- .merge_map(tpl$x$plot, output$plot)
   }
   own <- list(data = output$data %||% list(), codelists = output$codelists,
               content = output$content, page = output$page)
@@ -199,9 +201,12 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
       # what the program writes after the template's call (the A use)
       r <- .tpl_rest(prov, tpl$name)
       # (a report's own data: the call's data step is the template's)
+      # (a figure's call draws the template's layers: none of them replaced)
+      ok <- r$ok && !length(own$data) && (!identical(output$kind, "figure") || !length(intersect(
+        vapply(r$items, `[[`, "", "fn"), vapply(tpl$x$content, `[[`, "", "fn"))))
       attr(output, "template") <- list(name = tpl$name, args = tpl$args, study = tpl$study,
-                                       items = tpl$x$content, rest = r$items,
-                                       ok = r$ok && !length(own$data))
+                                       items = tpl$x$content, rest = r$items, ok = ok,
+                                       plot = tpl$x$plot, call_steps = tpl$x$call_steps)
     }
     if (isTRUE(provenance)) acc$content <- prov
   }
@@ -402,7 +407,12 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   r <- .verb_rank(it$fn)
   if (is.na(r) || !length(items)) return(c(items, list(it)))
   ranks <- vapply(items, function(x) .verb_rank(x$fn), 1)
-  at <- max(c(0L, which(!is.na(ranks) & ranks <= r)))
+  # after the last of a rank at or below its own; with none, before the
+  # first ranked above it -- after the items of no rank before that (a
+  # figure designer's layers have none: an item goes after them)
+  below <- which(!is.na(ranks) & ranks <= r)
+  above <- which(!is.na(ranks) & ranks > r)
+  at <- if (length(below)) max(below) else if (length(above)) min(above) - 1L else length(items)
   append(items, list(it), after = at)
 }
 

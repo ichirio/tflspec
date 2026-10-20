@@ -91,6 +91,20 @@ test_that("km_simple: the analysis set's subjects, by data.yml's definition (a s
   expect_identical(j[[1L]][c("step", "dataset", "where", "by")],
                    list(step = "join", dataset = "ADSL", where = "SAFFL == \"Y\"", by = "USUBJID"))
   expect_false(any(vapply(st, function(x) identical(x$step, "flag"), NA)))
+  # the design form: the designer's layers, the settings in `plot:`; the
+  # report's own items after the layers, its own settings over the template's
+  o2 <- o
+  o2$content <- list(tfl_item("geom_hline", list(yintercept = 0.5)),
+                     tfl_item("labs", list(y = "P")))
+  o2$plot <- list(y_by = 0.25)
+  r2 <- tfl_resolve_output(o2, s)
+  expect_identical(vapply(r2$content, `[[`, "", "fn"),
+                   c("km_curve", "censor_mark", "geom_hline", "labs"))
+  expect_identical(r2$plot[c("x_label", "y_by")], list(x_label = "Time (Months)", y_by = 0.25))
+  fd <- .fig_design_of_output(r2)
+  expect_identical(fd$layers[[3L]][c("layer", "fn")], list(layer = "call", fn = "geom_hline"))
+  expect_identical(fd$plot$add[[1L]]$fn, "labs")
+  expect_identical(tfl_template_to_spec(o2, s)$plot$x_label, "Time (Months)")
   code <- paste(tfl_fig_design_code(tfl_fig_design(data = st)), collapse = "\n")
   expect_match(code, "semi_join(", fixed = TRUE)
   expect_match(code, "filter(SAFFL == \"Y\") |> select(USUBJID)", fixed = TRUE)

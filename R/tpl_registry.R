@@ -63,8 +63,10 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
   }
   nv <- c("name", "text")
   c(k(c("by", "baseline", "post", "term", "grade", "category", "censor", "group", "time",
-        "pop", "param_order", "visit_order", "exposure", "response"), "vars"),
-    k(c("categorical", "continuous", "variables", "hierarchy", "covariates"), "vars", TRUE),
+        "pop", "param_order", "visit_order", "exposure", "response", "value", "visit_var"), "vars"),
+    k(c("categorical", "continuous", "variables", "hierarchy", "covariates", "subgroups"),
+      "vars", TRUE),
+    k("comparison", "levels", of = "group"),
     k("by_levels", "levels", TRUE, of = "by"),
     k("levels", "levels", TRUE, of = "post"),
     k("grade_levels", "levels", TRUE, of = "grade"),
@@ -74,7 +76,7 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
     k("visit", "levels", of = "AVISIT"),
     k("baseline_value", "levels", of = "baseline"),
     k(c("sort_by", "ref"), "levels", of = "by"),
-    k(c("stack", "drop_time_0", "cumulative", "baseline_normal"), "flag"),
+    k(c("stack", "drop_time_0", "cumulative", "baseline_normal", "by_response"), "flag"),
     k(c("min_pct", "per"), "number"),
     k("layout", "choice", choices = c("cols", "rows")),
     k("grade_in", "choice", choices = c("rows", "cols")),
@@ -117,7 +119,11 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
 # defaults: the one list of their names.  Each is function(output, study).
 .tpl_study_sources <- list(
   # the report's analysis set (its `population:`)
-  output.population = function(output, study) output$population,
+  # (none when the report names none: NA is tfl_output()'s "not given")
+  output.population = function(output, study) {
+    p <- output$population
+    if (length(p) == 1L && !is.na(p)) p
+  },
   # the study's treatment variable (study.yml `settings: treatment:`)
   settings.treatment = function(output, study) study$study$settings$treatment
 )
@@ -230,6 +236,17 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
   t <- .tpl_get(name, fn)
   a <- .tpl_args(t, args, fn)
   out <- t$body(a, list(codelists = codelists, population = population, given = names(args)))
+  # a figure's: how many of the data's last steps its call (tpl_<name>())
+  # makes -- the statistics; the program writes the steps before them
+  if (identical(t$kind, "figure")) {
+    k <- out$call_steps
+    if (!is.numeric(k) || length(k) != 1L || is.na(k) || k < 0 ||
+        k > length(out$data$steps %||% list())) {
+      .ard_stop(sprintf(paste0("%s: template %s's body returns `call_steps`, how many of its ",
+                               "data's last steps its call makes."), fn, name))
+    }
+    out$call_steps <- as.integer(k)
+  }
   out$content <- lapply(out$content, function(it) {
     it$from <- paste0("template:", name)
     it
@@ -837,36 +854,6 @@ tpl_ae_max_grade <- function(ard, population, ..., codelists = NULL) {
               codelists = codelists)
 }
 
-# ---- km_simple: the figure template of tfl_fig_template(), on the registry ------
-
-# (no tpl_km_simple() yet: a figure's program is its items)
-.tfl_template("km_simple", kind = "figure", layout = "km", call = NA_character_,
-  params = list(
-    tfl_param("param", required = TRUE, type = "levels", of = "PARAMCD",
-              doc = "the PARAMCD of ADTTE"),
-    tfl_param("population", NULL, type = "text",
-              doc = "the analysis set's id (SAF): its subjects kept; NULL: every record"),
-    tfl_param("group", NULL, doc = "the curves' variable (TRT01A)"),
-    tfl_param("time", NULL, doc = "the time variable; NULL: AVAL"),
-    tfl_param("censor", "CNSR", doc = "the censoring variable"),
-    tfl_param("time_unit", "months", doc = "the time axis' unit"),
-    tfl_param("data", NULL, doc = "the dataset; NULL: ADTTE")
-  ),
-  body = function(a, ctx) {
-    f <- tfl_fig_template("km_simple", data = a$data, param = a$param, group = a$group,
-                          time = a$time, censor = a$censor, time_unit = a$time_unit,
-                          form = "items")
-    # the analysis set: its subjects (data.yml's definition), in place of
-    # a flag on the figure's data
-    steps <- Filter(function(s) !identical(s$step, "flag"), f$data$steps)
-    if (!is.null(a$population)) {
-      at <- match("read", vapply(steps, `[[`, "", "step"))
-      steps <- append(steps, .tpl_population_step(a$population, ctx$population), at)
-    }
-    f$data$steps <- steps
-    list(data = f$data, content = f$content)
-  })
-
 #' Disposition: a table plan from the template `disposition`
 #'
 #' A display template on the `summary` layout: the subjects' status at the
@@ -1410,3 +1397,4 @@ tpl_ae_overview <- function(ard, population = "SAF", ..., codelists = NULL) {
 .tpl_la_register()
 .tpl_eair_register()
 .tpl_ancova_register()
+.tpl_fig_register()
