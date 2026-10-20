@@ -59,7 +59,10 @@
          population = pop),
     Filter(Negate(is.null), list(
       id = set, from = a$data, subjects = subj,
-      where = if (length(where)) tfl_r(paste(where, collapse = " & ")))),
+      where = if (length(where)) tfl_r(paste(where, collapse = " & ")),
+      # every parameter analysed a level: its rows even with no subject in
+      # a category (0/N)
+      derive = tfl_r("PARAM = factor(PARAM)"))),
     # the N
     per("_n", "the subjects with a value of each parameter",
         code = sprintf("dplyr::distinct(%s, %s)", set, keys))), cats)
@@ -93,7 +96,8 @@
 #' parameter (`PARAM`): the normal range indicator (`ANRIND`: `LOW`,
 #' `HIGH`), or a criterion's levels (`MCRIT1ML`).  A cell is n/N (%): N is
 #' the arm's subjects with a value of the parameter in the records kept, n
-#' those with a value in the category.  A subject is counted once in each
+#' those with a value in the category; every parameter analysed has its
+#' rows, 0/N when no subject is in a category.  A subject is counted once in each
 #' category; with `cumulative = TRUE`, in every level up to their worst
 #' (`levels` lowest first: "level 2 or more").  With `baseline_normal =
 #' TRUE`, n and N are the subjects normal at baseline only (`BNRIND ==

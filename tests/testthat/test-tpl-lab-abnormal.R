@@ -9,6 +9,7 @@ la_ard <- function(x, lb = adlb) {
   d <- x$ard$analysis_data
   adlb_saf <- lb[lb$USUBJID %in% saf$USUBJID, ]
   if (length(d[[2L]]$where)) adlb_saf <- adlb_saf[eval(parse(text = d[[2L]]$where), adlb_saf), ]
+  adlb_saf$PARAM <- factor(adlb_saf$PARAM)
   adlb_saf_n <- eval(parse(text = d[[3L]]$code))
   adlb_saf_cat <- if (length(d) == 5L) {
     adlb_saf_worst <- eval(parse(text = d[[4L]]$code))
@@ -85,6 +86,20 @@ test_that("LOW / HIGH: n/N (%), N the subjects with a value of the parameter", {
   k <- la_count(adlb[adlb$ONTRTFL == "Y", ], alt, "Drug X", function(r) r$ANRIND == "HIGH")
   expect_identical(t[["Drug X"]][t$group == alt & t$label == "HIGH"],
                    sprintf("%d/%d (%.1f)", k[["n"]], k[["N"]], 100 * k[["n"]] / k[["N"]]))
+})
+
+test_that("a parameter with no subject in any category: its rows, 0/N (0.0)", {
+  la_skip()
+  lb <- adlb
+  lb$ANRIND[lb$PARAMCD == "BILI"] <- "NORMAL"
+  x <- tfl_template_expand("lab_abnormal", la_args)
+  expect_identical(as.character(x$ard$analysis_data[[2L]]$derive), "PARAM = factor(PARAM)")
+  t <- la_tab(do.call(tpl_lab_abnormal, c(list(la_ard(x, lb)), la_args)))
+  bili <- t[t$group == "Bilirubin (umol/L)", ]
+  expect_identical(bili$label, c("LOW", "HIGH"))
+  k <- la_count(lb[lb$ONTRTFL == "Y", ], "Bilirubin (umol/L)", "Drug X", function(r) FALSE)
+  expect_identical(bili[["Drug X"]], rep(sprintf("0/%d (0.0)", k[["N"]]), 2L))
+  expect_length(unique(t$group), 6L)
 })
 
 test_that("cumulative: a subject in every level up to their worst", {

@@ -27,7 +27,8 @@ The subjects with a laboratory value in an abnormal category, a block a
 parameter (\code{PARAM}): the normal range indicator (\code{ANRIND}: \code{LOW},
 \code{HIGH}), or a criterion's levels (\code{MCRIT1ML}).  A cell is n/N (\%): N is
 the arm's subjects with a value of the parameter in the records kept, n
-those with a value in the category.  A subject is counted once in each
+those with a value in the category; every parameter analysed has its
+rows, 0/N when no subject is in a category.  A subject is counted once in each
 category; with \code{cumulative = TRUE}, in every level up to their worst
 (\code{levels} lowest first: "level 2 or more").  With \code{baseline_normal = TRUE}, n and N are the subjects normal at baseline only (\code{BNRIND == "NORMAL"}).  The categories' order is \code{levels}, or the code list of
 \code{category}.
