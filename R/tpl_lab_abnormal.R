@@ -3,6 +3,7 @@
 
 .tpl_la_params <- function() list(
   tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
+  .tpl_subset_param(),
   tfl_param("data", "ADLB", doc = "the dataset of records"),
   tfl_param("params", NULL, doc = "the PARAMCD values; NULL: all"),
   tfl_param("where", NULL, doc = "the records kept (R), e.g. ONTRTFL == \"Y\""),

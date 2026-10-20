@@ -14,7 +14,8 @@ tfl_param(
   multiple = NULL,
   of = NULL,
   choices = NULL,
-  fields = NULL
+  fields = NULL,
+  group = NULL
 )
 }
 \arguments{
@@ -51,6 +52,13 @@ template's parameters first (the variable it names: \code{by_levels}, \code{of =
 \item{choices}{For \code{type = "choice"}: the values it may take.}
 
 \item{fields}{For \code{type = "list"}: a record's fields, \code{c("vars", "label", "width")}; a named vector's are \code{c("name", "text")}.}
+
+\item{group}{The input form's group it is shown in: \code{"target"} (shown
+first) for what the report is of -- \code{population}, \code{subset} (which
+subjects: a condition on the analysis set's ADSL, narrowing the
+denominators, the header N and, through them, the records) and \code{where}
+(which records of the records data); \code{NULL}: tflspec's for its name,
+else none.}
 }
 \value{
 A \code{tfl_param}.

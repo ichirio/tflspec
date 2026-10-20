@@ -38,6 +38,12 @@
 #' @param choices For `type = "choice"`: the values it may take.
 #' @param fields For `type = "list"`: a record's fields, `c("vars",
 #'   "label", "width")`; a named vector's are `c("name", "text")`.
+#' @param group The input form's group it is shown in: `"target"` (shown
+#'   first) for what the report is of -- `population`, `subset` (which
+#'   subjects: a condition on the analysis set's ADSL, narrowing the
+#'   denominators, the header N and, through them, the records) and `where`
+#'   (which records of the records data); `NULL`: tflspec's for its name,
+#'   else none.
 #' @return A `tfl_param`.
 #' @examples
 #' tfl_param("population", "SAF", doc = "the analysis set's id")
@@ -45,11 +51,11 @@
 #' @export
 tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study = NULL,
                       type = NULL, multiple = NULL, of = NULL, choices = NULL,
-                      fields = NULL) {
+                      fields = NULL, group = NULL) {
   if (!is.null(type)) type <- match.arg(type, .tpl_param_types)
   structure(list(name = name, default = default, required = isTRUE(required),
                  doc = doc, study = study, type = type, multiple = multiple, of = of,
-                 choices = choices, fields = fields), class = "tfl_param")
+                 choices = choices, fields = fields, group = group), class = "tfl_param")
 }
 
 .tpl_param_types <- c("vars", "levels", "flag", "number", "text", "choice", "list")
@@ -81,7 +87,9 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
     k("layout", "choice", choices = c("cols", "rows")),
     k("grade_in", "choice", choices = c("rows", "cols")),
     k("min_pct_in", "choice", choices = c("any", "all", "total")),
-    k(c("population", "data", "where", "data_id", "data_label", "analysis_id",
+    # what the report is of: the analysis set, which subjects, which records
+    k(c("population", "subset", "where"), "text", group = "target"),
+    k(c("data", "data_id", "data_label", "analysis_id",
         "analysis_label", "overall", "any_grade", "cat_id", "cat_label", "ci_id", "ci_label",
         "ci_method", "groupn_label", "median_label", "time_prefix", "time_unit", "unit",
         "when", "visit_label", "param_label", "value_label", "change_label", "cell", "start"),
@@ -144,6 +152,8 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
   if (is.null(p$type) && !is.null(by_name)) {
     for (f in names(by_name)) if (is.null(p[[f]])) p[f] <- list(by_name[[f]])
   }
+  # its form's group: tflspec's for its name, whatever its type says
+  if (is.null(p$group) && !is.null(by_name$group)) p$group <- by_name$group
   if (is.null(p$type)) {
     p$guessed <- TRUE
     d <- p$default
@@ -247,10 +257,88 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
     }
     out$call_steps <- as.integer(k)
   }
+  # which subjects: the analysis set's ADSL narrowed, whatever the template
+  if ("subset" %in% names(t$params)) out <- .tpl_subset(out, a$subset, population)
   out$content <- lapply(out$content, function(it) {
     it$from <- paste0("template:", name)
     it
   })
+  out
+}
+
+# The template parameters every table and figure takes: which subjects
+# (`subset`) and which records (`where`)
+.tpl_subset_param <- function() {
+  tfl_param("subset", NULL, doc = "which subjects (R, on the analysis set's ADSL): PART == \"Part 1\"")
+}
+.tpl_where_param <- function(default = NULL, doc = "which records (R)") {
+  tfl_param("where", default, doc = doc)
+}
+
+# Conditions together (`&`), each in brackets when it is an "or"; NULL
+# when none
+.tpl_and <- function(...) {
+  x <- vapply(Filter(function(v) length(v) && !is.na(v[1L]) && nzchar(v[1L]), list(...)),
+              function(v) as.character(v)[1L], "")
+  if (length(x) < 2L) return(if (length(x)) x)
+  x <- vapply(x, function(v) {
+    e <- tryCatch(str2lang(v), error = function(err) NULL)
+    if (is.call(e) && as.character(e[[1L]]) %in% c("|", "||")) sprintf("(%s)", v) else v
+  }, "")
+  paste(x, collapse = " & ")
+}
+
+# A template's items with the report's subjects (`subset`): the analysis
+# set's ADSL data keeps them (its `where`), and a records data of the set
+# takes its subjects from it (`subjects`: the three stages); a figure's
+# semi join of the set's ADSL, a listing's records (it has no analysis
+# set: the condition on its own columns)
+.tpl_subset <- function(out, subset, population = NULL) {
+  s <- .tpl_and(subset)
+  if (is.null(s)) return(out)
+  ad <- out$ard$analysis_data
+  if (length(ad)) {
+    ids <- vapply(ad, function(e) e$id %||% "", "")
+    res <- list()
+    for (e in ad) {
+      p <- e$population
+      if (!is.null(p) && is.null(e$code)) {
+        if (identical(toupper(e$from %||% ""), "ADSL")) {
+          e$where <- tfl_r(.tpl_and(e$where, s))
+        } else {
+          sid <- paste0("adsl_", tolower(p))
+          if (!sid %in% ids) {
+            res <- c(res, list(list(id = sid, label = .tpl_set_label(p, population),
+                                    from = "ADSL", population = p, where = tfl_r(s))))
+            ids <- c(ids, sid)
+          }
+          e$population <- NULL
+          e$subjects <- sid
+        }
+      }
+      res <- c(res, list(e))
+    }
+    out$ard$analysis_data <- res
+  }
+  st <- out$data$steps
+  if (is.list(st) && length(st) && !inherits(st, "tfl_r") &&
+      all(vapply(st, is.list, NA))) {
+    kinds <- vapply(st, function(x) x$step %||% "", "")
+    j <- which(kinds == "join" & vapply(st, function(x) identical(x$how, "semi") &&
+      identical(toupper(x$dataset %||% ""), "ADSL"), NA))
+    if (length(j)) {
+      st[[j[1L]]]$where <- .tpl_and(st[[j[1L]]]$where, s)
+    } else {
+      # (after the read: a figure whose data is its ARD has none)
+      at <- match("read", kinds, nomatch = 0L)
+      if (at > 0L) st <- append(st, list(list(step = "join", dataset = "ADSL", where = s,
+                                              by = "USUBJID", how = "semi")), at)
+    }
+    out$data$steps <- st
+  }
+  if (identical(out$data$source, "dataset")) {
+    out$data$where <- tfl_r(.tpl_and(out$data$where, s))
+  }
   out
 }
 
@@ -279,6 +367,7 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
 .tfl_template("demog", kind = "table", layout = "summary",
   params = list(
     tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
+    .tpl_subset_param(),
     tfl_param("data", "ADSL", doc = "the dataset"),
     tfl_param("by", "TRT01A", doc = "the column variable"),
     tfl_param("continuous", "AGE", doc = "continuous variables"),
@@ -366,9 +455,11 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
 #' @param population The analysis set's id (`"SAF"`).
 #' @param ... The template's other parameters: `data`, `by`, `continuous`,
 #'   `categorical`, `labels`, `cells`.  `labels` given by name change those
-#'   names only (`labels: {RACE: "Race, n (%) [a]"}`); `RACE: ~` drops one.
+#'   names only (`labels:` with `RACE: "Race, n (%) [a]"`); `RACE: ~` drops one.
 #'   The default `continuous` and `categorical` are the variables the data
-#'   has of them (`any_of()`); the report's own are as written.
+#'   has of them (`any_of()`); the report's own are as written.  Every
+#'   table and figure template also takes `subset` (which subjects) and,
+#'   with records data, `where` (which records): see [tfl_param()].
 #' @param codelists The report's code lists, for the order and labels of
 #'   values; `NULL` takes the ARD's.
 #' @return A [rtfreporter::table_plan()]: the template's items run on the
@@ -394,6 +485,7 @@ tpl_demog <- function(ard, population, ..., codelists = NULL) {
 
 .tpl_summary_params <- list(
   tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
+  .tpl_subset_param(),
   tfl_param("variables", NULL, doc = "the continuous variables, in order"),
   tfl_param("categorical", NULL, doc = "the categorical variables, in order"),
   tfl_param("by", "TRT01A", doc = "the column variable"),
@@ -471,7 +563,7 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
 
 # disposition: the subjects' status at the end of the study, on summary
 .tfl_template("disposition", kind = "table", layout = "summary",
-  params = c(.tpl_summary_params["population"],
+  params = c(.tpl_summary_params[c("population", "subset")],
              lapply(list(
                list("categorical", "EOSSTT"),
                list("cat_id", "DISP"),
@@ -519,6 +611,11 @@ tpl_summary <- function(ard, population, variables = NULL, ..., codelists = NULL
 
 #' The templates
 #'
+#' Every table and figure template takes the same pair of filters, its
+#' input form's first group with `population`: `subset` (which subjects: R
+#' on the analysis set's ADSL) and, with records data, `where` (which
+#' records).  Both are `NULL` by default; see [tfl_param()].
+#'
 #' @return A data frame, one row a template: `name`, `kind`, `layout`,
 #'   `params` (its parameters, comma-separated), `package` (the package
 #'   that registered it: tflspec, or a company's, [tfl_template()]) and
@@ -542,6 +639,7 @@ tfl_templates <- function() {
 
 .tpl_hier_params <- list(
   tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
+  .tpl_subset_param(),
   tfl_param("hierarchy", required = TRUE, doc = "the levels, outer first"),
   tfl_param("by", "TRT01A", doc = "the column variable"),
   tfl_param("data", "ADAE", doc = "the dataset of records"),
@@ -599,7 +697,8 @@ names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
 # ae_soc_pt: treatment-emergent AEs by SOC and PT, on the hierarchical layout
 .tfl_template("ae_soc_pt", kind = "table", layout = "hierarchical",
   params = c(list(tfl_param("population", required = TRUE,
-                            doc = "the analysis set's id (SAF)")),
+                            doc = "the analysis set's id (SAF)"),
+                  .tpl_subset_param()),
              lapply(list(
                list("hierarchy", c("AEBODSYS", "AEDECOD")),
                list("where", "TRTEMFL == \"Y\""),
@@ -643,6 +742,7 @@ tpl_hierarchical <- function(ard, population, hierarchy, ..., codelists = NULL) 
 
 .tpl_pt_params <- list(
   tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
+  .tpl_subset_param(),
   tfl_param("term", "AEDECOD", doc = "the term variable (the PT)"),
   tfl_param("by", "TRT01A", doc = "the column variable"),
   tfl_param("data", "ADAE", doc = "the dataset of records"),
@@ -735,6 +835,7 @@ tpl_ae_pt_freq <- function(ard, population, ..., codelists = NULL) {
 
 .tpl_mg_params <- list(
   tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
+  .tpl_subset_param(),
   tfl_param("grade", "AESEV", doc = "the severity or grade variable (AESEV, AETOXGR)"),
   tfl_param("grade_levels", NULL,
             doc = "its values, lowest first; NULL: the code list of `grade`"),
@@ -872,6 +973,7 @@ tpl_disposition <- function(ard, population, ..., codelists = NULL) {
 
 .tpl_shift_params <- list(
   tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
+  .tpl_subset_param(),
   tfl_param("by", "TRT01A", doc = "the column variable"),
   tfl_param("data", "ADLB", doc = "the dataset of records"),
   tfl_param("where", NULL, doc = "the records kept (R): the visit, the parameters"),
@@ -925,15 +1027,17 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
 
 # lab_shift: the normal range indicator at baseline by a visit's, on shift
 .tfl_template("lab_shift", kind = "table", layout = "shift",
-  params = c(.tpl_shift_params["population"],
+  params = c(.tpl_shift_params[c("population", "subset")],
              list(tfl_param("visit", required = TRUE, doc = "the visit (AVISIT)"),
-                  tfl_param("params", required = TRUE, doc = "the PARAMCD values")),
+                  tfl_param("params", required = TRUE, doc = "the PARAMCD values"),
+                  .tpl_where_param(doc = "the records kept besides the visit and parameters (R)")),
              .tpl_shift_params[c("by", "data_id", "by_levels", "param_labels", "levels")]),
   body = function(a, ctx) {
     b <- lapply(.tpl_shift_params, `[[`, "default")
     for (k in intersect(names(a), names(b))) b[k] <- list(a[[k]])
-    b$where <- sprintf("AVISIT == \"%s\" & PARAMCD %%in%% c(%s)", a$visit,
-                       paste(sprintf("\"%s\"", a$params), collapse = ", "))
+    b$where <- .tpl_and(sprintf("AVISIT == \"%s\" & PARAMCD %%in%% c(%s)", a$visit,
+                                paste(sprintf("\"%s\"", a$params), collapse = ", ")),
+                        a$where)
     .tpl_shift_body(b, ctx)
   })
 
@@ -972,6 +1076,9 @@ tpl_lab_shift <- function(ard, population, ..., codelists = NULL) {
               doc = paste("the columns, in order: each a list of vars (one or more),",
                           "label, width and collapse_repeats")),
     tfl_param("where", NULL, doc = "the records kept (R)"),
+    tfl_param("subset", NULL, doc = paste(
+      "which subjects (R): a listing has no analysis set, so a condition on",
+      "the subject columns its records have, with `where`")),
     tfl_param("sort", NULL, type = "vars", multiple = TRUE, doc = "the records' order (variables)")
   ),
   body = function(a, ctx) {
@@ -1088,6 +1195,7 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
 .tfl_template("vs_change", kind = "table", layout = "summary",
   params = list(
     tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
+    .tpl_subset_param(),
     tfl_param("param", required = TRUE, type = "levels", of = "PARAMCD",
               doc = "the PARAMCD (SYSBP)"),
     tfl_param("visit", required = TRUE, doc = "the AVISIT (CYCLE 9 DAY 1)"),
@@ -1095,7 +1203,8 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
     tfl_param("when", required = TRUE, doc = "the visit in words, short (week 24)"),
     tfl_param("visit_label", required = TRUE, doc = "the value's row heading's visit"),
     tfl_param("unit", required = TRUE, doc = "the unit (mmHg)"),
-    tfl_param("by", "TRTA", doc = "the column variable")
+    tfl_param("by", "TRTA", doc = "the column variable"),
+    .tpl_where_param(doc = "the records kept besides the parameter and visit (R)")
   ),
   body = function(a, ctx) {
     b <- lapply(.tpl_summary_params, `[[`, "default")
@@ -1103,7 +1212,7 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
     b[c("population", "by", "data", "where", "data_id", "data_label", "analysis_id",
         "analysis_label", "variables", "statistics", "cells", "labels")] <- list(
       a$population, a$by, "ADVS",
-      sprintf("PARAMCD == \"%s\" & AVISIT == \"%s\"", a$param, a$visit),
+      .tpl_and(sprintf("PARAMCD == \"%s\" & AVISIT == \"%s\"", a$param, a$visit), a$where),
       paste0("advs_", tolower(a$population), "_", tolower(a$param)),
       sprintf("%s at %s, %s", a$param_label, a$when, set_lab),
       a$param, sprintf("%s at %s", a$param, a$when),
@@ -1138,6 +1247,7 @@ tpl_vs_change <- function(ard, population, ..., codelists = NULL) {
 
 .tpl_pc_params <- list(
   tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
+  .tpl_subset_param(),
   tfl_param("data", required = TRUE, doc = "the BDS dataset (ADLB, ADVS, ADEG)"),
   tfl_param("params", NULL, doc = "the PARAMCD values, in the data's order; NULL: all"),
   tfl_param("visits", NULL, doc = "the AVISIT values; NULL: all"),
@@ -1250,6 +1360,7 @@ tpl_param_change <- function(ard, population, ..., codelists = NULL) {
 .tfl_template("orr", kind = "table", layout = "summary",
   params = list(
     tfl_param("population", "ITT", doc = "the analysis set's id"),
+    .tpl_subset_param(),
     tfl_param("by", "TRT01P", doc = "the column variable"),
     tfl_param("by_levels", NULL, doc = "its values in order; NULL: its code list's"),
     tfl_param("data", "ADRS", doc = "the response dataset"),
@@ -1257,6 +1368,7 @@ tpl_param_change <- function(ard, population, ..., codelists = NULL) {
               doc = "the PARAMCD of the best overall response"),
     tfl_param("category", "AVALC", doc = "the response category's variable"),
     tfl_param("responders", c("CR", "PR"), doc = "the categories that respond"),
+    .tpl_where_param(doc = "the records kept besides the parameter (R)"),
     tfl_param("data_id", NULL, doc = "the analysis data's id; NULL: <data>_<param>"),
     tfl_param("ci_method", "clopper-pearson", doc = "the rate's CI (cardx's method)"),
     tfl_param("heading", "Response", doc = "the label column's heading")
@@ -1267,7 +1379,7 @@ tpl_param_change <- function(ard, population, ..., codelists = NULL) {
     ard <- list(
       analysis_data = list(list(
         id = set, from = a$data, population = a$population,
-        where = tfl_r(sprintf("PARAMCD == \"%s\"", a$param)),
+        where = tfl_r(.tpl_and(sprintf("PARAMCD == \"%s\"", a$param), a$where)),
         derive = tfl_r(sprintf("RESP = %s %%in%% c(%s)", a$category,
                                paste(sprintf("\"%s\"", a$responders), collapse = ", "))))),
       analyses = list(
@@ -1325,6 +1437,7 @@ tpl_orr <- function(ard, population = "ITT", ..., codelists = NULL) {
 .tfl_template("ae_overview", kind = "table", layout = "summary",
   params = list(
     tfl_param("population", "SAF", doc = "the analysis set's id"),
+    .tpl_subset_param(),
     tfl_param("by", "TRT01A", doc = "the column variable"),
     tfl_param("data", "ADAE", doc = "the dataset of events"),
     tfl_param("where", "TRTEMFL == \"Y\"", doc = "the events kept (R): the treatment-emergent"),
