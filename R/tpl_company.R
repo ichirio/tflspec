@@ -370,6 +370,8 @@ tfl_test_templates <- function(names = NULL) {
   listing = list(data = "ADAE", columns = list(list(vars = "USUBJID", label = "Subject"))),
   km_table = list(),
   km_simple = list(param = "PFS", group = "TRT01P"),
+  km_risk_table = list(param = "PFS", group = "TRT01P"),
+  km_ci = list(param = "PFS", group = "TRT01P"),
   mean_se = list(param = "SYSBP", data = "ADVS"),
   mean_ci = list(param = "SYSBP", data = "ADVS"),
   waterfall = list(param = "SUMDIAM", where = "AVISIT == \"WEEK 12\""),

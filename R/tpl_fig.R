@@ -51,9 +51,32 @@
 # ---- km_simple: Kaplan-Meier curves ----------------------------------------------
 
 .tpl_km_design <- function(group = NULL, time = NULL, censor = "CNSR", time_unit = "months",
-                           data = NULL, param = NULL) {
-  .tpl_fig_design("km_simple", list(data = data, param = param, group = group, time = time,
+                           data = NULL, param = NULL, preset = "km_simple") {
+  f <- .tpl_fig_design(preset, list(data = data, param = param, group = group, time = time,
                                     censor = censor, time_unit = time_unit), "survfit")
+  # the number at risk: ggsurvfit's own table under the curves (a layer of
+  # the plot, so the report's own items `+`-ed after the call go on the
+  # curves), its title, height and text as the study standard's panel
+  is_rt <- vapply(f$content, function(it) identical(it$fn, "risk_table"), NA)
+  if (any(is_rt)) {
+    rt <- f$content[[which(is_rt)[1L]]]$args
+    base <- as.numeric(f$plot$base_size %||% 10)
+    # the x axis's breaks from the fit (the call's, after it): the table's
+    # times, and the axis to the last of them, as the standard's panel
+    f$stats <- c(f$stats, list(list(step = "code", label = "the x axis's breaks, the times at risk",
+                                    code = "x_breaks <- pretty(c(0, max(fit$time)))")))
+    f$plot$add <- c(f$plot$add, list(list(fn = "scale_x_continuous", args = list(
+      breaks = tfl_r("x_breaks"), limits = tfl_r("range(x_breaks)"),
+      expand = tfl_r("expansion(mult = c(0.02, 0.02))")))))
+    f$content[[which(is_rt)[1L]]] <- tfl_item("call", list(fn = "add_risktable", args = list(
+      times = tfl_r("x_breaks"), risktable_stats = "n.risk", size = rt$size,
+      stats_label = rt$title,
+      risktable_height = rt$height,
+      theme = tfl_r(sprintf(paste0("list(theme_risktable_default(axis.text.y.size = %s, ",
+                                   "plot.title.size = %s), theme(plot.title.position = \"plot\"))"),
+                            format(base), format(base * 0.9))))))
+  }
+  f
 }
 
 .tpl_km_simple_params <- function() list(
@@ -102,6 +125,42 @@ tpl_km_simple <- function(data, group = NULL, time = NULL, censor = "CNSR",
   f <- .tpl_km_design(.tpl_col(rlang::enquo(group)), .tpl_col(rlang::enquo(time)),
                       .tpl_col(rlang::enquo(censor)), time_unit)
   .tpl_fig_draw("km_simple", f, data, plot)
+}
+
+#' Kaplan-Meier curves and the number at risk: `km_risk_table`, `km_ci`
+#'
+#' The A use of the templates `km_risk_table` (the curves, the censor
+#' marks, the median's line and the number at risk under them) and
+#' `km_ci` (the same with the curves' confidence bands), as
+#' [tpl_km_simple()]: the program makes the data, one call draws it.  The
+#' number at risk is ggsurvfit's own table (`ggsurvfit::add_risktable()`),
+#' a layer of the plot: a report's own items `+`-ed after the call go on
+#' the curves.
+#'
+#' @inheritParams tpl_km_simple
+#' @return A ggplot (a ggsurvfit, its risk table built when it is drawn).
+#' @seealso [tfl_template_expand()] for the design it draws (the B use).
+#' @examples
+#' if (requireNamespace("ggsurvfit", quietly = TRUE)) {
+#'   df <- adtte[adtte$PARAMCD == "PFS", ]
+#'   p <- tpl_km_ci(df, group = TRT01A)
+#'   class(p)
+#' }
+#' @export
+tpl_km_risk_table <- function(data, group = NULL, time = NULL, censor = "CNSR",
+                              time_unit = "months", plot = NULL) {
+  f <- .tpl_km_design(.tpl_col(rlang::enquo(group)), .tpl_col(rlang::enquo(time)),
+                      .tpl_col(rlang::enquo(censor)), time_unit, preset = "km_risk_table")
+  .tpl_fig_draw("km_risk_table", f, data, plot)
+}
+
+#' @rdname tpl_km_risk_table
+#' @export
+tpl_km_ci <- function(data, group = NULL, time = NULL, censor = "CNSR",
+                      time_unit = "months", plot = NULL) {
+  f <- .tpl_km_design(.tpl_col(rlang::enquo(group)), .tpl_col(rlang::enquo(time)),
+                      .tpl_col(rlang::enquo(censor)), time_unit, preset = "km_ci")
+  .tpl_fig_draw("km_ci", f, data, plot)
 }
 
 # ---- mean_se / mean_ci: a mean over the visits, with SE or CI bars ------------------
@@ -232,14 +291,22 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
   .tpl_fig_draw("waterfall", f, data, plot)
 }
 
+.tpl_km_body <- function(preset) {
+  force(preset)
+  function(a, ctx) {
+    f <- .tpl_km_design(a$group, a$time, a$censor, a$time_unit, data = a$data, param = a$param,
+                        preset = preset)
+    .tpl_fig_body_of(f, a, ctx)
+  }
+}
+
 # ---- registered --------------------------------------------------------------------
 
 .tpl_fig_register <- function() {
-  .tfl_template("km_simple", kind = "figure", layout = "km", params = .tpl_km_simple_params(),
-    body = function(a, ctx) {
-      f <- .tpl_km_design(a$group, a$time, a$censor, a$time_unit, data = a$data, param = a$param)
-      .tpl_fig_body_of(f, a, ctx)
-    })
+  for (nm in c("km_simple", "km_risk_table", "km_ci")) {
+    .tfl_template(nm, kind = "figure", layout = "km", params = .tpl_km_simple_params(),
+                  body = .tpl_km_body(nm))
+  }
   .tfl_template("mean_se", kind = "figure", layout = "mean", params = .tpl_mean_params(),
                 body = .tpl_mean_body("se"), label = "Mean +/- SE by visit")
   .tfl_template("mean_ci", kind = "figure", layout = "mean", params = .tpl_mean_params(),
