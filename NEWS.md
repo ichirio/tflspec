@@ -1,5 +1,22 @@
 # tflspec (development version)
 
+* **Figure templates: the design form, and `tpl_` functions that draw
+  only** (#403, 0.0.24.9190).  A template SPEC's figure expands into the
+  design form (data steps, plot, layers), as the figure designer and the
+  AI drafts write it; a report's own items after `template:` go onto it
+  (a dashed line, the numbers from an ARD, labs).  As for tables, the
+  program writes the data steps (the analysis set's semi join, the
+  filters) and a `tpl_` function draws: `tpl_km_simple(adtte_pfs, group =
+  TRT01A) + geom_hline(...)`, the `+` on the main plot.  New templates:
+  `mean_se` / `mean_ci`, `waterfall`, `km_risk_table` / `km_ci` (with
+  ggsurvfit's `add_risktable()`) and `forest_hr` (its own ARD, built by
+  `tfl_build_ard()`; `tpl_forest_hr(ard, ...)` and `tpl_forest_layout()`,
+  the assembly a line of its own).  Each figure template declares the
+  statistics its function makes (`call_steps`); the functions inside
+  tflspec attach no package.  The template SPEC, its program and its
+  items written out give the same PNG, and the program written out in
+  full calls no tflspec function.
+
 * **Template `lab_abnormal`: subjects with laboratory values in abnormal
   categories** (#400, 0.0.24.9188).  n/N (%), a block a parameter, in
   `PARAMN`'s order (`param_order`).  The category is an ADaM variable
