@@ -1,5 +1,17 @@
 # tflspec (development version)
 
+* **`tfl_param(type = )`: each template parameter's input type** (#387,
+  0.0.24.9182).  `"vars"`, `"levels"`, `"flag"`, `"number"`, `"text"`,
+  `"choice"` (with `choices`) or `"list"` (with `fields`), and `multiple`,
+  in `tfl_template_params()` -- what tflplanner's template SPEC form reads
+  in place of guessing from the default.  Levels say whose values they
+  are (`of`: `by_levels` of `by`, `params` of `PARAMCD`).  Every tflspec
+  template's parameters have theirs; a company's without one takes
+  tflspec's for its name, else one read from its default, which
+  `tfl_test_templates()` lists (`"no type"`).  The schema says each plan
+  function's `tier` (`required`, `usual`, `other`): which cards
+  tflplanner's builder shows from the start.
+
 * **Template `ae_max_grade`: adverse events by SOC and PT at the maximum
   severity or grade** (#385, 0.0.24.9181).  Each subject once, at the
   highest severity (`AESEV`) or grade (`AETOXGR`) of their events --

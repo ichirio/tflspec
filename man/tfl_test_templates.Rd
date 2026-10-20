@@ -2,7 +2,7 @@
 % Please edit documentation in R/tpl_company.R
 \name{tfl_test_templates}
 \alias{tfl_test_templates}
-\title{Test templates: no parameter is the look}
+\title{Test templates: no parameter is the look, each has its type}
 \usage{
 tfl_test_templates(names = NULL)
 }
@@ -12,14 +12,17 @@ tfl_test_templates(names = NULL)
 \value{
 A data frame, one row a parameter that ends in the look
 (\code{status} \code{"look"}: \code{param}, and the verb \code{fn} and argument \code{arg} it
-ends in) or a template whose run stopped (\code{"not checked: ..."}):
+ends in), a parameter with no type (\code{"no type (guessed: <type>)"})
+or a template whose run stopped (\code{"not checked: ..."}):
 \code{template}, \code{param}, \code{fn}, \code{arg}, \code{status}.  No rows: none.
 }
 \description{
 Runs each template's body with its example, and again with one
 parameter at a time changed, and looks which items change with it: a
 parameter that changes the look (the rows a page, column widths, the
-digits, the blank rows, the style, a listing's type) is listed.
+digits, the blank rows, the style, a listing's type) is listed.  So is
+a parameter with no type (\code{\link[=tfl_param]{tfl_param()}}'s \code{type}, nor tflspec's for its
+name): an input form guesses its field from the default.
 tflspec's own templates have none; a company's package tests its own
 with it (one line in its tests, \code{\link[=tfl_use_company_templates]{tfl_use_company_templates()}}).
 }
