@@ -27,7 +27,9 @@ of covariance: \verb{<response> ~ <by> + <covariates>} (\code{CHG ~ TRT01A + BAS
 difference in LS means between the arms (SE, 95\% CI, p-value) in the
 first arm's column of each pair, from cardx's \code{ard_emmeans_emmeans()}
 and \code{ard_emmeans_contrast()} (emmeans).  The arms' order is the code
-list's: the arm compared with comes after the other.
+list's: the arm compared with comes after the other.  The p-value is
+written as the program's \code{fmt_pvalue()} writes it (\verb{<0.001}, else 3
+decimals).
 }
 \examples{
 x <- tfl_template_expand("ancova", list(population = "SAF", data = "ADVS",

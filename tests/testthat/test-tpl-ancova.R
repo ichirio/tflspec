@@ -2,17 +2,20 @@
 
 an_args <- list(population = "SAF", data = "ADVS", param = "SYSBP", visit = "CYCLE 2 DAY 1")
 
-an_data <- function() {
+an_data <- function(shift = 0) {
   saf <- adsl$USUBJID[adsl$SAFFL == "Y"]
   d <- advs[advs$USUBJID %in% saf & advs$PARAMCD == "SYSBP" & advs$AVISIT == "CYCLE 2 DAY 1", ]
   # the arms' order of a code list: the arm compared with last
   d$TRT01A <- factor(d$TRT01A, levels = c("Drug X", "Control"))
+  d$CHG[d$TRT01A == "Drug X"] <- d$CHG[d$TRT01A == "Drug X"] + shift
   d
 }
+# the program's fmt_pvalue() (inst/helpers/study_helpers.R)
+an_pvalue <- function(x) ifelse(x < 0.001, "<0.001", sprintf("%.3f", x))
 # the ARD as the study's program makes it: cardx's LS means and their
 # difference, the arm (the difference's first) as the group
-an_ard <- function() {
-  d <- an_data()
+an_ard <- function(shift = 0) {
+  d <- an_data(shift)
   as_arm <- function(a, what, level) {
     a$group1_level <- level
     a$variable <- what
@@ -21,6 +24,8 @@ an_ard <- function() {
   }
   m <- cardx::ard_emmeans_emmeans(d, formula = CHG ~ TRT01A + BASE, method = "lm")
   k <- cardx::ard_emmeans_contrast(d, formula = CHG ~ TRT01A + BASE, method = "lm")
+  k <- cards::apply_fmt_fun(cards::update_ard_fmt_fun(k, stat_names = "p.value",
+                                                      fmt_fun = an_pvalue))
   cards::bind_ard(
     cards::ard_tabulate(adsl[adsl$SAFFL == "Y", ], variables = TRT01A),
     as_arm(m, "LSMEAN", m$variable_level),
@@ -73,7 +78,17 @@ test_that("the LS means and their difference: as emmeans gives them", {
   diff <- t$label == "Difference (SE)"
   expect_identical(t[["Drug X"]][diff], sprintf("%.2f (%.2f)", pr$estimate, pr$SE))
   expect_true(is.na(t$Control[diff]))
-  expect_identical(t[["Drug X"]][t$label == "p-value"], sprintf("%.4f", pr$p.value))
+  expect_identical(t[["Drug X"]][t$label == "p-value"], an_pvalue(pr$p.value))
+})
+
+test_that("a p-value below 0.0001: as the program's fmt_pvalue() writes it", {
+  an_skip()
+  x <- tfl_template_expand("ancova", an_args)
+  expect_identical(x$ard$analyses[[3L]]$formats, "p.value=pvalue")
+  t <- an_tab(do.call(tpl_ancova, c(list(an_ard(shift = 10)), an_args)))
+  fit <- stats::lm(CHG ~ TRT01A + BASE, data = an_data(shift = 10))
+  expect_lt(summary(fit)$coefficients["TRT01AControl", "Pr(>|t|)"], 1e-4)
+  expect_identical(t[["Drug X"]][t$label == "p-value"], "<0.001")
 })
 
 test_that("A (the call) = B (the items as the report's content)", {

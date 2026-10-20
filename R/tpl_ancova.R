@@ -25,9 +25,9 @@
   post <- function(what, level) sprintf(paste(
     "dplyr::mutate(group1_level = %s) |",
     "dplyr::mutate(variable = \"%s\", variable_level = list(NULL))"), level, what)
-  an <- function(id, fn, what, level) list(
+  an <- function(id, fn, what, level, formats = NULL) Filter(Negate(is.null), list(
     id = id, method = paste0("cardx::ard_emmeans_", fn), data = set, args = tfl_r(model),
-    post = post(what, level), purpose = "PRIMARY OUTCOME MEASURE")
+    post = post(what, level), formats = formats, purpose = "PRIMARY OUTCOME MEASURE"))
   ard <- list(
     analysis_data = list(
       list(id = subj, label = .tpl_set_label(pop, ctx$population), from = "ADSL",
@@ -39,7 +39,9 @@
            purpose = "PRIMARY OUTCOME MEASURE"),
       an("LSMEAN", "emmeans", "LSMEAN", "variable_level"),
       an("LSDIFF", "contrast", "DIFF",
-         "lapply(variable_level, sub, pattern = \" - .*\", replacement = \"\")")))
+         "lapply(variable_level, sub, pattern = \" - .*\", replacement = \"\")",
+         # the p-value as the program's fmt_pvalue() writes it (<0.001)
+         formats = "p.value=pvalue")))
   content <- list(
     tfl_item("table_plan", list(cols = a$by, rows = list(group = "variable"))),
     tfl_item("plan_cells", list(
@@ -47,7 +49,7 @@
                     `95% CI` = "({conf.low:.2f}, {conf.high:.2f})"),
       DIFF = list(`Difference (SE)` = "{estimate:.2f} ({std.error:.2f})",
                   `95% CI` = "({conf.low:.2f}, {conf.high:.2f})",
-                  `p-value` = "{p.value:.4f}"))),
+                  `p-value` = "{p.value}"))),
     tfl_item("plan_levels", list(variable = c("LSMEAN", "DIFF"))),
     tfl_item("plan_labels", list(variable = list(
       LSMEAN = sprintf("%s: LS mean", a$response),
@@ -70,7 +72,9 @@
 #' difference in LS means between the arms (SE, 95% CI, p-value) in the
 #' first arm's column of each pair, from cardx's `ard_emmeans_emmeans()`
 #' and `ard_emmeans_contrast()` (emmeans).  The arms' order is the code
-#' list's: the arm compared with comes after the other.
+#' list's: the arm compared with comes after the other.  The p-value is
+#' written as the program's `fmt_pvalue()` writes it (`<0.001`, else 3
+#' decimals).
 #'
 #' @inheritParams tpl_demog
 #' @param ... The template's other parameters: `data`, `param`, `visit`
