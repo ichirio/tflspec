@@ -243,7 +243,7 @@
 # the program's names, which a data's own code does not assign; `reads`:
 # each data's columns the analyses read (kept whatever `keep` says)
 .adata_lines <- function(x, ids, subj, levels = NULL, avoid = character(),
-                         reads = list()) {
+                         reads = list(), needs = list()) {
   ad <- .adata_sheet(x)
   out <- character()
   lv <- if (length(levels)) .levels_step
@@ -279,30 +279,40 @@
     # the subjects an analysis data above kept (a report's own analysis set)
     if (!is.na(r$subjects)) pop <- r$subjects
     whr <- if (!is.na(r$where)) r$where
-    # as each analysis's data: the population itself when the data is its
-    # dataset, else the dataset's records of its subjects
-    base <- if (is.null(pop)) {
-      list(src, if (!is.null(whr)) sprintf("dplyr::filter(%s)", whr))
-    } else if (!from_data && is.na(r$subjects) && identical(r$from, pop_ds)) {
-      list(pop, if (!is.null(whr)) sprintf("dplyr::filter(%s)", whr))
-    } else {
-      cond <- sprintf("%s %%in%% %s$%s", subj, pop, subj)
-      if (!is.null(whr)) cond <- .cond_and(cond, whr)
-      list(src, sprintf("dplyr::filter(%s)", cond))
-    }
+    flt <- if (!is.null(whr)) sprintf("dplyr::filter(%s)", whr)
     add <- .split_bar(r$add)
     keep <- .split_bar(r$keep)
     dis <- .split_bar(r$distinct)
-    # columns from the subjects' data: the population's values replace a
-    # column of the same name
-    join <- if (length(add)) c(
+    # the subject-level columns it takes: those asked for (`add`), and the
+    # groups the analyses' denominators count by (their by, strata)
+    # (not the columns the population's derive makes: a record's TRTA,
+    # APERIOD ... are its own)
+    pops <- x$populations
+    take <- c(add, setdiff(needs[[id]], .derive_names(
+      pops$derive[pops$population_id %in% .adata_pop(ad, id)])))
+    # three stages: the denominator (the population's subjects: its own
+    # data), the target subjects (the records joined to them, the subjects'
+    # columns replacing theirs), the target records (the report's condition,
+    # after the join).  A data of the subjects already: `add` a left join
+    left <- if (length(add)) c(
       sprintf("dplyr::select(-dplyr::any_of(%s))", .lay(.c_str(add), width = Inf)),
       sprintf("dplyr::left_join(dplyr::select(%s, %s), by = %s)",
               .adata_add_from(ad, id), paste(unique(c(subj, add)), collapse = ", "),
               .q(subj)))
+    if (is.null(pop)) {
+      base <- src
+      steps0 <- c(flt, left)
+    } else if (!from_data && is.na(r$subjects) && identical(r$from, pop_ds)) {
+      # the population itself (its dataset): its subjects, the condition
+      base <- pop
+      steps0 <- c(flt, left)
+    } else {
+      base <- src
+      steps0 <- c(.subjects_join(pop, subj, take), flt)
+    }
     # what follows the rows: the columns added, derived, the columns kept,
     # one row per ..., its code lists
-    steps <- c(base[[2L]], join, .derive_steps(r$derive),
+    steps <- c(steps0, .derive_steps(r$derive),
                # the columns kept: the subject, those the analyses read on
                # it (their by, strata, variables), and the ones asked for
                if (length(keep)) sprintf("dplyr::select(%s)",
@@ -311,8 +321,8 @@
                if (length(dis)) sprintf("dplyr::distinct(%s, .keep_all = TRUE)",
                                         paste(dis, collapse = ", ")),
                # the same rows as the data it is made from: the same levels
-               if (length(c(base[[2L]], .split_bar(r$derive), dis, add))) lv)
-    out <- c(out, .make_code(id, base[[1L]], steps))
+               if (length(c(steps0, .split_bar(r$derive), dis, add))) lv)
+    out <- c(out, .make_code(id, base, steps))
   }
   out
 }

@@ -67,6 +67,18 @@ and \code{population} (in \code{local()} only when it needs a scope of its own: 
 defines a function, or assigns a name the program has).
 }
 \details{
+The data comes in three stages: the denominator (ADSL filtered to the
+analysis set), the target subjects (the records joined to it), the target
+records (the report's \code{where}, a \code{filter()} after the join).  The join is
+\code{inner_join()} when the records take ADSL columns -- the \code{add} columns, and
+the by / strata of the analyses that have a denominator (their own or
+their method's: the denominator counts by them) -- the ADSL value
+replacing the record's, else \code{semi_join()}.  In ADaM, columns copied from
+ADSL should hold the same values, so they are aligned to the
+denominator's ADSL values.  A column the population's
+\code{derive} makes is not taken: a record's TRTA or APERIOD is its own (a
+crossover's differs by record).
+
 The formats (the method's and the row's \code{formats}, over each statistic's
 default in \code{\link[=tfl_ard_statistics]{tfl_ard_statistics()}}) are in the cards call itself, its
 \code{fmt_fun} argument, where a reader sees them next to the statistics:
