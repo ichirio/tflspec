@@ -311,6 +311,14 @@ tfl_template_run <- function(name, x, ..., codelists = NULL, sets = NULL) {
   unique(do.call(rbind, rows))
 }
 
+# A parameter that is the analysis set or the treatment: by its name, or a
+# treatment variable as its default
+.tpl_study_kind <- function(p) {
+  p$name %in% c(names(.tpl_param_study), "pop", "arm", "trt", "treatment") ||
+    any(as.character(unlist(p$default)) %in% c("TRT01A", "TRT01P", "TRTA", "TRTP", "ARM",
+                                               "ACTARM"))
+}
+
 #' Test templates: no parameter is the look, each has its type
 #'
 #' Runs each template's body with its example, and again with one
@@ -334,14 +342,6 @@ tfl_template_run <- function(name, x, ..., codelists = NULL, sets = NULL) {
 #' @examples
 #' tfl_test_templates("demog")
 #' @export
-# A parameter that is the analysis set or the treatment: by its name, or a
-# treatment variable as its default
-.tpl_study_kind <- function(p) {
-  p$name %in% c(names(.tpl_param_study), "pop", "arm", "trt", "treatment") ||
-    any(as.character(unlist(p$default)) %in% c("TRT01A", "TRT01P", "TRTA", "TRTP", "ARM",
-                                               "ACTARM"))
-}
-
 tfl_test_templates <- function(names = NULL) {
   nm <- names %||% sort(ls(.tpl_registry))
   out <- lapply(nm, function(n) .tpl_look_params(.tpl_get(n, "tfl_test_templates()")))
