@@ -225,6 +225,7 @@ reference:
       - tfl_template
       - tfl_param
       - tfl_template_params
+      - tfl_template_variant
       - tfl_template_run
       - tfl_test_templates
       - tfl_use_company_templates

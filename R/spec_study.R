@@ -50,6 +50,7 @@ tfl_read_study_spec <- function(dir) {
   .check_spec_version(study$spec_version, file.path(dir, "study.yml"))
   dflt <- rd(file.path(spec, "defaults.yml"))
   styles <- dflt$styles %||% list()
+  .study_templates(spec, study$id %||% basename(normalizePath(dir, "/", mustWork = FALSE)))
   structure(list(
     study = study,
     data = .calls_in(rd(file.path(spec, "data.yml")) %||% list()),
@@ -61,6 +62,24 @@ tfl_read_study_spec <- function(dir) {
     toc = rd(file.path(spec, "toc.yml")) %||% list(),
     dir = normalizePath(dir, "/", mustWork = FALSE)),
     class = "tfl_study_spec")
+}
+
+# The study's own templates: spec/templates/*.R, each registering its
+# variants (tfl_template_variant()) -- run when the study is read, so a
+# report's template: finds them.  Quietly: a study read again registers
+# them again.
+.study_templates <- function(spec, study_id) {
+  for (f in sort(list.files(file.path(spec, "templates"), "[.][Rr]$", full.names = TRUE))) {
+    op <- options(tflspec.template_source = sprintf("study %s: spec/templates/%s", study_id,
+                                                    basename(f)))
+    tryCatch(suppressMessages(sys.source(f, envir = new.env(parent = globalenv()))),
+             error = function(e) {
+               options(op)
+               stop(sprintf("tfl_read_study_spec(): spec/templates/%s: %s", basename(f),
+                            conditionMessage(e)), call. = FALSE)
+             })
+    options(op)
+  }
 }
 
 # spec/ of a study folder, or the folder itself when it is a spec folder

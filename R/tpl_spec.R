@@ -186,6 +186,12 @@ tfl_template_to_spec <- function(output, study) {
   list(items = rest, ok = ok)
 }
 
+# A package and its version, as a program records where a template is from
+.tpl_pkg_version <- function(pkg) {
+  v <- tryCatch(as.character(utils::packageVersion(pkg)), error = function(e) NULL)
+  paste(c(pkg, v), collapse = " ")
+}
+
 # A template report's program (the A use): the template's call, the
 # arguments its SPEC gives and the study's defaults it took (not the ones
 # left at the template's own default), the code lists it reads at the head;
@@ -195,6 +201,12 @@ tfl_template_to_spec <- function(output, study) {
   op <- .ard_pipe_op(pipe)
   t <- .tpl_get(tp$name, "tfl_content_code()")
   args <- tp$args[names(tp$args) %in% names(t$params)]
+  # a variant: the template it is made from, called with the variant's
+  # defaults written out (those the report does not give)
+  if (!is.null(t$from)) {
+    args <- c(t$defaults[setdiff(names(t$defaults), names(args))], args)
+    args <- args[intersect(names(t$params), names(args))]
+  }
   # the code lists the template reads: those its plan_levels() item names
   lv <- Filter(function(it) identical(it$fn, "plan_levels"), tp$items)
   vars <- setdiff(unlist(lapply(lv, function(it) names(it$args))), c("variable", ".drop_empty"))
@@ -206,7 +218,9 @@ tfl_template_to_spec <- function(output, study) {
                                 if (length(levels)) list(codelists = stats::setNames(
                                   lapply(names(levels), function(v) .spec_sym(.cl_name(v))),
                                   names(levels)))))
-  head <- c(sprintf("# template %s%s", tp$name,
+  head <- c(sprintf("# template %s%s%s", tp$name,
+                    if (!is.null(t$from)) sprintf(": a variant of %s (%s)", t$from,
+                                                   .tpl_pkg_version(t$package)) else "",
                     if (length(tp$study)) paste0("; study defaults: ", paste(tp$study, collapse = ", "))
                     else ""),
             paste(plan, "<-", .spec_call_code(call, 0L, nchar(plan) + 4L)))

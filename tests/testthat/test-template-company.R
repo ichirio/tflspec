@@ -86,17 +86,17 @@ test_that("tfl_use_company_templates(): a package to start from, whose templates
     "R/templates.R", "R/zzz.R", "tests/testthat.R", "tests/testthat/test-templates.R",
     "inst/standards/defaults.yml")))))
   expect_identical(read.dcf(file.path(d, "DESCRIPTION"))[, "Package"], c(Package = "acmetpl"))
-  expect_true(all(c("export(acmetpl_demog)", "export(acmetpl_ae_soc_pt)") %in%
-                    readLines(file.path(d, "NAMESPACE"))))
+  expect_false(any(grepl("^export", readLines(file.path(d, "NAMESPACE")))))
   for (r in list.files(d, "[.]R$", recursive = TRUE, full.names = TRUE)) expect_silent(parse(r))
   expect_true(is.list(yaml::read_yaml(file.path(d, "inst/standards/defaults.yml"))))
   # its templates, registered as its .onLoad() does
   withr::defer(tc_forget(c("acmetpl_demog", "acmetpl_ae_soc_pt")))
   e <- new.env()
   sys.source(file.path(d, "R", "templates.R"), envir = e)
-  e$acmetpl_demog_register()
-  e$acmetpl_ae_soc_pt_register()
-  expect_true(all(c("acmetpl_demog", "acmetpl_ae_soc_pt") %in% tfl_templates()$name))
+  e$register_templates()
+  tt <- tfl_templates()
+  expect_identical(tt$from[match(c("acmetpl_demog", "acmetpl_ae_soc_pt"), tt$name)],
+                   c("demog", "ae_soc_pt"))
   # its tests' checks
   look <- tfl_test_templates(c("acmetpl_demog", "acmetpl_ae_soc_pt"))
   expect_identical(look$param[look$status == "look"], character(0))
