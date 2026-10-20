@@ -369,6 +369,9 @@ tfl_test_templates <- function(names = NULL) {
   orr = list(),
   param_change = list(population = "SAF", data = "ADLB", params = c("ALT", "AST"),
                       where = "ANL01FL == \"Y\""),
+  ae_eair = list(population = "SAF"),
+  ancova = list(population = "SAF", data = "ADVS", param = "SYSBP", visit = "CYCLE 2 DAY 1"),
+  lab_abnormal = list(population = "SAF", levels = c("LOW", "HIGH"), where = "ONTRTFL == \"Y\""),
   vs_change = list(population = "SAF", param = "SYSBP", visit = "WEEK 24",
                    param_label = "Systolic blood pressure", when = "week 24",
                    visit_label = "Week 24", unit = "mmHg"))

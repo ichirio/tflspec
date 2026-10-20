@@ -7,6 +7,26 @@
   0.8.2.9085 (#701) takes such a column as the stub, and a header cell
   naming it as the stub.  Needs rtfreporter 0.8.2.9085.
 
+* **Template `lab_abnormal`: subjects with laboratory values in abnormal
+  categories** (#400, 0.0.24.9188).  n/N (%), a block a parameter, in
+  `PARAMN`'s order (`param_order`).  The category is an ADaM variable
+  (`ANRIND`, or criteria levels such as `MCRIT1ML`), not thresholds;
+  `cumulative = TRUE` counts a level or worse, `baseline_normal = TRUE`
+  only subjects normal at baseline.  Every parameter analysed keeps its
+  rows, 0/N when no subject is in a category.
+
+* **Template `ae_eair`: exposure-adjusted incidence rates by SOC and PT**
+  (#400, 0.0.24.9188).  Each arm's subjects with the event over their
+  time at risk (to the first event, else the whole exposure, `exposure =
+  "TRTDURD"`), per `per` person-years, with `cardx::ard_incidence_rate()`.
+
+* **Template `ancova`: LS means of the change from baseline and their
+  differences** (#400, 0.0.24.9188).  Each arm's LS mean at one visit
+  (`cardx::ard_emmeans_emmeans()`, the model `CHG ~ arm + BASE`,
+  `covariates`) and each other arm's difference against the reference arm
+  (`ref`; NULL: the last in the code list, said) with its 95% CI and
+  p-value (`cardx::ard_emmeans_contrast()`, written by `fmt_pvalue()`).
+
 * **Template `param_change`: parameters' value and change from baseline
   at each visit** (#386, 0.0.24.9187).  Laboratory tests, vital signs or
   ECG parameters (`data`: ADLB, ADVS, ADEG) -- n, mean (SD), median, min,
