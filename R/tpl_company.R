@@ -32,7 +32,11 @@
 #' @param body `function(a, ctx)`: `a` the parameters' values by name (the
 #'   report's, else their defaults), `ctx` the report's `codelists` and the
 #'   study's `population` (its analysis sets); returns `list(ard = , data =
-#'   , content = )`, `content` a list of [tfl_item()].
+#'   , content = )`, `content` a list of [tfl_item()].  A figure's body
+#'   returns its design (`data` its steps, `content` its layers, `plot` its
+#'   settings) and `call_steps`: how many of the data's last steps (the
+#'   statistics, the fit) its call makes from the data the steps before
+#'   them make.
 #' @param label What it makes, in a few words; `NULL` none.
 #' @param call The function a report's program calls for it (the A use);
 #'   `NULL`: `tpl_<name>`.  A company's package exports it, calling

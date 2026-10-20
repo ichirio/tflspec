@@ -105,3 +105,18 @@ test_that("a report that replaces a template's layer: its design, not the call",
   expect_message(code <- tfl_content_code(ro), "its design is written")
   expect_false(any(grepl("tpl_km_simple", code, fixed = TRUE)))
 })
+
+test_that("a figure template's body says the steps its call makes (call_steps)", {
+  k <- tfl_template_expand("km_simple", list(param = "PFS"))
+  expect_identical(k$call_steps, 1L)
+  expect_identical(k$data$steps[[length(k$data$steps)]]$step, "survfit")
+  t <- .tpl_get("km_simple", "test")
+  suppressMessages(tfl_template("km_nocall", "figure", "km", params = t$params,
+                                body = function(a, ctx) {
+                                  x <- t$body(a, ctx)
+                                  x$call_steps <- NULL
+                                  x
+                                }))
+  on.exit(rm("km_nocall", envir = .tpl_registry))
+  expect_error(tfl_template_expand("km_nocall", list(param = "PFS")), "call_steps")
+})

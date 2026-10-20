@@ -234,6 +234,17 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
   t <- .tpl_get(name, fn)
   a <- .tpl_args(t, args, fn)
   out <- t$body(a, list(codelists = codelists, population = population, given = names(args)))
+  # a figure's: how many of the data's last steps its call (tpl_<name>())
+  # makes -- the statistics; the program writes the steps before them
+  if (identical(t$kind, "figure")) {
+    k <- out$call_steps
+    if (!is.numeric(k) || length(k) != 1L || is.na(k) || k < 0 ||
+        k > length(out$data$steps %||% list())) {
+      .ard_stop(sprintf(paste0("%s: template %s's body returns `call_steps`, how many of its ",
+                               "data's last steps its call makes."), fn, name))
+    }
+    out$call_steps <- as.integer(k)
+  }
   out$content <- lapply(out$content, function(it) {
     it$from <- paste0("template:", name)
     it

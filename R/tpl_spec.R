@@ -257,7 +257,7 @@ tfl_template_to_spec <- function(output, study) {
   tp <- attr(output, "template")
   t <- .tpl_get(tp$name, "tfl_content_code()")
   steps <- output$data$steps %||% list()
-  n_call <- tp$call_steps %||% 0L
+  n_call <- tp$call_steps
   data_steps <- steps[seq_len(length(steps) - n_call)]
   lv <- .codelist_levels(.codelists_rows(output$codelists, output$id), output$id)
   d <- .fig_steps_code(data_steps, lv)
