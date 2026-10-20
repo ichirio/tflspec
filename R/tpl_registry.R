@@ -83,7 +83,10 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
         "ci_method", "groupn_label", "median_label", "time_prefix", "time_unit", "unit",
         "when", "visit_label", "param_label", "value_label", "change_label", "cell"), "text"),
     k(c("heading", "statistics", "cat_statistics"), "text", TRUE),
-    k(c("cells", "labels", "param_labels"), "list", fields = nv),
+    # a variable's heading each: given by name, merged with the default's
+    k(c("labels", "param_labels"), "list", fields = nv, merge = TRUE),
+    # the rows: given, they are the rows (no merge)
+    k("cells", "list", fields = c("label", "template")),
     k("flags", "list", TRUE, fields = c("id", "label", "where")),
     k("columns", "list", TRUE, fields = c("vars", "label", "width", "collapse_repeats")))
 })
@@ -167,6 +170,14 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
   t
 }
 
+# A named default and the names given: the default's order, the new names
+# after it, a NULL dropping its name; as a character vector when the
+# default is one
+.tpl_merge_named <- function(default, given) {
+  m <- utils::modifyList(as.list(default), as.list(given))
+  if (is.character(default)) unlist(m) else m
+}
+
 # The arguments as the body sees them: given (NULL too) > the template's default.
 .tpl_args <- function(t, args, fn) {
   unknown <- setdiff(names(args), names(t$params))
@@ -174,8 +185,17 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
     .ard_stop(sprintf("%s: template %s has no parameter %s.", fn, t$name,
                       paste(sQuote(unknown, FALSE), collapse = ", ")))
   }
-  # a parameter given, NULL too ("none"), else the template's default
-  out <- lapply(t$params, function(p) if (p$name %in% names(args)) args[[p$name]] else p$default)
+  # a parameter given, NULL too ("none"), else the template's default; a
+  # map of headings given by name changes those names only (`RACE: ~`, a
+  # NULL, drops one)
+  out <- lapply(t$params, function(p) {
+    if (!p$name %in% names(args)) return(p$default)
+    v <- args[[p$name]]
+    if (isTRUE(p$merge) && length(p$default) && length(v) && !is.null(names(v))) {
+      v <- .tpl_merge_named(p$default, v)
+    }
+    v
+  })
   miss <- vapply(t$params, function(p) p$required && is.null(out[[p$name]]), NA)
   if (any(miss)) {
     .ard_stop(sprintf("%s: template %s needs %s.", fn, t$name,
@@ -207,7 +227,7 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
   fn <- "tfl_template_expand()"
   t <- .tpl_get(name, fn)
   a <- .tpl_args(t, args, fn)
-  out <- t$body(a, list(codelists = codelists, population = population))
+  out <- t$body(a, list(codelists = codelists, population = population, given = names(args)))
   out$content <- lapply(out$content, function(it) {
     it$from <- paste0("template:", name)
     it
@@ -248,7 +268,7 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
     tfl_param("labels", c(AGE = "Age (years)", AGEGR1 = "Age group, n (%)",
                           SEX = "Sex, n (%)", RACE = "Race, n (%)",
                           ETHNIC = "Ethnicity, n (%)"),
-              doc = "each variable's heading"),
+              doc = "each variable's heading; given by name, merged (RACE: ~ drops one)"),
     tfl_param("cells", list(n = "{N:.0f}", `Mean (SD)` = "{mean:.1f} ({sd:.2f})",
                             Median = "{median:.1f}", `Min, Max` = "{min:.0f}, {max:.0f}"),
               doc = "the continuous variables' rows", study = "plan_cells.continuous")
@@ -259,6 +279,9 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
     pop <- a$population
     set <- paste0(tolower(a$data), "_", tolower(pop))
     vars <- c(a$continuous, a$categorical)
+    # the template's own variables, not the report's: those the data has
+    # (any_of() in the ARD program)
+    opt <- function(p) if (!p %in% ctx$given) TRUE
     ard <- list(
       analysis_data = list(list(id = set, label = .tpl_set_label(pop, ctx$population),
                                 from = a$data, population = pop)),
@@ -268,22 +291,24 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
              method = "cards::ard_stack", data = set, by = a$by,
              purpose = "PRIMARY OUTCOME MEASURE"),
         list(id = "CONT", parent = "DEMOG", label = "Continuous", method = "continuous",
-             variables = a$continuous,
+             variables = a$continuous, optional = opt("continuous"),
              statistics = c("N", "mean", "sd", "median", "min", "max"),
              purpose = "PRIMARY OUTCOME MEASURE"),
         list(id = "CAT", parent = "DEMOG", label = "Categorical", method = "categorical",
-             variables = a$categorical, statistics = c("n", "p"),
+             variables = a$categorical, optional = opt("categorical"), statistics = c("n", "p"),
              purpose = "PRIMARY OUTCOME MEASURE"))
       else list(
         list(id = "GROUPN", label = "Subjects per group", method = "categorical",
              data = set, variables = a$by, purpose = "PRIMARY OUTCOME MEASURE"),
         list(id = "CONT", label = "Continuous", method = "continuous", data = set,
-             by = a$by, variables = a$continuous,
+             by = a$by, variables = a$continuous, optional = opt("continuous"),
              statistics = c("N", "mean", "sd", "median", "min", "max"),
              purpose = "PRIMARY OUTCOME MEASURE"),
         list(id = "CAT", label = "Categorical", method = "categorical", data = set,
-             by = a$by, variables = a$categorical, statistics = c("n", "p"),
+             by = a$by, variables = a$categorical, optional = opt("categorical"),
+             statistics = c("n", "p"),
              purpose = "PRIMARY OUTCOME MEASURE")))
+    ard$analyses <- lapply(ard$analyses, function(x) Filter(Negate(is.null), x))
     # (no plan_levels(): the ARD says the order -- the code lists applied
     # when it is made, the variables in its analyses' order)
     content <- list(
@@ -321,7 +346,11 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
 #'   report.
 #' @param population The analysis set's id (`"SAF"`).
 #' @param ... The template's other parameters: `data`, `by`, `continuous`,
-#'   `categorical`, `labels`, `cells`.
+#'   `categorical`, `labels`, `cells`.  `labels` given by name change those
+#'   names only (`labels = c(RACE = "Race, n (%) [a]")`); in YAML, `RACE:
+#'   ~` drops one.
+#'   The default `continuous` and `categorical` are the variables the data
+#'   has of them (`any_of()`); the report's own are as written.
 #' @param codelists The report's code lists, for the order and labels of
 #'   values; `NULL` takes the ARD's.
 #' @return A [rtfreporter::table_plan()]: the template's items run on the
@@ -370,7 +399,7 @@ tpl_demog <- function(ard, population, ..., codelists = NULL) {
   tfl_param("cells", list(n = "{N:.0f}", `Mean (SD)` = "{mean:.1f} ({sd:.2f})",
                           Median = "{median:.1f}", `Min, Max` = "{min:.0f}, {max:.0f}"),
             doc = "the rows of each continuous variable", study = "plan_cells.continuous"),
-  tfl_param("labels", NULL, doc = "each variable's heading")
+  tfl_param("labels", NULL, doc = "each variable's heading; given by name, merged (RACE: ~ drops one)")
 )
 names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
 
@@ -403,7 +432,8 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
       variables = a$variables, purpose = "SECONDARY OUTCOME MEASURE")),
     if (length(a$categorical)) list(nn(list(
       id = a$cat_id, label = a$cat_label, method = "categorical", data = set,
-      by = a$by, variables = a$categorical, statistics = a$cat_statistics,
+      by = a$by, variables = a$categorical,
+      optional = if (!"categorical" %in% ctx$given) TRUE, statistics = a$cat_statistics,
       purpose = "PRIMARY OUTCOME MEASURE"))))
   vars <- c(a$variables, a$categorical)
   content <- c(
@@ -866,7 +896,8 @@ tpl_disposition <- function(ard, population, ..., codelists = NULL) {
   tfl_param("levels", c("LOW", "NORMAL", "HIGH"), doc = "the categories, in order"),
   tfl_param("by_levels", NULL,
             doc = "the column variable's values in order; NULL: the ARD's (its code list)"),
-  tfl_param("param_labels", NULL, doc = "each parameter's heading (a named vector)"),
+  tfl_param("param_labels", NULL,
+            doc = "each parameter's heading (a named vector); given by name, merged"),
   tfl_param("cell", "{n}", doc = "a cell's template"),
   tfl_param("heading", "Parameter / Baseline", doc = "the label column's heading")
 )

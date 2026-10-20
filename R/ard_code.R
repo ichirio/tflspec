@@ -473,6 +473,10 @@
   if (identical(fn, "(code)")) return(own_r(r$code))
   by <- .vars(r$by)
   vars <- .vars(r$variables)
+  # optional: the variables the data has, of these (a template's default)
+  if (!is.null(vars) && isTRUE(.ard_yes(r$optional %||% NA))) {
+    vars <- sprintf("cards::any_of(%s)", .lay(.c_str(.split_bar(r$variables)), width = Inf))
+  }
   strata <- .vars(r$strata)
   user <- as.list(vapply(.split_args(r$args), own_r, ""))
   own <- c(if (!is.null(strata)) list(strata = strata),
