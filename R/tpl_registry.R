@@ -123,6 +123,7 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
     .ard_stop(sprintf("%s: no template %s; the templates: %s.", fn, sQuote(name, FALSE),
                       paste(sort(ls(.tpl_registry)), collapse = ", ")))
   }
+  if (!is.null(t$from)) t <- .tpl_variant(t)
   t
 }
 
@@ -439,12 +440,13 @@ tpl_summary <- function(ard, population, variables = NULL, ..., codelists = NULL
 #' @export
 tfl_templates <- function() {
   nm <- sort(ls(.tpl_registry))
-  t <- lapply(nm, get, envir = .tpl_registry)
+  t <- lapply(nm, .tpl_get, fn = "tfl_templates()")
   data.frame(name = nm, kind = vapply(t, `[[`, "", "kind"),
              layout = vapply(t, `[[`, "", "layout"),
              params = vapply(t, function(x) paste(names(x$params), collapse = ", "), ""),
              package = vapply(t, function(x) x$package %||% "tflspec", ""),
              call = vapply(t, function(x) x$call %||% paste0("tpl_", x$name), ""),
+             from = vapply(t, function(x) x$from %||% NA_character_, ""),
              stringsAsFactors = FALSE)
 }
 
