@@ -1,5 +1,10 @@
 # tflspec (development version)
 
+* **ae_max_grade's ARD builds in a study** (#394, 0.0.24.9183).  Its
+  analysis data made by code (each subject's highest record) had no
+  `from`, and the ARD definition's check stopped ("`from` is blank"); each
+  says the records it is made from now.
+
 * **`tfl_param(type = )`: each template parameter's input type** (#387,
   0.0.24.9182).  `"vars"`, `"levels"`, `"flag"`, `"number"`, `"text"`,
   `"choice"` (with `choices`) or `"list"` (with `fields`), and `multiple`,
