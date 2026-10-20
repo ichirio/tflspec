@@ -24,6 +24,15 @@ test_that("tpl_km_simple(): the curves of the data it is given, a column bare or
   expect_error(tpl_km_simple("adtte"), "a data frame")
 })
 
+test_that("tpl_km_simple() and a figure's run attach no package", {
+  km_skip()
+  was <- c("package:ggsurvfit", "package:dplyr") %in% search()
+  df <- adtte[adtte$PARAMCD == "PFS", ]
+  p <- tpl_km_simple(df, group = TRT01A)
+  expect_s3_class(p, "ggplot")
+  expect_identical(c("package:ggsurvfit", "package:dplyr") %in% search(), was)
+})
+
 test_that("in a study: A (the data steps, the call) = B (the design) = the template SPEC", {
   skip_on_cran()
   km_skip()
@@ -58,10 +67,10 @@ test_that("in a study: A (the data steps, the call) = B (the design) = the templ
   expect_match(txt, "content <- tpl_km_simple(adtte_pfs, group = TRT01A, time_unit = \"days\") +",
                fixed = TRUE)
   expect_match(txt, "labs(y = \"Probability of no event\")", fixed = TRUE)
-  env <- new.env(parent = globalenv())
+  # (its packages around it, as its program's library() lines attach them)
+  env <- new.env(parent = .fig_pkg_env(c(attr(a, "libs"), "tflspec")))
   for (n in names(data)) assign(n, data[[n]], envir = env)
   eval(parse(text = tfl_fig_setup_code()), env)
-  suppressPackageStartupMessages(for (l in attr(a, "libs")) library(l, character.only = TRUE))
   eval(parse(text = a), env)
   expect_identical(km_png(env$content), km_png(p_t))
   # B: the written-out report, read back
