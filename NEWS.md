@@ -1,5 +1,20 @@
 # tflspec (development version)
 
+* **Template parameters from the study standard** (#392, 0.0.24.9184).
+  `tfl_param(study = )` also takes `"output.population"` (the report's
+  `population:`) and `"settings.treatment"` (`study.yml`'s new `settings:
+  treatment:`); `population`, `by` and `group` take them by their names,
+  so a report with `population: SAF` need not write it again.  A value
+  comes from the report's arguments, the study standard, a variant's
+  defaults, the template's.  `tfl_test_templates()` lists an analysis set
+  or treatment parameter with no study source.  **km_simple takes
+  `population`** (the analysis set's id) in place of the flag `pop`: its
+  subjects are kept by `data.yml`'s definition, a semi join of the
+  figure's data (the join step's new `how = "semi"`:
+  `semi_join(adsl |> filter(SAFFL == "Y") |> select(USUBJID), by =
+  "USUBJID")`), whatever the figure's data has.  `tfl_fig_template()`'s
+  `pop` stays (the figure designer's presets).
+
 * **`tfl_template_variant()`: a template by its defaults alone** (#388,
   0.0.24.9183).  `tfl_template_variant("demog_jp", from = "demog",
   defaults = list(...))` registers `from`'s parameters, types and body with

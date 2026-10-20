@@ -72,3 +72,39 @@ test_that("tfl_test_templates(): the analysis set or the treatment with no study
   expect_identical(r$status[r$param %in% "arm"], "no study source (population / treatment)")
   expect_identical(tfl_template_params("ss_arm")$by$study, "settings.treatment")
 })
+
+test_that("km_simple: the analysis set's subjects, by data.yml's definition (a semi join)", {
+  d <- tempfile()
+  on.exit(unlink(d, recursive = TRUE))
+  dir.create(d)
+  file.copy(list.files(system.file("extdata", "spec-yaml", package = "tflspec"),
+                       full.names = TRUE), d, recursive = TRUE)
+  writeLines(c("populations:", "  - id: SAF", "    dataset: ADSL", "    where: !r SAFFL == \"Y\""),
+             file.path(d, "data.yml"))
+  s <- tfl_read_study_spec(d)
+  o <- tfl_output("F-9", "figure", population = "SAF",
+                  template = list(name = "km_simple", args = list(param = "PFS", group = "TRT01A")))
+  ro <- tfl_resolve_output(o, s)
+  st <- ro$data$steps
+  j <- Filter(function(x) identical(x$how, "semi"), st)
+  expect_length(j, 1L)
+  expect_identical(j[[1L]][c("step", "dataset", "where", "by")],
+                   list(step = "join", dataset = "ADSL", where = "SAFFL == \"Y\"", by = "USUBJID"))
+  expect_false(any(vapply(st, function(x) identical(x$step, "flag"), NA)))
+  code <- paste(tfl_fig_design_code(tfl_fig_design(data = st)), collapse = "\n")
+  expect_match(code, "semi_join(", fixed = TRUE)
+  expect_match(code, "filter(SAFFL == \"Y\") |> select(USUBJID)", fixed = TRUE)
+  # a semi join takes no variables; a left join still needs them
+  chk <- tfl_check_fig_design(tfl_fig_design(data = st))
+  expect_false(any(chk$field %in% "vars"))
+  left <- list(list(step = "read", dataset = "ADTTE"), list(step = "join", dataset = "ADSL"))
+  expect_true(any(tfl_check_fig_design(tfl_fig_design(data = left))$field %in% "vars"))
+  # an id the study does not define
+  o$population <- "ITT"
+  expect_error(tfl_resolve_output(o, s), "no analysis set 'ITT'")
+  # the semi join keeps the rows of the set's subjects: the same as the flag
+  df <- adtte[adtte$PARAMCD == adtte$PARAMCD[1L], ]
+  saf <- adsl$USUBJID[adsl$SAFFL == "Y"]
+  kept <- dplyr::semi_join(df, dplyr::select(adsl[adsl$SAFFL == "Y", ], USUBJID), by = "USUBJID")
+  expect_identical(sort(unique(kept$USUBJID)), sort(intersect(unique(df$USUBJID), saf)))
+})
