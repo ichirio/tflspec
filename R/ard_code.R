@@ -1131,23 +1131,78 @@
 # (`adsl_saf <- adsl |> dplyr::filter(SAFFL == "Y") |> ...`), and no pop_saf.
 .pop_as_adata <- function(code, data_ids) {
   rx <- "^([A-Za-z.][A-Za-z0-9._]*) <- (pop_[A-Za-z0-9._]+)$"
-  for (k in rev(grep(rx, code))) {
-    d <- sub(rx, "\\1", code[k])
-    p <- sub(rx, "\\2", code[k])
+  # (or the set's subjects narrowed further: `adsl_saf <- pop_saf |>
+  # filter(PART == "Part 1")`, the set's own steps then these)
+  rx_pipe <- "^([A-Za-z.][A-Za-z0-9._]*) <- (pop_[A-Za-z0-9._]+) \\|>\n"
+  # (one step, in one call: `adsl_saf <- filter(pop_saf, PART == "Part 1")`)
+  rx_call <- paste0("^([A-Za-z.][A-Za-z0-9._]*) <- ([A-Za-z_.][A-Za-z0-9._:]*)",
+                    "\\((pop_[A-Za-z0-9._]+), (.*)\\)$")
+  one <- grepl(rx_call, code) & !grepl("\n", code, fixed = TRUE)
+  code[one] <- sub(rx_call, "\\1 <- \\3 |>\n  \\2(\\4)", code[one])
+  drop <- integer()
+  for (k in rev(grep(paste0(rx, "|", rx_pipe), code))) {
+    piped <- grepl(rx_pipe, code[k])
+    head <- if (piped) sub("\n.*$", "", code[k]) else code[k]
+    d <- sub("^([^ ]+) <- .*$", "\\1", head)
+    p <- sub("^[^ ]+ <- (pop_[A-Za-z0-9._]+).*$", "\\1", head)
     if (!d %in% data_ids) next
     def <- which(startsWith(code, paste0(p, " <- ")))
     if (length(def) != 1L) next
     word <- paste0("(^|[^A-Za-z0-9._])", gsub(".", "\\.", p, fixed = TRUE), "($|[^A-Za-z0-9._])")
     if (any(grepl(word, code[-c(k, def)]))) next
-    code[k] <- paste0(d, substring(code[def], nchar(p) + 1L))
-    code <- code[-def]
+    if (!piped) {
+      code[k] <- paste0(d, substring(code[def], nchar(p) + 1L))
+    } else {
+      set <- .pipe_of(substring(code[def], nchar(p) + 5L))
+      if (is.null(set)) next
+      rest <- sub("^[^\n]*\n", "", code[k])
+      # the set's condition and the subjects' in one filter() when they meet
+      steps <- strsplit(set, " |>\n", fixed = TRUE)[[1L]]
+      # (its code lists once, at the end: the subjects' steps put them)
+      steps <- steps[steps != paste0("  ", .levels_step)]
+      set <- paste(steps, collapse = " |>\n")
+      first <- sub("\n.*$", "", rest)
+      fl <- "^  ((dplyr::)?filter)\\(([^\n]*)\\)( \\|>)?$"
+      n <- length(steps)
+      both <- if (n > 1L && grepl(fl, steps[n]) && grepl(fl, first)) {
+        sprintf("  %s(%s, %s)%s", sub(fl, "\\1", first), sub(fl, "\\3", steps[n]),
+                sub(fl, "\\3", first), if (grepl(" \\|>$", first)) " |>" else "")
+      }
+      code[k] <- if (!is.null(both) && nchar(sub("dplyr::", "", both, fixed = TRUE)) <= 80L) {
+        paste0(d, " <- ", paste(steps[-n], collapse = " |>\n"), " |>\n",
+               both, substring(rest, nchar(first) + 1L))
+      } else {
+        paste0(d, " <- ", set, " |>\n", rest)
+      }
+    }
+    drop <- c(drop, def)
   }
+  # a pipe of one step: the call, as .make_code() writes it
+  for (k in which(one)) {
+    l <- strsplit(code[k], "\n", fixed = TRUE)[[1L]]
+    if (length(l) == 2L && endsWith(l[1L], " |>")) {
+      code[k] <- .make_code(sub(" <- .*$", "", l[1L]),
+                            sub(" \\|>$", "", sub("^[^ ]+ <- ", "", l[1L])), trimws(l[2L]))
+    }
+  }
+  if (length(drop)) code <- code[-drop]
   # a populations section with nothing left in it goes
   h <- which(code == "# ---- populations ----")
   if (length(h) && (h == length(code) || !nzchar(code[h + 1L]))) {
     code <- code[-c(if (h > 1L && !nzchar(code[h - 1L])) h - 1L, h)]
   }
   code
+}
+
+# A data's definition (the right of `<-`) as a pipe: `adsl |>\n  filter(...)`
+# from `filter(adsl, ...)` or a pipe as it is; NULL when it is neither
+.pipe_of <- function(rhs) {
+  if (grepl("^[A-Za-z.][A-Za-z0-9._]*( \\|>\n.*)?$", rhs)) return(rhs)
+  one <- "^([A-Za-z_.][A-Za-z0-9._:]*)\\(([A-Za-z.][A-Za-z0-9._]*), (.*)\\)$"
+  if (!grepl("\n", rhs, fixed = TRUE) && grepl(one, rhs)) {
+    return(paste0(sub(one, "\\2", rhs), " |>\n  ", sub(one, "\\1(\\3)", rhs)))
+  }
+  NULL
 }
 
 # An analysis set that is its dataset as it is (`pop_enr <- adsl`: no

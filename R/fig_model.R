@@ -791,6 +791,11 @@ tfl_read_fig_design <- function(path) {
         vars <- .split_vals(v("vars"))
         by <- v("by")
         w <- v("where")
+        # its conditions as filter()'s arguments (`SAFFL == "Y", PART == "Part 1"`)
+        e <- if (!is.null(w)) tryCatch(str2lang(w), error = function(err) NULL)
+        if (!is.null(e) && .and_parts_n(e) > 1L) {
+          w <- paste(vapply(.and_parts(e), .expr_text, ""), collapse = ", ")
+        }
         semi <- identical(v("how"), "semi")
         sel <- paste(c(by, if (!semi) vars), collapse = ", ")
         add(paste0(if (semi) "semi_join" else "left_join", "(\n    ", pp_ds_name(ds),
