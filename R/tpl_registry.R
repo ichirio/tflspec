@@ -291,8 +291,8 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
 # A template's items with the report's subjects (`subset`): the analysis
 # set's ADSL data keeps them (its `where`), and a records data of the set
 # takes its subjects from it (`subjects`: the three stages); a figure's
-# semi join of the set's ADSL, a listing's records (it has no analysis
-# set: the condition on its own columns)
+# semi join of the set's ADSL; a listing's records of the ADSL subjects it keeps (no
+# analysis set: all of ADSL narrowed)
 .tpl_subset <- function(out, subset, population = NULL) {
   s <- .tpl_and(subset)
   if (is.null(s)) return(out)
@@ -336,8 +336,18 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
     }
     out$data$steps <- st
   }
+  # a listing has no analysis set: the records of ADSL's subjects the
+  # subset keeps, a semi join after its own condition (its data's rework)
   if (identical(out$data$source, "dataset")) {
-    out$data$where <- tfl_r(.tpl_and(out$data$where, s))
+    e <- tryCatch(str2lang(s), error = function(err) NULL)
+    w <- if (!is.null(e)) paste(vapply(.and_parts(e), .expr_text, ""), collapse = ", ") else s
+    out$data$steps <- c(out$data$steps, list(tfl_r(paste0(
+      "# the subjects of the subset (ADSL)\n",
+      "data <- data |>\n",
+      "  dplyr::semi_join(\n",
+      "    adsl |> dplyr::filter(", w, ") |> dplyr::select(USUBJID),\n",
+      "    by = \"USUBJID\"\n",
+      "  )"))))
   }
   out
 }
@@ -1078,8 +1088,8 @@ tpl_lab_shift <- function(ard, population, ..., codelists = NULL) {
                           "label, width and collapse_repeats")),
     tfl_param("where", NULL, doc = "the records kept (R)"),
     tfl_param("subset", NULL, doc = paste(
-      "which subjects (R): a listing has no analysis set, so a condition on",
-      "the subject columns its records have, with `where`")),
+      "which subjects (R, on ADSL): a listing has no analysis set, so ADSL's",
+      "subjects it keeps (a semi join)")),
     tfl_param("sort", NULL, type = "vars", multiple = TRUE, doc = "the records' order (variables)")
   ),
   body = function(a, ctx) {
@@ -1120,6 +1130,8 @@ tpl_lab_shift <- function(ard, population, ..., codelists = NULL) {
 tpl_listing <- function(x, ...) {
   a <- list(...)
   it <- tfl_template_expand("listing", a)
+  # `x` is the data as the program made it (its subjects kept already)
+  it$data$steps <- NULL
   o <- tfl_output("tpl-listing", kind = "listing", extends = "none",
                   data = it$data, content = it$content)
   tfl_content_run(o, x)

@@ -61,10 +61,47 @@ test_that("expanded: subset on the set's ADSL; a records data takes its subjects
   f <- tfl_template_expand("km_simple", list(param = "PFS", subset = "PART == \"Part 1\""))
   j <- f$data$steps[[2L]]
   expect_identical(c(j$step, j$dataset, j$where, j$how), c("join", "ADSL", "PART == \"Part 1\"", "semi"))
-  # a listing has no analysis set: the condition on its own records
-  l <- tfl_template_expand("listing", list(data = "ADSL", subset = "PART == \"Part 1\"",
+  # a listing has no analysis set: the records of ADSL's subjects it keeps
+  l <- tfl_template_expand("listing", list(data = "ADAE", subset = "PART == \"Part 1\"",
                                            columns = list(list(vars = "USUBJID"))))
-  expect_identical(as.character(l$data$where), "PART == \"Part 1\"")
+  expect_null(l$data$where)
+  expect_match(as.character(l$data$steps[[1L]]),
+               "adsl |> dplyr::filter(PART == \"Part 1\") |> dplyr::select(USUBJID)", fixed = TRUE)
+})
+
+test_that("in a study: a listing of ADAE (no PART) with subset lists Part 1's subjects only", {
+  subset_skip()
+  d <- tempfile()
+  on.exit(unlink(d, recursive = TRUE))
+  dir.create(file.path(d, "adam"), recursive = TRUE)
+  sl <- subset_adsl()
+  haven::write_xpt(tflspec:::.ai_chr(sl), file.path(d, "adam", "adsl.xpt"))
+  haven::write_xpt(tflspec:::.ai_chr(adae), file.path(d, "adam", "adae.xpt"))
+  tfl_ai_study_init(d, adam = "adam", study_id = "SUB-L")
+  o <- tfl_output("L-9-1", "listing", label = "AEs, Part 1", extends = "defaults",
+                  template = list(name = "listing", args = list(
+                    data = "ADAE", where = "TRTEMFL == \"Y\"", subset = "PART == \"Part 1\"",
+                    columns = list(list(vars = "USUBJID", label = "Subject"),
+                                   list(vars = "AEDECOD", label = "PT")))))
+  f <- file.path(d, "spec", "outputs", "L-9-1.yml")
+  tfl_write_output(o, f)
+  st <- tfl_read_study_spec(d)
+  ro <- tfl_resolve_output(tfl_read_output(f), st)
+  # the program as the sheets write it: the listing's rows, its rework
+  sh <- suppressMessages(tfl_sheets_from_spec(st, list(`L-9-1` = ro)))
+  rework <- stats::na.omit(sh$planner$process_code[sh$planner$output_id == "L-9-1"])
+  code <- tfl_listing_code(tfl_listing_spec(sh$listing, check = FALSE), "L-9-1",
+                           sh$ard$datasets, rework = rework, part = "data")
+  expect_true(any(grepl("adsl <- ", code, fixed = TRUE)))
+  e <- new.env(parent = .fig_pkg_env("dplyr"))
+  old <- setwd(d)
+  on.exit(setwd(old), add = TRUE)
+  eval(parse(text = code), envir = e)
+  p1 <- sl$USUBJID[sl$PART == "Part 1"]
+  te <- adae[adae$TRTEMFL == "Y", ]
+  expect_true(nrow(e$data) > 0L)
+  expect_true(all(e$data$USUBJID %in% p1))
+  expect_identical(nrow(e$data), sum(te$USUBJID %in% p1))
 })
 
 test_that("in a study: demog and ae_soc_pt of Part 1's subjects; N and counts theirs; A = B", {

@@ -421,9 +421,15 @@ tfl_listing_code <- function(spec, output_id = NULL, datasets,
              lay_out) |>
              .drop_attached_ns())
   }
+  # the datasets the rework reads besides it (ADSL: the subjects a
+  # template's subset keeps)
+  syms <- if (!is.null(rework)) tryCatch(all.names(parse(text = rework, keep.source = FALSE)),
+                                         error = function(e) character())
+  also <- setdiff(datasets$dataset[.r_name(datasets$dataset) %in% syms], l$dataset)
   c(if (length(lv)) .codelists_head(lv),
-    paste0("# the data: ", l$dataset, " (data catalog)"),
+    paste0("# the data: ", paste(c(l$dataset, also), collapse = ", "), " (data catalog)"),
     tfl_read_data_code(datasets, l$dataset),
+    unlist(lapply(also, function(d) tfl_read_data_code(datasets, d))),
     if (is.null(rework)) "# its records, in its order; dates as they print",
     .make_code("data", obj, steps),
     if (!is.null(rework)) c("", "# rework", rework, "", "# in its order; dates as they print",
