@@ -68,7 +68,9 @@ test_that("the definition becomes code and the code the study ARD", {
   # the analysis data is made once, by name; a custom row's `data` is the
   # program's data, by its name
   expect_true(any(code ==
-    "adae_saf <- filter(adae, USUBJID %in% pop_saf$USUBJID, TRTEMFL == \"Y\")"))
+    paste0("adae_saf <- adae |>\n",
+           "  semi_join(select(pop_saf, USUBJID), by = \"USUBJID\") |>\n",
+           "  filter(TRTEMFL == \"Y\")")))
   expect_true(any(grepl("pop_saf[pop_saf$TRT01A != \"Placebo\", ]", code, fixed = TRUE)))
   expect_false(any(grepl("local(", code, fixed = TRUE)))
 
