@@ -9,8 +9,8 @@
   "cols"`), or the change's rows under the value's (`"rows"`).  The
   change is read from the records that have one, so the baseline visit's
   change cells are empty.  `params`, `visits` and `where` are all records
-  unless given (`where = 'ANL01FL == "Y"'` in the examples).  The arm's N
-  needs rtfreporter 0.8.2.9084.
+  unless given (`where = 'ANL01FL == "Y"'` in the examples).  Needs
+  rtfreporter 0.8.2.9084 (the arm's N over its two columns).
 * **Template headings given by name merge with the defaults'; a
   template's default variables are those the data has** (#393,
   0.0.24.9185).  `labels: {RACE: "Race, n (%) [a]"}` in a template SPEC

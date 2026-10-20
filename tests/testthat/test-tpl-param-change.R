@@ -88,7 +88,6 @@ test_that("as rows: the value's rows, then the change's; none at baseline", {
 
 test_that("the arm and its N over its two columns", {
   pc_skip()
-  skip_if(utils::packageVersion("rtfreporter") < "0.8.2.9084", "rtfreporter with #697")
   x <- tfl_template_expand("param_change", pc_args)
   p <- do.call(tpl_param_change, c(list(pc_ard(x)), pc_args))
   f <- tempfile(fileext = ".rtf")
