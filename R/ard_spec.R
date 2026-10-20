@@ -37,7 +37,7 @@
   analyses = c("output_id", "analysis_id", "parent", "label", "method",
                "data", "dataset",
                "population_id", "where", "by", "overall", "strata", "variables",
-               "statistics", "denominator", "formats", "args", "post",
+               "optional", "statistics", "denominator", "formats", "args", "post",
                "code", "purpose", "reason"))
 
 .split_bar <- function(x) {
@@ -340,6 +340,15 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
       if (!is.null(f) && !any(c(col, "...") %in% names(formals(f)))) {
         add(i, col, sprintf("%s: %s takes no `%s`", tag, a$method[i], col))
       }
+    }
+  }
+  # optional: its variables the data may not have (a template's default
+  # list), written any_of(); yes / no
+  op <- a$optional %||% rep(NA_character_, nrow(a))
+  for (i in which(!is.na(op) & nzchar(op))) {
+    if (is.na(.ard_yes(op[i]))) {
+      add(i, "optional", sprintf("%s / %s: `optional` is TRUE or FALSE; got %s",
+                                 a$output_id[i], a$analysis_id[i], op[i]))
     }
   }
   # overall: the analysis again without its by (a Total column); a call's
@@ -1049,7 +1058,27 @@ tfl_build_ard <- function(spec, dir = ".", output_id = NULL, save = TRUE,
   on.exit(setwd(owd), add = TRUE)
   e <- new.env(parent = globalenv())
   eval(parse(text = code, encoding = "UTF-8"), envir = e)
+  .ard_optional_note(spec, e, output_id)
   invisible(e$ard)
+}
+
+# The optional variables (analyses' `optional: TRUE`) the data did not
+# have, said once the program has run: the analysis data it read is there
+.ard_optional_note <- function(spec, e, output_id = NULL) {
+  if (inherits(spec, "tfl_study_spec")) spec <- .ard_spec_of_study(spec)$spec
+  a <- tryCatch(.as_spec(spec, "ard", "tfl_build_ard")$analyses, error = function(err) NULL)
+  if (is.null(a) || is.null(a$optional)) return(invisible())
+  if (!is.null(output_id)) a <- a[a$output_id %in% output_id, , drop = FALSE]
+  for (i in which(vapply(a$optional, function(x) isTRUE(.ard_yes(x)), NA))) {
+    d <- e[[a$data[i] %||% NA_character_]] %||% e[[tolower(a$dataset[i] %||% "")]]
+    if (!is.data.frame(d)) next
+    gone <- setdiff(.split_bar(a$variables[i]), names(d))
+    if (length(gone)) {
+      message(sprintf("%s / %s: %s not in the data; left out (a template's default).",
+                      a$output_id[i], a$analysis_id[i], paste(gone, collapse = ", ")))
+    }
+  }
+  invisible()
 }
 
 #' One output's part of the study ARD

@@ -1,5 +1,18 @@
 # tflspec (development version)
 
+* **Template headings given by name merge with the defaults'; a
+  template's default variables are those the data has** (#393,
+  0.0.24.9185).  `labels: {RACE: "Race, n (%) [a]"}` in a template SPEC
+  changed every other heading to NA (the whole default replaced): now
+  `labels` and `param_labels` given by name change those names only, and
+  `RACE: ~` drops one (`cells` are the rows given).  An ARD analysis may
+  say `optional: true` (the analyses sheet's new column): its variables
+  are written `any_of(c(...))`, the ones the data has, and
+  `tfl_build_ard()` says which it left out.  demog and disposition set it
+  for the variables a report does not name, so demog runs on an ADSL with
+  no ETHNIC; a report's own variables are as written (a misspelling
+  stops).  ARS export leaves the flag out (tflspec's own).
+
 * **Template parameters from the study standard** (#392, 0.0.24.9184).
   `tfl_param(study = )` also takes `"output.population"` (the report's
   `population:`) and `"settings.treatment"` (`study.yml`'s new `settings:
