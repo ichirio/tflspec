@@ -239,7 +239,7 @@ test_that("an analysis's formats are in its cards call; the rest after it", {
     "  ) |>\n",
     "  tag_ard(report_id, \"H2\", population = \"SAF\")"), fixed = TRUE)
   expect_match(txt, paste0(
-    "ard_rows <- adae_saf_2 |>\n",
+    "ard_rows <- adae_saf_1 |>\n",
     "  ard_tabulate_rows(\n",
     "    by = TRTA,\n",
     "    fmt_fun = everything() ~ modifyList(fmt_default, list(n = 2L))\n",
