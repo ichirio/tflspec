@@ -5,8 +5,8 @@
   defaults = list(...))` registers `from`'s parameters, types and body with
   other defaults, no R body; it reads `from` as it is when it runs, so a
   fix to it reaches the variant.  The same name replaces `from` (with a
-  message).  A value comes from the report's arguments, then the study's
-  defaults, the variant's, `from`'s.  A report's program calls `from`'s
+  message).  A value comes from the report's arguments, then the study
+  standard, the variant's defaults, `from`'s.  A report's program calls `from`'s
   `tpl_*()` with the variant's defaults written out, under `# template
   <name>: a variant of <from> (<package> <version>)`.  `tfl_templates()`
   has a `from` column.  A study's `spec/templates/*.R` is run when the

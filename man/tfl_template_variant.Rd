@@ -31,8 +31,7 @@ A report's YAML names it (\code{template: {name: demog_jp}}); its program
 (the A use, \code{\link[=tfl_content_code]{tfl_content_code()}}) calls \code{from}'s function with the
 variant's defaults written out, so the package that registers it
 exports nothing.  A value comes from, first to last: the report's
-arguments, the study's defaults (\code{tfl_param(study = )}), the variant's
-\code{defaults}, \code{from}'s.
+arguments, the study standard (\code{study.yml}, \code{defaults.yml}: \code{tfl_param(study = )}), the variant's \code{defaults}, \code{from}'s.
 
 Register it where it is used: a company's package's \code{.onLoad()}
 (\code{\link[=tfl_use_company_templates]{tfl_use_company_templates()}}), or a study's \verb{spec/templates/*.R}.

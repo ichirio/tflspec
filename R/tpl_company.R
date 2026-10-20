@@ -96,8 +96,8 @@ tfl_template <- function(name, kind = c("table", "figure", "listing"), layout, p
 #' (the A use, [tfl_content_code()]) calls `from`'s function with the
 #' variant's defaults written out, so the package that registers it
 #' exports nothing.  A value comes from, first to last: the report's
-#' arguments, the study's defaults (`tfl_param(study = )`), the variant's
-#' `defaults`, `from`'s.
+#' arguments, the study standard (`study.yml`, `defaults.yml`: `tfl_param(study
+#' = )`), the variant's `defaults`, `from`'s.
 #'
 #' Register it where it is used: a company's package's `.onLoad()`
 #' ([tfl_use_company_templates()]), or a study's `spec/templates/*.R`.
@@ -369,8 +369,9 @@ tfl_test_templates <- function(names = NULL) {
 #' The files: `DESCRIPTION`, `NAMESPACE`, `LICENSE`, `R/templates.R` (the
 #' templates), `R/zzz.R` (their registration), `tests/` (that each is
 #' registered, takes no look as a parameter and expands),
-#' `inst/standards/defaults.yml` (the company's study defaults, the form
-#' of a study's `spec/defaults.yml`) and `README.md`.
+#' `inst/standards/defaults.yml` (the company standard a new study's
+#' standard is copied from, the form of a study's `spec/defaults.yml`) and
+#' `README.md`.
 #'
 #' @param path The package's folder (made; it must be empty or new).
 #' @param package The package's name; the folder's name by default.
@@ -484,8 +485,8 @@ tfl_use_company_templates <- function(path, package = basename(path),
       "  expect_gt(length(x$content), 0L)"))),
     "})"))
   put(file.path("inst", "standards", "defaults.yml"), c(
-    paste0("# ", package, "'s study defaults: what a new study starts from, in the form"),
-    "# of a study's spec/defaults.yml (the look of every table: the digits, the",
+    paste0("# ", package, "'s company standard: what a new study's standard is copied"),
+    "# from, in the form of a study's spec/defaults.yml (the look of every table: the digits, the",
     "# header, the label column, the blank rows, the widths, the style).",
     "content:",
     "  - normalize_ard: {}",

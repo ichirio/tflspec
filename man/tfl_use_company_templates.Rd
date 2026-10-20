@@ -38,8 +38,9 @@ loaded.  It exports nothing: a report's program calls tflspec's
 The files: \code{DESCRIPTION}, \code{NAMESPACE}, \code{LICENSE}, \code{R/templates.R} (the
 templates), \code{R/zzz.R} (their registration), \verb{tests/} (that each is
 registered, takes no look as a parameter and expands),
-\code{inst/standards/defaults.yml} (the company's study defaults, the form
-of a study's \code{spec/defaults.yml}) and \code{README.md}.
+\code{inst/standards/defaults.yml} (the company standard a new study's
+standard is copied from, the form of a study's \code{spec/defaults.yml}) and
+\code{README.md}.
 }
 \examples{
 d <- file.path(tempdir(), "acmetpl")
