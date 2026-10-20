@@ -133,3 +133,27 @@ test_that("the sheets (and the study's ARD program) take a template report's ana
   a <- sh$ard$analyses
   expect_identical(a$analysis_id[a$output_id %in% "T-9"], c("GROUPN", "CONT", "CAT"))
 })
+
+test_that("every template as a template SPEC: resolved as its items written out (B), the study's layers on both", {
+  s <- ts_study()
+  tp <- tfl_templates()
+  for (nm in names(.tpl_examples)) {
+    o <- tfl_output(paste0("X-", nm), tp$kind[tp$name == nm], population = "SAF",
+                    template = list(name = nm, args = .tpl_examples[[nm]]))
+    ro <- tfl_resolve_output(o, s)
+    rb <- tfl_resolve_output(tfl_template_to_spec(o, s), s)
+    expect_identical(lapply(ro$content, unclass), lapply(rb$content, unclass), info = nm)
+  }
+})
+
+test_that("shift: the study's plan_stub(name, before) keeps the template's stub columns (vars)", {
+  s <- ts_study()
+  o <- tfl_output("X-shift", "table", population = "SAF",
+                  template = list(name = "shift", args = .tpl_examples$shift))
+  st <- Filter(function(it) identical(it$fn, "plan_stub"), tfl_resolve_output(o, s)$content)
+  expect_length(st, 1L)
+  expect_identical(st[[1L]]$args$vars, c("group", "BNRIND"))
+  expect_false(.tpl_is_look(tfl_item("plan_stub", list(vars = "a", before = TRUE))))
+  expect_true(.tpl_is_look(tfl_item("plan_stub", list(before = TRUE))))
+  expect_true(.tpl_is_look(tfl_item("plan_style", list(font_size = 8))))
+})

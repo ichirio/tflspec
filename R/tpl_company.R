@@ -143,6 +143,16 @@ tfl_template_run <- function(name, x, ..., codelists = NULL, sets = NULL) {
   plan_cell_style = NULL, plan_stub = c("indent", "before", "group_summary"),
   plan_paginate_rows = "max_rows", plan_listing = "type")
 
+# The arguments of a look verb that say the shape: an item with one of them
+# is the shape, over the study's layers.  plan_stub(vars =) names the stub's
+# columns -- the study's plan_stub(name, before) must not take them away.
+.tpl_shape_keys <- list(plan_stub = "vars")
+
+# An item of the look: a look verb with none of its shape keys
+.tpl_is_look <- function(it) {
+  it$fn %in% names(.tpl_look) && !any(names(it$args) %in% .tpl_shape_keys[[it$fn]])
+}
+
 # A value of the same shape, changed: each string with a mark after it (its
 # names kept), each number one more, each logical turned
 .tpl_perturb <- function(x) {
