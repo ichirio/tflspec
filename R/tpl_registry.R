@@ -347,7 +347,8 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
 #' @param population The analysis set's id (`"SAF"`).
 #' @param ... The template's other parameters: `data`, `by`, `continuous`,
 #'   `categorical`, `labels`, `cells`.  `labels` given by name change those
-#'   names only (`labels: {RACE: "Race, n (%) [a]"}`); `RACE: ~` drops one.
+#'   names only (`labels = c(RACE = "Race, n (%) [a]")`); in YAML, `RACE:
+#'   ~` drops one.
 #'   The default `continuous` and `categorical` are the variables the data
 #'   has of them (`any_of()`); the report's own are as written.
 #' @param codelists The report's code lists, for the order and labels of
