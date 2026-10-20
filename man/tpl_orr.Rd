@@ -13,7 +13,8 @@ report.}
 \item{population}{The analysis set's id (\code{"SAF"}).}
 
 \item{...}{The template's other parameters: \code{by}, \code{by_levels}, \code{data},
-\code{param}, \code{category}, \code{responders}, \code{ci_method}, \code{heading}.}
+\code{param}, \code{category}, \code{responders}, \code{ci_method}, \code{conf_level} (0.95,
+the CI's level and its row's label), \code{heading}.}
 
 \item{codelists}{The report's code lists, for the order and labels of
 values; \code{NULL} takes the ARD's.}
