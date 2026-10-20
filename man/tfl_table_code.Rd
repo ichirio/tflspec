@@ -21,7 +21,7 @@ tfl_table_code(
 \item{output_id}{The table, when the definition has several.}
 
 \item{data}{The name of the ARD in the program: the pipe starts from it
-(erb{plan <- ard |> normalize_ard(...) |> table_plan(...)}).  With
+(\verb{plan <- ard |> normalize_ard(...) |> table_plan(...)}).  With
 \code{normalize = FALSE}, the name of the data already normalized.}
 
 \item{plan}{The name the plan is assigned to.}
