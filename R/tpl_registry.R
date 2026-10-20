@@ -679,7 +679,7 @@ names(.tpl_mg_params) <- vapply(.tpl_mg_params, `[[`, "", "name")
   } else sprintf("xtfrm(%s)", g)
   # each subject's record of the highest grade: overall, in each SOC, in each PT
   top <- function(suffix, within) {
-    list(id = paste0(set, "_max", suffix),
+    list(id = paste0(set, "_max", suffix), from = set,
          code = sprintf("dplyr::slice_max(%s, %s, by = c(%s), n = 1, with_ties = FALSE)",
                         set, rank, paste(c("USUBJID", within), collapse = ", ")))
   }
