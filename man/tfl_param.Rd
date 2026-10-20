@@ -12,6 +12,7 @@ tfl_param(
   study = NULL,
   type = NULL,
   multiple = NULL,
+  of = NULL,
   choices = NULL,
   fields = NULL
 )
@@ -40,6 +41,9 @@ default.}
 
 \item{multiple}{\code{TRUE} when it takes several values (\code{hierarchy}),
 \code{FALSE} one (\code{by}); \code{NULL}: as \code{type}.}
+
+\item{of}{For \code{type = "levels"}: whose values they are -- another of
+the template's parameters, the variable it names (\code{by_levels}: \code{of = "by"}), else a variable (\code{params}: \code{of = "PARAMCD"}).}
 
 \item{choices}{For \code{type = "choice"}: the values it may take.}
 

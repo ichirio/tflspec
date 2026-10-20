@@ -15,6 +15,8 @@ test_that("every tflspec template parameter has its type declared", {
         expect_true(is.null(p$default) || p$default %in% p$choices, info = at)
       }
       if (identical(p$type, "list")) expect_true(length(p$fields) >= 2L, info = at)
+      if (identical(p$type, "levels")) expect_true(length(p$of) == 1L, info = at)
+      expect_false(isTRUE(p$guessed), info = at)
     }
   }
 })
@@ -42,4 +44,22 @@ test_that("a company's parameter without a type: by its name, else from its defa
   # declared wins over the name
   expect_identical(.tpl_param_typed(tfl_param("by", "x", type = "levels"))$type, "levels")
   expect_error(tfl_param("x", type = "date"))
+})
+
+test_that("levels say whose values they are", {
+  expect_identical(tfl_template_params("shift")$by_levels$of, "by")
+  expect_identical(tfl_template_params("ae_max_grade")$grade_levels$of, "grade")
+  expect_identical(tfl_template_params("param_change")$params$of, "PARAMCD")
+  expect_identical(tfl_template_params("orr")$param$of, "PARAMCD")
+})
+
+test_that("tfl_test_templates(): a parameter with no type is listed", {
+  expect_false(any(grepl("^no type", tfl_test_templates()$status)))
+  d <- .tpl_get("demog", "test")
+  suppressMessages(tfl_template("tt_guess", "table", "summary",
+                                params = c(d$params, list(tfl_param("digits", 1))),
+                                body = d$body, example = list(population = "SAF")))
+  on.exit(rm("tt_guess", envir = .tpl_registry))
+  r <- tfl_test_templates("tt_guess")
+  expect_identical(r$status[r$param %in% "digits"], "no type (guessed: number)")
 })

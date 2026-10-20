@@ -190,6 +190,10 @@ tfl_template_run <- function(name, x, ..., codelists = NULL, sets = NULL) {
   ex <- t$example %||% .tpl_examples[[t$name]] %||% list()
   base <- tryCatch(.tpl_args(t, ex, "tfl_test_templates()"), error = function(e) e)
   x0 <- if (inherits(base, "error")) base else run(base)
+  # a parameter with no type of its own: its input field is a guess
+  for (p in t$params) if (isTRUE(p$guessed)) {
+    row(p$name, NA_character_, NA_character_, sprintf("no type (guessed: %s)", p$type))
+  }
   if (inherits(x0, "error")) {
     row(NA_character_, NA_character_, NA_character_, paste("not checked:", conditionMessage(x0)))
   } else {
@@ -221,19 +225,22 @@ tfl_template_run <- function(name, x, ..., codelists = NULL, sets = NULL) {
   unique(do.call(rbind, rows))
 }
 
-#' Test templates: no parameter is the look
+#' Test templates: no parameter is the look, each has its type
 #'
 #' Runs each template's body with its example, and again with one
 #' parameter at a time changed, and looks which items change with it: a
 #' parameter that changes the look (the rows a page, column widths, the
-#' digits, the blank rows, the style, a listing's type) is listed.
+#' digits, the blank rows, the style, a listing's type) is listed.  So is
+#' a parameter with no type ([tfl_param()]'s `type`, nor tflspec's for its
+#' name): an input form guesses its field from the default.
 #' tflspec's own templates have none; a company's package tests its own
 #' with it (one line in its tests, [tfl_use_company_templates()]).
 #'
 #' @param names The templates; `NULL`: every one registered.
 #' @return A data frame, one row a parameter that ends in the look
 #'   (`status` `"look"`: `param`, and the verb `fn` and argument `arg` it
-#'   ends in) or a template whose run stopped (`"not checked: ..."`):
+#'   ends in), a parameter with no type (`"no type (guessed: <type>)"`)
+#'   or a template whose run stopped (`"not checked: ..."`):
 #'   `template`, `param`, `fn`, `arg`, `status`.  No rows: none.
 #' @examples
 #' tfl_test_templates("demog")
