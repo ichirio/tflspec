@@ -1,7 +1,7 @@
 # tflspec (development version)
 
 * **Template `param_change`: parameters' value and change from baseline
-  at each visit** (#386, 0.0.24.9186).  Laboratory tests, vital signs or
+  at each visit** (#386, 0.0.24.9187).  Laboratory tests, vital signs or
   ECG parameters (`data`: ADLB, ADVS, ADEG) -- n, mean (SD), median, min,
   max of `AVAL` and `CHG`, a block a parameter (`PARAM`, its unit in its
   text) and a visit, in the order of `PARAMN` and `AVISITN`.  Each arm's
