@@ -12,6 +12,12 @@ report.}
 
 \item{population}{The analysis set's id (\code{"SAF"}).}
 
+\item{...}{The template's other parameters: \code{data}, \code{by}, \code{continuous},
+\code{categorical}, \code{labels}, \code{cells}.  \code{labels} given by name change those
+names only (\code{labels = c(RACE = "Race, n (\%) [a]")}); in YAML, \verb{RACE: ~} drops one.
+The default \code{continuous} and \code{categorical} are the variables the data
+has of them (\code{any_of()}); the report's own are as written.}
+
 \item{codelists}{The report's code lists, for the order and labels of
 values; \code{NULL} takes the ARD's.}
 }

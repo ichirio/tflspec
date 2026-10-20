@@ -100,3 +100,28 @@ test_that("A (the call) = B (the items as the report's content)", {
   b <- suppressMessages(tfl_content_run(tfl_output("T-1", "table", content = x$content), ard))
   expect_identical(mg_tab(b), a)
 })
+
+test_that("in a study: the ARD program runs (its analysis data made from the records)", {
+  skip_on_cran()
+  mg_skip()
+  skip_if_not_installed("haven")
+  d <- tempfile()
+  on.exit(unlink(d, recursive = TRUE))
+  dir.create(file.path(d, "adam"), recursive = TRUE)
+  for (x in c("adsl", "adae")) {
+    haven::write_xpt(tflspec:::.ai_chr(getExportedValue("tflspec", x)),
+                     file.path(d, "adam", paste0(x, ".xpt")))
+  }
+  tfl_ai_study_init(d, adam = "adam", study_id = "MG-1")
+  o <- tfl_output("T-9-2", "table", population = "SAF", label = "AEs by maximum severity",
+                  extends = "defaults",
+                  template = list(name = "ae_max_grade", args = list(population = "SAF",
+                                                                     grade_levels = mg_lv)))
+  tfl_write_output(o, file.path(d, "spec", "outputs", "T-9-2.yml"))
+  st <- tfl_read_study_spec(d)
+  ard <- suppressMessages(tfl_build_ard(st, output_id = "T-9-2", dir = d, save = FALSE))
+  expect_true(nrow(ard) > 0L)
+  ro <- tfl_resolve_output(tfl_read_output(file.path(d, "spec", "outputs", "T-9-2.yml")), st)
+  t <- mg_tab(suppressMessages(tfl_content_run(ro, ard)))
+  expect_true(nrow(t) > 0L)
+})

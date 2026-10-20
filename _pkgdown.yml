@@ -209,6 +209,9 @@ reference:
       - tpl_listing
       - tpl_km_table
       - tpl_param_change
+      - tpl_lab_abnormal
+      - tpl_ae_eair
+      - tpl_ancova
       - tpl_vs_change
       - tpl_orr
       - tpl_ae_overview

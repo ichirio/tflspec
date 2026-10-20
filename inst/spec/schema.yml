@@ -842,6 +842,11 @@ rtf_footnotes:
       - column: variables
         description: The variables analysed (cards' variables), | between them.
         example: AGE | BMIBL
+      - column: optional
+        description: 'TRUE: the variables are the ones the data has of them (written
+          any_of(); tfl_build_ard() says which it left out), as a template''s default
+          list. Blank: every variable must be in the data.'
+        example: 'TRUE'
       - column: statistics
         description: 'For continuous / categorical / missing: the statistics computed,
           in order (tfl_ard_statistics()); for other methods: the statistics kept
