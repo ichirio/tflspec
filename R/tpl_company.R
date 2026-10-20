@@ -370,6 +370,8 @@ tfl_test_templates <- function(names = NULL) {
   listing = list(data = "ADAE", columns = list(list(vars = "USUBJID", label = "Subject"))),
   km_table = list(),
   km_simple = list(param = "PFS", group = "TRT01P"),
+  mean_se = list(param = "SYSBP", data = "ADVS"),
+  mean_ci = list(param = "SYSBP", data = "ADVS"),
   orr = list(),
   param_change = list(population = "SAF", data = "ADLB", params = c("ALT", "AST"),
                       where = "ANL01FL == \"Y\""),

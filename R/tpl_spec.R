@@ -264,7 +264,7 @@ tfl_template_to_spec <- function(output, study) {
   # the call: the parameters it takes that the SPEC gives (or the study's
   # defaults), a column bare
   fun <- get(t$call, envir = asNamespace(t$package %||% "tflspec"), mode = "function")
-  keep <- intersect(names(tp$args), setdiff(names(formals(fun)), c("data", "plot")))
+  keep <- intersect(setdiff(names(formals(fun)), c("data", "plot")), names(tp$args))
   arg_code <- vapply(keep, function(k) {
     v <- tp$args[[k]]
     col <- identical(t$params[[k]]$type, "vars") && is.character(v) && length(v) == 1L
