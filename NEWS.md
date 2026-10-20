@@ -1,5 +1,12 @@
 # tflspec (development version)
 
+* **ae_pt_freq and ae_overview draw in a study of the default standard**
+  (#402, 0.0.24.9189).  A study whose standard folds the row headings
+  (`plan_stub(name = "row_label", before = TRUE)`, as `tfl_ai_study_init()`
+  writes) stopped on these tables of one row-heading column; rtfreporter
+  0.8.2.9085 (#701) takes such a column as the stub, and a header cell
+  naming it as the stub.  Needs rtfreporter 0.8.2.9085.
+
 * **Template `lab_abnormal`: subjects with laboratory values in abnormal
   categories** (#400, 0.0.24.9188).  n/N (%), a block a parameter, in
   `PARAMN`'s order (`param_order`).  The category is an ADaM variable
