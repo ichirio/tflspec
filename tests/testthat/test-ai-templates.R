@@ -204,7 +204,7 @@ test_that("mode = \"agent\": what every request repeats is a file, written once"
   expect_false(file.exists(file.path(d0, "ai", "templates.md")))
   # the instructions once, with the header's place holders; no template list
   it <- readLines(file.path(d1, "ai", "instructions-table.md"), encoding = "UTF-8")
-  expect_true(any(grepl("outputs: [<id>, <id>]", it, fixed = TRUE)))
+  expect_true(any(grepl("outputs: [\"<id>\", \"<id>\"]", it, fixed = TRUE)))
   expect_false(any(grepl("### The templates", it, fixed = TRUE)))
   expect_identical(it, readLines(file.path(d0, "ai", "instructions-table.md"), encoding = "UTF-8"))
   tp <- paste(readLines(file.path(d1, "ai", "templates.md"), encoding = "UTF-8"), collapse = "\n")
