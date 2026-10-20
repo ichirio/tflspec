@@ -26,7 +26,9 @@
 #' @param size The reports a request holds at most (1 or more).
 #' @param dir The folder the requests go to, under `study_dir`.
 #' @param max_chars A request's length at most, in characters; `NULL` for
-#'   no limit.
+#'   no limit.  A request over it is halved; with `templates`, it first
+#'   lists the templates' arguments by name only (no type, default or
+#'   description).
 #' @param families,types As [tfl_ai_batches()]: the tables in batches.  A
 #'   figure (`"figure"` in `types`, the default) is a request of its own,
 #'   `figure-1`, `figure-2` ... (family `figure`): its shell, the ADaM's
@@ -63,6 +65,13 @@
 #'   the templates registered when the requests are written listed in it,
 #'   its first line `<!-- templates: TRUE -->` -- else as a code SPEC.
 #'   `FALSE`: the code SPEC only, the requests as they were before templates.
+#' @param mode `"chat"` (default): each request whole, to paste.
+#'   `"agent"` ([tfl_ai_prepare()]`(mode = "agent")`): what every request
+#'   would repeat in a file of the study's `ai/` folder, written once
+#'   (`instructions-table.md`, `instructions-figure.md`, `templates.md`),
+#'   the ADaM summary and `spec/` files named, not copied; each request
+#'   names them, its answer's header and, with `templates`, the templates
+#'   likely for its reports (from their titles).
 #' The folder the answers go to (`ai/answers`, beside `dir`) is made too.
 #'
 #' @return A data frame, one row a request: `request` (the file's name,
@@ -90,10 +99,13 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = 8L,
                                   examples = NULL,
                                   instructions = c("each", "once"),
                                   workbook = c("text", "attach", "both", "file"),
-                                  overwrite = FALSE, add = FALSE, templates = TRUE) {
+                                  overwrite = FALSE, add = FALSE, templates = TRUE,
+                                  mode = c("chat", "agent")) {
   fn <- "tfl_ai_write_requests()"
   templates <- .ai_templates_flag(templates, fn)
   instructions <- match.arg(instructions)
+  mode <- match.arg(mode)
+  agent <- identical(mode, "agent")
   workbook <- match.arg(workbook)
   book <- basename(shell$path %||% "the workbook")
   # the workbook's path for an agent: from the study folder when inside it
@@ -226,10 +238,12 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = 8L,
                           shell = shell, language = language)
     ctx$shell <- placed(ctx$shell, id)
     ctx$ai_templates <- templates
+    if (agent) ctx$ai_files <- TRUE
     p <- tfl_ai_prompt("figure", ctx)
-    list(context = ctx, text = format(p), system = p$system)
+    list(context = ctx, text = if (agent) p$user else format(p), system = p$system,
+         task = "figure")
   }
-  prompt_of <- function(ids, family) {
+  prompt_of <- function(ids, family, short = FALSE) {
     ex <- if (is.null(names(examples))) examples
           else unname(examples[names(examples) == family])
     if (!length(ex)) ex <- NULL
@@ -240,15 +254,22 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = 8L,
                           examples = ex)
     ctx$shell <- placed(ctx$shell, ids)
     ctx$ai_templates <- templates
+    if (short) ctx$ai_templates_short <- TRUE
+    if (agent) ctx$ai_files <- TRUE
     p <- tfl_ai_prompt("table", ctx)
-    text <- if (identical(instructions, "each")) format(p) else
+    text <- if (agent) p$user else if (identical(instructions, "each")) format(p) else
       paste(c("(Follow the instructions of my first message in this chat.)", "",
               p$user), collapse = "\n")
-    list(context = ctx, text = text, system = p$system)
+    list(context = ctx, text = text, system = p$system, task = "table")
   }
   # a request too long is halved until it fits, or holds one report
-  fit <- function(name, ids, family) {
-    p <- prompt_of(ids, family)
+  # (a chat's with templates: first the templates' arguments by name only)
+  fit <- function(name, ids, family, short = FALSE) {
+    p <- prompt_of(ids, family, short)
+    if (!short && templates && !agent && identical(instructions, "each") &&
+        !is.null(max_chars) && nchar(p$text) > max_chars) {
+      return(fit(name, ids, family, short = TRUE))
+    }
     if (is.null(max_chars) || nchar(p$text) <= max_chars || length(ids) == 1L) {
       if (!is.null(max_chars) && nchar(p$text) > max_chars) {
         warning(sprintf(paste0("%s: %s is %d characters with one report (%s), over ",
@@ -258,8 +279,8 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = 8L,
       return(stats::setNames(list(c(p, list(ids = ids))), name))
     }
     h <- ceiling(length(ids) / 2)
-    c(fit(paste0(name, "a"), ids[seq_len(h)], family),
-      fit(paste0(name, "b"), ids[-seq_len(h)], family))
+    c(fit(paste0(name, "a"), ids[seq_len(h)], family, short),
+      fit(paste0(name, "b"), ids[-seq_len(h)], family, short))
   }
   req <- list()
   fam <- character()
@@ -277,7 +298,16 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = 8L,
   for (nm in names(req)) {
     .ai_write_text(paste0(head, req[[nm]]$text), file.path(out_dir, paste0(nm, ".md")))
   }
-  if (identical(instructions, "once")) {
+  if (agent) {
+    # an agent's: what every request would repeat, once (ai/instructions-
+    # <task>.md, ai/templates.md)
+    for (task in unique(vapply(req, `[[`, "", "task"))) {
+      sys <- unique(unlist(lapply(Filter(function(r) identical(r$task, task), req), `[[`, "system")))
+      stopifnot(length(sys) == 1L)
+      .ai_write_text(sys, file.path(study_dir, .ai_instructions_file(task)))
+    }
+    if (templates) .ai_write_text(.ai_templates_file_text(), file.path(study_dir, "ai", "templates.md"))
+  } else if (identical(instructions, "once")) {
     .ai_write_text(req[[1L]]$system, file.path(out_dir, "00-instructions.md"))
   }
   # the folder the answers are saved in, beside the requests (ai/answers)
@@ -298,7 +328,7 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = 8L,
   .ai_write_text(paste(c(
     "# Requests",
     "",
-    if (identical(instructions, "once"))
+    if (!agent && identical(instructions, "once"))
       c("Paste `00-instructions.md` first in a new chat, then one request.", ""),
     if (workbook %in% c("attach", "both"))
       c(sprintf("Attach `%s` (the TOC / SHELL workbook) to each chat with its request.", book), ""),
@@ -315,7 +345,7 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = 8L,
                          "Next: paste %s into a new chat%s%s; save the whole answer as ",
                          "%s/%s.md, then run tfl_ai_collect_answers()."),
                   nrow(idx), sum(idx$n), dir, max(idx$chars), idx$file[1L],
-                  if (identical(instructions, "once")) " after 00-instructions.md" else "",
+                  if (!agent && identical(instructions, "once")) " after 00-instructions.md" else "",
                   if (workbook %in% c("attach", "both")) sprintf(", attaching %s", book) else "",
                   ans, idx$request[1L]))
   idx

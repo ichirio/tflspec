@@ -188,3 +188,73 @@ test_that("answers with templates: checked, written, built (RTF, PNG); a bad arg
   p <- tfl_ai_check(bad, tfl_ai_context("table", outputs = "T-1"))
   expect_true(any(grepl("'demo' is not a template; the templates are", p$problem, fixed = TRUE)))
 })
+
+test_that("mode = \"agent\": what every request repeats is a file, written once", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  root <- withr::local_tempdir()
+  ad <- aitpl_study(root)
+  d1 <- file.path(root, "with")
+  d0 <- file.path(root, "without")
+  r1 <- tfl_ai_prepare(d1, aitpl_book(), adam = ad, quiet = TRUE, mode = "agent")
+  r0 <- tfl_ai_prepare(d0, aitpl_book(), adam = ad, quiet = TRUE, mode = "agent", templates = FALSE)
+  for (f in c("ai/instructions-table.md", "ai/instructions-figure.md", "ai/templates.md")) {
+    expect_true(f %in% r1$files, info = f)
+  }
+  expect_false(file.exists(file.path(d0, "ai", "templates.md")))
+  # the instructions once, with the header's place holders; no template list
+  it <- readLines(file.path(d1, "ai", "instructions-table.md"), encoding = "UTF-8")
+  expect_true(any(grepl("outputs: [<id>, <id>]", it, fixed = TRUE)))
+  expect_false(any(grepl("### The templates", it, fixed = TRUE)))
+  expect_identical(it, readLines(file.path(d0, "ai", "instructions-table.md"), encoding = "UTF-8"))
+  tp <- paste(readLines(file.path(d1, "ai", "templates.md"), encoding = "UTF-8"), collapse = "\n")
+  expect_match(tp, "- `ae_soc_pt`: Adverse events by SOC and PT", fixed = TRUE)
+  expect_match(tp, "- `km_simple`:", fixed = TRUE)
+  expect_match(tp, "as the schema of `ai/instructions-table.md` says", fixed = TRUE)
+  # a request: the files named, its header, the likely templates; no copies
+  ae <- paste(readLines(file.path(d1, "ai", "requests", "ae-1.md"), encoding = "UTF-8"), collapse = "\n")
+  expect_lt(nchar(ae), 8000)
+  expect_match(ae, "Follow `ai/instructions-table.md`", fixed = TRUE)
+  expect_match(ae, "Your answer's header: `tflspec_ai: {task: table, version: 1, outputs: [T-14-3-1]}`",
+               fixed = TRUE)
+  expect_match(ae, "- T-14-3-1: `ae_soc_pt`", fixed = TRUE)
+  expect_match(ae, "`ai/adam_summary.md`: name only", fixed = TRUE)
+  expect_false(grepl("```yaml", ae, fixed = TRUE))
+  expect_false(grepl("### ADSL", ae, fixed = TRUE))
+  fg <- paste(readLines(file.path(d1, "ai", "requests", "figure-1.md"), encoding = "UTF-8"), collapse = "\n")
+  expect_match(fg, "Follow `ai/instructions-figure.md`", fixed = TRUE)
+  expect_match(fg, "- F-14-2-2: `km_", fixed = TRUE)
+  ae0 <- paste(readLines(file.path(d0, "ai", "requests", "ae-1.md"), encoding = "UTF-8"), collapse = "\n")
+  expect_false(grepl("templates", ae0, fixed = TRUE))
+  # AGENTS.md says to read them
+  ag <- paste(readLines(file.path(d1, "AGENTS.md"), encoding = "UTF-8"), collapse = "\n")
+  expect_match(ag, "`ai/instructions-table.md`", fixed = TRUE)
+  expect_match(ag, "Read `ai/templates.md` once", fixed = TRUE)
+  expect_identical(readLines(file.path(d1, ".github", "copilot-instructions.md")),
+                   readLines(file.path(d1, "AGENTS.md")))
+  # the likely templates, from a title
+  expect_identical(tflspec:::.ai_templates_likely("Demographic and Baseline Characteristics", "table"),
+                   "demog")
+  expect_identical(tflspec:::.ai_templates_likely("Listing of Deaths", "table"), "listing")
+  expect_identical(tflspec:::.ai_templates_likely("", "table"), character())
+})
+
+test_that("a chat's request over max_chars: the templates' arguments by name only", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  root <- withr::local_tempdir()
+  ad <- aitpl_study(root)
+  d1 <- file.path(root, "full")
+  d2 <- file.path(root, "short")
+  r1 <- tfl_ai_prepare(d1, aitpl_book(), adam = ad, quiet = TRUE)
+  r2 <- suppressWarnings(tfl_ai_prepare(d2, aitpl_book(), adam = ad, quiet = TRUE,
+                                        max_chars = 45000))
+  ae1 <- paste(readLines(file.path(d1, "ai", "requests", "ae-1.md"), encoding = "UTF-8"), collapse = "\n")
+  ae2 <- paste(readLines(file.path(d2, "ai", "requests", "ae-1.md"), encoding = "UTF-8"), collapse = "\n")
+  expect_lt(nchar(ae2), nchar(ae1))
+  expect_lte(nchar(ae2), 45000)
+  expect_match(ae2, "- `ae_soc_pt`: Adverse events by SOC and PT", fixed = TRUE)
+  expect_match(ae2, "  - `population` [target]*, ", fixed = TRUE)
+  expect_false(grepl("(text) = ", ae2, fixed = TRUE))
+  expect_match(ae1, "(text) = ", fixed = TRUE)
+})

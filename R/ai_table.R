@@ -143,24 +143,32 @@
   } else {
     out <- c(out, "Every table of the TOC and shells.", "")
   }
+  # an agent's request: the files it reads, once, not their text
+  files <- isTRUE(ctx$ai_files)
+  yml <- function(x) if (files) character() else c("", "```yaml", x, "```")
   if (!is.null(ctx$data_yml) || !is.null(ctx$defaults_yml)) {
-    out <- c(out, "## The study's files, already written", "")
+    out <- c(out, if (files) "## The study's files, already written: read them" else
+                    "## The study's files, already written", "")
     if (!is.null(ctx$data_yml)) {
       out <- c(out, paste("`spec/data.yml`: the datasets and the analysis sets. Name an",
                           "analysis set by its `id`", if (length(ctx$populations))
                             sprintf("(%s)", paste(ctx$populations, collapse = ", ")),
                           "in `population`; write no other."),
-               "", "```yaml", ctx$data_yml, "```", "")
+               yml(ctx$data_yml), "")
     }
     if (!is.null(ctx$defaults_yml)) {
       out <- c(out, paste("`spec/defaults.yml`: what every report starts from",
                           "(`extends: [defaults]`). Do not repeat what it gives; an item",
                           "of the same function in a report replaces it (`plan_cells`,",
                           "`plan_labels`, `plan_levels`, `plan_digits`: merged by key)."),
-               "", "```yaml", ctx$defaults_yml, "```", "")
+               yml(ctx$defaults_yml), "")
     }
   }
-  if (!is.null(ctx$datasets)) {
+  if (!is.null(ctx$datasets) && files) {
+    out <- c(out, "## The ADaM datasets", "",
+             paste("`ai/adam_summary.md`: name only its datasets, variables and values",
+                   "(a value as the data write it)."), "")
+  } else if (!is.null(ctx$datasets)) {
     out <- c(out, "## The ADaM datasets", "",
              paste("Name only these datasets, variables and values (a value as the",
                    "data write it). No record is shown."), "",

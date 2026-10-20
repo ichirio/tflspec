@@ -15,7 +15,12 @@
 #' @section For a coding agent: `mode = "agent"`:
 #' The requests for an agent (GitHub Copilot's agent in VS Code, and the
 #' like) that works through all of them without stopping.  Besides the
-#' requests (each starting with the agent's steps), the study folder gets
+#' requests (each starting with the agent's steps), and what every request
+#' would repeat written once for the agent to read -- `ai/instructions-table.md`
+#' and `ai/instructions-figure.md` (the instructions and the schema),
+#' `ai/templates.md` (with `templates = TRUE`: every template, each request
+#' naming the ones likely for its reports), `ai/adam_summary.md` and
+#' `spec/`, each request naming them -- the study folder gets
 #' `AGENTS.md` and `.github/copilot-instructions.md` (the same
 #' instructions: answer each request into `ai/answers/`, run `run.R`, read
 #' `ai/status.md`, repair; a question it cannot settle taken as an
@@ -190,7 +195,7 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
                                  instructions = instructions, max_chars = max_chars,
                                  workbook = workbook,
                                  overwrite = if (isTRUE(add)) overwrite else TRUE, add = add,
-                                 templates = templates)
+                                 templates = templates, mode = mode)
     rq <- file.path(dir, "ai", "requests")
     files <- c(files, file.path(ai, c("adam_summary.md", shell_md)),
                .ai_toc_yml(dir, shell, overwrite = overwrite, add = add))
@@ -205,6 +210,8 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
       }
       files <- c(files, .ai_agent_files(dir, overwrite = overwrite && !isTRUE(add),
                                         templates = templates))
+      # what every request would repeat, written once
+      files <- c(files, list.files(ai, "^(instructions-.*|templates)[.]md$", full.names = TRUE))
     }
     files <- c(files, list.files(rq, "[.](md|rds)$", full.names = TRUE))
     nxt <- if (identical(mode, "agent")) {

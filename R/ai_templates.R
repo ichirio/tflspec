@@ -73,7 +73,9 @@
 # is, its kind and layout (a variant: of which), then a line a parameter
 # (the target ones marked: population, subset, where).  `kinds`: the kinds
 # listed (a table request lists tables, a figure request figures).
-.ai_templates_list <- function(kinds = c("table", "listing", "figure")) {
+# (`short`: each template's arguments on one line, their names only -- a
+# chat's request over `max_chars` with the whole list)
+.ai_templates_list <- function(kinds = c("table", "listing", "figure"), short = FALSE) {
   tt <- tfl_templates()
   tt <- tt[tt$kind %in% kinds, , drop = FALSE]
   target <- c("population", "subset", "where")
@@ -85,6 +87,15 @@
     pkg <- if (!identical(tt$package[i], "tflspec")) sprintf("; %s's", tt$package[i]) else ""
     out <- c(out, sprintf("- `%s`: %s (%s, layout %s%s%s)", tt$name[i], .ai_tpl_description(t),
                           tt$kind[i], tt$layout[i], from, pkg))
+    if (short) {
+      if (length(p)) {
+        out <- c(out, paste0("  - ", paste(vapply(p, function(x) {
+          tgt <- if (identical(x$group, "target") || (is.null(x$group) && x$name %in% target)) " [target]" else ""
+          sprintf("`%s`%s%s", x$name, tgt, if (isTRUE(x$required)) "*" else "")
+        }, ""), collapse = ", ")))
+      }
+      next
+    }
     for (x in p) {
       what <- x$type %||% "text"
       if (isTRUE(x$multiple)) what <- paste0(what, ", several")
@@ -102,15 +113,114 @@
 
 # The instructions, the list and the example a request with templates
 # holds (its system part, after the schema)
-.ai_templates_text <- function(task) {
+.ai_templates_text <- function(task, short = FALSE) {
   kinds <- if (identical(task, "figure")) "figure" else c("table", "listing")
   ex <- .ai_prompt_file(if (identical(task, "figure")) "templates-figure" else "templates-table")
   paste(c(ex, "", "### The templates", "",
-          paste("Each: its name, what it is, its kind and layout; then its parameters --",
-                "`name` [target] (the report's analysis set, subjects and records),",
-                "* required, (its type), = its default, and what it is. A parameter left",
-                "out takes its default or the study standard's value."), "",
-          .ai_templates_list(kinds)), collapse = "\n")
+          if (short) {
+            paste("Each: its name, what it is, its kind and layout; then its parameters'",
+                  "names -- [target] (the report's analysis set, subjects and records),",
+                  "* required. A parameter left out takes its default or the study",
+                  "standard's value.")
+          } else {
+            paste("Each: its name, what it is, its kind and layout; then its parameters --",
+                  "`name` [target] (the report's analysis set, subjects and records),",
+                  "* required, (its type), = its default, and what it is. A parameter left",
+                  "out takes its default or the study standard's value.")
+          }, "",
+          .ai_templates_list(kinds, short = short)), collapse = "\n")
+}
+
+# ---- an agent's files -------------------------------------------------------
+#  tfl_ai_prepare(mode = "agent"): what every request would repeat is a file
+#  of the study's ai/ folder, written once -- the instructions and schema of
+#  a task (ai/instructions-<task>.md), the templates (ai/templates.md), the
+#  ADaM (ai/adam_summary.md), the study's spec/ files -- and a request names
+#  them, with the templates likely for its reports.
+
+# The file of a task's instructions
+.ai_instructions_file <- function(task) file.path("ai", paste0("instructions-", task, ".md"))
+
+# ai/templates.md: how to answer with a template, for a table and a figure,
+# and every template registered, with its arguments
+.ai_templates_file_text <- function() {
+  how <- function(task) {
+    sub("as the schema above says", sprintf("as the schema of `%s` says", .ai_instructions_file(task)),
+        .ai_prompt_file(paste0("templates-", task)), fixed = TRUE)
+  }
+  kinds <- list(table = c("table", "listing"), figure = "figure")
+  paste(c("# The study's templates", "",
+          paste("Read when a request has `<!-- templates: TRUE -->` at its head. The",
+                "templates are written from the registry (tflspec's, the company's, the",
+                "study's variants) when the requests were; name no other."), "",
+          unlist(lapply(names(kinds), function(task) {
+            c(sub("^## ", sprintf("## %s: ", if (task == "table") "Tables and listings" else "Figures"),
+                  how(task)), "",
+              "### The templates", "",
+              paste("Each: its name, what it is, its kind and layout; then its parameters --",
+                    "`name` [target] (the report's analysis set, subjects and records),",
+                    "* required, (its type), = its default, and what it is. A parameter left",
+                    "out takes its default or the study standard's value."), "",
+              .ai_templates_list(kinds[[task]]), "")
+          }))), collapse = "\n")
+}
+
+# The words a title and a template are matched by: lower case, the usual
+# names of a report kind as one word
+.ai_tpl_words <- function(x) {
+  x <- tolower(paste(x, collapse = " "))
+  same <- c("adverse events?" = "ae", "system organ class(es)?" = "soc", "preferred terms?" = "pt",
+            "kaplan[- ]meier" = "km", "demograph[a-z]*" = "demog", "laborator[a-z]*" = "lab",
+            "vital signs?" = "vs", "hazard ratios?" = "hr", "\\bexposure[- ]adjusted\\b" = "eair",
+            "incidence rates?" = "eair", "(objective )?response( rate)?" = "orr",
+            "severity|toxicity|grades?" = "grade", "listings?" = "listing", "subgroups?" = "forest",
+            "number at risk" = "risk", "confidence interval|\\bci\\b" = "ci",
+            "standard error|\\bse\\b" = "se", "change from baseline|changes?" = "change",
+            "abnormal[a-z]*" = "abnormal", "shifts?" = "shift", "overview|summary of ae" = "overview")
+  for (p in names(same)) x <- gsub(p, paste0(" ", same[[p]], " "), x, perl = TRUE)
+  w <- unique(strsplit(x, "[^a-z0-9]+")[[1L]])
+  setdiff(w[nzchar(w)], c("a", "an", "and", "the", "of", "by", "at", "to", "in", "for", "on",
+                          "first", "each", "most", "its", "table", "tables", "figure",
+                          "plot", "time", "subjects", "patients", "number", "summary"))
+}
+
+# The templates likely for reports of these titles (at most `n`, the best
+# first): a template's name's words count twice its description's
+.ai_templates_likely <- function(titles, task, n = 3L) {
+  tt <- tfl_templates()
+  w <- .ai_tpl_words(titles)
+  kinds <- if (identical(task, "figure")) "figure" else if ("listing" %in% w) "listing" else "table"
+  tt <- tt[tt$kind %in% kinds, , drop = FALSE]
+  if (!nrow(tt) || !length(w)) return(character())
+  score <- vapply(seq_len(nrow(tt)), function(i) {
+    nm <- strsplit(tt$name[i], "_", fixed = TRUE)[[1L]]
+    d <- .ai_tpl_words(.ai_tpl_description(.tpl_get(tt$name[i], "tfl_ai_prepare()")))
+    2 * sum(nm %in% w) + sum(setdiff(d, nm) %in% w)
+  }, 0)
+  o <- order(-score, tt$name)
+  o <- o[score[o] > 0]
+  tt$name[utils::head(o, n)]
+}
+
+# The lines an agent's request starts its message with: its instructions'
+# file, its header, the templates' file and the likely ones
+.ai_files_lines <- function(task, header, ctx) {
+  # each report's title (a figure: its own)
+  t <- if (is.data.frame(ctx$titles)) ctx$titles else
+    data.frame(output_id = ctx$output_id %||% ctx$outputs %||% NA_character_,
+               title = paste(ctx$titles, collapse = " "), stringsAsFactors = FALSE)
+  likely <- if (isTRUE(ctx$ai_templates)) vapply(seq_len(nrow(t)), function(i) {
+    x <- .ai_templates_likely(if (is.na(t$title[i])) "" else t$title[i], task)
+    if (length(x)) paste(sprintf("`%s`", x), collapse = ", ") else "none from its title"
+  }, "")
+  c(sprintf(paste("Follow `%s`: the instructions and the schema, the same for every %s",
+                  "request (read it once)."), .ai_instructions_file(task), task),
+    sprintf("Your answer's header: `%s`.", header),
+    if (isTRUE(ctx$ai_templates)) {
+      c("", paste("Templates: `ai/templates.md` (how to answer with one, and every template",
+                  "with its arguments). Likely, from the titles (another may fit better):"),
+        "", sprintf("- %s: %s", t$output_id, likely))
+    }, "")
 }
 
 # ---- an answer's template ---------------------------------------------------
