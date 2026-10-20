@@ -1,6 +1,18 @@
 # tflspec (development version)
 
-* **Generated code pipes with `|>`** (the 3-stage PR).  The report
+* **Generated ARD programs in three stages: the denominator, the target
+  subjects, the target records** (0.0.24.9192).  A records dataset is
+  joined to its subjects: `inner_join()` when it takes ADSL columns (an
+  explicit `add`, and the `by` / `strata` of analyses with a denominator;
+  never record-level columns the population's derive makes, such as
+  `TRTA`), the records' own columns of those names dropped first;
+  `semi_join()` otherwise.  The report's `where` is its own `filter()`
+  after the join, and a dataset as a denominator is a `semi_join()` too.
+  Analyses on the same dataset, analysis set and `where` share one object,
+  with the union of the ADSL columns they need.  See `tfl_ard_code()`'s
+  details.
+
+* **Generated code pipes with `|>`** (0.0.24.9192).  The report
   programs' pipe was RStudio's Insert Pipe Operator setting, and `%>%`
   outside RStudio, while the ARD programs wrote `|>`; now every program
   writes `|>` unless asked (`pipe = "%>%"` / `"rstudio"`, or the option
