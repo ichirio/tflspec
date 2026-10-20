@@ -49,7 +49,7 @@ test_that("a company's parameter without a type: by its name, else from its defa
 test_that("levels say whose values they are", {
   expect_identical(tfl_template_params("shift")$by_levels$of, "by")
   expect_identical(tfl_template_params("ae_max_grade")$grade_levels$of, "grade")
-  expect_identical(tfl_template_params("param_change")$params$of, "PARAMCD")
+  expect_identical(tfl_template_params("lab_shift")$params$of, "PARAMCD")
   expect_identical(tfl_template_params("orr")$param$of, "PARAMCD")
 })
 
