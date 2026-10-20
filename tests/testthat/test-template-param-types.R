@@ -63,3 +63,12 @@ test_that("tfl_test_templates(): a parameter with no type is listed", {
   r <- tfl_test_templates("tt_guess")
   expect_identical(r$status[r$param %in% "digits"], "no type (guessed: number)")
 })
+
+test_that("the schema's tier of each plan function, for the GUI's builder", {
+  tier <- function(fn) tfl_schema(fn)$tier
+  expect_identical(vapply(c("normalize_ard", "table_plan", "plan_cells"), tier, ""),
+                   c(normalize_ard = "required", table_plan = "required", plan_cells = "required"))
+  expect_identical(tier("plan_paginate_rows"), "usual")
+  expect_identical(tier("plan_total"), "other")
+  expect_identical(tier("plan_filter"), "other")
+})

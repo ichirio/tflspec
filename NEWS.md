@@ -8,7 +8,9 @@
   are (`of`: `by_levels` of `by`, `params` of `PARAMCD`).  Every tflspec
   template's parameters have theirs; a company's without one takes
   tflspec's for its name, else one read from its default, which
-  `tfl_test_templates()` lists (`"no type"`).
+  `tfl_test_templates()` lists (`"no type"`).  The schema says each plan
+  function's `tier` (`required`, `usual`, `other`): which cards
+  tflplanner's builder shows from the start.
 
 * **Template `ae_max_grade`: adverse events by SOC and PT at the maximum
   severity or grade** (#385, 0.0.24.9181).  Each subject once, at the
