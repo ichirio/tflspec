@@ -1,5 +1,17 @@
 # tflspec (development version)
 
+* **Template `param_change`: parameters' value and change from baseline
+  at each visit** (#386, 0.0.24.9182).  Laboratory tests, vital signs or
+  ECG parameters (`data`: ADLB, ADVS, ADEG) -- n, mean (SD), median, min,
+  max of `AVAL` and `CHG`, a block a parameter (`PARAM`, its unit in its
+  text) and a visit, in the order of `PARAMN` and `AVISITN`.  Each arm's
+  value and change side by side under the arm and its N (`layout =
+  "cols"`), or the change's rows under the value's (`"rows"`).  The
+  change is read from the records that have one, so the baseline visit's
+  change cells are empty.  `params`, `visits` and `where` are all records
+  unless given (`where = 'ANL01FL == "Y"'` in the examples).  The arm's N
+  needs rtfreporter 0.8.2.9084.
+
 * **Template `ae_max_grade`: adverse events by SOC and PT at the maximum
   severity or grade** (#385, 0.0.24.9181).  Each subject once, at the
   highest severity (`AESEV`) or grade (`AETOXGR`) of their events --
