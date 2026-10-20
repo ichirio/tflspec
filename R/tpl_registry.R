@@ -1146,6 +1146,117 @@ tpl_vs_change <- function(ard, population, ..., codelists = NULL) {
               codelists = codelists)
 }
 
+# ---- param_change: parameters' value and change from baseline at each visit -------
+
+.tpl_pc_params <- list(
+  tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
+  tfl_param("data", required = TRUE, doc = "the BDS dataset (ADLB, ADVS, ADEG)"),
+  tfl_param("params", NULL, doc = "the PARAMCD values, in the data's order; NULL: all"),
+  tfl_param("visits", NULL, doc = "the AVISIT values; NULL: all"),
+  tfl_param("where", NULL, doc = "the records kept (R), e.g. ANL01FL == \"Y\""),
+  tfl_param("by", "TRT01A", doc = "the column variable"),
+  tfl_param("layout", "cols", doc = paste(
+    "cols: each arm's value and change side by side;",
+    "rows: the value's rows, then the change's, under each visit")),
+  tfl_param("param_order", "PARAMN", doc = "the parameters' order variable; NULL: by name"),
+  tfl_param("visit_order", "AVISITN", doc = "the visits' order variable; NULL: by name"),
+  tfl_param("value_label", "Value", doc = "the value's heading"),
+  tfl_param("change_label", "Change from baseline", doc = "the change's heading"),
+  tfl_param("data_id", NULL, doc = "the analysis data's id; NULL: <data>_<population>"),
+  tfl_param("data_label", NULL, doc = "the analysis data's label"),
+  tfl_param("statistics", c("N", "mean", "sd", "median", "min", "max"),
+            doc = "the statistics the ARD has"),
+  tfl_param("cells", list(n = "{N:.0f}", `Mean (SD)` = "{mean:.1f} ({sd:.2f})",
+                          Median = "{median:.1f}", `Min, Max` = "{min:.1f}, {max:.1f}"),
+            doc = "the rows of a value or a change", study = "plan_cells.continuous")
+)
+names(.tpl_pc_params) <- vapply(.tpl_pc_params, `[[`, "", "name")
+
+.tpl_pc_body <- function(a, ctx) {
+  rows_in <- identical(match.arg(a$layout, c("cols", "rows")), "rows")
+  pop <- a$population
+  subj <- paste0("adsl_", tolower(pop))
+  set <- a$data_id %||% paste0(tolower(a$data), "_", tolower(pop))
+  inn <- function(v, x) if (length(x)) {
+    sprintf("%s %%in%% c(%s)", v, paste0("\"", x, "\"", collapse = ", "))
+  }
+  where <- c(a$where, inn("PARAMCD", a$params), inn("AVISIT", a$visits))
+  # the parameters and visits as factors in their order: the ARD keeps it
+  ord <- c(if (length(a$param_order))
+             sprintf("PARAM = reorder(factor(PARAM), %s)", a$param_order),
+           if (length(a$visit_order))
+             sprintf("AVISIT = reorder(factor(AVISIT), %s)", a$visit_order))
+  nn <- function(x) Filter(Negate(is.null), x)
+  sets <- list(
+    list(id = subj, label = .tpl_set_label(pop, ctx$population), from = "ADSL",
+         population = pop),
+    nn(list(id = set, label = a$data_label, from = a$data, subjects = subj,
+            where = if (length(where)) tfl_r(paste(where, collapse = " & ")),
+            derive = if (length(ord)) tfl_r(paste(ord, collapse = " | ")))),
+    # the change: the records that have one (no baseline visit's, so its
+    # change cells stay empty)
+    nn(list(id = paste0(set, "_chg"), from = set, where = tfl_r("!is.na(CHG)"),
+            derive = if (length(a$visit_order)) tfl_r("AVISIT = droplevels(AVISIT)"))))
+  an <- function(id, data, v) list(
+    id = id, method = "continuous", data = data, by = c(a$by, "PARAM", "AVISIT"),
+    variables = v, statistics = a$statistics, purpose = "PRIMARY OUTCOME MEASURE")
+  analyses <- list(
+    list(id = "GROUPN", method = "categorical", data = subj, variables = a$by,
+         purpose = "PRIMARY OUTCOME MEASURE"),
+    an("VALUE", set, "AVAL"), an("CHANGE", paste0(set, "_chg"), "CHG"))
+  plan <- if (rows_in) {
+    list(tfl_item("table_plan", list(cols = a$by, rows = list(
+           group1 = "PARAM", group2 = "AVISIT", group3 = "variable"))),
+         tfl_item("plan_cells", list(continuous = as.list(a$cells))),
+         tfl_item("plan_sort", list(keys = c("group1", "group2", "group3"))),
+         tfl_item("plan_col_header", list(header = list(
+           list(line = "1", cols = ".values", span = "each", text = "{col}
+(N={n})")))))
+  } else {
+    list(tfl_item("table_plan", list(cols = c(a$by, "variable"), rows = list(
+           group1 = "PARAM", group2 = "AVISIT"))),
+         tfl_item("plan_cells", list(continuous = as.list(a$cells))),
+         # the arm and its N over its two columns (the N is the arm's, not
+         # a value's or a change's)
+         tfl_item("plan_col_header", list(header = list(
+           list(line = "1", cols = ".values", span = a$by, text = "{col1}
+(N={n})"),
+           list(line = "2", cols = ".values", span = "each", text = "{col}")))))
+  }
+  content <- c(plan, list(
+    tfl_item("plan_labels", list(variable = list(AVAL = a$value_label,
+                                                 CHG = a$change_label))),
+    tfl_item("plan_paginate_rows", list(max_rows = 30L, split = "group_safe"))))
+  list(ard = list(analysis_data = sets, analyses = analyses),
+       data = list(source = "ard", object = "ard"), content = content)
+}
+
+.tfl_template("param_change", kind = "table", layout = "summary",
+              params = .tpl_pc_params, body = .tpl_pc_body)
+
+#' Parameters' value and change: a table plan from the template `param_change`
+#'
+#' Laboratory tests, vital signs or ECG parameters at each visit: n, mean
+#' (SD), median and min, max of the value (`AVAL`) and of its change from
+#' baseline (`CHG`), a block a parameter (`PARAM`, its heading with its
+#' unit) and a visit (`AVISIT`).  The parameters and visits are in the
+#' order of `PARAMN` and `AVISITN`.  The change is read from the records
+#' that have one: the baseline visit's change cells stay empty.
+#'
+#' `layout = "cols"` puts each arm's value and change side by side;
+#' `"rows"` puts the change's rows under the value's, in one column an arm.
+#'
+#' @inheritParams tpl_demog
+#' @param ... The template's other parameters: `data` (required), `params`,
+#'   `visits`, `where`, `by`, `layout`, `param_order`, `visit_order`,
+#'   `value_label`, `change_label`, `cells` ...
+#' @return A [rtfreporter::table_plan()].
+#' @export
+tpl_param_change <- function(ard, population, ..., codelists = NULL) {
+  .tpl_object("param_change", ard, c(list(population = population), list(...)),
+              codelists = codelists)
+}
+
 # ---- orr: best overall response and the objective response rate (95% CI) --------
 
 .tfl_template("orr", kind = "table", layout = "summary",
