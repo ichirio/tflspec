@@ -20,13 +20,76 @@
 #'   (`"plan_cells.continuous"`): the value of the study's defaults (and
 #'   pattern) item, when the report's template SPEC does not give it.
 #'   `NULL`: the template's own default only.
+#' @param type What its value is, for an input form: `"vars"` (variable
+#'   names), `"levels"` (values of a variable), `"flag"` (`TRUE` /
+#'   `FALSE`), `"number"`, `"text"` (also an R condition, an id, a label),
+#'   `"choice"` (one of `choices`) or `"list"` (a named vector or a list
+#'   of records, their `fields`).  `NULL`: tflspec's type for the name
+#'   (`by` is `"vars"`, `where` `"text"` ...), else one read from the
+#'   default.
+#' @param multiple `TRUE` when it takes several values (`hierarchy`),
+#'   `FALSE` one (`by`); `NULL`: as `type`.
+#' @param choices For `type = "choice"`: the values it may take.
+#' @param fields For `type = "list"`: a record's fields, `c("vars",
+#'   "label", "width")`; a named vector's are `c("name", "text")`.
 #' @return A `tfl_param`.
 #' @examples
 #' tfl_param("population", "SAF", doc = "the analysis set's id")
+#' tfl_param("layout", "cols", type = "choice", choices = c("cols", "rows"))
 #' @export
-tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study = NULL) {
+tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study = NULL,
+                      type = NULL, multiple = NULL, choices = NULL, fields = NULL) {
+  if (!is.null(type)) type <- match.arg(type, .tpl_param_types)
   structure(list(name = name, default = default, required = isTRUE(required),
-                 doc = doc, study = study), class = "tfl_param")
+                 doc = doc, study = study, type = type, multiple = multiple,
+                 choices = choices, fields = fields), class = "tfl_param")
+}
+
+.tpl_param_types <- c("vars", "levels", "flag", "number", "text", "choice", "list")
+
+# tflspec's parameters' types by name (a template's tfl_param(type = )
+# says it where a name means two things: `param`, `sort`)
+.tpl_param_kinds <- local({
+  k <- function(names, type, multiple = FALSE, ...) {
+    stats::setNames(rep(list(list(type = type, multiple = multiple, ...)), length(names)),
+                    names)
+  }
+  nv <- c("name", "text")
+  c(k(c("by", "baseline", "post", "term", "grade", "category", "censor", "group", "time",
+        "pop", "param_order", "visit_order"), "vars"),
+    k(c("categorical", "continuous", "variables", "hierarchy"), "vars", TRUE),
+    k(c("by_levels", "levels", "grade_levels", "responders", "params", "visits"),
+      "levels", TRUE),
+    k(c("visit", "sort_by"), "levels"),
+    k(c("stack", "drop_time_0"), "flag"),
+    k("min_pct", "number"),
+    k("layout", "choice", choices = c("cols", "rows")),
+    k("grade_in", "choice", choices = c("rows", "cols")),
+    k("min_pct_in", "choice", choices = c("any", "all", "total")),
+    k(c("population", "data", "where", "data_id", "data_label", "analysis_id",
+        "analysis_label", "overall", "any_grade", "cat_id", "cat_label", "ci_id", "ci_label",
+        "ci_method", "groupn_label", "median_label", "time_prefix", "time_unit", "unit",
+        "when", "visit_label", "param_label", "value_label", "change_label", "cell"), "text"),
+    k(c("heading", "statistics", "cat_statistics"), "text", TRUE),
+    k(c("cells", "labels", "param_labels"), "list", fields = nv),
+    k("flags", "list", TRUE, fields = c("id", "label", "where")),
+    k("columns", "list", TRUE, fields = c("vars", "label", "width", "collapse_repeats")))
+})
+
+# A parameter's type filled in: as declared, by its name, else from its
+# default (a company's template that says none)
+.tpl_param_typed <- function(p) {
+  by_name <- .tpl_param_kinds[[p$name]]
+  if (is.null(p$type) && !is.null(by_name)) {
+    for (f in names(by_name)) if (is.null(p[[f]])) p[f] <- list(by_name[[f]])
+  }
+  if (is.null(p$type)) {
+    d <- p$default
+    p$type <- if (is.logical(d)) "flag" else if (is.numeric(d)) "number" else
+      if (is.list(d)) "list" else "text"
+  }
+  if (is.null(p$multiple)) p$multiple <- identical(p$type, "list") || length(p$default) > 1L
+  p
 }
 
 # Register a template: its kind, layout, parameters and body.  The body is
@@ -34,6 +97,7 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
 # report's items, `content` a list of tfl_item().
 .tfl_template <- function(name, kind, layout, params, body, label = NULL, call = NULL,
                           package = "tflspec", example = NULL) {
+  params <- lapply(params, .tpl_param_typed)
   names(params) <- vapply(params, `[[`, "", "name")
   assign(name, list(name = name, kind = kind, layout = layout, params = params, body = body,
                     label = label, call = call %||% paste0("tpl_", name), package = package,
@@ -387,7 +451,7 @@ tfl_templates <- function() {
   tfl_param("analysis_label", NULL, doc = "the analysis's label"),
   tfl_param("overall", NULL, doc = "the any-record row's label; NULL: none"),
   tfl_param("sort", c(".overall", "group1", ".depth", "-n", "label"),
-            doc = "the rows' order (plan_sort())"),
+            type = "text", multiple = TRUE, doc = "the rows' order (plan_sort())"),
   tfl_param("heading", c("System Organ Class", "   Preferred Term"),
             doc = "the label column's heading, a line a level")
 )
@@ -581,7 +645,8 @@ tpl_ae_pt_freq <- function(ard, population, ..., codelists = NULL) {
   tfl_param("data_id", NULL, doc = "the analysis data's id; NULL: <data>_<population>"),
   tfl_param("overall", "Any TEAE", doc = "the any-record row's label"),
   tfl_param("any_grade", "Any grade", doc = "the label of a term's count at any grade"),
-  tfl_param("sort", "n", doc = "the SOCs and PTs by their count, most first (\"n\"), or by \"name\""),
+  tfl_param("sort", "n", type = "choice", choices = c("n", "name"),
+            doc = "the SOCs and PTs by their count, most first (\"n\"), or by \"name\""),
   tfl_param("heading", c("System Organ Class", "   Preferred Term"),
             doc = "the label column's heading, a line a level")
 )
@@ -692,7 +757,7 @@ tpl_ae_max_grade <- function(ard, population, ..., codelists = NULL) {
 # (no tpl_km_simple() yet: a figure's program is its items)
 .tfl_template("km_simple", kind = "figure", layout = "km", call = NA_character_,
   params = list(
-    tfl_param("param", required = TRUE, doc = "the PARAMCD of ADTTE"),
+    tfl_param("param", required = TRUE, type = "levels", doc = "the PARAMCD of ADTTE"),
     tfl_param("pop", NULL, doc = "the population flag (SAFFL)"),
     tfl_param("group", NULL, doc = "the curves' variable (TRT01A)"),
     tfl_param("time", NULL, doc = "the time variable; NULL: AVAL"),
@@ -731,7 +796,8 @@ tpl_disposition <- function(ard, population, ..., codelists = NULL) {
   tfl_param("where", NULL, doc = "the records kept (R): the visit, the parameters"),
   tfl_param("data_id", NULL, doc = "the analysis data's id; NULL: <data>_<population>"),
   tfl_param("analysis_id", "SHIFT", doc = "the analysis's id"),
-  tfl_param("param", "PARAMCD", doc = "the parameter's variable (a block of rows each)"),
+  tfl_param("param", "PARAMCD", type = "vars",
+            doc = "the parameter's variable (a block of rows each)"),
   tfl_param("baseline", "BNRIND", doc = "the category at baseline (the rows)"),
   tfl_param("post", "ANRIND", doc = "the category after it (the columns under each arm)"),
   tfl_param("levels", c("LOW", "NORMAL", "HIGH"), doc = "the categories, in order"),
@@ -824,7 +890,7 @@ tpl_lab_shift <- function(ard, population, ..., codelists = NULL) {
               doc = paste("the columns, in order: each a list of vars (one or more),",
                           "label, width and collapse_repeats")),
     tfl_param("where", NULL, doc = "the records kept (R)"),
-    tfl_param("sort", NULL, doc = "the records' order (variables)")
+    tfl_param("sort", NULL, type = "vars", multiple = TRUE, doc = "the records' order (variables)")
   ),
   body = function(a, ctx) {
     # a column's width is part of its definition (each column its own), the
@@ -940,7 +1006,7 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
 .tfl_template("vs_change", kind = "table", layout = "summary",
   params = list(
     tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
-    tfl_param("param", required = TRUE, doc = "the PARAMCD (SYSBP)"),
+    tfl_param("param", required = TRUE, type = "levels", doc = "the PARAMCD (SYSBP)"),
     tfl_param("visit", required = TRUE, doc = "the AVISIT (CYCLE 9 DAY 1)"),
     tfl_param("param_label", required = TRUE, doc = "the parameter in words"),
     tfl_param("when", required = TRUE, doc = "the visit in words, short (week 24)"),
@@ -993,7 +1059,7 @@ tpl_vs_change <- function(ard, population, ..., codelists = NULL) {
     tfl_param("by", "TRT01P", doc = "the column variable"),
     tfl_param("by_levels", NULL, doc = "its values in order; NULL: its code list's"),
     tfl_param("data", "ADRS", doc = "the response dataset"),
-    tfl_param("param", "BOR", doc = "the PARAMCD of the best overall response"),
+    tfl_param("param", "BOR", type = "levels", doc = "the PARAMCD of the best overall response"),
     tfl_param("category", "AVALC", doc = "the response category's variable"),
     tfl_param("responders", c("CR", "PR"), doc = "the categories that respond"),
     tfl_param("data_id", NULL, doc = "the analysis data's id; NULL: <data>_<param>"),
