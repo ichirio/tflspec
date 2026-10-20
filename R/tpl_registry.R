@@ -92,17 +92,13 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
 # its dataset's records (data.yml's definition: dataset, where), so any
 # where works, whatever the figure's data has
 .tpl_population_step <- function(id, populations) {
-  # a study that defines none (or no study): every record, said
-  if (!length(populations)) {
-    message(sprintf(paste0("template: no analysis sets defined (data.yml populations); ",
-                           "%s's every record is kept."), id))
-    return(list())
-  }
-  def <- Filter(function(p) identical(p$id, id), populations)
+  # as a table's analysis data: an analysis set the study does not
+  # define stops (no figure of the wrong subjects)
+  def <- Filter(function(p) identical(p$id, id), populations %||% list())
   if (!length(def)) {
-    .ard_stop(sprintf("template: no analysis set %s in the study's data.yml (populations: %s).",
-                      sQuote(id, FALSE),
-                      paste(vapply(populations %||% list(), `[[`, "", "id"), collapse = ", ")))
+    .ard_stop(sprintf("template: population %s is not in `populations` (data.yml: %s).",
+                      id, paste(vapply(populations %||% list(), `[[`, "", "id"),
+                                collapse = ", ")))
   }
   def <- def[[1L]]
   w <- def$where
