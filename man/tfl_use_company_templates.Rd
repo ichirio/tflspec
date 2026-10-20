@@ -28,10 +28,11 @@ The files written, invisibly.
 \description{
 A company's templates live in an R package of its own (decided
 2026-10-17).  This writes one to start from, every file meant to be
-read and changed: for each template chosen, a thin wrapper of tflspec's
-(the same parameters, the company's defaults where it changes them, the
-body tflspec's, so tflspec's fixes reach it) registered when the
-package is loaded, and the function its reports' programs call.
+read and changed: for each template chosen, one
+\code{\link[=tfl_template_variant]{tfl_template_variant()}} call -- tflspec's template with the company's
+defaults, so tflspec's fixes reach it -- registered when the package is
+loaded.  It exports nothing: a report's program calls tflspec's
+\verb{tpl_<template>()} with the company's defaults written out.
 }
 \details{
 The files: \code{DESCRIPTION}, \code{NAMESPACE}, \code{LICENSE}, \code{R/templates.R} (the

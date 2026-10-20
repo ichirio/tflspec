@@ -84,6 +84,88 @@ tfl_template <- function(name, kind = c("table", "figure", "listing"), layout, p
   invisible(name)
 }
 
+#' A template with other defaults
+#'
+#' A company's or a study's template is mostly its defaults: the variables
+#' of its demographics table, the severity's levels, the records kept.
+#' This registers one by them alone, no R body: `from`'s parameters, types
+#' and body, with `defaults` in place of `from`'s.  It is looked up as
+#' `from` is when it runs, so a fix to `from` reaches it.
+#'
+#' A report's YAML names it (`template: {name: demog_jp}`); its program
+#' (the A use, [tfl_content_code()]) calls `from`'s function with the
+#' variant's defaults written out, so the package that registers it
+#' exports nothing.  A value comes from, first to last: the report's
+#' arguments, the study's defaults (`tfl_param(study = )`), the variant's
+#' `defaults`, `from`'s.
+#'
+#' Register it where it is used: a company's package's `.onLoad()`
+#' ([tfl_use_company_templates()]), or a study's `spec/templates/*.R`.
+#'
+#' @param name The variant's name.  `from`'s own name replaces `from`
+#'   (with a message).
+#' @param from The template it is a variant of ([tfl_templates()]).
+#' @param defaults Its parameters' defaults, by name: `list(variables =
+#'   c("AGE", "SEX"))`.  Each is one of `from`'s parameters.
+#' @param label Its label; `NULL`: `from`'s.
+#' @return `name`, invisibly.
+#' @examples
+#' tfl_template_variant("demog_age_sex", from = "demog",
+#'                      defaults = list(continuous = "AGE", categorical = "SEX"))
+#' tfl_template_params("demog_age_sex")$categorical$default
+#' @export
+tfl_template_variant <- function(name, from, defaults = list(), label = NULL) {
+  fn <- "tfl_template_variant()"
+  if (!is.character(name) || length(name) != 1L || !grepl("^[A-Za-z][A-Za-z0-9_.]*$", name)) {
+    .ard_stop(sprintf("%s: `name` is one name of letters, digits, '_' and '.'.", fn))
+  }
+  src <- .tpl_get(from, fn)
+  if (!is.list(defaults) || (length(defaults) && is.null(names(defaults)))) {
+    .ard_stop(sprintf("%s: `defaults` is a named list, list(variables = ...).", fn))
+  }
+  unknown <- setdiff(names(defaults), names(src$params))
+  if (length(unknown)) {
+    .ard_stop(sprintf("%s: template %s has no parameter %s; its parameters: %s.", fn, from,
+                      paste(sQuote(unknown, FALSE), collapse = ", "),
+                      paste(names(src$params), collapse = ", ")))
+  }
+  # where it is registered: a package, or a study's spec/templates/ file
+  pkg <- getOption("tflspec.template_source") %||% environmentName(topenv(parent.frame()))
+  if (identical(pkg, "R_GlobalEnv")) pkg <- "(session)"
+  old <- get0(name, envir = .tpl_registry, inherits = FALSE)
+  if (!is.null(old)) {
+    message(sprintf("%s: %s's template %s replaces %s's.", fn, pkg, name,
+                    old$package %||% "tflspec"))
+  }
+  # replacing `from` itself: the variant reads the template it replaces
+  if (identical(name, from)) {
+    keep <- paste0(".base.", from)
+    assign(keep, old, envir = .tpl_registry)
+    from <- keep
+  }
+  assign(name, list(name = name, from = from, defaults = defaults, label = label,
+                    package = pkg), envir = .tpl_registry)
+  invisible(name)
+}
+
+# A variant as a template: `from`'s, as it is now, with the variant's
+# defaults (a default given makes a required parameter optional)
+.tpl_variant <- function(v) {
+  src <- .tpl_get(v$from, "tfl_template_variant()")
+  params <- src$params
+  for (k in names(v$defaults)) {
+    params[[k]]$default <- v$defaults[[k]]
+    if (!is.null(v$defaults[[k]])) params[[k]]$required <- FALSE
+  }
+  root <- src$root %||% src$name
+  list(name = v$name, kind = src$kind, layout = src$layout, params = params,
+       body = src$body, label = v$label %||% src$label, call = src$call,
+       package = v$package, example = src$example %||% .tpl_examples[[root]],
+       from = sub("^[.]base[.]", "", v$from), root = root,
+       # every default it changes, the ones of a variant it is made from too
+       defaults = utils::modifyList(src$defaults %||% list(), v$defaults, keep.null = TRUE))
+}
+
 #' A template's parameters
 #'
 #' The parameters of a registered template, to start a template of one's
@@ -278,10 +360,11 @@ tfl_test_templates <- function(names = NULL) {
 #'
 #' A company's templates live in an R package of its own (decided
 #' 2026-10-17).  This writes one to start from, every file meant to be
-#' read and changed: for each template chosen, a thin wrapper of tflspec's
-#' (the same parameters, the company's defaults where it changes them, the
-#' body tflspec's, so tflspec's fixes reach it) registered when the
-#' package is loaded, and the function its reports' programs call.
+#' read and changed: for each template chosen, one
+#' [tfl_template_variant()] call -- tflspec's template with the company's
+#' defaults, so tflspec's fixes reach it -- registered when the package is
+#' loaded.  It exports nothing: a report's program calls tflspec's
+#' `tpl_<template>()` with the company's defaults written out.
 #'
 #' The files: `DESCRIPTION`, `NAMESPACE`, `LICENSE`, `R/templates.R` (the
 #' templates), `R/zzz.R` (their registration), `tests/` (that each is
@@ -332,7 +415,7 @@ tfl_use_company_templates <- function(path, package = basename(path),
     paste0("Description: The report templates of ", package, ", on 'tflspec''s: each a"),
     "    template of 'tflspec' with the company's defaults, registered when the",
     "    package is loaded.  A report's YAML names one (template: {name, args});",
-    "    its program calls the function of the same name.",
+    "    its program calls the 'tflspec' template's function with them.",
     "License: file LICENSE",
     "Encoding: UTF-8",
     "Depends: R (>= 4.1.0)",
@@ -340,7 +423,8 @@ tfl_use_company_templates <- function(path, package = basename(path),
     "Suggests: testthat (>= 3.0.0)",
     "Config/testthat/edition: 3"))
   put("LICENSE", "Proprietary: for the company's own use.")
-  put("NAMESPACE", c("# the functions the reports' programs call", paste0("export(", nm, ")")))
+  put("NAMESPACE", c("# nothing exported: a report's program calls tflspec's tpl_*() with",
+                     "# the company's defaults written out"))
   tpl <- lapply(templates, .tpl_get, fn = fn)
   ex <- vapply(templates, function(t) {
     e <- .tpl_examples[[t]] %||% list()
@@ -349,63 +433,40 @@ tfl_use_company_templates <- function(path, package = basename(path),
   body <- c(
     paste0("# ", package, "'s report templates: tflspec's, with ", package, "'s defaults."),
     "#",
-    "# Each is a thin wrapper of a tflspec template: the same parameters",
-    "# (tfl_template_params()), a default changed where the company's differs,",
-    "# and tflspec's body -- so tflspec's fixes reach it.  Registered when the",
-    "# package is loaded (R/zzz.R).  A report's YAML names it:",
+    "# Each is a variant of a tflspec template (tflspec::tfl_template_variant()):",
+    "# its parameters, types and body, with the company's defaults -- so",
+    "# tflspec's fixes reach it.  Registered when the package is loaded",
+    "# (R/zzz.R).  A report's YAML names it:",
     "#   template: {name: <name>, args: {population: SAF}}",
-    "# and its program calls the function of that name.  The look (widths, the",
-    "# rows a page, digits) is no parameter: inst/standards/defaults.yml says it.",
-    "")
+    "# and its program calls tflspec's function with these defaults written out.",
+    "# The look (widths, the rows a page, digits) is no parameter:",
+    "# inst/standards/defaults.yml says it.",
+    "",
+    "register_templates <- function() {")
   for (i in seq_along(templates)) {
     t <- tpl[[i]]
-    n <- nm[i]
-    rule <- sprintf("# ---- %s: tflspec's %s (the %s layout) ", n, t$name, t$layout)
     # a default to change, as an example: the continuous rows when it has them
     hint <- if ("cells" %in% names(t$params)) {
-      "  #   p$cells$default <- list(n = \"{N:.0f}\", `Mean (SD)` = \"{mean:.1f} ({sd:.1f})\")"
+      "      # cells = list(n = \"{N:.0f}\", `Mean (SD)` = \"{mean:.1f} ({sd:.1f})\")"
     } else {
-      sprintf("  #   p$%s$default <- ...", setdiff(names(t$params), "population")[1L])
+      sprintf("      # %s = ...", setdiff(names(t$params), "population")[1L])
     }
     body <- c(body,
-      paste0(rule, strrep("-", max(3L, 78L - nchar(rule)))),
-      "",
-      sprintf("%s_params <- function() {", n),
-      sprintf("  p <- tflspec::tfl_template_params(\"%s\")", t$name),
-      "  # the company's defaults, e.g.:",
+      sprintf("  # %s: tflspec's %s (the %s layout; tflspec::tfl_template_params(\"%s\"))",
+              nm[i], t$name, t$layout, t$name),
+      sprintf("  tflspec::tfl_template_variant(\"%s\", from = \"%s\",", nm[i], t$name),
+      "    defaults = list(",
+      "      # the company's defaults, e.g.:",
       hint,
-      "  p",
-      "}",
-      "",
-      sprintf("%s_register <- function() {", n),
-      sprintf("  tflspec::tfl_template(\"%s\", kind = \"%s\", layout = \"%s\",", n, t$kind, t$layout),
-      sprintf("    params = %s_params(),", n),
-      sprintf("    example = %s,", ex[[i]]),
-      sprintf("    body = function(a, ctx) tflspec::tfl_template_expand(\"%s\", a,", t$name),
-      "      codelists = ctx$codelists, population = ctx$population),",
-      sprintf("    call = \"%s\")", n),
-      "}",
-      "",
-      sprintf("#' %s's %s (tflspec's %s)", package, n, t$name),
-      "#'",
-      sprintf("#' @param x The data: the report's rows of the study ARD%s.",
-              if (identical(t$kind, "listing")) " (a listing: the dataset)" else ""),
-      sprintf("#' @param ... The parameters: %s.", paste(names(t$params), collapse = ", ")),
-      "#' @param codelists The report's code lists.",
-      "#' @return The table plan.",
-      "#' @export",
-      sprintf("%s <- function(x, ..., codelists = NULL) {", n),
-      sprintf("  tflspec::tfl_template_run(\"%s\", x, ..., codelists = codelists)", n),
-      "}",
-      "")
+      "    ))")
   }
+  body <- c(body, "  invisible()", "}")
   put(file.path("R", "templates.R"), body)
   put(file.path("R", "zzz.R"), c(
     "# the templates, registered when the package is loaded (a name of",
     "# tflspec's is replaced, with a message)",
     ".onLoad <- function(libname, pkgname) {",
-    paste0("  ", nm, "_register()"),
-    "  invisible()",
+    "  register_templates()",
     "}"))
   put(file.path("tests", "testthat.R"), c(
     "library(testthat)", paste0("library(", package, ")"), "", paste0("test_check(\"", package, "\")")))
@@ -437,15 +498,16 @@ tfl_use_company_templates <- function(path, package = basename(path),
     "",
     paste0(package, "'s report templates, on [tflspec](https://ichirio.github.io/tflspec/)'s."),
     "",
-    "| Template | Wraps tflspec's | Kind |",
+    "| Template | A variant of tflspec's | Kind |",
     "|---|---|---|",
     sprintf("| `%s` | `%s` | %s |", nm, templates, vapply(tpl, `[[`, "", "kind")),
     "",
-    "- `R/templates.R`: the templates. Change a default in `<name>_params()`;",
+    "- `R/templates.R`: the templates. Change a default in its `defaults = list()`;",
     "  the look (widths, the rows a page, digits) is not a parameter -- it is",
     "  `inst/standards/defaults.yml`, the defaults a new study starts from.",
     "- A report's YAML names a template: `template: {name: <name>, args: {...}}`;",
-    paste0("  its program calls the function of that name, so it needs `library(", package, ")`."),
+    paste0("  its program calls tflspec's function with the defaults written out; the"),
+    paste0("  templates are registered by `library(", package, ")`."),
     paste0("- `devtools::test()`: each template is registered, takes no look as a"),
     "  parameter (`tflspec::tfl_test_templates()`) and expands.",
     "- Written by `tflspec::tfl_use_company_templates()`."))

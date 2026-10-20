@@ -1,5 +1,18 @@
 # tflspec (development version)
 
+* **`tfl_template_variant()`: a template by its defaults alone** (#388,
+  0.0.24.9183).  `tfl_template_variant("demog_jp", from = "demog",
+  defaults = list(...))` registers `from`'s parameters, types and body with
+  other defaults, no R body; it reads `from` as it is when it runs, so a
+  fix to it reaches the variant.  The same name replaces `from` (with a
+  message).  A value comes from the report's arguments, then the study's
+  defaults, the variant's, `from`'s.  A report's program calls `from`'s
+  `tpl_*()` with the variant's defaults written out, under `# template
+  <name>: a variant of <from> (<package> <version>)`.  `tfl_templates()`
+  has a `from` column.  A study's `spec/templates/*.R` is run when the
+  study is read (`tfl_read_study_spec()`), and `tfl_use_company_templates()`
+  writes one variant a template, its package exporting nothing.
+
 * **`tfl_param(type = )`: each template parameter's input type** (#387,
   0.0.24.9182).  `"vars"`, `"levels"`, `"flag"`, `"number"`, `"text"`,
   `"choice"` (with `choices`) or `"list"` (with `fields`), and `multiple`,
