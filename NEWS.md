@@ -1,5 +1,12 @@
 # tflspec (development version)
 
+* **`orr(stat_layout = "cols")`: each arm's rate and its CI side by side**
+  (0.0.24.9201), on the layout `stat_block`; the best overall response's
+  n (%) in the first of the two columns.  The arms' N is not in that
+  header yet (rtfreporter does not read it over split columns,
+  ichirio/rtfreporter#709).  The
+  default, `"rows"`, is the table as before.
+
 * **A study copied elsewhere checks its answers against its own files**
   (0.0.24.9200).  The requests' contexts (`ai/requests/_contexts.rds`)
   kept the study folder's path of the PC that wrote them, and an answer's
@@ -62,6 +69,7 @@
 * **`orr`: `conf_level`** (0.95): the rate's CI's level, and its row's
   label (`90% CI`).  The template is now tagged as the `stat_block`
   layout; with the defaults it writes the same table as before.
+
 
 * **The template `vs_change` and `tpl_vs_change()` are removed**
   (0.0.24.9194).  Its table is `param_change` with `baseline = TRUE` and

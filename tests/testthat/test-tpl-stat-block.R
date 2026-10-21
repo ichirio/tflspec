@@ -114,3 +114,37 @@ test_that("orr: conf_level, the CI's level and its row's label; 0.95 as before",
   expect_identical(names(Filter(function(i) identical(i$fn, "plan_cells"), y$content)[[1L]]$args$proportion_ci),
                    c("n (%)", "95% CI"))
 })
+
+test_that("orr(stat_layout = \"cols\"): each arm's rate and CI side by side, the BOR counts in the first", {
+  skip_on_cran()
+  sb_skip()
+  skip_if_not_installed("haven")
+  x <- tfl_template_expand("orr", list(stat_layout = "cols"))
+  fns <- vapply(x$content, `[[`, "", "fn")
+  expect_true("plan_stat_groups" %in% fns)
+  expect_identical(x$content[[match("plan_stat_groups", fns)]]$args$.others, "n (%)")
+  # in a study, its standard applied
+  d <- tempfile()
+  on.exit(unlink(d, recursive = TRUE))
+  dir.create(file.path(d, "adam"), recursive = TRUE)
+  for (v in c("adsl", "adrs")) {
+    haven::write_xpt(tflspec:::.ai_chr(getExportedValue("tflspec", v)),
+                     file.path(d, "adam", paste0(v, ".xpt")))
+  }
+  tfl_ai_study_init(d, adam = "adam", study_id = "SB-2")
+  o <- tfl_output("T-C", "table", population = "ITT", extends = "defaults",
+                  template = list(name = "orr", args = list(population = "ITT", stat_layout = "cols",
+                                                            conf_level = 0.9)))
+  f <- file.path(d, "spec", "outputs", "T-C.yml")
+  tfl_write_output(o, f)
+  st <- tfl_read_study_spec(d)
+  ard <- suppressMessages(tfl_build_ard(st, output_id = "T-C", dir = d, save = FALSE))
+  t <- sb_tab(suppressMessages(tfl_content_run(tfl_resolve_output(tfl_read_output(f), st), ard)))
+  expect_true(all(c("Drug X____n (%)", "Drug X____90% CI") %in% names(t)))
+  last <- nrow(t)
+  expect_identical(t[["Drug X____n (%)"]][last], "32 (39.0)")
+  expect_identical(t[["Drug X____90% CI"]][last], "[30.0, 48.7]")
+  # the counts by their own cell, no CI beside them
+  expect_identical(t[["Drug X____n (%)"]][1:(last - 1L)], c("2 (2.4)", "3 (3.7)", "7 (8.5)", "30 (36.6)", "40 (48.8)"))
+  expect_true(all(is.na(t[["Drug X____90% CI"]][1:(last - 1L)])))
+})
