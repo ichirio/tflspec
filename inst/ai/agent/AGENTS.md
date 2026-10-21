@@ -15,7 +15,11 @@ and `ai/`. If the workspace is a folder above it, use the paths from here.
    `ai/requests/index.md`: the requests, in order.
 2. For each request `ai/requests/<request>.md`, in that order:
    1. Read it, and write the answer it asks for: one ```` ```yaml ```` block
-      (the header, `outputs`, `assumptions`).
+      (the header, `outputs`, `assumptions`). A request names the files it
+      shares with the others -- `ai/instructions-table.md` or
+      `ai/instructions-figure.md` (the instructions and the schema),
+      `ai/adam_summary.md`, `spec/data.yml`, `spec/defaults.yml` -- read each
+      once and follow it for every request.
    2. Save the whole answer as `ai/answers/<request>.md` (UTF-8).
    3. Run `Rscript run.R` in a terminal (from this folder, or
       `Rscript <this folder>/run.R`: it finds its folder). It reads every

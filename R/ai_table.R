@@ -14,7 +14,7 @@
 
 # The report file's keys an answer may write, in the order written.
 .ai_table_keys <- c("id", "kind", "label", "population", "extends", "ard", "data",
-                    "codelists", "content", "page")
+                    "codelists", "content", "page", "template")
 
 # The functions a table's content may call: the table's stage of the schema
 # (rtfreporter's plan verbs and normalize_ard), in their rank.
@@ -143,24 +143,32 @@
   } else {
     out <- c(out, "Every table of the TOC and shells.", "")
   }
+  # an agent's request: the files it reads, once, not their text
+  files <- isTRUE(ctx$ai_files)
+  yml <- function(x) if (files) character() else c("", "```yaml", x, "```")
   if (!is.null(ctx$data_yml) || !is.null(ctx$defaults_yml)) {
-    out <- c(out, "## The study's files, already written", "")
+    out <- c(out, if (files) "## The study's files, already written: read them" else
+                    "## The study's files, already written", "")
     if (!is.null(ctx$data_yml)) {
       out <- c(out, paste("`spec/data.yml`: the datasets and the analysis sets. Name an",
                           "analysis set by its `id`", if (length(ctx$populations))
                             sprintf("(%s)", paste(ctx$populations, collapse = ", ")),
                           "in `population`; write no other."),
-               "", "```yaml", ctx$data_yml, "```", "")
+               yml(ctx$data_yml), "")
     }
     if (!is.null(ctx$defaults_yml)) {
       out <- c(out, paste("`spec/defaults.yml`: what every report starts from",
                           "(`extends: [defaults]`). Do not repeat what it gives; an item",
                           "of the same function in a report replaces it (`plan_cells`,",
                           "`plan_labels`, `plan_levels`, `plan_digits`: merged by key)."),
-               "", "```yaml", ctx$defaults_yml, "```", "")
+               yml(ctx$defaults_yml), "")
     }
   }
-  if (!is.null(ctx$datasets)) {
+  if (!is.null(ctx$datasets) && files) {
+    out <- c(out, "## The ADaM datasets", "",
+             paste("`ai/adam_summary.md`: name only its datasets, variables and values",
+                   "(a value as the data write it)."), "")
+  } else if (!is.null(ctx$datasets)) {
     out <- c(out, "## The ADaM datasets", "",
              paste("Name only these datasets, variables and values (a value as the",
                    "data write it). No record is shown."), "",
@@ -407,11 +415,42 @@
     }
   }
   vars <- context$datasets
+  st <- NULL
+  bad <- character()
   for (i in seq_along(outs)) {
-    p <- rbind(p, .ai_check_table_output(outs[[i]], sprintf("outputs[%d] %s", i, names(outs)[i]),
-                                         context, vars))
+    at <- sprintf("outputs[%d] %s", i, names(outs)[i])
+    o <- outs[[i]]
+    # a template: its name and arguments; then what it stands for (its
+    # items, the report's own after them) checked as a code SPEC
+    tp <- .ai_answer_template(o)
+    if (!is.null(tp)) {
+      tpp <- .ai_check_template(tp, at, kinds = c("table", "listing"))
+      p <- rbind(p, tpp)
+      if (any(tpp$severity == "error")) {
+        bad <- c(bad, names(outs)[i])
+        next
+      }
+      if (!is.null(o$ard)) {
+        bad <- c(bad, names(outs)[i])
+        p <- .ai_problem(p, paste(at, "ard"), paste(
+          "a report has `template` or `ard`, not both: the template makes the analyses"))
+        next
+      }
+      if (is.null(st) && !is.null(context$study_dir)) {
+        st <- tryCatch(tfl_read_study_spec(context$study_dir), error = function(e) NULL)
+      }
+      o <- tryCatch(.ai_template_items(o, st), error = function(e) e)
+      if (inherits(o, "error")) {
+        bad <- c(bad, names(outs)[i])
+        p <- .ai_problem(p, paste(at, "template"), paste("could not be expanded:",
+                                                         .ai_one_line(conditionMessage(o))))
+        next
+      }
+    }
+    p <- rbind(p, .ai_check_table_output(o, at, context, vars))
   }
-  rbind(p, .ai_check_table_run(outs, context))
+  # (a report whose template is wrong: its run would say it again)
+  rbind(p, .ai_check_table_run(outs[setdiff(names(outs), bad)], context))
 }
 
 .ai_check_table_output <- function(o, at, context, vars) {

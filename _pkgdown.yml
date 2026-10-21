@@ -416,6 +416,7 @@ reference:
       - tfl_ai_save_answer
       - tfl_ai_requests
       - tfl_ai_run
+      - tfl_ai_compare
       - tfl_ai_questions
       - tfl_ai_study_init
       - tfl_ai_tasks
