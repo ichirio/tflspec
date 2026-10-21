@@ -25,7 +25,8 @@ tfl_ai_prepare(
   quiet = FALSE,
   mode = c("chat", "agent"),
   shells = NULL,
-  add = FALSE
+  add = FALSE,
+  templates = TRUE
 )
 }
 \arguments{
@@ -82,6 +83,14 @@ end, and the workbook's text is \verb{ai/toc_shell-<workbook>.md}.  With
 \code{add}, \code{overwrite} is about the requests alone: the study's
 \code{study.yml}, \code{spec/data.yml}, \code{spec/defaults.yml} and the agent's
 files are kept as they are.}
+
+\item{templates}{\code{TRUE} (default): the AI answers a report with one of the
+study's templates where it fits (\verb{template: \{name, args\}}, and the
+report's own content items for what it does not cover), else as a code
+SPEC; the requests (and \code{AGENTS.md}) list the templates registered now
+-- tflspec's, a company's, the study's variants.  \code{FALSE}: the code
+SPEC only, the requests as they were before templates.  The setting is
+each request's first line (\code{templates: TRUE}) and \code{ai/status.md}'s.}
 }
 \value{
 A \code{tfl_ai_prepared}: a list with \code{requests} (one row a request:
@@ -113,7 +122,12 @@ has none) and \code{\link[=tfl_ai_write_requests]{tfl_ai_write_requests()}}.  No
  \code{mode = "agent"}:
 The requests for an agent (GitHub Copilot's agent in VS Code, and the
 like) that works through all of them without stopping.  Besides the
-requests (each starting with the agent's steps), the study folder gets
+requests (each starting with the agent's steps), and what every request
+would repeat written once for the agent to read -- \code{ai/instructions-table.md}
+and \code{ai/instructions-figure.md} (the instructions and the schema),
+\code{ai/templates.md} (with \code{templates = TRUE}: every template, each request
+naming the ones likely for its reports), \code{ai/adam_summary.md} and
+\verb{spec/}, each request naming them -- the study folder gets
 \code{AGENTS.md} and \code{.github/copilot-instructions.md} (the same
 instructions: answer each request into \verb{ai/answers/}, run \code{run.R}, read
 \code{ai/status.md}, repair; a question it cannot settle taken as an

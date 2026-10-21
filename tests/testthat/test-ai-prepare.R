@@ -90,7 +90,7 @@ test_that("tfl_ai_prepare(): a list for a screen; dry_run writes nothing; the AD
   dry <- suppressMessages(tfl_ai_prepare(d, book(), study_id = "XYZ-ONC-01", dry_run = TRUE))
   expect_s3_class(dry, "tfl_ai_prepared")
   expect_named(dry, c("requests", "toc", "sheets", "adam", "files", "hint", "next_steps",
-                      "dry_run", "mode", "agent_prompt", "workbook"))
+                      "dry_run", "mode", "agent_prompt", "templates", "workbook"))
   expect_true(is.na(dry$agent_prompt))
   expect_false(file.exists(file.path(d, "study.yml")))
   expect_false(dir.exists(file.path(d, "ai")))
@@ -129,7 +129,7 @@ test_that("tfl_ai_save_answer() and tfl_ai_collect_answers(): the files, the rep
   expect_error(tfl_ai_save_answer(d, one, ""), "not empty")
   res <- suppressMessages(tfl_ai_collect_answers(d))
   expect_s3_class(res, "tfl_ai_collected")
-  expect_named(res, c("reports", "next_steps", "assumptions", "stray", "requests"))
+  expect_named(res, c("reports", "next_steps", "assumptions", "stray", "requests", "templates"))
   rp <- res$reports
   expect_true(all(c("problems_text", "file", "repair") %in% names(rp)))
   done <- rp$request == one
