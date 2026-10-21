@@ -1,5 +1,11 @@
 # tflspec (development version)
 
+* **`orr(stat_layout = "cols")`: each arm's rate and its CI side by side**
+  (0.0.24.9197), on the layout `stat_block`; the best overall response's
+  n (%) in the first of the two columns.  The arms' N is not in that
+  header yet (rtfreporter does not read it over split columns).  The
+  default, `"rows"`, is the table as before.
+
 * **The layout template `stat_block`: one record's statistics over several
   rows and columns** (0.0.24.9195).  Each arm's block holds one analysis
   record's statistics -- its N in one column, its rate and interval in the

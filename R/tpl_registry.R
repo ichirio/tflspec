@@ -1408,7 +1408,7 @@ tpl_param_change <- function(ard, population, ..., codelists = NULL) {
 # group the other variables' records go to whole (a display template's
 # own rows), `rows_key` the row keys before the groups (direction rows)
 .tpl_stat_block_body <- function(a, ctx = NULL, others = NULL, rows_key = NULL,
-                                 header = TRUE) {
+                                 header = TRUE, levels = FALSE) {
   cells <- .tpl_cells_list(a$cells)
   dir <- match.arg(a$direction %||% "cols", c("cols", "rows"))
   rows <- a$rows
@@ -1419,7 +1419,9 @@ tpl_param_change <- function(ard, population, ..., codelists = NULL) {
   keys <- c(rows_key %||% list(group = "variable"),
             if (length(rows)) stats::setNames(as.list(rows), rows))
   plan <- if (dir == "cols") {
-    list(cols = c(a$by, ".stat_group"), rows = keys, label = NA)
+    # (`levels`: a display template's own rows -- BOR's categories -- keep
+    # their label column)
+    c(list(cols = c(a$by, ".stat_group"), rows = keys), if (!levels) list(label = NA))
   } else {
     list(cols = a$by, rows = c(keys, list(stat = ".stat_group")), label = NA)
   }
@@ -1503,6 +1505,9 @@ tpl_stat_block <- function(ard, ..., codelists = NULL) {
     tfl_param("data_id", NULL, doc = "the analysis data's id; NULL: <data>_<param>"),
     tfl_param("ci_method", "clopper-pearson", doc = "the rate's CI (cardx's method)"),
     tfl_param("conf_level", 0.95, doc = "the rate's CI's level"),
+    tfl_param("stat_layout", "rows", type = "choice", choices = c("rows", "cols"), doc = paste(
+      "the rate and its CI: \"rows\", under each other in the arm's column, or \"cols\",",
+      "each arm's two columns (stat_block)")),
     tfl_param("heading", "Response", doc = "the label column's heading")
   ),
   body = function(a, ctx) {
@@ -1531,6 +1536,25 @@ tpl_stat_block <- function(ard, ..., codelists = NULL) {
     labels_item <- tfl_item("plan_labels", list(variable = stats::setNames(
       list("Best overall response, n (%)", sprintf("Objective response rate (%s)", resp)),
       c(a$category, "RESP"))))
+    if (identical(match.arg(a$stat_layout %||% "rows", c("rows", "cols")), "cols")) {
+      # each arm's two columns, the rate and its CI (stat_block); the best
+      # overall response's n (%) in the first, by its own (categorical) cell
+      blk <- Filter(Negate(is.null), .tpl_stat_block_body(list(
+        by = a$by, variable = "RESP", label = a$heading,
+        cells = stats::setNames(list("{n} ({estimate:.1f%})", "[{conf.low:.1f%}, {conf.high:.1f%}]"),
+                                c("n (%)", ci_lab))), ctx, others = "n (%)", header = FALSE, levels = TRUE))
+      fn <- vapply(blk, `[[`, "", "fn")
+      blk[[match("plan_cells", fn)]]$args$categorical <- "{n} ({p:.1f%})"
+      # (the rate's row: its block's heading says it, its level is no label;
+      # the arms' N is not read in the header of split columns yet)
+      content <- c(blk, list(levels_item, labels_item,
+        tfl_item("plan_labels", list(RESP = c("TRUE" = ""))),
+        tfl_item("plan_col_header", list(header = list(
+          list(line = "1", cols = ".values", span = a$by, text = "{col1}"),
+          list(line = "2", cols = "row_label", text = a$heading),
+          list(line = "2", cols = ".values", span = "each", text = "{col}"))))))
+      return(list(ard = ard, data = list(source = "ard"), content = content))
+    }
     content <- list(
       tfl_item("table_plan", list(cols = a$by, rows = list(group = "variable"))),
       tfl_item("plan_cells", list(proportion_ci = stats::setNames(list(
@@ -1552,7 +1576,10 @@ tpl_stat_block <- function(ard, ..., codelists = NULL) {
 #' @inheritParams tpl_demog
 #' @param ... The template's other parameters: `by`, `by_levels`, `data`,
 #'   `param`, `category`, `responders`, `ci_method`, `conf_level` (0.95,
-#'   the CI's level and its row's label), `heading`.
+#'   the CI's level and its row's label), `stat_layout`, `heading`.
+#'   `stat_layout = "rows"` (the default) puts the rate and its CI under
+#'   each other in the arm's column; `"cols"` gives each arm two columns,
+#'   the rate and the CI (the layout [tpl_stat_block()]).
 #' @return A [rtfreporter::table_plan()].
 #' @export
 tpl_orr <- function(ard, population = "ITT", ..., codelists = NULL) {

@@ -14,7 +14,10 @@ report.}
 
 \item{...}{The template's other parameters: \code{by}, \code{by_levels}, \code{data},
 \code{param}, \code{category}, \code{responders}, \code{ci_method}, \code{conf_level} (0.95,
-the CI's level and its row's label), \code{heading}.}
+the CI's level and its row's label), \code{stat_layout}, \code{heading}.
+\code{stat_layout = "rows"} (the default) puts the rate and its CI under
+each other in the arm's column; \code{"cols"} gives each arm two columns,
+the rate and the CI (the layout \code{\link[=tpl_stat_block]{tpl_stat_block()}}).}
 
 \item{codelists}{The report's code lists, for the order and labels of
 values; \code{NULL} takes the ARD's.}
