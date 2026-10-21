@@ -69,10 +69,9 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
   }
   nv <- c("name", "text")
   c(k(c("by", "baseline", "post", "term", "grade", "category", "censor", "group", "time",
-        "pop", "param_order", "visit_order", "exposure", "response", "value", "visit_var",
-        "variable"), "vars"),
-    k(c("categorical", "continuous", "variables", "hierarchy", "covariates", "subgroups",
-        "rows"), "vars", TRUE),
+        "pop", "param_order", "visit_order", "exposure", "response", "value", "visit_var"), "vars"),
+    k(c("categorical", "continuous", "variables", "hierarchy", "covariates", "subgroups"),
+      "vars", TRUE),
     k("comparison", "levels", of = "group"),
     k("by_levels", "levels", TRUE, of = "by"),
     k("levels", "levels", TRUE, of = "post"),
@@ -93,8 +92,7 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
     k(c("data", "data_id", "data_label", "analysis_id",
         "analysis_label", "overall", "any_grade", "cat_id", "cat_label", "ci_id", "ci_label",
         "ci_method", "groupn_label", "median_label", "time_prefix", "time_unit", "unit",
-        "when", "visit_label", "param_label", "baseline_label", "value_label", "change_label", "cell", "start",
-        "label"),
+        "when", "visit_label", "param_label", "baseline_label", "value_label", "change_label", "cell", "start"),
       "text"),
     k(c("heading", "statistics", "cat_statistics"), "text", TRUE),
     # a variable's heading each: given by name, merged with the default's
@@ -1453,13 +1451,15 @@ tpl_param_change <- function(ard, population, ..., codelists = NULL) {
   params = list(
     tfl_param("by", "TRT01A", doc = "the column key (the arms)"),
     tfl_param("by_levels", NULL, doc = "its values in order; NULL: its code list's"),
-    tfl_param("variable", required = TRUE, doc = "the analysis variable whose record is split (RESP)"),
-    tfl_param("rows", NULL, doc = "the row keys (subgroup, subgroup_level); NULL: one row of blocks"),
+    tfl_param("variable", required = TRUE, type = "vars",
+              doc = "the analysis variable whose record is split (RESP)"),
+    tfl_param("rows", NULL, type = "vars", multiple = TRUE,
+              doc = "the row keys (subgroup, subgroup_level); NULL: one row of blocks"),
     tfl_param("cells", required = TRUE, doc = paste(
       "the block's grid: heading = template, one element a column (or a row), a vector",
       "its lines (N: \"{N}\", ORR(%) 90%CI: [\"{n} ({estimate:.1f%})\", \"{conf.low:.1f%}, {conf.high:.1f%}\"])")),
     tfl_param("direction", "cols", doc = "the cells' elements as columns or rows"),
-    tfl_param("label", NULL, doc = "the row label column's heading")
+    tfl_param("label", NULL, type = "text", doc = "the row label column's heading")
   ),
   body = function(a, ctx) {
     list(data = list(source = "ard"), content = Filter(Negate(is.null), .tpl_stat_block_body(a, ctx)))

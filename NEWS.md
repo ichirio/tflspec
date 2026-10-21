@@ -8,8 +8,8 @@
   (`"rows"`), a vector its lines (`cells = list(N = "{N}", "ORR(%) 90%CI" =
   c("{n} ({estimate:.1f%})", "{conf.low:.1f%}, {conf.high:.1f%}"))`; in
   YAML, records `{label, template}`).  The statistics each group shows are
-  read from its templates; the ARD is the report's own.  `tpl_stat_block()`
-  is the call.  Needs rtfreporter 0.8.2.9086 (a split record takes its
+  read from its templates; the ARD is the report's own (so, as `km_table`,
+  it takes no `subset` or `where`).  `tpl_stat_block()` is the call.  Needs rtfreporter 0.8.2.9086 (a split record takes its
   group's template, whatever the study's `categorical`).
 * **`orr`: `conf_level`** (0.95): the rate's CI's level, and its row's
   label (`90% CI`).  The template is now tagged as the `stat_block`
