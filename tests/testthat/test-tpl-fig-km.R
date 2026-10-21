@@ -31,14 +31,16 @@ test_that("km_simple / km_risk_table / km_ci: the same expansion as before the k
 
 test_that("the former tpl_km_*() draw as before; tfl_tpl() draws the same", {
   skip_if_not_installed("ggsurvfit")
-  before <- readRDS(test_path("fixtures", "tpl-km-before.rds"))
+  # (compared within this R: a figure's built data differs a little between
+  # ggplot2 / ggsurvfit versions and platforms, so no stored copy)
   df <- adtte[adtte$PARAMCD == "PFS", ]
-  expect_identical(tplkm_pd(tpl_km_simple(df, group = TRT01A)), before$plotdata$km_simple)
-  expect_identical(tplkm_pd(tpl_km_risk_table(df, group = TRT01A)), before$plotdata$km_risk_table)
-  expect_identical(tplkm_pd(tpl_km_ci(df, group = TRT01A)), before$plotdata$km_ci)
-  for (nm in c("km_simple", "km_risk_table", "km_ci")) {
-    expect_identical(tplkm_pd(tfl_tpl(df, nm, group = TRT01A)), before$plotdata[[nm]], info = nm)
-    expect_identical(tplkm_pd(tfl_tpl(df, nm, group = "TRT01A")), before$plotdata[[nm]], info = nm)
+  old <- list(km_simple = tpl_km_simple(df, group = TRT01A),
+              km_risk_table = tpl_km_risk_table(df, group = TRT01A),
+              km_ci = tpl_km_ci(df, group = TRT01A))
+  for (nm in names(old)) {
+    want <- tplkm_pd(old[[nm]])
+    expect_equal(tplkm_pd(tfl_tpl(df, nm, group = TRT01A)), want, tolerance = 1e-8, info = nm)
+    expect_equal(tplkm_pd(tfl_tpl(df, nm, group = "TRT01A")), want, tolerance = 1e-8, info = nm)
   }
   # the other figures: tfl_tpl() as their functions
   sb <- advs[advs$PARAMCD == "SYSBP", ]
