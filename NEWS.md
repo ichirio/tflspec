@@ -1,5 +1,9 @@
 # tflspec (development version)
 
+* **`orr(stat_layout = "cols")`: each arm's N over its two columns**
+  (0.0.24.9207), as the default layout has it under the arm: rtfreporter
+  (>= 0.8.2.9090) reads it over split columns (ichirio/rtfreporter#709).
+
 * **The figure templates are called as the tables': `tfl_tpl(<data>,
   "<name>", ...)`** (0.0.24.9204, #430), and a report's program calls it:
   `content <- tfl_tpl(adtte_ttdisc, "km_disc", group = TRT01A)`.  The

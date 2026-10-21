@@ -147,4 +147,14 @@ test_that("orr(stat_layout = \"cols\"): each arm's rate and CI side by side, the
   # the counts by their own cell, no CI beside them
   expect_identical(t[["Drug X____n (%)"]][1:(last - 1L)], c("2 (2.4)", "3 (3.7)", "7 (8.5)", "30 (36.6)", "40 (48.8)"))
   expect_true(all(is.na(t[["Drug X____90% CI"]][1:(last - 1L)])))
+  # the arm's N over its two columns (rtfreporter#709)
+  p <- suppressMessages(tfl_content_run(tfl_resolve_output(tfl_read_output(f), st), ard))
+  g <- tempfile(fileext = ".rtf")
+  on.exit(unlink(g), add = TRUE)
+  expect_no_warning(suppressMessages(rtfreporter::generate_rtfreport(
+    rtfreporter::rtf_tables(rtfreporter::rtf_document(), p), g, overwrite = TRUE)))
+  txt <- paste(readLines(g, warn = FALSE), collapse = " ")
+  n <- sum(adsl$ITTFL == "Y" & adsl$TRT01P == "Drug X")
+  expect_true(grepl(sprintf("Drug X (N=%d)", n), txt, fixed = TRUE))
+  expect_false(grepl("N=NA", txt, fixed = TRUE))
 })
