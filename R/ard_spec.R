@@ -820,6 +820,19 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 #' and `population` (in `local()` only when it needs a scope of its own: it
 #' defines a function, or assigns a name the program has).
 #'
+#' The data comes in three stages: the denominator (ADSL filtered to the
+#' analysis set), the target subjects (the records joined to it), the target
+#' records (the report's `where`, a `filter()` after the join).  The join is
+#' `inner_join()` when the records take ADSL columns -- the `add` columns, and
+#' the by / strata of the analyses that have a denominator (their own or
+#' their method's: the denominator counts by them) -- the ADSL value
+#' replacing the record's, else `semi_join()`.  In ADaM, columns copied from
+#' ADSL should hold the same values, so they are aligned to the
+#' denominator's ADSL values.  A column the population's
+#' `derive` makes is not taken: a record's TRTA or APERIOD is its own (a
+#' crossover's differs by record).  The analyses reading the same data share
+#' one object, which takes the union of the ADSL columns they need.
+#'
 #' The formats (the method's and the row's `formats`, over each statistic's
 #' default in [tfl_ard_statistics()]) are in the cards call itself, its
 #' `fmt_fun` argument, where a reader sees them next to the statistics:

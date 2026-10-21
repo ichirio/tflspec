@@ -45,9 +45,9 @@ test_that("the analysis data is made once, in order, for what a report reads", {
   # (the population's columns replace one of the same name)
   at <- match(c("adsl_saf <- pop_saf",
                 paste0("adae_teae <- adae |>\n",
-                       "  filter(USUBJID %in% pop_saf$USUBJID, TRTEMFL == \"Y\") |>\n",
                        "  select(-any_of(c(\"TRT01A\", \"AGEGR1\"))) |>\n",
-                       "  left_join(select(pop_saf, USUBJID, TRT01A, AGEGR1), by = \"USUBJID\")"),
+                       "  inner_join(select(pop_saf, USUBJID, TRT01A, AGEGR1), by = \"USUBJID\") |>\n",
+                       "  filter(TRTEMFL == \"Y\")"),
                 "adae_ser <- adae_teae |>\n  filter(AESER == \"Y\") |>\n  mutate(SER = 1)",
                 "adae_subj <- distinct(adae_teae, USUBJID, .keep_all = TRUE)"), code)
   expect_false(anyNA(at))
@@ -174,12 +174,13 @@ test_that("a report's own subjects, the columns kept, factors of derived columns
   cl <- ad_df(output_id = c("T1", "T1", "T1"), variable = c("SEX", "OLD", "OLD"),
               value = c("F", "75+", "65-74"), order = c(1, 1, 2))
   code <- tfl_ard_code(x, output_id = "T1", save = FALSE, part = "body", codelists = cl)
-  # the numerator kept to the denominator's subjects; add from that data
+  # the numerator joined to the denominator's subjects (their columns), then
+  # its records
   expect_true(any(code == paste0(
     "adae_old <- adae |>\n",
-    "  filter(USUBJID %in% adsl_old$USUBJID, TRTEMFL == \"Y\") |>\n",
     "  select(-any_of(\"TRT01A\")) |>\n",
-    "  left_join(select(adsl_old, USUBJID, TRT01A), by = \"USUBJID\") |>\n",
+    "  inner_join(select(adsl_old, USUBJID, TRT01A), by = \"USUBJID\") |>\n",
+    "  filter(TRTEMFL == \"Y\") |>\n",
     "  select(USUBJID, TRT01A, AEBODSYS, AEDECOD) |>\n",
     "  set_levels(OLD = cl_old)")))
   # the derived column a factor: the report's own code list rows count

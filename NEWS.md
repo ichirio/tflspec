@@ -1,5 +1,23 @@
 # tflspec (development version)
 
+* **Generated ARD programs in three stages: the denominator, the target
+  subjects, the target records** (0.0.24.9192).  A records dataset is
+  joined to its subjects: `inner_join()` when it takes ADSL columns (an
+  explicit `add`, and the `by` / `strata` of analyses with a denominator;
+  never record-level columns the population's derive makes, such as
+  `TRTA`), the records' own columns of those names dropped first;
+  `semi_join()` otherwise.  The report's `where` is its own `filter()`
+  after the join, and a dataset as a denominator is a `semi_join()` too.
+  Analyses on the same dataset, analysis set and `where` share one object,
+  with the union of the ADSL columns they need.  See `tfl_ard_code()`'s
+  details.
+
+* **Generated code pipes with `|>`** (0.0.24.9192).  The report
+  programs' pipe was RStudio's Insert Pipe Operator setting, and `%>%`
+  outside RStudio, while the ARD programs wrote `|>`; now every program
+  writes `|>` unless asked (`pipe = "%>%"` / `"rstudio"`, or the option
+  `rtfreporter.ard_pipe`).
+
 * **The AI flow with templates: `tfl_ai_prepare(templates = TRUE)`**
   (0.0.24.9191).  The requests ask the AI to answer a report with one of
   the study's templates where one fits (`template: {name, args}`, only the

@@ -430,7 +430,42 @@
   if (den %in% x$analysis_data$data_id) return(den)
   obj <- .r_name(den)
   if (is.null(pop)) obj else
-    sprintf("dplyr::filter(%s, %s %%in%% %s$%s)", obj, subj, population, subj)
+    sprintf("dplyr::semi_join(%s, dplyr::select(%s, %s), by = %s)", obj, population,
+            subj, .q(subj))
+}
+
+# Does a denominator count subjects of a data (a population, a dataset, an
+# analysis data), so the numerator needs its groups?  (Not "row" / "column"
+# / "cell": cards' percentages of the table itself)
+.den_counts <- function(den) {
+  !is.null(den) && length(den) == 1L && !is.na(den) && !den %in% .den_words[-1L]
+}
+
+# The subject-level columns an analysis's records take from its subjects'
+# data: its by and strata, when it has a denominator (its own, one in its
+# `args`, or its method's: the hierarchical counts' population) -- the
+# denominator counts by them, so the records must have its values
+.den_needs <- function(r, keys) {
+  k <- .method_key(r$method, keys)
+  den <- .den_counts(r$denominator %||% NA) ||
+    "denominator" %in% tryCatch(.args_given(r$args %||% NA),
+                                error = function(e) character()) ||
+    (!is.na(k) && grepl("denominator", keys$defaults[k], fixed = TRUE))
+  if (!den) return(character())
+  unique(unlist(lapply(c(r$by, r$strata %||% NA), .split_bar)))
+}
+
+# The target subjects: records joined to their subjects' data `pop`.  The
+# subject-level columns `take` come from it, replacing the records' own of
+# the same name (inner_join); with none, a semi_join keeps the subjects
+.subjects_join <- function(pop, subj, take = character()) {
+  take <- setdiff(unique(take), subj)
+  if (!length(take)) {
+    return(sprintf("dplyr::semi_join(dplyr::select(%s, %s), by = %s)", pop, subj, .q(subj)))
+  }
+  c(sprintf("dplyr::select(-dplyr::any_of(%s))", .lay(.c_str(take), width = Inf)),
+    sprintf("dplyr::inner_join(dplyr::select(%s, %s), by = %s)", pop,
+            paste(c(subj, take), collapse = ", "), .q(subj)))
 }
 
 .stat_arg <- function(method, stats) {
@@ -834,7 +869,20 @@
       unique(c(unlist(lapply(c(rd$by[on], rd$strata[on], rd$variables[on]), .split_bar)),
                unlist(lapply(rd$by[den], .split_bar))))
     })
-    made <- .adata_lines(xo, named[[o]], subj, lv, avoid = taken, reads = reads)
+    # the subject-level columns each data takes from its subjects' data:
+    # the groups its analyses' denominators count by (by, strata)
+    needs <- lapply(stats::setNames(named[[o]], named[[o]]), function(d) {
+      on <- which(!is.na(dcol[rows]) & dcol[rows] == d)
+      unique(unlist(lapply(on, function(i) .den_needs(rd[i, ], keys))))
+    })
+    made <- .adata_lines(xo, named[[o]], subj, lv, avoid = taken, reads = reads,
+                         needs = needs)
+    # the analyses reading the same records (dataset, analysis set, where)
+    # share one data: it takes the union of the ADSL columns they need
+    grp <- paste(a$dataset[rows], a$population_id[rows], a$where[rows], sep = "\r")
+    own <- is.na(dcol[rows])
+    take_of <- lapply(split(seq_along(rows)[own], grp[own]), function(k)
+      unique(unlist(lapply(rows[k], function(i) .den_needs(a[i, ], keys)))))
     data_name <- vapply(rows, function(i) {
       r <- a[i, ]
       # on an analysis data: it, or its records the analysis's condition keeps
@@ -853,28 +901,32 @@
       ds <- if (!is.na(r$dataset)) .r_name(r$dataset) else pop
       pop_ds <- if (!is.na(pid)) x$populations$dataset[
         x$populations$population_id == pid][1L]
-      # one filter() for the population's subjects and the analysis's own
-      # condition (filter() drops the rows a condition leaves NA)
+      # the population's subjects (the records joined to them), then the
+      # analysis's own condition (filter() drops the rows it leaves NA)
       whr <- if (!is.na(r$where)) r$where
+      join <- NULL
       if (is.null(pop) || identical(r$dataset, pop_ds) || is.na(r$dataset)) {
         src <- if (is.null(pop)) ds else pop
-        cond <- whr
       } else {
         src <- ds
-        cond <- sprintf("%s %%in%% %s$%s", subj, pop, subj)
-        if (!is.null(whr)) cond <- .cond_and(cond, whr)
+        # (not a column the population's derive makes: the record's own)
+        g <- grp[match(i, rows)]
+        join <- .subjects_join(pop, subj, setdiff(take_of[[g]], .derive_names(
+          x$populations$derive[x$populations$population_id %in% pid])))
       }
       # no dataset and no population: no data (as before, `data` is NULL)
       if (is.null(src)) return("NULL")
-      if (is.null(cond) && src %in% taken) return(src)  # a dataset or a population
-      key <- paste(src, cond, sep = "\r")
+      if (is.null(whr) && is.null(join) && src %in% taken) return(src)  # a dataset or a population
+      key <- paste(c(src, pop, whr), collapse = "\r")
       if (!is.na(data_of[key])) return(data_of[[key]])
       base <- paste(c(if (!is.na(r$dataset)) .r_name(r$dataset) else
         .r_name(pop_ds), if (!is.na(pid)) .r_name(pid)), collapse = "_")
       nm <- make.unique(c(taken, base), sep = "_")[length(taken) + 1L]
       taken <<- c(taken, nm)
       data_of[[key]] <<- nm
-      made <<- c(made, .made_line(nm, src, cond, lv))
+      made <<- c(made, .make_code(nm, src, c(
+        join, if (!is.null(whr)) sprintf("dplyr::filter(%s)", whr),
+        if (length(lv)) .levels_step)))
       nm
     }, "")
     names(data_name) <- as.character(rows)
