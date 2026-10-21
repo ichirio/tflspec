@@ -73,7 +73,8 @@
 #' templates), the ADaM it reads or the packages' versions -- else its RTF
 #' (and PNG) of the last run is kept, as `ai/built.csv` says.  A report
 #' that passed its checks but could not be built gets a repair
-#' (`ai/repairs/<request>.md`) with why.
+#' (`ai/repairs/<request>-build.md`) with why, which stays until the
+#' request's reports are built.
 #'
 #' @param study_dir The study folder.
 #' @param rtf `FALSE` to build the ARDs only (no rtfreporter).
@@ -251,22 +252,34 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
   rlang::hash(paste(own, common, sep = "|"))
 }
 
-# ai/repairs/<request>.md for a report that passed its checks but could
-# not be built (the checks' own repair, when there is one, comes first)
+# A report that passed its checks but could not be built: its repair --
+#   ai/repairs/<request>-build.md: a file of its own, run.R's -- the checks'
+#   repair (<request>.md) is tfl_ai_collect_answers()'s, which removes it
+#   when the answer passes; this one stays until the request's reports are
+#   built (a collect run in between, a screen's reload, leaves it)
+.ai_build_repair_file <- function(dir, request) {
+  file.path(dir, "ai", "repairs", paste0(request, "-build.md"))
+}
+
 .ai_build_repairs <- function(dir, r) {
   bad <- r[!is.na(r$rtf_problem), , drop = FALSE]
+  # a request whose reports are all built (or kept) now: its build repair goes
+  ok <- setdiff(unique(r$request[r$built %in% c("built", "kept")]), bad$request)
+  for (q in ok) {
+    f <- .ai_build_repair_file(dir, q)
+    if (file.exists(f)) unlink(f)
+  }
   if (!nrow(bad)) return(invisible())
   rd <- file.path(dir, "ai", "repairs")
   dir.create(rd, recursive = TRUE, showWarnings = FALSE)
   for (q in unique(bad$request)) {
     b <- bad[bad$request == q, , drop = FALSE]
-    f <- file.path(rd, paste0(q, ".md"))
-    head <- if (file.exists(f)) c(readLines(f, warn = FALSE, encoding = "UTF-8"), "") else
-      c(sprintf("# Repair: %s", q), "",
-        "The answer passed its checks, but a report could not be built. Fix the answer",
-        sprintf("(ai/answers/%s.md, the whole answer again) and run `Rscript run.R %s`.", q, q), "")
-    .ai_write_text(c(head, "## Could not be built", "",
-                     sprintf("- %s: %s", b$output_id, b$rtf_problem)), f)
+    .ai_write_text(c(
+      sprintf("# Repair: %s -- could not be built", q), "",
+      "The answer passed its checks, but a report could not be built. Fix the answer",
+      sprintf("(ai/answers/%s.md, the whole answer again) and run `Rscript run.R %s`.", q, q), "",
+      "## Could not be built", "",
+      sprintf("- %s: %s", b$output_id, b$rtf_problem)), .ai_build_repair_file(dir, q))
     a <- file.path(dir, "ai", "answers", paste0(q, ".md"))
     if (file.exists(a)) .ai_repair_log(rd, q, a)
   }
@@ -283,8 +296,8 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
   nxt <- res$next_steps
   for (i in seq_len(nrow(bad))) {
     nxt[bad$request[i]] <- sprintf(paste0("the answer passed its checks but %s could not be built (%s): ",
-                                          "fix the answer and run again"),
-                                   bad$output_id[i], bad$rtf_problem[i])
+                                          "fix the answer (ai/repairs/%s-build.md) and run again"),
+                                   bad$output_id[i], bad$rtf_problem[i], bad$request[i])
   }
   c(sprintf("# Status (written by run.R, %s)", format(Sys.time(), "%Y-%m-%d %H:%M")),
     "",

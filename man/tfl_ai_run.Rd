@@ -45,7 +45,8 @@ study's files (\code{study.yml}, \code{spec/data.yml}, \code{spec/defaults.yml},
 templates), the ADaM it reads or the packages' versions -- else its RTF
 (and PNG) of the last run is kept, as \code{ai/built.csv} says.  A report
 that passed its checks but could not be built gets a repair
-(\verb{ai/repairs/<request>.md}) with why.
+(\verb{ai/repairs/<request>-build.md}) with why, which stays until the
+request's reports are built.
 }
 \seealso{
 \code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}} (\code{mode = "agent"}).

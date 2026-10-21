@@ -28,7 +28,8 @@ and `ai/`. If the workspace is a folder above it, use the paths from here.
       reports and writes `ai/status.md`. `Rscript run.R` alone builds every
       report that changed since the last run.
    4. Read `ai/status.md`. When it gives your request a repair
-      (`ai/repairs/<request>.md`) or a build problem, fix the answer as it
+      (`ai/repairs/<request>.md`) or a build problem
+      (`ai/repairs/<request>-build.md`), fix the answer as it
       says, save the whole answer over `ai/answers/<request>.md`, and run
       again. Three tries at most; then leave it, add a question to
       `ai/questions.md` saying what is wrong, and go on.

@@ -1,5 +1,12 @@
 # tflspec (development version)
 
+* **A report that could not be built: its repair is a file of its own**
+  (0.0.24.9199), `ai/repairs/<request>-build.md`, which stays until the
+  request's reports are built: `tfl_ai_collect_answers()` -- run again
+  between, by a screen's reload -- removes only the checks' repair
+  (`<request>.md`), and took the build's with it.  `ai/status.md` and the
+  agent's instructions name the file.
+
 * **`tfl_ai_run()` (`run.R`) builds only what changed** (0.0.24.9197).  A
   report's ARD and RTF are made again only when its report file, the
   study's files (`study.yml`, `spec/data.yml`, `spec/defaults.yml`, its
