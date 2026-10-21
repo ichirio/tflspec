@@ -176,6 +176,17 @@ test_that("tfl_ai_run(): a report built again only when it changed; one request'
   expect_identical(readLines(bf, encoding = "UTF-8"), rp)
   # (the ADaM changed: every other report built again, and fine)
   expect_true(all(r5$reports$built[!bad] == "built"))
+  # its RTF of the last run that built it: gone, not listed
+  expect_false(any(file.exists(rtf[r1$reports$request == "ae-1"])))
+  expect_true(all(is.na(r5$reports$rtf[bad])))
+  # a run of another request: ae-1 still as its last build left it
+  r5b <- suppressMessages(tfl_ai_run(d, requests = "demographics-1"))
+  expect_identical(r5b$reports$rtf_problem[bad], r5$reports$rtf_problem[bad])
+  status <- readLines(file.path(d, "ai", "status.md"), encoding = "UTF-8")
+  nx <- grep("^- ae-1: ", status, value = TRUE)
+  expect_match(nx, "could not be built", fixed = TRUE)
+  expect_match(nx, "ai/repairs/ae-1-build.md", fixed = TRUE)
+  expect_true(file.exists(bf))
   # the data back: the request's reports built, its build repair gone
   ad2 <- agent_study(file.path(root, "again"))
   file.copy(file.path(ad2, "adae.xpt"), file.path(d, "adam", "adae.xpt"))
@@ -264,4 +275,29 @@ test_that("mode = \"agent\": a study with its ADaM and workbook inside it names 
   r2 <- tfl_ai_prepare(d2, ex_book(), adam = ad, quiet = TRUE, mode = "agent")
   dy2 <- yaml::read_yaml(file.path(d2, "spec", "data.yml"))
   expect_true(all(startsWith(tolower(vapply(dy2$datasets, `[[`, "", "path")), tolower(ad))))
+})
+
+test_that("tfl_ai_run(): a request not built yet says so, after a run of another", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("rtfreporter")
+  root <- withr::local_tempdir()
+  d <- file.path(root, "study")
+  agent_study(root, adam_inside = TRUE)
+  tfl_ai_prepare(d, ex_book(), adam = "adam", quiet = TRUE, mode = "agent")
+  ex <- system.file("ai", "example", "answers", package = "tflspec")
+  file.copy(list.files(ex, "^(demographics|ae)-1[.]md$", full.names = TRUE),
+            file.path(d, "ai", "answers"))
+  r <- suppressMessages(tfl_ai_run(d, requests = "demographics-1"))
+  ae <- r$reports$request == "ae-1"
+  expect_true(all(is.na(r$reports$built[ae])))
+  status <- readLines(file.path(d, "ai", "status.md"), encoding = "UTF-8")
+  nx <- grep("^- ae-1: ", status, value = TRUE)
+  expect_match(nx, "not built yet: run `Rscript run.R ae-1`", fixed = TRUE)
+  expect_false(grepl("the report files are written", nx, fixed = TRUE))
+  # (an ai/built.csv of an older tflspec, no problem column: read as built)
+  f <- file.path(d, "ai", "built.csv")
+  b <- utils::read.csv(f, colClasses = "character")
+  utils::write.csv(b[setdiff(names(b), "problem")], f, row.names = FALSE)
+  expect_true(all(is.na(tflspec:::.ai_built_read(d)$problem)))
 })
