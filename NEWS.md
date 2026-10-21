@@ -1,7 +1,7 @@
 # tflspec (development version)
 
 * **A study's AI files name its paths from the study folder**
-  (0.0.24.9194).  `tfl_ai_prepare(mode = "agent")`'s first message for the
+  (0.0.24.9196).  `tfl_ai_prepare(mode = "agent")`'s first message for the
   agent (`ai/agent_prompt.md`, `$agent_prompt`) names `AGENTS.md`,
   `ai/requests/index.md`, `run.R` ... from the study folder, not with this
   PC's path; the requests name a TOC / SHELL workbook in the study folder
