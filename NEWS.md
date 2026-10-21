@@ -11,6 +11,21 @@
   says the same.  A workbook or ADaM folder outside the study keeps its
   whole path.
 
+* **The layout template `stat_block`: one record's statistics over several
+  rows and columns** (0.0.24.9195).  Each arm's block holds one analysis
+  record's statistics -- its N in one column, its rate and interval in the
+  next, or under each other -- as `cells` says: a named list, heading =
+  template, one element a column (`direction = "cols"`) or a row
+  (`"rows"`), a vector its lines (`cells = list(N = "{N}", "ORR(%) 90%CI" =
+  c("{n} ({estimate:.1f%})", "{conf.low:.1f%}, {conf.high:.1f%}"))`; in
+  YAML, records `{label, template}`).  The statistics each group shows are
+  read from its templates; the ARD is the report's own (so, as `km_table`,
+  it takes no `subset` or `where`).  `tpl_stat_block()` is the call.  Needs rtfreporter 0.8.2.9086 (a split record takes its
+  group's template, whatever the study's `categorical`).
+* **`orr`: `conf_level`** (0.95): the rate's CI's level, and its row's
+  label (`90% CI`).  The template is now tagged as the `stat_block`
+  layout; with the defaults it writes the same table as before.
+
 * **The template `vs_change` and `tpl_vs_change()` are removed**
   (0.0.24.9194).  Its table is `param_change` with `baseline = TRUE` and
   `layout = "rows"`: one parameter (`params`), one visit (`visits`),

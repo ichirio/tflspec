@@ -18,7 +18,8 @@ subset_adsl <- function() {
 test_that("every table and figure template takes subset; a records template where", {
   t <- tfl_templates()
   has <- function(n, p) p %in% names(tflspec:::.tpl_get(n, "test")$params)
-  own <- setdiff(t$name[t$package == "tflspec"], "km_table")
+  # (km_table and stat_block read the report's own ARD: no data of their own)
+  own <- setdiff(t$name[t$package == "tflspec"], c("km_table", "stat_block"))
   expect_true(all(vapply(own, has, NA, p = "subset")))
   expect_true(all(vapply(setdiff(own, c("demog", "disposition", "summary")), has, NA,
                          p = "where")))
