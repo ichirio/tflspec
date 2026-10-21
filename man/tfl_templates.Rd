@@ -13,7 +13,10 @@ that registered it: tflspec, or a company's, \code{\link[=tfl_template]{tfl_temp
 \code{call} (the function its program calls, the A use).
 }
 \description{
-The templates
+Every table and figure template takes the same pair of filters, its
+input form's first group with \code{population}: \code{subset} (which subjects: R
+on the analysis set's ADSL) and, with records data, \code{where} (which
+records).  Both are \code{NULL} by default; see \code{\link[=tfl_param]{tfl_param()}}.
 }
 \examples{
 tfl_templates()

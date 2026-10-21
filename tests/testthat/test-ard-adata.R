@@ -184,14 +184,15 @@ test_that("a report's own subjects, the columns kept, factors of derived columns
     "  select(USUBJID, TRT01A, AEBODSYS, AEDECOD) |>\n",
     "  set_levels(OLD = cl_old)")))
   # the derived column a factor: the report's own code list rows count
+  # (the analysis set it is made from, used for nothing else: in it, its
+  # condition and the report's in one filter())
   expect_true(any(code == paste0(
-    "adsl_old <- pop_saf |>\n",
-    "  filter(AGE >= 65) |>\n",
+    "adsl_old <- adsl |>\n",
+    "  filter(SAFFL == \"Y\", AGE >= 65) |>\n",
     "  mutate(OLD = ifelse(AGE >= 75, \"75+\", \"65-74\")) |>\n",
     "  set_levels(OLD = cl_old)")))
   expect_true("cl_old <- c(\"75+\", \"65-74\")" %in% code)
-  # the analysis set the data are made from: as it is
-  expect_true("pop_saf <- filter(adsl, SAFFL == \"Y\")" %in% code)
+  expect_false(any(startsWith(code, "pop_saf <- ")))
   # only what the analyses read: no SEX
   expect_false(any(grepl("SEX =", code, fixed = TRUE)))
   # the study's program of its one report: the same

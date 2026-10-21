@@ -137,3 +137,51 @@ test_that("in a study: the ARD program runs and the table is made from it", {
   expect_true(nrow(t) > 0L)
   expect_identical(unique(t$group2), pc_args$visits)
 })
+
+test_that("vs_change's table from param_change: a baseline block, its labels and cells", {
+  skip_on_cran()
+  pc_skip()
+  skip_if_not_installed("haven")
+  d <- tempfile()
+  on.exit(unlink(d, recursive = TRUE))
+  dir.create(file.path(d, "adam"), recursive = TRUE)
+  for (x in c("adsl", "advs")) {
+    haven::write_xpt(tflspec:::.ai_chr(getExportedValue("tflspec", x)),
+                     file.path(d, "adam", paste0(x, ".xpt")))
+  }
+  tfl_ai_study_init(d, adam = "adam", study_id = "VS-1")
+  vs <- list(population = "SAF", param = "SYSBP", visit = "CYCLE 9 DAY 1", by = "TRT01A",
+             param_label = "Systolic blood pressure", when = "week 24",
+             visit_label = "Week 24", unit = "mmHg")
+  pc <- list(population = "SAF", data = "ADVS", params = "SYSBP", visits = "CYCLE 9 DAY 1",
+             by = "TRT01A", layout = "rows", param_order = NULL, baseline = TRUE,
+             baseline_label = "Baseline (mmHg)", value_label = "Week 24 (mmHg)",
+             change_label = "Change from baseline (mmHg)",
+             statistics = c("N", "mean", "sd", "se", "mean_lcl", "mean_ucl", "median", "min", "max"),
+             cells = list(n = "{N:.0f}", `Mean (SD)` = "{mean:.1f} ({sd:.2f})", SE = "{se:.2f}",
+                          `95% CI of the mean` = "{mean_lcl:.1f}, {mean_ucl:.1f}",
+                          Median = "{median:.1f}", `Min, Max` = "{min:.0f}, {max:.0f}"))
+  outs <- list(tfl_output("T-V", "table", population = "SAF", extends = "defaults",
+                          template = list(name = "vs_change", args = vs)),
+               tfl_output("T-P", "table", population = "SAF", extends = "defaults",
+                          template = list(name = "param_change", args = pc)))
+  for (o in outs) tfl_write_output(o, file.path(d, "spec", "outputs", paste0(o$id, ".yml")))
+  st <- tfl_read_study_spec(d)
+  ard <- suppressMessages(tfl_build_ard(st, dir = d, save = FALSE))
+  tab <- function(id) {
+    ro <- tfl_resolve_output(tfl_read_output(file.path(d, "spec", "outputs",
+                                                       paste0(id, ".yml"))), st)
+    t <- pc_tab(suppressMessages(tfl_content_run(ro, ard[ard$output_id == id, ])))
+    t[] <- lapply(t, as.character)
+    t
+  }
+  v <- tab("T-V")
+  p <- tab("T-P")
+  # the same rows and cells; param_change's blocks of the parameter and the
+  # visit (one each here) are what vs_change leaves to the title
+  expect_identical(unique(p$group1), "Systolic Blood Pressure (mmHg)")
+  expect_identical(unique(p$group2), "CYCLE 9 DAY 1")
+  p <- data.frame(group = p$group3, p[setdiff(names(p), c("group1", "group2", "group3"))],
+                  check.names = FALSE, stringsAsFactors = FALSE)
+  expect_identical(p, v)
+})

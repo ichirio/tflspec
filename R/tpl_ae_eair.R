@@ -3,6 +3,7 @@
 
 .tpl_eair_params <- function() list(
   tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
+  .tpl_subset_param(),
   tfl_param("data", "ADAE", doc = "the dataset of records"),
   tfl_param("where", "TRTEMFL == \"Y\"", doc = "the records kept (R)"),
   tfl_param("by", "TRT01A", doc = "the column variable"),
