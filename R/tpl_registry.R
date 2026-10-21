@@ -44,6 +44,9 @@
 #'   denominators, the header N and, through them, the records) and `where`
 #'   (which records of the records data); `NULL`: tflspec's for its name,
 #'   else none.
+#' @param tier How often it is set, for a help page and an input form:
+#'   `"required"`, `"usual"` (shown with its default) or `"other"` (folded
+#'   away); `NULL`: `"required"` when `required`, else `"other"`.
 #' @return A `tfl_param`.
 #' @examples
 #' tfl_param("population", "SAF", doc = "the analysis set's id")
@@ -51,11 +54,13 @@
 #' @export
 tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study = NULL,
                       type = NULL, multiple = NULL, of = NULL, choices = NULL,
-                      fields = NULL, group = NULL) {
+                      fields = NULL, group = NULL, tier = NULL) {
   if (!is.null(type)) type <- match.arg(type, .tpl_param_types)
+  if (!is.null(tier)) tier <- match.arg(tier, c("required", "usual", "other"))
   structure(list(name = name, default = default, required = isTRUE(required),
                  doc = doc, study = study, type = type, multiple = multiple, of = of,
-                 choices = choices, fields = fields, group = group), class = "tfl_param")
+                 choices = choices, fields = fields, group = group, tier = tier),
+            class = "tfl_param")
 }
 
 .tpl_param_types <- c("vars", "levels", "flag", "number", "text", "choice", "list")
@@ -161,6 +166,8 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
       if (is.list(d)) "list" else "text"
   }
   if (is.null(p$multiple)) p$multiple <- identical(p$type, "list") || length(p$default) > 1L
+  # its tier: as declared, else required or other (a variant keeps its root's)
+  if (is.null(p$tier)) p$tier <- if (isTRUE(p$required)) "required" else "other"
   p
 }
 
@@ -168,12 +175,14 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
 # function(args, context) returning list(ard = , data = , content = ): the
 # report's items, `content` a list of tfl_item().
 .tfl_template <- function(name, kind, layout, params, body, label = NULL, call = NULL,
-                          package = "tflspec", example = NULL) {
+                          package = "tflspec", example = NULL, ai = FALSE) {
   params <- lapply(params, .tpl_param_typed)
   names(params) <- vapply(params, `[[`, "", "name")
+  # (a table's or a listing's call is the one tfl_tpl(); a figure's its own)
+  call <- call %||% if (identical(kind, "figure")) paste0("tpl_", name) else "tfl_tpl"
   assign(name, list(name = name, kind = kind, layout = layout, params = params, body = body,
-                    label = label, call = call %||% paste0("tpl_", name), package = package,
-                    example = example),
+                    label = label, call = call, package = package,
+                    example = example, ai = isTRUE(ai)),
          envir = .tpl_registry)
   invisible(name)
 }
@@ -449,6 +458,60 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
     list(ard = ard, data = list(source = "ard", object = "ard"), content = content)
   })
 
+#' A table or listing template's plan: one call for every template
+#'
+#' The A use of a template SPEC, one function for them all: the template's
+#' items run on the data, as the report's content.  `tfl_tpl(ard, "demog",
+#' population = "SAF")` is what a template report's program calls; a
+#' study's defaults the template does not take as its parameters are added
+#' after the call.  The template's parameters, their defaults and where each
+#' ends: [tfl_tpl_help()] (and `?tpl_<name>`).
+#'
+#' @param x The data: the ARD, not yet normalized (a table); the dataset as
+#'   the program made it, its subjects kept already (a listing).
+#' @param name The template's name ([tfl_templates()]): a layout, a display
+#'   template or a variant.
+#' @param ... Its parameters, by name.  A name it does not have is an error
+#'   naming its parameters.
+#' @param codelists The report's code lists: as [tfl_read_output()] reads
+#'   them, or the values in order, `list(TRT01A = c("Drug X", "Control"))`.
+#' @param sets The study's analysis sets (`data.yml`'s populations), for
+#'   their labels; `NULL` none.
+#' @return A [rtfreporter::table_plan()].
+#' @seealso [tfl_template_expand()] for the items (the B use);
+#'   [tfl_templates()]; a figure template's own function ([tpl_km_simple()]
+#'   ...).
+#' @examples
+#' if (requireNamespace("cards", quietly = TRUE)) {
+#'   saf <- adsl[adsl$SAFFL == "Y", ]
+#'   ard <- cards::bind_ard(
+#'     cards::ard_tabulate(saf, variables = TRT01A),
+#'     cards::ard_summary(saf, by = TRT01A, variables = AGE),
+#'     cards::ard_tabulate(saf, by = TRT01A, variables = c(AGEGR1, SEX, RACE, ETHNIC)))
+#'   plan <- tfl_tpl(ard, "demog", population = "SAF")
+#' }
+#' @export
+tfl_tpl <- function(x, name, ..., codelists = NULL, sets = NULL) {
+  fn <- "tfl_tpl()"
+  if (!is.character(name) || length(name) != 1L || is.na(name)) {
+    .ard_stop(sprintf("%s: `name` is a template's name, one text (\"demog\"); the templates: tfl_templates().",
+                      fn))
+  }
+  t <- .tpl_get(name, fn)
+  if (identical(t$kind, "figure")) {
+    .ard_stop(sprintf("%s: %s is a figure template; its call is %s(data, ...).", fn, name, t$call))
+  }
+  if (identical(t$kind, "listing")) {
+    it <- tfl_template_expand(name, list(...), codelists = codelists, population = sets)
+    # `x` is the data as the program made it (its subjects kept already)
+    it$data$steps <- NULL
+    o <- tfl_output(paste0("tpl-", name), kind = "listing", extends = "none",
+                    data = it$data, content = it$content)
+    return(tfl_content_run(o, x))
+  }
+  .tpl_object(name, x, list(...), codelists = codelists, population = sets)
+}
+
 # The A use: the template's object.  Its items run on the ARD as a report's
 # content does; a study's defaults are not in it -- the program writes them
 # after the call (`# (study default)`), as plan_*() lines.
@@ -657,6 +720,8 @@ tfl_templates <- function() {
              package = vapply(t, function(x) x$package %||% "tflspec", ""),
              call = vapply(t, function(x) x$call %||% paste0("tpl_", x$name), ""),
              from = vapply(t, function(x) x$from %||% NA_character_, ""),
+             label = vapply(t, function(x) x$label %||% NA_character_, ""),
+             ai = vapply(t, function(x) isTRUE(x$ai), NA),
              stringsAsFactors = FALSE)
 }
 

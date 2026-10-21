@@ -205,12 +205,17 @@ tfl_template_to_spec <- function(output, study) {
   op <- .ard_pipe_op(pipe)
   t <- .tpl_get(tp$name, "tfl_content_code()")
   args <- tp$args[names(tp$args) %in% names(t$params)]
-  # a variant: the template it is made from, called with the variant's
-  # defaults written out (those the report does not give)
-  if (!is.null(t$from)) {
+  # the template called: a table's or a listing's by tfl_tpl(<data>, "<name>",
+  # ...); a variant of tflspec's by its name, a company's or a study's by
+  # the template it is made from, its defaults written out (the program
+  # does not library() the company's package)
+  called <- tp$name
+  if (!is.null(t$from) && !identical(t$package, "tflspec")) {
     args <- c(t$defaults[setdiff(names(t$defaults), names(args))], args)
     args <- args[intersect(names(t$params), names(args))]
+    called <- t$root %||% t$from
   }
+  generic <- identical(t$call, "tfl_tpl")
   # the code lists the template reads: those its plan_levels() item names
   lv <- Filter(function(it) identical(it$fn, "plan_levels"), tp$items)
   vars <- setdiff(unlist(lapply(lv, function(it) names(it$args))), c("variable", ".drop_empty"))
@@ -218,7 +223,8 @@ tfl_template_to_spec <- function(output, study) {
   levels <- .tpl_levels(vars, output$codelists)
   cl <- if (length(levels)) c("# the code lists: each value in its order, as the table shows it",
                               .codelists_lines(levels), "")
-  call <- do.call(.spec_call, c(list(t$call %||% paste0("tpl_", tp$name), .spec_sym(data)), args,
+  call <- do.call(.spec_call, c(if (generic) list("tfl_tpl", .spec_sym(data), called)
+                                else list(t$call %||% paste0("tpl_", called), .spec_sym(data)), args,
                                 if (length(levels)) list(codelists = stats::setNames(
                                   lapply(names(levels), function(v) .spec_sym(.cl_name(v))),
                                   names(levels)))))

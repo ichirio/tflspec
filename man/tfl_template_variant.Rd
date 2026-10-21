@@ -4,7 +4,14 @@
 \alias{tfl_template_variant}
 \title{A template with other defaults}
 \usage{
-tfl_template_variant(name, from, defaults = list(), label = NULL)
+tfl_template_variant(
+  name,
+  from,
+  defaults = list(),
+  label = NULL,
+  example = NULL,
+  ai = NULL
+)
 }
 \arguments{
 \item{name}{The variant's name.  \code{from}'s own name replaces \code{from}
@@ -15,6 +22,12 @@ tfl_template_variant(name, from, defaults = list(), label = NULL)
 \item{defaults}{Its parameters' defaults, by name: \code{list(variables = c("AGE", "SEX"))}.  Each is one of \code{from}'s parameters.}
 
 \item{label}{Its label; \code{NULL}: \code{from}'s.}
+
+\item{example}{The parameters \code{\link[=tfl_test_templates]{tfl_test_templates()}} and its help page's
+example run it with; \code{NULL}: \code{from}'s.}
+
+\item{ai}{\code{TRUE} to list it in the AI requests that answer with
+templates (\code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}}\code{(templates = TRUE)}); \code{NULL}: \code{from}'s.}
 }
 \value{
 \code{name}, invisibly.

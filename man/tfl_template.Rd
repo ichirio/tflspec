@@ -12,7 +12,8 @@ tfl_template(
   body,
   label = NULL,
   call = NULL,
-  example = NULL
+  example = NULL,
+  ai = FALSE
 )
 }
 \arguments{
@@ -36,11 +37,13 @@ them make.}
 \item{label}{What it makes, in a few words; \code{NULL} none.}
 
 \item{call}{The function a report's program calls for it (the A use);
-\code{NULL}: \verb{tpl_<name>}.  A company's package exports it, calling
-\code{\link[=tfl_template_run]{tfl_template_run()}}.}
+\code{NULL}: \code{\link[=tfl_tpl]{tfl_tpl()}} for a table or a listing (\code{tfl_tpl(ard, "<name>", ...)}), \verb{tpl_<name>} for a figure.}
 
 \item{example}{Its parameters for a try (a named list): what
 \code{\link[=tfl_test_templates]{tfl_test_templates()}} runs it with, beside the defaults; \code{NULL} none.}
+
+\item{ai}{\code{TRUE} to list it in the AI requests that answer with
+templates (\code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}}\code{(templates = TRUE)}).}
 }
 \value{
 \code{name}, invisibly.

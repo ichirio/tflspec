@@ -15,7 +15,8 @@ tfl_param(
   of = NULL,
   choices = NULL,
   fields = NULL,
-  group = NULL
+  group = NULL,
+  tier = NULL
 )
 }
 \arguments{
@@ -59,6 +60,10 @@ subjects: a condition on the analysis set's ADSL, narrowing the
 denominators, the header N and, through them, the records) and \code{where}
 (which records of the records data); \code{NULL}: tflspec's for its name,
 else none.}
+
+\item{tier}{How often it is set, for a help page and an input form:
+\code{"required"}, \code{"usual"} (shown with its default) or \code{"other"} (folded
+away); \code{NULL}: \code{"required"} when \code{required}, else \code{"other"}.}
 }
 \value{
 A \code{tfl_param}.
