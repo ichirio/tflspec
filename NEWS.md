@@ -23,6 +23,16 @@
   says the same.  A workbook or ADaM folder outside the study keeps its
   whole path.
 
+* **The template `vs_change` and `tpl_vs_change()` are removed**
+  (0.0.24.9194).  Its table is `param_change` with `baseline = TRUE` and
+  `layout = "rows"`: one parameter (`params`), one visit (`visits`),
+  vs_change's statistics, cells and labels (`baseline_label`,
+  `value_label`, `change_label`) give the same rows and cells.  The one
+  difference is param_change's blocks of the parameter and the visit; a
+  report that wants them in the title removes them with its own `plan_*`
+  items.  A report file with `template: {name: vs_change}` is now an
+  error naming the templates there are.
+
 * **Templates: the standard filter pair, `subset` (which subjects) and
   `where` (which records)** (0.0.24.9193).  Every table and figure
   template takes `subset`, an R condition on the analysis set's ADSL --
