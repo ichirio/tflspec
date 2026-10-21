@@ -47,6 +47,10 @@
 #' @param tier How often it is set, for a help page and an input form:
 #'   `"required"`, `"usual"` (shown with its default) or `"other"` (folded
 #'   away); `NULL`: `"required"` when `required`, else `"other"`.
+#' @param stage Where its value is used: `"call"` (the default), an argument
+#'   of the template's call in a report's program, or `"data"`, a step that
+#'   prepares the analysis data (a figure's records, its analysis set),
+#'   written in the program's data steps, not in the call.
 #' @return A `tfl_param`.
 #' @examples
 #' tfl_param("population", "SAF", doc = "the analysis set's id")
@@ -54,12 +58,14 @@
 #' @export
 tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study = NULL,
                       type = NULL, multiple = NULL, of = NULL, choices = NULL,
-                      fields = NULL, group = NULL, tier = NULL) {
+                      fields = NULL, group = NULL, tier = NULL, stage = "call") {
   if (!is.null(type)) type <- match.arg(type, .tpl_param_types)
   if (!is.null(tier)) tier <- match.arg(tier, c("required", "usual", "other"))
+  stage <- match.arg(stage, c("call", "data"))
   structure(list(name = name, default = default, required = isTRUE(required),
                  doc = doc, study = study, type = type, multiple = multiple, of = of,
-                 choices = choices, fields = fields, group = group, tier = tier),
+                 choices = choices, fields = fields, group = group, tier = tier,
+                 stage = stage),
             class = "tfl_param")
 }
 
@@ -174,6 +180,8 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
   if (is.null(p$multiple)) p$multiple <- identical(p$type, "list") || length(p$default) > 1L
   # its tier: as declared, else required or other (a variant keeps its root's)
   if (is.null(p$tier)) p$tier <- if (isTRUE(p$required)) "required" else "other"
+  # (a parameter made before `stage`: an argument of the call)
+  if (is.null(p$stage)) p$stage <- "call"
   p
 }
 

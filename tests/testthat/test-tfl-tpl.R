@@ -50,6 +50,10 @@ test_that("the layouts take the look: the parameters, their tiers, the items the
   expect_identical(p$by$tier, "usual")
   expect_identical(p$stub_name$tier, "other")
   expect_identical(p$stub_name$study, "plan_stub.name")
+  # every parameter's stage: an argument of the call, unless it says "data"
+  expect_true(all(vapply(p, `[[`, "", "stage") == "call"))
+  expect_identical(tfl_param("x", stage = "data")$stage, "data")
+  expect_error(tfl_param("x", stage = "plot"), "should be one of")
   x <- tfl_template_expand("summary", list(population = "SAF", continuous = "AGE",
     stub_name = "row_label", stub_indent = 2, blanks = "between_groups", widths = list(label = "2in"),
     rounding = "r", order = "AGE", heading = "Characteristic", header_n = "{col}\n(N={n})"))

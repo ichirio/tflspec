@@ -16,7 +16,8 @@ tfl_param(
   choices = NULL,
   fields = NULL,
   group = NULL,
-  tier = NULL
+  tier = NULL,
+  stage = "call"
 )
 }
 \arguments{
@@ -64,6 +65,11 @@ else none.}
 \item{tier}{How often it is set, for a help page and an input form:
 \code{"required"}, \code{"usual"} (shown with its default) or \code{"other"} (folded
 away); \code{NULL}: \code{"required"} when \code{required}, else \code{"other"}.}
+
+\item{stage}{Where its value is used: \code{"call"} (the default), an argument
+of the template's call in a report's program, or \code{"data"}, a step that
+prepares the analysis data (a figure's records, its analysis set),
+written in the program's data steps, not in the call.}
 }
 \value{
 A \code{tfl_param}.
