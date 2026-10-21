@@ -33,6 +33,7 @@ test_that("the former tpl_km_*() draw as before; tfl_tpl() draws the same", {
   skip_if_not_installed("ggsurvfit")
   # (compared within this R: a figure's built data differs a little between
   # ggplot2 / ggsurvfit versions and platforms, so no stored copy)
+  adtte <- tflspec::adtte  # (not ggsurvfit's, attached before tflspec)
   df <- adtte[adtte$PARAMCD == "PFS", ]
   old <- list(km_simple = tpl_km_simple(df, group = TRT01A),
               km_risk_table = tpl_km_risk_table(df, group = TRT01A),
