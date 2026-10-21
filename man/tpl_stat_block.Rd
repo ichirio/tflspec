@@ -11,13 +11,11 @@ tpl_stat_block(ard, ..., codelists = NULL)
 \item{ard}{The normalized ARD's source: the study ARD's rows of this
 report.}
 
-\item{...}{The template's other parameters: \code{data}, \code{by}, \code{continuous},
-\code{categorical}, \code{labels}, \code{cells}.  \code{labels} given by name change those
-names only (\code{labels = c(RACE = "Race, n (\%) [a]")}); in YAML, \verb{RACE: ~} drops one.
-The default \code{continuous} and \code{categorical} are the variables the data
-has of them (\code{any_of()}); the report's own are as written.  Every
-table and figure template also takes \code{subset} (which subjects) and,
-with records data, \code{where} (which records): see \code{\link[=tfl_param]{tfl_param()}}.}
+\item{...}{The template's parameters: \code{variable} and \code{cells} (required),
+\code{by}, \code{by_levels}, \code{rows}, \code{direction}, \code{label}.  \code{cells} is a named
+list, heading = template, one element a column (\code{direction = "cols"})
+or a row (\code{"rows"}), a vector its lines (\code{tpl_orr()}'s \code{cells}: an N
+column, then the rate over its interval).}
 
 \item{codelists}{The report's code lists, for the order and labels of
 values; \code{NULL} takes the ARD's.}

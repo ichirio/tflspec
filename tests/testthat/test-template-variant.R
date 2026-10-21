@@ -1,6 +1,13 @@
 # tfl_template_variant(): a template by its defaults alone
 
 tv_study <- function() tfl_read_study_spec(system.file("extdata", "spec-yaml", package = "tflspec"))
+# registered from a test as from a session: not tflspec's own (a test of
+# the installed package runs in its namespace)
+tv_variant <- function(...) {
+  op <- options(tflspec.template_source = "(session)")
+  on.exit(options(op))
+  tfl_template_variant(...)
+}
 tv_drop <- function(...) for (n in c(...)) {
   if (exists(n, envir = .tpl_registry, inherits = FALSE)) rm(list = n, envir = .tpl_registry)
 }
@@ -124,8 +131,8 @@ test_that("first to last: the report's argument, the study's default, the varian
 test_that("demog: the YAML's template:, A and B make the same RTF; A calls tpl_demog()", {
   skip_if_not_installed("cards")
   on.exit(tv_drop("demog_as"))
-  tfl_template_variant("demog_as", from = "demog",
-                       defaults = list(continuous = "AGE", categorical = c("AGEGR1", "SEX")))
+  tv_variant("demog_as", from = "demog",
+             defaults = list(continuous = "AGE", categorical = c("AGEGR1", "SEX")))
   s <- tv_study()
   saf <- adsl[adsl$SAFFL == "Y", ]
   ard <- cards::bind_ard(cards::ard_tabulate(saf, variables = TRT01A),
@@ -146,8 +153,8 @@ test_that("demog: the YAML's template:, A and B make the same RTF; A calls tpl_d
 test_that("ae_soc_pt: the YAML's template:, A and B make the same RTF", {
   skip_if_not_installed("cards")
   on.exit(tv_drop("ae_soc_pt_all"))
-  tfl_template_variant("ae_soc_pt_all", from = "ae_soc_pt",
-                       defaults = list(where = NULL, overall = "Any AE"))
+  tv_variant("ae_soc_pt_all", from = "ae_soc_pt",
+             defaults = list(where = NULL, overall = "Any AE"))
   s <- tv_study()
   saf <- adsl[adsl$SAFFL == "Y", ]
   ae <- adae[adae$USUBJID %in% saf$USUBJID, ]
