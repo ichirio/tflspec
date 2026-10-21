@@ -1,6 +1,6 @@
 # tflspec (development version)
 
-* **`tfl_ai_run()` (`run.R`) builds only what changed** (0.0.24.9195).  A
+* **`tfl_ai_run()` (`run.R`) builds only what changed** (0.0.24.9197).  A
   report's ARD and RTF are made again only when its report file, the
   study's files (`study.yml`, `spec/data.yml`, `spec/defaults.yml`, its
   templates), the ADaM it reads or the packages' versions changed since
@@ -13,7 +13,7 @@
   run after one answer goes from minutes to seconds.
 
 * **A study's AI files name its paths from the study folder**
-  (0.0.24.9194).  `tfl_ai_prepare(mode = "agent")`'s first message for the
+  (0.0.24.9196).  `tfl_ai_prepare(mode = "agent")`'s first message for the
   agent (`ai/agent_prompt.md`, `$agent_prompt`) names `AGENTS.md`,
   `ai/requests/index.md`, `run.R` ... from the study folder, not with this
   PC's path; the requests name a TOC / SHELL workbook in the study folder
