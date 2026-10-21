@@ -1,5 +1,13 @@
 # tflspec (development version)
 
+* **`demog` and `ae_pt_freq` are built on their layouts** (0.0.24.9198):
+  `demog`'s usual table is `summary`'s body (its own code stays for
+  `stack = TRUE` and a dataset other than ADSL), `ae_pt_freq` is
+  `hierarchical`'s of one level with its own order, `min_pct` filter and
+  page.  Their ARDs, items and programs are as before.  `hierarchical`
+  with one level (`hierarchy = "AEDECOD"`) no longer stops: it has no row
+  keys above the term.
+
 * **`tfl_ai_run()` (`run.R`) builds only what changed** (0.0.24.9197).  A
   report's ARD and RTF are made again only when its report file, the
   study's files (`study.yml`, `spec/data.yml`, `spec/defaults.yml`, its
