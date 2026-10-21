@@ -129,7 +129,7 @@
               doc = "the theme; NULL: the figure style's"),
     tfl_param("base_size", NULL, type = "number", study = "km.base_size",
               doc = "the theme's base font size; NULL: the figure style's"),
-    tfl_param("plot", NULL, type = "list",
+    tfl_param("plot", NULL, type = "list", fields = c("name", "value"),
               doc = "any other figure setting (plot:): dpi, facet_by, add ..., over the template's")
   )
 }
@@ -290,6 +290,13 @@
                               legend = "bottom")
 
 .tpl_km_register <- function() {
+  # the layout's parameters' types by name, as tflspec's others are
+  km <- .tpl_km_params()
+  new <- Filter(function(p) !p$name %in% names(.tpl_param_kinds), km)
+  .tpl_param_kinds <<- c(.tpl_param_kinds, stats::setNames(lapply(new, function(p) {
+    Filter(Negate(is.null), list(type = p$type, multiple = isTRUE(p$multiple), choices = p$choices,
+                                 fields = p$fields))
+  }), vapply(new, `[[`, "", "name")))
   .tfl_template("km", kind = "figure", layout = "km", params = .tpl_km_params(),
                 body = .tpl_km_layout_body, call = "tfl_tpl",
                 label = "Kaplan-Meier curves (the layout)",
