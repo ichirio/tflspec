@@ -42,9 +42,11 @@ test_that("a variant: from's parameters and types, its own defaults; listed with
   expect_identical(p$categorical$type, "vars")
   tt <- tfl_templates()
   expect_identical(tt$from[tt$name == "demog_as"], "demog")
-  expect_true(is.na(tt$from[tt$name == "demog"]))
-  expect_identical(tt$call[tt$name == "demog_as"], "tpl_demog")
-  expect_identical(nrow(tfl_test_templates("demog_as")), 0L)
+  # demog itself: summary's parameters with its own defaults
+  expect_identical(tt$from[tt$name == "demog"], "summary")
+  expect_identical(tt$call[tt$name == "demog_as"], "tfl_tpl")
+  # its look parameters take the study standard's values: no plain "look"
+  expect_false("look" %in% tfl_test_templates("demog_as")$status)
   expect_error(tfl_template_variant("x", from = "demog", defaults = list(colour = 1)),
                "no parameter 'colour'")
   expect_error(tfl_template_variant("x", from = "nope"), "no template")
@@ -133,7 +135,8 @@ test_that("demog: the YAML's template:, A and B make the same RTF; A calls tpl_d
                   template = list(name = "demog_as", args = list(population = "SAF")))
   r <- tv_rtfs(o, ard, s)
   expect_match(r$code, "# template demog_as: a variant of demog", fixed = TRUE, all = FALSE)
-  expect_match(r$code, "plan <- tpl_demog(", fixed = TRUE, all = FALSE)
+  # (a variant of a session or a company: its root called, its defaults written)
+  expect_match(paste(r$code, collapse = "\n"), "plan <- tfl_tpl(\n  ard,\n  \"summary\",", fixed = TRUE)
   expect_match(paste(r$code, collapse = "\n"), "categorical = c(\"AGEGR1\", \"SEX\")",
                fixed = TRUE)
   expect_identical(r$a, r$yaml)
@@ -153,7 +156,7 @@ test_that("ae_soc_pt: the YAML's template:, A and B make the same RTF", {
   o <- tfl_output("T-9", "table", population = "SAF", label = "AEs",
                   template = list(name = "ae_soc_pt_all", args = list(population = "SAF")))
   r <- tv_rtfs(o, ard, s)
-  expect_match(r$code, "plan <- tpl_ae_soc_pt(", fixed = TRUE, all = FALSE)
+  expect_match(paste(r$code, collapse = "\n"), "plan <- tfl_tpl(\n  ard,\n  \"hierarchical\",", fixed = TRUE)
   expect_match(paste(r$code, collapse = "\n"), "overall = \"Any AE\"", fixed = TRUE)
   expect_identical(r$a, r$yaml)
   expect_identical(r$b, r$yaml)

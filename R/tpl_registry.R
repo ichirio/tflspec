@@ -81,7 +81,7 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
     k(c("max_rows", "stub_indent"), "number"),
     k(c("stub_before", "blanks_first", "blanks_last", "blanks_counted", "total"), "flag"),
     k(c("blanks", "split", "total_label", "stub_name", "header_n", "cat_cell", "na",
-        "rounding", "empty", "denominator"), "text"),
+        "rounding", "empty", "denominator", "stack_id", "stack_label"), "text"),
     k("widths", "list", fields = c("name", "text")),
     k("comparison", "levels", of = "group"),
     k("by_levels", "levels", TRUE, of = "by"),

@@ -38,7 +38,9 @@ test_that("every table and figure template takes subset; a records template wher
   on.exit(rm(list = "tsub_ae", envir = tflspec:::.tpl_registry))
   r <- tfl_test_templates("tsub_ae")
   expect_setequal(r$status, c("no subset", "no where (a records template)"))
-  expect_identical(nrow(tfl_test_templates(own)), 0L)
+  # (a look parameter that takes the study standard's value is no finding)
+  tt <- tfl_test_templates(own)
+  expect_identical(nrow(tt[tt$status != "look (study source)", ]), 0L)
 })
 
 test_that("expanded: subset on the set's ADSL; a records data takes its subjects", {

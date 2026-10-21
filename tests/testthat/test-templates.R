@@ -102,9 +102,11 @@ test_that("summary: categorical variables too; disposition on it", {
   expect_null(x$ard$analyses[[2L]]$statistics)
   expect_false("plan_cells" %in% vapply(x$content, `[[`, "", "fn"))
   expect_identical(x$content[[length(x$content)]]$args, list(max_rows = 30L, split = "group_safe"))
-  # the look is no parameter
+  # the look is a parameter of the layout, the study standard's value its default
+  m <- tfl_template_expand("summary", list(population = "SAF", continuous = "AGE", max_rows = 24))
+  expect_identical(m$content[[length(m$content)]]$args, list(max_rows = 24, split = "group_safe"))
   expect_error(tfl_template_expand("summary", list(population = "SAF", continuous = "AGE",
-                                                   max_rows = 24)), "no parameter")
+                                                   colour = "red")), "no parameter")
   expect_error(tfl_template_expand("summary", list(population = "SAF")), "categorical")
   d <- tfl_template_expand("disposition", list(population = "SAF"))
   expect_identical(d$ard$analyses[[2L]]$id, "DISP")
