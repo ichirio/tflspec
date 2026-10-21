@@ -163,7 +163,8 @@ tfl_time_unit_days <- function() {
         .ff("censor", "variable", "Censor (1 = censored)", "CNSR", required = TRUE),
         .ff("by", "variable", "Group", help = "Empty = one curve"),
         .ff("conf_type", "choice", "Confidence interval", "log",
-            c("log", "log-log", "plain")))),
+            c("log", "log-log", "plain")),
+        .ff("conf_level", "number", "Confidence level", 0.95))),
     summary = list(section = "data", label = "Summary statistics",
       help = "n, mean, SD, SE and an interval (lo, hi) of a value, by group and visit.",
       fields = rbind(
@@ -232,7 +233,9 @@ tfl_time_unit_days <- function() {
       help = "The Kaplan-Meier curves (ggsurvfit); the first layer.",
       fields = rbind(
         .ff("fit", "object", "Fit", "fit"),
-        .ff("linewidth", "number", "Line width", 0.3))),
+        .ff("linewidth", "number", "Line width", 0.3),
+        .ff("type", "choice", "Y axis", "survival", c("survival", "risk", "cumhaz"),
+            help = "survival: S(t); risk: 1 - S(t), the cumulative incidence."))),
     km_ci = list(section = "layers", label = "KM confidence bands",
       help = "The curves' confidence intervals.",
       fields = rbind(.ff("alpha", "number", "Transparency", 0.2))),
@@ -855,9 +858,11 @@ tfl_read_fig_design <- function(path) {
       survfit = {
         libs <- c(libs, "ggsurvfit")
         ct <- v("conf_type")
-        out <- c(out, sprintf("%s <- survfit2(Surv(%s, %s == 0) ~ %s, data = %s%s)",
+        cl <- as.numeric(v("conf_level") %||% 0.95)
+        out <- c(out, sprintf("%s <- survfit2(Surv(%s, %s == 0) ~ %s, data = %s%s%s)",
                               v("name"), v("time"), v("censor"), v("by") %||% "1", src,
-                              if (!identical(ct, "log")) paste0(", conf.type = ", q(ct)) else ""),
+                              if (!identical(ct, "log")) paste0(", conf.type = ", q(ct)) else "",
+                              if (!isTRUE(all.equal(cl, 0.95))) paste0(", conf.int = ", format(cl)) else ""),
                  "")
       },
       summary = {
@@ -1032,7 +1037,10 @@ tfl_read_fig_design <- function(path) {
   kv <- function(name, val) if (!is.null(val)) paste(name, "=", val)
   lbl <- function(title) paste0("# ---- layer ", i, ": ", title, " ----")
   switch(k,
-    km_curve = list(base = sprintf("p <- ggsurvfit(%s, linewidth = %s%s%s)", v("fit"), num("linewidth"),
+    km_curve = list(base = sprintf("p <- ggsurvfit(%s, %slinewidth = %s%s%s)", v("fit"),
+                                   if (!identical(v("type") %||% "survival", "survival"))
+                                     sprintf("type = %s, ", q(v("type"))) else "",
+                                   num("linewidth"),
                                    if (is.null(plot$colour_by)) ", colour = pal[[1]]" else "",
                                    if (isTRUE(l$.linetype_by)) ", linetype_aes = TRUE" else "")),
     km_ci = list(code = c(lbl("KM confidence bands"),
