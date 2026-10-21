@@ -1139,14 +1139,17 @@ tpl_listing <- function(x, ...) {
 # The ARD's survival analyses are the report's own (`ard:`, cardx's
 # ard_survival_survfit()): the template does ARD -> table only.
 
-.tfl_template("km_table", kind = "table", layout = "km_table",
+.tfl_template("km_table", kind = "table", layout = "stat_block",
   params = list(
     tfl_param("by", "TRT01A", doc = "the column variable"),
     tfl_param("by_levels", NULL, doc = "its values in order; NULL: its code list's"),
     tfl_param("median_label", "Median (95% CI)", doc = "the median's row"),
     tfl_param("time_prefix", "Day", doc = "a rate's row: <prefix> <time>"),
     tfl_param("time_unit", "days", doc = "the times' unit, in the median block's heading"),
-    tfl_param("drop_time_0", TRUE, doc = "leave out the rate at time 0")
+    tfl_param("drop_time_0", TRUE, doc = "leave out the rate at time 0"),
+    tfl_param("stat_layout", "rows", type = "choice", choices = c("rows", "cols"), doc = paste(
+      "a rate and its CI: \"rows\", in one cell, or \"cols\", each arm's two columns",
+      "(stat_block)"))
   ),
   body = function(a, ctx) {
     step <- paste(c(
@@ -1163,12 +1166,37 @@ tpl_listing <- function(x, ...) {
     # (the arms' order: an order given, else the code list's, which the ARD
     # program puts on the survfit / CI analysis too, relevel_ard())
     by_lv <- a$by_levels
+    prob_cell <- list(tfl_r("is.na(estimate) ~ \"NE\""),
+                      tfl_r("is.na(conf.high) ~ \"{estimate:.0f} ({conf.low:.0f}, NE)\""),
+                      "{estimate:.0f} ({conf.low:.0f}, {conf.high:.0f})")
+    data <- list(source = "ard", object = "ard", steps = list(tfl_r(step)))
+    if (identical(match.arg(a$stat_layout %||% "rows", c("rows", "cols")), "cols")) {
+      # each arm's two columns, a time's rate and its CI (stat_block); the
+      # median (95% CI) in the first, by its own cell
+      blk <- Filter(Negate(is.null), .tpl_stat_block_body(list(
+        by = a$by, variable = "time",
+        cells = list("Rate (%)" = "{estimate:.1f%}", "95% CI" = "{conf.low:.1f%}, {conf.high:.1f%}")),
+        ctx, others = "Rate (%)", header = FALSE, levels = TRUE))
+      fn <- vapply(blk, `[[`, "", "fn")
+      blk[[match("plan_cells", fn)]]$args <- c(list(prob = prob_cell),
+                                               blk[[match("plan_cells", fn)]]$args)
+      content <- c(blk, list(
+        tfl_item("plan_levels", c(list(variable = c("prob", "time")),
+                                  if (length(by_lv)) stats::setNames(list(by_lv), a$by))),
+        tfl_item("plan_labels", list(variable = list(
+          prob = sprintf("Time to first event (%s)", a$time_unit),
+          time = "Event-free probability"))),
+        # (the arms' N is not read over split columns yet: rtfreporter #709)
+        tfl_item("plan_col_header", list(header = list(
+          list(line = "1", cols = ".values", span = a$by, text = "{col1}"),
+          list(line = "2", cols = "row_label"),
+          list(line = "2", cols = ".values", span = "each", text = "{col}"))))))
+      return(list(data = data, content = content))
+    }
     content <- list(
       tfl_item("table_plan", list(cols = a$by, rows = list(group = "variable"))),
       tfl_item("plan_cells", list(
-        prob = list(tfl_r("is.na(estimate) ~ \"NE\""),
-                    tfl_r("is.na(conf.high) ~ \"{estimate:.0f} ({conf.low:.0f}, NE)\""),
-                    "{estimate:.0f} ({conf.low:.0f}, {conf.high:.0f})"),
+        prob = prob_cell,
         time = "{estimate:.1f%} ({conf.low:.1f%}, {conf.high:.1f%})")),
       tfl_item("plan_levels", c(list(variable = c("prob", "time")),
                                 if (length(by_lv)) stats::setNames(list(by_lv), a$by))),
@@ -1194,7 +1222,10 @@ tpl_listing <- function(x, ...) {
 #' @param ard The study ARD's rows of this report (not normalized: the
 #'   template's data step normalizes it).
 #' @param ... The template's parameters: `by`, `by_levels`, `median_label`,
-#'   `time_prefix`, `time_unit`, `drop_time_0`.
+#'   `time_prefix`, `time_unit`, `drop_time_0`, `stat_layout`.
+#'   `stat_layout = "rows"` (the default) puts a time's rate and its CI in
+#'   one cell; `"cols"` gives each arm two columns, the rate and the CI
+#'   (the layout [tpl_stat_block()]), the median (95% CI) in the first.
 #' @param codelists The report's code lists; `NULL` takes the ARD's.
 #' @return A [rtfreporter::table_plan()].
 #' @export

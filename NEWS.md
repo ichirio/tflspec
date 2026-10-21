@@ -1,5 +1,12 @@
 # tflspec (development version)
 
+* **`km_table` on the layout `stat_block`; `stat_layout = "cols"`**
+  (0.0.24.9201): each arm's two columns, a time's event-free rate and its
+  95% CI, the median (95% CI) by its own cell in the first.  The default,
+  `"rows"`, is the table as before (its expansion identical).  As for
+  `orr`, the arms' N is not in that header yet
+  (ichirio/rtfreporter#709).
+
 * **`orr(stat_layout = "cols")`: each arm's rate and its CI side by side**
   (0.0.24.9200), on the layout `stat_block`; the best overall response's
   n (%) in the first of the two columns.  The arms' N is not in that

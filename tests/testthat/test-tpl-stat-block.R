@@ -148,3 +148,24 @@ test_that("orr(stat_layout = \"cols\"): each arm's rate and CI side by side, the
   expect_identical(t[["Drug X____n (%)"]][1:(last - 1L)], c("2 (2.4)", "3 (3.7)", "7 (8.5)", "30 (36.6)", "40 (48.8)"))
   expect_true(all(is.na(t[["Drug X____90% CI"]][1:(last - 1L)])))
 })
+
+test_that("km_table(stat_layout = \"cols\"): a time's rate and CI side by side, the median in the first", {
+  sb_skip()
+  skip_if_not_installed("survival")
+  tte <- tflspec::adtte[tflspec::adtte$PARAMCD == "PFS", ]
+  fit <- survival::survfit(survival::Surv(AVAL, 1 - CNSR) ~ TRT01A, data = tte)
+  ard <- suppressMessages(cards::bind_ard(
+    cardx::ard_survival_survfit(fit, probs = 0.5),
+    cardx::ard_survival_survfit(fit, times = c(0, 90, 180))))
+  rows <- sb_tab(tpl_km_table(ard))
+  cols <- sb_tab(tpl_km_table(ard, stat_layout = "cols"))
+  expect_true(all(c("Drug X____Rate (%)", "Drug X____95% CI") %in% names(cols)))
+  # the median by its own cell, in the first column, nothing beside it
+  expect_identical(cols[["Drug X____Rate (%)"]][1L], rows[["Drug X"]][1L])
+  expect_true(is.na(cols[["Drug X____95% CI"]][1L]))
+  # a time's rate and CI: the rows' one cell, in two
+  expect_identical(paste0(cols[["Drug X____Rate (%)"]][-1L], " (", cols[["Drug X____95% CI"]][-1L], ")"),
+                   rows[["Drug X"]][-1L])
+  # the default as before: one column a arm
+  expect_false(any(grepl("____", names(rows))))
+})

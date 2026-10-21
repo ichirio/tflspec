@@ -11,7 +11,10 @@ tpl_km_table(ard, ..., codelists = NULL)
 template's data step normalizes it).}
 
 \item{...}{The template's parameters: \code{by}, \code{by_levels}, \code{median_label},
-\code{time_prefix}, \code{time_unit}, \code{drop_time_0}.}
+\code{time_prefix}, \code{time_unit}, \code{drop_time_0}, \code{stat_layout}.
+\code{stat_layout = "rows"} (the default) puts a time's rate and its CI in
+one cell; \code{"cols"} gives each arm two columns, the rate and the CI
+(the layout \code{\link[=tpl_stat_block]{tpl_stat_block()}}), the median (95\% CI) in the first.}
 
 \item{codelists}{The report's code lists; \code{NULL} takes the ARD's.}
 }
