@@ -1204,58 +1204,6 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
   .tpl_object("km_table", ard, list(...), codelists = codelists)
 }
 
-# vs_change: a vital sign's baseline, value and change at one visit, on summary
-.tfl_template("vs_change", kind = "table", layout = "summary",
-  params = list(
-    tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
-    .tpl_subset_param(),
-    tfl_param("param", required = TRUE, type = "levels", of = "PARAMCD",
-              doc = "the PARAMCD (SYSBP)"),
-    tfl_param("visit", required = TRUE, doc = "the AVISIT (CYCLE 9 DAY 1)"),
-    tfl_param("param_label", required = TRUE, doc = "the parameter in words"),
-    tfl_param("when", required = TRUE, doc = "the visit in words, short (week 24)"),
-    tfl_param("visit_label", required = TRUE, doc = "the value's row heading's visit"),
-    tfl_param("unit", required = TRUE, doc = "the unit (mmHg)"),
-    tfl_param("by", "TRTA", doc = "the column variable"),
-    .tpl_where_param(doc = "the records kept besides the parameter and visit (R)")
-  ),
-  body = function(a, ctx) {
-    b <- lapply(.tpl_summary_params, `[[`, "default")
-    set_lab <- tolower(.tpl_set_label(a$population, ctx$population))
-    b[c("population", "by", "data", "where", "data_id", "data_label", "analysis_id",
-        "analysis_label", "variables", "statistics", "cells", "labels")] <- list(
-      a$population, a$by, "ADVS",
-      .tpl_and(sprintf("PARAMCD == \"%s\" & AVISIT == \"%s\"", a$param, a$visit), a$where),
-      paste0("advs_", tolower(a$population), "_", tolower(a$param)),
-      sprintf("%s at %s, %s", a$param_label, a$when, set_lab),
-      a$param, sprintf("%s at %s", a$param, a$when),
-      c("BASE", "AVAL", "CHG"),
-      c("N", "mean", "sd", "se", "mean_lcl", "mean_ucl", "median", "min", "max"),
-      list(n = "{N:.0f}", `Mean (SD)` = "{mean:.1f} ({sd:.2f})", SE = "{se:.2f}",
-           `95% CI of the mean` = "{mean_lcl:.1f}, {mean_ucl:.1f}", Median = "{median:.1f}",
-           `Min, Max` = "{min:.0f}, {max:.0f}"),
-      c(BASE = sprintf("Baseline (%s)", a$unit),
-        AVAL = sprintf("%s (%s)", a$visit_label, a$unit),
-        CHG = sprintf("Change from baseline (%s)", a$unit)))
-    .tpl_summary_body(b, ctx)
-  })
-
-#' A vital sign's change: a table plan from the template `vs_change`
-#'
-#' A display template on the `summary` layout: a parameter's baseline,
-#' value and change from baseline at one visit (n, mean (SD), SE, 95% CI of
-#' the mean, median, min, max).
-#'
-#' @inheritParams tpl_demog
-#' @param ... The template's parameters: `param`, `visit`, `param_label`,
-#'   `when`, `visit_label`, `unit`, `by`.
-#' @return A [rtfreporter::table_plan()].
-#' @export
-tpl_vs_change <- function(ard, population, ..., codelists = NULL) {
-  .tpl_object("vs_change", ard, c(list(population = population), list(...)),
-              codelists = codelists)
-}
-
 # ---- param_change: parameters' value and change from baseline at each visit -------
 
 .tpl_pc_params <- list(
