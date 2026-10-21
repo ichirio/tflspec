@@ -1,5 +1,12 @@
 # tflspec (development version)
 
+* **A report that could not be built: its repair is a file of its own**
+  (0.0.24.9199), `ai/repairs/<request>-build.md`, which stays until the
+  request's reports are built: `tfl_ai_collect_answers()` -- run again
+  between, by a screen's reload -- removes only the checks' repair
+  (`<request>.md`), and took the build's with it.  `ai/status.md` and the
+  agent's instructions name the file.
+
 * **`demog` and `ae_pt_freq` are built on their layouts** (0.0.24.9198):
   `demog`'s usual table is `summary`'s body (its own code stays for
   `stack = TRUE` and a dataset other than ADSL), `ae_pt_freq` is

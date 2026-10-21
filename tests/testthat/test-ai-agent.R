@@ -166,11 +166,22 @@ test_that("tfl_ai_run(): a report built again only when it changed; one request'
   r5 <- suppressMessages(tfl_ai_run(d))
   bad <- r5$reports$request == "ae-1"
   expect_true(all(!is.na(r5$reports$rtf_problem[bad])))
-  rp <- readLines(file.path(d, "ai", "repairs", "ae-1.md"), encoding = "UTF-8")
+  bf <- file.path(d, "ai", "repairs", "ae-1-build.md")
+  rp <- readLines(bf, encoding = "UTF-8")
   expect_true("## Could not be built" %in% rp)
   expect_true(any(grepl("Rscript run.R ae-1", rp, fixed = TRUE)))
+  expect_false(file.exists(file.path(d, "ai", "repairs", "ae-1.md")))   # (the checks passed)
+  # a collect in between (a screen's reload) leaves it for the agent to read
+  suppressMessages(tfl_ai_collect_answers(d))
+  expect_identical(readLines(bf, encoding = "UTF-8"), rp)
   # (the ADaM changed: every other report built again, and fine)
   expect_true(all(r5$reports$built[!bad] == "built"))
+  # the data back: the request's reports built, its build repair gone
+  ad2 <- agent_study(file.path(root, "again"))
+  file.copy(file.path(ad2, "adae.xpt"), file.path(d, "adam", "adae.xpt"))
+  r6 <- suppressMessages(tfl_ai_run(d, requests = "ae-1"))
+  expect_true(all(is.na(r6$reports$rtf_problem)))
+  expect_false(file.exists(bf))
 })
 
 test_that("the questions: one asked by several reports once, the reports listed; added to later", {
