@@ -23,6 +23,7 @@
   - The generated code of `.content_fig_tpl_code()` lives in
     `R/tpl_fig_code.R`.
 
+
 * **`tfl_tpl(x, name, ...)`: one call for every table and listing template**
   (0.0.24.9202), and a report's program calls it: `tfl_tpl(ard, "demog",
   population = "SAF")`.  The template's own functions (`tpl_demog()` ...)
