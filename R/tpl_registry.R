@@ -394,6 +394,18 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
     tfl_param("stack", FALSE, doc = "TRUE: the ARD as one cards::ard_stack() call")
   ),
   body = function(a, ctx) {
+    # the usual table is summary's: its continuous and categorical
+    # analyses, the template's own variables those the data has
+    if (!isTRUE(a$stack) && identical(toupper(a$data), "ADSL")) {
+      b <- lapply(.tpl_summary_params, `[[`, "default")
+      b[c("population", "by", "data", "cells", "labels", "groupn_label")] <- list(
+        a$population, a$by, a$data, a$cells, a$labels, "Subjects per group")
+      b["variables"] <- list(a$continuous)
+      b["categorical"] <- list(a$categorical)
+      b$.optional_variables <- !"continuous" %in% ctx$given
+      return(.tpl_summary_body(b, ctx))
+    }
+    # one cards::ard_stack() call, or a dataset of its own: demog's
     pop <- a$population
     set <- paste0(tolower(a$data), "_", tolower(pop))
     vars <- c(a$continuous, a$categorical)
@@ -544,10 +556,12 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
   analyses <- c(
     list(nn(list(id = "GROUPN", label = a$groupn_label, method = "categorical", data = subj,
                  variables = a$by, purpose = "PRIMARY OUTCOME MEASURE"))),
-    if (length(a$variables)) list(list(
+    if (length(a$variables)) list(nn(list(
       id = a$analysis_id, label = a$analysis_label, method = "continuous", data = set,
-      by = a$by, variables = a$variables, statistics = a$statistics,
-      purpose = "PRIMARY OUTCOME MEASURE")),
+      by = a$by, variables = a$variables,
+      # (a display template's own default variables: those the data has)
+      optional = if (isTRUE(a$.optional_variables)) TRUE, statistics = a$statistics,
+      purpose = "PRIMARY OUTCOME MEASURE"))),
     if (length(a$variables) && !is.null(a$ci_label)) list(list(
       id = a$ci_id, label = a$ci_label, method = a$ci_method, data = set, by = a$by,
       variables = a$variables, purpose = "SECONDARY OUTCOME MEASURE")),
@@ -687,10 +701,11 @@ names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
   content <- list(
     tfl_item("normalize_ard", Filter(Negate(is.null),
                                      list(hierarchy = a$hierarchy, overall = a$overall))),
-    tfl_item("table_plan", list(
+    # (one level: the term alone, no row keys above it)
+    tfl_item("table_plan", Filter(Negate(is.null), list(
       cols = a$by,
-      rows = stats::setNames(as.list(a$hierarchy[-n]), paste0("group", seq_len(n - 1L))),
-      label = list(label = a$hierarchy[n]))),
+      rows = if (n > 1L) stats::setNames(as.list(a$hierarchy[-n]), paste0("group", seq_len(n - 1L))),
+      label = list(label = a$hierarchy[n])))),
     # (the columns' order is the ARD's: the code list applied when it is made)
     tfl_item("plan_sort", list(keys = a$sort)),
     tfl_item("plan_col_header", list(header = list(
@@ -775,21 +790,11 @@ names(.tpl_pt_params) <- vapply(.tpl_pt_params, `[[`, "", "name")
 
 .tpl_pt_body <- function(a, ctx) {
   in_ <- match.arg(a$min_pct_in, c("any", "all", "total"))
-  pop <- a$population
-  subj <- paste0("adsl_", tolower(pop))
-  set <- a$data_id %||% paste0(tolower(a$data), "_", tolower(pop))
-  d <- list(id = set, label = a$data_label, from = a$data, subjects = subj,
-            where = if (!is.null(a$where)) tfl_r(a$where))
-  ard <- list(
-    analysis_data = list(
-      list(id = subj, label = .tpl_set_label(pop, ctx$population), from = "ADSL",
-           population = pop),
-      Filter(Negate(is.null), d)),
-    analyses = list(Filter(Negate(is.null), list(
-      id = a$analysis_id, label = a$analysis_label, method = "hierarchical", data = set,
-      by = a$by, variables = a$term, denominator = subj,
-      args = if (!is.null(a$overall)) tfl_r("over_variables = TRUE"),
-      purpose = "PRIMARY OUTCOME MEASURE"))))
+  # hierarchical's ARD and items, of one level (the term); then its own
+  # order, the terms kept and the page
+  h <- a[intersect(names(a), names(.tpl_hier_params))]
+  h$hierarchy <- a$term
+  out <- .tpl_hier_body(h, ctx)
   # the order: a column's subjects, most first (the PT's name when equal)
   col <- a$sort_by %||%
     (if (identical(in_, "total")) "Total" else .tpl_levels(a$by, ctx$codelists)[[a$by]][1L])
@@ -800,20 +805,13 @@ names(.tpl_pt_params) <- vapply(.tpl_pt_params, `[[`, "", "name")
     list(tfl_item("plan_filter", c(list(where = tfl_r(cond)),
                                    if (identical(in_, "all")) list(any = FALSE))))
   }
-  content <- c(list(
-    tfl_item("normalize_ard", Filter(Negate(is.null),
-                                     list(hierarchy = a$term, overall = a$overall))),
-    tfl_item("table_plan", list(cols = a$by, label = list(label = a$term))),
-    tfl_item("plan_sort", list(keys = c(".overall", key, "label")))),
-    keep,
-    list(
-      tfl_item("plan_col_header", list(header = list(
-        list(line = "1", cols = "row_label"),
-        list(line = "1", cols = ".values", span = "each", text = "{col}\n(N={n})\nn (%)"),
-        list(line = "2", cols = "row_label", text = a$heading),
-        list(line = "2", cols = ".values")))),
-      tfl_item("plan_paginate_rows", list(max_rows = 22L))))
-  list(ard = ard, data = list(source = "ard", object = "ard"), content = content)
+  it <- out$content
+  fn <- vapply(it, `[[`, "", "fn")
+  it[[match("plan_sort", fn)]]$args <- list(keys = c(".overall", key, "label"))
+  it[[match("plan_paginate_rows", fn)]]$args <- list(max_rows = 22L)
+  at <- match("plan_sort", fn)
+  out$content <- c(it[seq_len(at)], keep, it[-seq_len(at)])
+  out
 }
 
 .tfl_template("ae_pt_freq", kind = "table", layout = "hierarchical",
