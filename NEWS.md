@@ -1,5 +1,16 @@
 # tflspec (development version)
 
+* **A study's AI files name its paths from the study folder**
+  (0.0.24.9194).  `tfl_ai_prepare(mode = "agent")`'s first message for the
+  agent (`ai/agent_prompt.md`, `$agent_prompt`) names `AGENTS.md`,
+  `ai/requests/index.md`, `run.R` ... from the study folder, not with this
+  PC's path; the requests name a TOC / SHELL workbook in the study folder
+  from it, however it was given (relative, with backslashes, another
+  case); `tfl_ai_study_init()` writes an ADaM folder in the study, given
+  whole, from it in `spec/data.yml`.  A study copied to another PC then
+  says the same.  A workbook or ADaM folder outside the study keeps its
+  whole path.
+
 * **Templates: the standard filter pair, `subset` (which subjects) and
   `where` (which records)** (0.0.24.9193).  Every table and figure
   template takes `subset`, an R condition on the analysis set's ADSL --
