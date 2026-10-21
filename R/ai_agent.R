@@ -19,7 +19,7 @@
 # The agent's files of a study folder: the instructions, run.R, and the
 # questions / decisions files (never written over: the person's answers
 # and decisions are in them).  The paths written.
-.ai_agent_files <- function(dir, overwrite = FALSE) {
+.ai_agent_files <- function(dir, overwrite = FALSE, templates = FALSE) {
   src <- system.file("ai", "agent", package = "tflspec")
   rd <- function(f) paste(readLines(file.path(src, f), warn = FALSE, encoding = "UTF-8"),
                           collapse = "\n")
@@ -31,6 +31,8 @@
     out <<- c(out, f)
   }
   agents <- rd("AGENTS.md")
+  # with templates: answer with one where it fits (each request lists them)
+  if (isTRUE(templates)) agents <- paste(agents, rd("AGENTS-templates.md"), sep = "\n\n")
   put("AGENTS.md", agents, again = TRUE)
   put(file.path(".github", "copilot-instructions.md"), agents, again = TRUE)
   put("run.R", rd("run.R"), again = TRUE)
@@ -103,7 +105,8 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE) {
           f <- file.path(out_dir, paste0(id, ".rtf"))
           if (identical(o$kind, "figure")) {
             # drawn by its program, as tflplanner draws it: the PNG, then the RTF
-            fig <- .ai_fig_draw(st, id, out_dir)
+            fig <- if (!is.null(.tpl_spec_of(outs[[id]]))) .ai_tpl_fig_draw(st, o, out_dir) else
+              .ai_fig_draw(st, id, out_dir)
             if (isTRUE(rtf)) {
               suppressMessages(rtfreporter::generate_rtfreport(
                 tfl_report(o, content = fig$plot, study = st), f, overwrite = TRUE))
@@ -156,6 +159,8 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE) {
     "",
     sprintf("%d of %d reports have an RTF. Questions: %d open, %d decided (ai/questions.md).",
             sum(!is.na(r$rtf)), nrow(r), sum(q$status %in% "open"), sum(q$status %in% "decided")),
+    "",
+    .ai_templates_status(res$templates),
     "",
     "| request | report | answer | RTF | the first problem |",
     "|---|---|---|---|---|",

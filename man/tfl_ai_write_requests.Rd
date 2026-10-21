@@ -18,7 +18,9 @@ tfl_ai_write_requests(
   instructions = c("each", "once"),
   workbook = c("text", "attach", "both", "file"),
   overwrite = FALSE,
-  add = FALSE
+  add = FALSE,
+  templates = TRUE,
+  mode = c("chat", "agent")
 )
 }
 \arguments{
@@ -33,7 +35,9 @@ tfl_ai_write_requests(
 \item{dir}{The folder the requests go to, under \code{study_dir}.}
 
 \item{max_chars}{A request's length at most, in characters; \code{NULL} for
-no limit.}
+no limit.  A request over it is halved; with \code{templates}, it first
+lists the templates' arguments by name only (no type, default or
+description).}
 
 \item{families, types}{As \code{\link[=tfl_ai_batches]{tfl_ai_batches()}}: the tables in batches.  A
 figure (\code{"figure"} in \code{types}, the default) is a request of its own,
@@ -71,7 +75,21 @@ written anew).}
 \item{add}{\code{TRUE} to keep the requests already there and add these: the
 new ones named after them (\code{ae-2} when \code{ae-1} is there, \code{figure-3}
 ...), the index listing all of them, each request's \code{book} the
-workbook its reports' shells are in.
+workbook its reports' shells are in.}
+
+\item{templates}{\code{TRUE} (default): each request asks the AI to answer a
+report with a template (\verb{template: \{name, args\}}) where one fits --
+the templates registered when the requests are written listed in it,
+its first line \verb{<!-- templates: TRUE -->} -- else as a code SPEC.
+\code{FALSE}: the code SPEC only, the requests as they were before templates.}
+
+\item{mode}{\code{"chat"} (default): each request whole, to paste.
+\code{"agent"} (\code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}}\code{(mode = "agent")}): what every request
+would repeat in a file of the study's \verb{ai/} folder, written once
+(\code{instructions-table.md}, \code{instructions-figure.md}, \code{templates.md}),
+the ADaM summary and \verb{spec/} files named, not copied; each request
+names them, its answer's header and, with \code{templates}, the templates
+likely for its reports (from their titles).
 The folder the answers go to (\code{ai/answers}, beside \code{dir}) is made too.}
 }
 \value{

@@ -419,6 +419,8 @@ print.tfl_ai_answer <- function(x, ...) {
 
 .ai_read_design <- function(x) {
   p <- .ai_problems()
+  # a figure template (`template: {name, args}`, a mapping), its own layers
+  if (is.list(x$template) && !is.null(x$template$name)) return(.ai_read_tpl_figure(x, p))
   for (k in c("data", "stats", "layers")) {
     v <- x[[k]]
     if (is.null(v)) next

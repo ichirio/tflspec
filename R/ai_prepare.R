@@ -15,7 +15,12 @@
 #' @section For a coding agent: `mode = "agent"`:
 #' The requests for an agent (GitHub Copilot's agent in VS Code, and the
 #' like) that works through all of them without stopping.  Besides the
-#' requests (each starting with the agent's steps), the study folder gets
+#' requests (each starting with the agent's steps), and what every request
+#' would repeat written once for the agent to read -- `ai/instructions-table.md`
+#' and `ai/instructions-figure.md` (the instructions and the schema),
+#' `ai/templates.md` (with `templates = TRUE`: every template, each request
+#' naming the ones likely for its reports), `ai/adam_summary.md` and
+#' `spec/`, each request naming them -- the study folder gets
 #' `AGENTS.md` and `.github/copilot-instructions.md` (the same
 #' instructions: answer each request into `ai/answers/`, run `run.R`, read
 #' `ai/status.md`, repair; a question it cannot settle taken as an
@@ -71,6 +76,13 @@
 #'   `add`, `overwrite` is about the requests alone: the study's
 #'   `study.yml`, `spec/data.yml`, `spec/defaults.yml` and the agent's
 #'   files are kept as they are.
+#' @param templates `TRUE` (default): the AI answers a report with one of the
+#'   study's templates where it fits (`template: {name, args}`, and the
+#'   report's own content items for what it does not cover), else as a code
+#'   SPEC; the requests (and `AGENTS.md`) list the templates registered now
+#'   -- tflspec's, a company's, the study's variants.  `FALSE`: the code
+#'   SPEC only, the requests as they were before templates.  The setting is
+#'   each request's first line (`templates: TRUE`) and `ai/status.md`'s.
 #' @return A `tfl_ai_prepared`: a list with `requests` (one row a request:
 #'   `request`, `family`, `outputs`, `n`, `chars`, `file` -- as
 #'   [tfl_ai_write_requests()] gives them), `toc` (one row a report of the
@@ -108,13 +120,15 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
                            instructions = c("each", "once"), max_chars = NULL,
                            overwrite = FALSE, dry_run = FALSE, adam_summary = NULL,
                            datasets = NULL, max_levels = 15L, quiet = FALSE,
-                           mode = c("chat", "agent"), shells = NULL, add = FALSE) {
+                           mode = c("chat", "agent"), shells = NULL, add = FALSE,
+                           templates = TRUE) {
   if (isTRUE(quiet)) {
     cl <- match.call()
     cl$quiet <- FALSE
     return(suppressMessages(eval(cl, parent.frame())))
   }
   fn <- "tfl_ai_prepare()"
+  templates <- .ai_templates_flag(templates, fn)
   workbook <- match.arg(workbook)
   instructions <- match.arg(instructions)
   if (!is.character(toc) || length(toc) != 1L || !file.exists(toc)) {
@@ -180,7 +194,8 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
     req <- tfl_ai_write_requests(dir, shell, ad, size = size, language = language,
                                  instructions = instructions, max_chars = max_chars,
                                  workbook = workbook,
-                                 overwrite = if (isTRUE(add)) overwrite else TRUE, add = add)
+                                 overwrite = if (isTRUE(add)) overwrite else TRUE, add = add,
+                                 templates = templates, mode = mode)
     rq <- file.path(dir, "ai", "requests")
     files <- c(files, file.path(ai, c("adam_summary.md", shell_md)),
                .ai_toc_yml(dir, shell, overwrite = overwrite, add = add))
@@ -193,7 +208,10 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
         .ai_write_text(txt, f)
         req$chars[i] <- nchar(paste(txt, collapse = "\n"))
       }
-      files <- c(files, .ai_agent_files(dir, overwrite = overwrite && !isTRUE(add)))
+      files <- c(files, .ai_agent_files(dir, overwrite = overwrite && !isTRUE(add),
+                                        templates = templates))
+      # what every request would repeat, written once
+      files <- c(files, list.files(ai, "^(instructions-.*|templates)[.]md$", full.names = TRUE))
     }
     files <- c(files, list.files(rq, "[.](md|rds)$", full.names = TRUE))
     nxt <- if (identical(mode, "agent")) {
@@ -229,6 +247,7 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
     paste0("Follow ", at, "/AGENTS.md. Do every request of ", at, "/ai/requests/index.md, ",
            "in its order: save each answer as ", at, "/ai/answers/<request>.md and run ",
            "`Rscript ", at, "/run.R` after it, then read ", at, "/ai/status.md and repair. ",
+           if (templates) "Answer a report with a template where one fits (AGENTS.md). ",
            "Do not stop to ask; when every request is done, tell me which reports have an ",
            "RTF and that ", at, "/ai/questions.md waits for my answers.")
   } else NA_character_
@@ -239,7 +258,7 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
   }
   structure(list(requests = req, toc = tc, sheets = shell$sheets, adam = ad,
                  files = unique(files), hint = hint, next_steps = nxt, dry_run = dry,
-                 mode = mode, agent_prompt = agent_prompt,
+                 mode = mode, agent_prompt = agent_prompt, templates = templates,
                  workbook = basename(toc)),
             class = "tfl_ai_prepared")
 }

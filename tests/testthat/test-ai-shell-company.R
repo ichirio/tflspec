@@ -191,13 +191,13 @@ test_that("a request never cuts a shell; max_chars splits between reports", {
   tfl_ai_study_init(d)
   sh <- tfl_ai_read_shell(f)
   adam <- tfl_ai_adam_summary(file.path(d, "adam"))
-  r <- suppressMessages(tfl_ai_write_requests(d, sh, adam, size = 3))
+  r <- suppressMessages(tfl_ai_write_requests(d, sh, adam, size = 3, templates = FALSE))
   expect_identical(nrow(r), 1L)
   txt <- paste(readLines(file.path(d, r$file), encoding = "UTF-8"), collapse = "\n")
   expect_false(grepl("[... cut at", txt, fixed = TRUE))
   expect_true(all(vapply(ids, function(id) grepl(paste("END OF", id), txt, fixed = TRUE), NA)))
   # over max_chars: split between reports, each request holding its shells whole
-  r2 <- suppressMessages(tfl_ai_write_requests(d, sh, adam, size = 3, overwrite = TRUE,
+  r2 <- suppressMessages(tfl_ai_write_requests(d, sh, adam, size = 3, overwrite = TRUE, templates = FALSE,
                                                max_chars = r$chars - 5000))
   expect_gt(nrow(r2), 1L)
   expect_setequal(unlist(strsplit(r2$outputs, ", ")), ids)
