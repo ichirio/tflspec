@@ -1,5 +1,15 @@
 # tflspec (development version)
 
+* **A study copied elsewhere checks its answers against its own files**
+  (0.0.24.9200).  The requests' contexts (`ai/requests/_contexts.rds`)
+  kept the study folder's path of the PC that wrote them, and an answer's
+  check read the study's files there; they now keep none, and
+  `tfl_ai_collect_answers()` (and `run.R`) use the folder they are run in
+  -- requests written before included.
+* **An agent's requests say an agent's next steps**: `ai/requests/index.md`
+  and `ai/status.md`'s next steps name `ai/agent_prompt.md`, the answer to
+  save and `Rscript run.R <request>`, not a chat to paste into.
+
 * **A report that could not be built: its repair is a file of its own**
   (0.0.24.9199), `ai/repairs/<request>-build.md`, which stays until the
   request's reports are built: `tfl_ai_collect_answers()` -- run again

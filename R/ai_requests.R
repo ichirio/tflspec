@@ -328,7 +328,11 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = 8L,
     if (length(bk)) paste(bk, collapse = ", ") else basename(shell$path %||% NA_character_)
   }
   new <- stats::setNames(lapply(seq_along(req), function(i) {
-    list(ids = req[[i]]$ids, context = req[[i]]$context, family = fam[i],
+    ctx <- req[[i]]$context
+    # (the study folder: whichever the answers are collected in, not this
+    # PC's path -- a copied study checks its answers against its own files)
+    if (!is.null(ctx$study_dir)) ctx$study_dir <- "."
+    list(ids = req[[i]]$ids, context = ctx, family = fam[i],
          book = book_of(req[[i]]$ids))
   }), names(req))
   saveRDS(c(old, new), cf)
@@ -338,11 +342,15 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = 8L,
     "",
     if (!agent && identical(instructions, "once"))
       c("Paste `00-instructions.md` first in a new chat, then one request.", ""),
-    if (workbook %in% c("attach", "both"))
+    if (!agent && workbook %in% c("attach", "both"))
       c(sprintf("Attach `%s` (the TOC / SHELL workbook) to each chat with its request.", book), ""),
-    "Paste each file into a new chat as one message; save the whole answer as",
-    sprintf("`ai/answers/<request>.md`, then run `tfl_ai_collect_answers(\"%s\")`.",
-            "."),
+    if (agent) c(
+      "For the agent (AGENTS.md; its first message is `ai/agent_prompt.md`): answer each",
+      "request in this order, save the whole answer as `ai/answers/<request>.md` and run",
+      "`Rscript run.R <request>`; then read `ai/status.md`.")
+    else c(
+      "Paste each file into a new chat as one message; save the whole answer as",
+      sprintf("`ai/answers/<request>.md`, then run `tfl_ai_collect_answers(\"%s\")`.", ".")),
     "",
     "| request | reports | characters | outputs |",
     "|---|---|---|---|",
@@ -407,6 +415,13 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
                       fn, sQuote(file.path(study_dir, requests), FALSE), study_dir))
   }
   ctxs <- readRDS(cf)
+  # each request's study folder is this one, wherever it was written (a
+  # copied study; requests written before kept this PC's path)
+  here <- normalizePath(study_dir, winslash = "/", mustWork = FALSE)
+  ctxs <- lapply(ctxs, function(x) {
+    if (!is.null(x$context$study_dir)) x$context$study_dir <- here
+    x
+  })
   rows <- list()
   row <- function(req, ids, status, n = 0L, first = NA_character_, all = first) {
     data.frame(request = req, output_id = ids, status = status, problems = n,
@@ -417,10 +432,17 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
   for (nm in names(ctxs)) {
     ids <- .ai_file_id(ctxs[[nm]]$ids)
     f <- .ai_answer_file(file.path(study_dir, answers), nm)
+    # the next step as the request was written for: a chat's (paste, ask
+    # the chat) or an agent's (answer, save, run.R)
+    agent <- isTRUE(ctxs[[nm]]$context$ai_files)
+    run <- sprintf(" and run `Rscript run.R %s`", nm)
     if (is.na(f)) {
       rows[[nm]] <- row(nm, ids, "no answer")
-      nxt[nm] <- sprintf("paste %s into a new chat; save the whole answer as %s",
-                         rel(requests, paste0(nm, ".md")), rel(answers, paste0(nm, ".md")))
+      nxt[nm] <- if (agent) {
+        sprintf("answer %s; save the whole answer as %s%s",
+                rel(requests, paste0(nm, ".md")), rel(answers, paste0(nm, ".md")), run)
+      } else sprintf("paste %s into a new chat; save the whole answer as %s",
+                     rel(requests, paste0(nm, ".md")), rel(answers, paste0(nm, ".md")))
       next
     }
     task <- ctxs[[nm]]$context$task %||% "table"
@@ -429,8 +451,9 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
     if (inherits(a, "error")) {
       rows[[nm]] <- row(nm, ids, "error", 1L, conditionMessage(a))
       nxt[nm] <- sprintf(paste0("fix %s as the problem below says (copy the whole answer, ",
-                                "from the first ``` to the last), then collect again"),
-                         rel(answers, basename(f)))
+                                "from the first ``` to the last), then %s"),
+                         rel(answers, basename(f)),
+                         if (agent) sprintf("run `Rscript run.R %s`", nm) else "collect again")
       next
     }
     a <- .ai_answer_as_asked(a, ids)
@@ -442,8 +465,10 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
     }
     if (inherits(pr, "error")) {
       rows[[nm]] <- row(nm, ids, "error", 1L, conditionMessage(pr))
-      nxt[nm] <- sprintf("ask the chat for the answer again; save it over %s",
-                         rel(answers, basename(f)))
+      nxt[nm] <- if (agent) {
+        sprintf("answer the request again; save it over %s%s", rel(answers, basename(f)), run)
+      } else sprintf("ask the chat for the answer again; save it over %s",
+                     rel(answers, basename(f)))
       next
     }
     err <- pr[pr$severity == "error", , drop = FALSE]
@@ -454,8 +479,11 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
       .ai_repair_log(file.path(study_dir, repairs), nm, f)
       .ai_write_text(format(tfl_ai_repair_prompt(a, pr)),
                      file.path(study_dir, repairs, paste0(nm, ".md")))
-      nxt[nm] <- sprintf("paste %s into the SAME chat; save its new answer over %s",
-                         rel(repairs, paste0(nm, ".md")), rel(answers, basename(f)))
+      nxt[nm] <- if (agent) {
+        sprintf("fix the answer as %s says; save the whole answer over %s%s",
+                rel(repairs, paste0(nm, ".md")), rel(answers, basename(f)), run)
+      } else sprintf("paste %s into the SAME chat; save its new answer over %s",
+                     rel(repairs, paste0(nm, ".md")), rel(answers, basename(f)))
     } else {
       # only the reports this request asked for (another is warned of)
       keep <- a
@@ -475,7 +503,10 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
         }, error = function(e) conditionMessage(e))
       }
       if (is.null(wrote)) unlink(file.path(study_dir, repairs, paste0(nm, ".md")))
-      nxt[nm] <- if (!is.null(wrote)) "see the problem below, then collect again"
+      nxt[nm] <- if (!is.null(wrote)) {
+                   if (agent) sprintf("see the problem below, then run `Rscript run.R %s`", nm)
+                   else "see the problem below, then collect again"
+                 }
                  else if (nrow(pr)) "read the warnings; the report files are written"
                  else "done: the report files are written"
     }
@@ -501,16 +532,18 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
     rows[[nm]] <- do.call(rbind, per)
     if (any(names(a$outputs) %in% ids) && !all(ids %in% names(a$outputs)) && !nrow(err) &&
         is.null(wrote)) {
-      nxt[nm] <- sprintf("ask the same chat for %s too; save the whole answer over %s",
+      nxt[nm] <- sprintf(if (agent) "add %s to the answer; save the whole answer over %s%s"
+                         else "ask the same chat for %s too; save the whole answer over %s%s",
                          paste(setdiff(ids, names(a$outputs)), collapse = ", "),
-                         rel(answers, basename(f)))
+                         rel(answers, basename(f)), if (agent) run else "")
     } else if (!any(names(a$outputs) %in% ids) && !nrow(err)) {
       # none of the reports asked for: nothing was written
-      nxt[nm] <- sprintf(paste0("the answer has none of %s (it has %s): ask the same chat ",
-                                "for them; save the whole answer over %s"),
+      nxt[nm] <- sprintf(paste0("the answer has none of %s (it has %s): %s; save the whole ",
+                                "answer over %s%s"),
                          paste(ids, collapse = ", "),
                          if (length(a$outputs)) paste(names(a$outputs), collapse = ", ") else "no report",
-                         rel(answers, basename(f)))
+                         if (agent) "answer them" else "ask the same chat for them",
+                         rel(answers, basename(f)), if (agent) run else "")
     }
   }
   out <- do.call(rbind, rows)
