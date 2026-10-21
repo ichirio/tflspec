@@ -46,7 +46,10 @@ templates), the ADaM it reads or the packages' versions -- else its RTF
 (and PNG) of the last run is kept, as \code{ai/built.csv} says.  A report
 that passed its checks but could not be built gets a repair
 (\verb{ai/repairs/<request>-build.md}) with why, which stays until the
-request's reports are built.
+request's reports are built; its RTF (and PNG) of an earlier run are
+removed, and \code{ai/built.csv} keeps why, so that a run of other requests
+still says it.  A report not built yet (only other requests run) says
+so in \code{ai/status.md}.
 }
 \seealso{
 \code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}} (\code{mode = "agent"}).

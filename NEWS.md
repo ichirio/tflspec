@@ -1,5 +1,13 @@
 # tflspec (development version)
 
+* **`run.R`'s status of a request not run this time** (0.0.24.9205):
+  `Rscript run.R <request>` built that request's reports alone, and
+  `ai/status.md` said of another, never built, "the report files are
+  written", and of one whose last build failed, nothing.  A report not
+  built yet now says so, with its `Rscript run.R` line; a failed build is
+  kept in `ai/built.csv` and said again.  A report that could not be built
+  has no RTF (or PNG) left of an earlier run: they are removed.
+
 * **`orr(stat_layout = "cols")`: each arm's rate and its CI side by side**
   (0.0.24.9201), on the layout `stat_block`; the best overall response's
   n (%) in the first of the two columns.  The arms' N is not in that
