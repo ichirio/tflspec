@@ -27,7 +27,7 @@ test_that("tfl_template(): registered from outside, listed, replaced with a mess
   tfl_template("tc_ages", kind = "table", layout = "summary",
     params = list(tfl_param("population", "SAF")),
     body = function(a, ctx) tfl_template_expand("summary",
-      list(population = a$population, variables = "AGE"),
+      list(population = a$population, continuous = "AGE"),
       codelists = ctx$codelists, population = ctx$population),
     call = "tc_ages")
   t <- tfl_templates()
@@ -38,13 +38,13 @@ test_that("tfl_template(): registered from outside, listed, replaced with a mess
   expect_message(tfl_template("tc_ages", kind = "table", layout = "summary",
     params = list(tfl_param("population", "SAF")),
     body = function(a, ctx) tfl_template_expand("summary", list(population = a$population,
-                                                                variables = "AGE"))),
+                                                                continuous = "AGE"))),
     "replaces")
   # a parameter that ends in the look
   expect_warning(tfl_template("tc_wide", kind = "table", layout = "summary",
     params = list(tfl_param("population", "SAF"), tfl_param("widths", c(row_label = 4))),
     body = function(a, ctx) {
-      x <- tfl_template_expand("summary", list(population = a$population, variables = "AGE"))
+      x <- tfl_template_expand("summary", list(population = a$population, continuous = "AGE"))
       x$content <- c(x$content, list(tfl_item("plan_columns", list(widths = a$widths))))
       x
     }), "`widths` \\(plan_columns\\(widths\\)\\)")

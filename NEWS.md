@@ -1,5 +1,23 @@
 # tflspec (development version)
 
+* **`tfl_tpl(x, name, ...)`: one call for every table and listing template**
+  (0.0.24.9202), and a report's program calls it: `tfl_tpl(ard, "demog",
+  population = "SAF")`.  The template's own functions (`tpl_demog()` ...)
+  and `tfl_template_run()` stay.
+  - The layouts `summary` and `hierarchical` take a table's whole look as
+    parameters (`order`, `total`, `heading`, `header_n`, `rounding`,
+    `stub_*`, `blanks*`, `widths`, `max_rows`, `split` ...), each in a tier
+    (`tfl_param(tier = "required" / "usual" / "other")`); those whose
+    `study` names a study standard's item take its value, and the
+    program's call says them, with no `# (study default)` lines after it.
+  - `demog` is `summary` with its own defaults (summary's `variables` is
+    now `continuous`); `ae_soc_pt` is `hierarchical`'s, and
+    `ae_ser_soc_pt` (serious TEAEs, "Any SAE") and `ae_disc_soc_pt` (TEAEs
+    leading to discontinuation) are `ae_soc_pt`'s.  `min_pct` on
+    `hierarchical`; `stack = TRUE` on `summary`.
+  - `tfl_templates()` says each one's `label` and whether the AI kit uses
+    it (`ai`; `tfl_template(ai = )`, `tfl_template_variant(ai = , example = )`).
+
 * **`orr(stat_layout = "cols")`: each arm's rate and its CI side by side**
   (0.0.24.9201), on the layout `stat_block`; the best overall response's
   n (%) in the first of the two columns.  The arms' N is not in that

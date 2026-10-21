@@ -35,6 +35,6 @@ if (requireNamespace("cards", quietly = TRUE)) {
   saf <- adsl[adsl$SAFFL == "Y", ]
   ard <- cards::bind_ard(cards::ard_tabulate(saf, variables = TRT01A),
                          cards::ard_summary(saf, by = TRT01A, variables = AGE))
-  plan <- tfl_template_run("summary", ard, population = "SAF", variables = "AGE")
+  plan <- tfl_template_run("summary", ard, population = "SAF", continuous = "AGE")
 }
 }

@@ -195,6 +195,7 @@ reference:
       resolves it, its program is the template's call, and
       `tfl_template_to_spec()` writes it out as its items.
     contents:
+      - tfl_tpl
       - tfl_templates
       - tfl_template_expand
       - tfl_template_to_spec
