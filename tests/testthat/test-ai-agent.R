@@ -166,11 +166,56 @@ test_that("tfl_ai_run(): a report built again only when it changed; one request'
   r5 <- suppressMessages(tfl_ai_run(d))
   bad <- r5$reports$request == "ae-1"
   expect_true(all(!is.na(r5$reports$rtf_problem[bad])))
-  rp <- readLines(file.path(d, "ai", "repairs", "ae-1.md"), encoding = "UTF-8")
+  bf <- file.path(d, "ai", "repairs", "ae-1-build.md")
+  rp <- readLines(bf, encoding = "UTF-8")
   expect_true("## Could not be built" %in% rp)
   expect_true(any(grepl("Rscript run.R ae-1", rp, fixed = TRUE)))
+  expect_false(file.exists(file.path(d, "ai", "repairs", "ae-1.md")))   # (the checks passed)
+  # a collect in between (a screen's reload) leaves it for the agent to read
+  suppressMessages(tfl_ai_collect_answers(d))
+  expect_identical(readLines(bf, encoding = "UTF-8"), rp)
   # (the ADaM changed: every other report built again, and fine)
   expect_true(all(r5$reports$built[!bad] == "built"))
+  # the data back: the request's reports built, its build repair gone
+  ad2 <- agent_study(file.path(root, "again"))
+  file.copy(file.path(ad2, "adae.xpt"), file.path(d, "adam", "adae.xpt"))
+  r6 <- suppressMessages(tfl_ai_run(d, requests = "ae-1"))
+  expect_true(all(is.na(r6$reports$rtf_problem)))
+  expect_false(file.exists(bf))
+})
+
+test_that("a study copied elsewhere: its answers checked and built against its own files; an agent's next steps", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("rtfreporter")
+  skip_if_not_installed("ggsurvfit")
+  root <- withr::local_tempdir()
+  d <- file.path(root, "study")
+  agent_study(root, adam_inside = TRUE)
+  tfl_ai_prepare(d, ex_book(), adam = "adam", quiet = TRUE, mode = "agent")
+  # the requests keep no path of this PC
+  ctx <- readRDS(file.path(d, "ai", "requests", "_contexts.rds"))
+  sd <- unlist(lapply(ctx, function(x) x$context$study_dir))
+  expect_true(all(sd == "."))
+  # copied to another place, the first one gone
+  d2 <- file.path(root, "elsewhere", "study")
+  dir.create(dirname(d2), recursive = TRUE)
+  file.copy(d, dirname(d2), recursive = TRUE)
+  unlink(d, recursive = TRUE)
+  # the agent's wording, not a chat's
+  ix <- paste(readLines(file.path(d2, "ai", "requests", "index.md"), encoding = "UTF-8"), collapse = "\n")
+  expect_match(ix, "Rscript run.R <request>", fixed = TRUE)
+  expect_false(grepl("new chat", ix, fixed = TRUE))
+  r0 <- suppressMessages(tfl_ai_collect_answers(d2))
+  expect_match(r0$next_steps[["ae-1"]], "Rscript run.R ae-1", fixed = TRUE)
+  expect_false(any(grepl("chat", r0$next_steps, fixed = TRUE)))
+  # answered there: checked against its own study files, built
+  ex <- system.file("ai", "example", "answers", package = "tflspec")
+  file.copy(list.files(ex, full.names = TRUE), file.path(d2, "ai", "answers"))
+  res <- suppressMessages(tfl_ai_run(d2))
+  expect_true(all(res$reports$status %in% c("ok", "warning")))
+  expect_true(all(file.exists(file.path(d2, res$reports$rtf))))
+  expect_false(dir.exists(d))
 })
 
 test_that("the questions: one asked by several reports once, the reports listed; added to later", {

@@ -1,11 +1,28 @@
 # tflspec (development version)
 
 * **`orr(stat_layout = "cols")`: each arm's rate and its CI side by side**
-  (0.0.24.9200), on the layout `stat_block`; the best overall response's
+  (0.0.24.9201), on the layout `stat_block`; the best overall response's
   n (%) in the first of the two columns.  The arms' N is not in that
   header yet (rtfreporter does not read it over split columns,
   ichirio/rtfreporter#709).  The
   default, `"rows"`, is the table as before.
+
+* **A study copied elsewhere checks its answers against its own files**
+  (0.0.24.9200).  The requests' contexts (`ai/requests/_contexts.rds`)
+  kept the study folder's path of the PC that wrote them, and an answer's
+  check read the study's files there; they now keep none, and
+  `tfl_ai_collect_answers()` (and `run.R`) use the folder they are run in
+  -- requests written before included.
+* **An agent's requests say an agent's next steps**: `ai/requests/index.md`
+  and `ai/status.md`'s next steps name `ai/agent_prompt.md`, the answer to
+  save and `Rscript run.R <request>`, not a chat to paste into.
+
+* **A report that could not be built: its repair is a file of its own**
+  (0.0.24.9199), `ai/repairs/<request>-build.md`, which stays until the
+  request's reports are built: `tfl_ai_collect_answers()` -- run again
+  between, by a screen's reload -- removes only the checks' repair
+  (`<request>.md`), and took the build's with it.  `ai/status.md` and the
+  agent's instructions name the file.
 
 * **`demog` and `ae_pt_freq` are built on their layouts** (0.0.24.9198):
   `demog`'s usual table is `summary`'s body (its own code stays for
