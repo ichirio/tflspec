@@ -1,10 +1,33 @@
 # tflspec (development version)
 
 * **`orr(stat_layout = "cols")`: each arm's rate and its CI side by side**
-  (0.0.24.9197), on the layout `stat_block`; the best overall response's
+  (0.0.24.9199), on the layout `stat_block`; the best overall response's
   n (%) in the first of the two columns.  The arms' N is not in that
   header yet (rtfreporter does not read it over split columns).  The
   default, `"rows"`, is the table as before.
+
+* **`tfl_ai_run()` (`run.R`) builds only what changed** (0.0.24.9197).  A
+  report's ARD and RTF are made again only when its report file, the
+  study's files (`study.yml`, `spec/data.yml`, `spec/defaults.yml`, its
+  templates), the ADaM it reads or the packages' versions changed since
+  the last run (`ai/built.csv`); else its RTF is kept.  `requests =`
+  (`Rscript run.R ae-1`) builds one request's reports, every answer still
+  read and checked; `rebuild = TRUE` builds them all.  A report that
+  passed its checks but could not be built gets a repair,
+  `ai/repairs/<request>.md`, with why.  The agent's instructions and each
+  request name `Rscript run.R <request>`.  In a study of 100 reports a
+  run after one answer goes from minutes to seconds.
+
+* **A study's AI files name its paths from the study folder**
+  (0.0.24.9196).  `tfl_ai_prepare(mode = "agent")`'s first message for the
+  agent (`ai/agent_prompt.md`, `$agent_prompt`) names `AGENTS.md`,
+  `ai/requests/index.md`, `run.R` ... from the study folder, not with this
+  PC's path; the requests name a TOC / SHELL workbook in the study folder
+  from it, however it was given (relative, with backslashes, another
+  case); `tfl_ai_study_init()` writes an ADaM folder in the study, given
+  whole, from it in `spec/data.yml`.  A study copied to another PC then
+  says the same.  A workbook or ADaM folder outside the study keeps its
+  whole path.
 
 * **The layout template `stat_block`: one record's statistics over several
   rows and columns** (0.0.24.9195).  Each arm's block holds one analysis
@@ -20,6 +43,17 @@
 * **`orr`: `conf_level`** (0.95): the rate's CI's level, and its row's
   label (`90% CI`).  The template is now tagged as the `stat_block`
   layout; with the defaults it writes the same table as before.
+
+
+* **The template `vs_change` and `tpl_vs_change()` are removed**
+  (0.0.24.9194).  Its table is `param_change` with `baseline = TRUE` and
+  `layout = "rows"`: one parameter (`params`), one visit (`visits`),
+  vs_change's statistics, cells and labels (`baseline_label`,
+  `value_label`, `change_label`) give the same rows and cells.  The one
+  difference is param_change's blocks of the parameter and the visit; a
+  report that wants them in the title removes them with its own `plan_*`
+  items.  A report file with `template: {name: vs_change}` is now an
+  error naming the templates there are.
 
 * **Templates: the standard filter pair, `subset` (which subjects) and
   `where` (which records)** (0.0.24.9193).  Every table and figure

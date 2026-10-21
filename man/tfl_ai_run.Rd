@@ -4,18 +4,26 @@
 \alias{tfl_ai_run}
 \title{Run the study's AI answers through: collect, build, status, questions}
 \usage{
-tfl_ai_run(study_dir = ".", rtf = TRUE)
+tfl_ai_run(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = FALSE)
 }
 \arguments{
 \item{study_dir}{The study folder.}
 
 \item{rtf}{\code{FALSE} to build the ARDs only (no rtfreporter).}
+
+\item{requests}{The requests whose reports are built (\code{"ae-1"}); \code{NULL}
+(the default): every request's.  Every answer is still read and
+checked, and \code{ai/status.md} lists them all.  \verb{Rscript run.R ae-1}
+passes them.}
+
+\item{rebuild}{\code{TRUE} to build every report again, changed or not.}
 }
 \value{
 A \code{tfl_ai_collected} (as \code{\link[=tfl_ai_collect_answers]{tfl_ai_collect_answers()}}) whose
-\code{reports} also have \code{rtf} (the file made, else \code{NA}) and \code{rtf_problem},
-and a \code{questions} data frame (\code{n}, \code{question}, \code{reports}, \code{status},
-\code{answer}), invisibly.
+\code{reports} also have \code{rtf} (the file made, else \code{NA}), \code{rtf_problem}
+and \code{built} (\code{"built"}, \code{"kept"} -- unchanged since the last run --
+or \code{NA}), and a \code{questions} data frame (\code{n}, \code{question}, \code{reports},
+\code{status}, \code{answer}), invisibly.
 }
 \description{
 What a coding agent runs after each answer it saves (\code{run.R} of
@@ -30,6 +38,14 @@ questions (an assumption's \code{question}) into \code{ai/questions.md}: one
 question once, with every report that asks it; a question there already
 is kept as it is -- its answer, its status -- with the new reports added
 to its list.  Nothing is sent anywhere.
+}
+\details{
+A report is built again only when it changed: its report file, the
+study's files (\code{study.yml}, \code{spec/data.yml}, \code{spec/defaults.yml}, its
+templates), the ADaM it reads or the packages' versions -- else its RTF
+(and PNG) of the last run is kept, as \code{ai/built.csv} says.  A report
+that passed its checks but could not be built gets a repair
+(\verb{ai/repairs/<request>.md}) with why.
 }
 \seealso{
 \code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}} (\code{mode = "agent"}).

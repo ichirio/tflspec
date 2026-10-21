@@ -121,6 +121,58 @@ test_that("tfl_ai_run(): the RTFs, ai/status.md, the questions; a second round k
   expect_identical(readLines(file.path(d, "ai", "decisions.md")), dec)
 })
 
+test_that("tfl_ai_run(): a report built again only when it changed; one request's; a build's repair", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("rtfreporter")
+  skip_if_not_installed("ggsurvfit")
+  root <- withr::local_tempdir()
+  d <- file.path(root, "study")
+  ad <- agent_study(root, adam_inside = TRUE)
+  tfl_ai_prepare(d, ex_book(), adam = "adam", quiet = TRUE, mode = "agent")
+  ex <- system.file("ai", "example", "answers", package = "tflspec")
+  file.copy(list.files(ex, full.names = TRUE), file.path(d, "ai", "answers"))
+  built <- function(res) stats::setNames(res$reports$built, res$reports$output_id)
+  r1 <- suppressMessages(tfl_ai_run(d))
+  expect_true(all(built(r1) == "built"))
+  expect_true(file.exists(file.path(d, "ai", "built.csv")))
+  rtf <- file.path(d, r1$reports$rtf)
+  t1 <- file.mtime(rtf)
+  # nothing changed: every report kept, its RTF as it was
+  r2 <- suppressMessages(tfl_ai_run(d))
+  expect_true(all(built(r2) == "kept"))
+  expect_identical(r2$reports$rtf, r1$reports$rtf)
+  expect_identical(file.mtime(rtf), t1)
+  # one answer changed: its report alone
+  a <- file.path(d, "ai", "answers", "demographics-1.md")
+  writeLines(sub("label: Demographic and Baseline Characteristics",
+                 "label: Demographic and Baseline Characteristics (ITT)", readLines(a, encoding = "UTF-8"),
+                 fixed = TRUE), a, useBytes = TRUE)
+  r3 <- suppressMessages(tfl_ai_run(d))
+  dm <- r3$reports$request == "demographics-1"
+  expect_true(all(r3$reports$built[dm] == "built"))
+  expect_true(all(r3$reports$built[!dm] == "kept"))
+  # one request asked for: its reports, the others as the last run left them
+  r4 <- suppressMessages(tfl_ai_run(d, requests = "ae-1", rebuild = TRUE))
+  ae <- r4$reports$request == "ae-1"
+  expect_true(all(r4$reports$built[ae] == "built"))
+  expect_true(all(r4$reports$built[!ae] == "kept"))
+  expect_true(all(!is.na(r4$reports$rtf)))
+  status <- readLines(file.path(d, "ai", "status.md"), encoding = "UTF-8")
+  expect_true(any(grepl("5 of 5 reports have an RTF", status, fixed = TRUE)))
+  expect_error(tfl_ai_run(d, requests = "ae-9"), "no request 'ae-9'")
+  # a report whose build fails (its data gone): a repair says why
+  file.remove(file.path(d, "adam", "adae.xpt"))
+  r5 <- suppressMessages(tfl_ai_run(d))
+  bad <- r5$reports$request == "ae-1"
+  expect_true(all(!is.na(r5$reports$rtf_problem[bad])))
+  rp <- readLines(file.path(d, "ai", "repairs", "ae-1.md"), encoding = "UTF-8")
+  expect_true("## Could not be built" %in% rp)
+  expect_true(any(grepl("Rscript run.R ae-1", rp, fixed = TRUE)))
+  # (the ADaM changed: every other report built again, and fine)
+  expect_true(all(r5$reports$built[!bad] == "built"))
+})
+
 test_that("the questions: one asked by several reports once, the reports listed; added to later", {
   d <- withr::local_tempdir()
   a <- data.frame(output_id = c("T-1", "T-2", "T-3"), where = NA_character_, item = NA_character_,
@@ -138,4 +190,33 @@ test_that("the questions: one asked by several reports once, the reports listed;
   expect_identical(nrow(q2), 2L)
   # no question: nothing new
   expect_identical(nrow(.ai_questions_update(d, a2[0L, ])), 2L)
+})
+
+test_that("mode = \"agent\": a study with its ADaM and workbook inside it names no path of this PC", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  root <- withr::local_tempdir()
+  d <- file.path(root, "study")
+  ad <- agent_study(root, adam_inside = TRUE)            # given whole
+  dir.create(file.path(d, "shells"), recursive = TRUE, showWarnings = FALSE)
+  book <- file.path(d, "shells", "toc.xlsx")
+  file.copy(ex_book(), book)
+  r <- tfl_ai_prepare(d, book, adam = ad, quiet = TRUE, mode = "agent")
+  here <- normalizePath(root, winslash = "/")
+  files <- list.files(d, recursive = TRUE, all.files = TRUE, pattern = "[.](md|yml|R)$")
+  for (f in files) {
+    txt <- paste(readLines(file.path(d, f), warn = FALSE, encoding = "UTF-8"), collapse = "\n")
+    expect_false(grepl(tolower(here), tolower(txt), fixed = TRUE), info = f)
+  }
+  expect_false(grepl(tolower(here), tolower(r$agent_prompt), fixed = TRUE))
+  # the workbook and the ADaM, from the study folder
+  ae <- paste(readLines(file.path(d, "ai", "requests", "ae-1.md"), encoding = "UTF-8"), collapse = "\n")
+  expect_match(ae, "shells/toc.xlsx", fixed = TRUE)
+  dy <- yaml::read_yaml(file.path(d, "spec", "data.yml"))
+  expect_true(all(startsWith(vapply(dy$datasets, `[[`, "", "path"), "adam/")))
+  # one outside the study: whole, as it must be
+  d2 <- file.path(root, "study2")
+  r2 <- tfl_ai_prepare(d2, ex_book(), adam = ad, quiet = TRUE, mode = "agent")
+  dy2 <- yaml::read_yaml(file.path(d2, "spec", "data.yml"))
+  expect_true(all(startsWith(tolower(vapply(dy2$datasets, `[[`, "", "path")), tolower(ad))))
 })
