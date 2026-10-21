@@ -1,5 +1,17 @@
 # tflspec (development version)
 
+* **`tfl_ai_run()` (`run.R`) builds only what changed** (0.0.24.9195).  A
+  report's ARD and RTF are made again only when its report file, the
+  study's files (`study.yml`, `spec/data.yml`, `spec/defaults.yml`, its
+  templates), the ADaM it reads or the packages' versions changed since
+  the last run (`ai/built.csv`); else its RTF is kept.  `requests =`
+  (`Rscript run.R ae-1`) builds one request's reports, every answer still
+  read and checked; `rebuild = TRUE` builds them all.  A report that
+  passed its checks but could not be built gets a repair,
+  `ai/repairs/<request>.md`, with why.  The agent's instructions and each
+  request name `Rscript run.R <request>`.  In a study of 100 reports a
+  run after one answer goes from minutes to seconds.
+
 * **A study's AI files name its paths from the study folder**
   (0.0.24.9194).  `tfl_ai_prepare(mode = "agent")`'s first message for the
   agent (`ai/agent_prompt.md`, `$agent_prompt`) names `AGENTS.md`,

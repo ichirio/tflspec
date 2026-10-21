@@ -46,7 +46,7 @@
 .ai_agent_request_head <- function(request) {
   c("<!-- tflspec: agent mode -->",
     paste0("> **For the agent** (AGENTS.md): answer this request with its one `yaml` block and ",
-           "save the whole answer as `ai/answers/", request, ".md`; then run `Rscript run.R` and ",
+           "save the whole answer as `ai/answers/", request, ".md`; then run `Rscript run.R ", request, "` and ",
            "read `ai/status.md`. Read `ai/decisions.md` first and follow it. Do not stop to ask: ",
            "take the likeliest choice and write it as an assumption with its `question`. Work from ",
            "`ai/adam_summary.md`; read the ADaM with R only to settle a question it does not."),
@@ -68,15 +68,28 @@
 #' is kept as it is -- its answer, its status -- with the new reports added
 #' to its list.  Nothing is sent anywhere.
 #'
+#' A report is built again only when it changed: its report file, the
+#' study's files (`study.yml`, `spec/data.yml`, `spec/defaults.yml`, its
+#' templates), the ADaM it reads or the packages' versions -- else its RTF
+#' (and PNG) of the last run is kept, as `ai/built.csv` says.  A report
+#' that passed its checks but could not be built gets a repair
+#' (`ai/repairs/<request>.md`) with why.
+#'
 #' @param study_dir The study folder.
 #' @param rtf `FALSE` to build the ARDs only (no rtfreporter).
+#' @param requests The requests whose reports are built (`"ae-1"`); `NULL`
+#'   (the default): every request's.  Every answer is still read and
+#'   checked, and `ai/status.md` lists them all.  `Rscript run.R ae-1`
+#'   passes them.
+#' @param rebuild `TRUE` to build every report again, changed or not.
 #' @return A `tfl_ai_collected` (as [tfl_ai_collect_answers()]) whose
-#'   `reports` also have `rtf` (the file made, else `NA`) and `rtf_problem`,
-#'   and a `questions` data frame (`n`, `question`, `reports`, `status`,
-#'   `answer`), invisibly.
+#'   `reports` also have `rtf` (the file made, else `NA`), `rtf_problem`
+#'   and `built` (`"built"`, `"kept"` -- unchanged since the last run --
+#'   or `NA`), and a `questions` data frame (`n`, `question`, `reports`,
+#'   `status`, `answer`), invisibly.
 #' @seealso [tfl_ai_prepare()] (`mode = "agent"`).
 #' @export
-tfl_ai_run <- function(study_dir = ".", rtf = TRUE) {
+tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = FALSE) {
   fn <- "tfl_ai_run()"
   if (isTRUE(rtf) && !requireNamespace("rtfreporter", quietly = TRUE)) {
     .ard_stop(sprintf("%s: the RTF needs the rtfreporter package; or rtf = FALSE.", fn))
@@ -86,7 +99,31 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE) {
   r$rtf <- NA_character_
   r$png <- NA_character_
   r$rtf_problem <- NA_character_
+  r$built <- NA_character_
+  if (!is.null(requests)) {
+    bad <- setdiff(requests, r$request)
+    if (length(bad)) {
+      .ard_stop(sprintf("%s: no request %s; the requests are %s.", fn,
+                        paste(sQuote(bad, FALSE), collapse = ", "),
+                        paste(unique(r$request), collapse = ", ")))
+    }
+  }
   todo <- which(r$status %in% c("ok", "warning") & !is.na(r$file))
+  # the reports not asked for this time: as the last run left them
+  done <- .ai_built_read(study_dir)
+  keep_as <- function(i) {
+    b <- done[match(r$output_id[i], done$output_id), , drop = FALSE]
+    if (nrow(b) && !is.na(b$output_id) && .ai_built_there(study_dir, b)) {
+      r$rtf[i] <<- b$rtf
+      r$png[i] <<- b$png
+      r$built[i] <<- "kept"
+      TRUE
+    } else FALSE
+  }
+  if (!is.null(requests)) {
+    for (i in setdiff(todo, which(r$request %in% requests))) keep_as(i)
+    todo <- intersect(todo, which(r$request %in% requests))
+  }
   if (length(todo)) {
     old <- setwd(study_dir)
     on.exit(setwd(old), add = TRUE)
@@ -97,8 +134,19 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE) {
       r$rtf_problem[todo] <- paste("the study could not be read:", .ai_one_line(conditionMessage(e)))
     } else {
       out_dir <- st$study$settings$output_path %||% "output"
+      common <- .ai_built_common(st)
       for (i in todo) {
         id <- r$output_id[i]
+        # unchanged since the last run, its files there: kept
+        key <- .ai_built_key(id, common)
+        b <- done[match(id, done$output_id), , drop = FALSE]
+        if (!isTRUE(rebuild) && nrow(b) && identical(b$key, key) && .ai_built_there(".", b) &&
+            (!isTRUE(rtf) || !is.na(b$rtf))) {
+          r$rtf[i] <- b$rtf
+          r$png[i] <- b$png
+          r$built[i] <- "kept"
+          next
+        }
         made <- tryCatch({
           o <- tfl_resolve_output(outs[[id]], st)
           dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
@@ -125,13 +173,22 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE) {
         }, error = function(e) structure(.ai_one_line(conditionMessage(e)), class = "failed"))
         if (inherits(made, "failed")) {
           r$rtf_problem[i] <- unclass(made)
+          done <- done[!done$output_id %in% id, , drop = FALSE]
         } else {
           if (!is.null(made$rtf)) r$rtf[i] <- gsub("\\\\", "/", made$rtf)
           if (!is.null(made$png)) r$png[i] <- gsub("\\\\", "/", made$png)
+          r$built[i] <- "built"
+          done <- rbind(done[!done$output_id %in% id, , drop = FALSE],
+                        data.frame(output_id = id, key = key, rtf = r$rtf[i], png = r$png[i],
+                                   stringsAsFactors = FALSE))
         }
       }
+      .ai_built_write(".", done)
     }
   }
+  # a report that passed its checks but could not be built: a repair, as
+  # for an answer with errors
+  .ai_build_repairs(study_dir, r)
   res$reports <- r
   res$questions <- .ai_questions_update(study_dir, res$assumptions)
   .ai_write_text(.ai_status_text(res), file.path(study_dir, "ai", "status.md"))
@@ -140,6 +197,80 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE) {
   message(sprintf("%d of %d reports have an RTF; %d question(s) open in ai/questions.md; see ai/status.md.",
                   made, nrow(r), open))
   invisible(res)
+}
+
+# ---- what the last run built: ai/built.csv ---------------------------------------
+# A report's key: its report file's md5, the study's files' (study.yml,
+# spec/data.yml, spec/defaults.yml, spec/templates/), the ADaM files' size
+# and time, the packages' versions.  The same key, its RTF / PNG there:
+# nothing to build.
+
+.ai_built_file <- function(dir) file.path(dir, "ai", "built.csv")
+
+.ai_built_read <- function(dir) {
+  f <- .ai_built_file(dir)
+  empty <- data.frame(output_id = character(), key = character(), rtf = character(),
+                      png = character(), stringsAsFactors = FALSE)
+  if (!file.exists(f)) return(empty)
+  x <- tryCatch(utils::read.csv(f, stringsAsFactors = FALSE, colClasses = "character"),
+                error = function(e) empty)
+  if (!all(names(empty) %in% names(x))) return(empty)
+  x[names(empty)]
+}
+
+.ai_built_write <- function(dir, x) {
+  dir.create(file.path(dir, "ai"), recursive = TRUE, showWarnings = FALSE)
+  utils::write.csv(x[order(x$output_id), , drop = FALSE], .ai_built_file(dir), row.names = FALSE)
+}
+
+# its RTF (and PNG) are still there
+.ai_built_there <- function(dir, b) {
+  ok <- function(p) is.na(p) || !nzchar(p) || file.exists(file.path(dir, p))
+  !is.na(b$rtf) && ok(b$rtf) && ok(b$png)
+}
+
+# what every report reads: the study's files, the ADaM, the packages
+.ai_built_common <- function(st) {
+  md5 <- function(f) {
+    f <- f[file.exists(f)]
+    if (length(f)) paste(basename(f), unname(tools::md5sum(f)), collapse = ";") else ""
+  }
+  tpl <- sort(list.files(file.path("spec", "templates"), "[.][Rr]$", full.names = TRUE))
+  # (the datasets' paths: from the study folder, or whole)
+  data <- unlist(lapply(st$data$datasets %||% list(), function(d) d$path), use.names = FALSE)
+  fi <- file.info(data[file.exists(data)])
+  adam <- if (nrow(fi)) paste(rownames(fi), fi$size, format(fi$mtime, "%Y%m%d%H%M%S"), collapse = ";") else ""
+  pk <- function(p) if (requireNamespace(p, quietly = TRUE)) format(utils::packageVersion(p)) else "-"
+  paste(md5(c("study.yml", file.path("spec", c("data.yml", "defaults.yml")))), md5(tpl), adam,
+        "tflspec", pk("tflspec"), "rtfreporter", pk("rtfreporter"), sep = "|")
+}
+
+.ai_built_key <- function(id, common) {
+  f <- file.path("spec", "outputs", paste0(id, ".yml"))
+  own <- if (file.exists(f)) unname(tools::md5sum(f)) else ""
+  rlang::hash(paste(own, common, sep = "|"))
+}
+
+# ai/repairs/<request>.md for a report that passed its checks but could
+# not be built (the checks' own repair, when there is one, comes first)
+.ai_build_repairs <- function(dir, r) {
+  bad <- r[!is.na(r$rtf_problem), , drop = FALSE]
+  if (!nrow(bad)) return(invisible())
+  rd <- file.path(dir, "ai", "repairs")
+  dir.create(rd, recursive = TRUE, showWarnings = FALSE)
+  for (q in unique(bad$request)) {
+    b <- bad[bad$request == q, , drop = FALSE]
+    f <- file.path(rd, paste0(q, ".md"))
+    head <- if (file.exists(f)) c(readLines(f, warn = FALSE, encoding = "UTF-8"), "") else
+      c(sprintf("# Repair: %s", q), "",
+        "The answer passed its checks, but a report could not be built. Fix the answer",
+        sprintf("(ai/answers/%s.md, the whole answer again) and run `Rscript run.R %s`.", q, q), "")
+    .ai_write_text(c(head, "## Could not be built", "",
+                     sprintf("- %s: %s", b$output_id, b$rtf_problem)), f)
+    a <- file.path(dir, "ai", "answers", paste0(q, ".md"))
+    if (file.exists(a)) .ai_repair_log(rd, q, a)
+  }
+  invisible()
 }
 
 # ---- ai/status.md -----------------------------------------------------------------
