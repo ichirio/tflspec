@@ -40,7 +40,7 @@ test_that("in a study: the ARD built; A (the call, the layout) = B (the design) 
   expect_true(all(c("HR", "HR_SEX", "HR_AGEGR1") %in% ard$analysis_id))
   x <- tplfig_check(o, d, c(data, list(ard = ard)))
   txt <- paste(x$a, collapse = "\n")
-  expect_match(txt, "fig <- tpl_forest_hr(ard, subgroups = c(SEX, AGEGR1)) +", fixed = TRUE)
+  expect_match(txt, "fig <- tfl_tpl(ard, \"forest_hr\", subgroups = c(SEX, AGEGR1)) +", fixed = TRUE)
   expect_match(txt, "content <- tpl_forest_layout(fig)", fixed = TRUE)
   # the forest alone, then its text column at its right
   p <- tpl_forest_hr(ard, group = TRT01A, subgroups = c(SEX, AGEGR1))

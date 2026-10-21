@@ -43,7 +43,7 @@ test_that("in a study: A (the data steps, the call) = B (the design) = the templ
     txt <- paste(x$a, collapse = "\n")
     expect_match(txt, "semi_join(", fixed = TRUE)
     expect_match(txt, "filter(PARAMCD == \"SYSBP\", ", fixed = TRUE)
-    expect_match(txt, sprintf(paste0("content <- tpl_%s(advs_sysbp, value = CHG, ",
-                                     "param = \"SYSBP\") +"), nm), fixed = TRUE)
+    expect_match(txt, sprintf(paste0("content <- tfl_tpl(advs_sysbp, \"%s\", param = \"SYSBP\", ",
+                                     "value = CHG) +"), nm), fixed = TRUE)
   }
 })

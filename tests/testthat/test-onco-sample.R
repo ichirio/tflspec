@@ -2,6 +2,10 @@
 # consistent across datasets, plausible numbers; and its recipe,
 # data-raw/gen_onco.R, seeded and current (where the source tree is here).
 
+# tflspec's adtte: ggsurvfit's, attached by an earlier test, has no TRT01A
+# (under devtools::test() the helpers' copy is behind it)
+adtte <- tflspec::adtte
+
 onco <- list(ADSL = tflspec::adsl, ADEX = tflspec::adex, ADAE = tflspec::adae,
              ADLB = tflspec::adlb, ADVS = tflspec::advs, ADRS = tflspec::adrs,
              ADTR = tflspec::adtr, ADTTE = tflspec::adtte)

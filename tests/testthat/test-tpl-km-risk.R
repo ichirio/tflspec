@@ -1,3 +1,7 @@
+# tflspec's adtte: ggsurvfit's, attached by an earlier test, has no TRT01A
+# (under devtools::test() the helpers' copy is behind it)
+adtte <- tflspec::adtte
+
 test_that("km_risk_table / km_ci: ggsurvfit's risk table, a layer of the curves", {
   for (nm in c("km_risk_table", "km_ci")) {
     x <- tfl_template_expand(nm, list(param = "PFS", group = "TRT01A"))
@@ -38,6 +42,6 @@ test_that("in a study: A (the data steps, the call) = B (the design) = the templ
                                    tfl_item("labs", list(y = "Progression-free"))))
     x <- tplfig_check(o, d, data)
     expect_match(paste(x$a, collapse = "\n"),
-                 sprintf("content <- tpl_%s(adtte_pfs, group = TRT01A) +", nm), fixed = TRUE)
+                 sprintf("content <- tfl_tpl(adtte_pfs, \"%s\", group = TRT01A) +", nm), fixed = TRUE)
   }
 })

@@ -55,50 +55,7 @@
 # a column given bare or as text (a quosure), NULL when not given
 .tpl_col <- function(q) if (rlang::quo_is_null(q)) NULL else rlang::as_name(q)
 
-# ---- km_simple: Kaplan-Meier curves ----------------------------------------------
-
-.tpl_km_design <- function(group = NULL, time = NULL, censor = "CNSR", time_unit = "months",
-                           data = NULL, param = NULL, preset = "km_simple") {
-  f <- .tpl_fig_design(preset, list(data = data, param = param, group = group, time = time,
-                                    censor = censor, time_unit = time_unit), "survfit")
-  # the number at risk: ggsurvfit's own table under the curves (a layer of
-  # the plot, so the report's own items `+`-ed after the call go on the
-  # curves), its title, height and text as the study standard's panel
-  is_rt <- vapply(f$content, function(it) identical(it$fn, "risk_table"), NA)
-  if (any(is_rt)) {
-    rt <- f$content[[which(is_rt)[1L]]]$args
-    base <- as.numeric(f$plot$base_size %||% 10)
-    # the x axis's breaks from the fit (the call's, after it): the table's
-    # times, and the axis to the last of them, as the standard's panel
-    f$stats <- c(f$stats, list(list(step = "code", label = "the x axis's breaks, the times at risk",
-                                    code = "x_breaks <- pretty(c(0, max(fit$time)))")))
-    f$plot$add <- c(f$plot$add, list(list(fn = "scale_x_continuous", args = list(
-      breaks = tfl_r("x_breaks"), limits = tfl_r("range(x_breaks)"),
-      expand = tfl_r("expansion(mult = c(0.02, 0.02))")))))
-    f$content[[which(is_rt)[1L]]] <- tfl_item("call", list(fn = "add_risktable", args = list(
-      times = tfl_r("x_breaks"), risktable_stats = "n.risk", size = rt$size,
-      stats_label = rt$title,
-      risktable_height = rt$height,
-      theme = tfl_r(sprintf(paste0("list(theme_risktable_default(axis.text.y.size = %s, ",
-                                   "plot.title.size = %s), theme(plot.title.position = \"plot\"))"),
-                            format(base), format(base * 0.9))))))
-  }
-  f
-}
-
-.tpl_km_simple_params <- function() list(
-  tfl_param("param", required = TRUE, type = "levels", of = "PARAMCD",
-            doc = "the PARAMCD of ADTTE"),
-  tfl_param("population", NULL, type = "text",
-            doc = "the analysis set's id (SAF): its subjects kept; NULL: every record"),
-  .tpl_subset_param(),
-  tfl_param("group", NULL, doc = "the curves' variable (TRT01A)"),
-  tfl_param("time", NULL, doc = "the time variable; NULL: AVAL"),
-  tfl_param("censor", "CNSR", doc = "the censoring variable"),
-  tfl_param("time_unit", "months", doc = "the time axis' unit"),
-  tfl_param("data", NULL, doc = "the dataset; NULL: ADTTE"),
-  .tpl_where_param(doc = "the records kept besides the parameter (R)")
-)
+# ---- km_simple ...: the km layout's former presets (R/tpl_fig_km.R) ----------
 
 #' Kaplan-Meier curves: a figure from the template `km_simple`
 #'
@@ -429,31 +386,23 @@ tpl_forest_layout <- function(fig) {
   env$fig
 }
 
-.tpl_km_body <- function(preset) {
-  force(preset)
-  function(a, ctx) {
-    f <- .tpl_km_design(a$group, a$time, a$censor, a$time_unit, data = a$data, param = a$param,
-                        preset = preset)
-    .tpl_fig_body_of(f, a, ctx)
-  }
-}
-
 # ---- registered --------------------------------------------------------------------
 
 .tpl_fig_register <- function() {
-  .tfl_template("forest_hr", kind = "figure", layout = "forest", params = .tpl_forest_params(),
-                body = .tpl_forest_body, label = "Hazard ratio by subgroup (forest)")
-  for (nm in c("km_simple", "km_risk_table", "km_ci")) {
-    .tfl_template(nm, kind = "figure", layout = "km", params = .tpl_km_simple_params(),
-                  body = .tpl_km_body(nm))
-  }
-  .tfl_template("mean_se", kind = "figure", layout = "mean", params = .tpl_mean_params(),
-                body = .tpl_mean_body("se"), label = "Mean +/- SE by visit")
-  .tfl_template("mean_ci", kind = "figure", layout = "mean", params = .tpl_mean_params(),
-                body = .tpl_mean_body("ci"), label = "Mean (95% CI) by visit")
-  .tfl_template("waterfall", kind = "figure", layout = "waterfall", params = .tpl_wf_params(),
+  .tfl_template("forest_hr", kind = "figure", layout = "forest", params = .tpl_fig_data_stage(.tpl_forest_params(),
+                  c("param", "population", "subset", "data", "time", "censor", "where")),
+                body = .tpl_forest_body, label = "Hazard ratio by subgroup (forest)", call = "tfl_tpl")
+  .tpl_km_register()
+  .tfl_template("mean_se", kind = "figure", layout = "mean", params = .tpl_fig_data_stage(.tpl_mean_params()),
+                body = .tpl_mean_body("se"), label = "Mean +/- SE by visit", call = "tfl_tpl")
+  .tfl_template("mean_ci", kind = "figure", layout = "mean", params = .tpl_fig_data_stage(.tpl_mean_params()),
+                body = .tpl_mean_body("ci"), label = "Mean (95% CI) by visit", call = "tfl_tpl")
+  .tfl_template("waterfall", kind = "figure", layout = "waterfall", params = .tpl_fig_data_stage(.tpl_wf_params(),
+    c("param", "population", "subset", "data", "where")),
     body = function(a, ctx) {
       f <- .tpl_wf_design(a$value, a$by_response, a$param, a$data, a$where)
       .tpl_fig_body_of(f, a[setdiff(names(a), "where")], ctx)
-    }, label = "Waterfall of each subject's change")
+    }, label = "Waterfall of each subject's change", call = "tfl_tpl")
+  # the study's figure style: the km parameters' study values
+  .tpl_extend(study_sources = .tpl_km_style_sources())
 }
