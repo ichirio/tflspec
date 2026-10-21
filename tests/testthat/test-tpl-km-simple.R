@@ -1,3 +1,7 @@
+# tflspec's adtte: ggsurvfit's, attached by an earlier test, has no TRT01A
+# (under devtools::test() the helpers' copy is behind it)
+adtte <- tflspec::adtte
+
 km_skip <- function() {
   skip_if_not_installed("ggsurvfit")
   skip_if_not_installed("dplyr")

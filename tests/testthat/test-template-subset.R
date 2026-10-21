@@ -1,6 +1,10 @@
 # The standard filter pair of every template: which subjects (`subset`, on
 # the analysis set's ADSL) and which records (`where`)
 
+# tflspec's adtte: ggsurvfit's, attached by an earlier test, has no TRT01A
+# (under devtools::test() the helpers' copy is behind it)
+adtte <- tflspec::adtte
+
 subset_skip <- function() {
   skip_on_cran()
   skip_if_not_installed("cards")
