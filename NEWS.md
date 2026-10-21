@@ -1,6 +1,6 @@
 # tflspec (development version)
 
-* **A template's help** (0.0.24.9203): `tfl_tpl_args(name, study,
+* **A template's help** (#429, 0.0.24.9203): `tfl_tpl_args(name, study,
   population)` is a template's parameters as a table -- tier, the layout's
   default, the default a variant changes, the study standard's value, the
   value in effect and its layer (`"study"`, `"variant:<name>"`,
