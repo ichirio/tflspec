@@ -2,6 +2,10 @@
 # the file's form, its rules, the code, and the designer's designs
 # converted to it (the same figure).
 
+# tflspec's adtte: ggsurvfit's, attached by an earlier test, has no TRT01A
+# (under devtools::test() the helpers' copy is behind it)
+adtte <- tflspec::adtte
+
 fc_template <- function(t, adam = tfl_example_adam()) {
   kinds <- tfl_fig_templates()
   kind <- kinds$kind[kinds$template == t]

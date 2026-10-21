@@ -1,3 +1,7 @@
+# tflspec's adtte: ggsurvfit's, attached by an earlier test, has no TRT01A
+# (under devtools::test() the helpers' copy is behind it)
+adtte <- tflspec::adtte
+
 test_that("the built-in style carries the sample programs' values", {
   s <- tfl_fig_style()
   expect_named(s, c("settings", "colors", "markers"))

@@ -1,6 +1,10 @@
 # A template parameter's value from the study standard: the report's
 # population, the study's treatment (tfl_param(study = ))
 
+# tflspec's adtte: ggsurvfit's, attached by an earlier test, has no TRT01A
+# (under devtools::test() the helpers' copy is behind it)
+adtte <- tflspec::adtte
+
 # the sample study, its study.yml saying the treatment
 ss_study <- function(treatment = "TRT01P") {
   d <- tempfile()

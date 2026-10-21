@@ -2,6 +2,10 @@
 # parameters (summary, hierarchical); demog and the AE tables as their
 # parameter sets
 
+# tflspec's adtte: ggsurvfit's, attached by an earlier test, has no TRT01A
+# (under devtools::test() the helpers' copy is behind it)
+adtte <- tflspec::adtte
+
 tt_tab <- function(p) {
   t <- as.data.frame(suppressMessages(rtfreporter::plan_apply(p, "table")))
   t[] <- lapply(t, function(v) if (is.factor(v)) as.character(v) else v)

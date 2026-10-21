@@ -1,6 +1,10 @@
 # relevel_ard(): an ARD that is not cards' in the code lists' order (#362):
 # cardx's survfit makes the arms' factor again, alphabetical.
 
+# tflspec's adtte: ggsurvfit's, attached by an earlier test, has no TRT01A
+# (under devtools::test() the helpers' copy is behind it)
+adtte <- tflspec::adtte
+
 lvl <- function(x) vapply(x, function(v) if (length(v)) as.character(v[[1L]]) else NA_character_, "")
 
 test_that("relevel_ard() puts a column's levels in its code list's order, values and rows as they were", {
