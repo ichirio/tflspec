@@ -8,6 +8,29 @@
   with one level (`hierarchy = "AEDECOD"`) no longer stops: it has no row
   keys above the term.
 
+* **`tfl_ai_run()` (`run.R`) builds only what changed** (0.0.24.9197).  A
+  report's ARD and RTF are made again only when its report file, the
+  study's files (`study.yml`, `spec/data.yml`, `spec/defaults.yml`, its
+  templates), the ADaM it reads or the packages' versions changed since
+  the last run (`ai/built.csv`); else its RTF is kept.  `requests =`
+  (`Rscript run.R ae-1`) builds one request's reports, every answer still
+  read and checked; `rebuild = TRUE` builds them all.  A report that
+  passed its checks but could not be built gets a repair,
+  `ai/repairs/<request>.md`, with why.  The agent's instructions and each
+  request name `Rscript run.R <request>`.  In a study of 100 reports a
+  run after one answer goes from minutes to seconds.
+
+* **A study's AI files name its paths from the study folder**
+  (0.0.24.9196).  `tfl_ai_prepare(mode = "agent")`'s first message for the
+  agent (`ai/agent_prompt.md`, `$agent_prompt`) names `AGENTS.md`,
+  `ai/requests/index.md`, `run.R` ... from the study folder, not with this
+  PC's path; the requests name a TOC / SHELL workbook in the study folder
+  from it, however it was given (relative, with backslashes, another
+  case); `tfl_ai_study_init()` writes an ADaM folder in the study, given
+  whole, from it in `spec/data.yml`.  A study copied to another PC then
+  says the same.  A workbook or ADaM folder outside the study keeps its
+  whole path.
+
 * **The layout template `stat_block`: one record's statistics over several
   rows and columns** (0.0.24.9195).  Each arm's block holds one analysis
   record's statistics -- its N in one column, its rate and interval in the

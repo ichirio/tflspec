@@ -21,10 +21,12 @@ and `ai/`. If the workspace is a folder above it, use the paths from here.
       `ai/adam_summary.md`, `spec/data.yml`, `spec/defaults.yml` -- read each
       once and follow it for every request.
    2. Save the whole answer as `ai/answers/<request>.md` (UTF-8).
-   3. Run `Rscript run.R` in a terminal (from this folder, or
-      `Rscript <this folder>/run.R`: it finds its folder). It reads every
-      answer, checks it, writes `spec/outputs/<id>.yml`, builds the ARD and
-      the RTF (`output/tfl/<id>.rtf`) and writes `ai/status.md`.
+   3. Run `Rscript run.R <request>` in a terminal (from this folder, or
+      `Rscript <this folder>/run.R <request>`: it finds its folder). It
+      reads every answer, checks it, writes `spec/outputs/<id>.yml`, builds
+      the ARD and the RTF (`output/tfl/<id>.rtf`) of that request's
+      reports and writes `ai/status.md`. `Rscript run.R` alone builds every
+      report that changed since the last run.
    4. Read `ai/status.md`. When it gives your request a repair
       (`ai/repairs/<request>.md`) or a build problem, fix the answer as it
       says, save the whole answer over `ai/answers/<request>.md`, and run

@@ -222,6 +222,15 @@ tfl_ai_study_init <- function(dir, adam = "adam", study_id = "STUDY-01", title =
   }
   dir.create(file.path(dir, "spec", "outputs"), recursive = TRUE, showWarnings = FALSE)
   nm <- toupper(tools::file_path_sans_ext(files))
+  # (an ADaM folder in the study, given whole, from the study folder: the
+  # study then reads it wherever it is copied; one outside it, whole)
+  if (grepl("^(/|[A-Za-z]:)", adam)) {
+    root <- paste0(normalizePath(dir, winslash = "/", mustWork = FALSE), "/")
+    q <- normalizePath(adam, winslash = "/", mustWork = FALSE)
+    same <- if (.Platform$OS.type == "windows") startsWith(tolower(q), tolower(root)) else
+      startsWith(q, root)
+    if (same) adam <- substring(q, nchar(root) + 1L)
+  }
   rel <- gsub("\\\\", "/", file.path(adam, files))
   pops <- .ai_adam_populations(file.path(adam_dir, files[nm == "ADSL"]), fn)
   study <- list(study_id = study_id, title = title %||% study_id,
