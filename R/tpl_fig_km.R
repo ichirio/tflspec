@@ -293,7 +293,7 @@
   # the layout's parameters' types by name, as tflspec's others are
   km <- .tpl_km_params()
   new <- Filter(function(p) !p$name %in% names(.tpl_param_kinds), km)
-  .tpl_param_kinds <<- c(.tpl_param_kinds, stats::setNames(lapply(new, function(p) {
+  .tpl_extend(param_kinds = stats::setNames(lapply(new, function(p) {
     Filter(Negate(is.null), list(type = p$type, multiple = isTRUE(p$multiple), choices = p$choices,
                                  fields = p$fields))
   }), vapply(new, `[[`, "", "name")))
@@ -321,8 +321,8 @@
     label = "Kaplan-Meier plot: time to last follow-up (FDA STF Figure 13)",
     example = list(param = "TTLFU", group = "TRT01A"))
   # (the examples a company's package tests its wrapped templates with)
-  .tpl_examples <<- c(.tpl_examples, list(km = list(param = "PFS", group = "TRT01A"),
-                                          km_disc = list(param = "TTDISC", group = "TRT01A"),
-                                          km_ae_onset = list(param = "TTSAE", group = "TRT01A"),
-                                          km_lfu = list(param = "TTLFU", group = "TRT01A")))
+  .tpl_extend(examples = list(km = list(param = "PFS", group = "TRT01A"),
+                              km_disc = list(param = "TTDISC", group = "TRT01A"),
+                              km_ae_onset = list(param = "TTSAE", group = "TRT01A"),
+                              km_lfu = list(param = "TTLFU", group = "TRT01A")))
 }
