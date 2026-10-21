@@ -4,7 +4,7 @@
 \alias{tfl_tpl_listing}
 \title{listing: the template listing}
 \description{
-The listing template \code{listing}, layout \code{listing}. Its program is one call, \code{tfl_tpl(data, "listing", ...)}; a parameter a report leaves out takes the study standard's value, else the variant's default, else the layout's.
+The listing template \code{listing}, layout \code{listing}. Its program is one call, \code{tfl_tpl(adae, "listing", ...)}; a parameter a report leaves out takes the study standard's value, else the variant's default, else the layout's.
 }
 \section{Parameters}{
 \tabular{llllll}{
@@ -20,7 +20,7 @@ The listing template \code{listing}, layout \code{listing}. Its program is one c
 \section{Example}{
 
 
-\if{html}{\out{<div class="sourceCode">}}\preformatted{plan <- tfl_tpl(data, "listing", data = "ADAE", columns = list(list(vars = "USUBJID", label = "Subject")))
+\if{html}{\out{<div class="sourceCode">}}\preformatted{plan <- tfl_tpl(adae, "listing", data = "ADAE", columns = list(list(vars = "USUBJID", label = "Subject")))
 }\if{html}{\out{</div>}}
 }
 

@@ -59,6 +59,6 @@ test_that(".tpl_rd(): the roxygen tags of a page", {
   tbl <- r[startsWith(r, "@section Parameters:")]
   # (the tag's line, the table's head and its rule, a row a parameter)
   expect_length(strsplit(tbl, "\n", fixed = TRUE)[[1L]], 3L + nrow(tfl_tpl_args("demog")))
-  # a listing's call is on its data
-  expect_true(any(grepl("tfl_tpl(data, \"listing\"", .tpl_rd("listing"), fixed = TRUE)))
+  # a listing's call is on its data, named after its dataset
+  expect_true(any(grepl("tfl_tpl(adae, \"listing\"", .tpl_rd("listing"), fixed = TRUE)))
 })

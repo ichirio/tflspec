@@ -75,3 +75,18 @@ test_that("tfl_tpl_help(): the head, the tiers, its table invisibly", {
   expect_true(any(grepl("^other [(]", out)))
   expect_error(tfl_tpl_help("demog", tier = "most"))
 })
+
+test_that("tfl_tpl_help(): the call's first argument follows the kind", {
+  call_of <- function(nm) {
+    out <- capture.output(tfl_tpl_help(nm, tier = "required"))
+    out[startsWith(out, "Call: ")]
+  }
+  # a table: its ARD
+  expect_identical(call_of("demog"), "Call: tfl_tpl(ard, \"demog\", ...)")
+  # a listing: its data, named after the dataset
+  expect_identical(call_of("listing"), "Call: tfl_tpl(adae, \"listing\", ...)")
+  # a figure: its data source's name, else `data`
+  expect_identical(call_of("mean_se"), "Call: tfl_tpl(adlb, \"mean_se\", ...)")
+  expect_identical(call_of("waterfall"), "Call: tfl_tpl(adtr, \"waterfall\", ...)")
+  expect_identical(.tpl_first_arg(list(kind = "figure", name = "x", params = list())), "data")
+})

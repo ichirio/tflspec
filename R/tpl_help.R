@@ -139,6 +139,17 @@ tfl_tpl_args <- function(name, study = NULL, population = NULL) {
   out
 }
 
+# The first argument of a template's call, by its kind: a table's ARD
+# (`ard`); a listing's or a figure's data, named after its dataset (the
+# `data` parameter's default, else its example's: `adae`), else `data`
+.tpl_first_arg <- function(t) {
+  if (identical(t$kind, "table")) return("ard")
+  ex <- t$example %||% .tpl_examples[[t$root %||% t$name]]
+  d <- t$params$data$default %||% ex$data
+  if (is.character(d) && length(d) == 1L && grepl("^[A-Za-z][A-Za-z0-9_]*$", d)) tolower(d) else
+    "data"
+}
+
 # The first line of a template's help: its name, kind, layout, its root
 # when a variant, its package
 .tpl_help_head <- function(t) {
@@ -171,8 +182,7 @@ tfl_tpl_help <- function(name, study = NULL, population = NULL,
   a <- tfl_tpl_args(name, study = study, population = population)
   lines <- .tpl_help_head(t)
   if (!is.null(t$label)) lines <- c(lines, t$label)
-  lines <- c(lines, sprintf("Call: tfl_tpl(%s, \"%s\", ...)",
-                            if (identical(t$kind, "listing")) "data" else "ard", t$name))
+  lines <- c(lines, sprintf("Call: tfl_tpl(%s, \"%s\", ...)", .tpl_first_arg(t), t$name))
   for (k in tier) {
     r <- a[a$tier == k, , drop = FALSE]
     if (!nrow(r)) next
@@ -220,7 +230,7 @@ tfl_tpl_help <- function(name, study = NULL, population = NULL,
   t <- .tpl_get(name, ".tpl_rd()")
   a <- tfl_tpl_args(name)
   topic <- paste0("tfl_tpl_", name)
-  x <- if (identical(t$kind, "listing")) "data" else "ard"
+  x <- .tpl_first_arg(t)
   ex <- t$example %||% .tpl_examples[[t$root %||% name]] %||% list()
   desc <- sprintf("The %s template `%s`, layout `%s`", t$kind, name, t$layout)
   if (!is.null(t$from)) desc <- sprintf("%s: a variant of `%s` (its defaults changed)", desc, t$from)
