@@ -4,6 +4,14 @@
   (0.0.24.9207), as the default layout has it under the arm: rtfreporter
   (>= 0.8.2.9090) reads it over split columns (ichirio/rtfreporter#709).
 
+* **`run.R`'s status of a request not run this time** (0.0.24.9205):
+  `Rscript run.R <request>` built that request's reports alone, and
+  `ai/status.md` said of another, never built, "the report files are
+  written", and of one whose last build failed, nothing.  A report not
+  built yet now says so, with its `Rscript run.R` line; a failed build is
+  kept in `ai/built.csv` and said again.  A report that could not be built
+  has no RTF (or PNG) left of an earlier run: they are removed.
+
 * **The figure templates are called as the tables': `tfl_tpl(<data>,
   "<name>", ...)`** (0.0.24.9204, #430), and a report's program calls it:
   `content <- tfl_tpl(adtte_ttdisc, "km_disc", group = TRT01A)`.  The

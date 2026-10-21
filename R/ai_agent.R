@@ -74,7 +74,10 @@
 #' (and PNG) of the last run is kept, as `ai/built.csv` says.  A report
 #' that passed its checks but could not be built gets a repair
 #' (`ai/repairs/<request>-build.md`) with why, which stays until the
-#' request's reports are built.
+#' request's reports are built; its RTF (and PNG) of an earlier run are
+#' removed, and `ai/built.csv` keeps why, so that a run of other requests
+#' still says it.  A report not built yet (only other requests run) says
+#' so in `ai/status.md`.
 #'
 #' @param study_dir The study folder.
 #' @param rtf `FALSE` to build the ARDs only (no rtfreporter).
@@ -114,7 +117,13 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
   done <- .ai_built_read(study_dir)
   keep_as <- function(i) {
     b <- done[match(r$output_id[i], done$output_id), , drop = FALSE]
-    if (nrow(b) && !is.na(b$output_id) && .ai_built_there(study_dir, b)) {
+    if (!nrow(b) || is.na(b$output_id)) return(FALSE)
+    # its last build failed: still so
+    if (!is.na(b$problem) && nzchar(b$problem)) {
+      r$rtf_problem[i] <<- b$problem
+      return(TRUE)
+    }
+    if (.ai_built_there(study_dir, b)) {
       r$rtf[i] <<- b$rtf
       r$png[i] <<- b$png
       r$built[i] <<- "kept"
@@ -174,14 +183,22 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
         }, error = function(e) structure(.ai_one_line(conditionMessage(e)), class = "failed"))
         if (inherits(made, "failed")) {
           r$rtf_problem[i] <- unclass(made)
-          done <- done[!done$output_id %in% id, , drop = FALSE]
+          # the last run's RTF and PNG are not this answer's: gone
+          old_files <- c(file.path(out_dir, paste0(id, c(".rtf", ".png"))), b$rtf, b$png)
+          old_files <- unique(old_files[!is.na(old_files) & nzchar(old_files)])
+          unlink(old_files[file.exists(old_files)])
+          # (said again by a run that does not build it)
+          done <- rbind(done[!done$output_id %in% id, , drop = FALSE],
+                        data.frame(output_id = id, key = key, rtf = NA_character_,
+                                   png = NA_character_, problem = r$rtf_problem[i],
+                                   stringsAsFactors = FALSE))
         } else {
           if (!is.null(made$rtf)) r$rtf[i] <- gsub("\\\\", "/", made$rtf)
           if (!is.null(made$png)) r$png[i] <- gsub("\\\\", "/", made$png)
           r$built[i] <- "built"
           done <- rbind(done[!done$output_id %in% id, , drop = FALSE],
                         data.frame(output_id = id, key = key, rtf = r$rtf[i], png = r$png[i],
-                                   stringsAsFactors = FALSE))
+                                   problem = NA_character_, stringsAsFactors = FALSE))
         }
       }
       .ai_built_write(".", done)
@@ -211,10 +228,12 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
 .ai_built_read <- function(dir) {
   f <- .ai_built_file(dir)
   empty <- data.frame(output_id = character(), key = character(), rtf = character(),
-                      png = character(), stringsAsFactors = FALSE)
+                      png = character(), problem = character(), stringsAsFactors = FALSE)
   if (!file.exists(f)) return(empty)
   x <- tryCatch(utils::read.csv(f, stringsAsFactors = FALSE, colClasses = "character"),
                 error = function(e) empty)
+  # (a file of an older tflspec: no problem column, every row built)
+  if (nrow(x) && !"problem" %in% names(x)) x$problem <- NA_character_
   if (!all(names(empty) %in% names(x))) return(empty)
   x[names(empty)]
 }
@@ -294,6 +313,13 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
   q <- res$questions
   bad <- r[!is.na(r$rtf_problem), , drop = FALSE]
   nxt <- res$next_steps
+  # passed its checks, never built (a run of other requests only)
+  wait <- r[r$status %in% c("ok", "warning") & is.na(r$rtf) & is.na(r$rtf_problem) &
+              is.na(r$built), , drop = FALSE]
+  for (w in unique(wait$request)) {
+    nxt[w] <- sprintf("the answer passed its checks; %s not built yet: run `Rscript run.R %s`",
+                      paste(wait$output_id[wait$request == w], collapse = ", "), w)
+  }
   for (i in seq_len(nrow(bad))) {
     nxt[bad$request[i]] <- sprintf(paste0("the answer passed its checks but %s could not be built (%s): ",
                                           "fix the answer (ai/repairs/%s-build.md) and run again"),
