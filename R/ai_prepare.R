@@ -250,7 +250,7 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
            " (the one holding AGENTS.md and run.R; with a folder above it open, put the ",
            "study folder before each). Follow AGENTS.md. Do every request of ",
            "ai/requests/index.md, in its order: save each answer as ",
-           "ai/answers/<request>.md and run `Rscript run.R` after it, then read ",
+           "ai/answers/<request>.md and run `Rscript run.R <request>` after it, then read ",
            "ai/status.md and repair. ",
            if (templates) "Answer a report with a template where one fits (AGENTS.md). ",
            "Do not stop to ask; when every request is done, tell me which reports have an ",
