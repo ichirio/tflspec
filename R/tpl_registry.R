@@ -1567,9 +1567,8 @@ tpl_param_change <- function(ard, population, ..., codelists = NULL) {
 #' @param ... The template's parameters: `variable` and `cells` (required),
 #'   `by`, `by_levels`, `rows`, `direction`, `label`.  `cells` is a named
 #'   list, heading = template, one element a column (`direction = "cols"`)
-#'   or a row (`"rows"`), a vector its lines:
-#'   `cells = list(N = "{N}", "ORR(%) 90%CI" = c("{n} ({estimate:.1f%})",
-#'   "{conf.low:.1f%}, {conf.high:.1f%}"))`.
+#'   or a row (`"rows"`), a vector its lines (`tpl_orr()`'s `cells`: an N
+#'   column, then the rate over its interval).
 #' @return A [rtfreporter::table_plan()].
 #' @export
 tpl_stat_block <- function(ard, ..., codelists = NULL) {
@@ -1758,6 +1757,16 @@ tpl_ae_overview <- function(ard, population = "SAF", ..., codelists = NULL) {
 }
 
 # ---- the templates in files of their own (R/tpl_<name>.R, read before this one) ----
+
+# A file's own templates (R/tpl_fig.R ...): its parameters' types by name,
+# study sources and examples, added to the shared tables.  Called from a
+# .tpl_*_register() below, while the package loads.
+.tpl_extend <- function(param_kinds = NULL, study_sources = NULL, examples = NULL) {
+  if (length(param_kinds)) .tpl_param_kinds[names(param_kinds)] <<- param_kinds
+  if (length(study_sources)) .tpl_study_sources[names(study_sources)] <<- study_sources
+  if (length(examples)) .tpl_examples[names(examples)] <<- examples
+  invisible(NULL)
+}
 
 .tpl_la_register()
 .tpl_eair_register()
