@@ -1,10 +1,19 @@
 # tflspec (development version)
 
 * **`orr(stat_layout = "cols")`: each arm's rate and its CI side by side**
-  (0.0.24.9199), on the layout `stat_block`; the best overall response's
+  (0.0.24.9200), on the layout `stat_block`; the best overall response's
   n (%) in the first of the two columns.  The arms' N is not in that
-  header yet (rtfreporter does not read it over split columns).  The
+  header yet (rtfreporter does not read it over split columns,
+  ichirio/rtfreporter#709).  The
   default, `"rows"`, is the table as before.
+
+* **`demog` and `ae_pt_freq` are built on their layouts** (0.0.24.9198):
+  `demog`'s usual table is `summary`'s body (its own code stays for
+  `stack = TRUE` and a dataset other than ADSL), `ae_pt_freq` is
+  `hierarchical`'s of one level with its own order, `min_pct` filter and
+  page.  Their ARDs, items and programs are as before.  `hierarchical`
+  with one level (`hierarchy = "AEDECOD"`) no longer stops: it has no row
+  keys above the term.
 
 * **`tfl_ai_run()` (`run.R`) builds only what changed** (0.0.24.9197).  A
   report's ARD and RTF are made again only when its report file, the
