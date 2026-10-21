@@ -50,7 +50,7 @@
 #' tfl_template("my_ages", kind = "table", layout = "summary",
 #'   params = list(tfl_param("population", "SAF", doc = "the analysis set's id")),
 #'   body = function(a, ctx) tfl_template_expand("summary",
-#'     list(population = a$population, variables = "AGE"),
+#'     list(population = a$population, continuous = "AGE"),
 #'     codelists = ctx$codelists, population = ctx$population))
 #' tfl_templates()[, c("name", "package")]
 #' @export
@@ -132,7 +132,7 @@ tfl_template_variant <- function(name, from, defaults = list(), label = NULL, ex
   }
   src <- .tpl_get(from, fn)
   if (!is.list(defaults) || (length(defaults) && is.null(names(defaults)))) {
-    .ard_stop(sprintf("%s: `defaults` is a named list, list(variables = ...).", fn))
+    .ard_stop(sprintf("%s: `defaults` is a named list, list(continuous = ...).", fn))
   }
   unknown <- setdiff(names(defaults), names(src$params))
   if (length(unknown)) {
@@ -217,7 +217,7 @@ tfl_template_params <- function(name) {
 #'   saf <- adsl[adsl$SAFFL == "Y", ]
 #'   ard <- cards::bind_ard(cards::ard_tabulate(saf, variables = TRT01A),
 #'                          cards::ard_summary(saf, by = TRT01A, variables = AGE))
-#'   plan <- tfl_template_run("summary", ard, population = "SAF", variables = "AGE")
+#'   plan <- tfl_template_run("summary", ard, population = "SAF", continuous = "AGE")
 #' }
 #' @export
 tfl_template_run <- function(name, x, ..., codelists = NULL, sets = NULL) {
@@ -321,7 +321,12 @@ tfl_template_run <- function(name, x, ..., codelists = NULL, sets = NULL) {
         b <- if (length(same) >= k) same[[k]]$args else list()
         keys <- union(names(it$args), names(b))
         if (!is.null(.tpl_look[[it$fn]])) keys <- intersect(keys, .tpl_look[[it$fn]])
-        for (key in keys) if (!identical(it$args[[key]], b[[key]])) row(p, it$fn, key, "look")
+        # (one that takes the study standard's value of that very argument,
+        # tfl_param(study = "<verb>.<argument>"), is the study's look: fine)
+        for (key in keys) if (!identical(it$args[[key]], b[[key]])) {
+          own <- identical(t$params[[p]]$study, paste0(it$fn, ".", key))
+          row(p, it$fn, key, if (own) "look (study source)" else "look")
+        }
       }
     }
   }
@@ -391,10 +396,12 @@ tfl_test_templates <- function(names = NULL) {
 # package tests its wrapped templates with
 .tpl_examples <- list(
   demog = list(population = "SAF"),
-  summary = list(population = "SAF", variables = "AGE"),
+  summary = list(population = "SAF", continuous = "AGE"),
   disposition = list(population = "SAF"),
   hierarchical = list(population = "SAF", hierarchy = c("AEBODSYS", "AEDECOD")),
   ae_soc_pt = list(population = "SAF"),
+  ae_ser_soc_pt = list(population = "SAF"),
+  ae_disc_soc_pt = list(population = "SAF"),
   ae_pt_freq = list(population = "SAF", min_pct = 5),
   ae_max_grade = list(population = "SAF", grade_levels = c("MILD", "MODERATE", "SEVERE")),
   ae_overview = list(population = "SAF"),

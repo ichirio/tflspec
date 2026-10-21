@@ -30,7 +30,7 @@ The A use of a template SPEC, one function for them all: the template's
 items run on the data, as the report's content.  \code{tfl_tpl(ard, "demog", population = "SAF")} is what a template report's program calls; a
 study's defaults the template does not take as its parameters are added
 after the call.  The template's parameters, their defaults and where each
-ends: \code{\link[=tfl_tpl_help]{tfl_tpl_help()}} (and \verb{?tpl_<name>}).
+ends: \code{tfl_tpl_help()} (and \verb{?tpl_<name>}).
 }
 \examples{
 if (requireNamespace("cards", quietly = TRUE)) {

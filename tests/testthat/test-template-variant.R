@@ -74,8 +74,8 @@ test_that("the same name: the variant replaces from, and reads the one it replac
     tv_drop(".base.summary")
   })
   expect_message(tfl_template_variant("summary", from = "summary",
-                                      defaults = list(variables = "AGE")), "replaces")
-  expect_identical(tfl_template_params("summary")$variables$default, "AGE")
+                                      defaults = list(continuous = "AGE")), "replaces")
+  expect_identical(tfl_template_params("summary")$continuous$default, "AGE")
   expect_identical(tfl_templates()$from[tfl_templates()$name == "summary"], "summary")
   x <- tfl_template_expand("summary", list(population = "SAF"))
   expect_identical(x$ard$analyses[[2L]]$variables, "AGE")

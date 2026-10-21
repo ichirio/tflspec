@@ -70,7 +70,7 @@ defaults say those, and a template parameter would beat them
 tfl_template("my_ages", kind = "table", layout = "summary",
   params = list(tfl_param("population", "SAF", doc = "the analysis set's id")),
   body = function(a, ctx) tfl_template_expand("summary",
-    list(population = a$population, variables = "AGE"),
+    list(population = a$population, continuous = "AGE"),
     codelists = ctx$codelists, population = ctx$population))
 tfl_templates()[, c("name", "package")]
 }

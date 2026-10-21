@@ -167,8 +167,13 @@ tfl_template_to_spec <- function(output, study) {
 # `...` is named its keys, by where they come from (`arg_from`).  `ok` is
 # FALSE when the call cannot say it: the table's roles (table_plan()) or
 # the normalization's arguments come from elsewhere.
-.tpl_rest <- function(items, name) {
+.tpl_rest <- function(items, name, tpl_items = list()) {
   tag <- paste0("template:", name)
+  # an item the template made the same (its parameters took the study's
+  # values: stub_name, blanks ...) is in the call, not after it
+  same_as_tpl <- function(it) any(vapply(tpl_items, function(t) {
+    identical(t$fn, it$fn) && identical(t$args, it$args)
+  }, NA))
   rest <- list()
   ok <- TRUE
   for (it in items) {
@@ -183,7 +188,7 @@ tfl_template_to_spec <- function(output, study) {
       for (s in unique(af[not_tpl])) {
         rest <- c(rest, list(tfl_item(it$fn, it$args[keys[af == s]], from = s)))
       }
-    } else if (!identical(it$from, tag)) {
+    } else if (!identical(it$from, tag) && !same_as_tpl(it)) {
       rest <- c(rest, list(it))
     }
   }

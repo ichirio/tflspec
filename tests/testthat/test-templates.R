@@ -33,7 +33,7 @@ test_that("tfl_template_expand(): the items, marked as the template's", {
   y <- tfl_template_expand("demog", list(population = "SAF"), codelists = cl)
   expect_null(tpl_item(y, "plan_levels"))
   # a dataset other than ADSL: its own analysis data, its records kept by `where`
-  z <- tfl_template_expand("summary", list(population = "SAF", variables = "AVAL",
+  z <- tfl_template_expand("summary", list(population = "SAF", continuous = "AVAL",
                                            data = "ADVS", where = 'PARAMCD == "SYSBP"'))
   expect_identical(z$ard$analysis_data[[2L]]$id, "advs_saf")
   expect_s3_class(z$ard$analysis_data[[2L]]$where, "tfl_r")
@@ -70,7 +70,7 @@ test_that("tpl_demog() / tpl_summary(): the object is the items run on the ARD",
   q <- suppressMessages(tfl_content_run(o, ard))
   expect_identical(suppressMessages(rtfreporter::plan_apply(p, "table")),
                    suppressMessages(rtfreporter::plan_apply(q, "table")))
-  s <- suppressMessages(tpl_summary(ard, population = "SAF", variables = c("AGE", "TRTDURD")))
+  s <- suppressMessages(tpl_summary(ard, population = "SAF", continuous = c("AGE", "TRTDURD")))
   tab <- suppressMessages(rtfreporter::plan_apply(s, "table"))
   expect_true(all(c("Drug X", "Control") %in% names(tab)))
 })
@@ -103,7 +103,7 @@ test_that("summary: categorical variables too; disposition on it", {
   expect_false("plan_cells" %in% vapply(x$content, `[[`, "", "fn"))
   expect_identical(x$content[[length(x$content)]]$args, list(max_rows = 30L, split = "group_safe"))
   # the look is no parameter
-  expect_error(tfl_template_expand("summary", list(population = "SAF", variables = "AGE",
+  expect_error(tfl_template_expand("summary", list(population = "SAF", continuous = "AGE",
                                                    max_rows = 24)), "no parameter")
   expect_error(tfl_template_expand("summary", list(population = "SAF")), "categorical")
   d <- tfl_template_expand("disposition", list(population = "SAF"))
@@ -146,7 +146,7 @@ test_that("listing: one row a record, a column's width part of its definition", 
 })
 
 test_that("summary's mean (CI); km_table and orr", {
-  x <- tfl_template_expand("summary", list(population = "SAF", variables = "CHG", statistics = "N",
+  x <- tfl_template_expand("summary", list(population = "SAF", continuous = "CHG", statistics = "N",
                                            ci_label = "Mean change (95% CI)"))
   expect_identical(vapply(x$ard$analyses, `[[`, "", "method"),
                    c("categorical", "continuous", "mean_ci"))
@@ -182,7 +182,7 @@ test_that("hierarchical of one level; demog and ae_pt_freq on their layouts", {
                      "plan_paginate_rows"))
   # demog's usual table is summary's
   d <- tfl_template_expand("demog", list(population = "SAF", continuous = "AGE", categorical = "SEX"))
-  s <- tfl_template_expand("summary", list(population = "SAF", variables = "AGE", categorical = "SEX",
+  s <- tfl_template_expand("summary", list(population = "SAF", continuous = "AGE", categorical = "SEX",
     groupn_label = "Subjects per group", labels = list(AGE = "Age (years)", SEX = "Sex, n (%)")))
   no_from <- function(x) lapply(x, function(i) i[setdiff(names(i), "from")])
   expect_identical(no_from(d$content), no_from(s$content))   # (each item says its template)
