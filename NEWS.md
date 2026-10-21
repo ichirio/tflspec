@@ -1,5 +1,14 @@
 # tflspec (development version)
 
+* **A template's help** (#429, 0.0.24.9203): `tfl_tpl_args(name, study,
+  population)` is a template's parameters as a table -- tier, the layout's
+  default, the default a variant changes, the study standard's value, the
+  value in effect and its layer (`"study"`, `"variant:<name>"`,
+  `"template"`) -- and `tfl_tpl_help()` prints it by tier.  Each table and
+  listing template has its page, `?tfl_tpl_<name>` (`?tfl_tpl_demog`),
+  made from the registry when the documentation is built (roxygen
+  `@eval`); a test says when one is missing or out of date.
+
 * **`tfl_tpl(x, name, ...)`: one call for every table and listing template**
   (0.0.24.9202), and a report's program calls it: `tfl_tpl(ard, "demog",
   population = "SAF")`.  The template's own functions (`tpl_demog()` ...)
