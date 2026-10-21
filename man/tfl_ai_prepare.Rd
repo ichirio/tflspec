@@ -103,8 +103,9 @@ TOC: \code{output_id}, \code{title}, \code{type}, \code{shell} -- the sheet of i
 files written, relative to \code{dir}), \code{hint} (what the workbook's reading
 could not find -- no TOC, a report with no shell -- and what to pass),
 \code{next_steps} (what to do next) and \code{agent_prompt} (with \code{mode = "agent"}:
-the first message to the agent, the study's paths in it, also written
-to \code{ai/agent_prompt.md}; else \code{NA}).
+the first message to the agent, its paths from the study folder (a
+copy of the study says the same), also written to
+\code{ai/agent_prompt.md}; else \code{NA}).
 Its print is the workbook's summary and the next step.  The files are
 UTF-8.
 }

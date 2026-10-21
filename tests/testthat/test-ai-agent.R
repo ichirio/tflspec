@@ -139,3 +139,32 @@ test_that("the questions: one asked by several reports once, the reports listed;
   # no question: nothing new
   expect_identical(nrow(.ai_questions_update(d, a2[0L, ])), 2L)
 })
+
+test_that("mode = \"agent\": a study with its ADaM and workbook inside it names no path of this PC", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  root <- withr::local_tempdir()
+  d <- file.path(root, "study")
+  ad <- agent_study(root, adam_inside = TRUE)            # given whole
+  dir.create(file.path(d, "shells"), recursive = TRUE, showWarnings = FALSE)
+  book <- file.path(d, "shells", "toc.xlsx")
+  file.copy(ex_book(), book)
+  r <- tfl_ai_prepare(d, book, adam = ad, quiet = TRUE, mode = "agent")
+  here <- normalizePath(root, winslash = "/")
+  files <- list.files(d, recursive = TRUE, all.files = TRUE, pattern = "[.](md|yml|R)$")
+  for (f in files) {
+    txt <- paste(readLines(file.path(d, f), warn = FALSE, encoding = "UTF-8"), collapse = "\n")
+    expect_false(grepl(tolower(here), tolower(txt), fixed = TRUE), info = f)
+  }
+  expect_false(grepl(tolower(here), tolower(r$agent_prompt), fixed = TRUE))
+  # the workbook and the ADaM, from the study folder
+  ae <- paste(readLines(file.path(d, "ai", "requests", "ae-1.md"), encoding = "UTF-8"), collapse = "\n")
+  expect_match(ae, "shells/toc.xlsx", fixed = TRUE)
+  dy <- yaml::read_yaml(file.path(d, "spec", "data.yml"))
+  expect_true(all(startsWith(vapply(dy$datasets, `[[`, "", "path"), "adam/")))
+  # one outside the study: whole, as it must be
+  d2 <- file.path(root, "study2")
+  r2 <- tfl_ai_prepare(d2, ex_book(), adam = ad, quiet = TRUE, mode = "agent")
+  dy2 <- yaml::read_yaml(file.path(d2, "spec", "data.yml"))
+  expect_true(all(startsWith(tolower(vapply(dy2$datasets, `[[`, "", "path")), tolower(ad))))
+})

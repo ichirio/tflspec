@@ -110,7 +110,15 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = 8L,
   book <- basename(shell$path %||% "the workbook")
   # the workbook's path for an agent: from the study folder when inside it
   root <- paste0(normalizePath(study_dir, winslash = "/", mustWork = FALSE), "/")
-  from_study <- function(p) ifelse(startsWith(p, root), substring(p, nchar(root) + 1L), p)
+  # (a path in the study folder, however it was given -- relative, with
+  # backslashes, another case on Windows -- from the study folder; one
+  # outside it, whole)
+  from_study <- function(p) {
+    q <- normalizePath(p, winslash = "/", mustWork = FALSE)
+    same <- if (.Platform$OS.type == "windows") startsWith(tolower(q), tolower(root)) else
+      startsWith(q, root)
+    ifelse(same, substring(q, nchar(root) + 1L), q)
+  }
   book_path <- if (is.null(shell$path)) book else from_study(shell$path)
   # the workbooks of shells apart from the TOC's
   more_books <- if (!is.null(shell$books) && nrow(shell$books) > 1L) {

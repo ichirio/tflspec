@@ -1,5 +1,16 @@
 # tflspec (development version)
 
+* **A study's AI files name its paths from the study folder**
+  (0.0.24.9196).  `tfl_ai_prepare(mode = "agent")`'s first message for the
+  agent (`ai/agent_prompt.md`, `$agent_prompt`) names `AGENTS.md`,
+  `ai/requests/index.md`, `run.R` ... from the study folder, not with this
+  PC's path; the requests name a TOC / SHELL workbook in the study folder
+  from it, however it was given (relative, with backslashes, another
+  case); `tfl_ai_study_init()` writes an ADaM folder in the study, given
+  whole, from it in `spec/data.yml`.  A study copied to another PC then
+  says the same.  A workbook or ADaM folder outside the study keeps its
+  whole path.
+
 * **The layout template `stat_block`: one record's statistics over several
   rows and columns** (0.0.24.9195).  Each arm's block holds one analysis
   record's statistics -- its N in one column, its rate and interval in the
