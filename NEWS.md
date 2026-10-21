@@ -1,7 +1,7 @@
 # tflspec (development version)
 
 * **The figure templates are called as the tables': `tfl_tpl(<data>,
-  "<name>", ...)`** (0.0.24.9204), and a report's program calls it:
+  "<name>", ...)`** (0.0.24.9204, #430), and a report's program calls it:
   `content <- tfl_tpl(adtte_ttdisc, "km_disc", group = TRT01A)`.  The
   arguments of the data steps (`population`, `param`, `data`, `where`,
   `event`: `tfl_param(stage = "data")`) are the program's, not the call's.
