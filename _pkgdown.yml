@@ -220,7 +220,6 @@ reference:
       - tpl_waterfall
       - tpl_forest_hr
       - tpl_forest_layout
-      - tpl_vs_change
       - tpl_orr
       - tpl_stat_block
       - tpl_ae_overview
