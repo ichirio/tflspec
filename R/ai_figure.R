@@ -13,6 +13,7 @@
 
 # The figure design of an answer as its report file (a tfl_output).
 .ai_fig_output <- function(design, id, ctx) {
+  if (inherits(design, "tfl_ai_tpl_figure")) return(.ai_tpl_fig_output(design, id, ctx))
   y <- unclass(design)
   data <- list(source = "code")
   if (length(y$data)) data$steps <- y$data

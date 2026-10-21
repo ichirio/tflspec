@@ -30,7 +30,9 @@ report's \verb{spec/outputs/<id>.yml} when written, else \code{NA}), \code{repai
 \code{next_steps} (a request's next step, named by the request),
 \code{assumptions} (the study's \verb{spec/_assumptions.yml} for these reports:
 \code{output_id}, \code{where}, \code{item}, \code{assumption}, \code{question}), \code{stray} (answer
-files named after no request) and \code{requests} (the requests' folder).
+files named after no request), \code{requests} (the requests' folder) and
+\code{templates} (each request's setting, \code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}}'s \code{templates}:
+a logical named by the request).
 The paths are relative to \code{study_dir}.  Its print is a summary: each
 request's status, its reports and the next step.
 }

@@ -313,11 +313,16 @@ tfl_ai_prompt <- function(task, context = NULL, mode = c("chat", "api"),
   context <- .ai_prompt_context(task, context, fn)
   docs <- .ai_documents(documents, mode, fn)
   parts <- .ai_prompt_parts(task)
+  # an agent's request (tfl_ai_prepare(mode = "agent")): the instructions a
+  # file shared by the requests of the task, so with the header's place
+  # holders; the request says its own header
+  shared <- isTRUE(context$ai_files)
+  header <- .ai_header_text(task, context$output_id, format, context$outputs)
   fill <- list(
     task = parts$task,
     values = parts$values,
     format = format,
-    header = .ai_header_text(task, context$output_id, format, context$outputs),
+    header = if (shared) .ai_header_text(task, NULL, format) else header,
     content = parts$content,
     whole = parts$whole,
     language = .ai_language_line(context$language),
@@ -326,11 +331,19 @@ tfl_ai_prompt <- function(task, context = NULL, mode = c("chat", "api"),
     example = if (isTRUE(example)) .ai_example_text(task, format) else ""
   )
   system <- .ai_fill(.ai_prompt_file("system"), fill)
+  # a study's request with templates (tfl_ai_prepare(templates = TRUE)):
+  # answer with one where it fits; the templates, from the registry
+  # (an agent's: in ai/templates.md, the request naming the likely ones)
+  if (isTRUE(context$ai_templates) && task %in% c("table", "figure") && !shared) {
+    system <- paste(system, .ai_templates_text(task, short = isTRUE(context$ai_templates_short)),
+                    sep = "\n\n")
+  }
   # a figure whose shell is in the message (a study's request): what to do
   # reads it, nothing attached
   ask <- if (task == "figure" && mode == "chat" && !is.null(context$shell) &&
                !is.null(parts$shell)) parts$shell else parts[[mode]]
   user <- paste(c(
+    if (shared) .ai_files_lines(task, header, context),
     .ai_context_text(context, format), "", ask,
     if (mode == "api") c("", .ai_documents_text(docs))
   ), collapse = "\n")
@@ -592,7 +605,10 @@ print.tfl_ai_text <- function(x, ...) {
     if (length(pop_txt)) sprintf("- Analysis set: %s", pop_txt),
     ""
   )
-  if (!is.null(ctx$datasets)) {
+  if (!is.null(ctx$datasets) && isTRUE(ctx$ai_files)) {
+    out <- c(out, "## The datasets", "",
+             "`ai/adam_summary.md`: name only its datasets and variables.", "")
+  } else if (!is.null(ctx$datasets)) {
     out <- c(out, "## The datasets", "",
              "Name only these datasets and variables.", "",
              .ai_datasets_text(ctx$datasets))

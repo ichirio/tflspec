@@ -47,6 +47,32 @@
   writes `|>` unless asked (`pipe = "%>%"` / `"rstudio"`, or the option
   `rtfreporter.ard_pipe`).
 
+* **The AI flow with templates: `tfl_ai_prepare(templates = TRUE)`**
+  (0.0.24.9191).  The requests ask the AI to answer a report with one of
+  the study's templates where one fits (`template: {name, args}`, only the
+  arguments that differ, the report's own content items after it), else as
+  a code SPEC; the templates are listed from the registry (tflspec's, a
+  company's, a study's variants, the target arguments marked) when the
+  requests are written, never by hand.  An answer's template is checked
+  (its name, its arguments' names and types) and expanded, so the code
+  SPEC's checks run on what it stands for; the report file keeps the
+  template, and its RTF or PNG is built as any other.  Each request's
+  first line and `ai/status.md` say the setting.  `templates = FALSE` asks
+  for the code SPEC only: a chat's requests are byte for byte as before.
+  `tfl_ai_compare()` (new) sets the two side by side: one row a report --
+  answered with a template or code, its report file's values, its check,
+  its repairs -- in `ai/compare.csv`.
+  - `mode = "agent"`: what every request repeated is written once in
+    `ai/` -- `instructions-table.md`, `instructions-figure.md` (the
+    instructions and the schema), `templates.md` -- and the ADaM summary
+    and `spec/` files are named, not copied; a request names them, its own
+    answer header and the templates likely for each report (from its
+    title).  A request drops from about 53,000 to 4,000 characters; with
+    `templates = FALSE` the agent's requests take the same form.
+    `tfl_ai_write_requests()` has a `mode` argument for this.
+  - A chat's request over `max_chars` with templates first lists their
+    arguments by name only, then is halved as before.
+
 * **Figure templates: the design form, and `tpl_` functions that draw
   only** (#403, 0.0.24.9190).  A template SPEC's figure expands into the
   design form (data steps, plot, layers), as the figure designer and the
