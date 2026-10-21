@@ -1,5 +1,13 @@
 # tflspec (development version)
 
+* **`ancova` on the layout `stat_block`; `stat_layout = "cols"`**
+  (0.0.24.9202): each arm's columns n | Estimate (SE) | 95% CI | p-value,
+  the LS mean a row (n, estimate, CI) and the difference a row (estimate,
+  CI, p-value), the same columns for both; the reference arm has no
+  difference.  The default, `"rows"`, is the table as before (its
+  expansion identical).  The arms' N is not in that header yet
+  (ichirio/rtfreporter#709).
+
 * **`km_table` on the layout `stat_block`; `stat_layout = "cols"`**
   (0.0.24.9201): each arm's two columns, a time's event-free rate and its
   95% CI, the median (95% CI) by its own cell in the first.  The default,

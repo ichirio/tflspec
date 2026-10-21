@@ -171,4 +171,39 @@ test_that("in a study: the ARD program runs, the table from its ARD", {
   t <- an_tab(suppressMessages(tfl_content_run(ro, ard)))
   expect_true(nrow(t) > 0L)
   expect_true(any(t$label == "p-value"))
+  # as columns, the study's standard applied: the same values
+  o2 <- tfl_output("T-9-4", "table", population = "SAF", extends = "defaults",
+                   template = list(name = "ancova", args = c(an_args, list(stat_layout = "cols"))))
+  ro2 <- tfl_resolve_output(o2, st)
+  t2 <- an_tab(suppressMessages(tfl_content_run(ro2, ard)))
+  # (the arm against the reference: whichever the study's code list makes it)
+  p_rows <- unlist(t[t$label == "p-value", setdiff(names(t), c("group", "label"))])
+  pc <- grep("____p-value$", names(t2), value = TRUE)
+  expect_length(pc, 1L)
+  expect_identical(t2[[pc]][startsWith(t2$group, "Difference")], unname(p_rows[!is.na(p_rows)]))
+})
+
+test_that("stat_layout = \"cols\": each arm's n | Estimate (SE) | 95% CI | p-value, the rows' values", {
+  an_skip()
+  x <- tfl_template_expand("ancova", an_args)
+  ard <- suppressMessages(an_ard(x))
+  r <- an_tab(do.call(tpl_ancova, c(list(ard), an_args)))
+  cl <- an_tab(do.call(tpl_ancova, c(list(ard), an_args, list(stat_layout = "cols"))))
+  expect_true(all(paste0("Drug X____", c("n", "Estimate (SE)", "95% CI", "p-value")) %in% names(cl)))
+  ls <- cl[grepl("LS mean$", cl$group), ]
+  df <- cl[startsWith(cl$group, "Difference"), ]
+  for (arm in c("Drug X", "Control")) {
+    col <- function(g) paste0(arm, "____", g)
+    expect_identical(ls[[col("Estimate (SE)")]], r[[arm]][r$label == "LS mean (SE)"], info = arm)
+    expect_identical(ls[[col("95% CI")]], r[[arm]][r$label == "95% CI"][1L], info = arm)
+  }
+  expect_true(is.na(ls[["Drug X____p-value"]]))
+  # the reference arm has no difference: no p-value column of its own
+  expect_false("Control____p-value" %in% names(cl))
+  expect_identical(df[["Drug X____Estimate (SE)"]], r[["Drug X"]][r$label == "Difference (SE)"])
+  expect_identical(df[["Drug X____p-value"]], r[["Drug X"]][r$label == "p-value"])
+  expect_true(is.na(df[["Control____Estimate (SE)"]]))     # the reference arm: no difference
+  # the default as before
+  y <- tfl_template_expand("ancova", c(an_args, list(stat_layout = "rows")))
+  expect_identical(y$content, x$content)
 })

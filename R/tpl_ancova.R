@@ -12,7 +12,10 @@
   tfl_param("response", "CHG", doc = "the response variable"),
   tfl_param("covariates", "BASE", doc = "the model's covariates besides the arm"),
   tfl_param("where", NULL, doc = "the records kept besides the parameter and visit (R)"),
-  tfl_param("ref", NULL, doc = "the reference arm; NULL: the last arm in the code list's order")
+  tfl_param("ref", NULL, doc = "the reference arm; NULL: the last arm in the code list's order"),
+  tfl_param("stat_layout", "rows", type = "choice", choices = c("rows", "cols"), doc = paste(
+    "the statistics: \"rows\", under each other in the arm's column, or \"cols\",",
+    "each arm's columns n | Estimate (SE) | 95% CI | p-value (stat_block)"))
 )
 
 .tpl_ancova_body <- function(a, ctx) {
@@ -61,6 +64,27 @@
                     "lapply(variable_level, sub, pattern = \" - .*\", replacement = \"\")"),
         # the p-value as the program's fmt_pvalue() writes it (<0.001)
         formats = "p.value=pvalue", purpose = "PRIMARY OUTCOME MEASURE")))
+  labels_item <- tfl_item("plan_labels", list(variable = list(
+    LSMEAN = sprintf("%s: LS mean", a$response),
+    DIFF = sprintf("Difference in LS means (vs %s)", a$ref %||% "the reference arm"))))
+  if (identical(match.arg(a$stat_layout %||% "rows", c("rows", "cols")), "cols")) {
+    # each arm's columns, the same for both blocks (stat_block): an LS mean
+    # fills n, Estimate (SE), 95% CI; a difference Estimate (SE), 95% CI,
+    # p-value
+    blk <- Filter(Negate(is.null), .tpl_stat_block_body(list(
+      by = a$by, variable = c("LSMEAN", "DIFF"),
+      cells = list(n = "{n}", "Estimate (SE)" = "{estimate:.2f} ({std.error:.2f})",
+                   "95% CI" = "({conf.low:.2f}, {conf.high:.2f})", "p-value" = "{p.value}")),
+      ctx, header = FALSE))
+    content <- c(blk, list(
+      tfl_item("plan_levels", list(variable = c("LSMEAN", "DIFF"))), labels_item,
+      # (the arms' N is not read over split columns yet: rtfreporter #709)
+      tfl_item("plan_col_header", list(header = list(
+        list(line = "1", cols = ".values", span = a$by, text = "{col1}"),
+        list(line = "2", cols = "group"),
+        list(line = "2", cols = ".values", span = "each", text = "{col}"))))))
+    return(list(ard = ard, data = list(source = "ard", object = "ard"), content = content))
+  }
   content <- list(
     tfl_item("table_plan", list(cols = a$by, rows = list(group = "variable"))),
     tfl_item("plan_cells", list(
@@ -79,7 +103,7 @@
 }
 
 .tpl_ancova_register <- function() {
-  .tfl_template("ancova", kind = "table", layout = "summary",
+  .tfl_template("ancova", kind = "table", layout = "stat_block",
                 params = .tpl_ancova_params(), body = .tpl_ancova_body)
 }
 
@@ -98,7 +122,11 @@
 #'
 #' @inheritParams tpl_demog
 #' @param ... The template's other parameters: `data`, `param`, `visit`
-#'   (required), `by`, `response`, `covariates`, `where`, `ref`.
+#'   (required), `by`, `response`, `covariates`, `where`, `ref`,
+#'   `stat_layout`.  `stat_layout = "rows"` (the default) puts the
+#'   statistics under each other in the arm's column; `"cols"` gives each
+#'   arm the columns n | Estimate (SE) | 95% CI | p-value, an LS mean and a
+#'   difference each a row (the layout [tpl_stat_block()]).
 #' @return A [rtfreporter::table_plan()].
 #' @examples
 #' x <- tfl_template_expand("ancova", list(population = "SAF", data = "ADVS",

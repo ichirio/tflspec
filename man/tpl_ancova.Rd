@@ -13,7 +13,11 @@ report.}
 \item{population}{The analysis set's id (\code{"SAF"}).}
 
 \item{...}{The template's other parameters: \code{data}, \code{param}, \code{visit}
-(required), \code{by}, \code{response}, \code{covariates}, \code{where}, \code{ref}.}
+(required), \code{by}, \code{response}, \code{covariates}, \code{where}, \code{ref},
+\code{stat_layout}.  \code{stat_layout = "rows"} (the default) puts the
+statistics under each other in the arm's column; \code{"cols"} gives each
+arm the columns n | Estimate (SE) | 95\% CI | p-value, an LS mean and a
+difference each a row (the layout \code{\link[=tpl_stat_block]{tpl_stat_block()}}).}
 
 \item{codelists}{The report's code lists, for the order and labels of
 values; \code{NULL} takes the ARD's.}
