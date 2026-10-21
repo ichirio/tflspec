@@ -1,6 +1,10 @@
 # A template parameter's value from the study standard: the report's
 # population, the study's treatment (tfl_param(study = ))
 
+# tflspec's adtte: ggsurvfit's, attached by an earlier test, has no TRT01A
+# (under devtools::test() the helpers' copy is behind it)
+adtte <- tflspec::adtte
+
 # the sample study, its study.yml saying the treatment
 ss_study <- function(treatment = "TRT01P") {
   d <- tempfile()
@@ -26,9 +30,10 @@ test_that("the report's population: the template's population, written in its pr
   s <- ss_study(NULL)
   ro <- ss_resolve("demog", list(), s)
   expect_identical(attr(ro, "template")$args$population, "SAF")
-  expect_identical(attr(ro, "template")$study, "population")
+  # (with the study standard's look: its plan_stub, plan_blanks ... too)
+  expect_identical(attr(ro, "template")$study[1L], "population")
   code <- tfl_content_code(ro, pipe = "|>")
-  expect_match(paste(code, collapse = "\n"), "tpl_demog(ard, population = \"SAF\"",
+  expect_match(paste(code, collapse = "\n"), "  \"demog\",\n  population = \"SAF\",",
                fixed = TRUE)
   # the report's own argument wins, and says so
   expect_message(ro2 <- ss_resolve("demog", list(population = "SCRF"), s),

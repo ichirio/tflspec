@@ -62,10 +62,11 @@ test_that("resolved: the template's items between the study's layers and the rep
   o2 <- ts_output(); o2$ard <- own_ard
   ro2 <- tfl_resolve_output(o2, s)
   expect_identical(ro2$ard$analyses[[3L]]$variables, "SEX")
-  # provenance: by argument, the template's marked
+  # provenance: by argument, the template's marked (categorical's cell: the
+  # study standard's, through the template's cat_cell)
   rp <- tfl_resolve_output(ts_output(), s, provenance = TRUE)
   pc <- rp$content[[match("plan_cells", vapply(rp$content, `[[`, "", "fn"))]]
-  expect_identical(unname(pc$arg_from[c("continuous", "categorical")]), c("template:demog", "defaults"))
+  expect_identical(unname(pc$arg_from[c("continuous", "categorical")]), c("template:demog", "template:demog"))
 })
 
 test_that("A (the template's call) = B (its items) = the items written out, as tables", {
@@ -76,7 +77,7 @@ test_that("A (the template's call) = B (its items) = the items written out, as t
   ro <- tfl_resolve_output(o, s)
   code <- tfl_content_code(ro, pipe = "|>")
   expect_match(code, "# template demog", fixed = TRUE, all = FALSE)
-  expect_match(code, "plan <- tpl_demog(", fixed = TRUE, all = FALSE)
+  expect_match(paste(code, collapse = "\n"), "plan <- tfl_tpl(\n  ard,\n  \"demog\",", fixed = TRUE)
   # (the code lists are the ARD's: no codelists = for a template of cards' analyses)
   expect_false(any(grepl("codelists =", code, fixed = TRUE)))
   expect_match(code, "# (study default)", fixed = TRUE, all = FALSE)
@@ -105,7 +106,7 @@ test_that("a study's default for a parameter that says where it is: taken, and a
   k <- which(vapply(s$defaults$content, `[[`, "", "fn") == "plan_cells")
   s$defaults$content[[k]]$args$continuous <- rows
   ro <- tfl_resolve_output(ts_output(), s)
-  expect_identical(attr(ro, "template")$study, "cells")
+  expect_identical(attr(ro, "template")$study[1L], "cells")
   expect_identical(attr(ro, "template")$args$cells, rows)
   expect_match(paste(tfl_content_code(ro), collapse = "\n"), "study defaults: cells", fixed = TRUE)
   expect_message(tfl_resolve_output(ts_output(args = list(cells = list(n = "{N}"))), s),

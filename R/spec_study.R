@@ -199,7 +199,7 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
     prov <- .content_provenance(acc$content, output$content, layers, below)
     if (!is.null(tpl)) {
       # what the program writes after the template's call (the A use)
-      r <- .tpl_rest(prov, tpl$name)
+      r <- .tpl_rest(prov, tpl$name, tpl$x$content)
       # (a report's own data: the call's data step is the template's)
       # (a figure's call draws the template's layers: none of them replaced)
       ok <- r$ok && !length(own$data) && (!identical(output$kind, "figure") || !length(intersect(

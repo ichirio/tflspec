@@ -44,7 +44,7 @@ test_that("templates = TRUE / FALSE: the setting at each request's head; FALSE a
   }
   # a table's request lists the table templates, a figure's the figures'
   t1 <- paste(readLines(file.path(d1, "ai", "requests", "ae-1.md"), encoding = "UTF-8"), collapse = "\n")
-  expect_match(t1, "- `ae_soc_pt`: Adverse events by SOC and PT (table, layout hierarchical)", fixed = TRUE)
+  expect_match(t1, "- `ae_soc_pt`: Adverse events by SOC and PT (FDA STF Table 14) (table, layout hierarchical; variant of hierarchical)", fixed = TRUE)
   expect_match(t1, "  - `population` [target]*", fixed = TRUE)
   expect_match(t1, "  - `where` [target] (text) = \"TRTEMFL == \\\"Y\\\"\"", fixed = TRUE)
   expect_false(grepl("`km_simple`", t1, fixed = TRUE))
@@ -217,13 +217,13 @@ test_that("mode = \"agent\": what every request repeats is a file, written once"
   expect_match(ae, "Follow `ai/instructions-table.md`", fixed = TRUE)
   expect_match(ae, "Your answer's header: `tflspec_ai: {task: table, version: 1, outputs: [T-14-3-1]}`",
                fixed = TRUE)
-  expect_match(ae, "- T-14-3-1: `ae_soc_pt`", fixed = TRUE)
+  expect_match(ae, "- T-14-3-1: [^\n]*`ae_soc_pt`")
   expect_match(ae, "`ai/adam_summary.md`: name only", fixed = TRUE)
   expect_false(grepl("```yaml", ae, fixed = TRUE))
   expect_false(grepl("### ADSL", ae, fixed = TRUE))
   fg <- paste(readLines(file.path(d1, "ai", "requests", "figure-1.md"), encoding = "UTF-8"), collapse = "\n")
   expect_match(fg, "Follow `ai/instructions-figure.md`", fixed = TRUE)
-  expect_match(fg, "- F-14-2-2: `km_", fixed = TRUE)
+  expect_match(fg, "- F-14-2-2: `km", fixed = TRUE)
   ae0 <- paste(readLines(file.path(d0, "ai", "requests", "ae-1.md"), encoding = "UTF-8"), collapse = "\n")
   expect_false(grepl("templates", ae0, fixed = TRUE))
   # AGENTS.md says to read them

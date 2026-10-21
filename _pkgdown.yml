@@ -195,6 +195,7 @@ reference:
       resolves it, its program is the template's call, and
       `tfl_template_to_spec()` writes it out as its items.
     contents:
+      - tfl_tpl
       - tfl_templates
       - tfl_template_expand
       - tfl_template_to_spec
@@ -241,6 +242,16 @@ reference:
       - tfl_template_run
       - tfl_test_templates
       - tfl_use_company_templates
+  - title: Template SPEC, a template's help
+    desc: >
+      A template's parameters by tier (required, usual, other): the value
+      in effect and where it is from -- the study standard, a variant, the
+      layout (`tfl_tpl_args()`, `tfl_tpl_help()`) -- and each table and
+      listing template's page, `?tfl_tpl_<name>`, made from the registry.
+    contents:
+      - tfl_tpl_args
+      - tfl_tpl_help
+      - has_concept("template pages")
   - title: Report spec, titles, footnotes, headers and tokens
     desc: >
       The page, the running header and footer, the titles and footnotes,

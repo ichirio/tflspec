@@ -8,6 +8,57 @@
   kept in `ai/built.csv` and said again.  A report that could not be built
   has no RTF (or PNG) left of an earlier run: they are removed.
 
+* **The figure templates are called as the tables': `tfl_tpl(<data>,
+  "<name>", ...)`** (0.0.24.9204, #430), and a report's program calls it:
+  `content <- tfl_tpl(adtte_ttdisc, "km_disc", group = TRT01A)`.  The
+  arguments of the data steps (`population`, `param`, `data`, `where`,
+  `event`: `tfl_param(stage = "data")`) are the program's, not the call's.
+  The figures' own functions (`tpl_km_simple()` ...) stay and draw as before.
+  - One Kaplan-Meier layout, `km`, its look as arguments: `y_type`
+    (survival or risk, 1 - S(t)), `y_percent`, `ci` (`"band"`, or `"bars"`:
+    the CI at the axis's times, `geom_errorbar()`), `censor_marks`,
+    `median_line`, `risk_table` (`risk_title`, `risk_stats` ...), `pvalue`,
+    `x_max` / `x_by`, the labels, the legend, `event` (CNSR made from a
+    condition: ADSL's `EOTSTT == "DISCONTINUED"`), `time_unit` and `plot`
+    (any other setting).  The figure style's km values a study changes
+    (`censor_shape`, `risk_title` ...) are the study's values of their
+    parameters (`tfl_param(study = "km.<key>")`).
+  - `km_disc` (FDA STF Figure 1: time to permanent discontinuation, the
+    cumulative % in weeks, the CI as bars, the log-rank p-value),
+    `km_ae_onset` (Figure 4) and `km_lfu` (Figure 13) are its parameter
+    sets; `km_simple`, `km_risk_table` and `km_ci` too, their designs as
+    before.
+  - The generated code of `.content_fig_tpl_code()` lives in
+    `R/tpl_fig_code.R`.
+
+
+* **A template's help** (#429, 0.0.24.9203): `tfl_tpl_args(name, study,
+  population)` is a template's parameters as a table -- tier, the layout's
+  default, the default a variant changes, the study standard's value, the
+  value in effect and its layer (`"study"`, `"variant:<name>"`,
+  `"template"`) -- and `tfl_tpl_help()` prints it by tier.  Each table and
+  listing template has its page, `?tfl_tpl_<name>` (`?tfl_tpl_demog`),
+  made from the registry when the documentation is built (roxygen
+  `@eval`); a test says when one is missing or out of date.
+
+* **`tfl_tpl(x, name, ...)`: one call for every table and listing template**
+  (0.0.24.9202), and a report's program calls it: `tfl_tpl(ard, "demog",
+  population = "SAF")`.  The template's own functions (`tpl_demog()` ...)
+  and `tfl_template_run()` stay.
+  - The layouts `summary` and `hierarchical` take a table's whole look as
+    parameters (`order`, `total`, `heading`, `header_n`, `rounding`,
+    `stub_*`, `blanks*`, `widths`, `max_rows`, `split` ...), each in a tier
+    (`tfl_param(tier = "required" / "usual" / "other")`); those whose
+    `study` names a study standard's item take its value, and the
+    program's call says them, with no `# (study default)` lines after it.
+  - `demog` is `summary` with its own defaults (summary's `variables` is
+    now `continuous`); `ae_soc_pt` is `hierarchical`'s, and
+    `ae_ser_soc_pt` (serious TEAEs, "Any SAE") and `ae_disc_soc_pt` (TEAEs
+    leading to discontinuation) are `ae_soc_pt`'s.  `min_pct` on
+    `hierarchical`; `stack = TRUE` on `summary`.
+  - `tfl_templates()` says each one's `label` and whether the AI kit uses
+    it (`ai`; `tfl_template(ai = )`, `tfl_template_variant(ai = , example = )`).
+
 * **`orr(stat_layout = "cols")`: each arm's rate and its CI side by side**
   (0.0.24.9201), on the layout `stat_block`; the best overall response's
   n (%) in the first of the two columns.  The arms' N is not in that

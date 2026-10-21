@@ -39,21 +39,23 @@
 #'   them make.
 #' @param label What it makes, in a few words; `NULL` none.
 #' @param call The function a report's program calls for it (the A use);
-#'   `NULL`: `tpl_<name>`.  A company's package exports it, calling
-#'   [tfl_template_run()].
+#'   `NULL`: [tfl_tpl()] for a table or a listing (`tfl_tpl(ard,
+#'   "<name>", ...)`), `tpl_<name>` for a figure.
 #' @param example Its parameters for a try (a named list): what
 #'   [tfl_test_templates()] runs it with, beside the defaults; `NULL` none.
+#' @param ai `TRUE` to list it in the AI requests that answer with
+#'   templates ([tfl_ai_prepare()]`(templates = TRUE)`).
 #' @return `name`, invisibly.
 #' @examples
 #' tfl_template("my_ages", kind = "table", layout = "summary",
 #'   params = list(tfl_param("population", "SAF", doc = "the analysis set's id")),
 #'   body = function(a, ctx) tfl_template_expand("summary",
-#'     list(population = a$population, variables = "AGE"),
+#'     list(population = a$population, continuous = "AGE"),
 #'     codelists = ctx$codelists, population = ctx$population))
 #' tfl_templates()[, c("name", "package")]
 #' @export
 tfl_template <- function(name, kind = c("table", "figure", "listing"), layout, params,
-                         body, label = NULL, call = NULL, example = NULL) {
+                         body, label = NULL, call = NULL, example = NULL, ai = FALSE) {
   fn <- "tfl_template()"
   if (!is.character(name) || length(name) != 1L || !grepl("^[A-Za-z][A-Za-z0-9_.]*$", name)) {
     .ard_stop(sprintf("%s: `name` is one name of letters, digits, '_' and '.'.", fn))
@@ -75,7 +77,7 @@ tfl_template <- function(name, kind = c("table", "figure", "listing"), layout, p
     message(sprintf("%s: %s's template %s replaces %s's.", fn, pkg, name, old$package %||% "tflspec"))
   }
   .tfl_template(name, kind, layout, params, body, label = label, call = call, package = pkg,
-                example = example)
+                example = example, ai = ai)
   look <- .tpl_look_params(.tpl_get(name, fn))
   look <- look[look$status == "look", , drop = FALSE]
   if (nrow(look)) {
@@ -112,20 +114,25 @@ tfl_template <- function(name, kind = c("table", "figure", "listing"), layout, p
 #' @param defaults Its parameters' defaults, by name: `list(variables =
 #'   c("AGE", "SEX"))`.  Each is one of `from`'s parameters.
 #' @param label Its label; `NULL`: `from`'s.
+#' @param example The parameters [tfl_test_templates()] and its help page's
+#'   example run it with; `NULL`: `from`'s.
+#' @param ai `TRUE` to list it in the AI requests that answer with
+#'   templates ([tfl_ai_prepare()]`(templates = TRUE)`); `NULL`: `from`'s.
 #' @return `name`, invisibly.
 #' @examples
 #' tfl_template_variant("demog_age_sex", from = "demog",
 #'                      defaults = list(continuous = "AGE", categorical = "SEX"))
 #' tfl_template_params("demog_age_sex")$categorical$default
 #' @export
-tfl_template_variant <- function(name, from, defaults = list(), label = NULL) {
+tfl_template_variant <- function(name, from, defaults = list(), label = NULL, example = NULL,
+                                 ai = NULL) {
   fn <- "tfl_template_variant()"
   if (!is.character(name) || length(name) != 1L || !grepl("^[A-Za-z][A-Za-z0-9_.]*$", name)) {
     .ard_stop(sprintf("%s: `name` is one name of letters, digits, '_' and '.'.", fn))
   }
   src <- .tpl_get(from, fn)
   if (!is.list(defaults) || (length(defaults) && is.null(names(defaults)))) {
-    .ard_stop(sprintf("%s: `defaults` is a named list, list(variables = ...).", fn))
+    .ard_stop(sprintf("%s: `defaults` is a named list, list(continuous = ...).", fn))
   }
   unknown <- setdiff(names(defaults), names(src$params))
   if (length(unknown)) {
@@ -148,7 +155,7 @@ tfl_template_variant <- function(name, from, defaults = list(), label = NULL) {
     from <- keep
   }
   assign(name, list(name = name, from = from, defaults = defaults, label = label,
-                    package = pkg), envir = .tpl_registry)
+                    package = pkg, example = example, ai = ai), envir = .tpl_registry)
   invisible(name)
 }
 
@@ -164,7 +171,8 @@ tfl_template_variant <- function(name, from, defaults = list(), label = NULL) {
   root <- src$root %||% src$name
   list(name = v$name, kind = src$kind, layout = src$layout, params = params,
        body = src$body, label = v$label %||% src$label, call = src$call,
-       package = v$package, example = src$example %||% .tpl_examples[[root]],
+       package = v$package, example = v$example %||% src$example %||% .tpl_examples[[root]],
+       ai = if (is.null(v$ai)) isTRUE(src$ai) else isTRUE(v$ai),
        from = sub("^[.]base[.]", "", v$from), root = root,
        # every default it changes, the ones of a variant it is made from too
        defaults = utils::modifyList(src$defaults %||% list(), v$defaults, keep.null = TRUE))
@@ -209,7 +217,7 @@ tfl_template_params <- function(name) {
 #'   saf <- adsl[adsl$SAFFL == "Y", ]
 #'   ard <- cards::bind_ard(cards::ard_tabulate(saf, variables = TRT01A),
 #'                          cards::ard_summary(saf, by = TRT01A, variables = AGE))
-#'   plan <- tfl_template_run("summary", ard, population = "SAF", variables = "AGE")
+#'   plan <- tfl_template_run("summary", ard, population = "SAF", continuous = "AGE")
 #' }
 #' @export
 tfl_template_run <- function(name, x, ..., codelists = NULL, sets = NULL) {
@@ -313,7 +321,12 @@ tfl_template_run <- function(name, x, ..., codelists = NULL, sets = NULL) {
         b <- if (length(same) >= k) same[[k]]$args else list()
         keys <- union(names(it$args), names(b))
         if (!is.null(.tpl_look[[it$fn]])) keys <- intersect(keys, .tpl_look[[it$fn]])
-        for (key in keys) if (!identical(it$args[[key]], b[[key]])) row(p, it$fn, key, "look")
+        # (one that takes the study standard's value of that very argument,
+        # tfl_param(study = "<verb>.<argument>"), is the study's look: fine)
+        for (key in keys) if (!identical(it$args[[key]], b[[key]])) {
+          own <- identical(t$params[[p]]$study, paste0(it$fn, ".", key))
+          row(p, it$fn, key, if (own) "look (study source)" else "look")
+        }
       }
     }
   }
@@ -383,10 +396,12 @@ tfl_test_templates <- function(names = NULL) {
 # package tests its wrapped templates with
 .tpl_examples <- list(
   demog = list(population = "SAF"),
-  summary = list(population = "SAF", variables = "AGE"),
+  summary = list(population = "SAF", continuous = "AGE"),
   disposition = list(population = "SAF"),
   hierarchical = list(population = "SAF", hierarchy = c("AEBODSYS", "AEDECOD")),
   ae_soc_pt = list(population = "SAF"),
+  ae_ser_soc_pt = list(population = "SAF"),
+  ae_disc_soc_pt = list(population = "SAF"),
   ae_pt_freq = list(population = "SAF", min_pct = 5),
   ae_max_grade = list(population = "SAF", grade_levels = c("MILD", "MODERATE", "SEVERE")),
   ae_overview = list(population = "SAF"),

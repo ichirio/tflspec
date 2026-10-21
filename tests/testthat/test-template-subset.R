@@ -1,6 +1,10 @@
 # The standard filter pair of every template: which subjects (`subset`, on
 # the analysis set's ADSL) and which records (`where`)
 
+# tflspec's adtte: ggsurvfit's, attached by an earlier test, has no TRT01A
+# (under devtools::test() the helpers' copy is behind it)
+adtte <- tflspec::adtte
+
 subset_skip <- function() {
   skip_on_cran()
   skip_if_not_installed("cards")
@@ -38,7 +42,9 @@ test_that("every table and figure template takes subset; a records template wher
   on.exit(rm(list = "tsub_ae", envir = tflspec:::.tpl_registry))
   r <- tfl_test_templates("tsub_ae")
   expect_setequal(r$status, c("no subset", "no where (a records template)"))
-  expect_identical(nrow(tfl_test_templates(own)), 0L)
+  # (a look parameter that takes the study standard's value is no finding)
+  tt <- tfl_test_templates(own)
+  expect_identical(nrow(tt[tt$status != "look (study source)", ]), 0L)
 })
 
 test_that("expanded: subset on the set's ADSL; a records data takes its subjects", {

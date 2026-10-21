@@ -131,7 +131,7 @@ test_that("the figure schema names every piece and field of tfl_fig_parts()", {
   # each piece's own fields under it
   at <- grep("^- `km_curve`:", s)
   expect_identical(
-    sub("^  - `([a-z_]+)`.*$", "\\1", s[at + seq_len(2L)]),
+    sub("^  - `([a-z_]+)`.*$", "\\1", s[at + seq_len(sum(parts$piece == "km_curve"))]),
     parts$field[parts$piece == "km_curve"]
   )
   # the templates offered are the templates made of pieces

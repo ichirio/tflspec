@@ -27,7 +27,7 @@
 # A template's description: its tpl_*() help page's title (before the
 # colon), else its label, else its layout
 .ai_tpl_description <- function(t) {
-  title <- .ai_tpl_rd_title(t$call %||% paste0("tpl_", t$name))
+  title <- .ai_tpl_rd_title(paste0("tpl_", t$name))
   d <- if (!is.null(t$label) && nzchar(t$label)) t$label else title %||% sprintf("on the %s layout", t$layout)
   sub(":.*$", "", d)
 }
