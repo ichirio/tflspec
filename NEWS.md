@@ -1,12 +1,37 @@
 # tflspec (development version)
 
-* **`demog` and `ae_pt_freq` are built on their layouts** (0.0.24.9196):
+* **`demog` and `ae_pt_freq` are built on their layouts** (0.0.24.9198):
   `demog`'s usual table is `summary`'s body (its own code stays for
   `stack = TRUE` and a dataset other than ADSL), `ae_pt_freq` is
   `hierarchical`'s of one level with its own order, `min_pct` filter and
   page.  Their ARDs, items and programs are as before.  `hierarchical`
   with one level (`hierarchy = "AEDECOD"`) no longer stops: it has no row
   keys above the term.
+
+* **The layout template `stat_block`: one record's statistics over several
+  rows and columns** (0.0.24.9195).  Each arm's block holds one analysis
+  record's statistics -- its N in one column, its rate and interval in the
+  next, or under each other -- as `cells` says: a named list, heading =
+  template, one element a column (`direction = "cols"`) or a row
+  (`"rows"`), a vector its lines (`cells = list(N = "{N}", "ORR(%) 90%CI" =
+  c("{n} ({estimate:.1f%})", "{conf.low:.1f%}, {conf.high:.1f%}"))`; in
+  YAML, records `{label, template}`).  The statistics each group shows are
+  read from its templates; the ARD is the report's own (so, as `km_table`,
+  it takes no `subset` or `where`).  `tpl_stat_block()` is the call.  Needs rtfreporter 0.8.2.9086 (a split record takes its
+  group's template, whatever the study's `categorical`).
+* **`orr`: `conf_level`** (0.95): the rate's CI's level, and its row's
+  label (`90% CI`).  The template is now tagged as the `stat_block`
+  layout; with the defaults it writes the same table as before.
+
+* **The template `vs_change` and `tpl_vs_change()` are removed**
+  (0.0.24.9194).  Its table is `param_change` with `baseline = TRUE` and
+  `layout = "rows"`: one parameter (`params`), one visit (`visits`),
+  vs_change's statistics, cells and labels (`baseline_label`,
+  `value_label`, `change_label`) give the same rows and cells.  The one
+  difference is param_change's blocks of the parameter and the visit; a
+  report that wants them in the title removes them with its own `plan_*`
+  items.  A report file with `template: {name: vs_change}` is now an
+  error naming the templates there are.
 
 * **Templates: the standard filter pair, `subset` (which subjects) and
   `where` (which records)** (0.0.24.9193).  Every table and figure
