@@ -48,7 +48,7 @@ test_that("in a study: A (the data steps, the call) = B (the design) = the templ
     txt <- paste(x$a, collapse = "\n")
     expect_match(txt, "semi_join(", fixed = TRUE)
     expect_match(txt, "filter(PARAMCD == \"SUMDIAM\", AVISIT == \"WEEK 12\"", fixed = TRUE)
-    expect_match(txt, sprintf("content <- tpl_waterfall(adtr_sumdiam, by_response = %s) +", resp),
+    expect_match(txt, sprintf("content <- tfl_tpl(adtr_sumdiam, \"waterfall\", by_response = %s) +", resp),
                  fixed = TRUE)
     expect_identical(grepl("PARAMCD == \"BOR\"", txt, fixed = TRUE), resp)
   }

@@ -43,7 +43,7 @@ test_that("in a study: A (the data steps, the call) = B (the design) = the templ
   txt <- paste(x$a, collapse = "\n")
   expect_match(txt, "semi_join(", fixed = TRUE)
   expect_match(txt, "filter(PARAMCD == \"PFS\")", fixed = TRUE)
-  expect_match(txt, "content <- tpl_km_simple(adtte_pfs, group = TRT01A, time_unit = \"days\") +",
+  expect_match(txt, "content <- tfl_tpl(adtte_pfs, \"km_simple\", time_unit = \"days\", group = TRT01A) +",
                fixed = TRUE)
   expect_match(txt, "labs(y = \"Probability of no event\")", fixed = TRUE)
 })

@@ -438,7 +438,7 @@ tfl_tpl <- function(x, name, ..., codelists = NULL, sets = NULL) {
   }
   t <- .tpl_get(name, fn)
   if (identical(t$kind, "figure")) {
-    .ard_stop(sprintf("%s: %s is a figure template; its call is %s(data, ...).", fn, name, t$call))
+    return(.tpl_fig_call(t, x, rlang::enquos(...)))
   }
   if (identical(t$kind, "listing")) {
     it <- tfl_template_expand(name, list(...), codelists = codelists, population = sets)

@@ -223,7 +223,7 @@ test_that("mode = \"agent\": what every request repeats is a file, written once"
   expect_false(grepl("### ADSL", ae, fixed = TRUE))
   fg <- paste(readLines(file.path(d1, "ai", "requests", "figure-1.md"), encoding = "UTF-8"), collapse = "\n")
   expect_match(fg, "Follow `ai/instructions-figure.md`", fixed = TRUE)
-  expect_match(fg, "- F-14-2-2: `km_", fixed = TRUE)
+  expect_match(fg, "- F-14-2-2: `km", fixed = TRUE)
   ae0 <- paste(readLines(file.path(d0, "ai", "requests", "ae-1.md"), encoding = "UTF-8"), collapse = "\n")
   expect_false(grepl("templates", ae0, fixed = TRUE))
   # AGENTS.md says to read them

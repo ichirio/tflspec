@@ -29,7 +29,8 @@ test_that("tfl_tpl(): the same plan as the template's own function; its errors",
   expect_error(tfl_tpl(ard, "nope"), "no template 'nope'")
   expect_error(tfl_tpl(ard, "demog", population = "SAF", colour = "red"), "no parameter")
   expect_error(tfl_tpl(ard, c("demog", "summary")), "one text")
-  expect_error(tfl_tpl(adtte, "km_simple"), "a figure template; its call is tpl_km_simple")
+  # a figure: the data the program made, its data step's parameters not the call's
+  expect_error(tfl_tpl(adtte, "km_simple", population = "SAF"), "the program's data step")
   # a listing: the data as the program made it
   cols <- list(list(vars = "USUBJID", label = "Subject"), list(vars = "AEDECOD", label = "Term"))
   ae <- adae[seq_len(20L), ]
@@ -38,8 +39,8 @@ test_that("tfl_tpl(): the same plan as the template's own function; its errors",
   # the registry: the call, the label, the AI's templates
   t <- tfl_templates()
   expect_identical(t$call[t$name == "demog"], "tfl_tpl")
-  expect_identical(t$call[t$name == "km_simple"], "tpl_km_simple")
-  expect_identical(sort(t$name[t$ai]), c("ae_disc_soc_pt", "ae_ser_soc_pt", "ae_soc_pt", "demog"))
+  expect_identical(t$call[t$name == "km_simple"], "tfl_tpl")
+  expect_identical(sort(t$name[t$ai]), c("ae_disc_soc_pt", "ae_ser_soc_pt", "ae_soc_pt", "demog", "km_disc"))
   expect_match(t$label[t$name == "ae_ser_soc_pt"], "FDA STF Table 10", fixed = TRUE)
   expect_identical(t$from[t$name == "ae_ser_soc_pt"], "ae_soc_pt")
 })

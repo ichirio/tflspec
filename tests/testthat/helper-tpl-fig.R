@@ -34,7 +34,8 @@ tplfig_check <- function(o, d, data) {
   png_t <- tplfig_png(suppressMessages(tfl_content_run(ro, data)))
   # A: the data steps written out, the call, the report's own items
   a <- tfl_content_code(ro)
-  testthat::expect_true(any(grepl(paste0("<- tpl_", o$template$name, "("), a, fixed = TRUE)))
+  call <- a[grepl("<- tfl_tpl(", a, fixed = TRUE)]
+  testthat::expect_true(any(grepl(sprintf(", \"%s\"", o$template$name), call, fixed = TRUE)))
   env <- new.env(parent = .fig_pkg_env(c(attr(a, "libs"), "tflspec")))
   for (n in names(data)) assign(n, data[[n]], envir = env)
   eval(parse(text = tfl_fig_setup_code()), env)

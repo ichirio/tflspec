@@ -1,5 +1,28 @@
 # tflspec (development version)
 
+* **The figure templates are called as the tables': `tfl_tpl(<data>,
+  "<name>", ...)`** (0.0.24.9204), and a report's program calls it:
+  `content <- tfl_tpl(adtte_ttdisc, "km_disc", group = TRT01A)`.  The
+  arguments of the data steps (`population`, `param`, `data`, `where`,
+  `event`: `tfl_param(stage = "data")`) are the program's, not the call's.
+  The figures' own functions (`tpl_km_simple()` ...) stay and draw as before.
+  - One Kaplan-Meier layout, `km`, its look as arguments: `y_type`
+    (survival or risk, 1 - S(t)), `y_percent`, `ci` (`"band"`, or `"bars"`:
+    the CI at the axis's times, `geom_errorbar()`), `censor_marks`,
+    `median_line`, `risk_table` (`risk_title`, `risk_stats` ...), `pvalue`,
+    `x_max` / `x_by`, the labels, the legend, `event` (CNSR made from a
+    condition: ADSL's `EOTSTT == "DISCONTINUED"`), `time_unit` and `plot`
+    (any other setting).  The figure style's km values a study changes
+    (`censor_shape`, `risk_title` ...) are the study's values of their
+    parameters (`tfl_param(study = "km.<key>")`).
+  - `km_disc` (FDA STF Figure 1: time to permanent discontinuation, the
+    cumulative % in weeks, the CI as bars, the log-rank p-value),
+    `km_ae_onset` (Figure 4) and `km_lfu` (Figure 13) are its parameter
+    sets; `km_simple`, `km_risk_table` and `km_ci` too, their designs as
+    before.
+  - The generated code of `.content_fig_tpl_code()` lives in
+    `R/tpl_fig_code.R`.
+
 * **`tfl_tpl(x, name, ...)`: one call for every table and listing template**
   (0.0.24.9202), and a report's program calls it: `tfl_tpl(ard, "demog",
   population = "SAF")`.  The template's own functions (`tpl_demog()` ...)
