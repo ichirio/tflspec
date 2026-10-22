@@ -1,5 +1,32 @@
 # tflspec (development version)
 
+* **A report's parts, and requests written fast** (0.0.24.9211).
+  - A report whose shell sheet holds it in parts (`Table 15.1.5.1.a` above,
+    `.b` below, the later often only what differs) is found:
+    `tfl_ai_read_shell()$toc` says `parts` (the parts' ids, the TOC's number
+    with the letter: `t.15.1.5.1.a | t.15.1.5.1.b`) and `parts_row` (the row
+    each starts on), and its request asks for a report file a part (the
+    layout the first part's).  Answers with the parts' ids are the report's
+    (not reports too many), and `spec/toc.yml` lists the parts in its place.
+  - A number's part letter after a dot, a dash or an underscore (`.a`, `-a`,
+    `_a`) is the number's, as one written straight on (`T15.1.5.1A`); a TOC
+    row of a part with no sheet of its own reads its parent's sheet whole.
+    A number the TOC names twice warns (`same_number`; its first row kept).
+  - The table instructions (`ai/instructions-table.md`, a chat's prompt)
+    always say that a sheet can hold a report's parts (Part 1 / Part 2,
+    Phase 1 / Phase 2): a report file a part, its id the shell's number or
+    the TOC's with `.a`, `.b`, the layout the first part's, the split an
+    assumption.  The request adds the parts' rows when they are found.
+  - `size = 1`: a request is named after its report's number
+    (`ai/requests/t.15.1.5.1.md`).
+  - A request's shell is cut from the workbook as it was read, not read
+    again from the file a request at a time: 46 reports' requests in about
+    30 seconds, where a workbook of many sheets took half an hour.  Each
+    request is written as it is made (`index.md` at the end), and
+    `progress = function(step, i, n)` on `tfl_ai_prepare()` /
+    `tfl_ai_write_requests()` says where the work is (`"adam"`,
+    `"workbook"`, `"request"` i of n).
+
 * **The layouts' parameters: what a report changes** (0.0.24.9208).
   `summary` (42 parameters, now 15) and `hierarchical` (33, now 15) keep
   only what one report's table differs from another's in; the look (the

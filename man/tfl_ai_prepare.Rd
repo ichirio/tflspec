@@ -26,7 +26,8 @@ tfl_ai_prepare(
   mode = c("chat", "agent"),
   shells = NULL,
   add = FALSE,
-  templates = TRUE
+  templates = TRUE,
+  progress = NULL
 )
 }
 \arguments{
@@ -91,6 +92,11 @@ SPEC; the requests (and \code{AGENTS.md}) list the templates registered now
 -- tflspec's, a company's, the study's variants.  \code{FALSE}: the code
 SPEC only, the requests as they were before templates.  The setting is
 each request's first line (\code{templates: TRUE}) and \code{ai/status.md}'s.}
+
+\item{progress}{\code{NULL}, or a function(step, i, n) called as the work goes:
+\code{step} \code{"adam"} (the ADaM's summary), \code{"workbook"} (the TOC / SHELL
+read), then \code{"request"}, \code{i} of \code{n} requests written -- for a progress
+bar (shiny's \code{setProgress()}); see \code{\link[=tfl_ai_write_requests]{tfl_ai_write_requests()}}.}
 }
 \value{
 A \code{tfl_ai_prepared}: a list with \code{requests} (one row a request:

@@ -20,7 +20,8 @@ tfl_ai_write_requests(
   overwrite = FALSE,
   add = FALSE,
   templates = TRUE,
-  mode = c("chat", "agent")
+  mode = c("chat", "agent"),
+  progress = NULL
 )
 }
 \arguments{
@@ -91,6 +92,11 @@ the ADaM summary and \verb{spec/} files named, not copied; each request
 names them, its answer's header and, with \code{templates}, the templates
 likely for its reports (from their titles).
 The folder the answers go to (\code{ai/answers}, beside \code{dir}) is made too.}
+
+\item{progress}{\code{NULL}, or a function(step, i, n) called as the requests
+are made: \code{step} \code{"request"}, \code{i} of \code{n} written (0 first) -- for a
+progress bar (shiny's \code{setProgress()}).  Each request is written as
+it is made; \code{index.md} and the contexts at the end.}
 }
 \value{
 A data frame, one row a request: \code{request} (the file's name,

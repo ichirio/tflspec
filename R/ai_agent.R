@@ -461,6 +461,18 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
     if (!nrow(t)) return(character())
   } else if (!nrow(t) || (file.exists(f) && !isTRUE(overwrite))) return(character())
   pop_of <- function(txt) .ai_population_of(dir, txt)$id %||% NA_character_
+  # a report written in parts (tfl_ai_read_shell()$toc$parts): a TOC entry
+  # a part, in the report's place
+  if (!is.null(t$parts) && any(!is.na(t$parts))) {
+    t <- do.call(rbind, lapply(seq_len(nrow(t)), function(i) {
+      if (is.na(t$parts[i])) return(t[i, , drop = FALSE])
+      p <- strsplit(t$parts[i], " | ", fixed = TRUE)[[1L]]
+      r <- t[rep(i, length(p)), , drop = FALSE]
+      r$output_id <- p
+      r$key <- .ai_id_key(p)
+      r
+    }))
+  }
   outs <- lapply(seq_len(nrow(t)), function(i) {
     num <- sub("^[A-Z]*", "", t$key[i] %||% "")
     parts <- strsplit(num, ".", fixed = TRUE)[[1L]]
