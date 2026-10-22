@@ -256,8 +256,8 @@ print.tfl_ai_context <- function(x, ...) {
 .ai_ctx_fig_shell <- function(sh, output_id, fn) {
   if (inherits(sh, "tfl_ai_shell")) {
     if (!length(sh$outputs)) {
-      sh <- do.call(tfl_ai_read_shell, c(list(sh$path, outputs = output_id, max_chars = Inf),
-                                         Filter(Negate(is.null), sh$args)))
+      # (from what was read: the file is read once, not a request at a time)
+      sh <- .ai_shell_for(sh, output_id, fn)
     }
     return(sh$text)
   }

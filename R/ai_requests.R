@@ -65,6 +65,10 @@
 #'   the templates registered when the requests are written listed in it,
 #'   its first line `<!-- templates: TRUE -->` -- else as a code SPEC.
 #'   `FALSE`: the code SPEC only, the requests as they were before templates.
+#' @param progress `NULL`, or a function(step, i, n) called as the requests
+#'   are made: `step` `"request"`, `i` of `n` written (0 first) -- for a
+#'   progress bar (shiny's `setProgress()`).  Each request is written as
+#'   it is made; `index.md` and the contexts at the end.
 #' @param mode `"chat"` (default): each request whole, to paste.
 #'   `"agent"` ([tfl_ai_prepare()]`(mode = "agent")`): what every request
 #'   would repeat in a file of the study's `ai/` folder, written once
@@ -100,8 +104,11 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = 8L,
                                   instructions = c("each", "once"),
                                   workbook = c("text", "attach", "both", "file"),
                                   overwrite = FALSE, add = FALSE, templates = TRUE,
-                                  mode = c("chat", "agent")) {
+                                  mode = c("chat", "agent"), progress = NULL) {
   fn <- "tfl_ai_write_requests()"
+  if (!is.null(progress) && !is.function(progress)) {
+    .ard_stop(sprintf("%s: `progress` is a function(step, i, n), or NULL.", fn))
+  }
   templates <- .ai_templates_flag(templates, fn)
   instructions <- match.arg(instructions)
   mode <- match.arg(mode)
@@ -201,6 +208,8 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = 8L,
   # where each report's shell is in the attached workbook ("attach",
   # "both"); or in the workbook file an agent reads ("file")
   placed <- function(text, ids) {
+    # a part on its parent's sheet: which of the sheet's reports is this one
+    text <- paste(c(.ai_part_notes(shell, ids), text), collapse = "\n")
     if (identical(workbook, "file")) {
       # an agent that reads files: the text, and where each report's shell
       # is in the workbook file -- to read that place alone when the text
@@ -290,21 +299,35 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = 8L,
     c(fit(paste0(name, "a"), ids[seq_len(h)], family, short),
       fit(paste0(name, "b"), ids[-seq_len(h)], family, short))
   }
-  req <- list()
-  fam <- character()
-  for (bt in unique(b$batch)) {
-    r <- fit(bt, b$output_id[b$batch == bt], b$family[match(bt, b$batch)])
-    req <- c(req, r)
-    fam <- c(fam, rep(b$family[match(bt, b$batch)], length(r)))
-  }
-  for (k in seq_along(figs)) {
-    req[[fig_names[k]]] <- c(fig_prompt_of(figs[k]), list(ids = figs[k]))
-    fam <- c(fam, "figure")
-  }
   # (with templates: the setting at the request's head)
   head <- if (templates) paste0("<!-- ", .ai_templates_line(templates), " -->\n")
-  for (nm in names(req)) {
-    .ai_write_text(paste0(head, req[[nm]]$text), file.path(out_dir, paste0(nm, ".md")))
+  # each request written as soon as it is made: a run stopped half way
+  # leaves the requests it made (index.md, the contexts: at the end)
+  write_req <- function(r) {
+    for (nm in names(r)) {
+      .ai_write_text(paste0(head, r[[nm]]$text), file.path(out_dir, paste0(nm, ".md")))
+    }
+  }
+  batches <- unique(b$batch)
+  n_req <- length(batches) + length(figs)
+  tick <- function(i) if (is.function(progress)) progress("request", i, n_req)
+  tick(0L)
+  req <- list()
+  fam <- character()
+  for (j in seq_along(batches)) {
+    bt <- batches[j]
+    r <- fit(bt, b$output_id[b$batch == bt], b$family[match(bt, b$batch)])
+    write_req(r)
+    req <- c(req, r)
+    fam <- c(fam, rep(b$family[match(bt, b$batch)], length(r)))
+    tick(j)
+  }
+  for (k in seq_along(figs)) {
+    r <- stats::setNames(list(c(fig_prompt_of(figs[k]), list(ids = figs[k]))), fig_names[k])
+    write_req(r)
+    req <- c(req, r)
+    fam <- c(fam, "figure")
+    tick(length(batches) + k)
   }
   if (agent) {
     # an agent's: what every request would repeat, once (ai/instructions-

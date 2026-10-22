@@ -76,6 +76,10 @@
 #'   `add`, `overwrite` is about the requests alone: the study's
 #'   `study.yml`, `spec/data.yml`, `spec/defaults.yml` and the agent's
 #'   files are kept as they are.
+#' @param progress `NULL`, or a function(step, i, n) called as the work goes:
+#'   `step` `"adam"` (the ADaM's summary), `"workbook"` (the TOC / SHELL
+#'   read), then `"request"`, `i` of `n` requests written -- for a progress
+#'   bar (shiny's `setProgress()`); see [tfl_ai_write_requests()].
 #' @param templates `TRUE` (default): the AI answers a report with one of the
 #'   study's templates where it fits (`template: {name, args}`, and the
 #'   report's own content items for what it does not cover), else as a code
@@ -125,7 +129,7 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
                            overwrite = FALSE, dry_run = FALSE, adam_summary = NULL,
                            datasets = NULL, max_levels = 15L, quiet = FALSE,
                            mode = c("chat", "agent"), shells = NULL, add = FALSE,
-                           templates = TRUE) {
+                           templates = TRUE, progress = NULL) {
   if (isTRUE(quiet)) {
     cl <- match.call()
     cl$quiet <- FALSE
@@ -159,11 +163,15 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
     dir.create(ai, recursive = TRUE, showWarnings = FALSE)
   }
   adam_dir <- if (grepl("^(/|[A-Za-z]:)", adam)) adam else file.path(dir, adam)
+  # (where it is: the ADaM's summary, the workbook, then a request at a time)
+  step <- function(s, i = 0L, n = 1L) if (is.function(progress)) progress(s, i, n)
+  step("adam")
   ad <- adam_summary
   if (is.null(ad) || (!is.null(datasets) &&
                       !setequal(toupper(datasets), toupper(ad$datasets$dataset)))) {
     ad <- tfl_ai_adam_summary(adam_dir, datasets = datasets, max_levels = max_levels)
   }
+  step("workbook")
   shell <- do.call(tfl_ai_read_shell, c(list(toc), Filter(Negate(is.null), list(
     toc_sheet = toc_sheet, sheets = sheets, shells = shells))))
   hint <- .ai_shell_hint(shell)
@@ -199,7 +207,7 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
                                  instructions = instructions, max_chars = max_chars,
                                  workbook = workbook,
                                  overwrite = if (isTRUE(add)) overwrite else TRUE, add = add,
-                                 templates = templates, mode = mode)
+                                 templates = templates, mode = mode, progress = progress)
     rq <- file.path(dir, "ai", "requests")
     files <- c(files, file.path(ai, c("adam_summary.md", shell_md)),
                .ai_toc_yml(dir, shell, overwrite = overwrite, add = add))

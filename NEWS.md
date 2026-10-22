@@ -1,5 +1,23 @@
 # tflspec (development version)
 
+* **A report's parts, and requests written fast** (0.0.24.9211).
+  - A number's part letter after a dot, a dash or an underscore
+    (`t15.1.5.1.a`, `-a`, `_a`) is the number's, as one written straight on
+    (`T15.1.5.1A`): the parts are reports of their own (they read as one
+    before, the requests overlapping).  A part with no sheet of its own
+    reads its parent number's sheet (`t15.1.5.1`), whole, and its request
+    says which of the sheet's reports it is (a later part may write only
+    what differs; the layout is the first part's).  `tfl_ai_read_shell()$toc`
+    says `part_of` (that sheet) and `same_number` (a number the TOC names
+    twice, which now warns; its first row is kept).
+  - A request's shell is cut from the workbook as it was read, not read
+    again from the file a request at a time: 46 reports' requests in about
+    30 seconds, where a workbook of many sheets took half an hour.
+  - Each request is written as it is made (a run stopped half way keeps
+    them), `index.md` at the end; `progress = function(step, i, n)` on
+    `tfl_ai_prepare()` / `tfl_ai_write_requests()` says where the work is
+    (`"adam"`, `"workbook"`, `"request"` i of n).
+
 * **The layouts' parameters: what a report changes** (0.0.24.9208).
   `summary` (42 parameters, now 15) and `hierarchical` (33, now 15) keep
   only what one report's table differs from another's in; the look (the
