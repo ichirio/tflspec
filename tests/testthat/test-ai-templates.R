@@ -23,12 +23,12 @@ test_that("templates = TRUE / FALSE: the setting at each request's head; FALSE a
   ad <- aitpl_study(root)
   d1 <- file.path(root, "with")
   d0 <- file.path(root, "without")
-  r1 <- tfl_ai_prepare(d1, aitpl_book(), adam = ad, quiet = TRUE)
-  r0 <- tfl_ai_prepare(d0, aitpl_book(), adam = ad, quiet = TRUE, templates = FALSE)
+  r1 <- tfl_ai_prepare(d1, aitpl_book(), adam = ad, quiet = TRUE, instructions = "each")
+  r0 <- tfl_ai_prepare(d0, aitpl_book(), adam = ad, quiet = TRUE, instructions = "each", templates = FALSE)
   expect_true(r1$templates)
   expect_false(r0$templates)
   expect_identical(r1$requests$request, r0$requests$request)
-  expect_error(tfl_ai_prepare(d0, aitpl_book(), adam = ad, quiet = TRUE, templates = "prefer"),
+  expect_error(tfl_ai_prepare(d0, aitpl_book(), adam = ad, quiet = TRUE, instructions = "each", templates = "prefer"),
                "TRUE .* or FALSE")
   for (i in seq_len(nrow(r1$requests))) {
     with <- readLines(file.path(d1, r1$requests$file[i]), encoding = "UTF-8")
@@ -77,7 +77,7 @@ test_that("answers with templates: checked, written, built (RTF, PNG); a bad arg
   root <- withr::local_tempdir()
   ad <- aitpl_study(root)
   d <- file.path(root, "study")
-  r <- tfl_ai_prepare(d, aitpl_book(), adam = ad, quiet = TRUE)
+  r <- tfl_ai_prepare(d, aitpl_book(), adam = ad, quiet = TRUE, instructions = "each")
   tfl_ai_save_answer(d, "demographics-1", aitpl_answer(
     "tflspec_ai: {task: table, version: 1, outputs: [T-14-1-1]}",
     "outputs:",
@@ -246,8 +246,8 @@ test_that("a chat's request over max_chars: the templates' arguments by name onl
   ad <- aitpl_study(root)
   d1 <- file.path(root, "full")
   d2 <- file.path(root, "short")
-  r1 <- tfl_ai_prepare(d1, aitpl_book(), adam = ad, quiet = TRUE)
-  r2 <- suppressWarnings(tfl_ai_prepare(d2, aitpl_book(), adam = ad, quiet = TRUE,
+  r1 <- tfl_ai_prepare(d1, aitpl_book(), adam = ad, quiet = TRUE, instructions = "each")
+  r2 <- suppressWarnings(tfl_ai_prepare(d2, aitpl_book(), adam = ad, quiet = TRUE, instructions = "each",
                                         max_chars = 45000))
   ae1 <- paste(readLines(file.path(d1, "ai", "requests", "ae-1.md"), encoding = "UTF-8"), collapse = "\n")
   ae2 <- paste(readLines(file.path(d2, "ai", "requests", "ae-1.md"), encoding = "UTF-8"), collapse = "\n")
@@ -265,7 +265,7 @@ test_that("tfl_ai_compare(): a study without templates; no answer; a repair coun
   root <- withr::local_tempdir()
   ad <- aitpl_study(root)
   d <- file.path(root, "study")
-  r <- tfl_ai_prepare(d, aitpl_book(), adam = ad, quiet = TRUE, templates = FALSE)
+  r <- tfl_ai_prepare(d, aitpl_book(), adam = ad, quiet = TRUE, instructions = "each", templates = FALSE)
   cmp <- tfl_ai_compare(d, file = NULL)
   expect_false(file.exists(file.path(d, "ai", "compare.csv")))
   expect_setequal(cmp$output_id, r$toc$output_id)
