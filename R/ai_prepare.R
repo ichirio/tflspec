@@ -92,7 +92,9 @@
 #'   `request`, `family`, `outputs`, `n`, `chars`, `file` -- as
 #'   [tfl_ai_write_requests()] gives them), `toc` (one row a report of the
 #'   TOC: `output_id`, `title`, `type`, `shell` -- the sheet of its shell --,
-#'   `shell_found`, `request` -- the request that asks for it, `NA` for none),
+#'   `shell_found`, `request` -- the request that asks for it, `NA` for none,
+#'   `book`, and `parts`, `parts_row`, `same_number` as
+#'   [tfl_ai_read_shell()]'s `toc` says them),
 #'   `sheets` (the workbook's sheets and their roles), `adam` (the
 #'   [tfl_ai_adam_summary()]: `datasets`, `variables`, `text`), `files` (the
 #'   files written, relative to `dir`), `hint` (what the workbook's reading
@@ -252,6 +254,12 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
                    request = who[match(t$output_id, unlist(asked))],
                    book = t$book %||% rep(basename(toc), nrow(t)),
                    stringsAsFactors = FALSE)
+  # a report written in parts on its sheet, a number the TOC names twice:
+  # as tfl_ai_read_shell()$toc says them
+  na <- rep(NA_character_, nrow(t))
+  tc$parts <- t$parts %||% na
+  tc$parts_row <- t$parts_row %||% na
+  tc$same_number <- t$same_number %||% rep(FALSE, nrow(t))
   # the files written, relative to the study folder
   root <- paste0(normalizePath(dir, winslash = "/"), "/")
   files <- normalizePath(files, winslash = "/")

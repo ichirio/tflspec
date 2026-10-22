@@ -1,5 +1,9 @@
 # tflspec (development version)
 
+* `tfl_ai_prepare()`'s `toc` (a dry run's too) says each report's `parts`,
+  `parts_row` and `same_number`, as `tfl_ai_read_shell()$toc` does: a
+  caller need not read the workbook again (0.0.24.9213).
+
 * **The AI requests' defaults** (0.0.24.9212): `size = NULL` holds one
   report a request with `mode = "agent"` (each answer checked and built
   before the next) and, in a chat, 3 (`tfl_ai_prepare()`) or 8
