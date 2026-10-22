@@ -22,7 +22,7 @@ test_that("tfl_tpl_args(): one row a parameter, the template's order and tiers",
   expect_identical(r("continuous")$variant, "AGE")
   expect_identical(r("continuous")$layer, "variant:demog")
   expect_identical(r("categorical")$effective, "AGEGR1, SEX, RACE, ETHNIC")
-  expect_identical(r("max_rows")$maps_to, "plan_paginate_rows.max_rows")
+  expect_identical(r("cat_cell")$maps_to, "plan_cells.categorical")
   expect_identical(r("order")$maps_to, "plan_levels.variable")
   # no study: no study value
   expect_true(all(is.na(a$study)))
@@ -47,15 +47,15 @@ test_that("tfl_tpl_args(): the study standard's values, layer study", {
   r <- function(nm) a[a$param == nm, , drop = FALSE]
   expect_identical(r("population")$study, "SAF")
   expect_identical(r("population")$layer, "study")
-  # the sample study's plan_stub: {name: row_label, before: true}
-  expect_identical(r("stub_name")$effective, "row_label")
-  expect_identical(r("stub_name")$layer, "study")
-  expect_identical(r("stub_before")$effective, "TRUE")
-  expect_identical(r("blanks")$effective, "between_groups")
+  # the sample study's plan_cells(categorical = )
+  expect_identical(r("cat_cell")$effective, "{n:.0f} ({p:.1f%})")
+  expect_identical(r("cat_cell")$layer, "study")
+  # (the look is not a parameter: the study's plan_stub is the study's)
+  expect_false("stub_name" %in% a$param)
   # one the study does not say: the variant's, the template's
   expect_identical(r("continuous")$layer, "variant:demog")
-  expect_identical(r("max_rows")$layer, "template")
-  expect_identical(r("max_rows")$effective, "30")
+  expect_identical(r("total")$layer, "template")
+  expect_identical(r("total")$effective, "FALSE")
   # a study's folder is read the same
   d <- system.file("extdata", "spec-yaml", package = "tflspec")
   expect_identical(tfl_tpl_args("demog", study = d, population = "SAF"), a)

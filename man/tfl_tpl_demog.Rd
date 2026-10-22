@@ -20,37 +20,10 @@ The table template \code{demog}, layout \code{summary}: a variant of \code{summa
    \code{order} \tab other \tab call \tab  \tab plan_levels.variable \tab the variables' order (plan_levels(variable = )); NULL: the continuous, then the categorical \cr
    \code{cells} \tab usual \tab call \tab n = \{N:.0f\}; Mean (SD) = \{mean:.1f\} (\{sd:.2f\}); Median = ... \tab plan_cells.continuous \tab the rows of each continuous variable \cr
    \code{cat_cell} \tab other \tab call \tab  \tab plan_cells.categorical \tab a categorical value's cell (plan_cells(categorical = )); NULL: the study standard's \cr
-   \code{na} \tab other \tab call \tab  \tab plan_cells.na \tab an empty cell's text (plan_cells(na = )) \cr
-   \code{rounding} \tab other \tab call \tab  \tab plan_digits.rounding \tab the rounding, "sas" or "r" (plan_digits(rounding = )) \cr
    \code{statistics} \tab other \tab call \tab N, mean, sd, median, min, max \tab  \tab the continuous statistics the ARD has \cr
    \code{cat_statistics} \tab other \tab call \tab n, p \tab  \tab the categorical statistics the ARD has; NULL: cards' own \cr
    \code{total} \tab usual \tab call \tab FALSE \tab plan_total \tab TRUE: a Total column (each analysis again without 'by', plan_total()) \cr
-   \code{total_label} \tab other \tab call \tab Total \tab plan_total.label \tab the Total column's heading \cr
-   \code{heading} \tab other \tab call \tab  \tab plan_col_header \tab the label column's heading (plan_col_header); with 'header_n', the header in place of the study standard's; both NULL: the study standard's \cr
-   \code{header_n} \tab other \tab call \tab  \tab plan_col_header \tab a column's heading, "\{col\}\\n(N=\{n\})" (plan_col_header) \cr
-   \code{max_rows} \tab other \tab call \tab 30 \tab plan_paginate_rows.max_rows \tab the rows a page \cr
-   \code{split} \tab other \tab call \tab group_safe \tab plan_paginate_rows.split \tab where a page may break (plan_paginate_rows(split = )) \cr
-   \code{stub_name} \tab other \tab call \tab  \tab plan_stub.name \tab the folded row headings' column (plan_stub(name = )); NULL: none \cr
-   \code{stub_before} \tab other \tab call \tab  \tab plan_stub.before \tab a heading on its own row before its block (plan_stub(before = )) \cr
-   \code{stub_indent} \tab other \tab call \tab  \tab plan_stub.indent \tab the indent of a block's rows \cr
-   \code{blanks} \tab other \tab call \tab  \tab plan_blanks.where \tab where blank rows go (plan_blanks(where = )); the four NULL: none \cr
-   \code{blanks_first} \tab other \tab call \tab  \tab plan_blanks.first \tab a blank row first \cr
-   \code{blanks_last} \tab other \tab call \tab  \tab plan_blanks.last \tab a blank row last \cr
-   \code{blanks_counted} \tab other \tab call \tab  \tab plan_blanks.counted \tab blank rows counted in a page's rows \cr
-   \code{widths} \tab other \tab call \tab  \tab plan_columns.widths \tab the columns' widths by name (plan_columns(widths = )) \cr
    \code{stack} \tab other \tab call \tab FALSE \tab  \tab TRUE: the ARD as one cards::ard_stack() call \cr
-   \code{stack_id} \tab other \tab call \tab DEMOG \tab  \tab the stack's analysis id \cr
-   \code{stack_label} \tab other \tab call \tab Demographics, run together \tab  \tab the stack's label \cr
-   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: \if{html}{\out{<data>}}_\if{html}{\out{<population>}} \cr
-   \code{data_label} \tab other \tab call \tab  \tab  \tab the analysis data's label \cr
-   \code{groupn_label} \tab other \tab call \tab Subjects per group \tab  \tab the subjects-per-group analysis' label \cr
-   \code{analysis_id} \tab other \tab call \tab CONT \tab  \tab the continuous analysis' id \cr
-   \code{analysis_label} \tab other \tab call \tab Continuous \tab  \tab the continuous analysis' label \cr
-   \code{ci_id} \tab other \tab call \tab CI \tab  \tab the confidence-interval analysis' id \cr
-   \code{ci_label} \tab other \tab call \tab  \tab  \tab the continuous variables' mean (CI) analysis' label; NULL: none \cr
-   \code{ci_method} \tab other \tab call \tab mean_ci \tab  \tab its method (mean_ci: a one-sample t-test) \cr
-   \code{cat_id} \tab other \tab call \tab CAT \tab  \tab the categorical analysis' id \cr
-   \code{cat_label} \tab other \tab call \tab Categorical \tab  \tab the categorical analysis' label \cr
 }
 }
 

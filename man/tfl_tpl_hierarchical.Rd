@@ -17,31 +17,12 @@ The table template \code{hierarchical}, layout \code{hierarchical}. Its program 
    \code{by} \tab usual \tab call \tab TRT01A \tab settings.treatment \tab the column variable \cr
    \code{overall} \tab usual \tab call \tab  \tab  \tab the any-record row's label; NULL: none \cr
    \code{heading} \tab usual \tab call \tab System Organ Class,    Preferred Term \tab  \tab the label column's heading, a line a level \cr
-   \code{header_n} \tab other \tab call \tab \{col\} (N=\{n\}) n (\%) \tab plan_col_header \tab a column's heading (plan_col_header) \cr
    \code{sort} \tab other \tab call \tab .overall, group1, .depth, -n, label \tab plan_sort \tab the rows' order (plan_sort()) \cr
    \code{min_pct} \tab usual \tab call \tab  \tab plan_filter \tab the rows kept: this \% of subjects or more (plan_filter()); NULL: all \cr
    \code{min_pct_in} \tab other \tab call \tab any \tab  \tab where min_pct is met: "any" column, "all" of them, or the "total" column \cr
    \code{cell} \tab other \tab call \tab  \tab plan_cells.categorical \tab a count's cell (plan_cells(categorical = )); NULL: the study standard's \cr
-   \code{na} \tab other \tab call \tab  \tab plan_cells.na \tab an empty cell's text (plan_cells(na = )) \cr
-   \code{rounding} \tab other \tab call \tab  \tab plan_digits.rounding \tab the rounding, "sas" or "r" (plan_digits(rounding = )) \cr
    \code{denominator} \tab other \tab call \tab  \tab  \tab the percentages' denominator: NULL the analysis set's subjects, "data" the records' subjects \cr
    \code{total} \tab other \tab call \tab FALSE \tab plan_total \tab TRUE: a Total column (the analysis again without 'by', plan_total()) \cr
-   \code{total_label} \tab other \tab call \tab Total \tab plan_total.label \tab the Total column's heading \cr
-   \code{max_rows} \tab other \tab call \tab 22 \tab plan_paginate_rows.max_rows \tab the rows a page \cr
-   \code{split} \tab other \tab call \tab group_force \tab plan_paginate_rows.split \tab where a page may break (plan_paginate_rows(split = )) \cr
-   \code{stub_name} \tab other \tab call \tab  \tab plan_stub.name \tab the folded row headings' column (plan_stub(name = )); NULL: none \cr
-   \code{stub_before} \tab other \tab call \tab  \tab plan_stub.before \tab a heading on its own row before its block (plan_stub(before = )) \cr
-   \code{stub_indent} \tab other \tab call \tab  \tab plan_stub.indent \tab the indent of a block's rows \cr
-   \code{blanks} \tab other \tab call \tab  \tab plan_blanks.where \tab where blank rows go (plan_blanks(where = )); the four NULL: none \cr
-   \code{blanks_first} \tab other \tab call \tab  \tab plan_blanks.first \tab a blank row first \cr
-   \code{blanks_last} \tab other \tab call \tab  \tab plan_blanks.last \tab a blank row last \cr
-   \code{blanks_counted} \tab other \tab call \tab  \tab plan_blanks.counted \tab blank rows counted in a page's rows \cr
-   \code{widths} \tab other \tab call \tab  \tab plan_columns.widths \tab the columns' widths by name (plan_columns(widths = )) \cr
-   \code{empty} \tab other \tab call \tab  \tab plan_empty.text \tab the row when no record is kept (plan_empty(text = )); NULL: none \cr
-   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: \if{html}{\out{<data>}}_\if{html}{\out{<population>}} \cr
-   \code{data_label} \tab other \tab call \tab  \tab  \tab the analysis data's label \cr
-   \code{analysis_id} \tab other \tab call \tab AE \tab  \tab the analysis's id \cr
-   \code{analysis_label} \tab other \tab call \tab  \tab  \tab the analysis's label \cr
 }
 }
 

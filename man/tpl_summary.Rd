@@ -15,9 +15,10 @@ report.}
 \item{continuous}{The continuous variables, in order; \code{NULL} for none.}
 
 \item{...}{The template's other parameters: \code{categorical} (the
-categorical variables), \code{by}, \code{labels}, \code{cells}, \code{total}, the look
-(\code{max_rows}, \code{stub_name}, \code{blanks} ...) and the analyses' ids and
-labels: \code{tfl_tpl_help("summary")}.}
+categorical variables), \code{by}, \code{labels}, \code{order}, \code{cells}, \code{cat_cell},
+\code{total} ...: \code{tfl_tpl_help("summary")}.  The look (the stub, the blank
+rows, the widths, the page) is the study standard's; change it after the
+template with \verb{|> plan_stub()}, \verb{|> plan_paginate_rows()} ...}
 
 \item{codelists}{The report's code lists, for the order and labels of
 values; \code{NULL} takes the ARD's.}
