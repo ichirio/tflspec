@@ -12,6 +12,11 @@
     `_a`) is the number's, as one written straight on (`T15.1.5.1A`); a TOC
     row of a part with no sheet of its own reads its parent's sheet whole.
     A number the TOC names twice warns (`same_number`; its first row kept).
+  - The table instructions (`ai/instructions-table.md`, a chat's prompt)
+    always say that a sheet can hold a report's parts (Part 1 / Part 2,
+    Phase 1 / Phase 2): a report file a part, its id the shell's number or
+    the TOC's with `.a`, `.b`, the layout the first part's, the split an
+    assumption.  The request adds the parts' rows when they are found.
   - `size = 1`: a request is named after its report's number
     (`ai/requests/t.15.1.5.1.md`).
   - A request's shell is cut from the workbook as it was read, not read

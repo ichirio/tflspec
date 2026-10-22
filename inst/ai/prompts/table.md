@@ -11,6 +11,8 @@ For each report, read its shell and write one report file:
 - A table always has its column key: with one arm too, the analyses have `by: [<the arm>]` and `table_plan` has `cols: <the arm>`. An overall row of a hierarchical table (`normalize_ard: {overall: Any TEAE}`) needs `args: over_variables = TRUE` on its hierarchical analysis; without it the row is not there.
 - `page`: the titles and the footnotes, copied exactly from the TOC and the shell.
 
+One sheet can hold several reports of the same shape (Part 1 / Part 2, Phase 1 / Phase 2 ...; a later one often writes only what differs: the subset, a column). When you find them, write one report file a part. Its id is the part's number in the shell (15.1.5.1.a); with no number there, the TOC's number with `.a`, `.b`. Take the layout from the first part and apply what a later part changes. Write how you split the sheet as an assumption (`assumption` and `question`).
+
 When the user's message shows reviewed reports of this study, follow them: write a report like them in the same way, item by item.
 <!-- values -->
 Write each value as YAML: a number as a number, `true` / `false` for a logical, a list as a list, a mapping as a mapping; R code (a condition, a derivation, the arguments of a method) only where the schema says `r`, tagged `!r`. Every name is one the user's message lists: a dataset, a variable, a value of a variable as the data write it, an analysis set's id.

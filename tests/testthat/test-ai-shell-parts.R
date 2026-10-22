@@ -153,3 +153,11 @@ test_that("one report a request: the request named after the report's number", {
   expect_true(file.exists(file.path(d, "ai", "requests", "t.15.1.5.1.md")))
   expect_identical(seen, c("adam 0 1", "workbook 0 1", "request 0 2", "request 1 2", "request 2 2"))
 })
+
+test_that("the table instructions always say how to write a sheet's parts", {
+  p <- tfl_ai_prompt("table", example = FALSE)
+  expect_match(p$system, "write one report file a part", fixed = TRUE)
+  expect_match(p$system, "the TOC's number with `.a`, `.b`", fixed = TRUE)
+  fig <- tfl_ai_prompt("figure", tfl_ai_context("figure", output_id = "F-1"), example = FALSE)
+  expect_no_match(fig$system, "Part 1 / Part 2", fixed = TRUE)
+})
