@@ -29,8 +29,10 @@ test_that("tfl_ai_prepare(): the guide's step 3 in one call; a study.yml there i
   r2 <- suppressMessages(tfl_ai_prepare(d, book(), study_id = "OTHER", size = 1L))
   expect_true("# kept" %in% readLines(y))
   expect_identical(nrow(r2$requests), 5L)
-  # and the answers of the example still pass, as in the guide
-  ex <- system.file("ai", "example", "answers", package = "tflspec")
+  # and the answers of the example still pass, as in the guide (its
+  # requests: the default size's, size = 1 names them after the reports)
+  suppressMessages(tfl_ai_prepare(d, book()))
+  ex <-system.file("ai", "example", "answers", package = "tflspec")
   file.copy(list.files(ex, full.names = TRUE), file.path(d, "ai", "answers"), overwrite = TRUE)
   res <- suppressMessages(tfl_ai_collect_answers(d))
   expect_identical(unique(res$reports$status), "ok")
