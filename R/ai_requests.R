@@ -203,13 +203,27 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = 8L,
   }
   fig_names <- character()
   for (k in seq_along(figs)) fig_names[k] <- next_name("figure", c(taken, fig_names))
+  # one report a request: the request named after its report's number
+  # (t.15.1.5.1.md: the sheet it reads), letters a file name cannot hold
+  # replaced
+  if (isTRUE(as.integer(size) == 1L)) {
+    one <- !duplicated(b$batch)
+    nm <- .ai_file_id(b$output_id[one])
+    nm <- make.unique(c(taken, nm), sep = "-")[length(taken) + seq_along(nm)]
+    b$batch <- unname(stats::setNames(nm, b$batch[one])[b$batch])
+    if (length(figs)) {
+      fn_ <- make.unique(c(taken, nm, .ai_file_id(figs)), sep = "-")
+      fig_names <- fn_[length(taken) + length(nm) + seq_along(figs)]
+    }
+  }
 
   # the shells' text as the workbook reaches the chat: the text alone; with
   # where each report's shell is in the attached workbook ("attach",
   # "both"); or in the workbook file an agent reads ("file")
   placed <- function(text, ids) {
     # a part on its parent's sheet: which of the sheet's reports is this one
-    text <- paste(c(.ai_part_notes(shell, ids), text), collapse = "\n")
+    text <- paste(c(.ai_parts_lines(shell, ids), .ai_part_notes(shell, ids), text),
+                  collapse = "\n")
     if (identical(workbook, "file")) {
       # an agent that reads files: the text, and where each report's shell
       # is in the workbook file -- to read that place alone when the text
@@ -479,6 +493,15 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
                          if (agent) sprintf("run `Rscript run.R %s`", nm) else "collect again")
       next
     }
+    # a report the answer gives in parts (t.15.1.5.1.a, .b): its parts are
+    # its reports here
+    ids <- unlist(lapply(ids, function(id) {
+      k <- .ai_id_key(id)
+      pk <- .ai_id_key(names(a$outputs))
+      part <- !is.na(pk) & !is.na(k) & grepl("[A-Z]$", pk) &
+        vapply(pk, function(z) .ai_id_same(sub("[A-Z]$", "", z), k), NA)
+      if (any(part) && !id %in% names(a$outputs)) names(a$outputs)[part] else id
+    }), use.names = FALSE)
     a <- .ai_answer_as_asked(a, ids)
     a <- .ai_answer_overall(a)
     pr <- tryCatch(tfl_ai_check(a, ctxs[[nm]]$context), error = function(e) e)

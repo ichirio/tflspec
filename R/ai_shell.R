@@ -128,6 +128,12 @@ tfl_ai_read_shell <- function(path, outputs = NULL, sheets = NULL,
   toc$part_of <- ifelse(!is.na(par) & !own & !is.na(toc$shell), toc$shell, NA_character_)
   toc$same_number <- attr(toc, "same_number") %||% rep(FALSE, nrow(toc))
   attr(toc, "same_number") <- NULL
+  # a report written in parts on its sheet (15.1.5.1.a above, .b below):
+  # the parts' ids (the TOC's number and the part's letter, as written) and
+  # the row each starts on, " | " between them
+  pp <- lapply(seq_len(nrow(toc)), function(i) .ai_shell_parts(toc[i, , drop = FALSE], cells))
+  toc$parts <- vapply(pp, function(p) if (nrow(p)) paste(p$id, collapse = " | ") else NA_character_, "")
+  toc$parts_row <- vapply(pp, function(p) if (nrow(p)) paste(p$row, collapse = " | ") else NA_character_, "")
   info$role <- ifelse(info$sheet %in% toc_name, "toc",
                       ifelse(info$sheet %in% toc$shell, "shell", "other"))
   # the workbook each report's shell is in (its TOC's when none was found)
@@ -937,4 +943,54 @@ tfl_ai_batches <- function(x, size = 8L, types = "table", families = NULL) {
   sh$outputs <- keep$outputs
   sh$truncated <- FALSE
   sh
+}
+
+# The parts of a report on its shell sheet: the numbers there that are the
+# report's own and a letter (15.1.5.1.a, 15.1.5.1-b), two or more, each
+# with the first row naming it; none when the sheet has fewer than two.
+# A part's id is the TOC's number with the letter, as the sheet separates
+# it (t.15.1.5.1 and "15.1.5.1.a" -> t.15.1.5.1.a).
+.ai_shell_parts <- function(r, cells) {
+  none <- data.frame(id = character(), key = character(), row = integer(),
+                     stringsAsFactors = FALSE)
+  if (is.na(r$shell) || is.na(r$key) || grepl("[A-Z]$", r$key)) return(none)
+  d <- cells[cells$sheet == r$shell, , drop = FALSE]
+  if (!nrow(d)) return(none)
+  hits <- .ai_ids_in(d$text)
+  rows <- rep(d$row, vapply(hits, nrow, 1L))
+  h <- do.call(rbind, hits)
+  if (is.null(h) || !nrow(h)) return(none)
+  h$row <- rows
+  mine <- !is.na(h$key) & grepl("[A-Z]$", h$key) &
+    vapply(h$key, function(k) .ai_id_same(sub("[A-Z]$", "", k), r$key), NA)
+  h <- h[mine, , drop = FALSE]
+  h <- h[order(h$row), , drop = FALSE]
+  h <- h[!duplicated(h$key), , drop = FALSE]
+  if (nrow(h) < 2L) return(none)
+  letter <- tolower(sub("^.*([A-Z])$", "\\1", h$key))
+  sep <- vapply(h$id, function(z) {
+    m <- regmatches(z, regexpr("[._-]?[A-Za-z]$", trimws(z)))
+    if (length(m) && nchar(m) == 2L) substring(m, 1L, 1L) else ""
+  }, "", USE.NAMES = FALSE)
+  data.frame(id = paste0(r$output_id, sep, letter), key = h$key, row = as.integer(h$row),
+             stringsAsFactors = FALSE)
+}
+
+# A request's lines for its reports written in parts: each report's parts
+# and where they start, one report file a part
+.ai_parts_lines <- function(x, ids) {
+  toc <- x$toc
+  if (is.null(toc$parts)) return(character())
+  out <- unlist(lapply(ids, function(id) {
+    i <- .ai_id_match(.ai_id_key(id), toc$key)
+    if (!length(i) || is.na(toc$parts[i[1L]])) return(NULL)
+    p <- strsplit(toc$parts[i[1L]], " | ", fixed = TRUE)[[1L]]
+    w <- strsplit(toc$parts_row[i[1L]], " | ", fixed = TRUE)[[1L]]
+    paste0(id, " is written in ", length(p), " parts (",
+           paste(sprintf("%s: from row %s", p, w), collapse = ", "),
+           "). Write one report file a part, its id the part's number. A later part ",
+           "often writes only what differs (the subset, a column); take the layout from ",
+           "the first part. When unsure, open those rows of the workbook.")
+  }))
+  if (length(out)) c(out, "") else character()
 }

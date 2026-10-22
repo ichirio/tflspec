@@ -401,14 +401,22 @@
   if (length(want)) {
     wk <- .ai_id_key(want)
     have_k <- .ai_id_key(names(outs))
+    # a report answered in parts (t.15.1.5.1.a, .b): asked for, its parts
+    part_of <- function(k) {
+      !is.na(k) & grepl("[A-Z]$", k) &
+        vapply(k, function(z) length(.ai_id_match(sub("[A-Z]$", "", z), wk)) > 0L, NA)
+    }
+    in_parts <- vapply(wk, function(w) any(part_of(have_k) &
+      vapply(have_k, function(z) .ai_id_same(sub("[A-Z]$", "", z), w), NA)), NA)
     for (i in seq_along(want)) {
+      if (in_parts[i]) next
       if (!is.na(wk[i]) && !length(.ai_id_match(wk[i], have_k)) && !want[i] %in% names(outs)) {
         p <- .ai_problem(p, "outputs", sprintf("has no report %s; the prompt asked for it", want[i]))
       }
     }
     for (id in names(outs)) {
       k <- .ai_id_key(id)
-      if (!id %in% want && (is.na(k) || !length(.ai_id_match(k, wk)))) {
+      if (!id %in% want && (is.na(k) || !length(.ai_id_match(k, wk))) && !part_of(k)) {
         p <- .ai_problem(p, paste("outputs", id),
                          "was not asked for: not written (its own request drafts it)", "warning")
       }
