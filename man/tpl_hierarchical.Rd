@@ -15,7 +15,7 @@ report.}
 \item{hierarchy}{The levels, outer first (\code{c("AEBODSYS", "AEDECOD")}).}
 
 \item{...}{The template's other parameters: \code{by}, \code{data}, \code{where},
-\code{overall}, \code{sort}, \code{heading} ...}
+\code{any_row}, \code{any_row_label}, \code{sort}, \code{heading} ...}
 
 \item{codelists}{The report's code lists, for the order and labels of
 values; \code{NULL} takes the ARD's.}

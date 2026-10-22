@@ -97,7 +97,7 @@ test_that("tfl_read_template_sheets(): the Excel example, as report files", {
 
 test_that("summary: categorical variables too; disposition on it", {
   x <- tfl_template_expand("summary", list(population = "SAF", categorical = c("AGEGR1", "SEX"),
-                                           cat_statistics = NULL))
+                                           categorical_statistics = NULL))
   expect_identical(vapply(x$ard$analyses, `[[`, "", "id"), c("GROUPN", "CAT"))
   expect_null(x$ard$analyses[[2L]]$statistics)
   expect_false("plan_cells" %in% vapply(x$content, `[[`, "", "fn"))
@@ -148,7 +148,8 @@ test_that("listing: one row a record, a column's width part of its definition", 
 })
 
 test_that("summary has no mean (CI) analysis of its own; km_table and orr", {
-  x <- tfl_template_expand("summary", list(population = "SAF", continuous = "CHG", statistics = "N"))
+  x <- tfl_template_expand("summary", list(population = "SAF", continuous = "CHG",
+                                           continuous_statistics = "N"))
   expect_identical(vapply(x$ard$analyses, `[[`, "", "method"), c("categorical", "continuous"))
   k <- tfl_template_expand("km_table", list(by_levels = c("A", "B")))
   expect_null(k$ard)   # the survival analyses are the report's own
@@ -174,7 +175,7 @@ test_that("hierarchical of one level; demog and ae_pt_freq on their layouts", {
   # order, filter and page
   p <- tfl_template_expand("ae_pt_freq", list(population = "SAF", min_pct = 5))
   h1 <- tfl_template_expand("hierarchical", list(population = "SAF", hierarchy = "AEDECOD",
-    where = "TRTEMFL == \"Y\"", overall = "Any TEAE"))
+    where = "TRTEMFL == \"Y\"", any_row = TRUE, any_row_label = "Any TEAE"))
   # (its own ids and labels: the layout's are its parameters no more)
   k <- c("method", "data", "by", "variables", "denominator", "args")
   expect_identical(p$ard$analyses[[1L]][k], h1$ard$analyses[[1L]][k])

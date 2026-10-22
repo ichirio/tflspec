@@ -15,12 +15,13 @@ The table template \code{ae_soc_pt}, layout \code{hierarchical}: a variant of \c
    \code{data} \tab other \tab call \tab ADAE \tab  \tab the dataset of records \cr
    \code{where} \tab usual \tab call \tab TRTEMFL == "Y" \tab  \tab the records kept (R) \cr
    \code{by} \tab usual \tab call \tab TRT01A \tab settings.treatment \tab the column variable \cr
-   \code{overall} \tab usual \tab call \tab Any TEAE \tab  \tab the any-record row's label; NULL: none \cr
+   \code{any_row} \tab usual \tab call \tab TRUE \tab  \tab TRUE: the row of the subjects with any record, first \cr
+   \code{any_row_label} \tab other \tab call \tab Any TEAE \tab  \tab that row's label \cr
    \code{heading} \tab usual \tab call \tab System Organ Class,    Preferred Term \tab  \tab the label column's heading, a line a level \cr
    \code{sort} \tab other \tab call \tab .overall, group1, .depth, -n, label \tab plan_sort \tab the rows' order (plan_sort()) \cr
    \code{min_pct} \tab usual \tab call \tab  \tab plan_filter \tab the rows kept: this \% of subjects or more (plan_filter()); NULL: all \cr
    \code{min_pct_in} \tab other \tab call \tab any \tab  \tab where min_pct is met: "any" column, "all" of them, or the "total" column \cr
-   \code{cell} \tab other \tab call \tab  \tab plan_cells.categorical \tab a count's cell (plan_cells(categorical = )); NULL: the study standard's \cr
+   \code{count_cell} \tab other \tab call \tab  \tab plan_cells.categorical \tab a count's cell, n (\%) (plan_cells(categorical = )); NULL: the study standard's \cr
    \code{denominator} \tab other \tab call \tab  \tab  \tab the percentages' denominator: NULL the analysis set's subjects, "data" the records' subjects \cr
    \code{total} \tab other \tab call \tab FALSE \tab plan_total \tab TRUE: a Total column (the analysis again without 'by', plan_total()) \cr
 }

@@ -15,7 +15,7 @@ report.}
 \item{continuous}{The continuous variables, in order; \code{NULL} for none.}
 
 \item{...}{The template's other parameters: \code{categorical} (the
-categorical variables), \code{by}, \code{labels}, \code{order}, \code{cells}, \code{cat_cell},
+categorical variables), \code{by}, \code{labels}, \code{order}, \code{cells}, \code{count_cell},
 \code{total} ...: \code{tfl_tpl_help("summary")}.  The look (the stub, the blank
 rows, the widths, the page) is the study standard's; change it after the
 template with \verb{|> plan_stub()}, \verb{|> plan_paginate_rows()} ...}

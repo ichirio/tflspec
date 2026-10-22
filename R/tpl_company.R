@@ -397,6 +397,7 @@ tfl_test_templates <- function(names = NULL) {
 # package tests its wrapped templates with
 .tpl_examples <- list(
   demog = list(population = "SAF"),
+  stf_t02_demog = list(population = "SAF"),
   summary = list(population = "SAF", continuous = "AGE"),
   disposition = list(population = "SAF"),
   hierarchical = list(population = "SAF", hierarchy = c("AEBODSYS", "AEDECOD")),

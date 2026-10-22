@@ -111,7 +111,10 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
         "ci_method", "groupn_label", "median_label", "time_prefix", "time_unit", "unit",
         "when", "visit_label", "param_label", "baseline_label", "value_label", "change_label", "cell", "start"),
       "text"),
-    k(c("heading", "statistics", "cat_statistics"), "text", TRUE),
+    k(c("heading", "statistics", "cat_statistics", "continuous_statistics",
+        "categorical_statistics"), "text", TRUE),
+    k("any_row", "flag"),
+    k(c("count_cell", "any_row_label"), "text"),
     # a variable's heading each: given by name, merged with the default's
     k(c("labels", "param_labels"), "list", fields = nv, merge = TRUE),
     # the rows: given, they are the rows (no merge)
@@ -523,11 +526,11 @@ tpl_demog <- function(ard, population, ..., codelists = NULL) {
   tfl_param("cells", list(n = "{N:.0f}", `Mean (SD)` = "{mean:.1f} ({sd:.2f})",
                           Median = "{median:.1f}", `Min, Max` = "{min:.0f}, {max:.0f}"),
             tier = "usual", doc = "the rows of each continuous variable", study = "plan_cells.continuous"),
-  tfl_param("cat_cell", NULL, study = "plan_cells.categorical",
-            doc = "a categorical value's cell (plan_cells(categorical = )); NULL: the study standard's"),
-  tfl_param("statistics", c("N", "mean", "sd", "median", "min", "max"),
+  tfl_param("count_cell", NULL, study = "plan_cells.categorical",
+            doc = "a categorical value's cell, n (%) (plan_cells(categorical = )); NULL: the study standard's"),
+  tfl_param("continuous_statistics", c("N", "mean", "sd", "median", "min", "max"),
             doc = "the continuous statistics the ARD has"),
-  tfl_param("cat_statistics", c("n", "p"),
+  tfl_param("categorical_statistics", c("n", "p"),
             doc = "the categorical statistics the ARD has; NULL: cards' own"),
   tfl_param("total", FALSE, tier = "usual",
             doc = "TRUE: a Total column (each analysis again without `by`, plan_total())"),
@@ -563,12 +566,12 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
                  by = a$by, overall = ov, purpose = "PRIMARY OUTCOME MEASURE"))),
     if (length(a$continuous)) list(nn(list(
       id = "CONT", parent = "STACK", label = "Continuous", method = "continuous",
-      variables = a$continuous, optional = opt("continuous"), statistics = a$statistics,
+      variables = a$continuous, optional = opt("continuous"), statistics = a$continuous_statistics,
       purpose = "PRIMARY OUTCOME MEASURE"))),
     if (length(a$categorical)) list(nn(list(
       id = a[["cat_id"]] %||% "CAT", parent = "STACK", label = a[["cat_label"]] %||% "Categorical",
       method = "categorical",
-      variables = a$categorical, optional = opt("categorical"), statistics = a$cat_statistics,
+      variables = a$categorical, optional = opt("categorical"), statistics = a$categorical_statistics,
       purpose = "PRIMARY OUTCOME MEASURE"))))
   else c(
     list(nn(list(id = "GROUPN", label = a[["groupn_label"]] %||% "Subjects per group",
@@ -577,15 +580,15 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
     if (length(a$continuous)) list(nn(list(
       id = "CONT", label = "Continuous", method = "continuous", data = set,
       by = a$by, overall = ov, variables = a$continuous, optional = opt("continuous"),
-      statistics = a$statistics, purpose = "PRIMARY OUTCOME MEASURE"))),
+      statistics = a$continuous_statistics, purpose = "PRIMARY OUTCOME MEASURE"))),
     if (length(a$categorical)) list(nn(list(
       id = a[["cat_id"]] %||% "CAT", label = a[["cat_label"]] %||% "Categorical",
       method = "categorical", data = set,
       by = a$by, overall = ov, variables = a$categorical, optional = opt("categorical"),
-      statistics = a$cat_statistics, purpose = "PRIMARY OUTCOME MEASURE"))))
+      statistics = a$categorical_statistics, purpose = "PRIMARY OUTCOME MEASURE"))))
   vars <- c(a$continuous, a$categorical)
   cells <- nn(list(continuous = if (length(a$continuous)) as.list(a$cells),
-                   categorical = a$cat_cell))
+                   categorical = a$count_cell))
   content <- c(
     list(tfl_item("table_plan", list(cols = a$by, rows = list(group = "variable")))),
     if (length(cells)) list(tfl_item("plan_cells", cells)),
@@ -605,12 +608,27 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
 # demog: the demographics table -- summary's parameters, its own defaults
 # (a template is a program and a set of parameters: the program is the
 # layout's)
-tfl_template_variant("demog", from = "summary", label = "Demographics (FDA STF Table 2)",
+tfl_template_variant("demog", from = "summary", label = "Demographics",
   ai = TRUE, example = list(population = "SAF"),
   defaults = list(continuous = "AGE", categorical = c("AGEGR1", "SEX", "RACE", "ETHNIC"),
                   labels = c(AGE = "Age (years)", AGEGR1 = "Age group, n (%)",
                              SEX = "Sex, n (%)", RACE = "Race, n (%)",
                              ETHNIC = "Ethnicity, n (%)")))
+
+# FDA STF IG v2 Table 2's shape (stf_*: a table of FDA's Standard Safety
+# Tables and Figures Integrated Guide, version 2): demog with a Total
+# column, the rows in its order, age as Mean (SD) and Median (min, max)
+tfl_template_variant("stf_t02_demog", from = "demog",
+  label = "Demographics, after FDA STF IG v2 Table 2",
+  example = list(population = "SAF"), ai = FALSE,
+  defaults = list(categorical = c("SEX", "AGEGR1", "RACE", "ETHNIC", "COUNTRY"),
+                  order = c("SEX", "AGE", "AGEGR1", "RACE", "ETHNIC", "COUNTRY"),
+                  labels = c(SEX = "Sex, n (%)", AGE = "Age, years",
+                             AGEGR1 = "Age groups (years), n (%)", RACE = "Race, n (%)",
+                             ETHNIC = "Ethnicity, n (%)", COUNTRY = "Country, n (%)"),
+                  cells = list(`Mean (SD)` = "{mean:.1f} ({sd:.2f})",
+                               `Median (min, max)` = "{median:.1f} ({min:.0f}, {max:.0f})"),
+                  total = TRUE))
 
 # disposition: the subjects' status at the end of the study, on summary
 .tfl_template("disposition", kind = "table", layout = "summary",
@@ -621,7 +639,7 @@ tfl_template_variant("demog", from = "summary", label = "Demographics (FDA STF T
                list("cat_label", "Status at end of study"),
                list("labels", c(EOSSTT = "Status at end of study, n (%)"))),
                function(x) tfl_param(x[[1L]], x[[2L]])),
-             .tpl_summary_params[c("by", "cat_statistics")],
+             .tpl_summary_params[c("by", "categorical_statistics")],
              list(tfl_param("groupn_label", NULL, doc = "the subjects-per-group analysis' label"))),
   body = function(a, ctx) {
     b <- lapply(.tpl_summary_params, `[[`, "default")
@@ -641,7 +659,7 @@ tfl_template_variant("demog", from = "summary", label = "Demographics (FDA STF T
 #' @inheritParams tpl_demog
 #' @param continuous The continuous variables, in order; `NULL` for none.
 #' @param ... The template's other parameters: `categorical` (the
-#'   categorical variables), `by`, `labels`, `order`, `cells`, `cat_cell`,
+#'   categorical variables), `by`, `labels`, `order`, `cells`, `count_cell`,
 #'   `total` ...: `tfl_tpl_help("summary")`.  The look (the stub, the blank
 #'   rows, the widths, the page) is the study standard's; change it after the
 #'   template with `|> plan_stub()`, `|> plan_paginate_rows()` ...
@@ -698,7 +716,9 @@ tfl_templates <- function() {
   tfl_param("data", "ADAE", doc = "the dataset of records"),
   tfl_param("where", NULL, tier = "usual", doc = "the records kept (R)"),
   tfl_param("by", "TRT01A", tier = "usual", doc = "the column variable"),
-  tfl_param("overall", NULL, tier = "usual", doc = "the any-record row's label; NULL: none"),
+  tfl_param("any_row", FALSE, tier = "usual",
+            doc = "TRUE: the row of the subjects with any record, first"),
+  tfl_param("any_row_label", "Any event", doc = "that row's label"),
   tfl_param("heading", c("System Organ Class", "   Preferred Term"), tier = "usual",
             doc = "the label column's heading, a line a level"),
   tfl_param("sort", c(".overall", "group1", ".depth", "-n", "label"),
@@ -707,8 +727,8 @@ tfl_templates <- function() {
             doc = "the rows kept: this % of subjects or more (plan_filter()); NULL: all"),
   tfl_param("min_pct_in", "any",
             doc = "where min_pct is met: \"any\" column, \"all\" of them, or the \"total\" column"),
-  tfl_param("cell", NULL, study = "plan_cells.categorical",
-            doc = "a count's cell (plan_cells(categorical = )); NULL: the study standard's"),
+  tfl_param("count_cell", NULL, study = "plan_cells.categorical",
+            doc = "a count's cell, n (%) (plan_cells(categorical = )); NULL: the study standard's"),
   tfl_param("denominator", NULL,
             doc = "the percentages' denominator: NULL the analysis set's subjects, \"data\" the records' subjects"),
   tfl_param("total", FALSE, doc = "TRUE: a Total column (the analysis again without `by`, plan_total())")
@@ -727,6 +747,8 @@ names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
 }
 
 .tpl_hier_body <- function(a, ctx) {
+  # the any-record row: its label, when it is shown
+  overall <- if (isTRUE(a[["any_row"]])) a[["any_row_label"]]
   pop <- a$population
   subj <- paste0("adsl_", tolower(pop))
   set <- a[["data_id"]] %||% paste0(tolower(a[["data"]]), "_", tolower(pop))
@@ -743,12 +765,12 @@ names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
       method = "hierarchical", data = set,
       by = a$by, overall = if (isTRUE(a[["total"]])) TRUE, variables = a$hierarchy,
       denominator = if (identical(a$denominator, "data")) NULL else a$denominator %||% subj,
-      args = if (!is.null(a$overall)) tfl_r("over_variables = TRUE"),
+      args = if (!is.null(overall)) tfl_r("over_variables = TRUE"),
       purpose = "PRIMARY OUTCOME MEASURE"))))
   n <- length(a$hierarchy)
-  cells <- nn(list(categorical = a[["cell"]]))
+  cells <- nn(list(categorical = a[["count_cell"]]))
   content <- c(list(
-    tfl_item("normalize_ard", nn(list(hierarchy = a$hierarchy, overall = a$overall))),
+    tfl_item("normalize_ard", nn(list(hierarchy = a$hierarchy, overall = overall))),
     # (one level: the term alone, no row keys above it)
     tfl_item("table_plan", nn(list(
       cols = a$by,
@@ -779,15 +801,15 @@ tfl_template_variant("ae_soc_pt", from = "hierarchical", ai = TRUE,
   label = "Adverse events by SOC and PT (FDA STF Table 14)",
   example = list(population = "SAF"),
   defaults = list(hierarchy = c("AEBODSYS", "AEDECOD"), where = "TRTEMFL == \"Y\"",
-                  overall = "Any TEAE"))
+                  any_row = TRUE, any_row_label = "Any TEAE"))
 tfl_template_variant("ae_ser_soc_pt", from = "ae_soc_pt",
   label = "Serious adverse events by SOC and PT (FDA STF Table 10)",
   defaults = list(where = "TRTEMFL == \"Y\" & AESER == \"Y\"",
-                  overall = "Any SAE"))
+                  any_row_label = "Any SAE"))
 tfl_template_variant("ae_disc_soc_pt", from = "ae_soc_pt",
   label = "Adverse events leading to treatment discontinuation by SOC and PT (FDA STF Table 12)",
   defaults = list(where = "TRTEMFL == \"Y\" & AEACN == \"DRUG WITHDRAWN\"",
-                  overall = "Subjects with at least one AE leading to treatment discontinuation"))
+                  any_row_label = "Subjects with at least one AE leading to treatment discontinuation"))
 
 #' Adverse events by SOC and PT: a table plan from the template `ae_soc_pt`
 #'
@@ -796,7 +818,7 @@ tfl_template_variant("ae_disc_soc_pt", from = "ae_soc_pt",
 #'
 #' @inheritParams tpl_demog
 #' @param ... The template's other parameters: `hierarchy`, `where`,
-#'   `overall`, `by`, `sort`, `heading` ...
+#'   `any_row`, `any_row_label`, `by`, `sort`, `heading` ...
 #' @return A [rtfreporter::table_plan()].
 #' @export
 tpl_ae_soc_pt <- function(ard, population, ..., codelists = NULL) {
@@ -809,7 +831,7 @@ tpl_ae_soc_pt <- function(ard, population, ..., codelists = NULL) {
 #' @inheritParams tpl_demog
 #' @param hierarchy The levels, outer first (`c("AEBODSYS", "AEDECOD")`).
 #' @param ... The template's other parameters: `by`, `data`, `where`,
-#'   `overall`, `sort`, `heading` ...
+#'   `any_row`, `any_row_label`, `sort`, `heading` ...
 #' @return A [rtfreporter::table_plan()].
 #' @export
 tpl_hierarchical <- function(ard, population, hierarchy, ..., codelists = NULL) {
@@ -851,6 +873,8 @@ names(.tpl_pt_params) <- vapply(.tpl_pt_params, `[[`, "", "name")
   h[names(a)] <- a
   h$hierarchy <- a$term
   h$min_pct <- NULL
+  h$any_row <- !is.null(a$overall)
+  h$any_row_label <- a$overall
   out <- .tpl_hier_body(h, ctx)
   # the order: a column's subjects, most first (the PT's name when equal)
   col <- a$sort_by %||%
@@ -1022,7 +1046,7 @@ tpl_ae_max_grade <- function(ard, population, ..., codelists = NULL) {
 #'
 #' @inheritParams tpl_demog
 #' @param ... The template's other parameters: `categorical`, `by`,
-#'   `cat_statistics` ...
+#'   `categorical_statistics` ...
 #' @return A [rtfreporter::table_plan()].
 #' @export
 tpl_disposition <- function(ard, population, ..., codelists = NULL) {

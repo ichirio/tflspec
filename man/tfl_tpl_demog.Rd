@@ -2,7 +2,7 @@
 % Please edit documentation in R/tpl_docs.R
 \name{tfl_tpl_demog}
 \alias{tfl_tpl_demog}
-\title{Demographics (FDA STF Table 2): the template demog}
+\title{Demographics: the template demog}
 \description{
 The table template \code{demog}, layout \code{summary}: a variant of \code{summary} (its defaults changed). Its program is one call, \code{tfl_tpl(ard, "demog", ...)}; a parameter a report leaves out takes the study standard's value, else the variant's default, else the layout's.
 }
@@ -19,9 +19,9 @@ The table template \code{demog}, layout \code{summary}: a variant of \code{summa
    \code{labels} \tab usual \tab call \tab AGE = Age (years); AGEGR1 = Age group, n (\%); SEX = Sex, ... \tab  \tab each variable's heading; given by name, merged (RACE: ~ drops one) \cr
    \code{order} \tab other \tab call \tab  \tab plan_levels.variable \tab the variables' order (plan_levels(variable = )); NULL: the continuous, then the categorical \cr
    \code{cells} \tab usual \tab call \tab n = \{N:.0f\}; Mean (SD) = \{mean:.1f\} (\{sd:.2f\}); Median = ... \tab plan_cells.continuous \tab the rows of each continuous variable \cr
-   \code{cat_cell} \tab other \tab call \tab  \tab plan_cells.categorical \tab a categorical value's cell (plan_cells(categorical = )); NULL: the study standard's \cr
-   \code{statistics} \tab other \tab call \tab N, mean, sd, median, min, max \tab  \tab the continuous statistics the ARD has \cr
-   \code{cat_statistics} \tab other \tab call \tab n, p \tab  \tab the categorical statistics the ARD has; NULL: cards' own \cr
+   \code{count_cell} \tab other \tab call \tab  \tab plan_cells.categorical \tab a categorical value's cell, n (\%) (plan_cells(categorical = )); NULL: the study standard's \cr
+   \code{continuous_statistics} \tab other \tab call \tab N, mean, sd, median, min, max \tab  \tab the continuous statistics the ARD has \cr
+   \code{categorical_statistics} \tab other \tab call \tab n, p \tab  \tab the categorical statistics the ARD has; NULL: cards' own \cr
    \code{total} \tab usual \tab call \tab FALSE \tab plan_total \tab TRUE: a Total column (each analysis again without 'by', plan_total()) \cr
    \code{stack} \tab other \tab call \tab FALSE \tab  \tab TRUE: the ARD as one cards::ard_stack() call \cr
 }

@@ -182,6 +182,7 @@ tfl_tpl_help <- function(name, study = NULL, population = NULL,
   a <- tfl_tpl_args(name, study = study, population = population)
   lines <- .tpl_help_head(t)
   if (!is.null(t$label)) lines <- c(lines, t$label)
+  if (!is.null(.tpl_stf_note(t$name))) lines <- c(lines, .tpl_stf_note(t$name))
   lines <- c(lines, sprintf("Call: tfl_tpl(%s, \"%s\", ...)", .tpl_first_arg(t), t$name))
   for (k in tier) {
     r <- a[a$tier == k, , drop = FALSE]
@@ -226,6 +227,14 @@ tfl_tpl_help <- function(name, study = NULL, population = NULL,
 # The roxygen tags of a template's Rd page, topic tfl_tpl_<name> (the
 # table and listing templates' tpl_<name>() functions keep their own
 # pages): roxygen @eval in R/tpl_docs.R
+# A template after a table of FDA's Standard Safety Tables and Figures
+# Integrated Guide (`stf_*`): what it is, and what it is not
+.tpl_stf_note <- function(name) {
+  if (!startsWith(name, "stf_")) return(NULL)
+  paste("It follows the shape of a table in FDA's Standard Safety Tables and Figures",
+        "Integrated Guide (version 2); it is not endorsed or recommended by FDA.")
+}
+
 .tpl_rd <- function(name) {
   t <- .tpl_get(name, ".tpl_rd()")
   a <- tfl_tpl_args(name)
@@ -236,7 +245,8 @@ tfl_tpl_help <- function(name, study = NULL, population = NULL,
   if (!is.null(t$from)) desc <- sprintf("%s: a variant of `%s` (its defaults changed)", desc, t$from)
   desc <- paste0(desc, sprintf(". Its program is one call, `tfl_tpl(%s, \"%s\", ...)`; ", x, name),
                  "a parameter a report leaves out takes the study standard's value, ",
-                 "else the variant's default, else the layout's.")
+                 "else the variant's default, else the layout's.",
+                 if (!is.null(.tpl_stf_note(name))) paste0(" ", .tpl_stf_note(name)))
   tbl <- c("| Parameter | Tier | Stage | Default | Maps to | What |",
            "|---|---|---|---|---|---|",
            sprintf("| `%s` | %s | %s | %s | %s | %s |", a$param, a$tier, a$stage,

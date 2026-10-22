@@ -55,10 +55,12 @@ test_that("the layouts' parameters: what a report changes; the look is the study
   expect_identical(p$by$tier, "usual")
   expect_identical(sort(names(p)), sort(c(
     "population", "subset", "data", "where", "by", "continuous", "categorical", "labels",
-    "order", "cells", "cat_cell", "statistics", "cat_statistics", "total", "stack")))
+    "order", "cells", "count_cell", "continuous_statistics", "categorical_statistics", "total",
+    "stack")))
   expect_identical(sort(names(tfl_template_params("hierarchical"))), sort(c(
-    "population", "subset", "hierarchy", "data", "where", "by", "overall", "heading", "sort",
-    "min_pct", "min_pct_in", "cell", "denominator", "total")))
+    "population", "subset", "hierarchy", "data", "where", "by", "any_row", "any_row_label",
+    "heading", "sort",
+    "min_pct", "min_pct_in", "count_cell", "denominator", "total")))
   # every parameter's stage: an argument of the call, unless it says "data"
   expect_true(all(vapply(p, `[[`, "", "stage") == "call"))
   expect_identical(tfl_param("x", stage = "data")$stage, "data")
@@ -146,9 +148,9 @@ test_that("in a study: demog with a Total column and its own order; the program 
   suppressMessages(eval(parse(text = code), envir = e))
   expect_identical(tt_tab(e$plan), t)
   # a report's own value over the study standard's: said
-  f2 <- tt_report(d, "T-DM2", "demog", list(population = "SAF", cat_cell = "{n}"))
+  f2 <- tt_report(d, "T-DM2", "demog", list(population = "SAF", count_cell = "{n}"))
   expect_message(tfl_resolve_output(tfl_read_output(f2), tfl_read_study_spec(d)),
-                 "cat_cell overrides the study standard \\(plan_cells.categorical\\)")
+                 "count_cell overrides the study standard \\(plan_cells.categorical\\)")
 })
 
 test_that("in a study: ae_ser_soc_pt is ae_soc_pt with its defaults; ae_soc_pt's min_pct", {
@@ -158,7 +160,8 @@ test_that("in a study: ae_ser_soc_pt is ae_soc_pt with its defaults; ae_soc_pt's
   d <- tt_study(withr::local_tempdir())
   f1 <- tt_report(d, "T-SAE", "ae_ser_soc_pt", list(population = "SAF"))
   f2 <- tt_report(d, "T-SAE2", "ae_soc_pt", list(
-    population = "SAF", where = "TRTEMFL == \"Y\" & AESER == \"Y\"", overall = "Any SAE"))
+    population = "SAF", where = "TRTEMFL == \"Y\" & AESER == \"Y\"", any_row = TRUE,
+    any_row_label = "Any SAE"))
   a <- tt_tab(tt_run(d, "T-SAE", f1)$plan)
   b <- tt_tab(tt_run(d, "T-SAE2", f2)$plan)
   expect_identical(a, b)

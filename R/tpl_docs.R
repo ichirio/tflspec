@@ -57,6 +57,9 @@ NULL
 #' @eval .tpl_rd("shift")
 NULL
 
+#' @eval .tpl_rd("stf_t02_demog")
+NULL
+
 #' @eval .tpl_rd("stat_block")
 NULL
 
