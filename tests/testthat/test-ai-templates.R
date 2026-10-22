@@ -57,12 +57,12 @@ test_that("templates = TRUE / FALSE: the setting at each request's head; FALSE a
   expect_true(any(grepl("`demog_x`: .*variant of demog", tflspec:::.ai_templates_list("table"))))
   # the agent's instructions say it too
   da <- file.path(root, "agent")
-  ra <- tfl_ai_prepare(da, aitpl_book(), adam = ad, quiet = TRUE, mode = "agent")
+  ra <- tfl_ai_prepare(da, aitpl_book(), adam = ad, quiet = TRUE, mode = "agent", size = 3L)
   ag <- readLines(file.path(da, "AGENTS.md"), encoding = "UTF-8")
   expect_true(any(grepl("## Templates first", ag, fixed = TRUE)))
   expect_match(ra$agent_prompt, "template where one fits", fixed = TRUE)
   db <- file.path(root, "agent0")
-  rb <- tfl_ai_prepare(db, aitpl_book(), adam = ad, quiet = TRUE, mode = "agent", templates = FALSE)
+  rb <- tfl_ai_prepare(db, aitpl_book(), adam = ad, quiet = TRUE, mode = "agent", size = 3L, templates = FALSE)
   expect_false(any(grepl("Templates first", readLines(file.path(db, "AGENTS.md")), fixed = TRUE)))
   expect_false(grepl("template", rb$agent_prompt, fixed = TRUE))
 })
@@ -196,8 +196,8 @@ test_that("mode = \"agent\": what every request repeats is a file, written once"
   ad <- aitpl_study(root)
   d1 <- file.path(root, "with")
   d0 <- file.path(root, "without")
-  r1 <- tfl_ai_prepare(d1, aitpl_book(), adam = ad, quiet = TRUE, mode = "agent")
-  r0 <- tfl_ai_prepare(d0, aitpl_book(), adam = ad, quiet = TRUE, mode = "agent", templates = FALSE)
+  r1 <- tfl_ai_prepare(d1, aitpl_book(), adam = ad, quiet = TRUE, mode = "agent", size = 3L)
+  r0 <- tfl_ai_prepare(d0, aitpl_book(), adam = ad, quiet = TRUE, mode = "agent", size = 3L, templates = FALSE)
   for (f in c("ai/instructions-table.md", "ai/instructions-figure.md", "ai/templates.md")) {
     expect_true(f %in% r1$files, info = f)
   }

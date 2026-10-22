@@ -91,7 +91,7 @@ test_that("tfl_ai_run(): the figure drawn, its PNG and RTF; agent_prompt", {
   skip_if_not_installed("ggsurvfit")
   root <- withr::local_tempdir()
   d <- file.path(root, "study")
-  r <- tfl_ai_prepare(d, fig_book(), adam = fig_study(root), quiet = TRUE, mode = "agent")
+  r <- tfl_ai_prepare(d, fig_book(), adam = fig_study(root), quiet = TRUE, mode = "agent", size = 3L)
   # (from the study folder: a copy of it says the same)
   expect_match(r$agent_prompt, "Follow AGENTS.md", fixed = TRUE)
   expect_match(r$agent_prompt, " ai/requests/index.md", fixed = TRUE)
