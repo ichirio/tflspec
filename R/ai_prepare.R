@@ -101,6 +101,8 @@
 #' @seealso The AI table guide: `system.file("ai", "tflspec-ai-table-guide.md",
 #'   package = "tflspec")`.
 #' @examples
+#' \donttest{
+#' # (over 5 seconds: the workbook read, five ADaM written, every request)
 #' ex <- system.file("ai", "example", package = "tflspec")
 #' d <- file.path(tempdir(), "prepare-study")
 #' dir.create(file.path(d, "adam"), recursive = TRUE, showWarnings = FALSE)
@@ -113,6 +115,7 @@
 #'   r <- tfl_ai_prepare(d, file.path(ex, "onco_toc_shell.xlsx"),
 #'                       study_id = "XYZ-ONC-01", overwrite = TRUE)
 #'   r$requests[c("request", "outputs", "chars")]
+#' }
 #' }
 #' @export
 tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title = NULL,

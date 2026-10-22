@@ -1567,11 +1567,11 @@ tpl_stat_block <- function(ard, ..., codelists = NULL) {
       fn <- vapply(blk, `[[`, "", "fn")
       blk[[match("plan_cells", fn)]]$args$categorical <- "{n} ({p:.1f%})"
       # (the rate's row: its block's heading says it, its level is no label;
-      # the arms' N is not read in the header of split columns yet)
+      # the arm's N over its two columns, rtfreporter#709)
       content <- c(blk, list(levels_item, labels_item,
         tfl_item("plan_labels", list(RESP = c("TRUE" = ""))),
         tfl_item("plan_col_header", list(header = list(
-          list(line = "1", cols = ".values", span = a$by, text = "{col1}"),
+          list(line = "1", cols = ".values", span = a$by, text = "{col1} (N={n1})"),
           list(line = "2", cols = "row_label", text = a$heading),
           list(line = "2", cols = ".values", span = "each", text = "{col}"))))))
       return(list(ard = ard, data = list(source = "ard"), content = content))

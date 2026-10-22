@@ -19,6 +19,10 @@
   country; a Total column).  It is not endorsed or recommended by FDA.
   `demog`'s label is now "Demographics".
 
+* **`orr(stat_layout = "cols")`: each arm's N over its two columns**
+  (0.0.24.9207), as the default layout has it under the arm: rtfreporter
+  (>= 0.8.2.9090) reads it over split columns (ichirio/rtfreporter#709).
+
 * **`run.R`'s status of a request not run this time** (0.0.24.9205):
   `Rscript run.R <request>` built that request's reports alone, and
   `ai/status.md` said of another, never built, "the report files are

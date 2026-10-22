@@ -145,6 +145,8 @@ ADaM's summary only.
 }
 
 \examples{
+\donttest{
+# (over 5 seconds: the workbook read, five ADaM written, every request)
 ex <- system.file("ai", "example", package = "tflspec")
 d <- file.path(tempdir(), "prepare-study")
 dir.create(file.path(d, "adam"), recursive = TRUE, showWarnings = FALSE)
@@ -157,6 +159,7 @@ if (requireNamespace("haven", quietly = TRUE)) {
   r <- tfl_ai_prepare(d, file.path(ex, "onco_toc_shell.xlsx"),
                       study_id = "XYZ-ONC-01", overwrite = TRUE)
   r$requests[c("request", "outputs", "chars")]
+}
 }
 }
 \seealso{
