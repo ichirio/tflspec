@@ -161,3 +161,18 @@ test_that("the table instructions always say how to write a sheet's parts", {
   fig <- tfl_ai_prompt("figure", tfl_ai_context("figure", output_id = "F-1"), example = FALSE)
   expect_no_match(fig$system, "Part 1 / Part 2", fixed = TRUE)
 })
+
+test_that("tfl_ai_prepare()'s toc, a dry run's too, says the parts as the shell's", {
+  skip_if_not_installed("haven")
+  f <- sheet_parts_book(tempfile(fileext = ".xlsx"))
+  d <- tempfile()
+  on.exit(unlink(c(f, d), recursive = TRUE), add = TRUE)
+  dir.create(file.path(d, "adam"), recursive = TRUE)
+  haven::write_xpt(.ai_chr(adsl), file.path(d, "adam", "adsl.xpt"))
+  r <- tfl_ai_prepare(d, f, adam = "adam", quiet = TRUE, dry_run = TRUE, templates = FALSE)
+  sh <- tfl_ai_read_shell(f)$toc
+  expect_identical(r$toc$parts, sh$parts)
+  expect_identical(r$toc$parts_row, sh$parts_row)
+  expect_identical(r$toc$same_number, sh$same_number)
+  expect_true(any(!is.na(r$toc$parts)))
+})
