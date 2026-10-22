@@ -12,10 +12,10 @@ tfl_ai_prepare(
   title = NULL,
   toc_sheet = NULL,
   sheets = NULL,
-  size = 3L,
+  size = NULL,
   language = NULL,
   workbook = c("text", "attach", "both", "file"),
-  instructions = c("each", "once"),
+  instructions = c("once", "each"),
   max_chars = NULL,
   overwrite = FALSE,
   dry_run = FALSE,
@@ -43,7 +43,8 @@ tfl_ai_prepare(
 guess is wrong, the sheets to keep.}
 
 \item{size, language, workbook, instructions, max_chars}{As
-\code{\link[=tfl_ai_write_requests]{tfl_ai_write_requests()}}: the reports a request holds, the language of
+\code{\link[=tfl_ai_write_requests]{tfl_ai_write_requests()}}: the reports a request holds (\code{NULL}, the
+default: 1 with \code{mode = "agent"}, 3 in a chat), the language of
 the assumptions, how the workbook reaches the chat (\code{"text"},
 \code{"attach"}, \code{"both"}, \code{"file"}; with \code{mode = "agent"}, \code{"text"} is
 \code{"file"}: the text and each shell's place in the workbook file), the

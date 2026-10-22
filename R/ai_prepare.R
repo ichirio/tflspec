@@ -42,7 +42,8 @@
 #' @param toc_sheet,sheets As [tfl_ai_read_shell()]: the TOC sheet when the
 #'   guess is wrong, the sheets to keep.
 #' @param size,language,workbook,instructions,max_chars As
-#'   [tfl_ai_write_requests()]: the reports a request holds, the language of
+#'   [tfl_ai_write_requests()]: the reports a request holds (`NULL`, the
+#'   default: 1 with `mode = "agent"`, 3 in a chat), the language of
 #'   the assumptions, how the workbook reaches the chat (`"text"`,
 #'   `"attach"`, `"both"`, `"file"`; with `mode = "agent"`, `"text"` is
 #'   `"file"`: the text and each shell's place in the workbook file), the
@@ -123,9 +124,9 @@
 #' }
 #' @export
 tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title = NULL,
-                           toc_sheet = NULL, sheets = NULL, size = 3L, language = NULL,
+                           toc_sheet = NULL, sheets = NULL, size = NULL, language = NULL,
                            workbook = c("text", "attach", "both", "file"),
-                           instructions = c("each", "once"), max_chars = NULL,
+                           instructions = c("once", "each"), max_chars = NULL,
                            overwrite = FALSE, dry_run = FALSE, adam_summary = NULL,
                            datasets = NULL, max_levels = 15L, quiet = FALSE,
                            mode = c("chat", "agent"), shells = NULL, add = FALSE,
@@ -147,6 +148,9 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
                       fn))
   }
   mode <- match.arg(mode)
+  # the reports a request holds: an agent's one (its answer checked and
+  # built before the next), a chat's three
+  size <- size %||% if (identical(mode, "agent")) 1L else 3L
   # an agent reads files: the text, and where each shell is in the workbook
   if (identical(mode, "agent") && identical(workbook, "text")) workbook <- "file"
   dry <- isTRUE(dry_run)

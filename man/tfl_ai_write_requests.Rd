@@ -8,14 +8,14 @@ tfl_ai_write_requests(
   study_dir,
   shell,
   adam,
-  size = 8L,
+  size = NULL,
   dir = file.path("ai", "requests"),
   max_chars = NULL,
   families = NULL,
   types = c("table", "figure"),
   language = NULL,
   examples = NULL,
-  instructions = c("each", "once"),
+  instructions = c("once", "each"),
   workbook = c("text", "attach", "both", "file"),
   overwrite = FALSE,
   add = FALSE,
@@ -31,7 +31,9 @@ tfl_ai_write_requests(
 
 \item{adam}{The ADaM summary (\code{\link[=tfl_ai_adam_summary]{tfl_ai_adam_summary()}}).}
 
-\item{size}{The reports a request holds at most (1 or more).}
+\item{size}{The reports a request holds at most (1 or more); \code{NULL}
+(the default): 1 with \code{mode = "agent"} (each answer checked and built
+before the next), 8 in a chat.}
 
 \item{dir}{The folder the requests go to, under \code{study_dir}.}
 
@@ -53,9 +55,12 @@ assumptions.}
 (\code{c(ae = "spec/outputs/T-14-3-1.yml")}), each goes only to its
 family's requests; unnamed, to every request.}
 
-\item{instructions}{\code{"each"} (default): every request holds the
-instructions, one paste a request.  \code{"once"}: the instructions in
-\code{00-instructions.md}, the requests without them.}
+\item{instructions}{In a chat: \code{"once"} (default), the instructions in
+\code{00-instructions.md} (the chat's first message), the requests without
+them; \code{"each"}, every request holds them, one paste a request.  With
+\code{mode = "agent"} either is the same: the instructions are written once,
+\code{ai/instructions-table.md} / \code{ai/instructions-figure.md}, and no
+request repeats them.}
 
 \item{workbook}{How the TOC / SHELL workbook reaches the chat:
 \code{"text"} (default) the shells as text in each request

@@ -23,7 +23,9 @@
 #' @param study_dir The study folder ([tfl_ai_study_init()]).
 #' @param shell The TOC and shells ([tfl_ai_read_shell()]).
 #' @param adam The ADaM summary ([tfl_ai_adam_summary()]).
-#' @param size The reports a request holds at most (1 or more).
+#' @param size The reports a request holds at most (1 or more); `NULL`
+#'   (the default): 1 with `mode = "agent"` (each answer checked and built
+#'   before the next), 8 in a chat.
 #' @param dir The folder the requests go to, under `study_dir`.
 #' @param max_chars A request's length at most, in characters; `NULL` for
 #'   no limit.  A request over it is halved; with `templates`, it first
@@ -39,9 +41,12 @@
 #'   ([tfl_ai_context()]'s `examples`).  Named by family
 #'   (`c(ae = "spec/outputs/T-14-3-1.yml")`), each goes only to its
 #'   family's requests; unnamed, to every request.
-#' @param instructions `"each"` (default): every request holds the
-#'   instructions, one paste a request.  `"once"`: the instructions in
-#'   `00-instructions.md`, the requests without them.
+#' @param instructions In a chat: `"once"` (default), the instructions in
+#'   `00-instructions.md` (the chat's first message), the requests without
+#'   them; `"each"`, every request holds them, one paste a request.  With
+#'   `mode = "agent"` either is the same: the instructions are written once,
+#'   `ai/instructions-table.md` / `ai/instructions-figure.md`, and no
+#'   request repeats them.
 #' @param workbook How the TOC / SHELL workbook reaches the chat:
 #'   `"text"` (default) the shells as text in each request
 #'   ([tfl_ai_read_shell()]); `"attach"` the workbook attached to each chat,
@@ -96,12 +101,12 @@
 #'   r[c("request", "outputs", "chars")]
 #' }
 #' @export
-tfl_ai_write_requests <- function(study_dir, shell, adam, size = 8L,
+tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
                                   dir = file.path("ai", "requests"),
                                   max_chars = NULL, families = NULL,
                                   types = c("table", "figure"), language = NULL,
                                   examples = NULL,
-                                  instructions = c("each", "once"),
+                                  instructions = c("once", "each"),
                                   workbook = c("text", "attach", "both", "file"),
                                   overwrite = FALSE, add = FALSE, templates = TRUE,
                                   mode = c("chat", "agent"), progress = NULL) {
@@ -113,6 +118,8 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = 8L,
   instructions <- match.arg(instructions)
   mode <- match.arg(mode)
   agent <- identical(mode, "agent")
+  # (an agent's request: one report; a chat's: up to 8)
+  size <- size %||% if (agent) 1L else 8L
   workbook <- match.arg(workbook)
   book <- basename(shell$path %||% "the workbook")
   # the workbook's path for an agent: from the study folder when inside it

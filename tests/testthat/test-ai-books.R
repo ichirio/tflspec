@@ -77,7 +77,7 @@ test_that("tfl_ai_prepare(shells = , add = TRUE): one workbook at a time, the re
   d <- file.path(root, "study")
   ad <- books_adam(root)
   f <- split_books(root)
-  r <- tfl_ai_prepare(d, f[1L], shells = f[2L], adam = ad, quiet = TRUE, mode = "agent")
+  r <- tfl_ai_prepare(d, f[1L], shells = f[2L], adam = ad, quiet = TRUE, mode = "agent", size = 3L)
   expect_identical(unique(r$requests$book), "shells.xlsx")
   expect_identical(unique(r$toc$book), "shells.xlsx")
   # an agent request names both files
@@ -87,7 +87,7 @@ test_that("tfl_ai_prepare(shells = , add = TRUE): one workbook at a time, the re
   # an answer saved before the next workbook is added
   tfl_ai_save_answer(d, "ae-1", "an answer")
   m <- more_book(root)
-  r2 <- tfl_ai_prepare(d, m, adam = ad, quiet = TRUE, mode = "agent", add = TRUE)
+  r2 <- tfl_ai_prepare(d, m, adam = ad, quiet = TRUE, mode = "agent", size = 3L, add = TRUE)
   expect_identical(r2$requests$request, c(r$requests$request, "ae-2"))
   expect_identical(r2$requests$book[r2$requests$request == "ae-2"], "more.xlsx")
   expect_identical(r2$requests$outputs[r2$requests$request == "ae-2"], "T-14-3-2")

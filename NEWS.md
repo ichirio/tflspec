@@ -1,5 +1,14 @@
 # tflspec (development version)
 
+* **The AI requests' defaults** (0.0.24.9212): `size = NULL` holds one
+  report a request with `mode = "agent"` (each answer checked and built
+  before the next) and, in a chat, 3 (`tfl_ai_prepare()`) or 8
+  (`tfl_ai_write_requests()`) as before; `instructions = "once"` is the
+  default (a chat's instructions in `00-instructions.md`, its requests
+  without them).  With `mode = "agent"` the instructions are always
+  written once, `ai/instructions-table.md` / `-figure.md`, whichever
+  `instructions` says.
+
 * **A report's parts, and requests written fast** (0.0.24.9211).
   - A report whose shell sheet holds it in parts (`Table 15.1.5.1.a` above,
     `.b` below, the later often only what differs) is found:
