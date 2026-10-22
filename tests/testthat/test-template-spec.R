@@ -63,7 +63,7 @@ test_that("resolved: the template's items between the study's layers and the rep
   ro2 <- tfl_resolve_output(o2, s)
   expect_identical(ro2$ard$analyses[[3L]]$variables, "SEX")
   # provenance: by argument, the template's marked (categorical's cell: the
-  # study standard's, through the template's cat_cell)
+  # study standard's, through the template's count_cell)
   rp <- tfl_resolve_output(ts_output(), s, provenance = TRUE)
   pc <- rp$content[[match("plan_cells", vapply(rp$content, `[[`, "", "fn"))]]
   expect_identical(unname(pc$arg_from[c("continuous", "categorical")]), c("template:demog", "template:demog"))

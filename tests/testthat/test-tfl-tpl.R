@@ -49,39 +49,43 @@ test_that("tfl_tpl(): the same plan as the template's own function; its errors",
   expect_identical(t$from[t$name == "ae_ser_soc_pt"], "ae_soc_pt")
 })
 
-test_that("the layouts take the look: the parameters, their tiers, the items they make", {
+test_that("the layouts' parameters: what a report changes; the look is the study standard's", {
   p <- tfl_template_params("summary")
   expect_identical(p$population$tier, "required")
   expect_identical(p$by$tier, "usual")
-  expect_identical(p$stub_name$tier, "other")
-  expect_identical(p$stub_name$study, "plan_stub.name")
+  expect_identical(sort(names(p)), sort(c(
+    "population", "subset", "data", "where", "by", "continuous", "categorical", "labels",
+    "order", "cells", "count_cell", "continuous_statistics", "categorical_statistics", "total",
+    "stack")))
+  expect_identical(sort(names(tfl_template_params("hierarchical"))), sort(c(
+    "population", "subset", "hierarchy", "data", "where", "by", "any_row", "any_row_label",
+    "heading", "sort",
+    "min_pct", "min_pct_in", "count_cell", "denominator", "total")))
   # every parameter's stage: an argument of the call, unless it says "data"
   expect_true(all(vapply(p, `[[`, "", "stage") == "call"))
   expect_identical(tfl_param("x", stage = "data")$stage, "data")
   expect_error(tfl_param("x", stage = "plot"), "should be one of")
-  x <- tfl_template_expand("summary", list(population = "SAF", continuous = "AGE",
-    stub_name = "row_label", stub_indent = 2, blanks = "between_groups", widths = list(label = "2in"),
-    rounding = "r", order = "AGE", heading = "Characteristic", header_n = "{col}\n(N={n})"))
-  it <- function(fn) Filter(function(i) identical(i$fn, fn), x$content)[[1L]]$args
-  expect_identical(it("plan_stub"), list(name = "row_label", indent = 2))
-  expect_identical(it("plan_blanks"), list(where = "between_groups"))
-  expect_identical(it("plan_columns"), list(widths = list(label = "2in")))
-  expect_identical(it("plan_digits"), list(rounding = "r"))
-  expect_identical(it("plan_levels"), list(variable = "AGE"))
-  expect_identical(length(it("plan_col_header")$header), 2L)
-  # none given: none of those items (the study standard's stay)
+  # the look is not a parameter: the study standard's, or |> plan_*() after
+  expect_error(tfl_template_expand("summary", list(population = "SAF", continuous = "AGE",
+                                                   stub_name = "row_label")),
+               "no parameter 'stub_name'")
+  x <- tfl_template_expand("summary", list(population = "SAF", continuous = "AGE", order = "AGE"))
+  fns <- vapply(x$content, `[[`, "", "fn")
+  expect_identical(fns, c("table_plan", "plan_cells", "plan_levels", "plan_paginate_rows"))
+  # an item when its parameter is given (order -> plan_levels), else none
   y <- tfl_template_expand("summary", list(population = "SAF", continuous = "AGE"))
-  fns <- vapply(y$content, `[[`, "", "fn")
-  expect_false(any(c("plan_stub", "plan_blanks", "plan_columns", "plan_digits", "plan_levels",
-                     "plan_col_header", "plan_total") %in% fns))
+  expect_false("plan_levels" %in% vapply(y$content, `[[`, "", "fn"))
+  # the layout's page: its own value, which the study standard's replaces
+  expect_identical(x$content[[4L]]$args, list(max_rows = 30L, split = "group_safe"))
   # one cards::ard_stack() call, on summary itself
   st <- tfl_template_expand("summary", list(population = "SAF", continuous = "AGE",
                                             categorical = "SEX", stack = TRUE))
   expect_identical(vapply(st$ard$analyses, `[[`, "", "id"), c("STACK", "CONT", "CAT"))
   expect_identical(st$ard$analyses[[2L]]$parent, "STACK")
-  # demog's: as before (its own ids)
+  # demog's the same ids, its label the template's
   dm <- tfl_template_expand("demog", list(population = "SAF", stack = TRUE))
-  expect_identical(vapply(dm$ard$analyses, `[[`, "", "id"), c("DEMOG", "CONT", "CAT"))
+  expect_identical(vapply(dm$ard$analyses, `[[`, "", "id"), c("STACK", "CONT", "CAT"))
+  expect_match(dm$ard$analyses[[1L]]$label, "Demographics", fixed = TRUE)
   # a template's own default variables: those the data has (any_of)
   expect_true(isTRUE(tfl_template_expand("demog", list(population = "SAF"))$ard$analyses[[2L]]$optional))
   expect_null(tfl_template_expand("demog", list(population = "SAF", continuous = "AGE"))$ard$analyses[[2L]]$optional)
@@ -133,20 +137,20 @@ test_that("in a study: demog with a Total column and its own order; the program 
   expect_identical(unique(t$group)[1L], "Sex, n (%)")
   n <- sum(adsl$SAFFL == "Y")
   expect_identical(t$Total[t$group == "Age (years)" & t$label == "n"], as.character(n))
-  # the program: the study standard's look in the call, nothing after it
+  # the program: the template's call, the study standard's look after it
   code <- paste(tfl_content_code(r$ro, pipe = "|>"), collapse = "\n")
   expect_match(code, "tfl_tpl(\n  ard,\n  \"demog\",", fixed = TRUE)
-  expect_match(code, "stub_name = \"row_label\"", fixed = TRUE)
-  expect_false(grepl("# (study default)", code, fixed = TRUE))
+  expect_false(grepl("stub_name", code, fixed = TRUE))
+  expect_match(code, "# (study default)\n  plan_stub(", fixed = TRUE)
   # the program's plan is the report's
   e <- new.env()
   e$ard <- r$ard
   suppressMessages(eval(parse(text = code), envir = e))
   expect_identical(tt_tab(e$plan), t)
   # a report's own value over the study standard's: said
-  f2 <- tt_report(d, "T-DM2", "demog", list(population = "SAF", stub_name = "label"))
+  f2 <- tt_report(d, "T-DM2", "demog", list(population = "SAF", count_cell = "{n}"))
   expect_message(tfl_resolve_output(tfl_read_output(f2), tfl_read_study_spec(d)),
-                 "stub_name overrides the study standard \\(plan_stub.name\\)")
+                 "count_cell overrides the study standard \\(plan_cells.categorical\\)")
 })
 
 test_that("in a study: ae_ser_soc_pt is ae_soc_pt with its defaults; ae_soc_pt's min_pct", {
@@ -156,9 +160,8 @@ test_that("in a study: ae_ser_soc_pt is ae_soc_pt with its defaults; ae_soc_pt's
   d <- tt_study(withr::local_tempdir())
   f1 <- tt_report(d, "T-SAE", "ae_ser_soc_pt", list(population = "SAF"))
   f2 <- tt_report(d, "T-SAE2", "ae_soc_pt", list(
-    population = "SAF", where = "TRTEMFL == \"Y\" & AESER == \"Y\"", overall = "Any SAE",
-    data_label = "Treatment-emergent serious AEs of the safety set",
-    analysis_id = "TESAE", analysis_label = "Serious TEAE by SOC / PT"))
+    population = "SAF", where = "TRTEMFL == \"Y\" & AESER == \"Y\"", any_row = TRUE,
+    any_row_label = "Any SAE"))
   a <- tt_tab(tt_run(d, "T-SAE", f1)$plan)
   b <- tt_tab(tt_run(d, "T-SAE2", f2)$plan)
   expect_identical(a, b)
@@ -173,4 +176,37 @@ test_that("in a study: ae_ser_soc_pt is ae_soc_pt with its defaults; ae_soc_pt's
   ten <- tt_tab(tt_run(d, "T-SOC10", f4)$plan)
   expect_lt(nrow(ten), nrow(all))
   expect_gt(nrow(ten), 0L)
+})
+
+test_that("the layout's own page and column header: the study standard's replace them", {
+  d <- tempfile()
+  on.exit(unlink(d, recursive = TRUE))
+  dir.create(d)
+  file.copy(list.files(system.file("extdata", "spec-yaml", package = "tflspec"),
+                       full.names = TRUE), d, recursive = TRUE)
+  s <- tfl_read_study_spec(d)
+  fn_args <- function(ro, fn) Filter(function(i) identical(i$fn, fn), ro$content)
+  res <- function(name, args) {
+    tfl_resolve_output(tfl_output("T-9", "table", population = "SAF",
+                                  template = list(name = name, args = args)), s)
+  }
+  # no plan_paginate_rows in the standard: the layout's
+  pg <- fn_args(res("summary", list(continuous = "AGE")), "plan_paginate_rows")
+  expect_identical(pg[[length(pg)]]$args, list(max_rows = 30L, split = "group_safe"))
+  # the standard's: it replaces the layout's
+  s$defaults$content <- c(s$defaults$content,
+                          list(tfl_item("plan_paginate_rows", list(max_rows = 15L))))
+  ro <- res("summary", list(continuous = "AGE"))
+  pg <- fn_args(ro, "plan_paginate_rows")
+  expect_identical(pg[[length(pg)]]$args, list(max_rows = 15L))
+  hp <- fn_args(res("ae_soc_pt", list()), "plan_paginate_rows")
+  expect_identical(hp[[length(hp)]]$args, list(max_rows = 15L))
+  # hierarchical's column header is its shape (the counts' "n (%)" line, the
+  # levels' heading): a standard's general header (Characteristic, (N=n))
+  # does not replace it
+  s$defaults$content <- c(s$defaults$content, list(tfl_item("plan_col_header", list(
+    header = list(list(line = "1", cols = ".values", span = "each", text = "{col}"))))))
+  hh <- fn_args(res("ae_soc_pt", list()), "plan_col_header")
+  expect_length(hh, 1L)
+  expect_identical(hh[[1L]]$args$header[[2L]]$text, "{col}\n(N={n})\nn (%)")
 })

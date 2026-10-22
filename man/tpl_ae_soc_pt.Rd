@@ -13,7 +13,7 @@ report.}
 \item{population}{The analysis set's id (\code{"SAF"}).}
 
 \item{...}{The template's other parameters: \code{hierarchy}, \code{where},
-\code{overall}, \code{by}, \code{sort}, \code{heading} ...}
+\code{any_row}, \code{any_row_label}, \code{by}, \code{sort}, \code{heading} ...}
 
 \item{codelists}{The report's code lists, for the order and labels of
 values; \code{NULL} takes the ARD's.}

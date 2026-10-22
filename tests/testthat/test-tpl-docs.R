@@ -54,7 +54,7 @@ test_that("every table and listing template has its Rd page, a row a parameter",
 test_that(".tpl_rd(): the roxygen tags of a page", {
   r <- .tpl_rd("demog")
   expect_identical(r[2L], "@name tfl_tpl_demog")
-  expect_match(r[1L], "^@title Demographics [(]FDA STF Table 2[)]: the template demog$")
+  expect_match(r[1L], "^@title Demographics: the template demog$")
   expect_true(any(grepl("tfl_tpl(ard, \"demog\", population = \"SAF\")", r, fixed = TRUE)))
   tbl <- r[startsWith(r, "@section Parameters:")]
   # (the tag's line, the table's head and its rule, a row a parameter)

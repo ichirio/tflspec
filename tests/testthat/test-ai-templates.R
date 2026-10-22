@@ -234,7 +234,7 @@ test_that("mode = \"agent\": what every request repeats is a file, written once"
                    readLines(file.path(d1, "AGENTS.md")))
   # the likely templates, from a title
   expect_identical(tflspec:::.ai_templates_likely("Demographic and Baseline Characteristics", "table"),
-                   "demog")
+                   c("demog", "stf_t02_demog"))
   expect_identical(tflspec:::.ai_templates_likely("Listing of Deaths", "table"), "listing")
   expect_identical(tflspec:::.ai_templates_likely("", "table"), character())
 })

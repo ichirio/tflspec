@@ -1,5 +1,24 @@
 # tflspec (development version)
 
+* **The layouts' parameters: what a report changes** (0.0.24.9208).
+  `summary` (42 parameters, now 15) and `hierarchical` (33, now 15) keep
+  only what one report's table differs from another's in; the look (the
+  stub, blank rows, widths, rounding, the column header) and the page are
+  the study standard's -- change them after the template, `tfl_tpl(...) |>
+  plan_stub(...)` -- and the ARD's ids and labels are the layout's own (the
+  template's label).  The layout's page (`summary`: 30 rows, group_safe;
+  `hierarchical`: 22, group_force) gives way to a study standard's
+  `plan_paginate_rows()`; `hierarchical`'s column header (its n (%) line)
+  stays the table's.  Renamed after the parameter naming rules:
+  `cat_cell` / `cell` -> `count_cell`, `statistics` ->
+  `continuous_statistics`, `cat_statistics` -> `categorical_statistics`,
+  `overall` -> `any_row` (TRUE / FALSE) and `any_row_label`.  The study's
+  tables are as before.
+* **`stf_t02_demog`**: `demog` in the shape of FDA STF IG v2 Table 2 (Sex,
+  Age as Mean (SD) and Median (min, max), age groups, race, ethnicity,
+  country; a Total column).  It is not endorsed or recommended by FDA.
+  `demog`'s label is now "Demographics".
+
 * **`orr(stat_layout = "cols")`: each arm's N over its two columns**
   (0.0.24.9207), as the default layout has it under the arm: rtfreporter
   (>= 0.8.2.9090) reads it over split columns (ichirio/rtfreporter#709).

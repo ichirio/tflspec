@@ -26,8 +26,8 @@ test_that("tfl_template_expand(): the items, marked as the template's", {
   expect_identical(x$ard$analysis_data[[1L]]$id, "adsl_saf")
   expect_identical(vapply(x$ard$analyses, `[[`, "", "id"), c("GROUPN", "CONT", "CAT"))
   s <- tfl_template_expand("demog", list(population = "SAF", stack = TRUE))
-  expect_identical(vapply(s$ard$analyses, `[[`, "", "id"), c("DEMOG", "CONT", "CAT"))
-  expect_identical(s$ard$analyses[[2L]]$parent, "DEMOG")
+  expect_identical(vapply(s$ard$analyses, `[[`, "", "id"), c("STACK", "CONT", "CAT"))
+  expect_identical(s$ard$analyses[[2L]]$parent, "STACK")
   # the code lists are the ARD's (applied when it is made): no plan_levels()
   cl <- list(SEX = list(list(value = "F", label = "Female"), list(value = "M", label = "Male")))
   y <- tfl_template_expand("demog", list(population = "SAF"), codelists = cl)
@@ -97,14 +97,14 @@ test_that("tfl_read_template_sheets(): the Excel example, as report files", {
 
 test_that("summary: categorical variables too; disposition on it", {
   x <- tfl_template_expand("summary", list(population = "SAF", categorical = c("AGEGR1", "SEX"),
-                                           cat_statistics = NULL))
+                                           categorical_statistics = NULL))
   expect_identical(vapply(x$ard$analyses, `[[`, "", "id"), c("GROUPN", "CAT"))
   expect_null(x$ard$analyses[[2L]]$statistics)
   expect_false("plan_cells" %in% vapply(x$content, `[[`, "", "fn"))
   expect_identical(x$content[[length(x$content)]]$args, list(max_rows = 30L, split = "group_safe"))
-  # the look is a parameter of the layout, the study standard's value its default
-  m <- tfl_template_expand("summary", list(population = "SAF", continuous = "AGE", max_rows = 24))
-  expect_identical(m$content[[length(m$content)]]$args, list(max_rows = 24, split = "group_safe"))
+  # the page is the study standard's (or |> plan_paginate_rows() after), not a parameter
+  expect_error(tfl_template_expand("summary", list(population = "SAF", continuous = "AGE",
+                                                   max_rows = 24)), "no parameter 'max_rows'")
   expect_error(tfl_template_expand("summary", list(population = "SAF", continuous = "AGE",
                                                    colour = "red")), "no parameter")
   expect_error(tfl_template_expand("summary", list(population = "SAF")), "categorical")
@@ -147,11 +147,10 @@ test_that("listing: one row a record, a column's width part of its definition", 
   expect_s3_class(p, "table_plan")
 })
 
-test_that("summary's mean (CI); km_table and orr", {
-  x <- tfl_template_expand("summary", list(population = "SAF", continuous = "CHG", statistics = "N",
-                                           ci_label = "Mean change (95% CI)"))
-  expect_identical(vapply(x$ard$analyses, `[[`, "", "method"),
-                   c("categorical", "continuous", "mean_ci"))
+test_that("summary has no mean (CI) analysis of its own; km_table and orr", {
+  x <- tfl_template_expand("summary", list(population = "SAF", continuous = "CHG",
+                                           continuous_statistics = "N"))
+  expect_identical(vapply(x$ard$analyses, `[[`, "", "method"), c("categorical", "continuous"))
   k <- tfl_template_expand("km_table", list(by_levels = c("A", "B")))
   expect_null(k$ard)   # the survival analyses are the report's own
   expect_s3_class(k$data$steps[[1L]], "tfl_r")
@@ -176,16 +175,19 @@ test_that("hierarchical of one level; demog and ae_pt_freq on their layouts", {
   # order, filter and page
   p <- tfl_template_expand("ae_pt_freq", list(population = "SAF", min_pct = 5))
   h1 <- tfl_template_expand("hierarchical", list(population = "SAF", hierarchy = "AEDECOD",
-    where = "TRTEMFL == \"Y\"", data_label = "Treatment-emergent AEs of the safety set",
-    analysis_id = "TEAE_PT", analysis_label = "TEAE by PT", overall = "Any TEAE"))
-  expect_identical(p$ard, h1$ard)
+    where = "TRTEMFL == \"Y\"", any_row = TRUE, any_row_label = "Any TEAE"))
+  # (its own ids and labels: the layout's are its parameters no more)
+  k <- c("method", "data", "by", "variables", "denominator", "args")
+  expect_identical(p$ard$analyses[[1L]][k], h1$ard$analyses[[1L]][k])
+  expect_identical(p$ard$analyses[[1L]][c("id", "label")], list(id = "TEAE_PT", label = "TEAE by PT"))
+  expect_identical(p$ard$analysis_data[[2L]]$where, h1$ard$analysis_data[[2L]]$where)
   expect_identical(vapply(p$content, `[[`, "", "fn"),
                    c("normalize_ard", "table_plan", "plan_sort", "plan_filter", "plan_col_header",
                      "plan_paginate_rows"))
   # demog's usual table is summary's
   d <- tfl_template_expand("demog", list(population = "SAF", continuous = "AGE", categorical = "SEX"))
   s <- tfl_template_expand("summary", list(population = "SAF", continuous = "AGE", categorical = "SEX",
-    groupn_label = "Subjects per group", labels = list(AGE = "Age (years)", SEX = "Sex, n (%)")))
+    labels = list(AGE = "Age (years)", SEX = "Sex, n (%)")))
   no_from <- function(x) lapply(x, function(i) i[setdiff(names(i), "from")])
   expect_identical(no_from(d$content), no_from(s$content))   # (each item says its template)
   expect_identical(d$ard$analysis_data, s$ard$analysis_data)

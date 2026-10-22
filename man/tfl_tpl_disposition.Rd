@@ -16,7 +16,7 @@ The table template \code{disposition}, layout \code{summary}. Its program is one
    \code{cat_label} \tab other \tab call \tab Status at end of study \tab  \tab  \cr
    \code{labels} \tab other \tab call \tab Status at end of study, n (\%) \tab  \tab  \cr
    \code{by} \tab usual \tab call \tab TRT01A \tab settings.treatment \tab the column variable \cr
-   \code{cat_statistics} \tab other \tab call \tab n, p \tab  \tab the categorical statistics the ARD has; NULL: cards' own \cr
+   \code{categorical_statistics} \tab other \tab call \tab n, p \tab  \tab the categorical statistics the ARD has; NULL: cards' own \cr
    \code{groupn_label} \tab other \tab call \tab  \tab  \tab the subjects-per-group analysis' label \cr
 }
 }

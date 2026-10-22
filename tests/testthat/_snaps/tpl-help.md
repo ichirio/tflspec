@@ -4,7 +4,7 @@
       tfl_tpl_help("demog", tier = c("required", "usual"))
     Output
       demog (table, layout summary; variant of summary; tflspec)
-      Demographics (FDA STF Table 2)
+      Demographics
       Call: tfl_tpl(ard, "demog", ...)
       
       required (1):

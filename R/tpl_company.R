@@ -278,7 +278,8 @@ tfl_template_run <- function(name, x, ..., codelists = NULL, sets = NULL) {
   rows <- list()
   row <- function(p, fn, arg, status) rows[[length(rows) + 1L]] <<- data.frame(
     template = t$name, param = p, fn = fn, arg = arg, status = status, stringsAsFactors = FALSE)
-  ctx <- list(codelists = NULL, population = NULL)
+  ctx <- list(codelists = NULL, population = NULL,
+              template = list(name = t$name, label = t$label))
   run <- function(a) tryCatch(suppressMessages(suppressWarnings(t$body(a, ctx))),
                               error = function(e) e)
   ex <- t$example %||% .tpl_examples[[t$name]] %||% list()
@@ -396,6 +397,7 @@ tfl_test_templates <- function(names = NULL) {
 # package tests its wrapped templates with
 .tpl_examples <- list(
   demog = list(population = "SAF"),
+  stf_t02_demog = list(population = "SAF"),
   summary = list(population = "SAF", continuous = "AGE"),
   disposition = list(population = "SAF"),
   hierarchical = list(population = "SAF", hierarchy = c("AEBODSYS", "AEDECOD")),
