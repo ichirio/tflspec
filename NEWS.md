@@ -24,24 +24,13 @@
   once), and a TOC's header of two rows (Title merged over its parts) says
   its titles.
 
-* The TOC read as a company writes it (0.0.24.9230): every row naming a
-  number is a report -- its shell shared with other rows, or none -- its
-  number and its shell's number read from columns apart.
-  `tfl_ai_read_shell()` / `tfl_ai_prepare()` find the columns by their
-  headers' words (Output No, Shell, Title, Population, Program, File, and
-  the Japanese words), or by `toc_cols = c(output_id = "Output No", shell
-  = "Shell", title = c("Title 1", "Title 2"))` (a header or a column's
-  letter); with no header, of two columns of numbers the shell's is the
-  one naming sheets.  `toc` gains `shell_id`, `shell_key`, `population`,
-  `program`, `file` and `info` (the row's other columns, "header: value").
-  The batches keep a shell's reports together -- `size` counts shells, a
-  request of `size = 1` is named after its shell -- and a request lists
-  its reports' TOC rows: the shell or that there is none, the title, the
-  population, the other columns.  The instructions say a TOC row can be
-  several reports (parts, phases, subgroups, a parameter or a visit each),
-  read from its columns and the shell's text, a report file each, its id
-  the number the shell or the TOC writes (the TOC's number with the
-  shell's letter), else `.a`, `.b`.
+* A TOC's columns by their role (0.0.24.9230): the item's number and its
+  shell's apart, the title(s), the population, the program and file names
+  from the headers' words (Output No, Shell, Title, Population, Program,
+  File, and the Japanese words), or `toc_cols = c(output_id = "Output No",
+  shell = "Shell", title = c("Title 1", "Title 2"))` (a header or a
+  column's letter); the row's other columns go to its requests as
+  "header: value".
 
 * Named values in the ARD definition (0.0.24.9227): sheet `objects`
   (`output_id`, `object_id`, `code`, `label`), data.yml `objects:` for
