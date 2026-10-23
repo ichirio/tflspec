@@ -94,7 +94,8 @@
     section_align = "text", auto_title = "bool", title_align = "text",
     table_font_size_half_points = "int", title_font_size_half_points = "int",
     footnote_font_size_half_points = "int", page_header = "bool",
-    page_footer = "bool", watermark = "text", figure_width_in = "text",
+    page_footer = "bool", watermark = "text", page_break = "bool", space_before = "int",
+    first_rows = "int", cont_title = "text", figure_width_in = "text",
     figure_height_in = "text", ard_source = "text", pattern = "text",
     data_code = "text", content_code = "text"),
   page = c(
@@ -2263,7 +2264,9 @@ tfl_table_spec_template <- function(ard, path = NULL, cols = NULL,
 #' `{PROGRAM}`; blank: the file name of the program that runs, and
 #' `{output_id}` only when none is found -- rtfreporter's
 #' `program_fallback`), `auto_section`, `section_align`,
-#' `auto_title`, `title_align` (as [rtfreporter::rtf_tables()] takes them), and
+#' `auto_title`, `title_align` (as [rtfreporter::rtf_tables()] takes them),
+#' `page_break`, `space_before`, `first_rows`, `cont_title` (on the page of the
+#' content before it: [rtfreporter::rtf_tables()]; a figure the first two), and
 #' `table_font_size_half_points`, `title_font_size_half_points`,
 #' `footnote_font_size_half_points`,
 #' and `page_header` / `page_footer` (`FALSE` drops that running band for

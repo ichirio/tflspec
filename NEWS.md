@@ -13,7 +13,7 @@
   winning, key by key; `plan_hide()`'s columns adding up -- and a message
   says so; the verbs whose calls are layers of their own (filters,
   comparisons, cell styles, steps after, titles of other pages) are left
-  as they are, and a figure's content is not touched (0.0.24.9222).
+  as they are, and a figure's content is not touched (0.0.24.9224).
 
 * **Listing sheets keep what their columns cannot say** (#447): YAML ->
   sheets -> YAML no longer drops a listing's other items (`plan_hide`,
@@ -21,7 +21,30 @@
   column's other `listing_col()` arguments (`name`, `rel_width`, `layout`):
   the `listings` sheet's new column `content_more` holds those items as
   YAML, the `listing_cols` sheet's `more` a column's other arguments, and
-  they are read back as they were (0.0.24.9221).
+  they are read back as they were (0.0.24.9224).
+* **A report's own `data:` with a figure template** (#446): its steps (the
+  data stage: the analysis set, the parameter, the records kept) come
+  first, then the template's call steps (the fit and what the call makes
+  from it); the template's call stays on, and `tfl_template_to_spec()`
+  writes the same.  Before, the report's steps replaced the template's
+  whole list, the fit with it.  Without own steps, and for a table's
+  template, nothing changes (0.0.24.9222).
+
+* **No page argument is dropped any more** (#444): `page.rtf_titles` and
+  `page.rtf_footnotes` write `row_height_twips`, `markup`, `font` and
+  `align` (not only `font_size_half_points`), `page.rtf_figures` its
+  `align`, and `page.rtf_tables` a `font_size_half_points` left on the page
+  (a content of R code) -- the schema took them, the program left them out.
+  `markup` takes rtfreporter's words (`"script"`, `"relational"`, `"all"`,
+  `"none"`), no longer `TRUE` / `FALSE` (0.0.24.9217).
+
+* **A report on the page of the content before it** (#443): a report's
+  `page.rtf_tables` says `page_break`, `space_before`, `first_rows` and
+  `cont_title`, and `page.rtf_figures` `page_break` and `space_before`, as
+  rtfreporter's `rtf_tables()` / `rtf_figures()` take them; the report
+  sheet has the same columns.  The generated call passes them only when the
+  report is not on a page of its own (`page_break: false`).  They take effect
+  in a document that holds content before the report's (0.0.24.9216).
 
 * `tfl_ai_prepare()`'s `toc` (a dry run's too) says each report's `parts`,
   `parts_row` and `same_number`, as `tfl_ai_read_shell()$toc` does: a
