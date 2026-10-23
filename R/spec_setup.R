@@ -53,8 +53,10 @@
     own <- setdiff(.page_used_tokens(pg[band]), .ard_spec_rtf_tokens)
     nm <- .setup_band_names[[band]]
     lines <- paste0(nm, "_lines")
-    call <- .spec_call(paste0("rtf_", band), .spec_sym(lines),
-                       drop_empty_rows = if (length(own)) TRUE)
+    # (its look as the study's page says it: page.rtf_header / rtf_footer)
+    style <- .band_style(pg, band)
+    if (is.null(style$drop_empty_rows) && length(own)) style$drop_empty_rows <- TRUE
+    call <- do.call(.spec_call, c(list(paste0("rtf_", band), .spec_sym(lines)), style))
     out <- c(out,
              paste(lines, "<-", .spec_call_code(b, 0L, lead = nchar(lines) + 4L)),
              paste(nm, "<-", .spec_call_code(call, 0L, lead = nchar(nm) + 4L)))

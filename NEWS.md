@@ -11,6 +11,15 @@
   family was lost on the sheets' path.  rtfreporter (>= 0.8.2.9094)
   (0.0.24.9223).
 
+* **The running header's and footer's look** (#450): `page.rtf_header` and
+  `page.rtf_footer` take rtfreporter's `rtf_header()` / `rtf_footer()`
+  arguments (`border`, `width`, `width_twips`, `row_height_twips`,
+  `font_size_half_points`, `font`, `markup`, `cell_padding_*`,
+  `drop_empty_rows`; the lines stay `page.header` / `page.footer`), and
+  `page.rtf_footnotes` a `border`.  The report's call and the study setup's
+  `study_header` / `study_footer` write them; a report whose look differs
+  from the study's writes its own call.
+
 * **No page argument is dropped any more** (#444): `page.rtf_titles` and
   `page.rtf_footnotes` write `row_height_twips`, `markup`, `font` and
   `align` (not only `font_size_half_points`), `page.rtf_figures` its

@@ -336,7 +336,7 @@ tfl_sheets_from_spec <- function(study, outputs) {
 
 .page_known <- c("header", "footer", "titles", "footnotes", "tokens", "page", "report",
                  "rtf_page", "rtf_default_format", "rtf_document", "rtf_tables", "rtf_titles",
-                 "rtf_footnotes", "rtf_figures")
+                 "rtf_footnotes", "rtf_figures", "rtf_header", "rtf_footer")
 
 # `page:`'s rtfreporter arguments as the page and report sheets' columns
 # (the inverse of the converter's .page_put()): list(page = , report = ),

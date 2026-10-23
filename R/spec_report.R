@@ -124,8 +124,9 @@
   if (length(fn)) {
     a <- args_of("rtf_footnotes")
     if (!is.null(a[["font"]])) a[["font"]] <- .font_slots_value(a[["font"]])
+    if (!is.null(a[["border"]])) a[["border"]] <- .page_call_value(a[["border"]])
     st[[length(st) + 1L]] <- do.call(.spec_call, c(list("rtf_footnotes", doc, list(fn)),
-                                                   a[intersect(band_style, names(a))]))
+                                                   a[intersect(c(band_style, "border"), names(a))]))
   }
   st
 }
@@ -179,9 +180,16 @@
   b <- .page_band(pg, band, tokens)
   if (!length(b)) return(NULL)
   fn <- paste0("rtf_", band)
-  if (is.null(split)) return(.spec_call(fn, b))
+  # the band's own look: rtf_header() / rtf_footer()'s arguments as the
+  # page says them (page.rtf_header, page.rtf_footer)
+  style <- .band_style(pg, band)
+  call <- function(lines) do.call(.spec_call, c(list(fn, lines), style))
+  if (is.null(split)) return(call(b))
   nm <- .setup_band_names[[band]]
   study_lines <- split$bands_study[[band]]
+  # (the study's band by name only when its look is the study's too)
+  same_look <- identical(style, split$band_style_study[[band]] %||% list())
+  if (!same_look) return(call(b))
   if (!isTRUE(split$bands_own[[band]]) && length(study_lines)) return(.spec_sym(nm))
   if (length(study_lines)) {
     st <- stats::setNames(list(study_lines), band)
@@ -190,14 +198,34 @@
     if (n && length(b) > n && identical(sb, .page_band(st, band, NULL))) {
       lines <- .spec_sym(paste0(nm, "_lines"))
       if (identical(utils::tail(b, n), sb)) {
-        return(.spec_call(fn, .spec_call("c", utils::head(b, -n), lines)))
+        return(call(.spec_call("c", utils::head(b, -n), lines)))
       }
       if (identical(utils::head(b, n), sb)) {
-        return(.spec_call(fn, .spec_call("c", lines, utils::tail(b, -n))))
+        return(call(.spec_call("c", lines, utils::tail(b, -n))))
       }
     }
   }
-  .spec_call(fn, b)
+  call(b)
+}
+
+# A running band's look as the page says it (page.rtf_header /
+# page.rtf_footer): rtfreporter's rtf_header() / rtf_footer() arguments
+# but its rows, a font per script slot as a named vector
+.band_style_args <- c("border", "width_twips", "width", "row_height_twips",
+                      "font_size_half_points", "font", "markup", "cell_padding_left_twips",
+                      "cell_padding_right_twips", "drop_empty_rows")
+.band_style <- function(pg, band) {
+  a <- .page_args(pg[[paste0("rtf_", band)]])
+  a <- a[intersect(.band_style_args, names(a))]
+  if (!is.null(a[["font"]])) a[["font"]] <- .font_slots_value(a[["font"]])
+  lapply(a, .page_call_value)
+}
+
+# a page argument that is a call (a border: {fn: rtf_border, args: ...})
+# as the program writes and runs it
+.page_call_value <- function(v) {
+  if (!inherits(v, "tfl_call")) return(v)
+  do.call(.spec_call, c(list(v$fn), lapply(v$args, .page_call_value)))
 }
 
 # The study's and the report's parts of a report's page (the report as
@@ -237,8 +265,10 @@
     m <- .page_args(study_pg[[b]])
     m[setdiff(names(m), own_keys)]
   })
+  band_style_study <- lapply(c(header = "header", footer = "footer"),
+                             function(b) .band_style(study_pg, b))
   list(page_study = page_study, tokens_study = tokens_study,
-       bands_own = bands_own, bands_study = bands_study)
+       bands_own = bands_own, bands_study = bands_study, band_style_study = band_style_study)
 }
 
 # A content's place on the page, as rtfreporter's rtf_tables() /

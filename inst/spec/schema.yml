@@ -638,6 +638,37 @@ rtf_footnotes:
     markup: {type: "enum[script|relational|all|none]|list<enum[script|relational]>"}
     font: {type: "string|vec<enum[latin|east_asian|complex|hansi], string>"}
     align: {type: "enum[left|center|right]"}
+    border: {type: "call<rtf_border>", description: "The footnotes' border: {fn: rtf_border, args: {top: true}}."}
+
+rtf_header:
+  package: rtfreporter
+  description: The running header's look (its lines are page.header).
+  args:
+    border: {type: "call<rtf_border>", description: "The band's border: {fn: rtf_border, args: {top: true}}."}
+    width_twips: {type: integer}
+    width: {type: "enum[page]|number", description: "page (the writable width), a fraction of it in (0, 1], or twips."}
+    row_height_twips: {type: integer}
+    font_size_half_points: {type: integer}
+    font: {type: "string|vec<enum[latin|east_asian|complex|hansi], string>"}
+    markup: {type: "enum[script|relational|all|none]|list<enum[script|relational]>"}
+    cell_padding_left_twips: {type: integer}
+    cell_padding_right_twips: {type: integer}
+    drop_empty_rows: {type: logical, description: "TRUE: a line whose own tokens are all empty is left out."}
+
+rtf_footer:
+  package: rtfreporter
+  description: The running footer's look (its lines are page.footer).
+  args:
+    border: {type: "call<rtf_border>", description: "The band's border: {fn: rtf_border, args: {top: true}}."}
+    width_twips: {type: integer}
+    width: {type: "enum[page]|number", description: "page (the writable width), a fraction of it in (0, 1], or twips."}
+    row_height_twips: {type: integer}
+    font_size_half_points: {type: integer}
+    font: {type: "string|vec<enum[latin|east_asian|complex|hansi], string>"}
+    markup: {type: "enum[script|relational|all|none]|list<enum[script|relational]>"}
+    cell_padding_left_twips: {type: integer}
+    cell_padding_right_twips: {type: integer}
+    drop_empty_rows: {type: logical, description: "TRUE: a line whose own tokens are all empty is left out."}
 
 # ---- the spec sheets' columns: the help of each, in the sheets' order -------
 # What tfl_spec_columns() returns (the xlsx's header comments, the GUI's ?,
