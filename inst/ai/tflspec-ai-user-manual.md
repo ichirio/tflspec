@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9218** (the development version,
+**This manual documents tflspec 0.0.24.9230** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -840,7 +840,7 @@ back): rename the value or choose another separator.
 `tfl_as_table_spec`
 
 **Report spec:** `tfl_read_report_spec` `tfl_read_toc` `tfl_report` `tfl_report_code`
-`tfl_report_path` `tfl_report_setup_code` `tfl_report_tokens` `tfl_check_code`
+`tfl_report_overwrite` `tfl_report_path` `tfl_report_setup_code` `tfl_report_tokens` `tfl_check_code`
 
 **Document import (a define, by rule):** `tfl_read_define`
 `tfl_read_define_spec` `tfl_define_profile` `tfl_define_codelists`
@@ -995,8 +995,11 @@ cat(tfl_report_code(sp, content = "plan"), sep = "\n")
   (put it on the parent).
 - `denominator`: what percentages are of — `population` (the analysis
   set; `hierarchical` and `max` take it anyway), `row` / `column` / `cell`
-  (cards), another population, or a dataset (its records of the analysis
-  set's subjects). Not in `args` as well.
+  (cards), another population, a dataset (its records of the analysis
+  set's subjects), or numbers given: one (`denominator: 86`, every
+  column's N) or one a value of the analysis's one `by` variable
+  (`denominator: {Drug X: 86, Placebo: 85}`; in the sheet
+  `c("Drug X" = 86, "Placebo" = 85)`). Not in `args` as well.
 - `args`: more arguments as R (`over_variables = TRUE, overall = TRUE`),
   read as the arguments of a call — any order; refused if not R.
 - `formats`: `mean=xx.x | p=xx.x% | AGE:sd=xx.xx` — the `xx` part says the

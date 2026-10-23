@@ -579,7 +579,7 @@ rtf_default_format:
     row_height_twips: {type: integer}
     cell_padding_left_twips: {type: integer}
     cell_padding_right_twips: {type: integer}
-    markup: {type: logical}
+    markup: {type: "enum[script|relational|all|none]|list<enum[script|relational]>"}
     title_format: {type: string}
     footnote_format: {type: string}
     title_width: {type: "number|string"}
@@ -589,7 +589,8 @@ rtf_document:
   package: rtfreporter
   description: The document -- its font, watermark and program.
   args:
-    font_table: {type: "list<map<string, string>>", description: "The fonts, the first the document's: [{name: Arial}]."}
+    font_table: {type: "list<map<string, string|vec<enum[latin|east_asian|complex|hansi], string>>>", description: "The fonts, the first the document's: [{name: Arial}]; a name a family per script slot: [{name: {latin: Times New Roman, east_asian: MS Mincho}}]."}
+    font_lang: {type: "vec<enum[latin|east_asian|complex], enum[ja|zh-Hans|zh-Hant|ko|ar|he|en]>", description: "The language of a font slot: {east_asian: ja}."}
     watermark: {type: string}
     program: {type: string}
     program_fallback: {type: string}
@@ -603,6 +604,10 @@ rtf_tables:
     auto_title: {type: logical}
     title_label_align: {type: "enum[left|center|right]"}
     font_size_half_points: {type: integer}
+    page_break: {type: logical, description: "FALSE: on under the content before it in the document, on the page that one ends on."}
+    space_before: {type: integer, description: "With page_break false, empty lines between the content before and this one."}
+    first_rows: {type: integer, description: "With page_break false, the table's rows on the page before it; the rest on pages of their own."}
+    cont_title: {type: string, description: "With first_rows, a line under the title of each page after the shared one."}
 
 rtf_figures:
   package: rtfreporter
@@ -611,6 +616,12 @@ rtf_figures:
     width_twips: {type: "integer|enum[fit]"}
     height_twips: {type: "integer|enum[fit]"}
     align: {type: "enum[left|center|right]"}
+    page_break: {type: logical, description: "FALSE: on under the content before it in the document, on the page that one ends on."}
+    space_before: {type: integer, description: "With page_break false, empty lines between the content before and this one."}
+    render_width: {type: number, description: "A plot object drawn this wide, in inches (rtfplot()'s); blank: rtfplot()'s default."}
+    render_height: {type: number, description: "A plot object drawn this high, in inches."}
+    render_dpi: {type: number, description: "A plot object drawn at this resolution."}
+    png_device: {type: "enum[auto|ragg|png]", description: "The PNG device a plot object is drawn with: auto (ragg when installed), ragg, png."}
 
 rtf_titles:
   package: rtfreporter
@@ -618,8 +629,8 @@ rtf_titles:
   args:
     font_size_half_points: {type: integer}
     row_height_twips: {type: integer}
-    markup: {type: logical}
-    font: {type: string}
+    markup: {type: "enum[script|relational|all|none]|list<enum[script|relational]>"}
+    font: {type: "string|vec<enum[latin|east_asian|complex|hansi], string>"}
     align: {type: "enum[left|center|right]"}
 
 rtf_footnotes:
@@ -628,9 +639,46 @@ rtf_footnotes:
   args:
     font_size_half_points: {type: integer}
     row_height_twips: {type: integer}
-    markup: {type: logical}
-    font: {type: string}
+    markup: {type: "enum[script|relational|all|none]|list<enum[script|relational]>"}
+    font: {type: "string|vec<enum[latin|east_asian|complex|hansi], string>"}
     align: {type: "enum[left|center|right]"}
+    border: {type: "call<rtf_border>", description: "The footnotes' border: {fn: rtf_border, args: {top: true}}."}
+
+generate_rtfreport:
+  package: rtfreporter
+  description: Writing the report's RTF file.
+  args:
+    overwrite: {type: logical, description: "FALSE: a report's file already there is not written over (an error); blank: TRUE."}
+
+rtf_header:
+  package: rtfreporter
+  description: The running header's look (its lines are page.header).
+  args:
+    border: {type: "call<rtf_border>", description: "The band's border: {fn: rtf_border, args: {top: true}}."}
+    width_twips: {type: integer}
+    width: {type: "enum[page]|number", description: "page (the writable width), a fraction of it in (0, 1], or twips."}
+    row_height_twips: {type: integer}
+    font_size_half_points: {type: integer}
+    font: {type: "string|vec<enum[latin|east_asian|complex|hansi], string>"}
+    markup: {type: "enum[script|relational|all|none]|list<enum[script|relational]>"}
+    cell_padding_left_twips: {type: integer}
+    cell_padding_right_twips: {type: integer}
+    drop_empty_rows: {type: logical, description: "TRUE: a line whose own tokens are all empty is left out."}
+
+rtf_footer:
+  package: rtfreporter
+  description: The running footer's look (its lines are page.footer).
+  args:
+    border: {type: "call<rtf_border>", description: "The band's border: {fn: rtf_border, args: {top: true}}."}
+    width_twips: {type: integer}
+    width: {type: "enum[page]|number", description: "page (the writable width), a fraction of it in (0, 1], or twips."}
+    row_height_twips: {type: integer}
+    font_size_half_points: {type: integer}
+    font: {type: "string|vec<enum[latin|east_asian|complex|hansi], string>"}
+    markup: {type: "enum[script|relational|all|none]|list<enum[script|relational]>"}
+    cell_padding_left_twips: {type: integer}
+    cell_padding_right_twips: {type: integer}
+    drop_empty_rows: {type: logical, description: "TRUE: a line whose own tokens are all empty is left out."}
 
 # ---- the spec sheets' columns: the help of each, in the sheets' order -------
 # What tfl_spec_columns() returns (the xlsx's header comments, the GUI's ?,
@@ -855,9 +903,10 @@ rtf_footnotes:
       - column: denominator
         description: 'What percentages are of: population (hierarchical and max take
           it anyway), row / column / cell (cards), another population, a dataset (its
-          records of the population''s subjects), or an analysis data (as it is: one
-          row a subject and phase gives the N of each phase); blank: the method''s
-          default.'
+          records of the population''s subjects), an analysis data (as it is: one
+          row a subject and phase gives the N of each phase), or numbers: one (86,
+          every column''s N) or one a value of the by (c("Drug X" = 86, "Placebo" =
+          85); YAML {Drug X: 86, Placebo: 85}); blank: the method''s default.'
         example: row
       - column: formats
         description: 'Display formats, statistic=format, | between them; VAR:statistic=format
@@ -1535,6 +1584,28 @@ rtf_footnotes:
         description: 'A word drawn diagonally behind every page (rtf_document(watermark
           = )); blank: none.'
         example: DRAFT
+      - column: page_break
+        at: rtf_tables.page_break
+        description: 'TRUE / FALSE: FALSE puts the report under the content before
+          it in the document, on the page that one ends on (rtf_tables(page_break
+          = ), a figure rtf_figures(page_break = )); blank: TRUE, a new page.'
+        example: 'FALSE'
+      - column: space_before
+        at: rtf_tables.space_before
+        description: 'With page_break FALSE, the empty lines between the content
+          before and this one (rtf_tables(space_before = )); blank: 0.'
+        example: '1'
+      - column: first_rows
+        at: rtf_tables.first_rows
+        description: 'With page_break FALSE, the table''s rows on the page before
+          it; the rest on pages of their own (rtf_tables(first_rows = )); blank:
+          the whole table.'
+        example: '12'
+      - column: cont_title
+        at: rtf_tables.cont_title
+        description: 'With first_rows, a line under the title of each page after
+          the shared one (rtf_tables(cont_title = )); blank: none.'
+        example: (continued)
       - column: figure_width_in
         description: 'A figure report: the figure''s width on the page -- a number
           of inches, or fit (the page''s body); drawn and placed so (rtf_figures(width_twips
@@ -1620,8 +1691,15 @@ rtf_footnotes:
       - column: font
         description: 'The document''s font (its font table); the study''s row (blank
           output_id) is the company''s, written once in the setup code; blank: rtfreporter''s
-          option (Courier).'
+          option (Courier). A family per script slot: latin = Times New Roman | east_asian
+          = MS Mincho (rtfreporter''s Fonts per script).'
         example: Courier New
+      - column: font_lang
+        at: rtf_document.font_lang
+        description: 'The language of a font slot (rtf_document(font_lang = )): east_asian
+          = ja; slots latin, east_asian, complex; languages ja, zh-Hans, zh-Hant, ko,
+          ar, he, en. Blank: none.'
+        example: east_asian = ja
       - column: font_size_half_points
         at: rtf_default_format.font_size_half_points
         description: 'The body font size in half-points (18 = 9 pt); blank: rtfreporter''s
@@ -1651,6 +1729,11 @@ rtf_footnotes:
         description: 'Cell-text markup for the whole document: script / relational
           / all / none; blank: script.'
         example: all
+      - column: page_more
+        description: 'The page''s rtfreporter arguments no column says (the titles''
+          row height, the running header''s look, a second font ...), as YAML: {rtf_titles:
+          {row_height_twips: 300}}; kept as they are and written back. Blank: none.'
+        example: '{rtf_header: {font_size_half_points: 16}}'
   - sheet: header
     description: 'Report: the running page header, one row a line; the line is the
       key (the study''s lines on blank output_id, a report''s own on its rows). A

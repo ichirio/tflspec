@@ -430,13 +430,34 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     auto_title = "rtf_tables.auto_title", title_align = "rtf_tables.title_label_align",
     title_font_size_half_points = "rtf_titles.font_size_half_points",
     footnote_font_size_half_points = "rtf_footnotes.font_size_half_points",
-    watermark = "rtf_document.watermark"))
+    watermark = "rtf_document.watermark",
+    page_break = "rtf_tables.page_break", space_before = "rtf_tables.space_before",
+    first_rows = "rtf_tables.first_rows", cont_title = "rtf_tables.cont_title"))
+
+# a sheet cell "latin = X | east_asian = Y" as a map (YAML's), a cell
+# without "=" as it is
+.conv_slots <- function(v) {
+  if (!is.character(v) || length(v) != 1L || !grepl("=", v, fixed = TRUE)) return(v)
+  parts <- trimws(strsplit(v, "|", fixed = TRUE)[[1L]])
+  kv <- strsplit(parts, "=", fixed = TRUE)
+  stats::setNames(lapply(kv, function(x) trimws(paste(x[-1L], collapse = "="))),
+                  vapply(kv, function(x) trimws(x[1L]), ""))
+}
 
 .page_put <- function(page, sheet, col, v, note, id) {
   # (the data's and the content's code are not the page's: .conv_output())
   if (identical(sheet, "report") && col %in% c("data_code", "content_code")) return(page)
-  if (identical(sheet, "page") && identical(col, "font")) {
-    page$rtf_document$font_table <- list(list(name = v))
+  if (identical(sheet, "page") && identical(col, "page_more")) {
+    # what no column says, as YAML (tfl_sheets_from_yaml()'s .page_more())
+    more <- .calls_in(yaml::yaml.load(v, handlers = .yaml_handlers()))
+    for (fn in names(more)) for (k in names(more[[fn]])) page[[fn]][[k]] <- more[[fn]][[k]]
+    return(page)
+  }
+  if (identical(sheet, "page") && col %in% c("font", "font_lang")) {
+    # one family, or one a script slot: "latin = X | east_asian = Y"
+    v <- .conv_slots(v)
+    if (identical(col, "font")) page$rtf_document$font_table <- list(list(name = v))
+    else page$rtf_document$font_lang <- v
     return(page)
   }
   if (identical(sheet, "report") && col %in% c("page_header", "page_footer")) {
@@ -595,9 +616,16 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     if (nrow(ad)) ard_part$analysis_data <- .conv_rows(ad, note, id, "analysis_data", r_cols = c("where", "derive", "code"),
                                                     list_cols = c("add", "keep", "distinct"), rename = c(data_id = "id", population_id = "population"))
     an <- ard$analyses[!is.na(ard$analyses$output_id) & ard$analyses$output_id == id, , drop = FALSE]
-    if (nrow(an)) ard_part$analyses <- .conv_rows(an, note, id, "analyses", r_cols = c("where", "args", "post", "code"),
-                                               list_cols = c("by", "strata", "variables", "statistics", "formats"),
-                                               rename = c(analysis_id = "id", population_id = "population"))
+    if (nrow(an)) {
+      ard_part$analyses <- .conv_rows(an, note, id, "analyses", r_cols = c("where", "args", "post", "code"),
+                                      list_cols = c("by", "strata", "variables", "statistics", "formats"),
+                                      rename = c(analysis_id = "id", population_id = "population"))
+      # a denominator of numbers: a number, or a map by the by's values
+      ard_part$analyses <- lapply(ard_part$analyses, function(m) {
+        if (!is.null(m$denominator)) m$denominator <- .den_yaml(m$denominator)
+        m
+      })
+    }
   }
   # a report whose data or content is its R code (the report row's
   # data_code / content_code): the data as code, the content as one !r

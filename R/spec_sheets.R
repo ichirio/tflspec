@@ -180,6 +180,7 @@ tfl_sheets_from_spec <- function(study, outputs) {
       adata[[length(adata) + 1L]] <- c(list(output_id = id), m)
     }
     for (a in o$ard$analyses %||% list()) {
+      if (!is.null(a$denominator)) a$denominator <- .den_cell(a$denominator)
       m <- lapply(a, cell); m$analysis_id <- m$id; m$id <- NULL
       if (!is.null(m$population)) { m$population_id <- m$population; m$population <- NULL }
       if (!is.null(a$ref)) note(id, paste0("analyses.", a$id), "a reference to another report's analysis (ref) has no sheet")
@@ -336,7 +337,7 @@ tfl_sheets_from_spec <- function(study, outputs) {
 
 .page_known <- c("header", "footer", "titles", "footnotes", "tokens", "page", "report",
                  "rtf_page", "rtf_default_format", "rtf_document", "rtf_tables", "rtf_titles",
-                 "rtf_footnotes", "rtf_figures")
+                 "rtf_footnotes", "rtf_figures", "rtf_header", "rtf_footer", "generate_rtfreport")
 
 # `page:`'s rtfreporter arguments as the page and report sheets' columns
 # (the inverse of the converter's .page_put()): list(page = , report = ),
@@ -354,7 +355,13 @@ tfl_sheets_from_spec <- function(study, outputs) {
     }
   }
   ft <- page$rtf_document$font_table
-  if (length(ft) && !is.null(ft[[1L]]$name)) pr$page$font <- cell(ft[[1L]]$name)
+  # (a family per script slot, a language per slot: "latin = X | east_asian = Y")
+  slots <- function(v) {
+    v <- .font_slots_value(v)
+    if (is.null(names(v))) cell(v) else paste(names(v), "=", unname(v), collapse = " | ")
+  }
+  if (length(ft) && !is.null(ft[[1L]]$name)) pr$page$font <- slots(ft[[1L]]$name)
+  if (length(page$rtf_document$font_lang)) pr$page$font_lang <- slots(page$rtf_document$font_lang)
   if (inherits(page$header, "tfl_unset")) pr$report$page_header <- "FALSE"
   if (inherits(page$footer, "tfl_unset")) pr$report$page_footer <- "FALSE"
   for (a in c("width_twips", "height_twips")) {
@@ -363,5 +370,35 @@ tfl_sheets_from_spec <- function(study, outputs) {
       if (is.numeric(v)) format(v / 1440) else cell(v)
   }
   for (k in names(page$report)) pr$report[[k]] <- cell(page$report[[k]])
+  # what no column says (the titles' row height, the bands' look, a second
+  # font ...): kept as YAML in the page sheet's page_more, read back as it was
+  more <- .page_more(page)
+  if (length(more)) {
+    txt <- yaml::as.yaml(.calls_out(more), indent.mapping.sequence = TRUE,
+                         handlers = .yaml_out_handlers())
+    pr$page$page_more <- sub("\n$", "", txt)
+  }
   pr
+}
+
+# The rtfreporter arguments of a page no page or report sheet column says:
+# list(<fn> = list(<arg> = value)); a font table of more than one font whole
+.page_more <- function(page) {
+  said <- character()
+  for (sh in names(.page_map)) {
+    m <- .page_map[[sh]]
+    said <- c(said, ifelse(grepl(".", m, fixed = TRUE), m, paste(m, names(m), sep = ".")))
+  }
+  said <- c(said, "rtf_document.font_lang", "rtf_figures.width_twips", "rtf_figures.height_twips")
+  ft <- page$rtf_document$font_table
+  if (length(ft) <= 1L) said <- c(said, "rtf_document.font_table")
+  out <- list()
+  for (fn in intersect(names(page), c("rtf_page", "rtf_default_format", "rtf_document",
+                                      "rtf_tables", "rtf_figures", "rtf_titles", "rtf_footnotes",
+                                      "rtf_header", "rtf_footer", "generate_rtfreport"))) {
+    a <- page[[fn]]
+    if (!is.list(a) || inherits(a, "tfl_unset")) next
+    for (k in names(a)) if (!paste(fn, k, sep = ".") %in% said) out[[fn]][[k]] <- a[[k]]
+  }
+  out
 }
