@@ -1,5 +1,24 @@
 # tflspec (development version)
 
+* The TOC read as a company writes it (0.0.24.9222): every row naming a
+  number is a report -- its shell shared with other rows, or none -- its
+  number and its shell's number read from columns apart.
+  `tfl_ai_read_shell()` / `tfl_ai_prepare()` find the columns by their
+  headers' words (Output No, Shell, Title, Population, Program, File, and
+  the Japanese words), or by `toc_cols = c(output_id = "Output No", shell
+  = "Shell", title = c("Title 1", "Title 2"))` (a header or a column's
+  letter); with no header, of two columns of numbers the shell's is the
+  one naming sheets.  `toc` gains `shell_id`, `shell_key`, `population`,
+  `program`, `file` and `info` (the row's other columns, "header: value").
+  The batches keep a shell's reports together -- `size` counts shells, a
+  request of `size = 1` is named after its shell -- and a request lists
+  its reports' TOC rows: the shell or that there is none, the title, the
+  population, the other columns.  The instructions say a TOC row can be
+  several reports (parts, phases, subgroups, a parameter or a visit each),
+  read from its columns and the shell's text, a report file each, its id
+  the number the shell or the TOC writes (the TOC's number with the
+  shell's letter), else `.a`, `.b`.
+
 * `tfl_ai_prepare()`'s `toc` (a dry run's too) says each report's `parts`,
   `parts_row` and `same_number`, as `tfl_ai_read_shell()$toc` does: a
   caller need not read the workbook again (0.0.24.9213).

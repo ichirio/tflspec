@@ -156,8 +156,8 @@ test_that("one report a request: the request named after the report's number", {
 
 test_that("the table instructions always say how to write a sheet's parts", {
   p <- tfl_ai_prompt("table", example = FALSE)
-  expect_match(p$system, "write one report file a part", fixed = TRUE)
-  expect_match(p$system, "the TOC's number with `.a`, `.b`", fixed = TRUE)
+  expect_match(p$system, "Write one report file for each report the row makes", fixed = TRUE)
+  expect_match(p$system, "the TOC's number with `.a`, `.b` ... in order", fixed = TRUE)
   fig <- tfl_ai_prompt("figure", tfl_ai_context("figure", output_id = "F-1"), example = FALSE)
   expect_no_match(fig$system, "Part 1 / Part 2", fixed = TRUE)
 })

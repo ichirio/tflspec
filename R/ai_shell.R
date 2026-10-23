@@ -537,7 +537,7 @@ print.tfl_ai_shell <- function(x, ...) {
 
 # The TOC's reports: one row a row of the TOC sheet naming a report number
 # -- every row, a shell it shares with others or none -- else one a sheet
-# named by a number.  The columns' roles (.ai_toc_columns()): the report's
+# named by a number.  The columns' roles (.ai_toc_roles_of()): the report's
 # number, its shell's number, its title(s), its population, its program and
 # file names; the row's other cells are its `info` ("header: value").
 .ai_shell_toc <- function(cells, toc_name, toc_cols = NULL, sheet_keys = character()) {
@@ -563,7 +563,7 @@ print.tfl_ai_shell <- function(x, ...) {
     return(do.call(rbind, c(list(empty), rows)))
   }
   d <- cells[cells$sheet == toc_name, , drop = FALSE]
-  cols <- .ai_toc_columns(d, toc_cols, sheet_keys)
+  cols <- .ai_toc_roles_of(d, toc_cols, sheet_keys)
   if (is.null(cols)) return(empty)
   one <- function(x, col) {
     if (is.na(col) || !any(x$col == col)) return(NA_character_)
@@ -640,7 +640,7 @@ print.tfl_ai_shell <- function(x, ...) {
 # else the headers' words, else the cells: of the columns of report
 # numbers, the shell's is the one whose numbers name sheets.  NULL when the
 # sheet names no report.
-.ai_toc_columns <- function(d, toc_cols = NULL, sheet_keys = character()) {
+.ai_toc_roles_of <- function(d, toc_cols = NULL, sheet_keys = character()) {
   ids <- .ai_ids_in(d$text)
   is_id <- vapply(seq_along(ids), function(i) {
     nrow(ids[[i]]) > 0L && nchar(trimws(d$text[i])) <= nchar(ids[[i]]$id[1L]) + 10L
@@ -1198,8 +1198,9 @@ tfl_ai_batches <- function(x, size = 8L, types = "table", families = NULL) {
     if (any(is.na(r$shell))) paste(
       "A report with no shell: write it from its TOC row and the shells of reports like it,",
       "and say what you took as assumptions."),
-    if (any(grepl("(?i)\\bboth\\b", r$info %||% "", perl = TRUE))) paste(
-      "A flag that says both (Part 1 and Part 2, Phase 1 and Phase 2): the report is two,",
-      "a report file each, as the parts rule says."))
+    paste(
+      "A TOC row can be several reports (parts, phases, subgroups, a parameter or a visit",
+      "each): read the split from its columns above and the shell's text, and write a report",
+      "file for each, as the instructions say."))
   c(head, lines, "", tail, if (length(tail)) "")
 }

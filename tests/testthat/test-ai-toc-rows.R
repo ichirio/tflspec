@@ -69,7 +69,7 @@ test_that("a request a shell, named after it; its rows, a shared shell, no shell
   expect_match(txt, "- Table 15.1.1.1.3: shell t.15.1.1.1 (sheet 't.15.1.1.1'); title: Summary of Measure 3 / Subgroup 3; population: Safety Analysis Set; program: t_15_1_1_1_3.sas; Doc No: D003; Seq: 3; Phase: both",
                fixed = TRUE)
   expect_match(txt, "Reports sharing a shell are each a report file of their own", fixed = TRUE)
-  expect_match(txt, "A flag that says both", fixed = TRUE)
+  expect_match(txt, "A TOC row can be several reports", fixed = TRUE)
   # the shell's sheet in the request
   expect_match(txt, "## Sheet \"t.15.1.1.1\"", fixed = TRUE)
   no <- r$requests[grepl("16.9.1", r$requests$outputs), , drop = FALSE]
