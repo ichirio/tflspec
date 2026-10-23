@@ -1,5 +1,13 @@
 # tflspec (development version)
 
+* An agent's requests and `AGENTS.md` always say where the TOC / SHELL
+  workbook and the ADaM are, from the study folder, and that the agent may
+  open them to check what a request leaves unclear -- above all a shell's
+  shape (several parts, a part that writes only what differs, merged
+  cells); when it cannot open them (outside its workspace, no
+  permission), it decides from the request alone (0.0.24.9218).  What an
+  agent may read is the workspace's to say, not the request's.
+
 * `tfl_ai_prepare()`'s `toc` (a dry run's too) says each report's `parts`,
   `parts_row` and `same_number`, as `tfl_ai_read_shell()$toc` does: a
   caller need not read the workbook again (0.0.24.9213).

@@ -233,8 +233,8 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
                   collapse = "\n")
     if (identical(workbook, "file")) {
       # an agent that reads files: the text, and where each report's shell
-      # is in the workbook file -- to read that place alone when the text
-      # looks cut, never another sheet
+      # is in the workbook file -- to check what the text leaves unclear
+      # when the agent can open it; when it cannot, the request alone
       where <- c(if (length(more_books)) {
                    sprintf(paste("The TOC is the workbook `%s`; the shells are in %s.",
                                  "The reports' shells:"), book_path,
@@ -244,14 +244,17 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
                            book_path)
                  }, "",
                  .ai_shell_where(shell, ids), "",
-                 paste("Use the text below, read from that workbook. Only when it looks cut or",
-                       "garbled, read the place above -- that sheet, those cells -- with R:",
+                 paste("Use the text below, read from that workbook. When you can open the",
+                       "workbook, use it to check what the text leaves unclear -- above all a",
+                       "shell's shape (several parts, a part that writes only what differs,",
+                       "merged cells, a text that looks cut): read the place above -- that",
+                       "sheet, those cells -- with R:",
                        sprintf("`tflspec::tfl_ai_read_shell(\"%s\", %soutputs = \"<id>\")`", book_path,
                                if (length(more_books)) sprintf("shells = c(%s), ",
                                  paste(sprintf("\"%s\"", more_books), collapse = ", ")) else ""),
-                       "or `readxl::read_excel(<file>, sheet = <sheet>, range = <cells>)`. Never",
-                       "read another sheet on a guess; when the place looks wrong, ask it as a",
-                       "question."))
+                       "or `readxl::read_excel(<file>, sheet = <sheet>, range = <cells>)`. When",
+                       "you cannot open it (outside your workspace, no permission), decide from",
+                       "this request alone. When the place looks wrong, ask it as a question."))
       return(paste(c(where, "", text), collapse = "\n"))
     }
     if (identical(workbook, "text")) return(text)
