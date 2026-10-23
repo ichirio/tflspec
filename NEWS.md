@@ -32,6 +32,14 @@
   column's letter); the row's other columns go to its requests as
   "header: value".
 
+* An agent's requests and `AGENTS.md` always say where the TOC / SHELL
+  workbook and the ADaM are, from the study folder, and that the agent may
+  open them to check what a request leaves unclear -- above all a shell's
+  shape (several parts, a part that writes only what differs, merged
+  cells); when it cannot open them (outside its workspace, no
+  permission), it decides from the request alone (0.0.24.9228).  What an
+  agent may read is the workspace's to say, not the request's.
+
 * Named values in the ARD definition (0.0.24.9227): sheet `objects`
   (`output_id`, `object_id`, `code`, `label`), data.yml `objects:` for
   the study's and a report's `ard: objects:` for its own, each
@@ -116,7 +124,7 @@
   from it); the template's call stays on, and `tfl_template_to_spec()`
   writes the same.  Before, the report's steps replaced the template's
   whole list, the fit with it.  Without own steps, and for a table's
-  template, nothing changes (0.0.24.9230).
+  template, nothing changes (0.0.24.9222).
 
 * **No page argument is dropped any more** (#444): `page.rtf_titles` and
   `page.rtf_footnotes` write `row_height_twips`, `markup`, `font` and

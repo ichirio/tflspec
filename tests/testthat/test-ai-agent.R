@@ -45,9 +45,15 @@ test_that("mode = \"agent\": the instructions, run.R, questions, decisions; toc.
   expect_match(txt, sprintf("- %s: sheet '", strsplit(r$requests$outputs[1L], ", ")[[1L]][1L]),
                fixed = TRUE)
   expect_match(txt, "# Workbook onco_toc_shell.xlsx", fixed = TRUE)
-  expect_match(txt, "Never read another sheet on a guess", fixed = TRUE)
+  expect_match(txt, "When you can open the workbook, use it to check", fixed = TRUE)
+  expect_match(txt, "decide from this request alone", fixed = TRUE)
+  # where the ADaM and the workbook are, from the study folder
+  expect_match(req1[3L], "From this study folder, the TOC / SHELL workbook is `", fixed = TRUE)
+  expect_match(req1[3L], "the ADaM is in `", fixed = TRUE)
   expect_false(any(grepl("Attach", readLines(file.path(d, "ai", "requests", "index.md")))))
-  for (k in c("read **that place alone** with R", "Never read another sheet on a guess")) {
+  expect_false(any(grepl("{{", ag, fixed = TRUE)))
+  for (k in c("When you can open the workbook", "When you cannot open it",
+              "Read the place the request names with R")) {
     expect_true(any(grepl(k, ag, fixed = TRUE)), info = k)
   }
   # tflplanner's places, and its TOC
