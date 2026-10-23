@@ -1085,6 +1085,13 @@ rtf_footer:
           its children does; drop: judged by its own counts (plan_filter(parents =
           )).'
         example: drop
+      - column: content_more
+        description: 'The table''s items the sheets cannot say, as YAML (- fn: {args};
+          plan_titles, plan_footnotes, plan_after, a second call of a verb, a plan_digits
+          with stat ...): an item any of whose arguments no column says is kept here
+          whole, not in the sheets; written back to the report''s content by its verb''s
+          rank; blank: none.'
+        example: '- plan_titles: {titles: [Safety population]}'
       - column: stack
         description: 'Subgroups as one pair of keys: name = its layers, a comma between
           them, * crossing variables (AGEGR1 * SEX), | between several keys; or the
@@ -1880,6 +1887,11 @@ rtf_footer:
         description: 'The name of an R function that breaks a cell into lines (listing_spec(wrap
           = )); blank: the type''s own rule.'
         example: my_wrap
+      - column: content_more
+        description: 'The listing''s items the columns cannot say, as YAML (- fn:
+          {args}; plan_hide, plan_paginate_group, a plan_paginate_rows with page_by
+          ...): kept as they are, written back to the report''s content; blank: none.'
+        example: '- plan_hide: {cols: [USUBJID]}'
   - sheet: listing_cols
     description: 'Listing: one row a printed column, in order (listing_col()).'
     columns:
@@ -1906,6 +1918,10 @@ rtf_footer:
         description: 'TRUE / FALSE: TRUE prints a value once until it changes; blank:
           FALSE.'
         example: 'TRUE'
+      - column: more
+        description: 'The column''s other listing_col() arguments the columns cannot
+          say, as YAML (a map: name, rel_width, layout ...); blank: none.'
+        example: '{rel_width: 2}'
 
 # ---- figures: the functions a figure's content calls -------------------------
 # A figure report's `content:` is its plots' items (R/fig_content.R): the
