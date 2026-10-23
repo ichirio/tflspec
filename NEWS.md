@@ -1,13 +1,13 @@
 # tflspec (development version)
 
 * In a table with columns (`table_plan(cols = TRT01A)`), every analysis
-  has its `by` (0.0.24.9221): one without is a problem of the study's ARD
+  has its `by` (0.0.24.9222): one without is a problem of the study's ARD
   definition that says the `by` to write (`by: [TRT01A]`), but for the
   columns' own count (the N), a `custom` analysis, one inside another and
   the study's N; `by: []` (in the sheet `(none)`) says an analysis has no
   columns.  A `by` the data does not have stops the program, as before.
 
-* Named sets of records (0.0.24.9220): sheet `records` (`record_id`,
+* Named sets of records (0.0.24.9221): sheet `records` (`record_id`,
   `dataset`, `where`, `label`, `any_label`), data.yml `records:`
   (`- {id: TESAE, dataset: ADAE, where: !r ..., label: ..., any_label:
   Any SAE}`); an analysis's `records: TESAE` reads the set's dataset under
@@ -29,8 +29,6 @@
   (`data_id`) do not change.
   `tfl_ard_data_names()` says each analysis's data by the program's name.
 
-* Named values in the ARD definition (0.0.24.9215): sheet `objects`
-
 * Named values in the ARD definition (0.0.24.9219): sheet `objects`
   (`output_id`, `object_id`, `code`, `label`), data.yml `objects:` for
   the study's and a report's `ard: objects:` for its own, each
@@ -39,8 +37,6 @@
   report's; an analysis names one as its `denominator`, or in its `args`
   or `where`.  Checked: an R name, not a dataset's or `pop_*`, once in
   its scope, code that is R.
-
-* An analysis's `denominator` can be numbers (0.0.24.9214): one
 
 * An analysis's `denominator` can be numbers (0.0.24.9218): one
   (`denominator: 86`, every column's N) or one a value of the analysis's
