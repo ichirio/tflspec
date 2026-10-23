@@ -14,7 +14,7 @@
 # Topline_TOC too)
 .ai_toc_name_re <- paste0(
   "(?i)(^|[^a-z])(toc|contents?|index)([^a-z]|$)|table of contents|^lists?([^a-z]|$)|",
-  "目次|一覧表|帳票一覧|帳票リスト")
+  "\u76ee\u6b21|\u4e00\u89a7\u8868|\u5e33\u7968\u4e00\u89a7|\u5e33\u7968\u30ea\u30b9\u30c8")
 
 # Each sheet's role: `toc`, `shell` or `other` -- a sheet named like a TOC
 # (none so named: the sheet listing the most report numbers, three at
@@ -365,9 +365,6 @@
   .ai_shell_join(x$info, list(cells = keep, outputs = ids))
 }
 
-# NA as the default
-`%|NA|%` <- function(a, b) if (length(a) && !is.na(a[1L])) a else b
-
 # The plan of a workbook's requests, shell sheets first: the tables'
 # batches (`ub`, named by request: a sheet a request with `size` 1, named
 # after it; else `size` sheets of a family, "<family>-<k>"), the figure
@@ -382,14 +379,14 @@
     cc <- x$cand[[s]]
     kind <- if (nrow(cc)) toc$type[cc$i[1L]] else NA_character_
     if (is.na(kind)) {
-      z <- .ai_ids_in(x$shells$numbers_in_sheet[j] %|NA|% "")[[1L]]
+      z <- .ai_ids_in(.na_or(x$shells$numbers_in_sheet[j], ""))[[1L]]
       kind <- if (nrow(z)) z$type[1L] else NA_character_
     }
     if (!is.na(kind) && !kind %in% types) next
     txt <- paste(c(x$shells$title_in_sheet[j], toc$title[cc$i]), collapse = " ")
     hit <- names(fam_re)[vapply(fam_re, function(re) grepl(re, txt, perl = TRUE), NA)]
     units[[length(units) + 1L]] <- list(sheet = s, ids = toc$output_id[cc$i],
-                                        kind = kind %|NA|% "table",
+                                        kind = .na_or(kind, "table"),
                                         family = if (length(hit)) hit[1L] else "other")
   }
   tab <- Filter(function(u) !identical(u$kind, "figure"), units)
