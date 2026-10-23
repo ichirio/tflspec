@@ -579,7 +579,7 @@ rtf_default_format:
     row_height_twips: {type: integer}
     cell_padding_left_twips: {type: integer}
     cell_padding_right_twips: {type: integer}
-    markup: {type: logical}
+    markup: {type: "enum[script|relational|all|none]|list<enum[script|relational]>"}
     title_format: {type: string}
     footnote_format: {type: string}
     title_width: {type: "number|string"}
@@ -603,6 +603,10 @@ rtf_tables:
     auto_title: {type: logical}
     title_label_align: {type: "enum[left|center|right]"}
     font_size_half_points: {type: integer}
+    page_break: {type: logical, description: "FALSE: on under the content before it in the document, on the page that one ends on."}
+    space_before: {type: integer, description: "With page_break false, empty lines between the content before and this one."}
+    first_rows: {type: integer, description: "With page_break false, the table's rows on the page before it; the rest on pages of their own."}
+    cont_title: {type: string, description: "With first_rows, a line under the title of each page after the shared one."}
 
 rtf_figures:
   package: rtfreporter
@@ -611,6 +615,8 @@ rtf_figures:
     width_twips: {type: "integer|enum[fit]"}
     height_twips: {type: "integer|enum[fit]"}
     align: {type: "enum[left|center|right]"}
+    page_break: {type: logical, description: "FALSE: on under the content before it in the document, on the page that one ends on."}
+    space_before: {type: integer, description: "With page_break false, empty lines between the content before and this one."}
 
 rtf_titles:
   package: rtfreporter
@@ -618,7 +624,7 @@ rtf_titles:
   args:
     font_size_half_points: {type: integer}
     row_height_twips: {type: integer}
-    markup: {type: logical}
+    markup: {type: "enum[script|relational|all|none]|list<enum[script|relational]>"}
     font: {type: string}
     align: {type: "enum[left|center|right]"}
 
@@ -628,7 +634,7 @@ rtf_footnotes:
   args:
     font_size_half_points: {type: integer}
     row_height_twips: {type: integer}
-    markup: {type: logical}
+    markup: {type: "enum[script|relational|all|none]|list<enum[script|relational]>"}
     font: {type: string}
     align: {type: "enum[left|center|right]"}
 
@@ -1536,6 +1542,28 @@ rtf_footnotes:
         description: 'A word drawn diagonally behind every page (rtf_document(watermark
           = )); blank: none.'
         example: DRAFT
+      - column: page_break
+        at: rtf_tables.page_break
+        description: 'TRUE / FALSE: FALSE puts the report under the content before
+          it in the document, on the page that one ends on (rtf_tables(page_break
+          = ), a figure rtf_figures(page_break = )); blank: TRUE, a new page.'
+        example: 'FALSE'
+      - column: space_before
+        at: rtf_tables.space_before
+        description: 'With page_break FALSE, the empty lines between the content
+          before and this one (rtf_tables(space_before = )); blank: 0.'
+        example: '1'
+      - column: first_rows
+        at: rtf_tables.first_rows
+        description: 'With page_break FALSE, the table''s rows on the page before
+          it; the rest on pages of their own (rtf_tables(first_rows = )); blank:
+          the whole table.'
+        example: '12'
+      - column: cont_title
+        at: rtf_tables.cont_title
+        description: 'With first_rows, a line under the title of each page after
+          the shared one (rtf_tables(cont_title = )); blank: none.'
+        example: (continued)
       - column: figure_width_in
         description: 'A figure report: the figure''s width on the page -- a number
           of inches, or fit (the page''s body); drawn and placed so (rtf_figures(width_twips
