@@ -603,6 +603,10 @@ rtf_tables:
     auto_title: {type: logical}
     title_label_align: {type: "enum[left|center|right]"}
     font_size_half_points: {type: integer}
+    page_break: {type: logical, description: "FALSE: on under the content before it in the document, on the page that one ends on."}
+    space_before: {type: integer, description: "With page_break false, empty lines between the content before and this one."}
+    first_rows: {type: integer, description: "With page_break false, the table's rows on the page before it; the rest on pages of their own."}
+    cont_title: {type: string, description: "With first_rows, a line under the title of each page after the shared one."}
 
 rtf_figures:
   package: rtfreporter
@@ -611,6 +615,8 @@ rtf_figures:
     width_twips: {type: "integer|enum[fit]"}
     height_twips: {type: "integer|enum[fit]"}
     align: {type: "enum[left|center|right]"}
+    page_break: {type: logical, description: "FALSE: on under the content before it in the document, on the page that one ends on."}
+    space_before: {type: integer, description: "With page_break false, empty lines between the content before and this one."}
 
 rtf_titles:
   package: rtfreporter

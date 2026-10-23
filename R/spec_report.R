@@ -78,8 +78,20 @@
   }
   tt <- .page_band(pg, "titles", tokens)
   fn <- .page_band(pg, "footnotes", tokens)
+  # on the page of the content before it (rtfreporter's page_break = FALSE):
+  # said only when the page says it, the default (a new page) left out
+  flow <- function(a) {
+    a <- a[intersect(c("page_break", "space_before", "first_rows", "cont_title"), names(a))]
+    if (!isFALSE(a$page_break)) a$page_break <- NULL
+    if (!isFALSE(a$page_break) || identical(as.integer(a$space_before), 0L)) a$space_before <- NULL
+    a
+  }
   if (identical(kind, "figure")) {
     fa <- args_of("rtf_figures")
+    # (the report sheet says page_break, space_before for both kinds: under
+    # rtf_tables; the figure's own win)
+    ft <- args_of("rtf_tables")
+    fa <- c(fa, ft[setdiff(intersect(c("page_break", "space_before"), names(ft)), names(fa))])
     # a figure of items: its image is its tfl_image item (R/fig_content.R)
     img <- if (.fig_new_content(output$content)) .fig_split_content(output$content)$image
     # its size on the page: inches as twips, or the page's body (fit)
@@ -92,17 +104,17 @@
       fig <- .spec_call("rtfplot", .spec_sym(content),
                         render_width = sz$width_in, render_height = sz$height_in,
                         render_dpi = as.numeric(img$dpi %||% 300))
-      st[[length(st) + 1L]] <- .spec_call("rtf_figures", doc, fig)
+      st[[length(st) + 1L]] <- do.call(.spec_call, c(list("rtf_figures", doc, fig), flow(fa)))
     } else {
-      st[[length(st) + 1L]] <- .spec_call("rtf_figures", doc, .spec_sym(content),
+      st[[length(st) + 1L]] <- do.call(.spec_call, c(list("rtf_figures", doc, .spec_sym(content),
         width_twips = if (sz$mode[["width"]] != "native") twips(sz$width_in),
-        height_twips = if (sz$mode[["height"]] != "native") twips(sz$height_in))
+        height_twips = if (sz$mode[["height"]] != "native") twips(sz$height_in)), flow(fa)))
     }
   } else {
     ta <- args_of("rtf_tables")
     st[[length(st) + 1L]] <- do.call(.spec_call, c(list("rtf_tables", doc, .spec_sym(content)),
       ta[intersect(c("auto_section", "section_label_align", "auto_title",
-                     "title_label_align"), names(ta))]))
+                     "title_label_align"), names(ta))], flow(ta)))
   }
   if (length(tt)) {
     st[[length(st) + 1L]] <- .spec_call("rtf_titles", doc, list(tt),
