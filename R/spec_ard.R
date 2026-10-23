@@ -118,6 +118,6 @@
     d[order(k, seq_len(nrow(d))), , drop = FALSE]
   }
   ard <- b$ard
-  for (s in c("analysis_data", "analyses")) ard[[s]] <- in_toc(ard[[s]])
+  for (s in c("objects", "analysis_data", "analyses")) ard[[s]] <- in_toc(ard[[s]])
   list(spec = tfl_ard_spec(ard), codelists = b$table$codelists)
 }

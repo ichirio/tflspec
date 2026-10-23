@@ -729,6 +729,22 @@ rtf_footnotes:
         description: 'The population as a header or footnote prints it, and its name
           in CDISC ARS; blank: the population_id.'
         example: Safety Analysis Set
+  - sheet: objects
+    description: 'ARD: named values the program makes at its top (object_id <- code),
+      the study''s (output_id blank) before the reports'' own: an analysis names one
+      as its denominator, or in its args or where.'
+    columns:
+      - column: object_id
+        description: The value's name in the program (an R name; not a dataset's or
+          pop_<population>).
+        example: n_saf_jp
+      - column: code
+        description: R that makes the value (the datasets and pop_<population> in
+          reach).
+        example: 'c("Drug X" = 40, "Placebo" = 38)'
+      - column: label
+        description: 'What it is, a comment above it in the program; blank: none.'
+        example: Japanese subjects of the safety set
   - sheet: analysis_data
     description: 'ARD: named data the analyses read (the study''s, one row a data):
       from a dataset or an analysis data above it, the subjects of a population, the

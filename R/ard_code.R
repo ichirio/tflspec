@@ -427,6 +427,7 @@
   if (is.null(den) || is.na(den)) return(NULL)
   if (den == "population") return(population)
   if (den %in% .den_words) return(encodeString(den, quote = "\""))
+  if (den %in% .objects_sheet(x)$object_id) return(den)
   num <- .den_numbers(den)
   if (!is.null(num)) {
     if (is.null(names(num))) return(sprintf("%dL", num))
@@ -876,6 +877,12 @@
   own_data <- several && length(levels) > 0L
   lv_of <- function(o) if (is.null(levels)) NULL else levels[[o]]
   lv1 <- if (!several) lv_of(outs[1L])
+  # the named values: the study's, then each report's (in its part)
+  ob_all <- .objects_sheet(x)
+  ob_study <- .objects_lines(ob_all[is.na(ob_all$output_id), , drop = FALSE])
+  ob_report <- function(o) {
+    .objects_lines(ob_all[!is.na(ob_all$output_id) & ob_all$output_id == o, , drop = FALSE])
+  }
   code <- if (!several) c(sprintf("report_id <- %s", .q(outs[1L])), "")
   if (own_data) {
     used_ds <- character()
@@ -892,6 +899,8 @@
               "# ---- data ----",
               dl$data,
               if (length(dl$pops)) c("", "# ---- populations ----", dl$pops))
+    ob1 <- c(ob_study, if (!several) ob_report(outs[1L]))
+    if (length(ob1)) code <- c(code, "", "# ---- objects ----", ob1)
   }
   keys <- tfl_ard_methods()
   par <- a$parent %||% rep(NA_character_, nrow(a))
@@ -907,13 +916,15 @@
       dl <- .ard_data_lines(x, a[rows, , drop = FALSE], nad_of(o), lv)
       used_ds <- dl$used_ds
       pops <- dl$pops_id
-      part <- c(if (length(lv)) .codelists_lines(lv), dl$data, dl$pops)
+      part <- c(if (length(lv)) .codelists_lines(lv), dl$data, dl$pops, ob_study)
     }
+    if (several) part <- c(part, ob_report(o))
     # each analysis's data: the dataset, restricted to the population's
     # subjects (or the population itself when it is that dataset), and to
     # the analysis's own subset -- made once, under a name, for every
     # analysis that reads it
-    taken <- c(.r_name(used_ds), paste0("pop_", .r_name(pops)), ad_o$data_id)
+    taken <- c(.r_name(used_ds), paste0("pop_", .r_name(pops)), ad_o$data_id,
+               ob_all$object_id)
     data_of <- character()
     # the columns each analysis data's analyses read (by, strata,
     # variables; a denominator's by): kept by a data that keeps columns
