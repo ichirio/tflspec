@@ -7,7 +7,13 @@
   by position ...): an item any of whose arguments no column says goes
   whole, as YAML, into the `tables` sheet's new column `content_more` (not
   into the other sheets as well), and is read back into the content by its
-  verb's rank. The defaults' items too (0.0.24.9222).
+  verb's rank. The defaults' items too.  A table's (or a listing's) verb
+  called twice is put together in one call when the content is read, as
+  rtfreporter puts the two layers together -- a later call's arguments
+  winning, key by key; `plan_hide()`'s columns adding up -- and a message
+  says so; the verbs whose calls are layers of their own (filters,
+  comparisons, cell styles, steps after, titles of other pages) are left
+  as they are, and a figure's content is not touched (0.0.24.9222).
 
 * **Listing sheets keep what their columns cannot say** (#447): YAML ->
   sheets -> YAML no longer drops a listing's other items (`plan_hide`,

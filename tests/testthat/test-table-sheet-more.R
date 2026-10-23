@@ -50,11 +50,11 @@ test_that("the items the sheets cannot say: whole in content_more, and back", {
   for (fn in c("plan_titles", "plan_after", "plan_digits", "plan_style", "plan_columns")) {
     expect_match(cm, paste0("- ", fn, ":"), fixed = TRUE)
   }
-  # the first plan_hide said by the columns sheet, the second kept whole
-  expect_match(cm, "cols: B", fixed = TRUE)
+  # plan_hide twice: one call when read (R/plan_repeats.R), its columns
+  # added up, said by the columns sheet
+  expect_false(grepl("plan_hide", cm, fixed = TRUE))
   cl <- sh$table$columns
-  expect_identical(cl$hide[cl$output_id %in% "T-14-1-1" & cl$column %in% "A"], "TRUE")
-  expect_false(any(cl$column %in% "B"))
+  expect_identical(cl$hide[cl$output_id %in% "T-14-1-1" & cl$column %in% c("A", "B")], c("TRUE", "TRUE"))
   # never both: plan_style's border and the widths are not on the other sheets
   st <- sh$table$style
   expect_true(!any(st$output_id %in% "T-14-1-1") ||
