@@ -1,7 +1,7 @@
 # tflspec (development version)
 
 * The data the ARD program makes itself is named `<dataset>_sub`
-  (0.0.24.9219): an analysis set's (`adsl_sub`, was `pop_saf`) and an
+  (0.0.24.9220): an analysis set's (`adsl_sub`, was `pop_saf`) and an
   analysis's own records (`adae_sub`, was `adae_saf`), numbered from a
   report's second of a dataset (`adsl_sub2`), each under a comment saying
   what it is (`# adsl_sub: SAF — Safety Analysis Set (SAFFL == "Y")`).
@@ -13,6 +13,8 @@
   `tfl_ard_data_names()` says each analysis's data by the program's name.
 
 * Named values in the ARD definition (0.0.24.9215): sheet `objects`
+
+* Named values in the ARD definition (0.0.24.9219): sheet `objects`
   (`output_id`, `object_id`, `code`, `label`), data.yml `objects:` for
   the study's and a report's `ard: objects:` for its own, each
   `{id, code: !r ..., label}`.  The ARD program makes them at its top
@@ -22,6 +24,8 @@
   its scope, code that is R.
 
 * An analysis's `denominator` can be numbers (0.0.24.9214): one
+
+* An analysis's `denominator` can be numbers (0.0.24.9218): one
   (`denominator: 86`, every column's N) or one a value of the analysis's
   `by` (`denominator: {Drug X: 86, Placebo: 85}`, in the sheet
   `c("Drug X" = 86, "Placebo" = 85)`).  The ARD program writes the one
@@ -30,6 +34,22 @@
   counts the same way for a tabulation and a nested count.  A vector
   without names, a number not whole, or `by` of more than one variable is
   a problem of the definition.
+
+* **No page argument is dropped any more** (#444): `page.rtf_titles` and
+  `page.rtf_footnotes` write `row_height_twips`, `markup`, `font` and
+  `align` (not only `font_size_half_points`), `page.rtf_figures` its
+  `align`, and `page.rtf_tables` a `font_size_half_points` left on the page
+  (a content of R code) -- the schema took them, the program left them out.
+  `markup` takes rtfreporter's words (`"script"`, `"relational"`, `"all"`,
+  `"none"`), no longer `TRUE` / `FALSE` (0.0.24.9217).
+
+* **A report on the page of the content before it** (#443): a report's
+  `page.rtf_tables` says `page_break`, `space_before`, `first_rows` and
+  `cont_title`, and `page.rtf_figures` `page_break` and `space_before`, as
+  rtfreporter's `rtf_tables()` / `rtf_figures()` take them; the report
+  sheet has the same columns.  The generated call passes them only when the
+  report is not on a page of its own (`page_break: false`).  They take effect
+  in a document that holds content before the report's (0.0.24.9216).
 
 * `tfl_ai_prepare()`'s `toc` (a dry run's too) says each report's `parts`,
   `parts_row` and `same_number`, as `tfl_ai_read_shell()$toc` does: a
