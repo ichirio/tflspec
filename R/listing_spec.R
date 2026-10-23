@@ -59,14 +59,14 @@ tfl_read_data_code <- function(datasets, dataset) {
 
 .listing_sheets <- list(
   listings     = c("output_id", "type", "dataset", "where", "sort",
-                   "max_rows", "blank_row", "wrap", "content_more"),
+                   "max_rows", "blank_row", "wrap", "align", "record", "content_more"),
   listing_cols = c("output_id", "vars", "label", "width", "sep", "align",
                    "collapse_repeats", "more"))
 
 # the arguments the sheets' columns say: plan_listing()'s on the listings
 # row, listing_col()'s on its listing_cols row; the rest go as YAML in
 # content_more / more
-.listing_row_said <- c("type", "wrap")
+.listing_row_said <- c("type", "wrap", "align", "record")
 .listing_col_said <- c("vars", "label", "width", "sep", "align", "collapse_repeats")
 
 # what the sheets' columns cannot say, as YAML text for a cell: content
@@ -425,7 +425,9 @@ tfl_listing_code <- function(spec, output_id = NULL, datasets,
     list(.cl("list", lapply(col_code, .step_cl))),
     list(type = encodeString(type, quote = "\"")),
     if (!is.na(l$blank_row)) list(blank_row = toupper(l$blank_row)),
-    if (!is.na(l$wrap)) list(wrap = as.character(l$wrap))))
+    if (!is.na(l$wrap)) list(wrap = as.character(l$wrap)),
+    if (!is.na(l$align %||% NA)) list(align = encodeString(l$align, quote = "\"")),
+    if (!is.na(l$record %||% NA)) list(record = .listing_record_code(l$record))))
   lay_out <- c(
     "",
     paste("lst <-", .lay(spec, lead = 7L)),
@@ -535,8 +537,21 @@ tfl_listing <- function(data, spec, output_id = NULL, type = "multiline") {
   if (!is.na(l$wrap)) {
     la$wrap <- eval(str2lang(l$wrap), parent.frame())
   }
+  if (!is.na(l$align %||% NA)) la$align <- l$align
+  if (!is.na(l$record %||% NA)) la$record <- .listing_record_value(l$record)
   lst <- do.call(rtfreporter::listing_spec, la)
   args <- list(data, listing = lst)
   if (!is.na(l$max_rows)) args$max_rows <- as.numeric(l$max_rows)
   do.call(rtfreporter::as_rtftables, args)
+}
+
+# A listing's `record` cell (listing_spec(record = )): TRUE / FALSE, or the
+# hidden record column's name
+.listing_record_value <- function(x) {
+  v <- toupper(trimws(x))
+  if (v %in% c("TRUE", "FALSE")) v == "TRUE" else trimws(x)
+}
+.listing_record_code <- function(x) {
+  v <- .listing_record_value(x)
+  if (is.logical(v)) toupper(as.character(v)) else encodeString(v, quote = "\"")
 }
