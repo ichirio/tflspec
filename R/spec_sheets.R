@@ -190,18 +190,36 @@ tfl_sheets_from_spec <- function(study, outputs) {
     } else if (o$kind == "listing") {
       lr <- list(output_id = id)
       for (k in c("dataset", "where", "sort")) if (!is.null(o$data[[k]])) lr[[k]] <- cell(o$data[[k]])
+      # what the listing sheets' columns cannot say is kept as YAML: the
+      # items in the listing's content_more, a column's other arguments in
+      # its row's more (read back by .conv_output(): nothing lost)
+      more <- list()
+      said <- character()
       for (it in if (code_content) list() else o$content) {
-        if (identical(it$fn, "plan_listing")) {
-          for (cl in it$args$cols %||% list()) {
-            if (inherits(cl, "tfl_call")) listing_cols[[length(listing_cols) + 1L]] <- c(list(output_id = id), lapply(cl$args, cell))
+        a <- it$args
+        if (identical(it$fn, "plan_listing") && !"plan_listing" %in% said) {
+          said <- c(said, it$fn)
+          for (cl in a$cols %||% list()) {
+            if (!inherits(cl, "tfl_call")) next
+            row <- c(list(output_id = id), lapply(cl$args[intersect(names(cl$args), .listing_col_said)], cell))
+            rest <- cl$args[setdiff(names(cl$args), .listing_col_said)]
+            if (length(rest)) row$more <- .listing_more_out(rest)
+            listing_cols[[length(listing_cols) + 1L]] <- row
           }
-          for (k in setdiff(names(it$args), "cols")) lr[[k]] <- cell(it$args[[k]])
-        } else if (identical(it$fn, "plan_blanks")) {
-          if (identical(it$args$where, "records")) lr$blank_row <- "TRUE"
-        } else if (identical(it$fn, "plan_paginate_rows")) {
-          if (!is.null(it$args$max_rows)) lr$max_rows <- cell(it$args$max_rows)
-        } else note(id, paste0("content.", it$fn), "a listing item the listing sheets do not hold")
+          ks <- setdiff(names(a), "cols")
+          for (k in intersect(ks, .listing_row_said)) lr[[k]] <- cell(a[[k]])
+          if (length(setdiff(ks, .listing_row_said))) {
+            more <- c(more, list(tfl_item("plan_listing", a[setdiff(ks, .listing_row_said)])))
+          }
+        } else if (identical(it$fn, "plan_blanks") && identical(names(a), "where") &&
+                   identical(a$where, "records") && is.null(lr$blank_row)) {
+          lr$blank_row <- "TRUE"
+        } else if (identical(it$fn, "plan_paginate_rows") && identical(names(a), "max_rows") &&
+                   is.null(lr$max_rows)) {
+          lr$max_rows <- cell(a$max_rows)
+        } else more <- c(more, list(it))
       }
+      if (length(more)) lr$content_more <- .listing_more_out(more, items = TRUE)
       listings[[length(listings) + 1L]] <- lr
     } else if (o$kind == "figure" && .fig_new_content(o$content)) {
       # a figure of items (R/fig_content.R): its data and items as they are

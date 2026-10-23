@@ -1,5 +1,13 @@
 # tflspec (development version)
 
+* **Listing sheets keep what their columns cannot say** (#447): YAML ->
+  sheets -> YAML no longer drops a listing's other items (`plan_hide`,
+  `plan_paginate_group`, a `plan_paginate_rows()` with `page_by`, ...) or a
+  column's other `listing_col()` arguments (`name`, `rel_width`, `layout`):
+  the `listings` sheet's new column `content_more` holds those items as
+  YAML, the `listing_cols` sheet's `more` a column's other arguments, and
+  they are read back as they were (0.0.24.9221).
+
 * `tfl_ai_prepare()`'s `toc` (a dry run's too) says each report's `parts`,
   `parts_row` and `same_number`, as `tfl_ai_read_shell()$toc` does: a
   caller need not read the workbook again (0.0.24.9213).

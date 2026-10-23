@@ -59,9 +59,28 @@ tfl_read_data_code <- function(datasets, dataset) {
 
 .listing_sheets <- list(
   listings     = c("output_id", "type", "dataset", "where", "sort",
-                   "max_rows", "blank_row", "wrap"),
+                   "max_rows", "blank_row", "wrap", "content_more"),
   listing_cols = c("output_id", "vars", "label", "width", "sep", "align",
-                   "collapse_repeats"))
+                   "collapse_repeats", "more"))
+
+# the arguments the sheets' columns say: plan_listing()'s on the listings
+# row, listing_col()'s on its listing_cols row; the rest go as YAML in
+# content_more / more
+.listing_row_said <- c("type", "wrap")
+.listing_col_said <- c("vars", "label", "width", "sep", "align", "collapse_repeats")
+
+# what the columns cannot say, as YAML text for a cell: content items
+# (`- fn: {args}`), or a column's other arguments (a map); and back
+.listing_more_out <- function(x, items = FALSE) {
+  y <- if (items) .items_to_list(x) else .calls_out(x)
+  txt <- yaml::as.yaml(y, indent.mapping.sequence = TRUE, handlers = .yaml_out_handlers())
+  sub("\n$", "", txt)
+}
+.listing_more_in <- function(txt, items = FALSE) {
+  if (is.null(txt) || is.na(txt) || !nzchar(trimws(txt))) return(if (items) list() else NULL)
+  y <- yaml::yaml.load(txt, handlers = .yaml_handlers())
+  if (items) lapply(y, .item_from_list) else .calls_in(y)
+}
 
 # a sheet as the definition keeps it: its columns, in order, as text; blank
 # cells NA; rows with nothing but an output_id dropped
