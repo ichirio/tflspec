@@ -1,7 +1,7 @@
 # tflspec (development version)
 
 * In a table with columns (`table_plan(cols = TRT01A)`), every analysis
-  has its `by` (0.0.24.9232): one without is a problem of the study's ARD
+  has its `by` (0.0.24.9233): one without is a problem of the study's ARD
   definition that says the `by` to write (`by: [TRT01A]`), but for the
   columns' own count (the N), a `custom` analysis, one inside another and
   the study's N; `by: []` (in the sheet `(none)`) says an analysis has no
