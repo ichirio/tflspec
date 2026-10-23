@@ -1,5 +1,13 @@
 # tflspec (development version)
 
+* **A report's own `data:` with a figure template** (#446): its steps (the
+  data stage: the analysis set, the parameter, the records kept) come
+  first, then the template's call steps (the fit and what the call makes
+  from it); the template's call stays on, and `tfl_template_to_spec()`
+  writes the same.  Before, the report's steps replaced the template's
+  whole list, the fit with it.  Without own steps, and for a table's
+  template, nothing changes (0.0.24.9219).
+
 * `tfl_ai_prepare()`'s `toc` (a dry run's too) says each report's `parts`,
   `parts_row` and `same_number`, as `tfl_ai_read_shell()$toc` does: a
   caller need not read the workbook again (0.0.24.9213).
