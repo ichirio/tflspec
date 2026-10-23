@@ -6,7 +6,7 @@
   `align`, and `page.rtf_tables` a `font_size_half_points` left on the page
   (a content of R code) -- the schema took them, the program left them out.
   `markup` takes rtfreporter's words (`"script"`, `"relational"`, `"all"`,
-  `"none"`), no longer `TRUE` / `FALSE` (0.0.24.9218).
+  `"none"`), no longer `TRUE` / `FALSE` (0.0.24.9217).
 
 * **A report on the page of the content before it** (#443): a report's
   `page.rtf_tables` says `page_break`, `space_before`, `first_rows` and
