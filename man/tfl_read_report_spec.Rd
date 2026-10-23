@@ -62,7 +62,9 @@ together.  A sheet found in two of them is an error.
 \code{{PROGRAM}}; blank: the file name of the program that runs, and
 \code{{output_id}} only when none is found -- rtfreporter's
 \code{program_fallback}), \code{auto_section}, \code{section_align},
-\code{auto_title}, \code{title_align} (as \code{\link[rtfreporter:rtf_tables]{rtfreporter::rtf_tables()}} takes them), and
+\code{auto_title}, \code{title_align} (as \code{\link[rtfreporter:rtf_tables]{rtfreporter::rtf_tables()}} takes them),
+\code{page_break}, \code{space_before}, \code{first_rows}, \code{cont_title} (on the page of the
+content before it: \code{\link[rtfreporter:rtf_tables]{rtfreporter::rtf_tables()}}; a figure the first two), and
 \code{table_font_size_half_points}, \code{title_font_size_half_points},
 \code{footnote_font_size_half_points},
 and \code{page_header} / \code{page_footer} (\code{FALSE} drops that running band for

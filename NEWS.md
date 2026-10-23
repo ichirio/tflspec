@@ -6,7 +6,15 @@
   from it); the template's call stays on, and `tfl_template_to_spec()`
   writes the same.  Before, the report's steps replaced the template's
   whole list, the fit with it.  Without own steps, and for a table's
-  template, nothing changes (0.0.24.9219).
+  template, nothing changes (0.0.24.9218).
+
+* **A report on the page of the content before it** (#443): a report's
+  `page.rtf_tables` says `page_break`, `space_before`, `first_rows` and
+  `cont_title`, and `page.rtf_figures` `page_break` and `space_before`, as
+  rtfreporter's `rtf_tables()` / `rtf_figures()` take them; the report
+  sheet has the same columns.  The generated call passes them only when the
+  report is not on a page of its own (`page_break: false`).  They take effect
+  in a document that holds content before the report's (0.0.24.9216).
 
 * `tfl_ai_prepare()`'s `toc` (a dry run's too) says each report's `parts`,
   `parts_row` and `same_number`, as `tfl_ai_read_shell()$toc` does: a
