@@ -1,6 +1,6 @@
 # The AI steps over several workbooks: a TOC and its shells in workbooks of
 # their own (tfl_ai_read_shell(shells = )), and a study's requests added to
-# one workbook at a time (tfl_ai_prepare(add = TRUE)) (#378)
+# one workbook at a time (tfl_ai_prepare(unit = "toc", add = TRUE)) (#378)
 
 books_adam <- function(root) {
   ad <- file.path(root, "adam")
@@ -77,7 +77,7 @@ test_that("tfl_ai_prepare(shells = , add = TRUE): one workbook at a time, the re
   d <- file.path(root, "study")
   ad <- books_adam(root)
   f <- split_books(root)
-  r <- tfl_ai_prepare(d, f[1L], shells = f[2L], adam = ad, quiet = TRUE, mode = "agent", size = 3L)
+  r <- tfl_ai_prepare(unit = "toc", d, f[1L], shells = f[2L], adam = ad, quiet = TRUE, mode = "agent", size = 3L)
   expect_identical(unique(r$requests$book), "shells.xlsx")
   expect_identical(unique(r$toc$book), "shells.xlsx")
   # an agent request names both files
@@ -87,7 +87,7 @@ test_that("tfl_ai_prepare(shells = , add = TRUE): one workbook at a time, the re
   # an answer saved before the next workbook is added
   tfl_ai_save_answer(d, "ae-1", "an answer")
   m <- more_book(root)
-  r2 <- tfl_ai_prepare(d, m, adam = ad, quiet = TRUE, mode = "agent", size = 3L, add = TRUE)
+  r2 <- tfl_ai_prepare(unit = "toc", d, m, adam = ad, quiet = TRUE, mode = "agent", size = 3L, add = TRUE)
   expect_identical(r2$requests$request, c(r$requests$request, "ae-2"))
   expect_identical(r2$requests$book[r2$requests$request == "ae-2"], "more.xlsx")
   expect_identical(r2$requests$outputs[r2$requests$request == "ae-2"], "T-14-3-2")
@@ -103,17 +103,17 @@ test_that("tfl_ai_prepare(shells = , add = TRUE): one workbook at a time, the re
   expect_identical(vapply(toc, `[[`, "", "id"),
                    c("T-14-1-1", "T-14-2-1", "F-14-2-2", "T-14-3-1", "T-14-3-5", "T-14-3-2"))
   # the same workbook again: stopped; asked again with overwrite
-  expect_error(tfl_ai_prepare(d, m, adam = ad, quiet = TRUE, add = TRUE),
+  expect_error(tfl_ai_prepare(unit = "toc", d, m, adam = ad, quiet = TRUE, add = TRUE),
                "T-14-3-2 already asked for \\(ae-2\\)")
   # the study's own files kept, whatever overwrite says
   keep <- c("study.yml", "spec/data.yml", "spec/defaults.yml", "AGENTS.md")
   for (f in file.path(d, keep)) cat("# the study's own line\n", file = f, append = TRUE)
   before <- lapply(file.path(d, keep), readLines)
-  r3 <- tfl_ai_prepare(d, m, adam = ad, quiet = TRUE, add = TRUE, overwrite = TRUE)
+  r3 <- tfl_ai_prepare(unit = "toc", d, m, adam = ad, quiet = TRUE, add = TRUE, overwrite = TRUE)
   expect_identical(lapply(file.path(d, keep), readLines), before)
   expect_identical(sum(r3$requests$outputs == "T-14-3-2"), 1L)
   expect_identical(nrow(r3$requests), nrow(r2$requests))
   # without add, the requests are written anew (as before)
-  r4 <- tfl_ai_prepare(d, m, adam = ad, quiet = TRUE)
+  r4 <- tfl_ai_prepare(unit = "toc", d, m, adam = ad, quiet = TRUE)
   expect_identical(r4$requests$request, "ae-1")
 })

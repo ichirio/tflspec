@@ -12,12 +12,12 @@ prep_example <- function(d) {
   }
   ex <- system.file("ai", "example", package = "tflspec")
   tfl_ai_study_init(d, adam = "adam", study_id = "XYZ-ONC-01", overwrite = TRUE)
-  suppressMessages(tfl_ai_write_requests(d, tfl_ai_read_shell(file.path(ex, "onco_toc_shell.xlsx")),
+  suppressMessages(tfl_ai_write_requests(unit = "toc", d, tfl_ai_read_shell(file.path(ex, "onco_toc_shell.xlsx")),
                                          tfl_ai_adam_summary(file.path(d, "adam")), overwrite = TRUE))
   d
 }
 answer_of <- function(name) {
-  readLines(system.file("ai", "example", "answers", paste0(name, ".md"), package = "tflspec"),
+  readLines(test_path("fixtures", "answers-toc", paste0(name, ".md")),
             encoding = "UTF-8")
 }
 put <- function(d, name, lines) {

@@ -152,7 +152,7 @@ show the code.
 ## A whole study (up to ~200 tables)
 
 1. **Start small**: `size = 2` or `3`. Do one request of each family
-   (`demographics-1`, `ae-1`, `labs-1` ...) and check its RTF against the
+   (`demographics-1`, `ae-1`, `efficacy-1` ...) and check its RTF against the
    shell.
 2. **Fix one table of each family by hand**, then write the requests again
    with them as examples, named by family — each request gets its own
@@ -239,7 +239,7 @@ r     <- tfl_ai_write_requests(d, shell, tfl_ai_adam_summary(file.path(d, "adam"
 # the stored answers stand in for the chat's: one a request
 invisible(file.copy(list.files(file.path(ex, "answers"), full.names = TRUE),
                     file.path(d, "ai", "answers"), overwrite = TRUE))
-tfl_ai_collect_answers(d)            # 5 reports in 5 requests: ok 5 ...
+tfl_ai_collect_answers(d)            # 5 reports in 4 requests (a shell sheet each, the figure its own): ok 5 ...
 ```
 
 Keep the `ai/` folder (requests, answers) — share it only within your company.

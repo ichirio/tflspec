@@ -131,7 +131,11 @@
 .ai_context_table <- function(ctx) {
   out <- .ai_context_study(ctx)
   out <- c(out, "## The reports to write", "")
-  if (!is.null(ctx$titles)) {
+  if (isTRUE(ctx$sheet_mode)) {
+    out <- c(out, paste("The reports the shell sheet(s) below make: one report file a report,",
+                        "its id as the lines above the workbook's text say; write the ids you",
+                        "chose in the header's `outputs`."), "")
+  } else if (!is.null(ctx$titles)) {
     t <- ctx$titles
     t$title[is.na(t$title)] <- ""
     out <- c(out, paste("One report file each, in this order; `id` is the number as",
@@ -396,7 +400,27 @@
 .ai_check_table <- function(answer, context) {
   p <- .ai_problems()
   outs <- answer$outputs
-  if (!length(outs)) return(.ai_problem(p, "outputs", "holds no report"))
+  if (!length(outs)) {
+    # (a sheet that is no shell: no report, said as an assumption)
+    if (isTRUE(context$sheet_mode)) {
+      return(.ai_problem(p, "outputs", "holds no report (the sheet is no shell, the answer says)",
+                         "warning"))
+    }
+    return(.ai_problem(p, "outputs", "holds no report"))
+  }
+  # a sheet's request: its reports are the AI's to name; one that is no TOC
+  # item's number is said
+  if (isTRUE(context$sheet_mode) && length(context$toc_keys)) {
+    for (id in names(outs)) {
+      k <- .ai_id_key(id)
+      base <- if (!is.na(k)) sub("[A-Z]$", "", k) else k
+      if (is.na(k) || !(length(.ai_id_match(k, context$toc_keys)) ||
+                        length(.ai_id_match(base, context$toc_keys)))) {
+        p <- .ai_problem(p, paste("outputs", id),
+                         "is no TOC item's number: check the number the sheet writes", "warning")
+      }
+    }
+  }
   want <- context$outputs
   if (length(want)) {
     wk <- .ai_id_key(want)

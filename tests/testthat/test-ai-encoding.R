@@ -15,7 +15,7 @@ enc_study <- function() {
   ex <- system.file("ai", "example", package = "tflspec")
   shell <- tfl_ai_read_shell(file.path(ex, "onco_toc_shell.xlsx"))
   adam <- tfl_ai_adam_summary(file.path(d, "adam"))
-  r <- suppressMessages(tfl_ai_write_requests(d, shell, adam))
+  r <- suppressMessages(tfl_ai_write_requests(unit = "toc", d, shell, adam))
   list(dir = d, ex = ex, r = r, ans = file.path(d, "ai", "answers"))
 }
 
@@ -30,7 +30,7 @@ write_raw <- function(x, f) writeBin(x, f)
 # an answer's text with a Japanese label in place of the English one
 jp_label <- "人口統計学的特性及びベースライン特性"
 answer_text <- function(s, request, jp = FALSE) {
-  x <- readLines(file.path(s$ex, "answers", paste0(request, ".md")), encoding = "UTF-8")
+  x <- readLines(file.path(test_path("fixtures"), "answers-toc", paste0(request, ".md")), encoding = "UTF-8")
   if (jp) x <- sub("label: Demographic and Baseline Characteristics", paste("label:", jp_label),
                    x, fixed = TRUE)
   x

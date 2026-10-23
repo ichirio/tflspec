@@ -1,4 +1,4 @@
-# tfl_ai_prepare(templates = TRUE / FALSE): the requests ask for a template
+# tfl_ai_prepare(unit = "toc", templates = TRUE / FALSE): the requests ask for a template
 # where one fits (listed from the registry), or the code SPEC only (as
 # before); an answer's template checked, expanded and built; the
 # comparison of the two
@@ -23,12 +23,12 @@ test_that("templates = TRUE / FALSE: the setting at each request's head; FALSE a
   ad <- aitpl_study(root)
   d1 <- file.path(root, "with")
   d0 <- file.path(root, "without")
-  r1 <- tfl_ai_prepare(d1, aitpl_book(), adam = ad, quiet = TRUE, instructions = "each")
-  r0 <- tfl_ai_prepare(d0, aitpl_book(), adam = ad, quiet = TRUE, instructions = "each", templates = FALSE)
+  r1 <- tfl_ai_prepare(unit = "toc", d1, aitpl_book(), adam = ad, quiet = TRUE, instructions = "each")
+  r0 <- tfl_ai_prepare(unit = "toc", d0, aitpl_book(), adam = ad, quiet = TRUE, instructions = "each", templates = FALSE)
   expect_true(r1$templates)
   expect_false(r0$templates)
   expect_identical(r1$requests$request, r0$requests$request)
-  expect_error(tfl_ai_prepare(d0, aitpl_book(), adam = ad, quiet = TRUE, instructions = "each", templates = "prefer"),
+  expect_error(tfl_ai_prepare(unit = "toc", d0, aitpl_book(), adam = ad, quiet = TRUE, instructions = "each", templates = "prefer"),
                "TRUE .* or FALSE")
   for (i in seq_len(nrow(r1$requests))) {
     with <- readLines(file.path(d1, r1$requests$file[i]), encoding = "UTF-8")
@@ -57,12 +57,12 @@ test_that("templates = TRUE / FALSE: the setting at each request's head; FALSE a
   expect_true(any(grepl("`demog_x`: .*variant of demog", tflspec:::.ai_templates_list("table"))))
   # the agent's instructions say it too
   da <- file.path(root, "agent")
-  ra <- tfl_ai_prepare(da, aitpl_book(), adam = ad, quiet = TRUE, mode = "agent", size = 3L)
+  ra <- tfl_ai_prepare(unit = "toc", da, aitpl_book(), adam = ad, quiet = TRUE, mode = "agent", size = 3L)
   ag <- readLines(file.path(da, "AGENTS.md"), encoding = "UTF-8")
   expect_true(any(grepl("## Templates first", ag, fixed = TRUE)))
   expect_match(ra$agent_prompt, "template where one fits", fixed = TRUE)
   db <- file.path(root, "agent0")
-  rb <- tfl_ai_prepare(db, aitpl_book(), adam = ad, quiet = TRUE, mode = "agent", size = 3L, templates = FALSE)
+  rb <- tfl_ai_prepare(unit = "toc", db, aitpl_book(), adam = ad, quiet = TRUE, mode = "agent", size = 3L, templates = FALSE)
   expect_false(any(grepl("Templates first", readLines(file.path(db, "AGENTS.md")), fixed = TRUE)))
   expect_false(grepl("template", rb$agent_prompt, fixed = TRUE))
 })
@@ -77,7 +77,7 @@ test_that("answers with templates: checked, written, built (RTF, PNG); a bad arg
   root <- withr::local_tempdir()
   ad <- aitpl_study(root)
   d <- file.path(root, "study")
-  r <- tfl_ai_prepare(d, aitpl_book(), adam = ad, quiet = TRUE, instructions = "each")
+  r <- tfl_ai_prepare(unit = "toc", d, aitpl_book(), adam = ad, quiet = TRUE, instructions = "each")
   tfl_ai_save_answer(d, "demographics-1", aitpl_answer(
     "tflspec_ai: {task: table, version: 1, outputs: [T-14-1-1]}",
     "outputs:",
@@ -169,7 +169,7 @@ test_that("answers with templates: checked, written, built (RTF, PNG); a bad arg
   expect_true(file.exists(file.path(d, "ai", "compare.csv")))
   expect_identical(names(cmp), c("output_id", "request", "templates", "answered_with", "values",
                                  "check", "repairs"))
-  expect_setequal(cmp$output_id, r$toc$output_id)
+  expect_setequal(cmp$output_id, r$toc$toc_id)
   by_id <- function(col) stats::setNames(cmp[[col]], cmp$output_id)
   expect_identical(unname(by_id("answered_with")[c("T-14-1-1", "T-14-3-1", "T-14-3-5", "F-14-2-2",
                                                    "T-14-2-1")]),
@@ -196,8 +196,8 @@ test_that("mode = \"agent\": what every request repeats is a file, written once"
   ad <- aitpl_study(root)
   d1 <- file.path(root, "with")
   d0 <- file.path(root, "without")
-  r1 <- tfl_ai_prepare(d1, aitpl_book(), adam = ad, quiet = TRUE, mode = "agent", size = 3L)
-  r0 <- tfl_ai_prepare(d0, aitpl_book(), adam = ad, quiet = TRUE, mode = "agent", size = 3L, templates = FALSE)
+  r1 <- tfl_ai_prepare(unit = "toc", d1, aitpl_book(), adam = ad, quiet = TRUE, mode = "agent", size = 3L)
+  r0 <- tfl_ai_prepare(unit = "toc", d0, aitpl_book(), adam = ad, quiet = TRUE, mode = "agent", size = 3L, templates = FALSE)
   for (f in c("ai/instructions-table.md", "ai/instructions-figure.md", "ai/templates.md")) {
     expect_true(f %in% r1$files, info = f)
   }
@@ -246,8 +246,8 @@ test_that("a chat's request over max_chars: the templates' arguments by name onl
   ad <- aitpl_study(root)
   d1 <- file.path(root, "full")
   d2 <- file.path(root, "short")
-  r1 <- tfl_ai_prepare(d1, aitpl_book(), adam = ad, quiet = TRUE, instructions = "each")
-  r2 <- suppressWarnings(tfl_ai_prepare(d2, aitpl_book(), adam = ad, quiet = TRUE, instructions = "each",
+  r1 <- tfl_ai_prepare(unit = "toc", d1, aitpl_book(), adam = ad, quiet = TRUE, instructions = "each")
+  r2 <- suppressWarnings(tfl_ai_prepare(unit = "toc", d2, aitpl_book(), adam = ad, quiet = TRUE, instructions = "each",
                                         max_chars = 45000))
   ae1 <- paste(readLines(file.path(d1, "ai", "requests", "ae-1.md"), encoding = "UTF-8"), collapse = "\n")
   ae2 <- paste(readLines(file.path(d2, "ai", "requests", "ae-1.md"), encoding = "UTF-8"), collapse = "\n")
@@ -265,10 +265,10 @@ test_that("tfl_ai_compare(): a study without templates; no answer; a repair coun
   root <- withr::local_tempdir()
   ad <- aitpl_study(root)
   d <- file.path(root, "study")
-  r <- tfl_ai_prepare(d, aitpl_book(), adam = ad, quiet = TRUE, instructions = "each", templates = FALSE)
+  r <- tfl_ai_prepare(unit = "toc", d, aitpl_book(), adam = ad, quiet = TRUE, instructions = "each", templates = FALSE)
   cmp <- tfl_ai_compare(d, file = NULL)
   expect_false(file.exists(file.path(d, "ai", "compare.csv")))
-  expect_setequal(cmp$output_id, r$toc$output_id)
+  expect_setequal(cmp$output_id, r$toc$toc_id)
   expect_false(any(cmp$templates))
   expect_true(all(is.na(cmp$answered_with)))
   expect_true(all(cmp$check == "no answer"))
