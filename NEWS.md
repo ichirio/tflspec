@@ -1,5 +1,16 @@
 # tflspec (development version)
 
+* **Fonts per script and their languages** (#449, rtfreporter#715): a font
+  table entry's `name` is one family or a family per script slot (`latin`,
+  `east_asian`, `complex`, `hansi`), the titles' and footnotes' `font` too;
+  `page.rtf_document.font_lang` gives a slot's language (`east_asian: ja`).
+  The report's `rtf_document()` call writes them as rtfreporter takes them
+  (named vectors), the study setup as `options(rtfreporter.font =,
+  rtfreporter.font_lang =)`, and the page sheet's `font` / new `font_lang`
+  columns say them as `latin = X | east_asian = Y` -- before, a slotted
+  family was lost on the sheets' path.  rtfreporter (>= 0.8.2.9094)
+  (0.0.24.9223).
+
 * **No page argument is dropped any more** (#444): `page.rtf_titles` and
   `page.rtf_footnotes` write `row_height_twips`, `markup`, `font` and
   `align` (not only `font_size_half_points`), `page.rtf_figures` its

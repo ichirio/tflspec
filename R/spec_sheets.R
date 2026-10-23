@@ -354,7 +354,13 @@ tfl_sheets_from_spec <- function(study, outputs) {
     }
   }
   ft <- page$rtf_document$font_table
-  if (length(ft) && !is.null(ft[[1L]]$name)) pr$page$font <- cell(ft[[1L]]$name)
+  # (a family per script slot, a language per slot: "latin = X | east_asian = Y")
+  slots <- function(v) {
+    v <- .font_slots_value(v)
+    if (is.null(names(v))) cell(v) else paste(names(v), "=", unname(v), collapse = " | ")
+  }
+  if (length(ft) && !is.null(ft[[1L]]$name)) pr$page$font <- slots(ft[[1L]]$name)
+  if (length(page$rtf_document$font_lang)) pr$page$font_lang <- slots(page$rtf_document$font_lang)
   if (inherits(page$header, "tfl_unset")) pr$report$page_header <- "FALSE"
   if (inherits(page$footer, "tfl_unset")) pr$report$page_footer <- "FALSE"
   for (a in c("width_twips", "height_twips")) {

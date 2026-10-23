@@ -43,6 +43,7 @@
   if (setup) {
     # the study's font and size, its tokens: the setup's options() say them
     if ("font" %in% split$page_study) doc_a$font_table <- NULL
+    if ("font_lang" %in% split$page_study) doc_a$font_lang <- NULL
     if ("font_size_half_points" %in% split$page_study) fmt$font_size_half_points <- NULL
     doc_tokens <- tokens[setdiff(names(tokens), split$tokens_study)]
     if (!length(doc_tokens)) doc_tokens <- NULL
@@ -62,7 +63,8 @@
   file <- if (inherits(study, "tfl_study_spec")) .rtf_file_said(.output_rtf_path(output, study))
   doc <- .spec_sym("doc")
   st <- list(.spec_call("rtf_document",
-                        font_table = doc_a$font_table,
+                        font_table = .font_table_value(doc_a$font_table),
+                        font_lang = .font_slots_value(doc_a$font_lang),
                         page = if (length(page)) page,
                         default_format = if (length(fmt))
                           do.call(.spec_call, c(list("rtf_default_format"), fmt)),
@@ -115,11 +117,13 @@
   band_style <- c("font_size_half_points", "row_height_twips", "markup", "font", "align")
   if (length(tt)) {
     a <- args_of("rtf_titles")
+    if (!is.null(a[["font"]])) a[["font"]] <- .font_slots_value(a[["font"]])
     st[[length(st) + 1L]] <- do.call(.spec_call, c(list("rtf_titles", doc, list(tt)),
                                                    a[intersect(band_style, names(a))]))
   }
   if (length(fn)) {
     a <- args_of("rtf_footnotes")
+    if (!is.null(a[["font"]])) a[["font"]] <- .font_slots_value(a[["font"]])
     st[[length(st) + 1L]] <- do.call(.spec_call, c(list("rtf_footnotes", doc, list(fn)),
                                                    a[intersect(band_style, names(a))]))
   }
@@ -219,8 +223,10 @@
     !is.null(v) && length(v) > 0L
   }, NA))
   font_said <- function(p) length(p$rtf_document$font_table %||% list()) > 0L
+  lang_said <- function(p) length(p$rtf_document$font_lang %||% list()) > 0L
   size_said <- function(p) !is.null(p$rtf_default_format$font_size_half_points)
   page_study <- c(if (font_said(study_pg) && !said("rtf_document", "font_table")) "font",
+                  if (lang_said(study_pg) && !said("rtf_document", "font_lang")) "font_lang",
                   if (size_said(study_pg) && !said("rtf_default_format", "font_size_half_points"))
                     "font_size_half_points")
   own_tokens <- unique(unlist(lapply(layers, function(l) names(l$tokens))))
@@ -247,6 +253,23 @@
   if (!isFALSE(a$page_break)) a$page_break <- NULL
   if (!isFALSE(a$page_break) || identical(as.integer(a$space_before), 0L)) a$space_before <- NULL
   a
+}
+
+# A font as rtfreporter takes it (its Fonts per script): one family, or a
+# family per script slot (latin, east_asian, complex, hansi) -- YAML's map
+# a named character vector; a font table's entries each so; font_lang the
+# same, a language per slot.  NULL stays NULL.
+.font_slots_value <- function(x) {
+  if (is.null(x) || !length(x)) return(NULL)
+  if (is.list(x) && !is.null(names(x))) return(unlist(x))
+  x
+}
+.font_table_value <- function(ft) {
+  if (is.null(ft) || !length(ft) || !is.list(ft)) return(ft)
+  lapply(ft, function(f) {
+    if (is.list(f) && !is.null(f$name)) f$name <- .font_slots_value(f$name)
+    f
+  })
 }
 
 # a function's arguments as page: says them: a map, unset ones gone

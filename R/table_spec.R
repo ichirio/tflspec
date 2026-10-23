@@ -103,7 +103,7 @@
     height_in = "num", margin_top_in = "num", margin_bottom_in = "num",
     margin_left_in = "num", margin_right_in = "num",
     header_dist_in = "num", footer_dist_in = "num",
-    font = "text", font_size_half_points = "int", title_format = "text",
+    font = "text", font_lang = "text", font_size_half_points = "int", title_format = "text",
     footnote_format = "text", title_width = "text",
     footnote_width = "text", markup = "text"),
   header    = c(line = "int", left = "text", center = "text", right = "text"),

@@ -18,10 +18,15 @@
   ft <- .page_args(pg$rtf_document)$font_table
   if (length(ft)) {
     first <- if (is.list(ft) && length(ft) && is.list(ft[[1L]])) ft[[1L]]$name else ft[[1L]]
+    # (one family, or a family per script slot: a named vector)
+    first <- .font_slots_value(first)
     if (!is.null(first) && !is.na(first[1L]) && nzchar(first[1L])) {
-      opts[[.page_options[["font"]]]] <- as.character(first[1L])
+      opts[[.page_options[["font"]]]] <- if (is.null(names(first))) as.character(first[1L]) else first
     }
   }
+  # the language of each font slot (rtfreporter's font_lang)
+  fl <- .font_slots_value(.page_args(pg$rtf_document)$font_lang)
+  if (length(fl)) opts[["rtfreporter.font_lang"]] <- fl
   sz <- .page_args(pg$rtf_default_format)$font_size_half_points
   if (!is.null(sz)) {
     n <- suppressWarnings(as.integer(sz))

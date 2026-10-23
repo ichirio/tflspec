@@ -434,11 +434,24 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     page_break = "rtf_tables.page_break", space_before = "rtf_tables.space_before",
     first_rows = "rtf_tables.first_rows", cont_title = "rtf_tables.cont_title"))
 
+# a sheet cell "latin = X | east_asian = Y" as a map (YAML's), a cell
+# without "=" as it is
+.conv_slots <- function(v) {
+  if (!is.character(v) || length(v) != 1L || !grepl("=", v, fixed = TRUE)) return(v)
+  parts <- trimws(strsplit(v, "|", fixed = TRUE)[[1L]])
+  kv <- strsplit(parts, "=", fixed = TRUE)
+  stats::setNames(lapply(kv, function(x) trimws(paste(x[-1L], collapse = "="))),
+                  vapply(kv, function(x) trimws(x[1L]), ""))
+}
+
 .page_put <- function(page, sheet, col, v, note, id) {
   # (the data's and the content's code are not the page's: .conv_output())
   if (identical(sheet, "report") && col %in% c("data_code", "content_code")) return(page)
-  if (identical(sheet, "page") && identical(col, "font")) {
-    page$rtf_document$font_table <- list(list(name = v))
+  if (identical(sheet, "page") && col %in% c("font", "font_lang")) {
+    # one family, or one a script slot: "latin = X | east_asian = Y"
+    v <- .conv_slots(v)
+    if (identical(col, "font")) page$rtf_document$font_table <- list(list(name = v))
+    else page$rtf_document$font_lang <- v
     return(page)
   }
   if (identical(sheet, "report") && col %in% c("page_header", "page_footer")) {
