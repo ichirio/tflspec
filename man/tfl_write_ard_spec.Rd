@@ -28,7 +28,7 @@ reader passes over sheets whose name starts with \verb{_}).}
 \code{path}, invisibly.
 }
 \description{
-Writes the six sheets (\code{study}, \code{datasets}, \code{populations}, \code{objects},
+Writes the seven sheets (\code{study}, \code{datasets}, \code{populations}, \code{records}, \code{objects},
 \code{analysis_data}, \code{analyses})
 and no more; what each column means is a comment on its header cell
 (\code{\link[=tfl_spec_columns]{tfl_spec_columns()}}).  \code{\link[=tfl_read_ard_spec]{tfl_read_ard_spec()}} takes one back.  With

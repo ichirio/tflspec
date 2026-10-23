@@ -21,6 +21,12 @@
 #   populations  population_id, dataset, where,  analysis sets (and the
 #                derive, label                   denominators; `label`: the
 #                                                text a header prints)
+#   records      record_id, dataset, where,      named sets of records (CDISC
+#                label, any_label                ARS data subsets): an analysis
+#                                                names one in `records` for its
+#                                                dataset and condition;
+#                                                `any_label` the "any" row of
+#                                                a hierarchy of them
 #   objects      output_id, object_id, code,     named values: `object_id <-
 #                label                           code` at the program's top
 #                                                (a report's, or the study's
@@ -38,11 +44,12 @@
   study = c("key", "value"),
   datasets = c("dataset", "level", "path", "derive"),
   populations = c("population_id", "dataset", "where", "derive", "label"),
+  records = c("record_id", "dataset", "where", "label", "any_label"),
   objects = c("output_id", "object_id", "code", "label"),
   analysis_data = c("output_id", "data_id", "label", "from", "population_id", "subjects",
                     "where", "add", "derive", "keep", "distinct", "code"),
   analyses = c("output_id", "analysis_id", "parent", "label", "method",
-               "data", "dataset",
+               "data", "dataset", "records",
                "population_id", "where", "by", "overall", "strata", "variables",
                "optional", "statistics", "denominator", "formats", "args", "post",
                "code", "purpose", "reason"))
@@ -134,7 +141,7 @@
 
 #' Write an ARD definition to a workbook
 #'
-#' Writes the six sheets (`study`, `datasets`, `populations`, `objects`,
+#' Writes the seven sheets (`study`, `datasets`, `populations`, `records`, `objects`,
 #' `analysis_data`, `analyses`)
 #' and no more; what each column means is a comment on its header cell
 #' ([tfl_spec_columns()]).  [tfl_read_ard_spec()] takes one back.  With
@@ -171,7 +178,7 @@ tfl_write_ard_spec <- function(spec, path, statistics = NULL, methods = NULL,
 #' @param check `FALSE` reads a definition still being written without
 #'   refusing it.
 #' @inheritParams tfl_write_ard_spec
-#' @return An `tfl_ard_spec`: a list of the six sheets (a workbook
+#' @return An `tfl_ard_spec`: a list of the seven sheets (a workbook
 #'   without `analysis_data`, written before it was added, reads it empty).
 #' @export
 tfl_read_ard_spec <- function(path, check = TRUE, statistics = NULL,
@@ -445,7 +452,7 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   }
   cust <- which(a$method %in% "custom" & is.na(a$code))
   if (length(cust)) add(cust[1L], "code", "a `custom` analysis needs its `code`")
-  pr <- c(pr, list(.objects_problems(x)))
+  pr <- c(pr, list(.objects_problems(x), .old_pop_names_problems(x), .records_problems(x)))
   p <- do.call(rbind, pr)
   rownames(p) <- NULL
   p
@@ -928,7 +935,7 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
   old <- .set_catalogs(statistics, methods)
   on.exit(options(old), add = TRUE)
   x <- .as_spec(spec, "ard", "tfl_ard_code")
-  a <- x$analyses
+  a <- .records_expand(x, x$analyses)
   if (!is.null(output_id)) a <- a[a$output_id %in% output_id, , drop = FALSE]
   # written for its setup, which attaches cards and dplyr (not when
   # tfl_build_ard() runs it: every `pkg::` kept)
@@ -961,7 +968,10 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
                                                            codelists))),
                     if (out != "output/ard/ard.rds") list(path = .path_code(out))))
     }
-    return(.drop_attached_ns(.ard_body_lines(x, a, lv, save = sv)))
+    body <- .ard_body_lines(x, a, lv, save = sv)
+    out <- .drop_attached_ns(body)
+    attr(out, "data_names") <- attr(body, "data_names")
+    return(out)
   }
   out <- .study_value(x, "output", "output/ard/ard.rds")
   code <- c(
@@ -1337,4 +1347,152 @@ tfl_ard_as_custom <- function(spec, output_id, analysis_id) {
   for (i in which(dup)) add(i, "object_id", sprintf(
     "object %s: named twice (a report's object may not take a study object's name)", ob$object_id[i]))
   do.call(rbind, pr)
+}
+
+# An analysis set's data was pop_<id> in the program; it is <dataset>_sub
+# now (numbered from a report's second: adsl_sub2).  R a cell writes with
+# the old name stops here, saying the new one, rather than failing as the
+# program runs.
+.old_pop_names_problems <- function(x) {
+  pops <- x$populations
+  if (is.null(pops) || !nrow(pops)) return(.spec_problems_empty())
+  old <- paste0("pop_", .r_name(pops$population_id))
+  rx <- paste0("(^|[^A-Za-z0-9._])(", paste(gsub(".", "\\.", old, fixed = TRUE), collapse = "|"),
+               ")($|[^A-Za-z0-9._])")
+  cols <- list(analysis_data = c("where", "derive", "code"),
+               analyses = c("where", "args", "post", "code"),
+               objects = "code")
+  pr <- list(.spec_problems_empty())
+  for (sh in names(cols)) {
+    d <- if (identical(sh, "objects")) .objects_sheet(x) else
+      if (identical(sh, "analysis_data")) .adata_sheet(x) else x[[sh]]
+    if (is.null(d) || !nrow(d)) next
+    idc <- c(analysis_data = "data_id", analyses = "analysis_id", objects = "object_id")[[sh]]
+    for (cn in intersect(cols[[sh]], names(d))) {
+      for (i in which(!is.na(d[[cn]]) & grepl(rx, d[[cn]]))) {
+        w <- sub(paste0("^.*?", rx, ".*$"), "\\2", d[[cn]][i], perl = TRUE)
+        k <- match(w, old)
+        new <- paste0(.r_name(pops$dataset[k]), "_sub")
+        pr[[length(pr) + 1L]] <- .spec_problem(sprintf(paste(
+          "%s%s: `%s` writes %s, a name the ARD program no longer has: the population %s's",
+          "data is %s now (%s2, %s3 ... from the second a report reads of %s); write that"),
+          if (is.na(d$output_id[i] %||% NA)) "" else paste0(d$output_id[i], " / "),
+          d[[idc]][i] %||% sh, cn, w, pops$population_id[k], new, new, new, pops$dataset[k]),
+          sh, d$output_id[i] %||% NA_character_, d[[idc]][i] %||% "", cn)
+      }
+    }
+  }
+  do.call(rbind, pr)
+}
+
+#' The data each analysis reads, by its name in the ARD program
+#'
+#' The names [tfl_ard_code()] gives the data it makes itself: an analysis
+#' set's (`adsl_sub`) and an analysis's own records (`adae_sub`), numbered
+#' from a report's second of a dataset (`adsl_sub2`); an analysis data a
+#' person named (`data_id`) by its name; a dataset read as it is by the
+#' dataset's.  For a screen that shows what an analysis reads under the
+#' program's name, without writing the rule again.
+#'
+#' @inheritParams tfl_ard_code
+#' @return A data frame: `output_id`, `analysis_id` (an analysis that runs
+#'   inside another -- a stack's, a strata's -- is not listed: it reads its
+#'   parent's), `data` (the name; `"NULL"` for an analysis that reads none).
+#' @examples
+#' tfl_ard_data_names(tfl_ard_spec_template())
+#' @export
+tfl_ard_data_names <- function(spec, output_id = NULL, codelists = NULL) {
+  code <- tfl_ard_code(spec, output_id = output_id, save = FALSE, part = "body",
+                       codelists = codelists)
+  dn <- attr(code, "data_names")
+  if (is.null(dn)) {
+    dn <- data.frame(output_id = character(), analysis_id = character(),
+                     data = character(), stringsAsFactors = FALSE)
+  }
+  dn
+}
+
+# ---- named sets of records (sheet `records`) --------------------------------
+
+# the sheet, in shape (none: no rows)
+.records_sheet <- function(x) {
+  .normalize_ard_sheet(x$records %||% data.frame(), "records")
+}
+
+# Two conditions, both: each in parentheses when it has an `|` at its top
+.cond_both <- function(a, b) {
+  if (is.na(a)) return(b)
+  if (is.na(b)) return(a)
+  wrap <- function(w) {
+    e <- tryCatch(str2lang(w), error = function(err) NULL)
+    if (is.call(e) && as.character(e[[1L]]) %in% c("|", "||")) sprintf("(%s)", w) else w
+  }
+  paste(wrap(a), "&", wrap(b))
+}
+
+# The analyses with their records read: an analysis naming a set of records
+# reads its dataset, under its condition and then the analysis's own
+.records_expand <- function(x, a) {
+  rec <- .records_sheet(x)
+  r <- a$records %||% rep(NA_character_, nrow(a))
+  for (i in which(!is.na(r))) {
+    k <- match(r[i], rec$record_id)
+    if (is.na(k)) next
+    a$dataset[i] <- rec$dataset[k]
+    a$where[i] <- .cond_both(rec$where[k], a$where[i])
+  }
+  a
+}
+
+# The sheet's problems, and the analyses' `records`: an id once, a dataset
+# of the definition, a condition that is R; an analysis's records one of
+# the sheet's, and not with a `dataset` or `data` of its own
+.records_problems <- function(x) {
+  rec <- .records_sheet(x)
+  pr <- list(.spec_problems_empty())
+  add <- function(sheet, out, row, field, message) {
+    pr[[length(pr) + 1L]] <<- .spec_problem(message, sheet, out, row, field)
+  }
+  for (i in seq_len(nrow(rec))) {
+    id <- rec$record_id[i]
+    tag <- if (is.na(id)) sprintf("records row %d", i) else paste("records", id)
+    if (is.na(id)) { add("records", NA, "", "record_id", paste0(tag, ": a record_id")); next }
+    if (is.na(rec$dataset[i])) {
+      add("records", NA, id, "dataset", paste0(tag, ": its dataset"))
+    } else if (!rec$dataset[i] %in% x$datasets$dataset) {
+      add("records", NA, id, "dataset", sprintf("%s: dataset %s is not one of the datasets",
+                                               tag, rec$dataset[i]))
+    }
+    if (!is.na(rec$where[i]) &&
+        inherits(tryCatch(str2lang(rec$where[i]), error = function(e) e), "error")) {
+      add("records", NA, id, "where", sprintf("%s: the condition is not R: %s", tag, rec$where[i]))
+    }
+  }
+  for (i in which(duplicated(rec$record_id) & !is.na(rec$record_id))) {
+    add("records", NA, rec$record_id[i], "record_id",
+        sprintf("records %s: named twice", rec$record_id[i]))
+  }
+  a <- x$analyses
+  r <- a$records %||% rep(NA_character_, nrow(a))
+  for (i in which(!is.na(r))) {
+    tag <- paste(a$output_id[i], a$analysis_id[i], sep = " / ")
+    if (!r[i] %in% rec$record_id) {
+      add("analyses", a$output_id[i], a$analysis_id[i], "records", sprintf(
+        "%s: records %s is not one of the records sheet's (%s)", tag, r[i],
+        if (nrow(rec)) paste(stats::na.omit(rec$record_id), collapse = ", ") else "none"))
+    }
+    if (!is.na(a$dataset[i]) || !is.na(.data_col(a)[i])) {
+      add("analyses", a$output_id[i], a$analysis_id[i], "records", sprintf(
+        "%s: `records` says the dataset and the records; leave `dataset` and `data` blank", tag))
+    }
+  }
+  do.call(rbind, pr)
+}
+
+# The "any" row's label of a set of records: its any_label, else
+# "Any <id>"
+.records_any_label <- function(rec, id) {
+  k <- match(id, rec$record_id)
+  if (is.na(k)) return(NULL)
+  if (!is.na(rec$any_label[k])) rec$any_label[k] else paste("Any", id)
 }

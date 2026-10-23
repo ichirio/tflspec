@@ -1,6 +1,6 @@
 # tflspec (development version)
 
-* **AI requests: the shell sheet first, the TOC as candidates** (0.0.24.9230).
+* **AI requests: the shell sheet first, the TOC as candidates** (0.0.24.9234).
   A request is a shell sheet's (`unit = "sheet"`, the default of
   `tfl_ai_prepare()` / `tfl_ai_write_requests()`): what the sheet writes
   comes first -- its numbers, titles, populations, conditions, layout and
@@ -24,13 +24,35 @@
   once), and a TOC's header of two rows (Title merged over its parts) says
   its titles.
 
-* A TOC's columns by their role (0.0.24.9230): the item's number and its
+* A TOC's columns by their role (0.0.24.9234): the item's number and its
   shell's apart, the title(s), the population, the program and file names
   from the headers' words (Output No, Shell, Title, Population, Program,
   File, and the Japanese words), or `toc_cols = c(output_id = "Output No",
   shell = "Shell", title = c("Title 1", "Title 2"))` (a header or a
   column's letter); the row's other columns go to its requests as
   "header: value".
+
+* Named sets of records (0.0.24.9231): sheet `records` (`record_id`,
+  `dataset`, `where`, `label`, `any_label`), data.yml `records:`
+  (`- {id: TESAE, dataset: ADAE, where: !r ..., label: ..., any_label:
+  Any SAE}`); an analysis's `records: TESAE` reads the set's dataset under
+  its condition, its own `where` on top, and the program's data of it is
+  commented with the set.  A hierarchy of a set with its "any" row
+  (`over_variables = TRUE`) is labelled with the set's `any_label`, else
+  `Any <id>`, when the table's `normalize_ard()` (or its `overall_label`)
+  says none.
+
+* The data the ARD program makes itself is named `<dataset>_sub`
+  (0.0.24.9229): an analysis set's (`adsl_sub`, was `pop_saf`) and an
+  analysis's own records (`adae_sub`, was `adae_saf`), numbered from a
+  report's second of a dataset (`adsl_sub2`), each under a comment saying
+  what it is (`# adsl_sub: SAF — Safety Analysis Set (SAFFL == "Y")`).
+  In the study's program each report's part makes its own, so a name
+  means one thing in a report.  R in the definition (`code`, `args`,
+  `where`) writes the new names; an old `pop_<id>` there is a problem that
+  says the new one.  The names of analysis data a person gives
+  (`data_id`) do not change.
+  `tfl_ard_data_names()` says each analysis's data by the program's name.
 
 * An agent's requests and `AGENTS.md` always say where the TOC / SHELL
   workbook and the ADaM are, from the study folder, and that the agent may
