@@ -191,7 +191,13 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
   if (length(old)) {
     # a report asked for already: stopped, or (overwrite) its request asked anew
     had <- unlist(lapply(old, `[[`, "ids"))
-    again <- intersect(c(b$output_id, figs), had)
+    # (the shell sheets' requests: the TOC items they name, a sheet with no
+    # candidate by its name -- as their contexts keep them)
+    asking <- if (sheet_mode) {
+      lone <- shell$shells$sheet[is.na(shell$shells$candidates)]
+      unique(c(shell$toc$output_id, vapply(lone, .ai_file_id, "", USE.NAMES = FALSE)))
+    } else c(b$output_id, figs)
+    again <- intersect(asking, had)
     if (length(again) && !isTRUE(overwrite)) {
       in_req <- names(old)[vapply(old, function(o) any(o$ids %in% again), NA)]
       .ard_stop(sprintf(paste0("%s: %s already asked for (%s); pass `overwrite = TRUE` to ",

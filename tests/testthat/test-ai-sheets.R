@@ -148,3 +148,21 @@ test_that("a sheet's cells read at once are those read row by row", {
                      .xl_sheet_cells_rows(x, "s", shared, indent), info = m)
   }
 })
+
+test_that("add = TRUE: a TOC item asked for already stops; overwrite asks it anew, once", {
+  skip_if_not_installed("openxlsx")
+  skip_if_not_installed("haven")
+  f <- real_shape_book(tempfile(fileext = ".xlsx"))
+  d <- tempfile()
+  on.exit(unlink(c(f, d), recursive = TRUE), add = TRUE)
+  dir.create(file.path(d, "adam"), recursive = TRUE)
+  haven::write_xpt(tflspec:::.ai_chr(tflspec::adsl), file.path(d, "adam", "adsl.xpt"))
+  r <- tfl_ai_prepare(d, f, adam = "adam", quiet = TRUE, mode = "agent", templates = FALSE)
+  expect_error(tfl_ai_prepare(d, f, adam = "adam", quiet = TRUE, mode = "agent", templates = FALSE,
+                              add = TRUE), "already asked for")
+  r2 <- suppressMessages(tfl_ai_prepare(d, f, adam = "adam", quiet = TRUE, mode = "agent",
+                                        templates = FALSE, add = TRUE, overwrite = TRUE))
+  # (the old requests asked anew, not beside them: a TOC item can be a
+  # candidate of several sheets, each sheet's request once)
+  expect_setequal(tfl_ai_requests(d)$request, r$requests$request)
+})
