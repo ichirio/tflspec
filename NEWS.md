@@ -32,6 +32,13 @@
   column's letter); the row's other columns go to its requests as
   "header: value".
 
+* In a table with columns (`table_plan(cols = TRT01A)`), every analysis
+  has its `by` (0.0.24.9233): one without is a problem of the study's ARD
+  definition that says the `by` to write (`by: [TRT01A]`), but for the
+  columns' own count (the N), a `custom` analysis, one inside another and
+  the study's N; `by: []` (in the sheet `(none)`) says an analysis has no
+  columns.  A `by` the data does not have stops the program, as before.
+
 * Named sets of records (0.0.24.9231): sheet `records` (`record_id`,
   `dataset`, `where`, `label`, `any_label`), data.yml `records:`
   (`- {id: TESAE, dataset: ADAE, where: !r ..., label: ..., any_label:

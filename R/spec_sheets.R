@@ -211,6 +211,8 @@ tfl_sheets_from_spec <- function(study, outputs) {
     }
     for (a in o$ard$analyses %||% list()) {
       if (!is.null(a$denominator)) a$denominator <- .den_cell(a$denominator)
+      # (`by: []`: no columns, said so)
+      if ("by" %in% names(a) && !length(a$by)) a$by <- tfl_unset()
       m <- lapply(a, cell); m$analysis_id <- m$id; m$id <- NULL
       if (!is.null(m$population)) { m$population_id <- m$population; m$population <- NULL }
       if (!is.null(a$ref)) note(id, paste0("analyses.", a$id), "a reference to another report's analysis (ref) has no sheet")

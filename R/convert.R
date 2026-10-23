@@ -654,6 +654,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
       # a denominator of numbers: a number, or a map by the by's values
       ard_part$analyses <- lapply(ard_part$analyses, function(m) {
         if (!is.null(m$denominator)) m$denominator <- .den_yaml(m$denominator)
+        if (inherits(m$by, "tfl_unset")) m$by <- list()
         m
       })
     }

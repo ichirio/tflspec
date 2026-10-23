@@ -65,6 +65,7 @@ tfl_write_spec_xlsx <- function(dir, path) {
     for (e in o$ard$analysis_data %||% list()) add_rows("analysis_data", list(.flat_map(c(list(output_id = id), e), "analysis_data", id, note)))
     for (e in o$ard$analyses %||% list()) {
       if (!is.null(e$denominator)) e$denominator <- .den_cell(e$denominator)
+      if ("by" %in% names(e) && !length(e$by)) e$by <- tfl_unset()
       add_rows("analyses", list(.flat_map(c(list(output_id = id), e), "analyses", id, note)))
     }
     if (!is.null(o$data)) {

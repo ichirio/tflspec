@@ -265,6 +265,11 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 # yet (written before it was added) blank
 .ard_spec_shaped <- function(x) {
   x$analysis_data <- .adata_sheet(x)
+  # `by` "(none)": no columns, said so (.by_needed_problems()); for the
+  # program, no by
+  if (is.data.frame(x$analyses) && !is.null(x$analyses$by)) {
+    x$analyses$by[trimws(x$analyses$by) %in% "(none)"] <- NA_character_
+  }
   for (s in intersect(names(.ard_spec_sheets), names(x))) {
     for (c in setdiff(.ard_spec_sheets[[s]], names(x[[s]]))) {
       x[[s]][[c]] <- rep(NA_character_, nrow(x[[s]]))
@@ -1495,4 +1500,45 @@ tfl_ard_data_names <- function(spec, output_id = NULL, codelists = NULL) {
   k <- match(id, rec$record_id)
   if (is.na(k)) return(NULL)
   if (!is.na(rec$any_label[k])) rec$any_label[k] else paste("Any", id)
+}
+
+# ---- a table's analyses have its columns' `by` ---------------------------------
+
+# In a table whose plan has its columns (table_plan(cols = TRT01A)), an
+# analysis with no `by` is a mistake more often than not: its statistics
+# would not split by the columns.  A problem each, saying the by to write.
+# Not one: an analysis that counts the columns' variable itself (the
+# groups' N), a `custom` one, one inside another (its parent's by), the
+# study's N (total_n), one whose method takes no by (its arms in a model),
+# and `by: []` -- no columns, said so ("(none)").
+# `tables`: the table sheets' `tables` (output_id, cols).
+.by_needed_problems <- function(a, tables) {
+  out <- .spec_problems_empty()
+  if (is.null(a) || !nrow(a) || is.null(tables) || !nrow(tables) || is.null(tables$cols)) {
+    return(out)
+  }
+  pr <- list(out)
+  par <- a$parent %||% rep(NA_character_, nrow(a))
+  for (i in seq_len(nrow(a))) {
+    k <- match(a$output_id[i], tables$output_id)
+    if (is.na(k) || is.na(tables$cols[k]) || !nzchar(trimws(tables$cols[k]))) next
+    if (!is.na(a$by[i]) || !is.na(par[i]) || identical(a$method[i], "custom")) next
+    cols <- trimws(strsplit(tables$cols[k], "[,|]")[[1L]])
+    cols <- cols[nzchar(cols)]
+    v <- .split_bar(a$variables[i])
+    if (length(v) && all(v %in% cols)) next
+    # (the study's N: no by)
+    if (grepl("total_n", a$method[i], fixed = TRUE)) next
+    # a method that takes no by (its arms in a model: cardx's emmeans);
+    # a generic's arguments (cards::ard_tabulate(data, ...)) cannot say it
+    f <- .method_fun(a$method[i])
+    if (!is.null(f) && !any(c("by", ".by", "...") %in% names(formals(f)))) next
+    pr[[length(pr) + 1L]] <- .spec_problem(sprintf(paste(
+      "%s / %s: no `by`, in a table whose columns are %s (table_plan(cols = %s)): write",
+      "by: [%s] -- or by: [] for an analysis that has no columns"),
+      a$output_id[i], a$analysis_id[i], paste(cols, collapse = ", "),
+      paste(cols, collapse = ", "), paste(cols, collapse = ", ")),
+      "analyses", a$output_id[i], a$analysis_id[i], "by")
+  }
+  do.call(rbind, pr)
 }
