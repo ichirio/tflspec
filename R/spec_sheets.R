@@ -127,6 +127,10 @@ tfl_sheets_from_spec <- function(study, outputs) {
   ard$populations <- .rows_df(lapply(s$data$populations %||% list(), function(e) {
     m <- lapply(e, cell); if (!is.null(m$id)) { m$population_id <- m$id; m$id <- NULL }; m
   }), .ard_spec_sheets$populations)
+  # named sets of records (data.yml `records:`)
+  ard$records <- .rows_df(lapply(s$data$records %||% list(), function(e) {
+    m <- lapply(e, cell); if (!is.null(m$id)) { m$record_id <- m$id; m$id <- NULL }; m
+  }), .ard_spec_sheets$records)
   # named values: the study's (data.yml `objects:`), then the reports'
   objs <- lapply(s$data$objects %||% list(), function(e) {
     m <- lapply(e, cell); m$object_id <- m$id; m$id <- NULL; c(list(output_id = NA_character_), m)

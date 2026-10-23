@@ -1004,8 +1004,12 @@
       taken <<- c(taken, nm)
       data_of[[key]] <<- nm
       auto_ds[[nm]] <<- if (!is.na(r$dataset)) r$dataset else pop_ds
+      rid <- r$records %||% NA
+      rk <- if (!is.na(rid)) match(rid, .records_sheet(x)$record_id) else NA
       auto_note[[nm]] <<- paste0(
-        if (!is.na(r$dataset)) r$dataset else pop_ds,
+        if (!is.na(rk)) paste0(rid, if (!is.na(.records_sheet(x)$label[rk]))
+          paste0(" \u2014 ", .records_sheet(x)$label[rk])) else
+          if (!is.na(r$dataset)) r$dataset else pop_ds,
         if (!is.null(whr)) sprintf(" (%s)", whr),
         if (!is.null(join)) sprintf("; of the %s subjects", pop))
       made <<- c(made, .make_code(nm, src, c(
