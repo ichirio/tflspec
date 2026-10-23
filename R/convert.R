@@ -447,6 +447,12 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
 .page_put <- function(page, sheet, col, v, note, id) {
   # (the data's and the content's code are not the page's: .conv_output())
   if (identical(sheet, "report") && col %in% c("data_code", "content_code")) return(page)
+  if (identical(sheet, "page") && identical(col, "page_more")) {
+    # what no column says, as YAML (tfl_sheets_from_yaml()'s .page_more())
+    more <- .calls_in(yaml::yaml.load(v, handlers = .yaml_handlers()))
+    for (fn in names(more)) for (k in names(more[[fn]])) page[[fn]][[k]] <- more[[fn]][[k]]
+    return(page)
+  }
   if (identical(sheet, "page") && col %in% c("font", "font_lang")) {
     # one family, or one a script slot: "latin = X | east_asian = Y"
     v <- .conv_slots(v)

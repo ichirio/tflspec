@@ -105,7 +105,7 @@
     header_dist_in = "num", footer_dist_in = "num",
     font = "text", font_lang = "text", font_size_half_points = "int", title_format = "text",
     footnote_format = "text", title_width = "text",
-    footnote_width = "text", markup = "text"),
+    footnote_width = "text", markup = "text", page_more = "text"),
   header    = c(line = "int", left = "text", center = "text", right = "text"),
   footer    = c(line = "int", left = "text", center = "text", right = "text"),
   titles    = c(line = "int", left = "text", center = "text", right = "text"),

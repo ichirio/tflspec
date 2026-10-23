@@ -369,5 +369,35 @@ tfl_sheets_from_spec <- function(study, outputs) {
       if (is.numeric(v)) format(v / 1440) else cell(v)
   }
   for (k in names(page$report)) pr$report[[k]] <- cell(page$report[[k]])
+  # what no column says (the titles' row height, the bands' look, a second
+  # font ...): kept as YAML in the page sheet's page_more, read back as it was
+  more <- .page_more(page)
+  if (length(more)) {
+    txt <- yaml::as.yaml(.calls_out(more), indent.mapping.sequence = TRUE,
+                         handlers = .yaml_out_handlers())
+    pr$page$page_more <- sub("\n$", "", txt)
+  }
   pr
+}
+
+# The rtfreporter arguments of a page no page or report sheet column says:
+# list(<fn> = list(<arg> = value)); a font table of more than one font whole
+.page_more <- function(page) {
+  said <- character()
+  for (sh in names(.page_map)) {
+    m <- .page_map[[sh]]
+    said <- c(said, ifelse(grepl(".", m, fixed = TRUE), m, paste(m, names(m), sep = ".")))
+  }
+  said <- c(said, "rtf_document.font_lang", "rtf_figures.width_twips", "rtf_figures.height_twips")
+  ft <- page$rtf_document$font_table
+  if (length(ft) <= 1L) said <- c(said, "rtf_document.font_table")
+  out <- list()
+  for (fn in intersect(names(page), c("rtf_page", "rtf_default_format", "rtf_document",
+                                      "rtf_tables", "rtf_figures", "rtf_titles", "rtf_footnotes",
+                                      "rtf_header", "rtf_footer"))) {
+    a <- page[[fn]]
+    if (!is.list(a) || inherits(a, "tfl_unset")) next
+    for (k in names(a)) if (!paste(fn, k, sep = ".") %in% said) out[[fn]][[k]] <- a[[k]]
+  }
+  out
 }

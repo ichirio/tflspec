@@ -1718,6 +1718,11 @@ rtf_footer:
         description: 'Cell-text markup for the whole document: script / relational
           / all / none; blank: script.'
         example: all
+      - column: page_more
+        description: 'The page''s rtfreporter arguments no column says (the titles''
+          row height, the running header''s look, a second font ...), as YAML: {rtf_titles:
+          {row_height_twips: 300}}; kept as they are and written back. Blank: none.'
+        example: '{rtf_header: {font_size_half_points: 16}}'
   - sheet: header
     description: 'Report: the running page header, one row a line; the line is the
       key (the study''s lines on blank output_id, a report''s own on its rows). A

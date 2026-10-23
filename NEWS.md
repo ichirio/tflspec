@@ -20,6 +20,12 @@
   `study_header` / `study_footer` write them; a report whose look differs
   from the study's writes its own call.
 
+* **Page sheets keep the page arguments no column says** (#451): YAML ->
+  sheets -> YAML no longer drops a page's other rtfreporter arguments (the
+  titles' row height, the running header's look, the figure's align, a
+  second font ...): the page sheet's new column `page_more` holds them as
+  YAML and they are read back as they were.
+
 * **No page argument is dropped any more** (#444): `page.rtf_titles` and
   `page.rtf_footnotes` write `row_height_twips`, `markup`, `font` and
   `align` (not only `font_size_half_points`), `page.rtf_figures` its
