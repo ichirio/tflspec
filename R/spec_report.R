@@ -43,6 +43,7 @@
   if (setup) {
     # the study's font and size, its tokens: the setup's options() say them
     if ("font" %in% split$page_study) doc_a$font_table <- NULL
+    if ("font_lang" %in% split$page_study) doc_a$font_lang <- NULL
     if ("font_size_half_points" %in% split$page_study) fmt$font_size_half_points <- NULL
     doc_tokens <- tokens[setdiff(names(tokens), split$tokens_study)]
     if (!length(doc_tokens)) doc_tokens <- NULL
@@ -62,7 +63,8 @@
   file <- if (inherits(study, "tfl_study_spec")) .rtf_file_said(.output_rtf_path(output, study))
   doc <- .spec_sym("doc")
   st <- list(.spec_call("rtf_document",
-                        font_table = doc_a$font_table,
+                        font_table = .font_table_value(doc_a$font_table),
+                        font_lang = .font_slots_value(doc_a$font_lang),
                         page = if (length(page)) page,
                         default_format = if (length(fmt))
                           do.call(.spec_call, c(list("rtf_default_format"), fmt)),
@@ -96,13 +98,14 @@
       # shows is the plot as drawn, never stretched into the box
       fig <- .spec_call("rtfplot", .spec_sym(content),
                         render_width = sz$width_in, render_height = sz$height_in,
-                        render_dpi = as.numeric(img$dpi %||% 300))
+                        render_dpi = as.numeric(img$dpi %||% 300), png_device = fa$png_device)
       st[[length(st) + 1L]] <- do.call(.spec_call, c(list("rtf_figures", doc, fig, align = fa$align), flow(fa)))
     } else {
       st[[length(st) + 1L]] <- do.call(.spec_call, c(list("rtf_figures", doc, .spec_sym(content),
         width_twips = if (sz$mode[["width"]] != "native") twips(sz$width_in),
         height_twips = if (sz$mode[["height"]] != "native") twips(sz$height_in),
-        align = fa$align), flow(fa)))
+        align = fa$align, render_width = fa$render_width, render_height = fa$render_height,
+        render_dpi = fa$render_dpi, png_device = fa$png_device), flow(fa)))
     }
   } else {
     ta <- args_of("rtf_tables")
@@ -115,13 +118,16 @@
   band_style <- c("font_size_half_points", "row_height_twips", "markup", "font", "align")
   if (length(tt)) {
     a <- args_of("rtf_titles")
+    if (!is.null(a[["font"]])) a[["font"]] <- .font_slots_value(a[["font"]])
     st[[length(st) + 1L]] <- do.call(.spec_call, c(list("rtf_titles", doc, list(tt)),
                                                    a[intersect(band_style, names(a))]))
   }
   if (length(fn)) {
     a <- args_of("rtf_footnotes")
+    if (!is.null(a[["font"]])) a[["font"]] <- .font_slots_value(a[["font"]])
+    if (!is.null(a[["border"]])) a[["border"]] <- .page_call_value(a[["border"]])
     st[[length(st) + 1L]] <- do.call(.spec_call, c(list("rtf_footnotes", doc, list(fn)),
-                                                   a[intersect(band_style, names(a))]))
+                                                   a[intersect(c(band_style, "border"), names(a))]))
   }
   st
 }
@@ -175,9 +181,16 @@
   b <- .page_band(pg, band, tokens)
   if (!length(b)) return(NULL)
   fn <- paste0("rtf_", band)
-  if (is.null(split)) return(.spec_call(fn, b))
+  # the band's own look: rtf_header() / rtf_footer()'s arguments as the
+  # page says them (page.rtf_header, page.rtf_footer)
+  style <- .band_style(pg, band)
+  call <- function(lines) do.call(.spec_call, c(list(fn, lines), style))
+  if (is.null(split)) return(call(b))
   nm <- .setup_band_names[[band]]
   study_lines <- split$bands_study[[band]]
+  # (the study's band by name only when its look is the study's too)
+  same_look <- identical(style, split$band_style_study[[band]] %||% list())
+  if (!same_look) return(call(b))
   if (!isTRUE(split$bands_own[[band]]) && length(study_lines)) return(.spec_sym(nm))
   if (length(study_lines)) {
     st <- stats::setNames(list(study_lines), band)
@@ -186,14 +199,34 @@
     if (n && length(b) > n && identical(sb, .page_band(st, band, NULL))) {
       lines <- .spec_sym(paste0(nm, "_lines"))
       if (identical(utils::tail(b, n), sb)) {
-        return(.spec_call(fn, .spec_call("c", utils::head(b, -n), lines)))
+        return(call(.spec_call("c", utils::head(b, -n), lines)))
       }
       if (identical(utils::head(b, n), sb)) {
-        return(.spec_call(fn, .spec_call("c", lines, utils::tail(b, -n))))
+        return(call(.spec_call("c", lines, utils::tail(b, -n))))
       }
     }
   }
-  .spec_call(fn, b)
+  call(b)
+}
+
+# A running band's look as the page says it (page.rtf_header /
+# page.rtf_footer): rtfreporter's rtf_header() / rtf_footer() arguments
+# but its rows, a font per script slot as a named vector
+.band_style_args <- c("border", "width_twips", "width", "row_height_twips",
+                      "font_size_half_points", "font", "markup", "cell_padding_left_twips",
+                      "cell_padding_right_twips", "drop_empty_rows")
+.band_style <- function(pg, band) {
+  a <- .page_args(pg[[paste0("rtf_", band)]])
+  a <- a[intersect(.band_style_args, names(a))]
+  if (!is.null(a[["font"]])) a[["font"]] <- .font_slots_value(a[["font"]])
+  lapply(a, .page_call_value)
+}
+
+# a page argument that is a call (a border: {fn: rtf_border, args: ...})
+# as the program writes and runs it
+.page_call_value <- function(v) {
+  if (!inherits(v, "tfl_call")) return(v)
+  do.call(.spec_call, c(list(v$fn), lapply(v$args, .page_call_value)))
 }
 
 # The study's and the report's parts of a report's page (the report as
@@ -219,8 +252,10 @@
     !is.null(v) && length(v) > 0L
   }, NA))
   font_said <- function(p) length(p$rtf_document$font_table %||% list()) > 0L
+  lang_said <- function(p) length(p$rtf_document$font_lang %||% list()) > 0L
   size_said <- function(p) !is.null(p$rtf_default_format$font_size_half_points)
   page_study <- c(if (font_said(study_pg) && !said("rtf_document", "font_table")) "font",
+                  if (lang_said(study_pg) && !said("rtf_document", "font_lang")) "font_lang",
                   if (size_said(study_pg) && !said("rtf_default_format", "font_size_half_points"))
                     "font_size_half_points")
   own_tokens <- unique(unlist(lapply(layers, function(l) names(l$tokens))))
@@ -231,8 +266,10 @@
     m <- .page_args(study_pg[[b]])
     m[setdiff(names(m), own_keys)]
   })
+  band_style_study <- lapply(c(header = "header", footer = "footer"),
+                             function(b) .band_style(study_pg, b))
   list(page_study = page_study, tokens_study = tokens_study,
-       bands_own = bands_own, bands_study = bands_study)
+       bands_own = bands_own, bands_study = bands_study, band_style_study = band_style_study)
 }
 
 # A content's place on the page, as rtfreporter's rtf_tables() /
@@ -247,6 +284,23 @@
   if (!isFALSE(a$page_break)) a$page_break <- NULL
   if (!isFALSE(a$page_break) || identical(as.integer(a$space_before), 0L)) a$space_before <- NULL
   a
+}
+
+# A font as rtfreporter takes it (its Fonts per script): one family, or a
+# family per script slot (latin, east_asian, complex, hansi) -- YAML's map
+# a named character vector; a font table's entries each so; font_lang the
+# same, a language per slot.  NULL stays NULL.
+.font_slots_value <- function(x) {
+  if (is.null(x) || !length(x)) return(NULL)
+  if (is.list(x) && !is.null(names(x))) return(unlist(x))
+  x
+}
+.font_table_value <- function(ft) {
+  if (is.null(ft) || !length(ft) || !is.list(ft)) return(ft)
+  lapply(ft, function(f) {
+    if (is.list(f) && !is.null(f$name)) f$name <- .font_slots_value(f$name)
+    f
+  })
 }
 
 # a function's arguments as page: says them: a map, unset ones gone
