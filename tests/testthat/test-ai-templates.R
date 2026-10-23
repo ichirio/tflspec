@@ -47,9 +47,9 @@ test_that("templates = TRUE / FALSE: the setting at each request's head; FALSE a
   expect_match(t1, "- `ae_soc_pt`: Adverse events by SOC and PT (FDA STF Table 14) (table, layout hierarchical; variant of hierarchical)", fixed = TRUE)
   expect_match(t1, "  - `population` [target]*", fixed = TRUE)
   expect_match(t1, "  - `where` [target] (text) = \"TRTEMFL == \\\"Y\\\"\"", fixed = TRUE)
-  expect_false(grepl("`km_simple`", t1, fixed = TRUE))
+  expect_false(grepl("`km_survival`", t1, fixed = TRUE))
   f1 <- paste(readLines(file.path(d1, "ai", "requests", "figure-1.md"), encoding = "UTF-8"), collapse = "\n")
-  expect_match(f1, "- `km_simple`:", fixed = TRUE)
+  expect_match(f1, "- `km_survival`:", fixed = TRUE)
   expect_false(grepl("`demog`", f1, fixed = TRUE))
   # a variant registered now is listed, its from said
   tfl_template_variant("demog_x", from = "demog", defaults = list(continuous = "AGE"))
@@ -117,7 +117,7 @@ test_that("answers with templates: checked, written, built (RTF, PNG); a bad arg
     "assumptions: []"))
   tfl_ai_save_answer(d, "figure-1", aitpl_answer(
     "tflspec_ai: {task: figure, version: 1, output_id: F-14-2-2}",
-    "template: {name: km_simple, args: {param: OS, group: TRT01A, time_unit: months}}",
+    "template: {name: km_survival, args: {param: OS, by: TRT01A, time_unit: months}}",
     "layers:",
     "  - {layer: geom_hline, yintercept: 0.5, linetype: dashed}",
     "assumptions: []"))
@@ -174,7 +174,7 @@ test_that("answers with templates: checked, written, built (RTF, PNG); a bad arg
   expect_identical(unname(by_id("answered_with")[c("T-14-1-1", "T-14-3-1", "T-14-3-5", "F-14-2-2",
                                                    "T-14-2-1")]),
                    c("template:demog", "template:ae_soc_pt", "template:param_change",
-                     "template:km_simple", "code"))
+                     "template:km_survival", "code"))
   expect_true(all(cmp$templates))
   expect_identical(unname(by_id("repairs")[c("T-14-3-5", "T-14-1-1")]), c(1L, 0L))
   expect_true(all(cmp$check %in% c("ok", "warning")))
@@ -209,7 +209,7 @@ test_that("mode = \"agent\": what every request repeats is a file, written once"
   expect_identical(it, readLines(file.path(d0, "ai", "instructions-table.md"), encoding = "UTF-8"))
   tp <- paste(readLines(file.path(d1, "ai", "templates.md"), encoding = "UTF-8"), collapse = "\n")
   expect_match(tp, "- `ae_soc_pt`: Adverse events by SOC and PT", fixed = TRUE)
-  expect_match(tp, "- `km_simple`:", fixed = TRUE)
+  expect_match(tp, "- `km_survival`:", fixed = TRUE)
   expect_match(tp, "as the schema of `ai/instructions-table.md` says", fixed = TRUE)
   # a request: the files named, its header, the likely templates; no copies
   ae <- paste(readLines(file.path(d1, "ai", "requests", "ae-1.md"), encoding = "UTF-8"), collapse = "\n")

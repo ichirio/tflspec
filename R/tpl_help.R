@@ -107,7 +107,7 @@ tfl_tpl_args <- function(name, study = NULL, population = NULL) {
   names(root_p) <- vapply(root_p, `[[`, "", "name")
   base <- if (!is.null(study)) .layer_of("defaults", study)$content else list()
   output <- list(population = population)
-  rows <- lapply(t$params, function(p) {
+  rows <- lapply(.tpl_shown(t$params), function(p) {
     rp <- root_p[[p$name]] %||% p
     # the nearest variant that sets it
     vname <- NA_character_
@@ -241,6 +241,9 @@ tfl_tpl_help <- function(name, study = NULL, population = NULL,
   topic <- paste0("tfl_tpl_", name)
   x <- .tpl_first_arg(t)
   ex <- t$example %||% .tpl_examples[[t$root %||% name]] %||% list()
+  # (a figure's call: the data step's arguments are the program's)
+  fig <- identical(t$kind, "figure")
+  if (fig) ex <- ex[!vapply(names(ex), function(k) identical(t$params[[k]]$stage, "data"), NA)]
   desc <- sprintf("The %s template `%s`, layout `%s`", t$kind, name, t$layout)
   if (!is.null(t$from)) desc <- sprintf("%s: a variant of `%s` (its defaults changed)", desc, t$from)
   desc <- paste0(desc, sprintf(". Its program is one call, `tfl_tpl(%s, \"%s\", ...)`; ", x, name),
@@ -256,7 +259,7 @@ tfl_tpl_help <- function(name, study = NULL, population = NULL,
     sprintf("@name %s", topic),
     paste("@description", desc),
     paste0("@section Parameters:\n", paste(tbl, collapse = "\n")),
-    paste0("@section Example:\n```\nplan <- tfl_tpl(", x, ", \"", name, "\"",
+    paste0("@section Example:\n```\n", if (fig) "fig" else "plan", " <- tfl_tpl(", x,", \"", name, "\"",
            .tpl_rd_args(ex), ")\n```"),
     sprintf("@examples\ntfl_tpl_help(\"%s\", tier = c(\"required\", \"usual\"))", name),
     "@seealso [tfl_tpl()], [tfl_tpl_help()], [tfl_tpl_args()], [tfl_templates()]",

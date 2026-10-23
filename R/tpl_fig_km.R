@@ -3,11 +3,13 @@
 #
 # One layout, `km`: the curves, the censor marks, the confidence interval
 # (bands, or bars at the axis's times), the number at risk, the median's
-# line and the log-rank p-value -- each an argument.  The display
-# templates (`km_disc`, FDA STF Figure 1; `km_ae_onset`, Figure 4;
-# `km_lfu`, Figure 13) and the former templates `km_simple`,
-# `km_risk_table`, `km_ci` are its variants: parameter sets, no body.  A
-# report's own layers go after the call with `+`.
+# line and the log-rank p-value -- each an argument.  Its report types,
+# `km_survival` (the survival S(t)) and `km_cumulative` (the cumulative
+# 1 - S(t)), are its variants: the form and the analysis by default, the
+# look (`.tpl_km_look`) and the y axis's type hidden -- the figure style
+# standard's (tfl_param(study = "km.<key>")).  A report's own layers go
+# after the call with `+`.  FDA STF Figures 1, 4 and 13 are report
+# definitions on km_cumulative (inst/extdata/report-definitions/).
 
 # The arguments the call takes that are the figure's settings (`plot:`)
 # by the same name: a report's own `plot:` value of one is written as the
@@ -56,8 +58,8 @@
               tier = "usual", doc = "the time's unit: the data step's days -> unit, the x axis's title"),
     tfl_param("censor", "CNSR", type = "vars", tier = "usual",
               doc = "the censoring variable, 1 censored (Surv(time, censor == 0))"),
-    tfl_param("group", "TRT01A", type = "vars", tier = "usual",
-              doc = "the curves' variable (survfit2(~ group), the colours)"),
+    tfl_param("by", NULL, required = TRUE, type = "vars",
+              doc = "the curves' variable (survfit2(~ by), the colours)"),
     tfl_param("y_type", "survival", type = "choice", choices = c("survival", "risk"), tier = "usual",
               doc = "the y axis: survival S(t), or risk 1 - S(t) (ggsurvfit(type = ))"),
     tfl_param("y_percent", FALSE, type = "flag",
@@ -92,21 +94,21 @@
               doc = "the number at risk under the curves (add_risktable(times = x_breaks))"),
     tfl_param("risk_title", NULL, type = "text", study = "km.risk_title",
               doc = "the risk table's title (add_risktable(stats_label = )); NULL: the figure style's"),
-    tfl_param("risk_stats", NULL, type = "text", multiple = TRUE,
+    tfl_param("risk_statistics", NULL, type = "text", multiple = TRUE,
               doc = "the risk table's rows (add_risktable(risktable_stats = )); NULL: n.risk"),
     tfl_param("risk_height", NULL, type = "number", study = "km.risk_height",
               doc = "the risk table's height, a share (add_risktable(risktable_height = ))"),
     tfl_param("risk_size", NULL, type = "number", study = "km.text_size",
               doc = "the risk table's text size (add_risktable(size = ))"),
     tfl_param("x_max", NULL, type = "number", tier = "usual",
-              doc = "the x axis's end (x_breaks <- seq(0, x_max, by = x_by)); NULL: the last time"),
-    tfl_param("x_by", NULL, type = "number", tier = "usual",
+              doc = "the x axis's end (x_breaks <- seq(0, x_max, by = x_step)); NULL: the last time"),
+    tfl_param("x_step", NULL, type = "number", tier = "usual",
               doc = "the x axis's step, the risk table's times; NULL: pretty()"),
     tfl_param("x_label", NULL, type = "text", tier = "usual",
               doc = "the x axis's title (labs(x = )); NULL: Time (<unit>)"),
     tfl_param("y_min", NULL, type = "number", doc = "the y axis's start (coord_cartesian(ylim = )); NULL: 0"),
     tfl_param("y_max", NULL, type = "number", doc = "the y axis's end; NULL: 1"),
-    tfl_param("y_by", NULL, type = "number", study = "km.y_by",
+    tfl_param("y_step", NULL, type = "number", study = "km.y_by",
               doc = "the y axis's step (scale_y_continuous(breaks = )); NULL: the figure style's"),
     tfl_param("y_label", NULL, type = "text", tier = "usual",
               doc = "the y axis's title (labs(y = )); NULL: by y_type"),
@@ -150,7 +152,7 @@
 .tpl_km_layout <- function(a) {
   censor <- if (!is.null(a$event)) "CNSR" else a$censor %||% "CNSR"
   unit <- a$time_unit %||% "months"
-  f <- .tpl_fig_design("km_ci", list(data = a$data, param = a$param %||% "OS", group = a$group,
+  f <- .tpl_fig_design("km_ci", list(data = a$data, param = a$param %||% "OS", group = a$by,
                                      time = a$time, censor = censor, time_unit = unit), "survfit")
   kinds <- function() vapply(f$steps, function(s) s$step %||% "", "")
   # no parameter: no step (a dataset not BDS, ADSL)
@@ -185,7 +187,7 @@
   # the figure's settings the arguments say
   pl <- list(title = a$title, x_label = a$x_label, legend = a$legend, theme = a$theme,
              base_size = a$base_size, palette = a$palette, y_min = a$y_min, y_max = a$y_max,
-             y_by = a$y_by)
+             y_by = a$y_step)
   if (identical(a$y_type, "risk") && is.null(a$y_label)) {
     pl$y_label <- if (isTRUE(a$y_percent)) "Cumulative Percentage of Subjects" else "Cumulative Probability"
   }
@@ -194,9 +196,9 @@
   # the x axis's breaks (the call's, after the fit): the risk table's times,
   # the bars' times, the axis to the last of them
   bars <- identical(a$ci, "bars")
-  if (rt || bars || !is.null(a$x_max) || !is.null(a$x_by)) {
+  if (rt || bars || !is.null(a$x_max) || !is.null(a$x_step)) {
     to <- if (!is.null(a$x_max)) format(a$x_max) else "max(fit$time)"
-    br <- if (!is.null(a$x_by)) sprintf("seq(0, %s, by = %s)", to, format(a$x_by))
+    br <- if (!is.null(a$x_step)) sprintf("seq(0, %s, by = %s)", to, format(a$x_step))
           else sprintf("pretty(c(0, %s))", to)
     f$stats <- c(f$stats, list(list(step = "code", label = if (rt) "the x axis's breaks, the times at risk"
                                     else "the x axis's breaks", code = paste("x_breaks <-", br))))
@@ -236,7 +238,7 @@
     r <- f$content[[which(is_rt)[1L]]]$args
     base <- as.numeric(f$plot$base_size %||% 10)
     f$content[[which(is_rt)[1L]]] <- tfl_item("call", list(fn = "add_risktable", args = list(
-      times = tfl_r("x_breaks"), risktable_stats = a$risk_stats %||% "n.risk", size = r$size,
+      times = tfl_r("x_breaks"), risktable_stats = a$risk_statistics %||% "n.risk", size = r$size,
       stats_label = r$title,
       risktable_height = r$height,
       theme = tfl_r(sprintf(paste0("list(theme_risktable_default(axis.text.y.size = %s, ",
@@ -270,24 +272,20 @@
 
 .tpl_km_layout_body <- function(a, ctx) .tpl_fig_body_of(.tpl_km_layout(a), a, ctx)
 
-# The former km presets as the layout's arguments (tpl_km_simple() ...)
-.tpl_km_preset_args <- list(km_simple = list(risk_table = FALSE),
-                            km_risk_table = list(median_line = TRUE),
-                            km_ci = list(median_line = TRUE, ci = "band"))
+# The look: the figure style standard's (tfl_param(study = "km.<key>")),
+# not a report type's arguments; a report changes it with `+` layers or
+# `plot:`.  (The layout `km` keeps them, the types hide them.)
+.tpl_km_look <- c("censor_shape", "censor_size", "censor_stroke", "median_linetype",
+                  "median_colour", "median_linewidth", "risk_title", "risk_height", "risk_size",
+                  "linewidth", "palette", "theme", "base_size", "ci_alpha")
 
-.tpl_km_design <- function(group = NULL, time = NULL, censor = "CNSR", time_unit = "months",
-                           data = NULL, param = NULL, preset = "km_simple") {
-  .tpl_km_layout(c(list(group = group, time = time, censor = censor, time_unit = time_unit,
-                        data = data, param = param), .tpl_km_preset_args[[preset]]))
-}
-
-# The display templates: FDA STF Figure 1 (and 4, 13 its variants)
-.tpl_km_disc_defaults <- list(param = "TTDISC", time_unit = "weeks",
-                              y_type = "risk", y_percent = TRUE, ci = "bars", pvalue = TRUE,
-                              risk_table = TRUE, median_line = FALSE,
-                              x_label = "Time (Weeks)",
-                              y_label = "Cumulative Percentage of Subjects Discontinued",
-                              legend = "bottom")
+# The report types' defaults: the form and the analysis (y_type fixed)
+.tpl_km_types <- list(
+  km_survival = list(y_type = "survival", median_line = TRUE, risk_table = TRUE, ci = "none",
+                     pvalue = TRUE, censor_marks = TRUE, legend = "inside"),
+  km_cumulative = list(y_type = "risk", y_percent = TRUE, ci = "bars", risk_table = TRUE,
+                       median_line = FALSE, pvalue = TRUE, censor_marks = FALSE,
+                       legend = "bottom"))
 
 .tpl_km_register <- function() {
   # the layout's parameters' types by name, as tflspec's others are
@@ -300,29 +298,19 @@
   .tfl_template("km", kind = "figure", layout = "km", params = .tpl_km_params(),
                 body = .tpl_km_layout_body, call = "tfl_tpl",
                 label = "Kaplan-Meier curves (the layout)",
-                example = list(param = "PFS", group = "TRT01A"))
-  tfl_template_variant("km_simple", from = "km", defaults = .tpl_km_preset_args$km_simple,
-                       label = "Kaplan-Meier curves")
-  tfl_template_variant("km_risk_table", from = "km", defaults = .tpl_km_preset_args$km_risk_table,
-                       label = "Kaplan-Meier curves + number at risk")
-  tfl_template_variant("km_ci", from = "km", defaults = .tpl_km_preset_args$km_ci,
-                       label = "Kaplan-Meier curves + confidence bands + number at risk")
-  tfl_template_variant("km_disc", from = "km", ai = TRUE, defaults = .tpl_km_disc_defaults,
-    label = "Kaplan-Meier plot: time to permanent discontinuation of treatment (FDA STF Figure 1)",
-    example = list(param = "TTDISC", group = "TRT01A"))
-  # (from km, km_disc's defaults again: its parameter, no default, the study's)
-  tfl_template_variant("km_ae_onset", from = "km",
-    defaults = utils::modifyList(.tpl_km_disc_defaults, keep.null = TRUE, val = list(
-      param = NULL, y_label = "Cumulative Percentage of Subjects With the Event")),
-    label = "Kaplan-Meier plot: time to onset of an AE of interest (FDA STF Figure 4)",
-    example = list(param = "TTSAE", group = "TRT01A"))
-  tfl_template_variant("km_lfu", from = "km_disc", ai = FALSE,
-    defaults = list(param = "TTLFU", y_label = "Cumulative Percentage of Subjects Lost to Follow-Up"),
-    label = "Kaplan-Meier plot: time to last follow-up (FDA STF Figure 13)",
-    example = list(param = "TTLFU", group = "TRT01A"))
+                example = list(param = "PFS", by = "TRT01A"))
+  hide <- c(.tpl_km_look, "y_type")
+  tfl_template_variant("km_survival", from = "km", ai = TRUE, hide = hide,
+    defaults = .tpl_km_types$km_survival,
+    label = "Kaplan-Meier plot of the survival: curves, median line, number at risk, p-value",
+    example = list(param = "PFS", by = "TRT01A"))
+  tfl_template_variant("km_cumulative", from = "km", ai = TRUE, hide = hide,
+    defaults = .tpl_km_types$km_cumulative,
+    label = "Kaplan-Meier plot of the cumulative percentage (1 - S(t)): CI bars, number at risk, p-value",
+    example = list(param = "TTDISC", by = "TRT01A", time_unit = "weeks"))
   # (the examples a company's package tests its wrapped templates with)
-  .tpl_extend(examples = list(km = list(param = "PFS", group = "TRT01A"),
-                              km_disc = list(param = "TTDISC", group = "TRT01A"),
-                              km_ae_onset = list(param = "TTSAE", group = "TRT01A"),
-                              km_lfu = list(param = "TTLFU", group = "TRT01A")))
+  .tpl_extend(examples = list(km = list(param = "PFS", by = "TRT01A"),
+                              km_survival = list(param = "PFS", by = "TRT01A"),
+                              km_cumulative = list(param = "TTDISC", by = "TRT01A",
+                                                   time_unit = "weeks")))
 }

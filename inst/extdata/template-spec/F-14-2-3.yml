@@ -1,6 +1,7 @@
-# F-14-2-3 as a template SPEC: the template km_simple, and the report's own
-# items after it (the median line, three numbers from T-14-2-2's ARD, the
-# y axis' title).  Its PNG is the same as the sample study's design-form
+# F-14-2-3 as a template SPEC: the report type km_survival without its
+# number at risk, median line and p-value, and the report's own items
+# after it (the median line, three numbers from T-14-2-2's ARD, the y
+# axis' title).  Its PNG is the same as the sample study's design-form
 # F-14-2-3 (data-raw/check of 2026-10-17).
 id: F-14-2-3
 kind: figure
@@ -8,11 +9,14 @@ label: KM curves of the time to first skin disorder
 population: SAF
 extends: defaults
 template:
-  name: km_simple
+  name: km_survival
   args:
     param: TTSKIN
-    group: TRT01A
+    by: TRT01A
     time_unit: days
+    risk_table: false
+    median_line: false
+    pvalue: false
 content:
   - geom_hline: {yintercept: 0.5, linetype: dashed, colour: grey50, linewidth: 0.3}
   - tfl_ard_number: {analysis_id: KM, variable: prob, level: 0.5, stat: estimate,

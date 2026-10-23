@@ -65,7 +65,7 @@ test_that("expanded: subset on the set's ADSL; a records data takes its subjects
   z <- tfl_template_expand("demog", list(population = "SAF", subset = "PART == \"A\" | AGE > 70"))
   expect_identical(as.character(z$ard$analysis_data[[1L]]$where), "PART == \"A\" | AGE > 70")
   # a figure: the set's semi join keeps them too; none given: one of its own
-  f <- tfl_template_expand("km_simple", list(param = "PFS", subset = "PART == \"Part 1\""))
+  f <- tfl_template_expand("km_survival", list(param = "PFS", by = "TRT01A", subset = "PART == \"Part 1\""))
   j <- f$data$steps[[2L]]
   expect_identical(c(j$step, j$dataset, j$where, j$how), c("join", "ADSL", "PART == \"Part 1\"", "semi"))
   # a listing has no analysis set: the records of ADSL's subjects it keeps
@@ -179,7 +179,7 @@ test_that("in a study: demog and ae_soc_pt of Part 1's subjects; N and counts th
   }
 })
 
-test_that("a figure (km_simple) of Part 1's subjects: A = B = the template SPEC", {
+test_that("a figure (km_survival) of Part 1's subjects: A = B = the template SPEC", {
   skip_on_cran()
   skip_if_not_installed("ggsurvfit")
   skip_if_not_installed("dplyr")
@@ -192,8 +192,8 @@ test_that("a figure (km_simple) of Part 1's subjects: A = B = the template SPEC"
   data$adsl <- as.data.frame(haven::read_xpt(file.path(d, "adam", "adsl.xpt")))
   o <- tfl_output("F-9-2", "figure", population = "SAF", label = "KM curves, Part 1",
                   extends = "defaults",
-                  template = list(name = "km_simple",
-                                  args = list(param = "PFS", group = "TRT01A",
+                  template = list(name = "km_survival",
+                                  args = list(param = "PFS", by = "TRT01A",
                                               subset = "PART == \"Part 1\"")))
   x <- tplfig_check(o, d, data)
   txt <- paste(x$a, collapse = "\n")

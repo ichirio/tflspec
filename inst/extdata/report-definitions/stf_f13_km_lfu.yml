@@ -1,0 +1,19 @@
+# FDA STF Figure 13 as a report definition: the report type km_cumulative
+# (the cumulative percentage, 1 - S(t), with CI bars, the number at risk
+# and the log-rank p-value), the data step (ADTTE's TTLFU, the time to the
+# last follow-up, in weeks) and its labels.  It follows the shape of a
+# figure in FDA's Standard Safety Tables and Figures Integrated Guide
+# (version 2); it is not endorsed or recommended by FDA.
+id: F-STF-13
+kind: figure
+label: Kaplan-Meier Plot of Time to Loss to Follow-Up, Safety Population
+population: SAF
+extends: defaults
+template:
+  name: km_cumulative
+  args:
+    param: TTLFU
+    by: TRT01A
+    time_unit: weeks
+    x_label: Time (Weeks)
+    y_label: Cumulative Percentage of Subjects Lost to Follow-Up

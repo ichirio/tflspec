@@ -1,4 +1,4 @@
-# Each table and listing template's Rd page, topic tfl_tpl_<name>, made
+# Each table and listing template's Rd page (and the KM report types'), made
 # from the registry when the documentation is built (roxygen @eval,
 # .tpl_rd() in R/tpl_help.R; man/tfl_tpl_<name>.Rd is committed).  A new
 # template: one block here (test-tpl-docs.R says which is missing).
@@ -34,6 +34,12 @@ NULL
 NULL
 
 #' @eval .tpl_rd("hierarchical")
+NULL
+
+#' @eval .tpl_rd("km_cumulative")
+NULL
+
+#' @eval .tpl_rd("km_survival")
 NULL
 
 #' @eval .tpl_rd("km_table")

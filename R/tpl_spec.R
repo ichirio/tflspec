@@ -40,6 +40,13 @@
 # gives over a different study value says so (a message).  Returns the
 # arguments and the names the study gave.
 .tpl_study_args <- function(t, args, base, id, output = NULL, study = NULL) {
+  # (a parameter the template hides is not the report's: its look)
+  hidden <- intersect(names(args), names(Filter(function(p) isTRUE(p$hidden), t$params)))
+  if (length(hidden)) {
+    .ard_stop(sprintf(paste0("%s: template %s takes %s from the study standard, not from ",
+                             "`template: args:`; change it with the report's own items or `plot:`."),
+                      id, t$name, paste(sQuote(hidden, FALSE), collapse = ", ")))
+  }
   from_study <- character()
   for (p in t$params) {
     if (is.null(p$study)) next

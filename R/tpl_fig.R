@@ -55,80 +55,6 @@
 # a column given bare or as text (a quosure), NULL when not given
 .tpl_col <- function(q) if (rlang::quo_is_null(q)) NULL else rlang::as_name(q)
 
-# ---- km_simple ...: the km layout's former presets (R/tpl_fig_km.R) ----------
-
-#' Kaplan-Meier curves: a figure from the template `km_simple`
-#'
-#' The A use of a figure's template SPEC: the program makes the figure's
-#' data with its own steps (the dataset read, the analysis set's subjects
-#' kept, the parameter, the time's unit), then one call draws it.  The
-#' survival fit is made here, from the data (`ggsurvfit::survfit2()`): the
-#' curves, the censor marks, the treatment palette, the axes and the
-#' study's figure theme.  A report's own layers and settings go after the
-#' call with `+` (`+ geom_hline(...) + labs(...)`).
-#'
-#' @param data The figure's data: one record a subject (the parameter's,
-#'   the analysis set's subjects), its time in `time_unit`.
-#' @param group The curves' variable (`TRT01A`), bare or as text; `NULL`:
-#'   one curve.
-#' @param time The time variable; `NULL`: `AVAL`.
-#' @param censor The censoring variable (1: censored).
-#' @param time_unit The time's unit, for the x axis' title.
-#' @param plot The figure's settings over the template's (`x_label`,
-#'   `y_by`, `legend` ..., as a designed figure's `plot:`).
-#' @return A ggplot.
-#' @seealso [tfl_template_expand()] for the design it draws (the B use).
-#' @examples
-#' if (requireNamespace("ggsurvfit", quietly = TRUE)) {
-#'   saf <- adsl$USUBJID[adsl$SAFFL == "Y"]
-#'   df <- adtte[adtte$PARAMCD == "PFS" & adtte$USUBJID %in% saf, ]
-#'   p <- tpl_km_simple(df, group = TRT01A)
-#'   class(p)
-#' }
-#' @export
-tpl_km_simple <- function(data, group = NULL, time = NULL, censor = "CNSR",
-                          time_unit = "months", plot = NULL) {
-  f <- .tpl_km_design(.tpl_col(rlang::enquo(group)), .tpl_col(rlang::enquo(time)),
-                      .tpl_col(rlang::enquo(censor)), time_unit)
-  .tpl_fig_draw("km_simple", f, data, plot)
-}
-
-#' Kaplan-Meier curves and the number at risk: `km_risk_table`, `km_ci`
-#'
-#' The A use of the templates `km_risk_table` (the curves, the censor
-#' marks, the median's line and the number at risk under them) and
-#' `km_ci` (the same with the curves' confidence bands), as
-#' [tpl_km_simple()]: the program makes the data, one call draws it.  The
-#' number at risk is ggsurvfit's own table (`ggsurvfit::add_risktable()`),
-#' a layer of the plot: a report's own items `+`-ed after the call go on
-#' the curves.
-#'
-#' @inheritParams tpl_km_simple
-#' @return A ggplot (a ggsurvfit, its risk table built when it is drawn).
-#' @seealso [tfl_template_expand()] for the design it draws (the B use).
-#' @examples
-#' if (requireNamespace("ggsurvfit", quietly = TRUE)) {
-#'   df <- adtte[adtte$PARAMCD == "PFS", ]
-#'   p <- tpl_km_ci(df, group = TRT01A)
-#'   class(p)
-#' }
-#' @export
-tpl_km_risk_table <- function(data, group = NULL, time = NULL, censor = "CNSR",
-                              time_unit = "months", plot = NULL) {
-  f <- .tpl_km_design(.tpl_col(rlang::enquo(group)), .tpl_col(rlang::enquo(time)),
-                      .tpl_col(rlang::enquo(censor)), time_unit, preset = "km_risk_table")
-  .tpl_fig_draw("km_risk_table", f, data, plot)
-}
-
-#' @rdname tpl_km_risk_table
-#' @export
-tpl_km_ci <- function(data, group = NULL, time = NULL, censor = "CNSR",
-                      time_unit = "months", plot = NULL) {
-  f <- .tpl_km_design(.tpl_col(rlang::enquo(group)), .tpl_col(rlang::enquo(time)),
-                      .tpl_col(rlang::enquo(censor)), time_unit, preset = "km_ci")
-  .tpl_fig_draw("km_ci", f, data, plot)
-}
-
 # ---- mean_se / mean_ci: a mean over the visits, with SE or CI bars ------------------
 
 .tpl_mean_design <- function(interval, group = "TRT01A", value = "AVAL", visit_var = "AVISIT",
@@ -179,7 +105,8 @@ tpl_km_ci <- function(data, group = NULL, time = NULL, censor = "CNSR",
 #' @param visit_var The visits on the x axis (`AVISIT`), a factor in their order.
 #' @param visit_order The visits' order (`AVISITN`).
 #' @param param The parameter, for the y axis' title; `NULL`: none.
-#' @inheritParams tpl_km_simple
+#' @param plot The figure's settings over the template's (`x_label`,
+#'   `y_by`, `legend` ..., as a designed figure's `plot:`).
 #' @return A ggplot.
 #' @seealso [tfl_template_expand()] for the design it draws (the B use).
 #' @examples
@@ -247,7 +174,7 @@ tpl_mean_ci <- function(data, group = "TRT01A", value = "AVAL", visit_var = "AVI
 #' @param value The bars' value (`PCHG`), bare or as text.
 #' @param by_response `TRUE`: the bars coloured by `BOR` (the best overall
 #'   response, a column of `data`).
-#' @inheritParams tpl_km_simple
+#' @inheritParams tpl_mean_se
 #' @return A ggplot.
 #' @seealso [tfl_template_expand()] for the design it draws (the B use).
 #' @examples
@@ -348,7 +275,7 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
 #'   other arm, each row saying which.
 #' @param fig `tpl_forest_layout()`: the forest, with the report's own
 #'   items.
-#' @inheritParams tpl_km_simple
+#' @inheritParams tpl_mean_se
 #' @return `tpl_forest_hr()`: a ggplot; `tpl_forest_layout()`: a patchwork
 #'   of it and its text column.
 #' @seealso [tfl_template_expand()] for its ARD and design (the B use).

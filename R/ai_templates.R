@@ -82,7 +82,7 @@
   out <- character()
   for (i in seq_len(nrow(tt))) {
     t <- .tpl_get(tt$name[i], "tfl_ai_prepare()")
-    p <- tfl_template_params(tt$name[i])
+    p <- .tpl_shown(tfl_template_params(tt$name[i]))
     from <- if (!is.na(tt$from[i])) sprintf("; variant of %s", tt$from[i]) else ""
     pkg <- if (!identical(tt$package[i], "tflspec")) sprintf("; %s's", tt$package[i]) else ""
     out <- c(out, sprintf("- `%s`: %s (%s, layout %s%s%s)", tt$name[i], .ai_tpl_description(t),

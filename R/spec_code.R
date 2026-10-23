@@ -1245,8 +1245,8 @@ tfl_content_run <- function(output, data) {
 #'   report's own lines after it, each marked; `"items"` writes the items
 #'   it stands for, as for any report (and so does `"call"`, with a message,
 #'   when the call cannot say the report's own table roles, data or
-#'   normalization).  A figure's template (`km_simple`): its data steps
-#'   written out, then `content <- tpl_<name>(<data>, ...)` and the
+#'   normalization).  A figure's template (`km_survival`): its data steps
+#'   written out, then `content <- tfl_tpl(<data>, "<name>", ...)` and the
 #'   report's own items `+`-ed after it; `"items"` (or a report that
 #'   replaces one of the template's layers) writes its design.
 #' @return The code, one element a line.

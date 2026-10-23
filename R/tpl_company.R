@@ -118,6 +118,12 @@ tfl_template <- function(name, kind = c("table", "figure", "listing"), layout, p
 #'   example run it with; `NULL`: `from`'s.
 #' @param ai `TRUE` to list it in the AI requests that answer with
 #'   templates ([tfl_ai_prepare()]`(templates = TRUE)`); `NULL`: `from`'s.
+#' @param hide Parameters of `from` that are not the variant's arguments:
+#'   left out of its help, [tfl_templates()] and the AI's list, and a
+#'   report's `template: args:` may not give them.  They keep their
+#'   defaults and the study standard's values (`tfl_param(study = )`), as
+#'   the look of a figure's report type takes the figure style standard's;
+#'   a report changes that with its own items (`+`) or `plot:`.
 #' @return `name`, invisibly.
 #' @examples
 #' tfl_template_variant("demog_age_sex", from = "demog",
@@ -125,7 +131,7 @@ tfl_template <- function(name, kind = c("table", "figure", "listing"), layout, p
 #' tfl_template_params("demog_age_sex")$categorical$default
 #' @export
 tfl_template_variant <- function(name, from, defaults = list(), label = NULL, example = NULL,
-                                 ai = NULL) {
+                                 ai = NULL, hide = NULL) {
   fn <- "tfl_template_variant()"
   if (!is.character(name) || length(name) != 1L || !grepl("^[A-Za-z][A-Za-z0-9_.]*$", name)) {
     .ard_stop(sprintf("%s: `name` is one name of letters, digits, '_' and '.'.", fn))
@@ -139,6 +145,11 @@ tfl_template_variant <- function(name, from, defaults = list(), label = NULL, ex
     .ard_stop(sprintf("%s: template %s has no parameter %s; its parameters: %s.", fn, from,
                       paste(sQuote(unknown, FALSE), collapse = ", "),
                       paste(names(src$params), collapse = ", ")))
+  }
+  unknown <- setdiff(hide, names(src$params))
+  if (length(unknown)) {
+    .ard_stop(sprintf("%s: template %s has no parameter %s to hide.", fn, from,
+                      paste(sQuote(unknown, FALSE), collapse = ", ")))
   }
   # where it is registered: a package, or a study's spec/templates/ file
   pkg <- getOption("tflspec.template_source") %||% environmentName(topenv(parent.frame()))
@@ -155,9 +166,13 @@ tfl_template_variant <- function(name, from, defaults = list(), label = NULL, ex
     from <- keep
   }
   assign(name, list(name = name, from = from, defaults = defaults, label = label,
-                    package = pkg, example = example, ai = ai), envir = .tpl_registry)
+                    package = pkg, example = example, ai = ai, hide = hide),
+         envir = .tpl_registry)
   invisible(name)
 }
+
+# A template's parameters a report gives: those its variant hides left out
+.tpl_shown <- function(params) Filter(function(p) !isTRUE(p$hidden), params)
 
 # A variant as a template: `from`'s, as it is now, with the variant's
 # defaults (a default given makes a required parameter optional)
@@ -168,6 +183,8 @@ tfl_template_variant <- function(name, from, defaults = list(), label = NULL, ex
     params[[k]]$default <- v$defaults[[k]]
     if (!is.null(v$defaults[[k]])) params[[k]]$required <- FALSE
   }
+  # (hidden: not its arguments; a variant of it keeps them hidden)
+  for (k in v$hide) params[[k]]$hidden <- TRUE
   root <- src$root %||% src$name
   list(name = v$name, kind = src$kind, layout = src$layout, params = params,
        body = src$body, label = v$label %||% src$label, call = src$call,
@@ -411,9 +428,8 @@ tfl_test_templates <- function(names = NULL) {
   lab_shift = list(population = "SAF", visit = "CYCLE 2 DAY 1", params = c("ALT", "AST")),
   listing = list(data = "ADAE", columns = list(list(vars = "USUBJID", label = "Subject"))),
   km_table = list(),
-  km_simple = list(param = "PFS", group = "TRT01P"),
-  km_risk_table = list(param = "PFS", group = "TRT01P"),
-  km_ci = list(param = "PFS", group = "TRT01P"),
+  km_survival = list(param = "PFS", by = "TRT01P"),
+  km_cumulative = list(param = "TTDISC", by = "TRT01P", time_unit = "weeks"),
   forest_hr = list(param = "PFS", population = "SAF"),
   mean_se = list(param = "SYSBP", data = "ADVS"),
   mean_ci = list(param = "SYSBP", data = "ADVS"),
