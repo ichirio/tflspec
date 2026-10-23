@@ -172,7 +172,7 @@ going and leaves the message in the `error` / `warning` column.
 | a report file's content as code / run it | `tfl_content_code(report)` / `tfl_content_run(report, data)`; an item's arguments: `tfl_schema(fn)`, `tfl_schema_check(item)`, `tfl_schema_help(fn, arg)` |
 | the study folder as workbooks and back; workbooks to a folder once | `tfl_sheets_from_yaml(dir)` (`tfl_sheets_from_spec(study, outputs)` from a spec in memory), `tfl_write_spec_xlsx(dir, path)` / `tfl_import_spec_xlsx(dir, path)`; `tfl_convert_sheets_to_yaml(from, to)` |
 | start an ARD spec / read / write it | `tfl_ard_spec_template()` / `tfl_read_ard_spec()` / `tfl_write_ard_spec()` |
-| write the cards code of one output | `tfl_ard_code(spec, output_id)` |
+| write the cards code of one output; each analysis's data by the program's name | `tfl_ard_code(spec, output_id)`; `tfl_ard_data_names(spec, output_id)` |
 | run the ARD spec, one study ARD | `tfl_build_ard(spec)`; one output's rows: `tfl_ard_for(ard, output_id)` |
 | scaffold a table spec from an ARD | `tfl_table_spec_template(ard)` |
 | read / write a table (+ report) spec | `tfl_read_table_spec()` / `tfl_read_report_spec()` / `tfl_write_table_spec()` / `tfl_write_report_spec()` |
