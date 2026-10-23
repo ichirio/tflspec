@@ -49,13 +49,13 @@ test_that("a fitted model given as the first argument takes no data", {
                         args = "x = lm(AGE ~ TRT01A, data = data)"))
   code <- paste(tfl_ard_code(sp, save = FALSE), collapse = "\n")
   # `data` in args is the program's data, by its name
-  expect_match(code, "cardx::ard_car_anova(x = lm(AGE ~ TRT01A, data = pop_saf))",
+  expect_match(code, "cardx::ard_car_anova(x = lm(AGE ~ TRT01A, data = adsl_sub))",
                fixed = TRUE)
   # a function with a `data` argument still takes the data first
   sp <- exact_spec(list(method = "cardx::ard_stats_aov", population_id = "SAF",
                         args = "formula = AGE ~ TRT01A"))
   code <- paste(tfl_ard_code(sp, save = FALSE), collapse = "\n")
-  expect_match(code, "pop_saf |>
+  expect_match(code, "adsl_sub |>
   cardx::ard_stats_aov(", fixed = TRUE)
 })
 
@@ -71,7 +71,7 @@ test_that("args are read as R arguments: their order and spacing do not matter",
   sp <- exact_spec(list(method = "cards::ard_strata", population_id = "SAF",
                         args = ".strata = SEX, .f = function(df) cards::ard_summary(df, by = TRT01A, variables = AGE)"))
   code <- paste(tfl_ard_code(sp, save = FALSE), collapse = "\n")
-  expect_match(code, "pop_saf |>
+  expect_match(code, "adsl_sub |>
   ard_strata(", fixed = TRUE)
   # args that are not R are refused before any code is made
   expect_error(exact_spec(list(method = "categorical", population_id = "SAF",
@@ -88,7 +88,7 @@ test_that("a study's own function is a method, loaded by the study key `source`"
   expect_true("source(\"R/ard-own.R\")" %in%
                 tfl_ard_code(sp, part = "setup"))
   expect_match(paste(code, collapse = "\n"),
-               "pop_saf |>
+               "adsl_sub |>
   ard_riskdiff_newcombe(", fixed = TRUE)
   # without `source` it still reads, with a warning
   expect_warning(exact_spec(list(method = "ard_riskdiff_newcombe",

@@ -24,7 +24,7 @@ test_that("code lists make the listed columns factors, their labels the ARD's va
   Unknown = \"Unknown\"
 )"), fixed = TRUE)
   expect_match(code, "cl_sex <- c(M = \"Male\", F = \"Female\")", fixed = TRUE)
-  expect_match(code, paste0("pop_saf <- adsl |>\n  filter(SAFFL == \"Y\") |>\n",
+  expect_match(code, paste0("adsl_sub <- adsl |>\n  filter(SAFFL == \"Y\") |>\n",
                             "  set_levels(AGEGR1 = cl_agegr1, SEX = cl_sex)"), fixed = TRUE)
   ard <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE, codelists = cl))
   ag <- ard[ard$variable == "AGEGR1", ]
@@ -244,8 +244,8 @@ test_that("the study's program: an analysis data that is its population under a 
   cl <- data.frame(output_id = c("T", "T", "U", "U"), variable = "SEX", value = c("M", "F", "M", "F"),
                    label = c("Male", "Female", "Male", "Female"), order = c("1", "2", "1", "2"))
   all <- tfl_ard_code(sp, save = FALSE, codelists = cl)
-  # (the study's part: adsl_saf <- pop_saf, the code lists on pop_saf)
-  expect_true(any(grepl("adsl_saf <- pop_saf", all, fixed = TRUE)))
+  # (the study's part: adsl_saf <- adsl_sub, the code lists on adsl_sub)
+  expect_true(any(grepl("adsl_saf <- adsl_sub", all, fixed = TRUE)))
   ard <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE, codelists = cl))
   sx <- unique(vapply(ard$variable_level[ard$variable == "SEX"], as.character, ""))
   expect_identical(sx, c("Male", "Female"))

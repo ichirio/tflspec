@@ -445,7 +445,7 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   }
   cust <- which(a$method %in% "custom" & is.na(a$code))
   if (length(cust)) add(cust[1L], "code", "a `custom` analysis needs its `code`")
-  pr <- c(pr, list(.objects_problems(x)))
+  pr <- c(pr, list(.objects_problems(x), .old_pop_names_problems(x)))
   p <- do.call(rbind, pr)
   rownames(p) <- NULL
   p
@@ -1336,5 +1336,41 @@ tfl_ard_as_custom <- function(spec, output_id, analysis_id) {
   dup <- dup | (!is.na(ob$output_id) & ob$object_id %in% ob$object_id[is.na(ob$output_id)])
   for (i in which(dup)) add(i, "object_id", sprintf(
     "object %s: named twice (a report's object may not take a study object's name)", ob$object_id[i]))
+  do.call(rbind, pr)
+}
+
+# An analysis set's data was pop_<id> in the program; it is <dataset>_sub
+# now (numbered from a report's second: adsl_sub2).  R a cell writes with
+# the old name stops here, saying the new one, rather than failing as the
+# program runs.
+.old_pop_names_problems <- function(x) {
+  pops <- x$populations
+  if (is.null(pops) || !nrow(pops)) return(.spec_problems_empty())
+  old <- paste0("pop_", .r_name(pops$population_id))
+  rx <- paste0("(^|[^A-Za-z0-9._])(", paste(gsub(".", "\\.", old, fixed = TRUE), collapse = "|"),
+               ")($|[^A-Za-z0-9._])")
+  cols <- list(analysis_data = c("where", "derive", "code"),
+               analyses = c("where", "args", "post", "code"),
+               objects = "code")
+  pr <- list(.spec_problems_empty())
+  for (sh in names(cols)) {
+    d <- if (identical(sh, "objects")) .objects_sheet(x) else
+      if (identical(sh, "analysis_data")) .adata_sheet(x) else x[[sh]]
+    if (is.null(d) || !nrow(d)) next
+    idc <- c(analysis_data = "data_id", analyses = "analysis_id", objects = "object_id")[[sh]]
+    for (cn in intersect(cols[[sh]], names(d))) {
+      for (i in which(!is.na(d[[cn]]) & grepl(rx, d[[cn]]))) {
+        w <- sub(paste0("^.*?", rx, ".*$"), "\\2", d[[cn]][i], perl = TRUE)
+        k <- match(w, old)
+        new <- paste0(.r_name(pops$dataset[k]), "_sub")
+        pr[[length(pr) + 1L]] <- .spec_problem(sprintf(paste(
+          "%s%s: `%s` writes %s, a name the ARD program no longer has: the population %s's",
+          "data is %s now (%s2, %s3 ... from the second a report reads of %s); write that"),
+          if (is.na(d$output_id[i] %||% NA)) "" else paste0(d$output_id[i], " / "),
+          d[[idc]][i] %||% sh, cn, w, pops$population_id[k], new, new, new, pops$dataset[k]),
+          sh, d$output_id[i] %||% NA_character_, d[[idc]][i] %||% "", cn)
+      }
+    }
+  }
   do.call(rbind, pr)
 }

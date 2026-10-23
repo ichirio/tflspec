@@ -1,5 +1,16 @@
 # tflspec (development version)
 
+* The data the ARD program makes itself is named `<dataset>_sub`
+  (0.0.24.9219): an analysis set's (`adsl_sub`, was `pop_saf`) and an
+  analysis's own records (`adae_sub`, was `adae_saf`), numbered from a
+  report's second of a dataset (`adsl_sub2`), each under a comment saying
+  what it is (`# adsl_sub: SAF — Safety Analysis Set (SAFFL == "Y")`).
+  In the study's program each report's part makes its own, so a name
+  means one thing in a report.  R in the definition (`code`, `args`,
+  `where`) writes the new names; an old `pop_<id>` there is a problem that
+  says the new one.  The names of analysis data a person gives
+  (`data_id`) do not change.
+
 * Named values in the ARD definition (0.0.24.9215): sheet `objects`
   (`output_id`, `object_id`, `code`, `label`), data.yml `objects:` for
   the study's and a report's `ard: objects:` for its own, each
