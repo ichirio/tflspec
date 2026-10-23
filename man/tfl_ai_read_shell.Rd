@@ -11,7 +11,8 @@ tfl_ai_read_shell(
   toc_sheet = NULL,
   max_chars = .ai_shell_max_chars,
   file = NULL,
-  shells = NULL
+  shells = NULL,
+  toc_cols = NULL
 )
 }
 \arguments{
@@ -36,12 +37,25 @@ sheets join the TOC workbook's -- a sheet named as one already there
 becomes \code{"<sheet> [<workbook>]"} -- and each report's shell is looked
 for in all of them.  The TOC is \code{path}'s.  The text has a part a
 workbook.}
+
+\item{toc_cols}{The TOC's columns by their role, when its headers do not
+say them: a named character vector (or list) of a header's text or a
+column's letter -- \code{output_id} (the report's number), \code{shell} (its
+shell's number: the sheet's name), \code{title} (one column or more, joined
+with " / "), \code{population}, \code{program}, \code{file}.  \code{NULL} (default): the
+headers' words say them (Output No, Shell, Title, Population ...);
+with none, of two columns of report numbers the shell's is the one
+whose numbers name sheets.}
 }
 \value{
 A \code{tfl_ai_shell}: a list with \code{text} (one string), \code{toc} (a data
-frame, one row a report the TOC lists: \code{output_id} as written, \code{key},
-\code{type}, \code{title}, \code{text} -- the row's text -- \code{sheet}, \code{row}, \code{shell} --
-the sheet of its shell, \code{NA} for none found), \code{sheets} (\code{sheet},
+frame, one row a report the TOC lists -- every row naming a number, its
+shell shared with other rows or none: \code{output_id} as written, \code{key},
+\code{type}, \code{title}, \code{text} -- the row's text -- \code{sheet}, \code{row},
+\code{shell_id} and \code{shell_key} -- its shell's number as the TOC writes it,
+the report's own when the TOC names none -- \code{population}, \code{program},
+\code{file}, \code{info} -- the row's other cells, "header: value; ..." -- and
+\code{shell} -- the sheet of its shell, \code{NA} for none found), \code{sheets} (\code{sheet},
 \code{role} -- \code{toc}, \code{shell} or \code{other} -- \code{rows}, \code{cells}, \code{hidden}),
 \code{cells} (every non-empty cell: \code{sheet}, \code{row}, \code{col}, \code{ref}, \code{text}),
 \code{outputs} (the reports kept), \code{truncated}, \code{path} and \code{args} (the

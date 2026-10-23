@@ -27,7 +27,8 @@ tfl_ai_prepare(
   shells = NULL,
   add = FALSE,
   templates = TRUE,
-  progress = NULL
+  progress = NULL,
+  toc_cols = NULL
 )
 }
 \arguments{
@@ -98,6 +99,9 @@ each request's first line (\code{templates: TRUE}) and \code{ai/status.md}'s.}
 \code{step} \code{"adam"} (the ADaM's summary), \code{"workbook"} (the TOC / SHELL
 read), then \code{"request"}, \code{i} of \code{n} requests written -- for a progress
 bar (shiny's \code{setProgress()}); see \code{\link[=tfl_ai_write_requests]{tfl_ai_write_requests()}}.}
+
+\item{toc_cols}{The TOC's columns, when its headers do not say them (as
+\code{\link[=tfl_ai_read_shell]{tfl_ai_read_shell()}}): \code{c(output_id = "Output No", shell = "Shell", title = c("Title 1", "Title 2"))}, a header's text or a column's letter.}
 }
 \value{
 A \code{tfl_ai_prepared}: a list with \code{requests} (one row a request:
@@ -105,8 +109,9 @@ A \code{tfl_ai_prepared}: a list with \code{requests} (one row a request:
 \code{\link[=tfl_ai_write_requests]{tfl_ai_write_requests()}} gives them), \code{toc} (one row a report of the
 TOC: \code{output_id}, \code{title}, \code{type}, \code{shell} -- the sheet of its shell --,
 \code{shell_found}, \code{request} -- the request that asks for it, \code{NA} for none,
-\code{book}, and \code{parts}, \code{parts_row}, \code{same_number} as
-\code{\link[=tfl_ai_read_shell]{tfl_ai_read_shell()}}'s \code{toc} says them),
+\code{book}, and \code{parts}, \code{parts_row}, \code{same_number}, \code{shell_id},
+\code{population}, \code{program}, \code{file}, \code{info} as \code{\link[=tfl_ai_read_shell]{tfl_ai_read_shell()}}'s
+\code{toc} says them),
 \code{sheets} (the workbook's sheets and their roles), \code{adam} (the
 \code{\link[=tfl_ai_adam_summary]{tfl_ai_adam_summary()}}: \code{datasets}, \code{variables}, \code{text}), \code{files} (the
 files written, relative to \code{dir}), \code{hint} (what the workbook's reading

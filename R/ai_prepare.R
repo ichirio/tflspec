@@ -96,8 +96,9 @@
 #'   [tfl_ai_write_requests()] gives them), `toc` (one row a report of the
 #'   TOC: `output_id`, `title`, `type`, `shell` -- the sheet of its shell --,
 #'   `shell_found`, `request` -- the request that asks for it, `NA` for none,
-#'   `book`, and `parts`, `parts_row`, `same_number` as
-#'   [tfl_ai_read_shell()]'s `toc` says them),
+#'   `book`, and `parts`, `parts_row`, `same_number`, `shell_id`,
+#'   `population`, `program`, `file`, `info` as [tfl_ai_read_shell()]'s
+#'   `toc` says them),
 #'   `sheets` (the workbook's sheets and their roles), `adam` (the
 #'   [tfl_ai_adam_summary()]: `datasets`, `variables`, `text`), `files` (the
 #'   files written, relative to `dir`), `hint` (what the workbook's reading
@@ -263,6 +264,9 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
   tc$parts <- t$parts %||% na
   tc$parts_row <- t$parts_row %||% na
   tc$same_number <- t$same_number %||% rep(FALSE, nrow(t))
+  # its shell's number as the TOC writes it (a row whose shell has no sheet
+  # says which), and the row's other columns
+  for (k in c("shell_id", "population", "program", "file", "info")) tc[[k]] <- t[[k]] %||% na
   # the files written, relative to the study folder
   root <- paste0(normalizePath(dir, winslash = "/"), "/")
   files <- normalizePath(files, winslash = "/")
