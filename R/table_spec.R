@@ -103,9 +103,9 @@
     height_in = "num", margin_top_in = "num", margin_bottom_in = "num",
     margin_left_in = "num", margin_right_in = "num",
     header_dist_in = "num", footer_dist_in = "num",
-    font = "text", font_size_half_points = "int", title_format = "text",
+    font = "text", font_lang = "text", font_size_half_points = "int", title_format = "text",
     footnote_format = "text", title_width = "text",
-    footnote_width = "text", markup = "text"),
+    footnote_width = "text", markup = "text", page_more = "text"),
   header    = c(line = "int", left = "text", center = "text", right = "text"),
   footer    = c(line = "int", left = "text", center = "text", right = "text"),
   titles    = c(line = "int", left = "text", center = "text", right = "text"),
@@ -2401,6 +2401,30 @@ tfl_report_path <- function(spec, output_id = NULL, study = NULL) {
   }
   .sheet_rtf_path(.ard_spec_scope(.as_spec(spec, "table", "tfl_report_path",
                                           output_id = output_id), output_id))
+}
+
+#' Whether a report's RTF file may be written over
+#'
+#' What [rtfreporter::generate_rtfreport()]'s `overwrite` is for a report of
+#' the YAML spec: its page's `generate_rtfreport: {overwrite: }` (the
+#' report's own, its pattern's or the study's defaults), `TRUE` when none
+#' says it -- a report's program writes its file again each run.
+#'
+#' @param output A report of the YAML spec ([tfl_output()]).
+#' @param study The study ([tfl_read_study_spec()]), for its layers.
+#' @return `TRUE` or `FALSE`.
+#' @examples
+#' d <- system.file("extdata", "spec-yaml", package = "tflspec")
+#' tfl_report_overwrite(tfl_read_outputs(d)[["T-14-1-1"]], tfl_read_study_spec(d))
+#' @seealso [tfl_report_path()]
+#' @export
+tfl_report_overwrite <- function(output, study = NULL) {
+  if (!inherits(output, "tfl_output")) .ard_stop("tfl_report_overwrite(): `output` is a tfl_output.")
+  if (!isTRUE(attr(output, "resolved")) && inherits(study, "tfl_study_spec")) {
+    output <- tfl_resolve_output(output, study)
+  }
+  v <- .page_args(output$page$generate_rtfreport)$overwrite
+  if (is.null(v)) TRUE else isTRUE(v)
 }
 
 # The document's file, rtf_document(file = ): the report's path, unless it

@@ -22,6 +22,43 @@
   the `listings` sheet's new column `content_more` holds those items as
   YAML, the `listing_cols` sheet's `more` a column's other arguments, and
   they are read back as they were (0.0.24.9224).
+* **Fonts per script and their languages** (#449, rtfreporter#715): a font
+  table entry's `name` is one family or a family per script slot (`latin`,
+  `east_asian`, `complex`, `hansi`), the titles' and footnotes' `font` too;
+  `page.rtf_document.font_lang` gives a slot's language (`east_asian: ja`).
+  The report's `rtf_document()` call writes them as rtfreporter takes them
+  (named vectors), the study setup as `options(rtfreporter.font =,
+  rtfreporter.font_lang =)`, and the page sheet's `font` / new `font_lang`
+  columns say them as `latin = X | east_asian = Y` -- before, a slotted
+  family was lost on the sheets' path.  rtfreporter (>= 0.8.2.9094)
+  (0.0.24.9223).
+
+* **The running header's and footer's look** (#450): `page.rtf_header` and
+  `page.rtf_footer` take rtfreporter's `rtf_header()` / `rtf_footer()`
+  arguments (`border`, `width`, `width_twips`, `row_height_twips`,
+  `font_size_half_points`, `font`, `markup`, `cell_padding_*`,
+  `drop_empty_rows`; the lines stay `page.header` / `page.footer`), and
+  `page.rtf_footnotes` a `border`.  The report's call and the study setup's
+  `study_header` / `study_footer` write them; a report whose look differs
+  from the study's writes its own call.
+
+* **Page sheets keep the page arguments no column says** (#451): YAML ->
+  sheets -> YAML no longer drops a page's other rtfreporter arguments (the
+  titles' row height, the running header's look, the figure's align, a
+  second font ...): the page sheet's new column `page_more` holds them as
+  YAML and they are read back as they were.
+
+* **rtf_figures()'s drawing, the study's rtfreporter options, overwrite**
+  (#452): `page.rtf_figures` takes `render_width`, `render_height`,
+  `render_dpi` and `png_device` (rtfreporter#719; a drawn figure's
+  `rtfplot()` gets the device too); `defaults.yml`'s `options:` names
+  rtfreporter's options (`rtfreporter.png_device`,
+  `rtfreporter.figure.default_dpi`, `rtfreporter.ard_pipe` ...), which the
+  study setup writes as `options()`; `page.generate_rtfreport.overwrite`
+  says whether a report's file may be written over, read by the new
+  `tfl_report_overwrite()` (and `tfl_ai_run()`).  rtfreporter (>=
+  0.8.2.9096).
+
 * **A report's own `data:` with a figure template** (#446): its steps (the
   data stage: the analysis set, the parameter, the records kept) come
   first, then the template's call steps (the fit and what the call makes

@@ -167,7 +167,7 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
               .ai_fig_draw(st, id, out_dir)
             if (isTRUE(rtf)) {
               suppressMessages(rtfreporter::generate_rtfreport(
-                tfl_report(o, content = fig$plot, study = st), f, overwrite = TRUE))
+                tfl_report(o, content = fig$plot, study = st), f, overwrite = tfl_report_overwrite(o)))
             }
             list(rtf = if (isTRUE(rtf)) f, png = fig$png)
           } else {
@@ -176,7 +176,7 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
             if (isTRUE(rtf)) {
               plan <- suppressMessages(tfl_content_run(o, ard))
               suppressMessages(rtfreporter::generate_rtfreport(
-                tfl_report(o, content = plan, study = st), f, overwrite = TRUE))
+                tfl_report(o, content = plan, study = st), f, overwrite = tfl_report_overwrite(o)))
             }
             list(rtf = if (isTRUE(rtf)) f)
           }

@@ -589,7 +589,8 @@ rtf_document:
   package: rtfreporter
   description: The document -- its font, watermark and program.
   args:
-    font_table: {type: "list<map<string, string>>", description: "The fonts, the first the document's: [{name: Arial}]."}
+    font_table: {type: "list<map<string, string|vec<enum[latin|east_asian|complex|hansi], string>>>", description: "The fonts, the first the document's: [{name: Arial}]; a name a family per script slot: [{name: {latin: Times New Roman, east_asian: MS Mincho}}]."}
+    font_lang: {type: "vec<enum[latin|east_asian|complex], enum[ja|zh-Hans|zh-Hant|ko|ar|he|en]>", description: "The language of a font slot: {east_asian: ja}."}
     watermark: {type: string}
     program: {type: string}
     program_fallback: {type: string}
@@ -617,6 +618,10 @@ rtf_figures:
     align: {type: "enum[left|center|right]"}
     page_break: {type: logical, description: "FALSE: on under the content before it in the document, on the page that one ends on."}
     space_before: {type: integer, description: "With page_break false, empty lines between the content before and this one."}
+    render_width: {type: number, description: "A plot object drawn this wide, in inches (rtfplot()'s); blank: rtfplot()'s default."}
+    render_height: {type: number, description: "A plot object drawn this high, in inches."}
+    render_dpi: {type: number, description: "A plot object drawn at this resolution."}
+    png_device: {type: "enum[auto|ragg|png]", description: "The PNG device a plot object is drawn with: auto (ragg when installed), ragg, png."}
 
 rtf_titles:
   package: rtfreporter
@@ -625,7 +630,7 @@ rtf_titles:
     font_size_half_points: {type: integer}
     row_height_twips: {type: integer}
     markup: {type: "enum[script|relational|all|none]|list<enum[script|relational]>"}
-    font: {type: string}
+    font: {type: "string|vec<enum[latin|east_asian|complex|hansi], string>"}
     align: {type: "enum[left|center|right]"}
 
 rtf_footnotes:
@@ -635,8 +640,45 @@ rtf_footnotes:
     font_size_half_points: {type: integer}
     row_height_twips: {type: integer}
     markup: {type: "enum[script|relational|all|none]|list<enum[script|relational]>"}
-    font: {type: string}
+    font: {type: "string|vec<enum[latin|east_asian|complex|hansi], string>"}
     align: {type: "enum[left|center|right]"}
+    border: {type: "call<rtf_border>", description: "The footnotes' border: {fn: rtf_border, args: {top: true}}."}
+
+generate_rtfreport:
+  package: rtfreporter
+  description: Writing the report's RTF file.
+  args:
+    overwrite: {type: logical, description: "FALSE: a report's file already there is not written over (an error); blank: TRUE."}
+
+rtf_header:
+  package: rtfreporter
+  description: The running header's look (its lines are page.header).
+  args:
+    border: {type: "call<rtf_border>", description: "The band's border: {fn: rtf_border, args: {top: true}}."}
+    width_twips: {type: integer}
+    width: {type: "enum[page]|number", description: "page (the writable width), a fraction of it in (0, 1], or twips."}
+    row_height_twips: {type: integer}
+    font_size_half_points: {type: integer}
+    font: {type: "string|vec<enum[latin|east_asian|complex|hansi], string>"}
+    markup: {type: "enum[script|relational|all|none]|list<enum[script|relational]>"}
+    cell_padding_left_twips: {type: integer}
+    cell_padding_right_twips: {type: integer}
+    drop_empty_rows: {type: logical, description: "TRUE: a line whose own tokens are all empty is left out."}
+
+rtf_footer:
+  package: rtfreporter
+  description: The running footer's look (its lines are page.footer).
+  args:
+    border: {type: "call<rtf_border>", description: "The band's border: {fn: rtf_border, args: {top: true}}."}
+    width_twips: {type: integer}
+    width: {type: "enum[page]|number", description: "page (the writable width), a fraction of it in (0, 1], or twips."}
+    row_height_twips: {type: integer}
+    font_size_half_points: {type: integer}
+    font: {type: "string|vec<enum[latin|east_asian|complex|hansi], string>"}
+    markup: {type: "enum[script|relational|all|none]|list<enum[script|relational]>"}
+    cell_padding_left_twips: {type: integer}
+    cell_padding_right_twips: {type: integer}
+    drop_empty_rows: {type: logical, description: "TRUE: a line whose own tokens are all empty is left out."}
 
 # ---- the spec sheets' columns: the help of each, in the sheets' order -------
 # What tfl_spec_columns() returns (the xlsx's header comments, the GUI's ?,
@@ -1655,8 +1697,15 @@ rtf_footnotes:
       - column: font
         description: 'The document''s font (its font table); the study''s row (blank
           output_id) is the company''s, written once in the setup code; blank: rtfreporter''s
-          option (Courier).'
+          option (Courier). A family per script slot: latin = Times New Roman | east_asian
+          = MS Mincho (rtfreporter''s Fonts per script).'
         example: Courier New
+      - column: font_lang
+        at: rtf_document.font_lang
+        description: 'The language of a font slot (rtf_document(font_lang = )): east_asian
+          = ja; slots latin, east_asian, complex; languages ja, zh-Hans, zh-Hant, ko,
+          ar, he, en. Blank: none.'
+        example: east_asian = ja
       - column: font_size_half_points
         at: rtf_default_format.font_size_half_points
         description: 'The body font size in half-points (18 = 9 pt); blank: rtfreporter''s
@@ -1686,6 +1735,11 @@ rtf_footnotes:
         description: 'Cell-text markup for the whole document: script / relational
           / all / none; blank: script.'
         example: all
+      - column: page_more
+        description: 'The page''s rtfreporter arguments no column says (the titles''
+          row height, the running header''s look, a second font ...), as YAML: {rtf_titles:
+          {row_height_twips: 300}}; kept as they are and written back. Blank: none.'
+        example: '{rtf_header: {font_size_half_points: 16}}'
   - sheet: header
     description: 'Report: the running page header, one row a line; the line is the
       key (the study''s lines on blank output_id, a report''s own on its rows). A

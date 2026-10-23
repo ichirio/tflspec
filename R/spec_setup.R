@@ -18,9 +18,20 @@
   ft <- .page_args(pg$rtf_document)$font_table
   if (length(ft)) {
     first <- if (is.list(ft) && length(ft) && is.list(ft[[1L]])) ft[[1L]]$name else ft[[1L]]
+    # (one family, or a family per script slot: a named vector)
+    first <- .font_slots_value(first)
     if (!is.null(first) && !is.na(first[1L]) && nzchar(first[1L])) {
-      opts[[.page_options[["font"]]]] <- as.character(first[1L])
+      opts[[.page_options[["font"]]]] <- if (is.null(names(first))) as.character(first[1L]) else first
     }
+  }
+  # the language of each font slot (rtfreporter's font_lang)
+  fl <- .font_slots_value(.page_args(pg$rtf_document)$font_lang)
+  if (length(fl)) opts[["rtfreporter.font_lang"]] <- fl
+  # rtfreporter's options the study says by name (defaults.yml's options:);
+  # they win over the page's font and size
+  for (k in names(study$options)) {
+    v <- study$options[[k]]
+    opts[[k]] <- if (is.list(v) && !is.null(names(v))) unlist(v) else v
   }
   sz <- .page_args(pg$rtf_default_format)$font_size_half_points
   if (!is.null(sz)) {
@@ -48,8 +59,10 @@
     own <- setdiff(.page_used_tokens(pg[band]), .ard_spec_rtf_tokens)
     nm <- .setup_band_names[[band]]
     lines <- paste0(nm, "_lines")
-    call <- .spec_call(paste0("rtf_", band), .spec_sym(lines),
-                       drop_empty_rows = if (length(own)) TRUE)
+    # (its look as the study's page says it: page.rtf_header / rtf_footer)
+    style <- .band_style(pg, band)
+    if (is.null(style$drop_empty_rows) && length(own)) style$drop_empty_rows <- TRUE
+    call <- do.call(.spec_call, c(list(paste0("rtf_", band), .spec_sym(lines)), style))
     out <- c(out,
              paste(lines, "<-", .spec_call_code(b, 0L, lead = nchar(lines) + 4L)),
              paste(nm, "<-", .spec_call_code(call, 0L, lead = nchar(nm) + 4L)))
