@@ -97,25 +97,31 @@
       fig <- .spec_call("rtfplot", .spec_sym(content),
                         render_width = sz$width_in, render_height = sz$height_in,
                         render_dpi = as.numeric(img$dpi %||% 300))
-      st[[length(st) + 1L]] <- do.call(.spec_call, c(list("rtf_figures", doc, fig), flow(fa)))
+      st[[length(st) + 1L]] <- do.call(.spec_call, c(list("rtf_figures", doc, fig, align = fa$align), flow(fa)))
     } else {
       st[[length(st) + 1L]] <- do.call(.spec_call, c(list("rtf_figures", doc, .spec_sym(content),
         width_twips = if (sz$mode[["width"]] != "native") twips(sz$width_in),
-        height_twips = if (sz$mode[["height"]] != "native") twips(sz$height_in)), flow(fa)))
+        height_twips = if (sz$mode[["height"]] != "native") twips(sz$height_in),
+        align = fa$align), flow(fa)))
     }
   } else {
     ta <- args_of("rtf_tables")
     st[[length(st) + 1L]] <- do.call(.spec_call, c(list("rtf_tables", doc, .spec_sym(content)),
       ta[intersect(c("auto_section", "section_label_align", "auto_title",
-                     "title_label_align"), names(ta))], flow(ta)))
+                     "title_label_align", "font_size_half_points"), names(ta))], flow(ta)))
   }
+  # the titles' and footnotes' own style: rtf_titles() / rtf_footnotes()'s
+  # arguments as the page says them
+  band_style <- c("font_size_half_points", "row_height_twips", "markup", "font", "align")
   if (length(tt)) {
-    st[[length(st) + 1L]] <- .spec_call("rtf_titles", doc, list(tt),
-      font_size_half_points = args_of("rtf_titles")$font_size_half_points)
+    a <- args_of("rtf_titles")
+    st[[length(st) + 1L]] <- do.call(.spec_call, c(list("rtf_titles", doc, list(tt)),
+                                                   a[intersect(band_style, names(a))]))
   }
   if (length(fn)) {
-    st[[length(st) + 1L]] <- .spec_call("rtf_footnotes", doc, list(fn),
-      font_size_half_points = args_of("rtf_footnotes")$font_size_half_points)
+    a <- args_of("rtf_footnotes")
+    st[[length(st) + 1L]] <- do.call(.spec_call, c(list("rtf_footnotes", doc, list(fn)),
+                                                   a[intersect(band_style, names(a))]))
   }
   st
 }

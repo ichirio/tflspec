@@ -6,7 +6,15 @@
   from it); the template's call stays on, and `tfl_template_to_spec()`
   writes the same.  Before, the report's steps replaced the template's
   whole list, the fit with it.  Without own steps, and for a table's
-  template, nothing changes (0.0.24.9218).
+  template, nothing changes (0.0.24.9222).
+
+* **No page argument is dropped any more** (#444): `page.rtf_titles` and
+  `page.rtf_footnotes` write `row_height_twips`, `markup`, `font` and
+  `align` (not only `font_size_half_points`), `page.rtf_figures` its
+  `align`, and `page.rtf_tables` a `font_size_half_points` left on the page
+  (a content of R code) -- the schema took them, the program left them out.
+  `markup` takes rtfreporter's words (`"script"`, `"relational"`, `"all"`,
+  `"none"`), no longer `TRUE` / `FALSE` (0.0.24.9217).
 
 * **A report on the page of the content before it** (#443): a report's
   `page.rtf_tables` says `page_break`, `space_before`, `first_rows` and
