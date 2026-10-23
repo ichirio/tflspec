@@ -316,14 +316,14 @@
   tfl_template_variant("km_survival", from = "km", ai = TRUE, hide = hide,
     defaults = .tpl_km_types$km_survival,
     label = "Kaplan-Meier plot of the survival: curves, median line, number at risk, p-value",
-    example = list(param = "PFS", by = "TRT01A"))
+    example = list(by = "TRT01A"))
   tfl_template_variant("km_cumulative", from = "km", ai = TRUE, hide = hide,
     defaults = .tpl_km_types$km_cumulative,
     label = "Kaplan-Meier plot of the cumulative percentage (1 - S(t)): CI bars, number at risk, p-value",
-    example = list(param = "TTDISC", by = "TRT01A", time_unit = "weeks"))
+    example = list(by = "TRT01A", time_unit = "weeks"))
   # (the examples a company's package tests its wrapped templates with)
   .tpl_extend(examples = list(km = list(param = "PFS", by = "TRT01A"),
-                              km_survival = list(param = "PFS", by = "TRT01A"),
-                              km_cumulative = list(param = "TTDISC", by = "TRT01A",
-                                                   time_unit = "weeks")))
+                              # (the report types: no data stage, a report's own data: steps)
+                              km_survival = list(by = "TRT01A"),
+                              km_cumulative = list(by = "TRT01A", time_unit = "weeks")))
 }

@@ -428,8 +428,9 @@ tfl_test_templates <- function(names = NULL) {
   lab_shift = list(population = "SAF", visit = "CYCLE 2 DAY 1", params = c("ALT", "AST")),
   listing = list(data = "ADAE", columns = list(list(vars = "USUBJID", label = "Subject"))),
   km_table = list(),
-  km_survival = list(param = "PFS", by = "TRT01P"),
-  km_cumulative = list(param = "TTDISC", by = "TRT01P", time_unit = "weeks"),
+  # (the KM report types: their data stage is a report's own data: steps)
+  km_survival = list(by = "TRT01P"),
+  km_cumulative = list(by = "TRT01P", time_unit = "weeks"),
   forest_hr = list(param = "PFS", population = "SAF"),
   mean_se = list(param = "SYSBP", data = "ADVS"),
   mean_ci = list(param = "SYSBP", data = "ADVS"),
