@@ -579,7 +579,7 @@ rtf_default_format:
     row_height_twips: {type: integer}
     cell_padding_left_twips: {type: integer}
     cell_padding_right_twips: {type: integer}
-    markup: {type: logical}
+    markup: {type: "enum[script|relational|all|none]|list<enum[script|relational]>"}
     title_format: {type: string}
     footnote_format: {type: string}
     title_width: {type: "number|string"}
@@ -624,7 +624,7 @@ rtf_titles:
   args:
     font_size_half_points: {type: integer}
     row_height_twips: {type: integer}
-    markup: {type: logical}
+    markup: {type: "enum[script|relational|all|none]|list<enum[script|relational]>"}
     font: {type: string}
     align: {type: "enum[left|center|right]"}
 
@@ -634,7 +634,7 @@ rtf_footnotes:
   args:
     font_size_half_points: {type: integer}
     row_height_twips: {type: integer}
-    markup: {type: logical}
+    markup: {type: "enum[script|relational|all|none]|list<enum[script|relational]>"}
     font: {type: string}
     align: {type: "enum[left|center|right]"}
 

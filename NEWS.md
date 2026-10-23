@@ -1,5 +1,13 @@
 # tflspec (development version)
 
+* **No page argument is dropped any more** (#444): `page.rtf_titles` and
+  `page.rtf_footnotes` write `row_height_twips`, `markup`, `font` and
+  `align` (not only `font_size_half_points`), `page.rtf_figures` its
+  `align`, and `page.rtf_tables` a `font_size_half_points` left on the page
+  (a content of R code) -- the schema took them, the program left them out.
+  `markup` takes rtfreporter's words (`"script"`, `"relational"`, `"all"`,
+  `"none"`), no longer `TRUE` / `FALSE` (0.0.24.9218).
+
 * **A report on the page of the content before it** (#443): a report's
   `page.rtf_tables` says `page_break`, `space_before`, `first_rows` and
   `cont_title`, and `page.rtf_figures` `page_break` and `space_before`, as
