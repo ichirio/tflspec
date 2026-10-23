@@ -134,12 +134,27 @@ tfl_template_to_spec <- function(output, study) {
   # win over among them) stay the layers', so the report resolves the same
   ro <- tfl_resolve_output(output, study, provenance = TRUE)
   output$ard <- .merge_ard(e$x$ard, output$ard)
-  output$data <- .merge_map(e$x$data %||% list(), output$data %||% list())
+  own <- if (.tpl_composes(output$data, e$x)) .tpl_compose_data(output$data, e$x) else output$data
+  output$data <- .merge_map(e$x$data %||% list(), own %||% list())
   output$content <- if (inherits(ro$content, "tfl_r")) ro$content else .tpl_own_part(ro$content)
   # a figure's design: its settings, the template's under the report's
   if (!is.null(ro$plot)) output$plot <- ro$plot
   output$template <- NULL
   output
+}
+
+# A figure template (its call makes the data's last `call_steps` steps: the
+# fit ...) and a report's own data steps (its data stage: the analysis set,
+# the parameter, the records kept): the report's steps, then the
+# template's call steps -- tfl_resolve_output() and tfl_template_to_spec()
+# alike.  Without own steps, or for a table's template, the template's.
+.tpl_composes <- function(data, x) {
+  as.integer(x$call_steps %||% 0L) > 0L && length(data$steps) > 0L
+}
+.tpl_compose_data <- function(data, x) {
+  n <- as.integer(x$call_steps)
+  data$steps <- c(data$steps, utils::tail(x$data$steps %||% list(), n))
+  data
 }
 
 # The resolved items' part from the template and the report's own file:
