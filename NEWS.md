@@ -12,8 +12,6 @@
   (`data_id`) do not change.
   `tfl_ard_data_names()` says each analysis's data by the program's name.
 
-* Named values in the ARD definition (0.0.24.9215): sheet `objects`
-
 * Named values in the ARD definition (0.0.24.9219): sheet `objects`
   (`output_id`, `object_id`, `code`, `label`), data.yml `objects:` for
   the study's and a report's `ard: objects:` for its own, each
@@ -22,8 +20,6 @@
   report's; an analysis names one as its `denominator`, or in its `args`
   or `where`.  Checked: an R name, not a dataset's or `pop_*`, once in
   its scope, code that is R.
-
-* An analysis's `denominator` can be numbers (0.0.24.9214): one
 
 * An analysis's `denominator` can be numbers (0.0.24.9218): one
   (`denominator: 86`, every column's N) or one a value of the analysis's
