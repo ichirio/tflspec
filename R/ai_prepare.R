@@ -218,16 +218,20 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
     files <- c(files, file.path(ai, c("adam_summary.md", shell_md)),
                .ai_toc_yml(dir, shell, overwrite = overwrite, add = add))
     if (identical(mode, "agent")) {
+      # where the ADaM and the workbook are, from the study folder
+      adam_at <- .ai_from_study(dir, adam_dir)
+      book_at <- .ai_from_study(dir, toc)
       # each request says the agent's steps at its head
       for (i in seq_len(nrow(req))) {
         f <- file.path(dir, req$file[i])
-        txt <- c(.ai_agent_request_head(req$request[i]),
+        txt <- c(.ai_agent_request_head(req$request[i], adam = adam_at, book = book_at),
                  readLines(f, warn = FALSE, encoding = "UTF-8"))
         .ai_write_text(txt, f)
         req$chars[i] <- nchar(paste(txt, collapse = "\n"))
       }
       files <- c(files, .ai_agent_files(dir, overwrite = overwrite && !isTRUE(add),
-                                        templates = templates))
+                                        templates = templates, adam = adam_at,
+                                        book = book_at))
       # what every request would repeat, written once
       files <- c(files, list.files(ai, "^(instructions-.*|templates)[.]md$", full.names = TRUE))
     }
