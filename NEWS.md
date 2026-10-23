@@ -1,5 +1,27 @@
 # tflspec (development version)
 
+* **Table sheets keep what they cannot say** (#448): YAML -> sheets -> YAML
+  no longer drops a table's items the sheets cannot hold (`plan_titles`,
+  `plan_after`, a second call of a verb, a `plan_digits()` with `stat`, a
+  `plan_style()` border with more than its sides, `plan_columns()` widths
+  by position ...): an item any of whose arguments no column says goes
+  whole, as YAML, into the `tables` sheet's new column `content_more` (not
+  into the other sheets as well), and is read back into the content by its
+  verb's rank. The defaults' items too.  A table's (or a listing's) verb
+  called twice is put together in one call when the content is read, as
+  rtfreporter puts the two layers together -- a later call's arguments
+  winning, key by key; `plan_hide()`'s columns adding up -- and a message
+  says so; the verbs whose calls are layers of their own (filters,
+  comparisons, cell styles, steps after, titles of other pages) are left
+  as they are, and a figure's content is not touched (0.0.24.9226).
+
+* **Listing sheets keep what their columns cannot say** (#447): YAML ->
+  sheets -> YAML no longer drops a listing's other items (`plan_hide`,
+  `plan_paginate_group`, a `plan_paginate_rows()` with `page_by`, ...) or a
+  column's other `listing_col()` arguments (`name`, `rel_width`, `layout`):
+  the `listings` sheet's new column `content_more` holds those items as
+  YAML, the `listing_cols` sheet's `more` a column's other arguments, and
+  they are read back as they were (0.0.24.9226).
 * An analysis's `denominator` can be numbers (0.0.24.9225): one
   (`denominator: 86`, every column's N) or one a value of the analysis's
   `by` (`denominator: {Drug X: 86, Placebo: 85}`, in the sheet

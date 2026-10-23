@@ -655,7 +655,21 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
     items <- .levels_prune_sheets(items, sp, ard_spec, output_id %||% attr(sp, "output_id"),
                                   own = isTRUE(own))
   }
-  items
+  .plan_content_more(items, sp$tables)
+}
+
+# the items the sheets cannot say, from the tables rows' content_more (YAML,
+# tfl_sheets_from_spec()): each put by its verb's rank among the sheets'
+# items; a table_plan() there is the table's whole (its row says none of it)
+.plan_content_more <- function(items, tables) {
+  if (!is.data.frame(tables) || !"content_more" %in% names(tables)) return(items)
+  more <- do.call(c, c(list(list()), lapply(tables$content_more, .sheet_more_in, items = TRUE)))
+  if (!length(more)) return(items)
+  if (any(vapply(more, function(it) identical(it$fn, "table_plan"), NA))) {
+    items <- Filter(function(it) !identical(it$fn, "table_plan"), items)
+  }
+  for (it in more) items <- .insert_by_rank(items, it)
+  .table_plan_first(items)
 }
 
 # A call as the program writes it: an argument the schema marks
@@ -716,7 +730,14 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
 .plan_sheets_from_content <- function(items, output_id = NULL) {
   id <- if (is.null(output_id)) NA_character_ else output_id
   lost <- character()
-  miss <- function(fn, what) lost <<- c(lost, sprintf("%s: %s", fn, what))
+  # (the items a miss is in, by their place among the items not
+  # normalize_ard(): attr(, "not_converted_at"), the caller keeps them whole)
+  lost_at <- integer()
+  cur <- NA_integer_
+  miss <- function(fn, what) {
+    lost <<- c(lost, sprintf("%s: %s", fn, what))
+    lost_at <<- c(lost_at, cur)
+  }
   bar <- function(x) paste(as.character(x), collapse = " | ")
   # the sheets read raw text (tables, variables, cells, col_header) take a
   # value as it is; a leading or trailing blank is kept by quoting it
@@ -804,13 +825,17 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
   # recommended order puts plan_levels() first, and plan_levels() is read
   # first wherever a file writes it
   calls <- .content_calls(items)
+  at <- seq_along(calls)
   fns <- vapply(calls, function(cl) cl$fun, "")
   first <- match("plan_labels", fns)
   if (!is.na(first) && any(fns[-seq_len(first)] == "plan_levels")) {
     lv <- which(fns == "plan_levels" & seq_along(fns) > first)
     calls <- append(calls[-lv], calls[lv], after = first - 1L)
+    at <- append(at[-lv], at[lv], after = first - 1L)
   }
-  for (cl in calls) {
+  for (j in seq_along(calls)) {
+    cl <- calls[[j]]
+    cur <- at[j]
     fn <- cl$fun
     a <- cl$args
     nm <- names(a) %||% rep("", length(a))
@@ -1099,6 +1124,7 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
     sp$codelists <- frame(codes)
   }
   attr(sp, "not_converted") <- lost
+  attr(sp, "not_converted_at") <- sort(unique(lost_at[!is.na(lost_at)]))
   sp
 }
 
