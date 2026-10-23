@@ -383,13 +383,26 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
     }
   }
   den <- a$denominator %||% rep(NA, nrow(a))
-  bad <- which(!is.na(den) & !den %in% c(.den_words,
-                                         x$populations$population_id,
-                                         x$datasets$dataset,
-                                         x$analysis_data$data_id))
+  num <- lapply(den, .den_numbers)
+  bad <- which(!is.na(den) & vapply(num, is.null, NA) &
+                 !den %in% c(.den_words,
+                             x$populations$population_id,
+                             x$datasets$dataset,
+                             x$analysis_data$data_id))
   if (length(bad)) add(bad[1L], "denominator", sprintf(
-    "denominator(s) %s: population, row, column, cell, a population, a dataset or an analysis data",
+    "denominator(s) %s: population, row, column, cell, a population, a dataset, an analysis data or numbers (86, or c(\"Drug X\" = 86, \"Placebo\" = 85))",
     paste(unique(den[bad]), collapse = ", ")))
+  for (i in which(vapply(num, function(n) length(n) == 1L && is.na(n), NA))) {
+    add(i, "denominator", sprintf(
+      "%s / %s: denominator %s: the numbers are whole and each named by a value of the by: c(\"Drug X\" = 86, \"Placebo\" = 85)",
+      a$output_id[i], a$analysis_id[i], den[i]))
+  }
+  for (i in which(vapply(num, function(n) !is.null(names(n)), NA))) {
+    if (length(.split_bar(a$by[i])) != 1L) add(i, "denominator", sprintf(
+      "%s / %s: a denominator by value (%s) needs one by variable; the analysis has %s",
+      a$output_id[i], a$analysis_id[i], den[i],
+      if (is.na(a$by[i])) "none" else paste(.split_bar(a$by[i]), collapse = ", ")))
+  }
   ds_a <- which(!is.na(a$dataset) & !a$dataset %in% x$datasets$dataset)
   pops <- x$populations
   ds_p <- which(!is.na(pops$dataset) & !pops$dataset %in% x$datasets$dataset)
@@ -1162,7 +1175,7 @@ tfl_ard_as_custom <- function(spec, output_id, analysis_id) {
   given <- c(.args_given(r$args), if (!is.na(r$strata)) "strata",
              if (!is.na(r$denominator)) "denominator")
   has <- function(arg) arg %in% given
-  den <- .den_code(r$denominator, x, pop, subj, population = "population")
+  den <- .den_code(r$denominator, x, pop, subj, population = "population", by = r$by)
   body <- .analysis_body(r, keys, subj, has, den)
   k <- .method_key(r$method, keys)
   fmt <- c(if (!is.na(k)) .parse_formats(keys$formats[k]), .parse_formats(r$formats))
