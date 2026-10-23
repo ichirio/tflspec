@@ -1509,7 +1509,8 @@ tfl_ard_data_names <- function(spec, output_id = NULL, codelists = NULL) {
 # would not split by the columns.  A problem each, saying the by to write.
 # Not one: an analysis that counts the columns' variable itself (the
 # groups' N), a `custom` one, one inside another (its parent's by), the
-# study's N (total_n), and `by: []` -- no columns, said so ("(none)").
+# study's N (total_n), one whose method takes no by (its arms in a model),
+# and `by: []` -- no columns, said so ("(none)").
 # `tables`: the table sheets' `tables` (output_id, cols).
 .by_needed_problems <- function(a, tables) {
   out <- .spec_problems_empty()
@@ -1528,6 +1529,10 @@ tfl_ard_data_names <- function(spec, output_id = NULL, codelists = NULL) {
     if (length(v) && all(v %in% cols)) next
     # (the study's N: no by)
     if (grepl("total_n", a$method[i], fixed = TRUE)) next
+    # a method that takes no by (its arms in a model: cardx's emmeans);
+    # a generic's arguments (cards::ard_tabulate(data, ...)) cannot say it
+    f <- .method_fun(a$method[i])
+    if (!is.null(f) && !any(c("by", ".by", "...") %in% names(formals(f)))) next
     pr[[length(pr) + 1L]] <- .spec_problem(sprintf(paste(
       "%s / %s: no `by`, in a table whose columns are %s (table_plan(cols = %s)): write",
       "by: [%s] -- or by: [] for an analysis that has no columns"),
