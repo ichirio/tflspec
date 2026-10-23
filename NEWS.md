@@ -10,6 +10,7 @@
   `where`) writes the new names; an old `pop_<id>` there is a problem that
   says the new one.  The names of analysis data a person gives
   (`data_id`) do not change.
+  `tfl_ard_data_names()` says each analysis's data by the program's name.
 
 * Named values in the ARD definition (0.0.24.9215): sheet `objects`
   (`output_id`, `object_id`, `code`, `label`), data.yml `objects:` for

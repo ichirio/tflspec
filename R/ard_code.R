@@ -905,6 +905,8 @@
   keys <- tfl_ard_methods()
   par <- a$parent %||% rep(NA_character_, nrow(a))
   if (several) code <- c(code, if (length(code)) "", "ards <- list()")
+  # each analysis's data, by the name the program gives it (tfl_ard_data_names())
+  dnames <- list()
   for (o in outs) {
     xo <- x
     ad_o <- .adata_of(ad, o)
@@ -1012,6 +1014,8 @@
       nm
     }, "")
     names(data_name) <- as.character(rows)
+    dn <- data.frame(output_id = o, analysis_id = a$analysis_id[rows],
+                     data = unname(data_name), stringsAsFactors = FALSE)
     if (several) {
       # the report's part, its code lists put on what its analyses read
       # once the analyses are written (below), as in one report's program
@@ -1051,12 +1055,14 @@
       .cl("dplyr::bind_rows", as.list(ard_names))
     if (several) {
       seg <- seq.int(seg_from, length(code))
-      code <- c(code[seq_len(seg_from - 1L)],
-                .ard_sub_names(.levels_where_read(code[seg], lv, first_an = seg_an - seg_from + 1L),
-                               x, auto_ds, auto_note))
+      renamed <- .ard_sub_names(.levels_where_read(code[seg], lv, first_an = seg_an - seg_from + 1L),
+                                x, auto_ds, auto_note)
+      dnames[[o]] <- .data_names_renamed(dn, attr(renamed, "renamed"), x)
+      code <- c(code[seq_len(seg_from - 1L)], renamed)
     } else {
       one_ds <- auto_ds
       one_note <- auto_note
+      one_dn <- dn
     }
     code <- c(code, "", if (several) {
       .pipe_code("ards[[report_id]]", bound)
@@ -1074,9 +1080,33 @@
   if (several) code <- c(code, "", "ard <- dplyr::bind_rows(ards)")
   # (one report's program: an analysis set that is only its adsl_<set> is
   # made once, under that name; the study's keeps pop_* for every report)
-  if (several) return(code)
-  .ard_sub_names(.levels_where_read(.pop_identity(.pop_as_adata(code, ad$data_id)), lv1),
-                 x, one_ds, one_note)
+  if (several) {
+    attr(code, "data_names") <- do.call(rbind, unname(dnames))
+    return(code)
+  }
+  out <- .ard_sub_names(.levels_where_read(.pop_identity(.pop_as_adata(code, ad$data_id)), lv1),
+                        x, one_ds, one_note)
+  attr(out, "data_names") <- .data_names_renamed(one_dn, attr(out, "renamed"), x)
+  attr(out, "renamed") <- NULL
+  out
+}
+
+# Each analysis's data as the program names it at last: the names renamed
+# <dataset>_sub; an analysis set that is its dataset as it is
+# (.pop_identity()) the dataset
+.data_names_renamed <- function(dn, renamed, x) {
+  if (length(renamed)) {
+    hit <- dn$data %in% names(renamed)
+    dn$data[hit] <- unname(renamed[dn$data[hit]])
+  }
+  pops <- x$populations
+  left <- startsWith(dn$data, "pop_")
+  if (any(left) && !is.null(pops)) {
+    k <- match(dn$data[left], paste0("pop_", .r_name(pops$population_id)))
+    dn$data[left] <- ifelse(is.na(k), dn$data[left], .r_name(pops$dataset[k]))
+  }
+  rownames(dn) <- NULL
+  dn
 }
 
 # The names of the data the program makes itself, in a report's code: an
@@ -1088,6 +1118,7 @@
 .ard_sub_names <- function(code, x, auto_ds, auto_note) {
   head <- regmatches(code, regexpr("^[A-Za-z.][A-Za-z0-9._]* <- ", code))
   defs <- unique(sub(" <- $", "", head))
+  attr(code, "renamed") <- character()
   pops <- x$populations
   pop_obj <- paste0("pop_", .r_name(pops$population_id %||% character()))
   is_pop <- defs %in% pop_obj
@@ -1135,6 +1166,7 @@
     if (length(hit)) out <- c(out, sprintf("# %s: %s", new[hit[1L]], note[[hit[1L]]]))
     out <- c(out, code[k])
   }
+  attr(out, "renamed") <- new
   out
 }
 

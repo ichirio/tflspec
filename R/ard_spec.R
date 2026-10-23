@@ -961,7 +961,10 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
                                                            codelists))),
                     if (out != "output/ard/ard.rds") list(path = .path_code(out))))
     }
-    return(.drop_attached_ns(.ard_body_lines(x, a, lv, save = sv)))
+    body <- .ard_body_lines(x, a, lv, save = sv)
+    out <- .drop_attached_ns(body)
+    attr(out, "data_names") <- attr(body, "data_names")
+    return(out)
   }
   out <- .study_value(x, "output", "output/ard/ard.rds")
   code <- c(
@@ -1373,4 +1376,31 @@ tfl_ard_as_custom <- function(spec, output_id, analysis_id) {
     }
   }
   do.call(rbind, pr)
+}
+
+#' The data each analysis reads, by its name in the ARD program
+#'
+#' The names [tfl_ard_code()] gives the data it makes itself: an analysis
+#' set's (`adsl_sub`) and an analysis's own records (`adae_sub`), numbered
+#' from a report's second of a dataset (`adsl_sub2`); an analysis data a
+#' person named (`data_id`) by its name; a dataset read as it is by the
+#' dataset's.  For a screen that shows what an analysis reads under the
+#' program's name, without writing the rule again.
+#'
+#' @inheritParams tfl_ard_code
+#' @return A data frame: `output_id`, `analysis_id` (an analysis that runs
+#'   inside another -- a stack's, a strata's -- is not listed: it reads its
+#'   parent's), `data` (the name; `"NULL"` for an analysis that reads none).
+#' @examples
+#' tfl_ard_data_names(tfl_ard_spec_template())
+#' @export
+tfl_ard_data_names <- function(spec, output_id = NULL, codelists = NULL) {
+  code <- tfl_ard_code(spec, output_id = output_id, save = FALSE, part = "body",
+                       codelists = codelists)
+  dn <- attr(code, "data_names")
+  if (is.null(dn)) {
+    dn <- data.frame(output_id = character(), analysis_id = character(),
+                     data = character(), stringsAsFactors = FALSE)
+  }
+  dn
 }
