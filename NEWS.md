@@ -1,5 +1,14 @@
 # tflspec (development version)
 
+* Named values in the ARD definition (0.0.24.9227): sheet `objects`
+  (`output_id`, `object_id`, `code`, `label`), data.yml `objects:` for
+  the study's and a report's `ard: objects:` for its own, each
+  `{id, code: !r ..., label}`.  The ARD program makes them at its top
+  (`id <- code`, the label a comment above), the study's before a
+  report's; an analysis names one as its `denominator`, or in its `args`
+  or `where`.  Checked: an R name, not a dataset's or `pop_*`, once in
+  its scope, code that is R.
+
 * **Table sheets keep what they cannot say** (#448): YAML -> sheets -> YAML
   no longer drops a table's items the sheets cannot hold (`plan_titles`,
   `plan_after`, a second call of a verb, a `plan_digits()` with `stat`, a

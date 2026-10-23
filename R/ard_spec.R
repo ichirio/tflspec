@@ -21,6 +21,12 @@
 #   populations  population_id, dataset, where,  analysis sets (and the
 #                derive, label                   denominators; `label`: the
 #                                                text a header prints)
+#   objects      output_id, object_id, code,     named values: `object_id <-
+#                label                           code` at the program's top
+#                                                (a report's, or the study's
+#                                                when output_id is blank),
+#                                                named by a denominator, an
+#                                                argument, a condition
 #   analyses     output_id, analysis_id, parent, method, dataset,
 #                population_id, where, by, variables, statistics, formats,
 #                args, code
@@ -32,6 +38,7 @@
   study = c("key", "value"),
   datasets = c("dataset", "level", "path", "derive"),
   populations = c("population_id", "dataset", "where", "derive", "label"),
+  objects = c("output_id", "object_id", "code", "label"),
   analysis_data = c("output_id", "data_id", "label", "from", "population_id", "subjects",
                     "where", "add", "derive", "keep", "distinct", "code"),
   analyses = c("output_id", "analysis_id", "parent", "label", "method",
@@ -127,7 +134,7 @@
 
 #' Write an ARD definition to a workbook
 #'
-#' Writes the five sheets (`study`, `datasets`, `populations`,
+#' Writes the six sheets (`study`, `datasets`, `populations`, `objects`,
 #' `analysis_data`, `analyses`)
 #' and no more; what each column means is a comment on its header cell
 #' ([tfl_spec_columns()]).  [tfl_read_ard_spec()] takes one back.  With
@@ -164,7 +171,7 @@ tfl_write_ard_spec <- function(spec, path, statistics = NULL, methods = NULL,
 #' @param check `FALSE` reads a definition still being written without
 #'   refusing it.
 #' @inheritParams tfl_write_ard_spec
-#' @return An `tfl_ard_spec`: a list of the five sheets (a workbook
+#' @return An `tfl_ard_spec`: a list of the six sheets (a workbook
 #'   without `analysis_data`, written before it was added, reads it empty).
 #' @export
 tfl_read_ard_spec <- function(path, check = TRUE, statistics = NULL,
@@ -385,12 +392,12 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   den <- a$denominator %||% rep(NA, nrow(a))
   num <- lapply(den, .den_numbers)
   bad <- which(!is.na(den) & vapply(num, is.null, NA) &
-                 !den %in% c(.den_words,
+                 !den %in% c(.den_words, .objects_sheet(x)$object_id,
                              x$populations$population_id,
                              x$datasets$dataset,
                              x$analysis_data$data_id))
   if (length(bad)) add(bad[1L], "denominator", sprintf(
-    "denominator(s) %s: population, row, column, cell, a population, a dataset, an analysis data or numbers (86, or c(\"Drug X\" = 86, \"Placebo\" = 85))",
+    "denominator(s) %s: population, row, column, cell, a population, a dataset, an analysis data, an object or numbers (86, or c(\"Drug X\" = 86, \"Placebo\" = 85))",
     paste(unique(den[bad]), collapse = ", ")))
   for (i in which(vapply(num, function(n) length(n) == 1L && is.na(n), NA))) {
     add(i, "denominator", sprintf(
@@ -438,6 +445,7 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   }
   cust <- which(a$method %in% "custom" & is.na(a$code))
   if (length(cust)) add(cust[1L], "code", "a `custom` analysis needs its `code`")
+  pr <- c(pr, list(.objects_problems(x)))
   p <- do.call(rbind, pr)
   rownames(p) <- NULL
   p
@@ -1271,4 +1279,62 @@ tfl_ard_as_custom <- function(spec, output_id, analysis_id) {
   e <- walk(e)
   if (!changed) return(where)
   paste(deparse(e, width.cutoff = 500L), collapse = " ")
+}
+
+# ---- named values (sheet `objects`) ------------------------------------------
+
+# the sheet, in shape (none: no rows)
+.objects_sheet <- function(x) {
+  .normalize_ard_sheet(x$objects %||% data.frame(), "objects")
+}
+
+# A report's named values, the study's (blank output_id) first: the rows
+# its program makes, in order
+.objects_of <- function(x, output_id = NULL) {
+  ob <- .objects_sheet(x)
+  keep <- is.na(ob$output_id) | (!is.null(output_id) & ob$output_id %in% output_id)
+  ob <- ob[keep, , drop = FALSE]
+  ob[order(!is.na(ob$output_id)), , drop = FALSE]
+}
+
+# The lines that make named values: `id <- code`, its label a comment above
+.objects_lines <- function(ob) {
+  if (is.null(ob) || !nrow(ob)) return(character())
+  unlist(lapply(seq_len(nrow(ob)), function(i) c(
+    if (!is.na(ob$label[i])) sprintf("# %s: %s", ob$object_id[i], ob$label[i]),
+    sprintf("%s <- %s", ob$object_id[i], ob$code[i]))))
+}
+
+# The sheet's problems: an id that is not an R name of its own, no code, code
+# that is not R, an id given twice in one scope or that is a dataset's or a
+# population's name in the program
+.objects_problems <- function(x) {
+  ob <- .objects_sheet(x)
+  pr <- list(.spec_problems_empty())
+  if (!nrow(ob)) return(pr[[1L]])
+  add <- function(i, field, message) {
+    pr[[length(pr) + 1L]] <<- .spec_problem(message, "objects", ob$output_id[i],
+                                            if (is.na(ob$object_id[i])) "" else ob$object_id[i], field)
+  }
+  taken <- c(.r_name(x$datasets$dataset %||% character()),
+             paste0("pop_", .r_name(x$populations$population_id %||% character())))
+  scope <- ifelse(is.na(ob$output_id), "", ob$output_id)
+  for (i in seq_len(nrow(ob))) {
+    id <- ob$object_id[i]
+    if (is.na(id)) { add(i, "object_id", sprintf("objects row %d: an object_id", i)); next }
+    if (make.names(id) != id) add(i, "object_id", sprintf(
+      "object %s: the name is an R name (letters, digits, . and _, a letter first)", id))
+    if (id %in% taken) add(i, "object_id", sprintf(
+      "object %s: the program's name of a dataset or a population; name it otherwise", id))
+    if (is.na(ob$code[i])) add(i, "code", sprintf("object %s: its code (R, the value)", id))
+    else if (inherits(tryCatch(parse(text = ob$code[i]), error = function(e) e), "error")) {
+      add(i, "code", sprintf("object %s: the code is not R: %s", id, ob$code[i]))
+    }
+  }
+  dup <- duplicated(paste(scope, ob$object_id)) & !is.na(ob$object_id)
+  # (a report's value of the study's name)
+  dup <- dup | (!is.na(ob$output_id) & ob$object_id %in% ob$object_id[is.na(ob$output_id)])
+  for (i in which(dup)) add(i, "object_id", sprintf(
+    "object %s: named twice (a report's object may not take a study object's name)", ob$object_id[i]))
+  do.call(rbind, pr)
 }
