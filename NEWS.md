@@ -1,7 +1,7 @@
 # tflspec (development version)
 
 * The data the ARD program makes itself is named `<dataset>_sub`
-  (0.0.24.9227): an analysis set's (`adsl_sub`, was `pop_saf`) and an
+  (0.0.24.9229): an analysis set's (`adsl_sub`, was `pop_saf`) and an
   analysis's own records (`adae_sub`, was `adae_saf`), numbered from a
   report's second of a dataset (`adsl_sub2`), each under a comment saying
   what it is (`# adsl_sub: SAF — Safety Analysis Set (SAFFL == "Y")`).
@@ -12,7 +12,7 @@
   (`data_id`) do not change.
   `tfl_ard_data_names()` says each analysis's data by the program's name.
 
-* Named values in the ARD definition (0.0.24.9226): sheet `objects`
+* Named values in the ARD definition (0.0.24.9227): sheet `objects`
   (`output_id`, `object_id`, `code`, `label`), data.yml `objects:` for
   the study's and a report's `ard: objects:` for its own, each
   `{id, code: !r ..., label}`.  The ARD program makes them at its top
@@ -21,6 +21,28 @@
   or `where`.  Checked: an R name, not a dataset's or `pop_*`, once in
   its scope, code that is R.
 
+* **Table sheets keep what they cannot say** (#448): YAML -> sheets -> YAML
+  no longer drops a table's items the sheets cannot hold (`plan_titles`,
+  `plan_after`, a second call of a verb, a `plan_digits()` with `stat`, a
+  `plan_style()` border with more than its sides, `plan_columns()` widths
+  by position ...): an item any of whose arguments no column says goes
+  whole, as YAML, into the `tables` sheet's new column `content_more` (not
+  into the other sheets as well), and is read back into the content by its
+  verb's rank. The defaults' items too.  A table's (or a listing's) verb
+  called twice is put together in one call when the content is read, as
+  rtfreporter puts the two layers together -- a later call's arguments
+  winning, key by key; `plan_hide()`'s columns adding up -- and a message
+  says so; the verbs whose calls are layers of their own (filters,
+  comparisons, cell styles, steps after, titles of other pages) are left
+  as they are, and a figure's content is not touched (0.0.24.9226).
+
+* **Listing sheets keep what their columns cannot say** (#447): YAML ->
+  sheets -> YAML no longer drops a listing's other items (`plan_hide`,
+  `plan_paginate_group`, a `plan_paginate_rows()` with `page_by`, ...) or a
+  column's other `listing_col()` arguments (`name`, `rel_width`, `layout`):
+  the `listings` sheet's new column `content_more` holds those items as
+  YAML, the `listing_cols` sheet's `more` a column's other arguments, and
+  they are read back as they were (0.0.24.9226).
 * An analysis's `denominator` can be numbers (0.0.24.9225): one
   (`denominator: 86`, every column's N) or one a value of the analysis's
   `by` (`denominator: {Drug X: 86, Placebo: 85}`, in the sheet

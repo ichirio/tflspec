@@ -555,14 +555,26 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     }
     # rtfreporter's chain: plan_listing(listing_col(...), ..., type, sep ...)
     # |> plan_blanks(where = "records") |> plan_paginate_rows(max_rows)
-    cols <- .conv_rows(lc, note, id, "listing_cols", list_cols = "vars", drop = c("output_id", "note"))
-    args <- list(cols = lapply(cols, function(m) tfl_call("listing_col", m)))
+    cols <- .conv_rows(lc, note, id, "listing_cols", list_cols = "vars", drop = c("output_id", "note", "more"))
+    # (a column's other arguments: its row's more, YAML)
+    col_more <- if ("more" %in% names(lc)) lc$more else rep(NA_character_, nrow(lc))
+    args <- list(cols = lapply(seq_along(cols), function(i)
+      tfl_call("listing_col", c(cols[[i]], .sheet_more_in(col_more[i])))))
     blank_row <- NULL
+    more_items <- list()
     if (nrow(lr)) {
       more <- .conv_rows(lr[1L, , drop = FALSE], note, id, "listings",
-                         drop = c("output_id", "note", "dataset", "where", "sort", "max_rows", "blank_row"))[[1L]]
+                         drop = c("output_id", "note", "dataset", "where", "sort", "max_rows", "blank_row",
+                                  "content_more"))[[1L]]
       args <- c(args, more)
       if (!is.na(lr$blank_row[1L]) && identical(lr$blank_row[1L], "TRUE")) blank_row <- TRUE
+      # the items the columns cannot say (content_more, YAML): plan_listing()'s
+      # other arguments joined to its own, the rest after the sheet's items
+      if ("content_more" %in% names(lr)) more_items <- .sheet_more_in(lr$content_more[1L], items = TRUE)
+      for (it in Filter(function(it) identical(it$fn, "plan_listing"), more_items)) {
+        args <- c(args, it$args[setdiff(names(it$args), names(args))])
+      }
+      more_items <- Filter(function(it) !identical(it$fn, "plan_listing"), more_items)
     }
     content <- list(tfl_item("plan_listing", args))
     # its font size (the report sheet's, on the style sheet): the plan's
@@ -575,6 +587,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     if (nrow(lr) && !is.na(lr$max_rows[1L])) {
       content <- c(content, list(tfl_item("plan_paginate_rows", list(max_rows = as.integer(lr$max_rows[1L])))))
     }
+    content <- c(content, more_items)
   } else if (kind %in% c("figure", "listing")) {
     # a figure with no design, a listing with no rows yet: nothing of a
     # table's (its data its own code, or a dataset)
