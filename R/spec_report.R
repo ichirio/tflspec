@@ -78,8 +78,13 @@
   }
   tt <- .page_band(pg, "titles", tokens)
   fn <- .page_band(pg, "footnotes", tokens)
+  flow <- .page_flow_args
   if (identical(kind, "figure")) {
     fa <- args_of("rtf_figures")
+    # (the report sheet says page_break, space_before for both kinds: under
+    # rtf_tables; the figure's own win)
+    ft <- args_of("rtf_tables")
+    fa <- c(fa, ft[setdiff(intersect(c("page_break", "space_before"), names(ft)), names(fa))])
     # a figure of items: its image is its tfl_image item (R/fig_content.R)
     img <- if (.fig_new_content(output$content)) .fig_split_content(output$content)$image
     # its size on the page: inches as twips, or the page's body (fit)
@@ -92,25 +97,31 @@
       fig <- .spec_call("rtfplot", .spec_sym(content),
                         render_width = sz$width_in, render_height = sz$height_in,
                         render_dpi = as.numeric(img$dpi %||% 300))
-      st[[length(st) + 1L]] <- .spec_call("rtf_figures", doc, fig)
+      st[[length(st) + 1L]] <- do.call(.spec_call, c(list("rtf_figures", doc, fig, align = fa$align), flow(fa)))
     } else {
-      st[[length(st) + 1L]] <- .spec_call("rtf_figures", doc, .spec_sym(content),
+      st[[length(st) + 1L]] <- do.call(.spec_call, c(list("rtf_figures", doc, .spec_sym(content),
         width_twips = if (sz$mode[["width"]] != "native") twips(sz$width_in),
-        height_twips = if (sz$mode[["height"]] != "native") twips(sz$height_in))
+        height_twips = if (sz$mode[["height"]] != "native") twips(sz$height_in),
+        align = fa$align), flow(fa)))
     }
   } else {
     ta <- args_of("rtf_tables")
     st[[length(st) + 1L]] <- do.call(.spec_call, c(list("rtf_tables", doc, .spec_sym(content)),
       ta[intersect(c("auto_section", "section_label_align", "auto_title",
-                     "title_label_align"), names(ta))]))
+                     "title_label_align", "font_size_half_points"), names(ta))], flow(ta)))
   }
+  # the titles' and footnotes' own style: rtf_titles() / rtf_footnotes()'s
+  # arguments as the page says them
+  band_style <- c("font_size_half_points", "row_height_twips", "markup", "font", "align")
   if (length(tt)) {
-    st[[length(st) + 1L]] <- .spec_call("rtf_titles", doc, list(tt),
-      font_size_half_points = args_of("rtf_titles")$font_size_half_points)
+    a <- args_of("rtf_titles")
+    st[[length(st) + 1L]] <- do.call(.spec_call, c(list("rtf_titles", doc, list(tt)),
+                                                   a[intersect(band_style, names(a))]))
   }
   if (length(fn)) {
-    st[[length(st) + 1L]] <- .spec_call("rtf_footnotes", doc, list(fn),
-      font_size_half_points = args_of("rtf_footnotes")$font_size_half_points)
+    a <- args_of("rtf_footnotes")
+    st[[length(st) + 1L]] <- do.call(.spec_call, c(list("rtf_footnotes", doc, list(fn)),
+                                                   a[intersect(band_style, names(a))]))
   }
   st
 }
@@ -222,6 +233,20 @@
   })
   list(page_study = page_study, tokens_study = tokens_study,
        bands_own = bands_own, bands_study = bands_study)
+}
+
+# A content's place on the page, as rtfreporter's rtf_tables() /
+# rtf_figures() take it: on the page of the content before it
+# (page_break = FALSE), the empty lines between (space_before), a table's
+# rows on that page (first_rows) and the title of the pages after
+# (cont_title).  `a` a map of arguments (a report's page.rtf_tables, or one
+# content's place in a report of several); only these kept, and only when
+# not a new page (the default, said by nothing).
+.page_flow_args <- function(a) {
+  a <- a[intersect(c("page_break", "space_before", "first_rows", "cont_title"), names(a))]
+  if (!isFALSE(a$page_break)) a$page_break <- NULL
+  if (!isFALSE(a$page_break) || identical(as.integer(a$space_before), 0L)) a$space_before <- NULL
+  a
 }
 
 # a function's arguments as page: says them: a map, unset ones gone

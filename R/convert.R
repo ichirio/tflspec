@@ -442,7 +442,9 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     auto_title = "rtf_tables.auto_title", title_align = "rtf_tables.title_label_align",
     title_font_size_half_points = "rtf_titles.font_size_half_points",
     footnote_font_size_half_points = "rtf_footnotes.font_size_half_points",
-    watermark = "rtf_document.watermark"))
+    watermark = "rtf_document.watermark",
+    page_break = "rtf_tables.page_break", space_before = "rtf_tables.space_before",
+    first_rows = "rtf_tables.first_rows", cont_title = "rtf_tables.cont_title"))
 
 .page_put <- function(page, sheet, col, v, note, id) {
   # (the data's and the content's code are not the page's: .conv_output())
