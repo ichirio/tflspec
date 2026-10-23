@@ -65,6 +65,9 @@
 #'   the result's `hint` and `next_steps` itself.
 #' @param mode `"chat"` (default): requests to paste into a chat, one at a
 #'   time.  `"agent"`: for a coding agent -- see *For a coding agent*.
+#' @param toc_cols The TOC's columns, when its headers do not say them (as
+#'   [tfl_ai_read_shell()]): `c(output_id = "Output No", shell = "Shell",
+#'   title = c("Title 1", "Title 2"))`, a header's text or a column's letter.
 #' @param shells Workbooks holding the shells when `toc` holds the TOC
 #'   alone (as [tfl_ai_read_shell()]): each report's shell is looked for in
 #'   them; the requests and the `toc` say each report's `book`.
@@ -132,7 +135,7 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
                            overwrite = FALSE, dry_run = FALSE, adam_summary = NULL,
                            datasets = NULL, max_levels = 15L, quiet = FALSE,
                            mode = c("chat", "agent"), shells = NULL, add = FALSE,
-                           templates = TRUE, progress = NULL) {
+                           templates = TRUE, progress = NULL, toc_cols = NULL) {
   if (isTRUE(quiet)) {
     cl <- match.call()
     cl$quiet <- FALSE
@@ -179,7 +182,7 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
   }
   step("workbook")
   shell <- do.call(tfl_ai_read_shell, c(list(toc), Filter(Negate(is.null), list(
-    toc_sheet = toc_sheet, sheets = sheets, shells = shells))))
+    toc_sheet = toc_sheet, sheets = sheets, shells = shells, toc_cols = toc_cols))))
   hint <- .ai_shell_hint(shell)
   if (dry) {
     # the tables in batches, each figure a request of its own (as written)

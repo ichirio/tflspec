@@ -214,8 +214,9 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
   # (t.15.1.5.1.md: the sheet it reads), letters a file name cannot hold
   # replaced
   if (isTRUE(as.integer(size) == 1L)) {
+    # (a shell's reports: the shell's number)
     one <- !duplicated(b$batch)
-    nm <- .ai_file_id(b$output_id[one])
+    nm <- .ai_file_id((b$shell_id %||% b$output_id)[one])
     nm <- make.unique(c(taken, nm), sep = "-")[length(taken) + seq_along(nm)]
     b$batch <- unname(stats::setNames(nm, b$batch[one])[b$batch])
     if (length(figs)) {
@@ -229,7 +230,8 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
   # "both"); or in the workbook file an agent reads ("file")
   placed <- function(text, ids) {
     # a part on its parent's sheet: which of the sheet's reports is this one
-    text <- paste(c(.ai_parts_lines(shell, ids), .ai_part_notes(shell, ids), text),
+    text <- paste(c(.ai_toc_row_lines(shell, ids), .ai_parts_lines(shell, ids),
+                    .ai_part_notes(shell, ids), text),
                   collapse = "\n")
     if (identical(workbook, "file")) {
       # an agent that reads files: the text, and where each report's shell

@@ -57,15 +57,27 @@
 #' @param max_chars The text's length at most; the rest is cut and the text
 #'   says so (pick fewer `outputs`).
 #' @param file A file to write the text to (UTF-8), or `NULL`.
+#' @param toc_cols The TOC's columns by their role, when its headers do not
+#'   say them: a named character vector (or list) of a header's text or a
+#'   column's letter -- `output_id` (the report's number), `shell` (its
+#'   shell's number: the sheet's name), `title` (one column or more, joined
+#'   with " / "), `population`, `program`, `file`.  `NULL` (default): the
+#'   headers' words say them (Output No, Shell, Title, Population ...);
+#'   with none, of two columns of report numbers the shell's is the one
+#'   whose numbers name sheets.
 #' @param shells Workbooks of shells apart from the TOC's (`path`): their
 #'   sheets join the TOC workbook's -- a sheet named as one already there
 #'   becomes `"<sheet> [<workbook>]"` -- and each report's shell is looked
 #'   for in all of them.  The TOC is `path`'s.  The text has a part a
 #'   workbook.
 #' @return A `tfl_ai_shell`: a list with `text` (one string), `toc` (a data
-#'   frame, one row a report the TOC lists: `output_id` as written, `key`,
-#'   `type`, `title`, `text` -- the row's text -- `sheet`, `row`, `shell` --
-#'   the sheet of its shell, `NA` for none found), `sheets` (`sheet`,
+#'   frame, one row a report the TOC lists -- every row naming a number, its
+#'   shell shared with other rows or none: `output_id` as written, `key`,
+#'   `type`, `title`, `text` -- the row's text -- `sheet`, `row`,
+#'   `shell_id` and `shell_key` -- its shell's number as the TOC writes it,
+#'   the report's own when the TOC names none -- `population`, `program`,
+#'   `file`, `info` -- the row's other cells, "header: value; ..." -- and
+#'   `shell` -- the sheet of its shell, `NA` for none found), `sheets` (`sheet`,
 #'   `role` -- `toc`, `shell` or `other` -- `rows`, `cells`, `hidden`),
 #'   `cells` (every non-empty cell: `sheet`, `row`, `col`, `ref`, `text`),
 #'   `outputs` (the reports kept), `truncated`, `path` and `args` (the
@@ -83,7 +95,7 @@
 #' @export
 tfl_ai_read_shell <- function(path, outputs = NULL, sheets = NULL,
                               toc_sheet = NULL, max_chars = .ai_shell_max_chars,
-                              file = NULL, shells = NULL) {
+                              file = NULL, shells = NULL, toc_cols = NULL) {
   fn <- "tfl_ai_read_shell()"
   if (!is.character(path) || length(path) != 1L || !file.exists(path)) {
     .ard_stop(sprintf(paste0("%s: no file %s in %s; give the workbook's path from that ",
@@ -116,12 +128,14 @@ tfl_ai_read_shell <- function(path, outputs = NULL, sheets = NULL,
   # the TOC is the TOC workbook's
   toc_name <- .ai_shell_toc_sheet(info[info$book_path == info$book_path[1L], , drop = FALSE],
                                   cells, toc_sheet, fn)
-  toc <- .ai_shell_toc(cells, toc_name)
+  sheet_keys <- vapply(.ai_ids_in(setdiff(info$sheet, toc_name)),
+                       function(z) if (nrow(z)) z$key[1L] else NA_character_, "")
+  toc <- .ai_shell_toc(cells, toc_name, toc_cols, sheet_keys[!is.na(sheet_keys)])
   toc$shell <- .ai_shell_find(toc, info, cells, toc_name)
   # a part's sheet when it is its parent's (part_of: that sheet, every
   # part reading it whole); a number the TOC has twice (same_number)
-  par <- .ai_id_parent(toc$key)
-  own <- vapply(toc$key, function(k) {
+  par <- .ai_id_parent(toc$shell_key)
+  own <- vapply(toc$shell_key, function(k) {
     ks <- vapply(.ai_ids_in(info$sheet), function(d) if (nrow(d)) d$key[1L] else NA_character_, "")
     length(.ai_id_match(k, ks)) > 0L
   }, NA, USE.NAMES = FALSE)
@@ -162,7 +176,7 @@ tfl_ai_read_shell <- function(path, outputs = NULL, sheets = NULL,
                        role = c("toc", rep("shells", length(books) - 1L)),
                        stringsAsFactors = FALSE),
     # what a request's own read of the workbook passes again
-    args = list(toc_sheet = toc_sheet, sheets = sheets, shells = shells)
+    args = list(toc_sheet = toc_sheet, sheets = sheets, shells = shells, toc_cols = toc_cols)
   ), class = "tfl_ai_shell")
   if (!is.null(file)) .ai_write_text(text, file)
   out
@@ -522,11 +536,16 @@ print.tfl_ai_shell <- function(x, ...) {
 }
 
 # The TOC's reports: one row a row of the TOC sheet naming a report number
-# (its first); else one a sheet named by a number.
-.ai_shell_toc <- function(cells, toc_name) {
+# -- every row, a shell it shares with others or none -- else one a sheet
+# named by a number.  The columns' roles (.ai_toc_columns()): the report's
+# number, its shell's number, its title(s), its population, its program and
+# file names; the row's other cells are its `info` ("header: value").
+.ai_shell_toc <- function(cells, toc_name, toc_cols = NULL, sheet_keys = character()) {
   empty <- data.frame(output_id = character(), key = character(), type = character(),
                       title = character(), text = character(), sheet = character(),
-                      row = integer(), stringsAsFactors = FALSE)
+                      row = integer(), shell_id = character(), shell_key = character(),
+                      population = character(), program = character(), file = character(),
+                      info = character(), stringsAsFactors = FALSE)
   if (!length(toc_name)) {
     sh <- unique(cells$sheet)
     ids <- .ai_ids_in(sh)
@@ -536,39 +555,55 @@ print.tfl_ai_shell <- function(x, ...) {
       txt <- d$text[d$row %in% utils::head(unique(d$row), 3L)]
       data.frame(output_id = ids[[i]]$id[1L], key = ids[[i]]$key[1L], type = ids[[i]]$type[1L],
                  title = .ai_title_of(txt, ids[[i]]$id[1L]), text = paste(txt, collapse = " | "),
-                 sheet = sh[i], row = NA_integer_, stringsAsFactors = FALSE)
+                 sheet = sh[i], row = NA_integer_, shell_id = ids[[i]]$id[1L],
+                 shell_key = ids[[i]]$key[1L], population = NA_character_,
+                 program = NA_character_, file = NA_character_, info = NA_character_,
+                 stringsAsFactors = FALSE)
     })
     return(do.call(rbind, c(list(empty), rows)))
   }
   d <- cells[cells$sheet == toc_name, , drop = FALSE]
-  # a cell that is a number (with a word of kind at most), not a text that
-  # holds one ("draft 0.2", "14.1 Demographic Data"); the TOC's numbers are
-  # in the column holding most of them
-  ids <- .ai_ids_in(d$text)
-  is_id <- vapply(seq_along(ids), function(i) {
-    nrow(ids[[i]]) > 0L && nchar(trimws(d$text[i])) <= nchar(ids[[i]]$id[1L]) + 10L
-  }, NA)
-  if (!any(is_id)) return(empty)
-  id_col <- as.integer(names(which.max(table(d$col[is_id]))))
-  title_col <- .ai_toc_title_col(d, min(d$row[is_id & d$col == id_col]))
+  cols <- .ai_toc_columns(d, toc_cols, sheet_keys)
+  if (is.null(cols)) return(empty)
+  one <- function(x, col) {
+    if (is.na(col) || !any(x$col == col)) return(NA_character_)
+    v <- trimws(gsub("\\s+", " ", x$text[x$col == col][1L]))
+    if (nzchar(v)) v else NA_character_
+  }
+  id_of <- function(txt) {
+    if (is.na(txt)) return(NULL)
+    h <- .ai_ids_in(txt)[[1L]]
+    if (!nrow(h) || nchar(trimws(txt)) > nchar(h$id[1L]) + 10L) NULL else h[1L, ]
+  }
   out <- list()
-  for (r in unique(d$row[is_id & d$col == id_col])) {
+  for (r in sort(unique(d$row[d$row > cols$header_row]))) {
     x <- d[d$row == r, , drop = FALSE]
-    k <- which(x$col == id_col)[1L]
-    id <- .ai_ids_in(x$text[k])[[1L]][1L, ]
-    shown <- trimws(.ai_half_width(x$text[k]))
-    others <- x$text[-k]
-    tp <- id$type
+    o_txt <- one(x, cols$output_id)
+    s_txt <- one(x, cols$shell)
+    oid <- id_of(o_txt)
+    sid <- id_of(s_txt)
+    if (is.null(oid) && is.null(sid)) next
+    main <- if (!is.null(oid)) oid else sid
+    shown <- trimws(.ai_half_width(if (!is.null(oid)) o_txt else s_txt))
+    tp <- main$type
     if (is.na(tp)) tp <- .ai_type_word(paste(x$text, collapse = " "))
-    ttl <- if (!is.na(title_col) && any(x$col == title_col)) {
-      trimws(gsub("\\s+", " ", x$text[x$col == title_col][1L]))
-    } else {
-      .ai_title_of(others, id$id)
-    }
+    tt <- vapply(cols$title, function(cl) one(x, cl), "")
+    tt <- tt[!is.na(tt)]
+    ttl <- if (length(tt)) paste(tt, collapse = " / ") else
+      .ai_title_of(x$text[!x$col %in% c(cols$output_id, cols$shell)], main$id)
+    role_cols <- c(cols$output_id, cols$shell, cols$title, cols$population, cols$program,
+                   cols$file)
+    rest <- x[!x$col %in% role_cols & nzchar(trimws(x$text)), , drop = FALSE]
+    info <- if (nrow(rest)) paste(sprintf("%s: %s", cols$header_of(rest$col),
+                                          trimws(gsub("\\s+", " ", rest$text))),
+                                  collapse = "; ") else NA_character_
     out[[length(out) + 1L]] <- data.frame(
-      output_id = shown, key = id$key, type = tp,
-      title = ttl, text = paste(trimws(x$text), collapse = " | "),
-      sheet = toc_name, row = r, stringsAsFactors = FALSE)
+      output_id = shown, key = main$key, type = tp, title = ttl,
+      text = paste(trimws(x$text), collapse = " | "), sheet = toc_name, row = r,
+      shell_id = if (!is.null(sid)) trimws(.ai_half_width(s_txt)) else shown,
+      shell_key = if (!is.null(sid)) sid$key else main$key,
+      population = one(x, cols$population), program = one(x, cols$program),
+      file = one(x, cols$file), info = info, stringsAsFactors = FALSE)
   }
   toc <- do.call(rbind, c(list(empty), out))
   # a number the TOC has twice: its first row kept, the number marked
@@ -583,6 +618,121 @@ print.tfl_ai_shell <- function(x, ...) {
   toc <- toc[!dup, , drop = FALSE]
   attr(toc, "same_number") <- same[!dup]
   toc
+}
+
+# The words of a TOC header cell naming each column's role, tried in this
+# order (a "Shell No." column is the shell's, not the report's number)
+.ai_toc_role_words <- c(
+  shell = "(?i)shell|mock|template sheet|\u30b7\u30a7\u30eb|\u96db\u5f62|\u30e2\u30c3\u30af",
+  program = "(?i)program|\\bpgm\\b|\u30d7\u30ed\u30b0\u30e9\u30e0",
+  file = "(?i)file|\\brtf\\b|\u30d5\u30a1\u30a4\u30eb",
+  population = paste0("(?i)population|analysis set|\\bpop\\b|\u96c6\u56e3|\u89e3\u6790\u5bfe\u8c61|",
+                      "\u89e3\u6790\u96c6\u56e3"),
+  title = "(?i)title|heading|\u30bf\u30a4\u30c8\u30eb|\u8868\u984c|\u6a19\u984c|\u5e33\u7968\u540d|\u540d\u79f0",
+  output_id = paste0("(?i)^\\s*((output|table|tlf|tfl|report|display|figure|listing|t/f/l)s?\\s*)?",
+                     "(no\\.?|number|num|#|id)\\s*$|\u5e33\u7968\u756a\u53f7|\u8868\u756a\u53f7|",
+                     "\u56f3\u8868\u756a\u53f7|^\\s*\u756a\u53f7\\s*$"))
+
+# The TOC's columns: the row of headers (the row above the first report
+# naming the most roles), and the column of each role -- the report's
+# number (output_id), its shell's (shell), its title(s), population,
+# program, file -- from `toc_cols` (a header's text or a column's letter),
+# else the headers' words, else the cells: of the columns of report
+# numbers, the shell's is the one whose numbers name sheets.  NULL when the
+# sheet names no report.
+.ai_toc_columns <- function(d, toc_cols = NULL, sheet_keys = character()) {
+  ids <- .ai_ids_in(d$text)
+  is_id <- vapply(seq_along(ids), function(i) {
+    nrow(ids[[i]]) > 0L && nchar(trimws(d$text[i])) <= nchar(ids[[i]]$id[1L]) + 10L
+  }, NA)
+  if (!any(is_id)) return(NULL)
+  per_col <- table(d$col[is_id])
+  id_cols <- as.integer(names(per_col)[per_col >= max(2L, 0.3 * max(per_col))])
+  if (!length(id_cols)) id_cols <- as.integer(names(which.max(per_col)))
+  first <- min(d$row[is_id & d$col %in% id_cols])
+  # the header row: above the first report, the one naming the most roles
+  h <- d[d$row < first, , drop = FALSE]
+  role_of <- function(txt) {
+    for (nm in names(.ai_toc_role_words)) {
+      if (grepl(.ai_toc_role_words[[nm]], txt, perl = TRUE)) return(nm)
+    }
+    NA_character_
+  }
+  h$role <- vapply(h$text, role_of, "", USE.NAMES = FALSE)
+  header_row <- 0L
+  if (nrow(h) && any(!is.na(h$role))) {
+    n <- tapply(!is.na(h$role), h$row, sum)
+    header_row <- max(as.integer(names(n)[n == max(n)]))
+  }
+  hd <- h[h$row == header_row, , drop = FALSE]
+  header_of <- function(cl) {
+    vapply(cl, function(k) {
+      t <- trimws(gsub("\\s+", " ", hd$text[hd$col == k][1L]))
+      if (length(t) && !is.na(t) && nzchar(t)) t else .xl_col_letter(k)
+    }, "", USE.NAMES = FALSE)
+  }
+  # a role given: a header's text, or a column's letter
+  col_of <- function(v) {
+    v <- v[!is.na(v)]
+    out <- integer()
+    for (x in v) {
+      hit <- hd$col[tolower(trimws(hd$text)) == tolower(trimws(x))]
+      if (!length(hit) && grepl("^[A-Za-z]{1,3}$", x)) hit <- .xl_col_num(toupper(x))
+      if (!length(hit)) {
+        .ard_stop(sprintf(paste("tfl_ai_read_shell(): `toc_cols`: no TOC column %s; its headers",
+                                "are %s (or give a column's letter)."), sQuote(x, FALSE),
+                          paste(sQuote(hd$text, FALSE), collapse = ", ")))
+      }
+      out <- c(out, hit[1L])
+    }
+    out
+  }
+  roles <- c("output_id", "shell", "title", "population", "program", "file")
+  if (!is.null(toc_cols) && (!is.list(toc_cols) && !is.character(toc_cols) ||
+                             is.null(names(toc_cols)) || !all(names(toc_cols) %in% roles))) {
+    .ard_stop(sprintf("tfl_ai_read_shell(): `toc_cols` names the columns of %s: c(output_id = \"Output\", shell = \"Shell\", title = c(\"Title 1\", \"Title 2\")).",
+                      paste(roles, collapse = ", ")))
+  }
+  given <- lapply(stats::setNames(roles, roles), function(r) {
+    v <- if (is.list(toc_cols)) toc_cols[[r]] else toc_cols[names(toc_cols) == r]
+    if (length(v)) col_of(unname(unlist(v))) else NULL
+  })
+  by_head <- lapply(stats::setNames(roles, roles), function(r) sort(hd$col[hd$role %in% r]))
+  pick <- function(r) given[[r]] %||% (if (length(by_head[[r]])) by_head[[r]])
+  out_col <- pick("output_id")[1L]
+  shell_col <- pick("shell")[1L]
+  # the cells: the columns of numbers, the shell's naming sheets
+  key_cols <- lapply(stats::setNames(id_cols, id_cols), function(k) {
+    w <- which(is_id & d$col == k & d$row > header_row)
+    unlist(lapply(ids[w], function(z) z$key[1L]))
+  })
+  names_sheets <- vapply(key_cols, function(k) {
+    if (!length(k) || !length(sheet_keys)) return(0)
+    mean(vapply(k, function(z) length(.ai_id_match(z, sheet_keys)) > 0L, NA))
+  }, 0)
+  if (is.null(shell_col) || is.na(shell_col)) {
+    cand <- setdiff(id_cols, out_col %||% integer())
+    if (length(cand) && length(id_cols) > 1L) {
+      s <- names_sheets[as.character(cand)]
+      if (max(s) >= 0.5) shell_col <- cand[which.max(s)]
+    }
+  }
+  if (is.null(out_col) || is.na(out_col)) {
+    cand <- setdiff(id_cols, shell_col %||% integer())
+    if (!length(cand)) cand <- id_cols
+    nk <- vapply(as.character(cand), function(k) length(unique(key_cols[[k]])), 1L)
+    out_col <- cand[which.max(nk)]
+  }
+  if (is.null(shell_col)) shell_col <- NA_integer_
+  if (is.null(pick("title")) && header_row == 0L) {
+    tc <- .ai_toc_title_col(d, first)
+    title <- if (!is.na(tc)) tc else integer()
+  } else title <- pick("title") %||% integer()
+  one_or_na <- function(v) if (length(v)) v[1L] else NA_integer_
+  list(header_row = header_row, output_id = out_col, shell = shell_col,
+       title = setdiff(title, c(out_col, shell_col)),
+       population = one_or_na(pick("population")), program = one_or_na(pick("program")),
+       file = one_or_na(pick("file")), header_of = header_of)
 }
 
 # The TOC's title column: the cell of a header row above the first report
@@ -633,7 +783,7 @@ print.tfl_ai_shell <- function(x, ...) {
     j <- which(vapply(named, function(n) any(vapply(n, .ai_id_same, NA, b = k)), NA))
     if (length(j)) others[j[1L]] else NA_character_
   }
-  vapply(toc$key, function(k) {
+  vapply(toc$shell_key, function(k) {
     own <- find(k)
     if (!is.na(own) || is.na(k)) return(own)
     # a part (15.1.5.1.a) with no sheet of its own: its parent's (15.1.5.1),
@@ -690,7 +840,7 @@ print.tfl_ai_shell <- function(x, ...) {
     d <- cells[cells$sheet == s, , drop = FALSE]
     # (a part on its parent's sheet: the whole sheet, the parts not cut)
     parts[[length(parts) + 1L]] <- if (!is.na(rows$part_of[i] %||% NA)) d else
-      .ai_shell_block(d, rows$key[i], toc$key)
+      .ai_shell_block(d, rows$shell_key[i], unique(c(toc$shell_key, toc$key)))
   }
   if (!is.null(sheets)) parts[[length(parts) + 1L]] <- cells[cells$sheet %in% sheets, , drop = FALSE]
   keep <- do.call(rbind, c(list(.xl_no_cells()), parts))
@@ -810,9 +960,13 @@ print.tfl_ai_shell <- function(x, ...) {
 #'   known is kept); `NULL` for all.
 #' @param families Your own families: a named character vector of regular
 #'   expressions (Perl) tried on the title before the built-in ones.
+#'   The reports of one shell (TOC rows sharing a shell sheet) go in one
+#'   batch, whatever `size`: `size` counts shells -- a request writes a
+#'   shell's reports together, their layout one.
 #' @return A data frame: `output_id`, `title`, `family`, `batch` (`ae-1`,
-#'   `ae-2` ...), in the TOC's order within a batch; `split(x$output_id,
-#'   x$batch)` gives the requests.
+#'   `ae-2` ...), `shell_id` (the shell's number; the report's own when the
+#'   TOC names none), in the TOC's order within a batch;
+#'   `split(x$output_id, x$batch)` gives the requests.
 #' @examples
 #' f <- system.file("ai", "example", "onco_toc_shell.xlsx", package = "tflspec")
 #' b <- tfl_ai_batches(tfl_ai_read_shell(f), size = 2)
@@ -846,11 +1000,19 @@ tfl_ai_batches <- function(x, size = 8L, types = "table", families = NULL) {
     hit <- names(fam)[vapply(fam, function(re) grepl(re, text[i], perl = TRUE), NA)]
     family[i] <- if (length(hit)) hit[1L] else "other"
   }
+  # the reports of one shell together: its first report's family, one unit
+  # of `size`
+  shell_id <- if ("shell_id" %in% names(toc)) toc$shell_id else toc$output_id
+  shell_id[is.na(shell_id)] <- toc$output_id[is.na(shell_id)]
+  unit <- if ("shell_key" %in% names(toc)) toc$shell_key else rep(NA_character_, nrow(toc))
+  unit <- ifelse(is.na(unit), paste0("\r", seq_len(nrow(toc))), unit)
+  family <- family[match(unit, unit)]
   out <- data.frame(output_id = toc$output_id, title = toc$title, family = family,
-                    batch = NA_character_, stringsAsFactors = FALSE)
+                    batch = NA_character_, shell_id = shell_id, stringsAsFactors = FALSE)
   for (f in unique(family)) {
     i <- which(family == f)
-    out$batch[i] <- paste0(f, "-", (seq_along(i) - 1L) %/% as.integer(size) + 1L)
+    u <- match(unit[i], unique(unit[i]))
+    out$batch[i] <- paste0(f, "-", (u - 1L) %/% as.integer(size) + 1L)
   }
   ord <- order(match(out$family, unique(c(names(fam), "other"))), seq_len(nrow(out)))
   out <- out[ord, , drop = FALSE]
@@ -879,7 +1041,8 @@ tfl_ai_batches <- function(x, size = 8L, types = "table", families = NULL) {
                      id, at_toc))
     }
     d <- x$cells[x$cells$sheet == r$shell, , drop = FALSE]
-    b <- if (!is.na(r$part_of %||% NA)) d else .ai_shell_block(d, r$key, toc$key)
+    b <- if (!is.na(r$part_of %||% NA)) d else
+      .ai_shell_block(d, r$shell_key %||% r$key, unique(c(toc$shell_key, toc$key)))
     where <- if (!nrow(b) || nrow(b) == nrow(d)) "the whole sheet" else
       sprintf("cells %s%d:%s%d", .xl_col_letter(min(b$col)), as.integer(min(b$row)),
               .xl_col_letter(max(b$col)), as.integer(max(b$row)))
@@ -953,7 +1116,8 @@ tfl_ai_batches <- function(x, size = 8L, types = "table", families = NULL) {
 .ai_shell_parts <- function(r, cells) {
   none <- data.frame(id = character(), key = character(), row = integer(),
                      stringsAsFactors = FALSE)
-  if (is.na(r$shell) || is.na(r$key) || grepl("[A-Z]$", r$key)) return(none)
+  sk <- r$shell_key %||% r$key
+  if (is.na(r$shell) || is.na(sk) || grepl("[A-Z]$", sk)) return(none)
   d <- cells[cells$sheet == r$shell, , drop = FALSE]
   if (!nrow(d)) return(none)
   hits <- .ai_ids_in(d$text)
@@ -962,7 +1126,7 @@ tfl_ai_batches <- function(x, size = 8L, types = "table", families = NULL) {
   if (is.null(h) || !nrow(h)) return(none)
   h$row <- rows
   mine <- !is.na(h$key) & grepl("[A-Z]$", h$key) &
-    vapply(h$key, function(k) .ai_id_same(sub("[A-Z]$", "", k), r$key), NA)
+    vapply(h$key, function(k) .ai_id_same(sub("[A-Z]$", "", k), sk), NA)
   h <- h[mine, , drop = FALSE]
   h <- h[order(h$row), , drop = FALSE]
   h <- h[!duplicated(h$key), , drop = FALSE]
@@ -988,9 +1152,54 @@ tfl_ai_batches <- function(x, size = 8L, types = "table", families = NULL) {
     w <- strsplit(toc$parts_row[i[1L]], " | ", fixed = TRUE)[[1L]]
     paste0(id, " is written in ", length(p), " parts (",
            paste(sprintf("%s: from row %s", p, w), collapse = ", "),
-           "). Write one report file a part, its id the part's number. A later part ",
+           "). Write one report file a part, its id as listed here, its title as the shell writes it. A later part ",
            "often writes only what differs (the subset, a column); take the layout from ",
            "the first part. When unsure, open those rows of the workbook.")
   }))
   if (length(out)) c(out, "") else character()
+}
+
+# A request's lines for its reports' TOC rows, when the TOC says more than a
+# number and a title, or reports share a shell, or one has none: a line a
+# report -- its shell (or that there is none), its title, population and
+# the row's other columns as the TOC writes them (a flag of parts: p1 / p2
+# / both) -- and, for reports sharing a shell, that each is a report file
+# of its own with the layout in common.
+.ai_toc_row_lines <- function(x, ids) {
+  toc <- x$toc
+  if (is.null(toc$shell_id)) return(character())
+  i <- vapply(ids, function(id) {
+    k <- .ai_id_match(.ai_id_key(id), toc$key)
+    if (length(k)) k[1L] else NA_integer_
+  }, 1L)
+  r <- toc[i[!is.na(i)], , drop = FALSE]
+  if (!nrow(r)) return(character())
+  shared <- duplicated(r$shell_key) | duplicated(r$shell_key, fromLast = TRUE)
+  rich <- any(!is.na(r$info) | !is.na(r$population) | is.na(r$shell) | shared |
+                r$shell_id != r$output_id)
+  if (!rich) return(character())
+  lines <- vapply(seq_len(nrow(r)), function(k) {
+    paste0("- ", r$output_id[k], ": ",
+           if (is.na(r$shell[k])) sprintf("no shell (the TOC names %s; no sheet of it was found)",
+                                          r$shell_id[k])
+           else sprintf("shell %s (sheet '%s')", r$shell_id[k], r$shell[k]),
+           if (!is.na(r$title[k])) paste0("; title: ", r$title[k]),
+           if (!is.na(r$population[k])) paste0("; population: ", r$population[k]),
+           if (!is.na(r$program[k])) paste0("; program: ", r$program[k]),
+           if (!is.na(r$file[k])) paste0("; file: ", r$file[k]),
+           if (!is.na(r$info[k])) paste0("; ", r$info[k]))
+  }, "")
+  head <- "The reports of this request, as their TOC rows say them:"
+  tail <- c(
+    if (any(shared)) paste(
+      "Reports sharing a shell are each a report file of their own (its id the TOC's number),",
+      "the layout the shell's; what differs is in their TOC row (the title, the population,",
+      "a subgroup, a flag)."),
+    if (any(is.na(r$shell))) paste(
+      "A report with no shell: write it from its TOC row and the shells of reports like it,",
+      "and say what you took as assumptions."),
+    if (any(grepl("(?i)\\bboth\\b", r$info %||% "", perl = TRUE))) paste(
+      "A flag that says both (Part 1 and Part 2, Phase 1 and Phase 2): the report is two,",
+      "a report file each, as the parts rule says."))
+  c(head, lines, "", tail, if (length(tail)) "")
 }
