@@ -990,6 +990,13 @@ rtf_footnotes:
           its children does; drop: judged by its own counts (plan_filter(parents =
           )).'
         example: drop
+      - column: content_more
+        description: 'The table''s items the sheets cannot say, as YAML (- fn: {args};
+          plan_titles, plan_footnotes, plan_after, a second call of a verb, a plan_digits
+          with stat ...): an item any of whose arguments no column says is kept here
+          whole, not in the sheets; written back to the report''s content by its verb''s
+          rank; blank: none.'
+        example: '- plan_titles: {titles: [Safety population]}'
       - column: stack
         description: 'Subgroups as one pair of keys: name = its layers, a comma between
           them, * crossing variables (AGEGR1 * SEX), | between several keys; or the

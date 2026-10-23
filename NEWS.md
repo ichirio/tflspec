@@ -1,5 +1,14 @@
 # tflspec (development version)
 
+* **Table sheets keep what they cannot say** (#448): YAML -> sheets -> YAML
+  no longer drops a table's items the sheets cannot hold (`plan_titles`,
+  `plan_after`, a second call of a verb, a `plan_digits()` with `stat`, a
+  `plan_style()` border with more than its sides, `plan_columns()` widths
+  by position ...): an item any of whose arguments no column says goes
+  whole, as YAML, into the `tables` sheet's new column `content_more` (not
+  into the other sheets as well), and is read back into the content by its
+  verb's rank. The defaults' items too (0.0.24.9222).
+
 * **Listing sheets keep what their columns cannot say** (#447): YAML ->
   sheets -> YAML no longer drops a listing's other items (`plan_hide`,
   `plan_paginate_group`, a `plan_paginate_rows()` with `page_by`, ...) or a

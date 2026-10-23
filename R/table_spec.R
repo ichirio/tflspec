@@ -198,7 +198,7 @@
                   "sep", "sort", "sort_stat", "na", "header_n", "total",
                   "total_position", "overall_label", "stat_groups", "stack",
                   "stack_sep", "stack_nest", "compare", "compare_by", "compare_position",
-                  "show_keys", "keep_where", "keep_any", "keep_parents"),
+                  "show_keys", "keep_where", "keep_any", "keep_parents", "content_more"),
     variables = c("output_id", "variable", "label", "order", "levels",
                   "empty_levels", "under"),
     # the study's code list: a value's text and place

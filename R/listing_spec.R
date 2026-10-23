@@ -69,14 +69,15 @@ tfl_read_data_code <- function(datasets, dataset) {
 .listing_row_said <- c("type", "wrap")
 .listing_col_said <- c("vars", "label", "width", "sep", "align", "collapse_repeats")
 
-# what the columns cannot say, as YAML text for a cell: content items
-# (`- fn: {args}`), or a column's other arguments (a map); and back
-.listing_more_out <- function(x, items = FALSE) {
+# what the sheets' columns cannot say, as YAML text for a cell: content
+# items (`- fn: {args}`), or a column's other arguments (a map); and back.
+# The listings' content_more / more and the tables' content_more (#447, #448)
+.sheet_more_out <- function(x, items = FALSE) {
   y <- if (items) .items_to_list(x) else .calls_out(x)
   txt <- yaml::as.yaml(y, indent.mapping.sequence = TRUE, handlers = .yaml_out_handlers())
   sub("\n$", "", txt)
 }
-.listing_more_in <- function(txt, items = FALSE) {
+.sheet_more_in <- function(txt, items = FALSE) {
   if (is.null(txt) || is.na(txt) || !nzchar(trimws(txt))) return(if (items) list() else NULL)
   y <- yaml::yaml.load(txt, handlers = .yaml_handlers())
   if (items) lapply(y, .item_from_list) else .calls_in(y)

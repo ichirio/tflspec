@@ -531,7 +531,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     # (a column's other arguments: its row's more, YAML)
     col_more <- if ("more" %in% names(lc)) lc$more else rep(NA_character_, nrow(lc))
     args <- list(cols = lapply(seq_along(cols), function(i)
-      tfl_call("listing_col", c(cols[[i]], .listing_more_in(col_more[i])))))
+      tfl_call("listing_col", c(cols[[i]], .sheet_more_in(col_more[i])))))
     blank_row <- NULL
     more_items <- list()
     if (nrow(lr)) {
@@ -542,7 +542,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
       if (!is.na(lr$blank_row[1L]) && identical(lr$blank_row[1L], "TRUE")) blank_row <- TRUE
       # the items the columns cannot say (content_more, YAML): plan_listing()'s
       # other arguments joined to its own, the rest after the sheet's items
-      if ("content_more" %in% names(lr)) more_items <- .listing_more_in(lr$content_more[1L], items = TRUE)
+      if ("content_more" %in% names(lr)) more_items <- .sheet_more_in(lr$content_more[1L], items = TRUE)
       for (it in Filter(function(it) identical(it$fn, "plan_listing"), more_items)) {
         args <- c(args, it$args[setdiff(names(it$args), names(args))])
       }
