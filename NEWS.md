@@ -9,8 +9,6 @@
   or `where`.  Checked: an R name, not a dataset's or `pop_*`, once in
   its scope, code that is R.
 
-* An analysis's `denominator` can be numbers (0.0.24.9214): one
-
 * An analysis's `denominator` can be numbers (0.0.24.9218): one
   (`denominator: 86`, every column's N) or one a value of the analysis's
   `by` (`denominator: {Drug X: 86, Placebo: 85}`, in the sheet
