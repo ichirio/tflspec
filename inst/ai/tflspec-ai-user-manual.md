@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9231** (the development version,
+**This manual documents tflspec 0.0.24.9233** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -972,6 +972,11 @@ cat(tfl_report_code(sp, content = "plan"), sep = "\n")
 - `by`, `strata`, `variables`, `statistics`: `|` between several. `strata`:
   the analysis repeated within them (cards' `strata`: a subgroup, a
   parameter by visit).
+- `by` is required in a table with columns (`table_plan(cols = TRT01A)`):
+  an analysis without it is a problem that says `by: [TRT01A]`, but for
+  the columns' own count (the N: `variables: TRT01A`); `by: []` (in the
+  sheet `(none)`) says an analysis has no columns. A `by` the data does not
+  have stops the program (never left out).
 - `overall`: `TRUE` repeats the analysis without its `by`, over all its
   subjects — cards' own overall rows, with no group — bound under the
   grouped call (`bind_rows(ard_tabulate(adsl, by = ARM, ...),
