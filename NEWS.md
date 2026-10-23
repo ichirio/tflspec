@@ -1,5 +1,15 @@
 # tflspec (development version)
 
+* An analysis's `denominator` can be numbers (0.0.24.9214): one
+  (`denominator: 86`, every column's N) or one a value of the analysis's
+  `by` (`denominator: {Drug X: 86, Placebo: 85}`, in the sheet
+  `c("Drug X" = 86, "Placebo" = 85)`).  The ARD program writes the one
+  as `86L` and the other as that many subjects of each arm
+  (`data.frame(TRT01A = rep(...), USUBJID = seq_len(...))`), which cards
+  counts the same way for a tabulation and a nested count.  A vector
+  without names, a number not whole, or `by` of more than one variable is
+  a problem of the definition.
+
 * `tfl_ai_prepare()`'s `toc` (a dry run's too) says each report's `parts`,
   `parts_row` and `same_number`, as `tfl_ai_read_shell()$toc` does: a
   caller need not read the workbook again (0.0.24.9213).

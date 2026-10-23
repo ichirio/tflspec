@@ -595,9 +595,16 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     if (nrow(ad)) ard_part$analysis_data <- .conv_rows(ad, note, id, "analysis_data", r_cols = c("where", "derive", "code"),
                                                     list_cols = c("add", "keep", "distinct"), rename = c(data_id = "id", population_id = "population"))
     an <- ard$analyses[!is.na(ard$analyses$output_id) & ard$analyses$output_id == id, , drop = FALSE]
-    if (nrow(an)) ard_part$analyses <- .conv_rows(an, note, id, "analyses", r_cols = c("where", "args", "post", "code"),
-                                               list_cols = c("by", "strata", "variables", "statistics", "formats"),
-                                               rename = c(analysis_id = "id", population_id = "population"))
+    if (nrow(an)) {
+      ard_part$analyses <- .conv_rows(an, note, id, "analyses", r_cols = c("where", "args", "post", "code"),
+                                      list_cols = c("by", "strata", "variables", "statistics", "formats"),
+                                      rename = c(analysis_id = "id", population_id = "population"))
+      # a denominator of numbers: a number, or a map by the by's values
+      ard_part$analyses <- lapply(ard_part$analyses, function(m) {
+        if (!is.null(m$denominator)) m$denominator <- .den_yaml(m$denominator)
+        m
+      })
+    }
   }
   # a report whose data or content is its R code (the report row's
   # data_code / content_code): the data as code, the content as one !r

@@ -855,9 +855,10 @@ rtf_footnotes:
       - column: denominator
         description: 'What percentages are of: population (hierarchical and max take
           it anyway), row / column / cell (cards), another population, a dataset (its
-          records of the population''s subjects), or an analysis data (as it is: one
-          row a subject and phase gives the N of each phase); blank: the method''s
-          default.'
+          records of the population''s subjects), an analysis data (as it is: one
+          row a subject and phase gives the N of each phase), or numbers: one (86,
+          every column''s N) or one a value of the by (c("Drug X" = 86, "Placebo" =
+          85); YAML {Drug X: 86, Placebo: 85}); blank: the method''s default.'
         example: row
       - column: formats
         description: 'Display formats, statistic=format, | between them; VAR:statistic=format
