@@ -259,6 +259,8 @@ tfl_read_output <- function(path) {
   }
   content <- if (inherits(y$content, "tfl_r")) y$content else
     lapply(y$content %||% list(), .item_from_list)
+  # (a table's verb twice: one call, R/plan_repeats.R)
+  if (y$kind %in% c("table", "listing")) content <- .plan_merge_repeats(content, y$id)
   extends <- y$extends %||% "defaults"
   out <- tfl_output(
     id = y$id, kind = y$kind, label = y$label, population = y$population,
