@@ -196,6 +196,11 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   }
   own <- list(data = output$data %||% list(), codelists = output$codelists,
               content = output$content, page = output$page)
+  # a figure template and the report's own data steps: the report's steps
+  # (its data stage: the analysis set, the parameter, the records kept),
+  # then the template's call steps (the fit and what the call makes from it)
+  composed <- !is.null(tpl) && .tpl_composes(own$data, tpl$x)
+  if (composed) own$data <- .tpl_compose_data(own$data, tpl$x)
   below <- acc$content
   acc <- .layer_over(acc, own)
   if ((isTRUE(provenance) || !is.null(tpl)) && !inherits(acc$content, "tfl_r")) {
@@ -203,9 +208,11 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
     if (!is.null(tpl)) {
       # what the program writes after the template's call (the A use)
       r <- .tpl_rest(prov, tpl$name, tpl$x$content)
-      # (a report's own data: the call's data step is the template's)
+      # (a report's own data: the call's data step is the template's --
+      # unless the report's steps come before the template's call steps)
       # (a figure's call draws the template's layers: none of them replaced)
-      ok <- r$ok && !length(own$data) && (!identical(output$kind, "figure") || !length(intersect(
+      ok <- r$ok && (!length(own$data) || composed) &&
+        (!identical(output$kind, "figure") || !length(intersect(
         vapply(r$items, `[[`, "", "fn"), vapply(tpl$x$content, `[[`, "", "fn"))))
       attr(output, "template") <- list(name = tpl$name, args = tpl$args, study = tpl$study,
                                        items = tpl$x$content, rest = r$items, ok = ok,

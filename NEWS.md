@@ -37,6 +37,14 @@
   `tfl_report_overwrite()` (and `tfl_ai_run()`).  rtfreporter (>=
   0.8.2.9096).
 
+* **A report's own `data:` with a figure template** (#446): its steps (the
+  data stage: the analysis set, the parameter, the records kept) come
+  first, then the template's call steps (the fit and what the call makes
+  from it); the template's call stays on, and `tfl_template_to_spec()`
+  writes the same.  Before, the report's steps replaced the template's
+  whole list, the fit with it.  Without own steps, and for a table's
+  template, nothing changes (0.0.24.9222).
+
 * **No page argument is dropped any more** (#444): `page.rtf_titles` and
   `page.rtf_footnotes` write `row_height_twips`, `markup`, `font` and
   `align` (not only `font_size_half_points`), `page.rtf_figures` its

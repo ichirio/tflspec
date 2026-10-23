@@ -840,7 +840,7 @@ back): rename the value or choose another separator.
 `tfl_as_table_spec`
 
 **Report spec:** `tfl_read_report_spec` `tfl_read_toc` `tfl_report` `tfl_report_code`
-`tfl_report_overwrite` `tfl_report_path` `tfl_report_setup_code` `tfl_report_tokens` `tfl_check_code`
+`tfl_report_path` `tfl_report_setup_code` `tfl_report_tokens` `tfl_check_code`
 
 **Document import (a define, by rule):** `tfl_read_define`
 `tfl_read_define_spec` `tfl_define_profile` `tfl_define_codelists`
