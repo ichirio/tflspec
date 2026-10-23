@@ -60,11 +60,19 @@ test_that("the program puts the report under the content before it", {
   o <- tfl_output("T-1", "table", page = list(rtf_tables = list(page_break = FALSE)))
   code <- paste(tfl_report_code(o, content = "content"), collapse = "\n")
   # (the document already holding a table: the report's call goes on under it)
-  code <- sub("rtf_document\\([^)]*\\)","rtfreporter::rtf_tables(rtfreporter::rtf_document(), first)",
+  code <- sub("rtf_document\\([^)]*\\)", "rtfreporter::rtf_tables(rtfreporter::rtf_document(), first)",
               code, perl = TRUE)
   first <- rtfreporter::as_rtftables(data.frame(a = c("1", "2")))
   env <- list2env(list(first = first, content = content), parent = asNamespace("rtfreporter"))
   doc <- eval(parse(text = code), env)
   pb <- vapply(doc$placement, function(p) isTRUE(p$page_break), logical(1L))
   expect_identical(pb, c(TRUE, FALSE))
+})
+
+test_that(".page_flow_args() keeps a content's place only off a new page", {
+  f <- tflspec:::.page_flow_args
+  expect_identical(f(list(page_break = TRUE, space_before = 2L, auto_title = TRUE)), setNames(list(), character()))
+  expect_identical(f(list(page_break = FALSE, space_before = 0L, first_rows = 3L)),
+                   list(page_break = FALSE, first_rows = 3L))
+  expect_length(f(list()), 0L)
 })

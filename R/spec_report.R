@@ -78,14 +78,7 @@
   }
   tt <- .page_band(pg, "titles", tokens)
   fn <- .page_band(pg, "footnotes", tokens)
-  # on the page of the content before it (rtfreporter's page_break = FALSE):
-  # said only when the page says it, the default (a new page) left out
-  flow <- function(a) {
-    a <- a[intersect(c("page_break", "space_before", "first_rows", "cont_title"), names(a))]
-    if (!isFALSE(a$page_break)) a$page_break <- NULL
-    if (!isFALSE(a$page_break) || identical(as.integer(a$space_before), 0L)) a$space_before <- NULL
-    a
-  }
+  flow <- .page_flow_args
   if (identical(kind, "figure")) {
     fa <- args_of("rtf_figures")
     # (the report sheet says page_break, space_before for both kinds: under
@@ -234,6 +227,20 @@
   })
   list(page_study = page_study, tokens_study = tokens_study,
        bands_own = bands_own, bands_study = bands_study)
+}
+
+# A content's place on the page, as rtfreporter's rtf_tables() /
+# rtf_figures() take it: on the page of the content before it
+# (page_break = FALSE), the empty lines between (space_before), a table's
+# rows on that page (first_rows) and the title of the pages after
+# (cont_title).  `a` a map of arguments (a report's page.rtf_tables, or one
+# content's place in a report of several); only these kept, and only when
+# not a new page (the default, said by nothing).
+.page_flow_args <- function(a) {
+  a <- a[intersect(c("page_break", "space_before", "first_rows", "cont_title"), names(a))]
+  if (!isFALSE(a$page_break)) a$page_break <- NULL
+  if (!isFALSE(a$page_break) || identical(as.integer(a$space_before), 0L)) a$space_before <- NULL
+  a
 }
 
 # a function's arguments as page: says them: a map, unset ones gone

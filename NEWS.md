@@ -6,7 +6,7 @@
   rtfreporter's `rtf_tables()` / `rtf_figures()` take them; the report
   sheet has the same columns.  The generated call passes them only when the
   report is not on a page of its own (`page_break: false`).  They take effect
-  in a document that holds content before the report's (0.0.24.9215).
+  in a document that holds content before the report's (0.0.24.9216).
 
 * `tfl_ai_prepare()`'s `toc` (a dry run's too) says each report's `parts`,
   `parts_row` and `same_number`, as `tfl_ai_read_shell()$toc` does: a
