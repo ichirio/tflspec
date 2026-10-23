@@ -418,12 +418,25 @@
 
 # The denominator column as R: `population` (the analysis set), "row" /
 # "column" / "cell" (cards' percentages within a row, a column, of the
-# whole), a population (its analysis set), or a dataset (its records of the
-# analysis set's subjects)
-.den_code <- function(den, x, pop, subj, population = "population") {
+# whole), a population (its analysis set), a dataset (its records of the
+# analysis set's subjects), or numbers given: one (every column's N) or
+# one a value of the analysis's by (`c("Drug X" = 86, "Placebo" = 85)`),
+# that many subjects of each value -- a data cards counts the subjects of,
+# by the by, as it counts a population's
+.den_code <- function(den, x, pop, subj, population = "population", by = NA) {
   if (is.null(den) || is.na(den)) return(NULL)
   if (den == "population") return(population)
   if (den %in% .den_words) return(encodeString(den, quote = "\""))
+  if (den %in% .objects_sheet(x)$object_id) return(den)
+  num <- .den_numbers(den)
+  if (!is.null(num)) {
+    if (is.null(names(num))) return(sprintf("%dL", num))
+    b <- .split_bar(by)
+    if (length(b) != 1L) return(NULL)
+    return(sprintf("data.frame(%s = rep(%s, %s), %s = seq_len(%dL))",
+                   b, .lay(.c_str(names(num)), width = Inf), .lay(.cl("c", as.list(sprintf("%dL", num))), width = Inf),
+                   subj, sum(num)))
+  }
   if (den %in% x$populations$population_id) {
     return(paste0("pop_", .r_name(den)))
   }
@@ -432,6 +445,49 @@
   if (is.null(pop)) obj else
     sprintf("dplyr::semi_join(%s, dplyr::select(%s, %s), by = %s)", obj, population,
             subj, .q(subj))
+}
+
+# A denominator of numbers: one whole number (`86`), or whole numbers
+# named by the values of the by (`c("Drug X" = 86, "Placebo" = 85)`, a
+# YAML map `{Drug X: 86, Placebo: 85}` read as that).  The numbers (named
+# or not), or NULL when the text is not one; `NA` when it is written as a
+# vector of numbers but is not one (a name missing, a number not whole).
+.den_numbers <- function(den) {
+  if (is.null(den) || length(den) != 1L || is.na(den)) return(NULL)
+  t <- trimws(den)
+  if (grepl("^[0-9]+$", t)) return(as.integer(t))
+  if (!grepl("^c\\s*\\(", t)) return(NULL)
+  e <- tryCatch(str2lang(t), error = function(e) NULL)
+  if (!is.call(e) || !identical(e[[1L]], as.name("c")) || length(e) < 2L) return(NA)
+  args <- as.list(e)[-1L]
+  nm <- names(args)
+  ok <- !is.null(nm) && all(nzchar(nm)) && !anyDuplicated(nm) &&
+    all(vapply(args, function(v) is.numeric(v) && length(v) == 1L && !is.na(v) &&
+                 v >= 0 && v == round(v), NA))
+  if (!ok) return(NA)
+  stats::setNames(as.integer(unlist(args)), nm)
+}
+
+# A YAML denominator as the sheet's cell: a map of numbers by the by's
+# values (`{Drug X: 86, Placebo: 85}`) as `c("Drug X" = 86, "Placebo" =
+# 85)`; anything else as it is
+.den_cell <- function(v) {
+  if (is.list(v) && !is.null(names(v)) && length(v) &&
+      all(vapply(v, function(z) is.numeric(z) && length(z) == 1L, NA))) v <- unlist(v)
+  if (is.numeric(v) && !is.null(names(v))) {
+    return(sprintf("c(%s)", paste(sprintf("%s = %s", encodeString(names(v), quote = "\""),
+                                          format(v, scientific = FALSE, trim = TRUE)),
+                                  collapse = ", ")))
+  }
+  v
+}
+
+# A denominator cell as YAML writes it: numbers by value a map, one number
+# a number, anything else the text
+.den_yaml <- function(v) {
+  n <- .den_numbers(v)
+  if (is.null(n) || (length(n) == 1L && is.na(n))) return(v)
+  if (is.null(names(n))) n else as.list(n)
 }
 
 # Does a denominator count subjects of a data (a population, a dataset, an
@@ -821,6 +877,12 @@
   own_data <- several && length(levels) > 0L
   lv_of <- function(o) if (is.null(levels)) NULL else levels[[o]]
   lv1 <- if (!several) lv_of(outs[1L])
+  # the named values: the study's, then each report's (in its part)
+  ob_all <- .objects_sheet(x)
+  ob_study <- .objects_lines(ob_all[is.na(ob_all$output_id), , drop = FALSE])
+  ob_report <- function(o) {
+    .objects_lines(ob_all[!is.na(ob_all$output_id) & ob_all$output_id == o, , drop = FALSE])
+  }
   code <- if (!several) c(sprintf("report_id <- %s", .q(outs[1L])), "")
   if (own_data) {
     used_ds <- character()
@@ -837,6 +899,8 @@
               "# ---- data ----",
               dl$data,
               if (length(dl$pops)) c("", "# ---- populations ----", dl$pops))
+    ob1 <- c(ob_study, if (!several) ob_report(outs[1L]))
+    if (length(ob1)) code <- c(code, "", "# ---- objects ----", ob1)
   }
   keys <- tfl_ard_methods()
   par <- a$parent %||% rep(NA_character_, nrow(a))
@@ -852,13 +916,15 @@
       dl <- .ard_data_lines(x, a[rows, , drop = FALSE], nad_of(o), lv)
       used_ds <- dl$used_ds
       pops <- dl$pops_id
-      part <- c(if (length(lv)) .codelists_lines(lv), dl$data, dl$pops)
+      part <- c(if (length(lv)) .codelists_lines(lv), dl$data, dl$pops, ob_study)
     }
+    if (several) part <- c(part, ob_report(o))
     # each analysis's data: the dataset, restricted to the population's
     # subjects (or the population itself when it is that dataset), and to
     # the analysis's own subset -- made once, under a name, for every
     # analysis that reads it
-    taken <- c(.r_name(used_ds), paste0("pop_", .r_name(pops)), ad_o$data_id)
+    taken <- c(.r_name(used_ds), paste0("pop_", .r_name(pops)), ad_o$data_id,
+               ob_all$object_id)
     data_of <- character()
     # the columns each analysis data's analyses read (by, strata,
     # variables; a denominator's by): kept by a data that keeps columns
@@ -1065,7 +1131,7 @@
   k <- .method_key(r$method, keys)
   kind <- if (is.na(k)) "" else keys$kind[k]
   call_fn <- if (is.na(k)) r$method else keys$call[k]
-  den <- .den_code(r$denominator, x, pop, subj, population = pop_name)
+  den <- .den_code(r$denominator, x, pop, subj, population = pop_name, by = r$by)
   fmt <- c(if (!is.na(k)) .parse_formats(keys$formats[k]),
            .parse_formats(r$formats))
   fmt <- fmt[!duplicated(names(fmt), fromLast = TRUE)]
@@ -1282,7 +1348,7 @@
   child <- function(kr, fmt_fun) {
     given <- given_of(kr)
     has <- function(arg) arg %in% given
-    den <- .den_code(kr$denominator, x, pop, subj, population = pop_name)
+    den <- .den_code(kr$denominator, x, pop, subj, population = pop_name, by = kr$by)
     if (stack) kr$by <- NA
     .analysis_node(kr, keys, subj, has, den,
                    data = if (stack) NULL else ".x",
@@ -1360,7 +1426,7 @@
   k <- .method_key(r$method, keys)
   kind <- if (is.na(k)) "" else keys$kind[k]
   call_fn <- if (is.na(k)) r$method else keys$call[k]
-  den <- .den_code(r$denominator, x, pop, subj, population = pop_name)
+  den <- .den_code(r$denominator, x, pop, subj, population = pop_name, by = r$by)
   fmt <- c(if (!is.na(k)) .parse_formats(keys$formats[k]),
            .parse_formats(r$formats))
   fmt <- fmt[!duplicated(names(fmt), fromLast = TRUE)]

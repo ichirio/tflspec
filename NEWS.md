@@ -24,7 +24,7 @@
   once), and a TOC's header of two rows (Title merged over its parts) says
   its titles.
 
-* The TOC read as a company writes it (0.0.24.9222): every row naming a
+* The TOC read as a company writes it (0.0.24.9230): every row naming a
   number is a report -- its shell shared with other rows, or none -- its
   number and its shell's number read from columns apart.
   `tfl_ai_read_shell()` / `tfl_ai_prepare()` find the columns by their
@@ -42,6 +42,108 @@
   read from its columns and the shell's text, a report file each, its id
   the number the shell or the TOC writes (the TOC's number with the
   shell's letter), else `.a`, `.b`.
+
+* Named values in the ARD definition (0.0.24.9227): sheet `objects`
+  (`output_id`, `object_id`, `code`, `label`), data.yml `objects:` for
+  the study's and a report's `ard: objects:` for its own, each
+  `{id, code: !r ..., label}`.  The ARD program makes them at its top
+  (`id <- code`, the label a comment above), the study's before a
+  report's; an analysis names one as its `denominator`, or in its `args`
+  or `where`.  Checked: an R name, not a dataset's or `pop_*`, once in
+  its scope, code that is R.
+
+* **Table sheets keep what they cannot say** (#448): YAML -> sheets -> YAML
+  no longer drops a table's items the sheets cannot hold (`plan_titles`,
+  `plan_after`, a second call of a verb, a `plan_digits()` with `stat`, a
+  `plan_style()` border with more than its sides, `plan_columns()` widths
+  by position ...): an item any of whose arguments no column says goes
+  whole, as YAML, into the `tables` sheet's new column `content_more` (not
+  into the other sheets as well), and is read back into the content by its
+  verb's rank. The defaults' items too.  A table's (or a listing's) verb
+  called twice is put together in one call when the content is read, as
+  rtfreporter puts the two layers together -- a later call's arguments
+  winning, key by key; `plan_hide()`'s columns adding up -- and a message
+  says so; the verbs whose calls are layers of their own (filters,
+  comparisons, cell styles, steps after, titles of other pages) are left
+  as they are, and a figure's content is not touched (0.0.24.9226).
+
+* **Listing sheets keep what their columns cannot say** (#447): YAML ->
+  sheets -> YAML no longer drops a listing's other items (`plan_hide`,
+  `plan_paginate_group`, a `plan_paginate_rows()` with `page_by`, ...) or a
+  column's other `listing_col()` arguments (`name`, `rel_width`, `layout`):
+  the `listings` sheet's new column `content_more` holds those items as
+  YAML, the `listing_cols` sheet's `more` a column's other arguments, and
+  they are read back as they were (0.0.24.9226).
+* An analysis's `denominator` can be numbers (0.0.24.9225): one
+  (`denominator: 86`, every column's N) or one a value of the analysis's
+  `by` (`denominator: {Drug X: 86, Placebo: 85}`, in the sheet
+  `c("Drug X" = 86, "Placebo" = 85)`).  The ARD program writes the one
+  as `86L` and the other as that many subjects of each arm
+  (`data.frame(TRT01A = rep(...), USUBJID = seq_len(...))`), which cards
+  counts the same way for a tabulation and a nested count.  A vector
+  without names, a number not whole, or `by` of more than one variable is
+  a problem of the definition.
+
+* **Fonts per script and their languages** (#449, rtfreporter#715): a font
+  table entry's `name` is one family or a family per script slot (`latin`,
+  `east_asian`, `complex`, `hansi`), the titles' and footnotes' `font` too;
+  `page.rtf_document.font_lang` gives a slot's language (`east_asian: ja`).
+  The report's `rtf_document()` call writes them as rtfreporter takes them
+  (named vectors), the study setup as `options(rtfreporter.font =,
+  rtfreporter.font_lang =)`, and the page sheet's `font` / new `font_lang`
+  columns say them as `latin = X | east_asian = Y` -- before, a slotted
+  family was lost on the sheets' path.  rtfreporter (>= 0.8.2.9094)
+  (0.0.24.9223).
+
+* **The running header's and footer's look** (#450): `page.rtf_header` and
+  `page.rtf_footer` take rtfreporter's `rtf_header()` / `rtf_footer()`
+  arguments (`border`, `width`, `width_twips`, `row_height_twips`,
+  `font_size_half_points`, `font`, `markup`, `cell_padding_*`,
+  `drop_empty_rows`; the lines stay `page.header` / `page.footer`), and
+  `page.rtf_footnotes` a `border`.  The report's call and the study setup's
+  `study_header` / `study_footer` write them; a report whose look differs
+  from the study's writes its own call.
+
+* **Page sheets keep the page arguments no column says** (#451): YAML ->
+  sheets -> YAML no longer drops a page's other rtfreporter arguments (the
+  titles' row height, the running header's look, the figure's align, a
+  second font ...): the page sheet's new column `page_more` holds them as
+  YAML and they are read back as they were.
+
+* **rtf_figures()'s drawing, the study's rtfreporter options, overwrite**
+  (#452): `page.rtf_figures` takes `render_width`, `render_height`,
+  `render_dpi` and `png_device` (rtfreporter#719; a drawn figure's
+  `rtfplot()` gets the device too); `defaults.yml`'s `options:` names
+  rtfreporter's options (`rtfreporter.png_device`,
+  `rtfreporter.figure.default_dpi`, `rtfreporter.ard_pipe` ...), which the
+  study setup writes as `options()`; `page.generate_rtfreport.overwrite`
+  says whether a report's file may be written over, read by the new
+  `tfl_report_overwrite()` (and `tfl_ai_run()`).  rtfreporter (>=
+  0.8.2.9096).
+
+* **A report's own `data:` with a figure template** (#446): its steps (the
+  data stage: the analysis set, the parameter, the records kept) come
+  first, then the template's call steps (the fit and what the call makes
+  from it); the template's call stays on, and `tfl_template_to_spec()`
+  writes the same.  Before, the report's steps replaced the template's
+  whole list, the fit with it.  Without own steps, and for a table's
+  template, nothing changes (0.0.24.9230).
+
+* **No page argument is dropped any more** (#444): `page.rtf_titles` and
+  `page.rtf_footnotes` write `row_height_twips`, `markup`, `font` and
+  `align` (not only `font_size_half_points`), `page.rtf_figures` its
+  `align`, and `page.rtf_tables` a `font_size_half_points` left on the page
+  (a content of R code) -- the schema took them, the program left them out.
+  `markup` takes rtfreporter's words (`"script"`, `"relational"`, `"all"`,
+  `"none"`), no longer `TRUE` / `FALSE` (0.0.24.9217).
+
+* **A report on the page of the content before it** (#443): a report's
+  `page.rtf_tables` says `page_break`, `space_before`, `first_rows` and
+  `cont_title`, and `page.rtf_figures` `page_break` and `space_before`, as
+  rtfreporter's `rtf_tables()` / `rtf_figures()` take them; the report
+  sheet has the same columns.  The generated call passes them only when the
+  report is not on a page of its own (`page_break: false`).  They take effect
+  in a document that holds content before the report's (0.0.24.9216).
 
 * `tfl_ai_prepare()`'s `toc` (a dry run's too) says each report's `parts`,
   `parts_row` and `same_number`, as `tfl_ai_read_shell()$toc` does: a

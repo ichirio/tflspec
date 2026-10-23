@@ -70,13 +70,30 @@ tfl_sheets_from_spec <- function(study, outputs) {
   table_rows <- function(items, id) {
     # normalize_ard() is the tables row's overall_label / stack columns (its
     # hierarchy is the ARD's analysis): taken out before the bridge
-    nz <- Filter(function(it) identical(it$fn, "normalize_ard"), items)
-    items <- Filter(function(it) !identical(it$fn, "normalize_ard"), items)
+    is_nz <- vapply(items, function(it) identical(it$fn, "normalize_ard"), NA)
+    nz <- items[is_nz]
+    items <- items[!is_nz]
     if (length(nz) && !is.na(id) && length(nz[[1L]]$args)) norm_rows[[id]] <<- nz[[1L]]$args
-    if (!length(items)) return()
+    # (a second normalize_ard(): kept with the items the sheets cannot say)
+    more <- nz[-1L]
+    nz <- nz[seq_len(min(1L, length(nz)))]
+    key <- if (is.na(id)) ".defaults" else id
+    if (!length(items)) { if (length(more)) more_rows[[key]] <<- more; return() }
     if (is.null(bridge)) { note(id, "content", "no bridge from the layers to the sheets (tflspec's .plan_sheets_from_content)"); return() }
     # (the bridge reads normalize_ard()'s stack: the columns the plan makes)
-    sp <- bridge(c(nz, items), if (is.na(id)) NULL else id)
+    # an item any of whose arguments the sheets cannot say goes whole, as
+    # YAML, in the tables row's content_more -- never on both (#448): taken
+    # out, and the bridge run again on the rest
+    keep <- seq_along(items)
+    repeat {
+      sp <- bridge(c(nz, items[keep]), if (is.na(id)) NULL else id)
+      out <- attr(sp, "not_converted_at") %||% integer()
+      if (!length(out)) break
+      keep <- keep[-out]
+      if (!length(keep)) { sp <- list(); break }
+    }
+    more <- c(more, items[setdiff(seq_along(items), keep)])
+    if (length(more)) more_rows[[key]] <<- more
     for (sh in names(sp)) {
       d <- sp[[sh]]
       if (!is.data.frame(d) || !nrow(d)) next
@@ -87,6 +104,7 @@ tfl_sheets_from_spec <- function(study, outputs) {
     for (x in attr(sp, "not_converted") %||% character()) note(id, "content", x)
   }
   norm_rows <- list()
+  more_rows <- list()
   table_rows(s$defaults$content, NA_character_)
   for (nm in names(s$patterns)) table_rows(s$patterns[[nm]]$content, paste0("@", nm))
 
@@ -127,6 +145,10 @@ tfl_sheets_from_spec <- function(study, outputs) {
   ard$populations <- .rows_df(lapply(s$data$populations %||% list(), function(e) {
     m <- lapply(e, cell); if (!is.null(m$id)) { m$population_id <- m$id; m$id <- NULL }; m
   }), .ard_spec_sheets$populations)
+  # named values: the study's (data.yml `objects:`), then the reports'
+  objs <- lapply(s$data$objects %||% list(), function(e) {
+    m <- lapply(e, cell); m$object_id <- m$id; m$id <- NULL; c(list(output_id = NA_character_), m)
+  })
   adata <- list(); analyses <- list()
   listings <- list(); listing_cols <- list(); fig_rows <- list()
   figures <- list()
@@ -179,7 +201,12 @@ tfl_sheets_from_spec <- function(study, outputs) {
       if (!is.null(m$population)) { m$population_id <- m$population; m$population <- NULL }
       adata[[length(adata) + 1L]] <- c(list(output_id = id), m)
     }
+    for (e in o$ard$objects %||% list()) {
+      m <- lapply(e, cell); m$object_id <- m$id; m$id <- NULL
+      objs[[length(objs) + 1L]] <- c(list(output_id = id), m)
+    }
     for (a in o$ard$analyses %||% list()) {
+      if (!is.null(a$denominator)) a$denominator <- .den_cell(a$denominator)
       m <- lapply(a, cell); m$analysis_id <- m$id; m$id <- NULL
       if (!is.null(m$population)) { m$population_id <- m$population; m$population <- NULL }
       if (!is.null(a$ref)) note(id, paste0("analyses.", a$id), "a reference to another report's analysis (ref) has no sheet")
@@ -190,18 +217,36 @@ tfl_sheets_from_spec <- function(study, outputs) {
     } else if (o$kind == "listing") {
       lr <- list(output_id = id)
       for (k in c("dataset", "where", "sort")) if (!is.null(o$data[[k]])) lr[[k]] <- cell(o$data[[k]])
+      # what the listing sheets' columns cannot say is kept as YAML: the
+      # items in the listing's content_more, a column's other arguments in
+      # its row's more (read back by .conv_output(): nothing lost)
+      more <- list()
+      said <- character()
       for (it in if (code_content) list() else o$content) {
-        if (identical(it$fn, "plan_listing")) {
-          for (cl in it$args$cols %||% list()) {
-            if (inherits(cl, "tfl_call")) listing_cols[[length(listing_cols) + 1L]] <- c(list(output_id = id), lapply(cl$args, cell))
+        a <- it$args
+        if (identical(it$fn, "plan_listing") && !"plan_listing" %in% said) {
+          said <- c(said, it$fn)
+          for (cl in a$cols %||% list()) {
+            if (!inherits(cl, "tfl_call")) next
+            row <- c(list(output_id = id), lapply(cl$args[intersect(names(cl$args), .listing_col_said)], cell))
+            rest <- cl$args[setdiff(names(cl$args), .listing_col_said)]
+            if (length(rest)) row$more <- .sheet_more_out(rest)
+            listing_cols[[length(listing_cols) + 1L]] <- row
           }
-          for (k in setdiff(names(it$args), "cols")) lr[[k]] <- cell(it$args[[k]])
-        } else if (identical(it$fn, "plan_blanks")) {
-          if (identical(it$args$where, "records")) lr$blank_row <- "TRUE"
-        } else if (identical(it$fn, "plan_paginate_rows")) {
-          if (!is.null(it$args$max_rows)) lr$max_rows <- cell(it$args$max_rows)
-        } else note(id, paste0("content.", it$fn), "a listing item the listing sheets do not hold")
+          ks <- setdiff(names(a), "cols")
+          for (k in intersect(ks, .listing_row_said)) lr[[k]] <- cell(a[[k]])
+          if (length(setdiff(ks, .listing_row_said))) {
+            more <- c(more, list(tfl_item("plan_listing", a[setdiff(ks, .listing_row_said)])))
+          }
+        } else if (identical(it$fn, "plan_blanks") && identical(names(a), "where") &&
+                   identical(a$where, "records") && is.null(lr$blank_row)) {
+          lr$blank_row <- "TRUE"
+        } else if (identical(it$fn, "plan_paginate_rows") && identical(names(a), "max_rows") &&
+                   is.null(lr$max_rows)) {
+          lr$max_rows <- cell(a$max_rows)
+        } else more <- c(more, list(it))
       }
+      if (length(more)) lr$content_more <- .sheet_more_out(more, items = TRUE)
       listings[[length(listings) + 1L]] <- lr
     } else if (o$kind == "figure" && .fig_new_content(o$content)) {
       # a figure of items (R/fig_content.R): its data and items as they are
@@ -223,6 +268,7 @@ tfl_sheets_from_spec <- function(study, outputs) {
                          setup_code = if (!is.null(s$study$setup)) cell(s$study$setup) else NA_character_,
                          process_code = NA_character_, section = NA_character_, population = NA_character_,
                          datasets = NA_character_, batches = NA_character_)), planner)
+  ard$objects <- .rows_df(objs, .ard_spec_sheets$objects)
   ard$analysis_data <- .rows_df(adata, c("output_id", .ard_spec_sheets$analysis_data))
   ard$analyses <- .rows_df(analyses, .ard_spec_sheets$analyses)
 
@@ -232,7 +278,7 @@ tfl_sheets_from_spec <- function(study, outputs) {
   # every report's file and program go back to the report sheet's study row
   fp <- settings[intersect(c("file", "program"), names(settings))]
   settings <- settings[setdiff(names(settings), c("file", "program"))]
-  table$study <- data.frame(key = names(settings), value = vapply(settings, cell, ""), stringsAsFactors = FALSE)
+  table$study <- data.frame(key = as.character(names(settings)), value = vapply(settings, cell, ""), stringsAsFactors = FALSE)
   for (sh in c(names(.ard_spec_schema()), .ard_spec_pattern_sheets)) {
     table[[sh]] <- .rows_df(rows[[sh]] %||% list(), c("output_id", setdiff(.sheet_columns(sh), "output_id")))
   }
@@ -271,6 +317,16 @@ tfl_sheets_from_spec <- function(study, outputs) {
       if (!is.null(a$stack_sep)) put("stack_sep", encodeString(as.character(a$stack_sep), quote = "\""))
       if (isTRUE(a$stack_nest)) put("stack_nest", "TRUE")
     }
+    table$tables <- tb
+  }
+  # a table's items the sheets cannot say on its tables row (content_more)
+  for (key in names(more_rows)) {
+    tb <- table$tables
+    oid <- if (identical(key, ".defaults")) NA_character_ else key
+    i <- match(oid, tb$output_id)
+    if (is.na(i)) { tb[nrow(tb) + 1L, ] <- NA; i <- nrow(tb); tb$output_id[i] <- oid }
+    if (!"content_more" %in% names(tb)) tb$content_more <- NA_character_
+    tb$content_more[i] <- .sheet_more_out(more_rows[[key]], items = TRUE)
     table$tables <- tb
   }
   list(table = table, planner = .rows_df(planner, c("output_id", "description", "setup_code", "process_code",
@@ -336,7 +392,7 @@ tfl_sheets_from_spec <- function(study, outputs) {
 
 .page_known <- c("header", "footer", "titles", "footnotes", "tokens", "page", "report",
                  "rtf_page", "rtf_default_format", "rtf_document", "rtf_tables", "rtf_titles",
-                 "rtf_footnotes", "rtf_figures")
+                 "rtf_footnotes", "rtf_figures", "rtf_header", "rtf_footer", "generate_rtfreport")
 
 # `page:`'s rtfreporter arguments as the page and report sheets' columns
 # (the inverse of the converter's .page_put()): list(page = , report = ),
@@ -354,7 +410,13 @@ tfl_sheets_from_spec <- function(study, outputs) {
     }
   }
   ft <- page$rtf_document$font_table
-  if (length(ft) && !is.null(ft[[1L]]$name)) pr$page$font <- cell(ft[[1L]]$name)
+  # (a family per script slot, a language per slot: "latin = X | east_asian = Y")
+  slots <- function(v) {
+    v <- .font_slots_value(v)
+    if (is.null(names(v))) cell(v) else paste(names(v), "=", unname(v), collapse = " | ")
+  }
+  if (length(ft) && !is.null(ft[[1L]]$name)) pr$page$font <- slots(ft[[1L]]$name)
+  if (length(page$rtf_document$font_lang)) pr$page$font_lang <- slots(page$rtf_document$font_lang)
   if (inherits(page$header, "tfl_unset")) pr$report$page_header <- "FALSE"
   if (inherits(page$footer, "tfl_unset")) pr$report$page_footer <- "FALSE"
   for (a in c("width_twips", "height_twips")) {
@@ -363,5 +425,35 @@ tfl_sheets_from_spec <- function(study, outputs) {
       if (is.numeric(v)) format(v / 1440) else cell(v)
   }
   for (k in names(page$report)) pr$report[[k]] <- cell(page$report[[k]])
+  # what no column says (the titles' row height, the bands' look, a second
+  # font ...): kept as YAML in the page sheet's page_more, read back as it was
+  more <- .page_more(page)
+  if (length(more)) {
+    txt <- yaml::as.yaml(.calls_out(more), indent.mapping.sequence = TRUE,
+                         handlers = .yaml_out_handlers())
+    pr$page$page_more <- sub("\n$", "", txt)
+  }
   pr
+}
+
+# The rtfreporter arguments of a page no page or report sheet column says:
+# list(<fn> = list(<arg> = value)); a font table of more than one font whole
+.page_more <- function(page) {
+  said <- character()
+  for (sh in names(.page_map)) {
+    m <- .page_map[[sh]]
+    said <- c(said, ifelse(grepl(".", m, fixed = TRUE), m, paste(m, names(m), sep = ".")))
+  }
+  said <- c(said, "rtf_document.font_lang", "rtf_figures.width_twips", "rtf_figures.height_twips")
+  ft <- page$rtf_document$font_table
+  if (length(ft) <= 1L) said <- c(said, "rtf_document.font_table")
+  out <- list()
+  for (fn in intersect(names(page), c("rtf_page", "rtf_default_format", "rtf_document",
+                                      "rtf_tables", "rtf_figures", "rtf_titles", "rtf_footnotes",
+                                      "rtf_header", "rtf_footer", "generate_rtfreport"))) {
+    a <- page[[fn]]
+    if (!is.list(a) || inherits(a, "tfl_unset")) next
+    for (k in names(a)) if (!paste(fn, k, sep = ".") %in% said) out[[fn]][[k]] <- a[[k]]
+  }
+  out
 }

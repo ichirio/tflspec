@@ -161,6 +161,13 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
       data$populations <- .conv_rows(ard$populations, note, NA, "populations",
                                      r_cols = c("where", "derive"), rename = c(population_id = "id"))
     }
+    # the study's named values (no output_id)
+    ob <- ard$objects
+    if (!is.null(ob) && nrow(ob)) {
+      ob <- ob[is.na(ob$output_id), , drop = FALSE]
+      if (nrow(ob)) data$objects <- .conv_rows(ob, note, NA, "objects", r_cols = "code",
+                                               rename = c(object_id = "id"))
+    }
     put("spec/data.yml", data)
   }
 
@@ -430,13 +437,34 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     auto_title = "rtf_tables.auto_title", title_align = "rtf_tables.title_label_align",
     title_font_size_half_points = "rtf_titles.font_size_half_points",
     footnote_font_size_half_points = "rtf_footnotes.font_size_half_points",
-    watermark = "rtf_document.watermark"))
+    watermark = "rtf_document.watermark",
+    page_break = "rtf_tables.page_break", space_before = "rtf_tables.space_before",
+    first_rows = "rtf_tables.first_rows", cont_title = "rtf_tables.cont_title"))
+
+# a sheet cell "latin = X | east_asian = Y" as a map (YAML's), a cell
+# without "=" as it is
+.conv_slots <- function(v) {
+  if (!is.character(v) || length(v) != 1L || !grepl("=", v, fixed = TRUE)) return(v)
+  parts <- trimws(strsplit(v, "|", fixed = TRUE)[[1L]])
+  kv <- strsplit(parts, "=", fixed = TRUE)
+  stats::setNames(lapply(kv, function(x) trimws(paste(x[-1L], collapse = "="))),
+                  vapply(kv, function(x) trimws(x[1L]), ""))
+}
 
 .page_put <- function(page, sheet, col, v, note, id) {
   # (the data's and the content's code are not the page's: .conv_output())
   if (identical(sheet, "report") && col %in% c("data_code", "content_code")) return(page)
-  if (identical(sheet, "page") && identical(col, "font")) {
-    page$rtf_document$font_table <- list(list(name = v))
+  if (identical(sheet, "page") && identical(col, "page_more")) {
+    # what no column says, as YAML (tfl_sheets_from_yaml()'s .page_more())
+    more <- .calls_in(yaml::yaml.load(v, handlers = .yaml_handlers()))
+    for (fn in names(more)) for (k in names(more[[fn]])) page[[fn]][[k]] <- more[[fn]][[k]]
+    return(page)
+  }
+  if (identical(sheet, "page") && col %in% c("font", "font_lang")) {
+    # one family, or one a script slot: "latin = X | east_asian = Y"
+    v <- .conv_slots(v)
+    if (identical(col, "font")) page$rtf_document$font_table <- list(list(name = v))
+    else page$rtf_document$font_lang <- v
     return(page)
   }
   if (identical(sheet, "report") && col %in% c("page_header", "page_footer")) {
@@ -527,14 +555,26 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     }
     # rtfreporter's chain: plan_listing(listing_col(...), ..., type, sep ...)
     # |> plan_blanks(where = "records") |> plan_paginate_rows(max_rows)
-    cols <- .conv_rows(lc, note, id, "listing_cols", list_cols = "vars", drop = c("output_id", "note"))
-    args <- list(cols = lapply(cols, function(m) tfl_call("listing_col", m)))
+    cols <- .conv_rows(lc, note, id, "listing_cols", list_cols = "vars", drop = c("output_id", "note", "more"))
+    # (a column's other arguments: its row's more, YAML)
+    col_more <- if ("more" %in% names(lc)) lc$more else rep(NA_character_, nrow(lc))
+    args <- list(cols = lapply(seq_along(cols), function(i)
+      tfl_call("listing_col", c(cols[[i]], .sheet_more_in(col_more[i])))))
     blank_row <- NULL
+    more_items <- list()
     if (nrow(lr)) {
       more <- .conv_rows(lr[1L, , drop = FALSE], note, id, "listings",
-                         drop = c("output_id", "note", "dataset", "where", "sort", "max_rows", "blank_row"))[[1L]]
+                         drop = c("output_id", "note", "dataset", "where", "sort", "max_rows", "blank_row",
+                                  "content_more"))[[1L]]
       args <- c(args, more)
       if (!is.na(lr$blank_row[1L]) && identical(lr$blank_row[1L], "TRUE")) blank_row <- TRUE
+      # the items the columns cannot say (content_more, YAML): plan_listing()'s
+      # other arguments joined to its own, the rest after the sheet's items
+      if ("content_more" %in% names(lr)) more_items <- .sheet_more_in(lr$content_more[1L], items = TRUE)
+      for (it in Filter(function(it) identical(it$fn, "plan_listing"), more_items)) {
+        args <- c(args, it$args[setdiff(names(it$args), names(args))])
+      }
+      more_items <- Filter(function(it) !identical(it$fn, "plan_listing"), more_items)
     }
     content <- list(tfl_item("plan_listing", args))
     # its font size (the report sheet's, on the style sheet): the plan's
@@ -547,6 +587,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     if (nrow(lr) && !is.na(lr$max_rows[1L])) {
       content <- c(content, list(tfl_item("plan_paginate_rows", list(max_rows = as.integer(lr$max_rows[1L])))))
     }
+    content <- c(content, more_items)
   } else if (kind %in% c("figure", "listing")) {
     # a figure with no design, a listing with no rows yet: nothing of a
     # table's (its data its own code, or a dataset)
@@ -590,14 +631,27 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   # figure's hazard ratios too): its ard: section, the ARD stage's
   ard_part <- NULL
   if (!is.null(ard)) {
+    ob <- ard$objects
+    if (!is.null(ob) && nrow(ob)) {
+      ob <- ob[!is.na(ob$output_id) & ob$output_id == id, , drop = FALSE]
+      if (nrow(ob)) ard_part$objects <- .conv_rows(ob, note, id, "objects", r_cols = "code",
+                                                   rename = c(object_id = "id"))
+    }
     ad <- ard$analysis_data
     if (!is.null(ad$output_id)) ad <- ad[!is.na(ad$output_id) & ad$output_id == id, , drop = FALSE]
     if (nrow(ad)) ard_part$analysis_data <- .conv_rows(ad, note, id, "analysis_data", r_cols = c("where", "derive", "code"),
                                                     list_cols = c("add", "keep", "distinct"), rename = c(data_id = "id", population_id = "population"))
     an <- ard$analyses[!is.na(ard$analyses$output_id) & ard$analyses$output_id == id, , drop = FALSE]
-    if (nrow(an)) ard_part$analyses <- .conv_rows(an, note, id, "analyses", r_cols = c("where", "args", "post", "code"),
-                                               list_cols = c("by", "strata", "variables", "statistics", "formats"),
-                                               rename = c(analysis_id = "id", population_id = "population"))
+    if (nrow(an)) {
+      ard_part$analyses <- .conv_rows(an, note, id, "analyses", r_cols = c("where", "args", "post", "code"),
+                                      list_cols = c("by", "strata", "variables", "statistics", "formats"),
+                                      rename = c(analysis_id = "id", population_id = "population"))
+      # a denominator of numbers: a number, or a map by the by's values
+      ard_part$analyses <- lapply(ard_part$analyses, function(m) {
+        if (!is.null(m$denominator)) m$denominator <- .den_yaml(m$denominator)
+        m
+      })
+    }
   }
   # a report whose data or content is its R code (the report row's
   # data_code / content_code): the data as code, the content as one !r

@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9222** (the development version,
+**This manual documents tflspec 0.0.24.9230** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -245,7 +245,9 @@ analysis functions).
 
 **spec/data.yml** — `datasets:` (`dataset`, `level`, `path`, `derive`)
 and `populations:` (`id`, `dataset`, `where`, `derive`, `label`): the
-`datasets` and `populations` sheets of §A.1, a population's id under `id`.
+`datasets` and `populations` sheets of §A.1, a population's id under `id`;
+`objects:` (`id`, `code`, `label`): the study's named values (the
+`objects` sheet).
 
 **spec/toc.yml** — `outputs:`, one entry a report in the TOC's order:
 `id`, `kind` (`table` / `listing` / `figure`), `label` (its title),
@@ -840,7 +842,7 @@ back): rename the value or choose another separator.
 `tfl_as_table_spec`
 
 **Report spec:** `tfl_read_report_spec` `tfl_read_toc` `tfl_report` `tfl_report_code`
-`tfl_report_path` `tfl_report_setup_code` `tfl_report_tokens` `tfl_check_code`
+`tfl_report_overwrite` `tfl_report_path` `tfl_report_setup_code` `tfl_report_tokens` `tfl_check_code`
 
 **Document import (a define, by rule):** `tfl_read_define`
 `tfl_read_define_spec` `tfl_define_profile` `tfl_define_codelists`
@@ -929,6 +931,7 @@ cat(tfl_report_code(sp, content = "plan"), sep = "\n")
 | `study` | `key`, `value` | `id`: the subject key (`USUBJID`); `output`: where the study ARD goes (`output/ard/ard.rds`); `source`: R files of the study's own analysis functions, relative to the study folder (`|` between them) |
 | `datasets` | `dataset`, `level`, `path`, `derive` | a name for the data, its level (`SDTM` / `ADaM`), its file relative to the study folder, new columns (`NAME = R expression`, `|` between them) |
 | `populations` | `population_id`, `dataset`, `where`, `derive`, `label` | an analysis set: the subjects of `dataset` for which `where` (R) holds; `derive` adds columns (`TRTA = TRT01A`); `label` is the text a header prints (Safety Analysis Set) and the set's name in ARS (blank: the id). "Population" is tflspec's word for what ICH E9 and CDISC ARS call an analysis set: `tfl_ars()` writes it as an `AnalysisSet`, an analysis's `population_id` as `analysisSetId` |
+| `objects` | `output_id`, `object_id`, `code`, `label` | named values the ARD program makes at its top (`object_id <- code`, `label` a comment above): the study's (`output_id` blank; data.yml `objects:`) before a report's own (its `ard: objects:`); an analysis names one as its `denominator`, or in its `args` / `where`. YAML: `objects: [{id: n_saf_jp, code: !r 'c("Drug X" = 40, "Placebo" = 38)', label: ...}]` |
 | `analysis_data` | `output_id`, `data_id`, `label`, `from`, `population_id`, `subjects`, `where`, `add`, `derive`, `keep`, `distinct`, `code` | named data a report's analyses read (a report's, by `output_id`: the same `data_id` may mean something else in another report; a row names only its own report's rows above it): made `from` a dataset or an analysis data above, kept to a population's subjects and the records `where` keeps, with columns of the population's data added by the subject key (`add`), columns derived, and one row per set of values (`distinct`: `USUBJID | APHASE`, a denominator per subject and phase) -- in that order; `subjects` (instead of `population_id`) keeps the subjects of an analysis data above, a report's own subjects (the numerator kept to the denominator's), and `keep` the columns kept (with `derive`, transmute()). `data_id` is the object's name in the ARD program (lower case, not a dataset's or `pop_*`). When the columns cannot say it, `code` is R that makes the data itself (its value is the data; the datasets, `pop_*` and the analysis data above are in reach); then the other columns but `from` stay blank |
 | `analyses` | `output_id`, `analysis_id`, `label`, `method`, `data`, `dataset`, `population_id`, `where`, `by`, `overall`, `strata`, `variables`, `statistics`, `denominator`, `formats`, `args`, `code`, `purpose`, `reason` | one analysis a row; both ids become ARD columns; `purpose` / `reason` (CDISC terms) only for `tfl_ars()` |
 
@@ -995,8 +998,11 @@ cat(tfl_report_code(sp, content = "plan"), sep = "\n")
   (put it on the parent).
 - `denominator`: what percentages are of — `population` (the analysis
   set; `hierarchical` and `max` take it anyway), `row` / `column` / `cell`
-  (cards), another population, or a dataset (its records of the analysis
-  set's subjects). Not in `args` as well.
+  (cards), another population, a dataset (its records of the analysis
+  set's subjects), or numbers given: one (`denominator: 86`, every
+  column's N) or one a value of the analysis's one `by` variable
+  (`denominator: {Drug X: 86, Placebo: 85}`; in the sheet
+  `c("Drug X" = 86, "Placebo" = 85)`). Not in `args` as well.
 - `args`: more arguments as R (`over_variables = TRUE, overall = TRUE`),
   read as the arguments of a call — any order; refused if not R.
 - `formats`: `mean=xx.x | p=xx.x% | AGE:sd=xx.xx` — the `xx` part says the
