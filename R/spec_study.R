@@ -60,6 +60,9 @@ tfl_read_study_spec <- function(dir) {
     codelists = rd(file.path(spec, "codelists.yml")) %||% list(),
     patterns = patterns,
     toc = rd(file.path(spec, "toc.yml")) %||% list(),
+    # rtfreporter's options for every program of the study (defaults.yml's
+    # options:, by rtfreporter's names: rtfreporter.png_device ...)
+    options = dflt$options %||% list(),
     dir = normalizePath(dir, "/", mustWork = FALSE)),
     class = "tfl_study_spec")
 }

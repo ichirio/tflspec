@@ -26,6 +26,17 @@
   second font ...): the page sheet's new column `page_more` holds them as
   YAML and they are read back as they were.
 
+* **rtf_figures()'s drawing, the study's rtfreporter options, overwrite**
+  (#452): `page.rtf_figures` takes `render_width`, `render_height`,
+  `render_dpi` and `png_device` (rtfreporter#719; a drawn figure's
+  `rtfplot()` gets the device too); `defaults.yml`'s `options:` names
+  rtfreporter's options (`rtfreporter.png_device`,
+  `rtfreporter.figure.default_dpi`, `rtfreporter.ard_pipe` ...), which the
+  study setup writes as `options()`; `page.generate_rtfreport.overwrite`
+  says whether a report's file may be written over, read by the new
+  `tfl_report_overwrite()` (and `tfl_ai_run()`).  rtfreporter (>=
+  0.8.2.9096).
+
 * **No page argument is dropped any more** (#444): `page.rtf_titles` and
   `page.rtf_footnotes` write `row_height_twips`, `markup`, `font` and
   `align` (not only `font_size_half_points`), `page.rtf_figures` its

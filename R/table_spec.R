@@ -2403,6 +2403,30 @@ tfl_report_path <- function(spec, output_id = NULL, study = NULL) {
                                           output_id = output_id), output_id))
 }
 
+#' Whether a report's RTF file may be written over
+#'
+#' What [rtfreporter::generate_rtfreport()]'s `overwrite` is for a report of
+#' the YAML spec: its page's `generate_rtfreport: {overwrite: }` (the
+#' report's own, its pattern's or the study's defaults), `TRUE` when none
+#' says it -- a report's program writes its file again each run.
+#'
+#' @param output A report of the YAML spec ([tfl_output()]).
+#' @param study The study ([tfl_read_study_spec()]), for its layers.
+#' @return `TRUE` or `FALSE`.
+#' @examples
+#' d <- system.file("extdata", "spec-yaml", package = "tflspec")
+#' tfl_report_overwrite(tfl_read_outputs(d)[["T-14-1-1"]], tfl_read_study_spec(d))
+#' @seealso [tfl_report_path()]
+#' @export
+tfl_report_overwrite <- function(output, study = NULL) {
+  if (!inherits(output, "tfl_output")) .ard_stop("tfl_report_overwrite(): `output` is a tfl_output.")
+  if (!isTRUE(attr(output, "resolved")) && inherits(study, "tfl_study_spec")) {
+    output <- tfl_resolve_output(output, study)
+  }
+  v <- .page_args(output$page$generate_rtfreport)$overwrite
+  if (is.null(v)) TRUE else isTRUE(v)
+}
+
 # The document's file, rtf_document(file = ): the report's path, unless it
 # still has an `{output_id}` no report filled (a definition of no one report)
 .rtf_file_said <- function(path) {

@@ -336,7 +336,7 @@ tfl_sheets_from_spec <- function(study, outputs) {
 
 .page_known <- c("header", "footer", "titles", "footnotes", "tokens", "page", "report",
                  "rtf_page", "rtf_default_format", "rtf_document", "rtf_tables", "rtf_titles",
-                 "rtf_footnotes", "rtf_figures", "rtf_header", "rtf_footer")
+                 "rtf_footnotes", "rtf_figures", "rtf_header", "rtf_footer", "generate_rtfreport")
 
 # `page:`'s rtfreporter arguments as the page and report sheets' columns
 # (the inverse of the converter's .page_put()): list(page = , report = ),
@@ -394,7 +394,7 @@ tfl_sheets_from_spec <- function(study, outputs) {
   out <- list()
   for (fn in intersect(names(page), c("rtf_page", "rtf_default_format", "rtf_document",
                                       "rtf_tables", "rtf_figures", "rtf_titles", "rtf_footnotes",
-                                      "rtf_header", "rtf_footer"))) {
+                                      "rtf_header", "rtf_footer", "generate_rtfreport"))) {
     a <- page[[fn]]
     if (!is.list(a) || inherits(a, "tfl_unset")) next
     for (k in names(a)) if (!paste(fn, k, sep = ".") %in% said) out[[fn]][[k]] <- a[[k]]

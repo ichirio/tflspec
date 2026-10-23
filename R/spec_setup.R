@@ -27,6 +27,12 @@
   # the language of each font slot (rtfreporter's font_lang)
   fl <- .font_slots_value(.page_args(pg$rtf_document)$font_lang)
   if (length(fl)) opts[["rtfreporter.font_lang"]] <- fl
+  # rtfreporter's options the study says by name (defaults.yml's options:);
+  # they win over the page's font and size
+  for (k in names(study$options)) {
+    v <- study$options[[k]]
+    opts[[k]] <- if (is.list(v) && !is.null(names(v))) unlist(v) else v
+  }
   sz <- .page_args(pg$rtf_default_format)$font_size_half_points
   if (!is.null(sz)) {
     n <- suppressWarnings(as.integer(sz))

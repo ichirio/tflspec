@@ -98,13 +98,14 @@
       # shows is the plot as drawn, never stretched into the box
       fig <- .spec_call("rtfplot", .spec_sym(content),
                         render_width = sz$width_in, render_height = sz$height_in,
-                        render_dpi = as.numeric(img$dpi %||% 300))
+                        render_dpi = as.numeric(img$dpi %||% 300), png_device = fa$png_device)
       st[[length(st) + 1L]] <- do.call(.spec_call, c(list("rtf_figures", doc, fig, align = fa$align), flow(fa)))
     } else {
       st[[length(st) + 1L]] <- do.call(.spec_call, c(list("rtf_figures", doc, .spec_sym(content),
         width_twips = if (sz$mode[["width"]] != "native") twips(sz$width_in),
         height_twips = if (sz$mode[["height"]] != "native") twips(sz$height_in),
-        align = fa$align), flow(fa)))
+        align = fa$align, render_width = fa$render_width, render_height = fa$render_height,
+        render_dpi = fa$render_dpi, png_device = fa$png_device), flow(fa)))
     }
   } else {
     ta <- args_of("rtf_tables")

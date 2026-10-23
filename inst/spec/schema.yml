@@ -618,6 +618,10 @@ rtf_figures:
     align: {type: "enum[left|center|right]"}
     page_break: {type: logical, description: "FALSE: on under the content before it in the document, on the page that one ends on."}
     space_before: {type: integer, description: "With page_break false, empty lines between the content before and this one."}
+    render_width: {type: number, description: "A plot object drawn this wide, in inches (rtfplot()'s); blank: rtfplot()'s default."}
+    render_height: {type: number, description: "A plot object drawn this high, in inches."}
+    render_dpi: {type: number, description: "A plot object drawn at this resolution."}
+    png_device: {type: "enum[auto|ragg|png]", description: "The PNG device a plot object is drawn with: auto (ragg when installed), ragg, png."}
 
 rtf_titles:
   package: rtfreporter
@@ -639,6 +643,12 @@ rtf_footnotes:
     font: {type: "string|vec<enum[latin|east_asian|complex|hansi], string>"}
     align: {type: "enum[left|center|right]"}
     border: {type: "call<rtf_border>", description: "The footnotes' border: {fn: rtf_border, args: {top: true}}."}
+
+generate_rtfreport:
+  package: rtfreporter
+  description: Writing the report's RTF file.
+  args:
+    overwrite: {type: logical, description: "FALSE: a report's file already there is not written over (an error); blank: TRUE."}
 
 rtf_header:
   package: rtfreporter
