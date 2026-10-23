@@ -777,6 +777,28 @@ rtf_footer:
         description: 'The population as a header or footnote prints it, and its name
           in CDISC ARS; blank: the population_id.'
         example: Safety Analysis Set
+  - sheet: records
+    description: 'ARD: named sets of records (CDISC ARS data subsets), the study''s:
+      a dataset and the condition its records meet. An analysis names one in
+      `records` instead of `dataset` and `where` (its own `where` on top).'
+    columns:
+      - column: record_id
+        description: The set's name, used by analyses.
+        example: TESAE
+      - column: dataset
+        description: The dataset its records are of (one of the datasets).
+        example: ADAE
+      - column: where
+        description: 'An R condition its records meet; blank: every record.'
+        example: TRTEMFL == "Y" & AESER == "Y"
+      - column: label
+        description: 'What the set is, the comment above its data in the program;
+          blank: none.'
+        example: Treatment-emergent serious adverse events
+      - column: any_label
+        description: 'The "any" row of a hierarchy of these records (normalize_ard()''s
+          overall) when the table says none; blank: Any <record_id>.'
+        example: Any SAE
   - sheet: objects
     description: 'ARD: named values the program makes at its top (object_id <- code),
       the study''s (output_id blank) before the reports'' own: an analysis names one
@@ -879,8 +901,13 @@ rtf_footer:
         example: adae_teae
       - column: dataset
         description: 'The data analysed; blank: the population''s own dataset. Blank
-          when `data` is given.'
+          when `data` or `records` is given.'
         example: ADAE
+      - column: records
+        description: 'A set of the records sheet (record_id): its dataset and condition,
+          instead of dataset and where (the analysis''s where on top); blank: dataset
+          and where say it.'
+        example: TESAE
       - column: population_id
         description: 'The population: the data is restricted to its subjects; blank:
           no restriction (population is NULL), or the population of `data`.'

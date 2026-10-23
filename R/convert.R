@@ -161,6 +161,11 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
       data$populations <- .conv_rows(ard$populations, note, NA, "populations",
                                      r_cols = c("where", "derive"), rename = c(population_id = "id"))
     }
+    # the named sets of records
+    if (!is.null(ard$records) && nrow(ard$records)) {
+      data$records <- .conv_rows(ard$records, note, NA, "records", r_cols = "where",
+                                 rename = c(record_id = "id"))
+    }
     # the study's named values (no output_id)
     ob <- ard$objects
     if (!is.null(ob) && nrow(ob)) {

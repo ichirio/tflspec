@@ -1,5 +1,15 @@
 # tflspec (development version)
 
+* Named sets of records (0.0.24.9231): sheet `records` (`record_id`,
+  `dataset`, `where`, `label`, `any_label`), data.yml `records:`
+  (`- {id: TESAE, dataset: ADAE, where: !r ..., label: ..., any_label:
+  Any SAE}`); an analysis's `records: TESAE` reads the set's dataset under
+  its condition, its own `where` on top, and the program's data of it is
+  commented with the set.  A hierarchy of a set with its "any" row
+  (`over_variables = TRUE`) is labelled with the set's `any_label`, else
+  `Any <id>`, when the table's `normalize_ard()` (or its `overall_label`)
+  says none.
+
 * The data the ARD program makes itself is named `<dataset>_sub`
   (0.0.24.9229): an analysis set's (`adsl_sub`, was `pop_saf`) and an
   analysis's own records (`adae_sub`, was `adae_saf`), numbered from a
