@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9228** (the development version,
+**This manual documents tflspec 0.0.24.9229** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -172,7 +172,7 @@ going and leaves the message in the `error` / `warning` column.
 | a report file's content as code / run it | `tfl_content_code(report)` / `tfl_content_run(report, data)`; an item's arguments: `tfl_schema(fn)`, `tfl_schema_check(item)`, `tfl_schema_help(fn, arg)` |
 | the study folder as workbooks and back; workbooks to a folder once | `tfl_sheets_from_yaml(dir)` (`tfl_sheets_from_spec(study, outputs)` from a spec in memory), `tfl_write_spec_xlsx(dir, path)` / `tfl_import_spec_xlsx(dir, path)`; `tfl_convert_sheets_to_yaml(from, to)` |
 | start an ARD spec / read / write it | `tfl_ard_spec_template()` / `tfl_read_ard_spec()` / `tfl_write_ard_spec()` |
-| write the cards code of one output | `tfl_ard_code(spec, output_id)` |
+| write the cards code of one output; each analysis's data by the program's name | `tfl_ard_code(spec, output_id)`; `tfl_ard_data_names(spec, output_id)` |
 | run the ARD spec, one study ARD | `tfl_build_ard(spec)`; one output's rows: `tfl_ard_for(ard, output_id)` |
 | scaffold a table spec from an ARD | `tfl_table_spec_template(ard)` |
 | read / write a table (+ report) spec | `tfl_read_table_spec()` / `tfl_read_report_spec()` / `tfl_write_table_spec()` / `tfl_write_report_spec()` |
@@ -722,7 +722,10 @@ case with underscores (`output_id`, `analysis_id`, `stat_name`), and the
 program's names are
 `report_id` (the report's id, in the ARD and the report programs), `cl_<variable>` (a code
 list), `path_<folder>` (a folder of the study's setup), `ard_<analysis id>`
-(an analysis's ARD), `pop_<set>` / `<dataset>_<set>` (data), `fmt_default`
+(an analysis's ARD), `<dataset>_sub` (the data the program makes: an
+analysis set's, `adsl_sub`, and an analysis's records, `adae_sub`; a
+report's second of a dataset `adsl_sub2`, each under a comment saying
+what it is), `fmt_default`
 and `tfl_stats` (the company standards' values).  The ARD has no method
 column: ARS's `methodId` comes from the spec.
 
@@ -828,7 +831,7 @@ back): rename the value or choose another separator.
 `tfl_ai_answer_questions`
 
 **ARD spec:** `tfl_ard_spec` `tfl_read_ard_spec` `tfl_write_ard_spec`
-`tfl_ard_spec_template` `tfl_ard_code` `tfl_build_ard` `tfl_ard_for`
+`tfl_ard_spec_template` `tfl_ard_code` `tfl_ard_data_names` `tfl_build_ard` `tfl_ard_for`
 `tfl_ard_spec_hash` `tfl_ard_methods` `tfl_ard_as_custom` `tfl_ard_statistics`
 `tfl_ard_functions` `tfl_ard_args` `tfl_write_ard` `tfl_read_ard` `tfl_check_ard` `tfl_check_ard_function` `tfl_ard_function_template` `tfl_ard_function_info` `tfl_ard_conditions`
 
@@ -932,7 +935,7 @@ cat(tfl_report_code(sp, content = "plan"), sep = "\n")
 | `datasets` | `dataset`, `level`, `path`, `derive` | a name for the data, its level (`SDTM` / `ADaM`), its file relative to the study folder, new columns (`NAME = R expression`, `|` between them) |
 | `populations` | `population_id`, `dataset`, `where`, `derive`, `label` | an analysis set: the subjects of `dataset` for which `where` (R) holds; `derive` adds columns (`TRTA = TRT01A`); `label` is the text a header prints (Safety Analysis Set) and the set's name in ARS (blank: the id). "Population" is tflspec's word for what ICH E9 and CDISC ARS call an analysis set: `tfl_ars()` writes it as an `AnalysisSet`, an analysis's `population_id` as `analysisSetId` |
 | `objects` | `output_id`, `object_id`, `code`, `label` | named values the ARD program makes at its top (`object_id <- code`, `label` a comment above): the study's (`output_id` blank; data.yml `objects:`) before a report's own (its `ard: objects:`); an analysis names one as its `denominator`, or in its `args` / `where`. YAML: `objects: [{id: n_saf_jp, code: !r 'c("Drug X" = 40, "Placebo" = 38)', label: ...}]` |
-| `analysis_data` | `output_id`, `data_id`, `label`, `from`, `population_id`, `subjects`, `where`, `add`, `derive`, `keep`, `distinct`, `code` | named data a report's analyses read (a report's, by `output_id`: the same `data_id` may mean something else in another report; a row names only its own report's rows above it): made `from` a dataset or an analysis data above, kept to a population's subjects and the records `where` keeps, with columns of the population's data added by the subject key (`add`), columns derived, and one row per set of values (`distinct`: `USUBJID | APHASE`, a denominator per subject and phase) -- in that order; `subjects` (instead of `population_id`) keeps the subjects of an analysis data above, a report's own subjects (the numerator kept to the denominator's), and `keep` the columns kept (with `derive`, transmute()). `data_id` is the object's name in the ARD program (lower case, not a dataset's or `pop_*`). When the columns cannot say it, `code` is R that makes the data itself (its value is the data; the datasets, `pop_*` and the analysis data above are in reach); then the other columns but `from` stay blank |
+| `analysis_data` | `output_id`, `data_id`, `label`, `from`, `population_id`, `subjects`, `where`, `add`, `derive`, `keep`, `distinct`, `code` | named data a report's analyses read (a report's, by `output_id`: the same `data_id` may mean something else in another report; a row names only its own report's rows above it): made `from` a dataset or an analysis data above, kept to a population's subjects and the records `where` keeps, with columns of the population's data added by the subject key (`add`), columns derived, and one row per set of values (`distinct`: `USUBJID | APHASE`, a denominator per subject and phase) -- in that order; `subjects` (instead of `population_id`) keeps the subjects of an analysis data above, a report's own subjects (the numerator kept to the denominator's), and `keep` the columns kept (with `derive`, transmute()). `data_id` is the object's name in the ARD program (lower case, not a dataset's or the program's own `<dataset>_sub`). When the columns cannot say it, `code` is R that makes the data itself (its value is the data; the datasets, the analysis set's data `<dataset>_sub` and the analysis data above are in reach); then the other columns but `from` stay blank |
 | `analyses` | `output_id`, `analysis_id`, `label`, `method`, `data`, `dataset`, `population_id`, `where`, `by`, `overall`, `strata`, `variables`, `statistics`, `denominator`, `formats`, `args`, `code`, `purpose`, `reason` | one analysis a row; both ids become ARD columns; `purpose` / `reason` (CDISC terms) only for `tfl_ars()` |
 
 - `method`: a keyword — `continuous`, `categorical`, `dichotomous`,
@@ -979,7 +982,7 @@ cat(tfl_report_code(sp, content = "plan"), sep = "\n")
   `cards::ard_pairwise` (each pair of the levels of its one `variables`).
   The rows inside leave `dataset` / `population_id` / `where` (and in a
   stack `by`) blank: they are the parent's. The program writes one call,
-  `cards::ard_stack(pop_saf, .by = ARM, cards::ard_summary(variables =
+  `cards::ard_stack(adsl_sub, .by = ARM, cards::ard_summary(variables =
   c(AGE, BMIBL)), cards::ard_tabulate(variables = SEX))`, and tags each
   variable's rows with its own analysis (the stack's own rows with the
   parent's id). ARS gets each row inside as an analysis of its own.
@@ -1018,7 +1021,7 @@ cat(tfl_report_code(sp, content = "plan"), sep = "\n")
   cannot say it; the definition keeps the code, the program is never edited.
 - In `args` and `code`, `data` is the analysis data and `population` the
   analysis set's subjects; the program writes them as the data's own names
-  (`adtte_ttde`, `pop_saf`), and a `custom` analysis's last expression is
+  (`adtte_ttde`, `adsl_sub`), and a `custom` analysis's last expression is
   its ARD (`local()` only when its code defines a function or assigns a
   name the program has).
 - A function that takes a **formula** (`cardx::ard_survival_survdiff`,

@@ -32,7 +32,7 @@ test_that("a stack is one ard_stack() call, each variable tagged with its analys
          variables = "SEX")))
   code <- tfl_ard_code(sp, part = "body")
   txt <- paste(code, collapse = "\n")
-  expect_match(txt, "ard_demo <- pop_saf |>\n  ard_stack(\n    .by = ARM,\n", fixed = TRUE)
+  expect_match(txt, "ard_demo <- adsl_sub |>\n  ard_stack(\n    .by = ARM,\n", fixed = TRUE)
   expect_match(txt, "    ard_summary(\n      variables = c(AGE, BMIBL),", fixed = TRUE)
   expect_match(txt, "    ard_tabulate(variables = SEX,", fixed = TRUE)
   # each analysis's variables; the rest the stack's
@@ -76,9 +76,9 @@ test_that("ard_strata() and ard_pairwise() run their one analysis with .x", {
     list(analysis_id = "TT", parent = "PAIRS", method = "ttest", by = "ARM",
          variables = "AGE", statistics = "estimate | p.value")))
   txt <- paste(tfl_ard_code(sp, part = "body"), collapse = "\n")
-  expect_match(txt, "pop_saf |>\n  ard_strata(\n    .strata = SEX,\n    .f = ~ ard_summary(\n      .x,",
+  expect_match(txt, "adsl_sub |>\n  ard_strata(\n    .strata = SEX,\n    .f = ~ ard_summary(\n      .x,",
                fixed = TRUE)
-  expect_match(txt, "pop_saf |>\n  ard_pairwise(\n    variable = ARM,\n    .f = ~ cardx::ard_stats_t_test(.x,",
+  expect_match(txt, "adsl_sub |>\n  ard_pairwise(\n    variable = ARM,\n    .f = ~ cardx::ard_stats_t_test(.x,",
                fixed = TRUE)
   ard <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE))
   expect_setequal(unique(ard$analysis_id), c("AGE", "TT"))
