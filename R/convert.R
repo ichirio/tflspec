@@ -161,6 +161,13 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
       data$populations <- .conv_rows(ard$populations, note, NA, "populations",
                                      r_cols = c("where", "derive"), rename = c(population_id = "id"))
     }
+    # the study's named values (no output_id)
+    ob <- ard$objects
+    if (!is.null(ob) && nrow(ob)) {
+      ob <- ob[is.na(ob$output_id), , drop = FALSE]
+      if (nrow(ob)) data$objects <- .conv_rows(ob, note, NA, "objects", r_cols = "code",
+                                               rename = c(object_id = "id"))
+    }
     put("spec/data.yml", data)
   }
 
@@ -624,6 +631,12 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   # figure's hazard ratios too): its ard: section, the ARD stage's
   ard_part <- NULL
   if (!is.null(ard)) {
+    ob <- ard$objects
+    if (!is.null(ob) && nrow(ob)) {
+      ob <- ob[!is.na(ob$output_id) & ob$output_id == id, , drop = FALSE]
+      if (nrow(ob)) ard_part$objects <- .conv_rows(ob, note, id, "objects", r_cols = "code",
+                                                   rename = c(object_id = "id"))
+    }
     ad <- ard$analysis_data
     if (!is.null(ad$output_id)) ad <- ad[!is.na(ad$output_id) & ad$output_id == id, , drop = FALSE]
     if (nrow(ad)) ard_part$analysis_data <- .conv_rows(ad, note, id, "analysis_data", r_cols = c("where", "derive", "code"),

@@ -145,6 +145,10 @@ tfl_sheets_from_spec <- function(study, outputs) {
   ard$populations <- .rows_df(lapply(s$data$populations %||% list(), function(e) {
     m <- lapply(e, cell); if (!is.null(m$id)) { m$population_id <- m$id; m$id <- NULL }; m
   }), .ard_spec_sheets$populations)
+  # named values: the study's (data.yml `objects:`), then the reports'
+  objs <- lapply(s$data$objects %||% list(), function(e) {
+    m <- lapply(e, cell); m$object_id <- m$id; m$id <- NULL; c(list(output_id = NA_character_), m)
+  })
   adata <- list(); analyses <- list()
   listings <- list(); listing_cols <- list(); fig_rows <- list()
   figures <- list()
@@ -196,6 +200,10 @@ tfl_sheets_from_spec <- function(study, outputs) {
       m <- lapply(a, cell); m$data_id <- m$id; m$id <- NULL
       if (!is.null(m$population)) { m$population_id <- m$population; m$population <- NULL }
       adata[[length(adata) + 1L]] <- c(list(output_id = id), m)
+    }
+    for (e in o$ard$objects %||% list()) {
+      m <- lapply(e, cell); m$object_id <- m$id; m$id <- NULL
+      objs[[length(objs) + 1L]] <- c(list(output_id = id), m)
     }
     for (a in o$ard$analyses %||% list()) {
       if (!is.null(a$denominator)) a$denominator <- .den_cell(a$denominator)
@@ -260,6 +268,7 @@ tfl_sheets_from_spec <- function(study, outputs) {
                          setup_code = if (!is.null(s$study$setup)) cell(s$study$setup) else NA_character_,
                          process_code = NA_character_, section = NA_character_, population = NA_character_,
                          datasets = NA_character_, batches = NA_character_)), planner)
+  ard$objects <- .rows_df(objs, .ard_spec_sheets$objects)
   ard$analysis_data <- .rows_df(adata, c("output_id", .ard_spec_sheets$analysis_data))
   ard$analyses <- .rows_df(analyses, .ard_spec_sheets$analyses)
 

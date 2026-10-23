@@ -16,6 +16,10 @@ toy_spec <- function(analyses) {
                                derive = "TRTA = TRT01A")),
     analyses = analyses)
   for (n in names(.ard_spec_sheets)) {
+    if (is.null(s[[n]])) {
+      s[[n]] <- as.data.frame(lapply(stats::setNames(nm = .ard_spec_sheets[[n]]),
+                                     function(c) character()), stringsAsFactors = FALSE)
+    }
     for (c in .ard_spec_sheets[[n]]) {
       if (!c %in% names(s[[n]])) s[[n]][[c]] <- NA_character_
     }
