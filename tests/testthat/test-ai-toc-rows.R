@@ -51,35 +51,6 @@ test_that("the batches: a shell's reports together; size counts shells", {
   expect_true(all(per <= 3L))
 })
 
-test_that("a request a shell, named after it; its rows, a shared shell, no shell, both", {
-  skip_if_not_installed("openxlsx")
-  skip_if_not_installed("haven")
-  f <- company_toc_book(tempfile(fileext = ".xlsx"))
-  d <- tempfile()
-  on.exit(unlink(c(f, d), recursive = TRUE), add = TRUE)
-  dir.create(file.path(d, "adam"), recursive = TRUE)
-  haven::write_xpt(tflspec:::.ai_chr(tflspec::adsl), file.path(d, "adam", "adsl.xpt"))
-  r <- tfl_ai_prepare(d, f, adam = "adam", quiet = TRUE, mode = "agent", templates = FALSE,
-                      size = 1)
-  x <- tfl_ai_read_shell(f)
-  expect_identical(nrow(r$requests), length(unique(x$toc$shell_key)))
-  one <- r$requests[r$requests$request == "t.15.1.1.1", , drop = FALSE]
-  expect_identical(one$outputs, "Table 15.1.1.1, Table 15.1.1.1.2, Table 15.1.1.1.3")
-  txt <- paste(readLines(file.path(d, one$file), encoding = "UTF-8"), collapse = "\n")
-  expect_match(txt, "- Table 15.1.1.1.3: shell t.15.1.1.1 (sheet 't.15.1.1.1'); title: Summary of Measure 3 / Subgroup 3; population: Safety Analysis Set; program: t_15_1_1_1_3.sas; Doc No: D003; Seq: 3; Phase: both",
-               fixed = TRUE)
-  expect_match(txt, "Reports sharing a shell are each a report file of their own", fixed = TRUE)
-  expect_match(txt, "A TOC row can be several reports", fixed = TRUE)
-  # the shell's sheet in the request
-  expect_match(txt, "## Sheet \"t.15.1.1.1\"", fixed = TRUE)
-  no <- r$requests[grepl("16.9.1", r$requests$outputs), , drop = FALSE]
-  txt <- paste(readLines(file.path(d, no$file), encoding = "UTF-8"), collapse = "\n")
-  expect_match(txt, "Table 16.9.1: no shell (the TOC names t.16.9.1", fixed = TRUE)
-  # every row in spec/toc.yml
-  toc <- yaml::read_yaml(file.path(d, "spec", "toc.yml"))$outputs
-  expect_identical(length(toc), nrow(x$toc))
-})
-
 test_that("a TOC without a shell column reads as before: the number, its sheet", {
   f <- system.file("ai", "example", "onco_toc_shell.xlsx", package = "tflspec")
   x <- tfl_ai_read_shell(f)
@@ -87,26 +58,27 @@ test_that("a TOC without a shell column reads as before: the number, its sheet",
   expect_false(anyNA(x$toc$shell))
 })
 
-test_that("a shell in parts that two reports share: each report's parts, its number and the shell's letter", {
+
+test_that("a company's TOC: a request a shell sheet, the TOC items sharing it its candidates", {
   skip_if_not_installed("openxlsx")
-  f <- tempfile(fileext = ".xlsx")
-  on.exit(unlink(f))
-  wb <- openxlsx::createWorkbook()
-  openxlsx::addWorksheet(wb, "TOC")
-  openxlsx::writeData(wb, "TOC", data.frame(
-    Shell = c("t.15.1.5.1", "t.15.1.5.1"), `Output No` = c("Table 15.1.5.1", "Table 15.1.5.2"),
-    Title = c("Demographics", "Demographics, Japan"), check.names = FALSE))
-  s <- "t.15.1.5.1"
-  openxlsx::addWorksheet(wb, s)
-  openxlsx::writeData(wb, s, "Table 15.1.5.1.a  Demographics - Phase 1 Part", startRow = 1)
-  openxlsx::writeData(wb, s, t(c("", "Placebo", "Drug X")), startRow = 3, colNames = FALSE)
-  openxlsx::writeData(wb, s, "Table 15.1.5.1.b  Demographics - Phase 2 Part", startRow = 20)
-  openxlsx::saveWorkbook(wb, f)
+  skip_if_not_installed("haven")
+  f <- company_toc_book(tempfile(fileext = ".xlsx"))
+  d <- tempfile()
+  on.exit(unlink(c(f, d), recursive = TRUE), add = TRUE)
+  dir.create(file.path(d, "adam"), recursive = TRUE)
+  haven::write_xpt(tflspec:::.ai_chr(tflspec::adsl), file.path(d, "adam", "adsl.xpt"))
+  r <- tfl_ai_prepare(d, f, adam = "adam", quiet = TRUE, mode = "agent", templates = FALSE)
   x <- tfl_ai_read_shell(f)
-  expect_identical(x$toc$parts, c("Table 15.1.5.1.a | Table 15.1.5.1.b",
-                                  "Table 15.1.5.2.a | Table 15.1.5.2.b"))
-  expect_identical(x$toc$parts_row, c("1 | 20", "1 | 20"))
-  lines <- tflspec:::.ai_parts_lines(x, "Table 15.1.5.2")
-  expect_match(lines[1L], "Table 15.1.5.2.a: from row 1", fixed = TRUE)
-  expect_match(lines[1L], "its title as the shell writes it", fixed = TRUE)
+  # 60 shell sheets and one request of the TOC items with no shell
+  expect_identical(nrow(r$requests), nrow(x$shells) + 1L)
+  expect_identical(nrow(x$shells), 60L)
+  expect_identical(r$counts[["no_shell"]], 3L)
+  one <- r$requests[r$requests$request == "t.15.1.1.1", , drop = FALSE]
+  txt <- paste(readLines(file.path(d, one$file), encoding = "UTF-8"), collapse = "\n")
+  for (id in c("Table 15.1.1.1", "Table 15.1.1.1.2", "Table 15.1.1.1.3")) {
+    expect_match(txt, paste0("- ", id, " ("), fixed = TRUE)
+  }
+  expect_match(txt, "Phase: both", fixed = TRUE)
+  ns <- r$requests[r$requests$request == "no-shell", , drop = FALSE]
+  expect_identical(ns$outputs, "Table 16.9.1, Table 16.9.2, Table 16.9.3")
 })

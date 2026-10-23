@@ -1,4 +1,4 @@
-# tfl_ai_prepare(mode = "agent", size = 3L) and tfl_ai_run(): the study folder as a
+# tfl_ai_prepare(unit = "toc", mode = "agent", size = 3L) and tfl_ai_run(): the study folder as a
 # coding agent's work -- every request without a stop, the questions
 # gathered into ai/questions.md, a second round from the answers (#374)
 
@@ -20,7 +20,7 @@ test_that("mode = \"agent\": the instructions, run.R, questions, decisions; toc.
   root <- withr::local_tempdir()
   d <- file.path(root, "study")
   ad <- agent_study(root)
-  r <- tfl_ai_prepare(d, ex_book(), adam = ad, quiet = TRUE, mode = "agent")
+  r <- tfl_ai_prepare(unit = "toc", d, ex_book(), adam = ad, quiet = TRUE, mode = "agent")
   expect_identical(r$mode, "agent")
   # an agent's default: one report a request, named after the report
   expect_identical(r$requests$request, c("T-14-1-1", "T-14-3-1", "T-14-3-5", "T-14-2-1", "F-14-2-2"))
@@ -55,7 +55,7 @@ test_that("mode = \"agent\": the instructions, run.R, questions, decisions; toc.
   expect_identical(st$settings$output_path, "output/tfl")
   expect_identical(st$settings$program_dir, "programs/tfl")
   toc <- yaml::read_yaml(file.path(d, "spec", "toc.yml"))$outputs
-  expect_identical(vapply(toc, `[[`, "", "id"), r$toc$output_id)
+  expect_identical(vapply(toc, `[[`, "", "id"), r$toc$toc_id)
   expect_identical(toc[[1L]]$section, "14.1")
   expect_true(all(vapply(toc, function(e) !is.null(e$population), NA)))
   expect_true(any(grepl("VS Code", r$next_steps, fixed = TRUE)))
@@ -68,12 +68,12 @@ test_that("mode = \"agent\": the ADaM inside the study folder is fine; chat mode
   root <- withr::local_tempdir()
   d <- file.path(root, "study")
   agent_study(root, adam_inside = TRUE)
-  r <- tfl_ai_prepare(d, ex_book(), adam = "adam", quiet = TRUE, mode = "agent", size = 3L)
+  r <- tfl_ai_prepare(unit = "toc", d, ex_book(), adam = "adam", quiet = TRUE, mode = "agent", size = 3L)
   expect_length(r$hint, 0L)
   expect_true(file.exists(file.path(d, "AGENTS.md")))
   d2 <- file.path(root, "chat")
   agent_study(file.path(root, "chat-root"))
-  r2 <- tfl_ai_prepare(d2, ex_book(), adam = normalizePath(file.path(root, "chat-root", "adam"),
+  r2 <- tfl_ai_prepare(unit = "toc", d2, ex_book(), adam = normalizePath(file.path(root, "chat-root", "adam"),
                                                            winslash = "/"), quiet = TRUE)
   expect_false(file.exists(file.path(d2, "AGENTS.md")))
   expect_false(file.exists(file.path(d2, "run.R")))
@@ -88,8 +88,8 @@ test_that("tfl_ai_run(): the RTFs, ai/status.md, the questions; a second round k
   root <- withr::local_tempdir()
   d <- file.path(root, "study")
   ad <- agent_study(root)
-  tfl_ai_prepare(d, ex_book(), adam = ad, quiet = TRUE, mode = "agent", size = 3L)
-  ex <- system.file("ai", "example", "answers", package = "tflspec")
+  tfl_ai_prepare(unit = "toc", d, ex_book(), adam = ad, quiet = TRUE, mode = "agent", size = 3L)
+  ex <- test_path("fixtures", "answers-toc")
   file.copy(list.files(ex, full.names = TRUE), file.path(d, "ai", "answers"))
   res <- suppressMessages(tfl_ai_run(d))
   rp <- res$reports
@@ -118,7 +118,7 @@ test_that("tfl_ai_run(): the RTFs, ai/status.md, the questions; a second round k
   writeLines(c(readLines(file.path(d, "ai", "decisions.md")), "- Q1 (T-14-1-1): TRT01P"),
              file.path(d, "ai", "decisions.md"))
   dec <- readLines(file.path(d, "ai", "decisions.md"))
-  tfl_ai_prepare(d, ex_book(), adam = ad, quiet = TRUE, mode = "agent", size = 3L, overwrite = TRUE)
+  tfl_ai_prepare(unit = "toc", d, ex_book(), adam = ad, quiet = TRUE, mode = "agent", size = 3L, overwrite = TRUE)
   expect_identical(readLines(f, encoding = "UTF-8"), x)
   expect_identical(readLines(file.path(d, "ai", "decisions.md")), dec)
 })
@@ -131,8 +131,8 @@ test_that("tfl_ai_run(): a report built again only when it changed; one request'
   root <- withr::local_tempdir()
   d <- file.path(root, "study")
   ad <- agent_study(root, adam_inside = TRUE)
-  tfl_ai_prepare(d, ex_book(), adam = "adam", quiet = TRUE, mode = "agent", size = 3L)
-  ex <- system.file("ai", "example", "answers", package = "tflspec")
+  tfl_ai_prepare(unit = "toc", d, ex_book(), adam = "adam", quiet = TRUE, mode = "agent", size = 3L)
+  ex <- test_path("fixtures", "answers-toc")
   file.copy(list.files(ex, full.names = TRUE), file.path(d, "ai", "answers"))
   built <- function(res) stats::setNames(res$reports$built, res$reports$output_id)
   r1 <- suppressMessages(tfl_ai_run(d))
@@ -205,7 +205,7 @@ test_that("a study copied elsewhere: its answers checked and built against its o
   root <- withr::local_tempdir()
   d <- file.path(root, "study")
   agent_study(root, adam_inside = TRUE)
-  tfl_ai_prepare(d, ex_book(), adam = "adam", quiet = TRUE, mode = "agent", size = 3L)
+  tfl_ai_prepare(unit = "toc", d, ex_book(), adam = "adam", quiet = TRUE, mode = "agent", size = 3L)
   # the requests keep no path of this PC
   ctx <- readRDS(file.path(d, "ai", "requests", "_contexts.rds"))
   sd <- unlist(lapply(ctx, function(x) x$context$study_dir))
@@ -223,7 +223,7 @@ test_that("a study copied elsewhere: its answers checked and built against its o
   expect_match(r0$next_steps[["ae-1"]], "Rscript run.R ae-1", fixed = TRUE)
   expect_false(any(grepl("chat", r0$next_steps, fixed = TRUE)))
   # answered there: checked against its own study files, built
-  ex <- system.file("ai", "example", "answers", package = "tflspec")
+  ex <- test_path("fixtures", "answers-toc")
   file.copy(list.files(ex, full.names = TRUE), file.path(d2, "ai", "answers"))
   res <- suppressMessages(tfl_ai_run(d2))
   expect_true(all(res$reports$status %in% c("ok", "warning")))
@@ -259,7 +259,7 @@ test_that("mode = \"agent\": a study with its ADaM and workbook inside it names 
   dir.create(file.path(d, "shells"), recursive = TRUE, showWarnings = FALSE)
   book <- file.path(d, "shells", "toc.xlsx")
   file.copy(ex_book(), book)
-  r <- tfl_ai_prepare(d, book, adam = ad, quiet = TRUE, mode = "agent", size = 3L)
+  r <- tfl_ai_prepare(unit = "toc", d, book, adam = ad, quiet = TRUE, mode = "agent", size = 3L)
   here <- normalizePath(root, winslash = "/")
   files <- list.files(d, recursive = TRUE, all.files = TRUE, pattern = "[.](md|yml|R)$")
   for (f in files) {
@@ -274,7 +274,7 @@ test_that("mode = \"agent\": a study with its ADaM and workbook inside it names 
   expect_true(all(startsWith(vapply(dy$datasets, `[[`, "", "path"), "adam/")))
   # one outside the study: whole, as it must be
   d2 <- file.path(root, "study2")
-  r2 <- tfl_ai_prepare(d2, ex_book(), adam = ad, quiet = TRUE, mode = "agent", size = 3L)
+  r2 <- tfl_ai_prepare(unit = "toc", d2, ex_book(), adam = ad, quiet = TRUE, mode = "agent", size = 3L)
   dy2 <- yaml::read_yaml(file.path(d2, "spec", "data.yml"))
   expect_true(all(startsWith(tolower(vapply(dy2$datasets, `[[`, "", "path")), tolower(ad))))
 })
@@ -286,8 +286,8 @@ test_that("tfl_ai_run(): a request not built yet says so, after a run of another
   root <- withr::local_tempdir()
   d <- file.path(root, "study")
   agent_study(root, adam_inside = TRUE)
-  tfl_ai_prepare(d, ex_book(), adam = "adam", quiet = TRUE, mode = "agent", size = 3L)
-  ex <- system.file("ai", "example", "answers", package = "tflspec")
+  tfl_ai_prepare(unit = "toc", d, ex_book(), adam = "adam", quiet = TRUE, mode = "agent", size = 3L)
+  ex <- test_path("fixtures", "answers-toc")
   file.copy(list.files(ex, "^(demographics|ae)-1[.]md$", full.names = TRUE),
             file.path(d, "ai", "answers"))
   r <- suppressMessages(tfl_ai_run(d, requests = "demographics-1"))

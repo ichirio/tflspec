@@ -1,4 +1,4 @@
-# tfl_ai_prepare() and tfl_ai_write_requests(workbook = ): the workbook
+# tfl_ai_prepare() and tfl_ai_write_requests(unit = "toc", workbook = ): the workbook
 # attached, the requests saying where each shell is in it (#364)
 
 prep_study <- function(d) {
@@ -19,35 +19,35 @@ test_that("tfl_ai_prepare(): the guide's step 3 in one call; a study.yml there i
   skip_on_cran()
   skip_if_not_installed("haven")
   d <- prep_study(withr::local_tempdir())
-  r <- suppressMessages(tfl_ai_prepare(d, book(), study_id = "XYZ-ONC-01"))
+  r <- suppressMessages(tfl_ai_prepare(unit = "toc", d, book(), study_id = "XYZ-ONC-01"))
   expect_identical(nrow(r$requests), 5L)
   expect_true(all(file.exists(file.path(d, c("study.yml", "spec/data.yml", "ai/adam_summary.md",
                                              "ai/toc_shell.md", "ai/requests/index.md")))))
   # again: the study's settings are kept, the requests written again
   y <- file.path(d, "study.yml")
   writeLines(c(readLines(y), "# kept"), y)
-  r2 <- suppressMessages(tfl_ai_prepare(d, book(), study_id = "OTHER", size = 1L))
+  r2 <- suppressMessages(tfl_ai_prepare(unit = "toc", d, book(), study_id = "OTHER", size = 1L))
   expect_true("# kept" %in% readLines(y))
   expect_identical(nrow(r2$requests), 5L)
   # and the answers of the example still pass, as in the guide (its
   # requests: the default size's, size = 1 names them after the reports)
-  suppressMessages(tfl_ai_prepare(d, book()))
-  ex <-system.file("ai", "example", "answers", package = "tflspec")
+  suppressMessages(tfl_ai_prepare(unit = "toc", d, book()))
+  ex <-test_path("fixtures", "answers-toc")
   file.copy(list.files(ex, full.names = TRUE), file.path(d, "ai", "answers"), overwrite = TRUE)
   res <- suppressMessages(tfl_ai_collect_answers(d))
   expect_identical(unique(res$reports$status), "ok")
-  expect_error(tfl_ai_prepare(d, file.path(d, "nope.xlsx")), "workbook's path")
+  expect_error(tfl_ai_prepare(unit = "toc", d, file.path(d, "nope.xlsx")), "workbook's path")
 })
 
 test_that("workbook = \"attach\" / \"both\": where each shell is in the attached workbook", {
   skip_on_cran()
   skip_if_not_installed("haven")
   d <- prep_study(withr::local_tempdir())
-  r_text <- suppressMessages(tfl_ai_prepare(d, book(), study_id = "XYZ-ONC-01"))
+  r_text <- suppressMessages(tfl_ai_prepare(unit = "toc", d, book(), study_id = "XYZ-ONC-01"))
   t_text <- req_text(d, r_text)
   expect_false(grepl("is attached to this message", t_text, fixed = TRUE))
   expect_match(t_text, "# Workbook onco_toc_shell.xlsx", fixed = TRUE)
-  r_att <- suppressMessages(tfl_ai_prepare(d, book(), workbook = "attach"))
+  r_att <- suppressMessages(tfl_ai_prepare(unit = "toc", d, book(), workbook = "attach"))
   t_att <- req_text(d, r_att)
   expect_match(t_att, "The TOC / SHELL workbook `onco_toc_shell.xlsx` is attached to this message.",
                fixed = TRUE)
@@ -57,7 +57,7 @@ test_that("workbook = \"attach\" / \"both\": where each shell is in the attached
   expect_lt(nchar(t_att), nchar(t_text))
   expect_match(paste(readLines(file.path(d, "ai", "requests", "index.md")), collapse = "\n"),
                "Attach `onco_toc_shell.xlsx`", fixed = TRUE)
-  r_both <- suppressMessages(tfl_ai_prepare(d, book(), workbook = "both"))
+  r_both <- suppressMessages(tfl_ai_prepare(unit = "toc", d, book(), workbook = "both"))
   t_both <- req_text(d, r_both)
   expect_match(t_both, "is attached to this message", fixed = TRUE)
   expect_match(t_both, "# Workbook onco_toc_shell.xlsx", fixed = TRUE)
@@ -89,25 +89,25 @@ test_that("tfl_ai_prepare(): a list for a screen; dry_run writes nothing; the AD
   skip_on_cran()
   skip_if_not_installed("haven")
   d <- prep_study(withr::local_tempdir())
-  dry <- suppressMessages(tfl_ai_prepare(d, book(), study_id = "XYZ-ONC-01", dry_run = TRUE))
+  dry <- suppressMessages(tfl_ai_prepare(unit = "toc", d, book(), study_id = "XYZ-ONC-01", dry_run = TRUE))
   expect_s3_class(dry, "tfl_ai_prepared")
-  expect_named(dry, c("requests", "toc", "sheets", "adam", "files", "hint", "next_steps",
-                      "dry_run", "mode", "agent_prompt", "templates", "workbook"))
+  expect_named(dry, c("requests", "toc", "shells", "counts", "sheets", "adam", "files", "hint",
+                      "next_steps", "dry_run", "mode", "agent_prompt", "templates", "workbook"))
   expect_true(is.na(dry$agent_prompt))
   expect_false(file.exists(file.path(d, "study.yml")))
   expect_false(dir.exists(file.path(d, "ai")))
   expect_length(dry$files, 0L)
   expect_true(all(is.na(dry$requests$file)))
   expect_match(dry$next_steps[length(dry$next_steps)], "dry_run = FALSE")
-  expect_named(dry$toc, c("output_id", "title", "type", "shell", "shell_found", "request", "book",
-                          "parts", "parts_row", "same_number", "shell_id", "population",
+  expect_named(dry$toc, c("toc_id", "title", "type", "toc_sheets", "sheets", "shell",
+                          "shell_found", "request", "book", "shell_id", "population",
                           "program", "file", "info"))
   expect_true(all(dry$toc$shell_found))
   expect_setequal(dry$toc$request, dry$requests$request)
   expect_s3_class(dry$adam, "tfl_ai_adam")
   expect_output(print(dry), "dry run")
   # written, the ADaM summary of the look before passed back
-  r <- suppressMessages(tfl_ai_prepare(d, book(), study_id = "XYZ-ONC-01",
+  r <- suppressMessages(tfl_ai_prepare(unit = "toc", d, book(), study_id = "XYZ-ONC-01",
                                        adam_summary = dry$adam))
   expect_identical(r$requests$request, dry$requests$request)
   expect_identical(r$toc$request, dry$toc$request)
@@ -115,15 +115,15 @@ test_that("tfl_ai_prepare(): a list for a screen; dry_run writes nothing; the AD
                     "ai/requests/index.md", r$requests$file) %in% r$files))
   expect_true(all(file.exists(file.path(d, r$files))))
   expect_match(r$next_steps[length(r$next_steps)], "tfl_ai_save_answer()", fixed = TRUE)
-  expect_error(tfl_ai_prepare(d, book(), adam_summary = list()), "tfl_ai_adam_summary")
+  expect_error(tfl_ai_prepare(unit = "toc", d, book(), adam_summary = list()), "tfl_ai_adam_summary")
 })
 
 test_that("tfl_ai_save_answer() and tfl_ai_collect_answers(): the files, the repairs, the assumptions", {
   skip_on_cran()
   skip_if_not_installed("haven")
   d <- prep_study(withr::local_tempdir())
-  r <- suppressMessages(tfl_ai_prepare(d, book(), study_id = "XYZ-ONC-01"))
-  ex <- system.file("ai", "example", "answers", package = "tflspec")
+  r <- suppressMessages(tfl_ai_prepare(unit = "toc", d, book(), study_id = "XYZ-ONC-01"))
+  ex <- test_path("fixtures", "answers-toc")
   one <- r$requests$request[1L]
   txt <- readLines(file.path(ex, paste0(one, ".md")), encoding = "UTF-8")
   f <- tfl_ai_save_answer(d, one, txt)
@@ -162,10 +162,10 @@ test_that("tfl_ai_prepare(quiet, datasets); tfl_ai_requests(); no ADaM folder in
   # the ADaM outside the study, by its full path
   ad <- file.path(prep_study(file.path(root, "secret-server")), "adam")
   ad <- normalizePath(ad, winslash = "/")
-  expect_no_message(dry <- tfl_ai_prepare(d, book(), adam = ad, dry_run = TRUE, quiet = TRUE))
+  expect_no_message(dry <- tfl_ai_prepare(unit = "toc", d, book(), adam = ad, dry_run = TRUE, quiet = TRUE))
   expect_type(dry$hint, "character")
   expect_setequal(dry$adam$datasets$dataset, c("ADAE", "ADLB", "ADRS", "ADSL", "ADTTE"))
-  expect_no_message(r <- tfl_ai_prepare(d, book(), adam = ad, adam_summary = dry$adam,
+  expect_no_message(r <- tfl_ai_prepare(unit = "toc", d, book(), adam = ad, adam_summary = dry$adam,
                                         datasets = c("ADSL", "ADAE"), max_levels = 5L,
                                         quiet = TRUE))
   expect_setequal(r$adam$datasets$dataset, c("ADSL", "ADAE"))

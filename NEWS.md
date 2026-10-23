@@ -1,5 +1,29 @@
 # tflspec (development version)
 
+* **AI requests: the shell sheet first, the TOC as candidates** (0.0.24.9230).
+  A request is a shell sheet's (`unit = "sheet"`, the default of
+  `tfl_ai_prepare()` / `tfl_ai_write_requests()`): what the sheet writes
+  comes first -- its numbers, titles, populations, conditions, layout and
+  variables -- then its sheet name, then its TOC candidates, each with the
+  clues that chose it (a number written in the sheet, the sheet name's
+  number, a close number, the title's words); the TOC and the sheet names
+  can hold mistakes, and the AI says which it chose and why.  The reports
+  and their ids are the AI's to read from the sheet (a TOC item made by two
+  Part sheets, a sheet of several reports); collecting does not hold them
+  to a list -- an id no TOC item has is a warning, and a sheet that is no
+  shell is answered with no report.  Every TOC sheet is read (Topline_TOC
+  too), an item once with the TOC sheets listing it (`toc_sheets`); the
+  TOC items no sheet chose are asked for in one request (`no-shell`).
+  `sheet_roles = c("Topline TOC" = "other")` changes a sheet's role.  No
+  part is guessed any more (a heading's format sample "Table 15.1.2.x" was
+  read as parts): `parts`, `parts_row` and `part_of` go.  A dry run's
+  `toc` is a TOC item a row (`toc_id`, `toc_sheets`, `sheets`, `request`),
+  `shells` a shell sheet a row (`candidates`, `guessed`, `request`) and
+  `counts` the numbers of each.  `unit = "toc"`: the requests as before.
+  The workbook is read about three times as fast (a sheet's cells at
+  once), and a TOC's header of two rows (Title merged over its parts) says
+  its titles.
+
 * The TOC read as a company writes it (0.0.24.9222): every row naming a
   number is a report -- its shell shared with other rows, or none -- its
   number and its shell's number read from columns apart.

@@ -21,7 +21,8 @@ tfl_ai_write_requests(
   add = FALSE,
   templates = TRUE,
   mode = c("chat", "agent"),
-  progress = NULL
+  progress = NULL,
+  unit = c("sheet", "toc")
 )
 }
 \arguments{
@@ -102,6 +103,14 @@ The folder the answers go to (\code{ai/answers}, beside \code{dir}) is made too.
 are made: \code{step} \code{"request"}, \code{i} of \code{n} written (0 first) -- for a
 progress bar (shiny's \code{setProgress()}).  Each request is written as
 it is made; \code{index.md} and the contexts at the end.}
+
+\item{unit}{A request's unit: \code{"sheet"} (default; \code{shell}'s \code{shells}) a
+shell sheet, its TOC items as candidates, and one request of the TOC
+items no sheet chose; \code{"toc"} the TOC's reports in batches
+(\code{\link[=tfl_ai_batches]{tfl_ai_batches()}}), as before.  A sheet's request lets the AI name
+its reports: their ids are not held to a list (one that is no TOC
+item's is a warning), and a sheet that is no shell is answered with no
+report (a warning).}
 }
 \value{
 A data frame, one row a request: \code{request} (the file's name,

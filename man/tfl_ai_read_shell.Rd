@@ -12,7 +12,8 @@ tfl_ai_read_shell(
   max_chars = .ai_shell_max_chars,
   file = NULL,
   shells = NULL,
-  toc_cols = NULL
+  toc_cols = NULL,
+  sheet_roles = NULL
 )
 }
 \arguments{
@@ -46,16 +47,28 @@ with " / "), \code{population}, \code{program}, \code{file}.  \code{NULL} (defau
 headers' words say them (Output No, Shell, Title, Population ...);
 with none, of two columns of report numbers the shell's is the one
 whose numbers name sheets.}
+
+\item{sheet_roles}{Sheets' roles over the guess: a named character
+vector, a sheet's role each -- \code{"toc"}, \code{"shell"}, \code{"other"}
+(\code{c("Topline TOC" = "other")}).  The guess: every sheet named like a
+TOC (TOC, contents, index, list, the Japanese words; Topline_TOC too)
+a TOC; a sheet of content (5 cells or more, or one that names a report
+number) a shell; the rest other.}
 }
 \value{
 A \code{tfl_ai_shell}: a list with \code{text} (one string), \code{toc} (a data
-frame, one row a report the TOC lists -- every row naming a number, its
-shell shared with other rows or none: \code{output_id} as written, \code{key},
-\code{type}, \code{title}, \code{text} -- the row's text -- \code{sheet}, \code{row},
-\code{shell_id} and \code{shell_key} -- its shell's number as the TOC writes it,
-the report's own when the TOC names none -- \code{population}, \code{program},
-\code{file}, \code{info} -- the row's other cells, "header: value; ..." -- and
-\code{shell} -- the sheet of its shell, \code{NA} for none found), \code{sheets} (\code{sheet},
+frame, one row a TOC item -- of every TOC sheet, an item once:
+\code{output_id} (its number as written), \code{key}, \code{type}, \code{title}, \code{text} --
+the row's text -- \code{sheet}, \code{row}, \code{toc_sheets} (the TOC sheets listing
+it), \code{shell_id} and \code{shell_key} -- its shell's number as the TOC writes
+it, the item's own when the TOC names none -- \code{population}, \code{program},
+\code{file}, \code{info} -- the row's other cells, "header: value; ..." --,
+\code{sheets} (the shell sheets it is a candidate of, the best first; \code{NA}:
+no shell found) and \code{shell} (the best)), \code{shells} (a row a shell
+sheet: \code{sheet}, \code{numbers_in_sheet}, \code{title_in_sheet}, \code{candidates} --
+its TOC items, "id (clues)" -- and \code{guessed}: no number and no
+candidate, a shell by its content alone), \code{roles} (each sheet's),
+\code{sheets} (\code{sheet},
 \code{role} -- \code{toc}, \code{shell} or \code{other} -- \code{rows}, \code{cells}, \code{hidden}),
 \code{cells} (every non-empty cell: \code{sheet}, \code{row}, \code{col}, \code{ref}, \code{text}),
 \code{outputs} (the reports kept), \code{truncated}, \code{path} and \code{args} (the

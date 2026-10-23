@@ -78,7 +78,7 @@ test_that("a Japanese TOC: its own sheet name, headers off row 1, merged title",
   dir.create(file.path(d, "adam"))
   saveRDS(tflspec::adsl[1:5, c("USUBJID", "SAFFL")], file.path(d, "adam", "adsl.rds"))
   tfl_ai_study_init(d)
-  r <- suppressMessages(tfl_ai_write_requests(d, x, tfl_ai_adam_summary(file.path(d, "adam")),
+  r <- suppressMessages(tfl_ai_write_requests(unit = "toc", d, x, tfl_ai_adam_summary(file.path(d, "adam")),
                                               size = 1))
   req <- vapply(file.path(d, r$file), function(z) {
     t <- rawToChar(readBin(z, "raw", file.size(z)))
@@ -138,7 +138,7 @@ test_that("empty rows and columns, a very wide sheet", {
   expect_identical(x$toc$shell, c("Wide", NA, NA))
   expect_true(grepl("DS=col 120", format(x), fixed = TRUE))
   # the reports with no shell: the print says what to pass
-  expect_output(print(x), "sheets = c(", fixed = TRUE)
+  expect_output(print(x), "sheet_roles = c(", fixed = TRUE)
 })
 
 test_that("no TOC found: the print and the error say to pass toc_sheet", {
@@ -149,7 +149,7 @@ test_that("no TOC found: the print and the error say to pass toc_sheet", {
   x <- tfl_ai_read_shell(f)
   expect_identical(nrow(x$toc), 0L)
   expect_output(print(x), "toc_sheet = \"Plan\"", fixed = TRUE)
-  expect_error(tfl_ai_write_requests(withr::local_tempdir(), x, NULL), "toc_sheet")
+  expect_error(tfl_ai_write_requests(unit = "toc", withr::local_tempdir(), x, NULL), "toc_sheet")
   # named, it is found; a request's own read passes it again
   y <- tfl_ai_read_shell(f, toc_sheet = "Plan")
   expect_identical(y$toc$output_id, c("T-14-1-1", "T-14-2-1"))
@@ -191,13 +191,13 @@ test_that("a request never cuts a shell; max_chars splits between reports", {
   tfl_ai_study_init(d)
   sh <- tfl_ai_read_shell(f)
   adam <- tfl_ai_adam_summary(file.path(d, "adam"))
-  r <- suppressMessages(tfl_ai_write_requests(d, sh, adam, size = 3, templates = FALSE))
+  r <- suppressMessages(tfl_ai_write_requests(unit = "toc", d, sh, adam, size = 3, templates = FALSE))
   expect_identical(nrow(r), 1L)
   txt <- paste(readLines(file.path(d, r$file), encoding = "UTF-8"), collapse = "\n")
   expect_false(grepl("[... cut at", txt, fixed = TRUE))
   expect_true(all(vapply(ids, function(id) grepl(paste("END OF", id), txt, fixed = TRUE), NA)))
   # over max_chars: split between reports, each request holding its shells whole
-  r2 <- suppressMessages(tfl_ai_write_requests(d, sh, adam, size = 3, overwrite = TRUE, templates = FALSE,
+  r2 <- suppressMessages(tfl_ai_write_requests(unit = "toc", d, sh, adam, size = 3, overwrite = TRUE, templates = FALSE,
                                                max_chars = r$chars - 5000))
   expect_gt(nrow(r2), 1L)
   expect_setequal(unlist(strsplit(r2$outputs, ", ")), ids)
