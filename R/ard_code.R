@@ -907,6 +907,10 @@
   if (several) code <- c(code, if (length(code)) "", "ards <- list()")
   # each analysis's data, by the name the program gives it (tfl_ard_data_names())
   dnames <- list()
+  one_ds <- character()
+  one_note <- character()
+  one_dn <- data.frame(output_id = character(), analysis_id = character(),
+                       data = character(), stringsAsFactors = FALSE)
   for (o in outs) {
     xo <- x
     ad_o <- .adata_of(ad, o)
@@ -1133,7 +1137,7 @@
       k <- match(d, pop_obj)
       ds <- pops$dataset[k]
       note[[d]] <- paste0(pops$population_id[k],
-                          if (!is.na(pops$label[k] %||% NA)) paste0(" — ", pops$label[k]),
+                          if (!is.na(pops$label[k] %||% NA)) paste0(" \u2014 ", pops$label[k]),
                           if (!is.na(pops$where[k])) sprintf(" (%s)", pops$where[k]))
     } else {
       ds <- auto_ds[[d]]
