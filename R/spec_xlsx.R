@@ -42,6 +42,9 @@ tfl_write_spec_xlsx <- function(dir, path) {
   # the data catalog
   add_rows("datasets", lapply(s$data$datasets %||% list(), function(e) .flat_map(e, "datasets", NA, note)))
   add_rows("populations", lapply(s$data$populations %||% list(), function(e) .flat_map(e, "populations", NA, note)))
+  add_rows("records", lapply(s$data$records %||% list(), function(e) {
+    m <- .flat_map(e, "records", NA, note); m$record_id <- m$id; m$id <- NULL; m
+  }))
   add_rows("objects", lapply(s$data$objects %||% list(), function(e) .flat_map(e, "objects", NA, note)))
   # the defaults and patterns: the page parts, the code list templates
   scopes <- c(list(list(id = NA_character_, layer = s$defaults)),
@@ -62,6 +65,7 @@ tfl_write_spec_xlsx <- function(dir, path) {
     for (e in o$ard$analysis_data %||% list()) add_rows("analysis_data", list(.flat_map(c(list(output_id = id), e), "analysis_data", id, note)))
     for (e in o$ard$analyses %||% list()) {
       if (!is.null(e$denominator)) e$denominator <- .den_cell(e$denominator)
+      if ("by" %in% names(e) && !length(e$by)) e$by <- tfl_unset()
       add_rows("analyses", list(.flat_map(c(list(output_id = id), e), "analyses", id, note)))
     }
     if (!is.null(o$data)) {
@@ -85,7 +89,7 @@ tfl_write_spec_xlsx <- function(dir, path) {
   # the workbook
   wb <- openxlsx::createWorkbook()
   written <- character()
-  order <- c("toc", "datasets", "populations", "objects", "analysis_data", "analyses", "codelists",
+  order <- c("toc", "datasets", "populations", "records", "objects", "analysis_data", "analyses", "codelists",
              "tokens", "header", "footer", "titles", "footnotes", "page", "report", "listing_cols")
   for (sh in intersect(order, names(sheets))) {
     d <- .rows_frame(sheets[[sh]])

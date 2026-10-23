@@ -1,5 +1,22 @@
 # tflspec (development version)
 
+* In a table with columns (`table_plan(cols = TRT01A)`), every analysis
+  has its `by` (0.0.24.9233): one without is a problem of the study's ARD
+  definition that says the `by` to write (`by: [TRT01A]`), but for the
+  columns' own count (the N), a `custom` analysis, one inside another and
+  the study's N; `by: []` (in the sheet `(none)`) says an analysis has no
+  columns.  A `by` the data does not have stops the program, as before.
+
+* Named sets of records (0.0.24.9231): sheet `records` (`record_id`,
+  `dataset`, `where`, `label`, `any_label`), data.yml `records:`
+  (`- {id: TESAE, dataset: ADAE, where: !r ..., label: ..., any_label:
+  Any SAE}`); an analysis's `records: TESAE` reads the set's dataset under
+  its condition, its own `where` on top, and the program's data of it is
+  commented with the set.  A hierarchy of a set with its "any" row
+  (`over_variables = TRUE`) is labelled with the set's `any_label`, else
+  `Any <id>`, when the table's `normalize_ard()` (or its `overall_label`)
+  says none.
+
 * The data the ARD program makes itself is named `<dataset>_sub`
   (0.0.24.9229): an analysis set's (`adsl_sub`, was `pop_saf`) and an
   analysis's own records (`adae_sub`, was `adae_saf`), numbered from a

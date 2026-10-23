@@ -21,6 +21,12 @@
 #   populations  population_id, dataset, where,  analysis sets (and the
 #                derive, label                   denominators; `label`: the
 #                                                text a header prints)
+#   records      record_id, dataset, where,      named sets of records (CDISC
+#                label, any_label                ARS data subsets): an analysis
+#                                                names one in `records` for its
+#                                                dataset and condition;
+#                                                `any_label` the "any" row of
+#                                                a hierarchy of them
 #   objects      output_id, object_id, code,     named values: `object_id <-
 #                label                           code` at the program's top
 #                                                (a report's, or the study's
@@ -38,11 +44,12 @@
   study = c("key", "value"),
   datasets = c("dataset", "level", "path", "derive"),
   populations = c("population_id", "dataset", "where", "derive", "label"),
+  records = c("record_id", "dataset", "where", "label", "any_label"),
   objects = c("output_id", "object_id", "code", "label"),
   analysis_data = c("output_id", "data_id", "label", "from", "population_id", "subjects",
                     "where", "add", "derive", "keep", "distinct", "code"),
   analyses = c("output_id", "analysis_id", "parent", "label", "method",
-               "data", "dataset",
+               "data", "dataset", "records",
                "population_id", "where", "by", "overall", "strata", "variables",
                "optional", "statistics", "denominator", "formats", "args", "post",
                "code", "purpose", "reason"))
@@ -134,7 +141,7 @@
 
 #' Write an ARD definition to a workbook
 #'
-#' Writes the six sheets (`study`, `datasets`, `populations`, `objects`,
+#' Writes the seven sheets (`study`, `datasets`, `populations`, `records`, `objects`,
 #' `analysis_data`, `analyses`)
 #' and no more; what each column means is a comment on its header cell
 #' ([tfl_spec_columns()]).  [tfl_read_ard_spec()] takes one back.  With
@@ -171,7 +178,7 @@ tfl_write_ard_spec <- function(spec, path, statistics = NULL, methods = NULL,
 #' @param check `FALSE` reads a definition still being written without
 #'   refusing it.
 #' @inheritParams tfl_write_ard_spec
-#' @return An `tfl_ard_spec`: a list of the six sheets (a workbook
+#' @return An `tfl_ard_spec`: a list of the seven sheets (a workbook
 #'   without `analysis_data`, written before it was added, reads it empty).
 #' @export
 tfl_read_ard_spec <- function(path, check = TRUE, statistics = NULL,
@@ -258,6 +265,11 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 # yet (written before it was added) blank
 .ard_spec_shaped <- function(x) {
   x$analysis_data <- .adata_sheet(x)
+  # `by` "(none)": no columns, said so (.by_needed_problems()); for the
+  # program, no by
+  if (is.data.frame(x$analyses) && !is.null(x$analyses$by)) {
+    x$analyses$by[trimws(x$analyses$by) %in% "(none)"] <- NA_character_
+  }
   for (s in intersect(names(.ard_spec_sheets), names(x))) {
     for (c in setdiff(.ard_spec_sheets[[s]], names(x[[s]]))) {
       x[[s]][[c]] <- rep(NA_character_, nrow(x[[s]]))
@@ -445,7 +457,7 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   }
   cust <- which(a$method %in% "custom" & is.na(a$code))
   if (length(cust)) add(cust[1L], "code", "a `custom` analysis needs its `code`")
-  pr <- c(pr, list(.objects_problems(x), .old_pop_names_problems(x)))
+  pr <- c(pr, list(.objects_problems(x), .old_pop_names_problems(x), .records_problems(x)))
   p <- do.call(rbind, pr)
   rownames(p) <- NULL
   p
@@ -928,7 +940,7 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
   old <- .set_catalogs(statistics, methods)
   on.exit(options(old), add = TRUE)
   x <- .as_spec(spec, "ard", "tfl_ard_code")
-  a <- x$analyses
+  a <- .records_expand(x, x$analyses)
   if (!is.null(output_id)) a <- a[a$output_id %in% output_id, , drop = FALSE]
   # written for its setup, which attaches cards and dplyr (not when
   # tfl_build_ard() runs it: every `pkg::` kept)
@@ -1403,4 +1415,130 @@ tfl_ard_data_names <- function(spec, output_id = NULL, codelists = NULL) {
                      data = character(), stringsAsFactors = FALSE)
   }
   dn
+}
+
+# ---- named sets of records (sheet `records`) --------------------------------
+
+# the sheet, in shape (none: no rows)
+.records_sheet <- function(x) {
+  .normalize_ard_sheet(x$records %||% data.frame(), "records")
+}
+
+# Two conditions, both: each in parentheses when it has an `|` at its top
+.cond_both <- function(a, b) {
+  if (is.na(a)) return(b)
+  if (is.na(b)) return(a)
+  wrap <- function(w) {
+    e <- tryCatch(str2lang(w), error = function(err) NULL)
+    if (is.call(e) && as.character(e[[1L]]) %in% c("|", "||")) sprintf("(%s)", w) else w
+  }
+  paste(wrap(a), "&", wrap(b))
+}
+
+# The analyses with their records read: an analysis naming a set of records
+# reads its dataset, under its condition and then the analysis's own
+.records_expand <- function(x, a) {
+  rec <- .records_sheet(x)
+  r <- a$records %||% rep(NA_character_, nrow(a))
+  for (i in which(!is.na(r))) {
+    k <- match(r[i], rec$record_id)
+    if (is.na(k)) next
+    a$dataset[i] <- rec$dataset[k]
+    a$where[i] <- .cond_both(rec$where[k], a$where[i])
+  }
+  a
+}
+
+# The sheet's problems, and the analyses' `records`: an id once, a dataset
+# of the definition, a condition that is R; an analysis's records one of
+# the sheet's, and not with a `dataset` or `data` of its own
+.records_problems <- function(x) {
+  rec <- .records_sheet(x)
+  pr <- list(.spec_problems_empty())
+  add <- function(sheet, out, row, field, message) {
+    pr[[length(pr) + 1L]] <<- .spec_problem(message, sheet, out, row, field)
+  }
+  for (i in seq_len(nrow(rec))) {
+    id <- rec$record_id[i]
+    tag <- if (is.na(id)) sprintf("records row %d", i) else paste("records", id)
+    if (is.na(id)) { add("records", NA, "", "record_id", paste0(tag, ": a record_id")); next }
+    if (is.na(rec$dataset[i])) {
+      add("records", NA, id, "dataset", paste0(tag, ": its dataset"))
+    } else if (!rec$dataset[i] %in% x$datasets$dataset) {
+      add("records", NA, id, "dataset", sprintf("%s: dataset %s is not one of the datasets",
+                                               tag, rec$dataset[i]))
+    }
+    if (!is.na(rec$where[i]) &&
+        inherits(tryCatch(str2lang(rec$where[i]), error = function(e) e), "error")) {
+      add("records", NA, id, "where", sprintf("%s: the condition is not R: %s", tag, rec$where[i]))
+    }
+  }
+  for (i in which(duplicated(rec$record_id) & !is.na(rec$record_id))) {
+    add("records", NA, rec$record_id[i], "record_id",
+        sprintf("records %s: named twice", rec$record_id[i]))
+  }
+  a <- x$analyses
+  r <- a$records %||% rep(NA_character_, nrow(a))
+  for (i in which(!is.na(r))) {
+    tag <- paste(a$output_id[i], a$analysis_id[i], sep = " / ")
+    if (!r[i] %in% rec$record_id) {
+      add("analyses", a$output_id[i], a$analysis_id[i], "records", sprintf(
+        "%s: records %s is not one of the records sheet's (%s)", tag, r[i],
+        if (nrow(rec)) paste(stats::na.omit(rec$record_id), collapse = ", ") else "none"))
+    }
+    if (!is.na(a$dataset[i]) || !is.na(.data_col(a)[i])) {
+      add("analyses", a$output_id[i], a$analysis_id[i], "records", sprintf(
+        "%s: `records` says the dataset and the records; leave `dataset` and `data` blank", tag))
+    }
+  }
+  do.call(rbind, pr)
+}
+
+# The "any" row's label of a set of records: its any_label, else
+# "Any <id>"
+.records_any_label <- function(rec, id) {
+  k <- match(id, rec$record_id)
+  if (is.na(k)) return(NULL)
+  if (!is.na(rec$any_label[k])) rec$any_label[k] else paste("Any", id)
+}
+
+# ---- a table's analyses have its columns' `by` ---------------------------------
+
+# In a table whose plan has its columns (table_plan(cols = TRT01A)), an
+# analysis with no `by` is a mistake more often than not: its statistics
+# would not split by the columns.  A problem each, saying the by to write.
+# Not one: an analysis that counts the columns' variable itself (the
+# groups' N), a `custom` one, one inside another (its parent's by), the
+# study's N (total_n), one whose method takes no by (its arms in a model),
+# and `by: []` -- no columns, said so ("(none)").
+# `tables`: the table sheets' `tables` (output_id, cols).
+.by_needed_problems <- function(a, tables) {
+  out <- .spec_problems_empty()
+  if (is.null(a) || !nrow(a) || is.null(tables) || !nrow(tables) || is.null(tables$cols)) {
+    return(out)
+  }
+  pr <- list(out)
+  par <- a$parent %||% rep(NA_character_, nrow(a))
+  for (i in seq_len(nrow(a))) {
+    k <- match(a$output_id[i], tables$output_id)
+    if (is.na(k) || is.na(tables$cols[k]) || !nzchar(trimws(tables$cols[k]))) next
+    if (!is.na(a$by[i]) || !is.na(par[i]) || identical(a$method[i], "custom")) next
+    cols <- trimws(strsplit(tables$cols[k], "[,|]")[[1L]])
+    cols <- cols[nzchar(cols)]
+    v <- .split_bar(a$variables[i])
+    if (length(v) && all(v %in% cols)) next
+    # (the study's N: no by)
+    if (grepl("total_n", a$method[i], fixed = TRUE)) next
+    # a method that takes no by (its arms in a model: cardx's emmeans);
+    # a generic's arguments (cards::ard_tabulate(data, ...)) cannot say it
+    f <- .method_fun(a$method[i])
+    if (!is.null(f) && !any(c("by", ".by", "...") %in% names(formals(f)))) next
+    pr[[length(pr) + 1L]] <- .spec_problem(sprintf(paste(
+      "%s / %s: no `by`, in a table whose columns are %s (table_plan(cols = %s)): write",
+      "by: [%s] -- or by: [] for an analysis that has no columns"),
+      a$output_id[i], a$analysis_id[i], paste(cols, collapse = ", "),
+      paste(cols, collapse = ", "), paste(cols, collapse = ", ")),
+      "analyses", a$output_id[i], a$analysis_id[i], "by")
+  }
+  do.call(rbind, pr)
 }

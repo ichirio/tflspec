@@ -587,7 +587,7 @@
   k <- if (!is.na(sheet) && sheet %in% names(key)) key[[sheet]] else sheet %||% ""
   own <- !is.na(output_id) && nzchar(output_id)
   file <- if (own) file.path("spec", "outputs", paste0(output_id, ".yml"))
-          else if (sheet %in% c("datasets", "populations", "objects", "analysis_data")) "spec/data.yml"
+          else if (sheet %in% c("datasets", "populations", "records", "objects", "analysis_data")) "spec/data.yml"
           else if (sheet %in% c("study", "")) "study.yml"
           else "spec/defaults.yml"
   if (nzchar(k)) paste0(file, ": ", k) else file

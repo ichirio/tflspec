@@ -46,7 +46,7 @@ tfl_review_rules <- function() {
                          "codelists", "cells", "digits", "layout", "columns",
                          "style", "cell_styles", "col_header", "report",
                          "page", "header", "footer", "titles", "footnotes",
-                         "tokens", "datasets", "populations", "objects", "analysis_data",
+                         "tokens", "datasets", "populations", "records", "objects", "analysis_data",
                          "analyses", "listings", "listing_cols", "design")
 
 .review_empty <- function() {

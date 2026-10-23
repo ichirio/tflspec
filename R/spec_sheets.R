@@ -145,6 +145,10 @@ tfl_sheets_from_spec <- function(study, outputs) {
   ard$populations <- .rows_df(lapply(s$data$populations %||% list(), function(e) {
     m <- lapply(e, cell); if (!is.null(m$id)) { m$population_id <- m$id; m$id <- NULL }; m
   }), .ard_spec_sheets$populations)
+  # named sets of records (data.yml `records:`)
+  ard$records <- .rows_df(lapply(s$data$records %||% list(), function(e) {
+    m <- lapply(e, cell); if (!is.null(m$id)) { m$record_id <- m$id; m$id <- NULL }; m
+  }), .ard_spec_sheets$records)
   # named values: the study's (data.yml `objects:`), then the reports'
   objs <- lapply(s$data$objects %||% list(), function(e) {
     m <- lapply(e, cell); m$object_id <- m$id; m$id <- NULL; c(list(output_id = NA_character_), m)
@@ -207,6 +211,8 @@ tfl_sheets_from_spec <- function(study, outputs) {
     }
     for (a in o$ard$analyses %||% list()) {
       if (!is.null(a$denominator)) a$denominator <- .den_cell(a$denominator)
+      # (`by: []`: no columns, said so)
+      if ("by" %in% names(a) && !length(a$by)) a$by <- tfl_unset()
       m <- lapply(a, cell); m$analysis_id <- m$id; m$id <- NULL
       if (!is.null(m$population)) { m$population_id <- m$population; m$population <- NULL }
       if (!is.null(a$ref)) note(id, paste0("analyses.", a$id), "a reference to another report's analysis (ref) has no sheet")
