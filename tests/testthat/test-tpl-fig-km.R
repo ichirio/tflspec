@@ -39,11 +39,12 @@ test_that("km_survival / km_cumulative: the report types' defaults; the look hid
     expect_true(p$by$required)
     expect_null(p$by$default)
     shown <- strsplit(tt$params[tt$name == nm], ", ", fixed = TRUE)[[1L]]
-    expect_false(any(c(look, "y_type") %in% shown), info = nm)
+    stage <- c("population", "subset", "data", "param", "where", "event")
+    expect_false(any(c(look, "y_type", stage) %in% shown), info = nm)
     expect_true(all(c("by", "time", "censor", "time_unit", "risk_statistics", "x_step", "y_step",
                       "conf_level", "linetype_by", "legend_title") %in% shown), info = nm)
-    expect_false(any(c(look, "y_type") %in% tfl_tpl_args(nm)$param), info = nm)
-    expect_true(all(vapply(p[c(look, "y_type")], function(x) isTRUE(x$hidden), NA)), info = nm)
+    expect_false(any(c(look, "y_type", stage) %in% tfl_tpl_args(nm)$param), info = nm)
+    expect_true(all(vapply(p[c(look, "y_type", stage)], function(x) isTRUE(x$hidden), NA)), info = nm)
   }
   # the layout keeps them
   expect_true(all(c(look, "y_type") %in% strsplit(tt$params[tt$name == "km"], ", ", fixed = TRUE)[[1L]]))
@@ -83,6 +84,8 @@ test_that("the former km_simple / km_risk_table / km_ci: km_survival with argume
       it$from <- "template:km_survival"
       it
     })
+    # (the time's unit: now the call's first step, the steps the same)
+    want$call_steps <- want$call_steps + 1L
     for (k in c("content", "plot", "data", "call_steps")) {
       expect_identical(x[[k]], want[[k]], info = paste(nm, k))
     }
@@ -140,7 +143,8 @@ test_that("km: the arguments and what the design has for them", {
   expect_false("censor_mark" %in% fns(x(censor_marks = FALSE)))
   e <- x(risk_table = FALSE)
   expect_null(calls(e))
-  expect_identical(e$call_steps, 1L)
+  expect_identical(e$call_steps, 2L)
+  expect_identical(e$data$steps[[length(e$data$steps) - 1L]]$step, "time_unit")
   # the axis: its end and step
   e <- x(x_max = 52, x_step = 4)
   expect_identical(e$data$steps[[length(e$data$steps)]]$code, "x_breaks <- seq(0, 52, by = 4)")
@@ -167,7 +171,6 @@ test_that("km: the arguments and what the design has for them", {
 test_that("tfl_tpl(): a figure's call; the data step's parameters are not its", {
   skip_if_not_installed("ggsurvfit")
   df <- tplkm_ttdisc(adsl)
-  df$AVAL <- df$AVAL / 7
   p <- tfl_tpl(df, "km_cumulative", by = TRT01A, time_unit = "weeks", x_max = 52, x_step = 4)
   expect_s3_class(p, "ggsurvfit")
   b <- ggplot2::ggplot_build(p)
@@ -209,7 +212,8 @@ test_that("in a study: km_cumulative (STF Figure 1's sample) from ADTTE and from
   x <- tplfig_check(o1, d, data)
   txt <- paste(x$a, collapse = "\n")
   expect_match(txt, "filter(PARAMCD == \"TTDISC\")", fixed = TRUE)
-  expect_match(txt, "AVAL / days_per_week", fixed = TRUE)
+  expect_match(txt, "semi_join(", fixed = TRUE)
+  expect_false(grepl("days_per_week", txt, fixed = TRUE))
   expect_match(txt, paste0("\"km_cumulative\", time_unit = \"weeks\", by = TRT01A, x_max = 52, ",
                            "x_step = 4, x_label = \"Time (Weeks)\""), fixed = TRUE)
   expect_match(txt, "y_label = \"Cumulative Percentage of Subjects Discontinued\") +", fixed = TRUE)
@@ -221,9 +225,13 @@ test_that("in a study: km_cumulative (STF Figure 1's sample) from ADTTE and from
   expect_match(items, "add_pvalue(", fixed = TRUE)
   # ADSL: no parameter, the event, the time
   o2 <- tfl_output("F-9-adsl", "figure", population = "SAF", label = "KM", extends = "defaults",
+                   data = list(steps = list(
+                     list(step = "read", dataset = "ADSL"),
+                     list(step = "filter", expr = "SAFFL == \"Y\""),
+                     list(step = "derive", variable = "CNSR",
+                          expr = "as.integer(!(EOTSTT == \"DISCONTINUED\"))"))),
                    template = list(name = "km_cumulative", args = list(
-                     data = "ADSL", by = "TRT01A", time = "TRTDURD", time_unit = "weeks",
-                     event = "EOTSTT == \"DISCONTINUED\"")))
+                     by = "TRT01A", time = "TRTDURD", time_unit = "weeks")))
   y <- tplfig_check(o2, d, data)
   txt <- paste(y$a, collapse = "\n")
   expect_match(txt, "mutate(CNSR = as.integer(!(EOTSTT == \"DISCONTINUED\")))", fixed = TRUE)
@@ -290,19 +298,55 @@ test_that("a company's variant of km: its root called, its defaults written out"
   expect_false(grepl("param = ", code, fixed = TRUE))
 })
 
-test_that("FDA STF Figures 1, 4 and 13: report definitions on km_cumulative", {
-  d <- system.file("extdata", "report-definitions", package = "tflspec")
+test_that("FDA STF Figures 1, 4 and 13: report definitions on km_cumulative, built in a study (A = B)", {
+  skip_on_cran()
+  skip_if_not_installed("ggsurvfit")
+  skip_if_not_installed("haven")
+  d <- tempfile()
+  on.exit(unlink(d, recursive = TRUE))
+  # (ADTTE: the three parameters, each made from ADSL as TTDISC is)
   want <- c(stf_f01_km_disc = "TTDISC", stf_f04_km_ae_onset = "TTSAE", stf_f13_km_lfu = "TTLFU")
+  tt <- do.call(rbind, lapply(unname(want), function(p) {
+    x <- tplkm_ttdisc(adsl)
+    x$PARAMCD <- p
+    x
+  }))
+  dir.create(file.path(d, "adam"), recursive = TRUE)
+  haven::write_xpt(tflspec:::.ai_chr(adsl), file.path(d, "adam", "adsl.xpt"))
+  haven::write_xpt(tflspec:::.ai_chr(tt), file.path(d, "adam", "adtte.xpt"))
+  tfl_ai_study_init(d, adam = "adam", study_id = "STF-KM")
+  data <- lapply(c(adsl = "adsl", adtte = "adtte"), function(x)
+    as.data.frame(haven::read_xpt(file.path(d, "adam", paste0(x, ".xpt")))))
+  rd <- system.file("extdata", "report-definitions", package = "tflspec")
   for (nm in names(want)) {
-    o <- tfl_read_output(file.path(d, paste0(nm, ".yml")))
+    o <- tfl_read_output(file.path(rd, paste0(nm, ".yml")))
     expect_identical(o$template$name, "km_cumulative", info = nm)
-    a <- o$template$args
-    expect_identical(a$param, want[[nm]], info = nm)
-    e <- tfl_template_expand("km_cumulative", a)
-    pr <- Filter(function(x) identical(x$step, "param"), e$data$steps)
-    expect_identical(pr[[1L]]$value, want[[nm]], info = nm)
-    expect_identical(e$plot$x_label, "Time (Weeks)", info = nm)
-    expect_identical(e$plot$y_label, a$y_label, info = nm)
-    expect_match(a$y_label, "^Cumulative Percentage of Subjects", info = nm)
+    # the data stage: the report's own steps; the args no data step's
+    expect_identical(vapply(o$data$steps, `[[`, "", "step"), c("read", "join", "param"), info = nm)
+    expect_identical(o$data$steps[[3L]]$value, want[[nm]], info = nm)
+    expect_false(any(c("param", "population", "data", "where") %in% names(o$template$args)), info = nm)
+    x <- tplfig_check(o, d, data)
+    txt <- paste(x$a, collapse = "\n")
+    expect_match(txt, sprintf("filter(PARAMCD == \"%s\")", want[[nm]]), fixed = TRUE, info = nm)
+    expect_match(txt, "semi_join(", fixed = TRUE, info = nm)
+    expect_match(txt, "\"km_cumulative\", time_unit = \"weeks\", by = TRT01A", fixed = TRUE, info = nm)
+    expect_true(attr(x$ro, "template")$ok, info = nm)
+    expect_identical(x$ro$plot$y_label, o$template$args$y_label, info = nm)
+    expect_match(o$template$args$y_label, "^Cumulative Percentage of Subjects", info = nm)
   }
+})
+
+test_that("a report type's data stage in `template: args:` stops, pointing to `data:`", {
+  d <- system.file("extdata", "spec-yaml", package = "tflspec")
+  s <- tfl_read_study_spec(d)
+  for (k in c("param", "data", "where", "event", "subset")) {
+    args <- c(list(by = "TRT01A"), stats::setNames(list("X"), k))
+    o <- tfl_output("F-9", "figure", extends = "none",
+                    template = list(name = "km_cumulative", args = args))
+    expect_error(tfl_resolve_output(o, s), "the report's own `data:`", info = k)
+  }
+  # the layout km keeps them as arguments
+  o <- tfl_output("F-9", "figure", extends = "none",
+                  template = list(name = "km", args = list(by = "TRT01A", param = "PFS")))
+  expect_true(attr(tfl_resolve_output(o, s), "template")$ok)
 })

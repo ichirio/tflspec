@@ -40,8 +40,13 @@ test_that("in a study: km_survival, A (the data steps, the call) = B (the design
   data <- tplfig_study(d, c("adsl", "adtte"), "KM-1")
   o <- tfl_output("F-9-1", "figure", population = "SAF", label = "KM curves",
                   extends = "defaults",
+                  data = list(steps = list(
+                    list(step = "read", dataset = "ADTTE"),
+                    list(step = "join", dataset = "ADSL", where = "SAFFL == \"Y\"", by = "USUBJID",
+                         how = "semi"),
+                    list(step = "param", value = "PFS"))),
                   template = list(name = "km_survival",
-                                  args = list(param = "PFS", by = "TRT01A", time_unit = "days")),
+                                  args = list(by = "TRT01A", time_unit = "days")),
                   content = list(tfl_item("geom_hline", list(yintercept = 0.5, linetype = "dashed")),
                                  tfl_item("labs", list(y = "Probability of no event"))))
   x <- tplfig_check(o, d, data)
@@ -107,7 +112,9 @@ test_that("a report that replaces a template's layer: its design, not the call",
                        full.names = TRUE), d, recursive = TRUE)
   s <- tfl_read_study_spec(d)
   o <- tfl_output("F-9", "figure",
-                  template = list(name = "km_survival", args = list(param = "PFS", by = "TRT01A")),
+                  data = list(steps = list(list(step = "read", dataset = "ADTTE"),
+                                           list(step = "param", value = "PFS"))),
+                  template = list(name = "km_survival", args = list(by = "TRT01A")),
                   content = list(tfl_item("censor_mark", list(shape = "plus", size = 2, stroke = 0.5))))
   ro <- tfl_resolve_output(o, s)
   expect_false(attr(ro, "template")$ok)
@@ -117,7 +124,7 @@ test_that("a report that replaces a template's layer: its design, not the call",
 
 test_that("a figure template's body says the steps its call makes (call_steps)", {
   k <- tfl_template_expand("km_survival", list(param = "PFS", by = "TRT01A", risk_table = FALSE))
-  expect_identical(k$call_steps, 1L)
+  expect_identical(k$call_steps, 2L)
   expect_identical(k$data$steps[[length(k$data$steps)]]$step, "survfit")
   t <- .tpl_get("km_survival", "test")
   suppressMessages(tfl_template("km_nocall", "figure", "km", params = t$params,

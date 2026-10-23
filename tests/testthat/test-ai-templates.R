@@ -117,7 +117,8 @@ test_that("answers with templates: checked, written, built (RTF, PNG); a bad arg
     "assumptions: []"))
   tfl_ai_save_answer(d, "figure-1", aitpl_answer(
     "tflspec_ai: {task: figure, version: 1, output_id: F-14-2-2}",
-    "template: {name: km_survival, args: {param: OS, by: TRT01A, time_unit: months}}",
+    "data: [{step: read, dataset: ADTTE}, {step: param, value: OS}]",
+    "template: {name: km_survival, args: {by: TRT01A, time_unit: months}}",
     "layers:",
     "  - {layer: geom_hline, yintercept: 0.5, linetype: dashed}",
     "assumptions: []"))

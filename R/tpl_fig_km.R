@@ -7,7 +7,8 @@
 # `km_survival` (the survival S(t)) and `km_cumulative` (the cumulative
 # 1 - S(t)), are its variants: the form and the analysis by default, the
 # look (`.tpl_km_look`) and the y axis's type hidden -- the figure style
-# standard's (tfl_param(study = "km.<key>")).  A report's own layers go
+# standard's (tfl_param(study = "km.<key>")) -- and the data stage hidden,
+# the report's own `data:` steps (the time's unit is the call's step).  A report's own layers go
 # after the call with `+`.  FDA STF Figures 1, 4 and 13 are report
 # definitions on km_cumulative (inst/extdata/report-definitions/).
 
@@ -55,7 +56,7 @@
     tfl_param("time", "AVAL", type = "vars", tier = "usual",
               doc = "the time variable (Surv(time, ...)), in `time_unit`"),
     tfl_param("time_unit", "months", type = "choice", choices = c("days", "weeks", "months", "years"),
-              tier = "usual", doc = "the time's unit: the data step's days -> unit, the x axis's title"),
+              tier = "usual", doc = "the time's unit: the call's first step converts the days to it; the x axis's title"),
     tfl_param("censor", "CNSR", type = "vars", tier = "usual",
               doc = "the censoring variable, 1 censored (Surv(time, censor == 0))"),
     tfl_param("by", NULL, required = TRUE, type = "vars",
@@ -165,8 +166,14 @@
   }
   # (days: no step)
   if (identical(unit, "days")) f$steps <- f$steps[kinds() != "time_unit"]
-  if (!is.null(a$conf_type)) f$stats[[1L]]$conf_type <- a$conf_type
-  if (!is.null(a$conf_level)) f$stats[[1L]]$conf_level <- a$conf_level
+  # the time's unit: the call's first step (its data in days), so a report
+  # that writes its own data stage (`data:` steps) keeps it
+  tu <- kinds() == "time_unit"
+  f$stats <- c(f$steps[tu], f$stats)
+  f$steps <- f$steps[!tu]
+  fit <- match("survfit", vapply(f$stats, function(s) s$step %||% "", ""))
+  if (!is.null(a$conf_type)) f$stats[[fit]]$conf_type <- a$conf_type
+  if (!is.null(a$conf_level)) f$stats[[fit]]$conf_level <- a$conf_level
   # the layers
   ct <- f$content
   ct <- .tpl_km_set(ct, "km_curve", linewidth = a$linewidth,
@@ -212,7 +219,7 @@
   if (bars) {
     times <- if (length(a$ci_times)) vec_code(a$ci_times) else "x_breaks"
     risk <- identical(a$y_type, "risk")
-    grp <- !is.null(f$stats[[1L]]$by)
+    grp <- !is.null(f$stats[[fit]]$by)
     f$stats <- c(f$stats, list(list(step = "code",
       label = "the confidence interval at the axis's times, as vertical bars",
       code = paste0(
@@ -279,6 +286,10 @@
                   "median_colour", "median_linewidth", "risk_title", "risk_height", "risk_size",
                   "linewidth", "palette", "theme", "base_size", "ci_alpha")
 
+# The data stage: a report type's data are the report's own `data:` steps
+# (the layout `km` keeps them as its arguments)
+.tpl_km_data_stage <- c("population", "subset", "data", "param", "where", "event")
+
 # The report types' defaults: the form and the analysis (y_type fixed)
 .tpl_km_types <- list(
   km_survival = list(y_type = "survival", median_line = TRUE, risk_table = TRUE, ci = "none",
@@ -299,7 +310,9 @@
                 body = .tpl_km_layout_body, call = "tfl_tpl",
                 label = "Kaplan-Meier curves (the layout)",
                 example = list(param = "PFS", by = "TRT01A"))
-  hide <- c(.tpl_km_look, "y_type")
+  # (hidden: the look, the y axis's type, and the data stage -- a report's
+  # own `data:` steps: read, the analysis set's join, param, filter)
+  hide <- c(.tpl_km_look, "y_type", .tpl_km_data_stage)
   tfl_template_variant("km_survival", from = "km", ai = TRUE, hide = hide,
     defaults = .tpl_km_types$km_survival,
     label = "Kaplan-Meier plot of the survival: curves, median line, number at risk, p-value",

@@ -87,7 +87,7 @@ test_that("km_survival: the analysis set's subjects, by data.yml's definition (a
              file.path(d, "data.yml"))
   s <- tfl_read_study_spec(d)
   o <- tfl_output("F-9", "figure", population = "SAF",
-                  template = list(name = "km_survival", args = list(param = "PFS", by = "TRT01A",
+                  template = list(name = "km", args = list(param = "PFS", by = "TRT01A",
                                                                 risk_table = FALSE, median_line = FALSE,
                                                                 pvalue = FALSE)))
   ro <- tfl_resolve_output(o, s)

@@ -8,10 +8,14 @@ kind: figure
 label: KM curves of the time to first skin disorder
 population: SAF
 extends: defaults
+data:
+  steps:
+    - {step: read, dataset: ADTTE}
+    - {step: join, dataset: ADSL, where: SAFFL == "Y", by: USUBJID, how: semi}
+    - {step: param, value: TTSKIN}
 template:
   name: km_survival
   args:
-    param: TTSKIN
     by: TRT01A
     time_unit: days
     risk_table: false

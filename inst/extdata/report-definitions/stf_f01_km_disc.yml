@@ -1,19 +1,30 @@
 # FDA STF Figure 1 as a report definition: the report type km_cumulative
 # (the cumulative percentage, 1 - S(t), with CI bars, the number at risk
-# and the log-rank p-value), the data step (ADTTE's TTDISC, in weeks) and
-# its labels.  It follows the shape of a figure in FDA's Standard Safety
-# Tables and Figures Integrated Guide (version 2); it is not endorsed or
-# recommended by FDA.  A study without TTDISC in ADTTE: `data: ADSL`,
-# `param: ~`, `time: TRTDURD` and `event: EOTSTT == "DISCONTINUED"`.
+# and the log-rank p-value) on ADTTE's TTDISC (time to permanent
+# discontinuation of treatment).
+# It follows the shape of a figure in FDA's Standard Safety Tables and
+# Figures Integrated Guide (version 2); it is not endorsed or recommended
+# by FDA.
+# The data stage is the report's own `data:` steps: ADTTE read, the
+# safety population's subjects kept (a semi join on ADSL, as data.yml's
+# SAF says), the parameter; the template's call converts the time (days)
+# to `time_unit` and fits the curves.
+# A study without TTDISC in ADTTE: read ADSL, no param step, a derive
+# step `{step: derive, variable: CNSR, expr: as.integer(!(EOTSTT ==
+# "DISCONTINUED")))}` and `time: TRTDURD` in the args.
 id: F-STF-01
 kind: figure
 label: Kaplan-Meier Plot of Time to Permanent Discontinuation of Treatment, Safety Population
 population: SAF
 extends: defaults
+data:
+  steps:
+    - {step: read, dataset: ADTTE}
+    - {step: join, dataset: ADSL, where: SAFFL == "Y", by: USUBJID, how: semi}
+    - {step: param, value: TTDISC}
 template:
   name: km_cumulative
   args:
-    param: TTDISC
     by: TRT01A
     time_unit: weeks
     x_label: Time (Weeks)

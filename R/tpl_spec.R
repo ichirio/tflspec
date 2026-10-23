@@ -42,6 +42,13 @@
 .tpl_study_args <- function(t, args, base, id, output = NULL, study = NULL) {
   # (a parameter the template hides is not the report's: its look)
   hidden <- intersect(names(args), names(Filter(function(p) isTRUE(p$hidden), t$params)))
+  stage <- hidden[vapply(hidden, function(k) identical(t$params[[k]]$stage, "data"), NA)]
+  if (length(stage)) {
+    .ard_stop(sprintf(paste0("%s: template %s's %s: the data stage, the report's own `data:` ",
+                             "steps (read, the analysis set's join, param, filter), not ",
+                             "`template: args:`."),
+                      id, t$name, paste(sQuote(stage, FALSE), collapse = ", ")))
+  }
   if (length(hidden)) {
     .ard_stop(sprintf(paste0("%s: template %s takes %s from the study standard, not from ",
                              "`template: args:`; change it with the report's own items or `plot:`."),

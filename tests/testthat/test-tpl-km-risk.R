@@ -12,7 +12,7 @@ test_that("km_survival, its band too: ggsurvfit's risk table, a layer of the cur
     expect_identical(rt$args$stats_label, "Number of Patients at Risk")
     expect_identical("km_ci" %in% fns, nm == "band")
     expect_true("hline" %in% fns)
-    expect_identical(x$call_steps, 2L)
+    expect_identical(x$call_steps, 3L)
     expect_identical(x$plot$add[[1L]]$fn, "scale_x_continuous")
   }
 })
@@ -37,7 +37,9 @@ test_that("in a study: A (the data steps, the call) = B (the design) = the templ
   for (nm in c("km_survival", "km_cumulative")) {
     o <- tfl_output(paste0("F-9-", nm), "figure", population = "SAF", label = "KM",
                     extends = "defaults",
-                    template = list(name = nm, args = list(param = "PFS", by = "TRT01A")),
+                    data = list(steps = list(list(step = "read", dataset = "ADTTE"),
+                                             list(step = "param", value = "PFS"))),
+                    template = list(name = nm, args = list(by = "TRT01A")),
                     content = list(tfl_item("geom_vline", list(xintercept = 6, linetype = "dotted")),
                                    tfl_item("labs", list(y = "Progression-free"))))
     x <- tplfig_check(o, d, data)

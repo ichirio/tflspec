@@ -7,6 +7,14 @@
     percentage 1 - S(t): CI bars, number at risk, p-value, legend below).
     Each has its page, `?tfl_tpl_km_survival`, `?tfl_tpl_km_cumulative`,
     and is listed for the AI.
+  - Their data stage is the report's own `data:` steps (read, the
+    analysis set's semi join, `param`, `filter`, `derive`; #446): the
+    data-step parameters (`population`, `subset`, `data`, `param`,
+    `where`, `event`) are not their arguments, and a report that gives
+    one in `template: args:` stops, pointing to `data:`.  The time's unit
+    (days to `time_unit`) is now the call's first step, so `tfl_tpl()`
+    takes the data in days.  An AI answer with a figure template may give
+    `data:` steps.
   - Their arguments are the study's variables (`by`, required; `time`,
     `censor`, `time_unit`) and the figure's form and analysis
     (`risk_table`, `risk_statistics`, `median_line`, `ci`, `pvalue`,
@@ -23,8 +31,8 @@
     defaults, or `ci = "band"`) and their functions `tpl_km_simple()`,
     `tpl_km_risk_table()`, `tpl_km_ci()` (`tfl_tpl(data, "km_survival",
     ...)`); the templates `km_disc`, `km_ae_onset`, `km_lfu` (FDA STF
-    Figures 1, 4, 13), now report definitions on `km_cumulative` in
-    `extdata/report-definitions/`.  The figure designer's presets
+    Figures 1, 4, 13), now report definitions on `km_cumulative` (their
+    parameter in `data:` steps) in `extdata/report-definitions/`.  The figure designer's presets
     (`tfl_fig_template("km_simple")` ...) are unchanged.
 
 * **A report's own `data:` with a figure template** (#446): its steps (the

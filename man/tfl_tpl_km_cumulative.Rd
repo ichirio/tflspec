@@ -9,14 +9,8 @@ The figure template \code{km_cumulative}, layout \code{km}: a variant of \code{k
 \section{Parameters}{
 \tabular{llllll}{
    Parameter \tab Tier \tab Stage \tab Default \tab Maps to \tab What \cr
-   \code{population} \tab usual \tab data \tab  \tab output.population \tab the analysis set's id (SAF): its subjects kept; NULL: every record \cr
-   \code{subset} \tab other \tab data \tab  \tab  \tab which subjects (R, on the analysis set's ADSL): PART == "Part 1" \cr
-   \code{data} \tab other \tab data \tab ADTTE \tab  \tab the dataset (ADTTE; ADSL with 'event') \cr
-   \code{param} \tab usual \tab data \tab  \tab  \tab the PARAMCD of ADTTE (filter(PARAMCD == )); NULL: no step (a dataset not BDS) \cr
-   \code{where} \tab other \tab data \tab  \tab  \tab the records kept besides the parameter (R) \cr
-   \code{event} \tab other \tab data \tab  \tab  \tab the event, in R (EOTSTT == "DISCONTINUED"): CNSR made from it (data without CNSR: ADSL) \cr
    \code{time} \tab usual \tab call \tab AVAL \tab  \tab the time variable (Surv(time, ...)), in 'time_unit' \cr
-   \code{time_unit} \tab usual \tab call \tab months \tab  \tab the time's unit: the data step's days -> unit, the x axis's title \cr
+   \code{time_unit} \tab usual \tab call \tab months \tab  \tab the time's unit: the call's first step converts the days to it; the x axis's title \cr
    \code{censor} \tab usual \tab call \tab CNSR \tab  \tab the censoring variable, 1 censored (Surv(time, censor == 0)) \cr
    \code{by} \tab required \tab call \tab  \tab settings.treatment \tab the curves' variable (survfit2(~ by), the colours) \cr
    \code{y_percent} \tab other \tab call \tab TRUE \tab  \tab TRUE: the y axis in \% (scale_y_continuous(labels = scales::label_percent())) \cr
