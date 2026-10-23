@@ -244,7 +244,9 @@ reference:
       A template's parameters by tier (required, usual, other): the value
       in effect and where it is from -- the study standard, a variant, the
       layout (`tfl_tpl_args()`, `tfl_tpl_help()`) -- and each table and
-      listing template's page, `?tfl_tpl_<name>`, made from the registry.
+      listing template's page and the Kaplan-Meier report types'
+      (`km_survival`, `km_cumulative`), `?tfl_tpl_<name>`, made from the
+      registry.
     contents:
       - tfl_tpl_args
       - tfl_tpl_help

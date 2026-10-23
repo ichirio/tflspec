@@ -1,5 +1,32 @@
 # tflspec (development version)
 
+* **Kaplan-Meier figures: two report types** (#442, 0.0.24.9220).
+  - The layout `km` has two report types: `km_survival` (the survival
+    S(t): curves, censor marks, median line, number at risk, log-rank
+    p-value, legend inside) and `km_cumulative` (the cumulative
+    percentage 1 - S(t): CI bars, number at risk, p-value, legend below).
+    Each has its page, `?tfl_tpl_km_survival`, `?tfl_tpl_km_cumulative`,
+    and is listed for the AI.
+  - Their arguments are the study's variables (`by`, required; `time`,
+    `censor`, `time_unit`) and the figure's form and analysis
+    (`risk_table`, `risk_statistics`, `median_line`, `ci`, `pvalue`,
+    `x_max`, `x_step`, `y_step` ...).  The look (the censor marks, the
+    median line's and the curves' widths, the risk table's title and
+    size, the palette, the theme) is the figure style standard's, not an
+    argument: `tfl_template_variant(hide = )` keeps a parameter of `from`
+    out of a variant's arguments, and a report's `template: args:` that
+    gives one stops.
+  - `km`'s arguments renamed: `group` -> `by` (now required), `x_by` ->
+    `x_step`, `y_by` -> `y_step`, `risk_stats` -> `risk_statistics`.
+  - Removed: the templates `km_simple`, `km_risk_table`, `km_ci` (write
+    `km_survival` with `risk_table = FALSE, median_line = FALSE`, its
+    defaults, or `ci = "band"`) and their functions `tpl_km_simple()`,
+    `tpl_km_risk_table()`, `tpl_km_ci()` (`tfl_tpl(data, "km_survival",
+    ...)`); the templates `km_disc`, `km_ae_onset`, `km_lfu` (FDA STF
+    Figures 1, 4, 13), now report definitions on `km_cumulative` in
+    `extdata/report-definitions/`.  The figure designer's presets
+    (`tfl_fig_template("km_simple")` ...) are unchanged.
+
 * **A report's own `data:` with a figure template** (#446): its steps (the
   data stage: the analysis set, the parameter, the records kept) come
   first, then the template's call steps (the fit and what the call makes
