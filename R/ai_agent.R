@@ -238,8 +238,8 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
   .ai_write_text(.ai_status_text(res), file.path(study_dir, "ai", "status.md"))
   made <- sum(!is.na(r$rtf))
   open <- sum(res$questions$status %in% "open")
-  message(sprintf("%d of %d reports have an RTF; %d question(s) open in ai/questions.md; see ai/status.md.",
-                  made, nrow(r), open))
+  message(sprintf("%s; %d question(s) open in ai/questions.md; see ai/status.md.",
+                  .ai_count_text(res), open))
   invisible(res)
 }
 
@@ -333,6 +333,18 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
 
 # ---- ai/status.md -----------------------------------------------------------------
 
+# The count of the reports: those the answers have (a report asked for and
+# not in its answer, or not answered yet, is not one) and the TOC items,
+# and how many have an RTF
+.ai_count_text <- function(res) {
+  r <- res$reports
+  made <- sum(!is.na(r$rtf))
+  m <- res$toc_items %||% NA_integer_
+  if (is.na(m)) return(sprintf("%d of %d reports have an RTF", made, nrow(r)))
+  have <- r$status != "no answer" & !grepl("^not in the answer", ifelse(is.na(r$first), "", r$first))
+  sprintf("Reports (in the answers) %d, TOC items %d: %d have an RTF", sum(have), m, made)
+}
+
 .ai_status_text <- function(res) {
   r <- res$reports
   cell <- function(x) ifelse(is.na(x), "", gsub("|", "/", x, fixed = TRUE))
@@ -353,8 +365,8 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
   }
   c(sprintf("# Status (written by run.R, %s)", format(Sys.time(), "%Y-%m-%d %H:%M")),
     "",
-    sprintf("%d of %d reports have an RTF. Questions: %d open, %d decided (ai/questions.md).",
-            sum(!is.na(r$rtf)), nrow(r), sum(q$status %in% "open"), sum(q$status %in% "decided")),
+    sprintf("%s. Questions: %d open, %d decided (ai/questions.md).",
+            .ai_count_text(res), sum(q$status %in% "open"), sum(q$status %in% "decided")),
     "",
     .ai_templates_status(res$templates),
     "",
