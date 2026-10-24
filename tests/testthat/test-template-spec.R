@@ -141,8 +141,13 @@ test_that("every template as a template SPEC: resolved as its items written out 
   s$data$populations <- list(list(id = "SAF", dataset = "ADSL", where = tfl_r("SAFFL == \"Y\"")))
   tp <- tfl_templates()
   for (nm in names(.tpl_examples)) {
+    # (a template whose data stage is the report's: its data: steps)
+    own <- if (any(vapply(.tpl_get(nm, "test")$params, function(p) isTRUE(p$hidden) &&
+                            identical(p$stage, "data"), NA))) {
+      list(steps = list(list(step = "read", dataset = "ADTTE"), list(step = "param", value = "PFS")))
+    }
     o <- tfl_output(paste0("X-", nm), tp$kind[tp$name == nm], population = "SAF",
-                    template = list(name = nm, args = .tpl_examples[[nm]]))
+                    template = list(name = nm, args = .tpl_examples[[nm]]), data = own)
     ro <- tfl_resolve_output(o, s)
     rb <- tfl_resolve_output(tfl_template_to_spec(o, s), s)
     expect_identical(lapply(ro$content, unclass), lapply(rb$content, unclass), info = nm)

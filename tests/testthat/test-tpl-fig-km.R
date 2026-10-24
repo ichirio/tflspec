@@ -258,7 +258,7 @@ test_that("the study's figure style: a km parameter's study value, in the call",
   d <- system.file("extdata", "spec-yaml", package = "tflspec")
   s <- tfl_read_study_spec(d)
   o <- tfl_output("F-9", "figure", extends = "none",
-                  template = list(name = "km_survival", args = list(by = "TRT01A")))
+                  template = list(name = "km_survival", args = list(by = "TRT01A")), data = list(steps = list(list(step = "read", dataset = "ADTTE"), list(step = "param", value = "PFS"))))
   ro <- tfl_resolve_output(o, s)
   tp <- attr(ro, "template")
   expect_true("censor_shape" %in% tp$study)
@@ -289,7 +289,7 @@ test_that("a company's variant of km: its root called, its defaults written out"
   d <- system.file("extdata", "spec-yaml", package = "tflspec")
   s <- tfl_read_study_spec(d)
   o <- tfl_output("F-9", "figure", extends = "none",
-                  template = list(name = "acme_km", args = list(by = "TRT01A")))
+                  template = list(name = "acme_km", args = list(by = "TRT01A")), data = list(steps = list(list(step = "read", dataset = "ADTTE"), list(step = "param", value = "PFS"))))
   code <- paste(tfl_content_code(tfl_resolve_output(o, s)), collapse = "\n")
   expect_match(code, "# template acme_km (a variant of km_cumulative, acmetpl", fixed = TRUE)
   expect_match(code, ", \"km\",", fixed = TRUE)
