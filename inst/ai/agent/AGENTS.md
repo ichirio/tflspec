@@ -59,7 +59,11 @@ and `ai/`. If the workspace is a folder above it, use the paths from here.
 5. A question you cannot settle from the request, its shell, the summary,
    the data or `ai/decisions.md`: **do not stop**. Take the likeliest
    choice and write it as an assumption with its `question` (the request's answer format says
-   how). `run.R` gathers the questions into `ai/questions.md`, a question
+   how). Not so for the analysis set and, for a dataset of parameters
+   (PARAMCD), the parameter: they define the report, and the shell says
+   them. When you cannot read them, never take a likely one: ask the
+   question, and leave the report with the error `run.R` gives it (no
+   repair by guessing). `run.R` gathers the questions into `ai/questions.md`, a question
    several reports ask once, with the reports listed. A question about the
    work rather than a report (a shell you cannot find, a file missing): add
    it to `ai/questions.md` yourself, in the same form (`## Q<n>. ...`,

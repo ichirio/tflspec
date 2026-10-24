@@ -513,6 +513,14 @@
   known_ds <- if (!is.null(vars)) unique(vars$dataset)
   ad_ids <- character()
   derived <- list()
+  # (what keeps a BDS dataset to its parameters, and who names an analysis
+  # set: a report that says neither is no report -- the shell always does)
+  par_rx <- "\\bPARAM(CD|N)?\\b"
+  says_par <- function(x) any(grepl(par_rx, unlist(lapply(x, as.character))))
+  ad_par <- list()
+  has_pop <- !is.na(o[["population"]])
+  bds <- if (!is.null(vars)) unique(vars$dataset[vars$variable %in% "PARAMCD"]) else character()
+  unkept <- character()
   for (j in seq_along(ad)) {
     a <- ad[[j]]
     w <- sprintf("ard.analysis_data[%d]", j)
@@ -527,6 +535,9 @@
     id <- .ai_scalar_text(a[["id"]])
     if (is.null(id)) add(w, "has no id") else ad_ids <- c(ad_ids, id)
     chk_pop(paste(w, "population"), .ai_scalar_text(a[["population"]]))
+    has_pop <- has_pop || !is.null(a[["population"]]) || !is.null(a[["subjects"]])
+    ad_par[[tolower(id %||% paste0("data", j))]] <- says_par(a[["where"]]) || says_par(a[["code"]]) ||
+      isTRUE(ad_par[[tolower(.ai_scalar_text(a[["from"]]) %||% "")]])
     from <- toupper(.ai_scalar_text(a[["from"]]) %||% "")
     from_ds <- if (from %in% toupper(ad_ids)) attr(derived[[tolower(from)]], "dataset") else from
     if (!nzchar(from) && is.null(a[["code"]])) add(paste(w, "from"), "says no dataset")
@@ -570,6 +581,7 @@
       add(paste(w, "variables"), "is missing: the variables analysed")
     }
     chk_pop(paste(w, "population"), .ai_scalar_text(a[["population"]]))
+    has_pop <- has_pop || !is.null(a[["population"]])
     data_id <- .ai_scalar_text(a[["data"]])
     ds <- toupper(.ai_scalar_text(a[["dataset"]]) %||% "")
     have <- character()
@@ -595,6 +607,19 @@
       p <- rbind(p, .ai_check_vars(.ai_r_names(a[["where"]]), vars, ds, have, paste(at, w, "where"),
                                    "warning"))
     }
+    # a BDS dataset's analysis: kept to its parameters (where, its data's
+    # where, its named records) or by them (PARAM in by, strata, variables)
+    if (ds %in% bds && is.null(a[["parent"]]) && !identical(m, "custom") && is.null(a[["records"]]) &&
+        !says_par(a[["where"]]) && !isTRUE(ad_par[[tolower(data_id %||% "")]]) &&
+        !says_par(a[c("by", "strata", "variables")])) {
+      unkept[w] <- ds
+    }
+  }
+  if (!has_pop) {
+    add("population", paste(
+      "the report names no analysis set (population: the report's, an analysis's or its data's):",
+      "write the one the shell says; if the shell does not say it, ask it in a question --",
+      "do not guess"))
   }
   # code lists: variables of the data
   if (!is.null(vars)) {
@@ -610,6 +635,15 @@
     return(p)
   }
   fns <- vapply(o[["content"]], `[[`, "", "fn")
+  # (a table with PARAM in its rows lists every parameter: kept by them)
+  rows_par <- any(vapply(o[["content"]][fns %in% "table_plan"], function(it) says_par(it$args), NA))
+  for (w in if (!rows_par) names(unkept)) {
+    add(paste(w, "where"), sprintf(paste(
+      "reads %s, a dataset of parameters (PARAMCD), but keeps no parameter: write the shell's",
+      "(where: PARAMCD == \"...\"), or put PARAM in by / the rows for a table of them all;",
+      "if the shell does not say which, ask it in a question -- do not guess"),
+      unkept[[w]]))
+  }
   known <- .ai_table_functions()
   if (!"table_plan" %in% fns) add("content", "has no table_plan item (the roles: cols and rows)")
   for (j in seq_along(o[["content"]])) {
