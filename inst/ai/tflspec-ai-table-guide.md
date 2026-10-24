@@ -126,6 +126,12 @@ each report. An answer with errors writes no file; its repair prompt is
 answer over `ai/answers/<request>.md`, and run `tfl_ai_collect_answers(".")`
 again (2-3 rounds are usual).
 
+Each answer starts with the list of the reports it makes (`reports:`: id,
+title, how its TOC row is split, the TOC row). The print counts them, and
+`ai/manifest.csv` lists every one with its status: check the count against
+the TOC (one TOC row can be several reports), and look at a report "listed
+but not answered" or "answered but not listed".
+
 Then the RTF of every report written:
 
 ```r

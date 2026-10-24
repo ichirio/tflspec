@@ -15,7 +15,7 @@ and `ai/`. If the workspace is a folder above it, use the paths from here.
    `ai/requests/index.md`: the requests, in order.
 2. For each request `ai/requests/<request>.md`, in that order:
    1. Read it, and write the answer it asks for: one ```` ```yaml ```` block
-      (the header, `outputs`, `assumptions`). A request names the files it
+      (the header, `reports`, `outputs`, `assumptions`). A request names the files it
       shares with the others -- `ai/instructions-table.md` or
       `ai/instructions-figure.md` (the instructions and the schema),
       `ai/adam_summary.md`, `spec/data.yml`, `spec/defaults.yml` -- read each
@@ -66,7 +66,8 @@ and `ai/`. If the workspace is a folder above it, use the paths from here.
    `- Reports:`, `- Where:`, `- The agent took, for now:`, `- Status: open`,
    `- Answer:`).
 6. When every request is done (`ok`, `warning`, or left after three tries),
-   stop and tell the person: how many reports have an RTF, which do not and
+   stop and tell the person: how many reports the answers list (`ai/manifest.csv`,
+   to check against the TOC), how many have an RTF, which do not and
    why, and that `ai/questions.md` waits for their answers.
 
 ## Round 2: the person's answers

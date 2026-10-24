@@ -395,6 +395,26 @@
   do.call(rbind, c(list(empty), rows))
 }
 
+# A table answer's `reports`: the list of the reports its request makes,
+# written first (id, title, how its TOC row is split for it, the TOC row),
+# for the study's manifest (tfl_ai_collect_answers()); one row a report
+.ai_report_list_rows <- function(x) {
+  empty <- data.frame(output_id = character(), title = character(), split = character(),
+                      toc = character(), stringsAsFactors = FALSE)
+  if (is.null(x) || !length(x) || !is.list(x)) return(empty)
+  cell <- function(e, k) {
+    v <- e[[k]]
+    if (is.null(v) || !length(v) || is.list(v)) NA_character_ else as.character(v[[1L]])
+  }
+  rows <- lapply(x, function(e) {
+    if (!is.list(e)) e <- list(id = as.character(e))
+    id <- cell(e, "id")
+    data.frame(output_id = if (is.na(id)) id else .ai_file_id(id), title = cell(e, "title"),
+               split = cell(e, "split"), toc = cell(e, "toc"), stringsAsFactors = FALSE)
+  })
+  do.call(rbind, c(list(empty), rows))
+}
+
 # ---- checking it -----------------------------------------------------------------------
 
 .ai_check_table <- function(answer, context) {

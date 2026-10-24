@@ -134,7 +134,8 @@ test_that("tfl_ai_save_answer() and tfl_ai_collect_answers(): the files, the rep
   res <- suppressMessages(tfl_ai_collect_answers(d))
   expect_s3_class(res, "tfl_ai_collected")
   expect_named(res, c("reports", "next_steps", "assumptions", "stray", "requests", "templates",
-                      "toc_items"))
+                      "toc_items", "manifest", "manifest_file"))
+  expect_true(file.exists(file.path(d, res$manifest_file)))
   rp <- res$reports
   expect_true(all(c("problems_text", "file", "repair") %in% names(rp)))
   done <- rp$request == one
@@ -153,6 +154,43 @@ test_that("tfl_ai_save_answer() and tfl_ai_collect_answers(): the files, the rep
   expect_true(all(rp2$repair == paste0("ai/repairs/", one, ".md")))
   expect_true(file.exists(file.path(d, rp2$repair[1L])))
   expect_true(any(grepl("NOPE", rp2$problems_text)))
+})
+
+test_that("the manifest: each answer's `reports`, its count against the TOC (ai/manifest.csv)", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  d <- prep_study(withr::local_tempdir())
+  r <- suppressMessages(tfl_ai_prepare(unit = "toc", d, book(), study_id = "XYZ-ONC-01"))
+  ex <- test_path("fixtures", "answers-toc")
+  one <- r$requests$request[1L]
+  txt <- readLines(file.path(ex, paste0(one, ".md")), encoding = "UTF-8")
+  ids <- names(tfl_ai_parse(txt, "table")$outputs)
+  # the list first: the answer's first report, and one it lists but does not write
+  head <- grep("^tflspec_ai:", txt)
+  listed <- c("reports:",
+              sprintf("  - {id: %s, title: \"The first\", split: ~, toc: \"14.1\"}", ids[1L]),
+              "  - {id: T-99-9-9.b, title: \"Part B\", split: \"Part B: the second cohort\", toc: \"14.1\"}")
+  txt2 <- append(txt, listed, after = head)
+  a <- tfl_ai_parse(txt2, "table")
+  expect_false(any(a$problems$severity == "error"))
+  expect_identical(a$report_list$output_id, c(ids[1L], "T-99-9-9.b"))
+  expect_identical(a$report_list$split[2L], "Part B: the second cohort")
+  tfl_ai_save_answer(d, one, txt2)
+  res <- suppressMessages(tfl_ai_collect_answers(d))
+  m <- res$manifest
+  expect_named(m, c("request", "toc", "output_id", "title", "split", "listed", "status"))
+  mine <- m[m$request == one, ]
+  expect_identical(mine$output_id[1:2], c(ids[1L], "T-99-9-9.b"))
+  expect_identical(mine$status[2L], "not answered")
+  # a report written but not listed
+  expect_identical(mine$listed, c(TRUE, TRUE, rep(FALSE, length(ids) - 1L)))
+  # a request with no answer: its reports as asked
+  expect_true(all(is.na(m$listed[m$request != one])))
+  expect_true(all(m$status[m$request != one] == "no answer"))
+  csv <- utils::read.csv(file.path(d, res$manifest_file), encoding = "UTF-8",
+                         stringsAsFactors = FALSE)
+  expect_identical(nrow(csv), nrow(m))
+  expect_output(print(res), "1 listed but not answered")
 })
 
 test_that("tfl_ai_prepare(quiet, datasets); tfl_ai_requests(); no ADaM folder in the requests", {
