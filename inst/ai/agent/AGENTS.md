@@ -33,23 +33,29 @@ and `ai/`. If the workspace is a folder above it, use the paths from here.
       says, save the whole answer over `ai/answers/<request>.md`, and run
       again. Three tries at most; then leave it, add a question to
       `ai/questions.md` saying what is wrong, and go on.
-3. The shells: use the text each request gives (read from the TOC / SHELL
-   workbook). Each request also says where its reports' shells are in the
-   workbook file -- the file, the sheet, the cells, the TOC row. Only when
-   the text looks cut or garbled, read **that place alone** with R:
+3. The shells: use the text each request gives, read from the TOC / SHELL
+   workbook {{workbook}}. Each request also says where its reports' shells
+   are in the workbook file -- the file, the sheet, the cells, the TOC row.
+   When you can open the workbook, use it to check what the text leaves
+   unclear -- above all a shell's shape: several parts on one sheet, a
+   later part that writes only what differs, merged cells, a text that
+   looks cut. Read the place the request names with R:
    `Rscript -e "cat(format(tflspec::tfl_ai_read_shell('<file>', outputs = '<id>')))"`
    or `readxl::read_excel('<file>', sheet = '<sheet>', range = '<cells>')`.
-   Never read another sheet on a guess; when the place looks wrong (another
-   report's shell, an empty range), ask it in `ai/questions.md`.
+   When you cannot open it (outside your workspace, no permission), decide
+   from the request alone and write what you took as an assumption. When
+   the place looks wrong (another report's shell, an empty range), ask it
+   in `ai/questions.md`.
 4. The variables and their values are in `ai/adam_summary.md`; work from
-   it. You may read the ADaM itself (where `spec/data.yml` says, `path:`)
-   when a question about the data is not settled by the summary -- a value
-   as the data write it, whether a variable is there, an arm's levels.
-   There is no need to read it otherwise. Read it with R, never by opening
-   a `.xpt` / `.sas7bdat` in the editor, and print only what settles the
-   question -- a variable's values, labels, counts -- not subjects'
-   records in bulk:
+   it first. The ADaM is in {{adam}} (`spec/data.yml` names each file,
+   `path:`). When you can open it, you may read the ADaM itself when a
+   question about the data is not settled by the summary -- a value as the
+   data write it, whether a variable is there, an arm's levels. Read it
+   with R, never by opening a `.xpt` / `.sas7bdat` in the editor, and print
+   only what settles the question -- a variable's values, labels, counts
+   -- not subjects' records in bulk:
    `Rscript -e "d <- haven::read_xpt('<path>/adae.xpt'); print(table(d$ACNDR, useNA = 'ifany'))"`.
+   When you cannot open it, decide from the summary and the request.
 5. A question you cannot settle from the request, its shell, the summary,
    the data or `ai/decisions.md`: **do not stop**. Take the likeliest
    choice and write it as an assumption with its `question` (the request's answer format says
@@ -82,8 +88,8 @@ When the person says the questions are answered:
 - Do not open a data file (`.xpt`, `.sas7bdat`) in the editor, and do not
   print subjects' records in bulk: read the ADaM with R, only for a
   question the summary does not settle (round 1, step 4).
-- Do not read a sheet of the TOC / SHELL workbook that no request names
-  for its report (round 1, step 3).
+- Do not change the TOC / SHELL workbook or the ADaM: read them only to
+  check (round 1, steps 3 and 4).
 - Do not change `study.yml`, `spec/data.yml`, `spec/defaults.yml`, `run.R`,
   `AGENTS.md` or `.github/copilot-instructions.md`. When one seems wrong,
   ask in `ai/questions.md`.

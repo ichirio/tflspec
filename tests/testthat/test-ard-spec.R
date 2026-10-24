@@ -16,6 +16,10 @@ toy_spec <- function(analyses) {
                                derive = "TRTA = TRT01A")),
     analyses = analyses)
   for (n in names(.ard_spec_sheets)) {
+    if (is.null(s[[n]])) {
+      s[[n]] <- as.data.frame(lapply(stats::setNames(nm = .ard_spec_sheets[[n]]),
+                                     function(c) character()), stringsAsFactors = FALSE)
+    }
     for (c in .ard_spec_sheets[[n]]) {
       if (!c %in% names(s[[n]])) s[[n]][[c]] <- NA_character_
     }
@@ -64,14 +68,14 @@ test_that("the definition becomes code and the code the study ARD", {
   code <- tfl_ard_code(x)
   expect_silent(parse(text = code))
   expect_true(any(grepl("ard_stack_hierarchical(", code, fixed = TRUE)))
-  expect_true(any(grepl("denominator = pop_saf", code, fixed = TRUE)))
+  expect_true(any(grepl("denominator = adsl_sub", code, fixed = TRUE)))
   # the analysis data is made once, by name; a custom row's `data` is the
   # program's data, by its name
   expect_true(any(code ==
-    paste0("adae_saf <- adae |>\n",
-           "  semi_join(select(pop_saf, USUBJID), by = \"USUBJID\") |>\n",
+    paste0("adae_sub <- adae |>\n",
+           "  semi_join(select(adsl_sub, USUBJID), by = \"USUBJID\") |>\n",
            "  filter(TRTEMFL == \"Y\")")))
-  expect_true(any(grepl("pop_saf[pop_saf$TRT01A != \"Placebo\", ]", code, fixed = TRUE)))
+  expect_true(any(grepl("adsl_sub[adsl_sub$TRT01A != \"Placebo\", ]", code, fixed = TRUE)))
   expect_false(any(grepl("local(", code, fixed = TRUE)))
 
   a <- tfl_build_ard(x, dir = dir)

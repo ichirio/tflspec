@@ -43,10 +43,10 @@ test_that("the analysis data is made once, in order, for what a report reads", {
   # in the sheet's order; the population itself when the data is its dataset
   # (a data made in one statement: its condition, derive, one row per ...)
   # (the population's columns replace one of the same name)
-  at <- match(c("adsl_saf <- pop_saf",
+  at <- match(c("adsl_saf <- adsl_sub",
                 paste0("adae_teae <- adae |>\n",
                        "  select(-any_of(c(\"TRT01A\", \"AGEGR1\"))) |>\n",
-                       "  inner_join(select(pop_saf, USUBJID, TRT01A, AGEGR1), by = \"USUBJID\") |>\n",
+                       "  inner_join(select(adsl_sub, USUBJID, TRT01A, AGEGR1), by = \"USUBJID\") |>\n",
                        "  filter(TRTEMFL == \"Y\")"),
                 "adae_ser <- adae_teae |>\n  filter(AESER == \"Y\") |>\n  mutate(SER = 1)",
                 "adae_subj <- distinct(adae_teae, USUBJID, .keep_all = TRUE)"), code)
@@ -54,8 +54,8 @@ test_that("the analysis data is made once, in order, for what a report reads", {
   expect_false(is.unsorted(at))
   # an analysis's own condition on top, under a name of its own; the
   # denominator as it is; the analysis set is the data's
-  expect_true(any(code == "adae_ser_1 <- filter(adae_ser, AESEV == \"SEVERE\")"))
-  expect_true(any(grepl("ard_ser <- adae_ser_1 |>\n  ard_tabulate(", code, fixed = TRUE)))
+  expect_true(any(code == "adae_sub <- filter(adae_ser, AESEV == \"SEVERE\")"))
+  expect_true(any(grepl("ard_ser <- adae_sub |>\n  ard_tabulate(", code, fixed = TRUE)))
   expect_true(any(grepl("denominator = adae_subj,", code, fixed = TRUE)))
   expect_true(any(grepl("denominator = adsl_saf,", code, fixed = TRUE)))
   # formatted in the call (cards::ard_tabulate() takes fmt_fun)
@@ -192,7 +192,7 @@ test_that("a report's own subjects, the columns kept, factors of derived columns
     "  mutate(OLD = ifelse(AGE >= 75, \"75+\", \"65-74\")) |>\n",
     "  set_levels(OLD = cl_old)")))
   expect_true("cl_old <- c(\"75+\", \"65-74\")" %in% code)
-  expect_false(any(startsWith(code, "pop_saf <- ")))
+  expect_false(any(startsWith(code, "adsl_sub <- ")))
   # only what the analyses read: no SEX
   expect_false(any(grepl("SEX =", code, fixed = TRUE)))
   # the study's program of its one report: the same

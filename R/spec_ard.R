@@ -118,6 +118,12 @@
     d[order(k, seq_len(nrow(d))), , drop = FALSE]
   }
   ard <- b$ard
-  for (s in c("analysis_data", "analyses")) ard[[s]] <- in_toc(ard[[s]])
+  for (s in c("objects", "analysis_data", "analyses")) ard[[s]] <- in_toc(ard[[s]])
+  # a table's analyses have its columns' by
+  p <- .by_needed_problems(.normalize_ard_sheet(ard$analyses, "analyses"), b$table$tables)
+  if (nrow(p)) {
+    .spec_stop(paste(c("The ARD definition is not valid:", p$message), collapse = "\n  "),
+               p, "tflspec_ard_spec_error")
+  }
   list(spec = tfl_ard_spec(ard), codelists = b$table$codelists)
 }

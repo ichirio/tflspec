@@ -21,6 +21,18 @@
 #   populations  population_id, dataset, where,  analysis sets (and the
 #                derive, label                   denominators; `label`: the
 #                                                text a header prints)
+#   records      record_id, dataset, where,      named sets of records (CDISC
+#                label, any_label                ARS data subsets): an analysis
+#                                                names one in `records` for its
+#                                                dataset and condition;
+#                                                `any_label` the "any" row of
+#                                                a hierarchy of them
+#   objects      output_id, object_id, code,     named values: `object_id <-
+#                label                           code` at the program's top
+#                                                (a report's, or the study's
+#                                                when output_id is blank),
+#                                                named by a denominator, an
+#                                                argument, a condition
 #   analyses     output_id, analysis_id, parent, method, dataset,
 #                population_id, where, by, variables, statistics, formats,
 #                args, code
@@ -32,10 +44,12 @@
   study = c("key", "value"),
   datasets = c("dataset", "level", "path", "derive"),
   populations = c("population_id", "dataset", "where", "derive", "label"),
+  records = c("record_id", "dataset", "where", "label", "any_label"),
+  objects = c("output_id", "object_id", "code", "label"),
   analysis_data = c("output_id", "data_id", "label", "from", "population_id", "subjects",
                     "where", "add", "derive", "keep", "distinct", "code"),
   analyses = c("output_id", "analysis_id", "parent", "label", "method",
-               "data", "dataset",
+               "data", "dataset", "records",
                "population_id", "where", "by", "overall", "strata", "variables",
                "optional", "statistics", "denominator", "formats", "args", "post",
                "code", "purpose", "reason"))
@@ -127,7 +141,7 @@
 
 #' Write an ARD definition to a workbook
 #'
-#' Writes the five sheets (`study`, `datasets`, `populations`,
+#' Writes the seven sheets (`study`, `datasets`, `populations`, `records`, `objects`,
 #' `analysis_data`, `analyses`)
 #' and no more; what each column means is a comment on its header cell
 #' ([tfl_spec_columns()]).  [tfl_read_ard_spec()] takes one back.  With
@@ -164,7 +178,7 @@ tfl_write_ard_spec <- function(spec, path, statistics = NULL, methods = NULL,
 #' @param check `FALSE` reads a definition still being written without
 #'   refusing it.
 #' @inheritParams tfl_write_ard_spec
-#' @return An `tfl_ard_spec`: a list of the five sheets (a workbook
+#' @return An `tfl_ard_spec`: a list of the seven sheets (a workbook
 #'   without `analysis_data`, written before it was added, reads it empty).
 #' @export
 tfl_read_ard_spec <- function(path, check = TRUE, statistics = NULL,
@@ -251,6 +265,11 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 # yet (written before it was added) blank
 .ard_spec_shaped <- function(x) {
   x$analysis_data <- .adata_sheet(x)
+  # `by` "(none)": no columns, said so (.by_needed_problems()); for the
+  # program, no by
+  if (is.data.frame(x$analyses) && !is.null(x$analyses$by)) {
+    x$analyses$by[trimws(x$analyses$by) %in% "(none)"] <- NA_character_
+  }
   for (s in intersect(names(.ard_spec_sheets), names(x))) {
     for (c in setdiff(.ard_spec_sheets[[s]], names(x[[s]]))) {
       x[[s]][[c]] <- rep(NA_character_, nrow(x[[s]]))
@@ -383,13 +402,26 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
     }
   }
   den <- a$denominator %||% rep(NA, nrow(a))
-  bad <- which(!is.na(den) & !den %in% c(.den_words,
-                                         x$populations$population_id,
-                                         x$datasets$dataset,
-                                         x$analysis_data$data_id))
+  num <- lapply(den, .den_numbers)
+  bad <- which(!is.na(den) & vapply(num, is.null, NA) &
+                 !den %in% c(.den_words, .objects_sheet(x)$object_id,
+                             x$populations$population_id,
+                             x$datasets$dataset,
+                             x$analysis_data$data_id))
   if (length(bad)) add(bad[1L], "denominator", sprintf(
-    "denominator(s) %s: population, row, column, cell, a population, a dataset or an analysis data",
+    "denominator(s) %s: population, row, column, cell, a population, a dataset, an analysis data, an object or numbers (86, or c(\"Drug X\" = 86, \"Placebo\" = 85))",
     paste(unique(den[bad]), collapse = ", ")))
+  for (i in which(vapply(num, function(n) length(n) == 1L && is.na(n), NA))) {
+    add(i, "denominator", sprintf(
+      "%s / %s: denominator %s: the numbers are whole and each named by a value of the by: c(\"Drug X\" = 86, \"Placebo\" = 85)",
+      a$output_id[i], a$analysis_id[i], den[i]))
+  }
+  for (i in which(vapply(num, function(n) !is.null(names(n)), NA))) {
+    if (length(.split_bar(a$by[i])) != 1L) add(i, "denominator", sprintf(
+      "%s / %s: a denominator by value (%s) needs one by variable; the analysis has %s",
+      a$output_id[i], a$analysis_id[i], den[i],
+      if (is.na(a$by[i])) "none" else paste(.split_bar(a$by[i]), collapse = ", ")))
+  }
   ds_a <- which(!is.na(a$dataset) & !a$dataset %in% x$datasets$dataset)
   pops <- x$populations
   ds_p <- which(!is.na(pops$dataset) & !pops$dataset %in% x$datasets$dataset)
@@ -425,6 +457,7 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   }
   cust <- which(a$method %in% "custom" & is.na(a$code))
   if (length(cust)) add(cust[1L], "code", "a `custom` analysis needs its `code`")
+  pr <- c(pr, list(.objects_problems(x), .old_pop_names_problems(x), .records_problems(x)))
   p <- do.call(rbind, pr)
   rownames(p) <- NULL
   p
@@ -907,7 +940,7 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
   old <- .set_catalogs(statistics, methods)
   on.exit(options(old), add = TRUE)
   x <- .as_spec(spec, "ard", "tfl_ard_code")
-  a <- x$analyses
+  a <- .records_expand(x, x$analyses)
   if (!is.null(output_id)) a <- a[a$output_id %in% output_id, , drop = FALSE]
   # written for its setup, which attaches cards and dplyr (not when
   # tfl_build_ard() runs it: every `pkg::` kept)
@@ -940,7 +973,10 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
                                                            codelists))),
                     if (out != "output/ard/ard.rds") list(path = .path_code(out))))
     }
-    return(.drop_attached_ns(.ard_body_lines(x, a, lv, save = sv)))
+    body <- .ard_body_lines(x, a, lv, save = sv)
+    out <- .drop_attached_ns(body)
+    attr(out, "data_names") <- attr(body, "data_names")
+    return(out)
   }
   out <- .study_value(x, "output", "output/ard/ard.rds")
   code <- c(
@@ -1162,7 +1198,7 @@ tfl_ard_as_custom <- function(spec, output_id, analysis_id) {
   given <- c(.args_given(r$args), if (!is.na(r$strata)) "strata",
              if (!is.na(r$denominator)) "denominator")
   has <- function(arg) arg %in% given
-  den <- .den_code(r$denominator, x, pop, subj, population = "population")
+  den <- .den_code(r$denominator, x, pop, subj, population = "population", by = r$by)
   body <- .analysis_body(r, keys, subj, has, den)
   k <- .method_key(r$method, keys)
   fmt <- c(if (!is.na(k)) .parse_formats(keys$formats[k]), .parse_formats(r$formats))
@@ -1258,4 +1294,251 @@ tfl_ard_as_custom <- function(spec, output_id, analysis_id) {
   e <- walk(e)
   if (!changed) return(where)
   paste(deparse(e, width.cutoff = 500L), collapse = " ")
+}
+
+# ---- named values (sheet `objects`) ------------------------------------------
+
+# the sheet, in shape (none: no rows)
+.objects_sheet <- function(x) {
+  .normalize_ard_sheet(x$objects %||% data.frame(), "objects")
+}
+
+# A report's named values, the study's (blank output_id) first: the rows
+# its program makes, in order
+.objects_of <- function(x, output_id = NULL) {
+  ob <- .objects_sheet(x)
+  keep <- is.na(ob$output_id) | (!is.null(output_id) & ob$output_id %in% output_id)
+  ob <- ob[keep, , drop = FALSE]
+  ob[order(!is.na(ob$output_id)), , drop = FALSE]
+}
+
+# The lines that make named values: `id <- code`, its label a comment above
+.objects_lines <- function(ob) {
+  if (is.null(ob) || !nrow(ob)) return(character())
+  unlist(lapply(seq_len(nrow(ob)), function(i) c(
+    if (!is.na(ob$label[i])) sprintf("# %s: %s", ob$object_id[i], ob$label[i]),
+    sprintf("%s <- %s", ob$object_id[i], ob$code[i]))))
+}
+
+# The sheet's problems: an id that is not an R name of its own, no code, code
+# that is not R, an id given twice in one scope or that is a dataset's or a
+# population's name in the program
+.objects_problems <- function(x) {
+  ob <- .objects_sheet(x)
+  pr <- list(.spec_problems_empty())
+  if (!nrow(ob)) return(pr[[1L]])
+  add <- function(i, field, message) {
+    pr[[length(pr) + 1L]] <<- .spec_problem(message, "objects", ob$output_id[i],
+                                            if (is.na(ob$object_id[i])) "" else ob$object_id[i], field)
+  }
+  taken <- c(.r_name(x$datasets$dataset %||% character()),
+             paste0("pop_", .r_name(x$populations$population_id %||% character())))
+  scope <- ifelse(is.na(ob$output_id), "", ob$output_id)
+  for (i in seq_len(nrow(ob))) {
+    id <- ob$object_id[i]
+    if (is.na(id)) { add(i, "object_id", sprintf("objects row %d: an object_id", i)); next }
+    if (make.names(id) != id) add(i, "object_id", sprintf(
+      "object %s: the name is an R name (letters, digits, . and _, a letter first)", id))
+    if (id %in% taken) add(i, "object_id", sprintf(
+      "object %s: the program's name of a dataset or a population; name it otherwise", id))
+    if (is.na(ob$code[i])) add(i, "code", sprintf("object %s: its code (R, the value)", id))
+    else if (inherits(tryCatch(parse(text = ob$code[i]), error = function(e) e), "error")) {
+      add(i, "code", sprintf("object %s: the code is not R: %s", id, ob$code[i]))
+    }
+  }
+  dup <- duplicated(paste(scope, ob$object_id)) & !is.na(ob$object_id)
+  # (a report's value of the study's name)
+  dup <- dup | (!is.na(ob$output_id) & ob$object_id %in% ob$object_id[is.na(ob$output_id)])
+  for (i in which(dup)) add(i, "object_id", sprintf(
+    "object %s: named twice (a report's object may not take a study object's name)", ob$object_id[i]))
+  do.call(rbind, pr)
+}
+
+# An analysis set's data was pop_<id> in the program; it is <dataset>_sub
+# now (numbered from a report's second: adsl_sub2).  R a cell writes with
+# the old name stops here, saying the new one, rather than failing as the
+# program runs.
+.old_pop_names_problems <- function(x) {
+  pops <- x$populations
+  if (is.null(pops) || !nrow(pops)) return(.spec_problems_empty())
+  old <- paste0("pop_", .r_name(pops$population_id))
+  rx <- paste0("(^|[^A-Za-z0-9._])(", paste(gsub(".", "\\.", old, fixed = TRUE), collapse = "|"),
+               ")($|[^A-Za-z0-9._])")
+  cols <- list(analysis_data = c("where", "derive", "code"),
+               analyses = c("where", "args", "post", "code"),
+               objects = "code")
+  pr <- list(.spec_problems_empty())
+  for (sh in names(cols)) {
+    d <- if (identical(sh, "objects")) .objects_sheet(x) else
+      if (identical(sh, "analysis_data")) .adata_sheet(x) else x[[sh]]
+    if (is.null(d) || !nrow(d)) next
+    idc <- c(analysis_data = "data_id", analyses = "analysis_id", objects = "object_id")[[sh]]
+    for (cn in intersect(cols[[sh]], names(d))) {
+      for (i in which(!is.na(d[[cn]]) & grepl(rx, d[[cn]]))) {
+        w <- sub(paste0("^.*?", rx, ".*$"), "\\2", d[[cn]][i], perl = TRUE)
+        k <- match(w, old)
+        new <- paste0(.r_name(pops$dataset[k]), "_sub")
+        pr[[length(pr) + 1L]] <- .spec_problem(sprintf(paste(
+          "%s%s: `%s` writes %s, a name the ARD program no longer has: the population %s's",
+          "data is %s now (%s2, %s3 ... from the second a report reads of %s); write that"),
+          if (is.na(d$output_id[i] %||% NA)) "" else paste0(d$output_id[i], " / "),
+          d[[idc]][i] %||% sh, cn, w, pops$population_id[k], new, new, new, pops$dataset[k]),
+          sh, d$output_id[i] %||% NA_character_, d[[idc]][i] %||% "", cn)
+      }
+    }
+  }
+  do.call(rbind, pr)
+}
+
+#' The data each analysis reads, by its name in the ARD program
+#'
+#' The names [tfl_ard_code()] gives the data it makes itself: an analysis
+#' set's (`adsl_sub`) and an analysis's own records (`adae_sub`), numbered
+#' from a report's second of a dataset (`adsl_sub2`); an analysis data a
+#' person named (`data_id`) by its name; a dataset read as it is by the
+#' dataset's.  For a screen that shows what an analysis reads under the
+#' program's name, without writing the rule again.
+#'
+#' @inheritParams tfl_ard_code
+#' @return A data frame: `output_id`, `analysis_id` (an analysis that runs
+#'   inside another -- a stack's, a strata's -- is not listed: it reads its
+#'   parent's), `data` (the name; `"NULL"` for an analysis that reads none).
+#' @examples
+#' tfl_ard_data_names(tfl_ard_spec_template())
+#' @export
+tfl_ard_data_names <- function(spec, output_id = NULL, codelists = NULL) {
+  code <- tfl_ard_code(spec, output_id = output_id, save = FALSE, part = "body",
+                       codelists = codelists)
+  dn <- attr(code, "data_names")
+  if (is.null(dn)) {
+    dn <- data.frame(output_id = character(), analysis_id = character(),
+                     data = character(), stringsAsFactors = FALSE)
+  }
+  dn
+}
+
+# ---- named sets of records (sheet `records`) --------------------------------
+
+# the sheet, in shape (none: no rows)
+.records_sheet <- function(x) {
+  .normalize_ard_sheet(x$records %||% data.frame(), "records")
+}
+
+# Two conditions, both: each in parentheses when it has an `|` at its top
+.cond_both <- function(a, b) {
+  if (is.na(a)) return(b)
+  if (is.na(b)) return(a)
+  wrap <- function(w) {
+    e <- tryCatch(str2lang(w), error = function(err) NULL)
+    if (is.call(e) && as.character(e[[1L]]) %in% c("|", "||")) sprintf("(%s)", w) else w
+  }
+  paste(wrap(a), "&", wrap(b))
+}
+
+# The analyses with their records read: an analysis naming a set of records
+# reads its dataset, under its condition and then the analysis's own
+.records_expand <- function(x, a) {
+  rec <- .records_sheet(x)
+  r <- a$records %||% rep(NA_character_, nrow(a))
+  for (i in which(!is.na(r))) {
+    k <- match(r[i], rec$record_id)
+    if (is.na(k)) next
+    a$dataset[i] <- rec$dataset[k]
+    a$where[i] <- .cond_both(rec$where[k], a$where[i])
+  }
+  a
+}
+
+# The sheet's problems, and the analyses' `records`: an id once, a dataset
+# of the definition, a condition that is R; an analysis's records one of
+# the sheet's, and not with a `dataset` or `data` of its own
+.records_problems <- function(x) {
+  rec <- .records_sheet(x)
+  pr <- list(.spec_problems_empty())
+  add <- function(sheet, out, row, field, message) {
+    pr[[length(pr) + 1L]] <<- .spec_problem(message, sheet, out, row, field)
+  }
+  for (i in seq_len(nrow(rec))) {
+    id <- rec$record_id[i]
+    tag <- if (is.na(id)) sprintf("records row %d", i) else paste("records", id)
+    if (is.na(id)) { add("records", NA, "", "record_id", paste0(tag, ": a record_id")); next }
+    if (is.na(rec$dataset[i])) {
+      add("records", NA, id, "dataset", paste0(tag, ": its dataset"))
+    } else if (!rec$dataset[i] %in% x$datasets$dataset) {
+      add("records", NA, id, "dataset", sprintf("%s: dataset %s is not one of the datasets",
+                                               tag, rec$dataset[i]))
+    }
+    if (!is.na(rec$where[i]) &&
+        inherits(tryCatch(str2lang(rec$where[i]), error = function(e) e), "error")) {
+      add("records", NA, id, "where", sprintf("%s: the condition is not R: %s", tag, rec$where[i]))
+    }
+  }
+  for (i in which(duplicated(rec$record_id) & !is.na(rec$record_id))) {
+    add("records", NA, rec$record_id[i], "record_id",
+        sprintf("records %s: named twice", rec$record_id[i]))
+  }
+  a <- x$analyses
+  r <- a$records %||% rep(NA_character_, nrow(a))
+  for (i in which(!is.na(r))) {
+    tag <- paste(a$output_id[i], a$analysis_id[i], sep = " / ")
+    if (!r[i] %in% rec$record_id) {
+      add("analyses", a$output_id[i], a$analysis_id[i], "records", sprintf(
+        "%s: records %s is not one of the records sheet's (%s)", tag, r[i],
+        if (nrow(rec)) paste(stats::na.omit(rec$record_id), collapse = ", ") else "none"))
+    }
+    if (!is.na(a$dataset[i]) || !is.na(.data_col(a)[i])) {
+      add("analyses", a$output_id[i], a$analysis_id[i], "records", sprintf(
+        "%s: `records` says the dataset and the records; leave `dataset` and `data` blank", tag))
+    }
+  }
+  do.call(rbind, pr)
+}
+
+# The "any" row's label of a set of records: its any_label, else
+# "Any <id>"
+.records_any_label <- function(rec, id) {
+  k <- match(id, rec$record_id)
+  if (is.na(k)) return(NULL)
+  if (!is.na(rec$any_label[k])) rec$any_label[k] else paste("Any", id)
+}
+
+# ---- a table's analyses have its columns' `by` ---------------------------------
+
+# In a table whose plan has its columns (table_plan(cols = TRT01A)), an
+# analysis with no `by` is a mistake more often than not: its statistics
+# would not split by the columns.  A problem each, saying the by to write.
+# Not one: an analysis that counts the columns' variable itself (the
+# groups' N), a `custom` one, one inside another (its parent's by), the
+# study's N (total_n), one whose method takes no by (its arms in a model),
+# and `by: []` -- no columns, said so ("(none)").
+# `tables`: the table sheets' `tables` (output_id, cols).
+.by_needed_problems <- function(a, tables) {
+  out <- .spec_problems_empty()
+  if (is.null(a) || !nrow(a) || is.null(tables) || !nrow(tables) || is.null(tables$cols)) {
+    return(out)
+  }
+  pr <- list(out)
+  par <- a$parent %||% rep(NA_character_, nrow(a))
+  for (i in seq_len(nrow(a))) {
+    k <- match(a$output_id[i], tables$output_id)
+    if (is.na(k) || is.na(tables$cols[k]) || !nzchar(trimws(tables$cols[k]))) next
+    if (!is.na(a$by[i]) || !is.na(par[i]) || identical(a$method[i], "custom")) next
+    cols <- trimws(strsplit(tables$cols[k], "[,|]")[[1L]])
+    cols <- cols[nzchar(cols)]
+    v <- .split_bar(a$variables[i])
+    if (length(v) && all(v %in% cols)) next
+    # (the study's N: no by)
+    if (grepl("total_n", a$method[i], fixed = TRUE)) next
+    # a method that takes no by (its arms in a model: cardx's emmeans);
+    # a generic's arguments (cards::ard_tabulate(data, ...)) cannot say it
+    f <- .method_fun(a$method[i])
+    if (!is.null(f) && !any(c("by", ".by", "...") %in% names(formals(f)))) next
+    pr[[length(pr) + 1L]] <- .spec_problem(sprintf(paste(
+      "%s / %s: no `by`, in a table whose columns are %s (table_plan(cols = %s)): write",
+      "by: [%s] -- or by: [] for an analysis that has no columns"),
+      a$output_id[i], a$analysis_id[i], paste(cols, collapse = ", "),
+      paste(cols, collapse = ", "), paste(cols, collapse = ", ")),
+      "analyses", a$output_id[i], a$analysis_id[i], "by")
+  }
+  do.call(rbind, pr)
 }

@@ -146,7 +146,7 @@ tfl_ai_run(".")   # もう一度読み、帳票ごとに ARD と RTF: output/tfl
 ## 1 試験分（200 帳票くらいまで）を回す
 
 1. **小さく始める**: `size = 2` か `3`。種類ごと（`demographics-1`、`ae-1`、
-   `labs-1` …）に 1 依頼ずつ回し、RTF をシェルと見比べる。
+   `efficacy-1` …）に 1 依頼ずつ回し、RTF をシェルと見比べる。
 2. **種類ごとに 1 本を手で直し**、それを見本にして依頼を書き直す。見本は種類の名前を
    付けて渡すと、その種類の依頼にだけ入り、AI はそれに倣う:
    `tfl_ai_write_requests(..., examples = c(demographics = "spec/outputs/T-14-1-1.yml", ae = "spec/outputs/T-14-3-1.yml"), overwrite = TRUE)`。
@@ -224,7 +224,7 @@ r     <- tfl_ai_write_requests(d, shell, tfl_ai_adam_summary(file.path(d, "adam"
 # 保存済みの回答を、チャットの回答の代わりに置く（1 依頼に 1 つ）
 invisible(file.copy(list.files(file.path(ex, "answers"), full.names = TRUE),
                     file.path(d, "ai", "answers"), overwrite = TRUE))
-tfl_ai_collect_answers(d)            # 5 reports in 5 requests: ok 5 ...
+tfl_ai_collect_answers(d)            # 5 reports in 4 requests (a shell sheet each, the figure its own): ok 5 ...
 ```
 
 `ai/` フォルダ（依頼と回答）は残してください。共有は社内だけに。

@@ -18,8 +18,11 @@
 
 # The agent's files of a study folder: the instructions, run.R, and the
 # questions / decisions files (never written over: the person's answers
-# and decisions are in them).  The paths written.
-.ai_agent_files <- function(dir, overwrite = FALSE, templates = FALSE) {
+# and decisions are in them).  `adam`, `book`: where the ADaM and the TOC /
+# SHELL workbook are, from the study folder, as AGENTS.md says them.  The
+# paths written.
+.ai_agent_files <- function(dir, overwrite = FALSE, templates = FALSE, adam = NULL,
+                            book = NULL) {
   src <- system.file("ai", "agent", package = "tflspec")
   rd <- function(f) paste(readLines(file.path(src, f), warn = FALSE, encoding = "UTF-8"),
                           collapse = "\n")
@@ -31,6 +34,9 @@
     out <<- c(out, f)
   }
   agents <- rd("AGENTS.md")
+  place <- function(p) if (length(p) && !is.na(p[1L])) sprintf("`%s`", p[1L]) else
+    "(where the request says)"
+  agents <- .ai_fill(agents, list(workbook = place(book), adam = place(adam)))
   # with templates: answer with one where it fits (each request lists them)
   if (isTRUE(templates)) agents <- paste(agents, rd("AGENTS-templates.md"), sep = "\n\n")
   put("AGENTS.md", agents, again = TRUE)
@@ -42,15 +48,35 @@
 }
 
 # The lines a request starts with in agent mode: the steps, so a request
-# read alone says them.
-.ai_agent_request_head <- function(request) {
+# read alone says them, and where the ADaM and the workbook are (`adam`,
+# `book`: from the study folder)
+.ai_agent_request_head <- function(request, adam = NULL, book = NULL) {
+  at <- function(p) length(p) && !is.na(p[1L])
+  places <- c(if (at(book)) sprintf("the TOC / SHELL workbook is `%s`", book[1L]),
+              if (at(adam)) sprintf("the ADaM is in `%s`", adam[1L]))
   c("<!-- tflspec: agent mode -->",
     paste0("> **For the agent** (AGENTS.md): answer this request with its one `yaml` block and ",
            "save the whole answer as `ai/answers/", request, ".md`; then run `Rscript run.R ", request, "` and ",
            "read `ai/status.md`. Read `ai/decisions.md` first and follow it. Do not stop to ask: ",
            "take the likeliest choice and write it as an assumption with its `question`. Work from ",
            "`ai/adam_summary.md`; read the ADaM with R only to settle a question it does not."),
+    if (length(places)) paste0(
+      "> From this study folder, ", paste(places, collapse = " and "), ". When you can open ",
+      "them, use them to check what this request leaves unclear -- above all a shell's shape ",
+      "(several parts, a part that writes only what differs, merged cells). When you cannot ",
+      "(outside your workspace, no permission), decide from this request alone."),
     "", "---", "")
+}
+
+# A path as seen from the study folder `dir`: the part below it when it is
+# inside (however it was given), else the whole path
+.ai_from_study <- function(dir, p) {
+  if (is.null(p) || !length(p) || is.na(p[1L])) return(NA_character_)
+  root <- paste0(normalizePath(dir, winslash = "/", mustWork = FALSE), "/")
+  q <- normalizePath(p, winslash = "/", mustWork = FALSE)
+  same <- if (.Platform$OS.type == "windows") startsWith(tolower(q), tolower(root)) else
+    startsWith(q, root)
+  ifelse(same, substring(q, nchar(root) + 1L), q)
 }
 
 #' Run the study's AI answers through: collect, build, status, questions
@@ -167,7 +193,7 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
               .ai_fig_draw(st, id, out_dir)
             if (isTRUE(rtf)) {
               suppressMessages(rtfreporter::generate_rtfreport(
-                tfl_report(o, content = fig$plot, study = st), f, overwrite = TRUE))
+                tfl_report(o, content = fig$plot, study = st), f, overwrite = tfl_report_overwrite(o)))
             }
             list(rtf = if (isTRUE(rtf)) f, png = fig$png)
           } else {
@@ -176,7 +202,7 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
             if (isTRUE(rtf)) {
               plan <- suppressMessages(tfl_content_run(o, ard))
               suppressMessages(rtfreporter::generate_rtfreport(
-                tfl_report(o, content = plan, study = st), f, overwrite = TRUE))
+                tfl_report(o, content = plan, study = st), f, overwrite = tfl_report_overwrite(o)))
             }
             list(rtf = if (isTRUE(rtf)) f)
           }

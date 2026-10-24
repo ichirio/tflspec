@@ -74,6 +74,13 @@
 #'   are made: `step` `"request"`, `i` of `n` written (0 first) -- for a
 #'   progress bar (shiny's `setProgress()`).  Each request is written as
 #'   it is made; `index.md` and the contexts at the end.
+#' @param unit A request's unit: `"sheet"` (default; `shell`'s `shells`) a
+#'   shell sheet, its TOC items as candidates, and one request of the TOC
+#'   items no sheet chose; `"toc"` the TOC's reports in batches
+#'   ([tfl_ai_batches()]), as before.  A sheet's request lets the AI name
+#'   its reports: their ids are not held to a list (one that is no TOC
+#'   item's is a warning), and a sheet that is no shell is answered with no
+#'   report (a warning).
 #' @param mode `"chat"` (default): each request whole, to paste.
 #'   `"agent"` ([tfl_ai_prepare()]`(mode = "agent")`): what every request
 #'   would repeat in a file of the study's `ai/` folder, written once
@@ -109,7 +116,8 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
                                   instructions = c("once", "each"),
                                   workbook = c("text", "attach", "both", "file"),
                                   overwrite = FALSE, add = FALSE, templates = TRUE,
-                                  mode = c("chat", "agent"), progress = NULL) {
+                                  mode = c("chat", "agent"), progress = NULL,
+                                  unit = c("sheet", "toc")) {
   fn <- "tfl_ai_write_requests()"
   if (!is.null(progress) && !is.function(progress)) {
     .ard_stop(sprintf("%s: `progress` is a function(step, i, n), or NULL.", fn))
@@ -117,6 +125,7 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
   templates <- .ai_templates_flag(templates, fn)
   instructions <- match.arg(instructions)
   mode <- match.arg(mode)
+  unit <- match.arg(unit)
   agent <- identical(mode, "agent")
   # (an agent's request: one report; a chat's: up to 8)
   size <- size %||% if (agent) 1L else 8L
@@ -157,7 +166,15 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
     tfl_ai_batches(shell, size = size, types = tab_types, families = families)
   } else data.frame(output_id = character(), family = character(), batch = character())
   figs <- if ("figure" %in% types) shell$toc$output_id[shell$toc$type %in% "figure"] else character()
-  if (!nrow(b) && !length(figs)) {
+  # the shell sheets first (tfl_ai_read_shell()$shells): a request a sheet
+  # (a chat's: `size` sheets), the TOC its candidates; a figure sheet's
+  # request a figure's; the TOC items no sheet chose, one request
+  sheet_mode <- identical(unit, "sheet") && !is.null(shell$shells)
+  if (sheet_mode) {
+    b <- data.frame(output_id = character(), family = character(), batch = character())
+    figs <- character()
+  }
+  if (!nrow(b) && !length(figs) && !(sheet_mode && nrow(shell$shells) + nrow(shell$toc) > 0L)) {
     .ard_stop(sprintf(paste0("%s: none of the TOC's %d reports is a %s (shell$toc$type); ",
                              "pass `types` or `families` that pick them."), fn, nrow(shell$toc),
                       paste(types, collapse = " or ")))
@@ -174,7 +191,13 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
   if (length(old)) {
     # a report asked for already: stopped, or (overwrite) its request asked anew
     had <- unlist(lapply(old, `[[`, "ids"))
-    again <- intersect(c(b$output_id, figs), had)
+    # (the shell sheets' requests: the TOC items they name, a sheet with no
+    # candidate by its name -- as their contexts keep them)
+    asking <- if (sheet_mode) {
+      lone <- shell$shells$sheet[is.na(shell$shells$candidates)]
+      unique(c(shell$toc$output_id, vapply(lone, .ai_file_id, "", USE.NAMES = FALSE)))
+    } else c(b$output_id, figs)
+    again <- intersect(asking, had)
     if (length(again) && !isTRUE(overwrite)) {
       in_req <- names(old)[vapply(old, function(o) any(o$ids %in% again), NA)]
       .ard_stop(sprintf(paste0("%s: %s already asked for (%s); pass `overwrite = TRUE` to ",
@@ -213,9 +236,10 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
   # one report a request: the request named after its report's number
   # (t.15.1.5.1.md: the sheet it reads), letters a file name cannot hold
   # replaced
-  if (isTRUE(as.integer(size) == 1L)) {
+  if (isTRUE(as.integer(size) == 1L) && nrow(b)) {
+    # (a shell's reports: the shell's number)
     one <- !duplicated(b$batch)
-    nm <- .ai_file_id(b$output_id[one])
+    nm <- .ai_file_id((b$shell_id %||% b$output_id)[one])
     nm <- make.unique(c(taken, nm), sep = "-")[length(taken) + seq_along(nm)]
     b$batch <- unname(stats::setNames(nm, b$batch[one])[b$batch])
     if (length(figs)) {
@@ -229,12 +253,11 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
   # "both"); or in the workbook file an agent reads ("file")
   placed <- function(text, ids) {
     # a part on its parent's sheet: which of the sheet's reports is this one
-    text <- paste(c(.ai_parts_lines(shell, ids), .ai_part_notes(shell, ids), text),
-                  collapse = "\n")
+    text <- paste(c(.ai_toc_row_lines(shell, ids), text), collapse = "\n")
     if (identical(workbook, "file")) {
       # an agent that reads files: the text, and where each report's shell
-      # is in the workbook file -- to read that place alone when the text
-      # looks cut, never another sheet
+      # is in the workbook file -- to check what the text leaves unclear
+      # when the agent can open it; when it cannot, the request alone
       where <- c(if (length(more_books)) {
                    sprintf(paste("The TOC is the workbook `%s`; the shells are in %s.",
                                  "The reports' shells:"), book_path,
@@ -244,14 +267,17 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
                            book_path)
                  }, "",
                  .ai_shell_where(shell, ids), "",
-                 paste("Use the text below, read from that workbook. Only when it looks cut or",
-                       "garbled, read the place above -- that sheet, those cells -- with R:",
+                 paste("Use the text below, read from that workbook. When you can open the",
+                       "workbook, use it to check what the text leaves unclear -- above all a",
+                       "shell's shape (several parts, a part that writes only what differs,",
+                       "merged cells, a text that looks cut): read the place above -- that",
+                       "sheet, those cells -- with R:",
                        sprintf("`tflspec::tfl_ai_read_shell(\"%s\", %soutputs = \"<id>\")`", book_path,
                                if (length(more_books)) sprintf("shells = c(%s), ",
                                  paste(sprintf("\"%s\"", more_books), collapse = ", ")) else ""),
-                       "or `readxl::read_excel(<file>, sheet = <sheet>, range = <cells>)`. Never",
-                       "read another sheet on a guess; when the place looks wrong, ask it as a",
-                       "question."))
+                       "or `readxl::read_excel(<file>, sheet = <sheet>, range = <cells>)`. When",
+                       "you cannot open it (outside your workspace, no permission), decide from",
+                       "this request alone. When the place looks wrong, ask it as a question."))
       return(paste(c(where, "", text), collapse = "\n"))
     }
     if (identical(workbook, "text")) return(text)
@@ -267,14 +293,17 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
   }
   # a figure: a request of its own, its shell, its analysis set when the
   # TOC row names one of spec/data.yml's
-  fig_prompt_of <- function(id) {
+  fig_prompt_of <- function(id, sheet = NULL) {
     i <- match(id, shell$toc$output_id)
     ttl <- shell$toc$title[i]
     ctx <- tfl_ai_context("figure", output_id = id,
                           titles = if (!is.na(ttl)) ttl, datasets = adam,
                           population = .ai_population_of(study_dir, shell$toc$text[i]),
                           shell = shell, language = language)
-    ctx$shell <- placed(ctx$shell, id)
+    ctx$shell <- if (is.null(sheet)) placed(ctx$shell, id) else
+      placed_sheets(paste(c(.ai_sheet_lines(shell, sheet), .ai_sheet_text(shell, sheet)),
+                          collapse = "\n"), sheet)
+    if (!is.null(sheet)) ctx$sheets <- sheet
     ctx$ai_templates <- templates
     if (agent) ctx$ai_files <- TRUE
     p <- tfl_ai_prompt("figure", ctx)
@@ -299,6 +328,55 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
       paste(c("(Follow the instructions of my first message in this chat.)", "",
               p$user), collapse = "\n")
     list(context = ctx, text = text, system = p$system, task = "table")
+  }
+  # a request of shell sheets (or of the TOC items no sheet chose): each
+  # sheet's lines and text; the reports the AI's to name
+  sheet_prompt_of <- function(us, family, noshell = character()) {
+    ex <- if (is.null(names(examples))) examples
+          else unname(examples[names(examples) == family])
+    if (!length(ex)) ex <- NULL
+    if (!is.null(ex)) ex <- ifelse(file.exists(ex), ex, file.path(study_dir, ex))
+    sheets <- vapply(us, `[[`, "", "sheet")
+    text <- if (length(noshell)) {
+      paste(c(.ai_noshell_lines(shell, noshell), .ai_noshell_text(shell, noshell)), collapse = "\n")
+    } else {
+      paste(c(unlist(lapply(sheets, function(s) .ai_sheet_lines(shell, s))),
+              unlist(lapply(sheets, function(s) .ai_sheet_text(shell, s)))), collapse = "\n")
+    }
+    ctx <- tfl_ai_context("table", shell = text, datasets = adam, study_dir = study_dir,
+                          language = language, examples = ex)
+    ctx$shell <- placed_sheets(ctx$shell, sheets)
+    ctx$sheet_mode <- TRUE
+    ctx$sheets <- sheets
+    ids <- if (length(noshell)) noshell else unique(unlist(lapply(us, `[[`, "ids")))
+    ctx$candidates <- ids
+    ctx$toc_keys <- shell$toc$key
+    ctx$ai_templates <- templates
+    if (agent) ctx$ai_files <- TRUE
+    p <- tfl_ai_prompt("table", ctx)
+    text <- if (agent) p$user else if (identical(instructions, "each")) format(p) else
+      paste(c("(Follow the instructions of my first message in this chat.)", "",
+              p$user), collapse = "\n")
+    list(context = ctx, text = text, system = p$system, task = "table",
+         ids = if (length(ids)) ids else vapply(sheets, .ai_file_id, ""))
+  }
+  # where a request's sheets are, as the workbook reaches the AI
+  placed_sheets <- function(text, sheets) {
+    at <- if (length(sheets)) paste(sprintf("'%s'", sheets), collapse = ", ") else "(none)"
+    if (identical(workbook, "file")) {
+      return(paste(c(sprintf("The TOC / SHELL workbook is the file `%s`; this request's sheet(s): %s.",
+                             book_path, at),
+                     paste("Use the text below, read from that workbook. When you can open it,",
+                           "use it to check what the text leaves unclear (read the sheet with R:",
+                           "`readxl::read_excel(<file>, sheet = <sheet>)`); when you cannot,",
+                           "decide from this request alone."), "", text), collapse = "\n"))
+    }
+    if (identical(workbook, "text")) return(text)
+    where <- sprintf("The TOC / SHELL workbook `%s` is attached to this message; this request's sheet(s): %s.",
+                     book, at)
+    paste(c(where, if (identical(workbook, "both")) c("", paste(
+      "The text below is read from that workbook; where the two differ, the attached",
+      "workbook is right."), "", text)), collapse = "\n")
   }
   # a request too long is halved until it fits, or holds one report
   # (a chat's with templates: first the templates' arguments by name only)
@@ -329,22 +407,52 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
       .ai_write_text(paste0(head, r[[nm]]$text), file.path(out_dir, paste0(nm, ".md")))
     }
   }
-  batches <- unique(b$batch)
-  n_req <- length(batches) + length(figs)
+  if (sheet_mode) {
+    plan <- .ai_sheet_plan(shell, size, types, families, taken)
+    ub <- plan$ub
+    noshell <- plan$noshell
+    fig_names <- names(plan$figs)
+    figs <- unname(vapply(plan$figs, function(u) if (length(u$ids)) u$ids[1L] else u$sheet, ""))
+    fig_sheets <- unname(vapply(plan$figs, `[[`, "", "sheet"))
+    batches <- names(ub)
+    n_req <- length(ub) + length(figs) + as.integer(length(noshell) > 0L)
+  } else {
+    batches <- unique(b$batch)
+    n_req <- length(batches) + length(figs)
+  }
   tick <- function(i) if (is.function(progress)) progress("request", i, n_req)
   tick(0L)
   req <- list()
   fam <- character()
   for (j in seq_along(batches)) {
     bt <- batches[j]
+    if (sheet_mode) {
+      us <- ub[[bt]]
+      r <- stats::setNames(list(sheet_prompt_of(us, us[[1L]]$family)), bt)
+      write_req(r)
+      req <- c(req, r)
+      fam <- c(fam, us[[1L]]$family)
+      tick(j)
+      next
+    }
     r <- fit(bt, b$output_id[b$batch == bt], b$family[match(bt, b$batch)])
     write_req(r)
     req <- c(req, r)
     fam <- c(fam, rep(b$family[match(bt, b$batch)], length(r)))
     tick(j)
   }
+  if (sheet_mode && length(noshell)) {
+    r <- stats::setNames(list(sheet_prompt_of(list(), "other", noshell = noshell)),
+                         plan$noshell_name)
+    write_req(r)
+    req <- c(req, r)
+    fam <- c(fam, "other")
+    tick(length(batches) + 1L)
+  }
   for (k in seq_along(figs)) {
-    r <- stats::setNames(list(c(fig_prompt_of(figs[k]), list(ids = figs[k]))), fig_names[k])
+    # (a sheet's figure: the sheet whole, its candidates first)
+    fp <- if (sheet_mode) fig_prompt_of(figs[k], sheet = fig_sheets[k]) else fig_prompt_of(figs[k])
+    r <- stats::setNames(list(c(fp, list(ids = figs[k]))), fig_names[k])
     write_req(r)
     req <- c(req, r)
     fam <- c(fam, "figure")
@@ -709,7 +817,7 @@ tfl_ai_requests <- function(study_dir, requests = file.path("ai", "requests")) {
     return(data.frame(request = character(), type = character(), family = character(),
                       outputs = character(),
                       n = integer(), chars = integer(), file = character(),
-                      book = character(), stringsAsFactors = FALSE))
+                      book = character(), sheets = character(), stringsAsFactors = FALSE))
   }
   ctxs <- readRDS(cf)
   nm <- names(ctxs)
@@ -725,7 +833,13 @@ tfl_ai_requests <- function(study_dir, requests = file.path("ai", "requests")) {
     family = vapply(ctxs, function(x) x$family %||% NA_character_, "", USE.NAMES = FALSE),
     outputs = vapply(ctxs, function(x) paste(x$ids, collapse = ", "), "", USE.NAMES = FALSE),
     n = vapply(ctxs, function(x) length(x$ids), 0L, USE.NAMES = FALSE),
-    chars = chars, file = file, book = book, stringsAsFactors = FALSE)
+    chars = chars, file = file, book = book,
+    # (the shell sheets a request is of: tfl_ai_read_shell()$shells)
+    sheets = vapply(ctxs, function(x) {
+      s <- x$context$sheets
+      if (length(s)) paste(s, collapse = " | ") else NA_character_
+    }, "", USE.NAMES = FALSE),
+    stringsAsFactors = FALSE)
   rownames(out) <- NULL
   out
 }

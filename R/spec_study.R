@@ -60,6 +60,9 @@ tfl_read_study_spec <- function(dir) {
     codelists = rd(file.path(spec, "codelists.yml")) %||% list(),
     patterns = patterns,
     toc = rd(file.path(spec, "toc.yml")) %||% list(),
+    # rtfreporter's options for every program of the study (defaults.yml's
+    # options:, by rtfreporter's names: rtfreporter.png_device ...)
+    options = dflt$options %||% list(),
     dir = normalizePath(dir, "/", mustWork = FALSE)),
     class = "tfl_study_spec")
 }
@@ -219,7 +222,7 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   }
   output$data <- if (length(acc$data)) acc$data else output$data
   output$codelists <- acc$codelists
-  output$content <- acc$content
+  output$content <- .any_label_default(acc$content, output, study)
   output$page <- acc$page
   output <- .page_font_to_plan(output)
   attr(output, "resolved") <- TRUE
@@ -562,4 +565,25 @@ tfl_write_study_part <- function(study, part = c("defaults", "patterns", "codeli
   writeLines(yaml::as.yaml(y, indent.mapping.sequence = TRUE, handlers = .yaml_out_handlers()),
              path, useBytes = TRUE)
   invisible(path)
+}
+
+# A table's normalize_ard() without `overall`, of a report whose hierarchy
+# reads a set of records with its "any" row (over_variables = TRUE): the
+# set's any_label (data.yml `records:`), else "Any <id>"
+.any_label_default <- function(items, output, study) {
+  if (inherits(items, "tfl_r") || !identical(output$kind, "table")) return(items)
+  an <- Filter(function(e) !is.null(e$records) && grepl("hierarchical", e$method %||% "") &&
+                 grepl("over_variables\\s*=\\s*TRUE", paste(as.character(e$args %||% ""), collapse = " ")),
+               output$ard$analyses %||% list())
+  if (!length(an)) return(items)
+  rec <- .normalize_ard_sheet(.rows_df(lapply(study$data$records %||% list(), function(e) {
+    m <- lapply(e, .sheet_cell); m$record_id <- m$id; m$id <- NULL; m
+  }), .ard_spec_sheets$records), "records")
+  lab <- .records_any_label(rec, an[[1L]]$records)
+  if (is.null(lab)) return(items)
+  lapply(items, function(it) {
+    if (identical(it$fn, "normalize_ard") && is.null(it$args$overall) &&
+        length(it$args$hierarchy)) it$args$overall <- lab
+    it
+  })
 }

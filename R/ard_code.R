@@ -418,12 +418,25 @@
 
 # The denominator column as R: `population` (the analysis set), "row" /
 # "column" / "cell" (cards' percentages within a row, a column, of the
-# whole), a population (its analysis set), or a dataset (its records of the
-# analysis set's subjects)
-.den_code <- function(den, x, pop, subj, population = "population") {
+# whole), a population (its analysis set), a dataset (its records of the
+# analysis set's subjects), or numbers given: one (every column's N) or
+# one a value of the analysis's by (`c("Drug X" = 86, "Placebo" = 85)`),
+# that many subjects of each value -- a data cards counts the subjects of,
+# by the by, as it counts a population's
+.den_code <- function(den, x, pop, subj, population = "population", by = NA) {
   if (is.null(den) || is.na(den)) return(NULL)
   if (den == "population") return(population)
   if (den %in% .den_words) return(encodeString(den, quote = "\""))
+  if (den %in% .objects_sheet(x)$object_id) return(den)
+  num <- .den_numbers(den)
+  if (!is.null(num)) {
+    if (is.null(names(num))) return(sprintf("%dL", num))
+    b <- .split_bar(by)
+    if (length(b) != 1L) return(NULL)
+    return(sprintf("data.frame(%s = rep(%s, %s), %s = seq_len(%dL))",
+                   b, .lay(.c_str(names(num)), width = Inf), .lay(.cl("c", as.list(sprintf("%dL", num))), width = Inf),
+                   subj, sum(num)))
+  }
   if (den %in% x$populations$population_id) {
     return(paste0("pop_", .r_name(den)))
   }
@@ -432,6 +445,49 @@
   if (is.null(pop)) obj else
     sprintf("dplyr::semi_join(%s, dplyr::select(%s, %s), by = %s)", obj, population,
             subj, .q(subj))
+}
+
+# A denominator of numbers: one whole number (`86`), or whole numbers
+# named by the values of the by (`c("Drug X" = 86, "Placebo" = 85)`, a
+# YAML map `{Drug X: 86, Placebo: 85}` read as that).  The numbers (named
+# or not), or NULL when the text is not one; `NA` when it is written as a
+# vector of numbers but is not one (a name missing, a number not whole).
+.den_numbers <- function(den) {
+  if (is.null(den) || length(den) != 1L || is.na(den)) return(NULL)
+  t <- trimws(den)
+  if (grepl("^[0-9]+$", t)) return(as.integer(t))
+  if (!grepl("^c\\s*\\(", t)) return(NULL)
+  e <- tryCatch(str2lang(t), error = function(e) NULL)
+  if (!is.call(e) || !identical(e[[1L]], as.name("c")) || length(e) < 2L) return(NA)
+  args <- as.list(e)[-1L]
+  nm <- names(args)
+  ok <- !is.null(nm) && all(nzchar(nm)) && !anyDuplicated(nm) &&
+    all(vapply(args, function(v) is.numeric(v) && length(v) == 1L && !is.na(v) &&
+                 v >= 0 && v == round(v), NA))
+  if (!ok) return(NA)
+  stats::setNames(as.integer(unlist(args)), nm)
+}
+
+# A YAML denominator as the sheet's cell: a map of numbers by the by's
+# values (`{Drug X: 86, Placebo: 85}`) as `c("Drug X" = 86, "Placebo" =
+# 85)`; anything else as it is
+.den_cell <- function(v) {
+  if (is.list(v) && !is.null(names(v)) && length(v) &&
+      all(vapply(v, function(z) is.numeric(z) && length(z) == 1L, NA))) v <- unlist(v)
+  if (is.numeric(v) && !is.null(names(v))) {
+    return(sprintf("c(%s)", paste(sprintf("%s = %s", encodeString(names(v), quote = "\""),
+                                          format(v, scientific = FALSE, trim = TRUE)),
+                                  collapse = ", ")))
+  }
+  v
+}
+
+# A denominator cell as YAML writes it: numbers by value a map, one number
+# a number, anything else the text
+.den_yaml <- function(v) {
+  n <- .den_numbers(v)
+  if (is.null(n) || (length(n) == 1L && is.na(n))) return(v)
+  if (is.null(names(n))) n else as.list(n)
 }
 
 # Does a denominator count subjects of a data (a population, a dataset, an
@@ -821,6 +877,12 @@
   own_data <- several && length(levels) > 0L
   lv_of <- function(o) if (is.null(levels)) NULL else levels[[o]]
   lv1 <- if (!several) lv_of(outs[1L])
+  # the named values: the study's, then each report's (in its part)
+  ob_all <- .objects_sheet(x)
+  ob_study <- .objects_lines(ob_all[is.na(ob_all$output_id), , drop = FALSE])
+  ob_report <- function(o) {
+    .objects_lines(ob_all[!is.na(ob_all$output_id) & ob_all$output_id == o, , drop = FALSE])
+  }
   code <- if (!several) c(sprintf("report_id <- %s", .q(outs[1L])), "")
   if (own_data) {
     used_ds <- character()
@@ -836,11 +898,19 @@
                 .codelists_lines(lv1), ""),
               "# ---- data ----",
               dl$data,
-              if (length(dl$pops)) c("", "# ---- populations ----", dl$pops))
+              if (length(dl$pops) && !several) c("", "# ---- populations ----", dl$pops))
+    ob1 <- c(ob_study, if (!several) ob_report(outs[1L]))
+    if (length(ob1)) code <- c(code, "", "# ---- objects ----", ob1)
   }
   keys <- tfl_ard_methods()
   par <- a$parent %||% rep(NA_character_, nrow(a))
   if (several) code <- c(code, if (length(code)) "", "ards <- list()")
+  # each analysis's data, by the name the program gives it (tfl_ard_data_names())
+  dnames <- list()
+  one_ds <- character()
+  one_note <- character()
+  one_dn <- data.frame(output_id = character(), analysis_id = character(),
+                       data = character(), stringsAsFactors = FALSE)
   for (o in outs) {
     xo <- x
     ad_o <- .adata_of(ad, o)
@@ -852,13 +922,24 @@
       dl <- .ard_data_lines(x, a[rows, , drop = FALSE], nad_of(o), lv)
       used_ds <- dl$used_ds
       pops <- dl$pops_id
-      part <- c(if (length(lv)) .codelists_lines(lv), dl$data, dl$pops)
+      part <- c(if (length(lv)) .codelists_lines(lv), dl$data, dl$pops, ob_study)
+    } else if (several) {
+      # (its own analysis sets: a name means one thing in a report's part)
+      dl_o <- .ard_data_lines(x, a[rows, , drop = FALSE], nad_of(o), NULL)
+      pops <- dl_o$pops_id
+      part <- dl_o$pops
     }
+    if (several) part <- c(part, ob_report(o))
+    # the data the program makes itself, each with its dataset and what it
+    # is (the comment above it once named <dataset>_sub)
+    auto_ds <- character()
+    auto_note <- character()
     # each analysis's data: the dataset, restricted to the population's
     # subjects (or the population itself when it is that dataset), and to
     # the analysis's own subset -- made once, under a name, for every
     # analysis that reads it
-    taken <- c(.r_name(used_ds), paste0("pop_", .r_name(pops)), ad_o$data_id)
+    taken <- c(.r_name(used_ds), paste0("pop_", .r_name(pops)), ad_o$data_id,
+               ob_all$object_id)
     data_of <- character()
     # the columns each analysis data's analyses read (by, strata,
     # variables; a denominator's by): kept by a data that keeps columns
@@ -893,6 +974,8 @@
         nm <- make.unique(c(taken, dcol[i]), sep = "_")[length(taken) + 1L]
         taken <<- c(taken, nm)
         data_of[[key]] <<- nm
+        auto_ds[[nm]] <<- .adata_dataset(ad_o, dcol[i]) %||% dcol[i]
+        auto_note[[nm]] <<- sprintf("%s (%s)", dcol[i], r$where)
         made <<- c(made, .made_line(nm, dcol[i], r$where, lv))
         return(nm)
       }
@@ -924,12 +1007,23 @@
       nm <- make.unique(c(taken, base), sep = "_")[length(taken) + 1L]
       taken <<- c(taken, nm)
       data_of[[key]] <<- nm
+      auto_ds[[nm]] <<- if (!is.na(r$dataset)) r$dataset else pop_ds
+      rid <- r$records %||% NA
+      rk <- if (!is.na(rid)) match(rid, .records_sheet(x)$record_id) else NA
+      auto_note[[nm]] <<- paste0(
+        if (!is.na(rk)) paste0(rid, if (!is.na(.records_sheet(x)$label[rk]))
+          paste0(" \u2014 ", .records_sheet(x)$label[rk])) else
+          if (!is.na(r$dataset)) r$dataset else pop_ds,
+        if (!is.null(whr)) sprintf(" (%s)", whr),
+        if (!is.null(join)) sprintf("; of the %s subjects", pop))
       made <<- c(made, .make_code(nm, src, c(
         join, if (!is.null(whr)) sprintf("dplyr::filter(%s)", whr),
         if (length(lv)) .levels_step)))
       nm
     }, "")
     names(data_name) <- as.character(rows)
+    dn <- data.frame(output_id = o, analysis_id = a$analysis_id[rows],
+                     data = unname(data_name), stringsAsFactors = FALSE)
     if (several) {
       # the report's part, its code lists put on what its analyses read
       # once the analyses are written (below), as in one report's program
@@ -969,8 +1063,14 @@
       .cl("dplyr::bind_rows", as.list(ard_names))
     if (several) {
       seg <- seq.int(seg_from, length(code))
-      code <- c(code[seq_len(seg_from - 1L)],
-                .levels_where_read(code[seg], lv, first_an = seg_an - seg_from + 1L))
+      renamed <- .ard_sub_names(.levels_where_read(code[seg], lv, first_an = seg_an - seg_from + 1L),
+                                x, auto_ds, auto_note)
+      dnames[[o]] <- .data_names_renamed(dn, attr(renamed, "renamed"), x)
+      code <- c(code[seq_len(seg_from - 1L)], renamed)
+    } else {
+      one_ds <- auto_ds
+      one_note <- auto_note
+      one_dn <- dn
     }
     code <- c(code, "", if (several) {
       .pipe_code("ards[[report_id]]", bound)
@@ -988,8 +1088,94 @@
   if (several) code <- c(code, "", "ard <- dplyr::bind_rows(ards)")
   # (one report's program: an analysis set that is only its adsl_<set> is
   # made once, under that name; the study's keeps pop_* for every report)
-  if (several) return(code)
-  .levels_where_read(.pop_identity(.pop_as_adata(code, ad$data_id)), lv1)
+  if (several) {
+    attr(code, "data_names") <- do.call(rbind, unname(dnames))
+    return(code)
+  }
+  out <- .ard_sub_names(.levels_where_read(.pop_identity(.pop_as_adata(code, ad$data_id)), lv1),
+                        x, one_ds, one_note)
+  attr(out, "data_names") <- .data_names_renamed(one_dn, attr(out, "renamed"), x)
+  attr(out, "renamed") <- NULL
+  out
+}
+
+# Each analysis's data as the program names it at last: the names renamed
+# <dataset>_sub; an analysis set that is its dataset as it is
+# (.pop_identity()) the dataset
+.data_names_renamed <- function(dn, renamed, x) {
+  if (length(renamed)) {
+    hit <- dn$data %in% names(renamed)
+    dn$data[hit] <- unname(renamed[dn$data[hit]])
+  }
+  pops <- x$populations
+  left <- startsWith(dn$data, "pop_")
+  if (any(left) && !is.null(pops)) {
+    k <- match(dn$data[left], paste0("pop_", .r_name(pops$population_id)))
+    dn$data[left] <- ifelse(is.na(k), dn$data[left], .r_name(pops$dataset[k]))
+  }
+  rownames(dn) <- NULL
+  dn
+}
+
+# The names of the data the program makes itself, in a report's code: an
+# analysis set's (built as pop_<id>) and an analysis's own records (built
+# as <dataset>_<set>, ...) become <dataset>_sub, numbered from the second
+# of a dataset in the report (adsl_sub, adsl_sub2), past every name the
+# report's code gives otherwise; a comment above each says what it is.
+# A report's names mean one thing in its part only.
+.ard_sub_names <- function(code, x, auto_ds, auto_note) {
+  head <- regmatches(code, regexpr("^[A-Za-z.][A-Za-z0-9._]* <- ", code))
+  defs <- unique(sub(" <- $", "", head))
+  attr(code, "renamed") <- character()
+  pops <- x$populations
+  pop_obj <- paste0("pop_", .r_name(pops$population_id %||% character()))
+  is_pop <- defs %in% pop_obj
+  autos <- defs[!is_pop & defs %in% names(auto_ds)]
+  old <- c(defs[is_pop], autos)
+  if (!length(old)) return(code)
+  taken <- setdiff(defs, old)
+  new <- character()
+  note <- character()
+  for (d in old) {
+    if (d %in% pop_obj) {
+      k <- match(d, pop_obj)
+      ds <- pops$dataset[k]
+      note[[d]] <- paste0(pops$population_id[k],
+                          if (!is.na(pops$label[k] %||% NA)) paste0(" \u2014 ", pops$label[k]),
+                          if (!is.na(pops$where[k])) sprintf(" (%s)", pops$where[k]))
+    } else {
+      ds <- auto_ds[[d]]
+      note[[d]] <- auto_note[[d]]
+    }
+    base <- paste0(.r_name(ds), "_sub")
+    nm <- base
+    n <- 1L
+    while (nm %in% c(taken, new)) {
+      n <- n + 1L
+      nm <- paste0(base, n)
+    }
+    new[[d]] <- nm
+  }
+  # (through marks: a new name may be an old one)
+  word <- function(w) paste0("(^|[^A-Za-z0-9._])", gsub(".", "\\.", w, fixed = TRUE),
+                             "(?=$|[^A-Za-z0-9._])")
+  mark <- sprintf("\001%d\001", seq_along(old))
+  for (i in seq_along(old)) {
+    code <- gsub(word(old[i]), paste0("\\1", mark[i]), code, perl = TRUE)
+    note <- gsub(word(old[i]), paste0("\\1", mark[i]), note, perl = TRUE)
+  }
+  for (i in seq_along(old)) {
+    code <- gsub(mark[i], new[[old[i]]], code, fixed = TRUE)
+    note <- gsub(mark[i], new[[old[i]]], note, fixed = TRUE)
+  }
+  out <- character()
+  for (k in seq_along(code)) {
+    hit <- which(startsWith(code[k], paste0(new, " <- ")))
+    if (length(hit)) out <- c(out, sprintf("# %s: %s", new[hit[1L]], note[[hit[1L]]]))
+    out <- c(out, code[k])
+  }
+  attr(out, "renamed") <- new
+  out
 }
 
 # One report's program: the code lists put on the data the analyses read
@@ -1065,7 +1251,7 @@
   k <- .method_key(r$method, keys)
   kind <- if (is.na(k)) "" else keys$kind[k]
   call_fn <- if (is.na(k)) r$method else keys$call[k]
-  den <- .den_code(r$denominator, x, pop, subj, population = pop_name)
+  den <- .den_code(r$denominator, x, pop, subj, population = pop_name, by = r$by)
   fmt <- c(if (!is.na(k)) .parse_formats(keys$formats[k]),
            .parse_formats(r$formats))
   fmt <- fmt[!duplicated(names(fmt), fromLast = TRUE)]
@@ -1282,7 +1468,7 @@
   child <- function(kr, fmt_fun) {
     given <- given_of(kr)
     has <- function(arg) arg %in% given
-    den <- .den_code(kr$denominator, x, pop, subj, population = pop_name)
+    den <- .den_code(kr$denominator, x, pop, subj, population = pop_name, by = kr$by)
     if (stack) kr$by <- NA
     .analysis_node(kr, keys, subj, has, den,
                    data = if (stack) NULL else ".x",
@@ -1360,7 +1546,7 @@
   k <- .method_key(r$method, keys)
   kind <- if (is.na(k)) "" else keys$kind[k]
   call_fn <- if (is.na(k)) r$method else keys$call[k]
-  den <- .den_code(r$denominator, x, pop, subj, population = pop_name)
+  den <- .den_code(r$denominator, x, pop, subj, population = pop_name, by = r$by)
   fmt <- c(if (!is.na(k)) .parse_formats(keys$formats[k]),
            .parse_formats(r$formats))
   fmt <- fmt[!duplicated(names(fmt), fromLast = TRUE)]
