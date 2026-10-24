@@ -1285,7 +1285,7 @@ attr(cl, "set_by_hand")   # what the define could not give
 
 | Sheet | Columns |
 |---|---|
-| `listings` (one row a listing) | `output_id`, `type` (`multiline`), `dataset`, `where` (R), `sort` (`-` for descending), `max_rows`, `blank_row` (`TRUE` / `FALSE`), `wrap` (the name of an R function) |
+| `listings` (one row a listing) | `output_id`, `type` (`multiline`), `dataset`, `where` (R), `sort` (`-` for descending), `max_rows`, `blank_row` (`TRUE` / `FALSE`), `wrap` (the name of an R function), `align` (the columns' default alignment: `left` / `center` / `right`), `record` (the hidden record column: `FALSE` none, a name for it) |
 | `listing_cols` (one row a column) | `output_id`, `vars` (`|` stacks variables in one column), `label`, `width` (characters), `sep` (quoted to keep spaces: `" / "`), `align`, `collapse_repeats` |
 
 Layout on the page is rtfreporter's `listing_spec()` / `as_rtftables()`.
