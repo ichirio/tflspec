@@ -57,7 +57,18 @@ tfl_sheets_from_spec <- function(study, outputs) {
   outs <- outs[order(match(ids, toc_ids, nomatch = length(toc_ids) + 1L), seq_along(ids))]
   # a template SPEC: the sheets hold its items (tfl_template_to_spec()),
   # the ARD's analyses among them
-  outs <- lapply(outs, function(o) if (is.null(.tpl_spec_of(o))) o else tfl_template_to_spec(o, s))
+  # (one that cannot be expanded -- a KM type with no `data:` steps -- stays
+  # as it is, its template and args kept, and is named in a warning: the
+  # study still reads, the report can be opened and fixed; running it says
+  # the error again)
+  outs <- lapply(outs, function(o) {
+    if (is.null(.tpl_spec_of(o))) return(o)
+    tryCatch(tfl_template_to_spec(o, s), error = function(e) {
+      warning(sprintf("%s: kept as it is (its template not expanded): %s", o$id,
+                      conditionMessage(e)), call. = FALSE)
+      o
+    })
+  })
   bridge <- .bridge_fn(".plan_sheets_from_content")
   nc <- list()
   note <- function(output, part, reason) nc[[length(nc) + 1L]] <<- data.frame(
