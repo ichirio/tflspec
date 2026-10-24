@@ -173,6 +173,18 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
       if (nrow(ob)) data$objects <- .conv_rows(ob, note, NA, "objects", r_cols = "code",
                                                rename = c(object_id = "id"))
     }
+    # condition-defined groups: a group each, its levels in the sheet's order
+    if (!is.null(ard$groups) && nrow(ard$groups)) {
+      gs <- ard$groups
+      data$groups <- lapply(unique(gs$group_id), function(g) {
+        d <- gs[gs$group_id == g, , drop = FALSE]
+        Filter(Negate(is.null), list(
+          id = g, label = if (!is.na(d$label[1L])) d$label[1L],
+          levels = lapply(seq_len(nrow(d)), function(k) Filter(Negate(is.null), list(
+            level = if (!is.na(d$level[k])) d$level[k] else "",
+            where = if (!is.na(d$where[k])) tfl_r(d$where[k]))))))
+      })
+    }
     put("spec/data.yml", data)
   }
 

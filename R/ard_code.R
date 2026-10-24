@@ -1052,6 +1052,11 @@
       lines <- if (length(kids)) {
         .ard_wrapper_lines(xo, r, a[kids, , drop = FALSE], keys, subj,
                            data_name[[as.character(i)]], ard_names[j])
+      } else if (length(.split_bar(r$groups %||% NA))) {
+        # condition-defined groups: the analysis once in each level
+        .ard_groups_lines(xo, r, .ard_analysis_lines(xo, r, keys, subj, "data", "ard",
+                                                     avoid),
+                          data_name[[as.character(i)]], ard_names[j])
       } else {
         .ard_analysis_lines(xo, r, keys, subj, data_name[[as.character(i)]],
                             ard_names[j], avoid)
@@ -1597,4 +1602,52 @@
   .cl(cl$fn, lapply(cl$args, function(a) {
     if (is.list(a) && !inherits(a, "tfl_r") && !is.null(a$fn)) .call_as_cl(a) else as.character(a)
   }))
+}
+
+# ---- condition-defined groups (the ARS's grouping factors) ------------------
+#
+# An analysis with `groups` runs once in each level of each group the
+# definition's `groups` sheet defines -- a level a condition on its data, the
+# levels free to overlap ("1 or 2", ">= 3 months") -- and each level's rows
+# say it in group2 / group2_level, in the definition's order.  Written as a
+# list of the conditions and a loop over them, to be read and changed by
+# hand: the analysis's own code inside, its data `data` and its ARD `ard`.
+.ard_groups_lines <- function(x, r, inner, data, name) {
+  gd <- x$groups
+  ids <- .split_bar(r$groups)
+  defs <- lapply(ids, function(g) gd[gd$group_id == g, , drop = FALSE])
+  list_name <- paste0("groups_", name)
+  lvl <- function(d) {
+    vapply(seq_len(nrow(d)), function(k) {
+      w <- d$where[k]
+      # (a level of no name -- the whole group, "All" -- is "NA" here, as R
+      # names no list element "", and prints as an empty level)
+      lv <- if (is.na(d$level[k]) || !nzchar(d$level[k])) "NA" else d$level[k]
+      sprintf("    %s = %s", .q(lv),
+              .q(if (is.na(w) || !nzchar(trimws(w))) "TRUE" else w))
+    }, "")
+  }
+  glabel <- function(d) if (!is.na(d$label[1L])) d$label[1L] else d$group_id[1L]
+  head <- c(sprintf("# %s: in each level of %s (group2 / group2_level)", r$analysis_id,
+                    paste(ids, collapse = ", ")),
+            sprintf("%s <- list(", list_name),
+            unlist(lapply(seq_along(defs), function(k) {
+              d <- defs[[k]]
+              body <- lvl(d)
+              body[-length(body)] <- paste0(body[-length(body)], ",")
+              c(sprintf("  %s = list(", .q(glabel(d))), body,
+                if (k < length(defs)) "  )," else "  )")
+            })),
+            ")")
+  inner <- unlist(strsplit(inner, "\n", fixed = TRUE))
+  c(head,
+    sprintf("%s <- dplyr::bind_rows(unlist(lapply(names(%s), function(group) {", name, list_name),
+    sprintf("  lapply(names(%s[[group]]), function(level) {", list_name),
+    sprintf("    data <- dplyr::filter(%s, !!rlang::parse_expr(%s[[group]][[level]]))",
+            data, list_name),
+    paste0("    ", inner),
+    "    dplyr::mutate(ard, group2 = group,",
+    "                  group2_level = list(if (identical(level, \"NA\")) \"\" else level))",
+    "  })",
+    "}), recursive = FALSE))")
 }
