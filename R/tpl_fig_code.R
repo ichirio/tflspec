@@ -4,7 +4,7 @@
 # on the data the program made (its data steps: the dataset read, the
 # analysis set's subjects, the parameter), a ggplot back.  The arguments
 # of the data steps (tfl_param(stage = "data")) are the program's, not the
-# call's.  (The figures' former functions, tpl_km_simple() ..., stay.)
+# call's.  (The figures' former functions, tpl_mean_se() ..., stay.)
 
 # Parameters the data step takes (stage "data"); the rest the call's
 .tpl_fig_data_stage <- function(params, names = c("population", "subset", "data", "where")) {
@@ -116,7 +116,8 @@
   own_plot <- Filter(Negate(is.null), lapply(stats::setNames(nm = names(output$plot)), function(k) {
     if (!identical(output$plot[[k]], tp$plot[[k]])) output$plot[[k]]
   }))
-  as_arg <- if (generic) intersect(names(own_plot), intersect(.tpl_km_plot_args, names(t$params)))
+  as_arg <- if (generic) intersect(names(own_plot), intersect(.tpl_km_plot_args,
+                                                                 names(.tpl_shown(t$params))))
   for (k in as_arg) args[[k]] <- own_plot[[k]]
   keep <- c(keep, setdiff(as_arg, keep))
   own_plot <- .merge_map(if (generic) args$plot, own_plot[setdiff(names(own_plot), as_arg)])

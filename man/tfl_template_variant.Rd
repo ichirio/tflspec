@@ -10,7 +10,8 @@ tfl_template_variant(
   defaults = list(),
   label = NULL,
   example = NULL,
-  ai = NULL
+  ai = NULL,
+  hide = NULL
 )
 }
 \arguments{
@@ -28,6 +29,13 @@ example run it with; \code{NULL}: \code{from}'s.}
 
 \item{ai}{\code{TRUE} to list it in the AI requests that answer with
 templates (\code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}}\code{(templates = TRUE)}); \code{NULL}: \code{from}'s.}
+
+\item{hide}{Parameters of \code{from} that are not the variant's arguments:
+left out of its help, \code{\link[=tfl_templates]{tfl_templates()}} and the AI's list, and a
+report's \verb{template: args:} may not give them.  They keep their
+defaults and the study standard's values (\code{tfl_param(study = )}), as
+the look of a figure's report type takes the figure style standard's;
+a report changes that with its own items (\code{+}) or \verb{plot:}.}
 }
 \value{
 \code{name}, invisibly.

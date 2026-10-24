@@ -422,7 +422,7 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
 #'   their labels; `NULL` none.
 #' @return A [rtfreporter::table_plan()].
 #' @seealso [tfl_template_expand()] for the items (the B use);
-#'   [tfl_templates()]; a figure template's own function ([tpl_km_simple()]
+#'   [tfl_templates()]; a figure template's own function ([tpl_mean_se()]
 #'   ...).
 #' @examples
 #' if (requireNamespace("cards", quietly = TRUE)) {
@@ -698,7 +698,7 @@ tfl_templates <- function() {
   t <- lapply(nm, .tpl_get, fn = "tfl_templates()")
   data.frame(name = nm, kind = vapply(t, `[[`, "", "kind"),
              layout = vapply(t, `[[`, "", "layout"),
-             params = vapply(t, function(x) paste(names(x$params), collapse = ", "), ""),
+             params = vapply(t, function(x) paste(names(.tpl_shown(x$params)), collapse = ", "), ""),
              package = vapply(t, function(x) x$package %||% "tflspec", ""),
              call = vapply(t, function(x) x$call %||% paste0("tpl_", x$name), ""),
              from = vapply(t, function(x) x$from %||% NA_character_, ""),

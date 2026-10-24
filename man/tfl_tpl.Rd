@@ -44,6 +44,6 @@ if (requireNamespace("cards", quietly = TRUE)) {
 }
 \seealso{
 \code{\link[=tfl_template_expand]{tfl_template_expand()}} for the items (the B use);
-\code{\link[=tfl_templates]{tfl_templates()}}; a figure template's own function (\code{\link[=tpl_km_simple]{tpl_km_simple()}}
+\code{\link[=tfl_templates]{tfl_templates()}}; a figure template's own function (\code{\link[=tpl_mean_se]{tpl_mean_se()}}
 ...).
 }

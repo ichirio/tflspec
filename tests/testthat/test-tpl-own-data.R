@@ -24,10 +24,10 @@ test_that("own data steps come before the template's call steps; the same figure
   data <- lapply(c(adsl = "adsl", adtte = "adtte"), function(x)
     as.data.frame(haven::read_xpt(file.path(d, "adam", paste0(x, ".xpt")))))
   st <- tfl_read_study_spec(d)
-  args <- list(group = "TRT01A", x_max = 52, x_by = 4)
-  # the template's own data step
+  args <- list(by = "TRT01A", time_unit = "weeks", x_max = 52, x_step = 4, y_type = "risk")
+  # the template's own data step (the layout km's; its types take the report's)
   o1 <- tfl_output("F-9-tpl", "figure", population = "SAF", label = "KM", extends = "defaults",
-                   template = list(name = "km_disc", args = args))
+                   template = list(name = "km", args = c(args, list(param = "TTDISC"))))
   r1 <- tfl_resolve_output(o1, st)
   n_call <- attr(r1, "template")$call_steps
   expect_gt(n_call, 0L)
@@ -35,7 +35,7 @@ test_that("own data steps come before the template's call steps; the same figure
   own_steps <- utils::head(steps, length(steps) - n_call)
   # the same data stage, said by the report
   o2 <- tfl_output("F-9-own", "figure", population = "SAF", label = "KM", extends = "defaults",
-                   template = list(name = "km_disc", args = args),
+                   template = list(name = "km", args = args),
                    data = list(steps = own_steps))
   r2 <- tfl_resolve_output(o2, st)
   expect_identical(length(r2$data$steps), length(steps))
@@ -43,7 +43,7 @@ test_that("own data steps come before the template's call steps; the same figure
   expect_identical(vapply(r2$data$steps, `[[`, "", "step"), vapply(steps, `[[`, "", "step"))
   expect_true(attr(r2, "template")$ok)
   x <- tplfig_check(o2, d, data)
-  expect_match(paste(x$a, collapse = "\n"), "\"km_disc\"", fixed = TRUE)
+  expect_match(paste(x$a, collapse = "\n"), "\"km\"", fixed = TRUE)
   p1 <- tplfig_png(suppressMessages(tfl_content_run(r1, data)))
   expect_identical(tplfig_png(suppressMessages(tfl_content_run(r2, data))), p1)
 })
@@ -55,22 +55,32 @@ test_that("a report's own steps other than the template's: theirs, then the call
   own <- list(list(step = "read", dataset = "ADTTE"),
               list(step = "param", value = "PFS"))
   o <- tfl_output("F-9", "figure", extends = "none",
-                  template = list(name = "km_disc", args = list(group = "TRT01A")),
+                  template = list(name = "km_cumulative", args = list(by = "TRT01A")),
                   data = list(steps = own))
   ro <- tfl_resolve_output(o, s)
   n <- attr(ro, "template")$call_steps
   expect_identical(utils::head(ro$data$steps, 2L), own)
   expect_length(ro$data$steps, 2L + n)
-  expect_identical(ro$data$steps[[3L]]$step, "survfit")
+  # (the time's unit: the call's first step)
+  expect_identical(ro$data$steps[[3L]]$step, "time_unit")
+  expect_identical(ro$data$steps[[4L]]$step, "survfit")
 })
 
-test_that("no own steps, or a table template: as before", {
+test_that("no own steps (the layout km), or a table template: as before; a KM type wants them", {
   d <- system.file("extdata", "spec-yaml", package = "tflspec")
   s <- tfl_read_study_spec(d)
   o <- tfl_output("F-9", "figure", extends = "none",
-                  template = list(name = "km_disc", args = list(group = "TRT01A")))
+                  template = list(name = "km_cumulative", args = list(by = "TRT01A")))
+  # (a KM type: its data stage the report's -- none said, no report)
+  expect_error(tfl_resolve_output(o, s), "its own `data:` steps", fixed = TRUE)
+  o$data <- list(steps = list(list(step = "read", dataset = "ADTTE")))
+  expect_error(tfl_resolve_output(o, s), "keep no parameter", fixed = TRUE)
+  o$data <- list(steps = list(list(step = "read", dataset = "ADSL")))
+  expect_true(attr(tfl_resolve_output(o, s), "template")$ok)
+  o <- tfl_output("F-9", "figure", extends = "none",
+                  template = list(name = "km", args = list(by = "TRT01A")))
   ro <- tfl_resolve_output(o, s)
-  ex <- tfl_template_expand("km_disc", list(group = "TRT01A"))
+  ex <- tfl_template_expand("km", list(by = "TRT01A"))
   expect_identical(length(ro$data$steps), length(ex$data$steps))
   expect_true(attr(ro, "template")$ok)
 })

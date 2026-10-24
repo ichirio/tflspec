@@ -33,8 +33,8 @@ SPEC gives and the study's defaults it took, then the study's and the
 report's own lines after it, each marked; \code{"items"} writes the items
 it stands for, as for any report (and so does \code{"call"}, with a message,
 when the call cannot say the report's own table roles, data or
-normalization).  A figure's template (\code{km_simple}): its data steps
-written out, then \verb{content <- tpl_<name>(<data>, ...)} and the
+normalization).  A figure's template (\code{km_survival}): its data steps
+written out, then \verb{content <- tfl_tpl(<data>, "<name>", ...)} and the
 report's own items \code{+}-ed after it; \code{"items"} (or a report that
 replaces one of the template's layers) writes its design.}
 }
