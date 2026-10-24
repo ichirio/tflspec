@@ -166,3 +166,49 @@ test_that("add = TRUE: a TOC item asked for already stops; overwrite asks it ane
   # candidate of several sheets, each sheet's request once)
   expect_setequal(tfl_ai_requests(d)$request, r$requests$request)
 })
+
+test_that("a sheet is asked for the TOC items it is the best sheet of; a close number elsewhere's stays a candidate", {
+  skip_if_not_installed("openxlsx")
+  skip_if_not_installed("haven")
+  f <- tempfile(fileext = ".xlsx")
+  d <- tempfile()
+  on.exit(unlink(c(f, d), recursive = TRUE), add = TRUE)
+  wb <- openxlsx::createWorkbook()
+  openxlsx::addWorksheet(wb, "TOC")
+  openxlsx::writeData(wb, "TOC", data.frame(
+    `Output No.` = paste("Table", c("14.1.1", "14.1.2", "14.1.3")),
+    Title = c("Subject Disposition", "Subject Disposition by Site", "Subject Disposition by Country"),
+    check.names = FALSE), startRow = 2)
+  body <- list(t(c("", "Placebo", "Drug X")), t(c("n", "xx", "xx")), t(c("Mean (SD)", "xx.x", "xx.x")))
+  for (k in 1:3) {
+    s <- sprintf("t.14.1.%d", k)
+    openxlsx::addWorksheet(wb, s)
+    lines <- c(list(sprintf("Table 14.1.%d  Subject Disposition", k), "All Subjects"), body)
+    for (j in seq_along(lines)) openxlsx::writeData(wb, s, lines[[j]], startRow = j, colNames = FALSE)
+  }
+  openxlsx::saveWorkbook(wb, f, overwrite = TRUE)
+  dir.create(file.path(d, "adam"), recursive = TRUE)
+  haven::write_xpt(tflspec:::.ai_chr(tflspec::adsl), file.path(d, "adam", "adsl.xpt"))
+  r <- tfl_ai_prepare(d, f, adam = "adam", quiet = TRUE, mode = "agent", templates = FALSE)
+  rq <- r$requests
+  # each sheet its own TOC item, not the close numbers of the others
+  expect_identical(rq$n[rq$request %in% sprintf("t.14.1.%d", 1:3)], c(1L, 1L, 1L))
+  expect_false(grepl("14.1.2", rq$outputs[rq$request == "t.14.1.1"], fixed = TRUE))
+  p <- paste(readLines(file.path(d, rq$file[rq$request == "t.14.1.1"]), encoding = "UTF-8"),
+             collapse = "\n")
+  expect_match(p, "sheet 't.14.1.2' fits it better", fixed = TRUE)
+  # an answer of its own report alone: no error for the others' (theirs to answer)
+  own <- list(a = "Table-14.1.1", b = "Table-14.1.2", c = "Table-14.1.3")
+  ans <- function(ids) list(outputs = stats::setNames(as.list(ids), ids))
+  expect_identical(.ai_sheet_answer_ids("Table-14.1.1", ans("Table-14.1.1"), "a", own),
+                   "Table-14.1.1")
+  # another sheet's report in the answer: that request's, not this one's
+  expect_identical(.ai_sheet_answer_ids("Table-14.1.1", ans(c("Table-14.1.1", "Table-14.1.2")),
+                                        "a", own), "Table-14.1.1")
+  # a report the sheet writes that no request was asked for: written
+  expect_identical(.ai_sheet_answer_ids("Table-14.1.1", ans(c("Table-14.1.1", "Table-14.1.9")),
+                                        "a", own), c("Table-14.1.1", "Table-14.1.9"))
+  # a sheet asked for none (its name stands in): the answer's reports
+  own$g <- character()
+  expect_identical(.ai_sheet_answer_ids("Cover", ans("Table-14.1.8"), "g", own), "Table-14.1.8")
+})
