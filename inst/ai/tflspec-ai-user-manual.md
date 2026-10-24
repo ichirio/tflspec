@@ -581,8 +581,10 @@ tfl_ai_unpack(a, "study")                           # spec/outputs/<id>.yml, spe
   text)` writes one from pasted text); `tfl_ai_collect_answers(study_dir)`
   parses, checks and writes them: a list with `reports` (one row a report:
   `ok` / `warning` / `error` / `no answer`, its problems, its file, its
-  request's repair prompt left in `ai/repairs/`), `next_steps` and
-  `assumptions`.  `tfl_ai_prepare(dir, toc, ...)` does the steps before
+  request's repair prompt left in `ai/repairs/`), `next_steps`,
+  `assumptions` and `manifest` (every report the answers list first,
+  `reports:` -- `id`, `title`, `split`, `toc` --, with its status; also
+  `ai/manifest.csv`, to check the count against the TOC).  `tfl_ai_prepare(dir, toc, ...)` does the steps before
   (the study folder when there is none, the ADaM summary, the workbook
   read, the requests) in one call and returns a list (`requests`, `toc`,
   `sheets`, `adam`, `files`, `next_steps`); `dry_run = TRUE` reads and

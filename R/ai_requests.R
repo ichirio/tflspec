@@ -548,9 +548,22 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
 #'   `next_steps` (a request's next step, named by the request),
 #'   `assumptions` (the study's `spec/_assumptions.yml` for these reports:
 #'   `output_id`, `where`, `item`, `assumption`, `question`), `stray` (answer
-#'   files named after no request), `requests` (the requests' folder) and
+#'   files named after no request), `requests` (the requests' folder),
 #'   `templates` (each request's setting, [tfl_ai_prepare()]'s `templates`:
-#'   a logical named by the request).
+#'   a logical named by the request), `manifest` and `manifest_file`
+#'   (below).
+#'
+#'   The manifest is every report the answers say they make, for the person
+#'   to check the count against the TOC (one TOC row can be several
+#'   reports): each answer lists its reports first (`reports:`, one line a
+#'   report: `id`, `title`, `split` -- how its TOC row is split for it --,
+#'   `toc` -- the TOC row's number).  A data frame, one row a report:
+#'   `request`, `toc`, `output_id`, `title`, `split`, `listed` (`FALSE`: a
+#'   report the answer writes but does not list; `NA`: a request not
+#'   answered or not read, its reports as asked) and `status` (the report's,
+#'   as in `reports`, or `"not answered"`: listed, but no report file in the
+#'   answer).  It is written to `ai/manifest.csv` (UTF-8) beside the
+#'   requests' folder, anew at each collection.
 #'   The paths are relative to `study_dir`.  Its print is a summary: each
 #'   request's status, its reports and the next step.
 #' @seealso [tfl_ai_write_requests()]
@@ -581,6 +594,8 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
   }
   rel <- function(...) gsub("\\\\", "/", file.path(...))
   nxt <- character()
+  # each answer's list of its reports (`reports`), for the manifest
+  listed <- list()
   for (nm in names(ctxs)) {
     ids <- .ai_file_id(ctxs[[nm]]$ids)
     f <- .ai_answer_file(file.path(study_dir, answers), nm)
@@ -618,6 +633,7 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
       if (any(part) && !id %in% names(a$outputs)) names(a$outputs)[part] else id
     }), use.names = FALSE)
     a <- .ai_answer_as_asked(a, ids)
+    listed[[nm]] <- .ai_manifest_rows(nm, a)
     a <- .ai_answer_overall(a)
     pr <- tryCatch(tfl_ai_check(a, ctxs[[nm]]$context), error = function(e) e)
     # a figure's design under its report, as a table answer's reports
@@ -727,9 +743,67 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
   rownames(asm) <- NULL
   # each request's setting: answered with templates where they fit, or not
   tpl <- vapply(ctxs, function(x) isTRUE(x$context$ai_templates), NA)
+  # the manifest: every report the answers say they make, for the person to
+  # check the count against the TOC (ai/manifest.csv)
+  man <- .ai_manifest(out, listed)
+  mf <- file.path(dirname(file.path(study_dir, requests)), "manifest.csv")
+  utils::write.csv(man, mf, row.names = FALSE, na = "", fileEncoding = "UTF-8")
   structure(list(reports = out, next_steps = nxt[unique(out$request)], assumptions = asm,
-                 stray = rel(answers, stray), requests = requests, templates = tpl),
+                 stray = rel(answers, stray), requests = requests, templates = tpl,
+                 manifest = man, manifest_file = rel(dirname(requests), "manifest.csv")),
             class = "tfl_ai_collected")
+}
+
+# An answer's manifest rows: the reports its `reports` lists (the ids as
+# its reports are named, the request's ids), then a report it writes but
+# does not list
+.ai_manifest_rows <- function(request, a) {
+  rl <- a$report_list
+  if (is.null(rl)) rl <- .ai_report_list_rows(NULL)
+  outs <- names(a$outputs)
+  same <- function(x, y) {
+    identical(x, y) || .ai_id_same(.ai_id_key(x), .ai_id_key(y))
+  }
+  rl$output_id <- vapply(rl$output_id, function(id) {
+    hit <- outs[vapply(outs, same, NA, y = id)]
+    if (length(hit)) hit[1L] else id
+  }, "", USE.NAMES = FALSE)
+  rl$listed <- rep(TRUE, nrow(rl))
+  more <- setdiff(outs, rl$output_id)
+  if (length(more)) {
+    lab <- vapply(more, function(id) .ai_scalar_text(a$outputs[[id]]$label) %||% NA_character_,
+                  "", USE.NAMES = FALSE)
+    rl <- rbind(rl, data.frame(output_id = more, title = lab, split = NA_character_,
+                               toc = NA_character_, listed = FALSE,
+                               stringsAsFactors = FALSE))
+  }
+  if (!nrow(rl)) return(NULL)
+  cbind(request = request, rl, stringsAsFactors = FALSE)
+}
+
+# The study's manifest: one row a report -- each answer's list, and the
+# reports of a request with no answer (or one not read) as asked; with the
+# report's status from the collection ("not answered": listed, but no
+# report file in the answer)
+.ai_manifest <- function(out, listed) {
+  rows <- do.call(rbind, c(list(data.frame(
+    request = character(), output_id = character(), title = character(),
+    split = character(), toc = character(), listed = logical(),
+    stringsAsFactors = FALSE)), unname(listed)))
+  rest <- out[!out$request %in% rows$request, , drop = FALSE]
+  if (nrow(rest)) {
+    rows <- rbind(rows, data.frame(request = rest$request, output_id = rest$output_id,
+                                   title = NA_character_, split = NA_character_,
+                                   toc = NA_character_, listed = NA,
+                                   stringsAsFactors = FALSE))
+  }
+  key <- paste(out$request, out$output_id, sep = " | ")
+  st <- out$status[match(paste(rows$request, rows$output_id, sep = " | "), key)]
+  rows$status <- ifelse(is.na(st), "not answered", st)
+  # in the requests' order
+  rows <- rows[order(match(rows$request, unique(out$request))), , drop = FALSE]
+  rownames(rows) <- NULL
+  rows[c("request", "toc", "output_id", "title", "split", "listed", "status")]
 }
 
 # An answer's reports under the ids its request asked for: a report named
@@ -916,6 +990,17 @@ print.tfl_ai_collected <- function(x, ...) {
     cat("\nProblems (the first of each report):\n")
     print(as.data.frame(todo[c("request", "output_id", "status", "first")]),
           row.names = FALSE, right = FALSE)
+  }
+  man <- obj$manifest
+  if (!is.null(man) && nrow(man)) {
+    toc <- unique(man$toc[!is.na(man$toc)])
+    cat(sprintf("\nManifest (%s): %d report(s)%s", obj$manifest_file %||% "ai/manifest.csv",
+                nrow(man), if (length(toc)) sprintf(" from %d TOC row(s)", length(toc)) else ""))
+    odd <- c(if (any(man$status == "not answered"))
+               sprintf("%d listed but not answered", sum(man$status == "not answered")),
+             if (any(man$listed %in% FALSE))
+               sprintf("%d answered but not listed", sum(man$listed %in% FALSE)))
+    cat(if (length(odd)) sprintf(" -- %s", paste(odd, collapse = ", ")) else "", "\n", sep = "")
   }
   stray <- obj$stray
   if (length(stray)) {

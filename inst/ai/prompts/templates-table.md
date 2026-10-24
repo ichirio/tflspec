@@ -12,6 +12,9 @@ An example: a demographics table as its template, and the adverse events by SOC 
 
 ```yaml
 tflspec_ai: {task: table, version: 1, outputs: [T-14-1-1, T-14-3-1]}
+reports:
+  - {id: T-14-1-1, title: Demographic and Baseline Characteristics, split: ~, toc: "14.1.1"}
+  - {id: T-14-3-1, title: TEAEs by SOC and PT, split: ~, toc: "14.3.1"}
 outputs:
   - id: T-14-1-1
     kind: table

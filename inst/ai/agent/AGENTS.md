@@ -15,7 +15,7 @@ and `ai/`. If the workspace is a folder above it, use the paths from here.
    `ai/requests/index.md`: the requests, in order.
 2. For each request `ai/requests/<request>.md`, in that order:
    1. Read it, and write the answer it asks for: one ```` ```yaml ```` block
-      (the header, `outputs`, `assumptions`). A request names the files it
+      (the header, `reports`, `outputs`, `assumptions`). A request names the files it
       shares with the others -- `ai/instructions-table.md` or
       `ai/instructions-figure.md` (the instructions and the schema),
       `ai/adam_summary.md`, `spec/data.yml`, `spec/defaults.yml` -- read each
