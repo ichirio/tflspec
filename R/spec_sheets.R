@@ -153,6 +153,14 @@ tfl_sheets_from_spec <- function(study, outputs) {
   objs <- lapply(s$data$objects %||% list(), function(e) {
     m <- lapply(e, cell); m$object_id <- m$id; m$id <- NULL; c(list(output_id = NA_character_), m)
   })
+  # condition-defined groups: a row a level (data.yml `groups:`, each with
+  # its `levels:`, a level and the condition its records meet)
+  ard$groups <- .rows_df(unlist(lapply(s$data$groups %||% list(), function(g) {
+    lapply(g$levels %||% list(), function(l) {
+      list(group_id = cell(g$id), label = cell(g$label), level = cell(l$level),
+           where = cell(l$where))
+    })
+  }), recursive = FALSE), .ard_spec_sheets$groups)
   adata <- list(); analyses <- list()
   listings <- list(); listing_cols <- list(); fig_rows <- list()
   figures <- list()

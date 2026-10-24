@@ -11,10 +11,10 @@ The table template \code{disposition}, layout \code{summary}. Its program is one
    Parameter \tab Tier \tab Stage \tab Default \tab Maps to \tab What \cr
    \code{population} \tab required \tab call \tab  \tab output.population \tab the analysis set's id (SAF) \cr
    \code{subset} \tab other \tab call \tab  \tab  \tab which subjects (R, on the analysis set's ADSL): PART == "Part 1" \cr
-   \code{categorical} \tab other \tab call \tab EOSSTT \tab  \tab  \cr
-   \code{cat_id} \tab other \tab call \tab DISP \tab  \tab  \cr
-   \code{cat_label} \tab other \tab call \tab Status at end of study \tab  \tab  \cr
-   \code{labels} \tab other \tab call \tab Status at end of study, n (\%) \tab  \tab  \cr
+   \code{categorical} \tab other \tab call \tab EOSSTT \tab  \tab the status variable(s), in order \cr
+   \code{cat_id} \tab other \tab call \tab DISP \tab  \tab the status analysis' id in the ARD \cr
+   \code{cat_label} \tab other \tab call \tab Status at end of study \tab  \tab the status analysis' label in the ARD \cr
+   \code{labels} \tab other \tab call \tab Status at end of study, n (\%) \tab  \tab each variable's heading; given by name, merged \cr
    \code{by} \tab usual \tab call \tab TRT01A \tab settings.treatment \tab the column variable \cr
    \code{categorical_statistics} \tab other \tab call \tab n, p \tab  \tab the categorical statistics the ARD has; NULL: cards' own \cr
    \code{groupn_label} \tab other \tab call \tab  \tab  \tab the subjects-per-group analysis' label \cr

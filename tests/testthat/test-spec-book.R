@@ -42,17 +42,17 @@ test_that("the report writer keeps the report keys and the report sheets", {
   expect_identical(back$study$key, c("output_path", "program_dir"))
 })
 
-test_that("an ARD spec is its seven sheets; the catalogs only on request", {
+test_that("an ARD spec is its eight sheets; the catalogs only on request", {
   skip_if_not_installed("readxl")
   a <- tfl_ard_spec_template()
   f <- withr::local_tempfile(fileext = ".xlsx")
   tfl_write_ard_spec(a, f)
   expect_identical(readxl::excel_sheets(f),
-                   c("study", "datasets", "populations", "records", "objects", "analysis_data",
+                   c("study", "datasets", "populations", "records", "objects", "groups", "analysis_data",
                      "analyses"))
   tfl_write_ard_spec(a, f, catalogs = TRUE)
   expect_identical(readxl::excel_sheets(f),
-                   c("study", "datasets", "populations", "records", "objects", "analysis_data",
+                   c("study", "datasets", "populations", "records", "objects", "groups", "analysis_data",
                      "analyses", "_methods", "_statistics"))
 })
 
