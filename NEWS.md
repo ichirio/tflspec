@@ -1,13 +1,5 @@
 # tflspec (development version)
 
-* A listing's `align` and `record` (0.0.24.9235; rtfreporter >= 0.8.2.9097,
-  its `plan_listing(align, record)`): the listings sheet's columns `align`
-  (the alignment of the columns that set none of their own) and `record`
-  (the hidden record column: `FALSE` none, a name for it), written into the
-  program's `listing_spec()` and the run's, and YAML's
-  `plan_listing(align = , record = )` <-> the columns.  The schema's
-  `plan_listing()` takes them.
-
 * In a table with columns (`table_plan(cols = TRT01A)`), every analysis
   has its `by` (0.0.24.9233): one without is a problem of the study's ARD
   definition that says the `by` to write (`by: [TRT01A]`), but for the
