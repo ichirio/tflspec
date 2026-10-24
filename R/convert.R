@@ -571,6 +571,8 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
       more <- .conv_rows(lr[1L, , drop = FALSE], note, id, "listings",
                          drop = c("output_id", "note", "dataset", "where", "sort", "max_rows", "blank_row",
                                   "content_more"))[[1L]]
+      # (record: TRUE / FALSE, or the record column's name)
+      if (!is.null(more$record)) more$record <- .listing_record_value(more$record)
       args <- c(args, more)
       if (!is.na(lr$blank_row[1L]) && identical(lr$blank_row[1L], "TRUE")) blank_row <- TRUE
       # the items the columns cannot say (content_more, YAML): plan_listing()'s

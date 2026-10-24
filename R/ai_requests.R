@@ -194,8 +194,8 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
     # (the shell sheets' requests: the TOC items they name, a sheet with no
     # candidate by its name -- as their contexts keep them)
     asking <- if (sheet_mode) {
-      lone <- shell$shells$sheet[is.na(shell$shells$candidates)]
-      unique(c(shell$toc$output_id, vapply(lone, .ai_file_id, "", USE.NAMES = FALSE)))
+      # (a sheet asked for no TOC item stands under its name)
+      unique(c(shell$toc$output_id, vapply(shell$shells$sheet, .ai_file_id, "", USE.NAMES = FALSE)))
     } else c(b$output_id, figs)
     again <- intersect(asking, had)
     if (length(again) && !isTRUE(overwrite)) {
@@ -596,6 +596,10 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
   nxt <- character()
   # each answer's list of its reports (`reports`), for the manifest
   listed <- list()
+  # a sheet's request: the TOC items it was asked for (the others its
+  # candidates only), by request -- a report another sheet was asked for is
+  # that request's
+  own <- lapply(ctxs, function(x) if (isTRUE(x$context$sheet_mode)) .ai_file_id(x$context$candidates))
   for (nm in names(ctxs)) {
     ids <- .ai_file_id(ctxs[[nm]]$ids)
     f <- .ai_answer_file(file.path(study_dir, answers), nm)
@@ -633,6 +637,8 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
       if (any(part) && !id %in% names(a$outputs)) names(a$outputs)[part] else id
     }), use.names = FALSE)
     a <- .ai_answer_as_asked(a, ids)
+    sheet <- isTRUE(ctxs[[nm]]$context$sheet_mode)
+    if (sheet) ids <- .ai_sheet_answer_ids(ids, a, nm, own)
     listed[[nm]] <- .ai_manifest_rows(nm, a)
     a <- .ai_answer_overall(a)
     pr <- tryCatch(tfl_ai_check(a, ctxs[[nm]]$context), error = function(e) e)
@@ -694,8 +700,11 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
                                                          fixed = TRUE)), NA), , drop = FALSE]
       p <- rbind(hit, own)
       missing <- !id %in% names(a$outputs)
-      st <- if (missing || any(p$severity == "error") || nrow(err) || !is.null(wrote)) "error"
-            else if (nrow(p)) "warning" else "ok"
+      # (a sheet's: the reports are the AI's to decide, one asked for and
+      # not answered a warning)
+      soft <- missing && sheet
+      st <- if ((missing && !soft) || any(p$severity == "error") || nrow(err) || !is.null(wrote)) "error"
+            else if (nrow(p) || soft) "warning" else "ok"
       first <- if (missing) sprintf("not in the answer (it has %s)",
                                     if (length(a$outputs)) paste(names(a$outputs), collapse = ", ")
                                     else "no report")
@@ -709,7 +718,11 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
     rows[[nm]] <- do.call(rbind, per)
     if (any(names(a$outputs) %in% ids) && !all(ids %in% names(a$outputs)) && !nrow(err) &&
         is.null(wrote)) {
-      nxt[nm] <- sprintf(if (agent) "add %s to the answer; save the whole answer over %s%s"
+      nxt[nm] <- if (sheet) {
+        sprintf(paste0("the report files are written; %s (the sheet's numbers) not in the answer: ",
+                       "add them if the sheet makes them, or say why as an assumption"),
+                paste(setdiff(ids, names(a$outputs)), collapse = ", "))
+      } else sprintf(if (agent) "add %s to the answer; save the whole answer over %s%s"
                          else "ask the same chat for %s too; save the whole answer over %s%s",
                          paste(setdiff(ids, names(a$outputs)), collapse = ", "),
                          rel(answers, basename(f)), if (agent) run else "")
@@ -743,6 +756,9 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
   rownames(asm) <- NULL
   # each request's setting: answered with templates where they fit, or not
   tpl <- vapply(ctxs, function(x) isTRUE(x$context$ai_templates), NA)
+  # the TOC items the requests were written from (sheet requests: their
+  # keys; NA: not known)
+  keys <- unique(unlist(lapply(ctxs, function(x) x$context$toc_keys), use.names = FALSE))
   # the manifest: every report the answers say they make, for the person to
   # check the count against the TOC (ai/manifest.csv)
   man <- .ai_manifest(out, listed)
@@ -750,8 +766,27 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
   utils::write.csv(man, mf, row.names = FALSE, na = "", fileEncoding = "UTF-8")
   structure(list(reports = out, next_steps = nxt[unique(out$request)], assumptions = asm,
                  stray = rel(answers, stray), requests = requests, templates = tpl,
+                 toc_items = if (length(keys)) length(keys[!is.na(keys)]) else NA_integer_,
                  manifest = man, manifest_file = rel(dirname(requests), "manifest.csv")),
             class = "tfl_ai_collected")
+}
+
+# A sheet's request's reports, as its answer names them: those it was asked
+# for (none: the sheet's name stands in, dropped once the answer has
+# reports), and every other report the answer writes from the sheet but one
+# another sheet's request was asked for (that one's; warned of, not written)
+.ai_sheet_answer_ids <- function(ids, a, request, own) {
+  outs <- names(a$outputs)
+  if (!length(outs)) return(ids)
+  mine <- own[[request]]
+  if (!length(mine)) ids <- character()
+  others <- unlist(own[setdiff(names(own), request)], use.names = FALSE)
+  ok <- .ai_id_key(others)
+  theirs <- vapply(outs, function(o) {
+    k <- .ai_id_key(o)
+    o %in% others || (!is.na(k) && any(vapply(ok, .ai_id_same, NA, b = k)))
+  }, NA)
+  unique(c(ids, outs[!outs %in% ids & !theirs]))
 }
 
 # An answer's manifest rows: the reports its `reports` lists (the ids as

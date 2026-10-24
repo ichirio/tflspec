@@ -319,6 +319,8 @@ plan_listing:
     spacer_rel_width: {type: number}
     layout: {type: string}
     wrap: {type: "logical|string"}
+    align: {type: "enum[left|center|right]", description: "The alignment of the columns that set none of their own (listing_col(align = ))."}
+    record: {type: "logical|string", description: "The hidden record column: false for none, a string its name; true (the default) the standard one."}
 
 listing_col:
   package: rtfreporter
@@ -1887,6 +1889,14 @@ rtf_footer:
         description: 'The name of an R function that breaks a cell into lines (listing_spec(wrap
           = )); blank: the type''s own rule.'
         example: my_wrap
+      - column: align
+        description: 'The alignment of the columns that set none of their own (listing_spec(align
+          = )): left, center or right; blank: the type''s.'
+        example: left
+      - column: record
+        description: 'The hidden record column (listing_spec(record = )): FALSE for none, a
+          name for it; blank: the standard one.'
+        example: 'FALSE'
       - column: content_more
         description: 'The listing''s items the columns cannot say, as YAML (- fn:
           {args}; plan_hide, plan_paginate_group, a plan_paginate_rows with page_by

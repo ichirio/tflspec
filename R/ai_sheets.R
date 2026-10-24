@@ -314,7 +314,14 @@
       "The TOC items that may be this sheet's (candidates; the TOC can hold mistakes):",
       vapply(seq_len(nrow(cand)), function(j) {
         r <- toc[cand$i[j], , drop = FALSE]
-        paste0("- ", r$output_id, " (", cand$clues[j], ")",
+        # (a close candidate another sheet fits better: that sheet's)
+        first <- strsplit(.na_or(r$sheets %||% NA, ""), " | ", fixed = TRUE)[[1L]][1L]
+        said <- grepl("its number is written in the sheet|the sheet name has its number",
+                      cand$clues[j])
+        else_where <- if (!said && !is.na(first) && !identical(first, sheet)) {
+          sprintf("; sheet '%s' fits it better: write it only if this sheet is its shell", first)
+        }
+        paste0("- ", r$output_id, " (", cand$clues[j], ")", else_where,
                if (!is.na(r$title)) paste0("; title: ", r$title),
                if (!is.na(r$population %||% NA)) paste0("; population: ", r$population),
                if (!is.na(r$info %||% NA)) paste0("; ", r$info))
@@ -385,7 +392,12 @@
     if (!is.na(kind) && !kind %in% types) next
     txt <- paste(c(x$shells$title_in_sheet[j], toc$title[cc$i]), collapse = " ")
     hit <- names(fam_re)[vapply(fam_re, function(re) grepl(re, txt, perl = TRUE), NA)]
-    units[[length(units) + 1L]] <- list(sheet = s, ids = toc$output_id[cc$i],
+    # the reports it is asked for: the TOC items whose number it writes or
+    # its name has (a part a sheet too); the other candidates are for the
+    # AI's reference only, in the text; none: the AI decides
+    said <- grepl("its number is written in the sheet|the sheet name has its number", cc$clues)
+    own <- cc$i[said]
+    units[[length(units) + 1L]] <- list(sheet = s, ids = toc$output_id[own],
                                         kind = .na_or(kind, "table"),
                                         family = if (length(hit)) hit[1L] else "other")
   }

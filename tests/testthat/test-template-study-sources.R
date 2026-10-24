@@ -77,7 +77,7 @@ test_that("tfl_test_templates(): the analysis set or the treatment with no study
   expect_identical(tfl_template_params("ss_arm")$by$study, "settings.treatment")
 })
 
-test_that("km_simple: the analysis set's subjects, by data.yml's definition (a semi join)", {
+test_that("km_survival: the analysis set's subjects, by data.yml's definition (a semi join)", {
   d <- tempfile()
   on.exit(unlink(d, recursive = TRUE))
   dir.create(d)
@@ -87,7 +87,9 @@ test_that("km_simple: the analysis set's subjects, by data.yml's definition (a s
              file.path(d, "data.yml"))
   s <- tfl_read_study_spec(d)
   o <- tfl_output("F-9", "figure", population = "SAF",
-                  template = list(name = "km_simple", args = list(param = "PFS", group = "TRT01A")))
+                  template = list(name = "km", args = list(param = "PFS", by = "TRT01A",
+                                                                risk_table = FALSE, median_line = FALSE,
+                                                                pvalue = FALSE)))
   ro <- tfl_resolve_output(o, s)
   st <- ro$data$steps
   j <- Filter(function(x) identical(x$how, "semi"), st)

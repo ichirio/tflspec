@@ -543,6 +543,11 @@ shells:
 | swimmer | `swimmer_*` | `ggplot`, `geom_segment`, `geom_point` | the events in the legend |
 | forest plot of subgroups | `forest_hr` / `forest_or` | `ggplot`, `geom_vline`, `geom_errorbar`, `geom_point`, `scale_x_log10`; the text at its right a plot of its own, `tfl_text_column` (`wrap_plots`) | the subgroups listed; the comparison arm |
 
+- A request that answers with templates (`tfl_templates()`, not the
+  designer's presets above) has two for a Kaplan-Meier shell:
+  `km_survival` (the survival, a median line) and `km_cumulative` (the
+  cumulative percentage, CI bars -- FDA STF Figures 1, 4 and 13, whose
+  report definitions are in `extdata/report-definitions/`).
 - The data steps: `read` the dataset, `param` the `PARAMCD`, `flag` the
   population flag, `filter`, `levels`, `summary` / `survfit` (an object
   of its own by `name`: `sm`, `fit`).  The time unit: a KM shell in

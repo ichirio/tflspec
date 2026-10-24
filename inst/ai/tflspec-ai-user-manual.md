@@ -269,7 +269,7 @@ sections follow this order.
 | `codelists` | by variable, a list of `{value, label}` in the order printed (the `codelists` sheet); a nested count's inner value may say `under:` (its parent's value, for `complete_hierarchy()`) |
 | `content` | the report, a list of items, each one call: `- plan_cells: {categorical: '{n} ({p:.1f%})'}`.  A table's items are rtfreporter's `normalize_ard()`, `table_plan()` and `plan_*()` verbs; a listing's `plan_listing()` (its columns `listing_col()` calls); a figure's the calls of its plot -- `ggplot`, `geom_*`, `scale_*`, `labs`, `theme` ..., and `tfl_image` last (§7.1).  Or `content: !r ...`, the report's own R |
 | `page` | the document: `titles`, `footnotes`, `header`, `footer` (maps by line number: `'1': {center: Table 14.1.1}`), `tokens`, and rtfreporter's calls by name (`rtf_page: {orientation: landscape}`, `rtf_tables: {auto_section: true}`, `rtf_document: {watermark: DRAFT}`); where a table's page names print is better said in its content, `plan_paginate_group: {heading_at: section}` -- a page's `rtf_tables: {auto_section: }` given wins |
-| `template` | a figure's template (`km_simple` ...); the designer's `plot`, `plots`, `compose` are its old form (§7) |
+| `template` | a template SPEC, `{name: km_survival, args: {...}}` (`tfl_templates()`; FDA STF Figures 1, 4, 13: `km_cumulative`, its data stage in `data:` steps, samples in `extdata/report-definitions/`); a figure designer's preset is a name (`km_simple` ...), the designer's `plot`, `plots`, `compose` its old form (§7) |
 
 **An item's keys are the function's arguments** (§A.2's tables say which
 sheet column is which verb's argument: `pages_max_rows` is
@@ -826,7 +826,7 @@ back): rename the value or choose another separator.
 
 **Template SPEC (prototype):** `tfl_tpl` `tfl_tpl_args` `tfl_tpl_help` `tfl_templates` `tfl_template_expand` `tfl_template_to_spec` `tfl_template` `tfl_param` `tfl_template_params` `tfl_template_variant` `tfl_template_run` `tfl_test_templates` `tfl_use_company_templates`
 `tpl_demog` `tpl_summary` `tpl_disposition` `tpl_ae_soc_pt` `tpl_ae_pt_freq` `tpl_ae_max_grade` `tpl_hierarchical`
-`tpl_shift` `tpl_lab_shift` `tpl_listing` `tpl_km_table` `tpl_param_change` `tpl_lab_abnormal` `tpl_ae_eair` `tpl_ancova` `tpl_km_simple` `tpl_km_risk_table` `tpl_km_ci` `tpl_mean_se` `tpl_mean_ci` `tpl_waterfall` `tpl_forest_hr` `tpl_forest_layout` `tpl_orr` `tpl_stat_block` `tpl_ae_overview`
+`tpl_shift` `tpl_lab_shift` `tpl_listing` `tpl_km_table` `tpl_param_change` `tpl_lab_abnormal` `tpl_ae_eair` `tpl_ancova` `tpl_mean_se` `tpl_mean_ci` `tpl_waterfall` `tpl_forest_hr` `tpl_forest_layout` `tpl_orr` `tpl_stat_block` `tpl_ae_overview`
 `tfl_read_template_sheets` `tfl_write_template_yaml`
 
 **AI-assisted drafting:** `tfl_ai_tasks` `tfl_ai_context` `tfl_ai_schema`
@@ -1287,7 +1287,7 @@ attr(cl, "set_by_hand")   # what the define could not give
 
 | Sheet | Columns |
 |---|---|
-| `listings` (one row a listing) | `output_id`, `type` (`multiline`), `dataset`, `where` (R), `sort` (`-` for descending), `max_rows`, `blank_row` (`TRUE` / `FALSE`), `wrap` (the name of an R function) |
+| `listings` (one row a listing) | `output_id`, `type` (`multiline`), `dataset`, `where` (R), `sort` (`-` for descending), `max_rows`, `blank_row` (`TRUE` / `FALSE`), `wrap` (the name of an R function), `align` (the columns' default alignment: `left` / `center` / `right`), `record` (the hidden record column: `FALSE` none, a name for it) |
 | `listing_cols` (one row a column) | `output_id`, `vars` (`|` stacks variables in one column), `label`, `width` (characters), `sep` (quoted to keep spaces: `" / "`), `align`, `collapse_repeats` |
 
 Layout on the page is rtfreporter's `listing_spec()` / `as_rtftables()`.

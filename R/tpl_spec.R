@@ -35,11 +35,53 @@
   if (length(hit)) hit[[length(hit)]]$args[[arg]] else NULL
 }
 
+# A template whose data stage is the report's (its data-stage parameters
+# hidden: km_survival, km_cumulative): the report says it in its own
+# `data:` steps -- they read the data, and a dataset of parameters (all but
+# ADSL) is kept to one (a param step, or a filter on PARAMCD).  Without
+# them the figure would be of every record: no report, so an error.
+.tpl_data_said <- function(t, output, id) {
+  hid <- Filter(function(p) isTRUE(p$hidden) && identical(p$stage, "data"), t$params)
+  if (!length(hid) || is.null(output)) return(invisible(TRUE))
+  steps <- output$data$steps %||% list()
+  kind <- vapply(steps, function(st) if (is.list(st)) as.character(st$step %||% "") else "", "")
+  how <- "data: {steps: [{step: read, dataset: ADTTE}, {step: param, value: <PARAMCD>}]}"
+  if (!"read" %in% kind) {
+    .ard_stop(sprintf(paste0("%s: template %s: the report says its data in its own `data:` steps ",
+                             "-- read, the analysis set, the parameter (%s)."), id, t$name, how))
+  }
+  reads <- toupper(vapply(steps[kind == "read"], function(st) as.character(st$dataset %||% ""), ""))
+  on_param <- "param" %in% kind || any(vapply(steps[kind == "filter"], function(st)
+    grepl("PARAMCD", paste(as.character(st$expr %||% ""), collapse = " "), fixed = TRUE), NA))
+  if (any(reads != "ADSL") && !on_param) {
+    .ard_stop(sprintf(paste0("%s: template %s: its `data:` steps read %s but keep no parameter: ",
+                             "add {step: param, value: <PARAMCD>} (the parameter is what the ",
+                             "report is of)."), id, t$name, paste(unique(reads[reads != "ADSL"]),
+                                                                   collapse = ", ")))
+  }
+  invisible(TRUE)
+}
+
 # The template SPEC's arguments with the study's defaults: a parameter the
 # SPEC does not give takes the study's value (tfl_param(study = )); one it
 # gives over a different study value says so (a message).  Returns the
 # arguments and the names the study gave.
 .tpl_study_args <- function(t, args, base, id, output = NULL, study = NULL) {
+  # (a parameter the template hides is not the report's: its look)
+  hidden <- intersect(names(args), names(Filter(function(p) isTRUE(p$hidden), t$params)))
+  stage <- hidden[vapply(hidden, function(k) identical(t$params[[k]]$stage, "data"), NA)]
+  if (length(stage)) {
+    .ard_stop(sprintf(paste0("%s: template %s's %s: the data stage, the report's own `data:` ",
+                             "steps (read, the analysis set's join, param, filter), not ",
+                             "`template: args:`."),
+                      id, t$name, paste(sQuote(stage, FALSE), collapse = ", ")))
+  }
+  if (length(hidden)) {
+    .ard_stop(sprintf(paste0("%s: template %s takes %s from the study standard, not from ",
+                             "`template: args:`; change it with the report's own items or `plot:`."),
+                      id, t$name, paste(sQuote(hidden, FALSE), collapse = ", ")))
+  }
+  .tpl_data_said(t, output, id)
   from_study <- character()
   for (p in t$params) {
     if (is.null(p$study)) next

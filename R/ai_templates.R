@@ -82,7 +82,7 @@
   out <- character()
   for (i in seq_len(nrow(tt))) {
     t <- .tpl_get(tt$name[i], "tfl_ai_prepare()")
-    p <- tfl_template_params(tt$name[i])
+    p <- .tpl_shown(tfl_template_params(tt$name[i]))
     from <- if (!is.na(tt$from[i])) sprintf("; variant of %s", tt$from[i]) else ""
     pkg <- if (!identical(tt$package[i], "tflspec")) sprintf("; %s's", tt$package[i]) else ""
     out <- c(out, sprintf("- `%s`: %s (%s, layout %s%s%s)", tt$name[i], .ai_tpl_description(t),
@@ -300,8 +300,10 @@
 
 # ---- a figure answered with a template --------------------------------------
 
-# The answer's template and its own layers (each a mapping, a design's
-# layer); a design's other parts beside it are not read
+# The answer's template, its data stage (`data`: a design's data steps,
+# before the template's call: read, the analysis set, param, filter) and
+# its own layers (each a mapping, a design's layer); a design's other
+# parts beside it are not read
 .ai_read_tpl_figure <- function(x, p) {
   layers <- x$layers %||% list()
   if (!is.list(layers) || !is.null(names(layers)) ||
@@ -309,11 +311,18 @@
     p <- .ai_problem(p, "layers", "is a list of layers, each a mapping that starts with its `layer`")
     layers <- list()
   }
-  for (k in intersect(names(x), c("data", "stats", "plot", "plots", "compose"))) {
+  data <- x$data
+  if (!is.null(data) && (!is.list(data) || !is.null(names(data)) ||
+                         !all(vapply(data, function(z) is.list(z) && !is.null(z$step), NA)))) {
+    p <- .ai_problem(p, "data", "is a list of data steps, each a mapping that starts with its `step`")
+    data <- NULL
+  }
+  for (k in intersect(names(x), c("stats", "plot", "plots", "compose"))) {
     p <- .ai_problem(p, k, "is a design's part: with a template it is not read (the template makes it)",
                      "warning")
   }
-  list(design = structure(list(template = x$template, layers = layers), class = "tfl_ai_tpl_figure"),
+  list(design = structure(list(template = x$template, data = data, layers = layers),
+                         class = "tfl_ai_tpl_figure"),
        problems = p)
 }
 
@@ -328,6 +337,7 @@
   tfl_output(id, kind = "figure", label = if (length(ttl)) ttl[1L] else NA_character_,
              population = if (length(pop)) pop else NA_character_,
              template = list(name = tp$name, args = tp$args %||% list()), content = content,
+             data = if (length(design$data)) list(steps = design$data) else NULL,
              page = if (length(ttl)) list(titles = as.list(ttl)) else list())
 }
 
