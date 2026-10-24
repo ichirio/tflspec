@@ -212,3 +212,11 @@ test_that("a sheet is asked for the TOC items it is the best sheet of; a close n
   own$g <- character()
   expect_identical(.ai_sheet_answer_ids("Cover", ans("Table-14.1.8"), "g", own), "Table-14.1.8")
 })
+
+test_that("the status's count: the reports in the answers and the TOC items, not the candidates", {
+  r <- data.frame(status = c("ok", "warning", "no answer"), rtf = c("a.rtf", NA, NA),
+                  first = c(NA, "not in the answer (it has T-1)", NA), stringsAsFactors = FALSE)
+  expect_identical(.ai_count_text(list(reports = r, toc_items = 46L)),
+                   "Reports (in the answers) 1, TOC items 46: 1 have an RTF")
+  expect_identical(.ai_count_text(list(reports = r)), "1 of 3 reports have an RTF")
+})

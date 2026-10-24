@@ -392,14 +392,11 @@
     if (!is.na(kind) && !kind %in% types) next
     txt <- paste(c(x$shells$title_in_sheet[j], toc$title[cc$i]), collapse = " ")
     hit <- names(fam_re)[vapply(fam_re, function(re) grepl(re, txt, perl = TRUE), NA)]
-    # the reports it is asked for: the candidates it is the best sheet of,
-    # and those whose number it writes or its name has (a part a sheet);
-    # a close number or a title another sheet fits better stays a candidate
-    # in the text only
+    # the reports it is asked for: the TOC items whose number it writes or
+    # its name has (a part a sheet too); the other candidates are for the
+    # AI's reference only, in the text; none: the AI decides
     said <- grepl("its number is written in the sheet|the sheet name has its number", cc$clues)
-    own <- cc$i[said | vapply(cc$i, function(i) {
-      identical(strsplit(.na_or(toc$sheets[i], ""), " | ", fixed = TRUE)[[1L]][1L], s)
-    }, NA)]
+    own <- cc$i[said]
     units[[length(units) + 1L]] <- list(sheet = s, ids = toc$output_id[own],
                                         kind = .na_or(kind, "table"),
                                         family = if (length(hit)) hit[1L] else "other")

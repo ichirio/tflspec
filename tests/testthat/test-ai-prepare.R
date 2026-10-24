@@ -133,7 +133,8 @@ test_that("tfl_ai_save_answer() and tfl_ai_collect_answers(): the files, the rep
   expect_error(tfl_ai_save_answer(d, one, ""), "not empty")
   res <- suppressMessages(tfl_ai_collect_answers(d))
   expect_s3_class(res, "tfl_ai_collected")
-  expect_named(res, c("reports", "next_steps", "assumptions", "stray", "requests", "templates"))
+  expect_named(res, c("reports", "next_steps", "assumptions", "stray", "requests", "templates",
+                      "toc_items"))
   rp <- res$reports
   expect_true(all(c("problems_text", "file", "repair") %in% names(rp)))
   done <- rp$request == one

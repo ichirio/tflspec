@@ -622,7 +622,8 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
       if (any(part) && !id %in% names(a$outputs)) names(a$outputs)[part] else id
     }), use.names = FALSE)
     a <- .ai_answer_as_asked(a, ids)
-    if (isTRUE(ctxs[[nm]]$context$sheet_mode)) ids <- .ai_sheet_answer_ids(ids, a, nm, own)
+    sheet <- isTRUE(ctxs[[nm]]$context$sheet_mode)
+    if (sheet) ids <- .ai_sheet_answer_ids(ids, a, nm, own)
     a <- .ai_answer_overall(a)
     pr <- tryCatch(tfl_ai_check(a, ctxs[[nm]]$context), error = function(e) e)
     # a figure's design under its report, as a table answer's reports
@@ -683,8 +684,11 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
                                                          fixed = TRUE)), NA), , drop = FALSE]
       p <- rbind(hit, own)
       missing <- !id %in% names(a$outputs)
-      st <- if (missing || any(p$severity == "error") || nrow(err) || !is.null(wrote)) "error"
-            else if (nrow(p)) "warning" else "ok"
+      # (a sheet's: the reports are the AI's to decide, one asked for and
+      # not answered a warning)
+      soft <- missing && sheet
+      st <- if ((missing && !soft) || any(p$severity == "error") || nrow(err) || !is.null(wrote)) "error"
+            else if (nrow(p) || soft) "warning" else "ok"
       first <- if (missing) sprintf("not in the answer (it has %s)",
                                     if (length(a$outputs)) paste(names(a$outputs), collapse = ", ")
                                     else "no report")
@@ -698,7 +702,11 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
     rows[[nm]] <- do.call(rbind, per)
     if (any(names(a$outputs) %in% ids) && !all(ids %in% names(a$outputs)) && !nrow(err) &&
         is.null(wrote)) {
-      nxt[nm] <- sprintf(if (agent) "add %s to the answer; save the whole answer over %s%s"
+      nxt[nm] <- if (sheet) {
+        sprintf(paste0("the report files are written; %s (the sheet's numbers) not in the answer: ",
+                       "add them if the sheet makes them, or say why as an assumption"),
+                paste(setdiff(ids, names(a$outputs)), collapse = ", "))
+      } else sprintf(if (agent) "add %s to the answer; save the whole answer over %s%s"
                          else "ask the same chat for %s too; save the whole answer over %s%s",
                          paste(setdiff(ids, names(a$outputs)), collapse = ", "),
                          rel(answers, basename(f)), if (agent) run else "")
@@ -732,8 +740,12 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
   rownames(asm) <- NULL
   # each request's setting: answered with templates where they fit, or not
   tpl <- vapply(ctxs, function(x) isTRUE(x$context$ai_templates), NA)
+  # the TOC items the requests were written from (sheet requests: their
+  # keys; NA: not known)
+  keys <- unique(unlist(lapply(ctxs, function(x) x$context$toc_keys), use.names = FALSE))
   structure(list(reports = out, next_steps = nxt[unique(out$request)], assumptions = asm,
-                 stray = rel(answers, stray), requests = requests, templates = tpl),
+                 stray = rel(answers, stray), requests = requests, templates = tpl,
+                 toc_items = if (length(keys)) length(keys[!is.na(keys)]) else NA_integer_),
             class = "tfl_ai_collected")
 }
 
