@@ -1,5 +1,37 @@
 # tflspec (development version)
 
+* **AI requests: the shell sheet first, the TOC as candidates** (0.0.24.9234).
+  A request is a shell sheet's (`unit = "sheet"`, the default of
+  `tfl_ai_prepare()` / `tfl_ai_write_requests()`): what the sheet writes
+  comes first -- its numbers, titles, populations, conditions, layout and
+  variables -- then its sheet name, then its TOC candidates, each with the
+  clues that chose it (a number written in the sheet, the sheet name's
+  number, a close number, the title's words); the TOC and the sheet names
+  can hold mistakes, and the AI says which it chose and why.  The reports
+  and their ids are the AI's to read from the sheet (a TOC item made by two
+  Part sheets, a sheet of several reports); collecting does not hold them
+  to a list -- an id no TOC item has is a warning, and a sheet that is no
+  shell is answered with no report.  Every TOC sheet is read (Topline_TOC
+  too), an item once with the TOC sheets listing it (`toc_sheets`); the
+  TOC items no sheet chose are asked for in one request (`no-shell`).
+  `sheet_roles = c("Topline TOC" = "other")` changes a sheet's role.  No
+  part is guessed any more (a heading's format sample "Table 15.1.2.x" was
+  read as parts): `parts`, `parts_row` and `part_of` go.  A dry run's
+  `toc` is a TOC item a row (`toc_id`, `toc_sheets`, `sheets`, `request`),
+  `shells` a shell sheet a row (`candidates`, `guessed`, `request`) and
+  `counts` the numbers of each.  `unit = "toc"`: the requests as before.
+  The workbook is read about three times as fast (a sheet's cells at
+  once), and a TOC's header of two rows (Title merged over its parts) says
+  its titles.
+
+* A TOC's columns by their role (0.0.24.9234): the item's number and its
+  shell's apart, the title(s), the population, the program and file names
+  from the headers' words (Output No, Shell, Title, Population, Program,
+  File, and the Japanese words), or `toc_cols = c(output_id = "Output No",
+  shell = "Shell", title = c("Title 1", "Title 2"))` (a header or a
+  column's letter); the row's other columns go to its requests as
+  "header: value".
+
 * In a table with columns (`table_plan(cols = TRT01A)`), every analysis
   has its `by` (0.0.24.9233): one without is a problem of the study's ARD
   definition that says the `by` to write (`by: [TRT01A]`), but for the

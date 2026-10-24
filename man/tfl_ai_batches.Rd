@@ -16,11 +16,16 @@ tfl_ai_batches(x, size = 8L, types = "table", families = NULL)
 known is kept); \code{NULL} for all.}
 
 \item{families}{Your own families: a named character vector of regular
-expressions (Perl) tried on the title before the built-in ones.}
+expressions (Perl) tried on the title before the built-in ones.
+The reports of one shell (TOC rows sharing a shell sheet) go in one
+batch, whatever \code{size}: \code{size} counts shells -- a request writes a
+shell's reports together, their layout one.}
 }
 \value{
 A data frame: \code{output_id}, \code{title}, \code{family}, \code{batch} (\code{ae-1},
-\code{ae-2} ...), in the TOC's order within a batch; \code{split(x$output_id, x$batch)} gives the requests.
+\code{ae-2} ...), \code{shell_id} (the shell's number; the report's own when the
+TOC names none), in the TOC's order within a batch;
+\code{split(x$output_id, x$batch)} gives the requests.
 }
 \description{
 A chat drafts a few reports well and many badly: the \code{table} prompt

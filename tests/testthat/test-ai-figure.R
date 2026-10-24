@@ -20,12 +20,12 @@ test_that("a figure is a request of its own: its shell, its analysis set, the de
   skip_if_not_installed("haven")
   root <- withr::local_tempdir()
   d <- file.path(root, "study")
-  r <- tfl_ai_prepare(d, fig_book(), adam = fig_study(root), quiet = TRUE)
+  r <- tfl_ai_prepare(unit = "toc", d, fig_book(), adam = fig_study(root), quiet = TRUE)
   fr <- r$requests[r$requests$type == "figure", ]
   expect_identical(fr$request, "figure-1")
   expect_identical(fr$family, "figure")
   expect_identical(fr$outputs, "F-14-2-2")
-  expect_identical(r$toc$request[r$toc$output_id == "F-14-2-2"], "figure-1")
+  expect_identical(r$toc$request[r$toc$toc_id == "F-14-2-2"], "figure-1")
   expect_identical(tfl_ai_requests(d)$type, r$requests$type)
   txt <- paste(readLines(file.path(d, fr$file), encoding = "UTF-8"), collapse = "\n")
   expect_match(txt, "tflspec_ai: {task: figure, version: 1, output_id: F-14-2-2}", fixed = TRUE)
@@ -35,11 +35,11 @@ test_that("a figure is a request of its own: its shell, its analysis set, the de
   expect_match(txt, "Read the figure's shell and its TOC row above", fixed = TRUE)
   expect_false(grepl("Attached:", txt, fixed = TRUE))
   # the dry run says the same requests
-  dry <- tfl_ai_prepare(d, fig_book(), adam = fig_study(root), quiet = TRUE, dry_run = TRUE)
+  dry <- tfl_ai_prepare(unit = "toc", d, fig_book(), adam = fig_study(root), quiet = TRUE, dry_run = TRUE)
   expect_identical(dry$requests[c("request", "type", "family", "outputs")],
                    r$requests[c("request", "type", "family", "outputs")])
   # tables only, when asked
-  r2 <- suppressMessages(tfl_ai_write_requests(d, tfl_ai_read_shell(fig_book()),
+  r2 <- suppressMessages(tfl_ai_write_requests(unit = "toc", d, tfl_ai_read_shell(fig_book()),
                                                tfl_ai_adam_summary(fig_study(root)),
                                                types = "table", overwrite = TRUE))
   expect_false("figure" %in% r2$type)
@@ -50,8 +50,8 @@ test_that("the figure's answer: its report file in the design's form, the same d
   skip_if_not_installed("haven")
   root <- withr::local_tempdir()
   d <- file.path(root, "study")
-  tfl_ai_prepare(d, fig_book(), adam = fig_study(root), quiet = TRUE)
-  ex <- system.file("ai", "example", "answers", "figure-1.md", package = "tflspec")
+  tfl_ai_prepare(unit = "toc", d, fig_book(), adam = fig_study(root), quiet = TRUE)
+  ex <- test_path("fixtures", "answers-toc", "figure-1.md")
   tfl_ai_save_answer(d, "figure-1", readLines(ex, encoding = "UTF-8"))
   res <- suppressMessages(tfl_ai_collect_answers(d))
   fr <- res$reports[res$reports$type == "figure", ]
@@ -91,7 +91,7 @@ test_that("tfl_ai_run(): the figure drawn, its PNG and RTF; agent_prompt", {
   skip_if_not_installed("ggsurvfit")
   root <- withr::local_tempdir()
   d <- file.path(root, "study")
-  r <- tfl_ai_prepare(d, fig_book(), adam = fig_study(root), quiet = TRUE, mode = "agent", size = 3L)
+  r <- tfl_ai_prepare(unit = "toc", d, fig_book(), adam = fig_study(root), quiet = TRUE, mode = "agent", size = 3L)
   # (from the study folder: a copy of it says the same)
   expect_match(r$agent_prompt, "Follow AGENTS.md", fixed = TRUE)
   expect_match(r$agent_prompt, " ai/requests/index.md", fixed = TRUE)
@@ -100,7 +100,7 @@ test_that("tfl_ai_run(): the figure drawn, its PNG and RTF; agent_prompt", {
   expect_true("ai/agent_prompt.md" %in% r$files)
   expect_identical(paste(readLines(file.path(d, "ai", "agent_prompt.md"), encoding = "UTF-8"),
                          collapse = "\n"), r$agent_prompt)
-  ex <- system.file("ai", "example", "answers", package = "tflspec")
+  ex <- test_path("fixtures", "answers-toc")
   file.copy(list.files(ex, full.names = TRUE), file.path(d, "ai", "answers"))
   res <- suppressMessages(tfl_ai_run(d))
   fr <- res$reports[res$reports$type == "figure", ]

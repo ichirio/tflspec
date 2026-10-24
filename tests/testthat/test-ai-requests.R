@@ -19,7 +19,7 @@ req_study <- function() {
 
 test_that("tfl_ai_write_requests(): one file a request, an index, the contexts", {
   s <- req_study()
-  r <- suppressMessages(tfl_ai_write_requests(s$dir, s$shell, s$adam, size = 8, instructions = "each"))
+  r <- suppressMessages(tfl_ai_write_requests(unit = "toc", s$dir, s$shell, s$adam, size = 8, instructions = "each"))
   expect_setequal(unlist(strsplit(r$outputs, ", ")), s$shell$toc$output_id)
   f <- list.files(file.path(s$dir, "ai", "requests"))
   expect_true(all(paste0(r$request, ".md") %in% f))
@@ -29,9 +29,9 @@ test_that("tfl_ai_write_requests(): one file a request, an index, the contexts",
   expect_true(any(grepl("^## Schema", one)))
   expect_identical(nchar(paste(one, collapse = "\n")), r$chars[1L])
   # written again only when asked
-  expect_error(tfl_ai_write_requests(s$dir, s$shell, s$adam), "overwrite")
+  expect_error(tfl_ai_write_requests(unit = "toc", s$dir, s$shell, s$adam), "overwrite")
   # the instructions once: a file of their own, the requests without them
-  r1 <- suppressMessages(tfl_ai_write_requests(s$dir, s$shell, s$adam,
+  r1 <- suppressMessages(tfl_ai_write_requests(unit = "toc", s$dir, s$shell, s$adam,
                                                instructions = "once", overwrite = TRUE))
   expect_true(file.exists(file.path(s$dir, "ai", "requests", "00-instructions.md")))
   # (a figure's request keeps its own instructions)
@@ -44,19 +44,19 @@ test_that("tfl_ai_write_requests(max_chars = ): a request too long is split", {
   shell$toc$family <- "demographics"         # one family: one request of four
   # (with templates, a request over max_chars first shortens their list:
   # it then fits)
-  r <- suppressMessages(tfl_ai_write_requests(s$dir, shell, s$adam, size = 8, types = "table",
+  r <- suppressMessages(tfl_ai_write_requests(unit = "toc", s$dir, shell, s$adam, size = 8, types = "table",
                                               instructions = "each"))
   expect_identical(nrow(r), 1L)
-  r1 <- suppressMessages(tfl_ai_write_requests(s$dir, shell, s$adam, size = 8, types = "table",
+  r1 <- suppressMessages(tfl_ai_write_requests(unit = "toc", s$dir, shell, s$adam, size = 8, types = "table",
                                                max_chars = r$chars - 500, overwrite = TRUE,
                                                instructions = "each"))
   expect_identical(nrow(r1), 1L)
   expect_lte(r1$chars, r$chars - 500)
-  r <- suppressMessages(tfl_ai_write_requests(s$dir, shell, s$adam, size = 8, types = "table",
+  r <- suppressMessages(tfl_ai_write_requests(unit = "toc", s$dir, shell, s$adam, size = 8, types = "table",
                                               templates = FALSE, overwrite = TRUE,
                                               instructions = "each"))
   lim <- r$chars - 500
-  r2 <- suppressMessages(suppressWarnings(tfl_ai_write_requests(
+  r2 <- suppressMessages(suppressWarnings(tfl_ai_write_requests(unit = "toc", 
     s$dir, shell, s$adam, size = 8, max_chars = lim, types = "table", overwrite = TRUE,
     templates = FALSE, instructions = "each")))
   expect_gt(nrow(r2), 1L)
@@ -68,7 +68,7 @@ test_that("tfl_ai_write_requests(max_chars = ): a request too long is split", {
 
 test_that("tfl_ai_collect_answers(): checked, written, one row a report", {
   s <- req_study()
-  r <- suppressMessages(tfl_ai_write_requests(s$dir, s$shell, s$adam, size = 8))
+  r <- suppressMessages(tfl_ai_write_requests(unit = "toc", s$dir, s$shell, s$adam, size = 8))
   dir.create(file.path(s$dir, "ai", "answers"), showWarnings = FALSE)
   # the sample's answer holds all four reports; given as the first request's
   first <- r$request[1L]
@@ -92,14 +92,14 @@ test_that("tfl_ai_collect_answers(): checked, written, one row a report", {
 
 test_that("tfl_ai_write_requests(examples = ): named by family, only to that family", {
   s <- req_study()
-  r <- suppressMessages(tfl_ai_write_requests(s$dir, s$shell, s$adam, size = 8))
+  r <- suppressMessages(tfl_ai_write_requests(unit = "toc", s$dir, s$shell, s$adam, size = 8))
   dir.create(file.path(s$dir, "ai", "answers"), showWarnings = FALSE)
   file.copy(file.path(s$ex, "onco-answer.md"),
             file.path(s$dir, "ai", "answers", paste0(r$request[1L], ".md")))
   res <- tfl_ai_collect_answers(s$dir)
   id <- strsplit(r$outputs[1L], ", ")[[1L]][1L]
   ex <- c(stats::setNames(file.path("spec", "outputs", paste0(id, ".yml")), r$family[1L]))
-  r2 <- suppressMessages(tfl_ai_write_requests(s$dir, s$shell, s$adam, size = 8,
+  r2 <- suppressMessages(tfl_ai_write_requests(unit = "toc", s$dir, s$shell, s$adam, size = 8,
                                                examples = ex, overwrite = TRUE))
   grew <- r2$chars > r$chars[match(r2$request, r$request)]
   expect_identical(grew, r2$family == r$family[1L])
