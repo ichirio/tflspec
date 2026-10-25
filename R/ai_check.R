@@ -206,6 +206,49 @@ tfl_ai_check <- function(answer, context = NULL, adam = NULL) {
       chk$problem, "error"
     ))
   }
+  rbind(p, .ai_fig_required(design$data, design[c("layers", "plot", "plots")], context))
+}
+
+# What defines a figure, as a table's (10/24): its data steps keep the
+# analysis set (a flag step, or a condition on the set's flag) and, for a
+# dataset of parameters (PARAMCD), the shell's parameter (a param step, a
+# condition on PARAMCD) -- or the figure is by the parameter (PARAM in a
+# layer or the plot: a facet, a colour).  Without them it is no report: an
+# error, to be asked, not guessed.
+.ai_fig_required <- function(steps, rest = list(), context = NULL) {
+  p <- .ai_problems()
+  steps <- Filter(is.list, steps %||% list())
+  if (!length(steps)) return(p)
+  txt <- function(x) paste(unlist(lapply(x, function(v) as.character(unlist(v)))), collapse = " ")
+  kind <- vapply(steps, function(s) as.character(s$step %||% ""), "")
+  reads <- toupper(unlist(lapply(steps[kind %in% c("read", "join")], function(s) s$dataset)))
+  # the analysis set: a flag step, or its flag in a condition
+  pop_vars <- if (!is.null(context$population$where)) .ai_r_names(context$population$where)
+  pop_rx <- paste0("\\b(", paste(unique(c(pop_vars, "SAFFL", "FASFL", "ITTFL", "MITTFL", "PPROTFL",
+                                           "PPSFL", "RANDFL", "ENRLFL", "EFFFL", "PKFL")),
+                                collapse = "|"), ")\\b")
+  conds <- txt(lapply(steps[!kind %in% c("read", "survfit", "summary", "summary_by")], function(s)
+    s[intersect(names(s), c("expr", "where", "variable", "code"))]))
+  if (!"flag" %in% kind && !grepl(pop_rx, conds, perl = TRUE)) {
+    p <- .ai_problem(p, "data", paste(
+      "keeps no analysis set: add the shell's (`{step: flag, variable: <its flag, FASFL ...>}`);",
+      "if the shell does not say it, ask it in a question -- do not guess"))
+  }
+  # a dataset of parameters: kept to the shell's, or the figure by it
+  bds <- if (!is.null(context$datasets)) {
+    unique(context$datasets$dataset[context$datasets$variable %in% "PARAMCD"])
+  } else c("ADTTE", "ADLB", "ADVS", "ADEG", "ADRS", "ADPC", "ADPP", "ADTR", "ADQS", "ADEX")
+  par_rx <- "\\bPARAM(CD|N)?\\b"
+  on_par <- "param" %in% kind || grepl(par_rx, conds, perl = TRUE) ||
+    grepl(par_rx, txt(rest), perl = TRUE)
+  hit <- intersect(reads, bds)
+  if (length(hit) && !on_par) {
+    p <- .ai_problem(p, "data", sprintf(paste(
+      "reads %s, a dataset of parameters (PARAMCD), but keeps no parameter: add the shell's",
+      "(`{step: param, value: <PARAMCD>}`), or draw by PARAM for a figure of them all;",
+      "if the shell does not say which, ask it in a question -- do not guess"),
+      paste(hit, collapse = ", ")))
+  }
   p
 }
 
