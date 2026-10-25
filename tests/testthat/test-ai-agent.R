@@ -309,3 +309,20 @@ test_that("tfl_ai_run(): a request not built yet says so, after a run of another
   utils::write.csv(b[setdiff(names(b), "problem")], f, row.names = FALSE)
   expect_true(all(is.na(tflspec:::.ai_built_read(d)$problem)))
 })
+
+test_that("a report not built for a missing package: no repair of the answer, the step says to install it", {
+  expect_identical(.ai_missing_package(c("there is no package called 'cards'",
+                                         "The figure's code needs the dplyr package: install it.",
+                                         "object 'x' not found", NA)),
+                   c("cards", "dplyr", NA, NA))
+  d <- tempfile()
+  on.exit(unlink(d, recursive = TRUE))
+  dir.create(file.path(d, "ai"), recursive = TRUE)
+  r <- data.frame(request = c("a", "b"), output_id = c("T-1", "T-2"), status = "ok",
+                  built = NA_character_, rtf = NA_character_,
+                  rtf_problem = c("there is no package called 'cards'", "object 'x' not found"),
+                  stringsAsFactors = FALSE)
+  .ai_build_repairs(d, r)
+  expect_false(file.exists(.ai_build_repair_file(d, "a")))
+  expect_true(file.exists(.ai_build_repair_file(d, "b")))
+})
