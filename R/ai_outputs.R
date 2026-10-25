@@ -21,6 +21,7 @@
 
 # a CSV of text, every column character, blanks NA
 .ai_csv_read <- function(f) {
+  if (!file.exists(f)) return(NULL)
   x <- tryCatch(utils::read.csv(f, stringsAsFactors = FALSE, colClasses = "character",
                                 encoding = "UTF-8", na.strings = character(),
                                 check.names = FALSE),
@@ -97,8 +98,9 @@ tfl_ai_outputs <- function(study_dir = ".") {
   rq <- tfl_ai_requests(study_dir)
   sheet <- rq$sheets[match(req, rq$request)]
   # the shell's code: the TOC entry's (toc.yml), a part's its number's
-  toc <- tryCatch(yaml::read_yaml(file.path(study_dir, "spec", "toc.yml"))$outputs,
-                  error = function(e) NULL) %||% list()
+  tf <- file.path(study_dir, "spec", "toc.yml")
+  toc <- if (file.exists(tf)) tryCatch(yaml::read_yaml(tf)$outputs, error = function(e) NULL)
+  toc <- toc %||% list()
   tk <- vapply(toc, function(e) {
     tryCatch(.ai_id_key(e$id %||% ""), error = function(err) NA_character_)
   }, "")
@@ -121,7 +123,7 @@ tfl_ai_outputs <- function(study_dir = ".") {
     .ai_questions_read(character())
   q <- q[q$status %in% "open", , drop = FALSE]
   nq <- vapply(ids, function(id) {
-    sum(vapply(strsplit(ifelse(is.na(q$reports), "", q$reports), ",\\s*"),
+    sum(vapply(strsplit(as.character(ifelse(is.na(q$reports), "", q$reports)), ",\\s*"),
                function(r) id %in% trimws(r), NA))
   }, 0L, USE.NAMES = FALSE)
   out <- data.frame(

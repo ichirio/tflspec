@@ -4,7 +4,7 @@
 \alias{tfl_ai_adopt}
 \title{Adopt the AI's drafts into the study's report files}
 \usage{
-tfl_ai_adopt(study_dir, outputs = NULL, overwrite = FALSE)
+tfl_ai_adopt(study_dir, outputs = NULL, overwrite = FALSE, dry_run = FALSE)
 }
 \arguments{
 \item{study_dir}{The study folder.}
@@ -13,6 +13,11 @@ tfl_ai_adopt(study_dir, outputs = NULL, overwrite = FALSE)
 
 \item{overwrite}{\code{TRUE} to write over a report already adopted (or
 written by hand) that differs from its draft.}
+
+\item{dry_run}{\code{TRUE} to copy nothing and say what adopting would do:
+\code{status} \code{new} (no study file yet), \code{replace} (the study's file differs
+from the draft: adopting writes over it, with \code{overwrite = TRUE}),
+\code{same}, \verb{no draft} -- for a screen's question before it adopts.}
 }
 \value{
 A data frame, one row a report: \code{output_id}, \code{status}
