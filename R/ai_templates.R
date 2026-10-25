@@ -364,6 +364,12 @@
     NULL
   }, error = function(e) .ai_one_line(conditionMessage(e)))
   if (!is.null(r)) p <- .ai_problem(p, "template", paste("could not be written:", r))
+  # (its data steps, when the report says them: the analysis set kept --
+  # the parameter the template's own check says)
+  if (length(answer$design$data)) {
+    fr <- .ai_fig_required(answer$design$data, answer$design["layers"], context)
+    p <- rbind(p, fr[!grepl("keeps no parameter", fr$problem), , drop = FALSE])
+  }
   p
 }
 
