@@ -844,7 +844,7 @@
     .ard_stop(sprintf("tfl_ai_unpack(): %s", paste(errs$problem[bad], collapse = "; ")))
   }
   ids <- names(answer$outputs)
-  paths <- file.path(dir, "spec", "outputs", paste0(ids, ".yml"))
+  paths <- file.path(.outputs_dir(dir), paste0(ids, ".yml"))
   there <- paths[file.exists(paths)]
   if (length(there) && !isTRUE(overwrite)) {
     .ard_stop(sprintf("tfl_ai_unpack(): %s already there; pass `overwrite = TRUE`.",

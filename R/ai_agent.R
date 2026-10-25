@@ -163,6 +163,9 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
   if (length(todo)) {
     old <- setwd(study_dir)
     on.exit(setwd(old), add = TRUE)
+    # (a study with the AI's drafts apart: they are read and built, into ai/output)
+    area_opt <- .ai_area_options(".")
+    if (!is.null(area_opt)) on.exit(options(area_opt), add = TRUE)
     st <- tryCatch(tfl_read_study_spec("."), error = function(e) e)
     outs <- if (!inherits(st, "error")) tryCatch(tfl_read_outputs("."), error = function(e) e)
     if (inherits(st, "error") || inherits(outs, "error")) {
@@ -170,6 +173,8 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
       r$rtf_problem[todo] <- paste("the study could not be read:", .ai_one_line(conditionMessage(e)))
     } else {
       out_dir <- st$study$settings$output_path %||% "output"
+      # (the drafts' RTF under ai/, as the study's under its output path)
+      if (!is.null(area_opt)) out_dir <- file.path("ai", out_dir)
       common <- .ai_built_common(st)
       for (i in todo) {
         id <- r$output_id[i]

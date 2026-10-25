@@ -25,7 +25,10 @@ and `ai/`. If the workspace is a folder above it, use the paths from here.
       `Rscript <this folder>/run.R <request>`: it finds its folder). It
       reads every answer, checks it, writes `spec/outputs/<id>.yml`, builds
       the ARD and the RTF (`output/tfl/<id>.rtf`) of that request's
-      reports and writes `ai/status.md`. `Rscript run.R` alone builds every
+      reports and writes `ai/status.md`. (When the study has
+      `ai/spec/outputs/`, your report files go there and their RTF under
+      `ai/output/`: drafts, which the person adopts into `spec/outputs/`.
+      Never write `spec/outputs/` yourself.) `Rscript run.R` alone builds every
       report that changed since the last run.
    4. Read `ai/status.md`. When it gives your request a repair
       (`ai/repairs/<request>.md`) or a build problem
