@@ -435,9 +435,10 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
   c("# Questions for the person",
     "",
     "The agent's open questions, one each, with the reports they touch.",
-    "Write your answer after `- Answer:` (one line or more), then tell the agent",
-    "\"the questions are answered\". `- Status: decided` is set by the agent once",
-    "it has moved the answer to `ai/decisions.md` and redone the reports.",
+    "Write your answer after `- Answer:` (one line or more); with your corrections",
+    "(tfl_ai_corrections(): ai/corrections.md) tell the agent \"the answers and",
+    "corrections are written\". `- Status: decided` is set by the agent once it has",
+    "moved the answer to `ai/decisions.md` and redone the reports.",
     "")
 }
 

@@ -433,6 +433,7 @@ reference:
       - tfl_ai_migrate
       - tfl_ai_outputs
       - tfl_ai_expected_write
+      - tfl_ai_corrections
       - tfl_ai_save_answer
       - tfl_ai_requests
       - tfl_ai_run

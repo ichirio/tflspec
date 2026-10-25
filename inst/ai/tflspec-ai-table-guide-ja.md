@@ -180,8 +180,11 @@ tfl_ai_run(".")   # もう一度読み、帳票ごとに ARD と RTF: output/tfl
    「Follow mystudy/AGENTS.md ...」）。依頼ごとに回答を保存し、`run.R` を実行し、
    `ai/status.md` を読んで直し、次へ進みます。
 4. 終わったら `ai/questions.md` に答える（複数の帳票の同じ疑問は 1 つにまとまり、
-   関わる帳票が並びます）。エージェントに「the questions are answered」と伝える
-   と、回答を `ai/decisions.md` に移し、関わる帳票を作り直します。
+   関わる帳票が並びます）。帳票の一覧の直し（`ai/expected_outputs.csv`、
+   `tfl_ai_expected_write()`）があれば、`tfl_ai_corrections()` で回答と直しを
+   `ai/corrections.md` にまとめます。エージェントに「the answers and corrections
+   are written」と伝えると、回答を `ai/decisions.md` に移し、直しの節を 1 つずつ
+   済ませて、関わる帳票を作り直します。
 
 RTF は `output/tfl/` にできます。このフォルダは tflplanner で試験として開けます
 （`spec/toc.yml` に帳票の一覧）。
