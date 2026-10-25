@@ -106,7 +106,7 @@ tfl_read_study_spec <- function(dir) {
 #' @rdname tfl_read_study_spec
 #' @export
 tfl_read_outputs <- function(dir) {
-  out_dir <- file.path(.spec_dir(dir), "outputs")
+  out_dir <- .outputs_dir(dir)
   files <- list.files(out_dir, "\\.ya?ml$", recursive = TRUE, full.names = TRUE)
   outs <- list()
   where <- character()
@@ -586,4 +586,13 @@ tfl_write_study_part <- function(study, part = c("defaults", "patterns", "codeli
         length(it$args$hierarchy)) it$args$overall <- lab
     it
   })
+}
+
+# The folder of a study's report files: spec/outputs, or -- while the AI's
+# drafts are read and built (R/ai_adopt.R) -- the folder the option
+# `tflspec.outputs_dir` names (relative to the study folder)
+.outputs_dir <- function(dir) {
+  o <- getOption("tflspec.outputs_dir")
+  if (is.null(o)) return(file.path(.spec_dir(dir), "outputs"))
+  if (grepl("^([A-Za-z]:)?[/\\]", o)) o else file.path(dir, o)
 }

@@ -326,3 +326,59 @@ test_that("a report not built for a missing package: no repair of the answer, th
   expect_false(file.exists(.ai_build_repair_file(d, "a")))
   expect_true(file.exists(.ai_build_repair_file(d, "b")))
 })
+
+test_that("the AI's drafts apart: run.R builds them into ai/output; tfl_ai_adopt() copies them; the adopted are not written over", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("rtfreporter")
+  root <- withr::local_tempdir()
+  d <- file.path(root, "study")
+  ad <- agent_study(root)
+  tfl_ai_prepare(unit = "toc", d, ex_book(), adam = ad, quiet = TRUE, mode = "agent", size = 3L)
+  expect_identical(tfl_ai_migrate(d), character())
+  expect_true(dir.exists(file.path(d, "ai", "spec", "outputs")))
+  file.copy(list.files(test_path("fixtures", "answers-toc"), full.names = TRUE),
+            file.path(d, "ai", "answers"))
+  rp <- suppressMessages(tfl_ai_run(d))$reports
+  expect_true(all(startsWith(rp$rtf, "ai/output/tfl/")))
+  expect_true(all(file.exists(file.path(d, rp$rtf))))
+  expect_true(all(startsWith(rp$file, "ai/spec/outputs/")))
+  expect_length(list.files(file.path(d, "spec", "outputs")), 0L)
+  id <- rp$output_id[1L]
+  expect_identical(tfl_ai_adopt(d, id)$status, "adopted")
+  f <- file.path(d, "spec", "outputs", paste0(id, ".yml"))
+  expect_true(file.exists(f))
+  expect_identical(tfl_ai_adopt(d, id)$status, "same")
+  # a person changes the adopted file: a new round leaves it; adopting again asks
+  writeLines(c(readLines(f), "# changed by hand"), f)
+  suppressMessages(tfl_ai_run(d, rebuild = TRUE))
+  expect_true(any(grepl("changed by hand", readLines(f), fixed = TRUE)))
+  expect_message(a2 <- tfl_ai_adopt(d, id), "left as the study has them")
+  expect_identical(a2$status, "kept")
+  expect_identical(tfl_ai_adopt(d, id, overwrite = TRUE)$status, "adopted")
+  expect_false(any(grepl("changed by hand", readLines(f), fixed = TRUE)))
+  expect_identical(tfl_ai_adopt(d, "NOPE")$status, "no draft")
+  log <- utils::read.csv(file.path(d, "ai", "adopted.csv"), stringsAsFactors = FALSE)
+  expect_identical(log$output_id, id)
+})
+
+test_that("tfl_ai_migrate(): a study's AI reports copied apart and recorded as adopted", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("rtfreporter")
+  root <- withr::local_tempdir()
+  d <- file.path(root, "study")
+  ad <- agent_study(root)
+  tfl_ai_prepare(unit = "toc", d, ex_book(), adam = ad, quiet = TRUE, mode = "agent", size = 3L)
+  file.copy(list.files(test_path("fixtures", "answers-toc"), full.names = TRUE),
+            file.path(d, "ai", "answers"))
+  rp <- suppressMessages(tfl_ai_collect_answers(d))$reports
+  made <- rp$output_id[!is.na(rp$file)]
+  expect_true(all(file.exists(file.path(d, "spec", "outputs", paste0(made, ".yml")))))
+  ids <- tfl_ai_migrate(d)
+  expect_setequal(ids, made)
+  expect_true(all(file.exists(file.path(d, "ai", "spec", "outputs", paste0(made, ".yml")))))
+  log <- utils::read.csv(file.path(d, "ai", "adopted.csv"), stringsAsFactors = FALSE)
+  expect_setequal(log$output_id, made)
+  expect_error(tfl_ai_adopt(file.path(root, "nowhere")), "keeps the AI's drafts in spec/outputs")
+})
