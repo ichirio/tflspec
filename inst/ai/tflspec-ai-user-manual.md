@@ -450,6 +450,11 @@ layers:                                 # what is drawn, in order
 - {layer: risk_table}                   # method: panel (default) | add_risktable
 ```
 
+A read may take one of the report's own analysis data instead of a dataset
+(`{step: read, data: adtte_os}`, its `ard: analysis_data:` row `adtte_os`):
+the program makes it first (`tfl_ard_code(part = "data")`), as a table's
+analyses do, and the figure starts from it.
+
 - `data`: one list, in order. `read` starts `df`; `join`, `param`,
   `flag`, `filter`, `derive`, `time_unit`, `levels`, `rank` change the
   object above them; `survfit`, `summary`, `summary_by`, `rate`, `count`,
@@ -597,7 +602,11 @@ tfl_ai_unpack(a, "study")                           # spec/outputs/<id>.yml, spe
   `ai/questions.md` and `ai/decisions.md` -- every request without a stop,
   then a second round from the person's answers; `tfl_ai_questions(study_dir)`
   reads `ai/questions.md` and `tfl_ai_answer_questions(study_dir, answers)`
-  writes the person's answers into it.  The TOC and its shells in
+  writes the person's answers into it; `tfl_ai_outputs(study_dir)` lists
+  the reports made, `tfl_ai_expected_write()` keeps the list the person
+  expects (`ai/expected_outputs.csv`, which `run.R` compares with), and
+  `tfl_ai_corrections(study_dir)` gathers the corrections and the answers
+  for the agent's next round (`ai/corrections.md`).  The TOC and its shells in
   workbooks apart: `tfl_ai_read_shell(path, shells = )` /
   `tfl_ai_prepare(toc, shells = )`; another workbook added to the study's
   requests: `tfl_ai_prepare(..., add = TRUE)`.  A figure of the TOC is a request
@@ -739,7 +748,10 @@ column: ARS's `methodId` comes from the spec.
 
 ## 11. A listing's report file
 
-A listing reads a dataset (`data: {source: dataset, dataset: ADAE, where: !r 'AESER == "Y"', sort: [USUBJID, ASTDY]}`)
+A listing reads a dataset (`data: {source: dataset, dataset: ADAE, where: !r 'AESER == "Y"', sort: [USUBJID, ASTDY]}`),
+the subjects of an analysis set in it (`population: SAF`), or one of the
+report's own analysis data (`data: adae_ser`, instead of `dataset` and
+`population`; its `ard: analysis_data:` row),
 and its `content:` is one `plan_listing` item, its columns
 `listing_col()` calls:
 
@@ -860,7 +872,7 @@ back): rename the value or choose another separator.
 **AI-assisted drafting:** `tfl_ai_tasks` `tfl_ai_context` `tfl_ai_schema`
 `tfl_ai_prompt` `tfl_ai_parse` `tfl_ai_check` `tfl_ai_repair_prompt`
 `tfl_ai_diff` `tfl_ai_read_shell` `tfl_ai_adam_summary` `tfl_ai_batches`
-`tfl_ai_write_requests` `tfl_ai_collect_answers` `tfl_ai_adopt` `tfl_ai_migrate` `tfl_ai_outputs` `tfl_ai_expected_read` `tfl_ai_expected_write` `tfl_ai_save_answer` `tfl_ai_study_init`
+`tfl_ai_write_requests` `tfl_ai_collect_answers` `tfl_ai_adopt` `tfl_ai_migrate` `tfl_ai_outputs` `tfl_ai_expected_read` `tfl_ai_expected_write` `tfl_ai_corrections` `tfl_ai_save_answer` `tfl_ai_study_init`
 `tfl_ai_prepare` `tfl_ai_requests` `tfl_ai_run` `tfl_ai_compare` `tfl_ai_questions`
 `tfl_ai_answer_questions`
 

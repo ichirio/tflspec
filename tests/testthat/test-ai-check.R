@@ -18,6 +18,7 @@ ai_km <- c(
   "data:",
   "- {step: read, dataset: ADTTE}",
   "- {step: param, value: OS}",
+  "- {step: flag, variable: FASFL}",
   "- {step: survfit, name: fit, time: AVAL, censor: CNSR, by: TRT01P}",
   "layers:",
   "- {layer: km_curve}"
@@ -109,6 +110,22 @@ test_that("a figure for another report, a PARAMCD the data lacks", {
   p <- tfl_ai_check(ai_fig(bad), ctx, adam = tfl_example_adam())
   expect_identical(p$where, "data[2] param field value")
   expect_identical(p$problem, "no PARAMCD TTDE")
+})
+
+test_that("what defines a figure: its analysis set and parameter, or an error to ask", {
+  ctx <- tfl_ai_context("figure", output_id = "F-14-2-1",
+                        datasets = tfl_example_adam()["ADTTE"])
+  # no analysis set kept
+  p <- tfl_ai_check(ai_fig(ai_km[!grepl("flag", ai_km)]), ctx)
+  expect_identical(p$where, "data")
+  expect_match(p$problem, "keeps no analysis set")
+  # kept by a condition on its flag: fine
+  cond <- sub("- {step: flag, variable: FASFL}", "- {step: filter, expr: 'FASFL == \"Y\"'}",
+              ai_km, fixed = TRUE)
+  expect_identical(nrow(tfl_ai_check(ai_fig(cond), ctx)), 0L)
+  # a dataset of parameters with no parameter kept
+  p <- tfl_ai_check(ai_fig(ai_km[!grepl("param", ai_km)]), ctx)
+  expect_match(p$problem, "reads ADTTE, a dataset of parameters")
 })
 
 test_that("a template or a dataset outside the context is a warning", {

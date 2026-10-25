@@ -470,7 +470,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
 
 .page_put <- function(page, sheet, col, v, note, id) {
   # (the data's and the content's code are not the page's: .conv_output())
-  if (identical(sheet, "report") && col %in% c("data_code", "content_code")) return(page)
+  if (identical(sheet, "report") && col %in% c("data_code", "content_code", "ard_object")) return(page)
   if (identical(sheet, "page") && identical(col, "page_more")) {
     # what no column says, as YAML (tfl_sheets_from_yaml()'s .page_more())
     more <- .calls_in(yaml::yaml.load(v, handlers = .yaml_handlers()))
@@ -566,7 +566,8 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     lc <- lf$listing_cols[!is.na(lf$listing_cols$output_id) & lf$listing_cols$output_id == id, , drop = FALSE]
     data <- list(source = "dataset")
     if (nrow(lr)) {
-      for (k in c("dataset")) if (!is.na(lr[[k]][1L])) data[[k]] <- lr[[k]][1L]
+      for (k in c("dataset", "data")) if (!is.na(lr[[k]][1L] %||% NA)) data[[k]] <- lr[[k]][1L]
+      if (!is.na(lr$population_id[1L] %||% NA)) data$population <- lr$population_id[1L]
       if (!is.na(lr$where[1L])) { data$where <- tfl_r(gsub("\r\n?", "\n", lr$where[1L])); note(id, "listings", 1, "where", "kept as R text (!r)", lr$where[1L]) }
       if (!is.na(lr$sort[1L])) data$sort <- as.list(.conv_split(lr$sort[1L]))
     }
@@ -581,7 +582,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     more_items <- list()
     if (nrow(lr)) {
       more <- .conv_rows(lr[1L, , drop = FALSE], note, id, "listings",
-                         drop = c("output_id", "note", "dataset", "where", "sort", "max_rows", "blank_row",
+                         drop = c("output_id", "note", "dataset", "data", "population_id", "where", "sort", "max_rows", "blank_row",
                                   "content_more"))[[1L]]
       # (record: TRUE / FALSE, or the record column's name)
       if (!is.null(more$record)) more$record <- .listing_record_value(more$record)
@@ -614,7 +615,10 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   } else {
     # the data stage of a table: the study ARD (`object`), then its steps
     # (the rework step of the sheets, R as it was)
-    data <- list(source = "ard", object = "ard")
+    # (its name in the program: the report row's ard_object, else ard)
+    obj <- if (nrow(rrow) && "ard_object" %in% names(rrow) && !is.na(rrow$ard_object[1L]) &&
+                 nzchar(rrow$ard_object[1L])) rrow$ard_object[1L] else "ard"
+    data <- list(source = "ard", object = obj)
     if (!is.null(prow) && nrow(prow) && !is.na(prow$process_code[1L])) {
       data$steps <- list(tfl_r(gsub("\r\n?", "\n", prow$process_code[1L])))
       note(id, "_tflplanner", id, "process_code", "the table's rework step kept as R text (data.steps)", prow$process_code[1L])

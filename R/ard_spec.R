@@ -906,7 +906,10 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 #' (`tfl_stats`) and each statistic's format (`fmt_default`); `"body"` is the analyses of
 #' `output_id`, starting with `report_id <- "..."` and its code lists
 #' (`cl_<variable>`), and ending in `save_ard()` (one report, `save =
-#' TRUE`) or `ard`.
+#' TRUE`) or `ard`.  `"data"` is one report's data alone: the datasets,
+#' the analysis sets and the analysis data it reads (`ard.analysis_data`,
+#' each made once under its `data_id`), what a figure's or a listing's
+#' program starts with before its own steps read them by name.
 #'
 #' @param spec An [tfl_ard_spec()] (or the path of one), or a study of the
 #'   YAML spec ([tfl_read_study_spec()]): its data catalog and its reports'
@@ -916,7 +919,11 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 #' @param save `FALSE` leaves out the final `saveRDS()`.  For one report's
 #'   `"body"`, `TRUE` ends it in `save_ard()` (its rows into the
 #'   study ARD, with the definition's fingerprint), `FALSE` in `ard`.
-#' @param part `"all"` (the whole program), `"setup"` or `"body"`.
+#' @param part `"all"` (the whole program), `"setup"`, `"body"` or
+#'   `"data"` (one report's data part).
+#' @param data For `part = "data"`: the analysis data to make (their
+#'   `data_id`s; the data they are made from come too); `NULL`: all the
+#'   report's.
 #' @param dir The study folder: the fingerprints saved with the ARD
 #'   ([tfl_ard_spec_hash()]) read the study's own function files from it.
 #' @param codelists The reports' code lists: a table definition (its
@@ -938,9 +945,9 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 #' @return The code, one element per line.
 #' @export
 tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
-                          part = c("all", "setup", "body"),
+                          part = c("all", "setup", "body", "data"),
                           statistics = NULL, methods = NULL, dir = ".",
-                          codelists = NULL) {
+                          codelists = NULL, data = NULL) {
   part <- match.arg(part)
   # a study of the YAML spec: its ARD definition and code lists from its
   # files (R/spec_ard.R)
@@ -974,6 +981,13 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
   # their `under`)
   attr(x, "levels") <- lv
   attr(x, "under") <- .codelist_under_by(codelists, a)
+  if (part == "data") {
+    if (length(output_id) != 1L) {
+      .ard_stop("tfl_ard_code(part = \"data\") is one report's data: give its `output_id`.")
+    }
+    return(.drop_attached_ns(.ard_data_part(x, output_id, data = data,
+                                            levels = lv[[output_id]])))
+  }
   if (part == "body") {
     # one report's: its ARD into the study's, with its definition's
     # fingerprint

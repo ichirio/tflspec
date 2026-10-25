@@ -364,6 +364,12 @@
     NULL
   }, error = function(e) .ai_one_line(conditionMessage(e)))
   if (!is.null(r)) p <- .ai_problem(p, "template", paste("could not be written:", r))
+  # (its data steps, when the report says them: the analysis set kept --
+  # the parameter the template's own check says)
+  if (length(answer$design$data)) {
+    fr <- .ai_fig_required(answer$design$data, answer$design["layers"], context)
+    p <- rbind(p, fr[!grepl("keeps no parameter", fr$problem), , drop = FALSE])
+  }
   p
 }
 
@@ -446,7 +452,9 @@ tfl_ai_compare <- function(study_dir, file = file.path("ai", "compare.csv")) {
   log <- file.path(study_dir, "ai", "repairs", "_log.csv")
   log <- if (file.exists(log)) utils::read.csv(log, stringsAsFactors = FALSE) else
     data.frame(request = character(), md5 = character())
-  yml <- file.path(study_dir, "spec", "outputs", paste0(r$output_id, ".yml"))
+  # (the drafts' folder in a study with the AI's drafts apart)
+  yml <- file.path(study_dir, .ai_area(study_dir) %||% file.path("spec", "outputs"),
+                   paste0(r$output_id, ".yml"))
   read <- lapply(yml, function(f) if (file.exists(f)) {
     tryCatch(yaml::read_yaml(f, handlers = list(r = function(x) x)), error = function(e) NULL)
   })

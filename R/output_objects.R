@@ -175,6 +175,21 @@ tfl_output_contents <- function(output, study, dir = ".") {
     if (!grepl("^([A-Za-z]:)?[/\\\\]", p)) p <- file.path(dir, p)
     data[[tolower(r)]] <- .ai_read_dataset(p)
   }
+  # the report's analysis data its reads name (`data:`): its data part of
+  # the ARD program run from the study folder (tfl_ard_code(part = "data"))
+  ids <- unique(unlist(lapply(steps, function(s)
+    if (is.list(s) && identical(s$step, "read")) .fig_read_data(s))))
+  if (length(ids)) {
+    old <- options(tflspec.plain_ns = TRUE)
+    on.exit(options(old), add = TRUE)
+    code <- tfl_ard_code(study, o$id, part = "data", data = ids)
+    env <- new.env(parent = globalenv())
+    eval(parse(text = tfl_helpers_code()), env)
+    wd <- setwd(dir)
+    on.exit(setwd(wd), add = TRUE)
+    eval(parse(text = code), env)
+    for (id in ids) data[[id]] <- get(id, envir = env)
+  }
   data
 }
 

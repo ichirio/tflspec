@@ -320,7 +320,8 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
 }
 
 .ai_built_key <- function(id, common) {
-  f <- file.path("spec", "outputs", paste0(id, ".yml"))
+  # (the drafts' folder in a study with the AI's drafts apart)
+  f <- file.path(.outputs_dir("."), paste0(id, ".yml"))
   own <- if (file.exists(f)) unname(tools::md5sum(f)) else ""
   rlang::hash(paste(own, common, sep = "|"))
 }
@@ -444,9 +445,10 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
   c("# Questions for the person",
     "",
     "The agent's open questions, one each, with the reports they touch.",
-    "Write your answer after `- Answer:` (one line or more), then tell the agent",
-    "\"the questions are answered\". `- Status: decided` is set by the agent once",
-    "it has moved the answer to `ai/decisions.md` and redone the reports.",
+    "Write your answer after `- Answer:` (one line or more); with your corrections",
+    "(tfl_ai_corrections(): ai/corrections.md) tell the agent \"the answers and",
+    "corrections are written\". `- Status: decided` is set by the agent once it has",
+    "moved the answer to `ai/decisions.md` and redone the reports.",
     "")
 }
 

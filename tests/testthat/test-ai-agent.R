@@ -100,7 +100,8 @@ test_that("tfl_ai_run(): the RTFs, ai/status.md, the questions; a second round k
   res <- suppressMessages(tfl_ai_run(d))
   rp <- res$reports
   expect_true(all(file.exists(file.path(d, rp$rtf))))
-  expect_true(all(startsWith(rp$rtf, "output/tfl/")))
+  # (a new study: the AI's drafts and their RTF apart, ai/)
+  expect_true(all(startsWith(rp$rtf, "ai/output/tfl/")))
   status <- readLines(file.path(d, "ai", "status.md"), encoding = "UTF-8")
   expect_true(any(grepl("5 of 5 reports have an RTF", status, fixed = TRUE)))
   q <- res$questions
@@ -369,7 +370,9 @@ test_that("tfl_ai_migrate(): a study's AI reports copied apart and recorded as a
   root <- withr::local_tempdir()
   d <- file.path(root, "study")
   ad <- agent_study(root)
-  tfl_ai_prepare(unit = "toc", d, ex_book(), adam = ad, quiet = TRUE, mode = "agent", size = 3L)
+  # (a study of the form before: its drafts in spec/outputs)
+  tfl_ai_prepare(unit = "toc", d, ex_book(), adam = ad, quiet = TRUE, mode = "agent", size = 3L,
+                 area = FALSE)
   file.copy(list.files(test_path("fixtures", "answers-toc"), full.names = TRUE),
             file.path(d, "ai", "answers"))
   rp <- suppressMessages(tfl_ai_collect_answers(d))$reports

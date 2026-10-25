@@ -24,7 +24,8 @@ and `ai/`. If the workspace is a folder above it, use the paths from here.
    3. Run `Rscript run.R <request>` in a terminal (from this folder, or
       `Rscript <this folder>/run.R <request>`: it finds its folder). It
       reads every answer, checks it, writes `spec/outputs/<id>.yml`, builds
-      the ARD and the RTF (`output/tfl/<id>.rtf`) of that request's
+      the ARD and the RTF (`output/tfl/<id>.rtf`, `ai/output/tfl/` in a study
+      with `ai/spec/outputs/`) of that request's
       reports and writes `ai/status.md`. (When the study has
       `ai/spec/outputs/`, your report files go there and their RTF under
       `ai/output/`: drafts, which the person adopts into `spec/outputs/`.
@@ -78,19 +79,31 @@ and `ai/`. If the workspace is a folder above it, use the paths from here.
    to check against the TOC), how many have an RTF, which do not and
    why, and that `ai/questions.md` waits for their answers.
 
-## Round 2: the person's answers
+## Round 2: the person's answers and corrections
 
-When the person says the questions are answered:
+When the person says the answers and corrections are written:
 
-1. Read `ai/questions.md`. For each question with `- Status: open` and an
-   answer after `- Answer:`:
-   1. Add one line to `ai/decisions.md`:
-      `- Q<n> (<the reports>): <the decision, in a sentence>`.
-   2. Change its `- Status: open` to `- Status: decided`.
-2. Redo each request with a report a new decision touches: change its answer
-   (`ai/answers/<request>.md`) as `ai/decisions.md` says, save the whole
-   answer, and run `Rscript run.R`; repair as in round 1.
-3. Tell the person what changed, and the questions still open.
+1. Read `ai/corrections.md` (when there is none, read `ai/questions.md` for
+   the questions answered, as below). For each section with
+   `- Status: open`:
+   - `add <id>`: write the report from its sheet and TOC item, as round 1
+     does, and list it in the request's answer (`reports:` and `outputs`).
+   - `drop <id>`: take the report out of the answer (both lists); do not
+     write it.
+   - `change <id>: ...`: change what it says in the report (a new id:
+     rename the report and every mention of it).
+   - `note <id>`: change the report as the note says.
+   - `Q<n> (answered)`: add one line to `ai/decisions.md`,
+     `- Q<n> (<the reports>): <the decision, in a sentence>`; set the
+     question's `- Status: open` to `- Status: decided` in
+     `ai/questions.md`; then change every report it names.
+2. Save each changed answer whole over `ai/answers/<request>.md` and run
+   `Rscript run.R <request>`; repair as in round 1. Then set the section's
+   `- Status: open` to `- Status: done`. A section you cannot do: leave it
+   `- Status: open` and add a line `- Agent:` saying why.
+3. Tell the person what changed, the sections left and why, the questions
+   still open, and the count of the reports against their list
+   (`ai/status.md`, "Expected outputs").
 
 ## Never
 
@@ -102,8 +115,10 @@ When the person says the questions are answered:
 - Do not change `study.yml`, `spec/data.yml`, `spec/defaults.yml`, `run.R`,
   `AGENTS.md` or `.github/copilot-instructions.md`. When one seems wrong,
   ask in `ai/questions.md`.
-- Write only `ai/answers/`, `ai/questions.md` and `ai/decisions.md` (add
-  lines; change nothing a person wrote). Fix a report through its answer,
+- Write only `ai/answers/`, `ai/questions.md`, `ai/decisions.md` and the
+  `- Status:` / `- Agent:` lines of `ai/corrections.md` (add lines; change
+  nothing a person wrote). Never write `ai/expected_outputs.csv`: it is the
+  person's list. Fix a report through its answer,
   not by editing `spec/outputs/`.
 - Do not install packages or go online: `run.R` uses the R and the packages
   installed.

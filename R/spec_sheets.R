@@ -204,6 +204,8 @@ tfl_sheets_from_spec <- function(study, outputs) {
     }
     if (inherits(o$content, "tfl_r")) rr$content_code <- cell(o$content)
     if (identical(o$data$source, "code") && !is.null(o$data$code)) rr$data_code <- cell(o$data$code)
+    # the ARD's name in the report's program, when not ard
+    if (!is.null(o$data$object) && !identical(o$data$object, "ard")) rr$ard_object <- cell(o$data$object)
     add("report", rr)
     for (v in names(o$codelists)) for (i in seq_along(o$codelists[[v]])) {
       cl <- o$codelists[[v]][[i]]
@@ -241,7 +243,8 @@ tfl_sheets_from_spec <- function(study, outputs) {
       if (!code_content) table_rows(o$content, id)
     } else if (o$kind == "listing") {
       lr <- list(output_id = id)
-      for (k in c("dataset", "where", "sort")) if (!is.null(o$data[[k]])) lr[[k]] <- cell(o$data[[k]])
+      for (k in c("dataset", "data", "where", "sort")) if (!is.null(o$data[[k]])) lr[[k]] <- cell(o$data[[k]])
+      if (!is.null(o$data$population)) lr$population_id <- cell(o$data$population)
       # what the listing sheets' columns cannot say is kept as YAML: the
       # items in the listing's content_more, a column's other arguments in
       # its row's more (read back by .conv_output(): nothing lost)
