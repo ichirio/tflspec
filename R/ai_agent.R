@@ -306,8 +306,24 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
   file.path(dir, "ai", "repairs", paste0(request, "-build.md"))
 }
 
+# The package a build problem says is missing (R's "there is no package
+# called 'x'", tflspec's "needs the x package"), else NA: the PC's to
+# install, no fault of the answer
+.ai_missing_package <- function(x) {
+  rx <- c("there is no package called [^A-Za-z0-9.]*([A-Za-z][A-Za-z0-9.]*)",
+          "needs the ([A-Za-z][A-Za-z0-9.]*) package")
+  out <- rep(NA_character_, length(x))
+  for (re in rx) {
+    hit <- is.na(out) & !is.na(x) & grepl(re, x, perl = TRUE)
+    out[hit] <- sub(paste0("^.*?", re, ".*$"), "\\1", x[hit], perl = TRUE)
+  }
+  out
+}
+
 .ai_build_repairs <- function(dir, r) {
   bad <- r[!is.na(r$rtf_problem), , drop = FALSE]
+  # (a missing package is no repair of the answer: status.md says to install it)
+  bad <- bad[is.na(.ai_missing_package(bad$rtf_problem)), , drop = FALSE]
   # a request whose reports are all built (or kept) now: its build repair goes
   ok <- setdiff(unique(r$request[r$built %in% c("built", "kept")]), bad$request)
   for (q in ok) {
@@ -358,10 +374,19 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
     nxt[w] <- sprintf("the answer passed its checks; %s not built yet: run `Rscript run.R %s`",
                       paste(wait$output_id[wait$request == w], collapse = ", "), w)
   }
+  pkg <- .ai_missing_package(bad$rtf_problem)
   for (i in seq_len(nrow(bad))) {
-    nxt[bad$request[i]] <- sprintf(paste0("the answer passed its checks but %s could not be built (%s): ",
-                                          "fix the answer (ai/repairs/%s-build.md) and run again"),
-                                   bad$output_id[i], bad$rtf_problem[i], bad$request[i])
+    nxt[bad$request[i]] <- if (!is.na(pkg[i])) {
+      sprintf(paste0("the answer passed its checks but %s could not be built: R has no package %s ",
+                     "on this PC -- not the answer's fault, do not change it. Ask the person to ",
+                     "install it (install.packages(\"%s\")) in a question, go on with the next ",
+                     "request, and run `Rscript run.R %s` again once it is installed"),
+              bad$output_id[i], pkg[i], pkg[i], bad$request[i])
+    } else {
+      sprintf(paste0("the answer passed its checks but %s could not be built (%s): ",
+                     "fix the answer (ai/repairs/%s-build.md) and run again"),
+              bad$output_id[i], bad$rtf_problem[i], bad$request[i])
+    }
   }
   c(sprintf("# Status (written by run.R, %s)", format(Sys.time(), "%Y-%m-%d %H:%M")),
     "",
