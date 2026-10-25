@@ -1054,7 +1054,8 @@ print.tfl_ai_shell <- function(x, ...) {
 #' @param x A [tfl_ai_read_shell()] result (its `toc`), or a data frame with
 #'   `output_id` and `title` (and optionally `type`, `family`).
 #' @param size The reports a batch holds at most.
-#' @param types The kinds of report kept (`type`; a report whose kind is not
+#' @param types The kinds of report kept (`type`; a listing's family is
+#'   `listing`, its batches of listings alone; a report whose kind is not
 #'   known is kept); `NULL` for all.
 #' @param families Your own families: a named character vector of regular
 #'   expressions (Perl) tried on the title before the built-in ones.
@@ -1094,6 +1095,8 @@ tfl_ai_batches <- function(x, size = 8L, types = "table", families = NULL) {
   text <- if ("text" %in% names(toc)) ifelse(is.na(toc$title), toc$text, toc$title) else toc$title
   text[is.na(text)] <- ""
   family <- if ("family" %in% names(toc)) as.character(toc$family) else rep(NA_character_, nrow(toc))
+  # (a listing: its own family, its requests of listings alone)
+  family[is.na(family) & toc$type %in% "listing"] <- "listing"
   for (i in which(is.na(family))) {
     hit <- names(fam)[vapply(fam, function(re) grepl(re, text[i], perl = TRUE), NA)]
     family[i] <- if (length(hit)) hit[1L] else "other"
@@ -1112,7 +1115,7 @@ tfl_ai_batches <- function(x, size = 8L, types = "table", families = NULL) {
     u <- match(unit[i], unique(unit[i]))
     out$batch[i] <- paste0(f, "-", (u - 1L) %/% as.integer(size) + 1L)
   }
-  ord <- order(match(out$family, unique(c(names(fam), "other"))), seq_len(nrow(out)))
+  ord <- order(match(out$family, unique(c(names(fam), "other", "listing"))), seq_len(nrow(out)))
   out <- out[ord, , drop = FALSE]
   rownames(out) <- NULL
   out

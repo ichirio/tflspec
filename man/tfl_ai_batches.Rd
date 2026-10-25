@@ -12,7 +12,8 @@ tfl_ai_batches(x, size = 8L, types = "table", families = NULL)
 
 \item{size}{The reports a batch holds at most.}
 
-\item{types}{The kinds of report kept (\code{type}; a report whose kind is not
+\item{types}{The kinds of report kept (\code{type}; a listing's family is
+\code{listing}, its batches of listings alone; a report whose kind is not
 known is kept); \code{NULL} for all.}
 
 \item{families}{Your own families: a named character vector of regular

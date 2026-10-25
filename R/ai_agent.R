@@ -212,6 +212,15 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
                 tfl_report(o, content = fig$plot, study = st), f, overwrite = tfl_report_overwrite(o)))
             }
             list(rtf = if (isTRUE(rtf)) f, png = fig$png)
+          } else if (identical(o$kind, "listing") && identical(o$data$source, "dataset")) {
+            # a listing: its records (read with rtf = FALSE too), laid out
+            recs <- .listing_data_of(o, st, ".")
+            if (isTRUE(rtf)) {
+              plan <- suppressMessages(tfl_content_run(o, recs))
+              suppressMessages(rtfreporter::generate_rtfreport(
+                tfl_report(o, content = plan, study = st), f, overwrite = tfl_report_overwrite(o)))
+            }
+            list(rtf = if (isTRUE(rtf)) f)
           } else {
             ard <- suppressMessages(tfl_build_ard(st, dir = ".", output_id = id, save = FALSE))
             if (!is.null(ard$output_id)) ard <- ard[ard$output_id %in% id, , drop = FALSE]

@@ -12,7 +12,7 @@ tfl_ai_write_requests(
   dir = file.path("ai", "requests"),
   max_chars = NULL,
   families = NULL,
-  types = c("table", "figure"),
+  types = c("table", "listing", "figure"),
   language = NULL,
   examples = NULL,
   instructions = c("once", "each"),
@@ -43,7 +43,8 @@ no limit.  A request over it is halved; with \code{templates}, it first
 lists the templates' arguments by name only (no type, default or
 description).}
 
-\item{families, types}{As \code{\link[=tfl_ai_batches]{tfl_ai_batches()}}: the tables in batches.  A
+\item{families, types}{As \code{\link[=tfl_ai_batches]{tfl_ai_batches()}}: the tables and listings
+in batches (a listing's family \code{listing}; its answer a report of \code{kind: listing}, in the table task).  A
 figure (\code{"figure"} in \code{types}, the default) is a request of its own,
 \code{figure-1}, \code{figure-2} ... (family \code{figure}): its shell, the ADaM's
 summary, the figure templates; its answer a figure design.}
