@@ -105,6 +105,12 @@
 #' still says it.  A report not built yet (only other requests run) says
 #' so in `ai/status.md`.
 #'
+#' When the person keeps a list of the reports they expect
+#' (`ai/expected_outputs.csv`, [tfl_ai_expected_write()]), the reports made
+#' are compared with it, and `ai/status.md` says what differs (a report
+#' missing, one dropped still there, a title or analysis set not the
+#' list's, one the list does not have): told, never refused.
+#'
 #' @param study_dir The study folder.
 #' @param rtf `FALSE` to build the ARDs only (no rtfreporter).
 #' @param requests The requests whose reports are built (`"ae-1"`); `NULL`
@@ -116,11 +122,16 @@
 #'   `reports` also have `rtf` (the file made, else `NA`), `rtf_problem`
 #'   and `built` (`"built"`, `"kept"` -- unchanged since the last run --
 #'   or `NA`), and a `questions` data frame (`n`, `question`, `reports`,
-#'   `status`, `answer`), invisibly.
-#' @seealso [tfl_ai_prepare()] (`mode = "agent"`).
+#'   `status`, `answer`), and `expected` (the comparison with the
+#'   person's list: `output_id`, `result` -- `missing`, `still there`,
+#'   `differs`, `not expected` --, `detail`; its counts in its attribute
+#'   `text`; `NULL` without a list), invisibly.
+#' @seealso [tfl_ai_prepare()] (`mode = "agent"`), [tfl_ai_outputs()].
 #' @export
 tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = FALSE) {
   fn <- "tfl_ai_run()"
+  # (the study's own path: the run builds from inside it)
+  here <- normalizePath(study_dir, winslash = "/", mustWork = FALSE)
   if (isTRUE(rtf) && !requireNamespace("rtfreporter", quietly = TRUE)) {
     .ard_stop(sprintf("%s: the RTF needs the rtfreporter package; or rtf = FALSE.", fn))
   }
@@ -240,6 +251,9 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
   .ai_build_repairs(study_dir, r)
   res$reports <- r
   res$questions <- .ai_questions_update(study_dir, res$assumptions)
+  # the reports made against the person's list (ai/expected_outputs.csv):
+  # told, not refused
+  res$expected <- .ai_expected_compare(tfl_ai_expected_read(here), tfl_ai_outputs(here))
   .ai_write_text(.ai_status_text(res), file.path(study_dir, "ai", "status.md"))
   made <- sum(!is.na(r$rtf))
   open <- sum(res$questions$status %in% "open")
@@ -409,6 +423,7 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
     "## Next, each request",
     "",
     if (length(nxt)) sprintf("- %s: %s", names(nxt), nxt) else "- (no request)",
+    .ai_expected_status(res$expected),
     if (length(res$stray)) c("", sprintf(paste0("Not read (no request of that name): %s -- ",
                                                 "rename each to <request>.md."),
                                          paste(res$stray, collapse = ", "))))

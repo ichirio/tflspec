@@ -23,7 +23,10 @@ A \code{tfl_ai_collected} (as \code{\link[=tfl_ai_collect_answers]{tfl_ai_collec
 \code{reports} also have \code{rtf} (the file made, else \code{NA}), \code{rtf_problem}
 and \code{built} (\code{"built"}, \code{"kept"} -- unchanged since the last run --
 or \code{NA}), and a \code{questions} data frame (\code{n}, \code{question}, \code{reports},
-\code{status}, \code{answer}), invisibly.
+\code{status}, \code{answer}), and \code{expected} (the comparison with the
+person's list: \code{output_id}, \code{result} -- \code{missing}, \verb{still there},
+\code{differs}, \verb{not expected} --, \code{detail}; its counts in its attribute
+\code{text}; \code{NULL} without a list), invisibly.
 }
 \description{
 What a coding agent runs after each answer it saves (\code{run.R} of
@@ -50,7 +53,13 @@ request's reports are built; its RTF (and PNG) of an earlier run are
 removed, and \code{ai/built.csv} keeps why, so that a run of other requests
 still says it.  A report not built yet (only other requests run) says
 so in \code{ai/status.md}.
+
+When the person keeps a list of the reports they expect
+(\code{ai/expected_outputs.csv}, \code{\link[=tfl_ai_expected_write]{tfl_ai_expected_write()}}), the reports made
+are compared with it, and \code{ai/status.md} says what differs (a report
+missing, one dropped still there, a title or analysis set not the
+list's, one the list does not have): told, never refused.
 }
 \seealso{
-\code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}} (\code{mode = "agent"}).
+\code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}} (\code{mode = "agent"}), \code{\link[=tfl_ai_outputs]{tfl_ai_outputs()}}.
 }
