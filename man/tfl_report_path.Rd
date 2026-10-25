@@ -28,6 +28,19 @@ else its TOC entry's), else \code{study.yml}'s \code{settings: file}
 (\code{"{output_id}.rtf"} when none says it), in \code{settings: output_path} as
 it is written (a relative one from the working directory).
 }
+\details{
+The file is a pattern.  Beside \code{{output_id}}, the parts of the report's
+number fill it: \code{{type}} (\code{t}, \code{f}, \code{l}), \code{{num}} (\verb{15.1.5.1}), \code{{num:N}}
+(its first N levels joined: \code{{num:2}} is \code{151}), \code{{part}} (\code{a}),
+\code{{part_no}} (\code{1}); and \code{{shell_code}}, the id written at the top of the
+report's shell (its TOC entry's \code{shell_code}, which \code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}}
+reads: a cell of the shell's first rows in the form \code{t_dem_01} or
+\verb{151_t_dem_01}, or \code{study.yml}'s \code{settings: shell_code}, a regular
+expression).  A part's entry is its number's.  \verb{[ ... ]} is left out
+when a field in it is empty: \verb{[m\{part_no\}_]\{shell_code\}.rtf} is
+\code{m1_151_t_dem_01.rtf} for part a, \verb{151_t_dem_01.rtf} for a report with
+no parts.
+}
 \section{The table engine}{
 
 The ARD functions and the plan are rtfreporter's:
