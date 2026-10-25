@@ -841,6 +841,39 @@
   list(data = code, pops = pop_code, used_ds = used_ds, pops_id = pops)
 }
 
+# A report's data part: the datasets, the analysis sets and the analysis
+# data it reads -- `data` (data_ids of its analysis data, with those they
+# are made from; NULL: all its own), and the analysis set and dataset a
+# listing reads besides -- the part a figure's or a listing's program
+# starts with, its own steps reading them by name
+.ard_data_part <- function(x, o, data = NULL, population_id = NULL,
+                           dataset = NULL, levels = NULL) {
+  subj <- .study_value(x, "id", "USUBJID")
+  ad_o <- .adata_of(.adata_sheet(x), o)
+  miss <- setdiff(data, ad_o$data_id)
+  if (length(miss)) {
+    .ard_stop(sprintf("%s reads analysis data %s, which its ard.analysis_data does not define.",
+                      o, paste(miss, collapse = ", ")))
+  }
+  ids <- if (is.null(data)) ad_o$data_id else
+    .adata_used(ad_o, data.frame(data = data, stringsAsFactors = FALSE))
+  nad <- ad_o[ad_o$data_id %in% ids, , drop = FALSE]
+  a <- data.frame(population_id = population_id %||% NA_character_,
+                  dataset = dataset %||% NA_character_,
+                  denominator = NA_character_, stringsAsFactors = FALSE)
+  dl <- .ard_data_lines(x, a, nad, levels)
+  xo <- x
+  xo$analysis_data <- ad_o
+  made <- .adata_lines(xo, ids, subj, levels,
+                       avoid = c(.r_name(dl$used_ds), paste0("pop_", .r_name(dl$pops_id))))
+  c(if (length(levels)) c(
+      "# ---- code lists: each value in its order ----",
+      .codelists_lines(levels), ""),
+    "# ---- data ----", dl$data,
+    if (length(dl$pops)) c("", "# ---- populations ----", dl$pops),
+    if (length(made)) c("", "# ---- analysis data ----", made))
+}
+
 # ---- the program ---------------------------------------------------------
 
 # The analyses `a`: their data, their analysis sets, one statement each

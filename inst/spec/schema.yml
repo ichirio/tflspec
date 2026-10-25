@@ -1899,6 +1899,15 @@ rtf_footer:
       - column: dataset
         description: The dataset listed (of the ARD spec's datasets catalog).
         example: ADAE
+      - column: data
+        description: 'The analysis data listed (a data_id of the report''s analysis_data),
+          instead of dataset and population_id; blank: dataset and population_id say
+          it.'
+        example: adae_teae
+      - column: population_id
+        description: 'Keeps the subjects of this population; blank: every subject
+          of the dataset.'
+        example: SAF
       - column: where
         description: 'An R condition on its columns choosing the rows; blank: every
           row.'

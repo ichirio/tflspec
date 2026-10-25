@@ -7,11 +7,12 @@
 tfl_listing_code(
   spec,
   output_id = NULL,
-  datasets,
+  datasets = NULL,
   rework = NULL,
   type = "multiline",
   codelists = NULL,
-  part = c("all", "data", "content")
+  part = c("all", "data", "content"),
+  ard = NULL
 )
 }
 \arguments{
@@ -19,7 +20,8 @@ tfl_listing_code(
 
 \item{output_id}{The listing; may be left out when the definition has one.}
 
-\item{datasets}{The data catalog (see \code{\link[=tfl_read_data_code]{tfl_read_data_code()}}).}
+\item{datasets}{The data catalog (see \code{\link[=tfl_read_data_code]{tfl_read_data_code()}}); \code{NULL}:
+\code{ard}'s.}
 
 \item{rework}{Code run on \code{data} before it is sorted, or \code{NULL}.}
 
@@ -39,6 +41,13 @@ order: what a report's content step of its own code reads as \code{data})
 or \code{"content"} (the listing laid out from a \code{data} made before -- by a
 report's data step of its own code: its code lists, its order, its
 columns).}
+
+\item{ard}{The ARD definition (\code{\link[=tfl_ard_spec]{tfl_ard_spec()}}), for a listing that
+reads an analysis data (\code{data}, a data_id of its report's
+\code{analysis_data}) or keeps the subjects of an analysis set
+(\code{population_id}): the program starts with their part of the ARD
+program (\code{\link[=tfl_ard_code]{tfl_ard_code()}}'s \code{part = "data"}), and lists the data it
+makes.}
 }
 \value{
 The code, one element per line; \code{NULL} when the listing names no

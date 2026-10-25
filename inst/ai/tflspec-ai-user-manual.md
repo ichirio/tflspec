@@ -450,6 +450,11 @@ layers:                                 # what is drawn, in order
 - {layer: risk_table}                   # method: panel (default) | add_risktable
 ```
 
+A read may take one of the report's own analysis data instead of a dataset
+(`{step: read, data: adtte_os}`, its `ard: analysis_data:` row `adtte_os`):
+the program makes it first (`tfl_ard_code(part = "data")`), as a table's
+analyses do, and the figure starts from it.
+
 - `data`: one list, in order. `read` starts `df`; `join`, `param`,
   `flag`, `filter`, `derive`, `time_unit`, `levels`, `rank` change the
   object above them; `survfit`, `summary`, `summary_by`, `rate`, `count`,
@@ -743,7 +748,10 @@ column: ARS's `methodId` comes from the spec.
 
 ## 11. A listing's report file
 
-A listing reads a dataset (`data: {source: dataset, dataset: ADAE, where: !r 'AESER == "Y"', sort: [USUBJID, ASTDY]}`)
+A listing reads a dataset (`data: {source: dataset, dataset: ADAE, where: !r 'AESER == "Y"', sort: [USUBJID, ASTDY]}`),
+the subjects of an analysis set in it (`population: SAF`), or one of the
+report's own analysis data (`data: adae_ser`, instead of `dataset` and
+`population`; its `ard: analysis_data:` row),
 and its `content:` is one `plan_listing` item, its columns
 `listing_col()` calls:
 
