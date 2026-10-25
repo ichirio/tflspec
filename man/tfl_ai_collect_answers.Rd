@@ -30,9 +30,22 @@ report's \verb{spec/outputs/<id>.yml} when written, else \code{NA}), \code{repai
 \code{next_steps} (a request's next step, named by the request),
 \code{assumptions} (the study's \verb{spec/_assumptions.yml} for these reports:
 \code{output_id}, \code{where}, \code{item}, \code{assumption}, \code{question}), \code{stray} (answer
-files named after no request), \code{requests} (the requests' folder) and
+files named after no request), \code{requests} (the requests' folder),
 \code{templates} (each request's setting, \code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}}'s \code{templates}:
-a logical named by the request).
+a logical named by the request), \code{manifest} and \code{manifest_file}
+(below).
+
+The manifest is every report the answers say they make, for the person
+to check the count against the TOC (one TOC row can be several
+reports): each answer lists its reports first (\verb{reports:}, one line a
+report: \code{id}, \code{title}, \code{split} -- how its TOC row is split for it --,
+\code{toc} -- the TOC row's number).  A data frame, one row a report:
+\code{request}, \code{toc}, \code{output_id}, \code{title}, \code{split}, \code{listed} (\code{FALSE}: a
+report the answer writes but does not list; \code{NA}: a request not
+answered or not read, its reports as asked) and \code{status} (the report's,
+as in \code{reports}, or \code{"not answered"}: listed, but no report file in the
+answer).  It is written to \code{ai/manifest.csv} (UTF-8) beside the
+requests' folder, anew at each collection.
 The paths are relative to \code{study_dir}.  Its print is a summary: each
 request's status, its reports and the next step.
 }

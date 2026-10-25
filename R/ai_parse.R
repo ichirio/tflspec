@@ -13,7 +13,7 @@
   toc = "toc",
   figure = c("template", "ggplot2_version", "data", "stats", "plot",
              "layers", "plots", "compose", "note"),
-  table = "outputs"
+  table = c("reports", "outputs")
 )
 
 #' Read a drafting answer
@@ -83,6 +83,7 @@ tfl_ai_parse <- function(text, task) {
   if (task == "table") {
     out$outputs <- list()
     out$assumption_rows <- .ai_assumption_rows(NULL)
+    out$report_list <- .ai_report_list_rows(NULL)
   }
   found <- .ai_find_answer(text, task)
   out$problems <- found$problems
@@ -109,6 +110,7 @@ tfl_ai_parse <- function(text, task) {
     tb <- .ai_read_table(x)
     prob <- rbind(prob, tb$problems)
     out$outputs <- tb$outputs
+    out$report_list <- .ai_report_list_rows(x$reports)
     out$assumption_rows <- .ai_assumption_rows(x$assumptions)
     a <- out$assumption_rows
     out$assumptions <- trimws(paste0(

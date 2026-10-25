@@ -18,7 +18,7 @@ When the user's message shows reviewed reports of this study, follow them: write
 <!-- values -->
 Write each value as YAML: a number as a number, `true` / `false` for a logical, a list as a list, a mapping as a mapping; R code (a condition, a derivation, the arguments of a method) only where the schema says `r`, tagged `!r`. Every name is one the user's message lists: a dataset, a variable, a value of a variable as the data write it, an analysis set's id.
 <!-- content -->
-`outputs`: the reports, one report file each (a mapping with the keys of the schema), in the order of the user's message.
+`reports`: the reports you make, one line each: `- {id: <id>, title: <title>, split: <how its TOC row is split, or ~>, toc: <the TOC row's number>}`. Then `outputs`: one report file a report (a mapping with the keys of the schema), in that order.
 <!-- whole -->
 report file of every report asked for
 <!-- chat -->

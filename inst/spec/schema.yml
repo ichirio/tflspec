@@ -815,6 +815,26 @@ rtf_footer:
       - column: label
         description: 'What it is, a comment above it in the program; blank: none.'
         example: Japanese subjects of the safety set
+  - sheet: groups
+    description: 'ARD: condition-defined groups (CDISC ARS grouping factors), one
+      row a level of a group. An analysis names groups in `groups` and runs once in
+      each level; its rows say the group in group2 and the level in group2_level, in
+      this sheet''s order.'
+    columns:
+      - column: group_id
+        description: The group's name, used by analyses (its levels share it).
+        example: AGEGRP
+      - column: label
+        description: 'The group as the ARD''s group2 says it; blank: the group_id.'
+        example: Age Group
+      - column: level
+        description: 'The level as group2_level says it; blank: the whole group
+          (All).'
+        example: <65 years
+      - column: where
+        description: 'An R condition on the analysis''s data choosing the level''s
+          records (levels may overlap); blank: every record.'
+        example: AGE < 65
   - sheet: analysis_data
     description: 'ARD: named data the analyses read (the study''s, one row a data):
       from a dataset or an analysis data above it, the subjects of a population, the
@@ -935,6 +955,10 @@ rtf_footer:
         description: 'Variables the analysis is repeated within (cards'' strata: a
           subgroup, a parameter by visit), | between them; blank: none.'
         example: PARAMCD | AVISIT
+      - column: groups
+        description: 'Groups of the groups sheet the analysis runs in, each level once
+          (group2 / group2_level), | between them; blank: none.'
+        example: AGEGRP | SEX
       - column: variables
         description: The variables analysed (cards' variables), | between them.
         example: AGE | BMIBL

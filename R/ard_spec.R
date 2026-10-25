@@ -46,11 +46,13 @@
   populations = c("population_id", "dataset", "where", "derive", "label"),
   records = c("record_id", "dataset", "where", "label", "any_label"),
   objects = c("output_id", "object_id", "code", "label"),
+  # condition-defined groups (the ARS's grouping factors): a row a level
+  groups = c("group_id", "label", "level", "where"),
   analysis_data = c("output_id", "data_id", "label", "from", "population_id", "subjects",
                     "where", "add", "derive", "keep", "distinct", "code"),
   analyses = c("output_id", "analysis_id", "parent", "label", "method",
                "data", "dataset", "records",
-               "population_id", "where", "by", "overall", "strata", "variables",
+               "population_id", "where", "by", "overall", "strata", "groups", "variables",
                "optional", "statistics", "denominator", "formats", "args", "post",
                "code", "purpose", "reason"))
 
@@ -270,6 +272,16 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   if (is.data.frame(x$analyses) && !is.null(x$analyses$by)) {
     x$analyses$by[trimws(x$analyses$by) %in% "(none)"] <- NA_character_
   }
+  # (a definition without condition-defined groups: none; a row of blanks
+  # is no level)
+  g <- x$groups
+  if (!is.null(g) && !is.data.frame(g)) g <- as.data.frame(g, stringsAsFactors = FALSE)
+  if (is.null(g)) {
+    g <- as.data.frame(stats::setNames(rep(list(character()), 4L), .ard_spec_sheets$groups),
+                       stringsAsFactors = FALSE)
+  }
+  blank <- if (nrow(g)) apply(is.na(g) | g == "", 1L, all) else logical()
+  x$groups <- g[!blank, , drop = FALSE]
   for (s in intersect(names(.ard_spec_sheets), names(x))) {
     for (c in setdiff(.ard_spec_sheets[[s]], names(x[[s]]))) {
       x[[s]][[c]] <- rep(NA_character_, nrow(x[[s]]))
@@ -302,7 +314,7 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   if (any(dup)) add(which(dup)[1L], "analysis_id", sprintf(
     "output_id / analysis_id repeated: %s",
     paste(unique(paste(a$output_id, a$analysis_id)[dup]), collapse = ", ")))
-  pr <- c(pr, list(.ard_parent_problems(a), .adata_problems(x, a)))
+  pr <- c(pr, list(.ard_parent_problems(a), .adata_problems(x, a), .ard_groups_problems(x, a)))
   for (i in which(!is.na(a$post %||% rep(NA, nrow(a))))) {
     tag <- paste(a$output_id[i], a$analysis_id[i], sep = " / ")
     if (!is.na(a$parent[i] %||% NA)) {
@@ -1541,4 +1553,36 @@ tfl_ard_data_names <- function(spec, output_id = NULL, codelists = NULL) {
       "analyses", a$output_id[i], a$analysis_id[i], "by")
   }
   do.call(rbind, pr)
+}
+
+# The groups sheet and the analyses that name its groups: a level names its
+# group; an analysis names groups the sheet has, and takes group2 for them
+# (not with strata, nor with a `by` of two variables, which take it too)
+.ard_groups_problems <- function(x, a) {
+  gd <- x$groups
+  if (!is.data.frame(gd)) gd <- NULL
+  out <- list(.spec_problems_empty())
+  add <- function(i, msg) out[[length(out) + 1L]] <<- .ard_problem(a, i, "groups", msg)
+  if (!is.null(gd) && nrow(gd) > 0L && anyNA(gd$group_id)) {
+    out[[length(out) + 1L]] <- .spec_problem("`groups$group_id` is blank: each level names its group",
+                                             "groups", NA_character_,
+                                             as.character(which(is.na(gd$group_id))[1L]), "group_id")
+  }
+  known <- unique(stats::na.omit(if (is.null(gd)) character() else gd$group_id))
+  for (i in seq_len(nrow(a))) {
+    g <- .split_bar(a$groups[i] %||% NA)
+    if (!length(g)) next
+    bad <- setdiff(g, known)
+    if (length(bad)) {
+      add(i, sprintf("%s / %s: groups %s not in the `groups` sheet (data.yml `groups:`)%s",
+                     a$output_id[i], a$analysis_id[i], paste(bad, collapse = ", "),
+                     if (length(known)) paste0("; it has ", paste(known, collapse = ", ")) else ""))
+    }
+    if (!is.na(a$strata[i]) || length(.split_bar(a$by[i])) > 1L) {
+      add(i, sprintf(paste("%s / %s: `groups` take group2 / group2_level, which `strata` or a",
+                           "`by` of two variables take too: give one of them"),
+                     a$output_id[i], a$analysis_id[i]))
+    }
+  }
+  do.call(rbind, out)
 }

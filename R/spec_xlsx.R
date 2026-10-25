@@ -89,7 +89,7 @@ tfl_write_spec_xlsx <- function(dir, path) {
   # the workbook
   wb <- openxlsx::createWorkbook()
   written <- character()
-  order <- c("toc", "datasets", "populations", "records", "objects", "analysis_data", "analyses", "codelists",
+  order <- c("toc", "datasets", "populations", "records", "objects", "groups", "analysis_data", "analyses", "codelists",
              "tokens", "header", "footer", "titles", "footnotes", "page", "report", "listing_cols")
   for (sh in intersect(order, names(sheets))) {
     d <- .rows_frame(sheets[[sh]])

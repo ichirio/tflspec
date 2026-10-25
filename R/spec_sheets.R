@@ -57,7 +57,18 @@ tfl_sheets_from_spec <- function(study, outputs) {
   outs <- outs[order(match(ids, toc_ids, nomatch = length(toc_ids) + 1L), seq_along(ids))]
   # a template SPEC: the sheets hold its items (tfl_template_to_spec()),
   # the ARD's analyses among them
-  outs <- lapply(outs, function(o) if (is.null(.tpl_spec_of(o))) o else tfl_template_to_spec(o, s))
+  # (one that cannot be expanded -- a KM type with no `data:` steps -- stays
+  # as it is, its template and args kept, and is named in a warning: the
+  # study still reads, the report can be opened and fixed; running it says
+  # the error again)
+  outs <- lapply(outs, function(o) {
+    if (is.null(.tpl_spec_of(o))) return(o)
+    tryCatch(tfl_template_to_spec(o, s), error = function(e) {
+      warning(sprintf("%s: kept as it is (its template not expanded): %s", o$id,
+                      conditionMessage(e)), call. = FALSE)
+      o
+    })
+  })
   bridge <- .bridge_fn(".plan_sheets_from_content")
   nc <- list()
   note <- function(output, part, reason) nc[[length(nc) + 1L]] <<- data.frame(
@@ -153,6 +164,14 @@ tfl_sheets_from_spec <- function(study, outputs) {
   objs <- lapply(s$data$objects %||% list(), function(e) {
     m <- lapply(e, cell); m$object_id <- m$id; m$id <- NULL; c(list(output_id = NA_character_), m)
   })
+  # condition-defined groups: a row a level (data.yml `groups:`, each with
+  # its `levels:`, a level and the condition its records meet)
+  ard$groups <- .rows_df(unlist(lapply(s$data$groups %||% list(), function(g) {
+    lapply(g$levels %||% list(), function(l) {
+      list(group_id = cell(g$id), label = cell(g$label), level = cell(l$level),
+           where = cell(l$where))
+    })
+  }), recursive = FALSE), .ard_spec_sheets$groups)
   adata <- list(); analyses <- list()
   listings <- list(); listing_cols <- list(); fig_rows <- list()
   figures <- list()
