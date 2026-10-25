@@ -566,7 +566,8 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     lc <- lf$listing_cols[!is.na(lf$listing_cols$output_id) & lf$listing_cols$output_id == id, , drop = FALSE]
     data <- list(source = "dataset")
     if (nrow(lr)) {
-      for (k in c("dataset")) if (!is.na(lr[[k]][1L])) data[[k]] <- lr[[k]][1L]
+      for (k in c("dataset", "data")) if (!is.na(lr[[k]][1L] %||% NA)) data[[k]] <- lr[[k]][1L]
+      if (!is.na(lr$population_id[1L] %||% NA)) data$population <- lr$population_id[1L]
       if (!is.na(lr$where[1L])) { data$where <- tfl_r(gsub("\r\n?", "\n", lr$where[1L])); note(id, "listings", 1, "where", "kept as R text (!r)", lr$where[1L]) }
       if (!is.na(lr$sort[1L])) data$sort <- as.list(.conv_split(lr$sort[1L]))
     }
@@ -581,7 +582,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     more_items <- list()
     if (nrow(lr)) {
       more <- .conv_rows(lr[1L, , drop = FALSE], note, id, "listings",
-                         drop = c("output_id", "note", "dataset", "where", "sort", "max_rows", "blank_row",
+                         drop = c("output_id", "note", "dataset", "data", "population_id", "where", "sort", "max_rows", "blank_row",
                                   "content_more"))[[1L]]
       # (record: TRUE / FALSE, or the record column's name)
       if (!is.null(more$record)) more$record <- .listing_record_value(more$record)

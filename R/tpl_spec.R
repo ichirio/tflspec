@@ -50,9 +50,31 @@
     .ard_stop(sprintf(paste0("%s: template %s: the report says its data in its own `data:` steps ",
                              "-- read, the analysis set, the parameter (%s)."), id, t$name, how))
   }
-  reads <- toupper(vapply(steps[kind == "read"], function(st) as.character(st$dataset %||% ""), ""))
-  on_param <- "param" %in% kind || any(vapply(steps[kind == "filter"], function(st)
-    grepl("PARAMCD", paste(as.character(st$expr %||% ""), collapse = " "), fixed = TRUE), NA))
+  # (a read of the report's analysis data: its dataset the one it is made
+  # from, its parameter kept when a condition on its way says PARAMCD)
+  ad <- output$ard$analysis_data %||% list()
+  ad_said <- character()
+  ad_root <- function(id) {
+    seen <- character()
+    repeat {
+      e <- Filter(function(a) identical(a$id, id), ad)
+      if (!length(e) || id %in% seen) return("")
+      seen <- c(seen, id)
+      if (grepl("PARAMCD", paste(as.character(e[[1L]]$where %||% ""), collapse = " "), fixed = TRUE)) {
+        ad_said <<- c(ad_said, id)
+      }
+      from <- as.character(e[[1L]]$from %||% "")
+      if (!from %in% vapply(ad, function(a) as.character(a$id %||% ""), "")) return(from)
+      id <- from
+    }
+  }
+  reads <- toupper(vapply(steps[kind == "read"], function(st) {
+    dd <- .fig_read_data(st)
+    if (!is.null(dd)) ad_root(dd) else as.character(st$dataset %||% "")
+  }, ""))
+  on_param <- "param" %in% kind || length(ad_said) > 0L ||
+    any(vapply(steps[kind == "filter"], function(st)
+      grepl("PARAMCD", paste(as.character(st$expr %||% ""), collapse = " "), fixed = TRUE), NA))
   if (any(reads != "ADSL") && !on_param) {
     .ard_stop(sprintf(paste0("%s: template %s: its `data:` steps read %s but keep no parameter: ",
                              "add {step: param, value: <PARAMCD>} (the parameter is what the ",

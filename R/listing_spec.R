@@ -58,7 +58,7 @@ tfl_read_data_code <- function(datasets, dataset) {
 # ---- the definition --------------------------------------------------------
 
 .listing_sheets <- list(
-  listings     = c("output_id", "type", "dataset", "where", "sort",
+  listings     = c("output_id", "type", "dataset", "data", "population_id", "where", "sort",
                    "max_rows", "blank_row", "wrap", "align", "record", "content_more"),
   listing_cols = c("output_id", "vars", "label", "width", "sep", "align",
                    "collapse_repeats", "more"))
@@ -201,7 +201,21 @@ tfl_listing_spec <- function(listings = NULL, listing_cols = NULL,
   }
   for (i in seq_len(nrow(l))) {
     r <- l[i, ]
-    if (is.na(r$dataset)) add_l(i, "dataset", sprintf("%s: no `dataset`", who(r$output_id)))
+    r$data <- r$data %||% NA_character_
+    r$population_id <- r$population_id %||% NA_character_
+    if (is.na(r$dataset) && is.na(r$data)) add_l(i, "dataset", sprintf("%s: no `dataset`", who(r$output_id)))
+    if (!is.na(r$data)) {
+      both <- c("dataset", "population_id")[!is.na(c(r$dataset, r$population_id))]
+      if (length(both)) {
+        add_l(i, "data", sprintf(paste(
+          "%s: a listing reads its `data` or a %s; not both (the analysis",
+          "data has them)"), who(r$output_id), paste0("`", both, "`", collapse = " and ")))
+      }
+      if (!.adata_name_ok(r$data)) {
+        add_l(i, "data", sprintf("%s: `data` is the data_id of an analysis data, not %s",
+                                 who(r$output_id), r$data))
+      }
+    }
     if (!is.na(r$where) &&
         inherits(try(str2lang(r$where), silent = TRUE), "try-error")) {
       add_l(i, "where", sprintf("%s: `where` is not R code: %s", who(r$output_id),
@@ -360,7 +374,8 @@ print.tfl_listing_spec <- function(x, ...) {
 #'
 #' @param spec A [tfl_listing_spec()], or the path of its workbook.
 #' @param output_id The listing; may be left out when the definition has one.
-#' @param datasets The data catalog (see [tfl_read_data_code()]).
+#' @param datasets The data catalog (see [tfl_read_data_code()]); `NULL`:
+#'   `ard`'s.
 #' @param rework Code run on `data` before it is sorted, or `NULL`.
 #' @param type The listing type when the listing's `type` is blank (one of
 #'   rtfreporter's `listing_spec()` types).
@@ -376,22 +391,48 @@ print.tfl_listing_spec <- function(x, ...) {
 #'   or `"content"` (the listing laid out from a `data` made before -- by a
 #'   report's data step of its own code: its code lists, its order, its
 #'   columns).
+#' @param ard The ARD definition ([tfl_ard_spec()]), for a listing that
+#'   reads an analysis data (`data`, a data_id of its report's
+#'   `analysis_data`) or keeps the subjects of an analysis set
+#'   (`population_id`): the program starts with their part of the ARD
+#'   program ([tfl_ard_code()]'s `part = "data"`), and lists the data it
+#'   makes.
 #' @return The code, one element per line; `NULL` when the listing names no
 #'   dataset yet (`part = "content"`: no columns yet).
 #' @seealso [tfl_listing()] for the pages themselves.
 #' @export
-tfl_listing_code <- function(spec, output_id = NULL, datasets,
+tfl_listing_code <- function(spec, output_id = NULL, datasets = NULL,
                              rework = NULL, type = "multiline",
                              codelists = NULL,
-                             part = c("all", "data", "content")) {
+                             part = c("all", "data", "content"), ard = NULL) {
   part <- match.arg(part)
   x <- .listing_one(spec, output_id, "tfl_listing_code")
   l <- x$listing
   cols <- x$cols
+  l_data <- l$data %||% NA_character_
+  l_pop <- l$population_id %||% NA_character_
   if (identical(part, "content")) {
     if (!nrow(cols)) return(NULL)
-  } else if (is.na(l$dataset)) return(NULL)
-  obj <- .r_name(l$dataset)
+  } else if (is.na(l$dataset) && is.na(l_data)) return(NULL)
+  if (!is.null(ard)) ard <- .as_spec(ard, "ard", "tfl_listing_code")
+  datasets <- datasets %||% ard$datasets
+  # an analysis data, or the subjects of an analysis set: the ARD
+  # program's data part makes them (R/ard_code.R)
+  own <- !is.na(l_data) || !is.na(l_pop)
+  if (own && is.null(ard) && !identical(part, "content")) {
+    .ard_stop(sprintf(paste("Listing %s reads %s: give the ARD definition",
+                            "(`ard`), which defines it."), l$output_id,
+                      if (!is.na(l_data)) paste("analysis data", l_data) else
+                        paste("the subjects of", l_pop)))
+  }
+  obj <- if (!is.na(l_data)) l_data else .r_name(l$dataset)
+  join <- NULL
+  if (is.na(l_data) && !is.na(l_pop)) {
+    pop <- paste0("pop_", .r_name(l_pop))
+    pop_ds <- ard$populations$dataset[ard$populations$population_id %in% l_pop][1L]
+    if (identical(pop_ds, l$dataset)) obj <- pop else
+      join <- .subjects_join(pop, .study_value(ard, "id", "USUBJID"))
+  }
   col_code <- vapply(seq_len(nrow(cols)), function(i) {
     c <- cols[i, ]
     v <- .split_bar(c$vars)
@@ -417,7 +458,7 @@ tfl_listing_code <- function(spec, output_id = NULL, datasets,
   # dates as they print: a column of dates becomes its text
   dates <- paste0("dplyr::mutate(dplyr::across(dplyr::where(~ inherits(.x, c(",
                   "\"Date\", \"POSIXt\"", "))), format))")
-  steps <- c(if (!is.na(l$where)) sprintf("dplyr::filter(%s)", l$where),
+  steps <- c(join, if (!is.na(l$where)) sprintf("dplyr::filter(%s)", l$where),
              if (length(lv)) .levels_call(lv),
              if (is.null(rework)) c(sort, dates))
   # the columns it prints: listing_spec(list(listing_col(...), ...), type =)
@@ -448,9 +489,17 @@ tfl_listing_code <- function(spec, output_id = NULL, datasets,
   syms <- if (!is.null(rework)) tryCatch(all.names(parse(text = rework, keep.source = FALSE)),
                                          error = function(e) character())
   also <- setdiff(datasets$dataset[.r_name(datasets$dataset) %in% syms], l$dataset)
+  read <- if (own) {
+    made <- .ard_data_part(ard, l$output_id, data = if (!is.na(l_data)) l_data else character(),
+                           population_id = if (is.na(l_data)) l_pop,
+                           dataset = if (is.na(l_data)) l$dataset)
+    also <- setdiff(also, ard$datasets$dataset[.r_name(ard$datasets$dataset) %in%
+                                                 sub(" <-.*", "", made)])
+    c(made, "", if (length(also)) paste0("# also: ", paste(also, collapse = ", "), " (data catalog)"))
+  } else c(paste0("# the data: ", paste(c(l$dataset, also), collapse = ", "), " (data catalog)"),
+           tfl_read_data_code(datasets, l$dataset))
   c(if (length(lv)) .codelists_head(lv),
-    paste0("# the data: ", paste(c(l$dataset, also), collapse = ", "), " (data catalog)"),
-    tfl_read_data_code(datasets, l$dataset),
+    read,
     unlist(lapply(also, function(d) tfl_read_data_code(datasets, d))),
     if (is.null(rework)) "# its records, in its order; dates as they print",
     .make_code("data", obj, steps),

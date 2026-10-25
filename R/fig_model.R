@@ -101,7 +101,10 @@ tfl_time_unit_days <- function() {
     # ---- data
     read = list(section = "data", label = "Read a dataset",
       help = "The dataset the figure starts from: `df`.",
-      fields = rbind(.ff("dataset", "dataset", "Dataset", "ADSL", required = TRUE))),
+      fields = rbind(.ff("dataset", "dataset", "Dataset", "ADSL", required = TRUE),
+                     .ff("data", "text", "Analysis data",
+                         help = paste("Or one of the report's analysis data (its data_id), made",
+                                      "before the figure: read instead of the dataset")))),
     join = list(section = "data", label = "Join variables",
       help = paste("Variables of another dataset (e.g. ADSL's treatment, ADRS's best response),",
                    "one row a subject; or only the rows of its subjects (semi: an analysis set's)."),
@@ -721,6 +724,7 @@ tfl_read_fig_design <- function(path) {
   out <- character()
   pipe <- character()
   reads <- character()
+  adata <- character()
   libs <- character()
   cur <- "df"
   lv_todo <- length(levels) > 0L
@@ -783,10 +787,18 @@ tfl_read_fig_design <- function(path) {
     switch(k,
       read = {
         flush()
-        ds <- toupper(v("dataset"))
-        reads <- c(reads, ds)
         cur <- o
-        pipe <- pp_ds_name(ds)
+        # one of the report's analysis data, made before (its data part,
+        # tfl_ard_code(part = "data")), or a dataset
+        dd <- .fig_read_data(s)
+        if (!is.null(dd)) {
+          adata <- c(adata, dd)
+          pipe <- dd
+        } else {
+          ds <- toupper(v("dataset"))
+          reads <- c(reads, ds)
+          pipe <- pp_ds_name(ds)
+        }
       },
       join = {
         ds <- toupper(v("dataset"))
@@ -845,7 +857,14 @@ tfl_read_fig_design <- function(path) {
   }
   put_levels()
   flush()
-  list(code = out, reads = unique(reads), libs = unique(libs))
+  list(code = out, reads = unique(reads), libs = unique(libs), data = unique(adata))
+}
+
+# the analysis data a read step reads (`data`, a data_id), or NULL: it
+# reads its dataset
+.fig_read_data <- function(s) {
+  d <- s[["data"]]
+  if (is.character(d) && length(d) == 1L && !is.na(d) && nzchar(trimws(d))) trimws(d)
 }
 
 .fig_stats_code <- function(steps, src = "df") {
@@ -1463,9 +1482,9 @@ tfl_read_fig_design <- function(path) {
   fnames <- vapply(layers, function(l) if (identical(l$layer, "call")) .fig_bare_fn_name(l$fn) else "", "")
   list(
     libs = libs, needs = needs, guard = guard, guard_v = guard_v, features = features,
-    reads = d$reads,
+    reads = d$reads, data = d$data,
     step1 = c(
-      if (!setup) c(sprintf("# Input data frames: %s", paste(pp_ds_name(d$reads), collapse = ", ")),
+      if (!setup) c(sprintf("# Input data frames: %s", paste(c(pp_ds_name(d$reads), d$data), collapse = ", ")),
                     if (.fig_uses_ard(design)) "# Input ARD: ard (read with ard_value() / ard_stats(), tfl_helpers_code())",
                     ""),
       head,
@@ -1586,7 +1605,8 @@ tfl_fig_design_code <- function(design, plot_id = "fig", ggplot2_version = NULL,
     if (save) c("", name, "", .fig_save_code(design$plot, plot_id, name, width_in, height_in)))
   code <- .fig_rename_df(code, tfl_fig_data_name(design))
   code <- .fig_tidy_names(code)
-  .fig_code_out(code, b$reads, b$libs, b$needs, ard = .fig_uses_ard(design))
+  .fig_code_out(code, b$reads, b$libs, b$needs, ard = .fig_uses_ard(design),
+                data = b$data)
 }
 
 #' The name of a figure's data in its program
@@ -1701,12 +1721,13 @@ tfl_fig_uses_ard <- function(design) .fig_uses_ard(design)
 }
 
 # the script, with what it needs as attributes
-.fig_code_out <- function(code, reads, libs, needs, ard = FALSE) {
+.fig_code_out <- function(code, reads, libs, needs, ard = FALSE, data = NULL) {
   code <- .drop_attached_ns(.code_lines(code))
   # (a script made with the setup starts at its first section)
   while (length(code) && identical(code[[1L]], "")) code <- code[-1L]
   structure(code, class = "tfl_code", reads = unique(reads),
-            libs = unique(libs), needs = unique(needs), ard = isTRUE(ard))
+            libs = unique(libs), needs = unique(needs), ard = isTRUE(ard),
+            data = unique(data))
 }
 
 # ---- the checks -------------------------------------------------------------
@@ -1911,8 +1932,12 @@ tfl_check_fig_design <- function(design, adam = NULL, ggplot2_version = NULL,
     }
     switch(k,
       read = {
-        d <- ds(v("dataset"))
-        if (!is.null(adam) && is.null(d)) add(part, "dataset", paste0("no dataset ", v("dataset")))
+        # (an analysis data: made by the report's data part, its columns
+        # not known here)
+        d <- if (is.null(.fig_read_data(s))) ds(v("dataset"))
+        if (!is.null(adam) && is.null(d) && is.null(.fig_read_data(s))) {
+          add(part, "dataset", paste0("no dataset ", v("dataset")))
+        }
         cols <- if (!is.null(d)) names(d)
       },
       join = {

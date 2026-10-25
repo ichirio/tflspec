@@ -8,11 +8,12 @@ tfl_ard_code(
   spec,
   output_id = NULL,
   save = TRUE,
-  part = c("all", "setup", "body"),
+  part = c("all", "setup", "body", "data"),
   statistics = NULL,
   methods = NULL,
   dir = ".",
-  codelists = NULL
+  codelists = NULL,
+  data = NULL
 )
 }
 \arguments{
@@ -27,7 +28,8 @@ its code lists the reports' own (when \code{codelists} is \code{NULL}).}
 \code{"body"}, \code{TRUE} ends it in \code{save_ard()} (its rows into the
 study ARD, with the definition's fingerprint), \code{FALSE} in \code{ard}.}
 
-\item{part}{\code{"all"} (the whole program), \code{"setup"} or \code{"body"}.}
+\item{part}{\code{"all"} (the whole program), \code{"setup"}, \code{"body"} or
+\code{"data"} (one report's data part).}
 
 \item{statistics, methods}{The catalogs (\code{\link[=tfl_ard_statistics]{tfl_ard_statistics()}},
 \code{\link[=tfl_ard_methods]{tfl_ard_methods()}}) to use instead of the current ones.}
@@ -50,6 +52,10 @@ program.  An analysis's \code{where} on such a column is written in its
 labels: one that names a value whose label differs stops here.  In the
 study's program, each report's part reads its data again with its own.
 \code{NULL} (default): the data as read.}
+
+\item{data}{For \code{part = "data"}: the analysis data to make (their
+\code{data_id}s; the data they are made from come too); \code{NULL}: all the
+report's.}
 }
 \value{
 The code, one element per line.
@@ -107,5 +113,8 @@ tflspec.
 \code{library(dplyr)}, the computed statistics the analyses use
 (\code{tfl_stats}) and each statistic's format (\code{fmt_default}); \code{"body"} is the analyses of
 \code{output_id}, starting with \code{report_id <- "..."} and its code lists
-(\verb{cl_<variable>}), and ending in \code{save_ard()} (one report, \code{save = TRUE}) or \code{ard}.
+(\verb{cl_<variable>}), and ending in \code{save_ard()} (one report, \code{save = TRUE}) or \code{ard}.  \code{"data"} is one report's data alone: the datasets,
+the analysis sets and the analysis data it reads (\code{ard.analysis_data},
+each made once under its \code{data_id}), what a figure's or a listing's
+program starts with before its own steps read them by name.
 }

@@ -241,7 +241,8 @@ tfl_sheets_from_spec <- function(study, outputs) {
       if (!code_content) table_rows(o$content, id)
     } else if (o$kind == "listing") {
       lr <- list(output_id = id)
-      for (k in c("dataset", "where", "sort")) if (!is.null(o$data[[k]])) lr[[k]] <- cell(o$data[[k]])
+      for (k in c("dataset", "data", "where", "sort")) if (!is.null(o$data[[k]])) lr[[k]] <- cell(o$data[[k]])
+      if (!is.null(o$data$population)) lr$population_id <- cell(o$data$population)
       # what the listing sheets' columns cannot say is kept as YAML: the
       # items in the listing's content_more, a column's other arguments in
       # its row's more (read back by .conv_output(): nothing lost)
