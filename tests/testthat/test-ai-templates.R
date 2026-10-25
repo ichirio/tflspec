@@ -131,7 +131,7 @@ test_that("answers with templates: checked, written, built (RTF, PNG); a bad arg
   }
   expect_true(file.exists(file.path(d, rp$png[rp$output_id == "F-14-2-2"])))
   # the report file keeps the template, as answered
-  y <- yaml::read_yaml(file.path(d, "spec", "outputs", "T-14-3-1.yml"))
+  y <- yaml::read_yaml(file.path(d, "ai", "spec", "outputs", "T-14-3-1.yml"))
   expect_identical(y$template$name, "ae_soc_pt")
   # a bad argument: an error that names the template's parameters, a repair
   expect_identical(unname(st["T-14-3-5"]), "error")

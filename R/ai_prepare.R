@@ -98,6 +98,13 @@
 #'   the AI's to read from it -- and one request of the TOC items no sheet
 #'   chose; `"toc"` the TOC's reports, as before (a report's shell found
 #'   by its number).
+#' @param area Where the AI's report files go: `TRUE`, its own folder
+#'   `ai/spec/outputs/` (made here) -- drafts, built into `ai/output/`,
+#'   which the person adopts into the study's `spec/outputs/`
+#'   ([tfl_ai_adopt()]); `FALSE`, `spec/outputs/` itself, as before.
+#'   `NULL` (default): `TRUE` for a new study (no report in `spec/outputs/`
+#'   and no answer yet), else as the study is (a study of the form before
+#'   is moved with [tfl_ai_migrate()]).
 #' @return A `tfl_ai_prepared`: a list with `requests` (one row a request:
 #'   `request`, `family`, `outputs` -- the TOC items it names (a sheet's:
 #'   its candidates) --, `n`, `chars`, `file`, `sheets` -- as
@@ -147,7 +154,7 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
                            datasets = NULL, max_levels = 15L, quiet = FALSE,
                            mode = c("chat", "agent"), shells = NULL, add = FALSE,
                            templates = TRUE, progress = NULL, toc_cols = NULL,
-                           sheet_roles = NULL, unit = c("sheet", "toc")) {
+                           sheet_roles = NULL, unit = c("sheet", "toc"), area = NULL) {
   unit <- match.arg(unit)
   if (isTRUE(quiet)) {
     cl <- match.call()
@@ -175,6 +182,13 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
   ai <- file.path(dir, "ai")
   files <- character()
   if (!dry) {
+    # a new study: the AI's drafts in their own folder from the start
+    if (is.null(area)) {
+      outs <- list.files(file.path(dir, "spec", "outputs"), pattern = "\\.ya?ml$")
+      answered <- length(list.files(file.path(ai, "answers"), pattern = "\\.md$")) > 0L
+      area <- !length(outs[!startsWith(outs, "_")]) && !answered
+    }
+    if (isTRUE(area)) dir.create(file.path(ai, "spec", "outputs"), recursive = TRUE, showWarnings = FALSE)
     dir.create(dir, recursive = TRUE, showWarnings = FALSE)
     # (added to a study: its study.yml and spec/ as they are, whatever
     # `overwrite`, which then says only the requests)

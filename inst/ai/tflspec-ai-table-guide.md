@@ -135,7 +135,7 @@ but not answered" or "answered but not listed".
 Then the RTF of every report written:
 
 ```r
-tfl_ai_run(".")   # collect again, then each report's ARD and RTF: output/tfl/<id>.rtf
+tfl_ai_run(".")   # collect again, then each report's ARD and RTF: ai/output/tfl/<id>.rtf
 ```
 
 It writes `ai/status.md` (each report: its status, its RTF or why none, the
@@ -194,8 +194,13 @@ cannot settle into one file for you.
    questions are answered"*: it moves each answer to `ai/decisions.md` and
    redoes the reports it touches.
 
-The RTF files are in `output/tfl/`; the folder opens in tflplanner as a
-study (its `spec/toc.yml` lists the reports).
+In a new study the AI's report files are drafts in `ai/spec/outputs/`,
+their RTF files in `ai/output/tfl/`. A draft you have checked is adopted
+with `tfl_ai_adopt()`: copied to the study's `spec/outputs/`, where the
+report list shows it (the AI never writes over what was adopted). The
+folder opens in tflplanner as a study (its `spec/toc.yml` lists the
+reports). A study of the form before (its drafts in `spec/outputs/`) moves
+with `tfl_ai_migrate()`.
 
 What every request would repeat is written once in `ai/` for the agent:
 `ai/instructions-table.md` and `ai/instructions-figure.md` (the
