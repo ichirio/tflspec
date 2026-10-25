@@ -544,6 +544,16 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
     if (!nrow(t)) return(character())
   } else if (!nrow(t) || (file.exists(f) && !isTRUE(overwrite))) return(character())
   pop_of <- function(txt) .ai_population_of(dir, txt)$id %||% NA_character_
+  # the id written at the top of each item's shell (its best sheet): the
+  # file name's {shell_code}; the study's own form (settings: shell_code)
+  sy <- file.path(dir, "spec", "study.yml")
+  code_rx <- if (file.exists(sy)) tryCatch(yaml::read_yaml(sy)$settings$shell_code,
+                                           error = function(e) NULL)
+  code_of <- function(i) {
+    s <- if (!is.null(t$sheets)) strsplit(.na_or(t$sheets[i], ""), " | ", fixed = TRUE)[[1L]][1L]
+    if (is.null(s) || is.na(s) || is.null(shell$cells)) return(NA_character_)
+    .shell_code_of(shell$cells[shell$cells$sheet == s, , drop = FALSE], code_rx)
+  }
   # a report written in parts (tfl_ai_read_shell()$toc$parts): a TOC entry
   # a part, in the report's place
   if (!is.null(t$parts) && any(!is.na(t$parts))) {
@@ -564,6 +574,8 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
     if (length(parts) >= 3L) e$section <- paste(parts[seq_len(length(parts) - 1L)], collapse = ".")
     p <- pop_of(t$text[i])
     if (!is.na(p)) e$population <- p
+    sc <- code_of(i)
+    if (!is.na(sc)) e$shell_code <- sc
     e
   })
   dir.create(dirname(f), recursive = TRUE, showWarnings = FALSE)
