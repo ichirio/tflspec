@@ -1720,6 +1720,11 @@ rtf_footer:
           pages, a ggplot or rtfplot figure, or a list of them -- for the report step
           to dress. Blank: the definition makes the content.'
         example: content <- ggplot2::ggplot(df) + ggplot2::geom_line()
+      - column: ard_object
+        description: 'The ARD''s name in the report''s program (data.object): the
+          content''s pipe starts from it and the generated code follows the name.
+          Blank: ard.'
+        example: ard_dm
   - sheet: page
     description: 'Report: one row a report; the page (rtf_page()) and the document''s
       text defaults (rtf_default_format()). Blank: rtfreporter''s options (landscape

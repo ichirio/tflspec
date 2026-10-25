@@ -204,6 +204,8 @@ tfl_sheets_from_spec <- function(study, outputs) {
     }
     if (inherits(o$content, "tfl_r")) rr$content_code <- cell(o$content)
     if (identical(o$data$source, "code") && !is.null(o$data$code)) rr$data_code <- cell(o$data$code)
+    # the ARD's name in the report's program, when not ard
+    if (!is.null(o$data$object) && !identical(o$data$object, "ard")) rr$ard_object <- cell(o$data$object)
     add("report", rr)
     for (v in names(o$codelists)) for (i in seq_along(o$codelists[[v]])) {
       cl <- o$codelists[[v]][[i]]

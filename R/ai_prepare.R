@@ -280,7 +280,8 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
         paste0("in the agent's chat: \"Follow AGENTS.md: do every request of ",
                "ai/requests/index.md.\" (a folder above it open: \"Follow <the study ",
                "folder>/AGENTS.md ...\")"),
-        "then answer ai/questions.md and tell the agent \"the questions are answered\"")
+        paste0("then answer ai/questions.md, write your corrections (tfl_ai_corrections(): ",
+               "ai/corrections.md) and tell the agent \"the answers and corrections are written\""))
     } else {
       sprintf(paste0("paste %s into a new chat; save the whole answer as ",
                      "ai/answers/%s.md (tfl_ai_save_answer()), then ",

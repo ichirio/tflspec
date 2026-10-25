@@ -190,9 +190,13 @@ cannot settle into one file for you.
    *"Follow mystudy/AGENTS.md ..."*.) For each request it saves an answer,
    runs `run.R`, reads `ai/status.md` and repairs, then goes on.
 4. When it is done, answer `ai/questions.md` (one question asked by several
-   reports is there once, with the reports), and tell the agent *"the
-   questions are answered"*: it moves each answer to `ai/decisions.md` and
-   redoes the reports it touches.
+   reports is there once, with the reports). Correct the list of reports
+   when it needs it (`tfl_ai_outputs()`, `tfl_ai_expected_write()`:
+   `ai/expected_outputs.csv`), gather the answers and corrections with
+   `tfl_ai_corrections()` (`ai/corrections.md`), and tell the agent *"the
+   answers and corrections are written"*: it moves each answer to
+   `ai/decisions.md`, does each correction, and redoes the reports they
+   touch.
 
 In a new study the AI's report files are drafts in `ai/spec/outputs/`,
 their RTF files in `ai/output/tfl/`. A draft you have checked is adopted

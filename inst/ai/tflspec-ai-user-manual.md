@@ -597,7 +597,11 @@ tfl_ai_unpack(a, "study")                           # spec/outputs/<id>.yml, spe
   `ai/questions.md` and `ai/decisions.md` -- every request without a stop,
   then a second round from the person's answers; `tfl_ai_questions(study_dir)`
   reads `ai/questions.md` and `tfl_ai_answer_questions(study_dir, answers)`
-  writes the person's answers into it.  The TOC and its shells in
+  writes the person's answers into it; `tfl_ai_outputs(study_dir)` lists
+  the reports made, `tfl_ai_expected_write()` keeps the list the person
+  expects (`ai/expected_outputs.csv`, which `run.R` compares with), and
+  `tfl_ai_corrections(study_dir)` gathers the corrections and the answers
+  for the agent's next round (`ai/corrections.md`).  The TOC and its shells in
   workbooks apart: `tfl_ai_read_shell(path, shells = )` /
   `tfl_ai_prepare(toc, shells = )`; another workbook added to the study's
   requests: `tfl_ai_prepare(..., add = TRUE)`.  A figure of the TOC is a request
@@ -860,7 +864,7 @@ back): rename the value or choose another separator.
 **AI-assisted drafting:** `tfl_ai_tasks` `tfl_ai_context` `tfl_ai_schema`
 `tfl_ai_prompt` `tfl_ai_parse` `tfl_ai_check` `tfl_ai_repair_prompt`
 `tfl_ai_diff` `tfl_ai_read_shell` `tfl_ai_adam_summary` `tfl_ai_batches`
-`tfl_ai_write_requests` `tfl_ai_collect_answers` `tfl_ai_adopt` `tfl_ai_migrate` `tfl_ai_outputs` `tfl_ai_expected_read` `tfl_ai_expected_write` `tfl_ai_save_answer` `tfl_ai_study_init`
+`tfl_ai_write_requests` `tfl_ai_collect_answers` `tfl_ai_adopt` `tfl_ai_migrate` `tfl_ai_outputs` `tfl_ai_expected_read` `tfl_ai_expected_write` `tfl_ai_corrections` `tfl_ai_save_answer` `tfl_ai_study_init`
 `tfl_ai_prepare` `tfl_ai_requests` `tfl_ai_run` `tfl_ai_compare` `tfl_ai_questions`
 `tfl_ai_answer_questions`
 
