@@ -2191,11 +2191,9 @@ tfl_table_spec_template <- function(ard, path = NULL, cols = NULL,
   })
 }
 
-# `{output_id}` in a report's file or program name.
-.ard_spec_fill_id <- function(x, id) {
-  if (is.null(x) || is.na(id)) return(x)
-  gsub("{output_id}", id, x, fixed = TRUE)
-}
+# `{output_id}` -- and the parts of its number (R/file_names.R) -- in a
+# report's file or program name.
+.ard_spec_fill_id <- function(x, id) .file_name_fill(x, id)
 
 .ard_spec_report_row <- function(sp) {
   r <- if (nrow(sp$report)) .ard_spec_typed(sp$report[1L, ], "report") else list()
@@ -2387,6 +2385,18 @@ tfl_report <- function(spec, output_id = NULL, content, study = NULL) {
 #' else its TOC entry's), else `study.yml`'s `settings: file`
 #' (`"{output_id}.rtf"` when none says it), in `settings: output_path` as
 #' it is written (a relative one from the working directory).
+#'
+#' The file is a pattern.  Beside `{output_id}`, the parts of the report's
+#' number fill it: `{type}` (`t`, `f`, `l`), `{num}` (`15.1.5.1`), `{num:N}`
+#' (its first N levels joined: `{num:2}` is `151`), `{part}` (`a`),
+#' `{part_no}` (`1`); and `{shell_code}`, the id written at the top of the
+#' report's shell (its TOC entry's `shell_code`, which [tfl_ai_prepare()]
+#' reads: a cell of the shell's first rows in the form `t_dem_01` or
+#' `151_t_dem_01`, or `study.yml`'s `settings: shell_code`, a regular
+#' expression).  A part's entry is its number's.  `[ ... ]` is left out
+#' when a field in it is empty: `[m{part_no}_]{shell_code}.rtf` is
+#' `m1_151_t_dem_01.rtf` for part a, `151_t_dem_01.rtf` for a report with
+#' no parts.
 #'
 #' @param spec A report definition ([tfl_read_report_spec()]) narrowed to one
 #'   report, or the path(s) to read it from; or a report of the YAML spec
@@ -3020,9 +3030,10 @@ tfl_as_table_spec <- function(x, output_id = NULL, compare = TRUE) {
 .output_rtf_path <- function(output, study) {
   id <- output$id
   set <- study$study$settings
-  entry <- .page_toc_entry(study, id)
-  file <- .ard_spec_fill_id(output$settings$file %||% entry[["file"]] %||% set$file %||%
-                              "{output_id}.rtf", id)
+  # (a part's entry is its number's: its shell_code)
+  entry <- .file_toc_entry(study, id)
+  file <- .file_name_fill(output$settings$file %||% .page_toc_entry(study, id)[["file"]] %||%
+                            set$file %||% "{output_id}.rtf", id, entry)
   out <- set$output_path %||% NA_character_
   if (is.na(out)) file else file.path(out, file)
 }
