@@ -188,6 +188,34 @@ print.tfl_item <- function(x, ...) {
 #' layering with `defaults` is not done here).  `tfl_write_output()`
 #' writes one report back in the same form.
 #'
+#' @section Several objects in one report:
+#' One report (one RTF) can hold several objects -- tables, figures -- on
+#' its pages: `contents:` in place of `content:` names them.  An object is a
+#' list of items (it reads the report's `data:` / `ard:`), or a map of
+#' `kind`, `data`, `content`, `template`, `plot` (its own data: a figure's
+#' steps, a template).  Its kind, when not said, is what its items make
+#' (`table_plan` a table) or its template's.  The report's `page: layout:`
+#' rows say each object's place, as `rtfreporter::rtf_tables()` /
+#' `rtf_figures()` take it: `object` (its name), `page_break` (each after
+#' the first goes on under the one before unless `true`), `space_before`,
+#' `first_rows`, `cont_title` (a table's), `titles`, `footnotes` (the
+#' object's own, as `page: titles:` writes them), `width_in`, `height_in`
+#' (a figure's).  The report's `page: titles:` go above the first object,
+#' its `page: footnotes:` below the last.  [tfl_run_output()] makes the RTF;
+#' [tfl_output_contents()] builds the objects.
+#'
+#' ```yaml
+#' contents:
+#'   demog: [{table_plan: {cols: TRT01A}}, ...]
+#'   km:
+#'     data: {steps: [{step: read, dataset: ADTTE}, {step: param, value: OS}]}
+#'     template: {name: km_survival, args: {by: TRT01A}}
+#' page:
+#'   layout:
+#'     - {object: demog}
+#'     - {object: km, page_break: false, space_before: 1, height_in: 3}
+#' ```
+#'
 #' @param path The file.
 #' @param x A `tfl_output`.
 #' @return `tfl_read_output()`: a `tfl_output`, or a list of them.
@@ -257,8 +285,9 @@ tfl_read_output <- function(path) {
          "; a report's ARD analyses are its ard: section (ard: {analysis_data, analyses}).",
          call. = FALSE)
   }
-  content <- if (inherits(y$content, "tfl_r")) y$content else
-    lapply(y$content %||% list(), .item_from_list)
+  # ([[ ]]: `$content` would take `contents` when there is no content)
+  content <- if (inherits(y[["content"]], "tfl_r")) y[["content"]] else
+    lapply(y[["content"]] %||% list(), .item_from_list)
   # (a table's verb twice: one call, R/plan_repeats.R)
   if (y$kind %in% c("table", "listing")) content <- .plan_merge_repeats(content, y$id)
   extends <- y$extends %||% "defaults"
@@ -269,6 +298,14 @@ tfl_read_output <- function(path) {
     data = .data_steps_in(.calls_in(y$data)), codelists = y$codelists %||% list(),
     content = content, page = .calls_in(y$page %||% list()))
   for (k in setdiff(names(y), c(.output_fields, "outputs", "base"))) out[[k]] <- .calls_in(y[[k]])
+  # several objects on its pages (R/output_objects.R): their items as items
+  if (!is.null(y$contents)) {
+    if (length(content)) {
+      stop("tfl_read_output(): ", y$id, " has both content: and contents:; one of them.",
+           call. = FALSE)
+    }
+    out$contents <- .contents_in(y$contents, y$id)
+  }
   out
 }
 
@@ -359,6 +396,10 @@ tfl_write_output <- function(x, path) {
   # a kind's own parts beside the common ones (a figure's template, plot,
   # plots, compose)
   for (k in setdiff(names(x), .output_fields)) if (!is.null(x[[k]])) y[[k]] <- .calls_out(x[[k]])
+  if (!is.null(x$contents)) {
+    y$contents <- .contents_out(x$contents)
+    if (!length(x$content)) y$content <- NULL
+  }
   # a template SPEC's arguments: a named vector as a map (`labels: {AGE: ...}`)
   if (!is.null(.tpl_spec_of(x))) y$template <- .named_as_map(y$template)
   y
