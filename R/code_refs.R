@@ -68,7 +68,9 @@ tfl_output_data_names <- function(output, study) {
     data.frame(output_id = output$id, object = object, name = name, kind = kind,
                from = from, used_by = used_by, stringsAsFactors = FALSE)
   }
-  out <- list(row(character(), character(), character()))
+  out <- list(data.frame(output_id = character(), object = character(), name = character(),
+                         kind = character(), from = character(), used_by = character(),
+                         stringsAsFactors = FALSE))
   # the ARD's: the analysis data by name, what each analysis reads
   ad <- output$ard$analysis_data %||% list()
   an <- output$ard$analyses %||% list()
