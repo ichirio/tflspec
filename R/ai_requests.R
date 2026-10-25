@@ -580,6 +580,9 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
                       fn, sQuote(file.path(study_dir, requests), FALSE), study_dir))
   }
   ctxs <- readRDS(cf)
+  # (a study with the AI's drafts apart: the answers write them there)
+  area_opt <- .ai_area_options(study_dir)
+  if (!is.null(area_opt)) on.exit(options(area_opt), add = TRUE)
   # each request's study folder is this one, wherever it was written (a
   # copied study; requests written before kept this PC's path)
   here <- normalizePath(study_dir, winslash = "/", mustWork = FALSE)
@@ -745,7 +748,7 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
   got <- list.files(file.path(study_dir, answers), "[.](md|txt)$", ignore.case = TRUE)
   stray <- got[!sub("([.]md)?([.]txt)?$", "", got, ignore.case = TRUE) %in% names(ctxs)]
   # each report's file (when written) and its request's repair prompt (when one waits)
-  yml <- rel("spec", "outputs", paste0(out$output_id, ".yml"))
+  yml <- rel(.ai_area(study_dir) %||% file.path("spec", "outputs"), paste0(out$output_id, ".yml"))
   out$file <- ifelse(out$status %in% c("ok", "warning") & file.exists(file.path(study_dir, yml)),
                      yml, NA_character_)
   rp <- rel(repairs, paste0(out$request, ".md"))
