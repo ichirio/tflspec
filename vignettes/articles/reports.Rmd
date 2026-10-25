@@ -144,7 +144,7 @@ tfl_report_tokens(sp, "T-14-1-1")
 The `page` sheet's `font` and `font_size_half_points` set the document's
 font. The study's row (a blank `output_id`) is the company's; a report's
 row that says its own wins (the AE table above is a size smaller). Blank:
-rtfreporter's own (Courier, 9 pt).
+rtfreporter's own (Courier New, 9 pt).
 
 What every report shares -- that font, the study's tokens, the running
 header and footer -- `tfl_report_setup_code()` writes once, as the code a

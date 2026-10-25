@@ -1451,7 +1451,7 @@ rtf_footer:
         description: 'Right cell padding in twips; blank: 0.'
         example: '60'
       - column: font
-        description: 'Font family of the table; blank: the document''s (Courier).'
+        description: 'Font family of the table; blank: the document''s (Courier New).'
         example: Arial
       - column: font_size_half_points
         description: 'Font size in half-points (18 = 9 pt); blank: the document''s.'
@@ -1770,7 +1770,7 @@ rtf_footer:
       - column: font
         description: 'The document''s font (its font table); the study''s row (blank
           output_id) is the company''s, written once in the setup code; blank: rtfreporter''s
-          option (Courier). A family per script slot: latin = Times New Roman | east_asian
+          option (Courier New). A family per script slot: latin = Times New Roman | east_asian
           = MS Mincho (rtfreporter''s Fonts per script).'
         example: Courier New
       - column: font_lang
