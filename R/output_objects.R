@@ -193,6 +193,35 @@ tfl_output_contents <- function(output, study, dir = ".") {
   data
 }
 
+# A listing's records (`data: {source: dataset, ...}`): the data part of
+# its program (tfl_listing_code(part = "data"): the dataset, or the
+# report's analysis data, its analysis set's subjects, its condition, its
+# order) run from the study folder
+.listing_data_of <- function(o, study, dir = ".") {
+  d <- o$data %||% list()
+  txt <- function(x) {
+    v <- unlist(lapply(x, as.character))
+    if (!length(v)) NA_character_ else paste(v, collapse = " | ")
+  }
+  # (`[[`: `d$data` would be `dataset` by partial matching)
+  l <- data.frame(output_id = o$id, dataset = txt(d[["dataset"]]), data = txt(d[["data"]]),
+                  population_id = txt(d[["population"]]), where = txt(d[["where"]]),
+                  sort = txt(d[["sort"]]),
+                  stringsAsFactors = FALSE)
+  sp <- tfl_listing_spec(l, data.frame(output_id = o$id, vars = "USUBJID"), check = FALSE)
+  old <- options(tflspec.plain_ns = TRUE)
+  on.exit(options(old), add = TRUE)
+  ard <- .ard_spec_of_study(study)$spec
+  code <- tfl_listing_code(sp, o$id, ard = ard, part = "data")
+  if (is.null(code)) .ard_stop(sprintf("%s: the listing names no dataset.", o$id))
+  env <- new.env(parent = globalenv())
+  eval(parse(text = tfl_helpers_code()), env)
+  wd <- setwd(dir)
+  on.exit(setwd(wd), add = TRUE)
+  eval(parse(text = code), env)
+  get("data", envir = env, inherits = FALSE)
+}
+
 #' Build a report's RTF from its YAML file
 #'
 #' One line to make a report's RTF from the study's files: the report read
@@ -217,6 +246,10 @@ tfl_run_output <- function(output, dir = ".", overwrite = TRUE) {
   st <- tfl_read_study_spec(".")
   content <- if (!is.null(output$contents)) {
     tfl_output_contents(output, st, ".")
+  } else if (identical(output$kind, "listing") && identical(output$data$source, "dataset")) {
+    # a listing's records: its data step, as its program reads them
+    o <- tfl_resolve_output(output, st)
+    suppressMessages(tfl_content_run(o, .listing_data_of(o, st, ".")))
   } else if (identical(output$kind, "figure")) {
     o <- tfl_resolve_output(output, st)
     data <- .contents_fig_data(o, st, ".")

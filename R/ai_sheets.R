@@ -403,7 +403,8 @@
     own <- cc$i[said]
     units[[length(units) + 1L]] <- list(sheet = s, ids = toc$output_id[own],
                                         kind = .na_or(kind, "table"),
-                                        family = if (length(hit)) hit[1L] else "other")
+                                        family = if (identical(kind, "listing")) "listing" else
+                                          if (length(hit)) hit[1L] else "other")
   }
   tab <- Filter(function(u) !identical(u$kind, "figure"), units)
   figs <- Filter(function(u) identical(u$kind, "figure"), units)

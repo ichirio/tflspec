@@ -146,7 +146,7 @@ tfl_ai_schema <- function(task, parts = NULL) {
   switch(task,
     toc = "toc",
     figure = c("template", names(.ai_fig_sections)),
-    table = c("report", "ard", .ai_table_functions())
+    table = c("report", "ard", "listing", .ai_table_functions())
   )
 }
 

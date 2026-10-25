@@ -210,16 +210,16 @@
 
 # ---- the schema --------------------------------------------------------------------
 
-# Parts: "report", "ard", or a content function's name.
+# Parts: "report", "ard", "listing", or a content function's name.
 .ai_schema_table <- function(parts = NULL) {
   fns <- .ai_table_functions()
-  parts <- parts %||% c("report", "ard", fns)
+  parts <- parts %||% c("report", "ard", "listing", fns)
   out <- character()
   if ("report" %in% parts) {
     out <- c(out, "### The report file", "",
       "One mapping a report, with these keys (a key marked * is required):", "",
       "- `id`*: the report's number as the user's message writes it (its file's name keeps letters, digits, '.', '_' and '-').",
-      "- `kind`*: `table`.",
+      "- `kind`*: `table`; `listing` for a listing (its own section below).",
       "- `label`: the report's title, without its number and analysis set.",
       "- `population`: the analysis set's `id` (spec/data.yml).",
       "- `extends`: `[defaults]`: the study's defaults under this report.",
@@ -244,34 +244,47 @@
                      ifelse(is.na(m$note) | !nzchar(m$note), "", paste0("; ", m$note))),
              "")
   }
+  s <- tfl_schema()
+  # a function's arguments, as the schema has them
+  fn_lines <- function(fn) {
+    e <- s[[fn]]
+    out <- sprintf("- `%s`: %s", fn, .ai_help(e$description %||% "", "") %||% "")
+    if (!is.null(e$dots)) {
+      d <- e$dots
+      logical_in <- function(v) is.logical(v) || (is.list(v) && any(vapply(v, logical_in, NA))) ||
+        any(names(v) %in% c("TRUE", "FALSE"))
+      ex <- if (!is.null(d$example) && !logical_in(d$example)) {
+        sprintf(" Example: `%s: %s`", fn,
+                if (identical(d$style, "positional")) .ai_yaml_flow(stats::setNames(list(d$example), d$key))
+                else .ai_yaml_flow(d$example))
+      } else ""
+      what <- if (identical(d$style, "positional")) sprintf("`%s`", d$key) else "`...`"
+      out <- c(out, sprintf("  - %s (%s)%s%s", what, d$type, .ai_help(d$description %||% "", ": "), ex))
+    }
+    for (a in names(e$args)) {
+      x <- e$args[[a]]
+      if (!is.null(x$renamed_to)) next
+      out <- c(out, sprintf("  - `%s` (%s)%s", a, x$type %||% "value",
+                            .ai_help(x$description %||% "", ": ")))
+    }
+    out
+  }
+  if ("listing" %in% parts) {
+    out <- c(out, "### A listing", "",
+      "A listing (`kind: listing`) prints records, not statistics: it has no `ard: analyses` and no `table_plan`.", "",
+      "- `data`*: the records: `{source: dataset, dataset: <ADaM dataset>, population: <analysis set id>, where: !r '<R condition on its columns>', sort: [<variable>, -<variable, descending>]}`; or `{source: dataset, data: <an analysis_data id of this report>}`, that data in `ard: analysis_data` (its `population` there), when the records need more than a condition (ADSL's columns added, derived columns).",
+      "- The analysis set is required: `data.population`, or the analysis data's. A dataset of parameters (PARAMCD: ADLB, ADVS ...) is kept to the shell's (`where: !r 'PARAMCD == \"ALT\"'`) or shows PARAM / PARAMCD in a column. When the shell does not say them, ask -- do not guess.",
+      "- `content`*: one `plan_listing` item, its `cols` the shell's columns in order, each `{fn: listing_col, args: {vars: [<variables stacked in the column>], label: <header>, width: <characters>, collapse_repeats: true}}` (`collapse_repeats`: a value printed once while it repeats, as a subject's id); `type: multiline` unless the shell is one line a record. Then, if the shell says how many rows a page, `plan_paginate_rows: {max_rows: <n>}`.",
+      "- `page`: its titles and footnotes, as a table's.",
+      "",
+      fn_lines("plan_listing"), fn_lines("listing_col"), "")
+  }
   fns <- intersect(fns, parts)
   if (length(fns)) {
-    s <- tfl_schema()
     out <- c(out, "### The content's functions", "",
              "Each item's arguments by name; `...` means the item's keys are the entries (`plan_labels: {AGE: Age (years)}`). Leave out an argument to take its default.",
              "")
-    for (fn in fns) {
-      e <- s[[fn]]
-      out <- c(out, sprintf("- `%s`: %s", fn, .ai_help(e$description %||% "", "") %||% ""))
-      if (!is.null(e$dots)) {
-        d <- e$dots
-        logical_in <- function(v) is.logical(v) || (is.list(v) && any(vapply(v, logical_in, NA))) ||
-          any(names(v) %in% c("TRUE", "FALSE"))
-        ex <- if (!is.null(d$example) && !logical_in(d$example)) {
-          sprintf(" Example: `%s: %s`", fn,
-                  if (identical(d$style, "positional")) .ai_yaml_flow(stats::setNames(list(d$example), d$key))
-                  else .ai_yaml_flow(d$example))
-        } else ""
-        what <- if (identical(d$style, "positional")) sprintf("`%s`", d$key) else "`...`"
-        out <- c(out, sprintf("  - %s (%s)%s%s", what, d$type, .ai_help(d$description %||% "", ": "), ex))
-      }
-      for (a in names(e$args)) {
-        x <- e$args[[a]]
-        if (!is.null(x$renamed_to)) next
-        out <- c(out, sprintf("  - `%s` (%s)%s", a, x$type %||% "value",
-                              .ai_help(x$description %||% "", ": ")))
-      }
-    }
+    for (fn in fns) out <- c(out, fn_lines(fn))
     out <- c(out, "",
       "### The types", "",
       "- `column`: a column of the normalized ARD (a by or analysis variable, `variable`, `.label` ...) or of the table (`row_label`, `.values`, an arm's name).",
@@ -499,7 +512,9 @@
         next
       }
     }
-    p <- rbind(p, .ai_check_table_output(o, at, context, vars))
+    # (a listing, drafted with the tables: R/ai_listing.R)
+    p <- rbind(p, if (identical(o[["kind"]], "listing")) .ai_check_listing_output(o, at, context, vars)
+               else .ai_check_table_output(o, at, context, vars))
   }
   # (a report whose template is wrong: its run would say it again)
   rbind(p, .ai_check_table_run(outs[setdiff(names(outs), bad)], context))
@@ -510,7 +525,9 @@
   add <- function(where, what, severity = "error") {
     p <<- .ai_problem(p, paste(at, where), what, severity)
   }
-  if (!identical(o[["kind"]], "table")) add("kind", sprintf("is %s; this task writes tables", o[["kind"]]))
+  if (!identical(o[["kind"]], "table")) {
+    add("kind", sprintf("is %s; this task writes tables and listings", o[["kind"]]))
+  }
   for (e in o[["extends"]]) {
     ok <- e %in% c("defaults", "none") ||
       (startsWith(e, "patterns/") && (is.null(context$patterns) ||
@@ -826,6 +843,7 @@
   hit <- unique(sub("^content\\[[0-9]+\\] ", "", hit))
   c(if (any(grepl("ard\\b|analys", where))) "ard",
     if (any(grepl("^outputs|kind|extends|page|label|population", where))) "report",
+    if (any(grepl("listing|\\bdata\\b", where))) "listing",
     intersect(fns, hit))
 }
 

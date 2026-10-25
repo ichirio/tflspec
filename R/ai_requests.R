@@ -31,7 +31,9 @@
 #'   no limit.  A request over it is halved; with `templates`, it first
 #'   lists the templates' arguments by name only (no type, default or
 #'   description).
-#' @param families,types As [tfl_ai_batches()]: the tables in batches.  A
+#' @param families,types As [tfl_ai_batches()]: the tables and listings
+#'   in batches (a listing's family `listing`; its answer a report of `kind:
+#'   listing`, in the table task).  A
 #'   figure (`"figure"` in `types`, the default) is a request of its own,
 #'   `figure-1`, `figure-2` ... (family `figure`): its shell, the ADaM's
 #'   summary, the figure templates; its answer a figure design.
@@ -111,7 +113,7 @@
 tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
                                   dir = file.path("ai", "requests"),
                                   max_chars = NULL, families = NULL,
-                                  types = c("table", "figure"), language = NULL,
+                                  types = c("table", "listing", "figure"), language = NULL,
                                   examples = NULL,
                                   instructions = c("once", "each"),
                                   workbook = c("text", "attach", "both", "file"),

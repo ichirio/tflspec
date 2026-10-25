@@ -215,12 +215,13 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
   if (dry && identical(unit, "sheet") && !is.null(shell$shells)) {
     # the shell sheets' requests (as written)
     sz <- size %||% if (identical(mode, "agent")) 1L else 3L
-    req <- .ai_sheet_plan_table(.ai_sheet_plan(shell, sz, c("table", "figure")))
+    req <- .ai_sheet_plan_table(.ai_sheet_plan(shell, sz, c("table", "listing", "figure")))
     rownames(req) <- NULL
     nxt <- "look at the TOC and the requests; then run again with dry_run = FALSE to write them"
   } else if (dry) {
-    # the tables in batches, each figure a request of its own (as written)
-    b <- if (nrow(shell$toc)) tfl_ai_batches(shell, size = size) else
+    # the tables and listings in batches, each figure a request of its own
+    # (as written)
+    b <- if (nrow(shell$toc)) tfl_ai_batches(shell, size = size, types = c("table", "listing")) else
       data.frame(output_id = character(), family = character(), batch = character())
     figs <- shell$toc$output_id[shell$toc$type %in% "figure"]
     if (length(figs)) {
