@@ -8,6 +8,7 @@ For each report, read its shell and write one report file:
 - `ard`: the analyses that compute every number of the shell. One analysis for a block of rows that one method makes (the continuous summary of AGE; the counts of SEX, AGEGR1 and RACE; the AEs by SOC and PT). Name the dataset and the analysis set; restrict the records with `where`; make a variable the data do not have with an `analysis_data` and its `derive`. The by variables are the shell's columns (the arms); `overall: true` adds a Total column.
 - `codelists`: a variable whose values the shell prints in another wording or order (M -> Male, then F -> Female).
 - `content`: the table, one item a call. `table_plan` says what goes across (`cols`: the arm) and down (`rows`); `plan_cells` turns statistics into the shell's cell text with the shell's decimals (`xx.x` is one decimal: `{mean:.1f}`); `plan_labels` writes the row headings as the shell does; `plan_levels` orders the arms and the variables; `plan_col_header` writes the column header lines; `plan_sort`, `plan_total`, `plan_stub`, `plan_blanks` as the shell needs. Add only what the defaults do not already give.
+- The arm: the actual treatment (TRT01A) unless the shell or the TOC says planned. When the shell names the arms otherwise than the data (Placebo, the data Control), write a code list of the arm so the table prints the shell's names.
 - A table always has its column key: with one arm too, the analyses have `by: [<the arm>]` and `table_plan` has `cols: <the arm>`. An analysis without `by` in such a table is an error (but the arm's own count, the N); write `by: []` for one that has no columns. An overall row of a hierarchical table (`normalize_ard: {overall: Any TEAE}`) needs `args: over_variables = TRUE` on its hierarchical analysis; without it the row is not there.
 - `page`: the titles and the footnotes, copied exactly from the TOC and the shell.
 - The analysis set and, for a dataset of parameters (PARAMCD), the parameter define the report: take them from the shell (`population`; `where: PARAMCD == ...`, or PARAM in the rows for a table of them all). Never guess them: when the shell does not say them, ask in a question; a report without them is an error.
@@ -24,8 +25,8 @@ report file of every report asked for
 <!-- chat -->
 ## What to do
 
-Read the TOC and the shell of each report above (or in the attached workbook), and write the answer block as the instructions above describe: one report file a report. Write the assumptions as mappings: `- {output_id: <id>, where: <key>, item: <what>, assumption: <what you took>, question: <what the reviewer should confirm>}`.
+Read the TOC and the shell of each report above (or in the attached workbook), and write the answer block as the instructions above describe: one report file a report. Write the assumptions as mappings: `- {output_id: <id>, where: <key>, item: <what>, assumption: <what you took>, question: <a whole question the reviewer can answer -- never just "Confirm">}`.
 <!-- api -->
 ## What to do
 
-Read the TOC and the shell of each report above and in the documents below, and write the answer block as the instructions above describe: one report file a report. Write the assumptions as mappings: `- {output_id: <id>, where: <key>, item: <what>, assumption: <what you took>, question: <what the reviewer should confirm>}`.
+Read the TOC and the shell of each report above and in the documents below, and write the answer block as the instructions above describe: one report file a report. Write the assumptions as mappings: `- {output_id: <id>, where: <key>, item: <what>, assumption: <what you took>, question: <a whole question the reviewer can answer -- never just "Confirm">}`.
