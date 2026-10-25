@@ -56,7 +56,7 @@ test_that("the figure's answer: its report file in the design's form, the same d
   res <- suppressMessages(tfl_ai_collect_answers(d))
   fr <- res$reports[res$reports$type == "figure", ]
   expect_identical(fr$status, "ok")
-  expect_identical(fr$file, "spec/outputs/F-14-2-2.yml")
+  expect_identical(fr$file, "ai/spec/outputs/F-14-2-2.yml")
   o <- tfl_read_output(file.path(d, fr$file))
   expect_identical(o$kind, "figure")
   expect_identical(o$label, "Kaplan-Meier Plot of Overall Survival")
@@ -64,7 +64,9 @@ test_that("the figure's answer: its report file in the design's form, the same d
   expect_identical(o$data$source, "code")
   # the design as the figure designer gets it back: the answer's design
   a <- tfl_ai_parse(readLines(ex, encoding = "UTF-8"), "figure")
-  fd <- tfl_sheets_from_yaml(d)$figures[["F-14-2-2"]]
+  # (the AI's drafts: read as the study's report files)
+  fd <- withr::with_options(list(tflspec.outputs_dir = "ai/spec/outputs"),
+                            tfl_sheets_from_yaml(d))$figures[["F-14-2-2"]]
   back <- tfl_fig_design(data = fd$data, stats = fd$stats %||% list(), plot = fd$plot,
                          layers = fd$layers, template = fd$template)
   expect_identical(as.character(tfl_fig_design_code(back, "F", save = FALSE)),
@@ -81,7 +83,7 @@ test_that("the figure's answer: its report file in the design's form, the same d
   expect_identical(fr2$status, "error")
   expect_identical(fr2$repair, "ai/repairs/figure-1.md")
   expect_match(fr2$problems_text, "censor_mark", fixed = TRUE)
-  expect_false(file.exists(file.path(d, "spec", "outputs", "F-14-2-2.yml")))
+  expect_false(file.exists(file.path(d, "ai", "spec", "outputs", "F-14-2-2.yml")))
 })
 
 test_that("tfl_ai_run(): the figure drawn, its PNG and RTF; agent_prompt", {
@@ -104,8 +106,8 @@ test_that("tfl_ai_run(): the figure drawn, its PNG and RTF; agent_prompt", {
   file.copy(list.files(ex, full.names = TRUE), file.path(d, "ai", "answers"))
   res <- suppressMessages(tfl_ai_run(d))
   fr <- res$reports[res$reports$type == "figure", ]
-  expect_identical(fr$png, "output/tfl/F-14-2-2.png")
-  expect_identical(fr$rtf, "output/tfl/F-14-2-2.rtf")
+  expect_identical(fr$png, "ai/output/tfl/F-14-2-2.png")
+  expect_identical(fr$rtf, "ai/output/tfl/F-14-2-2.rtf")
   expect_true(all(file.exists(file.path(d, c(fr$png, fr$rtf)))))
   expect_gt(file.size(file.path(d, fr$png)), 10000)
   expect_true(all(!is.na(res$reports$rtf)))

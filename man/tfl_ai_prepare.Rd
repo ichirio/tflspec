@@ -30,7 +30,8 @@ tfl_ai_prepare(
   progress = NULL,
   toc_cols = NULL,
   sheet_roles = NULL,
-  unit = c("sheet", "toc")
+  unit = c("sheet", "toc"),
+  area = NULL
 )
 }
 \arguments{
@@ -113,6 +114,14 @@ TOC and the sheet names can hold mistakes), the reports and their ids
 the AI's to read from it -- and one request of the TOC items no sheet
 chose; \code{"toc"} the TOC's reports, as before (a report's shell found
 by its number).}
+
+\item{area}{Where the AI's report files go: \code{TRUE}, its own folder
+\verb{ai/spec/outputs/} (made here) -- drafts, built into \verb{ai/output/},
+which the person adopts into the study's \verb{spec/outputs/}
+(\code{\link[=tfl_ai_adopt]{tfl_ai_adopt()}}); \code{FALSE}, \verb{spec/outputs/} itself, as before.
+\code{NULL} (default): \code{TRUE} for a new study (no report in \verb{spec/outputs/}
+and no answer yet), else as the study is (a study of the form before
+is moved with \code{\link[=tfl_ai_migrate]{tfl_ai_migrate()}}).}
 }
 \value{
 A \code{tfl_ai_prepared}: a list with \code{requests} (one row a request:

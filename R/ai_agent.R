@@ -311,7 +311,8 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
 }
 
 .ai_built_key <- function(id, common) {
-  f <- file.path("spec", "outputs", paste0(id, ".yml"))
+  # (the drafts' folder in a study with the AI's drafts apart)
+  f <- file.path(.outputs_dir("."), paste0(id, ".yml"))
   own <- if (file.exists(f)) unname(tools::md5sum(f)) else ""
   rlang::hash(paste(own, common, sep = "|"))
 }

@@ -131,7 +131,7 @@ TOC の行）を書きます。表示にその本数が出て、`ai/manifest.csv
 続けて、書けた帳票すべての RTF を作ります:
 
 ```r
-tfl_ai_run(".")   # もう一度読み、帳票ごとに ARD と RTF: output/tfl/<id>.rtf
+tfl_ai_run(".")   # もう一度読み、帳票ごとに ARD と RTF: ai/output/tfl/<id>.rtf
 ```
 
 `ai/status.md`（帳票ごとの状態、RTF かできなかった理由、次にすること）を書き、
@@ -186,8 +186,11 @@ tfl_ai_run(".")   # もう一度読み、帳票ごとに ARD と RTF: output/tfl
    are written」と伝えると、回答を `ai/decisions.md` に移し、直しの節を 1 つずつ
    済ませて、関わる帳票を作り直します。
 
-RTF は `output/tfl/` にできます。このフォルダは tflplanner で試験として開けます
-（`spec/toc.yml` に帳票の一覧）。
+新しい試験では、AI の帳票ファイルは下書きとして `ai/spec/outputs/` に、RTF は
+`ai/output/tfl/` にできます。確かめた帳票を `tfl_ai_adopt()` で採用すると、試験の
+`spec/outputs/` に写り、帳票一覧に出ます（AI は採用した物を上書きしません）。
+このフォルダは tflplanner で試験として開けます（`spec/toc.yml` に帳票の一覧）。
+前の形の試験（下書きが `spec/outputs/` にある）は `tfl_ai_migrate()` で移せます。
 
 どの依頼にも入るはずの物は、エージェント用に `ai/` に 1 回だけ書かれます:
 `ai/instructions-table.md` と `ai/instructions-figure.md`（指示と schema）、
