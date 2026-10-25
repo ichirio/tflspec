@@ -81,6 +81,11 @@
   tt <- .page_band(pg, "titles", tokens)
   fn <- .page_band(pg, "footnotes", tokens)
   flow <- .page_flow_args
+  # several objects (contents:): each its own call, the output's titles
+  # above the first, its footnotes below the last
+  if (!is.null(output$contents)) {
+    return(c(st, .page_contents_steps(output, pg, tokens, tt, fn, content, args_of)))
+  }
   if (identical(kind, "figure")) {
     fa <- args_of("rtf_figures")
     # (the report sheet says page_break, space_before for both kinds: under
@@ -130,6 +135,52 @@
                                                    a[intersect(c(band_style, "border"), names(a))]))
   }
   st
+}
+
+# A report of several objects: an rtf_tables() / rtf_figures() call each,
+# in its layout's order, with the row's place (page_break -- each after the
+# first goes on under the one before unless it says TRUE --, space_before,
+# first_rows, cont_title; a figure's width_in / height_in) and titles /
+# footnotes: the output's titles above the first object (over the row's),
+# its footnotes below the last.  rtf_titles() / rtf_footnotes() are not
+# used: they would take every object's.  `content`: each object's name in
+# the program, named by the object (else the object's name).
+.page_contents_steps <- function(output, pg, tokens, tt, fn, content, args_of) {
+  lay <- .contents_layout(output)
+  nms <- names(lay)
+  doc <- .spec_sym("doc")
+  ta <- args_of("rtf_tables")
+  fa <- args_of("rtf_figures")
+  twips <- function(v) as.integer(round(as.numeric(v) * 1440))
+  steps <- list()
+  for (k in seq_along(nms)) {
+    nm <- nms[k]
+    row <- lay[[nm]]
+    sym <- if (!is.null(names(content)) && nm %in% names(content)) content[[nm]] else nm
+    kind <- .object_kind(output$contents[[nm]])
+    rt <- .page_band(list(titles = row$titles), "titles", tokens)
+    rf <- .page_band(list(footnotes = row$footnotes), "footnotes", tokens)
+    titles <- c(if (k == 1L) tt, rt)
+    foot <- c(rf, if (k == length(nms)) fn)
+    pb <- if (k == 1L) TRUE else isTRUE(row$page_break)
+    flow <- .page_flow_args(c(list(page_break = pb),
+                              row[intersect(c("space_before", "first_rows", "cont_title"), names(row))]))
+    tb <- if (length(titles)) list(titles)
+    fb <- if (length(foot)) list(foot)
+    if (identical(kind, "figure")) {
+      steps[[k]] <- do.call(.spec_call, c(list("rtf_figures", doc, .spec_sym(sym),
+        width_twips = if (!is.null(row$width_in)) twips(row$width_in),
+        height_twips = if (!is.null(row$height_in)) twips(row$height_in),
+        align = fa$align, titles = tb, footnotes = fb),
+        flow[intersect(c("page_break", "space_before"), names(flow))]))
+    } else {
+      steps[[k]] <- do.call(.spec_call, c(list("rtf_tables", doc, .spec_sym(sym)),
+        ta[intersect(c("auto_section", "section_label_align", "auto_title",
+                       "title_label_align", "font_size_half_points"), names(ta))],
+        list(titles = tb, footnotes = fb), flow))
+    }
+  }
+  steps
 }
 
 # Where a report's titles and footnotes print: the study's settings

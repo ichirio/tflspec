@@ -754,6 +754,34 @@ content:
 
 The listing sheets of Appendix A.4 say the same.
 
+### 11.1 Several objects in one report (`contents:`)
+
+One report (one RTF) can hold several tables and figures on its pages.
+Write `contents:` (a map of named objects) in place of `content:`, and say
+each object's place in `page: layout:`:
+
+```yaml
+contents:
+  demog: [{table_plan: {cols: TRT01A}}, ...]      # reads the report's ard:
+  km:                                              # its own data (a figure)
+    data: {steps: [{step: read, dataset: ADTTE}, {step: param, value: OS}]}
+    template: {name: km_survival, args: {by: TRT01A}}
+page:
+  titles: {"1": {center: Table 14.1.9}}            # above the first object
+  footnotes: {"1": {left: ...}}                    # below the last
+  layout:
+    - {object: demog}
+    - {object: km, page_break: false, space_before: 1, height_in: 3,
+       titles: {"1": {left: Overall survival}}}
+```
+
+A layout row takes `object`, `page_break` (each object after the first
+goes on under the one before unless `true`), `space_before`, `first_rows`,
+`cont_title` (a table's), `titles`, `footnotes`, `width_in`, `height_in`
+(a figure's). Tables share the report's ARD: keep each table to its own
+analyses with `plan_filter: {where: !r 'analysis_id %in% c("AGE", "SEX")'}`.
+`tfl_run_output("<id>")` writes the RTF. Not yet in the workbooks (sheets).
+
 ---
 
 ## 12. The sheet spec (Excel workbooks)
@@ -814,7 +842,7 @@ back): rename the value or choose another separator.
 
 **Spec files (YAML, one file a report):** `tfl_output` `tfl_item` `tfl_plot` `tfl_call` `tfl_r`
 `tfl_unset` `tfl_read_output` `tfl_write_output` `tfl_read_study_spec`
-`tfl_read_outputs` `tfl_resolve_output` `tfl_write_study_part` `tfl_item_code`
+`tfl_read_outputs` `tfl_resolve_output` `tfl_run_output` `tfl_output_contents` `tfl_write_study_part` `tfl_item_code`
 `tfl_item_written` `tfl_item_own` `tfl_convert_sheets_to_yaml`
 `tfl_yaml_from_sheets` `tfl_sheets_from_yaml` `tfl_sheets_from_spec` `tfl_write_spec_xlsx`
 `tfl_import_spec_xlsx` `tfl_schema` `tfl_schema_check` `tfl_schema_help` `tfl_content_code` `tfl_content_run`

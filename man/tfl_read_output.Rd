@@ -28,6 +28,35 @@ back, each with the file's \verb{base:} merged under it as a plain list (the
 layering with \code{defaults} is not done here).  \code{tfl_write_output()}
 writes one report back in the same form.
 }
+\section{Several objects in one report}{
+
+One report (one RTF) can hold several objects -- tables, figures -- on
+its pages: \verb{contents:} in place of \verb{content:} names them.  An object is a
+list of items (it reads the report's \verb{data:} / \verb{ard:}), or a map of
+\code{kind}, \code{data}, \code{content}, \code{template}, \code{plot} (its own data: a figure's
+steps, a template).  Its kind, when not said, is what its items make
+(\code{table_plan} a table) or its template's.  The report's \verb{page: layout:}
+rows say each object's place, as \code{rtfreporter::rtf_tables()} /
+\code{rtf_figures()} take it: \code{object} (its name), \code{page_break} (each after
+the first goes on under the one before unless \code{true}), \code{space_before},
+\code{first_rows}, \code{cont_title} (a table's), \code{titles}, \code{footnotes} (the
+object's own, as \verb{page: titles:} writes them), \code{width_in}, \code{height_in}
+(a figure's).  The report's \verb{page: titles:} go above the first object,
+its \verb{page: footnotes:} below the last.  \code{\link[=tfl_run_output]{tfl_run_output()}} makes the RTF;
+\code{\link[=tfl_output_contents]{tfl_output_contents()}} builds the objects.
+
+\if{html}{\out{<div class="sourceCode yaml">}}\preformatted{contents:
+  demog: [\{table_plan: \{cols: TRT01A\}\}, ...]
+  km:
+    data: \{steps: [\{step: read, dataset: ADTTE\}, \{step: param, value: OS\}]\}
+    template: \{name: km_survival, args: \{by: TRT01A\}\}
+page:
+  layout:
+    - \{object: demog\}
+    - \{object: km, page_break: false, space_before: 1, height_in: 3\}
+}\if{html}{\out{</div>}}
+}
+
 \examples{
 f <- system.file("extdata", "spec-yaml", "outputs", "T-14-1-1.yml", package = "tflspec")
 out <- tfl_read_output(f)
