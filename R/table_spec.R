@@ -2354,8 +2354,17 @@ tfl_report <- function(spec, output_id = NULL, content, study = NULL) {
   }
   # the rtfreporter calls the definition stands for (R/spec_code.R): run
   # here, written out by tfl_report_code() -- one list, so the two agree
+  # (a report of several objects: each object its own name, tfl_output_contents())
+  cname <- "content"
+  if (inherits(spec, "tfl_output") && !is.null(spec$contents)) {
+    if (!is.list(content) || inherits(content, c("table_plan", "rtftable")) || is.null(names(content))) {
+      .ard_stop(sprintf("tfl_report(): %s has several objects: its `content` is their list by name (tfl_output_contents()).",
+                        spec$id))
+    }
+    cname <- stats::setNames(paste0(".object_", names(content)), names(content))
+  }
   steps <- if (inherits(spec, "tfl_output")) {
-    .page_report_steps(spec, study, "content")
+    .page_report_steps(spec, study, cname)
   } else {
     .report_spec_steps(.ard_spec_scope(.as_spec(spec, "table", "tfl_report",
                                                 output_id = output_id), output_id),
@@ -2363,6 +2372,7 @@ tfl_report <- function(spec, output_id = NULL, content, study = NULL) {
   }
   env <- new.env(parent = emptyenv())
   env$content <- content
+  if (!is.null(names(cname))) for (nm in names(cname)) assign(cname[[nm]], content[[nm]], envir = env)
   for (st in steps) {
     env$doc <- .spec_eval(st, env)
   }
