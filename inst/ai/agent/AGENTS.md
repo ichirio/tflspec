@@ -54,7 +54,8 @@ and `ai/`. If the workspace is a folder above it, use the paths from here.
    with R, never by opening a `.xpt` / `.sas7bdat` in the editor, and print
    only what settles the question -- a variable's values, labels, counts
    -- not subjects' records in bulk:
-   `Rscript -e "d <- haven::read_xpt('<path>/adae.xpt'); print(table(d$ACNDR, useNA = 'ifany'))"`.
+   `Rscript -e "d <- readRDS('<path>/adae.rds'); print(table(d$ACNDR, useNA = 'ifany'))"`
+   (`haven::read_xpt()` for a `.xpt`, as `spec/data.yml`'s `path:` says).
    When you cannot open it, decide from the summary and the request.
 5. A question you cannot settle from the request, its shell, the summary,
    the data or `ai/decisions.md`: **do not stop**. Take the likeliest
