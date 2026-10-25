@@ -675,6 +675,8 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
         r <- keep$assumption_rows
         keep$assumption_rows <- r[is.na(r$output_id) | r$output_id %in% ids, , drop = FALSE]
       }
+      # (the ADaM's variables: a listing's columns given their widths)
+      keep$vars <- ctxs[[nm]]$context$datasets
       if (identical(task, "figure")) {
         keep <- .ai_fig_as_files(a, ids, ctxs[[nm]]$context)
         if (!is.null(keep$error)) wrote <- keep$error

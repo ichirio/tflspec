@@ -46,6 +46,17 @@ and `ai/`. If the workspace is a folder above it, use the paths from here.
    from the request alone and write what you took as an assumption. When
    the place looks wrong (another report's shell, an empty range), ask it
    in `ai/questions.md`.
+   The layout too: when you can open the workbook, look at the shell's
+   table -- its columns' widths, the merged header cells, the underlines
+   (a cell's bottom border), bold, the alignment -- and write them: the
+   widths as `plan_columns: {widths: {<stub column>: <n>, .values: <n>}}`
+   in the shell's proportions (a listing: each `listing_col`'s `width`, in
+   characters), the header's spans, underlines, bold and alignment with
+   the items that say them. Read them with R (`openxlsx2::wb_load()`, the
+   sheet's column widths and cell styles). When you cannot open it, or the
+   shell does not make them clear, leave them out: R writes the usual
+   widths (the stub wider, the value columns equal) when it reads the
+   answer, and no borders or bold.
 4. The variables and their values are in `ai/adam_summary.md`; work from
    it first. The ADaM is in {{adam}} (`spec/data.yml` names each file,
    `path:`). When you can open it, you may read the ADaM itself when a

@@ -199,12 +199,28 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
           } else {
             ard <- suppressMessages(tfl_build_ard(st, dir = ".", output_id = id, save = FALSE))
             if (!is.null(ard$output_id)) ard <- ard[ard$output_id %in% id, , drop = FALSE]
-            if (isTRUE(rtf)) {
+            # a table whose columns have no widths: the usual layout's
+            # (the stub wider), written into its report file -- what a
+            # person then changes is a value, not an argument to add
+            widened <- FALSE
+            if (isTRUE(rtf) || !.ai_has_widths(o)) {
               plan <- suppressMessages(tfl_content_run(o, ard))
+              w <- .ai_table_widths(outs[[id]], o, plan)
+              if (!is.null(w)) {
+                outs[[id]] <- w
+                tfl_write_output(w, file.path(.outputs_dir("."), paste0(id, ".yml")))
+                pc <- Filter(function(it) identical(it$fn, "plan_columns"), w$content)
+                .ai_widths_remember(".", id, pc[[1L]]$args$widths)
+                o <- tfl_resolve_output(w, st)
+                if (isTRUE(rtf)) plan <- suppressMessages(tfl_content_run(o, ard))
+                widened <- TRUE
+              }
+            }
+            if (isTRUE(rtf)) {
               suppressMessages(rtfreporter::generate_rtfreport(
                 tfl_report(o, content = plan, study = st), f, overwrite = tfl_report_overwrite(o)))
             }
-            list(rtf = if (isTRUE(rtf)) f)
+            list(rtf = if (isTRUE(rtf)) f, widened = widened)
           }
         }, error = function(e) structure(.ai_one_line(conditionMessage(e)), class = "failed"))
         if (inherits(made, "failed")) {
@@ -219,6 +235,8 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
                                    png = NA_character_, problem = r$rtf_problem[i],
                                    stringsAsFactors = FALSE))
         } else {
+          # (its report file given widths: the key of the file as it is now)
+          if (isTRUE(made$widened)) key <- .ai_built_key(id, common)
           if (!is.null(made$rtf)) r$rtf[i] <- gsub("\\\\", "/", made$rtf)
           if (!is.null(made$png)) r$png[i] <- gsub("\\\\", "/", made$png)
           r$built[i] <- "built"
