@@ -42,3 +42,74 @@ tfl_code_refs <- function(code, names) {
   rownames(out) <- NULL
   out
 }
+
+#' Every data and object a report's program makes, by name
+#'
+#' The names a report's program gives what it makes: the analysis data of
+#' its ARD definition (`data_id`, and the analysis sets' and records' own
+#' `<dataset>_sub`), the ARD (`ard`), a figure's data steps that name what
+#' they make (`out:`, a fit's `name:`).  For a screen that lists a report's
+#' data and lets a person rename one (the rename itself is the SPEC's,
+#' [tfl_code_refs()] finds the code that still says the old name).
+#'
+#' @param output A report ([tfl_read_output()]); one with several objects
+#'   (`contents:`) gives each object's.
+#' @param study The study ([tfl_read_study_spec()]).
+#' @return A data frame, one row a name: `output_id`, `object` (the object
+#'   of a report with `contents:`, else `NA`), `name`, `kind` (`subset`: a
+#'   data the program keeps; `ard`; `fit`: a model a figure's step fits),
+#'   `from` (what it is made from: a dataset, a data above, `NA`), `used_by`
+#'   (the analyses or steps that read it, ` | ` between them).
+#' @seealso [tfl_ard_data_names()], [tfl_code_refs()]
+#' @export
+tfl_output_data_names <- function(output, study) {
+  if (!inherits(output, "tfl_output")) .ard_stop("tfl_output_data_names(): `output` is a report (tfl_read_output()).")
+  row <- function(object, name, kind, from = NA_character_, used_by = NA_character_) {
+    data.frame(output_id = output$id, object = object, name = name, kind = kind,
+               from = from, used_by = used_by, stringsAsFactors = FALSE)
+  }
+  out <- list(row(character(), character(), character()))
+  # the ARD's: the analysis data by name, what each analysis reads
+  ad <- output$ard$analysis_data %||% list()
+  an <- output$ard$analyses %||% list()
+  if (length(an)) {
+    dn <- tryCatch(tfl_ard_data_names(study, output_id = output$id), error = function(e) NULL)
+    defined <- vapply(ad, function(a) as.character(a$id %||% NA_character_), "")
+    froms <- vapply(ad, function(a) as.character(a$from %||% NA_character_), "")
+    names_used <- if (!is.null(dn)) unique(dn$data[dn$data != "NULL"]) else character()
+    for (nm in unique(c(defined, names_used))) {
+      if (is.na(nm)) next
+      by <- if (!is.null(dn)) dn$analysis_id[dn$data %in% nm] else character()
+      out[[length(out) + 1L]] <- row(NA_character_, nm, "subset",
+                                     if (nm %in% defined) froms[match(nm, defined)] else
+                                       toupper(sub("_sub[0-9]*$", "", nm)),
+                                     if (length(by)) paste(by, collapse = " | ") else NA_character_)
+    }
+    out[[length(out) + 1L]] <- row(NA_character_, "ard", "ard")
+  }
+  # a figure's data steps that name what they make
+  steps_names <- function(o, object) {
+    st <- o$data$steps %||% list()
+    prev <- NA_character_
+    for (s in st) {
+      if (!is.list(s)) next
+      if (!is.null(s$dataset)) prev <- toupper(as.character(s$dataset))
+      nm <- s$out %||% s$name
+      if (!is.null(nm)) {
+        kind <- if (identical(s$step, "survfit") || !is.null(s$name)) "fit" else "subset"
+        out[[length(out) + 1L]] <<- row(object, as.character(nm), kind, prev, s$step %||% NA_character_)
+        if (identical(kind, "subset")) prev <- as.character(nm)
+      }
+    }
+  }
+  if (!is.null(output$contents)) {
+    for (o in .output_objects(output)) {
+      if (!is.null(output$contents[[attr(o, "object")]]$data)) steps_names(o, attr(o, "object"))
+    }
+  } else {
+    steps_names(output, NA_character_)
+  }
+  r <- do.call(rbind, out)
+  rownames(r) <- NULL
+  r
+}
