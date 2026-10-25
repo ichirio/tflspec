@@ -209,7 +209,11 @@
   close <- rep(0, n)
   if (length(own)) {
     olv <- lapply(own, .ai_levels)
-    for (i in which(score < 2)) {
+    # (a close number of another kind is none: a figure's 14.2.1 is not
+    # near a table's 14.2.1)
+    ot <- unique(substr(own[grepl("^[TFL]", own)], 1L, 1L))
+    it <- ifelse(grepl("^[TFL]", pre$k), substr(pre$k, 1L, 1L), NA_character_)
+    for (i in which(score < 2 & (is.na(it) | !length(ot) | it %in% ot))) {
       close[i] <- max(0, vapply(olv, function(l) max(.ai_close(l, pre$lv[[i]]),
                                                      .ai_close(l, pre$slv[[i]])), 0))
     }

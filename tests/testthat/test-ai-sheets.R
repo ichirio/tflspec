@@ -220,3 +220,12 @@ test_that("the status's count: the reports in the answers and the TOC items, not
                    "Reports (in the answers) 1, TOC items 46: 1 have an RTF")
   expect_identical(.ai_count_text(list(reports = r)), "1 of 3 reports have an RTF")
 })
+
+test_that("a close number of another kind is no candidate: a figure sheet is not near a table's number", {
+  toc <- data.frame(output_id = c("Table 14.2.1", "Figure 14.2.1"), title = c("Summary", "KM plot"),
+                    type = c("table", "figure"), stringsAsFactors = FALSE)
+  toc$key <- tflspec:::.ai_id_key(toc$output_id)
+  self <- list(keys = tflspec:::.ai_id_key("Figure 14.2.1"), title = "KM plot", text = "")
+  cand <- .ai_sheet_candidates("f.14.2.1", self, toc)
+  expect_identical(toc$output_id[cand$i], "Figure 14.2.1")
+})
