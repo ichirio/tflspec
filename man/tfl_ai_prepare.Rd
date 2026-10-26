@@ -134,7 +134,11 @@ item the rule left a candidate, or a number no TOC item has, which is
 warned of and keeps its number as the sheet writes it as its id);
 \code{NA}, back to the rule -- or a list named by sheet, each the numbers
 that sheet makes (its other numbers references only).  The numbers and
-sheets not given keep the rule.  Saved as \code{ai/sheet_numbers.csv}
+sheets not given keep the rule.  The result's \code{toc} follows: a TOC
+item made in a sheet has that sheet as its shell (made in several,
+the first in the workbook's order; the others listed in \code{sheets}), one
+the rule made and no sheet makes now has none (the no-shell request's,
+counted in \code{counts}).  Saved as \code{ai/sheet_numbers.csv}
 (\code{sheet}, \code{number}, \code{make}, UTF-8) when the requests are written (not
 by a dry run), and read by a later call without \code{numbers}; given
 again, it replaces the file.  \code{NULL} (default): the saved file, if any.

@@ -115,7 +115,11 @@
 #'   warned of and keeps its number as the sheet writes it as its id);
 #'   `NA`, back to the rule -- or a list named by sheet, each the numbers
 #'   that sheet makes (its other numbers references only).  The numbers and
-#'   sheets not given keep the rule.  Saved as `ai/sheet_numbers.csv`
+#'   sheets not given keep the rule.  The result's `toc` follows: a TOC
+#'   item made in a sheet has that sheet as its shell (made in several,
+#'   the first in the workbook's order; the others listed in `sheets`), one
+#'   the rule made and no sheet makes now has none (the no-shell request's,
+#'   counted in `counts`).  Saved as `ai/sheet_numbers.csv`
 #'   (`sheet`, `number`, `make`, UTF-8) when the requests are written (not
 #'   by a dry run), and read by a later call without `numbers`; given
 #'   again, it replaces the file.  `NULL` (default): the saved file, if any.
@@ -238,7 +242,6 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
   shell <- do.call(tfl_ai_read_shell, c(list(toc), Filter(Negate(is.null), list(
     toc_sheet = toc_sheet, sheets = sheets, shells = shells, toc_cols = toc_cols,
     sheet_roles = sheet_roles))))
-  hint <- .ai_shell_hint(shell)
   # the report numbers each shell sheet writes, and which its request makes:
   # the person's (given, else saved in the study) over the rule's
   if (!is.null(shell$shells)) {
@@ -255,6 +258,8 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
       files <- c(files, .ai_sheet_numbers_write(dir, over))
     }
   } else nums <- .ai_sheet_numbers_rule(shell)
+  # (what the workbook's reading could not find, as the numbers left it)
+  hint <- .ai_shell_hint(shell)
   if (dry && identical(unit, "sheet") && !is.null(shell$shells)) {
     # the shell sheets' requests (as written)
     sz <- size %||% if (identical(mode, "agent")) 1L else 3L

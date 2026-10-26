@@ -229,7 +229,39 @@
   x$sheet_ids <- ids
   # the TOC items a sheet makes (out of the request of those with no shell)
   x$sheet_toc_ids <- unique(tab$toc_id[tab$make %in% TRUE & !is.na(tab$toc_id)])
+  x$toc <- .ai_sheet_numbers_toc(x, tab, rule)
   x
+}
+
+# The TOC items' shells as the numbers say them, where not the rule's
+# alone: an item made a report (given, or a guess) has the sheets making it
+# first, in the workbook's order, the first its shell; an item the rule made
+# and the person made in no sheet has no shell (the no-shell request's); a
+# sheet the person said only refers to it is not one of its sheets
+.ai_sheet_numbers_toc <- function(x, tab, rule) {
+  toc <- x$toc
+  if (is.null(toc$sheets) || !nrow(tab)) return(toc)
+  info <- x$info %||% x$sheets
+  order_of <- x$shells$sheet
+  ids <- unique(tab$toc_id[tab$source != "rule" & !is.na(tab$toc_id)])
+  made_by_rule <- unique(rule$toc_id[rule$make %in% TRUE & !is.na(rule$toc_id)])
+  for (id in ids) {
+    i <- match(id, toc$output_id)
+    if (is.na(i)) next
+    d <- tab[tab$toc_id %in% id, , drop = FALSE]
+    on <- order_of[order_of %in% d$sheet[d$make %in% TRUE]]
+    off <- d$sheet[d$make %in% FALSE & d$source %in% c("given", "saved")]
+    had <- strsplit(.na_or(toc$sheets[i], ""), " | ", fixed = TRUE)[[1L]]
+    had <- setdiff(had[nzchar(had)], off)
+    sheets <- if (!length(on) && id %in% made_by_rule) character() else unique(c(on, had))
+    toc$sheets[i] <- if (length(sheets)) paste(sheets, collapse = " | ") else NA_character_
+    toc$shell[i] <- if (length(sheets)) sheets[1L] else NA_character_
+    if (!is.null(toc$book)) {
+      bk <- info$book[match(toc$shell[i], info$sheet)]
+      toc$book[i] <- if (is.na(bk)) info$book[1L] else bk
+    }
+  }
+  toc
 }
 
 # A sheet's request lines of its numbers when not the rule's alone: the

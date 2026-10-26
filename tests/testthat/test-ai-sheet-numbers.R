@@ -124,7 +124,8 @@ test_that("numbers as a list; make NA back to the rule; the saved file used, the
   dr <- prep_numbers(d, f, dry_run = TRUE, numbers = list(t14.2.1 = c("Table 14.2.1", "14.3.1")))
   expect_identical(dr$requests$outputs[dr$requests$request == "t14.2.1"],
                    "Table 14.2.1, Table 14.3.1")
-  expect_false("no-shell" %in% dr$requests$request)
+  # (14.4.1, the guess its other number made, now made in no sheet: no shell)
+  expect_identical(dr$requests$outputs[dr$requests$request == "no-shell"], "Table 14.4.1")
   r <- prep_numbers(d, f, numbers = data.frame(sheet = c("t14.1.1", "t14.1.1"),
                                                number = c("Table 14.2.1", "Table 14.1.1"),
                                                make = c(FALSE, NA)))
@@ -240,4 +241,42 @@ test_that("numbers: a TOC item given to a sheet that does not write it is that s
                                                          make = TRUE)),
                  "no TOC item has Table 14.8.8 (sheet 'vitals')", fixed = TRUE)
   expect_match(dr$requests$outputs[dr$requests$request == "vitals"], "Table 14.8.8", fixed = TRUE)
+})
+
+test_that("the TOC view follows the numbers: made in no sheet, no shell; given, that sheet's", {
+  skip_if_not_installed("openxlsx")
+  skip_if_not_installed("haven")
+  f <- numbers_book(tempfile(fileext = ".xlsx"))
+  d <- numbers_study()
+  on.exit(unlink(c(f, d), recursive = TRUE), add = TRUE)
+  row <- function(r, id) r$toc[r$toc$toc_id == id, , drop = FALSE]
+  dr <- prep_numbers(d, f, dry_run = TRUE)
+  expect_identical(row(dr, "Table 14.1.1")$shell, "t14.1.1")
+  expect_identical(unname(dr$counts[["no_shell"]]), 1L)
+  # its only sheet made it a reference: no shell, the no-shell request's
+  off <- data.frame(sheet = "t14.1.1", number = "Table 14.1.1", make = FALSE)
+  for (r in list(prep_numbers(d, f, dry_run = TRUE, numbers = off),
+                 prep_numbers(d, f, numbers = off))) {
+    t <- row(r, "Table 14.1.1")
+    expect_true(is.na(t$shell))
+    expect_false(t$shell_found)
+    expect_identical(t$request, "no-shell")
+    expect_identical(unname(r$counts[["no_shell"]]), 2L)
+    expect_identical(r$requests$outputs[r$requests$request == "no-shell"],
+                     "Table 14.1.1, Table 14.3.1")
+  }
+  idx <- readLines(file.path(d, "ai", "requests", "index.md"), encoding = "UTF-8")
+  expect_true(any(grepl("Table 14.1.1, Table 14.3.1", idx, fixed = TRUE)))
+  # a TOC item given to a sheet: its shell and request that sheet's
+  on <- data.frame(sheet = "vitals", number = "Table 14.3.1", make = TRUE)
+  for (r in list(prep_numbers(d, f, dry_run = TRUE, numbers = on),
+                 prep_numbers(d, f, numbers = on))) {
+    t <- row(r, "Table 14.3.1")
+    expect_identical(c(t$shell, t$request), c("vitals", "vitals"))
+    expect_true(t$shell_found)
+    expect_identical(unname(r$counts[["no_shell"]]), 0L)
+    expect_false("no-shell" %in% r$requests$request)
+    # (a guess made: its sheet the shell)
+    expect_identical(row(r, "Table 14.4.1")$shell, "t14.2.1")
+  }
 })
