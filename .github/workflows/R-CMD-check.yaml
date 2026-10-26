@@ -9,7 +9,7 @@
 # catalog (inst/ard/functions.csv) describes it.
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, next]
   pull_request:
   workflow_dispatch:
   schedule:
