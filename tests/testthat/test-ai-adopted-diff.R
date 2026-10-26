@@ -61,3 +61,28 @@ test_that("tfl_ai_adopted_diff(): each value that differs, by its path; every ne
   expect_identical(unique(tfl_ai_adopted_diff(d, "T-1")$output_id), "T-1")
   expect_identical(nrow(tfl_ai_adopted_diff(d, "T-2")), 0L)
 })
+
+test_that("a report adopted that spec/toc.yml does not list gets its entry, after its number's", {
+  s <- adiff_study()
+  d <- s$dir
+  on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  yaml::write_yaml(list(outputs = list(
+    list(id = "T-1", kind = "table", label = "Adverse events"),
+    list(id = "T-14-1-1", kind = "table", label = "Demographics"),
+    list(id = "T-14-9-9", kind = "table", label = "Other"))), file.path(d, "spec", "toc.yml"))
+  tfl_write_output(s$mk("T-14-1-1.a", "Demographics, part a", "TRTEMFL == \"Y\""),
+                   file.path(d, "ai", "spec", "outputs", "T-14-1-1.a.yml"))
+  dry <- tfl_ai_adopt(d, dry_run = TRUE)
+  expect_identical(stats::setNames(dry$toc, dry$output_id),
+                   c(`T-1` = NA, `T-14-1-1.a` = "add", `T-2` = "add"))
+  r <- tfl_ai_adopt(d)
+  expect_identical(sort(r$output_id[r$toc %in% "added"]), c("T-14-1-1.a", "T-2"))
+  toc <- yaml::read_yaml(file.path(d, "spec", "toc.yml"))$outputs
+  # the part after its number; a report of no number at the end
+  expect_identical(vapply(toc, `[[`, "", "id"), c("T-1", "T-14-1-1", "T-14-1-1.a", "T-14-9-9", "T-2"))
+  expect_identical(toc[[3L]]$label, "Demographics, part a")
+  expect_identical(toc[[3L]]$population, "SAF")
+  # adopted again: no second entry
+  invisible(tfl_ai_adopt(d, overwrite = TRUE))
+  expect_length(yaml::read_yaml(file.path(d, "spec", "toc.yml"))$outputs, 5L)
+})

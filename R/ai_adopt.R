@@ -54,6 +54,10 @@
 #' @param outputs The reports to adopt (their ids); `NULL`, every draft.
 #' @param overwrite `TRUE` to write over a report already adopted (or
 #'   written by hand) that differs from its draft.
+#' A report adopted that the study's `spec/toc.yml` does not list (a part
+#' the AI wrote, a report it named otherwise) gets an entry there -- after
+#' its number's, else at the end -- so the study's report list shows it.
+#'
 #' @param dry_run `TRUE` to copy nothing and say what adopting would do:
 #'   `status` `new` (no study file yet), `replace` (the study's file differs
 #'   from the draft: adopting writes over it, with `overwrite = TRUE`),
@@ -61,7 +65,8 @@
 #' @return A data frame, one row a report: `output_id`, `status`
 #'   (`adopted`, `same` -- the study's file is the draft already --, `kept`
 #'   -- the study's file differs and was left, pass `overwrite = TRUE` --,
-#'   `no draft`), `file` (the study's file).  The adoptions are recorded in
+#'   `no draft`), `file` (the study's file), `toc` (`added`: its entry was
+#'   added to `spec/toc.yml`; with `dry_run`, `add`).  The adoptions are recorded in
 #'   `ai/adopted.csv` (the report, when, the draft's md5).
 #' @seealso [tfl_ai_migrate()], [tfl_ai_collect_answers()]
 #' @export
@@ -104,7 +109,17 @@ tfl_ai_adopt <- function(study_dir, outputs = NULL, overwrite = FALSE, dry_run =
   out <- do.call(rbind, c(list(data.frame(output_id = character(), status = character(),
                                           file = character())), rows))
   rownames(out) <- NULL
-  if (isTRUE(dry_run)) return(out)
+  # (the report list shows what spec/toc.yml lists: a report adopted that
+  # it does not -- a part, a report the AI named -- gets its entry)
+  in_toc <- .ai_toc_ids(study_dir)
+  if (isTRUE(dry_run)) {
+    out$toc <- ifelse(out$status %in% c("new", "replace", "same") & !out$output_id %in% in_toc,
+                      "add", NA_character_)
+    return(out)
+  }
+  added <- .ai_toc_add(study_dir, out$output_id[out$status == "adopted" &
+                                                  !out$output_id %in% in_toc])
+  out$toc <- ifelse(out$output_id %in% added, "added", NA_character_)
   utils::write.csv(log, .ai_adopted_file(study_dir), row.names = FALSE, fileEncoding = "UTF-8")
   rownames(out) <- NULL
   kept <- out$output_id[out$status == "kept"]
@@ -244,4 +259,47 @@ tfl_ai_adopted_diff <- function(study_dir = ".", output_id = NULL) {
   }
   walk(y, "")
   out
+}
+
+# The ids spec/toc.yml lists
+.ai_toc_ids <- function(study_dir) {
+  f <- file.path(.spec_dir(study_dir), "toc.yml")
+  if (!file.exists(f)) return(character())
+  e <- tryCatch(yaml::read_yaml(f)$outputs, error = function(e) NULL) %||% list()
+  vapply(e, function(x) as.character(x$id %||% NA_character_), "")
+}
+
+# Reports adopted into the study's spec/toc.yml: each an entry from its
+# report file (id, kind, label, population), after the entry of its number
+# (a part t.15.1.5.1.a after t.15.1.5.1 and its parts there), else at the
+# end.  The ids added.
+.ai_toc_add <- function(study_dir, ids) {
+  if (!length(ids)) return(character())
+  f <- file.path(.spec_dir(study_dir), "toc.yml")
+  y <- if (file.exists(f)) tryCatch(yaml::read_yaml(f), error = function(e) NULL) else NULL
+  toc <- y$outputs %||% list()
+  base_key <- function(id) {
+    k <- tryCatch(.ai_id_key(id), error = function(e) NA_character_)
+    if (is.na(k)) k else sub("([0-9])[A-Z]$", "\\1", k)
+  }
+  added <- character()
+  for (id in ids) {
+    o <- tryCatch(tfl_read_output(file.path(.spec_dir(study_dir), "outputs", paste0(id, ".yml"))),
+                  error = function(e) NULL)
+    e <- list(id = id, kind = o$kind %||% "table")
+    if (!is.null(o) && !is.na(o$label %||% NA)) e$label <- o$label
+    if (!is.null(o) && !is.na(o$population %||% NA)) e$population <- o$population
+    b <- base_key(id)
+    near <- which(vapply(toc, function(x) identical(base_key(x$id %||% ""), b), NA))
+    if (!is.na(b) && length(near)) {
+      toc <- append(toc, list(e), after = max(near))
+    } else {
+      toc[[length(toc) + 1L]] <- e
+    }
+    added <- c(added, id)
+  }
+  y$outputs <- toc
+  dir.create(dirname(f), recursive = TRUE, showWarnings = FALSE)
+  .ai_write_text(yaml::as.yaml(y, indent.mapping.sequence = TRUE), f)
+  added
 }
