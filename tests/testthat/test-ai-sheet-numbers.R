@@ -5,12 +5,14 @@
 
 # A company-style workbook: a TOC; a sheet writing its own number and a
 # reference to another report's; that report's sheet; a sheet whose number
-# no TOC item has; a TOC item with no sheet
+# no TOC item has; a TOC item with no sheet; TOC items with no shell whose
+# number with a part letter one sheet writes (14.4.1.b), two sheets (14.5.1)
 numbers_book <- function(f) {
   wb <- openxlsx::createWorkbook()
-  toc <- data.frame(`Output No.` = paste("Table", c("14.1.1", "14.2.1", "14.3.1")),
+  toc <- data.frame(`Output No.` = paste("Table", c("14.1.1", "14.2.1", "14.3.1", "14.4.1",
+                                                  "14.5.1")),
                     Title = c("Summary of Demographics", "Summary of Adverse Events",
-                              "Laboratory Values"),
+                              "Laboratory Values", "Concomitant Medications", "Medical History"),
                     Population = "Safety", check.names = FALSE, stringsAsFactors = FALSE)
   openxlsx::addWorksheet(wb, "TOC")
   openxlsx::writeData(wb, "TOC", toc)
@@ -20,8 +22,10 @@ numbers_book <- function(f) {
   }
   body <- list(t(c("", "Placebo", "Drug X")), t(c("n", "xx", "xx")), t(c("Mean (SD)", "xx.x", "xx.x")))
   shell("t14.1.1", c(list("Table 14.1.1  Summary of Demographics", "Safety Analysis Set"), body,
-                     list("Note: the adverse event counts are in Table 14.2.1")))
-  shell("t14.2.1", c(list("Table 14.2.1  Summary of Adverse Events", "Safety Analysis Set"), body))
+                     list("Note: the adverse event counts are in Table 14.2.1",
+                          "Part A: Table 14.5.1.a")))
+  shell("t14.2.1", c(list("Table 14.2.1  Summary of Adverse Events", "Safety Analysis Set"), body,
+                     list("Part B: Table 14.4.1.b", "Part B: Table 14.5.1.b")))
   shell("vitals", c(list("Table 14.9.9  Summary of Vital Signs", "Safety Analysis Set"), body))
   openxlsx::saveWorkbook(wb, f, overwrite = TRUE)
   f
@@ -47,16 +51,26 @@ test_that("a dry run's numbers: a row a number a sheet writes, the rule's make",
   dr <- prep_numbers(d, f, dry_run = TRUE)
   n <- dr$numbers
   expect_identical(names(n), c("sheet", "number", "title", "toc_id", "make", "source"))
-  expect_identical(n$sheet, c("t14.1.1", "t14.1.1", "t14.2.1", "vitals"))
-  expect_identical(n$number, paste("Table", c("14.1.1", "14.2.1", "14.2.1", "14.9.9")))
-  expect_identical(n$toc_id, c("Table 14.1.1", "Table 14.2.1", "Table 14.2.1", NA))
-  expect_identical(n$title, c("Summary of Demographics", "Summary of Adverse Events",
-                              "Summary of Adverse Events", "Summary of Vital Signs"))
-  # written in the sheet and a TOC item's: made; no TOC item: not
-  expect_identical(n$make, c(TRUE, TRUE, TRUE, FALSE))
-  expect_true(all(n$source == "rule"))
+  expect_identical(n$sheet, rep(c("t14.1.1", "t14.2.1", "vitals"), c(3, 3, 1)))
+  expect_identical(n$number, paste("Table", c("14.1.1", "14.2.1", "14.5.1.a", "14.2.1",
+                                              "14.4.1.b", "14.5.1.b", "14.9.9")))
+  # a part of a TOC item (14.4.1.b): its toc_id the item's
+  expect_identical(n$toc_id, c(paste("Table", c("14.1.1", "14.2.1", "14.5.1", "14.2.1", "14.4.1",
+                                                "14.5.1")), NA))
+  expect_identical(n$title[c(1, 5, 7)], c("Summary of Demographics", "Concomitant Medications",
+                                          "Summary of Vital Signs"))
+  # written in the sheet and a TOC item's: made; no TOC item: not; a TOC
+  # item with no shell one sheet writes a part of: made (a guess), two
+  # sheets: a candidate of each
+  expect_identical(n$make, c(TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE))
+  expect_identical(n$source, c("rule", "rule", "guess", "rule", "guess", "guess", "rule"))
   expect_identical(dr$requests$outputs[dr$requests$request == "t14.1.1"],
                    "Table 14.1.1, Table 14.2.1")
+  # the report's id the part the sheet writes; its TOC item asked by it
+  expect_identical(dr$requests$outputs[dr$requests$request == "t14.2.1"],
+                   "Table 14.2.1, Table 14.4.1.b")
+  expect_identical(dr$toc$request[dr$toc$toc_id == "Table 14.4.1"], "t14.2.1")
+  expect_true(is.na(dr$toc$request[dr$toc$toc_id == "Table 14.5.1"]))
   # a dry run writes nothing, not even the study folder
   d2 <- file.path(tempfile("sheetnum-none-"), "study")
   dr2 <- suppressWarnings(prep_numbers(d2, f, dry_run = TRUE, adam = file.path(d, "adam"),
@@ -78,13 +92,15 @@ test_that("numbers: make FALSE a reference only, make TRUE with no TOC item a re
   rq <- r$requests
   expect_identical(rq$outputs[rq$request == "t14.1.1"], "Table 14.1.1")
   expect_identical(rq$outputs[rq$request == "vitals"], "Table 14.9.9")
-  expect_identical(r$numbers$make, c(TRUE, FALSE, TRUE, TRUE))
-  expect_identical(r$numbers$source, c("rule", "given", "rule", "given"))
+  expect_identical(r$numbers$make, c(TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE))
+  expect_identical(r$numbers$source, c("rule", "given", "guess", "rule", "guess", "guess", "given"))
   # the request still names the reference, as a reference
   p <- paste(readLines(file.path(d, rq$file[rq$request == "t14.1.1"]), encoding = "UTF-8"),
              collapse = "\n")
   expect_match(p, "- Table 14.2.1 (its number is written in the sheet", fixed = TRUE)
   expect_match(p, "reference only, not this sheet's reports: Table 14.2.1", fixed = TRUE)
+  expect_match(p, "- Table 14.5.1.a: the TOC item Table 14.5.1 has no shell of its own; sheet(s) 't14.2.1'",
+               fixed = TRUE)
   # saved for the next call
   csv <- utils::read.csv(file.path(d, "ai", "sheet_numbers.csv"), stringsAsFactors = FALSE)
   expect_identical(names(csv), c("sheet", "number", "make"))
@@ -101,8 +117,8 @@ test_that("numbers as a list; make NA back to the rule; the saved file used, the
   d <- numbers_study()
   on.exit(unlink(c(f, d), recursive = TRUE), add = TRUE)
   dr <- prep_numbers(d, f, dry_run = TRUE, numbers = list(t14.1.1 = "Table 14.1.1"))
-  expect_identical(dr$numbers$make, c(TRUE, FALSE, TRUE, FALSE))
-  expect_identical(dr$numbers$source, c("given", "given", "rule", "rule"))
+  expect_identical(dr$numbers$make, c(TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE))
+  expect_identical(dr$numbers$source, c("given", "given", "given", "rule", "guess", "guess", "rule"))
   # a TOC item the rule left out (no sheet: the no-shell request's) made a
   # sheet's report
   dr <- prep_numbers(d, f, dry_run = TRUE, numbers = list(t14.2.1 = c("Table 14.2.1", "14.3.1")))
@@ -113,10 +129,10 @@ test_that("numbers as a list; make NA back to the rule; the saved file used, the
                                                number = c("Table 14.2.1", "Table 14.1.1"),
                                                make = c(FALSE, NA)))
   expect_identical(utils::read.csv(file.path(d, "ai", "sheet_numbers.csv"))$number, "Table 14.2.1")
-  expect_identical(r$numbers$source, c("rule", "given", "rule", "rule"))
+  expect_identical(r$numbers$source, c("rule", "given", "guess", "rule", "guess", "guess", "rule"))
   # the next call, a dry run or not, reads it
   dr <- prep_numbers(d, f, dry_run = TRUE)
-  expect_identical(dr$numbers$source, c("rule", "saved", "rule", "rule"))
+  expect_identical(dr$numbers$source, c("rule", "saved", "guess", "rule", "guess", "guess", "rule"))
   expect_identical(dr$requests$outputs[dr$requests$request == "t14.1.1"], "Table 14.1.1")
   r <- prep_numbers(d, f)
   expect_identical(r$requests$outputs[r$requests$request == "t14.1.1"], "Table 14.1.1")
@@ -165,4 +181,63 @@ test_that("collect follows the corrected reports: a reference not answered is no
   expect_identical(v$output_id, "Table-14.9.9")
   expect_false(grepl("no TOC item", v$problems_text %||% ""))
   expect_true(v$status %in% c("ok", "warning"))
+})
+
+test_that("a TOC item with no shell: one sheet writing its part makes it (out of no-shell)", {
+  skip_if_not_installed("openxlsx")
+  skip_if_not_installed("haven")
+  # (the sheet's three numbers of its own fill its candidates: 20.9 none's)
+  f <- tempfile(fileext = ".xlsx")
+  d <- numbers_study()
+  on.exit(unlink(c(f, d), recursive = TRUE), add = TRUE)
+  wb <- openxlsx::createWorkbook()
+  openxlsx::addWorksheet(wb, "TOC")
+  openxlsx::writeData(wb, "TOC", data.frame(
+    `Output No.` = paste("Table", c("20.1", "20.2", "20.3", "20.9")),
+    Title = c("Disposition", "Demographics", "Exposure", "Protocol Deviations"),
+    check.names = FALSE))
+  openxlsx::addWorksheet(wb, "t20")
+  for (k in 1:4) {
+    openxlsx::writeData(wb, "t20", paste("Table", c("20.1", "20.2", "20.3", "20.9.b"))[k],
+                        startRow = k, colNames = FALSE)
+  }
+  openxlsx::writeData(wb, "t20", t(c("", "Placebo", "Drug X")), startRow = 5, colNames = FALSE)
+  openxlsx::saveWorkbook(wb, f)
+  x <- tfl_ai_read_shell(f)
+  expect_true(is.na(x$toc$sheets[x$toc$output_id == "Table 20.9"]))
+  dr <- prep_numbers(d, f, dry_run = TRUE)
+  n <- dr$numbers[dr$numbers$number == "Table 20.9.b", , drop = FALSE]
+  expect_identical(c(n$toc_id, n$source), c("Table 20.9", "guess"))
+  expect_true(n$make)
+  expect_false("no-shell" %in% dr$requests$request)
+  expect_match(dr$requests$outputs[dr$requests$request == "t20"], "Table 20.9.b", fixed = TRUE)
+  # the person over the guess
+  dr <- prep_numbers(d, f, dry_run = TRUE,
+                     numbers = data.frame(sheet = "t20", number = "Table 20.9.b", make = FALSE))
+  expect_identical(dr$requests$outputs[dr$requests$request == "no-shell"], "Table 20.9")
+})
+
+test_that("numbers: a TOC item given to a sheet that does not write it is that sheet's", {
+  skip_if_not_installed("openxlsx")
+  skip_if_not_installed("haven")
+  f <- numbers_book(tempfile(fileext = ".xlsx"))
+  d <- numbers_study()
+  on.exit(unlink(c(f, d), recursive = TRUE), add = TRUE)
+  # out of the no-shell request, and out of the sheet it was guessed into
+  dr <- prep_numbers(d, f, dry_run = TRUE,
+                     numbers = data.frame(sheet = "vitals", number = c("Table 14.3.1", "Table 14.4.1"),
+                                          make = TRUE))
+  n <- dr$numbers[dr$numbers$sheet == "vitals" & dr$numbers$source == "given", , drop = FALSE]
+  expect_identical(n$toc_id, c("Table 14.3.1", "Table 14.4.1"))
+  rq <- dr$requests
+  expect_identical(rq$outputs[rq$request == "vitals"], "Table 14.3.1, Table 14.4.1")
+  expect_identical(rq$outputs[rq$request == "t14.2.1"], "Table 14.2.1")
+  expect_false("no-shell" %in% rq$request)
+  expect_false(dr$numbers$make[dr$numbers$number == "Table 14.4.1.b"])
+  # a number no TOC item has, not written in the sheet: allowed, warned
+  expect_warning(dr <- prep_numbers(d, f, dry_run = TRUE,
+                                    numbers = data.frame(sheet = "vitals", number = "Table 14.8.8",
+                                                         make = TRUE)),
+                 "no TOC item has Table 14.8.8 (sheet 'vitals')", fixed = TRUE)
+  expect_match(dr$requests$outputs[dr$requests$request == "vitals"], "Table 14.8.8", fixed = TRUE)
 })

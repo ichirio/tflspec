@@ -134,8 +134,12 @@
 #'   as the sheet writes it, `title` -- the TOC item's, else the sheet's
 #'   own when it writes that number alone, else `NA` --, `toc_id` -- the
 #'   TOC item it is, `NA` none --, `make` -- a report of that sheet's
-#'   request --, `source` -- `"rule"`, `"saved"` (`ai/sheet_numbers.csv`)
-#'   or `"given"` (`numbers`); a dry run's and the written requests' alike),
+#'   request --, `source` -- `"rule"`, `"guess"` (a TOC item no sheet
+#'   writes or names, whose number -- a part letter taken off, `15.2.4.2.b`
+#'   -- one sheet writes: made that sheet's, its id the number the sheet
+#'   writes; two sheets or more: a candidate of each, not made), `"saved"`
+#'   (`ai/sheet_numbers.csv`) or `"given"` (`numbers`); a dry run's and the
+#'   written requests' alike),
 #'   `counts` (`shells`,
 #'   `toc_items`, `no_shell`),
 #'   `sheets` (the workbook's sheets and their roles), `adam` (the
@@ -336,8 +340,16 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
   # shell sheets it is a candidate of (NA: no shell found), the requests
   # naming it; the row's columns
   na <- rep(NA_character_, nrow(t))
+  # (a request asking for a part of it, 15.2.4.2.b, names it too)
+  part_keys <- lapply(asked, function(a) {
+    k <- .ai_id_key(a)
+    sub("[A-Z]$", "", k[!is.na(k) & grepl("[A-Z]$", k)])
+  })
   req_of <- vapply(t$output_id, function(id) {
-    w <- req$request[vapply(asked, function(a) id %in% a, NA)]
+    k <- .ai_id_key(id)
+    w <- req$request[vapply(seq_along(asked), function(j) {
+      id %in% asked[[j]] || any(vapply(part_keys[[j]], .ai_id_same, NA, b = k))
+    }, NA)]
     if (length(w)) paste(w, collapse = " | ") else NA_character_
   }, "", USE.NAMES = FALSE)
   tc <- data.frame(toc_id = t$output_id, title = t$title, type = t$type,

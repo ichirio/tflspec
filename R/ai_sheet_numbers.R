@@ -8,6 +8,10 @@
 # name has -- `sheet`, `number` (as written), `title`, `toc_id` (the TOC
 # item it is, NA none), `make` (the rule makes it the sheet's report: its
 # number written in the sheet or in its name, and a TOC item's), `source`
+# ("rule"; "guess": a TOC item with no shell -- no sheet writes its number
+# or has it in its name -- whose number, a part letter taken off the
+# sheet's, one sheet writes is made that sheet's; two sheets, a candidate
+# of each)
 .ai_sheet_numbers_rule <- function(x) {
   empty <- data.frame(sheet = character(), number = character(), title = character(),
                       toc_id = character(), make = logical(), source = character(),
@@ -32,6 +36,9 @@
     said <- grepl("its number is written in the sheet|the sheet name has its number", cc$clues)
     own <- cc$i[said]
     i <- vapply(key, function(k) .ai_sheet_number_toc(k, pre, prefer = own), 0L)
+    # (a part of a TOC item: 15.2.4.2.b, the item 15.2.4.2)
+    part <- is.na(i) & !is.na(key) & grepl("[A-Z]$", key)
+    i[part] <- vapply(sub("[A-Z]$", "", key[part]), .ai_sheet_number_toc, 0L, pre = pre)
     # the title: the TOC item's; else the sheet's, when it writes that
     # number alone
     title <- ifelse(is.na(i), NA_character_, toc$title[i])
@@ -47,7 +54,27 @@
   })
   out <- do.call(rbind, c(list(empty), rows))
   rownames(out) <- NULL
+  # a TOC item with no shell: the sheet writing its number (the only one)
+  # makes it; several sheets, a candidate of each
+  said_any <- unlist(lapply(x$cand, function(cc) {
+    cc$i[grepl("its number is written in the sheet|the sheet name has its number", cc$clues)]
+  }), use.names = FALSE)
+  no_shell <- toc$output_id[setdiff(seq_len(nrow(toc)), said_any)]
+  for (id in intersect(no_shell, out$toc_id)) {
+    at <- which(out$toc_id %in% id)
+    out$make[at] <- length(unique(out$sheet[at])) == 1L
+    out$source[at] <- "guess"
+  }
   out
+}
+
+# A row's report id: the TOC item's number, or the number as the sheet
+# writes it (no TOC item, or a part of one: 15.2.4.2.b)
+.ai_sheet_number_id <- function(d) {
+  num <- trimws(.ai_half_width(d$number))
+  same <- !is.na(d$toc_id) & mapply(function(a, b) .ai_id_same(a, b),
+                                    .ai_id_key(num), .ai_id_key(d$toc_id))
+  ifelse(same, d$toc_id, num)
 }
 
 # The TOC item a number's key is (its number or its shell's), the sheet's
@@ -145,6 +172,13 @@
   if (!is.null(over) && nrow(over)) {
     toc <- x$toc
     pre <- .ai_toc_pre(toc)
+    # (a TOC item made a sheet's: no longer guessed into another)
+    given_to <- function(k) {
+      if (!isTRUE(tab$make[k]) || is.na(tab$toc_id[k])) return(invisible())
+      g <- tab$source == "guess" & tab$toc_id %in% tab$toc_id[k] & tab$sheet != tab$sheet[k]
+      tab$make[g] <<- FALSE
+      invisible()
+    }
     for (r in seq_len(nrow(over))) {
       s <- over$sheet[r]
       n <- over$number[r]
@@ -155,6 +189,7 @@
       if (length(hit)) {
         tab$make[hit[1L]] <- over$make[r]
         tab$source[hit[1L]] <- source
+        given_to(hit[1L])
         next
       }
       # a number the rule did not read from the sheet (a TOC item that was
@@ -165,6 +200,7 @@
                                    toc_id = if (is.na(i)) NA_character_ else toc$output_id[i],
                                    make = over$make[r], source = source,
                                    stringsAsFactors = FALSE))
+      given_to(nrow(tab))
     }
     # (the rows in the sheets' order)
     tab <- tab[order(match(tab$sheet, x$shells$sheet), seq_len(nrow(tab))), , drop = FALSE]
@@ -184,33 +220,58 @@
     cc <- x$cand[[s]]
     said <- grepl("its number is written in the sheet|the sheet name has its number", cc$clues)
     rule_ids <- x$toc$output_id[cc$i[said]]
-    id <- ifelse(is.na(d$toc_id), trimws(.ai_half_width(d$number)), d$toc_id)
+    id <- .ai_sheet_number_id(d)
     off <- id[d$make %in% FALSE]
     on <- id[d$make %in% TRUE]
     ids[[s]] <- unique(c(setdiff(rule_ids, off), on))
   }
   x$sheet_numbers <- tab
   x$sheet_ids <- ids
+  # the TOC items a sheet makes (out of the request of those with no shell)
+  x$sheet_toc_ids <- unique(tab$toc_id[tab$make %in% TRUE & !is.na(tab$toc_id)])
   x
 }
 
-# A sheet's request lines of the person's correction: the numbers it makes
-# and those it only refers to (none when the rule stands)
+# A sheet's request lines of its numbers when not the rule's alone: the
+# person's correction (the numbers it makes, those it only refers to) and
+# the TOC items with no shell its numbers were taken for
 .ai_sheet_numbers_lines <- function(x, sheet) {
-  d <- x$sheet_numbers
-  if (is.null(d)) return(NULL)
-  d <- d[d$sheet == sheet & d$source != "rule", , drop = FALSE]
+  all <- x$sheet_numbers
+  if (is.null(all)) return(NULL)
+  d <- all[all$sheet == sheet & all$source != "rule", , drop = FALSE]
   if (!nrow(d)) return(NULL)
   ids <- x$sheet_ids[[sheet]] %||% character()
-  ref <- d$number[d$make %in% FALSE]
-  c("The person checked this sheet's report numbers:",
-    if (length(ids)) sprintf("- its reports: %s (write a report file for each);",
-                             paste(ids, collapse = ", "))
-    else "- it makes none of the numbers it writes;",
-    if (length(ref)) sprintf("- reference only, not this sheet's reports: %s (write no report file for them from this sheet).",
-                             paste(ref, collapse = ", ")),
-    if (any(d$make & is.na(d$toc_id))) sprintf(
-      "- no TOC item has %s: a report all the same, its id the number as the sheet writes it.",
-      paste(d$number[d$make & is.na(d$toc_id)], collapse = ", ")),
+  p <- d[d$source %in% c("given", "saved"), , drop = FALSE]
+  g <- d[d$source == "guess", , drop = FALSE]
+  ref <- p$number[p$make %in% FALSE]
+  guess_line <- function(k) {
+    id <- g$toc_id[k]
+    if (isTRUE(g$make[k])) {
+      return(sprintf(paste0("- %s: the TOC item %s has no shell of its own and this sheet alone ",
+                            "writes its number: a report of this sheet, its id %s."),
+                     g$number[k], id, .ai_sheet_number_id(g[k, , drop = FALSE])))
+    }
+    maker <- unique(all$sheet[all$toc_id %in% id & all$make %in% TRUE])
+    if (length(maker)) {
+      return(sprintf("- %s: the TOC item %s is made by sheet '%s': a reference here.",
+                     g$number[k], id, maker[1L]))
+    }
+    others <- setdiff(unique(all$sheet[all$toc_id %in% id]), sheet)
+    sprintf(paste0("- %s: the TOC item %s has no shell of its own; sheet(s) %s write its number ",
+                   "too: write it from this sheet only if this sheet is its shell."),
+            g$number[k], id, paste(sQuote(others, FALSE), collapse = ", "))
+  }
+  c(if (nrow(p)) c(
+      "The person checked this sheet's report numbers:",
+      if (length(ids)) sprintf("- its reports: %s (write a report file for each);",
+                               paste(ids, collapse = ", "))
+      else "- it makes none of the numbers it writes;",
+      if (length(ref)) sprintf("- reference only, not this sheet's reports: %s (write no report file for them from this sheet).",
+                               paste(ref, collapse = ", ")),
+      if (any(p$make & is.na(p$toc_id))) sprintf(
+        "- no TOC item has %s: a report all the same, its id the number as the sheet writes it.",
+        paste(p$number[p$make & is.na(p$toc_id)], collapse = ", "))),
+    if (nrow(g)) c("TOC items with no shell found that this sheet's numbers name:",
+                   vapply(seq_len(nrow(g)), guess_line, "")),
     "")
 }

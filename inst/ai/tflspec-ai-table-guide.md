@@ -85,7 +85,10 @@ with `numbers = data.frame(sheet = "t14.1.1", number = "Table 14.2.1",
 make = FALSE)` (reference only: the request still shows it), or
 `numbers = list(t14.1.1 = "Table 14.1.1")` (the numbers the sheet makes;
 its others reference only). A number no TOC item has, made `TRUE`, is a
-report all the same (with a warning). The correction is saved as
+report all the same (with a warning). A TOC item no sheet writes or names
+whose number (with a part letter: `Table 15.2.4.2.b`) one sheet writes is
+made that sheet's report (`source` `"guess"`); written in two sheets, it is
+a candidate of each. The correction is saved as
 `ai/sheet_numbers.csv` when the requests are written, and used by the
 next calls until `numbers` is given again.
 

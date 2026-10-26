@@ -155,8 +155,12 @@ report number a shell sheet writes or its name has: \code{sheet}, \code{number}
 as the sheet writes it, \code{title} -- the TOC item's, else the sheet's
 own when it writes that number alone, else \code{NA} --, \code{toc_id} -- the
 TOC item it is, \code{NA} none --, \code{make} -- a report of that sheet's
-request --, \code{source} -- \code{"rule"}, \code{"saved"} (\code{ai/sheet_numbers.csv})
-or \code{"given"} (\code{numbers}); a dry run's and the written requests' alike),
+request --, \code{source} -- \code{"rule"}, \code{"guess"} (a TOC item no sheet
+writes or names, whose number -- a part letter taken off, \verb{15.2.4.2.b}
+-- one sheet writes: made that sheet's, its id the number the sheet
+writes; two sheets or more: a candidate of each, not made), \code{"saved"}
+(\code{ai/sheet_numbers.csv}) or \code{"given"} (\code{numbers}); a dry run's and the
+written requests' alike),
 \code{counts} (\code{shells},
 \code{toc_items}, \code{no_shell}),
 \code{sheets} (the workbook's sheets and their roles), \code{adam} (the

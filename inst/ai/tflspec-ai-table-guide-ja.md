@@ -81,7 +81,10 @@ r <- tfl_ai_prepare("mystudy", "mystudy/TOC_SHELL.xlsx", study_id = "ABC-123",
 作る帳票になるので、`numbers = data.frame(sheet = "t14.1.1", number = "Table 14.2.1",
 make = FALSE)`（参照だけ。依頼には参照として残る）か、`numbers = list(t14.1.1 =
 "Table 14.1.1")`（そのシートで作る番号。ほかの番号は参照だけ）で直します。TOC に
-無い番号を `TRUE` にすると、警告を出してそのまま帳票にします。直した内容は依頼を
+無い番号を `TRUE` にすると、警告を出してそのまま帳票にします。どのシートにも番号が
+書かれていない TOC の帳票は、その番号（`Table 15.2.4.2.b` のような枝番付きも）を
+書いたシートが 1 つだけならそのシートの帳票にし（`source` が `"guess"`）、2 つ以上
+なら各シートの候補として示します。直した内容は依頼を
 書くときに `ai/sheet_numbers.csv` に保存され、次に `numbers` を渡すまで以後の
 呼び出しで使われます。
 
