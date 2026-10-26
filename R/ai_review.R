@@ -594,11 +594,14 @@
 }
 
 # spec/_assumptions.yml as the review's frame: output_id, sheet (where),
-# item, assumption, question
-.ai_folder_assumptions <- function(dir) {
+# item, assumption, question; `all`: also each row's id and kind (R/ai_assumptions.R),
+# its status (`fixed` once the agent applied the person's answer) and note
+.ai_folder_assumptions <- function(dir, all = FALSE) {
+  extra <- c("id", "kind", "status", "note")
   empty <- data.frame(output_id = character(), sheet = character(), item = character(),
                       assumption = character(), question = character(),
                       stringsAsFactors = FALSE)
+  if (isTRUE(all)) for (k in extra) empty[[k]] <- character()
   f <- file.path(dir, "spec", "_assumptions.yml")
   if (!file.exists(f)) return(empty)
   y <- tryCatch(yaml::read_yaml(f), error = function(e) NULL)
@@ -610,11 +613,13 @@
   }
   rows <- lapply(y, function(e) {
     if (is.character(e)) e <- list(assumption = e)
-    data.frame(output_id = cell(e, "output_id"), sheet = cell(e, "where"), item = cell(e, "item"),
-               assumption = cell(e, "assumption"), question = cell(e, "question"),
-               stringsAsFactors = FALSE)
+    r <- data.frame(output_id = cell(e, "output_id"), sheet = cell(e, "where"),
+                    item = cell(e, "item"), assumption = cell(e, "assumption"),
+                    question = cell(e, "question"), stringsAsFactors = FALSE)
+    if (isTRUE(all)) for (k in extra) r[[k]] <- cell(e, k)
+    r
   })
-  do.call(rbind, rows)
+  do.call(rbind, c(list(empty), rows))
 }
 
 # ---- the two prompts -----------------------------------------------------------------

@@ -22,7 +22,7 @@ passes them.}
 A \code{tfl_ai_collected} (as \code{\link[=tfl_ai_collect_answers]{tfl_ai_collect_answers()}}) whose
 \code{reports} also have \code{rtf} (the file made, else \code{NA}), \code{rtf_problem}
 and \code{built} (\code{"built"}, \code{"kept"} -- unchanged since the last run --
-or \code{NA}), and a \code{questions} data frame (\code{n}, \code{question}, \code{reports},
+or \code{NA}), and a \code{questions} data frame (\code{n}, \code{question}, \code{reports}, \code{assumptions},
 \code{status}, \code{answer}), and \code{expected} (the comparison with the
 person's list: \code{output_id}, \code{result} -- \code{missing}, \verb{still there},
 \code{differs}, \verb{not expected} --, \code{detail}; its counts in its attribute

@@ -29,7 +29,9 @@ report's \verb{spec/outputs/<id>.yml} when written, else \code{NA}), \code{repai
 (the request's repair prompt to paste into the same chat, else \code{NA})),
 \code{next_steps} (a request's next step, named by the request),
 \code{assumptions} (the study's \verb{spec/_assumptions.yml} for these reports:
-\code{output_id}, \code{where}, \code{item}, \code{assumption}, \code{question}), \code{stray} (answer
+\code{output_id}, \code{where}, \code{item}, \code{assumption}, \code{question}, \code{id} -- the
+assumption's \verb{A<n>} -- and \code{kind} -- its \verb{K<n>}, \code{\link[=tfl_ai_assumptions]{tfl_ai_assumptions()}}),
+\code{stray} (answer
 files named after no request), \code{requests} (the requests' folder),
 \code{templates} (each request's setting, \code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}}'s \code{templates}:
 a logical named by the request), \code{manifest} and \code{manifest_file}

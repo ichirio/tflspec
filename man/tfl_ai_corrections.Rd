@@ -23,6 +23,16 @@ and each \code{note} on what a report should show, and each question of
 item -- \verb{## C<n>. add ...}, \verb{## Q<n> (answered). ...} -- with \code{- Status: open}, which the agent sets to \code{done} once it has done it.
 }
 \details{
+Each assumption of the AI the person answered \code{wrong}
+(\code{\link[=tfl_ai_assumption_answers_write]{tfl_ai_assumption_answers_write()}}) is a section too: one report's
+(\verb{## A12. assumption of T-14-1-1: <item>}, with \verb{- Was:} and
+\verb{- Correct:}) or every report of its kind's (\verb{## K3. assumption of every report: <item>}, with \verb{- Reports:} too).  An answer \code{ok} needs no
+section.  An answer changed while its section is open changes its
+\verb{- Correct:}; an answer removed (or no longer \code{wrong}) while its section
+is open sets it \code{- Status: withdrawn}.  A question of \code{ai/questions.md}
+whose assumptions are all answered is answered first from them
+(unless the person has written its answer).
+
 Written again (after more corrections), the sections there are kept as
 they are -- their number, their status, what the agent wrote -- and only
 new ones are added: the same correction is never written twice.  The

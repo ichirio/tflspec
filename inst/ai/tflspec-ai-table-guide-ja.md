@@ -196,7 +196,10 @@ tfl_ai_run(".")   # もう一度読み、帳票ごとに ARD と RTF: ai/output/
    `ai/status.md` を読んで直し、次へ進みます。
 4. 終わったら `ai/questions.md` に答える（複数の帳票の同じ疑問は 1 つにまとまり、
    関わる帳票が並びます）。帳票の一覧の直し（`ai/expected_outputs.csv`、
-   `tfl_ai_expected_write()`）があれば、`tfl_ai_corrections()` で回答と直しを
+   `tfl_ai_expected_write()`）があれば、それも書きます。AI の仮定（`tfl_ai_assumptions()`）
+   には、正しいか誤りか、誤りなら正しい内容を `tfl_ai_assumption_answers_write()`
+   （`ai/assumption_answers.csv`）で答えます（その帳票だけ、または同じ種類の全帳票）。
+   `tfl_ai_corrections()` で回答と直しを
    `ai/corrections.md` にまとめます。エージェントに「the answers and corrections
    are written」と伝えると、回答を `ai/decisions.md` に移し、直しの節を 1 つずつ
    済ませて、関わる帳票を作り直します。
