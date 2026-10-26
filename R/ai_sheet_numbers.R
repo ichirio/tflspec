@@ -102,72 +102,79 @@
 # number, by priority: an exact number before one a part letter differs;
 # in the sheet's title rows or name before the body only; then the sheet
 # whose own numbers are nearest the item's (the most levels in common
-# from the first: the same section first); then the workbook's order.  The
-# best sheet makes the item (all its rows of it), the others keep it as a
-# candidate; each row's `reason` says why.  `tab` the rows (with `part`
-# and `where`), `rank` (`toc_id`, `sheet`, `rank`, `why` -- how it matches
-# --, `exact`).
+# from the first: the same section first); then the workbook's order.
+# Ranked a number at a time (as written, its part letter with it: each
+# part of the item its own report, 15.2.4.2.a and 15.2.4.2.b): its best
+# sheet makes it, the others keep it as a candidate; each row's `reason`
+# says why.  `tab` the rows (with `part` and `where`), `rank` (`toc_id`,
+# `key` -- the number's, its kind's letter off --, `sheet`, `rank`, `why`
+# -- how it matches --, `exact`).
 .ai_sheet_numbers_guess <- function(tab, ids, order_of) {
-  rank <- data.frame(toc_id = character(), sheet = character(), rank = integer(),
-                     why = character(), exact = logical(), stringsAsFactors = FALSE)
+  rank <- data.frame(toc_id = character(), key = character(), sheet = character(),
+                     rank = integer(), why = character(), exact = logical(),
+                     stringsAsFactors = FALSE)
   for (id in ids) {
-    at <- which(tab$toc_id %in% id)
-    tab$source[at] <- "guess"
+    all_at <- which(tab$toc_id %in% id)
+    tab$source[all_at] <- "guess"
     lv <- .ai_levels(.ai_id_key(id))
-    # a row's tiers (lower better) and the reason it matches
-    tier_m <- ifelse(tab$part[at], 2L, 1L)
-    tier_w <- ifelse(tab$where[at] == "body", 2L, 1L)
-    why <- paste0(ifelse(tab$part[at],
-                         sprintf("part letter differs (%s for %s)", tab$number[at], id),
-                         "exact number"), "; ",
-                  c(top = "in the sheet's title rows", name = "in the sheet name",
-                    body = "in the body only")[tab$where[at]])
-    exact <- tier_m == 1L & tier_w == 1L
-    why[!exact] <- paste0(why[!exact], "; not an exact match")
-    # a sheet's best row
-    sheets <- unique(tab$sheet[at])
-    best <- vapply(sheets, function(s) {
-      w <- which(tab$sheet[at] == s)
-      w[order(tier_m[w], tier_w[w])][1L]
-    }, 0L)
-    # the sheet's own numbers: those the rule made it, its name's, else
-    # those in its title rows -- not this item's
-    near <- vapply(sheets, function(s) {
-      mine <- tab$sheet == s & !(tab$toc_id %in% id)
-      own <- tab$number[mine & tab$make & tab$source == "rule"]
-      own <- c(own, tab$number[mine & tab$where == "name"])
-      if (!length(own)) own <- tab$number[mine & tab$where == "top"]
-      if (!length(own)) return(0L)
-      max(vapply(own, function(n) {
-        l <- .ai_levels(.ai_id_key(n))
-        m <- min(length(l), length(lv))
-        eq <- l[seq_len(m)] == lv[seq_len(m)]
-        as.integer(if (all(eq)) m else which(!eq)[1L] - 1L)
-      }, 0L))
-    }, 0L)
-    o <- order(tier_m[best], tier_w[best], -near, match(sheets, order_of))
-    sheets <- sheets[o]
-    best <- best[o]
-    near <- near[o]
-    chosen <- sheets[1L]
-    for (k in seq_along(sheets)) {
-      w <- which(tab$sheet[at] == sheets[k])
-      tab$make[at[w]] <- k == 1L
-      tab$reason[at[w]] <- if (k == 1L) {
-        tie <- if (length(sheets) > 1L) {
-          b2 <- best[2L]
-          same_tier <- tier_m[best[1L]] == tier_m[b2] && tier_w[best[1L]] == tier_w[b2]
-          paste0("; 1st choice of ", length(sheets), " sheets",
-                 if (same_tier && near[1L] > near[2L]) "; its own number is nearest" else
-                   if (same_tier) "; first in the workbook of those alike")
+    keys <- sub("^[TFL]", "", .ai_id_key(tab$number[all_at]))
+    for (pk in unique(keys)) {
+      at <- all_at[keys %in% pk]
+      # a row's tiers (lower better) and the reason it matches
+      tier_m <- ifelse(tab$part[at], 2L, 1L)
+      tier_w <- ifelse(tab$where[at] == "body", 2L, 1L)
+      why <- paste0(ifelse(tab$part[at],
+                           sprintf("part letter differs (%s for %s)", tab$number[at], id),
+                           "exact number"), "; ",
+                    c(top = "in the sheet's title rows", name = "in the sheet name",
+                      body = "in the body only")[tab$where[at]])
+      exact <- tier_m == 1L & tier_w == 1L
+      why[!exact] <- paste0(why[!exact], "; not an exact match")
+      # a sheet's best row
+      sheets <- unique(tab$sheet[at])
+      best <- vapply(sheets, function(s) {
+        w <- which(tab$sheet[at] == s)
+        w[order(tier_m[w], tier_w[w])][1L]
+      }, 0L)
+      # the sheet's own numbers: those the rule made it, its name's, else
+      # those in its title rows -- not this item's
+      near <- vapply(sheets, function(s) {
+        mine <- tab$sheet == s & !(tab$toc_id %in% id)
+        own <- tab$number[mine & tab$make & tab$source == "rule"]
+        own <- c(own, tab$number[mine & tab$where == "name"])
+        if (!length(own)) own <- tab$number[mine & tab$where == "top"]
+        if (!length(own)) return(0L)
+        max(vapply(own, function(n) {
+          l <- .ai_levels(.ai_id_key(n))
+          m <- min(length(l), length(lv))
+          eq <- l[seq_len(m)] == lv[seq_len(m)]
+          as.integer(if (all(eq)) m else which(!eq)[1L] - 1L)
+        }, 0L))
+      }, 0L)
+      o <- order(tier_m[best], tier_w[best], -near, match(sheets, order_of))
+      sheets <- sheets[o]
+      best <- best[o]
+      near <- near[o]
+      chosen <- sheets[1L]
+      for (k in seq_along(sheets)) {
+        w <- which(tab$sheet[at] == sheets[k])
+        tab$make[at[w]] <- k == 1L
+        tab$reason[at[w]] <- if (k == 1L) {
+          tie <- if (length(sheets) > 1L) {
+            b2 <- best[2L]
+            same_tier <- tier_m[best[1L]] == tier_m[b2] && tier_w[best[1L]] == tier_w[b2]
+            paste0("; 1st choice of ", length(sheets), " sheets",
+                   if (same_tier && near[1L] > near[2L]) "; its own number is nearest" else
+                     if (same_tier) "; first in the workbook of those alike")
+          }
+          paste0(why[w], tie %||% "")
+        } else {
+          sprintf("%s choice; %s; chosen: sheet '%s'", .ai_ordinal(k), why[w], chosen)
         }
-        paste0(why[w], tie %||% "")
-      } else {
-        sprintf("%s choice; %s; chosen: sheet '%s'", .ai_ordinal(k), why[w], chosen)
+        rank <- rbind(rank, data.frame(toc_id = id, key = pk, sheet = sheets[k], rank = k,
+                                       why = why[best[k]], exact = exact[best[k]],
+                                       stringsAsFactors = FALSE))
       }
-      rank <- rbind(rank, data.frame(toc_id = id, sheet = sheets[k], rank = k,
-                                     why = why[best[k]], exact = exact[best[k]],
-                                     stringsAsFactors = FALSE))
     }
   }
   list(tab = tab, rank = rank)
@@ -363,7 +370,8 @@
 
 # The TOC items' shells as the numbers say them, where not the rule's
 # alone: an item made a report (given, or a guess) has the sheets making it
-# first, in the workbook's order, the first its shell; an item the rule made
+# first, its parts' order then the workbook's, the first its shell; an
+# item the rule made
 # and the person made in no sheet has no shell (the no-shell request's); a
 # sheet the person said only refers to it is not one of its sheets
 .ai_sheet_numbers_toc <- function(x, tab, rule) {
@@ -377,7 +385,9 @@
     i <- match(id, toc$output_id)
     if (is.na(i)) next
     d <- tab[tab$toc_id %in% id, , drop = FALSE]
-    on <- order_of[order_of %in% d$sheet[d$make %in% TRUE]]
+    # (its parts in their order, 15.2.4.2.a first; then the workbook's)
+    m <- d[d$make %in% TRUE, , drop = FALSE]
+    on <- unique(m$sheet[order(.ai_id_key(m$number), match(m$sheet, order_of))])
     off <- d$sheet[d$make %in% FALSE & d$source %in% c("given", "saved")]
     had <- strsplit(.na_or(toc$sheets[i], ""), " | ", fixed = TRUE)[[1L]]
     had <- setdiff(had[nzchar(had)], off)
@@ -407,7 +417,8 @@
   rank <- x$sheet_guess
   guess_line <- function(k) {
     id <- g$toc_id[k]
-    rk <- if (is.null(rank)) NULL else rank[rank$toc_id %in% id, , drop = FALSE]
+    pk <- sub("^[TFL]", "", .ai_id_key(g$number[k]))
+    rk <- if (is.null(rank)) NULL else rank[rank$toc_id %in% id & rank$key %in% pk, , drop = FALSE]
     rk <- rk[order(rk$rank), , drop = FALSE]
     others <- rk[rk$sheet != sheet, , drop = FALSE]
     if (isTRUE(g$make[k])) {
@@ -424,7 +435,10 @@
                                                 .ai_ordinal(others$rank), others$why),
                                         collapse = "; "))))
     }
-    maker <- unique(all$sheet[all$toc_id %in% id & all$make %in% TRUE])
+    made <- all$toc_id %in% id & all$make %in% TRUE
+    # (the sheet making this part, else any part of the item)
+    same <- made & sub("^[TFL]", "", .ai_id_key(all$number)) %in% pk
+    maker <- unique(all$sheet[if (any(same)) same else made])
     here <- rk[rk$sheet == sheet, , drop = FALSE]
     if (length(maker) && nrow(here) && maker[1L] %in% rk$sheet[rk$rank == 1L]) {
       return(sprintf(paste0("- %s: the TOC item %s: its shell is more likely sheet '%s' ",

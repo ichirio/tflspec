@@ -151,3 +151,42 @@ test_that("numbers = over a priority guess: the person's sheet makes it, the oth
     sheet = "t15.2.5", number = "Table 15.2.4.3.a", make = FALSE))
   expect_identical(dr$requests$outputs[dr$requests$request == "no-shell"], "Table 15.2.4.3")
 })
+
+test_that("each part its own report: two parts in two sheets both made, one part once", {
+  skip_if_not_installed("openxlsx")
+  skip_if_not_installed("haven")
+  f <- tempfile(fileext = ".xlsx")
+  d <- priority_study()
+  on.exit(unlink(c(f, d), recursive = TRUE), add = TRUE)
+  wb <- openxlsx::createWorkbook()
+  openxlsx::addWorksheet(wb, "TOC")
+  openxlsx::writeData(wb, "TOC", data.frame(`Output No.` = paste("Table", c("20.1", "20.2", "20.3")),
+                                            Title = c("Disposition", "Demographics", "Exposure"),
+                                            check.names = FALSE))
+  hdr <- t(c("", "Placebo", "Drug X"))
+  shell <- function(s, lines) {
+    openxlsx::addWorksheet(wb, s)
+    for (k in seq_along(lines)) {
+      openxlsx::writeData(wb, s, lines[[k]], startRow = k, colNames = FALSE)
+    }
+  }
+  # (the .b part's sheet first in the workbook; the .a part in the body of
+  # the other, with 20.3.a, which the first sheet writes too)
+  shell("t20.2", list("Table 20.2  Demographics", "Table 20.1.b  Disposition: Part B", hdr,
+                      "Table 20.3.a  Exposure", hdr))
+  shell("t20.9", list("Listing 20.9  Notes", hdr, "Table 20.1.a  Disposition: Part A", hdr,
+                      "Table 20.3.a  Exposure", hdr))
+  openxlsx::saveWorkbook(wb, f)
+  dr <- prep_priority(d, f, dry_run = TRUE)
+  g <- dr$numbers[dr$numbers$source == "guess", , drop = FALSE]
+  made <- g[g$make, , drop = FALSE]
+  expect_identical(sort(paste(made$sheet, made$number)),
+                   c("t20.2 Table 20.1.b", "t20.2 Table 20.3.a", "t20.9 Table 20.1.a"))
+  # one part in two sheets: made once
+  expect_identical(sum(g$number == "Table 20.3.a" & g$make), 1L)
+  # the item's shell: its first part's sheet, though later in the workbook
+  t <- dr$toc[dr$toc$toc_id == "Table 20.1", , drop = FALSE]
+  expect_identical(t$shell, "t20.9")
+  expect_identical(t$request, "t20.2 | t20.9")
+  expect_false("no-shell" %in% dr$requests$request)
+})

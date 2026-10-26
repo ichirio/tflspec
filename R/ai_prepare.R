@@ -141,7 +141,8 @@
 #'   TOC item it is, `NA` none --, `make` -- a report of that sheet's
 #'   request --, `source` -- `"rule"`, `"guess"` (a TOC item no sheet
 #'   writes or names, whose number -- a part letter taken off, `15.2.4.2.b`
-#'   -- sheets write: made the best sheet's, its id the number the sheet
+#'   -- sheets write, each number (a part with its letter) on its own:
+#'   made the best sheet's, its id the number the sheet
 #'   writes, the other sheets' a candidate each, not made; the best: an
 #'   exact number before one a part letter differs, in the sheet's title
 #'   rows or name before its body only, then the sheet whose own number is
