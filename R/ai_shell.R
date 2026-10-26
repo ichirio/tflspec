@@ -170,7 +170,8 @@ tfl_ai_read_shell <- function(path, outputs = NULL, sheets = NULL,
   out <- structure(list(
     text = text, toc = toc, shells = ss$shells, cand = ss$cand, roles = roles,
     info = info, first_rows = attr(toc, "first_rows"),
-    sheets = info[c("sheet", "role", "rows", "cells", "hidden", "book", "name")],
+    sheets = info[intersect(c("sheet", "role", "rows", "cells", "hidden", "book", "name", "widths"),
+                         names(info))],
     cells = cells, outputs = keep$outputs, truncated = truncated,
     path = normalizePath(path, winslash = "/"),
     books = data.frame(book = unique(info$book), path = books,
@@ -348,14 +349,39 @@ print.tfl_ai_shell <- function(x, ...) {
   sst <- .xl_member(path, "xl/sharedStrings.xml", members)
   shared <- .xl_si_text(regmatches(sst, gregexpr("(?s)<si>.*?</si>|<si/>", sst, perl = TRUE))[[1L]])
   indent <- .xl_indents(.xl_member(path, "xl/styles.xml", members))
+  xml <- lapply(info$member, function(m) .xl_member(path, m, members))
   cells <- lapply(seq_len(nrow(info)), function(i) {
-    .xl_sheet_cells(.xl_member(path, info$member[i], members), info$sheet[i], shared, indent)
+    .xl_sheet_cells(xml[[i]], info$sheet[i], shared, indent)
   })
   cells <- do.call(rbind, c(list(.xl_no_cells()), cells))
+  # each sheet's column widths, as Excel keeps them (characters)
+  info$widths <- I(lapply(seq_len(nrow(info)), function(i) {
+    .xl_col_widths(xml[[i]], max(c(0L, cells$col[cells$sheet == info$sheet[i]])))
+  }))
   info$rows <- vapply(info$sheet, function(s) length(unique(cells$row[cells$sheet == s])), 1L)
   info$cells <- vapply(info$sheet, function(s) sum(cells$sheet == s), 1L)
   rownames(info) <- NULL
   list(sheets = info, cells = cells)
+}
+
+# A sheet's column widths (Excel's, in characters of its default font),
+# columns 1 to n: its <col> entry's width or the sheet's default (Excel's
+# own 8.43 when the sheet says none); a hidden column 0
+.xl_col_widths <- function(x, n) {
+  fmt <- regmatches(x, regexpr("<sheetFormatPr\\b[^>]*>", x, perl = TRUE))
+  def <- if (length(fmt)) suppressWarnings(as.numeric(.xl_attr(fmt, "defaultColWidth"))) else NA
+  if (is.na(def)) def <- 8.43
+  cols <- regmatches(x, gregexpr("<col\\s[^>]*>", x, perl = TRUE))[[1L]]
+  lo <- suppressWarnings(as.integer(.xl_attr(cols, "min")))
+  hi <- suppressWarnings(as.integer(.xl_attr(cols, "max")))
+  w <- suppressWarnings(as.numeric(.xl_attr(cols, "width")))
+  hid <- .xl_attr(cols, "hidden") %in% c("1", "true")
+  vapply(seq_len(n), function(k) {
+    j <- which(!is.na(lo) & !is.na(hi) & lo <= k & hi >= k)
+    if (!length(j)) return(def)
+    j <- j[1L]
+    if (hid[j]) 0 else if (is.na(w[j])) def else w[j]
+  }, 1)
 }
 
 .xl_no_cells <- function() {
@@ -978,7 +1004,8 @@ print.tfl_ai_shell <- function(x, ...) {
     paste("Each line is one row of a sheet: `<row>: <column>=<text> | ...`, the",
           "non-empty cells left to right. A merged cell is written once with its",
           "range (`A1:E1=`). Leading spaces are the cell's indent; `\\n` is a line",
-          "break inside a cell."),
+          "break inside a cell. A shell sheet's `Column widths` are Excel's: write",
+          "its table's widths in their proportions."),
     "")
   body <- unlist(lapply(sh, function(s) {
     d <- cells[cells$sheet == s, , drop = FALSE]
@@ -992,9 +1019,25 @@ print.tfl_ai_shell <- function(x, ...) {
     c(sprintf("## Sheet \"%s\"%s%s", s,
               if (identical(i$role, "toc")) " (the TOC)" else "",
               if (isTRUE(i$hidden)) " (hidden)" else ""),
+      if (!identical(i$role, "toc")) .ai_shell_widths_line(i$widths[[1L]], d$col),
       lines, "")
   }), use.names = FALSE)
   paste(c(head, body), collapse = "\n")
+}
+
+# A shell sheet's column widths, of the columns its cells are in: Excel's
+# (characters), and as parts of the narrowest -- what a table's
+# plan_columns(widths) is written from
+.ai_shell_widths_line <- function(w, cols) {
+  if (is.null(w) || !length(w) || !length(cols)) return(NULL)
+  k <- sort(unique(cols[cols <= length(w)]))
+  k <- k[w[k] > 0]
+  # (all alike, Excel's default most likely: nothing to copy)
+  if (length(k) < 2L || length(unique(round(w[k], 1L))) == 1L) return(NULL)
+  rel <- w[k] / min(w[k])
+  sprintf("Column widths (Excel, characters): %s; as parts: %s",
+          paste0(.xl_col_letter(k), "=", as.character(round(w[k], 1L)), collapse = " "),
+          paste(as.character(round(rel, 1L)), collapse = " : "))
 }
 
 .ai_shell_cell <- function(x) {
