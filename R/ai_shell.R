@@ -1019,21 +1019,50 @@ print.tfl_ai_shell <- function(x, ...) {
     c(sprintf("## Sheet \"%s\"%s%s", s,
               if (identical(i$role, "toc")) " (the TOC)" else "",
               if (isTRUE(i$hidden)) " (hidden)" else ""),
-      if (!identical(i$role, "toc")) .ai_shell_widths_line(i$widths[[1L]], d$col),
+      if (!identical(i$role, "toc")) .ai_shell_widths_line(i$widths[[1L]], d),
       lines, "")
   }), use.names = FALSE)
   paste(c(head, body), collapse = "\n")
 }
 
-# A shell sheet's column widths, of the columns its cells are in: Excel's
-# (characters), and as parts of the narrowest -- what a table's
-# plan_columns(widths) is written from
-.ai_shell_widths_line <- function(w, cols) {
-  if (is.null(w) || !length(w) || !length(cols)) return(NULL)
-  k <- sort(unique(cols[cols <= length(w)]))
-  k <- k[w[k] > 0]
+# A shell sheet's column widths, written only where the sheet's columns
+# are plainly its table's: the rows from the column header (the first row
+# with a cell right of the first column) to the table's last row of two
+# cells or more, every column there
+# holding a cell (no empty spacer column), no cell there merged across
+# columns, and no text there wider than its column with the cell to its
+# right empty (a text that spills over).  Excel's widths (characters), and
+# as parts of the narrowest -- what plan_columns(widths) is written from.
+# A wrong width misleads more than none: in doubt, nothing.
+.ai_shell_widths_line <- function(w, d) {
+  if (is.null(w) || !length(w) || is.null(d) || !nrow(d)) return(NULL)
+  per_row <- table(d$row)
+  multi <- as.integer(names(per_row)[per_row >= 2L])
+  if (!length(multi)) return(NULL)
+  # (from the first row with a cell right of the first column -- a header
+  # cell over the arms, merged or not; a title is in the first column)
+  first <- min(c(d$row[d$col > min(d$col)], min(multi)))
+  t <- d[d$row >= first & d$row <= max(multi), , drop = FALSE]
+  span <- grepl(":", t$ref, fixed = TRUE)
+  if (any(span)) {
+    rg <- strsplit(t$ref[span], ":", fixed = TRUE)
+    across <- vapply(rg, function(z) !identical(sub("[0-9]+$", "", z[1L]),
+                                                sub("[0-9]+$", "", z[2L])), NA)
+    if (any(across)) return(NULL)
+  }
+  k <- seq(min(t$col), max(t$col))
+  if (length(k) < 2L || any(k > length(w)) || !all(k %in% t$col) || any(w[k] <= 0)) return(NULL)
+  # (a text wider than its column, nothing to its right: it spills over)
+  tm <- t[t$row %in% multi, , drop = FALSE]
+  wide <- nchar(trimws(tm$text), type = "width") > 1.1 * w[tm$col] + 1
+  if (any(wide)) {
+    right_empty <- vapply(which(wide), function(r) {
+      !any(tm$row == tm$row[r] & tm$col == tm$col[r] + 1L)
+    }, NA)
+    if (any(right_empty)) return(NULL)
+  }
   # (all alike, Excel's default most likely: nothing to copy)
-  if (length(k) < 2L || length(unique(round(w[k], 1L))) == 1L) return(NULL)
+  if (length(unique(round(w[k], 1L))) == 1L) return(NULL)
   rel <- w[k] / min(w[k])
   sprintf("Column widths (Excel, characters): %s; as parts: %s",
           paste0(.xl_col_letter(k), "=", as.character(round(w[k], 1L)), collapse = " "),

@@ -35,6 +35,48 @@ test_that("a shell sheet's column widths in its text, as parts of the narrowest;
   expect_false(any(grepl("^Column widths", lines)))
 })
 
+test_that("a shell whose columns are not plainly its table's: no widths (merged header, spacer column, spilled text)", {
+  skip_if_not_installed("openxlsx")
+  one <- function(edit) {
+    f <- tempfile(fileext = ".xlsx")
+    wb <- openxlsx::createWorkbook()
+    openxlsx::addWorksheet(wb, "TOC")
+    openxlsx::writeData(wb, "TOC", data.frame(`Output No.` = "Table 14.1.1", Title = "Demographics",
+                                              check.names = FALSE), startRow = 2)
+    openxlsx::addWorksheet(wb, "t.14.1.1")
+    openxlsx::writeData(wb, "t.14.1.1", "Table 14.1.1  Demographics", startRow = 1, colNames = FALSE)
+    edit(wb)
+    openxlsx::saveWorkbook(wb, f, overwrite = TRUE)
+    lines <- strsplit(tfl_ai_read_shell(f)$text, "\n", fixed = TRUE)[[1L]]
+    unlink(f)
+    grep("^Column widths", lines, value = TRUE)
+  }
+  row <- function(wb, r, x) openxlsx::writeData(wb, "t.14.1.1", t(x), startRow = r, colNames = FALSE)
+  # plain: written
+  expect_length(one(function(wb) {
+    row(wb, 3, c("", "Placebo", "Drug X")); row(wb, 4, c("Mean (SD)", "xx.x", "xx.x"))
+    openxlsx::setColWidths(wb, "t.14.1.1", 1:3, c(30, 12, 12))
+  }), 1L)
+  # a header merged across columns (an arm over its sub-columns)
+  expect_length(one(function(wb) {
+    row(wb, 3, c("", "Drug X", "")); row(wb, 4, c("", "Low", "High"))
+    row(wb, 5, c("Mean (SD)", "xx.x", "xx.x"))
+    openxlsx::mergeCells(wb, "t.14.1.1", cols = 2:3, rows = 3)
+    openxlsx::setColWidths(wb, "t.14.1.1", 1:3, c(30, 12, 12))
+  }), 0L)
+  # an empty spacer column between the arms
+  expect_length(one(function(wb) {
+    row(wb, 3, c("", "Placebo", "", "Drug X")); row(wb, 4, c("Mean (SD)", "xx.x", "", "xx.x"))
+    openxlsx::setColWidths(wb, "t.14.1.1", 1:4, c(30, 12, 2, 12))
+  }), 0L)
+  # a label wider than its column, spilling into the empty cell beside it
+  expect_length(one(function(wb) {
+    row(wb, 3, c("", "", "Placebo", "Drug X"))
+    row(wb, 4, c("Subjects with at least one adverse event", "", "xx", "xx"))
+    openxlsx::setColWidths(wb, "t.14.1.1", 1:4, c(10, 10, 12, 12))
+  }), 0L)
+})
+
 test_that("an agent's request holds its shell's column widths", {
   skip_on_cran()
   skip_if_not_installed("openxlsx")
