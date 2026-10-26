@@ -133,9 +133,13 @@ as a setup script the figure programs source.
 names(tfl_fig_style())
 ```
 
-A time on a figure's axis is divided by a named constant, not by a number
-in each program: `mutate(AVAL = AVAL / days_per_month)`, with
-`days_per_week`, `days_per_month` and `days_per_year`. The study's setup
+A time on a figure's axis is converted with named constants, not with
+numbers in each program: `days_per_week`, `days_per_month` and
+`days_per_year`. AVAL is converted from each record's unit, AVALU (`DAYS`,
+`WEEKS`, `MONTHS` or `YEARS`; days when the data has no AVALU; a unit
+not one of them stops the program), with `case_when(AVALU == "MONTHS" ~
+days_per_month, ...)`; another time is in days:
+`mutate(TRTDURD = TRTDURD / days_per_week)`. The study's setup
 sets them; `tfl_fig_setup_code()` defines each one that is not defined
 yet, with the values of `tfl_time_unit_days()`.
 

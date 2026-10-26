@@ -2,6 +2,24 @@
 adtte_ttde <- adtte |>
   filter(PARAMCD == "TTDE", SAFFL == "Y")
 
+# AVAL in days, from each record's unit, AVALU (days when the data has no AVALU)
+adtte_ttde <- adtte_ttde |>
+  mutate(AVALU = if ("AVALU" %in% names(adtte_ttde)) toupper(AVALU) else "DAYS")
+units_unknown <- setdiff(adtte_ttde$AVALU, c("DAYS", "WEEKS", "MONTHS", "YEARS"))
+if (length(units_unknown)) {
+  stop("AVALU: a unit not DAYS, WEEKS, MONTHS or YEARS: ", toString(units_unknown), call. = FALSE)
+}
+adtte_ttde <- adtte_ttde |>
+  mutate(
+    AVAL = AVAL * case_when(
+      AVALU == "DAYS"   ~ 1,
+      AVALU == "WEEKS"  ~ days_per_week,
+      AVALU == "MONTHS" ~ days_per_month,
+      AVALU == "YEARS"  ~ days_per_year
+    ),
+    AVALU = "DAYS"
+  )
+
 fit <- survfit2(Surv(AVAL, CNSR == 0) ~ TRT01A, data = adtte_ttde)
 
 # the numbers it prints, from the ARD

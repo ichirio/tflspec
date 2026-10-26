@@ -12,7 +12,7 @@ test_that("km_survival, its band too: ggsurvfit's risk table, a layer of the cur
     expect_identical(rt$args$stats_label, "Number of Patients at Risk")
     expect_identical("km_ci" %in% fns, nm == "band")
     expect_true("hline" %in% fns)
-    expect_identical(x$call_steps, 3L)
+    expect_identical(x$call_steps, 4L)
     expect_identical(x$plot$add[[1L]]$fn, "scale_x_continuous")
   }
 })

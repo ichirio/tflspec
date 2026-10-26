@@ -124,7 +124,7 @@ test_that("a report that replaces a template's layer: its design, not the call",
 
 test_that("a figure template's body says the steps its call makes (call_steps)", {
   k <- tfl_template_expand("km_survival", list(param = "PFS", by = "TRT01A", risk_table = FALSE))
-  expect_identical(k$call_steps, 2L)
+  expect_identical(k$call_steps, 3L)
   expect_identical(k$data$steps[[length(k$data$steps)]]$step, "survfit")
   t <- .tpl_get("km_survival", "test")
   suppressMessages(tfl_template("km_nocall", "figure", "km", params = t$params,

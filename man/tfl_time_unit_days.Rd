@@ -11,14 +11,16 @@ A named numeric vector: \code{days_per_week} 7, \code{days_per_month}
 30.4375 (365.25 / 12), \code{days_per_year} 365.25.
 }
 \description{
-The figure programs divide a time in days by named constants --
+The figure programs change a time's unit with named constants --
 \code{days_per_week}, \code{days_per_month}, \code{days_per_year} -- not by numbers
 written in each program, so a company sets them once (a study's
-setup: tflplanner writes them from its company standards).  These are
+setup: tflplanner writes them from its company standards): AVAL from
+each record's unit, AVALU (\code{AVALU == "MONTHS" ~ days_per_month}), another
+time in days (\code{TRTDURD / days_per_week}).  These are
 the values used where none is set: the figure setup
 (\code{\link[=tfl_fig_setup_code]{tfl_fig_setup_code()}}) and a figure script of its own define a
 constant only when it is not defined yet.  The programs say the name as
-it is (\code{AVAL / days_per_month}): a data column must not be named like
+it is: a data column must not be named like
 one (tflplanner's review says so).
 }
 \examples{
