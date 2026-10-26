@@ -869,7 +869,15 @@
                       paste(sQuote(file.path("spec", "outputs", basename(there)), FALSE),
                             collapse = ", ")))
   }
+  # (a listing's columns their widths, where the answer gave none: R/ai_widths.R)
+  answer$outputs <- lapply(answer$outputs, .ai_listing_widths, vars = answer$vars)
+  # (a table's widths R gave it on an earlier run)
+  known <- .ai_widths_read(dir)
+  answer$outputs <- lapply(answer$outputs, .ai_widths_again, known = known)
   for (i in seq_along(ids)) tfl_write_output(answer$outputs[[i]], paths[i])
+  # a table with no widths: built here when its data can be read, its
+  # widths from its printed columns (else run.R gives them when it builds)
+  .ai_widths_on_read(answer$outputs, paths, dir)
   out <- paths
   a <- answer$assumption_rows
   if (!is.null(a) && nrow(a)) {
