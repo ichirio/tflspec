@@ -197,7 +197,12 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
     # candidate by its name -- as their contexts keep them)
     asking <- if (sheet_mode) {
       # (a sheet asked for no TOC item stands under its name)
-      unique(c(shell$toc$output_id, vapply(shell$shells$sheet, .ai_file_id, "", USE.NAMES = FALSE)))
+      # (and a report a sheet makes by its own number: a part, 15.2.4.2.a)
+      sn <- shell$sheet_numbers
+      made <- if (is.null(sn) || !any(sn$make %in% TRUE)) character() else
+        .ai_sheet_number_id(sn[sn$make %in% TRUE, , drop = FALSE])
+      unique(c(shell$toc$output_id, vapply(shell$shells$sheet, .ai_file_id, "", USE.NAMES = FALSE),
+               made))
     } else c(b$output_id, figs)
     again <- intersect(asking, had)
     if (length(again) && !isTRUE(overwrite)) {

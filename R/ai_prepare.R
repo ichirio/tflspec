@@ -121,8 +121,9 @@
 #'   the rule made and no sheet makes now has none (the no-shell request's,
 #'   counted in `counts`).  Saved as `ai/sheet_numbers.csv`
 #'   (`sheet`, `number`, `make`, UTF-8) when the requests are written (not
-#'   by a dry run), and read by a later call without `numbers`; given
-#'   again, it replaces the file.  `NULL` (default): the saved file, if any.
+#'   by a dry run), and read by a later call; given again, it goes over the
+#'   saved rows (a row of the same sheet and number replaced, `NA` taking
+#'   it out) and the file keeps the result.  `NULL` (default): the saved file, if any.
 #'   With `unit = "sheet"` only.
 #' @return A `tfl_ai_prepared`: a list with `requests` (one row a request:
 #'   `request`, `family`, `outputs` -- the TOC items it names (a sheet's:
@@ -140,10 +141,15 @@
 #'   TOC item it is, `NA` none --, `make` -- a report of that sheet's
 #'   request --, `source` -- `"rule"`, `"guess"` (a TOC item no sheet
 #'   writes or names, whose number -- a part letter taken off, `15.2.4.2.b`
-#'   -- one sheet writes: made that sheet's, its id the number the sheet
-#'   writes; two sheets or more: a candidate of each, not made), `"saved"`
-#'   (`ai/sheet_numbers.csv`) or `"given"` (`numbers`); a dry run's and the
-#'   written requests' alike),
+#'   -- sheets write: made the best sheet's, its id the number the sheet
+#'   writes, the other sheets' a candidate each, not made; the best: an
+#'   exact number before one a part letter differs, in the sheet's title
+#'   rows or name before its body only, then the sheet whose own number is
+#'   nearest, then the first in the workbook), `"saved"`
+#'   (`ai/sheet_numbers.csv`) or `"given"` (`numbers`) --, `reason` -- a
+#'   guess's: how it matches, "not an exact match" when not, its choice
+#'   among the sheets; `"set by the person"` for `"saved"` and `"given"`;
+#'   `NA` the rule's --; a dry run's and the written requests' alike),
 #'   `counts` (`shells`,
 #'   `toc_items`, `no_shell`),
 #'   `sheets` (the workbook's sheets and their roles), `adam` (the
@@ -243,14 +249,16 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
     toc_sheet = toc_sheet, sheets = sheets, shells = shells, toc_cols = toc_cols,
     sheet_roles = sheet_roles))))
   # the report numbers each shell sheet writes, and which its request makes:
-  # the person's (given, else saved in the study) over the rule's
+  # the person's over the rule's: the saved in the study, the given over
+  # them (NA: back to the rule) -- one mapping for the numbers, the TOC
+  # view, the requests and the counts
   if (!is.null(shell$shells)) {
     shells_at <- shell$shells$sheet
     rule <- .ai_sheet_numbers_rule(shell)
-    over <- if (!is.null(numbers)) .ai_sheet_numbers_input(numbers, rule, shells_at, fn) else
-      .ai_sheet_numbers_read(dir, shells_at)
+    given <- if (!is.null(numbers)) .ai_sheet_numbers_input(numbers, rule, shells_at, fn)
+    over <- .ai_sheet_numbers_merge(.ai_sheet_numbers_read(dir, shells_at), given)
     if (identical(unit, "sheet")) {
-      shell <- .ai_sheet_numbers_apply(shell, over, if (is.null(numbers)) "saved" else "given", fn)
+      shell <- .ai_sheet_numbers_apply(shell, over, fn)
     }
     nums <- shell$sheet_numbers %||% rule
     # (given: saved for the next call when the requests are written)
@@ -258,6 +266,7 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
       files <- c(files, .ai_sheet_numbers_write(dir, over))
     }
   } else nums <- .ai_sheet_numbers_rule(shell)
+  attr(nums, "guess") <- NULL
   # (what the workbook's reading could not find, as the numbers left it)
   hint <- .ai_shell_hint(shell)
   if (dry && identical(unit, "sheet") && !is.null(shell$shells)) {

@@ -140,8 +140,9 @@ the first in the workbook's order; the others listed in \code{sheets}), one
 the rule made and no sheet makes now has none (the no-shell request's,
 counted in \code{counts}).  Saved as \code{ai/sheet_numbers.csv}
 (\code{sheet}, \code{number}, \code{make}, UTF-8) when the requests are written (not
-by a dry run), and read by a later call without \code{numbers}; given
-again, it replaces the file.  \code{NULL} (default): the saved file, if any.
+by a dry run), and read by a later call; given again, it goes over the
+saved rows (a row of the same sheet and number replaced, \code{NA} taking
+it out) and the file keeps the result.  \code{NULL} (default): the saved file, if any.
 With \code{unit = "sheet"} only.}
 }
 \value{
@@ -161,10 +162,15 @@ own when it writes that number alone, else \code{NA} --, \code{toc_id} -- the
 TOC item it is, \code{NA} none --, \code{make} -- a report of that sheet's
 request --, \code{source} -- \code{"rule"}, \code{"guess"} (a TOC item no sheet
 writes or names, whose number -- a part letter taken off, \verb{15.2.4.2.b}
--- one sheet writes: made that sheet's, its id the number the sheet
-writes; two sheets or more: a candidate of each, not made), \code{"saved"}
-(\code{ai/sheet_numbers.csv}) or \code{"given"} (\code{numbers}); a dry run's and the
-written requests' alike),
+-- sheets write: made the best sheet's, its id the number the sheet
+writes, the other sheets' a candidate each, not made; the best: an
+exact number before one a part letter differs, in the sheet's title
+rows or name before its body only, then the sheet whose own number is
+nearest, then the first in the workbook), \code{"saved"}
+(\code{ai/sheet_numbers.csv}) or \code{"given"} (\code{numbers}) --, \code{reason} -- a
+guess's: how it matches, "not an exact match" when not, its choice
+among the sheets; \code{"set by the person"} for \code{"saved"} and \code{"given"};
+\code{NA} the rule's --; a dry run's and the written requests' alike),
 \code{counts} (\code{shells},
 \code{toc_items}, \code{no_shell}),
 \code{sheets} (the workbook's sheets and their roles), \code{adam} (the
