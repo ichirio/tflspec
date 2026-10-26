@@ -331,6 +331,7 @@
                if (!is.na(r$info %||% NA)) paste0("; ", r$info))
       }, ""), "")
     else c("No TOC item was found for this sheet: read the reports from the sheet alone.", ""),
+    .ai_sheet_numbers_lines(x, sheet),
     paste(
       "Read the reports from the sheet first: the numbers, titles, populations, conditions,",
       "layout and variables written in it; then its sheet name; then the TOC candidates.",
@@ -401,7 +402,10 @@
     # AI's reference only, in the text; none: the AI decides
     said <- grepl("its number is written in the sheet|the sheet name has its number", cc$clues)
     own <- cc$i[said]
-    units[[length(units) + 1L]] <- list(sheet = s, ids = toc$output_id[own],
+    # (the person's correction of the sheet's numbers, when given or saved:
+    # .ai_sheet_numbers_apply())
+    ids <- if (!is.null(x$sheet_ids[[s]])) x$sheet_ids[[s]] else toc$output_id[own]
+    units[[length(units) + 1L]] <- list(sheet = s, ids = ids,
                                         kind = .na_or(kind, "table"),
                                         family = if (identical(kind, "listing")) "listing" else
                                           if (length(hit)) hit[1L] else "other")
@@ -437,6 +441,8 @@
   }
   names(figs) <- fig_names
   noshell <- toc$output_id[is.na(toc$sheets) & (is.na(toc$type) | toc$type %in% types)]
+  # (a TOC item the person made a sheet's report is that sheet's)
+  noshell <- setdiff(noshell, unlist(x$sheet_ids, use.names = FALSE))
   noshell_name <- if (length(noshell)) {
     make.unique(c(taken, names(ub), fig_names, "no-shell"), sep = "-")[
       length(taken) + length(ub) + length(fig_names) + 1L]

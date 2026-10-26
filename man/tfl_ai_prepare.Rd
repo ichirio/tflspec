@@ -31,7 +31,8 @@ tfl_ai_prepare(
   toc_cols = NULL,
   sheet_roles = NULL,
   unit = c("sheet", "toc"),
-  area = NULL
+  area = NULL,
+  numbers = NULL
 )
 }
 \arguments{
@@ -122,6 +123,22 @@ which the person adopts into the study's \verb{spec/outputs/}
 \code{NULL} (default): \code{TRUE} for a new study (no report in \verb{spec/outputs/}
 and no answer yet), else as the study is (a study of the form before
 is moved with \code{\link[=tfl_ai_migrate]{tfl_ai_migrate()}}).}
+
+\item{numbers}{The person's check of the report numbers each shell sheet
+writes (see the result's \code{numbers}), over the rule (a number written
+in the sheet or its name, and a TOC item's, is a report of the sheet's
+request): a data frame with \code{sheet}, \code{number} and \code{make} -- \code{FALSE},
+the number is a reference only (the request still shows it, not as
+one of its reports); \code{TRUE}, a report of that sheet's request (a TOC
+item the rule left a candidate, or a number no TOC item has, which is
+warned of and keeps its number as the sheet writes it as its id);
+\code{NA}, back to the rule -- or a list named by sheet, each the numbers
+that sheet makes (its other numbers references only).  The numbers and
+sheets not given keep the rule.  Saved as \code{ai/sheet_numbers.csv}
+(\code{sheet}, \code{number}, \code{make}, UTF-8) when the requests are written (not
+by a dry run), and read by a later call without \code{numbers}; given
+again, it replaces the file.  \code{NULL} (default): the saved file, if any.
+With \code{unit = "sheet"} only.}
 }
 \value{
 A \code{tfl_ai_prepared}: a list with \code{requests} (one row a request:
@@ -133,7 +150,14 @@ it is a candidate of --, \code{shell}, \code{shell_found}, \code{request} -- the
 requests naming it, \code{NA} for none --, \code{book}, \code{shell_id},
 \code{population}, \code{program}, \code{file}, \code{info} as \code{\link[=tfl_ai_read_shell]{tfl_ai_read_shell()}}'s
 \code{toc} says them), \code{shells} (a row a shell sheet, as
-\code{\link[=tfl_ai_read_shell]{tfl_ai_read_shell()}}'s, with its \code{request}), \code{counts} (\code{shells},
+\code{\link[=tfl_ai_read_shell]{tfl_ai_read_shell()}}'s, with its \code{request}), \code{numbers} (a row a
+report number a shell sheet writes or its name has: \code{sheet}, \code{number}
+as the sheet writes it, \code{title} -- the TOC item's, else the sheet's
+own when it writes that number alone, else \code{NA} --, \code{toc_id} -- the
+TOC item it is, \code{NA} none --, \code{make} -- a report of that sheet's
+request --, \code{source} -- \code{"rule"}, \code{"saved"} (\code{ai/sheet_numbers.csv})
+or \code{"given"} (\code{numbers}); a dry run's and the written requests' alike),
+\code{counts} (\code{shells},
 \code{toc_items}, \code{no_shell}),
 \code{sheets} (the workbook's sheets and their roles), \code{adam} (the
 \code{\link[=tfl_ai_adam_summary]{tfl_ai_adam_summary()}}: \code{datasets}, \code{variables}, \code{text}), \code{files} (the

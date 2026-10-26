@@ -444,11 +444,15 @@
   # a sheet's request: its reports are the AI's to name; one that is no TOC
   # item's number is said
   if (isTRUE(context$sheet_mode) && length(context$toc_keys)) {
+    # (a number the person made a report of this sheet: no TOC item's either)
+    sn <- context$sheet_numbers
+    made <- if (is.null(sn)) character() else .ai_id_key(sn$number[sn$make %in% TRUE])
+    known <- c(context$toc_keys, made[!is.na(made)])
     for (id in names(outs)) {
       k <- .ai_id_key(id)
       base <- if (!is.na(k)) sub("[A-Z]$", "", k) else k
-      if (is.na(k) || !(length(.ai_id_match(k, context$toc_keys)) ||
-                        length(.ai_id_match(base, context$toc_keys)))) {
+      if (is.na(k) || !(length(.ai_id_match(k, known)) ||
+                        length(.ai_id_match(base, known)))) {
         p <- .ai_problem(p, paste("outputs", id),
                          "is no TOC item's number: check the number the sheet writes", "warning")
       }

@@ -353,6 +353,12 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
     ids <- if (length(noshell)) noshell else unique(unlist(lapply(us, `[[`, "ids")))
     ctx$candidates <- ids
     ctx$toc_keys <- shell$toc$key
+    # (the person's correction of these sheets' numbers: the reports above
+    # follow it; a number made that no TOC item has is no mistake)
+    sn <- shell$sheet_numbers
+    if (!is.null(sn) && any(sn$sheet %in% sheets & sn$source != "rule")) {
+      ctx$sheet_numbers <- sn[sn$sheet %in% sheets, , drop = FALSE]
+    }
     ctx$ai_templates <- templates
     if (agent) ctx$ai_files <- TRUE
     p <- tfl_ai_prompt("table", ctx)
