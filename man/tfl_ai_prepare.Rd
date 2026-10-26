@@ -31,7 +31,8 @@ tfl_ai_prepare(
   toc_cols = NULL,
   sheet_roles = NULL,
   unit = c("sheet", "toc"),
-  area = NULL
+  area = NULL,
+  numbers = NULL
 )
 }
 \arguments{
@@ -122,6 +123,27 @@ which the person adopts into the study's \verb{spec/outputs/}
 \code{NULL} (default): \code{TRUE} for a new study (no report in \verb{spec/outputs/}
 and no answer yet), else as the study is (a study of the form before
 is moved with \code{\link[=tfl_ai_migrate]{tfl_ai_migrate()}}).}
+
+\item{numbers}{The person's check of the report numbers each shell sheet
+writes (see the result's \code{numbers}), over the rule (a number written
+in the sheet or its name, and a TOC item's, is a report of the sheet's
+request): a data frame with \code{sheet}, \code{number} and \code{make} -- \code{FALSE},
+the number is a reference only (the request still shows it, not as
+one of its reports); \code{TRUE}, a report of that sheet's request (a TOC
+item the rule left a candidate, or a number no TOC item has, which is
+warned of and keeps its number as the sheet writes it as its id);
+\code{NA}, back to the rule -- or a list named by sheet, each the numbers
+that sheet makes (its other numbers references only).  The numbers and
+sheets not given keep the rule.  The result's \code{toc} follows: a TOC
+item made in a sheet has that sheet as its shell (made in several,
+the first in the workbook's order; the others listed in \code{sheets}), one
+the rule made and no sheet makes now has none (the no-shell request's,
+counted in \code{counts}).  Saved as \code{ai/sheet_numbers.csv}
+(\code{sheet}, \code{number}, \code{make}, UTF-8) when the requests are written (not
+by a dry run), and read by a later call; given again, it goes over the
+saved rows (a row of the same sheet and number replaced, \code{NA} taking
+it out) and the file keeps the result.  \code{NULL} (default): the saved file, if any.
+With \code{unit = "sheet"} only.}
 }
 \value{
 A \code{tfl_ai_prepared}: a list with \code{requests} (one row a request:
@@ -133,7 +155,24 @@ it is a candidate of --, \code{shell}, \code{shell_found}, \code{request} -- the
 requests naming it, \code{NA} for none --, \code{book}, \code{shell_id},
 \code{population}, \code{program}, \code{file}, \code{info} as \code{\link[=tfl_ai_read_shell]{tfl_ai_read_shell()}}'s
 \code{toc} says them), \code{shells} (a row a shell sheet, as
-\code{\link[=tfl_ai_read_shell]{tfl_ai_read_shell()}}'s, with its \code{request}), \code{counts} (\code{shells},
+\code{\link[=tfl_ai_read_shell]{tfl_ai_read_shell()}}'s, with its \code{request}), \code{numbers} (a row a
+report number a shell sheet writes or its name has: \code{sheet}, \code{number}
+as the sheet writes it, \code{title} -- the TOC item's, else the sheet's
+own when it writes that number alone, else \code{NA} --, \code{toc_id} -- the
+TOC item it is, \code{NA} none --, \code{make} -- a report of that sheet's
+request --, \code{source} -- \code{"rule"}, \code{"guess"} (a TOC item no sheet
+writes or names, whose number -- a part letter taken off, \verb{15.2.4.2.b}
+-- sheets write, each number (a part with its letter) on its own:
+made the best sheet's, its id the number the sheet
+writes, the other sheets' a candidate each, not made; the best: an
+exact number before one a part letter differs, in the sheet's title
+rows or name before its body only, then the sheet whose own number is
+nearest, then the first in the workbook), \code{"saved"}
+(\code{ai/sheet_numbers.csv}) or \code{"given"} (\code{numbers}) --, \code{reason} -- a
+guess's: how it matches, "not an exact match" when not, its choice
+among the sheets; \code{"set by the person"} for \code{"saved"} and \code{"given"};
+\code{NA} the rule's --; a dry run's and the written requests' alike),
+\code{counts} (\code{shells},
 \code{toc_items}, \code{no_shell}),
 \code{sheets} (the workbook's sheets and their roles), \code{adam} (the
 \code{\link[=tfl_ai_adam_summary]{tfl_ai_adam_summary()}}: \code{datasets}, \code{variables}, \code{text}), \code{files} (the

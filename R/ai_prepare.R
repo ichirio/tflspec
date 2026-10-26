@@ -105,6 +105,26 @@
 #'   `NULL` (default): `TRUE` for a new study (no report in `spec/outputs/`
 #'   and no answer yet), else as the study is (a study of the form before
 #'   is moved with [tfl_ai_migrate()]).
+#' @param numbers The person's check of the report numbers each shell sheet
+#'   writes (see the result's `numbers`), over the rule (a number written
+#'   in the sheet or its name, and a TOC item's, is a report of the sheet's
+#'   request): a data frame with `sheet`, `number` and `make` -- `FALSE`,
+#'   the number is a reference only (the request still shows it, not as
+#'   one of its reports); `TRUE`, a report of that sheet's request (a TOC
+#'   item the rule left a candidate, or a number no TOC item has, which is
+#'   warned of and keeps its number as the sheet writes it as its id);
+#'   `NA`, back to the rule -- or a list named by sheet, each the numbers
+#'   that sheet makes (its other numbers references only).  The numbers and
+#'   sheets not given keep the rule.  The result's `toc` follows: a TOC
+#'   item made in a sheet has that sheet as its shell (made in several,
+#'   the first in the workbook's order; the others listed in `sheets`), one
+#'   the rule made and no sheet makes now has none (the no-shell request's,
+#'   counted in `counts`).  Saved as `ai/sheet_numbers.csv`
+#'   (`sheet`, `number`, `make`, UTF-8) when the requests are written (not
+#'   by a dry run), and read by a later call; given again, it goes over the
+#'   saved rows (a row of the same sheet and number replaced, `NA` taking
+#'   it out) and the file keeps the result.  `NULL` (default): the saved file, if any.
+#'   With `unit = "sheet"` only.
 #' @return A `tfl_ai_prepared`: a list with `requests` (one row a request:
 #'   `request`, `family`, `outputs` -- the TOC items it names (a sheet's:
 #'   its candidates) --, `n`, `chars`, `file`, `sheets` -- as
@@ -114,7 +134,24 @@
 #'   requests naming it, `NA` for none --, `book`, `shell_id`,
 #'   `population`, `program`, `file`, `info` as [tfl_ai_read_shell()]'s
 #'   `toc` says them), `shells` (a row a shell sheet, as
-#'   [tfl_ai_read_shell()]'s, with its `request`), `counts` (`shells`,
+#'   [tfl_ai_read_shell()]'s, with its `request`), `numbers` (a row a
+#'   report number a shell sheet writes or its name has: `sheet`, `number`
+#'   as the sheet writes it, `title` -- the TOC item's, else the sheet's
+#'   own when it writes that number alone, else `NA` --, `toc_id` -- the
+#'   TOC item it is, `NA` none --, `make` -- a report of that sheet's
+#'   request --, `source` -- `"rule"`, `"guess"` (a TOC item no sheet
+#'   writes or names, whose number -- a part letter taken off, `15.2.4.2.b`
+#'   -- sheets write, each number (a part with its letter) on its own:
+#'   made the best sheet's, its id the number the sheet
+#'   writes, the other sheets' a candidate each, not made; the best: an
+#'   exact number before one a part letter differs, in the sheet's title
+#'   rows or name before its body only, then the sheet whose own number is
+#'   nearest, then the first in the workbook), `"saved"`
+#'   (`ai/sheet_numbers.csv`) or `"given"` (`numbers`) --, `reason` -- a
+#'   guess's: how it matches, "not an exact match" when not, its choice
+#'   among the sheets; `"set by the person"` for `"saved"` and `"given"`;
+#'   `NA` the rule's --; a dry run's and the written requests' alike),
+#'   `counts` (`shells`,
 #'   `toc_items`, `no_shell`),
 #'   `sheets` (the workbook's sheets and their roles), `adam` (the
 #'   [tfl_ai_adam_summary()]: `datasets`, `variables`, `text`), `files` (the
@@ -154,7 +191,8 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
                            datasets = NULL, max_levels = 15L, quiet = FALSE,
                            mode = c("chat", "agent"), shells = NULL, add = FALSE,
                            templates = TRUE, progress = NULL, toc_cols = NULL,
-                           sheet_roles = NULL, unit = c("sheet", "toc"), area = NULL) {
+                           sheet_roles = NULL, unit = c("sheet", "toc"), area = NULL,
+                           numbers = NULL) {
   unit <- match.arg(unit)
   if (isTRUE(quiet)) {
     cl <- match.call()
@@ -211,6 +249,26 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
   shell <- do.call(tfl_ai_read_shell, c(list(toc), Filter(Negate(is.null), list(
     toc_sheet = toc_sheet, sheets = sheets, shells = shells, toc_cols = toc_cols,
     sheet_roles = sheet_roles))))
+  # the report numbers each shell sheet writes, and which its request makes:
+  # the person's over the rule's: the saved in the study, the given over
+  # them (NA: back to the rule) -- one mapping for the numbers, the TOC
+  # view, the requests and the counts
+  if (!is.null(shell$shells)) {
+    shells_at <- shell$shells$sheet
+    rule <- .ai_sheet_numbers_rule(shell)
+    given <- if (!is.null(numbers)) .ai_sheet_numbers_input(numbers, rule, shells_at, fn)
+    over <- .ai_sheet_numbers_merge(.ai_sheet_numbers_read(dir, shells_at), given)
+    if (identical(unit, "sheet")) {
+      shell <- .ai_sheet_numbers_apply(shell, over, fn)
+    }
+    nums <- shell$sheet_numbers %||% rule
+    # (given: saved for the next call when the requests are written)
+    if (!dry && !is.null(numbers)) {
+      files <- c(files, .ai_sheet_numbers_write(dir, over))
+    }
+  } else nums <- .ai_sheet_numbers_rule(shell)
+  attr(nums, "guess") <- NULL
+  # (what the workbook's reading could not find, as the numbers left it)
   hint <- .ai_shell_hint(shell)
   if (dry && identical(unit, "sheet") && !is.null(shell$shells)) {
     # the shell sheets' requests (as written)
@@ -297,8 +355,16 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
   # shell sheets it is a candidate of (NA: no shell found), the requests
   # naming it; the row's columns
   na <- rep(NA_character_, nrow(t))
+  # (a request asking for a part of it, 15.2.4.2.b, names it too)
+  part_keys <- lapply(asked, function(a) {
+    k <- .ai_id_key(a)
+    sub("[A-Z]$", "", k[!is.na(k) & grepl("[A-Z]$", k)])
+  })
   req_of <- vapply(t$output_id, function(id) {
-    w <- req$request[vapply(asked, function(a) id %in% a, NA)]
+    k <- .ai_id_key(id)
+    w <- req$request[vapply(seq_along(asked), function(j) {
+      id %in% asked[[j]] || any(vapply(part_keys[[j]], .ai_id_same, NA, b = k))
+    }, NA)]
     if (length(w)) paste(w, collapse = " | ") else NA_character_
   }, "", USE.NAMES = FALSE)
   tc <- data.frame(toc_id = t$output_id, title = t$title, type = t$type,
@@ -344,7 +410,7 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
     files <- c(files, "ai/agent_prompt.md")
   }
   structure(list(requests = req, toc = tc, shells = shl, counts = counts,
-                 sheets = shell$sheets, adam = ad,
+                 sheets = shell$sheets, numbers = nums, adam = ad,
                  files = unique(files), hint = hint, next_steps = nxt, dry_run = dry,
                  mode = mode, agent_prompt = agent_prompt, templates = templates,
                  workbook = basename(toc)),

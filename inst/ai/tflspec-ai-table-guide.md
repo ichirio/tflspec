@@ -75,6 +75,23 @@ Check before the first request:
 | `shell$toc$shell` | `NA` = no shell sheet found: `tfl_ai_read_shell(..., sheets = c("DM shells", ...))` |
 | `ai/adam_summary.md` | no records, but short value lists (up to 15): remove what your company does not allow |
 
+**The sheets' report numbers.** Before the requests are written, check
+which numbers each shell sheet makes: `tfl_ai_prepare(..., dry_run =
+TRUE)$numbers` has a row a number a sheet writes (or its name has) --
+`sheet`, `number`, `title`, `toc_id` (the TOC item, `NA` none), `make`
+(made a report of that sheet's request), `source`. A number written only
+as a reference ("see Table 14.2.1") is made by the rule too: correct it
+with `numbers = data.frame(sheet = "t14.1.1", number = "Table 14.2.1",
+make = FALSE)` (reference only: the request still shows it), or
+`numbers = list(t14.1.1 = "Table 14.1.1")` (the numbers the sheet makes;
+its others reference only). A number no TOC item has, made `TRUE`, is a
+report all the same (with a warning). A TOC item no sheet writes or names
+whose number (with a part letter: `Table 15.2.4.2.b`) one sheet writes is
+made that sheet's report (`source` `"guess"`); written in two sheets, it is
+a candidate of each. The correction is saved as
+`ai/sheet_numbers.csv` when the requests are written, and used by the
+next calls until `numbers` is given again.
+
 ## 4. What to give the AI
 
 | Give | Never |
