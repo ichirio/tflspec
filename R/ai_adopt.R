@@ -54,6 +54,10 @@
 #' @param outputs The reports to adopt (their ids); `NULL`, every draft.
 #' @param overwrite `TRUE` to write over a report already adopted (or
 #'   written by hand) that differs from its draft.
+#' @param dry_run `TRUE` to copy nothing and say what adopting would do:
+#'   `status` `new` (no study file yet), `replace` (the study's file differs
+#'   from the draft: adopting writes over it, with `overwrite = TRUE`),
+#'   `same`, `no draft` -- for a screen's question before it adopts.
 #' @return A data frame, one row a report: `output_id`, `status`
 #'   (`adopted`, `same` -- the study's file is the draft already --, `kept`
 #'   -- the study's file differs and was left, pass `overwrite = TRUE` --,
@@ -61,7 +65,7 @@
 #'   `ai/adopted.csv` (the report, when, the draft's md5).
 #' @seealso [tfl_ai_migrate()], [tfl_ai_collect_answers()]
 #' @export
-tfl_ai_adopt <- function(study_dir, outputs = NULL, overwrite = FALSE) {
+tfl_ai_adopt <- function(study_dir, outputs = NULL, overwrite = FALSE, dry_run = FALSE) {
   a <- .ai_area(study_dir)
   if (is.null(a)) {
     .ard_stop(sprintf(paste0("tfl_ai_adopt(): %s keeps the AI's drafts in spec/outputs (no ",
@@ -80,6 +84,11 @@ tfl_ai_adopt <- function(study_dir, outputs = NULL, overwrite = FALSE) {
     rel <- file.path("spec", "outputs", paste0(id, ".yml"))
     if (is.na(src)) return(data.frame(output_id = id, status = "no draft", file = NA_character_))
     md5 <- unname(tools::md5sum(src))
+    if (isTRUE(dry_run)) {
+      st <- if (!file.exists(dest)) "new" else
+        if (identical(unname(tools::md5sum(dest)), md5)) "same" else "replace"
+      return(data.frame(output_id = id, status = st, file = rel))
+    }
     if (file.exists(dest)) {
       if (identical(unname(tools::md5sum(dest)), md5)) {
         return(data.frame(output_id = id, status = "same", file = rel))
@@ -94,6 +103,8 @@ tfl_ai_adopt <- function(study_dir, outputs = NULL, overwrite = FALSE) {
   })
   out <- do.call(rbind, c(list(data.frame(output_id = character(), status = character(),
                                           file = character())), rows))
+  rownames(out) <- NULL
+  if (isTRUE(dry_run)) return(out)
   utils::write.csv(log, .ai_adopted_file(study_dir), row.names = FALSE, fileEncoding = "UTF-8")
   rownames(out) <- NULL
   kept <- out$output_id[out$status == "kept"]
@@ -146,4 +157,91 @@ tfl_ai_migrate <- function(study_dir) {
     utils::write.csv(log, .ai_adopted_file(study_dir), row.names = FALSE, fileEncoding = "UTF-8")
   }
   invisible(ids)
+}
+
+#' What the AI changed in a report since it was adopted
+#'
+#' A report adopted from the AI's draft ([tfl_ai_adopt()]) and redrafted by
+#' the AI since ([tfl_ai_outputs()]'s `adopted` `yes, draft newer`): its
+#' study file and its draft compared field by field, for the person to see
+#' before adopting again.  The two YAML files are read as they are written
+#' (an `!r` value as its text), each value under its path: `label`,
+#' `page.titles.2.center`, `ard.analyses[AE].where` (an item of a list
+#' named by its `id`, else by its place, `[2]`).
+#'
+#' @param study_dir The study folder.
+#' @param output_id The report; `NULL`, every report whose draft is newer
+#'   than its adoption.
+#' @return A data frame, one row a value that differs: `output_id`, `where`
+#'   (the path), `change` (`changed`, `added` -- in the draft only --,
+#'   `removed` -- in the study's file only), `adopted` and `draft` (the
+#'   value, one line: a short YAML; `NA` where there is none); no row when
+#'   they are the same.  Its attribute `text` says how many, for a screen.
+#' @seealso [tfl_ai_adopt()], [tfl_ai_outputs()]
+#' @export
+tfl_ai_adopted_diff <- function(study_dir = ".", output_id = NULL) {
+  a <- .ai_area(study_dir)
+  empty <- data.frame(output_id = character(), where = character(), change = character(),
+                      adopted = character(), draft = character(), stringsAsFactors = FALSE)
+  if (is.null(a)) return(structure(empty, text = "no drafts apart (ai/spec/outputs)"))
+  if (is.null(output_id)) {
+    o <- tfl_ai_outputs(study_dir)
+    output_id <- o$output_id[o$adopted %in% "yes, draft newer"]
+  }
+  rows <- lapply(output_id, function(id) {
+    f_new <- file.path(study_dir, a, paste0(id, ".yml"))
+    f_old <- file.path(.spec_dir(study_dir), "outputs", paste0(id, ".yml"))
+    old <- if (file.exists(f_old)) .ai_yaml_paths(f_old) else character()
+    new <- if (file.exists(f_new)) .ai_yaml_paths(f_new) else character()
+    keys <- union(names(old), names(new))
+    if (!length(keys)) return(NULL)
+    o <- unname(old[keys])
+    n <- unname(new[keys])
+    ch <- ifelse(is.na(o), "added", ifelse(is.na(n), "removed", "changed"))
+    keep <- is.na(o) | is.na(n) | o != n
+    if (!any(keep)) return(NULL)
+    data.frame(output_id = id, where = keys[keep], change = ch[keep], adopted = o[keep],
+               draft = n[keep], stringsAsFactors = FALSE)
+  })
+  out <- do.call(rbind, c(list(empty), rows))
+  rownames(out) <- NULL
+  n_out <- length(unique(out$output_id))
+  structure(out, text = if (!nrow(out)) "no differences" else
+    sprintf("%d difference%s in %d report%s", nrow(out), if (nrow(out) == 1L) "" else "s",
+            n_out, if (n_out == 1L) "" else "s"))
+}
+
+# A report file's values, each as one line of YAML under its path (an `!r`
+# value as its text)
+.ai_yaml_paths <- function(f) {
+  h <- .yaml_handlers()
+  h$r <- function(x) paste("!r", x)
+  h$unset <- function(x) "!unset"
+  y <- yaml::read_yaml(f, handlers = h)
+  out <- character()
+  one <- function(v) {
+    if (is.null(v)) return("~")
+    if (is.atomic(v) && length(v) == 1L) return(as.character(v))
+    gsub("\n", " ", sub("\n$", "", yaml::as.yaml(v, line.sep = "\n", column.major = FALSE)),
+         fixed = TRUE)
+  }
+  walk <- function(x, path) {
+    if (is.list(x) && length(x)) {
+      nm <- names(x)
+      for (i in seq_along(x)) {
+        el <- x[[i]]
+        key <- if (!is.null(nm) && nzchar(nm[i])) {
+          if (nzchar(path)) paste(path, nm[i], sep = ".") else nm[i]
+        } else {
+          id <- if (is.list(el) && length(el[["id"]]) == 1L) as.character(el[["id"]])
+          sprintf("%s[%s]", path, id %||% i)
+        }
+        walk(el, key)
+      }
+    } else {
+      out[[path]] <<- one(x)
+    }
+  }
+  walk(y, "")
+  out
 }
