@@ -55,14 +55,16 @@
 
 #' The days in a week, a month and a year
 #'
-#' The figure programs divide a time in days by named constants --
+#' The figure programs change a time's unit with named constants --
 #' `days_per_week`, `days_per_month`, `days_per_year` -- not by numbers
 #' written in each program, so a company sets them once (a study's
-#' setup: tflplanner writes them from its company standards).  These are
+#' setup: tflplanner writes them from its company standards): AVAL from
+#' each record's unit, AVALU (`AVALU == "MONTHS" ~ days_per_month`), another
+#' time in days (`TRTDURD / days_per_week`).  These are
 #' the values used where none is set: the figure setup
 #' ([tfl_fig_setup_code()]) and a figure script of its own define a
 #' constant only when it is not defined yet.  The programs say the name as
-#' it is (`AVAL / days_per_month`): a data column must not be named like
+#' it is: a data column must not be named like
 #' one (tflplanner's review says so).
 #'
 #' @return A named numeric vector: `days_per_week` 7, `days_per_month`
@@ -129,14 +131,19 @@ tfl_time_unit_days <- function() {
     filter = list(section = "data", label = "Keep rows (condition)",
       help = "Any condition, in R.",
       fields = rbind(.ff("expr", "expr", "Condition (R)", required = TRUE,
-                         help = "e.g. AVISITN > 0 & !is.na(AVAL)"))),
+                         help = "e.g. AVISITN > 0 & !is.na(AVAL)"),
+                     .ff("label", "text", "Why", help = "The comment above the filter in the program."),
+                     .ff("warn", "text", "Warning when rows are left out",
+                         help = "The program warns with it when the condition leaves rows out: {n} their count."))),
     derive = list(section = "data", label = "Derive a variable",
       help = "A new (or changed) variable, in R.",
       fields = rbind(
         .ff("variable", "text", "Variable", required = TRUE),
         .ff("expr", "expr", "Value (R)", required = TRUE, help = "e.g. AVAL / 7"))),
     time_unit = list(section = "data", label = "Change a time's unit",
-      help = "A time in days, shown in days (as it is), weeks, months or years.",
+      help = paste("A time shown in days, weeks, months or years.  AVAL is converted from each",
+                   "record's unit, AVALU (DAYS, WEEKS, MONTHS, YEARS; days when the data has no",
+                   "AVALU); another variable is a time in days."),
       fields = rbind(
         .ff("variable", "variable", "Time variable", "AVAL", required = TRUE),
         .ff("unit", "choice", "Unit", "months", names(.fig_units)))),
@@ -743,6 +750,17 @@ tfl_read_fig_design <- function(path) {
     pipe <<- c(if (!length(pipe)) "df" else pipe, .levels_call(levels))
     lv_todo <<- FALSE
   }
+  # a step written as code of its own (not a pipe's line): the object it
+  # starts from -- the pipe's so far written out first
+  block_src <- function() {
+    if (length(pipe) == 1L) {
+      src <- pipe[[1L]]
+      pipe <<- character()
+      return(src)
+    }
+    flush()
+    cur
+  }
   io <- .fig_step_io(steps)
   for (i in seq_along(steps)) {
     s <- steps[[i]]
@@ -823,12 +841,27 @@ tfl_read_fig_design <- function(path) {
             else sprintf("filter(%s %%in%% %s)", v("variable"), vec_code(vals)))
       },
       flag = add(sprintf("filter(%s == %s)", v("variable"), q(v("value")))),
-      filter = add(sprintf("filter(%s)", v("expr"))),
+      filter = {
+        lab <- v("label")
+        if (is.null(v("warn"))) {
+          add(paste0(if (!is.null(lab)) paste0("# ", lab, "\n  "), sprintf("filter(%s)", v("expr"))))
+        } else {
+          # the rows it leaves out counted, and said: code of its own
+          src <- block_src()
+          out <- c(out, .fig_filter_warn_code(src, cur, v("expr"), v("warn"), lab), "")
+        }
+      },
       derive = add(sprintf("mutate(%s = %s)", v("variable"), v("expr"))),
-      # days: the time stays as it is (ADTTE's AVAL is in days)
-      time_unit = if (!identical(v("unit"), "days")) add(sprintf("# days -> %s
-  mutate(%s = %s / %s)", v("unit"), v("variable"),
-                              v("variable"), .fig_unit_ref(v("unit")))),
+      time_unit = if (identical(v("variable"), "AVAL")) {
+        # AVAL's unit is the data's (AVALU): checked, and converted record
+        # by record -- code of its own
+        src <- block_src()
+        out <- c(out, .fig_aval_unit_code(src, cur, v("unit")), "")
+      } else if (!identical(v("unit"), "days")) {
+        # another variable: a time in days (TRTDURD, ADY ...)
+        add(sprintf("# days -> %s\n  mutate(%s = %s / %s)", v("unit"), v("variable"),
+                    v("variable"), .fig_unit_ref(v("unit"))))
+      },
       levels = {
         var <- v("variable")
         lv <- .split_vals(v("levels"))
@@ -858,6 +891,52 @@ tfl_read_fig_design <- function(path) {
   put_levels()
   flush()
   list(code = out, reads = unique(reads), libs = unique(libs), data = unique(adata))
+}
+
+# A time_unit step on AVAL: AVAL in `unit`, each record's from its own
+# unit, AVALU (days when the data has none: ADaM's AVAL of a time to event
+# may be in days, months ...).  A unit it does not know stops the program:
+# a time read in the wrong unit is a wrong figure.  AVALU says the new unit
+# after it.
+.fig_aval_unit_code <- function(src, dst, unit) {
+  to <- toupper(unit)
+  div <- if (identical(unit, "days")) "" else paste0(" / ", .fig_unit_ref(unit))
+  c(sprintf("# AVAL in %s, from each record's unit, AVALU (days when the data has no AVALU)", unit),
+    sprintf("%s <- %s |>", dst, src),
+    sprintf("  mutate(AVALU = if (\"AVALU\" %%in%% names(%s)) toupper(AVALU) else \"DAYS\")", src),
+    sprintf("units_unknown <- setdiff(%s$AVALU, c(\"DAYS\", \"WEEKS\", \"MONTHS\", \"YEARS\"))", dst),
+    "if (length(units_unknown)) {",
+    paste0("  stop(\"AVALU: a unit not DAYS, WEEKS, MONTHS or YEARS: \", toString(units_unknown),",
+           " call. = FALSE)"),
+    "}",
+    sprintf("%s <- %s |>", dst, dst),
+    "  mutate(",
+    "    AVAL = AVAL * case_when(",
+    "      AVALU == \"DAYS\"   ~ 1,",
+    "      AVALU == \"WEEKS\"  ~ days_per_week,",
+    "      AVALU == \"MONTHS\" ~ days_per_month,",
+    "      AVALU == \"YEARS\"  ~ days_per_year",
+    sprintf("    )%s,", div),
+    sprintf("    AVALU = \"%s\"", to),
+    "  )")
+}
+
+# A filter step that warns with `warn` ({n}: the rows left out) when it
+# leaves rows out
+.fig_filter_warn_code <- function(src, dst, expr, warn, label = NULL) {
+  parts <- strsplit(paste0(warn, "\u0001"), "{n}", fixed = TRUE)[[1L]]
+  parts[length(parts)] <- sub("\u0001$", "", parts[length(parts)])
+  # the text's pieces with the count between them
+  msg <- c(rbind(encodeString(parts, quote = "\""), sprintf("n_before - nrow(%s)", dst)))
+  msg <- msg[-length(msg)]
+  msg <- paste(msg[msg != "\"\""], collapse = ", ")
+  c(if (!is.null(label)) paste("#", label),
+    sprintf("n_before <- nrow(%s)", src),
+    sprintf("%s <- %s |>", dst, src),
+    sprintf("  filter(%s)", expr),
+    sprintf("if (nrow(%s) < n_before) {", dst),
+    sprintf("  warning(%s, call. = FALSE)", msg),
+    "}")
 }
 
 # the analysis data a read step reads (`data`, a data_id), or NULL: it

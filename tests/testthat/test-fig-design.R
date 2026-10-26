@@ -218,13 +218,20 @@ test_that("a time's unit is a named constant of the setup, never a column", {
   d <- tfl_fig_template("km_simple", data = "ADTTE", param = "TTDE", pop = "SAFFL", group = "TRT01A")
   # a study's program: the figure setup defines it (unless the study's setup has)
   prog <- strsplit(paste(tfl_fig_design_code(d, "F1", setup = TRUE), collapse = "\n"), "\n")[[1]]
-  expect_true(any(grepl("mutate(AVAL = AVAL / days_per_month)", prog, fixed = TRUE)))
+  # (AVAL from each record's unit, AVALU)
+  expect_true(any(grepl("AVALU == \"MONTHS\" ~ days_per_month", prog, fixed = TRUE)))
+  expect_true(any(grepl("    ) / days_per_month,", prog, fixed = TRUE)))
   expect_false(any(grepl("30.4375", prog, fixed = TRUE)))
   expect_true(any(grepl('if (!exists("days_per_month")) days_per_month <- 30.4375',
                         tfl_fig_setup_code(), fixed = TRUE)))
-  # a script of its own: defines the one it uses
+  # a script of its own: defines the ones it uses (AVAL from its unit: all
+  # three; another time, in days: the one)
+  own <- strsplit(paste(tfl_fig_design_code(d, "F1"), collapse = "\n"), "\n")[[1]]
+  expect_identical(sum(grepl("^if [(]!exists", own)), 3L)
+  d$data[[which(vapply(d$data, `[[`, "", "step") == "time_unit")]]$variable <- "ADY"
   own <- strsplit(paste(tfl_fig_design_code(d, "F1"), collapse = "\n"), "\n")[[1]]
   expect_identical(sum(grepl("^if [(]!exists", own)), 1L)
+  expect_true(any(grepl("mutate(ADY = ADY / days_per_month)", own, fixed = TRUE)))
   # the study's value wins
   e <- new.env()
   e$days_per_month <- 30
