@@ -61,9 +61,10 @@ test_that("a report's own steps other than the template's: theirs, then the call
   n <- attr(ro, "template")$call_steps
   expect_identical(utils::head(ro$data$steps, 2L), own)
   expect_length(ro$data$steps, 2L + n)
-  # (the time's unit: the call's first step)
-  expect_identical(ro$data$steps[[3L]]$step, "time_unit")
-  expect_identical(ro$data$steps[[4L]]$step, "survfit")
+  # (the subjects with an empty group left out, the time's unit: the call's first steps)
+  expect_identical(ro$data$steps[[3L]]$step, "filter")
+  expect_identical(ro$data$steps[[4L]]$step, "time_unit")
+  expect_identical(ro$data$steps[[5L]]$step, "survfit")
 })
 
 test_that("no own steps (the layout km), or a table template: as before; a KM type wants them", {

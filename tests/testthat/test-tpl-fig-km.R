@@ -86,6 +86,14 @@ test_that("the former km_simple / km_risk_table / km_ci: km_survival with argume
     })
     # (the time's unit: now the call's first step, the steps the same)
     want$call_steps <- want$call_steps + 1L
+    # (the subjects with an empty group left out, with a warning: the
+    # call's step before the time's unit)
+    at <- match("time_unit", vapply(want$data$steps, `[[`, "", "step"))
+    want$data$steps <- append(want$data$steps, list(list(step = "filter",
+      expr = "!is.na(TRT01A) & TRT01A != \"\"",
+      label = "the subjects with an empty TRT01A have no curve: left out, with a warning",
+      warn = "km_survival: {n} subjects with an empty TRT01A were left out")), at - 1L)
+    want$call_steps <- want$call_steps + 1L
     for (k in c("content", "plot", "data", "call_steps")) {
       expect_identical(x[[k]], want[[k]], info = paste(nm, k))
     }
@@ -130,7 +138,7 @@ test_that("km: the arguments and what the design has for them", {
   e <- x(ci = "bars")
   expect_identical(calls(e), c("geom_errorbar", "add_risktable"))
   expect_match(e$data$steps[[length(e$data$steps)]]$code, "summary(fit, times = x_breaks", fixed = TRUE)
-  expect_match(x(ci = "bars", ci_times = c(4, 8))$data$steps[[6L]]$code, "times = c(4, 8)", fixed = TRUE)
+  expect_match(x(ci = "bars", ci_times = c(4, 8))$data$steps[[7L]]$code, "times = c(4, 8)", fixed = TRUE)
   # the y axis: the risk, in %
   e <- x(y_type = "risk", y_percent = TRUE)
   expect_identical(e$content[[1L]]$args$type, "risk")
@@ -143,7 +151,7 @@ test_that("km: the arguments and what the design has for them", {
   expect_false("censor_mark" %in% fns(x(censor_marks = FALSE)))
   e <- x(risk_table = FALSE)
   expect_null(calls(e))
-  expect_identical(e$call_steps, 2L)
+  expect_identical(e$call_steps, 3L)
   expect_identical(e$data$steps[[length(e$data$steps) - 1L]]$step, "time_unit")
   # the axis: its end and step
   e <- x(x_max = 52, x_step = 4)
@@ -151,10 +159,10 @@ test_that("km: the arguments and what the design has for them", {
   # the data steps: the event, the unit, no parameter (ADSL)
   e <- tfl_template_expand("km", list(data = "ADSL", by = "TRT01A", time = "TRTDURD", time_unit = "weeks",
                                       event = "EOTSTT == \"DISCONTINUED\""))
-  expect_identical(steps(e), c("read", "derive", "time_unit", "survfit", "code"))
+  expect_identical(steps(e), c("read", "derive", "filter", "time_unit", "survfit", "code"))
   expect_identical(e$data$steps[[2L]]$expr, "as.integer(!(EOTSTT == \"DISCONTINUED\"))")
-  expect_identical(e$data$steps[[4L]]$censor, "CNSR")
-  expect_identical(e$data$steps[[3L]]$unit, "weeks")
+  expect_identical(e$data$steps[[5L]]$censor, "CNSR")
+  expect_identical(e$data$steps[[4L]]$unit, "weeks")
   # the escape hatch: any other setting
   expect_identical(x(plot = list(dpi = 150))$plot$dpi, 150)
   # the parameters: their stage and tier

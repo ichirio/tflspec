@@ -150,7 +150,7 @@
 # The layout's design: the preset's (tfl_fig_template("km_ci"), every
 # layer) with the arguments' changes.  The steps before the fit are the
 # program's; the fit and after it the call's (`stats`).
-.tpl_km_layout <- function(a) {
+.tpl_km_layout <- function(a, name = "km") {
   censor <- if (!is.null(a$event)) "CNSR" else a$censor %||% "CNSR"
   unit <- a$time_unit %||% "months"
   f <- .tpl_fig_design("km_ci", list(data = a$data, param = a$param %||% "OS", group = a$by,
@@ -164,13 +164,20 @@
     f$steps <- append(f$steps, list(list(step = "derive", variable = "CNSR",
                                          expr = sprintf("as.integer(!(%s))", a$event))), at)
   }
-  # (days: no step)
-  if (identical(unit, "days")) f$steps <- f$steps[kinds() != "time_unit"]
-  # the time's unit: the call's first step (its data in days), so a report
-  # that writes its own data stage (`data:` steps) keeps it
+  # the time's unit: the call's first step, so a report that writes its own
+  # data stage (`data:` steps) keeps it.  (Days too: AVAL is converted from
+  # its unit, AVALU, which may be months.)
   tu <- kinds() == "time_unit"
   f$stats <- c(f$steps[tu], f$stats)
   f$steps <- f$steps[!tu]
+  # the subjects with an empty group: no curve of theirs (survfit2() would
+  # draw one with no name, and a row at risk with none), left out and said
+  if (!is.null(a$by)) {
+    f$stats <- c(list(list(step = "filter",
+      expr = sprintf("!is.na(%s) & %s != \"\"", a$by, a$by),
+      label = sprintf("the subjects with an empty %s have no curve: left out, with a warning", a$by),
+      warn = sprintf("%s: {n} subjects with an empty %s were left out", name, a$by))), f$stats)
+  }
   fit <- match("survfit", vapply(f$stats, function(s) s$step %||% "", ""))
   if (!is.null(a$conf_type)) f$stats[[fit]]$conf_type <- a$conf_type
   if (!is.null(a$conf_level)) f$stats[[fit]]$conf_level <- a$conf_level
@@ -252,13 +259,6 @@
                                    "plot.title.size = %s), theme(plot.title.position = \"plot\"))"),
                             format(base), format(base * 0.9))))))
   }
-  if (isTRUE(a$pvalue)) {
-    f$content <- c(f$content, list(tfl_item("call", list(
-      fn = "add_pvalue", args = c(list(location = a$pvalue_location %||% "annotation"),
-                                  # (an axis shorter than the data: at its end)
-                                  if (!is.null(a$x_max) && !identical(a$pvalue_location, "caption"))
-                                    list(x = a$x_max, hjust = 1))))))
-  }
   if (isTRUE(a$y_percent)) {
     by <- as.numeric(f$plot$y_by %||% 0.2)
     f$plot$y_by <- NULL
@@ -274,10 +274,39 @@
   }
   # the escape hatch: any other setting, over the template's
   if (length(a$plot)) f$plot <- .merge_map(f$plot, a$plot)
+  if (isTRUE(a$pvalue)) {
+    loc <- a$pvalue_location %||% "annotation"
+    f$content <- c(f$content, list(tfl_item("call", list(
+      fn = "add_pvalue", args = c(list(location = loc),
+                                  if (identical(loc, "annotation")) .tpl_km_pvalue_at(a, f$plot))))))
+  }
   f
 }
 
-.tpl_km_layout_body <- function(a, ctx) .tpl_fig_body_of(.tpl_km_layout(a), a, ctx)
+# Where the p-value goes in the plot: a corner neither the curves nor the
+# legend take.  Survival curves fall from the top left: the bottom left is
+# free (ggsurvfit's place, the top right, is the inside legend's), the top
+# right when the legend is at the bottom left.  Cumulative curves rise from
+# the bottom left: ggsurvfit's bottom right, the top left when the legend
+# is at the bottom right.  An axis shorter than the data: its end.
+.tpl_km_pvalue_at <- function(a, plot) {
+  legend <- plot$legend %||% "inside"
+  y_min <- as.numeric(plot$y_min %||% 0)
+  y_max <- as.numeric(plot$y_max %||% 1)
+  x_min <- as.numeric(plot$x_min %||% 0)
+  near <- function(at) y_min + (y_max - y_min) * at
+  at_end <- if (!is.null(a$x_max)) list(x = a$x_max, hjust = 1)
+  if (identical(a$y_type, "risk")) {
+    if (identical(legend, "inside_br")) list(x = x_min, y = near(0.95), hjust = 0, vjust = 1)
+    else at_end
+  } else if (identical(legend, "inside_bl")) {
+    at_end
+  } else list(x = x_min, y = near(0.05), hjust = 0, vjust = 0)
+}
+
+.tpl_km_layout_body <- function(a, ctx) {
+  .tpl_fig_body_of(.tpl_km_layout(a, ctx$template$name %||% "km"), a, ctx)
+}
 
 # The look: the figure style standard's (tfl_param(study = "km.<key>")),
 # not a report type's arguments; a report changes it with `+` layers or

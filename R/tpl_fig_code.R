@@ -17,7 +17,7 @@
 # The design the call draws, from the template's arguments: the layout's
 # (its root's) function, by name
 .tpl_fig_draws <- list(
-  km = function(a) .tpl_km_layout(a),
+  km = function(a, name = "km") .tpl_km_layout(a, name),
   mean_se = function(a) {
     .tpl_mean_design("se", a$group, a$value, a$visit_var, a$visit_order, a$param, a$data)
   },
@@ -75,7 +75,9 @@
                       t$package %||% "tflspec"))
   }
   form <- .tpl_fig_forms[[root]] %||% list()
-  .tpl_fig_draw(t$name, draw(a), x, plot, as = if (identical(form$input, "ard")) "ard" else "df")
+  # (the template's name: what its warnings say)
+  f <- if ("name" %in% names(formals(draw))) draw(a, t$name) else draw(a)
+  .tpl_fig_draw(t$name, f, x, plot, as = if (identical(form$input, "ard")) "ard" else "df")
 }
 
 # A figure template report's program (the A use): the data steps written

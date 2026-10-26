@@ -197,7 +197,12 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
     # candidate by its name -- as their contexts keep them)
     asking <- if (sheet_mode) {
       # (a sheet asked for no TOC item stands under its name)
-      unique(c(shell$toc$output_id, vapply(shell$shells$sheet, .ai_file_id, "", USE.NAMES = FALSE)))
+      # (and a report a sheet makes by its own number: a part, 15.2.4.2.a)
+      sn <- shell$sheet_numbers
+      made <- if (is.null(sn) || !any(sn$make %in% TRUE)) character() else
+        .ai_sheet_number_id(sn[sn$make %in% TRUE, , drop = FALSE])
+      unique(c(shell$toc$output_id, vapply(shell$shells$sheet, .ai_file_id, "", USE.NAMES = FALSE),
+               made))
     } else c(b$output_id, figs)
     again <- intersect(asking, had)
     if (length(again) && !isTRUE(overwrite)) {
@@ -353,6 +358,12 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
     ids <- if (length(noshell)) noshell else unique(unlist(lapply(us, `[[`, "ids")))
     ctx$candidates <- ids
     ctx$toc_keys <- shell$toc$key
+    # (the person's correction of these sheets' numbers: the reports above
+    # follow it; a number made that no TOC item has is no mistake)
+    sn <- shell$sheet_numbers
+    if (!is.null(sn) && any(sn$sheet %in% sheets & sn$source != "rule")) {
+      ctx$sheet_numbers <- sn[sn$sheet %in% sheets, , drop = FALSE]
+    }
     ctx$ai_templates <- templates
     if (agent) ctx$ai_files <- TRUE
     p <- tfl_ai_prompt("table", ctx)
