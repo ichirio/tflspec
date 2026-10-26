@@ -12,7 +12,10 @@ tfl_ai_adopt(study_dir, outputs = NULL, overwrite = FALSE, dry_run = FALSE)
 \item{outputs}{The reports to adopt (their ids); \code{NULL}, every draft.}
 
 \item{overwrite}{\code{TRUE} to write over a report already adopted (or
-written by hand) that differs from its draft.}
+written by hand) that differs from its draft.
+A report adopted that the study's \code{spec/toc.yml} does not list (a part
+the AI wrote, a report it named otherwise) gets an entry there -- after
+its number's, else at the end -- so the study's report list shows it.}
 
 \item{dry_run}{\code{TRUE} to copy nothing and say what adopting would do:
 \code{status} \code{new} (no study file yet), \code{replace} (the study's file differs
@@ -23,7 +26,8 @@ from the draft: adopting writes over it, with \code{overwrite = TRUE}),
 A data frame, one row a report: \code{output_id}, \code{status}
 (\code{adopted}, \code{same} -- the study's file is the draft already --, \code{kept}
 -- the study's file differs and was left, pass \code{overwrite = TRUE} --,
-\verb{no draft}), \code{file} (the study's file).  The adoptions are recorded in
+\verb{no draft}), \code{file} (the study's file), \code{toc} (\code{added}: its entry was
+added to \code{spec/toc.yml}; with \code{dry_run}, \code{add}).  The adoptions are recorded in
 \code{ai/adopted.csv} (the report, when, the draft's md5).
 }
 \description{
