@@ -18,7 +18,7 @@
 # each to the next heading -- its kind, number, key (its heading's text
 # after the number), status and lines
 .ai_corrections_read <- function(lines) {
-  at <- grep("^## [CQ][0-9]+", lines)
+  at <- grep("^## [CQAK][0-9]+", lines)
   none <- data.frame(kind = character(), n = integer(), key = character(),
                      status = character(), start = integer(), end = integer(),
                      stringsAsFactors = FALSE)
@@ -29,8 +29,8 @@
     b <- lines[at[i]:end[i]]
     j <- grep("^- Status:", b)
     data.frame(kind = substr(h, 4L, 4L),
-               n = as.integer(sub("^## [CQ]([0-9]+).*$", "\\1", h)),
-               key = trimws(sub("^## [CQ][0-9]+[.]?", "", h)),
+               n = as.integer(sub("^## [CQAK]([0-9]+).*$", "\\1", h)),
+               key = trimws(sub("^## [CQAK][0-9]+[.]?", "", h)),
                status = if (length(j)) tolower(trimws(sub("^- Status:", "", b[j[1L]]))) else NA_character_,
                start = at[i], end = end[i], stringsAsFactors = FALSE)
   })
@@ -107,6 +107,17 @@
 #' item -- `## C<n>. add ...`, `## Q<n> (answered). ...` -- with `- Status:
 #' open`, which the agent sets to `done` once it has done it.
 #'
+#' Each assumption of the AI the person answered `wrong`
+#' ([tfl_ai_assumption_answers_write()]) is a section too: one report's
+#' (`## A12. assumption of T-14-1-1: <item>`, with `- Was:` and
+#' `- Correct:`) or every report of its kind's (`## K3. assumption of every
+#' report: <item>`, with `- Reports:` too).  An answer `ok` needs no
+#' section.  An answer changed while its section is open changes its
+#' `- Correct:`; an answer removed (or no longer `wrong`) while its section
+#' is open sets it `- Status: withdrawn`.  A question of `ai/questions.md`
+#' whose assumptions are all answered is answered first from them
+#' (unless the person has written its answer).
+#'
 #' Written again (after more corrections), the sections there are kept as
 #' they are -- their number, their status, what the agent wrote -- and only
 #' new ones are added: the same correction is never written twice.  The
@@ -120,6 +131,8 @@
 tfl_ai_corrections <- function(study_dir = ".") {
   f <- .ai_corrections_file(study_dir)
   lines <- if (file.exists(f)) readLines(f, warn = FALSE, encoding = "UTF-8") else character()
+  # a question answered through its assumptions' answers: its answer written first
+  .ai_asm_questions_sync(study_dir)
   have <- .ai_corrections_read(lines)
   e <- tfl_ai_expected_read(study_dir)
   items <- if (is.null(e)) list() else .ai_corrections_items(e)
@@ -146,11 +159,17 @@ tfl_ai_corrections <- function(study_dir = ".") {
              paste("- Answer:", gsub("\n", "\n  ", q$answer[i], fixed = TRUE)),
              "- Status: open", "")
   }
+  # the assumptions the person answered wrong (ai/assumption_answers.csv)
+  asm <- .ai_asm_corrections(study_dir, lines)
+  lines <- asm$lines
+  new <- c(new, asm$new)
+  add <- c(add, asm$add)
   if (!length(lines)) {
     lines <- c("# Corrections for the agent",
                "",
                "What the person wants changed, one section each, from the list of reports",
-               "(ai/expected_outputs.csv) and the questions answered (ai/questions.md).",
+               "(ai/expected_outputs.csv), the questions answered (ai/questions.md) and the",
+               "assumptions answered wrong (ai/assumption_answers.csv).",
                "Tell the agent \"the answers and corrections are written\": it does each",
                "section with `- Status: open` and sets it to `- Status: done`.",
                "")

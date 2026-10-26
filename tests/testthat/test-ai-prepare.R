@@ -143,7 +143,8 @@ test_that("tfl_ai_save_answer() and tfl_ai_collect_answers(): the files, the rep
   expect_true(all(is.na(rp$file[!done])))
   expect_true(all(rp$status[!done] == "no answer"))
   expect_identical(names(res$next_steps), r$requests$request)
-  expect_named(res$assumptions, c("output_id", "where", "item", "assumption", "question"))
+  expect_named(res$assumptions, c("output_id", "where", "item", "assumption", "question",
+                                  "id", "kind"))
   expect_output(print(res), "no answer")
   # an answer with an error: its repair prompt, every problem
   bad <- sub("population: [A-Z]+", "population: NOPE", txt)

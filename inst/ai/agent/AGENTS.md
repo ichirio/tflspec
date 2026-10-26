@@ -108,10 +108,19 @@ When the person says the answers and corrections are written:
      `- Q<n> (<the reports>): <the decision, in a sentence>`; set the
      question's `- Status: open` to `- Status: decided` in
      `ai/questions.md`; then change every report it names.
+   - `A<n>. assumption of <id>: <item>`: the person says your assumption
+     (`- Was:`) is wrong; change the report so it does what `- Correct:`
+     says.
+   - `K<n>. assumption of every report: <item>`: the same, for every
+     report in `- Reports:`.
 2. Save each changed answer whole over `ai/answers/<request>.md` and run
-   `Rscript run.R <request>`; repair as in round 1. Then set the section's
-   `- Status: open` to `- Status: done`. A section you cannot do: leave it
-   `- Status: open` and add a line `- Agent:` saying why.
+   `Rscript run.R <request>`; repair as in round 1. For an `A<n>` / `K<n>`
+   section, then, in `spec/_assumptions.yml`, change the `assumption` of
+   that item (`id: A<n>`; for a `K<n>`, each item with `kind: K<n>` of the
+   reports listed) to the correct content and add `status: fixed`. Then
+   set the section's `- Status: open` to `- Status: done`. A section you
+   cannot do: leave it `- Status: open` and add a line `- Agent:` saying
+   why. A section `- Status: withdrawn`: the person took it back; leave it.
 3. Tell the person what changed, the sections left and why, the questions
    still open, and the count of the reports against their list
    (`ai/status.md`, "Expected outputs").
@@ -126,10 +135,12 @@ When the person says the answers and corrections are written:
 - Do not change `study.yml`, `spec/data.yml`, `spec/defaults.yml`, `run.R`,
   `AGENTS.md` or `.github/copilot-instructions.md`. When one seems wrong,
   ask in `ai/questions.md`.
-- Write only `ai/answers/`, `ai/questions.md`, `ai/decisions.md` and the
+- Write only `ai/answers/`, `ai/questions.md`, `ai/decisions.md`, the
   `- Status:` / `- Agent:` lines of `ai/corrections.md` (add lines; change
-  nothing a person wrote). Never write `ai/expected_outputs.csv`: it is the
-  person's list. Fix a report through its answer,
+  nothing a person wrote) and, for an `A<n>` / `K<n>` section of it, the
+  `assumption` and `status` of its items in `spec/_assumptions.yml`. Never
+  write `ai/expected_outputs.csv` (the person's list) or
+  `ai/assumption_answers.csv` (the person's answers). Fix a report through its answer,
   not by editing `spec/outputs/`.
 - Do not install packages or go online: `run.R` uses the R and the packages
   installed.

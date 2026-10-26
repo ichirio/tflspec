@@ -881,17 +881,12 @@
   out <- paths
   a <- answer$assumption_rows
   if (!is.null(a) && nrow(a)) {
-    f <- file.path(dir, "spec", "_assumptions.yml")
-    old <- .ai_folder_assumptions(dir)
-    old <- old[is.na(old$output_id) | !old$output_id %in% ids, , drop = FALSE]
+    old <- .ai_folder_assumptions(dir, all = TRUE)
     names(old)[names(old) == "sheet"] <- "where"
-    rows <- rbind(old[names(a)], a)
-    lst <- lapply(seq_len(nrow(rows)), function(i) {
-      r <- as.list(rows[i, , drop = FALSE])
-      r[!vapply(r, function(z) is.na(z[1L]), NA)]
-    })
-    .ai_write_text(yaml::as.yaml(lst, indent.mapping.sequence = TRUE), f)
-    out <- c(out, f)
+    mine <- !is.na(old$output_id) & old$output_id %in% ids
+    # (an assumption the agent fixed from the person's answer: kept as fixed)
+    rows <- rbind(old[!mine, , drop = FALSE], .ai_asm_keep_fixed(old[mine, , drop = FALSE], a))
+    out <- c(out, .ai_asm_write(dir, rows))
   }
   invisible(normalizePath(out, winslash = "/"))
 }

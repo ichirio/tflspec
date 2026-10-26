@@ -549,7 +549,9 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
 #'   (the request's repair prompt to paste into the same chat, else `NA`)),
 #'   `next_steps` (a request's next step, named by the request),
 #'   `assumptions` (the study's `spec/_assumptions.yml` for these reports:
-#'   `output_id`, `where`, `item`, `assumption`, `question`), `stray` (answer
+#'   `output_id`, `where`, `item`, `assumption`, `question`, `id` -- the
+#'   assumption's `A<n>` -- and `kind` -- its `K<n>`, [tfl_ai_assumptions()]),
+#'   `stray` (answer
 #'   files named after no request), `requests` (the requests' folder),
 #'   `templates` (each request's setting, [tfl_ai_prepare()]'s `templates`:
 #'   a logical named by the request), `manifest` and `manifest_file`
@@ -757,9 +759,10 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
                      yml, NA_character_)
   rp <- rel(repairs, paste0(out$request, ".md"))
   out$repair <- ifelse(file.exists(file.path(study_dir, rp)), rp, NA_character_)
-  asm <- .ai_folder_assumptions(study_dir)
-  names(asm)[names(asm) == "sheet"] <- "where"
-  asm <- asm[is.na(asm$output_id) | asm$output_id %in% out$output_id, , drop = FALSE]
+  # each assumption its id and kind (ai/assumption_ids.csv), kept across collections
+  asm <- .ai_asm_stamp(study_dir)
+  asm <- asm[is.na(asm$output_id) | asm$output_id %in% out$output_id,
+             c("output_id", "where", "item", "assumption", "question", "id", "kind"), drop = FALSE]
   rownames(asm) <- NULL
   # each request's setting: answered with templates where they fit, or not
   tpl <- vapply(ctxs, function(x) isTRUE(x$context$ai_templates), NA)

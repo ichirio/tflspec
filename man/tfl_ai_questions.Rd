@@ -35,8 +35,10 @@ moves an answered question to \code{ai/decisions.md}, sets its status to
 }
 \details{
 The file: each question a block from its heading \verb{## Q<n>. <question>}
-to the next heading, holding \verb{- Reports:}, \verb{- Where:}, \verb{- The agent took, for now:}, \code{- Status: open} (or \code{decided}) and \verb{- Answer:} (one
-line or more, to the block's end).
+to the next heading, holding \verb{- Reports:}, \verb{- Assumptions:} (the ids of
+the assumptions asking it, \code{\link[=tfl_ai_assumptions]{tfl_ai_assumptions()}}), \verb{- Where:}, \verb{- The agent took, for now:}, \code{- Status: open} (or \code{decided}) and \verb{- Answer:}
+(one line or more, to the block's end).  A question is answered through
+its assumptions too (\code{\link[=tfl_ai_assumption_answers_write]{tfl_ai_assumption_answers_write()}}).
 }
 \seealso{
 \code{\link[=tfl_ai_run]{tfl_ai_run()}}, \code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}} (\code{mode = "agent"}).

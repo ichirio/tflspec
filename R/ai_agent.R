@@ -121,7 +121,7 @@
 #' @return A `tfl_ai_collected` (as [tfl_ai_collect_answers()]) whose
 #'   `reports` also have `rtf` (the file made, else `NA`), `rtf_problem`
 #'   and `built` (`"built"`, `"kept"` -- unchanged since the last run --
-#'   or `NA`), and a `questions` data frame (`n`, `question`, `reports`,
+#'   or `NA`), and a `questions` data frame (`n`, `question`, `reports`, `assumptions`,
 #'   `status`, `answer`), and `expected` (the comparison with the
 #'   person's list: `output_id`, `result` -- `missing`, `still there`,
 #'   `differs`, `not expected` --, `detail`; its counts in its attribute
@@ -474,7 +474,7 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
 .ai_questions_read <- function(lines) {
   at <- grep("^## Q[0-9]+[.] ", lines)
   none <- data.frame(n = integer(), question = character(), reports = character(),
-                     where = character(), provisional = character(),
+                     assumptions = character(), where = character(), provisional = character(),
                      status = character(), answer = character(), start = integer(),
                      end = integer(), stringsAsFactors = FALSE)
   if (!length(at)) return(none)
@@ -495,7 +495,8 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
     } else NA_character_
     data.frame(n = as.integer(sub("^## Q([0-9]+)[.] .*$", "\\1", b[1L])),
                question = trimws(sub("^## Q[0-9]+[.] ", "", b[1L])),
-               reports = field("Reports"), where = field("Where"),
+               reports = field("Reports"), assumptions = field("Assumptions"),
+               where = field("Where"),
                provisional = field("The agent took, for now"),
                status = tolower(field("Status") %||% NA_character_),
                answer = answer, start = at[i], end = end[i], stringsAsFactors = FALSE)
@@ -516,19 +517,35 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
   if (nrow(a)) {
     groups <- split(seq_len(nrow(a)), key(a$question))
     groups <- groups[order(vapply(groups, min, 1L))]
+    listed <- function(x) {
+      if (is.na(x)) return(character())
+      x <- trimws(strsplit(x, ",", fixed = TRUE)[[1L]])
+      x[nzchar(x)]
+    }
     for (g in groups) {
       ids <- unique(stats::na.omit(a$output_id[g]))
+      # the assumptions asking it (their A<n>, R/ai_assumptions.R)
+      aids <- if (is.null(a$id)) character() else unique(stats::na.omit(a$id[g]))
       k <- match(key(a$question[g[1L]]), key(q$question))
       if (!is.na(k)) {
-        have <- if (is.na(q$reports[k])) character() else
-          trimws(strsplit(q$reports[k], ",", fixed = TRUE)[[1L]])
-        have <- have[nzchar(have)]
+        have <- listed(q$reports[k])
         add <- setdiff(ids, have)
-        if (!length(add)) next
-        b <- q$start[k]:q$end[k]
-        j <- b[grep("^- Reports:", lines[b])]
-        line <- sprintf("- Reports: %s", paste(c(have, add), collapse = ", "))
-        if (length(j)) lines[j[1L]] <- line else lines <- append(lines, line, after = q$start[k])
+        have_a <- listed(q$assumptions[k])
+        add_a <- setdiff(aids, have_a)
+        if (!length(add) && !length(add_a)) next
+        # (each field's line replaced, or put after the heading / the reports)
+        put_line <- function(field, line) {
+          q <- .ai_questions_read(lines)
+          b <- q$start[k]:q$end[k]
+          j <- b[grep(sprintf("^- %s:", field), lines[b])]
+          r <- b[grep("^- Reports:", lines[b])]
+          if (length(j)) lines[j[1L]] <<- line else
+            lines <<- append(lines, line, after = if (length(r)) r[1L] else q$start[k])
+        }
+        if (length(add)) put_line("Reports", sprintf("- Reports: %s", paste(c(have, add), collapse = ", ")))
+        if (length(add_a)) {
+          put_line("Assumptions", sprintf("- Assumptions: %s", paste(c(have_a, add_a), collapse = ", ")))
+        }
       } else {
         n <- if (nrow(q)) max(q$n) + 1L else 1L
         while (length(lines) && !nzchar(trimws(lines[length(lines)]))) lines <- lines[-length(lines)]
@@ -536,6 +553,7 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
                    sprintf("## Q%d. %s", n, trimws(a$question[g[1L]])),
                    "",
                    sprintf("- Reports: %s", paste(ids, collapse = ", ")),
+                   if (length(aids)) sprintf("- Assumptions: %s", paste(aids, collapse = ", ")),
                    sprintf("- Where: %s", paste(unique(stats::na.omit(c(a$where[g], a$item[g]))),
                                                 collapse = ", ")),
                    sprintf("- The agent took, for now: %s", trimws(a$assumption[g[1L]] %||% "")),
@@ -550,7 +568,7 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
   q <- .ai_questions_read(lines)
   q$status[is.na(q$status)] <- "open"
   rownames(q) <- NULL
-  q[c("n", "question", "reports", "where", "provisional", "status", "answer")]
+  q[c("n", "question", "reports", "assumptions", "where", "provisional", "status", "answer")]
 }
 
 # ---- spec/toc.yml -------------------------------------------------------------------
@@ -647,9 +665,11 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
 #' `decided`, and redoes the reports it touches.
 #'
 #' The file: each question a block from its heading `## Q<n>. <question>`
-#' to the next heading, holding `- Reports:`, `- Where:`, `- The agent
-#' took, for now:`, `- Status: open` (or `decided`) and `- Answer:` (one
-#' line or more, to the block's end).
+#' to the next heading, holding `- Reports:`, `- Assumptions:` (the ids of
+#' the assumptions asking it, [tfl_ai_assumptions()]), `- Where:`, `- The
+#' agent took, for now:`, `- Status: open` (or `decided`) and `- Answer:`
+#' (one line or more, to the block's end).  A question is answered through
+#' its assumptions too ([tfl_ai_assumption_answers_write()]).
 #'
 #' @param study_dir The study folder.
 #' @param answers The answers: a data frame with `id` (`"Q1"`) and
