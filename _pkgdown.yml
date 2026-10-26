@@ -431,6 +431,9 @@ reference:
       - tfl_ai_collect_answers
       - tfl_ai_adopt
       - tfl_ai_adopted_diff
+      - tfl_ai_style_prompt
+      - tfl_ai_style_read
+      - tfl_rtf_style_scan
       - tfl_ai_migrate
       - tfl_ai_outputs
       - tfl_ai_expected_write
