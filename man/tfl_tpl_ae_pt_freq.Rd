@@ -4,7 +4,7 @@
 \alias{tfl_tpl_ae_pt_freq}
 \title{ae_pt_freq: the template ae_pt_freq}
 \description{
-The table template \code{ae_pt_freq}, layout \code{hierarchical}. Its program is one call, \code{tfl_tpl(ard, "ae_pt_freq", ...)}; a parameter a report leaves out takes the study standard's value, else the variant's default, else the layout's.
+The table template \code{ae_pt_freq}, layout \code{hierarchical}. Its program is one call, \code{tfl_tpl(ard, "ae_pt_freq", ...)}; a parameter a report leaves out takes the study standard's value, else the variant's default, else the layout's. It follows the shape of a table in FDA's Standard Safety Tables and Figures Integrated Guide (version 2); it is not endorsed or recommended by FDA.
 }
 \section{Parameters}{
 \tabular{llllll}{
@@ -24,6 +24,14 @@ The table template \code{ae_pt_freq}, layout \code{hierarchical}. Its program is
    \code{min_pct_in} \tab other \tab call \tab any \tab  \tab where min_pct is met: "any" column, "all" of them, or the "total" column \cr
    \code{sort_by} \tab other \tab call \tab  \tab  \tab the column (a value of 'by') whose counts order the PTs; NULL: the Total column with min_pct_in = "total", else the code list's first value of 'by', else all the columns \cr
    \code{heading} \tab other \tab call \tab Preferred Term \tab  \tab the label column's heading \cr
+}
+}
+
+\section{Aliases}{
+
+The same template by the names of other collections' items: each runs it as itself (\code{tfl_tpl(x, "stf_t15_ae_common", ...)}).\tabular{llll}{
+   Alias \tab Collection \tab Item \tab Title \cr
+   \code{stf_t15_ae_common} \tab FDA STF IG v2 \tab T15 \tab Common AEs by PT above threshold \cr
 }
 }
 

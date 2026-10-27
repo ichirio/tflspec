@@ -206,6 +206,11 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
 
 .tpl_get <- function(name, fn) {
   t <- get0(name, envir = .tpl_registry, inherits = FALSE)
+  # an alias of the catalog's (stf_t14_ae_soc_pt): its template, as itself
+  if (is.null(t)) {
+    to <- .tpl_alias_target(name, fn)
+    if (!is.null(to)) t <- get0(to, envir = .tpl_registry, inherits = FALSE)
+  }
   if (is.null(t)) {
     .ard_stop(sprintf("%s: no template %s; the templates: %s.", fn, sQuote(name, FALSE),
                       paste(sort(ls(.tpl_registry)), collapse = ", ")))
@@ -687,14 +692,52 @@ tpl_summary <- function(ard, population, continuous = NULL, ..., codelists = NUL
 #' on the analysis set's ADSL) and, with records data, `where` (which
 #' records).  Both are `NULL` by default; see [tfl_param()].
 #'
-#' @return A data frame, one row a template: `name`, `kind`, `layout`,
-#'   `params` (its parameters, comma-separated), `package` (the package
-#'   that registered it: tflspec, or a company's, [tfl_template()]) and
-#'   `call` (the function its program calls, the A use).
+#' A template is one program; the items of a published collection -- FDA's
+#' Standard Safety Tables and Figures IG v2, PhUSE CSS's white papers,
+#' CDISC ARS's examples -- are in the templates' catalog, each with an
+#' alias (`stf_t14_ae_soc_pt`) that runs its template wherever a template's
+#' name is taken ([tfl_tpl()], a report's `template: {name: }`, the
+#' template sheet), as itself.  `source` lists a collection's every item,
+#' whichever template writes it, and those none writes yet.  The items of
+#' FDA's collection follow the shapes of its guide; they are not endorsed
+#' or recommended by FDA.
+#'
+#' @param source `NULL` (default): the templates.  A collection --
+#'   `"tflspec"`, `"FDA STF IG v2"`, `"PhUSE CSS"`, `"CDISC ARS"` -- for its
+#'   items.
+#' @return A data frame.  Without `source`, one row a template: `name`,
+#'   `kind`, `layout`, `params` (its parameters, comma-separated),
+#'   `package` (the package that registered it: tflspec, or a company's,
+#'   [tfl_template()]), `call` (the function its program calls, the A use),
+#'   `from`, `label`, `ai` and `aliases` (its catalog aliases,
+#'   comma-separated, or `NA`).  With `source`, one row an item: `source`,
+#'   `item` (its number there), `title`, `alias`, `template` (the template
+#'   that writes it, `NA` when none does yet), `status` (`"same"`: the
+#'   template writes it; `"close"`: the template writes it, other defaults
+#'   or a column it lacks would match the collection exactly; `"missing"`;
+#'   `"not_output"`: a criteria table, not an output), `kind` and `note`.
 #' @examples
 #' tfl_templates()
+#' head(tfl_templates(source = "FDA STF IG v2"))
 #' @export
-tfl_templates <- function() {
+tfl_templates <- function(source = NULL) {
+  if (!is.null(source)) {
+    if (!is.character(source) || length(source) != 1L || !source %in% .tpl_sources) {
+      .ard_stop(sprintf("tfl_templates(source = ): one of %s.",
+                        paste(sprintf("\"%s\"", .tpl_sources), collapse = ", ")))
+    }
+    return(.tpl_catalog_rows(source))
+  }
+  tt <- .tpl_registry_table()
+  tt$aliases <- vapply(tt$name, function(n) {
+    a <- .tpl_aliases_of(n)$alias
+    if (length(a)) paste(a, collapse = ", ") else NA_character_
+  }, "", USE.NAMES = FALSE)
+  tt
+}
+
+# The registry, one row a template
+.tpl_registry_table <- function() {
   nm <- sort(ls(.tpl_registry))
   t <- lapply(nm, .tpl_get, fn = "tfl_templates()")
   data.frame(name = nm, kind = vapply(t, `[[`, "", "kind"),

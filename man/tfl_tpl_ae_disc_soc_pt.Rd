@@ -4,7 +4,7 @@
 \alias{tfl_tpl_ae_disc_soc_pt}
 \title{Adverse events leading to treatment discontinuation by SOC and PT (FDA STF Table 12): the template ae_disc_soc_pt}
 \description{
-The table template \code{ae_disc_soc_pt}, layout \code{hierarchical}: a variant of \code{ae_soc_pt} (its defaults changed). Its program is one call, \code{tfl_tpl(ard, "ae_disc_soc_pt", ...)}; a parameter a report leaves out takes the study standard's value, else the variant's default, else the layout's.
+The table template \code{ae_disc_soc_pt}, layout \code{hierarchical}: a variant of \code{ae_soc_pt} (its defaults changed). Its program is one call, \code{tfl_tpl(ard, "ae_disc_soc_pt", ...)}; a parameter a report leaves out takes the study standard's value, else the variant's default, else the layout's. It follows the shape of a table in FDA's Standard Safety Tables and Figures Integrated Guide (version 2); it is not endorsed or recommended by FDA.
 }
 \section{Parameters}{
 \tabular{llllll}{
@@ -24,6 +24,14 @@ The table template \code{ae_disc_soc_pt}, layout \code{hierarchical}: a variant 
    \code{count_cell} \tab other \tab call \tab  \tab plan_cells.categorical \tab a count's cell, n (\%) (plan_cells(categorical = )); NULL: the study standard's \cr
    \code{denominator} \tab other \tab call \tab  \tab  \tab the percentages' denominator: NULL the analysis set's subjects, "data" the records' subjects \cr
    \code{total} \tab other \tab call \tab FALSE \tab plan_total \tab TRUE: a Total column (the analysis again without 'by', plan_total()) \cr
+}
+}
+
+\section{Aliases}{
+
+The same template by the names of other collections' items: each runs it as itself (\code{tfl_tpl(x, "stf_t12_disc_soc_pt", ...)}).\tabular{llll}{
+   Alias \tab Collection \tab Item \tab Title \cr
+   \code{stf_t12_disc_soc_pt} \tab FDA STF IG v2 \tab T12 \tab AEs leading to discontinuation by SOC and PT \cr
 }
 }
 

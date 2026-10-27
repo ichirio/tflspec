@@ -4,7 +4,7 @@
 \alias{tfl_tpl_ae_eair}
 \title{ae_eair: the template ae_eair}
 \description{
-The table template \code{ae_eair}, layout \code{hierarchical}. Its program is one call, \code{tfl_tpl(ard, "ae_eair", ...)}; a parameter a report leaves out takes the study standard's value, else the variant's default, else the layout's.
+The table template \code{ae_eair}, layout \code{hierarchical}. Its program is one call, \code{tfl_tpl(ard, "ae_eair", ...)}; a parameter a report leaves out takes the study standard's value, else the variant's default, else the layout's. It follows the shape of a table in FDA's Standard Safety Tables and Figures Integrated Guide (version 2); it is not endorsed or recommended by FDA.
 }
 \section{Parameters}{
 \tabular{llllll}{
@@ -19,6 +19,14 @@ The table template \code{ae_eair}, layout \code{hierarchical}. Its program is on
    \code{start} \tab other \tab call \tab ASTDY \tab  \tab the event's day from the start of treatment: a variable or R (ASTDT - TRTSDT + 1) \cr
    \code{per} \tab other \tab call \tab 100 \tab  \tab the rate per this many person-years \cr
    \code{overall} \tab other \tab call \tab Any TEAE \tab  \tab the any-record row's label \cr
+}
+}
+
+\section{Aliases}{
+
+The same template by the names of other collections' items: each runs it as itself (\code{tfl_tpl(x, "stf_t16_ae_ir", ...)}).\tabular{llll}{
+   Alias \tab Collection \tab Item \tab Title \cr
+   \code{stf_t16_ae_ir} \tab FDA STF IG v2 \tab T16 \tab AE incidence rates per 100 person-years \cr
 }
 }
 

@@ -4,7 +4,7 @@
 \alias{tfl_tpl_disposition}
 \title{disposition: the template disposition}
 \description{
-The table template \code{disposition}, layout \code{summary}. Its program is one call, \code{tfl_tpl(ard, "disposition", ...)}; a parameter a report leaves out takes the study standard's value, else the variant's default, else the layout's.
+The table template \code{disposition}, layout \code{summary}. Its program is one call, \code{tfl_tpl(ard, "disposition", ...)}; a parameter a report leaves out takes the study standard's value, else the variant's default, else the layout's. It follows the shape of a table in FDA's Standard Safety Tables and Figures Integrated Guide (version 2); it is not endorsed or recommended by FDA.
 }
 \section{Parameters}{
 \tabular{llllll}{
@@ -18,6 +18,14 @@ The table template \code{disposition}, layout \code{summary}. Its program is one
    \code{by} \tab usual \tab call \tab TRT01A \tab settings.treatment \tab the column variable \cr
    \code{categorical_statistics} \tab other \tab call \tab n, p \tab  \tab the categorical statistics the ARD has; NULL: cards' own \cr
    \code{groupn_label} \tab other \tab call \tab  \tab  \tab the subjects-per-group analysis' label \cr
+}
+}
+
+\section{Aliases}{
+
+The same template by the names of other collections' items: each runs it as itself (\code{tfl_tpl(x, "stf_t05_disc_reasons", ...)}).\tabular{llll}{
+   Alias \tab Collection \tab Item \tab Title \cr
+   \code{stf_t05_disc_reasons} \tab FDA STF IG v2 \tab T05 \tab Treatment and study discontinuation reasons \cr
 }
 }
 

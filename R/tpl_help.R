@@ -3,11 +3,14 @@
 # R/tpl_docs.R).  Read from the registry (R/tpl_registry.R), so a new
 # parameter is in all three.
 
-# The chain of a template: its own entry, then each variant's `from`, up
-# to the template with the body (a list of raw registry entries)
+# The chain of a template (or of the template an alias names): its own
+# entry, then each variant's `from`, up to the template with the body (a
+# list of raw registry entries)
 .tpl_chain <- function(name) {
   out <- list()
-  nm <- name
+  # (an alias of the catalog's: its template's chain)
+  nm <- if (exists(name, envir = .tpl_registry, inherits = FALSE)) name else
+    .tpl_alias_target(name, "tfl_tpl_args()") %||% name
   while (!is.null(nm)) {
     e <- get0(nm, envir = .tpl_registry, inherits = FALSE)
     if (is.null(e)) break
@@ -230,7 +233,8 @@ tfl_tpl_help <- function(name, study = NULL, population = NULL,
 # A template after a table of FDA's Standard Safety Tables and Figures
 # Integrated Guide (`stf_*`): what it is, and what it is not
 .tpl_stf_note <- function(name) {
-  if (!startsWith(name, "stf_")) return(NULL)
+  fda <- any(.tpl_aliases_of(name)$source == "FDA STF IG v2")
+  if (!startsWith(name, "stf_") && !fda) return(NULL)
   paste("It follows the shape of a table in FDA's Standard Safety Tables and Figures",
         "Integrated Guide (version 2); it is not endorsed or recommended by FDA.")
 }
@@ -259,9 +263,24 @@ tfl_tpl_help <- function(name, study = NULL, population = NULL,
     sprintf("@name %s", topic),
     paste("@description", desc),
     paste0("@section Parameters:\n", paste(tbl, collapse = "\n")),
+    .tpl_rd_aliases(name),
     paste0("@section Example:\n```\n", if (fig) "fig" else "plan", " <- tfl_tpl(", x, ", \"", name, "\"",
            .tpl_rd_args(ex), ")\n```"),
     sprintf("@examples\ntfl_tpl_help(\"%s\", tier = c(\"required\", \"usual\"))", name),
     "@seealso [tfl_tpl()], [tfl_tpl_help()], [tfl_tpl_args()], [tfl_templates()]",
     "@concept template pages")
+}
+
+# A template page's section of its catalog aliases: each runs this template
+# as itself (tfl_templates(source = ) lists a collection's items); NULL when
+# it has none
+.tpl_rd_aliases <- function(name) {
+  a <- .tpl_aliases_of(name)
+  if (!nrow(a)) return(NULL)
+  rows <- sprintf("| `%s` | %s | %s | %s |", a$alias, a$source, a$item, .tpl_rd_cell(a$title))
+  paste0("@section Aliases:\n",
+         "The same template by the names of other collections' items: each runs it as ",
+         "itself (`tfl_tpl(x, \"", a$alias[1L], "\", ...)`).\n\n",
+         paste(c("| Alias | Collection | Item | Title |", "|---|---|---|---|", rows),
+               collapse = "\n"))
 }

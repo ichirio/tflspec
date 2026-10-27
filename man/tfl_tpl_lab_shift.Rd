@@ -22,6 +22,14 @@ The table template \code{lab_shift}, layout \code{shift}. Its program is one cal
 }
 }
 
+\section{Aliases}{
+
+The same template by the names of other collections' items: each runs it as itself (\code{tfl_tpl(x, "phuse_os_shift", ...)}).\tabular{llll}{
+   Alias \tab Collection \tab Item \tab Title \cr
+   \code{phuse_os_shift} \tab PhUSE CSS \tab OS table shift \tab Shift from normal to abnormal \cr
+}
+}
+
 \section{Example}{
 
 

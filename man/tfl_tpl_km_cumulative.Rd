@@ -4,7 +4,7 @@
 \alias{tfl_tpl_km_cumulative}
 \title{Kaplan-Meier plot of the cumulative percentage (1 - S(t)): CI bars, number at risk, p-value: the template km_cumulative}
 \description{
-The figure template \code{km_cumulative}, layout \code{km}: a variant of \code{km} (its defaults changed). Its program is one call, \code{tfl_tpl(adtte, "km_cumulative", ...)}; a parameter a report leaves out takes the study standard's value, else the variant's default, else the layout's.
+The figure template \code{km_cumulative}, layout \code{km}: a variant of \code{km} (its defaults changed). Its program is one call, \code{tfl_tpl(adtte, "km_cumulative", ...)}; a parameter a report leaves out takes the study standard's value, else the variant's default, else the layout's. It follows the shape of a table in FDA's Standard Safety Tables and Figures Integrated Guide (version 2); it is not endorsed or recommended by FDA.
 }
 \section{Parameters}{
 \tabular{llllll}{
@@ -36,6 +36,17 @@ The figure template \code{km_cumulative}, layout \code{km}: a variant of \code{k
    \code{pvalue_location} \tab other \tab call \tab annotation \tab  \tab where the p-value goes (add_pvalue(location = )) \cr
    \code{title} \tab other \tab call \tab  \tab  \tab the figure's title (labs(title = )) \cr
    \code{plot} \tab other \tab call \tab  \tab  \tab any other figure setting (plot:): dpi, facet_by, add ..., over the template's \cr
+}
+}
+
+\section{Aliases}{
+
+The same template by the names of other collections' items: each runs it as itself (\code{tfl_tpl(x, "stf_f01_km_disc", ...)}).\tabular{llll}{
+   Alias \tab Collection \tab Item \tab Title \cr
+   \code{stf_f01_km_disc} \tab FDA STF IG v2 \tab F01 \tab KM: time to treatment discontinuation \cr
+   \code{stf_f04_km_aesi} \tab FDA STF IG v2 \tab F04 \tab KM: time to onset of AE of interest \cr
+   \code{stf_f11_km_ole} \tab FDA STF IG v2 \tab F11 \tab KM: cumulative incidence with CI RC plus OLE \cr
+   \code{stf_f14_km_ae} \tab FDA STF IG v2 \tab F14 \tab KM: time to AE onset \cr
 }
 }
 

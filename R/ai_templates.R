@@ -87,6 +87,13 @@
     pkg <- if (!identical(tt$package[i], "tflspec")) sprintf("; %s's", tt$package[i]) else ""
     out <- c(out, sprintf("- `%s`: %s (%s, layout %s%s%s)", tt$name[i], .ai_tpl_description(t),
                           tt$kind[i], tt$layout[i], from, pkg))
+    # (its catalog aliases: the same template, by another collection's name)
+    al <- .tpl_aliases_of(tt$name[i])
+    if (nrow(al)) {
+      out <- c(out, paste0("  - aliases (the same template): ",
+                           paste(sprintf("`%s` (%s %s)", al$alias, al$source, al$item),
+                                 collapse = ", ")))
+    }
     if (short) {
       if (length(p)) {
         out <- c(out, paste0("  - ", paste(vapply(p, function(x) {
@@ -244,7 +251,11 @@
   nm <- .ai_scalar_text(tp$name)
   have <- tfl_templates()
   if (!is.null(kinds)) have <- have[have$kind %in% kinds, , drop = FALSE]
-  if (is.null(nm) || !nm %in% have$name) {
+  # (an alias of the catalog's is its template, as itself)
+  real <- if (!is.null(nm) && !nm %in% have$name) {
+    tryCatch(.tpl_alias_target(nm, "tfl_ai_check()"), error = function(e) NULL)
+  } else nm
+  if (is.null(nm) || is.null(real) || !real %in% have$name) {
     add("template name", sprintf("%s is not a template; the templates are %s",
                                  sQuote(nm %||% "", FALSE), paste(have$name, collapse = ", ")))
     return(p)

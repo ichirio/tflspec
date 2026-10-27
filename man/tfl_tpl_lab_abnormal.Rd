@@ -4,7 +4,7 @@
 \alias{tfl_tpl_lab_abnormal}
 \title{lab_abnormal: the template lab_abnormal}
 \description{
-The table template \code{lab_abnormal}, layout \code{summary}. Its program is one call, \code{tfl_tpl(ard, "lab_abnormal", ...)}; a parameter a report leaves out takes the study standard's value, else the variant's default, else the layout's.
+The table template \code{lab_abnormal}, layout \code{summary}. Its program is one call, \code{tfl_tpl(ard, "lab_abnormal", ...)}; a parameter a report leaves out takes the study standard's value, else the variant's default, else the layout's. It follows the shape of a table in FDA's Standard Safety Tables and Figures Integrated Guide (version 2); it is not endorsed or recommended by FDA.
 }
 \section{Parameters}{
 \tabular{llllll}{
@@ -24,6 +24,20 @@ The table template \code{lab_abnormal}, layout \code{summary}. Its program is on
    \code{baseline_value} \tab other \tab call \tab NORMAL \tab  \tab the value of 'baseline' that is normal \cr
    \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: \if{html}{\out{<data>}}_\if{html}{\out{<population>}} \cr
    \code{heading} \tab other \tab call \tab Parameter / Category \tab  \tab the label column's heading \cr
+}
+}
+
+\section{Aliases}{
+
+The same template by the names of other collections' items: each runs it as itself (\code{tfl_tpl(x, "stf_t20_kidney_level", ...)}).\tabular{llll}{
+   Alias \tab Collection \tab Item \tab Title \cr
+   \code{stf_t20_kidney_level} \tab FDA STF IG v2 \tab T20 \tab Kidney function values above levels \cr
+   \code{stf_t36_sbp_max} \tab FDA STF IG v2 \tab T36 \tab Maximum postbaseline systolic BP categories \cr
+   \code{stf_t37_dbp_max} \tab FDA STF IG v2 \tab T37 \tab Maximum postbaseline diastolic BP categories \cr
+   \code{stf_t38_hypotension} \tab FDA STF IG v2 \tab T38 \tab Postbaseline hypotension criteria \cr
+   \code{stf_t52_chem_last_l2} \tab FDA STF IG v2 \tab T52 \tab Last on-treatment chemistry at level 2 or above \cr
+   \code{stf_t53_hem_last_l2} \tab FDA STF IG v2 \tab T53 \tab Last on-treatment hematology at level 2 or above \cr
+   \code{phuse_os_abnormal} \tab PhUSE CSS \tab OS table abnormal \tab Postbaseline values outside normal range \cr
 }
 }
 

@@ -4,7 +4,7 @@
 \alias{tfl_tpl_listing}
 \title{listing: the template listing}
 \description{
-The listing template \code{listing}, layout \code{listing}. Its program is one call, \code{tfl_tpl(adae, "listing", ...)}; a parameter a report leaves out takes the study standard's value, else the variant's default, else the layout's.
+The listing template \code{listing}, layout \code{listing}. Its program is one call, \code{tfl_tpl(adae, "listing", ...)}; a parameter a report leaves out takes the study standard's value, else the variant's default, else the layout's. It follows the shape of a table in FDA's Standard Safety Tables and Figures Integrated Guide (version 2); it is not endorsed or recommended by FDA.
 }
 \section{Parameters}{
 \tabular{llllll}{
@@ -14,6 +14,16 @@ The listing template \code{listing}, layout \code{listing}. Its program is one c
    \code{where} \tab other \tab call \tab  \tab  \tab the records kept (R) \cr
    \code{subset} \tab other \tab call \tab  \tab  \tab which subjects (R, on ADSL): a listing has no analysis set, so ADSL's subjects it keeps (a semi join) \cr
    \code{sort} \tab other \tab call \tab  \tab  \tab the records' order (variables) \cr
+}
+}
+
+\section{Aliases}{
+
+The same template by the names of other collections' items: each runs it as itself (\code{tfl_tpl(x, "stf_t01_trials", ...)}).\tabular{llll}{
+   Alias \tab Collection \tab Item \tab Title \cr
+   \code{stf_t01_trials} \tab FDA STF IG v2 \tab T01 \tab Trials in the submission \cr
+   \code{stf_t09_death_list} \tab FDA STF IG v2 \tab T09 \tab Listing of deaths \cr
+   \code{stf_t39_disc_list} \tab FDA STF IG v2 \tab T39 \tab Listing of AEs leading to discontinuation \cr
 }
 }
 

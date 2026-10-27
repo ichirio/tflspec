@@ -30,6 +30,16 @@ The table template \code{param_change}, layout \code{summary}. Its program is on
 }
 }
 
+\section{Aliases}{
+
+The same template by the names of other collections' items: each runs it as itself (\code{tfl_tpl(x, "phuse_ct_summary", ...)}).\tabular{llll}{
+   Alias \tab Collection \tab Item \tab Title \cr
+   \code{phuse_ct_summary} \tab PhUSE CSS \tab CT table \tab Observed values and change by visit \cr
+   \code{ars_vs_chg_h} \tab CDISC ARS \tab 14-3-3-1a \tab Vital signs values and change horizontal \cr
+   \code{ars_vs_chg_v} \tab CDISC ARS \tab 14-3-3-1b \tab Vital signs values and change vertical \cr
+}
+}
+
 \section{Example}{
 
 

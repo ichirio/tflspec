@@ -27,6 +27,14 @@ The table template \code{demog}, layout \code{summary}: a variant of \code{summa
 }
 }
 
+\section{Aliases}{
+
+The same template by the names of other collections' items: each runs it as itself (\code{tfl_tpl(x, "ars_demog", ...)}).\tabular{llll}{
+   Alias \tab Collection \tab Item \tab Title \cr
+   \code{ars_demog} \tab CDISC ARS \tab 14-1-1 \tab Demographics \cr
+}
+}
+
 \section{Example}{
 
 

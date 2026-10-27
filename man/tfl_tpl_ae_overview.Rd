@@ -4,7 +4,7 @@
 \alias{tfl_tpl_ae_overview}
 \title{ae_overview: the template ae_overview}
 \description{
-The table template \code{ae_overview}, layout \code{summary}. Its program is one call, \code{tfl_tpl(ard, "ae_overview", ...)}; a parameter a report leaves out takes the study standard's value, else the variant's default, else the layout's.
+The table template \code{ae_overview}, layout \code{summary}. Its program is one call, \code{tfl_tpl(ard, "ae_overview", ...)}; a parameter a report leaves out takes the study standard's value, else the variant's default, else the layout's. It follows the shape of a table in FDA's Standard Safety Tables and Figures Integrated Guide (version 2); it is not endorsed or recommended by FDA.
 }
 \section{Parameters}{
 \tabular{llllll}{
@@ -17,6 +17,15 @@ The table template \code{ae_overview}, layout \code{summary}. Its program is one
    \code{data_id} \tab other \tab call \tab  \tab  \tab the events' analysis data's id; NULL: \if{html}{\out{<data>}}_\if{html}{\out{<population>}} \cr
    \code{flags} \tab other \tab call \tab (id = ANY; label = Any TEAE); (id = REL; label = Any trea... \tab  \tab the rows, in order: each 'id' (the flag's name), 'label' (the row's text) and 'where' (R: the events it counts; none: every event kept) \cr
    \code{heading} \tab other \tab call \tab Subjects with \tab  \tab the label column's heading \cr
+}
+}
+
+\section{Aliases}{
+
+The same template by the names of other collections' items: each runs it as itself (\code{tfl_tpl(x, "stf_t04_populations", ...)}).\tabular{llll}{
+   Alias \tab Collection \tab Item \tab Title \cr
+   \code{stf_t04_populations} \tab FDA STF IG v2 \tab T04 \tab Analysis populations \cr
+   \code{ars_ae_summary} \tab CDISC ARS \tab 14-3-1-1 \tab TEAE overview \cr
 }
 }
 

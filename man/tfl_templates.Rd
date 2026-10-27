@@ -4,13 +4,25 @@
 \alias{tfl_templates}
 \title{The templates}
 \usage{
-tfl_templates()
+tfl_templates(source = NULL)
+}
+\arguments{
+\item{source}{\code{NULL} (default): the templates.  A collection --
+\code{"tflspec"}, \code{"FDA STF IG v2"}, \code{"PhUSE CSS"}, \code{"CDISC ARS"} -- for its
+items.}
 }
 \value{
-A data frame, one row a template: \code{name}, \code{kind}, \code{layout},
-\code{params} (its parameters, comma-separated), \code{package} (the package
-that registered it: tflspec, or a company's, \code{\link[=tfl_template]{tfl_template()}}) and
-\code{call} (the function its program calls, the A use).
+A data frame.  Without \code{source}, one row a template: \code{name},
+\code{kind}, \code{layout}, \code{params} (its parameters, comma-separated),
+\code{package} (the package that registered it: tflspec, or a company's,
+\code{\link[=tfl_template]{tfl_template()}}), \code{call} (the function its program calls, the A use),
+\code{from}, \code{label}, \code{ai} and \code{aliases} (its catalog aliases,
+comma-separated, or \code{NA}).  With \code{source}, one row an item: \code{source},
+\code{item} (its number there), \code{title}, \code{alias}, \code{template} (the template
+that writes it, \code{NA} when none does yet), \code{status} (\code{"same"}: the
+template writes it; \code{"close"}: the template writes it, other defaults
+or a column it lacks would match the collection exactly; \code{"missing"};
+\code{"not_output"}: a criteria table, not an output), \code{kind} and \code{note}.
 }
 \description{
 Every table and figure template takes the same pair of filters, its
@@ -18,6 +30,18 @@ input form's first group with \code{population}: \code{subset} (which subjects: 
 on the analysis set's ADSL) and, with records data, \code{where} (which
 records).  Both are \code{NULL} by default; see \code{\link[=tfl_param]{tfl_param()}}.
 }
+\details{
+A template is one program; the items of a published collection -- FDA's
+Standard Safety Tables and Figures IG v2, PhUSE CSS's white papers,
+CDISC ARS's examples -- are in the templates' catalog, each with an
+alias (\code{stf_t14_ae_soc_pt}) that runs its template wherever a template's
+name is taken (\code{\link[=tfl_tpl]{tfl_tpl()}}, a report's \verb{template: \{name: \}}, the
+template sheet), as itself.  \code{source} lists a collection's every item,
+whichever template writes it, and those none writes yet.  The items of
+FDA's collection follow the shapes of its guide; they are not endorsed
+or recommended by FDA.
+}
 \examples{
 tfl_templates()
+head(tfl_templates(source = "FDA STF IG v2"))
 }
