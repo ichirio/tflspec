@@ -1,0 +1,17 @@
+pandoc: 3.8.3
+pkgdown: 2.2.1
+pkgdown_sha: ~
+articles:
+  articles/ai-table-drafting-ja: ai-table-drafting-ja.html
+  articles/ai-table-drafting: ai-table-drafting.html
+  articles/ard-spec: ard-spec.html
+  articles/ars: ars.html
+  articles/figures: figures.html
+  articles/listings: listings.html
+  articles/reports: reports.html
+  articles/table-spec: table-spec.html
+  articles/tflspec: tflspec.html
+last_built: 2026-10-27T09:45Z
+urls:
+  reference: https://ichirio.github.io/tflspec/reference
+  article: https://ichirio.github.io/tflspec/articles
