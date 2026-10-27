@@ -119,17 +119,18 @@
 
 #' The objects of a report with several: each built
 #'
-#' A report whose `contents:` names several objects (one RTF, its tables
-#' and figures on its pages): each object run as a report of its own -- a
-#' table's plan from the report's ARD ([tfl_build_ard()],
-#' [tfl_content_run()]), a figure's plot from its data steps.  What
+#' A report whose `contents:` names several objects (one RTF, its tables,
+#' figures and listings on its pages): each object run as a report of its
+#' own -- a table's plan from the report's ARD ([tfl_build_ard()],
+#' [tfl_content_run()]), a figure's plot from its data steps, a listing's
+#' plan from its records (its `data: {source: dataset, ...}`).  What
 #' [tfl_report()] takes as its `content` for such a report.
 #'
 #' @param output The report ([tfl_read_output()]), with `contents:`.
 #' @param study The study ([tfl_read_study_spec()]).
 #' @param dir The study folder (the ARD and the data are read from it).
 #' @return A named list, one element an object (its name in `contents:`):
-#'   a table's plan, a figure's plot.
+#'   a table's or a listing's plan, a figure's plot.
 #' @seealso [tfl_run_output()]
 #' @export
 tfl_output_contents <- function(output, study, dir = ".") {
@@ -156,7 +157,12 @@ tfl_output_contents <- function(output, study, dir = ".") {
       if (identical(ro$data$source, "ard") || length(o$ard$analyses %||% list())) data$ard <- get_ard()
       return(suppressMessages(suppressWarnings(tfl_content_run(ro, data))))
     }
-    .ard_stop(sprintf("%s: object %s is a %s; contents: holds tables and figures for now.",
+    if (identical(o$kind, "listing")) {
+      # a listing's records: its data step, as its program reads them; its
+      # pages laid out (the first on the page before, the rest after it)
+      return(suppressMessages(tfl_content_run(ro, .listing_data_of(ro, study, dir))))
+    }
+    .ard_stop(sprintf("%s: object %s is a %s; contents: holds tables, figures and listings.",
                       output$id, attr(o, "object"), o$kind))
   })
 }

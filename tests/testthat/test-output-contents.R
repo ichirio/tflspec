@@ -90,3 +90,43 @@ test_that("two tables and a KM plot in one RTF: the titles and footnotes where t
   expect_false(is.unsorted(at))
   expect_match(x, "\\pict", fixed = TRUE)
 })
+
+test_that("a listing as an object: its records read and laid out, beside a table", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("rtfreporter")
+  d <- tempfile()
+  on.exit(unlink(d, recursive = TRUE))
+  dir.create(file.path(d, "adam"), recursive = TRUE)
+  for (x in c("adsl", "adae")) {
+    haven::write_xpt(tflspec:::.ai_chr(getExportedValue("tflspec", x)),
+                     file.path(d, "adam", paste0(x, ".xpt")))
+  }
+  invisible(tfl_ai_study_init(d, adam = "adam", study_id = "XYZ"))
+  m <- tfl_output("M-9", "table", label = "AEs and their listing", population = "SAF")
+  m$ard <- list(analyses = list(list(id = "AE", method = "categorical", dataset = "ADAE",
+                                     population = "SAF", by = list("TRT01A"),
+                                     variables = list("AESEV"))))
+  m$data <- list(source = "ard")
+  m$content <- list()
+  lst <- list(tfl_item("plan_listing", list(cols = list(
+    tfl_call("listing_col", list(vars = list("USUBJID"), label = "Subject", width = 20)),
+    tfl_call("listing_col", list(vars = list("AEDECOD"), label = "Preferred term", width = 30))))))
+  m$contents <- list(
+    summary = list(content = list(tfl_item("table_plan", list(cols = "TRT01A", rows = list(group = "variable")))),
+                   short = TRUE),
+    records = list(kind = "listing", content = lst, short = FALSE,
+                   data = list(source = "dataset", dataset = "ADAE", population = "SAF",
+                               where = tfl_r("AESEV == \"SEVERE\""), sort = list("USUBJID"))))
+  m$page <- list(titles = list(`1` = list(center = "Table M-9")),
+                 layout = list(list(object = "summary"), list(object = "records", space_before = 1L)))
+  tfl_write_output(m, file.path(d, "spec", "outputs", "M-9.yml"))
+  st <- tfl_read_study_spec(d)
+  built <- withr::with_dir(d, tfl_output_contents(tfl_read_outputs(d)[["M-9"]], st, "."))
+  expect_identical(names(built), c("summary", "records"))
+  # (a listing's content as a table's: its plan, laid out when the RTF is written)
+  expect_s3_class(built$records, class(built$summary)[1L])
+  f <- tfl_run_output("M-9", d)
+  x <- paste(readLines(f, warn = FALSE), collapse = " ")
+  expect_match(x, "Preferred term", fixed = TRUE)
+})
