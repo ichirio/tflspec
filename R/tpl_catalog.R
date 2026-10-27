@@ -93,3 +93,62 @@
              template = x$template, status = x$status, kind = kind, note = x$note,
              stringsAsFactors = FALSE)
 }
+
+# ---- the collections' sources -------------------------------------------------
+
+# The publications the catalog's collections come from (one row a
+# collection: its document, version, date, URL, terms, the date we read it),
+# from inst/templates/sources.csv
+.tpl_sources_table <- function() {
+  if (!is.null(.tpl_catalog_cache$src)) return(.tpl_catalog_cache$src)
+  cols <- c("source", "document", "version", "date", "url", "terms", "accessed")
+  f <- system.file("templates", "sources.csv", package = "tflspec")
+  x <- if (nzchar(f)) {
+    utils::read.csv(f, colClasses = "character", na.strings = "", encoding = "UTF-8",
+                    stringsAsFactors = FALSE)
+  } else NULL
+  if (is.null(x) || !all(cols %in% names(x))) {
+    x <- stats::setNames(as.data.frame(replicate(length(cols), character()),
+                                       stringsAsFactors = FALSE), cols)
+  }
+  x <- x[cols]
+  .tpl_catalog_cache$src <- x
+  x
+}
+
+# A collection's publications cited, one line each (Markdown); NULL for none
+.tpl_cite <- function(source) {
+  x <- .tpl_sources_table()
+  x <- x[x$source %in% source, , drop = FALSE]
+  if (!nrow(x)) return(NULL)
+  na0 <- function(v) ifelse(is.na(v), "", v)
+  sprintf("%s: %s%s%s. <%s> (accessed %s).%s", x$source, x$document,
+          ifelse(is.na(x$version), "", paste0(", ", x$version)),
+          ifelse(is.na(x$date), "", paste0(", ", x$date)), na0(x$url), na0(x$accessed),
+          ifelse(is.na(x$terms), "", paste0(" ", x$terms)))
+}
+
+# The organisations behind collections, for the sentence that none of them
+# endorses tflspec's templates
+.tpl_source_orgs <- c("FDA STF IG v2" = "FDA", "PhUSE CSS" = "PhUSE", "CDISC ARS" = "CDISC")
+
+# That sentence, for the collections named (NULL for tflspec's own alone)
+.tpl_not_endorsed <- function(source) {
+  orgs <- unique(stats::na.omit(.tpl_source_orgs[intersect(source, names(.tpl_source_orgs))]))
+  if (!length(orgs)) return(NULL)
+  who <- if (length(orgs) == 1L) orgs else
+    paste(paste(orgs[-length(orgs)], collapse = ", "), "or", orgs[length(orgs)])
+  sprintf(paste("The aliases follow the numbering of these publications, and the titles are",
+                "short descriptions of our own, not their text. The templates are tflspec's,",
+                "not endorsed or recommended by %s."), who)
+}
+
+# tfl_templates()'s section of the collections and their sources (roxygen
+# @eval)
+.tpl_rd_sources <- function() {
+  x <- .tpl_sources_table()
+  if (!nrow(x)) return(character())
+  paste0("@section Sources:\nThe catalog's collections, as published:\n\n",
+         paste(paste0("* ", .tpl_cite(x$source)), collapse = "\n"), "\n\n",
+         .tpl_not_endorsed(x$source))
+}

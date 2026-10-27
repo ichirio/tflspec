@@ -4,7 +4,7 @@
 \alias{tfl_tpl_km_cumulative}
 \title{Kaplan-Meier plot of the cumulative percentage (1 - S(t)): CI bars, number at risk, p-value: the template km_cumulative}
 \description{
-The figure template \code{km_cumulative}, layout \code{km}: a variant of \code{km} (its defaults changed). Its program is one call, \code{tfl_tpl(adtte, "km_cumulative", ...)}; a parameter a report leaves out takes the study standard's value, else the variant's default, else the layout's. It follows the shape of a table in FDA's Standard Safety Tables and Figures Integrated Guide (version 2); it is not endorsed or recommended by FDA.
+The figure template \code{km_cumulative}, layout \code{km}: a variant of \code{km} (its defaults changed). Its program is one call, \code{tfl_tpl(adtte, "km_cumulative", ...)}; a parameter a report leaves out takes the study standard's value, else the variant's default, else the layout's.
 }
 \section{Parameters}{
 \tabular{llllll}{
@@ -48,6 +48,14 @@ The same template by the names of other collections' items: each runs it as itse
    \code{stf_f11_km_ole} \tab FDA STF IG v2 \tab F11 \tab KM: cumulative incidence with CI RC plus OLE \cr
    \code{stf_f14_km_ae} \tab FDA STF IG v2 \tab F14 \tab KM: time to AE onset \cr
 }
+
+
+Sources:
+\itemize{
+\item FDA STF IG v2: U.S. Food and Drug Administration, CDER. Standard Safety Tables and Figures: Integrated Guide, Version 2.0, April 2025. \url{https://www.fda.gov/media/187065/download} (accessed 2026-10-28). A U.S. Government work; FDA's website content is in the public domain unless noted (https://www.fda.gov/about-fda/about-website/website-policies).
+}
+
+The aliases follow the numbering of these publications, and the titles are short descriptions of our own, not their text. The templates are tflspec's, not endorsed or recommended by FDA.
 }
 
 \section{Example}{

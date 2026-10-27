@@ -4,7 +4,7 @@
 \alias{tfl_tpl_ae_overview}
 \title{ae_overview: the template ae_overview}
 \description{
-The table template \code{ae_overview}, layout \code{summary}. Its program is one call, \code{tfl_tpl(ard, "ae_overview", ...)}; a parameter a report leaves out takes the study standard's value, else the variant's default, else the layout's. It follows the shape of a table in FDA's Standard Safety Tables and Figures Integrated Guide (version 2); it is not endorsed or recommended by FDA.
+The table template \code{ae_overview}, layout \code{summary}. Its program is one call, \code{tfl_tpl(ard, "ae_overview", ...)}; a parameter a report leaves out takes the study standard's value, else the variant's default, else the layout's.
 }
 \section{Parameters}{
 \tabular{llllll}{
@@ -27,6 +27,15 @@ The same template by the names of other collections' items: each runs it as itse
    \code{stf_t04_populations} \tab FDA STF IG v2 \tab T04 \tab Analysis populations \cr
    \code{ars_ae_summary} \tab CDISC ARS \tab 14-3-1-1 \tab TEAE overview \cr
 }
+
+
+Sources:
+\itemize{
+\item FDA STF IG v2: U.S. Food and Drug Administration, CDER. Standard Safety Tables and Figures: Integrated Guide, Version 2.0, April 2025. \url{https://www.fda.gov/media/187065/download} (accessed 2026-10-28). A U.S. Government work; FDA's website content is in the public domain unless noted (https://www.fda.gov/about-fda/about-website/website-policies).
+\item CDISC ARS: Clinical Data Interchange Standards Consortium (CDISC). Analysis Results Standard, v1.0, 19 April 2024. \url{https://www.cdisc.org/standards/foundational/analysis-results-standard} (accessed 2026-10-28). Copyright CDISC. Its examples: github.com/cdisc-org/analysis-results-standard (content CC BY 4.0, code MIT); cited by number only. CDISC is a trademark of the Clinical Data Interchange Standards Consortium.
+}
+
+The aliases follow the numbering of these publications, and the titles are short descriptions of our own, not their text. The templates are tflspec's, not endorsed or recommended by FDA or CDISC.
 }
 
 \section{Example}{

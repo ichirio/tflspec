@@ -4,7 +4,7 @@
 \alias{tfl_tpl_ae_pt_freq}
 \title{ae_pt_freq: the template ae_pt_freq}
 \description{
-The table template \code{ae_pt_freq}, layout \code{hierarchical}. Its program is one call, \code{tfl_tpl(ard, "ae_pt_freq", ...)}; a parameter a report leaves out takes the study standard's value, else the variant's default, else the layout's. It follows the shape of a table in FDA's Standard Safety Tables and Figures Integrated Guide (version 2); it is not endorsed or recommended by FDA.
+The table template \code{ae_pt_freq}, layout \code{hierarchical}. Its program is one call, \code{tfl_tpl(ard, "ae_pt_freq", ...)}; a parameter a report leaves out takes the study standard's value, else the variant's default, else the layout's.
 }
 \section{Parameters}{
 \tabular{llllll}{
@@ -33,6 +33,14 @@ The same template by the names of other collections' items: each runs it as itse
    Alias \tab Collection \tab Item \tab Title \cr
    \code{stf_t15_ae_common} \tab FDA STF IG v2 \tab T15 \tab Common AEs by PT above threshold \cr
 }
+
+
+Sources:
+\itemize{
+\item FDA STF IG v2: U.S. Food and Drug Administration, CDER. Standard Safety Tables and Figures: Integrated Guide, Version 2.0, April 2025. \url{https://www.fda.gov/media/187065/download} (accessed 2026-10-28). A U.S. Government work; FDA's website content is in the public domain unless noted (https://www.fda.gov/about-fda/about-website/website-policies).
+}
+
+The aliases follow the numbering of these publications, and the titles are short descriptions of our own, not their text. The templates are tflspec's, not endorsed or recommended by FDA.
 }
 
 \section{Example}{

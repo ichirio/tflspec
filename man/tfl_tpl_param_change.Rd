@@ -38,6 +38,18 @@ The same template by the names of other collections' items: each runs it as itse
    \code{ars_vs_chg_h} \tab CDISC ARS \tab 14-3-3-1a \tab Vital signs values and change horizontal \cr
    \code{ars_vs_chg_v} \tab CDISC ARS \tab 14-3-3-1b \tab Vital signs values and change vertical \cr
 }
+
+
+Sources:
+\itemize{
+\item PhUSE CSS: PhUSE CSS Development of Standard Scripts for Analysis and Programming Working Group. Analyses and Displays Associated with Measures of Central Tendency: Focus on Vital Sign, Electrocardiogram, and Laboratory Analyte Measurements in Phase 2-4 Clinical Trials and Integrated Submission Documents (white paper), Version 1.0, 10 October 2013. \url{https://github.com/phuse-org/phuse-scripts/tree/master/whitepapers} (accessed 2026-10-28). Copyright PHUSE Limited, all rights reserved; cited by number only. Its standard scripts: phuse-org/phuse-scripts, MIT licence.
+\item PhUSE CSS: PhUSE CSS Standard Analyses Working Group. Analyses and Displays Associated with Outliers or Shifts from Normal to Abnormal: Focus on Vital Signs, Electrocardiogram, and Laboratory Analyte Measurements in Phase 2-4 Clinical Trials and Integrated Summary Documents (white paper), Version 1.0, 10 September 2015. \url{https://github.com/phuse-org/phuse-scripts/tree/master/whitepapers} (accessed 2026-10-28). Copyright PHUSE Limited, all rights reserved; cited by number only.
+\item PhUSE CSS: PhUSE CSS Standard Analyses Working Group. Analysis and Displays Associated with Adverse Events: Focus on Adverse Events in Phase 2-4 Clinical Trials and Integrated Summary Documents (white paper), Version 1.0, 3 February 2017. \url{https://phuse.global/Deliverables} (accessed 2026-10-28). Copyright PHUSE Limited, all rights reserved; cited by number only.
+\item PhUSE CSS: PhUSE CSS Standard Analyses Working Group. Analyses and Displays Associated with Demographics, Disposition, and Medications in Phase 2-4 Clinical Trials and Integrated Summary Documents (white paper), Version 2.0, 2 March 2018. \url{https://phuse.global/Deliverables} (accessed 2026-10-28). Copyright PHUSE Limited, all rights reserved; cited by number only.
+\item CDISC ARS: Clinical Data Interchange Standards Consortium (CDISC). Analysis Results Standard, v1.0, 19 April 2024. \url{https://www.cdisc.org/standards/foundational/analysis-results-standard} (accessed 2026-10-28). Copyright CDISC. Its examples: github.com/cdisc-org/analysis-results-standard (content CC BY 4.0, code MIT); cited by number only. CDISC is a trademark of the Clinical Data Interchange Standards Consortium.
+}
+
+The aliases follow the numbering of these publications, and the titles are short descriptions of our own, not their text. The templates are tflspec's, not endorsed or recommended by PhUSE or CDISC.
 }
 
 \section{Example}{

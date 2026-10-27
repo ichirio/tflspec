@@ -67,3 +67,16 @@ test_that("a template's help page lists its aliases, and says FDA endorses none"
   expect_false(grepl("@section Aliases:", paste(tflspec:::.tpl_rd("ancova"), collapse = "\n"),
                      fixed = TRUE))
 })
+
+test_that("every collection is cited: its publication, version, date, URL and terms", {
+  src <- tflspec:::.tpl_sources_table()
+  cat <- tflspec:::.tpl_catalog()
+  expect_true(all(unique(cat$source) %in% src$source))
+  expect_false(any(is.na(src$document) | is.na(src$url) | is.na(src$accessed) | is.na(src$terms)))
+  expect_true(all(grepl("^https://", src$url)))
+  rd <- paste(tflspec:::.tpl_rd("ae_soc_pt"), collapse = "\n")
+  expect_match(rd, "Sources:", fixed = TRUE)
+  expect_match(rd, "not endorsed or recommended by FDA, PhUSE or CDISC", fixed = TRUE)
+  expect_match(rd, "fda.gov/media/187065", fixed = TRUE)
+  expect_match(paste(tflspec:::.tpl_rd_sources(), collapse = "\n"), "@section Sources:", fixed = TRUE)
+})

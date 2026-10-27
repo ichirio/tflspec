@@ -198,7 +198,12 @@ reference:
       and display templates on them (`demog`).  A report's YAML file may be
       a template SPEC, `template: {name, args}`: `tfl_resolve_output()`
       resolves it, its program is the template's call, and
-      `tfl_template_to_spec()` writes it out as its items.
+      `tfl_template_to_spec()` writes it out as its items.  The items of
+      other collections -- FDA's Standard Safety Tables and Figures IG v2,
+      PhUSE CSS's white papers, CDISC ARS's examples -- are aliases of the
+      templates (`tfl_templates(source = )`, whose page cites the
+      publications); the templates are tflspec's, not endorsed by FDA,
+      PhUSE or CDISC.
     contents:
       - tfl_tpl
       - tfl_templates

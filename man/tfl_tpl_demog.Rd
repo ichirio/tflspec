@@ -33,6 +33,14 @@ The same template by the names of other collections' items: each runs it as itse
    Alias \tab Collection \tab Item \tab Title \cr
    \code{ars_demog} \tab CDISC ARS \tab 14-1-1 \tab Demographics \cr
 }
+
+
+Sources:
+\itemize{
+\item CDISC ARS: Clinical Data Interchange Standards Consortium (CDISC). Analysis Results Standard, v1.0, 19 April 2024. \url{https://www.cdisc.org/standards/foundational/analysis-results-standard} (accessed 2026-10-28). Copyright CDISC. Its examples: github.com/cdisc-org/analysis-results-standard (content CC BY 4.0, code MIT); cited by number only. CDISC is a trademark of the Clinical Data Interchange Standards Consortium.
+}
+
+The aliases follow the numbering of these publications, and the titles are short descriptions of our own, not their text. The templates are tflspec's, not endorsed or recommended by CDISC.
 }
 
 \section{Example}{

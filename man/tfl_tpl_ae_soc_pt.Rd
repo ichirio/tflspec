@@ -4,7 +4,7 @@
 \alias{tfl_tpl_ae_soc_pt}
 \title{Adverse events by SOC and PT (FDA STF Table 14): the template ae_soc_pt}
 \description{
-The table template \code{ae_soc_pt}, layout \code{hierarchical}: a variant of \code{hierarchical} (its defaults changed). Its program is one call, \code{tfl_tpl(ard, "ae_soc_pt", ...)}; a parameter a report leaves out takes the study standard's value, else the variant's default, else the layout's. It follows the shape of a table in FDA's Standard Safety Tables and Figures Integrated Guide (version 2); it is not endorsed or recommended by FDA.
+The table template \code{ae_soc_pt}, layout \code{hierarchical}: a variant of \code{hierarchical} (its defaults changed). Its program is one call, \code{tfl_tpl(ard, "ae_soc_pt", ...)}; a parameter a report leaves out takes the study standard's value, else the variant's default, else the layout's.
 }
 \section{Parameters}{
 \tabular{llllll}{
@@ -35,6 +35,19 @@ The same template by the names of other collections' items: each runs it as itse
    \code{phuse_ae_soc_pt} \tab PhUSE CSS \tab AE table \tab AEs by SOC and PT with risk difference \cr
    \code{ars_ae_soc_pt} \tab CDISC ARS \tab 14-3-2-1 \tab TEAEs by SOC and PT \cr
 }
+
+
+Sources:
+\itemize{
+\item FDA STF IG v2: U.S. Food and Drug Administration, CDER. Standard Safety Tables and Figures: Integrated Guide, Version 2.0, April 2025. \url{https://www.fda.gov/media/187065/download} (accessed 2026-10-28). A U.S. Government work; FDA's website content is in the public domain unless noted (https://www.fda.gov/about-fda/about-website/website-policies).
+\item PhUSE CSS: PhUSE CSS Development of Standard Scripts for Analysis and Programming Working Group. Analyses and Displays Associated with Measures of Central Tendency: Focus on Vital Sign, Electrocardiogram, and Laboratory Analyte Measurements in Phase 2-4 Clinical Trials and Integrated Submission Documents (white paper), Version 1.0, 10 October 2013. \url{https://github.com/phuse-org/phuse-scripts/tree/master/whitepapers} (accessed 2026-10-28). Copyright PHUSE Limited, all rights reserved; cited by number only. Its standard scripts: phuse-org/phuse-scripts, MIT licence.
+\item PhUSE CSS: PhUSE CSS Standard Analyses Working Group. Analyses and Displays Associated with Outliers or Shifts from Normal to Abnormal: Focus on Vital Signs, Electrocardiogram, and Laboratory Analyte Measurements in Phase 2-4 Clinical Trials and Integrated Summary Documents (white paper), Version 1.0, 10 September 2015. \url{https://github.com/phuse-org/phuse-scripts/tree/master/whitepapers} (accessed 2026-10-28). Copyright PHUSE Limited, all rights reserved; cited by number only.
+\item PhUSE CSS: PhUSE CSS Standard Analyses Working Group. Analysis and Displays Associated with Adverse Events: Focus on Adverse Events in Phase 2-4 Clinical Trials and Integrated Summary Documents (white paper), Version 1.0, 3 February 2017. \url{https://phuse.global/Deliverables} (accessed 2026-10-28). Copyright PHUSE Limited, all rights reserved; cited by number only.
+\item PhUSE CSS: PhUSE CSS Standard Analyses Working Group. Analyses and Displays Associated with Demographics, Disposition, and Medications in Phase 2-4 Clinical Trials and Integrated Summary Documents (white paper), Version 2.0, 2 March 2018. \url{https://phuse.global/Deliverables} (accessed 2026-10-28). Copyright PHUSE Limited, all rights reserved; cited by number only.
+\item CDISC ARS: Clinical Data Interchange Standards Consortium (CDISC). Analysis Results Standard, v1.0, 19 April 2024. \url{https://www.cdisc.org/standards/foundational/analysis-results-standard} (accessed 2026-10-28). Copyright CDISC. Its examples: github.com/cdisc-org/analysis-results-standard (content CC BY 4.0, code MIT); cited by number only. CDISC is a trademark of the Clinical Data Interchange Standards Consortium.
+}
+
+The aliases follow the numbering of these publications, and the titles are short descriptions of our own, not their text. The templates are tflspec's, not endorsed or recommended by FDA, PhUSE or CDISC.
 }
 
 \section{Example}{

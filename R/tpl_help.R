@@ -233,8 +233,7 @@ tfl_tpl_help <- function(name, study = NULL, population = NULL,
 # A template after a table of FDA's Standard Safety Tables and Figures
 # Integrated Guide (`stf_*`): what it is, and what it is not
 .tpl_stf_note <- function(name) {
-  fda <- any(.tpl_aliases_of(name)$source == "FDA STF IG v2")
-  if (!startsWith(name, "stf_") && !fda) return(NULL)
+  if (!startsWith(name, "stf_")) return(NULL)
   paste("It follows the shape of a table in FDA's Standard Safety Tables and Figures",
         "Integrated Guide (version 2); it is not endorsed or recommended by FDA.")
 }
@@ -282,5 +281,7 @@ tfl_tpl_help <- function(name, study = NULL, population = NULL,
          "The same template by the names of other collections' items: each runs it as ",
          "itself (`tfl_tpl(x, \"", a$alias[1L], "\", ...)`).\n\n",
          paste(c("| Alias | Collection | Item | Title |", "|---|---|---|---|", rows),
-               collapse = "\n"))
+               collapse = "\n"),
+         "\n\nSources:\n\n", paste(paste0("* ", .tpl_cite(unique(a$source))), collapse = "\n"),
+         "\n\n", .tpl_not_endorsed(unique(a$source)))
 }

@@ -698,9 +698,10 @@ tpl_summary <- function(ard, population, continuous = NULL, ..., codelists = NUL
 #' alias (`stf_t14_ae_soc_pt`) that runs its template wherever a template's
 #' name is taken ([tfl_tpl()], a report's `template: {name: }`, the
 #' template sheet), as itself.  `source` lists a collection's every item,
-#' whichever template writes it, and those none writes yet.  The items of
-#' FDA's collection follow the shapes of its guide; they are not endorsed
-#' or recommended by FDA.
+#' whichever template writes it, and those none writes yet.  The catalog
+#' keeps each item's number and a short title of our own, not the
+#' publications' text; the templates are tflspec's, not endorsed or
+#' recommended by FDA, PhUSE or CDISC.  The publications are cited below.
 #'
 #' @param source `NULL` (default): the templates.  A collection --
 #'   `"tflspec"`, `"FDA STF IG v2"`, `"PhUSE CSS"`, `"CDISC ARS"` -- for its
@@ -719,6 +720,7 @@ tpl_summary <- function(ard, population, continuous = NULL, ..., codelists = NUL
 #' @examples
 #' tfl_templates()
 #' head(tfl_templates(source = "FDA STF IG v2"))
+#' @eval .tpl_rd_sources()
 #' @export
 tfl_templates <- function(source = NULL) {
   if (!is.null(source)) {
