@@ -33,7 +33,10 @@ For each request you are given, in order:
 2. Save the whole answer as `ai/answers/<request>.md` (UTF-8). That is the
    request done: go on to the next one. One answer a request.
 3. What the request, its shell text and `ai/adam_summary.md` do not
-   settle: **do not look for it**. Take the likeliest choice and write it
+   settle: **do not look for it**. Above all, what a code stands for (a
+   numeric code and its text, `RACEN` and `RACE`): when the summary does
+   not show it (`[codes: ...]`), do not read the data for it; take it as
+   an assumption with the question "the codes' texts are not known". Take the likeliest choice and write it
    as an assumption with its `question` (the request's answer format says
    how), and go on. Not so for the analysis set and, for a dataset of
    parameters (PARAMCD), the parameter: they define the report. When the
@@ -47,6 +50,11 @@ For each request you are given, in order:
 When the requests you were given are done, **stop** and tell the person:
 the answers written, and the questions asked. Do not go on to other
 requests: the person asks for them.
+
+At most {{max_reads}} times for a request, open a file or run a command
+beyond the request and the files it names. When you reach it, write what
+is still unclear as assumptions and questions, write the request's
+answer, and go on to the next.
 
 If something does not work -- a file cannot be saved, a request cannot be
 read -- try once more. If it fails again, write what happened in

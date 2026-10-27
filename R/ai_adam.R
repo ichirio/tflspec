@@ -94,7 +94,10 @@
 #' @return A `tfl_ai_adam`: a list with `text` (one string, Markdown),
 #'   `variables` (one row a variable: `dataset`, `dataset_label`,
 #'   `variable`, `label`, `kind`, `levels` -- ` | ` between the values --
-#'   as [tfl_adam_metadata()] gives it) and `datasets` (`dataset`, `label`,
+#'   as [tfl_adam_metadata()] gives it; and `codes`: what each code of a
+#'   code variable stands for, `"1 = <65 | 2 = >=65"`, from its value labels
+#'   or the variable it pairs with -- `AGEGR1N` and `AGEGR1`, `ARMCD` and
+#'   `ARM`, `PARAMCD` and `PARAM` -- when each code has one text) and `datasets` (`dataset`, `label`,
 #'   `records`, `variables`).  `format()` gives the text.
 #' @seealso [tfl_ai_read_shell()], [tfl_ai_context()].
 #' @examples
@@ -121,6 +124,12 @@ tfl_ai_adam_summary <- function(path, datasets = NULL, max_levels = 15L, file = 
     meta$levels[i] <- .ai_md_levels(v, 4L * max_levels)
   }
   vars <- meta[c("dataset", "dataset_label", "variable", "label", "kind", "levels")]
+  # what a code stands for: its value labels (a SAS format read with the
+  # data), or the variable it pairs with (AGEGR1N / AGEGR1, ARMCD / ARM,
+  # PARAMCD / PARAM) when each code has one text
+  vars$codes <- unlist(lapply(seq_len(nrow(vars)), function(i) {
+    .ai_adam_codes(x[[vars$dataset[i]]], vars$variable[i], 4L * max_levels)
+  }), use.names = FALSE)
   ds <- data.frame(
     dataset = names(x),
     label = vapply(names(x), function(n) {
@@ -152,12 +161,44 @@ print.tfl_ai_adam <- function(x, ...) {
 .ai_adam_kind <- c(character = "char", numeric = "num", factor = "char", date = "date",
                    logical = "lgl")
 
+# A code variable's codes and what each stands for, "1 = <65 | 2 = >=65":
+# from its value labels (haven's `labels`), else from the variable it pairs
+# with -- `<X>N` and `<X>`, `<X>CD` and `<X>` -- when each code has one text
+# and there are `max` codes at most; NA else
+.ai_adam_codes <- function(d, v, max) {
+  x <- d[[v]]
+  show <- function(code, text) {
+    o <- order(code)
+    code <- code[o]; text <- text[o]
+    if (is.numeric(code)) code <- format(code, trim = TRUE, drop0trailing = TRUE)
+    paste(sprintf("%s = %s", code, text), collapse = " | ")
+  }
+  lab <- attr(x, "labels", exact = TRUE)
+  if (length(lab) && length(lab) <= max) return(show(unname(lab), names(lab)))
+  pair <- if (grepl("N$", v)) sub("N$", "", v) else if (grepl("CD$", v)) sub("CD$", "", v)
+  if (is.null(pair) || !nzchar(pair) || !pair %in% names(d) || identical(pair, v)) {
+    return(NA_character_)
+  }
+  y <- d[[pair]]
+  if (is.factor(y)) y <- as.character(y)
+  if (!is.character(y)) return(NA_character_)
+  ok <- !is.na(x) & !is.na(y) & nzchar(y)
+  m <- unique(data.frame(code = as.vector(x[ok]), text = y[ok], stringsAsFactors = FALSE))
+  if (!nrow(m) || nrow(m) > max || anyDuplicated(m$code) || anyDuplicated(m$text)) {
+    return(NA_character_)
+  }
+  show(m$code, m$text)
+}
+
 .ai_adam_text <- function(ds, vars) {
   head <- c(
     "# ADaM datasets: variables only",
     "",
-    paste("Each line: `NAME (type) Label: values`. The values are listed for a",
-          "character variable with few of them; no record is shown."),
+    paste0("Each line: `NAME (type) Label: values`. The values are listed for a ",
+           "character variable with few of them; no record is shown.",
+           if (any(!is.na(vars$codes))) paste0(
+             " A code variable shows what each code stands for: ",
+             "`[codes: 1 = <65 | 2 = >=65]`.")),
     "")
   body <- unlist(lapply(seq_len(nrow(ds)), function(i) {
     v <- vars[vars$dataset == ds$dataset[i], , drop = FALSE]
@@ -165,7 +206,8 @@ print.tfl_ai_adam <- function(x, ...) {
     kind[is.na(kind)] <- v$kind[is.na(kind)]
     lines <- paste0(v$variable, " (", kind, ")",
                     ifelse(is.na(v$label), "", paste0(" ", v$label)),
-                    ifelse(is.na(v$levels), "", paste0(": ", v$levels)))
+                    ifelse(is.na(v$levels), "", paste0(": ", v$levels)),
+                    ifelse(is.na(v$codes %||% NA), "", paste0(" [codes: ", v$codes, "]")))
     c(sprintf("## %s%s (%s records, %d variables)", ds$dataset[i],
               if (is.na(ds$label[i])) "" else paste0(": ", ds$label[i]),
               format(ds$records[i], big.mark = ","), ds$variables[i]),

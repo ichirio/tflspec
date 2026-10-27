@@ -76,11 +76,18 @@
 #'   the agent may open besides the requests and the files they name:
 #'   `"workbook"` (the TOC / SHELL workbook: each request then says where
 #'   its shells are in it) and `"adam"` (the ADaM), read with R only to
-#'   settle what a request leaves unclear.  `character()` (default): neither.
-#' @param references With `mode = "agent"`, reference documents the agent
-#'   may read for what a request leaves unclear (a SAP, a data guide):
-#'   their paths.  They are copied into `ai/references/` (the agent works in
-#'   the study folder) and `AGENTS.md` names them.  `NULL` (default): none.
+#'   settle what a request leaves unclear, with whatever tool the PC has
+#'   (PowerShell, Python, R).  `character()` (default): neither, and
+#'   `AGENTS.md` says not to open them.
+#' @param docs With `mode = "agent"`, documents the agent may read for what
+#'   a request leaves unclear (a SAP, a data guide): their paths.  They are
+#'   copied into `ai/docs/` (the agent works in the study folder) and
+#'   `AGENTS.md` names them; the agent reads no other document.  `NULL`
+#'   (default): none.
+#' @param agent_max_reads With `mode = "agent"` and `agent_run = FALSE`, how
+#'   many times for a request the agent may open a file or run a command
+#'   beyond the request and the files it names; then it writes what is
+#'   still unclear as assumptions and questions and goes on.  Default 3.
 #' @param toc_cols The TOC's columns, when its headers do not say them (as
 #'   [tfl_ai_read_shell()]): `c(output_id = "Output No", shell = "Shell",
 #'   title = c("Title 1", "Title 2"))`, a header's text or a column's letter.
@@ -179,7 +186,7 @@
 #'   `ai/agent_prompt.md`; else `NA`) and `agent_files` (what the agent may
 #'   open besides the requests and the files they name, from the study
 #'   folder: the workbook and the ADaM as `agent_reads` allows -- both with
-#'   `agent_run = TRUE` -- and the references; `character()` else).
+#'   `agent_run = TRUE` -- and the documents; `character()` else).
 #'   Its print is the workbook's summary and the next step.  The files are
 #'   UTF-8.
 #' @seealso The AI table guide: `system.file("ai", "tflspec-ai-table-guide.md",
@@ -212,7 +219,7 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
                            templates = TRUE, progress = NULL, toc_cols = NULL,
                            sheet_roles = NULL, unit = c("sheet", "toc"), area = NULL,
                            numbers = NULL, agent_run = FALSE, agent_reads = character(),
-                           references = NULL) {
+                           docs = NULL, agent_max_reads = 3L) {
   unit <- match.arg(unit)
   if (isTRUE(quiet)) {
     cl <- match.call()
@@ -243,9 +250,13 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
     .ard_stop(sprintf("tfl_ai_prepare(agent_reads = ): %s; it takes \"workbook\" and \"adam\".",
                       paste(sprintf("\"%s\"", bad), collapse = ", ")))
   }
-  if (length(references) && !all(file.exists(references))) {
-    .ard_stop(sprintf("tfl_ai_prepare(references = ): no file %s.",
-                      paste(sprintf("'%s'", references[!file.exists(references)]), collapse = ", ")))
+  if (!is.numeric(agent_max_reads) || length(agent_max_reads) != 1L || is.na(agent_max_reads) ||
+      agent_max_reads < 0) {
+    .ard_stop("tfl_ai_prepare(agent_max_reads = ): one number, 0 or more.")
+  }
+  if (length(docs) && !all(file.exists(docs))) {
+    .ard_stop(sprintf("tfl_ai_prepare(docs = ): no file %s.",
+                      paste(sprintf("'%s'", docs[!file.exists(docs)]), collapse = ", ")))
   }
   if (identical(mode, "agent") && identical(workbook, "text") &&
       (isTRUE(agent_run) || "workbook" %in% agent_reads)) {
@@ -363,21 +374,21 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
         .ai_write_text(txt, f)
         req$chars[i] <- nchar(paste(txt, collapse = "\n"))
       }
-      # the person's reference documents (a SAP, ...), copied into the study
+      # the documents the person gave (a SAP, ...), copied into the study
       # folder: the agent's workspace
       refs <- character()
-      if (length(references)) {
-        rd_ <- file.path(dir, "ai", "references")
+      if (length(docs)) {
+        rd_ <- file.path(dir, "ai", "docs")
         dir.create(rd_, recursive = TRUE, showWarnings = FALSE)
-        to <- file.path(rd_, basename(references))
-        file.copy(references, to, overwrite = TRUE)
-        refs <- file.path("ai", "references", basename(references))
+        to <- file.path(rd_, basename(docs))
+        file.copy(docs, to, overwrite = TRUE)
+        refs <- file.path("ai", "docs", basename(docs))
         files <- c(files, to)
       }
       files <- c(files, .ai_agent_files(dir, overwrite = overwrite && !isTRUE(add),
                                         templates = templates, adam = adam_at,
                                         book = book_at, run = agent_run, reads = agent_reads,
-                                        references = refs))
+                                        docs = refs, max_reads = agent_max_reads))
       # what the agent may open besides the requests and the files they name
       agent_files <- c(if ("workbook" %in% agent_reads || isTRUE(agent_run)) book_at,
                        if ("adam" %in% agent_reads || isTRUE(agent_run)) adam_at, refs)

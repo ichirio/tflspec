@@ -4,7 +4,7 @@
 \alias{tfl_ai_agent_prompt}
 \title{The message that asks a coding agent for the next requests}
 \usage{
-tfl_ai_agent_prompt(study_dir, requests = NULL, n = 2L)
+tfl_ai_agent_prompt(study_dir, requests = NULL, n = 10L)
 }
 \arguments{
 \item{study_dir}{The study folder.}
@@ -20,11 +20,12 @@ Its \code{requests} attribute names the requests it asks for.
 }
 \description{
 A study prepared for a coding agent (\code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}}\code{(mode = "agent")})
-asks it for one or two requests at a time: the first message,
-\code{ai/agent_prompt.md}, names the first ones, and the agent stops when they
-are answered.  This gives the message that asks for the next ones -- by
-default the first \code{n} requests, in \code{ai/requests/index.md}'s order, that
-have no answer in \verb{ai/answers/} yet -- to paste into the agent's chat.
+asks it for a few requests at a time: the first message,
+\code{ai/agent_prompt.md}, names the first two, and the agent stops when they
+are answered.  Once the person has checked those, this gives the message
+that asks for the next ones -- by default the first \code{n} (10) requests, in
+\code{ai/requests/index.md}'s order, that have no answer in \verb{ai/answers/} yet
+-- to paste into the agent's chat.
 What the agent does with them (answer only, or also run \code{run.R}) is what
 the study's \code{AGENTS.md} says (\code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}}'s \code{agent_run}).
 }

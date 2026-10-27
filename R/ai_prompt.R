@@ -645,7 +645,7 @@ print.tfl_ai_text <- function(x, ...) {
                           if (length(lab)) paste0(": ", lab[1L]) else ""), "")
     more <- nrow(v) - .ai_max_variables
     v <- v[seq_len(min(nrow(v), .ai_max_variables)), , drop = FALSE]
-    cols <- c("variable", "label", "kind", "levels")
+    cols <- c("variable", "label", "kind", "levels", "codes")
     cols <- cols[vapply(cols, function(cn) !all(is.na(v[[cn]])), NA)]
     t <- v[cols]
     names(t)[names(t) == "levels"] <- "values"

@@ -78,7 +78,7 @@ test_that("tfl_ai_context('toc', datasets = ) takes the metadata frame", {
   md <- tfl_adam_metadata(define = md_define())
   ctx <- tfl_ai_context("toc", datasets = md)
   expect_identical(names(ctx$datasets), c("dataset", "dataset_label", "variable",
-                                          "label", "kind", "levels"))
+                                          "label", "kind", "levels", "codes"))
   p <- paste(format(tfl_ai_prompt("toc", ctx)), collapse = "\n")
   expect_match(p, "## The datasets", fixed = TRUE)
   expect_match(p, "ADSL", fixed = TRUE)

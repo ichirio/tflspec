@@ -23,7 +23,10 @@ most (PARAMCD, PARCAT, AVISIT, the grades: four times as many).}
 A \code{tfl_ai_adam}: a list with \code{text} (one string, Markdown),
 \code{variables} (one row a variable: \code{dataset}, \code{dataset_label},
 \code{variable}, \code{label}, \code{kind}, \code{levels} -- \code{|} between the values --
-as \code{\link[=tfl_adam_metadata]{tfl_adam_metadata()}} gives it) and \code{datasets} (\code{dataset}, \code{label},
+as \code{\link[=tfl_adam_metadata]{tfl_adam_metadata()}} gives it; and \code{codes}: what each code of a
+code variable stands for, \code{"1 = <65 | 2 = >=65"}, from its value labels
+or the variable it pairs with -- \code{AGEGR1N} and \code{AGEGR1}, \code{ARMCD} and
+\code{ARM}, \code{PARAMCD} and \code{PARAM} -- when each code has one text) and \code{datasets} (\code{dataset}, \code{label},
 \code{records}, \code{variables}).  \code{format()} gives the text.
 }
 \description{

@@ -324,10 +324,10 @@ print.tfl_ai_context <- function(x, ...) {
 }
 
 # The datasets as one data frame, one row a variable: dataset,
-# dataset_label, variable, label, kind, levels (all character, NA = none).
+# dataset_label, variable, label, kind, levels, codes (all character, NA = none).
 .ai_ctx_datasets <- function(x, fn) {
   if (is.null(x)) return(NULL)
-  cols <- c("dataset", "dataset_label", "variable", "label", "kind", "levels")
+  cols <- c("dataset", "dataset_label", "variable", "label", "kind", "levels", "codes")
   if (inherits(x, "tfl_ai_adam")) x <- x$variables
   if (is.data.frame(x)) {
     # tfl_adam_metadata()'s own columns, which the prompt does not need

@@ -50,8 +50,11 @@ test_that("mode = \"agent\": the instructions, run.R, questions, decisions; toc.
   expect_identical(req1[3L], "")
   expect_identical(r$agent_files, character())
   expect_true(any(grepl("Do not run R or any other program.", ag, fixed = TRUE)))
+  expect_false(any(grepl("PowerShell", ag, fixed = TRUE)))
+  expect_true(any(grepl("the codes' texts are not known", ag, fixed = TRUE)))
+  expect_true(any(grepl("At most 3 times for a request", ag, fixed = TRUE)))
   # the next requests: those without an answer, two at a time
-  nx1 <- tfl_ai_agent_prompt(d)
+  nx1 <- tfl_ai_agent_prompt(d, n = 2L)
   expect_identical(as.character(nx1), r$agent_prompt)
   expect_identical(attr(nx1, "requests"), r$requests$request[1:2])
   for (q in r$requests$request[1:2]) writeLines("x", file.path(d, "ai", "answers", paste0(q, ".md")))
@@ -443,19 +446,22 @@ test_that("mode = \"agent\": what the agent may open -- agent_reads, references"
   sap <- file.path(root, "sap.txt")
   writeLines("The primary analysis set is the FAS.", sap)
   r <- tfl_ai_prepare(unit = "toc", d, ex_book(), adam = ad, quiet = TRUE, mode = "agent",
-                      agent_reads = "adam", references = sap)
+                      agent_reads = "adam", docs = sap)
   # the reference copied into the study folder; the ADaM allowed, the workbook not
-  expect_true(file.exists(file.path(d, "ai", "references", "sap.txt")))
-  expect_identical(r$agent_files[2L], "ai/references/sap.txt")
+  expect_true(file.exists(file.path(d, "ai", "docs", "sap.txt")))
+  expect_identical(r$agent_files[2L], "ai/docs/sap.txt")
   expect_length(r$agent_files, 2L)
   ag <- paste(readLines(file.path(d, "AGENTS.md"), encoding = "UTF-8"), collapse = "\n")
-  expect_match(ag, "`ai/references/sap.txt`", fixed = TRUE)
+  expect_match(ag, "`ai/docs/sap.txt`", fixed = TRUE)
   expect_match(ag, "- the ADaM in `", fixed = TRUE)
   expect_false(grepl("- the TOC / SHELL workbook", ag, fixed = TRUE))
-  expect_match(ag, "Run R only to read the files listed", fixed = TRUE)
+  expect_match(ag, "Run a command only to read the files listed", fixed = TRUE)
+  # any tool the PC has, not R alone; at most 3 reads a request
+  expect_match(ag, "PowerShell, Python, R", fixed = TRUE)
+  expect_match(ag, "At most 3 times for a request", fixed = TRUE)
   expect_false(grepl("{{", ag, fixed = TRUE))
-  expect_match(r$agent_prompt, "run R only to read those, install nothing", fixed = TRUE)
-  expect_identical(as.character(tfl_ai_agent_prompt(d)), r$agent_prompt)
+  expect_match(r$agent_prompt, "run a command only to read those, install nothing", fixed = TRUE)
+  expect_identical(as.character(tfl_ai_agent_prompt(d, n = 2L)), r$agent_prompt)
   req1 <- readLines(file.path(d, r$requests$file[1L]), encoding = "UTF-8")
   expect_match(req1[3L], "you may also read the ADaM in `", fixed = TRUE)
   # what it does not take
@@ -463,6 +469,9 @@ test_that("mode = \"agent\": what the agent may open -- agent_reads, references"
                               quiet = TRUE, mode = "agent", agent_reads = "sas"),
                "agent_reads = ): \"sas\"", fixed = TRUE)
   expect_error(tfl_ai_prepare(unit = "toc", file.path(root, "s3"), ex_book(), adam = ad,
-                              quiet = TRUE, mode = "agent", references = file.path(root, "none.pdf")),
-               "references = ): no file", fixed = TRUE)
+                              quiet = TRUE, mode = "agent", docs = file.path(root, "none.pdf")),
+               "docs = ): no file", fixed = TRUE)
+  expect_error(tfl_ai_prepare(unit = "toc", file.path(root, "s4"), ex_book(), adam = ad,
+                              quiet = TRUE, mode = "agent", agent_max_reads = "a"),
+               "agent_max_reads = ): one number", fixed = TRUE)
 })

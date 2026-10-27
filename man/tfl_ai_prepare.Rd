@@ -35,7 +35,8 @@ tfl_ai_prepare(
   numbers = NULL,
   agent_run = FALSE,
   agent_reads = character(),
-  references = NULL
+  docs = NULL,
+  agent_max_reads = 3L
 )
 }
 \arguments{
@@ -163,12 +164,20 @@ settle a question.}
 the agent may open besides the requests and the files they name:
 \code{"workbook"} (the TOC / SHELL workbook: each request then says where
 its shells are in it) and \code{"adam"} (the ADaM), read with R only to
-settle what a request leaves unclear.  \code{character()} (default): neither.}
+settle what a request leaves unclear, with whatever tool the PC has
+(PowerShell, Python, R).  \code{character()} (default): neither, and
+\code{AGENTS.md} says not to open them.}
 
-\item{references}{With \code{mode = "agent"}, reference documents the agent
-may read for what a request leaves unclear (a SAP, a data guide):
-their paths.  They are copied into \verb{ai/references/} (the agent works in
-the study folder) and \code{AGENTS.md} names them.  \code{NULL} (default): none.}
+\item{docs}{With \code{mode = "agent"}, documents the agent may read for what
+a request leaves unclear (a SAP, a data guide): their paths.  They are
+copied into \verb{ai/docs/} (the agent works in the study folder) and
+\code{AGENTS.md} names them; the agent reads no other document.  \code{NULL}
+(default): none.}
+
+\item{agent_max_reads}{With \code{mode = "agent"} and \code{agent_run = FALSE}, how
+many times for a request the agent may open a file or run a command
+beyond the request and the files it names; then it writes what is
+still unclear as assumptions and questions and goes on.  Default 3.}
 }
 \value{
 A \code{tfl_ai_prepared}: a list with \code{requests} (one row a request:
@@ -209,7 +218,7 @@ copy of the study says the same), also written to
 \code{ai/agent_prompt.md}; else \code{NA}) and \code{agent_files} (what the agent may
 open besides the requests and the files they name, from the study
 folder: the workbook and the ADaM as \code{agent_reads} allows -- both with
-\code{agent_run = TRUE} -- and the references; \code{character()} else).
+\code{agent_run = TRUE} -- and the documents; \code{character()} else).
 Its print is the workbook's summary and the next step.  The files are
 UTF-8.
 }

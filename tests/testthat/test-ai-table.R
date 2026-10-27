@@ -113,6 +113,19 @@ test_that("the ADaM summary: variables, labels, types, short value lists, no rec
                    "ADSL")
   expect_error(tfl_ai_adam_summary(file.path(d, "adam"), datasets = "ADXX"), "no dataset ADXX")
   expect_output(print(s), "5 dataset(s)", fixed = TRUE)
+  # what a code stands for: from the variable it pairs with, or its value labels
+  expect_identical(v$codes[v$dataset == "ADSL" & v$variable == "AGEGR1N"], "1 = <65 | 2 = >=65")
+  expect_identical(v$codes[v$dataset == "ADSL" & v$variable == "ARMCD"],
+                   "CTRL = Control | DRUGX = Drug X")
+  expect_true(is.na(v$codes[v$dataset == "ADSL" & v$variable == "SEX"]))
+  expect_match(format(s), "AGEGR1N (num) Pooled Age Group 1 (N) [codes: 1 = <65 | 2 = >=65]",
+               fixed = TRUE)
+  x <- data.frame(SEXN = c(1, 2, 1))
+  attr(x$SEXN, "labels") <- c(Male = 1, Female = 2)
+  expect_identical(tflspec:::.ai_adam_codes(x, "SEXN", 10L), "1 = Male | 2 = Female")
+  # a code with two texts: none shown
+  y <- data.frame(RACEN = c(1, 1), RACE = c("A", "B"))
+  expect_true(is.na(tflspec:::.ai_adam_codes(y, "RACEN", 10L)))
 })
 
 test_that("tfl_ai_study_init(): the datasets, ADSL's analysis sets, the defaults", {
