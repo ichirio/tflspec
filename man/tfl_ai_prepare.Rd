@@ -32,7 +32,10 @@ tfl_ai_prepare(
   sheet_roles = NULL,
   unit = c("sheet", "toc"),
   area = NULL,
-  numbers = NULL
+  numbers = NULL,
+  agent_run = FALSE,
+  agent_reads = character(),
+  references = NULL
 )
 }
 \arguments{
@@ -51,8 +54,9 @@ guess is wrong, the sheets to keep.}
 \code{\link[=tfl_ai_write_requests]{tfl_ai_write_requests()}}: the reports a request holds (\code{NULL}, the
 default: 1 with \code{mode = "agent"}, 3 in a chat), the language of
 the assumptions, how the workbook reaches the chat (\code{"text"},
-\code{"attach"}, \code{"both"}, \code{"file"}; with \code{mode = "agent"}, \code{"text"} is
-\code{"file"}: the text and each shell's place in the workbook file), the
+\code{"attach"}, \code{"both"}, \code{"file"}; with \code{mode = "agent"} and
+\code{agent_run = TRUE}, \code{"text"} is \code{"file"}: the text and each shell's
+place in the workbook file), the
 instructions in each request or once, a request's length at most.}
 
 \item{overwrite}{\code{TRUE} to start the study folder again
@@ -144,6 +148,27 @@ by a dry run), and read by a later call; given again, it goes over the
 saved rows (a row of the same sheet and number replaced, \code{NA} taking
 it out) and the file keeps the result.  \code{NULL} (default): the saved file, if any.
 With \code{unit = "sheet"} only.}
+
+\item{agent_run}{With \code{mode = "agent"}, what the agent does.  \code{FALSE}
+(default): it writes each answer and stops -- it reads the request and
+the files the request names only, looks for nothing else, runs and
+installs nothing, and takes what they do not settle as an assumption
+with its \code{question}; the person checks the answers (tflplanner's "Check
+all answers", \code{\link[=tfl_ai_collect_answers]{tfl_ai_collect_answers()}}).  \code{TRUE}: it also runs
+\code{run.R} after each answer, reads \code{ai/status.md} and repairs (three tries
+at most), and may read the TOC / SHELL workbook and the ADaM with R to
+settle a question.}
+
+\item{agent_reads}{With \code{mode = "agent"} and \code{agent_run = FALSE}, what
+the agent may open besides the requests and the files they name:
+\code{"workbook"} (the TOC / SHELL workbook: each request then says where
+its shells are in it) and \code{"adam"} (the ADaM), read with R only to
+settle what a request leaves unclear.  \code{character()} (default): neither.}
+
+\item{references}{With \code{mode = "agent"}, reference documents the agent
+may read for what a request leaves unclear (a SAP, a data guide):
+their paths.  They are copied into \verb{ai/references/} (the agent works in
+the study folder) and \code{AGENTS.md} names them.  \code{NULL} (default): none.}
 }
 \value{
 A \code{tfl_ai_prepared}: a list with \code{requests} (one row a request:
@@ -181,7 +206,10 @@ could not find -- no TOC, a report with no shell -- and what to pass),
 \code{next_steps} (what to do next) and \code{agent_prompt} (with \code{mode = "agent"}:
 the first message to the agent, its paths from the study folder (a
 copy of the study says the same), also written to
-\code{ai/agent_prompt.md}; else \code{NA}).
+\code{ai/agent_prompt.md}; else \code{NA}) and \code{agent_files} (what the agent may
+open besides the requests and the files they name, from the study
+folder: the workbook and the ADaM as \code{agent_reads} allows -- both with
+\code{agent_run = TRUE} -- and the references; \code{character()} else).
 Its print is the workbook's summary and the next step.  The files are
 UTF-8.
 }
@@ -198,7 +226,7 @@ has none) and \code{\link[=tfl_ai_write_requests]{tfl_ai_write_requests()}}.  No
 \section{For a coding agent}{
  \code{mode = "agent"}:
 The requests for an agent (GitHub Copilot's agent in VS Code, and the
-like) that works through all of them without stopping.  Besides the
+like) that writes the answers into \verb{ai/answers/}.  Besides the
 requests (each starting with the agent's steps), and what every request
 would repeat written once for the agent to read -- \code{ai/instructions-table.md}
 and \code{ai/instructions-figure.md} (the instructions and the schema),
@@ -206,18 +234,15 @@ and \code{ai/instructions-figure.md} (the instructions and the schema),
 naming the ones likely for its reports), \code{ai/adam_summary.md} and
 \verb{spec/}, each request naming them -- the study folder gets
 \code{AGENTS.md} and \code{.github/copilot-instructions.md} (the same
-instructions: answer each request into \verb{ai/answers/}, run \code{run.R}, read
-\code{ai/status.md}, repair; a question it cannot settle taken as an
-assumption with its \code{question}, never a stop; the ADaM read with R
-only to settle a question the summary does not),
+instructions; see \code{agent_run}),
 \code{run.R} (\code{\link[=tfl_ai_run]{tfl_ai_run()}}: collect, ARD, RTF, \code{ai/status.md}, the
 questions gathered into \code{ai/questions.md}), \code{ai/questions.md} (for the
 person's answers) and \code{ai/decisions.md} (what the reports follow; the
 agent moves an answered question there, then redoes the reports it
 touches -- the second round).  \code{questions.md} and \code{decisions.md} are never
-written over.  The agent works in the study folder with the company's
-approved AI: it may read the ADaM; a chat (\code{mode = "chat"}) is sent the
-ADaM's summary only.
+written over.  The first message (\code{ai/agent_prompt.md}) asks for the
+first one or two requests only, then a stop: the person asks for the
+rest.
 }
 
 \examples{

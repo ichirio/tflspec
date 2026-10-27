@@ -179,21 +179,24 @@ tfl_ai_run(".")   # もう一度読み、帳票ごとに ARD と RTF: ai/output/
 
 ## コーディングエージェントで（VS Code の GitHub Copilot）
 
-エージェントが依頼を止まらずに全部こなし、自分で決められないことは 1 つの
+エージェントは渡された依頼の回答を書いて止まり、自分で決められないことは 1 つの
 ファイルにまとめます。
 
 1. 会社が試験データに使うことを認めた AI を使う。チャット（`mode = "chat"`）に
-   送るのは ADaM の要約だけ。エージェントは試験フォルダで作業し、要約で決まらない
-   こと（データの値の書き方、変数の有無、群の水準）を確かめるときだけ、R で ADaM を
-   読む（データのファイルをエディタで開かない）。
+   送るのは ADaM の要約だけ。エージェントも、依頼とそこに名前のあるファイルだけを
+   読みます（`agent_run = TRUE` の時は、要約で決まらないことを確かめるときだけ R で
+   ADaM を読む。データのファイルをエディタで開かない）。
 2. `tfl_ai_prepare("mystudy", "mystudy/TOC_SHELL.xlsx", adam = "C:/data/ABC-123/adam", study_id = "ABC-123", mode = "agent")`。
    依頼のほかに、`AGENTS.md` と `.github/copilot-instructions.md`（エージェント
    への指示）、`run.R`（`tfl_ai_run()`）、`ai/questions.md`、`ai/decisions.md` が
    できます。
-3. VS Code で `mystudy` を開き、エージェントのチャットに「Follow AGENTS.md: do
-   every request of ai/requests/index.md.」（上のフォルダを開いたときは
-   「Follow mystudy/AGENTS.md ...」）。依頼ごとに回答を保存し、`run.R` を実行し、
-   `ai/status.md` を読んで直し、次へ進みます。
+3. VS Code で `mystudy` を開き、エージェントのチャットに `ai/agent_prompt.md` の
+   文を渡します（最初の 1〜2 件の依頼だけ）。エージェントは依頼ごとに回答を保存して
+   止まります。何も実行せず、パッケージも入れません。回答は tflplanner の
+   「すべての回答を検査」（`tfl_ai_collect_answers()`）で確かめると、YAML の下書きが
+   できます。続きは「Do ai/requests/<依頼>.md and ...」と頼みます。
+   `tfl_ai_prepare(agent_run = TRUE)` にすると、エージェントは回答のたびに `run.R` を
+   実行し、`ai/status.md` を読んで直します。
 4. 終わったら `ai/questions.md` に答える（複数の帳票の同じ疑問は 1 つにまとまり、
    関わる帳票が並びます）。帳票の一覧の直し（`ai/expected_outputs.csv`、
    `tfl_ai_expected_write()`）があれば、それも書きます。AI の仮定（`tfl_ai_assumptions()`）

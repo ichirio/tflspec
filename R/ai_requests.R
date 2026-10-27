@@ -510,9 +510,9 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
     if (!agent && workbook %in% c("attach", "both"))
       c(sprintf("Attach `%s` (the TOC / SHELL workbook) to each chat with its request.", book), ""),
     if (agent) c(
-      "For the agent (AGENTS.md; its first message is `ai/agent_prompt.md`): answer each",
-      "request in this order, save the whole answer as `ai/answers/<request>.md` and run",
-      "`Rscript run.R <request>`; then read `ai/status.md`.")
+      "For the agent (AGENTS.md; its first message is `ai/agent_prompt.md`): answer the",
+      "requests it is given, in this order, and save the whole answer as",
+      "`ai/answers/<request>.md`; then do as AGENTS.md says.")
     else c(
       "Paste each file into a new chat as one message; save the whole answer as",
       sprintf("`ai/answers/<request>.md`, then run `tfl_ai_collect_answers(\"%s\")`.", ".")),

@@ -92,8 +92,9 @@ test_that("tfl_ai_prepare(): a list for a screen; dry_run writes nothing; the AD
   dry <- suppressMessages(tfl_ai_prepare(unit = "toc", d, book(), study_id = "XYZ-ONC-01", dry_run = TRUE))
   expect_s3_class(dry, "tfl_ai_prepared")
   expect_named(dry, c("requests", "toc", "shells", "counts", "sheets", "numbers", "adam", "files", "hint",
-                      "next_steps", "dry_run", "mode", "agent_prompt", "templates", "workbook"))
+                      "next_steps", "dry_run", "mode", "agent_prompt", "agent_files", "templates", "workbook"))
   expect_true(is.na(dry$agent_prompt))
+  expect_identical(dry$agent_files, character())
   expect_false(file.exists(file.path(d, "study.yml")))
   expect_false(dir.exists(file.path(d, "ai")))
   expect_length(dry$files, 0L)

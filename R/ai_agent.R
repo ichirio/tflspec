@@ -1,10 +1,11 @@
 # ============================================================================
 #  tfl_ai_prepare(mode = "agent"): the study folder as a coding agent's work
 # ----------------------------------------------------------------------------
-#  A coding agent (GitHub Copilot's agent in VS Code, and the like) works
-#  through every request of the study without stopping: it answers a
-#  request into ai/answers/, runs run.R (tfl_ai_run(): collect, ARD, RTF,
-#  ai/status.md) and repairs what the status says.  What it cannot settle
+#  A coding agent (GitHub Copilot's agent in VS Code, and the like) answers
+#  the requests it is given into ai/answers/ and stops; the person checks
+#  the answers (tflplanner, tfl_ai_collect_answers()).  With
+#  tfl_ai_prepare(agent_run = TRUE) it also runs run.R (tfl_ai_run():
+#  collect, ARD, RTF, ai/status.md) and repairs what the status says.  What it cannot settle
 #  it takes a guess on and asks as an assumption's `question`; tfl_ai_run()
 #  gathers the questions into ai/questions.md -- one question asked by
 #  several reports once, the reports listed -- for the person to answer.
@@ -22,7 +23,8 @@
 # SHELL workbook are, from the study folder, as AGENTS.md says them.  The
 # paths written.
 .ai_agent_files <- function(dir, overwrite = FALSE, templates = FALSE, adam = NULL,
-                            book = NULL) {
+                            book = NULL, run = FALSE, reads = character(),
+                            references = character()) {
   src <- system.file("ai", "agent", package = "tflspec")
   rd <- function(f) paste(readLines(file.path(src, f), warn = FALSE, encoding = "UTF-8"),
                           collapse = "\n")
@@ -33,9 +35,34 @@
     .ai_write_text(text, f)
     out <<- c(out, f)
   }
-  agents <- rd("AGENTS.md")
+  # the agent answers only (the person checks the answers), or answers,
+  # runs run.R and repairs (`run`)
+  agents <- rd(if (isTRUE(run)) "AGENTS-run.md" else "AGENTS.md")
   place <- function(p) if (length(p) && !is.na(p[1L])) sprintf("`%s`", p[1L]) else
     "(where the request says)"
+  if (!isTRUE(run)) {
+    # what an agent that answers only may open besides the requests: the
+    # workbook and the ADaM when the person allows them, the references
+    more <- c(
+      if ("workbook" %in% reads) paste0(
+        "\n- the TOC / SHELL workbook {{workbook}}, to check what a shell's text leaves ",
+        "unclear (its shape, merged cells, a text that looks cut): read only the place ",
+        "the request names, with R: ",
+        "`Rscript -e \"cat(format(tflspec::tfl_ai_read_shell('<file>', outputs = '<id>')))\"`;"),
+      if ("adam" %in% reads) paste0(
+        "\n- the ADaM in {{adam}}, only to settle what `ai/adam_summary.md` does not (a ",
+        "value as the data write it, a variable, an arm's levels): read it with R, never ",
+        "in the editor, and print only what settles it, not subjects' records: ",
+        "`Rscript -e \"d <- haven::read_xpt('<file>'); print(table(d[['<variable>']]))\"`;"),
+      if (length(references)) paste0(
+        "\n- the reference documents the person gave, for what a request leaves unclear: ",
+        paste(sprintf("`%s`", references), collapse = ", "), "."))
+    agents <- .ai_fill(agents, list(
+      reads = paste(more, collapse = ""),
+      run_r = if (any(c("workbook", "adam") %in% reads)) {
+        "Run R only to read the files listed under \"What you read\"; nothing else."
+      } else "Do not run R or any other program."))
+  }
   agents <- .ai_fill(agents, list(workbook = place(book), adam = place(adam)))
   # with templates: answer with one where it fits (each request lists them)
   if (isTRUE(templates)) agents <- paste(agents, rd("AGENTS-templates.md"), sep = "\n\n")
@@ -48,10 +75,31 @@
 }
 
 # The lines a request starts with in agent mode: the steps, so a request
-# read alone says them, and where the ADaM and the workbook are (`adam`,
-# `book`: from the study folder)
-.ai_agent_request_head <- function(request, adam = NULL, book = NULL) {
+# read alone says them.  `run`: the agent also runs run.R and repairs, and
+# may check the ADaM and the workbook (`adam`, `book`: from the study
+# folder); else it writes the answer alone.
+.ai_agent_request_head <- function(request, adam = NULL, book = NULL, run = FALSE,
+                                   reads = character()) {
   at <- function(p) length(p) && !is.na(p[1L])
+  if (!isTRUE(run)) {
+    # the answer alone: from this request and the files it names (and the
+    # workbook / the ADaM, when the person allows them: `reads`)
+    allowed <- c(if ("workbook" %in% reads && at(book))
+                   sprintf("the TOC / SHELL workbook `%s`", book[1L]),
+                 if ("adam" %in% reads && at(adam)) sprintf("the ADaM in `%s`", adam[1L]))
+    return(c("<!-- tflspec: agent mode -->",
+      paste0("> **For the agent** (AGENTS.md): answer this request with its one `yaml` block and ",
+             "save the whole answer as `ai/answers/", request, ".md`; that is all. Read ",
+             "`ai/decisions.md` first and follow it. Read only this request and the files it ",
+             "names; do not look for others, install nothing. What they do not ",
+             "settle: take the likeliest choice and write it as an assumption with its `question`."),
+      if (length(allowed)) paste0(
+        "> From this study folder, you may also read ", paste(allowed, collapse = " and "),
+        ", with R, to check what this request leaves unclear -- above all a shell's shape ",
+        "(several parts, a part that writes only what differs, merged cells) -- as AGENTS.md ",
+        "says. When you cannot open them, decide from this request alone."),
+      "", "---", ""))
+  }
   places <- c(if (at(book)) sprintf("the TOC / SHELL workbook is `%s`", book[1L]),
               if (at(adam)) sprintf("the ADaM is in `%s`", adam[1L]))
   c("<!-- tflspec: agent mode -->",
@@ -743,4 +791,92 @@ tfl_ai_answer_questions <- function(study_dir, answers) {
   }
   .ai_write_text(lines, f)
   invisible(normalizePath(f, winslash = "/"))
+}
+
+# The message that asks the agent for `requests` (their names) of the study
+# folder `study` (its name: the paths are from it).  `run`: it also runs
+# run.R and repairs; `templates`: it answers with a template where one fits.
+.ai_agent_prompt <- function(study, requests, run = FALSE, templates = FALSE,
+                             reads = FALSE) {
+  which_ <- paste(sprintf("ai/requests/%s.md", requests), collapse = " and ")
+  paste0("The paths are from the study folder ", study,
+         " (the one holding AGENTS.md; with a folder above it open, put the ",
+         "study folder before each). Follow AGENTS.md. Do only ", which_, ", ",
+         if (isTRUE(run)) {
+           paste0("in that order: save each answer as ai/answers/<request>.md and run ",
+                  "`Rscript run.R <request>` after it, then read ai/status.md and repair. ")
+         } else {
+           paste0("in that order: write each answer and save it as ai/answers/<request>.md. ",
+                  "Read only the request and the files it names (AGENTS.md lists them); ",
+                  if (isTRUE(reads)) "run R only to read those, install nothing. "
+                  else "run nothing, install nothing. ")
+         },
+         if (isTRUE(templates)) "Answer a report with a template where one fits (AGENTS.md). ",
+         "What you cannot settle, write as an assumption with its question. Then stop ",
+         "and tell me the answers written and the questions asked.")
+}
+
+#' The message that asks a coding agent for the next requests
+#'
+#' A study prepared for a coding agent ([tfl_ai_prepare()]`(mode = "agent")`)
+#' asks it for one or two requests at a time: the first message,
+#' `ai/agent_prompt.md`, names the first ones, and the agent stops when they
+#' are answered.  This gives the message that asks for the next ones -- by
+#' default the first `n` requests, in `ai/requests/index.md`'s order, that
+#' have no answer in `ai/answers/` yet -- to paste into the agent's chat.
+#' What the agent does with them (answer only, or also run `run.R`) is what
+#' the study's `AGENTS.md` says ([tfl_ai_prepare()]'s `agent_run`).
+#'
+#' @param study_dir The study folder.
+#' @param requests The requests to ask for, by name; `NULL` (default): the
+#'   next `n` without an answer.
+#' @param n How many requests, when `requests` is `NULL`.
+#' @return The message, a string; `NA` when every request has an answer.
+#'   Its `requests` attribute names the requests it asks for.
+#' @seealso [tfl_ai_prepare()], [tfl_ai_requests()].
+#' @examples
+#' \donttest{
+#' # (over 5 seconds: the workbook read, the ADaM written, every request)
+#' ex <- system.file("ai", "example", package = "tflspec")
+#' d <- file.path(tempdir(), "agent-prompt-study")
+#' dir.create(file.path(d, "adam"), recursive = TRUE, showWarnings = FALSE)
+#' if (requireNamespace("haven", quietly = TRUE)) {
+#'   for (x in c("adsl", "adae", "adrs", "adlb", "adtte")) {
+#'     df <- getExportedValue("tflspec", x)
+#'     for (v in names(df)) if (is.factor(df[[v]])) df[[v]] <- as.character(df[[v]])
+#'     haven::write_xpt(df, file.path(d, "adam", paste0(x, ".xpt")))
+#'   }
+#'   invisible(tfl_ai_prepare(d, file.path(ex, "onco_toc_shell.xlsx"), mode = "agent",
+#'                            quiet = TRUE, overwrite = TRUE))
+#'   cat(tfl_ai_agent_prompt(d))
+#' }
+#' unlink(d, recursive = TRUE)
+#' }
+#' @export
+tfl_ai_agent_prompt <- function(study_dir, requests = NULL, n = 2L) {
+  idx <- tfl_ai_requests(study_dir)
+  if (!nrow(idx)) {
+    .ard_stop(sprintf("%s has no requests: run tfl_ai_prepare(mode = \"agent\") first.",
+                      study_dir))
+  }
+  if (is.null(requests)) {
+    answered <- file.exists(file.path(study_dir, "ai", "answers", paste0(idx$request, ".md")))
+    requests <- utils::head(idx$request[!answered], n)
+    if (!length(requests)) return(structure(NA_character_, requests = character()))
+  } else {
+    bad <- setdiff(requests, idx$request)
+    if (length(bad)) {
+      .ard_stop(sprintf("No request %s in %s/ai/requests.",
+                        paste(sprintf("'%s'", bad), collapse = ", "), study_dir))
+    }
+  }
+  # what the study's AGENTS.md says: the answers alone, or run.R too; templates
+  ag <- file.path(study_dir, "AGENTS.md")
+  txt <- if (file.exists(ag)) readLines(ag, warn = FALSE, encoding = "UTF-8") else character()
+  run <- any(grepl("Rscript run.R <request>", txt, fixed = TRUE))
+  tpl <- any(grepl("## Templates first", txt, fixed = TRUE))
+  reads <- any(grepl("Run R only to read the files", txt, fixed = TRUE))
+  structure(.ai_agent_prompt(basename(normalizePath(study_dir, mustWork = FALSE)), requests,
+                             run = run, templates = tpl, reads = reads),
+            requests = requests)
 }

@@ -190,22 +190,26 @@ show the code.
 
 ## With a coding agent (GitHub Copilot in VS Code)
 
-An agent works through every request without stopping, and gathers what it
-cannot settle into one file for you.
+An agent writes the answers to the requests it is given and stops, and
+gathers what it cannot settle into one file for you.
 
 1. Use the AI your company approves for the study's data. A chat
-   (`mode = "chat"`) is sent the ADaM's summary only; the agent works in the
-   study folder and may read the ADaM with R -- only to settle a question
-   the summary does not (a value as the data write it, a variable, an
-   arm's levels), never opening a data file in the editor.
+   (`mode = "chat"`) is sent the ADaM's summary only; so is the agent: it
+   reads the requests and the files they name, and nothing else. (With
+   `agent_run = TRUE` it may read the ADaM with R to settle a question the
+   summary does not, never opening a data file in the editor.)
 2. `tfl_ai_prepare("mystudy", "mystudy/TOC_SHELL.xlsx", adam = "C:/data/ABC-123/adam", study_id = "ABC-123", mode = "agent")`.
    Besides the requests, the folder gets `AGENTS.md` and
    `.github/copilot-instructions.md` (the agent's instructions), `run.R`
    (`tfl_ai_run()`), `ai/questions.md` and `ai/decisions.md`.
-3. Open `mystudy` in VS Code, and in the agent's chat: *"Follow AGENTS.md:
-   do every request of ai/requests/index.md."* (A folder above it open:
-   *"Follow mystudy/AGENTS.md ..."*.) For each request it saves an answer,
-   runs `run.R`, reads `ai/status.md` and repairs, then goes on.
+3. Open `mystudy` in VS Code, and give the agent's chat the text of
+   `ai/agent_prompt.md`: the first one or two requests. It saves an answer
+   for each and stops; it runs nothing and installs nothing. Check the
+   answers -- tflplanner's "Check all answers" (`tfl_ai_collect_answers()`)
+   writes the YAML drafts -- then ask for the next requests ("Do
+   ai/requests/<request>.md and ..."). With
+   `tfl_ai_prepare(agent_run = TRUE)`, the agent also runs `run.R` after
+   each answer, reads `ai/status.md` and repairs.
 4. When it is done, answer `ai/questions.md` (one question asked by several
    reports is there once, with the reports). Correct the list of reports
    when it needs it (`tfl_ai_outputs()`, `tfl_ai_expected_write()`:

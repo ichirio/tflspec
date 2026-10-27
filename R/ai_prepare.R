@@ -14,7 +14,7 @@
 #'
 #' @section For a coding agent: `mode = "agent"`:
 #' The requests for an agent (GitHub Copilot's agent in VS Code, and the
-#' like) that works through all of them without stopping.  Besides the
+#' like) that writes the answers into `ai/answers/`.  Besides the
 #' requests (each starting with the agent's steps), and what every request
 #' would repeat written once for the agent to read -- `ai/instructions-table.md`
 #' and `ai/instructions-figure.md` (the instructions and the schema),
@@ -22,18 +22,15 @@
 #' naming the ones likely for its reports), `ai/adam_summary.md` and
 #' `spec/`, each request naming them -- the study folder gets
 #' `AGENTS.md` and `.github/copilot-instructions.md` (the same
-#' instructions: answer each request into `ai/answers/`, run `run.R`, read
-#' `ai/status.md`, repair; a question it cannot settle taken as an
-#' assumption with its `question`, never a stop; the ADaM read with R
-#' only to settle a question the summary does not),
+#' instructions; see `agent_run`),
 #' `run.R` ([tfl_ai_run()]: collect, ARD, RTF, `ai/status.md`, the
 #' questions gathered into `ai/questions.md`), `ai/questions.md` (for the
 #' person's answers) and `ai/decisions.md` (what the reports follow; the
 #' agent moves an answered question there, then redoes the reports it
 #' touches -- the second round).  `questions.md` and `decisions.md` are never
-#' written over.  The agent works in the study folder with the company's
-#' approved AI: it may read the ADaM; a chat (`mode = "chat"`) is sent the
-#' ADaM's summary only.
+#' written over.  The first message (`ai/agent_prompt.md`) asks for the
+#' first one or two requests only, then a stop: the person asks for the
+#' rest.
 #'
 #' @param dir The study folder.
 #' @param toc The TOC / SHELL workbook (`.xlsx` or `.xlsm`).
@@ -45,8 +42,9 @@
 #'   [tfl_ai_write_requests()]: the reports a request holds (`NULL`, the
 #'   default: 1 with `mode = "agent"`, 3 in a chat), the language of
 #'   the assumptions, how the workbook reaches the chat (`"text"`,
-#'   `"attach"`, `"both"`, `"file"`; with `mode = "agent"`, `"text"` is
-#'   `"file"`: the text and each shell's place in the workbook file), the
+#'   `"attach"`, `"both"`, `"file"`; with `mode = "agent"` and
+#'   `agent_run = TRUE`, `"text"` is `"file"`: the text and each shell's
+#'   place in the workbook file), the
 #'   instructions in each request or once, a request's length at most.
 #' @param overwrite `TRUE` to start the study folder again
 #'   ([tfl_ai_study_init()] over its `study.yml` and `spec/`).  The requests
@@ -65,6 +63,24 @@
 #'   the result's `hint` and `next_steps` itself.
 #' @param mode `"chat"` (default): requests to paste into a chat, one at a
 #'   time.  `"agent"`: for a coding agent -- see *For a coding agent*.
+#' @param agent_run With `mode = "agent"`, what the agent does.  `FALSE`
+#'   (default): it writes each answer and stops -- it reads the request and
+#'   the files the request names only, looks for nothing else, runs and
+#'   installs nothing, and takes what they do not settle as an assumption
+#'   with its `question`; the person checks the answers (tflplanner's "Check
+#'   all answers", [tfl_ai_collect_answers()]).  `TRUE`: it also runs
+#'   `run.R` after each answer, reads `ai/status.md` and repairs (three tries
+#'   at most), and may read the TOC / SHELL workbook and the ADaM with R to
+#'   settle a question.
+#' @param agent_reads With `mode = "agent"` and `agent_run = FALSE`, what
+#'   the agent may open besides the requests and the files they name:
+#'   `"workbook"` (the TOC / SHELL workbook: each request then says where
+#'   its shells are in it) and `"adam"` (the ADaM), read with R only to
+#'   settle what a request leaves unclear.  `character()` (default): neither.
+#' @param references With `mode = "agent"`, reference documents the agent
+#'   may read for what a request leaves unclear (a SAP, a data guide):
+#'   their paths.  They are copied into `ai/references/` (the agent works in
+#'   the study folder) and `AGENTS.md` names them.  `NULL` (default): none.
 #' @param toc_cols The TOC's columns, when its headers do not say them (as
 #'   [tfl_ai_read_shell()]): `c(output_id = "Output No", shell = "Shell",
 #'   title = c("Title 1", "Title 2"))`, a header's text or a column's letter.
@@ -160,7 +176,10 @@
 #'   `next_steps` (what to do next) and `agent_prompt` (with `mode = "agent"`:
 #'   the first message to the agent, its paths from the study folder (a
 #'   copy of the study says the same), also written to
-#'   `ai/agent_prompt.md`; else `NA`).
+#'   `ai/agent_prompt.md`; else `NA`) and `agent_files` (what the agent may
+#'   open besides the requests and the files they name, from the study
+#'   folder: the workbook and the ADaM as `agent_reads` allows -- both with
+#'   `agent_run = TRUE` -- and the references; `character()` else).
 #'   Its print is the workbook's summary and the next step.  The files are
 #'   UTF-8.
 #' @seealso The AI table guide: `system.file("ai", "tflspec-ai-table-guide.md",
@@ -192,7 +211,8 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
                            mode = c("chat", "agent"), shells = NULL, add = FALSE,
                            templates = TRUE, progress = NULL, toc_cols = NULL,
                            sheet_roles = NULL, unit = c("sheet", "toc"), area = NULL,
-                           numbers = NULL) {
+                           numbers = NULL, agent_run = FALSE, agent_reads = character(),
+                           references = NULL) {
   unit <- match.arg(unit)
   if (isTRUE(quiet)) {
     cl <- match.call()
@@ -215,10 +235,26 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
   # built before the next), a chat's three
   size <- size %||% if (identical(mode, "agent")) 1L else 3L
   # an agent reads files: the text, and where each shell is in the workbook
-  if (identical(mode, "agent") && identical(workbook, "text")) workbook <- "file"
+  # an agent that runs and checks reads each shell's place in the workbook
+  # file too; one that answers only, the text alone
+  agent_reads <- as.character(agent_reads %||% character())
+  bad <- setdiff(agent_reads, c("workbook", "adam"))
+  if (length(bad)) {
+    .ard_stop(sprintf("tfl_ai_prepare(agent_reads = ): %s; it takes \"workbook\" and \"adam\".",
+                      paste(sprintf("\"%s\"", bad), collapse = ", ")))
+  }
+  if (length(references) && !all(file.exists(references))) {
+    .ard_stop(sprintf("tfl_ai_prepare(references = ): no file %s.",
+                      paste(sprintf("'%s'", references[!file.exists(references)]), collapse = ", ")))
+  }
+  if (identical(mode, "agent") && identical(workbook, "text") &&
+      (isTRUE(agent_run) || "workbook" %in% agent_reads)) {
+    workbook <- "file"
+  }
   dry <- isTRUE(dry_run)
   ai <- file.path(dir, "ai")
   files <- character()
+  agent_files <- character()
   if (!dry) {
     # a new study: the AI's drafts in their own folder from the start
     if (is.null(area)) {
@@ -321,14 +357,30 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
       # each request says the agent's steps at its head
       for (i in seq_len(nrow(req))) {
         f <- file.path(dir, req$file[i])
-        txt <- c(.ai_agent_request_head(req$request[i], adam = adam_at, book = book_at),
+        txt <- c(.ai_agent_request_head(req$request[i], adam = adam_at, book = book_at,
+                                        run = agent_run, reads = agent_reads),
                  readLines(f, warn = FALSE, encoding = "UTF-8"))
         .ai_write_text(txt, f)
         req$chars[i] <- nchar(paste(txt, collapse = "\n"))
       }
+      # the person's reference documents (a SAP, ...), copied into the study
+      # folder: the agent's workspace
+      refs <- character()
+      if (length(references)) {
+        rd_ <- file.path(dir, "ai", "references")
+        dir.create(rd_, recursive = TRUE, showWarnings = FALSE)
+        to <- file.path(rd_, basename(references))
+        file.copy(references, to, overwrite = TRUE)
+        refs <- file.path("ai", "references", basename(references))
+        files <- c(files, to)
+      }
       files <- c(files, .ai_agent_files(dir, overwrite = overwrite && !isTRUE(add),
                                         templates = templates, adam = adam_at,
-                                        book = book_at))
+                                        book = book_at, run = agent_run, reads = agent_reads,
+                                        references = refs))
+      # what the agent may open besides the requests and the files they name
+      agent_files <- c(if ("workbook" %in% agent_reads || isTRUE(agent_run)) book_at,
+                       if ("adam" %in% agent_reads || isTRUE(agent_run)) adam_at, refs)
       # what every request would repeat, written once
       files <- c(files, list.files(ai, "^(instructions-.*|templates)[.]md$", full.names = TRUE))
     }
@@ -336,9 +388,10 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
     nxt <- if (identical(mode, "agent")) {
       c(sprintf("open %s in VS Code (that folder: the agent reads its AGENTS.md)",
                 normalizePath(dir, winslash = "/")),
-        paste0("in the agent's chat: \"Follow AGENTS.md: do every request of ",
-               "ai/requests/index.md.\" (a folder above it open: \"Follow <the study ",
-               "folder>/AGENTS.md ...\")"),
+        paste0("in the agent's chat, the first message: ai/agent_prompt.md (the first ",
+               "requests only); when it stops, ask for the next ones"),
+        if (!isTRUE(agent_run))
+          "check the answers: tflplanner's \"Check all answers\" (tfl_ai_collect_answers())",
         paste0("then answer ai/questions.md, write your corrections (tfl_ai_corrections(): ",
                "ai/corrections.md) and tell the agent \"the answers and corrections are written\""))
     } else {
@@ -393,16 +446,11 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
   # the agent's first message: where its instructions, requests and run.R
   # are -- from the study folder, so a study copied to another PC (or
   # another drive) says the same
+  # -- and the first one or two requests only: the person asks for the rest
   agent_prompt <- if (identical(mode, "agent")) {
-    paste0("The paths are from the study folder ", basename(normalizePath(dir, mustWork = FALSE)),
-           " (the one holding AGENTS.md and run.R; with a folder above it open, put the ",
-           "study folder before each). Follow AGENTS.md. Do every request of ",
-           "ai/requests/index.md, in its order: save each answer as ",
-           "ai/answers/<request>.md and run `Rscript run.R <request>` after it, then read ",
-           "ai/status.md and repair. ",
-           if (templates) "Answer a report with a template where one fits (AGENTS.md). ",
-           "Do not stop to ask; when every request is done, tell me which reports have an ",
-           "RTF and that ai/questions.md waits for my answers.")
+    .ai_agent_prompt(basename(normalizePath(dir, mustWork = FALSE)),
+                     utils::head(req$request, 2L), run = agent_run, templates = templates,
+                     reads = any(c("workbook", "adam") %in% agent_reads))
   } else NA_character_
   # and as a file, to copy from
   if (identical(mode, "agent") && !dry) {
@@ -412,7 +460,8 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
   structure(list(requests = req, toc = tc, shells = shl, counts = counts,
                  sheets = shell$sheets, numbers = nums, adam = ad,
                  files = unique(files), hint = hint, next_steps = nxt, dry_run = dry,
-                 mode = mode, agent_prompt = agent_prompt, templates = templates,
+                 mode = mode, agent_prompt = agent_prompt, agent_files = agent_files,
+                 templates = templates,
                  workbook = basename(toc)),
             class = "tfl_ai_prepared")
 }

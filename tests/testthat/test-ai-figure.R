@@ -96,8 +96,8 @@ test_that("tfl_ai_run(): the figure drawn, its PNG and RTF; agent_prompt", {
   r <- tfl_ai_prepare(unit = "toc", d, fig_book(), adam = fig_study(root), quiet = TRUE, mode = "agent", size = 3L)
   # (from the study folder: a copy of it says the same)
   expect_match(r$agent_prompt, "Follow AGENTS.md", fixed = TRUE)
-  expect_match(r$agent_prompt, " ai/requests/index.md", fixed = TRUE)
-  expect_match(r$agent_prompt, "`Rscript run.R <request>`", fixed = TRUE)
+  expect_match(r$agent_prompt, "Do only ai/requests/", fixed = TRUE)
+  expect_false(grepl("run.R", r$agent_prompt, fixed = TRUE))
   expect_false(grepl(normalizePath(root, winslash = "/"), r$agent_prompt, fixed = TRUE))
   expect_true("ai/agent_prompt.md" %in% r$files)
   expect_identical(paste(readLines(file.path(d, "ai", "agent_prompt.md"), encoding = "UTF-8"),

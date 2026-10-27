@@ -30,32 +30,78 @@ test_that("mode = \"agent\": the instructions, run.R, questions, decisions; toc.
   expect_true(all(file.exists(file.path(d, have))))
   ag <- readLines(file.path(d, "AGENTS.md"), encoding = "UTF-8")
   expect_identical(readLines(file.path(d, ".github", "copilot-instructions.md"), encoding = "UTF-8"), ag)
-  for (k in c("do not stop", "Round 2", "read the ADaM itself", "never by opening",
-              "ai/questions.md", "ai/decisions.md", "Rscript run.R")) {
+  # the default: the answers alone, from the requests and the files they name
+  for (k in c("**do not look for it**", "Round 2", "Do not run `run.R`", "stop",
+              "ai/questions.md", "ai/decisions.md", "Do not install packages")) {
     expect_true(any(grepl(k, ag, fixed = TRUE)), info = k)
   }
+  expect_false(any(grepl("Rscript run.R", ag, fixed = TRUE)))
+  # the first message: the first two requests only, then a stop
+  expect_match(r$agent_prompt, sprintf("Do only ai/requests/%s.md and ai/requests/%s.md",
+                                       r$requests$request[1L], r$requests$request[2L]), fixed = TRUE)
+  expect_match(r$agent_prompt, "run nothing, install nothing", fixed = TRUE)
+  expect_match(r$agent_prompt, "Then stop", fixed = TRUE)
+  expect_false(grepl("run.R", r$agent_prompt, fixed = TRUE))
   # each request starts with the agent's steps; its length counts them
   req1 <- readLines(file.path(d, r$requests$file[1L]), encoding = "UTF-8")
   expect_identical(req1[1L], "<!-- tflspec: agent mode -->")
   expect_match(req1[2L], sprintf("ai/answers/%s.md", r$requests$request[1L]), fixed = TRUE)
+  expect_match(req1[2L], "install nothing", fixed = TRUE)
+  expect_identical(req1[3L], "")
+  expect_identical(r$agent_files, character())
+  expect_true(any(grepl("Do not run R or any other program.", ag, fixed = TRUE)))
+  # the next requests: those without an answer, two at a time
+  nx1 <- tfl_ai_agent_prompt(d)
+  expect_identical(as.character(nx1), r$agent_prompt)
+  expect_identical(attr(nx1, "requests"), r$requests$request[1:2])
+  for (q in r$requests$request[1:2]) writeLines("x", file.path(d, "ai", "answers", paste0(q, ".md")))
+  nx2 <- tfl_ai_agent_prompt(d, n = 1L)
+  expect_identical(attr(nx2, "requests"), r$requests$request[3L])
+  expect_match(nx2, sprintf("Do only ai/requests/%s.md, ", r$requests$request[3L]), fixed = TRUE)
+  expect_identical(attr(tfl_ai_agent_prompt(d, requests = r$requests$request[5L]), "requests"),
+                   r$requests$request[5L])
+  expect_error(tfl_ai_agent_prompt(d, requests = "nope"), "No request 'nope'")
+  for (q in r$requests$request) writeLines("x", file.path(d, "ai", "answers", paste0(q, ".md")))
+  expect_true(is.na(tfl_ai_agent_prompt(d)))
+  unlink(file.path(d, "ai", "answers", paste0(r$requests$request, ".md")))
+  # agent_run = TRUE: it runs run.R after each answer, repairs, may read the ADaM
+  d3 <- file.path(root, "study-run")
+  r3 <- tfl_ai_prepare(unit = "toc", d3, ex_book(), adam = ad, quiet = TRUE, mode = "agent",
+                       agent_run = TRUE)
+  ag3 <- readLines(file.path(d3, "AGENTS.md"), encoding = "UTF-8")
+  for (k in c("do not stop", "read the ADaM itself", "never by opening", "Rscript run.R")) {
+    expect_true(any(grepl(k, ag3, fixed = TRUE)), info = k)
+  }
+  expect_match(r3$agent_prompt, "`Rscript run.R <request>`", fixed = TRUE)
+  expect_match(tfl_ai_agent_prompt(d3), "`Rscript run.R <request>`", fixed = TRUE)
+  expect_match(readLines(file.path(d3, r3$requests$file[1L]), encoding = "UTF-8")[2L],
+               sprintf("run `Rscript run.R %s`", r3$requests$request[1L]), fixed = TRUE)
+  # with each shell's place in the workbook file, to check what the text leaves unclear
+  req3 <- readLines(file.path(d3, r3$requests$file[1L]), encoding = "UTF-8")
+  txt3 <- paste(req3, collapse = "\n")
+  expect_match(txt3, "The TOC / SHELL workbook is the file `", fixed = TRUE)
+  expect_match(txt3, sprintf("- %s: sheet '", strsplit(r3$requests$outputs[1L], ", ")[[1L]][1L]),
+               fixed = TRUE)
+  expect_match(txt3, "# Workbook onco_toc_shell.xlsx", fixed = TRUE)
+  expect_match(txt3, "When you can open the workbook, use it to check", fixed = TRUE)
+  expect_match(txt3, "decide from this request alone", fixed = TRUE)
+  # where the ADaM and the workbook are, from the study folder
+  expect_match(req3[3L], "From this study folder, the TOC / SHELL workbook is `", fixed = TRUE)
+  expect_match(req3[3L], "the ADaM is in `", fixed = TRUE)
+  expect_false(any(grepl("{{", ag3, fixed = TRUE)))
+  for (k in c("When you can open the workbook", "When you cannot open it",
+              "Read the place the request names with R")) {
+    expect_true(any(grepl(k, ag3, fixed = TRUE)), info = k)
+  }
   expect_identical(tfl_ai_requests(d)$chars, r$requests$chars)
   # the shells' text, and where each is in the workbook file (its sheet)
   txt <- paste(req1, collapse = "\n")
-  expect_match(txt, "The TOC / SHELL workbook is the file `", fixed = TRUE)
-  expect_match(txt, sprintf("- %s: sheet '", strsplit(r$requests$outputs[1L], ", ")[[1L]][1L]),
-               fixed = TRUE)
-  expect_match(txt, "# Workbook onco_toc_shell.xlsx", fixed = TRUE)
-  expect_match(txt, "When you can open the workbook, use it to check", fixed = TRUE)
-  expect_match(txt, "decide from this request alone", fixed = TRUE)
-  # where the ADaM and the workbook are, from the study folder
-  expect_match(req1[3L], "From this study folder, the TOC / SHELL workbook is `", fixed = TRUE)
-  expect_match(req1[3L], "the ADaM is in `", fixed = TRUE)
+  # the default: the shells' text alone -- no workbook, no ADaM to open
+  expect_false(grepl("The TOC / SHELL workbook is the file `", txt, fixed = TRUE))
+  expect_false(grepl("When you can open", txt, fixed = TRUE))
   expect_false(any(grepl("Attach", readLines(file.path(d, "ai", "requests", "index.md")))))
   expect_false(any(grepl("{{", ag, fixed = TRUE)))
-  for (k in c("When you can open the workbook", "When you cannot open it",
-              "Read the place the request names with R")) {
-    expect_true(any(grepl(k, ag, fixed = TRUE)), info = k)
-  }
+  expect_false(any(grepl("Read the place the request names with R", ag, fixed = TRUE)))
   # tflplanner's places, and its TOC
   st <- yaml::read_yaml(file.path(d, "study.yml"))
   expect_identical(st$settings$output_path, "output/tfl")
@@ -224,7 +270,7 @@ test_that("a study copied elsewhere: its answers checked and built against its o
   unlink(d, recursive = TRUE)
   # the agent's wording, not a chat's
   ix <- paste(readLines(file.path(d2, "ai", "requests", "index.md"), encoding = "UTF-8"), collapse = "\n")
-  expect_match(ix, "Rscript run.R <request>", fixed = TRUE)
+  expect_match(ix, "`ai/answers/<request>.md`; then do as AGENTS.md says", fixed = TRUE)
   expect_false(grepl("new chat", ix, fixed = TRUE))
   r0 <- suppressMessages(tfl_ai_collect_answers(d2))
   expect_match(r0$next_steps[["ae-1"]], "Rscript run.R ae-1", fixed = TRUE)
@@ -266,7 +312,9 @@ test_that("mode = \"agent\": a study with its ADaM and workbook inside it names 
   dir.create(file.path(d, "shells"), recursive = TRUE, showWarnings = FALSE)
   book <- file.path(d, "shells", "toc.xlsx")
   file.copy(ex_book(), book)
-  r <- tfl_ai_prepare(unit = "toc", d, book, adam = ad, quiet = TRUE, mode = "agent", size = 3L)
+  r <- tfl_ai_prepare(unit = "toc", d, book, adam = ad, quiet = TRUE, mode = "agent", size = 3L,
+                      agent_reads = c("workbook", "adam"))
+  expect_identical(r$agent_files, c("shells/toc.xlsx", "adam"))
   here <- normalizePath(root, winslash = "/")
   files <- list.files(d, recursive = TRUE, all.files = TRUE, pattern = "[.](md|yml|R)$")
   for (f in files) {
@@ -384,4 +432,37 @@ test_that("tfl_ai_migrate(): a study's AI reports copied apart and recorded as a
   log <- utils::read.csv(file.path(d, "ai", "adopted.csv"), stringsAsFactors = FALSE)
   expect_setequal(log$output_id, made)
   expect_error(tfl_ai_adopt(file.path(root, "nowhere")), "keeps the AI's drafts in spec/outputs")
+})
+
+test_that("mode = \"agent\": what the agent may open -- agent_reads, references", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  root <- withr::local_tempdir()
+  d <- file.path(root, "study")
+  ad <- agent_study(root)
+  sap <- file.path(root, "sap.txt")
+  writeLines("The primary analysis set is the FAS.", sap)
+  r <- tfl_ai_prepare(unit = "toc", d, ex_book(), adam = ad, quiet = TRUE, mode = "agent",
+                      agent_reads = "adam", references = sap)
+  # the reference copied into the study folder; the ADaM allowed, the workbook not
+  expect_true(file.exists(file.path(d, "ai", "references", "sap.txt")))
+  expect_identical(r$agent_files[2L], "ai/references/sap.txt")
+  expect_length(r$agent_files, 2L)
+  ag <- paste(readLines(file.path(d, "AGENTS.md"), encoding = "UTF-8"), collapse = "\n")
+  expect_match(ag, "`ai/references/sap.txt`", fixed = TRUE)
+  expect_match(ag, "- the ADaM in `", fixed = TRUE)
+  expect_false(grepl("- the TOC / SHELL workbook", ag, fixed = TRUE))
+  expect_match(ag, "Run R only to read the files listed", fixed = TRUE)
+  expect_false(grepl("{{", ag, fixed = TRUE))
+  expect_match(r$agent_prompt, "run R only to read those, install nothing", fixed = TRUE)
+  expect_identical(as.character(tfl_ai_agent_prompt(d)), r$agent_prompt)
+  req1 <- readLines(file.path(d, r$requests$file[1L]), encoding = "UTF-8")
+  expect_match(req1[3L], "you may also read the ADaM in `", fixed = TRUE)
+  # what it does not take
+  expect_error(tfl_ai_prepare(unit = "toc", file.path(root, "s2"), ex_book(), adam = ad,
+                              quiet = TRUE, mode = "agent", agent_reads = "sas"),
+               "agent_reads = ): \"sas\"", fixed = TRUE)
+  expect_error(tfl_ai_prepare(unit = "toc", file.path(root, "s3"), ex_book(), adam = ad,
+                              quiet = TRUE, mode = "agent", references = file.path(root, "none.pdf")),
+               "references = ): no file", fixed = TRUE)
 })

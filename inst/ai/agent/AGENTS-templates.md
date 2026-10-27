@@ -9,4 +9,4 @@ When one fits a report, answer that report as the template:
 from the default, and in `content` only the report's own items for what the
 template does not do. When none fits, write the report as a code SPEC, as
 the schema says (`ai/instructions-table.md`). A template or an argument `ai/templates.md` does
-not list is an error that `ai/status.md` names; repair it as for any other.
+not list is an error: use only those it lists.
