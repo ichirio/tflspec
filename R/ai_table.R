@@ -873,6 +873,8 @@
                       paste(sQuote(file.path("spec", "outputs", basename(there)), FALSE),
                             collapse = ", ")))
   }
+  # (the reports whose widths R sets: an assumption says so)
+  unset <- .ai_widths_unset(answer$outputs)
   # (a listing's columns their widths, where the answer gave none: R/ai_widths.R)
   answer$outputs <- lapply(answer$outputs, .ai_listing_widths, vars = answer$vars)
   # (a table's widths R gave it on an earlier run)
@@ -884,6 +886,15 @@
   .ai_widths_on_read(answer$outputs, paths, dir)
   out <- paths
   a <- answer$assumption_rows
+  aw <- .ai_widths_assumptions(unset)
+  if (!is.null(aw)) {
+    if (is.null(a) || !nrow(a)) {
+      a <- aw
+    } else {
+      for (k in setdiff(names(a), names(aw))) aw[[k]] <- NA_character_
+      a <- rbind(a, aw[names(a)])
+    }
+  }
   if (!is.null(a) && nrow(a)) {
     old <- .ai_folder_assumptions(dir, all = TRUE)
     names(old)[names(old) == "sheet"] <- "where"

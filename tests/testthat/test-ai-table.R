@@ -210,6 +210,8 @@ test_that("the stored answer reads, checks clean in its context, and unpacks", {
   a2$assumption_rows$assumption <- "changed"
   tfl_ai_unpack(a2, d, overwrite = TRUE)
   ass <- yaml::read_yaml(file.path(d, "spec", "_assumptions.yml"))
+  # (the answer's own; a report whose widths R set has one more, item widths)
+  ass <- Filter(function(x) !identical(x$item, "widths"), ass)
   ids <- vapply(ass, `[[`, "", "output_id")
   expect_identical(sum(ids == "T-14-1-1"), 1L)
   expect_identical(sum(ids == "T-14-3-5"), 1L)

@@ -1,6 +1,7 @@
 # The AI's reports always say their column widths: what an answer leaves
-# out, R writes -- a table's once it is built (the stub wider), a
-# listing's when the answer is read
+# out, R writes -- a table's once it is built (rtfreporter's
+# default_col_widths()), a listing's when the answer is read -- with the
+# assumption that they are the default ones
 
 test_that("a table with no widths gets the usual layout's in its report file, when read and when built", {
   skip_on_cran()
@@ -27,19 +28,34 @@ test_that("a table with no widths gets the usual layout's in its report file, wh
   expect_true(file.exists(file.path(d, "ai", "widths.yml")))
   res <- suppressMessages(tfl_ai_run(d, requests = c("demographics-1", "ae-1")))
   files <- res$reports$file[res$reports$request %in% c("demographics-1", "ae-1")]
+  # (rtfreporter's default_col_widths(): one width a printed column, by
+  # name; before it, the stub 3 -- a hierarchy's 4 -- to the values' 1)
+  dcw <- exists("default_col_widths", envir = asNamespace("rtfreporter"), inherits = FALSE)
   for (f in files) {
     y <- yaml::read_yaml(file.path(d, f))
     pc <- Filter(function(it) identical(names(it), "plan_columns"), y$content)
     expect_length(pc, 1L)
     w <- pc[[1L]]$plan_columns$widths
-    expect_identical(w$.values, 1L, info = f)
-    stub <- unlist(w[names(w) != ".values"])
-    expect_true(length(stub) >= 1L && all(stub >= 2L), info = f)
+    if (dcw) {
+      expect_null(w$.values, info = f)
+      expect_true(length(w) >= 2L && all(unlist(w) > 0), info = f)
+    } else {
+      expect_identical(w$.values, 1L, info = f)
+      stub <- unlist(w[names(w) != ".values"])
+      expect_true(length(stub) >= 1L && all(stub >= 2L), info = f)
+    }
   }
-  # the AE table (a hierarchy): its stub 4
-  ae <- yaml::read_yaml(file.path(d, files[grepl("T-14-3-1", files)]))
-  w <- Filter(function(it) identical(names(it), "plan_columns"), ae$content)[[1L]]$plan_columns$widths
-  expect_true(any(unlist(w[names(w) != ".values"]) == 4L))
+  if (!dcw) {
+    # the AE table (a hierarchy): its stub 4
+    ae <- yaml::read_yaml(file.path(d, files[grepl("T-14-3-1", files)]))
+    w <- Filter(function(it) identical(names(it), "plan_columns"), ae$content)[[1L]]$plan_columns$widths
+    expect_true(any(unlist(w[names(w) != ".values"]) == 4L))
+  }
+  # each report whose widths R set says so: an assumption
+  ass <- yaml::read_yaml(file.path(d, "spec", "_assumptions.yml"))
+  wa <- Filter(function(x) identical(x$item, "widths"), ass)
+  expect_true(all(c("T-14-1-1", "T-14-3-1") %in% vapply(wa, `[[`, "", "output_id")))
+  expect_match(wa[[1L]]$assumption, "default proportions, set for now", fixed = TRUE)
   # run again: kept (the file as it is now is what was built)
   res2 <- suppressMessages(tfl_ai_run(d, requests = c("demographics-1", "ae-1")))
   b <- res2$reports$built[res2$reports$request %in% c("demographics-1", "ae-1")]

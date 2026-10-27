@@ -595,6 +595,10 @@ tfl_ai_unpack(a, "study")                           # spec/outputs/<id>.yml, spe
   `sheets`, `adam`, `files`, `next_steps`); `dry_run = TRUE` reads and
   writes nothing, `adam_summary =` reuses a call's `$adam`; `tfl_ai_requests(study_dir)`
   reads the requests again;
+  a report always says its column widths: what an answer leaves out, R writes
+  when the answer is read (`rtfreporter::default_col_widths()`, one width a printed
+  column by name), with the assumption (item `widths`) that they are the default
+  ones; `tfl_fill_widths(study_dir)` does the same for any report of the study;
   `tfl_ai_run(study_dir)` collects, then builds each report's ARD and RTF
   (`ai/status.md`; the answers' questions gathered into `ai/questions.md`);
   `mode = "agent"` writes, besides, a coding agent's instructions
@@ -602,7 +606,7 @@ tfl_ai_unpack(a, "study")                           # spec/outputs/<id>.yml, spe
   `ai/questions.md` and `ai/decisions.md` -- the agent answers the first
   requests it is given (`ai/agent_prompt.md`: one or two) and stops, the
   person checks the answers (`tfl_ai_collect_answers()`) and asks for the
-  next (`tfl_ai_agent_prompt(study_dir)`: the message for the next two); `agent_run = TRUE`: it also runs `run.R` and repairs; then a second
+  next (`tfl_ai_agent_prompt(study_dir)`: the message for the next ten); `agent_run = TRUE`: it also runs `run.R` and repairs; then a second
   round from the person's answers; `tfl_ai_questions(study_dir)`
   reads `ai/questions.md` and `tfl_ai_answer_questions(study_dir, answers)`
   writes the person's answers into it; `tfl_ai_outputs(study_dir)` lists
@@ -879,7 +883,7 @@ back): rename the value or choose another separator.
 `tfl_ai_prompt` `tfl_ai_parse` `tfl_ai_check` `tfl_ai_repair_prompt`
 `tfl_ai_diff` `tfl_ai_read_shell` `tfl_ai_adam_summary` `tfl_ai_batches`
 `tfl_ai_write_requests` `tfl_ai_collect_answers` `tfl_ai_adopt` `tfl_ai_adopted_diff` `tfl_ai_style_prompt` `tfl_ai_style_read` `tfl_rtf_style_scan` `tfl_ai_migrate` `tfl_ai_outputs` `tfl_ai_expected_read` `tfl_ai_expected_write` `tfl_ai_corrections` `tfl_ai_assumptions` `tfl_ai_assumption_answers_read` `tfl_ai_assumption_answers_write` `tfl_ai_save_answer` `tfl_ai_study_init`
-`tfl_ai_prepare` `tfl_ai_requests` `tfl_ai_agent_prompt` `tfl_ai_run` `tfl_ai_compare` `tfl_ai_questions`
+`tfl_ai_prepare` `tfl_ai_requests` `tfl_ai_agent_prompt` `tfl_fill_widths` `tfl_ai_run` `tfl_ai_compare` `tfl_ai_questions`
 `tfl_ai_answer_questions`
 
 **ARD spec:** `tfl_ard_spec` `tfl_read_ard_spec` `tfl_write_ard_spec`

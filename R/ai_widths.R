@@ -6,9 +6,12 @@
 #  rather than change a value.  So a report of the AI's always has them: a
 #  table's `plan_columns(widths = )`, a listing's `listing_col(width = )`.
 #  The AI is asked to write them (the shell's proportions); what it leaves
-#  out, R writes: a table's from its printed columns once it is built (the
-#  stub wider, the value columns equal), a listing's from its columns'
-#  variables and headers when the answer is read.
+#  out, R writes: a table's from its printed table once it is built
+#  (rtfreporter's default_col_widths(): the row headings by their content,
+#  the value columns sharing the rest), one per printed column by name, a
+#  listing's from its columns' variables and headers when the answer is
+#  read -- each with the assumption that its widths are the default ones,
+#  set for now.
 # ============================================================================
 
 # Whether a report (resolved: the defaults' items too) says its table's
@@ -20,9 +23,11 @@
   }, NA))
 }
 
-# A table's widths from its plan's printed columns: each stub column (the
-# columns that are not values) wider -- one stub 3 to a value column's 1, a
-# hierarchy's 4; several stub columns 2 each.  The report (`own`, as its
+# A table's widths from its built table: rtfreporter's default_col_widths()
+# over its first page, the stub columns (those that are not values) the row
+# headings -- one width a printed column, by name.  (An rtfreporter before
+# default_col_widths(): each stub column 3 to a value column's 1, a
+# hierarchy's 4, several stub columns 2 each.)  The report (`own`, as its
 # file has it) with them as a plan_columns item, after its table_plan (an
 # item there without widths gets them); NULL when it says them already or
 # the plan's columns cannot be read.
@@ -32,6 +37,21 @@
   if (is.null(cols) || !length(cols$names)) return(NULL)
   stub <- setdiff(cols$names, cols$spread)
   if (!length(stub)) return(NULL)
+  ns <- asNamespace("rtfreporter")
+  if (exists("default_col_widths", envir = ns, inherits = FALSE)) {
+    body <- tryCatch({
+      pg <- suppressMessages(suppressWarnings(rtfreporter::plan_apply(plan, "pages")))
+      t1 <- if (inherits(pg, "rtftable")) pg else pg[[1L]]
+      t1$data
+    }, error = function(e) NULL)
+    if (is.data.frame(body) && ncol(body)) {
+      rt <- which(!names(body) %in% cols$spread)
+      if (length(rt)) {
+        w <- get("default_col_widths", envir = ns)(body, row_title = rt)
+        return(.ai_put_widths(own, as.list(w)))
+      }
+    }
+  }
   fns <- vapply(resolved$content %||% list(), `[[`, "", "fn")
   hier <- any(vapply(resolved$content[fns == "normalize_ard"], function(it) {
     length(it$args$hierarchy) > 0L
@@ -123,16 +143,17 @@
 # The tables of an answer just written with no widths: each built (its
 # ARD, its plan) from the study folder, its widths written into its file
 # and remembered; a table that cannot be built is left to run.R
-.ai_widths_on_read <- function(outs, paths, dir) {
+.ai_widths_on_read <- function(outs, paths, dir, remember = TRUE) {
   todo <- which(vapply(outs, function(o) {
     identical(o$kind, "table") && !inherits(o$content, "tfl_r") && !.ai_has_widths(o)
   }, NA))
-  if (!length(todo) || !requireNamespace("rtfreporter", quietly = TRUE)) return(invisible())
+  set <- character()
+  if (!length(todo) || !requireNamespace("rtfreporter", quietly = TRUE)) return(invisible(set))
   paths <- normalizePath(paths, winslash = "/", mustWork = FALSE)
   old <- setwd(dir)
   on.exit(setwd(old), add = TRUE)
   st <- tryCatch(tfl_read_study_spec("."), error = function(e) NULL)
-  if (is.null(st)) return(invisible())
+  if (is.null(st)) return(invisible(set))
   for (i in todo) {
     o <- outs[[i]]
     w <- tryCatch({
@@ -148,7 +169,34 @@
     if (is.null(w)) next
     tfl_write_output(w, paths[i])
     pc <- Filter(function(it) identical(it$fn, "plan_columns"), w$content)
-    .ai_widths_remember(".", o$id, pc[[1L]]$args$widths)
+    if (isTRUE(remember)) .ai_widths_remember(".", o$id, pc[[1L]]$args$widths)
+    set <- c(set, o$id)
   }
-  invisible()
+  invisible(set)
+}
+
+# The reports of an answer whose widths R sets (a table with none, a
+# listing with a column with none): their ids
+.ai_widths_unset <- function(outs) {
+  names(outs)[vapply(outs, function(o) {
+    if (inherits(o$content, "tfl_r")) return(FALSE)
+    if (identical(o$kind, "table")) return(!.ai_has_widths(o))
+    if (!identical(o$kind, "listing")) return(FALSE)
+    any(vapply(o$content %||% list(), function(it) {
+      identical(it$fn, "plan_listing") && any(vapply(it$args$cols %||% list(), function(cl) {
+        inherits(cl, "tfl_call") && is.null(cl$args$width)
+      }, NA))
+    }, NA))
+  }, NA)]
+}
+
+# The assumption a report whose widths R set carries: they are the default
+# ones, for now (none when the answer gave them, read from the shell)
+.ai_widths_assumptions <- function(ids) {
+  if (!length(ids)) return(NULL)
+  data.frame(output_id = ids, where = "content", item = "widths",
+             assumption = paste("the column widths are the default proportions, set for now",
+                                "(rtfreporter::default_col_widths()); not read from the shell"),
+             question = "Are the column widths as the shell wants?",
+             stringsAsFactors = FALSE)
 }
