@@ -501,7 +501,13 @@ test_that("a report can drop the running footer and use the page sheet", {
   expect_null(doc$sections[[1L]]$footer)
   expect_identical(doc$document$page$orientation, "portrait")
   expect_identical(doc$document$page$margin_left_in, 0.5)
-  expect_length(doc$footnotes, 1L)
+  # (rtfreporter's pages as printed, rtf_layout(); before it, the document's list)
+  if (exists("rtf_layout", envir = asNamespace("rtfreporter"))) {
+    seg <- rtfreporter::rtf_layout(doc)$pages[[1L]]$segments
+    expect_length(Filter(Negate(is.null), lapply(seg, `[[`, "footnote")), 1L)
+  } else {
+    expect_length(doc$footnotes, 1L)
+  }
 })
 
 test_that("a definition can be split over workbooks, and a sheet said once", {

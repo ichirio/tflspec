@@ -65,8 +65,15 @@ test_that("the program puts the report under the content before it", {
   first <- rtfreporter::as_rtftables(data.frame(a = c("1", "2")))
   env <- list2env(list(first = first, content = content), parent = asNamespace("rtfreporter"))
   doc <- eval(parse(text = code), env)
-  pb <- vapply(doc$placement, function(p) isTRUE(p$page_break), logical(1L))
-  expect_identical(pb, c(TRUE, FALSE))
+  # (rtfreporter's pages as printed, rtf_layout(); before it, its placements)
+  if (exists("rtf_layout", envir = asNamespace("rtfreporter"))) {
+    pages <- rtfreporter::rtf_layout(doc)$pages
+    expect_length(pages, 1L)
+    expect_length(pages[[1L]]$segments, 2L)
+  } else {
+    pb <- vapply(doc$placement, function(p) isTRUE(p$page_break), logical(1L))
+    expect_identical(pb, c(TRUE, FALSE))
+  }
 })
 
 test_that(".page_flow_args() keeps a content's place only off a new page", {
