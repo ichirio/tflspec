@@ -680,7 +680,9 @@ block, for `study.yml`, `spec/data.yml`, `spec/toc.yml`,
 `spec/defaults.yml`, one `spec/outputs/<id>.yml` a report, and
 `spec/_assumptions.yml` -- its guesses, a list of `output_id`, `where`,
 `item`, `assumption` (one sentence: what it decided and how), `value`
-(the value it used), `question`.  `tfl_ai_unpack(answer, dir)` checks the
+(the value it used), `question` -- the choices that change the numbers or
+their meaning; how the output looks is decided by the standard and
+rtfreporter's defaults, and not listed.  `tfl_ai_unpack(answer, dir)` checks the
 paths (only `study.yml` and `spec/**.yml`) and that every block is YAML,
 then writes the files; it writes nothing when one is wrong, and over
 existing files only with `overwrite = TRUE`.

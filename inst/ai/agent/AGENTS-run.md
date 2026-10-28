@@ -80,7 +80,14 @@ and `ai/`. If the workspace is a folder above it, use the paths from here.
    `question` (the request's answer format says how).  The treatment
    variable follows the analysis set: the safety set (SAFFL) takes TRT01A
    (actual), any other set (ITT, FAS, PP; demographics, disposition)
-   TRT01P (planned), unless the shell or the TOC says otherwise.  Not so
+   TRT01P (planned), unless the shell or the TOC says otherwise.  An
+   assumption is a choice that changes the numbers or their meaning (the
+   analysis set, the treatment variable, a denominator, missing values,
+   subjects or events, a subgroup's condition, a code list); how the
+   output looks (the title's lines, the columns' order and widths,
+   indentation, the default decimals, blank rows, a footnote's place, the
+   statistics' order) is not one -- decide it by the company or study
+   standard and rtfreporter's defaults, and say nothing.  Not so
    for the analysis set and, for a dataset of parameters
    (PARAMCD), the parameter: they define the report, and the shell says
    them. When you cannot read them, never take a likely one: ask the

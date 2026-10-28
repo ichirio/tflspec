@@ -642,11 +642,31 @@ Run through it; the review will.
   `output_id` (left out for the study), `where` (the file or key it is
   about), `item`, `assumption`, `value`, `question`.  `assumption` is
   **one sentence a reader understands on its own: what you decided, and
-  how** -- not a label (`titles: two title lines` says nothing; `Title in
-  two lines: line 1 'Table 14.1.1', line 2 'Demographic Characteristics',
-  because the shell shows two` does).  `value` is **the value you used**
-  (the variable, the flag, the list, the text), so a screen can show it
-  beside the sentence:
+  how** -- not a label (`arm: TRT01A` says nothing; `Treatment variable
+  for the columns: TRT01A (actual), because the analysis set is the safety
+  set (SAF)` does).  `value` is **the value you used** (the variable, the
+  flag, the list, the text), so a screen can show it beside the sentence.
+
+  **What goes in, and what does not.**  An assumption is a choice that
+  **changes the numbers or how they are read**: the analysis set and its
+  flag, the treatment variable (`TRT01A` / `TRT01P`), a denominator, how
+  missing values are handled, the unit counted (subjects or events), a
+  stratum's or subgroup's condition, a code list and its order, the
+  parameter behind a shell row, the visit a column stands for.  **Not an
+  assumption** is how the output looks: the title's lines, the columns'
+  order and widths, indentation, the default decimals, blank rows, where a
+  footnote sits, the order of the statistics -- decide those by the
+  company or study standard and rtfreporter's defaults, write them, and
+  say nothing.  Three that look like one and are not: the statistics'
+  order (the standard's); a title split in two lines (the shell's look);
+  the width of the label column (rtfreporter's default).  Three that are:
+  the denominator of a percentage; which flag marks treatment-emergent;
+  whether a subject with two events counts once.  A condition that
+  **defines** the report (the analysis set, the parameter of a PARAMCD
+  dataset) and is missing is neither: ask it as a question and leave the
+  report without it (§4.1).
+
+  The example:
 
   ```yaml
   - where: spec/data.yml populations

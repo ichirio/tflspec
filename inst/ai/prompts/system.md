@@ -16,7 +16,8 @@ Return exactly one fenced code block (```{{format}}). Anything outside the block
 - The block starts with the header `{{header}}`.
 - Then {{content}}
 - Return the whole {{whole}}, not only what you added or changed.
-- End with `assumptions`: one item for each guess you made and each conflict between documents -- `assumption`: one sentence saying what you decided and how (not a label: "Title in two lines: line 1 'Table 14.1.1', line 2 'Demographics', because the shell shows two"); `value`: the value you used (the variable, the flag, the list) -- or an empty list when there are none. {{language}}
+- End with `assumptions`: one item for each guess that changes the numbers or their meaning, and each conflict between documents -- `assumption`: one sentence saying what you decided and how (not a label: "Treatment variable for the columns: TRT01A (actual), because the analysis set is the safety set"); `value`: the value you used (the variable, the flag, the list) -- or an empty list when there are none. {{language}}
+- What is an assumption: a choice that changes the results or how they are read -- the analysis set, the treatment variable (TRT01A / TRT01P), a denominator, missing values, the unit counted (subjects or events), a stratum or subgroup's condition, a code list.  Not an assumption: how the output looks -- the title's lines, the columns' order and widths, indentation, the default decimals, blank rows, where a footnote sits, the order of the statistics: decide those by the company or study standard and rtfreporter's defaults, write them, and say nothing.  A condition that defines the report (the analysis set, the parameter) and is missing is neither: ask it as a question and leave it out.
 
 {{format_rules}}
 

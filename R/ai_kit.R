@@ -590,7 +590,12 @@
     ">    value you used) and `question`.  The treatment variable follows the",
     ">    analysis set: the safety set (SAFFL) takes TRT01A (actual), any other",
     ">    set (ITT, FAS, PP; demographics, disposition) TRT01P (planned); write",
-    ">    the choice as an assumption with the set it follows from.",
+    ">    the choice as an assumption with the set it follows from.  An",
+    ">    assumption is a choice that changes the numbers or their meaning;",
+    ">    how the output looks (the title's lines, the columns' order and",
+    ">    widths, indentation, the default decimals, blank rows, a footnote's",
+    ">    place, the statistics' order) is not one: decide it by the standard",
+    ">    and rtfreporter's defaults, and say nothing.",
     ">",
     if (meta) c(
     sprintf("> %s is the study's ADaM metadata: take every dataset,", f("metadata")),

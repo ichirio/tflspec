@@ -42,7 +42,14 @@ For each request you are given, in order:
    request's answer format says how), and go on.  The treatment variable
    follows the analysis set: the safety set (SAFFL) takes TRT01A (actual),
    any other set (ITT, FAS, PP; demographics, disposition) TRT01P
-   (planned), unless the shell or the TOC says otherwise. Not so for the analysis set and, for a dataset of
+   (planned), unless the shell or the TOC says otherwise.  An assumption
+   is a choice that changes the numbers or their meaning (the analysis
+   set, the treatment variable, a denominator, missing values, subjects
+   or events, a subgroup's condition, a code list).  How the output looks
+   (the title's lines, the columns' order and widths, indentation, the
+   default decimals, blank rows, a footnote's place, the statistics'
+   order) is not one: decide it by the company or study standard and
+   rtfreporter's defaults, and say nothing. Not so for the analysis set and, for a dataset of
    parameters (PARAMCD), the parameter: they define the report. When the
    request does not say them, never take a likely one: write the question,
    and leave them out of the report.
