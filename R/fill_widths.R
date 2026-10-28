@@ -56,24 +56,6 @@
 #' unlink(d, recursive = TRUE)
 #' }
 #' @export
-# The tables among `outs` whose widths the study's defaults give them: the
-# report resolved against the study (tfl_resolve_output()) has
-# plan_columns(widths = ), though its own file does not.  Their ids.  A
-# study that cannot be read, or a report that cannot be resolved, gives
-# none (the caller then tries to build it, and says so when it cannot).
-.ai_widths_inherited <- function(outs, dir) {
-  tabs <- names(outs)[vapply(outs, function(o) identical(o$kind, "table"), NA)]
-  if (!length(tabs)) return(character())
-  old <- setwd(dir)
-  on.exit(setwd(old), add = TRUE)
-  st <- tryCatch(tfl_read_study_spec("."), error = function(e) NULL)
-  if (is.null(st)) return(character())
-  tabs[vapply(tabs, function(id) {
-    ro <- tryCatch(tfl_resolve_output(outs[[id]], st), error = function(e) NULL)
-    !is.null(ro) && .ai_has_widths(ro)
-  }, NA)]
-}
-
 tfl_fill_widths <- function(study_dir = ".", output_id = NULL, assumption = TRUE) {
   outs <- tfl_read_outputs(study_dir)
   if (!is.null(output_id)) {
@@ -119,4 +101,22 @@ tfl_fill_widths <- function(study_dir = ".", output_id = NULL, assumption = TRUE
     }
   }
   invisible(set)
+}
+
+# The tables among `outs` whose widths the study's defaults give them: the
+# report resolved against the study (tfl_resolve_output()) has
+# plan_columns(widths = ), though its own file does not.  Their ids.  A
+# study that cannot be read, or a report that cannot be resolved, gives
+# none (the caller then tries to build it, and says so when it cannot).
+.ai_widths_inherited <- function(outs, dir) {
+  tabs <- names(outs)[vapply(outs, function(o) identical(o$kind, "table"), NA)]
+  if (!length(tabs)) return(character())
+  old <- setwd(dir)
+  on.exit(setwd(old), add = TRUE)
+  st <- tryCatch(tfl_read_study_spec("."), error = function(e) NULL)
+  if (is.null(st)) return(character())
+  tabs[vapply(tabs, function(id) {
+    ro <- tryCatch(tfl_resolve_output(outs[[id]], st), error = function(e) NULL)
+    !is.null(ro) && .ai_has_widths(ro)
+  }, NA)]
 }
