@@ -434,7 +434,8 @@ tfl_sheets_from_spec <- function(study, outputs) {
       fn <- sub("[.].*$", "", m[[col]])
       arg <- if (grepl(".", m[[col]], fixed = TRUE)) sub("^[^.]*[.]", "", m[[col]]) else col
       v <- page[[fn]][[arg]]
-      if (!is.null(v)) pr[[sh]][[col]] <- cell(v)
+      # (a call -- a watermark's look, rtf_watermark() -- is no cell: page_more)
+      if (!is.null(v) && !inherits(v, "tfl_call")) pr[[sh]][[col]] <- cell(v)
     }
   }
   ft <- page$rtf_document$font_table
@@ -473,6 +474,9 @@ tfl_sheets_from_spec <- function(study, outputs) {
     said <- c(said, ifelse(grepl(".", m, fixed = TRUE), m, paste(m, names(m), sep = ".")))
   }
   said <- c(said, "rtf_document.font_lang", "rtf_figures.width_twips", "rtf_figures.height_twips")
+  if (inherits(page$rtf_document$watermark, "tfl_call")) {
+    said <- setdiff(said, "rtf_document.watermark")
+  }
   ft <- page$rtf_document$font_table
   if (length(ft) <= 1L) said <- c(said, "rtf_document.font_table")
   out <- list()

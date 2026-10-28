@@ -37,3 +37,26 @@ test_that("a page the columns say whole: no page_more", {
   pg <- tfl_sheets_from_yaml(d)$table$page
   expect_true(is.null(pg$page_more) || all(is.na(pg$page_more)))
 })
+
+test_that("a watermark's look (an rtf_watermark() call): in page_more, and back; a word in its column", {
+  d <- withr::local_tempdir()
+  dir.create(file.path(d, "spec", "outputs"), recursive = TRUE)
+  writeLines(c("id: PM-1", "title: Page more"), file.path(d, "study.yml"))
+  wm <- tfl_call("rtf_watermark", list(text = "DRAFT", color = "#FF0000"))
+  tfl_write_output(tfl_output("T-1", "table", extends = "none",
+                              page = list(rtf_document = list(watermark = wm))),
+                   file.path(d, "spec", "outputs", "T-1.yml"))
+  tfl_write_output(tfl_output("T-2", "table", extends = "none",
+                              page = list(rtf_document = list(watermark = "DRAFT"))),
+                   file.path(d, "spec", "outputs", "T-2.yml"))
+  sh <- tfl_sheets_from_yaml(d)
+  rp <- sh$table$report
+  expect_true(is.na(rp$watermark[rp$output_id %in% "T-1"]))
+  expect_identical(rp$watermark[rp$output_id %in% "T-2"], "DRAFT")
+  pg <- sh$table$page
+  pm <- pg$page_more[pg$output_id %in% "T-1"]
+  expect_match(pm, "rtf_watermark", fixed = TRUE)
+  back <- tflspec:::.page_put(list(), "page", "page_more", pm, function(...) NULL, "T-1")
+  expect_identical(back$rtf_document$watermark,
+                   tfl_read_outputs(d)[["T-1"]]$page$rtf_document$watermark)
+})
