@@ -28,28 +28,16 @@ problem), \code{problems_text} (all of them, one a line), \code{file} (the
 report's \verb{spec/outputs/<id>.yml} when written, else \code{NA}), \code{repair}
 (the request's repair prompt to paste into the same chat, else \code{NA})),
 \code{next_steps} (a request's next step, named by the request),
+\code{next_kind} and \code{next_args} (the same step as a kind and its values,
+for a screen to say in its own words -- see \emph{The next step's kinds}),
 \code{assumptions} (the study's \verb{spec/_assumptions.yml} for these reports:
-\code{output_id}, \code{where}, \code{item}, \code{assumption}, \code{question}, \code{id} -- the
+\code{output_id}, \code{where}, \code{item}, \code{assumption}, \code{value}, \code{question}, \code{id} -- the
 assumption's \verb{A<n>} -- and \code{kind} -- its \verb{K<n>}, \code{\link[=tfl_ai_assumptions]{tfl_ai_assumptions()}}),
 \code{stray} (answer
 files named after no request), \code{requests} (the requests' folder),
 \code{templates} (each request's setting, \code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}}'s \code{templates}:
 a logical named by the request), \code{manifest} and \code{manifest_file}
 (below).
-
-The manifest is every report the answers say they make, for the person
-to check the count against the TOC (one TOC row can be several
-reports): each answer lists its reports first (\verb{reports:}, one line a
-report: \code{id}, \code{title}, \code{split} -- how its TOC row is split for it --,
-\code{toc} -- the TOC row's number).  A data frame, one row a report:
-\code{request}, \code{toc}, \code{output_id}, \code{title}, \code{split}, \code{listed} (\code{FALSE}: a
-report the answer writes but does not list; \code{NA}: a request not
-answered or not read, its reports as asked) and \code{status} (the report's,
-as in \code{reports}, or \code{"not answered"}: listed, but no report file in the
-answer).  It is written to \code{ai/manifest.csv} (UTF-8) beside the
-requests' folder, anew at each collection.
-The paths are relative to \code{study_dir}.  Its print is a summary: each
-request's status, its reports and the next step.
 }
 \description{
 Reads each \verb{<request>.md} in \code{answers} (the AI's whole answer to the
@@ -67,6 +55,51 @@ encoding (Shift-JIS / CP932, "ANSI") is an \code{error} that says how to save
 it again.  An answer saved as \verb{<request>.md.txt} or \verb{<request>.txt} (Notepad
 adds \code{.txt}) is read too.
 }
+\section{The next step's kinds}{
+
+\code{next_steps} is English text; \code{next_kind} names the same step by a
+word, with its values in \code{next_args}, so a screen can say it in its
+own language.  The kinds, and the values each carries (\code{agent}: whether
+the request was written for an agent -- \verb{Rscript run.R} -- or a chat):
+\describe{
+\item{\code{answer}}{no answer yet: \code{request} (the request file),
+\code{answer} (the file to save it as), \code{agent}.}
+\item{\code{fix_answer}}{the answer could not be read as one block:
+\code{answer}, \code{agent}.}
+\item{\code{answer_again}}{the answer could not be checked: \code{answer},
+\code{agent}.}
+\item{\code{repair}}{the answer has errors and a repair prompt was written:
+\code{repair} (the prompt file), \code{answer}, \code{agent}.}
+\item{\code{see_problem}}{the report files could not be written (the
+problem is in \code{reports}): \code{agent}.}
+\item{\code{warnings}}{written, with warnings to read.}
+\item{\code{done}}{written, nothing to do.}
+\item{\code{sheet_missing}}{a sheet's request: written, but \code{missing} (the
+TOC items) are not in the answer.}
+\item{\code{add_missing}}{written, but \code{missing} are not in the answer:
+\code{answer}, \code{agent}.}
+\item{\code{none_asked}}{the answer has none of the reports asked for:
+\code{asked}, \code{has}, \code{answer}, \code{agent}.}
+}
+\code{\link[=tfl_ai_run]{tfl_ai_run()}} adds three, for a report that passed its checks:
+\code{not_built} (\code{reports}, not built in this run: \verb{Rscript run.R <request>}), \code{no_package} (\code{report}, \code{package}: R has no such package),
+\code{build_failed} (\code{report}, \code{problem}, \code{repair}).
+
+The manifest is every report the answers say they make, for the person
+to check the count against the TOC (one TOC row can be several
+reports): each answer lists its reports first (\verb{reports:}, one line a
+report: \code{id}, \code{title}, \code{split} -- how its TOC row is split for it --,
+\code{toc} -- the TOC row's number).  A data frame, one row a report:
+\code{request}, \code{toc}, \code{output_id}, \code{title}, \code{split}, \code{listed} (\code{FALSE}: a
+report the answer writes but does not list; \code{NA}: a request not
+answered or not read, its reports as asked) and \code{status} (the report's,
+as in \code{reports}, or \code{"not answered"}: listed, but no report file in the
+answer).  It is written to \code{ai/manifest.csv} (UTF-8) beside the
+requests' folder, anew at each collection.
+The paths are relative to \code{study_dir}.  Its print is a summary: each
+request's status, its reports and the next step.
+}
+
 \seealso{
 \code{\link[=tfl_ai_write_requests]{tfl_ai_write_requests()}}
 }
