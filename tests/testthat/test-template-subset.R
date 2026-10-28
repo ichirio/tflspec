@@ -136,7 +136,7 @@ test_that("in a study: demog and ae_soc_pt of Part 1's subjects; N and counts th
   # the denominator: the analysis set and the subset in one filter(); the
   # target subjects, then the target records
   expect_match(code, "adsl_saf <- filter(adsl, SAFFL == \"Y\", PART == \"Part 1\")", fixed = TRUE)
-  expect_match(code, paste0("  inner_join(select(adsl_saf, USUBJID, TRT01A), by = \"USUBJID\") |>\n",
+  expect_match(code, paste0("  inner_join(select(adsl_saf, USUBJID, any_of(\"TRT01A\")), by = \"USUBJID\") |>\n",
                             "  filter(TRTEMFL == \"Y\")"), fixed = TRUE)
   ard <- suppressMessages(tfl_build_ard(st, dir = d, save = FALSE))
   saf <- sl[sl$SAFFL == "Y", ]

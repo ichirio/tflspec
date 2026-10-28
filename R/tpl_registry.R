@@ -1365,9 +1365,9 @@ names(.tpl_pc_params) <- vapply(.tpl_pc_params, `[[`, "", "name")
   where <- c(a$where, inn("PARAMCD", a$params), inn("AVISIT", a$visits))
   # the parameters and visits as factors in their order: the ARD keeps it
   ord <- c(if (length(a$param_order))
-             sprintf("PARAM = reorder(factor(PARAM), %s)", a$param_order),
+             sprintf("PARAM = reorder_by(PARAM, %s)", a$param_order),
            if (length(a$visit_order))
-             sprintf("AVISIT = reorder(factor(AVISIT), %s)", a$visit_order))
+             sprintf("AVISIT = reorder_by(AVISIT, %s)", a$visit_order))
   nn <- function(x) Filter(Negate(is.null), x)
   sets <- list(
     list(id = subj, label = .tpl_set_label(pop, ctx$population), from = "ADSL",
