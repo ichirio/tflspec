@@ -702,6 +702,11 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
     if (!is.na(p)) e$population <- p
     sc <- code_of(i)
     if (!is.na(sc)) e$shell_code <- sc
+    # its batches (a TOC_<batch> sheet, a column of marks): `sets`, the
+    # key the study's planner sheet reads and writes (" | " between them)
+    if (!is.null(t$batches) && !is.na(t$batches[i])) {
+      e$sets <- as.list(strsplit(t$batches[i], " | ", fixed = TRUE)[[1L]])
+    }
     e
   })
   dir.create(dirname(f), recursive = TRUE, showWarnings = FALSE)
