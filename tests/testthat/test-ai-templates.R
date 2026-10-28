@@ -249,14 +249,15 @@ test_that("a chat's request over max_chars: the templates' arguments by name onl
   d2 <- file.path(root, "short")
   r1 <- tfl_ai_prepare(unit = "toc", d1, aitpl_book(), adam = ad, quiet = TRUE, instructions = "each")
   # (the whole request is about 67,000 characters, the shortened one about
-  # 48,300 -- the schema's listing section since the AI drafts listings: a
-  # limit between them, with room for the instructions to grow)
+  # 52,500 -- the schema's listing section since the AI drafts listings,
+  # plan_empty since the schema has it: a limit between them, with room for
+  # the instructions to grow)
   r2 <- suppressWarnings(tfl_ai_prepare(unit = "toc", d2, aitpl_book(), adam = ad, quiet = TRUE, instructions = "each",
-                                        max_chars = 52000))
+                                        max_chars = 55000))
   ae1 <- paste(readLines(file.path(d1, "ai", "requests", "ae-1.md"), encoding = "UTF-8"), collapse = "\n")
   ae2 <- paste(readLines(file.path(d2, "ai", "requests", "ae-1.md"), encoding = "UTF-8"), collapse = "\n")
   expect_lt(nchar(ae2), nchar(ae1))
-  expect_lte(nchar(ae2), 52000)
+  expect_lte(nchar(ae2), 55000)
   expect_match(ae2, "- `ae_soc_pt`: Adverse events by SOC and PT", fixed = TRUE)
   expect_match(ae2, "  - `population` [target]*, ", fixed = TRUE)
   expect_false(grepl("(text) = ", ae2, fixed = TRUE))
