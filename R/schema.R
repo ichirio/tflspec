@@ -44,6 +44,19 @@
 #' `...` (`plan_cells()`, `plan_digits()`, `plan_sort()` and ten more).
 #' The same file is what the GUI's help and the AI kit's schema read.
 #'
+#' A figure's functions: the file has a card for those a clinical figure
+#' uses most (geoms and the stats with no geom of their own, scales,
+#' coordinates, complete themes and `theme()`, elements, guides,
+#' positions); any other function of a plot `ggplot2` exports
+#' (`scale_colour_steps`, `guide_axis_logticks`) is its formals.  The
+#' arguments the functions of one kind share -- a layer's `stat`,
+#' `position`, `fun.data`, `pad`; a scale's `name`, `breaks`, `labels`,
+#' `sec.axis`; `theme()`'s settings, each its element -- are typed and
+#' labelled by `inst/fig/gg_args.csv` for every function that takes them.
+#' A geom given another `stat` (`geom_step(stat = "ecdf")`) is checked
+#' with that stat's parameters too, a stat given another `geom` with that
+#' geom's.
+#'
 #' The types, in a short notation: `string`, `integer`, `number`,
 #' `logical`, `enum[a|b]`, `column`, `stat`, `template`, `r` (`!r`),
 #' `formula` (`!r`, written `~ <text>`), `guard` (`!r`, a two-sided
@@ -88,8 +101,13 @@ tfl_schema <- function(fn = NULL) {
   ent <- ent %||% .schema_fig_entries()[[nm]] %||%
     # a ggplot2 layer function (geom_area, ggrepel::geom_text_repel): from
     # the installed package itself
-    (if (grepl("^(geom|stat)_", nm)) .schema_ggplot_entry(fn))
+    (if (grepl("^(geom|stat)_", nm)) .schema_ggplot_entry(fn)) %||%
+    # any other function of a plot ggplot2 exports (scale_colour_brewer,
+    # theme_bw, guide_axis): by its formals (R/spec_figure.R)
+    (if (!grepl("::", fn, fixed = TRUE) || startsWith(fn, "ggplot2::")) .schema_gg_entry(nm))
   if (is.null(ent)) return(NULL)
+  # a figure's function: the arguments its kind shares, typed
+  if (!is.null(ent$figure)) ent <- .schema_fig_common(ent, nm)
   .schema_add_formals(ent, nm)
 }
 
@@ -202,6 +220,9 @@ tfl_schema_check <- function(item) {
     return(out)
   }
   ent <- tfl_schema(fn)
+  # a geom drawn by another stat (geom_step(stat = "ecdf")), a stat by
+  # another geom (stat_summary(geom = "errorbar")): the other's parameters
+  ent <- .schema_item_entry(ent, fn, item$args %||% list())
   # a figure's own ggplot2 layer: the layer function's aesthetics and
   # parameters (R/spec_figure.R)
   if (identical(fn, "geom") && identical(ent$figure, "layer")) .schema_check_geom(item, bad)
