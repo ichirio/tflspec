@@ -127,7 +127,7 @@ outputs:
         "2": {center: Shift from Baseline in Laboratory Normal Range Indicator at Cycle 2 Day 1}
         "3": {center: Safety Population}
 assumptions:
-  - {output_id: T-14-1-1, where: ard.analyses, item: arm, assumption: "the columns are the actual treatment, TRT01A", question: "Actual (TRT01A) or planned (TRT01P) treatment?"}
+  - {output_id: T-14-1-1, where: ard.analyses, item: arm, assumption: "Treatment variable for the columns: TRT01A (actual), because the analysis set is the safety set (SAF)", value: TRT01A, question: "Actual (TRT01A) or planned (TRT01P) treatment?"}
   - {output_id: T-14-1-1, where: codelists, item: SEX, assumption: "the data code sex as M / F; printed Male, Female", question: "Is this the order the shell wants?"}
   - {output_id: T-14-2-1, where: ard.analysis_data, item: RESP, assumption: "a responder has a best overall response of CR or PR (PARAMCD BOR)", question: "Confirmed responses only?"}
   - {output_id: T-14-3-1, where: ard.analyses, item: where, assumption: "treatment-emergent is TRTEMFL == \"Y\"", question: "Is TRTEMFL the treatment-emergent flag?"}

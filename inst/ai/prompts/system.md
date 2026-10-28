@@ -16,7 +16,7 @@ Return exactly one fenced code block (```{{format}}). Anything outside the block
 - The block starts with the header `{{header}}`.
 - Then {{content}}
 - Return the whole {{whole}}, not only what you added or changed.
-- End with `assumptions`: one short line for each guess you made and each conflict between documents, or an empty list when there are none. {{language}}
+- End with `assumptions`: one item for each guess you made and each conflict between documents -- `assumption`: one sentence saying what you decided and how (not a label: "Title in two lines: line 1 'Table 14.1.1', line 2 'Demographics', because the shell shows two"); `value`: the value you used (the variable, the flag, the list) -- or an empty list when there are none. {{language}}
 
 {{format_rules}}
 

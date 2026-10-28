@@ -632,7 +632,8 @@ tfl_ai_unpack(a, "study")                           # spec/outputs/<id>.yml, spe
 * The answer is one YAML block: the header line (its task `table`, version
   1 and the reports), `outputs:` (one
   report file each, as §6), `assumptions:` (`output_id`, `where`, `item`,
-  `assumption`, `question`).  `tfl_ai_check()` reads every report as
+  `assumption` -- one sentence, what was decided and how -- `value`, the
+  value used, and `question`).  `tfl_ai_check()` reads every report as
   `tfl_read_output()` does, checks each content item against the schema (an
   unknown function or argument, a value of the wrong type, a required
   argument missing), each analysis's fields and method, the analysis sets
@@ -678,7 +679,8 @@ heading with the file's path (`### spec/outputs/T-1.yml`), then a `yaml`
 block, for `study.yml`, `spec/data.yml`, `spec/toc.yml`,
 `spec/defaults.yml`, one `spec/outputs/<id>.yml` a report, and
 `spec/_assumptions.yml` -- its guesses, a list of `output_id`, `where`,
-`item`, `assumption`, `question`.  `tfl_ai_unpack(answer, dir)` checks the
+`item`, `assumption` (one sentence: what it decided and how), `value`
+(the value it used), `question`.  `tfl_ai_unpack(answer, dir)` checks the
 paths (only `study.yml` and `spec/**.yml`) and that every block is YAML,
 then writes the files; it writes nothing when one is wrong, and over
 existing files only with `overwrite = TRUE`.

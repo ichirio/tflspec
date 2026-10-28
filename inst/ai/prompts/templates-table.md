@@ -39,5 +39,5 @@ outputs:
       titles:
         "1": {center: Table 14.3.1}
 assumptions:
-  - {output_id: T-14-3-1, where: template, item: ae_soc_pt, assumption: the shell is the standard SOC / PT table, question: ~}
+  - {output_id: T-14-3-1, where: template, item: ae_soc_pt, assumption: "Template: the standard SOC / PT table, because the shell has the same rows and columns", value: ae_soc_pt, question: ~}
 ```

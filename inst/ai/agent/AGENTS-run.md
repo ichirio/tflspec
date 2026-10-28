@@ -47,7 +47,8 @@ and `ai/`. If the workspace is a folder above it, use the paths from here.
    `Rscript -e "cat(format(tflspec::tfl_ai_read_shell('<file>', outputs = '<id>')))"`
    or `readxl::read_excel('<file>', sheet = '<sheet>', range = '<cells>')`.
    When you cannot open it (outside your workspace, no permission), decide
-   from the request alone and write what you took as an assumption. When
+   from the request alone and write what you took as an assumption (one
+   sentence saying what you decided and how, and its `value`). When
    the place looks wrong (another report's shell, an empty range), ask it
    in `ai/questions.md`.
    The layout too: when you can open the workbook, look at the shell's
@@ -74,8 +75,13 @@ and `ai/`. If the workspace is a folder above it, use the paths from here.
    When you cannot open it, decide from the summary and the request.
 5. A question you cannot settle from the request, its shell, the summary,
    the data or `ai/decisions.md`: **do not stop**. Take the likeliest
-   choice and write it as an assumption with its `question` (the request's answer format says
-   how). Not so for the analysis set and, for a dataset of parameters
+   choice and write it as an assumption -- `assumption` one sentence
+   saying what you decided and how, `value` the value you used -- with its
+   `question` (the request's answer format says how).  The treatment
+   variable follows the analysis set: the safety set (SAFFL) takes TRT01A
+   (actual), any other set (ITT, FAS, PP; demographics, disposition)
+   TRT01P (planned), unless the shell or the TOC says otherwise.  Not so
+   for the analysis set and, for a dataset of parameters
    (PARAMCD), the parameter: they define the report, and the shell says
    them. When you cannot read them, never take a likely one: ask the
    question, and leave the report with the error `run.R` gives it (no

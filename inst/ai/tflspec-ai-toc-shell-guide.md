@@ -367,8 +367,13 @@ number a shell shows must have an analysis that computes it.
   convention, not a fact: list each `id → flag` in the assumptions.  "All
   subjects" / "All enrolled" has no flag: no `where`.
 - The arm variable: `TRT01A` (actual) or `TRT01P` (planned) on ADSL;
-  `TRTA` / `TRTP` on event datasets.  A safety table is usually actual
-  treatment, an efficacy table planned; ask when the shell does not say.
+  `TRTA` / `TRTP` on event datasets.  The default follows the analysis
+  set: the safety set (`SAFFL`; adverse events, exposure, safety labs and
+  vitals) takes the actual treatment, `TRT01A`; every other set (ITT, FAS,
+  PP; demographics, disposition, efficacy) the planned treatment,
+  `TRT01P`.  The shell or the TOC saying otherwise wins.  Write the choice
+  as an assumption (`item: arm`): the set it follows from in
+  `assumption`, the variable in `value`.
 
 ### 4.2 One analysis per block of rows
 
@@ -635,17 +640,31 @@ Run through it; the review will.
 - **`spec/_assumptions.yml`** (its name starts with `_`, so no reader
   takes it as part of the spec): a list, one item a decision --
   `output_id` (left out for the study), `where` (the file or key it is
-  about), `item`, `assumption`, `question`:
+  about), `item`, `assumption`, `value`, `question`.  `assumption` is
+  **one sentence a reader understands on its own: what you decided, and
+  how** -- not a label (`titles: two title lines` says nothing; `Title in
+  two lines: line 1 'Table 14.1.1', line 2 'Demographic Characteristics',
+  because the shell shows two` does).  `value` is **the value you used**
+  (the variable, the flag, the list, the text), so a screen can show it
+  beside the sentence:
 
   ```yaml
   - where: spec/data.yml populations
     item: SAF
-    assumption: SAFFL == "Y" on ADSL
+    assumption: "Safety set: the flag SAFFL == \"Y\" on ADSL, because the TOC names the set SAF and no flag"
+    value: SAFFL == "Y"
     question: Is the safety set flagged by SAFFL?
+  - output_id: T-1
+    where: ard.analyses
+    item: arm
+    assumption: "Treatment variable for the columns: TRT01A (actual), because the analysis set is the safety set (SAF)"
+    value: TRT01A
+    question: Actual (TRT01A) or planned (TRT01P) treatment?
   - output_id: T-2
     where: ard.analyses
     item: AE denominator
-    assumption: the analysis set per column (SAF)
+    assumption: "AE denominator: the analysis set of each column (SAF), because the shell does not say"
+    value: SAF
     question: Percentages of the analysis set, or of subjects with any AE?
   ```
 - **In the chat**, after the files: the same list as text, so the person

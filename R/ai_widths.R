@@ -195,8 +195,10 @@
 .ai_widths_assumptions <- function(ids) {
   if (!length(ids)) return(NULL)
   data.frame(output_id = ids, where = "content", item = "widths",
-             assumption = paste("the column widths are the default proportions, set for now",
-                                "(rtfreporter::default_col_widths()); not read from the shell"),
+             assumption = paste("Column widths: the default proportions, set for now because",
+                                "the shell's widths were not read (rtfreporter::default_col_widths():",
+                                "the row headings by their content, the value columns sharing the rest)"),
+             value = "default_col_widths()",
              question = "Are the column widths as the shell wants?",
              stringsAsFactors = FALSE)
 }

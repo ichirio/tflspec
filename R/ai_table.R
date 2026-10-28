@@ -389,8 +389,8 @@
 
 .ai_assumption_rows <- function(x) {
   empty <- data.frame(output_id = character(), where = character(), item = character(),
-                      assumption = character(), question = character(),
-                      stringsAsFactors = FALSE)
+                      assumption = character(), value = character(),
+                      question = character(), stringsAsFactors = FALSE)
   if (is.null(x) || !length(x)) return(empty)
   cell <- function(e, k) {
     v <- e[[k]]
@@ -403,9 +403,19 @@
     }
     data.frame(output_id = cell(e, "output_id"), where = cell(e, "where"),
                item = cell(e, "item"), assumption = cell(e, "assumption"),
+               value = .ai_assumption_value(e$value),
                question = cell(e, "question"), stringsAsFactors = FALSE)
   })
   do.call(rbind, c(list(empty), rows))
+}
+
+# An assumption's `value` -- the value the AI used -- as text: a scalar as
+# it is, a list or a vector (the arms, the variables) joined with ", "
+.ai_assumption_value <- function(v) {
+  if (is.null(v) || !length(v)) return(NA_character_)
+  v <- unlist(v, use.names = FALSE)
+  if (!length(v)) return(NA_character_)
+  paste(as.character(v), collapse = ", ")
 }
 
 # A table answer's `reports`: the list of the reports its request makes,

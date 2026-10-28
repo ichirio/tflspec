@@ -25,7 +25,7 @@ test_that("each assumption an id kept across collections, and a kind", {
   d <- asm_rows(withr::local_tempdir(), asm_five())
   a <- tfl_ai_assumptions(d)
   expect_named(a, c("id", "kind", "n_reports", "output_id", "where", "item", "assumption",
-                    "question", "verdict", "correct", "status"))
+                    "value", "question", "verdict", "correct", "status"))
   expect_identical(a$id, paste0("A", 1:5))
   expect_identical(a$kind, c("K1", "K1", "K2", "K2", "K3"))
   expect_identical(a$n_reports, c(2L, 2L, 2L, 2L, 1L))
@@ -222,4 +222,22 @@ test_that("collected answers: ids kept; an assumption the agent fixed survives a
   expect_identical(r$assumption, "the columns are the planned treatment, TRT01P")
   expect_match(r$note, "the answer still says", fixed = TRUE)
   expect_identical(tfl_ai_assumptions(d)$status[match(id, a$id)], "done")
+})
+
+test_that("an assumption's value -- the value the AI used -- is kept and shown", {
+  rows <- asm_five()
+  rows[[1L]]$assumption <- "Treatment variable for the columns: TRT01A (actual), because the set is SAF"
+  rows[[1L]]$value <- "TRT01A"
+  rows[[5L]]$value <- list("Table 14.1.1", "Demographics")   # a list: joined
+  d <- asm_rows(withr::local_tempdir(), rows)
+  a <- tfl_ai_assumptions(d)
+  expect_named(a, c("id", "kind", "n_reports", "output_id", "where", "item", "assumption",
+                    "value", "question", "verdict", "correct", "status"))
+  expect_identical(a$value, c("TRT01A", NA, NA, NA, "Table 14.1.1, Demographics"))
+  # written back with the ids, the value stays, after the assumption
+  y <- yaml::read_yaml(file.path(d, "spec", "_assumptions.yml"))
+  expect_identical(y[[1L]]$value, "TRT01A")
+  expect_identical(names(y[[1L]]), c("id", "kind", "output_id", "where", "item", "assumption",
+                                     "value", "question"))
+  expect_null(y[[2L]]$value)
 })

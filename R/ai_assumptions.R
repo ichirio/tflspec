@@ -107,7 +107,8 @@
 # kind first, an empty field left out; the path
 .ai_asm_write <- function(d, rows) {
   f <- file.path(d, "spec", "_assumptions.yml")
-  ord <- c("id", "kind", "output_id", "where", "item", "assumption", "question", "status", "note")
+  ord <- c("id", "kind", "output_id", "where", "item", "assumption", "value", "question",
+           "status", "note")
   ord <- c(intersect(ord, names(rows)), setdiff(names(rows), ord))
   lst <- lapply(seq_len(nrow(rows)), function(i) {
     r <- as.list(rows[i, ord, drop = FALSE])
@@ -346,7 +347,9 @@ tfl_ai_assumption_answers_write <- function(study_dir, x, overwrite = TRUE) { # 
 #' @param study_dir The study folder.
 #' @return A data frame, one row an assumption: `id`, `kind`, `n_reports`
 #'   (the reports of its kind), `output_id`, `where`, `item`,
-#'   `assumption`, `question`, `verdict` and `correct` (its answer, its own
+#'   `assumption` (one sentence: what the AI decided and how), `value`
+#'   (the value it used, as text; `NA` when the item has none), `question`,
+#'   `verdict` and `correct` (its answer, its own
 #'   or its kind's; `NA` when none), `status`: `open` (no answer),
 #'   `confirmed` (`ok`), `answered` (`wrong`, for the agent to apply) or
 #'   `done` (the agent applied it: its section of `ai/corrections.md` is
@@ -358,7 +361,7 @@ tfl_ai_assumptions <- function(study_dir) {
   a <- .ai_asm_table(study_dir)
   out <- data.frame(id = a$id, kind = a$kind, n_reports = as.integer(a$n_reports),
                     output_id = a$output_id, where = a$where, item = a$item,
-                    assumption = a$assumption, question = a$question,
+                    assumption = a$assumption, value = a$value, question = a$question,
                     verdict = a$verdict, correct = a$correct, status = a$status_answer,
                     stringsAsFactors = FALSE)
   rownames(out) <- NULL

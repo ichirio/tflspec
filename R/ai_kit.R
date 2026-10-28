@@ -164,18 +164,30 @@
               "analyses", "tables", "listing_cols", "listings", "data", "data"),
     item = c("SAF", "paths", "TRT01A levels", "SEX", "cols", "AE denominator", "AE where",
              "cols", "columns", "where", "param", "summary"),
-    assumption = c("SAFFL == \"Y\" on ADSL",
-                   "data/adam/<dataset>.rds",
-                   "the arms as the data name them, in the shells' order",
-                   "the data code sex as M / F",
-                   "the arm is TRT01A (actual treatment)",
-                   "the analysis set per column (SAF)",
-                   "treatment-emergent is TRTEMFL == \"Y\"",
-                   "the arm on ADAE is TRT01A",
-                   "USUBJID, TRT01A, AEBODSYS / AEDECOD, ASTDY, AESEV, AEOUT",
-                   "serious is AESER == \"Y\"; SAFFL is on ADAE",
-                   "systolic blood pressure is PARAMCD SYSBP",
-                   "the mean and its standard error of AVAL at each AVISIT"),
+    assumption = c("Safety set: the flag SAFFL == \"Y\" on ADSL, because the TOC names the set SAF and no flag",
+                   "Datasets: read from data/adam/<dataset>.rds, because no path was given",
+                   "Arm levels: the arms as the data name them, in the shells' order",
+                   "Code list of SEX: the data code sex as M / F, because no code list was given",
+                   "Treatment variable for the columns: TRT01A (actual), because the analysis set is the safety set (SAF)",
+                   "AE denominator: the analysis set of each column (SAF), because the shell does not say",
+                   "Treatment-emergent: TRTEMFL == \"Y\", because the shell says TEAE and no flag",
+                   "Treatment variable on ADAE: TRT01A (actual), because the AE table is on the safety set",
+                   "Listing columns: USUBJID, TRT01A, AEBODSYS / AEDECOD, ASTDY, AESEV, AEOUT, matched to the shell's headers by name",
+                   "Serious: AESER == \"Y\"; the safety flag SAFFL taken from ADAE",
+                   "Parameter: systolic blood pressure is PARAMCD SYSBP, because the shell names the test and no code",
+                   "Statistics: the mean and its standard error of AVAL at each AVISIT, because the shell shows mean +/- SE"),
+    value = c("SAFFL == \"Y\"",
+              "data/adam/<dataset>.rds",
+              "as the data name them",
+              "M, F",
+              "TRT01A",
+              "SAF",
+              "TRTEMFL == \"Y\"",
+              "TRT01A",
+              "USUBJID, TRT01A, AEBODSYS, AEDECOD, ASTDY, AESEV, AEOUT",
+              "AESER == \"Y\"",
+              "SYSBP",
+              "mean, se"),
     question = c("Is the safety set flagged by SAFFL?",
                  "Where are the datasets, and in which format?",
                  "Are these the arms' values in the data?",
@@ -338,7 +350,7 @@
   rows <- lapply(seq_len(nrow(a)), function(i) {
     r <- list(output_id = if (nzchar(a$output_id[i])) a$output_id[i],
               where = unname(where[a$sheet[i]]), item = a$item[i],
-              assumption = a$assumption[i], question = a$question[i])
+              assumption = a$assumption[i], value = a$value[i], question = a$question[i])
     Filter(Negate(is.null), r)
   })
   .ai_write_text(yaml::as.yaml(rows, indent.mapping.sequence = TRUE),
@@ -489,9 +501,10 @@
         "# one item for everything decided without being told",
         "- output_id: T-1",
         "  where: ard.analyses",
-        "  item: AGE",
-        "  assumption: the arm is TRT01A (actual treatment)",
-        "  question: Actual or planned treatment?"))
+        "  item: arm",
+        "  assumption: \"Treatment variable for the columns: TRT01A (actual), because the analysis set is the safety set (SAF)\"",
+        "  value: TRT01A",
+        "  question: Actual (TRT01A) or planned (TRT01P) treatment?"))
 }
 
 # ---- what to give the AI --------------------------------------------------------
@@ -573,7 +586,11 @@
     "> 4. `spec/_assumptions.yml`: one item for everything you decided without",
     ">    being told -- datasets, flags, variables, denominators, methods, the",
     ">    order of levels -- each its `output_id`, `where`, `item`,",
-    ">    `assumption` and `question`.",
+    ">    `assumption` (one sentence: what you decided and how), `value` (the",
+    ">    value you used) and `question`.  The treatment variable follows the",
+    ">    analysis set: the safety set (SAFFL) takes TRT01A (actual), any other",
+    ">    set (ITT, FAS, PP; demographics, disposition) TRT01P (planned); write",
+    ">    the choice as an assumption with the set it follows from.",
     ">",
     if (meta) c(
     sprintf("> %s is the study's ADaM metadata: take every dataset,", f("metadata")),

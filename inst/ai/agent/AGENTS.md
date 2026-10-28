@@ -37,8 +37,12 @@ For each request you are given, in order:
    numeric code and its text, `RACEN` and `RACE`): when the summary does
    not show it (`[codes: ...]`), do not read the data for it; take it as
    an assumption with the question "the codes' texts are not known". Take the likeliest choice and write it
-   as an assumption with its `question` (the request's answer format says
-   how), and go on. Not so for the analysis set and, for a dataset of
+   as an assumption -- `assumption` one sentence saying what you decided
+   and how, `value` the value you used -- with its `question` (the
+   request's answer format says how), and go on.  The treatment variable
+   follows the analysis set: the safety set (SAFFL) takes TRT01A (actual),
+   any other set (ITT, FAS, PP; demographics, disposition) TRT01P
+   (planned), unless the shell or the TOC says otherwise. Not so for the analysis set and, for a dataset of
    parameters (PARAMCD), the parameter: they define the report. When the
    request does not say them, never take a likely one: write the question,
    and leave them out of the report.

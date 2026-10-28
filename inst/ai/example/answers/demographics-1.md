@@ -36,7 +36,7 @@ outputs:
         "2": {center: Demographic and Baseline Characteristics}
         "3": {center: Safety Population}
 assumptions:
-  - {output_id: T-14-1-1, where: ard.analyses, item: arm, assumption: "the columns are the actual treatment, TRT01A", question: "Actual (TRT01A) or planned (TRT01P) treatment?"}
+  - {output_id: T-14-1-1, where: ard.analyses, item: arm, assumption: "Treatment variable for the columns: TRT01A (actual), because the analysis set is the safety set (SAF)", value: TRT01A, question: "Actual (TRT01A) or planned (TRT01P) treatment?"}
   - {output_id: T-14-1-1, where: codelists, item: SEX, assumption: "the data code sex as M / F; printed Male, Female", question: "Is this the order the shell wants?"}
 ```
 

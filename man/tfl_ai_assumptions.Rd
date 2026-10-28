@@ -12,7 +12,9 @@ tfl_ai_assumptions(study_dir)
 \value{
 A data frame, one row an assumption: \code{id}, \code{kind}, \code{n_reports}
 (the reports of its kind), \code{output_id}, \code{where}, \code{item},
-\code{assumption}, \code{question}, \code{verdict} and \code{correct} (its answer, its own
+\code{assumption} (one sentence: what the AI decided and how), \code{value}
+(the value it used, as text; \code{NA} when the item has none), \code{question},
+\code{verdict} and \code{correct} (its answer, its own
 or its kind's; \code{NA} when none), \code{status}: \code{open} (no answer),
 \code{confirmed} (\code{ok}), \code{answered} (\code{wrong}, for the agent to apply) or
 \code{done} (the agent applied it: its section of \code{ai/corrections.md} is

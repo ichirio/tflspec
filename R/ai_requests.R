@@ -560,7 +560,7 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
 #'   (the request's repair prompt to paste into the same chat, else `NA`)),
 #'   `next_steps` (a request's next step, named by the request),
 #'   `assumptions` (the study's `spec/_assumptions.yml` for these reports:
-#'   `output_id`, `where`, `item`, `assumption`, `question`, `id` -- the
+#'   `output_id`, `where`, `item`, `assumption`, `value`, `question`, `id` -- the
 #'   assumption's `A<n>` -- and `kind` -- its `K<n>`, [tfl_ai_assumptions()]),
 #'   `stray` (answer
 #'   files named after no request), `requests` (the requests' folder),
@@ -773,7 +773,8 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
   # each assumption its id and kind (ai/assumption_ids.csv), kept across collections
   asm <- .ai_asm_stamp(study_dir)
   asm <- asm[is.na(asm$output_id) | asm$output_id %in% out$output_id,
-             c("output_id", "where", "item", "assumption", "question", "id", "kind"), drop = FALSE]
+             c("output_id", "where", "item", "assumption", "value", "question", "id", "kind"),
+             drop = FALSE]
   rownames(asm) <- NULL
   # each request's setting: answered with templates where they fit, or not
   tpl <- vapply(ctxs, function(x) isTRUE(x$context$ai_templates), NA)
@@ -913,6 +914,7 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
                       item = an[[j]][["id"]] %||% "over_variables",
                       assumption = paste("tflspec added over_variables = TRUE: the overall row",
                                          "(normalize_ard overall) needs it"),
+                      value = "over_variables = TRUE",
                       question = NA_character_, stringsAsFactors = FALSE)
     a$assumption_rows <- rbind(a$assumption_rows %||% row[0L, , drop = FALSE], row)
   }
