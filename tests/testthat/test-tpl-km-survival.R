@@ -53,7 +53,7 @@ test_that("in a study: km_survival, A (the data steps, the call) = B (the design
   txt <- paste(x$a, collapse = "\n")
   expect_match(txt, "semi_join(", fixed = TRUE)
   expect_match(txt, "filter(PARAMCD == \"PFS\")", fixed = TRUE)
-  expect_match(txt, "content <- tfl_tpl(adtte_pfs, \"km_survival\", time_unit = \"days\", by = TRT01A) +",
+  expect_match(txt, "content <- tflspec::tfl_tpl(adtte_pfs, \"km_survival\", time_unit = \"days\", by = TRT01A) +",
                fixed = TRUE)
   items <- paste(tfl_content_code(x$ro, template = "items"), collapse = "\n")
   expect_match(items, "add_risktable(", fixed = TRUE)

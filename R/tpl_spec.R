@@ -282,6 +282,19 @@ tfl_template_to_spec <- function(output, study) {
 
 # A template report's program (the A use): the template's call, the
 # arguments its SPEC gives and the study's defaults it took (not the ones
+# The template's call as a program writes it: `tflspec::tfl_tpl` (a table's
+# or a listing's), `tflspec::tpl_<name>` (a figure's), a package's own
+# template with its `pkg::`; one made in the session bare.  A study's
+# program does not library(tflspec), so the package is named;
+# .drop_attached_ns() takes the `pkg::` off for a package the study's setup
+# attaches (option tflspec.attached).
+.tpl_call_name <- function(t, generic, called = NULL) {
+  fn <- if (generic) "tfl_tpl" else t$call %||% paste0("tpl_", called %||% t$name)
+  if (grepl("::", fn, fixed = TRUE)) return(fn)
+  pkg <- if (generic) "tflspec" else t$package %||% "tflspec"
+  if (!nzchar(pkg) || identical(pkg, "(session)")) fn else paste0(pkg, "::", fn)
+}
+
 # left at the template's own default), the code lists it reads at the head;
 # then the study's and the report's own lines, each marked
 .content_tpl_code <- function(output, data = "ard", plan = "plan", pipe = NULL) {
@@ -307,8 +320,8 @@ tfl_template_to_spec <- function(output, study) {
   levels <- .tpl_levels(vars, output$codelists)
   cl <- if (length(levels)) c("# the code lists: each value in its order, as the table shows it",
                               .codelists_lines(levels), "")
-  call <- do.call(.spec_call, c(if (generic) list("tfl_tpl", .spec_sym(data), called)
-                                else list(t$call %||% paste0("tpl_", called), .spec_sym(data)), args,
+  call <- do.call(.spec_call, c(if (generic) list(.tpl_call_name(t, TRUE), .spec_sym(data), called)
+                                else list(.tpl_call_name(t, FALSE, called), .spec_sym(data)), args,
                                 if (length(levels)) list(codelists = stats::setNames(
                                   lapply(names(levels), function(v) .spec_sym(.cl_name(v))),
                                   names(levels)))))

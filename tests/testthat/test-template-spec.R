@@ -77,7 +77,7 @@ test_that("A (the template's call) = B (its items) = the items written out, as t
   ro <- tfl_resolve_output(o, s)
   code <- tfl_content_code(ro, pipe = "|>")
   expect_match(code, "# template demog", fixed = TRUE, all = FALSE)
-  expect_match(paste(code, collapse = "\n"), "plan <- tfl_tpl(\n  ard,\n  \"demog\",", fixed = TRUE)
+  expect_match(paste(code, collapse = "\n"), "plan <- tflspec::tfl_tpl(\n  ard,\n  \"demog\",", fixed = TRUE)
   # (the code lists are the ARD's: no codelists = for a template of cards' analyses)
   expect_false(any(grepl("codelists =", code, fixed = TRUE)))
   expect_match(code, "# (study default)", fixed = TRUE, all = FALSE)
