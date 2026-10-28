@@ -241,3 +241,19 @@ test_that("an assumption's value -- the value the AI used -- is kept and shown",
                                      "value", "question"))
   expect_null(y[[2L]]$value)
 })
+
+test_that("a field tflspec does not know survives the file being written back", {
+  rows <- asm_five()
+  rows[[1L]]$value <- "TRT01A"
+  rows[[1L]]$source <- "shell"              # a person's own field
+  rows[[3L]]$checked_by <- list("A", "B")
+  d <- asm_rows(withr::local_tempdir(), rows)
+  a <- tfl_ai_assumptions(d)                # stamps the ids: the file is written back
+  expect_identical(a$value[1L], "TRT01A")
+  y <- yaml::read_yaml(file.path(d, "spec", "_assumptions.yml"))
+  expect_identical(y[[1L]]$source, "shell")
+  expect_identical(y[[1L]]$value, "TRT01A")
+  expect_identical(y[[3L]]$checked_by, "A, B")
+  expect_null(y[[2L]]$source)
+  expect_false("source" %in% names(a))      # the table shows the known columns
+})

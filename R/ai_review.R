@@ -611,6 +611,14 @@
     v <- e[[k]]
     if (is.null(v) || !length(v)) NA_character_ else as.character(v[[1L]])
   }
+  # `all`: every other key an item carries too (a field this version does
+  # not know, a person's own), so that writing the file back keeps it
+  known <- c("output_id", "where", "item", "assumption", "value", "question", extra)
+  others <- if (isTRUE(all)) {
+    unique(unlist(lapply(y, function(e) if (is.list(e)) setdiff(names(e), known))))
+  } else character()
+  others <- others[!is.na(others) & nzchar(others)]
+  for (k in others) empty[[k]] <- character()
   rows <- lapply(y, function(e) {
     if (is.character(e)) e <- list(assumption = e)
     r <- data.frame(output_id = cell(e, "output_id"), sheet = cell(e, "where"),
@@ -618,6 +626,7 @@
                     value = .ai_assumption_value(e$value),
                     question = cell(e, "question"), stringsAsFactors = FALSE)
     if (isTRUE(all)) for (k in extra) r[[k]] <- cell(e, k)
+    for (k in others) r[[k]] <- .ai_assumption_value(e[[k]])
     r
   })
   do.call(rbind, c(list(empty), rows))
