@@ -1,6 +1,6 @@
 Package: tflspec
 Title: 'Excel' Specifications for Clinical Tables, Listings and Figures
-Version: 0.0.24.9237
+Version: 0.0.24.9238
 Authors@R: c(
     person(given  = "Yoichi",
            family = "Masui",
@@ -36,7 +36,7 @@ Imports:
     stats,
     utils
 Suggests:
-    rtfreporter (>= 0.8.2.9099),
+    rtfreporter (>= 0.8.2.9100),
     broom,
     broom.helpers,
     car,
@@ -66,6 +66,6 @@ Suggests:
     writexl,
     xml2
 Remotes:
-    ichirio/rtfreporter
+    ichirio/rtfreporter@next
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.1.1
