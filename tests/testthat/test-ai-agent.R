@@ -475,3 +475,12 @@ test_that("mode = \"agent\": what the agent may open -- agent_reads, references"
                               quiet = TRUE, mode = "agent", agent_max_reads = "a"),
                "agent_max_reads = ): one number", fixed = TRUE)
 })
+
+test_that("what every report's build depends on names the packages' versions", {
+  withr::local_dir(withr::local_tempdir())
+  k <- tflspec:::.ai_built_common(list(data = list(datasets = list())))
+  v <- function(p) if (requireNamespace(p, quietly = TRUE)) format(utils::packageVersion(p)) else "-"
+  for (p in c("tflspec", "rtfreporter", "cards", "cardx", "ggplot2")) {
+    expect_true(grepl(paste0("|", p, "|", v(p), "|"), paste0(k, "|"), fixed = TRUE), label = p)
+  }
+})

@@ -384,11 +384,15 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
   tpl <- sort(list.files(file.path("spec", "templates"), "[.][Rr]$", full.names = TRUE))
   # (the datasets' paths: from the study folder, or whole)
   data <- unlist(lapply(st$data$datasets %||% list(), function(d) d$path), use.names = FALSE)
+  data <- data %||% character()
   fi <- file.info(data[file.exists(data)])
   adam <- if (nrow(fi)) paste(rownames(fi), fi$size, format(fi$mtime, "%Y%m%d%H%M%S"), collapse = ";") else ""
   pk <- function(p) if (requireNamespace(p, quietly = TRUE)) format(utils::packageVersion(p)) else "-"
+  # (the packages whose version changes what a program makes: a new one
+  # builds every report again)
   paste(md5(c("study.yml", file.path("spec", c("data.yml", "defaults.yml")))), md5(tpl), adam,
-        "tflspec", pk("tflspec"), "rtfreporter", pk("rtfreporter"), sep = "|")
+        "tflspec", pk("tflspec"), "rtfreporter", pk("rtfreporter"), "cards", pk("cards"),
+        "cardx", pk("cardx"), "ggplot2", pk("ggplot2"), sep = "|")
 }
 
 .ai_built_key <- function(id, common) {
