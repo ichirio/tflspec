@@ -56,6 +56,24 @@
 #' unlink(d, recursive = TRUE)
 #' }
 #' @export
+# The tables among `outs` whose widths the study's defaults give them: the
+# report resolved against the study (tfl_resolve_output()) has
+# plan_columns(widths = ), though its own file does not.  Their ids.  A
+# study that cannot be read, or a report that cannot be resolved, gives
+# none (the caller then tries to build it, and says so when it cannot).
+.ai_widths_inherited <- function(outs, dir) {
+  tabs <- names(outs)[vapply(outs, function(o) identical(o$kind, "table"), NA)]
+  if (!length(tabs)) return(character())
+  old <- setwd(dir)
+  on.exit(setwd(old), add = TRUE)
+  st <- tryCatch(tfl_read_study_spec("."), error = function(e) NULL)
+  if (is.null(st)) return(character())
+  tabs[vapply(tabs, function(id) {
+    ro <- tryCatch(tfl_resolve_output(outs[[id]], st), error = function(e) NULL)
+    !is.null(ro) && .ai_has_widths(ro)
+  }, NA)]
+}
+
 tfl_fill_widths <- function(study_dir = ".", output_id = NULL, assumption = TRUE) {
   outs <- tfl_read_outputs(study_dir)
   if (!is.null(output_id)) {
@@ -70,6 +88,10 @@ tfl_fill_widths <- function(study_dir = ".", output_id = NULL, assumption = TRUE
   if (!length(outs)) return(invisible(character()))
   paths <- file.path(.outputs_dir(study_dir), paste0(names(outs), ".yml"))
   unset <- .ai_widths_unset(outs)
+  # a table whose widths come from the study's defaults (its file says
+  # none, the resolved report has them) says its widths already: left
+  # alone, quietly
+  unset <- setdiff(unset, .ai_widths_inherited(outs[unset], study_dir))
   # the listings: their columns, from their variables and headers
   lst <- intersect(unset, names(outs)[vapply(outs, function(o) identical(o$kind, "listing"), NA)])
   for (id in lst) {
