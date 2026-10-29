@@ -596,7 +596,8 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
   }, ""))
   lines <- unlist(lapply(seq_along(lines), function(i)
     c(if (nzchar(note[i])) note[i], lines[i])))
-  .drop_attached_ns(c(cl, unlist(strsplit(lines, "\n", fixed = TRUE))))
+  .drop_attached_ns(c(.content_parts_code(content, pipe), cl,
+                      unlist(strsplit(lines, "\n", fixed = TRUE))))
 }
 
 # ---- content: the items of a spec, one a function call -----------------------
@@ -689,7 +690,12 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
 # The items as the calls they stand for (.spec_call()), their arguments as
 # R takes them (.schema_to_r()).
 .content_calls <- function(content) {
+  k <- 0L
   lapply(content, function(it) {
+    if (.is_part(it)) {
+      k <<- k + 1L
+      return(.part_call(it, k))
+    }
     do.call(.spec_call, c(list(.schema_fn_name(it$fn)),
                           .schema_to_r(it$fn, it$args %||% list())))
   })
@@ -1217,10 +1223,20 @@ tfl_content_run <- function(output, data) {
 
 .content_table_run <- function(content, data, kind = "table") {
   pl <- .content_table_pipeline(content, kind)
+  # a table with parts: `data` the objects it reads, by name -- the table's
+  # own (`data`, or the ARD `ard`) and each part's
+  penv <- emptyenv()
+  if (any(vapply(content, .is_part, NA))) {
+    penv <- .content_parts_env(content, data)
+    if (is.list(data) && !is.data.frame(data)) {
+      own <- intersect(c("data", "ard"), names(data))
+      data <- data[[own[1L]]]
+    }
+  }
   x <- data
   run <- function(cl, first) {
     f <- .spec_fun(cl$fun)
-    do.call(f, c(list(first), lapply(cl$args, .spec_eval, env = emptyenv())))
+    do.call(f, c(list(first), lapply(cl$args, .spec_eval, env = penv)))
   }
   for (cl in pl$pre) x <- run(cl, x)
   p <- run(pl$head, x)
