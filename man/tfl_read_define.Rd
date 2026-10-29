@@ -41,6 +41,12 @@ or \code{"enumerated"}).
 \item \code{external}: code lists that point to a dictionary (\code{ExternalCodeList},
 e.g. MedDRA): \code{codelist}, \code{name}, \code{dictionary}, \code{version}.  They hold
 no values.
+\item \code{value_level}: the value-level metadata (\code{def:ValueListDef}), one row
+a variable's entry: \code{dataset}, \code{variable}, \code{where} (the entry's
+\code{def:WhereClauseDef} as an R condition, \code{PARAMCD == "ALT"},
+\code{PARAMCD \%in\% c("HGB", "PLAT")}), \code{label}, \code{type}, \code{length}, \code{digits}
+(\code{SignificantDigits}), \code{format} (\code{def:DisplayFormat}), \code{codelist},
+\code{order}, \code{oid}.  No rows when the define has none.
 \item \code{study}: \code{study_name}, \code{description}, \code{protocol}, \code{define_version},
 \code{file_oid}.
 }
@@ -48,8 +54,7 @@ no values.
 Elements are found by their namespace URIs, not by prefix, so a file
 that binds the namespaces to other prefixes reads the same.  Texts
 (\code{TranslatedText}) are taken in \code{lang}; else the one without \code{xml:lang};
-else the first.  Value-level metadata, methods, comments and documents
-are not read.
+else the first.  Methods, comments and documents are not read.
 }
 \examples{
 if (requireNamespace("xml2", quietly = TRUE)) {

@@ -21,7 +21,10 @@ report's skeleton and nothing of its look:
   a rule of your own (one decimal for Min and Max, ...): a rule the shell
   does not show is the study's, not yours.  Digits that differ by
   parameter (a lab table's rows) are a question when the shell does not
-  show them per row;
+  show them per row -- unless `ai/adam_summary.md` lists them from the
+  define (`[define.xml: digits 1]` on a variable, or its "Value level"
+  section by parameter): those are the study's digits, use them and say
+  so in an assumption (`from: define`);
 - `page: titles` (the shell's title lines), and the shell's footnotes:
   {{footnotes_at}}
 - an `ard.analysis_data` that `code` makes may name its `population`: the

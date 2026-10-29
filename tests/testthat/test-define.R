@@ -8,7 +8,7 @@
 .define_20 <- function() test_path("fixtures", "define", "define-2-0.xml")
 
 # A small define spec in the Pinnacle 21 layout (made up, as the XML).
-.p21_xlsx <- function(dir, codelists_sheet = "Codelists", label = "Label") {
+.p21_xlsx <- function(dir, codelists_sheet = "Codelists", label = "Label", value_level = FALSE) {
   path <- file.path(dir, "define-spec.xlsx")
   vars <- data.frame(
     Order = c(1, 2, 3, 4, 1, 2),
@@ -52,6 +52,18 @@
     Dictionaries = data.frame(ID = "MEDDRA", Name = "MedDRA",
                               Dictionary = "MedDRA", Version = "27.0"))
   names(sheets)[names(sheets) == "Codelists"] <- codelists_sheet
+  if (value_level) {
+    sheets$ValueLevel <- data.frame(
+      Order = c(1, 2), Dataset = "ADSL", Variable = "AGE",
+      `Where Clause` = c("WC.ADSL.AGE.1", "WC.ADSL.AGE.2"),
+      Description = c("Age (years)", "Age (months)"), `Data Type` = "float",
+      Length = 8, `Significant Digits` = c(0, 1), Format = c("8.0", "8.1"),
+      Codelist = NA, check.names = FALSE)
+    sheets$WhereClauses <- data.frame(
+      ID = c("WC.ADSL.AGE.1", "WC.ADSL.AGE.2", "WC.ADSL.AGE.2"), Dataset = "ADSL",
+      Variable = c("AGEU", "AGEU", "AGEGR1"), Comparator = c("EQ", "EQ", "IN"),
+      Value = c("YEARS", "MONTHS", "<65, >=65"))
+  }
   openxlsx::write.xlsx(sheets, path)
   path
 }
@@ -104,6 +116,26 @@ test_that("tfl_read_define() reads a Define-XML 2.1", {
   expect_identical(def$external$version, "27.0")
   expect_false("CL.MEDDRA" %in% cl$codelist)
   expect_output(print(def), "Define-XML|define.xml 2.1")
+})
+
+test_that("tfl_read_define() reads the value-level metadata: digits and format by where clause", {
+  skip_if_not_installed("xml2")
+  def <- tfl_read_define(test_path("fixtures", "define", "define-vl.xml"))
+  vl <- def$value_level
+  expect_identical(vl$dataset, rep("ADLB", 3L))
+  expect_identical(vl$variable, rep("AVAL", 3L))
+  expect_identical(vl$where, c("PARAMCD == \"ALT\"", "PARAMCD == \"BILI\"",
+                               "PARAMCD %in% c(\"HGB\", \"PLAT\")"))
+  expect_identical(vl$digits, c(0L, 1L, 0L))
+  expect_identical(vl$format, c("8.0", "8.1", "8.0"))
+  expect_identical(vl$label[2L], "Analysis Value (BILI, umol/L)")
+  expect_identical(vl$order, 1:3)
+  # the variable's own row keeps its item-level digits
+  av <- def$variables[def$variables$variable == "AVAL", ]
+  expect_identical(av$digits, 2L)
+  # a define without value-level metadata: no rows
+  expect_identical(nrow(tfl_read_define(.define_21())$value_level), 0L)
+  expect_output(print(def), "3 value-level row(s) (3 with digits)", fixed = TRUE)
 })
 
 test_that("the texts are taken in the language asked for", {
@@ -301,6 +333,22 @@ test_that("tfl_read_define_spec() reads a Pinnacle 21 style workbook", {
                    rows[rows$variable %in% "SEX" |
                           rows$value %in% "SEX", ],
                    ignore_attr = TRUE)
+})
+
+test_that("tfl_read_define_spec() reads the ValueLevel and WhereClauses sheets when there", {
+  skip_if_not_installed("readxl")
+  skip_if_not_installed("openxlsx")
+  dir <- withr::local_tempdir()
+  def <- tfl_read_define_spec(.p21_xlsx(dir, value_level = TRUE))
+  vl <- def$value_level
+  expect_identical(vl$variable, c("AGE", "AGE"))
+  expect_identical(vl$where, c("AGEU == \"YEARS\"",
+                               "AGEU == \"MONTHS\" & AGEGR1 %in% c(\"<65\", \">=65\")"))
+  expect_identical(vl$digits, c(0L, 1L))
+  expect_identical(vl$format, c("8.0", "8.1"))
+  expect_identical(vl$label, c("Age (years)", "Age (months)"))
+  # without the sheets: no rows, no complaint
+  expect_identical(nrow(tfl_read_define_spec(.p21_xlsx(dir))$value_level), 0L)
 })
 
 test_that("a company's layout: the profile changed through `map`", {

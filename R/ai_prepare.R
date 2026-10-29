@@ -72,6 +72,12 @@
 #'   nothing: the same result, to look at before the requests are written
 #'   (its `requests` are the TOC's batches, without `chars` and `file`;
 #'   `files` is empty).
+#' @param define,adam_spec The study's `define.xml`, or its ADaM spec
+#'   workbook (Pinnacle 21 layout), for the ADaM summary
+#'   ([tfl_ai_adam_summary()]): its code lists in their order with their
+#'   decodes, and the digits and display formats, value level too (a
+#'   parameter's AVAL), go into `ai/adam_summary.md` as the study's.
+#'   `NULL` (default): the data alone.
 #' @param adam_summary A [tfl_ai_adam_summary()] result to use instead of
 #'   reading the ADaM again (a previous call's `$adam`); read again when
 #'   `datasets` names others than it has.
@@ -222,7 +228,8 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
                            templates = TRUE, progress = NULL, toc_cols = NULL,
                            sheet_roles = NULL, unit = c("sheet", "toc"), area = TRUE,
                            numbers = NULL, agent_reads = character(),
-                           docs = NULL, agent_max_reads = 3L) {
+                           docs = NULL, agent_max_reads = 3L,
+                           define = NULL, adam_spec = NULL) {
   unit <- match.arg(unit)
   if (isTRUE(quiet)) {
     cl <- match.call()
@@ -283,7 +290,8 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
   ad <- adam_summary
   if (is.null(ad) || (!is.null(datasets) &&
                       !setequal(toupper(datasets), toupper(ad$datasets$dataset)))) {
-    ad <- tfl_ai_adam_summary(adam_dir, datasets = datasets, max_levels = max_levels)
+    ad <- tfl_ai_adam_summary(adam_dir, datasets = datasets, max_levels = max_levels,
+                              define = define, adam_spec = adam_spec)
   }
   step("workbook")
   shell <- do.call(tfl_ai_read_shell, c(list(toc), Filter(Negate(is.null), list(

@@ -92,6 +92,12 @@ test_that("tfl_ai_prepare(): a list for a screen; dry_run writes nothing; the AD
   expect_setequal(dry$toc$request, dry$requests$request)
   expect_s3_class(dry$adam, "tfl_ai_adam")
   expect_output(print(dry), "dry run")
+  # the define given: its value level in the summary
+  skip_if_not_installed("xml2")
+  dd <- suppressMessages(tfl_ai_prepare(unit = "toc", d, book(), study_id = "XYZ-ONC-01", dry_run = TRUE,
+                                        define = test_path("fixtures", "define", "define-vl.xml")))
+  expect_identical(nrow(dd$adam$value_level), 3L)
+  expect_match(format(dd$adam), "## Value level (define.xml)", fixed = TRUE)
   # written, the ADaM summary of the look before passed back
   r <- suppressMessages(tfl_ai_prepare(unit = "toc", d, book(), study_id = "XYZ-ONC-01",
                                        adam_summary = dry$adam))

@@ -28,7 +28,11 @@ layout (\code{\link[=tfl_define_profile]{tfl_define_profile()}}) -- and gives th
 \itemize{
 \item Sheet and column names are matched ignoring case and surrounding
 blanks.  A sheet the profile names that is not there is an error (but
-\code{external}, read when there); so is a required column.  An optional
+\code{external}, \code{value_level} and \code{where_clauses} -- Pinnacle 21's
+\code{Dictionaries}, \code{ValueLevel} and \code{WhereClauses} -- read when there: a
+value-level row's \verb{Where Clause} is an id of the \code{WhereClauses} sheet,
+whose rows (variable, comparator, value) become its R condition); so is
+a required column.  An optional
 column that is not there is read as empty and listed in
 \code{attr(, "unread")} (part, field, column), for the user to see.
 \item A term is \code{extended} when the profile maps an \code{extended} column (\code{Yes},

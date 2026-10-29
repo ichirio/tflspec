@@ -612,7 +612,11 @@ tfl_ai_unpack(a, "study")                           # spec/outputs/<id>.yml, spe
   `ask_when`, `carry`, `max_rounds`, `footnotes_at`; the study standard's
   `spec/defaults.yml` may say them first).  It reads the request and the
   files it names only (`agent_reads = c("workbook", "adam")` and `docs =`
-  allow more), runs nothing, installs nothing.
+  allow more), runs nothing, installs nothing.  `define =` (a `define.xml`)
+  or `adam_spec =` (a Pinnacle 21 ADaM spec workbook) puts the study's
+  code lists (in order, with decodes), digits and display formats --
+  value level too, a lab parameter's AVAL -- into `ai/adam_summary.md`: the
+  agent then takes the digits the shell does not show from there.
   `tfl_ai_collect_answers(study_dir)` is the person's check: it reads each
   request's drafts as its answer, checks them against the request and
   writes them anew (the column widths filled, the assumptions numbered,

@@ -33,7 +33,9 @@ tfl_ai_prepare(
   numbers = NULL,
   agent_reads = character(),
   docs = NULL,
-  agent_max_reads = 3L
+  agent_max_reads = 3L,
+  define = NULL,
+  adam_spec = NULL
 )
 }
 \arguments{
@@ -159,6 +161,13 @@ none.}
 a file or run a command beyond the request and the files it names;
 then it asks, or marks what is unclear to confirm, and goes on.
 Default 3.}
+
+\item{define, adam_spec}{The study's \code{define.xml}, or its ADaM spec
+workbook (Pinnacle 21 layout), for the ADaM summary
+(\code{\link[=tfl_ai_adam_summary]{tfl_ai_adam_summary()}}): its code lists in their order with their
+decodes, and the digits and display formats, value level too (a
+parameter's AVAL), go into \code{ai/adam_summary.md} as the study's.
+\code{NULL} (default): the data alone.}
 }
 \value{
 A \code{tfl_ai_prepared}: a list with \code{requests} (one row a request:

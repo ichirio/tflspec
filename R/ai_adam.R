@@ -91,6 +91,16 @@
 #' @param max_levels A variable's values are listed when it has this many at
 #'   most (PARAMCD, PARCAT, AVISIT, the grades: four times as many).
 #' @param file A file to write the text to (UTF-8), or `NULL`.
+#' @param define,adam_spec The study's `define.xml` (2.0 or 2.1), or its
+#'   ADaM spec workbook in the Pinnacle 21 layout ([tfl_read_define_spec()]),
+#'   or what either reader returns -- one of them.  What the define says is
+#'   added to what the data shows: each code list in the define's order
+#'   with its decodes (`[codes: M = Male | F = Female]`, the values listed
+#'   in that order), a variable's label the data lacks, the digits and
+#'   display format of a numeric variable, and the value-level metadata (a
+#'   variable's digits and format by where clause, `AVAL where PARAMCD ==
+#'   "BILI": digits 1, format 8.1`) as a section of its own.  `NULL`
+#'   (default): the data alone.
 #' @return A `tfl_ai_adam`: a list with `text` (one string, Markdown),
 #'   `variables` (one row a variable: `dataset`, `dataset_label`,
 #'   `variable`, `label`, `kind`, `levels` -- ` | ` between the values --
@@ -98,7 +108,8 @@
 #'   code variable stands for, `"1 = <65 | 2 = >=65"`, from its value labels
 #'   or the variable it pairs with -- `AGEGR1N` and `AGEGR1`, `ARMCD` and
 #'   `ARM`, `PARAMCD` and `PARAM` -- when each code has one text) and `datasets` (`dataset`, `label`,
-#'   `records`, `variables`).  `format()` gives the text.
+#'   `records`, `variables`), and `value_level` (the define's, one row an
+#'   entry; none without a define).  `format()` gives the text.
 #' @seealso [tfl_ai_read_shell()], [tfl_ai_context()].
 #' @examples
 #' s <- tfl_ai_adam_summary(list(adsl = tflspec::adsl, adae = tflspec::adae))
@@ -113,8 +124,11 @@
 #' }
 #' }
 #' @export
-tfl_ai_adam_summary <- function(path, datasets = NULL, max_levels = 15L, file = NULL) {
+tfl_ai_adam_summary <- function(path, datasets = NULL, max_levels = 15L, file = NULL,
+                                define = NULL, adam_spec = NULL) {
   fn <- "tfl_ai_adam_summary()"
+  def <- if (!is.null(define)) .ai_md_read(define, "define", fn) else
+    if (!is.null(adam_spec)) .ai_md_read(adam_spec, "adam_spec", fn)
   x <- .ai_adam_read(path, datasets, fn)
   meta <- tfl_adam_metadata(datasets = x, max_levels = max_levels)
   # the names a spec picks rows by: their values even when many
@@ -139,8 +153,16 @@ tfl_ai_adam_summary <- function(path, datasets = NULL, max_levels = 15L, file = 
     records = vapply(x, nrow, 1L), variables = vapply(x, ncol, 1L),
     stringsAsFactors = FALSE)
   rownames(ds) <- NULL
-  text <- .ai_adam_text(ds, vars)
-  out <- structure(list(text = text, variables = vars, datasets = ds), class = "tfl_ai_adam")
+  vl <- .define_vl_empty()
+  src <- NULL
+  if (!is.null(def)) {
+    src <- attr(def, "source")$kind %||% "define"
+    vars <- .ai_adam_define_merge(vars, def, 4L * max_levels)
+    vl <- .ai_adam_value_level(def, names(x))
+  }
+  text <- .ai_adam_text(ds, vars, vl, src)
+  out <- structure(list(text = text, variables = vars, datasets = ds, value_level = vl),
+                   class = "tfl_ai_adam")
   if (!is.null(file)) .ai_write_text(text, file)
   out
 }
@@ -190,7 +212,54 @@ print.tfl_ai_adam <- function(x, ...) {
   show(m$code, m$text)
 }
 
-.ai_adam_text <- function(ds, vars) {
+# What the define says, put on the data's variables: a code list's values
+# in its order with their decodes as the codes (the define's order and
+# decodes over what the data showed), a label the data lacks, a numeric
+# variable's digits and display format (`define`)
+.ai_adam_define_merge <- function(vars, def, max) {
+  dv <- def$variables
+  cl <- def$codelists
+  vars$define <- NA_character_
+  key <- paste(toupper(vars$dataset), toupper(vars$variable))
+  dkey <- paste(toupper(dv$dataset), toupper(dv$variable))
+  for (i in seq_len(nrow(dv))) {
+    k <- match(dkey[i], key)
+    if (is.na(k)) next
+    if (is.na(vars$label[k]) && !is.na(dv$label[i])) vars$label[k] <- dv$label[i]
+    id <- dv$codelist[i]
+    if (!is.na(id) && nzchar(id) && !is.null(cl)) {
+      x <- cl[cl$codelist %in% id, , drop = FALSE]
+      if (nrow(x) && nrow(x) <= max) {
+        if ("order" %in% names(x) && !all(is.na(x$order))) {
+          x <- x[order(suppressWarnings(as.numeric(x$order))), , drop = FALSE]
+        }
+        vars$levels[k] <- paste(unique(as.character(x$value)), collapse = " | ")
+        dec <- as.character(x$decode)
+        if (any(!is.na(dec) & nzchar(dec) & dec != as.character(x$value))) {
+          dec[is.na(dec) | !nzchar(dec)] <- as.character(x$value)[is.na(dec) | !nzchar(dec)]
+          vars$codes[k] <- paste(sprintf("%s = %s", x$value, dec), collapse = " | ")
+        }
+      }
+    }
+    note <- c(if (!is.na(dv$digits[i])) sprintf("digits %d", dv$digits[i]),
+              if (!is.na(dv$format[i]) && nzchar(dv$format[i])) sprintf("format %s", dv$format[i]))
+    if (length(note)) vars$define[k] <- paste(note, collapse = ", ")
+  }
+  vars
+}
+
+# The define's value-level rows of the datasets at hand (all of them when
+# the define names datasets the data does not have yet)
+.ai_adam_value_level <- function(def, datasets) {
+  vl <- def$value_level %||% .define_vl_empty()
+  if (!nrow(vl)) return(vl)
+  keep <- toupper(vl$dataset) %in% toupper(datasets)
+  if (any(keep)) vl <- vl[keep, , drop = FALSE]
+  rownames(vl) <- NULL
+  vl
+}
+
+.ai_adam_text <- function(ds, vars, vl = NULL, define = NULL) {
   head <- c(
     "# ADaM datasets: variables only",
     "",
@@ -198,8 +267,27 @@ print.tfl_ai_adam <- function(x, ...) {
            "character variable with few of them; no record is shown.",
            if (any(!is.na(vars$codes))) paste0(
              " A code variable shows what each code stands for: ",
-             "`[codes: 1 = <65 | 2 = >=65]`.")),
+             "`[codes: 1 = <65 | 2 = >=65]`."),
+           if (!is.null(define)) paste0(
+             " The ", define, " adds its code lists (the values in its order, with their decodes) ",
+             "and a numeric variable's digits and display format (`[", define, ": digits 1, format 8.1]`): ",
+             "the study's digits, to use when the shell does not show them.")),
     "")
+  vl_text <- if (!is.null(vl) && nrow(vl)) {
+    c(sprintf("## Value level (%s): digits and format by where clause", define %||% "define"),
+      "",
+      "A variable's digits in the records a condition picks (a lab parameter's AVAL): the study's digits for that parameter, to use when the shell does not show them.",
+      "",
+      vapply(seq_len(nrow(vl)), function(i) {
+        note <- c(if (!is.na(vl$digits[i])) sprintf("digits %d", vl$digits[i]),
+                  if (!is.na(vl$format[i]) && nzchar(vl$format[i])) sprintf("format %s", vl$format[i]),
+                  if (!is.na(vl$label[i]) && nzchar(vl$label[i])) vl$label[i])
+        sprintf("- %s %s where %s: %s", vl$dataset[i], vl$variable[i],
+                if (is.na(vl$where[i])) "(always)" else paste0("`", vl$where[i], "`"),
+                if (length(note)) paste(note, collapse = ", ") else "(no digits)")
+      }, ""),
+      "")
+  }
   body <- unlist(lapply(seq_len(nrow(ds)), function(i) {
     v <- vars[vars$dataset == ds$dataset[i], , drop = FALSE]
     kind <- unname(.ai_adam_kind[v$kind])
@@ -207,13 +295,14 @@ print.tfl_ai_adam <- function(x, ...) {
     lines <- paste0(v$variable, " (", kind, ")",
                     ifelse(is.na(v$label), "", paste0(" ", v$label)),
                     ifelse(is.na(v$levels), "", paste0(": ", v$levels)),
-                    ifelse(is.na(v$codes %||% NA), "", paste0(" [codes: ", v$codes, "]")))
+                    ifelse(is.na(v$codes %||% NA), "", paste0(" [codes: ", v$codes, "]")),
+                    ifelse(is.na(v$define %||% NA), "", paste0(" [", define, ": ", v$define, "]")))
     c(sprintf("## %s%s (%s records, %d variables)", ds$dataset[i],
               if (is.na(ds$label[i])) "" else paste0(": ", ds$label[i]),
               format(ds$records[i], big.mark = ","), ds$variables[i]),
       lines, "")
   }), use.names = FALSE)
-  paste(c(head, body), collapse = "\n")
+  paste(c(head, body, vl_text), collapse = "\n")
 }
 
 # ---- the study folder ---------------------------------------------------------

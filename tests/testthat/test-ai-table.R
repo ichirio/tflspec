@@ -94,6 +94,42 @@ test_that("the tables in batches of one family", {
 
 # ---- the ADaM summary and the study folder ------------------------------------
 
+test_that("the ADaM summary with a define: its code lists in order with decodes, digits, value level", {
+  skip_if_not_installed("xml2")
+  d <- ai_table_study()
+  def <- test_path("fixtures", "define", "define-vl.xml")
+  s <- tfl_ai_adam_summary(file.path(d, "adam"), datasets = c("ADSL", "ADLB"), define = def)
+  v <- s$variables
+  # the define's order and decodes, over the data's values
+  expect_identical(v$levels[v$dataset == "ADSL" & v$variable == "SEX"], "M | F")
+  expect_identical(v$codes[v$dataset == "ADSL" & v$variable == "SEX"], "M = Male | F = Female")
+  expect_identical(v$levels[v$dataset == "ADLB" & v$variable == "PARAMCD"], "ALT | BILI | HGB | PLAT")
+  expect_match(v$codes[v$dataset == "ADLB" & v$variable == "PARAMCD"], "BILI = Bilirubin (umol/L)", fixed = TRUE)
+  expect_identical(v$define[v$dataset == "ADLB" & v$variable == "AVAL"], "digits 2, format 8.2")
+  expect_identical(nrow(s$value_level), 3L)
+  txt <- format(s)
+  expect_match(txt, "AVAL (num) Analysis Value [define.xml: digits 2, format 8.2]", fixed = TRUE)
+  expect_match(txt, "## Value level (define.xml)", fixed = TRUE)
+  expect_match(txt, "- ADLB AVAL where `PARAMCD == \"BILI\"`: digits 1, format 8.1", fixed = TRUE)
+  # a P21 workbook the same way; none: as before
+  skip_if_not_installed("openxlsx")
+  xl <- file.path(d, "spec.xlsx")
+  openxlsx::write.xlsx(list(
+    Datasets = data.frame(Dataset = "ADSL", Description = "Subject-Level Analysis Dataset"),
+    Variables = data.frame(Order = 1:2, Dataset = "ADSL", Variable = c("SEX", "AGE"),
+                           Label = c("Sex", "Age"), Codelist = c("CL.SEX", NA),
+                           `Significant Digits` = c(NA, 0), check.names = FALSE),
+    Codelists = data.frame(ID = "CL.SEX", Name = "Sex", Order = 1:2, Term = c("M", "F"),
+                           `Decoded Value` = c("Male", "Female"), check.names = FALSE)), xl)
+  s2 <- tfl_ai_adam_summary(file.path(d, "adam"), datasets = "ADSL", adam_spec = xl)
+  expect_identical(s2$variables$codes[s2$variables$variable == "SEX"], "M = Male | F = Female")
+  expect_match(format(s2), "AGE (num) Age [define spec: digits 0]", fixed = TRUE)
+  expect_false(grepl("Value level", format(s2), fixed = TRUE))
+  s0 <- tfl_ai_adam_summary(file.path(d, "adam"), datasets = "ADSL")
+  expect_identical(nrow(s0$value_level), 0L)
+  expect_false(grepl("define", format(s0), fixed = TRUE))
+})
+
 test_that("the ADaM summary: variables, labels, types, short value lists, no records", {
   d <- ai_table_study()
   s <- tfl_ai_adam_summary(file.path(d, "adam"))
