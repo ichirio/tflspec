@@ -46,11 +46,17 @@
   args
 }
 
+# A part's items as items, whatever form they come in: as read (tfl_item),
+# or as the study's layers hand them on (`- fn: {args}` lists)
+.part_items <- function(x) {
+  lapply(x %||% list(), function(it) if (inherits(it, "tfl_item")) it else .item_from_list(it))
+}
+
 # ... and as written
 .part_out <- function(args) {
   out <- .calls_out(args[setdiff(names(args), c("content", "data"))])
   if (!is.null(args$data)) out$data <- .calls_out(args$data)
-  if (!is.null(args$content)) out$content <- .items_to_list(args$content)
+  if (!is.null(args$content)) out$content <- .items_to_list(.part_items(args$content))
   out[c(intersect(c("name", "absent", "data"), names(out)),
         setdiff(names(out), c("name", "absent", "data", "content")),
         intersect("content", names(out)))]
@@ -72,7 +78,7 @@
       .ard_stop(sprintf("%s(\"%s\"): its `content` is the part's own table items.", .spec_part$fn, nm[i]))
     }
     list(name = nm[i], var = make.names(nm[i]), object = .part_object(a$data),
-         data = a$data, content = a$content, absent = a$absent)
+         data = a$data, content = .part_items(a$content), absent = a$absent)
   })
 }
 
@@ -152,4 +158,12 @@
     }
   }
   out
+}
+
+# A records table's dataset (its own data `source: dataset`), for the
+# planner sheet's datasets: NULL for a table of the ARD
+.records_dataset <- function(o) {
+  d <- o$data
+  if (!identical(o$kind, "table") || !identical(d$source, "dataset") || is.null(d$dataset)) return(NULL)
+  as.character(d$dataset)[1L]
 }

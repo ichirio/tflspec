@@ -862,6 +862,7 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
         }
         if (!is.null(named$show_keys)) tb$show_keys <- bar(named$show_keys)
         if (!is.null(named$stat)) miss(fn, "stat (your statistic columns) stays in code")
+        if (!is.null(named$value)) miss(fn, "value (a records plan) stays in code")
       },
       plan_sort = {
         if (length(pos)) {

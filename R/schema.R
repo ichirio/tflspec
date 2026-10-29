@@ -210,7 +210,7 @@ tfl_schema_check <- function(item) {
   # a part (another plan's rows under the table's): its own items, each, and
   # the part's arguments as any item's (its data and content have no type)
   if (part && .is_part(item)) {
-    inner <- lapply(item$args$content %||% list(), tfl_schema_check)
+    inner <- lapply(.part_items(item$args$content), tfl_schema_check)
     top <- item
     top$args$content <- NULL
     if (!is.null(item$args$data) && !is.list(item$args$data)) {

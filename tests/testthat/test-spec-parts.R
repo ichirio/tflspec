@@ -131,3 +131,33 @@ test_that("the schema checks a part's arguments and each of its own items", {
   it$args$content <- NULL
   expect_true(any(tfl_schema_check(it)$arg == "content"))
 })
+
+test_that("a records table with a part goes to the workbook and back: content_more, the planner's dataset", {
+  skip_if_not_installed("haven")
+  d <- file.path(withr::local_tempdir(), "study")
+  dir.create(file.path(d, "adam"), recursive = TRUE)
+  haven::write_xpt(tflspec:::.ai_chr(tflspec::adsl), file.path(d, "adam", "adsl.xpt"))
+  tfl_ai_study_init(d, adam = "adam", study_id = "SP-2")
+  o <- tfl_read_output(sp_yaml())
+  o$data$population <- "SAF"
+  tfl_write_output(o, file.path(d, "spec", "outputs", "T-PK.yml"))
+  sh <- suppressMessages(tfl_sheets_from_yaml(d))
+  tb <- sh$table$tables
+  more <- tb$content_more[tb$output_id %in% "T-PK"]
+  expect_match(more, "value: AVAL", fixed = TRUE)
+  expect_match(more, paste0(sp_fn, ":"), fixed = TRUE)
+  expect_identical(sh$planner$datasets[sh$planner$output_id %in% "T-PK"], "ADPC")
+  out <- withr::local_tempdir()
+  suppressMessages(tfl_yaml_from_sheets(sh, out))
+  f <- list.files(out, "^T-PK[.]yml$", recursive = TRUE, full.names = TRUE)
+  b <- tfl_read_output(f[1L])
+  expect_identical(b$data$source, "dataset")
+  expect_identical(b$data$dataset, "ADPC")
+  fns <- vapply(b$content, `[[`, "", "fn")
+  expect_true(all(c("table_plan", sp_fn) %in% fns))
+  expect_false("normalize_ard" %in% fns)
+  tp <- b$content[[match("table_plan", fns)]]
+  expect_identical(tp$args$value, "AVAL")
+  pa <- b$content[[match(sp_fn, fns)]]
+  expect_identical(vapply(pa$args$content, `[[`, "", "fn"), c("normalize_ard", "table_plan", "plan_cells"))
+})
