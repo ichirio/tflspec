@@ -464,7 +464,8 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
                            normalize = TRUE) {
   sp <- .ard_spec_scope(.as_spec(spec, "table", "tfl_table_code",
                                  output_id = output_id), output_id)
-  items <- .plan_content_items(sp)
+  # (the study sheet's rounding is the setup's option, tfl_report_setup_code())
+  items <- .items_for_program(.plan_content_items(sp))
   if (isTRUE(normalize)) {
     id <- output_id %||% attr(sp, "output_id")
     nz <- .normalize_spec_args(sp, ard_spec, id, "tfl_table_code", guess = TRUE)
@@ -1334,6 +1335,10 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
                              "yet; tables, listings and figures, for now."), output$kind))
   }
   for (it in output$content) .schema_need_version(it)
+  # the study's rounding is the setup's option, not a report's item
+  if (!is.null(attr(output, "study_rounding"))) {
+    output$content <- .items_for_program(output$content, attr(output, "study_rounding"))
+  }
   # plan_levels() the ARD already says (a code list applied when the ARD is
   # made, the variables in its order): not written (R/spec_levels.R)
   if (identical(output$kind, "table")) output$content <- .levels_prune(output$content, output)
@@ -1752,6 +1757,9 @@ tfl_report_setup_code <- function(spec) {
       out <- c(out, .spec_call_code(do.call(.spec_call, c(list("options"), pg)), 0L))
     }
   }
+  # the study's rounding, once for every report
+  rnd <- .ard_spec_study_value(sp, "rounding")
+  if (!is.na(rnd)) out <- c(out, .spec_call_code(.spec_call("options", rtfreporter.rounding = rnd), 0L))
   d <- study(sp$tokens)
   if (!is.null(d) && nrow(d)) {
     v <- ifelse(is.na(d$value), "", d$value)

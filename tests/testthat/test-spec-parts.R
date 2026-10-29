@@ -190,4 +190,6 @@ test_that("tfl_data_code(): each object the table and its parts read, a dataset 
   expect_identical(rd(code$adlb), 0L)
   expect_true(rd(code$data) >= 1L)
   expect_named(tfl_data_code(o, st, ard = FALSE), c("data", "adlb"))
+  # the study as its folder too
+  expect_identical(tfl_data_code(o, d), code)
 })

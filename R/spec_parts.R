@@ -182,7 +182,7 @@
 #' once, with the first.
 #'
 #' @param output A report ([tfl_output()]) or its id.
-#' @param study The study ([tfl_read_study_spec()]).
+#' @param study The study ([tfl_read_study_spec()]), or its folder.
 #' @param ard `FALSE` leaves the ARD's code out (a program that writes its
 #'   own: the study's ARD program, its rework).
 #' @return A named list, one element an object (`data`, `ard`, a part's
@@ -194,6 +194,7 @@
 #' tfl_data_code(o, st)
 #' @export
 tfl_data_code <- function(output, study, ard = TRUE) {
+  if (is.character(study) && length(study) == 1L) study <- tfl_read_study_spec(study)
   if (is.character(output) && length(output) == 1L) output <- tfl_read_outputs(study$dir)[[output]]
   if (!inherits(output, "tfl_output")) .ard_stop("tfl_data_code(): `output` is a report, tfl_output(), or its id.")
   ro <- tfl_resolve_output(output, study)

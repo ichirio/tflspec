@@ -33,6 +33,10 @@
     v <- study$options[[k]]
     opts[[k]] <- if (is.list(v) && !is.null(names(v))) unlist(v) else v
   }
+  # the study's rounding, once for every report (a report's own plan_digits(
+  # rounding = ) wins where it differs)
+  rnd <- .study_rounding(study)
+  if (!is.null(rnd) && is.null(opts[["rtfreporter.rounding"]])) opts[["rtfreporter.rounding"]] <- rnd
   sz <- .page_args(pg$rtf_default_format)$font_size_half_points
   if (!is.null(sz)) {
     n <- suppressWarnings(as.integer(sz))
@@ -91,4 +95,35 @@
                      output$kind %||% "table")
   if (is.null(tk)) return(stats::setNames(character(), character()))
   vapply(tk, as.character, "")
+}
+
+# The study's rounding (rtfreporter's half to even "r", or "sas"): the last
+# plan_digits(rounding = ) of the study's defaults.yml; NULL when it says none
+.study_rounding <- function(study) {
+  r <- NULL
+  for (it in study$defaults$content %||% list()) {
+    if (identical(.schema_fn_name(it$fn %||% ""), "plan_digits") && !is.null(it$args$rounding)) {
+      r <- tolower(as.character(it$args$rounding))
+    }
+  }
+  r
+}
+
+# The items as a report's program writes them: the study's rounding is the
+# setup's (options(rtfreporter.rounding = ), report_setup.R, every report
+# sources it), so a plan_digits() rounding that is the study's is left out
+# (the item out when nothing else is left); a report's own rounding that
+# differs stays.  `rounding`: the study's (NULL: every rounding is the
+# study's -- a workbook's, one per study).  The run in hand keeps the items
+# as they are (the same numbers, with no option set).
+.items_for_program <- function(content, rounding = NULL) {
+  if (inherits(content, "tfl_r") || !length(content)) return(content)
+  out <- lapply(content, function(it) {
+    if (!inherits(it, "tfl_item") || !identical(.schema_fn_name(it$fn %||% ""), "plan_digits") ||
+        is.null(it$args$rounding)) return(it)
+    if (!is.null(rounding) && !identical(tolower(as.character(it$args$rounding)), rounding)) return(it)
+    it$args$rounding <- NULL
+    if (!length(it$args)) NULL else it
+  })
+  Filter(Negate(is.null), out)
 }
