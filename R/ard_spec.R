@@ -1026,7 +1026,7 @@ tfl_ard_code <- function(spec, output_id = NULL, save = TRUE,
   # a study of the YAML spec: its ARD definition and code lists from its
   # files (R/spec_ard.R)
   if (inherits(spec, "tfl_study_spec")) {
-    st <- .ard_spec_of_study(spec)
+    st <- .ard_spec_of_study(spec, output_id = output_id)
     spec <- st$spec
     codelists <- codelists %||% st$codelists
   }
@@ -1214,7 +1214,7 @@ tfl_build_ard <- function(spec, dir = ".", output_id = NULL, save = TRUE,
 # The optional variables (analyses' `optional: TRUE`) the data did not
 # have, said once the program has run: the analysis data it read is there
 .ard_optional_note <- function(spec, e, output_id = NULL) {
-  if (inherits(spec, "tfl_study_spec")) spec <- .ard_spec_of_study(spec)$spec
+  if (inherits(spec, "tfl_study_spec")) spec <- .ard_spec_of_study(spec, output_id = output_id)$spec
   a <- tryCatch(.as_spec(spec, "ard", "tfl_build_ard")$analyses, error = function(err) NULL)
   if (is.null(a) || is.null(a$optional)) return(invisible())
   if (!is.null(output_id)) a <- a[a$output_id %in% output_id, , drop = FALSE]

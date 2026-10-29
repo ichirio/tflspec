@@ -102,8 +102,10 @@
 # A YAML study's ARD definition (its data catalog and each report's
 # `ard.analysis_data` / `ard.analyses`) as the definition the ARD program
 # is written from, and the reports' code lists.  The reports in the order
-# of the TOC (toc.yml): the program's sections follow it.
-.ard_spec_of_study <- function(study) {
+# of the TOC (toc.yml): the program's sections follow it.  `output_id`:
+# those reports' rows alone (and the study's own), so that one report's
+# mistake stops that report, not every other.
+.ard_spec_of_study <- function(study, output_id = NULL) {
   if (is.null(study$dir)) {
     .ard_stop("A YAML study's ARD: read the study with tfl_read_study_spec(dir).")
   }
@@ -119,6 +121,13 @@
   }
   ard <- b$ard
   for (s in c("objects", "analysis_data", "analyses")) ard[[s]] <- in_toc(ard[[s]])
+  if (!is.null(output_id)) {
+    for (s in c("objects", "analysis_data", "analyses")) {
+      d <- ard[[s]]
+      if (is.null(d) || !nrow(d) || is.null(d$output_id)) next
+      ard[[s]] <- d[is.na(d$output_id) | d$output_id %in% output_id, , drop = FALSE]
+    }
+  }
   # a table's analyses have its columns' by
   p <- .by_needed_problems(.normalize_ard_sheet(ard$analyses, "analyses"), b$table$tables)
   if (nrow(p)) {

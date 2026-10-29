@@ -605,7 +605,10 @@
     }
     new <- .ai_derived_names(a[["derive"]])
     have <- c(new, unlist(a[["add"]]), if (from %in% toupper(ad_ids)) derived[[tolower(from)]])
-    derived[[tolower(id %||% paste0("data", j))]] <- structure(have, dataset = from_ds)
+    # (a data `code` makes: its columns are the code's, not the dataset's --
+    # an analysis of it is not checked against the ADaM's variables)
+    derived[[tolower(id %||% paste0("data", j))]] <- structure(have, dataset = from_ds,
+                                                                coded = !is.null(a[["code"]]))
     if (!is.null(vars) && nzchar(from_ds %||% "")) {
       p <- rbind(p, .ai_check_vars(.ai_r_names(a[["where"]]), vars, from_ds, have,
                                    paste(at, w, "where"), "warning"))
@@ -650,7 +653,7 @@
                                       if (length(ad_ids)) sprintf(" (%s)", paste(ad_ids, collapse = ", ")) else ""))
       } else {
         have <- derived[[tolower(data_id)]]
-        ds <- toupper(attr(have, "dataset") %||% "")
+        ds <- if (isTRUE(attr(have, "coded"))) "" else toupper(attr(have, "dataset") %||% "")
       }
     } else if (!nzchar(ds) && !is.null(a[["population"]])) {
       ds <- "ADSL"
@@ -753,6 +756,23 @@
     }
   }
   if (!length(o[["page"]]$titles)) add("page", "has no titles", "warning")
+  # a line's cells are left, center, right: another key is a text cut at
+  # an unquoted comma (`{left: a, b}` reads `b` as a key)
+  for (band in c("titles", "footnotes", "header", "footer")) {
+    m <- o[["page"]][[band]]
+    if (!is.list(m) || inherits(m, "tfl_unset")) next
+    for (line in names(m)) {
+      cells <- m[[line]]
+      if (!is.list(cells) || is.null(names(cells))) next
+      odd <- setdiff(names(cells), c("left", "center", "right"))
+      if (length(odd)) {
+        add(sprintf("page %s %s", band, line), sprintf(paste(
+          "has %s besides left / center / right: a text with a comma must be quoted",
+          "(`{left: \"a, b\"}`), or the text after the comma is lost"),
+          paste(sprintf("`%s`", odd), collapse = ", ")))
+      }
+    }
+  }
   p$where <- trimws(p$where)
   p
 }
@@ -810,6 +830,10 @@
 # written as tflspec writes them (nothing run), each error a problem.
 .ai_check_table_run <- function(outs, context) {
   p <- .ai_problems()
+  # (the study's drafts may live in ai/spec/outputs -- tflspec.outputs_dir, set
+  # by the check -- but this copy writes them to spec/outputs: read there)
+  op <- options(tflspec.outputs_dir = NULL)
+  on.exit(options(op), add = TRUE)
   d <- tempfile("ai-table-")
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   dir.create(file.path(d, "spec", "outputs"), recursive = TRUE)

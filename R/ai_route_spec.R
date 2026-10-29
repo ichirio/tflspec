@@ -265,6 +265,7 @@ tfl_ai_decisions_write <- function(study_dir, x) {
 # after), `bad` (the files refused, with why) and `stray` (the drafts no
 # request asks for).
 .ai_drafts_to_answers <- function(study_dir, ctxs, answers) {
+  .ai_drafts_footer_below(study_dir)
   d <- .ai_draft_blocks(study_dir)
   blocks <- d$blocks
   used <- character()
@@ -305,6 +306,32 @@ tfl_ai_decisions_write <- function(study_dir, x) {
     .ai_write_text(txt, file.path(answers, paste0(nm, ".md")))
   }
   list(blocks = blocks, bad = d$bad, stray = setdiff(names(blocks), used))
+}
+
+# A draft's footer lines (the shell's footnotes, written as `page: footer`)
+# numbered below the study's own footer lines (spec/defaults.yml's: the
+# program, the date), not over them: a draft whose lines collide with the
+# study's is written again with its lines moved down.  Once moved, they
+# collide no more, so a later check leaves them.
+.ai_drafts_footer_below <- function(study_dir) {
+  area <- file.path(study_dir, "ai", "spec", "outputs")
+  df <- file.path(study_dir, "spec", "defaults.yml")
+  if (!dir.exists(area) || !file.exists(df)) return(invisible(NULL))
+  y <- tryCatch(yaml::read_yaml(df, handlers = .yaml_handlers()), error = function(e) NULL)
+  own <- suppressWarnings(as.integer(names(y$page$footer %||% list())))
+  n <- if (length(own) && !all(is.na(own))) max(own, na.rm = TRUE) else 0L
+  if (n < 1L) return(invisible(NULL))
+  for (f in list.files(area, "[.]ya?ml$", full.names = TRUE)) {
+    o <- tryCatch(tfl_read_output(f), error = function(e) NULL)
+    ft <- o$page$footer
+    if (is.null(o) || !length(ft) || inherits(ft, "tfl_unset")) next
+    k <- suppressWarnings(as.integer(names(ft)))
+    if (anyNA(k) || !any(k <= n)) next
+    names(ft) <- as.character(n + seq_along(ft))
+    o$page$footer <- ft
+    tfl_write_output(o, f)
+  }
+  invisible(NULL)
 }
 
 # The drafts' `ai:` blocks put back on the files the check wrote (the check

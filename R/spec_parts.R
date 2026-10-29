@@ -215,7 +215,7 @@ tfl_data_code <- function(output, study, ard = TRUE) {
       c("# the study ARD's rows of this report",
         sprintf("%s <- readRDS(\"output/ard/ard.rds\") |>\n  subset(output_id == \"%s\")", nm, ro$id))
     } else {
-      if (is.null(spec)) spec <- .ard_spec_of_study(study)$spec
+      if (is.null(spec)) spec <- .ard_spec_of_study(study, output_id = ro$id)$spec
       .records_code(ro, d, nm, spec)
     }
     stmt <- !grepl("^#", lines) & nzchar(lines)

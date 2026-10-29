@@ -110,6 +110,15 @@ tfl_check_spec <- function(study, output_id = NULL) {
             item = ifelse(nzchar(p$arg), paste0(p$fn, "(", p$arg, ")"), p$fn),
             level = p$level, message = p$message)
       }
+      # (a function of the schema the installed rtfreporter does not have
+      # yet: the program would stop)
+      fn <- it$fn %||% ""
+      if (!grepl("::", fn, fixed = TRUE) && fn %in% names(tfl_schema()) &&
+          !nrow(p[p$level == "error", , drop = FALSE])) {
+        m <- .pkg_fn_missing(paste0("rtfreporter::", fn))
+        if (!is.null(m)) add(output_id = id, part = "content", item = fn, level = "warning",
+                             message = paste0(m, ": update rtfreporter"))
+      }
     }
   }
   out <- do.call(rbind, rows)

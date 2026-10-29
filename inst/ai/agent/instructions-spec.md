@@ -20,6 +20,12 @@ report's skeleton and nothing of its look:
   without them takes the study's default -- do not ask;
 - `page: titles` (the shell's title lines), and the shell's footnotes:
   {{footnotes_at}}
+- an `ard.analysis_data` that `code` makes may name its `population`: the
+  set's subjects are made first and are in reach as `<dataset>_sub`
+  (`adsl_sub`); its other fields (`where`, `add`, `derive` ...) stay blank.
+- a text holding a comma, a colon or a `#` is quoted: `{left: "MedDRA
+  version 27.0, fictional dictionary."}` -- unquoted, the text after the
+  comma is lost and the check refuses the draft.
 
 Not in a draft, ever: column widths, header rows (`plan_col_header`),
 pages (`plan_paginate_*`), blank rows, borders, fonts, `plan_style`,

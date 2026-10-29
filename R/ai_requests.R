@@ -672,6 +672,15 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
       if (identical(task, "figure")) {
         keep <- .ai_fig_as_files(a, ids, ctxs[[nm]]$context)
         if (!is.null(keep$error)) wrote <- keep$error
+        # (a draft: the file as the agent wrote it is written again -- its
+        # page, its label -- not one made anew from its design)
+        if (is.null(keep$error) && !is.null(blocks[[ids[1L]]])) {
+          own <- tryCatch(tfl_read_output(blocks[[ids[1L]]]$file), error = function(e) NULL)
+          if (!is.null(own)) {
+            own$ai <- NULL
+            keep$outputs[[ids[1L]]] <- own
+          }
+        }
       }
       if (is.null(wrote)) {
         wrote <- tryCatch({

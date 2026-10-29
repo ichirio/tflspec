@@ -217,7 +217,7 @@ tfl_output_contents <- function(output, study, dir = ".") {
   sp <- tfl_listing_spec(l, data.frame(output_id = o$id, vars = "USUBJID"), check = FALSE)
   old <- options(tflspec.plain_ns = TRUE)
   on.exit(options(old), add = TRUE)
-  ard <- .ard_spec_of_study(study)$spec
+  ard <- .ard_spec_of_study(study, output_id = o$id)$spec
   code <- tfl_listing_code(sp, o$id, ard = ard, part = "data")
   if (is.null(code)) .ard_stop(sprintf("%s: the listing names no dataset.", o$id))
   env <- new.env(parent = globalenv())

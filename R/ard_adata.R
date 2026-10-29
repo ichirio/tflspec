@@ -188,7 +188,10 @@
       if (is.null(tryCatch(parse(text = code), error = function(e) NULL))) {
         add_d(i, "code", sprintf("%s: `code` does not read as R", tag(i)))
       }
-      also <- c("population_id", "subjects", "where", "add", "derive", "keep", "distinct")
+      # (`population_id` with `code`: the set's subjects are made first,
+      # in reach as <dataset>_sub; the other columns are for a data the
+      # columns make)
+      also <- c("subjects", "where", "add", "derive", "keep", "distinct")
       also <- also[vapply(also, function(cn) !is.na(ad[[cn]][i] %||% NA), NA)]
       if (length(also)) {
         add_d(i, "code", sprintf(paste(
