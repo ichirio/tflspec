@@ -255,6 +255,8 @@ print.tfl_ai_adam <- function(x, ...) {
   if (!nrow(vl)) return(vl)
   keep <- toupper(vl$dataset) %in% toupper(datasets)
   if (any(keep)) vl <- vl[keep, , drop = FALSE]
+  # (an entry with neither digits nor a format says nothing of the look)
+  vl <- vl[!is.na(vl$digits) | (!is.na(vl$format) & nzchar(vl$format)), , drop = FALSE]
   rownames(vl) <- NULL
   vl
 }
@@ -279,11 +281,16 @@ print.tfl_ai_adam <- function(x, ...) {
       "A variable's digits in the records a condition picks (a lab parameter's AVAL): the study's digits for that parameter, to use when the shell does not show them.",
       "",
       vapply(seq_len(nrow(vl)), function(i) {
+        has_where <- !is.na(vl$where[i]) && nzchar(vl$where[i])
+        lab <- if (!is.na(vl$label[i]) && nzchar(vl$label[i])) vl$label[i]
         note <- c(if (!is.na(vl$digits[i])) sprintf("digits %d", vl$digits[i]),
                   if (!is.na(vl$format[i]) && nzchar(vl$format[i])) sprintf("format %s", vl$format[i]),
-                  if (!is.na(vl$label[i]) && nzchar(vl$label[i])) vl$label[i])
-        sprintf("- %s %s where %s: %s", vl$dataset[i], vl$variable[i],
-                if (is.na(vl$where[i])) "(always)" else paste0("`", vl$where[i], "`"),
+                  if (has_where) lab)
+        # (a Define-XML 1.0 has no where clause: the entry's label says
+        # which records -- a parameter's name)
+        sprintf("- %s %s %s: %s", vl$dataset[i], vl$variable[i],
+                if (has_where) paste0("where `", vl$where[i], "`") else
+                  if (!is.null(lab)) paste0("(", lab, ")") else "(a value level entry)",
                 if (length(note)) paste(note, collapse = ", ") else "(no digits)")
       }, ""),
       "")

@@ -1,7 +1,7 @@
 # ============================================================================
 #  Document import, level 1: a study's define as code lists and labels
 # ----------------------------------------------------------------------------
-#  A define (Define-XML 2.0 / 2.1, CDISC's standard XML; or the workbook it
+#  A define (Define-XML 1.0, 2.0 / 2.1, CDISC's standard XML; or the workbook it
 #  is made from) already says what each dataset's variables are called,
 #  their labels and the values each may take with their decodes.  These are
 #  read by rule -- no AI, no guessing -- into tidy data frames, and the code
@@ -11,9 +11,10 @@
 # ============================================================================
 
 .define_odm <- "http://www.cdisc.org/ns/odm/v1.3"
+.define_odm_12 <- "http://www.cdisc.org/ns/odm/v1.2"
 .define_xml_ns <- "http://www.w3.org/XML/1998/namespace"
 
-#' Read a Define-XML (2.0 or 2.1)
+#' Read a Define-XML (2.0 or 2.1; a 1.0 for its datasets, variables and code lists)
 #'
 #' Reads a study's `define.xml` -- the CDISC standard description of its
 #' datasets -- by rule (\pkg{xml2}), and gives its datasets, variables and
@@ -83,8 +84,16 @@ tfl_read_define <- function(path, lang = "en") {
     .ard_stop(sprintf(
       "tfl_read_define(): '%s' has no ODM/Study/MetaDataVersion.", path))
   }
-  text <- function(nodes, at) .define_text(nodes, at, ns, lang)
   attr1 <- function(nodes, name) xml2::xml_attr(nodes, name, ns)
+  # (a 1.0 file writes a label as def:Label, with no Description element)
+  text <- function(nodes, at) {
+    out <- .define_text(nodes, at, ns, lang)
+    if (identical(at, "odm:Description/odm:TranslatedText")) {
+      lab <- attr1(nodes, "def:Label")
+      out <- ifelse(is.na(out) & !is.na(lab), lab, out)
+    }
+    out
+  }
 
   gv <- xml2::xml_find_first(doc, "/odm:ODM/odm:Study/odm:GlobalVariables",
                              ns)
@@ -136,9 +145,15 @@ tfl_read_define <- function(path, lang = "en") {
     purpose = attr1(igs, "Purpose"),
     repeating = attr1(igs, "Repeating"),
     reference = attr1(igs, "IsReferenceData"),
-    keys = vapply(refs, function(r) {
+    keys = vapply(seq_along(refs), function(i) {
+      r <- refs[[i]]
       k <- r[!is.na(r$key), , drop = FALSE]
-      if (!nrow(k)) return(NA_character_)
+      if (!nrow(k)) {
+        # (a 1.0 file: def:DomainKeys, the key variables with commas)
+        dk <- attr1(igs[[i]], "def:DomainKeys")
+        if (is.na(dk) || !nzchar(trimws(dk))) return(NA_character_)
+        return(paste(trimws(strsplit(dk, "[,;]")[[1L]]), collapse = " | "))
+      }
       paste(item$variable[match(k$oid[order(k$key)], item$oid)],
             collapse = " | ")
     }, ""),
@@ -177,7 +192,8 @@ tfl_read_define <- function(path, lang = "en") {
         value = attr1(it, "CodedValue"),
         decode = text(it, "odm:Decode/odm:TranslatedText"),
         order = .define_int(attr1(it, "OrderNumber")),
-        rank = suppressWarnings(as.numeric(attr1(it, "Rank"))),
+        rank = suppressWarnings(as.numeric(ifelse(is.na(attr1(it, "Rank")),
+                                                  attr1(it, "def:Rank"), attr1(it, "Rank")))),
         extended = .define_yes(attr1(it, "def:ExtendedValue")),
         code = .define_first_attr(
           it, "odm:Alias[@Context='nci:ExtCodeID']", "Name", ns),
@@ -310,27 +326,29 @@ tfl_read_define <- function(path, lang = "en") {
              order = integer(), oid = character(), stringsAsFactors = FALSE)
 }
 
-# The namespaces by URI: `odm` (ODM 1.3), `def` (Define-XML 2.0 or 2.1),
+# The namespaces by URI: `odm` (ODM 1.3, or 1.2 of a Define-XML 1.0), `def` (Define-XML 1.0, 2.0 or 2.1),
 # `xml`.  The prefixes the file uses do not matter.
 .define_ns <- function(doc, path) {
   uris <- unique(unname(as.character(xml2::xml_ns(doc))))
   root <- xml2::xml_root(doc)
-  if (xml2::xml_name(root) != "ODM" || !.define_odm %in% uris) {
+  # (a Define-XML 1.0 is an ODM 1.2 document)
+  odm <- if (.define_odm %in% uris) .define_odm else if (.define_odm_12 %in% uris) .define_odm_12
+  if (xml2::xml_name(root) != "ODM" || is.null(odm)) {
     .ard_stop(sprintf(paste0(
       "tfl_read_define(): '%s' is not a Define-XML: its root is not an ",
-      "ODM 1.3 element (%s)."), path, .define_odm))
+      "ODM 1.3 (or 1.2) element (%s)."), path, .define_odm))
   }
   def <- grep("^http://www\\.cdisc\\.org/ns/def/v[0-9.]+$", uris,
               value = TRUE)
   ver <- sub("^.*/v", "", def)
-  ok <- ver %in% c("2.0", "2.1")
+  ok <- ver %in% c("1.0", "2.0", "2.1")
   if (!any(ok)) {
     .ard_stop(sprintf(paste0(
-      "tfl_read_define(): '%s' is not a Define-XML 2.0 or 2.1 (its def ",
+      "tfl_read_define(): '%s' is not a Define-XML 1.0, 2.0 or 2.1 (its def ",
       "namespace is %s)."), path,
       if (length(def)) paste(def, collapse = ", ") else "missing"))
   }
-  structure(c(odm = .define_odm, def = def[ok][[1L]], xml = .define_xml_ns),
+  structure(c(odm = odm, def = def[ok][[1L]], xml = .define_xml_ns),
             version = ver[ok][[1L]])
 }
 

@@ -2,7 +2,7 @@
 % Please edit documentation in R/define.R
 \name{tfl_read_define}
 \alias{tfl_read_define}
-\title{Read a Define-XML (2.0 or 2.1)}
+\title{Read a Define-XML (2.0 or 2.1; a 1.0 for its datasets, variables and code lists)}
 \usage{
 tfl_read_define(path, lang = "en")
 }

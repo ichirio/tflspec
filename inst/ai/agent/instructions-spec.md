@@ -245,8 +245,17 @@ Group: {RENALGR}"`.
     - table_plan: {cols: [TRT01A, WORST], rows: {group1: PARAMCD}}
     - plan_total: {label: Total, direction: rows, position: last}
     - plan_cells: {categorical: "{n} ({p:.1f%})"}
-    - plan_levels: {WORST: [LOW, NORMAL, HIGH], BASECAT: [LOW, NORMAL, HIGH, MISSING]}
+  codelists:
+    PARAMCD: [{value: ALT, label: Alanine Aminotransferase (U/L)}, {value: BILI, label: Bilirubin (umol/L)}]
+    WORST: [{value: LOW, label: Low}, {value: NORMAL, label: Normal}, {value: HIGH, label: High}]
+    BASECAT: [{value: LOW, label: Low}, {value: NORMAL, label: Normal}, {value: HIGH, label: High}, {value: MISSING, label: Missing}]
   ```
+
+  The labels the shell shows (Low, Normal, High; the parameter's name on
+  the PARAMCD rows, from `ai/adam_summary.md`'s codes) come from
+  `codelists` (value and label, in the shell's order -- a code list orders
+  too, so no `plan_levels` is needed); a category the code makes (`WORST`,
+  `BASECAT`) takes a code list like any column.
 
   A `by` or `strata` key that code makes (`WORST`, `BASECAT`) is a column
   of the ARD; a column that is neither a key nor the variable is not, and

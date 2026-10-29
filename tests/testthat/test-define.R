@@ -203,8 +203,44 @@ test_that("what is not a Define-XML 2.0 / 2.1 is refused", {
   writeLines("not xml at all <", f)
   expect_error(tfl_read_define(f), "is not XML")
   x <- readLines(.define_20())
-  writeLines(sub("def/v2.0", "def/v1.0", x, fixed = TRUE), f)
-  expect_error(tfl_read_define(f), "def/v1.0")
+  writeLines(sub("def/v2.0", "def/v9.9", x, fixed = TRUE), f)
+  expect_error(tfl_read_define(f), "def/v9.9")
+})
+
+test_that("tfl_read_define() reads a Define-XML 1.0 (ODM 1.2): def:Label, def:DomainKeys, def:Rank", {
+  skip_if_not_installed("xml2")
+  f <- tempfile(fileext = ".xml")
+  on.exit(unlink(f), add = TRUE)
+  writeLines(c(
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<ODM xmlns="http://www.cdisc.org/ns/odm/v1.2" xmlns:def="http://www.cdisc.org/ns/def/v1.0"',
+    '     ODMVersion="1.2" FileType="Snapshot" FileOID="DEF10" CreationDateTime="2026-10-30T00:00:00">',
+    '<Study OID="ST"><GlobalVariables><StudyName>TEST10</StudyName>',
+    '<StudyDescription>d</StudyDescription><ProtocolName>p</ProtocolName></GlobalVariables>',
+    '<MetaDataVersion OID="MDV" Name="ADaM" def:DefineVersion="1.0.0">',
+    '<ItemGroupDef OID="ADSL" Name="ADSL" Repeating="No" IsReferenceData="No" Purpose="Analysis"',
+    '  def:Label="Subject-Level Analysis" def:Structure="one record per subject"',
+    '  def:DomainKeys="STUDYID, USUBJID" def:Class="ADSL">',
+    '  <ItemRef ItemOID="ADSL.USUBJID" OrderNumber="1" Mandatory="Yes"/>',
+    '  <ItemRef ItemOID="ADSL.SEX" OrderNumber="2" Mandatory="No"/>',
+    '</ItemGroupDef>',
+    '<ItemDef OID="ADSL.USUBJID" Name="USUBJID" DataType="text" Length="20" def:Label="Unique Subject Identifier"/>',
+    '<ItemDef OID="ADSL.SEX" Name="SEX" DataType="text" Length="1" def:Label="Sex">',
+    '  <CodeListRef CodeListOID="SEX"/></ItemDef>',
+    '<CodeList OID="SEX" Name="SEX" DataType="text">',
+    '  <CodeListItem CodedValue="M" def:Rank="1"><Decode><TranslatedText xml:lang="en">Male</TranslatedText></Decode></CodeListItem>',
+    '  <CodeListItem CodedValue="F" def:Rank="2"><Decode><TranslatedText xml:lang="en">Female</TranslatedText></Decode></CodeListItem>',
+    '</CodeList>',
+    '</MetaDataVersion></Study></ODM>'), f)
+  def <- tfl_read_define(f)
+  expect_identical(attr(def, "source")$version, "1.0")
+  expect_identical(def$datasets$label, "Subject-Level Analysis")
+  expect_identical(def$datasets$keys, "STUDYID | USUBJID")
+  expect_identical(def$datasets$class, "ADSL")
+  expect_identical(def$variables$label, c("Unique Subject Identifier", "Sex"))
+  expect_identical(def$codelists$decode, c("Male", "Female"))
+  expect_identical(def$codelists$rank, c(1, 2))
+  expect_identical(nrow(def$value_level), 0L)
 })
 
 test_that("tfl_define_codelists() gives a report's codelists rows", {
