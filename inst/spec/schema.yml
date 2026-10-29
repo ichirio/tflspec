@@ -332,6 +332,18 @@ plan_hide:
   args:
     cols: {main: true, label: "Hidden columns", type: "list<column>", help: "The columns not printed, by name: a key a page break or an order reads stays in the data. e.g. TRT01AN"}
 
+plan_empty:
+  package: rtfreporter
+  rank: 75
+  stage: mapping
+  tier: other
+  description: A table of no events -- one row saying so, and a footnote, only when the table has no row or its overall row is 0.
+  args:
+    text: {type: string, description: "The row's text; blank: \"No subjects met the criteria.\"."}
+    when: {type: "enum[auto|no_rows|overall_zero]", description: "When the table counts as empty: no row (no_rows), its overall row 0 (overall_zero), or either (auto, the default)."}
+    position: {type: "enum[last|first|replace]", description: "Where the row goes: after the rows (last: the overall row's 0 stays), first, or alone (replace)."}
+    footnote: {type: string, description: "A footnote added only when the table is empty."}
+
 plan_col_header:
   package: rtfreporter
   rank: 130
@@ -647,9 +659,21 @@ rtf_document:
   args:
     font_table: {type: "list<map<string, string|vec<enum[latin|east_asian|complex|hansi], string>>>", description: "The fonts, the first the document's: [{name: Arial}]; a name a family per script slot: [{name: {latin: Times New Roman, east_asian: MS Mincho}}]."}
     font_lang: {type: "vec<enum[latin|east_asian|complex], enum[ja|zh-Hans|zh-Hant|ko|ar|he|en]>", description: "The language of a font slot: {east_asian: ja}."}
-    watermark: {type: string}
+    watermark: {type: "string|call<rtf_watermark>", description: "A word drawn behind every page (DRAFT), or its look too: {fn: rtf_watermark, args: {text: DRAFT, color: \"#FF0000\"}}."}
     program: {type: string}
     program_fallback: {type: string}
+
+rtf_watermark:
+  package: rtfreporter
+  description: The watermark's look, as rtf_document(watermark = ) takes it.
+  args:
+    text: {type: string, description: The word drawn behind every page.}
+    font_size_half_points: {type: integer}
+    color: {type: string, description: "A hex colour, \"#C8C8C8\"."}
+    angle: {type: number, description: "Degrees; -45 (the default) rises to the right."}
+    font: {type: string}
+    width_in: {type: number}
+    height_in: {type: number}
 
 rtf_tables:
   package: rtfreporter
