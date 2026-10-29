@@ -35,7 +35,7 @@ list(
     pal <- pal_of(d$grp)
     xb <- pretty(c(0, max(fit$time)))
     p <- ggsurvfit::ggsurvfit(fit, linewidth = 0.3) +
-      ggsurvfit::add_censor_mark(shape = 4, size = 3, stroke = 0.6) +
+      ggsurvfit::add_censor_mark(shape = 3, size = 3, stroke = 0.6) +
       ggplot2::geom_hline(yintercept = 0.5, linetype = "twodash",
                           colour = "grey50", linewidth = 0.3) +
       ggplot2::scale_colour_manual(values = pal, breaks = names(pal)) +

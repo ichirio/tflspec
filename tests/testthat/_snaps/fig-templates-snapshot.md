@@ -59,7 +59,7 @@
       pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       
       fig <- ggsurvfit(fit, linewidth = 0.3) +
-        add_censor_mark(shape = 4, size = 3, stroke = 0.6) +
+        add_censor_mark(shape = 3, size = 3, stroke = 0.6) +
         geom_hline(yintercept = 0.5, linetype = "twodash", colour = "grey50",
                    linewidth = 0.3) +
         scale_colour_manual(values = pal, breaks = names(pal)) +
@@ -175,7 +175,7 @@
       pal <- setNames(rep_len(c("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9"), length(lv)), lv)
       
       fig <- ggsurvfit(fit, linewidth = 0.3) +
-        add_censor_mark(shape = 4, size = 3, stroke = 0.6) +
+        add_censor_mark(shape = 3, size = 3, stroke = 0.6) +
         scale_colour_manual(values = pal, breaks = names(pal)) +
         scale_y_continuous(breaks = seq(0, 1, by = 0.2)) +
         coord_cartesian(ylim = c(0, 1)) +
@@ -280,7 +280,7 @@
       
       fig <- ggsurvfit(fit, linewidth = 0.3) +
         add_confidence_interval(alpha = 0.2) +
-        add_censor_mark(shape = 4, size = 3, stroke = 0.6) +
+        add_censor_mark(shape = 3, size = 3, stroke = 0.6) +
         geom_hline(yintercept = 0.5, linetype = "twodash", colour = "grey50",
                    linewidth = 0.3) +
         scale_colour_manual(values = pal, breaks = names(pal)) +
@@ -407,7 +407,7 @@
       pal <- c(All = "#0072B2")
       
       fig <- ggsurvfit(fit, linewidth = 0.3, colour = pal[[1]]) +
-        add_censor_mark(shape = 4, size = 3, stroke = 0.6, colour = pal[[1]]) +
+        add_censor_mark(shape = 3, size = 3, stroke = 0.6, colour = pal[[1]]) +
         geom_hline(yintercept = 0.5, linetype = "twodash", colour = "grey50",
                    linewidth = 0.3) +
         scale_x_continuous(
