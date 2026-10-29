@@ -53,6 +53,13 @@
 #' `rows<f1, f2, ...>` (a sequence of maps that is a data frame) and `T|U`
 #' (either).
 #'
+#' An argument's entry also says how a form shows it: `label`, its short
+#' English name (a GUI translates it and writes "label (argument)"),
+#' `help`, a sentence or two a form's "?" shows (the `description`
+#' is what the AI kit and the reference read), and `main: true` for the
+#' arguments a form shows from the start (the others folded under the
+#' function's other arguments).  `colour` is a colour's text (`#RRGGBB`).
+#'
 #' @param fn A function's name (`"plan_cells"`), or `NULL` for all.
 #' @return The function's entry (`package`, `description`, `dots`, `args`;
 #'   `rank`, its place in the recommended order, and `stage`, `"mapping"`,

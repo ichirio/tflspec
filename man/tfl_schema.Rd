@@ -36,6 +36,13 @@ The types, in a short notation: \code{string}, \code{integer}, \code{number},
 named vector in R), \verb{map<K, V>} (a map that is a named list),
 \verb{rows<f1, f2, ...>} (a sequence of maps that is a data frame) and \code{T|U}
 (either).
+
+An argument's entry also says how a form shows it: \code{label}, its short
+English name (a GUI translates it and writes "label (argument)"),
+\code{help}, a sentence or two a form's "?" shows (the \code{description}
+is what the AI kit and the reference read), and \code{main: true} for the
+arguments a form shows from the start (the others folded under the
+function's other arguments).  \code{colour} is a colour's text (\verb{#RRGGBB}).
 }
 \examples{
 names(tfl_schema())
