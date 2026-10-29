@@ -879,7 +879,7 @@ back): rename the value or choose another separator.
 `tfl_read_outputs` `tfl_resolve_output` `tfl_run_output` `tfl_output_contents` `tfl_output_data_names` `tfl_code_refs` `tfl_write_study_part` `tfl_item_code`
 `tfl_item_written` `tfl_item_own` `tfl_convert_sheets_to_yaml`
 `tfl_yaml_from_sheets` `tfl_sheets_from_yaml` `tfl_sheets_from_spec` `tfl_write_spec_xlsx`
-`tfl_import_spec_xlsx` `tfl_schema` `tfl_schema_check` `tfl_check_spec` `tfl_data_code` `tfl_schema_help` `tfl_ai_decisions_read` `tfl_ai_decisions_write` `tfl_ai_confirm` `tfl_content_code` `tfl_content_run`
+`tfl_import_spec_xlsx` `tfl_schema` `tfl_schema_check` `tfl_check_spec` `tfl_check_reports` `tfl_check_fix_text` `tfl_data_code` `tfl_schema_help` `tfl_ai_decisions_read` `tfl_ai_decisions_write` `tfl_ai_confirm` `tfl_content_code` `tfl_content_run`
 `tfl_ai_unpack` `tfl_args_to_r` `tfl_args_from_r` `tfl_fig_content_from_design`
 
 **Manual:** `tflspec_ai_manual` `tfl_adam_metadata` `tfl_ai_review`
@@ -896,7 +896,6 @@ back): rename the value or choose another separator.
 `tfl_ai_diff` `tfl_ai_read_shell` `tfl_ai_adam_summary` `tfl_ai_batches`
 `tfl_ai_write_requests` `tfl_ai_collect_answers` `tfl_ai_adopt` `tfl_ai_adopted_diff` `tfl_ai_style_prompt` `tfl_ai_style_read` `tfl_rtf_style_scan` `tfl_ai_migrate` `tfl_ai_outputs` `tfl_ai_assumptions` `tfl_ai_study_init`
 `tfl_ai_prepare` `tfl_ai_requests` `tfl_fill_widths` `tfl_ai_run` `tfl_ai_compare`
-`tfl_ai_answer_questions`
 
 **ARD spec:** `tfl_ard_spec` `tfl_read_ard_spec` `tfl_write_ard_spec`
 `tfl_ard_spec_template` `tfl_ard_code` `tfl_ard_data_names` `tfl_build_ard` `tfl_ard_for`
