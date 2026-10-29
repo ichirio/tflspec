@@ -9,7 +9,7 @@ tfl_data_code(output, study, ard = TRUE)
 \arguments{
 \item{output}{A report (\code{\link[=tfl_output]{tfl_output()}}) or its id.}
 
-\item{study}{The study (\code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}).}
+\item{study}{The study (\code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}), or its folder.}
 
 \item{ard}{\code{FALSE} leaves the ARD's code out (a program that writes its
 own: the study's ARD program, its rework).}

@@ -123,9 +123,13 @@
 # left it -- the answer may still say the old text -- with a note when the
 # answer's text differs.  The rows, with the columns of the file's frame.
 .ai_asm_keep_fixed <- function(old, new) {
-  cols <- names(old)
-  for (k in setdiff(cols, names(new))) new[[k]] <- NA_character_
+  # (a column the answers add -- `from`, the decision an assumption came
+  # from -- is kept beside the file's)
+  cols <- union(names(old), names(new))
+  for (k in setdiff(cols, names(new))) new[[k]] <- rep(NA_character_, nrow(new))
+  for (k in setdiff(cols, names(old))) old[[k]] <- rep(NA_character_, nrow(old))
   new <- new[cols]
+  old <- old[cols]
   fx <- old[old$status %in% "fixed", , drop = FALSE]
   if (!nrow(fx) || !nrow(new)) return(new)
   at <- match(.ai_asm_keys(new), .ai_asm_keys(old))

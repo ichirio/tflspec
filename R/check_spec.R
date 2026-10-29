@@ -16,7 +16,8 @@
 #'   study's ARD definition as a whole), `part` (`"ard"`, `"content"`,
 #'   `"figure"`), `item` (the analysis, the function and argument, or the
 #'   figure's part and field), `level` (`"error"`: the program would stop or
-#'   is not written; `"warning"`: to look at) and `message`.  Its attribute
+#'   is not written; `"warning"`: to look at; `"check"`: what the AI marked
+#'   to confirm, [tfl_ai_confirm()]) and `message`.  Its attribute
 #'   `versions` is a data frame of the key packages (`package`,
 #'   `installed`, `NA` when not installed).
 #' @examples
@@ -84,6 +85,12 @@ tfl_check_spec <- function(study, output_id = NULL) {
     if (inherits(ro, "error")) {
       add(output_id = id, part = "content", item = "", level = "error", message = conditionMessage(ro))
       next
+    }
+    # what the AI marked to confirm (the spec route): to look at
+    cf <- .ai_confirm_rows(ro)
+    if (nrow(cf)) {
+      add(output_id = id, part = "content", item = ifelse(is.na(cf$item), cf$where, paste0(cf$where, "$", cf$item)),
+          level = "check", message = paste0("to confirm: ", cf$why))
     }
     if (inherits(ro$content, "tfl_r")) next
     if (identical(ro$kind, "figure") && !.fig_new_content(ro$content)) {

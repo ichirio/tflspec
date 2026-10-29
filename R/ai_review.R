@@ -460,6 +460,13 @@
   })
   if (is.null(o)) return(list(rows = rows, kinds = "report", assumptions = NULL))
   id <- o$id
+  # what the AI marked to confirm (the spec route's `ai: confirm`)
+  cf <- .ai_confirm_rows(o)
+  for (j in seq_len(nrow(cf))) {
+    add(.ai_rv("K19", output_id = id, sheet = "ai", row = cf$where[j] %||% "", field = cf$item[j] %||% "",
+               args = c(id, paste(c(cf$where[j], cf$item[j])[!is.na(c(cf$where[j], cf$item[j]))], collapse = "$"),
+                        cf$why[j]), cat = cat))
+  }
   items <- if (inherits(o$content, "tfl_r")) list() else o$content
   # a figure's named plots: their items, each
   items <- unlist(lapply(items, function(it) if (inherits(it, "tfl_plot")) it$items else list(it)),

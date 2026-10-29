@@ -24,7 +24,8 @@
 # paths written.
 .ai_agent_files <- function(dir, overwrite = FALSE, templates = FALSE, adam = NULL,
                             book = NULL, run = FALSE, reads = character(),
-                            docs = character(), max_reads = 3L) {
+                            docs = character(), max_reads = 3L, route = "answers") {
+  spec <- identical(route, "spec")
   src <- system.file("ai", "agent", package = "tflspec")
   rd <- function(f) paste(readLines(file.path(src, f), warn = FALSE, encoding = "UTF-8"),
                           collapse = "\n")
@@ -37,7 +38,8 @@
   }
   # the agent answers only (the person checks the answers), or answers,
   # runs run.R and repairs (`run`)
-  agents <- rd(if (isTRUE(run)) "AGENTS-run.md" else "AGENTS.md")
+  agents <- rd(if (spec) "AGENTS-spec.md" else if (isTRUE(run)) "AGENTS-run.md" else "AGENTS.md")
+  if (spec) agents <- .ai_spec_agents(agents, .ai_spec_settings(dir))
   place <- function(p) if (length(p) && !is.na(p[1L])) sprintf("`%s`", p[1L]) else
     "(where the request says)"
   if (!isTRUE(run)) {
@@ -75,7 +77,7 @@
   put(file.path(".github", "copilot-instructions.md"), agents, again = TRUE)
   put("run.R", rd("run.R"), again = TRUE)
   put(file.path("ai", "questions.md"), .ai_questions_head())
-  put(file.path("ai", "decisions.md"), rd("decisions.md"))
+  put(file.path("ai", "decisions.md"), rd(if (spec) "decisions-spec.md" else "decisions.md"))
   out
 }
 
@@ -84,8 +86,19 @@
 # may check the ADaM and the workbook (`adam`, `book`: from the study
 # folder); else it writes the answer alone.
 .ai_agent_request_head <- function(request, adam = NULL, book = NULL, run = FALSE,
-                                   reads = character()) {
+                                   reads = character(), route = "answers", ids = character()) {
   at <- function(p) length(p) && !is.na(p[1L])
+  if (identical(route, "spec")) {
+    files <- paste(sprintf("`ai/spec/outputs/%s.yml`", ids), collapse = ", ")
+    return(c("<!-- tflspec: agent mode, route spec -->",
+      paste0("> **For the agent** (AGENTS.md): read `ai/decisions.md` and the decisions below, ",
+             "then ask in the chat what defines these reports and is not settled -- and wait for ",
+             "the answers. Then write each report's skeleton as its file: ", files, ". ",
+             "Record the answers in `ai/decisions.md`; mark what you could not settle under `ai: confirm`. ",
+             "Read only this request and the files it names; do not look for others, install nothing, ",
+             "run nothing. Write nothing of the look."),
+      "", "---", ""))
+  }
   if (!isTRUE(run)) {
     # the answer alone: from this request and the files it names (and the
     # workbook / the ADaM, when the person allows them: `reads`)
@@ -837,8 +850,21 @@ tfl_ai_answer_questions <- function(study_dir, answers) {
 # folder `study` (its name: the paths are from it).  `run`: it also runs
 # run.R and repairs; `templates`: it answers with a template where one fits.
 .ai_agent_prompt <- function(study, requests, run = FALSE, templates = FALSE,
-                             reads = FALSE) {
+                             reads = FALSE, route = "answers", language = "en") {
   which_ <- paste(sprintf("ai/requests/%s.md", requests), collapse = " and ")
+  if (identical(route, "spec")) {
+    return(paste0("The paths are from the study folder ", study,
+      " (the one holding AGENTS.md; with a folder above it open, put the study folder before each). ",
+      "Follow AGENTS.md. Do only ", which_, ", in that order. For each: read ai/decisions.md and the ",
+      "request; ask me here, in ", .ai_language_name(language), ", what defines its reports and is not ",
+      "settled (the analysis set, the parameter, the treatment variable, a denominator ...), numbered, ",
+      "with the choices and your default -- then wait for my answers. Record them in ai/decisions.md. ",
+      "Then write each report's skeleton as ai/spec/outputs/<id>.yml",
+      if (isTRUE(templates)) " (a template where one fits, AGENTS.md)" else "",
+      ", nothing of the look, and mark what you could not settle under ai: confirm. ",
+      "Read only the request and the files it names; run nothing, install nothing. ",
+      "Then stop and tell me the files written, the decisions added and what is to confirm."))
+  }
   paste0("The paths are from the study folder ", study,
          " (the one holding AGENTS.md; with a folder above it open, put the ",
          "study folder before each). Follow AGENTS.md. Do only ", which_, ", ",

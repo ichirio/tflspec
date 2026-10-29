@@ -393,8 +393,8 @@
 .ai_assumption_rows <- function(x) {
   empty <- data.frame(output_id = character(), where = character(), item = character(),
                       assumption = character(), value = character(),
-                      question = character(), stringsAsFactors = FALSE)
-  if (is.null(x) || !length(x)) return(empty)
+                      question = character(), from = character(), stringsAsFactors = FALSE)
+  if (is.null(x) || !length(x)) { empty$from <- NULL; return(empty) }
   cell <- function(e, k) {
     v <- e[[k]]
     if (is.null(v) || !length(v) || is.list(v)) NA_character_ else as.character(v[[1L]])
@@ -407,9 +407,13 @@
     data.frame(output_id = cell(e, "output_id"), where = cell(e, "where"),
                item = cell(e, "item"), assumption = cell(e, "assumption"),
                value = .ai_assumption_value(e$value),
-               question = cell(e, "question"), stringsAsFactors = FALSE)
+               question = cell(e, "question"), from = cell(e, "from"), stringsAsFactors = FALSE)
   })
-  do.call(rbind, c(list(empty), rows))
+  out <- do.call(rbind, c(list(empty), rows))
+  # (`from`: the decision an assumption was taken from, the spec route's;
+  # a column only when one says it)
+  if (!nrow(out) || all(is.na(out$from))) out$from <- NULL
+  out
 }
 
 # An assumption's `value` -- the value the AI used -- as text: a scalar as
