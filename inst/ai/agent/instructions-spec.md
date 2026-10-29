@@ -152,7 +152,8 @@ page:
 `records`, `groups`, `optional`, `formats`, `post`, `code`, `purpose`,
 `reason` -- no other key.  `method` is one of: continuous, categorical,
 dichotomous, missing, hierarchical, max, subjects, total_n,
-proportion_ci, mean_ci, ttest, wilcox, chisq, fisher, custom (or a
+proportion_ci, mean_ci, ttest, wilcox, chisq, fisher, cmh, prop_diff,
+lsmeans, lsmeans_diff, km, logrank, abnormal, incidence_rate, custom (or a
 `pkg::function` the instructions list).  `denominator` is `population`,
 `row`, `column`, `cell`, or an analysis data's id.
 

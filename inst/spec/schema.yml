@@ -688,6 +688,7 @@ rtf_tables:
     space_before: {type: integer, description: "With page_break false, empty lines between the content before and this one."}
     first_rows: {type: integer, description: "With page_break false, the table's rows on the page before it; the rest on pages of their own."}
     cont_title: {type: string, description: "With first_rows, a line under the title of each page after the shared one."}
+    read_attributes: {type: logical, description: "FALSE: what the table carries itself (its rtf_blank_rows attribute) is not read; blank: TRUE."}
 
 rtf_figures:
   package: rtfreporter

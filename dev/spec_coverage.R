@@ -1,6 +1,6 @@
 # The SPEC coverage table: every exported rtfreporter function and argument
 # against what a tflspec SPEC (the YAML spec's content: and page:, the
-# sheets' columns) can write.  Writes inst/dev/spec-coverage.csv and the
+# sheets' columns) can write.  Writes inst/dev/spec-coverage-rtfreporter.csv and the
 # numbers for inst/dev/spec-coverage.md.
 #
 # Run from the tflspec folder, with rtfreporter@next and this tflspec
@@ -68,7 +68,10 @@ via_plan <- c(
   col_header = "plan_col_header", col_header_align = "plan_col_header",
   spanning_header = "plan_col_header(lines)", col_rel_width = "plan_columns(widths)",
   column_widths_twips = "plan_columns(widths)", row_title = "plan_columns(row_title)",
-  blank_rows = "plan_blanks")
+  blank_rows = "plan_blanks",
+  style = "plan_style (rtf_table_style()'s fields: border_header ... underline)")
+# deprecated arguments: no SPEC item by design
+deprecated <- c(rtf_tables.read_gt = "deprecated: as_rtftables() reads a gt table")
 # APIs that are no SPEC item by design
 helper <- c(
   rtfreporter_ai_manual = "AI manual", rtfreporter_options = "package options",
@@ -81,12 +84,14 @@ helper <- c(
   assemble_toc = "file assembly", assemble_spec = "file assembly",
   assemble_from_spec = "file assembly", assemble_folder = "file assembly",
   toc_heading = "file assembly", toc_entry = "file assembly",
-  rtf_replace_text = "post-processing of a file", rtf_text_tokens = "inspection")
+  rtf_replace_text = "post-processing of a file", rtf_text_tokens = "inspection",
+  rtfreporter_validation_kit = "validation kit")
 out_of_scope <- c(plan_layers = "plan_layer / table_plan layers: designed in another session")
 
 rows <- list()
 add <- function(fn, arg, cov, where, note = "") {
-  rows[[length(rows) + 1L]] <<- data.frame(`function` = fn, argument = arg, covered = cov,
+  rows[[length(rows) + 1L]] <<- data.frame(package = "rtfreporter", `function` = fn,
+                                           argument = arg, covered = cov,
                                            where = where, note = note, check.names = FALSE)
 }
 data_args <- c("x", "plan", ".plan", "data", "doc")
@@ -109,6 +114,8 @@ for (fn in ns) {
         add(fn, a, "partial", "page.rtf_document.watermark", "a word only: no rtf_watermark() look")
       } else if (!is.null(e) && a %in% names(e$args)) {
         add(fn, a, "yes", paste0("page.", fn, ".", a), "schema.yml; R/spec_report.R")
+      } else if (paste(fn, a, sep = ".") %in% names(deprecated)) {
+        add(fn, a, "no", "", paste("[helper]", deprecated[[paste(fn, a, sep = ".")]]))
       } else if (fn == "rtf_tables" && a %in% names(via_plan)) {
         add(fn, a, "partial", paste0("content: ", via_plan[[a]]), "said by the plan verb, not page.rtf_tables")
       } else {
@@ -132,7 +139,7 @@ for (fn in ns) {
   }
 }
 cov <- do.call(rbind, rows)
-utils::write.csv(cov, "inst/dev/spec-coverage.csv", row.names = FALSE, na = "")
+utils::write.csv(cov, "inst/dev/spec-coverage-rtfreporter.csv", row.names = FALSE, na = "")
 
 pct <- function(d) {
   w <- c(yes = 1, partial = 0.5, no = 0)

@@ -3,16 +3,93 @@
 How much of each package the SPEC (a report's `content:` items, checked by
 `tfl_schema_check()`, catalogued by `inst/spec/schema.yml`) can write.
 
-## rtfreporter (table SPEC)
+## cards / cardx (table and listing SPEC: the ARD definition)
 
+How much of cards' and cardx's ARD functions an analysis row (the ARD
+definition's `analyses`: `method`, `by`, `variables`, `strata`,
+`denominator`, `statistics`, `args`, `post`) can write.  One row an
+argument: `spec-coverage-cards.csv` (columns `package`, `function`,
+`argument`, `covered`, `where`, `note`, `group`, `weight`), made by
+`dev/spec-coverage-cards.R` from the installed cards / cardx (their
+data.frame methods' formals, as `tfl_ard_args()` reads them) and the
+catalog (`inst/ard/functions.csv`, `args.csv`).  Scope: every exported
+`ard_*()`, and cards' helpers a row writes in `post` (`add_calculated_row()`,
+`filter_ard_hierarchical()`, `sort_ard_hierarchical()`,
+`diff_ard_hierarchical()`, `replace_null_statistic()`,
+`update_ard_stat_label()`).
+
+* **yes**: the row's own column writes it, or the catalog describes it
+  (its kind and a hint: the GUI shows it) and the check judges the value
+  written in `args` / `post` by that kind (TRUE / FALSE, a number, one of
+  the choices, text, a formula, a column, a list, selectors, an expression).
+* **partial**: written as R in `args` / `post` and its name checked against
+  the installed function, but not described, or its value taken as it is.
+* **no**: a SPEC cannot write it.
+* `[by design]`: not offered for a new analysis (the old names, the survey
+  designs, `ard_formals()`; see `?tfl_ard_functions`) -- left out.
+
+A function's coverage is its arguments' mean (yes 1, partial 0.5); the
+percentage is the functions' mean weighted by their use in clinical tables:
+3 for what demographics, disposition, AE by SOC / PT and severity, lab
+summary and shift, vital signs and model-based efficacy (ANCOVA / LS means,
+CMH, KM, log-rank, Cox, incidence rates) use; 2 sometimes; 1 rarely.
+
+cards 0.9.0, cardx 0.3.4; 60 functions, 308 arguments.
+
+| Scope | 2026-10-29 before | 2026-10-29 after |
+|---|---:|---:|
+| **cards / cardx, weighted** | **75.9%** (153 yes / 155 partial) | **99.3%** (304 / 4) |
+| cards ard_*() | 79.9% | 99.4% |
+| cardx ard_*() | 76.0% | 99.8% |
+| cards post helpers | 63.9% | 96.1% |
+| weight-3 functions only | 75.1% | 99.6% |
+
+### Added in this run
+
+* The check judges the values `args` writes, by each argument's kind in the
+  catalog (`.ard_arg_value_problems()`, a warning of `tfl_ard_spec()` like
+  an unknown argument): `overall = "yes"`, `conf.level = 95`,
+  `method = "wilson_cc"` (not one of `ard_categorical_ci()`'s choices),
+  `unit_label = 100`, `formula = 1`, `id = 1`, `method.args = "x"`,
+  `value = "Y"` (a list or formula of selectors), `tidy_fun = "tidy"`,
+  `x = "fit"`, `stats_to_remove = term`.  Only cards' and cardx's functions;
+  a name or a call is the program's to judge.
+* A `post` step's arguments are checked against its function
+  (`filter_ard_hierarchical(filtr = )`), and their values as above
+  (`filter = "n > 1"` in quotes, `sort = "frequency"`).
+* The catalog describes the post helpers' arguments (18 rows of
+  `inst/ard/args.csv`: `expr`, `stat_name`, `filter`, `var`, `keep_empty`,
+  `sort` with its choices, `by_level`, `levels`, `rows`, `stat_names` ...).
+* Eight method keywords for the model-based and safety analyses, each its
+  cardx function by a name a person reads (and the ARS's method name):
+  `cmh` (ard_stats_mantelhaen_test), `prop_diff` (ard_stats_prop_test),
+  `lsmeans` / `lsmeans_diff` (ard_emmeans_emmeans / _contrast), `km`
+  (ard_survival_survfit), `logrank` (ard_survival_survdiff), `abnormal`
+  (ard_tabulate_abnormal), `incidence_rate` (ard_incidence_rate).
+
+### Where the gaps are
+
+The scope is close to its ceiling; what is left and what is next:
+
+1. Taken as R (any value is right for some use): `ard_categorical_ci(weights = )`,
+   `ard_pairwise(include = )`, `add_calculated_row(fmt_fun = )` (a number of
+   decimals or a function), `replace_null_statistic(value = )`.
+2. A `custom` row's code is run as it is: nothing in it is judged.
+3. Next: the model functions' own arguments (`ard_regression()` passes
+   `...` to the model; `ard_car_anova(type = )`), the denominators' shapes
+   in `args` (`denominator = data.frame(...)`), and a wider scope (the
+   helpers the generated code writes: `continuous_summary_fns()`,
+   `label_round()`).
+
+## rtfreporter (table SPEC)
 
 How much of rtfreporter's exported API (rtfreporter@next) a tflspec SPEC
 (tflspec@next: the YAML spec's `content:` and `page:`, the sheets' columns
 and `content_more` / `page_more`) can write.  The table, one row per
-exported function and argument, is `spec-coverage.csv` (columns
-`function`, `argument`, `covered`, `where`, `note`); it is made by
-`dev/spec_coverage.R` from the installed packages' formals and
-`inst/spec/schema.yml`.
+exported function and argument, is `spec-coverage-rtfreporter.csv`
+(columns `package`, `function`, `argument`, `covered`, `where`, `note`);
+it is made by `dev/spec_coverage.R` from the installed packages' formals
+and `inst/spec/schema.yml`.
 
 * **yes**: a SPEC writes it -- a content item the schema checks, a `page:`
   argument the report code passes on (`R/spec_report.R`), or a value
@@ -21,27 +98,30 @@ exported function and argument, is `spec-coverage.csv` (columns
   (`rtf_tables(cell_valign = )` is `plan_style(cell_valign = )`), or a
   content item the schema has no entry for (no check, rank or help).
 * **no**: a SPEC cannot write it.
-* Notes `[helper]`: options, inspection helpers, code writers and file
-  assemblers -- no SPEC item by design.  `[out of scope]`: `plan_layers()`,
-  designed in another session.
+* Notes `[helper]`: options, inspection helpers, code writers, file
+  assemblers, the validation kit and deprecated arguments -- no SPEC item
+  by design.  `[out of scope]`: `plan_layers()`, designed in another session.
 
 Percentage: yes counts 1, partial 0.5.
 
-| Run        | All 720 arguments | SPEC-relevant (636, helpers out) | Functions yes / partial / no |
+| Run        | All arguments | SPEC-relevant (helpers out) | Functions yes / partial / no |
 |------------|-------------------|----------------------------------|------------------------------|
-| 2026-10-28 before | 41.9% (287 / 30 / 403) | 47.5% (287 / 30 / 319) | 38 / 7 / 90 |
-| 2026-10-28 after  | 43.3% (300 / 24 / 396) | 49.1% (300 / 24 / 312) | 40 / 6 / 89 |
+| 2026-10-28 before | 41.9% (287 / 30 / 403 of 720) | 47.5% (287 / 30 / 319) | 38 / 7 / 90 |
+| 2026-10-28 after  | 43.3% (300 / 24 / 396 of 720) | 49.1% (300 / 24 / 312) | 40 / 6 / 89 |
+| 2026-10-29 before | 43.7% (305 / 25 / 397 of 727) | 49.6% (305 / 25 / 310 of 640) | 41 / 6 / 90 |
+| 2026-10-29 after  | 43.8% (306 / 25 / 396 of 727) | 49.8% (306 / 25 / 309 of 640) | 41 / 6 / 90 |
+
+(2026-10-29 before is rtfreporter@next with 7 more arguments --
+`plan_append()`, `table_plan(value = )`, `rtfreporter_validation_kit()` --
+and the measure's corrections: `rtf_tables(style = )` is said by
+`plan_style()`'s `rtf_table_style()` fields (partial), `read_gt` is
+deprecated, the validation kit a helper.)
 
 ### Added in this run
 
-* `plan_empty(text, when, position, footnote)`: a schema entry (types,
-  enums, rank 75 with the mapping, help), so a spec's
-  `- plan_empty: {text: ..., position: replace}` is checked and placed.
-* `rtf_document(watermark = rtf_watermark(...))`: `page.rtf_document.watermark`
-  takes `{fn: rtf_watermark, args: {text: DRAFT, color: "#FF0000"}}` as
-  well as a word; it was written into the program as a raw `structure()`
-  before.  The sheets keep a word in the report sheet's `watermark` and a
-  call in `page_more`.
+* `rtf_tables(read_attributes = )`: `page.rtf_tables.read_attributes` (a
+  logical in the schema), passed on for a report of one content and of
+  several.
 
 ### Where the gaps are
 
@@ -54,8 +134,8 @@ could usefully close next:
 1. The border constructors as values (`rtf_border_tfl()`, `rtf_border_box()`,
    `rtf_border_top()` ..., `rtf_table_border()`): a border argument takes
    only `{fn: rtf_border}` in the schema.
-2. `rtf_tables()`: `col_spec`, `style` (`rtf_table_style()`),
-   `read_attributes`, `read_gt` are not passed on from `page.rtf_tables`.
+2. `rtf_tables(col_spec = )` (per-column align / bold ...): only
+   `plan_columns(decimal =, row_title =)` say a part of it.
 3. `rtf_section(page =, secinfo =)`, `rtf_document(color_table =)`,
    `generate_rtfreport(program =, report =)`, `rtfplot(width_twips =,
    height_twips =)`.
