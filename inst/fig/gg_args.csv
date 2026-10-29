@@ -336,8 +336,8 @@ theme,legend.location,enum[panel|plot],Legend aligned to,凡例の揃え先,"ggp
 theme,legend.box.margin,call<margin>|r,Legend box margin,凡例群の余白,
 theme,legend.box.background,"call<element_rect, element_blank>|r",Legend box background,凡例群の背景,
 theme,legend.box.spacing,call<unit>|r,Legend box spacing,凡例群と面の間隔,
-theme,panel.widths,call<unit>|r,Panel widths,面の幅,"ggplot2 3.5.2: fixed widths, {fn: unit, args: {x: 6, units: cm}}."
-theme,panel.heights,call<unit>|r,Panel heights,面の高さ,ggplot2 3.5.2.
+theme,panel.widths,call<unit>|r,Panel widths,面の幅,"ggplot2 4.0: fixed widths, {fn: unit, args: {x: 6, units: cm}}."
+theme,panel.heights,call<unit>|r,Panel heights,面の高さ,ggplot2 4.0.
 theme,plot.tag.location,enum[panel|plot|margin],Tag placed in,タグの配置先,ggplot2 3.5.
 theme,strip.switch.pad.wrap,call<unit>|r,Strip padding (switched wrap),ストリップの余白（wrap 入替時）,
 element,family,string,Font family,フォント,

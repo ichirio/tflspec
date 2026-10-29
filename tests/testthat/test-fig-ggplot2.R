@@ -228,7 +228,7 @@ test_that("the rarer theme settings take their element; complete themes' 4.0 arg
     legend.box.spacing = tfl_r("unit(2, 'mm')"), legend.location = "plot",
     axis.minor.ticks.x.bottom = tfl_call("element_line", list(colour = "grey50")),
     axis.minor.ticks.length.x.bottom = tfl_call("rel", list(x = 0.5)),
-    plot.tag.location = "plot", panel.widths = tfl_r("unit(8, 'cm')"))
+    plot.tag.location = "plot")
   expect_identical(nrow(gg_problems("theme", ok)), 0L)
   p <- gg_problems("theme", list(legend.ticks = tfl_call("element_text", list())))
   expect_identical(p$level, "error")
@@ -243,6 +243,8 @@ test_that("the rarer theme settings take their element; complete themes' 4.0 arg
     list("theme", ok)))
   expect_length(b$data, 1L)
   skip_if_not(utils::packageVersion("ggplot2") >= "4.0.0")
+  expect_identical(nrow(gg_problems("theme", list(panel.widths = tfl_r("unit(8, 'cm')"),
+                                                  panel.heights = tfl_r("unit(5, 'cm')")))), 0L)
   expect_identical(nrow(gg_problems("theme_bw", list(header_family = "serif", accent = "red"))), 0L)
   expect_identical(nrow(gg_problems("labs", list(dictionary = list(AVAL = "Value", TRTA = "Treatment"),
                                                  alt_insight = "Both arms fall"))), 0L)

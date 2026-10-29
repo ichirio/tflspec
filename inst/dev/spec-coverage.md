@@ -96,7 +96,7 @@ Round 2:
   the stats' parameters (`bounds`, `xseq`, `h`, `contour_var`, `args`,
   `xlim` ...), the rarer theme settings (`axis.minor.ticks.*`,
   `legend.frame`, `legend.ticks*`, `legend.box.*`, `legend.location`,
-  `panel.widths` / `panel.heights`, `plot.tag.location`, ggplot2 4.0's
+  `plot.tag.location`, ggplot2 4.0's `panel.widths` / `panel.heights`,
   `point`, `polygon`, `geom`, `spacing`, `margins`), the complete themes'
   `header_family` / `accent`, coord_radial()'s 4.0 names, labs()'s
   `dictionary`.
