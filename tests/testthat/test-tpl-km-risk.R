@@ -44,6 +44,6 @@ test_that("in a study: A (the data steps, the call) = B (the design) = the templ
                                    tfl_item("labs", list(y = "Progression-free"))))
     x <- tplfig_check(o, d, data)
     expect_match(paste(x$a, collapse = "\n"),
-                 sprintf("content <- tfl_tpl(adtte_pfs, \"%s\", by = TRT01A) +", nm), fixed = TRUE)
+                 sprintf("content <- tflspec::tfl_tpl(adtte_pfs, \"%s\", by = TRT01A) +", nm), fixed = TRUE)
   }
 })

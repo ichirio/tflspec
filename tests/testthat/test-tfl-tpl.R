@@ -140,7 +140,7 @@ test_that("in a study: demog with a Total column and its own order; the program 
   expect_identical(t$Total[t$group == "Age (years)" & t$label == "n"], as.character(n))
   # the program: the template's call, the study standard's look after it
   code <- paste(tfl_content_code(r$ro, pipe = "|>"), collapse = "\n")
-  expect_match(code, "tfl_tpl(\n  ard,\n  \"demog\",", fixed = TRUE)
+  expect_match(code, "tflspec::tfl_tpl(\n  ard,\n  \"demog\",", fixed = TRUE)
   expect_false(grepl("stub_name", code, fixed = TRUE))
   expect_match(code, "# (study default)\n  plan_stub(", fixed = TRUE)
   # the program's plan is the report's
@@ -210,4 +210,37 @@ test_that("the layout's own page and column header: the study standard's replace
   hh <- fn_args(res("ae_soc_pt", list()), "plan_col_header")
   expect_length(hh, 1L)
   expect_identical(hh[[1L]]$args$header[[2L]]$text, "{col}\n(N={n})\nn (%)")
+})
+
+test_that("the program runs in an R that did not library(tflspec): the template's call names it", {
+  skip_on_cran()
+  tt_skip()
+  skip_if_not_installed("haven")
+  rscript <- file.path(R.home("bin"), "Rscript")
+  # (the child R looks where this one does; system2(env = ) is Unix-only)
+  withr::local_envvar(R_LIBS = paste(.libPaths(), collapse = .Platform$path.sep))
+  has <- suppressWarnings(system2(rscript, c("-e", shQuote("cat(requireNamespace('tflspec', quietly = TRUE))")),
+                                  stdout = TRUE, stderr = FALSE))
+  skip_if_not(identical(utils::tail(has, 1L), "TRUE"), "tflspec is not installed where a child R looks")
+  d <- tt_study(withr::local_tempdir())
+  f <- tt_report(d, "T-DM", "demog", list(population = "SAF"))
+  r <- tt_run(d, "T-DM", f)
+  code <- tfl_content_code(r$ro, pipe = "|>")
+  expect_true(any(grepl("tflspec::tfl_tpl(", code, fixed = TRUE)))
+  # a setup that attaches tflspec: the call bare, as every attached package's
+  withr::with_options(list(tflspec.attached = "tflspec"), {
+    bare <- tfl_content_code(r$ro, pipe = "|>")
+    expect_true(any(grepl("<- tfl_tpl(", bare, fixed = TRUE)))
+    expect_false(any(grepl("tflspec::", bare, fixed = TRUE)))
+  })
+  # the program, run by a child R with no library(tflspec): the same table
+  w <- withr::local_tempdir()
+  withr::local_dir(w)
+  saveRDS(r$ard, "ard.rds")
+  # (a study's setup attaches rtfreporter, never tflspec)
+  writeLines(c("library(rtfreporter)", "ard <- readRDS('ard.rds')", code,
+               "saveRDS(plan_apply(plan, 'table'), 'tab.rds')"), "prog.R")
+  out <- suppressWarnings(system2(rscript, "prog.R", stdout = TRUE, stderr = TRUE))
+  expect_true(file.exists("tab.rds"), info = paste(out, collapse = "\n"))
+  expect_identical(readRDS("tab.rds"), rtfreporter::plan_apply(r$plan, "table"))
 })

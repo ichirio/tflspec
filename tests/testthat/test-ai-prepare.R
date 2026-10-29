@@ -134,8 +134,16 @@ test_that("tfl_ai_save_answer() and tfl_ai_collect_answers(): the files, the rep
   expect_error(tfl_ai_save_answer(d, one, ""), "not empty")
   res <- suppressMessages(tfl_ai_collect_answers(d))
   expect_s3_class(res, "tfl_ai_collected")
-  expect_named(res, c("reports", "next_steps", "assumptions", "stray", "requests", "templates",
-                      "toc_items", "manifest", "manifest_file"))
+  expect_named(res, c("reports", "next_steps", "next_kind", "next_args", "assumptions", "stray",
+                      "requests", "templates", "toc_items", "manifest", "manifest_file"))
+  # the step's kind and values beside its text, the same names
+  expect_identical(names(res$next_kind), names(res$next_steps))
+  expect_identical(names(res$next_args), names(res$next_steps))
+  expect_true(all(res$next_kind %in% c("answer", "fix_answer", "answer_again", "repair",
+                                       "see_problem", "warnings", "done", "sheet_missing",
+                                       "add_missing", "none_asked")))
+  expect_identical(unname(res$next_kind[res$reports$request[res$reports$status == "no answer"][1L]]),
+                   "answer")
   expect_true(file.exists(file.path(d, res$manifest_file)))
   rp <- res$reports
   expect_true(all(c("problems_text", "file", "repair") %in% names(rp)))
@@ -144,8 +152,8 @@ test_that("tfl_ai_save_answer() and tfl_ai_collect_answers(): the files, the rep
   expect_true(all(is.na(rp$file[!done])))
   expect_true(all(rp$status[!done] == "no answer"))
   expect_identical(names(res$next_steps), r$requests$request)
-  expect_named(res$assumptions, c("output_id", "where", "item", "assumption", "question",
-                                  "id", "kind"))
+  expect_named(res$assumptions, c("output_id", "where", "item", "assumption", "value",
+                                  "question", "id", "kind"))
   expect_output(print(res), "no answer")
   # an answer with an error: its repair prompt, every problem
   bad <- sub("population: [A-Z]+", "population: NOPE", txt)

@@ -334,6 +334,7 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
   # the reports made against the person's list (ai/expected_outputs.csv):
   # told, not refused
   res$expected <- .ai_expected_compare(tfl_ai_expected_read(here), tfl_ai_outputs(here))
+  res <- .ai_run_next(res)
   .ai_write_text(.ai_status_text(res), file.path(study_dir, "ai", "status.md"))
   made <- sum(!is.na(r$rtf))
   open <- sum(res$questions$status %in% "open")
@@ -383,11 +384,15 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
   tpl <- sort(list.files(file.path("spec", "templates"), "[.][Rr]$", full.names = TRUE))
   # (the datasets' paths: from the study folder, or whole)
   data <- unlist(lapply(st$data$datasets %||% list(), function(d) d$path), use.names = FALSE)
+  data <- data %||% character()
   fi <- file.info(data[file.exists(data)])
   adam <- if (nrow(fi)) paste(rownames(fi), fi$size, format(fi$mtime, "%Y%m%d%H%M%S"), collapse = ";") else ""
   pk <- function(p) if (requireNamespace(p, quietly = TRUE)) format(utils::packageVersion(p)) else "-"
+  # (the packages whose version changes what a program makes: a new one
+  # builds every report again)
   paste(md5(c("study.yml", file.path("spec", c("data.yml", "defaults.yml")))), md5(tpl), adam,
-        "tflspec", pk("tflspec"), "rtfreporter", pk("rtfreporter"), sep = "|")
+        "tflspec", pk("tflspec"), "rtfreporter", pk("rtfreporter"), "cards", pk("cards"),
+        "cardx", pk("cardx"), "ggplot2", pk("ggplot2"), sep = "|")
 }
 
 .ai_built_key <- function(id, common) {
@@ -461,33 +466,58 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
   sprintf("Reports (in the answers) %d, TOC items %d: %d have an RTF", sum(have), m, made)
 }
 
-.ai_status_text <- function(res) {
+# The run's own next steps, over the collection's: a report that passed its
+# checks and was not built in this run, or could not be built (a package
+# missing, or a build error).  The text, and its kind and values (as
+# tfl_ai_collect_answers()'s `next_kind` / `next_args`).  `res` with them.
+.ai_run_next <- function(res) {
   r <- res$reports
-  cell <- function(x) ifelse(is.na(x), "", gsub("|", "/", x, fixed = TRUE))
-  q <- res$questions
-  bad <- r[!is.na(r$rtf_problem), , drop = FALSE]
   nxt <- res$next_steps
+  nk <- res$next_kind %||% stats::setNames(rep(NA_character_, length(nxt)), names(nxt))
+  na <- res$next_args %||% stats::setNames(vector("list", length(nxt)), names(nxt))
+  bad <- r[!is.na(r$rtf_problem), , drop = FALSE]
   # passed its checks, never built (a run of other requests only)
   wait <- r[r$status %in% c("ok", "warning") & is.na(r$rtf) & is.na(r$rtf_problem) &
               is.na(r$built), , drop = FALSE]
   for (w in unique(wait$request)) {
+    ids <- wait$output_id[wait$request == w]
     nxt[w] <- sprintf("the answer passed its checks; %s not built yet: run `Rscript run.R %s`",
-                      paste(wait$output_id[wait$request == w], collapse = ", "), w)
+                      paste(ids, collapse = ", "), w)
+    nk[w] <- "not_built"
+    na[[w]] <- list(reports = ids)
   }
   pkg <- .ai_missing_package(bad$rtf_problem)
   for (i in seq_len(nrow(bad))) {
-    nxt[bad$request[i]] <- if (!is.na(pkg[i])) {
-      sprintf(paste0("the answer passed its checks but %s could not be built: R has no package %s ",
-                     "on this PC -- not the answer's fault, do not change it. Ask the person to ",
-                     "install it (install.packages(\"%s\")) in a question, go on with the next ",
-                     "request, and run `Rscript run.R %s` again once it is installed"),
-              bad$output_id[i], pkg[i], pkg[i], bad$request[i])
+    w <- bad$request[i]
+    if (!is.na(pkg[i])) {
+      nxt[w] <- sprintf(paste0("the answer passed its checks but %s could not be built: R has no ",
+                               "package %s on this PC -- not the answer's fault, do not change it. ",
+                               "Ask the person to install it (install.packages(\"%s\")) in a ",
+                               "question, go on with the next request, and run `Rscript run.R %s` ",
+                               "again once it is installed"),
+                        bad$output_id[i], pkg[i], pkg[i], w)
+      nk[w] <- "no_package"
+      na[[w]] <- list(report = bad$output_id[i], package = pkg[i])
     } else {
-      sprintf(paste0("the answer passed its checks but %s could not be built (%s): ",
-                     "fix the answer (ai/repairs/%s-build.md) and run again"),
-              bad$output_id[i], bad$rtf_problem[i], bad$request[i])
+      nxt[w] <- sprintf(paste0("the answer passed its checks but %s could not be built (%s): ",
+                               "fix the answer (ai/repairs/%s-build.md) and run again"),
+                        bad$output_id[i], bad$rtf_problem[i], w)
+      nk[w] <- "build_failed"
+      na[[w]] <- list(report = bad$output_id[i], problem = bad$rtf_problem[i],
+                      repair = sprintf("ai/repairs/%s-build.md", w))
     }
   }
+  res$next_steps <- nxt
+  res$next_kind <- nk
+  res$next_args <- na
+  res
+}
+
+.ai_status_text <- function(res) {
+  r <- res$reports
+  cell <- function(x) ifelse(is.na(x), "", gsub("|", "/", x, fixed = TRUE))
+  q <- res$questions
+  nxt <- res$next_steps
   c(sprintf("# Status (written by run.R, %s)", format(Sys.time(), "%Y-%m-%d %H:%M")),
     "",
     sprintf("%s. Questions: %d open, %d decided (ai/questions.md).",
@@ -676,6 +706,11 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
     if (!is.na(p)) e$population <- p
     sc <- code_of(i)
     if (!is.na(sc)) e$shell_code <- sc
+    # its batches (a TOC_<batch> sheet, a column of marks): `sets`, the
+    # key the study's planner sheet reads and writes (" | " between them)
+    if (!is.null(t$batches) && !is.na(t$batches[i])) {
+      e$sets <- as.list(strsplit(t$batches[i], " | ", fixed = TRUE)[[1L]])
+    }
     e
   })
   dir.create(dirname(f), recursive = TRUE, showWarnings = FALSE)

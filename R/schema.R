@@ -66,6 +66,13 @@
 #' `rows<f1, f2, ...>` (a sequence of maps that is a data frame) and `T|U`
 #' (either).
 #'
+#' An argument's entry also says how a form shows it: `label`, its short
+#' English name (a GUI translates it and writes "label (argument)"),
+#' `help`, a sentence or two a form's "?" shows (the `description`
+#' is what the AI kit and the reference read), and `main: true` for the
+#' arguments a form shows from the start (the others folded under the
+#' function's other arguments).  `colour` is a colour's text (`#RRGGBB`).
+#'
 #' @param fn A function's name (`"plan_cells"`), or `NULL` for all.
 #' @return The function's entry (`package`, `description`, `dots`, `args`;
 #'   `rank`, its place in the recommended order, and `stage`, `"mapping"`,
@@ -204,6 +211,12 @@ tfl_schema <- function(fn = NULL) {
 #' @seealso [tfl_schema()]
 #' @export
 tfl_schema_check <- function(item) {
+  .schema_check_item(item, part = TRUE)
+}
+
+.schema_check_plain <- function(item) .schema_check_item(item, part = FALSE)
+
+.schema_check_item <- function(item, part = TRUE) {
   fn <- item$fn
   out <- data.frame(fn = character(), arg = character(), level = character(),
                     message = character(), stringsAsFactors = FALSE)
@@ -212,6 +225,21 @@ tfl_schema_check <- function(item) {
     return(do.call(rbind, c(list(out), lapply(item$items, tfl_schema_check))))
   }
   if (identical(fn, ".r")) return(out)
+  # a part (another plan's rows under the table's): its own items, each, and
+  # the part's arguments as any item's (its data and content have no type)
+  if (part && .is_part(item)) {
+    inner <- lapply(.part_items(item$args$content), tfl_schema_check)
+    top <- item
+    top$args$content <- NULL
+    if (!is.null(item$args$data) && !is.list(item$args$data)) {
+      out[1L, ] <- list(fn, "data", "error", "a part's data is a map (source: ard, or source: dataset with its dataset)")
+    }
+    if (!length(item$args$content)) {
+      out[nrow(out) + 1L, ] <- list(fn, "content", "error", "a part's content is its own table items")
+    }
+    top$args$data <- NULL
+    return(do.call(rbind, c(list(out, .schema_check_plain(top)), inner)))
+  }
   bad <- function(arg, msg, level = "error") {
     out[nrow(out) + 1L, ] <<- list(fn, arg, level, msg)
   }

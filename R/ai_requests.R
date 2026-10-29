@@ -559,6 +559,8 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
 #'   report's `spec/outputs/<id>.yml` when written, else `NA`), `repair`
 #'   (the request's repair prompt to paste into the same chat, else `NA`)),
 #'   `next_steps` (a request's next step, named by the request),
+#'   `next_kind` and `next_args` (the same step as a kind and its values,
+#'   for a screen to say in its own words -- see *The next step's kinds*),
 #'   `assumptions` (the study's `spec/_assumptions.yml` for these reports:
 #'   `output_id`, `where`, `item`, `assumption`, `value`, `question`, `id` -- the
 #'   assumption's `A<n>` -- and `kind` -- its `K<n>`, [tfl_ai_assumptions()]),
@@ -567,6 +569,36 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
 #'   `templates` (each request's setting, [tfl_ai_prepare()]'s `templates`:
 #'   a logical named by the request), `manifest` and `manifest_file`
 #'   (below).
+#'
+#' @section The next step's kinds:
+#' `next_steps` is English text; `next_kind` names the same step by a
+#' word, with its values in `next_args`, so a screen can say it in its
+#' own language.  The kinds, and the values each carries (`agent`: whether
+#' the request was written for an agent -- `Rscript run.R` -- or a chat):
+#' \describe{
+#'   \item{`answer`}{no answer yet: `request` (the request file),
+#'     `answer` (the file to save it as), `agent`.}
+#'   \item{`fix_answer`}{the answer could not be read as one block:
+#'     `answer`, `agent`.}
+#'   \item{`answer_again`}{the answer could not be checked: `answer`,
+#'     `agent`.}
+#'   \item{`repair`}{the answer has errors and a repair prompt was written:
+#'     `repair` (the prompt file), `answer`, `agent`.}
+#'   \item{`see_problem`}{the report files could not be written (the
+#'     problem is in `reports`): `agent`.}
+#'   \item{`warnings`}{written, with warnings to read.}
+#'   \item{`done`}{written, nothing to do.}
+#'   \item{`sheet_missing`}{a sheet's request: written, but `missing` (the
+#'     TOC items) are not in the answer.}
+#'   \item{`add_missing`}{written, but `missing` are not in the answer:
+#'     `answer`, `agent`.}
+#'   \item{`none_asked`}{the answer has none of the reports asked for:
+#'     `asked`, `has`, `answer`, `agent`.}
+#' }
+#' [tfl_ai_run()] adds three, for a report that passed its checks:
+#' `not_built` (`reports`, not built in this run: `Rscript run.R
+#' <request>`), `no_package` (`report`, `package`: R has no such package),
+#' `build_failed` (`report`, `problem`, `repair`).
 #'
 #'   The manifest is every report the answers say they make, for the person
 #'   to check the count against the TOC (one TOC row can be several
@@ -612,6 +644,15 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
   }
   rel <- function(...) gsub("\\\\", "/", file.path(...))
   nxt <- character()
+  # the next step's kind and its values too (`next_kind`, `next_args`), for
+  # a screen that says it in its own words (.ai_next_kinds)
+  nk <- character()
+  na <- list()
+  step <- function(nm, kind, text, ...) {
+    nxt[nm] <<- text
+    nk[nm] <<- kind
+    na[[nm]] <<- list(...)
+  }
   # each answer's list of its reports (`reports`), for the manifest
   listed <- list()
   # a sheet's request: the TOC items it was asked for (the others its
@@ -627,11 +668,14 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
     run <- sprintf(" and run `Rscript run.R %s`", nm)
     if (is.na(f)) {
       rows[[nm]] <- row(nm, ids, "no answer")
-      nxt[nm] <- if (agent) {
-        sprintf("answer %s; save the whole answer as %s%s",
-                rel(requests, paste0(nm, ".md")), rel(answers, paste0(nm, ".md")), run)
-      } else sprintf("paste %s into a new chat; save the whole answer as %s",
-                     rel(requests, paste0(nm, ".md")), rel(answers, paste0(nm, ".md")))
+      step(nm, "answer",
+           if (agent) {
+             sprintf("answer %s; save the whole answer as %s%s",
+                     rel(requests, paste0(nm, ".md")), rel(answers, paste0(nm, ".md")), run)
+           } else sprintf("paste %s into a new chat; save the whole answer as %s",
+                          rel(requests, paste0(nm, ".md")), rel(answers, paste0(nm, ".md"))),
+           request = rel(requests, paste0(nm, ".md")), answer = rel(answers, paste0(nm, ".md")),
+           agent = agent)
       next
     }
     task <- ctxs[[nm]]$context$task %||% "table"
@@ -639,10 +683,12 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
                   error = function(e) e)
     if (inherits(a, "error")) {
       rows[[nm]] <- row(nm, ids, "error", 1L, conditionMessage(a))
-      nxt[nm] <- sprintf(paste0("fix %s as the problem below says (copy the whole answer, ",
-                                "from the first ``` to the last), then %s"),
-                         rel(answers, basename(f)),
-                         if (agent) sprintf("run `Rscript run.R %s`", nm) else "collect again")
+      step(nm, "fix_answer",
+           sprintf(paste0("fix %s as the problem below says (copy the whole answer, ",
+                          "from the first ``` to the last), then %s"),
+                   rel(answers, basename(f)),
+                   if (agent) sprintf("run `Rscript run.R %s`", nm) else "collect again"),
+           answer = rel(answers, basename(f)), agent = agent)
       next
     }
     # a report the answer gives in parts (t.15.1.5.1.a, .b): its parts are
@@ -666,10 +712,12 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
     }
     if (inherits(pr, "error")) {
       rows[[nm]] <- row(nm, ids, "error", 1L, conditionMessage(pr))
-      nxt[nm] <- if (agent) {
-        sprintf("answer the request again; save it over %s%s", rel(answers, basename(f)), run)
-      } else sprintf("ask the chat for the answer again; save it over %s",
-                     rel(answers, basename(f)))
+      step(nm, "answer_again",
+           if (agent) {
+             sprintf("answer the request again; save it over %s%s", rel(answers, basename(f)), run)
+           } else sprintf("ask the chat for the answer again; save it over %s",
+                          rel(answers, basename(f))),
+           answer = rel(answers, basename(f)), agent = agent)
       next
     }
     err <- pr[pr$severity == "error", , drop = FALSE]
@@ -680,11 +728,14 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
       .ai_repair_log(file.path(study_dir, repairs), nm, f)
       .ai_write_text(format(tfl_ai_repair_prompt(a, pr)),
                      file.path(study_dir, repairs, paste0(nm, ".md")))
-      nxt[nm] <- if (agent) {
-        sprintf("fix the answer as %s says; save the whole answer over %s%s",
-                rel(repairs, paste0(nm, ".md")), rel(answers, basename(f)), run)
-      } else sprintf("paste %s into the SAME chat; save its new answer over %s",
-                     rel(repairs, paste0(nm, ".md")), rel(answers, basename(f)))
+      step(nm, "repair",
+           if (agent) {
+             sprintf("fix the answer as %s says; save the whole answer over %s%s",
+                     rel(repairs, paste0(nm, ".md")), rel(answers, basename(f)), run)
+           } else sprintf("paste %s into the SAME chat; save its new answer over %s",
+                          rel(repairs, paste0(nm, ".md")), rel(answers, basename(f))),
+           repair = rel(repairs, paste0(nm, ".md")), answer = rel(answers, basename(f)),
+           agent = agent)
     } else {
       # only the reports this request asked for (another is warned of)
       keep <- a
@@ -706,12 +757,16 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
         }, error = function(e) conditionMessage(e))
       }
       if (is.null(wrote)) unlink(file.path(study_dir, repairs, paste0(nm, ".md")))
-      nxt[nm] <- if (!is.null(wrote)) {
-                   if (agent) sprintf("see the problem below, then run `Rscript run.R %s`", nm)
-                   else "see the problem below, then collect again"
-                 }
-                 else if (nrow(pr)) "read the warnings; the report files are written"
-                 else "done: the report files are written"
+      if (!is.null(wrote)) {
+        step(nm, "see_problem",
+             if (agent) sprintf("see the problem below, then run `Rscript run.R %s`", nm)
+             else "see the problem below, then collect again",
+             agent = agent)
+      } else if (nrow(pr)) {
+        step(nm, "warnings", "read the warnings; the report files are written")
+      } else {
+        step(nm, "done", "done: the report files are written")
+      }
     }
     # each report's own problems; one naming no report is the request's
     per <- lapply(ids, function(id) {
@@ -738,22 +793,31 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
     rows[[nm]] <- do.call(rbind, per)
     if (any(names(a$outputs) %in% ids) && !all(ids %in% names(a$outputs)) && !nrow(err) &&
         is.null(wrote)) {
-      nxt[nm] <- if (sheet) {
-        sprintf(paste0("the report files are written; %s (the sheet's numbers) not in the answer: ",
-                       "add them if the sheet makes them, or say why as an assumption"),
-                paste(setdiff(ids, names(a$outputs)), collapse = ", "))
-      } else sprintf(if (agent) "add %s to the answer; save the whole answer over %s%s"
-                         else "ask the same chat for %s too; save the whole answer over %s%s",
-                         paste(setdiff(ids, names(a$outputs)), collapse = ", "),
-                         rel(answers, basename(f)), if (agent) run else "")
+      miss <- setdiff(ids, names(a$outputs))
+      if (sheet) {
+        step(nm, "sheet_missing",
+             sprintf(paste0("the report files are written; %s (the sheet's numbers) not in the ",
+                            "answer: add them if the sheet makes them, or say why as an assumption"),
+                     paste(miss, collapse = ", ")),
+             missing = miss)
+      } else {
+        step(nm, "add_missing",
+             sprintf(if (agent) "add %s to the answer; save the whole answer over %s%s"
+                     else "ask the same chat for %s too; save the whole answer over %s%s",
+                     paste(miss, collapse = ", "), rel(answers, basename(f)),
+                     if (agent) run else ""),
+             missing = miss, answer = rel(answers, basename(f)), agent = agent)
+      }
     } else if (!any(names(a$outputs) %in% ids) && !nrow(err)) {
       # none of the reports asked for: nothing was written
-      nxt[nm] <- sprintf(paste0("the answer has none of %s (it has %s): %s; save the whole ",
-                                "answer over %s%s"),
-                         paste(ids, collapse = ", "),
-                         if (length(a$outputs)) paste(names(a$outputs), collapse = ", ") else "no report",
-                         if (agent) "answer them" else "ask the same chat for them",
-                         rel(answers, basename(f)), if (agent) run else "")
+      step(nm, "none_asked",
+           sprintf(paste0("the answer has none of %s (it has %s): %s; save the whole ",
+                          "answer over %s%s"),
+                   paste(ids, collapse = ", "),
+                   if (length(a$outputs)) paste(names(a$outputs), collapse = ", ") else "no report",
+                   if (agent) "answer them" else "ask the same chat for them",
+                   rel(answers, basename(f)), if (agent) run else ""),
+           asked = ids, has = names(a$outputs), answer = rel(answers, basename(f)), agent = agent)
     }
   }
   out <- do.call(rbind, rows)
@@ -786,7 +850,9 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
   man <- .ai_manifest(out, listed)
   mf <- file.path(dirname(file.path(study_dir, requests)), "manifest.csv")
   utils::write.csv(man, mf, row.names = FALSE, na = "", fileEncoding = "UTF-8")
-  structure(list(reports = out, next_steps = nxt[unique(out$request)], assumptions = asm,
+  req <- unique(out$request)
+  structure(list(reports = out, next_steps = nxt[req], next_kind = nk[req],
+                 next_args = stats::setNames(na[req], req), assumptions = asm,
                  stray = rel(answers, stray), requests = requests, templates = tpl,
                  toc_items = if (length(keys)) length(keys[!is.na(keys)]) else NA_integer_,
                  manifest = man, manifest_file = rel(dirname(requests), "manifest.csv")),

@@ -264,6 +264,9 @@
     for (a in names(e$args)) {
       x <- e$args[[a]]
       if (!is.null(x$renamed_to)) next
+      # an argument the schema lists for a form only (its label, no
+      # description): the AI is not told of it (its request stays short)
+      if (is.null(x$description) && !is.null(x$label)) next
       out <- c(out, sprintf("  - `%s` (%s)%s", a, x$type %||% "value",
                             .ai_help(x$description %||% "", ": ")))
     }

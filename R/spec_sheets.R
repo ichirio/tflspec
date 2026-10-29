@@ -186,7 +186,10 @@ tfl_sheets_from_spec <- function(study, outputs) {
       output_id = id, description = cell(e$label %||% o$label), setup_code = NA_character_,
       process_code = .first_r_step(o$data$steps),
       section = cell(e$section), population = cell(e$population %||% o$population),
-      datasets = cell(e$datasets), batches = cell(e$sets))
+      datasets = cell(e$datasets %||% .records_dataset(o)), batches = cell(e$sets))
+    if (!is.null(.records_dataset(o)) && !is.null(o$data$where)) {
+      note(id, "data", "a records table's where (its dataset's condition) stays in YAML")
+    }
     # the report row: its kind, its pattern, its file and program
     rr <- list(output_id = id, type = o$kind)
     pat <- grep("^patterns/", o$extends, value = TRUE)

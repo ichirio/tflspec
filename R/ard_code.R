@@ -519,9 +519,12 @@
   if (!length(take)) {
     return(sprintf("dplyr::semi_join(dplyr::select(%s, %s), by = %s)", pop, subj, .q(subj)))
   }
-  c(sprintf("dplyr::select(-dplyr::any_of(%s))", .lay(.c_str(take), width = Inf)),
-    sprintf("dplyr::inner_join(dplyr::select(%s, %s), by = %s)", pop,
-            paste(c(subj, take), collapse = ", "), .q(subj)))
+  # only the columns the subjects' data has: one it does not have (a
+  # stratum of the records themselves, AESEV) stays the records' own
+  tk <- .lay(.c_str(take), width = Inf)
+  c(sprintf("dplyr::select(-dplyr::any_of(intersect(%s, names(%s))))", tk, pop),
+    sprintf("dplyr::inner_join(dplyr::select(%s, %s, dplyr::any_of(%s)), by = %s)", pop,
+            subj, tk, .q(subj)))
 }
 
 .stat_arg <- function(method, stats) {

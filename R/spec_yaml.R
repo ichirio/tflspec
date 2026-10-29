@@ -325,6 +325,10 @@ tfl_read_output <- function(path) {
       stop("A content item is `- fn: {args}`; `", names(el), "` has a value that is not a map.",
            call. = FALSE)
     }
+    # a part (another plan's rows under the table's): its own data and items
+    if (identical(.schema_fn_name(names(el)), .spec_part$fn)) {
+      return(tfl_item(names(el), .part_in(args), "own"))
+    }
     return(tfl_item(names(el), .rounding_lower(names(el), .calls_in(args)), "own"))
   }
   if (is.list(el) && !is.null(el$fn)) {
@@ -466,6 +470,7 @@ tfl_write_output <- function(x, path) {
   lapply(items, function(it) {
     if (inherits(it, "tfl_plot")) return(stats::setNames(list(.items_to_list(it$items)), it$fn))
     if (identical(it$fn, ".r")) return(it$args$code)
+    if (.is_part(it)) return(stats::setNames(list(.part_out(it$args)), it$fn))
     a <- .calls_out(it$args)
     # no arguments: an empty map ({}), not an empty sequence
     if (!length(a)) a <- stats::setNames(list(), character())

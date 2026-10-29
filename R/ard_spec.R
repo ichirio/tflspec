@@ -259,6 +259,10 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
     .spec_stop(paste(c("The ARD definition is not valid:", p$message),
                      collapse = "\n  "), p, "tflspec_ard_spec_error")
   }
+  # an argument the installed function does not have: said now, with the
+  # version, rather than by the program when it runs
+  w <- .ard_args_unknown(x)
+  if (length(w)) warning(paste(w, collapse = "\n  "), call. = FALSE)
   x
 }
 
@@ -358,6 +362,12 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
     for (cn in twice) add(i, cn, sprintf(
       "%s / %s: `%s` is given twice, by the `%s` column and in `args`; write it in one place",
       a$output_id[i], a$analysis_id[i], col_arg[[cn]], cn))
+  }
+  # a function its package (installed) does not export: the program would
+  # stop on it; said here with the installed version
+  for (i in which(!is.na(a$method) & grepl("::", a$method, fixed = TRUE))) {
+    v <- .pkg_fn_missing(a$method[i])
+    if (!is.null(v)) add(i, "method", sprintf("%s / %s: %s", a$output_id[i], a$analysis_id[i], v))
   }
   for (col in c("strata", "denominator")) {
     for (i in which(!is.na(a[[col]] %||% rep(NA, nrow(a))))) {
@@ -800,6 +810,70 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   if (startsWith(fn, "(")) return(NULL)
   f <- tryCatch(eval(str2lang(fn)), error = function(e) NULL)
   if (is.function(f)) f else NULL
+}
+
+# Why `pkg::fn` cannot be called: its package is installed but has no such
+# function (with the version: a function of a later or an earlier one).
+# NULL when it can be, or when the package is not installed (nothing to
+# compare with: the program says so when it runs).
+.pkg_fn_missing <- function(call) {
+  pkg <- sub("::.*$", "", call)
+  fn <- sub("^.*::", "", call)
+  if (!requireNamespace(pkg, quietly = TRUE)) return(NULL)
+  if (fn %in% getNamespaceExports(pkg)) return(NULL)
+  sprintf("the installed %s %s has no %s()", pkg, utils::packageVersion(pkg), fn)
+}
+
+# The arguments in `args` the installed function does not have, one line
+# per analysis: "T1 / AGE: cards 0.9.0's ard_summary() has no argument
+# `nope` (it has: by, variables, ...)".  A keyword's function is the
+# catalog's; `custom`, a subject flag and a study's own function are not
+# looked at.  The names tflspec takes for itself (.overall, .missing) and
+# the column arguments are known.  A function with `...` is judged only
+# when its own code checks them (rlang's check_dots_empty() /
+# check_dots_used(), as cards' functions do): one that passes them on
+# (cardx::ard_car_anova(type = ) to car::Anova()) takes what it does not
+# name.
+.ard_args_unknown <- function(x) {
+  a <- x$analyses
+  keys <- tfl_ard_methods()
+  out <- character()
+  for (i in which(!is.na(a$args))) {
+    m <- a$method[i]
+    if (identical(m, "custom")) next
+    k <- .method_key(m, keys)
+    call <- if (is.na(k)) m else keys$call[k]
+    if (startsWith(call, "(") || !grepl("::", call, fixed = TRUE)) next
+    fm <- .ard_formals(call)
+    if (is.null(fm)) next
+    pkg <- sub("::.*$", "", call)
+    if ("..." %in% names(fm) && !.dots_checked(call)) next
+    given <- tryCatch(.args_given(a$args[i]), error = function(e) character())
+    known <- c(names(fm), ".overall", ".missing", "by", "variables", "strata",
+               "denominator", "statistic")
+    bad <- setdiff(given, known)
+    if (!length(bad)) next
+    has <- setdiff(names(fm), c("...", if (isTRUE(attr(fm, "data_first"))) names(fm)[1L]))
+    out <- c(out, sprintf(
+      "%s / %s: %s %s's %s() has no argument %s (it has: %s); the program would stop on it",
+      a$output_id[i], a$analysis_id[i], pkg, utils::packageVersion(pkg),
+      sub("^.*::", "", call), paste0("`", bad, "`", collapse = ", "),
+      paste(has, collapse = ", ")))
+  }
+  out
+}
+
+# Does the function check its `...` (rlang::check_dots_empty() /
+# check_dots_used())?  Then an argument it does not name stops it.
+.dots_checked <- function(call) {
+  f <- .ard_fun(call)
+  if (is.null(f)) return(FALSE)
+  m <- tryCatch(utils::getS3method(sub("^.*::", "", call), "data.frame",
+                                   optional = TRUE, envir = environment(f)),
+                error = function(e) NULL)
+  code <- paste(deparse(body(if (is.function(m)) m else f)), collapse = "
+")
+  grepl("check_dots_(empty|used)", code)
 }
 
 # the continuous statistics the ARD program computes (not cards)

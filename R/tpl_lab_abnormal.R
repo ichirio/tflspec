@@ -65,7 +65,7 @@
       # every parameter analysed a level (in its order): its rows even with
       # no subject in a category (0/N)
       derive = tfl_r(if (length(a$param_order))
-        sprintf("PARAM = reorder(factor(PARAM), %s)", a$param_order) else
+        sprintf("PARAM = reorder_by(PARAM, %s)", a$param_order) else
           "PARAM = factor(PARAM)"))),
     # the N
     per("_n", "the subjects with a value of each parameter",
