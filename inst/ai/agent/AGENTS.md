@@ -59,7 +59,12 @@ skip it.  For each of the others, in order:
    what is counted (subjects or events); missing values; a subgroup's or
    a filter's condition; what a code stands for when the summary does not
    show it.  These change the numbers or their meaning.  Never take a
-   likely one.
+   likely one.  When a footnote, the SAP or a document the person gave
+   **defines a derived timepoint or population** ("End of Treatment is
+   the last on-treatment assessment", "the per-protocol set excludes
+   ..."), apply that rule (an analysis data with `code`, an assumption
+   that cites it) or ask; do not take a visit name or a flag from the
+   data in its place.
 3. {{ask_when}} **Ask them in the chat**, in {{language}}, numbered.  Each
    question says **which report it is about -- its id and its title --**
    and the item, the choices you see, and the one you would take if the
@@ -115,9 +120,30 @@ skip it.  For each of the others, in order:
    report (a file the request names is missing, the request is unclear):
    ask it in the chat too, and wait for the answer.
 
-When every request is done, **stop** and tell the person: the report
-files written (their ids), the decisions added, and what is marked to
-confirm.
+When every request is done, **review the drafts** (*Before you stop*,
+below), then **stop** and tell the person: the report files written
+(their ids), the decisions added, what is marked to confirm, and what
+the review changed.
+
+## Before you stop
+
+Review each draft against this list and fix what fails:
+
+- every row, column, statistic and footnote of the shell is in the draft
+  or marked to confirm;
+- the analysis set, the treatment variable, the denominator and the
+  filters agree with the shell, the TOC and the documents (or the
+  disagreement was asked about or is marked);
+- the categories' order and labels agree with the shell and the code
+  lists;
+- the digits follow the shell, or the documents' rule;
+- a derived timepoint or population a footnote or a document defines is
+  made by its rule, not taken from the data;
+- nothing of the look is written;
+- the forms are the instructions' (*Before you save a draft*).
+
+Then tell the person what the review changed, draft by draft (or that it
+changed nothing).
 
 ## Stopping and going on
 

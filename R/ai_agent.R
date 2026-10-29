@@ -599,6 +599,7 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
     ", nothing of the look, and mark what you could not settle under ai: confirm; go on to ",
     "the next request. Read only the request and the files it names; run nothing, install ",
     "nothing. When I say \"continue\", go on from the first request with a draft missing. ",
-    "When every request is done, stop and tell me the files written, the decisions added ",
-    "and what is to confirm.")
+    "When every request is done, review each draft against the list under \"Before you ",
+    "stop\" in ai/AGENTS.md and fix what fails; then stop and tell me the files written, ",
+    "the decisions added, what is to confirm, and what the review changed.")
 }

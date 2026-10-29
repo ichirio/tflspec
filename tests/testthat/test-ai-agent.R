@@ -43,6 +43,10 @@ test_that("the agent's files: AGENTS.md, run.R, decisions; toc.yml; the paths; t
   expect_match(r$agent_prompt, "Do every request of ai/requests/index.md", fixed = TRUE)
   expect_match(r$agent_prompt, "ask me here, in English,", fixed = TRUE)
   expect_match(r$agent_prompt, "ai/spec/outputs/<id>.yml", fixed = TRUE)
+  expect_match(r$agent_prompt, "review each draft against the list under \"Before you stop\"", fixed = TRUE)
+  ag <- paste(readLines(file.path(d, "ai", "AGENTS.md"), encoding = "UTF-8"), collapse = "\n")
+  expect_match(ag, "## Before you stop", fixed = TRUE)
+  expect_match(ag, "defines a derived timepoint or population", fixed = TRUE)
   # one message for every request, in index.md's order; "continue" goes on
   expect_match(r$agent_prompt, "every request of ai/requests/index.md", fixed = TRUE)
   expect_match(r$agent_prompt, "\"continue\"", fixed = TRUE)
