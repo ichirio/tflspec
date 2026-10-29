@@ -62,3 +62,30 @@ test_that("a file that cannot be read is an error of that report alone; the leve
   expect_setequal(names(outs), c("T-OK", "T-ERR"))
   expect_error(tfl_read_outputs(d))
 })
+
+test_that("the study's rounding (study.yml settings) holds for an in-process build: a half away from zero", {
+  skip_on_cran()
+  d <- cl_study(withr::local_tempdir())
+  st <- tfl_read_study_spec(d)
+  expect_identical(tflspec:::.study_rounding(st), "sas")
+  old <- options(rtfreporter.rounding = "r")
+  on.exit(options(old), add = TRUE)
+  op <- tflspec:::.study_rounding_option(st)
+  expect_identical(getOption("rtfreporter.rounding"), "sas")
+  options(op)
+  expect_identical(getOption("rtfreporter.rounding"), "r")
+  # a study that says none leaves the option
+  st$study$settings$rounding <- NULL
+  expect_identical(tflspec:::.study_rounding_option(st), list())
+  expect_identical(getOption("rtfreporter.rounding"), "r")
+})
+
+test_that("a figure that draws nothing stops with why", {
+  skip_on_cran()
+  skip_if_not_installed("ggplot2")
+  empty <- ggplot2::ggplot(data.frame(x = numeric(), y = numeric()), ggplot2::aes(x, y)) +
+    ggplot2::geom_point()
+  expect_error(tflspec:::.ai_fig_nothing_drawn(empty, "F-1"), "draws nothing")
+  full <- ggplot2::ggplot(data.frame(x = 1:3, y = 1:3), ggplot2::aes(x, y)) + ggplot2::geom_point()
+  expect_true(tflspec:::.ai_fig_nothing_drawn(full, "F-1"))
+})

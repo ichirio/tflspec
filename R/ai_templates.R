@@ -401,6 +401,7 @@
     data$ard <- suppressMessages(tfl_build_ard(st, dir = ".", output_id = o$id, save = FALSE))
   }
   fig <- suppressMessages(suppressWarnings(tfl_content_run(o, data)))
+  .ai_fig_nothing_drawn(fig, o$id)
   dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
   png <- file.path(out_dir, paste0(o$id, ".png"))
   ggplot2::ggsave(png, fig, width = 9, height = 5, dpi = 72)

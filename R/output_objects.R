@@ -250,6 +250,10 @@ tfl_run_output <- function(output, dir = ".", overwrite = TRUE) {
   old <- setwd(dir)
   on.exit(setwd(old), add = TRUE)
   st <- tfl_read_study_spec(".")
+  # the study's rounding (a half away from zero, as SAS: 63.75 is 63.8),
+  # which the programs' setup sets: here too
+  old_r <- .study_rounding_option(st)
+  on.exit(options(old_r), add = TRUE)
   ro <- NULL
   content <- if (!is.null(output$contents)) {
     tfl_output_contents(output, st, ".")

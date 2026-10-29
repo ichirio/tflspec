@@ -86,8 +86,26 @@
   # a month), as the program runs after programs/tfl/fig_setup.R
   code <- c(tfl_fig_setup_code(), .fig_strip_library(code))
   suppressMessages(suppressWarnings(eval(parse(text = code), env)))
-  list(plot = get("fig", envir = env, inherits = FALSE),
-       png = file.path(out_dir, paste0(id, ".png")))
+  fig <- get("fig", envir = env, inherits = FALSE)
+  .ai_fig_nothing_drawn(fig, id)
+  list(plot = fig, png = file.path(out_dir, paste0(id, ".png")))
+}
+
+# A figure that draws nothing -- its data empty after its steps (a
+# parameter the data does not have, an analysis set that keeps no subject,
+# a filter that keeps no record) -- stops with why, rather than an empty
+# page no one notices
+.ai_fig_nothing_drawn <- function(fig, id) {
+  b <- tryCatch(suppressMessages(suppressWarnings(ggplot2::ggplot_build(fig))),
+                error = function(e) NULL)
+  if (is.null(b) || !length(b$data)) return(invisible(FALSE))
+  n <- vapply(b$data, function(d) if (is.data.frame(d)) nrow(d) else 0L, 1L)
+  if (all(n == 0L)) {
+    .ard_stop(sprintf(paste(
+      "%s: the figure draws nothing -- its data has no rows after its steps (the",
+      "parameter, the analysis set, a filter keeps no record): check them"), id))
+  }
+  invisible(TRUE)
 }
 
 # A dataset file as a data frame: .xpt / .sas7bdat (haven), .rds.

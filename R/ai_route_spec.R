@@ -305,7 +305,7 @@ tfl_ai_decisions_write <- function(study_dir, x) {
              "```", "")
     .ai_write_text(txt, file.path(answers, paste0(nm, ".md")))
   }
-  list(blocks = blocks, bad = d$bad, stray = setdiff(names(blocks), used))
+  list(blocks = blocks, bad = d$bad, stray = setdiff(names(blocks) %||% character(), used))
 }
 
 # A draft's footer lines (the shell's footnotes, written as `page: footer`)

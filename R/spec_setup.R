@@ -99,8 +99,21 @@
 
 # The study's rounding (rtfreporter's half to even "r", or "sas"): the last
 # plan_digits(rounding = ) of the study's defaults.yml; NULL when it says none
+# The study's rounding set as rtfreporter's option for an in-process build
+# (tfl_run_output(), tfl_ai_run()), as the programs' setup sets it; the
+# options as they were, to put back.  A study that says none leaves the
+# option as it is.
+.study_rounding_option <- function(study) {
+  rnd <- .study_rounding(study)
+  if (is.null(rnd)) return(list())
+  options(rtfreporter.rounding = rnd)
+}
+
 .study_rounding <- function(study) {
-  r <- NULL
+  # study.yml's `settings: rounding` (tfl_ai_study_init() writes it); the
+  # defaults' plan_digits(rounding = ) over it
+  r <- study$study$settings$rounding
+  if (!is.null(r)) r <- tolower(as.character(r)[1L])
   for (it in study$defaults$content %||% list()) {
     if (identical(.schema_fn_name(it$fn %||% ""), "plan_digits") && !is.null(it$args$rounding)) {
       r <- tolower(as.character(it$args$rounding))

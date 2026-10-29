@@ -185,6 +185,41 @@ Group: {RENALGR}"`.
 - **A table with a second block of rows under it** (a listing of the
   values and their summary): `plan_append` with its own `data` and
   `content` (the instructions' item list), after the first table's items.
+- **A shift table** (baseline category down, worst post-baseline category
+  across, a Total row, the % of the arm's subjects with a post-baseline
+  value for the parameter): the worst category is a column key of the
+  ARD (`strata`), the baseline category the rows' variable (`variables`,
+  never `label`), the denominator the subjects a parameter each, and the
+  Total row `plan_total` with `direction: rows` from a second analysis of
+  the column key by the row keys:
+
+  ```yaml
+  ard:
+    analysis_data:
+      - id: lb_shift
+        label: one row a subject and parameter: the baseline category, the worst post-baseline category
+        from: ADLB
+        population: SAF
+        code: !r 'post <- dplyr::filter(adlb, USUBJID %in% adsl_sub$USUBJID, ONTRTFL == "Y", is.na(ABLFL) | ABLFL != "Y", !is.na(ANRIND)); base <- dplyr::distinct(dplyr::filter(adlb, ABLFL == "Y"), USUBJID, PARAMCD, .keep_all = TRUE)[, c("USUBJID", "PARAMCD", "BNRIND")]; worst <- dplyr::summarise(dplyr::group_by(post, USUBJID, TRT01A, PARAMCD), WORST = if (any(ANRIND == "HIGH")) "HIGH" else if (any(ANRIND == "LOW")) "LOW" else "NORMAL", .groups = "drop"); out <- dplyr::left_join(worst, base, by = c("USUBJID", "PARAMCD")); dplyr::mutate(out, BASECAT = dplyr::coalesce(BNRIND, "MISSING"))'
+      - id: lb_den
+        label: the subjects with a post-baseline value, a parameter each (the denominator)
+        from: lb_shift
+        keep: USUBJID | TRT01A | PARAMCD
+        distinct: USUBJID | PARAMCD
+    analyses:
+      - {id: SHIFT, method: categorical, data: lb_shift, by: [TRT01A, PARAMCD], strata: [WORST], variables: [BASECAT], denominator: lb_den}
+      - {id: TOTAL, method: categorical, data: lb_shift, by: [TRT01A, PARAMCD], variables: [WORST], denominator: lb_den}
+  content:
+    - normalize_ard: {}
+    - table_plan: {cols: [TRT01A, WORST], rows: {group1: PARAMCD}}
+    - plan_total: {label: Total, direction: rows, position: last}
+    - plan_cells: {categorical: "{n} ({p:.1f%})"}
+    - plan_levels: {WORST: [LOW, NORMAL, HIGH], BASECAT: [LOW, NORMAL, HIGH, MISSING]}
+  ```
+
+  A `by` or `strata` key that code makes (`WORST`, `BASECAT`) is a column
+  of the ARD; a column that is neither a key nor the variable is not, and
+  `table_plan` cannot name it.
 
 ## Easy mistakes (the check refuses these)
 

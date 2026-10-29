@@ -682,8 +682,10 @@
       "write the one the shell says; if the shell does not say it, ask it in a question --",
       "do not guess"))
   }
-  # code lists: variables of the data
-  if (!is.null(vars)) {
+  # code lists: variables of the data (a column that code makes is not
+  # known here: no code list is held to the data then)
+  coded_any <- any(vapply(derived, function(x) isTRUE(attr(x, "coded")), NA))
+  if (!is.null(vars) && !coded_any) {
     for (v in names(o[["codelists"]])) {
       if (!v %in% vars$variable && !v %in% unlist(derived)) {
         add(paste("codelists", v), "is not a variable of the datasets given", "warning")

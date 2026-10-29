@@ -750,7 +750,8 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
                      USE.NAMES = FALSE)
   out <- out[c("request", "type", setdiff(names(out), c("request", "type")))]
   # drafts no request asks for (an id typed differently)
-  stray <- paste0(drafts$stray, ".yml")
+  # (paste0() of none and ".yml" is ".yml": none is none)
+  stray <- if (length(drafts$stray)) paste0(drafts$stray, ".yml") else character()
   # each report's file (when written) and its request's repair prompt (when one waits)
   yml <- rel(.ai_area(study_dir) %||% file.path("spec", "outputs"), paste0(out$output_id, ".yml"))
   out$file <- ifelse(out$status %in% c("ok", "warning") & file.exists(file.path(study_dir, yml)),

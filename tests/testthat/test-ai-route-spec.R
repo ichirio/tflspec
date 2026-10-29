@@ -112,6 +112,7 @@ test_that("prepare(): AGENTS.md asks and writes the drafts; the requests carry t
   # no draft yet: the next step says to ask the agent
   r0 <- suppressMessages(tfl_ai_collect_answers(d))
   expect_true(all(r0$reports$status == "no answer"))
+  expect_identical(r0$stray, character(0))
   expect_true(any(grepl("ask the agent", r0$next_steps)))
   # the agent's draft: the fixture answer's report, with an ai: block
   a <- tfl_ai_parse(readLines(test_path("fixtures", "answers-toc", "ae-1.md"), warn = FALSE), "table")

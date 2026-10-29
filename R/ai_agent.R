@@ -192,6 +192,9 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
       e <- if (inherits(st, "error")) st else outs
       r$rtf_problem[todo] <- paste("the study could not be read:", .ai_one_line(conditionMessage(e)))
     } else {
+      # (the study's rounding, as the programs' setup sets it)
+      old_r <- .study_rounding_option(st)
+      on.exit(options(old_r), add = TRUE)
       out_dir <- st$study$settings$output_path %||% "output"
       # (the drafts' RTF under ai/, as the study's under its output path)
       if (!is.null(area_opt)) out_dir <- file.path("ai", out_dir)
