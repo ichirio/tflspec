@@ -144,8 +144,9 @@ drop_empty_groups <- function(ard) {
   key <- do.call(paste, c(lapply(ard[gl], function(v) vapply(v, function(x)
     if (is.null(x) || length(x) == 0L) "" else as.character(x)[1L], "")), sep = "\r"))
   n0 <- ard$stat_name == "N" & vapply(ard$stat, function(x) {
-    v <- suppressWarnings(as.numeric(x[[1L]] %||% NA))
-    !is.na(v) && v == 0
+    if (!length(x)) return(FALSE)
+    v <- suppressWarnings(as.numeric(x[[1L]]))
+    length(v) == 1L && !is.na(v) && v == 0
   }, NA)
   empty <- unique(key[n0])
   ard[!key %in% empty, , drop = FALSE]
