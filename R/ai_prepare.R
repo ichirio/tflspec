@@ -93,12 +93,16 @@
 #'   whatever tool the PC has (PowerShell, Python, R).  `character()`
 #'   (default): neither, and `AGENTS.md` says not to open them.
 #' @param docs Documents the agent may read for what a request leaves
-#'   unclear (a SAP, a data guide): their paths.  They are copied into
-#'   `ai/docs/` (the agent works in the study folder); a `.docx`, `.pdf`
-#'   or workbook, which an agent in the editor cannot read, is also written
-#'   as text beside it (`<name>.md`, [tfl_ai_doc_text()]: the headings and
-#'   tables kept) and `AGENTS.md` names the text; the agent reads no other
-#'   document.  `NULL` (default): none.
+#'   unclear (a SAP, a data guide): their paths.  A study's documents live
+#'   in the study folder (its `docs/`): one inside the folder is read where
+#'   it is, never copied -- a `.md` / `.txt` at its own path; a `.docx`,
+#'   `.pdf` or workbook, which an agent in the editor cannot read, as its
+#'   text written to `ai/docs/<name>.md` ([tfl_ai_doc_text()]: the headings
+#'   and tables kept).  One outside the study folder is copied into
+#'   `ai/docs/` (the agent works in the study folder), the text beside it
+#'   for those kinds.  `AGENTS.md` names what the agent reads and which
+#'   document a text stands for; the agent reads no other document.  `NULL`
+#'   (default): none.
 #' @param agent_max_reads How many times for a request the agent may open
 #'   a file or run a command beyond the request and the files it names;
 #'   then it asks, or marks what is unclear to confirm, and goes on.

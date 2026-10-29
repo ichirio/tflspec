@@ -53,7 +53,7 @@
       "\n- the documents the person gave, for what a request leaves unclear: ",
       paste(sprintf("`%s`%s", docs, ifelse(
         is.na(docs_from %||% NA) | !nzchar(docs_from %||% ""), "",
-        sprintf(" (the text of %s)", basename(docs_from %||% "")))), collapse = ", "),
+        sprintf(" (the text of %s)", docs_from %||% ""))), collapse = ", "),
       "."))
   tools <- if (any(c("workbook", "adam") %in% reads)) paste0(
     "\n\nRead the workbook or the data with a tool this PC has -- PowerShell, ",

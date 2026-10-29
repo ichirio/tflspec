@@ -77,6 +77,23 @@ test_that("a document already in ai/docs/ and named from there is kept, not copi
                       adam = "adam", quiet = TRUE, size = 3L, docs = sap)
   expect_identical(readLines(sap, encoding = "UTF-8"), c("# SAP", "", "the analysis sets"))
   expect_identical(r$agent_files, "ai/docs/sap.md")
+  # a study's documents live in its docs/: inside the study they are read
+  # where they are, never copied; a workbook gets its text in ai/docs/
+  dir.create(file.path(d, "docs"))
+  own <- file.path(d, "docs", "notes.md")
+  writeLines(c("# Notes", "", "a rule"), own)
+  skip_if_not_installed("openxlsx")
+  xl <- file.path(d, "docs", "guide.xlsx")
+  openxlsx::write.xlsx(list(Rules = data.frame(Topic = "Baseline", Rule = "last before dose")), xl)
+  r2 <- tfl_ai_prepare(unit = "toc", d, system.file("ai", "example", "onco_toc_shell.xlsx", package = "tflspec"),
+                       adam = "adam", quiet = TRUE, size = 3L, docs = c(own, xl), overwrite = TRUE)
+  expect_setequal(r2$agent_files, c("docs/notes.md", "ai/docs/guide.md"))
+  expect_false(file.exists(file.path(d, "ai", "docs", "notes.md")))
+  expect_false(file.exists(file.path(d, "ai", "docs", "guide.xlsx")))
+  expect_match(paste(readLines(file.path(d, "ai", "docs", "guide.md"), encoding = "UTF-8"), collapse = "\n"),
+               "| Baseline | last before dose |", fixed = TRUE)
+  ag <- paste(readLines(file.path(d, "ai", "AGENTS.md"), encoding = "UTF-8"), collapse = "\n")
+  expect_match(ag, "`docs/notes.md`, `ai/docs/guide.md` (the text of docs/guide.xlsx).", fixed = TRUE)
   # the helper itself: the same file by another spelling, a folder target, a real copy
   f <- file.path(root, "a.txt"); writeLines("keep", f)
   expect_true(.file_copy_safe(f, file.path(root, ".", "a.txt")))

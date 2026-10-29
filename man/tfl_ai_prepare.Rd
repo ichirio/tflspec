@@ -152,12 +152,16 @@ whatever tool the PC has (PowerShell, Python, R).  \code{character()}
 (default): neither, and \code{AGENTS.md} says not to open them.}
 
 \item{docs}{Documents the agent may read for what a request leaves
-unclear (a SAP, a data guide): their paths.  They are copied into
-\verb{ai/docs/} (the agent works in the study folder); a \code{.docx}, \code{.pdf}
-or workbook, which an agent in the editor cannot read, is also written
-as text beside it (\verb{<name>.md}, \code{\link[=tfl_ai_doc_text]{tfl_ai_doc_text()}}: the headings and
-tables kept) and \code{AGENTS.md} names the text; the agent reads no other
-document.  \code{NULL} (default): none.}
+unclear (a SAP, a data guide): their paths.  A study's documents live
+in the study folder (its \verb{docs/}): one inside the folder is read where
+it is, never copied -- a \code{.md} / \code{.txt} at its own path; a \code{.docx},
+\code{.pdf} or workbook, which an agent in the editor cannot read, as its
+text written to \verb{ai/docs/<name>.md} (\code{\link[=tfl_ai_doc_text]{tfl_ai_doc_text()}}: the headings
+and tables kept).  One outside the study folder is copied into
+\verb{ai/docs/} (the agent works in the study folder), the text beside it
+for those kinds.  \code{AGENTS.md} names what the agent reads and which
+document a text stands for; the agent reads no other document.  \code{NULL}
+(default): none.}
 
 \item{agent_max_reads}{How many times for a request the agent may open
 a file or run a command beyond the request and the files it names;
