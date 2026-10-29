@@ -31,13 +31,19 @@ test_that("shells in a workbook of their own: the TOC workbook's other sheets ar
                 list("A3", "v2: Table 14.3.1 added"), list("A4", "example file T-14-1-1.yml"),
                 list("A5", "notes"), list("A6", "more notes"), list("A7", "and more"))
   f_toc <- books_book(list(TOC = toc, `Revision history` = notes, Notes = notes))
-  f_sh <- books_book(list(`T-DM` = books_shell("Table 14.1.1", "Demographic and Baseline Characteristics"),
+  conv <- list(list("A1", "General conventions"), list("A2", "All tables: N = number of subjects"),
+               list("A3", "Percentages use the column N"), list("A4", "Dates are DDMMMYYYY"),
+               list("A5", "Missing is shown as blank"), list("A6", "SOC sorted by frequency"))
+  f_sh <- books_book(list(`General conventions` = conv,
+                          `T-DM` = books_shell("Table 14.1.1", "Demographic and Baseline Characteristics"),
                           `T-AE` = books_shell("Table 14.3.1", "Treatment-Emergent Adverse Events")))
   x <- tfl_ai_read_shell(f_toc, shells = f_sh)
   roles <- stats::setNames(x$sheets$role, x$sheets$sheet)
   expect_identical(roles[["TOC"]], "toc")
   expect_identical(unname(roles[c("Revision history", "Notes")]), c("other", "other"))
   expect_identical(unname(roles[c("T-DM", "T-AE")]), c("shell", "shell"))
+  # a sheet of conventions in the shells' workbook: no shell either
+  expect_identical(roles[["General conventions"]], "other")
   expect_identical(x$toc$output_id, c("Table 14.1.1", "Table 14.3.1"))
   expect_identical(x$toc$shell, c("T-DM", "T-AE"))
   # the same sheets in one workbook: the notes are shells by the rule (as before)

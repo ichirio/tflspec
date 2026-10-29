@@ -34,6 +34,11 @@
       any(vapply(h, function(z) nrow(z) > 0L && any(!is.na(z$type)), NA))
     }, NA)
   roles[(n_cells >= 5L | (numbered & n_cells > 0L)) & !hidden] <- "shell"
+  # a sheet of conventions, notes, a revision history, a legend: no shell,
+  # unless a report number names it
+  conv <- grepl("(?i)convention|instruction|notes?\\b|history|revision|readme|legend|abbreviation|glossary",
+                info$sheet, perl = TRUE)
+  roles[conv & !numbered] <- "other"
   first <- info$book_path == info$book_path[1L]
   if (!is.null(toc_sheet)) {
     if (!(length(toc_sheet) == 1L && is.na(toc_sheet))) {
