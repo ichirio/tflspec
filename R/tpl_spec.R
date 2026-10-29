@@ -292,7 +292,12 @@ tfl_template_to_spec <- function(output, study) {
   fn <- if (generic) "tfl_tpl" else t$call %||% paste0("tpl_", called %||% t$name)
   if (grepl("::", fn, fixed = TRUE)) return(fn)
   pkg <- if (generic) "tflspec" else t$package %||% "tflspec"
-  if (!nzchar(pkg) || identical(pkg, "(session)")) fn else paste0(pkg, "::", fn)
+  if (!nzchar(pkg) || identical(pkg, "(session)")) return(fn)
+  # a package's name only when it exports the function: a template a study
+  # or a test registers with its own `call` is not tflspec's (the program
+  # finds it where the study's setup put it)
+  has <- tryCatch(fn %in% getNamespaceExports(pkg), error = function(e) FALSE)
+  if (has) paste0(pkg, "::", fn) else fn
 }
 
 # left at the template's own default), the code lists it reads at the head;
