@@ -35,7 +35,8 @@ scope <- list(
            geom_abline = 2, geom_path = 1, geom_rug = 1, geom_freqpoly = 1, geom_dotplot = 1,
            geom_raster = 1, geom_polygon = 1, geom_curve = 1, geom_count = 1, geom_qq = 1,
            geom_qq_line = 1, geom_blank = 1, geom_spoke = 1, geom_quantile = 1, geom_contour = 1,
-           geom_density_2d = 1, geom_bin_2d = 1, geom_function = 1),
+           geom_density_2d = 1, geom_bin_2d = 1, geom_function = 1,
+           geom_contour_filled = 1, geom_density_2d_filled = 1),
   # a geom drawn by another stat: the stat's parameters
   geom_stat = c("geom_step|ecdf" = 3, "geom_pointrange|summary" = 3, "geom_errorbar|summary" = 3,
                 "geom_line|summary" = 3, "geom_point|summary" = 3, "geom_col|summary" = 2,
@@ -56,6 +57,11 @@ scope <- list(
             scale_fill_grey = 1, scale_colour_hue = 1, scale_fill_hue = 1, scale_colour_identity = 1,
             scale_fill_identity = 1, scale_shape = 1, scale_linetype = 1, scale_size = 1,
             scale_size_manual = 1, scale_size_area = 1, scale_alpha = 1, scale_alpha_manual = 1,
+            scale_linewidth = 2, scale_linewidth_manual = 2, scale_fill_steps2 = 2,
+            scale_colour_discrete = 1, scale_fill_discrete = 1, scale_colour_continuous = 1,
+            scale_fill_continuous = 1, scale_x_binned = 1, scale_colour_steps = 1,
+            scale_fill_steps = 1, scale_colour_steps2 = 1, scale_colour_fermenter = 1,
+            scale_fill_fermenter = 1, scale_x_time = 1,
             expansion = 3, sec_axis = 2, dup_axis = 1),
   coord = c(coord_cartesian = 3, coord_flip = 3, coord_trans = 2, coord_fixed = 1, coord_equal = 1,
             coord_polar = 1, coord_radial = 1),
@@ -64,7 +70,8 @@ scope <- list(
             element_line = 3, element_rect = 3, element_blank = 3, margin = 2),
   facet = c(facet_wrap = 3, facet_grid = 3),
   guide = c(guides = 3, guide_legend = 3, guide_colourbar = 2, guide_axis = 2, guide_none = 2,
-            guide_bins = 1, guide_coloursteps = 1),
+            guide_bins = 1, guide_coloursteps = 1, guide_axis_logticks = 2,
+            guide_axis_theta = 1, guide_axis_stack = 1),
   labs = c(labs = 3, xlab = 1, ylab = 1, ggtitle = 1, annotate = 3),
   position = c(position_dodge = 3, position_dodge2 = 2, position_jitter = 2, position_jitterdodge = 2,
                position_nudge = 2, position_stack = 2, position_fill = 2, position_identity = 1)
@@ -73,7 +80,11 @@ scope <- list(
 # arguments no one writes in a SPEC: deprecated, internal
 drop_args <- c("...", "fun.y", "fun.ymin", "fun.ymax", "flipped_aes", "super", "call", "scale_name",
                "trans", "size", "fatten", "draw_quantiles", "legend.text.align", "legend.title.align",
-               "complete", "validate", "label.size")
+               "complete", "validate", "label.size",
+               # a geom's parameters its constructor makes from the per-part
+               # arguments (geom_boxplot(whisker.colour =) -> whisker_gp)
+               "box_gp", "median_gp", "middle_gp", "whisker_gp", "staple_gp", "outlier_gp",
+               "quantile_gp")
 
 layer_args <- function(fn) {
   f <- getExportedValue("ggplot2", fn)

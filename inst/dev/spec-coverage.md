@@ -22,24 +22,38 @@ line over time with mean +/- SE, bar, scatter, heat map and CDF plots use;
 2 sometimes; 1 rarely.  Deprecated and internal arguments (`size` of line
 geoms, `fun.y`, `trans`, `label.size` ...) are left out.
 
-| Scope | Before | After |
-|---|---:|---:|
-| **ggplot2: geoms (with their stats), scales, coords, themes, facets, guides, labs, positions** | **24.7%** | **94.9%** |
-| geom_*() | 55.9% | 91.4% |
-| a geom with another stat (geom_step(stat = "ecdf"), geom_pointrange(stat = "summary") ...) | 0.0% | 100.0% |
-| scale_*() and expansion() / sec_axis() / dup_axis() | 8.1% | 95.9% |
-| coord_*() | 34.5% | 98.8% |
-| theme(), complete themes, element_*(), margin() | 5.0% | 91.2% |
-| facet_wrap() / facet_grid() | 57.4% | 100.0% |
-| guides() and guide_*() | 10.7% | 97.3% |
-| labs(), xlab(), ylab(), ggtitle(), annotate() | 38.8% | 97.4% |
-| position_*() | 0.0% | 100.0% |
-| **stat_*()** (shown apart) | **44.2%** | **73.1%** |
+Two rounds.  The first counted 2015 arguments (156 functions and geoms with
+a stat); the second widened the scope by 19 functions (line widths, binned / stepped / default
+colour scales, scale_x_time(), guide_axis_logticks() for a forest plot's
+ratio axis, guide_axis_theta() / guide_axis_stack(), filled contours) to
+2303 arguments of 175 functions.
 
-Arguments measured: 2015 (after: 1533 yes, 482 partial, 0 no; before: 73
-yes, 960 partial, 982 no).
+| Scope | Start | Round 1 | Round 2 (wider scope: before / after) |
+|---|---:|---:|---:|
+| **ggplot2: geoms (with their stats), scales, coords, themes, facets, guides, labs, positions** | **24.7%** | **94.9%** | **91.4% / 100.0%** |
+| geom_*() | 55.9% | 91.4% | 90.6% / 100.0% |
+| a geom with another stat (geom_step(stat = "ecdf"), geom_pointrange(stat = "summary") ...) | 0.0% | 100.0% | 100.0% / 100.0% |
+| scale_*() and expansion() / sec_axis() / dup_axis() | 8.1% | 95.9% | 87.7% / 100.0% |
+| coord_*() | 34.5% | 98.8% | 98.8% / 100.0% |
+| theme(), complete themes, element_*(), margin() | 5.0% | 91.2% | 91.2% / 100.0% |
+| facet_wrap() / facet_grid() | 57.4% | 100.0% | 100.0% / 100.0% |
+| guides() and guide_*() | 10.7% | 97.3% | 86.8% / 100.0% |
+| labs(), xlab(), ylab(), ggtitle(), annotate() | 38.8% | 97.4% | 97.4% / 100.0% |
+| position_*() | 0.0% | 100.0% | 100.0% / 100.0% |
+| **stat_*()** (shown apart) | **44.2%** | **73.1%** | **73.1% / 100.0%** |
 
-What made the difference:
+Round 2, 2303 arguments: before 1533 yes / 770 partial / 0 no; after 2303
+yes.  (ggplot2 4.0's `box_gp`, `whisker_gp` ... are left out: geom_boxplot()
+makes them from `whisker.colour` and the like, and given too they clash.)
+
+100% is this measure's ceiling, not ggplot2's: every argument in the scope
+has a card and a type, which says the GUI shows it and the check types its
+value; the tests run the code of a sample of them (test-fig-ggplot2.R).
+Next: the extension packages (ggsurvfit, ggh4x, ggrepel, ggtext,
+ggnewscale, patchwork), and the scope's edge (geom_sf, geom_hex, the
+rarer stat_*()).
+
+What made the difference, round 1:
 
 - Any function of a plot ggplot2 exports is written and checked by its
   formals; before, a function without a card (`scale_colour_brewer`,
@@ -64,9 +78,27 @@ What made the difference:
   ylab / ggtitle, 8 complete themes, element_text / line / rect / blank and
   6 guides.
 
-Still partial (no card or untyped): ggplot2 4.0's per-part styling of box
-plots, violins, crossbars and labels (`whisker.colour`, `median.linewidth`,
-`border.colour` ...), the rarer theme settings (`legend.ticks`,
-`legend.box.*`, `axis.minor.ticks.*`, `panel.widths`), the stat_*() that
-have a geom twin (stat_smooth = geom_smooth, stat_bin = geom_histogram ...)
-and 2-d / contour layers.  Extension packages are measured later.
+Round 2:
+
+- Cards for the 2-d layers (geom_contour / _filled, geom_density_2d /
+  _filled, geom_bin_2d), geom_quantile, geom_spoke, geom_function,
+  geom_blank, and the 11 stat_*() with a geom twin (stat_smooth, stat_bin,
+  stat_count, stat_boxplot, stat_density, stat_ydensity, stat_identity,
+  stat_function, stat_qq, stat_qq_line, stat_sum).
+- Cards for 14 scales (scale_linewidth / _manual, scale_*_discrete /
+  _continuous, scale_x_binned, scale_*_steps / steps2 / fermenter,
+  scale_x_time) and 3 guides (guide_axis_logticks, guide_axis_theta,
+  guide_axis_stack).
+- Typed by kind (inst/fig/gg_args.csv, 106 more rows): ggplot2 4.0's look
+  of a part of a box plot, a violin, a crossbar or a label
+  (`whisker.colour`, `staple.linewidth`, `median.linetype`, `box.colour`,
+  `quantile.linetype`, `border.colour`, `text.colour`, `size.unit` ...),
+  the stats' parameters (`bounds`, `xseq`, `h`, `contour_var`, `args`,
+  `xlim` ...), the rarer theme settings (`axis.minor.ticks.*`,
+  `legend.frame`, `legend.ticks*`, `legend.box.*`, `legend.location`,
+  `panel.widths` / `panel.heights`, `plot.tag.location`, ggplot2 4.0's
+  `point`, `polygon`, `geom`, `spacing`, `margins`), the complete themes'
+  `header_family` / `accent`, coord_radial()'s 4.0 names, labs()'s
+  `dictionary`.
+- Fix: `visible: [.., y]` / `[.., n]` read as TRUE / FALSE by YAML in
+  tfl_text_column, tfl_ard_number, geom_function, stat_function (quoted).

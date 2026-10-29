@@ -29,10 +29,10 @@ The same file is what the GUI's help and the AI kit's schema read.
 }
 \details{
 A figure's functions: the file has a card for those a clinical figure
-uses most (geoms and the stats with no geom of their own, scales,
-coordinates, complete themes and \code{theme()}, elements, guides,
-positions); any other function of a plot \code{ggplot2} exports
-(\code{scale_colour_steps}, \code{guide_axis_logticks}) is its formals.  The
+uses (the geoms and the stats -- those with no geom of their own and
+those with one --, scales, coordinates, complete themes and \code{theme()},
+elements, guides, positions); any other function of a plot \code{ggplot2}
+exports (\code{scale_shape_identity}, \code{guide_custom}) is its formals.  The
 arguments the functions of one kind share -- a layer's \code{stat},
 \code{position}, \code{fun.data}, \code{pad}; a scale's \code{name}, \code{breaks}, \code{labels},
 \code{sec.axis}; \code{theme()}'s settings, each its element -- are typed and

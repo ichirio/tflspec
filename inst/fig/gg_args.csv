@@ -106,6 +106,56 @@ layer,median.linewidth,number,Line width of the median,中央値の線の太さ,
 layer,label.padding,call<unit>|r,Padding in the box,枠内の余白,
 layer,label.r,call<unit>|r,Rounded corners,角の丸み,
 layer,label.size,number,Box outline width,枠の線の太さ,
+layer,linemitre,number,Line mitre limit,線の角の上限,With linejoin: mitre (1 or more).
+layer,arrow.fill,string,Arrow fill,矢印の塗り,The fill of a closed arrow head (by default the line's colour).
+layer,outlier.color,string|r,Outlier colour,外れ値の色,
+layer,outlier.fill,string|r,Outlier fill,外れ値の塗り,
+layer,outlier.stroke,number,Outlier outline width,外れ値の輪郭の太さ,
+layer,box.colour,string,Colour of the box,箱の色,ggplot2 4.0: the box's outline alone (colour styles all parts).
+layer,box.color,string,Colour of the box,箱の色,
+layer,box.linetype,string|number,Line type of the box,箱の線種,ggplot2 4.0.
+layer,median.colour,string,Colour of the median,中央値の線の色,ggplot2 4.0.
+layer,median.color,string,Colour of the median,中央値の線の色,
+layer,median.linetype,string|number,Line type of the median,中央値の線種,ggplot2 4.0.
+layer,middle.colour,string,Colour of the middle,中央線の色,ggplot2 4.0 (crossbar: the middle line).
+layer,middle.color,string,Colour of the middle,中央線の色,
+layer,middle.linetype,string|number,Line type of the middle,中央線の線種,ggplot2 4.0.
+layer,whisker.colour,string,Colour of the whiskers,ひげの色,ggplot2 4.0.
+layer,whisker.color,string,Colour of the whiskers,ひげの色,
+layer,whisker.linetype,string|number,Line type of the whiskers,ひげの線種,ggplot2 4.0.
+layer,whisker.linewidth,number,Line width of the whiskers,ひげの太さ,ggplot2 4.0.
+layer,staple.colour,string,Colour of the staples,ひげの端の色,ggplot2 4.0 (with staplewidth).
+layer,staple.color,string,Colour of the staples,ひげの端の色,
+layer,staple.linetype,string|number,Line type of the staples,ひげの端の線種,ggplot2 4.0.
+layer,staple.linewidth,number,Line width of the staples,ひげの端の太さ,ggplot2 4.0.
+layer,quantile.colour,string,Colour of the quantiles,分位点の線の色,ggplot2 4.0: a violin's quantile lines (with quantiles).
+layer,quantile.color,string,Colour of the quantiles,分位点の線の色,
+layer,quantile.linetype,string|number,Line type of the quantiles,分位点の線種,"ggplot2 4.0 (0, blank: no lines)."
+layer,quantile.linewidth,number,Line width of the quantiles,分位点の線の太さ,ggplot2 4.0.
+layer,notchwidth,number,Notch width,くびれの幅,"With notch: TRUE, the notch's width relative to the box (0.5)."
+layer,quantile.type,integer,Quantile algorithm,分位点の算出法,"1-9 as stats::quantile() (7, the default)."
+layer,border.colour,string,Colour of the border,枠の色,ggplot2 4.0: a label's border alone.
+layer,border.color,string,Colour of the border,枠の色,
+layer,text.colour,string,Colour of the text,文字の色,ggplot2 4.0: a label's text alone.
+layer,text.color,string,Colour of the text,文字の色,
+layer,size.unit,enum[mm|pt|cm|in|pc],Unit of size,大きさの単位,Text size in mm (default) or pt (size.unit: pt; size: 9 is 9 pt).
+layer,binpositions,enum[bygroup|all],Bin positions,区間の位置,A dot plot's bins by group or for all.
+layer,stackgroups,logical,Stack the groups,群を積む,A dot plot's dots of the groups stacked.
+layer,origin,number|r,Origin of the bins,区間の起点,
+layer,right,logical,Bins closed on the right,区間を右で閉じる,
+layer,drop,logical,Drop empty bins,空の区間を除く,
+layer,bounds,list<number>|r,Bounds of the data,データの範囲,"Density: [0, .inf] for x known to be positive (estimated with a boundary correction)."
+layer,outside,logical,Rug outside the panel,目盛りを面の外に,
+layer,xseq,list<number>|r,X values,x の値,Where a smooth or a function is evaluated (by default n points over the range).
+layer,unique_loc,logical,One per location,位置ごとに一つ,
+layer,rule,enum[evenodd|winding],Fill rule,塗りの規則,A polygon with holes.
+layer,args,"map<string, string|number|logical|r>",Function arguments,関数の引数,"stat_function / geom_function: {mean: 0, sd: 1}, written list(...)."
+layer,xlim,list<number>|r,X range,x の範囲,"stat_function: the range the function is drawn over, [0, 10]."
+layer,lambda,number,Smoothing of the quantiles,分位点回帰の平滑化,
+layer,h,list<number>|number|r,Bandwidth,バンド幅,A 2-d density's bandwidth (x and y).
+layer,contour,logical,Draw contours,等高線を描く,
+layer,contour_var,enum[density|ndensity|count],Contoured variable,等高線の変数,
+layer,z.range,list<number>|r,Range of z,z の範囲,
 scale,name,string|r,Title,タイトル,The axis or legend title; !r NULL for none.
 scale,breaks,list<number|string>|r,Breaks,目盛り,"The values with a tick or a key; !r NULL for none, !r seq(0, 52, by = 4)."
 scale,minor_breaks,list<number>|r,Minor breaks,補助目盛り,
@@ -149,6 +199,12 @@ scale,date_minor_breaks,string,Date minor breaks,日付の補助目盛り,
 scale,timezone,string,Time zone,タイムゾーン,
 scale,show.limits,logical,Show the limits,範囲の端を表示,
 scale,nice.breaks,logical,Nice breaks,切りのよい目盛り,
+scale,alpha,number,Transparency,透明度,viridis: 0 (clear) to 1 (opaque).
+scale,continuous.limits,list<number>|r,Continuous limits,連続の範囲,ggplot2 3.5: a discrete position scale's range when continuous data join it.
+scale,fallback.palette,r,Fallback palette,予備のパレット,ggplot2 4.0: the colours used beyond the palette's (!r).
+scale,rescaler,r,Rescaler,再尺度化,!r scales::rescale_mid; how values map to 0-1.
+scale,space,enum[Lab],Colour space,色空間,
+scale,right,logical,Bins closed on the right,区間を右で閉じる,A binned scale: a value on a break goes to the bin below (TRUE).
 coord,xlim,list<number>|r,X range,x の範囲,Zooms without dropping data (unlike a scale's limits).
 coord,ylim,list<number>|r,Y range,y の範囲,
 coord,expand,logical,Expand the ranges,範囲に余白,FALSE: the axes start exactly at the limits.
@@ -167,6 +223,10 @@ coord,inner.radius,number,Inner radius,内側の半径,
 coord,end,number,End angle,終わりの角度,
 coord,r.axis.inside,logical,Radius axis inside,半径の軸を内側に,
 coord,rotate.angle,logical,Rotate the angle labels,角度のラベルを回転,
+coord,thetalim,list<number>|r,Angle range,角度の範囲,ggplot2 4.0 (coord_radial).
+coord,rlim,list<number>|r,Radius range,半径の範囲,ggplot2 4.0 (coord_radial).
+coord,r_axis_inside,logical|number|r,Radius axis inside,半径の軸を内側に,ggplot2 4.0.
+coord,rotate_angle,logical,Rotate the angle labels,角度のラベルを回転,ggplot2 4.0.
 facet,facets,r|list<column>|string,Variables,変数,"!r vars(PARAM), or [PARAM], or !r ~ PARAM."
 facet,rows,r|list<column>,Rows,行,!r vars(AVISIT)
 facet,cols,r|list<column>,Columns,列,!r vars(TRTA)
@@ -257,6 +317,29 @@ theme,strip.text.y,"call<element_text, element_blank, element_markdown>|r",Strip
 theme,strip.placement,enum[inside|outside],Strip placement,ストリップの位置,
 theme,strip.clip,enum[inherit|on|off],Strip clip,ストリップのはみ出し,
 theme,strip.switch.pad.grid,call<unit>|r,Strip padding (switched),ストリップの余白（入替時）,
+theme,point,"call<element_point, element_blank>|r",All points,すべての点,ggplot2 4.0: the look geoms take their points from.
+theme,polygon,"call<element_polygon, element_blank>|r",All polygons,すべての多角形,ggplot2 4.0.
+theme,geom,call<element_geom>|r,Geoms' defaults,geom の既定,"ggplot2 4.0: {fn: element_geom, args: {ink: black, linewidth: 0.5, pointsize: 1.5}}."
+theme,spacing,call<unit>|r,Base spacing,基本の間隔,ggplot2 4.0: the unit other spacings are relative to.
+theme,margins,call<margin>|r,Base margins,基本の余白,ggplot2 4.0.
+theme,debug,logical,Show the text boxes,文字枠を表示,
+theme,header_family,string,Font of the titles,見出しのフォント,ggplot2 4.0: the font of titles and strips.
+theme,accent,string,Accent colour,強調色,ggplot2 4.0: the colour of smooths and the like.
+theme,axis.minor.ticks,"call<element_line, element_blank>|r",Minor ticks,副目盛り線,"ggplot2 3.5: by side, axis.minor.ticks.x.bottom ...; drawn with guide_axis(minor.ticks: TRUE)."
+theme,axis.minor.ticks.length,"call<unit, rel>|number|r",Minor tick length,副目盛り線の長さ,"{fn: rel, args: {x: 0.5}}: half the major ticks."
+theme,legend.key.justification,string|list<number>|r,Key justification,凡例の印の位置合わせ,ggplot2 3.5.
+theme,legend.frame,"call<element_rect, element_blank>|r",Colour bar frame,カラーバーの枠,ggplot2 3.5.
+theme,legend.ticks,"call<element_line, element_blank>|r",Colour bar ticks,カラーバーの目盛り,ggplot2 3.5.
+theme,legend.ticks.length,"call<unit, rel>|number|r",Colour bar tick length,カラーバーの目盛りの長さ,ggplot2 3.5.
+theme,legend.axis.line,"call<element_line, element_blank>|r",Legend axis line,凡例の軸線,ggplot2 3.5 (guide_bins).
+theme,legend.location,enum[panel|plot],Legend aligned to,凡例の揃え先,"ggplot2 3.5: plot, a legend at the top aligned to the whole plot."
+theme,legend.box.margin,call<margin>|r,Legend box margin,凡例群の余白,
+theme,legend.box.background,"call<element_rect, element_blank>|r",Legend box background,凡例群の背景,
+theme,legend.box.spacing,call<unit>|r,Legend box spacing,凡例群と面の間隔,
+theme,panel.widths,call<unit>|r,Panel widths,面の幅,"ggplot2 3.5.2: fixed widths, {fn: unit, args: {x: 6, units: cm}}."
+theme,panel.heights,call<unit>|r,Panel heights,面の高さ,ggplot2 3.5.2.
+theme,plot.tag.location,enum[panel|plot|margin],Tag placed in,タグの配置先,ggplot2 3.5.
+theme,strip.switch.pad.wrap,call<unit>|r,Strip padding (switched wrap),ストリップの余白（wrap 入替時）,
 element,family,string,Font family,フォント,
 element,face,enum[plain|italic|bold|bold.italic],Font face,書体,
 element,colour,string,Colour,色,
@@ -278,6 +361,9 @@ element,r,number,Right,右,
 element,b,number,Bottom,下,
 element,l,number,Left,左,
 element,unit,string,Unit,単位,"pt, mm, cm, in, lines."
+element,linejoin,enum[round|mitre|bevel],Line joins,線の角,ggplot2 3.5.
+element,arrow.fill,string,Arrow fill,矢印の塗り,ggplot2 3.5.
+element,debug,logical,Show the text box,文字枠を表示,
 guide,title,string|r,Title,タイトル,!r NULL for none.
 guide,theme,call<theme>|r,Theme of the guide,凡例のテーマ,ggplot2 3.5.
 guide,position,enum[top|right|bottom|left|inside],Position,位置,
@@ -297,6 +383,24 @@ guide,nbin,integer,Bins of the bar,カラーバーの分割数,
 guide,display,enum[raster|rectangles|gradient],Bar drawn as,カラーバーの描き方,
 guide,alpha,number,Transparency,透明度,
 guide,show.limits,logical,Show the limits,範囲の端を表示,
+guide,raster,logical,Draw as an image,画像で描く,
+guide,draw.ulim,logical,Tick at the upper limit,上限に目盛り,
+guide,draw.llim,logical,Tick at the lower limit,下限に目盛り,
+guide,available_aes,list<string>,Aesthetics,対象の美的属性,"What the guide may show: [colour, fill]."
+guide,even.steps,logical,Even steps,等間隔の段,guide_coloursteps: each bin the same size.
+guide,long,number,Long ticks at,長い目盛りの値,"guide_axis_logticks: 10 (at 1, 10, 100 ...)."
+guide,mid,number,Middle ticks at,中くらいの目盛りの値,guide_axis_logticks: 5.
+guide,short,number,Short ticks at,短い目盛りの値,guide_axis_logticks: 1.
+guide,prescaled,logical,Data already logged,対数変換済み,guide_axis_logticks: TRUE when x is log10 already (not a log scale).
+guide,negative.small,number,Smallest near 0,0 近くの最小値,
+guide,short.theme,"call<element_line, element_blank>|r",Look of the short ticks,短い目盛りの見た目,
+guide,expanded,logical,Over the expanded range,拡張した範囲まで,
+guide,first,call|string|r,First axis,最初の軸,guide_axis_stack: the axis drawn next to the panel ({fn: guide_axis}).
+guide,spacing,call<unit>|r,Space between,軸の間隔,
+guide,prescale_base,number,Base of the logged data,対数変換の底,"guide_axis_logticks with data logged already: 10, or exp(1) (!r)."
+guide,prescale.base,number,Base of the logged data,対数変換の底,
+guide,negative_small,number,Smallest near 0,0 近くの最小値,ggplot2 4.0 name of negative.small.
+guide,short_theme,"call<element_line, element_blank>|r",Look of the short ticks,短い目盛りの見た目,ggplot2 4.0 name of short.theme.
 position,width,number,Dodge width,ずらし幅,The space the groups share at each x (0.9 by default).
 position,height,number,Jitter height,上下のばらし,
 position,padding,number,Padding,間隔,
@@ -338,3 +442,5 @@ labs,colour,string|r,Colour legend title,色の凡例のタイトル,
 labs,fill,string|r,Fill legend title,塗りの凡例のタイトル,
 labs,shape,string|r,Shape legend title,形の凡例のタイトル,
 labs,linetype,string|r,Line type legend title,線種の凡例のタイトル,
+labs,dictionary,"vec<string, string>",Labels by variable,変数ごとのラベル,"ggplot2 4.0: {AVAL: Value, TRTA: Treatment}: a variable's label wherever it is mapped."
+labs,alt_insight,string|r,Alt text insight,代替テキストの要点,
