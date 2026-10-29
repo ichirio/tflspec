@@ -758,8 +758,8 @@ print.tfl_ai_shell <- function(x, ...) {
 }
 
 # A cell that is a mark: x, o, y, yes, 1, an asterisk, a tick, a circle
-.ai_mark_re <- paste0("(?i)^(x|o|y|yes|1|[*]|✓|✔|○|●|◯|◎|",
-                      "■|☑)$")
+.ai_mark_re <- paste0("(?i)^(x|o|y|yes|1|[*]|\u2713|\u2714|\u25cb|\u25cf|\u25ef|\u25ce|",
+                      "\u25a0|\u2611)$")
 .ai_is_mark <- function(x) {
   x <- trimws(as.character(x))
   !is.na(x) & grepl(.ai_mark_re, x, perl = TRUE)
