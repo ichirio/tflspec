@@ -62,7 +62,7 @@ test_that("tfl_ai_prepare(): the code at the top of each shell goes to the TOC e
   openxlsx::saveWorkbook(wb, f, overwrite = TRUE)
   dir.create(file.path(d, "adam"), recursive = TRUE)
   haven::write_xpt(tflspec:::.ai_chr(tflspec::adsl), file.path(d, "adam", "adsl.xpt"))
-  invisible(tfl_ai_prepare(d, f, adam = "adam", quiet = TRUE, mode = "agent", templates = FALSE))
+  invisible(tfl_ai_prepare(d, f, adam = "adam", quiet = TRUE, templates = FALSE))
   toc <- yaml::read_yaml(file.path(d, "spec", "toc.yml"))$outputs
   sc <- vapply(toc, function(e) e$shell_code %||% NA_character_, "")
   expect_identical(unname(sc), c("141_t_dem_01", NA))
