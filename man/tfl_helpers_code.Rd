@@ -14,7 +14,8 @@ The R code of the functions the programs tflspec writes call:
 \code{set_levels()} (the code lists on a data: each listed column a factor in
 the list's order, its values as the list has them in the ARD; a value
 not listed stops the program), \code{reorder_by()} (a column in another's
-order when the data has it: \code{PARAM} by \code{PARAMN}), \code{tag_ard()} (the report, analysis and
+order when the data has it: \code{PARAM} by \code{PARAMN}), \code{order_arms()} (the arm
+variables in their numeric pairs' order: \code{TRT01A} by \code{TRT01AN}), \code{tag_ard()} (the report, analysis and
 analysis set in front of an analysis's ARD), \code{fmt_ard()} and
 \code{fmt_pvalue()} (formats after a call), \code{keep_stats()} (only the
 statistics asked for), \code{ard_hierarchical_or_none()} (nested counts,

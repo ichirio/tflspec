@@ -166,16 +166,24 @@ needs that variable in `by`.
 
 - **The rows ordered by one column's count** (the SOCs and PTs by the
   Drug A 20 mg column, most first, ties alphabetical): `plan_sort: {keys:
-  [.overall, group1, .depth, "-n[Drug A 20 mg]", label]}` -- `-n[<column>]`
-  is that column's count; `-n` alone is the count over every column.  With
-  the template `ae_soc_pt` / `ae_ser_soc_pt`, the same list as its `sort`
-  argument.
+  [.overall, "-n@group1[Drug A 20 mg]", .depth, "-n[Drug A 20 mg]", label]}`
+  -- `-n@group1[<column>]` orders the SOCs by their own count in that
+  column (each SOC's PTs stay with it), `-n[<column>]` the PTs by theirs;
+  `-n` alone is the count over every column.  `group1` in place of the
+  `@` key keeps the SOCs alphabetical, whatever the PTs are sorted by.
+  With the template `ae_soc_pt` / `ae_ser_soc_pt`, the same list as its
+  `sort` argument.
 - **Digits that differ by parameter** (a lab table: ALT one decimal, BILI
   three): guarded cell templates, one a parameter, the last one for the
   rest -- `plan_cells: {continuous: [!r 'PARAMCD == "ALT" ~ "{mean:.1f}
   ({sd:.2f})"', !r 'PARAMCD == "BILI" ~ "{mean:.3f} ({sd:.4f})"', "{mean:.2f}
   ({sd:.3f})"]}` (a guard is `<row key> == "<value>" ~ "<template>"`, as
-  `!r`).  `plan_digits` is by variable, not by a key's value.
+  `!r`).  The same list under one row's label when only that row differs:
+  `continuous: {"Mean (SD)": [!r '...', "..."], Median: "{median:.1f}"}`
+  (not the label as an entry of its own: `plan_cells: {"Mean (SD)":
+  [...]}` is refused).  A guard compares the value as the table has it: a
+  key with a code list holds the label (`PARAMCD == "Bilirubin (umol/L)"`,
+  not `"BILI"`).  `plan_digits` is by variable, not by a key's value.
 - **A title line that changes with the page** ("Parameter: <PARAM>", one
   parameter a page): `plan_paginate_rows: {page_by: [PARAMCD], heading:
   "Parameter: {PARAM}", heading_at: title}` -- the heading goes under the
@@ -183,6 +191,23 @@ needs that variable in `by`.
   column.  Several keys: `page_by: [ANALYTE, RENALGR]` and a heading of two
   lines, `"Analyte: {ANALYTE}
 Group: {RENALGR}"`.
+- **Every subject** (a report of all subjects, no flag): `population:
+  ALL` -- the study's `spec/data.yml` lists it beside the flags' sets.
+- **A p-value column** (a test of each variable between the arms, beside
+  the counts): one analysis a test, the same `by` and `variables` as the
+  counts', and a comparison column that reads its record --
+  `analyses: [..., {id: P_SEX, method: fisher, dataset: ADSL, population:
+  SAF, by: [TRT01A], variables: [SEX]}, {id: P_AGE, method: kruskal,
+  dataset: ADSL, population: SAF, by: [TRT01A], variables: [AGE]}]` and
+  `plan_compare: {p: "{p.value:.3f}"}` (the column's name is yours: `p`,
+  `pvalue`; `"<0.001"` for small values: `p: [!r 'p.value < 0.001 ~
+  "<0.001"', "{p.value:.3f}"]`).  The methods: `fisher`, `chisq`
+  (categorical), `ttest` (two arms), `wilcox`, `kruskal`, `oneway`
+  (continuous, any number of arms).  The p-value goes on the variable's
+  first row; a p-value the shell puts on a row of its own is a question.
+- **The arms in their order**: the data's order (TRT01AN beside TRT01A)
+  is the program's default; write a code list (`codelists: {TRT01A:
+  [...]}`) only when the shell's order or labels differ from the data's.
 - **A table with a second block of rows under it** (a listing of the
   values and their summary): `plan_append` with its own `data` and
   `content` (the instructions' item list), after the first table's items.

@@ -588,18 +588,31 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
   # candidates only), by request -- a report another sheet was asked for is
   # that request's
   own <- lapply(ctxs, function(x) if (isTRUE(x$context$sheet_mode)) .ai_file_id(x$context$candidates))
+  # a request's drafts that cannot be read (their rows, by request): the
+  # request's other reports are checked on their own, these are refused
+  bad_rows <- list()
+  bad_step <- list()
   for (nm in names(ctxs)) {
     ids <- .ai_file_id(ctxs[[nm]]$ids)
-    # a draft of the request's that cannot be read: refused, with why
+    # a draft of the request's that cannot be read: refused, with why; the
+    # request's other drafts go on as its answer
     bad <- drafts$bad[names(drafts$bad) %in% ids]
     if (length(bad)) {
       msg <- paste0("ai/spec/outputs/", names(bad), ".yml: ", bad)
-      rows[[nm]] <- row(nm, ids, "error", length(bad), msg[1L], paste(msg, collapse = "\n"))
-      step(nm, "fix_answer",
-           sprintf("fix %s as the problem below says (its form, not its content), then check again",
-                   drafts_of(names(bad))),
-           drafts = drafts_of(names(bad)))
-      next
+      bad_rows[[nm]] <- row(nm, names(bad), "error", 1L, msg, msg)
+      bad_step[[nm]] <- list(
+        "fix_answer",
+        sprintf("fix %s as the problem below says (its form, not its content), then check again",
+                drafts_of(names(bad))),
+        drafts = drafts_of(names(bad)))
+      ids <- setdiff(ids, names(bad))
+      if (!length(ids)) {
+        rows[[nm]] <- bad_rows[[nm]]
+        bad_rows[[nm]] <- NULL
+        do.call(step, c(list(nm), bad_step[[nm]]))
+        bad_step[[nm]] <- NULL
+        next
+      }
     }
     f <- .ai_answer_file(answers, nm)
     if (is.na(f)) {
@@ -743,6 +756,11 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
                    if (length(a$outputs)) paste(names(a$outputs), collapse = ", ") else "no report"),
            asked = ids, has = names(a$outputs))
     }
+  }
+  # (a request with a draft refused: its rows first, its next step the fix)
+  for (nm in names(bad_rows)) {
+    rows[[nm]] <- rbind(bad_rows[[nm]], rows[[nm]])
+    do.call(step, c(list(nm), bad_step[[nm]]))
   }
   out <- do.call(rbind, rows)
   rownames(out) <- NULL

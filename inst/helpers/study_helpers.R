@@ -16,6 +16,11 @@ set_levels <- function(data, ...) {
     cl <- lists[[v]]
     values <- if (is.null(names(cl))) unname(cl) else names(cl)
     x <- as.character(data[[v]])
+    # (a column the list was put on already -- a data made from another --
+    # holds the labels: those are the values they label)
+    lab <- unname(cl)
+    done <- !is.na(x) & !x %in% values & x %in% lab
+    x[done] <- values[match(x[done], lab)]
     unknown <- setdiff(unique(x[!is.na(x)]), values)
     if (length(unknown)) {
       stop(sprintf("%s has values its code list does not: %s.  Add them to the list.",
@@ -42,6 +47,26 @@ reorder_by <- function(x, by) {
   stats::reorder(factor(x), by)
 }
 
+# The arms in their numeric order when the data has it: each arm variable
+# (TRT..., ARM..., ACTARM...) with the numeric pair of its name and N
+# (TRT01A by TRT01AN, ARM by ARMN) is made a factor in that order, as a
+# program's data step; one without its pair is left as it is.  A blank
+# (a subject of no arm, as an XPT holds a missing text) is missing, not a
+# level.  A code list set after wins.
+#   adsl |> order_arms()
+order_arms <- function(data) {
+  for (v in grep("^(TRT|ARM|ACTARM)", names(data), value = TRUE)) {
+    n <- paste0(v, "N")
+    if (grepl("N$", v) || !n %in% names(data) || is.factor(data[[v]])) next
+    x <- as.character(data[[v]])
+    x[!is.na(x) & !nzchar(trimws(x))] <- NA
+    lv <- unique(x[!is.na(x)])
+    first <- vapply(lv, function(l) suppressWarnings(min(data[[n]][x %in% l], na.rm = TRUE)), 0)
+    data[[v]] <- factor(x, levels = lv[order(first, match(lv, lv))])
+  }
+  data
+}
+
 # The ids in front: the report, the analysis and its analysis set.  A cards
 # ARD stays one (class card), so the study ARD is one too and cards' own
 # tools (as_nested_list(), compare_ard()) take it.  Analyses run together
@@ -49,6 +74,14 @@ reorder_by <- function(x, by) {
 # its own, the rest (the by counts, the total N) `analysis_id`'s.
 tag_ard <- function(ard, report_id, analysis_id, population = NA_character_,
                     analyses = NULL) {
+  need <- c("variable", "stat_name", "stat")
+  if (!is.data.frame(ard) || !all(need %in% names(ard))) {
+    stop(sprintf(paste0("analysis %s: its code must return a cards ARD (columns variable, ",
+                        "stat_name, stat ..., as ard_summary() or ard_tabulate() make); it returned %s."),
+                 analysis_id, if (is.data.frame(ard)) {
+                   sprintf("a data frame with columns %s", paste(names(ard), collapse = ", "))
+                 } else paste("an object of class", class(ard)[1L])), call. = FALSE)
+  }
   if (length(analyses)) {
     own <- rep(names(analyses), lengths(analyses))
     id <- own[match(as.character(ard$variable), unlist(analyses))]

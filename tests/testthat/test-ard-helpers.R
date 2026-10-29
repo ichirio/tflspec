@@ -172,3 +172,25 @@ test_that("an ard_number's label names other statistics of its address", {
                  ", ", e$ard_value(a, "KM", "prob", "conf.high", ARM = "A", level = 0.5, digits = 1), ")")
   expect_true(want %in% labels)
 })
+
+test_that("set_levels() on a column that holds the list's labels already keeps them (a data made from another)", {
+  e <- new.env()
+  sys.source(system.file("helpers", "study_helpers.R", package = "tflspec"), envir = e)
+  cl <- c(LOW = "Low", NORMAL = "Normal", HIGH = "High")
+  d <- data.frame(WORST = c("HIGH", "LOW", NA), stringsAsFactors = FALSE)
+  once <- e$set_levels(d, WORST = cl)
+  expect_identical(levels(once$WORST), c("Low", "Normal", "High"))
+  twice <- e$set_levels(once, WORST = cl)
+  expect_identical(twice$WORST, once$WORST)
+  expect_error(e$set_levels(data.frame(WORST = "Mid"), WORST = cl), "WORST has values its code list does not")
+})
+
+test_that("tag_ard() refuses what is not a cards ARD (a custom analysis's plain data frame)", {
+  e <- new.env()
+  sys.source(system.file("helpers", "study_helpers.R", package = "tflspec"), envir = e)
+  expect_error(e$tag_ard(data.frame(AEBODSYS = "x", p.value = 0.5), "T", "FISHER"),
+               "analysis FISHER: its code must return a cards ARD.*columns AEBODSYS, p.value")
+  expect_error(e$tag_ard(0.5, "T", "FISHER"), "an object of class numeric")
+  ok <- e$tag_ard(data.frame(variable = "x", stat_name = "n", stat = 1), "T", "A")
+  expect_identical(ok$output_id, "T")
+})

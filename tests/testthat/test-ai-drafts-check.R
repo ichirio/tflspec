@@ -72,6 +72,54 @@ test_that("an analysis data made by code may name its population: the set's subj
   expect_true(z$status %in% c("ok", "warning"))
 })
 
+test_that("the set a code reads as <dataset>_sub stays an object when another data is the set under a name", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  d <- dc_study(withr::local_tempdir())
+  o <- tfl_read_output(dc_draft(d, "T-14-3-1"))
+  # adsl_saf alone would be made from adsl in one go (no adsl_sub); the
+  # code's adsl_sub keeps the set an object of its own
+  o$ard$analysis_data <- list(
+    list(id = "adsl_saf", from = "ADSL", population = "SAF", derive = tfl_r("TRTA = TRT01A"), keep = list("TRTA")),
+    list(id = "ae_first", label = "each subject's first AE", from = "ADAE", population = "SAF",
+         code = tfl_r("dplyr::slice_head(dplyr::group_by(dplyr::filter(adae, USUBJID %in% adsl_sub$USUBJID, TRTEMFL == \"Y\"), USUBJID), n = 1)")))
+  o$ard$analyses <- list(
+    list(id = "N", method = "categorical", data = "adsl_saf", by = list(), variables = list("TRTA"), statistics = list("n")),
+    list(id = "AE1", method = "categorical", data = "ae_first", by = list("TRT01A"),
+         variables = list("AESEV"), denominator = "column"))
+  o$content <- list(tfl_item("table_plan", list(cols = "TRT01A", rows = "AESEV")),
+                    tfl_item("plan_cells", list(categorical = "{n} ({p:.1f%})")))
+  tfl_write_output(o, dc_draft(d, "T-14-3-1"))
+  withr::local_options(tflspec.outputs_dir = file.path("ai", "spec", "outputs"))
+  st <- tfl_read_study_spec(d)
+  code <- tfl_ard_code(st, output_id = "T-14-3-1", save = FALSE)
+  expect_true(any(grepl("adsl_sub <- ", code)))
+  expect_true(any(grepl("adsl_saf <- adsl_sub |>", code, fixed = TRUE)))
+  ard <- suppressMessages(tfl_build_ard(st, dir = d, output_id = "T-14-3-1", save = FALSE))
+  expect_true(any(ard$variable == "AESEV"))
+})
+
+test_that("a draft that cannot be read stops its report alone: the request's other report is checked", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  d <- dc_study(withr::local_tempdir())
+  # one request of two reports: demographics-1 asks T-14-1-1 and T-14-3-1
+  cf <- file.path(d, "ai", "requests", "_contexts.rds")
+  ctxs <- readRDS(cf)
+  ctxs[["demographics-1"]]$ids <- c("T-14-1-1", "T-14-3-1")
+  ctxs[["ae-1"]] <- NULL
+  saveRDS(ctxs, cf)
+  f <- dc_draft(d, "T-14-3-1")
+  writeLines(sub("^content:", "content: {", readLines(f, encoding = "UTF-8")), f, useBytes = TRUE)
+  r <- suppressMessages(tfl_ai_collect_answers(d))
+  z <- r$reports[r$reports$request == "demographics-1", ]
+  expect_identical(z$output_id, c("T-14-3-1", "T-14-1-1"))
+  expect_identical(z$status[1L], "error")
+  expect_match(z$first[1L], "T-14-3-1.yml: the YAML cannot be read", fixed = TRUE)
+  expect_true(z$status[2L] %in% c("ok", "warning"))
+  expect_match(r$next_steps[["demographics-1"]], "T-14-3-1.yml", fixed = TRUE)
+})
+
 test_that("a figure's draft keeps its own file through the check: its page, its footer", {
   skip_on_cran()
   skip_if_not_installed("haven")

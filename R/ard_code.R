@@ -821,6 +821,10 @@
                                      nad$from[nad$from %in% x$datasets$dataset],
                                      x$populations$dataset[
     x$populations$population_id %in% pops])))
+  # the arms in their numeric order when the data has it (TRT01A by
+  # TRT01AN, ARM by ARMN: order_arms(), a study helper), as every dataset
+  # is read -- a model's reference arm, a comparison's pairs, a table's
+  # columns -- before the code lists, whose order wins
   code <- character()
   for (ds in used_ds) {
     r <- x$datasets[x$datasets$dataset == ds, ]
@@ -828,6 +832,7 @@
     d <- .split_bar(r$derive[1L])
     code <- c(code, .make_code(obj, .reader(r$path[1L]), c(
       if (length(d)) sprintf("dplyr::mutate(%s)", paste(d, collapse = ", ")),
+      "order_arms()",
       if (length(levels)) .levels_step)))
   }
   pop_code <- character()
@@ -1377,6 +1382,13 @@
     if (length(def) != 1L) next
     word <- paste0("(^|[^A-Za-z0-9._])", gsub(".", "\\.", p, fixed = TRUE), "($|[^A-Za-z0-9._])")
     if (any(grepl(word, code[-c(k, def)]))) next
+    # (a report's own code reads the set as <dataset>_sub -- the name the
+    # set's object gets -- so the set stays an object of its own)
+    ds <- tryCatch(all.vars(parse(text = code[def], keep.source = FALSE)[[1L]][[3L]])[1L],
+                   error = function(e) NA_character_)
+    if (is.na(ds)) next
+    sub_word <- paste0("(^|[^A-Za-z0-9._])", gsub(".", "\\.", ds, fixed = TRUE), "_sub[0-9]*($|[^A-Za-z0-9._])")
+    if (any(grepl(sub_word, code[-c(k, def)]))) next
     if (!piped) {
       code[k] <- paste0(d, substring(code[def], nchar(p) + 1L))
     } else {

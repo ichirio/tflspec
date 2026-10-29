@@ -179,6 +179,8 @@ test_that("vs_change's table (removed) from param_change: a baseline block, its 
                  "39", "135.7 (15.76)", "2.52", "130.6, 140.8", "138.0", "106, 168",
                  "39", "4.9 (9.71)", "1.56", "1.8, 8.1", "6.0", "-17, 30"),
     check.names = FALSE, stringsAsFactors = FALSE)
+  # (the arms in their N order now: Drug X, then Control)
+  v <- v[c("group", "label", "Drug X", "Control")]
   # the same rows and cells; param_change's blocks of the parameter and the
   # visit (one each here) are what vs_change left to the title
   expect_identical(unique(p$group1), "Systolic Blood Pressure (mmHg)")

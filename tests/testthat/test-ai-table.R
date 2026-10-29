@@ -133,7 +133,10 @@ test_that("tfl_ai_study_init(): the datasets, ADSL's analysis sets, the defaults
   st <- tfl_read_study_spec(d)
   expect_identical(st$study$study_id, "XYZ-ONC-01")
   pops <- vapply(st$data$populations, `[[`, "", "id")
-  expect_true(all(c("SAF", "ITT", "EFF") %in% pops))
+  expect_true(all(c("SAF", "ITT", "EFF", "ALL") %in% pops))
+  all_ <- st$data$populations[[which(pops == "ALL")]]
+  expect_identical(all_$dataset, "ADSL")
+  expect_null(all_$where)
   saf <- st$data$populations[[which(pops == "SAF")]]
   expect_s3_class(saf$where, "tfl_r")
   expect_identical(as.character(saf$where), "SAFFL == \"Y\"")

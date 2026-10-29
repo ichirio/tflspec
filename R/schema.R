@@ -216,6 +216,10 @@ tfl_schema_check <- function(item) {
 
 .schema_check_plain <- function(item) .schema_check_item(item, part = FALSE)
 
+# the kinds (and the entries) plan_cells() takes besides a variable's name
+.cells_kinds <- c("categorical", "continuous", "hierarchical", "dichotomous", "missing",
+                  "attributes", "total_n", "default")
+
 .schema_check_item <- function(item, part = TRUE) {
   fn <- item$fn
   out <- data.frame(fn = character(), arg = character(), level = character(),
@@ -283,7 +287,12 @@ tfl_schema_check <- function(item) {
       msg <- .schema_fits(v, .schema_type(dots$type))
       if (!is.null(msg)) bad(a, msg)
     } else if (!a %in% known) {
-      if (!is.null(dots) && identical(dots$style, "named")) {
+      if (identical(fn, "plan_cells") && !a %in% .cells_kinds && make.names(a) != a) {
+        # a row's label as an entry of its own ("Mean (SD)": [...]) names
+        # no variable: it goes under its kind (continuous: {"Mean (SD)": ...})
+        bad(a, sprintf(paste0("plan_cells: `%s` is a row's label, not a variable or a kind: ",
+                              "put the rows under their kind (continuous: {\"%s\": ...})"), a, a))
+      } else if (!is.null(dots) && identical(dots$style, "named")) {
         msg <- .schema_fits(v, .schema_type(dots$type))
         if (!is.null(msg)) bad(a, msg)
       } else if (!is.null(f) && "..." %in% names(f) && is.null(ent)) {

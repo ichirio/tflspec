@@ -282,9 +282,12 @@ tfl_ai_study_init <- function(dir, adam = "adam", study_id = "STUDY-01", title =
   data <- list(
     datasets = lapply(seq_along(nm), function(i) list(dataset = nm[i], level = "ADaM",
                                                       path = rel[i])),
-    populations = lapply(seq_len(nrow(pops)), function(i) list(
+    # (the flags' sets, and every subject of ADSL as a set of its own: a
+    # report of all subjects names ALL)
+    populations = c(lapply(seq_len(nrow(pops)), function(i) list(
       id = pops$id[i], dataset = "ADSL", where = tfl_r(sprintf("%s == \"Y\"", pops$flag[i])),
-      label = pops$label[i])))
+      label = pops$label[i])),
+      list(list(id = "ALL", dataset = "ADSL", label = "All subjects (every subject of ADSL)"))))
   .ai_write_text(.ai_yaml_text(study), paths[1L])
   .ai_write_text(.ai_yaml_text(data), paths[2L])
   .ai_write_text(.ai_defaults_yml(study_id), paths[3L])
