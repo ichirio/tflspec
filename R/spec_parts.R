@@ -1,5 +1,5 @@
 # ---- a table's parts: another plan's rows under its own ---------------------
-# rtfreporter's plan_layer() (#737): a table whose rows come from two sources
+# rtfreporter's plan_append() (#737): a table whose rows come from two sources
 # -- a listing of the records above, their summary below -- is two ordinary
 # plans, the second laid under the first.  The SPEC writes it as rtfreporter
 # does: one content item whose arguments are the part's own `data` (where
@@ -9,7 +9,7 @@
 #   content:
 #     - table_plan: {cols: ATPT, rows: {subject: !r '~ "{USUBJID}/{AGE}/{SEX}"'}, value: AVAL}
 #     - plan_cells: {default: "{value:.3s}", na: BLQ}
-#     - plan_layer:
+#     - plan_append:
 #         name: summary
 #         data: {source: ard}
 #         content:
@@ -21,12 +21,12 @@
 # its own data object, then the table's plan with the part laid in:
 #
 #   summary <- ard |> normalize_ard() |> table_plan(...) |> plan_cells(...)
-#   plan <- data |> table_plan(...) |> plan_cells(...) |> plan_layer(summary, name = "summary")
+#   plan <- data |> table_plan(...) |> plan_cells(...) |> plan_append(summary, name = "summary")
 #
 # The function's and its argument's names are said here only, so the
 # rtfreporter verb's name can change in one place.
 
-.spec_part <- list(fn = "plan_layer", arg = "layer")
+.spec_part <- list(fn = "plan_append", arg = "part")
 
 # Is an item a part?
 .is_part <- function(it) {
@@ -61,7 +61,7 @@
 .content_parts <- function(content) {
   parts <- Filter(.is_part, content)
   if (!length(parts)) return(list())
-  nm <- vapply(seq_along(parts), function(i) parts[[i]]$args$name %||% paste0("layer", i + 1L), "")
+  nm <- vapply(seq_along(parts), function(i) parts[[i]]$args$name %||% paste0("part", i + 1L), "")
   if (anyDuplicated(nm)) {
     .ard_stop(sprintf("%s: two parts are called %s; give each its own `name`.",
                       .spec_part$fn, paste(sQuote(unique(nm[duplicated(nm)])), collapse = ", ")))
@@ -92,7 +92,7 @@
 # part's plan (its object) and its name / absent
 .part_call <- function(it, i) {
   a <- it$args
-  nm <- a$name %||% paste0("layer", i + 1L)
+  nm <- a$name %||% paste0("part", i + 1L)
   args <- stats::setNames(list(.spec_sym(make.names(nm))), .spec_part$arg)
   args$name <- nm
   if (!is.null(a$absent)) args$absent <- a$absent

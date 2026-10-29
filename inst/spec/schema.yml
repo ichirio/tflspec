@@ -206,6 +206,18 @@ plan_row_group:
     collapse: {type: "list<integer>|list<column>|logical"}
     group_col: {type: column}
 
+plan_append:
+  package: rtfreporter
+  rank: 145
+  stage: mapping
+  tier: other
+  description: Another table's rows under this one's -- its own data and items (a listing above, its summary below).
+  args:
+    name: {type: string, description: "The part's name; part2, part3, ... by default."}
+    absent: {type: "enum[error|skip]", description: "A page group the part has no rows for: an error, or the page without the part."}
+    data: {description: "Where the part's rows come from: source: ard, or source: dataset with its dataset."}
+    content: {description: "The part's own table items: table_plan and the verbs that make its rows."}
+
 plan_blanks:
   package: rtfreporter
   rank: 150

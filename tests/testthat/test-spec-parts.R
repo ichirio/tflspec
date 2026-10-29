@@ -1,4 +1,4 @@
-# A table's parts (rtfreporter's plan_layer(), #737): one content item with
+# A table's parts (rtfreporter's plan_append(), #737): one content item with
 # the part's own data and items; read, written, its code and its run.
 
 sp_fn <- tflspec:::.spec_part$fn
@@ -53,7 +53,7 @@ test_that("the program writes the part's plan from its own object, then lays it 
   at <- grep("^summary <- ard \\|>", code)
   expect_length(at, 1L)
   expect_true(at < grep("^plan <- ", code))
-  expect_true(any(grepl(paste0(sp_fn, "(layer = summary, name = \"summary\")"), code, fixed = TRUE)))
+  expect_true(any(grepl(paste0(sp_fn, "(part = summary, name = \"summary\")"), code, fixed = TRUE)))
 })
 
 test_that("the run makes the part's plan from its object: its rows under the table's", {
@@ -117,4 +117,17 @@ test_that("in a study: tfl_run_output() builds a table of a listing and its summ
   rtf <- paste(readLines(f, warn = FALSE), collapse = "\n")
   expect_match(rtf, "Summary", fixed = TRUE)
   expect_match(rtf, "Mean", fixed = TRUE)
+})
+
+test_that("the schema checks a part's arguments and each of its own items", {
+  o <- tfl_read_output(sp_yaml())
+  expect_identical(nrow(tfl_schema_check(o$content[[3L]])), 0L)
+  it <- o$content[[3L]]
+  it$args$content[[2L]]$args$nope <- 1
+  it$args$absent <- "maybe"
+  p <- tfl_schema_check(it)
+  expect_true(any(p$fn == "table_plan" & p$arg == "nope"))
+  expect_true(any(p$fn == sp_fn & p$arg == "absent" & p$level == "error"))
+  it$args$content <- NULL
+  expect_true(any(tfl_schema_check(it)$arg == "content"))
 })
