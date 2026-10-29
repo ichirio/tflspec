@@ -15,8 +15,8 @@ enc_study <- function() {
   ex <- system.file("ai", "example", package = "tflspec")
   shell <- tfl_ai_read_shell(file.path(ex, "onco_toc_shell.xlsx"))
   adam <- tfl_ai_adam_summary(file.path(d, "adam"))
-  r <- suppressMessages(tfl_ai_write_requests(unit = "toc", d, shell, adam))
-  list(dir = d, ex = ex, r = r, ans = file.path(d, "ai", "answers"))
+  r <- suppressMessages(tfl_ai_write_requests(unit = "toc", d, shell, adam, size = 3L))
+  list(dir = d, ex = ex, r = r)
 }
 
 raw_utf8 <- function(f) {
@@ -36,71 +36,47 @@ answer_text <- function(s, request, jp = FALSE) {
   x
 }
 
-test_that("answers saved by Notepad: UTF-8 with BOM and CRLF, UTF-16, .md.txt", {
+test_that("a draft with a Japanese label: collected, kept in UTF-8", {
   s <- enc_study()
-  dm <- enc2utf8(paste(answer_text(s, "demographics-1", jp = TRUE), collapse = "\r\n"))
-  # UTF-8 with the BOM, CRLF line ends
-  write_raw(c(as.raw(c(0xef, 0xbb, 0xbf)), charToRaw(dm)), file.path(s$ans, "demographics-1.md"))
-  # Notepad's "Unicode": UTF-16LE with its BOM
-  u16 <- iconv(paste(answer_text(s, "efficacy-1"), collapse = "\r\n"), "UTF-8", "UTF-16LE",
-               toRaw = TRUE)[[1L]]
-  write_raw(c(as.raw(c(0xff, 0xfe)), u16), file.path(s$ans, "efficacy-1.md"))
-  # Notepad added .txt
-  writeLines(answer_text(s, "ae-1"), file.path(s$ans, "ae-1.md.txt"), useBytes = TRUE)
+  ai_drafts_from_answer(s$dir, answer_text(s, "demographics-1", jp = TRUE), "table")
   res <- tfl_ai_collect_answers(s$dir)
   st <- stats::setNames(res$reports$status, res$reports$output_id)
-  expect_identical(unname(st[c("T-14-1-1", "T-14-2-1", "T-14-3-1")]), rep("ok", 3L))
+  expect_identical(unname(st["T-14-1-1"]), "ok")
   expect_identical(unname(st["T-14-3-5"]), "no answer")
-  # the Japanese label is in the YAML, in UTF-8
-  y <- raw_utf8(file.path(s$dir, "spec", "outputs", "T-14-1-1.yml"))
+  # the Japanese label is in the draft's YAML, in UTF-8
+  f <- file.path(s$dir, "ai", "spec", "outputs", "T-14-1-1.yml")
+  y <- raw_utf8(f)
   expect_true(validUTF8(y))
   expect_true(grepl(jp_label, y, fixed = TRUE))
-  expect_identical(tfl_read_output(file.path(s$dir, "spec", "outputs", "T-14-1-1.yml"))$label,
-                   jp_label)
-  # the print: each request's status, reports and next step
-  out <- capture.output(print(res))
-  expect_true(any(grepl("5 reports in 5 requests: ok 3", out, fixed = TRUE)))
-  expect_true(any(grepl("^labs-1 +no answer +T-14-3-5$", out)))
-  expect_true(any(grepl("next: paste ai/requests/labs-1.md into a new chat", out, fixed = TRUE)))
-  expect_true(any(grepl("next: done", out, fixed = TRUE)))
+  expect_identical(tfl_read_output(f)$label, jp_label)
 })
 
-test_that("an answer in Shift-JIS (CP932) is an error that says how to save it", {
+test_that("a draft under a name that is no request's is pointed out", {
   s <- enc_study()
-  sj <- iconv(paste(answer_text(s, "demographics-1", jp = TRUE), collapse = "\r\n"), "UTF-8",
-              "CP932", toRaw = TRUE)[[1L]]
-  skip_if(is.null(sj), "no CP932 converter")
-  write_raw(sj, file.path(s$ans, "demographics-1.md"))
-  res <- tfl_ai_collect_answers(s$dir)
-  r1 <- res$reports[res$reports$request == "demographics-1", ]
-  expect_identical(r1$status, "error")
-  expect_match(r1$first, "is not UTF-8", fixed = TRUE)
-  expect_match(r1$first, "Encoding: UTF-8", fixed = TRUE)
-  expect_false(file.exists(file.path(s$dir, "spec", "outputs", "T-14-1-1.yml")))
-  # tfl_ai_unpack() says the same
-  expect_error(tfl_ai_unpack(file.path(s$ans, "demographics-1.md"), s$dir), "not UTF-8")
-})
-
-test_that("an answer under a name that is no request is pointed out", {
-  s <- enc_study()
-  writeLines(answer_text(s, "ae-1"), file.path(s$ans, "AE answer.md"), useBytes = TRUE)
+  area <- file.path(s$dir, "ai", "spec", "outputs")
+  dir.create(area, recursive = TRUE, showWarnings = FALSE)
+  tfl_write_output(tfl_output("AE-answer", kind = "table", label = "x"),
+                   file.path(area, "AE-answer.yml"))
   res <- tfl_ai_collect_answers(s$dir)
   expect_identical(unique(res$reports$status), "no answer")
+  expect_identical(res$stray, "ai/spec/outputs/AE-answer.yml")
   out <- capture.output(print(res))
-  expect_true(any(grepl("Not read (no request of that name): ai/answers/AE answer.md", out,
+  expect_true(any(grepl("Not read (no request asks for them): ai/spec/outputs/AE-answer.yml", out,
                         fixed = TRUE)))
 })
 
-test_that("an answer of a request with its errors: the repair and the next step", {
+test_that("a draft with its errors: the repair and the next step; the draft stays", {
   s <- enc_study()
-  x <- answer_text(s, "ae-1")
-  x <- sub("dataset: ADAE", "dataset: ADXX", x, fixed = TRUE)
-  writeLines(x, file.path(s$ans, "ae-1.md"), useBytes = TRUE)
+  ai_drafts_from_answer(s$dir, answer_text(s, "ae-1"), "table")
+  f <- file.path(s$dir, "ai", "spec", "outputs", "T-14-3-1.yml")
+  x <- readLines(f, encoding = "UTF-8")
+  writeLines(sub("dataset: ADAE", "dataset: ADXX", x, fixed = TRUE), f, useBytes = TRUE)
   res <- tfl_ai_collect_answers(s$dir)
   expect_identical(res$reports$status[res$reports$output_id == "T-14-3-1"], "error")
   expect_true(file.exists(file.path(s$dir, "ai", "repairs", "ae-1.md")))
+  expect_true(file.exists(f))
   out <- capture.output(print(res))
-  expect_true(any(grepl("paste ai/repairs/ae-1.md into the SAME chat", out, fixed = TRUE)))
+  expect_true(any(grepl("paste ai/repairs/ae-1.md into the agent's chat: it fixes", out, fixed = TRUE)))
 })
 
 test_that("every file the kit writes is UTF-8, Japanese text kept", {
@@ -153,13 +129,11 @@ test_that("in a Shift-JIS session the files written are UTF-8 all the same", {
     "shell <- tfl_ai_read_shell(file.path(ex, 'onco_toc_shell.xlsx'), file = file.path(d, 'ai', 'toc_shell.md'))",
     "adam <- tfl_ai_adam_summary(file.path(d, 'adam'), file = file.path(d, 'ai', 'adam_summary.md'))",
     # (a request needs the schema, which R/schema.R reads in the session's
-    # encoding: not run here; the answer is unpacked as collecting does)
-    "x <- readLines(file.path(ex, 'answers', 'demographics-1.md'), encoding = 'UTF-8')",
-    "x <- sub('label: Demographic and Baseline Characteristics', 'label: \\u4eba\\u53e3\\u7d71\\u8a08', x)",
-    "f <- file.path(d, 'ai', 'answers', 'demographics-1.md')",
-    "dir.create(dirname(f))",
-    "writeLines(enc2utf8(x), f, useBytes = TRUE)",
-    "tfl_ai_unpack(f, d)",
+    # encoding: not run here; a draft is read and written as collecting does)
+    "o <- tfl_read_output(file.path(ex, 'drafts', 'T-14-1-1.yml'))",
+    "o$label <- '\\u4eba\\u53e3\\u7d71\\u8a08'",
+    "dir.create(file.path(d, 'spec', 'outputs'), recursive = TRUE)",
+    "tfl_write_output(o, file.path(d, 'spec', 'outputs', 'T-14-1-1.yml'))",
     "cat('DONE\\n')"), script)
   out <- system2(file.path(R.home("bin"), "Rscript"), c("--vanilla", shQuote(script)),
                  stdout = TRUE, stderr = TRUE, env = c(paste0("LC_ALL=", sjis[1L]),

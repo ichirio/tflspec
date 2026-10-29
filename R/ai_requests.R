@@ -1,64 +1,43 @@
-# A study's table requests as files, and their answers read back: the
-# drafting of many reports with a chat that takes one pasted text a time.
+# A study's requests as files for a coding agent, and its drafts read back
+# as their answers: the drafting of many reports, a request at a time.
 
-#' Write a study's table requests, one file a request
+#' Write a study's requests, one file a request
 #'
-#' Splits the TOC's tables into requests ([tfl_ai_batches()]) and writes the
-#' prompt of each ([tfl_ai_prompt()]) to its own file, to paste into a chat
-#' as **one message**: no attachment is needed.  A request longer than
-#' `max_chars` is split again, until it fits or holds one report.  The
-#' requests' contexts are kept beside them (`_contexts.rds`), so
-#' [tfl_ai_collect_answers()] checks each answer against its own request.
-#'
-#' Start small (`size = 2` or `3`), check the answers, then raise `size`
-#' while the chat keeps up.
-#'
-#' A request holds the instructions and schema (about 23,000 characters,
-#' the same in every request) and its own reports (the TOC rows, shells and
-#' ADaM summary).  For a chat that cannot take that in one message,
-#' `instructions = "once"` writes the instructions to `00-instructions.md`
-#' and each request without them: paste `00-instructions.md` first in a
-#' new chat, then the request.
+#' Splits the TOC's tables into requests ([tfl_ai_batches()]) and writes
+#' each one's text ([tfl_ai_prompt()]) to its own file, for a coding agent
+#' ([tfl_ai_prepare()]): what every request would repeat is written once
+#' in the study's `ai/` folder (`instructions-table.md`,
+#' `instructions-figure.md`, `templates.md`), and each request names those
+#' files, the ADaM summary and the `spec/` files instead of copying them.
+#' A request longer than `max_chars` is split again, until it fits or holds
+#' one report.  The requests' contexts are kept beside them
+#' (`_contexts.rds`), so [tfl_ai_collect_answers()] checks each request's
+#' drafts against its own request.
 #'
 #' @param study_dir The study folder ([tfl_ai_study_init()]).
 #' @param shell The TOC and shells ([tfl_ai_read_shell()]).
 #' @param adam The ADaM summary ([tfl_ai_adam_summary()]).
 #' @param size The reports a request holds at most (1 or more); `NULL`
-#'   (the default): 1 with `mode = "agent"` (each answer checked and built
-#'   before the next), 8 in a chat.
+#'   (the default): 1, each request's drafts checked before the next.
 #' @param dir The folder the requests go to, under `study_dir`.
 #' @param max_chars A request's length at most, in characters; `NULL` for
-#'   no limit.  A request over it is halved; with `templates`, it first
-#'   lists the templates' arguments by name only (no type, default or
-#'   description).
+#'   no limit.  A request over it is halved.
 #' @param families,types As [tfl_ai_batches()]: the tables and listings
-#'   in batches (a listing's family `listing`; its answer a report of `kind:
-#'   listing`, in the table task).  A
-#'   figure (`"figure"` in `types`, the default) is a request of its own,
-#'   `figure-1`, `figure-2` ... (family `figure`): its shell, the ADaM's
-#'   summary, the figure templates; its answer a figure design.
+#'   in batches (a listing's family `listing`; its draft a report of `kind:
+#'   listing`).  A figure (`"figure"` in `types`, the default) is a request
+#'   of its own, `figure-1`, `figure-2` ... (family `figure`): its shell,
+#'   the ADaM's summary, the figure templates; its draft a figure report.
 #' @param language As [tfl_ai_context()]: the language of the AI's
 #'   assumptions.
 #' @param examples Reviewed report files for the AI to follow
 #'   ([tfl_ai_context()]'s `examples`).  Named by family
 #'   (`c(ae = "spec/outputs/T-14-3-1.yml")`), each goes only to its
 #'   family's requests; unnamed, to every request.
-#' @param instructions In a chat: `"once"` (default), the instructions in
-#'   `00-instructions.md` (the chat's first message), the requests without
-#'   them; `"each"`, every request holds them, one paste a request.  With
-#'   `mode = "agent"` either is the same: the instructions are written once,
-#'   `ai/instructions-table.md` / `ai/instructions-figure.md`, and no
-#'   request repeats them.
-#' @param workbook How the TOC / SHELL workbook reaches the chat:
+#' @param workbook How the TOC / SHELL workbook reaches the agent:
 #'   `"text"` (default) the shells as text in each request
-#'   ([tfl_ai_read_shell()]); `"attach"` the workbook attached to each chat,
-#'   the request saying where each report's shell is in it (its sheet,
-#'   cells and TOC row) instead of the text; `"both"` the places and the
-#'   text, the attachment right where the two differ -- for a workbook whose
-#'   text is not read right.  A chat that takes no Excel file needs
-#'   `"text"`.  `"file"`: for an agent that reads files
-#'   ([tfl_ai_prepare()]`(mode = "agent")`) -- the text, and the workbook's
-#'   path with each report's place in it, to read that place alone when the
+#'   ([tfl_ai_read_shell()]); `"file"` the text, and the workbook's path
+#'   with each report's place in it, for an agent allowed to open it
+#'   ([tfl_ai_prepare()]'s `agent_reads`) to read that place alone when the
 #'   text looks cut, never another sheet.
 #' @param overwrite `TRUE` to write over the requests already there; with
 #'   `add`, to ask again for a report asked for already (its request is
@@ -67,11 +46,12 @@
 #'   new ones named after them (`ae-2` when `ae-1` is there, `figure-3`
 #'   ...), the index listing all of them, each request's `book` the
 #'   workbook its reports' shells are in.
-#' @param templates `TRUE` (default): each request asks the AI to answer a
+#' @param templates `TRUE` (default): each request asks the AI to write a
 #'   report with a template (`template: {name, args}`) where one fits --
-#'   the templates registered when the requests are written listed in it,
+#'   the templates registered when the requests are written listed in
+#'   `ai/templates.md`, each request naming the ones likely for its reports,
 #'   its first line `<!-- templates: TRUE -->` -- else as a code SPEC.
-#'   `FALSE`: the code SPEC only, the requests as they were before templates.
+#'   `FALSE`: the code SPEC only.
 #' @param progress `NULL`, or a function(step, i, n) called as the requests
 #'   are made: `step` `"request"`, `i` of `n` written (0 first) -- for a
 #'   progress bar (shiny's `setProgress()`).  Each request is written as
@@ -83,19 +63,12 @@
 #'   its reports: their ids are not held to a list (one that is no TOC
 #'   item's is a warning), and a sheet that is no shell is answered with no
 #'   report (a warning).
-#' @param mode `"chat"` (default): each request whole, to paste.
-#'   `"agent"` ([tfl_ai_prepare()]`(mode = "agent")`): what every request
-#'   would repeat in a file of the study's `ai/` folder, written once
-#'   (`instructions-table.md`, `instructions-figure.md`, `templates.md`),
-#'   the ADaM summary and `spec/` files named, not copied; each request
-#'   names them, its answer's header and, with `templates`, the templates
-#'   likely for its reports (from their titles).
-#' The folder the answers go to (`ai/answers`, beside `dir`) is made too.
 #'
 #' @return A data frame, one row a request: `request` (the file's name,
 #'   `ae-1`), `family`, `outputs` (the report ids, comma-separated), `n`,
 #'   `chars`, `file`.  The same is written to `index.md` in `dir`.
-#' @seealso [tfl_ai_collect_answers()] for the answers.
+#' @seealso [tfl_ai_prepare()], which calls it; [tfl_ai_collect_answers()]
+#'   for the drafts.
 #' @examples
 #' f <- system.file("ai", "example", "onco_toc_shell.xlsx", package = "tflspec")
 #' d <- file.path(tempdir(), "req-study")
@@ -114,23 +87,17 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
                                   dir = file.path("ai", "requests"),
                                   max_chars = NULL, families = NULL,
                                   types = c("table", "listing", "figure"), language = NULL,
-                                  examples = NULL,
-                                  instructions = c("once", "each"),
-                                  workbook = c("text", "attach", "both", "file"),
+                                  examples = NULL, workbook = c("text", "file"),
                                   overwrite = FALSE, add = FALSE, templates = TRUE,
-                                  mode = c("chat", "agent"), progress = NULL,
-                                  unit = c("sheet", "toc")) {
+                                  progress = NULL, unit = c("sheet", "toc")) {
   fn <- "tfl_ai_write_requests()"
   if (!is.null(progress) && !is.function(progress)) {
     .ard_stop(sprintf("%s: `progress` is a function(step, i, n), or NULL.", fn))
   }
   templates <- .ai_templates_flag(templates, fn)
-  instructions <- match.arg(instructions)
-  mode <- match.arg(mode)
   unit <- match.arg(unit)
-  agent <- identical(mode, "agent")
-  # (an agent's request: one report; a chat's: up to 8)
-  size <- size %||% if (agent) 1L else 8L
+  # (a request: one report, its draft checked before the next)
+  size <- size %||% 1L
   workbook <- match.arg(workbook)
   book <- basename(shell$path %||% "the workbook")
   # the workbook's path for an agent: from the study folder when inside it
@@ -255,9 +222,9 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
     }
   }
 
-  # the shells' text as the workbook reaches the chat: the text alone; with
-  # where each report's shell is in the attached workbook ("attach",
-  # "both"); or in the workbook file an agent reads ("file")
+  # the shells' text as the workbook reaches the agent: the text alone
+  # ("text"), or with where each report's shell is in the workbook file
+  # ("file")
   placed <- function(text, ids) {
     # a part on its parent's sheet: which of the sheet's reports is this one
     text <- paste(c(.ai_toc_row_lines(shell, ids), text), collapse = "\n")
@@ -287,16 +254,7 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
                        "this request alone. When the place looks wrong, ask it as a question."))
       return(paste(c(where, "", text), collapse = "\n"))
     }
-    if (identical(workbook, "text")) return(text)
-    # the workbook attached: where each report's shell is in it, with the
-    # text ("both") or instead of it ("attach")
-    where <- c(sprintf(paste("The TOC / SHELL workbook `%s` is attached to this message.",
-                             "The reports' shells in it:"), book), "",
-               .ai_shell_where(shell, ids),
-               if (identical(workbook, "both"))
-                 c("", paste("The text below is read from that workbook; where the two",
-                             "differ, the attached workbook is right.")))
-    paste(c(where, if (identical(workbook, "both")) c("", text)), collapse = "\n")
+    text
   }
   # a figure: a request of its own, its shell, its analysis set when the
   # TOC row names one of spec/data.yml's
@@ -312,9 +270,9 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
                           collapse = "\n"), sheet)
     if (!is.null(sheet)) ctx$sheets <- sheet
     ctx$ai_templates <- templates
-    if (agent) ctx$ai_files <- TRUE
+    ctx$ai_files <- TRUE
     p <- tfl_ai_prompt("figure", ctx)
-    list(context = ctx, text = if (agent) p$user else format(p), system = p$system,
+    list(context = ctx, text = p$user, system = p$system,
          task = "figure")
   }
   prompt_of <- function(ids, family, short = FALSE) {
@@ -329,11 +287,9 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
     ctx$shell <- placed(ctx$shell, ids)
     ctx$ai_templates <- templates
     if (short) ctx$ai_templates_short <- TRUE
-    if (agent) ctx$ai_files <- TRUE
+    ctx$ai_files <- TRUE
     p <- tfl_ai_prompt("table", ctx)
-    text <- if (agent) p$user else if (identical(instructions, "each")) format(p) else
-      paste(c("(Follow the instructions of my first message in this chat.)", "",
-              p$user), collapse = "\n")
+    text <- p$user
     list(context = ctx, text = text, system = p$system, task = "table")
   }
   # a request of shell sheets (or of the TOC items no sheet chose): each
@@ -365,11 +321,9 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
       ctx$sheet_numbers <- sn[sn$sheet %in% sheets, , drop = FALSE]
     }
     ctx$ai_templates <- templates
-    if (agent) ctx$ai_files <- TRUE
+    ctx$ai_files <- TRUE
     p <- tfl_ai_prompt("table", ctx)
-    text <- if (agent) p$user else if (identical(instructions, "each")) format(p) else
-      paste(c("(Follow the instructions of my first message in this chat.)", "",
-              p$user), collapse = "\n")
+    text <- p$user
     list(context = ctx, text = text, system = p$system, task = "table",
          ids = if (length(ids)) ids else vapply(sheets, .ai_file_id, ""))
   }
@@ -384,21 +338,11 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
                            "`readxl::read_excel(<file>, sheet = <sheet>)`); when you cannot,",
                            "decide from this request alone."), "", text), collapse = "\n"))
     }
-    if (identical(workbook, "text")) return(text)
-    where <- sprintf("The TOC / SHELL workbook `%s` is attached to this message; this request's sheet(s): %s.",
-                     book, at)
-    paste(c(where, if (identical(workbook, "both")) c("", paste(
-      "The text below is read from that workbook; where the two differ, the attached",
-      "workbook is right."), "", text)), collapse = "\n")
+    text
   }
   # a request too long is halved until it fits, or holds one report
-  # (a chat's with templates: first the templates' arguments by name only)
   fit <- function(name, ids, family, short = FALSE) {
     p <- prompt_of(ids, family, short)
-    if (!short && templates && !agent && identical(instructions, "each") &&
-        !is.null(max_chars) && nchar(p$text) > max_chars) {
-      return(fit(name, ids, family, short = TRUE))
-    }
     if (is.null(max_chars) || nchar(p$text) <= max_chars || length(ids) == 1L) {
       if (!is.null(max_chars) && nchar(p$text) > max_chars) {
         warning(sprintf(paste0("%s: %s is %d characters with one report (%s), over ",
@@ -471,21 +415,14 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
     fam <- c(fam, "figure")
     tick(length(batches) + k)
   }
-  if (agent) {
-    # an agent's: what every request would repeat, once (ai/instructions-
-    # <task>.md, ai/templates.md)
-    for (task in unique(vapply(req, `[[`, "", "task"))) {
-      sys <- unique(unlist(lapply(Filter(function(r) identical(r$task, task), req), `[[`, "system")))
-      stopifnot(length(sys) == 1L)
-      .ai_write_text(sys, file.path(study_dir, .ai_instructions_file(task)))
-    }
-    if (templates) .ai_write_text(.ai_templates_file_text(), file.path(study_dir, "ai", "templates.md"))
-  } else if (identical(instructions, "once")) {
-    .ai_write_text(req[[1L]]$system, file.path(out_dir, "00-instructions.md"))
+  # what every request would repeat, once (ai/instructions-<task>.md,
+  # ai/templates.md)
+  for (task in unique(vapply(req, `[[`, "", "task"))) {
+    sys <- unique(unlist(lapply(Filter(function(r) identical(r$task, task), req), `[[`, "system")))
+    stopifnot(length(sys) == 1L)
+    .ai_write_text(sys, file.path(study_dir, .ai_instructions_file(task)))
   }
-  # the folder the answers are saved in, beside the requests (ai/answers)
-  dir.create(file.path(study_dir, dirname(dir), "answers"), recursive = TRUE,
-             showWarnings = FALSE)
+  if (templates) .ai_write_text(.ai_templates_file_text(), file.path(study_dir, "ai", "templates.md"))
   # each request's workbook: its reports' shells'
   book_of <- function(ids) {
     bk <- shell$toc$book[match(ids, shell$toc$output_id)]
@@ -505,67 +442,54 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
   .ai_write_text(paste(c(
     "# Requests",
     "",
-    if (!agent && identical(instructions, "once"))
-      c("Paste `00-instructions.md` first in a new chat, then one request.", ""),
-    if (!agent && workbook %in% c("attach", "both"))
-      c(sprintf("Attach `%s` (the TOC / SHELL workbook) to each chat with its request.", book), ""),
-    if (agent) c(
-      "For the agent (AGENTS.md; its first message is `ai/agent_prompt.md`): answer the",
-      "requests it is given, in this order, and save the whole answer as",
-      "`ai/answers/<request>.md`; then do as AGENTS.md says.")
-    else c(
-      "Paste each file into a new chat as one message; save the whole answer as",
-      sprintf("`ai/answers/<request>.md`, then run `tfl_ai_collect_answers(\"%s\")`.", ".")),
+    "For the agent (AGENTS.md; its first message is `ai/agent_prompt.md`): do the",
+    "requests it is given, in this order -- ask what is not settled, then write each",
+    "report's draft as `ai/spec/outputs/<id>.yml`. Then check the drafts: tflplanner's",
+    "\"Check\" (`tfl_ai_collect_answers()`).",
     "",
     "| request | reports | characters | outputs |",
     "|---|---|---|---|",
     sprintf("| %s | %d | %d | %s |", idx$request, idx$n, idx$chars, idx$outputs)),
     collapse = "\n"), file.path(out_dir, "index.md"))
-  ans <- gsub("\\\\", "/", file.path(dirname(dir), "answers"))
   message(sprintf(paste0("%d requests (%d reports) in %s; the longest %d characters.\n",
-                         "Next: paste %s into a new chat%s%s; save the whole answer as ",
-                         "%s/%s.md, then run tfl_ai_collect_answers()."),
-                  nrow(idx), sum(idx$n), dir, max(idx$chars), idx$file[1L],
-                  if (!agent && identical(instructions, "once")) " after 00-instructions.md" else "",
-                  if (workbook %in% c("attach", "both")) sprintf(", attaching %s", book) else "",
-                  ans, idx$request[1L]))
+                         "Next: give the agent %s (ai/agent_prompt.md); when its drafts are ",
+                         "written, run tfl_ai_collect_answers()."),
+                  nrow(idx), sum(idx$n), dir, max(idx$chars), idx$file[1L]))
   idx
 }
 
-#' Read the answers of a study's requests, check them, write the report files
+#' Read the agent's drafts, check them, write the report files
 #'
-#' Reads each `<request>.md` in `answers` (the AI's whole answer to the
-#' request of the same name, [tfl_ai_write_requests()]), checks it against
-#' its request ([tfl_ai_parse()], [tfl_ai_check()]) and, when it has no
-#' error, writes its report files ([tfl_ai_unpack()]).  An answer with
-#' errors writes no file: its repair prompt ([tfl_ai_repair_prompt()]) goes
-#' to `repairs`, to paste into the same chat; save the new answer over the
-#' old and collect again.
-#'
-#' An answer is read as UTF-8, with or without the byte-order mark Windows
-#' Notepad writes, and with any line ends; an answer saved in another
-#' encoding (Shift-JIS / CP932, "ANSI") is an `error` that says how to save
-#' it again.  An answer saved as `<request>.md.txt` or `<request>.txt` (Notepad
-#' adds `.txt`) is read too.
+#' The person's check of what the agent wrote ([tfl_ai_prepare()]): each
+#' request's drafts (`ai/spec/outputs/<id>.yml`, one a report) are read as
+#' the request's answer, checked against the request ([tfl_ai_check()]:
+#' the schema, the analyses, the ADaM summary, the study's files) and, when
+#' they have no error, written anew as the study's report files -- the
+#' column widths filled, the assumptions numbered
+#' (`spec/_assumptions.yml`, [tfl_ai_assumptions()]), the draft's `ai:`
+#' block (its assumptions, what is marked to confirm: [tfl_ai_confirm()])
+#' kept.  A draft with errors is left as it is: its repair prompt
+#' ([tfl_ai_repair_prompt()]) goes to `repairs`, to paste into the agent's
+#' chat; check again when the agent has fixed it.  A draft YAML cannot read
+#' is refused with why, for the agent to fix its form.
 #'
 #' @param study_dir The study folder.
-#' @param requests,answers,repairs The folders, under `study_dir`.
+#' @param requests,repairs The folders, under `study_dir`.
 #' @param overwrite `TRUE` (default) to write over report files already
-#'   there: an answer collected again replaces its reports.
+#'   there: a draft checked again replaces its report.
 #' @return A `tfl_ai_collected`: a list with `reports` (a data frame, one
 #'   row a report: `request`, `output_id`, `status` -- `ok`, `warning`,
-#'   `error`, `no answer` --, `problems` (how many), `first` (the first
-#'   problem), `problems_text` (all of them, one a line), `file` (the
-#'   report's `spec/outputs/<id>.yml` when written, else `NA`), `repair`
-#'   (the request's repair prompt to paste into the same chat, else `NA`)),
+#'   `error`, `no answer` (no draft yet) --, `problems` (how many), `first`
+#'   (the first problem), `problems_text` (all of them, one a line), `file`
+#'   (the report's `ai/spec/outputs/<id>.yml` when written, else `NA`),
+#'   `repair` (the request's repair prompt, else `NA`)),
 #'   `next_steps` (a request's next step, named by the request),
 #'   `next_kind` and `next_args` (the same step as a kind and its values,
 #'   for a screen to say in its own words -- see *The next step's kinds*),
 #'   `assumptions` (the study's `spec/_assumptions.yml` for these reports:
 #'   `output_id`, `where`, `item`, `assumption`, `value`, `question`, `id` -- the
 #'   assumption's `A<n>` -- and `kind` -- its `K<n>`, [tfl_ai_assumptions()]),
-#'   `stray` (answer
-#'   files named after no request), `requests` (the requests' folder),
+#'   `stray` (drafts no request asks for), `requests` (the requests' folder),
 #'   `templates` (each request's setting, [tfl_ai_prepare()]'s `templates`:
 #'   a logical named by the request), `manifest` and `manifest_file`
 #'   (below).
@@ -573,50 +497,44 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
 #' @section The next step's kinds:
 #' `next_steps` is English text; `next_kind` names the same step by a
 #' word, with its values in `next_args`, so a screen can say it in its
-#' own language.  The kinds, and the values each carries (`agent`: whether
-#' the request was written for an agent -- `Rscript run.R` -- or a chat):
+#' own language.  The kinds, and the values each carries (`drafts`: the
+#' request's draft files, comma-separated):
 #' \describe{
-#'   \item{`answer`}{no answer yet: `request` (the request file),
-#'     `answer` (the file to save it as), `agent`.}
-#'   \item{`fix_answer`}{the answer could not be read as one block:
-#'     `answer`, `agent`.}
-#'   \item{`answer_again`}{the answer could not be checked: `answer`,
-#'     `agent`.}
-#'   \item{`repair`}{the answer has errors and a repair prompt was written:
-#'     `repair` (the prompt file), `answer`, `agent`.}
+#'   \item{`answer`}{no draft yet: `request` (the request file), `drafts`
+#'     (the files the agent writes).}
+#'   \item{`fix_answer`}{a draft could not be read (its YAML, or no
+#'     `id`): `drafts` (the files refused).}
+#'   \item{`answer_again`}{the drafts could not be checked: `drafts`.}
+#'   \item{`repair`}{the drafts have errors and a repair prompt was
+#'     written: `repair` (the prompt file), `drafts`.}
 #'   \item{`see_problem`}{the report files could not be written (the
-#'     problem is in `reports`): `agent`.}
+#'     problem is in `reports`).}
 #'   \item{`warnings`}{written, with warnings to read.}
 #'   \item{`done`}{written, nothing to do.}
 #'   \item{`sheet_missing`}{a sheet's request: written, but `missing` (the
-#'     TOC items) are not in the answer.}
-#'   \item{`add_missing`}{written, but `missing` are not in the answer:
-#'     `answer`, `agent`.}
-#'   \item{`none_asked`}{the answer has none of the reports asked for:
-#'     `asked`, `has`, `answer`, `agent`.}
+#'     TOC items) have no draft.}
+#'   \item{`add_missing`}{written, but `missing` have no draft: `drafts`
+#'     (theirs).}
+#'   \item{`none_asked`}{the drafts are none of the reports asked for:
+#'     `asked`, `has`.}
 #' }
 #' [tfl_ai_run()] adds three, for a report that passed its checks:
 #' `not_built` (`reports`, not built in this run: `Rscript run.R
 #' <request>`), `no_package` (`report`, `package`: R has no such package),
 #' `build_failed` (`report`, `problem`, `repair`).
 #'
-#'   The manifest is every report the answers say they make, for the person
-#'   to check the count against the TOC (one TOC row can be several
-#'   reports): each answer lists its reports first (`reports:`, one line a
-#'   report: `id`, `title`, `split` -- how its TOC row is split for it --,
-#'   `toc` -- the TOC row's number).  A data frame, one row a report:
-#'   `request`, `toc`, `output_id`, `title`, `split`, `listed` (`FALSE`: a
-#'   report the answer writes but does not list; `NA`: a request not
-#'   answered or not read, its reports as asked) and `status` (the report's,
-#'   as in `reports`, or `"not answered"`: listed, but no report file in the
-#'   answer).  It is written to `ai/manifest.csv` (UTF-8) beside the
-#'   requests' folder, anew at each collection.
+#'   The manifest is every report the drafts make, for the person to check
+#'   the count against the TOC (one TOC row can be several reports): a
+#'   data frame, one row a report: `request`, `toc`, `output_id`, `title`,
+#'   `split`, `listed` (`NA`: a request not answered or not read, its
+#'   reports as asked) and `status` (the report's, as in `reports`).  It is
+#'   written to `ai/manifest.csv` (UTF-8) beside the requests' folder, anew
+#'   at each collection.
 #'   The paths are relative to `study_dir`.  Its print is a summary: each
 #'   request's status, its reports and the next step.
-#' @seealso [tfl_ai_write_requests()]
+#' @seealso [tfl_ai_prepare()], [tfl_ai_confirm()], [tfl_ai_adopt()].
 #' @export
 tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "requests"),
-                                   answers = file.path("ai", "answers"),
                                    repairs = file.path("ai", "repairs"),
                                    overwrite = TRUE) {
   fn <- "tfl_ai_collect_answers()"
@@ -627,11 +545,17 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
                       fn, sQuote(file.path(study_dir, requests), FALSE), study_dir))
   }
   ctxs <- readRDS(cf)
-  # the spec route: the agent's drafts (ai/spec/outputs/<id>.yml) are the
-  # answers; their `ai:` blocks (assumptions, confirm) are put back after
-  spec <- identical(.ai_route(study_dir), "spec")
-  blocks <- if (spec) .ai_drafts_to_answers(study_dir, ctxs, answers) else list()
+  # the agent's drafts (ai/spec/outputs/<id>.yml) are the answers: each
+  # request's become one answer in a folder of the check's own, read as an
+  # answer is; the drafts' `ai:` blocks (assumptions, confirm) are put back
+  # after
+  answers <- tempfile("tfl-ai-answers-")
+  dir.create(answers)
+  on.exit(unlink(answers, recursive = TRUE), add = TRUE)
+  drafts <- .ai_drafts_to_answers(study_dir, ctxs, answers)
+  blocks <- drafts$blocks
   if (length(blocks)) on.exit(.ai_draft_blocks_restore(study_dir, blocks), add = TRUE)
+  drafts_of <- function(ids) paste(sprintf("ai/spec/outputs/%s.yml", ids), collapse = ", ")
   # (a study with the AI's drafts apart: the answers write them there)
   area_opt <- .ai_area_options(study_dir)
   if (!is.null(area_opt)) on.exit(options(area_opt), add = TRUE)
@@ -666,25 +590,24 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
   own <- lapply(ctxs, function(x) if (isTRUE(x$context$sheet_mode)) .ai_file_id(x$context$candidates))
   for (nm in names(ctxs)) {
     ids <- .ai_file_id(ctxs[[nm]]$ids)
-    f <- .ai_answer_file(file.path(study_dir, answers), nm)
-    # the next step as the request was written for: a chat's (paste, ask
-    # the chat) or an agent's (answer, save, run.R)
-    agent <- isTRUE(ctxs[[nm]]$context$ai_files)
-    run <- sprintf(" and run `Rscript run.R %s`", nm)
+    # a draft of the request's that cannot be read: refused, with why
+    bad <- drafts$bad[names(drafts$bad) %in% ids]
+    if (length(bad)) {
+      msg <- paste0("ai/spec/outputs/", names(bad), ".yml: ", bad)
+      rows[[nm]] <- row(nm, ids, "error", length(bad), msg[1L], paste(msg, collapse = "\n"))
+      step(nm, "fix_answer",
+           sprintf("fix %s as the problem below says (its form, not its content), then check again",
+                   drafts_of(names(bad))),
+           drafts = drafts_of(names(bad)))
+      next
+    }
+    f <- .ai_answer_file(answers, nm)
     if (is.na(f)) {
       rows[[nm]] <- row(nm, ids, "no answer")
       step(nm, "answer",
-           if (spec) {
-             sprintf("ask the agent for %s: it asks what is not settled, then writes %s",
-                     rel(requests, paste0(nm, ".md")),
-                     paste(sprintf("ai/spec/outputs/%s.yml", ids), collapse = ", "))
-           } else if (agent) {
-             sprintf("answer %s; save the whole answer as %s%s",
-                     rel(requests, paste0(nm, ".md")), rel(answers, paste0(nm, ".md")), run)
-           } else sprintf("paste %s into a new chat; save the whole answer as %s",
-                          rel(requests, paste0(nm, ".md")), rel(answers, paste0(nm, ".md"))),
-           request = rel(requests, paste0(nm, ".md")), answer = rel(answers, paste0(nm, ".md")),
-           agent = agent)
+           sprintf("ask the agent for %s: it asks what is not settled, then writes %s",
+                   rel(requests, paste0(nm, ".md")), drafts_of(ids)),
+           request = rel(requests, paste0(nm, ".md")), drafts = drafts_of(ids))
       next
     }
     task <- ctxs[[nm]]$context$task %||% "table"
@@ -693,11 +616,8 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
     if (inherits(a, "error")) {
       rows[[nm]] <- row(nm, ids, "error", 1L, conditionMessage(a))
       step(nm, "fix_answer",
-           sprintf(paste0("fix %s as the problem below says (copy the whole answer, ",
-                          "from the first ``` to the last), then %s"),
-                   rel(answers, basename(f)),
-                   if (agent) sprintf("run `Rscript run.R %s`", nm) else "collect again"),
-           answer = rel(answers, basename(f)), agent = agent)
+           sprintf("fix %s as the problem below says, then check again", drafts_of(ids)),
+           drafts = drafts_of(ids))
       next
     }
     # a report the answer gives in parts (t.15.1.5.1.a, .b): its parts are
@@ -722,11 +642,9 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
     if (inherits(pr, "error")) {
       rows[[nm]] <- row(nm, ids, "error", 1L, conditionMessage(pr))
       step(nm, "answer_again",
-           if (agent) {
-             sprintf("answer the request again; save it over %s%s", rel(answers, basename(f)), run)
-           } else sprintf("ask the chat for the answer again; save it over %s",
-                          rel(answers, basename(f))),
-           answer = rel(answers, basename(f)), agent = agent)
+           sprintf("fix %s as the problem below says (paste it into the agent's chat), then check again",
+                   drafts_of(ids)),
+           drafts = drafts_of(ids))
       next
     }
     err <- pr[pr$severity == "error", , drop = FALSE]
@@ -738,13 +656,9 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
       .ai_write_text(format(tfl_ai_repair_prompt(a, pr)),
                      file.path(study_dir, repairs, paste0(nm, ".md")))
       step(nm, "repair",
-           if (agent) {
-             sprintf("fix the answer as %s says; save the whole answer over %s%s",
-                     rel(repairs, paste0(nm, ".md")), rel(answers, basename(f)), run)
-           } else sprintf("paste %s into the SAME chat; save its new answer over %s",
-                          rel(repairs, paste0(nm, ".md")), rel(answers, basename(f))),
-           repair = rel(repairs, paste0(nm, ".md")), answer = rel(answers, basename(f)),
-           agent = agent)
+           sprintf("paste %s into the agent's chat: it fixes %s; then check again",
+                   rel(repairs, paste0(nm, ".md")), drafts_of(ids)),
+           repair = rel(repairs, paste0(nm, ".md")), drafts = drafts_of(ids))
     } else {
       # only the reports this request asked for (another is warned of)
       keep <- a
@@ -767,10 +681,7 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
       }
       if (is.null(wrote)) unlink(file.path(study_dir, repairs, paste0(nm, ".md")))
       if (!is.null(wrote)) {
-        step(nm, "see_problem",
-             if (agent) sprintf("see the problem below, then run `Rscript run.R %s`", nm)
-             else "see the problem below, then collect again",
-             agent = agent)
+        step(nm, "see_problem", "see the problem below, then check again")
       } else if (nrow(pr)) {
         step(nm, "warnings", "read the warnings; the report files are written")
       } else {
@@ -805,28 +716,23 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
       miss <- setdiff(ids, names(a$outputs))
       if (sheet) {
         step(nm, "sheet_missing",
-             sprintf(paste0("the report files are written; %s (the sheet's numbers) not in the ",
-                            "answer: add them if the sheet makes them, or say why as an assumption"),
+             sprintf(paste0("the report files are written; %s (the sheet's numbers) have no ",
+                            "draft: ask the agent for them if the sheet makes them, or why not"),
                      paste(miss, collapse = ", ")),
              missing = miss)
       } else {
         step(nm, "add_missing",
-             sprintf(if (agent) "add %s to the answer; save the whole answer over %s%s"
-                     else "ask the same chat for %s too; save the whole answer over %s%s",
-                     paste(miss, collapse = ", "), rel(answers, basename(f)),
-                     if (agent) run else ""),
-             missing = miss, answer = rel(answers, basename(f)), agent = agent)
+             sprintf("ask the agent for %s too (%s); then check again",
+                     paste(miss, collapse = ", "), drafts_of(miss)),
+             missing = miss, drafts = drafts_of(miss))
       }
     } else if (!any(names(a$outputs) %in% ids) && !nrow(err)) {
       # none of the reports asked for: nothing was written
       step(nm, "none_asked",
-           sprintf(paste0("the answer has none of %s (it has %s): %s; save the whole ",
-                          "answer over %s%s"),
+           sprintf("the drafts are none of %s (they are %s): ask the agent for them; then check again",
                    paste(ids, collapse = ", "),
-                   if (length(a$outputs)) paste(names(a$outputs), collapse = ", ") else "no report",
-                   if (agent) "answer them" else "ask the same chat for them",
-                   rel(answers, basename(f)), if (agent) run else ""),
-           asked = ids, has = names(a$outputs), answer = rel(answers, basename(f)), agent = agent)
+                   if (length(a$outputs)) paste(names(a$outputs), collapse = ", ") else "no report"),
+           asked = ids, has = names(a$outputs))
     }
   }
   out <- do.call(rbind, rows)
@@ -834,9 +740,8 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
   out$type <- vapply(out$request, function(r) ctxs[[r]]$context$task %||% "table", "",
                      USE.NAMES = FALSE)
   out <- out[c("request", "type", setdiff(names(out), c("request", "type")))]
-  # answers that match no request (a name typed differently)
-  got <- list.files(file.path(study_dir, answers), "[.](md|txt)$", ignore.case = TRUE)
-  stray <- got[!sub("([.]md)?([.]txt)?$", "", got, ignore.case = TRUE) %in% names(ctxs)]
+  # drafts no request asks for (an id typed differently)
+  stray <- paste0(drafts$stray, ".yml")
   # each report's file (when written) and its request's repair prompt (when one waits)
   yml <- rel(.ai_area(study_dir) %||% file.path("spec", "outputs"), paste0(out$output_id, ".yml"))
   out$file <- ifelse(out$status %in% c("ok", "warning") & file.exists(file.path(study_dir, yml)),
@@ -862,7 +767,7 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
   req <- unique(out$request)
   structure(list(reports = out, next_steps = nxt[req], next_kind = nk[req],
                  next_args = stats::setNames(na[req], req), assumptions = asm,
-                 stray = rel(answers, stray), requests = requests, templates = tpl,
+                 stray = rel("ai", "spec", "outputs", stray), requests = requests, templates = tpl,
                  toc_items = if (length(keys)) length(keys[!is.na(keys)]) else NA_integer_,
                  manifest = man, manifest_file = rel(dirname(requests), "manifest.csv")),
             class = "tfl_ai_collected")
@@ -1051,50 +956,6 @@ tfl_ai_requests <- function(study_dir, requests = file.path("ai", "requests")) {
   out
 }
 
-#' Save a chat's answer to a request where tfl_ai_collect_answers() reads it
-#'
-#' Writes the answer (the chat's whole reply, as copied) to
-#' `ai/answers/<request>.md` in UTF-8 -- the name and the encoding
-#' [tfl_ai_collect_answers()] reads -- for a program or a screen that takes
-#' the pasted text, rather than the person saving a file.
-#'
-#' @param study_dir The study folder.
-#' @param request The request's name (`ae-1`: a row of the requests'
-#'   `request`, `ai/requests/index.md`).
-#' @param text The answer: one string, or lines.
-#' @param overwrite `TRUE` (default) to write over an answer saved before
-#'   (a repaired answer replaces the first).
-#' @param requests,answers The folders, under `study_dir`.
-#' @return The file's path, invisibly.
-#' @seealso [tfl_ai_collect_answers()], [tfl_ai_prepare()].
-#' @export
-tfl_ai_save_answer <- function(study_dir, request, text, overwrite = TRUE,
-                               requests = file.path("ai", "requests"),
-                               answers = file.path("ai", "answers")) {
-  fn <- "tfl_ai_save_answer()"
-  cf <- file.path(study_dir, requests, "_contexts.rds")
-  if (!file.exists(cf)) {
-    .ard_stop(sprintf("%s: no requests in %s; write them first (tfl_ai_prepare()).", fn,
-                      sQuote(file.path(study_dir, requests), FALSE)))
-  }
-  known <- names(readRDS(cf))
-  if (!is.character(request) || length(request) != 1L || !request %in% known) {
-    .ard_stop(sprintf("%s: `request` is one of the study's requests: %s.", fn,
-                      paste(known, collapse = ", ")))
-  }
-  if (!is.character(text) || !length(text) || anyNA(text) || !any(nzchar(trimws(text)))) {
-    .ard_stop(sprintf("%s: `text` is the chat's answer (text, not empty).", fn))
-  }
-  f <- file.path(study_dir, answers, paste0(request, ".md"))
-  if (file.exists(f) && !isTRUE(overwrite)) {
-    .ard_stop(sprintf("%s: %s already there; pass `overwrite = TRUE`.", fn,
-                      sQuote(file.path(answers, basename(f)), FALSE)))
-  }
-  # (<request>.md is read before a .md.txt / .txt Notepad may have left)
-  .ai_write_text(gsub("\r\n?", "\n", enc2utf8(paste(text, collapse = "\n"))), f)
-  invisible(normalizePath(f, winslash = "/"))
-}
-
 #' @export
 print.tfl_ai_collected <- function(x, ...) {
   obj <- x
@@ -1137,14 +998,14 @@ print.tfl_ai_collected <- function(x, ...) {
   }
   stray <- obj$stray
   if (length(stray)) {
-    cat(sprintf(paste0("\nNot read (no request of that name): %s -- rename each to ",
-                       "<request>.md, the names in %s/index.md.\n"),
+    cat(sprintf(paste0("\nNot read (no request asks for them): %s -- a draft's name is its ",
+                       "report's id, the ids in %s/index.md.\n"),
                 paste(stray, collapse = ", "), obj$requests %||% "ai/requests"))
   }
   if (all(x$status %in% c("ok", "warning"))) {
-    cat("\nAll answers read: next, build the RTF files (the guide's step 6).\n")
+    cat("\nAll drafts read: next, finish them in the builder and adopt them.\n")
   } else if (any(x$status == "error")) {
-    cat("\nAfter each fix, run tfl_ai_collect_answers() again: it reads every answer anew.\n")
+    cat("\nAfter each fix, run tfl_ai_collect_answers() again: it reads every draft anew.\n")
   }
   invisible(obj)
 }

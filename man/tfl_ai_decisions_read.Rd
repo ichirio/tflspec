@@ -24,7 +24,7 @@ in the file); no rows when the file has none.
 \code{ai/decisions.md} holds what the reports follow over the agent's own
 choices, one line a decision: \verb{- D<n> [<scope>] <topic>: <decision> (<source>)}.  \code{scope} is \code{all}, a dataset, a TOC section or report ids;
 \code{topic} the item decided.  The agent adds the person's chat answers
-there (the spec route, \code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}}\code{(route = "spec")}) and applies
+there (\code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}}) and applies
 a decision to a later report when its scope covers it.  A line of the
 older form, \verb{- Q<n> (<reports>): <decision>}, is read too (its scope the
 reports, no topic), and a person's own line without a scope is \code{all}.

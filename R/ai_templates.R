@@ -222,7 +222,6 @@
   }, "")
   c(sprintf(paste("Follow `%s`: the instructions and the schema, the same for every %s",
                   "request (read it once)."), .ai_instructions_file(task), task),
-    sprintf("Your answer's header: `%s`.", header),
     if (isTRUE(ctx$ai_templates)) {
       c("", paste("Templates: `ai/templates.md` (how to answer with one, and every template",
                   "with its arguments). Likely, from the titles (another may fit better):"),

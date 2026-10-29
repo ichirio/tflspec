@@ -54,6 +54,9 @@
       if (length(g)) roles[g] <- "toc"
     }
   }
+  # the shells in workbooks of their own: the TOC's workbook holds the TOC
+  # alone -- its other sheets (a revision history, notes) are no shells
+  if (any(!first)) roles[first & roles == "shell"] <- "other"
   if (!is.null(sheet_roles)) {
     if (!is.character(sheet_roles) || is.null(names(sheet_roles)) ||
         !all(sheet_roles %in% c("toc", "shell", "other"))) {

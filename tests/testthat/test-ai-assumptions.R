@@ -184,9 +184,8 @@ test_that("collected answers: ids kept; an assumption the agent fixed survives a
   d <- file.path(root, "study")
   book <- system.file("ai", "example", "onco_toc_shell.xlsx", package = "tflspec")
   tfl_ai_prepare(unit = "toc", d, book, adam = normalizePath(ad, winslash = "/"),
-                 quiet = TRUE, mode = "agent", size = 3L)
-  file.copy(list.files(test_path("fixtures", "answers-toc"), full.names = TRUE),
-            file.path(d, "ai", "answers"))
+                 quiet = TRUE, size = 3L)
+  ai_drafts_from_fixtures(d)
   res <- suppressMessages(tfl_ai_collect_answers(d))
   expect_named(res$assumptions, c("output_id", "where", "item", "assumption", "value",
                                   "question", "id", "kind"))
@@ -194,19 +193,13 @@ test_that("collected answers: ids kept; an assumption the agent fixed survives a
   expect_true(all(grepl("^K[0-9]+$", res$assumptions$kind)))
   expect_false(anyDuplicated(res$assumptions$id) > 0L)
   res2 <- suppressMessages(tfl_ai_collect_answers(d))
+  # (the usual widths, written into the draft by the first collection, stay an
+  # assumption of the draft's: the rows and their ids are the same)
   expect_identical(res2$assumptions, res$assumptions)
-  # questions.md lists each question's assumptions
-  q <- .ai_questions_update(d, res2$assumptions)
-  expect_true(any(grepl("^A[0-9]+", q$assumptions)))
-  # the person: the demographics' arm is wrong; the agent applies it and
-  # marks the row fixed
+  # the demographics' arm is wrong; the agent applies it and marks the row fixed
   a <- tfl_ai_assumptions(d)
   id <- a$id[a$output_id %in% "T-14-1-1" & a$item %in% "arm"]
   expect_length(id, 1L)
-  tfl_ai_assumption_answers_write(d, data.frame(id = id, verdict = "wrong", correct = "TRT01P"))
-  expect_identical(tfl_ai_assumptions(d)$status[match(id, a$id)], "answered")
-  new <- tfl_ai_corrections(d)
-  expect_true(sprintf("## %s. assumption of T-14-1-1: arm", id) %in% new)
   f <- file.path(d, "spec", "_assumptions.yml")
   y <- yaml::read_yaml(f)
   at <- which(vapply(y, function(e) identical(e$id, id), NA))
@@ -215,13 +208,12 @@ test_that("collected answers: ids kept; an assumption the agent fixed survives a
   writeLines(yaml::as.yaml(y, indent.mapping.sequence = TRUE), f)
   # collected again: the answer still says TRT01A -- the fixed row kept, a note
   res3 <- suppressMessages(tfl_ai_collect_answers(d))
-  expect_identical(res3$assumptions$id, res$assumptions$id)
+  expect_identical(res3$assumptions$id, res2$assumptions$id)
   y3 <- yaml::read_yaml(f)
   r <- Filter(function(e) identical(e$id, id), y3)[[1L]]
   expect_identical(r$status, "fixed")
   expect_identical(r$assumption, "the columns are the planned treatment, TRT01P")
   expect_match(r$note, "the answer still says", fixed = TRUE)
-  expect_identical(tfl_ai_assumptions(d)$status[match(id, a$id)], "done")
 })
 
 test_that("an assumption's value -- the value the AI used -- is kept and shown", {

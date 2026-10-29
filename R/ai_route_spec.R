@@ -1,22 +1,26 @@
-# ---------------------------------------------------------------------------
-#  The agent's "spec" route (2026-10-29, the AI flow made again)
-# ---------------------------------------------------------------------------
-#  tfl_ai_prepare(mode = "agent", route = "spec"): the agent writes each
-#  report's skeleton as its draft file, ai/spec/outputs/<id>.yml, asks the
-#  person in the chat what defines a report and is not settled, records the
-#  answers in ai/decisions.md (one structured line a decision) and marks
-#  what it could not settle as `ai: confirm` in the file.  The person's
-#  check (tfl_ai_collect_answers() / run.R) reads the drafts as the answers
-#  route reads the answers -- the same checks, repairs, assumptions, status
-#  -- and keeps the drafts' `ai:` block.
+# ============================================================================
+#  The agent's work: it asks, the drafts are the answers (2026-10-29, the
+#  AI flow made again)
+# ----------------------------------------------------------------------------
+#  tfl_ai_prepare(): the agent writes each report's skeleton as a draft
+#  (ai/spec/outputs/<id>.yml) after asking the person in the chat what
+#  defines the report and is not settled; it keeps the answers in
+#  ai/decisions.md (one structured line a decision) and marks what it could
+#  not settle under the draft's `ai: confirm`.  The person's check
+#  (tfl_ai_collect_answers() / run.R) reads the drafts as the answers of
+#  their requests -- the same checks, repairs, assumptions, status -- and
+#  puts the drafts' `ai:` blocks back.
 #
-#  What the user's seven decisions may change is in one place,
-#  .ai_spec_settings(): when the agent asks, how far a decision carries,
-#  the questions' limit, the language.
+#    .ai_spec_settings()      study.yml's ai: keys over the defaults
+#    tfl_ai_decisions_*()     ai/decisions.md read and written
+#    .ai_decisions_block()    a request's "Decisions that apply"
+#    .ai_drafts_to_answers()  the drafts as the check's answers
+#    tfl_ai_confirm()         what is marked to confirm
+# ============================================================================
 
 # ---- the settings ------------------------------------------------------------
 
-# The spec route's settings: the package's defaults, under study.yml's
+# The agent's settings: the package's defaults, under study.yml's
 # `ai:` keys (ask_when, carry, max_questions, language)
 .ai_spec_defaults <- list(
   ask_when = "request",                 # "request": once per request, before writing; "report": per report
@@ -40,15 +44,6 @@
   s$carry <- as.character(unlist(s$carry))
   s$footnotes_at <- match.arg(as.character(s$footnotes_at)[1L], c("footer", "table"))
   s
-}
-
-# The route a study was prepared for: "spec" when its AGENTS.md says so,
-# else "answers"
-.ai_route <- function(study_dir) {
-  f <- file.path(study_dir, "AGENTS.md")
-  if (!file.exists(f)) return("answers")
-  if (any(grepl("<!-- tflspec route: spec -->", readLines(f, warn = FALSE, encoding = "UTF-8"),
-                fixed = TRUE))) "spec" else "answers"
 }
 
 # AGENTS-spec.md filled from the settings
@@ -92,7 +87,7 @@
 #' choices, one line a decision: `- D<n> [<scope>] <topic>: <decision>
 #' (<source>)`.  `scope` is `all`, a dataset, a TOC section or report ids;
 #' `topic` the item decided.  The agent adds the person's chat answers
-#' there (the spec route, [tfl_ai_prepare()]`(route = "spec")`) and applies
+#' there ([tfl_ai_prepare()]) and applies
 #' a decision to a later report when its scope covers it.  A line of the
 #' older form, `- Q<n> (<reports>): <decision>`, is read too (its scope the
 #' reports, no topic), and a person's own line without a scope is `all`.
@@ -139,7 +134,7 @@ tfl_ai_decisions_read <- function(study_dir) {
         source = if (length(src)) src[2L] else NA_character_, line = i, stringsAsFactors = FALSE)
       next
     }
-    # - Q2 (T-14-3-1, T-14-3-2): the decision   (the answers route's)
+    # - Q2 (T-14-3-1, T-14-3-2): the decision   (a question's line, before)
     m <- regmatches(body, regexec("^(Q[0-9]+)\\s+\\(([^)]*)\\):\\s*(.*)$", body))[[1L]]
     if (length(m)) {
       rows[[length(rows) + 1L]] <- data.frame(
@@ -208,7 +203,7 @@ tfl_ai_decisions_write <- function(study_dir, x) {
 }
 
 # The lines a request carries: the decisions that apply to its reports and
-# those to ask about (the spec route's "Decisions that apply")
+# those to ask about (a request's "Decisions that apply")
 .ai_decisions_block <- function(study_dir, ids, datasets = character(), section = NA_character_) {
   s <- .ai_spec_settings(study_dir)
   rows <- do.call(rbind, lapply(ids, function(id) {
@@ -233,68 +228,112 @@ tfl_ai_decisions_write <- function(study_dir, x) {
 # ---- the drafts as answers: the person's check --------------------------------
 
 # A draft's `ai:` block (assumptions, confirm), by report, from
-# ai/spec/outputs/*.yml; kept while the check writes the drafts anew
+# ai/spec/outputs/*.yml; kept while the check writes the drafts anew.  A
+# file YAML cannot read, or with no `id`, is in `bad` (by the file's name)
+# with why: the check refuses it, and the agent fixes its form.
 .ai_draft_blocks <- function(study_dir) {
   area <- file.path(study_dir, "ai", "spec", "outputs")
-  if (!dir.exists(area)) return(list())
-  fs <- list.files(area, "[.]yml$", full.names = TRUE)
-  out <- list()
-  for (f in fs) {
-    y <- tryCatch(yaml::read_yaml(f, handlers = .yaml_handlers()), error = function(e) NULL)
-    if (!is.list(y) || is.null(y$id)) next
-    out[[as.character(y$id)]] <- list(file = f, ai = y$ai, y = y)
+  out <- list(blocks = list(), bad = character())
+  if (!dir.exists(area)) return(out)
+  for (f in list.files(area, "[.]ya?ml$", full.names = TRUE)) {
+    id <- sub("[.]ya?ml$", "", basename(f))
+    y <- tryCatch(yaml::read_yaml(f, handlers = .yaml_handlers()), error = function(e) e)
+    if (inherits(y, "error")) {
+      out$bad[id] <- paste("the YAML cannot be read:", .ai_one_line(conditionMessage(y)))
+    } else if (!is.list(y) || is.null(y$id)) {
+      out$bad[id] <- "not a report file: no `id`"
+    } else if (!identical(.ai_file_id(y$id), id) &&
+               !isTRUE(.ai_id_same(.ai_id_key(as.character(y$id)[1L]), .ai_id_key(id)))) {
+      # (the same report number written another way -- "Table 14.1.1" in
+      # T-14-1-1.yml -- is the same report)
+      out$bad[id] <- sprintf("its `id` is %s, not the file's name: name the file after the id",
+                             as.character(y$id)[1L])
+    } else {
+      out$blocks[[id]] <- list(file = f, ai = y$ai, y = y)
+    }
   }
   out
 }
 
 # The drafts the agent wrote, as the answers the check reads: for each
-# request, its reports' draft files become one answer
-# (ai/answers/<request>.md) in the table answer's form -- the header, the
-# outputs, the assumptions -- so tfl_ai_collect_answers() checks, repairs,
-# numbers the assumptions and writes the status as it does for an answer.
-# The drafts' `ai:` blocks are returned, to be put back after.
-.ai_drafts_to_answers <- function(study_dir, ctxs, answers = file.path("ai", "answers")) {
-  blocks <- .ai_draft_blocks(study_dir)
-  if (!length(blocks)) return(blocks)
-  dir.create(file.path(study_dir, answers), recursive = TRUE, showWarnings = FALSE)
+# request, its reports' draft files become one answer (`answers`/<request>.md,
+# a folder of the check's own) in the answer's form -- a table's: the
+# header, the outputs, the assumptions; a figure's: its header and its
+# design (.fig_design_of_output()) -- so tfl_ai_collect_answers() checks,
+# repairs, numbers the assumptions and writes the status as it does for an
+# answer.  A list: `blocks` (the drafts' `ai:` blocks, to be put back
+# after), `bad` (the files refused, with why) and `stray` (the drafts no
+# request asks for).
+.ai_drafts_to_answers <- function(study_dir, ctxs, answers) {
+  d <- .ai_draft_blocks(study_dir)
+  blocks <- d$blocks
+  used <- character()
   keys <- .ai_id_key(names(blocks))
   for (nm in names(ctxs)) {
     ids <- .ai_file_id(ctxs[[nm]]$ids)
     task <- ctxs[[nm]]$context$task %||% "table"
     have <- names(blocks)[vapply(keys, function(k) any(vapply(.ai_id_key(ids), .ai_id_same, NA, b = k)), NA)]
     if (!length(have)) next
-    outs <- lapply(have, function(id) {
-      y <- blocks[[id]]$y
-      y$ai <- NULL
-      y
-    })
+    used <- c(used, have)
     asm <- do.call(c, lapply(have, function(id) {
       a <- blocks[[id]]$ai$assumptions %||% list()
       lapply(a, function(e) { e$output_id <- id; e })
     }))
-    body <- list(tflspec_ai = list(task = "table", version = 1L, outputs = have),
-                 outputs = outs, assumptions = asm %||% list())
-    if (identical(task, "figure")) body$tflspec_ai$task <- "table"
-    txt <- c(sprintf("The report files of %s, from ai/spec/outputs/ (the spec route).", paste(have, collapse = ", ")),
+    if (identical(task, "figure")) {
+      # (the figure's design back from its file; a template's {name, args}
+      # as the answer gives it)
+      y <- blocks[[have[1L]]]$y
+      y$ai <- NULL
+      o <- tfl_read_output(blocks[[have[1L]]]$file)
+      fd <- .fig_design_of_output(o)
+      if (is.list(y$template)) fd$template <- y$template
+      body <- c(list(tflspec_ai = list(task = "figure", version = 1L, output_id = have[1L])),
+                fd, list(assumptions = asm %||% list()))
+    } else {
+      outs <- lapply(have, function(id) {
+        y <- blocks[[id]]$y
+        y$ai <- NULL
+        y
+      })
+      body <- list(tflspec_ai = list(task = "table", version = 1L, outputs = have),
+                   outputs = outs, assumptions = asm %||% list())
+    }
+    txt <- c(sprintf("The report files of %s, from ai/spec/outputs/.", paste(have, collapse = ", ")),
              "", "```yaml",
              sub("\n$", "", yaml::as.yaml(body, indent.mapping.sequence = TRUE, handlers = .yaml_out_handlers())),
              "```", "")
-    .ai_write_text(txt, file.path(study_dir, answers, paste0(nm, ".md")))
+    .ai_write_text(txt, file.path(answers, paste0(nm, ".md")))
   }
-  blocks
+  list(blocks = blocks, bad = d$bad, stray = setdiff(names(blocks), used))
 }
 
 # The drafts' `ai:` blocks put back on the files the check wrote (the check
 # writes a draft from the answer, without it); a draft the check did not
-# write (an answer refused) keeps the agent's file as it was
+# write (an answer refused) keeps the agent's file as it was.  What the
+# check assumed on its own -- the column widths it filled (item `widths`,
+# spec/_assumptions.yml) -- joins the draft's assumptions, so that the next
+# check, finding the widths there, still says they were the default ones.
 .ai_draft_blocks_restore <- function(study_dir, blocks) {
   area <- file.path(study_dir, "ai", "spec", "outputs")
+  af <- file.path(study_dir, "spec", "_assumptions.yml")
+  asm <- if (file.exists(af)) tryCatch(yaml::read_yaml(af), error = function(e) NULL)
+  if (!is.list(asm)) asm <- list()
   for (id in names(blocks)) {
     f <- file.path(area, paste0(id, ".yml"))
-    if (!file.exists(f) || is.null(blocks[[id]]$ai)) next
+    if (!file.exists(f)) next
     o <- tryCatch(tfl_read_output(f), error = function(e) NULL)
     if (is.null(o)) next
-    o$ai <- blocks[[id]]$ai
+    ai <- blocks[[id]]$ai
+    own <- Filter(function(e) is.list(e) && identical(.ai_file_id(e$output_id %||% ""), id) &&
+                    identical(e$item, "widths"), asm)
+    had <- any(vapply(ai$assumptions %||% list(), function(e) identical(e$item, "widths"), NA))
+    if (length(own) && !had) {
+      ai$assumptions <- c(ai$assumptions %||% list(), lapply(own, function(e) {
+        e[intersect(names(e), c("where", "item", "assumption", "value", "question"))]
+      }))
+    }
+    if (is.null(ai)) next
+    o$ai <- ai
     tfl_write_output(o, f)
   }
   invisible(NULL)
@@ -319,7 +358,7 @@ tfl_ai_decisions_write <- function(study_dir, x) {
 
 #' What the AI marked to confirm in a study's drafts
 #'
-#' The spec route's agent marks, in a report file's `ai: confirm`, what it
+#' The agent marks, in a report file's `ai: confirm`, what it
 #' could not settle and the person decides in the builder: one row a mark,
 #' from the drafts (`ai/spec/outputs/`) and the adopted reports
 #' (`spec/outputs/`).  [tfl_check_spec()] lists them too (`level`
@@ -377,4 +416,18 @@ tfl_ai_confirm <- function(study_dir, where = c("both", "drafts", "adopted")) {
     .ai_write_text(c(old, "", txt), f)
   }
   invisible(NULL)
+}
+
+# One of study.yml's ai: keys set (the others kept): tfl_ai_prepare(language =)
+# writes the chat's language there
+.ai_study_yml_set <- function(study_dir, key, value) {
+  f <- file.path(study_dir, "study.yml")
+  y <- if (file.exists(f)) yaml::read_yaml(f) else list()
+  if (!is.list(y)) y <- list()
+  if (!is.list(y$ai)) y$ai <- list()
+  if (identical(y$ai[[key]], value)) return(invisible(f))
+  y$ai[[key]] <- value
+  .ai_write_text(sub("
+$", "", yaml::as.yaml(y, indent.mapping.sequence = TRUE, handlers = .yaml_out_handlers())), f)
+  invisible(f)
 }

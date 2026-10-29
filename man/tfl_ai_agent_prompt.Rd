@@ -10,24 +10,23 @@ tfl_ai_agent_prompt(study_dir, requests = NULL, n = 10L)
 \item{study_dir}{The study folder.}
 
 \item{requests}{The requests to ask for, by name; \code{NULL} (default): the
-next \code{n} without an answer.}
+next \code{n} without a draft.}
 
 \item{n}{How many requests, when \code{requests} is \code{NULL}.}
 }
 \value{
-The message, a string; \code{NA} when every request has an answer.
+The message, a string; \code{NA} when every request has its drafts.
 Its \code{requests} attribute names the requests it asks for.
 }
 \description{
-A study prepared for a coding agent (\code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}}\code{(mode = "agent")})
-asks it for a few requests at a time: the first message,
-\code{ai/agent_prompt.md}, names the first two, and the agent stops when they
-are answered.  Once the person has checked those, this gives the message
-that asks for the next ones -- by default the first \code{n} (10) requests, in
-\code{ai/requests/index.md}'s order, that have no answer in \verb{ai/answers/} yet
--- to paste into the agent's chat.
-What the agent does with them (answer only, or also run \code{run.R}) is what
-the study's \code{AGENTS.md} says (\code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}}'s \code{agent_run}).
+A study prepared for a coding agent (\code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}}) asks it for a
+few requests at a time: the first message, \code{ai/agent_prompt.md}, names
+the first two, and the agent stops when their drafts are written.  Once
+the person has checked those, this gives the message that asks for the
+next ones -- by default the first \code{n} (10) requests, in
+\code{ai/requests/index.md}'s order, that have no draft yet
+(\verb{ai/spec/outputs/<id>.yml} for every report of the request) -- to
+paste into the agent's chat.
 }
 \examples{
 \donttest{
@@ -41,7 +40,7 @@ if (requireNamespace("haven", quietly = TRUE)) {
     for (v in names(df)) if (is.factor(df[[v]])) df[[v]] <- as.character(df[[v]])
     haven::write_xpt(df, file.path(d, "adam", paste0(x, ".xpt")))
   }
-  invisible(tfl_ai_prepare(d, file.path(ex, "onco_toc_shell.xlsx"), mode = "agent",
+  invisible(tfl_ai_prepare(d, file.path(ex, "onco_toc_shell.xlsx"),
                            quiet = TRUE, overwrite = TRUE))
   cat(tfl_ai_agent_prompt(d))
 }

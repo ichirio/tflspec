@@ -1,11 +1,15 @@
-# Drafting tables' code spec with an AI chat
+# Drafting tables' code spec with a coding agent
 
 ## 1. What it does
 
-From a study's **TOC/SHELL workbook** and its **ADaM (XPT)**, a chat AI
-writes each table's **code spec** (`spec/outputs/<id>.yml`). tflspec checks
-it and makes the **RTF**. Everything runs in R on your PC; tflspec sends
-nothing — you paste a request into the chat and save the answer.
+From a study's **TOC/SHELL workbook** and its **ADaM (XPT)**, a coding agent
+(GitHub Copilot's agent in VS Code, and the like) drafts each table's
+**code spec** (`ai/spec/outputs/<id>.yml`): it **asks you in its chat**
+what defines a report and is not settled, keeps your answers as the
+study's decisions, and writes each report's skeleton -- nothing of the
+look. tflspec checks the drafts and makes the **RTF**; you finish them in
+tflplanner's builder and adopt them. Everything runs in R on your PC;
+tflspec sends nothing.
 
 Japanese: `tflspec-ai-table-guide-ja.md` in the same folder
 (`system.file("ai", package = "tflspec")`).
@@ -16,9 +20,11 @@ Japanese: `tflspec-ai-table-guide-ja.md` in the same folder
 mystudy/
   TOC_SHELL.xlsx        your TOC and shells (one workbook)
   adam/                 adsl.xpt, adae.xpt, adlb.xpt ...
+  AGENTS.md             written by tflspec: the agent's instructions (step 3)
   ai/requests/          written by tflspec: one file a request (step 3)
-  ai/answers/           you save the AI's answers here (step 5)
-  ai/repairs/           written by tflspec: what to send back (step 6)
+  ai/decisions.md       your answers from the chat, one line each (step 5)
+  ai/spec/outputs/      the agent's drafts, one file a report (step 5)
+  ai/repairs/           written by tflspec: what to paste back (step 6)
 ```
 
 Install once (a new R has no `remotes`; `broom` is what cardx's confidence
@@ -33,47 +39,41 @@ remotes::install_github(c("ichirio/rtfreporter", "ichirio/tflspec"))
 
 ```r
 library(tflspec)
-setwd("mystudy")
-# writes study.yml, spec/data.yml, spec/defaults.yml
-tfl_ai_study_init(".", adam = "adam", study_id = "ABC-123")
-adam  <- tfl_ai_adam_summary("adam", file = "ai/adam_summary.md")
-shell <- tfl_ai_read_shell("TOC_SHELL.xlsx", file = "ai/toc_shell.md")
-
-r <- tfl_ai_write_requests(".", shell, adam, size = 3, language = "Japanese")
-r                                   # request, outputs, characters
+r <- tfl_ai_prepare("mystudy", "mystudy/TOC_SHELL.xlsx", adam = "adam",
+                    study_id = "ABC-123", language = "Japanese")
+r                                   # request, outputs, characters; the next steps
 ```
 
-This writes `ai/requests/<request>.md` (`demographics-1.md`, `ae-1.md` ...,
-one family each) and `ai/requests/index.md`. A figure of the TOC is a request of
-its own (`figure-1.md` ...): its shell, and a figure design to answer.
+One call does the steps: the study folder when there is none (`study.yml`,
+`spec/data.yml`, `spec/defaults.yml`; an existing `study.yml` is kept, so
+the call can be run again), the ADaM summary (`ai/adam_summary.md`: the
+variables, their labels and short value lists -- no records), the workbook
+read (`ai/toc_shell.md`), the requests (`ai/requests/<request>.md`, one a
+report by default: `T-14-1-1.md` ...; `size = 3` groups a family's reports,
+`demographics-1.md`, `ae-1.md` ...; `ai/requests/index.md` lists them), what
+every request would repeat written once (`ai/instructions-table.md`,
+`ai/instructions-figure.md`, `ai/templates.md`), and the agent's files:
+`AGENTS.md` and `.github/copilot-instructions.md` (the same text), `run.R`,
+`ai/questions.md`, `ai/decisions.md` and `ai/agent_prompt.md` (its first
+message). A figure of the TOC is a request of its own (`figure-1.md` ...):
+its shell, and a figure report to draft. The steps one at a time:
+`tfl_ai_study_init()`, `tfl_ai_adam_summary()`, `tfl_ai_read_shell()`,
+`tfl_ai_write_requests()`.
+
 The TOC and the shells in workbooks apart: `tfl_ai_prepare("mystudy",
 "TOC.xlsx", shells = "SHELLS.xlsx", ...)`; another workbook later (the
 listings, a book of PK figures): the same call with `add = TRUE` -- the
-requests and answers there are kept, the new requests added beside them.
-
-The same in one call (an existing `study.yml` is kept, so it can be run
-again; it prints what the workbook read found):
-
-```r
-r <- tfl_ai_prepare("mystudy", "mystudy/TOC_SHELL.xlsx", study_id = "ABC-123",
-                    size = 3, language = "Japanese")
-```
-
-When the workbook's text is not read right, **and only when the chat reads
-an attached Excel file** (a chat that takes pasted text only needs the
-default `"text"`): `workbook = "both"` (or `"attach"`) -- each request says where its
-reports' shells are in the workbook (sheet, cells, TOC row), and you attach
-`TOC_SHELL.xlsx` to each chat with the request; with `"both"` the text is
-there too, the attachment right where they differ.
+requests and drafts there are kept, the new requests added beside them.
 
 Check before the first request:
 
 | Look at | Why |
 |---|---|
-| `spec/data.yml` | the analysis sets (one per ADSL flag `SAFFL`, `FASFL` ...): the AI names them by id |
-| `shell$toc` | the reports found; a TOC sheet not found: `tfl_ai_read_shell(..., toc_sheet = "Index")` |
-| `shell$toc$shell` | `NA` = no shell sheet found: `tfl_ai_read_shell(..., sheets = c("DM shells", ...))` |
+| `spec/data.yml` | the analysis sets (one per ADSL flag `SAFFL`, `FASFL` ...): the agent names them by id |
+| `r$toc` | the reports found; a TOC sheet not found: `tfl_ai_prepare(..., toc_sheet = "Index")` |
+| `r$toc$shell` | `NA` = no shell sheet found: `tfl_ai_prepare(..., sheets = c("DM shells", ...))` |
 | `ai/adam_summary.md` | no records, but short value lists (up to 15): remove what your company does not allow |
+| `AGENTS.md` | what the agent may read and must ask; `study.yml`'s `ai:` keys change its rules (below) |
 
 **The sheets' report numbers.** Before the requests are written, check
 which numbers each shell sheet makes: `tfl_ai_prepare(..., dry_run =
@@ -92,174 +92,179 @@ a candidate of each. The correction is saved as
 `ai/sheet_numbers.csv` when the requests are written, and used by the
 next calls until `numbers` is given again.
 
-## 4. What to give the AI
+**The agent's rules** are `study.yml`'s `ai:` keys (the study standard's
+`spec/defaults.yml` may say them first; `study.yml` wins):
 
-| Give | Never |
+```yaml
+ai:
+  language: ja          # the chat's language ("en" by default)
+  ask_when: request     # the request's reports' questions together; "report": one by one
+  carry: [all, dataset, section]   # which decisions apply to a later report without asking
+  max_rounds: 3         # one item asked again at most this many times, then marked to confirm
+  footnotes_at: footer  # where the shell's footnotes go: "footer", or "table"
+```
+
+## 4. What the agent reads
+
+| Reads | Never |
 |---|---|
-| one `ai/requests/<request>.md` — the whole file, pasted as one message in a **new chat** | the **XPT files**, or any data with records: subject ids, dates, results |
+| the request it is given and the files it names: `ai/instructions-*.md`, `ai/templates.md`, `ai/adam_summary.md`, `spec/data.yml`, `spec/defaults.yml`, `ai/decisions.md` | the **XPT files**, or any data with records: subject ids, dates, results; other folders, other files |
 
-Each request already holds the instructions, its reports' TOC rows and
-shells, the ADaM summary, `spec/data.yml` and `spec/defaults.yml`.
+Use the AI your company approves for the study's data: the agent is sent
+the ADaM's summary, not the data. `AGENTS.md` says what it may open; with
+`tfl_ai_prepare(..., agent_reads = c("workbook", "adam"))` it may also
+read the workbook (the place a request names, when a shell's text looks
+cut) and the ADaM (a variable's values, never a data file in the editor),
+with whatever tool the PC has; `docs = ` gives it documents (a SAP, a data
+guide), copied into `ai/docs/`. It installs nothing and runs nothing.
 
-**First, one request as it is.** A request is about 23,000 characters of
-instructions plus its own reports (about 33,000 with one report).
+Each request is a few thousand characters: the agent's steps, the
+decisions that apply to its reports, its reports' TOC rows and shells, and
+the names of the files to read. A request longer than `max_chars` is split.
 
-1. Paste one request, as it is, into a new chat.
-2. **If the chat will not take it** (the message is too long, or is cut),
-   write the requests again with the instructions apart:
+## 5. The agent's questions, your decisions, its drafts
 
-   ```r
-   r <- tfl_ai_write_requests(".", shell, adam, size = 3, instructions = "once",
-                              overwrite = TRUE)
-   ```
+1. Open `mystudy` in VS Code and give the agent's chat the text of
+   `ai/agent_prompt.md`: the first one or two requests.
+2. The agent **asks you**, numbered, what defines each report and is not
+   settled -- the analysis set, a parameter, the treatment variable, the
+   denominator of a percent, what is counted, missing values, a subgroup's
+   condition -- each question saying the report's id and title, the
+   choices and its default. **Answer in the chat**; "default" takes its
+   default. It asks again when an answer does not settle the item, three
+   times at most; then it takes the likeliest choice and marks it *to
+   confirm*.
+3. It records your answers in `ai/decisions.md`, one line a decision
+   (`- D1 [all] treatment_var.SAF: TRT01A (chat, T-14-3-1)`), and applies
+   them to the reports after -- without asking when it is sure the
+   decision holds (its scope is `all`, or the report's dataset or TOC
+   section, as `carry` says), asking "the same here?" when it is not. You
+   can write lines of your own there before it starts (a line without a
+   scope is `all`).
+4. It writes each report's **skeleton** as `ai/spec/outputs/<id>.yml`:
+   `id`, `kind`, `label`, `population`, `data`, `ard` (the analysis data,
+   the analyses), the content (a template where one fits, else
+   `table_plan` and `plan_cells`), the digits when the shell shows them,
+   `page: titles` and the shell's footnotes (`footnotes_at`) -- and under
+   `ai:`, its `assumptions` (each `from: D<n>`) and what is to `confirm`.
+   No column widths, header rows, pages, borders or fonts: the study's
+   defaults and your builder do those.
+5. It stops and tells you the files written, the decisions added and what
+   is to confirm. Check them (step 6), then ask for the next requests:
+   `tfl_ai_agent_prompt("mystudy")` gives the message (the next ten
+   without a draft).
 
-   Then for each request: a **new chat**, paste `ai/requests/00-instructions.md`
-   first, then the request (about 10,000 characters).
-3. Still too long: a smaller `size`, or `max_chars = 20000` (a request over
-   it is split).
+A question about the work rather than a report (a file missing, a request
+unclear) goes to `ai/questions.md` too: `tfl_ai_questions()` reads it,
+`tfl_ai_answer_questions()` writes your answers.
 
-## 5. Where to put the AI's answer
-
-Copy the **whole answer** (one `yaml` block) into
-`ai/answers/<the same name>.md`: the answer to `ae-1.md` is
-`ai/answers/ae-1.md` (the folder is made by `tfl_ai_write_requests()`).
-
-Save it as **UTF-8** (with or without BOM; Windows line ends are fine). In
-Notepad: *File > Save As*, *Encoding: UTF-8*, *Save as type: All files*
-(otherwise Notepad adds `.txt`; `ae-1.md.txt` is read too). A file saved
-as ANSI / Shift-JIS is reported as an `error` saying so.
-
-## 6. Check it, write the YAML, make the RTF
+## 6. Check the drafts, write the YAML, make the RTF
 
 ```r
-res <- tfl_ai_collect_answers(".")   # parse, check, write spec/outputs/<id>.yml
+res <- tfl_ai_collect_answers(".")   # read the drafts, check, write them anew
 res                                  # each request: its status, reports and next step
 ```
 
-The print gives, for each request, its status (`ok`, `warning`, `error`,
-`no answer`), its reports and **the next step**, then the first problem of
-each report. An answer with errors writes no file; its repair prompt is
-`ai/repairs/<request>.md`. Paste it into **the same chat**, save the new
-answer over `ai/answers/<request>.md`, and run `tfl_ai_collect_answers(".")`
-again (2-3 rounds are usual).
+tflplanner's "Check" does the same. Each request's drafts are read as its
+answer and checked against the request -- the schema, the analyses, every
+dataset and variable against the ADaM summary, the study's files -- and
+written anew: the column widths filled, the assumptions numbered
+(`spec/_assumptions.yml`), the `ai:` block kept. The print gives, for each
+request, its status (`ok`, `warning`, `error`, `no answer`), its reports
+and **the next step**, then the first problem of each report. A draft with
+errors is left as it is; its repair prompt is `ai/repairs/<request>.md`.
+Paste it into **the agent's chat**: it fixes the draft; then run
+`tfl_ai_collect_answers(".")` again (2-3 rounds are usual). A draft whose
+YAML cannot be read is refused with why: tell the agent, it fixes the form.
 
-Each answer starts with the list of the reports it makes (`reports:`: id,
-title, how its TOC row is split, the TOC row). The print counts them, and
-`ai/manifest.csv` lists every one with its status: check the count against
-the TOC (one TOC row can be several reports), and look at a report "listed
-but not answered" or "answered but not listed".
+`tfl_ai_confirm(".")` lists what the agent marked to confirm (the report,
+the item, why): decide those in the builder. They do not stop a draft from
+being adopted; `tfl_check_spec()` shows them as `check` rows until they are
+decided.
+
+The print counts the reports, and `ai/manifest.csv` lists every one with
+its status: check the count against the TOC (one TOC row can be several
+reports).
 
 Then the RTF of every report written:
 
 ```r
-tfl_ai_run(".")   # collect again, then each report's ARD and RTF: ai/output/tfl/<id>.rtf
+tfl_ai_run(".")   # check again, then each report's ARD and RTF: ai/output/tfl/<id>.rtf
 ```
 
 It writes `ai/status.md` (each report: its status, its RTF or why none, the
-next step) and gathers the answers' questions into `ai/questions.md`. One
-report's failure does not stop the others.
+next step). One report's failure does not stop the others. `Rscript run.R`
+does the same from the command line.
 
 | Function | Does |
 |---|---|
-| `tfl_ai_write_requests()` | one file a request (`size`, `max_chars`, `instructions`) |
-| `tfl_ai_collect_answers()` | reads `ai/answers/`, checks each against its request, writes the report files |
-| `tfl_ai_run()` | collects, then each report's ARD and RTF; `ai/status.md`, `ai/questions.md` |
-| `tfl_ai_compare()` | one row a report: answered with a template or a code SPEC, its values, check, repairs (`ai/compare.csv`) |
+| `tfl_ai_prepare()` | the study folder, the ADaM summary, the workbook read, the requests, the agent's files |
+| `tfl_ai_write_requests()` | one file a request (`size`, `max_chars`) |
+| `tfl_ai_agent_prompt()` | the message that asks the agent for the next requests |
+| `tfl_ai_collect_answers()` | reads `ai/spec/outputs/`, checks each request's drafts, writes them anew |
+| `tfl_ai_confirm()` | what the agent marked to confirm |
+| `tfl_ai_run()` | checks, then each report's ARD and RTF; `ai/status.md` |
+| `tfl_ai_adopt()` | a checked draft into the study's `spec/outputs/` |
+| `tfl_ai_compare()` | one row a report: drafted with a template or a code SPEC, its values, check, repairs (`ai/compare.csv`) |
 | `tfl_build_ard()` | the ARD; one report at a time to find an error: `output_id = "T-14-1-1"` |
 | `tfl_content_run()`, `tfl_report()` | the table and its page → RTF |
 
-**Read `spec/_assumptions.yml`**: the AI's guesses (arm variable, flag,
-visit, denominator). `tfl_content_code(o)` and `tfl_ard_code(st, output_id = id)`
-show the code.
+**Read `spec/_assumptions.yml`**: what the agent took from a decision
+(`from: D<n>`) or, after three rounds, on its own. `tfl_content_code(o)`
+and `tfl_ard_code(st, output_id = id)` show the code.
+
+A draft you have checked is adopted with `tfl_ai_adopt()`: copied to the
+study's `spec/outputs/`, where the report list shows it (the agent never
+writes over what was adopted). The folder opens in tflplanner as a study
+(its `spec/toc.yml` lists the reports). A study of the form before (its
+drafts in `spec/outputs/`) moves with `tfl_ai_migrate()`.
 
 ## A whole study (up to ~200 tables)
 
-1. **Start small**: `size = 2` or `3`. Do one request of each family
-   (`demographics-1`, `ae-1`, `efficacy-1` ...) and check its RTF against the
-   shell.
+1. **Start small**: one request of each family (`T-14-1-1`, `T-14-3-1`
+   ...), and check its RTF against the shell.
 2. **Fix one table of each family by hand**, then write the requests again
-   with them as examples, named by family — each request gets its own
-   family's, and the AI follows it:
-   `tfl_ai_write_requests(..., examples = c(demographics = "spec/outputs/T-14-1-1.yml", ae = "spec/outputs/T-14-3-1.yml"), overwrite = TRUE)`.
-3. **Raise `size`** (5 to 8) while the answers stay right.
-4. **How many requests**: the reports ÷ `size`, rounded up within each
-   family — 200 tables at `size = 5` is about 40-45 requests, at `size = 8`
-   about 25-30. `nrow(r$requests)` says it.
-5. `tfl_ai_collect_answers(".")` any time: it reads every answer there and
-   lists what is left (`no answer`, `error`).
+   with them as examples, named by family -- each request gets its own
+   family's, and the agent follows it:
+   `tfl_ai_prepare(..., examples = c(demographics = "spec/outputs/T-14-1-1.yml", ae = "spec/outputs/T-14-3-1.yml"), overwrite = TRUE)`.
+3. **Ask for more at a time** (`tfl_ai_agent_prompt(n = 10)`) while the
+   drafts stay right; `size = 3` to `5` groups a family's reports in one
+   request, their questions asked together.
+4. **Your decisions carry**: a decision of scope `all` or a dataset holds
+   for every report after; the agent asks once a family, not once a report.
+5. `tfl_ai_collect_answers(".")` any time: it reads every draft there and
+   lists what is left (`no answer`, `error`, to confirm).
 
-## With a coding agent (GitHub Copilot in VS Code)
+## The second round: corrections
 
-An agent writes the answers to the requests it is given and stops, and
-gathers what it cannot settle into one file for you.
-
-1. Use the AI your company approves for the study's data. A chat
-   (`mode = "chat"`) is sent the ADaM's summary only; so is the agent: it
-   reads the requests and the files they name, and nothing else. (With
-   `agent_run = TRUE` it may read the ADaM with R to settle a question the
-   summary does not, never opening a data file in the editor.)
-2. `tfl_ai_prepare("mystudy", "mystudy/TOC_SHELL.xlsx", adam = "C:/data/ABC-123/adam", study_id = "ABC-123", mode = "agent")`.
-   Besides the requests, the folder gets `AGENTS.md` and
-   `.github/copilot-instructions.md` (the agent's instructions), `run.R`
-   (`tfl_ai_run()`), `ai/questions.md` and `ai/decisions.md`.
-3. Open `mystudy` in VS Code, and give the agent's chat the text of
-   `ai/agent_prompt.md`: the first one or two requests. It saves an answer
-   for each and stops; it runs nothing and installs nothing. Check the
-   answers -- tflplanner's "Check all answers" (`tfl_ai_collect_answers()`)
-   writes the YAML drafts -- then ask for the next requests ("Do
-   ai/requests/<request>.md and ..."). With
-   `tfl_ai_prepare(agent_run = TRUE)`, the agent also runs `run.R` after
-   each answer, reads `ai/status.md` and repairs.
-4. When it is done, answer `ai/questions.md` (one question asked by several
-   reports is there once, with the reports). Correct the list of reports
-   when it needs it (`tfl_ai_outputs()`, `tfl_ai_expected_write()`:
-   `ai/expected_outputs.csv`), say which of the AI's assumptions are
-   right or wrong and what is right instead (`tfl_ai_assumptions()`,
-   `tfl_ai_assumption_answers_write()`: `ai/assumption_answers.csv`; for
-   one report, or every report of its kind), gather the answers and corrections with
-   `tfl_ai_corrections()` (`ai/corrections.md`), and tell the agent *"the
-   answers and corrections are written"*: it moves each answer to
-   `ai/decisions.md`, does each correction, and redoes the reports they
-   touch.
-
-In a new study the AI's report files are drafts in `ai/spec/outputs/`,
-their RTF files in `ai/output/tfl/`. A draft you have checked is adopted
-with `tfl_ai_adopt()`: copied to the study's `spec/outputs/`, where the
-report list shows it (the AI never writes over what was adopted). The
-folder opens in tflplanner as a study (its `spec/toc.yml` lists the
-reports). A study of the form before (its drafts in `spec/outputs/`) moves
-with `tfl_ai_migrate()`.
-
-What every request would repeat is written once in `ai/` for the agent:
-`ai/instructions-table.md` and `ai/instructions-figure.md` (the
-instructions and the schema), `ai/templates.md` (the templates), next to
-`ai/adam_summary.md`. Each request names them, so a request is a few
-thousand characters.
+When the drafts are checked, correct the list of reports when it needs it
+(`tfl_ai_outputs()`, `tfl_ai_expected_write()`: `ai/expected_outputs.csv`),
+say which of the agent's assumptions are right or wrong and what is right
+instead (`tfl_ai_assumptions()`, `tfl_ai_assumption_answers_write()`:
+`ai/assumption_answers.csv`; for one report, or every report of its
+kind), gather them with `tfl_ai_corrections()` (`ai/corrections.md`), and
+tell the agent *"the corrections are written"*: it adds each answer to
+`ai/decisions.md`, does each correction, and redoes the drafts they touch.
 
 ## Templates or the code SPEC (`templates`)
 
-`tfl_ai_prepare(templates = TRUE)` (the default) asks the AI to answer a
-report with one of the study's templates where one fits
-(`template: {name, args}`, only the arguments that differ), else as a code
-SPEC. The templates are listed from the registry -- tflspec's, the
-company's, the study's variants -- when the requests are written: in each
-chat request, or in `ai/templates.md` for an agent, each request naming
-the templates likely for its reports. A chat request over `max_chars`
-lists the templates' arguments by name only. `templates = FALSE` asks for
-the code SPEC only (the chat requests as before templates).
-
-To set the two side by side, prepare the same TOC in two folders, one with
-each setting, have each answered, then run `tfl_ai_compare(".")` in each:
-one row a report -- what it was answered with (`template:<name>` or
-`code`), how many values its report file holds, its check, its repairs --
-written to `ai/compare.csv`.
+By default (`templates = TRUE`) each request asks the agent to draft a
+report with one of the study's templates where one fits (`template: {name,
+args}`, only the arguments that differ from the default, and the report's
+own content items for what the template does not do), else as a code SPEC.
+`ai/templates.md` lists the templates registered when the requests were
+written -- tflspec's, the company's, the study's variants -- with their
+arguments, and each request names the ones likely for its reports.
+`templates = FALSE`: the code SPEC only. The setting is each request's
+first line (`<!-- templates: TRUE -->`) and `ai/status.md`'s.
+`tfl_ai_compare()` says, a row a report, which was used.
 
 ## Try it on the sample (10 minutes)
 
 The files that come with tflspec: a TOC/SHELL workbook of four tables and a
-Kaplan-Meier figure, the sample ADaM as XPT, and a stored answer for each of
-its five requests (`figure-1` is the figure's). The installation is ready
-when the last line prints `ok` for all five reports.
+Kaplan-Meier figure, the sample ADaM as XPT, and a stored draft for each of
+its five reports (what an agent wrote). The installation is ready when the
+last line prints `ok` for all five reports.
 
 ```r
 library(tflspec)
@@ -270,31 +275,29 @@ for (x in c("adsl", "adae", "adrs", "adlb", "adtte")) {
   for (v in names(df)) if (is.factor(df[[v]])) df[[v]] <- as.character(df[[v]])
   haven::write_xpt(df, file.path(d, "adam", paste0(x, ".xpt")))
 }
-tfl_ai_study_init(d, adam = "adam", study_id = "XYZ-ONC-01", overwrite = TRUE)
-ex    <- system.file("ai", "example", package = "tflspec")
-shell <- tfl_ai_read_shell(file.path(ex, "onco_toc_shell.xlsx"))
-r     <- tfl_ai_write_requests(d, shell, tfl_ai_adam_summary(file.path(d, "adam")),
-                               overwrite = TRUE)
-# the stored answers stand in for the chat's: one a request
-invisible(file.copy(list.files(file.path(ex, "answers"), full.names = TRUE),
-                    file.path(d, "ai", "answers"), overwrite = TRUE))
-tfl_ai_collect_answers(d)            # 5 reports in 4 requests (a shell sheet each, the figure its own): ok 5 ...
+ex <- system.file("ai", "example", package = "tflspec")
+r  <- tfl_ai_prepare(d, file.path(ex, "onco_toc_shell.xlsx"), adam = "adam",
+                     study_id = "XYZ-ONC-01", size = 3, overwrite = TRUE)
+# the stored drafts stand in for the agent's: one a report
+invisible(file.copy(list.files(file.path(ex, "drafts"), full.names = TRUE),
+                    file.path(d, "ai", "spec", "outputs"), overwrite = TRUE))
+tfl_ai_collect_answers(d)            # 5 reports in 5 requests (the figure its own): ok 5 ...
 ```
 
-Keep the `ai/` folder (requests, answers) — share it only within your company.
+Keep the `ai/` folder (requests, decisions, drafts) -- share it only within
+your company.
 
 ## When it does not work
 
 | What you see | Do |
 |---|---|
-| `shell$toc` is empty: the TOC sheet was not found | `tfl_ai_read_shell("TOC_SHELL.xlsx", toc_sheet = "<the TOC sheet's name>")` |
-| `shell$toc$shell` is `NA`: no shell found by the report's number | add that sheet: `tfl_ai_read_shell("TOC_SHELL.xlsx", sheets = c("<shell sheet>", ...))` |
-| the chat says the message is too long | `tfl_ai_write_requests(..., instructions = "once")`, or a smaller `size`, or `max_chars = 20000` |
-| `error`, "no answer block found", in `tfl_ai_collect_answers()` | the answer was not copied whole: copy it again, from the first ```` ``` ```` to the last |
-| `error`, "is not UTF-8" | save the answer again as UTF-8 (Notepad: *Save As*, *Encoding: UTF-8*) |
-| "Not read (no request of that name)" | rename the answer to the request's name (`ai/requests/index.md`): `ae-1.md` |
-| The shells as text look wrong (cells missed or out of order) | when the chat reads an attached Excel file only, attach the workbook: `tfl_ai_prepare(..., workbook = "both")` or `tfl_ai_write_requests(..., workbook = "both")`, and attach `TOC_SHELL.xlsx` to each chat |
-| `print(shell)` ends with "Next: no TOC found" or "no shell found" | pass what it names: `toc_sheet = "<sheet>"` or `sheets = c(...)` |
-| the same error after 2-3 repairs | correct `spec/outputs/<id>.yml` by hand, then run step 6 |
+| `r$toc` is empty: the TOC sheet was not found | `tfl_ai_prepare(..., toc_sheet = "<the TOC sheet's name>")` |
+| `r$toc$shell` is `NA`: no shell found by the report's number | add that sheet: `tfl_ai_prepare(..., sheets = c("<shell sheet>", ...))` |
+| the agent writes a draft without asking, or asks what a decision settles | its `AGENTS.md` was changed or not read: `tfl_ai_prepare(..., overwrite = TRUE)` writes it again; open the study folder itself in VS Code |
+| `error`, "the YAML cannot be read", in `tfl_ai_collect_answers()` | tell the agent: it fixes the file's form (`ai/spec/outputs/<id>.yml`) |
+| "Not read (no request asks for them)" | a draft named after no report of the TOC: the ids are in `ai/requests/index.md` |
+| The shells as text look wrong (cells missed or out of order) | let the agent read the workbook: `tfl_ai_prepare(..., agent_reads = "workbook")` -- each request then says where its shells are in the file |
+| `print(r)` ends with "Next: no TOC found" or "no shell found" | pass what it names: `toc_sheet = "<sheet>"` or `sheets = c(...)` |
+| the same error after 2-3 repairs | correct `ai/spec/outputs/<id>.yml` by hand (or in the builder), then run step 6 |
 | `tfl_build_ard()` stops: `The package "broom" (>= 1.0.8) is required.` | `install.packages("broom")` (another package named so: install it too) |
 | `tfl_build_ard()` stops | find the report: `tfl_build_ard(st, dir = ".", output_id = "T-14-1-1", save = FALSE)` |

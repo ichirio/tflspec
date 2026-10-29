@@ -41,5 +41,5 @@ the assumptions asking it, \code{\link[=tfl_ai_assumptions]{tfl_ai_assumptions()
 its assumptions too (\code{\link[=tfl_ai_assumption_answers_write]{tfl_ai_assumption_answers_write()}}).
 }
 \seealso{
-\code{\link[=tfl_ai_run]{tfl_ai_run()}}, \code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}} (\code{mode = "agent"}).
+\code{\link[=tfl_ai_run]{tfl_ai_run()}}, \code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}}.
 }

@@ -1147,13 +1147,15 @@ print.tfl_ai_shell <- function(x, ...) {
 
 # ---- batches -------------------------------------------------------------------
 
-# The families a table's title says, in the order they are tried.
+# The families a table's title says, in the order they are tried
+# (demographics before disposition: a shell's title lines name the
+# analysis set, which is disposition's word too).
 .ai_families <- c(
+  demographics = paste0("(?i)demograph|baseline characteristic|characteristics|medical history|",
+                        "prior|concomitant|\u80cc\u666f|\u4f75\u7528"),
   disposition = paste0("(?i)dispos|discontinu|withdr[ae]w|enrol|screen|analysis sets?\\b|",
                        "populations?\\b|protocol deviation|\u4e2d\u6b62|\u5185\u8a33|",
                        "\u89e3\u6790\u5bfe\u8c61"),
-  demographics = paste0("(?i)demograph|baseline characteristic|characteristics|medical history|",
-                        "prior|concomitant|\u80cc\u666f|\u4f75\u7528"),
   exposure = "(?i)exposure|dose|dosing|treatment duration|compliance|\u66dd\u9732|\u6295\u4e0e",
   ae = paste0("(?i)adverse|teae|\\bt?ae\\b|\\bsaes?\\b|death|\u6709\u5bb3\u4e8b\u8c61|",
               "\u526f\u4f5c\u7528|\u6b7b\u4ea1"),

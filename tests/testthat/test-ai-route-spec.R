@@ -35,15 +35,15 @@ test_that("decisions: written as structured lines, read back; the older lines an
   r2 <- tfl_ai_decisions_read(d)
   expect_identical(utils::tail(r2$id, 1L), "D3")
   # what applies to a report, under the carry settings
-  a <- tflspec:::.ai_decisions_for(d, "T-14-3-2", datasets = "ADAE", section = NA_character_,
+  a <- tflspec:::.ai_decisions_for(d, "T-14-3-5", datasets = "ADAE", section = NA_character_,
                                    settings = tflspec:::.ai_spec_defaults)
   expect_identical(a$how[a$id %in% c("D1", "D2")], c("apply", "apply"))
   expect_identical(a$how[a$id %in% "D3"], "ask")
   expect_identical(a$how[a$scope == "T-14-1-1, T-14-1-2"], "ask")
   narrow <- tflspec:::.ai_spec_defaults; narrow$carry <- "all"
-  b <- tflspec:::.ai_decisions_for(d, "T-14-3-2", datasets = "ADAE", settings = narrow)
+  b <- tflspec:::.ai_decisions_for(d, "T-14-3-5", datasets = "ADAE", settings = narrow)
   expect_identical(b$how[b$id %in% "D2"], "ask")
-  blk <- tflspec:::.ai_decisions_block(d, "T-14-3-2", datasets = "ADAE")
+  blk <- tflspec:::.ai_decisions_block(d, "T-14-3-5", datasets = "ADAE")
   expect_true(any(grepl("^## Decisions that apply", blk)))
   expect_true(any(grepl("D1 \\[all\\]", blk)))
 })
@@ -73,14 +73,13 @@ test_that("the settings: the package's, under study.yml's ai: keys; the language
   expect_identical(tflspec:::.ai_language_name("Deutsch"), "Deutsch")
 })
 
-test_that("prepare(route = 'spec'): AGENTS.md asks and writes the drafts; the requests carry the decisions; the check reads the drafts", {
+test_that("prepare(): AGENTS.md asks and writes the drafts; the requests carry the decisions; the check reads the drafts", {
   skip_on_cran()
   skip_if_not_installed("haven")
   skip_if_not_installed("cards")
   root <- withr::local_tempdir()
   d <- rs_study(root)
-  tfl_ai_prepare(unit = "toc", d, rs_book(), adam = "adam", quiet = TRUE, mode = "agent",
-                 size = 3L, route = "spec")
+  tfl_ai_prepare(unit = "toc", d, rs_book(), adam = "adam", quiet = TRUE, size = 3L)
   ag <- readLines(file.path(d, "AGENTS.md"), warn = FALSE, encoding = "UTF-8")
   expect_true(any(grepl("<!-- tflspec route: spec -->", ag, fixed = TRUE)))
   expect_true(any(grepl("ai/spec/outputs/<id>.yml", ag, fixed = TRUE)))
@@ -88,7 +87,7 @@ test_that("prepare(route = 'spec'): AGENTS.md asks and writes the drafts; the re
   expect_true(any(grepl("page: footer", ag, fixed = TRUE)))
   expect_true(any(grepl("in English", ag, fixed = TRUE)))
   expect_false(any(grepl("{{", ag, fixed = TRUE)))
-  expect_identical(tflspec:::.ai_route(d), "spec")
+  expect_false(dir.exists(file.path(d, "ai", "answers")))
   dec <- readLines(file.path(d, "ai", "decisions.md"), warn = FALSE, encoding = "UTF-8")
   expect_true(any(grepl("D<n> \\[<scope>\\]", dec)))
   # the shared instructions say what a draft holds, once
@@ -103,10 +102,10 @@ test_that("prepare(route = 'spec'): AGENTS.md asks and writes the drafts; the re
   req <- idx$request[idx$outputs == "T-14-3-1" | grepl("T-14-3-1", idx$outputs)][1L]
   expect_false(is.na(req))
   rq <- readLines(file.path(d, "ai", "requests", paste0(req, ".md")), warn = FALSE, encoding = "UTF-8")
-  expect_true(any(grepl("agent mode, route spec", rq, fixed = TRUE)))
+  expect_true(any(grepl("<!-- tflspec: agent -->", rq, fixed = TRUE)))
+  expect_false(any(grepl("ai/answers", rq, fixed = TRUE)))
   tfl_ai_decisions_write(d, data.frame(scope = "all", topic = "treatment_var.SAF", decision = "TRT01A", source = "person"))
-  tfl_ai_prepare(unit = "toc", d, rs_book(), adam = "adam", quiet = TRUE, mode = "agent",
-                 size = 3L, route = "spec")
+  tfl_ai_prepare(unit = "toc", d, rs_book(), adam = "adam", quiet = TRUE, size = 3L)
   rq <- readLines(file.path(d, "ai", "requests", paste0(req, ".md")), warn = FALSE, encoding = "UTF-8")
   expect_true(any(grepl("^## Decisions that apply", rq)))
   expect_true(any(grepl("D1 [all] treatment_var.SAF: TRT01A", rq, fixed = TRUE)))
@@ -127,8 +126,10 @@ test_that("prepare(route = 'spec'): AGENTS.md asks and writes the drafts; the re
   r <- suppressMessages(tfl_ai_collect_answers(d))
   st <- r$reports[r$reports$output_id == "T-14-3-1", ]
   expect_true(nrow(st) == 1L && st$status %in% c("ok", "warning"), info = st$problems_text)
-  # the answer made from the draft, the draft written again with its ai: block
-  expect_true(file.exists(file.path(d, "ai", "answers", paste0(req, ".md"))))
+  expect_identical(r$next_kind[[req]], "done")
+  # no answers folder: the drafts are read in a folder of the check's own;
+  # the draft written again with its ai: block
+  expect_false(dir.exists(file.path(d, "ai", "answers")))
   back <- tfl_read_output(file.path(area, "T-14-3-1.yml"))
   expect_identical(back$ai$confirm[[1L]]$item, "plan_cells")
   expect_identical(back$ai$assumptions[[1L]]$from, "D1")
@@ -145,4 +146,21 @@ test_that("prepare(route = 'spec'): AGENTS.md asks and writes the drafts; the re
   p <- tfl_check_spec(d, "T-14-3-1")
   expect_true(any(p$level == "check" & grepl("to confirm", p$message)))
   expect_identical(nrow(tfl_ai_confirm(d, "adopted")), 1L)
+  # a draft YAML cannot read: refused with why, its request's step says the file
+  writeLines(c("id: T-14-3-5", "kind: table", "label: [unclosed"), file.path(area, "T-14-3-5.yml"))
+  r2 <- suppressMessages(tfl_ai_collect_answers(d))
+  req2 <- idx$request[grepl("T-14-3-5", idx$outputs)][1L]
+  st2 <- r2$reports[r2$reports$output_id == "T-14-3-5", ]
+  expect_identical(st2$status, "error")
+  expect_match(st2$first, "T-14-3-5.yml: the YAML cannot be read", fixed = TRUE)
+  expect_identical(r2$next_kind[[req2]], "fix_answer")
+  expect_match(r2$next_args[[req2]]$drafts, "ai/spec/outputs/T-14-3-5.yml", fixed = TRUE)
+  # a draft no request asks for: stray
+  tfl_write_output(tfl_output("T-99-9-9", kind = "table", label = "x"), file.path(area, "T-99-9-9.yml"))
+  r3 <- suppressMessages(tfl_ai_collect_answers(d))
+  expect_identical(r3$stray, "ai/spec/outputs/T-99-9-9.yml")
+  # the agent's next message: the requests whose drafts are not written yet
+  pr2 <- tfl_ai_agent_prompt(d, n = 2L)
+  expect_false(req %in% attr(pr2, "requests"))
+  expect_identical(length(attr(pr2, "requests")), 2L)
 })

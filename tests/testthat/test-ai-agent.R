@@ -1,4 +1,4 @@
-# tfl_ai_prepare(unit = "toc", mode = "agent", size = 3L) and tfl_ai_run(): the study folder as a
+# tfl_ai_prepare(unit = "toc", size = 3L) and tfl_ai_run(): the study folder as a
 # coding agent's work -- every request without a stop, the questions
 # gathered into ai/questions.md, a second round from the answers (#374)
 
@@ -14,97 +14,72 @@ agent_study <- function(root, adam_inside = FALSE) {
 }
 ex_book <- function() system.file("ai", "example", "onco_toc_shell.xlsx", package = "tflspec")
 
-test_that("mode = \"agent\": the instructions, run.R, questions, decisions; toc.yml; the paths", {
+test_that("the agent's files: AGENTS.md, run.R, decisions; toc.yml; the paths; the first message", {
   skip_on_cran()
   skip_if_not_installed("haven")
   root <- withr::local_tempdir()
   d <- file.path(root, "study")
   ad <- agent_study(root)
-  r <- tfl_ai_prepare(unit = "toc", d, ex_book(), adam = ad, quiet = TRUE, mode = "agent")
-  expect_identical(r$mode, "agent")
-  # an agent's default: one report a request, named after the report
+  r <- tfl_ai_prepare(unit = "toc", d, ex_book(), adam = ad, quiet = TRUE)
+  expect_false("mode" %in% names(r))
+  # the default: one report a request, named after the report
   expect_identical(r$requests$request, c("T-14-1-1", "T-14-3-1", "T-14-3-5", "T-14-2-1", "F-14-2-2"))
-  have <- c("AGENTS.md", ".github/copilot-instructions.md", "run.R", "ai/questions.md",
+  have <- c("AGENTS.md", ".github/copilot-instructions.md", "run.R",
             "ai/decisions.md", "spec/toc.yml")
   expect_true(all(have %in% r$files))
   expect_true(all(file.exists(file.path(d, have))))
+  expect_true(dir.exists(file.path(d, "ai", "spec", "outputs")))
+  expect_false(dir.exists(file.path(d, "ai", "answers")))
+  expect_false(file.exists(file.path(d, "ai", "requests", "00-instructions.md")))
   ag <- readLines(file.path(d, "AGENTS.md"), encoding = "UTF-8")
   expect_identical(readLines(file.path(d, ".github", "copilot-instructions.md"), encoding = "UTF-8"), ag)
-  # the default: the answers alone, from the requests and the files they name
-  for (k in c("**do not look for it**", "Round 2", "Do not run `run.R`", "stop",
-              "ai/questions.md", "ai/decisions.md", "Do not install packages")) {
+  for (k in c("<!-- tflspec route: spec -->", "ai/decisions.md", "three times at most",
+              "ai/spec/outputs/<id>.yml")) {
     expect_true(any(grepl(k, ag, fixed = TRUE)), info = k)
   }
   expect_false(any(grepl("Rscript run.R", ag, fixed = TRUE)))
-  # the first message: the first two requests only, then a stop
+  expect_false(any(grepl("{{", ag, fixed = TRUE)))
+  # the first message: the first two requests, then a stop
+  expect_true(is.character(r$agent_prompt) && length(r$agent_prompt) == 1L)
   expect_match(r$agent_prompt, sprintf("Do only ai/requests/%s.md and ai/requests/%s.md",
                                        r$requests$request[1L], r$requests$request[2L]), fixed = TRUE)
-  expect_match(r$agent_prompt, "run nothing, install nothing", fixed = TRUE)
-  expect_match(r$agent_prompt, "Then stop", fixed = TRUE)
-  expect_false(grepl("run.R", r$agent_prompt, fixed = TRUE))
-  # each request starts with the agent's steps; its length counts them
+  expect_match(r$agent_prompt, "ask me here, in English,", fixed = TRUE)
+  expect_match(r$agent_prompt, "ai/spec/outputs/<id>.yml", fixed = TRUE)
+  # each request starts with the agent's head
   req1 <- readLines(file.path(d, r$requests$file[1L]), encoding = "UTF-8")
-  expect_identical(req1[1L], "<!-- tflspec: agent mode -->")
-  expect_match(req1[2L], sprintf("ai/answers/%s.md", r$requests$request[1L]), fixed = TRUE)
-  expect_match(req1[2L], "install nothing", fixed = TRUE)
-  expect_identical(req1[3L], "")
+  expect_identical(req1[1L], "<!-- tflspec: agent -->")
+  expect_match(req1[2L], "> **For the agent**", fixed = TRUE)
+  expect_match(req1[2L], sprintf("ai/spec/outputs/%s.yml", r$requests$request[1L]), fixed = TRUE)
   expect_identical(r$agent_files, character())
-  expect_true(any(grepl("Do not run R or any other program.", ag, fixed = TRUE)))
-  expect_false(any(grepl("PowerShell", ag, fixed = TRUE)))
-  expect_true(any(grepl("the codes' texts are not known", ag, fixed = TRUE)))
-  expect_true(any(grepl("At most 3 times for a request", ag, fixed = TRUE)))
-  # the next requests: those without an answer, two at a time
+  for (f in c("ai/instructions-table.md", "ai/instructions-figure.md", "ai/templates.md")) {
+    expect_true(file.exists(file.path(d, f)), info = f)
+  }
+  # the next requests: those whose reports have no draft yet, two at a time
   nx1 <- tfl_ai_agent_prompt(d, n = 2L)
   expect_identical(as.character(nx1), r$agent_prompt)
   expect_identical(attr(nx1, "requests"), r$requests$request[1:2])
-  for (q in r$requests$request[1:2]) writeLines("x", file.path(d, "ai", "answers", paste0(q, ".md")))
+  mark <- function(q, on = TRUE) {
+    ids <- strsplit(r$requests$outputs[r$requests$request == q], ", ")[[1L]]
+    f <- file.path(d, "ai", "spec", "outputs", paste0(ids, ".yml"))
+    if (on) {
+      for (i in seq_along(ids)) {
+        tfl_write_output(tfl_output(ids[i], kind = "table", label = "x"), f[i])
+      }
+    } else {
+      unlink(f)
+    }
+  }
+  for (q in r$requests$request[1:2]) mark(q)
   nx2 <- tfl_ai_agent_prompt(d, n = 1L)
   expect_identical(attr(nx2, "requests"), r$requests$request[3L])
   expect_match(nx2, sprintf("Do only ai/requests/%s.md, ", r$requests$request[3L]), fixed = TRUE)
   expect_identical(attr(tfl_ai_agent_prompt(d, requests = r$requests$request[5L]), "requests"),
                    r$requests$request[5L])
   expect_error(tfl_ai_agent_prompt(d, requests = "nope"), "No request 'nope'")
-  for (q in r$requests$request) writeLines("x", file.path(d, "ai", "answers", paste0(q, ".md")))
+  for (q in r$requests$request) mark(q)
   expect_true(is.na(tfl_ai_agent_prompt(d)))
-  unlink(file.path(d, "ai", "answers", paste0(r$requests$request, ".md")))
-  # agent_run = TRUE: it runs run.R after each answer, repairs, may read the ADaM
-  d3 <- file.path(root, "study-run")
-  r3 <- tfl_ai_prepare(unit = "toc", d3, ex_book(), adam = ad, quiet = TRUE, mode = "agent",
-                       agent_run = TRUE)
-  ag3 <- readLines(file.path(d3, "AGENTS.md"), encoding = "UTF-8")
-  for (k in c("do not stop", "read the ADaM itself", "never by opening", "Rscript run.R")) {
-    expect_true(any(grepl(k, ag3, fixed = TRUE)), info = k)
-  }
-  expect_match(r3$agent_prompt, "`Rscript run.R <request>`", fixed = TRUE)
-  expect_match(tfl_ai_agent_prompt(d3), "`Rscript run.R <request>`", fixed = TRUE)
-  expect_match(readLines(file.path(d3, r3$requests$file[1L]), encoding = "UTF-8")[2L],
-               sprintf("run `Rscript run.R %s`", r3$requests$request[1L]), fixed = TRUE)
-  # with each shell's place in the workbook file, to check what the text leaves unclear
-  req3 <- readLines(file.path(d3, r3$requests$file[1L]), encoding = "UTF-8")
-  txt3 <- paste(req3, collapse = "\n")
-  expect_match(txt3, "The TOC / SHELL workbook is the file `", fixed = TRUE)
-  expect_match(txt3, sprintf("- %s: sheet '", strsplit(r3$requests$outputs[1L], ", ")[[1L]][1L]),
-               fixed = TRUE)
-  expect_match(txt3, "# Workbook onco_toc_shell.xlsx", fixed = TRUE)
-  expect_match(txt3, "When you can open the workbook, use it to check", fixed = TRUE)
-  expect_match(txt3, "decide from this request alone", fixed = TRUE)
-  # where the ADaM and the workbook are, from the study folder
-  expect_match(req3[3L], "From this study folder, the TOC / SHELL workbook is `", fixed = TRUE)
-  expect_match(req3[3L], "the ADaM is in `", fixed = TRUE)
-  expect_false(any(grepl("{{", ag3, fixed = TRUE)))
-  for (k in c("When you can open the workbook", "When you cannot open it",
-              "Read the place the request names with R")) {
-    expect_true(any(grepl(k, ag3, fixed = TRUE)), info = k)
-  }
+  for (q in r$requests$request) mark(q, FALSE)
   expect_identical(tfl_ai_requests(d)$chars, r$requests$chars)
-  # the shells' text, and where each is in the workbook file (its sheet)
-  txt <- paste(req1, collapse = "\n")
-  # the default: the shells' text alone -- no workbook, no ADaM to open
-  expect_false(grepl("The TOC / SHELL workbook is the file `", txt, fixed = TRUE))
-  expect_false(grepl("When you can open", txt, fixed = TRUE))
-  expect_false(any(grepl("Attach", readLines(file.path(d, "ai", "requests", "index.md")))))
-  expect_false(any(grepl("{{", ag, fixed = TRUE)))
-  expect_false(any(grepl("Read the place the request names with R", ag, fixed = TRUE)))
   # tflplanner's places, and its TOC
   st <- yaml::read_yaml(file.path(d, "study.yml"))
   expect_identical(st$settings$output_path, "output/tfl")
@@ -117,35 +92,26 @@ test_that("mode = \"agent\": the instructions, run.R, questions, decisions; toc.
   expect_length(r$hint, 0L)
 })
 
-test_that("mode = \"agent\": the ADaM inside the study folder is fine; chat mode writes no agent file", {
+test_that("the ADaM inside the study folder is fine", {
   skip_on_cran()
   skip_if_not_installed("haven")
   root <- withr::local_tempdir()
   d <- file.path(root, "study")
   agent_study(root, adam_inside = TRUE)
-  r <- tfl_ai_prepare(unit = "toc", d, ex_book(), adam = "adam", quiet = TRUE, mode = "agent", size = 3L)
+  r <- tfl_ai_prepare(unit = "toc", d, ex_book(), adam = "adam", quiet = TRUE, size = 3L)
   expect_length(r$hint, 0L)
   expect_true(file.exists(file.path(d, "AGENTS.md")))
-  d2 <- file.path(root, "chat")
-  agent_study(file.path(root, "chat-root"))
-  r2 <- tfl_ai_prepare(unit = "toc", d2, ex_book(), adam = normalizePath(file.path(root, "chat-root", "adam"),
-                                                           winslash = "/"), quiet = TRUE)
-  expect_false(file.exists(file.path(d2, "AGENTS.md")))
-  expect_false(file.exists(file.path(d2, "run.R")))
-  expect_true(file.exists(file.path(d2, "spec", "toc.yml")))
-  expect_false(any(grepl("agent mode", readLines(file.path(d2, r2$requests$file[1L])), fixed = TRUE)))
 })
 
-test_that("tfl_ai_run(): the RTFs, ai/status.md, the questions; a second round keeps the answers", {
+test_that("tfl_ai_run(): the RTFs, ai/status.md; a second prepare keeps the decisions", {
   skip_on_cran()
   skip_if_not_installed("haven")
   skip_if_not_installed("rtfreporter")
   root <- withr::local_tempdir()
   d <- file.path(root, "study")
   ad <- agent_study(root)
-  tfl_ai_prepare(unit = "toc", d, ex_book(), adam = ad, quiet = TRUE, mode = "agent", size = 3L)
-  ex <- test_path("fixtures", "answers-toc")
-  file.copy(list.files(ex, full.names = TRUE), file.path(d, "ai", "answers"))
+  tfl_ai_prepare(unit = "toc", d, ex_book(), adam = ad, quiet = TRUE, size = 3L)
+  ai_drafts_from_fixtures(d)
   res <- suppressMessages(tfl_ai_run(d))
   rp <- res$reports
   expect_true(all(file.exists(file.path(d, rp$rtf))))
@@ -153,29 +119,11 @@ test_that("tfl_ai_run(): the RTFs, ai/status.md, the questions; a second round k
   expect_true(all(startsWith(rp$rtf, "ai/output/tfl/")))
   status <- readLines(file.path(d, "ai", "status.md"), encoding = "UTF-8")
   expect_true(any(grepl("5 of 5 reports have an RTF", status, fixed = TRUE)))
-  q <- res$questions
-  expect_gt(nrow(q), 0L)
-  expect_true(all(q$status == "open"))
-  # the person answers Q1; the agent marks it decided; a run keeps both
-  f <- file.path(d, "ai", "questions.md")
-  x <- readLines(f, encoding = "UTF-8")
-  at <- grep("^## Q1[.]", x)
-  ans <- at + grep("^- Answer:", x[at:length(x)])[1L] - 1L
-  x[ans] <- "- Answer: planned treatment, TRT01P"
-  st <- at + grep("^- Status:", x[at:length(x)])[1L] - 1L
-  x[st] <- "- Status: decided"
-  writeLines(x, f, useBytes = TRUE)
-  res2 <- suppressMessages(tfl_ai_run(d))
-  expect_identical(res2$questions$answer[1L], "planned treatment, TRT01P")
-  expect_identical(res2$questions$status[1L], "decided")
-  expect_identical(nrow(res2$questions), nrow(q))
-  expect_identical(readLines(f, encoding = "UTF-8"), x)
-  # a second prepare keeps the questions and the decisions
+  # a second prepare keeps the decisions
   writeLines(c(readLines(file.path(d, "ai", "decisions.md")), "- Q1 (T-14-1-1): TRT01P"),
              file.path(d, "ai", "decisions.md"))
   dec <- readLines(file.path(d, "ai", "decisions.md"))
-  tfl_ai_prepare(unit = "toc", d, ex_book(), adam = ad, quiet = TRUE, mode = "agent", size = 3L, overwrite = TRUE)
-  expect_identical(readLines(f, encoding = "UTF-8"), x)
+  tfl_ai_prepare(unit = "toc", d, ex_book(), adam = ad, quiet = TRUE, size = 3L, overwrite = TRUE)
   expect_identical(readLines(file.path(d, "ai", "decisions.md")), dec)
 })
 
@@ -187,9 +135,8 @@ test_that("tfl_ai_run(): a report built again only when it changed; one request'
   root <- withr::local_tempdir()
   d <- file.path(root, "study")
   ad <- agent_study(root, adam_inside = TRUE)
-  tfl_ai_prepare(unit = "toc", d, ex_book(), adam = "adam", quiet = TRUE, mode = "agent", size = 3L)
-  ex <- test_path("fixtures", "answers-toc")
-  file.copy(list.files(ex, full.names = TRUE), file.path(d, "ai", "answers"))
+  tfl_ai_prepare(unit = "toc", d, ex_book(), adam = "adam", quiet = TRUE, size = 3L)
+  ai_drafts_from_fixtures(d)
   built <- function(res) stats::setNames(res$reports$built, res$reports$output_id)
   r1 <- suppressMessages(tfl_ai_run(d))
   expect_true(all(built(r1) == "built"))
@@ -201,8 +148,8 @@ test_that("tfl_ai_run(): a report built again only when it changed; one request'
   expect_true(all(built(r2) == "kept"))
   expect_identical(r2$reports$rtf, r1$reports$rtf)
   expect_identical(file.mtime(rtf), t1)
-  # one answer changed: its report alone
-  a <- file.path(d, "ai", "answers", "demographics-1.md")
+  # one draft changed: its report alone
+  a <- file.path(d, "ai", "spec", "outputs", "T-14-1-1.yml")
   writeLines(sub("label: Demographic and Baseline Characteristics",
                  "label: Demographic and Baseline Characteristics (ITT)", readLines(a, encoding = "UTF-8"),
                  fixed = TRUE), a, useBytes = TRUE)
@@ -261,7 +208,7 @@ test_that("a study copied elsewhere: its answers checked and built against its o
   root <- withr::local_tempdir()
   d <- file.path(root, "study")
   agent_study(root, adam_inside = TRUE)
-  tfl_ai_prepare(unit = "toc", d, ex_book(), adam = "adam", quiet = TRUE, mode = "agent", size = 3L)
+  tfl_ai_prepare(unit = "toc", d, ex_book(), adam = "adam", quiet = TRUE, size = 3L)
   # the requests keep no path of this PC
   ctx <- readRDS(file.path(d, "ai", "requests", "_contexts.rds"))
   sd <- unlist(lapply(ctx, function(x) x$context$study_dir))
@@ -273,37 +220,17 @@ test_that("a study copied elsewhere: its answers checked and built against its o
   unlink(d, recursive = TRUE)
   # the agent's wording, not a chat's
   ix <- paste(readLines(file.path(d2, "ai", "requests", "index.md"), encoding = "UTF-8"), collapse = "\n")
-  expect_match(ix, "`ai/answers/<request>.md`; then do as AGENTS.md says", fixed = TRUE)
+  expect_match(ix, "`ai/spec/outputs/<id>.yml`", fixed = TRUE)
   expect_false(grepl("new chat", ix, fixed = TRUE))
   r0 <- suppressMessages(tfl_ai_collect_answers(d2))
-  expect_match(r0$next_steps[["ae-1"]], "Rscript run.R ae-1", fixed = TRUE)
+  expect_match(r0$next_steps[["ae-1"]], "ask the agent for ai/requests/ae-1.md", fixed = TRUE)
   expect_false(any(grepl("chat", r0$next_steps, fixed = TRUE)))
   # answered there: checked against its own study files, built
-  ex <- test_path("fixtures", "answers-toc")
-  file.copy(list.files(ex, full.names = TRUE), file.path(d2, "ai", "answers"))
+  ai_drafts_from_fixtures(d2)
   res <- suppressMessages(tfl_ai_run(d2))
   expect_true(all(res$reports$status %in% c("ok", "warning")))
   expect_true(all(file.exists(file.path(d2, res$reports$rtf))))
   expect_false(dir.exists(d))
-})
-
-test_that("the questions: one asked by several reports once, the reports listed; added to later", {
-  d <- withr::local_tempdir()
-  a <- data.frame(output_id = c("T-1", "T-2", "T-3"), where = NA_character_, item = NA_character_,
-                  assumption = c("TRT01A", "TRT01A", "SAFFL"),
-                  question = c("Actual (TRT01A) or planned treatment?",
-                               "actual (TRT01A) or planned treatment", "Which analysis set?"),
-                  stringsAsFactors = FALSE)
-  q <- .ai_questions_update(d, a)
-  expect_identical(q$question, c("Actual (TRT01A) or planned treatment?", "Which analysis set?"))
-  expect_identical(q$reports, c("T-1, T-2", "T-3"))
-  a2 <- rbind(a, data.frame(output_id = "T-4", where = NA, item = NA, assumption = "TRT01A",
-                            question = "Actual (TRT01A) or planned treatment?"))
-  q2 <- .ai_questions_update(d, a2)
-  expect_identical(q2$reports[1L], "T-1, T-2, T-4")
-  expect_identical(nrow(q2), 2L)
-  # no question: nothing new
-  expect_identical(nrow(.ai_questions_update(d, a2[0L, ])), 2L)
 })
 
 test_that("mode = \"agent\": a study with its ADaM and workbook inside it names no path of this PC", {
@@ -315,7 +242,7 @@ test_that("mode = \"agent\": a study with its ADaM and workbook inside it names 
   dir.create(file.path(d, "shells"), recursive = TRUE, showWarnings = FALSE)
   book <- file.path(d, "shells", "toc.xlsx")
   file.copy(ex_book(), book)
-  r <- tfl_ai_prepare(unit = "toc", d, book, adam = ad, quiet = TRUE, mode = "agent", size = 3L,
+  r <- tfl_ai_prepare(unit = "toc", d, book, adam = ad, quiet = TRUE, size = 3L,
                       agent_reads = c("workbook", "adam"))
   expect_identical(r$agent_files, c("shells/toc.xlsx", "adam"))
   here <- normalizePath(root, winslash = "/")
@@ -332,7 +259,7 @@ test_that("mode = \"agent\": a study with its ADaM and workbook inside it names 
   expect_true(all(startsWith(vapply(dy$datasets, `[[`, "", "path"), "adam/")))
   # one outside the study: whole, as it must be
   d2 <- file.path(root, "study2")
-  r2 <- tfl_ai_prepare(unit = "toc", d2, ex_book(), adam = ad, quiet = TRUE, mode = "agent", size = 3L)
+  r2 <- tfl_ai_prepare(unit = "toc", d2, ex_book(), adam = ad, quiet = TRUE, size = 3L)
   dy2 <- yaml::read_yaml(file.path(d2, "spec", "data.yml"))
   expect_true(all(startsWith(tolower(vapply(dy2$datasets, `[[`, "", "path")), tolower(ad))))
 })
@@ -344,10 +271,8 @@ test_that("tfl_ai_run(): a request not built yet says so, after a run of another
   root <- withr::local_tempdir()
   d <- file.path(root, "study")
   agent_study(root, adam_inside = TRUE)
-  tfl_ai_prepare(unit = "toc", d, ex_book(), adam = "adam", quiet = TRUE, mode = "agent", size = 3L)
-  ex <- test_path("fixtures", "answers-toc")
-  file.copy(list.files(ex, "^(demographics|ae)-1[.]md$", full.names = TRUE),
-            file.path(d, "ai", "answers"))
+  tfl_ai_prepare(unit = "toc", d, ex_book(), adam = "adam", quiet = TRUE, size = 3L)
+  ai_drafts_from_fixtures(d, only = c("demographics-1", "ae-1"))
   r <- suppressMessages(tfl_ai_run(d, requests = "demographics-1"))
   ae <- r$reports$request == "ae-1"
   expect_true(all(is.na(r$reports$built[ae])))
@@ -386,11 +311,10 @@ test_that("the AI's drafts apart: run.R builds them into ai/output; tfl_ai_adopt
   root <- withr::local_tempdir()
   d <- file.path(root, "study")
   ad <- agent_study(root)
-  tfl_ai_prepare(unit = "toc", d, ex_book(), adam = ad, quiet = TRUE, mode = "agent", size = 3L)
+  tfl_ai_prepare(unit = "toc", d, ex_book(), adam = ad, quiet = TRUE, size = 3L)
   expect_identical(tfl_ai_migrate(d), character())
   expect_true(dir.exists(file.path(d, "ai", "spec", "outputs")))
-  file.copy(list.files(test_path("fixtures", "answers-toc"), full.names = TRUE),
-            file.path(d, "ai", "answers"))
+  ai_drafts_from_fixtures(d)
   rp <- suppressMessages(tfl_ai_run(d))$reports
   expect_true(all(startsWith(rp$rtf, "ai/output/tfl/")))
   expect_true(all(file.exists(file.path(d, rp$rtf))))
@@ -422,13 +346,14 @@ test_that("tfl_ai_migrate(): a study's AI reports copied apart and recorded as a
   d <- file.path(root, "study")
   ad <- agent_study(root)
   # (a study of the form before: its drafts in spec/outputs)
-  tfl_ai_prepare(unit = "toc", d, ex_book(), adam = ad, quiet = TRUE, mode = "agent", size = 3L,
+  tfl_ai_prepare(unit = "toc", d, ex_book(), adam = ad, quiet = TRUE, size = 3L,
                  area = FALSE)
-  file.copy(list.files(test_path("fixtures", "answers-toc"), full.names = TRUE),
-            file.path(d, "ai", "answers"))
-  rp <- suppressMessages(tfl_ai_collect_answers(d))$reports
-  made <- rp$output_id[!is.na(rp$file)]
-  expect_true(all(file.exists(file.path(d, "spec", "outputs", paste0(made, ".yml")))))
+  made <- ai_drafts_from_fixtures(d)
+  suppressMessages(tfl_ai_collect_answers(d))
+  dir.create(file.path(d, "spec", "outputs"), recursive = TRUE, showWarnings = FALSE)
+  file.copy(file.path(d, "ai", "spec", "outputs", paste0(made, ".yml")),
+            file.path(d, "spec", "outputs"))
+  unlink(file.path(d, "ai", "spec"), recursive = TRUE)
   ids <- tfl_ai_migrate(d)
   expect_setequal(ids, made)
   expect_true(all(file.exists(file.path(d, "ai", "spec", "outputs", paste0(made, ".yml")))))
@@ -445,7 +370,7 @@ test_that("mode = \"agent\": what the agent may open -- agent_reads, references"
   ad <- agent_study(root)
   sap <- file.path(root, "sap.txt")
   writeLines("The primary analysis set is the FAS.", sap)
-  r <- tfl_ai_prepare(unit = "toc", d, ex_book(), adam = ad, quiet = TRUE, mode = "agent",
+  r <- tfl_ai_prepare(unit = "toc", d, ex_book(), adam = ad, quiet = TRUE,
                       agent_reads = "adam", docs = sap)
   # the reference copied into the study folder; the ADaM allowed, the workbook not
   expect_true(file.exists(file.path(d, "ai", "docs", "sap.txt")))
@@ -460,19 +385,18 @@ test_that("mode = \"agent\": what the agent may open -- agent_reads, references"
   expect_match(ag, "PowerShell, Python, R", fixed = TRUE)
   expect_match(ag, "At most 3 times for a request", fixed = TRUE)
   expect_false(grepl("{{", ag, fixed = TRUE))
-  expect_match(r$agent_prompt, "run a command only to read those, install nothing", fixed = TRUE)
+  expect_match(r$agent_prompt, "install nothing", fixed = TRUE)
   expect_identical(as.character(tfl_ai_agent_prompt(d, n = 2L)), r$agent_prompt)
   req1 <- readLines(file.path(d, r$requests$file[1L]), encoding = "UTF-8")
-  expect_match(req1[3L], "you may also read the ADaM in `", fixed = TRUE)
   # what it does not take
   expect_error(tfl_ai_prepare(unit = "toc", file.path(root, "s2"), ex_book(), adam = ad,
-                              quiet = TRUE, mode = "agent", agent_reads = "sas"),
+                              quiet = TRUE, agent_reads = "sas"),
                "agent_reads = ): \"sas\"", fixed = TRUE)
   expect_error(tfl_ai_prepare(unit = "toc", file.path(root, "s3"), ex_book(), adam = ad,
-                              quiet = TRUE, mode = "agent", docs = file.path(root, "none.pdf")),
+                              quiet = TRUE, docs = file.path(root, "none.pdf")),
                "docs = ): no file", fixed = TRUE)
   expect_error(tfl_ai_prepare(unit = "toc", file.path(root, "s4"), ex_book(), adam = ad,
-                              quiet = TRUE, mode = "agent", agent_max_reads = "a"),
+                              quiet = TRUE, agent_max_reads = "a"),
                "agent_max_reads = ): one number", fixed = TRUE)
 })
 

@@ -86,7 +86,7 @@ test_that("one report a request: the request named after the report's number", {
   dir.create(file.path(d, "adam"), recursive = TRUE)
   haven::write_xpt(.ai_chr(adsl), file.path(d, "adam", "adsl.xpt"))
   seen <- character()
-  r <- tfl_ai_prepare(d, f, adam = "adam", quiet = TRUE, mode = "agent", size = 1,
+  r <- tfl_ai_prepare(d, f, adam = "adam", quiet = TRUE, size = 1,
                       templates = FALSE,
                       progress = function(step, i, n) seen <<- c(seen, paste(step, i, n)))
   expect_setequal(r$requests$request, c("t.14.1.1", "t.15.1.5.1"))

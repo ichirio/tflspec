@@ -1,5 +1,5 @@
-# Run by the agent after each answer it saves (AGENTS.md): reads every
-# answer in ai/answers/, checks it, writes spec/outputs/<id>.yml, builds
+# The check from the command line (the person runs it; the agent does not):
+# reads every draft in ai/spec/outputs/, checks it, writes it anew, builds
 # each report's ARD and RTF -- only those that changed since the last run
 # (ai/built.csv) -- and writes ai/status.md and ai/questions.md.
 # It uses the R and the packages installed; it reads the ADaM, the agent

@@ -1,17 +1,15 @@
 # ============================================================================
-#  tfl_ai_prepare(mode = "agent"): the study folder as a coding agent's work
+#  tfl_ai_prepare(): the study folder as a coding agent's work
 # ----------------------------------------------------------------------------
-#  A coding agent (GitHub Copilot's agent in VS Code, and the like) answers
-#  the requests it is given into ai/answers/ and stops; the person checks
-#  the answers (tflplanner, tfl_ai_collect_answers()).  With
-#  tfl_ai_prepare(agent_run = TRUE) it also runs run.R (tfl_ai_run():
-#  collect, ARD, RTF, ai/status.md) and repairs what the status says.  What it cannot settle
-#  it takes a guess on and asks as an assumption's `question`; tfl_ai_run()
-#  gathers the questions into ai/questions.md -- one question asked by
-#  several reports once, the reports listed -- for the person to answer.
-#  A second round reads the answers into ai/decisions.md and redoes the
-#  reports they touch.  The instructions are AGENTS.md and
-#  .github/copilot-instructions.md (the same text).
+#  A coding agent (GitHub Copilot's agent in VS Code, and the like) asks the
+#  person in the chat what defines each report and is not settled, keeps
+#  the answers in ai/decisions.md, writes each report's skeleton as a draft
+#  (ai/spec/outputs/<id>.yml, with an `ai:` block: assumptions, confirm)
+#  and stops; the person checks the drafts (tflplanner's "Check",
+#  tfl_ai_collect_answers(), or run.R -> tfl_ai_run(): collect, ARD, RTF,
+#  ai/status.md), finishes them in the builder and adopts them.  The
+#  instructions are AGENTS.md and .github/copilot-instructions.md (the same
+#  text; R/ai_route_spec.R fills its settings).
 #
 #    .ai_agent_files()   the instructions, run.R, questions / decisions
 #    tfl_ai_run()        collect, build, status, questions
@@ -23,9 +21,8 @@
 # SHELL workbook are, from the study folder, as AGENTS.md says them.  The
 # paths written.
 .ai_agent_files <- function(dir, overwrite = FALSE, templates = FALSE, adam = NULL,
-                            book = NULL, run = FALSE, reads = character(),
-                            docs = character(), max_reads = 3L, route = "answers") {
-  spec <- identical(route, "spec")
+                            book = NULL, reads = character(), docs = character(),
+                            max_reads = 3L) {
   src <- system.file("ai", "agent", package = "tflspec")
   rd <- function(f) paste(readLines(file.path(src, f), warn = FALSE, encoding = "UTF-8"),
                           collapse = "\n")
@@ -36,101 +33,58 @@
     .ai_write_text(text, f)
     out <<- c(out, f)
   }
-  # the agent answers only (the person checks the answers), or answers,
-  # runs run.R and repairs (`run`)
-  agents <- rd(if (spec) "AGENTS-spec.md" else if (isTRUE(run)) "AGENTS-run.md" else "AGENTS.md")
-  if (spec) agents <- .ai_spec_agents(agents, .ai_spec_settings(dir))
+  # the instructions, with the study's settings (study.yml's ai: keys)
+  agents <- .ai_spec_agents(rd("AGENTS.md"), .ai_spec_settings(dir))
   place <- function(p) if (length(p) && !is.na(p[1L])) sprintf("`%s`", p[1L]) else
     "(where the request says)"
-  if (!isTRUE(run)) {
-    # what an agent that answers only may open besides the requests: the
-    # workbook and the ADaM when the person allows them, the documents the
-    # person gave; read with whatever the PC has, not R alone
-    more <- c(
-      if ("workbook" %in% reads) paste0(
-        "\n- the TOC / SHELL workbook {{workbook}}, to check what a shell's text leaves ",
-        "unclear (its shape, merged cells, a text that looks cut): read only the place ",
-        "the request names (the sheet, the cells);"),
-      if ("adam" %in% reads) paste0(
-        "\n- the ADaM in {{adam}}, only to settle what `ai/adam_summary.md` does not (a ",
-        "value as the data write it, a variable): never in the editor, and print only ",
-        "what settles it (a variable's values, counts), not subjects' records;"),
-      if (length(docs)) paste0(
-        "\n- the documents the person gave, for what a request leaves unclear: ",
-        paste(sprintf("`%s`", docs), collapse = ", "), "."))
-    tools <- if (any(c("workbook", "adam") %in% reads)) paste0(
-      "\n\nRead the workbook or the data with a tool this PC has -- PowerShell, ",
-      "Python, R -- whichever works; install nothing. In PowerShell, put a text with ",
-      "`$` in single quotes ('...'), or `$` is read as a variable. Do not open a ",
-      "data file (`.xpt`, `.sas7bdat`) in the editor.")
-    agents <- .ai_fill(agents, list(
-      reads = paste(c(more, tools), collapse = ""),
-      max_reads = as.character(max_reads),
-      run_r = if (any(c("workbook", "adam") %in% reads)) {
-        "Run a command only to read the files listed under \"What you read\"; nothing else."
-      } else "Do not run R or any other program."))
-  }
+  # what the agent may open besides the requests: the workbook and the ADaM
+  # when the person allows them, the documents the person gave; read with
+  # whatever the PC has, not R alone
+  more <- c(
+    if ("workbook" %in% reads) paste0(
+      "\n- the TOC / SHELL workbook {{workbook}}, to check what a shell's text leaves ",
+      "unclear (its shape, merged cells, a text that looks cut): read only the place ",
+      "the request names (the sheet, the cells);"),
+    if ("adam" %in% reads) paste0(
+      "\n- the ADaM in {{adam}}, only to settle what `ai/adam_summary.md` does not (a ",
+      "value as the data write it, a variable): never in the editor, and print only ",
+      "what settles it (a variable's values, counts), not subjects' records;"),
+    if (length(docs)) paste0(
+      "\n- the documents the person gave, for what a request leaves unclear: ",
+      paste(sprintf("`%s`", docs), collapse = ", "), "."))
+  tools <- if (any(c("workbook", "adam") %in% reads)) paste0(
+    "\n\nRead the workbook or the data with a tool this PC has -- PowerShell, ",
+    "Python, R -- whichever works; install nothing. In PowerShell, put a text with ",
+    "`$` in single quotes ('...'), or `$` is read as a variable. Do not open a ",
+    "data file (`.xpt`, `.sas7bdat`) in the editor.")
+  agents <- .ai_fill(agents, list(
+    reads = paste(c(more, tools), collapse = ""),
+    max_reads = as.character(max_reads),
+    run_r = if (any(c("workbook", "adam") %in% reads)) {
+      "Run a command only to read the files listed under \"What you read\"; nothing else."
+    } else "Do not run R or any other program."))
   agents <- .ai_fill(agents, list(workbook = place(book), adam = place(adam)))
-  # with templates: answer with one where it fits (each request lists them)
+  # with templates: a template where it fits (each request lists them)
   if (isTRUE(templates)) agents <- paste(agents, rd("AGENTS-templates.md"), sep = "\n\n")
   put("AGENTS.md", agents, again = TRUE)
   put(file.path(".github", "copilot-instructions.md"), agents, again = TRUE)
   put("run.R", rd("run.R"), again = TRUE)
   put(file.path("ai", "questions.md"), .ai_questions_head())
-  put(file.path("ai", "decisions.md"), rd(if (spec) "decisions-spec.md" else "decisions.md"))
+  put(file.path("ai", "decisions.md"), rd("decisions.md"))
   out
 }
 
-# The lines a request starts with in agent mode: the steps, so a request
-# read alone says them.  `run`: the agent also runs run.R and repairs, and
-# may check the ADaM and the workbook (`adam`, `book`: from the study
-# folder); else it writes the answer alone.
-.ai_agent_request_head <- function(request, adam = NULL, book = NULL, run = FALSE,
-                                   reads = character(), route = "answers", ids = character()) {
-  at <- function(p) length(p) && !is.na(p[1L])
-  if (identical(route, "spec")) {
-    files <- paste(sprintf("`ai/spec/outputs/%s.yml`", ids), collapse = ", ")
-    return(c("<!-- tflspec: agent mode, route spec -->",
-      paste0("> **For the agent** (AGENTS.md): read `ai/decisions.md` and the decisions below, ",
-             "then ask in the chat what defines these reports and is not settled -- and wait for ",
-             "the answers. Then write each report's skeleton as its file: ", files, ". ",
-             "Record the answers in `ai/decisions.md`; mark what you could not settle under `ai: confirm`. ",
-             "Read only this request and the files it names; do not look for others, install nothing, ",
-             "run nothing. Write nothing of the look."),
-      "", "---", ""))
-  }
-  if (!isTRUE(run)) {
-    # the answer alone: from this request and the files it names (and the
-    # workbook / the ADaM, when the person allows them: `reads`)
-    allowed <- c(if ("workbook" %in% reads && at(book))
-                   sprintf("the TOC / SHELL workbook `%s`", book[1L]),
-                 if ("adam" %in% reads && at(adam)) sprintf("the ADaM in `%s`", adam[1L]))
-    return(c("<!-- tflspec: agent mode -->",
-      paste0("> **For the agent** (AGENTS.md): answer this request with its one `yaml` block and ",
-             "save the whole answer as `ai/answers/", request, ".md`; that is all. Read ",
-             "`ai/decisions.md` first and follow it. Read only this request and the files it ",
-             "names; do not look for others, install nothing. What they do not ",
-             "settle: take the likeliest choice and write it as an assumption with its `question`."),
-      if (length(allowed)) paste0(
-        "> From this study folder, you may also read ", paste(allowed, collapse = " and "),
-        ", to check what this request leaves unclear -- above all a shell's shape ",
-        "(several parts, a part that writes only what differs, merged cells) -- as AGENTS.md ",
-        "says. When you cannot open them, decide from this request alone."),
-      "", "---", ""))
-  }
-  places <- c(if (at(book)) sprintf("the TOC / SHELL workbook is `%s`", book[1L]),
-              if (at(adam)) sprintf("the ADaM is in `%s`", adam[1L]))
-  c("<!-- tflspec: agent mode -->",
-    paste0("> **For the agent** (AGENTS.md): answer this request with its one `yaml` block and ",
-           "save the whole answer as `ai/answers/", request, ".md`; then run `Rscript run.R ", request, "` and ",
-           "read `ai/status.md`. Read `ai/decisions.md` first and follow it. Do not stop to ask: ",
-           "take the likeliest choice and write it as an assumption with its `question`. Work from ",
-           "`ai/adam_summary.md`; read the ADaM with R only to settle a question it does not."),
-    if (length(places)) paste0(
-      "> From this study folder, ", paste(places, collapse = " and "), ". When you can open ",
-      "them, use them to check what this request leaves unclear -- above all a shell's shape ",
-      "(several parts, a part that writes only what differs, merged cells). When you cannot ",
-      "(outside your workspace, no permission), decide from this request alone."),
+# The lines a request starts with: the agent's steps, so a request read
+# alone says them.  `ids`: the request's reports, whose drafts it writes.
+.ai_agent_request_head <- function(request, ids = character()) {
+  files <- paste(sprintf("`ai/spec/outputs/%s.yml`", ids), collapse = ", ")
+  c("<!-- tflspec: agent -->",
+    paste0("> **For the agent** (AGENTS.md): read `ai/decisions.md` and the decisions below, ",
+           "then ask in the chat what defines these reports and is not settled -- and wait for ",
+           "the answers. Then write each report's skeleton as its file: ", files, ". ",
+           "Record the answers in `ai/decisions.md`; mark what you could not settle under `ai: confirm`. ",
+           "Read only this request and the files it names; do not look for others, install nothing, ",
+           "run nothing. Write nothing of the look."),
     "", "---", "")
 }
 
@@ -145,12 +99,11 @@
   ifelse(same, substring(q, nchar(root) + 1L), q)
 }
 
-#' Run the study's AI answers through: collect, build, status, questions
+#' Run the study's AI drafts through: collect, build, status, questions
 #'
-#' What a coding agent runs after each answer it saves (`run.R` of
-#' [tfl_ai_prepare()]`(mode = "agent")` calls it): [tfl_ai_collect_answers()]
-#' (read, check, write the report files, a repair prompt for an answer with
-#' errors), then each report written (`ok`, `warning`) built -- its ARD
+#' The person's check from the command line (`run.R` of [tfl_ai_prepare()]
+#' calls it): [tfl_ai_collect_answers()] (read the agent's drafts, check
+#' them, write the report files, a repair prompt for a draft with errors), then each report written (`ok`, `warning`) built -- its ARD
 #' ([tfl_build_ard()]) and its RTF (rtfreporter) into the study's
 #' `output_path` -- one report's failure not stopping the others.  It writes
 #' `ai/status.md` (each report's status, its RTF or why none, each
@@ -192,7 +145,7 @@
 #'   person's list: `output_id`, `result` -- `missing`, `still there`,
 #'   `differs`, `not expected` --, `detail`; its counts in its attribute
 #'   `text`; `NULL` without a list), invisibly.
-#' @seealso [tfl_ai_prepare()] (`mode = "agent"`), [tfl_ai_outputs()].
+#' @seealso [tfl_ai_prepare()], [tfl_ai_outputs()].
 #' @export
 tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = FALSE) {
   fn <- "tfl_ai_run()"
@@ -455,11 +408,12 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
     b <- bad[bad$request == q, , drop = FALSE]
     .ai_write_text(c(
       sprintf("# Repair: %s -- could not be built", q), "",
-      "The answer passed its checks, but a report could not be built. Fix the answer",
-      sprintf("(ai/answers/%s.md, the whole answer again) and run `Rscript run.R %s`.", q, q), "",
+      "The drafts passed their checks, but a report could not be built. Fix its draft",
+      sprintf("(ai/spec/outputs/<id>.yml) and run `Rscript run.R %s`.", q), "",
       "## Could not be built", "",
       sprintf("- %s: %s", b$output_id, b$rtf_problem)), .ai_build_repair_file(dir, q))
-    a <- file.path(dir, "ai", "answers", paste0(q, ".md"))
+    # (counted as a repair of the request's first draft, for tfl_ai_compare())
+    a <- file.path(dir, "ai", "spec", "outputs", paste0(b$output_id[1L], ".yml"))
     if (file.exists(a)) .ai_repair_log(rd, q, a)
   }
   invisible()
@@ -781,7 +735,7 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
 #'   `question`, `provisional` (what the AI took for now), `answer` (`NA`
 #'   when none), `status` (`open`, `decided`); no row when there is no
 #'   question.  `tfl_ai_answer_questions()`: the file's path, invisibly.
-#' @seealso [tfl_ai_run()], [tfl_ai_prepare()] (`mode = "agent"`).
+#' @seealso [tfl_ai_run()], [tfl_ai_prepare()].
 #' @export
 tfl_ai_questions <- function(study_dir) {
   f <- file.path(study_dir, "ai", "questions.md")
@@ -846,59 +800,40 @@ tfl_ai_answer_questions <- function(study_dir, answers) {
   invisible(normalizePath(f, winslash = "/"))
 }
 
-# The message that asks the agent for `requests` (their names) of the study
-# folder `study` (its name: the paths are from it).  `run`: it also runs
-# run.R and repairs; `templates`: it answers with a template where one fits.
-.ai_agent_prompt <- function(study, requests, run = FALSE, templates = FALSE,
-                             reads = FALSE, route = "answers", language = "en") {
+# The agent's first message: the study folder's name (its paths are from
+# it), the requests it is to do; `templates`: a template where one fits;
+# `language`: the chat's.
+.ai_agent_prompt <- function(study, requests, templates = FALSE, language = "en") {
   which_ <- paste(sprintf("ai/requests/%s.md", requests), collapse = " and ")
-  if (identical(route, "spec")) {
-    return(paste0("The paths are from the study folder ", study,
-      " (the one holding AGENTS.md; with a folder above it open, put the study folder before each). ",
-      "Follow AGENTS.md. Do only ", which_, ", in that order. For each: read ai/decisions.md and the ",
-      "request; ask me here, in ", .ai_language_name(language), ", what defines its reports and is not ",
-      "settled (the analysis set, the parameter, the treatment variable, a denominator ...), numbered, ",
-      "with the choices and your default -- then wait for my answers. Record them in ai/decisions.md. ",
-      "Then write each report's skeleton as ai/spec/outputs/<id>.yml",
-      if (isTRUE(templates)) " (a template where one fits, AGENTS.md)" else "",
-      ", nothing of the look, and mark what you could not settle under ai: confirm. ",
-      "Read only the request and the files it names; run nothing, install nothing. ",
-      "Then stop and tell me the files written, the decisions added and what is to confirm."))
-  }
   paste0("The paths are from the study folder ", study,
-         " (the one holding AGENTS.md; with a folder above it open, put the ",
-         "study folder before each). Follow AGENTS.md. Do only ", which_, ", ",
-         if (isTRUE(run)) {
-           paste0("in that order: save each answer as ai/answers/<request>.md and run ",
-                  "`Rscript run.R <request>` after it, then read ai/status.md and repair. ")
-         } else {
-           paste0("in that order: write each answer and save it as ai/answers/<request>.md. ",
-                  "Read only the request and the files it names (AGENTS.md lists them); ",
-                  if (isTRUE(reads)) "run a command only to read those, install nothing. "
-                  else "run nothing, install nothing. ")
-         },
-         if (isTRUE(templates)) "Answer a report with a template where one fits (AGENTS.md). ",
-         "What you cannot settle, write as an assumption with its question. Then stop ",
-         "and tell me the answers written and the questions asked.")
+    " (the one holding AGENTS.md; with a folder above it open, put the study folder before each). ",
+    "Follow AGENTS.md. Do only ", which_, ", in that order. For each: read ai/decisions.md and the ",
+    "request; ask me here, in ", .ai_language_name(language), ", what defines its reports and is not ",
+    "settled (the analysis set, the parameter, the treatment variable, a denominator ...), numbered, ",
+    "with the choices and your default -- then wait for my answers. Record them in ai/decisions.md. ",
+    "Then write each report's skeleton as ai/spec/outputs/<id>.yml",
+    if (isTRUE(templates)) " (a template where one fits, AGENTS.md)" else "",
+    ", nothing of the look, and mark what you could not settle under ai: confirm. ",
+    "Read only the request and the files it names; run nothing, install nothing. ",
+    "Then stop and tell me the files written, the decisions added and what is to confirm.")
 }
 
 #' The message that asks a coding agent for the next requests
 #'
-#' A study prepared for a coding agent ([tfl_ai_prepare()]`(mode = "agent")`)
-#' asks it for a few requests at a time: the first message,
-#' `ai/agent_prompt.md`, names the first two, and the agent stops when they
-#' are answered.  Once the person has checked those, this gives the message
-#' that asks for the next ones -- by default the first `n` (10) requests, in
-#' `ai/requests/index.md`'s order, that have no answer in `ai/answers/` yet
-#' -- to paste into the agent's chat.
-#' What the agent does with them (answer only, or also run `run.R`) is what
-#' the study's `AGENTS.md` says ([tfl_ai_prepare()]'s `agent_run`).
+#' A study prepared for a coding agent ([tfl_ai_prepare()]) asks it for a
+#' few requests at a time: the first message, `ai/agent_prompt.md`, names
+#' the first two, and the agent stops when their drafts are written.  Once
+#' the person has checked those, this gives the message that asks for the
+#' next ones -- by default the first `n` (10) requests, in
+#' `ai/requests/index.md`'s order, that have no draft yet
+#' (`ai/spec/outputs/<id>.yml` for every report of the request) -- to
+#' paste into the agent's chat.
 #'
 #' @param study_dir The study folder.
 #' @param requests The requests to ask for, by name; `NULL` (default): the
-#'   next `n` without an answer.
+#'   next `n` without a draft.
 #' @param n How many requests, when `requests` is `NULL`.
-#' @return The message, a string; `NA` when every request has an answer.
+#' @return The message, a string; `NA` when every request has its drafts.
 #'   Its `requests` attribute names the requests it asks for.
 #' @seealso [tfl_ai_prepare()], [tfl_ai_requests()].
 #' @examples
@@ -913,7 +848,7 @@ tfl_ai_answer_questions <- function(study_dir, answers) {
 #'     for (v in names(df)) if (is.factor(df[[v]])) df[[v]] <- as.character(df[[v]])
 #'     haven::write_xpt(df, file.path(d, "adam", paste0(x, ".xpt")))
 #'   }
-#'   invisible(tfl_ai_prepare(d, file.path(ex, "onco_toc_shell.xlsx"), mode = "agent",
+#'   invisible(tfl_ai_prepare(d, file.path(ex, "onco_toc_shell.xlsx"),
 #'                            quiet = TRUE, overwrite = TRUE))
 #'   cat(tfl_ai_agent_prompt(d))
 #' }
@@ -923,12 +858,17 @@ tfl_ai_answer_questions <- function(study_dir, answers) {
 tfl_ai_agent_prompt <- function(study_dir, requests = NULL, n = 10L) {
   idx <- tfl_ai_requests(study_dir)
   if (!nrow(idx)) {
-    .ard_stop(sprintf("%s has no requests: run tfl_ai_prepare(mode = \"agent\") first.",
-                      study_dir))
+    .ard_stop(sprintf("%s has no requests: run tfl_ai_prepare() first.", study_dir))
   }
   if (is.null(requests)) {
-    answered <- file.exists(file.path(study_dir, "ai", "answers", paste0(idx$request, ".md")))
-    requests <- utils::head(idx$request[!answered], n)
+    # a request is done when every report of it has its draft
+    ctxs <- readRDS(file.path(study_dir, "ai", "requests", "_contexts.rds"))
+    done <- vapply(idx$request, function(r) {
+      ids <- .ai_file_id(ctxs[[r]]$ids)
+      length(ids) > 0L &&
+        all(file.exists(file.path(study_dir, "ai", "spec", "outputs", paste0(ids, ".yml"))))
+    }, NA, USE.NAMES = FALSE)
+    requests <- utils::head(idx$request[!done], n)
     if (!length(requests)) return(structure(NA_character_, requests = character()))
   } else {
     bad <- setdiff(requests, idx$request)
@@ -937,13 +877,11 @@ tfl_ai_agent_prompt <- function(study_dir, requests = NULL, n = 10L) {
                         paste(sprintf("'%s'", bad), collapse = ", "), study_dir))
     }
   }
-  # what the study's AGENTS.md says: the answers alone, or run.R too; templates
+  # what the study's AGENTS.md says: templates; study.yml: the chat's language
   ag <- file.path(study_dir, "AGENTS.md")
   txt <- if (file.exists(ag)) readLines(ag, warn = FALSE, encoding = "UTF-8") else character()
-  run <- any(grepl("Rscript run.R <request>", txt, fixed = TRUE))
   tpl <- any(grepl("## Templates first", txt, fixed = TRUE))
-  reads <- any(grepl("Run a command only to read the files", txt, fixed = TRUE))
   structure(.ai_agent_prompt(basename(normalizePath(study_dir, mustWork = FALSE)), requests,
-                             run = run, templates = tpl, reads = reads),
+                             templates = tpl, language = .ai_spec_settings(study_dir)$language),
             requests = requests)
 }

@@ -2,12 +2,11 @@
 % Please edit documentation in R/ai_requests.R
 \name{tfl_ai_collect_answers}
 \alias{tfl_ai_collect_answers}
-\title{Read the answers of a study's requests, check them, write the report files}
+\title{Read the agent's drafts, check them, write the report files}
 \usage{
 tfl_ai_collect_answers(
   study_dir,
   requests = file.path("ai", "requests"),
-  answers = file.path("ai", "answers"),
   repairs = file.path("ai", "repairs"),
   overwrite = TRUE
 )
@@ -15,91 +14,83 @@ tfl_ai_collect_answers(
 \arguments{
 \item{study_dir}{The study folder.}
 
-\item{requests, answers, repairs}{The folders, under \code{study_dir}.}
+\item{requests, repairs}{The folders, under \code{study_dir}.}
 
 \item{overwrite}{\code{TRUE} (default) to write over report files already
-there: an answer collected again replaces its reports.}
+there: a draft checked again replaces its report.}
 }
 \value{
 A \code{tfl_ai_collected}: a list with \code{reports} (a data frame, one
 row a report: \code{request}, \code{output_id}, \code{status} -- \code{ok}, \code{warning},
-\code{error}, \verb{no answer} --, \code{problems} (how many), \code{first} (the first
-problem), \code{problems_text} (all of them, one a line), \code{file} (the
-report's \verb{spec/outputs/<id>.yml} when written, else \code{NA}), \code{repair}
-(the request's repair prompt to paste into the same chat, else \code{NA})),
+\code{error}, \verb{no answer} (no draft yet) --, \code{problems} (how many), \code{first}
+(the first problem), \code{problems_text} (all of them, one a line), \code{file}
+(the report's \verb{ai/spec/outputs/<id>.yml} when written, else \code{NA}),
+\code{repair} (the request's repair prompt, else \code{NA})),
 \code{next_steps} (a request's next step, named by the request),
 \code{next_kind} and \code{next_args} (the same step as a kind and its values,
 for a screen to say in its own words -- see \emph{The next step's kinds}),
 \code{assumptions} (the study's \verb{spec/_assumptions.yml} for these reports:
 \code{output_id}, \code{where}, \code{item}, \code{assumption}, \code{value}, \code{question}, \code{id} -- the
 assumption's \verb{A<n>} -- and \code{kind} -- its \verb{K<n>}, \code{\link[=tfl_ai_assumptions]{tfl_ai_assumptions()}}),
-\code{stray} (answer
-files named after no request), \code{requests} (the requests' folder),
+\code{stray} (drafts no request asks for), \code{requests} (the requests' folder),
 \code{templates} (each request's setting, \code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}}'s \code{templates}:
 a logical named by the request), \code{manifest} and \code{manifest_file}
 (below).
 }
 \description{
-Reads each \verb{<request>.md} in \code{answers} (the AI's whole answer to the
-request of the same name, \code{\link[=tfl_ai_write_requests]{tfl_ai_write_requests()}}), checks it against
-its request (\code{\link[=tfl_ai_parse]{tfl_ai_parse()}}, \code{\link[=tfl_ai_check]{tfl_ai_check()}}) and, when it has no
-error, writes its report files (\code{\link[=tfl_ai_unpack]{tfl_ai_unpack()}}).  An answer with
-errors writes no file: its repair prompt (\code{\link[=tfl_ai_repair_prompt]{tfl_ai_repair_prompt()}}) goes
-to \code{repairs}, to paste into the same chat; save the new answer over the
-old and collect again.
-}
-\details{
-An answer is read as UTF-8, with or without the byte-order mark Windows
-Notepad writes, and with any line ends; an answer saved in another
-encoding (Shift-JIS / CP932, "ANSI") is an \code{error} that says how to save
-it again.  An answer saved as \verb{<request>.md.txt} or \verb{<request>.txt} (Notepad
-adds \code{.txt}) is read too.
+The person's check of what the agent wrote (\code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}}): each
+request's drafts (\verb{ai/spec/outputs/<id>.yml}, one a report) are read as
+the request's answer, checked against the request (\code{\link[=tfl_ai_check]{tfl_ai_check()}}:
+the schema, the analyses, the ADaM summary, the study's files) and, when
+they have no error, written anew as the study's report files -- the
+column widths filled, the assumptions numbered
+(\verb{spec/_assumptions.yml}, \code{\link[=tfl_ai_assumptions]{tfl_ai_assumptions()}}), the draft's \verb{ai:}
+block (its assumptions, what is marked to confirm: \code{\link[=tfl_ai_confirm]{tfl_ai_confirm()}})
+kept.  A draft with errors is left as it is: its repair prompt
+(\code{\link[=tfl_ai_repair_prompt]{tfl_ai_repair_prompt()}}) goes to \code{repairs}, to paste into the agent's
+chat; check again when the agent has fixed it.  A draft YAML cannot read
+is refused with why, for the agent to fix its form.
 }
 \section{The next step's kinds}{
 
 \code{next_steps} is English text; \code{next_kind} names the same step by a
 word, with its values in \code{next_args}, so a screen can say it in its
-own language.  The kinds, and the values each carries (\code{agent}: whether
-the request was written for an agent -- \verb{Rscript run.R} -- or a chat):
+own language.  The kinds, and the values each carries (\code{drafts}: the
+request's draft files, comma-separated):
 \describe{
-\item{\code{answer}}{no answer yet: \code{request} (the request file),
-\code{answer} (the file to save it as), \code{agent}.}
-\item{\code{fix_answer}}{the answer could not be read as one block:
-\code{answer}, \code{agent}.}
-\item{\code{answer_again}}{the answer could not be checked: \code{answer},
-\code{agent}.}
-\item{\code{repair}}{the answer has errors and a repair prompt was written:
-\code{repair} (the prompt file), \code{answer}, \code{agent}.}
+\item{\code{answer}}{no draft yet: \code{request} (the request file), \code{drafts}
+(the files the agent writes).}
+\item{\code{fix_answer}}{a draft could not be read (its YAML, or no
+\code{id}): \code{drafts} (the files refused).}
+\item{\code{answer_again}}{the drafts could not be checked: \code{drafts}.}
+\item{\code{repair}}{the drafts have errors and a repair prompt was
+written: \code{repair} (the prompt file), \code{drafts}.}
 \item{\code{see_problem}}{the report files could not be written (the
-problem is in \code{reports}): \code{agent}.}
+problem is in \code{reports}).}
 \item{\code{warnings}}{written, with warnings to read.}
 \item{\code{done}}{written, nothing to do.}
 \item{\code{sheet_missing}}{a sheet's request: written, but \code{missing} (the
-TOC items) are not in the answer.}
-\item{\code{add_missing}}{written, but \code{missing} are not in the answer:
-\code{answer}, \code{agent}.}
-\item{\code{none_asked}}{the answer has none of the reports asked for:
-\code{asked}, \code{has}, \code{answer}, \code{agent}.}
+TOC items) have no draft.}
+\item{\code{add_missing}}{written, but \code{missing} have no draft: \code{drafts}
+(theirs).}
+\item{\code{none_asked}}{the drafts are none of the reports asked for:
+\code{asked}, \code{has}.}
 }
 \code{\link[=tfl_ai_run]{tfl_ai_run()}} adds three, for a report that passed its checks:
 \code{not_built} (\code{reports}, not built in this run: \verb{Rscript run.R <request>}), \code{no_package} (\code{report}, \code{package}: R has no such package),
 \code{build_failed} (\code{report}, \code{problem}, \code{repair}).
 
-The manifest is every report the answers say they make, for the person
-to check the count against the TOC (one TOC row can be several
-reports): each answer lists its reports first (\verb{reports:}, one line a
-report: \code{id}, \code{title}, \code{split} -- how its TOC row is split for it --,
-\code{toc} -- the TOC row's number).  A data frame, one row a report:
-\code{request}, \code{toc}, \code{output_id}, \code{title}, \code{split}, \code{listed} (\code{FALSE}: a
-report the answer writes but does not list; \code{NA}: a request not
-answered or not read, its reports as asked) and \code{status} (the report's,
-as in \code{reports}, or \code{"not answered"}: listed, but no report file in the
-answer).  It is written to \code{ai/manifest.csv} (UTF-8) beside the
-requests' folder, anew at each collection.
+The manifest is every report the drafts make, for the person to check
+the count against the TOC (one TOC row can be several reports): a
+data frame, one row a report: \code{request}, \code{toc}, \code{output_id}, \code{title},
+\code{split}, \code{listed} (\code{NA}: a request not answered or not read, its
+reports as asked) and \code{status} (the report's, as in \code{reports}).  It is
+written to \code{ai/manifest.csv} (UTF-8) beside the requests' folder, anew
+at each collection.
 The paths are relative to \code{study_dir}.  Its print is a summary: each
 request's status, its reports and the next step.
 }
 
 \seealso{
-\code{\link[=tfl_ai_write_requests]{tfl_ai_write_requests()}}
+\code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}}, \code{\link[=tfl_ai_confirm]{tfl_ai_confirm()}}, \code{\link[=tfl_ai_adopt]{tfl_ai_adopt()}}.
 }

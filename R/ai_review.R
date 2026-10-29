@@ -460,7 +460,7 @@
   })
   if (is.null(o)) return(list(rows = rows, kinds = "report", assumptions = NULL))
   id <- o$id
-  # what the AI marked to confirm (the spec route's `ai: confirm`)
+  # what the AI marked to confirm (`ai: confirm`)
   cf <- .ai_confirm_rows(o)
   for (j in seq_len(nrow(cf))) {
     add(.ai_rv("K19", output_id = id, sheet = "ai", row = cf$where[j] %||% "", field = cf$item[j] %||% "",

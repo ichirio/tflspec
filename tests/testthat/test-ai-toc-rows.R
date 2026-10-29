@@ -67,7 +67,7 @@ test_that("a company's TOC: a request a shell sheet, the TOC items sharing it it
   on.exit(unlink(c(f, d), recursive = TRUE), add = TRUE)
   dir.create(file.path(d, "adam"), recursive = TRUE)
   haven::write_xpt(tflspec:::.ai_chr(tflspec::adsl), file.path(d, "adam", "adsl.xpt"))
-  r <- tfl_ai_prepare(d, f, adam = "adam", quiet = TRUE, mode = "agent", templates = FALSE)
+  r <- tfl_ai_prepare(d, f, adam = "adam", quiet = TRUE, templates = FALSE)
   x <- tfl_ai_read_shell(f)
   # 60 shell sheets and one request of the TOC items with no shell
   expect_identical(nrow(r$requests), nrow(x$shells) + 1L)

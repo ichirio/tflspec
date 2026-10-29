@@ -14,8 +14,7 @@ tfl_ai_prepare(
   sheets = NULL,
   size = NULL,
   language = NULL,
-  workbook = c("text", "attach", "both", "file"),
-  instructions = c("once", "each"),
+  workbook = c("text", "file"),
   max_chars = NULL,
   overwrite = FALSE,
   dry_run = FALSE,
@@ -23,7 +22,6 @@ tfl_ai_prepare(
   datasets = NULL,
   max_levels = 15L,
   quiet = FALSE,
-  mode = c("chat", "agent"),
   shells = NULL,
   add = FALSE,
   templates = TRUE,
@@ -31,13 +29,11 @@ tfl_ai_prepare(
   toc_cols = NULL,
   sheet_roles = NULL,
   unit = c("sheet", "toc"),
-  area = NULL,
+  area = TRUE,
   numbers = NULL,
-  agent_run = FALSE,
   agent_reads = character(),
   docs = NULL,
-  agent_max_reads = 3L,
-  route = c("answers", "spec")
+  agent_max_reads = 3L
 )
 }
 \arguments{
@@ -52,18 +48,18 @@ tfl_ai_prepare(
 \item{toc_sheet, sheets}{As \code{\link[=tfl_ai_read_shell]{tfl_ai_read_shell()}}: the TOC sheet when the
 guess is wrong, the sheets to keep.}
 
-\item{size, language, workbook, instructions, max_chars}{As
-\code{\link[=tfl_ai_write_requests]{tfl_ai_write_requests()}}: the reports a request holds (\code{NULL}, the
-default: 1 with \code{mode = "agent"}, 3 in a chat), the language of
-the assumptions, how the workbook reaches the chat (\code{"text"},
-\code{"attach"}, \code{"both"}, \code{"file"}; with \code{mode = "agent"} and
-\code{agent_run = TRUE}, \code{"text"} is \code{"file"}: the text and each shell's
-place in the workbook file), the
-instructions in each request or once, a request's length at most.}
+\item{size, language, workbook, max_chars}{As \code{\link[=tfl_ai_write_requests]{tfl_ai_write_requests()}}:
+the reports a request holds (\code{NULL}, the default: 1), the language of
+the assumptions -- and of the agent's questions in the chat: it is
+written to \code{study.yml} as \code{ai: language} --, how the workbook reaches
+the agent (\code{"text"},
+\code{"file"}; with \code{"workbook"} in \code{agent_reads}, \code{"text"} is \code{"file"}:
+the text and each shell's place in the workbook file), a request's
+length at most.}
 
 \item{overwrite}{\code{TRUE} to start the study folder again
 (\code{\link[=tfl_ai_study_init]{tfl_ai_study_init()}} over its \code{study.yml} and \verb{spec/}).  The requests
-are written again on every call (the answers are kept).}
+are written again on every call (the drafts are kept).}
 
 \item{dry_run}{\code{TRUE} to read the workbook and the ADaM and write
 nothing: the same result, to look at before the requests are written
@@ -81,15 +77,12 @@ Fewer datasets, shorter requests.}
 \item{quiet}{\code{TRUE} to say nothing (the steps' messages): a screen shows
 the result's \code{hint} and \code{next_steps} itself.}
 
-\item{mode}{\code{"chat"} (default): requests to paste into a chat, one at a
-time.  \code{"agent"}: for a coding agent -- see \emph{For a coding agent}.}
-
 \item{shells}{Workbooks holding the shells when \code{toc} holds the TOC
 alone (as \code{\link[=tfl_ai_read_shell]{tfl_ai_read_shell()}}): each report's shell is looked for in
 them; the requests and the \code{toc} say each report's \code{book}.}
 
 \item{add}{\code{TRUE} to add this workbook's reports to the study's requests
-and answers already there (a TOC of listings, a book of PK figures,
+and drafts already there (a TOC of listings, a book of PK figures,
 one at a time): the new requests are named after those there
 (\code{ae-2}), a report asked for already stops the call (\code{overwrite = TRUE} asks for it again), \code{spec/toc.yml} gets the new reports at its
 end, and the workbook's text is \verb{ai/toc_shell-<workbook>.md}.  With
@@ -97,8 +90,8 @@ end, and the workbook's text is \verb{ai/toc_shell-<workbook>.md}.  With
 \code{study.yml}, \code{spec/data.yml}, \code{spec/defaults.yml} and the agent's
 files are kept as they are.}
 
-\item{templates}{\code{TRUE} (default): the AI answers a report with one of the
-study's templates where it fits (\verb{template: \{name, args\}}, and the
+\item{templates}{\code{TRUE} (default): the agent writes a report with one of
+the study's templates where it fits (\verb{template: \{name, args\}}, and the
 report's own content items for what it does not cover), else as a code
 SPEC; the requests (and \code{AGENTS.md}) list the templates registered now
 -- tflspec's, a company's, the study's variants.  \code{FALSE}: the code
@@ -122,13 +115,11 @@ the AI's to read from it -- and one request of the TOC items no sheet
 chose; \code{"toc"} the TOC's reports, as before (a report's shell found
 by its number).}
 
-\item{area}{Where the AI's report files go: \code{TRUE}, its own folder
-\verb{ai/spec/outputs/} (made here) -- drafts, built into \verb{ai/output/},
+\item{area}{Where the agent's drafts go: \code{TRUE} (the default), their
+own folder \verb{ai/spec/outputs/} (made here), built into \verb{ai/output/},
 which the person adopts into the study's \verb{spec/outputs/}
-(\code{\link[=tfl_ai_adopt]{tfl_ai_adopt()}}); \code{FALSE}, \verb{spec/outputs/} itself, as before.
-\code{NULL} (default): \code{TRUE} for a new study (no report in \verb{spec/outputs/}
-and no answer yet), else as the study is (a study of the form before
-is moved with \code{\link[=tfl_ai_migrate]{tfl_ai_migrate()}}).}
+(\code{\link[=tfl_ai_adopt]{tfl_ai_adopt()}}); \code{FALSE}, the folder is not made here (a study of
+the form before is moved with \code{\link[=tfl_ai_migrate]{tfl_ai_migrate()}}).}
 
 \item{numbers}{The person's check of the report numbers each shell sheet
 writes (see the result's \code{numbers}), over the rule (a number written
@@ -151,47 +142,23 @@ saved rows (a row of the same sheet and number replaced, \code{NA} taking
 it out) and the file keeps the result.  \code{NULL} (default): the saved file, if any.
 With \code{unit = "sheet"} only.}
 
-\item{agent_run}{With \code{mode = "agent"}, what the agent does.  \code{FALSE}
-(default): it writes each answer and stops -- it reads the request and
-the files the request names only, looks for nothing else, runs and
-installs nothing, and takes what they do not settle as an assumption
-with its \code{question}; the person checks the answers (tflplanner's "Check
-all answers", \code{\link[=tfl_ai_collect_answers]{tfl_ai_collect_answers()}}).  \code{TRUE}: it also runs
-\code{run.R} after each answer, reads \code{ai/status.md} and repairs (three tries
-at most), and may read the TOC / SHELL workbook and the ADaM with R to
-settle a question.}
+\item{agent_reads}{What the agent may open besides the requests and
+the files they name: \code{"workbook"} (the TOC / SHELL workbook: each
+request then says where its shells are in it) and \code{"adam"} (the
+ADaM), read only to settle what a request leaves unclear, with
+whatever tool the PC has (PowerShell, Python, R).  \code{character()}
+(default): neither, and \code{AGENTS.md} says not to open them.}
 
-\item{agent_reads}{With \code{mode = "agent"} and \code{agent_run = FALSE}, what
-the agent may open besides the requests and the files they name:
-\code{"workbook"} (the TOC / SHELL workbook: each request then says where
-its shells are in it) and \code{"adam"} (the ADaM), read with R only to
-settle what a request leaves unclear, with whatever tool the PC has
-(PowerShell, Python, R).  \code{character()} (default): neither, and
-\code{AGENTS.md} says not to open them.}
+\item{docs}{Documents the agent may read for what a request leaves
+unclear (a SAP, a data guide): their paths.  They are copied into
+\verb{ai/docs/} (the agent works in the study folder) and \code{AGENTS.md}
+names them; the agent reads no other document.  \code{NULL} (default):
+none.}
 
-\item{docs}{With \code{mode = "agent"}, documents the agent may read for what
-a request leaves unclear (a SAP, a data guide): their paths.  They are
-copied into \verb{ai/docs/} (the agent works in the study folder) and
-\code{AGENTS.md} names them; the agent reads no other document.  \code{NULL}
-(default): none.}
-
-\item{agent_max_reads}{With \code{mode = "agent"} and \code{agent_run = FALSE}, how
-many times for a request the agent may open a file or run a command
-beyond the request and the files it names; then it writes what is
-still unclear as assumptions and questions and goes on.  Default 3.}
-
-\item{route}{With \code{mode = "agent"}, what the agent writes: \code{"answers"}
-(default): an answer a request (\verb{ai/answers/<request>.md}), the
-person's check writing the drafts; \code{"spec"}: the drafts themselves
-(\verb{ai/spec/outputs/<id>.yml}, the report's skeleton: its data, its
-analyses, the items that make its rows, its titles), after asking the
-person in the chat what defines a report and is not settled, the
-answers kept in \code{ai/decisions.md} (\code{\link[=tfl_ai_decisions_read]{tfl_ai_decisions_read()}}) and
-applied to the reports after; what it could not settle marked \code{ai: confirm} in the file (\code{\link[=tfl_ai_confirm]{tfl_ai_confirm()}}).  The check reads the drafts
-as it reads the answers.  \code{study.yml}'s \verb{ai:} keys set the route's
-rules: \code{language} (the chat's), \code{ask_when} (\code{"request"} /
-\code{"report"}), \code{carry} (which decision scopes apply without asking:
-\code{all}, \code{dataset}, \code{section}), \code{max_questions}.}
+\item{agent_max_reads}{How many times for a request the agent may open
+a file or run a command beyond the request and the files it names;
+then it asks, or marks what is unclear to confirm, and goes on.
+Default 3.}
 }
 \value{
 A \code{tfl_ai_prepared}: a list with \code{requests} (one row a request:
@@ -226,13 +193,12 @@ among the sheets; \code{"set by the person"} for \code{"saved"} and \code{"given
 \code{\link[=tfl_ai_adam_summary]{tfl_ai_adam_summary()}}: \code{datasets}, \code{variables}, \code{text}), \code{files} (the
 files written, relative to \code{dir}), \code{hint} (what the workbook's reading
 could not find -- no TOC, a report with no shell -- and what to pass),
-\code{next_steps} (what to do next) and \code{agent_prompt} (with \code{mode = "agent"}:
-the first message to the agent, its paths from the study folder (a
-copy of the study says the same), also written to
-\code{ai/agent_prompt.md}; else \code{NA}) and \code{agent_files} (what the agent may
-open besides the requests and the files they name, from the study
-folder: the workbook and the ADaM as \code{agent_reads} allows -- both with
-\code{agent_run = TRUE} -- and the documents; \code{character()} else).
+\code{next_steps} (what to do next), \code{agent_prompt} (the first message to
+the agent, its paths from the study folder (a copy of the study says
+the same), also written to \code{ai/agent_prompt.md}) and \code{agent_files}
+(what the agent may open besides the requests and the files they
+name, from the study folder: the workbook and the ADaM as
+\code{agent_reads} allows, and the documents; \code{character()} else).
 Its print is the workbook's summary and the next step.  The files are
 UTF-8.
 }
@@ -246,26 +212,43 @@ the result's \code{hint}), \code{spec/toc.yml} (the TOC's reports in order, with
 their section and analysis set, as tflplanner reads it; when the study
 has none) and \code{\link[=tfl_ai_write_requests]{tfl_ai_write_requests()}}.  Nothing is sent anywhere.
 }
-\section{For a coding agent}{
- \code{mode = "agent"}:
-The requests for an agent (GitHub Copilot's agent in VS Code, and the
-like) that writes the answers into \verb{ai/answers/}.  Besides the
-requests (each starting with the agent's steps), and what every request
-would repeat written once for the agent to read -- \code{ai/instructions-table.md}
-and \code{ai/instructions-figure.md} (the instructions and the schema),
-\code{ai/templates.md} (with \code{templates = TRUE}: every template, each request
-naming the ones likely for its reports), \code{ai/adam_summary.md} and
-\verb{spec/}, each request naming them -- the study folder gets
-\code{AGENTS.md} and \code{.github/copilot-instructions.md} (the same
-instructions; see \code{agent_run}),
-\code{run.R} (\code{\link[=tfl_ai_run]{tfl_ai_run()}}: collect, ARD, RTF, \code{ai/status.md}, the
-questions gathered into \code{ai/questions.md}), \code{ai/questions.md} (for the
-person's answers) and \code{ai/decisions.md} (what the reports follow; the
-agent moves an answered question there, then redoes the reports it
-touches -- the second round).  \code{questions.md} and \code{decisions.md} are never
-written over.  The first message (\code{ai/agent_prompt.md}) asks for the
-first one or two requests only, then a stop: the person asks for the
-rest.
+\section{The agent's work}{
+
+The requests are for a coding agent (GitHub Copilot's agent in VS Code,
+and the like) that \strong{asks the person in the chat} what defines each
+report and is not settled -- the analysis set, a parameter, the
+treatment variable, a denominator -- waits for the answers, keeps them
+in \code{ai/decisions.md} (\code{\link[=tfl_ai_decisions_read]{tfl_ai_decisions_read()}}) and applies them to
+the reports after, then writes each report's \strong{skeleton} as a draft,
+\verb{ai/spec/outputs/<id>.yml}: its data, its analyses, the items that make
+its rows (or a template), its titles and footnotes -- nothing of the
+look.  What it could not settle it marks under the draft's \code{ai: confirm} (\code{\link[=tfl_ai_confirm]{tfl_ai_confirm()}}).  The person checks the drafts
+(tflplanner's "Check", \code{\link[=tfl_ai_collect_answers]{tfl_ai_collect_answers()}}), finishes them in the
+builder and adopts them (\code{\link[=tfl_ai_adopt]{tfl_ai_adopt()}}).
+
+Besides the requests (each starting with the agent's steps and the
+decisions that apply to its reports), and what every request would
+repeat written once for the agent to read -- \code{ai/instructions-table.md}
+and \code{ai/instructions-figure.md} (the instructions, the schema, what a
+draft holds), \code{ai/templates.md} (with \code{templates = TRUE}: every
+template, each request naming the ones likely for its reports),
+\code{ai/adam_summary.md} and \verb{spec/}, each request naming them -- the study
+folder gets \code{AGENTS.md} and \code{.github/copilot-instructions.md} (the same
+instructions), \code{run.R} (\code{\link[=tfl_ai_run]{tfl_ai_run()}}: the check from the command
+line, with the ARD and RTF), \code{ai/questions.md} (the agent's questions
+about the work itself) and \code{ai/decisions.md}.  \code{questions.md} and
+\code{decisions.md} are never written over.  The first message
+(\code{ai/agent_prompt.md}) asks for the first one or two requests only, then
+a stop: the person asks for the rest (\code{\link[=tfl_ai_agent_prompt]{tfl_ai_agent_prompt()}}).
+
+\code{study.yml}'s \verb{ai:} keys set the agent's rules (the study standard's
+\code{spec/defaults.yml} may say them under its own \verb{ai:} key first):
+\code{language} (the chat's: \code{"en"}, \code{"ja"} ...), \code{ask_when} (\code{"request"},
+the default: the request's reports' questions together; \code{"report"}:
+report by report), \code{carry} (which decision scopes apply to a later
+report without asking: \code{all}, \code{dataset}, \code{section}), \code{max_rounds} (how
+many times one item is asked again, 3), \code{footnotes_at} (\code{"footer"}, the
+default, or \code{"table"}: where the shell's footnotes go).
 }
 
 \examples{

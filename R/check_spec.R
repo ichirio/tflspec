@@ -86,7 +86,7 @@ tfl_check_spec <- function(study, output_id = NULL) {
       add(output_id = id, part = "content", item = "", level = "error", message = conditionMessage(ro))
       next
     }
-    # what the AI marked to confirm (the spec route): to look at
+    # what the AI marked to confirm (`ai: confirm`): to look at
     cf <- .ai_confirm_rows(ro)
     if (nrow(cf)) {
       add(output_id = id, part = "content", item = ifelse(is.na(cf$item), cf$where, paste0(cf$where, "$", cf$item)),

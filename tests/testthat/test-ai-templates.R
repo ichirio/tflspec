@@ -23,47 +23,57 @@ test_that("templates = TRUE / FALSE: the setting at each request's head; FALSE a
   ad <- aitpl_study(root)
   d1 <- file.path(root, "with")
   d0 <- file.path(root, "without")
-  r1 <- tfl_ai_prepare(unit = "toc", d1, aitpl_book(), adam = ad, quiet = TRUE, instructions = "each")
-  r0 <- tfl_ai_prepare(unit = "toc", d0, aitpl_book(), adam = ad, quiet = TRUE, instructions = "each", templates = FALSE)
+  r1 <- tfl_ai_prepare(unit = "toc", d1, aitpl_book(), adam = ad, quiet = TRUE, size = 3L)
+  r0 <- tfl_ai_prepare(unit = "toc", d0, aitpl_book(), adam = ad, quiet = TRUE, size = 3L, templates = FALSE)
   expect_true(r1$templates)
   expect_false(r0$templates)
   expect_identical(r1$requests$request, r0$requests$request)
-  expect_error(tfl_ai_prepare(unit = "toc", d0, aitpl_book(), adam = ad, quiet = TRUE, instructions = "each", templates = "prefer"),
+  expect_error(tfl_ai_prepare(unit = "toc", d0, aitpl_book(), adam = ad, quiet = TRUE, templates = "prefer"),
                "TRUE .* or FALSE")
   for (i in seq_len(nrow(r1$requests))) {
     with <- readLines(file.path(d1, r1$requests$file[i]), encoding = "UTF-8")
     without <- readLines(file.path(d0, r0$requests$file[i]), encoding = "UTF-8")
-    expect_identical(with[1L], "<!-- templates: TRUE -->")
+    at <- match("<!-- templates: TRUE -->", with)
+    expect_false(is.na(at))
     expect_false(any(grepl("templates:", without, fixed = TRUE)))
     expect_false(any(grepl("## Templates first", without, fixed = TRUE)))
     # the same request but the setting's line and the templates' part
-    at <- match("## Templates first", with)
-    sep <- at + match("---", with[-seq_len(at)])
-    keep <- with[-c(1L, seq(at, sep - 1L))]
+    ts <- grep("^Templates: ", with)[1L]
+    sep <- ts + match(TRUE, grepl("^## ", with[-seq_len(ts)]))
+    keep <- with[-c(at, seq(ts, sep - 1L))]
     expect_identical(keep[keep != ""], without[without != ""], info = r1$requests$request[i])
   }
-  # a table's request lists the table templates, a figure's the figures'
-  t1 <- paste(readLines(file.path(d1, "ai", "requests", "ae-1.md"), encoding = "UTF-8"), collapse = "\n")
-  expect_match(t1, "- `ae_soc_pt`: Adverse events by SOC and PT (FDA STF Table 14) (table, layout hierarchical; variant of hierarchical)", fixed = TRUE)
-  expect_match(t1, "  - `population` [target]*", fixed = TRUE)
-  expect_match(t1, "  - `where` [target] (text) = \"TRTEMFL == \\\"Y\\\"\"", fixed = TRUE)
+  # a table's request names the likely table templates, a figure's the figures'
+  t1 <- paste(readLines(file.path(d1, "ai", "requests", "ae-1.md"), encoding = "UTF-8"), collapse = "
+")
+  expect_match(t1, "- T-14-3-1: [^
+]*`ae_soc_pt`")
   expect_false(grepl("`km_survival`", t1, fixed = TRUE))
-  f1 <- paste(readLines(file.path(d1, "ai", "requests", "figure-1.md"), encoding = "UTF-8"), collapse = "\n")
-  expect_match(f1, "- `km_survival`:", fixed = TRUE)
+  f1 <- paste(readLines(file.path(d1, "ai", "requests", "figure-1.md"), encoding = "UTF-8"), collapse = "
+")
+  expect_match(f1, "- F-14-2-2: [^
+]*`km_survival`")
   expect_false(grepl("`demog`", f1, fixed = TRUE))
+  # all of them, with their arguments, in the file every request names
+  tp <- paste(readLines(file.path(d1, "ai", "templates.md"), encoding = "UTF-8"), collapse = "
+")
+  expect_match(tp, "- `ae_soc_pt`: Adverse events by SOC and PT (FDA STF Table 14) (table, layout hierarchical; variant of hierarchical)", fixed = TRUE)
+  expect_match(tp, "  - `population` [target]*", fixed = TRUE)
+  expect_match(tp, "  - `where` [target] (text) = \"TRTEMFL == \\\"Y\\\"\"", fixed = TRUE)
+  expect_match(tp, "- `km_survival`:", fixed = TRUE)
   # a variant registered now is listed, its from said
   tfl_template_variant("demog_x", from = "demog", defaults = list(continuous = "AGE"))
   on.exit(rm(list = "demog_x", envir = tflspec:::.tpl_registry), add = TRUE)
   expect_true(any(grepl("`demog_x`: .*variant of demog", tflspec:::.ai_templates_list("table"))))
   # the agent's instructions say it too
   da <- file.path(root, "agent")
-  ra <- tfl_ai_prepare(unit = "toc", da, aitpl_book(), adam = ad, quiet = TRUE, mode = "agent", size = 3L)
+  ra <- tfl_ai_prepare(unit = "toc", da, aitpl_book(), adam = ad, quiet = TRUE, size = 3L)
   ag <- readLines(file.path(da, "AGENTS.md"), encoding = "UTF-8")
   expect_true(any(grepl("## Templates first", ag, fixed = TRUE)))
   expect_match(ra$agent_prompt, "template where one fits", fixed = TRUE)
   db <- file.path(root, "agent0")
-  rb <- tfl_ai_prepare(unit = "toc", db, aitpl_book(), adam = ad, quiet = TRUE, mode = "agent", size = 3L, templates = FALSE)
-  expect_false(any(grepl("Templates first", readLines(file.path(db, "AGENTS.md")), fixed = TRUE)))
+  rb <- tfl_ai_prepare(unit = "toc", db, aitpl_book(), adam = ad, quiet = TRUE, size = 3L, templates = FALSE)
+  expect_false(any(grepl("## Templates first", readLines(file.path(db, "AGENTS.md")), fixed = TRUE)))
   expect_false(grepl("template", rb$agent_prompt, fixed = TRUE))
 })
 
@@ -77,8 +87,8 @@ test_that("answers with templates: checked, written, built (RTF, PNG); a bad arg
   root <- withr::local_tempdir()
   ad <- aitpl_study(root)
   d <- file.path(root, "study")
-  r <- tfl_ai_prepare(unit = "toc", d, aitpl_book(), adam = ad, quiet = TRUE, instructions = "each")
-  tfl_ai_save_answer(d, "demographics-1", aitpl_answer(
+  r <- tfl_ai_prepare(unit = "toc", d, aitpl_book(), adam = ad, quiet = TRUE, size = 3L)
+  ai_drafts_from_answer(d, aitpl_answer(
     "tflspec_ai: {task: table, version: 1, outputs: [T-14-1-1]}",
     "outputs:",
     "  - id: T-14-1-1",
@@ -88,8 +98,8 @@ test_that("answers with templates: checked, written, built (RTF, PNG); a bad arg
     "    extends: [defaults]",
     "    template: {name: demog, args: {categorical: [AGEGR1, SEX, RACE]}}",
     "    page: {titles: {\"1\": {center: Table 14.1.1}}}",
-    "assumptions: []"))
-  tfl_ai_save_answer(d, "ae-1", aitpl_answer(
+    "assumptions: []"), "table")
+  ai_drafts_from_answer(d, aitpl_answer(
     "tflspec_ai: {task: table, version: 1, outputs: [T-14-3-1]}",
     "outputs:",
     "  - id: T-14-3-1",
@@ -101,8 +111,8 @@ test_that("answers with templates: checked, written, built (RTF, PNG); a bad arg
     "    content:",
     "      - plan_paginate_rows: {max_rows: 18}",
     "    page: {titles: {\"1\": {center: Table 14.3.1}}}",
-    "assumptions: []"))
-  tfl_ai_save_answer(d, "labs-1", aitpl_answer(
+    "assumptions: []"), "table")
+  ai_drafts_from_answer(d, aitpl_answer(
     "tflspec_ai: {task: table, version: 1, outputs: [T-14-3-5]}",
     "outputs:",
     "  - id: T-14-3-5",
@@ -114,14 +124,14 @@ test_that("answers with templates: checked, written, built (RTF, PNG); a bad arg
     "      name: param_change",
     "      args: {data: ADLB, params: [ALT, AST], visits: [CYCLE 2 DAY 1], param_order: ~, colour: red}",
     "    page: {titles: {\"1\": {center: Table 14.3.5}}}",
-    "assumptions: []"))
-  tfl_ai_save_answer(d, "figure-1", aitpl_answer(
+    "assumptions: []"), "table")
+  ai_drafts_from_answer(d, aitpl_answer(
     "tflspec_ai: {task: figure, version: 1, output_id: F-14-2-2}",
     "data: [{step: read, dataset: ADTTE}, {step: param, value: OS}]",
     "template: {name: km_survival, args: {by: TRT01A, time_unit: months}}",
     "layers:",
     "  - {layer: geom_hline, yintercept: 0.5, linetype: dashed}",
-    "assumptions: []"))
+    "assumptions: []"), "figure")
   res <- suppressMessages(tfl_ai_run(d))
   rp <- res$reports
   st <- stats::setNames(rp$status, rp$output_id)
@@ -140,8 +150,10 @@ test_that("answers with templates: checked, written, built (RTF, PNG); a bad arg
                fixed = TRUE)
   expect_true(file.exists(file.path(d, "ai", "repairs", "labs-1.md")))
   # the repaired answer: built
-  a <- readLines(file.path(d, "ai", "answers", "labs-1.md"), encoding = "UTF-8")
-  tfl_ai_save_answer(d, "labs-1", sub(", colour: red", "", a, fixed = TRUE))
+  f <- file.path(d, "ai", "spec", "outputs", "T-14-3-5.yml")
+  a <- readLines(f, encoding = "UTF-8")
+  a <- sub(", colour: red", "", a, fixed = TRUE)
+  writeLines(a[!grepl("^[[:space:]]*colour: red[[:space:]]*$", a)], f)
   res <- suppressMessages(tfl_ai_run(d))
   rp <- res$reports
   expect_identical(rp$status[rp$output_id == "T-14-3-5"], "ok")
@@ -150,7 +162,7 @@ test_that("answers with templates: checked, written, built (RTF, PNG); a bad arg
   expect_true("templates: TRUE" %in% status)
   # the comparison: one row a report, what it was answered with, its values,
   # its check, its repairs
-  tfl_ai_save_answer(d, "efficacy-1", aitpl_answer(
+  ai_drafts_from_answer(d, aitpl_answer(
     "tflspec_ai: {task: table, version: 1, outputs: [T-14-2-1]}",
     "outputs:",
     "  - id: T-14-2-1",
@@ -165,7 +177,7 @@ test_that("answers with templates: checked, written, built (RTF, PNG); a bad arg
     "    content:",
     "      - table_plan: {cols: TRT01A, rows: {group: variable}}",
     "    page: {titles: {\"1\": {center: Table 14.2.1}}}",
-    "assumptions: []"))
+    "assumptions: []"), "table")
   cmp <- tfl_ai_compare(d)
   expect_true(file.exists(file.path(d, "ai", "compare.csv")))
   expect_identical(names(cmp), c("output_id", "request", "templates", "answered_with", "values",
@@ -190,15 +202,15 @@ test_that("answers with templates: checked, written, built (RTF, PNG); a bad arg
   expect_true(any(grepl("'demo' is not a template; the templates are", p$problem, fixed = TRUE)))
 })
 
-test_that("mode = \"agent\": what every request repeats is a file, written once", {
+test_that("what every request repeats is a file, written once", {
   skip_on_cran()
   skip_if_not_installed("haven")
   root <- withr::local_tempdir()
   ad <- aitpl_study(root)
   d1 <- file.path(root, "with")
   d0 <- file.path(root, "without")
-  r1 <- tfl_ai_prepare(unit = "toc", d1, aitpl_book(), adam = ad, quiet = TRUE, mode = "agent", size = 3L)
-  r0 <- tfl_ai_prepare(unit = "toc", d0, aitpl_book(), adam = ad, quiet = TRUE, mode = "agent", size = 3L, templates = FALSE)
+  r1 <- tfl_ai_prepare(unit = "toc", d1, aitpl_book(), adam = ad, quiet = TRUE, size = 3L)
+  r0 <- tfl_ai_prepare(unit = "toc", d0, aitpl_book(), adam = ad, quiet = TRUE, size = 3L, templates = FALSE)
   for (f in c("ai/instructions-table.md", "ai/instructions-figure.md", "ai/templates.md")) {
     expect_true(f %in% r1$files, info = f)
   }
@@ -216,8 +228,6 @@ test_that("mode = \"agent\": what every request repeats is a file, written once"
   ae <- paste(readLines(file.path(d1, "ai", "requests", "ae-1.md"), encoding = "UTF-8"), collapse = "\n")
   expect_lt(nchar(ae), 8000)
   expect_match(ae, "Follow `ai/instructions-table.md`", fixed = TRUE)
-  expect_match(ae, "Your answer's header: `tflspec_ai: {task: table, version: 1, outputs: [T-14-3-1]}`",
-               fixed = TRUE)
   expect_match(ae, "- T-14-3-1: [^\n]*`ae_soc_pt`")
   expect_match(ae, "`ai/adam_summary.md`: name only", fixed = TRUE)
   expect_false(grepl("```yaml", ae, fixed = TRUE))
@@ -240,37 +250,13 @@ test_that("mode = \"agent\": what every request repeats is a file, written once"
   expect_identical(tflspec:::.ai_templates_likely("", "table"), character())
 })
 
-test_that("a chat's request over max_chars: the templates' arguments by name only", {
-  skip_on_cran()
-  skip_if_not_installed("haven")
-  root <- withr::local_tempdir()
-  ad <- aitpl_study(root)
-  d1 <- file.path(root, "full")
-  d2 <- file.path(root, "short")
-  r1 <- tfl_ai_prepare(unit = "toc", d1, aitpl_book(), adam = ad, quiet = TRUE, instructions = "each")
-  # (the whole request is about 67,000 characters, the shortened one about
-  # 52,500 -- the schema's listing section since the AI drafts listings,
-  # plan_empty since the schema has it: a limit between them, with room for
-  # the instructions to grow)
-  r2 <- suppressWarnings(tfl_ai_prepare(unit = "toc", d2, aitpl_book(), adam = ad, quiet = TRUE, instructions = "each",
-                                        max_chars = 55000))
-  ae1 <- paste(readLines(file.path(d1, "ai", "requests", "ae-1.md"), encoding = "UTF-8"), collapse = "\n")
-  ae2 <- paste(readLines(file.path(d2, "ai", "requests", "ae-1.md"), encoding = "UTF-8"), collapse = "\n")
-  expect_lt(nchar(ae2), nchar(ae1))
-  expect_lte(nchar(ae2), 55000)
-  expect_match(ae2, "- `ae_soc_pt`: Adverse events by SOC and PT", fixed = TRUE)
-  expect_match(ae2, "  - `population` [target]*, ", fixed = TRUE)
-  expect_false(grepl("(text) = ", ae2, fixed = TRUE))
-  expect_match(ae1, "(text) = ", fixed = TRUE)
-})
-
 test_that("tfl_ai_compare(): a study without templates; no answer; a repair counted once", {
   skip_on_cran()
   skip_if_not_installed("haven")
   root <- withr::local_tempdir()
   ad <- aitpl_study(root)
   d <- file.path(root, "study")
-  r <- tfl_ai_prepare(unit = "toc", d, aitpl_book(), adam = ad, quiet = TRUE, instructions = "each", templates = FALSE)
+  r <- tfl_ai_prepare(unit = "toc", d, aitpl_book(), adam = ad, quiet = TRUE, size = 3L, templates = FALSE)
   cmp <- tfl_ai_compare(d, file = NULL)
   expect_false(file.exists(file.path(d, "ai", "compare.csv")))
   expect_setequal(cmp$output_id, r$toc$toc_id)
@@ -278,15 +264,15 @@ test_that("tfl_ai_compare(): a study without templates; no answer; a repair coun
   expect_true(all(is.na(cmp$answered_with)))
   expect_true(all(cmp$check == "no answer"))
   expect_true(all(cmp$repairs == 0L))
-  # an answer with an error: a repair, logged once however often it is read
-  tfl_ai_save_answer(d, "demographics-1", aitpl_answer(
+  # a draft with an error: a repair, logged once however often it is read
+  ai_drafts_from_answer(d, aitpl_answer(
     "tflspec_ai: {task: table, version: 1, outputs: [T-14-1-1]}",
     "outputs:",
     "  - id: T-14-1-1",
     "    kind: table",
     "    population: SAF",
     "    template: {name: demo}",
-    "assumptions: []"))
+    "assumptions: []"), "table")
   for (i in 1:2) suppressMessages(tfl_ai_collect_answers(d))
   cmp <- tfl_ai_compare(d)
   expect_true(file.exists(file.path(d, "ai", "compare.csv")))

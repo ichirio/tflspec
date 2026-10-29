@@ -15,7 +15,7 @@ tfl_ai_confirm(study_dir, where = c("both", "drafts", "adopted"))
 A data frame: \code{output_id}, \code{where}, \code{item}, \code{why}, \code{file}.
 }
 \description{
-The spec route's agent marks, in a report file's \code{ai: confirm}, what it
+The agent marks, in a report file's \code{ai: confirm}, what it
 could not settle and the person decides in the builder: one row a mark,
 from the drafts (\verb{ai/spec/outputs/}) and the adopted reports
 (\verb{spec/outputs/}).  \code{\link[=tfl_check_spec]{tfl_check_spec()}} lists them too (\code{level}

@@ -59,14 +59,14 @@ test_that("the requests: a sheet each, the TOC items with no shell one; what the
   on.exit(unlink(c(f, d), recursive = TRUE), add = TRUE)
   dir.create(file.path(d, "adam"), recursive = TRUE)
   haven::write_xpt(tflspec:::.ai_chr(tflspec::adsl), file.path(d, "adam", "adsl.xpt"))
-  dr <- tfl_ai_prepare(d, f, adam = "adam", quiet = TRUE, mode = "agent", templates = FALSE,
+  dr <- tfl_ai_prepare(d, f, adam = "adam", quiet = TRUE, templates = FALSE,
                        dry_run = TRUE)
   expect_identical(unname(dr$counts), c(7L, 7L, 2L))
   expect_identical(dr$requests$request, c("t.14.1.1", "t.15.1.2", "t.15.1.4.2.2-1",
                                           "t.15.1.4.2.2-2", "t.99.9", "t.15.2.1", "Cover", "no-shell"))
   expect_identical(dr$shells$request, dr$shells$sheet)
   expect_identical(dr$toc$request[dr$toc$toc_id == "Table 16.1.1"], "no-shell")
-  r <- tfl_ai_prepare(d, f, adam = "adam", quiet = TRUE, mode = "agent", templates = FALSE)
+  r <- tfl_ai_prepare(d, f, adam = "adam", quiet = TRUE, templates = FALSE)
   expect_identical(r$requests$request, dr$requests$request)
   expect_identical(r$requests$sheets[r$requests$request == "t.99.9"], "t.99.9")
   txt <- function(nm) paste(readLines(file.path(d, r$requests$file[r$requests$request == nm]),
@@ -109,7 +109,7 @@ test_that("unit = \"toc\": a request a TOC item's reports, as before", {
   on.exit(unlink(c(f, d), recursive = TRUE), add = TRUE)
   dir.create(file.path(d, "adam"), recursive = TRUE)
   haven::write_xpt(tflspec:::.ai_chr(tflspec::adsl), file.path(d, "adam", "adsl.xpt"))
-  r <- tfl_ai_prepare(d, f, adam = "adam", quiet = TRUE, mode = "agent", templates = FALSE,
+  r <- tfl_ai_prepare(d, f, adam = "adam", quiet = TRUE, templates = FALSE,
                       unit = "toc", dry_run = TRUE)
   expect_false("no-shell" %in% r$requests$request)
   expect_true(all(r$toc$toc_id %in% unlist(strsplit(r$requests$outputs, ", "))))
@@ -157,10 +157,10 @@ test_that("add = TRUE: a TOC item asked for already stops; overwrite asks it ane
   on.exit(unlink(c(f, d), recursive = TRUE), add = TRUE)
   dir.create(file.path(d, "adam"), recursive = TRUE)
   haven::write_xpt(tflspec:::.ai_chr(tflspec::adsl), file.path(d, "adam", "adsl.xpt"))
-  r <- tfl_ai_prepare(d, f, adam = "adam", quiet = TRUE, mode = "agent", templates = FALSE)
-  expect_error(tfl_ai_prepare(d, f, adam = "adam", quiet = TRUE, mode = "agent", templates = FALSE,
+  r <- tfl_ai_prepare(d, f, adam = "adam", quiet = TRUE, templates = FALSE)
+  expect_error(tfl_ai_prepare(d, f, adam = "adam", quiet = TRUE, templates = FALSE,
                               add = TRUE), "already asked for")
-  r2 <- suppressMessages(tfl_ai_prepare(d, f, adam = "adam", quiet = TRUE, mode = "agent",
+  r2 <- suppressMessages(tfl_ai_prepare(d, f, adam = "adam", quiet = TRUE,
                                         templates = FALSE, add = TRUE, overwrite = TRUE))
   # (the old requests asked anew, not beside them: a TOC item can be a
   # candidate of several sheets, each sheet's request once)
@@ -189,7 +189,7 @@ test_that("a sheet is asked for the TOC items it is the best sheet of; a close n
   openxlsx::saveWorkbook(wb, f, overwrite = TRUE)
   dir.create(file.path(d, "adam"), recursive = TRUE)
   haven::write_xpt(tflspec:::.ai_chr(tflspec::adsl), file.path(d, "adam", "adsl.xpt"))
-  r <- tfl_ai_prepare(d, f, adam = "adam", quiet = TRUE, mode = "agent", templates = FALSE)
+  r <- tfl_ai_prepare(d, f, adam = "adam", quiet = TRUE, templates = FALSE)
   rq <- r$requests
   # each sheet its own TOC item, not the close numbers of the others
   expect_identical(rq$n[rq$request %in% sprintf("t.14.1.%d", 1:3)], c(1L, 1L, 1L))

@@ -410,7 +410,7 @@
                question = cell(e, "question"), from = cell(e, "from"), stringsAsFactors = FALSE)
   })
   out <- do.call(rbind, c(list(empty), rows))
-  # (`from`: the decision an assumption was taken from, the spec route's;
+  # (`from`: the decision an assumption was taken from;
   # a column only when one says it)
   if (!nrow(out) || all(is.na(out$from))) out$from <- NULL
   out

@@ -17,9 +17,8 @@ test_that("a table with no widths gets the usual layout's in its report file, wh
   }
   d <- file.path(root, "study")
   book <- system.file("ai", "example", "onco_toc_shell.xlsx", package = "tflspec")
-  tfl_ai_prepare(unit = "toc", d, book, adam = ad, quiet = TRUE, mode = "agent", size = 3L)
-  file.copy(list.files(test_path("fixtures", "answers-toc"), full.names = TRUE),
-            file.path(d, "ai", "answers"))
+  tfl_ai_prepare(unit = "toc", d, book, adam = ad, quiet = TRUE, size = 3L)
+  ai_drafts_from_fixtures(d)
   # read: the tables' widths written already (their data can be read)
   col <- suppressMessages(tfl_ai_collect_answers(d))
   f1 <- col$reports$file[col$reports$output_id == "T-14-1-1"]

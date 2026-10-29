@@ -2,7 +2,7 @@
 % Please edit documentation in R/ai_agent.R
 \name{tfl_ai_run}
 \alias{tfl_ai_run}
-\title{Run the study's AI answers through: collect, build, status, questions}
+\title{Run the study's AI drafts through: collect, build, status, questions}
 \usage{
 tfl_ai_run(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = FALSE)
 }
@@ -29,10 +29,9 @@ person's list: \code{output_id}, \code{result} -- \code{missing}, \verb{still th
 \code{text}; \code{NULL} without a list), invisibly.
 }
 \description{
-What a coding agent runs after each answer it saves (\code{run.R} of
-\code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}}\code{(mode = "agent")} calls it): \code{\link[=tfl_ai_collect_answers]{tfl_ai_collect_answers()}}
-(read, check, write the report files, a repair prompt for an answer with
-errors), then each report written (\code{ok}, \code{warning}) built -- its ARD
+The person's check from the command line (\code{run.R} of \code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}}
+calls it): \code{\link[=tfl_ai_collect_answers]{tfl_ai_collect_answers()}} (read the agent's drafts, check
+them, write the report files, a repair prompt for a draft with errors), then each report written (\code{ok}, \code{warning}) built -- its ARD
 (\code{\link[=tfl_build_ard]{tfl_build_ard()}}) and its RTF (rtfreporter) into the study's
 \code{output_path} -- one report's failure not stopping the others.  It writes
 \code{ai/status.md} (each report's status, its RTF or why none, each
@@ -61,5 +60,5 @@ missing, one dropped still there, a title or analysis set not the
 list's, one the list does not have): told, never refused.
 }
 \seealso{
-\code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}} (\code{mode = "agent"}), \code{\link[=tfl_ai_outputs]{tfl_ai_outputs()}}.
+\code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}}, \code{\link[=tfl_ai_outputs]{tfl_ai_outputs()}}.
 }

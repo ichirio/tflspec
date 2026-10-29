@@ -63,7 +63,7 @@ test_that("the TOC's listing: a request of its own, its answer checked and built
   }
   d <- file.path(root, "study")
   book <- lst_book(file.path(root, "toc.xlsx"))
-  invisible(tfl_ai_prepare(unit = "toc", d, book, adam = ad, quiet = TRUE, mode = "agent",
+  invisible(tfl_ai_prepare(unit = "toc", d, book, adam = ad, quiet = TRUE,
                            templates = FALSE))
   rq <- tfl_ai_requests(d)
   # (a request a report in an agent's study: named after it)
@@ -75,7 +75,7 @@ test_that("the TOC's listing: a request of its own, its answer checked and built
   ins <- paste(readLines(file.path(d, "ai", "instructions-table.md"), encoding = "UTF-8"), collapse = "\n")
   expect_match(ins, "### A listing", fixed = TRUE)
   expect_match(ins, "listing_col", fixed = TRUE)
-  writeLines(lst_answer(id), file.path(d, "ai", "answers", paste0(req, ".md")))
+  ai_drafts_from_answer(d, lst_answer(id), "table")
   res <- suppressMessages(tfl_ai_run(d, requests = req))
   r <- res$reports[res$reports$request == req, ]
   expect_identical(r$status, "ok")
