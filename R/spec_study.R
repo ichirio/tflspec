@@ -24,6 +24,8 @@
 #' files stops the read.
 #'
 #' @param dir The study folder (holds `study.yml` and `spec/`).
+#' @param skip_bad `TRUE` to leave out a report file that cannot be read, with a
+#'   warning naming it (`tfl_read_outputs()`); `FALSE` (default) to stop there.
 #' @return `tfl_read_study_spec()`: a list of class `tfl_study_spec` --
 #'   `study`, `data`, `defaults`, `styles` (by name: `defaults.yml`'s
 #'   `styles:`, the look a report picks with `style:`), `codelists`,
@@ -105,13 +107,23 @@ tfl_read_study_spec <- function(dir) {
 
 #' @rdname tfl_read_study_spec
 #' @export
-tfl_read_outputs <- function(dir) {
+tfl_read_outputs <- function(dir, skip_bad = FALSE) {
   out_dir <- .outputs_dir(dir)
   files <- list.files(out_dir, "\\.ya?ml$", recursive = TRUE, full.names = TRUE)
   outs <- list()
   where <- character()
   for (f in files) {
-    r <- tfl_read_output(f)
+    # (`skip_bad`: a file that cannot be read is left out with a warning,
+    # so that one report's broken file stops no other -- tfl_check_spec()
+    # and the AI's check say which file it is)
+    r <- if (isTRUE(skip_bad)) {
+      tryCatch(tfl_read_output(f), error = function(e) {
+        warning(sprintf("tfl_read_outputs(): %s is left out, it cannot be read: %s",
+                        basename(f), conditionMessage(e)), call. = FALSE)
+        NULL
+      })
+    } else tfl_read_output(f)
+    if (is.null(r)) next
     if (inherits(r, "tfl_output")) r <- list(r)
     for (o in r) {
       if (o$id %in% names(outs)) {

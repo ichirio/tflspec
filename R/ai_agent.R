@@ -185,7 +185,9 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
     area_opt <- .ai_area_options(".")
     if (!is.null(area_opt)) on.exit(options(area_opt), add = TRUE)
     st <- tryCatch(tfl_read_study_spec("."), error = function(e) e)
-    outs <- if (!inherits(st, "error")) tryCatch(tfl_read_outputs("."), error = function(e) e)
+    outs <- if (!inherits(st, "error")) {
+      tryCatch(suppressWarnings(tfl_read_outputs(".", skip_bad = TRUE)), error = function(e) e)
+    }
     if (inherits(st, "error") || inherits(outs, "error")) {
       e <- if (inherits(st, "error")) st else outs
       r$rtf_problem[todo] <- paste("the study could not be read:", .ai_one_line(conditionMessage(e)))

@@ -18,7 +18,8 @@ PC の R で動き、tflspec は何も送信しません。
 mystudy/
   TOC_SHELL.xlsx        TOC とシェル（1 つのワークブック）
   adam/                 adsl.xpt, adae.xpt, adlb.xpt ...
-  AGENTS.md             tflspec が書く: エージェントへの指示（手順 3）
+  AGENTS.md             tflspec が書く: 「ai/AGENTS.md を読む」（手順 3）
+  ai/AGENTS.md          tflspec が書く: エージェントへの指示（手順 3）
   ai/requests/          tflspec が書く: 1 依頼 1 ファイル（手順 3）
   ai/decisions.md       チャットでのあなたの答え、1 決定 1 行（手順 5）
   ai/spec/outputs/      エージェントの下書き、1 帳票 1 ファイル（手順 5）
@@ -51,9 +52,9 @@ r                                   # 依頼名・帳票・文字数・次にす
 `ae-1.md` …。一覧は `ai/requests/index.md`）、どの依頼にも繰り返し入るはずの物を
 1 回だけ書いたもの（`ai/instructions-table.md`、`ai/instructions-figure.md`、
 `ai/templates.md`）、そしてエージェント用のファイル:
-`AGENTS.md` と `.github/copilot-instructions.md`（同じ文）、`run.R`、
-`ai/questions.md`、`ai/decisions.md`、`ai/agent_prompt.md`（エージェントへの最初の
-メッセージ）。TOC の図は 1 図 1 依頼（`figure-1.md` …）で、そのシェルと、
+`ai/AGENTS.md`（エージェントへの指示: 何を読むか、どう質問するか、下書きに何を入れるか）、
+`AGENTS.md` と `.github/copilot-instructions.md`（短い文: `ai/AGENTS.md` を読む）、
+`run.R`、`ai/decisions.md`、`ai/agent_prompt.md`（エージェントへの 1 つのメッセージ）。TOC の図は 1 図 1 依頼（`figure-1.md` …）で、そのシェルと、
 下書きする図の帳票が入ります。1 つずつ実行する場合:
 `tfl_ai_study_init()`、`tfl_ai_adam_summary()`、`tfl_ai_read_shell()`、
 `tfl_ai_write_requests()`。
@@ -71,7 +72,7 @@ TOC とシェルが別のブックのとき: `tfl_ai_prepare("mystudy",
 | `r$toc` | 見つかった帳票。TOC のシートが見つからないとき: `tfl_ai_prepare(..., toc_sheet = "Index")` |
 | `r$toc$shell` | `NA`＝シェルのシートが見つからない: `tfl_ai_prepare(..., sheets = c("DM shells", ...))` |
 | `ai/adam_summary.md` | レコードは無いが、短い値の一覧（15 個まで）が出る。社内で認められていないものは消す |
-| `AGENTS.md` | エージェントが読んでよいものと必ず質問すること。`study.yml` の `ai:` キーで規則を変えられる（後述） |
+| `ai/AGENTS.md` | エージェントが読んでよいものと必ず質問すること。`study.yml` の `ai:` キーで規則を変えられる（後述） |
 
 **シートの帳票番号。** 依頼を書く前に、各シェルのシートがどの番号を作るかを
 確かめます。`tfl_ai_prepare(..., dry_run = TRUE)$numbers` は、シートに書かれた
@@ -120,7 +121,8 @@ ADaM の要約で、データではありません。`AGENTS.md` に、開いて
 ## 5. エージェントの質問・あなたの決定・下書き
 
 1. VS Code で `mystudy` を開き、エージェントのチャットに `ai/agent_prompt.md` の
-   文を渡します（最初の 1〜2 件の依頼）。
+   文を 1 回だけ渡します。エージェントは `ai/requests/index.md` の依頼を順に、
+   1 つずつすべて行います。
 2. エージェントが、各帳票を決めるのにまだ決まっていないこと（解析対象集団、
    パラメータ、治療の変数、パーセントの分母、何を数えるか、欠測値、サブグループの
    条件）を、番号付きで**質問**します。質問には帳票の id とタイトル、選択肢と既定が
@@ -138,14 +140,14 @@ ADaM の要約で、データではありません。`AGENTS.md` に、開いて
    シェルに桁数があればその桁数、`page: titles` とシェルの脚注（`footnotes_at`）。
    `ai:` の下には、`assumptions`（それぞれ `from: D<n>`）と `confirm`（要確認）が
    入ります。列幅、見出し行、ページ、罫線、フォントは書きません。それらは試験の
-   既定とビルダーが担当します。
-5. 書いたファイル、足した決定、要確認のことを知らせて止まります。それを確かめ
-   （手順 6）、次の依頼を頼みます: `tfl_ai_agent_prompt("mystudy")` がそのメッセージを
-   作ります（下書きのない次の 10 件）。
+   既定とビルダーが担当します。そのあと次の依頼に進みます。
+5. すべての依頼が終わると止まり、書いたファイル、足した決定、要確認のことを知らせます。
+   それを確かめてください（手順 6）。依頼の合間に止めて、あとで **「continue」** と
+   伝えることもできます。エージェントは、下書きのない（または確認で受け付けなかった）
+   最初の依頼から続け、あなたの決定は残ります。
 
-帳票ではなく作業についての質問（ファイルが無い、依頼が不明確）も `ai/questions.md` に
-入ります: `tfl_ai_questions()` で読み、`tfl_ai_answer_questions()` であなたの答えを
-書きます。
+帳票ではなく作業についての質問（ファイルが無い、依頼が不明確）も、エージェントは
+チャットで聞きます。
 
 ## 6. 下書きを確かめる・YAML にする・RTF を作る
 
@@ -164,6 +166,8 @@ tflplanner の「検査」も同じことをします。各依頼の下書きを
 下書きを直すので、もう一度 `tfl_ai_collect_answers(".")`（2〜3 往復がふつう）。
 YAML が読めない下書きは理由を添えて受け付けません。エージェントに伝えれば、
 形を直します。
+仮定が誤っているとき（`spec/_assumptions.yml`、`tfl_ai_assumptions()`）: 正しい内容を
+エージェントにチャットで伝えるか、ビルダーで下書きを直します。
 
 `tfl_ai_confirm(".")` は、エージェントが要確認とした項目（帳票、項目、理由）を
 一覧にします。ビルダーで決めてください。要確認があっても下書きの採用は止まりません。
@@ -185,7 +189,6 @@ tfl_ai_run(".")   # もう一度確かめ、帳票ごとに ARD と RTF: ai/outp
 |---|---|
 | `tfl_ai_prepare()` | 試験のフォルダ、ADaM の要約、ワークブックの読み取り、依頼、エージェント用のファイル |
 | `tfl_ai_write_requests()` | 1 依頼 1 ファイル（`size`、`max_chars`） |
-| `tfl_ai_agent_prompt()` | エージェントに次の依頼を頼むメッセージ |
 | `tfl_ai_collect_answers()` | `ai/spec/outputs/` を読み、依頼ごとに下書きを確かめ、書き直す |
 | `tfl_ai_confirm()` | エージェントが要確認とした項目 |
 | `tfl_ai_run()` | 確かめた後、帳票ごとに ARD と RTF。`ai/status.md` |
@@ -210,22 +213,12 @@ tflplanner で試験として開けます（`spec/toc.yml` に帳票の一覧）
 2. **種類ごとに 1 本を手で直し**、それを見本にして依頼を書き直す。見本は種類の名前を
    付けて渡すと、その種類の依頼にだけ入り、エージェントはそれに倣う:
    `tfl_ai_prepare(..., examples = c(demographics = "spec/outputs/T-14-1-1.yml", ae = "spec/outputs/T-14-3-1.yml"), overwrite = TRUE)`。
-3. 下書きが正しいうちは**一度に頼む数を増やす**（`tfl_ai_agent_prompt(n = 10)`）。
-   `size = 3`〜`5` で 1 つの種類の帳票を 1 依頼にまとめ、質問もまとめて聞きます。
+3. **進めながら確かめる**: `tfl_ai_collect_answers(".")` は、それまでに書かれた下書きを
+   読みます。`size = 3`〜`5` で 1 つの種類の帳票を 1 依頼にまとめ、質問もまとめて聞きます。
 4. **決定は引き継がれる**: 範囲が `all` やデータセットの決定は以後のすべての帳票に
    当てはまり、エージェントが聞くのは帳票ごとではなく種類ごとに 1 回です。
 5. `tfl_ai_collect_answers(".")` はいつ実行してもよい。そこにある下書きを全部読み、
    残り（`no answer`、`error`、要確認）を一覧にする。
-
-## 2 回目: 直し
-
-下書きを確かめたら、必要なら帳票の一覧を直し（`tfl_ai_outputs()`、
-`tfl_ai_expected_write()`: `ai/expected_outputs.csv`）、エージェントの仮定のうち
-正しいものと誤りのもの、誤りなら正しい内容を答え（`tfl_ai_assumptions()`、
-`tfl_ai_assumption_answers_write()`: `ai/assumption_answers.csv`。その帳票だけ、または
-同じ種類の全帳票）、`tfl_ai_corrections()` でまとめ（`ai/corrections.md`）、
-エージェントに*「the corrections are written」*と伝えます。エージェントは答えを
-`ai/decisions.md` に足し、直しを 1 つずつ行い、関わる下書きを作り直します。
 
 ## テンプレートかコード SPEC か（`templates`）
 

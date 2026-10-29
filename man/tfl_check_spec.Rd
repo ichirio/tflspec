@@ -13,21 +13,48 @@ tfl_check_spec(study, output_id = NULL)
 }
 \value{
 A data frame, one row a problem: \code{output_id} (\code{NA} for the
-study's ARD definition as a whole), \code{part} (\code{"ard"}, \code{"content"},
-\code{"figure"}), \code{item} (the analysis, the function and argument, or the
-figure's part and field), \code{level} (\code{"error"}: the program would stop or
-is not written; \code{"warning"}: to look at; \code{"check"}: what the AI marked
-to confirm, \code{\link[=tfl_ai_confirm]{tfl_ai_confirm()}}) and \code{message}.  Its attribute
-\code{versions} is a data frame of the key packages (\code{package},
-\code{installed}, \code{NA} when not installed).
+study's ARD definition as a whole), \code{part} (\code{"file"}, \code{"ard"},
+\code{"content"}, \code{"program"}, \code{"figure"}), \code{item} (the file, the
+analysis, the function and argument, or the figure's part and
+field), \code{level} (\code{"error"}, \code{"warning"}, \code{"note"}, \code{"check"}) and
+\code{message}.  Its attributes: \code{versions}, a data frame of the key
+packages (\code{package}, \code{installed}, \code{NA} when not installed); \code{ids}, the
+reports checked (the OK ones too); \code{kinds}, each report's kind, named
+by id; \code{outputs_dir}, the folder the report files are in, from the
+study folder.
 }
 \description{
 Everything tflspec can say about a study's reports before their programs
-run, in one table: the ARD definition (its analyses' functions and
-arguments against the installed cards / cardx, with their versions --
-\code{\link[=tfl_ard_spec]{tfl_ard_spec()}}'s errors and warnings), each report's content items
-against the schema and the installed rtfreporter (\code{\link[=tfl_schema_check]{tfl_schema_check()}},
-the items of an appended part too), and a figure's design against the
+run, in one table, each row at one of three levels -- the person's
+definition of 2026-10-29:
+}
+\details{
+\itemize{
+\item \code{error}: the file cannot be read as a SPEC (its YAML, or a key or a
+value the schema does not have, an analysis the ARD definition
+refuses): the report cannot be copied into the study;
+\item \code{warning}: the SPEC reads, but a program that runs cannot be written
+from it (the ARD program or the table's code stops; a content
+function the installed rtfreporter does not have yet);
+\item \code{note}: the program is written all the same -- an argument the
+installed cards / cardx does not know, a version to look at.
+}
+
+A report with no \code{error} and no \code{warning} row is OK: its code is
+written (whether the report is right is another matter).  What the AI
+marked to confirm (\code{ai: confirm}, \code{\link[=tfl_ai_confirm]{tfl_ai_confirm()}}) is a row of level
+\code{check}, apart from the three: it does not keep a report from being
+adopted.  \code{\link[=tfl_check_reports]{tfl_check_reports()}} gives the three levels a report at a
+time, with its confirms; \code{\link[=tfl_check_fix_text]{tfl_check_fix_text()}} writes, for a report at
+\code{error} or \code{warning}, the text to paste into the agent's chat.
+
+Each report is read and checked on its own: a file that cannot be read
+is an \code{error} of that report (by its file's name) and stops no other.
+The checks: each report's ARD definition against the installed cards /
+cardx (\code{\link[=tfl_ard_spec]{tfl_ard_spec()}}, written as its program, \code{\link[=tfl_ard_code]{tfl_ard_code()}}), its
+content items against the schema and the installed rtfreporter
+(\code{\link[=tfl_schema_check]{tfl_schema_check()}}, the items of an appended part too; its code
+written, \code{\link[=tfl_content_code]{tfl_content_code()}}), and a figure's design against the
 installed ggplot2 and the version it is written for
 (\code{\link[=tfl_check_fig_design]{tfl_check_fig_design()}}).  The packages' installed versions come with
 it, as an attribute.  A GUI's check button and the AI's run call it.
@@ -46,9 +73,11 @@ if (requireNamespace("haven", quietly = TRUE)) {
     file.path(d, "spec", "outputs", "T-DM.yml"))
   p <- tfl_check_spec(d)
   p
+  tfl_check_reports(p)
   attr(p, "versions")
 }
 }
 \seealso{
-\code{\link[=tfl_ard_spec]{tfl_ard_spec()}}, \code{\link[=tfl_schema_check]{tfl_schema_check()}}, \code{\link[=tfl_check_fig_design]{tfl_check_fig_design()}}
+\code{\link[=tfl_check_reports]{tfl_check_reports()}}, \code{\link[=tfl_check_fix_text]{tfl_check_fix_text()}}, \code{\link[=tfl_ard_spec]{tfl_ard_spec()}},
+\code{\link[=tfl_schema_check]{tfl_schema_check()}}, \code{\link[=tfl_check_fig_design]{tfl_check_fig_design()}}
 }

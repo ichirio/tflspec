@@ -36,7 +36,7 @@
 #' tfl_sheets_from_spec(s, outs)$planner$description
 #' @export
 tfl_sheets_from_yaml <- function(dir) {
-  tfl_sheets_from_spec(tfl_read_study_spec(dir), tfl_read_outputs(dir))
+  tfl_sheets_from_spec(tfl_read_study_spec(dir), tfl_read_outputs(dir, skip_bad = TRUE))
 }
 
 #' @rdname tfl_sheets_from_yaml

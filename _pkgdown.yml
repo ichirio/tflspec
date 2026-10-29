@@ -172,6 +172,8 @@ reference:
       - tfl_args_to_r
       - tfl_schema_check
       - tfl_check_spec
+      - tfl_check_reports
+      - tfl_check_fix_text
       - tfl_data_code
       - tfl_schema_help
       - tfl_content_code

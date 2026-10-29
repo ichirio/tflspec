@@ -36,7 +36,7 @@ test_that("an argument cards does not have, a function it does not have, an item
   tfl_write_output(o, file.path(d, "spec", "outputs", "T-AGE.yml"))
   p <- tfl_check_spec(d, "T-AGE")
   w <- p[p$part == "ard", ]
-  expect_true(any(w$output_id == "T-AGE" & w$item == "AGE" & w$level == "warning" &
+  expect_true(any(w$output_id == "T-AGE" & w$item == "AGE" & w$level == "note" &
                     grepl("has no argument `nope`", w$message)))
   expect_true(any(p$part == "content" & p$item == "table_plan(nope)"))
   # a function cards does not have: an error of the ARD definition

@@ -1,11 +1,33 @@
 #' Check a study's SPEC against the packages installed: one call
 #'
 #' Everything tflspec can say about a study's reports before their programs
-#' run, in one table: the ARD definition (its analyses' functions and
-#' arguments against the installed cards / cardx, with their versions --
-#' [tfl_ard_spec()]'s errors and warnings), each report's content items
-#' against the schema and the installed rtfreporter ([tfl_schema_check()],
-#' the items of an appended part too), and a figure's design against the
+#' run, in one table, each row at one of three levels -- the person's
+#' definition of 2026-10-29:
+#'
+#' * `error`: the file cannot be read as a SPEC (its YAML, or a key or a
+#'   value the schema does not have, an analysis the ARD definition
+#'   refuses): the report cannot be copied into the study;
+#' * `warning`: the SPEC reads, but a program that runs cannot be written
+#'   from it (the ARD program or the table's code stops; a content
+#'   function the installed rtfreporter does not have yet);
+#' * `note`: the program is written all the same -- an argument the
+#'   installed cards / cardx does not know, a version to look at.
+#'
+#' A report with no `error` and no `warning` row is OK: its code is
+#' written (whether the report is right is another matter).  What the AI
+#' marked to confirm (`ai: confirm`, [tfl_ai_confirm()]) is a row of level
+#' `check`, apart from the three: it does not keep a report from being
+#' adopted.  [tfl_check_reports()] gives the three levels a report at a
+#' time, with its confirms; [tfl_check_fix_text()] writes, for a report at
+#' `error` or `warning`, the text to paste into the agent's chat.
+#'
+#' Each report is read and checked on its own: a file that cannot be read
+#' is an `error` of that report (by its file's name) and stops no other.
+#' The checks: each report's ARD definition against the installed cards /
+#' cardx ([tfl_ard_spec()], written as its program, [tfl_ard_code()]), its
+#' content items against the schema and the installed rtfreporter
+#' ([tfl_schema_check()], the items of an appended part too; its code
+#' written, [tfl_content_code()]), and a figure's design against the
 #' installed ggplot2 and the version it is written for
 #' ([tfl_check_fig_design()]).  The packages' installed versions come with
 #' it, as an attribute.  A GUI's check button and the AI's run call it.
@@ -13,13 +35,15 @@
 #' @param study A study read with [tfl_read_study_spec()], or its folder.
 #' @param output_id The reports to check; `NULL` for every report.
 #' @return A data frame, one row a problem: `output_id` (`NA` for the
-#'   study's ARD definition as a whole), `part` (`"ard"`, `"content"`,
-#'   `"figure"`), `item` (the analysis, the function and argument, or the
-#'   figure's part and field), `level` (`"error"`: the program would stop or
-#'   is not written; `"warning"`: to look at; `"check"`: what the AI marked
-#'   to confirm, [tfl_ai_confirm()]) and `message`.  Its attribute
-#'   `versions` is a data frame of the key packages (`package`,
-#'   `installed`, `NA` when not installed).
+#'   study's ARD definition as a whole), `part` (`"file"`, `"ard"`,
+#'   `"content"`, `"program"`, `"figure"`), `item` (the file, the
+#'   analysis, the function and argument, or the figure's part and
+#'   field), `level` (`"error"`, `"warning"`, `"note"`, `"check"`) and
+#'   `message`.  Its attributes: `versions`, a data frame of the key
+#'   packages (`package`, `installed`, `NA` when not installed); `ids`, the
+#'   reports checked (the OK ones too); `kinds`, each report's kind, named
+#'   by id; `outputs_dir`, the folder the report files are in, from the
+#'   study folder.
 #' @examples
 #' if (requireNamespace("haven", quietly = TRUE)) {
 #'   # a study of the bundled ADSL, with one report
@@ -34,56 +58,80 @@
 #'     file.path(d, "spec", "outputs", "T-DM.yml"))
 #'   p <- tfl_check_spec(d)
 #'   p
+#'   tfl_check_reports(p)
 #'   attr(p, "versions")
 #' }
-#' @seealso [tfl_ard_spec()], [tfl_schema_check()], [tfl_check_fig_design()]
+#' @seealso [tfl_check_reports()], [tfl_check_fix_text()], [tfl_ard_spec()],
+#'   [tfl_schema_check()], [tfl_check_fig_design()]
 #' @export
 tfl_check_spec <- function(study, output_id = NULL) {
   if (is.character(study) && length(study) == 1L) study <- tfl_read_study_spec(study)
   if (!inherits(study, "tfl_study_spec")) {
     .ard_stop("tfl_check_spec(): `study` is a study read with tfl_read_study_spec(), or its folder.")
   }
-  outs <- if (!is.null(study$dir)) tfl_read_outputs(study$dir) else list()
-  ids <- output_id %||% names(outs)
-  miss <- setdiff(ids, names(outs))
+  rows <- list(.check_rows())
+  add <- function(...) rows[[length(rows) + 1L]] <<- .check_rows(...)
+  one <- function(x) .ai_one_line(conditionMessage(x))
+
+  # the report files, each on its own: one that cannot be read is an error
+  # of that report (its file's name), and stops no other
+  outs <- list()
+  bad <- character()
+  out_dir <- if (!is.null(study$dir)) .outputs_dir(study$dir)
+  if (!is.null(out_dir) && dir.exists(out_dir)) {
+    for (f in list.files(out_dir, "\\.ya?ml$", recursive = TRUE, full.names = TRUE)) {
+      r <- tryCatch(tfl_read_output(f), error = function(e) e)
+      if (inherits(r, "error")) {
+        id <- sub("\\.ya?ml$", "", basename(f))
+        bad <- c(bad, id)
+        add(output_id = id, part = "file", item = basename(f), level = "error",
+            message = paste("the YAML cannot be read as a report file:", one(r)))
+        next
+      }
+      if (inherits(r, "tfl_output")) r <- list(r)
+      for (o in r) outs[[o$id]] <- o
+    }
+  }
+  ids <- output_id %||% c(names(outs), bad)
+  miss <- setdiff(ids, c(names(outs), bad))
   if (length(miss)) {
     .ard_stop(sprintf("tfl_check_spec(): no report %s in the study.",
                       paste(sQuote(miss), collapse = ", ")))
   }
-  rows <- list(.check_rows())
-  add <- function(...) rows[[length(rows) + 1L]] <<- .check_rows(...)
+  kinds <- vapply(outs, function(o) o$kind %||% "table", "")
 
-  # the ARD definition: the study's, its problems kept for the reports asked
-  if (!is.null(study$dir)) {
-    withCallingHandlers(
-      tryCatch(.ard_spec_of_study(study), error = function(e) {
-        p <- e$problems
-        if (is.data.frame(p) && nrow(p)) {
-          add(output_id = p$output_id, part = "ard",
-              item = ifelse(nzchar(p$row %||% ""), paste0(p$row, "$", p$field), p$field),
-              level = "error", message = p$message)
-        } else {
-          add(output_id = NA_character_, part = "ard", item = "", level = "error",
-              message = conditionMessage(e))
-        }
-        NULL
-      }),
-      warning = function(w) {
-        for (m in strsplit(conditionMessage(w), "\n  ", fixed = TRUE)[[1L]]) {
-          at <- regmatches(m, regexec("^([^ ]+) / ([^:]+): ", m))[[1L]]
-          add(output_id = if (length(at)) at[2L] else NA_character_, part = "ard",
-              item = if (length(at)) at[3L] else "", level = "warning",
-              message = if (length(at)) substring(m, nchar(at[1L]) + 1L) else m)
-        }
-        invokeRestart("muffleWarning")
-      })
-  }
-
-  # each report: its content, or its figure's design
-  for (id in ids) {
-    ro <- tryCatch(tfl_resolve_output(outs[[id]], study), error = function(e) e)
+  for (id in setdiff(ids, bad)) {
+    o <- outs[[id]]
+    # its ARD definition, written as its program: the definition's problems
+    # are errors; what the installed packages do not know, notes; a program
+    # that cannot be written otherwise, a warning
+    if (!is.null(study$dir) && length(o$ard$analyses)) {
+      withCallingHandlers(
+        tryCatch(tfl_ard_code(study, output_id = id, save = FALSE), error = function(e) {
+          p <- e$problems
+          if (is.data.frame(p) && nrow(p)) {
+            add(output_id = ifelse(is.na(p$output_id), id, p$output_id), part = "ard",
+                item = ifelse(nzchar(p$row %||% ""), paste0(p$row, "$", p$field), p$field),
+                level = "error", message = p$message)
+          } else {
+            add(output_id = id, part = "program", item = "ard", level = "warning",
+                message = paste("the ARD program cannot be written:", one(e)))
+          }
+          NULL
+        }),
+        warning = function(w) {
+          for (m in strsplit(conditionMessage(w), "\n  ", fixed = TRUE)[[1L]]) {
+            at <- regmatches(m, regexec("^([^ ]+) / ([^:]+): ", m))[[1L]]
+            add(output_id = if (length(at)) at[2L] else id, part = "ard",
+                item = if (length(at)) at[3L] else "", level = "note",
+                message = if (length(at)) substring(m, nchar(at[1L]) + 1L) else m)
+          }
+          invokeRestart("muffleWarning")
+        })
+    }
+    ro <- tryCatch(tfl_resolve_output(o, study), error = function(e) e)
     if (inherits(ro, "error")) {
-      add(output_id = id, part = "content", item = "", level = "error", message = conditionMessage(ro))
+      add(output_id = id, part = "content", item = "", level = "error", message = one(ro))
       next
     }
     # what the AI marked to confirm (`ai: confirm`): to look at
@@ -103,12 +151,19 @@ tfl_check_spec <- function(study, output_id = NULL) {
       }
       next
     }
+    form_ok <- TRUE
     for (it in ro$content) {
       p <- tfl_schema_check(it)
       if (nrow(p)) {
+        # (an argument the function does not have stops the program: an
+        # error; the schema's other warnings -- a renamed argument -- are
+        # notes, the code is written)
+        lv <- ifelse(p$level == "error" | grepl("has no argument", p$message, fixed = TRUE),
+                     "error", "note")
         add(output_id = id, part = "content",
             item = ifelse(nzchar(p$arg), paste0(p$fn, "(", p$arg, ")"), p$fn),
-            level = p$level, message = p$message)
+            level = lv, message = p$message)
+        if (any(lv == "error")) form_ok <- FALSE
       }
       # (a function of the schema the installed rtfreporter does not have
       # yet: the program would stop)
@@ -116,8 +171,17 @@ tfl_check_spec <- function(study, output_id = NULL) {
       if (!grepl("::", fn, fixed = TRUE) && fn %in% names(tfl_schema()) &&
           !nrow(p[p$level == "error", , drop = FALSE])) {
         m <- .pkg_fn_missing(paste0("rtfreporter::", fn))
-        if (!is.null(m)) add(output_id = id, part = "content", item = fn, level = "warning",
+        if (!is.null(m)) add(output_id = id, part = "program", item = fn, level = "warning",
                              message = paste0(m, ": update rtfreporter"))
+      }
+    }
+    # the report's code, written: a stop is a warning (the form is right,
+    # the code is not)
+    if (form_ok) {
+      r <- tryCatch(suppressMessages(suppressWarnings(tfl_content_code(ro))), error = function(e) e)
+      if (inherits(r, "error")) {
+        add(output_id = id, part = "program", item = "content", level = "warning",
+            message = paste("the report's code cannot be written:", one(r)))
       }
     }
   }
@@ -125,6 +189,110 @@ tfl_check_spec <- function(study, output_id = NULL) {
   out <- out[is.na(out$output_id) | out$output_id %in% ids, , drop = FALSE]
   rownames(out) <- NULL
   attr(out, "versions") <- .check_versions()
+  attr(out, "ids") <- ids
+  attr(out, "kinds") <- kinds[intersect(ids, names(kinds))]
+  attr(out, "outputs_dir") <- if (!is.null(study$dir) && !is.null(out_dir)) {
+    .check_rel_path(out_dir, study$dir)
+  } else NA_character_
+  out
+}
+
+# A path from the study folder (as written, forward slashes), when under it
+.check_rel_path <- function(path, dir) {
+  p <- normalizePath(path, winslash = "/", mustWork = FALSE)
+  d <- paste0(normalizePath(dir, winslash = "/", mustWork = FALSE), "/")
+  if (startsWith(p, d)) substring(p, nchar(d) + 1L) else p
+}
+
+#' The check's three levels, a report at a time
+#'
+#' [tfl_check_spec()]'s rows summed up by report: its level -- `ERROR`
+#' (it cannot be copied into the study), `WARNING` (its program cannot be
+#' written), `OK` (its code is written) -- with the counts behind it, and
+#' apart from the level, what the AI marked to confirm ([tfl_ai_confirm()]).
+#' A problem of the study's ARD definition as a whole (no report) counts
+#' for every report.
+#'
+#' @param problems [tfl_check_spec()]'s result.
+#' @return A data frame, one row a report: `output_id`, `level`
+#'   (`"ERROR"`, `"WARNING"`, `"OK"`), `errors`, `warnings`, `notes`
+#'   (the counts), `confirms` (how many marked to confirm) and `confirm`
+#'   (their texts, `; ` between them; `NA` for none).
+#' @seealso [tfl_check_spec()], [tfl_check_fix_text()]
+#' @export
+tfl_check_reports <- function(problems) {
+  ids <- attr(problems, "ids") %||% unique(stats::na.omit(problems$output_id))
+  if (!length(ids)) {
+    return(data.frame(output_id = character(), level = character(), errors = integer(),
+                      warnings = integer(), notes = integer(), confirms = integer(),
+                      confirm = character(), stringsAsFactors = FALSE))
+  }
+  n <- function(id, lv) sum(problems$level == lv & (is.na(problems$output_id) | problems$output_id == id))
+  errors <- vapply(ids, n, 1L, lv = "error")
+  warnings <- vapply(ids, n, 1L, lv = "warning")
+  notes <- vapply(ids, n, 1L, lv = "note")
+  confirm <- vapply(ids, function(id) {
+    m <- problems$message[problems$level == "check" & problems$output_id %in% id]
+    if (length(m)) paste(sub("^to confirm: ", "", m), collapse = "; ") else NA_character_
+  }, "")
+  data.frame(output_id = ids,
+             level = ifelse(errors > 0L, "ERROR", ifelse(warnings > 0L, "WARNING", "OK")),
+             errors = unname(errors), warnings = unname(warnings), notes = unname(notes),
+             confirms = vapply(ids, n, 1L, lv = "check"), confirm = unname(confirm),
+             stringsAsFactors = FALSE, row.names = NULL)
+}
+
+#' The text that asks the agent to fix a draft
+#'
+#' For each report [tfl_check_spec()] put at `ERROR` or `WARNING`, the
+#' text to paste into the agent's chat: which file, which report, what is
+#' wrong where (each `error` and `warning` row), and what not to change --
+#' the common rules are in `ai/AGENTS.md` and the instructions, which the
+#' text names rather than repeats.  In English, or in Japanese
+#' (`language = "ja"`); tflspec's own messages stay as they are.
+#'
+#' @param problems [tfl_check_spec()]'s result.
+#' @param language `"en"` (default) or `"ja"` (`"Japanese"` too).
+#' @param output_id The reports to write the text for; `NULL` (default):
+#'   every report at `ERROR` or `WARNING`.
+#' @return A character vector named by report id, one text a report (its
+#'   lines joined with newlines); empty when no report needs a fix.
+#' @seealso [tfl_check_spec()], [tfl_check_reports()]
+#' @export
+tfl_check_fix_text <- function(problems, language = "en", output_id = NULL) {
+  ja <- tolower(as.character(language)[1L]) %in% c("ja", "japanese", "日本語")
+  rep <- tfl_check_reports(problems)
+  rep <- rep[rep$level %in% c("ERROR", "WARNING"), , drop = FALSE]
+  if (!is.null(output_id)) rep <- rep[rep$output_id %in% output_id, , drop = FALSE]
+  if (!nrow(rep)) return(stats::setNames(character(), character()))
+  od <- attr(problems, "outputs_dir") %||% NA_character_
+  if (is.na(od)) od <- file.path("spec", "outputs")
+  kinds <- attr(problems, "kinds") %||% character()
+  out <- character()
+  for (i in seq_len(nrow(rep))) {
+    id <- rep$output_id[i]
+    file <- paste0(od, "/", id, ".yml")
+    kind <- if (id %in% names(kinds)) kinds[[id]] else "table"
+    ins <- if (identical(kind, "figure")) "ai/instructions-figure.md" else "ai/instructions-table.md"
+    p <- problems[problems$level %in% c("error", "warning") &
+                    (is.na(problems$output_id) | problems$output_id == id), , drop = FALSE]
+    where <- ifelse(nzchar(p$item), paste0(p$part, ", ", p$item), p$part)
+    items <- sprintf("- %s (%s): %s", toupper(p$level), where, p$message)
+    txt <- if (ja) c(
+      sprintf("下書き `%s`（%s）を直してください。検査で受け付けられませんでした。", file, id),
+      sprintf("形は `ai/AGENTS.md` と `%s` をもう一度読んでください。", ins),
+      "下の項目だけを直し、それ以外と `ai:` の部分はそのまま残してください。",
+      "", items, "",
+      "直して保存したら、ここで知らせてください。人がもう一度検査します。"
+    ) else c(
+      sprintf("Fix the draft `%s` (%s): the check refused it.", file, id),
+      sprintf("Read `ai/AGENTS.md` and `%s` again for the form.", ins),
+      "Change only what is listed below; keep everything else, and the `ai:` block, as it is.",
+      "", items, "",
+      "When the file is saved, say so here; the person checks it again."
+    )
+    out[[id]] <- paste(txt, collapse = "\n")
+  }
   out
 }
 
@@ -132,17 +300,17 @@ tfl_check_spec <- function(study, output_id = NULL) {
                         level = character(), message = character()) {
   n <- max(length(output_id), length(part), length(item), length(level), length(message))
   r <- function(x) if (length(x) == n) as.character(x) else rep(as.character(x), length.out = n)
-  if (!n) return(data.frame(output_id = character(), part = character(), item = character(),
+  if (n == 0L) return(data.frame(output_id = character(), part = character(), item = character(),
                             level = character(), message = character(), stringsAsFactors = FALSE))
   data.frame(output_id = r(output_id), part = r(part), item = r(item), level = r(level),
              message = r(message), stringsAsFactors = FALSE)
 }
 
-# the key packages and their installed versions
+# The key packages' installed versions
 .check_versions <- function() {
   pk <- c("tflspec", "rtfreporter", "cards", "cardx", "ggplot2")
   v <- vapply(pk, function(p) {
-    if (requireNamespace(p, quietly = TRUE)) format(utils::packageVersion(p)) else NA_character_
+    if (requireNamespace(p, quietly = TRUE)) as.character(utils::packageVersion(p)) else NA_character_
   }, "")
   data.frame(package = pk, installed = unname(v), stringsAsFactors = FALSE)
 }
