@@ -161,3 +161,33 @@ test_that("a records table with a part goes to the workbook and back: content_mo
   pa <- b$content[[match(sp_fn, fns)]]
   expect_identical(vapply(pa$args$content, `[[`, "", "fn"), c("normalize_ard", "table_plan", "plan_cells"))
 })
+
+test_that("tfl_data_code(): each object the table and its parts read, a dataset read once, the ARD left out", {
+  skip_if_not_installed("haven")
+  d <- file.path(withr::local_tempdir(), "study")
+  dir.create(file.path(d, "adam"), recursive = TRUE)
+  for (x in c("adsl", "adlb")) {
+    haven::write_xpt(tflspec:::.ai_chr(getExportedValue("tflspec", x)), file.path(d, "adam", paste0(x, ".xpt")))
+  }
+  tfl_ai_study_init(d, adam = "adam", study_id = "SP-3")
+  st <- tfl_read_study_spec(d)
+  keep <- "PARAMCD == \"ALT\""
+  o <- tfl_output("T-LB", "table", population = "SAF",
+    data = list(source = "dataset", dataset = "ADLB", population = "SAF", where = tfl_r(keep)),
+    content = list(
+      tfl_item("table_plan", list(cols = "AVISIT", rows = list(subject = tfl_r("~ \"{USUBJID}\"")), value = "AVAL")),
+      tfl_item(sp_fn, list(name = "summary", data = list(source = "ard"), content = list(
+        tfl_item("table_plan", list(cols = "AVISIT"))))),
+      tfl_item(sp_fn, list(name = "high", data = list(source = "dataset", dataset = "ADLB", where = tfl_r("ANRIND == \"HIGH\"")),
+        content = list(tfl_item("table_plan", list(cols = "AVISIT", rows = list(subject = tfl_r("~ \"{USUBJID}\"")), value = "AVAL")))))))
+  code <- tfl_data_code(o, st)
+  expect_named(code, c("data", "ard", "adlb"))
+  expect_true(any(grepl("^data <- ", code$data)))
+  expect_true(any(grepl("^adlb <- ", code$adlb)))
+  expect_true(any(grepl("subset(output_id == \"T-LB\")", code$ard, fixed = TRUE)))
+  # the dataset read once: the part's code does not read ADLB again
+  rd <- function(x) sum(grepl("read_xpt", x, fixed = TRUE))
+  expect_identical(rd(code$adlb), 0L)
+  expect_true(rd(code$data) >= 1L)
+  expect_named(tfl_data_code(o, st, ard = FALSE), c("data", "adlb"))
+})

@@ -167,3 +167,76 @@
   if (!identical(o$kind, "table") || !identical(d$source, "dataset") || is.null(d$dataset)) return(NULL)
   as.character(d$dataset)[1L]
 }
+
+#' The code that makes the objects a report's content reads
+#'
+#' A table's content reads one object -- the study's ARD (`ard`), or the
+#' records of a dataset (`data`, a table of records: `table_plan(value = )`)
+#' -- and each part appended to it (`plan_append()`) its own: the ARD, or a
+#' dataset's records under the part's object name (`adpc`).  This writes the
+#' code that makes each of them, as the report's program has it before the
+#' content's code ([tfl_content_code()]): a dataset's records as a listing's
+#' data part ([tfl_listing_code()] `part = "data"`: read, the analysis
+#' set's subjects, the condition), the ARD as the study ARD's rows of the
+#' report.  A statement two objects share (a dataset read once) is written
+#' once, with the first.
+#'
+#' @param output A report ([tfl_output()]) or its id.
+#' @param study The study ([tfl_read_study_spec()]).
+#' @param ard `FALSE` leaves the ARD's code out (a program that writes its
+#'   own: the study's ARD program, its rework).
+#' @return A named list, one element an object (`data`, `ard`, a part's
+#'   object), each its lines of code.
+#' @examples
+#' o <- tfl_output("T-1", "table", content = list(
+#'   tfl_item("table_plan", list(cols = "TRT01A"))))
+#' st <- tfl_read_study_spec(system.file("extdata", "spec-yaml", package = "tflspec"))
+#' tfl_data_code(o, st)
+#' @export
+tfl_data_code <- function(output, study, ard = TRUE) {
+  if (is.character(output) && length(output) == 1L) output <- tfl_read_outputs(study$dir)[[output]]
+  if (!inherits(output, "tfl_output")) .ard_stop("tfl_data_code(): `output` is a report, tfl_output(), or its id.")
+  ro <- tfl_resolve_output(output, study)
+  own <- ro$data %||% list(source = "ard")
+  objs <- list()
+  if (identical(own$source, "dataset") && identical(ro$kind, "table")) objs$data <- own
+  else objs[[as.character(own$object %||% "ard")]] <- list(source = "ard")
+  for (p in .content_parts(ro$content)) {
+    if (is.null(objs[[p$object]])) objs[[p$object]] <- p$data %||% list(source = "ard")
+  }
+  spec <- NULL
+  out <- list()
+  seen <- character()
+  for (nm in names(objs)) {
+    d <- objs[[nm]]
+    lines <- if (identical(d$source %||% "ard", "ard")) {
+      if (!isTRUE(ard)) next
+      c("# the study ARD's rows of this report",
+        sprintf("%s <- readRDS(\"output/ard/ard.rds\") |>\n  subset(output_id == \"%s\")", nm, ro$id))
+    } else {
+      if (is.null(spec)) spec <- .ard_spec_of_study(study)$spec
+      .records_code(ro, d, nm, spec)
+    }
+    stmt <- !grepl("^#", lines) & nzchar(lines)
+    lines <- lines[!(stmt & lines %in% seen)]
+    seen <- c(seen, lines[stmt[seq_along(lines)] %in% TRUE])
+    out[[nm]] <- lines
+  }
+  out
+}
+
+# a dataset's records as a listing's data part, made under `name`
+.records_code <- function(o, data, name, ard_spec) {
+  txt <- function(x) {
+    v <- unlist(lapply(x, as.character))
+    if (!length(v)) NA_character_ else paste(v, collapse = " | ")
+  }
+  l <- data.frame(output_id = o$id, dataset = txt(data[["dataset"]]), data = txt(data[["data"]]),
+                  population_id = txt(data[["population"]] %||% o$population),
+                  where = txt(data[["where"]]), sort = txt(data[["sort"]]), stringsAsFactors = FALSE)
+  sp <- tfl_listing_spec(l, data.frame(output_id = o$id, vars = "USUBJID"), check = FALSE)
+  code <- tfl_listing_code(sp, o$id, ard = ard_spec, part = "data")
+  at <- grep("^data <- ", code)
+  if (length(at)) code[at] <- sub("^data <- ", paste0(name, " <- "), code[at])
+  code
+}
