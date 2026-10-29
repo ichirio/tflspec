@@ -286,23 +286,23 @@ plan_style:
     align_count_pct: {main: true, label: "Align n (%)", type: "logical", help: "TRUE: the n and the (%) of a count cell line up from row to row. e.g. TRUE"}
     border: {main: true, label: "Borders", type: "string", help: "The table's borders: \"tfl\" (rules over and under the header and under the last row) or \"none\"; another style as R (rtf_border()). Blank: tfl. e.g. \"none\""}
     font_size_half_points: {main: true, label: "Font size (half points)", type: "integer", help: "The table's font size in half points (18 = 9 pt). Blank: the document's. e.g. 16"}
-    font: {label: "Font", help: "The table's font. Blank: the document's font. e.g. \"Arial\""}
-    row_height_exact: {label: "Exact row height", help: "TRUE: the rows' height is exact (a longer text is cut); FALSE: it is the least height (a row grows). e.g. TRUE"}
-    header_row_height_twips: {label: "Header row height (twips)", help: "The height of the column header's rows in twips. Blank: as the body's. e.g. 300"}
-    blank_row_height_twips: {label: "Blank row height (twips)", help: "The height of the blank rows in twips: lower ones make a table shorter. Blank: as the body's. e.g. 120"}
-    cell_padding_left_twips: {label: "Cell padding, left (twips)", help: "The space between a cell's left border and its text, in twips. Blank: 0. e.g. 60"}
-    cell_padding_right_twips: {label: "Cell padding, right (twips)", help: "The space between a cell's text and its right border, in twips. Blank: 0. e.g. 60"}
-    cell_valign: {label: "Vertical alignment", help: "Where a cell's text sits from top to bottom: \"bottom\", \"top\" or \"center\". Blank: bottom. e.g. \"top\""}
-    table_align: {label: "Table alignment", help: "Where the table sits on the page: \"left\", \"center\" or \"right\". Blank: left. e.g. \"center\""}
-    markup: {label: "Markup in the text", help: "The marks in the cells' text turned into print: \"script\" ^{...} superscript and _{...} subscript, \"relational\" >= and <= as signs, \"all\", \"none\". Blank: the document's (script). e.g. \"all\""}
-    blank_row_normalize: {label: "Blank rows as one", help: "How blank rows are tidied: \"detect\" an empty row printed as one blank row, \"collapse\" several in a row made one. Blank: both. e.g. \"detect\""}
-    header_align: {label: "Header alignment", help: "The column header's alignment: \"left\", \"center\" or \"right\". Blank: center. e.g. \"left\""}
-    header_bold: {label: "Header bold", help: "TRUE: the whole column header in bold. e.g. TRUE"}
-    header_italic: {label: "Header italic", help: "TRUE: the whole column header in italics. e.g. TRUE"}
-    align: {label: "Alignment", help: "The body's alignment: \"left\", \"center\" or \"right\" (one column's: Cell styles). e.g. \"center\""}
-    bold: {label: "Bold", help: "TRUE: the whole body in bold (some cells only: Cell styles). e.g. TRUE"}
-    italic: {label: "Italic", help: "TRUE: the whole body in italics (some cells only: Cell styles). e.g. TRUE"}
-    underline: {label: "Underline", help: "TRUE: the whole body underlined (some cells only: Cell styles). e.g. TRUE"}
+    font: {label: "Font", help: "The table's font. Blank: the document's font. e.g. \"Arial\"", type: "string|vec<string, string>"}
+    row_height_exact: {label: "Exact row height", help: "TRUE: the rows' height is exact (a longer text is cut); FALSE: it is the least height (a row grows). e.g. TRUE", type: "logical"}
+    header_row_height_twips: {label: "Header row height (twips)", help: "The height of the column header's rows in twips. Blank: as the body's. e.g. 300", type: "integer"}
+    blank_row_height_twips: {label: "Blank row height (twips)", help: "The height of the blank rows in twips: lower ones make a table shorter. Blank: as the body's. e.g. 120", type: "integer"}
+    cell_padding_left_twips: {label: "Cell padding, left (twips)", help: "The space between a cell's left border and its text, in twips. Blank: 0. e.g. 60", type: "integer"}
+    cell_padding_right_twips: {label: "Cell padding, right (twips)", help: "The space between a cell's text and its right border, in twips. Blank: 0. e.g. 60", type: "integer"}
+    cell_valign: {label: "Vertical alignment", help: "Where a cell's text sits from top to bottom: \"bottom\", \"top\" or \"center\". Blank: bottom. e.g. \"top\"", type: "enum[bottom|top|center]"}
+    table_align: {label: "Table alignment", help: "Where the table sits on the page: \"left\", \"center\" or \"right\". Blank: left. e.g. \"center\"", type: "enum[left|center|right]"}
+    markup: {label: "Markup in the text", help: "The marks in the cells' text turned into print: \"script\" ^{...} superscript and _{...} subscript, \"relational\" >= and <= as signs, \"all\", \"none\". Blank: the document's (script). e.g. \"all\"", type: "enum[script|relational|all|none]|list<enum[script|relational]>"}
+    blank_row_normalize: {label: "Blank rows as one", help: "How blank rows are tidied: \"detect\" an empty row printed as one blank row, \"collapse\" several in a row made one. Blank: both. e.g. \"detect\"", type: "enum[detect|collapse|none]|list<enum[detect|collapse]>"}
+    header_align: {label: "Header alignment", help: "The column header's alignment: \"left\", \"center\" or \"right\". Blank: center. e.g. \"left\"", type: "enum[left|center|right]"}
+    header_bold: {label: "Header bold", help: "TRUE: the whole column header in bold. e.g. TRUE", type: "logical"}
+    header_italic: {label: "Header italic", help: "TRUE: the whole column header in italics. e.g. TRUE", type: "logical"}
+    align: {label: "Alignment", help: "The body's alignment: \"left\", \"center\" or \"right\" (one column's: Cell styles). e.g. \"center\"", type: "enum[left|center|right]"}
+    bold: {label: "Bold", help: "TRUE: the whole body in bold (some cells only: Cell styles). e.g. TRUE", type: "logical"}
+    italic: {label: "Italic", help: "TRUE: the whole body in italics (some cells only: Cell styles). e.g. TRUE", type: "logical"}
+    underline: {label: "Underline", help: "TRUE: the whole body underlined (some cells only: Cell styles). e.g. TRUE", type: "logical"}
 
 plan_cell_style:
   package: rtfreporter
@@ -342,8 +342,8 @@ plan_col_header:
     lines: {label: "Header lines, a row at a time", type: "list<vec<string, string>>", description: "The header a row at a time: each row a map, a cell's name the columns it sits on."}
     values: {label: "Values of the tokens", help: "What the header's tokens take: TRUE (list(n = TRUE)) reads each column's N from the ARD; numbers named by column give them by hand. e.g. list(n = TRUE)", type: "map<string, logical|vec<string, number>>"}
     col_header_align: {label: "Alignment", help: "The column header's alignment: \"left\", \"center\" or \"right\". Blank: center. e.g. \"left\"", type: string}
-    header_sep: {label: "Header separator", help: "The text a plain table's column names are cut at into spanning header rows. e.g. \"____\""}
-    span: {label: "Cells over columns", help: "How a cell of the header lines over several columns is made: \"each\" a cell a column, \"one\" one cell over them all, or a key's name (a cell a value of that key: a spanner). Blank: each. e.g. \"one\""}
+    header_sep: {label: "Header separator", help: "The text a plain table's column names are cut at into spanning header rows. e.g. \"____\"", type: "string"}
+    span: {label: "Cells over columns", help: "How a cell of the header lines over several columns is made: \"each\" a cell a column, \"one\" one cell over them all, or a key's name (a cell a value of that key: a spanner). Blank: each. e.g. \"one\"", type: "string|r"}
 
 plan_columns:
   package: rtfreporter
@@ -357,7 +357,7 @@ plan_columns:
     auto_width: {main: true, label: "Automatic width", help: "TRUE: each column sized to its content. e.g. TRUE", type: logical}
     sep: {label: "Separator", help: "The text that joins several column keys in the value columns' names; the spanning header is cut at it. Blank: \"____\" (Placebo____F). Changed only when a value has \"____\" in it. e.g. \"__\"", type: string}
     cell_format: {label: "Cell formats", help: "A function that formats the cells' text, or a list of them one a column, as R. e.g. function(x) toupper(x)"}
-    column_widths_twips: {label: "Column widths (twips)", help: "Each column's width in twips (1/1440 inch), as R; it replaces the widths above. e.g. c(3000, 1500, 1500)"}
+    column_widths_twips: {label: "Column widths (twips)", help: "Each column's width in twips (1/1440 inch), as R; it replaces the widths above. e.g. c(3000, 1500, 1500)", type: "list<integer>"}
 
 plan_listing:
   package: rtfreporter

@@ -39,3 +39,14 @@ test_that("plan_blanks(where) and plan_paginate_cols(order) are their choices", 
   expect_true(ok("plan_paginate_cols", list(order = list("group", "rows", "cols"))))
   expect_false(ok("plan_paginate_cols", list(order = "sideways")))
 })
+
+test_that("plan_style()'s look takes its values: choices, numbers, logicals", {
+  ok <- function(a) nrow(tfl_schema_check(tfl_item("plan_style", a))) == 0L
+  expect_true(ok(list(cell_valign = "top", table_align = "center", bold = TRUE,
+                      header_row_height_twips = 300L, markup = "script",
+                      blank_row_normalize = list("detect", "collapse"),
+                      font = list(latin = "Arial", east_asian = "MS Mincho"))))
+  expect_false(ok(list(cell_valign = "middle")))
+  expect_false(ok(list(bold = "yes")))
+  expect_false(ok(list(header_row_height_twips = "tall")))
+})
