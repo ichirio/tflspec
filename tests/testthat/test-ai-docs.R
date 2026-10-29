@@ -60,6 +60,34 @@ test_that("what is not a document, or a package missing, is said", {
   expect_identical(tfl_ai_doc_text(md), "# A note\n\ntext")
 })
 
+test_that("a document already in ai/docs/ and named from there is kept, not copied onto itself", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  root <- withr::local_tempdir()
+  d <- file.path(root, "study")
+  dir.create(file.path(d, "adam"), recursive = TRUE)
+  for (x in c("adsl", "adae")) {
+    haven::write_xpt(tflspec:::.ai_chr(getExportedValue("tflspec", x)),
+                     file.path(d, "adam", paste0(x, ".xpt")))
+  }
+  dir.create(file.path(d, "ai", "docs"), recursive = TRUE)
+  sap <- file.path(d, "ai", "docs", "sap.md")
+  writeLines(c("# SAP", "", "the analysis sets"), sap)
+  r <- tfl_ai_prepare(unit = "toc", d, system.file("ai", "example", "onco_toc_shell.xlsx", package = "tflspec"),
+                      adam = "adam", quiet = TRUE, size = 3L, docs = sap)
+  expect_identical(readLines(sap, encoding = "UTF-8"), c("# SAP", "", "the analysis sets"))
+  expect_identical(r$agent_files, "ai/docs/sap.md")
+  # the helper itself: the same file by another spelling, a folder target, a real copy
+  f <- file.path(root, "a.txt"); writeLines("keep", f)
+  expect_true(.file_copy_safe(f, file.path(root, ".", "a.txt")))
+  expect_identical(readLines(f), "keep")
+  expect_true(.file_copy_safe(f, root))
+  expect_identical(readLines(f), "keep")
+  g <- file.path(root, "b.txt")
+  expect_true(.file_copy_safe(f, g))
+  expect_identical(readLines(g), "keep")
+})
+
 test_that("tfl_ai_prepare(docs = ): a workbook document placed as text beside it, named in AGENTS.md", {
   skip_on_cran()
   skip_if_not_installed("haven")

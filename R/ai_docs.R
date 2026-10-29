@@ -164,6 +164,20 @@ tfl_ai_doc_text <- function(path, file = NULL) {
   paste(lines, collapse = "\n")
 }
 
+# file.copy() that leaves a file alone when it is copied onto itself: on
+# Windows, copying a file onto its own path truncates it to nothing (a
+# document the person had put into ai/docs/ already and then named).  `to`
+# is a file path each, or one folder.
+.file_copy_safe <- function(from, to, overwrite = TRUE) {
+  if (!length(from)) return(invisible(logical()))
+  dest <- if (length(to) == 1L && dir.exists(to)) file.path(to, basename(from)) else to
+  norm <- function(p) normalizePath(p, winslash = "/", mustWork = FALSE)
+  same <- file.exists(dest) & tolower(norm(from)) == tolower(norm(dest))
+  ok <- same
+  if (any(!same)) ok[!same] <- file.copy(from[!same], dest[!same], overwrite = overwrite)
+  invisible(ok)
+}
+
 # The documents the person gave, in ai/docs/: each copied as it is, and one
 # the agent cannot read (.docx, .pdf, a workbook) also as text beside it
 # (<name>.md).  The paths the agent reads (from the study folder): the text
@@ -173,7 +187,7 @@ tfl_ai_doc_text <- function(path, file = NULL) {
   rd_ <- file.path(dir, "ai", "docs")
   dir.create(rd_, recursive = TRUE, showWarnings = FALSE)
   to <- file.path(rd_, basename(docs))
-  file.copy(docs, to, overwrite = TRUE)
+  .file_copy_safe(docs, to)
   refs <- file.path("ai", "docs", basename(docs))
   from <- rep(NA_character_, length(docs))
   files <- to
