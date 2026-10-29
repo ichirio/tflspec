@@ -117,6 +117,12 @@ test_that("the sheet and the analyses' data are checked", {
   bad(d, msg = "population ITT is not in `populations`")
   d <- ad_rows(); d$population_id[2L] <- NA
   bad(d, msg = "`add` takes columns from the population's data")
+  # a derive piece that is not `name = expression` (R's `|` inside
+  # parentheses is one piece; a bare expression is not)
+  d <- ad_rows(); d$derive[2L] <- "FLAG = ifelse(is.na(AESER) | AESER != \"Y\", 0, 1) | paste(AEDECOD)"
+  bad(d, msg = "`derive` piece 'paste(AEDECOD)' does not read as `name = expression`")
+  d <- ad_rows(); d$derive[2L] <- "FLAG = ifelse(is.na(AESER) | AESER != \"Y\", 0, 1)"
+  expect_s3_class(ad_spec(d, an_rows()), "tfl_ard_spec")
   a <- an_rows(); a$data[2L] <- "adae_none"
   bad(an = a, msg = "data adae_none is not an analysis data of T1")
   a <- an_rows(); a$dataset[2L] <- "ADAE"

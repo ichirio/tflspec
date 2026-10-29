@@ -61,13 +61,44 @@
   # the same cells come back many times in a review of many reports
   hit <- .split_bar_memo[[x]]
   if (!is.null(hit)) return(hit)
-  out <- if (!nzchar(trimws(x))) character() else
-    trimws(strsplit(x, "|", fixed = TRUE)[[1L]])
+  out <- if (!nzchar(trimws(x))) character() else .split_bar_top(x)
   if (length(.split_bar_memo) > 20000L) rm(list = ls(.split_bar_memo), envir = .split_bar_memo)
   .split_bar_memo[[x]] <- out
   out
 }
 .split_bar_memo <- new.env(hash = TRUE, parent = emptyenv())
+
+# The pieces of a cell at its `|`s: those outside parentheses, brackets,
+# braces and quotes, and not R's `||` -- a derive's `ifelse(is.na(X) | X
+# != "Y", ...)` is one piece
+.split_bar_top <- function(x) {
+  ch <- strsplit(x, "", fixed = TRUE)[[1L]]
+  n <- length(ch)
+  depth <- 0L
+  quote <- ""
+  cut <- integer()
+  i <- 1L
+  while (i <= n) {
+    c <- ch[i]
+    if (nzchar(quote)) {
+      if (c == "\\") i <- i + 1L else if (c == quote) quote <- ""
+    } else if (c %in% c("\"", "'", "`")) {
+      quote <- c
+    } else if (c %in% c("(", "[", "{")) {
+      depth <- depth + 1L
+    } else if (c %in% c(")", "]", "}")) {
+      depth <- max(0L, depth - 1L)
+    } else if (c == "|" && depth == 0L) {
+      if (i < n && ch[i + 1L] == "|") i <- i + 1L else cut <- c(cut, i)
+    }
+    i <- i + 1L
+  }
+  from <- c(1L, cut + 1L)
+  to <- c(cut - 1L, n)
+  out <- trimws(vapply(seq_along(from), function(k)
+    if (to[k] >= from[k]) paste(ch[from[k]:to[k]], collapse = "") else "", ""))
+  out
+}
 
 # A yes / no cell: TRUE, FALSE, or NA (blank, or not one of the words)
 .ard_yes <- function(x) {
