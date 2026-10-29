@@ -260,7 +260,7 @@ tfl_check_reports <- function(problems) {
 #' @seealso [tfl_check_spec()], [tfl_check_reports()]
 #' @export
 tfl_check_fix_text <- function(problems, language = "en", output_id = NULL) {
-  ja <- tolower(as.character(language)[1L]) %in% c("ja", "japanese", "日本語")
+  ja <- tolower(as.character(language)[1L]) %in% c("ja", "japanese", "\u65e5\u672c\u8a9e")
   rep <- tfl_check_reports(problems)
   rep <- rep[rep$level %in% c("ERROR", "WARNING"), , drop = FALSE]
   if (!is.null(output_id)) rep <- rep[rep$output_id %in% output_id, , drop = FALSE]
@@ -279,11 +279,11 @@ tfl_check_fix_text <- function(problems, language = "en", output_id = NULL) {
     where <- ifelse(nzchar(p$item), paste0(p$part, ", ", p$item), p$part)
     items <- sprintf("- %s (%s): %s", toupper(p$level), where, p$message)
     txt <- if (ja) c(
-      sprintf("下書き `%s`（%s）を直してください。検査で受け付けられませんでした。", file, id),
-      sprintf("形は `ai/AGENTS.md` と `%s` をもう一度読んでください。", ins),
-      "下の項目だけを直し、それ以外と `ai:` の部分はそのまま残してください。",
+      sprintf("\u4e0b\u66f8\u304d `%s`\uff08%s\uff09\u3092\u76f4\u3057\u3066\u304f\u3060\u3055\u3044\u3002\u691c\u67fb\u3067\u53d7\u3051\u4ed8\u3051\u3089\u308c\u307e\u305b\u3093\u3067\u3057\u305f\u3002", file, id),
+      sprintf("\u5f62\u306f `ai/AGENTS.md` \u3068 `%s` \u3092\u3082\u3046\u4e00\u5ea6\u8aad\u3093\u3067\u304f\u3060\u3055\u3044\u3002", ins),
+      "\u4e0b\u306e\u9805\u76ee\u3060\u3051\u3092\u76f4\u3057\u3001\u305d\u308c\u4ee5\u5916\u3068 `ai:` \u306e\u90e8\u5206\u306f\u305d\u306e\u307e\u307e\u6b8b\u3057\u3066\u304f\u3060\u3055\u3044\u3002",
       "", items, "",
-      "直して保存したら、ここで知らせてください。人がもう一度検査します。"
+      "\u76f4\u3057\u3066\u4fdd\u5b58\u3057\u305f\u3089\u3001\u3053\u3053\u3067\u77e5\u3089\u305b\u3066\u304f\u3060\u3055\u3044\u3002\u4eba\u304c\u3082\u3046\u4e00\u5ea6\u691c\u67fb\u3057\u307e\u3059\u3002"
     ) else c(
       sprintf("Fix the draft `%s` (%s): the check refused it.", file, id),
       sprintf("Read `ai/AGENTS.md` and `%s` again for the form.", ins),

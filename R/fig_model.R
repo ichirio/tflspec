@@ -472,6 +472,8 @@ tfl_fig_objects <- function(design) {
     .ff("theme", "choice", "Theme", "boxed", pp_themes),
     .ff("base_size", "number", "Base font size", 10),
     .ff("legend", "choice", "Legend", "bottom", .fig_legends),
+    .ff("legend_labels", "expr", "Legend labels",
+        help = "R: a character vector named by the colour variable's values, the legend's text for each (an arm with its median: the km_survival template's legend_median makes one)."),
     # (its size is its report's: the report sheet's figure_width_in /
     # figure_height_in, blank the page's body -- tfl_fig_page_size())
     .ff("dpi", "number", "DPI", 300,
@@ -1506,13 +1508,18 @@ tfl_read_fig_design <- function(path) {
   # the arms' marks a layer uses: their scales and objects (lty, shp)
   arm <- c(shape = arm[["shape"]] && any(vapply(layers, function(l) !is.null(l$.shape_by), NA)),
            linetype = arm[["linetype"]] && (maps("linetype") || any(kinds == "km_curve")))
+  # the legend's text for each value, when the plot says it (legend_labels:
+  # R, a vector named by the values): every scale of the values, so that
+  # the legends stay one
+  ll <- .pv(plot, "legend_labels")
+  ll <- if (is.null(ll)) "" else sprintf(", labels = %s", as.character(ll))
   scales <- if (!is.null(plot$colour_by)) list(
     if (maps("colour") || any(kinds == "km_curve"))
-      "scale_colour_manual(values = pal, breaks = names(pal))",
+      sprintf("scale_colour_manual(values = pal, breaks = names(pal)%s)", ll),
     if (maps("fill") || any(kinds == "km_ci"))
-      "scale_fill_manual(values = pal, breaks = names(pal), na.value = \"grey80\")",
-    if (arm[["linetype"]]) "scale_linetype_manual(values = lty, breaks = names(lty))",
-    if (arm[["shape"]]) "scale_shape_manual(values = shp, breaks = names(shp))")
+      sprintf("scale_fill_manual(values = pal, breaks = names(pal), na.value = \"grey80\"%s)", ll),
+    if (arm[["linetype"]]) sprintf("scale_linetype_manual(values = lty, breaks = names(lty)%s)", ll),
+    if (arm[["shape"]]) sprintf("scale_shape_manual(values = shp, breaks = names(shp)%s)", ll))
   finish <- c(scales, ax$terms,
     if (length(labs_args)) sprintf("labs(%s)", paste(labs_args, collapse = ", ")),
     as.list(.fig_theme_code(plot, setup)),

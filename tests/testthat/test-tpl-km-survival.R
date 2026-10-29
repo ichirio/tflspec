@@ -137,3 +137,18 @@ test_that("a figure template's body says the steps its call makes (call_steps)",
   expect_error(tfl_template_expand("km_nocall", list(param = "PFS", by = "TRT01A", risk_table = FALSE)),
                "call_steps")
 })
+
+test_that("km_survival(legend_median = TRUE): each arm's median (95% CI) in the legend's text", {
+  km_skip()
+  saf <- adsl$USUBJID[adsl$SAFFL == "Y"]
+  df <- adtte[adtte$PARAMCD == "PFS" & adtte$USUBJID %in% saf, ]
+  p <- tfl_tpl(df, "km_survival", by = TRT01A, time_unit = "days", risk_table = FALSE,
+               legend_median = TRUE)
+  expect_s3_class(p, "ggplot")
+  lab <- p$scales$get_scales("colour")$labels
+  expect_identical(sort(names(lab)), sort(unique(as.character(df$TRT01A))))
+  expect_true(all(grepl("^.+: (NE|[0-9.]+) [(](NE|[0-9.]+), (NE|[0-9.]+)[)]$", lab)))
+  # without it, the legend's text is the arms' values
+  q <- tfl_tpl(df, "km_survival", by = TRT01A, time_unit = "days", risk_table = FALSE)
+  expect_s3_class(q$scales$get_scales("colour")$labels, "waiver")
+})

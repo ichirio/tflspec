@@ -161,6 +161,31 @@ proportion_ci, mean_ci, ttest, wilcox, chisq, fisher, custom (or a
 the `variables` are rows, never columns -- a column by a variable's level
 needs that variable in `by`.
 
+## What shells often ask for, and the item that does it
+
+- **The rows ordered by one column's count** (the SOCs and PTs by the
+  Drug A 20 mg column, most first, ties alphabetical): `plan_sort: {keys:
+  [.overall, group1, .depth, "-n[Drug A 20 mg]", label]}` -- `-n[<column>]`
+  is that column's count; `-n` alone is the count over every column.  With
+  the template `ae_soc_pt` / `ae_ser_soc_pt`, the same list as its `sort`
+  argument.
+- **Digits that differ by parameter** (a lab table: ALT one decimal, BILI
+  three): guarded cell templates, one a parameter, the last one for the
+  rest -- `plan_cells: {continuous: [!r 'PARAMCD == "ALT" ~ "{mean:.1f}
+  ({sd:.2f})"', !r 'PARAMCD == "BILI" ~ "{mean:.3f} ({sd:.4f})"', "{mean:.2f}
+  ({sd:.3f})"]}` (a guard is `<row key> == "<value>" ~ "<template>"`, as
+  `!r`).  `plan_digits` is by variable, not by a key's value.
+- **A title line that changes with the page** ("Parameter: <PARAM>", one
+  parameter a page): `plan_paginate_rows: {page_by: [PARAMCD], heading:
+  "Parameter: {PARAM}", heading_at: title}` -- the heading goes under the
+  report's titles on each page; `{PARAM}` is that page's value of the
+  column.  Several keys: `page_by: [ANALYTE, RENALGR]` and a heading of two
+  lines, `"Analyte: {ANALYTE}
+Group: {RENALGR}"`.
+- **A table with a second block of rows under it** (a listing of the
+  values and their summary): `plan_append` with its own `data` and
+  `content` (the instructions' item list), after the first table's items.
+
 ## Easy mistakes (the check refuses these)
 
 | wrong | right |
