@@ -117,7 +117,8 @@
     ta <- args_of("rtf_tables")
     st[[length(st) + 1L]] <- do.call(.spec_call, c(list("rtf_tables", doc, .spec_sym(content)),
       ta[intersect(c("auto_section", "section_label_align", "auto_title",
-                     "title_label_align", "font_size_half_points"), names(ta))], flow(ta)))
+                     "title_label_align", "font_size_half_points",
+                     "read_attributes"), names(ta))], flow(ta)))
   }
   # the titles' and footnotes' own style: rtf_titles() / rtf_footnotes()'s
   # arguments as the page says them
@@ -177,7 +178,8 @@
     } else {
       steps[[k]] <- do.call(.spec_call, c(list("rtf_tables", doc, .spec_sym(sym)),
         ta[intersect(c("auto_section", "section_label_align", "auto_title",
-                       "title_label_align", "font_size_half_points"), names(ta))],
+                       "title_label_align", "font_size_half_points",
+                       "read_attributes"), names(ta))],
         list(titles = tb, footnotes = fb), flow))
     }
   }

@@ -33,5 +33,14 @@ one line each; the condition (class \code{tflspec_spec_error}) carries them
 as rows too, \code{cnd$problems}: \code{output_id}, \code{sheet}, \code{row} (the row's key:
 the \code{analysis_id}, the \code{data_id}, the \code{population_id}), \code{field} and
 \code{message}.  \code{\link[=tfl_review_spec]{tfl_review_spec()}} lists them without stopping.
+
+What depends on the installed cards / cardx is a warning: an argument
+in \code{args} or in a \code{post} step its function does not have, and a value
+that does not fit the argument's kind (\code{\link[=tfl_ard_args]{tfl_ard_args()}}): \code{TRUE} or
+\code{FALSE} for a logical, a number (\code{conf.level} between 0 and 1), one of
+the choices (\code{method = "wilson"}), text in quotes, a formula, a column,
+a list (\code{method.args = list(...)}), a list or formula of selectors
+(\code{fmt_fun = everything() ~ 1L}), an expression not in quotes (a \code{post}
+step's \code{filter = n >= 2}).  A name or a call is the program's to judge.
 }
 

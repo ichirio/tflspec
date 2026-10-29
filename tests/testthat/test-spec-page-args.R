@@ -83,3 +83,19 @@ test_that("rtf_document's watermark: a word, or its look as an rtf_watermark() c
   rtf <- paste(readLines(f, warn = FALSE), collapse = "\n")
   expect_match(rtf, "DRAFT", fixed = TRUE)
 })
+
+test_that("rtf_tables: read_attributes as the page says it", {
+  code <- pa_code(list(rtf_tables = list(read_attributes = FALSE)))
+  expect_match(code, "rtf_tables\\([^|]*read_attributes = FALSE")
+  expect_false(grepl("read_attributes", pa_code(list()), fixed = TRUE))
+  ok <- function(v) nrow(tfl_schema_check(tfl_item("rtf_tables", list(read_attributes = v)))) == 0L
+  expect_true(ok(FALSE))
+  expect_false(ok("no"))
+  # and it runs: the table's blank rows attribute is not read
+  skip_if_not_installed("rtfreporter")
+  o <- tfl_output("T-1", "table", page = list(rtf_tables = list(read_attributes = FALSE)))
+  env <- list2env(list(content = rtfreporter::as_rtftables(data.frame(a = "1"))),
+                  parent = asNamespace("rtfreporter"))
+  doc <- eval(parse(text = tfl_report_code(o, content = "content")), env)
+  expect_s3_class(doc, "rtf_document")
+})
