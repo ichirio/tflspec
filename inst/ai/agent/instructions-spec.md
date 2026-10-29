@@ -166,11 +166,13 @@ needs that variable in `by`.
 
 - **The rows ordered by one column's count** (the SOCs and PTs by the
   Drug A 20 mg column, most first, ties alphabetical): `plan_sort: {keys:
-  [.overall, "-n@group1[Drug A 20 mg]", .depth, "-n[Drug A 20 mg]", label]}`
-  -- `-n@group1[<column>]` orders the SOCs by their own count in that
-  column (each SOC's PTs stay with it), `-n[<column>]` the PTs by theirs;
-  `-n` alone is the count over every column.  `group1` in place of the
-  `@` key keeps the SOCs alphabetical, whatever the PTs are sorted by.
+  [.overall, "-n@group1[Drug A 20 mg]", group1, .depth, "-n[Drug A 20 mg]",
+  label]}` -- `-n@group1[<column>]` orders the SOCs by their own count in
+  that column, `group1` right after it keeps each SOC's rows together when
+  two SOCs have the same count (without it their rows mix), `-n[<column>]`
+  the PTs by theirs; `-n` alone is the count over every column.  `group1`
+  alone in place of the `@` key keeps the SOCs alphabetical, whatever the
+  PTs are sorted by.
   With the template `ae_soc_pt` / `ae_ser_soc_pt`, the same list as its
   `sort` argument.
 - **Digits that differ by parameter** (a lab table: ALT one decimal, BILI
