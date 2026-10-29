@@ -345,6 +345,11 @@ page:
 | `xx.x (xx.xx)`, `xx (xx.x)` | the template's decimals: `"{mean:.1f} ({sd:.2f})"`, `"{n} ({p:.1f%})"` |
 | row headings, the order of the arms and values | `plan_labels`, `plan_levels`; a value printed in other words: `codelists` |
 | titles and footnotes | `page: titles / footnotes`, by line number |
+| the rows in one arm's order (the SOCs and PTs by the Drug A 20 mg column, most first, ties alphabetical) | `plan_sort: {keys: [.overall, group1, .depth, "-n[Drug A 20 mg]", label]}` -- `-n[<column>]` is that column's count, `-n` the count over every column; the AE templates' `sort` takes the same list |
+| digits that differ by parameter (ALT one decimal, bilirubin three) | guarded cell templates, one a parameter and the last for the rest: `plan_cells: {continuous: [!r 'PARAMCD == "ALT" ~ "{mean:.1f} ({sd:.2f})"', !r 'PARAMCD == "BILI" ~ "{mean:.3f} ({sd:.4f})"', "{mean:.2f} ({sd:.3f})"]}` |
+| a title line that changes with the page (`Parameter: <PARAM>`, a parameter a page) | `plan_paginate_rows: {page_by: [PARAMCD], heading: "Parameter: {PARAM}", heading_at: title}` (two keys: `page_by: [ANALYTE, RENALGR]`, a heading of two lines with `\n`); the heading goes under the report's titles on each page |
+| a listing with its summary under it (the PK samples) | the listing as the table (`table_plan: {cols: ATPT, rows: {subject: !r '~ "{USUBJID}/{AGE}/{SEX}"'}, value: AVAL}`), the summary as a part: `plan_append: {name: summary, data: {source: ard}, content: [...]}`, the whole-table items after it |
+| the KM legend with each arm's median (95% CI) | the template: `template: {name: km_survival, args: {legend_median: true}}`; by hand, the plot's `legend_labels` (R: a vector named by the arms) |
 
 The keys of `ard:` are the ARD sheets' columns (Appendix A.1) under their
 YAML names (`id`, `population`); the methods are `tfl_ard_methods()`.  The
