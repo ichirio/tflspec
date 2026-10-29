@@ -29,3 +29,13 @@ test_that("a type the schema gives checks a value; a colour also takes an !r", {
   p <- tfl_schema_check(tfl_item("plan_style", list(table_width_pct = "wide")))
   expect_identical(p$level, "error")
 })
+
+test_that("plan_blanks(where) and plan_paginate_cols(order) are their choices", {
+  ok <- function(fn, a) nrow(tfl_schema_check(tfl_item(fn, a))) == 0L
+  expect_true(ok("plan_blanks", list(where = "between_parts")))
+  expect_true(ok("plan_blanks", list(where = list(0L, 3L))))
+  expect_false(ok("plan_blanks", list(where = "between_rows")))
+  expect_true(ok("plan_paginate_cols", list(order = "down")))
+  expect_true(ok("plan_paginate_cols", list(order = list("group", "rows", "cols"))))
+  expect_false(ok("plan_paginate_cols", list(order = "sideways")))
+})

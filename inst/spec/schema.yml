@@ -233,7 +233,7 @@ plan_blanks:
   stage: finishing
   tier: usual
   args:
-    where: {main: true, label: "Where", help: "Where blank rows go: \"between_groups\" between the outermost row groups, \"records\" after each record of a listing, or as R (the rows' numbers, 0 before the first). e.g. \"between_groups\"", type: "string|list<integer>"}
+    where: {main: true, label: "Where", help: "Where blank rows go: \"between_groups\" between the outermost row groups, \"between_parts\" between a table's appended parts, \"records\" after each record of a listing, \"none\" none, or as R (the rows' numbers, 0 before the first). e.g. \"between_groups\"", type: "enum[between_groups|between_parts|records|none]|list<integer>|r"}
     first: {main: true, label: "Before the first", help: "TRUE: a blank row at the top of every page. Blank: none. e.g. TRUE", type: logical}
     last: {main: true, label: "After the last", help: "TRUE: a blank row at the bottom of every page. Blank: none. e.g. TRUE", type: logical}
     counted: {label: "Count blank rows", help: "TRUE: the blank rows count toward a page's rows (plan_paginate_rows()' most rows a page), so a page never overflows. Blank: only the table's rows are counted. e.g. TRUE", type: logical}
@@ -265,7 +265,7 @@ plan_paginate_cols:
     keep: {main: true, label: "Columns on every page", help: "The columns every column page repeats. Blank: the row heading columns. e.g. \"row_label\"", type: "list<integer>|list<column>"}
     fit: {main: true, label: "Fit to the page", help: "TRUE: every page's columns on page 1's scale, filling the width; FALSE: each column keeps its width. e.g. FALSE", type: logical}
     allow_span_break: {main: true, label: "A spanning header may break", help: "FALSE: a page is not cut inside a spanning header's cell. Blank: TRUE. e.g. FALSE", type: logical}
-    order: {main: true, label: "Order of the pages", help: "The order the pages come out in: \"across\" a row's column pages one after another, \"down\" all the rows' pages of a block first. Blank: across. e.g. \"down\"", type: string}
+    order: {main: true, label: "Order of the pages", help: "The order the pages come out in: \"across\" a row's column pages one after another, \"down\" all the rows' pages of a block first. Blank: across. e.g. \"down\"", type: "enum[across|down]|list<enum[group|rows|cols]>"}
     col_header: {label: "Header of the column pages", help: "What each column page's header becomes, as R. Used when the pages need a header other than the table's own. Blank: the table's header, cut with its columns."}
 
 plan_style:
