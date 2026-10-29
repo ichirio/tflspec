@@ -176,14 +176,18 @@
   f <- tryCatch(getExportedValue(pkg, nm), error = function(e) NULL)
   if (!is.function(f)) return(NULL)
   l <- tryCatch(suppressWarnings(suppressMessages(f())), error = function(e) NULL)
+  # (a layer of a function: stat_function(), geom_function())
+  if (is.null(l) && "fun" %in% names(formals(f))) {
+    l <- tryCatch(suppressWarnings(suppressMessages(f(fun = identity))), error = function(e) NULL)
+  }
   if (!inherits(l, "Layer")) return(NULL)
   aes <- unique(c(l$geom$aesthetics(), l$stat$aesthetics()))
-  own <- setdiff(names(formals(f)), c("mapping", "data", "..."))
+  own <- setdiff(names(formals(f)), "...")
   params <- unique(c(own, l$geom$parameters(TRUE), l$stat$parameters(TRUE), aes))
   list(package = pkg, figure = "ggplot layer",
        description = sprintf("The ggplot2 layer %s::%s().", pkg, nm),
        aes = sort(setdiff(aes, "group")) |> c("group"),
-       args = stats::setNames(lapply(params, function(p) list(type = "r|string|number|logical")), params))
+       args = stats::setNames(lapply(params, function(p) list(type = .schema_gg_generic)), params))
 }
 
 # A figure's `geom` layer (`geom: geom_area`, `aes:`, `params:`) checked
@@ -214,4 +218,179 @@
     }
   }
   invisible()
+}
+
+# ---- ggplot2's functions the catalog has not; the arguments a kind shares ----
+#
+# A figure may call any function ggplot2 exports for a plot (a geom, stat,
+# scale, coord, facet, theme, guide, position or element; labs(), xlab(),
+# annotate(); the values expansion(), sec_axis(), margin() ...): the
+# catalog (inst/spec/schema.yml) gives a card to those a clinical figure
+# uses most, any other is written and checked by its own arguments.  The
+# arguments the functions of one kind share -- a layer's stat, position
+# and colour, a scale's name, breaks and labels, theme()'s settings -- are
+# typed once, in inst/fig/gg_args.csv, and given to each function of the
+# kind that takes them.
+
+# the type of an argument nothing types: any value a spec can hold
+.schema_gg_generic <- paste0("r|call|string|number|logical|list<string|number|logical>|",
+                             "map<string, string|number|logical>")
+
+.fig_gg_args <- function() {
+  if (is.null(.fig_registry$gg_args)) {
+    .fig_registry$gg_args <- utils::read.csv(
+      system.file("fig", "gg_args.csv", package = "tflspec", mustWork = TRUE),
+      stringsAsFactors = FALSE, na.strings = "", colClasses = "character",
+      encoding = "UTF-8")
+  }
+  .fig_registry$gg_args
+}
+
+# the kind of a ggplot2 function by its name (NA: no function of a plot)
+.schema_gg_prefix <- c(geom = "layer", stat = "layer", scale = "scale", coord = "coord",
+                       facet = "facet", theme = "theme", guide = "guide",
+                       position = "position", element = "element")
+.schema_gg_helpers <- c("expansion", "sec_axis", "dup_axis", "margin", "margin_auto",
+                        "margin_part", "arrow", "unit", "rel")
+.schema_gg_kind <- function(nm) {
+  if (identical(nm, "theme")) return("theme")
+  if (nm %in% c("labs", "xlab", "ylab", "ggtitle")) return("labs")
+  if (identical(nm, "annotate")) return("layer")
+  if (nm %in% .schema_gg_helpers) return("helper")
+  k <- .schema_gg_prefix[sub("_.*$", "", nm)]
+  if (is.na(k)) NA_character_ else unname(k)
+}
+
+# A ggplot2 function the catalog has not, as an entry: its kind, no card
+# (no rank, no label); its arguments are its formals and, by its kind,
+# the shared ones it takes.  NULL for a name ggplot2 does not export, or
+# that is no function of a plot (ggsave), or that rtfreporter has too.
+.schema_gg_entry <- function(nm) {
+  if (!requireNamespace("ggplot2", quietly = TRUE) || !nm %in% getNamespaceExports("ggplot2")) {
+    return(NULL)
+  }
+  if (requireNamespace("rtfreporter", quietly = TRUE) &&
+      nm %in% getNamespaceExports("rtfreporter")) {
+    return(NULL)
+  }
+  kind <- .schema_gg_kind(nm)
+  if (is.na(kind)) return(NULL)
+  if (identical(kind, "layer") && grepl("^(geom|stat)_", nm)) return(.schema_ggplot_entry(nm))
+  list(package = "ggplot2", figure = kind,
+       description = sprintf("ggplot2's %s(), by its own arguments.", nm), args = list())
+}
+
+# The arguments a function takes by name: its formals, and a scale's
+# `...` -- the arguments of the constructor it passes them on to
+# (discrete_scale(), continuous_scale(), binned_scale())
+.schema_gg_takes <- function(nm, pkg = "ggplot2") {
+  f <- if (requireNamespace(pkg, quietly = TRUE)) {
+    tryCatch(getExportedValue(pkg, nm), error = function(e) NULL)
+  }
+  if (!is.function(f)) return(character())
+  fa <- names(formals(f))
+  # a function renamed, now only `...` passed on to its new name
+  # (coord_trans() of ggplot2 4.0 is coord_transform()'s)
+  if (identical(fa, "...")) {
+    cp <- .fig_compat()
+    to <- cp$replacement[cp$fn == nm & cp$change == "fn_renamed"]
+    if (length(to) == 1L) return(.schema_gg_takes(to, pkg))
+  }
+  if ("..." %in% fa && startsWith(nm, "scale_")) fa <- c(fa, .schema_scale_dots(nm, f))
+  # coord_fixed(ratio, ...): coord_cartesian()'s; labs(...): the labels by
+  # aesthetic
+  if ("..." %in% fa && startsWith(nm, "coord_")) fa <- c(fa, names(formals(ggplot2::coord_cartesian)))
+  if ("..." %in% fa && identical(nm, "labs")) {
+    fa <- c(fa, c("x", "y", "colour", "fill", "shape", "linetype"))
+  }
+  unique(setdiff(fa, "..."))
+}
+
+.schema_scale_dots <- function(nm, f) {
+  s <- tryCatch(suppressWarnings(suppressMessages(f())), error = function(e) NULL)
+  ctor <- if (inherits(s, "ScaleBinned") || grepl("_(stepsn?|binned|fermenter)$", nm)) {
+    "binned_scale"
+  } else if (inherits(s, "ScaleContinuous") || grepl("_(gradientn|continuous)$", nm)) {
+    "continuous_scale"
+  } else {
+    "discrete_scale"
+  }
+  setdiff(names(formals(getExportedValue("ggplot2", ctor))), c("scale_name", "super", "call"))
+}
+
+.schema_theme_sides <- c("x", "y", "top", "bottom", "left", "right", "x.top", "x.bottom",
+                         "y.left", "y.right", "theta", "r", "inside")
+
+# The entry with the shared arguments of its kind the function takes,
+# typed (an argument the catalog types itself stays as it says); any
+# other argument a scale takes through `...`, untyped.  `extra`: more
+# names the function takes (a layer's stat's parameters).
+.schema_fig_common <- function(ent, nm, extra = character()) {
+  kind <- ent$figure
+  if (is.null(kind)) return(ent)
+  takes <- unique(c(.schema_gg_takes(nm, ent$package %||% "ggplot2"), names(ent$args), extra))
+  g <- .fig_gg_args()
+  g <- g[g$kind == kind & g$arg %in% takes, , drop = FALSE]
+  for (i in seq_len(nrow(g))) {
+    a <- g$arg[i]
+    old <- ent$args[[a]]
+    if (!is.null(old$type) && !identical(old$type, .schema_gg_generic)) next
+    new <- list(type = g$type[i], label = list(en = g$en[i], ja = g$ja[i]))
+    if (!is.na(g$help[i])) new$description <- g$help[i]
+    ent$args[[a]] <- c(new, old[setdiff(names(old), names(new))])
+  }
+  # a theme setting of one side or axis (axis.text.x.top, legend.key.spacing.y)
+  # is typed as the setting it refines
+  if (identical(kind, "theme")) {
+    th <- .fig_gg_args()
+    th <- th[th$kind == "theme", , drop = FALSE]
+    for (a in setdiff(takes, names(ent$args))) {
+      p <- a
+      while (grepl(".", p, fixed = TRUE) && !p %in% th$arg) p <- sub("\\.[^.]*$", "", p)
+      i <- match(p, th$arg)
+      suf <- substring(a, nchar(p) + 2L)
+      if (is.na(i) || !suf %in% .schema_theme_sides) next
+      ent$args[[a]] <- list(type = th$type[i],
+                            label = list(en = sprintf("%s (%s)", th$en[i], suf),
+                                         ja = sprintf("%s\uff08%s\uff09", th$ja[i], suf)))
+    }
+  }
+  if (identical(kind, "scale")) {
+    fa <- names(.schema_formals(nm, ent) %||% list())
+    for (a in setdiff(takes, c(fa, names(ent$args)))) ent$args[[a]] <- list(type = .schema_gg_generic)
+  }
+  ent
+}
+
+# The layer a geom or a stat is drawn with when the item names another:
+# geom_step(stat = "ecdf") is stat_ecdf()'s too (pad, n), stat_summary(geom
+# = "errorbar") geom_errorbar()'s (width) -- its entry, or NULL
+.schema_layer_partner <- function(fn, args) {
+  nm <- .schema_fn_name(fn)
+  pick <- function(v) {
+    if (!is.character(v) || length(v) != 1L || !nzchar(v)) return(NULL)
+    sub("^(geom|stat)_", "", v)
+  }
+  other <- if (startsWith(nm, "geom_")) {
+    s <- pick(args$stat)
+    if (!is.null(s)) paste0("stat_", s)
+  } else if (startsWith(nm, "stat_")) {
+    g <- pick(args$geom)
+    if (!is.null(g)) paste0("geom_", g)
+  }
+  if (is.null(other)) return(NULL)
+  pkg <- if (grepl("::", fn, fixed = TRUE)) sub("::.*$", "", fn)
+  ent <- .schema_ggplot_entry(other)
+  if (is.null(ent) && !is.null(pkg)) ent <- .schema_ggplot_entry(paste0(pkg, "::", other))
+  ent
+}
+
+# The entry an item is checked against: its function's, with the
+# parameters of the layer it names as its stat or geom
+.schema_item_entry <- function(ent, fn, args) {
+  part <- .schema_layer_partner(fn, args)
+  if (is.null(ent) || is.null(part)) return(ent)
+  for (k in setdiff(names(part$args), names(ent$args))) ent$args[[k]] <- part$args[[k]]
+  ent$aes <- unique(c(ent$aes, part$aes))
+  .schema_fig_common(ent, .schema_fn_name(fn))
 }

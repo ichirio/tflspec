@@ -2053,12 +2053,17 @@ rtf_footer:
 # A figure report's `content:` is its plots' items (R/fig_content.R): the
 # function that makes a plot first, then its layers and its settings, then
 # the items that arrange the plots and the image's.  `figure:` says which
-# (plot | layer | ggsurvfit_layer | scale | coord | facet | labs | theme |
-# guide | element | compose | image); `rank` their order on the screen; `label` the
+# (plot | layer | ggsurvfit_layer | position | scale | helper | coord | facet |
+# labs | theme | guide | element | compose | image; `position` and
+# `helper` -- expansion(), sec_axis(), margin() -- are values of another
+# item's argument); `rank` their order on the screen; `label` the
 # function's meaning in English and Japanese; `visible` the arguments a
 # card shows (the rest are the installed function's formals); `aes` a
 # layer's aesthetics, `required` those it needs.  A function the catalog
-# does not have (pkg::fn) is written by its formals alone.
+# does not have (pkg::fn, or any function of a plot ggplot2 exports) is
+# written and checked by its formals.  The arguments a kind's functions
+# share (a layer's stat, a scale's breaks, theme()'s settings) are typed
+# once, in inst/fig/gg_args.csv.
 
 # -- the functions that make a plot (a plot's first item) --
 
@@ -2128,7 +2133,7 @@ tfl_text_column:
   label: {en: Text column, ja: 右のテキスト列}
   description: "Columns of text beside a plot (a forest plot's N and estimate), as a plot of its own (tflspec writes its code)."
   layers: []
-  visible: [data, y, columns, size]
+  visible: [data, "y", columns, size]
   args:
     data: {type: object, label: {en: Data, ja: データ}}
     "y": {type: column, label: {en: Row position, ja: 行の位置}}
@@ -2459,7 +2464,7 @@ annotate:
   rank: 290
   stage: mapping
   label: {en: Annotation, ja: 注記}
-  visible: [geom, x, y, label]
+  visible: [geom, x, "y", label]
   dots: {style: named, type: "string|number|logical|list<number|string>|call|r", description: "The geom's parameters (size, colour, hjust ...)."}
   args:
     geom: {type: string, label: {en: Geom, ja: 種類}}
@@ -2472,7 +2477,7 @@ tfl_ard_number:
   stage: mapping
   label: {en: A number from the ARD, ja: ARD の数値の注記}
   description: "A statistic of the ARD printed in the plot, as annotate() with ard_value() (tflspec writes its code)."
-  visible: [analysis_id, variable, level, stat, group, label, x, y]
+  visible: [analysis_id, variable, level, stat, group, label, x, "y"]
   args:
     analysis_id: {type: string, label: {en: Analysis, ja: 解析}}
     variable: {type: string, label: {en: Variable, ja: 変数}}
@@ -2753,6 +2758,1142 @@ guides:
   stage: finishing
   label: {en: Legends, ja: 凡例}
   dots: {style: named, type: "call|string|r", description: "A guide by aesthetic: {fn: guide_legend, args: {nrow: 1}}, or none."}
+  args:
+    colour: {type: "call|string|r", label: {en: Colour legend, ja: 色の凡例}}
+    fill: {type: "call|string|r", label: {en: Fill legend, ja: 塗りの凡例}}
+    shape: {type: "call|string|r", label: {en: Shape legend, ja: 形の凡例}}
+    linetype: {type: "call|string|r", label: {en: Line type legend, ja: 線種の凡例}}
+    x: {type: "call|string|r", label: {en: X axis, ja: x 軸}}
+    "y": {type: "call|string|r", label: {en: Y axis, ja: y 軸}}
+
+# -- more of ggplot2's layers (their shared arguments typed by
+#    inst/fig/gg_args.csv; a geom's `stat:` brings the stat's parameters) --
+
+geom_bar:
+  package: ggplot2
+  figure: layer
+  rank: 225
+  stage: mapping
+  label: {en: Bars of counts, ja: "度数の棒"}
+  description: "Bars of the number of rows at each x (stat count); geom_col() draws a y you give."
+  aes: {x: {required: true}, fill: {}, colour: {}}
+  visible: [mapping, width, position, stat]
+
+geom_linerange:
+  package: ggplot2
+  figure: layer
+  rank: 226
+  stage: mapping
+  label: {en: Line ranges, ja: "範囲の線"}
+  description: "A line from ymin to ymax at each x (a range with no point or whiskers)."
+  aes: {x: {required: true}, ymin: {required: true}, ymax: {required: true}, colour: {}}
+  visible: [mapping, linewidth, position]
+
+geom_crossbar:
+  package: ggplot2
+  figure: layer
+  rank: 227
+  stage: mapping
+  label: {en: Crossbars, ja: "クロスバー"}
+  description: "A box from ymin to ymax with a line at y."
+  aes: {x: {required: true}, y: {required: true}, ymin: {required: true}, ymax: {required: true}, fill: {}}
+  visible: [mapping, width, position]
+
+geom_rect:
+  package: ggplot2
+  figure: layer
+  rank: 228
+  stage: mapping
+  label: {en: Rectangles, ja: "矩形"}
+  description: "Rectangles from xmin to xmax and ymin to ymax, e.g. a shaded treatment period."
+  aes: {xmin: {required: true}, xmax: {required: true}, ymin: {required: true}, ymax: {required: true}, fill: {}}
+  visible: [mapping, alpha, fill]
+
+geom_path:
+  package: ggplot2
+  figure: layer
+  rank: 229
+  stage: mapping
+  label: {en: Paths, ja: "経路"}
+  description: "Lines through the points in the data's order (geom_line() sorts by x)."
+  aes: {x: {required: true}, "y": {required: true}, colour: {}, group: {}}
+  visible: [mapping, linewidth, arrow]
+
+geom_rug:
+  package: ggplot2
+  figure: layer
+  rank: 230
+  stage: mapping
+  label: {en: Rug, ja: "ラグ"}
+  description: "A tick on the axis for each value."
+  aes: {x: {}, "y": {}, colour: {}}
+  visible: [mapping, sides, alpha]
+
+geom_freqpoly:
+  package: ggplot2
+  figure: layer
+  rank: 231
+  stage: mapping
+  label: {en: Frequency polygon, ja: "度数折れ線"}
+  aes: {x: {required: true}, colour: {}}
+  visible: [mapping, bins, binwidth]
+
+geom_dotplot:
+  package: ggplot2
+  figure: layer
+  rank: 232
+  stage: mapping
+  label: {en: Dot plot, ja: "ドットプロット"}
+  description: "A dot for each value, stacked (small groups)."
+  aes: {x: {required: true}, "y": {}, fill: {}}
+  visible: [mapping, binaxis, stackdir, dotsize, binwidth]
+
+geom_raster:
+  package: ggplot2
+  figure: layer
+  rank: 233
+  stage: mapping
+  label: {en: Raster, ja: "ラスター"}
+  description: "Tiles of one size (a faster heat map)."
+  aes: {x: {required: true}, "y": {required: true}, fill: {required: true}}
+  visible: [mapping]
+
+geom_polygon:
+  package: ggplot2
+  figure: layer
+  rank: 234
+  stage: mapping
+  label: {en: Polygons, ja: "多角形"}
+  aes: {x: {required: true}, "y": {required: true}, fill: {}, group: {}}
+  visible: [mapping, alpha]
+
+geom_curve:
+  package: ggplot2
+  figure: layer
+  rank: 235
+  stage: mapping
+  label: {en: Curves, ja: "曲線"}
+  description: "Curved lines from (x, y) to (xend, yend), e.g. an arrow to an annotation."
+  aes: {x: {required: true}, "y": {required: true}, xend: {required: true}, yend: {required: true}, colour: {}}
+  visible: [mapping, curvature, arrow]
+
+geom_count:
+  package: ggplot2
+  figure: layer
+  rank: 236
+  stage: mapping
+  label: {en: Counted points, ja: "度数の点"}
+  description: "A point at each (x, y) as large as the rows there."
+  aes: {x: {required: true}, "y": {required: true}, colour: {}}
+  visible: [mapping]
+
+geom_qq:
+  package: ggplot2
+  figure: layer
+  rank: 237
+  stage: mapping
+  label: {en: Q-Q points, ja: "Q-Q プロットの点"}
+  aes: {sample: {required: true}, colour: {}}
+  visible: [mapping, distribution]
+
+geom_qq_line:
+  package: ggplot2
+  figure: layer
+  rank: 238
+  stage: mapping
+  label: {en: Q-Q line, ja: "Q-Q プロットの線"}
+  aes: {sample: {required: true}, colour: {}}
+  visible: [mapping, distribution]
+
+# -- the stats with no geom of their own (a geom's `stat:` says the same) --
+
+stat_ecdf:
+  package: ggplot2
+  figure: layer
+  rank: 240
+  stage: mapping
+  label: {en: Cumulative distribution, ja: "累積分布"}
+  description: "The empirical cumulative distribution of x by group, drawn as steps (a change from baseline's CDF); the same as geom_step(stat = \"ecdf\")."
+  aes: {x: {required: true}, colour: {}, linetype: {}, group: {}}
+  visible: [mapping, geom, pad, linewidth]
+
+stat_summary:
+  package: ggplot2
+  figure: layer
+  rank: 241
+  stage: mapping
+  label: {en: Summary at each x, ja: "x ごとの要約"}
+  description: "A summary of y at each x drawn from the subjects' rows, e.g. mean +/- SE (fun.data mean_se) as points and error bars or a line over time; the same as geom_pointrange(stat = \"summary\")."
+  aes: {x: {required: true}, "y": {required: true}, colour: {}, group: {}}
+  visible: [mapping, fun.data, fun, fun.args, geom, position]
+
+stat_summary_bin:
+  package: ggplot2
+  figure: layer
+  rank: 242
+  stage: mapping
+  label: {en: Summary in bins of x, ja: "x の区間ごとの要約"}
+  description: "A summary of y in bins of a continuous x (study day in windows)."
+  aes: {x: {required: true}, "y": {required: true}, colour: {}}
+  visible: [mapping, fun.data, fun, bins, binwidth, geom]
+
+stat_ellipse:
+  package: ggplot2
+  figure: layer
+  rank: 243
+  stage: mapping
+  label: {en: Ellipse, ja: "楕円"}
+  description: "A confidence ellipse of (x, y) by group."
+  aes: {x: {required: true}, "y": {required: true}, colour: {}}
+  visible: [mapping, level, type, geom]
+
+stat_unique:
+  package: ggplot2
+  figure: layer
+  rank: 244
+  stage: mapping
+  label: {en: Unique rows, ja: "重複を除いた行"}
+  description: "Draws each distinct row once (a subject's repeated rows as one point)."
+  visible: [mapping, geom]
+
+geom_blank:
+  package: ggplot2
+  figure: layer
+  rank: 239
+  stage: mapping
+  label: {en: Nothing drawn, ja: "描かない層"}
+  description: "Draws nothing; its mapping widens the axes (the same range in every panel)."
+  aes: {x: {}, "y": {}}
+  visible: [mapping]
+
+geom_spoke:
+  package: ggplot2
+  figure: layer
+  rank: 270
+  stage: mapping
+  label: {en: Spokes, ja: "向きのある線分"}
+  description: "A segment from (x, y) at an angle and of a radius."
+  aes: {x: {required: true}, "y": {required: true}, angle: {required: true}, radius: {required: true}, colour: {}}
+  visible: [mapping, arrow]
+
+geom_quantile:
+  package: ggplot2
+  figure: layer
+  rank: 271
+  stage: mapping
+  label: {en: Quantile regression lines, ja: "分位点回帰の線"}
+  description: "Quantile regression lines (needs quantreg)."
+  aes: {x: {required: true}, "y": {required: true}, colour: {}}
+  visible: [mapping, quantiles, formula]
+
+geom_contour:
+  package: ggplot2
+  figure: layer
+  rank: 272
+  stage: mapping
+  label: {en: Contour lines, ja: "等高線"}
+  aes: {x: {required: true}, "y": {required: true}, z: {required: true}, colour: {}}
+  visible: [mapping, bins, binwidth, breaks]
+
+geom_contour_filled:
+  package: ggplot2
+  figure: layer
+  rank: 273
+  stage: mapping
+  label: {en: Filled contours, ja: "塗った等高線"}
+  aes: {x: {required: true}, "y": {required: true}, z: {required: true}, fill: {}}
+  visible: [mapping, bins, binwidth, breaks]
+
+geom_density_2d:
+  package: ggplot2
+  figure: layer
+  rank: 274
+  stage: mapping
+  label: {en: 2-d density contours, ja: "2 次元密度の等高線"}
+  aes: {x: {required: true}, "y": {required: true}, colour: {}}
+  visible: [mapping, bins, h, adjust]
+
+geom_density_2d_filled:
+  package: ggplot2
+  figure: layer
+  rank: 275
+  stage: mapping
+  label: {en: Filled 2-d density, ja: "塗った 2 次元密度"}
+  aes: {x: {required: true}, "y": {required: true}, fill: {}}
+  visible: [mapping, bins, h, adjust]
+
+geom_bin_2d:
+  package: ggplot2
+  figure: layer
+  rank: 276
+  stage: mapping
+  label: {en: 2-d bins, ja: "2 次元の区間"}
+  description: "Counts in rectangles of (x, y), filled by the count."
+  aes: {x: {required: true}, "y": {required: true}, fill: {}}
+  visible: [mapping, bins, binwidth]
+
+geom_function:
+  package: ggplot2
+  figure: layer
+  rank: 277
+  stage: mapping
+  label: {en: A function's curve, ja: "関数の曲線"}
+  description: "The curve of a function of x, e.g. fun: dnorm with args {mean: 0, sd: 1}."
+  aes: {colour: {}, linetype: {}}
+  visible: [fun, args, xlim, "n"]
+
+# -- the stats with a geom twin (geom_smooth is stat_smooth's) --
+
+stat_smooth:
+  package: ggplot2
+  figure: layer
+  rank: 245
+  stage: mapping
+  label: {en: Smoothed line (stat), ja: "平滑線（stat）"}
+  description: "The same as geom_smooth()."
+  aes: {x: {required: true}, "y": {required: true}, colour: {}}
+  visible: [mapping, method, formula, se, level]
+
+stat_bin:
+  package: ggplot2
+  figure: layer
+  rank: 246
+  stage: mapping
+  label: {en: Bins of x (stat), ja: "x の区間（stat）"}
+  description: "Counts in bins of x; the same as geom_histogram(), or geom_freqpoly() with geom: line."
+  aes: {x: {required: true}, fill: {}}
+  visible: [mapping, bins, binwidth, boundary, geom]
+
+stat_count:
+  package: ggplot2
+  figure: layer
+  rank: 247
+  stage: mapping
+  label: {en: Counts (stat), ja: "度数（stat）"}
+  description: "The rows at each x; the same as geom_bar()."
+  aes: {x: {required: true}, fill: {}}
+  visible: [mapping, width, geom]
+
+stat_boxplot:
+  package: ggplot2
+  figure: layer
+  rank: 248
+  stage: mapping
+  label: {en: Box plot statistics, ja: "箱ひげの統計量"}
+  description: "The five numbers of a box plot; with geom: errorbar, the whiskers' staples."
+  aes: {x: {}, "y": {required: true}, colour: {}}
+  visible: [mapping, geom, coef, width]
+
+stat_density:
+  package: ggplot2
+  figure: layer
+  rank: 249
+  stage: mapping
+  label: {en: Density (stat), ja: "密度（stat）"}
+  description: "The same as geom_density()."
+  aes: {x: {required: true}, colour: {}}
+  visible: [mapping, bw, adjust, kernel, geom]
+
+stat_ydensity:
+  package: ggplot2
+  figure: layer
+  rank: 280
+  stage: mapping
+  label: {en: Violin density (stat), ja: "バイオリンの密度（stat）"}
+  description: "The same as geom_violin()."
+  aes: {x: {required: true}, "y": {required: true}, fill: {}}
+  visible: [mapping, bw, adjust, trim, scale]
+
+stat_identity:
+  package: ggplot2
+  figure: layer
+  rank: 281
+  stage: mapping
+  label: {en: The data as they are (stat), ja: "そのままのデータ（stat）"}
+  aes: {x: {}, "y": {}, colour: {}}
+  visible: [mapping, geom]
+
+stat_function:
+  package: ggplot2
+  figure: layer
+  rank: 282
+  stage: mapping
+  label: {en: A function's curve (stat), ja: "関数の曲線（stat）"}
+  description: "The same as geom_function()."
+  aes: {colour: {}}
+  visible: [fun, args, xlim, "n", geom]
+
+stat_qq:
+  package: ggplot2
+  figure: layer
+  rank: 283
+  stage: mapping
+  label: {en: Q-Q points (stat), ja: "Q-Q プロットの点（stat）"}
+  aes: {sample: {required: true}, colour: {}}
+  visible: [mapping, distribution, dparams]
+
+stat_qq_line:
+  package: ggplot2
+  figure: layer
+  rank: 284
+  stage: mapping
+  label: {en: Q-Q line (stat), ja: "Q-Q プロットの線（stat）"}
+  aes: {sample: {required: true}, colour: {}}
+  visible: [mapping, distribution, line.p]
+
+stat_sum:
+  package: ggplot2
+  figure: layer
+  rank: 285
+  stage: mapping
+  label: {en: Counted points (stat), ja: "度数の点（stat）"}
+  description: "The same as geom_count()."
+  aes: {x: {required: true}, "y": {required: true}}
+  visible: [mapping]
+
+
+# -- positions (a layer's `position:` as {fn:, args:}) --
+
+position_dodge:
+  package: ggplot2
+  figure: position
+  rank: 260
+  stage: mapping
+  label: {en: Side by side, ja: "横に並べる"}
+  description: "The groups at each x side by side (bars, points and error bars of the arms)."
+  visible: [width, preserve]
+
+position_dodge2:
+  package: ggplot2
+  figure: position
+  rank: 261
+  stage: mapping
+  label: {en: Side by side (with padding), ja: "横に並べる（間隔付き）"}
+  visible: [width, padding, preserve]
+
+position_jitter:
+  package: ggplot2
+  figure: position
+  rank: 262
+  stage: mapping
+  label: {en: Jittered, ja: "ばらす"}
+  visible: [width, height, seed]
+
+position_jitterdodge:
+  package: ggplot2
+  figure: position
+  rank: 263
+  stage: mapping
+  label: {en: Jittered side by side, ja: "横に並べてばらす"}
+  description: "Points over box plots of the arms."
+  visible: [jitter.width, jitter.height, dodge.width, seed]
+
+position_nudge:
+  package: ggplot2
+  figure: position
+  rank: 264
+  stage: mapping
+  label: {en: Nudged, ja: "ずらす"}
+  visible: [x, "y"]
+
+position_stack:
+  package: ggplot2
+  figure: position
+  rank: 265
+  stage: mapping
+  label: {en: Stacked, ja: "積み上げ"}
+  visible: [vjust, reverse]
+
+position_fill:
+  package: ggplot2
+  figure: position
+  rank: 266
+  stage: mapping
+  label: {en: Stacked to 100%, ja: "100% 積み上げ"}
+  visible: [vjust, reverse]
+
+position_identity:
+  package: ggplot2
+  figure: position
+  rank: 267
+  stage: mapping
+  label: {en: As they are, ja: "そのまま"}
+
+# -- more scales --
+
+scale_y_discrete:
+  package: ggplot2
+  figure: scale
+  rank: 305
+  stage: finishing
+  label: {en: Y axis (groups), ja: y 軸（群）}
+  visible: [limits, labels]
+
+scale_x_reverse:
+  package: ggplot2
+  figure: scale
+  rank: 306
+  stage: finishing
+  label: {en: X axis (reversed), ja: x 軸（逆向き）}
+  visible: [limits, breaks]
+
+scale_y_reverse:
+  package: ggplot2
+  figure: scale
+  rank: 307
+  stage: finishing
+  label: {en: Y axis (reversed), ja: y 軸（逆向き）}
+  visible: [limits, breaks]
+
+scale_x_sqrt:
+  package: ggplot2
+  figure: scale
+  rank: 308
+  stage: finishing
+  label: {en: X axis (square root), ja: x 軸（平方根）}
+  visible: [breaks, labels]
+
+scale_y_sqrt:
+  package: ggplot2
+  figure: scale
+  rank: 309
+  stage: finishing
+  label: {en: Y axis (square root), ja: y 軸（平方根）}
+  visible: [breaks, labels]
+
+scale_x_date:
+  package: ggplot2
+  figure: scale
+  rank: 330
+  stage: finishing
+  label: {en: X axis (dates), ja: x 軸（日付）}
+  visible: [date_breaks, date_labels, limits]
+
+scale_y_date:
+  package: ggplot2
+  figure: scale
+  rank: 331
+  stage: finishing
+  label: {en: Y axis (dates), ja: y 軸（日付）}
+  visible: [date_breaks, date_labels, limits]
+
+scale_x_datetime:
+  package: ggplot2
+  figure: scale
+  rank: 332
+  stage: finishing
+  label: {en: X axis (date-times), ja: x 軸（日時）}
+  visible: [date_breaks, date_labels, limits]
+
+scale_colour_brewer:
+  package: ggplot2
+  figure: scale
+  rank: 333
+  stage: finishing
+  label: {en: Colours (ColorBrewer), ja: 色（ColorBrewer）}
+  visible: [palette, type, direction]
+
+scale_fill_brewer:
+  package: ggplot2
+  figure: scale
+  rank: 334
+  stage: finishing
+  label: {en: Fill colours (ColorBrewer), ja: 塗り（ColorBrewer）}
+  visible: [palette, type, direction]
+
+scale_colour_distiller:
+  package: ggplot2
+  figure: scale
+  rank: 335
+  stage: finishing
+  label: {en: Colour gradient (ColorBrewer), ja: 色のグラデーション（ColorBrewer）}
+  visible: [palette, direction, limits]
+
+scale_fill_distiller:
+  package: ggplot2
+  figure: scale
+  rank: 336
+  stage: finishing
+  label: {en: Fill gradient (ColorBrewer), ja: 塗りのグラデーション（ColorBrewer）}
+  visible: [palette, direction, limits]
+
+scale_colour_gradient:
+  package: ggplot2
+  figure: scale
+  rank: 337
+  stage: finishing
+  label: {en: Colour gradient, ja: 色のグラデーション}
+  visible: [low, high, limits]
+
+scale_fill_gradient:
+  package: ggplot2
+  figure: scale
+  rank: 338
+  stage: finishing
+  label: {en: Fill gradient, ja: 塗りのグラデーション}
+  description: "A heat map's colours from low to high."
+  visible: [low, high, limits]
+
+scale_colour_gradient2:
+  package: ggplot2
+  figure: scale
+  rank: 339
+  stage: finishing
+  label: {en: Colour gradient (diverging), ja: 色のグラデーション（発散）}
+  visible: [low, mid, high, midpoint]
+
+scale_fill_gradient2:
+  package: ggplot2
+  figure: scale
+  rank: 340
+  stage: finishing
+  label: {en: Fill gradient (diverging), ja: 塗りのグラデーション（発散）}
+  description: "Below and above a midpoint in two colours (a change from baseline's heat map)."
+  visible: [low, mid, high, midpoint]
+
+scale_colour_gradientn:
+  package: ggplot2
+  figure: scale
+  rank: 341
+  stage: finishing
+  label: {en: Colour gradient (n colours), ja: 色のグラデーション（n 色）}
+  visible: [colours, values, limits]
+
+scale_fill_gradientn:
+  package: ggplot2
+  figure: scale
+  rank: 342
+  stage: finishing
+  label: {en: Fill gradient (n colours), ja: 塗りのグラデーション（n 色）}
+  visible: [colours, values, limits]
+
+scale_colour_viridis_d:
+  package: ggplot2
+  figure: scale
+  rank: 343
+  stage: finishing
+  label: {en: Colours (viridis), ja: 色（viridis）}
+  visible: [option, begin, end]
+
+scale_fill_viridis_d:
+  package: ggplot2
+  figure: scale
+  rank: 344
+  stage: finishing
+  label: {en: Fill colours (viridis), ja: 塗り（viridis）}
+  visible: [option, begin, end]
+
+scale_colour_viridis_c:
+  package: ggplot2
+  figure: scale
+  rank: 345
+  stage: finishing
+  label: {en: Colour gradient (viridis), ja: 色のグラデーション（viridis）}
+  visible: [option, limits]
+
+scale_fill_viridis_c:
+  package: ggplot2
+  figure: scale
+  rank: 346
+  stage: finishing
+  label: {en: Fill gradient (viridis), ja: 塗りのグラデーション（viridis）}
+  visible: [option, limits]
+
+scale_colour_grey:
+  package: ggplot2
+  figure: scale
+  rank: 347
+  stage: finishing
+  label: {en: Colours (greys), ja: 色（灰色）}
+  visible: [start, end]
+
+scale_fill_grey:
+  package: ggplot2
+  figure: scale
+  rank: 348
+  stage: finishing
+  label: {en: Fill colours (greys), ja: 塗り（灰色）}
+  visible: [start, end]
+
+scale_colour_hue:
+  package: ggplot2
+  figure: scale
+  rank: 349
+  stage: finishing
+  label: {en: Colours (hues), ja: 色（色相）}
+  visible: [l, c, h.start]
+
+scale_fill_hue:
+  package: ggplot2
+  figure: scale
+  rank: 350
+  stage: finishing
+  label: {en: Fill colours (hues), ja: 塗り（色相）}
+  visible: [l, c, h.start]
+
+scale_colour_identity:
+  package: ggplot2
+  figure: scale
+  rank: 351
+  stage: finishing
+  label: {en: Colours as in the data, ja: 色（データの値のまま）}
+  visible: [guide]
+
+scale_fill_identity:
+  package: ggplot2
+  figure: scale
+  rank: 352
+  stage: finishing
+  label: {en: Fill colours as in the data, ja: 塗り（データの値のまま）}
+  visible: [guide]
+
+scale_shape:
+  package: ggplot2
+  figure: scale
+  rank: 353
+  stage: finishing
+  label: {en: Shapes (default), ja: 形（既定）}
+  visible: [solid, name]
+
+scale_linetype:
+  package: ggplot2
+  figure: scale
+  rank: 354
+  stage: finishing
+  label: {en: Line types (default), ja: 線種（既定）}
+  visible: [name]
+
+scale_size:
+  package: ggplot2
+  figure: scale
+  rank: 355
+  stage: finishing
+  label: {en: Sizes, ja: 大きさ}
+  visible: [range, breaks]
+
+scale_size_manual:
+  package: ggplot2
+  figure: scale
+  rank: 356
+  stage: finishing
+  label: {en: Sizes by group, ja: 大きさの割り当て}
+  visible: [values]
+
+scale_size_area:
+  package: ggplot2
+  figure: scale
+  rank: 357
+  stage: finishing
+  label: {en: Sizes by area, ja: 大きさ（面積比例）}
+  visible: [max_size]
+
+scale_alpha:
+  package: ggplot2
+  figure: scale
+  rank: 358
+  stage: finishing
+  label: {en: Transparency, ja: 透明度}
+  visible: [range]
+
+scale_alpha_manual:
+  package: ggplot2
+  figure: scale
+  rank: 359
+  stage: finishing
+  label: {en: Transparency by group, ja: 透明度の割り当て}
+  visible: [values]
+
+scale_linewidth:
+  package: ggplot2
+  figure: scale
+  rank: 360
+  stage: finishing
+  label: {en: Line widths, ja: 線の太さ}
+  visible: [range, name]
+
+scale_linewidth_manual:
+  package: ggplot2
+  figure: scale
+  rank: 361
+  stage: finishing
+  label: {en: Line widths (manual), ja: 線の太さ（手動）}
+  visible: [values, name]
+
+scale_colour_discrete:
+  package: ggplot2
+  figure: scale
+  rank: 362
+  stage: finishing
+  label: {en: Colours (discrete default), ja: 色（離散の既定）}
+  visible: [name, labels, limits]
+
+scale_fill_discrete:
+  package: ggplot2
+  figure: scale
+  rank: 363
+  stage: finishing
+  label: {en: Fills (discrete default), ja: 塗り（離散の既定）}
+  visible: [name, labels, limits]
+
+scale_colour_continuous:
+  package: ggplot2
+  figure: scale
+  rank: 364
+  stage: finishing
+  label: {en: Colours (continuous default), ja: 色（連続の既定）}
+  visible: [name, type, limits]
+
+scale_fill_continuous:
+  package: ggplot2
+  figure: scale
+  rank: 365
+  stage: finishing
+  label: {en: Fills (continuous default), ja: 塗り（連続の既定）}
+  visible: [name, type, limits]
+
+scale_x_binned:
+  package: ggplot2
+  figure: scale
+  rank: 366
+  stage: finishing
+  label: {en: X axis (binned), ja: x 軸（区間）}
+  visible: [n.breaks, breaks, show.limits]
+
+scale_colour_steps:
+  package: ggplot2
+  figure: scale
+  rank: 367
+  stage: finishing
+  label: {en: Colours in steps, ja: 色（段階）}
+  visible: [low, high, breaks, n.breaks]
+
+scale_fill_steps:
+  package: ggplot2
+  figure: scale
+  rank: 368
+  stage: finishing
+  label: {en: Fills in steps, ja: 塗り（段階）}
+  visible: [low, high, breaks, n.breaks]
+
+scale_colour_steps2:
+  package: ggplot2
+  figure: scale
+  rank: 369
+  stage: finishing
+  label: {en: Colours in steps (diverging), ja: 色（段階・発散）}
+  visible: [low, mid, high, midpoint, breaks]
+
+scale_fill_steps2:
+  package: ggplot2
+  figure: scale
+  rank: 373
+  stage: finishing
+  label: {en: Fills in steps (diverging), ja: 塗り（段階・発散）}
+  description: "A heat map of change from baseline in steps around 0."
+  visible: [low, mid, high, midpoint, breaks]
+
+scale_colour_fermenter:
+  package: ggplot2
+  figure: scale
+  rank: 374
+  stage: finishing
+  label: {en: Colours in steps (ColorBrewer), ja: 色（段階・ColorBrewer）}
+  visible: [palette, type, direction, breaks]
+
+scale_fill_fermenter:
+  package: ggplot2
+  figure: scale
+  rank: 375
+  stage: finishing
+  label: {en: Fills in steps (ColorBrewer), ja: 塗り（段階・ColorBrewer）}
+  visible: [palette, type, direction, breaks]
+
+scale_x_time:
+  package: ggplot2
+  figure: scale
+  rank: 376
+  stage: finishing
+  label: {en: X axis (times of day), ja: x 軸（時刻）}
+  visible: [breaks, labels, limits]
+
+
+# -- the values of a scale's arguments --
+
+expansion:
+  package: ggplot2
+  figure: helper
+  rank: 370
+  stage: finishing
+  label: {en: Expansion of a range, ja: 範囲の余白}
+  description: "A scale's `expand`: {fn: expansion, args: {mult: [0, 0.05]}}."
+  visible: [mult, add]
+
+sec_axis:
+  package: ggplot2
+  figure: helper
+  rank: 371
+  stage: finishing
+  label: {en: Secondary axis, ja: 第2軸}
+  description: "A scale's `sec.axis`, a transformation of the first: {fn: sec_axis, args: {transform: !r ~ . / 7, name: Weeks}}."
+  visible: [transform, name, breaks]
+
+dup_axis:
+  package: ggplot2
+  figure: helper
+  rank: 372
+  stage: finishing
+  label: {en: Duplicated axis, ja: 第2軸（同じ目盛り）}
+  description: "A scale's `sec.axis`, the same axis on the other side."
+  visible: [name, breaks]
+
+# -- more coordinates --
+
+coord_fixed:
+  package: ggplot2
+  figure: coord
+  rank: 403
+  stage: finishing
+  label: {en: Fixed aspect, ja: 縦横比の固定}
+  visible: [ratio, xlim, ylim]
+
+coord_trans:
+  package: ggplot2
+  figure: coord
+  rank: 404
+  stage: finishing
+  label: {en: Transformed axes, ja: 軸の変換}
+  description: "The axes transformed after the statistics (log10 of a PK concentration without changing the means); coord_transform() in ggplot2 4.0."
+  visible: [x, "y", xlim, ylim]
+
+coord_polar:
+  package: ggplot2
+  figure: coord
+  rank: 405
+  stage: finishing
+  label: {en: Polar, ja: 極座標}
+  visible: [theta, start, direction]
+
+coord_radial:
+  package: ggplot2
+  figure: coord
+  rank: 406
+  stage: finishing
+  label: {en: Radial, ja: 放射座標}
+  description: "Polar coordinates with axes and an inner radius (ggplot2 3.5)."
+  visible: [theta, start, end, inner.radius]
+
+xlab:
+  package: ggplot2
+  figure: labs
+  rank: 601
+  stage: finishing
+  label: {en: X title, ja: x のタイトル}
+  visible: [label]
+
+ylab:
+  package: ggplot2
+  figure: labs
+  rank: 602
+  stage: finishing
+  label: {en: Y title, ja: y のタイトル}
+  visible: [label]
+
+ggtitle:
+  package: ggplot2
+  figure: labs
+  rank: 603
+  stage: finishing
+  label: {en: Title, ja: 題}
+  visible: [label, subtitle]
+
+# -- complete themes (theme() after them changes their settings) --
+
+theme_bw:
+  package: ggplot2
+  figure: theme
+  rank: 702
+  stage: finishing
+  label: {en: "Theme: black and white", ja: "テーマ：白黒"}
+  visible: [base_size, base_family]
+
+theme_classic:
+  package: ggplot2
+  figure: theme
+  rank: 703
+  stage: finishing
+  label: {en: "Theme: classic (axis lines, no grid)", ja: "テーマ：クラシック（軸線のみ）"}
+  visible: [base_size, base_family]
+
+theme_minimal:
+  package: ggplot2
+  figure: theme
+  rank: 704
+  stage: finishing
+  label: {en: "Theme: minimal", ja: "テーマ：ミニマル"}
+  visible: [base_size, base_family]
+
+theme_light:
+  package: ggplot2
+  figure: theme
+  rank: 705
+  stage: finishing
+  label: {en: "Theme: light", ja: "テーマ：ライト"}
+  visible: [base_size, base_family]
+
+theme_linedraw:
+  package: ggplot2
+  figure: theme
+  rank: 706
+  stage: finishing
+  label: {en: "Theme: line drawing", ja: "テーマ：線画"}
+  visible: [base_size, base_family]
+
+theme_gray:
+  package: ggplot2
+  figure: theme
+  rank: 707
+  stage: finishing
+  label: {en: "Theme: grey (ggplot2's default)", ja: "テーマ：灰色（ggplot2 の既定）"}
+  visible: [base_size, base_family]
+
+theme_void:
+  package: ggplot2
+  figure: theme
+  rank: 708
+  stage: finishing
+  label: {en: "Theme: void (no axes)", ja: "テーマ：なし（軸なし）"}
+  visible: [base_size, base_family]
+
+theme_dark:
+  package: ggplot2
+  figure: theme
+  rank: 709
+  stage: finishing
+  label: {en: "Theme: dark", ja: "テーマ：暗い背景"}
+  visible: [base_size, base_family]
+
+# -- the elements of theme()'s settings --
+
+element_text:
+  package: ggplot2
+  figure: element
+  rank: 740
+  stage: finishing
+  label: {en: Text, ja: 文字}
+  description: "A theme setting of text (axis.text.x, plot.title ...): {fn: element_text, args: {size: 9, face: bold}}."
+  visible: [size, face, colour, angle, hjust, vjust]
+
+element_line:
+  package: ggplot2
+  figure: element
+  rank: 741
+  stage: finishing
+  label: {en: Line, ja: 線}
+  description: "A theme setting of a line (axis.line, panel.grid.major ...)."
+  visible: [colour, linewidth, linetype]
+
+element_rect:
+  package: ggplot2
+  figure: element
+  rank: 742
+  stage: finishing
+  label: {en: Rectangle, ja: 矩形}
+  description: "A theme setting of a rectangle (panel.border, strip.background ...)."
+  visible: [fill, colour, linewidth]
+
+element_blank:
+  package: ggplot2
+  figure: element
+  rank: 743
+  stage: finishing
+  label: {en: Nothing, ja: なし}
+  description: "A theme setting drawn as nothing (panel.grid.minor, legend.title)."
+
+margin:
+  package: ggplot2
+  figure: helper
+  rank: 744
+  stage: finishing
+  label: {en: Margins, ja: 余白}
+  description: "plot.margin, legend.margin, an element's margin: {fn: margin, args: {t: 5, r: 5, b: 5, l: 5, unit: pt}}."
+  visible: [t, r, b, l, unit]
+
+# -- the guides of guides() and a scale's `guide:` --
+
+guide_legend:
+  package: ggplot2
+  figure: guide
+  rank: 801
+  stage: finishing
+  label: {en: Legend, ja: 凡例}
+  visible: [title, nrow, ncol, reverse, override.aes]
+
+guide_colourbar:
+  package: ggplot2
+  figure: guide
+  rank: 802
+  stage: finishing
+  label: {en: Colour bar, ja: カラーバー}
+  visible: [title, direction, reverse]
+
+guide_axis:
+  package: ggplot2
+  figure: guide
+  rank: 803
+  stage: finishing
+  label: {en: Axis, ja: 軸}
+  description: "An axis's guide: labels on n.dodge rows, at an angle, minor ticks."
+  visible: [n.dodge, angle, check.overlap, minor.ticks]
+
+guide_none:
+  package: ggplot2
+  figure: guide
+  rank: 804
+  stage: finishing
+  label: {en: No guide, ja: なし}
+
+guide_bins:
+  package: ggplot2
+  figure: guide
+  rank: 805
+  stage: finishing
+  label: {en: Legend of bins, ja: 区間の凡例}
+  visible: [title, show.limits]
+
+guide_coloursteps:
+  package: ggplot2
+  figure: guide
+  rank: 806
+  stage: finishing
+  label: {en: Colour steps, ja: 段階のカラーバー}
+  visible: [title, show.limits]
+
+guide_axis_logticks:
+  package: ggplot2
+  figure: guide
+  rank: 807
+  stage: finishing
+  label: {en: Log ticks, ja: 対数の目盛り}
+  description: "Ticks at 1, 2, 5 ... 10 of a log axis (a forest plot's ratio axis); ggplot2 3.5."
+  visible: [long, mid, short, cap]
+
+guide_axis_theta:
+  package: ggplot2
+  figure: guide
+  rank: 808
+  stage: finishing
+  label: {en: Angle axis, ja: 角度の軸}
+  visible: [angle, minor.ticks, cap]
+
+guide_axis_stack:
+  package: ggplot2
+  figure: guide
+  rank: 809
+  stage: finishing
+  label: {en: Stacked axes, ja: 重ねた軸}
+  description: "Two axis guides on one side (first, then the others)."
+  visible: [first, spacing]
+
 
 # -- extension packages (Suggests; the code calls them as pkg::fn) --
 
