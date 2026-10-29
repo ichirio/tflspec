@@ -79,6 +79,22 @@
 #'   settle what a request leaves unclear, with whatever tool the PC has
 #'   (PowerShell, Python, R).  `character()` (default): neither, and
 #'   `AGENTS.md` says not to open them.
+#' @param route With `mode = "agent"`, what the agent writes: `"answers"`
+#'   (default): an answer a request (`ai/answers/<request>.md`), the
+#'   person's check writing the drafts; `"spec"`: the drafts themselves
+#'   (`ai/spec/outputs/<id>.yml`, the report's skeleton: its data, its
+#'   analyses, the items that make its rows, its titles), after asking the
+#'   person in the chat what defines a report and is not settled, the
+#'   answers kept in `ai/decisions.md` ([tfl_ai_decisions_read()]) and
+#'   applied to the reports after; what it could not settle marked `ai:
+#'   confirm` in the file ([tfl_ai_confirm()]).  The check reads the drafts
+#'   as it reads the answers.  `study.yml`'s `ai:` keys set the route's
+#'   rules: `language` (the chat's), `ask_when` (`"request"` /
+#'   `"report"`), `carry` (which decision scopes apply without asking:
+#'   `all`, `dataset`, `section`), `max_rounds` (asking again about one
+#'   item), `footnotes_at` (`"footer"`, the default, or `"table"`: where the
+#'   shell's footnotes go; the study standard's `spec/defaults.yml` may say
+#'   it under its own `ai:` key).
 #' @param docs With `mode = "agent"`, documents the agent may read for what
 #'   a request leaves unclear (a SAP, a data guide): their paths.  They are
 #'   copied into `ai/docs/` (the agent works in the study folder) and
@@ -219,7 +235,11 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
                            templates = TRUE, progress = NULL, toc_cols = NULL,
                            sheet_roles = NULL, unit = c("sheet", "toc"), area = NULL,
                            numbers = NULL, agent_run = FALSE, agent_reads = character(),
-                           docs = NULL, agent_max_reads = 3L) {
+                           docs = NULL, agent_max_reads = 3L, route = c("answers", "spec")) {
+  route <- match.arg(route)
+  if (identical(route, "spec") && isTRUE(agent_run)) {
+    .ard_stop("tfl_ai_prepare(): route = \"spec\" is the agent that asks and writes the drafts; agent_run = TRUE is the answers route's.")
+  }
   unit <- match.arg(unit)
   if (isTRUE(quiet)) {
     cl <- match.call()
@@ -359,6 +379,9 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
                                  templates = templates, mode = mode, progress = progress,
                                  unit = unit)
     rq <- file.path(dir, "ai", "requests")
+    # the spec route: what a draft holds (the skeleton, the footnotes' place),
+    # after the instructions every request shares
+    if (identical(mode, "agent") && identical(route, "spec")) .ai_instructions_spec(dir)
     files <- c(files, file.path(ai, c("adam_summary.md", shell_md)),
                .ai_toc_yml(dir, shell, overwrite = overwrite, add = add))
     if (identical(mode, "agent")) {
@@ -368,8 +391,15 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
       # each request says the agent's steps at its head
       for (i in seq_len(nrow(req))) {
         f <- file.path(dir, req$file[i])
+        # (the spec route: the decisions that apply to the request's reports)
+        dec <- if (identical(route, "spec")) {
+          .ai_decisions_block(dir, strsplit(req$outputs[i], ", ", fixed = TRUE)[[1L]],
+                              section = .ai_request_section(shell, req$outputs[i]))
+        }
         txt <- c(.ai_agent_request_head(req$request[i], adam = adam_at, book = book_at,
-                                        run = agent_run, reads = agent_reads),
+                                        run = agent_run, reads = agent_reads, route = route,
+                                        ids = strsplit(req$outputs[i], ", ", fixed = TRUE)[[1L]]),
+                 dec,
                  readLines(f, warn = FALSE, encoding = "UTF-8"))
         .ai_write_text(txt, f)
         req$chars[i] <- nchar(paste(txt, collapse = "\n"))
@@ -388,7 +418,7 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
       files <- c(files, .ai_agent_files(dir, overwrite = overwrite && !isTRUE(add),
                                         templates = templates, adam = adam_at,
                                         book = book_at, run = agent_run, reads = agent_reads,
-                                        docs = refs, max_reads = agent_max_reads))
+                                        docs = refs, max_reads = agent_max_reads, route = route))
       # what the agent may open besides the requests and the files they name
       agent_files <- c(if ("workbook" %in% agent_reads || isTRUE(agent_run)) book_at,
                        if ("adam" %in% agent_reads || isTRUE(agent_run)) adam_at, refs)
@@ -401,7 +431,9 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
                 normalizePath(dir, winslash = "/")),
         paste0("in the agent's chat, the first message: ai/agent_prompt.md (the first ",
                "requests only); when it stops, ask for the next ones"),
-        if (!isTRUE(agent_run))
+        if (identical(route, "spec"))
+          "answer the agent's questions in its chat; then check the drafts: tflplanner's \"Check\" (tfl_ai_collect_answers()), finish them in the builder, adopt them"
+        else if (!isTRUE(agent_run))
           "check the answers: tflplanner's \"Check all answers\" (tfl_ai_collect_answers())",
         paste0("then answer ai/questions.md, write your corrections (tfl_ai_corrections(): ",
                "ai/corrections.md) and tell the agent \"the answers and corrections are written\""))
@@ -461,7 +493,8 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
   agent_prompt <- if (identical(mode, "agent")) {
     .ai_agent_prompt(basename(normalizePath(dir, mustWork = FALSE)),
                      utils::head(req$request, 2L), run = agent_run, templates = templates,
-                     reads = any(c("workbook", "adam") %in% agent_reads))
+                     reads = any(c("workbook", "adam") %in% agent_reads), route = route,
+                     language = .ai_spec_settings(dir)$language)
   } else NA_character_
   # and as a file, to copy from
   if (identical(mode, "agent") && !dry) {

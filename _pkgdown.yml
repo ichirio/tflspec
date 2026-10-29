@@ -450,6 +450,9 @@ reference:
       - tfl_ai_save_answer
       - tfl_ai_requests
       - tfl_ai_agent_prompt
+      - tfl_ai_decisions_read
+      - tfl_ai_decisions_write
+      - tfl_ai_confirm
       - tfl_fill_widths
       - tfl_ai_run
       - tfl_ai_compare

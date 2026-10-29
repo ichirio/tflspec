@@ -627,6 +627,11 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
                       fn, sQuote(file.path(study_dir, requests), FALSE), study_dir))
   }
   ctxs <- readRDS(cf)
+  # the spec route: the agent's drafts (ai/spec/outputs/<id>.yml) are the
+  # answers; their `ai:` blocks (assumptions, confirm) are put back after
+  spec <- identical(.ai_route(study_dir), "spec")
+  blocks <- if (spec) .ai_drafts_to_answers(study_dir, ctxs, answers) else list()
+  if (length(blocks)) on.exit(.ai_draft_blocks_restore(study_dir, blocks), add = TRUE)
   # (a study with the AI's drafts apart: the answers write them there)
   area_opt <- .ai_area_options(study_dir)
   if (!is.null(area_opt)) on.exit(options(area_opt), add = TRUE)
@@ -669,7 +674,11 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
     if (is.na(f)) {
       rows[[nm]] <- row(nm, ids, "no answer")
       step(nm, "answer",
-           if (agent) {
+           if (spec) {
+             sprintf("ask the agent for %s: it asks what is not settled, then writes %s",
+                     rel(requests, paste0(nm, ".md")),
+                     paste(sprintf("ai/spec/outputs/%s.yml", ids), collapse = ", "))
+           } else if (agent) {
              sprintf("answer %s; save the whole answer as %s%s",
                      rel(requests, paste0(nm, ".md")), rel(answers, paste0(nm, ".md")), run)
            } else sprintf("paste %s into a new chat; save the whole answer as %s",

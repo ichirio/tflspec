@@ -16,7 +16,8 @@ A data frame, one row a problem: \code{output_id} (\code{NA} for the
 study's ARD definition as a whole), \code{part} (\code{"ard"}, \code{"content"},
 \code{"figure"}), \code{item} (the analysis, the function and argument, or the
 figure's part and field), \code{level} (\code{"error"}: the program would stop or
-is not written; \code{"warning"}: to look at) and \code{message}.  Its attribute
+is not written; \code{"warning"}: to look at; \code{"check"}: what the AI marked
+to confirm, \code{\link[=tfl_ai_confirm]{tfl_ai_confirm()}}) and \code{message}.  Its attribute
 \code{versions} is a data frame of the key packages (\code{package},
 \code{installed}, \code{NA} when not installed).
 }

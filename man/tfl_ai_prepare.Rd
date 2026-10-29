@@ -36,7 +36,8 @@ tfl_ai_prepare(
   agent_run = FALSE,
   agent_reads = character(),
   docs = NULL,
-  agent_max_reads = 3L
+  agent_max_reads = 3L,
+  route = c("answers", "spec")
 )
 }
 \arguments{
@@ -178,6 +179,19 @@ copied into \verb{ai/docs/} (the agent works in the study folder) and
 many times for a request the agent may open a file or run a command
 beyond the request and the files it names; then it writes what is
 still unclear as assumptions and questions and goes on.  Default 3.}
+
+\item{route}{With \code{mode = "agent"}, what the agent writes: \code{"answers"}
+(default): an answer a request (\verb{ai/answers/<request>.md}), the
+person's check writing the drafts; \code{"spec"}: the drafts themselves
+(\verb{ai/spec/outputs/<id>.yml}, the report's skeleton: its data, its
+analyses, the items that make its rows, its titles), after asking the
+person in the chat what defines a report and is not settled, the
+answers kept in \code{ai/decisions.md} (\code{\link[=tfl_ai_decisions_read]{tfl_ai_decisions_read()}}) and
+applied to the reports after; what it could not settle marked \code{ai: confirm} in the file (\code{\link[=tfl_ai_confirm]{tfl_ai_confirm()}}).  The check reads the drafts
+as it reads the answers.  \code{study.yml}'s \verb{ai:} keys set the route's
+rules: \code{language} (the chat's), \code{ask_when} (\code{"request"} /
+\code{"report"}), \code{carry} (which decision scopes apply without asking:
+\code{all}, \code{dataset}, \code{section}), \code{max_questions}.}
 }
 \value{
 A \code{tfl_ai_prepared}: a list with \code{requests} (one row a request:
