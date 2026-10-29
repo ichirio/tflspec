@@ -1180,6 +1180,9 @@ tfl_content_run <- function(output, data) {
   for (it in output$content) .schema_need_version(it)
   # plan_levels() the ARD already says: left out, as the program does
   if (identical(output$kind, "table")) output$content <- .levels_prune(output$content, output)
+  # a table of records (its data a dataset: a table_plan(value = ) with
+  # its parts) has no ARD to normalize
+  if (identical(output$data$source, "dataset")) output$content <- .content_drop_data_steps(output$content)
   steps <- .content_r_steps(output)
   if (length(steps)) {
     # the steps run as the program runs them: the output's object bound
@@ -1333,6 +1336,9 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
   # plan_levels() the ARD already says (a code list applied when the ARD is
   # made, the variables in its order): not written (R/spec_levels.R)
   if (identical(output$kind, "table")) output$content <- .levels_prune(output$content, output)
+  # a table of records (its data a dataset: a table_plan(value = ) with
+  # its parts) has no ARD to normalize
+  if (identical(output$data$source, "dataset")) output$content <- .content_drop_data_steps(output$content)
   # a template SPEC (resolved): the template's call and the lines after it
   # (the A use); `template = "items"` writes the items it stands for (B)
   tp <- attr(output, "template")

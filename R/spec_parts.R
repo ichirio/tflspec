@@ -123,3 +123,33 @@
   }
   env
 }
+
+# The objects a table with parts reads, by name, as its program makes them:
+# the study ARD's rows of the report (`ard`) when the table or a part reads
+# it, and a listing's records for the table's own `source: dataset` (as
+# `data`) and each part's (under its object's name)
+.parts_objects <- function(o, study, dir = ".") {
+  parts <- .content_parts(o$content)
+  own <- o$data %||% list(source = "ard")
+  src <- own$source %||% "ard"
+  want_ard <- identical(src, "ard") || any(vapply(parts, function(p) identical(p$object, "ard"), NA))
+  out <- list()
+  if (want_ard) {
+    ard <- suppressMessages(tfl_build_ard(study, dir = dir, output_id = o$id, save = FALSE))
+    if (!is.null(ard$output_id)) ard <- ard[ard$output_id %in% o$id, , drop = FALSE]
+    out$ard <- ard
+  }
+  records <- function(data) {
+    x <- o
+    x$data <- data
+    # (a plain data frame: the plan reads columns it may not have by `$`)
+    as.data.frame(.listing_data_of(x, study, dir))
+  }
+  if (identical(src, "dataset")) out$data <- records(own)
+  for (p in parts) {
+    if (identical(p$data$source %||% "ard", "dataset") && is.null(out[[p$object]])) {
+      out[[p$object]] <- records(p$data)
+    }
+  }
+  out
+}

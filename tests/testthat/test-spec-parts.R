@@ -79,3 +79,42 @@ test_that("a part's object: data's object, the ARD, the dataset in lower case; t
   expect_error(tflspec:::.content_parts(list(part("s"), part("s"))), "two parts are called")
   expect_error(tflspec:::.content_parts(list(tfl_item(sp_fn, list(name = "s")))), "its `content`")
 })
+
+test_that("in a study: tfl_run_output() builds a table of a listing and its summary from the ARD", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("cards")
+  skip_if_not_installed("rtfreporter")
+  skip_if_not(exists(sp_fn, envir = asNamespace("rtfreporter")), "rtfreporter without the parts verb")
+  d <- file.path(withr::local_tempdir(), "study")
+  dir.create(file.path(d, "adam"), recursive = TRUE)
+  for (x in c("adsl", "adlb")) {
+    haven::write_xpt(tflspec:::.ai_chr(getExportedValue("tflspec", x)),
+                     file.path(d, "adam", paste0(x, ".xpt")))
+  }
+  tfl_ai_study_init(d, adam = "adam", study_id = "SP-1")
+  keep <- "PARAMCD == \"ALT\" & AVISIT %in% c(\"BASELINE\", \"CYCLE 2 DAY 1\")"
+  o <- tfl_output(
+    "T-LB", "table", population = "SAF", label = "ALT by subject",
+    data = list(source = "dataset", dataset = "ADLB", population = "SAF", where = tfl_r(keep)),
+    ard = list(
+      analysis_data = list(
+        list(id = "adsl_saf", from = "ADSL", population = "SAF"),
+        list(id = "adlb_alt", from = "ADLB", subjects = "adsl_saf", where = tfl_r(keep))),
+      analyses = list(list(id = "ALT", method = "continuous", data = "adlb_alt",
+                           by = "AVISIT", variables = "AVAL", statistics = "N | mean"))),
+    content = list(
+      tfl_item("table_plan", list(cols = "AVISIT", rows = list(subject = tfl_r("~ \"{USUBJID}\"")),
+                                  value = "AVAL")),
+      tfl_item("plan_cells", list(default = "{value:.1f}", na = "-")),
+      tfl_item(sp_fn, list(name = "summary", data = list(source = "ard"), content = list(
+        tfl_item("normalize_ard", list()),
+        tfl_item("table_plan", list(cols = "AVISIT", rows = list(block = tfl_r("~ \"Summary\"")))),
+        tfl_item("plan_cells", list(continuous = list(N = "{N:.0f}", Mean = "{mean:.2f}"))))))))
+  tfl_write_output(o, file.path(d, "spec", "outputs", "T-LB.yml"))
+  f <- tfl_run_output("T-LB", dir = d)
+  expect_true(file.exists(f))
+  rtf <- paste(readLines(f, warn = FALSE), collapse = "\n")
+  expect_match(rtf, "Summary", fixed = TRUE)
+  expect_match(rtf, "Mean", fixed = TRUE)
+})
