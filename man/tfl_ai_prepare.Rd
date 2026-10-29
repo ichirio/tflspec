@@ -233,13 +233,14 @@ and \code{ai/instructions-figure.md} (the instructions, the schema, what a
 draft holds), \code{ai/templates.md} (with \code{templates = TRUE}: every
 template, each request naming the ones likely for its reports),
 \code{ai/adam_summary.md} and \verb{spec/}, each request naming them -- the study
-folder gets \code{AGENTS.md} and \code{.github/copilot-instructions.md} (the same
-instructions), \code{run.R} (\code{\link[=tfl_ai_run]{tfl_ai_run()}}: the check from the command
-line, with the ARD and RTF), \code{ai/questions.md} (the agent's questions
-about the work itself) and \code{ai/decisions.md}.  \code{questions.md} and
-\code{decisions.md} are never written over.  The first message
-(\code{ai/agent_prompt.md}) asks for the first one or two requests only, then
-a stop: the person asks for the rest (\code{\link[=tfl_ai_agent_prompt]{tfl_ai_agent_prompt()}}).
+folder gets \code{ai/AGENTS.md} (the instructions: what the agent reads, how
+it asks, what a draft holds), \code{AGENTS.md} and
+\code{.github/copilot-instructions.md} (short: read \code{ai/AGENTS.md}), \code{run.R}
+(\code{\link[=tfl_ai_run]{tfl_ai_run()}}: the check from the command line, with the ARD and RTF)
+and \code{ai/decisions.md}, which is never written over.  One message
+(\code{ai/agent_prompt.md}) starts the agent on every request of
+\code{ai/requests/index.md} in order; stopped, it goes on at "continue" from
+the first request with a draft missing.
 
 \code{study.yml}'s \verb{ai:} keys set the agent's rules (the study standard's
 \code{spec/defaults.yml} may say them under its own \verb{ai:} key first):

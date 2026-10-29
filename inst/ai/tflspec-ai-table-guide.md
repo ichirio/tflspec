@@ -20,7 +20,8 @@ Japanese: `tflspec-ai-table-guide-ja.md` in the same folder
 mystudy/
   TOC_SHELL.xlsx        your TOC and shells (one workbook)
   adam/                 adsl.xpt, adae.xpt, adlb.xpt ...
-  AGENTS.md             written by tflspec: the agent's instructions (step 3)
+  AGENTS.md             written by tflspec: "read ai/AGENTS.md" (step 3)
+  ai/AGENTS.md          written by tflspec: the agent's instructions (step 3)
   ai/requests/          written by tflspec: one file a request (step 3)
   ai/decisions.md       your answers from the chat, one line each (step 5)
   ai/spec/outputs/      the agent's drafts, one file a report (step 5)
@@ -53,9 +54,10 @@ report by default: `T-14-1-1.md` ...; `size = 3` groups a family's reports,
 `demographics-1.md`, `ae-1.md` ...; `ai/requests/index.md` lists them), what
 every request would repeat written once (`ai/instructions-table.md`,
 `ai/instructions-figure.md`, `ai/templates.md`), and the agent's files:
-`AGENTS.md` and `.github/copilot-instructions.md` (the same text), `run.R`,
-`ai/questions.md`, `ai/decisions.md` and `ai/agent_prompt.md` (its first
-message). A figure of the TOC is a request of its own (`figure-1.md` ...):
+`ai/AGENTS.md` (its instructions: what it reads, how it asks, what a draft
+holds), `AGENTS.md` and `.github/copilot-instructions.md` (short: read
+`ai/AGENTS.md`), `run.R`, `ai/decisions.md` and `ai/agent_prompt.md` (its
+one message). A figure of the TOC is a request of its own (`figure-1.md` ...):
 its shell, and a figure report to draft. The steps one at a time:
 `tfl_ai_study_init()`, `tfl_ai_adam_summary()`, `tfl_ai_read_shell()`,
 `tfl_ai_write_requests()`.
@@ -73,7 +75,7 @@ Check before the first request:
 | `r$toc` | the reports found; a TOC sheet not found: `tfl_ai_prepare(..., toc_sheet = "Index")` |
 | `r$toc$shell` | `NA` = no shell sheet found: `tfl_ai_prepare(..., sheets = c("DM shells", ...))` |
 | `ai/adam_summary.md` | no records, but short value lists (up to 15): remove what your company does not allow |
-| `AGENTS.md` | what the agent may read and must ask; `study.yml`'s `ai:` keys change its rules (below) |
+| `ai/AGENTS.md` | what the agent may read and must ask; `study.yml`'s `ai:` keys change its rules (below) |
 
 **The sheets' report numbers.** Before the requests are written, check
 which numbers each shell sheet makes: `tfl_ai_prepare(..., dry_run =
@@ -125,7 +127,8 @@ the names of the files to read. A request longer than `max_chars` is split.
 ## 5. The agent's questions, your decisions, its drafts
 
 1. Open `mystudy` in VS Code and give the agent's chat the text of
-   `ai/agent_prompt.md`: the first one or two requests.
+   `ai/agent_prompt.md`, once: it does every request of
+   `ai/requests/index.md` in order, one after the other.
 2. The agent **asks you**, numbered, what defines each report and is not
    settled -- the analysis set, a parameter, the treatment variable, the
    denominator of a percent, what is counted, missing values, a subgroup's
@@ -148,15 +151,15 @@ the names of the files to read. A request longer than `max_chars` is split.
    `page: titles` and the shell's footnotes (`footnotes_at`) -- and under
    `ai:`, its `assumptions` (each `from: D<n>`) and what is to `confirm`.
    No column widths, header rows, pages, borders or fonts: the study's
-   defaults and your builder do those.
-5. It stops and tells you the files written, the decisions added and what
-   is to confirm. Check them (step 6), then ask for the next requests:
-   `tfl_ai_agent_prompt("mystudy")` gives the message (the next ten
-   without a draft).
+   defaults and your builder do those. Then it goes on to the next request.
+5. When every request is done it stops and tells you the files written,
+   the decisions added and what is to confirm. Check them (step 6). You can
+   stop it between requests and say **"continue"** later: it goes on from
+   the first request with a draft missing (or one the check refused), your
+   decisions kept.
 
 A question about the work rather than a report (a file missing, a request
-unclear) goes to `ai/questions.md` too: `tfl_ai_questions()` reads it,
-`tfl_ai_answer_questions()` writes your answers.
+unclear) it asks in the chat too.
 
 ## 6. Check the drafts, write the YAML, make the RTF
 
@@ -176,6 +179,8 @@ errors is left as it is; its repair prompt is `ai/repairs/<request>.md`.
 Paste it into **the agent's chat**: it fixes the draft; then run
 `tfl_ai_collect_answers(".")` again (2-3 rounds are usual). A draft whose
 YAML cannot be read is refused with why: tell the agent, it fixes the form.
+An assumption that is wrong (`spec/_assumptions.yml`, `tfl_ai_assumptions()`):
+tell the agent in the chat what is right, or change the draft in the builder.
 
 `tfl_ai_confirm(".")` lists what the agent marked to confirm (the report,
 the item, why): decide those in the builder. They do not stop a draft from
@@ -200,7 +205,6 @@ does the same from the command line.
 |---|---|
 | `tfl_ai_prepare()` | the study folder, the ADaM summary, the workbook read, the requests, the agent's files |
 | `tfl_ai_write_requests()` | one file a request (`size`, `max_chars`) |
-| `tfl_ai_agent_prompt()` | the message that asks the agent for the next requests |
 | `tfl_ai_collect_answers()` | reads `ai/spec/outputs/`, checks each request's drafts, writes them anew |
 | `tfl_ai_confirm()` | what the agent marked to confirm |
 | `tfl_ai_run()` | checks, then each report's ARD and RTF; `ai/status.md` |
@@ -227,24 +231,13 @@ drafts in `spec/outputs/`) moves with `tfl_ai_migrate()`.
    with them as examples, named by family -- each request gets its own
    family's, and the agent follows it:
    `tfl_ai_prepare(..., examples = c(demographics = "spec/outputs/T-14-1-1.yml", ae = "spec/outputs/T-14-3-1.yml"), overwrite = TRUE)`.
-3. **Ask for more at a time** (`tfl_ai_agent_prompt(n = 10)`) while the
-   drafts stay right; `size = 3` to `5` groups a family's reports in one
+3. **Check as it goes**: `tfl_ai_collect_answers(".")` reads the drafts
+   written so far; `size = 3` to `5` groups a family's reports in one
    request, their questions asked together.
 4. **Your decisions carry**: a decision of scope `all` or a dataset holds
    for every report after; the agent asks once a family, not once a report.
 5. `tfl_ai_collect_answers(".")` any time: it reads every draft there and
    lists what is left (`no answer`, `error`, to confirm).
-
-## The second round: corrections
-
-When the drafts are checked, correct the list of reports when it needs it
-(`tfl_ai_outputs()`, `tfl_ai_expected_write()`: `ai/expected_outputs.csv`),
-say which of the agent's assumptions are right or wrong and what is right
-instead (`tfl_ai_assumptions()`, `tfl_ai_assumption_answers_write()`:
-`ai/assumption_answers.csv`; for one report, or every report of its
-kind), gather them with `tfl_ai_corrections()` (`ai/corrections.md`), and
-tell the agent *"the corrections are written"*: it adds each answer to
-`ai/decisions.md`, does each correction, and redoes the drafts they touch.
 
 ## Templates or the code SPEC (`templates`)
 

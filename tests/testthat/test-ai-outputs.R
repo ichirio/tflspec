@@ -17,7 +17,7 @@ outs_study <- function(root) {
   d
 }
 
-test_that("tfl_ai_outputs(): a row a report, its request's sheets, status, questions, adoption", {
+test_that("tfl_ai_outputs(): a row a report, its request's sheets, status, adoption", {
   skip_on_cran()
   skip_if_not_installed("haven")
   root <- withr::local_tempdir()
@@ -25,7 +25,7 @@ test_that("tfl_ai_outputs(): a row a report, its request's sheets, status, quest
   res <- suppressMessages(tfl_ai_run(d, rtf = FALSE))
   o <- tfl_ai_outputs(d)
   expect_named(o, c("sheet", "shell_code", "toc_id", "output_id", "title", "population",
-                    "split", "request", "status", "rtf", "problem", "questions",
+                    "split", "request", "status", "rtf", "problem",
                     "adopted", "file"))
   made <- res$reports$output_id[!is.na(res$reports$file)]
   expect_true(all(made %in% o$output_id))

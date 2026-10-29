@@ -2,7 +2,7 @@
 % Please edit documentation in R/ai_agent.R
 \name{tfl_ai_run}
 \alias{tfl_ai_run}
-\title{Run the study's AI drafts through: collect, build, status, questions}
+\title{Run the study's AI drafts through: collect, build, status}
 \usage{
 tfl_ai_run(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = FALSE)
 }
@@ -22,11 +22,7 @@ passes them.}
 A \code{tfl_ai_collected} (as \code{\link[=tfl_ai_collect_answers]{tfl_ai_collect_answers()}}) whose
 \code{reports} also have \code{rtf} (the file made, else \code{NA}), \code{rtf_problem}
 and \code{built} (\code{"built"}, \code{"kept"} -- unchanged since the last run --
-or \code{NA}), and a \code{questions} data frame (\code{n}, \code{question}, \code{reports}, \code{assumptions},
-\code{status}, \code{answer}), and \code{expected} (the comparison with the
-person's list: \code{output_id}, \code{result} -- \code{missing}, \verb{still there},
-\code{differs}, \verb{not expected} --, \code{detail}; its counts in its attribute
-\code{text}; \code{NULL} without a list), invisibly.
+or \code{NA}), invisibly.
 }
 \description{
 The person's check from the command line (\code{run.R} of \code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}}
@@ -35,11 +31,7 @@ them, write the report files, a repair prompt for a draft with errors), then eac
 (\code{\link[=tfl_build_ard]{tfl_build_ard()}}) and its RTF (rtfreporter) into the study's
 \code{output_path} -- one report's failure not stopping the others.  It writes
 \code{ai/status.md} (each report's status, its RTF or why none, each
-request's next step, the questions open) and gathers the answers'
-questions (an assumption's \code{question}) into \code{ai/questions.md}: one
-question once, with every report that asks it; a question there already
-is kept as it is -- its answer, its status -- with the new reports added
-to its list.  Nothing is sent anywhere.
+request's next step).  Nothing is sent anywhere.
 }
 \details{
 A report is built again only when it changed: its report file, the
@@ -52,12 +44,6 @@ request's reports are built; its RTF (and PNG) of an earlier run are
 removed, and \code{ai/built.csv} keeps why, so that a run of other requests
 still says it.  A report not built yet (only other requests run) says
 so in \code{ai/status.md}.
-
-When the person keeps a list of the reports they expect
-(\code{ai/expected_outputs.csv}, \code{\link[=tfl_ai_expected_write]{tfl_ai_expected_write()}}), the reports made
-are compared with it, and \code{ai/status.md} says what differs (a report
-missing, one dropped still there, a title or analysis set not the
-list's, one the list does not have): told, never refused.
 }
 \seealso{
 \code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}}, \code{\link[=tfl_ai_outputs]{tfl_ai_outputs()}}.

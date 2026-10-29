@@ -1,7 +1,6 @@
 # The AI steps with a figure: its own request, its answer (a figure design)
 # collected as the figure's report file in the design's form, drawn by
-# tfl_ai_run() as tflplanner draws it; the questions read and answered
-# (tfl_ai_questions(), tfl_ai_answer_questions())
+# tfl_ai_run() as tflplanner draws it
 
 fig_study <- function(root) {
   ad <- file.path(root, "adam")
@@ -94,8 +93,8 @@ test_that("tfl_ai_run(): the figure drawn, its PNG and RTF; agent_prompt", {
   d <- file.path(root, "study")
   r <- tfl_ai_prepare(unit = "toc", d, fig_book(), adam = fig_study(root), quiet = TRUE, size = 3L)
   # (from the study folder: a copy of it says the same)
-  expect_match(r$agent_prompt, "Follow AGENTS.md", fixed = TRUE)
-  expect_match(r$agent_prompt, "Do only ai/requests/", fixed = TRUE)
+  expect_match(r$agent_prompt, "Read ai/AGENTS.md and follow it", fixed = TRUE)
+  expect_match(r$agent_prompt, "every request of ai/requests/index.md", fixed = TRUE)
   expect_false(grepl("run.R", r$agent_prompt, fixed = TRUE))
   expect_false(grepl(normalizePath(root, winslash = "/"), r$agent_prompt, fixed = TRUE))
   expect_true("ai/agent_prompt.md" %in% r$files)

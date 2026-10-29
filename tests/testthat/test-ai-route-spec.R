@@ -80,7 +80,7 @@ test_that("prepare(): AGENTS.md asks and writes the drafts; the requests carry t
   root <- withr::local_tempdir()
   d <- rs_study(root)
   tfl_ai_prepare(unit = "toc", d, rs_book(), adam = "adam", quiet = TRUE, size = 3L)
-  ag <- readLines(file.path(d, "AGENTS.md"), warn = FALSE, encoding = "UTF-8")
+  ag <- readLines(file.path(d, "ai", "AGENTS.md"), warn = FALSE, encoding = "UTF-8")
   expect_true(any(grepl("<!-- tflspec route: spec -->", ag, fixed = TRUE)))
   expect_true(any(grepl("ai/spec/outputs/<id>.yml", ag, fixed = TRUE)))
   expect_true(any(grepl("three times at most", ag, fixed = TRUE)))
@@ -159,8 +159,4 @@ test_that("prepare(): AGENTS.md asks and writes the drafts; the requests carry t
   tfl_write_output(tfl_output("T-99-9-9", kind = "table", label = "x"), file.path(area, "T-99-9-9.yml"))
   r3 <- suppressMessages(tfl_ai_collect_answers(d))
   expect_identical(r3$stray, "ai/spec/outputs/T-99-9-9.yml")
-  # the agent's next message: the requests whose drafts are not written yet
-  pr2 <- tfl_ai_agent_prompt(d, n = 2L)
-  expect_false(req %in% attr(pr2, "requests"))
-  expect_identical(length(attr(pr2, "requests")), 2L)
 })

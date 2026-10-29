@@ -585,10 +585,11 @@ tfl_ai_unpack(a, "study")                           # spec/outputs/<id>.yml, spe
   `size` reports a request, 1 by default; `max_chars` splits a long one),
   what every request would repeat once (`ai/instructions-table.md`,
   `ai/instructions-figure.md`, `ai/templates.md`), and the agent's files:
-  `AGENTS.md` and `.github/copilot-instructions.md` (its instructions),
-  `run.R`, `ai/questions.md`, `ai/decisions.md` and `ai/agent_prompt.md`
-  (its first message: the first one or two requests; `tfl_ai_agent_prompt()`
-  gives the message for the next ones).  The agent **asks in its chat** what
+  `ai/AGENTS.md` (its instructions), `AGENTS.md` and
+  `.github/copilot-instructions.md` (short: read `ai/AGENTS.md`), `run.R`,
+  `ai/decisions.md` and `ai/agent_prompt.md` (its one message: every
+  request of `ai/requests/index.md` in order; "continue" goes on from the
+  first with a draft missing).  The agent **asks in its chat** what
   defines each report and is not settled (the analysis set, a parameter, the
   treatment variable, a denominator; three rounds at most for one item,
   then marked to confirm), keeps the answers in `ai/decisions.md`
@@ -622,17 +623,10 @@ tfl_ai_unpack(a, "study")                           # spec/outputs/<id>.yml, spe
   `tfl_ai_run(study_dir)` collects, then builds each report's ARD and RTF
   (`ai/status.md`; `run.R` from the command line); a draft the person has
   checked is adopted into `spec/outputs/` with `tfl_ai_adopt()`
-  (`tfl_ai_adopted_diff()`: what changed since).  `tfl_ai_questions(study_dir)`
-  reads `ai/questions.md` (the agent's questions about the work itself) and
-  `tfl_ai_answer_questions(study_dir, answers)` writes the person's answers
-  into it; `tfl_ai_outputs(study_dir)` lists the reports made,
-  `tfl_ai_expected_write()` keeps the list the person expects
-  (`ai/expected_outputs.csv`, which `run.R` compares with), and
-  `tfl_ai_corrections(study_dir)` gathers the corrections and the answers
-  for the agent's next round (`ai/corrections.md`); `tfl_ai_assumptions(study_dir)`
-  lists the AI's assumptions with their ids (`A<n>`, kind `K<n>`), and
-  `tfl_ai_assumption_answers_write()` keeps the person's answers to them
-  (`ok`, or `wrong` with the right content: `ai/assumption_answers.csv`).  The TOC and its shells in
+  (`tfl_ai_adopted_diff()`: what changed since); `tfl_ai_outputs(study_dir)`
+  lists the reports made; `tfl_ai_assumptions(study_dir)` lists the AI's
+  assumptions with their ids (`A<n>`, kind `K<n>`) -- what is wrong, the
+  person tells the agent in its chat or changes in the builder.  The TOC and its shells in
   workbooks apart: `tfl_ai_read_shell(path, shells = )` /
   `tfl_ai_prepare(toc, shells = )`; another workbook added to the study's
   requests: `tfl_ai_prepare(..., add = TRUE)`.  A figure of the TOC is a request
@@ -900,8 +894,8 @@ back): rename the value or choose another separator.
 **AI-assisted drafting:** `tfl_ai_tasks` `tfl_ai_context` `tfl_ai_schema`
 `tfl_ai_prompt` `tfl_ai_parse` `tfl_ai_check` `tfl_ai_repair_prompt`
 `tfl_ai_diff` `tfl_ai_read_shell` `tfl_ai_adam_summary` `tfl_ai_batches`
-`tfl_ai_write_requests` `tfl_ai_collect_answers` `tfl_ai_adopt` `tfl_ai_adopted_diff` `tfl_ai_style_prompt` `tfl_ai_style_read` `tfl_rtf_style_scan` `tfl_ai_migrate` `tfl_ai_outputs` `tfl_ai_expected_read` `tfl_ai_expected_write` `tfl_ai_corrections` `tfl_ai_assumptions` `tfl_ai_assumption_answers_read` `tfl_ai_assumption_answers_write` `tfl_ai_study_init`
-`tfl_ai_prepare` `tfl_ai_requests` `tfl_ai_agent_prompt` `tfl_fill_widths` `tfl_ai_run` `tfl_ai_compare` `tfl_ai_questions`
+`tfl_ai_write_requests` `tfl_ai_collect_answers` `tfl_ai_adopt` `tfl_ai_adopted_diff` `tfl_ai_style_prompt` `tfl_ai_style_read` `tfl_rtf_style_scan` `tfl_ai_migrate` `tfl_ai_outputs` `tfl_ai_assumptions` `tfl_ai_study_init`
+`tfl_ai_prepare` `tfl_ai_requests` `tfl_fill_widths` `tfl_ai_run` `tfl_ai_compare`
 `tfl_ai_answer_questions`
 
 **ARD spec:** `tfl_ard_spec` `tfl_read_ard_spec` `tfl_write_ard_spec`

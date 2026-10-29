@@ -33,13 +33,14 @@
 #' draft holds), `ai/templates.md` (with `templates = TRUE`: every
 #' template, each request naming the ones likely for its reports),
 #' `ai/adam_summary.md` and `spec/`, each request naming them -- the study
-#' folder gets `AGENTS.md` and `.github/copilot-instructions.md` (the same
-#' instructions), `run.R` ([tfl_ai_run()]: the check from the command
-#' line, with the ARD and RTF), `ai/questions.md` (the agent's questions
-#' about the work itself) and `ai/decisions.md`.  `questions.md` and
-#' `decisions.md` are never written over.  The first message
-#' (`ai/agent_prompt.md`) asks for the first one or two requests only, then
-#' a stop: the person asks for the rest ([tfl_ai_agent_prompt()]).
+#' folder gets `ai/AGENTS.md` (the instructions: what the agent reads, how
+#' it asks, what a draft holds), `AGENTS.md` and
+#' `.github/copilot-instructions.md` (short: read `ai/AGENTS.md`), `run.R`
+#' ([tfl_ai_run()]: the check from the command line, with the ARD and RTF)
+#' and `ai/decisions.md`, which is never written over.  One message
+#' (`ai/agent_prompt.md`) starts the agent on every request of
+#' `ai/requests/index.md` in order; stopped, it goes on at "continue" from
+#' the first request with a draft missing.
 #'
 #' `study.yml`'s `ai:` keys set the agent's rules (the study standard's
 #' `spec/defaults.yml` may say them under its own `ai:` key first):
@@ -403,9 +404,8 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
     nxt <- c(
       sprintf("open %s in VS Code (that folder: the agent reads its AGENTS.md)",
               normalizePath(dir, winslash = "/")),
-      paste0("in the agent's chat, the first message: ai/agent_prompt.md (the first ",
-             "requests only); answer its questions there; when it stops, ask for the next ones ",
-             "(tfl_ai_agent_prompt())"),
+      paste0("in the agent's chat, one message: ai/agent_prompt.md; answer its questions ",
+             "there; \"continue\" when it stopped"),
       paste0("check the drafts: tflplanner's \"Check\" (tfl_ai_collect_answers()), ",
              "finish them in the builder, adopt them (tfl_ai_adopt())"))
   }
@@ -457,7 +457,7 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
   # another drive) says the same
   # -- and the first one or two requests only: the person asks for the rest
   agent_prompt <- .ai_agent_prompt(basename(normalizePath(dir, mustWork = FALSE)),
-                                   utils::head(req$request, 2L), templates = templates,
+                                   templates = templates,
                                    language = .ai_spec_settings(dir)$language)
   # and as a file, to copy from
   if (!dry) {

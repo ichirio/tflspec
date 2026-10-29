@@ -1,6 +1,5 @@
 # The AI's assumptions: their ids and kinds (ai/assumption_ids.csv), the
-# person's answers (ai/assumption_answers.csv), what they make of
-# ai/corrections.md and ai/questions.md, and a fix the agent made kept
+# fix the agent made kept
 
 asm_rows <- function(d, rows) {
   dir.create(file.path(d, "spec"), recursive = TRUE, showWarnings = FALSE)
@@ -25,7 +24,7 @@ test_that("each assumption an id kept across collections, and a kind", {
   d <- asm_rows(withr::local_tempdir(), asm_five())
   a <- tfl_ai_assumptions(d)
   expect_named(a, c("id", "kind", "n_reports", "output_id", "where", "item", "assumption",
-                    "value", "question", "verdict", "correct", "status"))
+                    "value", "question", "from"))
   expect_identical(a$id, paste0("A", 1:5))
   expect_identical(a$kind, c("K1", "K1", "K2", "K2", "K3"))
   expect_identical(a$n_reports, c(2L, 2L, 2L, 2L, 1L))
@@ -46,128 +45,6 @@ test_that("each assumption an id kept across collections, and a kind", {
   expect_identical(b$id, c("A5", "A3", "A1", "A6"))
   expect_identical(b$kind, c("K3", "K2", "K1", "K4"))
   expect_identical(b$n_reports, c(1L, 1L, 1L, 1L))
-})
-
-test_that("the answers file: written, read, an answer removed; its errors", {
-  d <- asm_rows(withr::local_tempdir(), asm_five())
-  expect_null(tfl_ai_assumption_answers_read(d))
-  tfl_ai_assumption_answers_write(d, data.frame(
-    id = c("A1", "K2"), verdict = c("ok", "wrong"), correct = c(NA, "1 / 2 coded")))
-  x <- tfl_ai_assumption_answers_read(d)
-  expect_named(x, c("id", "scope", "output_id", "verdict", "correct"))
-  expect_identical(x$scope, c("report", "all"))
-  expect_identical(x$output_id, c("T-1", NA))
-  # a row with neither verdict nor correct removes the id's answer
-  tfl_ai_assumption_answers_write(d, data.frame(id = "A1", verdict = "", correct = ""))
-  expect_identical(tfl_ai_assumption_answers_read(d)$id, "K2")
-  # (a correct with no verdict: wrong)
-  tfl_ai_assumption_answers_write(d, data.frame(id = "a5", correct = "one line"))
-  expect_identical(tfl_ai_assumption_answers_read(d)$verdict, c("wrong", "wrong"))
-  expect_error(tfl_ai_assumption_answers_write(d, data.frame(id = "A9", verdict = "ok")),
-               "no assumption A9")
-  expect_error(tfl_ai_assumption_answers_write(d, data.frame(id = "A1", verdict = "yes")),
-               "`ok` or `wrong`")
-  expect_error(tfl_ai_assumption_answers_write(d, data.frame(id = "A1", verdict = "wrong")),
-               "no `correct`")
-  expect_error(tfl_ai_assumption_answers_write(d, data.frame(id = "A1", scope = "all", verdict = "ok")),
-               "scope `report`")
-  expect_error(tfl_ai_assumption_answers_write(d, data.frame(id = "A1", output_id = "T-2",
-                                                             verdict = "ok")),
-               "an assumption of T-1")
-  expect_error(tfl_ai_assumption_answers_write(d, data.frame(id = "A5", verdict = "ok"),
-                                               overwrite = FALSE), "answered already")
-  expect_error(tfl_ai_assumption_answers_write(d, data.frame(id = "X1")), "A<n>")
-})
-
-test_that("the status: a kind's answer for each of its reports, a report's own wins", {
-  d <- asm_rows(withr::local_tempdir(), asm_five())
-  tfl_ai_assumption_answers_write(d, data.frame(
-    id = c("K2", "A4", "A1"), verdict = c("wrong", "ok", "ok"), correct = c("1 / 2 coded", NA, NA)))
-  a <- tfl_ai_assumptions(d)
-  expect_identical(a$status, c("confirmed", "open", "answered", "confirmed", "open"))
-  expect_identical(a$verdict, c("ok", NA, "wrong", "ok", NA))
-  expect_identical(a$correct[3L], "1 / 2 coded")
-  # the agent did the section: done; a row it fixed: done
-  tfl_ai_corrections(d)
-  f <- file.path(d, "ai", "corrections.md")
-  x <- readLines(f, encoding = "UTF-8")
-  x[x == "- Status: open"] <- "- Status: done"
-  writeLines(x, f)
-  expect_identical(tfl_ai_assumptions(d)$status[3L], "done")
-  r <- asm_five()
-  r[[5]]$status <- "fixed"
-  asm_rows(d, r)
-  expect_identical(tfl_ai_assumptions(d)$status[5L], "done")
-})
-
-test_that("ai/corrections.md: a report's and a kind's sections; kept, changed, withdrawn", {
-  d <- asm_rows(withr::local_tempdir(), asm_five())
-  tfl_ai_assumption_answers_write(d, data.frame(
-    id = c("A5", "K2", "A4", "A2"), verdict = c("wrong", "wrong", "ok", "ok"),
-    correct = c("three lines", "1 / 2 coded", NA, NA)))
-  new <- tfl_ai_corrections(d)
-  expect_identical(new, c("## A5. assumption of T-3: titles",
-                          "## K2. assumption of every report: SEX"))
-  f <- file.path(d, "ai", "corrections.md")
-  x <- readLines(f, encoding = "UTF-8")
-  expect_true(all(c("- Was: two lines", "- Correct: three lines", "- Reports: T-1",
-                    "- Was: M / F", "- Correct: 1 / 2 coded") %in% x))
-  expect_identical(sum(x == "- Status: open"), 2L)
-  # nothing new: nothing added; a correct changed while open: changed
-  expect_identical(tfl_ai_corrections(d), character())
-  tfl_ai_assumption_answers_write(d, data.frame(id = "A5", verdict = "wrong", correct = "3 lines"))
-  expect_identical(tfl_ai_corrections(d), character())
-  x <- readLines(f, encoding = "UTF-8")
-  expect_true("- Correct: 3 lines" %in% x)
-  expect_false("- Correct: three lines" %in% x)
-  expect_identical(length(grep("^## A5[.]", x)), 1L)
-  # the agent did K2; A5's answer removed: withdrawn, K2 kept done
-  k <- grep("^## K2", x)
-  x[k + match("- Status: open", x[k:length(x)]) - 1L] <- "- Status: done"
-  writeLines(x, f)
-  tfl_ai_assumption_answers_write(d, data.frame(id = "A5"))
-  tfl_ai_corrections(d)
-  y <- readLines(f, encoding = "UTF-8")
-  expect_identical(sum(y == "- Status: withdrawn"), 1L)
-  expect_identical(sum(y == "- Status: done"), 1L)
-  expect_identical(length(grep("^## [AK][0-9]+[.]", y)), 2L)
-})
-
-test_that("ai/questions.md: a question answered through its assumptions, the person's answer kept", {
-  r <- asm_five()
-  r[[6]] <- list(output_id = "T-4", where = "data", item = "visit", assumption = "C2D1",
-                 question = "Which visit?")
-  d <- asm_rows(withr::local_tempdir(), r)
-  a <- tfl_ai_assumptions(d)
-  q <- .ai_questions_update(d, a)
-  qf <- file.path(d, "ai", "questions.md")
-  x <- readLines(qf, encoding = "UTF-8")
-  expect_true(all(c("- Assumptions: A1, A2", "- Assumptions: A6") %in% x))
-  expect_identical(tfl_ai_questions(d)$answer, c(NA_character_, NA_character_))
-  # the same assumptions again: the file as it was; a new report asking it: added
-  .ai_questions_update(d, a)
-  expect_identical(readLines(qf, encoding = "UTF-8"), x)
-  # the person answered Q2 there
-  tfl_ai_answer_questions(d, c(Q2 = "the worst value"))
-  # A1 alone: Q1 not yet answered
-  tfl_ai_assumption_answers_write(d, data.frame(id = "A1", verdict = "ok"))
-  expect_true(is.na(tfl_ai_questions(d)$answer[1L]))
-  tfl_ai_assumption_answers_write(d, data.frame(id = c("A2", "A6"), verdict = "wrong",
-                                                correct = c("TRT01P", "C3D1")))
-  q <- tfl_ai_questions(d)
-  expect_identical(q$answer[1L], "A1: confirmed\nA2: TRT01P")
-  expect_identical(q$answer[2L], "the worst value")
-  # the answers removed: the answer written from them emptied
-  tfl_ai_assumption_answers_write(d, data.frame(id = "A2"))
-  expect_true(is.na(tfl_ai_questions(d)$answer[1L]))
-  # and through the kind
-  tfl_ai_assumption_answers_write(d, data.frame(id = "K1", verdict = "wrong", correct = "TRT01P"))
-  tfl_ai_assumption_answers_write(d, data.frame(id = "A1"))
-  expect_identical(tfl_ai_questions(d)$answer[1L], "A1, A2: TRT01P")
-  # tfl_ai_corrections(): the answered question's section, as before
-  new <- tfl_ai_corrections(d)
-  expect_true(any(startsWith(new, "## Q1 (answered).")))
-  expect_true(any(startsWith(new, "## Q2 (answered).")))
 })
 
 test_that("collected answers: ids kept; an assumption the agent fixed survives a collection", {
@@ -224,7 +101,7 @@ test_that("an assumption's value -- the value the AI used -- is kept and shown",
   d <- asm_rows(withr::local_tempdir(), rows)
   a <- tfl_ai_assumptions(d)
   expect_named(a, c("id", "kind", "n_reports", "output_id", "where", "item", "assumption",
-                    "value", "question", "verdict", "correct", "status"))
+                    "value", "question", "from"))
   expect_identical(a$value, c("TRT01A", NA, NA, NA, "Table 14.1.1, Demographics"))
   # written back with the ids, the value stays, after the assumption
   y <- yaml::read_yaml(file.path(d, "spec", "_assumptions.yml"))

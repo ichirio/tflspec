@@ -33,4 +33,4 @@ pages (`plan_paginate_*`), blank rows, borders, fonts, `plan_style`,
 
 Under a top-level `ai:` key: `assumptions` (what you took from a decision,
 `from: D<n>`, or on your own after three rounds) and `confirm` (what the
-person decides in the builder), as AGENTS.md shows.
+person decides in the builder), as ai/AGENTS.md shows.

@@ -68,12 +68,12 @@ test_that("templates = TRUE / FALSE: the setting at each request's head; FALSE a
   # the agent's instructions say it too
   da <- file.path(root, "agent")
   ra <- tfl_ai_prepare(unit = "toc", da, aitpl_book(), adam = ad, quiet = TRUE, size = 3L)
-  ag <- readLines(file.path(da, "AGENTS.md"), encoding = "UTF-8")
+  ag <- readLines(file.path(da, "ai", "AGENTS.md"), encoding = "UTF-8")
   expect_true(any(grepl("## Templates first", ag, fixed = TRUE)))
   expect_match(ra$agent_prompt, "template where one fits", fixed = TRUE)
   db <- file.path(root, "agent0")
   rb <- tfl_ai_prepare(unit = "toc", db, aitpl_book(), adam = ad, quiet = TRUE, size = 3L, templates = FALSE)
-  expect_false(any(grepl("## Templates first", readLines(file.path(db, "AGENTS.md")), fixed = TRUE)))
+  expect_false(any(grepl("## Templates first", readLines(file.path(db, "ai", "AGENTS.md")), fixed = TRUE)))
   expect_false(grepl("template", rb$agent_prompt, fixed = TRUE))
 })
 
@@ -238,7 +238,7 @@ test_that("what every request repeats is a file, written once", {
   ae0 <- paste(readLines(file.path(d0, "ai", "requests", "ae-1.md"), encoding = "UTF-8"), collapse = "\n")
   expect_false(grepl("templates", ae0, fixed = TRUE))
   # AGENTS.md says to read them
-  ag <- paste(readLines(file.path(d1, "AGENTS.md"), encoding = "UTF-8"), collapse = "\n")
+  ag <- paste(readLines(file.path(d1, "ai", "AGENTS.md"), encoding = "UTF-8"), collapse = "\n")
   expect_match(ag, "`ai/instructions-table.md`", fixed = TRUE)
   expect_match(ag, "Read `ai/templates.md` once", fixed = TRUE)
   expect_identical(readLines(file.path(d1, ".github", "copilot-instructions.md")),

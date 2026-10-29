@@ -2,7 +2,7 @@
 % Please edit documentation in R/ai_assumptions.R
 \name{tfl_ai_assumptions}
 \alias{tfl_ai_assumptions}
-\title{The AI's assumptions, their ids and the person's answers}
+\title{The AI's assumptions and their ids}
 \usage{
 tfl_ai_assumptions(study_dir)
 }
@@ -14,29 +14,23 @@ A data frame, one row an assumption: \code{id}, \code{kind}, \code{n_reports}
 (the reports of its kind), \code{output_id}, \code{where}, \code{item},
 \code{assumption} (one sentence: what the AI decided and how), \code{value}
 (the value it used, as text; \code{NA} when the item has none), \code{question},
-\code{verdict} and \code{correct} (its answer, its own
-or its kind's; \code{NA} when none), \code{status}: \code{open} (no answer),
-\code{confirmed} (\code{ok}), \code{answered} (\code{wrong}, for the agent to apply) or
-\code{done} (the agent applied it: its section of \code{ai/corrections.md} is
-done, or the assumption is \code{status: fixed} in \verb{spec/_assumptions.yml}).
+\code{from} (the decision it was taken from, \verb{D<n>}; \code{NA} when its own).
 }
 \description{
-What the AI took on a guess, from \verb{spec/_assumptions.yml} (written as
-its answers are collected, \code{\link[=tfl_ai_collect_answers]{tfl_ai_collect_answers()}}), one row an
-assumption, for a screen to show and the person to answer
-(\code{\link[=tfl_ai_assumption_answers_write]{tfl_ai_assumption_answers_write()}}).
+What the agent took on a guess or from a decision, from
+\verb{spec/_assumptions.yml} (written as its drafts are checked,
+\code{\link[=tfl_ai_collect_answers]{tfl_ai_collect_answers()}}), one row an assumption, for a screen to show
+and the person to read.  What is wrong, the person tells the agent in
+its chat, or changes in the builder.
 }
 \details{
 Each assumption has an id, \verb{A<n>}, kept across collections: the same
 report, \code{where} and \code{item} (the item compared without case, spaces or
 punctuation) keep their id, and a new one takes the next number
 (\code{ai/assumption_ids.csv} keeps them: columns \code{type}, \code{key}, \code{id}).  Each
-also has a kind, \verb{K<n>}: the assumptions asking the same question (as
-\code{ai/questions.md} groups them), or, with no question, saying the same
-item and assumption -- an answer to the kind is an answer for every
-report of it, unless a report's assumption has its own.
+also has a kind, \verb{K<n>}: the assumptions asking the same question, or,
+with no question, saying the same item and assumption.
 }
 \seealso{
-\code{\link[=tfl_ai_assumption_answers_read]{tfl_ai_assumption_answers_read()}}, \code{\link[=tfl_ai_corrections]{tfl_ai_corrections()}},
-\code{\link[=tfl_ai_questions]{tfl_ai_questions()}}
+\code{\link[=tfl_ai_confirm]{tfl_ai_confirm()}}, \code{\link[=tfl_ai_decisions_read]{tfl_ai_decisions_read()}}
 }

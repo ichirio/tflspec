@@ -19,19 +19,22 @@ examples show, and nothing else.  A draft that lacks something (an
 analysis set you were not told) is fine -- the person's check says what
 is missing; a draft that breaks the form is not.
 
-The paths below are from this folder: the one holding this file and `ai/`.
-If the workspace is a folder above it, use the paths from here.
+The paths below are from the study folder: the one holding `ai/` (this
+file is `ai/AGENTS.md`).  If the workspace is a folder above it, use the
+paths from there.
 
 ## What you read
 
 Only these:
 
+- this file, once;
 - `ai/decisions.md` first: the decisions the person made; they override
   your own choices (see *Decisions* below);
+- `ai/requests/index.md`: the requests in the order you do them;
 - the request you are working on, `ai/requests/<request>.md`, and the
   files it names: `ai/instructions-table.md` or
-  `ai/instructions-figure.md` (the instructions and the schema),
-  `ai/templates.md`, `ai/adam_summary.md`, `spec/data.yml`,
+  `ai/instructions-figure.md` (the instructions, the schema, what a draft
+  holds), `ai/templates.md`, `ai/adam_summary.md`, `spec/data.yml`,
   `spec/defaults.yml` -- read each once and follow it for every request.{{reads}}
 
 Do not look for other files: do not list or search the folders, and do not
@@ -39,9 +42,11 @@ open a file not listed here (programs, other studies, anything else). The
 request has what you need: the shell's text and the variables
 (`ai/adam_summary.md`).
 
-## A request: ask, then write the skeletons
+## The requests: ask, then write the skeletons
 
-For each request you are given, in order:
+Do every request of `ai/requests/index.md`, top to bottom.  A request
+whose reports all have their draft (`ai/spec/outputs/<id>.yml`) is done:
+skip it.  For each of the others, in order:
 
 1. Read `ai/decisions.md`, then the request.  The request lists the
    decisions that apply to its reports (*Decisions that apply*); apply
@@ -103,21 +108,27 @@ For each request you are given, in order:
    decide nothing about it, write nothing of it.
 7. Go on to the next request.  A question about the work rather than a
    report (a file the request names is missing, the request is unclear):
-   ask it in the chat too, and add it to `ai/questions.md` (`## Q<n>. ...`,
-   `- Reports:`, `- Where:`, `- Status: open`, `- Answer:`).
+   ask it in the chat too, and wait for the answer.
 
-When the requests you were given are done, **stop** and tell the person:
-the report files written (their ids), the decisions added, and what is
-marked to confirm.  Do not go on to other requests: the person asks for
-them.
+When every request is done, **stop** and tell the person: the report
+files written (their ids), the decisions added, and what is marked to
+confirm.
+
+## Stopping and going on
+
+The person may stop you between requests ("stop", a question of their
+own) and later say **"continue"**: go on from the first request of
+`ai/requests/index.md` that has a report with no draft, or whose draft the
+person says the check refused -- the decisions in `ai/decisions.md` hold
+as before.  Never write a draft that is there again unless the person asks
+for it (the check's note, a correction in the chat).
 
 At most {{max_reads}} times for a request, open a file or run a command
 beyond the request and the files it names.  When you reach it, ask or
 mark to confirm, and go on.
 
 If something does not work -- a file cannot be saved, a request cannot be
-read -- try once more.  If it fails again, say so in the chat, write it in
-`ai/questions.md`, and stop.
+read -- try once more.  If it fails again, say so in the chat and stop.
 
 ## When the check refuses a draft
 
@@ -153,14 +164,6 @@ what you would take.  When the person says yes, widen the decision's
 scope (add the report's id, its dataset or its section) instead of adding
 a line.
 
-## The person's corrections
-
-When the person says corrections are written (`ai/corrections.md`): for
-each section with `- Status: open`, change the report file it names as it
-says, set the section to `- Status: done` (one you cannot do: leave it
-open and add a line `- Agent:` saying why), and stop.  A question answered
-there is a decision: add its line to `ai/decisions.md` first.
-
 ## Never
 
 - Do not install packages or go online. Do not run `run.R`, and do not
@@ -171,9 +174,7 @@ there is a decision: add its line to `ai/decisions.md` first.
 - Do not change the TOC / SHELL workbook, the ADaM, `study.yml`,
   `spec/data.yml`, `spec/defaults.yml`, `run.R`, `AGENTS.md` or
   `.github/copilot-instructions.md`.
-- Write only `ai/spec/outputs/`, `ai/questions.md`, `ai/decisions.md`
-  (add lines, change nothing a person wrote) and the `- Status:` /
-  `- Agent:` lines of `ai/corrections.md`.
+- Write only `ai/spec/outputs/` and `ai/decisions.md` (add lines, change
+  nothing a person wrote).
 - Do not guess what defines a report: ask.  Do not write the look.
-- Do not try the same thing more than twice: say so in the chat, write it
-  in `ai/questions.md`, and stop.
+- Do not try the same thing more than twice: say so in the chat and stop.
