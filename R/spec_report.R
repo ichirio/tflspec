@@ -68,7 +68,8 @@
                         page = if (length(page)) page,
                         default_format = if (length(fmt))
                           do.call(.spec_call, c(list("rtf_default_format"), fmt)),
-                        watermark = doc_a$watermark,
+                        # a word, or its look too: {fn: rtf_watermark, args: }
+                        watermark = .page_call_value(doc_a$watermark),
                         program = in_dir(prog),
                         program_fallback = if (is.null(prog) && !is.na(id)) in_dir(id),
                         tokens = doc_tokens,

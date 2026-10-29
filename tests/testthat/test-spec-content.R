@@ -363,3 +363,28 @@ test_that("a value's labels: a column the plan makes, by its code list; one name
   expect_match(attr(sh2, "not_converted"), "TRT01A: a data variable's value labels go in the report's code list")
   expect_equal(NROW(sh2$codelists), 0L)
 })
+
+test_that("plan_empty(): the schema checks it, places it with the mapping, and its code runs", {
+  e <- tfl_schema("plan_empty")
+  expect_identical(e$stage, "mapping")
+  expect_true(e$rank > tfl_schema("plan_filter")$rank && e$rank < tfl_schema("plan_levels")$rank)
+  ok <- function(a) nrow(tfl_schema_check(tfl_item("plan_empty", a))) == 0L
+  expect_true(ok(list(text = "No events.", when = "no_rows", position = "replace",
+                      footnote = "No subject had an event.")))
+  expect_false(ok(list(when = "never")))
+  expect_false(ok(list(position = "middle")))
+  expect_false(ok(list(txt = "No events.")))
+  skip_if_not_installed("cards")
+  ard <- cards::ard_stack(cards::ADSL, .by = ARM, cards::ard_tabulate(variables = SEX))
+  out <- tfl_output("T-1", "table", content = list(
+    tfl_item("table_plan", list(cols = "ARM", rows = list(group = "variable"))),
+    tfl_item("plan_cells", list(categorical = "{n} ({p:.1f%})")),
+    tfl_item("plan_empty", list(text = "No events.", position = "replace"))))
+  code <- tfl_content_code(out, pipe = "|>")
+  expect_match(paste(code, collapse = "\n"),
+               "plan_empty(text = \"No events.\", position = \"replace\")", fixed = TRUE)
+  env <- new.env()
+  env$data <- rtfreporter::normalize_ard(ard)
+  eval(parse(text = c("library(rtfreporter)", code)), env)
+  expect_s3_class(env$plan, "table_plan")
+})

@@ -58,3 +58,28 @@ test_that("the written calls run in rtfreporter", {
   doc <- eval(parse(text = tfl_report_code(o, content = "content")), env)
   expect_s3_class(doc, "rtf_document")
 })
+
+test_that("rtf_document's watermark: a word, or its look as an rtf_watermark() call", {
+  code <- pa_code(list(rtf_document = list(watermark = "DRAFT")))
+  expect_match(code, "watermark = \"DRAFT\"", fixed = TRUE)
+  wm <- tfl_call("rtf_watermark", list(text = "DRAFT", color = "#FF0000", angle = -30))
+  code <- pa_code(list(rtf_document = list(watermark = wm)))
+  expect_match(code, "watermark = rtf_watermark(text = \"DRAFT\", color = \"#FF0000\", angle = -30)",
+               fixed = TRUE)
+  ok <- function(v) nrow(tfl_schema_check(tfl_item("rtf_document", list(watermark = v)))) == 0L
+  expect_true(ok("DRAFT"))
+  expect_true(ok(wm))
+  expect_false(ok(tfl_call("rtf_border", list(top = TRUE))))
+  # and it runs: the document carries the watermark's look
+  skip_if_not_installed("rtfreporter")
+  o <- tfl_output("T-1", "table", page = list(rtf_document = list(watermark = wm)))
+  env <- list2env(list(content = rtfreporter::as_rtftables(data.frame(a = "1"))),
+                  parent = asNamespace("rtfreporter"))
+  doc <- eval(parse(text = tfl_report_code(o, content = "content")), env)
+  expect_s3_class(doc, "rtf_document")
+  f <- tempfile(fileext = ".rtf")
+  on.exit(unlink(f))
+  rtfreporter::generate_rtfreport(doc, f)
+  rtf <- paste(readLines(f, warn = FALSE), collapse = "\n")
+  expect_match(rtf, "DRAFT", fixed = TRUE)
+})
