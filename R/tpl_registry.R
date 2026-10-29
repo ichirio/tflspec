@@ -1379,14 +1379,17 @@ names(.tpl_pc_params) <- vapply(.tpl_pc_params, `[[`, "", "name")
     # change cells stay empty)
     nn(list(id = paste0(set, "_chg"), from = set, where = tfl_r("!is.na(CHG)"),
             derive = if (length(a$visit_order)) tfl_r("AVISIT = droplevels(AVISIT)"))))
-  an <- function(id, data, v) list(
+  an <- function(id, data, v, ...) list(
     id = id, method = "continuous", data = data, by = c(a$by, "PARAM", "AVISIT"),
-    variables = v, statistics = a$statistics, purpose = "PRIMARY OUTCOME MEASURE")
+    variables = v, statistics = a$statistics, purpose = "PRIMARY OUTCOME MEASURE", ...)
   analyses <- c(
     list(list(id = "GROUPN", method = "categorical", data = subj, variables = a$by,
               purpose = "PRIMARY OUTCOME MEASURE")),
     if (isTRUE(a$baseline)) list(an("BASELINE", set, "BASE")),
-    list(an("VALUE", set, "AVAL"), an("CHANGE", paste0(set, "_chg"), "CHG")))
+    # (the change of a visit with no change records -- the baseline, whose
+    # level a code list puts back -- has no rows: its cells stay empty)
+    list(an("VALUE", set, "AVAL"),
+         an("CHANGE", paste0(set, "_chg"), "CHG", post = tfl_r("drop_empty_groups()"))))
   plan <- if (rows_in) {
     list(tfl_item("table_plan", list(cols = a$by, rows = list(
            group1 = "PARAM", group2 = "AVISIT", group3 = "variable"))),

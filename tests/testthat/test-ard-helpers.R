@@ -173,6 +173,19 @@ test_that("an ard_number's label names other statistics of its address", {
   expect_true(want %in% labels)
 })
 
+test_that("drop_empty_groups(): a group with N = 0 and nothing else loses its rows", {
+  e <- new.env()
+  sys.source(system.file("helpers", "study_helpers.R", package = "tflspec"), envir = e)
+  ard <- data.frame(group1 = "AVISIT", group1_level = I(list("BASELINE", "BASELINE", "WEEK 2", "WEEK 2")),
+                    variable = "CHG", stat_name = c("N", "mean", "N", "mean"),
+                    stat = I(list(0, NA_real_, 12, 1.5)), stringsAsFactors = FALSE)
+  r <- e$drop_empty_groups(ard)
+  expect_identical(unlist(r$group1_level), c("WEEK 2", "WEEK 2"))
+  expect_identical(nrow(e$drop_empty_groups(ard[0L, ])), 0L)
+  no_group <- data.frame(variable = "AGE", stat_name = "N", stat = I(list(0)))
+  expect_identical(nrow(e$drop_empty_groups(no_group)), 1L)
+})
+
 test_that("set_levels() on a column that holds the list's labels already keeps them (a data made from another)", {
   e <- new.env()
   sys.source(system.file("helpers", "study_helpers.R", package = "tflspec"), envir = e)

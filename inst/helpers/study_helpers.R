@@ -131,6 +131,26 @@ keep_stats <- function(ard, stats) {
   ard[ard$stat_name %in% stats, , drop = FALSE]
 }
 
+# The rows of a group no record fell in dropped: a group a code list
+# names that the data does not have (the baseline visit in the change's
+# records, whose level the code list put back) has N = 0 and nothing else;
+# its cells stay empty instead of printing 0.  The groups are the ARD's
+# group columns together.
+#   ard_summary(...) |> drop_empty_groups()
+drop_empty_groups <- function(ard) {
+  if (is.list(ard) && !is.data.frame(ard)) return(lapply(ard, drop_empty_groups))
+  gl <- grep("^group[0-9]+_level$", names(ard), value = TRUE)
+  if (!length(gl) || !"stat_name" %in% names(ard)) return(ard)
+  key <- do.call(paste, c(lapply(ard[gl], function(v) vapply(v, function(x)
+    if (is.null(x) || length(x) == 0L) "" else as.character(x)[1L], "")), sep = "\r"))
+  n0 <- ard$stat_name == "N" & vapply(ard$stat, function(x) {
+    v <- suppressWarnings(as.numeric(x[[1L]] %||% NA))
+    !is.na(v) && v == 0
+  }, NA)
+  empty <- unique(key[n0])
+  ard[!key %in% empty, , drop = FALSE]
+}
+
 # An ARD's columns in their code lists' order: the rows of a listed
 # variable (as `variable` or a group) get its list's levels (as the ARD has
 # them, the labels).  For what does not keep its data's factor order --
