@@ -434,6 +434,7 @@ reference:
     contents:
       - tfl_ai_read_shell
       - tfl_ai_adam_summary
+      - tfl_ai_doc_text
       - tfl_ai_batches
       - tfl_ai_write_requests
       - tfl_ai_prepare

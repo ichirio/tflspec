@@ -94,9 +94,11 @@
 #'   (default): neither, and `AGENTS.md` says not to open them.
 #' @param docs Documents the agent may read for what a request leaves
 #'   unclear (a SAP, a data guide): their paths.  They are copied into
-#'   `ai/docs/` (the agent works in the study folder) and `AGENTS.md`
-#'   names them; the agent reads no other document.  `NULL` (default):
-#'   none.
+#'   `ai/docs/` (the agent works in the study folder); a `.docx`, `.pdf`
+#'   or workbook, which an agent in the editor cannot read, is also written
+#'   as text beside it (`<name>.md`, [tfl_ai_doc_text()]: the headings and
+#'   tables kept) and `AGENTS.md` names the text; the agent reads no other
+#'   document.  `NULL` (default): none.
 #' @param agent_max_reads How many times for a request the agent may open
 #'   a file or run a command beyond the request and the files it names;
 #'   then it asks, or marks what is unclear to confirm, and goes on.
@@ -390,18 +392,18 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
       # the documents the person gave (a SAP, ...), copied into the study
       # folder: the agent's workspace
       refs <- character()
+      docs_from <- character()
       if (length(docs)) {
-        rd_ <- file.path(dir, "ai", "docs")
-        dir.create(rd_, recursive = TRUE, showWarnings = FALSE)
-        to <- file.path(rd_, basename(docs))
-        file.copy(docs, to, overwrite = TRUE)
-        refs <- file.path("ai", "docs", basename(docs))
-        files <- c(files, to)
+        placed <- .ai_docs_place(dir, docs)
+        refs <- placed$refs
+        docs_from <- placed$from
+        files <- c(files, placed$files)
       }
       files <- c(files, .ai_agent_files(dir, overwrite = overwrite && !isTRUE(add),
                                         templates = templates, adam = adam_at,
                                         book = book_at, reads = agent_reads,
-                                        docs = refs, max_reads = agent_max_reads))
+                                        docs = refs, docs_from = docs_from,
+                                        max_reads = agent_max_reads))
       # what the agent may open besides the requests and the files they name
       agent_files <- c(if ("workbook" %in% agent_reads) book_at,
                        if ("adam" %in% agent_reads) adam_at, refs)

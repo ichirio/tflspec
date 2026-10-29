@@ -612,7 +612,9 @@ tfl_ai_unpack(a, "study")                           # spec/outputs/<id>.yml, spe
   `ask_when`, `carry`, `max_rounds`, `footnotes_at`; the study standard's
   `spec/defaults.yml` may say them first).  It reads the request and the
   files it names only (`agent_reads = c("workbook", "adam")` and `docs =`
-  allow more), runs nothing, installs nothing.  `define =` (a `define.xml`)
+  allow more; a `.docx`, `.pdf` or workbook given as `docs` is written as
+  Markdown beside it in `ai/docs/`, `tfl_ai_doc_text()`, and the agent
+  reads the text), runs nothing, installs nothing.  `define =` (a `define.xml`)
   or `adam_spec =` (a Pinnacle 21 ADaM spec workbook) puts the study's
   code lists (in order, with decodes), digits and display formats --
   value level too, a lab parameter's AVAL -- into `ai/adam_summary.md`: the
@@ -905,7 +907,7 @@ back): rename the value or choose another separator.
 
 **AI-assisted drafting:** `tfl_ai_tasks` `tfl_ai_context` `tfl_ai_schema`
 `tfl_ai_prompt` `tfl_ai_parse` `tfl_ai_check` `tfl_ai_repair_prompt`
-`tfl_ai_diff` `tfl_ai_read_shell` `tfl_ai_adam_summary` `tfl_ai_batches`
+`tfl_ai_diff` `tfl_ai_read_shell` `tfl_ai_adam_summary` `tfl_ai_doc_text` `tfl_ai_batches`
 `tfl_ai_write_requests` `tfl_ai_collect_answers` `tfl_ai_adopt` `tfl_ai_adopted_diff` `tfl_ai_style_prompt` `tfl_ai_style_read` `tfl_rtf_style_scan` `tfl_ai_migrate` `tfl_ai_outputs` `tfl_ai_assumptions` `tfl_ai_study_init`
 `tfl_ai_prepare` `tfl_ai_requests` `tfl_fill_widths` `tfl_ai_run` `tfl_ai_compare`
 

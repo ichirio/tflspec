@@ -22,7 +22,7 @@
 # paths written.
 .ai_agent_files <- function(dir, overwrite = FALSE, templates = FALSE, adam = NULL,
                             book = NULL, reads = character(), docs = character(),
-                            max_reads = 3L) {
+                            docs_from = character(), max_reads = 3L) {
   src <- system.file("ai", "agent", package = "tflspec")
   rd <- function(f) paste(readLines(file.path(src, f), warn = FALSE, encoding = "UTF-8"),
                           collapse = "\n")
@@ -51,7 +51,10 @@
       "what settles it (a variable's values, counts), not subjects' records;"),
     if (length(docs)) paste0(
       "\n- the documents the person gave, for what a request leaves unclear: ",
-      paste(sprintf("`%s`", docs), collapse = ", "), "."))
+      paste(sprintf("`%s`%s", docs, ifelse(
+        is.na(docs_from %||% NA) | !nzchar(docs_from %||% ""), "",
+        sprintf(" (the text of %s)", basename(docs_from %||% "")))), collapse = ", "),
+      "."))
   tools <- if (any(c("workbook", "adam") %in% reads)) paste0(
     "\n\nRead the workbook or the data with a tool this PC has -- PowerShell, ",
     "Python, R -- whichever works; install nothing. In PowerShell, put a text with ",

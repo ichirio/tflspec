@@ -153,9 +153,11 @@ whatever tool the PC has (PowerShell, Python, R).  \code{character()}
 
 \item{docs}{Documents the agent may read for what a request leaves
 unclear (a SAP, a data guide): their paths.  They are copied into
-\verb{ai/docs/} (the agent works in the study folder) and \code{AGENTS.md}
-names them; the agent reads no other document.  \code{NULL} (default):
-none.}
+\verb{ai/docs/} (the agent works in the study folder); a \code{.docx}, \code{.pdf}
+or workbook, which an agent in the editor cannot read, is also written
+as text beside it (\verb{<name>.md}, \code{\link[=tfl_ai_doc_text]{tfl_ai_doc_text()}}: the headings and
+tables kept) and \code{AGENTS.md} names the text; the agent reads no other
+document.  \code{NULL} (default): none.}
 
 \item{agent_max_reads}{How many times for a request the agent may open
 a file or run a command beyond the request and the files it names;
