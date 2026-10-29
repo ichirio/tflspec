@@ -106,7 +106,12 @@ skip it.  For each of the others, in order:
    ```
    How the output looks is never an assumption and never a question:
    decide nothing about it, write nothing of it.
-7. Go on to the next request.  A question about the work rather than a
+7. **Read the draft once more before you save it**, against the list
+   *Before you save a draft* at the end of the instructions
+   (`ai/instructions-table.md`): the keys, the indentation, the quotes,
+   the forms of `data` and `ard`.  A draft the check refuses comes back
+   to you with its problems; one you checked yourself seldom does.
+8. Go on to the next request.  A question about the work rather than a
    report (a file the request names is missing, the request is unclear):
    ask it in the chat too, and wait for the answer.
 
