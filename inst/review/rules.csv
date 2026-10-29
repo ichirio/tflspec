@@ -57,4 +57,3 @@ U02,error,program,spec,tflplanner,"The %s code of %s reads %s, which the report 
 U03,error,program,spec,tflplanner,"The %s code of %s leaves no %s.","Assign what the next step reads: the data step data (a figure: df), the content step content."
 U04,check,program,spec,tflplanner,"The %s code of %s calls %s.","Read data through the report's datasets and its ARD switch, and call packages as pkg::fn(): the program reads the data and owns the session."
 U05,error,program,spec,tflplanner,"The %s code of %s uses ard, but the report does not read its ARD.",Turn its ARD on (step 1) or take ard out of the code.
-I01,check,ai,spec,tflplanner,AI assumption %s is unanswered (AI step 4).,"Say whether the AI's assumption is right or wrong (and what is right instead) on the AI step's assumptions screen (tfl_ai_assumption_answers_write()); a report built on an unanswered assumption may carry a wrong choice."
