@@ -417,3 +417,19 @@ test_that("tfl_ai_prepare(adam_spec = ) writes the requests, the spec's codes in
   expect_match(s, "M = Male | F = Female", fixed = TRUE)
   expect_match(s, "digits 0", fixed = TRUE)
 })
+
+test_that("tfl_ai_prepare(define = ) writes the requests, the define's codes and digits in the summary (#513)", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("xml2")
+  root <- withr::local_tempdir()
+  d <- file.path(root, "study")
+  ad <- agent_study(root)
+  r <- tfl_ai_prepare(unit = "toc", d, ex_book(), adam = ad, quiet = TRUE,
+                      define = test_path("fixtures", "define", "define-vl.xml"))
+  expect_true(nrow(r$requests) > 0L)
+  s <- paste(readLines(file.path(d, "ai", "adam_summary.md"), warn = FALSE), collapse = "\n")
+  expect_match(s, "M = Male | F = Female", fixed = TRUE)
+  expect_match(s, "digits 2, format 8.2", fixed = TRUE)
+  expect_match(s, "## Value level (define.xml)", fixed = TRUE)
+})
