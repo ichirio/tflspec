@@ -193,3 +193,10 @@ test_that("tfl_data_code(): each object the table and its parts read, a dataset 
   # the study as its folder too
   expect_identical(tfl_data_code(o, d), code)
 })
+
+test_that("the schema knows table_plan's value (a records table: the column the cells show)", {
+  p <- tfl_schema_check(tfl_item("table_plan", list(cols = "ATPT", rows = list(subject = tfl_r("~ \"{USUBJID}\"")),
+                                                    value = "AVAL")))
+  expect_identical(nrow(p[p$level == "error", , drop = FALSE]), 0L)
+  expect_true("value" %in% names(tfl_schema("table_plan")$args))
+})

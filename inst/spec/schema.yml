@@ -67,6 +67,7 @@ table_plan:
     label: {label: "Row text column", type: "vec<string, column>|map<string, column|guard>|list<column>|logical", description: "The column the row text comes from; false for none."}
     stat: {label: "Statistic columns", type: "vec<string, column>", description: The columns that hold the statistic name and value.}
     show_keys: {label: "Keys shown", type: "list<column>", description: Row keys also shown as variables.}
+    value: {label: "Value column", type: "column", description: "A records table: the column whose values the cells show (one row a record, the key's values across)."}
 
 plan_sort:
   package: rtfreporter
