@@ -70,3 +70,4 @@ K15,ai,error,"%s: the value %s is not among its levels in the ADaM metadata.","U
 K16,ai,error,"%s: %s %s.","Write the item as its function takes it: tfl_schema(""%s"") says each argument's type."
 K17,ai,check,"%s: %s %s.","Check the name against tfl_schema(""%s"") (a mistyped argument is ignored by nothing: it is an error when the code runs)."
 K18,ai,check,"%s: %s is R code (!r) where the spec takes %s.","Write it as the spec's own form (a map, a list, a column name); keep !r for what only R can say."
+I01,human,,,

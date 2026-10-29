@@ -97,6 +97,20 @@
   keep <- !duplicated(k)
   toc <- all[keep, , drop = FALSE]
   toc$toc_sheets <- unname(lists[k[keep]])
+  # the item's batches: its TOC sheets other than the main one (the one
+  # listing most), each named for the batch, and the mark columns of each
+  # TOC sheet listing it
+  main <- toc_names[ord][1L]
+  bt <- tapply(all$batches, factor(k, levels = unique(k)), function(v) {
+    v <- v[!is.na(v)]
+    unique(unlist(strsplit(v, " | ", fixed = TRUE)))
+  })
+  toc$batches <- vapply(seq_len(nrow(toc)), function(i) {
+    other <- setdiff(strsplit(toc$toc_sheets[i], " | ", fixed = TRUE)[[1L]], main)
+    b <- unique(c(.ai_batch_name_of(other), bt[[k[keep][i]]]))
+    b <- b[!is.na(b) & nzchar(b)]
+    if (length(b)) paste(b, collapse = " | ") else NA_character_
+  }, "")
   # (an item one TOC alone lists, when there are several: its other
   # information says so)
   if (length(toc_names) > 1L) {

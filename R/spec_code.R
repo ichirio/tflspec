@@ -464,7 +464,8 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
                            normalize = TRUE) {
   sp <- .ard_spec_scope(.as_spec(spec, "table", "tfl_table_code",
                                  output_id = output_id), output_id)
-  items <- .plan_content_items(sp)
+  # (the study sheet's rounding is the setup's option, tfl_report_setup_code())
+  items <- .items_for_program(.plan_content_items(sp))
   if (isTRUE(normalize)) {
     id <- output_id %||% attr(sp, "output_id")
     nz <- .normalize_spec_args(sp, ard_spec, id, "tfl_table_code", guess = TRUE)
@@ -596,7 +597,8 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
   }, ""))
   lines <- unlist(lapply(seq_along(lines), function(i)
     c(if (nzchar(note[i])) note[i], lines[i])))
-  .drop_attached_ns(c(cl, unlist(strsplit(lines, "\n", fixed = TRUE))))
+  .drop_attached_ns(c(.content_parts_code(content, pipe), cl,
+                      unlist(strsplit(lines, "\n", fixed = TRUE))))
 }
 
 # ---- content: the items of a spec, one a function call -----------------------
@@ -689,7 +691,12 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
 # The items as the calls they stand for (.spec_call()), their arguments as
 # R takes them (.schema_to_r()).
 .content_calls <- function(content) {
+  k <- 0L
   lapply(content, function(it) {
+    if (.is_part(it)) {
+      k <<- k + 1L
+      return(.part_call(it, k))
+    }
     do.call(.spec_call, c(list(.schema_fn_name(it$fn)),
                           .schema_to_r(it$fn, it$args %||% list())))
   })
@@ -856,6 +863,7 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
         }
         if (!is.null(named$show_keys)) tb$show_keys <- bar(named$show_keys)
         if (!is.null(named$stat)) miss(fn, "stat (your statistic columns) stays in code")
+        if (!is.null(named$value)) miss(fn, "value (a records plan) stays in code")
       },
       plan_sort = {
         if (length(pos)) {
@@ -1174,6 +1182,9 @@ tfl_content_run <- function(output, data) {
   for (it in output$content) .schema_need_version(it)
   # plan_levels() the ARD already says: left out, as the program does
   if (identical(output$kind, "table")) output$content <- .levels_prune(output$content, output)
+  # a table of records (its data a dataset: a table_plan(value = ) with
+  # its parts) has no ARD to normalize
+  if (identical(output$data$source, "dataset")) output$content <- .content_drop_data_steps(output$content)
   steps <- .content_r_steps(output)
   if (length(steps)) {
     # the steps run as the program runs them: the output's object bound
@@ -1217,10 +1228,20 @@ tfl_content_run <- function(output, data) {
 
 .content_table_run <- function(content, data, kind = "table") {
   pl <- .content_table_pipeline(content, kind)
+  # a table with parts: `data` the objects it reads, by name -- the table's
+  # own (`data`, or the ARD `ard`) and each part's
+  penv <- emptyenv()
+  if (any(vapply(content, .is_part, NA))) {
+    penv <- .content_parts_env(content, data)
+    if (is.list(data) && !is.data.frame(data)) {
+      own <- intersect(c("data", "ard"), names(data))
+      data <- data[[own[1L]]]
+    }
+  }
   x <- data
   run <- function(cl, first) {
     f <- .spec_fun(cl$fun)
-    do.call(f, c(list(first), lapply(cl$args, .spec_eval, env = emptyenv())))
+    do.call(f, c(list(first), lapply(cl$args, .spec_eval, env = penv)))
   }
   for (cl in pl$pre) x <- run(cl, x)
   p <- run(pl$head, x)
@@ -1314,9 +1335,16 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
                              "yet; tables, listings and figures, for now."), output$kind))
   }
   for (it in output$content) .schema_need_version(it)
+  # the study's rounding is the setup's option, not a report's item
+  if (!is.null(attr(output, "study_rounding"))) {
+    output$content <- .items_for_program(output$content, attr(output, "study_rounding"))
+  }
   # plan_levels() the ARD already says (a code list applied when the ARD is
   # made, the variables in its order): not written (R/spec_levels.R)
   if (identical(output$kind, "table")) output$content <- .levels_prune(output$content, output)
+  # a table of records (its data a dataset: a table_plan(value = ) with
+  # its parts) has no ARD to normalize
+  if (identical(output$data$source, "dataset")) output$content <- .content_drop_data_steps(output$content)
   # a template SPEC (resolved): the template's call and the lines after it
   # (the A use); `template = "items"` writes the items it stands for (B)
   tp <- attr(output, "template")
@@ -1729,6 +1757,9 @@ tfl_report_setup_code <- function(spec) {
       out <- c(out, .spec_call_code(do.call(.spec_call, c(list("options"), pg)), 0L))
     }
   }
+  # the study's rounding, once for every report
+  rnd <- .ard_spec_study_value(sp, "rounding")
+  if (!is.na(rnd)) out <- c(out, .spec_call_code(.spec_call("options", rtfreporter.rounding = rnd), 0L))
   d <- study(sp$tokens)
   if (!is.null(d) && nrow(d)) {
     v <- ifelse(is.na(d$value), "", d$value)

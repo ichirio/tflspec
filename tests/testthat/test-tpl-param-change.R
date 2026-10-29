@@ -6,6 +6,7 @@ pc_args <- list(population = "SAF", data = "ADLB", params = c("ALT", "AST"),
 
 # the ARD as the study's program makes it (its analysis data's steps)
 pc_ard <- function(x) {
+  eval(parse(text = tfl_helpers_code()))  # reorder_by()
   adsl_saf <- adsl[adsl$SAFFL == "Y", ]
   d <- x$ard$analysis_data
   e <- function(s) eval(parse(text = s))
@@ -37,7 +38,7 @@ test_that("expanded: the records kept, the visits in their order, the change's o
   expect_identical(vapply(d, `[[`, "", "id"), c("adsl_saf", "adlb_saf", "adlb_saf_chg"))
   expect_match(d[[2L]]$where, "PARAMCD %in% c(\"ALT\", \"AST\")", fixed = TRUE)
   expect_match(d[[2L]]$where, "AVISIT %in% c(\"BASELINE\"", fixed = TRUE)
-  expect_identical(as.character(d[[2L]]$derive), "AVISIT = reorder(factor(AVISIT), AVISITN)")
+  expect_identical(as.character(d[[2L]]$derive), "AVISIT = reorder_by(AVISIT, AVISITN)")
   expect_identical(as.character(d[[3L]]$where), "!is.na(CHG)")
   expect_identical(as.character(d[[3L]]$derive), "AVISIT = droplevels(AVISIT)")
   an <- x$ard$analyses
@@ -46,7 +47,7 @@ test_that("expanded: the records kept, the visits in their order, the change's o
   # no where of its own unless given: ANL01FL is not every study's
   y <- tfl_template_expand("param_change", list(population = "SAF", data = "ADVS"))
   expect_null(y$ard$analysis_data[[2L]]$where)
-  expect_match(y$ard$analysis_data[[2L]]$derive, "PARAM = reorder(factor(PARAM), PARAMN)",
+  expect_match(y$ard$analysis_data[[2L]]$derive, "PARAM = reorder_by(PARAM, PARAMN)",
                fixed = TRUE)
   z <- tfl_template_expand("param_change", list(population = "SAF", data = "ADVS",
                                                 where = "ANL01FL == \"Y\"", visit_order = NULL))

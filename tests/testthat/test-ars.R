@@ -168,7 +168,7 @@ test_that("what ARS cannot say is listed with the reason", {
     list(output_id = "T1", analysis_id = "A", method = "continuous",
          population_id = "SAF", by = "TRT01A", variables = "AGE",
          where = "is.na(BMIBL)", formats = "mean=xx.x",
-         args = "na.rm = TRUE"),
+         args = "stat_label = NULL"),
     list(output_id = "T1", analysis_id = "C", method = "custom",
          population_id = "SAF", variables = "AGE", code = "my_fun(data)")))
   ars <- tfl_ars(sp, list(cells = ars_df(list(output_id = "T1",

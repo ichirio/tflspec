@@ -188,8 +188,8 @@ test_that("collected answers: ids kept; an assumption the agent fixed survives a
   file.copy(list.files(test_path("fixtures", "answers-toc"), full.names = TRUE),
             file.path(d, "ai", "answers"))
   res <- suppressMessages(tfl_ai_collect_answers(d))
-  expect_named(res$assumptions, c("output_id", "where", "item", "assumption", "question",
-                                  "id", "kind"))
+  expect_named(res$assumptions, c("output_id", "where", "item", "assumption", "value",
+                                  "question", "id", "kind"))
   expect_true(all(grepl("^A[0-9]+$", res$assumptions$id)))
   expect_true(all(grepl("^K[0-9]+$", res$assumptions$kind)))
   expect_false(anyDuplicated(res$assumptions$id) > 0L)

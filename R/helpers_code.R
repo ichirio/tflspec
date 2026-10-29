@@ -3,7 +3,8 @@
 #' The R code of the functions the programs tflspec writes call:
 #' `set_levels()` (the code lists on a data: each listed column a factor in
 #' the list's order, its values as the list has them in the ARD; a value
-#' not listed stops the program), `tag_ard()` (the report, analysis and
+#' not listed stops the program), `reorder_by()` (a column in another's
+#' order when the data has it: `PARAM` by `PARAMN`), `tag_ard()` (the report, analysis and
 #' analysis set in front of an analysis's ARD), `fmt_ard()` and
 #' `fmt_pvalue()` (formats after a call), `keep_stats()` (only the
 #' statistics asked for), `ard_hierarchical_or_none()` (nested counts,

@@ -7,6 +7,7 @@ la_args <- list(population = "SAF", levels = c("LOW", "HIGH"), where = "ONTRTFL 
 # the ARD as the study's program makes it: the records kept, the N (the
 # subjects with a value of the parameter) and each subject once a category
 la_ard <- function(x, lb = adlb) {
+  eval(parse(text = tfl_helpers_code()))  # reorder_by()
   saf <- adsl[adsl$SAFFL == "Y", ]
   d <- x$ard$analysis_data
   adlb_saf <- lb[lb$USUBJID %in% saf$USUBJID, ]
@@ -108,7 +109,7 @@ test_that("the parameters in PARAMN's order (param_order), not by name", {
   la_skip()
   x0 <- tfl_template_expand("lab_abnormal", list(population = "SAF"))
   expect_identical(as.character(x0$ard$analysis_data[[2L]]$derive),
-                   "PARAM = reorder(factor(PARAM), PARAMN)")
+                   "PARAM = reorder_by(PARAM, PARAMN)")
   lb <- adlb
   # PLAT first, ALT last: the reverse of the names' order
   ord <- c(PLAT = 1, NEUT = 2, HGB = 3, BILI = 4, AST = 5, ALT = 6)

@@ -80,7 +80,11 @@
 #'   frame, one row a TOC item -- of every TOC sheet, an item once:
 #'   `output_id` (its number as written), `key`, `type`, `title`, `text` --
 #'   the row's text -- `sheet`, `row`, `toc_sheets` (the TOC sheets listing
-#'   it), `shell_id` and `shell_key` -- its shell's number as the TOC writes
+#'   it), `batches` (the named batches the item is in, ` | ` between them,
+#'   `NA` for none: a second TOC sheet named for a batch -- `TOC_topline`
+#'   lists the topline reports -- or a TOC column of marks under the
+#'   batch's name -- `Topline` with an `x` on each; written to
+#'   `spec/toc.yml` as the item's `sets`), `shell_id` and `shell_key` -- its shell's number as the TOC writes
 #'   it, the item's own when the TOC names none -- `population`, `program`,
 #'   `file`, `info` -- the row's other cells, "header: value; ..." --,
 #'   `sheets` (the shell sheets it is a candidate of, the best first; `NA`:
@@ -668,7 +672,7 @@ print.tfl_ai_shell <- function(x, ...) {
                       title = character(), text = character(), sheet = character(),
                       row = integer(), shell_id = character(), shell_key = character(),
                       population = character(), program = character(), file = character(),
-                      info = character(), stringsAsFactors = FALSE)
+                      info = character(), batches = character(), stringsAsFactors = FALSE)
   if (!length(toc_name)) {
     sh <- unique(cells$sheet)
     ids <- .ai_ids_in(sh)
@@ -681,13 +685,19 @@ print.tfl_ai_shell <- function(x, ...) {
                  sheet = sh[i], row = NA_integer_, shell_id = ids[[i]]$id[1L],
                  shell_key = ids[[i]]$key[1L], population = NA_character_,
                  program = NA_character_, file = NA_character_, info = NA_character_,
-                 stringsAsFactors = FALSE)
+                 batches = NA_character_, stringsAsFactors = FALSE)
     })
     return(do.call(rbind, c(list(empty), rows)))
   }
   d <- cells[cells$sheet == toc_name, , drop = FALSE]
   cols <- .ai_toc_roles_of(d, toc_cols, sheet_keys)
   if (is.null(cols)) return(empty)
+  role_cols <- c(cols$output_id, cols$shell, cols$title, cols$population, cols$program,
+                 cols$file)
+  # a column of marks (x, Y, 1, a tick) under a header: the batch its
+  # header names, the rows marked its members (a "Topline" column)
+  item_rows <- sort(unique(d$row[d$row > cols$header_row]))
+  mark_cols <- .ai_toc_mark_cols(d, item_rows, role_cols, cols$header_of)
   one <- function(x, col) {
     if (is.na(col) || !any(x$col == col)) return(NA_character_)
     v <- trimws(gsub("\\s+", " ", x$text[x$col == col][1L]))
@@ -714,19 +724,23 @@ print.tfl_ai_shell <- function(x, ...) {
     tt <- tt[!is.na(tt)]
     ttl <- if (length(tt)) paste(tt, collapse = " / ") else
       .ai_title_of(x$text[!x$col %in% c(cols$output_id, cols$shell)], main$id)
-    role_cols <- c(cols$output_id, cols$shell, cols$title, cols$population, cols$program,
-                   cols$file)
-    rest <- x[!x$col %in% role_cols & nzchar(trimws(x$text)), , drop = FALSE]
+    rest <- x[!x$col %in% c(role_cols, mark_cols) & nzchar(trimws(x$text)), , drop = FALSE]
     info <- if (nrow(rest)) paste(sprintf("%s: %s", cols$header_of(rest$col),
                                           trimws(gsub("\\s+", " ", rest$text))),
                                   collapse = "; ") else NA_character_
+    marked <- mark_cols[vapply(mark_cols, function(cl) {
+      any(x$col == cl & .ai_is_mark(x$text))
+    }, NA)]
     out[[length(out) + 1L]] <- data.frame(
       output_id = shown, key = main$key, type = tp, title = ttl,
       text = paste(trimws(x$text), collapse = " | "), sheet = toc_name, row = r,
       shell_id = if (!is.null(sid)) trimws(.ai_half_width(s_txt)) else shown,
       shell_key = if (!is.null(sid)) sid$key else main$key,
       population = one(x, cols$population), program = one(x, cols$program),
-      file = one(x, cols$file), info = info, stringsAsFactors = FALSE)
+      file = one(x, cols$file), info = info,
+      batches = if (length(marked)) paste(cols$header_of(marked), collapse = " | ")
+                else NA_character_,
+      stringsAsFactors = FALSE)
   }
   toc <- do.call(rbind, c(list(empty), out))
   # a number the TOC has twice: its first row kept, the number marked
@@ -741,6 +755,47 @@ print.tfl_ai_shell <- function(x, ...) {
   toc <- toc[!dup, , drop = FALSE]
   attr(toc, "same_number") <- same[!dup]
   toc
+}
+
+# A cell that is a mark: x, o, y, yes, 1, an asterisk, a tick, a circle
+.ai_mark_re <- paste0("(?i)^(x|o|y|yes|1|[*]|\u2713|\u2714|\u25cb|\u25cf|\u25ef|\u25ce|",
+                      "\u25a0|\u2611)$")
+.ai_is_mark <- function(x) {
+  x <- trimws(as.character(x))
+  !is.na(x) & grepl(.ai_mark_re, x, perl = TRUE)
+}
+
+# The TOC's columns of marks: not a role's column, under a header of its
+# own (not a bare column letter), and every value it has in the item rows
+# a mark (one at least).  Each names a batch (its header): the rows marked
+# are the batch's reports.
+.ai_toc_mark_cols <- function(d, rows, role_cols, header_of) {
+  cl <- setdiff(sort(unique(d$col[d$row %in% rows])), role_cols)
+  keep <- vapply(cl, function(k) {
+    v <- trimws(d$text[d$row %in% rows & d$col == k])
+    v <- v[!is.na(v) & nzchar(v)]
+    h <- header_of(k)
+    length(v) > 0L && all(.ai_is_mark(v)) && nzchar(h) && !grepl("^[A-Z]{1,3}$", h) &&
+      .ai_batch_name_ok(h)
+  }, NA)
+  cl[keep]
+}
+
+# A batch's name as a batch folder can carry it (tflplanner's rule):
+# letters, digits, spaces, . _ - only
+.ai_batch_name_ok <- function(x) {
+  grepl("^[A-Za-z0-9][A-Za-z0-9 ._-]*$", x) && !grepl("|", x, fixed = TRUE)
+}
+
+# The batch a second TOC sheet names: its name without the TOC word
+# ("TOC_topline" -> "topline", "Topline TOC" -> "Topline"); "" when
+# nothing is left or the name is not one a batch can carry
+.ai_batch_name_of <- function(sheet) {
+  vapply(sheet, function(s) {
+    n <- gsub(.ai_toc_name_re, " ", s, perl = TRUE)
+    n <- gsub("^[ _-]+|[ _-]+$", "", gsub("\\s+", " ", n))
+    if (nzchar(n) && .ai_batch_name_ok(n)) n else ""
+  }, "", USE.NAMES = FALSE)
 }
 
 # The words of a TOC header cell naming each column's role, tried in this

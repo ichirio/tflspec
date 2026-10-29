@@ -26,6 +26,22 @@ set_levels <- function(data, ...) {
   data
 }
 
+# A column in another's order, when the data has it: reorder(factor(x), by)
+# for a program's data step (PARAM by PARAMN, AVISIT by AVISITN).  An order
+# is not a condition that defines the report, so a data without the order
+# variable does not stop the program: the values stay in their own order
+# (factor(x)), and a message says so.
+#   mutate(adlb, PARAM = reorder_by(PARAM, PARAMN))
+reorder_by <- function(x, by) {
+  what <- deparse(substitute(by))
+  by <- tryCatch(by, error = function(e) NULL)
+  if (is.null(by)) {
+    message(sprintf("reorder_by(): the data has no %s: the values in their own order.", what))
+    return(factor(x))
+  }
+  stats::reorder(factor(x), by)
+}
+
 # The ids in front: the report, the analysis and its analysis set.  A cards
 # ARD stays one (class card), so the study ARD is one too and cards' own
 # tools (as_nested_list(), compare_ard()) take it.  Analyses run together

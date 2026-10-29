@@ -250,12 +250,17 @@ tfl_run_output <- function(output, dir = ".", overwrite = TRUE) {
   old <- setwd(dir)
   on.exit(setwd(old), add = TRUE)
   st <- tfl_read_study_spec(".")
+  ro <- NULL
   content <- if (!is.null(output$contents)) {
     tfl_output_contents(output, st, ".")
-  } else if (identical(output$kind, "listing") && identical(output$data$source, "dataset")) {
-    # a listing's records: its data step, as its program reads them
-    o <- tfl_resolve_output(output, st)
-    suppressMessages(tfl_content_run(o, .listing_data_of(o, st, ".")))
+  } else if (any(vapply((ro <- tfl_resolve_output(output, st))$content, .is_part, NA))) {
+    # a table with parts: each object it reads, by name -- the ARD, a
+    # listing's records (the table's own data, a part's)
+    suppressMessages(tfl_content_run(ro, .parts_objects(ro, st, ".")))
+  } else if (identical((ro <- tfl_resolve_output(output, st))$data$source, "dataset")) {
+    # a listing's records (its own, or a template's: decided on the report
+    # as resolved): its data step, as its program reads them
+    suppressMessages(tfl_content_run(ro, .listing_data_of(ro, st, ".")))
   } else if (identical(output$kind, "figure")) {
     o <- tfl_resolve_output(output, st)
     data <- .contents_fig_data(o, st, ".")
