@@ -199,6 +199,18 @@ tfl_sheets_from_spec <- function(study, outputs) {
     # rtfreporter arguments from page_rows() -- one row
     before <- length(rows$report %||% list())
     page_rows(o$page, id)
+    # the report's own values for the bands' output tokens (its title from
+    # `label:`, its analysis set's label), as rows of the tokens sheet, so
+    # that a study header printing {OUTPUT_TITLE} / {OUTPUT_POPULATION}
+    # has them on the sheets' way too (the preview, a program from the
+    # sheets) -- when a band prints them, and the page gives none (#518)
+    if (length(.page_output_tokens_used(s$defaults$page %||% list())) ||
+        length(.page_output_tokens_used(o$page %||% list()))) {
+      own <- .page_own_tokens(o, s)
+      for (nm in setdiff(names(own), names(o$page$tokens))) {
+        add("tokens", list(output_id = id, name = nm, value = own[[nm]]))
+      }
+    }
     after <- rows$report %||% list()
     if (length(after) > before) {
       extra <- after[[length(after)]]

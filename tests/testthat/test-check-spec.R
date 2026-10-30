@@ -131,3 +131,27 @@ test_that("build = TRUE applies the cells' formats: a Python pattern stops the b
   expect_match(b$message, "Unknown format spec '.1'", fixed = TRUE)
   expect_match(b$message, "A Python form? Write `{p:.1f%}`", fixed = TRUE)
 })
+
+test_that("the sheets carry the report's own tokens under a study header that prints them; the TOC's title when there is no label (#518)", {
+  skip_if_not_installed("haven")
+  d <- cs_study()
+  writeLines(c("page:", "  header:", "    '4': {center: '{OUTPUT_LABEL}'}", "    '5': {center: '{OUTPUT_TITLE}'}",
+               "    '6': {center: '<{OUTPUT_POPULATION}>'}"),
+             file.path(d, "spec", "defaults.yml"))
+  tfl_write_output(tfl_output("T-DM", "table", population = "SAF", label = "Demographics", extends = "defaults",
+                              template = list(name = "demog", args = list(population = "SAF"))),
+                   file.path(d, "spec", "outputs", "T-DM.yml"))
+  sh <- suppressWarnings(tfl_sheets_from_yaml(d))
+  tk <- sh$table$tokens
+  expect_identical(tk$value[tk$output_id %in% "T-DM" & tk$name == "OUTPUT_TITLE"], "Demographics")
+  expect_identical(tk$value[tk$output_id %in% "T-DM" & tk$name == "OUTPUT_POPULATION"], "Safety Population")
+  # the sheets' way gives the same as the report's
+  r <- tfl_report_tokens(sh$table, "T-DM")
+  expect_identical(unname(r[c("OUTPUT_LABEL", "OUTPUT_TITLE", "OUTPUT_POPULATION")]),
+                   c("T-DM", "Demographics", "Safety Population"))
+  # no label: the TOC's title
+  st <- tfl_read_study_spec(d)
+  st$toc <- list(outputs = list(list(id = "T-X", title = "From the TOC")))
+  own <- tflspec:::.page_own_tokens(tfl_output("T-X", "table", population = "SAF"), st)
+  expect_identical(own$OUTPUT_TITLE, "From the TOC")
+})

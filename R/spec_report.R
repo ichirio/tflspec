@@ -364,8 +364,11 @@
 # without `page: tokens` (#518)
 .page_own_tokens <- function(output, study = NULL) {
   own <- list()
+  one <- function(v) is.character(v) && length(v) == 1L && !is.na(v) && nzchar(v)
+  # the title: the report's label, else the TOC's title of it
   lab <- output$label
-  if (is.character(lab) && length(lab) == 1L && !is.na(lab) && nzchar(lab)) own$OUTPUT_TITLE <- lab
+  if (!one(lab) && !is.null(study) && !is.null(output$id)) lab <- .page_toc_entry(study, output$id)$title
+  if (one(lab)) own$OUTPUT_TITLE <- lab
   pop <- output$population
   if (is.character(pop) && length(pop) == 1L && !is.na(pop) && nzchar(pop)) {
     def <- Filter(function(p) identical(p$id, pop), study$data$populations %||% list())
