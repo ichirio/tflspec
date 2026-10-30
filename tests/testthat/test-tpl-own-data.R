@@ -100,3 +100,17 @@ test_that("a report's own step of the template's call (a survfit): a clear stop 
                "F-9 uses template km_survival, which makes its own survfit step", fixed = TRUE)
   expect_error(tfl_resolve_output(o, s), "remove survfit; keep plot and layers", fixed = TRUE)
 })
+
+test_that("tfl_content_run(): a dataset the figure reads and the data do not hold is a clear stop, not the package's sample", {
+  skip_if_not_installed("ggsurvfit")
+  d <- system.file("extdata", "spec-yaml", package = "tflspec")
+  s <- tfl_read_study_spec(d)
+  o <- tfl_output("F-9", "figure", extends = "none",
+                  template = list(name = "km_survival", args = list(by = "TRT01A")),
+                  data = list(steps = list(list(step = "read", dataset = "ADTTE"),
+                                           list(step = "flag", variable = "FASFL"),
+                                           list(step = "param", value = "PFS"))))
+  ro <- tfl_resolve_output(o, s)
+  expect_error(tfl_content_run(ro, list()), "the figure reads ADTTE, not among the data given (none)", fixed = TRUE)
+  expect_error(tfl_content_run(ro, list(adsl = adsl)), "not among the data given (ADSL)", fixed = TRUE)
+})

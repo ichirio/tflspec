@@ -1207,6 +1207,7 @@ tfl_content_run <- function(output, data) {
 # in `content` is the content
 .content_own_run <- function(output, data) {
   env <- new.env(parent = globalenv())
+  if (identical(output$kind, "figure")) .fig_reads_given(output, data)
   if (identical(output$kind, "figure") && is.list(data) && !is.data.frame(data) &&
       !is.null(names(data))) {
     # a figure's own code reads the datasets by their names (adsl, adae),
