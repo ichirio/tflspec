@@ -3,7 +3,7 @@
 The study has figure templates: a figure kind written from a few arguments (listed below). When one fits the figure, answer with it instead of a design:
 
 - After the header: `template: {name: <template>, args: {<argument>: <value>, ...}}` -- a mapping, unlike a design's `template` (a preset's name). Give only the arguments the shell asks to differ from the default.
-- `data`: the data stage, when the template's arguments do not hold it (the Kaplan-Meier types): a design's data steps -- `read`, the analysis set (`join`, `how: semi`, on ADSL), `param`, `filter`, `derive` -- before the template's call, which makes the rest (the time's unit, the fit).
+- `data`: the data stage, when the template's arguments do not hold it (the Kaplan-Meier types): a design's data steps -- `read`, the analysis set (`join`, `how: semi`, on ADSL), `param`, `filter`, `derive` -- before the template's call, which makes the rest (the time's unit, the fit).  With a template, never write the call's own steps (`time_unit`, `survfit`, the statistics) in `data.steps`: the check refuses a draft that does.
 - `layers`: only the figure's own items, for what the template does not draw (a reference line, a label), each as a design's layer.
 - Then `assumptions`, as always.
 - When no template fits, answer with the design, as the schema above says.

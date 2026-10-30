@@ -85,3 +85,18 @@ test_that("no own steps (the layout km), or a table template: as before; a KM ty
   expect_identical(length(ro$data$steps), length(ex$data$steps))
   expect_true(attr(ro, "template")$ok)
 })
+
+test_that("a report's own step of the template's call (a survfit): a clear stop at the check (#517)", {
+  skip_if_not_installed("ggsurvfit")
+  d <- system.file("extdata", "spec-yaml", package = "tflspec")
+  s <- tfl_read_study_spec(d)
+  own <- list(list(step = "read", dataset = "ADTTE"),
+              list(step = "param", value = "PFS"),
+              list(step = "survfit", name = "fit", time = "AVAL", censor = "CNSR", by = "TRT01A"))
+  o <- tfl_output("F-9", "figure", extends = "none",
+                  template = list(name = "km_survival", args = list(by = "TRT01A")),
+                  data = list(steps = own))
+  expect_error(tfl_resolve_output(o, s),
+               "F-9 uses template km_survival, which makes its own survfit step", fixed = TRUE)
+  expect_error(tfl_resolve_output(o, s), "remove survfit; keep plot and layers", fixed = TRUE)
+})
