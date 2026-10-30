@@ -212,7 +212,7 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   # (its data stage: the analysis set, the parameter, the records kept),
   # then the template's call steps (the fit and what the call makes from it)
   composed <- !is.null(tpl) && .tpl_composes(own$data, tpl$x)
-  if (composed) own$data <- .tpl_compose_data(own$data, tpl$x)
+  if (composed) own$data <- .tpl_compose_data(own$data, tpl$x, output$id, tpl$name)
   below <- acc$content
   acc <- .layer_over(acc, own)
   if ((isTRUE(provenance) || !is.null(tpl)) && !inherits(acc$content, "tfl_r")) {

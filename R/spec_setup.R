@@ -92,7 +92,7 @@
     output <- tfl_resolve_output(output, study)
   }
   tk <- .page_tokens(output$page %||% list(), output$id %||% NA_character_,
-                     output$kind %||% "table")
+                     output$kind %||% "table", .page_own_tokens(output, study))
   if (is.null(tk)) return(stats::setNames(character(), character()))
   vapply(tk, as.character, "")
 }

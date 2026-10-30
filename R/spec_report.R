@@ -28,7 +28,7 @@
   pg <- .page_place(output$page %||% list(), study$study$settings, output$id)
   id <- output$id %||% NA_character_
   kind <- output$kind %||% "table"
-  tokens <- .page_tokens(pg, id, kind)
+  tokens <- .page_tokens(pg, id, kind, .page_own_tokens(output, study))
   args_of <- function(fn) .page_args(pg[[fn]])
   doc_a <- args_of("rtf_document")
   fmt <- args_of("rtf_default_format")
@@ -358,6 +358,33 @@
 }
 
 # a function's arguments as page: says them: a map, unset ones gone
+# The report's own values for the bands' tokens besides its id and label:
+# its title (`label:`) and its analysis set's label (data.yml's), so that
+# a study header printing {OUTPUT_TITLE} / {OUTPUT_POPULATION} shows them
+# without `page: tokens` (#518)
+.page_own_tokens <- function(output, study = NULL) {
+  own <- list()
+  lab <- output$label
+  if (is.character(lab) && length(lab) == 1L && !is.na(lab) && nzchar(lab)) own$OUTPUT_TITLE <- lab
+  pop <- output$population
+  if (is.character(pop) && length(pop) == 1L && !is.na(pop) && nzchar(pop)) {
+    def <- Filter(function(p) identical(p$id, pop), study$data$populations %||% list())
+    pl <- if (length(def)) def[[1L]]$label
+    own$OUTPUT_POPULATION <- if (is.character(pl) && length(pl) == 1L && nzchar(pl)) pl else pop
+  }
+  own
+}
+
+# The output tokens a page's header and titles print ({OUTPUT_LABEL},
+# {OUTPUT_TITLE}, {OUTPUT_POPULATION}): a study header that prints them
+# makes a report's own `page: titles` print the titles twice (#518)
+.page_output_tokens_used <- function(pg) {
+  used <- unlist(lapply(c("header", "titles"), function(s) unlist(.page_args(pg[[s]]))))
+  used <- unique(unlist(regmatches(as.character(used),
+                                   gregexpr("(?<=\\{)[A-Z][A-Z0-9_]*(?=\\})", as.character(used), perl = TRUE))))
+  intersect(c("OUTPUT_LABEL", "OUTPUT_TITLE", "OUTPUT_POPULATION"), used)
+}
+
 .page_args <- function(m) {
   if (is.null(m) || inherits(m, "tfl_unset") || !length(m)) return(list())
   Filter(function(v) !inherits(v, "tfl_unset") && !is.null(v), m)
@@ -391,7 +418,7 @@
 # The report's tokens, as rtf_document() takes them: page:'s, then the
 # report's own (OUTPUT_ID, OUTPUT_LABEL) when its lines say them -- as
 # .ard_spec_tokens() gives them from the tokens sheet.
-.page_tokens <- function(pg, id, kind) {
+.page_tokens <- function(pg, id, kind, own = list()) {
   tk <- .page_args(pg$tokens)
   out <- lapply(tk, function(v) if (is.na(v)) "" else as.character(v))
   used <- unlist(lapply(c("header", "footer", "titles", "footnotes"), function(s)
@@ -405,8 +432,8 @@
       w <- out[[paste0("OUTPUT_KIND_", toupper(k))]]
       if (!is.null(w) && nzchar(w)) words[[k]] <- w
     }
-    own <- list(OUTPUT_ID = if (is.na(id)) "" else id,
-                OUTPUT_LABEL = .ard_spec_output_label(id, kind, words))
+    own <- c(list(OUTPUT_ID = if (is.na(id)) "" else id,
+                  OUTPUT_LABEL = .ard_spec_output_label(id, kind, words)), own)
     for (k in setdiff(want, names(out))) out[[k]] <- own[[k]] %||% ""
     mine <- intersect(.ard_spec_output_tokens, names(out))
     out <- out[c(setdiff(names(out), mine), mine)]

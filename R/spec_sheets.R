@@ -243,7 +243,10 @@ tfl_sheets_from_spec <- function(study, outputs) {
       analyses[[length(analyses) + 1L]] <- c(list(output_id = id), m)
     }
     if (o$kind == "table") {
-      if (!code_content) table_rows(o$content, id)
+      if (!code_content) {
+        tryCatch(table_rows(o$content, id), error = function(e) note(
+          id, "content", paste("its content could not be put on the sheets:", conditionMessage(e))))
+      }
     } else if (o$kind == "listing") {
       lr <- list(output_id = id)
       for (k in c("dataset", "data", "where", "sort")) if (!is.null(o$data[[k]])) lr[[k]] <- cell(o$data[[k]])

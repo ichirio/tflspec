@@ -924,7 +924,7 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
           }
           # the variables' headings, plan_labels(variable = c(AGE = ...))
           if (identical(v, "variable") && is.character(x) && !is.null(names(x)) &&
-              all(nzchar(names(x)))) {
+              !anyNA(names(x)) && all(nzchar(names(x)))) {
             for (n in names(x)) {
               var_row(n); vars[[n]]$label <- unname(x[[n]])
               labelled <- c(labelled, n)
@@ -933,7 +933,7 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
           }
           # a value's labels: a column the plan makes, its code list rows; a
           # data variable's are its code list's already (the ARD has them)
-          if (is.character(x) && !is.null(names(x)) && all(nzchar(names(x)))) {
+          if (is.character(x) && !is.null(names(x)) && !anyNA(names(x)) && all(nzchar(names(x)))) {
             if (!v %in% own) {
               miss(fn, sprintf(paste0("%s: a data variable's value labels go in the ",
                                       "report's code list (the ARD program puts them on the data)"), v))
@@ -1207,6 +1207,7 @@ tfl_content_run <- function(output, data) {
 # in `content` is the content
 .content_own_run <- function(output, data) {
   env <- new.env(parent = globalenv())
+  if (identical(output$kind, "figure")) .fig_reads_given(output, data)
   if (identical(output$kind, "figure") && is.list(data) && !is.data.frame(data) &&
       !is.null(names(data))) {
     # a figure's own code reads the datasets by their names (adsl, adae),
