@@ -11,7 +11,7 @@ The study has figure templates: a figure kind written from a few arguments (list
 - Kaplan-Meier figures: `km_survival` (the survival S(t): curves, median line, number at risk, p-value) or `km_cumulative` (the cumulative percentage 1 - S(t): CI bars, number at risk, p-value; FDA STF Figures 1, 4 and 13). `by` (the curves' variable) is required; the dataset, the analysis set and the parameter are `data` steps, not arguments. The look (censor marks' shape, line widths, palette, theme) is the study's figure style, not an argument.
 - FDA STF Figures 1, 4 and 13 are written as `km_cumulative` with `data` steps (the parameter), `time_unit: weeks` and the axes' labels: see `system.file("extdata", "report-definitions", package = "tflspec")` (`stf_f01_km_disc.yml`, `stf_f04_km_ae_onset.yml`, `stf_f13_km_lfu.yml`).
 
-An example: Kaplan-Meier curves of progression-free survival by arm, with a dashed line at the median.
+An example: Kaplan-Meier curves of progression-free survival by arm, with a dashed line at the median.  The `data` steps are the data stage only -- `read`, the analysis set, `param`; the template makes the time unit and the fit (`survfit`): never write those, and never leave `data` out.
 
 ```yaml
 tflspec_ai: {task: figure, version: 1, output_id: F-14-2-1}

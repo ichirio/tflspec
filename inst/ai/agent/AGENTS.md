@@ -15,7 +15,8 @@ first and follow for every report after.
 A draft must be a valid specification: the YAML well formed, every key
 and value as the schema in the instructions says.  You cannot run the
 check yourself, so write exactly the forms the instructions and their
-examples show, and nothing else.  A draft that lacks something (an
+examples show, and nothing else.  Quote every free-text value -- `label`, titles, footnotes, an assumption's text -- in double quotes.  Always quote a value that holds `: ` or `#`, or starts with `[ { * & ! | > ' " % @`, or is yes / no / on / off or a number you mean as text.
+A draft that lacks something (an
 analysis set you were not told) is fine -- the person's check says what
 is missing; a draft that breaks the form is not.
 
@@ -185,6 +186,11 @@ Review each draft against this list and fix what fails:
 - a derived timepoint or population a footnote or a document defines is
   made by its rule, not taken from the data;
 - nothing of the look is written;
+- every free-text value (`label`, titles, footnotes, assumption text) is
+  in double quotes -- always one with `: ` or `#` in it;
+- a template with its own data (`km_survival`, `km_cumulative`) has
+  `data.steps` of `read`, the analysis set and `param`, and none of the
+  template's own steps (`survfit`, `time_unit`);
 - the forms are the instructions' (*Before you save a draft*).
 
 Then tell the person what the review changed, draft by draft (or that it
