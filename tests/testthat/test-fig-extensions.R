@@ -68,7 +68,7 @@ test_that("a KM figure of ggsurvfit's functions: risk table, p-value, axes, them
                                stats_label = list(n.risk = "At risk", cum.event = "Events"),
                                risktable_group = "risktable_stats", combine_groups = FALSE,
                                theme = tfl_call("theme_risktable_boxed", list(axis.text.y.size = 9)))),
-    list("add_risktable_strata_symbol", list(symbol = "\u25cf", vjust = 0.3)),
+    list("add_risktable_strata_symbol", list(symbol = "*", vjust = 0.3)),
     list("add_quantile", list(y_value = 0.5, linetype = 2)),
     list("add_pvalue", list(caption = "Log-rank {p.value}", rho = 0, location = "caption")),
     list("add_legend_title", list(title = "Treatment")),
