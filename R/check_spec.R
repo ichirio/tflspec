@@ -34,9 +34,15 @@
 #'
 #' @param study A study read with [tfl_read_study_spec()], or its folder.
 #' @param output_id The reports to check; `NULL` for every report.
+#' @param build `TRUE`: each report the checks above pass is also built
+#'   ([tfl_check_build()]) -- its data read, its ARD made, its table,
+#'   listing or figure object made, no RTF -- so that a report with no
+#'   row can be made; one that cannot has an `error` row, `part`
+#'   `"build"`.  A few seconds a report.  `FALSE` (default): the checks
+#'   above only.
 #' @return A data frame, one row a problem: `output_id` (`NA` for the
 #'   study's ARD definition as a whole), `part` (`"file"`, `"ard"`,
-#'   `"content"`, `"program"`, `"figure"`), `item` (the file, the
+#'   `"content"`, `"program"`, `"figure"`, `"build"`), `item` (the file, the
 #'   analysis, the function and argument, or the figure's part and
 #'   field), `level` (`"error"`, `"warning"`, `"note"`, `"check"`) and
 #'   `message`.  Its attributes: `versions`, a data frame of the key
@@ -64,7 +70,7 @@
 #' @seealso [tfl_check_reports()], [tfl_check_fix_text()], [tfl_ard_spec()],
 #'   [tfl_schema_check()], [tfl_check_fig_design()]
 #' @export
-tfl_check_spec <- function(study, output_id = NULL) {
+tfl_check_spec <- function(study, output_id = NULL, build = FALSE) {
   if (is.character(study) && length(study) == 1L) study <- tfl_read_study_spec(study)
   if (!inherits(study, "tfl_study_spec")) {
     .ard_stop("tfl_check_spec(): `study` is a study read with tfl_read_study_spec(), or its folder.")
@@ -187,6 +193,11 @@ tfl_check_spec <- function(study, output_id = NULL) {
   }
   out <- do.call(rbind, rows)
   out <- out[is.na(out$output_id) | out$output_id %in% ids, , drop = FALSE]
+  if (isTRUE(build) && !is.null(study$dir)) {
+    # the reports the checks pass: built, so that no row means it can be made
+    clean <- setdiff(ids, c(bad, out$output_id[out$level == "error"]))
+    if (length(clean)) out <- rbind(out, .check_build_rows(outs[clean], study))
+  }
   rownames(out) <- NULL
   attr(out, "versions") <- .check_versions()
   attr(out, "ids") <- ids
@@ -202,6 +213,65 @@ tfl_check_spec <- function(study, output_id = NULL) {
   p <- normalizePath(path, winslash = "/", mustWork = FALSE)
   d <- paste0(normalizePath(dir, winslash = "/", mustWork = FALSE), "/")
   if (startsWith(p, d)) substring(p, nchar(d) + 1L) else p
+}
+
+#' Build each report, to know that it can be made
+#'
+#' The step after [tfl_check_spec()]'s reading: each report's data read,
+#' its ARD made, its table, listing or figure object made -- all a
+#' program does but writing the RTF -- in the study folder.  A report that
+#' cannot be made gives an `error` row, `part` `"build"`, with the message
+#' the build stopped on; one that can gives no row.  The person's bar for
+#' OK (2026-10-30): the report's object can be made.  A few seconds a
+#' report; the AI's drafts apart (`options(tflspec.outputs_dir = )`) are
+#' read as [tfl_check_spec()] reads them.
+#'
+#' @inheritParams tfl_check_spec
+#' @return A data frame as [tfl_check_spec()]'s (`output_id`, `part`,
+#'   `item`, `level`, `message`): the reports that could not be built.
+#'   Attributes `ids` (the reports built or tried) and `kinds`.
+#' @seealso [tfl_check_spec()] (`build = TRUE` does both), [tfl_run_output()]
+#' @export
+tfl_check_build <- function(study, output_id = NULL) {
+  if (is.character(study) && length(study) == 1L) study <- tfl_read_study_spec(study)
+  if (!inherits(study, "tfl_study_spec") || is.null(study$dir)) {
+    .ard_stop("tfl_check_build(): `study` is a study read with tfl_read_study_spec(), or its folder.")
+  }
+  outs <- tryCatch(suppressWarnings(tfl_read_outputs(study$dir, skip_bad = TRUE)),
+                   error = function(e) list())
+  ids <- output_id %||% names(outs)
+  miss <- setdiff(ids, names(outs))
+  if (length(miss)) {
+    .ard_stop(sprintf("tfl_check_build(): no report %s in the study.",
+                      paste(sQuote(miss), collapse = ", ")))
+  }
+  out <- .check_build_rows(outs[ids], study)
+  rownames(out) <- NULL
+  attr(out, "ids") <- ids
+  attr(out, "kinds") <- vapply(outs[ids], function(o) o$kind %||% "table", "")
+  out
+}
+
+# One error row a report whose content cannot be made (in the study
+# folder, with the study's rounding, as tfl_run_output() makes it)
+.check_build_rows <- function(outs, study) {
+  old <- setwd(study$dir)
+  on.exit(setwd(old), add = TRUE)
+  old_r <- .study_rounding_option(study)
+  on.exit(options(old_r), add = TRUE)
+  rows <- list(.check_rows())
+  for (id in names(outs)) {
+    e <- tryCatch({
+      .output_build_content(outs[[id]], study)
+      NULL
+    }, error = function(e) e)
+    if (!is.null(e)) {
+      rows[[length(rows) + 1L]] <- .check_rows(
+        output_id = id, part = "build", item = "", level = "error",
+        message = paste("the report cannot be made:", .ai_one_line(conditionMessage(e))))
+    }
+  }
+  do.call(rbind, rows)
 }
 
 #' The check's three levels, a report at a time
