@@ -234,25 +234,35 @@ tfl_output_contents <- function(output, study, dir = ".") {
 # tfl_run_output() writes to RTF, and what tfl_check_build() makes to know
 # that the report can be made.
 .output_build_content <- function(output, st) {
-  ro <- NULL
+  # (each stage named in what stops it: "the ARD: ...", "the table: ...")
+  stage <- function(what, expr) {
+    tryCatch(expr, error = function(e) .ard_stop(paste0(what, ": ", conditionMessage(e))))
+  }
+  kind <- output$kind %||% "table"
   if (!is.null(output$contents)) {
-    tfl_output_contents(output, st, ".")
-  } else if (any(vapply((ro <- tfl_resolve_output(output, st))$content, .is_part, NA))) {
+    return(stage("the report's objects", tfl_output_contents(output, st, ".")))
+  }
+  ro <- stage("resolving the report", tfl_resolve_output(output, st))
+  if (any(vapply(ro$content, .is_part, NA))) {
     # a table with parts: each object it reads, by name -- the ARD, a
     # listing's records (the table's own data, a part's)
-    suppressMessages(tfl_content_run(ro, .parts_objects(ro, st, ".")))
+    objects <- stage("the parts' data", .parts_objects(ro, st, "."))
+    stage(paste("the", kind), suppressMessages(tfl_content_run(ro, objects)))
   } else if (identical(ro$data$source, "dataset")) {
     # a listing's records (its own, or a template's: decided on the report
     # as resolved): its data step, as its program reads them
-    suppressMessages(tfl_content_run(ro, .listing_data_of(ro, st, ".")))
-  } else if (identical(output$kind, "figure")) {
-    data <- .contents_fig_data(ro, st, ".")
-    if (length(ro$ard$analyses %||% list())) data$ard <- tfl_build_ard(st, ".", output_id = ro$id, save = FALSE)
-    suppressMessages(suppressWarnings(tfl_content_run(ro, data)))
+    recs <- stage("the listing's records", .listing_data_of(ro, st, "."))
+    stage(paste("the", kind), suppressMessages(tfl_content_run(ro, recs)))
+  } else if (identical(kind, "figure")) {
+    data <- stage("the figure's data", .contents_fig_data(ro, st, "."))
+    if (length(ro$ard$analyses %||% list())) {
+      data$ard <- stage("the ARD", tfl_build_ard(st, ".", output_id = ro$id, save = FALSE))
+    }
+    stage("the figure", suppressMessages(suppressWarnings(tfl_content_run(ro, data))))
   } else {
-    ard <- suppressMessages(tfl_build_ard(st, dir = ".", output_id = ro$id, save = FALSE))
+    ard <- stage("the ARD", suppressMessages(tfl_build_ard(st, dir = ".", output_id = ro$id, save = FALSE)))
     if (!is.null(ard$output_id)) ard <- ard[ard$output_id %in% ro$id, , drop = FALSE]
-    suppressMessages(tfl_content_run(ro, ard))
+    stage(paste("the", kind), suppressMessages(tfl_content_run(ro, ard)))
   }
 }
 
