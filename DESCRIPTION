@@ -37,6 +37,7 @@ Imports:
     utils
 Suggests:
     rtfreporter (>= 0.8.2.9100),
+    arrow,
     broom,
     broom.helpers,
     car,

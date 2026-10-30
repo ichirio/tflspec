@@ -108,10 +108,14 @@
   invisible(TRUE)
 }
 
-# A dataset file as a data frame: .xpt / .sas7bdat (haven), .rds.
+# A dataset file as a data frame: .xpt / .sas7bdat (haven), .rds, .parquet (arrow).
 .ai_read_dataset <- function(path) {
   ext <- tolower(tools::file_ext(path))
   if (ext == "rds") return(readRDS(path))
+  if (ext == "parquet") {
+    .ard_need("arrow", "reading a .parquet file")
+    return(as.data.frame(arrow::read_parquet(path)))
+  }
   if (!requireNamespace("haven", quietly = TRUE)) {
     .ard_stop(sprintf("reading %s needs the haven package.", basename(path)))
   }
