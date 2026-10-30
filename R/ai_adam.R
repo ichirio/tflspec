@@ -28,7 +28,7 @@
                         fn, sQuote(paste(format(path), collapse = " "), FALSE),
                         sQuote(getwd(), FALSE)))
     }
-    files <- if (dir.exists(path)) .ai_adam_files(path, full.names = TRUE) else path
+    files <- if (dir.exists(path)) .ai_adam_files(path, full = TRUE) else path
     if (!length(files)) {
       .ard_stop(sprintf("%s: no .xpt, .sas7bdat, .rds or .parquet file in %s; copy the ADaM files there.",
                         fn, sQuote(path, FALSE)))
@@ -56,9 +56,9 @@
 # (adsl.sas7bdat and adsl.xpt, adsl.xpt and adsl.rds), the one read is the
 # first of .sas7bdat, .xpt, .rds, .parquet (#523)
 .ai_adam_exts <- c("sas7bdat", "xpt", "rds", "parquet")
-.ai_adam_files <- function(dir, full.names = FALSE) {
+.ai_adam_files <- function(dir, full = FALSE) {
   files <- list.files(dir, pattern = "[.](xpt|sas7bdat|rds|parquet)$", ignore.case = TRUE,
-                      full.names = full.names)
+                      full.names = full)
   if (!length(files)) return(files)
   nm <- toupper(tools::file_path_sans_ext(basename(files)))
   rank <- match(tolower(tools::file_ext(files)), .ai_adam_exts)
