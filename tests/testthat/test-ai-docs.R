@@ -128,5 +128,5 @@ test_that("tfl_ai_prepare(docs = ): a workbook document placed as text beside it
                "| Baseline | last before dose |", fixed = TRUE)
   expect_setequal(r$agent_files, c("ai/docs/data-guide.md", "ai/docs/sap.md"))
   ag <- paste(readLines(file.path(d, "ai", "AGENTS.md"), encoding = "UTF-8"), collapse = "\n")
-  expect_match(ag, "`ai/docs/data-guide.md` (the text of data-guide.xlsx), `ai/docs/sap.md`.", fixed = TRUE)
+  expect_match(ag, "`ai/docs/data-guide.md` (the text of ai/docs/data-guide.xlsx), `ai/docs/sap.md`.", fixed = TRUE)
 })
