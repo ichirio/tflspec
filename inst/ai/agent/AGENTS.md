@@ -77,7 +77,11 @@ skip it.  For each of the others, in order:
    - Ask only when the sources disagree, or when a choice changes a
      report's numbers and nothing -- no document, no data, no decision
      -- defines it.
-3. {{ask_when}} **Ask them in the chat**, in {{language}}, numbered.  Each
+3. {{ask_when}} **Ask them in the chat**, in {{language}}, numbered.
+   **Collect every question first** -- every item of step 2, for every
+   report of the request -- and ask them together in **one message**;
+   never one at a time, waiting for an answer between them.  A follow-up
+   question only when an answer raises a new point.  Each
    question says **which report it is about -- its id and its title --**
    and the item, the choices you see, and the one you would take if the
    person says "default".  **End every question with an example answer**,
