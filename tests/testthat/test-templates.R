@@ -217,3 +217,14 @@ test_that("ae_overview: a subjects analysis and a row a flag", {
   expect_identical(nrow(tab), 1L)
   expect_identical(as.character(tab[[1L]]), "Serious")
 })
+
+test_that("demog: a categorical variable the labels do not name has no label row (no `<NA> = NA`; the sheets convert)", {
+  x <- tfl_template_expand("demog", list(population = "SAF", by = "TRT01A",
+                                         categorical = c("AGEGR1", "SEX", "RACE", "ETHNIC", "ECOGBL")))
+  lab <- Filter(function(it) identical(it$fn, "plan_labels"), x$content)
+  expect_identical(length(lab), 1L)
+  v <- lab[[1L]]$args$variable
+  expect_false(anyNA(names(v)))
+  expect_false("ECOGBL" %in% names(v))
+  expect_true(all(c("AGE", "AGEGR1", "SEX") %in% names(v)))
+})

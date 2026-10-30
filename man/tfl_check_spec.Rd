@@ -4,17 +4,24 @@
 \alias{tfl_check_spec}
 \title{Check a study's SPEC against the packages installed: one call}
 \usage{
-tfl_check_spec(study, output_id = NULL)
+tfl_check_spec(study, output_id = NULL, build = FALSE)
 }
 \arguments{
 \item{study}{A study read with \code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}, or its folder.}
 
 \item{output_id}{The reports to check; \code{NULL} for every report.}
+
+\item{build}{\code{TRUE}: each report the checks above pass is also built
+(\code{\link[=tfl_check_build]{tfl_check_build()}}) -- its data read, its ARD made, its table,
+listing or figure object made, no RTF -- so that a report with no
+row can be made; one that cannot has an \code{error} row, \code{part}
+\code{"build"}.  A few seconds a report.  \code{FALSE} (default): the checks
+above only.}
 }
 \value{
 A data frame, one row a problem: \code{output_id} (\code{NA} for the
 study's ARD definition as a whole), \code{part} (\code{"file"}, \code{"ard"},
-\code{"content"}, \code{"program"}, \code{"figure"}), \code{item} (the file, the
+\code{"content"}, \code{"program"}, \code{"figure"}, \code{"build"}), \code{item} (the file, the
 analysis, the function and argument, or the figure's part and
 field), \code{level} (\code{"error"}, \code{"warning"}, \code{"note"}, \code{"check"}) and
 \code{message}.  Its attributes: \code{versions}, a data frame of the key

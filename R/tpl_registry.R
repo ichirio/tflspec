@@ -599,7 +599,10 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
     if (length(cells)) list(tfl_item("plan_cells", cells)),
     # (no plan_levels() by default: the ARD says the order)
     if (length(a$order)) list(tfl_item("plan_levels", list(variable = a$order))),
-    if (length(a$labels)) list(tfl_item("plan_labels", list(variable = as.list(a$labels[vars])))),
+    # (a variable the labels do not name -- one added to `categorical` --
+    # has none here; the report's own plan_labels() may give it)
+    if (length(a$labels) && length(intersect(vars, names(a$labels)))) list(tfl_item(
+      "plan_labels", list(variable = as.list(a$labels[intersect(vars, names(a$labels))])))),
     if (isTRUE(a[["total"]])) list(tfl_item("plan_total", list(position = "last"))),
     # (the layout's page: the study standard's plan_paginate_rows() wins)
     list(tfl_item("plan_paginate_rows", list(max_rows = 30L, split = "group_safe"))))
