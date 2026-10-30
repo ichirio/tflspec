@@ -328,3 +328,32 @@ test_that("the unpacked report files run to RTF on the XPT data", {
     if (id %in% names(n)) expect_match(txt, n[[id]], fixed = TRUE, info = id)
   }
 })
+
+test_that("an ADaM folder: one file a dataset, .sas7bdat > .xpt > .rds > .parquet; .parquet listed (#523)", {
+  skip_if_not_installed("haven")
+  d <- tempfile("adam")
+  dir.create(d)
+  on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  haven::write_xpt(tflspec:::.ai_chr(tflspec::adsl), file.path(d, "adsl.xpt"))
+  saveRDS(tflspec::adsl, file.path(d, "adsl.rds"))
+  saveRDS(tflspec::adae, file.path(d, "adae.rds"))
+  file.create(file.path(d, "advs.parquet"))
+  f <- tflspec:::.ai_adam_files(d)
+  expect_identical(f, c("adae.rds", "adsl.xpt", "advs.parquet"))
+  # the summary and the study: one ADSL, the .xpt
+  s <- tfl_ai_adam_summary(d, datasets = c("ADSL", "ADAE"))
+  expect_identical(s$datasets$dataset, c("ADSL", "ADAE"))
+  st_dir <- tempfile("study")
+  dir.create(st_dir)
+  on.exit(unlink(st_dir, recursive = TRUE), add = TRUE)
+  tfl_ai_study_init(st_dir, adam = d, study_id = "X-1")
+  y <- yaml::read_yaml(file.path(st_dir, "spec", "data.yml"))
+  ds <- vapply(y$datasets, `[[`, "", "dataset")
+  expect_identical(ds, c("ADAE", "ADSL", "ADVS"))
+  expect_match(y$datasets[[2L]]$path, "adsl[.]xpt$")
+  expect_match(y$datasets[[3L]]$path, "advs[.]parquet$")
+  # reading a .parquet needs arrow: said so when it is not there
+  if (!requireNamespace("arrow", quietly = TRUE)) {
+    expect_error(tflspec:::.ai_adam_read_one(file.path(d, "advs.parquet"), "f()"), "'arrow' package")
+  }
+})
