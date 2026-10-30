@@ -122,7 +122,7 @@ for (fn in ns) {
         add(fn, a, "no", "", "page: does not pass it on")
       }
     } else if (!is.null(e)) {
-      where <- if (fn %in% c("rtf_border", "rtf_col_header", "listing_col", "cell_rows", "rtf_watermark"))
+      where <- if (fn %in% c("rtf_border", "rtf_border_line", "rtf_col_header", "listing_col", "cell_rows", "rtf_watermark"))
         paste0("{fn: ", fn, "} value") else paste0("content: ", fn)
       if (a %in% data_args) add(fn, a, "yes", "the pipe", "")
       else if (a == "..." && !is.null(e$dots)) add(fn, a, "yes", where, "schema dots grammar")

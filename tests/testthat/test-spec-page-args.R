@@ -99,3 +99,24 @@ test_that("rtf_tables: read_attributes as the page says it", {
   doc <- eval(parse(text = tfl_report_code(o, content = "content")), env)
   expect_s3_class(doc, "rtf_document")
 })
+
+test_that("rtf_document's color_table: colours declared ahead, in the document's table", {
+  code <- pa_code(list(rtf_document = list(color_table = list("#003366", "#C9372C"))))
+  expect_match(code, "color_table = c(\"#003366\", \"#C9372C\")", fixed = TRUE)
+  expect_false(grepl("color_table", pa_code(list()), fixed = TRUE))
+  ok <- function(v) nrow(tfl_schema_check(tfl_item("rtf_document", list(color_table = v)))) == 0L
+  expect_true(ok(list("#003366")))
+  expect_true(ok(c("#003366", "#C9372C")))
+  expect_false(ok(tfl_call("rtf_border", list(top = TRUE))))
+  # and it runs: the colour is in the RTF's colour table
+  skip_if_not_installed("rtfreporter")
+  o <- tfl_output("T-1", "table", page = list(rtf_document = list(color_table = list("#003366"))))
+  env <- list2env(list(content = rtfreporter::as_rtftables(data.frame(a = "1"))),
+                  parent = asNamespace("rtfreporter"))
+  doc <- eval(parse(text = tfl_report_code(o, content = "content")), env)
+  f <- tempfile(fileext = ".rtf")
+  on.exit(unlink(f))
+  rtfreporter::generate_rtfreport(doc, f)
+  rtf <- paste(readLines(f, warn = FALSE), collapse = "\n")
+  expect_match(rtf, "\\red0\\green51\\blue102;", fixed = TRUE)
+})

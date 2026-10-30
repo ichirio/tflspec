@@ -1015,7 +1015,8 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   }
   if (identical(kind, "choice") && nzchar(choices %||% "")) {
     ch <- .split_bar(choices)
-    if (!is.character(v) || !all(v %in% ch)) {
+    # a number among the choices as a number (car::Anova(type = 3))
+    if (!(is.character(v) || is.numeric(v)) || !all(as.character(v) %in% ch)) {
       return(sprintf("is one of %s; got %s",
                      paste0("\"", ch, "\"", collapse = ", "), shown))
     }
