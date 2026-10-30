@@ -163,7 +163,10 @@ far you have got:
 - at the start of each request: `[3/6] T-LB-SUM（14.3.4.1）を開始。残り 3 件`
   (`[3/6] Starting T-LB-SUM (14.3.4.1); 3 left`);
 - when a request's drafts are written: `[3/6] 完了: 14.3.4.1。次: T-LB-SHIFT`
-  (`[3/6] Done: 14.3.4.1; next: T-LB-SHIFT`);
+  (`[3/6] Done: 14.3.4.1; next: T-LB-SHIFT`) -- and **go straight on to
+  the next request**: do not wait for a "continue".  You stop only to
+  ask questions (then wait for the answers), or when every request is
+  done;
 - a question message starts with the same tag (step 3).
 
 `n` is the request's number of `N` in `ai/requests/index.md`.  Keep the
@@ -198,12 +201,17 @@ changed nothing).
 
 ## Stopping and going on
 
-The person may stop you between requests ("stop", a question of their
-own) and later say **"continue"**: go on from the first request of
-`ai/requests/index.md` that has a report with no draft, or whose draft the
-person says the check refused -- the decisions in `ai/decisions.md` hold
-as before.  Never write a draft that is there again unless the person asks
-for it (the check's note, a correction in the chat).
+The person may stop you at any time -- "止まって", "stop", "pause", or a
+question of their own.  Then **finish the step in hand cleanly**: save the
+draft you are writing, write `ai/progress.md` (what is done, what is
+next), and stop, saying where you stopped (`[3/6] 停止: 14.3.4.1 まで。次:
+T-LB-SHIFT` / `[3/6] Stopped after 14.3.4.1; next: T-LB-SHIFT`).  Later
+the person says **"続けて" / "continue"**: go on from `ai/progress.md` --
+the first request of `ai/requests/index.md` that has a report with no
+draft, or whose draft the person says the check refused -- the decisions
+in `ai/decisions.md` hold as before.  Never write a draft that is there
+again unless the person asks for it (the check's note, a correction in
+the chat).
 
 At most {{max_reads}} times for a request, open a file or run a command
 beyond the request and the files it names.  When you reach it, ask or
