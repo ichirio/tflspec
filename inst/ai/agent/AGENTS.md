@@ -65,10 +65,33 @@ skip it.  For each of the others, in order:
    ..."), apply that rule (an analysis data with `code`, an assumption
    that cites it) or ask; do not take a visit name or a flag from the
    data in its place.
+   **What to ask, and what not to ask:**
+   - Do not ask what the documents or the data settle: the shell, the
+     TOC, the SAP, `ai/adam_summary.md`, `spec/data.yml` or a decision.
+     Decide, and write the source in the assumption (`from:`).
+   - Do not ask about a case the data shows cannot happen: what to show
+     when there are 0 events while the summary shows events; how to
+     treat missing values when the summary says `[missing: none]` for
+     the variable.  Write the usual default and list it under
+     *to confirm* (step 6) -- no question.
+   - Ask only when the sources disagree, or when a choice changes a
+     report's numbers and nothing -- no document, no data, no decision
+     -- defines it.
 3. {{ask_when}} **Ask them in the chat**, in {{language}}, numbered.  Each
    question says **which report it is about -- its id and its title --**
    and the item, the choices you see, and the one you would take if the
-   person says "default".  A question that holds for every report of the
+   person says "default".  **End every question with an example answer**,
+   one line, `例: ...` in Japanese (`e.g. ...` in English): the answer as
+   the programmer would type it, holding every piece the draft needs --
+   the title's label, the condition, the variable, which source is wrong
+   -- so that the person sees what to answer, and can paste it as it is
+   or edit it.  The example follows your default choice.  A choice alone
+   ("SAFFL") is not an answer.
+   - a population conflict:
+     `例: シェルのとおり Safety Analysis Set（SAFFL = 'Y'）、実治療 TRT01A。TOC の Full Analysis Set は誤り。`
+   - a denominator:
+     `例: 分母は Total 行（post-baseline 値が 1 つ以上ある被験者）。食い違う脚注は削除。`
+   A question that holds for every report of the
    request says so.  Then **stop and wait**: do not write the report until
    the person answers.  There is no limit to the questions; ask what you
    need, each once.  When an answer does not settle the item, ask again,
@@ -207,5 +230,7 @@ a line.
   `.github/copilot-instructions.md`.
 - Write only `ai/spec/outputs/` and `ai/decisions.md` (add lines, change
   nothing a person wrote).
-- Do not guess what defines a report: ask.  Do not write the look.
+- Do not guess what defines a report: ask -- but do not ask what the
+  documents or the data settle, nor about a case the data rules out.
+  Do not write the look.
 - Do not try the same thing more than twice: say so in the chat and stop.

@@ -331,7 +331,7 @@ print.tfl_ai_context <- function(x, ...) {
   if (inherits(x, "tfl_ai_adam")) x <- x$variables
   if (is.data.frame(x)) {
     # tfl_adam_metadata()'s own columns, which the prompt does not need
-    x <- x[setdiff(names(x), c("codelist", "source"))]
+    x <- x[setdiff(names(x), c("codelist", "source", "missing"))]
     bad <- setdiff(names(x), cols)
     if (length(bad) || !all(c("dataset", "variable") %in% names(x))) {
       .ard_stop(sprintf(paste0(
