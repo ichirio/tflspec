@@ -112,7 +112,8 @@ test_that("the catalog's new cards: labelled, their shown arguments typed, each 
   }
   # every row of the shared arguments is a known kind, and its type parses
   g <- .fig_gg_args()
-  expect_true(all(g$kind %in% c(unname(.schema_gg_prefix), "labs", "helper")))
+  expect_true(all(g$kind %in% c(unname(.schema_gg_prefix), "labs", "helper", "plot", "ggsurvfit_layer",
+                                "compose")))
   expect_false(anyDuplicated(paste(g$kind, g$arg)) > 0L)
   for (t in unique(g$type)) expect_false(is.null(.schema_type(t)$kind), info = t)
 })

@@ -2302,3 +2302,354 @@
 "ggplot2","position_fill","vjust","yes","schema.yml: position_fill; gg_args.csv","","position",2
 "ggplot2","position_fill","reverse","yes","schema.yml: position_fill; gg_args.csv","","position",2
 "ggplot2","position_identity","","yes","schema.yml: position_identity","","position",1
+"ggsurvfit","ggsurvfit","x","yes","schema.yml: ggsurvfit","","ggsurvfit",3
+"ggsurvfit","ggsurvfit","type","yes","schema.yml: ggsurvfit","","ggsurvfit",3
+"ggsurvfit","ggsurvfit","linetype_aes","yes","schema.yml: ggsurvfit; gg_args.csv","","ggsurvfit",3
+"ggsurvfit","ggsurvfit","theme","yes","schema.yml: ggsurvfit; gg_args.csv","","ggsurvfit",3
+"ggsurvfit","ggcuminc","x","yes","schema.yml: ggcuminc","","ggsurvfit",2
+"ggsurvfit","ggcuminc","outcome","yes","schema.yml: ggcuminc","","ggsurvfit",2
+"ggsurvfit","ggcuminc","linetype_aes","yes","schema.yml: ggcuminc; gg_args.csv","","ggsurvfit",2
+"ggsurvfit","ggcuminc","theme","yes","schema.yml: ggcuminc; gg_args.csv","","ggsurvfit",2
+"ggsurvfit","add_risktable","times","yes","schema.yml: add_risktable","","ggsurvfit",3
+"ggsurvfit","add_risktable","risktable_stats","yes","schema.yml: add_risktable; gg_args.csv","","ggsurvfit",3
+"ggsurvfit","add_risktable","risktable_group","yes","schema.yml: add_risktable; gg_args.csv","","ggsurvfit",3
+"ggsurvfit","add_risktable","risktable_height","yes","schema.yml: add_risktable; gg_args.csv","","ggsurvfit",3
+"ggsurvfit","add_risktable","stats_label","yes","schema.yml: add_risktable; gg_args.csv","","ggsurvfit",3
+"ggsurvfit","add_risktable","combine_groups","yes","schema.yml: add_risktable; gg_args.csv","","ggsurvfit",3
+"ggsurvfit","add_risktable","theme","yes","schema.yml: add_risktable; gg_args.csv","","ggsurvfit",3
+"ggsurvfit","add_censor_mark","","yes","schema.yml: add_censor_mark","","ggsurvfit",3
+"ggsurvfit","add_confidence_interval","type","yes","schema.yml: add_confidence_interval; gg_args.csv","","ggsurvfit",3
+"ggsurvfit","add_quantile","y_value","yes","schema.yml: add_quantile; gg_args.csv","","ggsurvfit",2
+"ggsurvfit","add_quantile","x_value","yes","schema.yml: add_quantile; gg_args.csv","","ggsurvfit",2
+"ggsurvfit","add_pvalue","location","yes","schema.yml: add_pvalue; gg_args.csv","","ggsurvfit",3
+"ggsurvfit","add_pvalue","caption","yes","schema.yml: add_pvalue; gg_args.csv","","ggsurvfit",3
+"ggsurvfit","add_pvalue","prepend_p","yes","schema.yml: add_pvalue; gg_args.csv","","ggsurvfit",3
+"ggsurvfit","add_pvalue","pvalue_fun","yes","schema.yml: add_pvalue; gg_args.csv","","ggsurvfit",3
+"ggsurvfit","add_pvalue","rho","yes","schema.yml: add_pvalue; gg_args.csv","","ggsurvfit",3
+"ggsurvfit","add_legend_title","title","yes","schema.yml: add_legend_title; gg_args.csv","","ggsurvfit",2
+"ggsurvfit","add_risktable_strata_symbol","symbol","yes","schema.yml: add_risktable_strata_symbol; gg_args.csv","","ggsurvfit",2
+"ggsurvfit","add_risktable_strata_symbol","face","yes","schema.yml: add_risktable_strata_symbol; gg_args.csv","","ggsurvfit",2
+"ggsurvfit","add_risktable_strata_symbol","vjust","yes","schema.yml: add_risktable_strata_symbol; gg_args.csv","","ggsurvfit",2
+"ggsurvfit","scale_ggsurvfit","x_scales","yes","schema.yml: scale_ggsurvfit; gg_args.csv","","ggsurvfit",3
+"ggsurvfit","scale_ggsurvfit","y_scales","yes","schema.yml: scale_ggsurvfit; gg_args.csv","","ggsurvfit",3
+"ggsurvfit","theme_ggsurvfit_default","","yes","schema.yml: theme_ggsurvfit_default","","ggsurvfit",2
+"ggsurvfit","theme_ggsurvfit_KMunicate","","yes","schema.yml: theme_ggsurvfit_KMunicate","","ggsurvfit",2
+"ggsurvfit","theme_risktable_default","axis.text.y.size","yes","schema.yml: theme_risktable_default; gg_args.csv","","ggsurvfit",2
+"ggsurvfit","theme_risktable_default","plot.title.size","yes","schema.yml: theme_risktable_default; gg_args.csv","","ggsurvfit",2
+"ggsurvfit","theme_risktable_boxed","axis.text.y.size","yes","schema.yml: theme_risktable_boxed; gg_args.csv","","ggsurvfit",2
+"ggsurvfit","theme_risktable_boxed","plot.title.size","yes","schema.yml: theme_risktable_boxed; gg_args.csv","","ggsurvfit",2
+"ggsurvfit","stat_stepribbon","mapping","yes","schema.yml: stat_stepribbon; gg_args.csv","","ggsurvfit",1
+"ggsurvfit","stat_stepribbon","data","yes","schema.yml: stat_stepribbon; gg_args.csv","","ggsurvfit",1
+"ggsurvfit","stat_stepribbon","geom","yes","schema.yml: stat_stepribbon; gg_args.csv","","ggsurvfit",1
+"ggsurvfit","stat_stepribbon","position","yes","schema.yml: stat_stepribbon; gg_args.csv","","ggsurvfit",1
+"ggsurvfit","stat_stepribbon","na.rm","yes","schema.yml: stat_stepribbon; gg_args.csv","","ggsurvfit",1
+"ggsurvfit","stat_stepribbon","show.legend","yes","schema.yml: stat_stepribbon; gg_args.csv","","ggsurvfit",1
+"ggsurvfit","stat_stepribbon","inherit.aes","yes","schema.yml: stat_stepribbon; gg_args.csv","","ggsurvfit",1
+"ggsurvfit","stat_stepribbon","direction","yes","schema.yml: stat_stepribbon; gg_args.csv","","ggsurvfit",1
+"ggsurvfit","stat_stepribbon","lineend","yes","schema.yml: stat_stepribbon; gg_args.csv","","ggsurvfit",1
+"ggsurvfit","stat_stepribbon","linejoin","yes","schema.yml: stat_stepribbon; gg_args.csv","","ggsurvfit",1
+"ggsurvfit","stat_stepribbon","linemitre","yes","schema.yml: stat_stepribbon; gg_args.csv","","ggsurvfit",1
+"ggsurvfit","stat_stepribbon","outline.type","yes","schema.yml: stat_stepribbon; gg_args.csv","","ggsurvfit",1
+"ggsurvfit","stat_stepribbon","orientation","yes","schema.yml: stat_stepribbon; gg_args.csv","","ggsurvfit",1
+"ggsurvfit","stat_stepribbon","yvars","yes","schema.yml: stat_stepribbon; gg_args.csv","","ggsurvfit",1
+"ggrepel","geom_text_repel","mapping","yes","schema.yml: geom_text_repel","","ggrepel",3
+"ggrepel","geom_text_repel","data","yes","schema.yml: geom_text_repel","","ggrepel",3
+"ggrepel","geom_text_repel","stat","yes","schema.yml: geom_text_repel; gg_args.csv","","ggrepel",3
+"ggrepel","geom_text_repel","position","yes","schema.yml: geom_text_repel; gg_args.csv","","ggrepel",3
+"ggrepel","geom_text_repel","parse","yes","schema.yml: geom_text_repel; gg_args.csv","","ggrepel",3
+"ggrepel","geom_text_repel","box.padding","yes","schema.yml: geom_text_repel; gg_args.csv","","ggrepel",3
+"ggrepel","geom_text_repel","point.padding","yes","schema.yml: geom_text_repel; gg_args.csv","","ggrepel",3
+"ggrepel","geom_text_repel","min.segment.length","yes","schema.yml: geom_text_repel; gg_args.csv","","ggrepel",3
+"ggrepel","geom_text_repel","arrow","yes","schema.yml: geom_text_repel; gg_args.csv","","ggrepel",3
+"ggrepel","geom_text_repel","force","yes","schema.yml: geom_text_repel; gg_args.csv","","ggrepel",3
+"ggrepel","geom_text_repel","force_pull","yes","schema.yml: geom_text_repel; gg_args.csv","","ggrepel",3
+"ggrepel","geom_text_repel","max.time","yes","schema.yml: geom_text_repel; gg_args.csv","","ggrepel",3
+"ggrepel","geom_text_repel","max.iter","yes","schema.yml: geom_text_repel; gg_args.csv","","ggrepel",3
+"ggrepel","geom_text_repel","max.overlaps","yes","schema.yml: geom_text_repel; gg_args.csv","","ggrepel",3
+"ggrepel","geom_text_repel","nudge_x","yes","schema.yml: geom_text_repel; gg_args.csv","","ggrepel",3
+"ggrepel","geom_text_repel","nudge_y","yes","schema.yml: geom_text_repel; gg_args.csv","","ggrepel",3
+"ggrepel","geom_text_repel","xlim","yes","schema.yml: geom_text_repel; gg_args.csv","","ggrepel",3
+"ggrepel","geom_text_repel","ylim","yes","schema.yml: geom_text_repel; gg_args.csv","","ggrepel",3
+"ggrepel","geom_text_repel","na.rm","yes","schema.yml: geom_text_repel; gg_args.csv","","ggrepel",3
+"ggrepel","geom_text_repel","show.legend","yes","schema.yml: geom_text_repel; gg_args.csv","","ggrepel",3
+"ggrepel","geom_text_repel","direction","yes","schema.yml: geom_text_repel","","ggrepel",3
+"ggrepel","geom_text_repel","seed","yes","schema.yml: geom_text_repel; gg_args.csv","","ggrepel",3
+"ggrepel","geom_text_repel","verbose","yes","schema.yml: geom_text_repel; gg_args.csv","","ggrepel",3
+"ggrepel","geom_text_repel","inherit.aes","yes","schema.yml: geom_text_repel; gg_args.csv","","ggrepel",3
+"ggrepel","geom_label_repel","mapping","yes","schema.yml: geom_label_repel","","ggrepel",2
+"ggrepel","geom_label_repel","data","yes","schema.yml: geom_label_repel","","ggrepel",2
+"ggrepel","geom_label_repel","stat","yes","schema.yml: geom_label_repel; gg_args.csv","","ggrepel",2
+"ggrepel","geom_label_repel","position","yes","schema.yml: geom_label_repel; gg_args.csv","","ggrepel",2
+"ggrepel","geom_label_repel","parse","yes","schema.yml: geom_label_repel; gg_args.csv","","ggrepel",2
+"ggrepel","geom_label_repel","box.padding","yes","schema.yml: geom_label_repel; gg_args.csv","","ggrepel",2
+"ggrepel","geom_label_repel","label.padding","yes","schema.yml: geom_label_repel; gg_args.csv","","ggrepel",2
+"ggrepel","geom_label_repel","point.padding","yes","schema.yml: geom_label_repel; gg_args.csv","","ggrepel",2
+"ggrepel","geom_label_repel","label.r","yes","schema.yml: geom_label_repel; gg_args.csv","","ggrepel",2
+"ggrepel","geom_label_repel","min.segment.length","yes","schema.yml: geom_label_repel; gg_args.csv","","ggrepel",2
+"ggrepel","geom_label_repel","arrow","yes","schema.yml: geom_label_repel; gg_args.csv","","ggrepel",2
+"ggrepel","geom_label_repel","force","yes","schema.yml: geom_label_repel; gg_args.csv","","ggrepel",2
+"ggrepel","geom_label_repel","force_pull","yes","schema.yml: geom_label_repel; gg_args.csv","","ggrepel",2
+"ggrepel","geom_label_repel","max.time","yes","schema.yml: geom_label_repel; gg_args.csv","","ggrepel",2
+"ggrepel","geom_label_repel","max.iter","yes","schema.yml: geom_label_repel; gg_args.csv","","ggrepel",2
+"ggrepel","geom_label_repel","max.overlaps","yes","schema.yml: geom_label_repel","","ggrepel",2
+"ggrepel","geom_label_repel","nudge_x","yes","schema.yml: geom_label_repel; gg_args.csv","","ggrepel",2
+"ggrepel","geom_label_repel","nudge_y","yes","schema.yml: geom_label_repel; gg_args.csv","","ggrepel",2
+"ggrepel","geom_label_repel","xlim","yes","schema.yml: geom_label_repel; gg_args.csv","","ggrepel",2
+"ggrepel","geom_label_repel","ylim","yes","schema.yml: geom_label_repel; gg_args.csv","","ggrepel",2
+"ggrepel","geom_label_repel","na.rm","yes","schema.yml: geom_label_repel; gg_args.csv","","ggrepel",2
+"ggrepel","geom_label_repel","show.legend","yes","schema.yml: geom_label_repel; gg_args.csv","","ggrepel",2
+"ggrepel","geom_label_repel","direction","yes","schema.yml: geom_label_repel","","ggrepel",2
+"ggrepel","geom_label_repel","seed","yes","schema.yml: geom_label_repel; gg_args.csv","","ggrepel",2
+"ggrepel","geom_label_repel","verbose","yes","schema.yml: geom_label_repel; gg_args.csv","","ggrepel",2
+"ggrepel","geom_label_repel","inherit.aes","yes","schema.yml: geom_label_repel; gg_args.csv","","ggrepel",2
+"ggrepel","position_nudge_repel","x","yes","schema.yml: position_nudge_repel; gg_args.csv","","ggrepel",1
+"ggrepel","position_nudge_repel","y","yes","schema.yml: position_nudge_repel; gg_args.csv","","ggrepel",1
+"ggh4x","facet_nested","rows","yes","schema.yml: facet_nested","","ggh4x",2
+"ggh4x","facet_nested","cols","yes","schema.yml: facet_nested","","ggh4x",2
+"ggh4x","facet_nested","scales","yes","schema.yml: facet_nested","","ggh4x",2
+"ggh4x","facet_nested","space","yes","schema.yml: facet_nested; gg_args.csv","","ggh4x",2
+"ggh4x","facet_nested","axes","yes","schema.yml: facet_nested; gg_args.csv","","ggh4x",2
+"ggh4x","facet_nested","remove_labels","yes","schema.yml: facet_nested; gg_args.csv","","ggh4x",2
+"ggh4x","facet_nested","independent","yes","schema.yml: facet_nested; gg_args.csv","","ggh4x",2
+"ggh4x","facet_nested","shrink","yes","schema.yml: facet_nested; gg_args.csv","","ggh4x",2
+"ggh4x","facet_nested","labeller","yes","schema.yml: facet_nested; gg_args.csv","","ggh4x",2
+"ggh4x","facet_nested","as.table","yes","schema.yml: facet_nested; gg_args.csv","","ggh4x",2
+"ggh4x","facet_nested","switch","yes","schema.yml: facet_nested; gg_args.csv","","ggh4x",2
+"ggh4x","facet_nested","drop","yes","schema.yml: facet_nested; gg_args.csv","","ggh4x",2
+"ggh4x","facet_nested","margins","yes","schema.yml: facet_nested; gg_args.csv","","ggh4x",2
+"ggh4x","facet_nested","nest_line","yes","schema.yml: facet_nested; gg_args.csv","","ggh4x",2
+"ggh4x","facet_nested","solo_line","yes","schema.yml: facet_nested; gg_args.csv","","ggh4x",2
+"ggh4x","facet_nested","resect","yes","schema.yml: facet_nested; gg_args.csv","","ggh4x",2
+"ggh4x","facet_nested","render_empty","yes","schema.yml: facet_nested; gg_args.csv","","ggh4x",2
+"ggh4x","facet_nested","strip","yes","schema.yml: facet_nested; gg_args.csv","","ggh4x",2
+"ggh4x","facet_nested","bleed","yes","schema.yml: facet_nested; gg_args.csv","","ggh4x",2
+"ggh4x","facet_nested_wrap","facets","yes","schema.yml: facet_nested_wrap","","ggh4x",2
+"ggh4x","facet_nested_wrap","nrow","yes","schema.yml: facet_nested_wrap; gg_args.csv","","ggh4x",2
+"ggh4x","facet_nested_wrap","ncol","yes","schema.yml: facet_nested_wrap; gg_args.csv","","ggh4x",2
+"ggh4x","facet_nested_wrap","scales","yes","schema.yml: facet_nested_wrap","","ggh4x",2
+"ggh4x","facet_nested_wrap","axes","yes","schema.yml: facet_nested_wrap; gg_args.csv","","ggh4x",2
+"ggh4x","facet_nested_wrap","remove_labels","yes","schema.yml: facet_nested_wrap; gg_args.csv","","ggh4x",2
+"ggh4x","facet_nested_wrap","shrink","yes","schema.yml: facet_nested_wrap; gg_args.csv","","ggh4x",2
+"ggh4x","facet_nested_wrap","labeller","yes","schema.yml: facet_nested_wrap; gg_args.csv","","ggh4x",2
+"ggh4x","facet_nested_wrap","as.table","yes","schema.yml: facet_nested_wrap; gg_args.csv","","ggh4x",2
+"ggh4x","facet_nested_wrap","drop","yes","schema.yml: facet_nested_wrap; gg_args.csv","","ggh4x",2
+"ggh4x","facet_nested_wrap","dir","yes","schema.yml: facet_nested_wrap; gg_args.csv","","ggh4x",2
+"ggh4x","facet_nested_wrap","strip.position","yes","schema.yml: facet_nested_wrap; gg_args.csv","","ggh4x",2
+"ggh4x","facet_nested_wrap","nest_line","yes","schema.yml: facet_nested_wrap; gg_args.csv","","ggh4x",2
+"ggh4x","facet_nested_wrap","solo_line","yes","schema.yml: facet_nested_wrap; gg_args.csv","","ggh4x",2
+"ggh4x","facet_nested_wrap","resect","yes","schema.yml: facet_nested_wrap; gg_args.csv","","ggh4x",2
+"ggh4x","facet_nested_wrap","trim_blank","yes","schema.yml: facet_nested_wrap; gg_args.csv","","ggh4x",2
+"ggh4x","facet_nested_wrap","strip","yes","schema.yml: facet_nested_wrap; gg_args.csv","","ggh4x",2
+"ggh4x","facet_nested_wrap","bleed","yes","schema.yml: facet_nested_wrap; gg_args.csv","","ggh4x",2
+"ggh4x","facet_grid2","rows","yes","schema.yml: facet_grid2; gg_args.csv","","ggh4x",2
+"ggh4x","facet_grid2","cols","yes","schema.yml: facet_grid2; gg_args.csv","","ggh4x",2
+"ggh4x","facet_grid2","scales","yes","schema.yml: facet_grid2; gg_args.csv","","ggh4x",2
+"ggh4x","facet_grid2","space","yes","schema.yml: facet_grid2; gg_args.csv","","ggh4x",2
+"ggh4x","facet_grid2","axes","yes","schema.yml: facet_grid2; gg_args.csv","","ggh4x",2
+"ggh4x","facet_grid2","remove_labels","yes","schema.yml: facet_grid2; gg_args.csv","","ggh4x",2
+"ggh4x","facet_grid2","independent","yes","schema.yml: facet_grid2; gg_args.csv","","ggh4x",2
+"ggh4x","facet_grid2","shrink","yes","schema.yml: facet_grid2; gg_args.csv","","ggh4x",2
+"ggh4x","facet_grid2","labeller","yes","schema.yml: facet_grid2; gg_args.csv","","ggh4x",2
+"ggh4x","facet_grid2","as.table","yes","schema.yml: facet_grid2; gg_args.csv","","ggh4x",2
+"ggh4x","facet_grid2","switch","yes","schema.yml: facet_grid2; gg_args.csv","","ggh4x",2
+"ggh4x","facet_grid2","drop","yes","schema.yml: facet_grid2; gg_args.csv","","ggh4x",2
+"ggh4x","facet_grid2","margins","yes","schema.yml: facet_grid2; gg_args.csv","","ggh4x",2
+"ggh4x","facet_grid2","render_empty","yes","schema.yml: facet_grid2; gg_args.csv","","ggh4x",2
+"ggh4x","facet_grid2","strip","yes","schema.yml: facet_grid2; gg_args.csv","","ggh4x",2
+"ggh4x","facet_wrap2","facets","yes","schema.yml: facet_wrap2; gg_args.csv","","ggh4x",2
+"ggh4x","facet_wrap2","nrow","yes","schema.yml: facet_wrap2; gg_args.csv","","ggh4x",2
+"ggh4x","facet_wrap2","ncol","yes","schema.yml: facet_wrap2; gg_args.csv","","ggh4x",2
+"ggh4x","facet_wrap2","scales","yes","schema.yml: facet_wrap2; gg_args.csv","","ggh4x",2
+"ggh4x","facet_wrap2","axes","yes","schema.yml: facet_wrap2; gg_args.csv","","ggh4x",2
+"ggh4x","facet_wrap2","remove_labels","yes","schema.yml: facet_wrap2; gg_args.csv","","ggh4x",2
+"ggh4x","facet_wrap2","shrink","yes","schema.yml: facet_wrap2; gg_args.csv","","ggh4x",2
+"ggh4x","facet_wrap2","labeller","yes","schema.yml: facet_wrap2; gg_args.csv","","ggh4x",2
+"ggh4x","facet_wrap2","as.table","yes","schema.yml: facet_wrap2; gg_args.csv","","ggh4x",2
+"ggh4x","facet_wrap2","drop","yes","schema.yml: facet_wrap2; gg_args.csv","","ggh4x",2
+"ggh4x","facet_wrap2","dir","yes","schema.yml: facet_wrap2; gg_args.csv","","ggh4x",2
+"ggh4x","facet_wrap2","strip.position","yes","schema.yml: facet_wrap2; gg_args.csv","","ggh4x",2
+"ggh4x","facet_wrap2","trim_blank","yes","schema.yml: facet_wrap2; gg_args.csv","","ggh4x",2
+"ggh4x","facet_wrap2","strip","yes","schema.yml: facet_wrap2; gg_args.csv","","ggh4x",2
+"ggh4x","facetted_pos_scales","x","yes","schema.yml: facetted_pos_scales","","ggh4x",2
+"ggh4x","facetted_pos_scales","y","yes","schema.yml: facetted_pos_scales","","ggh4x",2
+"ggh4x","force_panelsizes","rows","yes","schema.yml: force_panelsizes","","ggh4x",2
+"ggh4x","force_panelsizes","cols","yes","schema.yml: force_panelsizes","","ggh4x",2
+"ggh4x","force_panelsizes","respect","yes","schema.yml: force_panelsizes; gg_args.csv","","ggh4x",2
+"ggh4x","force_panelsizes","total_width","yes","schema.yml: force_panelsizes; gg_args.csv","","ggh4x",2
+"ggh4x","force_panelsizes","total_height","yes","schema.yml: force_panelsizes; gg_args.csv","","ggh4x",2
+"ggh4x","strip_nested","clip","yes","schema.yml: strip_nested; gg_args.csv","","ggh4x",2
+"ggh4x","strip_nested","bleed","yes","schema.yml: strip_nested; gg_args.csv","","ggh4x",2
+"ggh4x","strip_nested","text_x","yes","schema.yml: strip_nested; gg_args.csv","","ggh4x",2
+"ggh4x","strip_nested","text_y","yes","schema.yml: strip_nested; gg_args.csv","","ggh4x",2
+"ggh4x","strip_nested","background_x","yes","schema.yml: strip_nested; gg_args.csv","","ggh4x",2
+"ggh4x","strip_nested","background_y","yes","schema.yml: strip_nested; gg_args.csv","","ggh4x",2
+"ggh4x","strip_nested","by_layer_x","yes","schema.yml: strip_nested; gg_args.csv","","ggh4x",2
+"ggh4x","strip_nested","by_layer_y","yes","schema.yml: strip_nested; gg_args.csv","","ggh4x",2
+"ggh4x","strip_themed","clip","yes","schema.yml: strip_themed; gg_args.csv","","ggh4x",1
+"ggh4x","strip_themed","text_x","yes","schema.yml: strip_themed; gg_args.csv","","ggh4x",1
+"ggh4x","strip_themed","text_y","yes","schema.yml: strip_themed; gg_args.csv","","ggh4x",1
+"ggh4x","strip_themed","background_x","yes","schema.yml: strip_themed; gg_args.csv","","ggh4x",1
+"ggh4x","strip_themed","background_y","yes","schema.yml: strip_themed; gg_args.csv","","ggh4x",1
+"ggh4x","strip_themed","by_layer_x","yes","schema.yml: strip_themed; gg_args.csv","","ggh4x",1
+"ggh4x","strip_themed","by_layer_y","yes","schema.yml: strip_themed; gg_args.csv","","ggh4x",1
+"ggh4x","strip_vanilla","clip","yes","schema.yml: strip_vanilla; gg_args.csv","","ggh4x",1
+"ggh4x","elem_list_text","","yes","schema.yml: elem_list_text","","ggh4x",1
+"ggh4x","elem_list_rect","","yes","schema.yml: elem_list_rect","","ggh4x",1
+"ggtext","element_markdown","family","yes","schema.yml: element_markdown; gg_args.csv","","ggtext",3
+"ggtext","element_markdown","face","yes","schema.yml: element_markdown; gg_args.csv","","ggtext",3
+"ggtext","element_markdown","colour","yes","schema.yml: element_markdown; gg_args.csv","","ggtext",3
+"ggtext","element_markdown","fill","yes","schema.yml: element_markdown; gg_args.csv","","ggtext",3
+"ggtext","element_markdown","box.colour","yes","schema.yml: element_markdown; gg_args.csv","","ggtext",3
+"ggtext","element_markdown","linetype","yes","schema.yml: element_markdown; gg_args.csv","","ggtext",3
+"ggtext","element_markdown","linewidth","yes","schema.yml: element_markdown; gg_args.csv","","ggtext",3
+"ggtext","element_markdown","hjust","yes","schema.yml: element_markdown; gg_args.csv","","ggtext",3
+"ggtext","element_markdown","vjust","yes","schema.yml: element_markdown; gg_args.csv","","ggtext",3
+"ggtext","element_markdown","halign","yes","schema.yml: element_markdown; gg_args.csv","","ggtext",3
+"ggtext","element_markdown","valign","yes","schema.yml: element_markdown; gg_args.csv","","ggtext",3
+"ggtext","element_markdown","angle","yes","schema.yml: element_markdown; gg_args.csv","","ggtext",3
+"ggtext","element_markdown","lineheight","yes","schema.yml: element_markdown; gg_args.csv","","ggtext",3
+"ggtext","element_markdown","margin","yes","schema.yml: element_markdown; gg_args.csv","","ggtext",3
+"ggtext","element_markdown","padding","yes","schema.yml: element_markdown; gg_args.csv","","ggtext",3
+"ggtext","element_markdown","r","yes","schema.yml: element_markdown","","ggtext",3
+"ggtext","element_markdown","color","yes","schema.yml: element_markdown; gg_args.csv","","ggtext",3
+"ggtext","element_markdown","box.color","yes","schema.yml: element_markdown; gg_args.csv","","ggtext",3
+"ggtext","element_markdown","align_widths","yes","schema.yml: element_markdown; gg_args.csv","","ggtext",3
+"ggtext","element_markdown","align_heights","yes","schema.yml: element_markdown; gg_args.csv","","ggtext",3
+"ggtext","element_markdown","rotate_margins","yes","schema.yml: element_markdown; gg_args.csv","","ggtext",3
+"ggtext","element_markdown","debug","yes","schema.yml: element_markdown; gg_args.csv","","ggtext",3
+"ggtext","element_markdown","inherit.blank","yes","schema.yml: element_markdown; gg_args.csv","","ggtext",3
+"ggtext","element_textbox_simple","family","yes","schema.yml: element_textbox_simple; gg_args.csv","","ggtext",2
+"ggtext","element_textbox_simple","face","yes","schema.yml: element_textbox_simple; gg_args.csv","","ggtext",2
+"ggtext","element_textbox_simple","colour","yes","schema.yml: element_textbox_simple; gg_args.csv","","ggtext",2
+"ggtext","element_textbox_simple","fill","yes","schema.yml: element_textbox_simple; gg_args.csv","","ggtext",2
+"ggtext","element_textbox_simple","box.colour","yes","schema.yml: element_textbox_simple; gg_args.csv","","ggtext",2
+"ggtext","element_textbox_simple","linetype","yes","schema.yml: element_textbox_simple; gg_args.csv","","ggtext",2
+"ggtext","element_textbox_simple","linewidth","yes","schema.yml: element_textbox_simple; gg_args.csv","","ggtext",2
+"ggtext","element_textbox_simple","hjust","yes","schema.yml: element_textbox_simple; gg_args.csv","","ggtext",2
+"ggtext","element_textbox_simple","vjust","yes","schema.yml: element_textbox_simple; gg_args.csv","","ggtext",2
+"ggtext","element_textbox_simple","halign","yes","schema.yml: element_textbox_simple; gg_args.csv","","ggtext",2
+"ggtext","element_textbox_simple","valign","yes","schema.yml: element_textbox_simple; gg_args.csv","","ggtext",2
+"ggtext","element_textbox_simple","lineheight","yes","schema.yml: element_textbox_simple; gg_args.csv","","ggtext",2
+"ggtext","element_textbox_simple","margin","yes","schema.yml: element_textbox_simple; gg_args.csv","","ggtext",2
+"ggtext","element_textbox_simple","padding","yes","schema.yml: element_textbox_simple; gg_args.csv","","ggtext",2
+"ggtext","element_textbox_simple","width","yes","schema.yml: element_textbox_simple; gg_args.csv","","ggtext",2
+"ggtext","element_textbox_simple","height","yes","schema.yml: element_textbox_simple; gg_args.csv","","ggtext",2
+"ggtext","element_textbox_simple","minwidth","yes","schema.yml: element_textbox_simple; gg_args.csv","","ggtext",2
+"ggtext","element_textbox_simple","maxwidth","yes","schema.yml: element_textbox_simple; gg_args.csv","","ggtext",2
+"ggtext","element_textbox_simple","minheight","yes","schema.yml: element_textbox_simple; gg_args.csv","","ggtext",2
+"ggtext","element_textbox_simple","maxheight","yes","schema.yml: element_textbox_simple; gg_args.csv","","ggtext",2
+"ggtext","element_textbox_simple","r","yes","schema.yml: element_textbox_simple; gg_args.csv","","ggtext",2
+"ggtext","element_textbox_simple","orientation","yes","schema.yml: element_textbox_simple; gg_args.csv","","ggtext",2
+"ggtext","element_textbox_simple","color","yes","schema.yml: element_textbox_simple; gg_args.csv","","ggtext",2
+"ggtext","element_textbox_simple","box.color","yes","schema.yml: element_textbox_simple; gg_args.csv","","ggtext",2
+"ggtext","element_textbox_simple","debug","yes","schema.yml: element_textbox_simple; gg_args.csv","","ggtext",2
+"ggtext","element_textbox_simple","inherit.blank","yes","schema.yml: element_textbox_simple; gg_args.csv","","ggtext",2
+"ggtext","element_textbox","family","yes","schema.yml: element_textbox; gg_args.csv","","ggtext",1
+"ggtext","element_textbox","face","yes","schema.yml: element_textbox; gg_args.csv","","ggtext",1
+"ggtext","element_textbox","colour","yes","schema.yml: element_textbox; gg_args.csv","","ggtext",1
+"ggtext","element_textbox","fill","yes","schema.yml: element_textbox; gg_args.csv","","ggtext",1
+"ggtext","element_textbox","box.colour","yes","schema.yml: element_textbox; gg_args.csv","","ggtext",1
+"ggtext","element_textbox","linetype","yes","schema.yml: element_textbox; gg_args.csv","","ggtext",1
+"ggtext","element_textbox","linewidth","yes","schema.yml: element_textbox; gg_args.csv","","ggtext",1
+"ggtext","element_textbox","hjust","yes","schema.yml: element_textbox; gg_args.csv","","ggtext",1
+"ggtext","element_textbox","vjust","yes","schema.yml: element_textbox; gg_args.csv","","ggtext",1
+"ggtext","element_textbox","halign","yes","schema.yml: element_textbox; gg_args.csv","","ggtext",1
+"ggtext","element_textbox","valign","yes","schema.yml: element_textbox; gg_args.csv","","ggtext",1
+"ggtext","element_textbox","lineheight","yes","schema.yml: element_textbox; gg_args.csv","","ggtext",1
+"ggtext","element_textbox","margin","yes","schema.yml: element_textbox; gg_args.csv","","ggtext",1
+"ggtext","element_textbox","padding","yes","schema.yml: element_textbox; gg_args.csv","","ggtext",1
+"ggtext","element_textbox","width","yes","schema.yml: element_textbox; gg_args.csv","","ggtext",1
+"ggtext","element_textbox","height","yes","schema.yml: element_textbox; gg_args.csv","","ggtext",1
+"ggtext","element_textbox","minwidth","yes","schema.yml: element_textbox; gg_args.csv","","ggtext",1
+"ggtext","element_textbox","maxwidth","yes","schema.yml: element_textbox; gg_args.csv","","ggtext",1
+"ggtext","element_textbox","minheight","yes","schema.yml: element_textbox; gg_args.csv","","ggtext",1
+"ggtext","element_textbox","maxheight","yes","schema.yml: element_textbox; gg_args.csv","","ggtext",1
+"ggtext","element_textbox","r","yes","schema.yml: element_textbox","","ggtext",1
+"ggtext","element_textbox","orientation","yes","schema.yml: element_textbox; gg_args.csv","","ggtext",1
+"ggtext","element_textbox","color","yes","schema.yml: element_textbox; gg_args.csv","","ggtext",1
+"ggtext","element_textbox","box.color","yes","schema.yml: element_textbox; gg_args.csv","","ggtext",1
+"ggtext","element_textbox","debug","yes","schema.yml: element_textbox; gg_args.csv","","ggtext",1
+"ggtext","element_textbox","inherit.blank","yes","schema.yml: element_textbox; gg_args.csv","","ggtext",1
+"ggtext","geom_richtext","mapping","yes","schema.yml: geom_richtext","","ggtext",2
+"ggtext","geom_richtext","data","yes","schema.yml: geom_richtext","","ggtext",2
+"ggtext","geom_richtext","stat","yes","schema.yml: geom_richtext; gg_args.csv","","ggtext",2
+"ggtext","geom_richtext","position","yes","schema.yml: geom_richtext; gg_args.csv","","ggtext",2
+"ggtext","geom_richtext","nudge_x","yes","schema.yml: geom_richtext; gg_args.csv","","ggtext",2
+"ggtext","geom_richtext","nudge_y","yes","schema.yml: geom_richtext; gg_args.csv","","ggtext",2
+"ggtext","geom_richtext","label.padding","yes","schema.yml: geom_richtext; gg_args.csv","","ggtext",2
+"ggtext","geom_richtext","label.margin","yes","schema.yml: geom_richtext; gg_args.csv","","ggtext",2
+"ggtext","geom_richtext","label.r","yes","schema.yml: geom_richtext; gg_args.csv","","ggtext",2
+"ggtext","geom_richtext","na.rm","yes","schema.yml: geom_richtext; gg_args.csv","","ggtext",2
+"ggtext","geom_richtext","show.legend","yes","schema.yml: geom_richtext; gg_args.csv","","ggtext",2
+"ggtext","geom_richtext","inherit.aes","yes","schema.yml: geom_richtext; gg_args.csv","","ggtext",2
+"ggtext","geom_textbox","mapping","yes","schema.yml: geom_textbox; gg_args.csv","","ggtext",1
+"ggtext","geom_textbox","data","yes","schema.yml: geom_textbox; gg_args.csv","","ggtext",1
+"ggtext","geom_textbox","stat","yes","schema.yml: geom_textbox; gg_args.csv","","ggtext",1
+"ggtext","geom_textbox","position","yes","schema.yml: geom_textbox; gg_args.csv","","ggtext",1
+"ggtext","geom_textbox","nudge_x","yes","schema.yml: geom_textbox; gg_args.csv","","ggtext",1
+"ggtext","geom_textbox","nudge_y","yes","schema.yml: geom_textbox; gg_args.csv","","ggtext",1
+"ggtext","geom_textbox","box.padding","yes","schema.yml: geom_textbox; gg_args.csv","","ggtext",1
+"ggtext","geom_textbox","box.margin","yes","schema.yml: geom_textbox; gg_args.csv","","ggtext",1
+"ggtext","geom_textbox","box.r","yes","schema.yml: geom_textbox; gg_args.csv","","ggtext",1
+"ggtext","geom_textbox","width","yes","schema.yml: geom_textbox","","ggtext",1
+"ggtext","geom_textbox","minwidth","yes","schema.yml: geom_textbox; gg_args.csv","","ggtext",1
+"ggtext","geom_textbox","maxwidth","yes","schema.yml: geom_textbox; gg_args.csv","","ggtext",1
+"ggtext","geom_textbox","height","yes","schema.yml: geom_textbox","","ggtext",1
+"ggtext","geom_textbox","minheight","yes","schema.yml: geom_textbox; gg_args.csv","","ggtext",1
+"ggtext","geom_textbox","maxheight","yes","schema.yml: geom_textbox; gg_args.csv","","ggtext",1
+"ggtext","geom_textbox","na.rm","yes","schema.yml: geom_textbox; gg_args.csv","","ggtext",1
+"ggtext","geom_textbox","show.legend","yes","schema.yml: geom_textbox; gg_args.csv","","ggtext",1
+"ggtext","geom_textbox","inherit.aes","yes","schema.yml: geom_textbox; gg_args.csv","","ggtext",1
+"ggnewscale","new_scale_colour","","yes","schema.yml: new_scale_colour","","ggnewscale",2
+"ggnewscale","new_scale_fill","","yes","schema.yml: new_scale_fill","","ggnewscale",2
+"ggnewscale","new_scale","new_aes","yes","schema.yml: new_scale; gg_args.csv","","ggnewscale",1
+"patchwork","wrap_plots","ncol","yes","schema.yml: wrap_plots","","patchwork",3
+"patchwork","wrap_plots","nrow","yes","schema.yml: wrap_plots","","patchwork",3
+"patchwork","wrap_plots","byrow","yes","schema.yml: wrap_plots; gg_args.csv","","patchwork",3
+"patchwork","wrap_plots","widths","yes","schema.yml: wrap_plots","","patchwork",3
+"patchwork","wrap_plots","heights","yes","schema.yml: wrap_plots","","patchwork",3
+"patchwork","wrap_plots","guides","yes","schema.yml: wrap_plots","","patchwork",3
+"patchwork","wrap_plots","tag_level","yes","schema.yml: wrap_plots; gg_args.csv","","patchwork",3
+"patchwork","wrap_plots","design","yes","schema.yml: wrap_plots; gg_args.csv","","patchwork",3
+"patchwork","wrap_plots","axes","yes","schema.yml: wrap_plots; gg_args.csv","","patchwork",3
+"patchwork","wrap_plots","axis_titles","yes","schema.yml: wrap_plots; gg_args.csv","","patchwork",3
+"patchwork","plot_layout","ncol","yes","schema.yml: plot_layout; gg_args.csv","","patchwork",3
+"patchwork","plot_layout","nrow","yes","schema.yml: plot_layout; gg_args.csv","","patchwork",3
+"patchwork","plot_layout","byrow","yes","schema.yml: plot_layout; gg_args.csv","","patchwork",3
+"patchwork","plot_layout","widths","yes","schema.yml: plot_layout; gg_args.csv","","patchwork",3
+"patchwork","plot_layout","heights","yes","schema.yml: plot_layout; gg_args.csv","","patchwork",3
+"patchwork","plot_layout","guides","yes","schema.yml: plot_layout; gg_args.csv","","patchwork",3
+"patchwork","plot_layout","tag_level","yes","schema.yml: plot_layout; gg_args.csv","","patchwork",3
+"patchwork","plot_layout","design","yes","schema.yml: plot_layout; gg_args.csv","","patchwork",3
+"patchwork","plot_layout","axes","yes","schema.yml: plot_layout; gg_args.csv","","patchwork",3
+"patchwork","plot_layout","axis_titles","yes","schema.yml: plot_layout; gg_args.csv","","patchwork",3
+"patchwork","plot_annotation","title","yes","schema.yml: plot_annotation; gg_args.csv","","patchwork",3
+"patchwork","plot_annotation","subtitle","yes","schema.yml: plot_annotation; gg_args.csv","","patchwork",3
+"patchwork","plot_annotation","caption","yes","schema.yml: plot_annotation; gg_args.csv","","patchwork",3
+"patchwork","plot_annotation","tag_levels","yes","schema.yml: plot_annotation; gg_args.csv","","patchwork",3
+"patchwork","plot_annotation","tag_prefix","yes","schema.yml: plot_annotation; gg_args.csv","","patchwork",3
+"patchwork","plot_annotation","tag_suffix","yes","schema.yml: plot_annotation; gg_args.csv","","patchwork",3
+"patchwork","plot_annotation","tag_sep","yes","schema.yml: plot_annotation; gg_args.csv","","patchwork",3
+"patchwork","plot_annotation","theme","yes","schema.yml: plot_annotation; gg_args.csv","","patchwork",3
+"patchwork","plot_spacer","","yes","schema.yml: plot_spacer","","patchwork",2
+"patchwork","wrap_elements","panel","yes","schema.yml: wrap_elements; gg_args.csv","","patchwork",2
+"patchwork","wrap_elements","plot","yes","schema.yml: wrap_elements; gg_args.csv","","patchwork",2
+"patchwork","wrap_elements","full","yes","schema.yml: wrap_elements; gg_args.csv","","patchwork",2
+"patchwork","wrap_elements","clip","yes","schema.yml: wrap_elements; gg_args.csv","","patchwork",2
+"patchwork","wrap_elements","ignore_tag","yes","schema.yml: wrap_elements; gg_args.csv","","patchwork",2
+"patchwork","inset_element","p","yes","schema.yml: inset_element; gg_args.csv","","patchwork",1
+"patchwork","inset_element","left","yes","schema.yml: inset_element; gg_args.csv","","patchwork",1
+"patchwork","inset_element","bottom","yes","schema.yml: inset_element; gg_args.csv","","patchwork",1
+"patchwork","inset_element","right","yes","schema.yml: inset_element; gg_args.csv","","patchwork",1
+"patchwork","inset_element","top","yes","schema.yml: inset_element; gg_args.csv","","patchwork",1
+"patchwork","inset_element","align_to","yes","schema.yml: inset_element; gg_args.csv","","patchwork",1
+"patchwork","inset_element","on_top","yes","schema.yml: inset_element; gg_args.csv","","patchwork",1
+"patchwork","inset_element","clip","yes","schema.yml: inset_element; gg_args.csv","","patchwork",1
+"patchwork","inset_element","ignore_tag","yes","schema.yml: inset_element; gg_args.csv","","patchwork",1
+"patchwork","guide_area","","yes","schema.yml: guide_area","","patchwork",1
+"patchwork","area","t","yes","schema.yml: area; gg_args.csv","","patchwork",1
+"patchwork","area","l","yes","schema.yml: area; gg_args.csv","","patchwork",1
+"patchwork","area","b","yes","schema.yml: area; gg_args.csv","","patchwork",1
+"patchwork","area","r","yes","schema.yml: area; gg_args.csv","","patchwork",1
+"patchwork","free","type","yes","schema.yml: free; gg_args.csv","","patchwork",1
+"patchwork","free","side","yes","schema.yml: free; gg_args.csv","","patchwork",1

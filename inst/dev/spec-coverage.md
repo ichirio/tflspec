@@ -186,9 +186,69 @@ makes them from `whisker.colour` and the like, and given too they clash.)
 100% is this measure's ceiling, not ggplot2's: every argument in the scope
 has a card and a type, which says the GUI shows it and the check types its
 value; the tests run the code of a sample of them (test-fig-ggplot2.R).
-Next: the extension packages (ggsurvfit, ggh4x, ggrepel, ggtext,
-ggnewscale, patchwork), and the scope's edge (geom_sf, geom_hex, the
-rarer stat_*()).
+The extension packages are measured apart (below).  Next: the scope's
+edge (geom_sf, geom_hex, the rarer stat_*()).
+
+### The extension packages (ggsurvfit, ggrepel, ggh4x, ggtext, ggnewscale, patchwork)
+
+The same measure, the same file (`package` says which), over the
+functions of a plot of the extension packages tflspec suggests: 46
+functions, 351 arguments (ggsurvfit 1.2.1, ggrepel 0.9.8, ggh4x 0.3.1,
+ggtext 0.2.0, ggnewscale 0.5.2, patchwork 1.3.2).  Weights: 3 for a KM
+plot's (ggsurvfit(), add_risktable(), add_censor_mark(),
+add_confidence_interval(), add_pvalue(), scale_ggsurvfit()), a label that
+avoids overlaps (geom_text_repel()), markdown text (element_markdown())
+and patchwork's arrangement (wrap_plots(), plot_layout(),
+plot_annotation()); 2 sometimes; 1 rarely.  A function with no card is
+named `pkg::fn` in a SPEC (`ggh4x::facet_manual`).
+
+| Package | 2026-10-30 before | 2026-10-30 after |
+|---|---:|---:|
+| **extensions, weighted** | **58.9%** (106 yes / 240 partial / 5 no) | **100.0%** (351 yes) |
+| ggsurvfit | 52.8% | 100.0% |
+| ggrepel | 69.6% | 100.0% |
+| ggh4x | 62.2% | 100.0% |
+| ggtext | 77.0% | 100.0% |
+| ggnewscale | 90.0% | 100.0% |
+| patchwork | 45.6% | 100.0% |
+
+ggplot2 itself stays at 100.0% (2303 arguments).
+
+Added in this run:
+
+- An extension's function without a card is its kind's, by `pkg::fn`
+  (`.schema_ext_kind()`): ggh4x's facets, strips and element lists,
+  ggtext's elements and geoms, ggsurvfit's `add_*()`, patchwork's
+  arrangement; before, `ggh4x::facet_grid2` was checked by its formals
+  only and `patchwork::plot_spacer()` was an error ("neither the schema
+  nor its package has").
+- Cards for 26 more functions: ggsurvfit's `add_legend_title()`,
+  `add_risktable_strata_symbol()`, `stat_stepribbon()`,
+  `scale_ggsurvfit()`, `theme_ggsurvfit_default()` / `_KMunicate()`,
+  `theme_risktable_default()` / `_boxed()`; ggrepel's
+  `position_nudge_repel()`; ggh4x's `facet_grid2()`, `facet_wrap2()`,
+  `force_panelsizes()`, `strip_nested()` / `_themed()` / `_vanilla()`,
+  `elem_list_text()` / `_rect()`; ggtext's `element_textbox()`,
+  `geom_textbox()`; ggnewscale's `new_scale()`; patchwork's
+  `plot_spacer()`, `wrap_elements()`, `inset_element()`, `guide_area()`,
+  `area()`, `free()`.
+- Typed by kind (`inst/fig/gg_args.csv`, 123 rows, new kinds `plot`,
+  `ggsurvfit_layer`, `compose`): the risk table's `risktable_stats`,
+  `stats_label`, `risktable_group`, `risktable_height`, `combine_groups`,
+  `theme`; `add_pvalue()`'s `caption`, `location`, `rho`, `pvalue_fun`;
+  `add_quantile()`'s `y_value` / `x_value`; ggrepel's `box.padding`,
+  `point.padding`, `min.segment.length`, `force`, `max.overlaps`, `seed`
+  ...; ggh4x's `independent`, `remove_labels`, `strip`, `nest_line`,
+  `bleed`, `render_empty`; ggtext's `halign`, `padding`, `box.colour`,
+  `width`, `orientation`; patchwork's `design`, `guides`, `axes`,
+  `tag_levels`, `inset_element()`'s place and plot (an object by name).
+  A card's shown `...` arguments are typed too (add_quantile's
+  `linetype`, add_censor_mark's `shape`).
+- `x_scales`, `y_scales` and `stats_label` are written `list(...)`.
+- Fixes: ggrepel's `direction` is `both|y|x` (it was typed as
+  geom_step's `hv|vh|mid`, so `direction: y` was an error); a ggsurvfit
+  theme or `stat_stepribbon()` on a plain ggplot attaches ggsurvfit, a
+  patchwork function inside a plot attaches patchwork.
 
 What made the difference, round 1:
 

@@ -161,7 +161,8 @@ tfl_plot <- function(name, items = list(), from = "own") {
 
 # the arguments R takes as a list, not a vector: a map of the spec is
 # written list(...) and read back from it
-.fig_list_args <- c("fun.args", "method.args", "args", "dparams", "override.aes")
+.fig_list_args <- c("fun.args", "method.args", "args", "dparams", "override.aes",
+                    "x_scales", "y_scales", "stats_label")
 
 # a function as the code calls it: bare for the packages the figure's
 # program attaches (ggplot2, ggsurvfit, patchwork) and tflspec's own,
@@ -357,7 +358,11 @@ tfl_plot <- function(name, items = list(), from = "own") {
         terms <- c(terms, .fig_term_text(.fig_item_lang(it)))
         pk <- if (grepl("::", it$fn, fixed = TRUE)) sub("::.*$", "", it$fn) else .fig_fn_package(fn)
         if (!is.null(pk) && !pk %in% .fig_attached) needs <- c(needs, pk)
-        if (fn %in% c("ggsurvfit", "ggcuminc") || startsWith(fn, "add_")) libs <- c(libs, "ggsurvfit")
+        if (fn %in% c("ggsurvfit", "ggcuminc") || startsWith(fn, "add_") || identical(pk, "ggsurvfit")) {
+          libs <- c(libs, "ggsurvfit")
+        }
+        # patchwork's inside one plot (p + inset_element(...))
+        if (identical(pk, "patchwork")) libs <- c(libs, "patchwork")
       }
       lines <- .fig_plus_chain(target, terms)
     }

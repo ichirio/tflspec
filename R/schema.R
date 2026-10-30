@@ -48,7 +48,11 @@
 #' uses (the geoms and the stats -- those with no geom of their own and
 #' those with one --, scales, coordinates, complete themes and `theme()`,
 #' elements, guides, positions); any other function of a plot `ggplot2`
-#' exports (`scale_shape_identity`, `guide_custom`) is its formals.  The
+#' exports (`scale_shape_identity`, `guide_custom`) is its formals.  So
+#' are the extension packages' (ggsurvfit's `add_risktable()` and themes,
+#' ggrepel, ggh4x's facets and strips, ggtext's elements, ggnewscale,
+#' patchwork's arrangement): those a clinical figure uses have a card, any
+#' other of a plot is named `pkg::fn` (`ggh4x::facet_manual`).  The
 #' arguments the functions of one kind share -- a layer's `stat`,
 #' `position`, `fun.data`, `pad`; a scale's `name`, `breaks`, `labels`,
 #' `sec.axis`; `theme()`'s settings, each its element -- are typed and
@@ -111,7 +115,9 @@ tfl_schema <- function(fn = NULL) {
     (if (grepl("^(geom|stat)_", nm)) .schema_ggplot_entry(fn)) %||%
     # any other function of a plot ggplot2 exports (scale_colour_brewer,
     # theme_bw, guide_axis): by its formals (R/spec_figure.R)
-    (if (!grepl("::", fn, fixed = TRUE) || startsWith(fn, "ggplot2::")) .schema_gg_entry(nm))
+    (if (!grepl("::", fn, fixed = TRUE) || startsWith(fn, "ggplot2::")) .schema_gg_entry(nm)
+     # one of an extension's (ggh4x::facet_grid2, patchwork::inset_element)
+     else .schema_gg_entry(nm, sub("::.*$", "", fn)))
   if (is.null(ent)) return(NULL)
   # a figure's function: the arguments its kind shares, typed
   if (!is.null(ent$figure)) ent <- .schema_fig_common(ent, nm)

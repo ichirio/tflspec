@@ -265,19 +265,49 @@
 # (no rank, no label); its arguments are its formals and, by its kind,
 # the shared ones it takes.  NULL for a name ggplot2 does not export, or
 # that is no function of a plot (ggsave), or that rtfreporter has too.
-.schema_gg_entry <- function(nm) {
-  if (!requireNamespace("ggplot2", quietly = TRUE) || !nm %in% getNamespaceExports("ggplot2")) {
+# `pkg`: an extension package the figure may call (ggh4x::facet_grid2,
+# patchwork::inset_element), its functions of a plot by the same kinds
+# and its own (.schema_ext_kind()).
+.schema_gg_entry <- function(nm, pkg = "ggplot2") {
+  if (!requireNamespace(pkg, quietly = TRUE) || !nm %in% getNamespaceExports(pkg)) {
     return(NULL)
   }
   if (requireNamespace("rtfreporter", quietly = TRUE) &&
       nm %in% getNamespaceExports("rtfreporter")) {
     return(NULL)
   }
-  kind <- .schema_gg_kind(nm)
+  kind <- if (identical(pkg, "ggplot2")) .schema_gg_kind(nm) else .schema_ext_kind(nm, pkg)
   if (is.na(kind)) return(NULL)
-  if (identical(kind, "layer") && grepl("^(geom|stat)_", nm)) return(.schema_ggplot_entry(nm))
-  list(package = "ggplot2", figure = kind,
-       description = sprintf("ggplot2's %s(), by its own arguments.", nm), args = list())
+  if (identical(kind, "layer") && grepl("^(geom|stat)_", nm)) {
+    return(.schema_ggplot_entry(if (identical(pkg, "ggplot2")) nm else paste0(pkg, "::", nm)))
+  }
+  list(package = pkg, figure = kind,
+       description = sprintf("%s's %s(), by its own arguments.", pkg, nm), args = list())
+}
+
+# the extension packages a figure may call a function of by pkg::fn
+.schema_ext_pkgs <- c("ggsurvfit", "ggrepel", "ggh4x", "ggtext", "ggnewscale", "patchwork")
+
+# the kind of an extension's function: ggplot2's by its prefix, and the
+# package's own (ggsurvfit's add_*() on a ggsurvfit plot, patchwork's
+# arrangement, ggnewscale's new scale between layers, ggh4x's strips and
+# element lists as elements, its panel sizes as a facet's)
+.schema_ext_kind <- function(nm, pkg) {
+  if (!pkg %in% .schema_ext_pkgs) return(NA_character_)
+  if (identical(pkg, "ggsurvfit") && startsWith(nm, "add_")) return("ggsurvfit_layer")
+  if (identical(pkg, "patchwork") &&
+      nm %in% c("wrap_plots", "plot_layout", "plot_annotation", "plot_spacer", "wrap_elements",
+                "inset_element", "guide_area", "area", "free", "wrap_table", "wrap_ggplot_grob")) {
+    return("compose")
+  }
+  if (identical(pkg, "ggnewscale") && startsWith(nm, "new_scale")) return("layer")
+  if (identical(pkg, "ggh4x")) {
+    if (startsWith(nm, "strip_") || startsWith(nm, "elem_list_")) return("element")
+    if (nm %in% c("force_panelsizes", "facetted_pos_scales")) return("facet")
+  }
+  if (identical(pkg, "ggtext") && startsWith(nm, "element_")) return("element")
+  if (nm %in% .schema_gg_helpers) return(NA_character_)
+  .schema_gg_kind(nm)
 }
 
 # The arguments a function takes by name: its formals, and a scale's
@@ -329,6 +359,9 @@
   kind <- ent$figure
   if (is.null(kind)) return(ent)
   takes <- unique(c(.schema_gg_takes(nm, ent$package %||% "ggplot2"), names(ent$args), extra))
+  # what a card shows of its `...` (add_quantile's linetype, passed on to
+  # its layer)
+  if (!is.null(ent$dots)) takes <- unique(c(takes, unlist(ent$visible)))
   g <- .fig_gg_args()
   g <- g[g$kind == kind & g$arg %in% takes, , drop = FALSE]
   for (i in seq_len(nrow(g))) {

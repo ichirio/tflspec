@@ -32,7 +32,11 @@ A figure's functions: the file has a card for those a clinical figure
 uses (the geoms and the stats -- those with no geom of their own and
 those with one --, scales, coordinates, complete themes and \code{theme()},
 elements, guides, positions); any other function of a plot \code{ggplot2}
-exports (\code{scale_shape_identity}, \code{guide_custom}) is its formals.  The
+exports (\code{scale_shape_identity}, \code{guide_custom}) is its formals.  So
+are the extension packages' (ggsurvfit's \code{add_risktable()} and themes,
+ggrepel, ggh4x's facets and strips, ggtext's elements, ggnewscale,
+patchwork's arrangement): those a clinical figure uses have a card, any
+other of a plot is named \code{pkg::fn} (\code{ggh4x::facet_manual}).  The
 arguments the functions of one kind share -- a layer's \code{stat},
 \code{position}, \code{fun.data}, \code{pad}; a scale's \code{name}, \code{breaks}, \code{labels},
 \code{sec.axis}; \code{theme()}'s settings, each its element -- are typed and

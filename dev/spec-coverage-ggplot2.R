@@ -17,7 +17,10 @@
 # A function's coverage is its arguments' mean (yes 1, partial 0.5); the
 # percentage is the functions' mean weighted by their use in clinical
 # figures (3 KM / forest / waterfall / swimmer / box / mean +/- SE / bar /
-# scatter / heat map / CDF, 2 sometimes, 1 rarely).
+# scatter / heat map / CDF, 2 sometimes, 1 rarely).  The extension
+# packages tflspec suggests (ext_scope: ggsurvfit, ggrepel, ggh4x, ggtext,
+# ggnewscale, patchwork) are measured the same way and printed apart; the
+# csv's `package` says which.
 
 suppressPackageStartupMessages({
   library(tflspec)
@@ -77,6 +80,25 @@ scope <- list(
                position_nudge = 2, position_stack = 2, position_fill = 2, position_identity = 1)
 )
 
+# the extension packages tflspec suggests: a function of a plot each, by
+# the same weights (ggsurvfit's KM curves 3; patchwork's arrangement 3)
+ext_scope <- list(
+  ggsurvfit = c(ggsurvfit = 3, ggcuminc = 2, add_risktable = 3, add_censor_mark = 3,
+                add_confidence_interval = 3, add_quantile = 2, add_pvalue = 3, add_legend_title = 2,
+                add_risktable_strata_symbol = 2, scale_ggsurvfit = 3, theme_ggsurvfit_default = 2,
+                theme_ggsurvfit_KMunicate = 2, theme_risktable_default = 2, theme_risktable_boxed = 2,
+                stat_stepribbon = 1),
+  ggrepel = c(geom_text_repel = 3, geom_label_repel = 2, position_nudge_repel = 1),
+  ggh4x = c(facet_nested = 2, facet_nested_wrap = 2, facet_grid2 = 2, facet_wrap2 = 2,
+            facetted_pos_scales = 2, force_panelsizes = 2, strip_nested = 2, strip_themed = 1,
+            strip_vanilla = 1, elem_list_text = 1, elem_list_rect = 1),
+  ggtext = c(element_markdown = 3, element_textbox_simple = 2, element_textbox = 1,
+             geom_richtext = 2, geom_textbox = 1),
+  ggnewscale = c(new_scale_colour = 2, new_scale_fill = 2, new_scale = 1),
+  patchwork = c(wrap_plots = 3, plot_layout = 3, plot_annotation = 3, plot_spacer = 2,
+                wrap_elements = 2, inset_element = 1, guide_area = 1, area = 1, free = 1)
+)
+
 # arguments no one writes in a SPEC: deprecated, internal
 drop_args <- c("...", "fun.y", "fun.ymin", "fun.ymax", "flipped_aes", "super", "call", "scale_name",
                "trans", "size", "fatten", "draw_quantiles", "legend.text.align", "legend.title.align",
@@ -84,18 +106,23 @@ drop_args <- c("...", "fun.y", "fun.ymin", "fun.ymax", "flipped_aes", "super", "
                # a geom's parameters its constructor makes from the per-part
                # arguments (geom_boxplot(whisker.colour =) -> whisker_gp)
                "box_gp", "median_gp", "middle_gp", "whisker_gp", "staple_gp", "outlier_gp",
-               "quantile_gp")
+               "quantile_gp",
+               # ggrepel's geom parameter its layer fills itself
+               "panel_scales")
 
-layer_args <- function(fn) {
-  f <- getExportedValue("ggplot2", fn)
+layer_args <- function(fn, pkg = "ggplot2") {
+  f <- getExportedValue(pkg, fn)
   l <- tryCatch(suppressWarnings(suppressMessages(f())), error = function(e) NULL)
   a <- names(formals(f))
   if (inherits(l, "Layer")) a <- c(a, l$geom$parameters(TRUE), l$stat$parameters(TRUE))
   setdiff(unique(a), c(drop_args, "mapping", "data"))
 }
-fn_args <- function(fn) {
-  if (grepl("^(geom|stat)_", fn)) return(c("mapping", "data", layer_args(fn)))
-  a <- names(formals(getExportedValue("ggplot2", fn)))
+fn_args <- function(fn, pkg = "ggplot2") {
+  if (grepl("^(geom|stat)_", fn)) return(c("mapping", "data", layer_args(fn, pkg)))
+  a <- names(formals(getExportedValue(pkg, fn)))
+  # patchwork::free(x): x is the plot freed, as a geom's data
+  if (identical(fn, "free")) a <- setdiff(a, "x")
+  if (!identical(pkg, "ggplot2")) return(setdiff(unique(a), c(drop_args, "data", "mapping")))
   if (identical(fn, "labs")) a <- c(a, "x", "y", "colour", "fill", "shape", "linetype")
   if (startsWith(fn, "scale_") && "..." %in% a) {
     sc <- tryCatch(suppressWarnings(suppressMessages(getExportedValue("ggplot2", fn)())), error = function(e) NULL)
@@ -111,7 +138,7 @@ fn_args <- function(fn) {
 file_entries <- get(".schema_all", ns)(figure = FALSE)
 gg_args <- tryCatch(get(".fig_gg_args", ns)(), error = function(e) NULL)
 
-status_of <- function(fn, arg, base_args = list()) {
+status_of <- function(fn, arg, base_args = list(), card_name = fn) {
   args <- base_args
   if (nzchar(arg)) args[[arg]] <- tfl_r("NULL")
   p <- tryCatch(tfl_schema_check(tfl_item(fn, args)), error = function(e) {
@@ -119,7 +146,7 @@ status_of <- function(fn, arg, base_args = list()) {
   })
   unknown <- grepl("no argument|neither the schema|no ggplot2 layer|no parameter", p$message)
   if (any(unknown)) return(list(status = "no", where = "", note = p$message[unknown][1L]))
-  card <- file_entries[[fn]]
+  card <- file_entries[[card_name]]
   has_card <- !is.null(card$figure) && !is.null(card$rank)
   ent <- tryCatch(tfl_schema(fn), error = function(e) NULL)
   a <- if (nzchar(arg)) ent$args[[arg]]
@@ -131,16 +158,16 @@ status_of <- function(fn, arg, base_args = list()) {
   typed <- !nzchar(arg) || !is.null(a$label) || !is.null(card$args[[arg]]$type) ||
     (identical(arg, "mapping") && !is.null(card$aes))
   from_csv <- nzchar(arg) && !is.null(gg_args) && arg %in% gg_args$arg && is.null(card$args[[arg]])
-  where <- if (has_card) paste0("schema.yml: ", fn) else "formals (no card)"
+  where <- if (has_card) paste0("schema.yml: ", card_name) else "formals (no card)"
   if (nzchar(arg) && typed && from_csv) where <- paste0(where, "; gg_args.csv")
   st <- if (has_card && typed) "yes" else "partial"
   list(status = st, where = where, note = "")
 }
 
 rows <- list()
-add <- function(group, fn, arg, weight, s, note = "") {
+add <- function(group, fn, arg, weight, s, note = "", package = "ggplot2") {
   rows[[length(rows) + 1L]] <<- data.frame(
-    package = "ggplot2", group = group, `function` = fn, argument = arg, weight = weight,
+    package = package, group = group, `function` = fn, argument = arg, weight = weight,
     covered = s$status, where = s$where, note = if (nzchar(s$note)) s$note else note,
     check.names = FALSE, stringsAsFactors = FALSE)
 }
@@ -163,6 +190,18 @@ for (g in names(scope)) {
     for (x in a) add(g, key, x, w[[key]], status_of(key, x))
   }
 }
+for (pkg in names(ext_scope)) {
+  if (!requireNamespace(pkg, quietly = TRUE)) next
+  w <- ext_scope[[pkg]]
+  for (key in names(w)) {
+    # a function with a card is named bare (its card says the package),
+    # any other pkg::fn
+    item_fn <- if (!is.null(file_entries[[key]]$figure)) key else paste0(pkg, "::", key)
+    a <- fn_args(key, pkg)
+    if (!length(a)) a <- ""
+    for (x in a) add(pkg, key, x, w[[key]], status_of(item_fn, x, card_name = key), package = pkg)
+  }
+}
 cov <- do.call(rbind, rows)
 cov$score <- c(yes = 1, partial = 0.5, no = 0)[cov$covered]
 
@@ -170,6 +209,9 @@ pct <- function(d) {
   f <- stats::aggregate(score ~ `function` + weight, data = d, FUN = mean)
   round(100 * sum(f$score * f$weight) / sum(f$weight), 1)
 }
+ext <- cov[cov$package != "ggplot2", , drop = FALSE]
+cov_all <- cov
+cov <- cov[cov$package == "ggplot2", , drop = FALSE]
 main <- cov[cov$group != "stat", , drop = FALSE]
 cat(sprintf("ggplot2 (geoms with their stats, scales, coords, themes, facets, guides, labs, positions): %.1f%%\n",
             pct(main)))
@@ -177,6 +219,14 @@ cat(sprintf("stat_*(): %.1f%%\n", pct(cov[cov$group == "stat", , drop = FALSE]))
 for (g in names(scope)) cat(sprintf("  %-9s %5.1f%%\n", g, pct(cov[cov$group == g, , drop = FALSE])))
 cat("arguments:", nrow(cov), " yes:", sum(cov$covered == "yes"), " partial:", sum(cov$covered == "partial"),
     " no:", sum(cov$covered == "no"), "\n")
+
+if (nrow(ext)) {
+  cat(sprintf("extensions: %.1f%%\n", pct(ext)))
+  for (pkg in unique(ext$package)) cat(sprintf("  %-10s %5.1f%%\n", pkg, pct(ext[ext$package == pkg, ])))
+  cat("arguments:", nrow(ext), " yes:", sum(ext$covered == "yes"), " partial:",
+      sum(ext$covered == "partial"), " no:", sum(ext$covered == "no"), "\n")
+}
+cov <- cov_all
 
 out <- commandArgs(TRUE)[1L]
 if (!is.na(out)) {

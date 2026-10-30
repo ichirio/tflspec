@@ -2438,11 +2438,12 @@ geom_text_repel:
   stage: mapping
   label: {en: "Text that avoids overlaps", ja: "重ならない文字"}
   description: "Labels pushed apart (ggrepel)."
-  aes: {x: {required: true}, y: {required: true}, label: {required: true}, colour: {}}
+  aes: {x: {required: true}, "y": {required: true}, label: {required: true}, colour: {}}
   visible: [mapping, size]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
     data: {type: object, label: {en: Data, ja: データ}}
+    direction: {type: "enum[both|y|x]", label: {en: Moved along, ja: 動かす向き}}
 
 geom_sina:
   package: ggforce
@@ -2549,6 +2550,25 @@ add_pvalue:
   stage: mapping
   label: {en: p-value, ja: p 値}
   visible: [location, caption]
+  dots: {style: named, type: "string|number|logical|list<number|string>|call|r", description: "Passed on to the layer (colour, linewidth, alpha ...)."}
+
+add_legend_title:
+  package: ggsurvfit
+  figure: ggsurvfit_layer
+  rank: 255
+  stage: mapping
+  label: {en: Legend title, ja: 凡例のタイトル}
+  description: "The legend's title: the strata's variable, or the text given."
+  visible: [title]
+
+add_risktable_strata_symbol:
+  package: ggsurvfit
+  figure: ggsurvfit_layer
+  rank: 256
+  stage: mapping
+  label: {en: Group symbols in the risk table, ja: リスク表の群の記号}
+  description: "The risk table's group names as a coloured symbol each (after add_risktable)."
+  visible: [symbol, size]
   dots: {style: named, type: "string|number|logical|list<number|string>|call|r", description: "Passed on to the layer (colour, linewidth, alpha ...)."}
 
 # -- the plot's settings --
@@ -3912,6 +3932,7 @@ geom_label_repel:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
     data: {type: object, label: {en: Data, ja: データ}}
     max.overlaps: {type: number, label: {en: Overlaps allowed, ja: 許す重なりの数}}
+    direction: {type: "enum[both|y|x]", label: {en: Moved along, ja: 動かす向き}}
 
 geom_richtext:
   package: ggtext
@@ -3978,6 +3999,8 @@ element_markdown:
   label: {en: Markdown text, ja: "Markdown の文字"}
   description: "In theme() or labs(): text with **bold**, *italic*, <sup>superscript</sup> -- {fn: element_markdown} as a theme setting's value."
   visible: [size, colour, hjust]
+  args:
+    r: {type: "call<unit>|r", label: {en: Rounded corners, ja: 角の丸み}}
 
 element_textbox_simple:
   package: ggtext
@@ -3987,6 +4010,181 @@ element_textbox_simple:
   label: {en: Markdown text box, ja: "Markdown の文字の箱"}
   description: "A title or caption that wraps inside a box: {fn: element_textbox_simple} as a theme setting's value."
   visible: [size, width, padding]
+
+stat_stepribbon:
+  package: ggsurvfit
+  figure: layer
+  rank: 257
+  stage: mapping
+  label: {en: Stepped band, ja: 階段状の帯}
+  description: "A ribbon drawn in steps (a KM curve's confidence band in a plain ggplot)."
+  aes: {x: {required: true}, ymin: {required: true}, ymax: {required: true}, fill: {}, group: {}}
+  visible: [mapping, direction, alpha]
+
+scale_ggsurvfit:
+  package: ggsurvfit
+  figure: scale
+  rank: 377
+  stage: finishing
+  label: {en: KM axes, ja: KM の軸}
+  description: "The axes a KM plot usually has: survival in percent from 0 to 1, no padding at 0; each axis's own arguments in x_scales / y_scales."
+  visible: [x_scales, y_scales]
+
+theme_ggsurvfit_default:
+  package: ggsurvfit
+  figure: theme
+  rank: 710
+  stage: finishing
+  label: {en: "Theme: ggsurvfit", ja: "テーマ：ggsurvfit"}
+  description: "ggsurvfit's theme (a ggsurvfit plot's by default): the legend at the bottom, no minor grid."
+
+theme_ggsurvfit_KMunicate:
+  package: ggsurvfit
+  figure: theme
+  rank: 711
+  stage: finishing
+  label: {en: "Theme: KMunicate", ja: "テーマ：KMunicate"}
+  description: "The KMunicate study's look of a KM plot: no grid, the legend at the top."
+
+theme_risktable_default:
+  package: ggsurvfit
+  figure: helper
+  rank: 712
+  stage: finishing
+  label: {en: Risk table theme, ja: リスク表のテーマ}
+  description: "A value of add_risktable(theme =): the risk table's look, its text sizes."
+  visible: [axis.text.y.size, plot.title.size]
+
+theme_risktable_boxed:
+  package: ggsurvfit
+  figure: helper
+  rank: 713
+  stage: finishing
+  label: {en: Risk table theme (boxed), ja: リスク表のテーマ（枠）}
+  description: "A value of add_risktable(theme =): the risk table in a box."
+  visible: [axis.text.y.size, plot.title.size]
+
+position_nudge_repel:
+  package: ggrepel
+  figure: position
+  rank: 268
+  stage: mapping
+  label: {en: Nudge (repelled), ja: ずらす（反発）}
+  description: "A ggrepel layer's position: labels nudged, their segments still drawn to the data."
+  visible: [x, "y"]
+
+geom_textbox:
+  package: ggtext
+  figure: layer
+  rank: 225
+  stage: mapping
+  label: {en: Text box, ja: 文字の箱}
+  description: "Markdown text wrapped in a box of a set width (a note on a plot)."
+  aes: {x: {required: true}, "y": {required: true}, label: {required: true}, colour: {}, fill: {}}
+  visible: [mapping, width, box.padding]
+  args:
+    width: {type: "call<unit>|r", label: {en: Width, ja: 幅}, description: "!r unit(2, \"inch\")."}
+    height: {type: "call<unit>|r", label: {en: Height, ja: 高さ}}
+
+element_textbox:
+  package: ggtext
+  figure: element
+  rank: 752
+  stage: finishing
+  label: {en: Text box (element), ja: 文字の箱（要素）}
+  description: "A theme setting's text wrapped in a box: element_textbox_simple() with nothing set."
+  visible: [width, padding, fill, box.colour]
+  args:
+    r: {type: "call<unit>|r", label: {en: Rounded corners, ja: 角の丸み}}
+
+strip_nested:
+  package: ggh4x
+  figure: element
+  rank: 753
+  stage: finishing
+  label: {en: Nested strips, ja: 入れ子のストリップ}
+  description: "A facet's strip: the outer levels' strips over the inner ones' (facet_nested(strip = ))."
+  visible: [bleed, text_x, background_x]
+  args:
+    size: {type: "enum[constant|variable]", label: {en: Strip sizes, ja: ストリップの大きさ}}
+
+strip_themed:
+  package: ggh4x
+  figure: element
+  rank: 754
+  stage: finishing
+  label: {en: Strips by panel, ja: 面ごとのストリップ}
+  description: "A facet's strip, each its own text and background (a treatment's colour)."
+  visible: [text_x, background_x]
+  args:
+    size: {type: "enum[constant|variable]", label: {en: Strip sizes, ja: ストリップの大きさ}}
+
+strip_vanilla:
+  package: ggh4x
+  figure: element
+  rank: 755
+  stage: finishing
+  label: {en: Plain strips, ja: 標準のストリップ}
+  visible: [clip]
+  args:
+    size: {type: "enum[constant|variable]", label: {en: Strip sizes, ja: ストリップの大きさ}}
+
+elem_list_text:
+  package: ggh4x
+  figure: element
+  rank: 756
+  stage: finishing
+  label: {en: Texts by strip, ja: ストリップごとの文字}
+  description: "element_text()'s arguments, each a list a strip: {colour: [red, blue]}."
+  dots: {style: named, type: "string|number|logical|list<number|string|logical>|call|r", description: "element_text()'s arguments, a value a strip."}
+
+elem_list_rect:
+  package: ggh4x
+  figure: element
+  rank: 757
+  stage: finishing
+  label: {en: Backgrounds by strip, ja: ストリップごとの背景}
+  description: "element_rect()'s arguments, each a list a strip: {fill: [grey90, white]}."
+  dots: {style: named, type: "string|number|logical|list<number|string|logical>|call|r", description: "element_rect()'s arguments, a value a strip."}
+
+facet_grid2:
+  package: ggh4x
+  figure: facet
+  rank: 504
+  stage: finishing
+  label: {en: Panel grid (ggh4x), ja: 面（格子・ggh4x）}
+  description: "facet_grid() with each panel's own axes (independent), axes drawn in every panel, and styled strips."
+  visible: [rows, cols, scales, independent]
+
+facet_wrap2:
+  package: ggh4x
+  figure: facet
+  rank: 505
+  stage: finishing
+  label: {en: Panels (ggh4x), ja: 面（ggh4x）}
+  description: "facet_wrap() with axes drawn in every panel and styled strips."
+  visible: [facets, ncol, scales, axes]
+
+force_panelsizes:
+  package: ggh4x
+  figure: facet
+  rank: 506
+  stage: finishing
+  label: {en: Panel sizes, ja: 面の大きさ}
+  description: "The panels' heights and widths set (a forest plot's table beside its panel)."
+  visible: [rows, cols]
+  args:
+    rows: {type: "list<number>|call<unit>|r", label: {en: Row heights, ja: 行の高さ}, description: "Relative, [3, 1], or !r unit(c(4, 1), \"cm\")."}
+    cols: {type: "list<number>|call<unit>|r", label: {en: Column widths, ja: 列の幅}}
+
+new_scale:
+  package: ggnewscale
+  figure: layer
+  rank: 297
+  stage: mapping
+  label: {en: New scale, ja: 新しいスケール}
+  description: "Between layers -- the layers after it get their own scale of new_aes (shape, linetype ...)."
+  visible: [new_aes]
 
 # -- the plots arranged, and the image --
 
@@ -4020,6 +4218,58 @@ plot_annotation:
   stage: output
   label: {en: Annotation of the whole, ja: 全体の注記}
   visible: [title, tag_levels]
+
+plot_spacer:
+  package: patchwork
+  figure: compose
+  rank: 853
+  stage: output
+  label: {en: Empty space, ja: 空き}
+  description: "An empty place in an arrangement."
+
+wrap_elements:
+  package: patchwork
+  figure: compose
+  rank: 854
+  stage: output
+  label: {en: Wrapped plot, ja: 包んだ plot}
+  description: "A plot (or a table, a grob) arranged as one piece, not aligned with the others."
+  visible: [full, panel, plot]
+
+inset_element:
+  package: patchwork
+  figure: compose
+  rank: 855
+  stage: output
+  label: {en: Inset, ja: 差し込み}
+  description: "A plot inside another, at a place of its panel (0-1)."
+  visible: [p, left, bottom, right, top]
+
+guide_area:
+  package: patchwork
+  figure: compose
+  rank: 856
+  stage: output
+  label: {en: Legend area, ja: 凡例の場所}
+  description: "The place of the collected legends (plot_layout(guides = \"collect\"))."
+
+area:
+  package: patchwork
+  figure: compose
+  rank: 857
+  stage: output
+  label: {en: Area of the design, ja: 配置図の区画}
+  description: "A place of plot_layout(design = ): its rows t to b, columns l to r."
+  visible: [t, l, b, r]
+
+free:
+  package: patchwork
+  figure: compose
+  rank: 858
+  stage: output
+  label: {en: Not aligned, ja: 揃えない}
+  description: "A plot left out of the alignment of the others (its long axis labels)."
+  visible: [type, side]
 
 tfl_image:
   package: tflspec
