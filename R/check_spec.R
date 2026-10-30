@@ -140,6 +140,18 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE) {
       add(output_id = id, part = "content", item = "", level = "error", message = one(ro))
       next
     }
+    # its own titles under a study header that prints the label, the title
+    # and the population from the report's keys: printed twice (#518)
+    if (length(.page_args(o$page$titles)) && ("defaults" %in% (o$extends %||% "defaults"))) {
+      tok <- .page_output_tokens_used(study$defaults$page %||% list())
+      if (length(tok)) {
+        add(output_id = id, part = "page", item = "titles", level = "warning",
+            message = sprintf(paste0("the study's header prints the report's label, title and population ",
+                                     "already (%s): `page: titles` prints them twice. Remove `page: titles`; ",
+                                     "`label:` and `population:` fill the header."),
+                              paste0("{", tok, "}", collapse = ", ")))
+      }
+    }
     # what the AI marked to confirm (`ai: confirm`): to look at
     cf <- .ai_confirm_rows(ro)
     if (nrow(cf)) {

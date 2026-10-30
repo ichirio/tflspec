@@ -81,3 +81,36 @@ test_that("build = TRUE: a report the checks pass is built; one that cannot be m
   expect_identical(nrow(suppressWarnings(tfl_check_build(d, output_id = "T-DM"))), 0L)
   expect_error(tfl_check_build(d, output_id = "NOPE"), "no report")
 })
+
+test_that("page: titles under a study header that prints the label, title and population: a warning (#518)", {
+  skip_if_not_installed("haven")
+  d <- cs_study()
+  writeLines(c("page:", "  header:", "    '4': {center: '{OUTPUT_LABEL}'}", "    '5': {center: '{OUTPUT_TITLE}'}",
+               "    '6': {center: '({OUTPUT_POPULATION})'}"),
+             file.path(d, "spec", "defaults.yml"))
+  o <- tfl_output("T-DM", "table", population = "SAF", label = "Demographics", extends = "defaults",
+                  template = list(name = "demog", args = list(population = "SAF")),
+                  page = list(titles = list("1" = list(center = "Table 14.1.1"),
+                                            "2" = list(center = "Demographics"))))
+  tfl_write_output(o, file.path(d, "spec", "outputs", "T-DM.yml"))
+  p <- tfl_check_spec(d)
+  w <- p[p$part == "page", ]
+  expect_identical(nrow(w), 1L)
+  expect_identical(w$level, "warning")
+  expect_match(w$message, "{OUTPUT_LABEL}, {OUTPUT_TITLE}, {OUTPUT_POPULATION}", fixed = TRUE)
+  expect_match(w$message, "Remove `page: titles`", fixed = TRUE)
+  # the report's own tokens fill the header: its label, its analysis set's label
+  st <- tfl_read_study_spec(d)
+  tk <- tfl_report_tokens(o, study = st)
+  expect_identical(unname(tk["OUTPUT_TITLE"]), "Demographics")
+  expect_identical(unname(tk["OUTPUT_POPULATION"]), "Safety Population")
+  # without its titles: no warning
+  o$page <- NULL
+  tfl_write_output(o, file.path(d, "spec", "outputs", "T-DM.yml"))
+  expect_false("page" %in% tfl_check_spec(d)$part)
+  # the agent's instructions say so
+  s <- tflspec:::.ai_spec_settings(d)
+  expect_identical(s$titles_in_header, c("OUTPUT_LABEL", "OUTPUT_TITLE", "OUTPUT_POPULATION"))
+  expect_match(tflspec:::.ai_titles_text(s$titles_in_header), "no `page: titles`", fixed = TRUE)
+  expect_match(tflspec:::.ai_titles_text(character()), "`page: titles`, from the shell", fixed = TRUE)
+})

@@ -119,7 +119,7 @@ skip it.  For each of the others, in order:
    - the **digits** when the shell shows them (`xx.x`, `xx.xx`): in the
      cell templates (`{mean:.1f}`) or `plan_digits`; when it does not,
      write none (the study's default applies; do not ask);
-   - `page: titles`, from the shell;
+   - {{titles_rule}}
    - the **footnotes**, from the shell: {{footnotes_at}}
    Nothing else of the look: no column widths, no header rows, no page
    settings, no blank rows, no borders, no fonts.  The study's defaults and
