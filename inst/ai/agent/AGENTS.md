@@ -191,6 +191,12 @@ Review each draft against this list and fix what fails:
 - nothing of the look is written;
 - every free-text value (`label`, titles, footnotes, assumption text) is
   in double quotes -- always one with `: ` or `#` in it;
+- every cell pattern uses rtfreporter's specs (`.Nf`, `.Nf%`, `.Ns`, `d`,
+  `stat`, `stat_fmt`; the instructions' *Cell formats*), none of Python's
+  (`{p:.1%}` is wrong: `{p:.1f%}`);
+- a layer or a step has only the fields the instructions' schema lists;
+- the titles follow step 5's rule for this study: with a study header
+  that prints them, **no `page: titles`** in any draft;
 - a template with its own data (`km_survival`, `km_cumulative`) has
   `data.steps` of `read`, the analysis set and `param`, and none of the
   template's own steps (`survfit`, `time_unit`);

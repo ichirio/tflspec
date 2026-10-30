@@ -114,3 +114,20 @@ test_that("page: titles under a study header that prints the label, title and po
   expect_match(tflspec:::.ai_titles_text(s$titles_in_header), "no `page: titles`", fixed = TRUE)
   expect_match(tflspec:::.ai_titles_text(character()), "`page: titles`, from the shell", fixed = TRUE)
 })
+
+test_that("build = TRUE applies the cells' formats: a Python pattern stops the build with the R form (#aitest-03)", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("cards")
+  d <- cs_study()
+  tfl_write_output(tfl_output("T-DM", "table", population = "SAF",
+                              template = list(name = "demog", args = list(population = "SAF",
+                                                                           count_cell = "{n} ({p:.1%})"))),
+                   file.path(d, "spec", "outputs", "T-DM.yml"))
+  p <- suppressWarnings(tfl_check_spec(d, build = TRUE))
+  b <- p[p$part == "build", ]
+  expect_identical(b$output_id, "T-DM")
+  expect_match(b$message, "the table's cells: ", fixed = TRUE)
+  expect_match(b$message, "Unknown format spec '.1'", fixed = TRUE)
+  expect_match(b$message, "A Python form? Write `{p:.1f%}`", fixed = TRUE)
+})

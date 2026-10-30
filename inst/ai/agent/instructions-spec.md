@@ -267,6 +267,24 @@ Group: {RENALGR}"`.
   of the ARD; a column that is neither a key nor the variable is not, and
   `table_plan` cannot name it.
 
+## Cell formats: rtfreporter's grammar, not Python's
+
+A cell pattern is text with the statistics in braces, each `{name}` or
+`{name:spec}`.  The specs are **rtfreporter's** (R is the original; the
+Python port follows it) -- never Python's `.1%`, `,d`, `>8`:
+
+| spec | gives | example |
+|---|---|---|
+| `{n}` | cards' formatted value, else the value | `{n}` |
+| `{p:.1f%}` | a proportion as a percent with N decimals: `.Nf%` | `{n} ({p:.1f%})` → `12 (34.5%)` |
+| `{mean:.2f}` | N decimals: `.Nf` | `{mean:.1f} ({sd:.2f})` |
+| `{x:.3s}` | N significant digits: `.Ns` | `{p_value:.3s}` |
+| `{n:d}` | an integer: `d` | `{n:d}` |
+| `{x:stat}` / `{x:stat_fmt}` | the ARD's raw value / its formatted value | `{median:stat_fmt}` |
+| `{p:%}` | a percent with the digits `plan_digits` sets | with `plan_digits` only |
+
+`{p:.1%}`, `{n:,d}`, `{n:>5}` are Python's: the check refuses them.
+
 ## Easy mistakes (the check refuses these)
 
 | wrong | right |
@@ -280,6 +298,9 @@ Group: {RENALGR}"`.
 | an analysis data with `code` **and** `where` / `add` / `derive` | `code` with `id`, `label`, `from`, `population` only |
 | `table_plan: {cols: [TRT01A, WORST]}` with `variables: [WORST]` | `cols: TRT01A` -- a variable's levels are rows; to have them across, put the variable in `by` |
 | `plan_cells: {categorical: {n} ({p:.1f%})}` | `plan_cells: {categorical: "{n} ({p:.1f%})"}` -- braces in a text: quote it |
+| `"{n:.0f} ({p:.1%})"` | `"{n} ({p:.1f%})"` -- `.1%` is Python's; a percent is `.Nf%` (*Cell formats*) |
+| a layer with a field of your own (`km_curve` with `.linetype_by`, a ggplot2 aesthetic) | only the fields the schema lists for that layer (*Schema*, `layers`); the look is the study's figure style |
+| `page: titles` when the study's header prints `{OUTPUT_LABEL}` / `{OUTPUT_TITLE}` / `{OUTPUT_POPULATION}` | no `page: titles`: `label:` and `population:` fill the header (`ai/AGENTS.md` says which applies to this study) |
 | a key of your own (`notes:`, `comment:`, `denominator_note:`) | none: a key the schema does not have is refused; a note is an `ai: assumptions` or `ai: confirm` item |
 | `extends: defaults` | `extends: [defaults]` |
 | `population: Safety Analysis Set` | `population: SAF` -- the id from `spec/data.yml` |
@@ -304,3 +325,8 @@ Group: {RENALGR}"`.
 9. A template with its own data (`km_survival`, `km_cumulative`) has
    `data.steps` of `read`, the analysis set and `param` -- and none of the
    template's own steps (`survfit`, `time_unit`).
+10. Every cell pattern's specs are rtfreporter's (*Cell formats*): `.Nf`,
+    `.Nf%`, `.Ns`, `d`, `stat`, `stat_fmt` -- no Python `.1%`.
+11. A layer or a step has only the fields the schema lists for it.
+12. `page: titles` only when `ai/AGENTS.md` says the study does not print
+    the titles from `label:` and `population:` itself.

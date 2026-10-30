@@ -1935,7 +1935,10 @@ tfl_check_fig_design <- function(design, adam = NULL, ggplot2_version = NULL,
       if (f$kind[i] == "number" && suppressWarnings(anyNA(as.numeric(v)))) add(part, f$field[i], "is not a number")
     }
     unknown <- setdiff(names(p), c(f$field, "step", "layer"))
-    for (u in unknown) add(part, u, paste0("is not a field of ", kind))
+    for (u in unknown) {
+      add(part, u, paste0("is not a field of ", kind, .fig_suggest(sub("^[.]", "", u), f$field),
+                          "; its fields: ", paste(f$field, collapse = ", ")))
+    }
   }
   need_var <- function(part, field, vars, where = cols, what = "df") {
     if (is.null(where)) return()

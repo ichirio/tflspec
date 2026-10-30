@@ -91,7 +91,7 @@ test_that("a figure's problems keep tfl_check_fig_design()'s part and field", {
              fixed = TRUE)
   p <- tfl_ai_check(ai_fig(bad), tfl_ai_context("figure", output_id = "F-14-2-1"))
   expect_identical(p$where, "layers[1] km_curve field colour")
-  expect_identical(p$problem, "is not a field of km_curve")
+  expect_match(p$problem, "^is not a field of km_curve.*; its fields: fit, linewidth, type")
   expect_identical(p$severity, "error")
 
   bad <- c(ai_km, "- {layer: pie}")

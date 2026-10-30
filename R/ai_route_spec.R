@@ -68,9 +68,11 @@
 # `label:` and `population:` (its tokens): then none, or they print twice
 .ai_titles_text <- function(tokens) {
   if (!length(tokens)) return("`page: titles`, from the shell;")
-  sprintf(paste0("**no `page: titles`**: the study's header prints the report's label, title ",
-                 "and population itself (%s) from `label:` and `population:` -- write those two ",
-                 "keys (the title as the shell shows it, in `label:`), and no titles, or they print twice;"),
+  sprintf(paste0("**no `page: titles` in this study -- never, in any draft**: the study's header ",
+                 "prints the report's label, title and population itself (%s) from `label:` and ",
+                 "`population:`. Write those two keys (the title as the shell shows it, in `label:`) ",
+                 "and leave `page: titles` out, whatever the instructions' examples show; a draft ",
+                 "with titles prints them twice and the check flags it;"),
           paste0("{", tokens, "}", collapse = ", "))
 }
 

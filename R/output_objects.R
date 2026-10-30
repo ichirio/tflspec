@@ -247,12 +247,12 @@ tfl_output_contents <- function(output, study, dir = ".") {
     # a table with parts: each object it reads, by name -- the ARD, a
     # listing's records (the table's own data, a part's)
     objects <- stage("the parts' data", .parts_objects(ro, st, "."))
-    stage(paste("the", kind), suppressMessages(tfl_content_run(ro, objects)))
+    .build_applied(stage(paste("the", kind), suppressMessages(tfl_content_run(ro, objects))), kind)
   } else if (identical(ro$data$source, "dataset")) {
     # a listing's records (its own, or a template's: decided on the report
     # as resolved): its data step, as its program reads them
     recs <- stage("the listing's records", .listing_data_of(ro, st, "."))
-    stage(paste("the", kind), suppressMessages(tfl_content_run(ro, recs)))
+    .build_applied(stage(paste("the", kind), suppressMessages(tfl_content_run(ro, recs))), kind)
   } else if (identical(kind, "figure")) {
     data <- stage("the figure's data", .contents_fig_data(ro, st, "."))
     if (length(ro$ard$analyses %||% list())) {
@@ -262,8 +262,26 @@ tfl_output_contents <- function(output, study, dir = ".") {
   } else {
     ard <- stage("the ARD", suppressMessages(tfl_build_ard(st, dir = ".", output_id = ro$id, save = FALSE)))
     if (!is.null(ard$output_id)) ard <- ard[ard$output_id %in% ro$id, , drop = FALSE]
-    stage(paste("the", kind), suppressMessages(tfl_content_run(ro, ard)))
+    .build_applied(stage(paste("the", kind), suppressMessages(tfl_content_run(ro, ard))), kind)
   }
+}
+
+# A table's or a listing's plan applied (rtfreporter::plan_apply(), as the
+# preview and the RTF apply it): the cells' formats run on the values, so
+# a pattern the engine does not know ("{p:.1%}", Python's form) stops the
+# build check, not the preview after it.  The plan itself is returned.
+.build_applied <- function(plan, kind) {
+  if (!inherits(plan, c("table_plan", "rtf_plan")) || !requireNamespace("rtfreporter", quietly = TRUE)) return(plan)
+  tryCatch(suppressMessages(rtfreporter::plan_apply(plan)), error = function(e) {
+    msg <- conditionMessage(e)
+    # (the engine's message, and the form the pattern should take)
+    m <- regmatches(msg, regexec("Unknown format spec '([.][0-9]+)'", msg))[[1L]]
+    if (length(m) == 2L) {
+      msg <- paste0(msg, " A Python form? Write `{p:", m[2L], "f%}` for a percent, `{x:", m[2L], "f}` for a value.")
+    }
+    .ard_stop(paste0("the ", kind, "'s cells: ", msg))
+  })
+  plan
 }
 
 #' Build a report's RTF from its YAML file
