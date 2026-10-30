@@ -77,7 +77,9 @@ skip it.  For each of the others, in order:
    - Ask only when the sources disagree, or when a choice changes a
      report's numbers and nothing -- no document, no data, no decision
      -- defines it.
-3. {{ask_when}} **Ask them in the chat**, in {{language}}, numbered.
+3. {{ask_when}} **Ask them in the chat**, in {{language}}, numbered,
+   the message starting with the progress tag (*Progress*, below):
+   `[n/N] <request> (<report ids>)`.
    **Collect every question first** -- every item of step 2, for every
    report of the request -- and ask them together in **one message**;
    never one at a time, waiting for an answer between them.  A follow-up
@@ -151,6 +153,22 @@ When every request is done, **review the drafts** (*Before you stop*,
 below), then **stop** and tell the person: the report files written
 (their ids), the decisions added, what is marked to confirm, and what
 the review changed.
+
+## Progress
+
+Say where you are, one line in {{language}}, so that the person sees how
+far you have got:
+
+- at the start of each request: `[3/6] T-LB-SUM（14.3.4.1）を開始。残り 3 件`
+  (`[3/6] Starting T-LB-SUM (14.3.4.1); 3 left`);
+- when a request's drafts are written: `[3/6] 完了: 14.3.4.1。次: T-LB-SHIFT`
+  (`[3/6] Done: 14.3.4.1; next: T-LB-SHIFT`);
+- a question message starts with the same tag (step 3).
+
+`n` is the request's number of `N` in `ai/requests/index.md`.  Keep the
+same in `ai/progress.md` (write it over each time): the current request,
+the requests done, the requests left.  (`ai/status.md` is `run.R`'s: do
+not write it.)
 
 ## Before you stop
 
@@ -232,8 +250,8 @@ a line.
 - Do not change the TOC / SHELL workbook, the ADaM, `study.yml`,
   `spec/data.yml`, `spec/defaults.yml`, `run.R`, `AGENTS.md` or
   `.github/copilot-instructions.md`.
-- Write only `ai/spec/outputs/` and `ai/decisions.md` (add lines, change
-  nothing a person wrote).
+- Write only `ai/spec/outputs/`, `ai/decisions.md` (add lines, change
+  nothing a person wrote) and `ai/progress.md`.
 - Do not guess what defines a report: ask -- but do not ask what the
   documents or the data settle, nor about a case the data rules out.
   Do not write the look.
