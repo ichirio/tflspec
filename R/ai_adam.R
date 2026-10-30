@@ -28,13 +28,9 @@
                         fn, sQuote(paste(format(path), collapse = " "), FALSE),
                         sQuote(getwd(), FALSE)))
     }
-    files <- if (dir.exists(path)) {
-      list.files(path, pattern = "[.](xpt|sas7bdat|rds)$", ignore.case = TRUE, full.names = TRUE)
-    } else {
-      path
-    }
+    files <- if (dir.exists(path)) .ai_adam_files(path, full.names = TRUE) else path
     if (!length(files)) {
-      .ard_stop(sprintf("%s: no .xpt, .sas7bdat or .rds file in %s; copy the ADaM files there.",
+      .ard_stop(sprintf("%s: no .xpt, .sas7bdat, .rds or .parquet file in %s; copy the ADaM files there.",
                         fn, sQuote(path, FALSE)))
     }
     nm <- toupper(tools::file_path_sans_ext(basename(files)))
@@ -56,9 +52,28 @@
   x
 }
 
+# The ADaM files of a folder, one a dataset: of a dataset in several forms
+# (adsl.sas7bdat and adsl.xpt, adsl.xpt and adsl.rds), the one read is the
+# first of .sas7bdat, .xpt, .rds, .parquet (#523)
+.ai_adam_exts <- c("sas7bdat", "xpt", "rds", "parquet")
+.ai_adam_files <- function(dir, full.names = FALSE) {
+  files <- list.files(dir, pattern = "[.](xpt|sas7bdat|rds|parquet)$", ignore.case = TRUE,
+                      full.names = full.names)
+  if (!length(files)) return(files)
+  nm <- toupper(tools::file_path_sans_ext(basename(files)))
+  rank <- match(tolower(tools::file_ext(files)), .ai_adam_exts)
+  o <- order(nm, rank)
+  files <- files[o][!duplicated(nm[o])]
+  files[order(toupper(tools::file_path_sans_ext(basename(files))))]
+}
+
 .ai_adam_read_one <- function(f, fn) {
   ext <- tolower(tools::file_ext(f))
   if (ext == "rds") return(as.data.frame(readRDS(f)))
+  if (ext == "parquet") {
+    .ard_need("arrow", paste(fn, "reading a .parquet file"))
+    return(as.data.frame(arrow::read_parquet(f)))
+  }
   if (!requireNamespace("haven", quietly = TRUE)) {
     .ard_stop(sprintf("%s: reading .%s files needs the haven package: install.packages(\"haven\").",
                       fn, ext))
@@ -346,9 +361,9 @@ tfl_ai_study_init <- function(dir, adam = "adam", study_id = "STUDY-01", title =
                               overwrite = FALSE) {
   fn <- "tfl_ai_study_init()"
   adam_dir <- if (grepl("^(/|[A-Za-z]:)", adam)) adam else file.path(dir, adam)
-  files <- list.files(adam_dir, pattern = "[.](xpt|sas7bdat|rds)$", ignore.case = TRUE)
+  files <- .ai_adam_files(adam_dir)
   if (!length(files)) {
-    .ard_stop(sprintf(paste0("%s: no .xpt, .sas7bdat or .rds file in %s; copy the ADaM files ",
+    .ard_stop(sprintf(paste0("%s: no .xpt, .sas7bdat, .rds or .parquet file in %s; copy the ADaM files ",
                              "there, or give `adam` as their folder from %s."), fn,
                       sQuote(adam_dir, FALSE), sQuote(dir, FALSE)))
   }
