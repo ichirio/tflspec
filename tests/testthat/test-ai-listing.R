@@ -125,3 +125,21 @@ test_that("a listing's answer: no analysis set, a dataset of parameters not kept
              lst_answer("L-1")[-(1:7)]))
   expect_true(any(grepl("a listing has no analyses", p$problem)))
 })
+
+test_that("a listing read from an analysis data with R code: its columns are not checked against the dataset", {
+  skip_on_cran()
+  vars <- data.frame(dataset = rep("ADAE", 4), variable = c("USUBJID", "AESER", "AEDECOD", "TRT01A"),
+                     stringsAsFactors = FALSE)
+  ctx <- structure(list(task = "table", datasets = vars, populations = c("SAF", "ITT")),
+                   class = "tfl_ai_context")
+  a <- lst_answer("L-3")
+  a <- sub("data: {source: dataset, dataset: ADAE, population: SAF, where: !r 'AESER == \"Y\"', sort: [TRT01A, USUBJID, ASTDY]}",
+           "data: {source: dataset, data: sae, sort: [TRT01A, USUBJID]}", a, fixed = TRUE)
+  a <- sub("vars: [ASTDY], label: Start day", "vars: [AGE_SEX], label: Age / Sex", a, fixed = TRUE)
+  a <- sub("vars: [AEBODSYS, AEDECOD]", "vars: [AEDECOD]", a, fixed = TRUE)
+  a <- append(a, "    ard: {analysis_data: [{id: sae, from: ADAE, population: SAF, code: !r 'dplyr::mutate(adae, AGE_SEX = \"x\")'}]}",
+              after = grep("extends:", a))
+  p <- tfl_ai_check(tfl_ai_parse(paste(a, collapse = "\n"), task = "table"), ctx)
+  expect_false(any(grepl("AGE_SEX", p$problem)))
+  expect_false(any(p$severity == "error"))
+})
