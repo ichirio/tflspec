@@ -37,6 +37,17 @@ number -> \code{number}, a character vector -> \code{choice}, else \code{code}.
 \code{ard_pairwise(variable =)} are its \code{by}, \code{strata} and \code{variables}).  The data is
 the row's own (\code{data}).
 
+A \code{code} argument whose function takes one shape of R has its value
+checked by that shape: a list or formula of cards' selectors (\code{fmt_fun},
+\code{stat_label}), a list (\code{method.args}), a function (\code{tidy_fun}), an
+expression of the ARD's columns (a \code{post} step's \code{filter}, \code{expr},
+\code{rows}), the stratified Wilson \code{weights} (numbers between 0 and 1 that
+add up to 1), the levels \code{ard_pairwise(include =)} compares (a vector),
+the format of one statistic (\code{add_calculated_row(fmt_fun =)},
+\code{update_ard_fmt_fun(fmt_fun =)}: a whole number of decimals, \code{"xx.x"} /
+\code{"xx.x\%"}, or a function) and the value \code{replace_null_statistic(value =)}
+gives (one value).
+
 A company adds its own rows with \verb{options(tflspec.ard_args = <data frame>)}: \code{call} (or \code{*} for every function), \code{arg}, \code{kind}, \code{hint},
 \code{choices}; a row for the same call and argument wins, and a row for the
 function wins over a \code{*} row.

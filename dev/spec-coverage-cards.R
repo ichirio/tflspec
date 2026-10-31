@@ -76,7 +76,8 @@ w2 <- c("cards::ard_strata", "cards::ard_pairwise", "cards::ard_mvsummary",
         "cardx::ard_stats_wilcox_test_onesample", "cardx::ard_smd_smd",
         "cardx::ard_stats_cohens_d", "cardx::ard_stats_paired_cohens_d",
         "cardx::ard_stats_mantelhaen_test", "cards::diff_ard_hierarchical",
-        "cards::update_ard_stat_label", "cards::replace_null_statistic")
+        "cards::update_ard_stat_label", "cards::replace_null_statistic",
+        "cards::update_ard_fmt_fun")
 weight <- function(call) if (call %in% w3) 3 else if (call %in% w2) 2 else 1
 
 rows <- list()

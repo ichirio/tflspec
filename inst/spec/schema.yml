@@ -1087,7 +1087,8 @@ rtf_footer:
         description: 'Steps on the ARD after the call, each a call with the ARD left
           out, | between them: cards::add_calculated_row() (a statistic computed from
           others), cards::filter_ard_hierarchical() (only the rows that pass), cards::sort_ard_hierarchical(),
-          cards::diff_ard_hierarchical(), complete_hierarchy() (a code list''s values no
+          cards::diff_ard_hierarchical(), cards::update_ard_fmt_fun() (a format for some
+          rows: one arm''s mean, run after the defaults), complete_hierarchy() (a code list''s values no
           subject has, counted 0: written with the row''s variables and the code lists''
           `under`), or a function of your own that takes an ARD and gives one; blank:
           none.'

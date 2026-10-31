@@ -179,3 +179,47 @@ test_that("post: steps on the ARD after the call", {
     list(analysis_id = "A", parent = "S", method = "continuous", variables = "AGE",
          post = "cards::sort_ard_hierarchical()"))), "goes on the parent's row")
 })
+
+test_that("post: a format set by update_ard_fmt_fun() is not the default's", {
+  skip_on_cran()
+  skip_if_not_installed("cards")
+  adam <- exact_data()
+  dir <- exact_dir(adam)
+  sp <- parent_spec(list(list(
+    analysis_id = "CONT", method = "continuous", dataset = "ADSL",
+    population_id = "SAF", by = "ARM", variables = "AGE",
+    statistics = "N | mean | sd",
+    post = paste("cards::update_ard_fmt_fun(stat_names = \"mean\", fmt_fun = 3L,",
+                 "filter = group1_level == \"Placebo\")"))))
+  # after the format step, and the ARD formatted again
+  txt <- paste(tfl_ard_code(sp, part = "body"), collapse = "\n")
+  expect_match(txt, paste0("fmt_ard(fmt_default) |>\n  update_ard_fmt_fun(stat_names = \"mean\", ",
+                           "fmt_fun = 3L, filter = group1_level == \"Placebo\") |>\n",
+                           "  apply_fmt_fun(replace = TRUE) |>"), fixed = TRUE)
+  ard <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE))
+  m <- ard[ard$stat_name == "mean", ]
+  arm <- vapply(m$group1_level, function(v) as.character(v[[1L]]), "")
+  fmt <- vapply(m$stat_fmt, function(v) as.character(v[[1L]]), "")
+  dec <- nchar(sub("^[^.]*[.]?", "", fmt))
+  expect_identical(dec[arm == "Placebo"], 3L)
+  expect_true(all(dec[arm != "Placebo"] != 3L))
+  # a row without such a step: as before
+  expect_identical(.post_fmt_split(list("cards::sort_ard_hierarchical()"))$after, NULL)
+  # a calculated statistic's own format: said again after the format step
+  # (se has a default format of its own, which would win)
+  sp2 <- parent_spec(list(list(
+    analysis_id = "CONT", method = "continuous", dataset = "ADSL",
+    population_id = "SAF", by = "ARM", variables = "AGE",
+    statistics = "N | mean | sd",
+    post = paste("cards::add_calculated_row(expr = sd / sqrt(N), stat_name = \"se\",",
+                 "fmt_fun = 4L)"))))
+  txt <- paste(tfl_ard_code(sp2, part = "body"), collapse = "\n")
+  expect_match(txt, paste0("fmt_ard(fmt_default) |>\n  update_ard_fmt_fun(stat_names = \"se\", ",
+                           "fmt_fun = 4L) |>\n  apply_fmt_fun(replace = TRUE) |>"), fixed = TRUE)
+  ard <- suppressMessages(tfl_build_ard(sp2, dir = dir, save = FALSE))
+  se <- vapply(ard$stat_fmt[ard$stat_name == "se"], function(v) as.character(v[[1L]]), "")
+  expect_true(all(nchar(sub("^[^.]*[.]", "", se)) == 4L))
+  # without fmt_fun, the default's
+  expect_identical(.post_fmt_split(list(
+    "cards::add_calculated_row(expr = sd / sqrt(N), stat_name = \"se\")"))$after, NULL)
+})

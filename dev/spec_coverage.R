@@ -70,8 +70,23 @@ via_plan <- c(
   column_widths_twips = "plan_columns(widths)", row_title = "plan_columns(row_title)",
   blank_rows = "plan_blanks",
   style = "plan_style (rtf_table_style()'s fields: border_header ... underline)")
-# deprecated arguments: no SPEC item by design
-deprecated <- c(rtf_tables.read_gt = "deprecated: as_rtftables() reads a gt table")
+# rtf_tables(col_spec = ): the columns' look, by number; plan_cell_style()
+# says it by name (its pages' col_spec)
+via_plan <- c(via_plan, col_spec = "plan_cell_style(cols =)")
+# rtf_table_style()'s fields: plan_style() takes each as its own argument
+via_style <- c(names(formals(rtfreporter::rtf_table_style)))
+# the program a report says it was written by: rtf_document(program =,
+# program_fallback =), which tflspec fills (generate_rtfreport()'s are the
+# same value given at the end)
+via_doc <- c(program = "rtf_document(program =)",
+             program_fallback = "rtf_document(program_fallback =)")
+# deprecated and superseded arguments: no SPEC item by design
+deprecated <- c(rtf_tables.read_gt = "deprecated: as_rtftables() reads a gt table",
+                rtf_section.secinfo = "superseded by header = / footer =",
+                generate_rtfreport.report = "superseded by doc")
+# rtfreporter's deprecated exports (removed in 0.9.0; its own API measure
+# leaves them out): no SPEC item by design
+dep_fns <- get0(".deprecated_exports", asNamespace("rtfreporter"), ifnotfound = character())
 # APIs that are no SPEC item by design
 helper <- c(
   rtfreporter_ai_manual = "AI manual", rtfreporter_options = "package options",
@@ -85,7 +100,8 @@ helper <- c(
   assemble_from_spec = "file assembly", assemble_folder = "file assembly",
   toc_heading = "file assembly", toc_entry = "file assembly",
   rtf_replace_text = "post-processing of a file", rtf_text_tokens = "inspection",
-  rtfreporter_validation_kit = "validation kit")
+  rtfreporter_validation_kit = "validation kit",
+  plan_apply = "runs the plan: rtf_tables() takes the plan itself")
 out_of_scope <- c(plan_layers = "plan_layer / table_plan layers: designed in another session")
 
 rows <- list()
@@ -102,7 +118,9 @@ for (fn in ns) {
   e <- sch[[fn]]
   imp <- implicit[[fn]] %||% character()
   for (a in args) {
-    if (fn %in% names(helper)) {
+    if (fn %in% dep_fns) {
+      add(fn, a, "no", "", "[helper] deprecated in rtfreporter (removed in 0.9.0)")
+    } else if (fn %in% names(helper)) {
       add(fn, a, "no", "", paste("[helper]", helper[[fn]]))
     } else if (fn %in% names(out_of_scope)) {
       add(fn, a, "no", "", paste("[out of scope]", out_of_scope[[fn]]))
@@ -118,6 +136,8 @@ for (fn in ns) {
         add(fn, a, "no", "", paste("[helper]", deprecated[[paste(fn, a, sep = ".")]]))
       } else if (fn == "rtf_tables" && a %in% names(via_plan)) {
         add(fn, a, "partial", paste0("content: ", via_plan[[a]]), "said by the plan verb, not page.rtf_tables")
+      } else if (fn == "generate_rtfreport" && a %in% names(via_doc)) {
+        add(fn, a, "partial", via_doc[[a]], "said by rtf_document(), which tflspec fills")
       } else {
         add(fn, a, "no", "", "page: does not pass it on")
       }
@@ -128,6 +148,11 @@ for (fn in ns) {
       else if (a == "..." && !is.null(e$dots)) add(fn, a, "yes", where, "schema dots grammar")
       else if (a %in% names(e$args)) add(fn, a, "yes", where, "schema.yml type")
       else add(fn, a, "yes", where, "formals pass through (no schema type)")
+    } else if (fn == "rtf_table_style" && a %in% via_style) {
+      add(fn, a, "partial", paste0("content: plan_style(", a, ")"),
+          "said by plan_style()'s own argument, not an rtf_table_style() value")
+    } else if (paste(fn, a, sep = ".") %in% names(deprecated)) {
+      add(fn, a, "no", "", paste("[helper]", deprecated[[paste(fn, a, sep = ".")]]))
     } else if (grepl("^plan_", fn)) {
       add(fn, a, "partial", paste0("content: ", fn),
           "runs as a content item, but schema.yml has no entry (no check, rank or help)")

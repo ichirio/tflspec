@@ -204,6 +204,17 @@ tfl_ard_functions <- function(installed = TRUE) {
 #' `ard_pairwise(variable =)` are its `by`, `strata` and `variables`).  The data is
 #' the row's own (`data`).
 #'
+#' A `code` argument whose function takes one shape of R has its value
+#' checked by that shape: a list or formula of cards' selectors (`fmt_fun`,
+#' `stat_label`), a list (`method.args`), a function (`tidy_fun`), an
+#' expression of the ARD's columns (a `post` step's `filter`, `expr`,
+#' `rows`), the stratified Wilson `weights` (numbers between 0 and 1 that
+#' add up to 1), the levels `ard_pairwise(include =)` compares (a vector),
+#' the format of one statistic (`add_calculated_row(fmt_fun =)`,
+#' `update_ard_fmt_fun(fmt_fun =)`: a whole number of decimals, `"xx.x"` /
+#' `"xx.x%"`, or a function) and the value `replace_null_statistic(value =)`
+#' gives (one value).
+#'
 #' A company adds its own rows with `options(tflspec.ard_args = <data
 #' frame>)`: `call` (or `*` for every function), `arg`, `kind`, `hint`,
 #' `choices`; a row for the same call and argument wins, and a row for the

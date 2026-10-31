@@ -952,15 +952,20 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 # (`method.args = list(var.equal = TRUE)`), names (`stats_to_remove`), a
 # function (`tidy_fun`, `.f`), a model (`x = lm(...)`), an expression of
 # the ARD's columns (a `post` step's `filter`, `expr`, `rows`).  An
-# argument of one function only is `function$arg`; NA: any R (`weights`,
-# `include`, replace_null_statistic(value = )).
+# argument of one function only is `function$arg`: the stratum weights
+# (numbers between 0 and 1 that add up to 1), the levels a pairwise
+# analysis compares (a vector of values), the format of one statistic
+# (cards::alias_as_fmt_fun(): a whole number of decimals, "xx.x" or a
+# function), the value a NULL statistic gets (one value).  NA: any R.
 .ard_code_shapes <- c(
   fmt_fun = "selectors", stat_label = "selectors", value = "selectors",
   label = "selectors", abnormal = "list", formulas = "list",
   method.args = "list", stats_to_remove = "character", tidy_fun = "function",
   .f = "function", x = "call", expr = "expression", filter = "expression",
   rows = "expression", by_level = "list", levels = "list", sort = "sort",
-  `add_calculated_row$fmt_fun` = NA, `replace_null_statistic$value` = NA)
+  `ard_categorical_ci$weights` = "weights", `ard_pairwise$include` = "values",
+  `add_calculated_row$fmt_fun` = "fmt", `update_ard_fmt_fun$fmt_fun` = "fmt",
+  `replace_null_statistic$value` = "scalar")
 
 .ard_code_shape <- function(fn, arg) {
   key <- paste0(fn, "$", arg)
@@ -982,7 +987,18 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
     shape <- if (identical(kind, "levels")) "selectors" else
       .ard_code_shape(fn, arg)
     if (is.na(shape)) return(NULL)
+    # (a call that makes the value -- rep(0.25, 4L), seq_len(3) -- is the
+    # program's, as a name is)
+    made <- is.call(e) && is.null(v) &&
+      !is_call_of(e, "list") && !is_call_of(e, "~")
     ok <- switch(shape,
+      weights = made || (is.numeric(v) && all(v >= 0 & v <= 1) &&
+                           abs(sum(v) - 1) < 1e-8),
+      values = made || (!is.null(v) && (is.character(v) || is.numeric(v))),
+      fmt = is_fn(e) || (made && !is_call_of(e, "c")) ||
+        (is.numeric(v) && length(v) == 1L && v >= 0 && v == round(v)) ||
+        (is.character(v) && length(v) == 1L && .fmt_string_ok(v)),
+      scalar = made || (!is.null(v) && length(v) == 1L),
       selectors = is_call_of(e, "list") || is_call_of(e, "~"),
       list = is_call_of(e, "list"),
       character = is.character(v),
@@ -999,7 +1015,11 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
       `function` = "a function: pkg::fun, function(x) ... or ~ ...",
       call = "R that makes the object: lm(AVAL ~ TRT01P, data = data)",
       expression = "an expression of the ARD's statistics, not in quotes: n >= 2",
-      sort = "\"descending\", \"alphanumeric\", or a list of them by variable")
+      sort = "\"descending\", \"alphanumeric\", or a list of them by variable",
+      weights = "numbers between 0 and 1 that add up to 1, one a stratum: c(0.5, 0.3, 0.2)",
+      values = "the levels compared, as a vector: c(\"Placebo\", \"Drug A\")",
+      fmt = "a whole number of decimals (1L), a format (\"xx.x\", \"xx.x%\") or a function (cards::label_round(1))",
+      scalar = "one value: NA, 0 or \"NE\"")
     return(sprintf("is %s; got %s", want, shown))
   }
   # a call (a formula, paste0(...), an object's part): the program's
@@ -1038,6 +1058,14 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
     if (!is.null(bad)) return(sprintf("does not read as R (%s)", gsub("\\s+", " ", bad)))
   }
   NULL
+}
+
+# A format string cards takes for a statistic (alias_as_fmt_fun()): an x,
+# then x's, at most one point and an optional % at the end ("xx",
+# "xx.x", "xx.xx%")
+.fmt_string_ok <- function(x) {
+  grepl("^x[x.%]+$", x) && lengths(regmatches(x, gregexpr(".", x, fixed = TRUE))) <= 1L &&
+    (!grepl("%", x, fixed = TRUE) || grepl("^[^%]*%$", x))
 }
 
 # The arguments of a `post` step its function does not have (a cards

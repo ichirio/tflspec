@@ -102,7 +102,7 @@
 "cardx","ard_categorical_ci","conf.level","yes","method: proportion_ci (or cardx::ard_categorical_ci); args","inst/ard/args.csv: number; its value judged","cardx ard_*()",3
 "cardx","ard_categorical_ci","value","yes","method: proportion_ci (or cardx::ard_categorical_ci); args","inst/ard/args.csv: levels; its value judged","cardx ard_*()",3
 "cardx","ard_categorical_ci","strata","yes","method: proportion_ci (or cardx::ard_categorical_ci); column `strata`","the analysis row's column","cardx ard_*()",3
-"cardx","ard_categorical_ci","weights","partial","method: proportion_ci (or cardx::ard_categorical_ci); args","inst/ard/args.csv: code; R taken as it is","cardx ard_*()",3
+"cardx","ard_categorical_ci","weights","yes","method: proportion_ci (or cardx::ard_categorical_ci); args","inst/ard/args.csv: code; its value judged","cardx ard_*()",3
 "cardx","ard_categorical_ci","max.iterations","yes","method: proportion_ci (or cardx::ard_categorical_ci); args","inst/ard/args.csv: number; its value judged","cardx ard_*()",3
 "cardx","ard_continuous_ci","data","yes","method: mean_ci (or cardx::ard_continuous_ci); column `data`","the analysis row's column","cardx ard_*()",3
 "cardx","ard_continuous_ci","variables","yes","method: mean_ci (or cardx::ard_continuous_ci); column `variables`","the analysis row's column","cardx ard_*()",3
@@ -327,7 +327,7 @@
 "cards","ard_pairwise","data","yes","method: cards::ard_pairwise; column `data`","the analysis row's column","cards ard_*()",2
 "cards","ard_pairwise","variable","yes","method: cards::ard_pairwise; column `variables`","the analysis row's column","cards ard_*()",2
 "cards","ard_pairwise",".f","yes","method: cards::ard_pairwise; args","inst/ard/args.csv: code; its value judged","cards ard_*()",2
-"cards","ard_pairwise","include","partial","method: cards::ard_pairwise; args","inst/ard/args.csv: code; R taken as it is","cards ard_*()",2
+"cards","ard_pairwise","include","yes","method: cards::ard_pairwise; args","inst/ard/args.csv: code; its value judged","cards ard_*()",2
 "cards","ard_mvsummary","data","yes","method: cards::ard_mvsummary; column `data`","the analysis row's column","cards ard_*()",2
 "cards","ard_mvsummary","variables","yes","method: cards::ard_mvsummary; column `variables`","the analysis row's column","cards ard_*()",2
 "cards","ard_mvsummary","by","yes","method: cards::ard_mvsummary; column `by`","the analysis row's column","cards ard_*()",2
@@ -363,7 +363,7 @@
 "cards","add_calculated_row","stat_name","yes","post","inst/ard/args.csv: text; its name and value judged","cards post helpers",3
 "cards","add_calculated_row","by","yes","post","inst/ard/args.csv: columns; its name and value judged","cards post helpers",3
 "cards","add_calculated_row","stat_label","yes","post","inst/ard/args.csv: text; its name and value judged","cards post helpers",3
-"cards","add_calculated_row","fmt_fun","partial","post","inst/ard/args.csv: code; R taken as it is","cards post helpers",3
+"cards","add_calculated_row","fmt_fun","yes","post","inst/ard/args.csv: code; its name and value judged","cards post helpers",3
 "cards","filter_ard_hierarchical","x","yes","post","the analysis's ARD (left out)","cards post helpers",3
 "cards","filter_ard_hierarchical","filter","yes","post","inst/ard/args.csv: code; its name and value judged","cards post helpers",3
 "cards","filter_ard_hierarchical","var","yes","post","inst/ard/args.csv: column; its name and value judged","cards post helpers",3
@@ -375,10 +375,15 @@
 "cards","diff_ard_hierarchical","x","yes","post","the analysis's ARD (left out)","cards post helpers",2
 "cards","diff_ard_hierarchical","levels","yes","post","inst/ard/args.csv: code; its name and value judged","cards post helpers",2
 "cards","replace_null_statistic","x","yes","post","the analysis's ARD (left out)","cards post helpers",2
-"cards","replace_null_statistic","value","partial","post","inst/ard/args.csv: code; R taken as it is","cards post helpers",2
+"cards","replace_null_statistic","value","yes","post","inst/ard/args.csv: code; its name and value judged","cards post helpers",2
 "cards","replace_null_statistic","rows","yes","post","inst/ard/args.csv: code; its name and value judged","cards post helpers",2
 "cards","update_ard_stat_label","x","yes","post","the analysis's ARD (left out)","cards post helpers",2
 "cards","update_ard_stat_label","variables","yes","post","inst/ard/args.csv: columns; its name and value judged","cards post helpers",2
 "cards","update_ard_stat_label","stat_names","yes","post","inst/ard/args.csv: text; its name and value judged","cards post helpers",2
 "cards","update_ard_stat_label","stat_label","yes","post","inst/ard/args.csv: text; its name and value judged","cards post helpers",2
 "cards","update_ard_stat_label","filter","yes","post","inst/ard/args.csv: code; its name and value judged","cards post helpers",2
+"cards","update_ard_fmt_fun","x","yes","post","the analysis's ARD (left out)","cards post helpers",2
+"cards","update_ard_fmt_fun","variables","yes","post","inst/ard/args.csv: columns; its name and value judged","cards post helpers",2
+"cards","update_ard_fmt_fun","stat_names","yes","post","inst/ard/args.csv: text; its name and value judged","cards post helpers",2
+"cards","update_ard_fmt_fun","fmt_fun","yes","post","inst/ard/args.csv: code; its name and value judged","cards post helpers",2
+"cards","update_ard_fmt_fun","filter","yes","post","inst/ard/args.csv: code; its name and value judged","cards post helpers",2
