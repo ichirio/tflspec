@@ -160,6 +160,8 @@ test_that("the figure catalog: every function and argument is the installed pack
     expect_true(all(c("en", "ja") %in% names(e$label)), info = fn)
     if (identical(e$package, "tflspec")) next
     if (!requireNamespace(e$package, quietly = TRUE)) next
+    # a card of a newer version's function (ggplot2 4.0's stat_connect)
+    if (!fn %in% getNamespaceExports(e$package)) next
     f <- getExportedValue(e$package, fn)
     known <- c(names(formals(f)), names(tfl_schema(fn)$args))
     for (a in c(names(e$args), unlist(e$visible))) {
