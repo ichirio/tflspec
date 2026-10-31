@@ -2723,7 +2723,7 @@ facet_wrap:
   label: {en: Panels, ja: 面}
   visible: [facets, ncol, scales]
   args:
-    facets: {type: r, label: {en: Variables (vars()), ja: 変数（vars()）}}
+    facets: {type: "r|call<vars>|list<column>|column", label: {en: Variables (vars()), ja: 変数（vars()）}, description: "!r vars(PARAM), or the columns [PARAM] (PARAM)."}
     scales: {type: "enum[fixed|free|free_x|free_y]", label: {en: Axes, ja: 軸}}
 
 facet_grid:
@@ -2734,8 +2734,8 @@ facet_grid:
   label: {en: Panel grid, ja: 面（格子）}
   visible: [rows, cols, scales]
   args:
-    rows: {type: r, label: {en: Rows (vars()), ja: 行（vars()）}}
-    cols: {type: r, label: {en: Columns (vars()), ja: 列（vars()）}}
+    rows: {type: "r|call<vars>", label: {en: Rows (vars()), ja: 行（vars()）}}
+    cols: {type: "r|call<vars>", label: {en: Columns (vars()), ja: 列（vars()）}}
 
 labs:
   package: ggplot2
@@ -3917,6 +3917,897 @@ guide_axis_stack:
   visible: [first, spacing]
 
 
+# -- round 3 of the figure SPEC coverage: the rest of ggplot2's functions of a plot --
+
+# the layers without a geom twin or without the prefix
+
+geom_hex:
+  package: ggplot2
+  figure: layer
+  rank: 278
+  stage: mapping
+  label: {en: Hexagonal bins, ja: "六角形の区間"}
+  description: "Counts in hexagons of (x, y), filled by the count (needs the hexbin package)."
+  aes: {x: {required: true}, "y": {required: true}, fill: {}}
+  visible: [mapping, bins, binwidth]
+
+stat_bin_2d:
+  package: ggplot2
+  figure: layer
+  rank: 279
+  stage: mapping
+  label: {en: 2-d bins (stat), ja: "2 次元の区間（stat）"}
+  aes: {x: {required: true}, "y": {required: true}, fill: {}}
+  visible: [mapping, bins, binwidth, geom]
+
+stat_bin_hex:
+  package: ggplot2
+  figure: layer
+  rank: 279
+  stage: mapping
+  label: {en: Hexagonal bins (stat), ja: "六角形の区間（stat）"}
+  aes: {x: {required: true}, "y": {required: true}, fill: {}}
+  visible: [mapping, bins, binwidth, geom]
+
+stat_contour:
+  package: ggplot2
+  figure: layer
+  rank: 286
+  stage: mapping
+  label: {en: Contour lines (stat), ja: "等高線（stat）"}
+  aes: {x: {required: true}, "y": {required: true}, z: {required: true}, colour: {}}
+  visible: [mapping, bins, binwidth, breaks]
+
+stat_contour_filled:
+  package: ggplot2
+  figure: layer
+  rank: 286
+  stage: mapping
+  label: {en: Filled contours (stat), ja: "塗りの等高線（stat）"}
+  aes: {x: {required: true}, "y": {required: true}, z: {required: true}, fill: {}}
+  visible: [mapping, bins, binwidth, breaks]
+
+stat_density_2d:
+  package: ggplot2
+  figure: layer
+  rank: 287
+  stage: mapping
+  label: {en: 2-d density (stat), ja: "2 次元の密度（stat）"}
+  aes: {x: {required: true}, "y": {required: true}, colour: {}}
+  visible: [mapping, geom, contour, "n", h]
+
+stat_density_2d_filled:
+  package: ggplot2
+  figure: layer
+  rank: 287
+  stage: mapping
+  label: {en: Filled 2-d density (stat), ja: "塗りの 2 次元の密度（stat）"}
+  aes: {x: {required: true}, "y": {required: true}, fill: {}}
+  visible: [mapping, geom, contour_var, bins]
+
+stat_summary_2d:
+  package: ggplot2
+  figure: layer
+  rank: 288
+  stage: mapping
+  label: {en: Summary in 2-d bins, ja: "2 次元の区間ごとの要約"}
+  description: "A summary of z (fun, by default the mean) in rectangles of (x, y): a heat map of a value."
+  aes: {x: {required: true}, "y": {required: true}, z: {required: true}, fill: {}}
+  visible: [mapping, fun, bins, binwidth]
+
+stat_summary_hex:
+  package: ggplot2
+  figure: layer
+  rank: 288
+  stage: mapping
+  label: {en: Summary in hexagons, ja: "六角形の区間ごとの要約"}
+  aes: {x: {required: true}, "y": {required: true}, z: {required: true}, fill: {}}
+  visible: [mapping, fun, bins, binwidth]
+
+stat_quantile:
+  package: ggplot2
+  figure: layer
+  rank: 289
+  stage: mapping
+  label: {en: Quantile regression (stat), ja: "分位点回帰（stat）"}
+  aes: {x: {required: true}, "y": {required: true}, colour: {}}
+  visible: [mapping, quantiles, formula, method]
+
+stat_align:
+  package: ggplot2
+  figure: layer
+  rank: 258
+  stage: mapping
+  label: {en: Aligned x (stat), ja: "x をそろえる（stat）"}
+  description: "Areas stacked on a common x: each group interpolated to the others' x values (geom_area's stat)."
+  aes: {x: {required: true}, "y": {required: true}, fill: {}}
+  visible: [mapping, geom, position]
+
+stat_connect:
+  package: ggplot2
+  figure: layer
+  rank: 259
+  stage: mapping
+  label: {en: Connected points (stat), ja: "点のつなぎ方（stat）"}
+  description: "Points joined as steps (connection: hv, vh, mid) or by a matrix of its own (ggplot2 4.0)."
+  aes: {x: {required: true}, "y": {required: true}, colour: {}}
+  visible: [mapping, connection, geom]
+  args:
+    connection: {type: "enum[hv|vh|mid|linear]|r", label: {en: Connection, ja: つなぎ方}, description: "hv: a step across then up (as geom_step()); or !r a 2-column matrix of its own."}
+
+stat_manual:
+  package: ggplot2
+  figure: layer
+  rank: 269
+  stage: mapping
+  label: {en: A function of the data (stat), ja: "データの関数（stat）"}
+  description: "Each group's data passed through fun (with args) before it is drawn (ggplot2 4.0): stat_manual(fun = !r function(d) transform(d, y = cumsum(y)))."
+  aes: {x: {}, "y": {}, colour: {}}
+  visible: [mapping, fun, args, geom]
+
+annotation_logticks:
+  package: ggplot2
+  figure: layer
+  rank: 292
+  stage: finishing
+  label: {en: Log ticks, ja: 対数の目盛り}
+  description: "Short, middle and long ticks of a log10 axis (a forest plot's ratio axis); with scale_x_log10(), scaled: TRUE."
+  visible: [sides, base, scaled, outside]
+  args:
+    base: {type: number, label: {en: Log base, ja: 対数の底}}
+    sides: {type: string, label: {en: Sides, ja: 辺}, description: "Any of t, r, b, l: bl (the default) bottom and left."}
+    outside: {type: logical, label: {en: Outside the panel, ja: パネルの外側に}, description: "TRUE with coord_cartesian(clip = off)."}
+    scaled: {type: logical, label: {en: Data already logged, ja: データは対数変換済み}, description: "TRUE with scale_x_log10() (the data on the log scale); FALSE with coord_transform(x = log10)."}
+    short: {type: "call<unit>|r", label: {en: Short tick length, ja: 短い目盛りの長さ}}
+    mid: {type: "call<unit>|r", label: {en: Middle tick length, ja: 中くらいの目盛りの長さ}}
+    long: {type: "call<unit>|r", label: {en: Long tick length, ja: 長い目盛りの長さ}}
+
+annotation_custom:
+  package: ggplot2
+  figure: layer
+  rank: 293
+  stage: finishing
+  label: {en: A grob on the plot, ja: グロブの注記}
+  description: "A grid grob (a table, a logo, a text block) drawn in a box of the data's coordinates (-Inf / Inf: the whole panel)."
+  visible: [grob, xmin, xmax, ymin, ymax]
+  args:
+    grob: {type: r, label: {en: Grob, ja: グロブ}, description: "!r grid::textGrob(\"Favours drug\") or a ggplotGrob()."}
+    xmin: {type: number|r, label: {en: Left, ja: 左}}
+    xmax: {type: number|r, label: {en: Right, ja: 右}}
+    ymin: {type: number|r, label: {en: Bottom, ja: 下}}
+    ymax: {type: number|r, label: {en: Top, ja: 上}}
+
+annotation_raster:
+  package: ggplot2
+  figure: layer
+  rank: 294
+  stage: finishing
+  label: {en: An image on the plot, ja: 画像の注記}
+  description: "A raster (a matrix of colours, an image read by png::readPNG()) in a box of the data's coordinates."
+  visible: [raster, xmin, xmax, ymin, ymax]
+  args:
+    raster: {type: r, label: {en: Raster, ja: ラスター}}
+    xmin: {type: number|r, label: {en: Left, ja: 左}}
+    xmax: {type: number|r, label: {en: Right, ja: 右}}
+    ymin: {type: number|r, label: {en: Bottom, ja: 下}}
+    ymax: {type: number|r, label: {en: Top, ja: 上}}
+    interpolate: {type: logical, label: {en: Smoothed, ja: 補間する}}
+
+expand_limits:
+  package: ggplot2
+  figure: layer
+  rank: 298
+  stage: finishing
+  label: {en: Values the axes include, ja: 軸に含める値}
+  description: "The axes widened to include these values (x: 0, y: [0, 100]): a blank layer, the scales keep their own limits."
+  dots: {style: named, type: "number|string|list<number|string>|r", description: "Values by aesthetic: x, y, colour, fill ..."}
+
+# the scales' limits alone
+
+xlim:
+  package: ggplot2
+  figure: scale
+  rank: 378
+  stage: finishing
+  label: {en: X limits, ja: x 軸の範囲}
+  description: "The x scale's limits, [0, 52]: values outside are dropped (to zoom, coord_cartesian(xlim =))."
+  dots: {style: positional, key: limits, type: "list<number|string>|r", description: "Two numbers (NA: the data's), or the discrete levels in order."}
+
+ylim:
+  package: ggplot2
+  figure: scale
+  rank: 378
+  stage: finishing
+  label: {en: Y limits, ja: y 軸の範囲}
+  description: "The y scale's limits, [0, 100]: values outside are dropped (to zoom, coord_cartesian(ylim =))."
+  dots: {style: positional, key: limits, type: "list<number|string>|r", description: "Two numbers (NA: the data's), or the discrete levels in order."}
+
+lims:
+  package: ggplot2
+  figure: scale
+  rank: 379
+  stage: finishing
+  label: {en: Limits by aesthetic, ja: 美的属性ごとの範囲}
+  description: "The scales' limits by aesthetic: {x: [0, 52], colour: [A, B]}."
+  dots: {style: named, type: "list<number|string>|r", description: "Limits by aesthetic (x, y, colour, fill ...)."}
+
+# the other scales of a colour, a fill, a size, an alpha, a shape, a line
+
+scale_colour_ordinal:
+  package: ggplot2
+  figure: scale
+  rank: 380
+  stage: finishing
+  label: {en: Colours (ordered factor), ja: 色（順序のある因子）}
+  visible: [name, type]
+
+scale_fill_ordinal:
+  package: ggplot2
+  figure: scale
+  rank: 380
+  stage: finishing
+  label: {en: Fills (ordered factor), ja: 塗り（順序のある因子）}
+  visible: [name, type]
+
+scale_colour_binned:
+  package: ggplot2
+  figure: scale
+  rank: 381
+  stage: finishing
+  label: {en: Colours (binned), ja: 色（区間）}
+  visible: [name, n.breaks, type]
+
+scale_fill_binned:
+  package: ggplot2
+  figure: scale
+  rank: 381
+  stage: finishing
+  label: {en: Fills (binned), ja: 塗り（区間）}
+  visible: [name, n.breaks, type]
+
+scale_colour_stepsn:
+  package: ggplot2
+  figure: scale
+  rank: 382
+  stage: finishing
+  label: {en: Colours (bins of n colours), ja: 色（n 色の区間）}
+  visible: [colours, breaks, name]
+
+scale_fill_stepsn:
+  package: ggplot2
+  figure: scale
+  rank: 382
+  stage: finishing
+  label: {en: Fills (bins of n colours), ja: 塗り（n 色の区間）}
+  visible: [colours, breaks, name]
+
+scale_colour_viridis_b:
+  package: ggplot2
+  figure: scale
+  rank: 383
+  stage: finishing
+  label: {en: Colours (viridis bins), ja: 色（viridis の区間）}
+  visible: [option, begin, end, name]
+
+scale_fill_viridis_b:
+  package: ggplot2
+  figure: scale
+  rank: 383
+  stage: finishing
+  label: {en: Fills (viridis bins), ja: 塗り（viridis の区間）}
+  visible: [option, begin, end, name]
+
+scale_colour_date:
+  package: ggplot2
+  figure: scale
+  rank: 384
+  stage: finishing
+  label: {en: Colours (dates), ja: 色（日付）}
+  visible: [low, high, name, date_labels]
+
+scale_fill_date:
+  package: ggplot2
+  figure: scale
+  rank: 384
+  stage: finishing
+  label: {en: Fills (dates), ja: 塗り（日付）}
+  visible: [low, high, name, date_labels]
+
+scale_colour_datetime:
+  package: ggplot2
+  figure: scale
+  rank: 384
+  stage: finishing
+  label: {en: Colours (date-times), ja: 色（日時）}
+  visible: [low, high, name, date_labels]
+
+scale_fill_datetime:
+  package: ggplot2
+  figure: scale
+  rank: 384
+  stage: finishing
+  label: {en: Fills (date-times), ja: 塗り（日時）}
+  visible: [low, high, name, date_labels]
+
+scale_y_binned:
+  package: ggplot2
+  figure: scale
+  rank: 385
+  stage: finishing
+  label: {en: Y axis (binned), ja: y 軸（区間）}
+  visible: [n.breaks, breaks, name]
+
+scale_y_datetime:
+  package: ggplot2
+  figure: scale
+  rank: 385
+  stage: finishing
+  label: {en: Y axis (date-times), ja: y 軸（日時）}
+  visible: [date_breaks, date_labels, limits, name]
+
+scale_y_time:
+  package: ggplot2
+  figure: scale
+  rank: 385
+  stage: finishing
+  label: {en: Y axis (times of day), ja: y 軸（時刻）}
+  visible: [breaks, labels, limits]
+
+scale_alpha_continuous:
+  package: ggplot2
+  figure: scale
+  rank: 386
+  stage: finishing
+  label: {en: Transparency (continuous), ja: 透明度（連続）}
+  visible: [range, name]
+
+scale_alpha_discrete:
+  package: ggplot2
+  figure: scale
+  rank: 386
+  stage: finishing
+  label: {en: Transparency (discrete), ja: 透明度（離散）}
+  visible: [name]
+
+scale_alpha_binned:
+  package: ggplot2
+  figure: scale
+  rank: 386
+  stage: finishing
+  label: {en: Transparency (binned), ja: 透明度（区間）}
+  visible: [range, n.breaks, name]
+
+scale_alpha_ordinal:
+  package: ggplot2
+  figure: scale
+  rank: 386
+  stage: finishing
+  label: {en: Transparency (ordered factor), ja: 透明度（順序のある因子）}
+  visible: [range, name]
+
+scale_alpha_identity:
+  package: ggplot2
+  figure: scale
+  rank: 386
+  stage: finishing
+  label: {en: Transparency as in the data, ja: 透明度（データの値のまま）}
+  visible: [guide, name]
+
+scale_size_continuous:
+  package: ggplot2
+  figure: scale
+  rank: 387
+  stage: finishing
+  label: {en: Sizes (continuous), ja: 大きさ（連続）}
+  description: "A point's size by a value (a forest plot's weight): range [1, 6] in mm."
+  visible: [range, name, breaks]
+
+scale_size_discrete:
+  package: ggplot2
+  figure: scale
+  rank: 387
+  stage: finishing
+  label: {en: Sizes (discrete), ja: 大きさ（離散）}
+  visible: [name]
+
+scale_size_binned:
+  package: ggplot2
+  figure: scale
+  rank: 387
+  stage: finishing
+  label: {en: Sizes (binned), ja: 大きさ（区間）}
+  visible: [range, n.breaks, name]
+
+scale_size_ordinal:
+  package: ggplot2
+  figure: scale
+  rank: 387
+  stage: finishing
+  label: {en: Sizes (ordered factor), ja: 大きさ（順序のある因子）}
+  visible: [range, name]
+
+scale_size_identity:
+  package: ggplot2
+  figure: scale
+  rank: 387
+  stage: finishing
+  label: {en: Sizes as in the data, ja: 大きさ（データの値のまま）}
+  visible: [guide, name]
+
+scale_size_binned_area:
+  package: ggplot2
+  figure: scale
+  rank: 387
+  stage: finishing
+  label: {en: Sizes (binned, by area), ja: 大きさ（区間、面積比例）}
+  visible: [max_size, n.breaks, name]
+
+scale_radius:
+  package: ggplot2
+  figure: scale
+  rank: 387
+  stage: finishing
+  label: {en: Sizes (by radius), ja: 大きさ（半径比例）}
+  visible: [range, name]
+
+scale_shape_discrete:
+  package: ggplot2
+  figure: scale
+  rank: 388
+  stage: finishing
+  label: {en: Shapes (discrete), ja: 形（離散）}
+  visible: [solid, name]
+
+scale_shape_binned:
+  package: ggplot2
+  figure: scale
+  rank: 388
+  stage: finishing
+  label: {en: Shapes (binned), ja: 形（区間）}
+  visible: [solid, n.breaks, name]
+
+scale_shape_ordinal:
+  package: ggplot2
+  figure: scale
+  rank: 388
+  stage: finishing
+  label: {en: Shapes (ordered factor), ja: 形（順序のある因子）}
+  visible: [name]
+
+scale_shape_identity:
+  package: ggplot2
+  figure: scale
+  rank: 388
+  stage: finishing
+  label: {en: Shapes as in the data, ja: 形（データの値のまま）}
+  description: "A column of shape numbers (16, 1, 3) drawn as they are: a swimmer plot's event marks."
+  visible: [guide, name]
+
+scale_linetype_discrete:
+  package: ggplot2
+  figure: scale
+  rank: 389
+  stage: finishing
+  label: {en: Line types (discrete), ja: 線種（離散）}
+  visible: [name]
+
+scale_linetype_binned:
+  package: ggplot2
+  figure: scale
+  rank: 389
+  stage: finishing
+  label: {en: Line types (binned), ja: 線種（区間）}
+  visible: [n.breaks, name]
+
+scale_linetype_identity:
+  package: ggplot2
+  figure: scale
+  rank: 389
+  stage: finishing
+  label: {en: Line types as in the data, ja: 線種（データの値のまま）}
+  visible: [guide, name]
+
+scale_linewidth_continuous:
+  package: ggplot2
+  figure: scale
+  rank: 390
+  stage: finishing
+  label: {en: Line widths (continuous), ja: 線の太さ（連続）}
+  visible: [range, name]
+
+scale_linewidth_discrete:
+  package: ggplot2
+  figure: scale
+  rank: 390
+  stage: finishing
+  label: {en: Line widths (discrete), ja: 線の太さ（離散）}
+  visible: [name]
+
+scale_linewidth_binned:
+  package: ggplot2
+  figure: scale
+  rank: 390
+  stage: finishing
+  label: {en: Line widths (binned), ja: 線の太さ（区間）}
+  visible: [range, n.breaks, name]
+
+scale_linewidth_ordinal:
+  package: ggplot2
+  figure: scale
+  rank: 390
+  stage: finishing
+  label: {en: Line widths (ordered factor), ja: 線の太さ（順序のある因子）}
+  visible: [range, name]
+
+scale_linewidth_identity:
+  package: ggplot2
+  figure: scale
+  rank: 390
+  stage: finishing
+  label: {en: Line widths as in the data, ja: 線の太さ（データの値のまま）}
+  visible: [guide, name]
+
+scale_discrete_manual:
+  package: ggplot2
+  figure: scale
+  rank: 391
+  stage: finishing
+  label: {en: Manual values of any aesthetic, ja: 任意の美的属性の値（手動）}
+  description: "One set of values for several aesthetics: aesthetics [colour, fill], values {A: grey50, B: red}."
+  visible: [aesthetics, values, name]
+
+scale_discrete_identity:
+  package: ggplot2
+  figure: scale
+  rank: 391
+  stage: finishing
+  label: {en: Any aesthetic as in the data (discrete), ja: 任意の美的属性（データの値のまま、離散）}
+  visible: [aesthetics, guide]
+
+scale_continuous_identity:
+  package: ggplot2
+  figure: scale
+  rank: 391
+  stage: finishing
+  label: {en: Any aesthetic as in the data (continuous), ja: 任意の美的属性（データの値のまま、連続）}
+  visible: [aesthetics, guide]
+
+# coordinates and facets
+
+coord_transform:
+  package: ggplot2
+  figure: coord
+  rank: 407
+  stage: finishing
+  label: {en: Transformed axes, ja: 変換した座標}
+  description: "An axis drawn on a transformed scale after the statistics (x: log10): ggplot2 4.0's name of coord_trans()."
+  visible: [x, "y", xlim, ylim]
+
+facet_null:
+  package: ggplot2
+  figure: facet
+  rank: 507
+  stage: finishing
+  label: {en: No panels, ja: 面なし}
+  description: "One panel: a facet of a plot taken away again (a template's facet_wrap() turned off)."
+
+vars:
+  package: ggplot2
+  figure: helper
+  rank: 508
+  stage: finishing
+  label: {en: Variables of the panels, ja: 面の変数}
+  description: "facet_wrap(facets =), facet_grid(rows =, cols =): the columns that split the panels."
+  dots: {style: named, type: r, description: "The columns by the names the strips show: {Parameter: !r PARAMCD}; mostly written whole, !r vars(PARAMCD, AVISIT)."}
+
+labeller:
+  package: ggplot2
+  figure: helper
+  rank: 509
+  stage: finishing
+  label: {en: Strip labels by variable, ja: 変数ごとのストリップのラベル}
+  description: "A facet's labeller: each variable its own (PARAMCD: !r label_wrap_gen(20), TRTA: !r label_both), or a lookup table."
+  visible: [.default, .multi_line]
+  dots: {style: named, type: "r|call|vec<string, string>", description: "Variable: a labeller (!r label_both) or a lookup {code: label}."}
+  args:
+    .rows: {type: "r|call|string", label: {en: Labeller of the rows, ja: 行のラベル}}
+    .cols: {type: "r|call|string", label: {en: Labeller of the columns, ja: 列のラベル}}
+    keep.as.numeric: {type: logical, label: {en: Keep numbers, ja: 数値のまま}}
+    .multi_line: {type: logical, label: {en: One line a variable, ja: 変数ごとに 1 行}}
+    .default: {type: "r|call|string", label: {en: Labeller of the others, ja: そのほかのラベル}, description: "!r label_value (the default)."}
+
+label_value:
+  package: ggplot2
+  figure: helper
+  rank: 510
+  stage: finishing
+  label: {en: "Strip labels: the values", ja: "ストリップ：値"}
+  description: "A facet's labeller, the values alone (the default): labeller: label_value."
+  visible: [multi_line]
+  args:
+    labels: {type: r, label: {en: Labels, ja: ラベル}, description: "The facet passes them; a SPEC names the labeller without it."}
+    multi_line: {type: logical, label: {en: One line a variable, ja: 変数ごとに 1 行}}
+
+label_both:
+  package: ggplot2
+  figure: helper
+  rank: 511
+  stage: finishing
+  label: {en: "Strip labels: variable and value", ja: "ストリップ：変数と値"}
+  description: "A facet's labeller, \"TRTA: Drug\": labeller: label_both."
+  visible: [sep, multi_line]
+  args:
+    labels: {type: r, label: {en: Labels, ja: ラベル}, description: "The facet passes them; a SPEC names the labeller without it."}
+    multi_line: {type: logical, label: {en: One line a variable, ja: 変数ごとに 1 行}}
+    sep: {type: string, label: {en: Separator, ja: 区切り}}
+
+label_context:
+  package: ggplot2
+  figure: helper
+  rank: 512
+  stage: finishing
+  label: {en: "Strip labels: by the number of variables", ja: "ストリップ：変数の数による"}
+  description: "label_value for one variable, label_both for more."
+  visible: [sep, multi_line]
+  args:
+    labels: {type: r, label: {en: Labels, ja: ラベル}, description: "The facet passes them; a SPEC names the labeller without it."}
+    multi_line: {type: logical, label: {en: One line a variable, ja: 変数ごとに 1 行}}
+    sep: {type: string, label: {en: Separator, ja: 区切り}}
+
+label_parsed:
+  package: ggplot2
+  figure: helper
+  rank: 513
+  stage: finishing
+  label: {en: "Strip labels: plotmath", ja: "ストリップ：数式"}
+  description: "The values read as plotmath (\"HbA[1*c]\")."
+  visible: [multi_line]
+  args:
+    labels: {type: r, label: {en: Labels, ja: ラベル}, description: "The facet passes them; a SPEC names the labeller without it."}
+    multi_line: {type: logical, label: {en: One line a variable, ja: 変数ごとに 1 行}}
+
+label_wrap_gen:
+  package: ggplot2
+  figure: helper
+  rank: 514
+  stage: finishing
+  label: {en: "Strip labels: wrapped", ja: "ストリップ：折り返し"}
+  description: "A facet's labeller that wraps long values (a parameter's name) at a width: {fn: label_wrap_gen, args: {width: 20}}."
+  visible: [width, multi_line]
+  args:
+    width: {type: integer, label: {en: Characters a line, ja: 1 行の文字数}}
+    multi_line: {type: logical, label: {en: One line a variable, ja: 変数ごとに 1 行}}
+
+label_bquote:
+  package: ggplot2
+  figure: helper
+  rank: 515
+  stage: finishing
+  label: {en: "Strip labels: an expression", ja: "ストリップ：式"}
+  description: "Strip labels made by an expression of the value: rows: !r alpha ^ .(AVISITN)."
+  visible: [rows, cols]
+  args:
+    rows: {type: r, label: {en: Rows, ja: 行}}
+    cols: {type: r, label: {en: Columns, ja: 列}}
+    default: {type: r, label: {en: Default, ja: 既定}}
+
+# a theme of its own, the parts of theme() by ggplot2 4.0's theme_sub_*()
+
+theme_test:
+  package: ggplot2
+  figure: theme
+  rank: 714
+  stage: finishing
+  label: {en: "Theme: test", ja: "テーマ：テスト"}
+  description: "A theme for visual tests: a stable look across ggplot2 versions."
+  visible: [base_size, base_family]
+
+theme_sub_axis:
+  package: ggplot2
+  figure: theme
+  rank: 715
+  stage: finishing
+  label: {en: Axes (both), ja: 軸（両方）}
+  description: "theme(axis.*) in short: theme_sub_axis(text = ...) is theme(axis.text = ...) (ggplot2 4.0)."
+  visible: [text, title, ticks, line]
+
+theme_sub_axis_x:
+  package: ggplot2
+  figure: theme
+  rank: 716
+  stage: finishing
+  label: {en: X axis, ja: x 軸}
+  description: "theme(axis.*.x) in short (ggplot2 4.0)."
+  visible: [text, title, ticks, line]
+
+theme_sub_axis_y:
+  package: ggplot2
+  figure: theme
+  rank: 716
+  stage: finishing
+  label: {en: Y axis, ja: y 軸}
+  description: "theme(axis.*.y) in short (ggplot2 4.0)."
+  visible: [text, title, ticks, line]
+
+theme_sub_axis_bottom:
+  package: ggplot2
+  figure: theme
+  rank: 717
+  stage: finishing
+  label: {en: Bottom axis, ja: 下の軸}
+  description: "theme(axis.*.x.bottom) in short (ggplot2 4.0)."
+  visible: [text, title, ticks, line]
+
+theme_sub_axis_top:
+  package: ggplot2
+  figure: theme
+  rank: 717
+  stage: finishing
+  label: {en: Top axis, ja: 上の軸}
+  description: "theme(axis.*.x.top) in short (ggplot2 4.0)."
+  visible: [text, title, ticks, line]
+
+theme_sub_axis_left:
+  package: ggplot2
+  figure: theme
+  rank: 717
+  stage: finishing
+  label: {en: Left axis, ja: 左の軸}
+  description: "theme(axis.*.y.left) in short (ggplot2 4.0)."
+  visible: [text, title, ticks, line]
+
+theme_sub_axis_right:
+  package: ggplot2
+  figure: theme
+  rank: 717
+  stage: finishing
+  label: {en: Right axis, ja: 右の軸}
+  description: "theme(axis.*.y.right) in short (ggplot2 4.0)."
+  visible: [text, title, ticks, line]
+
+theme_sub_legend:
+  package: ggplot2
+  figure: theme
+  rank: 718
+  stage: finishing
+  label: {en: Legend, ja: 凡例}
+  description: "theme(legend.*) in short: theme_sub_legend(position = bottom) (ggplot2 4.0)."
+  visible: [position, title, text, key.size]
+
+theme_sub_panel:
+  package: ggplot2
+  figure: theme
+  rank: 719
+  stage: finishing
+  label: {en: Panels, ja: パネル}
+  description: "theme(panel.*) in short (ggplot2 4.0)."
+  visible: [background, border, grid.major, grid.minor]
+
+theme_sub_plot:
+  package: ggplot2
+  figure: theme
+  rank: 720
+  stage: finishing
+  label: {en: The plot, ja: プロット全体}
+  description: "theme(plot.*) in short (ggplot2 4.0)."
+  visible: [title, title.position, caption, margin]
+
+theme_sub_strip:
+  package: ggplot2
+  figure: theme
+  rank: 721
+  stage: finishing
+  label: {en: Strips, ja: ストリップ}
+  description: "theme(strip.*) in short (ggplot2 4.0)."
+  visible: [background, text, placement]
+
+# the elements of ggplot2 4.0 and the values of a setting
+
+element_geom:
+  package: ggplot2
+  figure: element
+  rank: 745
+  stage: finishing
+  label: {en: Layers' defaults, ja: レイヤーの既定}
+  description: "theme(geom = ): the colours, widths and fonts the layers take by default (ggplot2 4.0)."
+  visible: [ink, paper, accent, linewidth]
+  args:
+    ink: {type: string, label: {en: Ink (foreground), ja: 前景色}, description: "The lines' and the text's colour."}
+    paper: {type: string, label: {en: Paper (background), ja: 背景色}}
+    accent: {type: string, label: {en: Accent colour, ja: 強調色}, description: "geom_smooth()'s line and the like."}
+    borderwidth: {type: number, label: {en: Border width, ja: 枠線の太さ}}
+    bordertype: {type: "string|integer", label: {en: Border type, ja: 枠線の種類}}
+    fontsize: {type: number, label: {en: Font size, ja: 文字の大きさ}, description: "In points (geom_text()'s size is in mm)."}
+    pointsize: {type: number, label: {en: Point size, ja: 点の大きさ}}
+    pointshape: {type: "integer|string", label: {en: Point shape, ja: 点の形}}
+
+element_point:
+  package: ggplot2
+  figure: element
+  rank: 746
+  stage: finishing
+  label: {en: Point, ja: 点}
+  description: "theme(point = ): points a theme draws (ggplot2 4.0)."
+  visible: [colour, shape, size]
+  args:
+    shape: {type: "integer|string", label: {en: Shape, ja: 形}}
+    stroke: {type: number, label: {en: Stroke, ja: 輪郭の太さ}}
+
+element_polygon:
+  package: ggplot2
+  figure: element
+  rank: 747
+  stage: finishing
+  label: {en: Polygon, ja: 多角形}
+  description: "theme(polygon = ): polygons a theme draws (ggplot2 4.0)."
+  visible: [fill, colour, linewidth]
+
+rel:
+  package: ggplot2
+  figure: helper
+  rank: 748
+  stage: finishing
+  label: {en: Relative size, ja: 相対的な大きさ}
+  description: "A size relative to the parent element's: element_text(size = {fn: rel, args: {x: 0.8}})."
+  visible: [x]
+  args:
+    x: {type: number, label: {en: Ratio, ja: 比}}
+
+unit:
+  package: ggplot2
+  figure: helper
+  rank: 749
+  stage: finishing
+  label: {en: Length, ja: 長さ}
+  description: "A length of grid (legend.key.size, axis.ticks.length): {fn: unit, args: {x: 2, units: mm}}."
+  visible: [x, units]
+  args:
+    x: {type: "number|list<number>", label: {en: Value, ja: 値}}
+    units: {type: string, label: {en: Unit, ja: 単位}, description: "pt, mm, cm, in, lines, npc, char."}
+    data: {type: r, label: {en: Data, ja: データ}, description: "For a unit of a string's or a grob's size."}
+
+margin_auto:
+  package: ggplot2
+  figure: helper
+  rank: 758
+  stage: finishing
+  label: {en: Margins (CSS-like), ja: 余白（CSS 風）}
+  description: "Margins given as in CSS: one value for all sides, two for top-bottom and left-right (ggplot2 3.5.2)."
+  visible: [t, r, b, l, unit]
+
+margin_part:
+  package: ggplot2
+  figure: helper
+  rank: 759
+  stage: finishing
+  label: {en: Margins (some sides), ja: 余白（一部の辺）}
+  description: "Only the sides given; the others inherited from the parent element (ggplot2 3.5.2)."
+  visible: [t, r, b, l, unit]
+
+arrow:
+  package: ggplot2
+  figure: helper
+  rank: 760
+  stage: finishing
+  label: {en: Arrowhead, ja: 矢じり}
+  description: "A line's arrowhead (geom_segment(arrow = ), a swimmer plot's ongoing mark): {fn: arrow, args: {length: !r unit(2, \"mm\"), type: closed}}."
+  visible: [length, type, ends, angle]
+
+guide_custom:
+  package: ggplot2
+  figure: guide
+  rank: 810
+  stage: finishing
+  label: {en: A grob as a legend, ja: グロブの凡例}
+  description: "A legend of a grob of its own (a key to the marks of a swimmer plot drawn by hand)."
+  visible: [grob, title, width, height]
+  args:
+    grob: {type: r, label: {en: Grob, ja: グロブ}}
+    width: {type: "call<unit>|r", label: {en: Width, ja: 幅}}
+    height: {type: "call<unit>|r", label: {en: Height, ja: 高さ}}
+    theme: {type: "call<theme>|r", label: {en: Theme, ja: テーマ}}
+
+
 # -- extension packages (Suggests; the code calls them as pkg::fn) --
 
 geom_label_repel:
@@ -3964,8 +4855,8 @@ facet_nested:
   description: "Panels with nested strips (SOC over PT)."
   visible: [rows, cols, scales, nest_line]
   args:
-    rows: {type: r, label: {en: Rows (vars()), ja: 行（vars()）}}
-    cols: {type: r, label: {en: Columns (vars()), ja: 列（vars()）}}
+    rows: {type: "r|call<vars>", label: {en: Rows (vars()), ja: 行（vars()）}}
+    cols: {type: "r|call<vars>", label: {en: Columns (vars()), ja: 列（vars()）}}
     scales: {type: "enum[fixed|free|free_x|free_y]", label: {en: Axes, ja: 軸}}
 
 facet_nested_wrap:

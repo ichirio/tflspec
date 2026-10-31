@@ -159,35 +159,79 @@ line over time with mean +/- SE, bar, scatter, heat map and CDF plots use;
 2 sometimes; 1 rarely.  Deprecated and internal arguments (`size` of line
 geoms, `fun.y`, `trans`, `label.size` ...) are left out.
 
-Two rounds.  The first counted 2015 arguments (156 functions and geoms with
+Three rounds.  The first counted 2015 arguments (156 functions and geoms with
 a stat); the second widened the scope by 19 functions (line widths, binned / stepped / default
 colour scales, scale_x_time(), guide_axis_logticks() for a forest plot's
 ratio axis, guide_axis_theta() / guide_axis_stack(), filled contours) to
-2303 arguments of 175 functions.
+2303 arguments of 175 functions; the third (2026-10-31) to ggplot2's
+other functions of a plot -- 89 more functions, 3409 arguments of 264:
+the limits (xlim(), ylim(), lims(), expand_limits()), annotation_logticks()
+/ _custom() / _raster(), a facet's vars() and labellers, the other scales
+of a size, an alpha, a shape, a line type and width, a colour or fill by
+date, ordinal and binned, scale_discrete_manual() and the identity scales,
+coord_transform(), facet_null(), theme_test(), ggplot2 4.0's
+theme_sub_*() and element_geom() / _point() / _polygon(), rel(), unit(),
+arrow(), margin_auto() / _part(), guide_custom(), geom_hex() and the
+rarer stat_*() (2-d bins and summaries, contours, 2-d density, quantile,
+align, connect, manual).
 
-| Scope | Start | Round 1 | Round 2 (wider scope: before / after) |
-|---|---:|---:|---:|
-| **ggplot2: geoms (with their stats), scales, coords, themes, facets, guides, labs, positions** | **24.7%** | **94.9%** | **91.4% / 100.0%** |
-| geom_*() | 55.9% | 91.4% | 90.6% / 100.0% |
-| a geom with another stat (geom_step(stat = "ecdf"), geom_pointrange(stat = "summary") ...) | 0.0% | 100.0% | 100.0% / 100.0% |
-| scale_*() and expansion() / sec_axis() / dup_axis() | 8.1% | 95.9% | 87.7% / 100.0% |
-| coord_*() | 34.5% | 98.8% | 98.8% / 100.0% |
-| theme(), complete themes, element_*(), margin() | 5.0% | 91.2% | 91.2% / 100.0% |
-| facet_wrap() / facet_grid() | 57.4% | 100.0% | 100.0% / 100.0% |
-| guides() and guide_*() | 10.7% | 97.3% | 86.8% / 100.0% |
-| labs(), xlab(), ylab(), ggtitle(), annotate() | 38.8% | 97.4% | 97.4% / 100.0% |
-| position_*() | 0.0% | 100.0% | 100.0% / 100.0% |
-| **stat_*()** (shown apart) | **44.2%** | **73.1%** | **73.1% / 100.0%** |
+| Scope | Start | Round 1 | Round 2 (wider scope: before / after) | Round 3 (wider scope: before / after) |
+|---|---:|---:|---:|---:|
+| **ggplot2: geoms (with their stats), scales, coords, themes, facets, guides, labs, positions** | **24.7%** | **94.9%** | **91.4% / 100.0%** | **84.2% / 100.0%** |
+| geom_*() | 55.9% | 91.4% | 90.6% / 100.0% | 99.4% / 100.0% |
+| a geom with another stat (geom_step(stat = "ecdf"), geom_pointrange(stat = "summary") ...) | 0.0% | 100.0% | 100.0% / 100.0% | 100.0% / 100.0% |
+| scale_*(), the limits and expansion() / sec_axis() / dup_axis() | 8.1% | 95.9% | 87.7% / 100.0% | 80.7% / 100.0% |
+| coord_*() | 34.5% | 98.8% | 98.8% / 100.0% | 92.9% / 100.0% |
+| theme(), theme_sub_*(), complete themes, element_*(), margin(), rel(), unit() | 5.0% | 91.2% | 91.2% / 100.0% | 75.0% / 100.0% |
+| facet_wrap() / facet_grid() / facet_null(), vars(), labellers | 57.4% | 100.0% | 100.0% / 100.0% | 32.5% / 100.0% |
+| guides() and guide_*() | 10.7% | 97.3% | 86.8% / 100.0% | 97.4% / 100.0% |
+| labs(), xlab(), ylab(), ggtitle(), annotate(), annotation_*() | 38.8% | 97.4% | 97.4% / 100.0% | 69.2% / 100.0% |
+| position_*() | 0.0% | 100.0% | 100.0% / 100.0% | 100.0% / 100.0% |
+| **stat_*()** (shown apart) | **44.2%** | **73.1%** | **73.1% / 100.0%** | **82.4% / 100.0%** |
 
 Round 2, 2303 arguments: before 1533 yes / 770 partial / 0 no; after 2303
-yes.  (ggplot2 4.0's `box_gp`, `whisker_gp` ... are left out: geom_boxplot()
-makes them from `whisker.colour` and the like, and given too they clash.)
+yes.  Round 3, 3409 arguments: before 2303 yes / 1054 partial / 52 no
+(xlim(), lims(), annotation_logticks(), the labellers, vars() were an
+error of the check: no kind without a prefix); after 3409 yes.  (ggplot2
+4.0's `box_gp`, `whisker_gp` ... are left out: geom_boxplot() makes them
+from `whisker.colour` and the like, and given too they clash.)
 
 100% is this measure's ceiling, not ggplot2's: every argument in the scope
 has a card and a type, which says the GUI shows it and the check types its
 value; the tests run the code of a sample of them (test-fig-ggplot2.R).
-The extension packages are measured apart (below).  Next: the scope's
-edge (geom_sf, geom_hex, the rarer stat_*()).
+The extension packages are measured apart (below).  Left out by design:
+maps and simple features (geom_sf*, coord_sf, coord_map / _quickmap,
+geom_map, annotation_map / _borders), the deprecated (geom_errorbarh,
+stat_spoke), the
+programming helpers (aes_*(), layer(), ggproto ...), and ggplot2's other
+spellings, which are not counted: the script checks that each of the 33
+(scale_color_*, guide_colorbar, guide_colorsteps, theme_grey, stat_bin2d,
+geom_density2d ...) reads as its function's card.
+
+Round 3:
+
+- A function of a plot without the prefix has a kind: xlim(), ylim() and
+  lims() a scale's, annotation_*() and expand_limits() a layer's, vars(),
+  labeller() and the label_*() labellers helpers (`.schema_gg_kind()`);
+  before, the check said "a function neither the schema nor its package
+  has".
+- `xlim(0, 52)`: a card's positional `...` is written by position and read
+  back (`limits: [0, 52]` in the SPEC), not `xlim(limits = c(0, 52))`.
+- ggplot2's other spellings read as the card of the function they spell
+  (`.schema_gg_alias()`: scale_color_manual is scale_colour_manual's card);
+  the generated code keeps the name written.
+- theme_sub_*() (ggplot2 4.0) are typed as the settings they stand for:
+  theme_sub_axis_bottom(text =) is axis.text.x.bottom, an element_text;
+  theme_sub_legend(position =) theme()'s legend.position.
+- A facet's `labeller` takes a labeller's call ({fn: label_wrap_gen, args:
+  {width: 20}}, {fn: labeller, args: {PARAMCD: !r label_both}});
+  facet_wrap()'s `facets` the columns (`facets: PARAMCD`), as ggplot2 takes
+  them (before: only !r vars(PARAMCD)).
+- 89 cards (inst/spec/schema.yml), the arguments without a kind's type
+  typed there: annotation_logticks()'s `base`, `sides`, `scaled`,
+  `outside`, `short` / `mid` / `long`; element_geom()'s `ink`, `paper`,
+  `accent`, `fontsize` ...; stat_connect()'s `connection`; unit()'s and
+  rel()'s `x`; guide_custom()'s `grob`.
 
 ### The extension packages (ggsurvfit, ggrepel, ggh4x, ggtext, ggnewscale, patchwork)
 
@@ -212,7 +256,7 @@ named `pkg::fn` in a SPEC (`ggh4x::facet_manual`).
 | ggnewscale | 90.0% | 100.0% |
 | patchwork | 45.6% | 100.0% |
 
-ggplot2 itself stays at 100.0% (2303 arguments).
+ggplot2 itself stayed at 100.0% (2303 arguments; 3409 after round 3).
 
 Added in this run:
 

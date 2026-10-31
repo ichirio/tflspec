@@ -30,9 +30,14 @@ The same file is what the GUI's help and the AI kit's schema read.
 \details{
 A figure's functions: the file has a card for those a clinical figure
 uses (the geoms and the stats -- those with no geom of their own and
-those with one --, scales, coordinates, complete themes and \code{theme()},
-elements, guides, positions); any other function of a plot \code{ggplot2}
-exports (\code{scale_shape_identity}, \code{guide_custom}) is its formals.  So
+those with one --, scales and the limits \code{xlim()}, \code{ylim()}, \code{lims()},
+\code{expand_limits()}, coordinates, complete themes, \code{theme()} and its
+parts \verb{theme_sub_*()}, elements, guides, positions, \verb{annotation_*()},
+a facet's \code{vars()} and labellers); any other function of a plot
+\code{ggplot2} exports (\code{coord_quickmap}, \code{geom_sf_text}) is its
+formals.  \code{ggplot2}'s other spellings (\code{scale_color_manual},
+\code{guide_colorbar}, \code{theme_grey}, \code{stat_bin2d}) read as the card of the
+function they spell, and the code keeps the name written.  So
 are the extension packages' (ggsurvfit's \code{add_risktable()} and themes,
 ggrepel, ggh4x's facets and strips, ggtext's elements, ggnewscale,
 patchwork's arrangement): those a clinical figure uses have a card, any

@@ -39,7 +39,7 @@ scope <- list(
            geom_raster = 1, geom_polygon = 1, geom_curve = 1, geom_count = 1, geom_qq = 1,
            geom_qq_line = 1, geom_blank = 1, geom_spoke = 1, geom_quantile = 1, geom_contour = 1,
            geom_density_2d = 1, geom_bin_2d = 1, geom_function = 1,
-           geom_contour_filled = 1, geom_density_2d_filled = 1),
+           geom_contour_filled = 1, geom_density_2d_filled = 1, geom_hex = 1),
   # a geom drawn by another stat: the stat's parameters
   geom_stat = c("geom_step|ecdf" = 3, "geom_pointrange|summary" = 3, "geom_errorbar|summary" = 3,
                 "geom_line|summary" = 3, "geom_point|summary" = 3, "geom_col|summary" = 2,
@@ -47,7 +47,9 @@ scope <- list(
   stat = c(stat_ecdf = 3, stat_summary = 3, stat_summary_bin = 2, stat_ellipse = 2, stat_unique = 1,
            stat_smooth = 1, stat_bin = 1, stat_count = 1, stat_boxplot = 1, stat_density = 1,
            stat_ydensity = 1, stat_identity = 1, stat_function = 1, stat_qq = 1, stat_qq_line = 1,
-           stat_sum = 1),
+           stat_sum = 1, stat_bin_2d = 1, stat_bin_hex = 1, stat_contour = 1, stat_contour_filled = 1,
+           stat_density_2d = 1, stat_density_2d_filled = 1, stat_summary_2d = 1, stat_summary_hex = 1,
+           stat_quantile = 1, stat_align = 1, stat_connect = 1, stat_manual = 1),
   scale = c(scale_x_continuous = 3, scale_y_continuous = 3, scale_x_discrete = 3, scale_y_discrete = 3,
             scale_x_log10 = 3, scale_y_log10 = 3, scale_colour_manual = 3, scale_fill_manual = 3,
             scale_shape_manual = 3, scale_linetype_manual = 3, scale_x_reverse = 2, scale_y_reverse = 2,
@@ -65,17 +67,39 @@ scope <- list(
             scale_fill_continuous = 1, scale_x_binned = 1, scale_colour_steps = 1,
             scale_fill_steps = 1, scale_colour_steps2 = 1, scale_colour_fermenter = 1,
             scale_fill_fermenter = 1, scale_x_time = 1,
+            scale_colour_ordinal = 1, scale_fill_ordinal = 1, scale_colour_binned = 1,
+            scale_fill_binned = 1, scale_colour_stepsn = 1, scale_fill_stepsn = 1,
+            scale_colour_viridis_b = 1, scale_fill_viridis_b = 1, scale_colour_date = 1,
+            scale_fill_date = 1, scale_colour_datetime = 1, scale_fill_datetime = 1,
+            scale_y_binned = 1, scale_y_datetime = 1, scale_y_time = 1,
+            scale_alpha_continuous = 1, scale_alpha_discrete = 1, scale_alpha_binned = 1,
+            scale_alpha_ordinal = 1, scale_alpha_identity = 1, scale_size_continuous = 1,
+            scale_size_discrete = 1, scale_size_binned = 1, scale_size_ordinal = 1,
+            scale_size_identity = 1, scale_size_binned_area = 1, scale_radius = 1,
+            scale_shape_discrete = 1, scale_shape_binned = 1, scale_shape_ordinal = 1,
+            scale_shape_identity = 1, scale_linetype_discrete = 1, scale_linetype_binned = 1,
+            scale_linetype_identity = 1, scale_linewidth_continuous = 1, scale_linewidth_discrete = 1,
+            scale_linewidth_binned = 1, scale_linewidth_ordinal = 1, scale_linewidth_identity = 1,
+            scale_discrete_manual = 1, scale_discrete_identity = 1, scale_continuous_identity = 1,
+            xlim = 2, ylim = 2, lims = 1, expand_limits = 2,
             expansion = 3, sec_axis = 2, dup_axis = 1),
   coord = c(coord_cartesian = 3, coord_flip = 3, coord_trans = 2, coord_fixed = 1, coord_equal = 1,
-            coord_polar = 1, coord_radial = 1),
+            coord_polar = 1, coord_radial = 1, coord_transform = 2),
   theme = c(theme = 3, theme_bw = 3, theme_classic = 3, theme_minimal = 2, theme_light = 1,
-            theme_linedraw = 1, theme_gray = 1, theme_void = 1, theme_dark = 1, element_text = 3,
-            element_line = 3, element_rect = 3, element_blank = 3, margin = 2),
-  facet = c(facet_wrap = 3, facet_grid = 3),
+            theme_linedraw = 1, theme_gray = 1, theme_void = 1, theme_dark = 1, theme_test = 1,
+            element_text = 3, element_line = 3, element_rect = 3, element_blank = 3, margin = 2,
+            rel = 2, unit = 2, margin_auto = 1, margin_part = 1, arrow = 1,
+            element_geom = 1, element_point = 1, element_polygon = 1,
+            theme_sub_axis = 1, theme_sub_axis_x = 1, theme_sub_axis_y = 1, theme_sub_axis_bottom = 1,
+            theme_sub_axis_top = 1, theme_sub_axis_left = 1, theme_sub_axis_right = 1,
+            theme_sub_legend = 1, theme_sub_panel = 1, theme_sub_plot = 1, theme_sub_strip = 1),
+  facet = c(facet_wrap = 3, facet_grid = 3, facet_null = 1, vars = 2, labeller = 2, label_value = 2,
+            label_both = 2, label_wrap_gen = 2, label_parsed = 1, label_context = 1, label_bquote = 1),
   guide = c(guides = 3, guide_legend = 3, guide_colourbar = 2, guide_axis = 2, guide_none = 2,
             guide_bins = 1, guide_coloursteps = 1, guide_axis_logticks = 2,
-            guide_axis_theta = 1, guide_axis_stack = 1),
-  labs = c(labs = 3, xlab = 1, ylab = 1, ggtitle = 1, annotate = 3),
+            guide_axis_theta = 1, guide_axis_stack = 1, guide_custom = 1),
+  labs = c(labs = 3, xlab = 1, ylab = 1, ggtitle = 1, annotate = 3, annotation_logticks = 2,
+           annotation_custom = 1, annotation_raster = 1),
   position = c(position_dodge = 3, position_dodge2 = 2, position_jitter = 2, position_jitterdodge = 2,
                position_nudge = 2, position_stack = 2, position_fill = 2, position_identity = 1)
 )
@@ -126,7 +150,7 @@ fn_args <- function(fn, pkg = "ggplot2") {
   if (identical(fn, "labs")) a <- c(a, "x", "y", "colour", "fill", "shape", "linetype")
   if (startsWith(fn, "scale_") && "..." %in% a) {
     sc <- tryCatch(suppressWarnings(suppressMessages(getExportedValue("ggplot2", fn)())), error = function(e) NULL)
-    ctor <- if (inherits(sc, "ScaleBinned")) "binned_scale" else
+    ctor <- if (inherits(sc, "ScaleBinned") || grepl("_(stepsn?|binned|fermenter)$", fn)) "binned_scale" else
       if (inherits(sc, "ScaleContinuous") || grepl("gradientn", fn)) "continuous_scale" else "discrete_scale"
     a <- c(a, names(formals(getExportedValue("ggplot2", ctor))))
   }
@@ -227,6 +251,17 @@ if (nrow(ext)) {
       sum(ext$covered == "partial"), " no:", sum(ext$covered == "no"), "\n")
 }
 cov <- cov_all
+
+# ggplot2's other spellings of a function in the scope (scale_color_*,
+# guide_colorbar, theme_grey, stat_bin2d ...): not counted, but each should
+# be the card of the function it spells
+alias_of <- get(".schema_gg_alias", ns)
+alias_to <- vapply(getNamespaceExports("ggplot2"), alias_of, "")
+in_scope <- unlist(lapply(scope, names))
+aliases <- sort(names(alias_to)[alias_to != names(alias_to) & alias_to %in% in_scope])
+carded <- vapply(aliases, function(nm) !is.null(tfl_schema(nm)$label), NA)
+cat(sprintf("aliases: %d of %d spellings read as their function's card%s\n", sum(carded), length(carded),
+            if (any(!carded)) paste0(" (not: ", paste(aliases[!carded], collapse = ", "), ")") else ""))
 
 out <- commandArgs(TRUE)[1L]
 if (!is.na(out)) {

@@ -274,3 +274,109 @@ test_that("a forest plot's log axis, line widths and the binned and default scal
     list("coord_cartesian", list(xlim = c(0.25, 4)))))
   expect_length(b$data, 3L)
 })
+
+test_that("the rest of ggplot2's functions of a plot have cards: limits, log ticks, labellers, theme_sub_*()", {
+  s <- .schema_all(figure = FALSE)
+  for (fn in c("xlim", "ylim", "lims", "expand_limits", "annotation_logticks", "annotation_custom",
+               "annotation_raster", "geom_hex", "stat_bin_2d", "stat_summary_2d", "stat_contour",
+               "stat_density_2d", "stat_quantile", "stat_align", "stat_connect", "stat_manual",
+               "scale_size_continuous", "scale_shape_identity", "scale_alpha_continuous",
+               "scale_discrete_manual", "scale_colour_ordinal", "scale_y_datetime", "coord_transform",
+               "facet_null", "vars", "labeller", "label_both", "label_wrap_gen", "theme_test",
+               "theme_sub_axis_bottom", "theme_sub_legend", "theme_sub_strip", "element_geom",
+               "element_point", "rel", "unit", "arrow", "margin_part", "guide_custom")) {
+    e <- s[[fn]]
+    expect_false(is.null(e$figure), info = fn)
+    expect_true(all(c("en", "ja") %in% names(e$label)), info = fn)
+    ent <- tfl_schema(fn)
+    for (a in unlist(e$visible)) expect_false(is.null(ent$args[[a]]$label), info = paste(fn, a))
+  }
+  # rel(x = ) and unit(x = ) are their own arguments, not the data's
+  expect_identical(nrow(gg_problems("rel", list(x = 0.8))), 0L)
+  expect_identical(nrow(gg_problems("unit", list(x = 2, units = "mm"))), 0L)
+})
+
+test_that("ggplot2's other spellings read as their function's card, and the code keeps them", {
+  for (nm in c("scale_color_manual", "scale_color_brewer", "guide_colorbar", "theme_grey", "stat_bin2d",
+               "geom_density2d", "stat_summary2d")) {
+    to <- .schema_gg_alias(nm)
+    expect_false(identical(to, nm), info = nm)
+    expect_identical(tfl_schema(nm)$label, tfl_schema(to)$label, info = nm)
+  }
+  expect_identical(.schema_gg_alias("scale_colour_manual"), "scale_colour_manual")
+  expect_match(gg_problems("scale_color_manual", list(values = "red", nmae = "x"))$message, "no argument")
+  expect_identical(gg_code("scale_color_manual", list(values = c("grey50", "red"))),
+                   "scale_color_manual(values = c(\"grey50\", \"red\"))")
+})
+
+test_that("xlim() and ylim() are written by position and read back; lims() and expand_limits() by aesthetic", {
+  expect_identical(gg_code("xlim", list(limits = c(0, 52))), "xlim(0, 52)")
+  expect_identical(gg_code("ylim", list(limits = c("Placebo", "Drug"))), "ylim(\"Placebo\", \"Drug\")")
+  expect_identical(nrow(gg_problems("xlim", list(limits = c(0, 52)))), 0L)
+  expect_match(gg_problems("xlim", list(limits = tfl_call("element_text", list())))$message, "list")
+  back <- .fig_lang_item(str2lang("xlim(-1, 52)"))
+  expect_identical(back$fn, "xlim")
+  expect_identical(back$args$limits, c(-1, 52))
+  expect_identical(.fig_lang_item(str2lang("ylim(NA, 100)"))$args$limits, c(NA, 100))
+  # anything but constants stays R
+  expect_identical(.fig_lang_item(str2lang("xlim(lo, hi)"))$fn, ".r")
+  expect_identical(gg_code("lims", list(x = c(0, 52), colour = c("A", "B"))),
+                   "lims(x = c(0, 52), colour = c(\"A\", \"B\"))")
+  expect_identical(nrow(gg_problems("expand_limits", list(x = 0, y = c(0, 100)))), 0L)
+})
+
+test_that("a facet's labeller as a call, facets as columns, and theme_sub_*() typed as theme()'s settings", {
+  a <- list(facets = "PARAMCD", labeller = tfl_call("label_wrap_gen", list(width = 20L)))
+  expect_identical(nrow(gg_problems("facet_wrap", a)), 0L)
+  expect_identical(gg_code("facet_wrap", a),
+                   "facet_wrap(facets = \"PARAMCD\", labeller = label_wrap_gen(width = 20))")
+  expect_match(gg_problems("facet_wrap", list(labeller = tfl_call("element_text", list())))$message,
+               "label_wrap_gen")
+  expect_identical(nrow(gg_problems("labeller", list(PARAMCD = tfl_r("label_both"), .default = "label_value"))), 0L)
+  # theme_sub_axis_bottom(text =) is axis.text.x.bottom: an element_text
+  ent <- tfl_schema("theme_sub_axis_bottom")
+  expect_identical(ent$args$text$description, "theme(axis.text.x.bottom = ).")
+  expect_match(gg_problems("theme_sub_axis_bottom", list(text = tfl_call("element_line", list())))$message,
+               "element_text")
+  expect_identical(nrow(gg_problems("theme_sub_legend", list(position = "bottom",
+                                                             key.size = tfl_call("unit", list(x = 4, units = "mm"))))), 0L)
+  expect_identical(gg_problems("theme_sub_legend", list(position = "middle"))$arg, "position")
+  expect_identical(tfl_schema("theme_sub_panel")$args$grid.major.x$description, "theme(panel.grid.major.x = ).")
+})
+
+test_that("the code of the new cards runs: limits, log ticks, labellers, theme_sub_*(), the other scales and stats", {
+  skip_if_not(utils::packageVersion("ggplot2") >= "4.0.0")
+  df <- data.frame(x = c(0.5, 1, 2, 4, 0.8, 1.5), y = c(1, 2, 3, 4, 5, 6), g = rep(c("A", "B"), 3),
+                   s = c(16, 1, 16, 1, 3, 3), w = c(1, 2, 3, 4, 5, 6))
+  b <- gg_build(df, "x, y, colour = g", list(
+    list("geom_point", list(mapping = list(shape = "s", size = "w"))),
+    list("scale_shape_identity", list()),
+    list("scale_size_continuous", list(range = c(1, 4), name = "Weight")),
+    list("scale_color_manual", list(values = c(A = "grey40", B = "red"))),
+    list("scale_x_log10", list()),
+    list("annotation_logticks", list(sides = "b", outside = FALSE)),
+    list("ylim", list(limits = c(0, 10))),
+    list("expand_limits", list(x = 0.25)),
+    list("facet_wrap", list(facets = "g", labeller = tfl_call("label_wrap_gen", list(width = 10L)))),
+    list("theme_sub_axis_bottom", list(text = tfl_call("element_text", list(size = tfl_call("rel", list(x = 0.8)))),
+                                       ticks.length = tfl_call("unit", list(x = 2, units = "mm")))),
+    list("theme_sub_legend", list(position = "bottom")),
+    list("theme_sub_strip", list(background = tfl_call("element_blank", list())))))
+  expect_length(b$data, 3L)
+  expect_identical(b$layout$panel_scales_y[[1L]]$get_limits(), c(0, 10))
+  set.seed(2)
+  d2 <- data.frame(x = stats::rnorm(80), y = stats::rnorm(80), z = stats::runif(80))
+  b <- gg_build(d2, "x, y, z = z", list(
+    list("stat_summary_2d", list(fun = "mean", bins = 5L)),
+    list("stat_bin_2d", list(bins = 5L, mapping = list(z = tfl_r("NULL")), alpha = 0.2))))
+  expect_length(b$data, 2L)
+  d3 <- data.frame(x = 1:6, y = c(1, 3, 2, 5, 4, 6), g = rep(c("A", "B"), each = 3))
+  b <- gg_build(d3, "x, y, colour = g", list(
+    list("stat_connect", list(connection = "hv")),
+    list("stat_manual", list(fun = tfl_r("function(d) transform(d, y = cumsum(y))"), geom = "point")),
+    list("lims", list(x = c(0, 7)))))
+  expect_length(b$data, 2L)
+  if (requireNamespace("hexbin", quietly = TRUE)) {
+    expect_length(gg_build(d2, "x, y", list(list("geom_hex", list(bins = 5L))))$data, 1L)
+  }
+})

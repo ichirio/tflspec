@@ -235,7 +235,7 @@ facet,ncol,integer,Columns,列の数,
 facet,scales,enum[fixed|free|free_x|free_y],Axes,軸,free_y: each panel its own y range.
 facet,space,enum[fixed|free|free_x|free_y],Panel sizes,面の大きさ,free_y: rows as tall as their range (with scales free_y).
 facet,shrink,logical,Shrink to the statistics,統計量の範囲に縮める,
-facet,labeller,string|r,Strip labels,ストリップのラベル,"label_value, label_both, label_wrap_gen(20), or !r labeller(...)."
+facet,labeller,"string|call<labeller, label_value, label_both, label_context, label_parsed, label_wrap_gen, label_bquote, as_labeller>|r",Strip labels,ストリップのラベル,"label_value, label_both, {fn: label_wrap_gen, args: {width: 20}}, {fn: labeller, args: {PARAMCD: !r label_wrap_gen(20)}}, or !r ..."
 facet,switch,enum[x|y|both],Strips on the other side,ストリップを反対側に,
 facet,strip.position,enum[top|bottom|left|right],Strip position,ストリップの位置,
 facet,dir,string,Order of the panels,面の並べ方,"h / v (or, ggplot2 4.0, lt, tl, rb ...)."
