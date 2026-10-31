@@ -161,7 +161,8 @@ tfl_plot <- function(name, items = list(), from = "own") {
 
 # the arguments R takes as a list, not a vector: a map of the spec is
 # written list(...) and read back from it
-.fig_list_args <- c("fun.args", "method.args", "args", "dparams", "override.aes")
+.fig_list_args <- c("fun.args", "method.args", "args", "dparams", "override.aes",
+                    "x_scales", "y_scales", "stats_label")
 
 # a function as the code calls it: bare for the packages the figure's
 # program attaches (ggplot2, ggsurvfit, patchwork) and tflspec's own,
@@ -182,12 +183,26 @@ tfl_plot <- function(name, items = list(), from = "own") {
   ent$package
 }
 
-# An item as its call
+# An item as its call; a card's positional `...` (xlim's limits) written
+# by position, xlim(0, 52)
 .fig_item_lang <- function(it) {
   a <- it$args %||% list()
   obj <- .fig_objects_of(it$fn)
   args <- lapply(stats::setNames(names(a), names(a)), function(k) .fig_value_lang(a[[k]], k, obj))
+  key <- .fig_positional_key(it$fn)
+  if (!is.null(key) && key %in% names(a) && !inherits(a[[key]], c("tfl_r", "tfl_call"))) {
+    i <- match(key, names(args))
+    pos <- lapply(unname(as.list(a[[key]])), .fig_value_lang, arg = key, objects = obj)
+    args <- c(args[seq_len(i - 1L)], pos, args[-seq_len(i)])
+  }
   as.call(c(list(.fig_fn_sym(it$fn)), args))
+}
+
+# the key a figure function's card names its positional `...` by (xlim:
+# limits), or NULL
+.fig_positional_key <- function(fn) {
+  dots <- .schema_all(figure = FALSE)[[.schema_fn_name(fn)]]$dots
+  if (identical(dots$style, "positional")) dots$key
 }
 
 .fig_deparse <- function(e) paste(deparse(e, width.cutoff = 500L), collapse = " ")
@@ -269,8 +284,8 @@ tfl_plot <- function(name, items = list(), from = "own") {
       mn <- names(as.list(m)[-1L])
       pos <- setdiff(mn, given[nzchar(given)])
       ord <- given
-      ord[!nzchar(ord)] <- pos[seq_len(sum(!nzchar(ord)))]
-      if (!anyNA(ord) && setequal(ord, mn)) {
+      if (length(pos) >= sum(!nzchar(ord))) ord[!nzchar(ord)] <- pos[seq_len(sum(!nzchar(ord)))]
+      if (all(nzchar(ord)) && !anyNA(ord) && setequal(ord, mn)) {
         e <- as.call(c(list(m[[1L]]), as.list(m)[-1L][ord]))
       } else {
         e <- m
@@ -282,6 +297,15 @@ tfl_plot <- function(name, items = list(), from = "own") {
   # an aes() given first, unnamed (geom_line(aes(...)))
   for (i in which(!nzchar(nm))) {
     if (is.call(a[[i]]) && identical(.fig_deparse(a[[i]][[1L]]), "aes")) nm[i] <- "mapping"
+  }
+  # a card's positional `...` (xlim(0, 52)): its key, when they are constants
+  key <- .fig_positional_key(f)
+  if (any(!nzchar(nm)) && !is.null(key) && !key %in% nm) {
+    pos <- lapply(a[!nzchar(nm)], .fig_lang_value, arg = key)
+    if (all(vapply(pos, function(v) is.atomic(v) && length(v) == 1L && !is.object(v), NA))) {
+      a <- c(a[nzchar(nm)], stats::setNames(list(as.call(c(list(as.name("c")), unname(pos)))), key))
+      nm <- names(a)
+    }
   }
   if (any(!nzchar(nm))) {
     # an argument the function's formals cannot name: the whole call as R
@@ -357,7 +381,11 @@ tfl_plot <- function(name, items = list(), from = "own") {
         terms <- c(terms, .fig_term_text(.fig_item_lang(it)))
         pk <- if (grepl("::", it$fn, fixed = TRUE)) sub("::.*$", "", it$fn) else .fig_fn_package(fn)
         if (!is.null(pk) && !pk %in% .fig_attached) needs <- c(needs, pk)
-        if (fn %in% c("ggsurvfit", "ggcuminc") || startsWith(fn, "add_")) libs <- c(libs, "ggsurvfit")
+        if (fn %in% c("ggsurvfit", "ggcuminc") || startsWith(fn, "add_") || identical(pk, "ggsurvfit")) {
+          libs <- c(libs, "ggsurvfit")
+        }
+        # patchwork's inside one plot (p + inset_element(...))
+        if (identical(pk, "patchwork")) libs <- c(libs, "patchwork")
       }
       lines <- .fig_plus_chain(target, terms)
     }

@@ -251,33 +251,80 @@
                        facet = "facet", theme = "theme", guide = "guide",
                        position = "position", element = "element")
 .schema_gg_helpers <- c("expansion", "sec_axis", "dup_axis", "margin", "margin_auto",
-                        "margin_part", "arrow", "unit", "rel")
+                        "margin_part", "arrow", "unit", "rel", "vars", "labeller", "as_labeller",
+                        "label_value", "label_both", "label_wrap_gen", "label_parsed",
+                        "label_context", "label_bquote")
 .schema_gg_kind <- function(nm) {
   if (identical(nm, "theme")) return("theme")
   if (nm %in% c("labs", "xlab", "ylab", "ggtitle")) return("labs")
-  if (identical(nm, "annotate")) return("layer")
+  # a layer without the prefix (annotation_logticks() for a log axis,
+  # expand_limits() a blank layer); xlim(), ylim() and lims() a scale's
+  # limits
+  if (nm %in% c("annotate", "expand_limits") || startsWith(nm, "annotation_")) return("layer")
+  if (nm %in% c("xlim", "ylim", "lims")) return("scale")
   if (nm %in% .schema_gg_helpers) return("helper")
   k <- .schema_gg_prefix[sub("_.*$", "", nm)]
   if (is.na(k)) NA_character_ else unname(k)
+}
+
+# ggplot2's other spelling of a function (scale_color_manual,
+# guide_colorbar, theme_grey, stat_bin2d) as the name the catalog gives it
+# a card by; any other name as it is
+.schema_gg_alias <- function(nm) {
+  to <- sub("^(scale|guide)_color", "\\1_colour", nm)
+  to <- sub("^((geom|stat)_(bin|density|summary))2d", "\\1_2d", to)
+  to <- sub("^stat_binhex$", "stat_bin_hex", to)
+  if (identical(to, "theme_grey")) to <- "theme_gray"
+  to
 }
 
 # A ggplot2 function the catalog has not, as an entry: its kind, no card
 # (no rank, no label); its arguments are its formals and, by its kind,
 # the shared ones it takes.  NULL for a name ggplot2 does not export, or
 # that is no function of a plot (ggsave), or that rtfreporter has too.
-.schema_gg_entry <- function(nm) {
-  if (!requireNamespace("ggplot2", quietly = TRUE) || !nm %in% getNamespaceExports("ggplot2")) {
+# `pkg`: an extension package the figure may call (ggh4x::facet_grid2,
+# patchwork::inset_element), its functions of a plot by the same kinds
+# and its own (.schema_ext_kind()).
+.schema_gg_entry <- function(nm, pkg = "ggplot2") {
+  if (!requireNamespace(pkg, quietly = TRUE) || !nm %in% getNamespaceExports(pkg)) {
     return(NULL)
   }
   if (requireNamespace("rtfreporter", quietly = TRUE) &&
       nm %in% getNamespaceExports("rtfreporter")) {
     return(NULL)
   }
-  kind <- .schema_gg_kind(nm)
+  kind <- if (identical(pkg, "ggplot2")) .schema_gg_kind(nm) else .schema_ext_kind(nm, pkg)
   if (is.na(kind)) return(NULL)
-  if (identical(kind, "layer") && grepl("^(geom|stat)_", nm)) return(.schema_ggplot_entry(nm))
-  list(package = "ggplot2", figure = kind,
-       description = sprintf("ggplot2's %s(), by its own arguments.", nm), args = list())
+  if (identical(kind, "layer") && grepl("^(geom|stat)_", nm)) {
+    return(.schema_ggplot_entry(if (identical(pkg, "ggplot2")) nm else paste0(pkg, "::", nm)))
+  }
+  list(package = pkg, figure = kind,
+       description = sprintf("%s's %s(), by its own arguments.", pkg, nm), args = list())
+}
+
+# the extension packages a figure may call a function of by pkg::fn
+.schema_ext_pkgs <- c("ggsurvfit", "ggrepel", "ggh4x", "ggtext", "ggnewscale", "patchwork")
+
+# the kind of an extension's function: ggplot2's by its prefix, and the
+# package's own (ggsurvfit's add_*() on a ggsurvfit plot, patchwork's
+# arrangement, ggnewscale's new scale between layers, ggh4x's strips and
+# element lists as elements, its panel sizes as a facet's)
+.schema_ext_kind <- function(nm, pkg) {
+  if (!pkg %in% .schema_ext_pkgs) return(NA_character_)
+  if (identical(pkg, "ggsurvfit") && startsWith(nm, "add_")) return("ggsurvfit_layer")
+  if (identical(pkg, "patchwork") &&
+      nm %in% c("wrap_plots", "plot_layout", "plot_annotation", "plot_spacer", "wrap_elements",
+                "inset_element", "guide_area", "area", "free", "wrap_table", "wrap_ggplot_grob")) {
+    return("compose")
+  }
+  if (identical(pkg, "ggnewscale") && startsWith(nm, "new_scale")) return("layer")
+  if (identical(pkg, "ggh4x")) {
+    if (startsWith(nm, "strip_") || startsWith(nm, "elem_list_")) return("element")
+    if (nm %in% c("force_panelsizes", "facetted_pos_scales")) return("facet")
+  }
+  if (identical(pkg, "ggtext") && startsWith(nm, "element_")) return("element")
+  if (nm %in% .schema_gg_helpers) return(NA_character_)
+  .schema_gg_kind(nm)
 }
 
 # The arguments a function takes by name: its formals, and a scale's
@@ -318,6 +365,18 @@
   setdiff(names(formals(getExportedValue("ggplot2", ctor))), c("scale_name", "super", "call"))
 }
 
+# The theme() setting a theme_sub_*() argument stands for (ggplot2 4.0):
+# theme_sub_axis_x(text =) is axis.text.x, theme_sub_legend(key.size =)
+# legend.key.size; theme()'s own argument as it is
+.schema_theme_sub_setting <- function(nm, a) {
+  if (!startsWith(nm, "theme_sub_")) return(a)
+  part <- sub("^theme_sub_", "", nm)
+  if (!startsWith(part, "axis")) return(paste(part, a, sep = "."))
+  side <- c(axis = "", axis_x = "x", axis_y = "y", axis_bottom = "x.bottom", axis_top = "x.top",
+            axis_left = "y.left", axis_right = "y.right")[[part]]
+  paste(c("axis", a, if (nzchar(side)) side), collapse = ".")
+}
+
 .schema_theme_sides <- c("x", "y", "top", "bottom", "left", "right", "x.top", "x.bottom",
                          "y.left", "y.right", "theta", "r", "inside")
 
@@ -329,8 +388,13 @@
   kind <- ent$figure
   if (is.null(kind)) return(ent)
   takes <- unique(c(.schema_gg_takes(nm, ent$package %||% "ggplot2"), names(ent$args), extra))
+  # what a card shows of its `...` (add_quantile's linetype, passed on to
+  # its layer)
+  if (!is.null(ent$dots)) takes <- unique(c(takes, unlist(ent$visible)))
   g <- .fig_gg_args()
-  g <- g[g$kind == kind & g$arg %in% takes, , drop = FALSE]
+  # a theme_sub_*() argument is the setting it stands for (below), not
+  # theme()'s of its name (theme_sub_axis_x(text =) is axis.text.x)
+  g <- g[g$kind == kind & g$arg %in% takes & !startsWith(nm, "theme_sub_"), , drop = FALSE]
   for (i in seq_len(nrow(g))) {
     a <- g$arg[i]
     old <- ent$args[[a]]
@@ -340,19 +404,32 @@
     ent$args[[a]] <- c(new, old[setdiff(names(old), names(new))])
   }
   # a theme setting of one side or axis (axis.text.x.top, legend.key.spacing.y)
-  # is typed as the setting it refines
+  # is typed as the setting it refines; a theme_sub_*() argument as the
+  # setting it stands for (theme_sub_axis_bottom(text =) is axis.text.x.bottom)
   if (identical(kind, "theme")) {
     th <- .fig_gg_args()
     th <- th[th$kind == "theme", , drop = FALSE]
+    own <- .schema_all(figure = FALSE)$theme$args
     for (a in setdiff(takes, names(ent$args))) {
-      p <- a
+      full <- .schema_theme_sub_setting(nm, a)
+      # a setting theme()'s card types itself (legend.position)
+      if (!identical(full, a) && !is.null(own[[full]]$type)) {
+        ent$args[[a]] <- c(own[[full]], list(description = sprintf("theme(%s = ).", full)))
+        next
+      }
+      p <- full
       while (grepl(".", p, fixed = TRUE) && !p %in% th$arg) p <- sub("\\.[^.]*$", "", p)
       i <- match(p, th$arg)
-      suf <- substring(a, nchar(p) + 2L)
-      if (is.na(i) || !suf %in% .schema_theme_sides) next
-      ent$args[[a]] <- list(type = th$type[i],
-                            label = list(en = sprintf("%s (%s)", th$en[i], suf),
-                                         ja = sprintf("%s\uff08%s\uff09", th$ja[i], suf)))
+      suf <- substring(full, nchar(p) + 2L)
+      if (is.na(i) || !(suf %in% .schema_theme_sides || !nzchar(suf))) next
+      ent$args[[a]] <- if (nzchar(suf)) {
+        list(type = th$type[i],
+             label = list(en = sprintf("%s (%s)", th$en[i], suf),
+                          ja = sprintf("%s\uff08%s\uff09", th$ja[i], suf)))
+      } else {
+        list(type = th$type[i], label = list(en = th$en[i], ja = th$ja[i]))
+      }
+      if (!identical(full, a)) ent$args[[a]]$description <- sprintf("theme(%s = ).", full)
     }
   }
   if (identical(kind, "scale")) {

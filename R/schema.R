@@ -46,9 +46,18 @@
 #'
 #' A figure's functions: the file has a card for those a clinical figure
 #' uses (the geoms and the stats -- those with no geom of their own and
-#' those with one --, scales, coordinates, complete themes and `theme()`,
-#' elements, guides, positions); any other function of a plot `ggplot2`
-#' exports (`scale_shape_identity`, `guide_custom`) is its formals.  The
+#' those with one --, scales and the limits `xlim()`, `ylim()`, `lims()`,
+#' `expand_limits()`, coordinates, complete themes, `theme()` and its
+#' parts `theme_sub_*()`, elements, guides, positions, `annotation_*()`,
+#' a facet's `vars()` and labellers); any other function of a plot
+#' `ggplot2` exports (`coord_quickmap`, `geom_sf_text`) is its
+#' formals.  `ggplot2`'s other spellings (`scale_color_manual`,
+#' `guide_colorbar`, `theme_grey`, `stat_bin2d`) read as the card of the
+#' function they spell, and the code keeps the name written.  So
+#' are the extension packages' (ggsurvfit's `add_risktable()` and themes,
+#' ggrepel, ggh4x's facets and strips, ggtext's elements, ggnewscale,
+#' patchwork's arrangement): those a clinical figure uses have a card, any
+#' other of a plot is named `pkg::fn` (`ggh4x::facet_manual`).  The
 #' arguments the functions of one kind share -- a layer's `stat`,
 #' `position`, `fun.data`, `pad`; a scale's `name`, `breaks`, `labels`,
 #' `sec.axis`; `theme()`'s settings, each its element -- are typed and
@@ -92,6 +101,15 @@ tfl_schema <- function(fn = NULL) {
   # the file's entries first; a figure's layer, made from the designer's
   # catalog, only for a name the file does not have
   ent <- .schema_all(figure = FALSE)[[nm]]
+  # ggplot2's other spelling of a function with a card (scale_color_manual):
+  # that card
+  if (is.null(ent) && (!grepl("::", fn, fixed = TRUE) || startsWith(fn, "ggplot2::"))) {
+    to <- .schema_gg_alias(nm)
+    if (!identical(to, nm) && identical(.schema_all(figure = FALSE)[[to]]$package, "ggplot2") &&
+        requireNamespace("ggplot2", quietly = TRUE) && nm %in% getNamespaceExports("ggplot2")) {
+      return(tfl_schema(to))
+    }
+  }
   # a catalog layer of ggplot2 (geom_line): its own entry over what the
   # installed layer takes -- its geom's and stat's parameters, its
   # aesthetics (they come through `...`)
@@ -111,7 +129,9 @@ tfl_schema <- function(fn = NULL) {
     (if (grepl("^(geom|stat)_", nm)) .schema_ggplot_entry(fn)) %||%
     # any other function of a plot ggplot2 exports (scale_colour_brewer,
     # theme_bw, guide_axis): by its formals (R/spec_figure.R)
-    (if (!grepl("::", fn, fixed = TRUE) || startsWith(fn, "ggplot2::")) .schema_gg_entry(nm))
+    (if (!grepl("::", fn, fixed = TRUE) || startsWith(fn, "ggplot2::")) .schema_gg_entry(nm)
+     # one of an extension's (ggh4x::facet_grid2, patchwork::inset_element)
+     else .schema_gg_entry(nm, sub("::.*$", "", fn)))
   if (is.null(ent)) return(NULL)
   # a figure's function: the arguments its kind shares, typed
   if (!is.null(ent$figure)) ent <- .schema_fig_common(ent, nm)
