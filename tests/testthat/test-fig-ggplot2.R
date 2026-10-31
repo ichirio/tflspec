@@ -285,6 +285,8 @@ test_that("the rest of ggplot2's functions of a plot have cards: limits, log tic
                "facet_null", "vars", "labeller", "label_both", "label_wrap_gen", "theme_test",
                "theme_sub_axis_bottom", "theme_sub_legend", "theme_sub_strip", "element_geom",
                "element_point", "rel", "unit", "arrow", "margin_part", "guide_custom")) {
+    # ggplot2 4.0's own (theme_sub_*(), stat_manual ...) only where it has them
+    if (!fn %in% getNamespaceExports("ggplot2")) next
     e <- s[[fn]]
     expect_false(is.null(e$figure), info = fn)
     expect_true(all(c("en", "ja") %in% names(e$label)), info = fn)
@@ -334,6 +336,7 @@ test_that("a facet's labeller as a call, facets as columns, and theme_sub_*() ty
                "label_wrap_gen")
   expect_identical(nrow(gg_problems("labeller", list(PARAMCD = tfl_r("label_both"), .default = "label_value"))), 0L)
   # theme_sub_axis_bottom(text =) is axis.text.x.bottom: an element_text
+  skip_if_not(utils::packageVersion("ggplot2") >= "4.0.0")
   ent <- tfl_schema("theme_sub_axis_bottom")
   expect_identical(ent$args$text$description, "theme(axis.text.x.bottom = ).")
   expect_match(gg_problems("theme_sub_axis_bottom", list(text = tfl_call("element_line", list())))$message,
