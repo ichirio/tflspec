@@ -1,0 +1,56 @@
+call,arg,passed_to,default,kind,hint,choices
+cardx::ard_regression,exponentiate,broom.helpers::tidy_plus_plus,FALSE,logical,"TRUE: the estimates and their confidence limits exponentiated -- hazard ratios of a Cox model, odds ratios of a logistic one, rate ratios of a Poisson one.",
+cardx::ard_regression,conf.level,broom.helpers::tidy_plus_plus,0.95,number,"Confidence level of the estimates, a number between 0 and 1 (0.95).",
+cardx::ard_regression,conf.int,broom.helpers::tidy_plus_plus,TRUE,logical,TRUE (default): the confidence limits of the estimates too.,
+cardx::ard_regression,intercept,broom.helpers::tidy_plus_plus,FALSE,logical,TRUE: the intercept is reported too.,
+cardx::ard_regression,add_reference_rows,broom.helpers::tidy_plus_plus,TRUE,logical,"TRUE: a row for the reference level of a categorical term (e.g. placebo), with no estimate.",
+cardx::ard_regression,add_header_rows,broom.helpers::tidy_plus_plus,FALSE,logical,TRUE: a header row over the levels of each categorical term.,
+cardx::ard_regression,add_n,broom.helpers::tidy_plus_plus,TRUE,logical,TRUE: the number of observations (and events) of each term.,
+cardx::ard_regression,show_single_row,broom.helpers::tidy_plus_plus,NULL,columns,"Binary terms reported on one row (no reference row), e.g. SEX.",
+cardx::ard_regression,include,broom.helpers::tidy_plus_plus,everything(),columns,"The model terms reported, e.g. TRT01P (default: all of them); the covariates left out of the table.",
+cardx::ard_regression_basic,exponentiate,broom.helpers::tidy_plus_plus,FALSE,logical,"TRUE: the estimates and their confidence limits exponentiated -- hazard ratios of a Cox model, odds ratios of a logistic one, rate ratios of a Poisson one.",
+cardx::ard_regression_basic,conf.level,broom.helpers::tidy_plus_plus,0.95,number,"Confidence level of the estimates, a number between 0 and 1 (0.95).",
+cardx::ard_regression_basic,conf.int,broom.helpers::tidy_plus_plus,TRUE,logical,TRUE (default): the confidence limits of the estimates too.,
+cardx::ard_regression_basic,intercept,broom.helpers::tidy_plus_plus,FALSE,logical,TRUE: the intercept is reported too.,
+cardx::ard_regression_basic,add_reference_rows,broom.helpers::tidy_plus_plus,FALSE,logical,"TRUE: a row for the reference level of a categorical term (e.g. placebo), with no estimate.",
+cardx::ard_regression_basic,add_header_rows,broom.helpers::tidy_plus_plus,FALSE,logical,TRUE: a header row over the levels of each categorical term.,
+cardx::ard_regression_basic,add_n,broom.helpers::tidy_plus_plus,FALSE,logical,TRUE: the number of observations (and events) of each term.,
+cardx::ard_regression_basic,show_single_row,broom.helpers::tidy_plus_plus,NULL,columns,"Binary terms reported on one row (no reference row), e.g. SEX.",
+cardx::ard_regression_basic,include,broom.helpers::tidy_plus_plus,everything(),columns,"The model terms reported, e.g. TRT01P (default: all of them); the covariates left out of the table.",
+cardx::ard_car_anova,type,car::Anova,"""II""",choice,"The type of the sums of squares: ""II"" (default) or ""III"" (2 or 3).",II | III | 2 | 3
+cardx::ard_car_anova,test.statistic,car::Anova,,choice,"The test statistic of a generalized linear model: ""LR"" (default), ""Wald"" or ""F"".",LR | Wald | F
+cardx::ard_stats_t_test,alternative,stats::t.test,"""two.sided""",choice,"The alternative hypothesis: two.sided (default), less or greater.",two.sided | less | greater
+cardx::ard_stats_t_test,mu,stats::t.test,0,number,The mean (of the difference) under the null hypothesis (default 0).,
+cardx::ard_stats_t_test,var.equal,stats::t.test,FALSE,logical,TRUE: the two groups have the same variance (Student's t test); FALSE (default): Welch's.,
+cardx::ard_stats_paired_t_test,alternative,stats::t.test,"""two.sided""",choice,"The alternative hypothesis: two.sided (default), less or greater.",two.sided | less | greater
+cardx::ard_stats_paired_t_test,mu,stats::t.test,0,number,The mean (of the difference) under the null hypothesis (default 0).,
+cardx::ard_stats_t_test_onesample,alternative,stats::t.test,"""two.sided""",choice,"The alternative hypothesis: two.sided (default), less or greater.",two.sided | less | greater
+cardx::ard_stats_t_test_onesample,mu,stats::t.test,0,number,The mean (of the difference) under the null hypothesis (default 0).,
+cardx::ard_stats_wilcox_test,alternative,stats::wilcox.test,"""two.sided""",choice,"The alternative hypothesis: two.sided (default), less or greater.",two.sided | less | greater
+cardx::ard_stats_wilcox_test,mu,stats::wilcox.test,0,number,The location shift under the null hypothesis (default 0).,
+cardx::ard_stats_wilcox_test,exact,stats::wilcox.test,NULL,logical,TRUE: an exact p-value; FALSE: the normal approximation (default: exact for fewer than 50 values and no ties).,
+cardx::ard_stats_wilcox_test,correct,stats::wilcox.test,TRUE,logical,TRUE (default): the continuity correction in the normal approximation.,
+cardx::ard_stats_paired_wilcox_test,alternative,stats::wilcox.test,"""two.sided""",choice,"The alternative hypothesis: two.sided (default), less or greater.",two.sided | less | greater
+cardx::ard_stats_paired_wilcox_test,mu,stats::wilcox.test,0,number,The location shift under the null hypothesis (default 0).,
+cardx::ard_stats_paired_wilcox_test,exact,stats::wilcox.test,NULL,logical,TRUE: an exact p-value; FALSE: the normal approximation (default: exact for fewer than 50 values and no ties).,
+cardx::ard_stats_paired_wilcox_test,correct,stats::wilcox.test,TRUE,logical,TRUE (default): the continuity correction in the normal approximation.,
+cardx::ard_stats_wilcox_test_onesample,alternative,stats::wilcox.test,"""two.sided""",choice,"The alternative hypothesis: two.sided (default), less or greater.",two.sided | less | greater
+cardx::ard_stats_wilcox_test_onesample,mu,stats::wilcox.test,0,number,The location shift under the null hypothesis (default 0).,
+cardx::ard_stats_wilcox_test_onesample,exact,stats::wilcox.test,NULL,logical,TRUE: an exact p-value; FALSE: the normal approximation (default: exact for fewer than 50 values and no ties).,
+cardx::ard_stats_wilcox_test_onesample,correct,stats::wilcox.test,TRUE,logical,TRUE (default): the continuity correction in the normal approximation.,
+cardx::ard_stats_chisq_test,correct,stats::chisq.test,TRUE,logical,TRUE (default): Yates' continuity correction of a 2 x 2 table.,
+cardx::ard_stats_chisq_test,simulate.p.value,stats::chisq.test,FALSE,logical,TRUE: the p-value by Monte Carlo simulation (B replicates).,
+cardx::ard_stats_chisq_test,B,stats::chisq.test,2000,number,The number of replicates of a simulated p-value (default 2000).,
+cardx::ard_stats_fisher_test,alternative,stats::fisher.test,"""two.sided""",choice,"The alternative hypothesis: two.sided (default), less or greater.",two.sided | less | greater
+cardx::ard_stats_fisher_test,simulate.p.value,stats::fisher.test,FALSE,logical,TRUE: the p-value of a table larger than 2 x 2 by Monte Carlo simulation (B replicates).,
+cardx::ard_stats_fisher_test,B,stats::fisher.test,2000,number,The number of replicates of a simulated p-value (default 2000).,
+cardx::ard_stats_prop_test,alternative,stats::prop.test,"""two.sided""",choice,"The alternative hypothesis: two.sided (default), less or greater.",two.sided | less | greater
+cardx::ard_stats_prop_test,correct,stats::prop.test,TRUE,logical,TRUE (default): Yates' continuity correction.,
+cardx::ard_stats_mantelhaen_test,alternative,stats::mantelhaen.test,"""two.sided""",choice,"The alternative hypothesis: two.sided (default), less or greater.",two.sided | less | greater
+cardx::ard_stats_mantelhaen_test,correct,stats::mantelhaen.test,TRUE,logical,TRUE (default): the continuity correction of the 2 x 2 x K statistic.,
+cardx::ard_stats_mantelhaen_test,exact,stats::mantelhaen.test,FALSE,logical,TRUE: the exact conditional test of a 2 x 2 x K table.,
+cardx::ard_stats_mcnemar_test,correct,stats::mcnemar.test,TRUE,logical,TRUE (default): the continuity correction.,
+cardx::ard_stats_mcnemar_test_long,correct,stats::mcnemar.test,TRUE,logical,TRUE (default): the continuity correction.,
+cardx::ard_stats_oneway_test,var.equal,stats::oneway.test,FALSE,logical,TRUE: the groups have the same variance (the F test); FALSE (default): Welch's.,
+cardx::ard_stats_poisson_test,alternative,stats::poisson.test,"""two.sided""",choice,"The alternative hypothesis: two.sided (default), less or greater.",two.sided | less | greater
+cardx::ard_stats_poisson_test,r,stats::poisson.test,1,number,The rate (or the rate ratio of two samples) under the null hypothesis (default 1).,

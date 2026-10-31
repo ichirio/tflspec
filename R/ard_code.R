@@ -396,6 +396,38 @@
                             if (length(skip)) list(skip = .cl("c", .q(skip)))))
 }
 
+# A `post` step that sets statistics' formats (cards::update_ard_fmt_fun():
+# a format for some rows, `filter = group1_level == "Drug X"`) goes after
+# the format step, which gives every statistic its format (the defaults,
+# the formats column), and the ARD is formatted again
+# (cards::apply_fmt_fun(replace = TRUE)): before it, the defaults would
+# win.  So does the format of a statistic a step adds
+# (cards::add_calculated_row(stat_name = "se", fmt_fun = 2L)): the step
+# stays where it is, and its format is said again after the format step.
+# The steps before the format step (`before`) and after it (`after`).
+.post_fmt_split <- function(steps) {
+  fn_of <- function(e) if (is.call(e)) paste(deparse(e[[1L]]), collapse = "") else ""
+  calls <- lapply(steps, function(s)
+    if (is.character(s)) tryCatch(str2lang(s), error = function(err) NULL))
+  fns <- vapply(calls, fn_of, "")
+  is_fmt <- fns %in% c("cards::update_ard_fmt_fun", "update_ard_fmt_fun")
+  # (in the pipe, the ARD is the call's first argument)
+  calc <- function(expr, stat_name, by, stat_label, fmt_fun) NULL
+  again <- list()
+  for (i in which(fns %in% c("cards::add_calculated_row", "add_calculated_row"))) {
+    e <- calls[[i]]
+    m <- tryCatch(match.call(calc, e), error = function(err) NULL)
+    if (is.null(m) || is.null(m$fmt_fun) || is.null(m$stat_name)) next
+    again[[length(again) + 1L]] <- sprintf(
+      "cards::update_ard_fmt_fun(stat_names = %s, fmt_fun = %s)",
+      paste(deparse(m$stat_name, width.cutoff = 500L), collapse = " "),
+      paste(deparse(m$fmt_fun, width.cutoff = 500L), collapse = " "))
+  }
+  after <- c(again, steps[is_fmt])
+  list(before = steps[!is_fmt],
+       after = if (length(after)) c(after, list("cards::apply_fmt_fun(replace = TRUE)")))
+}
+
 # The step that tags the ARD: tag_ard(output_id, "ID", population = "SAF"),
 # with the analyses a stack runs and their variables
 .tag_step <- function(analysis_id, population_id, analyses = NULL) {
@@ -1322,9 +1354,10 @@
   keep <- if (!kind %in% c("continuous", "categorical", "missing") &&
               !identical(call_fn, "(subjects)"))
     .split_bar(r$statistics)
-  steps <- c(.post_steps(x, r),
+  ps <- .post_fmt_split(.post_steps(x, r))
+  steps <- c(ps$before,
              if (length(keep)) list(.cl("keep_stats", list(.cl("c", .q(keep))))),
-             list(.fmt_step(fmt, !is.null(fmt_fun))), .relevel_step(x, r),
+             list(.fmt_step(fmt, !is.null(fmt_fun))), ps$after, .relevel_step(x, r),
              list(.tag_step(r$analysis_id, pid)))
   # every analysis says its id above it; its label too when it has one
   comment <- if (!is.na(r$label)) sprintf("# %s: %s", r$analysis_id, r$label) else
@@ -1567,11 +1600,12 @@
                  function(j) unlist(lapply(kids$variables[j], .split_bar)))
     .tag_step(r$analysis_id, pid, an)
   } else .tag_step(kids$analysis_id[1L], pid)
-  steps <- c(.post_steps(x, r),
+  ps <- .post_fmt_split(.post_steps(x, r))
+  steps <- c(ps$before,
              if (length(keep)) list(.cl("keep_stats", list(.cl("c", .q(keep))))),
              list(.fmt_step(post_fmt, in_call && !stack,
                             skip = if (stack && in_call) skip)),
-             .relevel_step(x, r), list(tag))
+             ps$after, .relevel_step(x, r), list(tag))
   lbl <- if (!is.na(r$label)) paste0(": ", r$label) else ""
   c(sprintf("# %s%s (runs %s)", r$analysis_id, lbl,
             paste(kids$analysis_id, collapse = ", ")),
@@ -1611,9 +1645,10 @@
   keep <- if (!kind %in% c("continuous", "categorical", "missing") &&
               !identical(call_fn, "(subjects)"))
     .split_bar(r$statistics)
-  steps <- c(.post_steps(x, r),
+  ps <- .post_fmt_split(.post_steps(x, r))
+  steps <- c(ps$before,
              if (length(keep)) list(.cl("keep_stats", list(.cl("c", .q(keep))))),
-             list(.fmt_step(fmt, !is.null(fmt_fun))), .relevel_step(x, r),
+             list(.fmt_step(fmt, !is.null(fmt_fun))), ps$after, .relevel_step(x, r),
              list(.tag_step(r$analysis_id, pid)))
   steps <- lapply(steps, .cl_as_call)
   if (identical(call_fn, "(code)")) {

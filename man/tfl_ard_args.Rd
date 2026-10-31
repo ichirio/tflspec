@@ -10,8 +10,10 @@ tfl_ard_args(call)
 \item{call}{The function, as an analysis names it: \code{"cards::ard_summary"}.}
 }
 \value{
-A data frame, one row per argument (\code{...} left out): \code{arg},
-\code{default}, \code{required}, \code{kind}, \code{hint}, \code{choices}, \code{column}.
+A data frame, one row per argument (\code{...} left out, the
+arguments it passes on through \code{...} after its own): \code{arg}, \code{default},
+\code{required}, \code{kind}, \code{hint}, \code{choices}, \code{column}, \code{passed_to} (\code{""} for
+the function's own argument).
 }
 \description{
 Read from the function's own \code{formals()} (its data frame method), so it
@@ -35,9 +37,32 @@ number -> \code{number}, a character vector -> \code{choice}, else \code{code}.
 \code{ard_pairwise(variable =)} are its \code{by}, \code{strata} and \code{variables}).  The data is
 the row's own (\code{data}).
 
+A \code{code} argument whose function takes one shape of R has its value
+checked by that shape: a list or formula of cards' selectors (\code{fmt_fun},
+\code{stat_label}), a list (\code{method.args}), a function (\code{tidy_fun}), an
+expression of the ARD's columns (a \code{post} step's \code{filter}, \code{expr},
+\code{rows}), the stratified Wilson \code{weights} (numbers between 0 and 1 that
+add up to 1), the levels \code{ard_pairwise(include =)} compares (a vector),
+the format of one statistic (\code{add_calculated_row(fmt_fun =)},
+\code{update_ard_fmt_fun(fmt_fun =)}: a whole number of decimals, \code{"xx.x"} /
+\code{"xx.x\%"}, or a function) and the value \code{replace_null_statistic(value =)}
+gives (one value).
+
 A company adds its own rows with \verb{options(tflspec.ard_args = <data frame>)}: \code{call} (or \code{*} for every function), \code{arg}, \code{kind}, \code{hint},
 \code{choices}; a row for the same call and argument wins, and a row for the
 function wins over a \code{*} row.
+
+The arguments a function passes on through \code{...} to the function that
+does the work follow its own, with \code{passed_to} naming that function:
+\code{ard_regression(exponentiate = TRUE)} (hazard or odds ratios, to
+\code{broom.helpers::tidy_plus_plus()}), \code{ard_car_anova(type = "III")} (to
+\code{car::Anova()}), \code{ard_stats_t_test(var.equal = TRUE)},
+\code{ard_stats_chisq_test(correct = FALSE)},
+\code{ard_stats_mantelhaen_test(exact = TRUE)} ... (to \code{stats}' tests).  They
+are written in \code{args} like the function's own, and their values are
+checked by their kind.  The catalog is \code{inst/ard/passed_args.csv}
+(\code{call}, \code{arg}, \code{passed_to}, \code{default}, \code{kind}, \code{hint}, \code{choices}); a
+company adds rows with \verb{options(tflspec.ard_passed_args = <data frame>)}.
 }
 \examples{
 tfl_ard_args("cardx::ard_categorical_ci")

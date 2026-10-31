@@ -285,7 +285,7 @@ plan_style:
     border_first_row: {label: "First row's border", help: "The rule over the table's first row (the top of the table). e.g. \"top\"", type: "call<rtf_border>"}
     border_last_row: {label: "Last row's border", help: "The rule under the table's last row (the foot of the table). e.g. \"bottom\"", type: "call<rtf_border>"}
     align_count_pct: {main: true, label: "Align n (%)", type: "logical", help: "TRUE: the n and the (%) of a count cell line up from row to row. e.g. TRUE"}
-    border: {main: true, label: "Borders", type: "string", help: "The table's borders: \"tfl\" (rules over and under the header and under the last row) or \"none\"; another style as R (rtf_border()). Blank: tfl. e.g. \"none\""}
+    border: {main: true, label: "Borders", type: "string|call<rtf_border>", help: "The table's borders: \"tfl\" (rules over and under the header and under the last row) or \"none\"; another style as a border ({fn: rtf_border, args: {all: true, inside_h: true}}). Blank: tfl. e.g. \"none\""}
     font_size_half_points: {main: true, label: "Font size (half points)", type: "integer", help: "The table's font size in half points (18 = 9 pt). Blank: the document's. e.g. 16"}
     font: {label: "Font", help: "The table's font. Blank: the document's font. e.g. \"Arial\"", type: "string|vec<string, string>"}
     row_height_exact: {label: "Exact row height", help: "TRUE: the rows' height is exact (a longer text is cut); FALSE: it is the least height (a row grows). e.g. TRUE", type: "logical"}
@@ -431,10 +431,21 @@ plan_after:
 rtf_border:
   package: rtfreporter
   args:
-    top: {type: "logical|string"}
-    bottom: {type: "logical|string"}
-    left: {type: "logical|string"}
-    right: {type: "logical|string"}
+    all: {type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>", description: "The four outer edges at once; a side named wins over it."}
+    top: {type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>"}
+    bottom: {type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>"}
+    left: {type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>"}
+    right: {type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>"}
+    inside_h: {type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>", description: "The rules between the rows."}
+    inside_v: {type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>", description: "The rules between the cells."}
+
+rtf_border_line:
+  package: rtfreporter
+  description: "One side of a border with a look of its own: {fn: rtf_border_line, args: {style: double, width: 30, color: \"#003366\"}}."
+  args:
+    style: {type: "enum[single|double|thick|dash|dot|none]", description: "The line's style (default single); none removes an inherited rule."}
+    width: {type: integer, description: "The line's weight in twips (default 15, about 0.5 pt)."}
+    color: {type: string, description: "The line's colour as a hex string, e.g. \"#003366\" (default black)."}
 
 normalize_ard:
   package: rtfreporter
@@ -661,6 +672,7 @@ rtf_document:
     font_table: {type: "list<map<string, string|vec<enum[latin|east_asian|complex|hansi], string>>>", description: "The fonts, the first the document's: [{name: Arial}]; a name a family per script slot: [{name: {latin: Times New Roman, east_asian: MS Mincho}}]."}
     font_lang: {type: "vec<enum[latin|east_asian|complex], enum[ja|zh-Hans|zh-Hant|ko|ar|he|en]>", description: "The language of a font slot: {east_asian: ja}."}
     watermark: {type: "string|call<rtf_watermark>", description: "A word drawn behind every page (DRAFT), or its look too: {fn: rtf_watermark, args: {text: DRAFT, color: \"#FF0000\"}}."}
+    color_table: {type: "list<string>", description: "Colours declared in the document's colour table ahead, as \"#RRGGBB\": [\"#003366\", \"#C9372C\"] (the colours borders and cells use are added for you)."}
     program: {type: string}
     program_fallback: {type: string}
 
@@ -1075,7 +1087,8 @@ rtf_footer:
         description: 'Steps on the ARD after the call, each a call with the ARD left
           out, | between them: cards::add_calculated_row() (a statistic computed from
           others), cards::filter_ard_hierarchical() (only the rows that pass), cards::sort_ard_hierarchical(),
-          cards::diff_ard_hierarchical(), complete_hierarchy() (a code list''s values no
+          cards::diff_ard_hierarchical(), cards::update_ard_fmt_fun() (a format for some
+          rows: one arm''s mean, run after the defaults), complete_hierarchy() (a code list''s values no
           subject has, counted 0: written with the row''s variables and the code lists''
           `under`), or a function of your own that takes an ARD and gives one; blank:
           none.'

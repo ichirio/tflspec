@@ -5,7 +5,7 @@ cards,sort_ard_hierarchical,post,A step on the ARD after its method: the analysi
 cards,diff_ard_hierarchical,post,A step on the ARD after its method: the analysis row's post column.
 cards,replace_null_statistic,post,A step on the ARD after its method: the analysis row's post column.
 cards,update_ard_stat_label,post,A step on the ARD after its method: the analysis row's post column.
-cards,update_ard_fmt_fun,code,Written by the generated ARD code.
+cards,update_ard_fmt_fun,post,A step on the ARD after its method: the analysis row's post column.
 cards,apply_fmt_fun,code,Written by the generated ARD code.
 cards,label_round,code,Written by the generated ARD code.
 cards,alias_as_fmt_fun,code,Written by the generated ARD code.

@@ -8,8 +8,10 @@
 # Run with the tflspec to measure installed, and cards / cardx from CRAN.
 #
 # Scope: every ard_*() cards and cardx export (their data.frame method's
-# arguments, as tfl_ard_args() reads them), and cards' helpers an analysis
-# row writes in its `post` column (inst/ard/utilities.csv, use "post").
+# arguments, as tfl_ard_args() reads them, and the arguments they pass on
+# through `...` to the function doing the work: inst/ard/passed_args.csv),
+# and cards' helpers an analysis row writes in its `post` column
+# (inst/ard/utilities.csv, use "post").
 #
 # Status of an argument:
 #   yes      an analysis row's own column writes it (by, variables, strata,
@@ -74,7 +76,8 @@ w2 <- c("cards::ard_strata", "cards::ard_pairwise", "cards::ard_mvsummary",
         "cardx::ard_stats_wilcox_test_onesample", "cardx::ard_smd_smd",
         "cardx::ard_stats_cohens_d", "cardx::ard_stats_paired_cohens_d",
         "cardx::ard_stats_mantelhaen_test", "cards::diff_ard_hierarchical",
-        "cards::update_ard_stat_label", "cards::replace_null_statistic")
+        "cards::update_ard_stat_label", "cards::replace_null_statistic",
+        "cards::update_ard_fmt_fun")
 weight <- function(call) if (call %in% w3) 3 else if (call %in% w2) 2 else 1
 
 rows <- list()
@@ -86,6 +89,10 @@ add <- function(group, fn, arg, s, where = "", note = "") {
 }
 
 # ---- the ard_*() functions ----------------------------------------------
+# (and the arguments each passes on through `...`, the scope's: this
+# checkout's catalog, so a tflspec before it is measured on the same scope)
+scope_passed <- utils::read.csv("inst/ard/passed_args.csv", stringsAsFactors = FALSE)
+cat_file <- function(to) if (nzchar(to)) "inst/ard/passed_args.csv" else "inst/ard/args.csv"
 f <- tfl_ard_functions()
 keys <- tfl_ard_methods()
 for (i in seq_len(nrow(f))) {
@@ -96,8 +103,18 @@ for (i in seq_len(nrow(f))) {
   kw <- keys$method[keys$call == call]
   via <- if (length(kw)) sprintf("method: %s (or %s)", kw[1L], call) else
     paste("method:", call)
+  # the arguments it passes on through `...` (inst/ard/passed_args.csv):
+  # in scope whichever tflspec is measured; one before tfl_ard_args() gave
+  # them is written as R in args, passed on, not described
+  passed <- if ("passed_to" %in% names(a)) a$passed_to else rep("", nrow(a))
+  extra <- scope_passed[scope_passed$call == call & !scope_passed$arg %in% a$arg, ]
+  for (k in seq_len(nrow(extra))) {
+    add(grp, call, extra$arg[k], if (f$offered[i]) "partial" else "no", paste0(via, "; args"),
+        paste0("passed on to ", extra$passed_to[k], "; R in args, not described"))
+  }
   for (j in seq_len(nrow(a))) {
     arg <- a$arg[j]
+    to <- if (nzchar(passed[j])) paste0("passed on to ", passed[j], "; ") else ""
     if (!f$offered[i]) {
       add(grp, call, arg, "no", via, "[by design] not offered for a new analysis")
     } else if (a$column[j] != "args") {
@@ -105,10 +122,10 @@ for (i in seq_len(nrow(f))) {
           "the analysis row's column")
     } else if (nzchar(a$hint[j]) && judged(a$kind[j], arg, call)) {
       add(grp, call, arg, "yes", paste0(via, "; args"),
-          paste0("inst/ard/args.csv: ", a$kind[j], "; its value judged"))
+          paste0(to, cat_file(passed[j]), ": ", a$kind[j], "; its value judged"))
     } else if (nzchar(a$hint[j])) {
       add(grp, call, arg, "partial", paste0(via, "; args"),
-          paste0("inst/ard/args.csv: ", a$kind[j], "; R taken as it is"))
+          paste0(to, cat_file(passed[j]), ": ", a$kind[j], "; R taken as it is"))
     } else {
       add(grp, call, arg, "partial", paste0(via, "; args"),
           paste0("R in args; kind from its default (", a$kind[j], "), no hint"))

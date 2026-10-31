@@ -204,14 +204,39 @@ tfl_ard_functions <- function(installed = TRUE) {
 #' `ard_pairwise(variable =)` are its `by`, `strata` and `variables`).  The data is
 #' the row's own (`data`).
 #'
+#' A `code` argument whose function takes one shape of R has its value
+#' checked by that shape: a list or formula of cards' selectors (`fmt_fun`,
+#' `stat_label`), a list (`method.args`), a function (`tidy_fun`), an
+#' expression of the ARD's columns (a `post` step's `filter`, `expr`,
+#' `rows`), the stratified Wilson `weights` (numbers between 0 and 1 that
+#' add up to 1), the levels `ard_pairwise(include =)` compares (a vector),
+#' the format of one statistic (`add_calculated_row(fmt_fun =)`,
+#' `update_ard_fmt_fun(fmt_fun =)`: a whole number of decimals, `"xx.x"` /
+#' `"xx.x%"`, or a function) and the value `replace_null_statistic(value =)`
+#' gives (one value).
+#'
 #' A company adds its own rows with `options(tflspec.ard_args = <data
 #' frame>)`: `call` (or `*` for every function), `arg`, `kind`, `hint`,
 #' `choices`; a row for the same call and argument wins, and a row for the
 #' function wins over a `*` row.
 #'
+#' The arguments a function passes on through `...` to the function that
+#' does the work follow its own, with `passed_to` naming that function:
+#' `ard_regression(exponentiate = TRUE)` (hazard or odds ratios, to
+#' `broom.helpers::tidy_plus_plus()`), `ard_car_anova(type = "III")` (to
+#' `car::Anova()`), `ard_stats_t_test(var.equal = TRUE)`,
+#' `ard_stats_chisq_test(correct = FALSE)`,
+#' `ard_stats_mantelhaen_test(exact = TRUE)` ... (to `stats`' tests).  They
+#' are written in `args` like the function's own, and their values are
+#' checked by their kind.  The catalog is `inst/ard/passed_args.csv`
+#' (`call`, `arg`, `passed_to`, `default`, `kind`, `hint`, `choices`); a
+#' company adds rows with `options(tflspec.ard_passed_args = <data frame>)`.
+#'
 #' @param call The function, as an analysis names it: `"cards::ard_summary"`.
-#' @return A data frame, one row per argument (`...` left out): `arg`,
-#'   `default`, `required`, `kind`, `hint`, `choices`, `column`.
+#' @return A data frame, one row per argument (`...` left out, the
+#'   arguments it passes on through `...` after its own): `arg`, `default`,
+#'   `required`, `kind`, `hint`, `choices`, `column`, `passed_to` (`""` for
+#'   the function's own argument).
 #' @examples
 #' tfl_ard_args("cardx::ard_categorical_ci")
 #' @export
@@ -262,11 +287,32 @@ tfl_ard_args <- function(call) {
     }
     data.frame(arg = a, default = dtext, required = required, kind = kind,
                hint = pick(a, "hint"), choices = ch,
-               column = .ard_arg_column(a, kind, call), stringsAsFactors = FALSE)
+               column = .ard_arg_column(a, kind, call), passed_to = "",
+               stringsAsFactors = FALSE)
   })
-  out <- do.call(rbind, rows)
+  out <- do.call(rbind, c(rows, list(.ard_passed_args(call, names(fm)))))
   rownames(out) <- NULL
   out
+}
+
+# The arguments a function passes on through `...` to the function that
+# does the work (inst/ard/passed_args.csv: ard_regression(exponentiate =)
+# to broom.helpers::tidy_plus_plus(), ard_car_anova(type =) to
+# car::Anova(), ard_stats_t_test(var.equal =) to stats::t.test()), as
+# tfl_ard_args() rows: written in `args` like the function's own.  Only
+# for a function that has `...`; a name it has itself is its own.
+.ard_passed_args <- function(call, own) {
+  fm <- .ard_formals(call)
+  if (is.null(fm) || !"..." %in% names(fm)) return(NULL)
+  d <- .ard_catalog_rows("passed_args.csv", "tflspec.ard_passed_args",
+                         c("call", "arg"))
+  d <- d[d$call == call & !d$arg %in% own, , drop = FALSE]
+  if (!nrow(d)) return(NULL)
+  data.frame(arg = d$arg,
+             default = ifelse(nzchar(d$default), d$default, NA_character_),
+             required = FALSE, kind = ifelse(nzchar(d$kind), d$kind, "code"),
+             hint = d$hint, choices = d$choices, column = "args",
+             passed_to = d$passed_to, stringsAsFactors = FALSE)
 }
 
 # what fills an argument the catalog does not describe, from its default
