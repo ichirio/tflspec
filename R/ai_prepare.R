@@ -416,8 +416,10 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
     }
     files <- c(files, list.files(rq, "[.](md|rds)$", full.names = TRUE))
     nxt <- c(
-      sprintf("open %s in VS Code (that folder: the agent reads its AGENTS.md)",
-              normalizePath(dir, winslash = "/")),
+      sprintf("open %s in VS Code (the ai folder alone: the agent reads its AGENTS.md)",
+              file.path(normalizePath(dir, winslash = "/"), "ai",
+                        paste0(.ai_file_id(basename(normalizePath(dir, mustWork = FALSE))),
+                               ".code-workspace"))),
       paste0("in the agent's chat, one message: ai/agent_prompt.md; answer its questions ",
              "there; \"continue\" when it stopped"),
       paste0("check the drafts: tflplanner's \"Check\" (tfl_ai_collect_answers()), ",
