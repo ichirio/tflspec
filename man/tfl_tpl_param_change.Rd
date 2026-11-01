@@ -27,6 +27,8 @@ The table template \code{param_change}, layout \code{summary}. Its program is on
    \code{data_label} \tab other \tab call \tab  \tab  \tab the analysis data's label \cr
    \code{statistics} \tab other \tab call \tab N, mean, sd, median, min, max \tab  \tab the statistics the ARD has \cr
    \code{cells} \tab other \tab call \tab n = \{N:.0f\}; Mean (SD) = \{mean:.1f\} (\{sd:.2f\}); Median = ... \tab plan_cells.continuous \tab the rows of a value or a change \cr
+   \code{param_page} \tab other \tab call \tab TRUE \tab  \tab TRUE: a page a parameter, named in the titles by 'param_heading' \cr
+   \code{param_heading} \tab other \tab call \tab Parameter: \{value\} \tab  \tab a parameter's page name ('\{value\}': the parameter) \cr
 }
 }
 
