@@ -166,3 +166,26 @@ test_that("the fingerprint follows the study's own function files", {
   sp2$analyses$strata <- NULL
   expect_identical(tfl_ard_spec_hash(sp2, "T"), h)
 })
+
+test_that("an argument or a function the installed package does not have is said, with the version", {
+  skip_if_not_installed("cards")
+  ok <- list(method = "continuous", population_id = "SAF", variables = "AGE")
+  # an argument the function has not: a warning now (the program would stop)
+  expect_warning(exact_spec(c(ok, args = "nope = 1")),
+                 "cards [0-9.]+'s ard_summary\\(\\) has no argument `nope` \\(it has: ")
+  # a function the package has not: an error, with the installed version
+  expect_error(exact_spec(list(method = "cards::ard_nonexistent", population_id = "SAF",
+                               variables = "AGE")),
+               "the installed cards [0-9.]+ has no ard_nonexistent\\(\\)")
+  # what the function has, and what tflspec takes for itself, pass
+  expect_no_warning(exact_spec(c(ok, args = "stat_label = NULL")))
+  expect_no_warning(exact_spec(list(method = "categorical", population_id = "SAF",
+                                    variables = "SEX", args = ".overall = TRUE")))
+  skip_if_not_installed("cardx")
+  expect_warning(exact_spec(list(method = "cardx::ard_categorical_ci", population_id = "SAF",
+                                 variables = "SEX", args = "conf.level = 0.9, nope = TRUE")),
+                 "cardx [0-9.]+'s ard_categorical_ci\\(\\) has no argument `nope`")
+  # a function that passes `...` on (car::Anova(type = )) takes what it does not name
+  expect_no_warning(exact_spec(list(method = "cardx::ard_car_anova", population_id = "SAF",
+                                    args = "x = lm(AGE ~ TRT01A, data = data), type = 2")))
+})

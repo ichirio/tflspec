@@ -123,6 +123,10 @@
               doc = "the legend's place (theme(legend.position = )); NULL: inside"),
     tfl_param("legend_title", NULL, type = "text",
               doc = "the legend's title (labs(colour = )); NULL: none"),
+    tfl_param("legend_median", FALSE, type = "flag", tier = "usual",
+              doc = "TRUE: each arm's legend text has its median survival and 95% CI, \"Drug X: 12.3 (9.8, 15.1)\" (from the fit; NE when not reached)"),
+    tfl_param("legend_median_digits", 1L, type = "number",
+              doc = "the decimals of the median and its CI in the legend"),
     tfl_param("pvalue", FALSE, type = "flag", tier = "usual",
               doc = "the log-rank p-value (add_pvalue())"),
     tfl_param("pvalue_location", "annotation", type = "choice", choices = c("annotation", "caption"),
@@ -181,6 +185,22 @@
   fit <- match("survfit", vapply(f$stats, function(s) s$step %||% "", ""))
   if (!is.null(a$conf_type)) f$stats[[fit]]$conf_type <- a$conf_type
   if (!is.null(a$conf_level)) f$stats[[fit]]$conf_level <- a$conf_level
+  # the legend's text with each arm's median (95% CI), from the fit: a
+  # step after it, and the scales' labels
+  if (isTRUE(a$legend_median)) {
+    dg <- as.integer(a$legend_median_digits %||% 1L)
+    f$stats <- append(f$stats, list(list(step = "code",
+      label = "the legend's text: each arm's median survival (95% CI)",
+      code = paste0(
+        "med <- summary(fit)$table\n",
+        "if (!is.matrix(med)) med <- matrix(med, nrow = 1, dimnames = list(\"All\", names(med)))\n",
+        "fmt_med <- function(x) ifelse(is.na(x), \"NE\", formatC(x, format = \"f\", digits = ", dg, "))\n",
+        "arm_of <- sub(\"^[^=]*=\", \"\", rownames(med))\n",
+        "legend_labels <- stats::setNames(sprintf(\"%s: %s (%s, %s)\", arm_of, fmt_med(med[, \"median\"]),\n",
+        "  fmt_med(med[, grep(\"LCL$\", colnames(med))[1]]), fmt_med(med[, grep(\"UCL$\", colnames(med))[1]])), arm_of)"))),
+      fit)
+    f$plot$legend_labels <- tfl_r("legend_labels")
+  }
   # the layers
   ct <- f$content
   ct <- .tpl_km_set(ct, "km_curve", linewidth = a$linewidth,

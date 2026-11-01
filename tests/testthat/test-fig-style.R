@@ -16,7 +16,7 @@ test_that("the built-in style carries the sample programs' values", {
 test_that("the generators take their defaults from the style", {
   code <- paste(tfl_fig_km(style = "single_arm"), collapse = "\n")
   expect_match(code, 'linetype = "twodash"', fixed = TRUE)
-  expect_match(code, "add_censor_mark(shape = 4, size = 3, stroke = 0.6", fixed = TRUE)
+  expect_match(code, "add_censor_mark(shape = 3, size = 3, stroke = 0.6", fixed = TRUE)
   wf <- paste(tfl_fig_waterfall(), collapse = "\n")
   expect_match(wf, "geom_col(width = 0.8)", fixed = TRUE)
   expect_match(wf, "hjust = -0.3, size = 3.7", fixed = TRUE)

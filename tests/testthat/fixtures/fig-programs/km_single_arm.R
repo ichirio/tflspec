@@ -37,7 +37,7 @@ risk <- data.frame(
 pal <- c(All = tfl_colours("treatment")[[1]])
 
 plot <- ggsurvfit(fit, linewidth = 0.3, colour = pal[[1]]) +
-  add_censor_mark(shape = 4, size = 3, stroke = 0.6, colour = pal[[1]]) +
+  add_censor_mark(shape = 3, size = 3, stroke = 0.6, colour = pal[[1]]) +
   geom_hline(yintercept = 0.5, linetype = "twodash", colour = "grey50",
              linewidth = 0.3) +
   scale_x_continuous(

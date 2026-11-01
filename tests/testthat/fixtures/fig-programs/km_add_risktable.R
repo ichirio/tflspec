@@ -29,7 +29,7 @@ x_breaks <- pretty(c(0, max(fit$time)))
 pal <- tfl_colours("treatment", levels(factor(adtte_os$TRT01P)))
 
 plot <- ggsurvfit(fit, linewidth = 0.3) +
-  add_censor_mark(shape = 4, size = 3, stroke = 0.6) +
+  add_censor_mark(shape = 3, size = 3, stroke = 0.6) +
   geom_hline(yintercept = 0.5, linetype = "twodash", colour = "grey50",
              linewidth = 0.3) +
   add_risktable(times = x_breaks, risktable_stats = "n.risk", size = 3) +

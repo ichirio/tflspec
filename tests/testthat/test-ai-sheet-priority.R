@@ -50,7 +50,7 @@ priority_study <- function() {
 }
 
 prep_priority <- function(d, f, ...) {
-  tfl_ai_prepare(d, f, adam = "adam", quiet = TRUE, mode = "agent", templates = FALSE, ...)
+  tfl_ai_prepare(d, f, adam = "adam", quiet = TRUE, templates = FALSE, ...)
 }
 
 test_that("a TOC item with no shell goes to one sheet by priority, the others candidates", {

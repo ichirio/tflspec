@@ -41,7 +41,7 @@ ard_label_2 <- paste0(
 pal <- tfl_colours("treatment", levels(factor(adtte_ttde$TRT01A)))
 
 plot <- ggsurvfit(fit, linewidth = 0.3) +
-  add_censor_mark(shape = 4, size = 3, stroke = 0.6) +
+  add_censor_mark(shape = 3, size = 3, stroke = 0.6) +
   annotate(
     "text", x = Inf, y = Inf, hjust = 1.1, vjust = 1.5, size = 3,
     label = ard_label_1

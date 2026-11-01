@@ -264,6 +264,9 @@
     for (a in names(e$args)) {
       x <- e$args[[a]]
       if (!is.null(x$renamed_to)) next
+      # an argument the schema lists for a form only (its label, no
+      # description): the AI is not told of it (its request stays short)
+      if (is.null(x$description) && !is.null(x$label)) next
       out <- c(out, sprintf("  - `%s` (%s)%s", a, x$type %||% "value",
                             .ai_help(x$description %||% "", ": ")))
     }
@@ -389,9 +392,9 @@
 
 .ai_assumption_rows <- function(x) {
   empty <- data.frame(output_id = character(), where = character(), item = character(),
-                      assumption = character(), question = character(),
-                      stringsAsFactors = FALSE)
-  if (is.null(x) || !length(x)) return(empty)
+                      assumption = character(), value = character(),
+                      question = character(), from = character(), stringsAsFactors = FALSE)
+  if (is.null(x) || !length(x)) { empty$from <- NULL; return(empty) }
   cell <- function(e, k) {
     v <- e[[k]]
     if (is.null(v) || !length(v) || is.list(v)) NA_character_ else as.character(v[[1L]])
@@ -403,9 +406,23 @@
     }
     data.frame(output_id = cell(e, "output_id"), where = cell(e, "where"),
                item = cell(e, "item"), assumption = cell(e, "assumption"),
-               question = cell(e, "question"), stringsAsFactors = FALSE)
+               value = .ai_assumption_value(e$value),
+               question = cell(e, "question"), from = cell(e, "from"), stringsAsFactors = FALSE)
   })
-  do.call(rbind, c(list(empty), rows))
+  out <- do.call(rbind, c(list(empty), rows))
+  # (`from`: the decision an assumption was taken from;
+  # a column only when one says it)
+  if (!nrow(out) || all(is.na(out$from))) out$from <- NULL
+  out
+}
+
+# An assumption's `value` -- the value the AI used -- as text: a scalar as
+# it is, a list or a vector (the arms, the variables) joined with ", "
+.ai_assumption_value <- function(v) {
+  if (is.null(v) || !length(v)) return(NA_character_)
+  v <- unlist(v, use.names = FALSE)
+  if (!length(v)) return(NA_character_)
+  paste(as.character(v), collapse = ", ")
 }
 
 # A table answer's `reports`: the list of the reports its request makes,
@@ -588,7 +605,10 @@
     }
     new <- .ai_derived_names(a[["derive"]])
     have <- c(new, unlist(a[["add"]]), if (from %in% toupper(ad_ids)) derived[[tolower(from)]])
-    derived[[tolower(id %||% paste0("data", j))]] <- structure(have, dataset = from_ds)
+    # (a data `code` makes: its columns are the code's, not the dataset's --
+    # an analysis of it is not checked against the ADaM's variables)
+    derived[[tolower(id %||% paste0("data", j))]] <- structure(have, dataset = from_ds,
+                                                                coded = !is.null(a[["code"]]))
     if (!is.null(vars) && nzchar(from_ds %||% "")) {
       p <- rbind(p, .ai_check_vars(.ai_r_names(a[["where"]]), vars, from_ds, have,
                                    paste(at, w, "where"), "warning"))
@@ -633,7 +653,7 @@
                                       if (length(ad_ids)) sprintf(" (%s)", paste(ad_ids, collapse = ", ")) else ""))
       } else {
         have <- derived[[tolower(data_id)]]
-        ds <- toupper(attr(have, "dataset") %||% "")
+        ds <- if (isTRUE(attr(have, "coded"))) "" else toupper(attr(have, "dataset") %||% "")
       }
     } else if (!nzchar(ds) && !is.null(a[["population"]])) {
       ds <- "ADSL"
@@ -662,8 +682,10 @@
       "write the one the shell says; if the shell does not say it, ask it in a question --",
       "do not guess"))
   }
-  # code lists: variables of the data
-  if (!is.null(vars)) {
+  # code lists: variables of the data (a column that code makes is not
+  # known here: no code list is held to the data then)
+  coded_any <- any(vapply(derived, function(x) isTRUE(attr(x, "coded")), NA))
+  if (!is.null(vars) && !coded_any) {
     for (v in names(o[["codelists"]])) {
       if (!v %in% vars$variable && !v %in% unlist(derived)) {
         add(paste("codelists", v), "is not a variable of the datasets given", "warning")
@@ -736,6 +758,23 @@
     }
   }
   if (!length(o[["page"]]$titles)) add("page", "has no titles", "warning")
+  # a line's cells are left, center, right: another key is a text cut at
+  # an unquoted comma (`{left: a, b}` reads `b` as a key)
+  for (band in c("titles", "footnotes", "header", "footer")) {
+    m <- o[["page"]][[band]]
+    if (!is.list(m) || inherits(m, "tfl_unset")) next
+    for (line in names(m)) {
+      cells <- m[[line]]
+      if (!is.list(cells) || is.null(names(cells))) next
+      odd <- setdiff(names(cells), c("left", "center", "right"))
+      if (length(odd)) {
+        add(sprintf("page %s %s", band, line), sprintf(paste(
+          "has %s besides left / center / right: a text with a comma must be quoted",
+          "(`{left: \"a, b\"}`), or the text after the comma is lost"),
+          paste(sprintf("`%s`", odd), collapse = ", ")))
+      }
+    }
+  }
   p$where <- trimws(p$where)
   p
 }
@@ -793,6 +832,10 @@
 # written as tflspec writes them (nothing run), each error a problem.
 .ai_check_table_run <- function(outs, context) {
   p <- .ai_problems()
+  # (the study's drafts may live in ai/spec/outputs -- tflspec.outputs_dir, set
+  # by the check -- but this copy writes them to spec/outputs: read there)
+  op <- options(tflspec.outputs_dir = NULL)
+  on.exit(options(op), add = TRUE)
   d <- tempfile("ai-table-")
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   dir.create(file.path(d, "spec", "outputs"), recursive = TRUE)
@@ -873,6 +916,8 @@
                       paste(sQuote(file.path("spec", "outputs", basename(there)), FALSE),
                             collapse = ", ")))
   }
+  # (the reports whose widths R sets: an assumption says so)
+  unset <- .ai_widths_unset(answer$outputs)
   # (a listing's columns their widths, where the answer gave none: R/ai_widths.R)
   answer$outputs <- lapply(answer$outputs, .ai_listing_widths, vars = answer$vars)
   # (a table's widths R gave it on an earlier run)
@@ -884,6 +929,15 @@
   .ai_widths_on_read(answer$outputs, paths, dir)
   out <- paths
   a <- answer$assumption_rows
+  aw <- .ai_widths_assumptions(unset)
+  if (!is.null(aw)) {
+    if (is.null(a) || !nrow(a)) {
+      a <- aw
+    } else {
+      for (k in setdiff(names(a), names(aw))) aw[[k]] <- NA_character_
+      a <- rbind(a, aw[names(a)])
+    }
+  }
   if (!is.null(a) && nrow(a)) {
     old <- .ai_folder_assumptions(dir, all = TRUE)
     names(old)[names(old) == "sheet"] <- "where"

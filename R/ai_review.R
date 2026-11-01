@@ -460,6 +460,13 @@
   })
   if (is.null(o)) return(list(rows = rows, kinds = "report", assumptions = NULL))
   id <- o$id
+  # what the AI marked to confirm (`ai: confirm`)
+  cf <- .ai_confirm_rows(o)
+  for (j in seq_len(nrow(cf))) {
+    add(.ai_rv("K19", output_id = id, sheet = "ai", row = cf$where[j] %||% "", field = cf$item[j] %||% "",
+               args = c(id, paste(c(cf$where[j], cf$item[j])[!is.na(c(cf$where[j], cf$item[j]))], collapse = "$"),
+                        cf$why[j]), cat = cat))
+  }
   items <- if (inherits(o$content, "tfl_r")) list() else o$content
   # a figure's named plots: their items, each
   items <- unlist(lapply(items, function(it) if (inherits(it, "tfl_plot")) it$items else list(it)),
@@ -594,13 +601,13 @@
 }
 
 # spec/_assumptions.yml as the review's frame: output_id, sheet (where),
-# item, assumption, question; `all`: also each row's id and kind (R/ai_assumptions.R),
+# item, assumption, value, question; `all`: also each row's id and kind (R/ai_assumptions.R),
 # its status (`fixed` once the agent applied the person's answer) and note
 .ai_folder_assumptions <- function(dir, all = FALSE) {
   extra <- c("id", "kind", "status", "note")
   empty <- data.frame(output_id = character(), sheet = character(), item = character(),
-                      assumption = character(), question = character(),
-                      stringsAsFactors = FALSE)
+                      assumption = character(), value = character(),
+                      question = character(), stringsAsFactors = FALSE)
   if (isTRUE(all)) for (k in extra) empty[[k]] <- character()
   f <- file.path(dir, "spec", "_assumptions.yml")
   if (!file.exists(f)) return(empty)
@@ -611,12 +618,22 @@
     v <- e[[k]]
     if (is.null(v) || !length(v)) NA_character_ else as.character(v[[1L]])
   }
+  # `all`: every other key an item carries too (a field this version does
+  # not know, a person's own), so that writing the file back keeps it
+  known <- c("output_id", "where", "item", "assumption", "value", "question", extra)
+  others <- if (isTRUE(all)) {
+    unique(unlist(lapply(y, function(e) if (is.list(e)) setdiff(names(e), known))))
+  } else character()
+  others <- others[!is.na(others) & nzchar(others)]
+  for (k in others) empty[[k]] <- character()
   rows <- lapply(y, function(e) {
     if (is.character(e)) e <- list(assumption = e)
     r <- data.frame(output_id = cell(e, "output_id"), sheet = cell(e, "where"),
                     item = cell(e, "item"), assumption = cell(e, "assumption"),
+                    value = .ai_assumption_value(e$value),
                     question = cell(e, "question"), stringsAsFactors = FALSE)
     if (isTRUE(all)) for (k in extra) r[[k]] <- cell(e, k)
+    for (k in others) r[[k]] <- .ai_assumption_value(e[[k]])
     r
   })
   do.call(rbind, c(list(empty), rows))

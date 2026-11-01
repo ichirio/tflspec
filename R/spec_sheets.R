@@ -36,7 +36,7 @@
 #' tfl_sheets_from_spec(s, outs)$planner$description
 #' @export
 tfl_sheets_from_yaml <- function(dir) {
-  tfl_sheets_from_spec(tfl_read_study_spec(dir), tfl_read_outputs(dir))
+  tfl_sheets_from_spec(tfl_read_study_spec(dir), tfl_read_outputs(dir, skip_bad = TRUE))
 }
 
 #' @rdname tfl_sheets_from_yaml
@@ -186,7 +186,10 @@ tfl_sheets_from_spec <- function(study, outputs) {
       output_id = id, description = cell(e$label %||% o$label), setup_code = NA_character_,
       process_code = .first_r_step(o$data$steps),
       section = cell(e$section), population = cell(e$population %||% o$population),
-      datasets = cell(e$datasets), batches = cell(e$sets))
+      datasets = cell(e$datasets %||% .records_dataset(o)), batches = cell(e$sets))
+    if (!is.null(.records_dataset(o)) && !is.null(o$data$where)) {
+      note(id, "data", "a records table's where (its dataset's condition) stays in YAML")
+    }
     # the report row: its kind, its pattern, its file and program
     rr <- list(output_id = id, type = o$kind)
     pat <- grep("^patterns/", o$extends, value = TRUE)
@@ -240,7 +243,10 @@ tfl_sheets_from_spec <- function(study, outputs) {
       analyses[[length(analyses) + 1L]] <- c(list(output_id = id), m)
     }
     if (o$kind == "table") {
-      if (!code_content) table_rows(o$content, id)
+      if (!code_content) {
+        tryCatch(table_rows(o$content, id), error = function(e) note(
+          id, "content", paste("its content could not be put on the sheets:", conditionMessage(e))))
+      }
     } else if (o$kind == "listing") {
       lr <- list(output_id = id)
       for (k in c("dataset", "data", "where", "sort")) if (!is.null(o$data[[k]])) lr[[k]] <- cell(o$data[[k]])
@@ -434,7 +440,8 @@ tfl_sheets_from_spec <- function(study, outputs) {
       fn <- sub("[.].*$", "", m[[col]])
       arg <- if (grepl(".", m[[col]], fixed = TRUE)) sub("^[^.]*[.]", "", m[[col]]) else col
       v <- page[[fn]][[arg]]
-      if (!is.null(v)) pr[[sh]][[col]] <- cell(v)
+      # (a call -- a watermark's look, rtf_watermark() -- is no cell: page_more)
+      if (!is.null(v) && !inherits(v, "tfl_call")) pr[[sh]][[col]] <- cell(v)
     }
   }
   ft <- page$rtf_document$font_table
@@ -473,6 +480,9 @@ tfl_sheets_from_spec <- function(study, outputs) {
     said <- c(said, ifelse(grepl(".", m, fixed = TRUE), m, paste(m, names(m), sep = ".")))
   }
   said <- c(said, "rtf_document.font_lang", "rtf_figures.width_twips", "rtf_figures.height_twips")
+  if (inherits(page$rtf_document$watermark, "tfl_call")) {
+    said <- setdiff(said, "rtf_document.watermark")
+  }
   ft <- page$rtf_document$font_table
   if (length(ft) <= 1L) said <- c(said, "rtf_document.font_table")
   out <- list()

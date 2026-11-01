@@ -1,7 +1,7 @@
 # ============================================================================
 #  Document import, level 1: a study's define as code lists and labels
 # ----------------------------------------------------------------------------
-#  A define (Define-XML 2.0 / 2.1, CDISC's standard XML; or the workbook it
+#  A define (Define-XML 1.0, 2.0 / 2.1, CDISC's standard XML; or the workbook it
 #  is made from) already says what each dataset's variables are called,
 #  their labels and the values each may take with their decodes.  These are
 #  read by rule -- no AI, no guessing -- into tidy data frames, and the code
@@ -11,9 +11,10 @@
 # ============================================================================
 
 .define_odm <- "http://www.cdisc.org/ns/odm/v1.3"
+.define_odm_12 <- "http://www.cdisc.org/ns/odm/v1.2"
 .define_xml_ns <- "http://www.w3.org/XML/1998/namespace"
 
-#' Read a Define-XML (2.0 or 2.1)
+#' Read a Define-XML (2.0 or 2.1; a 1.0 for its datasets, variables and code lists)
 #'
 #' Reads a study's `define.xml` -- the CDISC standard description of its
 #' datasets -- by rule (\pkg{xml2}), and gives its datasets, variables and
@@ -37,14 +38,19 @@
 #' * `external`: code lists that point to a dictionary (`ExternalCodeList`,
 #'   e.g. MedDRA): `codelist`, `name`, `dictionary`, `version`.  They hold
 #'   no values.
+#' * `value_level`: the value-level metadata (`def:ValueListDef`), one row
+#'   a variable's entry: `dataset`, `variable`, `where` (the entry's
+#'   `def:WhereClauseDef` as an R condition, `PARAMCD == "ALT"`,
+#'   `PARAMCD %in% c("HGB", "PLAT")`), `label`, `type`, `length`, `digits`
+#'   (`SignificantDigits`), `format` (`def:DisplayFormat`), `codelist`,
+#'   `order`, `oid`.  No rows when the define has none.
 #' * `study`: `study_name`, `description`, `protocol`, `define_version`,
 #'   `file_oid`.
 #'
 #' Elements are found by their namespace URIs, not by prefix, so a file
 #' that binds the namespaces to other prefixes reads the same.  Texts
 #' (`TranslatedText`) are taken in `lang`; else the one without `xml:lang`;
-#' else the first.  Value-level metadata, methods, comments and documents
-#' are not read.
+#' else the first.  Methods, comments and documents are not read.
 #'
 #' @param path A `define.xml`.
 #' @param lang The language of the texts to take (`xml:lang`), e.g. `"en"`
@@ -78,8 +84,16 @@ tfl_read_define <- function(path, lang = "en") {
     .ard_stop(sprintf(
       "tfl_read_define(): '%s' has no ODM/Study/MetaDataVersion.", path))
   }
-  text <- function(nodes, at) .define_text(nodes, at, ns, lang)
   attr1 <- function(nodes, name) xml2::xml_attr(nodes, name, ns)
+  # (a 1.0 file writes a label as def:Label, with no Description element)
+  text <- function(nodes, at) {
+    out <- .define_text(nodes, at, ns, lang)
+    if (identical(at, "odm:Description/odm:TranslatedText")) {
+      lab <- attr1(nodes, "def:Label")
+      out <- ifelse(is.na(out) & !is.na(lab), lab, out)
+    }
+    out
+  }
 
   gv <- xml2::xml_find_first(doc, "/odm:ODM/odm:Study/odm:GlobalVariables",
                              ns)
@@ -131,9 +145,15 @@ tfl_read_define <- function(path, lang = "en") {
     purpose = attr1(igs, "Purpose"),
     repeating = attr1(igs, "Repeating"),
     reference = attr1(igs, "IsReferenceData"),
-    keys = vapply(refs, function(r) {
+    keys = vapply(seq_along(refs), function(i) {
+      r <- refs[[i]]
       k <- r[!is.na(r$key), , drop = FALSE]
-      if (!nrow(k)) return(NA_character_)
+      if (!nrow(k)) {
+        # (a 1.0 file: def:DomainKeys, the key variables with commas)
+        dk <- attr1(igs[[i]], "def:DomainKeys")
+        if (is.na(dk) || !nzchar(trimws(dk))) return(NA_character_)
+        return(paste(trimws(strsplit(dk, "[,;]")[[1L]]), collapse = " | "))
+      }
       paste(item$variable[match(k$oid[order(k$key)], item$oid)],
             collapse = " | ")
     }, ""),
@@ -172,7 +192,8 @@ tfl_read_define <- function(path, lang = "en") {
         value = attr1(it, "CodedValue"),
         decode = text(it, "odm:Decode/odm:TranslatedText"),
         order = .define_int(attr1(it, "OrderNumber")),
-        rank = suppressWarnings(as.numeric(attr1(it, "Rank"))),
+        rank = suppressWarnings(as.numeric(ifelse(is.na(attr1(it, "Rank")),
+                                                  attr1(it, "def:Rank"), attr1(it, "Rank")))),
         extended = .define_yes(attr1(it, "def:ExtendedValue")),
         code = .define_first_attr(
           it, "odm:Alias[@Context='nci:ExtCodeID']", "Name", ns),
@@ -181,6 +202,11 @@ tfl_read_define <- function(path, lang = "en") {
         stringsAsFactors = FALSE)
     })))
   rownames(codelists) <- NULL
+  # value-level metadata: a variable's def:ValueListRef names a
+  # def:ValueListDef, whose ItemRefs (each with a def:WhereClauseRef: the
+  # records it holds for, PARAMCD == "ALT") name ItemDefs with the digits,
+  # the format, the label and the code list of the variable in those records
+  value_level <- .define_value_level(mdv, items, item, variables, ns, text, attr1)
   ext <- xml2::xml_find_all(mdv, "odm:CodeList[odm:ExternalCodeList]", ns)
   external <- data.frame(
     codelist = attr1(ext, "OID"),
@@ -193,30 +219,136 @@ tfl_read_define <- function(path, lang = "en") {
 
   .define_new(study, datasets, variables, codelists, external,
               source = list(file = path, kind = "define.xml",
-                            version = attr(ns, "version")))
+                            version = attr(ns, "version")),
+              value_level = value_level)
 }
 
-# The namespaces by URI: `odm` (ODM 1.3), `def` (Define-XML 2.0 or 2.1),
+# The value-level metadata of a define.xml (2.0 and 2.1 alike), one row a
+# variable's value list entry: `dataset`, `variable`, `where` (the
+# WhereClauseDef's RangeChecks as an R condition), `label`, `type`,
+# `length`, `digits`, `format`, `codelist`, `order`, `oid`.
+.define_value_level <- function(mdv, items, item, variables, ns, text, attr1) {
+  out <- .define_vl_empty()
+  vl_ref <- .define_first_attr(items, "def:ValueListRef", "ValueListOID", ns)
+  has <- which(!is.na(vl_ref))
+  if (!length(has)) return(out)
+  # each WhereClauseDef as an R condition
+  wcs <- xml2::xml_find_all(mdv, "def:WhereClauseDef", ns)
+  wc_text <- vapply(seq_along(wcs), function(i) {
+    rc <- xml2::xml_find_all(wcs[[i]], "odm:RangeCheck", ns)
+    conds <- vapply(seq_along(rc), function(k) {
+      var <- item$variable[match(attr1(rc[[k]], "def:ItemOID"), item$oid)]
+      if (is.na(var)) var <- sub("^.*[.]", "", attr1(rc[[k]], "def:ItemOID"))
+      vals <- trimws(xml2::xml_text(xml2::xml_find_all(rc[[k]], "odm:CheckValue", ns)))
+      .define_condition(var, attr1(rc[[k]], "Comparator"), vals)
+    }, "")
+    paste(conds, collapse = " & ")
+  }, "")
+  names(wc_text) <- attr1(wcs, "OID")
+  vls <- xml2::xml_find_all(mdv, "def:ValueListDef", ns)
+  vl_oid <- attr1(vls, "OID")
+  rows <- lapply(has, function(i) {
+    k <- match(vl_ref[i], vl_oid)
+    if (is.na(k)) return(NULL)
+    # the variable (its dataset) the value list belongs to
+    at <- variables[variables$oid == item$oid[i], , drop = FALSE]
+    if (!nrow(at)) return(NULL)
+    r <- xml2::xml_find_all(vls[[k]], "odm:ItemRef", ns)
+    if (!length(r)) return(NULL)
+    it <- item[match(attr1(r, "ItemOID"), item$oid), , drop = FALSE]
+    wc <- vapply(seq_along(r), function(j) {
+      w <- xml2::xml_find_all(r[[j]], "def:WhereClauseRef", ns)
+      ids <- attr1(w, "WhereClauseOID")
+      txt <- wc_text[ids]
+      txt <- txt[!is.na(txt) & nzchar(txt)]
+      if (length(txt)) paste(txt, collapse = " & ") else NA_character_
+    }, "")
+    data.frame(dataset = rep(at$dataset[1L], length(r)),
+               variable = rep(at$variable[1L], length(r)),
+               where = wc, label = it$label, type = it$type, length = it$length,
+               digits = it$digits, format = it$format, codelist = it$codelist,
+               order = .define_int(attr1(r, "OrderNumber")), oid = attr1(r, "ItemOID"),
+               stringsAsFactors = FALSE)
+  })
+  out <- do.call(rbind, c(list(out), rows))
+  rownames(out) <- NULL
+  out
+}
+
+# A RangeCheck as R: EQ `VAR == "v"`, NE `!=`, IN `%in% c(...)`, NOTIN,
+# LT / LE / GT / GE
+.define_condition <- function(var, comparator, vals) {
+  q <- function(v) {
+    num <- !is.na(suppressWarnings(as.numeric(v)))
+    ifelse(num, v, encodeString(v, quote = "\""))
+  }
+  cmp <- toupper(comparator %||% "EQ")
+  if (is.na(cmp) || !nzchar(cmp)) cmp <- "EQ"
+  one <- q(vals)
+  switch(cmp,
+    EQ = sprintf("%s == %s", var, one[1L]),
+    NE = sprintf("%s != %s", var, one[1L]),
+    IN = sprintf("%s %%in%% c(%s)", var, paste(one, collapse = ", ")),
+    NOTIN = sprintf("!%s %%in%% c(%s)", var, paste(one, collapse = ", ")),
+    LT = sprintf("%s < %s", var, one[1L]),
+    LE = sprintf("%s <= %s", var, one[1L]),
+    GT = sprintf("%s > %s", var, one[1L]),
+    GE = sprintf("%s >= %s", var, one[1L]),
+    sprintf("%s %s %s", var, cmp, paste(one, collapse = ", ")))
+}
+
+# The value-level sheet with its where clauses (a where clause's id in the
+# sheet, its rows in the WhereClauses sheet: one row a comparison, joined
+# by `&`); a where clause the sheet does not have stays as written
+.define_vl_spec <- function(vl, wc) {
+  if (is.null(vl) || !nrow(vl)) return(.define_vl_empty())
+  where <- as.character(vl$where)
+  if (!is.null(wc) && nrow(wc)) {
+    by_id <- split(wc, wc$id)
+    txt <- vapply(by_id, function(w) {
+      paste(vapply(seq_len(nrow(w)), function(k) .define_condition(
+        w$variable[k], w$comparator[k] %||% "EQ",
+        trimws(strsplit(w$value[k], ",", fixed = TRUE)[[1L]])), ""), collapse = " & ")
+    }, "")
+    hit <- match(where, names(txt))
+    where <- ifelse(is.na(hit), where, unname(txt[hit]))
+  }
+  data.frame(dataset = vl$dataset, variable = vl$variable, where = where,
+             label = vl$label, type = vl$type, length = vl$length, digits = vl$digits,
+             format = vl$format, codelist = vl$codelist, order = vl$order,
+             oid = NA_character_, stringsAsFactors = FALSE)
+}
+
+.define_vl_empty <- function() {
+  data.frame(dataset = character(), variable = character(), where = character(),
+             label = character(), type = character(), length = integer(),
+             digits = integer(), format = character(), codelist = character(),
+             order = integer(), oid = character(), stringsAsFactors = FALSE)
+}
+
+# The namespaces by URI: `odm` (ODM 1.3, or 1.2 of a Define-XML 1.0), `def` (Define-XML 1.0, 2.0 or 2.1),
 # `xml`.  The prefixes the file uses do not matter.
 .define_ns <- function(doc, path) {
   uris <- unique(unname(as.character(xml2::xml_ns(doc))))
   root <- xml2::xml_root(doc)
-  if (xml2::xml_name(root) != "ODM" || !.define_odm %in% uris) {
+  # (a Define-XML 1.0 is an ODM 1.2 document)
+  odm <- if (.define_odm %in% uris) .define_odm else if (.define_odm_12 %in% uris) .define_odm_12
+  if (xml2::xml_name(root) != "ODM" || is.null(odm)) {
     .ard_stop(sprintf(paste0(
       "tfl_read_define(): '%s' is not a Define-XML: its root is not an ",
-      "ODM 1.3 element (%s)."), path, .define_odm))
+      "ODM 1.3 (or 1.2) element (%s)."), path, .define_odm))
   }
   def <- grep("^http://www\\.cdisc\\.org/ns/def/v[0-9.]+$", uris,
               value = TRUE)
   ver <- sub("^.*/v", "", def)
-  ok <- ver %in% c("2.0", "2.1")
+  ok <- ver %in% c("1.0", "2.0", "2.1")
   if (!any(ok)) {
     .ard_stop(sprintf(paste0(
-      "tfl_read_define(): '%s' is not a Define-XML 2.0 or 2.1 (its def ",
+      "tfl_read_define(): '%s' is not a Define-XML 1.0, 2.0 or 2.1 (its def ",
       "namespace is %s)."), path,
       if (length(def)) paste(def, collapse = ", ") else "missing"))
   }
-  structure(c(odm = .define_odm, def = def[ok][[1L]], xml = .define_xml_ns),
+  structure(c(odm = odm, def = def[ok][[1L]], xml = .define_xml_ns),
             version = ver[ok][[1L]])
 }
 
@@ -267,9 +399,10 @@ tfl_read_define <- function(path, lang = "en") {
 }
 
 .define_new <- function(study, datasets, variables, codelists, external,
-                        source) {
+                        source, value_level = .define_vl_empty()) {
   structure(list(study = study, datasets = datasets, variables = variables,
-                 codelists = codelists, external = external),
+                 codelists = codelists, external = external,
+                 value_level = value_level),
             source = source, class = "tfl_define")
 }
 
@@ -289,6 +422,10 @@ print.tfl_define <- function(x, ...) {
   cat(sprintf("  %d code list(s), %d value(s); %d external dictionar%s\n",
               length(unique(x$codelists$codelist)), nrow(x$codelists),
               nrow(x$external), if (nrow(x$external) == 1L) "y" else "ies"))
+  if (nrow(x$value_level %||% .define_vl_empty())) {
+    cat(sprintf("  %d value-level row(s) (%d with digits)\n", nrow(x$value_level),
+                sum(!is.na(x$value_level$digits))))
+  }
   invisible(x)
 }
 
@@ -344,13 +481,23 @@ tfl_define_profile <- function(name = "p21") {
                      order = "Order", value = "Term", code = "NCI Term Code",
                      decode = "Decoded Value", extended = NA),
     external = list(sheet = "Dictionaries", codelist = "ID", name = "Name",
-                    dictionary = "Dictionary", version = "Version"))
+                    dictionary = "Dictionary", version = "Version"),
+    value_level = list(sheet = "ValueLevel", dataset = "Dataset",
+                       variable = "Variable", where = "Where Clause",
+                       label = "Description", type = "Data Type",
+                       length = "Length", digits = "Significant Digits",
+                       format = "Format", codelist = "Codelist", order = "Order"),
+    where_clauses = list(sheet = "WhereClauses", id = "ID", dataset = "Dataset",
+                         variable = "Variable", comparator = "Comparator",
+                         value = "Value"))
 }
 
 .define_required <- list(datasets = "dataset",
                          variables = c("dataset", "variable"),
                          codelists = c("codelist", "value"),
-                         external = "codelist")
+                         external = "codelist",
+                         value_level = c("dataset", "variable"),
+                         where_clauses = c("id", "variable", "value"))
 
 #' Read a define spec workbook (an import profile)
 #'
@@ -360,7 +507,11 @@ tfl_define_profile <- function(name = "p21") {
 #'
 #' * Sheet and column names are matched ignoring case and surrounding
 #'   blanks.  A sheet the profile names that is not there is an error (but
-#'   `external`, read when there); so is a required column.  An optional
+#'   `external`, `value_level` and `where_clauses` -- Pinnacle 21's
+#'   `Dictionaries`, `ValueLevel` and `WhereClauses` -- read when there: a
+#'   value-level row's `Where Clause` is an id of the `WhereClauses` sheet,
+#'   whose rows (variable, comparator, value) become its R condition); so is
+#'   a required column.  An optional
 #'   column that is not there is read as empty and listed in
 #'   `attr(, "unread")` (part, field, column), for the user to see.
 #' * A term is `extended` when the profile maps an `extended` column (`Yes`,
@@ -408,7 +559,7 @@ tfl_read_define_spec <- function(path, map = NULL, profile = "p21") {
     spec <- prof[[p]]
     sh <- have[match(tolower(trimws(spec$sheet)), tolower(trimws(have)))]
     if (is.na(sh)) {
-      if (identical(p, "external")) return(NULL)
+      if (p %in% c("external", "value_level", "where_clauses")) return(NULL)
       .ard_stop(sprintf(paste0("%s: '%s' has no sheet '%s' (the profile's ",
                                "%s); its sheets are %s."),
                         fn, basename(path), spec$sheet, p,
@@ -464,8 +615,10 @@ tfl_read_define_spec <- function(path, map = NULL, profile = "p21") {
   vs <- part("variables")
   cl <- part("codelists")
   ex <- part("external")
+  vl <- part("value_level")
+  wc <- part("where_clauses")
   unread <- c(attr(ds, "unread"), attr(vs, "unread"), attr(cl, "unread"),
-              attr(ex, "unread"))
+              attr(ex, "unread"), attr(vl, "unread"), attr(wc, "unread"))
 
   datasets <- data.frame(
     dataset = ds$dataset, label = ds$label, class = ds$class,
@@ -531,7 +684,8 @@ tfl_read_define_spec <- function(path, map = NULL, profile = "p21") {
                 file_oid = NA_character_)
   out <- .define_new(study, datasets, variables, codelists, external,
                      source = list(file = path, kind = "define spec",
-                                   version = NA_character_))
+                                   version = NA_character_),
+                     value_level = .define_vl_spec(vl, wc))
   attr(out, "unread") <- do.call(rbind, c(
     list(data.frame(part = character(), field = character(),
                     column = character(), stringsAsFactors = FALSE)),

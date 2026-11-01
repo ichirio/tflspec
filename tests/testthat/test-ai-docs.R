@@ -1,0 +1,187 @@
+# A document as Markdown for the agent: .docx, .pdf, a workbook; the
+# documents tfl_ai_prepare(docs = ) places, as text, named in AGENTS.md
+
+test_that("a workbook: each sheet a heading and a table of its cells", {
+  skip_if_not_installed("openxlsx")
+  skip_if_not_installed("readxl")
+  xl <- file.path(withr::local_tempdir(), "sap-tables.xlsx")
+  openxlsx::write.xlsx(list(
+    Sets = data.frame(Set = c("SAF", "FAS"), Definition = c("all treated", "a | b")),
+    Empty = data.frame()), xl)
+  txt <- tfl_ai_doc_text(xl)
+  expect_match(txt, "## Sets\n\n| Set | Definition |\n| --- | --- |\n| SAF | all treated |\n| FAS | a \\| b |",
+               fixed = TRUE)
+  expect_match(txt, "## Empty\n\n(empty)", fixed = TRUE)
+  f <- file.path(dirname(xl), "out.md")
+  expect_invisible(tfl_ai_doc_text(xl, file = f))
+  expect_identical(paste(readLines(f, encoding = "UTF-8"), collapse = "\n"), txt)
+})
+
+test_that("a Word file: headings, paragraphs, list items and tables", {
+  skip_if_not_installed("officer")
+  d <- officer::read_docx()
+  d <- officer::body_add_par(d, "Statistical Analysis Plan", style = "heading 1")
+  d <- officer::body_add_par(d, "Some text here.", style = "Normal")
+  d <- officer::body_add_par(d, "Analysis sets", style = "heading 2")
+  d <- officer::body_add_table(d, data.frame(Set = c("SAF", "FAS"),
+                                             Definition = c("all treated", "all randomized")),
+                               style = "table_template")
+  d <- officer::body_add_par(d, "After the table.", style = "Normal")
+  f <- file.path(withr::local_tempdir(), "sap.docx")
+  print(d, target = f)
+  txt <- tfl_ai_doc_text(f)
+  expect_match(txt, "# Statistical Analysis Plan\n\nSome text here.\n\n## Analysis sets\n\n| Set | Definition |\n| --- | --- |\n| SAF | all treated |\n| FAS | all randomized |\n\nAfter the table.",
+               fixed = TRUE)
+})
+
+test_that("a PDF: its text page by page, each page marked", {
+  skip_if_not_installed("pdftools")
+  f <- file.path(withr::local_tempdir(), "sap.pdf")
+  grDevices::pdf(f)
+  graphics::plot.new()
+  graphics::text(0.5, 0.9, "Statistical Analysis Plan")
+  graphics::plot.new()
+  graphics::text(0.5, 0.5, "Page two")
+  grDevices::dev.off()
+  txt <- tfl_ai_doc_text(f)
+  expect_match(txt, "<!-- page 1 -->", fixed = TRUE)
+  expect_match(txt, "Statistical Analysis Plan", fixed = TRUE)
+  expect_match(txt, "<!-- page 2 -->\n\n", fixed = TRUE)
+  expect_match(txt, "Page two", fixed = TRUE)
+})
+
+test_that("what is not a document, or a package missing, is said", {
+  f <- file.path(withr::local_tempdir(), "x.rtf")
+  writeLines("x", f)
+  expect_error(tfl_ai_doc_text(f), "not a document this reads")
+  expect_error(tfl_ai_doc_text(file.path(dirname(f), "none.docx")), "no file")
+  md <- file.path(dirname(f), "note.md")
+  writeLines(c("# A note", "", "text"), md)
+  expect_identical(tfl_ai_doc_text(md), "# A note\n\ntext")
+})
+
+test_that("a document already in ai/docs/ and named from there is kept, not copied onto itself", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  root <- withr::local_tempdir()
+  d <- file.path(root, "study")
+  dir.create(file.path(d, "adam"), recursive = TRUE)
+  for (x in c("adsl", "adae")) {
+    haven::write_xpt(tflspec:::.ai_chr(getExportedValue("tflspec", x)),
+                     file.path(d, "adam", paste0(x, ".xpt")))
+  }
+  dir.create(file.path(d, "ai", "docs"), recursive = TRUE)
+  sap <- file.path(d, "ai", "docs", "sap.md")
+  writeLines(c("# SAP", "", "the analysis sets"), sap)
+  r <- tfl_ai_prepare(unit = "toc", d, system.file("ai", "example", "onco_toc_shell.xlsx", package = "tflspec"),
+                      adam = "adam", quiet = TRUE, size = 3L, docs = sap)
+  expect_identical(readLines(sap, encoding = "UTF-8"), c("# SAP", "", "the analysis sets"))
+  expect_identical(r$agent_files, "ai/docs/sap.md")
+  # a study's own docs/ too: copied into ai/docs/, the agent's folder
+  # (#528), a workbook with its text beside it
+  dir.create(file.path(d, "docs"))
+  own <- file.path(d, "docs", "notes.md")
+  writeLines(c("# Notes", "", "a rule"), own)
+  skip_if_not_installed("openxlsx")
+  xl <- file.path(d, "docs", "guide.xlsx")
+  openxlsx::write.xlsx(list(Rules = data.frame(Topic = "Baseline", Rule = "last before dose")), xl)
+  r2 <- tfl_ai_prepare(unit = "toc", d, system.file("ai", "example", "onco_toc_shell.xlsx", package = "tflspec"),
+                       adam = "adam", quiet = TRUE, size = 3L, docs = c(own, xl), overwrite = TRUE)
+  expect_setequal(r2$agent_files, c("ai/docs/notes.md", "ai/docs/guide.md"))
+  expect_true(file.exists(file.path(d, "ai", "docs", "notes.md")))
+  expect_true(file.exists(file.path(d, "ai", "docs", "guide.xlsx")))
+  expect_match(paste(readLines(file.path(d, "ai", "docs", "guide.md"), encoding = "UTF-8"), collapse = "\n"),
+               "| Baseline | last before dose |", fixed = TRUE)
+  ag <- paste(readLines(file.path(d, "ai", "AGENTS.md"), encoding = "UTF-8"), collapse = "\n")
+  # (AGENTS.md's paths from ai/)
+  expect_match(ag, "`docs/notes.md`, `docs/guide.md` (the text of docs/guide.xlsx).", fixed = TRUE)
+  # the helper itself: the same file by another spelling, a folder target, a real copy
+  f <- file.path(root, "a.txt"); writeLines("keep", f)
+  expect_true(.file_copy_safe(f, file.path(root, ".", "a.txt")))
+  expect_identical(readLines(f), "keep")
+  expect_true(.file_copy_safe(f, root))
+  expect_identical(readLines(f), "keep")
+  g <- file.path(root, "b.txt")
+  expect_true(.file_copy_safe(f, g))
+  expect_identical(readLines(g), "keep")
+})
+
+test_that("tfl_ai_prepare(docs = ): a workbook document placed as text beside it, named in AGENTS.md", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("openxlsx")
+  root <- withr::local_tempdir()
+  d <- file.path(root, "study")
+  dir.create(file.path(d, "adam"), recursive = TRUE)
+  for (x in c("adsl", "adae")) {
+    haven::write_xpt(tflspec:::.ai_chr(getExportedValue("tflspec", x)),
+                     file.path(d, "adam", paste0(x, ".xpt")))
+  }
+  xl <- file.path(root, "data-guide.xlsx")
+  openxlsx::write.xlsx(list(Notes = data.frame(Topic = "Baseline", Rule = "last before dose")), xl)
+  note <- file.path(root, "sap.md")
+  writeLines(c("# SAP", "", "text"), note)
+  r <- tfl_ai_prepare(unit = "toc", d, system.file("ai", "example", "onco_toc_shell.xlsx", package = "tflspec"),
+                      adam = "adam", quiet = TRUE, size = 3L, docs = c(xl, note))
+  expect_true(file.exists(file.path(d, "ai", "docs", "data-guide.xlsx")))
+  expect_true(file.exists(file.path(d, "ai", "docs", "data-guide.md")))
+  expect_match(paste(readLines(file.path(d, "ai", "docs", "data-guide.md"), encoding = "UTF-8"), collapse = "\n"),
+               "| Baseline | last before dose |", fixed = TRUE)
+  expect_setequal(r$agent_files, c("ai/docs/data-guide.md", "ai/docs/sap.md"))
+  ag <- paste(readLines(file.path(d, "ai", "AGENTS.md"), encoding = "UTF-8"), collapse = "\n")
+  expect_match(ag, "`docs/data-guide.md` (the text of docs/data-guide.xlsx), `docs/sap.md`.", fixed = TRUE)
+})
+
+test_that("the agent's folder is ai/ alone: its paths from there, the study's facts, a workspace (#528)", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  d <- file.path(withr::local_tempdir(), "study")
+  dir.create(file.path(d, "adam"), recursive = TRUE)
+  for (x in c("adsl", "adae")) {
+    haven::write_xpt(tflspec:::.ai_chr(getExportedValue("tflspec", x)),
+                     file.path(d, "adam", paste0(x, ".xpt")))
+  }
+  r <- tfl_ai_prepare(unit = "toc", d, system.file("ai", "example", "onco_toc_shell.xlsx", package = "tflspec"),
+                      adam = "adam", quiet = TRUE, size = 3L)
+  rd <- function(...) paste(readLines(file.path(d, "ai", ...), encoding = "UTF-8"), collapse = "\n")
+  # the agent's files name no path from the study folder
+  for (f in c("AGENTS.md", "agent_prompt.md", "instructions-table.md", "requests/index.md")) {
+    expect_false(grepl("`ai/[a-z]", rd(f)), info = f)
+    expect_false(grepl("spec/data.yml", rd(f), fixed = TRUE), info = f)
+  }
+  expect_match(rd("AGENTS.md"), "`study_facts.md`", fixed = TRUE)
+  facts <- rd("study_facts.md")
+  expect_match(facts, "| SAF | Safety Population | `SAFFL == \"Y\"` |", fixed = TRUE)
+  expect_match(facts, "- ADSL", fixed = TRUE)
+  # the study's cell and header, for the draft to compare the shell's with
+  expect_match(facts, "- A count's cell: `{n} ({p:.1f%})`, printed `xx (xx.x)`.", fixed = TRUE)
+  expect_match(facts, "- The column header: the arm's name, no N", fixed = TRUE)
+  expect_true("ai/study_facts.md" %in% r$files)
+  ws <- list.files(file.path(d, "ai"), "[.]code-workspace$")
+  expect_identical(ws, "study.code-workspace")
+  expect_match(rd(ws), "\"path\": \".\"", fixed = TRUE)
+  expect_true(file.exists(file.path(d, "ai", ".github", "copilot-instructions.md")))
+  # the person's own files keep their paths from the study folder
+  expect_false(tflspec:::.ai_for_agent(file.path(d, "ai", "status.md")))
+  # spec/ changed: the check writes the facts again
+  Sys.setFileTime(file.path(d, "ai", "study_facts.md"), Sys.time() - 3600)
+  dy <- file.path(d, "spec", "data.yml")
+  writeLines(sub("Safety Population", "Safety Set", readLines(dy)), dy)
+  tflspec:::.ai_study_facts_write(d, if_older = TRUE)
+  expect_match(rd("study_facts.md"), "| SAF | Safety Set |", fixed = TRUE)
+})
+
+test_that("study_facts.md says the study's count cell as the shell writes it, and the header's N", {
+  expect_identical(tflspec:::.ai_cell_shape("{n} ({p:.1f%})"), "xx (xx.x)")
+  expect_identical(tflspec:::.ai_cell_shape("{n:.0f} ({p:.1f%}%)"), "xx (xx.x%)")
+  expect_identical(tflspec:::.ai_cell_shape("{mean:.2f}"), "xx.xx")
+  x <- tflspec:::.ai_facts_cells(list(
+    tfl_item("plan_cells", list(categorical = "{n} ({p:.1f%}%)")),
+    tfl_item("plan_col_header", list(header = list(
+      list(line = "1", cols = ".values", span = "each", text = "{col}\n(N={n})"))))))
+  expect_match(x[1L], "printed `xx (xx.x%)`", fixed = TRUE)
+  expect_identical(x[2L], "- The column header: the arm's name with its N.")
+  x <- tflspec:::.ai_facts_cells(NULL)
+  expect_match(x[1L], "none set", fixed = TRUE)
+  expect_match(x[2L], "no N", fixed = TRUE)
+})

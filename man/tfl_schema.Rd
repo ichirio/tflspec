@@ -28,6 +28,19 @@ expression), and the grammar of \code{...} for the functions whose body is
 The same file is what the GUI's help and the AI kit's schema read.
 }
 \details{
+A figure's functions: the file has a card for those a clinical figure
+uses (the geoms and the stats -- those with no geom of their own and
+those with one --, scales, coordinates, complete themes and \code{theme()},
+elements, guides, positions); any other function of a plot \code{ggplot2}
+exports (\code{scale_shape_identity}, \code{guide_custom}) is its formals.  The
+arguments the functions of one kind share -- a layer's \code{stat},
+\code{position}, \code{fun.data}, \code{pad}; a scale's \code{name}, \code{breaks}, \code{labels},
+\code{sec.axis}; \code{theme()}'s settings, each its element -- are typed and
+labelled by \code{inst/fig/gg_args.csv} for every function that takes them.
+A geom given another \code{stat} (\code{geom_step(stat = "ecdf")}) is checked
+with that stat's parameters too, a stat given another \code{geom} with that
+geom's.
+
 The types, in a short notation: \code{string}, \code{integer}, \code{number},
 \code{logical}, \code{enum[a|b]}, \code{column}, \code{stat}, \code{template}, \code{r} (\code{!r}),
 \code{formula} (\code{!r}, written \verb{~ <text>}), \code{guard} (\code{!r}, a two-sided
@@ -36,6 +49,13 @@ The types, in a short notation: \code{string}, \code{integer}, \code{number},
 named vector in R), \verb{map<K, V>} (a map that is a named list),
 \verb{rows<f1, f2, ...>} (a sequence of maps that is a data frame) and \code{T|U}
 (either).
+
+An argument's entry also says how a form shows it: \code{label}, its short
+English name (a GUI translates it and writes "label (argument)"),
+\code{help}, a sentence or two a form's "?" shows (the \code{description}
+is what the AI kit and the reference read), and \code{main: true} for the
+arguments a form shows from the start (the others folded under the
+function's other arguments).  \code{colour} is a colour's text (\verb{#RRGGBB}).
 }
 \examples{
 names(tfl_schema())

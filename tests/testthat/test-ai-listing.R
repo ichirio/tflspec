@@ -63,7 +63,7 @@ test_that("the TOC's listing: a request of its own, its answer checked and built
   }
   d <- file.path(root, "study")
   book <- lst_book(file.path(root, "toc.xlsx"))
-  invisible(tfl_ai_prepare(unit = "toc", d, book, adam = ad, quiet = TRUE, mode = "agent",
+  invisible(tfl_ai_prepare(unit = "toc", d, book, adam = ad, quiet = TRUE,
                            templates = FALSE))
   rq <- tfl_ai_requests(d)
   # (a request a report in an agent's study: named after it)
@@ -75,7 +75,7 @@ test_that("the TOC's listing: a request of its own, its answer checked and built
   ins <- paste(readLines(file.path(d, "ai", "instructions-table.md"), encoding = "UTF-8"), collapse = "\n")
   expect_match(ins, "### A listing", fixed = TRUE)
   expect_match(ins, "listing_col", fixed = TRUE)
-  writeLines(lst_answer(id), file.path(d, "ai", "answers", paste0(req, ".md")))
+  ai_drafts_from_answer(d, lst_answer(id), "table")
   res <- suppressMessages(tfl_ai_run(d, requests = req))
   r <- res$reports[res$reports$request == req, ]
   expect_identical(r$status, "ok")
@@ -124,4 +124,22 @@ test_that("a listing's answer: no analysis set, a dataset of parameters not kept
   p <- one(c(lst_answer("L-1")[1:7], "    ard: {analyses: [{id: A, method: categorical, dataset: ADAE, variables: [AESER]}]}",
              lst_answer("L-1")[-(1:7)]))
   expect_true(any(grepl("a listing has no analyses", p$problem)))
+})
+
+test_that("a listing read from an analysis data with R code: its columns are not checked against the dataset", {
+  skip_on_cran()
+  vars <- data.frame(dataset = rep("ADAE", 4), variable = c("USUBJID", "AESER", "AEDECOD", "TRT01A"),
+                     stringsAsFactors = FALSE)
+  ctx <- structure(list(task = "table", datasets = vars, populations = c("SAF", "ITT")),
+                   class = "tfl_ai_context")
+  a <- lst_answer("L-3")
+  a <- sub("data: {source: dataset, dataset: ADAE, population: SAF, where: !r 'AESER == \"Y\"', sort: [TRT01A, USUBJID, ASTDY]}",
+           "data: {source: dataset, data: sae, sort: [TRT01A, USUBJID]}", a, fixed = TRUE)
+  a <- sub("vars: [ASTDY], label: Start day", "vars: [AGE_SEX], label: Age / Sex", a, fixed = TRUE)
+  a <- sub("vars: [AEBODSYS, AEDECOD]", "vars: [AEDECOD]", a, fixed = TRUE)
+  a <- append(a, "    ard: {analysis_data: [{id: sae, from: ADAE, population: SAF, code: !r 'dplyr::mutate(adae, AGE_SEX = \"x\")'}]}",
+              after = grep("extends:", a))
+  p <- tfl_ai_check(tfl_ai_parse(paste(a, collapse = "\n"), task = "table"), ctx)
+  expect_false(any(grepl("AGE_SEX", p$problem)))
+  expect_false(any(p$severity == "error"))
 })

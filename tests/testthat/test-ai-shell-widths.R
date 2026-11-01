@@ -87,7 +87,7 @@ test_that("an agent's request holds its shell's column widths", {
   haven::write_xpt(tflspec:::.ai_chr(tflspec::adsl), file.path(ad, "adsl.xpt"))
   f <- shw_book(file.path(root, "toc.xlsx"))
   d <- file.path(root, "study")
-  invisible(tfl_ai_prepare(d, f, adam = ad, quiet = TRUE, mode = "agent", templates = FALSE))
+  invisible(tfl_ai_prepare(d, f, adam = ad, quiet = TRUE, templates = FALSE))
   rq <- list.files(file.path(d, "ai", "requests"), pattern = "[.]md$", full.names = TRUE)
   txt <- paste(unlist(lapply(rq, readLines, encoding = "UTF-8")), collapse = "\n")
   expect_match(txt, "Column widths (Excel, characters): A=36.7", fixed = TRUE)

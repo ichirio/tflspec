@@ -2,7 +2,7 @@
 % Please edit documentation in R/ai_requests.R
 \name{tfl_ai_write_requests}
 \alias{tfl_ai_write_requests}
-\title{Write a study's table requests, one file a request}
+\title{Write a study's requests, one file a request}
 \usage{
 tfl_ai_write_requests(
   study_dir,
@@ -15,12 +15,10 @@ tfl_ai_write_requests(
   types = c("table", "listing", "figure"),
   language = NULL,
   examples = NULL,
-  instructions = c("once", "each"),
-  workbook = c("text", "attach", "both", "file"),
+  workbook = c("text", "file"),
   overwrite = FALSE,
   add = FALSE,
   templates = TRUE,
-  mode = c("chat", "agent"),
   progress = NULL,
   unit = c("sheet", "toc")
 )
@@ -33,21 +31,17 @@ tfl_ai_write_requests(
 \item{adam}{The ADaM summary (\code{\link[=tfl_ai_adam_summary]{tfl_ai_adam_summary()}}).}
 
 \item{size}{The reports a request holds at most (1 or more); \code{NULL}
-(the default): 1 with \code{mode = "agent"} (each answer checked and built
-before the next), 8 in a chat.}
+(the default): 1, each request's drafts checked before the next.}
 
 \item{dir}{The folder the requests go to, under \code{study_dir}.}
 
 \item{max_chars}{A request's length at most, in characters; \code{NULL} for
-no limit.  A request over it is halved; with \code{templates}, it first
-lists the templates' arguments by name only (no type, default or
-description).}
+no limit.  A request over it is halved.}
 
 \item{families, types}{As \code{\link[=tfl_ai_batches]{tfl_ai_batches()}}: the tables and listings
-in batches (a listing's family \code{listing}; its answer a report of \code{kind: listing}, in the table task).  A
-figure (\code{"figure"} in \code{types}, the default) is a request of its own,
-\code{figure-1}, \code{figure-2} ... (family \code{figure}): its shell, the ADaM's
-summary, the figure templates; its answer a figure design.}
+in batches (a listing's family \code{listing}; its draft a report of \code{kind: listing}).  A figure (\code{"figure"} in \code{types}, the default) is a request
+of its own, \code{figure-1}, \code{figure-2} ... (family \code{figure}): its shell,
+the ADaM's summary, the figure templates; its draft a figure report.}
 
 \item{language}{As \code{\link[=tfl_ai_context]{tfl_ai_context()}}: the language of the AI's
 assumptions.}
@@ -57,23 +51,11 @@ assumptions.}
 (\code{c(ae = "spec/outputs/T-14-3-1.yml")}), each goes only to its
 family's requests; unnamed, to every request.}
 
-\item{instructions}{In a chat: \code{"once"} (default), the instructions in
-\code{00-instructions.md} (the chat's first message), the requests without
-them; \code{"each"}, every request holds them, one paste a request.  With
-\code{mode = "agent"} either is the same: the instructions are written once,
-\code{ai/instructions-table.md} / \code{ai/instructions-figure.md}, and no
-request repeats them.}
-
-\item{workbook}{How the TOC / SHELL workbook reaches the chat:
+\item{workbook}{How the TOC / SHELL workbook reaches the agent:
 \code{"text"} (default) the shells as text in each request
-(\code{\link[=tfl_ai_read_shell]{tfl_ai_read_shell()}}); \code{"attach"} the workbook attached to each chat,
-the request saying where each report's shell is in it (its sheet,
-cells and TOC row) instead of the text; \code{"both"} the places and the
-text, the attachment right where the two differ -- for a workbook whose
-text is not read right.  A chat that takes no Excel file needs
-\code{"text"}.  \code{"file"}: for an agent that reads files
-(\code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}}\code{(mode = "agent")}) -- the text, and the workbook's
-path with each report's place in it, to read that place alone when the
+(\code{\link[=tfl_ai_read_shell]{tfl_ai_read_shell()}}); \code{"file"} the text, and the workbook's path
+with each report's place in it, for an agent allowed to open it
+(\code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}}'s \code{agent_reads}) to read that place alone when the
 text looks cut, never another sheet.}
 
 \item{overwrite}{\code{TRUE} to write over the requests already there; with
@@ -85,20 +67,12 @@ new ones named after them (\code{ae-2} when \code{ae-1} is there, \code{figure-3
 ...), the index listing all of them, each request's \code{book} the
 workbook its reports' shells are in.}
 
-\item{templates}{\code{TRUE} (default): each request asks the AI to answer a
+\item{templates}{\code{TRUE} (default): each request asks the AI to write a
 report with a template (\verb{template: \{name, args\}}) where one fits --
-the templates registered when the requests are written listed in it,
+the templates registered when the requests are written listed in
+\code{ai/templates.md}, each request naming the ones likely for its reports,
 its first line \verb{<!-- templates: TRUE -->} -- else as a code SPEC.
-\code{FALSE}: the code SPEC only, the requests as they were before templates.}
-
-\item{mode}{\code{"chat"} (default): each request whole, to paste.
-\code{"agent"} (\code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}}\code{(mode = "agent")}): what every request
-would repeat in a file of the study's \verb{ai/} folder, written once
-(\code{instructions-table.md}, \code{instructions-figure.md}, \code{templates.md}),
-the ADaM summary and \verb{spec/} files named, not copied; each request
-names them, its answer's header and, with \code{templates}, the templates
-likely for its reports (from their titles).
-The folder the answers go to (\code{ai/answers}, beside \code{dir}) is made too.}
+\code{FALSE}: the code SPEC only.}
 
 \item{progress}{\code{NULL}, or a function(step, i, n) called as the requests
 are made: \code{step} \code{"request"}, \code{i} of \code{n} written (0 first) -- for a
@@ -119,23 +93,16 @@ A data frame, one row a request: \code{request} (the file's name,
 \code{chars}, \code{file}.  The same is written to \code{index.md} in \code{dir}.
 }
 \description{
-Splits the TOC's tables into requests (\code{\link[=tfl_ai_batches]{tfl_ai_batches()}}) and writes the
-prompt of each (\code{\link[=tfl_ai_prompt]{tfl_ai_prompt()}}) to its own file, to paste into a chat
-as \strong{one message}: no attachment is needed.  A request longer than
-\code{max_chars} is split again, until it fits or holds one report.  The
-requests' contexts are kept beside them (\verb{_contexts.rds}), so
-\code{\link[=tfl_ai_collect_answers]{tfl_ai_collect_answers()}} checks each answer against its own request.
-}
-\details{
-Start small (\code{size = 2} or \code{3}), check the answers, then raise \code{size}
-while the chat keeps up.
-
-A request holds the instructions and schema (about 23,000 characters,
-the same in every request) and its own reports (the TOC rows, shells and
-ADaM summary).  For a chat that cannot take that in one message,
-\code{instructions = "once"} writes the instructions to \code{00-instructions.md}
-and each request without them: paste \code{00-instructions.md} first in a
-new chat, then the request.
+Splits the TOC's tables into requests (\code{\link[=tfl_ai_batches]{tfl_ai_batches()}}) and writes
+each one's text (\code{\link[=tfl_ai_prompt]{tfl_ai_prompt()}}) to its own file, for a coding agent
+(\code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}}): what every request would repeat is written once
+in the study's \verb{ai/} folder (\code{instructions-table.md},
+\code{instructions-figure.md}, \code{templates.md}), and each request names those
+files, the ADaM summary and the \verb{spec/} files instead of copying them.
+A request longer than \code{max_chars} is split again, until it fits or holds
+one report.  The requests' contexts are kept beside them
+(\verb{_contexts.rds}), so \code{\link[=tfl_ai_collect_answers]{tfl_ai_collect_answers()}} checks each request's
+drafts against its own request.
 }
 \examples{
 f <- system.file("ai", "example", "onco_toc_shell.xlsx", package = "tflspec")
@@ -152,5 +119,6 @@ if (requireNamespace("haven", quietly = TRUE)) {
 }
 }
 \seealso{
-\code{\link[=tfl_ai_collect_answers]{tfl_ai_collect_answers()}} for the answers.
+\code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}}, which calls it; \code{\link[=tfl_ai_collect_answers]{tfl_ai_collect_answers()}}
+for the drafts.
 }

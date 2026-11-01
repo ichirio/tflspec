@@ -15,13 +15,14 @@ tfl_output_contents(output, study, dir = ".")
 }
 \value{
 A named list, one element an object (its name in \verb{contents:}):
-a table's plan, a figure's plot.
+a table's or a listing's plan, a figure's plot.
 }
 \description{
-A report whose \verb{contents:} names several objects (one RTF, its tables
-and figures on its pages): each object run as a report of its own -- a
-table's plan from the report's ARD (\code{\link[=tfl_build_ard]{tfl_build_ard()}},
-\code{\link[=tfl_content_run]{tfl_content_run()}}), a figure's plot from its data steps.  What
+A report whose \verb{contents:} names several objects (one RTF, its tables,
+figures and listings on its pages): each object run as a report of its
+own -- a table's plan from the report's ARD (\code{\link[=tfl_build_ard]{tfl_build_ard()}},
+\code{\link[=tfl_content_run]{tfl_content_run()}}), a figure's plot from its data steps, a listing's
+plan from its records (its \verb{data: \{source: dataset, ...\}}).  What
 \code{\link[=tfl_report]{tfl_report()}} takes as its \code{content} for such a report.
 }
 \seealso{

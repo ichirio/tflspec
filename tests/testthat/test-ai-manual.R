@@ -177,7 +177,11 @@ test_that("the manual's survival and model rows run as written, to the hand-writ
   adam <- exact_data()
   dir <- exact_dir(adam)
   on.exit(unlink(dir, recursive = TRUE), add = TRUE)
-  # (as the program makes it: dplyr, a column keeps its label)
+  # (as the program makes it: dplyr, a column keeps its label, the arms in
+  # their N order -- order_arms(), the study helper)
+  helpers <- new.env()
+  sys.source(system.file("helpers", "study_helpers.R", package = "tflspec"), envir = helpers)
+  adam <- lapply(adam, helpers$order_arms)
   data <- dplyr::filter(adam$ADTTE,
                         USUBJID %in% dplyr::filter(adam$ADSL, SAFFL == "Y")$USUBJID)
   hand <- list(

@@ -1,0 +1,102 @@
+source,item,title,alias,template,status,note
+FDA STF IG v2,T01,Trials in the submission,stf_t01_trials,listing,same,trial metadata outside ADaM
+FDA STF IG v2,T02,Demographics and baseline characteristics,stf_t02_demog,stf_t02_demog,close,registered variant
+FDA STF IG v2,T03,Screening and enrollment by trial,stf_t03_screening,,missing,needs screen-failure population; ae_overview counts likely
+FDA STF IG v2,T04,Analysis populations,stf_t04_populations,ae_overview,close,ADSL data with population flags; untested
+FDA STF IG v2,T05,Treatment and study discontinuation reasons,stf_t05_disc_reasons,disposition,close,reason indent under discontinued is approximate
+FDA STF IG v2,T06,Treatment exposure duration,stf_t06_exposure,,missing,needs person-years and cumulative duration categories
+FDA STF IG v2,T07,AE overview,stf_t07_ae_overview,,missing,needs stacked parts and max severity row; risk difference
+FDA STF IG v2,T08,Deaths,stf_t08_deaths,,missing,needs two stacked parts; risk difference
+FDA STF IG v2,T09,Listing of deaths,stf_t09_death_list,listing,same,deaths without AE need ADSL-based join
+FDA STF IG v2,T10,SAEs by SOC and PT,stf_t10_sae_soc_pt,ae_ser_soc_pt,close,needs risk difference column
+FDA STF IG v2,T11,SAEs by organ system and narrow OCMQ,stf_t11_sae_ocmq,,missing,needs OCMQ dictionary; risk difference
+FDA STF IG v2,T12,AEs leading to discontinuation by SOC and PT,stf_t12_disc_soc_pt,ae_disc_soc_pt,close,needs risk difference column
+FDA STF IG v2,T13,AEs leading to discontinuation by OCMQ,stf_t13_disc_ocmq,,missing,needs OCMQ dictionary; risk difference
+FDA STF IG v2,T14,AEs by SOC and PT,stf_t14_ae_soc_pt,ae_soc_pt,close,needs risk difference column
+FDA STF IG v2,T15,Common AEs by PT above threshold,stf_t15_ae_common,ae_pt_freq,close,needs risk difference column and RD ordering
+FDA STF IG v2,T16,AE incidence rates per 100 person-years,stf_t16_ae_ir,ae_eair,close,needs rate difference column and ordering
+FDA STF IG v2,T17,AEs by OCMQ narrow and broad side by side,stf_t17_ae_ocmq_nb,,missing,needs OCMQ dictionary and two column blocks
+FDA STF IG v2,T18,Summary of an AE of interest,stf_t18_aesi_summary,,missing,needs stacked parts; risk difference
+FDA STF IG v2,T19,AE of interest by demographic subgroup,stf_t19_aesi_subgroup,,missing,needs subgroup rows with row-wise denominators
+FDA STF IG v2,T20,Kidney function values above levels,stf_t20_kidney_level,lab_abnormal,close,needs level derivation and risk difference
+FDA STF IG v2,T21,Hepatocellular DILI quadrant subjects,stf_t21_dili_hep,,missing,needs DILI quadrant derivation
+FDA STF IG v2,T22,Cholestatic DILI quadrant subjects,stf_t22_dili_chol,,missing,needs DILI quadrant derivation
+FDA STF IG v2,T23,Adverse reaction incidence rates RC plus OLE pooled,stf_t23_ole_pooled,,missing,needs incidence rate CI and period columns
+FDA STF IG v2,T24,Adverse reaction incidence rates OLE only,stf_t24_ole_only,,missing,needs incidence rate CI and period columns
+FDA STF IG v2,T25,Adverse reaction incidence rates at-risk time,stf_t25_ole_atrisk,,missing,needs incidence rate CI and period columns
+FDA STF IG v2,T26,Common AEs by incidence rate RC plus OLE,stf_t26_ole_common_pooled,,missing,needs incidence rate CI and rate threshold
+FDA STF IG v2,T27,Common AEs by incidence rate OLE only,stf_t27_ole_common_only,,missing,needs incidence rate CI and period columns
+FDA STF IG v2,T28,Common AEs by incidence rate at-risk time,stf_t28_ole_common_atrisk,,missing,needs incidence rate CI and period columns
+FDA STF IG v2,T29,SAEs by organ system narrow OCMQ and PT,stf_t29_sae_ocmq_pt,,missing,needs OCMQ dictionary; risk difference
+FDA STF IG v2,T30,Discontinuation AEs by organ system narrow OCMQ and PT,stf_t30_disc_ocmq_pt,,missing,needs OCMQ dictionary; risk difference
+FDA STF IG v2,T31,AEs by organ system narrow OCMQ and PT,stf_t31_ae_ocmq_pt,,missing,needs OCMQ dictionary; risk difference
+FDA STF IG v2,T32,AEs with PTs outside narrow OCMQs,stf_t32_ae_non_ocmq,,missing,needs OCMQ dictionary flag; risk difference
+FDA STF IG v2,T33,Male-specific narrow OCMQs,stf_t33_male_ocmq_n,,missing,needs OCMQ dictionary; male subset; risk difference
+FDA STF IG v2,T34,Female-specific narrow OCMQs,stf_t34_female_ocmq_n,,missing,needs OCMQ dictionary; female subset; risk difference
+FDA STF IG v2,T35,Kidney function mean change by visit,stf_t35_kidney_chg,,missing,needs mean difference with 95% CI column
+FDA STF IG v2,T36,Maximum postbaseline systolic BP categories,stf_t36_sbp_max,lab_abnormal,close,derive subject maximum category; risk difference
+FDA STF IG v2,T37,Maximum postbaseline diastolic BP categories,stf_t37_dbp_max,lab_abnormal,close,derive subject maximum category; risk difference
+FDA STF IG v2,T38,Postbaseline hypotension criteria,stf_t38_hypotension,lab_abnormal,close,two criteria rows; risk difference
+FDA STF IG v2,T39,Listing of AEs leading to discontinuation,stf_t39_disc_list,listing,same,
+FDA STF IG v2,T40,AEs more frequent on drug than control,stf_t40_ae_excess,,missing,needs selection by between-arm difference; risk difference
+FDA STF IG v2,T41,Listing of subjects with narrow OCMQs,stf_t41_ocmq_n_list,,missing,needs OCMQ dictionary then listing
+FDA STF IG v2,T42,Listing of subjects with broad OCMQs,stf_t42_ocmq_b_list,,missing,needs OCMQ dictionary then listing
+FDA STF IG v2,T43,AEs by organ system broad OCMQ and PT,stf_t43_ae_ocmq_b_pt,,missing,needs OCMQ dictionary; risk difference
+FDA STF IG v2,T44,Male-specific broad OCMQs,stf_t44_male_ocmq_b,,missing,needs OCMQ dictionary; male subset; risk difference
+FDA STF IG v2,T45,Female-specific broad OCMQs,stf_t45_female_ocmq_b,,missing,needs OCMQ dictionary; female subset; risk difference
+FDA STF IG v2,T46,Algorithmic OCMQ: muscle injury,stf_t46_algo_muscle,,missing,needs algorithmic OCMQ combining AEs and labs
+FDA STF IG v2,T47,Algorithmic OCMQ: hypoglycemia,stf_t47_algo_hypogly,,missing,needs algorithmic OCMQ combining AEs and labs
+FDA STF IG v2,T48,Algorithmic OCMQ: hyperglycemia,stf_t48_algo_hypergly,,missing,needs algorithmic OCMQ combining AEs and labs
+FDA STF IG v2,T49,Algorithmic OCMQ: hypersensitivity,stf_t49_algo_hypersens,,missing,needs algorithmic OCMQ combining AEs and labs
+FDA STF IG v2,T50,SAE overview by demographic subgroup,stf_t50_sae_subgroup,,missing,needs subgroup rows with row-wise denominators
+FDA STF IG v2,T51,AE overview by demographic subgroup,stf_t51_ae_subgroup,,missing,needs subgroup rows with row-wise denominators
+FDA STF IG v2,T52,Last on-treatment chemistry at level 2 or above,stf_t52_chem_last_l2,lab_abnormal,close,needs level derivation and risk difference
+FDA STF IG v2,T53,Last on-treatment hematology at level 2 or above,stf_t53_hem_last_l2,lab_abnormal,close,needs level derivation and risk difference
+FDA STF IG v2,T54,Listing of lab values at level 2 or above,stf_t54_lab_l2_list,,missing,needs level derivation then listing
+FDA STF IG v2,T55,Listing of lab changes at level 2 or above,stf_t55_lab_chg_l2_list,,missing,needs level derivation then listing
+FDA STF IG v2,T56,Chemistry abnormality level criteria,,,not_output,criteria from study standard file
+FDA STF IG v2,T57,Hematology abnormality level criteria,,,not_output,criteria from study standard file
+FDA STF IG v2,T58,Extreme chemistry values suggesting lab error,,,not_output,criteria from study standard file
+FDA STF IG v2,T59,Extreme hematology values suggesting lab error,,,not_output,criteria from study standard file
+FDA STF IG v2,T60,Extreme vital sign values suggesting error,,,not_output,criteria from study standard file
+FDA STF IG v2,F01,KM: time to treatment discontinuation,stf_f01_km_disc,km_cumulative,same,report definition stf_f01_km_disc.yml
+FDA STF IG v2,F02,AEs by SOC dot plot with risk difference,stf_f02_ae_soc_dot,,missing,needs SOC dot plot template with risk difference
+FDA STF IG v2,F03,AEs by narrow OCMQ dot plot,stf_f03_ae_ocmq_dot,,missing,needs OCMQ dictionary and dot plot template
+FDA STF IG v2,F04,KM: time to onset of AE of interest,stf_f04_km_aesi,km_cumulative,same,report definition stf_f04_km_ae_onset.yml
+FDA STF IG v2,F05,Retention and lab availability by visit,stf_f05_lab_avail,,missing,needs availability bar chart by visit
+FDA STF IG v2,F06,Chemistry mean change over time,stf_f06_chem_mean_chg,mean_ci,close,value CHG; one parameter per figure
+FDA STF IG v2,F07,Hepatocellular DILI screening plot,stf_f07_edish_hep,,missing,needs DILI quadrant scatter plot
+FDA STF IG v2,F08,Cholestatic DILI screening plot,stf_f08_edish_chol,,missing,needs DILI quadrant scatter plot
+FDA STF IG v2,F09,Vital signs mean change over time,stf_f09_vs_mean_chg,mean_ci,close,ADVS with value CHG
+FDA STF IG v2,F10,Vital signs box plot by visit,stf_f10_vs_box,,missing,needs box plot by visit and arm
+FDA STF IG v2,F11,KM: cumulative incidence with CI RC plus OLE,stf_f11_km_ole,km_cumulative,close,pointwise CI; OLE data from report
+FDA STF IG v2,F12,AE rate by time interval,stf_f12_ir_over_time,,missing,needs incidence rate CI by time interval
+FDA STF IG v2,F13,KM: time to last follow-up,stf_f13_km_lfu,km,same,report definition stf_f13_km_lfu.yml
+FDA STF IG v2,F14,KM: time to AE onset,stf_f14_km_ae,km_cumulative,same,same shape as F04
+FDA STF IG v2,F15,Lab baseline vs postbaseline max or min,stf_f15_lab_base_max,,missing,needs baseline vs max/min scatter plot
+FDA STF IG v2,F16,Chemistry median and IQR over time,stf_f16_chem_box,,missing,needs box plot by visit and arm
+FDA STF IG v2,F17,Kidney function median and IQR over time,stf_f17_kidney_box,,missing,needs box plot by visit and arm
+FDA STF IG v2,F18,Liver tests median and IQR over time,stf_f18_liver_box,,missing,needs box plot by visit and arm
+FDA STF IG v2,F19,Lipids median and IQR over time,stf_f19_lipid_box,,missing,needs box plot by visit and arm
+FDA STF IG v2,F20,Hematology median and IQR over time,stf_f20_hem_box,,missing,needs box plot by visit and arm
+FDA STF IG v2,F21,Retention and vital sign availability by visit,stf_f21_vs_avail,,missing,needs availability bar chart by visit
+FDA STF IG v2,F22,Vital signs baseline vs postbaseline max or min,stf_f22_vs_base_max,,missing,needs baseline vs max/min scatter plot
+PhUSE CSS,CT F7.1,Box plot of observed values by visit,phuse_ct_box_value,,missing,needs box plot by visit and arm
+PhUSE CSS,CT F7.2,Box plot of change from baseline,phuse_ct_box_chg,,missing,needs box plot by visit and arm
+PhUSE CSS,CT F7.3,Box plots of values and changes together,phuse_ct_box_both,,missing,needs box plot with two panels
+PhUSE CSS,CT F7.6,Box plot of baseline and last/min/max postbaseline,phuse_ct_box_minmax,,missing,needs box plot and min/max derivation
+PhUSE CSS,CT F7.7,Box plot of last/min/max change,phuse_ct_box_minmax_chg,,missing,needs box plot and min/max derivation
+PhUSE CSS,CT F7.8,Baseline vs last/min/max postbaseline scatter,phuse_ct_scatter_minmax,,missing,needs baseline vs max/min scatter plot
+PhUSE CSS,CT table,Observed values and change by visit,phuse_ct_summary,param_change,same,id unconfirmed
+PhUSE CSS,OS F11.1,Baseline vs postbaseline scatter with low/high counts,phuse_os_scatter,,missing,needs baseline vs max/min scatter plot
+PhUSE CSS,OS table abnormal,Postbaseline values outside normal range,phuse_os_abnormal,lab_abnormal,close,id unconfirmed; baseline_normal; risk difference
+PhUSE CSS,OS table shift,Shift from normal to abnormal,phuse_os_shift,lab_shift,same,id unconfirmed
+PhUSE CSS,AE table,AEs by SOC and PT with risk difference,phuse_ae_soc_pt,ae_soc_pt,close,id unconfirmed; needs risk difference column
+PhUSE CSS,AE figure,AE proportion and risk difference dot plot,phuse_ae_dot,,missing,id unconfirmed; needs dot plot template with risk difference
+PhUSE CSS,DM,Demographics and discontinuation,,demog,same,id unconfirmed; also disposition; not registered
+CDISC ARS,14-1-1,Demographics,ars_demog,demog,same,
+CDISC ARS,14-3-1-1,TEAE overview,ars_ae_summary,ae_overview,close,no severity or SAE criteria rows
+CDISC ARS,14-3-2-1,TEAEs by SOC and PT,ars_ae_soc_pt,ae_soc_pt,same,
+CDISC ARS,14-3-3-1a,Vital signs values and change horizontal,ars_vs_chg_h,param_change,close,layout cols
+CDISC ARS,14-3-3-1b,Vital signs values and change vertical,ars_vs_chg_v,param_change,close,layout rows
+CDISC ARS,STF T02 example,Demographics in STF Table 2 shape,,stf_t02_demog,same,example in ARS; not registered

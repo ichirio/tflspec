@@ -4,13 +4,25 @@
 \alias{tfl_templates}
 \title{The templates}
 \usage{
-tfl_templates()
+tfl_templates(source = NULL)
+}
+\arguments{
+\item{source}{\code{NULL} (default): the templates.  A collection --
+\code{"tflspec"}, \code{"FDA STF IG v2"}, \code{"PhUSE CSS"}, \code{"CDISC ARS"} -- for its
+items.}
 }
 \value{
-A data frame, one row a template: \code{name}, \code{kind}, \code{layout},
-\code{params} (its parameters, comma-separated), \code{package} (the package
-that registered it: tflspec, or a company's, \code{\link[=tfl_template]{tfl_template()}}) and
-\code{call} (the function its program calls, the A use).
+A data frame.  Without \code{source}, one row a template: \code{name},
+\code{kind}, \code{layout}, \code{params} (its parameters, comma-separated),
+\code{package} (the package that registered it: tflspec, or a company's,
+\code{\link[=tfl_template]{tfl_template()}}), \code{call} (the function its program calls, the A use),
+\code{from}, \code{label}, \code{ai} and \code{aliases} (its catalog aliases,
+comma-separated, or \code{NA}).  With \code{source}, one row an item: \code{source},
+\code{item} (its number there), \code{title}, \code{alias}, \code{template} (the template
+that writes it, \code{NA} when none does yet), \code{status} (\code{"same"}: the
+template writes it; \code{"close"}: the template writes it, other defaults
+or a column it lacks would match the collection exactly; \code{"missing"};
+\code{"not_output"}: a criteria table, not an output), \code{kind} and \code{note}.
 }
 \description{
 Every table and figure template takes the same pair of filters, its
@@ -18,6 +30,34 @@ input form's first group with \code{population}: \code{subset} (which subjects: 
 on the analysis set's ADSL) and, with records data, \code{where} (which
 records).  Both are \code{NULL} by default; see \code{\link[=tfl_param]{tfl_param()}}.
 }
+\details{
+A template is one program; the items of a published collection -- FDA's
+Standard Safety Tables and Figures IG v2, PhUSE CSS's white papers,
+CDISC ARS's examples -- are in the templates' catalog, each with an
+alias (\code{stf_t14_ae_soc_pt}) that runs its template wherever a template's
+name is taken (\code{\link[=tfl_tpl]{tfl_tpl()}}, a report's \verb{template: \{name: \}}, the
+template sheet), as itself.  \code{source} lists a collection's every item,
+whichever template writes it, and those none writes yet.  The catalog
+keeps each item's number and a short title of our own, not the
+publications' text; the templates are tflspec's, not endorsed or
+recommended by FDA, PhUSE or CDISC.  The publications are cited below.
+}
+\section{Sources}{
+
+The catalog's collections, as published:
+\itemize{
+\item FDA STF IG v2: U.S. Food and Drug Administration, CDER. Standard Safety Tables and Figures: Integrated Guide, Version 2.0, April 2025. \url{https://www.fda.gov/media/187065/download} (accessed 2026-10-28). A U.S. Government work; FDA's website content is in the public domain unless noted (https://www.fda.gov/about-fda/about-website/website-policies).
+\item PhUSE CSS: PhUSE CSS Development of Standard Scripts for Analysis and Programming Working Group. Analyses and Displays Associated with Measures of Central Tendency: Focus on Vital Sign, Electrocardiogram, and Laboratory Analyte Measurements in Phase 2-4 Clinical Trials and Integrated Submission Documents (white paper), Version 1.0, 10 October 2013. \url{https://github.com/phuse-org/phuse-scripts/tree/master/whitepapers} (accessed 2026-10-28). Copyright PHUSE Limited, all rights reserved; cited by number only. Its standard scripts: phuse-org/phuse-scripts, MIT licence.
+\item PhUSE CSS: PhUSE CSS Standard Analyses Working Group. Analyses and Displays Associated with Outliers or Shifts from Normal to Abnormal: Focus on Vital Signs, Electrocardiogram, and Laboratory Analyte Measurements in Phase 2-4 Clinical Trials and Integrated Summary Documents (white paper), Version 1.0, 10 September 2015. \url{https://github.com/phuse-org/phuse-scripts/tree/master/whitepapers} (accessed 2026-10-28). Copyright PHUSE Limited, all rights reserved; cited by number only.
+\item PhUSE CSS: PhUSE CSS Standard Analyses Working Group. Analysis and Displays Associated with Adverse Events: Focus on Adverse Events in Phase 2-4 Clinical Trials and Integrated Summary Documents (white paper), Version 1.0, 3 February 2017. \url{https://phuse.global/Deliverables} (accessed 2026-10-28). Copyright PHUSE Limited, all rights reserved; cited by number only.
+\item PhUSE CSS: PhUSE CSS Standard Analyses Working Group. Analyses and Displays Associated with Demographics, Disposition, and Medications in Phase 2-4 Clinical Trials and Integrated Summary Documents (white paper), Version 2.0, 2 March 2018. \url{https://phuse.global/Deliverables} (accessed 2026-10-28). Copyright PHUSE Limited, all rights reserved; cited by number only.
+\item CDISC ARS: Clinical Data Interchange Standards Consortium (CDISC). Analysis Results Standard, v1.0, 19 April 2024. \url{https://www.cdisc.org/standards/foundational/analysis-results-standard} (accessed 2026-10-28). Copyright CDISC. Its examples: github.com/cdisc-org/analysis-results-standard (content CC BY 4.0, code MIT); cited by number only. CDISC is a trademark of the Clinical Data Interchange Standards Consortium.
+}
+
+The aliases follow the numbering of these publications, and the titles are short descriptions of our own, not their text. The templates are tflspec's, not endorsed or recommended by FDA, PhUSE or CDISC.
+}
+
 \examples{
 tfl_templates()
+head(tfl_templates(source = "FDA STF IG v2"))
 }

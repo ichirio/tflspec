@@ -27,13 +27,26 @@ test_that("rtf_figures: align as the page says it", {
   expect_false(grepl("align", pa_code(list(), "figure"), fixed = TRUE))
 })
 
-test_that("rtf_tables: a font size left on the page (a content of R code) is written", {
+test_that("rtf_tables: a font size left on the page (a content of R code) is not written", {
   o <- tfl_output("T-1", "table", page = list(rtf_tables = list(font_size_half_points = 16L)))
   o$content <- structure(list(code = "plan <- data.frame(a = 1)"), class = "tfl_r")
   o <- tflspec:::.page_font_to_plan(o)
-  expect_identical(o$page$rtf_tables$font_size_half_points, 16L)
+  expect_null(o$page$rtf_tables$font_size_half_points)
   code <- paste(tfl_report_code(o, content = "plan"), collapse = "\n")
-  expect_match(code, "rtf_tables\\([^|]*font_size_half_points = 16")
+  expect_false(grepl("font_size_half_points", code, fixed = TRUE))
+})
+
+test_that("rtf_tables: the arguments rtfreporter 0.9.0 removed are errors naming where they went", {
+  chk <- function(a) tfl_schema_check(tfl_item("rtf_tables", stats::setNames(list(16L), a)))
+  r <- chk("font_size_half_points")
+  expect_identical(r$level, "error")
+  expect_match(r$message, "plan_style(font_size_half_points = )", fixed = TRUE)
+  r <- chk("read_attributes")
+  expect_identical(r$level, "error")
+  expect_match(r$message, "rtftable(read_attributes = )", fixed = TRUE)
+  # not written, whatever the page says
+  expect_false(grepl("read_attributes", pa_code(list(rtf_tables = list(read_attributes = FALSE))),
+                     fixed = TRUE))
 })
 
 test_that("markup takes rtfreporter's words, not TRUE / FALSE", {
@@ -57,4 +70,29 @@ test_that("the written calls run in rtfreporter", {
   env <- list2env(list(content = content), parent = asNamespace("rtfreporter"))
   doc <- eval(parse(text = tfl_report_code(o, content = "content")), env)
   expect_s3_class(doc, "rtf_document")
+})
+
+test_that("rtf_document's watermark: a word, or its look as an rtf_watermark() call", {
+  code <- pa_code(list(rtf_document = list(watermark = "DRAFT")))
+  expect_match(code, "watermark = \"DRAFT\"", fixed = TRUE)
+  wm <- tfl_call("rtf_watermark", list(text = "DRAFT", color = "#FF0000", angle = -30))
+  code <- pa_code(list(rtf_document = list(watermark = wm)))
+  expect_match(code, "watermark = rtf_watermark(text = \"DRAFT\", color = \"#FF0000\", angle = -30)",
+               fixed = TRUE)
+  ok <- function(v) nrow(tfl_schema_check(tfl_item("rtf_document", list(watermark = v)))) == 0L
+  expect_true(ok("DRAFT"))
+  expect_true(ok(wm))
+  expect_false(ok(tfl_call("rtf_border", list(top = TRUE))))
+  # and it runs: the document carries the watermark's look
+  skip_if_not_installed("rtfreporter")
+  o <- tfl_output("T-1", "table", page = list(rtf_document = list(watermark = wm)))
+  env <- list2env(list(content = rtfreporter::as_rtftables(data.frame(a = "1"))),
+                  parent = asNamespace("rtfreporter"))
+  doc <- eval(parse(text = tfl_report_code(o, content = "content")), env)
+  expect_s3_class(doc, "rtf_document")
+  f <- tempfile(fileext = ".rtf")
+  on.exit(unlink(f))
+  rtfreporter::generate_rtfreport(doc, f)
+  rtf <- paste(readLines(f, warn = FALSE), collapse = "\n")
+  expect_match(rtf, "DRAFT", fixed = TRUE)
 })

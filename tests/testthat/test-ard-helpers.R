@@ -172,3 +172,38 @@ test_that("an ard_number's label names other statistics of its address", {
                  ", ", e$ard_value(a, "KM", "prob", "conf.high", ARM = "A", level = 0.5, digits = 1), ")")
   expect_true(want %in% labels)
 })
+
+test_that("drop_empty_groups(): a group with N = 0 and nothing else loses its rows", {
+  e <- new.env()
+  sys.source(system.file("helpers", "study_helpers.R", package = "tflspec"), envir = e)
+  ard <- data.frame(group1 = "AVISIT", group1_level = I(list("BASELINE", "BASELINE", "WEEK 2", "WEEK 2")),
+                    variable = "CHG", stat_name = c("N", "mean", "N", "mean"),
+                    stat = I(list(0, NA_real_, 12, 1.5)), stringsAsFactors = FALSE)
+  r <- e$drop_empty_groups(ard)
+  expect_identical(unlist(r$group1_level), c("WEEK 2", "WEEK 2"))
+  expect_identical(nrow(e$drop_empty_groups(ard[0L, ])), 0L)
+  no_group <- data.frame(variable = "AGE", stat_name = "N", stat = I(list(0)))
+  expect_identical(nrow(e$drop_empty_groups(no_group)), 1L)
+})
+
+test_that("set_levels() on a column that holds the list's labels already keeps them (a data made from another)", {
+  e <- new.env()
+  sys.source(system.file("helpers", "study_helpers.R", package = "tflspec"), envir = e)
+  cl <- c(LOW = "Low", NORMAL = "Normal", HIGH = "High")
+  d <- data.frame(WORST = c("HIGH", "LOW", NA), stringsAsFactors = FALSE)
+  once <- e$set_levels(d, WORST = cl)
+  expect_identical(levels(once$WORST), c("Low", "Normal", "High"))
+  twice <- e$set_levels(once, WORST = cl)
+  expect_identical(twice$WORST, once$WORST)
+  expect_error(e$set_levels(data.frame(WORST = "Mid"), WORST = cl), "WORST has values its code list does not")
+})
+
+test_that("tag_ard() refuses what is not a cards ARD (a custom analysis's plain data frame)", {
+  e <- new.env()
+  sys.source(system.file("helpers", "study_helpers.R", package = "tflspec"), envir = e)
+  expect_error(e$tag_ard(data.frame(AEBODSYS = "x", p.value = 0.5), "T", "FISHER"),
+               "analysis FISHER: its code must return a cards ARD.*columns AEBODSYS, p.value")
+  expect_error(e$tag_ard(0.5, "T", "FISHER"), "an object of class numeric")
+  ok <- e$tag_ard(data.frame(variable = "x", stat_name = "n", stat = 1), "T", "A")
+  expect_identical(ok$output_id, "T")
+})

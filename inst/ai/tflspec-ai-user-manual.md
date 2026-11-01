@@ -1,6 +1,6 @@
 # tflspec — AI user manual
 
-**This manual documents tflspec 0.0.24.9235** (the development version,
+**This manual documents tflspec 0.0.24.9238** (the development version,
 after release 0.0.24; with rtfreporter 0.8.2).
 Check it matches what you have — `packageVersion("tflspec")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -169,7 +169,7 @@ going and leaves the message in the `error` / `warning` column.
 | I want to … | Call |
 |---|---|
 | read a study folder (YAML); a report over its layers | `tfl_read_study_spec(dir)`, `tfl_read_outputs(dir)`; `tfl_resolve_output(report, study)` (§5) |
-| a report file's content as code / run it | `tfl_content_code(report)` / `tfl_content_run(report, data)`; an item's arguments: `tfl_schema(fn)`, `tfl_schema_check(item)`, `tfl_schema_help(fn, arg)` |
+| a report file's content as code / run it | `tfl_content_code(report)` / `tfl_content_run(report, data)`; an item's arguments: `tfl_schema(fn)`, `tfl_schema_check(item)`, `tfl_schema_help(fn, arg)`; every report's ARD, content and figure against the installed packages: `tfl_check_spec(study)` |
 | the study folder as workbooks and back; workbooks to a folder once | `tfl_sheets_from_yaml(dir)` (`tfl_sheets_from_spec(study, outputs)` from a spec in memory), `tfl_write_spec_xlsx(dir, path)` / `tfl_import_spec_xlsx(dir, path)`; `tfl_convert_sheets_to_yaml(from, to)` |
 | start an ARD spec / read / write it | `tfl_ard_spec_template()` / `tfl_read_ard_spec()` / `tfl_write_ard_spec()` |
 | write the cards code of one output; each analysis's data by the program's name | `tfl_ard_code(spec, output_id)`; `tfl_ard_data_names(spec, output_id)` |
@@ -269,7 +269,7 @@ sections follow this order.
 | `codelists` | by variable, a list of `{value, label}` in the order printed (the `codelists` sheet); a nested count's inner value may say `under:` (its parent's value, for `complete_hierarchy()`) |
 | `content` | the report, a list of items, each one call: `- plan_cells: {categorical: '{n} ({p:.1f%})'}`.  A table's items are rtfreporter's `normalize_ard()`, `table_plan()` and `plan_*()` verbs; a listing's `plan_listing()` (its columns `listing_col()` calls); a figure's the calls of its plot -- `ggplot`, `geom_*`, `scale_*`, `labs`, `theme` ..., and `tfl_image` last (§7.1).  Or `content: !r ...`, the report's own R |
 | `page` | the document: `titles`, `footnotes`, `header`, `footer` (maps by line number: `'1': {center: Table 14.1.1}`), `tokens`, and rtfreporter's calls by name (`rtf_page: {orientation: landscape}`, `rtf_tables: {auto_section: true}`, `rtf_document: {watermark: DRAFT}`); where a table's page names print is better said in its content, `plan_paginate_group: {heading_at: section}` -- a page's `rtf_tables: {auto_section: }` given wins |
-| `template` | a template SPEC, `{name: km_survival, args: {...}}` (`tfl_templates()`; FDA STF Figures 1, 4, 13: `km_cumulative`, its data stage in `data:` steps, samples in `extdata/report-definitions/`); a figure designer's preset is a name (`km_simple` ...), the designer's `plot`, `plots`, `compose` its old form (§7) |
+| `template` | a template SPEC, `{name: km_survival, args: {...}}` (`tfl_templates()`; a catalog alias runs its template as itself, `{name: stf_t14_ae_soc_pt}`, and a report keeps the name it was written with -- `tfl_templates(source = "FDA STF IG v2")` / `"PhUSE CSS"` / `"CDISC ARS"` lists a collection's every item with its alias and template; FDA STF Figures 1, 4, 13: `km_cumulative`, its data stage in `data:` steps, samples in `extdata/report-definitions/`); a figure designer's preset is a name (`km_simple` ...), the designer's `plot`, `plots`, `compose` its old form (§7) |
 
 **An item's keys are the function's arguments** (§A.2's tables say which
 sheet column is which verb's argument: `pages_max_rows` is
@@ -341,10 +341,18 @@ page:
 | a block of rows per variable | one analysis for the variables one method summarises (`continuous`, `categorical`); `rows: {group: variable}` |
 | SOC / PT rows | `method: hierarchical`, `variables: [AEBODSYS, AEDECOD]`; `normalize_ard: {hierarchy: [AEBODSYS, AEDECOD], overall: <the any-AE row>}`; `rows: {group1: AEBODSYS}`; `plan_sort: {keys: [.overall, group1, .depth, -n, label]}` |
 | a rate with its CI (ORR) | an `analysis_data` with `where` (the parameter) and `derive` (`!r 'RESP = AVALC %in% c("CR", "PR")'`); `method: proportion_ci`; `plan_cells: {proportion_ci: {"n (%)": "{n} ({estimate:.1f%})", 95% CI: "[{conf.low:.1f%}, {conf.high:.1f%}]"}}` |
-| a shift table (baseline down, post-baseline across) | `by: [TRT01A, PARAMCD, BNRIND]`, `variables: [ANRIND]`; `table_plan: {cols: [TRT01A, .label], rows: {group: PARAMCD}, label: BNRIND}`; `plan_stub: {vars: [group, BNRIND]}`; the arm as a spanner `{line: "1", cols: .values, span: TRT01A, text: "{col1}"}` |
+| a shift table (baseline down, worst post-baseline across, a Total row, the % of the arm's subjects with a post-baseline value) | an `analysis_data` that `code` makes (a subject and parameter a row: `BASECAT`, `WORST`), a second one of its subjects a parameter each (`keep`, `distinct`: the denominator); `by: [TRT01A, PARAMCD]`, `strata: [WORST]`, `variables: [BASECAT]`, `denominator: lb_den`; a second analysis of `WORST` by the same keys for the Total row; `table_plan: {cols: [TRT01A, WORST], rows: {group1: PARAMCD}}`; `plan_total: {label: Total, direction: rows}` (the full form is in the agent's instructions) |
+| (the shift table as before, no Total row) | `by: [TRT01A, PARAMCD, BNRIND]`, `variables: [ANRIND]`; `table_plan: {cols: [TRT01A, .label], rows: {group: PARAMCD}, label: BNRIND}`; `plan_stub: {vars: [group, BNRIND]}`; the arm as a spanner `{line: "1", cols: .values, span: TRT01A, text: "{col1}"}` |
 | `xx.x (xx.xx)`, `xx (xx.x)` | the template's decimals: `"{mean:.1f} ({sd:.2f})"`, `"{n} ({p:.1f%})"` |
 | row headings, the order of the arms and values | `plan_labels`, `plan_levels`; a value printed in other words: `codelists` |
 | titles and footnotes | `page: titles / footnotes`, by line number |
+| the rows in one arm's order (the SOCs and PTs by the Drug A 20 mg column, most first, ties alphabetical) | `plan_sort: {keys: [.overall, "-n@group1[Drug A 20 mg]", group1, .depth, "-n[Drug A 20 mg]", label]}` -- `-n@group1[<column>]` orders the SOCs by their own count in that column, `group1` right after it keeps each SOC's rows together when two SOCs tie, `-n[<column>]` the PTs by theirs, `-n` the count over every column; `group1` alone in place of the `@` key keeps the SOCs alphabetical; the AE templates' `sort` takes the same list |
+| digits that differ by parameter (ALT one decimal, bilirubin three) | guarded cell templates, one a parameter and the last for the rest: `plan_cells: {continuous: [!r 'PARAMCD == "ALT" ~ "{mean:.1f} ({sd:.2f})"', !r 'PARAMCD == "BILI" ~ "{mean:.3f} ({sd:.4f})"', "{mean:.2f} ({sd:.3f})"]}`; the same list under one row's label when only that row differs (`continuous: {"Mean (SD)": [...]}`; the label as an entry of its own, `plan_cells: {"Mean (SD)": [...]}`, is refused); a guard compares the value as the table has it (a key with a code list holds the label) |
+| a title line that changes with the page (`Parameter: <PARAM>`, a parameter a page) | `plan_paginate_rows: {page_by: [PARAMCD], heading: "Parameter: {PARAM}", heading_at: title}` (two keys: `page_by: [ANALYTE, RENALGR]`, a heading of two lines with `\n`); the heading goes under the report's titles on each page |
+| a listing with its summary under it (the PK samples) | the listing as the table (`table_plan: {cols: ATPT, rows: {subject: !r '~ "{USUBJID}/{AGE}/{SEX}"'}, value: AVAL}`), the summary as a part: `plan_append: {name: summary, data: {source: ard}, content: [...]}`, the whole-table items after it |
+| a p-value column (Fisher / chi-square of a categorical, Kruskal-Wallis / one-way of a continuous, a t-test of two arms) | one analysis a test with the counts' `by` and `variables` (`method: fisher`, `kruskal` ...), and `plan_compare: {p: "{p.value:.3f}"}` -- the column named as you like, the p-value on the variable's first row |
+| every subject, no flag | `population: ALL` (in `spec/data.yml` beside the flags' sets) |
+| the KM legend with each arm's median (95% CI) | the template: `template: {name: km_survival, args: {legend_median: true}}`; by hand, the plot's `legend_labels` (R: a vector named by the arms) |
 
 The keys of `ard:` are the ARD sheets' columns (Appendix A.1) under their
 YAML names (`id`, `population`); the methods are `tfl_ard_methods()`.  The
@@ -578,54 +586,77 @@ tfl_ai_unpack(a, "study")                           # spec/outputs/<id>.yml, spe
   `$variables` frame is the context's `datasets`.
 * `tfl_ai_batches(x, size = 8)` splits the TOC's tables by the words of
   their titles (English or Japanese); `families =` adds a company's own.
-* A whole study: `tfl_ai_write_requests(study_dir, shell, adam, size = 3)`
-  writes one file a request to `ai/requests/` (one paste each; `max_chars`
-  splits a long one, `instructions = "once"` writes the instructions to
-  `00-instructions.md` and the requests without them).  The answers go to
-  `ai/answers/<request>.md` (`tfl_ai_save_answer(study_dir, request,
-  text)` writes one from pasted text); `tfl_ai_collect_answers(study_dir)`
-  parses, checks and writes them: a list with `reports` (one row a report:
-  `ok` / `warning` / `error` / `no answer`, its problems, its file, its
-  request's repair prompt left in `ai/repairs/`), `next_steps`,
-  `assumptions` and `manifest` (every report the answers list first,
-  `reports:` -- `id`, `title`, `split`, `toc` --, with its status; also
-  `ai/manifest.csv`, to check the count against the TOC).  `tfl_ai_prepare(dir, toc, ...)` does the steps before
-  (the study folder when there is none, the ADaM summary, the workbook
-  read, the requests) in one call and returns a list (`requests`, `toc`,
-  `sheets`, `adam`, `files`, `next_steps`); `dry_run = TRUE` reads and
-  writes nothing, `adam_summary =` reuses a call's `$adam`; `tfl_ai_requests(study_dir)`
-  reads the requests again;
+* A whole study, with a coding agent (GitHub Copilot's agent in VS Code,
+  and the like): `tfl_ai_prepare(dir, toc, ...)` does the steps before (the
+  study folder when there is none, the ADaM summary, the workbook read) and
+  writes one file a request to `ai/requests/` (`tfl_ai_write_requests()`;
+  `size` reports a request, 1 by default; `max_chars` splits a long one),
+  what every request would repeat once (`ai/instructions-table.md`,
+  `ai/instructions-figure.md`, `ai/templates.md`), and the agent's files:
+  `ai/AGENTS.md` (its instructions), `AGENTS.md` and
+  `.github/copilot-instructions.md` (short: read `ai/AGENTS.md`), `run.R`,
+  `ai/decisions.md` and `ai/agent_prompt.md` (its one message: every
+  request of `ai/requests/index.md` in order; "continue" goes on from the
+  first with a draft missing).  The agent **asks in its chat** what
+  defines each report and is not settled (the analysis set, a parameter, the
+  treatment variable, a denominator; three rounds at most for one item,
+  then marked to confirm), keeps the answers in `ai/decisions.md`
+  (`tfl_ai_decisions_read()` / `_write()`: one line a decision, `D<n>
+  [scope] topic: decision (source)`, applied to the reports after) and
+  writes each report's **skeleton** as a draft, `ai/spec/outputs/<id>.yml`
+  -- its data, its analyses, its content items or a template, its titles
+  and footnotes, nothing of the look -- with an `ai:` block: `assumptions`
+  (each with `from: D<n>`) and `confirm` (what the person decides in the
+  builder; `tfl_ai_confirm()` lists them, `tfl_check_spec()` shows them as
+  `check` rows).  `study.yml`'s `ai:` keys set its rules (`language`,
+  `ask_when`, `carry`, `max_rounds`, `footnotes_at`; the study standard's
+  `spec/defaults.yml` may say them first).  It reads the request and the
+  files it names only (`agent_reads = c("workbook", "adam")` and `docs =`
+  allow more; a document inside the study folder -- its `docs/` -- is read
+  where it is, one outside is copied into `ai/docs/`; a `.docx`, `.pdf` or
+  workbook is written as Markdown in `ai/docs/`, `tfl_ai_doc_text()`, and
+  the agent reads the text), runs nothing, installs nothing.  `define =` (a `define.xml`)
+  or `adam_spec =` (a Pinnacle 21 ADaM spec workbook) puts the study's
+  code lists (in order, with decodes), digits and display formats --
+  value level too, a lab parameter's AVAL -- into `ai/adam_summary.md`: the
+  agent then takes the digits the shell does not show from there.
+  `tfl_ai_collect_answers(study_dir)` is the person's check: it reads each
+  request's drafts as its answer, checks them against the request and
+  writes them anew (the column widths filled, the assumptions numbered,
+  the `ai:` block kept): a list with `reports` (one row a report: `ok` /
+  `warning` / `error` / `no answer`, its problems, its file, its request's
+  repair prompt left in `ai/repairs/` -- to paste into the agent's chat),
+  `next_steps`, `assumptions` and `manifest` (every report the drafts make,
+  with its status; also `ai/manifest.csv`, to check the count against the
+  TOC); a draft YAML cannot read is refused with why.  `dry_run = TRUE`
+  reads and writes nothing, `adam_summary =` reuses a call's `$adam`;
+  `tfl_ai_requests(study_dir)` reads the requests again;
+  a report always says its column widths: what a draft leaves out, R writes
+  when the draft is read (`rtfreporter::default_col_widths()`, one width a printed
+  column by name), with the assumption (item `widths`) that they are the default
+  ones; `tfl_fill_widths(study_dir)` does the same for any report of the study;
   `tfl_ai_run(study_dir)` collects, then builds each report's ARD and RTF
-  (`ai/status.md`; the answers' questions gathered into `ai/questions.md`);
-  `mode = "agent"` writes, besides, a coding agent's instructions
-  (`AGENTS.md`, `.github/copilot-instructions.md`), `run.R`,
-  `ai/questions.md` and `ai/decisions.md` -- every request without a stop,
-  then a second round from the person's answers; `tfl_ai_questions(study_dir)`
-  reads `ai/questions.md` and `tfl_ai_answer_questions(study_dir, answers)`
-  writes the person's answers into it; `tfl_ai_outputs(study_dir)` lists
-  the reports made, `tfl_ai_expected_write()` keeps the list the person
-  expects (`ai/expected_outputs.csv`, which `run.R` compares with), and
-  `tfl_ai_corrections(study_dir)` gathers the corrections and the answers
-  for the agent's next round (`ai/corrections.md`); `tfl_ai_assumptions(study_dir)`
-  lists the AI's assumptions with their ids (`A<n>`, kind `K<n>`), and
-  `tfl_ai_assumption_answers_write()` keeps the person's answers to them
-  (`ok`, or `wrong` with the right content: `ai/assumption_answers.csv`).  The TOC and its shells in
+  (`ai/status.md`; `run.R` from the command line); a draft the person has
+  checked is adopted into `spec/outputs/` with `tfl_ai_adopt()`
+  (`tfl_ai_adopted_diff()`: what changed since); `tfl_ai_outputs(study_dir)`
+  lists the reports made; `tfl_ai_assumptions(study_dir)` lists the AI's
+  assumptions with their ids (`A<n>`, kind `K<n>`) -- what is wrong, the
+  person tells the agent in its chat or changes in the builder.  The TOC and its shells in
   workbooks apart: `tfl_ai_read_shell(path, shells = )` /
   `tfl_ai_prepare(toc, shells = )`; another workbook added to the study's
   requests: `tfl_ai_prepare(..., add = TRUE)`.  A figure of the TOC is a request
-  of its own (`figure-1` ...: its shell, a figure design to answer), written
-  as the figure's report file in the design's form and drawn by
-  `tfl_ai_run()` (PNG and RTF); `workbook = "attach"` / `"both"` has
-  each request say where its reports' shells are in the attached TOC /
-  SHELL workbook (with the text too for `"both"`, the attachment right
-  where they differ).
+  of its own (`figure-1` ...: its shell, a figure report to draft), drawn by
+  `tfl_ai_run()` (PNG and RTF); `workbook = "file"` (set when
+  `agent_reads` has `"workbook"`) has each request say where its reports'
+  shells are in the workbook file, for the agent to read that place alone.
 * `tfl_ai_context("table", examples = "study/spec/outputs/T-14-3-1.yml")`
   gives a reviewed report of the family: the prompt asks for the rest of the
   family written the same way.
 * The answer is one YAML block: the header line (its task `table`, version
   1 and the reports), `outputs:` (one
   report file each, as §6), `assumptions:` (`output_id`, `where`, `item`,
-  `assumption`, `question`).  `tfl_ai_check()` reads every report as
+  `assumption` -- one sentence, what was decided and how -- `value`, the
+  value used, and `question`).  `tfl_ai_check()` reads every report as
   `tfl_read_output()` does, checks each content item against the schema (an
   unknown function or argument, a value of the wrong type, a required
   argument missing), each analysis's fields and method, the analysis sets
@@ -671,7 +702,10 @@ heading with the file's path (`### spec/outputs/T-1.yml`), then a `yaml`
 block, for `study.yml`, `spec/data.yml`, `spec/toc.yml`,
 `spec/defaults.yml`, one `spec/outputs/<id>.yml` a report, and
 `spec/_assumptions.yml` -- its guesses, a list of `output_id`, `where`,
-`item`, `assumption`, `question`.  `tfl_ai_unpack(answer, dir)` checks the
+`item`, `assumption` (one sentence: what it decided and how), `value`
+(the value it used), `question` -- the choices that change the numbers or
+their meaning; how the output looks is decided by the standard and
+rtfreporter's defaults, and not listed.  `tfl_ai_unpack(answer, dir)` checks the
 paths (only `study.yml` and `spec/**.yml`) and that every block is YAML,
 then writes the files; it writes nothing when one is wrong, and over
 existing files only with `overwrite = TRUE`.
@@ -860,7 +894,7 @@ back): rename the value or choose another separator.
 `tfl_read_outputs` `tfl_resolve_output` `tfl_run_output` `tfl_output_contents` `tfl_output_data_names` `tfl_code_refs` `tfl_write_study_part` `tfl_item_code`
 `tfl_item_written` `tfl_item_own` `tfl_convert_sheets_to_yaml`
 `tfl_yaml_from_sheets` `tfl_sheets_from_yaml` `tfl_sheets_from_spec` `tfl_write_spec_xlsx`
-`tfl_import_spec_xlsx` `tfl_schema` `tfl_schema_check` `tfl_schema_help` `tfl_content_code` `tfl_content_run`
+`tfl_import_spec_xlsx` `tfl_schema` `tfl_schema_check` `tfl_check_spec` `tfl_check_build` `tfl_check_reports` `tfl_check_fix_text` `tfl_data_code` `tfl_schema_help` `tfl_ai_decisions_read` `tfl_ai_decisions_write` `tfl_ai_confirm` `tfl_content_code` `tfl_content_run`
 `tfl_ai_unpack` `tfl_args_to_r` `tfl_args_from_r` `tfl_fig_content_from_design`
 
 **Manual:** `tflspec_ai_manual` `tfl_adam_metadata` `tfl_ai_review`
@@ -874,10 +908,9 @@ back): rename the value or choose another separator.
 
 **AI-assisted drafting:** `tfl_ai_tasks` `tfl_ai_context` `tfl_ai_schema`
 `tfl_ai_prompt` `tfl_ai_parse` `tfl_ai_check` `tfl_ai_repair_prompt`
-`tfl_ai_diff` `tfl_ai_read_shell` `tfl_ai_adam_summary` `tfl_ai_batches`
-`tfl_ai_write_requests` `tfl_ai_collect_answers` `tfl_ai_adopt` `tfl_ai_adopted_diff` `tfl_ai_style_prompt` `tfl_ai_style_read` `tfl_rtf_style_scan` `tfl_ai_migrate` `tfl_ai_outputs` `tfl_ai_expected_read` `tfl_ai_expected_write` `tfl_ai_corrections` `tfl_ai_assumptions` `tfl_ai_assumption_answers_read` `tfl_ai_assumption_answers_write` `tfl_ai_save_answer` `tfl_ai_study_init`
-`tfl_ai_prepare` `tfl_ai_requests` `tfl_ai_run` `tfl_ai_compare` `tfl_ai_questions`
-`tfl_ai_answer_questions`
+`tfl_ai_diff` `tfl_ai_read_shell` `tfl_ai_adam_summary` `tfl_ai_doc_text` `tfl_ai_batches`
+`tfl_ai_write_requests` `tfl_ai_collect_answers` `tfl_ai_adopt` `tfl_ai_adopted_diff` `tfl_ai_style_prompt` `tfl_ai_style_read` `tfl_rtf_style_scan` `tfl_ai_migrate` `tfl_ai_outputs` `tfl_ai_assumptions` `tfl_ai_study_init`
+`tfl_ai_prepare` `tfl_ai_sample_study` `tfl_ai_requests` `tfl_fill_widths` `tfl_ai_run` `tfl_ai_compare`
 
 **ARD spec:** `tfl_ard_spec` `tfl_read_ard_spec` `tfl_write_ard_spec`
 `tfl_ard_spec_template` `tfl_ard_code` `tfl_ard_data_names` `tfl_build_ard` `tfl_ard_for`
@@ -991,7 +1024,9 @@ cat(tfl_report_code(sp, content = "plan"), sep = "\n")
 
 - `method`: a keyword — `continuous`, `categorical`, `dichotomous`,
   `missing`, `hierarchical`, `max`, `subjects`, `total_n`, `proportion_ci`,
-  `mean_ci`, `ttest`, `wilcox`, `chisq`, `fisher`, `custom` — or any
+  `mean_ci`, `ttest`, `wilcox`, `chisq`, `fisher`, `cmh`, `prop_diff`,
+  `lsmeans`, `lsmeans_diff`, `km`, `logrank`, `abnormal`, `incidence_rate`,
+  `custom` — or any
   `pkg::function` (`cards::`, `cardx::`), or a function of the study's own
   that the study key `source` loads (`ard_riskdiff_mn`): it takes the
   analysis data first, `by` and `variables` as bare column names, and gives

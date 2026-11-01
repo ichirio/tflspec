@@ -120,14 +120,49 @@ test_that("summary: categorical variables too; disposition on it", {
 test_that("shift and lab_shift: baseline by post category, a block a parameter", {
   x <- tfl_template_expand("lab_shift", list(population = "SAF", visit = "CYCLE 2 DAY 1",
                                              params = c("ALT", "AST")))
-  expect_identical(as.character(x$ard$analysis_data[[1L]]$where),
-                   'AVISIT == "CYCLE 2 DAY 1" & PARAMCD %in% c("ALT", "AST")')
+  # (the records kept in the code that keeps a subject once, at its worst)
+  expect_match(x$ard$analysis_data[[1L]]$code,
+               'AVISIT == "CYCLE 2 DAY 1" & PARAMCD %in% c("ALT", "AST")', fixed = TRUE)
   expect_identical(x$ard$analyses[[1L]]$by, c("TRT01A", "PARAMCD", "BNRIND"))
   expect_identical(x$content[[1L]]$args$cols, c("TRT01A", ".label"))
   s <- tfl_template_expand("shift", list(population = "SAF", by_levels = c("A", "B")))
   expect_identical(s$content[[3L]]$args$TRT01A, c("A", "B"))
   expect_error(tfl_template_expand("lab_shift", list(population = "SAF")), "needs")
   expect_true(all(c("shift", "lab_shift") %in% tfl_templates()$name))
+})
+
+test_that("shift: a subject once at its worst, a Missing and a Total row, a page a parameter", {
+  skip_if_not_installed("dplyr")
+  skip_if_not_installed("cards")
+  a <- list(population = "SAF", where = 'PARAMCD %in% c("ALT", "AST")')
+  x <- tfl_template_expand("shift", a)
+  ad <- x$ard$analysis_data[[1L]]
+  expect_null(ad$where)
+  lb <- adlb
+  lb$BNRIND[lb$PARAMCD == "ALT" & lb$USUBJID == lb$USUBJID[1L]] <- NA
+  d <- local({
+    adlb <- lb
+    adsl_sub <- adsl[adsl$SAFFL == "Y", ]
+    eval(parse(text = ad$code))
+  })
+  body <- d[d$BNRIND != "Total", ]
+  expect_false(anyDuplicated(body[c("USUBJID", "PARAMCD")]) > 0L)
+  expect_false(any(body$ABLFL %in% "Y"))
+  expect_identical(sum(d$BNRIND == "Total"), nrow(body))
+  expect_true("Missing" %in% body$BNRIND)
+  # the worst: a subject with any HIGH after baseline is HIGH
+  one <- lb[lb$PARAMCD == "ALT" & !lb$ABLFL %in% "Y" & lb$ANRIND %in% "HIGH", "USUBJID"][1L]
+  expect_identical(body$ANRIND[body$USUBJID == one & body$PARAMCD == "ALT"], "HIGH")
+  lv <- Filter(function(i) i$fn == "plan_levels", x$content)[[1L]]$args
+  expect_identical(lv$BNRIND, c("LOW", "NORMAL", "HIGH", "Missing", "Total"))
+  fns <- vapply(x$content, `[[`, "", "fn")
+  expect_true(all(c("plan_paginate_rows", "plan_hide") %in% fns))
+  # every record, as before: no code, no extra rows, the parameter in the stub
+  r <- tfl_template_expand("shift", c(a, list(worst = NULL, param_page = FALSE)))
+  expect_null(r$ard$analysis_data[[1L]]$code)
+  expect_identical(as.character(r$ard$analysis_data[[1L]]$where), a$where)
+  expect_false(any(c("plan_paginate_rows", "plan_hide") %in%
+                     vapply(r$content, `[[`, "", "fn")))
 })
 
 test_that("listing: one row a record, a column's width part of its definition", {
@@ -216,4 +251,15 @@ test_that("ae_overview: a subjects analysis and a row a flag", {
   tab <- suppressMessages(rtfreporter::plan_apply(p, "table"))
   expect_identical(nrow(tab), 1L)
   expect_identical(as.character(tab[[1L]]), "Serious")
+})
+
+test_that("demog: a categorical variable the labels do not name has no label row (no `<NA> = NA`; the sheets convert)", {
+  x <- tfl_template_expand("demog", list(population = "SAF", by = "TRT01A",
+                                         categorical = c("AGEGR1", "SEX", "RACE", "ETHNIC", "ECOGBL")))
+  lab <- Filter(function(it) identical(it$fn, "plan_labels"), x$content)
+  expect_identical(length(lab), 1L)
+  v <- lab[[1L]]$args$variable
+  expect_false(anyNA(names(v)))
+  expect_false("ECOGBL" %in% names(v))
+  expect_true(all(c("AGE", "AGEGR1", "SEX") %in% names(v)))
 })

@@ -58,6 +58,16 @@ test_that("expanded: subset on the set's ADSL; a records data takes its subjects
                                              where = "ANL01FL == \"Y\""))
   d <- y$ard$analysis_data
   expect_identical(vapply(d, `[[`, "", "id"), c("adsl_saf", "adlb_saf"))
+  expect_identical(as.character(d[[1L]]$where), "PART == \"Part 1\"")
+  # (its code keeps a subject once: it reads the subset's subjects)
+  expect_match(d[[2L]]$code, "dplyr::select(adsl_saf, USUBJID, TRT01A)", fixed = TRUE)
+  expect_match(d[[2L]]$code, "& ANL01FL == \"Y\")", fixed = TRUE)
+  # every record: a records data of the set takes the subjects
+  y <- tfl_template_expand("lab_shift", list(population = "SAF", visit = "WEEK 2",
+                                             params = "ALT", subset = "PART == \"Part 1\"",
+                                             where = "ANL01FL == \"Y\"", worst = NULL))
+  d <- y$ard$analysis_data
+  expect_identical(vapply(d, `[[`, "", "id"), c("adsl_saf", "adlb_saf"))
   expect_null(d[[2L]]$population)
   expect_identical(d[[2L]]$subjects, "adsl_saf")
   expect_match(as.character(d[[2L]]$where), "& ANL01FL == \"Y\"$")
@@ -136,7 +146,7 @@ test_that("in a study: demog and ae_soc_pt of Part 1's subjects; N and counts th
   # the denominator: the analysis set and the subset in one filter(); the
   # target subjects, then the target records
   expect_match(code, "adsl_saf <- filter(adsl, SAFFL == \"Y\", PART == \"Part 1\")", fixed = TRUE)
-  expect_match(code, paste0("  inner_join(select(adsl_saf, USUBJID, TRT01A), by = \"USUBJID\") |>\n",
+  expect_match(code, paste0("  inner_join(select(adsl_saf, USUBJID, any_of(\"TRT01A\")), by = \"USUBJID\") |>\n",
                             "  filter(TRTEMFL == \"Y\")"), fixed = TRUE)
   ard <- suppressMessages(tfl_build_ard(st, dir = d, save = FALSE))
   saf <- sl[sl$SAFFL == "Y", ]

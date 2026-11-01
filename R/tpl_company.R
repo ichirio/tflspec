@@ -1,5 +1,5 @@
 # The company layer of the template SPEC (_archive/template-preset-spec-
-# design-2026-10-17.md, §8 and §8.1): a company's templates are an R
+# design-2026-10-17.md, sections 8 and 8.1): a company's templates are an R
 # package of its own.  It registers them when it is loaded (tfl_template(),
 # usually a thin wrapper of a tflspec template with the company's
 # defaults), exports the function its reports' programs call (the A use,

@@ -628,6 +628,14 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
         content <- .conv_items(content_fn(sp, id))
         nz <- .conv_normalize_args(sp, ard, id, note)
         if (length(nz)) content <- c(list(tfl_item("normalize_ard", nz)), content)
+        # a records table (table_plan(value = ), its parts by plan_append()):
+        # its data the planner row's dataset, not the ARD
+        if (any(vapply(content, function(it) identical(it$fn, "table_plan") && !is.null(it$args$value), NA)) &&
+            !is.null(prow) && nrow(prow) && !is.na(prow$datasets[1L])) {
+          data <- list(source = "dataset", dataset = .conv_split(prow$datasets[1L])[1L])
+          if (!is.na(prow$population[1L])) data$population <- prow$population[1L]
+          content <- Filter(function(it) !identical(it$fn, "normalize_ard"), content)
+        }
       }
       else if (any(vapply(c("tables", "variables", "cells", "digits", "layout", "columns", "style", "col_header", "cell_styles"),
                           function(s) nrow(scope(sp[[s]], id)) > 0L, NA))) {

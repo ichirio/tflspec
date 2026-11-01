@@ -46,7 +46,9 @@ test_that("tfl_table_code() writes the plan the definition makes", {
   sp <- suppressMessages(tfl_as_table_spec(sc_plan(d), output_id = "T1"))
   code <- tfl_table_code(sp, data = "data", pipe = "|>", normalize = FALSE)
   expect_match(code[grep("<- table_plan", code)[1L]], "^plan <- table_plan\\(data, cols = \"TRT\"")
-  expect_true(any(grepl("plan_digits(rounding = \"sas\")", code, fixed = TRUE)))
+  # the study's rounding is the setup's option (tfl_report_setup_code()), not each table's
+  expect_false(any(grepl("rounding", code, fixed = TRUE)))
+  expect_true(any(grepl("rtfreporter.rounding = \"sas\"", tfl_report_setup_code(sp), fixed = TRUE)))
   expect_true(any(grepl("plan_col_header(", code, fixed = TRUE)))
   expect_true(any(grepl("data.frame(", code, fixed = TRUE)))
   expect_false(any(grepl("structure(", code, fixed = TRUE)))

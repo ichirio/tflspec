@@ -17,6 +17,24 @@ The listing template \code{listing}, layout \code{listing}. Its program is one c
 }
 }
 
+\section{Aliases}{
+
+The same template by the names of other collections' items: each runs it as itself (\code{tfl_tpl(x, "stf_t01_trials", ...)}).\tabular{llll}{
+   Alias \tab Collection \tab Item \tab Title \cr
+   \code{stf_t01_trials} \tab FDA STF IG v2 \tab T01 \tab Trials in the submission \cr
+   \code{stf_t09_death_list} \tab FDA STF IG v2 \tab T09 \tab Listing of deaths \cr
+   \code{stf_t39_disc_list} \tab FDA STF IG v2 \tab T39 \tab Listing of AEs leading to discontinuation \cr
+}
+
+
+Sources:
+\itemize{
+\item FDA STF IG v2: U.S. Food and Drug Administration, CDER. Standard Safety Tables and Figures: Integrated Guide, Version 2.0, April 2025. \url{https://www.fda.gov/media/187065/download} (accessed 2026-10-28). A U.S. Government work; FDA's website content is in the public domain unless noted (https://www.fda.gov/about-fda/about-website/website-policies).
+}
+
+The aliases follow the numbering of these publications, and the titles are short descriptions of our own, not their text. The templates are tflspec's, not endorsed or recommended by FDA.
+}
+
 \section{Example}{
 
 

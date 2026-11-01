@@ -24,6 +24,8 @@
 #' files stops the read.
 #'
 #' @param dir The study folder (holds `study.yml` and `spec/`).
+#' @param skip_bad `TRUE` to leave out a report file that cannot be read, with a
+#'   warning naming it (`tfl_read_outputs()`); `FALSE` (default) to stop there.
 #' @return `tfl_read_study_spec()`: a list of class `tfl_study_spec` --
 #'   `study`, `data`, `defaults`, `styles` (by name: `defaults.yml`'s
 #'   `styles:`, the look a report picks with `style:`), `codelists`,
@@ -105,13 +107,23 @@ tfl_read_study_spec <- function(dir) {
 
 #' @rdname tfl_read_study_spec
 #' @export
-tfl_read_outputs <- function(dir) {
+tfl_read_outputs <- function(dir, skip_bad = FALSE) {
   out_dir <- .outputs_dir(dir)
   files <- list.files(out_dir, "\\.ya?ml$", recursive = TRUE, full.names = TRUE)
   outs <- list()
   where <- character()
   for (f in files) {
-    r <- tfl_read_output(f)
+    # (`skip_bad`: a file that cannot be read is left out with a warning,
+    # so that one report's broken file stops no other -- tfl_check_spec()
+    # and the AI's check say which file it is)
+    r <- if (isTRUE(skip_bad)) {
+      tryCatch(tfl_read_output(f), error = function(e) {
+        warning(sprintf("tfl_read_outputs(): %s is left out, it cannot be read: %s",
+                        basename(f), conditionMessage(e)), call. = FALSE)
+        NULL
+      })
+    } else tfl_read_output(f)
+    if (is.null(r)) next
     if (inherits(r, "tfl_output")) r <- list(r)
     for (o in r) {
       if (o$id %in% names(outs)) {
@@ -200,7 +212,7 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   # (its data stage: the analysis set, the parameter, the records kept),
   # then the template's call steps (the fit and what the call makes from it)
   composed <- !is.null(tpl) && .tpl_composes(own$data, tpl$x)
-  if (composed) own$data <- .tpl_compose_data(own$data, tpl$x)
+  if (composed) own$data <- .tpl_compose_data(own$data, tpl$x, output$id, tpl$name)
   below <- acc$content
   acc <- .layer_over(acc, own)
   if ((isTRUE(provenance) || !is.null(tpl)) && !inherits(acc$content, "tfl_r")) {
@@ -223,6 +235,8 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   output$data <- if (length(acc$data)) acc$data else output$data
   output$codelists <- acc$codelists
   output$content <- .any_label_default(acc$content, output, study)
+  # the study's rounding: the setup's option, so the program leaves it out
+  attr(output, "study_rounding") <- .study_rounding(study)
   output$page <- acc$page
   output <- .page_font_to_plan(output)
   attr(output, "resolved") <- TRUE
@@ -485,13 +499,17 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
 # page: rtf_tables's font_size_half_points (written by a converter before
 # 0.0.24.9124): a table's font size is its plan's -- moved to the content's
 # plan_style(font_size_half_points = ), the report's own plan_style key
-# winning; a content that is R code keeps it on the page
+# winning.  rtfreporter 0.9.0 has no rtf_tables(font_size_half_points = ),
+# so it leaves the page either way: a content that is R code says its own
+# (tfl_schema_check() names where)
 .page_font_to_plan <- function(output) {
   fs <- output$page$rtf_tables$font_size_half_points
-  if (is.null(fs) || inherits(output$content, "tfl_r") ||
-      !output$kind %in% c("table", "listing")) return(output)
+  if (is.null(fs)) return(output)
   output$page$rtf_tables$font_size_half_points <- NULL
   if (!length(output$page$rtf_tables)) output$page$rtf_tables <- NULL
+  if (inherits(output$content, "tfl_r") || !output$kind %in% c("table", "listing")) {
+    return(output)
+  }
   k <- which(vapply(output$content, function(it) identical(it$fn, "plan_style"), NA))
   if (length(k)) {
     a <- output$content[[k[1L]]]$args

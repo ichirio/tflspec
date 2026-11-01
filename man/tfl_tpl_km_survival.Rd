@@ -32,6 +32,8 @@ The figure template \code{km_survival}, layout \code{km}: a variant of \code{km}
    \code{linetype_by} \tab other \tab call \tab FALSE \tab  \tab TRUE: a line type an arm too (ggsurvfit(linetype_aes = TRUE)) \cr
    \code{legend} \tab usual \tab call \tab inside \tab  \tab the legend's place (theme(legend.position = )); NULL: inside \cr
    \code{legend_title} \tab other \tab call \tab  \tab  \tab the legend's title (labs(colour = )); NULL: none \cr
+   \code{legend_median} \tab usual \tab call \tab FALSE \tab  \tab TRUE: each arm's legend text has its median survival and 95\% CI, "Drug X: 12.3 (9.8, 15.1)" (from the fit; NE when not reached) \cr
+   \code{legend_median_digits} \tab other \tab call \tab 1 \tab  \tab the decimals of the median and its CI in the legend \cr
    \code{pvalue} \tab usual \tab call \tab TRUE \tab  \tab the log-rank p-value (add_pvalue()) \cr
    \code{pvalue_location} \tab other \tab call \tab annotation \tab  \tab where the p-value goes (add_pvalue(location = )) \cr
    \code{title} \tab other \tab call \tab  \tab  \tab the figure's title (labs(title = )) \cr

@@ -7,10 +7,13 @@
 \usage{
 tfl_read_study_spec(dir)
 
-tfl_read_outputs(dir)
+tfl_read_outputs(dir, skip_bad = FALSE)
 }
 \arguments{
 \item{dir}{The study folder (holds \code{study.yml} and \verb{spec/}).}
+
+\item{skip_bad}{\code{TRUE} to leave out a report file that cannot be read, with a
+warning naming it (\code{tfl_read_outputs()}); \code{FALSE} (default) to stop there.}
 }
 \value{
 \code{tfl_read_study_spec()}: a list of class \code{tfl_study_spec} --

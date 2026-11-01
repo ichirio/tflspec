@@ -222,8 +222,8 @@
 # the names the setup and tflspec give (a study's code does not assign them)
 .ard_helper_names <- c("set_levels", "tag_ard", "fmt_pvalue", "fmt_ard",
                        "keep_stats", "save_ard", "fmt_default", "tfl_stats",
-                       "complete_hierarchy", "relevel_ard",
-                       "ard_hierarchical_or_none")
+                       "complete_hierarchy", "relevel_ard", "drop_empty_groups",
+                       "ard_hierarchical_or_none", "order_arms")
 
 # the packages an ARD program attaches (its setup's library() calls), and
 # those R attaches itself: their functions without `pkg::`
@@ -519,9 +519,12 @@
   if (!length(take)) {
     return(sprintf("dplyr::semi_join(dplyr::select(%s, %s), by = %s)", pop, subj, .q(subj)))
   }
-  c(sprintf("dplyr::select(-dplyr::any_of(%s))", .lay(.c_str(take), width = Inf)),
-    sprintf("dplyr::inner_join(dplyr::select(%s, %s), by = %s)", pop,
-            paste(c(subj, take), collapse = ", "), .q(subj)))
+  # only the columns the subjects' data has: one it does not have (a
+  # stratum of the records themselves, AESEV) stays the records' own
+  tk <- .lay(.c_str(take), width = Inf)
+  c(sprintf("dplyr::select(-dplyr::any_of(intersect(%s, names(%s))))", tk, pop),
+    sprintf("dplyr::inner_join(dplyr::select(%s, %s, dplyr::any_of(%s)), by = %s)", pop,
+            subj, tk, .q(subj)))
 }
 
 .stat_arg <- function(method, stats) {
@@ -818,6 +821,10 @@
                                      nad$from[nad$from %in% x$datasets$dataset],
                                      x$populations$dataset[
     x$populations$population_id %in% pops])))
+  # the arms in their numeric order when the data has it (TRT01A by
+  # TRT01AN, ARM by ARMN: order_arms(), a study helper), as every dataset
+  # is read -- a model's reference arm, a comparison's pairs, a table's
+  # columns -- before the code lists, whose order wins
   code <- character()
   for (ds in used_ds) {
     r <- x$datasets[x$datasets$dataset == ds, ]
@@ -825,6 +832,7 @@
     d <- .split_bar(r$derive[1L])
     code <- c(code, .make_code(obj, .reader(r$path[1L]), c(
       if (length(d)) sprintf("dplyr::mutate(%s)", paste(d, collapse = ", ")),
+      "order_arms()",
       if (length(levels)) .levels_step)))
   }
   pop_code <- character()
@@ -866,12 +874,36 @@
   xo$analysis_data <- ad_o
   made <- .adata_lines(xo, ids, subj, levels,
                        avoid = c(.r_name(dl$used_ds), paste0("pop_", .r_name(dl$pops_id))))
+  # the analysis set under the name a report's own code reads it by --
+  # <dataset>_sub, as the ARD program names it (.ard_sub_names()) -- beside
+  # its pop_<id> (#520): a code step's `adsl_sub` is in reach in the
+  # program, the preview and the build check alike
+  subs <- .ard_data_part_subs(x, dl$pops_id)
   c(if (length(levels)) c(
       "# ---- code lists: each value in its order ----",
       .codelists_lines(levels), ""),
     "# ---- data ----", dl$data,
-    if (length(dl$pops)) c("", "# ---- populations ----", dl$pops),
+    if (length(dl$pops)) c("", "# ---- populations ----", dl$pops, subs),
     if (length(made)) c("", "# ---- analysis data ----", made))
+}
+
+# `adsl_sub <- pop_saf` for each analysis set the data part makes: one
+# set of a dataset is <dataset>_sub, a second <dataset>_sub2 (the ARD
+# program's numbering)
+.ard_data_part_subs <- function(x, pops_id) {
+  pops <- x$populations
+  if (!length(pops_id) || is.null(pops)) return(character())
+  k <- match(pops_id, pops$population_id)
+  k <- k[!is.na(k)]
+  if (!length(k)) return(character())
+  ds <- .r_name(pops$dataset[k])
+  nm <- paste0(ds, "_sub")
+  for (d in unique(ds)) {
+    at <- which(ds == d)
+    if (length(at) > 1L) nm[at[-1L]] <- paste0(d, "_sub", seq_along(at)[-1L] + 0L)
+  }
+  c("# the sets as a report's own code reads them (<dataset>_sub)",
+    sprintf("%s <- pop_%s", nm, .r_name(pops$population_id[k])))
 }
 
 # ---- the program ---------------------------------------------------------
@@ -1374,6 +1406,13 @@
     if (length(def) != 1L) next
     word <- paste0("(^|[^A-Za-z0-9._])", gsub(".", "\\.", p, fixed = TRUE), "($|[^A-Za-z0-9._])")
     if (any(grepl(word, code[-c(k, def)]))) next
+    # (a report's own code reads the set as <dataset>_sub -- the name the
+    # set's object gets -- so the set stays an object of its own)
+    ds <- tryCatch(all.vars(parse(text = code[def], keep.source = FALSE)[[1L]][[3L]])[1L],
+                   error = function(e) NA_character_)
+    if (is.na(ds)) next
+    sub_word <- paste0("(^|[^A-Za-z0-9._])", gsub(".", "\\.", ds, fixed = TRUE), "_sub[0-9]*($|[^A-Za-z0-9._])")
+    if (any(grepl(sub_word, code[-c(k, def)]))) next
     if (!piped) {
       code[k] <- paste0(d, substring(code[def], nchar(p) + 1L))
     } else {

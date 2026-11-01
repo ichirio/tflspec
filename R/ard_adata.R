@@ -171,6 +171,19 @@
     if (!is.na(p) && !p %in% pops) {
       add_d(i, "population_id", sprintf("%s: population %s is not in `populations`", tag(i), p))
     }
+    # each derive piece `name = expression`, as R reads it (a `|` of R's own
+    # inside parentheses is not a separator)
+    for (piece in .split_bar(ad$derive[i] %||% NA)) {
+      ok <- !is.null(tryCatch(parse(text = sprintf("list(%s)", piece), keep.source = FALSE),
+                              error = function(e) NULL)) &&
+        grepl("^[A-Za-z.][A-Za-z0-9._]* *=[^=]", piece)
+      if (!ok) {
+        add_d(i, "derive", sprintf(paste(
+          "%s: `derive` piece %s does not read as `name = expression`",
+          "(pieces are separated by `|` outside parentheses; R's own `|` goes inside them)"),
+          tag(i), sQuote(piece, FALSE)))
+      }
+    }
     s <- ad$subjects[i]
     if (!is.na(s)) {
       if (!s %in% above) {
@@ -188,7 +201,10 @@
       if (is.null(tryCatch(parse(text = code), error = function(e) NULL))) {
         add_d(i, "code", sprintf("%s: `code` does not read as R", tag(i)))
       }
-      also <- c("population_id", "subjects", "where", "add", "derive", "keep", "distinct")
+      # (`population_id` with `code`: the set's subjects are made first,
+      # in reach as <dataset>_sub; the other columns are for a data the
+      # columns make)
+      also <- c("subjects", "where", "add", "derive", "keep", "distinct")
       also <- also[vapply(also, function(cn) !is.na(ad[[cn]][i] %||% NA), NA)]
       if (length(also)) {
         add_d(i, "code", sprintf(paste(

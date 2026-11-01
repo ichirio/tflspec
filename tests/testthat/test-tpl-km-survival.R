@@ -53,7 +53,7 @@ test_that("in a study: km_survival, A (the data steps, the call) = B (the design
   txt <- paste(x$a, collapse = "\n")
   expect_match(txt, "semi_join(", fixed = TRUE)
   expect_match(txt, "filter(PARAMCD == \"PFS\")", fixed = TRUE)
-  expect_match(txt, "content <- tfl_tpl(adtte_pfs, \"km_survival\", time_unit = \"days\", by = TRT01A) +",
+  expect_match(txt, "content <- tflspec::tfl_tpl(adtte_pfs, \"km_survival\", time_unit = \"days\", by = TRT01A) +",
                fixed = TRUE)
   items <- paste(tfl_content_code(x$ro, template = "items"), collapse = "\n")
   expect_match(items, "add_risktable(", fixed = TRUE)
@@ -136,4 +136,19 @@ test_that("a figure template's body says the steps its call makes (call_steps)",
   on.exit(rm("km_nocall", envir = .tpl_registry))
   expect_error(tfl_template_expand("km_nocall", list(param = "PFS", by = "TRT01A", risk_table = FALSE)),
                "call_steps")
+})
+
+test_that("km_survival(legend_median = TRUE): each arm's median (95% CI) in the legend's text", {
+  km_skip()
+  saf <- adsl$USUBJID[adsl$SAFFL == "Y"]
+  df <- adtte[adtte$PARAMCD == "PFS" & adtte$USUBJID %in% saf, ]
+  p <- tfl_tpl(df, "km_survival", by = TRT01A, time_unit = "days", risk_table = FALSE,
+               legend_median = TRUE)
+  expect_s3_class(p, "ggplot")
+  lab <- p$scales$get_scales("colour")$labels
+  expect_identical(sort(names(lab)), sort(unique(as.character(df$TRT01A))))
+  expect_true(all(grepl("^.+: (NE|[0-9.]+) [(](NE|[0-9.]+), (NE|[0-9.]+)[)]$", lab)))
+  # without it, the legend's text is the arms' values
+  q <- tfl_tpl(df, "km_survival", by = TRT01A, time_unit = "days", risk_table = FALSE)
+  expect_s3_class(q$scales$get_scales("colour")$labels, "waiver")
 })

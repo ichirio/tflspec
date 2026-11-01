@@ -32,11 +32,32 @@ The figure template \code{km_cumulative}, layout \code{km}: a variant of \code{k
    \code{linetype_by} \tab other \tab call \tab FALSE \tab  \tab TRUE: a line type an arm too (ggsurvfit(linetype_aes = TRUE)) \cr
    \code{legend} \tab usual \tab call \tab bottom \tab  \tab the legend's place (theme(legend.position = )); NULL: inside \cr
    \code{legend_title} \tab other \tab call \tab  \tab  \tab the legend's title (labs(colour = )); NULL: none \cr
+   \code{legend_median} \tab usual \tab call \tab FALSE \tab  \tab TRUE: each arm's legend text has its median survival and 95\% CI, "Drug X: 12.3 (9.8, 15.1)" (from the fit; NE when not reached) \cr
+   \code{legend_median_digits} \tab other \tab call \tab 1 \tab  \tab the decimals of the median and its CI in the legend \cr
    \code{pvalue} \tab usual \tab call \tab TRUE \tab  \tab the log-rank p-value (add_pvalue()) \cr
    \code{pvalue_location} \tab other \tab call \tab annotation \tab  \tab where the p-value goes (add_pvalue(location = )) \cr
    \code{title} \tab other \tab call \tab  \tab  \tab the figure's title (labs(title = )) \cr
    \code{plot} \tab other \tab call \tab  \tab  \tab any other figure setting (plot:): dpi, facet_by, add ..., over the template's \cr
 }
+}
+
+\section{Aliases}{
+
+The same template by the names of other collections' items: each runs it as itself (\code{tfl_tpl(x, "stf_f01_km_disc", ...)}).\tabular{llll}{
+   Alias \tab Collection \tab Item \tab Title \cr
+   \code{stf_f01_km_disc} \tab FDA STF IG v2 \tab F01 \tab KM: time to treatment discontinuation \cr
+   \code{stf_f04_km_aesi} \tab FDA STF IG v2 \tab F04 \tab KM: time to onset of AE of interest \cr
+   \code{stf_f11_km_ole} \tab FDA STF IG v2 \tab F11 \tab KM: cumulative incidence with CI RC plus OLE \cr
+   \code{stf_f14_km_ae} \tab FDA STF IG v2 \tab F14 \tab KM: time to AE onset \cr
+}
+
+
+Sources:
+\itemize{
+\item FDA STF IG v2: U.S. Food and Drug Administration, CDER. Standard Safety Tables and Figures: Integrated Guide, Version 2.0, April 2025. \url{https://www.fda.gov/media/187065/download} (accessed 2026-10-28). A U.S. Government work; FDA's website content is in the public domain unless noted (https://www.fda.gov/about-fda/about-website/website-policies).
+}
+
+The aliases follow the numbering of these publications, and the titles are short descriptions of our own, not their text. The templates are tflspec's, not endorsed or recommended by FDA.
 }
 
 \section{Example}{

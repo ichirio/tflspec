@@ -126,3 +126,16 @@ test_that("tfl_ai_parse() checks its arguments", {
   expect_error(tfl_ai_parse(1, "toc"), "as text")
   expect_error(tfl_ai_parse("x", "listing"), "no task")
 })
+
+test_that("an answer's assumption mappings carry `value` into the rows", {
+  x <- list(list(output_id = "T-1", where = "ard.analyses", item = "arm",
+                 assumption = "Treatment variable: TRT01P (planned), because the set is FAS",
+                 value = "TRT01P", question = "Planned or actual?"),
+            list(output_id = "T-1", item = "arms", assumption = "the arms in the shell's order",
+                 value = list("Placebo", "Drug X")),
+            "a bare line")
+  r <- tflspec:::.ai_assumption_rows(x)
+  expect_identical(names(r), c("output_id", "where", "item", "assumption", "value", "question"))
+  expect_identical(r$value, c("TRT01P", "Placebo, Drug X", NA))
+  expect_identical(r$assumption[3L], "a bare line")
+})

@@ -44,6 +44,19 @@
 #' `...` (`plan_cells()`, `plan_digits()`, `plan_sort()` and ten more).
 #' The same file is what the GUI's help and the AI kit's schema read.
 #'
+#' A figure's functions: the file has a card for those a clinical figure
+#' uses (the geoms and the stats -- those with no geom of their own and
+#' those with one --, scales, coordinates, complete themes and `theme()`,
+#' elements, guides, positions); any other function of a plot `ggplot2`
+#' exports (`scale_shape_identity`, `guide_custom`) is its formals.  The
+#' arguments the functions of one kind share -- a layer's `stat`,
+#' `position`, `fun.data`, `pad`; a scale's `name`, `breaks`, `labels`,
+#' `sec.axis`; `theme()`'s settings, each its element -- are typed and
+#' labelled by `inst/fig/gg_args.csv` for every function that takes them.
+#' A geom given another `stat` (`geom_step(stat = "ecdf")`) is checked
+#' with that stat's parameters too, a stat given another `geom` with that
+#' geom's.
+#'
 #' The types, in a short notation: `string`, `integer`, `number`,
 #' `logical`, `enum[a|b]`, `column`, `stat`, `template`, `r` (`!r`),
 #' `formula` (`!r`, written `~ <text>`), `guard` (`!r`, a two-sided
@@ -52,6 +65,13 @@
 #' named vector in R), `map<K, V>` (a map that is a named list),
 #' `rows<f1, f2, ...>` (a sequence of maps that is a data frame) and `T|U`
 #' (either).
+#'
+#' An argument's entry also says how a form shows it: `label`, its short
+#' English name (a GUI translates it and writes "label (argument)"),
+#' `help`, a sentence or two a form's "?" shows (the `description`
+#' is what the AI kit and the reference read), and `main: true` for the
+#' arguments a form shows from the start (the others folded under the
+#' function's other arguments).  `colour` is a colour's text (`#RRGGBB`).
 #'
 #' @param fn A function's name (`"plan_cells"`), or `NULL` for all.
 #' @return The function's entry (`package`, `description`, `dots`, `args`;
@@ -88,8 +108,13 @@ tfl_schema <- function(fn = NULL) {
   ent <- ent %||% .schema_fig_entries()[[nm]] %||%
     # a ggplot2 layer function (geom_area, ggrepel::geom_text_repel): from
     # the installed package itself
-    (if (grepl("^(geom|stat)_", nm)) .schema_ggplot_entry(fn))
+    (if (grepl("^(geom|stat)_", nm)) .schema_ggplot_entry(fn)) %||%
+    # any other function of a plot ggplot2 exports (scale_colour_brewer,
+    # theme_bw, guide_axis): by its formals (R/spec_figure.R)
+    (if (!grepl("::", fn, fixed = TRUE) || startsWith(fn, "ggplot2::")) .schema_gg_entry(nm))
   if (is.null(ent)) return(NULL)
+  # a figure's function: the arguments its kind shares, typed
+  if (!is.null(ent$figure)) ent <- .schema_fig_common(ent, nm)
   .schema_add_formals(ent, nm)
 }
 
@@ -186,6 +211,16 @@ tfl_schema <- function(fn = NULL) {
 #' @seealso [tfl_schema()]
 #' @export
 tfl_schema_check <- function(item) {
+  .schema_check_item(item, part = TRUE)
+}
+
+.schema_check_plain <- function(item) .schema_check_item(item, part = FALSE)
+
+# the kinds (and the entries) plan_cells() takes besides a variable's name
+.cells_kinds <- c("categorical", "continuous", "hierarchical", "dichotomous", "missing",
+                  "attributes", "total_n", "default")
+
+.schema_check_item <- function(item, part = TRUE) {
   fn <- item$fn
   out <- data.frame(fn = character(), arg = character(), level = character(),
                     message = character(), stringsAsFactors = FALSE)
@@ -194,6 +229,21 @@ tfl_schema_check <- function(item) {
     return(do.call(rbind, c(list(out), lapply(item$items, tfl_schema_check))))
   }
   if (identical(fn, ".r")) return(out)
+  # a part (another plan's rows under the table's): its own items, each, and
+  # the part's arguments as any item's (its data and content have no type)
+  if (part && .is_part(item)) {
+    inner <- lapply(.part_items(item$args$content), tfl_schema_check)
+    top <- item
+    top$args$content <- NULL
+    if (!is.null(item$args$data) && !is.list(item$args$data)) {
+      out[1L, ] <- list(fn, "data", "error", "a part's data is a map (source: ard, or source: dataset with its dataset)")
+    }
+    if (!length(item$args$content)) {
+      out[nrow(out) + 1L, ] <- list(fn, "content", "error", "a part's content is its own table items")
+    }
+    top$args$data <- NULL
+    return(do.call(rbind, c(list(out, .schema_check_plain(top)), inner)))
+  }
   bad <- function(arg, msg, level = "error") {
     out[nrow(out) + 1L, ] <<- list(fn, arg, level, msg)
   }
@@ -202,6 +252,9 @@ tfl_schema_check <- function(item) {
     return(out)
   }
   ent <- tfl_schema(fn)
+  # a geom drawn by another stat (geom_step(stat = "ecdf")), a stat by
+  # another geom (stat_summary(geom = "errorbar")): the other's parameters
+  ent <- .schema_item_entry(ent, fn, item$args %||% list())
   # a figure's own ggplot2 layer: the layer function's aesthetics and
   # parameters (R/spec_figure.R)
   if (identical(fn, "geom") && identical(ent$figure, "layer")) .schema_check_geom(item, bad)
@@ -233,8 +286,16 @@ tfl_schema_check <- function(item) {
     } else if (!is.null(dots) && identical(dots$style, "positional") && identical(a, dots$key)) {
       msg <- .schema_fits(v, .schema_type(dots$type))
       if (!is.null(msg)) bad(a, msg)
+    } else if (!is.null(.schema_removed[[fn]][[a]])) {
+      bad(a, sprintf("%s(%s = ) was removed in rtfreporter 0.9.0: %s", fn, a,
+                     .schema_removed[[fn]][[a]]))
     } else if (!a %in% known) {
-      if (!is.null(dots) && identical(dots$style, "named")) {
+      if (identical(fn, "plan_cells") && !a %in% .cells_kinds && make.names(a) != a) {
+        # a row's label as an entry of its own ("Mean (SD)": [...]) names
+        # no variable: it goes under its kind (continuous: {"Mean (SD)": ...})
+        bad(a, sprintf(paste0("plan_cells: `%s` is a row's label, not a variable or a kind: ",
+                              "put the rows under their kind (continuous: {\"%s\": ...})"), a, a))
+      } else if (!is.null(dots) && identical(dots$style, "named")) {
         msg <- .schema_fits(v, .schema_type(dots$type))
         if (!is.null(msg)) bad(a, msg)
       } else if (!is.null(f) && "..." %in% names(f) && is.null(ent)) {
@@ -248,6 +309,17 @@ tfl_schema_check <- function(item) {
   }
   out
 }
+
+# Arguments rtfreporter removed, and where what they said goes now: the
+# check names the replacement (an error), and nothing else -- the GUI's
+# cards, the AI's table -- offers them
+.schema_removed <- list(
+  rtf_tables = list(
+    font_size_half_points = paste0(
+      "a table's font size is its plan's, plan_style(font_size_half_points = ) ",
+      "(a listing's, as_rtftables(font_size_half_points = )); in the sheets, the ",
+      "report sheet's table_font_size_half_points"),
+    read_attributes = "it is the table's own, rtftable(read_attributes = )"))
 
 # The one wording of a renamed argument: what the check, the GUI's
 # suggestion and the AI review all say.

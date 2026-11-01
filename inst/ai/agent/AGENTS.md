@@ -1,146 +1,289 @@
 # tflspec: this study's report specifications, by an agent
 
-You draft the specification (YAML) of this study's tables from the requests
-in `ai/requests/`. tflspec, an R package, turns it into the programs and the
-RTF files. Work through **every** request without stopping to ask; what you
-cannot settle, take the likeliest choice, say so, and go on -- the questions
-are gathered for the person in `ai/questions.md`.
+<!-- tflspec route: spec -->
 
-The paths below are from this folder: the one holding this file, `run.R`
-and `ai/`. If the workspace is a folder above it, use the paths from here.
+Your one job: write each report's **specification file** -- the skeleton of
+the report, as YAML -- into `ai/spec/outputs/<id>.yml`, one file a report.
+Those are drafts: the person checks them in tflplanner ("Check"), finishes
+them in the builder and adopts them into `spec/outputs/`; you do not.
 
-## Round 1: every request
+What you do not know and cannot settle from the files you read, you **ask
+the person in the chat**, in {{language}}, before you write -- and stop
+until they answer.  Their answers go into `ai/decisions.md`, which you read
+first and follow for every report after.
 
-1. Read `ai/decisions.md` first: it overrides your own choices. Then
-   `ai/requests/index.md`: the requests, in order.
-2. For each request `ai/requests/<request>.md`, in that order:
-   1. Read it, and write the answer it asks for: one ```` ```yaml ```` block
-      (the header, `reports`, `outputs`, `assumptions`). A request names the files it
-      shares with the others -- `ai/instructions-table.md` or
-      `ai/instructions-figure.md` (the instructions and the schema),
-      `ai/adam_summary.md`, `spec/data.yml`, `spec/defaults.yml` -- read each
-      once and follow it for every request.
-   2. Save the whole answer as `ai/answers/<request>.md` (UTF-8).
-   3. Run `Rscript run.R <request>` in a terminal (from this folder, or
-      `Rscript <this folder>/run.R <request>`: it finds its folder). It
-      reads every answer, checks it, writes `spec/outputs/<id>.yml`, builds
-      the ARD and the RTF (`output/tfl/<id>.rtf`, `ai/output/tfl/` in a study
-      with `ai/spec/outputs/`) of that request's
-      reports and writes `ai/status.md`. (When the study has
-      `ai/spec/outputs/`, your report files go there and their RTF under
-      `ai/output/`: drafts, which the person adopts into `spec/outputs/`.
-      Never write `spec/outputs/` yourself.) `Rscript run.R` alone builds every
-      report that changed since the last run.
-   4. Read `ai/status.md`. When it gives your request a repair
-      (`ai/repairs/<request>.md`) or a build problem
-      (`ai/repairs/<request>-build.md`), fix the answer as it
-      says, save the whole answer over `ai/answers/<request>.md`, and run
-      again. Three tries at most; then leave it, add a question to
-      `ai/questions.md` saying what is wrong, and go on.
-3. The shells: use the text each request gives, read from the TOC / SHELL
-   workbook {{workbook}}. Each request also says where its reports' shells
-   are in the workbook file -- the file, the sheet, the cells, the TOC row.
-   When you can open the workbook, use it to check what the text leaves
-   unclear -- above all a shell's shape: several parts on one sheet, a
-   later part that writes only what differs, merged cells, a text that
-   looks cut. Read the place the request names with R:
-   `Rscript -e "cat(format(tflspec::tfl_ai_read_shell('<file>', outputs = '<id>')))"`
-   or `readxl::read_excel('<file>', sheet = '<sheet>', range = '<cells>')`.
-   When you cannot open it (outside your workspace, no permission), decide
-   from the request alone and write what you took as an assumption. When
-   the place looks wrong (another report's shell, an empty range), ask it
-   in `ai/questions.md`.
-   The layout too: when you can open the workbook, look at the shell's
-   table -- its columns' widths, the merged header cells, the underlines
-   (a cell's bottom border), bold, the alignment -- and write them: the
-   widths as `plan_columns: {widths: {<stub column>: <n>, .values: <n>}}`
-   in the shell's proportions (a listing: each `listing_col`'s `width`, in
-   characters), the header's spans, underlines, bold and alignment with
-   the items that say them. Read them with R (`openxlsx2::wb_load()`, the
-   sheet's column widths and cell styles). When you cannot open it, or the
-   shell does not make them clear, leave them out: R writes the usual
-   widths (the stub wider, the value columns equal) when it reads the
-   answer, and no borders or bold.
-4. The variables and their values are in `ai/adam_summary.md`; work from
-   it first. The ADaM is in {{adam}} (`spec/data.yml` names each file,
-   `path:`). When you can open it, you may read the ADaM itself when a
-   question about the data is not settled by the summary -- a value as the
-   data write it, whether a variable is there, an arm's levels. Read it
-   with R, never by opening a `.xpt` / `.sas7bdat` in the editor, and print
-   only what settles the question -- a variable's values, labels, counts
-   -- not subjects' records in bulk:
-   `Rscript -e "d <- readRDS('<path>/adae.rds'); print(table(d$ACNDR, useNA = 'ifany'))"`
-   (`haven::read_xpt()` for a `.xpt`, as `spec/data.yml`'s `path:` says).
-   When you cannot open it, decide from the summary and the request.
-5. A question you cannot settle from the request, its shell, the summary,
-   the data or `ai/decisions.md`: **do not stop**. Take the likeliest
-   choice and write it as an assumption with its `question` (the request's answer format says
-   how). Not so for the analysis set and, for a dataset of parameters
-   (PARAMCD), the parameter: they define the report, and the shell says
-   them. When you cannot read them, never take a likely one: ask the
-   question, and leave the report with the error `run.R` gives it (no
-   repair by guessing). `run.R` gathers the questions into `ai/questions.md`, a question
-   several reports ask once, with the reports listed. A question about the
-   work rather than a report (a shell you cannot find, a file missing): add
-   it to `ai/questions.md` yourself, in the same form (`## Q<n>. ...`,
-   `- Reports:`, `- Where:`, `- The agent took, for now:`, `- Status: open`,
-   `- Answer:`).
-6. When every request is done (`ok`, `warning`, or left after three tries),
-   stop and tell the person: how many reports the answers list (`ai/manifest.csv`,
-   to check against the TOC), how many have an RTF, which do not and
-   why, and that `ai/questions.md` waits for their answers.
+A draft must be a valid specification: the YAML well formed, every key
+and value as the schema in the instructions says.  You cannot run the
+check yourself, so write exactly the forms the instructions and their
+examples show, and nothing else.  Quote every free-text value -- `label`, titles, footnotes, an assumption's text -- in double quotes.  Always quote a value that holds `: ` or `#`, or starts with `[ { * & ! | > ' " % @`, or is yes / no / on / off or a number you mean as text.
+A draft that lacks something (an
+analysis set you were not told) is fine -- the person's check says what
+is missing; a draft that breaks the form is not.
 
-## Round 2: the person's answers and corrections
+This folder -- the study's `ai/` -- is your workspace: every path below
+is from it, and every file you read or write is in it.  Never open a
+path outside it (`../`).
 
-When the person says the answers and corrections are written:
+## What you read
 
-1. Read `ai/corrections.md` (when there is none, read `ai/questions.md` for
-   the questions answered, as below). For each section with
-   `- Status: open`:
-   - `add <id>`: write the report from its sheet and TOC item, as round 1
-     does, and list it in the request's answer (`reports:` and `outputs`).
-   - `drop <id>`: take the report out of the answer (both lists); do not
-     write it.
-   - `change <id>: ...`: change what it says in the report (a new id:
-     rename the report and every mention of it).
-   - `note <id>`: change the report as the note says.
-   - `Q<n> (answered)`: add one line to `ai/decisions.md`,
-     `- Q<n> (<the reports>): <the decision, in a sentence>`; set the
-     question's `- Status: open` to `- Status: decided` in
-     `ai/questions.md`; then change every report it names.
-   - `A<n>. assumption of <id>: <item>`: the person says your assumption
-     (`- Was:`) is wrong; change the report so it does what `- Correct:`
-     says.
-   - `K<n>. assumption of every report: <item>`: the same, for every
-     report in `- Reports:`.
-2. Save each changed answer whole over `ai/answers/<request>.md` and run
-   `Rscript run.R <request>`; repair as in round 1. For an `A<n>` / `K<n>`
-   section, then, in `spec/_assumptions.yml`, change the `assumption` of
-   that item (`id: A<n>`; for a `K<n>`, each item with `kind: K<n>` of the
-   reports listed) to the correct content and add `status: fixed`. Then
-   set the section's `- Status: open` to `- Status: done`. A section you
-   cannot do: leave it `- Status: open` and add a line `- Agent:` saying
-   why. A section `- Status: withdrawn`: the person took it back; leave it.
-3. Tell the person what changed, the sections left and why, the questions
-   still open, and the count of the reports against their list
-   (`ai/status.md`, "Expected outputs").
+Only these:
+
+- this file, once;
+- `ai/decisions.md` first: the decisions the person made; they override
+  your own choices (see *Decisions* below);
+- `ai/requests/index.md`: the requests in the order you do them;
+- the request you are working on, `ai/requests/<request>.md`, and the
+  files it names: `ai/instructions-table.md` or
+  `ai/instructions-figure.md` (the instructions, the schema, what a draft
+  holds), `ai/templates.md`, `ai/adam_summary.md`, `spec/data.yml`,
+  `spec/defaults.yml` -- read each once and follow it for every request.{{reads}}
+
+Do not look for other files: do not list or search the folders, and do not
+open a file not listed here (programs, other studies, anything else). The
+request has what you need: the shell's text and the variables
+(`ai/adam_summary.md`).
+
+## The requests: ask, then write the skeletons
+
+Do every request of `ai/requests/index.md`, top to bottom.  A request
+whose reports all have their draft (`ai/spec/outputs/<id>.yml`) is done:
+skip it.  For each of the others, in order:
+
+1. Read `ai/decisions.md`, then the request.  The request lists the
+   decisions that apply to its reports (*Decisions that apply*); apply
+   them without asking (see *Decisions* for when to ask instead).
+2. **Find what defines each report and is not settled** by the request,
+   its shell text, `ai/adam_summary.md`, `spec/data.yml` or a decision:
+   the analysis set (population); for a dataset of parameters (PARAMCD:
+   ADLB, ADVS ...) the parameter; the treatment variable when neither the
+   TOC, the shell nor a decision says it; the denominator of a percent;
+   what is counted (subjects or events); missing values; a subgroup's or
+   a filter's condition; what a code stands for when the summary does not
+   show it.  These change the numbers or their meaning.  Never take a
+   likely one.  When a footnote, the SAP or a document the person gave
+   **defines a derived timepoint or population** ("End of Treatment is
+   the last on-treatment assessment", "the per-protocol set excludes
+   ..."), apply that rule (an analysis data with `code`, an assumption
+   that cites it) or ask; do not take a visit name or a flag from the
+   data in its place.
+   **What to ask, and what not to ask:**
+   - Do not ask what the documents or the data settle: the shell, the
+     TOC, the SAP, `ai/adam_summary.md`, `spec/data.yml` or a decision.
+     Decide, and write the source in the assumption (`from:`).
+   - Do not ask about a case the data shows cannot happen: what to show
+     when there are 0 events while the summary shows events; how to
+     treat missing values when the summary says `[missing: none]` for
+     the variable.  Write the usual default and list it under
+     *to confirm* (step 6) -- no question.
+   - Ask only when the sources disagree, or when a choice changes a
+     report's numbers and nothing -- no document, no data, no decision
+     -- defines it.
+   **Your default choice** (the one you take when the person says
+   "default"):
+   - never a variable or a value that `ai/adam_summary.md` does not list
+     (no `BMIBL` when ADSL has no BMIBL): then the default is to leave the
+     row out, and the question says the variable is not in the data;
+   - the shell's layout (its columns, rows and items) over the SAP's when
+     the two differ: the shell is the agreed layout, the SAP is amended
+     later;
+   - a specific programming note or derivation rule over a generic
+     footnote (footnotes are often stale), and the question says so.
+3. {{ask_when}} **Ask them in the chat**, in {{language}}, numbered,
+   the message starting with the progress tag (*Progress*, below):
+   `[n/N] <request> (<report ids>)`.
+   **Collect every question first** -- every item of step 2, for every
+   report of the request -- and ask them together in **one message**;
+   never one at a time, waiting for an answer between them.  A follow-up
+   question only when an answer raises a new point.  Each
+   question says **which report it is about -- its id and its title --**
+   and the item, the choices you see, and the one you would take if the
+   person says "default".  **End every question with an example answer**,
+   one line, `例: ...` in Japanese (`e.g. ...` in English): the answer as
+   the programmer would type it, holding every piece the draft needs --
+   the title's label, the condition, the variable, which source is wrong
+   -- so that the person sees what to answer, and can paste it as it is
+   or edit it.  The example follows your default choice; for a question
+   of sources that disagree, give one `例:` line for each choice (`(a)`,
+   `(b)` ...), so that the person picks one, not your default by
+   pasting.  A choice alone ("SAFFL") is not an answer.
+   - a population conflict:
+     `例: シェルのとおり Safety Analysis Set（SAFFL = 'Y'）、実治療 TRT01A。TOC の Full Analysis Set は誤り。`
+   - a denominator:
+     `例: 分母は Total 行（post-baseline 値が 1 つ以上ある被験者）。食い違う脚注は削除。`
+   A question that holds for every report of the
+   request says so.  Then **stop and wait**: do not write the report until
+   the person answers.  There is no limit to the questions; ask what you
+   need, each once.  When an answer does not settle the item, ask again,
+   saying what was unclear: **three times at most** for one item; then
+   take the likeliest choice and mark it *to confirm* (step 6).
+4. **Record the answers**: for each one, add one line to
+   `ai/decisions.md` (the form is at the top of that file: its id, scope,
+   topic, the decision, where it came from).  Change nothing already
+   there.
+5. **Write the skeleton** of each report as `ai/spec/outputs/<id>.yml`
+   (UTF-8), the forms of the instructions exactly:
+   - `id`, `kind`, `label`, `population`, `extends: [defaults]`;
+   - `data`, and `ard` (the analysis data and the analyses: method, by,
+     variables, the denominator);
+   - the content: a template with its arguments when one fits
+     (`template: {name: ..., args: {...}}`, only the arguments that differ
+     from the default; see *Templates first*), else the items that make
+     the rows -- `table_plan` (cols, rows, label) and `plan_cells`;
+   - the **digits** when the shell shows them (`xx.x`, `xx.xx`): in the
+     cell templates (`{mean:.1f}`) or `plan_digits`; when it does not,
+     write none (the study's default applies; do not ask);
+   - the **cell form and the N** when the shell's differ from the study's
+     (`study_facts.md`): `xx (xx.x%)` is `"{n} ({p:.1f%}%)"` (`.1f%` prints
+     no `%` sign), `xx (xx.x)` is `"{n} ({p:.1f%})"` -- a template's
+     `count_cell` or `plan_cells`; `(N=xx)` under the arm is one
+     `plan_col_header` line, `{col}\n(N={n})` (the instructions say how);
+   - {{titles_rule}}
+   - the **footnotes**, from the shell: {{footnotes_at}}
+   Nothing else of the look: no column widths, no other header rows, no page
+   settings, no blank rows, no borders, no fonts.  The study's defaults and
+   the person's builder do those.
+6. In the same file, under a top-level `ai:` key, write:
+   - `assumptions`: one item for each choice that changes the numbers or
+     their meaning that you took from a decision (`from: D<n>`) or, after
+     three rounds, on your own: `where`, `item`, `assumption` (one
+     sentence: what you decided and how), `value`;
+   - `confirm`: what you could not settle and the person should decide in
+     the builder: `where`, `item`, `why` (one sentence).
+   ```yaml
+   ai:
+     assumptions:
+       - {where: ard.analyses, item: where, assumption: "treatment-emergent is TRTEMFL == \"Y\"", value: "TRTEMFL == \"Y\"", from: D3}
+     confirm:
+       - {where: content, item: plan_cells, why: "the shell shows n (%) but not whether the % is of the arm or of all"}
+   ```
+   How the output looks is never an assumption and never a question:
+   decide nothing about it, write nothing of it.
+7. **Read the draft once more before you save it**, against the list
+   *Before you save a draft* at the end of the instructions
+   (`ai/instructions-table.md`): the keys, the indentation, the quotes,
+   the forms of `data` and `ard`.  A draft the check refuses comes back
+   to you with its problems; one you checked yourself seldom does.
+8. Go on to the next request.  A question about the work rather than a
+   report (a file the request names is missing, the request is unclear):
+   ask it in the chat too, and wait for the answer.
+
+When every request is done, **review the drafts** (*Before you stop*,
+below), then **stop** and tell the person: the report files written
+(their ids), the decisions added, what is marked to confirm, and what
+the review changed.
+
+## Progress
+
+Say where you are, one line in {{language}}, so that the person sees how
+far you have got:
+
+- at the start of each request: `[3/6] T-LB-SUM（14.3.4.1）を開始。残り 3 件`
+  (`[3/6] Starting T-LB-SUM (14.3.4.1); 3 left`);
+- when a request's drafts are written: `[3/6] 完了: 14.3.4.1。次: T-LB-SHIFT`
+  (`[3/6] Done: 14.3.4.1; next: T-LB-SHIFT`) -- and **go straight on to
+  the next request**: do not wait for a "continue".  You stop only to
+  ask questions (then wait for the answers), or when every request is
+  done;
+- a question message starts with the same tag (step 3).
+
+`n` is the request's number of `N` in `ai/requests/index.md`.  Keep the
+same in `ai/progress.md` (write it over each time): the current request,
+the requests done, the requests left.  (`ai/status.md` is `run.R`'s: do
+not write it.)
+
+## Before you stop
+
+Review each draft against this list and fix what fails:
+
+- every row, column, statistic and footnote of the shell is in the draft
+  or marked to confirm;
+- the analysis set, the treatment variable, the denominator and the
+  filters agree with the shell, the TOC and the documents (or the
+  disagreement was asked about or is marked);
+- the categories' order and labels agree with the shell and the code
+  lists;
+- the digits follow the shell, or the documents' rule;
+- a derived timepoint or population a footnote or a document defines is
+  made by its rule, not taken from the data;
+- nothing of the look is written;
+- every free-text value (`label`, titles, footnotes, assumption text) is
+  in double quotes -- always one with `: ` or `#` in it;
+- a template with its own data (`km_survival`, `km_cumulative`) has
+  `data.steps` of `read`, the analysis set and `param`, and none of the
+  template's own steps (`survfit`, `time_unit`);
+- the forms are the instructions' (*Before you save a draft*).
+
+Then tell the person what the review changed, draft by draft (or that it
+changed nothing).
+
+## Stopping and going on
+
+The person may stop you at any time -- "止まって", "stop", "pause", or a
+question of their own.  Then **finish the step in hand cleanly**: save the
+draft you are writing, write `ai/progress.md` (what is done, what is
+next), and stop, saying where you stopped (`[3/6] 停止: 14.3.4.1 まで。次:
+T-LB-SHIFT` / `[3/6] Stopped after 14.3.4.1; next: T-LB-SHIFT`).  Later
+the person says **"続けて" / "continue"**: go on from `ai/progress.md` --
+the first request of `ai/requests/index.md` that has a report with no
+draft, or whose draft the person says the check refused -- the decisions
+in `ai/decisions.md` hold as before.  Never write a draft that is there
+again unless the person asks for it (the check's note, a correction in
+the chat).
+
+At most {{max_reads}} times for a request, open a file or run a command
+beyond the request and the files it names.  When you reach it, ask or
+mark to confirm, and go on.
+
+If something does not work -- a file cannot be saved, a request cannot be
+read -- try once more.  If it fails again, say so in the chat and stop.
+
+## When the check refuses a draft
+
+The person's check reads your drafts.  One that breaks the form (a key the
+schema does not have, a value of the wrong type, YAML that does not parse)
+is refused and stays a draft; the person pastes the check's note into the
+chat.  Fix the file as the note says -- the form only, the content as it
+was -- save it over `ai/spec/outputs/<id>.yml`, and tell the person.
+
+## Decisions
+
+`ai/decisions.md` holds one decision a line:
+
+```
+- D<n> [<scope>] <topic>: <the decision> (<source>)
+```
+
+`scope` is `all` (every report), a dataset (`ADAE`), a TOC section, or
+report ids separated by commas; `topic` names the item decided
+(`population.default`, `treatment_var.SAF`, `denominator`, `missing`,
+`subjects_or_events`, `codes.RACE`, `teae.where` ...); `source` is where
+it came from (`chat, T-14-3-1`, or the person's own line).  A line of the
+person's own without `[scope]` is `all`.
+
+Before asking, look for the topic there -- and be **careful**: apply a
+decision without asking only when you are sure it holds for this report
+(its scope is `all`, or the report's dataset{{carry_section}}, and nothing
+in the shell says otherwise); write an assumption line with `from: D<n>`.
+Whenever you are not sure -- a decision made for other reports, a shell
+that reads differently, two decisions of one topic that disagree --
+**ask**: "T-14-1-1 took X for this (D2); the same here?", with "yes" as
+what you would take.  When the person says yes, widen the decision's
+scope (add the report's id, its dataset or its section) instead of adding
+a line.
 
 ## Never
 
-- Do not open a data file (`.xpt`, `.sas7bdat`) in the editor, and do not
-  print subjects' records in bulk: read the ADaM with R, only for a
-  question the summary does not settle (round 1, step 4).
-- Do not change the TOC / SHELL workbook or the ADaM: read them only to
-  check (round 1, steps 3 and 4).
-- Do not change `study.yml`, `spec/data.yml`, `spec/defaults.yml`, `run.R`,
-  `AGENTS.md` or `.github/copilot-instructions.md`. When one seems wrong,
-  ask in `ai/questions.md`.
-- Write only `ai/answers/`, `ai/questions.md`, `ai/decisions.md`, the
-  `- Status:` / `- Agent:` lines of `ai/corrections.md` (add lines; change
-  nothing a person wrote) and, for an `A<n>` / `K<n>` section of it, the
-  `assumption` and `status` of its items in `spec/_assumptions.yml`. Never
-  write `ai/expected_outputs.csv` (the person's list) or
-  `ai/assumption_answers.csv` (the person's answers). Fix a report through its answer,
-  not by editing `spec/outputs/`.
-- Do not install packages or go online: `run.R` uses the R and the packages
-  installed.
+- Do not install packages or go online. Do not run `run.R`, and do not
+  write programs, the study's own specification (outside this folder) or
+  RTF files: the person's check does that. {{run_r}}
+- Do not open a file not listed under "What you read", and do not search
+  the folders.
+- Do not change the TOC / SHELL workbook, the ADaM, `study.yml`,
+  `spec/data.yml`, `spec/defaults.yml`, `run.R`, `AGENTS.md` or
+  `.github/copilot-instructions.md`.
+- Write only `ai/spec/outputs/`, `ai/decisions.md` (add lines, change
+  nothing a person wrote) and `ai/progress.md`.
+- Do not guess what defines a report: ask -- but do not ask what the
+  documents or the data settle, nor about a case the data rules out.
+  Do not write the look.
+- Do not try the same thing more than twice: say so in the chat and stop.

@@ -6,6 +6,7 @@ pc_args <- list(population = "SAF", data = "ADLB", params = c("ALT", "AST"),
 
 # the ARD as the study's program makes it (its analysis data's steps)
 pc_ard <- function(x) {
+  eval(parse(text = tfl_helpers_code()))  # reorder_by()
   adsl_saf <- adsl[adsl$SAFFL == "Y", ]
   d <- x$ard$analysis_data
   e <- function(s) eval(parse(text = s))
@@ -37,7 +38,7 @@ test_that("expanded: the records kept, the visits in their order, the change's o
   expect_identical(vapply(d, `[[`, "", "id"), c("adsl_saf", "adlb_saf", "adlb_saf_chg"))
   expect_match(d[[2L]]$where, "PARAMCD %in% c(\"ALT\", \"AST\")", fixed = TRUE)
   expect_match(d[[2L]]$where, "AVISIT %in% c(\"BASELINE\"", fixed = TRUE)
-  expect_identical(as.character(d[[2L]]$derive), "AVISIT = reorder(factor(AVISIT), AVISITN)")
+  expect_identical(as.character(d[[2L]]$derive), "AVISIT = reorder_by(AVISIT, AVISITN)")
   expect_identical(as.character(d[[3L]]$where), "!is.na(CHG)")
   expect_identical(as.character(d[[3L]]$derive), "AVISIT = droplevels(AVISIT)")
   an <- x$ard$analyses
@@ -46,7 +47,7 @@ test_that("expanded: the records kept, the visits in their order, the change's o
   # no where of its own unless given: ANL01FL is not every study's
   y <- tfl_template_expand("param_change", list(population = "SAF", data = "ADVS"))
   expect_null(y$ard$analysis_data[[2L]]$where)
-  expect_match(y$ard$analysis_data[[2L]]$derive, "PARAM = reorder(factor(PARAM), PARAMN)",
+  expect_match(y$ard$analysis_data[[2L]]$derive, "PARAM = reorder_by(PARAM, PARAMN)",
                fixed = TRUE)
   z <- tfl_template_expand("param_change", list(population = "SAF", data = "ADVS",
                                                 where = "ANL01FL == \"Y\"", visit_order = NULL))
@@ -136,6 +137,19 @@ test_that("in a study: the ARD program runs and the table is made from it", {
   t <- pc_tab(suppressMessages(tfl_content_run(tfl_resolve_output(tfl_read_output(f), st), ard)))
   expect_true(nrow(t) > 0L)
   expect_identical(unique(t$group2), pc_args$visits)
+  # a code list on the visits puts the baseline level back on the change's
+  # records: its change cells stay empty all the same (no "0" for n)
+  o <- tfl_read_output(f)
+  o$codelists <- list(AVISIT = lapply(pc_args$visits, function(v) list(value = v, label = tools::toTitleCase(tolower(v)))))
+  tfl_write_output(o, f)
+  st <- tfl_read_study_spec(d)
+  code <- paste(tfl_ard_code(st, output_id = "T-9-3", save = FALSE), collapse = "\n")
+  expect_match(code, "drop_empty_groups()", fixed = TRUE)
+  ard <- suppressMessages(tfl_build_ard(st, output_id = "T-9-3", dir = d, save = FALSE))
+  t <- pc_tab(suppressMessages(tfl_content_run(tfl_resolve_output(tfl_read_output(f), st), ard)))
+  chg <- grep("Change", names(t), value = TRUE)
+  expect_true(length(chg) > 0L)
+  expect_true(all(is.na(unlist(t[t$group2 == "Baseline", chg]))))
 })
 
 test_that("vs_change's table (removed) from param_change: a baseline block, its labels and cells", {
@@ -178,6 +192,8 @@ test_that("vs_change's table (removed) from param_change: a baseline block, its 
                  "39", "135.7 (15.76)", "2.52", "130.6, 140.8", "138.0", "106, 168",
                  "39", "4.9 (9.71)", "1.56", "1.8, 8.1", "6.0", "-17, 30"),
     check.names = FALSE, stringsAsFactors = FALSE)
+  # (the arms in their N order now: Drug X, then Control)
+  v <- v[c("group", "label", "Drug X", "Control")]
   # the same rows and cells; param_change's blocks of the parameter and the
   # visit (one each here) are what vs_change left to the title
   expect_identical(unique(p$group1), "Systolic Blood Pressure (mmHg)")
@@ -185,4 +201,34 @@ test_that("vs_change's table (removed) from param_change: a baseline block, its 
   p <- data.frame(group = p$group3, p[setdiff(names(p), c("group1", "group2", "group3"))],
                   check.names = FALSE, stringsAsFactors = FALSE)
   expect_identical(p, v)
+})
+
+test_that("cells as items ({label, template}); a page a parameter, named in the titles", {
+  x <- tfl_template_expand("param_change", c(pc_args, list(cells = list(
+    list(label = "n", template = "{N:.0f}"), list(label = "Mean", template = "{mean:.1f}")))))
+  cl <- Filter(function(i) i$fn == "plan_cells", x$content)[[1L]]$args$continuous
+  expect_identical(cl, list(n = "{N:.0f}", Mean = "{mean:.1f}"))
+  expect_error(tfl_template_expand("param_change", c(pc_args, list(cells = list(
+    list(name = "n", cell = "{N}"))))), "label: , template:")
+  pg <- Filter(function(i) i$fn == "plan_paginate_rows", x$content)[[1L]]$args
+  expect_identical(pg$page_by, "group1")
+  expect_identical(pg$heading, "Parameter: {value}")
+  y <- tfl_template_expand("param_change", c(pc_args, list(param_page = FALSE)))
+  pg <- Filter(function(i) i$fn == "plan_paginate_rows", y$content)[[1L]]$args
+  expect_null(pg$page_by)
+  expect_false("plan_hide" %in% vapply(y$content, `[[`, "", "fn"))
+})
+
+test_that("a page a parameter: the parameter's name in the titles, once a page", {
+  pc_skip()
+  x <- tfl_template_expand("param_change", pc_args)
+  p <- do.call(tpl_param_change, c(list(pc_ard(x)), pc_args))
+  f <- tempfile(fileext = ".rtf")
+  on.exit(unlink(f))
+  suppressWarnings(suppressMessages(rtfreporter::generate_rtfreport(
+    rtfreporter::rtf_tables(rtfreporter::rtf_document(), rtfreporter::plan_apply(p)), f)))
+  r <- readLines(f)
+  expect_length(grep("Parameter: Alanine Aminotransferase (U/L)", r, fixed = TRUE), 1L)
+  expect_length(grep("Parameter: Aspartate Aminotransferase (U/L)", r, fixed = TRUE), 1L)
+  expect_length(grep("Alanine Aminotransferase (U/L)", r, fixed = TRUE), 1L)
 })

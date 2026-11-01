@@ -28,7 +28,8 @@
       - The block starts with the header `tflspec_ai: {task: toc, version: 1}`.
       - Then `toc`: the reports, one mapping a row, with the columns of the schema.
       - Return the whole TOC: every report, the ones already in it included, not only what you added or changed.
-      - End with `assumptions`: one short line for each guess you made and each conflict between documents, or an empty list when there are none. Write the assumptions in the language of the user's message.
+      - End with `assumptions`: one item for each guess that changes the numbers or their meaning, and each conflict between documents -- `assumption`: one sentence saying what you decided and how (not a label: "Treatment variable for the columns: TRT01A (actual), because the analysis set is the safety set"); `value`: the value you used (the variable, the flag, the list) -- or an empty list when there are none. Write the assumptions in the language of the user's message.
+      - What is an assumption: a choice that changes the results or how they are read -- the analysis set, the treatment variable (TRT01A / TRT01P), a denominator, missing values, the unit counted (subjects or events), a stratum or subgroup's condition, a code list.  Not an assumption: how the output looks -- the title's lines, the columns' order and widths, indentation, the default decimals, blank rows, where a footnote sits, the order of the statistics: decide those by the company or study standard and rtfreporter's defaults, write them, and say nothing.  A condition that defines the report (the analysis set, the parameter) and is missing is neither: ask it as a question and leave it out.
       
       Write the block in YAML:
       
@@ -127,7 +128,8 @@
       - The block starts with the header `"tflspec_ai": {"task":"toc","version":1}`.
       - Then `toc`: the reports, one mapping a row, with the columns of the schema.
       - Return the whole TOC: every report, the ones already in it included, not only what you added or changed.
-      - End with `assumptions`: one short line for each guess you made and each conflict between documents, or an empty list when there are none. Write the assumptions in the language of the user's message.
+      - End with `assumptions`: one item for each guess that changes the numbers or their meaning, and each conflict between documents -- `assumption`: one sentence saying what you decided and how (not a label: "Treatment variable for the columns: TRT01A (actual), because the analysis set is the safety set"); `value`: the value you used (the variable, the flag, the list) -- or an empty list when there are none. Write the assumptions in the language of the user's message.
+      - What is an assumption: a choice that changes the results or how they are read -- the analysis set, the treatment variable (TRT01A / TRT01P), a denominator, missing values, the unit counted (subjects or events), a stratum or subgroup's condition, a code list.  Not an assumption: how the output looks -- the title's lines, the columns' order and widths, indentation, the default decimals, blank rows, where a footnote sits, the order of the statistics: decide those by the company or study standard and rtfreporter's defaults, write them, and say nothing.  A condition that defines the report (the analysis set, the parameter) and is missing is neither: ask it as a question and leave it out.
       
       Write the block in JSON: one object holding the header, the content and `assumptions`. Write text as strings, numbers and `true` / `false` as they are, a list as an array, and nothing JSON does not allow (no comments, no trailing commas).
       

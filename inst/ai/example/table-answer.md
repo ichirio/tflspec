@@ -69,6 +69,6 @@ outputs:
       footnotes:
         "1": {left: A subject is counted once in a system organ class and once in a preferred term.}
 assumptions:
-  - {output_id: T-14-1-1, where: ard.analyses, item: arm, assumption: "the columns are the actual treatment, TRT01A", question: "Actual (TRT01A) or planned (TRT01P) treatment?"}
+  - {output_id: T-14-1-1, where: ard.analyses, item: arm, assumption: "Treatment variable for the columns: TRT01A (actual), because the analysis set is the safety set (SAF)", value: TRT01A, question: "Actual (TRT01A) or planned (TRT01P) treatment?"}
   - {output_id: T-14-3-1, where: ard.analyses, item: where, assumption: "treatment-emergent is TRTEMFL == \"Y\"", question: "Is TRTEMFL the treatment-emergent flag?"}
 ```

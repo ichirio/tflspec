@@ -45,8 +45,11 @@ test_that("the analysis data is made once, in order, for what a report reads", {
   # (the population's columns replace one of the same name)
   at <- match(c("adsl_saf <- adsl_sub",
                 paste0("adae_teae <- adae |>\n",
-                       "  select(-any_of(c(\"TRT01A\", \"AGEGR1\"))) |>\n",
-                       "  inner_join(select(adsl_sub, USUBJID, TRT01A, AGEGR1), by = \"USUBJID\") |>\n",
+                       "  select(-any_of(intersect(c(\"TRT01A\", \"AGEGR1\"), names(adsl_sub)))) |>\n",
+                       "  inner_join(\n",
+                       "    select(adsl_sub, USUBJID, any_of(c(\"TRT01A\", \"AGEGR1\"))),\n",
+                       "    by = \"USUBJID\"\n",
+                       "  ) |>\n",
                        "  filter(TRTEMFL == \"Y\")"),
                 "adae_ser <- adae_teae |>\n  filter(AESER == \"Y\") |>\n  mutate(SER = 1)",
                 "adae_subj <- distinct(adae_teae, USUBJID, .keep_all = TRUE)"), code)
@@ -114,6 +117,12 @@ test_that("the sheet and the analyses' data are checked", {
   bad(d, msg = "population ITT is not in `populations`")
   d <- ad_rows(); d$population_id[2L] <- NA
   bad(d, msg = "`add` takes columns from the population's data")
+  # a derive piece that is not `name = expression` (R's `|` inside
+  # parentheses is one piece; a bare expression is not)
+  d <- ad_rows(); d$derive[2L] <- "FLAG = ifelse(is.na(AESER) | AESER != \"Y\", 0, 1) | paste(AEDECOD)"
+  bad(d, msg = "`derive` piece 'paste(AEDECOD)' does not read as `name = expression`")
+  d <- ad_rows(); d$derive[2L] <- "FLAG = ifelse(is.na(AESER) | AESER != \"Y\", 0, 1)"
+  expect_s3_class(ad_spec(d, an_rows()), "tfl_ard_spec")
   a <- an_rows(); a$data[2L] <- "adae_none"
   bad(an = a, msg = "data adae_none is not an analysis data of T1")
   a <- an_rows(); a$dataset[2L] <- "ADAE"
@@ -178,8 +187,8 @@ test_that("a report's own subjects, the columns kept, factors of derived columns
   # its records
   expect_true(any(code == paste0(
     "adae_old <- adae |>\n",
-    "  select(-any_of(\"TRT01A\")) |>\n",
-    "  inner_join(select(adsl_old, USUBJID, TRT01A), by = \"USUBJID\") |>\n",
+    "  select(-any_of(intersect(\"TRT01A\", names(adsl_old)))) |>\n",
+    "  inner_join(select(adsl_old, USUBJID, any_of(\"TRT01A\")), by = \"USUBJID\") |>\n",
     "  filter(TRTEMFL == \"Y\") |>\n",
     "  select(USUBJID, TRT01A, AEBODSYS, AEDECOD) |>\n",
     "  set_levels(OLD = cl_old)")))

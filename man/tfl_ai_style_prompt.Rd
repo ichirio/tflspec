@@ -11,7 +11,7 @@ tfl_ai_style_prompt(rtf_dir, out = NULL, dir = NULL)
 
 \item{out}{The file the agent writes its survey to (YAML); its folder
 gets the prompt and the numbers too.  \code{NULL}: \code{ai_style.yml} under
-\verb{standards/} of tflspec's data folder (\code{\link[tools:R_user_dir]{tools::R_user_dir()}}).}
+\verb{standards/} of tflspec's data folder (\code{\link[tools:userdir]{tools::R_user_dir()}}).}
 
 \item{dir}{Instead of \code{out}: the folder (\code{out} is \code{ai_style.yml} in it).}
 }

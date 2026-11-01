@@ -143,6 +143,12 @@ tfl_plot <- function(name, items = list(), from = "own") {
     return(as.call(c(list(as.name("aes")), a)))
   }
   if (arg %in% objects && is.character(v) && length(v) == 1L) return(as.name(v))
+  # an argument R takes as a list (fun.args = list(mult = 1.96))
+  if (arg %in% .fig_list_args && is.list(v)) {
+    el <- lapply(seq_along(v), function(i) .fig_value_lang(v[[i]], names(v)[i] %||% ""))
+    names(el) <- names(v)
+    return(as.call(c(list(as.name("list")), el)))
+  }
   if (is.list(v)) {
     el <- lapply(v, .fig_value_lang)
     return(as.call(c(list(as.name("c")), el)))
@@ -152,6 +158,10 @@ tfl_plot <- function(name, items = list(), from = "own") {
   if (length(v) == 1L && is.null(names(v))) return(v)
   as.call(c(list(as.name("c")), as.list(v)))
 }
+
+# the arguments R takes as a list, not a vector: a map of the spec is
+# written list(...) and read back from it
+.fig_list_args <- c("fun.args", "method.args", "args", "dparams", "override.aes")
 
 # a function as the code calls it: bare for the packages the figure's
 # program attaches (ggplot2, ggsurvfit, patchwork) and tflspec's own,
@@ -214,6 +224,11 @@ tfl_plot <- function(name, items = list(), from = "own") {
       out <- lapply(a, function(e) if (is.name(e)) as.character(e) else tfl_r(.fig_deparse(e)))
       return(out)
     }
+    if (identical(f, "list") && arg %in% .fig_list_args && length(a) &&
+        all(nzchar(names(a) %||% rep("", length(a))))) {
+      vals <- lapply(stats::setNames(names(a), names(a)), function(k) .fig_lang_value(a[[k]], k))
+      if (!any(vapply(vals, inherits, NA, "tfl_r"))) return(vals)
+    }
     # a negative number, a vector of constants
     if (identical(f, "-") && length(a) == 1L && is.numeric(a[[1L]])) return(-a[[1L]])
     if (identical(f, "c") && length(a) && is.null(names(a)) &&
@@ -230,10 +245,13 @@ tfl_plot <- function(name, items = list(), from = "own") {
 
 # the constructors an argument is written as {fn:, args:} when its own
 # arguments are constants
-.fig_constructors <- c("position_dodge", "position_jitter", "position_jitterdodge",
-                       "position_nudge", "position_stack", "position_fill",
+.fig_constructors <- c("position_dodge", "position_dodge2", "position_jitter",
+                       "position_jitterdodge", "position_nudge", "position_stack",
+                       "position_fill", "position_identity",
                        "element_text", "element_line", "element_rect", "element_blank",
-                       "margin", "unit", "expansion", "guide_legend", "guide_none",
+                       "margin", "unit", "expansion", "dup_axis", "guide_legend",
+                       "guide_none", "guide_colourbar", "guide_colorbar", "guide_axis",
+                       "guide_bins", "guide_coloursteps",
                        "arrow", "rel", "element_markdown", "element_textbox_simple")
 
 # A term of a ggplot chain (a call) as an item: its function, its

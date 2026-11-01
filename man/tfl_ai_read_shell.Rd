@@ -60,7 +60,11 @@ A \code{tfl_ai_shell}: a list with \code{text} (one string), \code{toc} (a data
 frame, one row a TOC item -- of every TOC sheet, an item once:
 \code{output_id} (its number as written), \code{key}, \code{type}, \code{title}, \code{text} --
 the row's text -- \code{sheet}, \code{row}, \code{toc_sheets} (the TOC sheets listing
-it), \code{shell_id} and \code{shell_key} -- its shell's number as the TOC writes
+it), \code{batches} (the named batches the item is in, \code{|} between them,
+\code{NA} for none: a second TOC sheet named for a batch -- \code{TOC_topline}
+lists the topline reports -- or a TOC column of marks under the
+batch's name -- \code{Topline} with an \code{x} on each; written to
+\code{spec/toc.yml} as the item's \code{sets}), \code{shell_id} and \code{shell_key} -- its shell's number as the TOC writes
 it, the item's own when the TOC names none -- \code{population}, \code{program},
 \code{file}, \code{info} -- the row's other cells, "header: value; ..." --,
 \code{sheets} (the shell sheets it is a candidate of, the best first; \code{NA}:

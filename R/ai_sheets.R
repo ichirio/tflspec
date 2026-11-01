@@ -34,6 +34,11 @@
       any(vapply(h, function(z) nrow(z) > 0L && any(!is.na(z$type)), NA))
     }, NA)
   roles[(n_cells >= 5L | (numbered & n_cells > 0L)) & !hidden] <- "shell"
+  # a sheet of conventions, notes, a revision history, a legend: no shell,
+  # unless a report number names it
+  conv <- grepl("(?i)convention|instruction|notes?\\b|history|revision|readme|legend|abbreviation|glossary",
+                info$sheet, perl = TRUE)
+  roles[conv & !numbered] <- "other"
   first <- info$book_path == info$book_path[1L]
   if (!is.null(toc_sheet)) {
     if (!(length(toc_sheet) == 1L && is.na(toc_sheet))) {
@@ -54,6 +59,9 @@
       if (length(g)) roles[g] <- "toc"
     }
   }
+  # the shells in workbooks of their own: the TOC's workbook holds the TOC
+  # alone -- its other sheets (a revision history, notes) are no shells
+  if (any(!first)) roles[first & roles == "shell"] <- "other"
   if (!is.null(sheet_roles)) {
     if (!is.character(sheet_roles) || is.null(names(sheet_roles)) ||
         !all(sheet_roles %in% c("toc", "shell", "other"))) {
@@ -97,6 +105,20 @@
   keep <- !duplicated(k)
   toc <- all[keep, , drop = FALSE]
   toc$toc_sheets <- unname(lists[k[keep]])
+  # the item's batches: its TOC sheets other than the main one (the one
+  # listing most), each named for the batch, and the mark columns of each
+  # TOC sheet listing it
+  main <- toc_names[ord][1L]
+  bt <- tapply(all$batches, factor(k, levels = unique(k)), function(v) {
+    v <- v[!is.na(v)]
+    unique(unlist(strsplit(v, " | ", fixed = TRUE)))
+  })
+  toc$batches <- vapply(seq_len(nrow(toc)), function(i) {
+    other <- setdiff(strsplit(toc$toc_sheets[i], " | ", fixed = TRUE)[[1L]], main)
+    b <- unique(c(.ai_batch_name_of(other), bt[[k[keep][i]]]))
+    b <- b[!is.na(b) & nzchar(b)]
+    if (length(b)) paste(b, collapse = " | ") else NA_character_
+  }, "")
   # (an item one TOC alone lists, when there are several: its other
   # information says so)
   if (length(toc_names) > 1L) {

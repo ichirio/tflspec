@@ -85,8 +85,19 @@
     p <- .tpl_shown(tfl_template_params(tt$name[i]))
     from <- if (!is.na(tt$from[i])) sprintf("; variant of %s", tt$from[i]) else ""
     pkg <- if (!identical(tt$package[i], "tflspec")) sprintf("; %s's", tt$package[i]) else ""
-    out <- c(out, sprintf("- `%s`: %s (%s, layout %s%s%s)", tt$name[i], .ai_tpl_description(t),
-                          tt$kind[i], tt$layout[i], from, pkg))
+    # (a template whose data stage is the report's: the rule beside it)
+    own <- any(vapply(t$params %||% list(), function(p) isTRUE(p$hidden) && identical(p$stage, "data"), NA))
+    out <- c(out, sprintf("- `%s`: %s (%s, layout %s%s%s)%s", tt$name[i], .ai_tpl_description(t),
+                          tt$kind[i], tt$layout[i], from, pkg,
+                          if (own) paste0(" -- own data: the report writes `data` steps `read`, the analysis ",
+                                          "set, `param`; not the template's own steps (`survfit`, `time_unit`)") else ""))
+    # (its catalog aliases: the same template, by another collection's name)
+    al <- .tpl_aliases_of(tt$name[i])
+    if (nrow(al)) {
+      out <- c(out, paste0("  - aliases (the same template): ",
+                           paste(sprintf("`%s` (%s %s)", al$alias, al$source, al$item),
+                                 collapse = ", ")))
+    }
     if (short) {
       if (length(p)) {
         out <- c(out, paste0("  - ", paste(vapply(p, function(x) {
@@ -144,9 +155,14 @@
 # ai/templates.md: how to answer with a template, for a table and a figure,
 # and every template registered, with its arguments
 .ai_templates_file_text <- function() {
+  # (the example a draft file, as the agent writes it, not a chat's answer)
   how <- function(task) {
-    sub("as the schema above says", sprintf("as the schema of `%s` says", .ai_instructions_file(task)),
-        .ai_prompt_file(paste0("templates-", task)), fixed = TRUE)
+    x <- sub("as the schema above says", sprintf("as the schema of `%s` says", .ai_instructions_file(task)),
+             .ai_prompt_file(paste0("templates-", task)), fixed = TRUE)
+    x <- sub("(?s)\nAn example:.*$", "", x, perl = TRUE)
+    x <- sub("- After the header: `template:", "- `template:", x, fixed = TRUE)
+    x <- sub("- Then `assumptions`, as always.", "- Then `ai:`, as AGENTS.md says.", x, fixed = TRUE)
+    paste(x, .ai_prompt_file(paste0("templates-", task, "-draft")), sep = "\n")
   }
   kinds <- list(table = c("table", "listing"), figure = "figure")
   paste(c("# The study's templates", "",
@@ -205,8 +221,10 @@
 # The lines an agent's request starts its message with: its instructions'
 # file, its header, the templates' file and the likely ones
 .ai_files_lines <- function(task, header, ctx) {
-  # each report's title (a figure: its own)
-  t <- if (is.data.frame(ctx$titles)) ctx$titles else
+  # each report's title (a figure: its own; a request of shell sheets: its
+  # reports' TOC titles)
+  t <- if (is.data.frame(ctx$likely) && nrow(ctx$likely)) ctx$likely else
+    if (is.data.frame(ctx$titles)) ctx$titles else
     data.frame(output_id = ctx$output_id %||% ctx$outputs %||% NA_character_,
                title = paste(ctx$titles, collapse = " "), stringsAsFactors = FALSE)
   likely <- if (isTRUE(ctx$ai_templates)) vapply(seq_len(nrow(t)), function(i) {
@@ -215,7 +233,6 @@
   }, "")
   c(sprintf(paste("Follow `%s`: the instructions and the schema, the same for every %s",
                   "request (read it once)."), .ai_instructions_file(task), task),
-    sprintf("Your answer's header: `%s`.", header),
     if (isTRUE(ctx$ai_templates)) {
       c("", paste("Templates: `ai/templates.md` (how to answer with one, and every template",
                   "with its arguments). Likely, from the titles (another may fit better):"),
@@ -244,7 +261,11 @@
   nm <- .ai_scalar_text(tp$name)
   have <- tfl_templates()
   if (!is.null(kinds)) have <- have[have$kind %in% kinds, , drop = FALSE]
-  if (is.null(nm) || !nm %in% have$name) {
+  # (an alias of the catalog's is its template, as itself)
+  real <- if (!is.null(nm) && !nm %in% have$name) {
+    tryCatch(.tpl_alias_target(nm, "tfl_ai_check()"), error = function(e) NULL)
+  } else nm
+  if (is.null(nm) || is.null(real) || !real %in% have$name) {
     add("template name", sprintf("%s is not a template; the templates are %s",
                                  sQuote(nm %||% "", FALSE), paste(have$name, collapse = ", ")))
     return(p)
@@ -391,6 +412,7 @@
     data$ard <- suppressMessages(tfl_build_ard(st, dir = ".", output_id = o$id, save = FALSE))
   }
   fig <- suppressMessages(suppressWarnings(tfl_content_run(o, data)))
+  .ai_fig_nothing_drawn(fig, o$id)
   dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
   png <- file.path(out_dir, paste0(o$id, ".png"))
   ggplot2::ggsave(png, fig, width = 9, height = 5, dpi = 72)

@@ -19,7 +19,31 @@ The table template \code{lab_shift}, layout \code{shift}. Its program is one cal
    \code{by_levels} \tab other \tab call \tab  \tab  \tab the column variable's values in order; NULL: the ARD's (its code list) \cr
    \code{param_labels} \tab other \tab call \tab  \tab  \tab each parameter's heading (a named vector); given by name, merged \cr
    \code{levels} \tab other \tab call \tab LOW, NORMAL, HIGH \tab  \tab the categories, in order \cr
+   \code{worst} \tab other \tab call \tab HIGH, LOW, NORMAL \tab  \tab a subject once a parameter, at its worst category after baseline, the categories from the worst; NULL: every record (the baseline's records too) \cr
+   \code{missing_label} \tab other \tab call \tab Missing \tab  \tab the row of the subjects with no baseline category; NULL: none \cr
+   \code{total_label} \tab other \tab call \tab Total \tab  \tab the row of all the subjects; NULL: none \cr
+   \code{param_page} \tab other \tab call \tab TRUE \tab  \tab TRUE: a page a parameter, named in the titles by 'param_heading' \cr
+   \code{param_heading} \tab other \tab call \tab Parameter: \{value\} \tab  \tab a parameter's page name ('\{value\}': the parameter) \cr
 }
+}
+
+\section{Aliases}{
+
+The same template by the names of other collections' items: each runs it as itself (\code{tfl_tpl(x, "phuse_os_shift", ...)}).\tabular{llll}{
+   Alias \tab Collection \tab Item \tab Title \cr
+   \code{phuse_os_shift} \tab PhUSE CSS \tab OS table shift \tab Shift from normal to abnormal \cr
+}
+
+
+Sources:
+\itemize{
+\item PhUSE CSS: PhUSE CSS Development of Standard Scripts for Analysis and Programming Working Group. Analyses and Displays Associated with Measures of Central Tendency: Focus on Vital Sign, Electrocardiogram, and Laboratory Analyte Measurements in Phase 2-4 Clinical Trials and Integrated Submission Documents (white paper), Version 1.0, 10 October 2013. \url{https://github.com/phuse-org/phuse-scripts/tree/master/whitepapers} (accessed 2026-10-28). Copyright PHUSE Limited, all rights reserved; cited by number only. Its standard scripts: phuse-org/phuse-scripts, MIT licence.
+\item PhUSE CSS: PhUSE CSS Standard Analyses Working Group. Analyses and Displays Associated with Outliers or Shifts from Normal to Abnormal: Focus on Vital Signs, Electrocardiogram, and Laboratory Analyte Measurements in Phase 2-4 Clinical Trials and Integrated Summary Documents (white paper), Version 1.0, 10 September 2015. \url{https://github.com/phuse-org/phuse-scripts/tree/master/whitepapers} (accessed 2026-10-28). Copyright PHUSE Limited, all rights reserved; cited by number only.
+\item PhUSE CSS: PhUSE CSS Standard Analyses Working Group. Analysis and Displays Associated with Adverse Events: Focus on Adverse Events in Phase 2-4 Clinical Trials and Integrated Summary Documents (white paper), Version 1.0, 3 February 2017. \url{https://phuse.global/Deliverables} (accessed 2026-10-28). Copyright PHUSE Limited, all rights reserved; cited by number only.
+\item PhUSE CSS: PhUSE CSS Standard Analyses Working Group. Analyses and Displays Associated with Demographics, Disposition, and Medications in Phase 2-4 Clinical Trials and Integrated Summary Documents (white paper), Version 2.0, 2 March 2018. \url{https://phuse.global/Deliverables} (accessed 2026-10-28). Copyright PHUSE Limited, all rights reserved; cited by number only.
+}
+
+The aliases follow the numbering of these publications, and the titles are short descriptions of our own, not their text. The templates are tflspec's, not endorsed or recommended by PhUSE.
 }
 
 \section{Example}{

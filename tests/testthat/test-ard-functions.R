@@ -24,10 +24,16 @@ test_that("what the catalog names exists", {
   # an old name points at a function the catalog has
   old <- f$replaced_by[nzchar(f$replaced_by)]
   expect_true(all(old %in% f$call[!nzchar(f$replaced_by)]))
-  # every argument a row of args.csv names is one of its function's
+  # every argument a row of args.csv names is one of its function's (an
+  # older cards / cardx than the catalog is written for may not have it yet:
+  # diff_ard_hierarchical(), sort_ard_hierarchical(by_level = ) of cards 0.9.0)
   a <- .ard_catalog_csv("args.csv")
   own <- a[a$call != "*", ]
+  written_for <- c(cards = "0.9.0", cardx = "0.3.4")
   for (i in seq_len(nrow(own))) {
+    pkg <- sub("::.*$", "", own$call[i])
+    if (utils::packageVersion(pkg) < written_for[[pkg]] &&
+        !own$arg[i] %in% names(.ard_formals(own$call[i]))) next
     expect_true(own$arg[i] %in% names(.ard_formals(own$call[i])),
                 label = paste(own$call[i], own$arg[i]))
   }

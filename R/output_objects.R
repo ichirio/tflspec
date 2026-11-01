@@ -119,17 +119,18 @@
 
 #' The objects of a report with several: each built
 #'
-#' A report whose `contents:` names several objects (one RTF, its tables
-#' and figures on its pages): each object run as a report of its own -- a
-#' table's plan from the report's ARD ([tfl_build_ard()],
-#' [tfl_content_run()]), a figure's plot from its data steps.  What
+#' A report whose `contents:` names several objects (one RTF, its tables,
+#' figures and listings on its pages): each object run as a report of its
+#' own -- a table's plan from the report's ARD ([tfl_build_ard()],
+#' [tfl_content_run()]), a figure's plot from its data steps, a listing's
+#' plan from its records (its `data: {source: dataset, ...}`).  What
 #' [tfl_report()] takes as its `content` for such a report.
 #'
 #' @param output The report ([tfl_read_output()]), with `contents:`.
 #' @param study The study ([tfl_read_study_spec()]).
 #' @param dir The study folder (the ARD and the data are read from it).
 #' @return A named list, one element an object (its name in `contents:`):
-#'   a table's plan, a figure's plot.
+#'   a table's or a listing's plan, a figure's plot.
 #' @seealso [tfl_run_output()]
 #' @export
 tfl_output_contents <- function(output, study, dir = ".") {
@@ -156,7 +157,12 @@ tfl_output_contents <- function(output, study, dir = ".") {
       if (identical(ro$data$source, "ard") || length(o$ard$analyses %||% list())) data$ard <- get_ard()
       return(suppressMessages(suppressWarnings(tfl_content_run(ro, data))))
     }
-    .ard_stop(sprintf("%s: object %s is a %s; contents: holds tables and figures for now.",
+    if (identical(o$kind, "listing")) {
+      # a listing's records: its data step, as its program reads them; its
+      # pages laid out (the first on the page before, the rest after it)
+      return(suppressMessages(tfl_content_run(ro, .listing_data_of(ro, study, dir))))
+    }
+    .ard_stop(sprintf("%s: object %s is a %s; contents: holds tables, figures and listings.",
                       output$id, attr(o, "object"), o$kind))
   })
 }
@@ -211,7 +217,7 @@ tfl_output_contents <- function(output, study, dir = ".") {
   sp <- tfl_listing_spec(l, data.frame(output_id = o$id, vars = "USUBJID"), check = FALSE)
   old <- options(tflspec.plain_ns = TRUE)
   on.exit(options(old), add = TRUE)
-  ard <- .ard_spec_of_study(study)$spec
+  ard <- .ard_spec_of_study(study, output_id = o$id)$spec
   code <- tfl_listing_code(sp, o$id, ard = ard, part = "data")
   if (is.null(code)) .ard_stop(sprintf("%s: the listing names no dataset.", o$id))
   env <- new.env(parent = globalenv())
@@ -220,6 +226,44 @@ tfl_output_contents <- function(output, study, dir = ".") {
   on.exit(setwd(wd), add = TRUE)
   eval(parse(text = code), env)
   get("data", envir = env, inherits = FALSE)
+}
+
+# A report's content object -- the plan of a table or a listing, the
+# figure(s) -- from the study's files, in the study folder (the working
+# directory): the data read, its ARD built, its content run.  What
+# tfl_run_output() writes to RTF, and what tfl_check_build() makes to know
+# that the report can be made.
+.output_build_content <- function(output, st) {
+  # (each stage named in what stops it: "the ARD: ...", "the table: ...")
+  stage <- function(what, expr) {
+    tryCatch(expr, error = function(e) .ard_stop(paste0(what, ": ", conditionMessage(e))))
+  }
+  kind <- output$kind %||% "table"
+  if (!is.null(output$contents)) {
+    return(stage("the report's objects", tfl_output_contents(output, st, ".")))
+  }
+  ro <- stage("resolving the report", tfl_resolve_output(output, st))
+  if (any(vapply(ro$content, .is_part, NA))) {
+    # a table with parts: each object it reads, by name -- the ARD, a
+    # listing's records (the table's own data, a part's)
+    objects <- stage("the parts' data", .parts_objects(ro, st, "."))
+    stage(paste("the", kind), suppressMessages(tfl_content_run(ro, objects)))
+  } else if (identical(ro$data$source, "dataset")) {
+    # a listing's records (its own, or a template's: decided on the report
+    # as resolved): its data step, as its program reads them
+    recs <- stage("the listing's records", .listing_data_of(ro, st, "."))
+    stage(paste("the", kind), suppressMessages(tfl_content_run(ro, recs)))
+  } else if (identical(kind, "figure")) {
+    data <- stage("the figure's data", .contents_fig_data(ro, st, "."))
+    if (length(ro$ard$analyses %||% list())) {
+      data$ard <- stage("the ARD", tfl_build_ard(st, ".", output_id = ro$id, save = FALSE))
+    }
+    stage("the figure", suppressMessages(suppressWarnings(tfl_content_run(ro, data))))
+  } else {
+    ard <- stage("the ARD", suppressMessages(tfl_build_ard(st, dir = ".", output_id = ro$id, save = FALSE)))
+    if (!is.null(ard$output_id)) ard <- ard[ard$output_id %in% ro$id, , drop = FALSE]
+    stage(paste("the", kind), suppressMessages(tfl_content_run(ro, ard)))
+  }
 }
 
 #' Build a report's RTF from its YAML file
@@ -244,23 +288,11 @@ tfl_run_output <- function(output, dir = ".", overwrite = TRUE) {
   old <- setwd(dir)
   on.exit(setwd(old), add = TRUE)
   st <- tfl_read_study_spec(".")
-  content <- if (!is.null(output$contents)) {
-    tfl_output_contents(output, st, ".")
-  } else if (identical(output$kind, "listing") && identical(output$data$source, "dataset")) {
-    # a listing's records: its data step, as its program reads them
-    o <- tfl_resolve_output(output, st)
-    suppressMessages(tfl_content_run(o, .listing_data_of(o, st, ".")))
-  } else if (identical(output$kind, "figure")) {
-    o <- tfl_resolve_output(output, st)
-    data <- .contents_fig_data(o, st, ".")
-    if (length(o$ard$analyses %||% list())) data$ard <- tfl_build_ard(st, ".", output_id = o$id, save = FALSE)
-    suppressMessages(suppressWarnings(tfl_content_run(o, data)))
-  } else {
-    o <- tfl_resolve_output(output, st)
-    ard <- suppressMessages(tfl_build_ard(st, dir = ".", output_id = o$id, save = FALSE))
-    if (!is.null(ard$output_id)) ard <- ard[ard$output_id %in% o$id, , drop = FALSE]
-    suppressMessages(tfl_content_run(o, ard))
-  }
+  # the study's rounding (a half away from zero, as SAS: 63.75 is 63.8),
+  # which the programs' setup sets: here too
+  old_r <- .study_rounding_option(st)
+  on.exit(options(old_r), add = TRUE)
+  content <- .output_build_content(output, st)
   f <- tfl_report_path(output, study = st)
   dir.create(dirname(f), recursive = TRUE, showWarnings = FALSE)
   suppressMessages(rtfreporter::generate_rtfreport(tfl_report(output, content = content, study = st),

@@ -13,7 +13,7 @@ prep_example <- function(d) {
   ex <- system.file("ai", "example", package = "tflspec")
   tfl_ai_study_init(d, adam = "adam", study_id = "XYZ-ONC-01", overwrite = TRUE)
   suppressMessages(tfl_ai_write_requests(unit = "toc", d, tfl_ai_read_shell(file.path(ex, "onco_toc_shell.xlsx")),
-                                         tfl_ai_adam_summary(file.path(d, "adam")), overwrite = TRUE))
+                                         tfl_ai_adam_summary(file.path(d, "adam")), size = 3L, overwrite = TRUE))
   d
 }
 answer_of <- function(name) {
@@ -21,7 +21,7 @@ answer_of <- function(name) {
             encoding = "UTF-8")
 }
 put <- function(d, name, lines) {
-  writeLines(enc2utf8(lines), file.path(d, "ai", "answers", paste0(name, ".md")), useBytes = TRUE)
+  ai_drafts_from_answer(d, lines, "table")
 }
 row_of <- function(res, id) res$reports[res$reports$output_id == id, , drop = FALSE]
 
@@ -31,22 +31,22 @@ test_that(".ai_file_id(): letters, digits, . _ - only; an id that is one stays",
   expect_identical(tflspec:::.ai_file_id("Table　１４.1.1"), "Table-14.1.1")
 })
 
-test_that("an answer's report number as the TOC writes it, or another way, is the report asked for", {
+test_that("a draft's report number as the TOC writes it is the report asked for; one asked for by no request is not", {
   skip_on_cran()
   skip_if_not_installed("haven")
   d <- prep_example(withr::local_tempdir())
-  # "Table 14.1.1" (a space: as the prompt asks, the number as written)
-  a <- answer_of("demographics-1")
-  put(d, "demographics-1", gsub("T-14-1-1", "Table 14.1.1", a, fixed = TRUE))
+  ai_drafts_from_fixtures(d, only = "demographics-1")
+  f <- file.path(d, "ai", "spec", "outputs", "T-14-1-1.yml")
+  x <- readLines(f, encoding = "UTF-8")
+  # "Table 14.1.1" (a space: the number as written)
+  writeLines(sub("id: T-14-1-1", "id: Table 14.1.1", x, fixed = TRUE), f)
   res <- suppressMessages(tfl_ai_collect_answers(d))
   expect_identical(row_of(res, "T-14-1-1")$status, "ok")
-  expect_true(file.exists(file.path(d, "spec", "outputs", "T-14-1-1.yml")))
-  # an answer whose report is none of those asked: an error, and the next
-  # step is its repair, not "done"
-  put(d, "demographics-1", gsub("T-14-1-1", "T-99-9-9", a, fixed = TRUE))
+  expect_true(file.exists(file.path(d, "ai", "spec", "outputs", "T-14-1-1.yml")))
+  # a draft whose report is none of those asked: not ok, and the next step is not "done"
+  writeLines(sub("id: T-14-1-1", "id: T-99-9-9", x, fixed = TRUE), f)
   res <- suppressMessages(tfl_ai_collect_answers(d))
-  expect_identical(row_of(res, "T-14-1-1")$status, "error")
-  expect_match(res$next_steps[["demographics-1"]], "repairs/demographics-1.md", fixed = TRUE)
+  expect_false(identical(row_of(res, "T-14-1-1")$status, "ok"))
   expect_false(grepl("done", res$next_steps[["demographics-1"]], fixed = TRUE))
 })
 
@@ -69,7 +69,7 @@ test_that("check: a table with no column key is an error; an overall row no anal
   res <- suppressMessages(tfl_ai_collect_answers(d))
   r <- res$reports[res$reports$request == "ae-1", , drop = FALSE]
   expect_identical(unique(r$status), "ok")
-  f <- readLines(file.path(d, "spec", "outputs", "T-14-3-1.yml"), encoding = "UTF-8")
+  f <- readLines(file.path(d, "ai", "spec", "outputs", "T-14-3-1.yml"), encoding = "UTF-8")
   expect_true(any(grepl("over_variables = TRUE", f, fixed = TRUE)))
   asm <- readLines(file.path(d, "spec", "_assumptions.yml"), encoding = "UTF-8")
   expect_true(any(grepl("tflspec added over_variables = TRUE", asm, fixed = TRUE)))

@@ -21,6 +21,22 @@ The table template \code{disposition}, layout \code{summary}. Its program is one
 }
 }
 
+\section{Aliases}{
+
+The same template by the names of other collections' items: each runs it as itself (\code{tfl_tpl(x, "stf_t05_disc_reasons", ...)}).\tabular{llll}{
+   Alias \tab Collection \tab Item \tab Title \cr
+   \code{stf_t05_disc_reasons} \tab FDA STF IG v2 \tab T05 \tab Treatment and study discontinuation reasons \cr
+}
+
+
+Sources:
+\itemize{
+\item FDA STF IG v2: U.S. Food and Drug Administration, CDER. Standard Safety Tables and Figures: Integrated Guide, Version 2.0, April 2025. \url{https://www.fda.gov/media/187065/download} (accessed 2026-10-28). A U.S. Government work; FDA's website content is in the public domain unless noted (https://www.fda.gov/about-fda/about-website/website-policies).
+}
+
+The aliases follow the numbering of these publications, and the titles are short descriptions of our own, not their text. The templates are tflspec's, not endorsed or recommended by FDA.
+}
+
 \section{Example}{
 
 

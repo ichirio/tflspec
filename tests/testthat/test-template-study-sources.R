@@ -33,7 +33,7 @@ test_that("the report's population: the template's population, written in its pr
   # (with the study standard's look: its plan_stub, plan_blanks ... too)
   expect_identical(attr(ro, "template")$study[1L], "population")
   code <- tfl_content_code(ro, pipe = "|>")
-  expect_match(paste(code, collapse = "\n"), "\"demog\", population = \"SAF\"", fixed = TRUE)
+  expect_match(paste(code, collapse = "\n"), "\"demog\",\\s+population = \"SAF\"")
   # the report's own argument wins, and says so
   expect_message(ro2 <- ss_resolve("demog", list(population = "SCRF"), s),
                  "overrides the study standard \\(output.population\\)")

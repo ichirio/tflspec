@@ -40,7 +40,7 @@ numbers_study <- function() {
 }
 
 prep_numbers <- function(d, f, ..., adam = "adam") {
-  tfl_ai_prepare(d, f, adam = adam, quiet = TRUE, mode = "agent", templates = FALSE, ...)
+  tfl_ai_prepare(d, f, adam = adam, quiet = TRUE, templates = FALSE, ...)
 }
 
 test_that("a dry run's numbers: a row a number a sheet writes, the rule's make", {
@@ -172,12 +172,11 @@ test_that("collect follows the corrected reports: a reference not answered is no
   on.exit(unlink(c(f, d), recursive = TRUE), add = TRUE)
   a <- readLines(test_path("fixtures", "answers-toc", "demographics-1.md"), encoding = "UTF-8")
   put <- function(name, id) {
-    writeLines(enc2utf8(gsub("T-14-1-1", id, a, fixed = TRUE)),
-               file.path(d, "ai", "answers", paste0(name, ".md")), useBytes = TRUE)
+    ai_drafts_from_answer(d, gsub("T-14-1-1", id, a, fixed = TRUE), "table")
   }
   # the rule: the sheet's reference is one of its reports, missing
   prep_numbers(d, f)
-  put("t14.1.1", "Table 14.1.1")
+  put("t14.1.1", "Table-14.1.1")
   res <- suppressMessages(tfl_ai_collect_answers(d))
   rows <- res$reports[res$reports$request == "t14.1.1", , drop = FALSE]
   expect_identical(rows$output_id, c("Table-14.1.1", "Table-14.2.1", "Table-14.5.1.a"))
@@ -186,7 +185,7 @@ test_that("collect follows the corrected reports: a reference not answered is no
   # has, a report with no warning of it
   suppressWarnings(prep_numbers(d, f, numbers = list(t14.1.1 = "Table 14.1.1",
                                                      vitals = "Table 14.9.9")))
-  put("vitals", "Table 14.9.9")
+  put("vitals", "Table-14.9.9")
   res <- suppressMessages(tfl_ai_collect_answers(d))
   rows <- res$reports[res$reports$request == "t14.1.1", , drop = FALSE]
   expect_identical(rows$output_id, "Table-14.1.1")

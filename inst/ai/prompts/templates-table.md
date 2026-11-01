@@ -15,7 +15,7 @@ tflspec_ai: {task: table, version: 1, outputs: [T-14-1-1, T-14-3-1]}
 outputs:
   - id: T-14-1-1
     kind: table
-    label: Demographic and Baseline Characteristics
+    label: "Demographic and Baseline Characteristics"
     population: SAF
     extends: [defaults]
     template:
@@ -27,17 +27,17 @@ outputs:
         "2": {center: Demographic and Baseline Characteristics}
   - id: T-14-3-1
     kind: table
-    label: Treatment-Emergent Adverse Events by System Organ Class and Preferred Term
+    label: "Treatment-Emergent Adverse Events by System Organ Class and Preferred Term"
     population: SAF
     extends: [defaults]
     template:
       name: ae_soc_pt
-      args: {overall: Subjects with at least one TEAE}
+      args: {any_row_label: "Subjects with at least one TEAE"}
     content:
       - plan_paginate_rows: {max_rows: 18}
     page:
       titles:
         "1": {center: Table 14.3.1}
 assumptions:
-  - {output_id: T-14-3-1, where: template, item: ae_soc_pt, assumption: the shell is the standard SOC / PT table, question: ~}
+  - {output_id: T-14-3-1, where: template, item: ae_soc_pt, assumption: "Template: the standard SOC / PT table, because the shell has the same rows and columns", value: ae_soc_pt, question: ~}
 ```

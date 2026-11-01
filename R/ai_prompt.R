@@ -317,6 +317,10 @@ tfl_ai_prompt <- function(task, context = NULL, mode = c("chat", "api"),
   # file shared by the requests of the task, so with the header's place
   # holders; the request says its own header
   shared <- isTRUE(context$ai_files)
+  # (an agent's draft writes no column widths: rtfreporter's defaults)
+  if (shared && !is.null(parts$task)) {
+    parts$task <- sub("(?m)^- The column widths,[^\n]*\n", "", parts$task, perl = TRUE)
+  }
   header <- .ai_header_text(task, context$output_id, format, context$outputs)
   fill <- list(
     task = parts$task,
@@ -340,8 +344,10 @@ tfl_ai_prompt <- function(task, context = NULL, mode = c("chat", "api"),
   }
   # a figure whose shell is in the message (a study's request): what to do
   # reads it, nothing attached
-  ask <- if (task == "figure" && mode == "chat" && !is.null(context$shell) &&
-               !is.null(parts$shell)) parts$shell else parts[[mode]]
+  # (an agent's request: its draft files, as AGENTS.md says)
+  ask <- if (shared && !is.null(parts$agent)) parts$agent else
+    if (task == "figure" && mode == "chat" && !is.null(context$shell) &&
+          !is.null(parts$shell)) parts$shell else parts[[mode]]
   user <- paste(c(
     if (shared) .ai_files_lines(task, header, context),
     .ai_context_text(context, format), "", ask,
@@ -645,7 +651,7 @@ print.tfl_ai_text <- function(x, ...) {
                           if (length(lab)) paste0(": ", lab[1L]) else ""), "")
     more <- nrow(v) - .ai_max_variables
     v <- v[seq_len(min(nrow(v), .ai_max_variables)), , drop = FALSE]
-    cols <- c("variable", "label", "kind", "levels")
+    cols <- c("variable", "label", "kind", "levels", "codes")
     cols <- cols[vapply(cols, function(cn) !all(is.na(v[[cn]])), NA)]
     t <- v[cols]
     names(t)[names(t) == "levels"] <- "values"

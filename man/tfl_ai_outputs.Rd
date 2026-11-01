@@ -19,7 +19,6 @@ number's),
 label), \code{population} (its analysis set), \code{split} (how its TOC row is
 split for it), \code{request}, \code{status} (\code{ok}, \code{warning}, \code{error}, \verb{no answer}, \verb{not answered}; \code{draft} for a report file no answer lists),
 \code{rtf} (its RTF, \code{NA} when none), \code{problem} (why it has none),
-\code{questions} (the open questions in \code{ai/questions.md} naming it),
 \code{adopted} (\code{no}; \code{yes}; \verb{yes, draft newer} -- the draft differs from
 the study's file adopted from it) and \code{file} (its draft report file).
 }
@@ -31,5 +30,5 @@ screen shows it in three levels -- the shell sheets, the TOC items, the
 reports -- by its \code{sheet} and \code{toc_id}.
 }
 \seealso{
-\code{\link[=tfl_ai_expected_write]{tfl_ai_expected_write()}} for the list the person expects.
+\code{\link[=tfl_ai_adopt]{tfl_ai_adopt()}}.
 }

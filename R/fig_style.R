@@ -59,7 +59,7 @@
     s(NA, "treatment_linetypes", NA,
       "optional: the arms' line types in order, e.g. solid, dashed, dotted (blank = solid)"),
     # ---- KM
-    s("km", "censor_shape", "x", "censor mark"),
+    s("km", "censor_shape", "plus", "censor mark"),
     s("km", "censor_size", "3", ""),
     s("km", "censor_stroke", "0.6", ""),
     s("km", "median_linetype", "twodash", "the 50% line"),

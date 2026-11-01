@@ -55,7 +55,7 @@
         "rows <- rep(seq_len(nrow(lsdiff)), lengths(lsdiff$stat))",
         "lsdiff <- dplyr::mutate(lsdiff[rows, ], variable_level = as.list(unlist(lsdiff$variable_level)),",
         "  stat = unlist(lapply(lsdiff$stat, as.list), recursive = FALSE))",
-        "dplyr::filter(lsdiff, endsWith(unlist(variable_level), paste(\" -\", ref)))"),
+        "dplyr::filter(lsdiff, endsWith(as.character(unlist(variable_level)), paste(\" -\", ref)))"),
         collapse = "\n"),
         post = post("DIFF",
                     "lapply(variable_level, sub, pattern = \" - .*\", replacement = \"\")"),

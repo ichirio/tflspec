@@ -1,25 +1,12 @@
 # ============================================================================
-#  The AI's reports, listed for the person to check, and the list the
-#  person expects (the review loop, 10/24)
+#  The AI's reports, listed for the person to check
 # ----------------------------------------------------------------------------
-#  tfl_ai_outputs() is one row a report the AI's answers make: its shell
+#  tfl_ai_outputs() is one row a report the AI's drafts make: its shell
 #  sheet, its TOC item, its title, analysis set and how its TOC row is split
-#  for it, its status, its RTF, the open questions on it, whether it is
-#  adopted.  A screen groups it by sheet and by TOC item.  The person
-#  corrects a copy of it -- ai/expected_outputs.csv, theirs, never the AI's:
-#  a row added (`add`), dropped (`drop`, with its reason) or changed
-#  (`change`, the old values in `was`), and a note on what the report
-#  should show.  run.R compares the reports made with it and says what
-#  differs in ai/status.md -- it tells, it does not refuse.
+#  for it, its status, its RTF, whether it is adopted.  A screen groups it
+#  by sheet and by TOC item.
 # ============================================================================
 
-.ai_expected_cols <- c("sheet", "toc_id", "output_id", "title", "population", "split",
-                       "action", "was", "reason", "note")
-.ai_expected_actions <- c("add", "drop", "change")
-
-.ai_expected_file <- function(study_dir) file.path(study_dir, "ai", "expected_outputs.csv")
-
-# a CSV of text, every column character, blanks NA
 .ai_csv_read <- function(f) {
   if (!file.exists(f)) return(NULL)
   x <- tryCatch(utils::read.csv(f, stringsAsFactors = FALSE, colClasses = "character",
@@ -73,10 +60,9 @@
 #'   split for it), `request`, `status` (`ok`, `warning`, `error`, `no
 #'   answer`, `not answered`; `draft` for a report file no answer lists),
 #'   `rtf` (its RTF, `NA` when none), `problem` (why it has none),
-#'   `questions` (the open questions in `ai/questions.md` naming it),
 #'   `adopted` (`no`; `yes`; `yes, draft newer` -- the draft differs from
 #'   the study's file adopted from it) and `file` (its draft report file).
-#' @seealso [tfl_ai_expected_write()] for the list the person expects.
+#' @seealso [tfl_ai_adopt()].
 #' @export
 tfl_ai_outputs <- function(study_dir = ".") {
   ai <- file.path(study_dir, "ai")
@@ -117,15 +103,6 @@ tfl_ai_outputs <- function(study_dir = ".") {
   # its RTF, or why none (the last run's, ai/built.csv)
   b <- .ai_built_read(study_dir)
   bi <- match(ids, b$output_id)
-  # the open questions naming it
-  qf <- file.path(ai, "questions.md")
-  q <- if (file.exists(qf)) .ai_questions_read(readLines(qf, warn = FALSE, encoding = "UTF-8")) else
-    .ai_questions_read(character())
-  q <- q[q$status %in% "open", , drop = FALSE]
-  nq <- vapply(ids, function(id) {
-    sum(vapply(strsplit(as.character(ifelse(is.na(q$reports), "", q$reports)), ",\\s*"),
-               function(r) id %in% trimws(r), NA))
-  }, 0L, USE.NAMES = FALSE)
   out <- data.frame(
     sheet = sheet,
     shell_code = sc[ei],
@@ -139,7 +116,6 @@ tfl_ai_outputs <- function(study_dir = ".") {
     status = ifelse(is.na(m), "draft", pick(man$status, m)),
     rtf = pick(b$rtf, bi),
     problem = pick(b$problem, bi),
-    questions = nq,
     adopted = .ai_adopted_state(study_dir, ids, pick(dr$file, d)),
     file = pick(dr$file, d),
     stringsAsFactors = FALSE)
@@ -159,148 +135,4 @@ tfl_ai_outputs <- function(study_dir = ".") {
     now <- unname(tools::md5sum(file.path(study_dir, f)))
     if (!is.na(ad$md5[j]) && !identical(now, ad$md5[j])) "yes, draft newer" else "yes"
   }, "")
-}
-
-#' The list of reports the person expects
-#'
-#' The person's own list of the study's reports, `ai/expected_outputs.csv`:
-#' first a copy of [tfl_ai_outputs()], then corrected by the person (on a
-#' screen, or in a spreadsheet) -- a row's `action` says what to do: blank,
-#' keep it; `add`, a report to add (its sheet and TOC item, and what is
-#' known of its id, title, analysis set and part); `drop`, a report not
-#' wanted (the row stays, with its `reason`); `change`, a row whose title or
-#' analysis set the person changed (`was`: the values before,
-#' `title: Demographics | population: SAF`).  `note` is what the report
-#' should show, free text.  The AI never writes it; `run.R` compares the
-#' reports with it ([tfl_ai_run()]).
-#'
-#' `tfl_ai_expected_write()` writes it: `x` (the person's rows), or, when
-#' `NULL`, the first copy of the AI's list -- only when there is none yet
-#' (`overwrite = TRUE` to start again).  `tfl_ai_expected_read()` reads it.
-#'
-#' @param study_dir The study folder.
-#' @param x The rows to write: a data frame with the list's columns
-#'   (`sheet`, `toc_id`, `output_id`, `title`, `population`, `split`,
-#'   `action`, `was`, `reason`, `note`; a column it lacks is blank).
-#'   `NULL`: the AI's list now.
-#' @param overwrite `TRUE` to write over the list there.
-#' @return `tfl_ai_expected_write()`: the file's path, invisibly.
-#'   `tfl_ai_expected_read()`: the list (a data frame of those columns), or
-#'   `NULL` when the study has none.
-#' @seealso [tfl_ai_outputs()]
-#' @export
-tfl_ai_expected_write <- function(study_dir = ".", x = NULL, overwrite = FALSE) {
-  f <- .ai_expected_file(study_dir)
-  if (file.exists(f) && !overwrite) {
-    .ard_stop(sprintf(paste0("tfl_ai_expected_write(): %s is there (the person's list); ",
-                             "overwrite = TRUE to write over it."), f))
-  }
-  if (is.null(x)) x <- tfl_ai_outputs(study_dir)
-  x <- .ai_expected_shape(as.data.frame(x, stringsAsFactors = FALSE))
-  bad <- setdiff(stats::na.omit(x$action), .ai_expected_actions)
-  if (length(bad)) {
-    .ard_stop(sprintf("tfl_ai_expected_write(): action is blank, %s; not %s.",
-                      paste(.ai_expected_actions, collapse = ", "),
-                      paste(unique(bad), collapse = ", ")))
-  }
-  dir.create(dirname(f), recursive = TRUE, showWarnings = FALSE)
-  out <- x
-  out[] <- lapply(out, function(v) ifelse(is.na(v), "", v))
-  con <- file(f, open = "w", encoding = "UTF-8")
-  on.exit(close(con), add = TRUE)
-  utils::write.csv(out, con, row.names = FALSE)
-  invisible(f)
-}
-
-#' @rdname tfl_ai_expected_write
-#' @export
-tfl_ai_expected_read <- function(study_dir = ".") {
-  f <- .ai_expected_file(study_dir)
-  if (!file.exists(f)) return(NULL)
-  x <- .ai_csv_read(f)
-  if (is.null(x)) .ard_stop(sprintf("tfl_ai_expected_read(): %s cannot be read as a CSV.", f))
-  x <- .ai_expected_shape(x)
-  x$action <- tolower(x$action)
-  x
-}
-
-# the list's columns, in order, as text (a column missing: blank)
-.ai_expected_shape <- function(x) {
-  n <- nrow(x)
-  out <- lapply(.ai_expected_cols, function(k) {
-    v <- if (k %in% names(x)) as.character(x[[k]]) else rep(NA_character_, n)
-    v <- trimws(v)
-    v[!is.na(v) & !nzchar(v)] <- NA_character_
-    v
-  })
-  out <- as.data.frame(stats::setNames(out, .ai_expected_cols), stringsAsFactors = FALSE)
-  rownames(out) <- NULL
-  out
-}
-
-# The reports made against the person's list: one row a difference
-# (`output_id`, `result` -- missing, differs, still there, not expected --,
-# `detail`), and the counts.  Compared by id; a title with its spaces and
-# case set aside, an analysis set by its id; a part not compared (free
-# text).  NULL when the study has no list.
-.ai_expected_compare <- function(expected, made) {
-  if (is.null(expected)) return(NULL)
-  made <- made[!is.na(made$file), , drop = FALSE]
-  e <- expected[!is.na(expected$output_id) | expected$action %in% "add", , drop = FALSE]
-  norm <- function(x) tolower(gsub("[[:space:]]+", " ", trimws(ifelse(is.na(x), "", x))))
-  rows <- list()
-  add <- function(id, result, detail = NA_character_) {
-    rows[[length(rows) + 1L]] <<- data.frame(output_id = id, result = result, detail = detail,
-                                            stringsAsFactors = FALSE)
-  }
-  n_ok <- 0L
-  for (i in seq_len(nrow(e))) {
-    id <- e$output_id[i]
-    act <- e$action[i]
-    there <- !is.na(id) && id %in% made$output_id
-    if (act %in% "drop") {
-      if (there) add(id, "still there", e$reason[i])
-      next
-    }
-    if (!there) {
-      add(id %|% sprintf("(sheet %s, TOC %s)", e$sheet[i] %|% "?", e$toc_id[i] %|% "?"),
-          "missing", e$title[i])
-      next
-    }
-    mi <- match(id, made$output_id)
-    diff <- c(
-      if (!is.na(e$title[i]) && norm(e$title[i]) != norm(made$title[mi]))
-        sprintf("title \"%s\" (expected \"%s\")", made$title[mi] %|% "", e$title[i]),
-      if (!is.na(e$population[i]) && !identical(toupper(e$population[i]),
-                                               toupper(made$population[mi] %|% "")))
-        sprintf("population %s (expected %s)", made$population[mi] %|% "none", e$population[i]))
-    if (length(diff)) add(id, "differs", paste(diff, collapse = "; ")) else n_ok <- n_ok + 1L
-  }
-  for (id in setdiff(made$output_id, e$output_id)) add(id, "not expected")
-  d <- do.call(rbind, c(list(data.frame(output_id = character(), result = character(),
-                                        detail = character(), stringsAsFactors = FALSE)), rows))
-  count <- function(k) sum(d$result == k)
-  wanted <- sum(!e$action %in% "drop")
-  structure(d, text = sprintf(
-    "Expected %d, made %d: missing %d, still there %d, differs %d, not expected %d",
-    wanted, nrow(made), count("missing"), count("still there"), count("differs"),
-    count("not expected")), ok = n_ok)
-}
-
-# x, or y when x is NA / NULL
-`%|%` <- function(x, y) if (is.null(x) || length(x) == 0L || is.na(x[1L])) y else x
-
-# status.md's section of the comparison (none without a list)
-.ai_expected_status <- function(cmp) {
-  if (is.null(cmp)) return(NULL)
-  cell <- function(x) ifelse(is.na(x), "", gsub("|", "/", x, fixed = TRUE))
-  c("",
-    "## Expected outputs (ai/expected_outputs.csv)",
-    "",
-    paste0(attr(cmp, "text"), "."),
-    if (nrow(cmp)) c(
-      "",
-      "| report | result | detail |",
-      "|---|---|---|",
-      sprintf("| %s | %s | %s |", cell(cmp$output_id), cmp$result, cell(cmp$detail))))
 }

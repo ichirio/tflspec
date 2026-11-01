@@ -8,7 +8,7 @@
 .define_20 <- function() test_path("fixtures", "define", "define-2-0.xml")
 
 # A small define spec in the Pinnacle 21 layout (made up, as the XML).
-.p21_xlsx <- function(dir, codelists_sheet = "Codelists", label = "Label") {
+.p21_xlsx <- function(dir, codelists_sheet = "Codelists", label = "Label", value_level = FALSE) {
   path <- file.path(dir, "define-spec.xlsx")
   vars <- data.frame(
     Order = c(1, 2, 3, 4, 1, 2),
@@ -52,6 +52,18 @@
     Dictionaries = data.frame(ID = "MEDDRA", Name = "MedDRA",
                               Dictionary = "MedDRA", Version = "27.0"))
   names(sheets)[names(sheets) == "Codelists"] <- codelists_sheet
+  if (value_level) {
+    sheets$ValueLevel <- data.frame(
+      Order = c(1, 2), Dataset = "ADSL", Variable = "AGE",
+      `Where Clause` = c("WC.ADSL.AGE.1", "WC.ADSL.AGE.2"),
+      Description = c("Age (years)", "Age (months)"), `Data Type` = "float",
+      Length = 8, `Significant Digits` = c(0, 1), Format = c("8.0", "8.1"),
+      Codelist = NA, check.names = FALSE)
+    sheets$WhereClauses <- data.frame(
+      ID = c("WC.ADSL.AGE.1", "WC.ADSL.AGE.2", "WC.ADSL.AGE.2"), Dataset = "ADSL",
+      Variable = c("AGEU", "AGEU", "AGEGR1"), Comparator = c("EQ", "EQ", "IN"),
+      Value = c("YEARS", "MONTHS", "<65, >=65"))
+  }
   openxlsx::write.xlsx(sheets, path)
   path
 }
@@ -104,6 +116,26 @@ test_that("tfl_read_define() reads a Define-XML 2.1", {
   expect_identical(def$external$version, "27.0")
   expect_false("CL.MEDDRA" %in% cl$codelist)
   expect_output(print(def), "Define-XML|define.xml 2.1")
+})
+
+test_that("tfl_read_define() reads the value-level metadata: digits and format by where clause", {
+  skip_if_not_installed("xml2")
+  def <- tfl_read_define(test_path("fixtures", "define", "define-vl.xml"))
+  vl <- def$value_level
+  expect_identical(vl$dataset, rep("ADLB", 3L))
+  expect_identical(vl$variable, rep("AVAL", 3L))
+  expect_identical(vl$where, c("PARAMCD == \"ALT\"", "PARAMCD == \"BILI\"",
+                               "PARAMCD %in% c(\"HGB\", \"PLAT\")"))
+  expect_identical(vl$digits, c(0L, 1L, 0L))
+  expect_identical(vl$format, c("8.0", "8.1", "8.0"))
+  expect_identical(vl$label[2L], "Analysis Value (BILI, umol/L)")
+  expect_identical(vl$order, 1:3)
+  # the variable's own row keeps its item-level digits
+  av <- def$variables[def$variables$variable == "AVAL", ]
+  expect_identical(av$digits, 2L)
+  # a define without value-level metadata: no rows
+  expect_identical(nrow(tfl_read_define(.define_21())$value_level), 0L)
+  expect_output(print(def), "3 value-level row(s) (3 with digits)", fixed = TRUE)
 })
 
 test_that("the texts are taken in the language asked for", {
@@ -171,8 +203,44 @@ test_that("what is not a Define-XML 2.0 / 2.1 is refused", {
   writeLines("not xml at all <", f)
   expect_error(tfl_read_define(f), "is not XML")
   x <- readLines(.define_20())
-  writeLines(sub("def/v2.0", "def/v1.0", x, fixed = TRUE), f)
-  expect_error(tfl_read_define(f), "def/v1.0")
+  writeLines(sub("def/v2.0", "def/v9.9", x, fixed = TRUE), f)
+  expect_error(tfl_read_define(f), "def/v9.9")
+})
+
+test_that("tfl_read_define() reads a Define-XML 1.0 (ODM 1.2): def:Label, def:DomainKeys, def:Rank", {
+  skip_if_not_installed("xml2")
+  f <- tempfile(fileext = ".xml")
+  on.exit(unlink(f), add = TRUE)
+  writeLines(c(
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<ODM xmlns="http://www.cdisc.org/ns/odm/v1.2" xmlns:def="http://www.cdisc.org/ns/def/v1.0"',
+    '     ODMVersion="1.2" FileType="Snapshot" FileOID="DEF10" CreationDateTime="2026-10-30T00:00:00">',
+    '<Study OID="ST"><GlobalVariables><StudyName>TEST10</StudyName>',
+    '<StudyDescription>d</StudyDescription><ProtocolName>p</ProtocolName></GlobalVariables>',
+    '<MetaDataVersion OID="MDV" Name="ADaM" def:DefineVersion="1.0.0">',
+    '<ItemGroupDef OID="ADSL" Name="ADSL" Repeating="No" IsReferenceData="No" Purpose="Analysis"',
+    '  def:Label="Subject-Level Analysis" def:Structure="one record per subject"',
+    '  def:DomainKeys="STUDYID, USUBJID" def:Class="ADSL">',
+    '  <ItemRef ItemOID="ADSL.USUBJID" OrderNumber="1" Mandatory="Yes"/>',
+    '  <ItemRef ItemOID="ADSL.SEX" OrderNumber="2" Mandatory="No"/>',
+    '</ItemGroupDef>',
+    '<ItemDef OID="ADSL.USUBJID" Name="USUBJID" DataType="text" Length="20" def:Label="Unique Subject Identifier"/>',
+    '<ItemDef OID="ADSL.SEX" Name="SEX" DataType="text" Length="1" def:Label="Sex">',
+    '  <CodeListRef CodeListOID="SEX"/></ItemDef>',
+    '<CodeList OID="SEX" Name="SEX" DataType="text">',
+    '  <CodeListItem CodedValue="M" def:Rank="1"><Decode><TranslatedText xml:lang="en">Male</TranslatedText></Decode></CodeListItem>',
+    '  <CodeListItem CodedValue="F" def:Rank="2"><Decode><TranslatedText xml:lang="en">Female</TranslatedText></Decode></CodeListItem>',
+    '</CodeList>',
+    '</MetaDataVersion></Study></ODM>'), f)
+  def <- tfl_read_define(f)
+  expect_identical(attr(def, "source")$version, "1.0")
+  expect_identical(def$datasets$label, "Subject-Level Analysis")
+  expect_identical(def$datasets$keys, "STUDYID | USUBJID")
+  expect_identical(def$datasets$class, "ADSL")
+  expect_identical(def$variables$label, c("Unique Subject Identifier", "Sex"))
+  expect_identical(def$codelists$decode, c("Male", "Female"))
+  expect_identical(def$codelists$rank, c(1, 2))
+  expect_identical(nrow(def$value_level), 0L)
 })
 
 test_that("tfl_define_codelists() gives a report's codelists rows", {
@@ -301,6 +369,22 @@ test_that("tfl_read_define_spec() reads a Pinnacle 21 style workbook", {
                    rows[rows$variable %in% "SEX" |
                           rows$value %in% "SEX", ],
                    ignore_attr = TRUE)
+})
+
+test_that("tfl_read_define_spec() reads the ValueLevel and WhereClauses sheets when there", {
+  skip_if_not_installed("readxl")
+  skip_if_not_installed("openxlsx")
+  dir <- withr::local_tempdir()
+  def <- tfl_read_define_spec(.p21_xlsx(dir, value_level = TRUE))
+  vl <- def$value_level
+  expect_identical(vl$variable, c("AGE", "AGE"))
+  expect_identical(vl$where, c("AGEU == \"YEARS\"",
+                               "AGEU == \"MONTHS\" & AGEGR1 %in% c(\"<65\", \">=65\")"))
+  expect_identical(vl$digits, c(0L, 1L))
+  expect_identical(vl$format, c("8.0", "8.1"))
+  expect_identical(vl$label, c("Age (years)", "Age (months)"))
+  # without the sheets: no rows, no complaint
+  expect_identical(nrow(tfl_read_define_spec(.p21_xlsx(dir))$value_level), 0L)
 })
 
 test_that("a company's layout: the profile changed through `map`", {

@@ -134,8 +134,9 @@
   # side by side is assembled after the report's own items, on `fig`)
   form <- .tpl_fig_forms[[t$root %||% t$from %||% tp$name]] %||% list()
   input <- form$input %||% "df"
-  call <- if (generic) sprintf("tfl_tpl(%s)", paste(c(input, q(called), arg_code), collapse = ", "))
-          else sprintf("%s(%s)", t$call, paste(c(input, arg_code), collapse = ", "))
+  call <- if (generic) sprintf("%s(%s)", .tpl_call_name(t, TRUE),
+                               paste(c(input, q(called), arg_code), collapse = ", "))
+          else sprintf("%s(%s)", .tpl_call_name(t, FALSE), paste(c(input, arg_code), collapse = ", "))
   # the report's own items after it
   pre <- character()
   terms <- character()

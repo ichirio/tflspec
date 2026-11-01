@@ -100,7 +100,7 @@ tfl_ai_adopt <- function(study_dir, outputs = NULL, overwrite = FALSE, dry_run =
       }
       if (!isTRUE(overwrite)) return(data.frame(output_id = id, status = "kept", file = rel))
     }
-    file.copy(src, dest, overwrite = TRUE)
+    .file_copy_safe(src, dest)
     log <<- rbind(log[log$output_id != id, , drop = FALSE],
                   data.frame(output_id = id, adopted = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
                              md5 = md5, stringsAsFactors = FALSE))
@@ -163,7 +163,7 @@ tfl_ai_migrate <- function(study_dir) {
   src <- file.path(.spec_dir(study_dir), "outputs", paste0(ids, ".yml"))
   ids <- ids[file.exists(src)]
   src <- src[file.exists(src)]
-  file.copy(src, area, overwrite = TRUE)
+  .file_copy_safe(src, area)
   if (length(ids)) {
     log <- .ai_adopted_read(study_dir)
     log <- rbind(log[!log$output_id %in% ids, , drop = FALSE],

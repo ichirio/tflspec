@@ -7,6 +7,7 @@
 exact_data <- function() {
   adsl <- as.data.frame(cards::ADSL)
   adsl$TRTA <- adsl$TRT01A
+  adsl$TRTAN <- adsl$TRT01AN   # (its pair: the arms in their order, as ADAE's TRTA)
   list(ADSL = adsl, ADAE = as.data.frame(cards::ADAE),
        ADTTE = as.data.frame(cards::ADTTE), ADLB = as.data.frame(cards::ADLB))
 }
@@ -51,6 +52,11 @@ exact_spec <- function(r, pop_derive = NULL, ds_derive = NULL,
 # the analysis data as the generated program makes it (dplyr: a column keeps
 # its label)
 exact_inputs <- function(r, adam, pop_derive = NULL, ds_derive = NULL) {
+  # (the program reads each dataset with its arms in their N order:
+  # order_arms(), the study helper; the hand-written call the same)
+  helpers <- new.env()
+  sys.source(system.file("helpers", "study_helpers.R", package = "tflspec"), envir = helpers)
+  adam <- lapply(adam, helpers$order_arms)
   pop <- dplyr::filter(adam$ADSL, SAFFL == "Y")
   if (!is.null(pop_derive)) {
     pop <- eval(str2lang(sprintf("dplyr::mutate(pop, %s)", pop_derive)))

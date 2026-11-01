@@ -16,12 +16,53 @@ set_levels <- function(data, ...) {
     cl <- lists[[v]]
     values <- if (is.null(names(cl))) unname(cl) else names(cl)
     x <- as.character(data[[v]])
+    # (a column the list was put on already -- a data made from another --
+    # holds the labels: those are the values they label)
+    lab <- unname(cl)
+    done <- !is.na(x) & !x %in% values & x %in% lab
+    x[done] <- values[match(x[done], lab)]
     unknown <- setdiff(unique(x[!is.na(x)]), values)
     if (length(unknown)) {
       stop(sprintf("%s has values its code list does not: %s.  Add them to the list.",
                    v, paste0("\"", unknown, "\"", collapse = ", ")), call. = FALSE)
     }
     data[[v]] <- factor(x, levels = values, labels = unname(cl))
+  }
+  data
+}
+
+# A column in another's order, when the data has it: reorder(factor(x), by)
+# for a program's data step (PARAM by PARAMN, AVISIT by AVISITN).  An order
+# is not a condition that defines the report, so a data without the order
+# variable does not stop the program: the values stay in their own order
+# (factor(x)), and a message says so.
+#   mutate(adlb, PARAM = reorder_by(PARAM, PARAMN))
+reorder_by <- function(x, by) {
+  what <- deparse(substitute(by))
+  by <- tryCatch(by, error = function(e) NULL)
+  if (is.null(by)) {
+    message(sprintf("reorder_by(): the data has no %s: the values in their own order.", what))
+    return(factor(x))
+  }
+  stats::reorder(factor(x), by)
+}
+
+# The arms in their numeric order when the data has it: each arm variable
+# (TRT..., ARM..., ACTARM...) with the numeric pair of its name and N
+# (TRT01A by TRT01AN, ARM by ARMN) is made a factor in that order, as a
+# program's data step; one without its pair is left as it is.  A blank
+# (a subject of no arm, as an XPT holds a missing text) is missing, not a
+# level.  A code list set after wins.
+#   adsl |> order_arms()
+order_arms <- function(data) {
+  for (v in grep("^(TRT|ARM|ACTARM)", names(data), value = TRUE)) {
+    n <- paste0(v, "N")
+    if (grepl("N$", v) || !n %in% names(data) || is.factor(data[[v]])) next
+    x <- as.character(data[[v]])
+    x[!is.na(x) & !nzchar(trimws(x))] <- NA
+    lv <- unique(x[!is.na(x)])
+    first <- vapply(lv, function(l) suppressWarnings(min(data[[n]][x %in% l], na.rm = TRUE)), 0)
+    data[[v]] <- factor(x, levels = lv[order(first, match(lv, lv))])
   }
   data
 }
@@ -33,6 +74,14 @@ set_levels <- function(data, ...) {
 # its own, the rest (the by counts, the total N) `analysis_id`'s.
 tag_ard <- function(ard, report_id, analysis_id, population = NA_character_,
                     analyses = NULL) {
+  need <- c("variable", "stat_name", "stat")
+  if (!is.data.frame(ard) || !all(need %in% names(ard))) {
+    stop(sprintf(paste0("analysis %s: its code must return a cards ARD (columns variable, ",
+                        "stat_name, stat ..., as ard_summary() or ard_tabulate() make); it returned %s."),
+                 analysis_id, if (is.data.frame(ard)) {
+                   sprintf("a data frame with columns %s", paste(names(ard), collapse = ", "))
+                 } else paste("an object of class", class(ard)[1L])), call. = FALSE)
+  }
   if (length(analyses)) {
     own <- rep(names(analyses), lengths(analyses))
     id <- own[match(as.character(ard$variable), unlist(analyses))]
@@ -80,6 +129,27 @@ fmt_ard <- function(ard, formats = list(), skip = character()) {
 keep_stats <- function(ard, stats) {
   if (is.list(ard) && !is.data.frame(ard)) return(lapply(ard, keep_stats, stats))
   ard[ard$stat_name %in% stats, , drop = FALSE]
+}
+
+# The rows of a group no record fell in dropped: a group a code list
+# names that the data does not have (the baseline visit in the change's
+# records, whose level the code list put back) has N = 0 and nothing else;
+# its cells stay empty instead of printing 0.  The groups are the ARD's
+# group columns together.
+#   ard_summary(...) |> drop_empty_groups()
+drop_empty_groups <- function(ard) {
+  if (is.list(ard) && !is.data.frame(ard)) return(lapply(ard, drop_empty_groups))
+  gl <- grep("^group[0-9]+_level$", names(ard), value = TRUE)
+  if (!length(gl) || !"stat_name" %in% names(ard)) return(ard)
+  key <- do.call(paste, c(lapply(ard[gl], function(v) vapply(v, function(x)
+    if (is.null(x) || length(x) == 0L) "" else as.character(x)[1L], "")), sep = "\r"))
+  n0 <- ard$stat_name == "N" & vapply(ard$stat, function(x) {
+    if (!length(x)) return(FALSE)
+    v <- suppressWarnings(as.numeric(x[[1L]]))
+    length(v) == 1L && !is.na(v) && v == 0
+  }, NA)
+  empty <- unique(key[n0])
+  ard[!key %in% empty, , drop = FALSE]
 }
 
 # An ARD's columns in their code lists' order: the rows of a listed

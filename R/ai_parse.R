@@ -36,8 +36,9 @@
 #' * `table`: each report of `outputs` is read as [tfl_read_output()]
 #'   reads a report file, into `outputs` (a list of `tfl_output` by id); a
 #'   key a report file does not have is a problem.  The assumptions (text,
-#'   or mappings with `output_id`, `where`, `item`, `assumption`,
-#'   `question`) are kept as rows too, in `assumption_rows`.
+#'   or mappings with `output_id`, `where`, `item`, `assumption`, `value`
+#'   -- the value used, a list joined with `", "` -- and `question`) are
+#'   kept as rows too, in `assumption_rows`.
 #' * `figure`: the design becomes a [tfl_fig_design()] (the 0.0.12 shape
 #'   `type` / `style` / `args` is read as one `figure` layer, and a `stats`
 #'   list of before 0.0.24.9074 after the `data` steps, each with a
