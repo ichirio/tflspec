@@ -35,4 +35,4 @@ Read the TOC and the shell of each report above and in the documents below, and 
 <!-- agent -->
 ## What to do
 
-Read the TOC and the shell of each report above, ask in the chat what is not settled, then write each report's draft as AGENTS.md says: one file a report, `spec/outputs/<id>.yml`, with what you took (`assumptions`) and what the person decides (`confirm`) under its `ai:` key.
+Read the TOC and the shell of each report above, settle each open point as AGENTS.md says -- the documents, else the usual convention (an assumption, `from: "programmer convention"`), else a question in the chat when it changes the numbers or the structure -- then write each report's draft as AGENTS.md says: one file a report, `spec/outputs/<id>.yml`, with what you took (`assumptions`) and what the person decides (`confirm`) under its `ai:` key.
