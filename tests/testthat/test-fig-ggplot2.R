@@ -379,7 +379,8 @@ test_that("the code of the new cards runs: limits, log ticks, labellers, theme_s
     list("stat_manual", list(fun = tfl_r("function(d) transform(d, y = cumsum(y))"), geom = "point")),
     list("lims", list(x = c(0, 7)))))
   expect_length(b$data, 2L)
-  if (requireNamespace("hexbin", quietly = TRUE)) {
+  # (hexbin is no Suggests of tflspec: rlang asks, not requireNamespace())
+  if (rlang::is_installed("hexbin")) {
     expect_length(gg_build(d2, "x, y", list(list("geom_hex", list(bins = 5L))))$data, 1L)
   }
 })
