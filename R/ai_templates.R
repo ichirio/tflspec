@@ -85,8 +85,12 @@
     p <- .tpl_shown(tfl_template_params(tt$name[i]))
     from <- if (!is.na(tt$from[i])) sprintf("; variant of %s", tt$from[i]) else ""
     pkg <- if (!identical(tt$package[i], "tflspec")) sprintf("; %s's", tt$package[i]) else ""
-    out <- c(out, sprintf("- `%s`: %s (%s, layout %s%s%s)", tt$name[i], .ai_tpl_description(t),
-                          tt$kind[i], tt$layout[i], from, pkg))
+    # (a template whose data stage is the report's: the rule beside it)
+    own <- any(vapply(t$params %||% list(), function(p) isTRUE(p$hidden) && identical(p$stage, "data"), NA))
+    out <- c(out, sprintf("- `%s`: %s (%s, layout %s%s%s)%s", tt$name[i], .ai_tpl_description(t),
+                          tt$kind[i], tt$layout[i], from, pkg,
+                          if (own) paste0(" -- own data: the report writes `data` steps `read`, the analysis ",
+                                          "set, `param`; not the template's own steps (`survfit`, `time_unit`)") else ""))
     # (its catalog aliases: the same template, by another collection's name)
     al <- .tpl_aliases_of(tt$name[i])
     if (nrow(al)) {

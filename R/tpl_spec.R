@@ -215,9 +215,28 @@ tfl_template_to_spec <- function(output, study) {
 .tpl_composes <- function(data, x) {
   as.integer(x$call_steps %||% 0L) > 0L && length(data$steps) > 0L
 }
-.tpl_compose_data <- function(data, x) {
+.tpl_compose_data <- function(data, x, id = "", name = "") {
   n <- as.integer(x$call_steps)
-  data$steps <- c(data$steps, utils::tail(x$data$steps %||% list(), n))
+  call <- utils::tail(x$data$steps %||% list(), n)
+  # a step of the call's kind written by the report (a survfit before the
+  # template's own): the template makes it, and would make it again on
+  # the report's -- a clear stop here, not a failure of the build
+  # (a step of the data stage -- a filter, a derive, R code -- is the
+  # report's to write even when the call has one of the kind too)
+  kind <- function(s) vapply(s, function(e) as.character(e$step %||% ""), "")
+  stage <- c("", "read", "join", "param", "filter", "derive", "code", "flag", "select",
+             "mutate", "arrange")
+  dup <- setdiff(intersect(kind(data$steps), kind(call)), stage)
+  if (length(dup)) {
+    .ard_stop(sprintf(paste0(
+      "%s uses template %s, which makes its own %s step%s (%s); `data.steps` writes %s too. ",
+      "Keep the data stage (read, the analysis set, param, filter, derive) and remove %s; ",
+      "keep plot and layers."),
+      id, name, paste(dup, collapse = " and "), if (length(dup) > 1L) "s" else "",
+      paste(unique(kind(call)), collapse = ", "), paste(dup, collapse = ", "),
+      paste(dup, collapse = ", ")))
+  }
+  data$steps <- c(data$steps, call)
   data
 }
 
