@@ -32,23 +32,23 @@ test_that("the agent's files: AGENTS.md, run.R, decisions; toc.yml; the paths; t
   expect_false(file.exists(file.path(d, "ai", "requests", "00-instructions.md")))
   ag <- readLines(file.path(d, "ai", "AGENTS.md"), encoding = "UTF-8")
   expect_identical(readLines(file.path(d, ".github", "copilot-instructions.md"), encoding = "UTF-8"), readLines(file.path(d, "AGENTS.md"), encoding = "UTF-8"))
-  for (k in c("<!-- tflspec route: spec -->", "ai/decisions.md", "three times at most",
-              "ai/spec/outputs/<id>.yml")) {
+  for (k in c("<!-- tflspec route: spec -->", "`decisions.md`", "three times at most",
+              "`spec/outputs/<id>.yml`")) {
     expect_true(any(grepl(k, ag, fixed = TRUE)), info = k)
   }
   expect_false(any(grepl("Rscript run.R", ag, fixed = TRUE)))
   expect_false(any(grepl("{{", ag, fixed = TRUE)))
   # the first message: the first two requests, then a stop
   expect_true(is.character(r$agent_prompt) && length(r$agent_prompt) == 1L)
-  expect_match(r$agent_prompt, "Do every request of ai/requests/index.md", fixed = TRUE)
+  expect_match(r$agent_prompt, "Do every request of requests/index.md", fixed = TRUE)
   expect_match(r$agent_prompt, "ask me here, in English,", fixed = TRUE)
-  expect_match(r$agent_prompt, "ai/spec/outputs/<id>.yml", fixed = TRUE)
+  expect_match(r$agent_prompt, "(spec/outputs/<id>.yml)", fixed = TRUE)
   expect_match(r$agent_prompt, "review each draft against the list under \"Before you stop\"", fixed = TRUE)
   ag <- paste(readLines(file.path(d, "ai", "AGENTS.md"), encoding = "UTF-8"), collapse = "\n")
   expect_match(ag, "## Before you stop", fixed = TRUE)
   expect_match(ag, "defines a derived timepoint or population", fixed = TRUE)
   # one message for every request, in index.md's order; "continue" goes on
-  expect_match(r$agent_prompt, "every request of ai/requests/index.md", fixed = TRUE)
+  expect_match(r$agent_prompt, "every request of requests/index.md", fixed = TRUE)
   expect_match(r$agent_prompt, "\"continue\"", fixed = TRUE)
   expect_identical(readLines(file.path(d, "ai", "agent_prompt.md"), warn = FALSE), r$agent_prompt)
   # the common instructions in ai/, the study folder's own AGENTS.md pointing to them
@@ -62,7 +62,7 @@ test_that("the agent's files: AGENTS.md, run.R, decisions; toc.yml; the paths; t
   req1 <- readLines(file.path(d, r$requests$file[1L]), encoding = "UTF-8")
   expect_identical(req1[1L], "<!-- tflspec: agent -->")
   expect_match(req1[2L], "> **For the agent**", fixed = TRUE)
-  expect_match(req1[2L], sprintf("ai/spec/outputs/%s.yml", r$requests$request[1L]), fixed = TRUE)
+  expect_match(req1[2L], sprintf("`spec/outputs/%s.yml`", r$requests$request[1L]), fixed = TRUE)
   expect_identical(r$agent_files, character())
   for (f in c("ai/instructions-table.md", "ai/instructions-figure.md", "ai/templates.md")) {
     expect_true(file.exists(file.path(d, f)), info = f)
@@ -208,7 +208,7 @@ test_that("a study copied elsewhere: its answers checked and built against its o
   unlink(d, recursive = TRUE)
   # the agent's wording, not a chat's
   ix <- paste(readLines(file.path(d2, "ai", "requests", "index.md"), encoding = "UTF-8"), collapse = "\n")
-  expect_match(ix, "`ai/spec/outputs/<id>.yml`", fixed = TRUE)
+  expect_match(ix, "`spec/outputs/<id>.yml`", fixed = TRUE)
   expect_false(grepl("new chat", ix, fixed = TRUE))
   r0 <- suppressMessages(tfl_ai_collect_answers(d2))
   expect_match(r0$next_steps[["ae-1"]], "ask the agent for ai/requests/ae-1.md", fixed = TRUE)
@@ -365,7 +365,7 @@ test_that("mode = \"agent\": what the agent may open -- agent_reads, references"
   expect_identical(r$agent_files[2L], "ai/docs/sap.txt")
   expect_length(r$agent_files, 2L)
   ag <- paste(readLines(file.path(d, "ai", "AGENTS.md"), encoding = "UTF-8"), collapse = "\n")
-  expect_match(ag, "`ai/docs/sap.txt`", fixed = TRUE)
+  expect_match(ag, "`docs/sap.txt`", fixed = TRUE)
   expect_match(ag, "- the ADaM in `", fixed = TRUE)
   expect_false(grepl("- the TOC / SHELL workbook", ag, fixed = TRUE))
   expect_match(ag, "Run a command only to read the files listed", fixed = TRUE)
