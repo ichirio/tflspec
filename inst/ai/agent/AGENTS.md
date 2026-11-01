@@ -15,7 +15,8 @@ first and follow for every report after.
 A draft must be a valid specification: the YAML well formed, every key
 and value as the schema in the instructions says.  You cannot run the
 check yourself, so write exactly the forms the instructions and their
-examples show, and nothing else.  A draft that lacks something (an
+examples show, and nothing else.  Quote every free-text value -- `label`, titles, footnotes, an assumption's text -- in double quotes.  Always quote a value that holds `: ` or `#`, or starts with `[ { * & ! | > ' " % @`, or is yes / no / on / off or a number you mean as text.
+A draft that lacks something (an
 analysis set you were not told) is fine -- the person's check says what
 is missing; a draft that breaks the form is not.
 
@@ -65,10 +66,39 @@ skip it.  For each of the others, in order:
    ..."), apply that rule (an analysis data with `code`, an assumption
    that cites it) or ask; do not take a visit name or a flag from the
    data in its place.
-3. {{ask_when}} **Ask them in the chat**, in {{language}}, numbered.  Each
+   **What to ask, and what not to ask:**
+   - Do not ask what the documents or the data settle: the shell, the
+     TOC, the SAP, `ai/adam_summary.md`, `spec/data.yml` or a decision.
+     Decide, and write the source in the assumption (`from:`).
+   - Do not ask about a case the data shows cannot happen: what to show
+     when there are 0 events while the summary shows events; how to
+     treat missing values when the summary says `[missing: none]` for
+     the variable.  Write the usual default and list it under
+     *to confirm* (step 6) -- no question.
+   - Ask only when the sources disagree, or when a choice changes a
+     report's numbers and nothing -- no document, no data, no decision
+     -- defines it.
+3. {{ask_when}} **Ask them in the chat**, in {{language}}, numbered,
+   the message starting with the progress tag (*Progress*, below):
+   `[n/N] <request> (<report ids>)`.
+   **Collect every question first** -- every item of step 2, for every
+   report of the request -- and ask them together in **one message**;
+   never one at a time, waiting for an answer between them.  A follow-up
+   question only when an answer raises a new point.  Each
    question says **which report it is about -- its id and its title --**
    and the item, the choices you see, and the one you would take if the
-   person says "default".  A question that holds for every report of the
+   person says "default".  **End every question with an example answer**,
+   one line, `例: ...` in Japanese (`e.g. ...` in English): the answer as
+   the programmer would type it, holding every piece the draft needs --
+   the title's label, the condition, the variable, which source is wrong
+   -- so that the person sees what to answer, and can paste it as it is
+   or edit it.  The example follows your default choice.  A choice alone
+   ("SAFFL") is not an answer.
+   - a population conflict:
+     `例: シェルのとおり Safety Analysis Set（SAFFL = 'Y'）、実治療 TRT01A。TOC の Full Analysis Set は誤り。`
+   - a denominator:
+     `例: 分母は Total 行（post-baseline 値が 1 つ以上ある被験者）。食い違う脚注は削除。`
+   A question that holds for every report of the
    request says so.  Then **stop and wait**: do not write the report until
    the person answers.  There is no limit to the questions; ask what you
    need, each once.  When an answer does not settle the item, ask again,
@@ -90,7 +120,7 @@ skip it.  For each of the others, in order:
    - the **digits** when the shell shows them (`xx.x`, `xx.xx`): in the
      cell templates (`{mean:.1f}`) or `plan_digits`; when it does not,
      write none (the study's default applies; do not ask);
-   - `page: titles`, from the shell;
+   - {{titles_rule}}
    - the **footnotes**, from the shell: {{footnotes_at}}
    Nothing else of the look: no column widths, no header rows, no page
    settings, no blank rows, no borders, no fonts.  The study's defaults and
@@ -125,6 +155,22 @@ below), then **stop** and tell the person: the report files written
 (their ids), the decisions added, what is marked to confirm, and what
 the review changed.
 
+## Progress
+
+Say where you are, one line in {{language}}, so that the person sees how
+far you have got:
+
+- at the start of each request: `[3/6] T-LB-SUM（14.3.4.1）を開始。残り 3 件`
+  (`[3/6] Starting T-LB-SUM (14.3.4.1); 3 left`);
+- when a request's drafts are written: `[3/6] 完了: 14.3.4.1。次: T-LB-SHIFT`
+  (`[3/6] Done: 14.3.4.1; next: T-LB-SHIFT`);
+- a question message starts with the same tag (step 3).
+
+`n` is the request's number of `N` in `ai/requests/index.md`.  Keep the
+same in `ai/progress.md` (write it over each time): the current request,
+the requests done, the requests left.  (`ai/status.md` is `run.R`'s: do
+not write it.)
+
 ## Before you stop
 
 Review each draft against this list and fix what fails:
@@ -140,6 +186,11 @@ Review each draft against this list and fix what fails:
 - a derived timepoint or population a footnote or a document defines is
   made by its rule, not taken from the data;
 - nothing of the look is written;
+- every free-text value (`label`, titles, footnotes, assumption text) is
+  in double quotes -- always one with `: ` or `#` in it;
+- a template with its own data (`km_survival`, `km_cumulative`) has
+  `data.steps` of `read`, the analysis set and `param`, and none of the
+  template's own steps (`survfit`, `time_unit`);
 - the forms are the instructions' (*Before you save a draft*).
 
 Then tell the person what the review changed, draft by draft (or that it
@@ -205,7 +256,9 @@ a line.
 - Do not change the TOC / SHELL workbook, the ADaM, `study.yml`,
   `spec/data.yml`, `spec/defaults.yml`, `run.R`, `AGENTS.md` or
   `.github/copilot-instructions.md`.
-- Write only `ai/spec/outputs/` and `ai/decisions.md` (add lines, change
-  nothing a person wrote).
-- Do not guess what defines a report: ask.  Do not write the look.
+- Write only `ai/spec/outputs/`, `ai/decisions.md` (add lines, change
+  nothing a person wrote) and `ai/progress.md`.
+- Do not guess what defines a report: ask -- but do not ask what the
+  documents or the data settle, nor about a case the data rules out.
+  Do not write the look.
 - Do not try the same thing more than twice: say so in the chat and stop.

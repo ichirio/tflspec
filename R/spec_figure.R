@@ -124,8 +124,26 @@
 
 # the figure made: its code run on the objects it reads (`data`: a named
 # list -- the datasets by their names in lower case, `ard`)
+# A dataset a figure's steps read and the data given do not hold would be
+# found on the search path -- the package's sample adtte, without the
+# study's flags, and a puzzling "object 'FASFL' not found": a clear stop
+.fig_reads_given <- function(output, data) {
+  reads <- unique(tolower(unlist(lapply(output$data$steps, function(st) {
+    if (is.list(st) && identical(st$step, "read") && is.null(.fig_read_data(st))) st$dataset
+  }))))
+  given <- if (is.list(data) && !is.data.frame(data)) tolower(names(data)) else character()
+  miss <- setdiff(reads, given)
+  if (length(miss)) {
+    .ard_stop(sprintf("tfl_content_run(): the figure reads %s, not among the data given (%s).",
+                      paste(toupper(miss), collapse = ", "),
+                      if (length(given)) paste(toupper(given), collapse = ", ") else "none"))
+  }
+  invisible(TRUE)
+}
+
 .content_fig_run <- function(output, data) {
   if (is.data.frame(data)) data <- list(df = data)
+  .fig_reads_given(output, data)
   new <- .fig_new_content(output$content)
   code <- .content_fig_code_out(output)
   # the packages it calls: their exports around it, none attached

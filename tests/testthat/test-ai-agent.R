@@ -395,3 +395,41 @@ test_that("what every report's build depends on names the packages' versions", {
     expect_true(grepl(paste0("|", p, "|", v(p), "|"), paste0(k, "|"), fixed = TRUE), label = p)
   }
 })
+
+test_that("tfl_ai_prepare(adam_spec = ) writes the requests, the spec's codes in the summary (#513)", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("openxlsx")
+  root <- withr::local_tempdir()
+  d <- file.path(root, "study")
+  ad <- agent_study(root)
+  xl <- file.path(root, "spec.xlsx")
+  openxlsx::write.xlsx(list(
+    Datasets = data.frame(Dataset = "ADSL", Description = "Subject-Level Analysis Dataset"),
+    Variables = data.frame(Order = 1:2, Dataset = "ADSL", Variable = c("SEX", "AGE"),
+                           Label = c("Sex", "Age"), Codelist = c("CL.SEX", NA),
+                           `Significant Digits` = c(NA, 0), check.names = FALSE),
+    Codelists = data.frame(ID = "CL.SEX", Name = "Sex", Order = 1:2, Term = c("M", "F"),
+                           `Decoded Value` = c("Male", "Female"), check.names = FALSE)), xl)
+  r <- tfl_ai_prepare(unit = "toc", d, ex_book(), adam = ad, adam_spec = xl, quiet = TRUE)
+  expect_true(nrow(r$requests) > 0L)
+  s <- paste(readLines(file.path(d, "ai", "adam_summary.md"), warn = FALSE), collapse = "\n")
+  expect_match(s, "M = Male | F = Female", fixed = TRUE)
+  expect_match(s, "digits 0", fixed = TRUE)
+})
+
+test_that("tfl_ai_prepare(define = ) writes the requests, the define's codes and digits in the summary (#513)", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("xml2")
+  root <- withr::local_tempdir()
+  d <- file.path(root, "study")
+  ad <- agent_study(root)
+  r <- tfl_ai_prepare(unit = "toc", d, ex_book(), adam = ad, quiet = TRUE,
+                      define = test_path("fixtures", "define", "define-vl.xml"))
+  expect_true(nrow(r$requests) > 0L)
+  s <- paste(readLines(file.path(d, "ai", "adam_summary.md"), warn = FALSE), collapse = "\n")
+  expect_match(s, "M = Male | F = Female", fixed = TRUE)
+  expect_match(s, "digits 2, format 8.2", fixed = TRUE)
+  expect_match(s, "## Value level (define.xml)", fixed = TRUE)
+})

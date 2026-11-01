@@ -116,28 +116,34 @@ ard:
     - {id: SHIFT, method: categorical, data: lb_worst, by: [TRT01A, PARAMCD], variables: [WORST], denominator: column}
 ```
 
-A figure from a template: its data as `steps` under `data` (never a bare
-list), the template by name:
+A figure from a template with its own data (`km_survival`,
+`km_cumulative`): the template by `name` and `args`, and its data as
+`steps` under `data` (never a bare list) -- the data stage only: `read`,
+the analysis set (`flag`, or a semi `join` on ADSL), `param`.  **Not the
+template's own steps**: no `survfit`, no `time_unit` -- the template
+makes them, and the check refuses a draft that writes them.  Never drop
+`data.steps` either: without them the figure would be of every record.
 
 ```yaml
 id: F-14-2-2
 kind: figure
-label: Kaplan-Meier Plot of Overall Survival
+label: "Kaplan-Meier Plot of Overall Survival"
 population: ITT
 extends: [defaults]
-template: km_simple
+template:
+  name: km_survival
+  args: {by: TRT01P, time_unit: months}
 data:
   source: code
   steps:
     - {step: read, dataset: ADTTE}
-    - {step: param, value: OS}
     - {step: flag, variable: ITTFL}
-    - {step: survfit, name: fit, time: AVAL, censor: CNSR, by: TRT01P}
-plot: {x_label: Time (Months), y_label: Survival Probability, colour_by: TRT01P}
+    - {step: param, value: OS}
+plot: {x_label: "Time (Months)", y_label: "Survival Probability"}
 page:
   titles:
-    "1": {center: Figure 14.2.2}
-    "2": {center: Kaplan-Meier Plot of Overall Survival}
+    "1": {center: "Figure 14.2.2"}
+    "2": {center: "Kaplan-Meier Plot of Overall Survival"}
 ```
 
 ## The fields, exactly
@@ -228,7 +234,7 @@ Group: {RENALGR}"`.
   ard:
     analysis_data:
       - id: lb_shift
-        label: one row a subject and parameter: the baseline category, the worst post-baseline category
+        label: "one row a subject and parameter: the baseline category, the worst post-baseline category"
         from: ADLB
         population: SAF
         code: !r 'post <- dplyr::filter(adlb, USUBJID %in% adsl_sub$USUBJID, ONTRTFL == "Y", is.na(ABLFL) | ABLFL != "Y", !is.na(ANRIND)); base <- dplyr::distinct(dplyr::filter(adlb, ABLFL == "Y"), USUBJID, PARAMCD, .keep_all = TRUE)[, c("USUBJID", "PARAMCD", "BNRIND")]; worst <- dplyr::summarise(dplyr::group_by(post, USUBJID, TRT01A, PARAMCD), WORST = if (any(ANRIND == "HIGH")) "HIGH" else if (any(ANRIND == "LOW")) "LOW" else "NORMAL", .groups = "drop"); out <- dplyr::left_join(worst, base, by = c("USUBJID", "PARAMCD")); dplyr::mutate(out, BASECAT = dplyr::coalesce(BNRIND, "MISSING"))'
@@ -266,6 +272,8 @@ Group: {RENALGR}"`.
 | wrong | right |
 |---|---|
 | `{left: MedDRA version 27.0, fictional dictionary.}` | `{left: "MedDRA version 27.0, fictional dictionary."}` -- a comma, a colon or `#` in a text: quote it |
+| `label: Shift Table of Laboratory Values: Baseline versus Worst` | `label: "Shift Table of Laboratory Values: Baseline versus Worst"` -- `: ` inside a value is a YAML error; quote every free text |
+| `template: {name: km_survival, ...}` with `data.steps` holding `survfit`, or with no `data.steps` | the data stage only: `read`, the analysis set, `param` -- the template makes `time_unit` and `survfit` |
 | `where: TRTEMFL == "Y"` | `where: !r TRTEMFL == "Y"` -- R code carries `!r` |
 | `data: [{step: read, dataset: ADTTE}, ...]` | `data: {source: code, steps: [{step: read, dataset: ADTTE}, ...]}` |
 | an analysis with `data: lb_worst` **and** `population: SAF` | one of the two: `data` alone, or `dataset` with `population` |
@@ -281,7 +289,10 @@ Group: {RENALGR}"`.
 
 1. Every key is one the schema or this file names; none of your own.
 2. Indentation is two spaces a level; a list is `- ` items or `[a, b]`.
-3. Every text with `,` `:` `#` `{` `}` is in double quotes; R code has `!r`.
+3. Every free-text value (`label`, titles, footnotes, assumption text)
+   is in double quotes -- always one with `: ` or `#`, one starting with
+   `[ { * & ! | > ' " % @`, or yes / no / on / off or a number meant as
+   text; R code has `!r`.
 4. `id` is the report's id as the request gives it; the file is `<id>.yml`.
 5. Each analysis reads `data` or `dataset` + `population`, not both; each
    `data` names an analysis data of this report; each variable is in
@@ -290,3 +301,6 @@ Group: {RENALGR}"`.
 7. Nothing of the look; the digits only where the shell shows them.
 8. `ai:` is the last top-level key: `assumptions` (each with `from` when
    from a decision) and `confirm`.
+9. A template with its own data (`km_survival`, `km_cumulative`) has
+   `data.steps` of `read`, the analysis set and `param` -- and none of the
+   template's own steps (`survfit`, `time_unit`).

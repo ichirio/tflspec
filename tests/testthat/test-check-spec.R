@@ -46,3 +46,71 @@ test_that("an argument cards does not have, a function it does not have, an item
   expect_true(any(p2$part == "ard" & p2$level == "error" & grepl("has no ard_nonexistent", p2$message)))
   expect_error(tfl_check_spec(d, "T-NONE"), "no report")
 })
+
+test_that("build = TRUE: a report the checks pass is built; one that cannot be made has a build error row (#519)", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("cards")
+  skip_if_not_installed("ggsurvfit")
+  d <- cs_study()
+  tfl_write_output(tfl_output("T-DM", "table", population = "SAF",
+                              template = list(name = "demog", args = list(population = "SAF"))),
+                   file.path(d, "spec", "outputs", "T-DM.yml"))
+  # a KM of ADTTE, which the study does not have: read, it cannot be made
+  tfl_write_output(tfl_output("F-KM", "figure", population = "SAF", extends = "defaults",
+                              template = list(name = "km_survival", args = list(by = "TRT01A")),
+                              data = list(steps = list(list(step = "read", dataset = "ADTTE"),
+                                                       list(step = "param", value = "PFS")))),
+                   file.path(d, "spec", "outputs", "F-KM.yml"))
+  p0 <- suppressWarnings(tfl_check_spec(d))
+  expect_false("build" %in% p0$part)
+  p <- suppressWarnings(tfl_check_spec(d, build = TRUE))
+  b <- p[p$part == "build", ]
+  expect_identical(b$output_id, "F-KM")
+  expect_identical(b$level, "error")
+  expect_match(b$message, "the report cannot be made: ", fixed = TRUE)
+  expect_false(any(p$output_id %in% "T-DM" & p$level == "error"))
+  r <- tfl_check_reports(p)
+  expect_identical(r$level[r$output_id == "T-DM"], "OK")
+  expect_identical(r$level[r$output_id == "F-KM"], "ERROR")
+  expect_true("F-KM" %in% names(tfl_check_fix_text(p)))
+  # on its own
+  b2 <- suppressWarnings(tfl_check_build(d))
+  expect_identical(b2$output_id, "F-KM")
+  expect_identical(attr(b2, "ids"), c("F-KM", "T-DM"))
+  expect_identical(nrow(suppressWarnings(tfl_check_build(d, output_id = "T-DM"))), 0L)
+  expect_error(tfl_check_build(d, output_id = "NOPE"), "no report")
+})
+
+test_that("page: titles under a study header that prints the label, title and population: a warning (#518)", {
+  skip_if_not_installed("haven")
+  d <- cs_study()
+  writeLines(c("page:", "  header:", "    '4': {center: '{OUTPUT_LABEL}'}", "    '5': {center: '{OUTPUT_TITLE}'}",
+               "    '6': {center: '({OUTPUT_POPULATION})'}"),
+             file.path(d, "spec", "defaults.yml"))
+  o <- tfl_output("T-DM", "table", population = "SAF", label = "Demographics", extends = "defaults",
+                  template = list(name = "demog", args = list(population = "SAF")),
+                  page = list(titles = list("1" = list(center = "Table 14.1.1"),
+                                            "2" = list(center = "Demographics"))))
+  tfl_write_output(o, file.path(d, "spec", "outputs", "T-DM.yml"))
+  p <- tfl_check_spec(d)
+  w <- p[p$part == "page", ]
+  expect_identical(nrow(w), 1L)
+  expect_identical(w$level, "warning")
+  expect_match(w$message, "{OUTPUT_LABEL}, {OUTPUT_TITLE}, {OUTPUT_POPULATION}", fixed = TRUE)
+  expect_match(w$message, "Remove `page: titles`", fixed = TRUE)
+  # the report's own tokens fill the header: its label, its analysis set's label
+  st <- tfl_read_study_spec(d)
+  tk <- tfl_report_tokens(o, study = st)
+  expect_identical(unname(tk["OUTPUT_TITLE"]), "Demographics")
+  expect_identical(unname(tk["OUTPUT_POPULATION"]), "Safety Population")
+  # without its titles: no warning
+  o$page <- NULL
+  tfl_write_output(o, file.path(d, "spec", "outputs", "T-DM.yml"))
+  expect_false("page" %in% tfl_check_spec(d)$part)
+  # the agent's instructions say so
+  s <- tflspec:::.ai_spec_settings(d)
+  expect_identical(s$titles_in_header, c("OUTPUT_LABEL", "OUTPUT_TITLE", "OUTPUT_POPULATION"))
+  expect_match(tflspec:::.ai_titles_text(s$titles_in_header), "no `page: titles`", fixed = TRUE)
+  expect_match(tflspec:::.ai_titles_text(character()), "`page: titles`, from the shell", fixed = TRUE)
+})
