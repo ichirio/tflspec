@@ -32,3 +32,7 @@ Read the TOC and the shell of each report above (or in the attached workbook), a
 ## What to do
 
 Read the TOC and the shell of each report above and in the documents below, and write the answer block as the instructions above describe: one report file a report. Write the assumptions as mappings: `- {output_id: <id>, where: <key>, item: <what>, assumption: <one sentence: what you decided and how>, value: <the value you used>, question: <a whole question the reviewer can answer -- never just "Confirm">}`.
+<!-- agent -->
+## What to do
+
+Read the TOC and the shell of each report above, ask in the chat what is not settled, then write each report's draft as AGENTS.md says: one file a report, `spec/outputs/<id>.yml`, with what you took (`assumptions`) and what the person decides (`confirm`) under its `ai:` key.

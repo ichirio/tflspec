@@ -1059,8 +1059,7 @@ print.tfl_ai_shell <- function(x, ...) {
     paste("Each line is one row of a sheet: `<row>: <column>=<text> | ...`, the",
           "non-empty cells left to right. A merged cell is written once with its",
           "range (`A1:E1=`). Leading spaces are the cell's indent; `\\n` is a line",
-          "break inside a cell. A shell sheet's `Column widths` are Excel's: write",
-          "its table's widths in their proportions."),
+          "break inside a cell."),
     "")
   body <- unlist(lapply(sh, function(s) {
     d <- cells[cells$sheet == s, , drop = FALSE]
