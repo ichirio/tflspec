@@ -43,10 +43,12 @@
   # {p:.1%}: a precision then `%`, no type between them
   bad <- if (!is.null(tx)) tx[grepl("[{][^{}:]+:[^{}]*[.][0-9]+%[}]", tx$text), , drop = FALSE]
   for (i in seq_len(NROW(bad))) {
-    fix <- gsub("(?<=[.][0-9]|[.][0-9][0-9])%(?=[}])", "f%", bad$text[i], perl = TRUE)
+    # (Python's form prints a sign; tflspec's `.1f%` does not: the sign after the brace)
+    fix <- gsub("(?<=[.][0-9]|[.][0-9][0-9])%[}]", "f%}%", bad$text[i], perl = TRUE)
     add(part = "content", item = bad$at[i], level = "error", message = sprintf(paste0(
       "the cell template \"%s\" is Python's percent form, which the build refuses ",
-      "(Unknown format spec): write \"%s\" (`.1f%%`: one decimal, then %%)"), bad$text[i], fix))
+      "(Unknown format spec): write \"%s\" (`.1f%%`: times 100, one decimal, no %% sign; ",
+      "the sign after the brace)"), bad$text[i], fix))
   }
   # a figure's piece turned off by its argument and added as a layer
   if (identical(o$kind, "figure") && length(o$layers)) {
