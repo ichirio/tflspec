@@ -228,6 +228,44 @@ tfl_output_contents <- function(output, study, dir = ".") {
   get("data", envir = env, inherits = FALSE)
 }
 
+# A report's content object -- the plan of a table or a listing, the
+# figure(s) -- from the study's files, in the study folder (the working
+# directory): the data read, its ARD built, its content run.  What
+# tfl_run_output() writes to RTF, and what tfl_check_build() makes to know
+# that the report can be made.
+.output_build_content <- function(output, st) {
+  # (each stage named in what stops it: "the ARD: ...", "the table: ...")
+  stage <- function(what, expr) {
+    tryCatch(expr, error = function(e) .ard_stop(paste0(what, ": ", conditionMessage(e))))
+  }
+  kind <- output$kind %||% "table"
+  if (!is.null(output$contents)) {
+    return(stage("the report's objects", tfl_output_contents(output, st, ".")))
+  }
+  ro <- stage("resolving the report", tfl_resolve_output(output, st))
+  if (any(vapply(ro$content, .is_part, NA))) {
+    # a table with parts: each object it reads, by name -- the ARD, a
+    # listing's records (the table's own data, a part's)
+    objects <- stage("the parts' data", .parts_objects(ro, st, "."))
+    stage(paste("the", kind), suppressMessages(tfl_content_run(ro, objects)))
+  } else if (identical(ro$data$source, "dataset")) {
+    # a listing's records (its own, or a template's: decided on the report
+    # as resolved): its data step, as its program reads them
+    recs <- stage("the listing's records", .listing_data_of(ro, st, "."))
+    stage(paste("the", kind), suppressMessages(tfl_content_run(ro, recs)))
+  } else if (identical(kind, "figure")) {
+    data <- stage("the figure's data", .contents_fig_data(ro, st, "."))
+    if (length(ro$ard$analyses %||% list())) {
+      data$ard <- stage("the ARD", tfl_build_ard(st, ".", output_id = ro$id, save = FALSE))
+    }
+    stage("the figure", suppressMessages(suppressWarnings(tfl_content_run(ro, data))))
+  } else {
+    ard <- stage("the ARD", suppressMessages(tfl_build_ard(st, dir = ".", output_id = ro$id, save = FALSE)))
+    if (!is.null(ard$output_id)) ard <- ard[ard$output_id %in% ro$id, , drop = FALSE]
+    stage(paste("the", kind), suppressMessages(tfl_content_run(ro, ard)))
+  }
+}
+
 #' Build a report's RTF from its YAML file
 #'
 #' One line to make a report's RTF from the study's files: the report read
@@ -254,28 +292,7 @@ tfl_run_output <- function(output, dir = ".", overwrite = TRUE) {
   # which the programs' setup sets: here too
   old_r <- .study_rounding_option(st)
   on.exit(options(old_r), add = TRUE)
-  ro <- NULL
-  content <- if (!is.null(output$contents)) {
-    tfl_output_contents(output, st, ".")
-  } else if (any(vapply((ro <- tfl_resolve_output(output, st))$content, .is_part, NA))) {
-    # a table with parts: each object it reads, by name -- the ARD, a
-    # listing's records (the table's own data, a part's)
-    suppressMessages(tfl_content_run(ro, .parts_objects(ro, st, ".")))
-  } else if (identical((ro <- tfl_resolve_output(output, st))$data$source, "dataset")) {
-    # a listing's records (its own, or a template's: decided on the report
-    # as resolved): its data step, as its program reads them
-    suppressMessages(tfl_content_run(ro, .listing_data_of(ro, st, ".")))
-  } else if (identical(output$kind, "figure")) {
-    o <- tfl_resolve_output(output, st)
-    data <- .contents_fig_data(o, st, ".")
-    if (length(o$ard$analyses %||% list())) data$ard <- tfl_build_ard(st, ".", output_id = o$id, save = FALSE)
-    suppressMessages(suppressWarnings(tfl_content_run(o, data)))
-  } else {
-    o <- tfl_resolve_output(output, st)
-    ard <- suppressMessages(tfl_build_ard(st, dir = ".", output_id = o$id, save = FALSE))
-    if (!is.null(ard$output_id)) ard <- ard[ard$output_id %in% o$id, , drop = FALSE]
-    suppressMessages(tfl_content_run(o, ard))
-  }
+  content <- .output_build_content(output, st)
   f <- tfl_report_path(output, study = st)
   dir.create(dirname(f), recursive = TRUE, showWarnings = FALSE)
   suppressMessages(rtfreporter::generate_rtfreport(tfl_report(output, content = content, study = st),

@@ -103,7 +103,8 @@ test_that("the ADaM summary with a define: its code lists in order with decodes,
   # the define's order and decodes, over the data's values
   expect_identical(v$levels[v$dataset == "ADSL" & v$variable == "SEX"], "M | F")
   expect_identical(v$codes[v$dataset == "ADSL" & v$variable == "SEX"], "M = Male | F = Female")
-  expect_identical(v$levels[v$dataset == "ADLB" & v$variable == "PARAMCD"], "ALT | BILI | HGB | PLAT")
+  expect_identical(v$levels[v$dataset == "ADLB" & v$variable == "PARAMCD"],
+                   "ALT | BILI | HGB | PLAT | AST | NEUT")
   expect_match(v$codes[v$dataset == "ADLB" & v$variable == "PARAMCD"], "BILI = Bilirubin (umol/L)", fixed = TRUE)
   expect_identical(v$define[v$dataset == "ADLB" & v$variable == "AVAL"], "digits 2, format 8.2")
   expect_identical(nrow(s$value_level), 3L)
@@ -123,6 +124,19 @@ test_that("the ADaM summary with a define: its code lists in order with decodes,
                            `Decoded Value` = c("Male", "Female"), check.names = FALSE)), xl)
   s2 <- tfl_ai_adam_summary(file.path(d, "adam"), datasets = "ADSL", adam_spec = xl)
   expect_identical(s2$variables$codes[s2$variables$variable == "SEX"], "M = Male | F = Female")
+  expect_identical(s2$variables$levels[s2$variables$variable == "SEX"], "M | F")
+  # a spec whose terms are not the data's: the data's values are listed,
+  # the spec's decodes go to the codes only
+  xl2 <- file.path(d, "spec2.xlsx")
+  openxlsx::write.xlsx(list(
+    Datasets = data.frame(Dataset = "ADSL", Description = "Subject-Level Analysis Dataset"),
+    Variables = data.frame(Order = 1, Dataset = "ADSL", Variable = "SEX", Label = "Sex",
+                           Codelist = "CL.SEX", check.names = FALSE),
+    Codelists = data.frame(ID = "CL.SEX", Name = "Sex", Order = 1:2, Term = c("Male", "Female"),
+                           `Decoded Value` = c("Male", "Female"), check.names = FALSE)), xl2)
+  s3 <- tfl_ai_adam_summary(file.path(d, "adam"), datasets = "ADSL", adam_spec = xl2)
+  expect_identical(s3$variables$levels[s3$variables$variable == "SEX"], "F | M")
+  expect_match(format(s3), "SEX (char) Sex: F | M [missing: none]", fixed = TRUE)
   expect_match(format(s2), "AGE (num) Age [define spec: digits 0]", fixed = TRUE)
   expect_false(grepl("Value level", format(s2), fixed = TRUE))
   s0 <- tfl_ai_adam_summary(file.path(d, "adam"), datasets = "ADSL")
@@ -141,8 +155,23 @@ test_that("the ADaM summary: variables, labels, types, short value lists, no rec
                    "ALT | AST | BILI | HGB | NEUT | PLAT")
   expect_true(is.na(v$levels[v$dataset == "ADSL" & v$variable == "USUBJID"]))
   txt <- format(s)
-  expect_match(txt, "## ADSL (200 records, 45 variables)", fixed = TRUE)
-  expect_match(txt, "SEX (char) Sex: F | M", fixed = TRUE)
+  expect_match(txt, "## ADSL (200 records, 200 subjects, 45 variables)", fixed = TRUE)
+  expect_match(txt, "SEX (char) Sex: F | M [missing: none]", fixed = TRUE)
+  # the subjects beside the records; the missing counts, NA and "" alike
+  expect_identical(s$datasets$subjects[s$datasets$dataset == "ADSL"], 200L)
+  expect_lt(s$datasets$subjects[s$datasets$dataset == "ADAE"],
+            s$datasets$records[s$datasets$dataset == "ADAE"])
+  expect_identical(v$missing[v$dataset == "ADSL" & v$variable == "SEX"], 0L)
+  m <- tfl_ai_adam_summary(list(adxx = data.frame(USUBJID = c("1", "1", "2", NA),
+                                                  SEX = c("F", "", NA, "M"), AGE = c(1, NA, 3, 4))))
+  expect_identical(m$datasets$subjects, 2L)
+  expect_identical(m$variables$missing, c(1L, 2L, 1L))
+  expect_match(format(m), "SEX (char): F | M [missing: 2 of 4]", fixed = TRUE)
+  expect_match(format(m), "AGE (num) [missing: 1 of 4]", fixed = TRUE)
+  expect_match(format(m), "## ADXX (4 records, 2 subjects, 3 variables)", fixed = TRUE)
+  n <- tfl_ai_adam_summary(list(adyy = data.frame(A = 1)))
+  expect_true(is.na(n$datasets$subjects))
+  expect_match(format(n), "## ADYY (1 records, 1 variables)", fixed = TRUE)
   expect_false(grepl(adsl$USUBJID[1L], txt, fixed = TRUE))
   expect_lt(nchar(txt), 20000)
   expect_identical(tfl_ai_adam_summary(file.path(d, "adam"), datasets = "adsl")$datasets$dataset,

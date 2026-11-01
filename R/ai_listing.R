@@ -71,16 +71,20 @@
       # parameters, the columns it adds or derives
       id <- data_id
       seen <- character()
+      coded <- FALSE
       while (!is.na(id) && id %in% ad_ids && !id %in% seen) {
         seen <- c(seen, id)
         a <- ad[[match(id, ad_ids)]]
+        coded <- coded || !is.null(a[["code"]])
         chk_pop(sprintf("ard.analysis_data %s population", id), .ai_scalar_text(a[["population"]]))
         has_pop <- has_pop || !is.null(a[["population"]]) || !is.null(a[["subjects"]])
         kept <- kept || says_par(a[["where"]]) || says_par(a[["code"]])
         have <- c(have, .ai_derived_names(a[["derive"]]), unlist(a[["add"]]))
         id <- .ai_scalar_text(a[["from"]]) %||% NA_character_
       }
-      ds <- toupper(if (!is.na(id) && !id %in% ad_ids) id else "")
+      # (a step of R code makes columns the check cannot know, as a
+      # table's: its columns are not checked against the dataset's)
+      ds <- toupper(if (!is.na(id) && !id %in% ad_ids && !coded) id else "")
     }
   } else if (!nzchar(ds)) {
     add("data dataset", "is missing: the dataset the listing's records are read from")
