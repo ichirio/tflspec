@@ -221,12 +221,17 @@ Percentage: yes counts 1, partial 0.5.
 | 2026-10-31 before | 44.3% (310 / 25 / 393 of 728) | 50.3% (310 / 25 / 306 of 641) | 43 / 5 / 89 |
 | 2026-10-31 after  | 45.4% (310 / 41 / 377 of 728) | 57.2% (310 / 41 / 227 of 578) | 43 / 5 / 89 |
 | 2026-11-01 before | 51.7% (310 / 40 / 288 of 638) | 57.9% (310 / 40 / 220 of 570) | 43 / 5 / 66 |
-| 2026-11-01 after  | 51.7% (310 / 40 / 288 of 638) | 57.9% (310 / 40 / 220 of 570) | 43 / 5 / 66 |
+| 2026-11-01 after  | 49.6% (308 / 17 / 313 of 638) | 58.1% (308 / 17 / 220 of 545) | 43 / 5 / 66 |
 
 (2026-11-01: rtfreporter@next no longer exports its deprecated functions
 (the old border constructors, `assemble_*()`, `format_count_pct()` ...: 90
-arguments, 23 functions, most of them helpers already); nothing new a
-SPEC writes in this run, which went to cards / cardx.)
+arguments, 23 functions, most of them helpers already).  Nothing new a
+SPEC writes in this run, which went to cards / cardx; after it: tflspec@next
+(#543) no longer passes `rtf_tables(font_size_half_points =,
+read_attributes =)` on, which rtfreporter deprecated with the rest of
+`rtf_tables()`' table-format arguments (`rtfreporter:::.rtf_tables_fmt_args`,
+removed in 0.9.0).  Those 25 are now helpers -- the plan verbs and
+`rtftable()` say them -- and leave the SPEC-relevant count.)
 
 (2026-10-31: the measure's corrections only, nothing new a SPEC writes --
 rtfreporter's deprecated exports and the superseded `rtf_section(secinfo =)`

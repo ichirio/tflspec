@@ -1676,14 +1676,12 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
       space_before = if (isFALSE(r$page_break) && !identical(r$space_before, 0L)) r$space_before)
   } else {
     # (a table's font size is its plan's, plan_style(): .plan_spec_steps();
-    # a listing's pages are made apart, so it is still said here)
+    # a listing's is on its pages, as_rtftables(listing = ): tfl_listing_code())
     st[[length(st) + 1L]] <- .spec_call("rtf_tables", doc, .spec_sym(content),
       auto_section = r$auto_section,
       section_label_align = r$section_align,
       auto_title = r$auto_title,
       title_label_align = r$title_align,
-      font_size_half_points = if (identical(r$type %||% "table", "listing"))
-        r$table_font_size_half_points,
       # on the page of the content before it (said only when not a new page)
       page_break = if (isFALSE(r$page_break)) FALSE,
       space_before = if (isFALSE(r$page_break) && !identical(r$space_before, 0L)) r$space_before,

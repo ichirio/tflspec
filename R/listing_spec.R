@@ -360,7 +360,25 @@ print.tfl_listing_spec <- function(x, ...) {
   }
   list(listing = spec$listings[match(output_id, ids), , drop = FALSE],
        cols = spec$listing_cols[spec$listing_cols$output_id %in% output_id, ,
-                                drop = FALSE])
+                                drop = FALSE],
+       font = .listing_font_size(spec, output_id))
+}
+
+# A listing's font size in half-points: the style sheet's
+# font_size_half_points of the listing (or the study's row), else the report
+# sheet's table_font_size_half_points; NULL when neither says one
+.listing_font_size <- function(spec, output_id) {
+  pick <- function(d, col) {
+    if (is.null(d) || !NROW(d) || !col %in% names(d)) return(NULL)
+    id <- d$output_id %||% rep(NA_character_, nrow(d))
+    v <- as.character(d[[col]])
+    x <- c(v[!is.na(id) & id == output_id], v[is.na(id) | !nzchar(id)])
+    x <- x[!is.na(x) & nzchar(x)]
+    n <- if (length(x)) suppressWarnings(as.integer(x[1L]))
+    if (length(n) && !is.na(n)) n
+  }
+  pick(spec$style, "font_size_half_points") %||%
+    pick(spec$report, "table_font_size_half_points")
 }
 
 # ---- the program -----------------------------------------------------------
@@ -472,9 +490,10 @@ tfl_listing_code <- function(spec, output_id = NULL, datasets = NULL,
   lay_out <- c(
     "",
     paste("lst <-", .lay(spec, lead = 7L)),
-    sprintf("content <- as_rtftables(data, listing = lst%s)",
+    sprintf("content <- as_rtftables(data, listing = lst%s%s)",
             if (!is.na(l$max_rows)) paste0(", max_rows = ", l$max_rows) else
-              ""))
+              "",
+            if (!is.null(x$font)) paste0(", font_size_half_points = ", x$font, "L") else ""))
   # on a `data` made before (a data step of the report's own code): its
   # code lists, its order and its dates, then laid out
   if (identical(part, "content")) {

@@ -132,9 +132,14 @@ skip it.  For each of the others, in order:
    - the **digits** when the shell shows them (`xx.x`, `xx.xx`): in the
      cell templates (`{mean:.1f}`) or `plan_digits`; when it does not,
      write none (the study's default applies; do not ask);
+   - the **cell form and the N** when the shell's differ from the study's
+     (`study_facts.md`): `xx (xx.x%)` is `"{n} ({p:.1f%}%)"` (`.1f%` prints
+     no `%` sign), `xx (xx.x)` is `"{n} ({p:.1f%})"` -- a template's
+     `count_cell` or `plan_cells`; `(N=xx)` under the arm is one
+     `plan_col_header` line, `{col}\n(N={n})` (the instructions say how);
    - {{titles_rule}}
    - the **footnotes**, from the shell: {{footnotes_at}}
-   Nothing else of the look: no column widths, no header rows, no page
+   Nothing else of the look: no column widths, no other header rows, no page
    settings, no blank rows, no borders, no fonts.  The study's defaults and
    the person's builder do those.
 6. In the same file, under a top-level `ai:` key, write:

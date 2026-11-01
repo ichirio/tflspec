@@ -153,6 +153,9 @@ test_that("the agent's folder is ai/ alone: its paths from there, the study's fa
   facts <- rd("study_facts.md")
   expect_match(facts, "| SAF | Safety Population | `SAFFL == \"Y\"` |", fixed = TRUE)
   expect_match(facts, "- ADSL", fixed = TRUE)
+  # the study's cell and header, for the draft to compare the shell's with
+  expect_match(facts, "- A count's cell: `{n} ({p:.1f%})`, printed `xx (xx.x)`.", fixed = TRUE)
+  expect_match(facts, "- The column header: the arm's name, no N", fixed = TRUE)
   expect_true("ai/study_facts.md" %in% r$files)
   ws <- list.files(file.path(d, "ai"), "[.]code-workspace$")
   expect_identical(ws, "study.code-workspace")
@@ -166,4 +169,19 @@ test_that("the agent's folder is ai/ alone: its paths from there, the study's fa
   writeLines(sub("Safety Population", "Safety Set", readLines(dy)), dy)
   tflspec:::.ai_study_facts_write(d, if_older = TRUE)
   expect_match(rd("study_facts.md"), "| SAF | Safety Set |", fixed = TRUE)
+})
+
+test_that("study_facts.md says the study's count cell as the shell writes it, and the header's N", {
+  expect_identical(tflspec:::.ai_cell_shape("{n} ({p:.1f%})"), "xx (xx.x)")
+  expect_identical(tflspec:::.ai_cell_shape("{n:.0f} ({p:.1f%}%)"), "xx (xx.x%)")
+  expect_identical(tflspec:::.ai_cell_shape("{mean:.2f}"), "xx.xx")
+  x <- tflspec:::.ai_facts_cells(list(
+    tfl_item("plan_cells", list(categorical = "{n} ({p:.1f%}%)")),
+    tfl_item("plan_col_header", list(header = list(
+      list(line = "1", cols = ".values", span = "each", text = "{col}\n(N={n})"))))))
+  expect_match(x[1L], "printed `xx (xx.x%)`", fixed = TRUE)
+  expect_identical(x[2L], "- The column header: the arm's name with its N.")
+  x <- tflspec:::.ai_facts_cells(NULL)
+  expect_match(x[1L], "none set", fixed = TRUE)
+  expect_match(x[2L], "no N", fixed = TRUE)
 })

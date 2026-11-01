@@ -84,6 +84,12 @@ via_doc <- c(program = "rtf_document(program =)",
 deprecated <- c(rtf_tables.read_gt = "deprecated: as_rtftables() reads a gt table",
                 rtf_section.secinfo = "superseded by header = / footer =",
                 generate_rtfreport.report = "superseded by doc")
+# rtf_tables()' table-format arguments, which copy rtftable()'s: deprecated
+# in rtfreporter 0.8.x, removed in 0.9.0 (the plan verbs say them)
+fmt_args <- get0(".rtf_tables_fmt_args", asNamespace("rtfreporter"), ifnotfound = character())
+fmt_args <- setdiff(fmt_args, "read_gt")
+deprecated[paste0("rtf_tables.", fmt_args)] <- paste(
+  "deprecated in rtfreporter 0.8.x (removed in 0.9.0): the table's own, its plan's")
 # rtfreporter's deprecated exports (removed in 0.9.0; its own API measure
 # leaves them out): no SPEC item by design
 dep_fns <- get0(".deprecated_exports", asNamespace("rtfreporter"), ifnotfound = character())
