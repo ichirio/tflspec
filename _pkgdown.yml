@@ -172,6 +172,7 @@ reference:
       - tfl_args_to_r
       - tfl_schema_check
       - tfl_check_spec
+      - tfl_check_build
       - tfl_check_reports
       - tfl_check_fix_text
       - tfl_data_code
@@ -455,6 +456,7 @@ reference:
       - tfl_ai_run
       - tfl_ai_compare
       - tfl_ai_study_init
+      - tfl_ai_sample_study
       - tfl_ai_tasks
       - tfl_ai_context
       - tfl_ai_schema

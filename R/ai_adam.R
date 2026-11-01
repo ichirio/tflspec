@@ -28,13 +28,9 @@
                         fn, sQuote(paste(format(path), collapse = " "), FALSE),
                         sQuote(getwd(), FALSE)))
     }
-    files <- if (dir.exists(path)) {
-      list.files(path, pattern = "[.](xpt|sas7bdat|rds)$", ignore.case = TRUE, full.names = TRUE)
-    } else {
-      path
-    }
+    files <- if (dir.exists(path)) .ai_adam_files(path, full = TRUE) else path
     if (!length(files)) {
-      .ard_stop(sprintf("%s: no .xpt, .sas7bdat or .rds file in %s; copy the ADaM files there.",
+      .ard_stop(sprintf("%s: no .xpt, .sas7bdat, .rds or .parquet file in %s; copy the ADaM files there.",
                         fn, sQuote(path, FALSE)))
     }
     nm <- toupper(tools::file_path_sans_ext(basename(files)))
@@ -56,9 +52,28 @@
   x
 }
 
+# The ADaM files of a folder, one a dataset: of a dataset in several forms
+# (adsl.sas7bdat and adsl.xpt, adsl.xpt and adsl.rds), the one read is the
+# first of .sas7bdat, .xpt, .rds, .parquet (#523)
+.ai_adam_exts <- c("sas7bdat", "xpt", "rds", "parquet")
+.ai_adam_files <- function(dir, full = FALSE) {
+  files <- list.files(dir, pattern = "[.](xpt|sas7bdat|rds|parquet)$", ignore.case = TRUE,
+                      full.names = full)
+  if (!length(files)) return(files)
+  nm <- toupper(tools::file_path_sans_ext(basename(files)))
+  rank <- match(tolower(tools::file_ext(files)), .ai_adam_exts)
+  o <- order(nm, rank)
+  files <- files[o][!duplicated(nm[o])]
+  files[order(toupper(tools::file_path_sans_ext(basename(files))))]
+}
+
 .ai_adam_read_one <- function(f, fn) {
   ext <- tolower(tools::file_ext(f))
   if (ext == "rds") return(as.data.frame(readRDS(f)))
+  if (ext == "parquet") {
+    .ard_need("arrow", paste(fn, "reading a .parquet file"))
+    return(as.data.frame(arrow::read_parquet(f)))
+  }
   if (!requireNamespace("haven", quietly = TRUE)) {
     .ard_stop(sprintf("%s: reading .%s files needs the haven package: install.packages(\"haven\").",
                       fn, ext))
@@ -94,9 +109,9 @@
 #' @param define,adam_spec The study's `define.xml` (2.0 or 2.1), or its
 #'   ADaM spec workbook in the Pinnacle 21 layout ([tfl_read_define_spec()]),
 #'   or what either reader returns -- one of them.  What the define says is
-#'   added to what the data shows: each code list in the define's order
-#'   with its decodes (`[codes: M = Male | F = Female]`, the values listed
-#'   in that order), a variable's label the data lacks, the digits and
+#'   added to what the data shows: each code list's decodes (`[codes: M =
+#'   Male | F = Female]`; the values listed stay the data's, in the code
+#'   list's order where it has them), a variable's label the data lacks, the digits and
 #'   display format of a numeric variable, and the value-level metadata (a
 #'   variable's digits and format by where clause, `AVAL where PARAMCD ==
 #'   "BILI": digits 1, format 8.1`) as a section of its own.  `NULL`
@@ -104,11 +119,13 @@
 #' @return A `tfl_ai_adam`: a list with `text` (one string, Markdown),
 #'   `variables` (one row a variable: `dataset`, `dataset_label`,
 #'   `variable`, `label`, `kind`, `levels` -- ` | ` between the values --
-#'   as [tfl_adam_metadata()] gives it; and `codes`: what each code of a
+#'   as [tfl_adam_metadata()] gives it; `missing`, how many records have no
+#'   value (`NA`, and `""` for a character variable); and `codes`: what each code of a
 #'   code variable stands for, `"1 = <65 | 2 = >=65"`, from its value labels
 #'   or the variable it pairs with -- `AGEGR1N` and `AGEGR1`, `ARMCD` and
 #'   `ARM`, `PARAMCD` and `PARAM` -- when each code has one text) and `datasets` (`dataset`, `label`,
-#'   `records`, `variables`), and `value_level` (the define's, one row an
+#'   `records`, `subjects` -- the distinct `USUBJID`s, `NA` without one --
+#'   `variables`), and `value_level` (the define's, one row an
 #'   entry; none without a define).  `format()` gives the text.
 #' @seealso [tfl_ai_read_shell()], [tfl_ai_context()].
 #' @examples
@@ -138,6 +155,9 @@ tfl_ai_adam_summary <- function(path, datasets = NULL, max_levels = 15L, file = 
     meta$levels[i] <- .ai_md_levels(v, 4L * max_levels)
   }
   vars <- meta[c("dataset", "dataset_label", "variable", "label", "kind", "levels")]
+  vars$missing <- vapply(seq_len(nrow(vars)), function(i) {
+    .ai_adam_missing(x[[vars$dataset[i]]][[vars$variable[i]]])
+  }, 1L)
   # what a code stands for: its value labels (a SAS format read with the
   # data), or the variable it pairs with (AGEGR1N / AGEGR1, ARMCD / ARM,
   # PARAMCD / PARAM) when each code has one text
@@ -150,7 +170,12 @@ tfl_ai_adam_summary <- function(path, datasets = NULL, max_levels = 15L, file = 
       l <- attr(x[[n]], "label", exact = TRUE)
       if (is.character(l) && length(l) == 1L) l else NA_character_
     }, ""),
-    records = vapply(x, nrow, 1L), variables = vapply(x, ncol, 1L),
+    records = vapply(x, nrow, 1L),
+    subjects = vapply(x, function(d) {
+      u <- d[["USUBJID"]]
+      if (is.null(u)) NA_integer_ else length(unique(u[!is.na(u)]))
+    }, 1L),
+    variables = vapply(x, ncol, 1L),
     stringsAsFactors = FALSE)
   rownames(ds) <- NULL
   vl <- .define_vl_empty()
@@ -174,14 +199,29 @@ format.tfl_ai_adam <- function(x, ...) x$text
 print.tfl_ai_adam <- function(x, ...) {
   cat(sprintf("<tfl_ai_adam: %d dataset(s), %d variables, %d characters>\n",
               nrow(x$datasets), nrow(x$variables), nchar(x$text)))
-  cat(sprintf("  %s (%s records, %d variables)\n", x$datasets$dataset,
-              format(x$datasets$records, big.mark = ","), x$datasets$variables), sep = "")
+  cat(sprintf("  %s (%s records%s, %d variables)\n", x$datasets$dataset,
+              format(x$datasets$records, big.mark = ","),
+              .ai_adam_subjects(x$datasets$subjects), x$datasets$variables), sep = "")
   cat("format(x) gives the text to paste.\n")
   invisible(x)
 }
 
 .ai_adam_kind <- c(character = "char", numeric = "num", factor = "char", date = "date",
                    logical = "lgl")
+
+# How many of a variable's values are missing: NA, and "" of a character
+# (or factor) variable
+.ai_adam_missing <- function(v) {
+  if (is.factor(v)) v <- as.character(v)
+  miss <- is.na(v)
+  if (is.character(v)) miss <- miss | !nzchar(trimws(v))
+  sum(miss)
+}
+
+# ", 120 subjects" after the records; nothing without a USUBJID
+.ai_adam_subjects <- function(n) {
+  ifelse(is.na(n), "", paste0(", ", format(n, big.mark = ","), " subjects"))
+}
 
 # A code variable's codes and what each stands for, "1 = <65 | 2 = >=65":
 # from its value labels (haven's `labels`), else from the variable it pairs
@@ -212,10 +252,11 @@ print.tfl_ai_adam <- function(x, ...) {
   show(m$code, m$text)
 }
 
-# What the define says, put on the data's variables: a code list's values
-# in its order with their decodes as the codes (the define's order and
-# decodes over what the data showed), a label the data lacks, a numeric
-# variable's digits and display format (`define`)
+# What the define says, put on the data's variables: a code list's decodes
+# as the codes (the values listed stay the data's -- a define's `Not
+# Reported` is not the data's `NOT REPORTED` -- put in the code list's
+# order where it has them), a label the data lacks, a numeric variable's
+# digits and display format (`define`)
 .ai_adam_define_merge <- function(vars, def, max) {
   dv <- def$variables
   cl <- def$codelists
@@ -233,7 +274,12 @@ print.tfl_ai_adam <- function(x, ...) {
         if ("order" %in% names(x) && !all(is.na(x$order))) {
           x <- x[order(suppressWarnings(as.numeric(x$order))), , drop = FALSE]
         }
-        vars$levels[k] <- paste(unique(as.character(x$value)), collapse = " | ")
+        if (!is.na(vars$levels[k])) {
+          lv <- strsplit(vars$levels[k], " | ", fixed = TRUE)[[1L]]
+          pos <- match(toupper(lv), toupper(as.character(x$value)))
+          vars$levels[k] <- paste(c(lv[!is.na(pos)][order(pos[!is.na(pos)])], lv[is.na(pos)]),
+                                  collapse = " | ")
+        }
         dec <- as.character(x$decode)
         if (any(!is.na(dec) & nzchar(dec) & dec != as.character(x$value))) {
           dec[is.na(dec) | !nzchar(dec)] <- as.character(x$value)[is.na(dec) | !nzchar(dec)]
@@ -265,13 +311,14 @@ print.tfl_ai_adam <- function(x, ...) {
   head <- c(
     "# ADaM datasets: variables only",
     "",
-    paste0("Each line: `NAME (type) Label: values`. The values are listed for a ",
-           "character variable with few of them; no record is shown.",
+    paste0("Each line: `NAME (type) Label: values [missing: ...]`. The values are listed for a ",
+           "character variable with few of them, as the data holds them; `[missing: 3 of 120]` ",
+           "is how many records have no value (NA, or blank); no record is shown.",
            if (any(!is.na(vars$codes))) paste0(
              " A code variable shows what each code stands for: ",
              "`[codes: 1 = <65 | 2 = >=65]`."),
            if (!is.null(define)) paste0(
-             " The ", define, " adds its code lists (the values in its order, with their decodes) ",
+             " The ", define, " adds its code lists' decodes (the values listed stay the data's) ",
              "and a numeric variable's digits and display format (`[", define, ": digits 1, format 8.1]`): ",
              "the study's digits, to use when the shell does not show them.")),
     "")
@@ -303,10 +350,13 @@ print.tfl_ai_adam <- function(x, ...) {
                     ifelse(is.na(v$label), "", paste0(" ", v$label)),
                     ifelse(is.na(v$levels), "", paste0(": ", v$levels)),
                     ifelse(is.na(v$codes %||% NA), "", paste0(" [codes: ", v$codes, "]")),
-                    ifelse(is.na(v$define %||% NA), "", paste0(" [", define, ": ", v$define, "]")))
-    c(sprintf("## %s%s (%s records, %d variables)", ds$dataset[i],
+                    ifelse(is.na(v$define %||% NA), "", paste0(" [", define, ": ", v$define, "]")),
+                    " [missing: ", ifelse(v$missing == 0L, "none",
+                                          paste(v$missing, "of", ds$records[i])), "]")
+    c(sprintf("## %s%s (%s records%s, %d variables)", ds$dataset[i],
               if (is.na(ds$label[i])) "" else paste0(": ", ds$label[i]),
-              format(ds$records[i], big.mark = ","), ds$variables[i]),
+              format(ds$records[i], big.mark = ","), .ai_adam_subjects(ds$subjects[i]),
+              ds$variables[i]),
       lines, "")
   }), use.names = FALSE)
   paste(c(head, body, vl_text), collapse = "\n")
@@ -346,9 +396,9 @@ tfl_ai_study_init <- function(dir, adam = "adam", study_id = "STUDY-01", title =
                               overwrite = FALSE) {
   fn <- "tfl_ai_study_init()"
   adam_dir <- if (grepl("^(/|[A-Za-z]:)", adam)) adam else file.path(dir, adam)
-  files <- list.files(adam_dir, pattern = "[.](xpt|sas7bdat|rds)$", ignore.case = TRUE)
+  files <- .ai_adam_files(adam_dir)
   if (!length(files)) {
-    .ard_stop(sprintf(paste0("%s: no .xpt, .sas7bdat or .rds file in %s; copy the ADaM files ",
+    .ard_stop(sprintf(paste0("%s: no .xpt, .sas7bdat, .rds or .parquet file in %s; copy the ADaM files ",
                              "there, or give `adam` as their folder from %s."), fn,
                       sQuote(adam_dir, FALSE), sQuote(dir, FALSE)))
   }

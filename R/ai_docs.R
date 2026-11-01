@@ -178,38 +178,20 @@ tfl_ai_doc_text <- function(path, file = NULL) {
   invisible(ok)
 }
 
-# The documents the person gave.  A study's documents live in the study
-# folder (its docs/): one inside it is read where it is, never copied -- a
-# .md / .txt at its own path, a .docx / .pdf / workbook as the text written
-# to ai/docs/<name>.md.  One outside the study is copied into ai/docs/, and
-# the text written beside it for those kinds.  The paths the agent reads
+# The documents the person gave, each copied into ai/docs/ -- one in the
+# study's own docs/ too: the agent opens ai/ alone (#528) -- and for a
+# .docx / .pdf / workbook the text written beside it, ai/docs/<name>.md.  The paths the agent reads
 # (from the study folder): the text files, the documents themselves for the
 # rest; `from`: the document a text file stands for.
 .ai_docs_place <- function(dir, docs) {
   if (!length(docs)) return(list(refs = character(), files = character(), from = character()))
   rd_ <- file.path(dir, "ai", "docs")
   dir.create(rd_, recursive = TRUE, showWarnings = FALSE)
-  norm <- function(p) normalizePath(p, winslash = "/", mustWork = FALSE)
-  root <- paste0(norm(dir), "/")
-  inside <- startsWith(tolower(norm(docs)), tolower(root))
   refs <- character(length(docs))
   from <- rep(NA_character_, length(docs))
   files <- character()
   for (i in seq_along(docs)) {
     text_kind <- tolower(tools::file_ext(docs[i])) %in% .ai_doc_exts
-    if (inside[i]) {
-      own <- substring(norm(docs[i]), nchar(root) + 1L)
-      if (!text_kind) {
-        refs[i] <- own
-        next
-      }
-      md <- file.path(rd_, paste0(tools::file_path_sans_ext(basename(docs[i])), ".md"))
-      tfl_ai_doc_text(docs[i], file = md)
-      from[i] <- own
-      refs[i] <- file.path("ai", "docs", basename(md))
-      files <- c(files, md)
-      next
-    }
     to <- file.path(rd_, basename(docs[i]))
     .file_copy_safe(docs[i], to)
     refs[i] <- file.path("ai", "docs", basename(docs[i]))
