@@ -82,6 +82,14 @@
 #' arguments a form shows from the start (the others folded under the
 #' function's other arguments).  `colour` is a colour's text (`#RRGGBB`).
 #'
+#' A layer's entry (`geom_errorbar`) says its aesthetics too: `aes`, the
+#' names a `mapping` takes (an unknown one warns, as ggplot2 does;
+#' `color` is `colour`), `aes_required`, those it needs, and `aes_or`, a
+#' required one's alternatives (`ymin` or `xmin`: a bar across).  A
+#' figure's plot is checked for them: a layer missing a required
+#' aesthetic, neither mapped nor given a value nor inherited from
+#' `ggplot()`'s mapping, warns.
+#'
 #' @param fn A function's name (`"plan_cells"`), or `NULL` for all.
 #' @return The function's entry (`package`, `description`, `dots`, `args`;
 #'   `rank`, its place in the recommended order, and `stage`, `"mapping"`,
@@ -120,6 +128,10 @@ tfl_schema <- function(fn = NULL) {
       # the catalog's aesthetics (those it needs marked) and the layer's own
       cat_aes <- ent$aes %||% list()
       ent$aes_required <- names(Filter(function(a) isTRUE(a$required), cat_aes))
+      # a required one's alternatives (geom_errorbar's x or y: the bars
+      # upright or across)
+      ors <- lapply(cat_aes[ent$aes_required], function(a) as.character(unlist(a$or)))
+      ent$aes_or <- ors[lengths(ors) > 0L]
       ent$aes <- unique(c(names(cat_aes), gg$aes))
     }
   }
@@ -246,7 +258,8 @@ tfl_schema_check <- function(item) {
                     message = character(), stringsAsFactors = FALSE)
   # a figure's named plot: its items, each; a figure's R item: R
   if (inherits(item, "tfl_plot")) {
-    return(do.call(rbind, c(list(out), lapply(item$items, tfl_schema_check))))
+    return(do.call(rbind, c(list(out), lapply(item$items, tfl_schema_check),
+                            list(.schema_check_plot_aes(item)))))
   }
   if (identical(fn, ".r")) return(out)
   # a part (another plan's rows under the table's): its own items, each, and
@@ -278,6 +291,8 @@ tfl_schema_check <- function(item) {
   # a figure's own ggplot2 layer: the layer function's aesthetics and
   # parameters (R/spec_figure.R)
   if (identical(fn, "geom") && identical(ent$figure, "layer")) .schema_check_geom(item, bad)
+  # a layer's mapping: aesthetics it has (R/spec_figure.R)
+  .schema_check_mapping(fn, ent, item$args$mapping, bad)
   f <- .schema_formals(fn, ent)
   if (is.null(ent) && is.null(f)) {
     bad("", sprintf("%s is a function neither the schema nor its package has", fn))

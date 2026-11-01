@@ -226,16 +226,77 @@ for (pkg in names(ext_scope)) {
     for (x in a) add(pkg, key, x, w[[key]], status_of(item_fn, x, card_name = key), package = pkg)
   }
 }
+
+# ---- a layer's aesthetics ----
+# One row a layer's aesthetic (geom_errorbar's xmin): yes when the check
+# judges a mapping's names (an unknown aesthetic warns) and the card marks
+# it as ggplot2 does -- required (or one of its alternatives: ymin or xmin)
+# when the layer's required_aes say so, not required when they do not;
+# partial when only one of the two holds (or the function has no card);
+# no when neither.
+req_of <- function(fn, pkg = "ggplot2") {
+  f <- tryCatch(getExportedValue(pkg, fn), error = function(e) NULL)
+  l <- tryCatch(suppressWarnings(suppressMessages(f())), error = function(e)
+    tryCatch(suppressWarnings(suppressMessages(f(fun = identity))), error = function(e) NULL))
+  if (!inherits(l, "Layer")) return(NULL)
+  list(req = if (startsWith(fn, "stat_") || !inherits(l$stat, "StatIdentity")) l$stat$required_aes else
+         l$geom$required_aes,
+       aes = unique(c(l$geom$aesthetics(), l$stat$aesthetics())))
+}
+aes_rows <- function(fn, pkg, weight, group) {
+  r <- req_of(fn, pkg)
+  if (is.null(r)) return(invisible())
+  item_fn <- if (identical(pkg, "ggplot2") || !is.null(file_entries[[fn]]$figure)) fn else paste0(pkg, "::", fn)
+  p <- tryCatch(tfl_schema_check(tfl_item(item_fn, list(mapping = list(zz_not_an_aes = "A")))),
+                error = function(e) data.frame(message = character()))
+  names_checked <- any(grepl("no aesthetic", p$message))
+  card <- file_entries[[fn]]
+  has_card <- identical(card$figure, "layer")
+  ent <- tfl_schema(item_fn)
+  marked <- ent$aes_required %||% character()
+  ors <- ent$aes_or %||% list()
+  groups <- strsplit(r$req, "|", fixed = TRUE)
+  group_ok <- vapply(groups, function(alts) {
+    m <- intersect(marked, alts)
+    if (!length(m)) return(FALSE)
+    if (length(alts) == 1L || length(m) > 1L) return(TRUE)
+    setequal(c(m, ors[[m]] %||% character()), alts)
+  }, NA)
+  for (a in r$aes) {
+    gi <- which(vapply(groups, function(alts) a %in% alts, NA))
+    mark_ok <- if (length(gi)) all(group_ok[gi]) else !a %in% marked
+    ok <- c(names_checked, has_card && mark_ok)
+    s <- list(status = if (all(ok)) "yes" else if (any(ok)) "partial" else "no",
+              where = if (has_card) paste0("schema.yml: ", fn, " aes") else "the installed layer (no card)",
+              note = paste(c(if (!names_checked) "a mapping's names are not checked",
+                             if (!(has_card && mark_ok)) {
+                               if (length(gi)) sprintf("ggplot2 needs %s", paste(r$req[gi], collapse = ", ")) else
+                                 "marked required, ggplot2 does not need it"
+                             }), collapse = "; "))
+    add(group, fn, paste0("aes: ", a), weight, s, package = pkg)
+  }
+}
+for (g in c("geom", "stat")) for (fn in names(scope[[g]])) aes_rows(fn, "ggplot2", scope[[g]][[fn]], g)
+for (pkg in names(ext_scope)) {
+  if (!requireNamespace(pkg, quietly = TRUE)) next
+  for (fn in grep("^(geom|stat)_", names(ext_scope[[pkg]]), value = TRUE)) {
+    aes_rows(fn, pkg, ext_scope[[pkg]][[fn]], pkg)
+  }
+}
+
 cov <- do.call(rbind, rows)
 cov$score <- c(yes = 1, partial = 0.5, no = 0)[cov$covered]
 
 pct <- function(d) {
+  if (!nrow(d)) return(NA_real_)
   f <- stats::aggregate(score ~ `function` + weight, data = d, FUN = mean)
   round(100 * sum(f$score * f$weight) / sum(f$weight), 1)
 }
-ext <- cov[cov$package != "ggplot2", , drop = FALSE]
+is_aes <- startsWith(cov$argument, "aes: ")
+aes_cov <- cov[is_aes, , drop = FALSE]
+ext <- cov[cov$package != "ggplot2" & !is_aes, , drop = FALSE]
 cov_all <- cov
-cov <- cov[cov$package == "ggplot2", , drop = FALSE]
+cov <- cov[cov$package == "ggplot2" & !is_aes, , drop = FALSE]
 main <- cov[cov$group != "stat", , drop = FALSE]
 cat(sprintf("ggplot2 (geoms with their stats, scales, coords, themes, facets, guides, labs, positions): %.1f%%\n",
             pct(main)))
@@ -244,6 +305,17 @@ for (g in names(scope)) cat(sprintf("  %-9s %5.1f%%\n", g, pct(cov[cov$group == 
 cat("arguments:", nrow(cov), " yes:", sum(cov$covered == "yes"), " partial:", sum(cov$covered == "partial"),
     " no:", sum(cov$covered == "no"), "\n")
 
+if (nrow(aes_cov)) {
+  gg_aes <- aes_cov[aes_cov$package == "ggplot2", , drop = FALSE]
+  cat(sprintf("aesthetics: geom_*() %.1f%%, stat_*() %.1f%%, extensions %.1f%%\n",
+              pct(gg_aes[gg_aes$group == "geom", ]), pct(gg_aes[gg_aes$group == "stat", ]),
+              pct(aes_cov[aes_cov$package != "ggplot2", ])))
+  cat("aesthetics:", nrow(aes_cov), " yes:", sum(aes_cov$covered == "yes"), " partial:",
+      sum(aes_cov$covered == "partial"), " no:", sum(aes_cov$covered == "no"), "\n")
+  both <- rbind(main, gg_aes[gg_aes$group == "geom", ])
+  both$`function` <- ifelse(startsWith(both$argument, "aes: "), paste(both$`function`, "aes"), both$`function`)
+  cat(sprintf("ggplot2 with the geoms' aesthetics: %.1f%%\n", pct(both)))
+}
 if (nrow(ext)) {
   cat(sprintf("extensions: %.1f%%\n", pct(ext)))
   for (pkg in unique(ext$package)) cat(sprintf("  %-10s %5.1f%%\n", pkg, pct(ext[ext$package == pkg, ])))

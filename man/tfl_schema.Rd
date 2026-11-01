@@ -65,6 +65,14 @@ English name (a GUI translates it and writes "label (argument)"),
 is what the AI kit and the reference read), and \code{main: true} for the
 arguments a form shows from the start (the others folded under the
 function's other arguments).  \code{colour} is a colour's text (\verb{#RRGGBB}).
+
+A layer's entry (\code{geom_errorbar}) says its aesthetics too: \code{aes}, the
+names a \code{mapping} takes (an unknown one warns, as ggplot2 does;
+\code{color} is \code{colour}), \code{aes_required}, those it needs, and \code{aes_or}, a
+required one's alternatives (\code{ymin} or \code{xmin}: a bar across).  A
+figure's plot is checked for them: a layer missing a required
+aesthetic, neither mapped nor given a value nor inherited from
+\code{ggplot()}'s mapping, warns.
 }
 \examples{
 names(tfl_schema())

@@ -2061,7 +2061,10 @@ rtf_footer:
 # item's argument); `rank` their order on the screen; `label` the
 # function's meaning in English and Japanese; `visible` the arguments a
 # card shows (the rest are the installed function's formals); `aes` a
-# layer's aesthetics, `required` those it needs.  A function the catalog
+# layer's aesthetics, `required` those it needs (ggplot2's required_aes)
+# and `or` what does instead (geom_errorbar's x: {required: true, or: [y]},
+# a bar across); a key YAML reads as TRUE / FALSE is quoted ("y").  The
+# others come from the installed layer.  A function the catalog
 # does not have (pkg::fn, or any function of a plot ggplot2 exports) is
 # written and checked by its formals.  The arguments a kind's functions
 # share (a layer's stat, a scale's breaks, theme()'s settings) are typed
@@ -2171,7 +2174,7 @@ geom_line:
   stage: mapping
   label: {en: Lines, ja: "線"}
   description: "Lines through the points of each group."
-  aes: {x: {required: true}, y: {required: true}, colour: {}, group: {}, linetype: {}}
+  aes: {x: {required: true}, "y": {required: true}, colour: {}, group: {}, linetype: {}}
   visible: [mapping, linewidth, alpha, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
@@ -2184,7 +2187,7 @@ geom_point:
   rank: 201
   stage: mapping
   label: {en: Points, ja: "点"}
-  aes: {x: {required: true}, y: {required: true}, colour: {}, group: {}}
+  aes: {x: {required: true}, "y": {required: true}, colour: {}, group: {}}
   visible: [mapping, shape, size, alpha, na.rm, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
@@ -2198,7 +2201,7 @@ geom_errorbar:
   stage: mapping
   label: {en: "Error bars", ja: "エラーバー"}
   description: "From ymin to ymax, e.g. the summary's lo and hi."
-  aes: {x: {required: true}, ymin: {required: true}, ymax: {required: true}, colour: {}}
+  aes: {x: {required: true, or: ["y"]}, ymin: {required: true, or: [xmin]}, ymax: {required: true, or: [xmax]}, colour: {}}
   visible: [mapping, width, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
@@ -2212,7 +2215,7 @@ geom_pointrange:
   stage: mapping
   label: {en: "Point and range", ja: "点と範囲"}
   description: "A point with its interval."
-  aes: {x: {required: true}, y: {required: true}, ymin: {required: true}, ymax: {required: true}, colour: {}}
+  aes: {x: {required: true}, "y": {required: true}, ymin: {required: true, or: [xmin]}, ymax: {required: true, or: [xmax]}, colour: {}}
   visible: [mapping, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
@@ -2226,7 +2229,7 @@ geom_col:
   stage: mapping
   label: {en: Bars, ja: "棒"}
   description: "Bars of height y."
-  aes: {x: {required: true}, y: {required: true}, fill: {}}
+  aes: {x: {required: true}, "y": {required: true}, fill: {}}
   visible: [mapping, width, position, colour, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
@@ -2239,7 +2242,7 @@ geom_text:
   rank: 205
   stage: mapping
   label: {en: Text, ja: "文字"}
-  aes: {x: {required: true}, y: {required: true}, label: {required: true}, colour: {}}
+  aes: {x: {required: true}, "y": {required: true}, label: {required: true}, colour: {}}
   visible: [mapping, size, position, vjust, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
@@ -2252,7 +2255,7 @@ geom_label:
   rank: 206
   stage: mapping
   label: {en: "Text in boxes", ja: "枠付きの文字"}
-  aes: {x: {required: true}, y: {required: true}, label: {required: true}}
+  aes: {x: {required: true}, "y": {required: true}, label: {required: true}}
   visible: [mapping, size, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
@@ -2265,7 +2268,7 @@ geom_step:
   rank: 207
   stage: mapping
   label: {en: Steps, ja: "階段"}
-  aes: {x: {required: true}, y: {required: true}, colour: {}}
+  aes: {x: {required: true}, "y": {required: true}, colour: {}}
   visible: [mapping]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
@@ -2277,7 +2280,7 @@ geom_area:
   rank: 208
   stage: mapping
   label: {en: Area, ja: "面"}
-  aes: {x: {required: true}, y: {required: true}, fill: {}}
+  aes: {x: {required: true}, "y": {required: true}, fill: {}}
   visible: [mapping, alpha]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
@@ -2290,7 +2293,7 @@ geom_ribbon:
   stage: mapping
   label: {en: Ribbon, ja: "帯"}
   description: "A band from ymin to ymax."
-  aes: {x: {required: true}, ymin: {required: true}, ymax: {required: true}, fill: {}}
+  aes: {x: {required: true, or: ["y"]}, ymin: {required: true, or: [xmin]}, ymax: {required: true, or: [xmax]}, fill: {}}
   visible: [mapping, alpha]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
@@ -2303,7 +2306,7 @@ geom_segment:
   stage: mapping
   label: {en: Segments, ja: "線分"}
   description: "Lines from (x, y) to (xend, yend), e.g. the bars of a swimmer plot."
-  aes: {x: {required: true}, y: {required: true}, xend: {required: true}, yend: {required: true}, colour: {}}
+  aes: {x: {required: true}, "y": {required: true}, xend: {required: true, or: [yend]}, yend: {}, colour: {}}
   visible: [mapping, linewidth, arrow, alpha]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
@@ -2316,7 +2319,7 @@ geom_tile:
   stage: mapping
   label: {en: Tiles, ja: "タイル"}
   description: "A heat map."
-  aes: {x: {required: true}, y: {required: true}, fill: {required: true}}
+  aes: {x: {required: true}, "y": {required: true}, fill: {}}
   visible: [mapping]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
@@ -2328,7 +2331,7 @@ geom_boxplot:
   rank: 212
   stage: mapping
   label: {en: "Box plots", ja: "箱ひげ"}
-  aes: {x: {required: true}, y: {required: true}, fill: {}}
+  aes: {"y": {required: true, or: [x]}, x: {}, fill: {}}
   visible: [mapping, width, outlier.shape, alpha, position, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
@@ -2341,7 +2344,7 @@ geom_violin:
   rank: 213
   stage: mapping
   label: {en: Violins, ja: "バイオリン"}
-  aes: {x: {required: true}, y: {required: true}, fill: {}}
+  aes: {x: {required: true}, "y": {required: true}, fill: {}}
   visible: [mapping, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
@@ -2354,7 +2357,7 @@ geom_histogram:
   rank: 214
   stage: mapping
   label: {en: Histogram, ja: "ヒストグラム"}
-  aes: {x: {required: true}, fill: {}}
+  aes: {x: {required: true, or: ["y"]}, fill: {}}
   visible: [mapping, bins]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
@@ -2366,7 +2369,7 @@ geom_density:
   rank: 215
   stage: mapping
   label: {en: Density, ja: "密度"}
-  aes: {x: {required: true}, colour: {}}
+  aes: {x: {required: true, or: ["y"]}, colour: {}}
   visible: [mapping]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
@@ -2378,7 +2381,7 @@ geom_jitter:
   rank: 216
   stage: mapping
   label: {en: "Jittered points", ja: "ばらした点"}
-  aes: {x: {required: true}, y: {required: true}, colour: {}}
+  aes: {x: {required: true}, "y": {required: true}, colour: {}}
   visible: [mapping, width, height, alpha, size]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
@@ -2391,7 +2394,7 @@ geom_smooth:
   stage: mapping
   label: {en: "Smoothed line", ja: "平滑線"}
   description: "A fitted line and its band."
-  aes: {x: {required: true}, y: {required: true}, colour: {}}
+  aes: {x: {required: true}, "y": {required: true}, colour: {}}
   visible: [mapping, method, se]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
@@ -2404,6 +2407,7 @@ geom_hline:
   stage: mapping
   label: {en: "Horizontal lines", ja: "水平線"}
   description: "Reference lines, e.g. y = 0.5 (median), 0, or 20 and -30."
+  aes: {yintercept: {required: true}}
   visible: [mapping, yintercept, linetype, colour, linewidth]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
@@ -2415,6 +2419,7 @@ geom_vline:
   rank: 219
   stage: mapping
   label: {en: "Vertical lines", ja: "垂直線"}
+  aes: {xintercept: {required: true}}
   visible: [mapping, xintercept, linetype, colour, linewidth]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
@@ -2426,6 +2431,7 @@ geom_abline:
   rank: 220
   stage: mapping
   label: {en: "Diagonal line", ja: "直線"}
+  aes: {slope: {required: true}, intercept: {required: true}}
   visible: [mapping, intercept, slope, linetype, colour]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
@@ -2452,7 +2458,7 @@ geom_sina:
   stage: mapping
   label: {en: "Sina plot", ja: "シナ"}
   description: "Points spread by their density, e.g. a distribution per group (instead of box plot + jitter)."
-  aes: {x: {required: true}, y: {required: true}, colour: {}}
+  aes: {x: {required: true}, "y": {required: true}, colour: {}}
   visible: [mapping, size, alpha]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
@@ -2798,7 +2804,7 @@ geom_bar:
   stage: mapping
   label: {en: Bars of counts, ja: "度数の棒"}
   description: "Bars of the number of rows at each x (stat count); geom_col() draws a y you give."
-  aes: {x: {required: true}, fill: {}, colour: {}}
+  aes: {x: {required: true, or: ["y"]}, fill: {}, colour: {}}
   visible: [mapping, width, position, stat]
 
 geom_linerange:
@@ -2808,7 +2814,7 @@ geom_linerange:
   stage: mapping
   label: {en: Line ranges, ja: "範囲の線"}
   description: "A line from ymin to ymax at each x (a range with no point or whiskers)."
-  aes: {x: {required: true}, ymin: {required: true}, ymax: {required: true}, colour: {}}
+  aes: {x: {required: true, or: ["y"]}, ymin: {required: true, or: [xmin]}, ymax: {required: true, or: [xmax]}, colour: {}}
   visible: [mapping, linewidth, position]
 
 geom_crossbar:
@@ -2818,7 +2824,7 @@ geom_crossbar:
   stage: mapping
   label: {en: Crossbars, ja: "クロスバー"}
   description: "A box from ymin to ymax with a line at y."
-  aes: {x: {required: true}, y: {required: true}, ymin: {required: true}, ymax: {required: true}, fill: {}}
+  aes: {x: {required: true}, "y": {required: true}, ymin: {required: true, or: [xmin]}, ymax: {required: true, or: [xmax]}, fill: {}}
   visible: [mapping, width, position]
 
 geom_rect:
@@ -2857,7 +2863,7 @@ geom_freqpoly:
   rank: 231
   stage: mapping
   label: {en: Frequency polygon, ja: "度数折れ線"}
-  aes: {x: {required: true}, colour: {}}
+  aes: {x: {required: true, or: ["y"]}, colour: {}}
   visible: [mapping, bins, binwidth]
 
 geom_dotplot:
@@ -2877,7 +2883,7 @@ geom_raster:
   stage: mapping
   label: {en: Raster, ja: "ラスター"}
   description: "Tiles of one size (a faster heat map)."
-  aes: {x: {required: true}, "y": {required: true}, fill: {required: true}}
+  aes: {x: {required: true}, "y": {required: true}, fill: {}}
   visible: [mapping]
 
 geom_polygon:
@@ -2896,7 +2902,7 @@ geom_curve:
   stage: mapping
   label: {en: Curves, ja: "曲線"}
   description: "Curved lines from (x, y) to (xend, yend), e.g. an arrow to an annotation."
-  aes: {x: {required: true}, "y": {required: true}, xend: {required: true}, yend: {required: true}, colour: {}}
+  aes: {x: {required: true}, "y": {required: true}, xend: {required: true, or: [yend]}, yend: {}, colour: {}}
   visible: [mapping, curvature, arrow]
 
 geom_count:
@@ -2936,7 +2942,7 @@ stat_ecdf:
   stage: mapping
   label: {en: Cumulative distribution, ja: "累積分布"}
   description: "The empirical cumulative distribution of x by group, drawn as steps (a change from baseline's CDF); the same as geom_step(stat = \"ecdf\")."
-  aes: {x: {required: true}, colour: {}, linetype: {}, group: {}}
+  aes: {x: {required: true, or: ["y"]}, colour: {}, linetype: {}, group: {}}
   visible: [mapping, geom, pad, linewidth]
 
 stat_summary:
@@ -3083,7 +3089,7 @@ stat_bin:
   stage: mapping
   label: {en: Bins of x (stat), ja: "x の区間（stat）"}
   description: "Counts in bins of x; the same as geom_histogram(), or geom_freqpoly() with geom: line."
-  aes: {x: {required: true}, fill: {}}
+  aes: {x: {required: true, or: ["y"]}, fill: {}}
   visible: [mapping, bins, binwidth, boundary, geom]
 
 stat_count:
@@ -3093,7 +3099,7 @@ stat_count:
   stage: mapping
   label: {en: Counts (stat), ja: "度数（stat）"}
   description: "The rows at each x; the same as geom_bar()."
-  aes: {x: {required: true}, fill: {}}
+  aes: {x: {required: true, or: ["y"]}, fill: {}}
   visible: [mapping, width, geom]
 
 stat_boxplot:
@@ -3103,7 +3109,7 @@ stat_boxplot:
   stage: mapping
   label: {en: Box plot statistics, ja: "箱ひげの統計量"}
   description: "The five numbers of a box plot; with geom: errorbar, the whiskers' staples."
-  aes: {x: {}, "y": {required: true}, colour: {}}
+  aes: {"y": {required: true, or: [x]}, x: {}, colour: {}}
   visible: [mapping, geom, coef, width]
 
 stat_density:
@@ -3113,7 +3119,7 @@ stat_density:
   stage: mapping
   label: {en: Density (stat), ja: "密度（stat）"}
   description: "The same as geom_density()."
-  aes: {x: {required: true}, colour: {}}
+  aes: {x: {required: true, or: ["y"]}, colour: {}}
   visible: [mapping, bw, adjust, kernel, geom]
 
 stat_ydensity:
@@ -4030,7 +4036,7 @@ stat_connect:
   stage: mapping
   label: {en: Connected points (stat), ja: "点のつなぎ方（stat）"}
   description: "Points joined as steps (connection: hv, vh, mid) or by a matrix of its own (ggplot2 4.0)."
-  aes: {x: {required: true}, "y": {required: true}, colour: {}}
+  aes: {x: {required: true, or: [xmin, xmax]}, "y": {required: true, or: [ymin, ymax]}, colour: {}}
   visible: [mapping, connection, geom]
   args:
     connection: {type: "enum[hv|vh|mid|linear]|r", label: {en: Connection, ja: つなぎ方}, description: "hv: a step across then up (as geom_step()); or !r a 2-column matrix of its own."}

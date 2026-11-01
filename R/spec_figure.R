@@ -220,6 +220,89 @@
   invisible()
 }
 
+# A layer's `mapping` (geom_line(mapping = {x: AVISITN, colour: TRT01A})):
+# each name an aesthetic the layer has (`color` is `colour`, as ggplot2
+# reads it); an unknown one warns, as ggplot2's "Ignoring unknown
+# aesthetics" does.  Only where the layer's package is installed (its
+# aesthetics are the installed layer's).
+.schema_check_mapping <- function(fn, ent, mapping, bad) {
+  if (is.null(ent$aes) || !is.list(mapping) || is.null(names(mapping))) return(invisible())
+  if (!requireNamespace(ent$package %||% "ggplot2", quietly = TRUE)) return(invisible())
+  given <- names(mapping)[nzchar(names(mapping))]
+  std <- ggplot2::standardise_aes_names(given)
+  for (i in which(!std %in% ent$aes)) {
+    bad("mapping", sprintf("%s has no aesthetic `%s` (it has: %s)", .schema_fn_name(fn), given[i],
+                           paste(ent$aes, collapse = ", ")), "warning")
+  }
+  invisible()
+}
+
+# The aesthetics a layer needs (ggplot2's own `required_aes`: "x|y" is x or
+# y), from the installed layer drawn by the stat and geom the item names:
+# a layer of a stat that computes them (geom_bar's count) needs the stat's,
+# any other its geom's.  NULL when the layer cannot be made.
+.schema_layer_required <- function(fn, args) {
+  pkg <- if (grepl("::", fn, fixed = TRUE)) sub("::.*$", "", fn) else
+    tfl_schema(fn)$package %||% "ggplot2"
+  nm <- sub("^.*::", "", fn)
+  if (!requireNamespace(pkg, quietly = TRUE)) return(NULL)
+  f <- tryCatch(getExportedValue(pkg, nm), error = function(e) NULL)
+  if (!is.function(f)) return(NULL)
+  pass <- args[intersect(c("stat", "geom"), names(args))]
+  pass <- pass[vapply(pass, function(v) is.character(v) && length(v) == 1L, NA)]
+  if ("fun" %in% names(formals(f))) pass$fun <- identity
+  l <- tryCatch(suppressWarnings(suppressMessages(do.call(f, pass))), error = function(e) NULL)
+  if (!inherits(l, "Layer")) return(NULL)
+  if (startsWith(nm, "stat_") || !inherits(l$stat, "StatIdentity")) l$stat$required_aes else
+    l$geom$required_aes
+}
+
+# A plot's layers each given the aesthetics they need: mapped by the layer,
+# given a value (geom_hline(yintercept = 0)) or inherited from the first
+# item's ggplot(mapping =) (unless inherit.aes: false).  A missing one
+# warns: ggplot2 would stop at the draw ("requires the following missing
+# aesthetics").  A plot not begun by ggplot() (ggsurvfit()'s own mapping),
+# or a mapping written as R, is not judged.
+.schema_check_plot_aes <- function(plot) {
+  out <- data.frame(fn = character(), arg = character(), level = character(),
+                    message = character(), stringsAsFactors = FALSE)
+  items <- plot$items
+  if (length(items) < 2L || !identical(.schema_fn_name(items[[1L]]$fn %||% ""), "ggplot")) return(out)
+  if (!requireNamespace("ggplot2", quietly = TRUE)) return(out)
+  std <- function(x) ggplot2::standardise_aes_names(x %||% character())
+  gm <- items[[1L]]$args$mapping
+  global <- if (is.null(gm)) character() else if (is.list(gm)) std(names(gm))
+  # an aes() added to the plot later: what it maps is not known here
+  if (any(vapply(items, function(it) identical(.schema_fn_name(it$fn %||% ""), "aes"), NA))) global <- NULL
+  for (it in items[-1L]) {
+    fn <- it$fn %||% ""
+    a <- it$args %||% list()
+    if (identical(fn, "geom")) {
+      fn <- a$geom %||% ""
+      a <- c(list(mapping = a$aes), a$params %||% list())
+    }
+    if (!is.character(fn) || length(fn) != 1L || !grepl("^(geom|stat)_", .schema_fn_name(fn))) next
+    m <- a$mapping
+    if (!is.null(m) && !is.list(m)) next
+    inherit <- !isFALSE(a$inherit.aes)
+    if (inherit && is.null(global)) next
+    req <- .schema_layer_required(fn, a)
+    if (!length(req)) next
+    given <- c(std(names(m)), std(setdiff(names(a), c("mapping", "data"))), if (inherit) global)
+    for (g in req) {
+      alts <- strsplit(g, "|", fixed = TRUE)[[1L]]
+      if (any(alts %in% given)) next
+      msg <- sprintf("%s needs the aesthetic `%s`%s: map it in %s, or give it a value",
+                     .schema_fn_name(fn), alts[1L],
+                     if (length(alts) > 1L) paste0(" (or ", paste0("`", alts[-1L], "`", collapse = ", "), ")") else "",
+                     if (inherit) "the layer's mapping or ggplot()'s" else
+                       "the layer's mapping (it has inherit.aes: false)")
+      out[nrow(out) + 1L, ] <- list(.schema_fn_name(fn), "mapping", "warning", msg)
+    }
+  }
+  out
+}
+
 # ---- ggplot2's functions the catalog has not; the arguments a kind shares ----
 #
 # A figure may call any function ggplot2 exports for a plot (a geom, stat,

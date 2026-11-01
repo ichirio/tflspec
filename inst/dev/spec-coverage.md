@@ -233,6 +233,53 @@ Round 3:
   `accent`, `fontsize` ...; stat_connect()'s `connection`; unit()'s and
   rel()'s `x`; guide_custom()'s `grob`.
 
+Round 4 (2026-11-01): a layer's aesthetics.  The arguments' measure says
+nothing of what a layer's `mapping` takes, so each aesthetic of each layer
+in the scope is a row of its own (`argument` "aes: ymin": 826 rows, 719 of
+ggplot2's geoms and stats, 107 of the extensions' layers): **yes** when the
+check judges a mapping's names (an unknown aesthetic warns) and the card
+marks it as ggplot2 does -- required (or one of its alternatives:
+geom_errorbar's `ymin` or `xmin`, a bar across) when the layer's
+`required_aes` say so, not required when they do not; **partial** when one
+of the two holds; **no** neither.  The same weights; the arguments' table
+above is unchanged (3409 arguments, 100%).
+
+| Aesthetics | Before | After |
+|---|---:|---:|
+| **ggplot2, the arguments and the geoms' aesthetics together** | **89.5%** | **100.0%** |
+| geom_*()'s aesthetics | 42.1% | 100.0% |
+| **stat_*()'s aesthetics** (shown apart) | **47.0%** | **100.0%** |
+| the extensions' layers' aesthetics (ggrepel, ggtext, ggsurvfit) | 50.0% | 100.0% |
+| rows yes / partial / no | 0 / 754 / 72 | 826 / 0 / 0 |
+
+Before, no mapping's names were checked (`geom_line(mapping = {colr:
+TRTA})` passed), and 16 cards wrote the aesthetic `y` bare, which YAML
+reads as TRUE: `tfl_schema("geom_line")$aes_required` was `x, TRUE`, and
+`y` came last, from the installed layer.  The 72 "no" rows: the `y` of
+those cards, and the cards that marked x of an "x|y" layer (geom_bar,
+geom_errorbar, stat_ecdf ...) with no word of y, or a fill ggplot2 does
+not need (geom_tile, geom_raster).
+
+Round 4:
+
+- A layer's `mapping` is checked: an aesthetic the layer (its geom and its
+  stat, the stat it is given too) does not have warns, as ggplot2's
+  "Ignoring unknown aesthetics" does; ggplot2's other spellings (`color`,
+  `pch`, `lwd`) are its own.
+- A plot is checked for the aesthetics its layers need (ggplot2's
+  `required_aes`, of the stat when the stat computes them: geom_bar's x or
+  y, geom_step(stat = "ecdf")'s x or y): mapped in the layer, given a
+  value (`geom_hline(yintercept = 0)`) or inherited from the first item's
+  `ggplot(mapping =)` unless `inherit.aes: false`.  A missing one warns
+  (`geom_errorbar needs the aesthetic ymax (or xmax)`), a note of
+  tfl_check_spec(); ggplot2 would stop at the draw.  A plot not begun by
+  ggplot() or a mapping written as R is not judged.
+- The cards (inst/spec/schema.yml, 34 layers) mark what ggplot2 needs,
+  with `or:` for the alternatives (`x: {required: true, or: [y]}`), and
+  write `"y"` quoted; `tfl_schema()` says them as `aes_required` and
+  `aes_or`.  geom_hline / _vline / _abline say `yintercept`, `xintercept`,
+  `slope` and `intercept`.
+
 ### The extension packages (ggsurvfit, ggrepel, ggh4x, ggtext, ggnewscale, patchwork)
 
 The same measure, the same file (`package` says which), over the
