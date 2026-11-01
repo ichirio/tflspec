@@ -456,6 +456,7 @@ reference:
       - tfl_ai_run
       - tfl_ai_compare
       - tfl_ai_study_init
+      - tfl_ai_sample_study
       - tfl_ai_tasks
       - tfl_ai_context
       - tfl_ai_schema
