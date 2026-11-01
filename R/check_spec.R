@@ -140,6 +140,8 @@ tfl_check_spec <- function(study, output_id = NULL) {
       add(output_id = id, part = "content", item = ifelse(is.na(cf$item), cf$where, paste0(cf$where, "$", cf$item)),
           level = "check", message = paste0("to confirm: ", cf$why))
     }
+    # the report as written: what stops the build far from its cause
+    rows[[length(rows) + 1L]] <- .check_static_rows(o, id)
     if (inherits(ro$content, "tfl_r")) next
     if (identical(ro$kind, "figure") && !.fig_new_content(ro$content)) {
       p <- tryCatch(tfl_check_fig_design(.fig_design_of_output(ro)), error = function(e) {
