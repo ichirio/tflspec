@@ -4,7 +4,8 @@ A draft is a report file, `ai/spec/outputs/<id>.yml`, in the form above
 (one report; no `tflspec_ai` header, no `reports` list).  It holds the
 report's skeleton and nothing of its look:
 
-- `id`, `kind` (`table`, `listing`, `figure`), `label` (the shell's title),
+- `id`, `kind` (`table`, `listing`, `figure`), `label` (the TOC's title;
+  when the shell's differs, the TOC's, and an assumption that says so),
   `population` (the analysis set's id from `spec/data.yml`), `extends:
   [defaults]`;
 - `data` (`{source: ard}` for a table of statistics; a listing's records as
@@ -27,6 +28,13 @@ report's skeleton and nothing of its look:
   so in an assumption (`from: define`);
 - `page: titles` (the shell's title lines), and the shell's footnotes:
   {{footnotes_at}}
+  A footnote is the shell's text as it is: never reworded, none added.  A
+  footnote of a statistic the table does not show (`SD = Standard
+  deviation.` under an AE table) is dropped, with an assumption that says
+  so;
+- a cell template is Python's `format()` of a number with tflspec's `%`:
+  `{n:.0f} ({p:.1f%})` (`.1f%`: one decimal, then `%`).  `{p:.1%}` is not
+  one -- the build stops (`Unknown format spec '.1'`);
 - an `ard.analysis_data` that `code` makes may name its `population`: the
   set's subjects are made first and are in reach as `<dataset>_sub`
   (`adsl_sub`); its other fields (`where`, `add`, `derive` ...) stay blank.
@@ -37,6 +45,12 @@ report's skeleton and nothing of its look:
 Not in a draft, ever: column widths, header rows (`plan_col_header`),
 pages (`plan_paginate_*`), blank rows, borders, fonts, `plan_style`,
 `plan_columns`.  The study's defaults and the person's builder do those.
+What the study's defaults (`spec/defaults.yml`, the company standard)
+already give -- the cell rules, the digits -- is not written again.
+Nor what a template does by default: a template argument is written only
+when its value differs (no list of every visit, no `plan_levels` of a
+variable the table does not show, `plan_empty: {text: ...}` with no other
+key).
 
 Under a top-level `ai:` key: `assumptions` (what you took from a decision,
 `from: D<n>`, or on your own after three rounds) and `confirm` (what the
@@ -195,8 +209,15 @@ needs that variable in `by`.
   [...]}` is refused).  A guard compares the value as the table has it: a
   key with a code list holds the label (`PARAMCD == "Bilirubin (umol/L)"`,
   not `"BILI"`).  `plan_digits` is by variable, not by a key's value.
+- **Every row the shell shows** (Race's Multiple, ECOG 0 to 3): each
+  value in `codelists` (value and label, in the shell's order) -- a value
+  the data does not have too: it prints as a 0 row.  A value left out of
+  the code list has no row.  A variable's heading as the shell's (`Baseline
+  ECOG performance status, n (%)`), in the template's `labels` -- without
+  it the heading is the variable's name.
 - **A title line that changes with the page** ("Parameter: <PARAM>", one
-  parameter a page): `plan_paginate_rows: {page_by: [PARAMCD], heading:
+  parameter a page): the templates `param_change` and `shift` do it
+  themselves (`param_page`, `param_heading`); else `plan_paginate_rows: {page_by: [PARAMCD], heading:
   "Parameter: {PARAM}", heading_at: title}` -- the heading goes under the
   report's titles on each page; `{PARAM}` is that page's value of the
   column.  Several keys: `page_by: [ANALYTE, RENALGR]` and a heading of two
@@ -222,9 +243,15 @@ Group: {RENALGR}"`.
 - **A table with a second block of rows under it** (a listing of the
   values and their summary): `plan_append` with its own `data` and
   `content` (the instructions' item list), after the first table's items.
-- **A shift table** (baseline category down, worst post-baseline category
-  across, a Total row, the % of the arm's subjects with a post-baseline
-  value for the parameter): the worst category is a column key of the
+- **A shift table of counts** (baseline category down, worst post-baseline
+  category across): the template `shift` (or `lab_shift` at one visit)
+  keeps a subject once a parameter at its worst category, with a Missing
+  and a Total row and a page a parameter; write only `where` (the
+  parameters, the records after baseline the study counts) and what
+  differs.
+- **A shift table with percents of the Total row** (the % of the arm's
+  subjects with a post-baseline value for the parameter): no template
+  yet; the worst category is a column key of the
   ARD (`strata`), the baseline category the rows' variable (`variables`,
   never `label`), the denominator the subjects a parameter each, and the
   Total row `plan_total` with `direction: rows` from a second analysis of
@@ -267,6 +294,16 @@ Group: {RENALGR}"`.
   of the ARD; a column that is neither a key nor the variable is not, and
   `table_plan` cannot name it.
 
+- **A figure's time axis**: its label carries the unit, `Time (Months)`
+  (the data's `AVALU`), never `Time` alone.  A template's own argument
+  (`censor_marks`, `risk_table`) says what the figure shows; a `layers:`
+  item is for what no argument does -- never both for one thing.
+- **A listing**: a listing column's `width:` in the shell's proportions,
+  wide enough for its longest value (a subject id on one line); a column
+  heading's line breaks as the shell's, `"Start Date\n(Study
+  Day)"`; a mark after a term with its space, `paste0(AEDECOD, " #")`; a
+  missing date blank, `ifelse(is.na(ASTDT), "", format(ASTDT, ...))`.
+
 ## Easy mistakes (the check refuses these)
 
 | wrong | right |
@@ -280,6 +317,7 @@ Group: {RENALGR}"`.
 | an analysis data with `code` **and** `where` / `add` / `derive` | `code` with `id`, `label`, `from`, `population` only |
 | `table_plan: {cols: [TRT01A, WORST]}` with `variables: [WORST]` | `cols: TRT01A` -- a variable's levels are rows; to have them across, put the variable in `by` |
 | `plan_cells: {categorical: {n} ({p:.1f%})}` | `plan_cells: {categorical: "{n} ({p:.1f%})"}` -- braces in a text: quote it |
+| `"{n} ({p:.1%})"` | `"{n} ({p:.1f%})"` -- `.1%` is not a tflspec format |
 | a key of your own (`notes:`, `comment:`, `denominator_note:`) | none: a key the schema does not have is refused; a note is an `ai: assumptions` or `ai: confirm` item |
 | `extends: defaults` | `extends: [defaults]` |
 | `population: Safety Analysis Set` | `population: SAF` -- the id from `spec/data.yml` |
