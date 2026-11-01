@@ -42,12 +42,11 @@ report's skeleton and nothing of its look:
   version 27.0, fictional dictionary."}` -- unquoted, the text after the
   comma is lost and the check refuses the draft.
 
-Not in a draft, ever: column widths (a listing's `width:` too), header
-rows (`plan_col_header`), pages (`plan_paginate_*`), blank rows, borders,
-fonts, `plan_style`, `plan_columns`.  The study's defaults and the
-person's builder do those.  What the study's defaults (`spec/defaults.yml`,
-the company standard) already give -- the cell rules, the digits, the
-column widths -- is not written again, and has no assumption either.
+Not in a draft, ever: column widths, header rows (`plan_col_header`),
+pages (`plan_paginate_*`), blank rows, borders, fonts, `plan_style`,
+`plan_columns`.  The study's defaults and the person's builder do those.
+What the study's defaults (`spec/defaults.yml`, the company standard)
+already give -- the cell rules, the digits -- is not written again.
 Nor what a template does by default: a template argument is written only
 when its value differs (no list of every visit, no `plan_levels` of a
 variable the table does not show, `plan_empty: {text: ...}` with no other
@@ -293,8 +292,9 @@ Group: {RENALGR}"`.
   (the data's `AVALU`), never `Time` alone.  A template's own argument
   (`censor_marks`, `risk_table`) says what the figure shows; a `layers:`
   item is for what no argument does -- never both for one thing.
-- **A listing**: no `width:` on its columns (the study's widths); a
-  column heading's line breaks as the shell's, `"Start Date\n(Study
+- **A listing**: a listing column's `width:` in the shell's proportions,
+  wide enough for its longest value (a subject id on one line); a column
+  heading's line breaks as the shell's, `"Start Date\n(Study
   Day)"`; a mark after a term with its space, `paste0(AEDECOD, " #")`; a
   missing date blank, `ifelse(is.na(ASTDT), "", format(ASTDT, ...))`.
 
