@@ -184,3 +184,39 @@ test_that("the catalog describes the post helpers' arguments", {
   s <- tfl_ard_args("cards::sort_ard_hierarchical")
   expect_identical(s$choices[s$arg == "sort"], "descending | alphanumeric")
 })
+
+test_that("a custom row's cards / cardx calls are judged as args and post are", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  custom <- function(code) list(method = "custom", population_id = "SAF",
+                                code = code)
+  # a name the function does not have
+  expect_warning(exact_spec(custom(
+    "cards::ard_tabulate(data, by = TRT01A, variables = SEX, denominatr = population)")),
+    "T / A: `code` ard_tabulate\\(\\) has no argument `denominatr`")
+  # a value that does not fit, inside a pipe and a stack
+  expect_warning(exact_spec(custom(paste(
+    "data |> cardx::ard_categorical_ci(by = TRT01A, variables = SEX,",
+    "method = \"wilson_cc\")"))),
+    "ard_categorical_ci\\(method = \\) is one of \"waldcc\"")
+  expect_warning(exact_spec(custom(paste(
+    "cards::ard_stack(data, .by = TRT01A,",
+    "cards::ard_summary(variables = AGE, fmt_fun = 1L))"))),
+    "ard_summary\\(fmt_fun = \\) is a list")
+  # several lines, an assignment, a post helper
+  expect_warning(exact_spec(custom(paste(
+    "x <- cards::ard_hierarchical(data, by = TRT01A, variables = c(AESOC, AEDECOD))",
+    "cards::sort_ard_hierarchical(x, sort = \"frequency\")", sep = "\n"))),
+    "sort_ard_hierarchical\\(sort = \\) is \"descending\"")
+  # what fits, and what is not cards' or cardx's, passes
+  expect_no_warning(exact_spec(custom(paste(
+    "data |> dplyr::filter(AGE > 18) |>",
+    "  cards::ard_tabulate(by = TRT01A, variables = SEX, denominator = population) |>",
+    "  cards::update_ard_fmt_fun(stat_names = \"p\", fmt_fun = \"xx.x%\")"))))
+  expect_no_warning(exact_spec(custom("my_ard(data, denominatr = 1)")))
+  # the calls found: outermost first, those in their arguments too
+  ex <- parse(text = "cards::ard_stack(data, cards::ard_summary(variables = AGE)) |> f()")
+  calls <- .ard_code_calls(ex)
+  expect_identical(vapply(calls, function(e) deparse(e[[1L]]), ""),
+                   c("cards::ard_stack", "cards::ard_summary"))
+})

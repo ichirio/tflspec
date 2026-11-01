@@ -58,7 +58,11 @@ does the work follow its own, with \code{passed_to} naming that function:
 \code{broom.helpers::tidy_plus_plus()}), \code{ard_car_anova(type = "III")} (to
 \code{car::Anova()}), \code{ard_stats_t_test(var.equal = TRUE)},
 \code{ard_stats_chisq_test(correct = FALSE)},
-\code{ard_stats_mantelhaen_test(exact = TRUE)} ... (to \code{stats}' tests).  They
+\code{ard_stats_mantelhaen_test(exact = TRUE)} ... (to \code{stats}' tests),
+\code{ard_continuous_ci(exact = FALSE)} (the median's CI, to
+\code{stats::wilcox.test()}), \code{ard_smd_smd(gref = 2L)} (to \code{smd::smd()}),
+\code{ard_effectsize_cohens_d(pooled_sd = FALSE)} (to \code{effectsize}),
+\code{ard_survival_survdiff(timefix = FALSE)} (to \code{survival::survdiff()}).  They
 are written in \code{args} like the function's own, and their values are
 checked by their kind.  The catalog is \code{inst/ard/passed_args.csv}
 (\code{call}, \code{arg}, \code{passed_to}, \code{default}, \code{kind}, \code{hint}, \code{choices}); a

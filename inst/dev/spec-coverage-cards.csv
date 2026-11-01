@@ -109,6 +109,9 @@
 "cardx","ard_continuous_ci","by","yes","method: mean_ci (or cardx::ard_continuous_ci); column `by`","the analysis row's column","cardx ard_*()",3
 "cardx","ard_continuous_ci","conf.level","yes","method: mean_ci (or cardx::ard_continuous_ci); args","inst/ard/args.csv: number; its value judged","cardx ard_*()",3
 "cardx","ard_continuous_ci","method","yes","method: mean_ci (or cardx::ard_continuous_ci); args","inst/ard/args.csv: choice; its value judged","cardx ard_*()",3
+"cardx","ard_continuous_ci","alternative","yes","method: mean_ci (or cardx::ard_continuous_ci); args","passed on to stats::t.test; inst/ard/passed_args.csv: choice; its value judged","cardx ard_*()",3
+"cardx","ard_continuous_ci","exact","yes","method: mean_ci (or cardx::ard_continuous_ci); args","passed on to stats::wilcox.test; inst/ard/passed_args.csv: logical; its value judged","cardx ard_*()",3
+"cardx","ard_continuous_ci","correct","yes","method: mean_ci (or cardx::ard_continuous_ci); args","passed on to stats::wilcox.test; inst/ard/passed_args.csv: logical; its value judged","cardx ard_*()",3
 "cardx","ard_incidence_rate","data","yes","method: incidence_rate (or cardx::ard_incidence_rate); column `data`","the analysis row's column","cardx ard_*()",3
 "cardx","ard_incidence_rate","time","yes","method: incidence_rate (or cardx::ard_incidence_rate); args","inst/ard/args.csv: column; its value judged","cardx ard_*()",3
 "cardx","ard_incidence_rate","count","yes","method: incidence_rate (or cardx::ard_incidence_rate); args","inst/ard/args.csv: column; its value judged","cardx ard_*()",3
@@ -163,6 +166,7 @@
 "cardx","ard_stats_mood_test","data","yes","method: cardx::ard_stats_mood_test; column `data`","the analysis row's column","cardx ard_*()",1
 "cardx","ard_stats_mood_test","by","yes","method: cardx::ard_stats_mood_test; column `by`","the analysis row's column","cardx ard_*()",1
 "cardx","ard_stats_mood_test","variables","yes","method: cardx::ard_stats_mood_test; column `variables`","the analysis row's column","cardx ard_*()",1
+"cardx","ard_stats_mood_test","alternative","yes","method: cardx::ard_stats_mood_test; args","passed on to stats::mood.test; inst/ard/passed_args.csv: choice; its value judged","cardx ard_*()",1
 "cardx","ard_stats_aov","formula","yes","method: cardx::ard_stats_aov; args","inst/ard/args.csv: formula; its value judged","cardx ard_*()",2
 "cardx","ard_stats_aov","data","yes","method: cardx::ard_stats_aov; column `data`","the analysis row's column","cardx ard_*()",2
 "cardx","ard_stats_oneway_test","formula","yes","method: cardx::ard_stats_oneway_test; args","inst/ard/args.csv: formula; its value judged","cardx ard_*()",2
@@ -227,25 +231,37 @@
 "cardx","ard_effectsize_cohens_d","by","yes","method: cardx::ard_effectsize_cohens_d; column `by`","the analysis row's column","cardx ard_*()",1
 "cardx","ard_effectsize_cohens_d","variables","yes","method: cardx::ard_effectsize_cohens_d; column `variables`","the analysis row's column","cardx ard_*()",1
 "cardx","ard_effectsize_cohens_d","conf.level","yes","method: cardx::ard_effectsize_cohens_d; args","inst/ard/args.csv: number; its value judged","cardx ard_*()",1
+"cardx","ard_effectsize_cohens_d","pooled_sd","yes","method: cardx::ard_effectsize_cohens_d; args","passed on to effectsize::cohens_d; inst/ard/passed_args.csv: logical; its value judged","cardx ard_*()",1
+"cardx","ard_effectsize_cohens_d","mu","yes","method: cardx::ard_effectsize_cohens_d; args","passed on to effectsize::cohens_d; inst/ard/passed_args.csv: number; its value judged","cardx ard_*()",1
+"cardx","ard_effectsize_cohens_d","alternative","yes","method: cardx::ard_effectsize_cohens_d; args","passed on to effectsize::cohens_d; inst/ard/passed_args.csv: choice; its value judged","cardx ard_*()",1
 "cardx","ard_effectsize_hedges_g","data","yes","method: cardx::ard_effectsize_hedges_g; column `data`","the analysis row's column","cardx ard_*()",1
 "cardx","ard_effectsize_hedges_g","by","yes","method: cardx::ard_effectsize_hedges_g; column `by`","the analysis row's column","cardx ard_*()",1
 "cardx","ard_effectsize_hedges_g","variables","yes","method: cardx::ard_effectsize_hedges_g; column `variables`","the analysis row's column","cardx ard_*()",1
 "cardx","ard_effectsize_hedges_g","conf.level","yes","method: cardx::ard_effectsize_hedges_g; args","inst/ard/args.csv: number; its value judged","cardx ard_*()",1
+"cardx","ard_effectsize_hedges_g","pooled_sd","yes","method: cardx::ard_effectsize_hedges_g; args","passed on to effectsize::hedges_g; inst/ard/passed_args.csv: logical; its value judged","cardx ard_*()",1
+"cardx","ard_effectsize_hedges_g","mu","yes","method: cardx::ard_effectsize_hedges_g; args","passed on to effectsize::hedges_g; inst/ard/passed_args.csv: number; its value judged","cardx ard_*()",1
+"cardx","ard_effectsize_hedges_g","alternative","yes","method: cardx::ard_effectsize_hedges_g; args","passed on to effectsize::hedges_g; inst/ard/passed_args.csv: choice; its value judged","cardx ard_*()",1
 "cardx","ard_effectsize_paired_cohens_d","data","yes","method: cardx::ard_effectsize_paired_cohens_d; column `data`","the analysis row's column","cardx ard_*()",1
 "cardx","ard_effectsize_paired_cohens_d","by","yes","method: cardx::ard_effectsize_paired_cohens_d; column `by`","the analysis row's column","cardx ard_*()",1
 "cardx","ard_effectsize_paired_cohens_d","variables","yes","method: cardx::ard_effectsize_paired_cohens_d; column `variables`","the analysis row's column","cardx ard_*()",1
 "cardx","ard_effectsize_paired_cohens_d","id","yes","method: cardx::ard_effectsize_paired_cohens_d; args","inst/ard/args.csv: column; its value judged","cardx ard_*()",1
 "cardx","ard_effectsize_paired_cohens_d","conf.level","yes","method: cardx::ard_effectsize_paired_cohens_d; args","inst/ard/args.csv: number; its value judged","cardx ard_*()",1
+"cardx","ard_effectsize_paired_cohens_d","mu","yes","method: cardx::ard_effectsize_paired_cohens_d; args","passed on to effectsize::cohens_d; inst/ard/passed_args.csv: number; its value judged","cardx ard_*()",1
+"cardx","ard_effectsize_paired_cohens_d","alternative","yes","method: cardx::ard_effectsize_paired_cohens_d; args","passed on to effectsize::cohens_d; inst/ard/passed_args.csv: choice; its value judged","cardx ard_*()",1
 "cardx","ard_effectsize_paired_hedges_g","data","yes","method: cardx::ard_effectsize_paired_hedges_g; column `data`","the analysis row's column","cardx ard_*()",1
 "cardx","ard_effectsize_paired_hedges_g","by","yes","method: cardx::ard_effectsize_paired_hedges_g; column `by`","the analysis row's column","cardx ard_*()",1
 "cardx","ard_effectsize_paired_hedges_g","variables","yes","method: cardx::ard_effectsize_paired_hedges_g; column `variables`","the analysis row's column","cardx ard_*()",1
 "cardx","ard_effectsize_paired_hedges_g","id","yes","method: cardx::ard_effectsize_paired_hedges_g; args","inst/ard/args.csv: column; its value judged","cardx ard_*()",1
 "cardx","ard_effectsize_paired_hedges_g","conf.level","yes","method: cardx::ard_effectsize_paired_hedges_g; args","inst/ard/args.csv: number; its value judged","cardx ard_*()",1
+"cardx","ard_effectsize_paired_hedges_g","mu","yes","method: cardx::ard_effectsize_paired_hedges_g; args","passed on to effectsize::hedges_g; inst/ard/passed_args.csv: number; its value judged","cardx ard_*()",1
+"cardx","ard_effectsize_paired_hedges_g","alternative","yes","method: cardx::ard_effectsize_paired_hedges_g; args","passed on to effectsize::hedges_g; inst/ard/passed_args.csv: choice; its value judged","cardx ard_*()",1
 "cardx","ard_smd_smd","data","yes","method: cardx::ard_smd_smd; column `data`","the analysis row's column","cardx ard_*()",2
 "cardx","ard_smd_smd","by","yes","method: cardx::ard_smd_smd; column `by`","the analysis row's column","cardx ard_*()",2
 "cardx","ard_smd_smd","variables","yes","method: cardx::ard_smd_smd; column `variables`","the analysis row's column","cardx ard_*()",2
 "cardx","ard_smd_smd","std.error","yes","method: cardx::ard_smd_smd; args","inst/ard/args.csv: logical; its value judged","cardx ard_*()",2
 "cardx","ard_smd_smd","conf.level","yes","method: cardx::ard_smd_smd; args","inst/ard/args.csv: number; its value judged","cardx ard_*()",2
+"cardx","ard_smd_smd","gref","yes","method: cardx::ard_smd_smd; args","passed on to smd::smd; inst/ard/passed_args.csv: number; its value judged","cardx ard_*()",2
+"cardx","ard_smd_smd","na.rm","yes","method: cardx::ard_smd_smd; args","passed on to smd::smd; inst/ard/passed_args.csv: logical; its value judged","cardx ard_*()",2
 "cardx","ard_regression","x","yes","method: cardx::ard_regression; column `data`","the analysis row's column","cardx ard_*()",3
 "cardx","ard_regression","formula","yes","method: cardx::ard_regression; args","inst/ard/args.csv: formula; its value judged","cardx ard_*()",3
 "cardx","ard_regression","method","yes","method: cardx::ard_regression; args","inst/ard/args.csv: text; its value judged","cardx ard_*()",3
@@ -312,6 +328,7 @@
 "cardx","ard_survival_survdiff","formula","yes","method: logrank (or cardx::ard_survival_survdiff); args","inst/ard/args.csv: formula; its value judged","cardx ard_*()",3
 "cardx","ard_survival_survdiff","data","yes","method: logrank (or cardx::ard_survival_survdiff); column `data`","the analysis row's column","cardx ard_*()",3
 "cardx","ard_survival_survdiff","rho","yes","method: logrank (or cardx::ard_survival_survdiff); args","inst/ard/args.csv: number; its value judged","cardx ard_*()",3
+"cardx","ard_survival_survdiff","timefix","yes","method: logrank (or cardx::ard_survival_survdiff); args","passed on to survival::survdiff; inst/ard/passed_args.csv: logical; its value judged","cardx ard_*()",3
 "cards","ard_stack","data","yes","method: cards::ard_stack; column `data`","the analysis row's column","cards ard_*()",3
 "cards","ard_stack",".by","yes","method: cards::ard_stack; column `by`","the analysis row's column","cards ard_*()",3
 "cards","ard_stack",".overall","yes","method: cards::ard_stack; args","inst/ard/args.csv: logical; its value judged","cards ard_*()",3
@@ -387,3 +404,31 @@
 "cards","update_ard_fmt_fun","stat_names","yes","post","inst/ard/args.csv: text; its name and value judged","cards post helpers",2
 "cards","update_ard_fmt_fun","fmt_fun","yes","post","inst/ard/args.csv: code; its name and value judged","cards post helpers",2
 "cards","update_ard_fmt_fun","filter","yes","post","inst/ard/args.csv: code; its name and value judged","cards post helpers",2
+"cards","continuous_summary_fns","summaries","yes","column `statistics` (a continuous analysis)","cards' own statistics, in the order asked","cards code helpers",3
+"cards","continuous_summary_fns","other_stats","yes","column `statistics`; tfl_ard_statistics(fun =)","a statistic of the statistics catalog with its own function (tfl_stats[...])","cards code helpers",3
+"cards","label_round","digits","yes","column `formats` (xx.x, 2)","the number of decimals","cards code helpers",3
+"cards","label_round","scale","partial","column `formats` (xx.x%)","100 only (a proportion as a percent); another scale is R in args / post","cards code helpers",3
+"cards","label_round","width","no","","[by design] the cell's width and alignment are rtfreporter's (decimal alignment), not padded text","cards code helpers",3
+"cards","alias_as_fmt_fun","x","yes","column `formats`","a number of decimals, xx.x, xx.x%, pvalue","cards code helpers",2
+"cards","alias_as_fmt_fun","variable","yes","column `formats` (AGE:sd=xx.xx)","a variable's own format","cards code helpers",2
+"cards","alias_as_fmt_fun","stat_name","yes","column `formats` (sd=xx.xx)","a statistic's format","cards code helpers",2
+"cards","apply_fmt_fun","x","yes","the pipe","the analysis's ARD","cards code helpers",2
+"cards","apply_fmt_fun","replace","yes","tflspec fills it","TRUE after a post step that sets formats","cards code helpers",2
+"cardx","proportion_ci_agresti_coull","x","yes","method: proportion_ci (cardx::ard_categorical_ci); column `variables` (and `by`)","ard_categorical_ci()'s argument, its value judged there","cardx CI helpers",1
+"cardx","proportion_ci_agresti_coull","conf.level","yes","method: proportion_ci (cardx::ard_categorical_ci); args: conf.level","ard_categorical_ci()'s argument, its value judged there","cardx CI helpers",1
+"cardx","proportion_ci_wald","x","yes","method: proportion_ci (cardx::ard_categorical_ci); column `variables` (and `by`)","ard_categorical_ci()'s argument, its value judged there","cardx CI helpers",2
+"cardx","proportion_ci_wald","conf.level","yes","method: proportion_ci (cardx::ard_categorical_ci); args: conf.level","ard_categorical_ci()'s argument, its value judged there","cardx CI helpers",2
+"cardx","proportion_ci_wald","correct","yes","method: proportion_ci (cardx::ard_categorical_ci); args: method = ""waldcc"" / ""wilsoncc"" / ""strat_wilsoncc""","ard_categorical_ci()'s argument, its value judged there","cardx CI helpers",2
+"cardx","proportion_ci_strat_wilson","x","yes","method: proportion_ci (cardx::ard_categorical_ci); column `variables` (and `by`)","ard_categorical_ci()'s argument, its value judged there","cardx CI helpers",2
+"cardx","proportion_ci_strat_wilson","strata","yes","method: proportion_ci (cardx::ard_categorical_ci); args: strata","ard_categorical_ci()'s argument, its value judged there","cardx CI helpers",2
+"cardx","proportion_ci_strat_wilson","weights","yes","method: proportion_ci (cardx::ard_categorical_ci); args: weights","ard_categorical_ci()'s argument, its value judged there","cardx CI helpers",2
+"cardx","proportion_ci_strat_wilson","conf.level","yes","method: proportion_ci (cardx::ard_categorical_ci); args: conf.level","ard_categorical_ci()'s argument, its value judged there","cardx CI helpers",2
+"cardx","proportion_ci_strat_wilson","max.iterations","yes","method: proportion_ci (cardx::ard_categorical_ci); args: max.iterations","ard_categorical_ci()'s argument, its value judged there","cardx CI helpers",2
+"cardx","proportion_ci_strat_wilson","correct","yes","method: proportion_ci (cardx::ard_categorical_ci); args: method = ""waldcc"" / ""wilsoncc"" / ""strat_wilsoncc""","ard_categorical_ci()'s argument, its value judged there","cardx CI helpers",2
+"cardx","proportion_ci_clopper_pearson","x","yes","method: proportion_ci (cardx::ard_categorical_ci); column `variables` (and `by`)","ard_categorical_ci()'s argument, its value judged there","cardx CI helpers",3
+"cardx","proportion_ci_clopper_pearson","conf.level","yes","method: proportion_ci (cardx::ard_categorical_ci); args: conf.level","ard_categorical_ci()'s argument, its value judged there","cardx CI helpers",3
+"cardx","proportion_ci_wilson","x","yes","method: proportion_ci (cardx::ard_categorical_ci); column `variables` (and `by`)","ard_categorical_ci()'s argument, its value judged there","cardx CI helpers",3
+"cardx","proportion_ci_wilson","conf.level","yes","method: proportion_ci (cardx::ard_categorical_ci); args: conf.level","ard_categorical_ci()'s argument, its value judged there","cardx CI helpers",3
+"cardx","proportion_ci_wilson","correct","yes","method: proportion_ci (cardx::ard_categorical_ci); args: method = ""waldcc"" / ""wilsoncc"" / ""strat_wilsoncc""","ard_categorical_ci()'s argument, its value judged there","cardx CI helpers",3
+"cardx","proportion_ci_jeffreys","x","yes","method: proportion_ci (cardx::ard_categorical_ci); column `variables` (and `by`)","ard_categorical_ci()'s argument, its value judged there","cardx CI helpers",1
+"cardx","proportion_ci_jeffreys","conf.level","yes","method: proportion_ci (cardx::ard_categorical_ci); args: conf.level","ard_categorical_ci()'s argument, its value judged there","cardx CI helpers",1

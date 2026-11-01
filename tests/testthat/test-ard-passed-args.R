@@ -108,3 +108,56 @@ test_that("a passed-on argument reaches the function: no continuity correction, 
   expect_equal(sort(est[!is.na(est)]), sort(c(1, unname(exp(stats::coef(fit))))),
                tolerance = 1e-6)
 })
+
+test_that("the effect sizes', Mood's, the SMD's and the CI's passed-on arguments reach their functions", {
+  skip_on_cran()
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("dplyr")
+  skip_if_not_installed("broom", "1.0.8")
+  adam <- exact_data()
+  dir <- exact_dir(adam)
+  on.exit(unlink(dir, recursive = TRUE))
+  run <- function(method, args, by = "SEX") suppressMessages(tfl_build_ard(exact_spec(list(
+    method = method, population_id = "SAF", by = by, variables = "AGE", args = args)),
+    dir = dir, save = FALSE))
+  stat <- function(ard, nm) unname(unlist(ard$stat[ard$stat_name == nm]))
+  pop <- adam$ADSL[adam$ADSL$SAFFL == "Y", ]
+  # Mood's test, one-sided
+  ard <- run("cardx::ard_stats_mood_test", "alternative = \"greater\"")
+  want <- stats::mood.test(AGE ~ SEX, data = pop, alternative = "greater")
+  expect_equal(stat(ard, "p.value"), want$p.value, tolerance = 1e-10)
+  # the SMD against the second group: its sign turns
+  skip_if_not_installed("smd")
+  s1 <- stat(run("cardx::ard_smd_smd", "gref = 1L"), "estimate")
+  s2 <- stat(run("cardx::ard_smd_smd", "gref = 2L"), "estimate")
+  expect_equal(s1, -s2, tolerance = 1e-10)
+  # Cohen's d with each group's own variance (pooled_sd = FALSE)
+  skip_if_not_installed("effectsize", "0.8.8")
+  skip_if_not_installed("parameters")
+  d1 <- stat(run("cardx::ard_effectsize_cohens_d", "pooled_sd = FALSE"), "estimate")
+  want <- effectsize::cohens_d(AGE ~ SEX, data = pop, pooled_sd = FALSE)
+  expect_equal(d1, want$Cohens_d, tolerance = 1e-10)
+  expect_false(isTRUE(all.equal(d1, effectsize::cohens_d(AGE ~ SEX, data = pop)$Cohens_d)))
+})
+
+test_that("the median's CI takes wilcox.test()'s exact and correct", {
+  skip_on_cran()
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("dplyr")
+  skip_if_not_installed("broom", "1.0.8")
+  adam <- exact_data()
+  dir <- exact_dir(adam)
+  on.exit(unlink(dir, recursive = TRUE))
+  ard <- suppressMessages(tfl_build_ard(exact_spec(list(
+    method = "cardx::ard_continuous_ci", population_id = "SAF", variables = "AGE",
+    args = "method = \"wilcox.test\", exact = FALSE, correct = FALSE")),
+    dir = dir, save = FALSE))
+  pop <- adam$ADSL[adam$ADSL$SAFFL == "Y", ]
+  want <- stats::wilcox.test(pop$AGE, conf.int = TRUE, exact = FALSE, correct = FALSE)
+  expect_equal(unname(unlist(ard$stat[ard$stat_name == "conf.low"])),
+               want$conf.int[1L], tolerance = 1e-10)
+  expect_warning(exact_spec(list(method = "cardx::ard_continuous_ci",
+                                 population_id = "SAF", variables = "AGE",
+                                 args = "exact = \"no\"")),
+                 "ard_continuous_ci\\(exact = \\) is TRUE or FALSE")
+})

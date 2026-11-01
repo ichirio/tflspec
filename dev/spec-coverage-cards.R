@@ -10,8 +10,13 @@
 # Scope: every ard_*() cards and cardx export (their data.frame method's
 # arguments, as tfl_ard_args() reads them, and the arguments they pass on
 # through `...` to the function doing the work: inst/ard/passed_args.csv),
-# and cards' helpers an analysis row writes in its `post` column
-# (inst/ard/utilities.csv, use "post").
+# cards' helpers an analysis row writes in its `post` column
+# (inst/ard/utilities.csv, use "post") and, since 2026-11-01, the helpers
+# the generated code writes from a row's columns (cards'
+# continuous_summary_fns(), label_round(), alias_as_fmt_fun(),
+# apply_fmt_fun(): the statistics and formats columns) and cardx's
+# proportion_ci_*() (ard_categorical_ci(method =)'s choices, their
+# arguments ard_categorical_ci()'s).
 #
 # Status of an argument:
 #   yes      an analysis row's own column writes it (by, variables, strata,
@@ -78,6 +83,10 @@ w2 <- c("cards::ard_strata", "cards::ard_pairwise", "cards::ard_mvsummary",
         "cardx::ard_stats_mantelhaen_test", "cards::diff_ard_hierarchical",
         "cards::update_ard_stat_label", "cards::replace_null_statistic",
         "cards::update_ard_fmt_fun")
+w3 <- c(w3, "cards::continuous_summary_fns", "cards::label_round",
+        "cardx::proportion_ci_wilson", "cardx::proportion_ci_clopper_pearson")
+w2 <- c(w2, "cards::alias_as_fmt_fun", "cards::apply_fmt_fun",
+        "cardx::proportion_ci_wald", "cardx::proportion_ci_strat_wilson")
 weight <- function(call) if (call %in% w3) 3 else if (call %in% w2) 2 else 1
 
 rows <- list()
@@ -155,6 +164,51 @@ for (k in which(u$use == "post")) {
       add("cards post helpers", call, arg, "partial", "post", "R in post; no hint")
     }
   }
+}
+
+# ---- the helpers the generated code writes from a row's columns ----------
+# (the statistics and formats columns; tflspec writes the call itself).
+# A tflspec before the formats column wrote fmt_fun (.fmt_r) or the
+# statistics column continuous_summary_fns() (.stat_arg): no.
+has <- function(f) exists(f, ns)
+helper_rows <- list(
+  list("cards::continuous_summary_fns", "summaries", has(".stat_arg"),
+       "column `statistics` (a continuous analysis)", "cards' own statistics, in the order asked"),
+  list("cards::continuous_summary_fns", "other_stats", has(".stat_arg"),
+       "column `statistics`; tfl_ard_statistics(fun =)",
+       "a statistic of the statistics catalog with its own function (tfl_stats[...])"),
+  list("cards::label_round", "digits", has(".fmt_r"), "column `formats` (xx.x, 2)",
+       "the number of decimals"),
+  list("cards::label_round", "scale", "partial", "column `formats` (xx.x%)",
+       "100 only (a proportion as a percent); another scale is R in args / post"),
+  list("cards::label_round", "width", "by design", "",
+       "[by design] the cell's width and alignment are rtfreporter's (decimal alignment), not padded text"),
+  list("cards::alias_as_fmt_fun", "x", has(".fmt_r"), "column `formats`",
+       "a number of decimals, xx.x, xx.x%, pvalue"),
+  list("cards::alias_as_fmt_fun", "variable", has(".fmt_fun_arg"), "column `formats` (AGE:sd=xx.xx)",
+       "a variable's own format"),
+  list("cards::alias_as_fmt_fun", "stat_name", has(".fmt_r"), "column `formats` (sd=xx.xx)",
+       "a statistic's format"),
+  list("cards::apply_fmt_fun", "x", TRUE, "the pipe", "the analysis's ARD"),
+  list("cards::apply_fmt_fun", "replace", has(".post_fmt_split"), "tflspec fills it",
+       "TRUE after a post step that sets formats"))
+ci_map <- c(x = "column `variables` (and `by`)", conf.level = "args: conf.level",
+            correct = "args: method = \"waldcc\" / \"wilsoncc\" / \"strat_wilsoncc\"",
+            strata = "args: strata", weights = "args: weights",
+            max.iterations = "args: max.iterations")
+for (fn in grep("^proportion_ci_", getNamespaceExports("cardx"), value = TRUE)) {
+  for (arg in names(formals(getExportedValue("cardx", fn)))) {
+    helper_rows[[length(helper_rows) + 1L]] <- list(
+      paste0("cardx::", fn), arg, arg %in% names(ci_map),
+      paste0("method: proportion_ci (cardx::ard_categorical_ci); ", ci_map[arg] %||% ""),
+      "ard_categorical_ci()'s argument, its value judged there")
+  }
+}
+for (h in helper_rows) {
+  st <- if (isTRUE(h[[3L]])) "yes" else if (identical(h[[3L]], FALSE)) "no" else
+    if (identical(h[[3L]], "by design")) "no" else h[[3L]]
+  grp <- if (startsWith(h[[1L]], "cardx")) "cardx CI helpers" else "cards code helpers"
+  add(grp, h[[1L]], h[[2L]], st, h[[4L]], h[[5L]])
 }
 
 cov <- do.call(rbind, rows)

@@ -226,7 +226,11 @@ tfl_ard_functions <- function(installed = TRUE) {
 #' `broom.helpers::tidy_plus_plus()`), `ard_car_anova(type = "III")` (to
 #' `car::Anova()`), `ard_stats_t_test(var.equal = TRUE)`,
 #' `ard_stats_chisq_test(correct = FALSE)`,
-#' `ard_stats_mantelhaen_test(exact = TRUE)` ... (to `stats`' tests).  They
+#' `ard_stats_mantelhaen_test(exact = TRUE)` ... (to `stats`' tests),
+#' `ard_continuous_ci(exact = FALSE)` (the median's CI, to
+#' `stats::wilcox.test()`), `ard_smd_smd(gref = 2L)` (to `smd::smd()`),
+#' `ard_effectsize_cohens_d(pooled_sd = FALSE)` (to `effectsize`),
+#' `ard_survival_survdiff(timefix = FALSE)` (to `survival::survdiff()`).  They
 #' are written in `args` like the function's own, and their values are
 #' checked by their kind.  The catalog is `inst/ard/passed_args.csv`
 #' (`call`, `arg`, `passed_to`, `default`, `kind`, `hint`, `choices`); a

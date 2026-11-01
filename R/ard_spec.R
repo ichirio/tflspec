@@ -279,6 +279,10 @@ tfl_read_ard_spec <- function(path, check = TRUE, statistics = NULL,
 #'   a list (`method.args = list(...)`), a list or formula of selectors
 #'   (`fmt_fun = everything() ~ 1L`), an expression not in quotes (a `post`
 #'   step's `filter = n >= 2`).  A name or a call is the program's to judge.
+#'   The same for the cards / cardx calls in a `custom` row's `code`, written
+#'   with their package (`cards::ard_tabulate(data, denominatr = ...)`,
+#'   `cardx::ard_categorical_ci(..., method = "wilson_cc")`), inside a pipe or
+#'   an `ard_stack()` too; the rest of the code is the program's.
 #' @export
 tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   old <- .set_catalogs(statistics, methods)
@@ -1080,26 +1084,76 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
     for (st in .split_post(post[i])) {
       e <- tryCatch(str2lang(st), error = function(e) NULL)
       if (!is.call(e)) next
-      fn <- paste(deparse(e[[1L]]), collapse = "")
-      if (!grepl("^[A-Za-z.][A-Za-z0-9.]*::[A-Za-z._][A-Za-z0-9._]*$", fn)) next
-      f <- .ard_fun(fn)
-      if (is.null(f)) next
-      fm <- names(formals(f))
-      given <- names(as.list(e)[-1L]) %||% character()
-      given <- given[nzchar(given)]
-      args <- paste(vapply(given, function(g)
-        paste0(.r_arg_name(g), " = ", paste(deparse(e[[g]], width.cutoff = 500L),
-                                            collapse = " ")), ""),
-        collapse = ", ")
-      if (length(given)) out <- c(out, .ard_arg_value_problems(tag, fn, args))
-      if ("..." %in% fm && !.dots_checked(fn)) next
-      bad <- setdiff(given, fm)
-      if (length(bad)) out <- c(out, sprintf(
-        "%s: `post` %s() has no argument %s (it has: %s); the program would stop on it",
-        tag, sub("^.*::", "", fn), paste0("`", bad, "`", collapse = ", "),
-        paste(setdiff(fm, c("...", fm[1L])), collapse = ", ")))
+      out <- c(out, .call_args_problems(tag, e, "post"))
     }
   }
+  c(out, .custom_args_unknown(a))
+}
+
+# The same for the calls of cards' and cardx's functions in a `custom`
+# row's code (`cards::ard_tabulate(data, variables = SEX, denominatr =
+# population)`, `cardx::ard_categorical_ci(data, ..., method = "wilsn")`):
+# their arguments' names against the function's (its data.frame method's,
+# as `args`), their values by the catalog's kinds.  Only a call written
+# with its package (cards:: / cardx::); the rest of the code is the
+# program's.
+.custom_args_unknown <- function(a) {
+  out <- character()
+  code <- a$code %||% rep(NA_character_, nrow(a))
+  for (i in which(!is.na(code) & a$method %in% "custom")) {
+    tag <- paste(a$output_id[i], a$analysis_id[i], sep = " / ")
+    ex <- tryCatch(parse(text = code[i], keep.source = FALSE),
+                   error = function(e) NULL)
+    for (e in .ard_code_calls(ex)) out <- c(out, .call_args_problems(tag, e, "code"))
+  }
+  unique(out)
+}
+
+# The calls of cards' and cardx's functions (pkg::fun(...)) in parsed code,
+# outermost first, those inside their arguments too
+.ard_code_calls <- function(ex) {
+  found <- list()
+  walk <- function(e) {
+    if (!is.call(e)) return(invisible())
+    head <- e[[1L]]
+    if (is.call(head) && identical(head[[1L]], as.name("::")) &&
+        as.character(head[[2L]]) %in% c("cards", "cardx")) {
+      found[[length(found) + 1L]] <<- e
+    } else if (is.call(head)) {
+      walk(head)
+    }
+    for (k in seq_along(e)[-1L]) if (is.call(e[[k]])) walk(e[[k]])
+    invisible()
+  }
+  for (k in seq_along(ex)) walk(ex[[k]])
+  found
+}
+
+# What is wrong with one call of a cards / cardx function, `pkg::fun(...)`:
+# the arguments it does not have (`where`: the column it is written in,
+# post or code) and the values that do not fit theirs.  An `ard_*()`
+# generic is judged by its data.frame method, as `args` is; a function
+# with `...` its code does not check takes any name.
+.call_args_problems <- function(tag, e, where) {
+  fn <- paste(deparse(e[[1L]]), collapse = "")
+  if (!grepl("^[A-Za-z.][A-Za-z0-9.]*::[A-Za-z._][A-Za-z0-9._]*$", fn)) return(character())
+  f <- .ard_fun(fn)
+  if (is.null(f)) return(character())
+  # (a custom row's ard_*() takes the data: its data.frame method's)
+  fm <- names(if (identical(where, "code")) .ard_formals(fn) else formals(f))
+  given <- names(as.list(e)[-1L]) %||% character()
+  given <- given[nzchar(given)]
+  args <- paste(vapply(given, function(g)
+    paste0(.r_arg_name(g), " = ", paste(deparse(e[[g]], width.cutoff = 500L),
+                                        collapse = " ")), ""),
+    collapse = ", ")
+  out <- if (length(given)) .ard_arg_value_problems(tag, fn, args) else character()
+  if ("..." %in% fm && !.dots_checked(fn)) return(out)
+  bad <- setdiff(given, fm)
+  if (length(bad)) out <- c(out, sprintf(
+    "%s: `%s` %s() has no argument %s (it has: %s); the program would stop on it",
+    tag, where, sub("^.*::", "", fn), paste0("`", bad, "`", collapse = ", "),
+    paste(setdiff(fm, c("...", fm[1L])), collapse = ", ")))
   out
 }
 

@@ -42,5 +42,9 @@ the choices (\code{method = "wilson"}), text in quotes, a formula, a column,
 a list (\code{method.args = list(...)}), a list or formula of selectors
 (\code{fmt_fun = everything() ~ 1L}), an expression not in quotes (a \code{post}
 step's \code{filter = n >= 2}).  A name or a call is the program's to judge.
+The same for the cards / cardx calls in a \code{custom} row's \code{code}, written
+with their package (\code{cards::ard_tabulate(data, denominatr = ...)},
+\code{cardx::ard_categorical_ci(..., method = "wilson_cc")}), inside a pipe or
+an \code{ard_stack()} too; the rest of the code is the program's.
 }
 

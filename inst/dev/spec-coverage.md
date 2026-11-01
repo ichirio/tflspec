@@ -21,7 +21,12 @@ to `stats::t.test()` ...: 55 arguments of 18 functions) -- and cards' helpers
 a row writes in `post` (`add_calculated_row()`, `filter_ard_hierarchical()`,
 `sort_ard_hierarchical()`, `diff_ard_hierarchical()`,
 `replace_null_statistic()`, `update_ard_stat_label()` and, since
-2026-10-31, `update_ard_fmt_fun()`).
+2026-10-31, `update_ard_fmt_fun()`).  Since 2026-11-01 also the helpers
+the generated code writes from a row's columns -- cards'
+`continuous_summary_fns()` (the statistics column), `label_round()`,
+`alias_as_fmt_fun()` and `apply_fmt_fun()` (the formats column) -- and
+cardx's `proportion_ci_*()` (the choices of `ard_categorical_ci(method =)`,
+whose arguments are `ard_categorical_ci()`'s).
 
 * **yes**: the row's own column writes it, or the catalog describes it
   (its kind and a hint: the GUI shows it) and the check judges the value
@@ -39,8 +44,27 @@ percentage is the functions' mean weighted by their use in clinical tables:
 summary and shift, vital signs and model-based efficacy (ANCOVA / LS means,
 CMH, KM, log-rank, Cox, incidence rates) use; 2 sometimes; 1 rarely.
 
-cards 0.9.0, cardx 0.3.4; 61 functions, 368 arguments (313 their own, 55
-passed on).
+cards 0.9.0, cardx 0.3.4; 71 functions, 412 arguments (2026-11-01 scope:
+313 of the ard_*() and post helpers' own, 72 passed on, 27 of the code
+and CI helpers; `label_round(width =)` left out by design).
+
+| Scope (2026-11-01, wider) | 2026-11-01 before | 2026-11-01 after |
+|---|---:|---:|
+| **cards / cardx, weighted** | **98.3%** (394 yes / 18 partial) | **99.5%** (411 / 1) |
+| cards ard_*() | 100.0% | 100.0% |
+| cardx ard_*() | 97.6% (237 / 17) | 100.0% (254 / 0) |
+| cards post helpers | 100.0% | 100.0% |
+| cards code helpers (new) | 92.5% (8 / 1) | 92.5% (8 / 1) |
+| cardx CI helpers (new) | 100.0% | 100.0% |
+| weight-3 functions only | 98.3% | 99.3% |
+
+(2026-11-01 before: the tflspec of this branch before the run, on the wider
+scope -- the 17 newly catalogued passed-on arguments could be written as R
+in `args` and reached their function, but were not described and their
+values not judged: partial.  On the 2026-10-31 scope the run starts and
+ends at 100.0%.)
+
+Earlier runs, on their scope:
 
 | Scope | 2026-10-29 before | 2026-10-29 after | 2026-10-30 before (wider scope) | 2026-10-30 after | 2026-10-31 before (+ update_ard_fmt_fun) | 2026-10-31 after |
 |---|---:|---:|---:|---:|---:|---:|
@@ -56,6 +80,38 @@ function, but the catalog did not describe it and its value was not
 judged: partial.  2026-10-31 before: the same, with
 `update_ard_fmt_fun()` in the `post` scope -- written as R in `post`, its
 names checked, its values not judged.)
+
+### Added 2026-11-01
+
+* More arguments cardx functions pass on through `...`, described in
+  `inst/ard/passed_args.csv` and their values judged (17 arguments of 9
+  functions):
+  * `ard_continuous_ci()`: `alternative` (to `stats::t.test()`), `exact`
+    and `correct` (`method = "wilcox.test"`, the median's CI, to
+    `stats::wilcox.test()`);
+  * `ard_survival_survdiff(timefix =)` (to `survival::survdiff()`);
+  * `ard_stats_mood_test(alternative =)` (to `stats::mood.test()`);
+  * `ard_smd_smd()`: `gref` (the reference group) and `na.rm` (to
+    `smd::smd()`);
+  * the effect sizes, `ard_effectsize_cohens_d()` / `_hedges_g()`:
+    `pooled_sd`, `mu`, `alternative`; their paired forms `mu`,
+    `alternative` (to `effectsize`).
+  The tests run them: Mood's one-sided p-value, the SMD's sign with
+  `gref = 2L`, Cohen's d with `pooled_sd = FALSE`, the median's CI with
+  `exact = FALSE, correct = FALSE` -- each against the function called
+  directly.
+* A `custom` row's code is no longer taken whole: its calls of cards' and
+  cardx's functions written with their package (`cards::ard_tabulate(data,
+  denominatr = population)`, `data |> cardx::ard_categorical_ci(method =
+  "wilson_cc")`, `cards::ard_summary()` inside `cards::ard_stack()`, a
+  `post` helper on a name the code assigns) have their arguments' names
+  checked against the function (an `ard_*()` generic's data.frame method)
+  and their values judged by the catalog's kinds, a warning of
+  `tfl_ard_spec()` as for `args` and `post`.  The rest of the code is the
+  program's.
+* The measure's scope takes in the helpers the generated code writes and
+  cardx's CI helpers (see above): all written by a row's columns except
+  `label_round(scale =)` (100 only, by `xx.x%`: partial).
 
 ### Added 2026-10-31
 
@@ -105,22 +161,27 @@ names checked, its values not judged.)
 
 The scope is close to its ceiling; what is left and what is next:
 
-Every argument in scope is described and its value judged.  What is left:
+Every argument in scope is described and its value judged but one.  What
+is left:
 
-1. A `post` step of the study's own or of another package that sets formats
+1. `label_round(scale =)`: the formats column says 100 only (`xx.x%`); a
+   rate per 1,000 is `ard_incidence_rate(unit_label =)` or R in `post`
+   (`update_ard_fmt_fun(fmt_fun = cards::label_round(1, scale = 1000))`).
+2. A `post` step of the study's own or of another package that sets formats
    is not moved: the format step after it gives the defaults.
-2. A `custom` row's code is run as it is: nothing in it is judged.
-3. A passed-on argument's name is not checked (a function that passes `...`
+3. A `custom` row's code: only its cards / cardx calls written with the
+   package are judged (not `ard_tabulate()` after `library(cards)`, not a
+   name bound to a function).
+4. A passed-on argument's name is not checked (a function that passes `...`
    on takes any name); the catalog names the ones clinical tables use, not
-   every argument of the function they reach (`survival::survdiff()`,
-   `smd::smd()`, `stats::aov()`'s are not described).
-4. Not measured: the helpers the generated code writes itself
-   (`continuous_summary_fns()` from the statistics column and the statistics
-   catalog's own functions, `label_round()` from the formats column --
-   `xx.x` sets the decimals, the width is rtfreporter's alignment's,
-   `apply_fmt_fun()`).  A denominator of numbers is the denominator column
-   (`86`, `c("Drug X" = 86, "Placebo" = 85)`); a data frame written in
-   `args` is the program's.
+   every argument of the function they reach (`stats::aov()`'s, `car::vif(type
+   =)` -- a method's argument, not the generic's -- are not described).
+5. Not in scope by design: `rename_ard_groups_shift()` /
+   `_reverse()` (the table code reads the by columns in the row's order:
+   reorder `by` instead), `bind_ard()` (tflspec #118), the `mock_*()`
+   shells.  A denominator of numbers is the denominator column (`86`,
+   `c("Drug X" = 86, "Placebo" = 85)`); a data frame written in `args` is
+   the program's.
 
 ## rtfreporter (table SPEC)
 
@@ -159,6 +220,13 @@ Percentage: yes counts 1, partial 0.5.
 | 2026-10-30 after  | 44.3% (310 / 25 / 393 of 728) | 50.3% (310 / 25 / 306 of 641) | 43 / 5 / 89 |
 | 2026-10-31 before | 44.3% (310 / 25 / 393 of 728) | 50.3% (310 / 25 / 306 of 641) | 43 / 5 / 89 |
 | 2026-10-31 after  | 45.4% (310 / 41 / 377 of 728) | 57.2% (310 / 41 / 227 of 578) | 43 / 5 / 89 |
+| 2026-11-01 before | 51.7% (310 / 40 / 288 of 638) | 57.9% (310 / 40 / 220 of 570) | 43 / 5 / 66 |
+| 2026-11-01 after  | 51.7% (310 / 40 / 288 of 638) | 57.9% (310 / 40 / 220 of 570) | 43 / 5 / 66 |
+
+(2026-11-01: rtfreporter@next no longer exports its deprecated functions
+(the old border constructors, `assemble_*()`, `format_count_pct()` ...: 90
+arguments, 23 functions, most of them helpers already); nothing new a
+SPEC writes in this run, which went to cards / cardx.)
 
 (2026-10-31: the measure's corrections only, nothing new a SPEC writes --
 rtfreporter's deprecated exports and the superseded `rtf_section(secinfo =)`
