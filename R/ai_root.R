@@ -49,12 +49,53 @@
       "It prints no title of the report's: a draft writes its titles under `page: titles`."
     },
     "",
+    "## The study's cells and column header",
+    "",
+    .ai_facts_cells(st$defaults$content),
+    "",
     "## The study's code lists",
     "",
     if (length(cls)) {
       c("These variables have one already; a draft writes its own only when the shell differs:",
         "", paste0("- ", cls))
     } else "None.")
+}
+
+# The study's count cell and column header (its defaults' plan_cells and
+# plan_col_header), as the lines of study_facts.md: what a draft compares
+# the shell's with
+.ai_facts_cells <- function(content) {
+  items <- content %||% list()
+  if (inherits(items, "tfl_r")) items <- list()
+  fn <- vapply(items, function(it) it$fn %||% "", "")
+  cell <- unlist(lapply(items[fn == "plan_cells"], function(it) it$args$categorical))
+  cell <- if (length(cell)) as.character(cell[[length(cell)]])
+  hdr <- unlist(lapply(items[fn == "plan_col_header"], function(it) {
+    vapply(it$args$header %||% list(), function(h) as.character(h$text %||% ""), "")
+  }))
+  n_in <- any(grepl("{n}", hdr, fixed = TRUE) | grepl("{N}", hdr, fixed = TRUE))
+  c(if (length(cell) && nzchar(cell)) {
+      sprintf("- A count's cell: `%s`, printed `%s`.", cell, .ai_cell_shape(cell))
+    } else {
+      "- A count's cell: none set (the template's, else rtfreporter's)."
+    },
+    if (n_in) {
+      "- The column header: the arm's name with its N."
+    } else {
+      "- The column header: the arm's name, no N (a template's own header may add it: templates.md)."
+    },
+    "",
+    paste("A shell that shows another cell form (`xx (xx.x%)`) or an N under the arm",
+          "(`(N=xx)`): the report writes its own (the instructions say how)."))
+}
+
+# A cell template as the shell writes it: "{n} ({p:.1f%})" -> "xx (xx.x)"
+.ai_cell_shape <- function(tpl) {
+  x <- tpl
+  for (d in 1:4) {
+    x <- gsub(sprintf("[{][^{}:]+:[.]%df%%?[}]", d), paste0("xx.", strrep("x", d)), x)
+  }
+  gsub("[{][^{}]*[}]", "xx", x)
 }
 
 # Write ai/study_facts.md; with `if_older`, only when spec/ is newer than it

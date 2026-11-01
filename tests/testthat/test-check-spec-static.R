@@ -7,7 +7,7 @@ test_that("a cell template in Python's percent form: an error with the tflspec f
   p <- .check_static_rows(o, "T1")
   expect_identical(nrow(p), 1L)
   expect_identical(p$level, "error")
-  expect_match(p$message, "\"{n:.0f} ({p:.1f%})\"", fixed = TRUE)
+  expect_match(p$message, "\"{n:.0f} ({p:.1f%}%)\"", fixed = TRUE)
   expect_match(p$item, "plan_cells", fixed = TRUE)
   # the tflspec form and plain counts: nothing
   o$content <- list(tfl_item("plan_cells", list(categorical = "{n} ({p:.1f%})")))
@@ -51,5 +51,5 @@ test_that("in tfl_check_spec(): the percent form of a template's cell", {
     file.path(d, "spec", "outputs", "T-DM.yml"))
   p <- tfl_check_spec(d)
   e <- p[p$level == "error", ]
-  expect_true(any(grepl("{n} ({p:.1f%})", e$message, fixed = TRUE)))
+  expect_true(any(grepl("{n} ({p:.1f%}%)", e$message, fixed = TRUE)))
 })

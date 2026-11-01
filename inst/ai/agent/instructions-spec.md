@@ -33,8 +33,23 @@ report's skeleton and nothing of its look:
   deviation.` under an AE table) is dropped, with an assumption that says
   so;
 - a cell template is Python's `format()` of a number with tflspec's `%`:
-  `{n:.0f} ({p:.1f%})` (`.1f%`: one decimal, then `%`).  `{p:.1%}` is not
-  one -- the build stops (`Unknown format spec '.1'`);
+  `.1f%` is the proportion times 100 with one decimal -- **no `%` sign**;
+  a sign the shell shows is written after the brace.  The shell's form,
+  as the cell template:
+  - `xx (xx.x%)`: `"{n} ({p:.1f%}%)"`;
+  - `xx (xx.x)`: `"{n} ({p:.1f%})"`;
+  - `xx.x` (a percent alone): `"{p:.1f%}"`.
+  `{p:.1%}` is not one -- the build stops (`Unknown format spec '.1'`);
+- **the shell's cell form against the study's**: `study_facts.md` says
+  the study's count cell and how it prints.  When the shell's differs
+  (`xx (xx.x%)` where the study prints `xx (xx.x)`), write the shell's
+  for this report: a template's `count_cell` argument, or a code SPEC's
+  `plan_cells: {categorical: ...}`.  When they agree, write none;
+- **the N under the arm**: when the shell's column headers show
+  `(N=xx)` under each arm and `study_facts.md` says the study's header
+  has no N (and the template's own header does not have it), write this
+  one item, nothing more of the header: `plan_col_header: {header: [{line:
+  "1", cols: .values, span: each, text: "{col}\n(N={n})"}]}`;
 - an `ard.analysis_data` that `code` makes may name its `population`: the
   set's subjects are made first and are in reach as `<dataset>_sub`
   (`adsl_sub`); its other fields (`where`, `add`, `derive` ...) stay blank.
@@ -42,11 +57,13 @@ report's skeleton and nothing of its look:
   version 27.0, fictional dictionary."}` -- unquoted, the text after the
   comma is lost and the check refuses the draft.
 
-Not in a draft, ever: column widths, header rows (`plan_col_header`),
-pages (`plan_paginate_*`), blank rows, borders, fonts, `plan_style`,
-`plan_columns`.  The study's defaults and the person's builder do those.
+Not in a draft, ever: column widths, header rows (`plan_col_header`, but
+the N under the arm above), pages (`plan_paginate_*`), blank rows,
+borders, fonts, `plan_style`, `plan_columns`.  The study's defaults and
+the person's builder do those.
 What the study's defaults (`spec/defaults.yml`, the company standard)
-already give -- the cell rules, the digits -- is not written again.
+already give -- the cell rules, the digits -- is not written again; a
+cell form or an N the shell shows otherwise is (above).
 Nor what a template does by default: a template argument is written only
 when its value differs (no list of every visit, no `plan_levels` of a
 variable the table does not show, `plan_empty: {text: ...}` with no other
@@ -317,7 +334,7 @@ Group: {RENALGR}"`.
 | an analysis data with `code` **and** `where` / `add` / `derive` | `code` with `id`, `label`, `from`, `population` only |
 | `table_plan: {cols: [TRT01A, WORST]}` with `variables: [WORST]` | `cols: TRT01A` -- a variable's levels are rows; to have them across, put the variable in `by` |
 | `plan_cells: {categorical: {n} ({p:.1f%})}` | `plan_cells: {categorical: "{n} ({p:.1f%})"}` -- braces in a text: quote it |
-| `"{n} ({p:.1%})"` | `"{n} ({p:.1f%})"` -- `.1%` is not a tflspec format |
+| `"{n} ({p:.1%})"` | `"{n} ({p:.1f%}%)"` -- `.1%` is not a tflspec format; `.1f%` prints no sign, so the shell's `%` goes after the brace |
 | a key of your own (`notes:`, `comment:`, `denominator_note:`) | none: a key the schema does not have is refused; a note is an `ai: assumptions` or `ai: confirm` item |
 | `extends: defaults` | `extends: [defaults]` |
 | `population: Safety Analysis Set` | `population: SAF` -- the id from `spec/data.yml` |
