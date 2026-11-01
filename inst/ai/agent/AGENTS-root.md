@@ -7,4 +7,4 @@ ask the person in the chat, and how you write each report's draft
 from the first request with a draft missing.
 
 Do not install packages, go online, run programs, or write any file but
-`ai/spec/outputs/` and `ai/decisions.md`.
+`ai/spec/outputs/`, `ai/decisions.md` and `ai/progress.md`.

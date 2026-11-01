@@ -155,9 +155,14 @@
 # ai/templates.md: how to answer with a template, for a table and a figure,
 # and every template registered, with its arguments
 .ai_templates_file_text <- function() {
+  # (the example a draft file, as the agent writes it, not a chat's answer)
   how <- function(task) {
-    sub("as the schema above says", sprintf("as the schema of `%s` says", .ai_instructions_file(task)),
-        .ai_prompt_file(paste0("templates-", task)), fixed = TRUE)
+    x <- sub("as the schema above says", sprintf("as the schema of `%s` says", .ai_instructions_file(task)),
+             .ai_prompt_file(paste0("templates-", task)), fixed = TRUE)
+    x <- sub("(?s)\nAn example:.*$", "", x, perl = TRUE)
+    x <- sub("- After the header: `template:", "- `template:", x, fixed = TRUE)
+    x <- sub("- Then `assumptions`, as always.", "- Then `ai:`, as AGENTS.md says.", x, fixed = TRUE)
+    paste(x, .ai_prompt_file(paste0("templates-", task, "-draft")), sep = "\n")
   }
   kinds <- list(table = c("table", "listing"), figure = "figure")
   paste(c("# The study's templates", "",
@@ -216,8 +221,10 @@
 # The lines an agent's request starts its message with: its instructions'
 # file, its header, the templates' file and the likely ones
 .ai_files_lines <- function(task, header, ctx) {
-  # each report's title (a figure: its own)
-  t <- if (is.data.frame(ctx$titles)) ctx$titles else
+  # each report's title (a figure: its own; a request of shell sheets: its
+  # reports' TOC titles)
+  t <- if (is.data.frame(ctx$likely) && nrow(ctx$likely)) ctx$likely else
+    if (is.data.frame(ctx$titles)) ctx$titles else
     data.frame(output_id = ctx$output_id %||% ctx$outputs %||% NA_character_,
                title = paste(ctx$titles, collapse = " "), stringsAsFactors = FALSE)
   likely <- if (isTRUE(ctx$ai_templates)) vapply(seq_len(nrow(t)), function(i) {
