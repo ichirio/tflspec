@@ -26,8 +26,9 @@
   cls <- names(st$defaults$codelists %||% list())
   c("# This study's facts",
     "",
-    "Read-only: the person's study as it is now (spec/data.yml, spec/defaults.yml);",
-    "tflspec writes this file again when they change.",
+    "Read-only: the person's study as it is now (its analysis sets, datasets and",
+    "defaults, outside this folder: do not open them); tflspec writes this file",
+    "again when they change.",
     "",
     "## The analysis sets (a report's `population:` is the id)",
     "",
@@ -136,7 +137,7 @@
 # the agent read from spec/ is ai/study_facts.md
 .ai_paths_from_ai <- function(x) {
   x <- gsub("(?<![A-Za-z0-9_./-])ai/(?=[A-Za-z_.{<*])", "", x, perl = TRUE)
-  x <- gsub("`spec/data[.]yml`, `spec/defaults[.]yml`", "`study_facts.md`", x)
+  x <- gsub("`spec/data[.]yml`,\\s+`spec/defaults[.]yml`", "`study_facts.md`", x, perl = TRUE)
   gsub("(?<![A-Za-z0-9_./-])spec/(data|defaults)[.]yml", "study_facts.md", x, perl = TRUE)
 }
 

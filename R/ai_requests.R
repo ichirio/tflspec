@@ -314,6 +314,9 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
     ids <- if (length(noshell)) noshell else unique(unlist(lapply(us, `[[`, "ids")))
     ctx$candidates <- ids
     ctx$toc_keys <- shell$toc$key
+    # (the reports' titles, for the templates likely for them)
+    ctx$likely <- data.frame(output_id = ids, title = shell$toc$title[match(ids, shell$toc$key)],
+                             stringsAsFactors = FALSE)
     # (the person's correction of these sheets' numbers: the reports above
     # follow it; a number made that no TOC item has is no mistake)
     sn <- shell$sheet_numbers
@@ -618,8 +621,9 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
     if (is.na(f)) {
       rows[[nm]] <- row(nm, ids, "no answer")
       step(nm, "answer",
-           sprintf("ask the agent for %s: it asks what is not settled, then writes %s",
-                   rel(requests, paste0(nm, ".md")), drafts_of(ids)),
+           # (what the person says in the agent's chat: its paths from ai/)
+           .ai_paths_from_ai(sprintf("ask the agent for %s: it asks what is not settled, then writes %s",
+                                     rel(requests, paste0(nm, ".md")), drafts_of(ids))),
            request = rel(requests, paste0(nm, ".md")), drafts = drafts_of(ids))
       next
     }
@@ -744,8 +748,8 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
              missing = miss)
       } else {
         step(nm, "add_missing",
-             sprintf("ask the agent for %s too (%s); then check again",
-                     paste(miss, collapse = ", "), drafts_of(miss)),
+             .ai_paths_from_ai(sprintf("ask the agent for %s too (%s); then check again",
+                                       paste(miss, collapse = ", "), drafts_of(miss))),
              missing = miss, drafts = drafts_of(miss))
       }
     } else if (!any(names(a$outputs) %in% ids) && !nrow(err)) {

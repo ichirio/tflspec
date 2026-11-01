@@ -211,7 +211,7 @@ test_that("a study copied elsewhere: its answers checked and built against its o
   expect_match(ix, "`spec/outputs/<id>.yml`", fixed = TRUE)
   expect_false(grepl("new chat", ix, fixed = TRUE))
   r0 <- suppressMessages(tfl_ai_collect_answers(d2))
-  expect_match(r0$next_steps[["ae-1"]], "ask the agent for ai/requests/ae-1.md", fixed = TRUE)
+  expect_match(r0$next_steps[["ae-1"]], "ask the agent for requests/ae-1.md", fixed = TRUE)
   expect_false(any(grepl("chat", r0$next_steps, fixed = TRUE)))
   # answered there: checked against its own study files, built
   ai_drafts_from_fixtures(d2)
