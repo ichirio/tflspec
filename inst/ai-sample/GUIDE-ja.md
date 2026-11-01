@@ -24,6 +24,8 @@ tflplanner::setup_tflplanner(home = "C:/work/tflplanner-home", language = "ja")
 tflspec::tfl_ai_sample_study("C:/work/tflplanner-home/ai-sample")
 ```
 
+この関数が作るのは**材料だけ**です。試験そのもの（`studies/DMY-001`）はまだできません。試験は、次の手順 1 の 1 つめ（「新規試験」）で作ります。
+
 `ai-sample` の下に次ができます。
 
 - `adam/`: ADaM 5 つ（adsl・adae・adlb・advs・adtte の `.xpt`。haven が無い時は `.rds`）。advs はどのシェルでも使いません。
@@ -37,7 +39,7 @@ tflspec::tfl_ai_sample_study("C:/work/tflplanner-home/ai-sample")
 
 `tflplanner::run_app()` で起動し、「**AI 連携**」タブ →「**1 プロンプトを書く**」で上から入れます。
 
-1. 「**新規試験**」を選び、ID に `DMY-001`、試験名に `Example Pharma DMY-001（架空）` と入れます。
+1. 「**新規試験**」を選び、ID に `DMY-001`、試験名に `Example Pharma DMY-001（架空）` と入れます。ここで試験（`studies/DMY-001`）ができます。
 2. 「**TOC / SHELL ブック**」に `inputs/toc.xlsx`、「**SHELL ブック**」に `inputs/shells.xlsx` を選びます。
 3. 「**ADaM フォルダ**」に `adam` フォルダを選びます（欄の下に「5 ファイル」と出ます）。
 4. 「**ADaM の仕様**」に `inputs/adam_spec.xlsx` を選びます。
@@ -50,7 +52,7 @@ tflspec::tfl_ai_sample_study("C:/work/tflplanner-home/ai-sample")
 ## 3. 手順 2「エージェントで SPEC を作成」（VS Code）
 
 1. 「**2 エージェントで SPEC を作成**」でプロンプトをコピーします。
-2. VS Code で**試験フォルダ**（`C:/work/tflplanner-home/studies/DMY-001`）を開きます。一つ上の `studies` は開きません。
+2. VS Code で試験の **ai フォルダ**（`C:/work/tflplanner-home/studies/DMY-001/ai`）を開きます。`ai/DMY-001.code-workspace` をダブルクリックしても同じです。試験フォルダ（`DMY-001`）や、その上の `studies` は開きません（エージェントが読むのは ai フォルダの中だけです）。
 3. チャットをエージェントモードにして、プロンプトを貼って送ります。
 4. エージェントの質問（集団・桁数など）にチャットで答えます（例「1: FAS、2: 生データの桁数＋1」）。止まったら「**続けて**」と送ります。
 5. パッケージを入れようとしたり、フォルダを探し回ったりしたら、「AGENTS.md に従い、下書きを書くだけにして」と送ります。
