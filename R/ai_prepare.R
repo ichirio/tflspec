@@ -391,7 +391,7 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
         txt <- c(.ai_agent_request_head(req$request[i], ids = ids), dec,
                  readLines(f, warn = FALSE, encoding = "UTF-8"))
         .ai_write_text(txt, f)
-        req$chars[i] <- nchar(paste(txt, collapse = "\n"))
+        req$chars[i] <- nchar(.ai_paths_from_ai(paste(txt, collapse = "\n")))
       }
       # the documents the person gave (a SAP, ...), copied into the study
       # folder: the agent's workspace
@@ -416,8 +416,10 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
     }
     files <- c(files, list.files(rq, "[.](md|rds)$", full.names = TRUE))
     nxt <- c(
-      sprintf("open %s in VS Code (that folder: the agent reads its AGENTS.md)",
-              normalizePath(dir, winslash = "/")),
+      sprintf("open %s in VS Code (the ai folder alone: the agent reads its AGENTS.md)",
+              file.path(normalizePath(dir, winslash = "/"), "ai",
+                        paste0(.ai_file_id(basename(normalizePath(dir, mustWork = FALSE))),
+                               ".code-workspace"))),
       paste0("in the agent's chat, one message: ai/agent_prompt.md; answer its questions ",
              "there; \"continue\" when it stopped"),
       paste0("check the drafts: tflplanner's \"Check\" (tfl_ai_collect_answers()), ",
@@ -470,13 +472,16 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
   # are -- from the study folder, so a study copied to another PC (or
   # another drive) says the same
   # -- and the first one or two requests only: the person asks for the rest
-  agent_prompt <- .ai_agent_prompt(basename(normalizePath(dir, mustWork = FALSE)),
-                                   templates = templates,
-                                   language = .ai_spec_settings(dir)$language)
+  agent_prompt <- .ai_paths_from_ai(.ai_agent_prompt(
+    basename(normalizePath(dir, mustWork = FALSE)), templates = templates,
+    language = .ai_spec_settings(dir)$language))
   # and as a file, to copy from
   if (!dry) {
     .ai_write_text(agent_prompt, file.path(ai, "agent_prompt.md"))
-    files <- c(files, "ai/agent_prompt.md")
+    # the study's facts the agent read from spec/, and the workspace on ai/
+    files <- c(files, "ai/agent_prompt.md",
+               .ai_check_rel(.ai_study_facts_write(dir), dir),
+               .ai_check_rel(.ai_workspace_write(dir), dir))
   }
   structure(list(requests = req, toc = tc, shells = shl, counts = counts,
                  sheets = shell$sheets, numbers = nums, adam = ad,

@@ -1137,6 +1137,8 @@ print.tfl_ai_shell <- function(x, ...) {
 # session's locale (a Japanese Windows R in CP932 too), "\n" line ends.
 .ai_write_text <- function(text, file) {
   text <- paste(enc2utf8(as.character(text)), collapse = "\n")
+  # a file the agent reads: its paths from ai/, the agent's folder (#528)
+  if (.ai_for_agent(file)) text <- .ai_paths_from_ai(text)
   # its folder made if need be (file = "ai/toc_shell.md" in a new study)
   dir.create(dirname(file), recursive = TRUE, showWarnings = FALSE)
   con <- file(file, open = "wb")

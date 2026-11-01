@@ -126,7 +126,9 @@ the names of the files to read. A request longer than `max_chars` is split.
 
 ## 5. The agent's questions, your decisions, its drafts
 
-1. Open `mystudy` in VS Code and give the agent's chat the text of
+1. Open the study's `ai` folder in VS Code -- double-click
+   `ai/mystudy.code-workspace`: the agent sees that folder alone, not
+   `spec/`, the programs or the data -- and give the agent's chat the text of
    `ai/agent_prompt.md`, once: it does every request of
    `ai/requests/index.md` in order, one after the other.
 2. The agent **asks you**, numbered, what defines each report and is not
@@ -286,7 +288,7 @@ your company.
 |---|---|
 | `r$toc` is empty: the TOC sheet was not found | `tfl_ai_prepare(..., toc_sheet = "<the TOC sheet's name>")` |
 | `r$toc$shell` is `NA`: no shell found by the report's number | add that sheet: `tfl_ai_prepare(..., sheets = c("<shell sheet>", ...))` |
-| the agent writes a draft without asking, or asks what a decision settles | its `AGENTS.md` was changed or not read: `tfl_ai_prepare(..., overwrite = TRUE)` writes it again; open the study folder itself in VS Code |
+| the agent writes a draft without asking, or asks what a decision settles | its `AGENTS.md` was changed or not read: `tfl_ai_prepare(..., overwrite = TRUE)` writes it again; open the study's `ai` folder in VS Code (`ai/<study>.code-workspace`) |
 | `error`, "the YAML cannot be read", in `tfl_ai_collect_answers()` | tell the agent: it fixes the file's form (`ai/spec/outputs/<id>.yml`) |
 | "Not read (no request asks for them)" | a draft named after no report of the TOC: the ids are in `ai/requests/index.md` |
 | The shells as text look wrong (cells missed or out of order) | let the agent read the workbook: `tfl_ai_prepare(..., agent_reads = "workbook")` -- each request then says where its shells are in the file |

@@ -20,9 +20,9 @@ A draft that lacks something (an
 analysis set you were not told) is fine -- the person's check says what
 is missing; a draft that breaks the form is not.
 
-The paths below are from the study folder: the one holding `ai/` (this
-file is `ai/AGENTS.md`).  If the workspace is a folder above it, use the
-paths from there.
+This folder -- the study's `ai/` -- is your workspace: every path below
+is from it, and every file you read or write is in it.  Never open a
+path outside it (`../`).
 
 ## What you read
 
@@ -78,6 +78,16 @@ skip it.  For each of the others, in order:
    - Ask only when the sources disagree, or when a choice changes a
      report's numbers and nothing -- no document, no data, no decision
      -- defines it.
+   **Your default choice** (the one you take when the person says
+   "default"):
+   - never a variable or a value that `ai/adam_summary.md` does not list
+     (no `BMIBL` when ADSL has no BMIBL): then the default is to leave the
+     row out, and the question says the variable is not in the data;
+   - the shell's layout (its columns, rows and items) over the SAP's when
+     the two differ: the shell is the agreed layout, the SAP is amended
+     later;
+   - a specific programming note or derivation rule over a generic
+     footnote (footnotes are often stale), and the question says so.
 3. {{ask_when}} **Ask them in the chat**, in {{language}}, numbered,
    the message starting with the progress tag (*Progress*, below):
    `[n/N] <request> (<report ids>)`.
@@ -92,8 +102,10 @@ skip it.  For each of the others, in order:
    the programmer would type it, holding every piece the draft needs --
    the title's label, the condition, the variable, which source is wrong
    -- so that the person sees what to answer, and can paste it as it is
-   or edit it.  The example follows your default choice.  A choice alone
-   ("SAFFL") is not an answer.
+   or edit it.  The example follows your default choice; for a question
+   of sources that disagree, give one `例:` line for each choice (`(a)`,
+   `(b)` ...), so that the person picks one, not your default by
+   pasting.  A choice alone ("SAFFL") is not an answer.
    - a population conflict:
      `例: シェルのとおり Safety Analysis Set（SAFFL = 'Y'）、実治療 TRT01A。TOC の Full Analysis Set は誤り。`
    - a denominator:
@@ -257,8 +269,8 @@ a line.
 ## Never
 
 - Do not install packages or go online. Do not run `run.R`, and do not
-  write programs, YAML under `spec/` or RTF files: the person's check does
-  that. {{run_r}}
+  write programs, the study's own specification (outside this folder) or
+  RTF files: the person's check does that. {{run_r}}
 - Do not open a file not listed under "What you read", and do not search
   the folders.
 - Do not change the TOC / SHELL workbook, the ADaM, `study.yml`,

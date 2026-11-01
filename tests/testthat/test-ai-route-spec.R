@@ -82,7 +82,7 @@ test_that("prepare(): AGENTS.md asks and writes the drafts; the requests carry t
   tfl_ai_prepare(unit = "toc", d, rs_book(), adam = "adam", quiet = TRUE, size = 3L)
   ag <- readLines(file.path(d, "ai", "AGENTS.md"), warn = FALSE, encoding = "UTF-8")
   expect_true(any(grepl("<!-- tflspec route: spec -->", ag, fixed = TRUE)))
-  expect_true(any(grepl("ai/spec/outputs/<id>.yml", ag, fixed = TRUE)))
+  expect_true(any(grepl("`spec/outputs/<id>.yml`", ag, fixed = TRUE)))
   expect_true(any(grepl("three times at most", ag, fixed = TRUE)))
   expect_true(any(grepl("page: footer", ag, fixed = TRUE)))
   expect_true(any(grepl("in English", ag, fixed = TRUE)))
@@ -96,7 +96,7 @@ test_that("prepare(): AGENTS.md asks and writes the drafts; the requests carry t
   expect_true(any(grepl("page: footer", ins, fixed = TRUE)))
   pr <- readLines(file.path(d, "ai", "agent_prompt.md"), warn = FALSE, encoding = "UTF-8")
   expect_true(any(grepl("ask me here, in English", pr, fixed = TRUE)))
-  expect_true(any(grepl("ai/spec/outputs/<id>.yml", pr, fixed = TRUE)))
+  expect_true(any(grepl("spec/outputs/<id>.yml", pr, fixed = TRUE)))
   # a request's head says the route; with a decision, the request lists it
   idx <- tfl_ai_requests(d)
   req <- idx$request[idx$outputs == "T-14-3-1" | grepl("T-14-3-1", idx$outputs)][1L]
