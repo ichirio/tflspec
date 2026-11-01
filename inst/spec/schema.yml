@@ -684,12 +684,10 @@ rtf_tables:
     section_label_align: {type: "enum[left|center|right]"}
     auto_title: {type: logical}
     title_label_align: {type: "enum[left|center|right]"}
-    font_size_half_points: {type: integer}
     page_break: {type: logical, description: "FALSE: on under the content before it in the document, on the page that one ends on."}
     space_before: {type: integer, description: "With page_break false, empty lines between the content before and this one."}
     first_rows: {type: integer, description: "With page_break false, the table's rows on the page before it; the rest on pages of their own."}
     cont_title: {type: string, description: "With first_rows, a line under the title of each page after the shared one."}
-    read_attributes: {type: logical, description: "FALSE: what the table carries itself (its rtf_blank_rows attribute) is not read; blank: TRUE."}
 
 rtf_figures:
   package: rtfreporter
@@ -1718,9 +1716,9 @@ rtf_footer:
           = )); blank: left.'
         example: center
       - column: table_font_size_half_points
-        at: rtf_tables.font_size_half_points
-        description: 'The table''s font size in half-points (18 = 9 pt) (rtf_tables(font_size_half_points
-          = )); blank: the document''s.'
+        description: 'The table''s font size in half-points (18 = 9 pt): the plan''s
+          plan_style(font_size_half_points = ), a listing''s as_rtftables(font_size_half_points
+          = ); blank: the document''s.'
         example: '14'
       - column: title_font_size_half_points
         at: rtf_titles.font_size_half_points
