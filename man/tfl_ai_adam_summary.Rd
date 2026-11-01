@@ -29,9 +29,8 @@ most (PARAMCD, PARCAT, AVISIT, the grades: four times as many).}
 \item{define, adam_spec}{The study's \code{define.xml} (2.0 or 2.1), or its
 ADaM spec workbook in the Pinnacle 21 layout (\code{\link[=tfl_read_define_spec]{tfl_read_define_spec()}}),
 or what either reader returns -- one of them.  What the define says is
-added to what the data shows: each code list in the define's order
-with its decodes (\verb{[codes: M = Male | F = Female]}, the values listed
-in that order), a variable's label the data lacks, the digits and
+added to what the data shows: each code list's decodes (\verb{[codes: M = Male | F = Female]}; the values listed stay the data's, in the code
+list's order where it has them), a variable's label the data lacks, the digits and
 display format of a numeric variable, and the value-level metadata (a
 variable's digits and format by where clause, \verb{AVAL where PARAMCD == "BILI": digits 1, format 8.1}) as a section of its own.  \code{NULL}
 (default): the data alone.}
@@ -40,11 +39,13 @@ variable's digits and format by where clause, \verb{AVAL where PARAMCD == "BILI"
 A \code{tfl_ai_adam}: a list with \code{text} (one string, Markdown),
 \code{variables} (one row a variable: \code{dataset}, \code{dataset_label},
 \code{variable}, \code{label}, \code{kind}, \code{levels} -- \code{|} between the values --
-as \code{\link[=tfl_adam_metadata]{tfl_adam_metadata()}} gives it; and \code{codes}: what each code of a
+as \code{\link[=tfl_adam_metadata]{tfl_adam_metadata()}} gives it; \code{missing}, how many records have no
+value (\code{NA}, and \code{""} for a character variable); and \code{codes}: what each code of a
 code variable stands for, \code{"1 = <65 | 2 = >=65"}, from its value labels
 or the variable it pairs with -- \code{AGEGR1N} and \code{AGEGR1}, \code{ARMCD} and
 \code{ARM}, \code{PARAMCD} and \code{PARAM} -- when each code has one text) and \code{datasets} (\code{dataset}, \code{label},
-\code{records}, \code{variables}), and \code{value_level} (the define's, one row an
+\code{records}, \code{subjects} -- the distinct \code{USUBJID}s, \code{NA} without one --
+\code{variables}), and \code{value_level} (the define's, one row an
 entry; none without a define).  \code{format()} gives the text.
 }
 \description{
