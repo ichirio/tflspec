@@ -1,0 +1,188 @@
+# CDISC ARS export and import
+
+The specs stay the source; CDISC’s Analysis Results Standard (ARS v1.0)
+is **written from them**, and anyone’s ARS can be **read back into
+them**. The JSON is the form to exchange; CDISC’s Excel template is
+written for people to read.
+
+``` r
+
+library(tflspec)
+df <- function(...) data.frame(..., stringsAsFactors = FALSE)
+```
+
+## The specs
+
+An ARD spec, as in the article [The ARD
+spec](https://ichirio.github.io/tflspec/articles/ard-spec.md), plus a
+report spec for the outputs’ titles. ARS needs one thing the spec does
+not guess: each analysis’s **`purpose`** (PRIMARY / SECONDARY /
+EXPLORATORY OUTCOME MEASURE) is the SAP’s decision – fill the `purpose`
+column, or give `tfl_ars(purpose = )` for the rows left blank. `reason`
+defaults to SPECIFIED IN SAP.
+
+``` r
+
+ard_spec <- tfl_ard_spec(list(
+  study = df(key = c("id", "study_id"), value = c("USUBJID", "XYZ-ONC-01")),
+  datasets = df(dataset = c("ADSL", "ADAE"),
+                path = c("data/adsl.rds", "data/adae.rds")),
+  populations = df(population_id = "SAF", dataset = "ADSL",
+                   where = 'SAFFL == "Y"'),
+  analyses = df(
+    output_id = c("T-14-1-1", "T-14-1-1", "T-14-3-1"),
+    analysis_id = c("AGE", "SEX", "TEAE"),
+    method = c("continuous", "categorical", "hierarchical"),
+    dataset = c(NA, NA, "ADAE"),
+    population_id = "SAF",
+    where = c(NA, NA, 'TRTEMFL == "Y"'),
+    by = "TRT01A",
+    variables = c("AGE", "SEX", "AEBODSYS | AEDECOD"),
+    purpose = "PRIMARY OUTCOME MEASURE")))
+
+report_spec <- tfl_table_spec(
+  report = df(output_id = c("T-14-1-1", "T-14-3-1")),
+  titles = df(output_id = c("T-14-1-1", "T-14-3-1"), line = 1,
+              center = c("Demographic Characteristics",
+                         "Treatment-Emergent Adverse Events")))
+```
+
+## Writing ARS
+
+``` r
+
+ars <- tfl_ars(ard_spec, report_spec = report_spec)
+tfl_check_ars(ars)      # 0 rows: valid (with jsonvalidate: CDISC's schema too)
+#> [1] part    field   problem
+#> <0 rows> (or 0-length row.names)
+```
+
+What ARS has no place for – and what was added to make it complete – is
+listed with the reason, never dropped or added silently:
+
+``` r
+
+knitr::kable(tfl_ars_unmapped(ars))
+```
+
+| where | item | reason |
+|:---|:---|:---|
+| T-14-1-1 | denominator | added An_T-14-1-1_GROUPN_TRT01A, the subject count by group the percentages divide by |
+| T-14-3-1 | denominator | added An_T-14-3-1_GROUPN_TRT01A, the subject count by group the percentages divide by |
+
+``` r
+
+json <- tfl_write_ars_json(ars, file.path(tempdir(), "xyz_onc_01_ars.json"))
+cat(readLines(json, n = 20), sep = "\n")
+#> {
+#>   "id": "XYZ-ONC-01",
+#>   "name": "XYZ-ONC-01",
+#>   "version": 1,
+#>   "mainListOfContents": {
+#>     "name": "List of Planned Analyses",
+#>     "contentsList": {
+#>       "listItems": [
+#>         {
+#>           "name": "Demographic Characteristics",
+#>           "level": 1,
+#>           "order": 1,
+#>           "outputId": "T-14-1-1",
+#>           "sublist": {
+#>             "listItems": [
+#>               {
+#>                 "name": "Number of subjects",
+#>                 "level": 2,
+#>                 "order": 1,
+#>                 "analysisId": "An_T-14-1-1_GROUPN_TRT01A"
+```
+
+`tfl_write_ars_xlsx(ars, path)` writes CDISC’s Excel template, for
+people to read.
+
+## A report’s analysis data
+
+An analysis that reads one of its report’s analysis data (`data`, see
+[The ARD spec](https://ichirio.github.io/tflspec/articles/ard-spec.md))
+is written with that data’s conditions: the `where` of each row it is
+made from, joined into one WhereClause on the ADaM dataset, and the
+population of the data it starts from. What a WhereClause cannot say –
+`subjects`, `derive`, `code` … – is listed by
+[`tfl_ars_unmapped()`](https://ichirio.github.io/tflspec/reference/tfl_ars_unmapped.md),
+as above.
+
+``` r
+
+adata <- df(output_id = "T-14-3-2",
+            data_id = c("adae_teae", "adae_ser"),
+            from = c("ADAE", "adae_teae"),
+            population_id = c("SAF", NA),
+            where = c('TRTEMFL == "Y"', 'AESER == "Y"'))
+analyses <- df(output_id = "T-14-3-2", analysis_id = "SER",
+               method = "hierarchical", data = "adae_ser", by = "TRT01A",
+               variables = "AEBODSYS | AEDECOD",
+               purpose = "PRIMARY OUTCOME MEASURE")
+sheets <- unclass(ard_spec)[c("study", "datasets", "populations")]
+ard_spec2 <- tfl_ard_spec(c(sheets,
+                            list(analysis_data = adata, analyses = analyses)))
+ars2 <- tfl_ars(ard_spec2)
+tfl_check_ars(ars2)
+#> [1] part    field   problem
+#> <0 rows> (or 0-length row.names)
+```
+
+## An output that prints another’s analyses
+
+A figure that prints a table’s median and hazard ratio has no analyses
+of its own. `tfl_ars(references = )` names such outputs – `output_id`,
+`source` (the output whose analyses it prints) and `analysis_id` – and
+writes each as an ARS `Output` whose list-of-contents item points at the
+source’s analyses, which are not written twice. One whose source the ARS
+does not have is listed by
+[`tfl_ars_unmapped()`](https://ichirio.github.io/tflspec/reference/tfl_ars_unmapped.md).
+
+## Running it with siera
+
+`profile = "siera"` writes ARS that
+[siera](https://clymbclinical.github.io/siera/) can run – still valid
+CDISC ARS, with an R code template per method.
+[`tfl_ars_ard()`](https://ichirio.github.io/tflspec/reference/tfl_ars_ard.md)
+runs it (siera writes and runs one programme per output) and gives its
+ARD, a round trip to compare with the ARD tflspec builds:
+
+``` r
+
+ars_s <- tfl_ars(ard_spec, profile = "siera")
+ard <- tfl_ars_ard(ars_s, adam)   # adam: a named list of datasets, or a folder
+```
+
+An analysis siera has no template for (a test other than chi-square,
+`missing`, `mean_ci`, `custom` …) is left out and listed by
+[`tfl_ars_unmapped()`](https://ichirio.github.io/tflspec/reference/tfl_ars_unmapped.md).
+
+## Reading anyone’s ARS
+
+[`tfl_read_ars_json()`](https://ichirio.github.io/tflspec/reference/tfl_read_ars_json.md)
+reads an ARS JSON – one written elsewhere, by another tool – and
+[`tfl_ars_to_specs()`](https://ichirio.github.io/tflspec/reference/tfl_ars_to_specs.md)
+turns it into specs: `$ard`, `$report` (and with `table = TRUE`,
+`$table`: the groupings’ levels). ARS has no ADaM paths, so
+`datasets$path` is filled in before the ARD spec runs; what has no place
+in the specs is in `attr(, "unmapped")`.
+
+``` r
+
+sp <- tfl_ars_to_specs(tfl_read_ars_json(json))
+sp$ard$analyses[, c("output_id", "analysis_id", "method", "by", "variables")]
+#>   output_id analysis_id       method     by          variables
+#> 1  T-14-1-1         AGE   continuous TRT01A                AGE
+#> 2  T-14-1-1         SEX  categorical TRT01A                SEX
+#> 3  T-14-3-1        TEAE hierarchical TRT01A AEBODSYS | AEDECOD
+sp$report$titles[, c("output_id", "line", "center")]
+#>   output_id line                            center
+#> 1  T-14-1-1    1       Demographic Characteristics
+#> 2  T-14-3-1    1 Treatment-Emergent Adverse Events
+```
+
+There is no way back from an ARD alone (it has no data paths,
+populations or conditions); an existing study’s analyses come in through
+ARS.
