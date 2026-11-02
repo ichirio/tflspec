@@ -144,6 +144,11 @@ test_that("a design's preset written as a template is the design's preset, not a
   expect_false(tflspec:::.fig_preset_named(list(name = "km_survival")))
   expect_false(tflspec:::.fig_preset_named(list(name = "no_such")))
   expect_false(tflspec:::.fig_preset_named("box_by_visit"))
+  # a name of both (forest_hr): without the template SPEC's required
+  # arguments the preset, with them the template SPEC
+  expect_true(tflspec:::.fig_preset_named(list(name = "forest_hr")))
+  expect_false(tflspec:::.fig_preset_named(list(name = "forest_hr", args = list(param = "OS"))))
+  expect_null(tflspec:::.tpl_spec_of(tfl_output("F-3", "figure", template = list(name = "forest_hr"))))
   o <- tfl_output("F-1", "figure", template = list(name = "box_by_visit"))
   expect_null(tflspec:::.tpl_spec_of(o))
   expect_identical(tflspec:::.fig_design_of_output(o)$template, "box_by_visit")
