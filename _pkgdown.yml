@@ -445,6 +445,7 @@ reference:
       - tfl_ai_style_prompt
       - tfl_ai_style_read
       - tfl_rtf_style_scan
+      - tfl_rtf_style_tables
       - tfl_ai_migrate
       - tfl_ai_outputs
       - tfl_ai_assumptions
