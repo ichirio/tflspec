@@ -109,3 +109,42 @@ test_that("x_breaks as YAML writes it (decimals and whole numbers: a list) is se
                                                                            x_breaks = list(1, "a"))), "")
   expect_true(any(grepl("number", bad$problem)))
 })
+
+test_that("n_by_arm: each arm's events / subjects, a column each; the call's look kept (#579)", {
+  x <- tfl_template_expand("forest_hr", list(param = "PFS", population = "SAF",
+                                             n_by_arm = c("Control", "Drug X")))
+  st <- x$data$steps
+  expect_match(st[[1L]]$stats, "n_event", fixed = TRUE)
+  expect_match(st[[2L]]$code, "n_arm2 = sprintf(\"%s/%s\", first(n_event[TRT01A == \"Drug X\"])", fixed = TRUE)
+  tc <- Filter(function(it) identical(it$fn, "text_column"), x$content)[[1L]]
+  expect_identical(tc$args$columns, "Control = n_arm1 | Drug X = n_arm2 | Hazard ratio (95% CI) = txt")
+  skip_on_cran()
+  fr_skip()
+  skip_if_not_installed("haven")
+  d <- tempfile()
+  on.exit(unlink(d, recursive = TRUE))
+  data <- tplfig_study(d, c("adsl", "adtte"), "FR-3")
+  o <- tfl_output("F-9-3", "figure", population = "SAF", label = "Forest", extends = "defaults",
+                  template = list(name = "forest_hr", args = list(
+                    param = "PFS", population = "SAF", subgroups = "SEX",
+                    favours = c("Drug X", "Control"), n_by_arm = c("Control", "Drug X"))))
+  tfl_write_output(o, file.path(d, "spec", "outputs", "F-9-3.yml"))
+  st <- tfl_read_study_spec(d)
+  ard <- suppressMessages(tfl_build_ard(st, output_id = "F-9-3", dir = d, save = FALSE))
+  # A (the call, the layout given the same arms) = B (the design) = the template SPEC
+  r <- tplfig_check(o, d, c(data, list(ard = ard)))
+  txt <- paste(r$a, collapse = "\n")
+  expect_match(txt, "content <- tpl_forest_layout(fig, n_by_arm = c(\"Control\", \"Drug X\"))", fixed = TRUE)
+  # the arms' events / subjects; none on a heading row
+  p <- tpl_forest_hr(ard, group = TRT01A, subgroups = SEX, n_by_arm = c("Control", "Drug X"))
+  est <- p$layers[[2L]]$data
+  expect_true(all(grepl("^[0-9]+/[0-9]+$", est$n_arm1[!est$head])))
+  expect_identical(unique(est$n_arm2[est$head]), "")
+  expect_s3_class(tpl_forest_layout(p, n_by_arm = c("Control", "Drug X")), "patchwork")
+  expect_error(tpl_forest_layout(tpl_forest_hr(ard, group = TRT01A, subgroups = SEX), n_by_arm = "Control"),
+               "the arms tpl_forest_hr")
+  # tfl_tpl() draws the look its arguments ask for (favours under the axis)
+  q <- tfl_tpl(ard, "forest_hr", subgroups = SEX, favours = c("Drug X", "Control"))
+  expect_match(q$labels$x %||% suppressWarnings(ggplot2::ggplot_build(q))$plot$labels$x,
+               "<- Favours Drug X", fixed = TRUE)
+})
