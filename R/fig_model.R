@@ -1159,8 +1159,16 @@ tfl_read_fig_design <- function(path) {
         sprintf("paste0(%s)", paste(q(parts), collapse = sprintf(", %s, ", yc)))
       } else q(v("label"))
       list(code = c(lbl("reference line labels"),
-        sprintf("p <- p + annotate(\"text\", x = Inf, y = %s, label = %s, hjust = -0.3, size = %s)",
-                yc, lab, num("size"))),
+        # (with panels (facet_by), a layer of its own data: annotate()'s
+        # vectors no longer fit the rows it repeats in every panel)
+        if (is.null(.pv(plot, "facet_by"))) {
+          sprintf("p <- p + annotate(\"text\", x = Inf, y = %s, label = %s, hjust = -0.3, size = %s)",
+                  yc, lab, num("size"))
+        } else {
+          sprintf(paste0("p <- p + geom_text(data = data.frame(y = %s, label = %s), ",
+                         "aes(x = Inf, y = y, label = label), hjust = -0.3, size = %s, inherit.aes = FALSE)"),
+                  yc, lab, num("size"))
+        }),
         # room right of the panel, after the theme (which would reset it)
         after = "p <- p + theme(plot.margin = margin(5.5, 50, 5.5, 5.5))   # room for the labels",
         clip_off = TRUE)
@@ -1493,7 +1501,12 @@ tfl_read_fig_design <- function(path) {
   needs <- setdiff(unique(c(unlist(lapply(lc, `[[`, "package")), add_res$pkgs)), "ggplot2")
   if (any(kinds %in% c("km_curve", "km_ci", "censor_mark"))) libs <- unique(c(libs, "ggsurvfit"))
   uses_pd <- any(vapply(layers, function(l) .lgl(l$dodge), logical(1)))
-  lab <- function(f) { x <- .pv(plot, f); if (!is.null(x)) q(x) }
+  # (an axis title written empty is no title: NULL, not the variable's name)
+  lab <- function(f) {
+    if (f != "title" && identical(plot[[f]], "")) return("NULL")
+    x <- .pv(plot, f)
+    if (!is.null(x)) q(x)
+  }
   labs_args <- c(if (!is.null(lab("x_label"))) paste("x =", lab("x_label")),
                  if (!is.null(lab("y_label"))) paste("y =", lab("y_label")),
                  if (!is.null(lab("title"))) paste("title =", lab("title")))
@@ -1527,21 +1540,23 @@ tfl_read_fig_design <- function(path) {
     if (arm[["linetype"]]) 'theme(legend.key.width = unit(2.5, "lines"))',
     if (!.lgl(.pv(plot, "x_text"))) "theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())",
     as.list(pp_q_legend(.pv(plot, "legend"))))
-  # the chain: the layers (the user's layer code as a statement), the
-  # figure's settings, what goes after them, the plot.add calls
+  # the chain: the layers, the figure's settings, what goes after them,
+  # the plot.add calls, then the user's layer code (statements, in their
+  # order: the last word over the settings)
   items <- list()
+  own <- list()
   for (i in seq_along(lc)) {
     x <- lc[[i]]
     if (!is.null(x$panel) || is.null(x$code)) next
     if (identical(kinds[i], "layer_code")) {
-      items <- c(items, list(list(stmt = layers[[i]]$code, label = layers[[i]]$label)))
+      own <- c(own, list(list(stmt = layers[[i]]$code, label = layers[[i]]$label)))
     } else {
       items <- c(items, lapply(.fig_terms(x$code), function(t) list(term = t)))
     }
   }
   tail_terms <- c(finish, .fig_terms(unlist(lapply(lc, `[[`, "after"))),
                   .fig_terms(add_res$lines))
-  items <- c(items, lapply(tail_terms, function(t) list(term = t)))
+  items <- c(items, lapply(tail_terms, function(t) list(term = t)), own)
   chain <- .fig_chain_lines(name, first, items)
   panel_data <- unlist(lapply(lc, function(x) if (!is.null(x$panel)) x$data))
   panel_code <- unlist(lapply(lc, function(x) if (!is.null(x$panel)) x$chain))

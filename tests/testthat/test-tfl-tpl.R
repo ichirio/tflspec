@@ -136,6 +136,13 @@ test_that("in a study: demog with a Total column and its own order; the program 
   t <- tt_tab(r$plan)
   expect_true("Total" %in% names(t))
   expect_identical(unique(t$group)[1L], "Sex, n (%)")
+  # the stub's heading is blank, not its name (the study default's
+  # plan_stub(heading = ""), #538); an rtfreporter before it prints the name
+  if ("heading" %in% names(formals(rtfreporter::plan_stub))) {
+    hdr <- unlist(suppressMessages(rtfreporter::plan_apply(r$plan, "pages"))[[1L]]$col_header)
+    expect_identical(hdr[1L], "")
+    expect_false("row_label" %in% hdr)
+  }
   n <- sum(adsl$SAFFL == "Y")
   expect_identical(t$Total[t$group == "Age (years)" & t$label == "n"], as.character(n))
   # the program: the template's call, the study standard's look after it
@@ -152,6 +159,20 @@ test_that("in a study: demog with a Total column and its own order; the program 
   f2 <- tt_report(d, "T-DM2", "demog", list(population = "SAF", count_cell = "{n}"))
   expect_message(tfl_resolve_output(tfl_read_output(f2), tfl_read_study_spec(d)),
                  "count_cell overrides the study standard \\(plan_cells.categorical\\)")
+  # count_cell a guarded list: a zero count `0`; the program writes the guard as R
+  f3 <- tt_report(d, "T-DM3", "demog", list(
+    population = "SAF", count_cell = list(tfl_r('n == 0 ~ "0"'), "{n} ({p:.1f%}%)")))
+  r3 <- suppressMessages(tt_run(d, "T-DM3", f3))
+  t3 <- tt_tab(r3$plan)
+  race <- t3[t3$group == "Race, n (%)", setdiff(names(t3), c("group", "label"))]
+  expect_true(any(unlist(race) == "0"))
+  expect_false(any(grepl("^0 \\(", unlist(race))))
+  code3 <- paste(tfl_content_code(r3$ro, pipe = "|>"), collapse = "\n")
+  expect_match(code3, "count_cell = list(n == 0 ~ \"0\", \"{n} ({p:.1f%}%)\")", fixed = TRUE)
+  e3 <- new.env()
+  e3$ard <- r3$ard
+  suppressMessages(eval(parse(text = code3), envir = e3))
+  expect_identical(tt_tab(e3$plan), t3)
 })
 
 test_that("in a study: ae_ser_soc_pt is ae_soc_pt with its defaults; ae_soc_pt's min_pct", {

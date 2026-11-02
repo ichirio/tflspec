@@ -22,7 +22,7 @@ rp_sheets <- function() {
 rp_output <- function() {
   tfl_output("T-1", "table", page = list(
     rtf_page = list(orientation = "portrait", margin_top_in = 1),
-    rtf_default_format = list(font_size_half_points = 16L),
+    rtf_style = list(font_size_half_points = 16L),
     rtf_document = list(font_table = list(list(name = "Arial"))),
     rtf_tables = list(auto_section = TRUE),
     rtf_titles = list(font_size_half_points = 20L),
@@ -66,14 +66,14 @@ test_that("a report's page: makes the document its sheets make", {
 
 test_that("page:'s calls check against their schema", {
   pg <- rp_output()$page
-  for (fn in c("rtf_page", "rtf_default_format", "rtf_document", "rtf_tables", "rtf_titles")) {
+  for (fn in c("rtf_page", "rtf_style", "rtf_document", "rtf_tables", "rtf_titles")) {
     p <- tfl_schema_check(tfl_item(fn, pg[[fn]]))
     expect_identical(nrow(p), 0L, info = fn)
   }
   typo <- tfl_schema_check(tfl_item("rtf_page", list(orientaton = "portrait")))
   expect_identical(typo$level, "warning")
   skip_if_not_installed("rtfreporter")
-  for (fn in c("rtf_page", "rtf_default_format", "rtf_document", "rtf_tables",
+  for (fn in c("rtf_page", "rtf_style", "rtf_default_format", "rtf_document", "rtf_tables",
                "rtf_figures", "rtf_titles", "rtf_footnotes")) {
     expect_true(all(names(tfl_schema(fn)$args) %in%
                       names(formals(getExportedValue("rtfreporter", fn)))), info = fn)
@@ -82,7 +82,7 @@ test_that("page:'s calls check against their schema", {
 
 test_that("after the study's setup code, a YAML report says what its sheets say", {
   full <- rp_output()$page
-  study_keys <- c("rtf_page", "rtf_default_format", "rtf_document", "header", "footer", "tokens")
+  study_keys <- c("rtf_page", "rtf_style", "rtf_document", "header", "footer", "tokens")
   study <- rp_study()
   study$defaults <- list(page = full[study_keys])
   study$patterns <- list()

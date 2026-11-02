@@ -182,7 +182,7 @@ test_that("only a report with its own header writes it", {
   expect_match(l, "OUTPUT_TITLE = \"\"", fixed = TRUE)
   hd <- rbind(setup_spec()$header,
               data.frame(output_id = "T-14-1-1", line = "1", left = "Own",
-                         center = NA, right = NA))
+                         center = NA, right = NA, row_height_twips = NA))
   t <- paste(tfl_report_code(setup_spec(header = hd), "T-14-1-1",
                              content = "pages", setup = TRUE), collapse = "\n")
   expect_match(t, "rtf_header(", fixed = TRUE)

@@ -87,11 +87,12 @@
   files <- paste(sprintf("`ai/spec/outputs/%s.yml`", ids), collapse = ", ")
   c("<!-- tflspec: agent -->",
     paste0("> **For the agent** (ai/AGENTS.md): read `ai/decisions.md` and the decisions below, ",
-           "then ask in the chat what defines these reports and is not settled -- and wait for ",
-           "the answers. Then write each report's skeleton as its file: ", files, ". ",
+           "then settle each open point as ai/AGENTS.md says -- the documents, else the usual ",
+           "convention (an assumption), else a question in the chat (only what you may not decide ",
+           "alone) -- and wait for the answers. Then write each report's skeleton as its file: ", files, ". ",
            "Record the answers in `ai/decisions.md`; mark what you could not settle under `ai: confirm`. ",
            "Read only this request and the files it names; do not look for others, install nothing, ",
-           "run nothing. Write nothing of the look."),
+           "run nothing. Write nothing of the look but the column widths."),
     "", "---", "")
 }
 
@@ -241,8 +242,12 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
             }
             list(rtf = if (isTRUE(rtf)) f)
           } else {
-            ard <- suppressMessages(tfl_build_ard(st, dir = ".", output_id = id, save = FALSE))
-            if (!is.null(ard$output_id)) ard <- ard[ard$output_id %in% id, , drop = FALSE]
+            # (a table with parts -- a listing with its summary, pk_conc --
+            # reads each object by name: the ARD, the records)
+            ard <- if (any(vapply(o$content, .is_part, NA))) .parts_objects(o, st, ".") else {
+              a <- suppressMessages(tfl_build_ard(st, dir = ".", output_id = id, save = FALSE))
+              if (!is.null(a$output_id)) a[a$output_id %in% id, , drop = FALSE] else a
+            }
             # a table whose columns have no widths: the usual layout's
             # (the stub wider), written into its report file -- what a
             # person then changes is a value, not an argument to add
@@ -595,12 +600,12 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
     "Read ai/AGENTS.md and follow it. Do every request of ai/requests/index.md, top to bottom; ",
     "skip a request whose reports all have their draft (ai/spec/outputs/<id>.yml). For each: ",
     "read ai/decisions.md and the request; ask me here, in ", .ai_language_name(language),
-    ", what defines its reports and is not settled (the analysis set, the parameter, the ",
-    "treatment variable, a denominator ...), numbered, with the choices and your default -- ",
-    "then wait for my answers. Record them in ai/decisions.md. Then write each report's ",
+    ", only what defines its reports and neither the documents nor the usual convention ",
+    "settles (ai/AGENTS.md: what to decide yourself, what to confirm, what to ask), numbered, with the ",
+    "choices and your default -- then wait for my answers. Record them in ai/decisions.md. Then write each report's ",
     "skeleton as ai/spec/outputs/<id>.yml",
     if (isTRUE(templates)) " (a template where one fits, ai/AGENTS.md)" else "",
-    ", nothing of the look, and mark what you could not settle under ai: confirm; go straight ",
+    ", nothing of the look but the column widths, and mark what you could not settle under ai: confirm; go straight ",
     "on to the next request without waiting for me -- stop only to ask, or when every request ",
     "is done. Read only the request and the files it names; run nothing, install nothing. ",
     "If I say \"stop\", finish the step in hand, write ai/progress.md and stop, saying where; ",

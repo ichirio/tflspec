@@ -129,7 +129,8 @@
     paste(k, "=", if (!col) .fig_arg_code(v) else if (length(v) == 1L) v
                   else sprintf("c(%s)", paste(v, collapse = ", ")))
   }, "")
-  if (length(own_plot)) arg_code <- c(arg_code, paste("plot =", .fig_arg_code(own_plot)))
+  # (a list: the settings keep their types -- a number, a flag, a text)
+  if (length(own_plot)) arg_code <- c(arg_code, paste("plot =", sub("^c[(]", "list(", .fig_arg_code(own_plot))))
   # (a template drawn from the ARD (forest_hr) takes `ard`; one of panels
   # side by side is assembled after the report's own items, on `fig`)
   form <- .tpl_fig_forms[[t$root %||% t$from %||% tp$name]] %||% list()

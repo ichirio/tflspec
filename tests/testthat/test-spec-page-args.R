@@ -51,7 +51,7 @@ test_that("rtf_tables: the arguments rtfreporter 0.9.0 removed are errors naming
 
 test_that("markup takes rtfreporter's words, not TRUE / FALSE", {
   ok <- function(fn, v) nrow(tfl_schema_check(tfl_item(fn, list(markup = v)))) == 0L
-  for (fn in c("rtf_default_format", "rtf_titles", "rtf_footnotes")) {
+  for (fn in c("rtf_style", "rtf_default_format", "rtf_titles", "rtf_footnotes")) {
     expect_true(ok(fn, "script"), info = fn)
     expect_true(ok(fn, "none"), info = fn)
     expect_true(ok(fn, c("script", "relational")), info = fn)

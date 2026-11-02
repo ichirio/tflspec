@@ -4,8 +4,9 @@
 # own, tfl_resolve_output()) is the rtfreporter calls that dress its pages,
 # each key one function and its arguments:
 #
-#   rtf_page, rtf_default_format      the page and the text defaults,
-#                                     rtf_document()'s page and default_format
+#   rtf_page, rtf_style               the page and the document's style,
+#                                     rtf_document()'s page and style (an
+#                                     old rtf_default_format: its shared level)
 #   rtf_document                      font_table, watermark, program ...
 #   rtf_tables / rtf_figures          the content's own arguments
 #   rtf_titles / rtf_footnotes        their font size ...
@@ -31,7 +32,7 @@
   tokens <- .page_tokens(pg, id, kind, .page_own_tokens(output, study))
   args_of <- function(fn) .page_args(pg[[fn]])
   doc_a <- args_of("rtf_document")
-  fmt <- args_of("rtf_default_format")
+  fmt <- .page_style(pg)
   for (w in intersect(c("title_width", "footnote_width"), names(fmt))) {
     v <- suppressWarnings(as.numeric(fmt[[w]]))
     if (!is.na(v)) fmt[[w]] <- v
@@ -66,8 +67,7 @@
                         font_table = .font_table_value(doc_a$font_table),
                         font_lang = .font_slots_value(doc_a$font_lang),
                         page = if (length(page)) page,
-                        default_format = if (length(fmt))
-                          do.call(.spec_call, c(list("rtf_default_format"), fmt)),
+                        style = if (length(fmt)) do.call(.spec_call, c(list("rtf_style"), fmt)),
                         # a word, or its look too: {fn: rtf_watermark, args: }
                         watermark = .page_call_value(doc_a$watermark),
                         # colours declared ahead ("#RRGGBB"), a vector
@@ -269,7 +269,8 @@
 # but its rows, a font per script slot as a named vector
 .band_style_args <- c("border", "width_twips", "width", "row_height_twips",
                       "font_size_half_points", "font", "markup", "cell_padding_left_twips",
-                      "cell_padding_right_twips", "drop_empty_rows")
+                      "cell_padding_right_twips", "cell_padding_top_twips",
+                      "cell_padding_bottom_twips", "drop_empty_rows")
 .band_style <- function(pg, band) {
   a <- .page_args(pg[[paste0("rtf_", band)]])
   a <- a[intersect(.band_style_args, names(a))]
@@ -282,6 +283,33 @@
 .page_call_value <- function(v) {
   if (!inherits(v, "tfl_call")) return(v)
   do.call(.spec_call, c(list(v$fn), lapply(v$args, .page_call_value)))
+}
+
+# The document's style as the page says it: rtfreporter's rtf_style()
+# arguments (page.rtf_style: its shared keys, and its sections table,
+# titles, footnotes, header, footer, each a map), over an old SPEC's
+# page.rtf_default_format, which is rtf_style()'s shared level
+# (rtfreporter#804: rtf_default_format() is deprecated)
+.page_style <- function(pg) {
+  old <- .page_args(pg$rtf_default_format)
+  new <- .page_args(pg$rtf_style)
+  for (s in intersect(.page_style_sections, names(new))) {
+    new[[s]] <- lapply(.page_args(new[[s]]), .page_call_value)
+  }
+  out <- utils::modifyList(old, new)
+  if (!is.null(out[["font"]])) out[["font"]] <- .font_slots_value(out[["font"]])
+  out
+}
+.page_style_sections <- c("table", "titles", "footnotes", "header", "footer")
+
+# An old SPEC's page.rtf_default_format moved into page.rtf_style, as its
+# shared level (rtf_style's own keys win): what the sheets write
+.page_style_norm <- function(page) {
+  old <- page$rtf_default_format
+  if (!is.list(old) || inherits(old, "tfl_unset") || !length(old)) return(page)
+  page$rtf_style <- utils::modifyList(as.list(old), as.list(page$rtf_style %||% list()))
+  page$rtf_default_format <- NULL
+  page
 }
 
 # The study's and the report's parts of a report's page (the report as
@@ -308,10 +336,11 @@
   }, NA))
   font_said <- function(p) length(p$rtf_document$font_table %||% list()) > 0L
   lang_said <- function(p) length(p$rtf_document$font_lang %||% list()) > 0L
-  size_said <- function(p) !is.null(p$rtf_default_format$font_size_half_points)
+  size_said <- function(p) !is.null(.page_style(p)$font_size_half_points)
   page_study <- c(if (font_said(study_pg) && !said("rtf_document", "font_table")) "font",
                   if (lang_said(study_pg) && !said("rtf_document", "font_lang")) "font_lang",
-                  if (size_said(study_pg) && !said("rtf_default_format", "font_size_half_points"))
+                  if (size_said(study_pg) && !said("rtf_style", "font_size_half_points") &&
+                      !said("rtf_default_format", "font_size_half_points"))
                     "font_size_half_points")
   own_tokens <- unique(unlist(lapply(layers, function(l) names(l$tokens))))
   tokens_study <- setdiff(names(.page_args(study_pg$tokens)), own_tokens)
@@ -404,7 +433,7 @@
 # (resolved), `lines` its titles' and footnotes' lines
 .fig_image_size <- function(img, page, lines = 0L) {
   fa <- .page_args(page$rtf_figures)
-  pg <- c(.page_args(page$rtf_page), .page_args(page$rtf_default_format))
+  pg <- c(.page_args(page$rtf_page), .page_style(page))
   r <- list(figure_width_in = img$width_in %||% .page_twips_in(fa$width_twips),
             figure_height_in = img$height_in %||% .page_twips_in(fa$height_twips))
   .fig_page_size(r, pg, lines)
@@ -450,13 +479,32 @@
   m <- .page_args(pg[[band]])
   if (!length(m)) return(NULL)
   m <- m[order(suppressWarnings(as.numeric(names(m))))]
+  m <- lapply(m, .page_args)
   lines <- lapply(m, function(cells) {
-    cells <- .page_args(cells)
     v <- c(l = cells$left %||% NA, c = cells$center %||% NA, r = cells$right %||% NA)
     v[!is.na(v)]
   })
   keep <- !vapply(lines, function(v) .ard_spec_empty_line(v, tokens), NA)
-  lines <- lines[keep]
-  if (!length(lines)) return(NULL)
-  unname(lapply(lines, function(v) if (!length(v)) c(c = "") else v))
+  if (!any(keep)) return(NULL)
+  unname(Map(function(v, cells) .page_line(v, cells$row_height_twips, band),
+             lines[keep], m[keep]))
+}
+
+# A band's line as rtfreporter takes it: its cells, c(l = , c = , r = ) (a
+# blank line centred); with a height of its own (`row_height_twips`, over
+# the band's) a row list -- a title's list(text = , align = ,
+# row_height_twips = ), a header's, footer's or footnote's list(columns = ,
+# row_height_twips = ) (rtfreporter#125)
+.page_line <- function(cells, height, band) {
+  if (!length(cells)) cells <- c(c = "")
+  if (!length(height) || is.na(height)) return(cells)
+  h <- as.integer(height)
+  if (!identical(band, "titles")) return(list(columns = cells, row_height_twips = h))
+  if (length(cells) > 1L) {
+    .ard_stop(sprintf(paste("a title line with a height of its own has one text (left, center or",
+                            "right); this one has %s."), paste(names(cells), collapse = ", ")))
+  }
+  list(text = unname(cells[[1L]]),
+       align = c(l = "left", c = "center", r = "right")[[names(cells)]],
+       row_height_twips = h)
 }

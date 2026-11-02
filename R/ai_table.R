@@ -724,7 +724,8 @@
         "error" else "warning"
       add(paste(w, if (nzchar(chk$arg[r])) paste("field", chk$arg[r]) else ""), chk$message[r], sev)
     }
-    for (a in .ai_required_args(it$fn)) {
+    # (a part's plan is its own data and content, not a `part` argument)
+    for (a in if (!.is_part(it)) .ai_required_args(it$fn)) {
       if (!a %in% names(it$args)) add(w, sprintf("%s needs `%s`", it$fn, a))
     }
   }
@@ -766,7 +767,7 @@
     for (line in names(m)) {
       cells <- m[[line]]
       if (!is.list(cells) || is.null(names(cells))) next
-      odd <- setdiff(names(cells), c("left", "center", "right"))
+      odd <- setdiff(names(cells), c("left", "center", "right", "row_height_twips"))
       if (length(odd)) {
         add(sprintf("page %s %s", band, line), sprintf(paste(
           "has %s besides left / center / right: a text with a comma must be quoted",

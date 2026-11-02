@@ -48,3 +48,35 @@ test_that("in a study: the ARD built; A (the call, the layout) = B (the design) 
   expect_s3_class(tpl_forest_layout(p), "patchwork")
   expect_error(tpl_forest_layout(ggplot2::ggplot()), "a forest of tpl_forest_hr")
 })
+
+test_that("comparison: the Cox model's reference is the other arm, whatever the arms' order", {
+  x <- tfl_template_expand("forest_hr", list(param = "OS", population = "ITT", group = "TRT01P",
+                                             comparison = "Drug X"))
+  expect_match(unclass(x$ard$analysis_data[[1L]]$derive),
+               "TRT01P = factor(TRT01P, levels = c(setdiff(levels(factor(TRT01P)), \"Drug X\"), \"Drug X\"))",
+               fixed = TRUE)
+  expect_null(tfl_template_expand("forest_hr", list(param = "OS", population = "ITT"))$ard$analysis_data[[1L]]$derive)
+  skip_on_cran()
+  fr_skip()
+  skip_if_not_installed("haven")
+  d <- tempfile()
+  on.exit(unlink(d, recursive = TRUE))
+  data <- tplfig_study(d, c("adsl", "adtte"), "FR-2")
+  # (the bundled data's arms: Drug X first, TRT01PN 1)
+  o <- tfl_output("F-9-2", "figure", population = "SAF", label = "Forest", extends = "defaults",
+                  template = list(name = "forest_hr", args = list(
+                    param = "OS", population = "SAF", group = "TRT01P", subgroups = "SEX",
+                    comparison = "Drug X")))
+  tfl_write_output(o, file.path(d, "spec", "outputs", "F-9-2.yml"))
+  st <- tfl_read_study_spec(d)
+  ard <- suppressMessages(tfl_build_ard(st, output_id = "F-9-2", dir = d, save = FALSE))
+  hr <- ard[ard$analysis_id == "HR" & ard$stat_name == "conf.low", ]
+  # the interval is Drug X's (against Control), not the reference's
+  lv <- as.character(unlist(hr$variable_level))
+  ci <- unlist(hr$stat)
+  expect_false(is.na(ci[lv == "Drug X"][1L]))
+  ro <- tfl_resolve_output(tfl_read_output(file.path(d, "spec", "outputs", "F-9-2.yml")), st)
+  fig <- suppressMessages(suppressWarnings(tfl_content_run(ro, c(data, list(ard = ard)))))
+  b <- suppressWarnings(ggplot2::ggplot_build(fig))
+  expect_gt(sum(vapply(b$data, nrow, 1L)), 0L)
+})

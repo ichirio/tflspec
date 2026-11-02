@@ -475,7 +475,7 @@ tfl_ai_study_init <- function(dir, adam = "adam", study_id = "STUDY-01", title =
     "content:",
     "  - normalize_ard: {}",
     "  - plan_cells: {categorical: \"{n} ({p:.1f%})\"}",
-    "  - plan_stub: {name: row_label, before: true}",
+    "  - plan_stub: {name: row_label, heading: \"\", before: true}",
     "  - plan_blanks: {where: between_groups}",
     "page:",
     "  header:",

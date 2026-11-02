@@ -323,8 +323,9 @@
 
 # The answer's template, its data stage (`data`: a design's data steps,
 # before the template's call: read, the analysis set, param, filter) and
-# its own layers (each a mapping, a design's layer); a design's other
-# parts beside it are not read
+# its own layers (each a mapping, a design's layer) and its settings
+# (`plot`, over the template's, as a report written by hand); a design's
+# other parts beside it are not read
 .ai_read_tpl_figure <- function(x, p) {
   layers <- x$layers %||% list()
   if (!is.list(layers) || !is.null(names(layers)) ||
@@ -338,11 +339,16 @@
     p <- .ai_problem(p, "data", "is a list of data steps, each a mapping that starts with its `step`")
     data <- NULL
   }
-  for (k in intersect(names(x), c("stats", "plot", "plots", "compose"))) {
+  plot <- x$plot
+  if (!is.null(plot) && (!is.list(plot) || (length(plot) && is.null(names(plot))))) {
+    p <- .ai_problem(p, "plot", "is a mapping of the figure's settings (x_label, y_by, legend ...)")
+    plot <- NULL
+  }
+  for (k in intersect(names(x), c("stats", "plots", "compose"))) {
     p <- .ai_problem(p, k, "is a design's part: with a template it is not read (the template makes it)",
                      "warning")
   }
-  list(design = structure(list(template = x$template, data = data, layers = layers),
+  list(design = structure(list(template = x$template, data = data, layers = layers, plot = plot),
                          class = "tfl_ai_tpl_figure"),
        problems = p)
 }
@@ -355,11 +361,13 @@
   content <- lapply(design$layers %||% list(), function(l) {
     tfl_item(l$layer, l[setdiff(names(l), "layer")])
   })
-  tfl_output(id, kind = "figure", label = if (length(ttl)) ttl[1L] else NA_character_,
-             population = if (length(pop)) pop else NA_character_,
-             template = list(name = tp$name, args = tp$args %||% list()), content = content,
-             data = if (length(design$data)) list(steps = design$data) else NULL,
-             page = if (length(ttl)) list(titles = as.list(ttl)) else list())
+  o <- tfl_output(id, kind = "figure", label = if (length(ttl)) ttl[1L] else NA_character_,
+                  population = if (length(pop)) pop else NA_character_,
+                  template = list(name = tp$name, args = tp$args %||% list()), content = content,
+                  data = if (length(design$data)) list(steps = design$data) else NULL,
+                  page = if (length(ttl)) list(titles = as.list(ttl)) else list())
+  if (length(design$plot)) o$plot <- design$plot
+  o
 }
 
 # Its checks: the request's figure, the template's name and arguments, and
