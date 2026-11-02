@@ -139,6 +139,7 @@
   ts <- .tpl_spec_of(output)
   t <- .tpl_get(ts$name, sprintf("%s: template:", output$id))
   sa <- .tpl_study_args(t, ts$args, base, output$id, output, study)
+  sa$args <- .tpl_plot_axis_args(t, sa$args, output$plot)
   x <- tfl_template_expand(ts$name, sa$args, codelists = codelists,
                            population = study$data$populations)
   if (!identical(t$kind, output$kind)) {
@@ -154,6 +155,21 @@
                    x$content)
   }
   list(name = ts$name, args = sa$args, study = sa$study, x = x)
+}
+
+# A figure template that makes its x axis itself (its breaks and the times
+# at risk: km_survival's x_step, x_max) takes the report's `plot.x_by` /
+# `plot.x_max` for them when its arguments do not say them: the template's
+# axis would otherwise win over the report's settings
+.tpl_plot_axis_args <- function(t, args, plot) {
+  map <- c(x_step = "x_by", x_max = "x_max")
+  for (a in intersect(names(map), names(t$params))) {
+    v <- plot[[map[[a]]]]
+    if (is.null(args[[a]]) && !is.null(v) && length(v) == 1L && !is.na(v) && !identical(v, "")) {
+      args[[a]] <- as.numeric(v)
+    }
+  }
+  args
 }
 
 # A report's ard: over the template's: an entry of the report's replaces the
