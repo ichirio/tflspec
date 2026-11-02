@@ -86,8 +86,56 @@ request has what you need: the shell's text and the variables
    neither is not a question: take the usual choice, say nothing of the
    look, and list the rest under *to confirm* (step 6 below).
 
-The documents disagreeing is never settled by a convention: ask (step 2
-of the requests, below).
+The aim is **few questions**, and a draft that needs no rework when the
+person says "yes".  Every open point is in one of three tiers:
+
+**(a) Decide it yourself, silently** -- an assumption (`from: shell`,
+`from: SAP 9.2` or `from: "programmer convention"`), no question --
+whatever an experienced programmer decides without asking, even when the
+shell and the SAP differ:
+- the layout when the shell and the SAP differ: the shell's columns,
+  rows, sort order, overview rows and labels (the shell is the agreed
+  layout: the SAP's extra "All Drug A" column, its extra overview rows,
+  its sort by another column are not used);
+- which visits or rows a table shows when the shell lists them and the
+  SAP adds a display rule (a minimum n a visit, a baseline row only for
+  those with post-baseline values): the shell's, the SAP's rule to
+  confirm;
+- a presentation rule the SAP or the standard gives and the shell does
+  not contradict (a zero count printed `0`, `<0.1`, the digits by the
+  data's precision): write it, `from: SAP 5.5`;
+- the column widths (step 5); a footnote of a statistic the table does
+  not show (dropped); a label's case as the shell writes it (the visits
+  `Cycle 2 Day 1`, not the data's `CYCLE 2 DAY 1`: a code list or
+  labels).
+
+**(b) Decide a default, and ask only to confirm it** -- for what changes
+the numbers when the documents disagree or say nothing: the analysis
+set, the treatment variable, a subset, a flag or a derivation
+(treatment-emergent, on-treatment, the worst value), an imputation, a
+denominator, what is counted.  Take the default an experienced
+programmer takes, and ask a yes / no question that says it; the draft
+you write after the answer takes it with an assumption
+(`from: "programmer convention"`, or the decision), so that "yes" needs
+no rework:
+- an AE table whose population nothing states: "14.3.1.1: I use the
+  Safety Analysis Set (SAFFL = 'Y') by actual treatment (TRT01A), as
+  usual for AE tables -- OK?";
+- a title that says "Part 1": "14.2.3: Part 1 subjects only
+  (`PARTFL == "Y"` / `APERIOD == 1`), from the title -- OK?";
+- a TOC and a shell that name different sets, the SAP siding with one:
+  "16.2.7.1: Safety Analysis Set, as the shell and SAP 10 (the TOC says
+  Full Analysis Set) -- OK?";
+- two derivations, one per document: the one the specific note or the
+  newer SAP gives, said so in the question.
+
+**(c) Ask an open question** only when no sensible default exists: a
+variable the shell names that the data does not have (BMIBL), a
+parameter nothing names, two equally usual choices that change the
+numbers (LOCF or observed cases).  Give the choices and the one you
+would take, as step 3 says.
+
+When the documents agree on a point, it is settled: take it, no question.
 
 ## The requests: ask, then write the skeletons
 
@@ -126,9 +174,10 @@ skip it.  For each of the others, in order:
      treat missing values when the summary says `[missing: none]` for
      the variable.  Write the usual default and list it under
      *to confirm* (step 6) -- no question.
-   - Ask only when the sources disagree, or when a choice changes a
-     report's numbers or its structure and nothing -- no document, no
-     data, no decision, no usual convention -- settles it.
+   - Ask only what changes the numbers and the documents disagree on or
+     do not settle -- with your default, to confirm (tier (b), above) --
+     or what has no sensible default (tier (c)).  A layout the shell and
+     the SAP show differently is not a question: the shell's (tier (a)).
    **Your default choice** (the one you take when the person says
    "default"):
    - never a variable or a value that `ai/adam_summary.md` does not list
@@ -188,11 +237,27 @@ skip it.  For each of the others, in order:
      no `%` sign), `xx (xx.x)` is `"{n} ({p:.1f%})"` -- a template's
      `count_cell` or `plan_cells`; `(N=xx)` under the arm is one
      `plan_col_header` line, `{col}\n(N={n})` (the instructions say how);
+   - a **zero count** as the SAP or the standard says (`0`, no percent):
+     a guarded cell, `plan_cells: {categorical: [!r 'n == 0 ~ "0"',
+     "{n} ({p:.1f%}%)"]}`, in place of a template's `count_cell` (which
+     takes one form only);
+   - the **column widths**, always, as a programmer sets them: a table's
+     `plan_columns: {widths: {row_label: 3, .values: 1}}`
+     (relative; `row_label` is the stub, `.values` every value column), a
+     listing column's `width:` (characters).  From the
+     shell's proportions when it shows them; else from the kind of table
+     and its content -- the longest row label against a value cell
+     (`xx (xx.x%)` is about 10 characters), the number of value columns
+     (a demographics or AE table: the stub about 2.5 to 3 times a value
+     column; a table of many columns, narrower); a listing column wide
+     enough for its longest value (a subject id on one line).  An
+     assumption, `item: widths`, `from: "programmer convention"` (or
+     `from: shell`);
    - {{titles_rule}}
    - the **footnotes**, from the shell: {{footnotes_at}}
-   Nothing else of the look: no column widths, no other header rows, no page
-   settings, no blank rows, no borders, no fonts.  The study's defaults and
-   the person's builder do those.
+   Nothing else of the look: no other header rows, no page settings, no
+   blank rows, no borders, no fonts.  The study's defaults and the
+   person's builder do those.
 6. In the same file, under a top-level `ai:` key, write:
    - `assumptions`: one item for each choice that changes the numbers or
      their meaning that you took from a document (`from: shell`,
@@ -210,8 +275,8 @@ skip it.  For each of the others, in order:
      confirm:
        - {where: content, item: plan_cells, why: "the shell shows n (%) but not whether the % is of the arm or of all"}
    ```
-   How the output looks is never an assumption and never a question:
-   decide nothing about it, write nothing of it.
+   How the output looks is never a question, and nothing of it is written
+   but the column widths (step 5, an assumption `item: widths`).
 7. **Read the draft once more before you save it**, against the list
    *Before you save a draft* at the end of the instructions
    (`ai/instructions-table.md`): the keys, the indentation, the quotes,
@@ -262,7 +327,8 @@ Review each draft against this list and fix what fails:
   question asked was one neither settled;
 - a derived timepoint or population a footnote or a document defines is
   made by its rule, not taken from the data;
-- nothing of the look is written;
+- nothing of the look is written but the column widths, which every
+  draft has;
 - every free-text value (`label`, titles, footnotes, assumption text) is
   in double quotes -- always one with `: ` or `#` in it;
 - a template with its own data (`km_survival`, `km_cumulative`) has
@@ -344,5 +410,6 @@ a line.
   from the usual convention (an assumption, `from: "programmer
   convention"`), else ask -- and do not ask what those settle, nor about a
   case the data rules out.
-  Do not write the look.
+  Do not write the look (the column widths are not the look: write
+  them).
 - Do not try the same thing more than twice: say so in the chat and stop.
