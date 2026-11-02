@@ -243,9 +243,9 @@ skip it.  For each of the others, in order:
      Change from Baseline): no header line -- it would replace the arm's
      name with `(N=NA)`;
    - a **zero count** as the SAP or the standard says (`0`, no percent):
-     a guarded cell, `plan_cells: {categorical: [!r 'n == 0 ~ "0"',
-     "{n} ({p:.1f%}%)"]}`, in place of a template's `count_cell` (which
-     takes one form only);
+     a guarded cell -- a template's `count_cell: [!r 'n == 0 ~ "0"',
+     "{n} ({p:.1f%}%)"]`, a code SPEC's `plan_cells: {categorical: [...]}`
+     with the same list;
    - the **column widths**, always, as a programmer sets them: a table's
      `plan_columns: {widths: {row_label: 3, .values: 1}}`
      (relative; `row_label` is the stub, `.values` every value column), a
@@ -264,6 +264,9 @@ skip it.  For each of the others, in order:
      `from: shell`);
    - {{titles_rule}}
    - the **footnotes**, from the shell: {{footnotes_at}}
+     A footnote that states what a decision replaced (the shell's old
+     rule, after the person chose the SAP's) is written to the decision,
+     with an assumption `from: D<n>`; never left saying the old rule;
    Nothing else of the look: no other header rows, no page settings, no
    blank rows, no borders, no fonts.  The study's defaults and the
    person's builder do those.
