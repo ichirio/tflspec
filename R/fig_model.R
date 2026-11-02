@@ -472,6 +472,9 @@ tfl_fig_objects <- function(design) {
     .ff("theme", "choice", "Theme", "boxed", pp_themes),
     .ff("base_size", "number", "Base font size", 10),
     .ff("legend", "choice", "Legend", "bottom", .fig_legends),
+    .ff("colours", "text", "Own colours",
+        help = "This figure's colours for some values of the colour variable, over the palette's: CR = darkgreen, PD = #D62728 (in YAML, a mapping)."),
+    .ff("legend_title", "text", "Legend title", help = "The legend's title; blank: none."),
     .ff("legend_labels", "expr", "Legend labels",
         help = "R: a character vector named by the colour variable's values, the legend's text for each (an arm with its median: the km_survival template's legend_median makes one)."),
     # (its size is its report's: the report sheet's figure_width_in /
@@ -1340,6 +1343,35 @@ tfl_read_fig_design <- function(path) {
 # (tfl_fig_setup_code()), whose tfl_colours() gives the palette (and
 # tfl_shapes() / tfl_linetypes() the arms' shapes and line types, `arm`)
 .fig_palette_code <- function(plot, setup = FALSE, arm = c(shape = FALSE, linetype = FALSE)) {
+  out <- .fig_palette_base(plot, setup, arm)
+  own <- .fig_own_colours(plot)
+  if (is.null(own) || is.null(plot$colour_by)) return(out)
+  # the figure's own colours over the palette's (one assignment: the
+  # figure's content items read `pal` as its expression)
+  i <- max(grep("^pal <- ", out))
+  out[i] <- sprintf("pal <- replace(%s, %s, %s)", sub("^pal <- ", "", out[i]),
+                    vec_code(names(own)), vec_code(unname(own)))
+  out
+}
+
+# A figure's own colours (`plot.colours`): a mapping value -> colour, a
+# named vector, or a text "CR = darkgreen, PD = #D62728"; NULL when none
+.fig_own_colours <- function(plot) {
+  x <- plot$colours
+  if (is.null(x) || !length(x) || (length(x) == 1L && (is.na(x) || identical(x, "")))) return(NULL)
+  if (is.list(x)) x <- unlist(x)
+  if (is.null(names(x))) {
+    parts <- trimws(strsplit(paste(x, collapse = ","), ",", fixed = TRUE)[[1L]])
+    kv <- strsplit(parts[nzchar(parts)], "=", fixed = TRUE)
+    if (!all(lengths(kv) == 2L)) {
+      stop("plot.colours: value = colour pairs, e.g. CR = darkgreen, PD = #D62728.", call. = FALSE)
+    }
+    x <- stats::setNames(trimws(vapply(kv, `[[`, "", 2L)), trimws(vapply(kv, `[[`, "", 1L)))
+  }
+  stats::setNames(as.character(x), names(x))
+}
+
+.fig_palette_base <- function(plot, setup = FALSE, arm = c(shape = FALSE, linetype = FALSE)) {
   pname <- .pv(plot, "palette")
   pal <- tfl_fig_palettes()[[pname]]
   if (is.null(pal)) stop("Unknown palette: ", pname, call. = FALSE)
@@ -1526,7 +1558,12 @@ tfl_read_fig_design <- function(path) {
     # keys long enough to show the arms' line types
     if (arm[["linetype"]]) 'theme(legend.key.width = unit(2.5, "lines"))',
     if (!.lgl(.pv(plot, "x_text"))) "theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())",
-    as.list(pp_q_legend(.pv(plot, "legend"))))
+    # the legend's title: blank unless the figure says it
+    if (!is.null(.pv(plot, "legend_title"))) {
+      sprintf("labs(%s)", paste(sprintf("%s = %s", c("colour", "fill", "shape", "linetype"),
+                                        q(.pv(plot, "legend_title"))), collapse = ", "))
+    },
+    as.list(pp_q_legend(.pv(plot, "legend"), title_blank = is.null(.pv(plot, "legend_title")))))
   # the chain: the layers (the user's layer code as a statement), the
   # figure's settings, what goes after them, the plot.add calls
   items <- list()

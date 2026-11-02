@@ -239,3 +239,35 @@ test_that("a time's unit is a named constant of the setup, never a column", {
   expect_identical(e$days_per_month, 30)
   expect_identical(e$days_per_year, 365.25)
 })
+
+test_that("a figure's own colours over the palette, and its legend title (#577)", {
+  d <- tfl_fig_design(
+    data = list(list(step = "read", dataset = "ADSL")),
+    plot = list(colour_by = "TRT01A", colours = list(`Drug B` = "grey40"), legend_title = "Treatment"),
+    layers = list(list(layer = "point", x = "TRT01A", y = "TRTDURD", colour = "TRT01A")))
+  code <- tfl_fig_design_code(d, save = FALSE)
+  txt <- paste(code, collapse = "
+")
+  expect_match(txt, "pal <- replace(setNames(rep_len(", fixed = TRUE)
+  expect_match(txt, "lv), c(\"Drug B\"), c(\"grey40\"))", fixed = TRUE)
+  expect_match(txt, "labs(colour = \"Treatment\", fill = \"Treatment\"", fixed = TRUE)
+  expect_false(grepl("legend.title = element_blank()", txt, fixed = TRUE))
+  r <- run_design(d)
+  expect_true(r$png)
+  # with the setup, and as text
+  d$plot$colours <- "Drug B = grey40, Drug A = #D62728"
+  code <- paste(tfl_fig_design_code(d, setup = TRUE, save = FALSE), collapse = "
+")
+  expect_match(code, "pal <- replace(tfl_colours(\"treatment\", levels(factor(df$TRT01A))), c(\"Drug B\", \"Drug A\"), c(\"grey40\", \"#D62728\"))",
+               fixed = TRUE)
+  x <- tfl_fig_content_from_design(d)
+  fns <- vapply(x$content, function(it) it$fn, "")
+  expect_true("scale_colour_manual" %in% fns)
+  expect_false("scale_colour_tfl" %in% fns)
+  # without: as before
+  d$plot$colours <- NULL
+  d$plot$legend_title <- NULL
+  expect_match(paste(tfl_fig_design_code(d, save = FALSE), collapse = "
+"),
+               "legend.title = element_blank()", fixed = TRUE)
+})
