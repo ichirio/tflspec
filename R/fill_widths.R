@@ -21,8 +21,9 @@
 #' characters), the row headings the rest -- one value column 70:30, two
 #' 60:20:20, three 55:15:15:15; when that leaves the row headings less
 #' than their content (at most 30 characters), value columns of 8
-#' characters (a cell on two lines), else all columns equal and the row
-#' headings two;
+#' characters (a cell on two lines), unless that leaves the row headings
+#' less than two value columns (16 characters): then all columns equal and
+#' the row headings two;
 #' a listing's columns get a width from their variables and headers.  Each
 #' report it writes widths into gets an assumption in
 #' `spec/_assumptions.yml` (item `widths`): the widths are the default ones,

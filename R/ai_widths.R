@@ -73,7 +73,8 @@
 #    + 2 (a cell on one line); the row headings the rest -- one value
 #    column 70:30, two 60:20:20, three 55:15:15:15;
 # 2. each value column 6 + 2 characters (a cell on two lines), the row
-#    headings the rest;
+#    headings the rest -- kept, too, when that is less than they keep but
+#    still two value columns (16) or more;
 # 3. every column equal, the row headings two: 2 / (n + 2) of the page.
 # Several row-heading columns share theirs by their content.  The tier
 # used is the result's attribute "tier".
@@ -91,7 +92,8 @@
   tier <- 3L
   v <- as.integer(floor(page / (n + 2L)))
   for (k in seq_along(tiers)) {
-    if (page - n * tiers[[k]] >= keep) {
+    left <- page - n * tiers[[k]]
+    if (left >= keep || (k == 2L && left >= 2L * tiers[[k]])) {
       tier <- k
       v <- tiers[[k]]
       break

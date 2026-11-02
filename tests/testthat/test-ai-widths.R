@@ -68,9 +68,14 @@ test_that("the default rule: the user's three tiers, the row headings keeping th
   expect_identical(attr(y, "tier"), 2L)
   expect_true(all(y[-1L] == 8L))
   expect_identical(unname(y[1L]), 40L)
-  # 3: a long stub (28, kept up to 30) with twelve columns: all equal, the
-  # stub two
-  z <- w(tab("a long row heading of text", 12))
+  # a long stub (28, kept up to 30) with twelve columns stays at 2: 24 is
+  # less than it keeps, but two value columns or more
+  long <- "a long row heading of text"
+  t2 <- w(tab(long, 12))
+  expect_identical(attr(t2, "tier"), 2L)
+  expect_identical(unname(t2[1L]), 24L)
+  # 3: with fourteen, 8 is left: all equal, the stub two
+  z <- w(tab(long, 14))
   expect_identical(attr(z, "tier"), 3L)
   expect_identical(unname(z[1L]), 2L * unname(z[2L]))
   expect_true(all(z[-1L] == z[2L]))
