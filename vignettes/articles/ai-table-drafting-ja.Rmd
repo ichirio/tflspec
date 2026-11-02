@@ -14,5 +14,8 @@ guide <- system.file("ai", "tflspec-ai-table-guide-ja.md", package = "tflspec")
   <a class="btn btn-outline-secondary btn-sm" href="ai-table-drafting.html">In English</a>
 </p>
 
+> **tflplanner のアプリで:** 「AI 連携」タブで、この流れを画面で進められます（TOC とシェルから依頼を書く、エージェントのチャット、検査、試験への写し）。「AI 連携用のサンプル」で、試すための架空の試験も作れます。
+> [AI 連携の使い方](https://ichirio.github.io/tflplanner/articles/ja-ai-flow.html)を見てください（勧めるエディターとモデルも書いてあります）。
+
 ```{r, child = guide}
 ```
