@@ -74,6 +74,8 @@
   put(file.path("ai", "AGENTS.md"), agents, again = TRUE)
   put("AGENTS.md", rd("AGENTS-root.md"), again = TRUE)
   put(file.path(".github", "copilot-instructions.md"), rd("AGENTS-root.md"), again = TRUE)
+  # (the workspace on ai/ alone: Copilot's copy there too, its paths from ai/)
+  put(file.path("ai", ".github", "copilot-instructions.md"), rd("AGENTS-root.md"), again = TRUE)
   put("run.R", rd("run.R"), again = TRUE)
   put(file.path("ai", "decisions.md"), rd("decisions.md"))
   out
@@ -85,11 +87,12 @@
   files <- paste(sprintf("`ai/spec/outputs/%s.yml`", ids), collapse = ", ")
   c("<!-- tflspec: agent -->",
     paste0("> **For the agent** (ai/AGENTS.md): read `ai/decisions.md` and the decisions below, ",
-           "then ask in the chat what defines these reports and is not settled -- and wait for ",
-           "the answers. Then write each report's skeleton as its file: ", files, ". ",
+           "then settle each open point as ai/AGENTS.md says -- the documents, else the usual ",
+           "convention (an assumption), else a question in the chat (only what you may not decide ",
+           "alone) -- and wait for the answers. Then write each report's skeleton as its file: ", files, ". ",
            "Record the answers in `ai/decisions.md`; mark what you could not settle under `ai: confirm`. ",
            "Read only this request and the files it names; do not look for others, install nothing, ",
-           "run nothing. Write nothing of the look."),
+           "run nothing. Write nothing of the look but the column widths."),
     "", "---", "")
 }
 
@@ -145,6 +148,8 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
   if (isTRUE(rtf) && !requireNamespace("rtfreporter", quietly = TRUE)) {
     .ard_stop(sprintf("%s: the RTF needs the rtfreporter package; or rtf = FALSE.", fn))
   }
+  # the agent's study facts again when spec/ changed since they were written
+  .ai_study_facts_write(study_dir, if_older = TRUE)
   res <- tfl_ai_collect_answers(study_dir)
   r <- res$reports
   r$rtf <- NA_character_
@@ -586,19 +591,21 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
 # ai/requests/index.md in order, and "continue" goes on from the first
 # with a draft missing.
 .ai_agent_prompt <- function(study, templates = FALSE, language = "en") {
-  paste0("The paths are from the study folder ", study,
-    " (the one holding ai/; with a folder above it open, put the study folder before each). ",
+  paste0("The workspace is the ai folder of the study ", study,
+    ": every path is from it; open nothing outside it. ",
     "Read ai/AGENTS.md and follow it. Do every request of ai/requests/index.md, top to bottom; ",
     "skip a request whose reports all have their draft (ai/spec/outputs/<id>.yml). For each: ",
     "read ai/decisions.md and the request; ask me here, in ", .ai_language_name(language),
-    ", what defines its reports and is not settled (the analysis set, the parameter, the ",
-    "treatment variable, a denominator ...), numbered, with the choices and your default -- ",
-    "then wait for my answers. Record them in ai/decisions.md. Then write each report's ",
+    ", only what defines its reports and neither the documents nor the usual convention ",
+    "settles (ai/AGENTS.md: what to decide yourself, what to confirm, what to ask), numbered, with the ",
+    "choices and your default -- then wait for my answers. Record them in ai/decisions.md. Then write each report's ",
     "skeleton as ai/spec/outputs/<id>.yml",
     if (isTRUE(templates)) " (a template where one fits, ai/AGENTS.md)" else "",
-    ", nothing of the look, and mark what you could not settle under ai: confirm; go on to ",
-    "the next request. Read only the request and the files it names; run nothing, install ",
-    "nothing. When I say \"continue\", go on from the first request with a draft missing. ",
+    ", nothing of the look but the column widths, and mark what you could not settle under ai: confirm; go straight ",
+    "on to the next request without waiting for me -- stop only to ask, or when every request ",
+    "is done. Read only the request and the files it names; run nothing, install nothing. ",
+    "If I say \"stop\", finish the step in hand, write ai/progress.md and stop, saying where; ",
+    "when I say \"continue\", go on from ai/progress.md. ",
     "When every request is done, review each draft against the list under \"Before you ",
     "stop\" in ai/AGENTS.md and fix what fails; then stop and tell me the files written, ",
     "the decisions added, what is to confirm, and what the review changed.")

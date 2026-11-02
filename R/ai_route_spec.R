@@ -27,7 +27,8 @@
   carry = c("all", "dataset", "section"),  # a decision applies without asking when its scope is one of these (and the agent is sure)
   max_rounds = 3L,                      # asking again about one item: this many times, then "to confirm"
   footnotes_at = "footer",              # the shell's footnotes: the page's "footer" band, or the "table"'s footnotes
-  language = "en"
+  language = "en",
+  titles_in_header = character()        # the output tokens the study standard's header prints (none: the report writes its titles)
 )
 
 # The settings, under the study standard's `ai:` keys (spec/defaults.yml:
@@ -36,6 +37,9 @@
   s <- .ai_spec_defaults
   for (f in file.path(study_dir, c(file.path("spec", "defaults.yml"), "study.yml"))) {
     y <- if (file.exists(f)) tryCatch(yaml::read_yaml(f), error = function(e) NULL)
+    if (is.list(y) && identical(basename(f), "defaults.yml") && is.list(y$page)) {
+      s$titles_in_header <- .page_output_tokens_used(y$page)
+    }
     ai <- if (is.list(y)) y$ai else NULL
     if (!is.list(ai)) next
     for (k in intersect(names(s), names(ai))) if (!is.null(ai[[k]])) s[[k]] <- ai[[k]]
@@ -55,7 +59,19 @@
       "Report by report, before you write it:"
     } else "For the request's reports together, before you write any of them:",
     carry_section = if ("section" %in% s$carry) " or its TOC section" else "",
-    footnotes_at = .ai_footnotes_text(s$footnotes_at)))
+    footnotes_at = .ai_footnotes_text(s$footnotes_at),
+    titles_rule = .ai_titles_text(s$titles_in_header)))
+}
+
+# The titles: the shell's, as `page: titles` -- unless the study standard's
+# header prints the label, the title and the population from the report's
+# `label:` and `population:` (its tokens): then none, or they print twice
+.ai_titles_text <- function(tokens) {
+  if (!length(tokens)) return("`page: titles`, from the shell;")
+  sprintf(paste0("**no `page: titles`**: the study's header prints the report's label, title ",
+                 "and population itself (%s) from `label:` and `population:` -- write those two ",
+                 "keys (the title as the shell shows it, in `label:`), and no titles, or they print twice;"),
+          paste0("{", tokens, "}", collapse = ", "))
 }
 
 # Where the shell's footnotes go, as the study standard says: the page's

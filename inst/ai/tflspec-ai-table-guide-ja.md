@@ -120,7 +120,9 @@ ADaM の要約で、データではありません。`AGENTS.md` に、開いて
 
 ## 5. エージェントの質問・あなたの決定・下書き
 
-1. VS Code で `mystudy` を開き、エージェントのチャットに `ai/agent_prompt.md` の
+1. VS Code で試験の `ai` フォルダを開き（`ai/mystudy.code-workspace` をダブルクリック。
+   エージェントにはそのフォルダだけが見え、`spec/`・プログラム・データは見えません）、
+   エージェントのチャットに `ai/agent_prompt.md` の
    文を 1 回だけ渡します。エージェントは `ai/requests/index.md` の依頼を順に、
    1 つずつすべて行います。
 2. エージェントが、各帳票を決めるのにまだ決まっていないこと（解析対象集団、
@@ -264,7 +266,7 @@ tfl_ai_collect_answers(d)            # 5 reports in 5 requests (the figure its o
 |---|---|
 | `r$toc` が空: TOC のシートが見つからない | `tfl_ai_prepare(..., toc_sheet = "<TOC のシート名>")` |
 | `r$toc$shell` が `NA`: 帳票番号でシェルが見つからない | そのシートを足す: `tfl_ai_prepare(..., sheets = c("<シェルのシート>", ...))` |
-| エージェントが質問せずに下書きを書く、または決定で決まることを聞く | `AGENTS.md` が変えられたか、読まれていない: `tfl_ai_prepare(..., overwrite = TRUE)` で書き直し、試験のフォルダそのものを VS Code で開く |
+| エージェントが質問せずに下書きを書く、または決定で決まることを聞く | `AGENTS.md` が変えられたか、読まれていない: `tfl_ai_prepare(..., overwrite = TRUE)` で書き直し、試験の `ai` フォルダを VS Code で開く（`ai/<試験>.code-workspace`） |
 | `tfl_ai_collect_answers()` で `error`（"the YAML cannot be read"） | エージェントに伝える: ファイル（`ai/spec/outputs/<id>.yml`）の形を直す |
 | "Not read (no request asks for them)" | TOC のどの帳票の名前でもない下書き: id は `ai/requests/index.md` にある |
 | 文字にしたシェルがおかしい（セルが抜ける、順が違う） | エージェントにワークブックを読ませる: `tfl_ai_prepare(..., agent_reads = "workbook")`。各依頼に、シェルがファイルのどこにあるかが書かれる |

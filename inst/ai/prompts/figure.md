@@ -27,3 +27,7 @@ In the documents below, find what they say about this figure: the analysis set, 
 ## What to do
 
 Read the figure's shell and its TOC row above: the analysis set, the parameter, the groups, the axes, their labels and ranges, the legend and any panels below the plot. Convert the time only when the data's unit (AVALU) differs from the shell's. Start from the template that fits best, and write the answer block as the instructions above describe. Write the assumptions as mappings: `- {output_id: <id>, where: <key>, item: <what>, assumption: <what you took>, question: <a whole question the reviewer can answer -- never just "Confirm">}`.
+<!-- agent -->
+## What to do
+
+Read the figure's shell and its TOC row above: the analysis set, the parameter, the groups, the axes, their labels and ranges, the legend and any panels below the plot. Convert the time only when the data's unit (AVALU) differs from the shell's. Start from the template that fits best. Settle each open point as AGENTS.md says -- the documents, else the usual convention (an assumption, `from: "programmer convention"`), else a question in the chat when it changes the numbers or the structure -- then write the figure's draft as AGENTS.md says: `spec/outputs/<id>.yml`, with what you took (`assumptions`) and what the person decides (`confirm`) under its `ai:` key.

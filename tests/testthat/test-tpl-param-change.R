@@ -202,3 +202,33 @@ test_that("vs_change's table (removed) from param_change: a baseline block, its 
                   check.names = FALSE, stringsAsFactors = FALSE)
   expect_identical(p, v)
 })
+
+test_that("cells as items ({label, template}); a page a parameter, named in the titles", {
+  x <- tfl_template_expand("param_change", c(pc_args, list(cells = list(
+    list(label = "n", template = "{N:.0f}"), list(label = "Mean", template = "{mean:.1f}")))))
+  cl <- Filter(function(i) i$fn == "plan_cells", x$content)[[1L]]$args$continuous
+  expect_identical(cl, list(n = "{N:.0f}", Mean = "{mean:.1f}"))
+  expect_error(tfl_template_expand("param_change", c(pc_args, list(cells = list(
+    list(name = "n", cell = "{N}"))))), "label: , template:")
+  pg <- Filter(function(i) i$fn == "plan_paginate_rows", x$content)[[1L]]$args
+  expect_identical(pg$page_by, "group1")
+  expect_identical(pg$heading, "Parameter: {value}")
+  y <- tfl_template_expand("param_change", c(pc_args, list(param_page = FALSE)))
+  pg <- Filter(function(i) i$fn == "plan_paginate_rows", y$content)[[1L]]$args
+  expect_null(pg$page_by)
+  expect_false("plan_hide" %in% vapply(y$content, `[[`, "", "fn"))
+})
+
+test_that("a page a parameter: the parameter's name in the titles, once a page", {
+  pc_skip()
+  x <- tfl_template_expand("param_change", pc_args)
+  p <- do.call(tpl_param_change, c(list(pc_ard(x)), pc_args))
+  f <- tempfile(fileext = ".rtf")
+  on.exit(unlink(f))
+  suppressWarnings(suppressMessages(rtfreporter::generate_rtfreport(
+    rtfreporter::rtf_tables(rtfreporter::rtf_document(), rtfreporter::plan_apply(p)), f)))
+  r <- readLines(f)
+  expect_length(grep("Parameter: Alanine Aminotransferase (U/L)", r, fixed = TRUE), 1L)
+  expect_length(grep("Parameter: Aspartate Aminotransferase (U/L)", r, fixed = TRUE), 1L)
+  expect_length(grep("Alanine Aminotransferase (U/L)", r, fixed = TRUE), 1L)
+})

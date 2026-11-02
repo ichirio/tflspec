@@ -27,13 +27,26 @@ test_that("rtf_figures: align as the page says it", {
   expect_false(grepl("align", pa_code(list(), "figure"), fixed = TRUE))
 })
 
-test_that("rtf_tables: a font size left on the page (a content of R code) is written", {
+test_that("rtf_tables: a font size left on the page (a content of R code) is not written", {
   o <- tfl_output("T-1", "table", page = list(rtf_tables = list(font_size_half_points = 16L)))
   o$content <- structure(list(code = "plan <- data.frame(a = 1)"), class = "tfl_r")
   o <- tflspec:::.page_font_to_plan(o)
-  expect_identical(o$page$rtf_tables$font_size_half_points, 16L)
+  expect_null(o$page$rtf_tables$font_size_half_points)
   code <- paste(tfl_report_code(o, content = "plan"), collapse = "\n")
-  expect_match(code, "rtf_tables\\([^|]*font_size_half_points = 16")
+  expect_false(grepl("font_size_half_points", code, fixed = TRUE))
+})
+
+test_that("rtf_tables: the arguments rtfreporter 0.9.0 removed are errors naming where they went", {
+  chk <- function(a) tfl_schema_check(tfl_item("rtf_tables", stats::setNames(list(16L), a)))
+  r <- chk("font_size_half_points")
+  expect_identical(r$level, "error")
+  expect_match(r$message, "plan_style(font_size_half_points = )", fixed = TRUE)
+  r <- chk("read_attributes")
+  expect_identical(r$level, "error")
+  expect_match(r$message, "rtftable(read_attributes = )", fixed = TRUE)
+  # not written, whatever the page says
+  expect_false(grepl("read_attributes", pa_code(list(rtf_tables = list(read_attributes = FALSE))),
+                     fixed = TRUE))
 })
 
 test_that("markup takes rtfreporter's words, not TRUE / FALSE", {
@@ -82,20 +95,4 @@ test_that("rtf_document's watermark: a word, or its look as an rtf_watermark() c
   rtfreporter::generate_rtfreport(doc, f)
   rtf <- paste(readLines(f, warn = FALSE), collapse = "\n")
   expect_match(rtf, "DRAFT", fixed = TRUE)
-})
-
-test_that("rtf_tables: read_attributes as the page says it", {
-  code <- pa_code(list(rtf_tables = list(read_attributes = FALSE)))
-  expect_match(code, "rtf_tables\\([^|]*read_attributes = FALSE")
-  expect_false(grepl("read_attributes", pa_code(list()), fixed = TRUE))
-  ok <- function(v) nrow(tfl_schema_check(tfl_item("rtf_tables", list(read_attributes = v)))) == 0L
-  expect_true(ok(FALSE))
-  expect_false(ok("no"))
-  # and it runs: the table's blank rows attribute is not read
-  skip_if_not_installed("rtfreporter")
-  o <- tfl_output("T-1", "table", page = list(rtf_tables = list(read_attributes = FALSE)))
-  env <- list2env(list(content = rtfreporter::as_rtftables(data.frame(a = "1"))),
-                  parent = asNamespace("rtfreporter"))
-  doc <- eval(parse(text = tfl_report_code(o, content = "content")), env)
-  expect_s3_class(doc, "rtf_document")
 })

@@ -215,9 +215,28 @@ tfl_template_to_spec <- function(output, study) {
 .tpl_composes <- function(data, x) {
   as.integer(x$call_steps %||% 0L) > 0L && length(data$steps) > 0L
 }
-.tpl_compose_data <- function(data, x) {
+.tpl_compose_data <- function(data, x, id = "", name = "") {
   n <- as.integer(x$call_steps)
-  data$steps <- c(data$steps, utils::tail(x$data$steps %||% list(), n))
+  call <- utils::tail(x$data$steps %||% list(), n)
+  # a step of the call's kind written by the report (a survfit before the
+  # template's own): the template makes it, and would make it again on
+  # the report's -- a clear stop here, not a failure of the build
+  # (a step of the data stage -- a filter, a derive, R code -- is the
+  # report's to write even when the call has one of the kind too)
+  kind <- function(s) vapply(s, function(e) as.character(e$step %||% ""), "")
+  stage <- c("", "read", "join", "param", "filter", "derive", "code", "flag", "select",
+             "mutate", "arrange")
+  dup <- setdiff(intersect(kind(data$steps), kind(call)), stage)
+  if (length(dup)) {
+    .ard_stop(sprintf(paste0(
+      "%s uses template %s, which makes its own %s step%s (%s); `data.steps` writes %s too. ",
+      "Keep the data stage (read, the analysis set, param, filter, derive) and remove %s; ",
+      "keep plot and layers."),
+      id, name, paste(dup, collapse = " and "), if (length(dup) > 1L) "s" else "",
+      paste(unique(kind(call)), collapse = ", "), paste(dup, collapse = ", "),
+      paste(dup, collapse = ", ")))
+  }
+  data$steps <- c(data$steps, call)
   data
 }
 
@@ -280,8 +299,6 @@ tfl_template_to_spec <- function(output, study) {
   paste(c(pkg, v), collapse = " ")
 }
 
-# A template report's program (the A use): the template's call, the
-# arguments its SPEC gives and the study's defaults it took (not the ones
 # The template's call as a program writes it: `tflspec::tfl_tpl` (a table's
 # or a listing's), `tflspec::tpl_<name>` (a figure's), a package's own
 # template with its `pkg::`; one made in the session bare.  A study's
@@ -300,6 +317,16 @@ tfl_template_to_spec <- function(output, study) {
   if (has) paste0(pkg, "::", fn) else fn
 }
 
+# An argument's !r values, in a list too, written as the R they are
+# (`n == 0 ~ "0"`), not as the text they are held in
+.tpl_r_code <- function(x) {
+  if (inherits(x, "tfl_r")) return(.spec_expr(as.character(unclass(x))))
+  if (is.list(x) && !is.object(x)) x[] <- lapply(x, .tpl_r_code)
+  x
+}
+
+# A template report's program (the A use): the template's call, the
+# arguments its SPEC gives and the study's defaults it took (not the ones
 # left at the template's own default), the code lists it reads at the head;
 # then the study's and the report's own lines, each marked
 .content_tpl_code <- function(output, data = "ard", plan = "plan", pipe = NULL) {
@@ -318,6 +345,8 @@ tfl_template_to_spec <- function(output, study) {
     called <- t$root %||% t$from
   }
   generic <- identical(t$call, "tfl_tpl")
+  # an !r value (a guard in `count_cell`'s list) as the R it is
+  args <- .tpl_r_code(args)
   # the code lists the template reads: those its plan_levels() item names
   lv <- Filter(function(it) identical(it$fn, "plan_levels"), tp$items)
   vars <- setdiff(unlist(lapply(lv, function(it) names(it$args))), c("variable", ".drop_empty"))

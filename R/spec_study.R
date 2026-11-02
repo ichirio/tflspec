@@ -212,7 +212,7 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   # (its data stage: the analysis set, the parameter, the records kept),
   # then the template's call steps (the fit and what the call makes from it)
   composed <- !is.null(tpl) && .tpl_composes(own$data, tpl$x)
-  if (composed) own$data <- .tpl_compose_data(own$data, tpl$x)
+  if (composed) own$data <- .tpl_compose_data(own$data, tpl$x, output$id, tpl$name)
   below <- acc$content
   acc <- .layer_over(acc, own)
   if ((isTRUE(provenance) || !is.null(tpl)) && !inherits(acc$content, "tfl_r")) {
@@ -499,13 +499,17 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
 # page: rtf_tables's font_size_half_points (written by a converter before
 # 0.0.24.9124): a table's font size is its plan's -- moved to the content's
 # plan_style(font_size_half_points = ), the report's own plan_style key
-# winning; a content that is R code keeps it on the page
+# winning.  rtfreporter 0.9.0 has no rtf_tables(font_size_half_points = ),
+# so it leaves the page either way: a content that is R code says its own
+# (tfl_schema_check() names where)
 .page_font_to_plan <- function(output) {
   fs <- output$page$rtf_tables$font_size_half_points
-  if (is.null(fs) || inherits(output$content, "tfl_r") ||
-      !output$kind %in% c("table", "listing")) return(output)
+  if (is.null(fs)) return(output)
   output$page$rtf_tables$font_size_half_points <- NULL
   if (!length(output$page$rtf_tables)) output$page$rtf_tables <- NULL
+  if (inherits(output$content, "tfl_r") || !output$kind %in% c("table", "listing")) {
+    return(output)
+  }
   k <- which(vapply(output$content, function(it) identical(it$fn, "plan_style"), NA))
   if (length(k)) {
     a <- output$content[[k[1L]]]$args

@@ -24,6 +24,11 @@ The table template \code{shift}, layout \code{shift}. Its program is one call, \
    \code{param_labels} \tab other \tab call \tab  \tab  \tab each parameter's heading (a named vector); given by name, merged \cr
    \code{cell} \tab other \tab call \tab \{n\} \tab  \tab a cell's template \cr
    \code{heading} \tab other \tab call \tab Parameter / Baseline \tab  \tab the label column's heading \cr
+   \code{worst} \tab other \tab call \tab HIGH, LOW, NORMAL \tab  \tab a subject once a parameter, at its worst category after baseline, the categories from the worst; NULL: every record (the baseline's records too) \cr
+   \code{missing_label} \tab other \tab call \tab Missing \tab  \tab the row of the subjects with no baseline category; NULL: none \cr
+   \code{total_label} \tab other \tab call \tab Total \tab  \tab the row of all the subjects; NULL: none \cr
+   \code{param_page} \tab other \tab call \tab TRUE \tab  \tab TRUE: a page a parameter, named in the titles by 'param_heading' \cr
+   \code{param_heading} \tab other \tab call \tab Parameter: \{value\} \tab  \tab a parameter's page name ('\{value\}': the parameter) \cr
 }
 }
 

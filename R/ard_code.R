@@ -874,12 +874,36 @@
   xo$analysis_data <- ad_o
   made <- .adata_lines(xo, ids, subj, levels,
                        avoid = c(.r_name(dl$used_ds), paste0("pop_", .r_name(dl$pops_id))))
+  # the analysis set under the name a report's own code reads it by --
+  # <dataset>_sub, as the ARD program names it (.ard_sub_names()) -- beside
+  # its pop_<id> (#520): a code step's `adsl_sub` is in reach in the
+  # program, the preview and the build check alike
+  subs <- .ard_data_part_subs(x, dl$pops_id)
   c(if (length(levels)) c(
       "# ---- code lists: each value in its order ----",
       .codelists_lines(levels), ""),
     "# ---- data ----", dl$data,
-    if (length(dl$pops)) c("", "# ---- populations ----", dl$pops),
+    if (length(dl$pops)) c("", "# ---- populations ----", dl$pops, subs),
     if (length(made)) c("", "# ---- analysis data ----", made))
+}
+
+# `adsl_sub <- pop_saf` for each analysis set the data part makes: one
+# set of a dataset is <dataset>_sub, a second <dataset>_sub2 (the ARD
+# program's numbering)
+.ard_data_part_subs <- function(x, pops_id) {
+  pops <- x$populations
+  if (!length(pops_id) || is.null(pops)) return(character())
+  k <- match(pops_id, pops$population_id)
+  k <- k[!is.na(k)]
+  if (!length(k)) return(character())
+  ds <- .r_name(pops$dataset[k])
+  nm <- paste0(ds, "_sub")
+  for (d in unique(ds)) {
+    at <- which(ds == d)
+    if (length(at) > 1L) nm[at[-1L]] <- paste0(d, "_sub", seq_along(at)[-1L] + 0L)
+  }
+  c("# the sets as a report's own code reads them (<dataset>_sub)",
+    sprintf("%s <- pop_%s", nm, .r_name(pops$population_id[k])))
 }
 
 # ---- the program ---------------------------------------------------------

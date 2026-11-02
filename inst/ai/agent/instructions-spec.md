@@ -4,7 +4,8 @@ A draft is a report file, `ai/spec/outputs/<id>.yml`, in the form above
 (one report; no `tflspec_ai` header, no `reports` list).  It holds the
 report's skeleton and nothing of its look:
 
-- `id`, `kind` (`table`, `listing`, `figure`), `label` (the shell's title),
+- `id`, `kind` (`table`, `listing`, `figure`), `label` (the TOC's title;
+  when the shell's differs, the TOC's, and an assumption that says so),
   `population` (the analysis set's id from `spec/data.yml`), `extends:
   [defaults]`;
 - `data` (`{source: ard}` for a table of statistics; a listing's records as
@@ -27,6 +28,30 @@ report's skeleton and nothing of its look:
   so in an assumption (`from: define`);
 - `page: titles` (the shell's title lines), and the shell's footnotes:
   {{footnotes_at}}
+  A footnote is the shell's text as it is: never reworded, none added.  A
+  footnote of a statistic the table does not show (`SD = Standard
+  deviation.` under an AE table) is dropped, with an assumption that says
+  so;
+- a cell template is Python's `format()` of a number with tflspec's `%`:
+  `.1f%` is the proportion times 100 with one decimal -- **no `%` sign**;
+  a sign the shell shows is written after the brace.  The shell's form,
+  as the cell template:
+  - `xx (xx.x%)`: `"{n} ({p:.1f%}%)"`;
+  - `xx (xx.x)`: `"{n} ({p:.1f%})"`;
+  - `xx.x` (a percent alone): `"{p:.1f%}"`.
+  `{p:.1%}` is not one -- the build stops (`Unknown format spec '.1'`);
+- **the shell's cell form against the study's**: `study_facts.md` says
+  the study's count cell and how it prints.  When the shell's differs
+  (`xx (xx.x%)` where the study prints `xx (xx.x)`), write the shell's
+  for this report: a template's `count_cell` argument, or a code SPEC's
+  `plan_cells: {categorical: ...}`.  When they agree, write none;
+- **the N under the arm**: when the shell's column headers show
+  `(N=xx)` under each arm and `study_facts.md` says the study's header
+  has no N (and the template's own header does not have it -- `param_change`
+  and `shift` have it -- and each arm heads one value column, not a Value
+  and a Change column under it), write this
+  one item, nothing more of the header: `plan_col_header: {header: [{line:
+  "1", cols: .values, span: each, text: "{col}\n(N={n})"}]}`;
 - an `ard.analysis_data` that `code` makes may name its `population`: the
   set's subjects are made first and are in reach as `<dataset>_sub`
   (`adsl_sub`); its other fields (`where`, `add`, `derive` ...) stay blank.
@@ -34,13 +59,30 @@ report's skeleton and nothing of its look:
   version 27.0, fictional dictionary."}` -- unquoted, the text after the
   comma is lost and the check refuses the draft.
 
-Not in a draft, ever: column widths, header rows (`plan_col_header`),
-pages (`plan_paginate_*`), blank rows, borders, fonts, `plan_style`,
-`plan_columns`.  The study's defaults and the person's builder do those.
+Not in a draft, ever: header rows (`plan_col_header`, but the N under the
+arm above), pages (`plan_paginate_*`), blank rows, borders, fonts,
+`plan_style`.  The study's defaults and the person's builder do those.
+The column widths are in every draft: `plan_columns: {widths: {...}}`
+for a table, `width:` for a listing column (ai/AGENTS.md, step 5).
+A zero count the SAP or the standard prints as `0`: a guarded list (a
+guard sees the cell's statistics), a template's `count_cell: [!r 'n == 0
+~ "0"', "{n} ({p:.1f%}%)"]` or a code SPEC's `plan_cells: {categorical:
+[!r 'n == 0 ~ "0"', "{n} ({p:.1f%}%)"]}`.
+What the study's defaults (`spec/defaults.yml`, the company standard)
+already give -- the cell rules, the digits -- is not written again; a
+cell form or an N the shell shows otherwise is (above).
+Nor what a template does by default: a template argument is written only
+when its value differs (no list of every visit, no `plan_levels` of a
+variable the table does not show, `plan_empty: {text: ...}` with no other
+key).
 
-Under a top-level `ai:` key: `assumptions` (what you took from a decision,
-`from: D<n>`, or on your own after three rounds) and `confirm` (what the
-person decides in the builder), as ai/AGENTS.md shows.
+Under a top-level `ai:` key: `assumptions` (what you took from a document,
+`from: shell` / `SAP` / `define`; from a decision, `from: D<n>`; from the
+usual convention for this kind of table, `from: "programmer convention"`;
+or on your own after three rounds) and `confirm` (what the person decides
+in the builder), as ai/AGENTS.md shows.  The order is always: the
+documents, else the convention, else a question (ai/AGENTS.md, *Every
+open point*).
 
 ## A draft, whole: the forms to copy
 
@@ -116,28 +158,34 @@ ard:
     - {id: SHIFT, method: categorical, data: lb_worst, by: [TRT01A, PARAMCD], variables: [WORST], denominator: column}
 ```
 
-A figure from a template: its data as `steps` under `data` (never a bare
-list), the template by name:
+A figure from a template with its own data (`km_survival`,
+`km_cumulative`): the template by `name` and `args`, and its data as
+`steps` under `data` (never a bare list) -- the data stage only: `read`,
+the analysis set (`flag`, or a semi `join` on ADSL), `param`.  **Not the
+template's own steps**: no `survfit`, no `time_unit` -- the template
+makes them, and the check refuses a draft that writes them.  Never drop
+`data.steps` either: without them the figure would be of every record.
 
 ```yaml
 id: F-14-2-2
 kind: figure
-label: Kaplan-Meier Plot of Overall Survival
+label: "Kaplan-Meier Plot of Overall Survival"
 population: ITT
 extends: [defaults]
-template: km_simple
+template:
+  name: km_survival
+  args: {by: TRT01P, time_unit: months}
 data:
   source: code
   steps:
     - {step: read, dataset: ADTTE}
-    - {step: param, value: OS}
     - {step: flag, variable: ITTFL}
-    - {step: survfit, name: fit, time: AVAL, censor: CNSR, by: TRT01P}
-plot: {x_label: Time (Months), y_label: Survival Probability, colour_by: TRT01P}
+    - {step: param, value: OS}
+plot: {x_label: "Time (Months)", y_label: "Survival Probability"}
 page:
   titles:
-    "1": {center: Figure 14.2.2}
-    "2": {center: Kaplan-Meier Plot of Overall Survival}
+    "1": {center: "Figure 14.2.2"}
+    "2": {center: "Kaplan-Meier Plot of Overall Survival"}
 ```
 
 ## The fields, exactly
@@ -188,12 +236,32 @@ needs that variable in `by`.
   (not the label as an entry of its own: `plan_cells: {"Mean (SD)":
   [...]}` is refused).  A guard compares the value as the table has it: a
   key with a code list holds the label (`PARAMCD == "Bilirubin (umol/L)"`,
-  not `"BILI"`).  `plan_digits` is by variable, not by a key's value.
+  not `"BILI"`), and a table by parameter (`param_change`, a shift) holds
+  `PARAM`, the label `ai/adam_summary.md` lists -- `PARAM == "Alanine
+  Aminotransferase (U/L)"`; a guard on the code (`PARAMCD == "ALT"`)
+  matches nothing and every row takes the last template.  `plan_digits`
+  takes a key's value too, by the key as the table holds it --
+  `plan_digits: {PARAM: {"Alanine Aminotransferase (U/L)": {mean: 1, sd:
+  2, median: 1, min: 0, max: 0}}}` -- but it gives digits only to a cell
+  written without them (`{mean} ({sd})`); a template's cells have theirs,
+  so on a template the guards above are the way.
+- **Every row the shell shows** (Race's Multiple, ECOG 0 to 3): each
+  value in `codelists` (value and label, in the shell's order) -- a value
+  the data does not have too: it prints as a 0 row.  A value left out of
+  the code list has no row.  A variable's heading as the shell's (`Baseline
+  ECOG performance status, n (%)`), in the template's `labels` -- without
+  it the heading is the variable's name.
 - **A title line that changes with the page** ("Parameter: <PARAM>", one
-  parameter a page): `plan_paginate_rows: {page_by: [PARAMCD], heading:
+  parameter a page): the templates `param_change` and `shift` do it
+  themselves (`param_page`, `param_heading`); else `plan_paginate_rows: {page_by: [PARAMCD], heading:
   "Parameter: {PARAM}", heading_at: title}` -- the heading goes under the
   report's titles on each page; `{PARAM}` is that page's value of the
-  column.  Several keys: `page_by: [ANALYTE, RENALGR]` and a heading of two
+  column.  `page_by` names a column the table holds, as it holds it: a
+  `table_plan` whose `rows: {group1: PARAM}` makes the column `group1`,
+  so `page_by: [group1]`, `heading: "Parameter: {value}"` and
+  `plan_hide: {cols: [group1]}` (a `page_by: [PARAMCD]` there is not
+  found and the build fails).  Group by the label (`PARAM`) when the
+  heading shows the label.  Several keys: `page_by: [ANALYTE, RENALGR]` and a heading of two
   lines, `"Analyte: {ANALYTE}
 Group: {RENALGR}"`.
 - **Every subject** (a report of all subjects, no flag): `population:
@@ -216,9 +284,15 @@ Group: {RENALGR}"`.
 - **A table with a second block of rows under it** (a listing of the
   values and their summary): `plan_append` with its own `data` and
   `content` (the instructions' item list), after the first table's items.
-- **A shift table** (baseline category down, worst post-baseline category
-  across, a Total row, the % of the arm's subjects with a post-baseline
-  value for the parameter): the worst category is a column key of the
+- **A shift table of counts** (baseline category down, worst post-baseline
+  category across): the template `shift` (or `lab_shift` at one visit)
+  keeps a subject once a parameter at its worst category, with a Missing
+  and a Total row and a page a parameter; write only `where` (the
+  parameters, the records after baseline the study counts) and what
+  differs.
+- **A shift table with percents of the Total row** (the % of the arm's
+  subjects with a post-baseline value for the parameter): no template
+  yet; the worst category is a column key of the
   ARD (`strata`), the baseline category the rows' variable (`variables`,
   never `label`), the denominator the subjects a parameter each, and the
   Total row `plan_total` with `direction: rows` from a second analysis of
@@ -228,7 +302,7 @@ Group: {RENALGR}"`.
   ard:
     analysis_data:
       - id: lb_shift
-        label: one row a subject and parameter: the baseline category, the worst post-baseline category
+        label: "one row a subject and parameter: the baseline category, the worst post-baseline category"
         from: ADLB
         population: SAF
         code: !r 'post <- dplyr::filter(adlb, USUBJID %in% adsl_sub$USUBJID, ONTRTFL == "Y", is.na(ABLFL) | ABLFL != "Y", !is.na(ANRIND)); base <- dplyr::distinct(dplyr::filter(adlb, ABLFL == "Y"), USUBJID, PARAMCD, .keep_all = TRUE)[, c("USUBJID", "PARAMCD", "BNRIND")]; worst <- dplyr::summarise(dplyr::group_by(post, USUBJID, TRT01A, PARAMCD), WORST = if (any(ANRIND == "HIGH")) "HIGH" else if (any(ANRIND == "LOW")) "LOW" else "NORMAL", .groups = "drop"); out <- dplyr::left_join(worst, base, by = c("USUBJID", "PARAMCD")); dplyr::mutate(out, BASECAT = dplyr::coalesce(BNRIND, "MISSING"))'
@@ -261,17 +335,37 @@ Group: {RENALGR}"`.
   of the ARD; a column that is neither a key nor the variable is not, and
   `table_plan` cannot name it.
 
+- **A figure's time axis**: its label carries the unit, `Time (Months)`
+  (the data's `AVALU`), never `Time` alone.  A template's own argument
+  (`censor_marks`, `risk_table`) says what the figure shows -- the look
+  the study standard sets (`censor_shape`, the colours, the legend's
+  place) is not a `template: args:` item (the build refuses it): leave it
+  to the standard, under `ai: confirm` when the shell differs; a `layers:`
+  item is for what no argument does -- never both for one thing.
+- **A listing**: a listing column's `width:` in the shell's proportions,
+  wide enough for its longest value (a subject id on one line) and its
+  heading's longest word -- a short column too (`Age/Sex`, `64/M`: about
+  10).  The widths are scaled to the page, so their sum fits it (a
+  landscape page about 120 characters): the room comes from the long
+  text column, not the short ones; a column
+  heading's line breaks as the shell's, `"Start Date\n(Study
+  Day)"`; a mark after a term with its space, `paste0(AEDECOD, " #")`; a
+  missing date blank, `ifelse(is.na(ASTDT), "", format(ASTDT, ...))`.
+
 ## Easy mistakes (the check refuses these)
 
 | wrong | right |
 |---|---|
 | `{left: MedDRA version 27.0, fictional dictionary.}` | `{left: "MedDRA version 27.0, fictional dictionary."}` -- a comma, a colon or `#` in a text: quote it |
+| `label: Shift Table of Laboratory Values: Baseline versus Worst` | `label: "Shift Table of Laboratory Values: Baseline versus Worst"` -- `: ` inside a value is a YAML error; quote every free text |
+| `template: {name: km_survival, ...}` with `data.steps` holding `survfit`, or with no `data.steps` | the data stage only: `read`, the analysis set, `param` -- the template makes `time_unit` and `survfit` |
 | `where: TRTEMFL == "Y"` | `where: !r TRTEMFL == "Y"` -- R code carries `!r` |
 | `data: [{step: read, dataset: ADTTE}, ...]` | `data: {source: code, steps: [{step: read, dataset: ADTTE}, ...]}` |
 | an analysis with `data: lb_worst` **and** `population: SAF` | one of the two: `data` alone, or `dataset` with `population` |
 | an analysis data with `code` **and** `where` / `add` / `derive` | `code` with `id`, `label`, `from`, `population` only |
 | `table_plan: {cols: [TRT01A, WORST]}` with `variables: [WORST]` | `cols: TRT01A` -- a variable's levels are rows; to have them across, put the variable in `by` |
 | `plan_cells: {categorical: {n} ({p:.1f%})}` | `plan_cells: {categorical: "{n} ({p:.1f%})"}` -- braces in a text: quote it |
+| `"{n} ({p:.1%})"` | `"{n} ({p:.1f%}%)"` -- `.1%` is not a tflspec format; `.1f%` prints no sign, so the shell's `%` goes after the brace |
 | a key of your own (`notes:`, `comment:`, `denominator_note:`) | none: a key the schema does not have is refused; a note is an `ai: assumptions` or `ai: confirm` item |
 | `extends: defaults` | `extends: [defaults]` |
 | `population: Safety Analysis Set` | `population: SAF` -- the id from `spec/data.yml` |
@@ -281,7 +375,10 @@ Group: {RENALGR}"`.
 
 1. Every key is one the schema or this file names; none of your own.
 2. Indentation is two spaces a level; a list is `- ` items or `[a, b]`.
-3. Every text with `,` `:` `#` `{` `}` is in double quotes; R code has `!r`.
+3. Every free-text value (`label`, titles, footnotes, assumption text)
+   is in double quotes -- always one with `: ` or `#`, one starting with
+   `[ { * & ! | > ' " % @`, or yes / no / on / off or a number meant as
+   text; R code has `!r`.
 4. `id` is the report's id as the request gives it; the file is `<id>.yml`.
 5. Each analysis reads `data` or `dataset` + `population`, not both; each
    `data` names an analysis data of this report; each variable is in
@@ -290,3 +387,6 @@ Group: {RENALGR}"`.
 7. Nothing of the look; the digits only where the shell shows them.
 8. `ai:` is the last top-level key: `assumptions` (each with `from` when
    from a decision) and `confirm`.
+9. A template with its own data (`km_survival`, `km_cumulative`) has
+   `data.steps` of `read`, the analysis set and `param` -- and none of the
+   template's own steps (`survfit`, `time_unit`).

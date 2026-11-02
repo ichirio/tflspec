@@ -321,6 +321,9 @@ tfl_schema_check <- function(item) {
     } else if (!is.null(dots) && identical(dots$style, "positional") && identical(a, dots$key)) {
       msg <- .schema_fits(v, .schema_type(dots$type))
       if (!is.null(msg)) bad(a, msg)
+    } else if (!is.null(.schema_removed[[fn]][[a]])) {
+      bad(a, sprintf("%s(%s = ) was removed in rtfreporter 0.9.0: %s", fn, a,
+                     .schema_removed[[fn]][[a]]))
     } else if (!a %in% known) {
       if (identical(fn, "plan_cells") && !a %in% .cells_kinds && make.names(a) != a) {
         # a row's label as an entry of its own ("Mean (SD)": [...]) names
@@ -341,6 +344,17 @@ tfl_schema_check <- function(item) {
   }
   out
 }
+
+# Arguments rtfreporter removed, and where what they said goes now: the
+# check names the replacement (an error), and nothing else -- the GUI's
+# cards, the AI's table -- offers them
+.schema_removed <- list(
+  rtf_tables = list(
+    font_size_half_points = paste0(
+      "a table's font size is its plan's, plan_style(font_size_half_points = ) ",
+      "(a listing's, as_rtftables(font_size_half_points = )); in the sheets, the ",
+      "report sheet's table_font_size_half_points"),
+    read_attributes = "it is the table's own, rtftable(read_attributes = )"))
 
 # The one wording of a renamed argument: what the check, the GUI's
 # suggestion and the AI review all say.

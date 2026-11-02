@@ -340,8 +340,10 @@ tfl_ai_prompt <- function(task, context = NULL, mode = c("chat", "api"),
   }
   # a figure whose shell is in the message (a study's request): what to do
   # reads it, nothing attached
-  ask <- if (task == "figure" && mode == "chat" && !is.null(context$shell) &&
-               !is.null(parts$shell)) parts$shell else parts[[mode]]
+  # (an agent's request: its draft files, as AGENTS.md says)
+  ask <- if (shared && !is.null(parts$agent)) parts$agent else
+    if (task == "figure" && mode == "chat" && !is.null(context$shell) &&
+          !is.null(parts$shell)) parts$shell else parts[[mode]]
   user <- paste(c(
     if (shared) .ai_files_lines(task, header, context),
     .ai_context_text(context, format), "", ask,

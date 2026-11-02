@@ -77,8 +77,8 @@ test_that("a document already in ai/docs/ and named from there is kept, not copi
                       adam = "adam", quiet = TRUE, size = 3L, docs = sap)
   expect_identical(readLines(sap, encoding = "UTF-8"), c("# SAP", "", "the analysis sets"))
   expect_identical(r$agent_files, "ai/docs/sap.md")
-  # a study's documents live in its docs/: inside the study they are read
-  # where they are, never copied; a workbook gets its text in ai/docs/
+  # a study's own docs/ too: copied into ai/docs/, the agent's folder
+  # (#528), a workbook with its text beside it
   dir.create(file.path(d, "docs"))
   own <- file.path(d, "docs", "notes.md")
   writeLines(c("# Notes", "", "a rule"), own)
@@ -87,13 +87,14 @@ test_that("a document already in ai/docs/ and named from there is kept, not copi
   openxlsx::write.xlsx(list(Rules = data.frame(Topic = "Baseline", Rule = "last before dose")), xl)
   r2 <- tfl_ai_prepare(unit = "toc", d, system.file("ai", "example", "onco_toc_shell.xlsx", package = "tflspec"),
                        adam = "adam", quiet = TRUE, size = 3L, docs = c(own, xl), overwrite = TRUE)
-  expect_setequal(r2$agent_files, c("docs/notes.md", "ai/docs/guide.md"))
-  expect_false(file.exists(file.path(d, "ai", "docs", "notes.md")))
-  expect_false(file.exists(file.path(d, "ai", "docs", "guide.xlsx")))
+  expect_setequal(r2$agent_files, c("ai/docs/notes.md", "ai/docs/guide.md"))
+  expect_true(file.exists(file.path(d, "ai", "docs", "notes.md")))
+  expect_true(file.exists(file.path(d, "ai", "docs", "guide.xlsx")))
   expect_match(paste(readLines(file.path(d, "ai", "docs", "guide.md"), encoding = "UTF-8"), collapse = "\n"),
                "| Baseline | last before dose |", fixed = TRUE)
   ag <- paste(readLines(file.path(d, "ai", "AGENTS.md"), encoding = "UTF-8"), collapse = "\n")
-  expect_match(ag, "`docs/notes.md`, `ai/docs/guide.md` (the text of docs/guide.xlsx).", fixed = TRUE)
+  # (AGENTS.md's paths from ai/)
+  expect_match(ag, "`docs/notes.md`, `docs/guide.md` (the text of docs/guide.xlsx).", fixed = TRUE)
   # the helper itself: the same file by another spelling, a folder target, a real copy
   f <- file.path(root, "a.txt"); writeLines("keep", f)
   expect_true(.file_copy_safe(f, file.path(root, ".", "a.txt")))
@@ -128,5 +129,59 @@ test_that("tfl_ai_prepare(docs = ): a workbook document placed as text beside it
                "| Baseline | last before dose |", fixed = TRUE)
   expect_setequal(r$agent_files, c("ai/docs/data-guide.md", "ai/docs/sap.md"))
   ag <- paste(readLines(file.path(d, "ai", "AGENTS.md"), encoding = "UTF-8"), collapse = "\n")
-  expect_match(ag, "`ai/docs/data-guide.md` (the text of data-guide.xlsx), `ai/docs/sap.md`.", fixed = TRUE)
+  expect_match(ag, "`docs/data-guide.md` (the text of docs/data-guide.xlsx), `docs/sap.md`.", fixed = TRUE)
+})
+
+test_that("the agent's folder is ai/ alone: its paths from there, the study's facts, a workspace (#528)", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  d <- file.path(withr::local_tempdir(), "study")
+  dir.create(file.path(d, "adam"), recursive = TRUE)
+  for (x in c("adsl", "adae")) {
+    haven::write_xpt(tflspec:::.ai_chr(getExportedValue("tflspec", x)),
+                     file.path(d, "adam", paste0(x, ".xpt")))
+  }
+  r <- tfl_ai_prepare(unit = "toc", d, system.file("ai", "example", "onco_toc_shell.xlsx", package = "tflspec"),
+                      adam = "adam", quiet = TRUE, size = 3L)
+  rd <- function(...) paste(readLines(file.path(d, "ai", ...), encoding = "UTF-8"), collapse = "\n")
+  # the agent's files name no path from the study folder
+  for (f in c("AGENTS.md", "agent_prompt.md", "instructions-table.md", "requests/index.md")) {
+    expect_false(grepl("`ai/[a-z]", rd(f)), info = f)
+    expect_false(grepl("spec/data.yml", rd(f), fixed = TRUE), info = f)
+  }
+  expect_match(rd("AGENTS.md"), "`study_facts.md`", fixed = TRUE)
+  facts <- rd("study_facts.md")
+  expect_match(facts, "| SAF | Safety Population | `SAFFL == \"Y\"` |", fixed = TRUE)
+  expect_match(facts, "- ADSL", fixed = TRUE)
+  # the study's cell and header, for the draft to compare the shell's with
+  expect_match(facts, "- A count's cell: `{n} ({p:.1f%})`, printed `xx (xx.x)`.", fixed = TRUE)
+  expect_match(facts, "- The column header: the arm's name, no N", fixed = TRUE)
+  expect_true("ai/study_facts.md" %in% r$files)
+  ws <- list.files(file.path(d, "ai"), "[.]code-workspace$")
+  expect_identical(ws, "study.code-workspace")
+  expect_match(rd(ws), "\"path\": \".\"", fixed = TRUE)
+  expect_true(file.exists(file.path(d, "ai", ".github", "copilot-instructions.md")))
+  # the person's own files keep their paths from the study folder
+  expect_false(tflspec:::.ai_for_agent(file.path(d, "ai", "status.md")))
+  # spec/ changed: the check writes the facts again
+  Sys.setFileTime(file.path(d, "ai", "study_facts.md"), Sys.time() - 3600)
+  dy <- file.path(d, "spec", "data.yml")
+  writeLines(sub("Safety Population", "Safety Set", readLines(dy)), dy)
+  tflspec:::.ai_study_facts_write(d, if_older = TRUE)
+  expect_match(rd("study_facts.md"), "| SAF | Safety Set |", fixed = TRUE)
+})
+
+test_that("study_facts.md says the study's count cell as the shell writes it, and the header's N", {
+  expect_identical(tflspec:::.ai_cell_shape("{n} ({p:.1f%})"), "xx (xx.x)")
+  expect_identical(tflspec:::.ai_cell_shape("{n:.0f} ({p:.1f%}%)"), "xx (xx.x%)")
+  expect_identical(tflspec:::.ai_cell_shape("{mean:.2f}"), "xx.xx")
+  x <- tflspec:::.ai_facts_cells(list(
+    tfl_item("plan_cells", list(categorical = "{n} ({p:.1f%}%)")),
+    tfl_item("plan_col_header", list(header = list(
+      list(line = "1", cols = ".values", span = "each", text = "{col}\n(N={n})"))))))
+  expect_match(x[1L], "printed `xx (xx.x%)`", fixed = TRUE)
+  expect_identical(x[2L], "- The column header: the arm's name with its N.")
+  x <- tflspec:::.ai_facts_cells(NULL)
+  expect_match(x[1L], "none set", fixed = TRUE)
+  expect_match(x[2L], "no N", fixed = TRUE)
 })

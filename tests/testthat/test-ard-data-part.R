@@ -114,3 +114,24 @@ test_that("a YAML study: the listing's data and analysis set through the sheets;
   expect_true(file.exists(rtf))
   expect_match(paste(readLines(rtf, warn = FALSE), collapse = " "), "\\pict", fixed = TRUE)
 })
+
+test_that("the data part names each analysis set as a report's own code reads it: adsl_sub beside pop_saf (#520)", {
+  x <- dp_spec()
+  code <- tfl_ard_code(x, "L-1", part = "data")
+  expect_true(any(grepl("^adsl_sub <- pop_saf$", code)))
+  sp <- tfl_listing_spec(data.frame(output_id = "L-2", dataset = "ADAE", population_id = "SAF", sort = "USUBJID"),
+                         data.frame(output_id = "L-2", vars = "USUBJID"))
+  expect_true(any(grepl("^adsl_sub <- pop_saf$", tfl_listing_code(sp, "L-2", ard = x, part = "data"))))
+  # two sets of one dataset: the second is adsl_sub2
+  x2 <- tfl_ard_spec(list(
+    datasets = data.frame(dataset = c("ADSL", "ADAE"), path = c("adsl.rds", "adae.rds")),
+    populations = data.frame(population_id = c("SAF", "ITT"), dataset = "ADSL",
+                             where = c("SAFFL == \"Y\"", "ITTFL == \"Y\"")),
+    analysis_data = data.frame(output_id = "L-9", data_id = c("a_saf", "a_itt"), from = "ADAE",
+                               population_id = c("SAF", "ITT")),
+    analyses = data.frame(output_id = "T-9", analysis_id = "A1", method = "categorical",
+                          dataset = "ADSL", population_id = "SAF", by = "TRT01A", variables = "SEX")))
+  code2 <- tfl_ard_code(x2, "L-9", part = "data")
+  expect_true(any(grepl("^adsl_sub <- pop_saf$", code2)))
+  expect_true(any(grepl("^adsl_sub2 <- pop_itt$", code2)))
+})
