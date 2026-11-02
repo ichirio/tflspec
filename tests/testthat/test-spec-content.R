@@ -364,6 +364,36 @@ test_that("a value's labels: a column the plan makes, by its code list; one name
   expect_equal(NROW(sh2$codelists), 0L)
 })
 
+test_that("plan_digits() by a row key's value: the schema takes both forms, the code runs to them", {
+  ok <- function(a) nrow(tfl_schema_check(tfl_item("plan_digits", a))) == 0L
+  expect_true(ok(list(PARAMCD = list(ALT = 1, BILI = 3))))
+  expect_true(ok(list(PARAMCD = list(ALT = list(mean = 1, sd = 2), BILI = 3))))
+  expect_false(ok(list(PARAMCD = list(ALT = list(mean = list(1))))))
+  data <- data.frame(
+    ARM = "A", PARAMCD = rep(c("ALT", "BILI", "AST"), each = 2), variable = "AVAL",
+    .label = NA_character_, .kind = "continuous", context = "summary",
+    stat_name = rep(c("mean", "sd"), 3),
+    stat = c(31.2345, 4.10234, 0.61234, 0.123456, 28.5555, 3.3333),
+    stringsAsFactors = FALSE)
+  out <- tfl_output("T-LB", "table", content = list(
+    tfl_item("table_plan", list(cols = "ARM", rows = list(param = "PARAMCD"))),
+    tfl_item("plan_cells", list(continuous = list(`Mean (SD)` = "{mean} ({sd})"), notes = FALSE)),
+    tfl_item("plan_digits", list(continuous = list(mean = 2, sd = 3),
+                                 PARAMCD = list(ALT = list(mean = 1, sd = 2), BILI = 3)))))
+  code <- paste(tfl_content_code(out, pipe = "|>"), collapse = "\n")
+  expect_match(code, "PARAMCD = list(ALT = c(mean = 1, sd = 2), BILI = 3)", fixed = TRUE)
+  env <- new.env()
+  env$data <- data
+  eval(parse(text = c("library(rtfreporter)", code)), env)
+  t <- tryCatch(as.data.frame(suppressMessages(rtfreporter::plan_apply(env$plan, "table"))),
+                error = function(e) e)
+  # an rtfreporter before digits by value (rtfreporter #794) says the key matched nothing
+  if (inherits(t, "error") && grepl("matched nothing", conditionMessage(t))) {
+    skip("rtfreporter without digits by a row key's value (#794)")
+  }
+  expect_identical(t$A, c("31.2 (4.10)", "0.612 (0.123)", "28.56 (3.333)"))
+})
+
 test_that("plan_empty(): the schema checks it, places it with the mapping, and its code runs", {
   e <- tfl_schema("plan_empty")
   expect_identical(e$stage, "mapping")
