@@ -245,8 +245,10 @@ tfl_ai_decisions_write <- function(study_dir, x) {
 
 # A draft's `ai:` block (assumptions, confirm), by report, from
 # ai/spec/outputs/*.yml; kept while the check writes the drafts anew.  A
-# file YAML cannot read, or with no `id`, is in `bad` (by the file's name)
-# with why: the check refuses it, and the agent fixes its form.
+# file YAML cannot read, with no `id`, or that is no report file (a call's
+# `args` given as a text ...), is in `bad` (by the file's name) with why:
+# the check refuses it alone, and the agent fixes its form; the other
+# drafts are read and built.
 .ai_draft_blocks <- function(study_dir) {
   area <- file.path(study_dir, "ai", "spec", "outputs")
   out <- list(blocks = list(), bad = character())
@@ -265,7 +267,17 @@ tfl_ai_decisions_write <- function(study_dir, x) {
       out$bad[id] <- sprintf("its `id` is %s, not the file's name: name the file after the id",
                              as.character(y$id)[1L])
     } else {
-      out$blocks[[id]] <- list(file = f, ai = y$ai, y = y)
+      rd <- tryCatch(tfl_read_output(f), error = function(e) e)
+      if (inherits(rd, "error")) {
+        why <- .ai_one_line(conditionMessage(rd))
+        if (grepl("`args` is a named list", why, fixed = TRUE)) {
+          why <- paste0(why, " A call's `args` (plot.add, a `call` layer) is a mapping, one key an ",
+                        "argument, `!r` for R: {fn: theme, args: {axis.text.x: !r element_text(angle = 45)}}.")
+        }
+        out$bad[id] <- paste("the report file cannot be read:", why)
+      } else {
+        out$blocks[[id]] <- list(file = f, ai = y$ai, y = y)
+      }
     }
   }
   out
