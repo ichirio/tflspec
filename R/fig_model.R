@@ -1159,8 +1159,16 @@ tfl_read_fig_design <- function(path) {
         sprintf("paste0(%s)", paste(q(parts), collapse = sprintf(", %s, ", yc)))
       } else q(v("label"))
       list(code = c(lbl("reference line labels"),
-        sprintf("p <- p + annotate(\"text\", x = Inf, y = %s, label = %s, hjust = -0.3, size = %s)",
-                yc, lab, num("size"))),
+        # (with panels (facet_by), a layer of its own data: annotate()'s
+        # vectors no longer fit the rows it repeats in every panel)
+        if (is.null(.pv(plot, "facet_by"))) {
+          sprintf("p <- p + annotate(\"text\", x = Inf, y = %s, label = %s, hjust = -0.3, size = %s)",
+                  yc, lab, num("size"))
+        } else {
+          sprintf(paste0("p <- p + geom_text(data = data.frame(y = %s, label = %s), ",
+                         "aes(x = Inf, y = y, label = label), hjust = -0.3, size = %s, inherit.aes = FALSE)"),
+                  yc, lab, num("size"))
+        }),
         # room right of the panel, after the theme (which would reset it)
         after = "p <- p + theme(plot.margin = margin(5.5, 50, 5.5, 5.5))   # room for the labels",
         clip_off = TRUE)
