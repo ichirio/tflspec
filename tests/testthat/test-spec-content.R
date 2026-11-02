@@ -419,7 +419,7 @@ test_that("plan_empty(): the schema checks it, places it with the mapping, and i
   expect_s3_class(env$plan, "table_plan")
 })
 
-test_that("a stub heading, which no sheet column says, goes whole and comes back (#538)", {
+test_that("a stub heading goes in the layout sheet's stub_heading and comes back (#538)", {
   d <- withr::local_tempdir()
   src <- system.file("extdata", "spec-yaml", package = "tflspec")
   file.copy(list.files(src, full.names = TRUE), d, recursive = TRUE)
@@ -428,7 +428,12 @@ test_that("a stub heading, which no sheet column says, goes whole and comes back
            "plan_stub: {name: row_label, heading: \"\", before: true}", readLines(f), fixed = TRUE)
   writeLines(y, f)
   out <- withr::local_tempdir()
-  suppressMessages(tfl_yaml_from_sheets(tfl_sheets_from_yaml(d), out))
+  sh <- tfl_sheets_from_yaml(d)
+  # the layout sheet's column, quoted (an empty heading), not the item whole
+  lay <- sh$table$layout
+  expect_identical(lay$stub_heading[lay$stub_name %in% "row_label"], "\"\"")
+  expect_false(any(grepl("plan_stub", unlist(sh$table$tables$content_more), fixed = TRUE)))
+  suppressMessages(tfl_yaml_from_sheets(sh, out))
   ff <- list.files(out, recursive = TRUE, full.names = TRUE)
   st <- Filter(function(it) identical(names(it), "plan_stub"),
                yaml::read_yaml(ff[basename(ff) == "defaults.yml"])$content)

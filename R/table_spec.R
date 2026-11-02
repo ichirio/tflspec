@@ -54,7 +54,7 @@
     blank_where = "blanks", blank_first = "bool", blank_last = "bool",
     blank_counted = "bool",
     stub_vars = "list", stub_name = "text", stub_indent = "int",
-    stub_summary = "text", stub_before = "bool",
+    stub_summary = "text", stub_before = "bool", stub_heading = "text",
     colpages_every = "int", colpages_at = "ids", colpages_keep = "ids",
     colpages_order = "list", colpages_cut_by = "text",
     colpages_fit = "bool", colpages_allow_span_break = "bool"),
@@ -747,7 +747,7 @@
 #'   \item{`blank_*`}{[rtfreporter::plan_blanks()]: `where`, `first`, `last`,
 #'     `counted`.}
 #'   \item{`stub_*`}{[rtfreporter::plan_stub()]: `vars`, `name`, `indent`, `summary`,
-#'     `before`.}
+#'     `before`, `heading` (the stub column's heading; `""`, quoted, for none).}
 #'   \item{`colpages_*`}{[rtfreporter::plan_paginate_cols()]: `every`, `at`,
 #'     `cut_by` (a separator in the column names, `____`: one block per
 #'     key), `keep`, `fit` (`TRUE`: every block on page 1's scale; `FALSE`:
@@ -2762,6 +2762,7 @@ tfl_as_table_spec <- function(x, output_id = NULL, compare = TRUE) {
     put("stub_vars", st$vars); put("stub_name", st$name)
     put("stub_indent", st$indent); put("stub_summary", st$group_summary)
     if (isTRUE(st$before)) put("stub_before", TRUE)
+    put("stub_heading", st$heading)
   }
   g <- ly[["group"]]
   put("group_mode", g$group_by); put("group_collapse", g$collapse_repeats)
