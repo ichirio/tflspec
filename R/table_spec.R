@@ -2292,7 +2292,7 @@ tfl_table_spec_template <- function(ard, path = NULL, cols = NULL,
 #' `header_dist_in`, `footer_dist_in` (the page, as [rtfreporter::rtf_document()] takes
 #' it), `font` (the document's font: `rtf_document(font_table = )`), and
 #' `font_size_half_points`, `title_format`, `footnote_format`,
-#' `title_width`, `footnote_width`, `markup` ([rtfreporter::rtf_default_format()]).
+#' `title_width`, `footnote_width`, `markup` ([rtfreporter::rtf_style()]'s shared level).
 #' The study's row (blank `output_id`) of `font` and `font_size_half_points`
 #' is the company's: [tfl_report_setup_code()] writes it once as
 #' `options(rtfreporter.font = , rtfreporter.font_size_half_points = )`.
@@ -2327,7 +2327,7 @@ tfl_read_report_spec <- function(path, output_id = NULL) {
 #' @param spec A report definition ([tfl_read_report_spec()]) narrowed to one
 #'   report, or the path(s) to read it from; or a report of the YAML spec
 #'   ([tfl_output()], resolved: [tfl_resolve_output()]), its `page:` the
-#'   calls -- `rtf_page`, `rtf_default_format`, `rtf_document`,
+#'   calls -- `rtf_page`, `rtf_style` (an old `rtf_default_format`: its shared level), `rtf_document`,
 #'   `rtf_tables` / `rtf_figures`, `rtf_titles`, `rtf_footnotes`, each its
 #'   arguments, and the lines of `header`, `footer`, `titles`, `footnotes`
 #'   and the `tokens`.

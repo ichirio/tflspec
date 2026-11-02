@@ -1621,8 +1621,7 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
   st <- list(.spec_call("rtf_document",
                         font_table = if (!is.null(pg[["font"]])) list(list(name = pg[["font"]])),
                         page = if (length(page)) page,
-                        default_format = if (length(fmt))
-                          do.call(.spec_call, c(list("rtf_default_format"), fmt)),
+                        style = if (length(fmt)) do.call(.spec_call, c(list("rtf_style"), fmt)),
                         watermark = r$watermark,
                         program = prog,
                         program_fallback = fallback,
@@ -1730,7 +1729,7 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
 #' For a study of the YAML spec, give the study ([tfl_read_study_spec()]):
 #' its defaults' `page:` (`spec/defaults.yml`) are the study's --
 #' `rtf_document: font_table` (the first font's name) and
-#' `rtf_default_format: font_size_half_points`, `tokens`, `header` and
+#' `rtf_style: font_size_half_points` (an old `rtf_default_format`'s too), `tokens`, `header` and
 #' `footer` -- and the lines are the ones
 #' `tfl_report_code(output, setup = TRUE, study = )` refers to.
 #'

@@ -17,7 +17,7 @@ tfl_report_code(
 \item{spec}{A report definition (\code{\link[=tfl_read_report_spec]{tfl_read_report_spec()}}) narrowed to one
 report, or the path(s) to read it from; or a report of the YAML spec
 (\code{\link[=tfl_output]{tfl_output()}}, resolved: \code{\link[=tfl_resolve_output]{tfl_resolve_output()}}), its \verb{page:} the
-calls -- \code{rtf_page}, \code{rtf_default_format}, \code{rtf_document},
+calls -- \code{rtf_page}, \code{rtf_style} (an old \code{rtf_default_format}: its shared level), \code{rtf_document},
 \code{rtf_tables} / \code{rtf_figures}, \code{rtf_titles}, \code{rtf_footnotes}, each its
 arguments, and the lines of \code{header}, \code{footer}, \code{titles}, \code{footnotes}
 and the \code{tokens}.}
