@@ -242,8 +242,12 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
             }
             list(rtf = if (isTRUE(rtf)) f)
           } else {
-            ard <- suppressMessages(tfl_build_ard(st, dir = ".", output_id = id, save = FALSE))
-            if (!is.null(ard$output_id)) ard <- ard[ard$output_id %in% id, , drop = FALSE]
+            # (a table with parts -- a listing with its summary, pk_conc --
+            # reads each object by name: the ARD, the records)
+            ard <- if (any(vapply(o$content, .is_part, NA))) .parts_objects(o, st, ".") else {
+              a <- suppressMessages(tfl_build_ard(st, dir = ".", output_id = id, save = FALSE))
+              if (!is.null(a$output_id)) a[a$output_id %in% id, , drop = FALSE] else a
+            }
             # a table whose columns have no widths: the usual layout's
             # (the stub wider), written into its report file -- what a
             # person then changes is a value, not an argument to add

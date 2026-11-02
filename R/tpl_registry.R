@@ -1852,4 +1852,5 @@ tpl_ae_overview <- function(ard, population = "SAF", ..., codelists = NULL) {
 .tpl_la_register()
 .tpl_eair_register()
 .tpl_ancova_register()
+.tpl_pk_register()
 .tpl_fig_register()

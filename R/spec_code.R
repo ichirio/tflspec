@@ -1350,9 +1350,12 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
   # its parts) has no ARD to normalize
   if (identical(output$data$source, "dataset")) output$content <- .content_drop_data_steps(output$content)
   # a template SPEC (resolved): the template's call and the lines after it
-  # (the A use); `template = "items"` writes the items it stands for (B)
+  # (the A use); `template = "items"` writes the items it stands for (B),
+  # and so does a table of records (pk_conc: its parts' objects, each its
+  # plan, are the program's, not the call's)
   tp <- attr(output, "template")
-  if (!is.null(tp) && identical(match.arg(template), "call") && identical(output$kind, "table")) {
+  if (!is.null(tp) && identical(match.arg(template), "call") && identical(output$kind, "table") &&
+      !identical(output$data$source, "dataset")) {
     if (isTRUE(tp$ok)) {
       return(.content_tpl_code(output, data = data %||% output$data$object %||% "ard",
                                plan = plan, pipe = pipe))
