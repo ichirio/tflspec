@@ -194,6 +194,7 @@ plan_stub:
     indent: {main: true, label: "Indent", help: "The spaces a level of the folded rows is indented by. Blank: 4. e.g. 2", type: integer}
     group_summary: {label: "Group summary rows", help: "Which rows are a group's own summary, printed on the group's heading row: \"empty\" a blank leaf, \"parent\" a leaf equal to its parent. Blank: both; \"none\" turns it off. e.g. \"empty\"", type: "enum[empty|parent]"}
     before: {main: true, label: "Before the rows", help: "TRUE: the rows are folded before the pages and groups are made, which plan_cell_style() needs to see the rows as printed; a page or group key folded away is then not found. Blank (FALSE): folded last. e.g. TRUE", type: logical}
+    heading: {label: "Heading", help: "The row label column's header text when it is not its name; \"\" leaves it blank (a column header line naming the column still sets it). Blank: the name. e.g. \"\"", type: string}
 
 plan_paginate_group:
   package: rtfreporter
