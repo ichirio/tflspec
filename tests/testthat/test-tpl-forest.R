@@ -96,3 +96,16 @@ test_that("comparison: the Cox model's reference is the other arm, whatever the 
   b <- suppressWarnings(ggplot2::ggplot_build(fig))
   expect_gt(sum(vapply(b$data, nrow, 1L)), 0L)
 })
+
+test_that("x_breaks as YAML writes it (decimals and whole numbers: a list) is several numbers", {
+  a <- yaml::yaml.load("{param: OS, population: ITT, x_breaks: [0.25, 0.5, 1, 2, 4]}")
+  expect_true(is.list(a$x_breaks))
+  p <- tflspec:::.ai_check_template(list(name = "forest_hr", args = a), "")
+  expect_identical(nrow(p[p$severity == "error", , drop = FALSE]), 0L)
+  x <- tfl_template_expand("forest_hr", a)
+  sc <- Filter(function(z) identical(z$fn, "scale_x_log10"), x$plot$add)
+  expect_identical(as.numeric(sc[[1L]]$args$breaks), c(0.25, 0.5, 1, 2, 4))
+  bad <- tflspec:::.ai_check_template(list(name = "forest_hr", args = list(param = "OS", population = "ITT",
+                                                                           x_breaks = list(1, "a"))), "")
+  expect_true(any(grepl("number", bad$problem)))
+})

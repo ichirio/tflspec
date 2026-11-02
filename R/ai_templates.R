@@ -285,7 +285,9 @@
     if (is.null(v)) next
     ok <- switch(x$type %||% "text",
                  flag = is.logical(v) && length(v) == 1L,
-                 number = is.numeric(v),
+                 # (YAML reads [0.25, 1, 2] -- decimals and whole numbers -- as a list)
+                 number = is.numeric(v) || (is.list(v) && length(v) &&
+                                              all(vapply(v, function(e) is.numeric(e) && length(e) == 1L, NA))),
                  vars = , levels = , text = , choice = is.character(v) || inherits(v, "tfl_r") ||
                    (is.list(v) && all(vapply(v, is.character, NA))),
                  TRUE)
