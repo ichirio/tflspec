@@ -138,3 +138,16 @@ test_that("an agent's figure draft with its layers as `layers:` (the instruction
   expect_false(is.na(fr$png), info = paste(fr$first, fr$rtf_problem))
   expect_true(file.exists(file.path(d, fr$png)))
 })
+
+test_that("a design's preset written as a template is the design's preset, not a template SPEC", {
+  expect_true(tflspec:::.fig_preset_named(list(name = "box_by_visit")))
+  expect_false(tflspec:::.fig_preset_named(list(name = "km_survival")))
+  expect_false(tflspec:::.fig_preset_named(list(name = "no_such")))
+  expect_false(tflspec:::.fig_preset_named("box_by_visit"))
+  o <- tfl_output("F-1", "figure", template = list(name = "box_by_visit"))
+  expect_null(tflspec:::.tpl_spec_of(o))
+  expect_identical(tflspec:::.fig_design_of_output(o)$template, "box_by_visit")
+  expect_identical(tflspec:::.tpl_spec_of(tfl_output("F-2", "figure",
+                                                      template = list(name = "km_survival")))$name,
+                   "km_survival")
+})
