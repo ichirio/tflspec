@@ -57,10 +57,14 @@ report's skeleton and nothing of its look:
   version 27.0, fictional dictionary."}` -- unquoted, the text after the
   comma is lost and the check refuses the draft.
 
-Not in a draft, ever: column widths, header rows (`plan_col_header`, but
-the N under the arm above), pages (`plan_paginate_*`), blank rows,
-borders, fonts, `plan_style`, `plan_columns`.  The study's defaults and
-the person's builder do those.
+Not in a draft, ever: header rows (`plan_col_header`, but the N under the
+arm above), pages (`plan_paginate_*`), blank rows, borders, fonts,
+`plan_style`.  The study's defaults and the person's builder do those.
+The column widths are in every draft: `plan_columns: {widths: {...}}`
+for a table, `width:` for a listing column (ai/AGENTS.md, step 5).
+A zero count the SAP or the standard prints as `0`: `plan_cells:
+{categorical: [!r 'n == 0 ~ "0"', "{n} ({p:.1f%}%)"]}` (a guard sees the
+cell's statistics), not a template's `count_cell`.
 What the study's defaults (`spec/defaults.yml`, the company standard)
 already give -- the cell rules, the digits -- is not written again; a
 cell form or an N the shell shows otherwise is (above).
@@ -229,7 +233,10 @@ needs that variable in `by`.
   (not the label as an entry of its own: `plan_cells: {"Mean (SD)":
   [...]}` is refused).  A guard compares the value as the table has it: a
   key with a code list holds the label (`PARAMCD == "Bilirubin (umol/L)"`,
-  not `"BILI"`).  `plan_digits` is by variable, not by a key's value.
+  not `"BILI"`), and a table by parameter (`param_change`, a shift) holds
+  `PARAM`, the label `ai/adam_summary.md` lists -- `PARAM == "Alanine
+  Aminotransferase (U/L)"`; a guard on the code (`PARAMCD == "ALT"`)
+  matches nothing and every row takes the last template.  `plan_digits` is by variable, not by a key's value.
 - **Every row the shell shows** (Race's Multiple, ECOG 0 to 3): each
   value in `codelists` (value and label, in the shell's order) -- a value
   the data does not have too: it prints as a 0 row.  A value left out of
