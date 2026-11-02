@@ -156,6 +156,19 @@ test_that("prepare(): AGENTS.md asks and writes the drafts; the requests carry t
   expect_match(st2$first, "T-14-3-5.yml: the YAML cannot be read", fixed = TRUE)
   expect_identical(r2$next_kind[[req2]], "fix_answer")
   expect_match(r2$next_args[[req2]]$drafts, "ai/spec/outputs/T-14-3-5.yml", fixed = TRUE)
+  # a draft YAML reads but that is no report file (a call's args as a text):
+  # refused alone with why; the other drafts are read as before
+  writeLines(c("id: T-14-3-5", "kind: table", "label: Lab",
+               "plot: {add: [{fn: theme, args: 'axis.text.x = element_blank()'}]}"),
+             file.path(area, "T-14-3-5.yml"))
+  r4 <- suppressMessages(tfl_ai_collect_answers(d))
+  st4 <- r4$reports[r4$reports$output_id == "T-14-3-5", ]
+  expect_identical(st4$status, "error")
+  expect_match(st4$first, "T-14-3-5.yml: the report file cannot be read", fixed = TRUE)
+  expect_match(st4$first, "`!r` for R", fixed = TRUE)
+  expect_identical(r4$reports$status[r4$reports$output_id == "T-14-3-1"],
+                   r2$reports$status[r2$reports$output_id == "T-14-3-1"])
+  unlink(file.path(area, "T-14-3-5.yml"))
   # a draft no request asks for: stray
   tfl_write_output(tfl_output("T-99-9-9", kind = "table", label = "x"), file.path(area, "T-99-9-9.yml"))
   r3 <- suppressMessages(tfl_ai_collect_answers(d))
