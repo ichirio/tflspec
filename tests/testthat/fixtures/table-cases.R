@@ -49,7 +49,7 @@ list(
   paginate_group = quote(base() |> plan_paginate_group(col = "group")),
   row_group = quote(base() |> plan_row_group(mode = "indent")),
   columns_widths = quote(base() |> plan_columns(widths = c(4, 2))),
-  columns_decimal = quote(base() |> plan_columns(decimal = TRUE)),
+  columns_decimal = quote(base() |> plan_columns(decimal = ".values")),
   columns_title = quote(base() |> plan_columns(row_title = "label")),
   style = quote(base() |> plan_style(align_count_pct = TRUE, font = "Arial")),
   style_border = quote(base() |> plan_style(border = "tfl")),
