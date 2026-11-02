@@ -54,17 +54,20 @@ test_that("the default rule: values as their cells and header words need, the st
   b <- data.frame(row_label = c("Age (years)", "    Mean (SD)"),
                   `Placebo____Value` = c("", "22.8 (10.38)"), check.names = FALSE)
   x <- w(b)
-  # the value: "22.8 (10.38)" 12 + 2; the stub the page's rest
+  # one value column 30% of the page (more than its "22.8 (10.38)" needs),
+  # the stub the rest: 70:30, the user's target; two 60:20:20, three 55:15:15:15
   expect_identical(names(x), names(b))
-  expect_identical(unname(x), c(106L, 14L))
+  expect_identical(unname(x), c(84L, 36L))
+  b3 <- cbind(b, B = "1", C = "1")
+  expect_identical(unname(w(b3)), c(66L, 18L, 18L, 18L))
   # a header word longer than the cells ("Placebo") sets the value's need
   h <- data.frame(row_label = "n", `Placebo____Change from baseline` = "7", check.names = FALSE)
   expect_true(w(h, page = 0L)[[2L]] >= nchar("baseline") + 2L)
-  # many value columns: the stub keeps its floor, the values their needs
+  # many value columns: each keeps its need, the stub its content (26 + 2)
   many <- as.data.frame(c(list(row_label = "a long row heading of text"),
                           stats::setNames(as.list(rep("100 (100.0%)", 12)), paste0("C", 1:12))))
   y <- w(many)
-  expect_identical(unname(y[1L]), 12L)
+  expect_identical(unname(y[1L]), 28L)
   expect_true(all(y[-1L] == 14L))
   # a hierarchy's first column at least 20
   expect_identical(unname(w(data.frame(row_label = "x", A = "1"), page = 0L, hier = TRUE)[1L]), 20L)

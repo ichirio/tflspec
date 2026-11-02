@@ -60,15 +60,17 @@
 
 # tflspec's default column widths (#541), in characters, one a column of the
 # printed table `body` by name; `stub` the row-heading columns (positions).
-# - A value column: its longest cell, or its header's longest word (the
-#   name's parts, `"Placebo____Value"`), whichever is longer, plus 2.
+# The user's targets (11/2): one value column 70:30, two 60:20:20, three
+# 55:15:15:15 -- each of `n` value columns 60 / (n + 1) % of the page.
+# - A value column never narrower than its content needs: its longest cell,
+#   or its header's longest word (the name's parts, `"Placebo____Value"`),
+#   whichever is longer, plus 2.
 # - The row headings take the rest of the page (`page` characters), shared
-#   by their content when there are several, each at least its floor (12; a
-#   hierarchy's first column 20) -- a stub as narrow as a number is the
-#   fault this rule is for.
-# - Value columns that alone leave less than the floors keep their needs
-#   and the stub its floor; rtfreporter scales the whole table to the page
-#   (as_rtftables(auto_width = )), so every column narrows in proportion.
+#   by their content when there are several, each at least its content
+#   (longest cell + 2) and its floor (12; a hierarchy's first column 20).
+# - When both cannot fit, each keeps its need; rtfreporter scales the whole
+#   table to the page (as_rtftables(auto_width = )), so every column
+#   narrows in proportion.
 .tfl_default_widths <- function(body, stub, page = 120L, hier = FALSE) {
   txt <- function(v) {
     v <- as.character(v)
@@ -82,10 +84,11 @@
   }
   vals <- setdiff(seq_along(body), stub)
   need <- vapply(vals, function(j) max(longest(body[[j]]), word(names(body)[j])) + 2L, 0L)
+  if (length(vals)) need <- pmax(need, as.integer(floor(page * 0.6 / (length(vals) + 1L))))
   low <- ifelse(seq_along(stub) == 1L & hier, 20L, 12L)
   own <- pmax(1L, vapply(stub, function(j) longest(body[[j]]) + 2L, 0L))
   rest <- max(0L, page - sum(need))
-  sw <- pmax(low, floor(rest * own / sum(own)))
+  sw <- pmax(low, own, floor(rest * own / sum(own)))
   w <- integer(ncol(body))
   w[stub] <- as.integer(sw)
   w[vals] <- as.integer(need)
