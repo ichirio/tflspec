@@ -174,4 +174,10 @@ test_that("an AI draft with pk_conc builds in tfl_ai_run(): the parts' objects, 
   expect_true(file.exists(file.path(d, rp$rtf)))
   rtf <- paste(readLines(file.path(d, rp$rtf), warn = FALSE), collapse = "\n")
   expect_match(rtf, "Summary Statistics", fixed = TRUE)
+  # its widths written into its file: the subjects' column by name, the
+  # value columns (two blocks of them) as .values
+  y <- yaml::read_yaml(file.path(d, "ai", "spec", "outputs", "T-14-3-5.yml"))
+  pc <- Filter(function(it) identical(names(it), "plan_columns"), y$content)
+  w <- pc[[1L]]$plan_columns$widths
+  expect_identical(names(w), c("row_label", ".values"))
 })

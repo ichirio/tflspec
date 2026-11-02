@@ -50,7 +50,13 @@
     rt <- which(!names(body) %in% cols$spread)
     if (length(rt)) {
       w <- .tfl_default_widths(body, rt)
-      return(.ai_put_widths(own, stats::setNames(as.list(as.vector(w)), names(w))))
+      w <- stats::setNames(as.list(as.vector(w)), names(w))
+      # value columns past the first page (pages split across, pk_conc's
+      # split_at): every value column the first page's width, as `.values`
+      if (length(setdiff(cols$spread, names(body))) && length(rt) < length(w)) {
+        w <- c(w[rt], list(.values = w[[setdiff(seq_along(w), rt)[1L]]]))
+      }
+      return(.ai_put_widths(own, w))
     }
   }
   w <- stats::setNames(as.list(rep(if (length(stub) > 1L) 2L else if (hier) 4L else 3L,
