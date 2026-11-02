@@ -1003,6 +1003,8 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
         }
       },
       plan_stub = {
+        # (its heading has no column: the item goes whole in content_more)
+        if (!is.null(named$heading)) miss("plan_stub", "heading")
         map <- c(vars = "stub_vars", name = "stub_name", indent = "stub_indent",
                  group_summary = "stub_summary", before = "stub_before")
         for (k in intersect(names(named), names(map))) lay[[map[[k]]]] <- named[[k]]

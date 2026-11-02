@@ -418,3 +418,21 @@ test_that("plan_empty(): the schema checks it, places it with the mapping, and i
   eval(parse(text = c("library(rtfreporter)", code)), env)
   expect_s3_class(env$plan, "table_plan")
 })
+
+test_that("a stub heading, which no sheet column says, goes whole and comes back (#538)", {
+  d <- withr::local_tempdir()
+  src <- system.file("extdata", "spec-yaml", package = "tflspec")
+  file.copy(list.files(src, full.names = TRUE), d, recursive = TRUE)
+  f <- file.path(d, "defaults.yml")
+  y <- sub("plan_stub: {name: row_label, before: true}",
+           "plan_stub: {name: row_label, heading: \"\", before: true}", readLines(f), fixed = TRUE)
+  writeLines(y, f)
+  out <- withr::local_tempdir()
+  suppressMessages(tfl_yaml_from_sheets(tfl_sheets_from_yaml(d), out))
+  ff <- list.files(out, recursive = TRUE, full.names = TRUE)
+  st <- Filter(function(it) identical(names(it), "plan_stub"),
+               yaml::read_yaml(ff[basename(ff) == "defaults.yml"])$content)
+  expect_length(st, 1L)
+  expect_identical(st[[1L]]$plan_stub$heading, "")
+  expect_identical(st[[1L]]$plan_stub$name, "row_label")
+})
