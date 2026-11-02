@@ -63,6 +63,7 @@
     row_height_twips = "int", row_height_exact = "bool",
     header_row_height_twips = "int", blank_row_height_twips = "int",
     cell_padding_left_twips = "int", cell_padding_right_twips = "int",
+    cell_padding_top_twips = "int", cell_padding_bottom_twips = "int",
     font = "text", font_size_half_points = "int", table_align = "text",
     cell_valign = "text", markup = "text", blank_row_normalize = "text",
     border_header = "sides", border_spanning = "sides",
@@ -106,10 +107,14 @@
     font = "text", font_lang = "text", font_size_half_points = "int", title_format = "text",
     footnote_format = "text", title_width = "text",
     footnote_width = "text", markup = "text", page_more = "text"),
-  header    = c(line = "int", left = "text", center = "text", right = "text"),
-  footer    = c(line = "int", left = "text", center = "text", right = "text"),
-  titles    = c(line = "int", left = "text", center = "text", right = "text"),
-  footnotes = c(line = "int", left = "text", center = "text", right = "text"),
+  header    = c(line = "int", left = "text", center = "text", right = "text",
+                row_height_twips = "int"),
+  footer    = c(line = "int", left = "text", center = "text", right = "text",
+                row_height_twips = "int"),
+  titles    = c(line = "int", left = "text", center = "text", right = "text",
+                row_height_twips = "int"),
+  footnotes = c(line = "int", left = "text", center = "text", right = "text",
+                row_height_twips = "int"),
   # tokens of one's own: {STUDY} in a header, footer, title or footnote
   tokens    = c(name = "text", value = "text"))
 
@@ -786,7 +791,8 @@
 #' [rtfreporter::plan_style()]: `border`, `align_count_pct`, `font`,
 #' `font_size_half_points`, `row_height_twips`, `row_height_exact`,
 #' `header_row_height_twips`, `blank_row_height_twips`,
-#' `cell_padding_left_twips`, `cell_padding_right_twips`, `cell_valign`,
+#' `cell_padding_left_twips`, `cell_padding_right_twips`,
+#' `cell_padding_top_twips`, `cell_padding_bottom_twips`, `cell_valign`,
 #' `table_align`, `markup`, `blank_row_normalize`, and the rules of one
 #' kind of row, `border_header`, `border_spanning`, `border_body`,
 #' `border_first_row`, `border_last_row`: the sides drawn (`top | bottom`)
@@ -2193,8 +2199,8 @@ tfl_table_spec_template <- function(ard, path = NULL, cols = NULL,
     cells <- c(l = r[["left"]] %||% NA, c = r[["center"]] %||% NA,
                r = r[["right"]] %||% NA)
     cells <- cells[!is.na(cells)]
-    # a blank line is centred, as an unnamed c("") is
-    if (!length(cells)) c(c = "") else cells
+    # a blank line is centred, as an unnamed c("") is; a line's own height
+    .page_line(cells, r[["row_height_twips"]], sheet)
   })
 }
 

@@ -128,7 +128,9 @@ tfl_sheets_from_spec <- function(study, outputs) {
         cells <- m[[line]]
         r <- list(output_id = id, line = line)
         if (inherits(cells, "tfl_unset")) { r$left <- "(none)"; add(band, r); next }
-        for (cn in c("left", "center", "right")) if (!is.null(cells[[cn]])) r[[cn]] <- cell(cells[[cn]])
+        for (cn in c("left", "center", "right", "row_height_twips")) {
+          if (!is.null(cells[[cn]])) r[[cn]] <- cell(cells[[cn]])
+        }
         add(band, r)
       }
     }
@@ -382,7 +384,8 @@ tfl_sheets_from_spec <- function(study, outputs) {
   switch(sh,
     report = c("output_id", "type", "file", "program", "pattern"),
     page = "output_id",
-    header = , footer = , titles = , footnotes = c("output_id", "line", "left", "center", "right"),
+    header = , footer = , titles = , footnotes = c("output_id", "line", "left", "center", "right",
+                                                   "row_height_twips"),
     tokens = c("output_id", "name", "value"),
     "output_id")
 }
