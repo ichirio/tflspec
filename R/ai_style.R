@@ -24,12 +24,16 @@
 #' widths (`\cellx`), each cell's top and bottom border (`\clbrdrt`,
 #' `\clbrdrb`), the font size (`\fs`), the cells' alignment (`\ql`, `\qc`,
 #' `\qr`), and the file's fonts (its font table).  Rows in a run, with
-#' nothing but row definitions between them, are one table.
+#' nothing but row definitions between them, are one table.  A table that
+#' goes on over pages, as SAS's ODS RTF writes it (a page a section, the
+#' column header rows, `\trhdr`, again at the top of each), is one table:
+#' its later pages' header rows are dropped, so a header counts once.
 #'
 #' @param rtf_dir The folder of RTF files.
-#' @return A data frame: `file` (its name), `table` (its place in the file),
-#'   `row` (in the table), `n_cells`, `width_twips` (the row's width),
-#'   `rel_widths` (each cell's width as parts of the narrowest, ` | `
+#' @return A data frame: `file` (its path under `rtf_dir`), `table` (its
+#'   place in the file), `row` (in the table), `page` (the file's page it
+#'   is on), `header` (a column header row, `\trhdr`), `n_cells`,
+#'   `width_twips` (the row's width), `rel_widths` (each cell's width as parts of the narrowest, ` | `
 #'   between them), `border_top`, `border_bottom` (one character a cell:
 #'   `1` a border, `0` none), `font_size_pt`, `align` (one character a
 #'   cell: `l`, `c`, `r`), `fonts` (the file's font table, ` | ` between).
@@ -39,13 +43,16 @@ tfl_rtf_style_scan <- function(rtf_dir) {
   fs <- list.files(rtf_dir, pattern = "[.]rtf$", full.names = TRUE, recursive = TRUE,
                    ignore.case = TRUE)
   empty <- data.frame(file = character(), table = integer(), row = integer(),
+                      page = integer(), header = logical(),
                       n_cells = integer(), width_twips = integer(), rel_widths = character(),
                       border_top = character(), border_bottom = character(),
                       font_size_pt = numeric(), align = character(), fonts = character(),
                       stringsAsFactors = FALSE)
   rows <- lapply(fs, function(f) {
     x <- paste(readLines(f, warn = FALSE, encoding = "latin1"), collapse = "\n")
-    .rtf_style_rows(x, basename(f))
+    # (its path under the folder: a study's subfolder and the file)
+    .rtf_style_rows(x, substring(normalizePath(f, winslash = "/"),
+                                 nchar(normalizePath(rtf_dir, winslash = "/")) + 2L))
   })
   out <- do.call(rbind, c(list(empty), rows))
   rownames(out) <- NULL
@@ -72,6 +79,9 @@ tfl_rtf_style_scan <- function(rtf_dir) {
   at <- gregexpr("\\\\trowd", x, perl = TRUE)[[1L]]
   if (at[1L] < 0L) return(NULL)
   ends <- gregexpr("\\\\row(?![a-z])", x, perl = TRUE)[[1L]]
+  # the page breaks (SAS ODS RTF: a \sect a page; Word: \page)
+  pb <- gregexpr("\\\\(sect|page)(?![a-z])", x, perl = TRUE)[[1L]]
+  pb <- pb[pb > 0L]
   out <- list()
   tbl <- 0L
   prev_end <- -1L
@@ -101,13 +111,52 @@ tfl_rtf_style_scan <- function(rtf_dir) {
     al <- regmatches(body, gregexpr("\\\\q[lcrj](?![a-z])", body, perl = TRUE))[[1L]]
     al <- paste(substring(al, 3L, 3L), collapse = "")
     out[[length(out) + 1L]] <- data.frame(
-      file = name, table = tbl, row = k, n_cells = length(cx), width_twips = max(cx),
+      file = name, table = tbl, row = k, page = 1L + sum(pb < s),
+      header = grepl("\\\\trhdr(?![a-z])", defs[1L], perl = TRUE),
+      n_cells = length(cx), width_twips = max(cx),
       rel_widths = rel, border_top = bt, border_bottom = bb,
       font_size_pt = if (length(fsz)) as.numeric(substring(fsz, 4L)) / 2 else doc_pt,
-      align = al, fonts = paste(fonts, collapse = " | "), stringsAsFactors = FALSE)
+      align = al, fonts = paste(fonts, collapse = " | "), .cx = paste(cx, collapse = ","),
+      stringsAsFactors = FALSE)
     prev_end <- e + 4L
   }
-  do.call(rbind, out)
+  if (!length(out)) return(NULL)
+  .rtf_join_pages(do.call(rbind, out))
+}
+
+# A table that goes on over pages is one table: SAS's ODS RTF writes each
+# page's rows as a table of their own, its column header rows (\trhdr)
+# again at the top of each.  A table that starts on a later page than the
+# one before it, with the same header rows (the same cells' right edges),
+# is that table going on: its rows join it, its repeated header rows go.
+.rtf_join_pages <- function(d) {
+  sig <- function(t) {
+    r <- d[d$table == t, , drop = FALSE]
+    h <- cumprod(r$header) == 1L
+    paste(r$.cx[h], collapse = "/")
+  }
+  d$.drop <- FALSE
+  ids <- unique(d$table)
+  into <- stats::setNames(ids, ids)
+  for (i in seq_along(ids)[-1L]) {
+    t <- ids[i]
+    p <- into[[as.character(ids[i - 1L])]]
+    s <- sig(t)
+    if (nzchar(s) && identical(s, sig(p)) &&
+        min(d$page[d$table == t]) > max(d$page[d$table %in% ids[into == p]])) {
+      into[[as.character(t)]] <- p
+      r <- which(d$table == t)
+      d$.drop[r] <- cumprod(d$header[r]) == 1L
+    }
+  }
+  d$table <- unname(into[as.character(d$table)])
+  d <- d[!d$.drop, , drop = FALSE]
+  d$table <- match(d$table, unique(d$table))
+  d$row <- stats::ave(seq_len(nrow(d)), d$table, FUN = seq_along)
+  d$.drop <- NULL
+  d$.cx <- NULL
+  rownames(d) <- NULL
+  d
 }
 
 #' A prompt for an AI agent to survey a company's past TFLs for their look
