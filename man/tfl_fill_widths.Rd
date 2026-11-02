@@ -22,9 +22,10 @@ The ids of the reports given widths, invisibly.
 A report says its column widths: a table's \code{plan_columns(widths = )}, one
 width a printed column by name, a listing's \code{listing_col(width = )}.  For
 each report of the study that does not, this builds it (its ARD, its
-plan) and writes the widths rtfreporter uses when none are given
-(\code{\link[rtfreporter:default_col_widths]{rtfreporter::default_col_widths()}}: the row headings by their content,
-the value columns sharing the rest) into its file, as numbers to change;
+plan) and writes tflspec's default widths into its file, as numbers to
+change: each value column as wide as its cells and its header's words
+need, the row headings the rest of the page (as wide as their content,
+at least 12 characters), what is left shared by the value columns;
 a listing's columns get a width from their variables and headers.  Each
 report it writes widths into gets an assumption in
 \verb{spec/_assumptions.yml} (item \code{widths}): the widths are the default ones,

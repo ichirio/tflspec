@@ -5,7 +5,7 @@
 #  column widths, so the person changes numbers rather than adds an argument,
 #  and the number of columns is right.  tfl_fill_widths() writes them into a
 #  report that has none -- a table's from its built table
-#  (rtfreporter::default_col_widths(), one width a printed column, by name),
+#  (tflspec's rule, .tfl_default_widths(), one width a printed column, by name),
 #  a listing's columns' from their variables and headers -- and says so with
 #  an assumption (item `widths`) in spec/_assumptions.yml.  Its program then
 #  writes them too: the widths are in the report.
@@ -16,9 +16,10 @@
 #' A report says its column widths: a table's `plan_columns(widths = )`, one
 #' width a printed column by name, a listing's `listing_col(width = )`.  For
 #' each report of the study that does not, this builds it (its ARD, its
-#' plan) and writes the widths rtfreporter uses when none are given
-#' ([rtfreporter::default_col_widths()]: the row headings by their content,
-#' the value columns sharing the rest) into its file, as numbers to change;
+#' plan) and writes tflspec's default widths into its file, as numbers to
+#' change: each value column as wide as its cells and its header's words
+#' need, the row headings the rest of the page (as wide as their content,
+#' at least 12 characters), what is left shared by the value columns;
 #' a listing's columns get a width from their variables and headers.  Each
 #' report it writes widths into gets an assumption in
 #' `spec/_assumptions.yml` (item `widths`): the widths are the default ones,

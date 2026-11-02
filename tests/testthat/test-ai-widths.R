@@ -1,6 +1,6 @@
 # The AI's reports always say their column widths: what an answer leaves
-# out, R writes -- a table's once it is built (rtfreporter's
-# default_col_widths()), a listing's when the answer is read -- with the
+# out, R writes -- a table's once it is built (tflspec's rule,
+# .tfl_default_widths()), a listing's when the answer is read -- with the
 # assumption that they are the default ones
 
 test_that("a table with no widths gets the usual layout's in its report file, when read and when built", {
@@ -27,28 +27,16 @@ test_that("a table with no widths gets the usual layout's in its report file, wh
   expect_true(file.exists(file.path(d, "ai", "widths.yml")))
   res <- suppressMessages(tfl_ai_run(d, requests = c("demographics-1", "ae-1")))
   files <- res$reports$file[res$reports$request %in% c("demographics-1", "ae-1")]
-  # (rtfreporter's default_col_widths(): one width a printed column, by
-  # name; before it, the stub 3 -- a hierarchy's 4 -- to the values' 1)
-  dcw <- exists("default_col_widths", envir = asNamespace("rtfreporter"), inherits = FALSE)
+  # (tflspec's rule: one width a printed column, by name, in characters;
+  # the stub at least 12)
   for (f in files) {
     y <- yaml::read_yaml(file.path(d, f))
     pc <- Filter(function(it) identical(names(it), "plan_columns"), y$content)
     expect_length(pc, 1L)
     w <- pc[[1L]]$plan_columns$widths
-    if (dcw) {
-      expect_null(w$.values, info = f)
-      expect_true(length(w) >= 2L && all(unlist(w) > 0), info = f)
-    } else {
-      expect_identical(w$.values, 1L, info = f)
-      stub <- unlist(w[names(w) != ".values"])
-      expect_true(length(stub) >= 1L && all(stub >= 2L), info = f)
-    }
-  }
-  if (!dcw) {
-    # the AE table (a hierarchy): its stub 4
-    ae <- yaml::read_yaml(file.path(d, files[grepl("T-14-3-1", files)]))
-    w <- Filter(function(it) identical(names(it), "plan_columns"), ae$content)[[1L]]$plan_columns$widths
-    expect_true(any(unlist(w[names(w) != ".values"]) == 4L))
+    expect_null(w$.values, info = f)
+    expect_true(length(w) >= 2L && all(unlist(w) > 0), info = f)
+    expect_true(w[[1L]] >= 12L, info = f)
   }
   # each report whose widths R set says so: an assumption
   ass <- yaml::read_yaml(file.path(d, "spec", "_assumptions.yml"))
@@ -59,6 +47,27 @@ test_that("a table with no widths gets the usual layout's in its report file, wh
   res2 <- suppressMessages(tfl_ai_run(d, requests = c("demographics-1", "ae-1")))
   b <- res2$reports$built[res2$reports$request %in% c("demographics-1", "ae-1")]
   expect_true(all(b == "kept"))
+})
+
+test_that("the default rule: values as their cells and header words need, the stub the rest", {
+  w <- function(body, stub = 1L, ...) tflspec:::.tfl_default_widths(body, stub, ...)
+  b <- data.frame(row_label = c("Age (years)", "    Mean (SD)"),
+                  `Placebo____Value` = c("", "22.8 (10.38)"), check.names = FALSE)
+  x <- w(b)
+  # the value: "22.8 (10.38)" 12 + 2; the stub the page's rest
+  expect_identical(names(x), names(b))
+  expect_identical(unname(x), c(106L, 14L))
+  # a header word longer than the cells ("Placebo") sets the value's need
+  h <- data.frame(row_label = "n", `Placebo____Change from baseline` = "7", check.names = FALSE)
+  expect_true(w(h, page = 0L)[[2L]] >= nchar("baseline") + 2L)
+  # many value columns: the stub keeps its floor, the values their needs
+  many <- as.data.frame(c(list(row_label = "a long row heading of text"),
+                          stats::setNames(as.list(rep("100 (100.0%)", 12)), paste0("C", 1:12))))
+  y <- w(many)
+  expect_identical(unname(y[1L]), 12L)
+  expect_true(all(y[-1L] == 14L))
+  # a hierarchy's first column at least 20
+  expect_identical(unname(w(data.frame(row_label = "x", A = "1"), page = 0L, hier = TRUE)[1L]), 20L)
 })
 
 test_that("a table that says its widths is left as it is", {
