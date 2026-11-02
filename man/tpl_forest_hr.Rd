@@ -10,6 +10,10 @@ tpl_forest_hr(
   group = "TRT01A",
   subgroups = c("SEX", "AGEGR1"),
   comparison = NULL,
+  favours = NULL,
+  x_breaks = NULL,
+  size_by_n = FALSE,
+  bold_headings = FALSE,
   plot = NULL
 )
 
@@ -24,6 +28,15 @@ tpl_forest_layout(fig)
 
 \item{comparison}{The arm compared with the reference; \code{NULL}: every
 other arm, each row saying which.}
+
+\item{favours}{Two labels under the axis: \verb{Favours <left>} and
+\verb{Favours <right>}; \code{NULL}: none.}
+
+\item{x_breaks}{The hazard ratio axis's ticks; \code{NULL}: ggplot2's.}
+
+\item{size_by_n}{\code{TRUE}: each point's size by its subjects.}
+
+\item{bold_headings}{\code{TRUE}: the subgroups' headings bold.}
 
 \item{plot}{The figure's settings over the template's (\code{x_label},
 \code{y_by}, \code{legend} ..., as a designed figure's \verb{plot:}).}

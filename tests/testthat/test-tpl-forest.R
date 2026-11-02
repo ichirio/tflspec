@@ -18,6 +18,11 @@ test_that("forest_hr: the report's ARD (its Cox analyses) and the design that re
   expect_identical(vapply(x$content, `[[`, "", "fn"),
                    c("vline", "errorbar_h", "point", "text_column"))
   expect_identical(tfl_template_params("forest_hr")$subgroups$type, "vars")
+  y <- tfl_template_expand("forest_hr", list(param = "PFS", population = "SAF", favours = c("A", "B"),
+                                             x_breaks = c(0.5, 1, 2), size_by_n = TRUE))
+  expect_identical(vapply(y$content, `[[`, "", "fn"), c("vline", "errorbar_h", "geom", "text_column"))
+  expect_error(tfl_template_expand("forest_hr", list(param = "PFS", population = "SAF", favours = "A")),
+               "two labels")
 })
 
 test_that("in a study: the ARD built; A (the call, the layout) = B (the design) = the template SPEC", {
@@ -47,6 +52,17 @@ test_that("in a study: the ARD built; A (the call, the layout) = B (the design) 
   expect_s3_class(p, "ggplot")
   expect_s3_class(tpl_forest_layout(p), "patchwork")
   expect_error(tpl_forest_layout(ggplot2::ggplot()), "a forest of tpl_forest_hr")
+  # the shells' look (#579): favours labels, ticks, points by n, bold headings
+  q <- tpl_forest_hr(ard, group = TRT01A, subgroups = c(SEX, AGEGR1), favours = c("Drug A", "Drug B"),
+                     x_breaks = c(0.5, 1, 2), size_by_n = TRUE, bold_headings = TRUE)
+  b <- suppressWarnings(ggplot2::ggplot_build(q))
+  pts <- ggplot2::layer_data(q, 3L)
+  expect_true(length(unique(stats::na.omit(pts$size))) > 1L)
+  expect_true(all(stats::na.omit(b$layout$panel_params[[1L]]$x$get_labels()) %in% c("0.5", "1", "2")))
+  expect_match(q$labels$x %||% b$plot$labels$x, "<- Favours Drug A", fixed = TRUE)
+  face <- q$theme$axis.text.y$face
+  expect_true(all(c("bold", "plain") %in% face))
+  expect_s3_class(tpl_forest_layout(q), "patchwork")
 })
 
 test_that("comparison: the Cox model's reference is the other arm, whatever the arms' order", {
