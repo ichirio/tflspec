@@ -267,7 +267,10 @@ tfl_ai_decisions_write <- function(study_dir, x) {
       out$bad[id] <- sprintf("its `id` is %s, not the file's name: name the file after the id",
                              as.character(y$id)[1L])
     } else {
-      rd <- tryCatch(tfl_read_output(f), error = function(e) e)
+      # read as the file's id: the same report written another way is no error here
+      y_id <- y
+      y_id$id <- id
+      rd <- tryCatch(.output_from_list(y_id, f), error = function(e) e)
       if (inherits(rd, "error")) {
         why <- .ai_one_line(conditionMessage(rd))
         if (grepl("`args` is a named list", why, fixed = TRUE)) {
