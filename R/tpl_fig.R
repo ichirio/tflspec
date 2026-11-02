@@ -215,9 +215,10 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
 }
 
 .tpl_forest_design <- function(group = "TRT01A", subgroups = c("SEX", "AGEGR1"),
-                               comparison = NULL) {
+                               comparison = NULL, look = list()) {
   d <- tfl_fig_template("forest_hr", group = group,
                         subgroups = paste(subgroups, collapse = ", "), comparison = comparison)
+  d <- .tpl_forest_look(d, look, length(subgroups) > 0L)
   # the ARD read and the rows made: all the call's (no data steps)
   keep <- vapply(d$data, function(st) st$step %in% c("ard_stats", "code"), NA)
   layers <- Filter(function(l) !identical(l$layer, "text_column"), d$layers)
@@ -237,10 +238,57 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
             doc = "the subgroups, each its levels' hazard ratios"),
   tfl_param("comparison", NULL, type = "levels", of = "group",
             doc = "the arm compared with the reference; NULL: every other arm"),
+  tfl_param("favours", NULL, type = "text", multiple = TRUE,
+            doc = "two labels under the axis, Favours <left> and Favours <right> (the arms); NULL: none"),
+  tfl_param("x_breaks", NULL, type = "number", multiple = TRUE,
+            doc = "the hazard ratio axis's ticks (0.25, 0.5, 1, 2, 4); NULL: ggplot2's"),
+  tfl_param("size_by_n", FALSE, type = "flag",
+            doc = "TRUE: each point's size by its subjects (n)"),
+  tfl_param("bold_headings", FALSE, type = "flag",
+            doc = "TRUE: the subgroups' headings bold"),
   tfl_param("time", "AVAL", type = "vars", doc = "the time variable"),
   tfl_param("censor", "CNSR", type = "vars", doc = "the censoring variable"),
   .tpl_where_param(doc = "the records kept besides the parameter (R)")
 )
+
+# The forest's look its arguments ask for (#579): the favours labels under
+# the axis, the axis's ticks, the points sized by the subjects, the
+# subgroups' headings bold
+.tpl_forest_look <- function(d, look, headings = TRUE) {
+  fav <- look$favours
+  if (length(fav)) {
+    if (length(fav) != 2L) .ard_stop("forest_hr: `favours` is two labels, the left's and the right's.")
+    d$plot$x_label <- paste0(d$plot$x_label, "\n<- Favours ", fav[1L], strrep(" ", 12L),
+                             "Favours ", fav[2L], " ->")
+  }
+  if (length(look$x_breaks)) {
+    d$plot$add <- c(d$plot$add, list(list(fn = "scale_x_log10",
+                                          args = list(breaks = as.numeric(look$x_breaks)))))
+  }
+  if (isTRUE(look$size_by_n)) {
+    i <- which(vapply(d$layers, function(l) identical(l$layer, "point"), NA))
+    d$layers[[i]] <- list(layer = "geom", geom = "geom_point", data = "est",
+                          aes = "x = estimate | y = y | size = n_obs",
+                          params = "shape = 15, na.rm = TRUE")
+    d$plot$add <- c(d$plot$add, list(list(fn = "scale_size_area",
+                                          args = list(max_size = 5, guide = "none"))))
+  }
+  if (isTRUE(look$bold_headings) && headings) {
+    for (k in seq_along(d$plot$add)) {
+      a <- d$plot$add[[k]]
+      if (identical(a$fn, "theme") && !is.null(a$args$axis.text.y)) {
+        # (the axis's labels in the order of their breaks, est$y ascending)
+        d$plot$add[[k]]$args$axis.text.y$args$face <-
+          tfl_r("ifelse(est$head[order(est$y)], \"bold\", \"plain\")")
+      }
+    }
+  }
+  d
+}
+
+.tpl_forest_look_args <- function(a) {
+  a[intersect(names(a), c("favours", "x_breaks", "size_by_n", "bold_headings"))]
+}
 
 .tpl_forest_body <- function(a, ctx) {
   set <- paste(tolower(a$data), tolower(a$population), tolower(a$param), sep = "_")
@@ -261,7 +309,7 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
     analyses = lapply(seq_len(nrow(an)), function(i) list(
       id = an$analysis_id[i], label = an$label[i], method = "custom", data = set,
       code = tfl_r(an$code[i]), purpose = "SECONDARY OUTCOME MEASURE")))
-  f <- .tpl_forest_design(a$group, a$subgroups, a$comparison)
+  f <- .tpl_forest_design(a$group, a$subgroups, a$comparison, .tpl_forest_look_args(a))
   c(list(ard = ard), .tpl_fig_body_of(f, list(), ctx))
 }
 
@@ -280,6 +328,11 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
 #' @param subgroups The subgroups (`c(SEX, AGEGR1)`), bare or as text.
 #' @param comparison The arm compared with the reference; `NULL`: every
 #'   other arm, each row saying which.
+#' @param favours Two labels under the axis: `Favours <left>` and
+#'   `Favours <right>`; `NULL`: none.
+#' @param x_breaks The hazard ratio axis's ticks; `NULL`: ggplot2's.
+#' @param size_by_n `TRUE`: each point's size by its subjects.
+#' @param bold_headings `TRUE`: the subgroups' headings bold.
 #' @param fig `tpl_forest_layout()`: the forest, with the report's own
 #'   items.
 #' @inheritParams tpl_mean_se
@@ -288,9 +341,11 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
 #' @seealso [tfl_template_expand()] for its ARD and design (the B use).
 #' @export
 tpl_forest_hr <- function(ard, group = "TRT01A", subgroups = c("SEX", "AGEGR1"),
-                          comparison = NULL, plot = NULL) {
+                          comparison = NULL, favours = NULL, x_breaks = NULL, size_by_n = FALSE,
+                          bold_headings = FALSE, plot = NULL) {
   f <- .tpl_forest_design(.tpl_col(rlang::enquo(group)), .tpl_cols(rlang::enquo(subgroups)),
-                          comparison)
+                          comparison, list(favours = favours, x_breaks = x_breaks,
+                                           size_by_n = size_by_n, bold_headings = bold_headings))
   f$content <- Filter(function(it) !identical(it$fn, "text_column"), f$content)
   .tpl_fig_draw("forest_hr", f, ard, plot, as = "ard")
 }
