@@ -331,7 +331,7 @@
     out
   }
   a <- pick("stub_", c(vars = "vars", name = "name", indent = "indent",
-                       summary = "group_summary", before = "before"))
+                       summary = "group_summary", before = "before", heading = "heading"))
   if (length(a)) do.call(add, c(list("plan_stub"), a))
   if (isTRUE(lay[["group_page"]])) {
     add("plan_paginate_group", col = lay[["group_col"]],
@@ -1004,11 +1004,11 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
         }
       },
       plan_stub = {
-        # (its heading has no column: the item goes whole in content_more)
-        if (!is.null(named$heading)) miss("plan_stub", "heading")
         map <- c(vars = "stub_vars", name = "stub_name", indent = "stub_indent",
-                 group_summary = "stub_summary", before = "stub_before")
+                 group_summary = "stub_summary", before = "stub_before", heading = "stub_heading")
         for (k in intersect(names(named), names(map))) lay[[map[[k]]]] <- named[[k]]
+        # (no heading, "", is a quoted cell: a blank one is the default)
+        if (identical(named$heading, "")) lay$stub_heading <- "\"\""
       },
       plan_paginate_group = {
         lay$group_page <- TRUE

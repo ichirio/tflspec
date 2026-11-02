@@ -1471,6 +1471,10 @@ rtf_footer:
         description: 'TRUE / FALSE: fold the stub before cell styles and sorting see
           the rows (plan_stub(before = )); blank: FALSE.'
         example: 'TRUE'
+      - column: stub_heading
+        description: 'The stub column''s heading (plan_stub(heading = )); "" (quoted):
+          no heading; blank: the default.'
+        example: '""'
       - column: colpages_every
         description: 'Value columns a column page, a whole number (plan_paginate_cols(every
           = )); blank: no column pages.'

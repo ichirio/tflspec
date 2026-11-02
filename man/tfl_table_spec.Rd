@@ -273,7 +273,7 @@ the report's \code{rtf_tables(auto_section = , auto_title = )}.}
 \item{\verb{blank_*}}{\code{\link[rtfreporter:plan_blanks]{rtfreporter::plan_blanks()}}: \code{where}, \code{first}, \code{last},
 \code{counted}.}
 \item{\verb{stub_*}}{\code{\link[rtfreporter:plan_stub]{rtfreporter::plan_stub()}}: \code{vars}, \code{name}, \code{indent}, \code{summary},
-\code{before}.}
+\code{before}, \code{heading} (the stub column's heading; \code{""}, quoted, for none).}
 \item{\verb{colpages_*}}{\code{\link[rtfreporter:plan_paginate_cols]{rtfreporter::plan_paginate_cols()}}: \code{every}, \code{at},
 \code{cut_by} (a separator in the column names, \verb{____}: one block per
 key), \code{keep}, \code{fit} (\code{TRUE}: every block on page 1's scale; \code{FALSE}:
