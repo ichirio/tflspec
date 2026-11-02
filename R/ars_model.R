@@ -131,7 +131,8 @@
     total_n = "N",
     proportion_ci = c("N", "n", "estimate", "conf.low", "conf.high"),
     mean_ci = c("estimate", "conf.low", "conf.high"),
-    ttest = , wilcox = , chisq = , fisher = , cmh = , logrank = "p.value",
+    ttest = , wilcox = , chisq = , fisher = , cmh = , logrank = , kruskal = ,
+    paired_ttest = , paired_wilcox = , mcnemar = "p.value",
     "result")
 }
 
@@ -154,8 +155,8 @@
   if (method %in% c("continuous", "missing", "mean_ci")) return("value")
   if (method %in% c("categorical", "dichotomous", "max", "hierarchical",
                     "subjects", "proportion_ci", "total_n")) return("count")
-  if (method %in% c("ttest", "wilcox")) return("test_value")
-  if (method %in% c("chisq", "fisher", "cmh")) return("test_count")
+  if (method %in% c("ttest", "wilcox", "kruskal")) return("test_value")
+  if (method %in% c("chisq", "fisher", "cmh", "mcnemar")) return("test_count")
   "other"
 }
 

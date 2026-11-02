@@ -27,12 +27,13 @@ sch <- tflspec::tfl_schema()
 sch <- sch[vapply(sch, function(e) identical(e$package %||% "rtfreporter", "rtfreporter"), NA)]
 
 # the page: functions (R/spec_report.R passes on the schema's arguments)
-page_fns <- c("rtf_page", "rtf_default_format", "rtf_document", "rtf_tables",
+page_fns <- c("rtf_page", "rtf_style", "rtf_document", "rtf_tables",
               "rtf_figures", "rtf_titles", "rtf_footnotes", "rtf_header",
               "rtf_footer", "generate_rtfreport")
 # arguments tflspec fills itself (the pipe, the page's lines, the study)
 implicit <- list(
-  rtf_document = c(page = "page.rtf_page", default_format = "page.rtf_default_format",
+  rtf_document = c(page = "page.rtf_page",
+                   style = "page.rtf_style (an old SPEC's page.rtf_default_format read into it)",
                    tokens = "page.tokens (+ OUTPUT_ID / OUTPUT_LABEL)",
                    file = "the study's RTF path (toc / settings)"),
   rtf_tables = c(doc = "the pipe", tables = "the content",
@@ -83,7 +84,9 @@ via_doc <- c(program = "rtf_document(program =)",
 # deprecated and superseded arguments: no SPEC item by design
 deprecated <- c(rtf_tables.read_gt = "deprecated: as_rtftables() reads a gt table",
                 rtf_section.secinfo = "superseded by header = / footer =",
-                generate_rtfreport.report = "superseded by doc")
+                generate_rtfreport.report = "superseded by doc",
+                rtf_document.default_format = "deprecated: style = rtf_style() (page.rtf_style)",
+                rtf_style.... = "not an argument: rtf_style() takes no other (an error)")
 # rtf_tables()' table-format arguments, which copy rtftable()'s: deprecated
 # in rtfreporter 0.8.x, removed in 0.9.0 (the plan verbs say them)
 fmt_args <- get0(".rtf_tables_fmt_args", asNamespace("rtfreporter"), ifnotfound = character())

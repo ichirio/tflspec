@@ -233,3 +233,19 @@ cat(sprintf("cards %s, cardx %s\n", utils::packageVersion("cards"),
 cat("all:               ", pct(cov), "\n")
 for (g in unique(cov$group)) cat(sprintf("%-19s %s\n", g, pct(cov[cov$group == g, ])))
 cat("weight-3 functions:", pct(cov[cov$weight == 3, ]), "\n")
+
+# Since 2026-11-02: the ard_*() functions a method keyword names (the name a
+# GUI offers and a person reads: "Kruskal-Wallis test", not
+# cardx::ard_stats_kruskal_test), by weight.  A keyword writes the same code
+# as its function: this measures how a SPEC is written, not what it can say.
+kw_calls <- tfl_ard_methods()$call
+fa <- unique(cov[cov$group %in% c("cards ard_*()", "cardx ard_*()") &
+                   !startsWith(cov$note, "[by design]"),
+                 c("package", "function", "weight")])
+fa$keyword <- paste0(fa$package, "::", fa$`function`) %in% kw_calls
+for (w in 3:1) {
+  d <- fa[fa$weight == w, ]
+  cat(sprintf("weight-%d ard_*() with a keyword: %d of %d%s\n", w, sum(d$keyword),
+              nrow(d), if (any(!d$keyword)) paste0(" (not: ", paste(
+                d$`function`[!d$keyword], collapse = ", "), ")") else ""))
+}

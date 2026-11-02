@@ -172,9 +172,9 @@
 "cardx","ard_stats_oneway_test","formula","yes","method: cardx::ard_stats_oneway_test; args","inst/ard/args.csv: formula; its value judged","cardx ard_*()",2
 "cardx","ard_stats_oneway_test","data","yes","method: cardx::ard_stats_oneway_test; column `data`","the analysis row's column","cardx ard_*()",2
 "cardx","ard_stats_oneway_test","var.equal","yes","method: cardx::ard_stats_oneway_test; args","passed on to stats::oneway.test; inst/ard/passed_args.csv: logical; its value judged","cardx ard_*()",2
-"cardx","ard_stats_kruskal_test","data","yes","method: cardx::ard_stats_kruskal_test; column `data`","the analysis row's column","cardx ard_*()",2
-"cardx","ard_stats_kruskal_test","by","yes","method: cardx::ard_stats_kruskal_test; column `by`","the analysis row's column","cardx ard_*()",2
-"cardx","ard_stats_kruskal_test","variables","yes","method: cardx::ard_stats_kruskal_test; column `variables`","the analysis row's column","cardx ard_*()",2
+"cardx","ard_stats_kruskal_test","data","yes","method: kruskal (or cardx::ard_stats_kruskal_test); column `data`","the analysis row's column","cardx ard_*()",2
+"cardx","ard_stats_kruskal_test","by","yes","method: kruskal (or cardx::ard_stats_kruskal_test); column `by`","the analysis row's column","cardx ard_*()",2
+"cardx","ard_stats_kruskal_test","variables","yes","method: kruskal (or cardx::ard_stats_kruskal_test); column `variables`","the analysis row's column","cardx ard_*()",2
 "cardx","ard_stats_mantelhaen_test","data","yes","method: cmh (or cardx::ard_stats_mantelhaen_test); column `data`","the analysis row's column","cardx ard_*()",3
 "cardx","ard_stats_mantelhaen_test","by","yes","method: cmh (or cardx::ard_stats_mantelhaen_test); column `by`","the analysis row's column","cardx ard_*()",3
 "cardx","ard_stats_mantelhaen_test","variables","yes","method: cmh (or cardx::ard_stats_mantelhaen_test); column `variables`","the analysis row's column","cardx ard_*()",3
@@ -188,26 +188,26 @@
 "cardx","ard_stats_anova","method.args","yes","method: cardx::ard_stats_anova; args","inst/ard/args.csv: code; its value judged","cardx ard_*()",2
 "cardx","ard_stats_anova","package","yes","method: cardx::ard_stats_anova; args","inst/ard/args.csv: text; its value judged","cardx ard_*()",2
 "cardx","ard_stats_anova","method_text","yes","method: cardx::ard_stats_anova; args","inst/ard/args.csv: text; its value judged","cardx ard_*()",2
-"cardx","ard_stats_paired_t_test","data","yes","method: cardx::ard_stats_paired_t_test; column `data`","the analysis row's column","cardx ard_*()",2
-"cardx","ard_stats_paired_t_test","by","yes","method: cardx::ard_stats_paired_t_test; column `by`","the analysis row's column","cardx ard_*()",2
-"cardx","ard_stats_paired_t_test","variables","yes","method: cardx::ard_stats_paired_t_test; column `variables`","the analysis row's column","cardx ard_*()",2
-"cardx","ard_stats_paired_t_test","id","yes","method: cardx::ard_stats_paired_t_test; args","inst/ard/args.csv: column; its value judged","cardx ard_*()",2
-"cardx","ard_stats_paired_t_test","conf.level","yes","method: cardx::ard_stats_paired_t_test; args","inst/ard/args.csv: number; its value judged","cardx ard_*()",2
-"cardx","ard_stats_paired_t_test","alternative","yes","method: cardx::ard_stats_paired_t_test; args","passed on to stats::t.test; inst/ard/passed_args.csv: choice; its value judged","cardx ard_*()",2
-"cardx","ard_stats_paired_t_test","mu","yes","method: cardx::ard_stats_paired_t_test; args","passed on to stats::t.test; inst/ard/passed_args.csv: number; its value judged","cardx ard_*()",2
-"cardx","ard_stats_paired_wilcox_test","data","yes","method: cardx::ard_stats_paired_wilcox_test; column `data`","the analysis row's column","cardx ard_*()",2
-"cardx","ard_stats_paired_wilcox_test","by","yes","method: cardx::ard_stats_paired_wilcox_test; column `by`","the analysis row's column","cardx ard_*()",2
-"cardx","ard_stats_paired_wilcox_test","variables","yes","method: cardx::ard_stats_paired_wilcox_test; column `variables`","the analysis row's column","cardx ard_*()",2
-"cardx","ard_stats_paired_wilcox_test","id","yes","method: cardx::ard_stats_paired_wilcox_test; args","inst/ard/args.csv: column; its value judged","cardx ard_*()",2
-"cardx","ard_stats_paired_wilcox_test","conf.level","yes","method: cardx::ard_stats_paired_wilcox_test; args","inst/ard/args.csv: number; its value judged","cardx ard_*()",2
-"cardx","ard_stats_paired_wilcox_test","alternative","yes","method: cardx::ard_stats_paired_wilcox_test; args","passed on to stats::wilcox.test; inst/ard/passed_args.csv: choice; its value judged","cardx ard_*()",2
-"cardx","ard_stats_paired_wilcox_test","mu","yes","method: cardx::ard_stats_paired_wilcox_test; args","passed on to stats::wilcox.test; inst/ard/passed_args.csv: number; its value judged","cardx ard_*()",2
-"cardx","ard_stats_paired_wilcox_test","exact","yes","method: cardx::ard_stats_paired_wilcox_test; args","passed on to stats::wilcox.test; inst/ard/passed_args.csv: logical; its value judged","cardx ard_*()",2
-"cardx","ard_stats_paired_wilcox_test","correct","yes","method: cardx::ard_stats_paired_wilcox_test; args","passed on to stats::wilcox.test; inst/ard/passed_args.csv: logical; its value judged","cardx ard_*()",2
-"cardx","ard_stats_mcnemar_test","data","yes","method: cardx::ard_stats_mcnemar_test; column `data`","the analysis row's column","cardx ard_*()",2
-"cardx","ard_stats_mcnemar_test","by","yes","method: cardx::ard_stats_mcnemar_test; column `by`","the analysis row's column","cardx ard_*()",2
-"cardx","ard_stats_mcnemar_test","variables","yes","method: cardx::ard_stats_mcnemar_test; column `variables`","the analysis row's column","cardx ard_*()",2
-"cardx","ard_stats_mcnemar_test","correct","yes","method: cardx::ard_stats_mcnemar_test; args","passed on to stats::mcnemar.test; inst/ard/passed_args.csv: logical; its value judged","cardx ard_*()",2
+"cardx","ard_stats_paired_t_test","data","yes","method: paired_ttest (or cardx::ard_stats_paired_t_test); column `data`","the analysis row's column","cardx ard_*()",2
+"cardx","ard_stats_paired_t_test","by","yes","method: paired_ttest (or cardx::ard_stats_paired_t_test); column `by`","the analysis row's column","cardx ard_*()",2
+"cardx","ard_stats_paired_t_test","variables","yes","method: paired_ttest (or cardx::ard_stats_paired_t_test); column `variables`","the analysis row's column","cardx ard_*()",2
+"cardx","ard_stats_paired_t_test","id","yes","method: paired_ttest (or cardx::ard_stats_paired_t_test); args","inst/ard/args.csv: column; its value judged","cardx ard_*()",2
+"cardx","ard_stats_paired_t_test","conf.level","yes","method: paired_ttest (or cardx::ard_stats_paired_t_test); args","inst/ard/args.csv: number; its value judged","cardx ard_*()",2
+"cardx","ard_stats_paired_t_test","alternative","yes","method: paired_ttest (or cardx::ard_stats_paired_t_test); args","passed on to stats::t.test; inst/ard/passed_args.csv: choice; its value judged","cardx ard_*()",2
+"cardx","ard_stats_paired_t_test","mu","yes","method: paired_ttest (or cardx::ard_stats_paired_t_test); args","passed on to stats::t.test; inst/ard/passed_args.csv: number; its value judged","cardx ard_*()",2
+"cardx","ard_stats_paired_wilcox_test","data","yes","method: paired_wilcox (or cardx::ard_stats_paired_wilcox_test); column `data`","the analysis row's column","cardx ard_*()",2
+"cardx","ard_stats_paired_wilcox_test","by","yes","method: paired_wilcox (or cardx::ard_stats_paired_wilcox_test); column `by`","the analysis row's column","cardx ard_*()",2
+"cardx","ard_stats_paired_wilcox_test","variables","yes","method: paired_wilcox (or cardx::ard_stats_paired_wilcox_test); column `variables`","the analysis row's column","cardx ard_*()",2
+"cardx","ard_stats_paired_wilcox_test","id","yes","method: paired_wilcox (or cardx::ard_stats_paired_wilcox_test); args","inst/ard/args.csv: column; its value judged","cardx ard_*()",2
+"cardx","ard_stats_paired_wilcox_test","conf.level","yes","method: paired_wilcox (or cardx::ard_stats_paired_wilcox_test); args","inst/ard/args.csv: number; its value judged","cardx ard_*()",2
+"cardx","ard_stats_paired_wilcox_test","alternative","yes","method: paired_wilcox (or cardx::ard_stats_paired_wilcox_test); args","passed on to stats::wilcox.test; inst/ard/passed_args.csv: choice; its value judged","cardx ard_*()",2
+"cardx","ard_stats_paired_wilcox_test","mu","yes","method: paired_wilcox (or cardx::ard_stats_paired_wilcox_test); args","passed on to stats::wilcox.test; inst/ard/passed_args.csv: number; its value judged","cardx ard_*()",2
+"cardx","ard_stats_paired_wilcox_test","exact","yes","method: paired_wilcox (or cardx::ard_stats_paired_wilcox_test); args","passed on to stats::wilcox.test; inst/ard/passed_args.csv: logical; its value judged","cardx ard_*()",2
+"cardx","ard_stats_paired_wilcox_test","correct","yes","method: paired_wilcox (or cardx::ard_stats_paired_wilcox_test); args","passed on to stats::wilcox.test; inst/ard/passed_args.csv: logical; its value judged","cardx ard_*()",2
+"cardx","ard_stats_mcnemar_test","data","yes","method: mcnemar (or cardx::ard_stats_mcnemar_test); column `data`","the analysis row's column","cardx ard_*()",2
+"cardx","ard_stats_mcnemar_test","by","yes","method: mcnemar (or cardx::ard_stats_mcnemar_test); column `by`","the analysis row's column","cardx ard_*()",2
+"cardx","ard_stats_mcnemar_test","variables","yes","method: mcnemar (or cardx::ard_stats_mcnemar_test); column `variables`","the analysis row's column","cardx ard_*()",2
+"cardx","ard_stats_mcnemar_test","correct","yes","method: mcnemar (or cardx::ard_stats_mcnemar_test); args","passed on to stats::mcnemar.test; inst/ard/passed_args.csv: logical; its value judged","cardx ard_*()",2
 "cardx","ard_stats_mcnemar_test_long","data","yes","method: cardx::ard_stats_mcnemar_test_long; column `data`","the analysis row's column","cardx ard_*()",2
 "cardx","ard_stats_mcnemar_test_long","by","yes","method: cardx::ard_stats_mcnemar_test_long; column `by`","the analysis row's column","cardx ard_*()",2
 "cardx","ard_stats_mcnemar_test_long","variables","yes","method: cardx::ard_stats_mcnemar_test_long; column `variables`","the analysis row's column","cardx ard_*()",2
@@ -262,21 +262,21 @@
 "cardx","ard_smd_smd","conf.level","yes","method: cardx::ard_smd_smd; args","inst/ard/args.csv: number; its value judged","cardx ard_*()",2
 "cardx","ard_smd_smd","gref","yes","method: cardx::ard_smd_smd; args","passed on to smd::smd; inst/ard/passed_args.csv: number; its value judged","cardx ard_*()",2
 "cardx","ard_smd_smd","na.rm","yes","method: cardx::ard_smd_smd; args","passed on to smd::smd; inst/ard/passed_args.csv: logical; its value judged","cardx ard_*()",2
-"cardx","ard_regression","x","yes","method: cardx::ard_regression; column `data`","the analysis row's column","cardx ard_*()",3
-"cardx","ard_regression","formula","yes","method: cardx::ard_regression; args","inst/ard/args.csv: formula; its value judged","cardx ard_*()",3
-"cardx","ard_regression","method","yes","method: cardx::ard_regression; args","inst/ard/args.csv: text; its value judged","cardx ard_*()",3
-"cardx","ard_regression","method.args","yes","method: cardx::ard_regression; args","inst/ard/args.csv: code; its value judged","cardx ard_*()",3
-"cardx","ard_regression","package","yes","method: cardx::ard_regression; args","inst/ard/args.csv: text; its value judged","cardx ard_*()",3
-"cardx","ard_regression","tidy_fun","yes","method: cardx::ard_regression; args","inst/ard/args.csv: code; its value judged","cardx ard_*()",3
-"cardx","ard_regression","exponentiate","yes","method: cardx::ard_regression; args","passed on to broom.helpers::tidy_plus_plus; inst/ard/passed_args.csv: logical; its value judged","cardx ard_*()",3
-"cardx","ard_regression","conf.level","yes","method: cardx::ard_regression; args","passed on to broom.helpers::tidy_plus_plus; inst/ard/passed_args.csv: number; its value judged","cardx ard_*()",3
-"cardx","ard_regression","conf.int","yes","method: cardx::ard_regression; args","passed on to broom.helpers::tidy_plus_plus; inst/ard/passed_args.csv: logical; its value judged","cardx ard_*()",3
-"cardx","ard_regression","intercept","yes","method: cardx::ard_regression; args","passed on to broom.helpers::tidy_plus_plus; inst/ard/passed_args.csv: logical; its value judged","cardx ard_*()",3
-"cardx","ard_regression","add_reference_rows","yes","method: cardx::ard_regression; args","passed on to broom.helpers::tidy_plus_plus; inst/ard/passed_args.csv: logical; its value judged","cardx ard_*()",3
-"cardx","ard_regression","add_header_rows","yes","method: cardx::ard_regression; args","passed on to broom.helpers::tidy_plus_plus; inst/ard/passed_args.csv: logical; its value judged","cardx ard_*()",3
-"cardx","ard_regression","add_n","yes","method: cardx::ard_regression; args","passed on to broom.helpers::tidy_plus_plus; inst/ard/passed_args.csv: logical; its value judged","cardx ard_*()",3
-"cardx","ard_regression","show_single_row","yes","method: cardx::ard_regression; args","passed on to broom.helpers::tidy_plus_plus; inst/ard/passed_args.csv: columns; its value judged","cardx ard_*()",3
-"cardx","ard_regression","include","yes","method: cardx::ard_regression; args","passed on to broom.helpers::tidy_plus_plus; inst/ard/passed_args.csv: columns; its value judged","cardx ard_*()",3
+"cardx","ard_regression","x","yes","method: regression (or cardx::ard_regression); column `data`","the analysis row's column","cardx ard_*()",3
+"cardx","ard_regression","formula","yes","method: regression (or cardx::ard_regression); args","inst/ard/args.csv: formula; its value judged","cardx ard_*()",3
+"cardx","ard_regression","method","yes","method: regression (or cardx::ard_regression); args","inst/ard/args.csv: text; its value judged","cardx ard_*()",3
+"cardx","ard_regression","method.args","yes","method: regression (or cardx::ard_regression); args","inst/ard/args.csv: code; its value judged","cardx ard_*()",3
+"cardx","ard_regression","package","yes","method: regression (or cardx::ard_regression); args","inst/ard/args.csv: text; its value judged","cardx ard_*()",3
+"cardx","ard_regression","tidy_fun","yes","method: regression (or cardx::ard_regression); args","inst/ard/args.csv: code; its value judged","cardx ard_*()",3
+"cardx","ard_regression","exponentiate","yes","method: regression (or cardx::ard_regression); args","passed on to broom.helpers::tidy_plus_plus; inst/ard/passed_args.csv: logical; its value judged","cardx ard_*()",3
+"cardx","ard_regression","conf.level","yes","method: regression (or cardx::ard_regression); args","passed on to broom.helpers::tidy_plus_plus; inst/ard/passed_args.csv: number; its value judged","cardx ard_*()",3
+"cardx","ard_regression","conf.int","yes","method: regression (or cardx::ard_regression); args","passed on to broom.helpers::tidy_plus_plus; inst/ard/passed_args.csv: logical; its value judged","cardx ard_*()",3
+"cardx","ard_regression","intercept","yes","method: regression (or cardx::ard_regression); args","passed on to broom.helpers::tidy_plus_plus; inst/ard/passed_args.csv: logical; its value judged","cardx ard_*()",3
+"cardx","ard_regression","add_reference_rows","yes","method: regression (or cardx::ard_regression); args","passed on to broom.helpers::tidy_plus_plus; inst/ard/passed_args.csv: logical; its value judged","cardx ard_*()",3
+"cardx","ard_regression","add_header_rows","yes","method: regression (or cardx::ard_regression); args","passed on to broom.helpers::tidy_plus_plus; inst/ard/passed_args.csv: logical; its value judged","cardx ard_*()",3
+"cardx","ard_regression","add_n","yes","method: regression (or cardx::ard_regression); args","passed on to broom.helpers::tidy_plus_plus; inst/ard/passed_args.csv: logical; its value judged","cardx ard_*()",3
+"cardx","ard_regression","show_single_row","yes","method: regression (or cardx::ard_regression); args","passed on to broom.helpers::tidy_plus_plus; inst/ard/passed_args.csv: columns; its value judged","cardx ard_*()",3
+"cardx","ard_regression","include","yes","method: regression (or cardx::ard_regression); args","passed on to broom.helpers::tidy_plus_plus; inst/ard/passed_args.csv: columns; its value judged","cardx ard_*()",3
 "cardx","ard_regression_basic","x","yes","method: cardx::ard_regression_basic; column `data`","the analysis row's column","cardx ard_*()",2
 "cardx","ard_regression_basic","formula","yes","method: cardx::ard_regression_basic; args","inst/ard/args.csv: formula; its value judged","cardx ard_*()",2
 "cardx","ard_regression_basic","method","yes","method: cardx::ard_regression_basic; args","inst/ard/args.csv: text; its value judged","cardx ard_*()",2
@@ -309,9 +309,9 @@
 "cardx","ard_emmeans_contrast","response_type","yes","method: lsmeans_diff (or cardx::ard_emmeans_contrast); args","inst/ard/args.csv: choice; its value judged","cardx ard_*()",3
 "cardx","ard_emmeans_contrast","conf.level","yes","method: lsmeans_diff (or cardx::ard_emmeans_contrast); args","inst/ard/args.csv: number; its value judged","cardx ard_*()",3
 "cardx","ard_emmeans_contrast","primary_covariate","yes","method: lsmeans_diff (or cardx::ard_emmeans_contrast); args","inst/ard/args.csv: text; its value judged","cardx ard_*()",3
-"cardx","ard_car_anova","x","yes","method: cardx::ard_car_anova; args","inst/ard/args.csv: code; its value judged","cardx ard_*()",3
-"cardx","ard_car_anova","type","yes","method: cardx::ard_car_anova; args","passed on to car::Anova; inst/ard/passed_args.csv: choice; its value judged","cardx ard_*()",3
-"cardx","ard_car_anova","test.statistic","yes","method: cardx::ard_car_anova; args","passed on to car::Anova; inst/ard/passed_args.csv: choice; its value judged","cardx ard_*()",3
+"cardx","ard_car_anova","x","yes","method: anova (or cardx::ard_car_anova); args","inst/ard/args.csv: code; its value judged","cardx ard_*()",3
+"cardx","ard_car_anova","type","yes","method: anova (or cardx::ard_car_anova); args","passed on to car::Anova; inst/ard/passed_args.csv: choice; its value judged","cardx ard_*()",3
+"cardx","ard_car_anova","test.statistic","yes","method: anova (or cardx::ard_car_anova); args","passed on to car::Anova; inst/ard/passed_args.csv: choice; its value judged","cardx ard_*()",3
 "cardx","ard_car_vif","x","yes","method: cardx::ard_car_vif; args","inst/ard/args.csv: code; its value judged","cardx ard_*()",1
 "cardx","ard_aod_wald_test","x","yes","method: cardx::ard_aod_wald_test; args","inst/ard/args.csv: code; its value judged","cardx ard_*()",1
 "cardx","ard_aod_wald_test","tidy_fun","yes","method: cardx::ard_aod_wald_test; args","inst/ard/args.csv: code; its value judged","cardx ard_*()",1
@@ -322,9 +322,9 @@
 "cardx","ard_survival_survfit","probs","yes","method: km (or cardx::ard_survival_survfit); args","inst/ard/args.csv: number; its value judged","cardx ard_*()",3
 "cardx","ard_survival_survfit","type","yes","method: km (or cardx::ard_survival_survfit); args","inst/ard/args.csv: choice; its value judged","cardx ard_*()",3
 "cardx","ard_survival_survfit","method.args","yes","method: km (or cardx::ard_survival_survfit); args","inst/ard/args.csv: code; its value judged","cardx ard_*()",3
-"cardx","ard_survival_survfit_diff","x","yes","method: cardx::ard_survival_survfit_diff; args","inst/ard/args.csv: code; its value judged","cardx ard_*()",2
-"cardx","ard_survival_survfit_diff","times","yes","method: cardx::ard_survival_survfit_diff; args","inst/ard/args.csv: number; its value judged","cardx ard_*()",2
-"cardx","ard_survival_survfit_diff","conf.level","yes","method: cardx::ard_survival_survfit_diff; args","inst/ard/args.csv: number; its value judged","cardx ard_*()",2
+"cardx","ard_survival_survfit_diff","x","yes","method: km_diff (or cardx::ard_survival_survfit_diff); args","inst/ard/args.csv: code; its value judged","cardx ard_*()",2
+"cardx","ard_survival_survfit_diff","times","yes","method: km_diff (or cardx::ard_survival_survfit_diff); args","inst/ard/args.csv: number; its value judged","cardx ard_*()",2
+"cardx","ard_survival_survfit_diff","conf.level","yes","method: km_diff (or cardx::ard_survival_survfit_diff); args","inst/ard/args.csv: number; its value judged","cardx ard_*()",2
 "cardx","ard_survival_survdiff","formula","yes","method: logrank (or cardx::ard_survival_survdiff); args","inst/ard/args.csv: formula; its value judged","cardx ard_*()",3
 "cardx","ard_survival_survdiff","data","yes","method: logrank (or cardx::ard_survival_survdiff); column `data`","the analysis row's column","cardx ard_*()",3
 "cardx","ard_survival_survdiff","rho","yes","method: logrank (or cardx::ard_survival_survdiff); args","inst/ard/args.csv: number; its value judged","cardx ard_*()",3

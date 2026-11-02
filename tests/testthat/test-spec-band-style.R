@@ -59,3 +59,24 @@ test_that("the study setup: its bands' look in study_header / study_footer", {
   code <- paste(tflspec:::.study_setup_code(st), collapse = "\n")
   expect_match(code, "study_header <- rtf_header\\([^|]*border = rtf_border\\(bottom = TRUE\\)")
 })
+
+test_that("a band's text colour: page.rtf_header.color / page.rtf_footer.color", {
+  expect_identical(nrow(tfl_schema_check(tfl_item("rtf_header", list(color = "#7F7F7F")))), 0L)
+  o <- tfl_output("T-1", "table", page = bs_page(list(
+    rtf_header = list(color = "#7F7F7F"), rtf_footer = list(color = "#003366"))))
+  code <- paste(tfl_report_code(o, content = "content"), collapse = "\n")
+  expect_match(code, "rtf_header\\([^|]*color = \"#7F7F7F\"")
+  expect_match(code, "rtf_footer\\([^|]*color = \"#003366\"")
+  skip_if_not_installed("rtfreporter")
+  skip_if_not("color" %in% names(formals(rtfreporter::rtf_header)))
+  content <- rtfreporter::as_rtftables(data.frame(a = "1"))
+  env <- list2env(list(content = content), parent = asNamespace("rtfreporter"))
+  doc <- eval(parse(text = tfl_report_code(o, content = "content")), env)
+  f <- tempfile(fileext = ".rtf")
+  on.exit(unlink(f))
+  rtfreporter::generate_rtfreport(doc, f)
+  rtf <- paste(readLines(f, warn = FALSE), collapse = "")
+  # the colours are in the document's colour table
+  expect_match(rtf, "\\red127\\green127\\blue127", fixed = TRUE)
+  expect_match(rtf, "\\red0\\green51\\blue102", fixed = TRUE)
+})

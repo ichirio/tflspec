@@ -270,7 +270,7 @@
 .band_style_args <- c("border", "width_twips", "width", "row_height_twips",
                       "font_size_half_points", "font", "markup", "cell_padding_left_twips",
                       "cell_padding_right_twips", "cell_padding_top_twips",
-                      "cell_padding_bottom_twips", "drop_empty_rows")
+                      "cell_padding_bottom_twips", "drop_empty_rows", "color")
 .band_style <- function(pg, band) {
   a <- .page_args(pg[[paste0("rtf_", band)]])
   a <- a[intersect(.band_style_args, names(a))]

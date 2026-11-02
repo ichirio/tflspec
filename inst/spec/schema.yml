@@ -786,6 +786,7 @@ rtf_header:
     cell_padding_top_twips: {type: integer}
     cell_padding_bottom_twips: {type: integer}
     drop_empty_rows: {type: logical, description: "TRUE: a line whose own tokens are all empty is left out."}
+    color: {type: string, description: "The band's text colour, \"#7F7F7F\" (blank: the document's, black); added to the colour table."}
 
 rtf_footer:
   package: rtfreporter
@@ -803,6 +804,7 @@ rtf_footer:
     cell_padding_top_twips: {type: integer}
     cell_padding_bottom_twips: {type: integer}
     drop_empty_rows: {type: logical, description: "TRUE: a line whose own tokens are all empty is left out."}
+    color: {type: string, description: "The band's text colour, \"#7F7F7F\" (blank: the document's, black); added to the colour table."}
 
 # ---- the spec sheets' columns: the help of each, in the sheets' order -------
 # What tfl_spec_columns() returns (the xlsx's header comments, the GUI's ?,

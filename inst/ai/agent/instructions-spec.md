@@ -204,7 +204,8 @@ page:
 `reason` -- no other key.  `method` is one of: continuous, categorical,
 dichotomous, missing, hierarchical, max, subjects, total_n,
 proportion_ci, mean_ci, ttest, wilcox, chisq, fisher, cmh, prop_diff,
-lsmeans, lsmeans_diff, km, logrank, abnormal, incidence_rate, custom (or a
+lsmeans, lsmeans_diff, km, logrank, abnormal, incidence_rate, regression,
+anova, kruskal, paired_ttest, paired_wilcox, mcnemar, km_diff, custom (or a
 `pkg::function` the instructions list).  `denominator` is `population`,
 `row`, `column`, `cell`, or an analysis data's id.
 

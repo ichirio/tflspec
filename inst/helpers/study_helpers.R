@@ -121,6 +121,10 @@ fmt_ard <- function(ard, formats = list(), skip = character()) {
       ard, variables = dplyr::all_of(unique(ard$variable[rows])),
       stat_names = s, fmt_fun = f[[k]])
   }
+  # a statistic that is text (a test's method) stays text: cardx gives some
+  # of them a number of decimals (ard_survival_survfit_diff())
+  txt <- vapply(ard$stat, is.character, NA)
+  if (any(txt)) ard$fmt_fun[txt] <- list(as.character)
   cards::apply_fmt_fun(ard)
 }
 

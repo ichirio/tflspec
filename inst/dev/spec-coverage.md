@@ -44,6 +44,23 @@ percentage is the functions' mean weighted by their use in clinical tables:
 summary and shift, vital signs and model-based efficacy (ANCOVA / LS means,
 CMH, KM, log-rank, Cox, incidence rates) use; 2 sometimes; 1 rarely.
 
+Since 2026-11-02 the measure also counts the ard_*() functions a method
+keyword names (`tfl_ard_methods()`: the name a GUI offers and a person
+reads, "Kruskal-Wallis test" rather than `cardx::ard_stats_kruskal_test`),
+by weight.  A keyword writes the same code as its function, so this
+measures how easily a SPEC is written, not what it can say; the argument
+percentages do not move with it.
+
+| ard_*() with a method keyword | 2026-11-02 before | 2026-11-02 after |
+|---|---:|---:|
+| weight 3 | 21 of 27 | **23 of 27** |
+| weight 2 | 0 of 19 | **5 of 19** |
+| weight 1 | 0 of 8 | 0 of 8 |
+
+(weight 3 without a keyword: `ard_stack()`, `ard_hierarchical()`,
+`ard_hierarchical_count()`, `ard_stack_hierarchical_count()` -- the
+`hierarchical` keyword's siblings, written by their name.)
+
 cards 0.9.0, cardx 0.3.4; 71 functions, 412 arguments (2026-11-01 scope:
 313 of the ard_*() and post helpers' own, 72 passed on, 27 of the code
 and CI helpers; `label_round(width =)` left out by design).
@@ -57,6 +74,9 @@ and CI helpers; `label_round(width =)` left out by design).
 | cards code helpers (new) | 92.5% (8 / 1) | 92.5% (8 / 1) |
 | cardx CI helpers (new) | 100.0% | 100.0% |
 | weight-3 functions only | 98.3% | 99.3% |
+
+2026-11-02 (the same scope and cards / cardx): 99.5% before and after (411
+yes / 1 partial); the run added keywords (above), not arguments.
 
 (2026-11-01 before: the tflspec of this branch before the run, on the wider
 scope -- the 17 newly catalogued passed-on arguments could be written as R
@@ -80,6 +100,32 @@ function, but the catalog did not describe it and its value was not
 judged: partial.  2026-10-31 before: the same, with
 `update_ard_fmt_fun()` in the `post` scope -- written as R in `post`, its
 names checked, its values not judged.)
+
+### Added 2026-11-02
+
+* Seven method keywords for the analyses clinical tables use most that had
+  none, each its cardx function by another name (the same code; a row
+  naming the function is the keyword's, in the ARS too):
+  * `regression` -- `cardx::ard_regression()`: a model's estimates with CI,
+    a Cox model's hazard ratio or a logistic model's odds ratio
+    (`exponentiate = TRUE`);
+  * `anova` -- `cardx::ard_car_anova()`: a model's ANOVA table, type II / III
+    (`x = lm(CHG ~ TRTA + BASE, data = data), type = "III"`);
+  * `kruskal` -- `cardx::ard_stats_kruskal_test()`;
+  * `paired_ttest` / `paired_wilcox` -- `cardx::ard_stats_paired_t_test()` /
+    `_paired_wilcox_test()` (two visits of each subject, `id = USUBJID`);
+  * `mcnemar` -- `cardx::ard_stats_mcnemar_test()`;
+  * `km_diff` -- `cardx::ard_survival_survfit_diff()`: the difference in
+    Kaplan-Meier survival between arms at times, with CI.
+  The ARS lays out `kruskal` as a test of values, `mcnemar` as a test of
+  counts, both with `p.value`; the paired tests give `p.value`.
+* Fix: a `km_diff` (`cardx::ard_survival_survfit_diff()`) row failed in the
+  format step: cardx gives its text statistic `method` a number of
+  decimals, which `cards::apply_fmt_fun()` cannot apply.  The program's
+  `fmt_ard()` (`inst/helpers/study_helpers.R`) now keeps a text statistic
+  as text.
+* Each keyword has an exact case (`tests/testthat/fixtures/ard-cases.R`):
+  the spec row's ARD against the hand-written cards / cardx call.
 
 ### Added 2026-11-01
 
@@ -222,6 +268,18 @@ Percentage: yes counts 1, partial 0.5.
 | 2026-10-31 after  | 45.4% (310 / 41 / 377 of 728) | 57.2% (310 / 41 / 227 of 578) | 43 / 5 / 89 |
 | 2026-11-01 before | 51.7% (310 / 40 / 288 of 638) | 57.9% (310 / 40 / 220 of 570) | 43 / 5 / 66 |
 | 2026-11-01 after  | 49.6% (308 / 17 / 313 of 638) | 58.1% (308 / 17 / 220 of 545) | 43 / 5 / 66 |
+| 2026-11-02 before | 51.6% (325 / 19 / 304 of 648) | 58.8% (325 / 19 / 225 of 569) | 41 / 7 / 67 |
+| 2026-11-02 after  | 51.8% (326 / 19 / 303 of 648) | 59.2% (326 / 19 / 222 of 567) | 42 / 6 / 67 |
+
+(2026-11-02 before: tflspec@next merged into the branch (#569:
+`page.rtf_style`, rtfreporter's `rtf_style()`; #564 ...) and
+rtfreporter@next (825d4d7: `rtf_style()`, the cells' top / bottom padding,
+the bands' `color`).  After: `page.rtf_header.color` /
+`page.rtf_footer.color` passed on, and the measure's corrections --
+`rtf_document(style =)` is written from `page.rtf_style` (yes; it was
+counted as not passed on), `rtf_document(default_format =)` is deprecated
+(by `style =`) and `rtf_style(...)` is not an argument (rtfreporter stops
+on one): helpers.  The corrections alone leave 58.8%.)
 
 (2026-11-01: rtfreporter@next no longer exports its deprecated functions
 (the old border constructors, `assemble_*()`, `format_count_pct()` ...: 90
@@ -249,6 +307,14 @@ program_fallback =)` by `rtf_document()`, which tflspec fills: partial.)
 and the measure's corrections: `rtf_tables(style = )` is said by
 `plan_style()`'s `rtf_table_style()` fields (partial), `read_gt` is
 deprecated, the validation kit a helper.)
+
+### Added 2026-11-02
+
+* A running band's text colour: `page.rtf_header.color` /
+  `page.rtf_footer.color` (`"#7F7F7F"`), passed on to rtfreporter's
+  `rtf_header(color =)` / `rtf_footer(color =)` in the report's call and the
+  study setup's `study_header` / `study_footer`; the colour is added to the
+  document's colour table.
 
 ### Added 2026-10-30
 

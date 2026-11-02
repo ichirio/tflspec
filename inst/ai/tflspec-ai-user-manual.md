@@ -1026,7 +1026,8 @@ cat(tfl_report_code(sp, content = "plan"), sep = "\n")
   `missing`, `hierarchical`, `max`, `subjects`, `total_n`, `proportion_ci`,
   `mean_ci`, `ttest`, `wilcox`, `chisq`, `fisher`, `cmh`, `prop_diff`,
   `lsmeans`, `lsmeans_diff`, `km`, `logrank`, `abnormal`, `incidence_rate`,
-  `custom` — or any
+  `regression`, `anova`, `kruskal`, `paired_ttest`, `paired_wilcox`,
+  `mcnemar`, `km_diff`, `custom` — or any
   `pkg::function` (`cards::`, `cardx::`), or a function of the study's own
   that the study key `source` loads (`ard_riskdiff_mn`): it takes the
   analysis data first, `by` and `variables` as bare column names, and gives
