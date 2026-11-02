@@ -90,6 +90,12 @@ test_that("the tables in batches of one family", {
   own <- tfl_ai_batches(toc, families = c(anything = "(?i)anything"))
   expect_identical(own$family[own$output_id == "T-5"], "anything")
   expect_error(tfl_ai_batches(data.frame(x = 1)), "output_id")
+  # a TOC of figures only, asked for its tables: none (not an error)
+  figs <- data.frame(output_id = c("F-1", "F-2"), title = c("KM plot", "Waterfall"),
+                     type = "figure")
+  b <- tfl_ai_batches(figs)
+  expect_identical(nrow(b), 0L)
+  expect_identical(tfl_ai_batches(figs, types = "figure")$output_id, c("F-1", "F-2"))
 })
 
 # ---- the ADaM summary and the study folder ------------------------------------
