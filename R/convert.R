@@ -411,6 +411,9 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
         v <- .conv_text(.conv_cell(d[[cn]][i], cn, character(), character(), note, id, s, i))
         if (!is.null(v)) cells[[cn]] <- v
       }
+      # (a line's own height, rtfreporter#125)
+      h <- suppressWarnings(as.integer(d[["row_height_twips"]][i] %||% NA))
+      if (length(h) && !is.na(h)) cells$row_height_twips <- h
       # a line of (none) in every cell: the line itself unset
       if (length(cells) && all(vapply(cells, inherits, NA, "tfl_unset"))) cells <- tfl_unset()
       m[[line]] <- cells

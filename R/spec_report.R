@@ -266,7 +266,8 @@
 # but its rows, a font per script slot as a named vector
 .band_style_args <- c("border", "width_twips", "width", "row_height_twips",
                       "font_size_half_points", "font", "markup", "cell_padding_left_twips",
-                      "cell_padding_right_twips", "drop_empty_rows")
+                      "cell_padding_right_twips", "cell_padding_top_twips",
+                      "cell_padding_bottom_twips", "drop_empty_rows")
 .band_style <- function(pg, band) {
   a <- .page_args(pg[[paste0("rtf_", band)]])
   a <- a[intersect(.band_style_args, names(a))]
@@ -447,13 +448,32 @@
   m <- .page_args(pg[[band]])
   if (!length(m)) return(NULL)
   m <- m[order(suppressWarnings(as.numeric(names(m))))]
+  m <- lapply(m, .page_args)
   lines <- lapply(m, function(cells) {
-    cells <- .page_args(cells)
     v <- c(l = cells$left %||% NA, c = cells$center %||% NA, r = cells$right %||% NA)
     v[!is.na(v)]
   })
   keep <- !vapply(lines, function(v) .ard_spec_empty_line(v, tokens), NA)
-  lines <- lines[keep]
-  if (!length(lines)) return(NULL)
-  unname(lapply(lines, function(v) if (!length(v)) c(c = "") else v))
+  if (!any(keep)) return(NULL)
+  unname(Map(function(v, cells) .page_line(v, cells$row_height_twips, band),
+             lines[keep], m[keep]))
+}
+
+# A band's line as rtfreporter takes it: its cells, c(l = , c = , r = ) (a
+# blank line centred); with a height of its own (`row_height_twips`, over
+# the band's) a row list -- a title's list(text = , align = ,
+# row_height_twips = ), a header's, footer's or footnote's list(columns = ,
+# row_height_twips = ) (rtfreporter#125)
+.page_line <- function(cells, height, band) {
+  if (!length(cells)) cells <- c(c = "")
+  if (!length(height) || is.na(height)) return(cells)
+  h <- as.integer(height)
+  if (!identical(band, "titles")) return(list(columns = cells, row_height_twips = h))
+  if (length(cells) > 1L) {
+    .ard_stop(sprintf(paste("a title line with a height of its own has one text (left, center or",
+                            "right); this one has %s."), paste(names(cells), collapse = ", ")))
+  }
+  list(text = unname(cells[[1L]]),
+       align = c(l = "left", c = "center", r = "right")[[names(cells)]],
+       row_height_twips = h)
 }

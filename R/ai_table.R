@@ -766,7 +766,7 @@
     for (line in names(m)) {
       cells <- m[[line]]
       if (!is.list(cells) || is.null(names(cells))) next
-      odd <- setdiff(names(cells), c("left", "center", "right"))
+      odd <- setdiff(names(cells), c("left", "center", "right", "row_height_twips"))
       if (length(odd)) {
         add(sprintf("page %s %s", band, line), sprintf(paste(
           "has %s besides left / center / right: a text with a comma must be quoted",

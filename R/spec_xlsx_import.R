@@ -183,6 +183,9 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
           v <- .conv_cell(part[[cn]][i], cn, character(), character(), function(...) NULL, NA, band, i)
           if (!is.null(v)) cells[[cn]] <- v
         }
+        # (a line's own height, rtfreporter#125)
+        h <- suppressWarnings(as.integer(part[["row_height_twips"]][i] %||% NA))
+        if (length(h) && !is.na(h)) cells$row_height_twips <- h
         if (length(cells) && all(vapply(cells, inherits, NA, "tfl_unset"))) cells <- tfl_unset()
         key <- paste(if (is.na(id)) "" else id, line, sep = " / ")
         if (is.null(m[[line]])) st$added <- c(st$added, paste0(band, ": ", key))
