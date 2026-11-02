@@ -47,7 +47,9 @@ report's skeleton and nothing of its look:
   `plan_cells: {categorical: ...}`.  When they agree, write none;
 - **the N under the arm**: when the shell's column headers show
   `(N=xx)` under each arm and `study_facts.md` says the study's header
-  has no N (and the template's own header does not have it), write this
+  has no N (and the template's own header does not have it -- `param_change`
+  and `shift` have it -- and each arm heads one value column, not a Value
+  and a Change column under it), write this
   one item, nothing more of the header: `plan_col_header: {header: [{line:
   "1", cols: .values, span: each, text: "{col}\n(N={n})"}]}`;
 - an `ard.analysis_data` that `code` makes may name its `population`: the
@@ -248,7 +250,12 @@ needs that variable in `by`.
   themselves (`param_page`, `param_heading`); else `plan_paginate_rows: {page_by: [PARAMCD], heading:
   "Parameter: {PARAM}", heading_at: title}` -- the heading goes under the
   report's titles on each page; `{PARAM}` is that page's value of the
-  column.  Several keys: `page_by: [ANALYTE, RENALGR]` and a heading of two
+  column.  `page_by` names a column the table holds, as it holds it: a
+  `table_plan` whose `rows: {group1: PARAM}` makes the column `group1`,
+  so `page_by: [group1]`, `heading: "Parameter: {value}"` and
+  `plan_hide: {cols: [group1]}` (a `page_by: [PARAMCD]` there is not
+  found and the build fails).  Group by the label (`PARAM`) when the
+  heading shows the label.  Several keys: `page_by: [ANALYTE, RENALGR]` and a heading of two
   lines, `"Analyte: {ANALYTE}
 Group: {RENALGR}"`.
 - **Every subject** (a report of all subjects, no flag): `population:
@@ -327,7 +334,11 @@ Group: {RENALGR}"`.
   (`censor_marks`, `risk_table`) says what the figure shows; a `layers:`
   item is for what no argument does -- never both for one thing.
 - **A listing**: a listing column's `width:` in the shell's proportions,
-  wide enough for its longest value (a subject id on one line); a column
+  wide enough for its longest value (a subject id on one line) and its
+  heading's longest word -- a short column too (`Age/Sex`, `64/M`: about
+  10).  The widths are scaled to the page, so their sum fits it (a
+  landscape page about 120 characters): the room comes from the long
+  text column, not the short ones; a column
   heading's line breaks as the shell's, `"Start Date\n(Study
   Day)"`; a mark after a term with its space, `paste0(AEDECOD, " #")`; a
   missing date blank, `ifelse(is.na(ASTDT), "", format(ASTDT, ...))`.

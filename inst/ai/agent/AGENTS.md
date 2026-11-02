@@ -236,7 +236,12 @@ skip it.  For each of the others, in order:
      (`study_facts.md`): `xx (xx.x%)` is `"{n} ({p:.1f%}%)"` (`.1f%` prints
      no `%` sign), `xx (xx.x)` is `"{n} ({p:.1f%})"` -- a template's
      `count_cell` or `plan_cells`; `(N=xx)` under the arm is one
-     `plan_col_header` line, `{col}\n(N={n})` (the instructions say how);
+     `plan_col_header` line, `{col}\n(N={n})` (the instructions say how) --
+     only for a table whose arm heads one value column and whose header
+     has no N yet.  A template whose header already shows the N
+     (`param_change`, `shift`), or arms over several columns (Value and
+     Change from Baseline): no header line -- it would replace the arm's
+     name with `(N=NA)`;
    - a **zero count** as the SAP or the standard says (`0`, no percent):
      a guarded cell, `plan_cells: {categorical: [!r 'n == 0 ~ "0"',
      "{n} ({p:.1f%}%)"]}`, in place of a template's `count_cell` (which
@@ -250,7 +255,11 @@ skip it.  For each of the others, in order:
      (`xx (xx.x%)` is about 10 characters), the number of value columns
      (a demographics or AE table: the stub about 2.5 to 3 times a value
      column; a table of many columns, narrower); a listing column wide
-     enough for its longest value (a subject id on one line).  An
+     enough for its longest value (a subject id on one line), a short
+     column too (`Age/Sex`, `64/M`: about 10).  The widths are scaled to
+     the page, so their sum fits it (a landscape page about 120
+     characters): take the room from the long text column (a term), not
+     the short ones.  An
      assumption, `item: widths`, `from: "programmer convention"` (or
      `from: shell`);
    - {{titles_rule}}
