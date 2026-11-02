@@ -289,6 +289,12 @@ Group: {RENALGR}"`.
 - **A table with a second block of rows under it** (a listing of the
   values and their summary): `plan_append` with its own `data` and
   `content` (the instructions' item list), after the first table's items.
+- **PK concentrations by subject with their summary** (a row a subject
+  `ID/Age/Sex`, the time points across, BLQ; N, Mean, SD ... under them, a
+  page an analyte and arm): the template `pk_conc`, not a code SPEC --
+  `template: {name: pk_conc, args: {population: PK, blq: 'BLQFL == "Y"'}}`,
+  with `by` (the page groups), `time` / `time_order`, `subject`, `stats`
+  and `split_at` (a second block of columns) as the shell says.
 - **A shift table of counts** (baseline category down, worst post-baseline
   category across): the template `shift` (or `lab_shift` at one visit)
   keeps a subject once a parameter at its worst category, with a Missing

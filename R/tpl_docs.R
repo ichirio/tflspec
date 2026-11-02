@@ -60,6 +60,9 @@ NULL
 #' @eval .tpl_rd("param_change")
 NULL
 
+#' @eval .tpl_rd("pk_conc")
+NULL
+
 #' @eval .tpl_rd("shift")
 NULL
 
