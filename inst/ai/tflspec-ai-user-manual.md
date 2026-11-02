@@ -909,7 +909,7 @@ back): rename the value or choose another separator.
 **AI-assisted drafting:** `tfl_ai_tasks` `tfl_ai_context` `tfl_ai_schema`
 `tfl_ai_prompt` `tfl_ai_parse` `tfl_ai_check` `tfl_ai_repair_prompt`
 `tfl_ai_diff` `tfl_ai_read_shell` `tfl_ai_adam_summary` `tfl_ai_doc_text` `tfl_ai_batches`
-`tfl_ai_write_requests` `tfl_ai_collect_answers` `tfl_ai_adopt` `tfl_ai_adopted_diff` `tfl_ai_style_prompt` `tfl_ai_style_read` `tfl_ai_style_diff` `tfl_rtf_style_scan` `tfl_rtf_style_tables` `tfl_ai_migrate` `tfl_ai_outputs` `tfl_ai_assumptions` `tfl_ai_study_init`
+`tfl_ai_write_requests` `tfl_ai_collect_answers` `tfl_ai_adopt` `tfl_ai_adopted_diff` `tfl_ai_style_prompt` `tfl_ai_style_read` `tfl_ai_style_diff` `tfl_ai_style_adopt` `tfl_ai_reference_build` `tfl_rtf_style_scan` `tfl_rtf_style_tables` `tfl_ai_migrate` `tfl_ai_outputs` `tfl_ai_assumptions` `tfl_ai_study_init`
 `tfl_ai_prepare` `tfl_ai_sample_study` `tfl_ai_requests` `tfl_fill_widths` `tfl_ai_run` `tfl_ai_compare`
 
 **ARD spec:** `tfl_ard_spec` `tfl_read_ard_spec` `tfl_write_ard_spec`
