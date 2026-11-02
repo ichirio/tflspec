@@ -239,7 +239,12 @@ needs that variable in `by`.
   not `"BILI"`), and a table by parameter (`param_change`, a shift) holds
   `PARAM`, the label `ai/adam_summary.md` lists -- `PARAM == "Alanine
   Aminotransferase (U/L)"`; a guard on the code (`PARAMCD == "ALT"`)
-  matches nothing and every row takes the last template.  `plan_digits` is by variable, not by a key's value.
+  matches nothing and every row takes the last template.  `plan_digits`
+  takes a key's value too, by the key as the table holds it --
+  `plan_digits: {PARAM: {"Alanine Aminotransferase (U/L)": {mean: 1, sd:
+  2, median: 1, min: 0, max: 0}}}` -- but it gives digits only to a cell
+  written without them (`{mean} ({sd})`); a template's cells have theirs,
+  so on a template the guards above are the way.
 - **Every row the shell shows** (Race's Multiple, ECOG 0 to 3): each
   value in `codelists` (value and label, in the shell's order) -- a value
   the data does not have too: it prints as a 0 row.  A value left out of
