@@ -1162,6 +1162,13 @@ print.tfl_table_spec <- function(x, ...) {
         row <- d[!mine, , drop = FALSE]
         own <- d[mine, , drop = FALSE]
         for (cn in names(own)) if (!is.na(own[[cn]])) row[[cn]] <- own[[cn]]
+        # the items no column says: the defaults' and the report's both (a
+        # study's plan_stub(heading = ) beside a report's own item)
+        cm <- "content_more"
+        if (cm %in% names(own) && !is.na(own[[cm]]) && !is.na(d[[cm]][!mine][1L])) {
+          row[[cm]] <- .sheet_more_out(c(.sheet_more_in(d[[cm]][!mine][1L], items = TRUE),
+                                         .sheet_more_in(own[[cm]], items = TRUE)), items = TRUE)
+        }
         d <- row
       }
     } else if (identical(.ard_spec_keys[[s]], NA_character_)) {
