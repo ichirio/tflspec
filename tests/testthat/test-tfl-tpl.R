@@ -136,6 +136,13 @@ test_that("in a study: demog with a Total column and its own order; the program 
   t <- tt_tab(r$plan)
   expect_true("Total" %in% names(t))
   expect_identical(unique(t$group)[1L], "Sex, n (%)")
+  # the stub's heading is blank, not its name (the study default's
+  # plan_stub(heading = ""), #538); an rtfreporter before it prints the name
+  if ("heading" %in% names(formals(rtfreporter::plan_stub))) {
+    hdr <- unlist(suppressMessages(rtfreporter::plan_apply(r$plan, "pages"))[[1L]]$col_header)
+    expect_identical(hdr[1L], "")
+    expect_false("row_label" %in% hdr)
+  }
   n <- sum(adsl$SAFFL == "Y")
   expect_identical(t$Total[t$group == "Age (years)" & t$label == "n"], as.character(n))
   # the program: the template's call, the study standard's look after it
