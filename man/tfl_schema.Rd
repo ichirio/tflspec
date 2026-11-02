@@ -48,9 +48,15 @@ arguments the functions of one kind share -- a layer's \code{stat},
 labelled by \code{inst/fig/gg_args.csv} for every function that takes them.
 A geom given another \code{stat} (\code{geom_step(stat = "ecdf")}) is checked
 with that stat's parameters too, a stat given another \code{geom} with that
-geom's.
+geom's.  A layer takes what any layer passes on to \code{layer()}
+(\code{key_glyph}, ggplot2 4.0's \code{layout}) and its position's (ggplot2 4.0's
+\code{nudge_x} / \code{nudge_y} of \code{geom_text()}); an argument by ggplot2's other
+spelling of an aesthetic (\code{color}, \code{pch}, \code{lty}) is checked as the one
+it spells.  \code{theme()} takes ggplot2 4.0's default palettes
+(\code{palette.colour.discrete} ...).
 
-The types, in a short notation: \code{string}, \code{integer}, \code{number},
+The types, in a short notation: \code{string}, \code{integer}, \code{number} (a
+number written as arithmetic of numbers, \verb{!r 1/5}, is one),
 \code{logical}, \code{enum[a|b]}, \code{column}, \code{stat}, \code{template}, \code{r} (\code{!r}),
 \code{formula} (\code{!r}, written \verb{~ <text>}), \code{guard} (\code{!r}, a two-sided
 \code{cond ~ "text"}), \code{call} and \verb{call<fn>}

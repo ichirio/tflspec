@@ -64,9 +64,15 @@
 #' labelled by `inst/fig/gg_args.csv` for every function that takes them.
 #' A geom given another `stat` (`geom_step(stat = "ecdf")`) is checked
 #' with that stat's parameters too, a stat given another `geom` with that
-#' geom's.
+#' geom's.  A layer takes what any layer passes on to `layer()`
+#' (`key_glyph`, ggplot2 4.0's `layout`) and its position's (ggplot2 4.0's
+#' `nudge_x` / `nudge_y` of `geom_text()`); an argument by ggplot2's other
+#' spelling of an aesthetic (`color`, `pch`, `lty`) is checked as the one
+#' it spells.  `theme()` takes ggplot2 4.0's default palettes
+#' (`palette.colour.discrete` ...).
 #'
-#' The types, in a short notation: `string`, `integer`, `number`,
+#' The types, in a short notation: `string`, `integer`, `number` (a
+#' number written as arithmetic of numbers, `!r 1/5`, is one),
 #' `logical`, `enum[a|b]`, `column`, `stat`, `template`, `r` (`!r`),
 #' `formula` (`!r`, written `~ <text>`), `guard` (`!r`, a two-sided
 #' `cond ~ "text"`), `call` and `call<fn>`
@@ -306,17 +312,20 @@ tfl_schema_check <- function(item) {
   for (a in names(args)) {
     v <- args[[a]]
     if (inherits(v, "tfl_unset")) next
+    # a layer's argument by ggplot2's other spelling (color, pch, lwd) is
+    # the aesthetic it spells, as ggplot2 reads it
+    ka <- .schema_layer_arg_name(ent, a, known)
     # a figure's arrangement item says how it joins the plots (op: "&")
     if (identical(a, "op") && !is.null(ent$figure)) {
       if (!v %in% c("+", "&")) bad(a, "op is + or &")
       next
     }
-    if (!is.null(ent$args[[a]]$renamed_to)) {
-      bad(a, .schema_renamed_text(fn, a, ent$args[[a]]), "warning")
+    if (!is.null(ent$args[[ka]]$renamed_to)) {
+      bad(a, .schema_renamed_text(fn, a, ent$args[[ka]]), "warning")
       next
     }
-    if (a %in% names(ent$args) && !is.null(ent$args[[a]]$type)) {
-      msg <- .schema_fits(v, .schema_type(ent$args[[a]]$type))
+    if (ka %in% names(ent$args) && !is.null(ent$args[[ka]]$type)) {
+      msg <- .schema_fits(v, .schema_type(ent$args[[ka]]$type))
       if (!is.null(msg)) bad(a, msg)
     } else if (!is.null(dots) && identical(dots$style, "positional") && identical(a, dots$key)) {
       msg <- .schema_fits(v, .schema_type(dots$type))
@@ -324,7 +333,7 @@ tfl_schema_check <- function(item) {
     } else if (!is.null(.schema_removed[[fn]][[a]])) {
       bad(a, sprintf("%s(%s = ) was removed in rtfreporter 0.9.0: %s", fn, a,
                      .schema_removed[[fn]][[a]]))
-    } else if (!a %in% known) {
+    } else if (!ka %in% known) {
       if (identical(fn, "plan_cells") && !a %in% .cells_kinds && make.names(a) != a) {
         # a row's label as an entry of its own ("Mean (SD)": [...]) names
         # no variable: it goes under its kind (continuous: {"Mean (SD)": ...})
@@ -343,6 +352,17 @@ tfl_schema_check <- function(item) {
     }
   }
   out
+}
+
+# The name a layer's argument is checked by: ggplot2's own spelling of an
+# aesthetic (color is colour, pch shape, lty linetype) when the layer has
+# that one and not the name given; any other as it is
+.schema_layer_arg_name <- function(ent, a, known) {
+  if (!identical(ent$figure, "layer") || a %in% known || !requireNamespace("ggplot2", quietly = TRUE)) {
+    return(a)
+  }
+  std <- ggplot2::standardise_aes_names(a)
+  if (std %in% known) std else a
 }
 
 # Arguments rtfreporter removed, and where what they said goes now: the
@@ -428,7 +448,8 @@ tfl_schema_check <- function(item) {
     if (is.data.frame(v)) return(all(names(v) %in% ty$args))
     return(is.list(v) && all(vapply(v, function(r) is.list(r) && all(names(r) %in% ty$args), NA)))
   }
-  # a scalar
+  # a scalar; a number written as arithmetic of constants (!r 1/5, !r -0.4 * pi)
+  if (k %in% c("number", "integer") && inherits(v, "tfl_r")) v <- .schema_r_number(v) %||% v
   if (is.list(v) || inherits(v, c("tfl_r", "tfl_call")) || length(v) != 1L) return(FALSE)
   switch(k,
     logical = is.logical(v),
@@ -436,6 +457,22 @@ tfl_schema_check <- function(item) {
     number = is.numeric(v),
     enum = as.character(v) %in% ty$args,
     is.character(v) || is.numeric(v) || is.logical(v))
+}
+
+# An !r expression that is arithmetic of numbers (1/5, -0.4 * pi, 2^10) as
+# the number it is, else NULL: a number of the spec written as R reads
+.schema_r_number <- function(v) {
+  e <- tryCatch(str2lang(as.character(unclass(v))), error = function(err) NULL)
+  ok <- function(x) {
+    if (is.numeric(x)) return(length(x) == 1L)
+    if (is.name(x)) return(as.character(x) %in% c("pi", "Inf"))
+    if (!is.call(x) || !is.name(x[[1L]])) return(FALSE)
+    if (!as.character(x[[1L]]) %in% c("+", "-", "*", "/", "^", "(")) return(FALSE)
+    all(vapply(as.list(x)[-1L], ok, NA))
+  }
+  if (is.null(e) || !ok(e)) return(NULL)
+  n <- eval(e, baseenv())
+  if (is.numeric(n) && length(n) == 1L && !is.na(n)) n
 }
 
 .schema_show <- function(ty) {

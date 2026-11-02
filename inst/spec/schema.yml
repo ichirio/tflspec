@@ -2080,7 +2080,7 @@ ggplot:
   layers: [layer]
   visible: [data, mapping]
   args:
-    data: {type: object, label: {en: Data, ja: データ}}
+    data: {type: "object|r", label: {en: Data, ja: データ}}
     mapping: {type: "map<string, column|r>", label: {en: Mapping shared by the layers, ja: レイヤー共通のマッピング}}
 
 ggsurvfit:
@@ -2176,7 +2176,7 @@ geom_line:
   visible: [mapping, linewidth, alpha, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: object, label: {en: Data, ja: データ}}
+    data: {type: "object|r", label: {en: Data, ja: データ}}
     position: {type: "call|string|r", label: {en: Position, ja: 位置}}
 
 geom_point:
@@ -2189,7 +2189,7 @@ geom_point:
   visible: [mapping, shape, size, alpha, na.rm, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: object, label: {en: Data, ja: データ}}
+    data: {type: "object|r", label: {en: Data, ja: データ}}
     position: {type: "call|string|r", label: {en: Position, ja: 位置}}
 
 geom_errorbar:
@@ -2203,7 +2203,7 @@ geom_errorbar:
   visible: [mapping, width, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: object, label: {en: Data, ja: データ}}
+    data: {type: "object|r", label: {en: Data, ja: データ}}
     position: {type: "call|string|r", label: {en: Position, ja: 位置}}
 
 geom_pointrange:
@@ -2217,7 +2217,7 @@ geom_pointrange:
   visible: [mapping, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: object, label: {en: Data, ja: データ}}
+    data: {type: "object|r", label: {en: Data, ja: データ}}
     position: {type: "call|string|r", label: {en: Position, ja: 位置}}
 
 geom_col:
@@ -2231,7 +2231,7 @@ geom_col:
   visible: [mapping, width, position, colour, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: object, label: {en: Data, ja: データ}}
+    data: {type: "object|r", label: {en: Data, ja: データ}}
     position: {type: "call|string|r", label: {en: Position, ja: 位置}}
 
 geom_text:
@@ -2244,7 +2244,7 @@ geom_text:
   visible: [mapping, size, position, vjust, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: object, label: {en: Data, ja: データ}}
+    data: {type: "object|r", label: {en: Data, ja: データ}}
     position: {type: "call|string|r", label: {en: Position, ja: 位置}}
 
 geom_label:
@@ -2257,7 +2257,7 @@ geom_label:
   visible: [mapping, size, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: object, label: {en: Data, ja: データ}}
+    data: {type: "object|r", label: {en: Data, ja: データ}}
     position: {type: "call|string|r", label: {en: Position, ja: 位置}}
 
 geom_step:
@@ -2270,7 +2270,7 @@ geom_step:
   visible: [mapping]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: object, label: {en: Data, ja: データ}}
+    data: {type: "object|r", label: {en: Data, ja: データ}}
 
 geom_area:
   package: ggplot2
@@ -2282,7 +2282,7 @@ geom_area:
   visible: [mapping, alpha]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: object, label: {en: Data, ja: データ}}
+    data: {type: "object|r", label: {en: Data, ja: データ}}
 
 geom_ribbon:
   package: ggplot2
@@ -2295,7 +2295,7 @@ geom_ribbon:
   visible: [mapping, alpha]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: object, label: {en: Data, ja: データ}}
+    data: {type: "object|r", label: {en: Data, ja: データ}}
 
 geom_segment:
   package: ggplot2
@@ -2308,7 +2308,7 @@ geom_segment:
   visible: [mapping, linewidth, arrow, alpha]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: object, label: {en: Data, ja: データ}}
+    data: {type: "object|r", label: {en: Data, ja: データ}}
 
 geom_tile:
   package: ggplot2
@@ -2321,7 +2321,7 @@ geom_tile:
   visible: [mapping]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: object, label: {en: Data, ja: データ}}
+    data: {type: "object|r", label: {en: Data, ja: データ}}
 
 geom_boxplot:
   package: ggplot2
@@ -2333,7 +2333,7 @@ geom_boxplot:
   visible: [mapping, width, outlier.shape, alpha, position, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: object, label: {en: Data, ja: データ}}
+    data: {type: "object|r", label: {en: Data, ja: データ}}
     position: {type: "call|string|r", label: {en: Position, ja: 位置}}
 
 geom_violin:
@@ -2346,7 +2346,7 @@ geom_violin:
   visible: [mapping, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: object, label: {en: Data, ja: データ}}
+    data: {type: "object|r", label: {en: Data, ja: データ}}
     position: {type: "call|string|r", label: {en: Position, ja: 位置}}
 
 geom_histogram:
@@ -2359,7 +2359,7 @@ geom_histogram:
   visible: [mapping, bins]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: object, label: {en: Data, ja: データ}}
+    data: {type: "object|r", label: {en: Data, ja: データ}}
 
 geom_density:
   package: ggplot2
@@ -2371,7 +2371,7 @@ geom_density:
   visible: [mapping]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: object, label: {en: Data, ja: データ}}
+    data: {type: "object|r", label: {en: Data, ja: データ}}
 
 geom_jitter:
   package: ggplot2
@@ -2383,7 +2383,7 @@ geom_jitter:
   visible: [mapping, width, height, alpha, size]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: object, label: {en: Data, ja: データ}}
+    data: {type: "object|r", label: {en: Data, ja: データ}}
 
 geom_smooth:
   package: ggplot2
@@ -2396,7 +2396,7 @@ geom_smooth:
   visible: [mapping, method, se]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: object, label: {en: Data, ja: データ}}
+    data: {type: "object|r", label: {en: Data, ja: データ}}
 
 geom_hline:
   package: ggplot2
@@ -2409,7 +2409,7 @@ geom_hline:
   visible: [mapping, yintercept, linetype, colour, linewidth]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: object, label: {en: Data, ja: データ}}
+    data: {type: "object|r", label: {en: Data, ja: データ}}
 
 geom_vline:
   package: ggplot2
@@ -2421,7 +2421,7 @@ geom_vline:
   visible: [mapping, xintercept, linetype, colour, linewidth]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: object, label: {en: Data, ja: データ}}
+    data: {type: "object|r", label: {en: Data, ja: データ}}
 
 geom_abline:
   package: ggplot2
@@ -2433,7 +2433,7 @@ geom_abline:
   visible: [mapping, intercept, slope, linetype, colour]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: object, label: {en: Data, ja: データ}}
+    data: {type: "object|r", label: {en: Data, ja: データ}}
 
 geom_text_repel:
   package: ggrepel
@@ -2446,7 +2446,7 @@ geom_text_repel:
   visible: [mapping, size]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: object, label: {en: Data, ja: データ}}
+    data: {type: "object|r", label: {en: Data, ja: データ}}
     direction: {type: "enum[both|y|x]", label: {en: Moved along, ja: 動かす向き}}
 
 geom_sina:
@@ -2460,7 +2460,7 @@ geom_sina:
   visible: [mapping, size, alpha]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: object, label: {en: Data, ja: データ}}
+    data: {type: "object|r", label: {en: Data, ja: データ}}
 
 
 # -- layers beyond the geoms --
@@ -2475,7 +2475,7 @@ annotate:
   dots: {style: named, type: "string|number|logical|list<number|string>|call|r", description: "The geom's parameters (size, colour, hjust ...)."}
   args:
     geom: {type: string, label: {en: Geom, ja: 種類}}
-    label: {type: "string|r", label: {en: Text, ja: 文字}}
+    label: {type: "string|list<string>|r", label: {en: Text, ja: 文字}}
 
 tfl_ard_number:
   package: tflspec
@@ -2590,7 +2590,7 @@ scale_x_continuous:
     limits: {type: "list<number>|r", label: {en: Range, ja: 範囲}}
     breaks: {type: "list<number>|r", label: {en: Breaks, ja: 目盛り}}
     labels: {type: "list<string>|r", label: {en: Tick labels, ja: 目盛りのラベル}}
-    expand: {type: "call|r", label: {en: Expansion, ja: 余白}}
+    expand: {type: "call<expansion>|list<number>|r", label: {en: Expansion, ja: 余白}}
 
 scale_y_continuous:
   package: ggplot2
@@ -2605,7 +2605,7 @@ scale_y_continuous:
     limits: {type: "list<number>|r", label: {en: Range, ja: 範囲}}
     breaks: {type: "list<number>|r", label: {en: Breaks, ja: 目盛り}}
     labels: {type: "list<string>|r", label: {en: Tick labels, ja: 目盛りのラベル}}
-    expand: {type: "call|r", label: {en: Expansion, ja: 余白}}
+    expand: {type: "call<expansion>|list<number>|r", label: {en: Expansion, ja: 余白}}
 
 scale_x_log10:
   package: ggplot2
@@ -2738,8 +2738,8 @@ facet_grid:
   label: {en: Panel grid, ja: 面（格子）}
   visible: [rows, cols, scales]
   args:
-    rows: {type: "r|call<vars>", label: {en: Rows (vars()), ja: 行（vars()）}}
-    cols: {type: "r|call<vars>", label: {en: Columns (vars()), ja: 列（vars()）}}
+    rows: {type: "r|call<vars>|list<column>|column", label: {en: Rows (vars()), ja: 行（vars()）}, description: "!r vars(SEX), or the columns [SEX] (SEX)."}
+    cols: {type: "r|call<vars>|list<column>|column", label: {en: Columns (vars()), ja: 列（vars()）}, description: "!r vars(TRTA), or the columns [TRTA] (TRTA)."}
 
 labs:
   package: ggplot2
@@ -4825,7 +4825,7 @@ geom_label_repel:
   visible: [mapping, size, max.overlaps, box.padding]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: object, label: {en: Data, ja: データ}}
+    data: {type: "object|r", label: {en: Data, ja: データ}}
     max.overlaps: {type: number, label: {en: Overlaps allowed, ja: 許す重なりの数}}
     direction: {type: "enum[both|y|x]", label: {en: Moved along, ja: 動かす向き}}
 
@@ -4840,7 +4840,7 @@ geom_richtext:
   visible: [mapping, size, label.padding]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: object, label: {en: Data, ja: データ}}
+    data: {type: "object|r", label: {en: Data, ja: データ}}
 
 new_scale_fill:
   package: ggnewscale
@@ -4859,8 +4859,8 @@ facet_nested:
   description: "Panels with nested strips (SOC over PT)."
   visible: [rows, cols, scales, nest_line]
   args:
-    rows: {type: "r|call<vars>", label: {en: Rows (vars()), ja: 行（vars()）}}
-    cols: {type: "r|call<vars>", label: {en: Columns (vars()), ja: 列（vars()）}}
+    rows: {type: "r|call<vars>|list<column>|column", label: {en: Rows (vars()), ja: 行（vars()）}, description: "!r vars(SEX), or the columns [SEX] (SEX)."}
+    cols: {type: "r|call<vars>|list<column>|column", label: {en: Columns (vars()), ja: 列（vars()）}, description: "!r vars(TRTA), or the columns [TRTA] (TRTA)."}
     scales: {type: "enum[fixed|free|free_x|free_y]", label: {en: Axes, ja: 軸}}
 
 facet_nested_wrap:

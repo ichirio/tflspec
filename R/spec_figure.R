@@ -199,13 +199,27 @@
     l <- tryCatch(suppressWarnings(suppressMessages(f(fun = identity))), error = function(e) NULL)
   }
   if (!inherits(l, "Layer")) return(NULL)
-  aes <- unique(c(l$geom$aesthetics(), l$stat$aesthetics()))
+  # and its position's (ggplot2 4.0: geom_text()'s nudge_x / nudge_y, mapped
+  # or given)
+  pos_aes <- if (is.function(l$position$aesthetics)) {
+    tryCatch(l$position$aesthetics(), error = function(e) character())
+  }
+  aes <- unique(c(l$geom$aesthetics(), l$stat$aesthetics(), pos_aes))
   own <- setdiff(names(formals(f)), "...")
-  params <- unique(c(own, l$geom$parameters(TRUE), l$stat$parameters(TRUE), aes))
+  params <- unique(c(own, l$geom$parameters(TRUE), l$stat$parameters(TRUE), aes,
+                     .schema_layer_dots(f)))
   list(package = pkg, figure = "ggplot layer",
        description = sprintf("The ggplot2 layer %s::%s().", pkg, nm),
        aes = sort(setdiff(aes, "group")) |> c("group"),
        args = stats::setNames(lapply(params, function(p) list(type = .schema_gg_generic)), params))
+}
+
+# What any layer function passes on to layer() through its `...`: the
+# legend key's look (key_glyph) and, ggplot2 4.0, the panels it is drawn
+# in (layout)
+.schema_layer_dots <- function(f) {
+  if (!"..." %in% names(formals(f))) return(character())
+  intersect(c("key_glyph", "layout"), names(formals(ggplot2::layer)))
 }
 
 # A figure's `geom` layer (`geom: geom_area`, `aes:`, `params:`) checked
@@ -448,6 +462,12 @@
   # coord_fixed(ratio, ...): coord_cartesian()'s; labs(...): the labels by
   # aesthetic
   if ("..." %in% fa && startsWith(nm, "coord_")) fa <- c(fa, names(formals(ggplot2::coord_cartesian)))
+  # theme(...): ggplot2 4.0's default palettes (palette.colour.discrete),
+  # settings of its element tree with no formal of their own
+  if ("..." %in% fa && identical(nm, "theme")) {
+    tree <- tryCatch(names(getExportedValue("ggplot2", "get_element_tree")()), error = function(e) NULL)
+    fa <- c(fa, grep("^palette[.]", tree, value = TRUE))
+  }
   if ("..." %in% fa && identical(nm, "labs")) {
     fa <- c(fa, c("x", "y", "colour", "fill", "shape", "linetype"))
   }
