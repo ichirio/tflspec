@@ -7,9 +7,16 @@ the report, as YAML -- into `ai/spec/outputs/<id>.yml`, one file a report.
 Those are drafts: the person checks them in tflplanner ("Check"), finishes
 them in the builder and adopts them into `spec/outputs/`; you do not.
 
-What you do not know and cannot settle from the files you read, you **ask
-the person in the chat**, in {{language}}, before you write -- and stop
-until they answer.  Their answers go into `ai/decisions.md`, which you read
+Every open point of a report you settle in **three steps, in this order**
+(*Every open point: three steps*, below): 1) from the documents -- the
+shell, the TOC, the SAP, the ADaM and its specification, the company's
+and the study's standard, a decision; 2) when they do not settle it, as
+an experienced statistical programmer would -- the usual convention for
+that kind of table -- written as an assumption with
+`from: "programmer convention"`, so that QC sees it; 3) only what neither
+settles **and** would change the numbers or the structure, you **ask the
+person in the chat**, in {{language}}, before you write -- and stop until
+they answer.  Their answers go into `ai/decisions.md`, which you read
 first and follow for every report after.
 
 A draft must be a valid specification: the YAML well formed, every key
@@ -43,6 +50,45 @@ open a file not listed here (programs, other studies, anything else). The
 request has what you need: the shell's text and the variables
 (`ai/adam_summary.md`).
 
+## Every open point: three steps
+
+1. **The documents settle it.**  The request's shell text and TOC row,
+   the SAP and the documents the person gave, `ai/adam_summary.md` (the
+   ADaM and its specification: the variables, their values, the define's
+   derivations), `study_facts.md` (the study's standard), a decision in
+   `ai/decisions.md`.  Take it, and write the source in the assumption
+   (`from: shell`, `from: SAP`, `from: define`, `from: D<n>`).
+2. **Else the usual convention settles it.**  Decide it as an experienced
+   statistical programmer would for that kind of table, and write it as
+   an assumption with `from: "programmer convention"` -- one sentence of
+   what you took and why it is the usual one.  For example, unless the
+   documents say otherwise:
+   - a percent's denominator is the column's N: the subjects of the
+     analysis set in that arm (the N under the arm);
+   - an AE table counts subjects, each once in a SOC and once in a PT; a
+     table by severity or grade counts a subject once, at the worst;
+     treatment-emergent is `TRTEMFL == "Y"` when ADAE has it;
+   - a safety table (AE, labs, vital signs, exposure) is by the actual
+     treatment (TRT01A), an efficacy table by the planned or randomized
+     one (TRT01P);
+   - a summary by visit takes the dataset's analysis records
+     (`ANL01FL == "Y"` when the summary lists it), the baseline the
+     record flagged `ABLFL == "Y"` and the change `CHG`, the visits in
+     `AVISITN` order;
+   - a subject with no value is left out of the statistics (n shows
+     how many), and a Missing row only when the shell shows one.
+   A convention holds only when it is *the* usual one for this kind of
+   table: when two are usual (LOCF or observed cases, a percent of the
+   arm or of those with a value), it is not settled -- step 3.
+3. **Else ask** -- only what neither the documents nor a convention
+   settles **and** what changes the report's numbers or its structure
+   (its rows, its columns, what is counted).  A point that changes
+   neither is not a question: take the usual choice, say nothing of the
+   look, and list the rest under *to confirm* (step 6 below).
+
+The documents disagreeing is never settled by a convention: ask (step 2
+of the requests, below).
+
 ## The requests: ask, then write the skeletons
 
 Do every request of `ai/requests/index.md`, top to bottom.  A request
@@ -59,8 +105,10 @@ skip it.  For each of the others, in order:
    TOC, the shell nor a decision says it; the denominator of a percent;
    what is counted (subjects or events); missing values; a subgroup's or
    a filter's condition; what a code stands for when the summary does not
-   show it.  These change the numbers or their meaning.  Never take a
-   likely one.  When a footnote, the SAP or a document the person gave
+   show it.  These change the numbers or their meaning.  Settle each by
+   the three steps (*Every open point*, above): the documents, else the
+   usual convention, else a question -- never a choice that is only
+   likely.  When a footnote, the SAP or a document the person gave
    **defines a derived timepoint or population** ("End of Treatment is
    the last on-treatment assessment", "the per-protocol set excludes
    ..."), apply that rule (an analysis data with `code`, an assumption
@@ -70,14 +118,17 @@ skip it.  For each of the others, in order:
    - Do not ask what the documents or the data settle: the shell, the
      TOC, the SAP, `ai/adam_summary.md`, `spec/data.yml` or a decision.
      Decide, and write the source in the assumption (`from:`).
+   - Do not ask what the usual convention for this kind of table
+     settles (*Every open point*, step 2): decide it, and write it as an
+     assumption with `from: "programmer convention"`.
    - Do not ask about a case the data shows cannot happen: what to show
      when there are 0 events while the summary shows events; how to
      treat missing values when the summary says `[missing: none]` for
      the variable.  Write the usual default and list it under
      *to confirm* (step 6) -- no question.
    - Ask only when the sources disagree, or when a choice changes a
-     report's numbers and nothing -- no document, no data, no decision
-     -- defines it.
+     report's numbers or its structure and nothing -- no document, no
+     data, no decision, no usual convention -- settles it.
    **Your default choice** (the one you take when the person says
    "default"):
    - never a variable or a value that `ai/adam_summary.md` does not list
@@ -144,15 +195,18 @@ skip it.  For each of the others, in order:
    the person's builder do those.
 6. In the same file, under a top-level `ai:` key, write:
    - `assumptions`: one item for each choice that changes the numbers or
-     their meaning that you took from a decision (`from: D<n>`) or, after
+     their meaning that you took from a document (`from: shell`,
+     `from: SAP`, `from: define`), from a decision (`from: D<n>`), from
+     the usual convention (`from: "programmer convention"`) or, after
      three rounds, on your own: `where`, `item`, `assumption` (one
-     sentence: what you decided and how), `value`;
+     sentence: what you decided and how), `value`, `from`;
    - `confirm`: what you could not settle and the person should decide in
      the builder: `where`, `item`, `why` (one sentence).
    ```yaml
    ai:
      assumptions:
        - {where: ard.analyses, item: where, assumption: "treatment-emergent is TRTEMFL == \"Y\"", value: "TRTEMFL == \"Y\"", from: D3}
+       - {where: ard.analyses, item: denominator, assumption: "the percent is of the arm's subjects in the safety set, the usual denominator of an AE table", value: "SAF by TRT01A", from: "programmer convention"}
      confirm:
        - {where: content, item: plan_cells, why: "the shell shows n (%) but not whether the % is of the arm or of all"}
    ```
@@ -203,6 +257,9 @@ Review each draft against this list and fix what fails:
 - the categories' order and labels agree with the shell and the code
   lists;
 - the digits follow the shell, or the documents' rule;
+- every choice the documents did not settle is an assumption with its
+  `from:` (`"programmer convention"` for a usual convention), and every
+  question asked was one neither settled;
 - a derived timepoint or population a footnote or a document defines is
   made by its rule, not taken from the data;
 - nothing of the look is written;
@@ -283,7 +340,9 @@ a line.
   `.github/copilot-instructions.md`.
 - Write only `ai/spec/outputs/`, `ai/decisions.md` (add lines, change
   nothing a person wrote) and `ai/progress.md`.
-- Do not guess what defines a report: ask -- but do not ask what the
-  documents or the data settle, nor about a case the data rules out.
+- Do not guess what defines a report: take it from the documents, else
+  from the usual convention (an assumption, `from: "programmer
+  convention"`), else ask -- and do not ask what those settle, nor about a
+  case the data rules out.
   Do not write the look.
 - Do not try the same thing more than twice: say so in the chat and stop.

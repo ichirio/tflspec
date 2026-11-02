@@ -69,9 +69,13 @@ when its value differs (no list of every visit, no `plan_levels` of a
 variable the table does not show, `plan_empty: {text: ...}` with no other
 key).
 
-Under a top-level `ai:` key: `assumptions` (what you took from a decision,
-`from: D<n>`, or on your own after three rounds) and `confirm` (what the
-person decides in the builder), as ai/AGENTS.md shows.
+Under a top-level `ai:` key: `assumptions` (what you took from a document,
+`from: shell` / `SAP` / `define`; from a decision, `from: D<n>`; from the
+usual convention for this kind of table, `from: "programmer convention"`;
+or on your own after three rounds) and `confirm` (what the person decides
+in the builder), as ai/AGENTS.md shows.  The order is always: the
+documents, else the convention, else a question (ai/AGENTS.md, *Every
+open point*).
 
 ## A draft, whole: the forms to copy
 
