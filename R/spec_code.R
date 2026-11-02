@@ -464,8 +464,9 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
                            normalize = TRUE) {
   sp <- .ard_spec_scope(.as_spec(spec, "table", "tfl_table_code",
                                  output_id = output_id), output_id)
-  # (the study sheet's rounding is the setup's option, tfl_report_setup_code())
-  items <- .items_for_program(.plan_content_items(sp))
+  # (the study sheet's rounding is the setup's option, tfl_report_setup_code());
+  # the items no column says (content_more), each in its place, too
+  items <- .items_for_program(.plan_content_more(.plan_content_items(sp), sp$tables))
   if (isTRUE(normalize)) {
     id <- output_id %||% attr(sp, "output_id")
     nz <- .normalize_spec_args(sp, ard_spec, id, "tfl_table_code", guess = TRUE)
