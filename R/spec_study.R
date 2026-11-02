@@ -336,7 +336,10 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   list(data = .merge_map(base$data, over$data),
        codelists = .merge_map(base$codelists, over$codelists),
        content = .merge_content(base$content, over$content),
-       page = .merge_map(base$page, over$page))
+       # (an old page.rtf_default_format is its own layer's rtf_style shared
+       # level, before the layers meet: a near layer's old key beats a far
+       # layer's new one)
+       page = .merge_map(.page_style_norm(base$page), .page_style_norm(over$page)))
 }
 
 # a map over a map: by key; an !unset removes the key; two maps recurse; a

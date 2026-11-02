@@ -75,3 +75,14 @@ test_that("the program runs in rtfreporter with no deprecation", {
   expect_no_warning(suppressMessages(rtfreporter::generate_rtfreport(doc, f)))
   expect_true(file.exists(f))
 })
+
+test_that("an old key of a near layer beats a new key of a far layer (each layer read first)", {
+  st <- structure(list(defaults = list(page = list(rtf_style = list(font_size_half_points = 18L))),
+                       patterns = list(), data = list()),
+                  class = "tfl_study_spec")
+  o <- tfl_output("T-1", "table", extends = "defaults",
+                  page = list(rtf_default_format = list(font_size_half_points = 16L)))
+  ro <- tfl_resolve_output(o, st)
+  expect_identical(ro$page$rtf_style$font_size_half_points, 16L)
+  expect_null(ro$page$rtf_default_format)
+})
