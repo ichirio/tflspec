@@ -291,49 +291,26 @@ Group: {RENALGR}"`.
   parameters, the records after baseline the study counts) and what
   differs.
 - **A shift table with percents of the Total row** (the % of the arm's
-  subjects with a post-baseline value for the parameter): no template
-  yet; the worst category is a column key of the
-  ARD (`strata`), the baseline category the rows' variable (`variables`,
-  never `label`), the denominator the subjects a parameter each, and the
-  Total row `plan_total` with `direction: rows` from a second analysis of
-  the column key by the row keys:
+  subjects with a post-baseline value for the parameter, the Missing row
+  among them): the template `shift` with `percent_of: total` and a cell
+  with `{p}`; a worst category that differs by parameter (the SAP: low
+  first for HGB, NEUT, PLAT) in `worst_by`, by the parameter's value:
 
   ```yaml
-  ard:
-    analysis_data:
-      - id: lb_shift
-        label: "one row a subject and parameter: the baseline category, the worst post-baseline category"
-        from: ADLB
-        population: SAF
-        code: !r 'post <- dplyr::filter(adlb, USUBJID %in% adsl_sub$USUBJID, ONTRTFL == "Y", is.na(ABLFL) | ABLFL != "Y", !is.na(ANRIND)); base <- dplyr::distinct(dplyr::filter(adlb, ABLFL == "Y"), USUBJID, PARAMCD, .keep_all = TRUE)[, c("USUBJID", "PARAMCD", "BNRIND")]; worst <- dplyr::summarise(dplyr::group_by(post, USUBJID, TRT01A, PARAMCD), WORST = if (any(ANRIND == "HIGH")) "HIGH" else if (any(ANRIND == "LOW")) "LOW" else "NORMAL", .groups = "drop"); out <- dplyr::left_join(worst, base, by = c("USUBJID", "PARAMCD")); dplyr::mutate(out, BASECAT = dplyr::coalesce(BNRIND, "MISSING"))'
-      - id: lb_den
-        label: the subjects with a post-baseline value, a parameter each (the denominator)
-        from: lb_shift
-        keep: USUBJID | TRT01A | PARAMCD
-        distinct: USUBJID | PARAMCD
-    analyses:
-      - {id: SHIFT, method: categorical, data: lb_shift, by: [TRT01A, PARAMCD], strata: [WORST], variables: [BASECAT], denominator: lb_den}
-      - {id: TOTAL, method: categorical, data: lb_shift, by: [TRT01A, PARAMCD], variables: [WORST], denominator: lb_den}
-  content:
-    - normalize_ard: {}
-    - table_plan: {cols: [TRT01A, WORST], rows: {group1: PARAMCD}}
-    - plan_total: {label: Total, direction: rows, position: last}
-    - plan_cells: {categorical: "{n} ({p:.1f%})"}
-  codelists:
-    PARAMCD: [{value: ALT, label: Alanine Aminotransferase (U/L)}, {value: BILI, label: Bilirubin (umol/L)}]
-    WORST: [{value: LOW, label: Low}, {value: NORMAL, label: Normal}, {value: HIGH, label: High}]
-    BASECAT: [{value: LOW, label: Low}, {value: NORMAL, label: Normal}, {value: HIGH, label: High}, {value: MISSING, label: Missing}]
+  template:
+    name: shift
+    args:
+      population: SAF
+      where: 'PARAMCD %in% c("ALT", "AST", "BILI", "HGB", "NEUT", "PLAT") & ONTRTFL == "Y"'
+      percent_of: total
+      cell: "{n} ({p:.1f%}%)"
+      worst: [HIGH, LOW, NORMAL]
+      worst_by: {HGB: [LOW, HIGH, NORMAL], NEUT: [LOW, HIGH, NORMAL], PLAT: [LOW, HIGH, NORMAL]}
+      param_labels: {ALT: "Alanine Aminotransferase (U/L)", BILI: "Bilirubin (umol/L)"}
   ```
 
-  The labels the shell shows (Low, Normal, High; the parameter's name on
-  the PARAMCD rows, from `ai/adam_summary.md`'s codes) come from
-  `codelists` (value and label, in the shell's order -- a code list orders
-  too, so no `plan_levels` is needed); a category the code makes (`WORST`,
-  `BASECAT`) takes a code list like any column.
-
-  A `by` or `strata` key that code makes (`WORST`, `BASECAT`) is a column
-  of the ARD; a column that is neither a key nor the variable is not, and
-  `table_plan` cannot name it.
+  A zero count the SAP prints as `0`: the cell a guarded list, `cell:
+  [!r 'n == 0 ~ "0"', "{n} ({p:.1f%}%)"]`.
 
 - **A figure's time axis**: its label carries the unit, `Time (Months)`
   (the data's `AVALU`), never `Time` alone.  A template's own argument

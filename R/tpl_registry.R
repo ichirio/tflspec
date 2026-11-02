@@ -92,6 +92,8 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
     k("comparison", "levels", of = "group"),
     k("by_levels", "levels", TRUE, of = "by"),
     k(c("levels", "worst"), "levels", TRUE, of = "post"),
+    k("percent_of", "choice", choices = c("row", "total")),
+    k("worst_by", "list", fields = c("name", "text")),
     k("grade_levels", "levels", TRUE, of = "grade"),
     k("responders", "levels", TRUE, of = "category"),
     k("params", "levels", TRUE, of = "PARAMCD"),
@@ -1129,6 +1131,13 @@ tpl_disposition <- function(ard, population, ..., codelists = NULL) {
   tfl_param("worst", c("HIGH", "LOW", "NORMAL"), doc = paste(
     "a subject once a parameter, at its worst category after baseline, the",
     "categories from the worst; NULL: every record (the baseline's records too)")),
+  tfl_param("worst_by", NULL, doc = paste(
+    "a parameter's own order from the worst, by its value (HGB: LOW, HIGH, NORMAL);",
+    "the others take `worst`")),
+  tfl_param("percent_of", "row", doc = paste(
+    "what a cell's {p} is of: \"row\" the subjects of its baseline category,",
+    "\"total\" the Total row -- the arm's subjects with a category after",
+    "baseline for the parameter (the Missing row among them)")),
   tfl_param("missing_label", "Missing",
             doc = "the row of the subjects with no baseline category; NULL: none"),
   tfl_param("total_label", "Total", doc = "the row of all the subjects; NULL: none"),
@@ -1155,10 +1164,11 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
             subj, a$by),
     sprintf("d <- dplyr::filter(d, %s)", paste(keep, collapse = ", ")),
     "# a subject once a parameter: its worst category",
-    sprintf("d <- dplyr::arrange(d, match(%s, c(%s)))", a$post, q(a$worst)),
+    sprintf("d <- dplyr::arrange(d, %s)", .tpl_shift_rank(a)),
     sprintf("d <- dplyr::distinct(d, USUBJID, %s, .keep_all = TRUE)", a$param),
+    # (a blank category is missing too: a transport file holds "" for NA)
     if (length(a$missing_label)) sprintf(
-      "d <- dplyr::mutate(d, %s = dplyr::coalesce(as.character(%s), \"%s\"))",
+      "d <- dplyr::mutate(d, %s = dplyr::coalesce(dplyr::na_if(as.character(%s), \"\"), \"%s\"))",
       a$baseline, a$baseline, a$missing_label),
     if (length(a$total_label)) c(
       "# the Total row: every subject once more, under the baseline's Total",
@@ -1168,6 +1178,22 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
 ")
 }
 
+# The order from the worst, the R a records' sort takes: `worst`, or a
+# parameter's own (`worst_by`, by its value)
+.tpl_shift_rank <- function(a) {
+  q <- function(x) paste0("\"", x, "\"", collapse = ", ")
+  m <- function(o) sprintf("match(%s, c(%s))", a$post, q(o))
+  by <- a$worst_by
+  if (!length(by)) return(m(a$worst))
+  ord <- lapply(by, function(o) {
+    o <- unlist(o)
+    if (length(o) == 1L) trimws(strsplit(o, ",", fixed = TRUE)[[1L]]) else o
+  })
+  paste0("dplyr::case_when(", paste(c(
+    sprintf("%s == \"%s\" ~ %s", a$param, names(ord), vapply(ord, m, "")),
+    sprintf("TRUE ~ %s", m(a$worst))), collapse = ", "), ")")
+}
+
 .tpl_shift_body <- function(a, ctx) {
   set <- a$data_id %||% paste0(tolower(a$data), "_", tolower(a$population))
   worst <- length(a$worst) > 0L
@@ -1175,6 +1201,13 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
   # where added to it after -- and the code reads them from it)
   sub <- worst && length(a$subset)
   subj <- if (sub) paste0("adsl_", tolower(a$population)) else "adsl_sub"
+  # the percents of the Total row: the denominator the arm's subjects a
+  # parameter each (the Total row's records, or every subject once)
+  total <- identical(a$percent_of, "total")
+  if (total && !worst) {
+    .ard_stop("shift: percent_of = \"total\" counts a subject once a parameter; give `worst`.")
+  }
+  den <- paste0(set, "_den")
   ard <- list(
     analysis_data = c(
       if (sub) list(list(id = subj, label = .tpl_set_label(a$population, ctx$population),
@@ -1182,9 +1215,21 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
       list(Filter(Negate(is.null), list(
         id = set, from = a$data, population = a$population,
         code = if (worst) tfl_r(.tpl_shift_code(a, subj)),
-        where = if (!worst && !is.null(a$where)) tfl_r(a$where))))),
-    analyses = list(list(id = a$analysis_id, method = "categorical", data = set,
-                         by = c(a$by, a$param, a$baseline), variables = a$post)))
+        where = if (!worst && !is.null(a$where)) tfl_r(a$where)))),
+      # (written as R: a `keep` would keep the columns the analysis reads,
+      # the baseline's among them, and cards would look for its levels)
+      if (total) list(list(
+        id = den, label = "the subjects with a category after baseline, a parameter each",
+        from = set,
+        code = tfl_r(sprintf("dplyr::distinct(%s, %s)",
+                             if (length(a$total_label))
+                               sprintf("dplyr::filter(%s, %s == \"%s\")", set, a$baseline,
+                                       a$total_label) else set,
+                             paste(c("USUBJID", a$by, a$param), collapse = ", ")))))),
+    analyses = list(Filter(Negate(is.null), list(
+      id = a$analysis_id, method = "categorical", data = set,
+      by = c(a$by, a$param, a$baseline), variables = a$post,
+      denominator = if (total) den))))
   # the columns: the ARD's order (the code list applied when it is made),
   # or `by_levels` when the report says them
   by_lv <- a$by_levels
@@ -1223,8 +1268,8 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
                   tfl_param("params", required = TRUE, doc = "the PARAMCD values"),
                   .tpl_where_param(doc = "the records kept besides the visit and parameters (R)")),
              .tpl_shift_params[c("by", "data_id", "by_levels", "param_labels", "levels",
-                                 "worst", "missing_label", "total_label", "param_page",
-                                 "param_heading")]),
+                                 "worst", "worst_by", "percent_of", "cell", "missing_label",
+                                 "total_label", "param_page", "param_heading")]),
   body = function(a, ctx) {
     b <- lapply(.tpl_shift_params, `[[`, "default")
     for (k in intersect(names(a), names(b))) b[k] <- list(a[[k]])
