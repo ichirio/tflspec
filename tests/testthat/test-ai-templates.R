@@ -129,6 +129,7 @@ test_that("answers with templates: checked, written, built (RTF, PNG); a bad arg
     "tflspec_ai: {task: figure, version: 1, output_id: F-14-2-2}",
     "data: [{step: read, dataset: ADTTE}, {step: param, value: OS}]",
     "template: {name: km_survival, args: {by: TRT01A, time_unit: months}}",
+    "plot: {x_label: Months since randomisation, legend: bottom}",
     "layers:",
     "  - {layer: geom_hline, yintercept: 0.5, linetype: dashed}",
     "assumptions: []"), "figure")
@@ -143,6 +144,12 @@ test_that("answers with templates: checked, written, built (RTF, PNG); a bad arg
   # the report file keeps the template, as answered
   y <- yaml::read_yaml(file.path(d, "ai", "spec", "outputs", "T-14-3-1.yml"))
   expect_identical(y$template$name, "ae_soc_pt")
+  # a template figure keeps its own settings, over the template's
+  y <- yaml::read_yaml(file.path(d, "ai", "spec", "outputs", "F-14-2-2.yml"))
+  expect_identical(y$plot$x_label, "Months since randomisation")
+  ro <- tfl_resolve_output(tfl_read_output(file.path(d, "ai", "spec", "outputs", "F-14-2-2.yml")),
+                           tfl_read_study_spec(d))
+  expect_identical(ro$plot$x_label, "Months since randomisation")
   # a bad argument: an error that names the template's parameters, a repair
   expect_identical(unname(st["T-14-3-5"]), "error")
   expect_match(rp$first[rp$output_id == "T-14-3-5"],
