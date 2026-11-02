@@ -7,11 +7,11 @@
 #  table's `plan_columns(widths = )`, a listing's `listing_col(width = )`.
 #  The AI is asked to write them (the shell's proportions); what it leaves
 #  out, R writes: a table's from its printed table once it is built
-#  (rtfreporter's default_col_widths(): the row headings by their content,
-#  the value columns sharing the rest), one per printed column by name, a
-#  listing's from its columns' variables and headers when the answer is
-#  read -- each with the assumption that its widths are the default ones,
-#  set for now.
+#  (tflspec's own rule, .tfl_default_widths(): each value column its share
+#  of the page, the row headings the rest, in three tiers), one
+#  per printed column by name, a listing's from its columns' variables and
+#  headers when the answer is read -- each with the assumption that its
+#  widths are the default ones, set for now.
 # ============================================================================
 
 # Whether a report (resolved: the defaults' items too) says its table's
@@ -23,43 +23,89 @@
   }, NA))
 }
 
-# A table's widths from its built table: rtfreporter's default_col_widths()
-# over its first page, the stub columns (those that are not values) the row
-# headings -- one width a printed column, by name.  (An rtfreporter before
-# default_col_widths(): each stub column 3 to a value column's 1, a
-# hierarchy's 4, several stub columns 2 each.)  The report (`own`, as its
-# file has it) with them as a plan_columns item, after its table_plan (an
-# item there without widths gets them); NULL when it says them already or
-# the plan's columns cannot be read.
+# A table's widths from its built table: tflspec's rule
+# (.tfl_default_widths()) over its first page, the stub columns (those that
+# are not values) the row headings -- one width a printed column, by name.
+# (A table whose page cannot be read: each stub column 3 to a value
+# column's 1, a hierarchy's 4, several stub columns 2 each.)  The report
+# (`own`, as its file has it) with them as a plan_columns item, after its
+# table_plan (an item there without widths gets them); NULL when it says
+# them already or the plan's columns cannot be read.
 .ai_table_widths <- function(own, resolved, plan) {
   if (.ai_has_widths(resolved) || inherits(own$content, "tfl_r")) return(NULL)
   cols <- tryCatch(rtfreporter::plan_layers(plan)$columns, error = function(e) NULL)
   if (is.null(cols) || !length(cols$names)) return(NULL)
   stub <- setdiff(cols$names, cols$spread)
   if (!length(stub)) return(NULL)
-  ns <- asNamespace("rtfreporter")
-  if (exists("default_col_widths", envir = ns, inherits = FALSE)) {
-    body <- tryCatch({
-      pg <- suppressMessages(suppressWarnings(rtfreporter::plan_apply(plan, "pages")))
-      t1 <- if (inherits(pg, "rtftable")) pg else pg[[1L]]
-      t1$data
-    }, error = function(e) NULL)
-    if (is.data.frame(body) && ncol(body)) {
-      rt <- which(!names(body) %in% cols$spread)
-      if (length(rt)) {
-        w <- get("default_col_widths", envir = ns)(body, row_title = rt)
-        return(.ai_put_widths(own, as.list(w)))
-      }
-    }
-  }
   fns <- vapply(resolved$content %||% list(), `[[`, "", "fn")
   hier <- any(vapply(resolved$content[fns == "normalize_ard"], function(it) {
     length(it$args$hierarchy) > 0L
   }, NA))
+  body <- tryCatch({
+    pg <- suppressMessages(suppressWarnings(rtfreporter::plan_apply(plan, "pages")))
+    t1 <- if (inherits(pg, "rtftable")) pg else pg[[1L]]
+    t1$data
+  }, error = function(e) NULL)
+  if (is.data.frame(body) && ncol(body)) {
+    rt <- which(!names(body) %in% cols$spread)
+    if (length(rt)) {
+      w <- .tfl_default_widths(body, rt)
+      return(.ai_put_widths(own, stats::setNames(as.list(as.vector(w)), names(w))))
+    }
+  }
   w <- stats::setNames(as.list(rep(if (length(stub) > 1L) 2L else if (hier) 4L else 3L,
                                    length(stub))), stub)
   if (length(cols$spread)) w[[".values"]] <- 1L
   .ai_put_widths(own, w)
+}
+
+# What the row headings keep at least, in characters: their content (the
+# longest cell + 2), but no more than this -- a short stub stops at its
+# content, a long one (an AE term, a race) keeps this much (#541)
+.tfl_widths_stub_keep <- 30L
+
+# tflspec's default column widths (#541, the user's rule of 11/2), in
+# characters of a `page` of 120, one a column of the printed table `body`
+# by name; `stub` the row-heading columns (positions), `n` value columns.
+# The first of three that leaves the row headings what they keep
+# (.tfl_widths_stub_keep, capped at their content):
+# 1. each value column 60 / (n + 1) % of the page, at least 10 characters
+#    + 2 (a cell on one line); the row headings the rest -- one value
+#    column 70:30, two 60:20:20, three 55:15:15:15;
+# 2. each value column 6 + 2 characters (a cell on two lines), the row
+#    headings the rest -- kept, too, when that is less than they keep but
+#    still two value columns (16) or more;
+# 3. every column equal, the row headings two: 2 / (n + 2) of the page.
+# Several row-heading columns share theirs by their content.  The tier
+# used is the result's attribute "tier".
+.tfl_default_widths <- function(body, stub, page = 120L) {
+  txt <- function(v) {
+    v <- as.character(v)
+    v[is.na(v)] <- ""
+    nchar(gsub("\u00a0", " ", v, fixed = TRUE), type = "width")
+  }
+  vals <- setdiff(seq_along(body), stub)
+  n <- length(vals)
+  own <- pmax(1L, vapply(stub, function(j) max(c(0L, txt(body[[j]]))) + 2L, 0L))
+  keep <- min(sum(own), .tfl_widths_stub_keep)
+  tiers <- list(max(as.integer(floor(page * 0.6 / (n + 1L))), 12L), 8L)
+  tier <- 3L
+  v <- as.integer(floor(page / (n + 2L)))
+  for (k in seq_along(tiers)) {
+    left <- page - n * tiers[[k]]
+    if (left >= keep || (k == 2L && left >= 2L * tiers[[k]])) {
+      tier <- k
+      v <- tiers[[k]]
+      break
+    }
+  }
+  rest <- if (tier == 3L) 2L * v else page - n * v
+  sw <- floor(rest * own / sum(own))
+  sw[1L] <- rest - sum(sw[-1L])
+  w <- integer(ncol(body))
+  w[stub] <- as.integer(sw)
+  w[vals] <- v
+  structure(stats::setNames(w, names(body)), tier = tier)
 }
 
 # The report with the widths `w` in its plan_columns item (after its
@@ -196,9 +242,9 @@
   if (!length(ids)) return(NULL)
   data.frame(output_id = ids, where = "content", item = "widths",
              assumption = paste("Column widths: the default proportions, set for now because",
-                                "the shell's widths were not read (rtfreporter::default_col_widths():",
-                                "the row headings by their content, the value columns sharing the rest)"),
-             value = "default_col_widths()",
+                                "the shell's widths were not read (tflspec's rule: each value column",
+                                "its share of the page, the row headings the rest)"),
+             value = "default widths",
              question = "Are the column widths as the shell wants?",
              stringsAsFactors = FALSE)
 }
