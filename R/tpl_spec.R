@@ -27,11 +27,15 @@
 # Is a `template: {name: }` a figure design's preset (tfl_fig_templates():
 # box_by_visit, swimmer_full ...) rather than a template SPEC?  An agent
 # writes the preset instructions-figure.md lists in the template SPEC's
-# form; a name the registry has is the template SPEC's
+# form; a name the registry has is the template SPEC's -- unless both have
+# it (forest_hr, mean_se, mean_ci) and it is written without the `args`
+# the template SPEC needs: that can only be the preset
 .fig_preset_named <- function(t) {
   if (!is.list(t) || !is.character(t$name) || length(t$name) != 1L) return(FALSE)
-  if (exists(t$name, envir = .tpl_registry, inherits = FALSE)) return(FALSE)
-  t$name %in% tfl_fig_templates()$template
+  if (!t$name %in% tfl_fig_templates()$template) return(FALSE)
+  if (!exists(t$name, envir = .tpl_registry, inherits = FALSE)) return(TRUE)
+  need <- Filter(function(p) isTRUE(p$required), get0(t$name, envir = .tpl_registry, inherits = FALSE)$params)
+  length(need) > 0L && !any(names(need) %in% names(t$args))
 }
 
 # The study standard's value of a parameter that says where it is
