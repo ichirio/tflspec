@@ -597,7 +597,7 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
     "skip a request whose reports all have their draft (ai/spec/outputs/<id>.yml). For each: ",
     "read ai/decisions.md and the request; ask me here, in ", .ai_language_name(language),
     ", only what defines its reports and neither the documents nor the usual convention ",
-    "settles (ai/AGENTS.md: what to decide yourself, what to always ask), numbered, with the ",
+    "settles (ai/AGENTS.md: what to decide yourself, what to confirm, what to ask), numbered, with the ",
     "choices and your default -- then wait for my answers. Record them in ai/decisions.md. Then write each report's ",
     "skeleton as ai/spec/outputs/<id>.yml",
     if (isTRUE(templates)) " (a template where one fits, ai/AGENTS.md)" else "",
