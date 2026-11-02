@@ -250,6 +250,11 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
       id = set, label = sprintf("%s of %s, with the subgroups", a$param, a$population),
       from = a$data, population = a$population,
       where = tfl_r(.tpl_and(sprintf("PARAMCD == %s", q(a$param)), a$where)),
+      # (the arm compared last: the Cox model's reference is another arm,
+      # whatever the arms' order -- a study whose treatment arm comes first)
+      derive = if (length(a$comparison)) tfl_r(sprintf(
+        "%s = factor(%s, levels = c(setdiff(levels(factor(%s)), %s), %s))",
+        a$group, a$group, a$group, q(a$comparison[1L]), q(a$comparison[1L]))),
       add = if (length(a$subgroups)) as.list(a$subgroups)))),
     analyses = lapply(seq_len(nrow(an)), function(i) list(
       id = an$analysis_id[i], label = an$label[i], method = "custom", data = set,
