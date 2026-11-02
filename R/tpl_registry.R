@@ -118,6 +118,10 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
     k(c("heading", "statistics", "cat_statistics", "continuous_statistics",
         "categorical_statistics"), "text", TRUE),
     k("any_row", "flag"),
+    # a forest's look (forest_hr)
+    k(c("size_by_n", "bold_headings"), "flag"),
+    k("favours", "text", TRUE),
+    k("x_breaks", "number", TRUE),
     k(c("count_cell", "any_row_label"), "text"),
     # a variable's heading each: given by name, merged with the default's
     k(c("labels", "param_labels"), "list", fields = nv, merge = TRUE),
