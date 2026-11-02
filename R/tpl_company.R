@@ -579,7 +579,7 @@ tfl_use_company_templates <- function(path, package = basename(path),
     "  - normalize_ard: {}",
     "  - plan_cells: {default: \"{n:.0f} ({p:.1f%})\"}",
     "  - plan_digits: {rounding: sas}",
-    "  - plan_stub: {name: row_label, before: true}",
+    "  - plan_stub: {name: row_label, heading: \"\", before: true}",
     "  - plan_blanks: {where: between_groups, first: true, last: true}"))
   put("README.md", c(
     paste0("# ", package),

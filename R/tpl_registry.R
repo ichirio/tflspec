@@ -1388,6 +1388,14 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
 
 # ---- param_change: parameters' value and change from baseline at each visit -------
 
+# The cells' digits: one decimal for the mean, the median and the range, two
+# for the SD -- a report's plan_digits(PARAM = c("<label>" = ...)) comes
+# before them for its parameters (rtfreporter's order: a row key's value,
+# then the kind's)
+.tpl_param_change_digits <- function() {
+  tfl_item("plan_digits", list(continuous = list(mean = 1, sd = 2, median = 1, min = 1, max = 1)))
+}
+
 .tpl_pc_params <- list(
   tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
   .tpl_subset_param(),
@@ -1410,8 +1418,10 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
   tfl_param("data_label", NULL, doc = "the analysis data's label"),
   tfl_param("statistics", c("N", "mean", "sd", "median", "min", "max"),
             doc = "the statistics the ARD has"),
-  tfl_param("cells", list(n = "{N:.0f}", `Mean (SD)` = "{mean:.1f} ({sd:.2f})",
-                          Median = "{median:.1f}", `Min, Max` = "{min:.1f}, {max:.1f}"),
+  # (the cells name no digits: the template's plan_digits() gives them,
+  # so a report's plan_digits(PARAM = ) can give a parameter its own)
+  tfl_param("cells", list(n = "{N:.0f}", `Mean (SD)` = "{mean} ({sd})",
+                          Median = "{median}", `Min, Max` = "{min}, {max}"),
             doc = "the rows of a value or a change", study = "plan_cells.continuous"),
   tfl_param("param_page", TRUE, type = "flag",
             doc = "TRUE: a page a parameter, named in the titles by `param_heading`"),
@@ -1472,6 +1482,7 @@ names(.tpl_pc_params) <- vapply(.tpl_pc_params, `[[`, "", "name")
     list(tfl_item("table_plan", list(cols = a$by, rows = list(
            group1 = "PARAM", group2 = "AVISIT", group3 = "variable"))),
          tfl_item("plan_cells", list(continuous = as.list(a$cells))),
+         .tpl_param_change_digits(),
          tfl_item("plan_sort", list(keys = c("group1", "group2", "group3"))),
          tfl_item("plan_col_header", list(header = list(
            list(line = "1", cols = ".values", span = "each", text = "{col}
@@ -1480,6 +1491,7 @@ names(.tpl_pc_params) <- vapply(.tpl_pc_params, `[[`, "", "name")
     list(tfl_item("table_plan", list(cols = c(a$by, "variable"), rows = list(
            group1 = "PARAM", group2 = "AVISIT"))),
          tfl_item("plan_cells", list(continuous = as.list(a$cells))),
+         .tpl_param_change_digits(),
          # the arm and its N over its two columns (the N is the arm's, not
          # a value's or a change's)
          tfl_item("plan_col_header", list(header = list(

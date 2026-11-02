@@ -227,7 +227,14 @@ needs that variable in `by`.
   With the template `ae_soc_pt` / `ae_ser_soc_pt`, the same list as its
   `sort` argument.
 - **Digits that differ by parameter** (a lab table: ALT one decimal, BILI
-  three): guarded cell templates, one a parameter, the last one for the
+  three): on the `param_change` template, `plan_digits` by the parameter
+  as the table holds it -- `PARAM`, the label `ai/adam_summary.md` lists:
+  `plan_digits: {PARAM: {"Alanine Aminotransferase (U/L)": {mean: 1, sd:
+  2, median: 1, min: 0, max: 0}, "Bilirubin (umol/L)": {mean: 2, sd: 3,
+  median: 2, min: 1, max: 1}}}` -- a parameter it leaves out keeps the
+  template's (one decimal, the SD two); its cells are written without
+  digits, so leave them as they are.  A code SPEC's own cells: guarded
+  cell templates, one a parameter, the last one for the
   rest -- `plan_cells: {continuous: [!r 'PARAMCD == "ALT" ~ "{mean:.1f}
   ({sd:.2f})"', !r 'PARAMCD == "BILI" ~ "{mean:.3f} ({sd:.4f})"', "{mean:.2f}
   ({sd:.3f})"]}` (a guard is `<row key> == "<value>" ~ "<template>"`, as
@@ -239,7 +246,10 @@ needs that variable in `by`.
   not `"BILI"`), and a table by parameter (`param_change`, a shift) holds
   `PARAM`, the label `ai/adam_summary.md` lists -- `PARAM == "Alanine
   Aminotransferase (U/L)"`; a guard on the code (`PARAMCD == "ALT"`)
-  matches nothing and every row takes the last template.  `plan_digits` is by variable, not by a key's value.
+  matches nothing and every row takes the last template.  `plan_digits`
+  by a value gives digits only to a cell written without them (`{mean}
+  ({sd})`), as `param_change`'s are; a cell with its own (`{mean:.1f}`)
+  keeps them.
 - **Every row the shell shows** (Race's Multiple, ECOG 0 to 3): each
   value in `codelists` (value and label, in the shell's order) -- a value
   the data does not have too: it prints as a 0 row.  A value left out of

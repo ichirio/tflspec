@@ -364,6 +364,36 @@ test_that("a value's labels: a column the plan makes, by its code list; one name
   expect_equal(NROW(sh2$codelists), 0L)
 })
 
+test_that("plan_digits() by a row key's value: the schema takes both forms, the code runs to them", {
+  ok <- function(a) nrow(tfl_schema_check(tfl_item("plan_digits", a))) == 0L
+  expect_true(ok(list(PARAMCD = list(ALT = 1, BILI = 3))))
+  expect_true(ok(list(PARAMCD = list(ALT = list(mean = 1, sd = 2), BILI = 3))))
+  expect_false(ok(list(PARAMCD = list(ALT = list(mean = list(1))))))
+  data <- data.frame(
+    ARM = "A", PARAMCD = rep(c("ALT", "BILI", "AST"), each = 2), variable = "AVAL",
+    .label = NA_character_, .kind = "continuous", context = "summary",
+    stat_name = rep(c("mean", "sd"), 3),
+    stat = c(31.2345, 4.10234, 0.61234, 0.123456, 28.5555, 3.3333),
+    stringsAsFactors = FALSE)
+  out <- tfl_output("T-LB", "table", content = list(
+    tfl_item("table_plan", list(cols = "ARM", rows = list(param = "PARAMCD"))),
+    tfl_item("plan_cells", list(continuous = list(`Mean (SD)` = "{mean} ({sd})"), notes = FALSE)),
+    tfl_item("plan_digits", list(continuous = list(mean = 2, sd = 3),
+                                 PARAMCD = list(ALT = list(mean = 1, sd = 2), BILI = 3)))))
+  code <- paste(tfl_content_code(out, pipe = "|>"), collapse = "\n")
+  expect_match(code, "PARAMCD = list(ALT = c(mean = 1, sd = 2), BILI = 3)", fixed = TRUE)
+  env <- new.env()
+  env$data <- data
+  eval(parse(text = c("library(rtfreporter)", code)), env)
+  t <- tryCatch(as.data.frame(suppressMessages(rtfreporter::plan_apply(env$plan, "table"))),
+                error = function(e) e)
+  # an rtfreporter before digits by value (rtfreporter #794) says the key matched nothing
+  if (inherits(t, "error") && grepl("matched nothing", conditionMessage(t))) {
+    skip("rtfreporter without digits by a row key's value (#794)")
+  }
+  expect_identical(t$A, c("31.2 (4.10)", "0.612 (0.123)", "28.56 (3.333)"))
+})
+
 test_that("plan_empty(): the schema checks it, places it with the mapping, and its code runs", {
   e <- tfl_schema("plan_empty")
   expect_identical(e$stage, "mapping")
@@ -387,4 +417,22 @@ test_that("plan_empty(): the schema checks it, places it with the mapping, and i
   env$data <- rtfreporter::normalize_ard(ard)
   eval(parse(text = c("library(rtfreporter)", code)), env)
   expect_s3_class(env$plan, "table_plan")
+})
+
+test_that("a stub heading, which no sheet column says, goes whole and comes back (#538)", {
+  d <- withr::local_tempdir()
+  src <- system.file("extdata", "spec-yaml", package = "tflspec")
+  file.copy(list.files(src, full.names = TRUE), d, recursive = TRUE)
+  f <- file.path(d, "defaults.yml")
+  y <- sub("plan_stub: {name: row_label, before: true}",
+           "plan_stub: {name: row_label, heading: \"\", before: true}", readLines(f), fixed = TRUE)
+  writeLines(y, f)
+  out <- withr::local_tempdir()
+  suppressMessages(tfl_yaml_from_sheets(tfl_sheets_from_yaml(d), out))
+  ff <- list.files(out, recursive = TRUE, full.names = TRUE)
+  st <- Filter(function(it) identical(names(it), "plan_stub"),
+               yaml::read_yaml(ff[basename(ff) == "defaults.yml"])$content)
+  expect_length(st, 1L)
+  expect_identical(st[[1L]]$plan_stub$heading, "")
+  expect_identical(st[[1L]]$plan_stub$name, "row_label")
 })

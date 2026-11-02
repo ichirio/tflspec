@@ -464,8 +464,9 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
                            normalize = TRUE) {
   sp <- .ard_spec_scope(.as_spec(spec, "table", "tfl_table_code",
                                  output_id = output_id), output_id)
-  # (the study sheet's rounding is the setup's option, tfl_report_setup_code())
-  items <- .items_for_program(.plan_content_items(sp))
+  # (the study sheet's rounding is the setup's option, tfl_report_setup_code());
+  # the items no column says (content_more), each in its place, too
+  items <- .items_for_program(.plan_content_more(.plan_content_items(sp), sp$tables))
   if (isTRUE(normalize)) {
     id <- output_id %||% attr(sp, "output_id")
     nz <- .normalize_spec_args(sp, ard_spec, id, "tfl_table_code", guess = TRUE)
@@ -1003,6 +1004,8 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
         }
       },
       plan_stub = {
+        # (its heading has no column: the item goes whole in content_more)
+        if (!is.null(named$heading)) miss("plan_stub", "heading")
         map <- c(vars = "stub_vars", name = "stub_name", indent = "stub_indent",
                  group_summary = "stub_summary", before = "stub_before")
         for (k in intersect(names(named), names(map))) lay[[map[[k]]]] <- named[[k]]
