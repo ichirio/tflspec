@@ -48,6 +48,8 @@
   }
   o <- tfl_output(paste0("tpl-", name), "figure", extends = "none",
                   data = list(source = "code", steps = f$stats), content = f$content)
+  # (settings given as a named vector, c(x_label = "Visit"), as a list)
+  if (!is.null(plot) && !is.list(plot)) plot <- as.list(plot)
   o$plot <- .merge_map(f$plot, plot)
   tfl_content_run(o, stats::setNames(list(data), as))
 }
