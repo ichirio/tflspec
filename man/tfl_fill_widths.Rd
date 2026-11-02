@@ -23,9 +23,12 @@ A report says its column widths: a table's \code{plan_columns(widths = )}, one
 width a printed column by name, a listing's \code{listing_col(width = )}.  For
 each report of the study that does not, this builds it (its ARD, its
 plan) and writes tflspec's default widths into its file, as numbers to
-change: each value column as wide as its cells and its header's words
-need, the row headings the rest of the page (as wide as their content,
-at least 12 characters), what is left shared by the value columns;
+change: each value column 60 / (n + 1) \% of the page (at least 12
+characters), the row headings the rest -- one value column 70:30, two
+60:20:20, three 55:15:15:15; when that leaves the row headings less
+than their content (at most 30 characters), value columns of 8
+characters (a cell on two lines), else all columns equal and the row
+headings two;
 a listing's columns get a width from their variables and headers.  Each
 report it writes widths into gets an assumption in
 \verb{spec/_assumptions.yml} (item \code{widths}): the widths are the default ones,

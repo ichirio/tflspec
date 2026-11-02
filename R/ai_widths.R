@@ -7,8 +7,8 @@
 #  table's `plan_columns(widths = )`, a listing's `listing_col(width = )`.
 #  The AI is asked to write them (the shell's proportions); what it leaves
 #  out, R writes: a table's from its printed table once it is built
-#  (tflspec's own rule, .tfl_default_widths(): each value column as wide as
-#  its cells and its header's words need, the row headings the rest), one
+#  (tflspec's own rule, .tfl_default_widths(): each value column its share
+#  of the page, the row headings the rest, in three tiers), one
 #  per printed column by name, a listing's from its columns' variables and
 #  headers when the answer is read -- each with the assumption that its
 #  widths are the default ones, set for now.
@@ -49,7 +49,8 @@
   if (is.data.frame(body) && ncol(body)) {
     rt <- which(!names(body) %in% cols$spread)
     if (length(rt)) {
-      return(.ai_put_widths(own, as.list(.tfl_default_widths(body, rt, hier = hier))))
+      w <- .tfl_default_widths(body, rt)
+      return(.ai_put_widths(own, stats::setNames(as.list(as.vector(w)), names(w))))
     }
   }
   w <- stats::setNames(as.list(rep(if (length(stub) > 1L) 2L else if (hier) 4L else 3L,
@@ -58,41 +59,51 @@
   .ai_put_widths(own, w)
 }
 
-# tflspec's default column widths (#541), in characters, one a column of the
-# printed table `body` by name; `stub` the row-heading columns (positions).
-# The user's targets (11/2): one value column 70:30, two 60:20:20, three
-# 55:15:15:15 -- each of `n` value columns 60 / (n + 1) % of the page.
-# - A value column never narrower than its content needs: its longest cell,
-#   or its header's longest word (the name's parts, `"Placebo____Value"`),
-#   whichever is longer, plus 2.
-# - The row headings take the rest of the page (`page` characters), shared
-#   by their content when there are several, each at least its content
-#   (longest cell + 2) and its floor (12; a hierarchy's first column 20).
-# - When both cannot fit, each keeps its need; rtfreporter scales the whole
-#   table to the page (as_rtftables(auto_width = )), so every column
-#   narrows in proportion.
-.tfl_default_widths <- function(body, stub, page = 120L, hier = FALSE) {
+# What the row headings keep at least, in characters: their content (the
+# longest cell + 2), but no more than this -- a short stub stops at its
+# content, a long one (an AE term, a race) keeps this much (#541)
+.tfl_widths_stub_keep <- 30L
+
+# tflspec's default column widths (#541, the user's rule of 11/2), in
+# characters of a `page` of 120, one a column of the printed table `body`
+# by name; `stub` the row-heading columns (positions), `n` value columns.
+# The first of three that leaves the row headings what they keep
+# (.tfl_widths_stub_keep, capped at their content):
+# 1. each value column 60 / (n + 1) % of the page, at least 10 characters
+#    + 2 (a cell on one line); the row headings the rest -- one value
+#    column 70:30, two 60:20:20, three 55:15:15:15;
+# 2. each value column 6 + 2 characters (a cell on two lines), the row
+#    headings the rest;
+# 3. every column equal, the row headings two: 2 / (n + 2) of the page.
+# Several row-heading columns share theirs by their content.  The tier
+# used is the result's attribute "tier".
+.tfl_default_widths <- function(body, stub, page = 120L) {
   txt <- function(v) {
     v <- as.character(v)
     v[is.na(v)] <- ""
     nchar(gsub("\u00a0", " ", v, fixed = TRUE), type = "width")
   }
-  longest <- function(v) max(c(0L, txt(v)))
-  word <- function(nm) {
-    w <- unlist(strsplit(nm, "____|[ \n]+"))
-    max(c(0L, nchar(w, type = "width")))
-  }
   vals <- setdiff(seq_along(body), stub)
-  need <- vapply(vals, function(j) max(longest(body[[j]]), word(names(body)[j])) + 2L, 0L)
-  if (length(vals)) need <- pmax(need, as.integer(floor(page * 0.6 / (length(vals) + 1L))))
-  low <- ifelse(seq_along(stub) == 1L & hier, 20L, 12L)
-  own <- pmax(1L, vapply(stub, function(j) longest(body[[j]]) + 2L, 0L))
-  rest <- max(0L, page - sum(need))
-  sw <- pmax(low, own, floor(rest * own / sum(own)))
+  n <- length(vals)
+  own <- pmax(1L, vapply(stub, function(j) max(c(0L, txt(body[[j]]))) + 2L, 0L))
+  keep <- min(sum(own), .tfl_widths_stub_keep)
+  tiers <- list(max(as.integer(floor(page * 0.6 / (n + 1L))), 12L), 8L)
+  tier <- 3L
+  v <- as.integer(floor(page / (n + 2L)))
+  for (k in seq_along(tiers)) {
+    if (page - n * tiers[[k]] >= keep) {
+      tier <- k
+      v <- tiers[[k]]
+      break
+    }
+  }
+  rest <- if (tier == 3L) 2L * v else page - n * v
+  sw <- floor(rest * own / sum(own))
+  sw[1L] <- rest - sum(sw[-1L])
   w <- integer(ncol(body))
   w[stub] <- as.integer(sw)
-  w[vals] <- as.integer(need)
-  stats::setNames(w, names(body))
+  w[vals] <- v
+  structure(stats::setNames(w, names(body)), tier = tier)
 }
 
 # The report with the widths `w` in its plan_columns item (after its
@@ -230,7 +241,7 @@
   data.frame(output_id = ids, where = "content", item = "widths",
              assumption = paste("Column widths: the default proportions, set for now because",
                                 "the shell's widths were not read (tflspec's rule: each value column",
-                                "as wide as its cells and header words need, the row headings the rest)"),
+                                "its share of the page, the row headings the rest)"),
              value = "default widths",
              question = "Are the column widths as the shell wants?",
              stringsAsFactors = FALSE)

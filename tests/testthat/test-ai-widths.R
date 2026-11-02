@@ -49,28 +49,31 @@ test_that("a table with no widths gets the usual layout's in its report file, wh
   expect_true(all(b == "kept"))
 })
 
-test_that("the default rule: values as their cells and header words need, the stub the rest", {
+test_that("the default rule: the user's three tiers, the row headings keeping their content", {
   w <- function(body, stub = 1L, ...) tflspec:::.tfl_default_widths(body, stub, ...)
-  b <- data.frame(row_label = c("Age (years)", "    Mean (SD)"),
-                  `Placebo____Value` = c("", "22.8 (10.38)"), check.names = FALSE)
-  x <- w(b)
-  # one value column 30% of the page (more than its "22.8 (10.38)" needs),
-  # the stub the rest: 70:30, the user's target; two 60:20:20, three 55:15:15:15
-  expect_identical(names(x), names(b))
-  expect_identical(unname(x), c(84L, 36L))
-  b3 <- cbind(b, B = "1", C = "1")
-  expect_identical(unname(w(b3)), c(66L, 18L, 18L, 18L))
-  # a header word longer than the cells ("Placebo") sets the value's need
-  h <- data.frame(row_label = "n", `Placebo____Change from baseline` = "7", check.names = FALSE)
-  expect_true(w(h, page = 0L)[[2L]] >= nchar("baseline") + 2L)
-  # many value columns: each keeps its need, the stub its content (26 + 2)
-  many <- as.data.frame(c(list(row_label = "a long row heading of text"),
-                          stats::setNames(as.list(rep("100 (100.0%)", 12)), paste0("C", 1:12))))
-  y <- w(many)
-  expect_identical(unname(y[1L]), 28L)
-  expect_true(all(y[-1L] == 14L))
-  # a hierarchy's first column at least 20
-  expect_identical(unname(w(data.frame(row_label = "x", A = "1"), page = 0L, hier = TRUE)[1L]), 20L)
+  vals <- function(k) stats::setNames(as.list(rep("40 (51.3%)", k)), paste0("C", seq_len(k)))
+  tab <- function(stub, k) as.data.frame(c(list(row_label = stub), vals(k)))
+  age <- c("Age group, n (%)", "    65-80")
+  # 1: each value 60 / (n + 1) % of the 120, the stub the rest -- 70:30,
+  # 60:20:20, 55:15:15:15
+  expect_identical(unname(as.vector(w(tab(age, 1)))), c(84L, 36L))
+  expect_identical(unname(as.vector(w(tab(age, 2)))), c(72L, 24L, 24L))
+  x <- w(tab(age, 3))
+  expect_identical(unname(as.vector(x)), c(66L, 18L, 18L, 18L))
+  expect_identical(attr(x, "tier"), 1L)
+  expect_identical(names(x), c("row_label", "C1", "C2", "C3"))
+  # 2: ten value columns of 12 leave nothing; of 8 (two lines) the stub its
+  # content (18)
+  y <- w(tab(age, 10))
+  expect_identical(attr(y, "tier"), 2L)
+  expect_true(all(y[-1L] == 8L))
+  expect_identical(unname(y[1L]), 40L)
+  # 3: a long stub (28, kept up to 30) with twelve columns: all equal, the
+  # stub two
+  z <- w(tab("a long row heading of text", 12))
+  expect_identical(attr(z, "tier"), 3L)
+  expect_identical(unname(z[1L]), 2L * unname(z[2L]))
+  expect_true(all(z[-1L] == z[2L]))
 })
 
 test_that("a table that says its widths is left as it is", {
