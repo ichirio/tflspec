@@ -9,10 +9,10 @@ The table template \code{pk_conc}, layout \code{listing_summary}. Its program is
 \section{Parameters}{
 \tabular{llllll}{
    Parameter \tab Tier \tab Stage \tab Default \tab Maps to \tab What \cr
-   \code{population} \tab required \tab call \tab  \tab output.population \tab the analysis set's id (PK) \cr
+   \code{population} \tab required \tab call \tab  \tab output.population \tab the analysis set's id (SAF) \cr
    \code{subset} \tab other \tab call \tab  \tab  \tab which subjects (R, on the analysis set's ADSL): PART == "Part 1" \cr
    \code{data} \tab other \tab call \tab ADPC \tab  \tab the dataset of concentrations \cr
-   \code{where} \tab other \tab call \tab  \tab  \tab the records kept (R), e.g. PARAMCD == "DRUGX" \cr
+   \code{where} \tab other \tab call \tab  \tab  \tab the records kept (R), e.g. ANL01FL == "Y" \cr
    \code{by} \tab other \tab call \tab PARAM, TRT01A \tab settings.treatment \tab the groups: a page each (an analyte, an arm), the summary's too \cr
    \code{heading} \tab other \tab call \tab  \tab  \tab a page's name in the titles (\{\if{html}{\out{<group>}}\}: its value); NULL: the groups' values, a line each \cr
    \code{time} \tab other \tab call \tab ATPT \tab  \tab the time point's variable (the columns) \cr

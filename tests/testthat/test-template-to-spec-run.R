@@ -12,6 +12,8 @@ tsr_study <- function(root) {
     haven::write_xpt(tflspec:::.ai_chr(getExportedValue("tflspec", x)),
                      file.path(d, "adam", paste0(x, ".xpt")))
   }
+  # (pk_conc's concentrations: helper-pk.R)
+  haven::write_xpt(tflspec:::.ai_chr(pk_adpc(tflspec::adsl)), file.path(d, "adam", "adpc.xpt"))
   tfl_ai_study_init(d, adam = "adam", study_id = "TSR-1")
   d
 }

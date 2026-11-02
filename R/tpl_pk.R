@@ -22,10 +22,10 @@
   "cv = \\(x) if (!length(x) || mean(x) == 0) NA_real_ else 100 * sd(x) / mean(x))")
 
 .tpl_pk_params <- function() list(
-  tfl_param("population", required = TRUE, doc = "the analysis set's id (PK)"),
+  tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
   .tpl_subset_param(),
   tfl_param("data", "ADPC", doc = "the dataset of concentrations"),
-  tfl_param("where", NULL, doc = "the records kept (R), e.g. PARAMCD == \"DRUGX\""),
+  tfl_param("where", NULL, doc = "the records kept (R), e.g. ANL01FL == \"Y\""),
   tfl_param("by", c("PARAM", "TRT01A"), type = "vars", multiple = TRUE,
             doc = "the groups: a page each (an analyte, an arm), the summary's too"),
   tfl_param("heading", NULL, doc = paste(
@@ -96,9 +96,9 @@
            lines = list(list(row_label = "", .values = a$time_heading),
                         list(row_label = a$subject_heading, .values = "{col}")),
            span = tfl_r("list(c(.values = \"one\"), c(.values = \"each\"))"))),
-         tfl_item("plan_columns", list(decimal = ".values")),
          tfl_item("plan_paginate_rows", list(page_by = a$by, heading = heading,
-                                             heading_at = "title"))),
+                                             heading_at = "title")),
+         tfl_item("plan_columns", list(decimal = ".values"))),
     if (length(a$split_at)) list(tfl_item("plan_paginate_cols", list(
       at = a$split_at, order = "down"))))
   list(ard = list(analysis_data = sets, analyses = analyses),
