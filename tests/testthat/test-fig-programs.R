@@ -136,17 +136,37 @@ test_that("a step after a named object changes it, in its pipe; code lists go on
                fixed = TRUE)
 })
 
-test_that("the user's layer code is a statement on p, the chain around it", {
+test_that("the user's layer code is a statement on p, after the settings", {
   d <- tfl_fig_design(
     data = list(list(step = "read", dataset = "ADSL")),
+    plot = list(legend = "bottom"),
     layers = list(list(layer = "hline", yintercept = 0),
                   list(layer = "layer_code", code = "p <- p + ggplot2::ggtitle('mine')"),
-                  list(layer = "hline", yintercept = 1)))
+                  list(layer = "hline", yintercept = 1),
+                  list(layer = "layer_code", code = "p <- p + ggplot2::theme(legend.title = ggplot2::element_text())")))
   code <- tfl_fig_design_code(d, setup = TRUE, save = FALSE, name = "plot")
   i <- which(code == "p <- p + ggplot2::ggtitle('mine')")
+  j <- which(startsWith(code, "p <- p + ggplot2::theme(legend.title"))
   expect_length(i, 1L)
-  expect_true(any(startsWith(code[seq_len(i)], "p <- ggplot() +")))
-  expect_true("p <- p +" %in% code[-seq_len(i)])
+  # both layers and every setting before it: the user's code has the last word
+  before <- paste(code[seq_len(i)], collapse = "
+")
+  expect_match(before, "p <- ggplot() +", fixed = TRUE)
+  expect_match(before, "yintercept = 1", fixed = TRUE)
+  expect_match(before, "legend.position = \"bottom\"", fixed = TRUE)
+  expect_true(j > i)
   expect_identical(code[[length(code)]], "plot <- p")
   expect_false(inherits(tryCatch(parse(text = code), error = function(e) e), "error"))
+})
+
+test_that("an axis title written empty is no title", {
+  d <- tfl_fig_design(data = list(list(step = "read", dataset = "ADSL")),
+                      plot = list(x_label = "", y_label = "Age"),
+                      layers = list(list(layer = "point", x = "TRT01A", y = "AGE")))
+  code <- paste(tfl_fig_design_code(d), collapse = "
+")
+  expect_match(code, "labs(x = NULL, y = \"Age\")", fixed = TRUE)
+  d$plot$x_label <- NULL
+  expect_match(paste(tfl_fig_design_code(d), collapse = "
+"), "labs(y = \"Age\")", fixed = TRUE)
 })
