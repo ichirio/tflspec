@@ -16,10 +16,22 @@
 .tpl_spec_of <- function(output) {
   t <- output$template
   if (!is.list(t) || is.null(t$name)) return(NULL)
+  # (a figure design's preset, not a template SPEC: the design's own)
+  if (.fig_preset_named(t)) return(NULL)
   if (!is.character(t$name) || length(t$name) != 1L || !nzchar(t$name)) {
     .ard_stop(sprintf("%s: `template: name:` is one template's name.", output$id))
   }
   list(name = t$name, args = as.list(t$args %||% list()))
+}
+
+# Is a `template: {name: }` a figure design's preset (tfl_fig_templates():
+# box_by_visit, swimmer_full ...) rather than a template SPEC?  An agent
+# writes the preset instructions-figure.md lists in the template SPEC's
+# form; a name the registry has is the template SPEC's
+.fig_preset_named <- function(t) {
+  if (!is.list(t) || !is.character(t$name) || length(t$name) != 1L) return(FALSE)
+  if (exists(t$name, envir = .tpl_registry, inherits = FALSE)) return(FALSE)
+  t$name %in% tfl_fig_templates()$template
 }
 
 # The study standard's value of a parameter that says where it is
