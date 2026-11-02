@@ -96,12 +96,21 @@ p <- ggplot(sm, aes(AVISIT, mean, colour = TRT01A, group = TRT01A)) +
 | `theme(legend.position = "bottom")`, `"none"`, inside top right | `legend: bottom`, `none`, `inside` |
 | `theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())` | `x_text: false` |
 | `theme_bw()`, `theme_minimal()` | leave out: the study's theme (`theme`) is the figure style |
-| any other `scale_*()`, `theme(...)`, `guides()`, `coord_*()` | `add: [{fn: theme, args: 'axis.text.x = element_text(angle = 45, hjust = 1)'}]`, or a `layer_code` |
+| any other `scale_*()`, `theme(...)`, `guides()`, `coord_*()` | `add: [{fn: theme, args: {axis.text.x: !r element_text(angle = 45, hjust = 1)}}]`. The `args` are a mapping, one key per argument; an R expression is `!r`. Or a `layer_code` |
 
 ### Titles
 
 The shell's title lines and population go to `page.titles`, not to the
 plot (the report prints them above the figure).
+
+### Rules the build holds you to
+
+- A `code` step's text goes into the program as it is: it assigns its own
+  object (`sm <- df |> ...`), and `out:` only names it.
+- A dataset is in reach only when a `read` or `join` step names it.
+  To use ADSL in a code step, read it first.
+- `args` of a `plot.add` call or a `call` layer is a mapping. A value that
+  is R (a vector, a function call) is `!r`: `breaks: !r c(0.5, 1, 2)`.
 
 ## 3. What has no SPEC form
 
