@@ -53,3 +53,22 @@ test_that("in a study: A (the data steps, the call) = B (the design) = the templ
     expect_identical(grepl("PARAMCD == \"BOR\"", txt, fixed = TRUE), resp)
   }
 })
+
+test_that("tpl_waterfall(): a panel per arm, its settings as a named vector (#573)", {
+  skip_if_not_installed("dplyr")
+  df <- adtr[adtr$AVISIT == "WEEK 12" & !is.na(adtr$PCHG), ]
+  bor <- adrs[adrs$PARAMCD == "BOR", c("USUBJID", "AVALC")]
+  names(bor)[2L] <- "BOR"
+  df <- merge(df, bor, by = "USUBJID", all.x = TRUE)
+  for (resp in c(FALSE, TRUE)) {
+    # the reference lines' labels drawn in each panel
+    p <- tpl_waterfall(df, by_response = resp, plot = list(facet_by = "TRT01A"))
+    expect_type(tplfig_png(p), "character")
+    lab <- ggplot2::layer_data(p, 4L)
+    expect_identical(sort(unique(lab$label)), c("-30%", "20%"))
+    expect_identical(length(unique(lab$PANEL)), length(unique(df$TRT01A)))
+  }
+  # (the program's call writes the settings as list(); a named vector reads too)
+  q <- tpl_waterfall(df, plot = c(x_label = "Subjects", y_min = -100, y_max = 100))
+  expect_type(tplfig_png(q), "character")
+})

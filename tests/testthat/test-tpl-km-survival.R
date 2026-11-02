@@ -152,3 +152,26 @@ test_that("km_survival(legend_median = TRUE): each arm's median (95% CI) in the 
   q <- tfl_tpl(df, "km_survival", by = TRT01A, time_unit = "days", risk_table = FALSE)
   expect_s3_class(q$scales$get_scales("colour")$labels, "waiver")
 })
+
+test_that("km_survival takes the report's plot.x_by / x_max for its axis, its arguments first", {
+  km_skip()
+  d <- tempfile()
+  on.exit(unlink(d, recursive = TRUE))
+  dir.create(d)
+  file.copy(list.files(system.file("extdata", "spec-yaml", package = "tflspec"),
+                       full.names = TRUE), d, recursive = TRUE)
+  s <- tfl_read_study_spec(d)
+  km <- function(args, plot) {
+    o <- tfl_output("F-9", "figure",
+                    data = list(steps = list(list(step = "read", dataset = "ADTTE"),
+                                             list(step = "param", value = "PFS"))),
+                    template = list(name = "km_survival", args = c(list(by = "TRT01A"), args)))
+    o$plot <- plot
+    x <- tfl_template_to_spec(o, s)
+    unlist(lapply(x$data$steps, function(st) if (identical(st$step, "code")) st$code))
+  }
+  expect_true("x_breaks <- seq(0, 30, by = 6)" %in% km(list(), list(x_by = 6, x_max = 30)))
+  expect_true("x_breaks <- seq(0, max(fit$time), by = 6)" %in% km(list(), list(x_by = 6)))
+  expect_true("x_breaks <- seq(0, max(fit$time), by = 3)" %in% km(list(x_step = 3), list(x_by = 6)))
+  expect_true("x_breaks <- pretty(c(0, max(fit$time)))" %in% km(list(), list(x_label = "Months")))
+})
