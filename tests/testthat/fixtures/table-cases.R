@@ -67,7 +67,7 @@ list(
     header_bold = TRUE)),
   style_width = quote(base() |> plan_style(table_width_twips = 9000)),
   style_width_pct = quote(base() |> plan_style(table_width_pct = 80)),
-  style_width_writable = quote(base() |> plan_style(table_width_pct_of_writable = 90)),
+  style_width_writable = quote(base() |> plan_style(table_width_pct_of_writable = 0.9)),
   col_header_align = quote(base() |> plan_col_header(col_header_align = "left")),
   col_header_align_cells = quote(base() |> plan_col_header(col_header_align = "right", values = list(n = TRUE),
     rtf_col_header(c("", "{col}"), c("Characteristic", "(N={n})")))),
