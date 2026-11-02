@@ -64,9 +64,10 @@ arm above), pages (`plan_paginate_*`), blank rows, borders, fonts,
 `plan_style`.  The study's defaults and the person's builder do those.
 The column widths are in every draft: `plan_columns: {widths: {...}}`
 for a table, `width:` for a listing column (ai/AGENTS.md, step 5).
-A zero count the SAP or the standard prints as `0`: `plan_cells:
-{categorical: [!r 'n == 0 ~ "0"', "{n} ({p:.1f%}%)"]}` (a guard sees the
-cell's statistics), not a template's `count_cell`.
+A zero count the SAP or the standard prints as `0`: a guarded list (a
+guard sees the cell's statistics), a template's `count_cell: [!r 'n == 0
+~ "0"', "{n} ({p:.1f%}%)"]` or a code SPEC's `plan_cells: {categorical:
+[!r 'n == 0 ~ "0"', "{n} ({p:.1f%}%)"]}`.
 What the study's defaults (`spec/defaults.yml`, the company standard)
 already give -- the cell rules, the digits -- is not written again; a
 cell form or an N the shell shows otherwise is (above).
@@ -331,7 +332,10 @@ Group: {RENALGR}"`.
 
 - **A figure's time axis**: its label carries the unit, `Time (Months)`
   (the data's `AVALU`), never `Time` alone.  A template's own argument
-  (`censor_marks`, `risk_table`) says what the figure shows; a `layers:`
+  (`censor_marks`, `risk_table`) says what the figure shows -- the look
+  the study standard sets (`censor_shape`, the colours, the legend's
+  place) is not a `template: args:` item (the build refuses it): leave it
+  to the standard, under `ai: confirm` when the shell differs; a `layers:`
   item is for what no argument does -- never both for one thing.
 - **A listing**: a listing column's `width:` in the shell's proportions,
   wide enough for its longest value (a subject id on one line) and its

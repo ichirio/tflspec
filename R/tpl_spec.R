@@ -299,8 +299,6 @@ tfl_template_to_spec <- function(output, study) {
   paste(c(pkg, v), collapse = " ")
 }
 
-# A template report's program (the A use): the template's call, the
-# arguments its SPEC gives and the study's defaults it took (not the ones
 # The template's call as a program writes it: `tflspec::tfl_tpl` (a table's
 # or a listing's), `tflspec::tpl_<name>` (a figure's), a package's own
 # template with its `pkg::`; one made in the session bare.  A study's
@@ -319,6 +317,16 @@ tfl_template_to_spec <- function(output, study) {
   if (has) paste0(pkg, "::", fn) else fn
 }
 
+# An argument's !r values, in a list too, written as the R they are
+# (`n == 0 ~ "0"`), not as the text they are held in
+.tpl_r_code <- function(x) {
+  if (inherits(x, "tfl_r")) return(.spec_expr(as.character(unclass(x))))
+  if (is.list(x) && !is.object(x)) x[] <- lapply(x, .tpl_r_code)
+  x
+}
+
+# A template report's program (the A use): the template's call, the
+# arguments its SPEC gives and the study's defaults it took (not the ones
 # left at the template's own default), the code lists it reads at the head;
 # then the study's and the report's own lines, each marked
 .content_tpl_code <- function(output, data = "ard", plan = "plan", pipe = NULL) {
@@ -337,6 +345,8 @@ tfl_template_to_spec <- function(output, study) {
     called <- t$root %||% t$from
   }
   generic <- identical(t$call, "tfl_tpl")
+  # an !r value (a guard in `count_cell`'s list) as the R it is
+  args <- .tpl_r_code(args)
   # the code lists the template reads: those its plan_levels() item names
   lv <- Filter(function(it) identical(it$fn, "plan_levels"), tp$items)
   vars <- setdiff(unlist(lapply(lv, function(it) names(it$args))), c("variable", ".drop_empty"))
