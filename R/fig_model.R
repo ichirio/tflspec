@@ -1522,7 +1522,11 @@ tfl_read_fig_design <- function(path) {
   ard_pre <- unlist(lapply(lc, `[[`, "pre"))
   clip <- any(vapply(lc, function(x) isTRUE(x$clip_off), logical(1)))
   ax <- .fig_axis_code(plot, any(kinds == "risk_table"), fit_of(), clip)
-  first <- if (length(lc) && !is.null(lc[[1L]]$base)) sub("^p <- ", "", lc[[1L]]$base) else "ggplot()"
+  # the chain starts from the layer that is the plot itself (ggsurvfit(), a
+  # call with base: true) wherever it is -- a report's own layer_code may
+  # come before a template's layers
+  at <- which(vapply(lc, function(x) !is.null(x$base), NA))[1L]
+  first <- if (!is.na(at)) sub("^p <- ", "", lc[[at]]$base) else "ggplot()"
   panels <- Filter(Negate(is.null), lapply(lc, `[[`, "panel"))
   add_res <- .fig_plot_add_code(plot$add %||% list(), gg$version)
   guard_v <- c(unlist(lapply(lc, `[[`, "guard")), add_res$guard)
