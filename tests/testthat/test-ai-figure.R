@@ -109,3 +109,45 @@ test_that("tfl_ai_run(): the figure drawn, its PNG and RTF; agent_prompt", {
   expect_gt(file.size(file.path(d, fr$png)), 10000)
   expect_true(all(!is.na(res$reports$rtf)))
 })
+
+test_that("an agent's figure draft with its layers as `layers:` (the instructions' form) is drawn", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("rtfreporter")
+  root <- withr::local_tempdir()
+  d <- file.path(root, "study")
+  tfl_ai_prepare(unit = "toc", d, fig_book(), adam = fig_study(root), quiet = TRUE, size = 3L)
+  ai_drafts_from_fixtures(d)
+  # the agent's file: no template, the layers beside an empty content
+  f <- file.path(d, "ai", "spec", "outputs", "F-14-2-2.yml")
+  writeLines(c(
+    "id: F-14-2-2", "kind: figure", "label: Best overall response by arm", "population: ITT",
+    "extends: [defaults]",
+    "data:", "  source: code", "  steps:",
+    "    - {step: read, dataset: ADRS}", "    - {step: flag, variable: ITTFL}",
+    "    - {step: param, value: OVR}",
+    "content: []",
+    "plot: {x_label: Arm, y_label: Subjects}",
+    "layers:", "  - {layer: point, x: AVISITN, y: AVAL}",
+    "page:", "  titles:", "    '1': {center: Figure 14.2.2}"), f)
+  o <- tfl_read_output(f)
+  fd <- tflspec:::.fig_design_of_output(o)
+  expect_identical(vapply(fd$layers, `[[`, "", "layer"), "point")
+  res <- suppressMessages(tfl_ai_run(d, requests = "figure-1"))
+  fr <- res$reports[res$reports$output_id == "F-14-2-2", ]
+  expect_false(is.na(fr$png), info = paste(fr$first, fr$rtf_problem))
+  expect_true(file.exists(file.path(d, fr$png)))
+})
+
+test_that("a design's preset written as a template is the design's preset, not a template SPEC", {
+  expect_true(tflspec:::.fig_preset_named(list(name = "box_by_visit")))
+  expect_false(tflspec:::.fig_preset_named(list(name = "km_survival")))
+  expect_false(tflspec:::.fig_preset_named(list(name = "no_such")))
+  expect_false(tflspec:::.fig_preset_named("box_by_visit"))
+  o <- tfl_output("F-1", "figure", template = list(name = "box_by_visit"))
+  expect_null(tflspec:::.tpl_spec_of(o))
+  expect_identical(tflspec:::.fig_design_of_output(o)$template, "box_by_visit")
+  expect_identical(tflspec:::.tpl_spec_of(tfl_output("F-2", "figure",
+                                                      template = list(name = "km_survival")))$name,
+                   "km_survival")
+})

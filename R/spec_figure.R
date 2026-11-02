@@ -53,7 +53,10 @@
   if (!is.null(output$data$steps)) fd$data <- output$data$steps
   if (!is.null(output$data$stats)) fd$stats <- output$data$stats
   if (!is.null(output$plot)) fd$plot <- output$plot
-  fd$layers <- list()
+  # (a draft that says its layers as a figure answer does, `layers:` beside
+  # its content -- the agent's file, as instructions-figure.md shows them --
+  # has them first)
+  fd$layers <- Filter(function(l) is.list(l) && !is.null(l$layer), output$layers %||% list())
   for (it in output$content) {
     x <- .fig_item_as_piece(it)
     if (identical(x$to, "add")) {
