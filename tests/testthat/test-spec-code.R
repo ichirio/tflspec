@@ -153,7 +153,7 @@ test_that("tfl_report_code() writes the document tfl_report() makes", {
   # one pipe from rtf_document(): the steps take the document from it
   expect_true(any(grepl("  rtf_titles(", code, fixed = TRUE)))
   expect_true(any(grepl("font_size_half_points = 20", code, fixed = TRUE)))
-  expect_true(any(grepl("rtf_default_format(font_size_half_points = 18", code,
+  expect_true(any(grepl("rtf_style(font_size_half_points = 18", code,
                         fixed = TRUE)))
 })
 

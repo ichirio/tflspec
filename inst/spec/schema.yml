@@ -641,9 +641,32 @@ rtf_page:
     header_dist_in: {type: number}
     footer_dist_in: {type: number}
 
+rtf_style:
+  package: rtfreporter
+  description: "The document's style (rtf_document(style = )): the shared keys reach every module that has them; a section (table, titles, footnotes, header, footer) is a map of that module's own arguments and wins over the shared key; a module's own argument wins over both."
+  args:
+    font: {type: "string|vec<enum[latin|east_asian|complex|hansi], string>"}
+    font_size_half_points: {type: integer}
+    row_height_twips: {type: integer}
+    cell_padding_left_twips: {type: integer}
+    cell_padding_right_twips: {type: integer}
+    cell_padding_top_twips: {type: integer}
+    cell_padding_bottom_twips: {type: integer}
+    markup: {type: "enum[script|relational|all|none]|list<enum[script|relational]>"}
+    color: {type: string, description: "Text colour, \"#7F7F7F\"; for now the page header and footer only."}
+    title_format: {type: string}
+    footnote_format: {type: string}
+    title_width: {type: "number|string"}
+    footnote_width: {type: "number|string"}
+    table: {type: "map<string, object>", description: "rtftable()'s style arguments for every content table: {header_row_height_twips: 260, cell_valign: center}."}
+    titles: {type: "map<string, object>", description: "rtf_titles()'s style arguments: font, font_size_half_points, row_height_twips, markup, align."}
+    footnotes: {type: "map<string, object>", description: "rtf_footnotes()'s style arguments: font, font_size_half_points, row_height_twips, markup, align, border."}
+    header: {type: "map<string, object>", description: "rtf_header()'s style arguments: font, font_size_half_points, row_height_twips, markup, the cell padding, border, color."}
+    footer: {type: "map<string, object>", description: "rtf_footer()'s style arguments, as header."}
+
 rtf_default_format:
   package: rtfreporter
-  description: The document's text defaults.
+  description: "The document's text defaults: deprecated in rtfreporter (rtf_style()); an old SPEC's page.rtf_default_format is read as rtf_style's shared level."
   args:
     font_size_half_points: {type: integer}
     row_height_twips: {type: integer}
@@ -1806,7 +1829,7 @@ rtf_footer:
         example: ard_dm
   - sheet: page
     description: 'Report: one row a report; the page (rtf_page()) and the document''s
-      text defaults (rtf_default_format()). Blank: rtfreporter''s options (landscape
+      style (rtf_style()). Blank: rtfreporter''s options (landscape
       Letter, 0.75 in margins).'
     columns:
       - column: paper_size
@@ -1864,31 +1887,31 @@ rtf_footer:
           ar, he, en. Blank: none.'
         example: east_asian = ja
       - column: font_size_half_points
-        at: rtf_default_format.font_size_half_points
+        at: rtf_style.font_size_half_points
         description: 'The body font size in half-points (18 = 9 pt); blank: rtfreporter''s
           option.'
         example: '18'
       - column: title_format
-        at: rtf_default_format.title_format
+        at: rtf_style.title_format
         description: 'text (centred paragraphs) / table (a content-width one-column
           table); blank: text.'
         example: table
       - column: footnote_format
-        at: rtf_default_format.footnote_format
+        at: rtf_style.footnote_format
         description: 'table (content-width, with the separator rule) / text (paragraphs);
           blank: table.'
         example: text
       - column: title_width
-        at: rtf_default_format.title_width
+        at: rtf_style.title_width
         description: 'The title block''s width: content / page / a fraction of the
           writable width / twips; blank: content.'
         example: page
       - column: footnote_width
-        at: rtf_default_format.footnote_width
+        at: rtf_style.footnote_width
         description: 'The footnote block''s width, as title_width; blank: content.'
         example: page
       - column: markup
-        at: rtf_default_format.markup
+        at: rtf_style.markup
         description: 'Cell-text markup for the whole document: script / relational
           / all / none; blank: script.'
         example: all

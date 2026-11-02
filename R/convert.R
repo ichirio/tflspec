@@ -446,9 +446,9 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     height_in = "rtf_page", margin_top_in = "rtf_page", margin_bottom_in = "rtf_page",
     margin_left_in = "rtf_page", margin_right_in = "rtf_page",
     header_dist_in = "rtf_page", footer_dist_in = "rtf_page",
-    font_size_half_points = "rtf_default_format", title_format = "rtf_default_format",
-    footnote_format = "rtf_default_format", title_width = "rtf_default_format",
-    footnote_width = "rtf_default_format", markup = "rtf_default_format"),
+    font_size_half_points = "rtf_style", title_format = "rtf_style",
+    footnote_format = "rtf_style", title_width = "rtf_style",
+    footnote_width = "rtf_style", markup = "rtf_style"),
   report = c(
     auto_section = "rtf_tables.auto_section", section_align = "rtf_tables.section_label_align",
     auto_title = "rtf_tables.auto_title", title_align = "rtf_tables.title_label_align",
