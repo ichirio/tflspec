@@ -280,6 +280,85 @@ Round 4:
   `aes_or`.  geom_hline / _vline / _abline say `yintercept`, `xintercept`,
   `slope` and `intercept`.
 
+### Round 5 (2026-11-02): ggplot2's own examples, through a SPEC and back
+
+The arguments' and the aesthetics' measures are at their ceiling: they say
+a SPEC can name every argument and the check types it, not that what
+ggplot2's users write reads as a SPEC and draws the same.  A third measure
+does: `dev/spec-coverage-ggplot2-examples.R` takes every call of a
+function in the scope in the examples of ggplot2's help pages (759 calls,
+1272 uses of an argument, 138 functions; read from the installed ggplot2,
+not copied), reads it as a SPEC item (`.fig_lang_item()`, what tflspec
+reads from R code), checks it, writes it back (`.fig_item_lang()`) and
+draws the example with that code in its place (data, layout, theme,
+labels and the scales' labels compared with the original's).  One row an
+argument as the examples write it: `spec-coverage-ggplot2-examples.csv`
+(the same columns, and `uses`).
+
+- **yes**: read as a typed value (not `!r`), no problem of the check on it,
+  and it draws the same (`!r NULL` and a number written as arithmetic,
+  `!r 1/5`, count as typed: the check judges them).
+- **partial**: read as R, or with R in it, or a warning of the check; it
+  draws the same.
+- **no**: an error of the check, the call not read as an item, or drawn
+  otherwise (or not at all).
+
+An example that does not draw the same twice by itself (data at random,
+a global theme, a package not installed) is not judged on its drawing; a
+call inside a function's definition (`aes({{ x }})`) is left out.  The
+same weights.
+
+| Examples | Before | After |
+|---|---:|---:|
+| **ggplot2: geoms, scales, coords, themes, facets, guides, labs, positions** | **89.7%** | **94.5%** |
+| weight-3 functions only | 85.0% | 91.2% |
+| geom_*() | 90.6% | 95.2% |
+| scale_*() | 87.2% | 92.1% |
+| coord_*() | 96.1% | 99.4% |
+| theme(), elements | 94.1% | 96.8% |
+| facets | 82.2% | 92.4% |
+| guides | 72.0% | 88.2% |
+| labs(), annotate(), annotation_*() | 89.3% | 96.8% |
+| position_*() | 100.0% | 100.0% |
+| **stat_*()** (shown apart) | **90.8%** | **92.1%** |
+| uses yes / partial / no | 986 / 248 / 35 | 1100 / 169 / 3 |
+
+Round 5:
+
+- The check (false problems on ggplot2's own code): a layer's argument by
+  ggplot2's other spelling (`color =`, `pch =`, `lty =`) is the aesthetic
+  it spells; a layer takes what it passes on to `layer()` (`key_glyph`,
+  ggplot2 4.0's `layout`) and its position's (4.0's `geom_text(nudge_x =)`,
+  and `nudge_x` / `nudge_y` as aesthetics); `theme()` takes 4.0's
+  `palette.colour.discrete` ... (14 settings, typed); a number written as
+  arithmetic of numbers (`!r 1/5`, `!r -0.4 * pi`) is a number.
+- Types (`inst/fig/gg_args.csv`, schema.yml): the vector forms ggplot2
+  takes (`annotate(label = c(...))`, a 2-d `binwidth`, `expand = c(0.1,
+  0.1)` on the position scales' cards, a 4.0 `palette` as colours), R where
+  a value may be computed (`colours`, `colour`, `fill`, `quantiles`,
+  `bins`, `args`, `lineend`, the geoms' and ggplot()'s `data`),
+  `margin_auto()` / `margin_part()` as a margin, `facet_grid()`'s `rows` /
+  `cols` as columns.  (`|r` comes last: the GUI's field is the same.)
+- The reader: `aes(displ, hwy)` is x and y; a facet's variables as its
+  columns (`~A`, `vars(A, B)`, `A ~ B`, `. ~ B`); any constructor of a
+  value (a position, a guide, an element, `theme()`, `unit()`, `rel()`,
+  `sec_axis()`, `margin_auto()` ...) as `{fn:, args:}`, its positional
+  arguments named and R in it (before: R, unless every argument was named
+  and a constant); a named vector of constants as a map; `1:5` as the
+  numbers.  Fix: R of several statements (`function(d) { ...; ... }`,
+  `quote({ ... })`) was joined into one line that did not parse; it keeps
+  its lines.
+- The writer: `unit()` and `rel()` by position (`unit(0.5, "cm")`, was
+  `unit(x = 0.5, units = "cm")`); `facet_grid()`'s columns as `vars(SEX)`
+  (ggplot2 takes no text for rows with cols).
+
+What is left (partial): a function given by name (`fun = mean`, `method
+= lm`, `fun = dnorm`), the labels and breaks functions of scales
+(`scales::label_math()`), objects of the example (`values = cols`,
+`breaks = price_bins`), dates (`Sys.Date() - 30`), and grobs:
+R is the SPEC's form for them.  No: `expand_limits(positions)`, a data
+frame given by position.
+
 ### The extension packages (ggsurvfit, ggrepel, ggh4x, ggtext, ggnewscale, patchwork)
 
 The same measure, the same file (`package` says which), over the
