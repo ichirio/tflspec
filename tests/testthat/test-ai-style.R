@@ -194,3 +194,73 @@ test_that("tfl_ai_style_diff(): learned against the standard; `all` stands for e
   expect_error(tfl_ai_style_diff(out, data.frame(a = 1)), "`kind`, `key` and `value`")
   expect_error(tfl_ai_style_diff(list()), "tfl_ai_style_read")
 })
+
+# fictional SAS ODS RTF (fixtures/sas-rtf, make-fixtures.R): DMY-901 / DMY-902
+sas_dir <- function() test_path("fixtures", "sas-rtf")
+
+test_that("SAS ODS RTF: a table over two pages is one table, its repeated header counted once (#547)", {
+  s <- tfl_rtf_style_scan(sas_dir())
+  ae <- s[s$file == "DMY-901/t_ae_soc.rtf", , drop = FALSE]
+  expect_identical(unique(ae$table), 1L)
+  expect_identical(sort(unique(ae$page)), 1:2)
+  expect_identical(sum(ae$header), 2L)
+  expect_identical(nrow(ae), 8L)
+  expect_identical(ae$row, seq_len(8L))
+  # the files by their study's folder
+  expect_setequal(unique(s$file), c("DMY-901/t_ae_soc.rtf", "DMY-901/t_dm.rtf",
+                                    "DMY-902/l_ae.rtf", "DMY-902/t_lb_chg.rtf"))
+  expect_false(any(grepl("Diarrhoea|Fatigue|Demographic", unlist(s))))
+})
+
+test_that("tfl_rtf_style_tables(): a table's kind, header, widths, rules, page, titles (#547)", {
+  t <- tfl_rtf_style_tables(sas_dir())
+  rownames(t) <- t$file
+  expect_identical(t[c("DMY-901/t_dm.rtf", "DMY-901/t_ae_soc.rtf", "DMY-902/t_lb_chg.rtf",
+                       "DMY-902/l_ae.rtf"), "kind"],
+                   c("demog", "ae_soc_pt", "param_change", "listing"))
+  ae <- t["DMY-901/t_ae_soc.rtf", ]
+  expect_identical(c(ae$pages, ae$header_rows, ae$body_rows, ae$n_cols), c(2L, 2L, 6L, 3L))
+  expect_identical(ae$stub_ratio, 2)
+  expect_identical(ae$rules, "above_header | under_header | end")
+  # a spanner's underline over its columns only
+  expect_identical(t["DMY-902/t_lb_chg.rtf", "rules"],
+                   "above_header | under_spanner | under_header | end")
+  expect_identical(t["DMY-901/t_dm.rtf", "stub_ratio"], 1.5)
+  expect_identical(t$orientation, ifelse(t$file == "DMY-902/t_lb_chg.rtf", "portrait", "landscape"))
+  expect_identical(unique(t$margins_in), "1 | 1 | 1 | 1")
+  expect_identical(unique(t$font), "Times New Roman")
+  expect_identical(unique(t$font_size_pt), 9)
+  # titles in the page header, centred, without its running line (page n of m);
+  # footnotes in the page footer, left
+  expect_identical(unique(t$title_place), "header")
+  expect_identical(unique(t$title_align), "c")
+  expect_identical(ae$title, paste("Table 14.3.1.2",
+    "Treatment-Emergent Adverse Events by System Organ Class and Preferred Term",
+    "(Safety Population)", sep = " / "))
+  expect_identical(unique(t$footnote_place), "footer")
+  expect_identical(unique(t$footnote_align), "l")
+  expect_identical(ae$footnotes, 2L)
+  expect_identical(c(t["DMY-901/t_dm.rtf", "value_align"], t["DMY-902/l_ae.rtf", "value_align"]),
+                   c("c", "l"))
+})
+
+test_that("titles written as paragraphs before the table, footnotes after it", {
+  d <- tempfile("style-")
+  dir.create(d)
+  on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  writeLines(c("{\\rtf1\\ansi{\\fonttbl{\\f0 Courier New;}}\\paperw12240\\paperh15840",
+               "\\pard\\qc{\\b Table 14.2.1}\\par\\pard\\qc Shift Table of ALT\\par",
+               "\\trowd\\trhdr\\clbrdrb\\brdrs\\cellx3000\\clbrdrb\\brdrs\\cellx4500",
+               "\\pard\\intbl\\ql \\cell\\pard\\intbl\\qc Normal\\cell\\row",
+               "\\trowd\\cellx3000\\cellx4500\\pard\\intbl\\ql Low\\cell\\pard\\intbl\\qc 3\\cell\\row",
+               "\\pard\\ql Note: x.\\par}"), file.path(d, "t.rtf"))
+  t <- tfl_rtf_style_tables(d)
+  expect_identical(t$title_place, "before")
+  expect_identical(t$title, "Table 14.2.1 / Shift Table of ALT")
+  expect_identical(t$kind, "shift")
+  expect_identical(t$footnote_place, "after")
+  expect_identical(t$footnotes, 1L)
+  expect_identical(t$rules, "under_header")
+  expect_identical(t$orientation, "portrait")
+  expect_error(tfl_rtf_style_tables(file.path(d, "none")), "a folder of RTF files")
+})

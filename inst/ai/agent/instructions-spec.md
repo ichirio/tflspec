@@ -188,6 +188,20 @@ page:
     "2": {center: "Kaplan-Meier Plot of Overall Survival"}
 ```
 
+A figure's draft goes into the program as you write it, so the build holds
+it to these rules (every agent of tflspec#512 tripped on them):
+
+- A `code` step's text is pasted as it is: it assigns its own object
+  (`sm <- df |> ...`); `out:` only names it.
+- A dataset is in reach only when a `read` or `join` step names it (a
+  `subset` step does not load one); to use ADSL in a code step, read it.
+- The `args` of a `plot.add` call or a `call` layer are a mapping, one key
+  an argument; an R value is `!r` (`breaks: !r c(0.5, 1, 2)`,
+  `axis.text.x: !r element_text(angle = 45)`); a plain value is plain
+  (`scales: free_x`, not `'"free_x"'`).
+- A list of numbers in `template: args` (`x_breaks: [0.25, 0.5, 1, 2, 4]`)
+  is several numbers.
+
 ## The fields, exactly
 
 `ard.analysis_data`, one item each: `id`, `label`, `from` (a dataset of
