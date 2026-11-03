@@ -32,7 +32,8 @@ Install once (a new R has no `remotes`; `broom` is what cardx's confidence
 intervals need):
 
 ```r
-install.packages(c("remotes", "cards", "cardx", "haven", "broom"))
+# tflplanner's article installs the same list
+install.packages(c("remotes", "cards", "cardx", "haven", "broom", "broom.helpers", "parameters", "dplyr", "tidyr", "readxl", "officer", "ggsurvfit", "patchwork"))
 remotes::install_github(c("ichirio/rtfreporter", "ichirio/tflspec"))
 ```
 
@@ -293,10 +294,25 @@ ai/                     the company's AI folder
   reference/            the company's conventions, if you have them
 ```
 
+Without tflplanner, set the folder first: `options(tflspec.ai_home = "C:/.../company-ai")`
+(or give `dir =` to each call).
+
 1. Copy past RTF tables into `past_tfl/`. Use only files you may show the
    agent.
-2. Run `tfl_ai_style_prompt(standard = <the company standard>)`: a data frame
-   of `kind`, `key`, `value`. Without a standard it still works.
+2. Run `tfl_ai_style_prompt(standard = <the company standard>)`. The standard is
+   a data frame of `kind`, `key`, `value`. Without a standard it still works.
+
+   ```r
+   options(tflspec.ai_home = "C:/.../company-ai")
+   std <- data.frame(kind = c("all", "demog", "ae_soc_pt"),
+                     key = c("font", "n_form", "first_row"),
+                     value = c("Courier New 9 pt", "(N=xx)", "Any TEAE"))
+   tfl_ai_style_prompt(standard = std)
+   ```
+
+   The kinds: all, demog, ae_soc_pt, ae, param_change, shift, listing, figure, other.
+   The keys: rules, spanner_rule, stub_ratio, font, orientation, titles, footnotes, n_form, categorical, zero, continuous, digits, stub_heading, first_row, sort.
+
 3. Open the AI folder in VS Code and give the agent `AGENTS-learn.md`.
 4. The agent writes `company_hints.yml`: the features of this company's
    reports by kind, with how many files show each. Where the files differ
@@ -347,6 +363,8 @@ first line (`<!-- templates: TRUE -->`) and `ai/status.md`'s.
 `tfl_ai_compare()` says, a row a report, which was used.
 
 ## Try it on the sample (10 minutes)
+
+This is tflspec's own oncology sample (5 reports, the drafts stored with it). tflplanner's AI tab has a different sample, study DMY-001 (8 reports, drafted by the agent): see its article.
 
 The files that come with tflspec: a TOC/SHELL workbook of four tables and a
 Kaplan-Meier figure, the sample ADaM as XPT, and a stored draft for each of

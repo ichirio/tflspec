@@ -30,7 +30,8 @@ mystudy/
 信頼区間に要ります）:
 
 ```r
-install.packages(c("remotes", "cards", "cardx", "haven", "broom"))
+# tflplanner の記事も同じ一覧を入れます
+install.packages(c("remotes", "cards", "cardx", "haven", "broom", "broom.helpers", "parameters", "dplyr", "tidyr", "readxl", "officer", "ggsurvfit", "patchwork"))
 remotes::install_github(c("ichirio/rtfreporter", "ichirio/tflspec"))
 ```
 
@@ -274,10 +275,25 @@ ai/                     会社の AI フォルダ
   reference/            会社の規約（あれば）
 ```
 
+tflplanner を使わないときは、先にフォルダを決めます: `options(tflspec.ai_home = "C:/.../company-ai")`
+（または各呼び出しに `dir =` を渡します）。
+
 1. 過去の RTF の表を `past_tfl/` に写します。エージェントに見せてよいファイルだけを
    使ってください。
 2. `tfl_ai_style_prompt(standard = <会社標準>)` を実行します。会社標準は `kind`・`key`・
    `value` のデータフレームです。標準がなくても動きます。
+
+   ```r
+   options(tflspec.ai_home = "C:/.../company-ai")
+   std <- data.frame(kind = c("all", "demog", "ae_soc_pt"),
+                     key = c("font", "n_form", "first_row"),
+                     value = c("Courier New 9 pt", "(N=xx)", "Any TEAE"))
+   tfl_ai_style_prompt(standard = std)
+   ```
+
+   kind は次のとおりです: all, demog, ae_soc_pt, ae, param_change, shift, listing, figure, other。
+   key は次のとおりです: rules, spanner_rule, stub_ratio, font, orientation, titles, footnotes, n_form, categorical, zero, continuous, digits, stub_heading, first_row, sort。
+
 3. AI フォルダを VS Code で開き、エージェントに `AGENTS-learn.md` を渡します。
 4. エージェントが `company_hints.yml` を書きます。この会社の帳票の特徴を種類ごとに、
    何本のファイルに見られたかを添えて書きます。ファイルが会社標準と違う点は
@@ -324,6 +340,8 @@ SPEC だけを頼みます。この設定は各依頼の 1 行目（`<!-- templa
 1 行で示します。
 
 ## 見本で試す（10 分）
+
+これは tflspec 自身の腫瘍の見本です（5 帳票、下書きは同梱）。tflplanner の AI タブには別の見本、試験 DMY-001（8 帳票、エージェントが下書きしたもの）があります。そちらは tflplanner の記事を見てください。
 
 tflspec 同梱のファイル（4 表と KM 図 1 つの TOC/SHELL ワークブック、XPT にした
 見本 ADaM、5 帳票それぞれの保存済みの下書き。エージェントが書いた物）で
