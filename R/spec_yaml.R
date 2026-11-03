@@ -295,7 +295,7 @@ tfl_read_output <- function(path) {
     id = y$id, kind = y$kind, label = y$label, population = y$population,
     extends = as.character(unlist(extends)),
     ard = if (!is.null(y$ard)) .calls_in(y$ard),
-    data = .data_steps_in(.calls_in(y$data)), codelists = y$codelists %||% list(),
+    data = .data_steps_in(.calls_in(y$data)), codelists = .codelists_norm(y$codelists),
     content = content, page = .calls_in(y$page %||% list()))
   for (k in setdiff(names(y), c(.output_fields, "outputs", "base"))) out[[k]] <- .calls_in(y[[k]])
   # several objects on its pages (R/output_objects.R): their items as items
@@ -498,4 +498,16 @@ tfl_write_output <- function(x, path) {
   v <- ifelse(is.na(x), ".na", ifelse(x, "true", "false"))
   class(v) <- "verbatim"
   v
+}
+
+# A report's code lists as {value, label} entries: a value written alone
+# (`TRT01P: [Placebo, Drug A]`) is its own label
+.codelists_norm <- function(cl) {
+  if (!length(cl)) return(list())
+  lapply(cl, function(l) {
+    if (!is.list(l)) l <- as.list(l)
+    lapply(l, function(e) {
+      if (is.list(e)) e else list(value = e, label = e)
+    })
+  })
 }

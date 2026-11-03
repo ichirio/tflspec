@@ -20,9 +20,9 @@ Their answers go into `ai/decisions.md`, which you read
 first and follow for every report after.
 
 A draft must be a valid specification: the YAML well formed, every key
-and value as the schema in the instructions says.  You cannot run the
-check yourself, so write exactly the forms the instructions and their
-examples show, and nothing else.  Quote every free-text value -- `label`, titles, footnotes, an assumption's text -- in double quotes.  Always quote a value that holds `: ` or `#`, or starts with `[ { * & ! | > ' " % @`, or is yes / no / on / off or a number you mean as text.
+and value as the schema in the instructions says.  {{check_rule}}
+Write exactly the forms the instructions and their examples show, and
+nothing else.  Quote every free-text value -- `label`, titles, footnotes, an assumption's text -- in double quotes.  Always quote a value that holds `: ` or `#`, or starts with `[ { * & ! | > ' " % @`, or is yes / no / on / off or a number you mean as text.
 A draft that lacks something (an
 analysis set you were not told) is fine -- the person's check says what
 is missing; a draft that breaks the form is not.

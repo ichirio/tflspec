@@ -399,7 +399,7 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
         f <- file.path(dir, req$file[i])
         ids <- strsplit(req$outputs[i], ", ", fixed = TRUE)[[1L]]
         dec <- .ai_decisions_block(dir, ids, section = .ai_request_section(shell, req$outputs[i]))
-        txt <- c(.ai_agent_request_head(req$request[i], ids = ids), dec,
+        txt <- c(.ai_agent_request_head(req$request[i], ids = ids, build = .ai_build_on(dir)), dec,
                  readLines(f, warn = FALSE, encoding = "UTF-8"))
         .ai_write_text(txt, f)
         req$chars[i] <- nchar(.ai_paths_from_ai(paste(txt, collapse = "\n")))
@@ -489,7 +489,8 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
   # -- and the first one or two requests only: the person asks for the rest
   agent_prompt <- .ai_paths_from_ai(.ai_agent_prompt(
     basename(normalizePath(dir, mustWork = FALSE)), templates = templates,
-    language = .ai_spec_settings(dir)$language, run = .ai_spec_settings(dir)$run))
+    language = .ai_spec_settings(dir)$language, run = .ai_spec_settings(dir)$run,
+    build = .ai_build_on(dir)))
   # and as a file, to copy from
   if (!dry) {
     .ai_write_text(agent_prompt, file.path(ai, "agent_prompt.md"))

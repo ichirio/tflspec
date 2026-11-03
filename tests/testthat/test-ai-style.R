@@ -241,3 +241,31 @@ test_that("tfl_ai_style_diff(): learned against the standard; `all` stands for e
   expect_error(tfl_ai_style_diff(out, data.frame(a = 1)), "`kind`, `key` and `value`")
   expect_error(tfl_ai_style_diff(list()), "tfl_ai_style_read")
 })
+
+test_that("a running header laid out in rows is not a table; the kind is guessed from the lines joined by ' / ' (E7)", {
+  skip_if_not_installed("rtfreporter")
+  d <- tempfile("style-")
+  dir.create(d)
+  on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  df <- data.frame(Baseline = c("Normal", "High"), Normal = c("5", "1"), High = c("2", "3"))
+  mk <- function(title, f) {
+    doc <- rtfreporter::rtf_document() |>
+      rtfreporter::rtf_section(header = rtfreporter::rtf_header(c(
+        list(c("Example Pharma", "Page 1 of 1"), "Protocol: DMY"), as.list(title)))) |>
+      rtfreporter::rtf_tables(list(rtfreporter::rtftable(df, border = "tfl")))
+    suppressMessages(rtfreporter::generate_rtfreport(doc, file.path(d, f), overwrite = TRUE))
+  }
+  mk(c("Table 14.3.5", "Shift Table of ALT, Baseline to Worst Post-baseline"), "t_shift.rtf")
+  mk(c("Listing 16.2.7", "Listing of Adverse Events"), "l_ae.rtf")
+  x <- paste(readLines(file.path(d, "t_shift.rtf"), warn = FALSE), collapse = "")
+  expect_true(grepl("header", x, fixed = TRUE))
+  t <- tfl_rtf_style_tables(d)
+  expect_identical(nrow(t), 2L)
+  rownames(t) <- t$file
+  expect_identical(t$kind[order(t$file)], c("listing", "shift"))
+  expect_false(grepl("Example PharmaPage|DMYTable", t["t_shift.rtf", "title"]))
+  expect_match(t["t_shift.rtf", "title"], "Table 14.3.5 / Shift Table of ALT", fixed = TRUE)
+  expect_identical(t["t_shift.rtf", "body_rows"], 2L)
+  # titles written with no separator are still told apart
+  expect_identical(tflspec:::.rtf_kind_guess(c("Table 14.3.5", "Shift Table of ALT")), "shift")
+})

@@ -95,7 +95,7 @@ test_that("tfl_ai_run(): the figure drawn, its PNG and RTF; agent_prompt", {
   # (from the ai folder, the agent's workspace: a copy of it says the same)
   expect_match(r$agent_prompt, "Read AGENTS.md and follow it", fixed = TRUE)
   expect_match(r$agent_prompt, "Process each request on its own", fixed = TRUE)
-  expect_false(grepl("run.R", r$agent_prompt, fixed = TRUE))
+  expect_match(r$agent_prompt, "run only `Rscript run.R <request>`", fixed = TRUE)
   expect_false(grepl(normalizePath(root, winslash = "/"), r$agent_prompt, fixed = TRUE))
   expect_true("ai/agent_prompt.md" %in% r$files)
   expect_identical(paste(readLines(file.path(d, "ai", "agent_prompt.md"), encoding = "UTF-8"),
@@ -187,4 +187,44 @@ test_that("a built figure's facts beside its PNG; a figure of the agent's own co
   expect_true(any(grepl("^- 1[.] geom_point: [1-9][0-9]* row", x)))
   expect_true(any(grepl("^- x axis: from", x)))
   expect_true(any(grepl("^- colour: ", x)))
+})
+
+test_that("a km_survival draft with `codelists` for its arms is drawn (set_levels is around it)", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("rtfreporter")
+  skip_if_not_installed("ggsurvfit")
+  root <- withr::local_tempdir()
+  d <- file.path(root, "study")
+  tfl_ai_prepare(unit = "toc", d, fig_book(), adam = fig_study(root), quiet = TRUE, size = 3L)
+  ai_drafts_from_fixtures(d)
+  f <- file.path(d, "ai", "spec", "outputs", "F-14-2-2.yml")
+  writeLines(c(
+    "id: F-14-2-2", "kind: figure", "label: Kaplan-Meier Plot of Overall Survival", "population: ITT",
+    "extends: [defaults]",
+    "data:", "  source: code", "  steps:",
+    "    - {step: read, dataset: ADTTE}", "    - {step: flag, variable: ITTFL}",
+    "    - {step: param, value: OS}",
+    "content: []",
+    "codelists:", "  TRT01P:",
+    "    - {value: Control, label: Control}", "    - {value: Drug X, label: Drug X}",
+    "template:", "  name: km_survival", "  args: {by: TRT01P, time_unit: months}",
+    "page:", "  titles:", "    '1': {center: Figure 14.2.2}"), f)
+  res <- suppressMessages(tfl_ai_run(d, requests = "figure-1"))
+  fr <- res$reports[res$reports$output_id == "F-14-2-2", ]
+  expect_false(grepl("set_levels", fr$rtf_problem %||% "", fixed = TRUE), info = fr$rtf_problem)
+  expect_false(is.na(fr$png), info = paste(fr$first, fr$rtf_problem))
+  expect_true(file.exists(file.path(d, fr$png)))
+})
+
+test_that("codelists written as plain values are read as {value, label} (E9)", {
+  f <- withr::local_tempfile(fileext = ".yml")
+  writeLines(c("id: F-1", "kind: figure", "label: KM", "codelists:",
+               "  TRT01P: [Placebo, Drug A]",
+               "  SEX:", "    - {value: F, label: Female}"), f)
+  o <- tfl_read_output(f)
+  expect_identical(o$codelists$TRT01P[[2L]], list(value = "Drug A", label = "Drug A"))
+  expect_identical(o$codelists$SEX[[1L]], list(value = "F", label = "Female"))
+  rows <- tflspec:::.codelists_rows(o$codelists, "F-1")
+  expect_identical(rows$label, c("Placebo", "Drug A", "Female"))
 })

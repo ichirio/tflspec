@@ -90,7 +90,10 @@
     out <- c(out, sprintf("- `%s`: %s (%s, layout %s%s%s)%s", tt$name[i], .ai_tpl_description(t),
                           tt$kind[i], tt$layout[i], from, pkg,
                           if (own) paste0(" -- own data: the report writes `data` steps `read`, the analysis ",
-                                          "set, `param`; not the template's own steps (`survfit`, `time_unit`)") else ""))
+                                          "set, `param`; not the template's own steps (`survfit`, `time_unit`)",
+                                          if (startsWith(tt$name[i], "km_")) paste0(
+                                            "; the arms' order: a `levels` data step on the arm ",
+                                            "variable, not `codelists`")) else ""))
     # (its catalog aliases: the same template, by another collection's name)
     al <- .tpl_aliases_of(tt$name[i])
     if (nrow(al)) {
