@@ -77,14 +77,12 @@
     "baseline, `where: ONTRTFL == \"Y\" | ABLFL == \"Y\"`."),
   shift = paste0(
     "a code list on `baseline` must list `Missing` and `Total` too, or the build fails; ",
-    "the table's values are the code list's labels, so write `levels` as the labels ",
-    "(`Low`, not `LOW`): the rows are then `levels`, `Missing`, `Total` (else Missing and ",
-    "Total come first)."),
+    "`levels` may be the codes (`LOW`) or the code list's labels (`Low`): the rows are ",
+    "`levels`, `Missing`, `Total`."),
   lab_shift = paste0(
     "a code list on `baseline` must list `Missing` and `Total` too, or the build fails; ",
-    "the table's values are the code list's labels, so write `levels` as the labels ",
-    "(`Low`, not `LOW`): the rows are then `levels`, `Missing`, `Total` (else Missing and ",
-    "Total come first)."),
+    "`levels` may be the codes (`LOW`) or the code list's labels (`Low`): the rows are ",
+    "`levels`, `Missing`, `Total`."),
   km_survival = paste0(
     "the log-rank p-value is shown by default: set `pvalue: false` when the shell shows ",
     "none."))
