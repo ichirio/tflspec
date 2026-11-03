@@ -39,6 +39,14 @@
        plot = f$plot, call_steps = length(f$stats))
 }
 
+# The settings `over` over a template's `base`. The `add` lists join (the
+# template's first, then the given one) -- the template's own scales stay;
+# the rest merges as .merge_map() does
+.tpl_plot_over <- function(base, over) {
+  if (length(base$add) && length(over$add)) over$add <- c(base$add, over$add)
+  .merge_map(base, over)
+}
+
 # The figure a tpl_<name>() call draws: the design's own steps and layers
 # on the data the program made, the settings `plot` over the template's
 .tpl_fig_draw <- function(name, f, data, plot = NULL, as = "df") {
@@ -50,7 +58,7 @@
                   data = list(source = "code", steps = f$stats), content = f$content)
   # (settings given as a named vector, c(x_label = "Visit"), as a list)
   if (!is.null(plot) && !is.list(plot)) plot <- as.list(plot)
-  o$plot <- .merge_map(f$plot, plot)
+  o$plot <- .tpl_plot_over(f$plot, plot)
   tfl_content_run(o, stats::setNames(list(data), as))
 }
 
@@ -293,9 +301,10 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
     for (k in seq_along(d$plot$add)) {
       a <- d$plot$add[[k]]
       if (identical(a$fn, "theme") && !is.null(a$args$axis.text.y)) {
-        # (the axis's labels in the order of their breaks, est$y ascending)
+        # (the axis's labels in the order the breaks are given, est's own rows:
+        # ggplot2 keeps that order, it does not sort the breaks)
         d$plot$add[[k]]$args$axis.text.y$args$face <-
-          tfl_r("ifelse(est$head[order(est$y)], \"bold\", \"plain\")")
+          tfl_r("ifelse(est$head, \"bold\", \"plain\")")
       }
     }
   }

@@ -118,6 +118,12 @@
   own_plot <- Filter(Negate(is.null), lapply(stats::setNames(nm = names(output$plot)), function(k) {
     if (!identical(output$plot[[k]], tp$plot[[k]])) output$plot[[k]]
   }))
+  # (its `add` follows the template's own, as the call joins them: the
+  # draft's pieces alone are written)
+  nb <- length(tp$plot$add)
+  if (nb && length(own_plot$add) > nb && identical(own_plot$add[seq_len(nb)], tp$plot$add)) {
+    own_plot$add <- own_plot$add[-seq_len(nb)]
+  }
   as_arg <- if (generic) intersect(names(own_plot), intersect(.tpl_km_plot_args,
                                                                  names(.tpl_shown(t$params))))
   for (k in as_arg) args[[k]] <- own_plot[[k]]

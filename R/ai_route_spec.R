@@ -478,7 +478,12 @@ tfl_ai_confirm <- function(study_dir, where = c("both", "drafts", "adopted")) {
   for (f in list.files(file.path(study_dir, "ai"), "^instructions-.*[.]md$", full.names = TRUE)) {
     old <- readLines(f, warn = FALSE, encoding = "UTF-8")
     if (any(grepl("^## The skeleton (what a draft holds)", old, fixed = TRUE))) next
-    .ai_write_text(c(old, "", txt), f)
+    # (the figure's file ends with what a template or a step cannot do)
+    lim <- if (basename(f) == "instructions-figure.md") {
+      readLines(system.file("ai", "agent", "instructions-figure-limits.md", package = "tflspec"),
+                warn = FALSE, encoding = "UTF-8")
+    }
+    .ai_write_text(c(old, "", txt, if (length(lim)) c("", lim)), f)
   }
   invisible(NULL)
 }

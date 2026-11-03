@@ -192,6 +192,14 @@ test_that("tfl_tpl(): a figure's call; the data step's parameters are not its", 
   # the escape hatch: `plot =`
   q <- tfl_tpl(df, "km_cumulative", by = TRT01A, plot = list(title = "Figure 1"))
   expect_identical(q$labels$title, "Figure 1")
+  # a draft's `plot$add` goes after the template's own, not instead of them
+  q <- tfl_tpl(df, "km_cumulative", by = TRT01A, time_unit = "weeks", y_percent = TRUE, x_step = 4,
+               plot = list(add = list(list(fn = "annotate", args = list(
+                 geom = "label", x = -Inf, y = Inf, label = "Median 10 (95% CI 8, 12)")))))
+  expect_true(any(vapply(q$layers, function(l) inherits(l$geom, "GeomLabel"), NA)))
+  yl <- ggplot2::ggplot_build(q)$layout$panel_scales_y[[1L]]
+  expect_identical(yl$get_labels(c(0, 0.5, 1)), c("0%", "50%", "100%"))
+  expect_equal(ggplot2::ggplot_build(q)$layout$panel_scales_x[[1L]]$get_breaks()[1:3], c(0, 4, 8))
   # a report's own items `+`-ed after it
   r <- p + ggplot2::geom_vline(xintercept = 12)
   expect_true(any(vapply(r$layers, function(l) inherits(l$geom, "GeomVline"), NA)))
@@ -231,6 +239,20 @@ test_that("in a study: km_cumulative (STF Figure 1's sample) from ADTTE and from
   expect_match(items, "geom_errorbar(", fixed = TRUE)
   expect_match(items, "scales::label_percent()", fixed = TRUE)
   expect_match(items, "add_pvalue(", fixed = TRUE)
+  # a report's own `plot: add:` follows the template's scales, in the resolved design and the program's call
+  o3 <- o1
+  o3$id <- "F-9-add"
+  o3$plot <- list(add = list(list(fn = "annotate", args = list(geom = "label", x = -Inf, y = -Inf,
+                                                              label = "Median 40"))))
+  f3 <- file.path(d, "spec", "outputs", "F-9-add.yml")
+  tfl_write_output(o3, f3)
+  ro3 <- tfl_resolve_output(tfl_read_output(f3), tfl_read_study_spec(d))
+  expect_identical(vapply(ro3$plot$add, `[[`, "", "fn"),
+                   c("scale_x_continuous", "scale_y_continuous", "annotate"))
+  txt3 <- paste(tfl_content_code(ro3), collapse = "
+")
+  expect_identical(lengths(regmatches(txt3, gregexpr("annotate(", txt3, fixed = TRUE))), 1L)
+  expect_false(grepl("scale_y_continuous", txt3, fixed = TRUE))
   # ADSL: no parameter, the event, the time
   o2 <- tfl_output("F-9-adsl", "figure", population = "SAF", label = "KM", extends = "defaults",
                    data = list(steps = list(
