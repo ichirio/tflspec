@@ -13,7 +13,7 @@
 # The functions a listing's content may call
 .ai_listing_functions <- c("plan_listing", "plan_paginate_rows", "plan_blanks")
 
-.ai_check_listing_output <- function(o, at, context, vars) {
+.ai_check_listing_output <- function(o, at, context, vars, from_template = FALSE) {
   p <- .ai_problems()
   add <- function(where, what, severity = "error") {
     p <<- .ai_problem(p, paste(at, where), what, severity)
@@ -94,7 +94,9 @@
         sprintf("%s is not among the datasets given (%s)", ds, paste(known_ds, collapse = ", ")))
     ds <- ""
   }
-  if (!has_pop) {
+  # (a listing made by a template has no analysis set: ADSL's subjects it
+  # keeps are its `subset`)
+  if (!has_pop && !from_template) {
     add("data population", paste(
       "the listing names no analysis set (`data.population`, or its analysis data's):",
       "write the one the shell says; if the shell does not say it, ask it in a question --",

@@ -306,3 +306,70 @@ test_that("templates.md carries the facts a trial found only by building", {
   # (the short list, names only, has none)
   expect_false(any(grepl("note:", tflspec:::.ai_templates_list("table", short = TRUE), fixed = TRUE)))
 })
+
+test_that("a listing drafted from the listing template is checked as a template, a code SPEC as before", {
+  tpl <- tfl_ai_parse(aitpl_answer(
+    "tflspec_ai: {task: table, version: 1, outputs: [L-1]}",
+    "outputs:",
+    "  - id: L-1",
+    "    kind: listing",
+    "    label: Listing of adverse events",
+    "    template:",
+    "      name: listing",
+    "      args:",
+    "        data: ADAE",
+    "        columns:",
+    "          - {vars: [USUBJID], label: Subject}",
+    "          - {vars: [AEDECOD], label: Term}",
+    "    page: {titles: {\"1\": {center: Listing 16.2.1}}}",
+    "assumptions: []"), "table")
+  ctx <- tfl_ai_context("table", outputs = "L-1")
+  p <- tfl_ai_check(tpl, ctx)
+  expect_false(any(p$severity == "error"), info = paste(p$problem, collapse = "; "))
+  expect_false(any(grepl("no analysis set", p$problem, fixed = TRUE)))
+  # a code SPEC listing without an analysis set: still the error
+  code <- tfl_ai_parse(aitpl_answer(
+    "tflspec_ai: {task: table, version: 1, outputs: [L-1]}",
+    "outputs:",
+    "  - id: L-1",
+    "    kind: listing",
+    "    label: Listing of adverse events",
+    "    data: {source: dataset, dataset: ADAE}",
+    "    content:",
+    "      - plan_listing: {cols: [{listing_col: {vars: [USUBJID]}}]}",
+    "    page: {titles: {\"1\": {center: Listing 16.2.1}}}",
+    "assumptions: []"), "table")
+  pc <- tfl_ai_check(code, ctx)
+  expect_true(any(grepl("the listing names no analysis set", pc$problem, fixed = TRUE)))
+})
+
+test_that("a listing drafted from the listing template is built (RTF)", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("rtfreporter")
+  root <- withr::local_tempdir()
+  ad <- aitpl_study(root)
+  d <- file.path(root, "study")
+  tfl_ai_prepare(unit = "toc", d, aitpl_book(), adam = ad, quiet = TRUE, size = 3L)
+  # (the study's TOC has no listing: the row T-14-2-1 is answered as one)
+  ai_drafts_from_answer(d, aitpl_answer(
+    "tflspec_ai: {task: table, version: 1, outputs: [T-14-2-1]}",
+    "outputs:",
+    "  - id: T-14-2-1",
+    "    kind: listing",
+    "    label: Listing of adverse events",
+    "    extends: [defaults]",
+    "    template:",
+    "      name: listing",
+    "      args:",
+    "        data: ADAE",
+    "        columns:",
+    "          - {vars: [USUBJID], label: Subject}",
+    "          - {vars: [AEDECOD], label: Preferred term}",
+    "    page: {titles: {\"1\": {center: Listing 16.2.1}}}",
+    "assumptions: []"), "table")
+  res <- suppressMessages(tfl_ai_run(d))
+  rp <- res$reports
+  expect_identical(rp$status[rp$output_id == "T-14-2-1"], "ok")
+  expect_true(file.exists(file.path(d, rp$rtf[rp$output_id == "T-14-2-1"])))
+})
