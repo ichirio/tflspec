@@ -2,23 +2,30 @@
 % Please edit documentation in R/ai_style.R
 \name{tfl_ai_style_read}
 \alias{tfl_ai_style_read}
-\title{Read an AI agent's survey of a company's past TFLs}
+\title{Read what an AI agent learned from a company's past TFLs}
 \usage{
 tfl_ai_style_read(file = NULL)
 }
 \arguments{
-\item{file}{The survey (YAML); \code{NULL}: \code{\link[=tfl_ai_style_prompt]{tfl_ai_style_prompt()}}'s default.}
+\item{file}{The agent's file (YAML); \code{NULL}: \code{\link[=tfl_ai_style_prompt]{tfl_ai_style_prompt()}}'s
+default.}
 }
 \value{
-A data frame, one row a form: \code{section} (\code{borders},
-\code{column_header}, \code{widths}, \code{fonts}, \code{titles}, \code{footnotes}), \code{kind} (a
-table kind, for widths), \code{form}, \code{count}; in the order written.  Its
-attribute \code{text} is a short summary, a line a section (the commonest
-form and its count), which \code{print()} shows; \code{files} / \code{tables} the
-survey's counts and \code{notes} its notes.
+A data frame, one row a convention, in the order written:
+\code{kind} (\code{all} for every kind), \code{key}, \code{value}, \code{seen}, \code{of},
+\code{evidence} (the kind's files the agent read, \code{|} between), \code{adopt}
+(\code{"proposed"}, or \code{"by hand"}: fewer than half the files, no count,
+or a name the prompt does not know).  Its attribute \code{text} is a short
+summary (a line a convention), which \code{print()} shows; \code{files} /
+\code{tables} the counts the file gives and \code{notes} its notes.
 }
 \description{
-The survey \code{\link[=tfl_ai_style_prompt]{tfl_ai_style_prompt()}} asks the agent to write: the forms of
-the reports' look (lines, column header, widths, fonts, alignment) and
-how many tables have each.
+The conventions \code{\link[=tfl_ai_style_prompt]{tfl_ai_style_prompt()}} asks the agent to write
+(\code{learned.yml}): by kind of report, each convention's form and how many
+of the files the agent read show it.  A form fewer than half of them
+show is kept, but to be adopted by hand only (\code{adopt}), as is a
+convention whose name is none of those the prompt asks for.
+}
+\seealso{
+\code{\link[=tfl_ai_style_diff]{tfl_ai_style_diff()}}
 }
