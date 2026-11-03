@@ -288,3 +288,21 @@ test_that("tfl_ai_compare(): a study without templates; no answer; a repair coun
   expect_identical(cmp$repairs[at], 1L)
   expect_true(all(cmp$repairs[!at] == 0L))
 })
+
+test_that("templates.md carries the facts a trial found only by building", {
+  txt <- tflspec:::.ai_templates_list(c("table", "listing", "figure"))
+  note <- function(tpl) {
+    i <- grep(sprintf("^- `%s`:", tpl), txt)
+    expect_length(i, 1L)
+    nxt <- grep("^- ", txt)
+    nxt <- nxt[nxt > i]
+    j <- if (length(nxt)) nxt[1L] - 1L else length(txt)
+    paste(txt[i:j][grepl("^  - note: ", txt[i:j])], collapse = " ")
+  }
+  expect_match(note("param_change"), "ONTRTFL == \"Y\" | ABLFL == \"Y\"", fixed = TRUE)
+  expect_match(note("shift"), "must list `Missing` and `Total`", fixed = TRUE)
+  expect_match(note("lab_shift"), "write `levels` as the labels", fixed = TRUE)
+  expect_match(note("km_survival"), "`pvalue: false`", fixed = TRUE)
+  # (the short list, names only, has none)
+  expect_false(any(grepl("note:", tflspec:::.ai_templates_list("table", short = TRUE), fixed = TRUE)))
+})

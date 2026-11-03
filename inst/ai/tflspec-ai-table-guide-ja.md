@@ -27,7 +27,7 @@ Opus または Fable を選べるプランを選んでください。
 1. 試験の `ai` フォルダをワークスペースとして開き、エージェントがその中だけで作業するようにします
    （VS Code では 5 節の手順 1 のとおり `ai/<試験>.code-workspace`）。
 2. エージェントがターミナルで `Rscript` を実行できること。できない場合は、あなたが
-   `Rscript run.R <request>` を実行して `c` と入力します。
+   試験フォルダで `Rscript run.R <request>` を実行して `c` と入力します。
 3. VS Code + Copilot では、設定（Ctrl+, を押して名前で検索）
    （[VS Code の AI 設定](https://code.visualstudio.com/docs/agents/reference/ai-settings.md)）:
    - `github.copilot.chat.summarizeAgentConversationHistory.enabled`: オン（既定）;
@@ -63,7 +63,7 @@ Opus または Fable を選べるプランを選んでください。
 mystudy/
   TOC_SHELL.xlsx        TOC とシェル（1 つのワークブック）
   adam/                 adsl.xpt, adae.xpt, adlb.xpt ...
-  AGENTS.md             tflspec が書く: 「ai/AGENTS.md を読む」（手順 3）
+  AGENTS.md             tflspec が書く（試験フォルダの直下）: 「ai/AGENTS.md を読む」（手順 3）
   ai/AGENTS.md          tflspec が書く: エージェントへの指示（手順 3）
   ai/requests/          tflspec が書く: 1 依頼 1 ファイル（手順 3）
   ai/decisions.md       チャットでのあなたの答え、1 決定 1 行（手順 5）
@@ -77,8 +77,14 @@ mystudy/
 ```r
 # tflplanner の記事も同じ一覧を入れます
 install.packages(c("remotes", "cards", "cardx", "haven", "broom", "broom.helpers", "parameters", "dplyr", "tidyr", "readxl", "officer", "ggsurvfit", "patchwork"))
-remotes::install_github(c("ichirio/rtfreporter", "ichirio/tflspec"))
+ref <- "ai-test-2026-11-09"  # 試験のタグ。伝えられたものを使います
+remotes::install_github(paste0("ichirio/rtfreporter@", ref), upgrade = "never")
+remotes::install_github(paste0("ichirio/tflspec@", ref), upgrade = "never")
+remotes::install_github(paste0("ichirio/tflplanner@", ref), upgrade = "never")
 ```
+
+伝えられたタグを使います（開発版なら `next`）。出来合いのサンプルで先に流れを試すには、
+`tflplanner::create_ai_sample_study()` を使います（tflplanner の AI の記事を参照）。
 
 ## 3. 何を実行するか
 
@@ -86,7 +92,7 @@ remotes::install_github(c("ichirio/rtfreporter", "ichirio/tflspec"))
 library(tflspec)
 r <- tfl_ai_prepare("mystudy", "mystudy/TOC_SHELL.xlsx", adam = "adam",
                     study_id = "ABC-123", language = "Japanese")
-r                                   # 依頼名・帳票・文字数・次にすること
+r                                   # シート・シェルのシート・依頼、そのあと「Next:」の行
 ```
 
 この 1 回の呼び出しで次のことを行います。試験のフォルダがなければ作る
@@ -99,7 +105,7 @@ r                                   # 依頼名・帳票・文字数・次にす
 1 回だけ書いたもの（`ai/instructions-table.md`、`ai/instructions-figure.md`、
 `ai/templates.md`）、そしてエージェント用のファイル:
 `ai/AGENTS.md`（エージェントへの指示: 何を読むか、どう質問するか、下書きに何を入れるか）、
-`AGENTS.md` と `.github/copilot-instructions.md`（短い文: `ai/AGENTS.md` を読む）、
+`AGENTS.md` と `.github/copilot-instructions.md`（試験フォルダの直下と `ai/` の中の両方。短い文: `ai/AGENTS.md` を読む。エージェントが従うのは `ai/AGENTS.md` です）、
 `run.R`、`ai/decisions.md`、`ai/agent_prompt.md`（エージェントへの 1 つのメッセージ）。TOC の図は 1 図 1 依頼（`figure-1.md` …）で、そのシェルと、
 下書きする図の帳票が入ります。1 つずつ実行する場合:
 `tfl_ai_study_init()`、`tfl_ai_adam_summary()`、`tfl_ai_read_shell()`、
@@ -161,7 +167,7 @@ ADaM の要約で、データではありません。`AGENTS.md` に、開いて
 （シェルの文字が切れて見えるとき、依頼が示す場所を読む）と ADaM（変数の値を確かめる。
 データのファイルをエディタで開くことはしない）も、PC にある道具で読めます。
 `docs = ` で文書（SAP、データガイド）を渡すと、`ai/docs/` に写されます。
-エージェントは何も入れません。実行するのは 1 つのコマンド `Rscript run.R <依頼名>` だけで、
+エージェントは何も入れません。実行するのは 1 つのコマンド `Rscript ../run.R <依頼名>`（作業場所の `ai/` から）だけで、
 下書きの帳票を作って確かめるために使います（7 節）。
 
 各依頼は数千文字です。エージェントの手順、その帳票に当てはまる決定、帳票の TOC の行と
@@ -169,7 +175,7 @@ ADaM の要約で、データではありません。`AGENTS.md` に、開いて
 
 ## 5. エージェントの質問・あなたの決定・下書き
 
-1. VS Code で試験の `ai` フォルダを開き（`ai/mystudy.code-workspace` をダブルクリック。
+1. VS Code で試験の `ai` フォルダを開き（`ai/<試験>.code-workspace`（`<試験>` は試験フォルダの名前。例では `ai/mystudy.code-workspace`）をダブルクリック。
    エージェントにはそのフォルダだけが見え、`spec/`・プログラム・データは見えません）、
    エージェントのチャットに `ai/agent_prompt.md` の
    文を 1 回だけ渡します。エージェントは `ai/requests/index.md` の依頼を順に、
@@ -219,7 +225,7 @@ ADaM の要約で、データではありません。`AGENTS.md` に、開いて
 前の決定がある帳票に当てはまるかは、その帳票を処理するときに、その帳票が判断します。
 
 **質問だけでなく、採った既定をすべて読んでください。既定は実行ごとに変わることが
-あります。** `ai/defaults.md` に、重要なものから順に並んでいます（数値が変わるもの、
+あります。** `ai/defaults.md`（`run.R` の最初のビルドで書かれます）に、重要なものから順に並んでいます（数値が変わるもの、
 行や統計量が変わるもの、文言や見た目が変わるもの）。バッチの最後のメッセージには、
 エージェント自身が選んだ既定（文書に由来しないもの）を話題ごとにまとめた最初の節の、
 最初の 2 つのグループがそのまま載り、残りは件数だけです。既定を変えるときも、答えと同じ書き方です
@@ -301,8 +307,8 @@ tflplanner で試験として開けます（`spec/toc.yml` に帳票の一覧）
 
 ## 7. エージェントが自分の下書きを作って確かめる
 
-依頼の下書きを書いたあと、エージェントは試験のフォルダで `Rscript run.R <依頼名>` を
-実行します。R が下書きを確かめ、ARD と RTF を作り、図を描きます。ADaM を読むのは
+依頼の下書きを書いたあと、エージェントは `ai/`（作業場所）から `Rscript ../run.R <依頼名>` を
+実行します（あなたが実行するときは、試験のフォルダで `Rscript run.R <依頼名>` です）。R が下書きを確かめ、ARD と RTF を作り、図を描きます。ADaM を読むのは
 R で、エージェントではありません。
 
 出力フォルダの各 RTF の隣（下書きを別にしている試験では `ai/output/tfl/`。図の PNG も
@@ -342,7 +348,7 @@ tflplanner では、AI タブの選択欄が同じことをします。
 した。深さによる費用の差は小さいということです。
 
 エージェントが R を実行できないとき（ターミナルが拒否される、R が見つからない）は、
-そう伝えて、あなたに `Rscript run.R <依頼名>`（または tflplanner の AI タブ）の実行を
+そう伝えて、あなたに、試験のフォルダでの `Rscript run.R <依頼名>`（または tflplanner の AI タブ）の実行を
 頼みます。そのあと、同じファイルを読みます。
 
 ## 8. 過去の TFL から会社のヒントを作る
@@ -485,7 +491,7 @@ tfl_ai_collect_answers(d)            # 5 reports in 5 requests (the figure its o
 | 2〜3 回直しても同じエラー | `ai/spec/outputs/<id>.yml` を手で（またはビルダーで）直し、手順 6 を実行 |
 | `tfl_build_ard()` が止まる: `The package "broom" (>= 1.0.8) is required.` | `install.packages("broom")`（ほかのパッケージの名前が出たときも、それを入れる） |
 | `tfl_build_ard()` が止まる | 帳票を絞って探す: `tfl_build_ard(st, dir = ".", output_id = "T-14-1-1", save = FALSE)` |
-| エージェントが R を実行できないと言う | 自分で `Rscript run.R <依頼名>` を実行し、エージェントに「done」と伝える |
+| エージェントが R を実行できないと言う | 試験のフォルダで自分で `Rscript run.R <依頼名>` を実行し、エージェントに「done」と伝える |
 | エージェントが止まり、行き詰まったと言う | そのメッセージのとおりにする（`/compact`、`ai/agent_prompt.md` を渡した新しいチャット、または Rscript の許可）。そのあと `c` と入力。`ai/progress.md` から続きます |
 | `<id>-facts.txt` に、表が 1 ページを超えるとある | ページはビルダーが決めるので、エージェントは*要確認*にする |
 | `AGENTS.md` に古い確認レベルが残っている | `tfl_ai_refresh_agents(".")` |

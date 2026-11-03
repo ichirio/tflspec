@@ -29,7 +29,7 @@ is missing; a draft that breaks the form is not.
 
 This folder -- the study's `ai/` -- is your workspace: every path below
 is from it, and every file you read or write is in it.  Never open a
-path outside it (`../`).
+path outside it (`../`), except to run `../run.R` as *Build and check* says.
 
 ## What you read
 
@@ -490,7 +490,7 @@ Then, in this order:
    choose:
    - "type `/compact` in this chat, then `c`";
    - "open a new chat, give it `ai/agent_prompt.md`, then type `c`";
-   - "allow `Rscript` (or run `Rscript run.R <request>` yourself), then type
+   - "allow `Rscript` (or run `Rscript run.R <request>` yourself, from the study folder), then type
      `c`".
 
 Never loop: never retry the same failing step more than three times.
