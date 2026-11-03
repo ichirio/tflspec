@@ -24,3 +24,22 @@ test_that("tfl_ai_outputs(): a row a report, its request's sheets, status, adopt
   writeLines(c(readLines(f, warn = FALSE), "# redrafted"), f)
   expect_identical(tfl_ai_outputs(d)$adopted[match(id, o$output_id)], "yes, draft newer")
 })
+
+test_that("tfl_ai_collect_answers(): an assumption's `from` beside ones without it is kept, not an error (#598)", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  root <- withr::local_tempdir()
+  d <- outs_study(root)
+  suppressMessages(tfl_ai_collect_answers(d))
+  f <- file.path(d, "ai", "spec", "outputs", "T-14-1-1.yml")
+  y <- yaml::read_yaml(f)
+  expect_gt(length(y$ai$assumptions), 1L)
+  y$ai$assumptions[[1L]]$from <- "programmer convention"
+  yaml::write_yaml(y, f)
+  res <- suppressMessages(tfl_ai_collect_answers(d))
+  o <- tfl_ai_outputs(d)
+  expect_true(o$status[o$output_id == "T-14-1-1"] %in% c("ok", "warning"))
+  a <- tfl_ai_assumptions(d)
+  expect_true("from" %in% names(a))
+  expect_true("programmer convention" %in% a$from[a$output_id == "T-14-1-1"])
+})
