@@ -253,15 +253,22 @@ it asks, what a draft holds), \code{AGENTS.md} and
 \code{.github/copilot-instructions.md} (short: read \code{ai/AGENTS.md}), \code{run.R}
 (\code{\link[=tfl_ai_run]{tfl_ai_run()}}: the check from the command line, with the ARD and RTF)
 and \code{ai/decisions.md}, which is never written over.  One message
-(\code{ai/agent_prompt.md}) starts the agent on every request of
-\code{ai/requests/index.md} in order; stopped, it goes on at "continue" from
-the first request with a draft missing.
+(\code{ai/agent_prompt.md}) starts the agent: with one request, then a menu, or
+with a batch of all the requests (\verb{ai: run}); \code{ai/progress.md}, the work
+queue (every request \code{todo}; never written over), says where it goes on.
 
 \code{study.yml}'s \verb{ai:} keys set the agent's rules (the study standard's
 \code{spec/defaults.yml} may say them under its own \verb{ai:} key first):
-\code{language} (the chat's: \code{"en"}, \code{"ja"} ...), \code{ask_when} (\code{"request"},
-the default: the request's reports' questions together; \code{"report"}:
-report by report), \code{carry} (which decision scopes apply to a later
+\code{language} (the chat's: \code{"en"}, \code{"ja"} ...), \code{run} (\code{"one"}, the
+default: the agent processes one request -- its questions in the chat, its
+drafts, its build and check -- and stops at a menu: the next request, the
+next N together, or all the rest; \code{"batch"}: all the requests at once, the
+agent taking its default for every question, noting it in
+\code{ai/questions-end.md}, and asking all of them in one message at the end,
+with \code{ai/defaults.md}, the defaults it took, the most important first --
+only the reports an answer changes are then written again),
+\code{requests_per_chat} (0, no limit: after that many requests the agent stops
+and asks for a new chat), \code{carry} (which decision scopes apply to a later
 report without asking: \code{all}, \code{dataset}, \code{section}), \code{max_rounds} (how
 many times one item is asked again, 3), \code{footnotes_at} (\code{"footer"}, the
 default, or \code{"table"}: where the shell's footnotes go), \code{review} (how

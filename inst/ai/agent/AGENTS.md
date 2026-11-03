@@ -14,9 +14,9 @@ and the study's standard, a decision; 2) when they do not settle it, as
 an experienced statistical programmer would -- the usual convention for
 that kind of table -- written as an assumption with
 `from: "programmer convention"`, so that QC sees it; 3) only what neither
-settles **and** would change the numbers or the structure, you **ask the
-person in the chat**, in {{language}}, before you write -- and stop until
-they answer.  Their answers go into `ai/decisions.md`, which you read
+settles **and** would change the numbers or the structure, you ask the person (in the chat when you run one request; in a batch you
+take your default and note the question: *Running the requests*, below).
+Their answers go into `ai/decisions.md`, which you read
 first and follow for every report after.
 
 A draft must be a valid specification: the YAML well formed, every key
@@ -139,13 +139,15 @@ When the documents agree on a point, it is settled: take it, no question.
 
 ## The requests: ask, then write the skeletons
 
-Do every request of `ai/requests/index.md`, top to bottom.  A request
-whose reports all have their draft (`ai/spec/outputs/<id>.yml`) is done:
-skip it.  For each of the others, in order:
+The requests are those of `ai/requests/index.md`, in the order of
+`ai/progress.md`.  A request whose reports all have their draft
+(`ai/spec/outputs/<id>.yml`) is done: skip it.  How many you do before you
+stop is *Running the requests*, below: one, or a batch.  For each request:
 
-1. Read `ai/decisions.md`, then the request.  The request lists the
-   decisions that apply to its reports (*Decisions that apply*); apply
-   them without asking (see *Decisions* for when to ask instead).
+1. Read `ai/progress.md` and the request, and `ai/decisions.md` (all of it:
+   it is the questions and answers so far).  The request lists the
+   decisions that may apply to its reports (*Decisions that may apply*);
+   judge, for each report, which entries hold for it (see *Decisions*).
 2. **Find what defines each report and is not settled** by the request,
    its shell text, `ai/adam_summary.md`, `spec/data.yml` or a decision:
    the analysis set (population); for a dataset of parameters (PARAMCD:
@@ -188,34 +190,9 @@ skip it.  For each of the others, in order:
      later;
    - a specific programming note or derivation rule over a generic
      footnote (footnotes are often stale), and the question says so.
-3. {{ask_when}} **Ask them in the chat**, in {{language}}, numbered,
-   the message starting with the progress tag (*Progress*, below):
-   `[n/N] <request> (<report ids>)`.
-   **Collect every question first** -- every item of step 2, for every
-   report of the request -- and ask them together in **one message**;
-   never one at a time, waiting for an answer between them.  A follow-up
-   question only when an answer raises a new point.  Each
-   question says **which report it is about -- its id and its title --**
-   and the item, the choices you see, and the one you would take if the
-   person says "default".  **End every question with an example answer**,
-   one line, `例: ...` in Japanese (`e.g. ...` in English): the answer as
-   the programmer would type it, holding every piece the draft needs --
-   the title's label, the condition, the variable, which source is wrong
-   -- so that the person sees what to answer, and can paste it as it is
-   or edit it.  The example follows your default choice; for a question
-   of sources that disagree, give one `例:` line for each choice (`(a)`,
-   `(b)` ...), so that the person picks one, not your default by
-   pasting.  A choice alone ("SAFFL") is not an answer.
-   - a population conflict:
-     `例: シェルのとおり Safety Analysis Set（SAFFL = 'Y'）、実治療 TRT01A。TOC の Full Analysis Set は誤り。`
-   - a denominator:
-     `例: 分母は Total 行（post-baseline 値が 1 つ以上ある被験者）。食い違う脚注は削除。`
-   A question that holds for every report of the
-   request says so.  Then **stop and wait**: do not write the report until
-   the person answers.  There is no limit to the questions; ask what you
-   need, each once.  When an answer does not settle the item, ask again,
-   saying what was unclear: **three times at most** for one item; then
-   take the likeliest choice and mark it *to confirm* (step 6).
+3. **Ask, or take your default**, as you are run: one request, you ask in
+   the chat; in a batch, you take your default and note the question
+   (*Running the requests*, below).
 4. **Record the answers**: for each one, add one line to
    `ai/decisions.md` (the form is at the top of that file: its id, scope,
    topic, the decision, where it came from).  Change nothing already
@@ -299,14 +276,76 @@ skip it.  For each of the others, in order:
    (`ai/instructions-table.md`): the keys, the indentation, the quotes,
    the forms of `data` and `ard`.  A draft the check refuses comes back
    to you with its problems; one you checked yourself seldom does.
-8. Go on to the next request.  A question about the work rather than a
-   report (a file the request names is missing, the request is unclear):
-   ask it in the chat too, and wait for the answer.
+8. Set the request's row in `ai/progress.md`, and go on as *Running the
+   requests* says.  A question about the work rather than a report (a file
+   the request names is missing, the request is unclear): ask it in the chat
+   when you run one request.  In a batch, do not stop: note it in
+   `ai/questions-end.md` as a `BLOCKER` entry, go on with the other requests,
+   and ask it at the end of the batch.
 
 When every request is done, **review the drafts** (*Before you stop*,
 below), then **stop** and tell the person: the report files written
 (their ids), the decisions added, what is marked to confirm, and what
 the review changed.
+
+## Running the requests: one request, or a batch
+
+`ai/agent_prompt.md` says how you start: **one request**, then the menu, or
+**a batch** of all the requests that are left. After that the person chooses
+at the menu. Work in one of two ways, and say nothing of the choice but the
+menu:
+
+{{run_one}}
+
+{{run_batch}}
+
+### The menu
+
+After one request, and after a batch while requests remain, **stop and post
+this in {{language}}**, with the numbers of `ai/progress.md`:
+
+```
+[3/17] Done: T-AE (14.3.1.1, 14.3.1.2). What next?
+c = the next request (T-LB-SUM)    <number> = the next N together (e.g. 5)    a = all the rest together (14)
+```
+
+In Japanese:
+
+```
+[3/17] 完了: T-AE（14.3.1.1, 14.3.1.2）。次は？
+c = 次の依頼（T-LB-SUM）    数字 = 次の N 依頼をまとめて（例: 5）    a = 残りを全部まとめて（14）
+```
+
+Accept the reply as:
+- `c`, `続ける`, `次`, `continue`: the next request, in the one-request way;
+- a number N (`5`): the next N requests, as a batch;
+- `a`, `全部`, `all`: all the rest, as a batch;
+- any free text you can map to these clearly ("do the next five");
+- anything unclear: show the menu again; do not guess.
+
+When no request is left, do not show the menu: finish (*Before you stop*).
+
+## Many requests: one at a time
+
+Each request is processed on its own: the common files plus ONE request.
+- Read the common files once: this file, the instructions, `ai/templates.md`,
+  `ai/adam_summary.md`, `study_facts.md`, `ai/reference/` and
+  `ai/decisions.md`. Then, for each request, read only that request and the
+  files it names.
+- Do not reopen an earlier request, its shell, or its drafts. Only when
+  `ai/decisions.md` points to one, read that one draft.
+- Keep nothing of an earlier report in mind beyond `ai/decisions.md` and
+  `ai/progress.md`. They are your memory.
+- **Start every request by reading `ai/progress.md` and that request
+  again**, even when you think you remember them: your editor may have
+  summarized the chat, and these files are the truth.
+- **File first.** Every request writes, as it goes and even when incomplete,
+  its drafts, its decisions (`ai/decisions.md`), its questions
+  (`ai/questions-end.md` in a batch) and its row in `ai/progress.md`. A failed
+  or summarized session resumes from the files and fixes things there.
+- Your editor may summarize (compact) a long chat on its own. After that, go
+  on from `ai/progress.md` as usual; nothing is lost, because every draft and
+  decision is in a file.{{per_chat}}
 
 ## Progress
 
@@ -315,17 +354,33 @@ far you have got:
 
 - at the start of each request: `[3/6] T-LB-SUM（14.3.4.1）を開始。残り 3 件`
   (`[3/6] Starting T-LB-SUM (14.3.4.1); 3 left`);
-- when a request's drafts are written: `[3/6] 完了: 14.3.4.1。次: T-LB-SHIFT`
-  (`[3/6] Done: 14.3.4.1; next: T-LB-SHIFT`) -- and **go straight on to
-  the next request**: do not wait for a "continue".  You stop only to
-  ask questions (then wait for the answers), or when every request is
-  done;
+- when a request is done: `[3/6] 完了: 14.3.4.1。次: T-LB-SHIFT`
+  (`[3/6] Done: 14.3.4.1; next: T-LB-SHIFT`) -- in a batch, **go straight on
+  to the next request**; in the one-request way, show the menu.  You stop
+  only at the menu, to ask questions (then wait for the answers), when you are
+  stuck (*When you are stuck*), or when every request is done;
 - a question message starts with the same tag (step 3).
 
-`n` is the request's number of `N` in `ai/requests/index.md`.  Keep the
-same in `ai/progress.md` (write it over each time): the current request,
-the requests done, the requests left.  (`ai/status.md` is `run.R`'s: do
-not write it.)
+`n` is the request's number of `N` in `ai/requests/index.md`.
+
+`ai/progress.md` is the work queue, in this form (R wrote it with every
+request `todo`; if it is missing, write it at your first start from
+`ai/requests/index.md`):
+
+```
+| request | reports | status | batch | questions |
+|---|---|---|---|---|
+| T-DM | 14.1.1, 14.1.2 | built | 1 | Q1 |
+| T-AE | 14.3.1.1 | todo | | |
+```
+
+`status` is one of `todo`, `asked` (one request: questions asked, waiting),
+`drafted`, `built`, `checked`, `blocked`, `reworked`, `failed` (`run.R` sets
+`built` or `failed` after a build; a `checked` row stays unless the build
+failed). `batch` is the batch's
+number (empty in the one-request way). Update one row as you go. A new chat
+starts from the first row that is not `checked` (or not `built`, when the
+review is none). (`ai/status.md` is `run.R`'s: do not write it.)
 
 ## Before you stop
 
@@ -363,9 +418,10 @@ question of their own.  Then **finish the step in hand cleanly**: save the
 draft you are writing, write `ai/progress.md` (what is done, what is
 next), and stop, saying where you stopped (`[3/6] 停止: 14.3.4.1 まで。次:
 T-LB-SHIFT` / `[3/6] Stopped after 14.3.4.1; next: T-LB-SHIFT`).  Later
-the person says **"続けて" / "continue"**: go on from `ai/progress.md` --
-the first request of `ai/requests/index.md` that has a report with no
-draft, or whose draft the person says the check refused -- the decisions
+the person says **"続けて" / "continue" / `c`**: go on from `ai/progress.md` --
+the first request of `ai/progress.md` that is not `checked` (or not
+`built`, when the review is none), or whose draft the person says the check
+refused -- the decisions
 in `ai/decisions.md` hold as before.  Never write a draft that is there
 again unless the person asks for it (the check's note, a correction in
 the chat).
@@ -375,7 +431,8 @@ beyond the request and the files it names.  When you reach it, ask or
 mark to confirm, and go on.
 
 If something does not work -- a file cannot be saved, a request cannot be
-read -- try once more.  If it fails again, say so in the chat and stop.
+read -- try again, up to three times in all.  If it still fails, *When you
+are stuck*.
 
 ## When the check refuses a draft
 
@@ -409,7 +466,34 @@ that reads differently, two decisions of one topic that disagree --
 **ask**: "T-14-1-1 took X for this (D2); the same here?", with "yes" as
 what you would take.  When the person says yes, widen the decision's
 scope (add the report's id, its dataset or its section) instead of adding
-a line.
+a line.  In a batch the question is not asked: take "yes" and note it in
+`ai/questions-end.md`.
+
+A decision is never applied to other reports at the moment it is made.
+Each report judges it when it is processed.
+
+## When you are stuck
+
+Your editor summarizes a long chat by itself; that comes first. This is for
+when it did not help, and you cannot go on safely:
+- your context is full and a summary did not help (you lose track of the
+  request, or of what you read);
+- the same tool call fails three times;
+- `Rscript` is refused or not found.
+
+Then, in this order:
+1. Save `ai/progress.md`, with the current row's status and a note of where
+   you are, and the current draft, even when it is incomplete.
+2. Stop.
+3. Post one message, in {{language}}: what happened, exactly what the person
+   should do, and where the run will resume (the request). The person can
+   choose:
+   - "type `/compact` in this chat, then `c`";
+   - "open a new chat, give it `ai/agent_prompt.md`, then type `c`";
+   - "allow `Rscript` (or run `Rscript run.R <request>` yourself), then type
+     `c`".
+
+Never loop: never retry the same failing step more than three times.
 
 ## Never
 
@@ -422,11 +506,11 @@ a line.
   `spec/data.yml`, `spec/defaults.yml`, `run.R`, `AGENTS.md` or
   `.github/copilot-instructions.md`.
 - Write only `ai/spec/outputs/`, `ai/decisions.md` (add lines, change
-  nothing a person wrote) and `ai/progress.md`.
+  nothing a person wrote), `ai/progress.md`, `ai/questions-end.md`.
 - Do not guess what defines a report: take it from the documents, else
   from the usual convention (an assumption, `from: "programmer
   convention"`), else ask -- and do not ask what those settle, nor about a
   case the data rules out.
   Do not write the look (the column widths are not the look: write
   them).
-- Do not try the same thing more than twice: say so in the chat and stop.
+- Do not try the same thing more than three times: *When you are stuck*.

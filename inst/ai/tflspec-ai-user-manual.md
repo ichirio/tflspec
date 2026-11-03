@@ -595,9 +595,10 @@ tfl_ai_unpack(a, "study")                           # spec/outputs/<id>.yml, spe
   `ai/instructions-figure.md`, `ai/templates.md`), and the agent's files:
   `ai/AGENTS.md` (its instructions), `AGENTS.md` and
   `.github/copilot-instructions.md` (short: read `ai/AGENTS.md`), `run.R`,
-  `ai/decisions.md` and `ai/agent_prompt.md` (its one message: every
-  request of `ai/requests/index.md` in order; "continue" goes on from the
-  first with a draft missing).  The agent **asks in its chat** what
+  `ai/decisions.md` and `ai/agent_prompt.md` (its one message: one
+  request then a menu, or a batch of all, by `ai: run`; `c`, a number or `a`
+  answers the menu) and `ai/progress.md` (the work queue: every request
+  `todo`; the agent updates its row).  The agent **asks in its chat** what
   defines each report and is not settled (the analysis set, a parameter, the
   treatment variable, a denominator; three rounds at most for one item,
   then marked to confirm), keeps the answers in `ai/decisions.md`
@@ -609,8 +610,20 @@ tfl_ai_unpack(a, "study")                           # spec/outputs/<id>.yml, spe
   (each with `from: D<n>`) and `confirm` (what the person decides in the
   builder; `tfl_ai_confirm()` lists them, `tfl_check_spec()` shows them as
   `check` rows).  `study.yml`'s `ai:` keys set its rules (`language`,
-  `ask_when`, `carry`, `max_rounds`, `footnotes_at`; the study standard's
-  `spec/defaults.yml` may say them first).  It reads the request and the
+  `run`, `requests_per_chat`, `carry`, `max_rounds`, `footnotes_at`; the study
+  standard's `spec/defaults.yml` may say them first).  `run` is `one` (the
+  default): the agent processes one request -- its questions in the chat, its
+  drafts, its build and check -- and stops at a menu (`c` the next request, a
+  number N the next N together, `a` all the rest).  `batch` (or the menu's
+  N / `a`): the agent takes its default for every question, notes it in
+  `ai/questions-end.md` (a section for each batch), writes and builds every
+  report, and asks all the questions in one message at the end; only the
+  reports an answer changes are written again.  Each request is processed on
+  its own, and each report judges for itself whether an earlier decision
+  holds.  `run.R` writes
+  `ai/defaults.md` in every mode: every assumption of the drafts, the ones
+  that change the numbers first -- read it too, as the defaults can differ
+  from run to run.  It reads the request and the
   files it names only (`agent_reads = c("workbook", "adam")` and `docs =`
   allow more; a document inside the study folder -- its `docs/` -- is read
   where it is, one outside is copied into `ai/docs/`; a `.docx`, `.pdf` or

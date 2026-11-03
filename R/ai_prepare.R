@@ -38,15 +38,22 @@
 #' `.github/copilot-instructions.md` (short: read `ai/AGENTS.md`), `run.R`
 #' ([tfl_ai_run()]: the check from the command line, with the ARD and RTF)
 #' and `ai/decisions.md`, which is never written over.  One message
-#' (`ai/agent_prompt.md`) starts the agent on every request of
-#' `ai/requests/index.md` in order; stopped, it goes on at "continue" from
-#' the first request with a draft missing.
+#' (`ai/agent_prompt.md`) starts the agent: with one request, then a menu, or
+#' with a batch of all the requests (`ai: run`); `ai/progress.md`, the work
+#' queue (every request `todo`; never written over), says where it goes on.
 #'
 #' `study.yml`'s `ai:` keys set the agent's rules (the study standard's
 #' `spec/defaults.yml` may say them under its own `ai:` key first):
-#' `language` (the chat's: `"en"`, `"ja"` ...), `ask_when` (`"request"`,
-#' the default: the request's reports' questions together; `"report"`:
-#' report by report), `carry` (which decision scopes apply to a later
+#' `language` (the chat's: `"en"`, `"ja"` ...), `run` (`"one"`, the
+#' default: the agent processes one request -- its questions in the chat, its
+#' drafts, its build and check -- and stops at a menu: the next request, the
+#' next N together, or all the rest; `"batch"`: all the requests at once, the
+#' agent taking its default for every question, noting it in
+#' `ai/questions-end.md`, and asking all of them in one message at the end,
+#' with `ai/defaults.md`, the defaults it took, the most important first --
+#' only the reports an answer changes are then written again),
+#' `requests_per_chat` (0, no limit: after that many requests the agent stops
+#' and asks for a new chat), `carry` (which decision scopes apply to a later
 #' report without asking: `all`, `dataset`, `section`), `max_rounds` (how
 #' many times one item is asked again, 3), `footnotes_at` (`"footer"`, the
 #' default, or `"table"`: where the shell's footnotes go), `review` (how
@@ -429,7 +436,7 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
                         paste0(.ai_file_id(basename(normalizePath(dir, mustWork = FALSE))),
                                ".code-workspace"))),
       paste0("in the agent's chat, one message: ai/agent_prompt.md; answer its questions ",
-             "there; \"continue\" when it stopped"),
+             "there; at its menu: c (the next request), a number (that many together) or a (all the rest)"),
       paste0("check the drafts: tflplanner's \"Check\" (tfl_ai_collect_answers()), ",
              "finish them in the builder, adopt them (tfl_ai_adopt())"))
   }
@@ -482,10 +489,13 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
   # -- and the first one or two requests only: the person asks for the rest
   agent_prompt <- .ai_paths_from_ai(.ai_agent_prompt(
     basename(normalizePath(dir, mustWork = FALSE)), templates = templates,
-    language = .ai_spec_settings(dir)$language, build = .ai_build_on(dir)))
+    language = .ai_spec_settings(dir)$language, run = .ai_spec_settings(dir)$run,
+    build = .ai_build_on(dir)))
   # and as a file, to copy from
   if (!dry) {
     .ai_write_text(agent_prompt, file.path(ai, "agent_prompt.md"))
+    # the work queue: every request todo (never written over)
+    .ai_progress_write(dir, req)
     # the study's facts the agent read from spec/, and the workspace on ai/
     files <- c(files, "ai/agent_prompt.md",
                .ai_check_rel(.ai_study_facts_write(dir), dir),

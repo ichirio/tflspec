@@ -13,7 +13,7 @@
 #
 #    .ai_spec_settings()      study.yml's ai: keys over the defaults
 #    tfl_ai_decisions_*()     ai/decisions.md read and written
-#    .ai_decisions_block()    a request's "Decisions that apply"
+#    .ai_decisions_block()    a request's "Decisions that may apply"
 #    .ai_drafts_to_answers()  the drafts as the check's answers
 #    tfl_ai_confirm()         what is marked to confirm
 # ============================================================================
@@ -21,9 +21,10 @@
 # ---- the settings ------------------------------------------------------------
 
 # The agent's settings: the package's defaults, under study.yml's
-# `ai:` keys (ask_when, carry, max_questions, language)
+# `ai:` keys (run, requests_per_chat, carry, max_rounds, language ...)
 .ai_spec_defaults <- list(
-  ask_when = "request",                 # "request": once per request, before writing; "report": per report
+  run = "one",                           # "one": one request, its questions, its build, then a menu; "batch": all the requests, the questions at the end
+  requests_per_chat = 0L,               # stop after this many requests in one chat (0: no limit)
   carry = c("all", "dataset", "section"),  # a decision applies without asking when its scope is one of these (and the agent is sure)
   max_rounds = 3L,                      # asking again about one item: this many times, then "to confirm"
   footnotes_at = "footer",              # the shell's footnotes: the page's "footer" band, or the "table"'s footnotes
@@ -53,18 +54,55 @@
   s$max_rounds <- as.integer(s$max_rounds)
   s$carry <- as.character(unlist(s$carry))
   s$review <- .ai_review_levels(s$review)
+  s$run <- .ai_run(s$run)
+  s$requests_per_chat <- .ai_requests_per_chat(s$requests_per_chat)
   s$footnotes_at <- match.arg(as.character(s$footnotes_at)[1L], c("footer", "table"))
   s
 }
 
-# AGENTS-spec.md filled from the settings
-.ai_spec_agents <- function(text, s) {
+# study.yml ai: run, checked: "one" or "batch"
+.ai_run <- function(x) {
+  ok <- c("one", "batch")
+  v <- as.character(unlist(x))[1L]
+  if (is.na(v) || !v %in% ok) {
+    .ard_stop(sprintf("study.yml ai: run is %s; not %s.", paste(ok, collapse = " or "),
+                      format(if (is.na(v)) "" else v)))
+  }
+  v
+}
+
+# study.yml ai: requests_per_chat, checked: an integer >= 0
+.ai_requests_per_chat <- function(x) {
+  v <- suppressWarnings(as.numeric(unlist(x))[1L])
+  if (is.na(v) || v < 0 || v != round(v)) {
+    .ard_stop(sprintf("study.yml ai: requests_per_chat is a whole number, 0 or more; not %s.",
+                      format(paste(unlist(x), collapse = " "))))
+  }
+  as.integer(v)
+}
+
+# AGENTS-spec.md filled from the settings.  AGENTS.md always holds both ways
+# of running (AGENTS-run-one.md: one request, then the menu; AGENTS-run-batch.md:
+# a batch, the questions at the end); `run` only decides how the agent starts
+# (agent_prompt.md).  `runs` holds the two texts (named `one`, `batch`), else
+# they are read from the package
+.ai_spec_agents <- function(text, s, runs = NULL) {
   lang <- .ai_language_name(s$language)
-.ai_fill(text, list(
+  if (is.null(runs)) {
+    src <- system.file("ai", "agent", package = "tflspec")
+    rd <- function(f) paste(readLines(file.path(src, f), warn = FALSE, encoding = "UTF-8"),
+                            collapse = "\n")
+    runs <- list(one = rd("AGENTS-run-one.md"), batch = rd("AGENTS-run-batch.md"))
+  }
+  n <- s$requests_per_chat
+  .ai_fill(text, list(
+    run_one = runs$one,
+    run_batch = runs$batch,
+    per_chat = if (isTRUE(n > 0L)) sprintf(paste0(
+      "\n- After %d requests in this chat, finish the current one, update ",
+      "`ai/progress.md` and stop with \"Open a new chat and give it ai/agent_prompt.md; ",
+      "it goes on from ai/progress.md\"."), n) else "",
     language = lang,
-    ask_when = if (identical(s$ask_when, "report")) {
-      "Report by report, before you write it:"
-    } else "For the request's reports together, before you write any of them:",
     carry_section = if ("section" %in% s$carry) " or its TOC section" else "",
     footnotes_at = .ai_footnotes_text(s$footnotes_at),
     titles_rule = .ai_titles_text(s$titles_in_header)))
@@ -226,7 +264,7 @@ tfl_ai_decisions_write <- function(study_dir, x) {
 }
 
 # The lines a request carries: the decisions that apply to its reports and
-# those to ask about (a request's "Decisions that apply")
+# those to ask about (a request's "Decisions that may apply")
 .ai_decisions_block <- function(study_dir, ids, datasets = character(), section = NA_character_) {
   s <- .ai_spec_settings(study_dir)
   rows <- do.call(rbind, lapply(ids, function(id) {
@@ -240,8 +278,9 @@ tfl_ai_decisions_write <- function(study_dir, x) {
   ask <- rows[rows$how == "ask", , drop = FALSE]
   apply_ <- apply_[!duplicated(apply_$line), , drop = FALSE]
   ask <- ask[!duplicated(ask$line), , drop = FALSE]
-  c("## Decisions that apply", "",
-    if (nrow(apply_)) c("Apply these without asking (write an assumption with `from: D<n>`):", "",
+  c("## Decisions that may apply", "",
+    if (nrow(apply_)) c(paste0("Judge each one for these reports: apply it (`from: D<n>`) only when it clearly ",
+                               "holds for this report; else ask, as AGENTS.md *Decisions* says:"), "",
                         vapply(seq_len(nrow(apply_)), function(i) line_of(apply_[i, ]), "")),
     if (nrow(ask)) c("", "These were decided for other reports; ask whether they hold here too:", "",
                      vapply(seq_len(nrow(ask)), function(i) line_of(ask[i, ]), "")),

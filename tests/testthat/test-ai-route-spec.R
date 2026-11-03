@@ -44,7 +44,8 @@ test_that("decisions: written as structured lines, read back; the older lines an
   b <- tflspec:::.ai_decisions_for(d, "T-14-3-5", datasets = "ADAE", settings = narrow)
   expect_identical(b$how[b$id %in% "D2"], "ask")
   blk <- tflspec:::.ai_decisions_block(d, "T-14-3-5", datasets = "ADAE")
-  expect_true(any(grepl("^## Decisions that apply", blk)))
+  expect_true(any(grepl("^## Decisions that may apply", blk)))
+  expect_true(any(grepl("Judge each one", blk, fixed = TRUE)))
   expect_true(any(grepl("D1 \\[all\\]", blk)))
 })
 
@@ -53,7 +54,9 @@ test_that("the settings: the package's, under study.yml's ai: keys; the language
   dir.create(d)
   s <- tflspec:::.ai_spec_settings(d)
   expect_identical(s$max_rounds, 3L)
-  expect_identical(s$ask_when, "request")
+  expect_identical(s$run, "one")
+  expect_identical(s$requests_per_chat, 0L)
+  expect_null(s[[paste0("ask_", "when")]])
   expect_identical(s$footnotes_at, "footer")
   writeLines(c("study_id: X", "ai:", "  language: ja", "  max_rounds: 2", "  carry: [all]"),
              file.path(d, "study.yml"))
@@ -83,7 +86,7 @@ test_that("prepare(): AGENTS.md asks and writes the drafts; the requests carry t
   ag <- readLines(file.path(d, "ai", "AGENTS.md"), warn = FALSE, encoding = "UTF-8")
   expect_true(any(grepl("<!-- tflspec route: spec -->", ag, fixed = TRUE)))
   expect_true(any(grepl("`spec/outputs/<id>.yml`", ag, fixed = TRUE)))
-  expect_true(any(grepl("three times at most", ag, fixed = TRUE)))
+  expect_true(any(grepl("questions-end.md", ag, fixed = TRUE)))
   expect_true(any(grepl("page: footer", ag, fixed = TRUE)))
   expect_true(any(grepl("in English", ag, fixed = TRUE)))
   expect_false(any(grepl("{{", ag, fixed = TRUE)))
@@ -96,7 +99,7 @@ test_that("prepare(): AGENTS.md asks and writes the drafts; the requests carry t
   expect_true(any(grepl("page: footer", ins, fixed = TRUE)))
   pr <- readLines(file.path(d, "ai", "agent_prompt.md"), warn = FALSE, encoding = "UTF-8")
   expect_true(any(grepl("ask me here, in English", pr, fixed = TRUE)))
-  expect_true(any(grepl("spec/outputs/<id>.yml", pr, fixed = TRUE)))
+  expect_true(any(grepl("write its drafts", pr, fixed = TRUE)))
   # a request's head says the route; with a decision, the request lists it
   idx <- tfl_ai_requests(d)
   req <- idx$request[idx$outputs == "T-14-3-1" | grepl("T-14-3-1", idx$outputs)][1L]
@@ -107,7 +110,8 @@ test_that("prepare(): AGENTS.md asks and writes the drafts; the requests carry t
   tfl_ai_decisions_write(d, data.frame(scope = "all", topic = "treatment_var.SAF", decision = "TRT01A", source = "person"))
   tfl_ai_prepare(unit = "toc", d, rs_book(), adam = "adam", quiet = TRUE, size = 3L)
   rq <- readLines(file.path(d, "ai", "requests", paste0(req, ".md")), warn = FALSE, encoding = "UTF-8")
-  expect_true(any(grepl("^## Decisions that apply", rq)))
+  expect_true(any(grepl("^## Decisions that may apply", rq)))
+  expect_true(any(grepl("Judge each one", rq, fixed = TRUE)))
   expect_true(any(grepl("D1 [all] treatment_var.SAF: TRT01A", rq, fixed = TRUE)))
   # no draft yet: the next step says to ask the agent
   r0 <- suppressMessages(tfl_ai_collect_answers(d))

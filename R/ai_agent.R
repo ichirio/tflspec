@@ -35,7 +35,8 @@
     out <<- c(out, f)
   }
   # the instructions, with the study's settings (study.yml's ai: keys)
-  agents <- .ai_spec_agents(rd("AGENTS.md"), .ai_spec_settings(dir))
+  agents <- .ai_spec_agents(rd("AGENTS.md"), .ai_spec_settings(dir),
+                            list(one = rd("AGENTS-run-one.md"), batch = rd("AGENTS-run-batch.md")))
   place <- function(p) if (length(p) && !is.na(p[1L])) sprintf("`%s`", p[1L]) else
     "(where the request says)"
   # the company's conventions (tfl_ai_reference_build()) and hints (the agent's
@@ -176,8 +177,10 @@
   c("<!-- tflspec: agent -->",
     paste0("> **For the agent** (ai/AGENTS.md): read `ai/decisions.md` and the decisions below, ",
            "then settle each open point as ai/AGENTS.md says -- the documents, else the usual ",
-           "convention (an assumption), else a question in the chat (only what you may not decide ",
-           "alone) -- and wait for the answers. Then write each report's skeleton as its file: ", files, ". ",
+           "convention (an assumption), else a question (only what you may not decide ",
+           "alone): in the chat when you run this one request, and wait for the answers; in a batch, ",
+           "take your default and note it in `ai/questions-end.md`, as ai/AGENTS.md says. ",
+           "Then write each report's skeleton as its file: ", files, ". ",
            "Record the answers in `ai/decisions.md`; mark what you could not settle under `ai: confirm`. ",
            "Read only this request and the files it names; do not look for others, install nothing, ",
            if (build) paste0("run only `Rscript run.R ", request, "`, as ai/AGENTS.md's *Build and check* says. ") else
@@ -407,8 +410,12 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
   # a report that passed its checks but could not be built: a repair, as
   # for an answer with errors
   .ai_build_repairs(study_dir, r)
+  # the requests built in this run: their rows in ai/progress.md
+  .ai_progress_built(study_dir, r, todo)
   res$reports <- r
   res <- .ai_run_next(res)
+  # every default the drafts took, the most important first
+  .ai_defaults_write(study_dir)
   .ai_write_text(.ai_status_text(res), file.path(study_dir, "ai", "status.md"))
   message(sprintf("%s; see ai/status.md.", .ai_count_text(res)))
   invisible(res)
@@ -600,7 +607,8 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
   r <- res$reports
   cell <- function(x) ifelse(is.na(x), "", gsub("|", "/", x, fixed = TRUE))
   nxt <- res$next_steps
-  c(sprintf("# Status (written by run.R, %s)", format(Sys.time(), "%Y-%m-%d %H:%M")),
+  c(sprintf("# Status (written by run.R, %s; the defaults the drafts took: ai/defaults.md)",
+            format(Sys.time(), "%Y-%m-%d %H:%M")),
     "",
     "Messages: ai/build.log",
     "",
@@ -714,27 +722,82 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
 # The requests are not named: the agent does every one of
 # ai/requests/index.md in order, and "continue" goes on from the first
 # with a draft missing.
-.ai_agent_prompt <- function(study, templates = FALSE, language = "en", build = FALSE) {
+.ai_agent_prompt <- function(study, templates = FALSE, language = "en", run = "one", build = FALSE) {
   paste0("The workspace is the ai folder of the study ", study,
     ": every path is from it; open nothing outside it. ",
-    "Read ai/AGENTS.md and follow it. Do every request of ai/requests/index.md, top to bottom; ",
-    "skip a request whose reports all have their draft (ai/spec/outputs/<id>.yml). For each: ",
-    "read ai/decisions.md and the request; ask me here, in ", .ai_language_name(language),
-    ", only what defines its reports and neither the documents nor the usual convention ",
-    "settles (ai/AGENTS.md: what to decide yourself, what to confirm, what to ask), numbered, with the ",
-    "choices and your default -- then wait for my answers. Record them in ai/decisions.md. Then write each report's ",
-    "skeleton as ai/spec/outputs/<id>.yml",
-    if (isTRUE(templates)) " (a template where one fits, ai/AGENTS.md)" else "",
-    ", nothing of the look but the column widths, and mark what you could not settle under ai: confirm; go straight ",
-    "on to the next request without waiting for me -- stop only to ask, or when every request ",
-    "is done. Read only the request and the files it names; ",
+    "Read ai/AGENTS.md and follow it. Go on from ai/progress.md: the first request not done. ",
+    "Process each request on its own: read ai/progress.md, ai/decisions.md and that request ",
+    "(only it), write its drafts", if (isTRUE(templates)) " (a template where one fits, ai/AGENTS.md)" else "",
+    ", nothing of the look but the column widths, and mark what you could not settle under ai: confirm. ",
+    if (identical(run, "batch")) paste0(
+      "Start with a batch of ALL the requests that are left, as ai/AGENTS.md says: do not ask me now; ",
+      "take your defaults and note every question in ai/questions-end.md; build and check each request; ",
+      "when all are built, post the questions and the defaults in one message, in ",
+      .ai_language_name(language), ", and wait for my answers. ") else paste0(
+      "Start with ONE request: ask me here, in ", .ai_language_name(language),
+      ", only what defines its reports and neither the documents nor the usual convention ",
+      "settles (ai/AGENTS.md: what to decide yourself, what to confirm, what to ask), numbered, with the ",
+      "choices and your default -- then wait for my answers. Record them in ai/decisions.md, write the drafts, ",
+      "build and check them, and then stop and show the menu. "),
+    "At the menu I answer with c (the next request), a number (that many requests together) or ",
+    "a (all the rest together). Read only the request and the files it names; ",
     if (build) paste0("run only `Rscript run.R <request>` (ai/AGENTS.md: *Build and check*), ",
                       "install nothing. ") else "run nothing, install nothing. ",
     "If I say \"stop\", finish the step in hand, write ai/progress.md and stop, saying where; ",
-    "when I say \"continue\", go on from ai/progress.md. ",
+    "when I say \"continue\" or c, go on from ai/progress.md. ",
     "When every request is done, review each draft against the list under \"Before you ",
     "stop\" in ai/AGENTS.md and fix what fails; then stop and tell me the files written, ",
     "the decisions added, what is to confirm, and what the review changed.")
+}
+
+# ai/progress.md, the agent's work queue: one row a request, status todo.
+# Never written over (the agent keeps it, and a new prepare must not undo it).
+.ai_progress_write <- function(dir, req) {
+  f <- file.path(dir, "ai", "progress.md")
+  if (file.exists(f) || is.null(req) || !nrow(req)) return(invisible(NULL))
+  .ai_write_text(c("# Progress", "",
+                   "| request | reports | status | batch | questions |",
+                   "|---|---|---|---|---|",
+                   sprintf("| %s | %s | todo | | |", req$request, req$outputs)), f)
+  invisible(f)
+}
+
+# After a run, the status of the requests it built, in ai/progress.md (when
+# it is there): `built` when all the request's reports built, `failed` when
+# one did not.  A row at `checked` or `reworked` stays, unless the build
+# failed; the other columns are not touched.  `r` is the run's reports,
+# `todo` the rows it built.
+.ai_progress_built <- function(dir, r, todo) {
+  f <- file.path(dir, "ai", "progress.md")
+  if (!file.exists(f) || !length(todo)) return(invisible(NULL))
+  req <- unique(r$request[todo])
+  req <- req[!is.na(req)]
+  failed <- vapply(req, function(q) {
+    any(!is.na(r$rtf_problem[r$request %in% q]) & nzchar(r$rtf_problem[r$request %in% q]))
+  }, NA)
+  ok <- vapply(req, function(q) all(r$built[r$request %in% q] %in% c("built", "kept")), NA)
+  new <- ifelse(failed, "failed", ifelse(ok, "built", NA_character_))
+  names(new) <- req
+  x <- readLines(f, warn = FALSE, encoding = "UTF-8")
+  head <- grep("^[|]", x)
+  if (!length(head)) return(invisible(NULL))
+  cells <- strsplit(x[head[1L]], "|", fixed = TRUE)[[1L]]
+  at <- match("status", trimws(cells))
+  if (is.na(at)) return(invisible(NULL))
+  changed <- FALSE
+  for (i in head[-1L]) {
+    cl <- strsplit(x[i], "|", fixed = TRUE)[[1L]]
+    q <- trimws(cl[2L])
+    if (length(cl) < at || !q %in% req || is.na(new[[q]])) next
+    old <- trimws(cl[at])
+    if (identical(old, new[[q]]) || (old %in% c("checked", "reworked") && new[[q]] != "failed")) next
+    pad <- regmatches(cl[at], regexec("^(\\s*).*?(\\s*)$", cl[at]))[[1L]]
+    cl[at] <- paste0(if (nzchar(pad[2L])) pad[2L] else " ", new[[q]], if (nzchar(pad[3L])) pad[3L] else " ")
+    x[i] <- paste0(paste(cl, collapse = "|"), if (grepl("[|]\\s*$", x[i])) "|" else "")
+    changed <- TRUE
+  }
+  if (changed) .ai_write_text(x, f)
+  invisible(f)
 }
 
 # The inputs tfl_ai_prepare() gave .ai_agent_files(), kept in
@@ -798,6 +861,14 @@ tfl_ai_refresh_agents <- function(study_dir = ".") {
     out <- .ai_agent_files(study_dir, overwrite = TRUE, templates = x$templates,
                            adam = x$adam, book = x$book, reads = x$reads, docs = x$docs,
                            docs_from = x$docs_from, max_reads = x$max_reads)
+  }
+  # the first message follows `ai: run`
+  ai <- file.path(study_dir, "ai")
+  if (dir.exists(ai)) {
+    s <- .ai_spec_settings(study_dir)
+    .ai_write_text(.ai_paths_from_ai(.ai_agent_prompt(
+      basename(normalizePath(study_dir, mustWork = FALSE)), templates = isTRUE(x$templates),
+      language = s$language, run = s$run, build = .ai_build_on(study_dir))), file.path(ai, "agent_prompt.md"))
   }
   invisible(out)
 }
