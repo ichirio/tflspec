@@ -1,22 +1,5 @@
 # The AI's reports listed for the person (tfl_ai_outputs())
 
-outs_study <- function(root) {
-  ad <- file.path(root, "adam")
-  dir.create(ad, recursive = TRUE, showWarnings = FALSE)
-  for (x in c("adsl", "adae", "adrs", "adlb", "adtte")) {
-    df <- getExportedValue("tflspec", x)
-    for (v in names(df)) if (is.factor(df[[v]])) df[[v]] <- as.character(df[[v]])
-    haven::write_xpt(df, file.path(ad, paste0(x, ".xpt")))
-  }
-  d <- file.path(root, "study")
-  book <- system.file("ai", "example", "onco_toc_shell.xlsx", package = "tflspec")
-  tfl_ai_prepare(unit = "toc", d, book, adam = normalizePath(ad, winslash = "/"),
-                 quiet = TRUE, size = 3L)
-  invisible(tfl_ai_migrate(d))
-  ai_drafts_from_fixtures(d)
-  d
-}
-
 test_that("tfl_ai_outputs(): a row a report, its request's sheets, status, adoption", {
   skip_on_cran()
   skip_if_not_installed("haven")
@@ -40,4 +23,23 @@ test_that("tfl_ai_outputs(): a row a report, its request's sheets, status, adopt
   f <- file.path(d, o$file[match(id, o$output_id)])
   writeLines(c(readLines(f, warn = FALSE), "# redrafted"), f)
   expect_identical(tfl_ai_outputs(d)$adopted[match(id, o$output_id)], "yes, draft newer")
+})
+
+test_that("tfl_ai_collect_answers(): an assumption's `from` beside ones without it is kept, not an error (#598)", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  root <- withr::local_tempdir()
+  d <- outs_study(root)
+  suppressMessages(tfl_ai_collect_answers(d))
+  f <- file.path(d, "ai", "spec", "outputs", "T-14-1-1.yml")
+  y <- yaml::read_yaml(f)
+  expect_gt(length(y$ai$assumptions), 1L)
+  y$ai$assumptions[[1L]]$from <- "programmer convention"
+  yaml::write_yaml(y, f)
+  res <- suppressMessages(tfl_ai_collect_answers(d))
+  o <- tfl_ai_outputs(d)
+  expect_true(o$status[o$output_id == "T-14-1-1"] %in% c("ok", "warning"))
+  a <- tfl_ai_assumptions(d)
+  expect_true("from" %in% names(a))
+  expect_true("programmer convention" %in% a$from[a$output_id == "T-14-1-1"])
 })

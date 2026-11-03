@@ -439,12 +439,17 @@ reference:
       - tfl_ai_batches
       - tfl_ai_write_requests
       - tfl_ai_prepare
+      - tfl_ai_refresh_agents
       - tfl_ai_collect_answers
       - tfl_ai_adopt
       - tfl_ai_adopted_diff
       - tfl_ai_style_prompt
       - tfl_ai_style_read
+      - tfl_ai_style_diff
+      - tfl_ai_style_adopt
+      - tfl_ai_reference_build
       - tfl_rtf_style_scan
+      - tfl_rtf_style_tables
       - tfl_ai_migrate
       - tfl_ai_outputs
       - tfl_ai_assumptions

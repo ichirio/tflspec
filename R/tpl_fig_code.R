@@ -26,7 +26,7 @@
   },
   waterfall = function(a) .tpl_wf_design(a$value, a$by_response, a$param, a$data, a$where),
   forest_hr = function(a) {
-    f <- .tpl_forest_design(a$group, a$subgroups, a$comparison)
+    f <- .tpl_forest_design(a$group, a$subgroups, a$comparison, .tpl_forest_look_args(a))
     # (the text column beside it: tpl_forest_layout(), after the report's items)
     f$content <- Filter(function(it) !identical(it$fn, "text_column"), f$content)
     f
@@ -118,6 +118,12 @@
   own_plot <- Filter(Negate(is.null), lapply(stats::setNames(nm = names(output$plot)), function(k) {
     if (!identical(output$plot[[k]], tp$plot[[k]])) output$plot[[k]]
   }))
+  # (its `add` follows the template's own, as the call joins them: the
+  # draft's pieces alone are written)
+  nb <- length(tp$plot$add)
+  if (nb && length(own_plot$add) > nb && identical(own_plot$add[seq_len(nb)], tp$plot$add)) {
+    own_plot$add <- own_plot$add[-seq_len(nb)]
+  }
   as_arg <- if (generic) intersect(names(own_plot), intersect(.tpl_km_plot_args,
                                                                  names(.tpl_shown(t$params))))
   for (k in as_arg) args[[k]] <- own_plot[[k]]
@@ -144,8 +150,14 @@
   libs <- c("dplyr", "ggplot2", d$libs)
   needs <- character()
   n_lab <- 0L
+  own <- list()
   for (i in seq_along(tp$rest)) {
     x <- .fig_item_as_piece(tp$rest[[i]])
+    # the report's own R code: statements on `p`, after the other items
+    if (identical(x$piece$layer, "layer_code")) {
+      own <- c(own, list(list(stmt = x$piece$code, label = x$piece$label)))
+      next
+    }
     if (identical(x$to, "add")) {
       res <- .fig_call_code(x$piece)
       terms <- c(terms, res$call)
@@ -177,12 +189,27 @@
     d$code,
     if (length(pre)) c("# the numbers it prints, from the ARD", pre, ""),
     section("plot"),
-    if (is.null(form$assemble)) .fig_plus_chain(name, c(call, terms))
-    else c(.fig_plus_chain("fig", c(call, terms)), sprintf("%s <- %s(fig)", name, form$assemble)))
+    .tpl_fig_chain(if (is.null(form$assemble)) name else "fig", call, terms, own),
+    if (!is.null(form$assemble)) {
+      # (the call's arguments the assembly needs too: the same values)
+      aa <- intersect(form$assemble_args, keep)
+      sprintf("%s <- %s(%s)", name, form$assemble,
+              paste(c("fig", arg_code[match(aa, keep)]), collapse = ", "))
+    })
   code <- .code_lines(code)
   code <- .fig_rename_df(code, tfl_fig_data_name(list(data = steps)))
   code <- .fig_tidy_names(code)
   .fig_code_out(c(.fig_units_used(code), code), d$reads, unique(libs),
                 setdiff(unique(needs), c("ggplot2", "ggsurvfit", "patchwork")),
                 ard = length(pre) > 0L)
+}
+
+# The call and the items after it into `name`: one `+` chain; with the
+# report's own code (layer_code), the chain into `p`, the statements, then
+# `name <- p`
+.tpl_fig_chain <- function(name, call, terms, own = list()) {
+  if (!length(own)) return(.fig_plus_chain(name, c(call, terms)))
+  c(.fig_plus_chain("p", c(call, terms)),
+    unlist(lapply(own, function(o) c(paste("#", o$label %||% "the report's own code"), o$stmt))),
+    sprintf("%s <- p", name))
 }

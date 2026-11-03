@@ -1023,9 +1023,9 @@ print.tfl_ai_collected <- function(x, ...) {
     cat(sprintf("\nManifest (%s): %d report(s)%s", obj$manifest_file %||% "ai/manifest.csv",
                 nrow(man), if (length(toc)) sprintf(" from %d TOC row(s)", length(toc)) else ""))
     odd <- c(if (any(man$status == "not answered"))
-               sprintf("%d listed but not answered", sum(man$status == "not answered")),
+               sprintf("%d in a request's `reports` list but with no draft", sum(man$status == "not answered")),
              if (any(man$listed %in% FALSE))
-               sprintf("%d answered but not listed", sum(man$listed %in% FALSE)))
+               sprintf("%d in a draft but not in its request's `reports` list", sum(man$listed %in% FALSE)))
     cat(if (length(odd)) sprintf(" -- %s", paste(odd, collapse = ", ")) else "", "\n", sep = "")
   }
   stray <- obj$stray

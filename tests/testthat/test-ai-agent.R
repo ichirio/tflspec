@@ -32,24 +32,77 @@ test_that("the agent's files: AGENTS.md, run.R, decisions; toc.yml; the paths; t
   expect_false(file.exists(file.path(d, "ai", "requests", "00-instructions.md")))
   ag <- readLines(file.path(d, "ai", "AGENTS.md"), encoding = "UTF-8")
   expect_identical(readLines(file.path(d, ".github", "copilot-instructions.md"), encoding = "UTF-8"), readLines(file.path(d, "AGENTS.md"), encoding = "UTF-8"))
-  for (k in c("<!-- tflspec route: spec -->", "`decisions.md`", "three times at most",
+  for (k in c("<!-- tflspec route: spec -->", "`decisions.md`", "questions-end.md",
               "`spec/outputs/<id>.yml`")) {
     expect_true(any(grepl(k, ag, fixed = TRUE)), info = k)
   }
-  expect_false(any(grepl("Rscript run.R", ag, fixed = TRUE)))
+  # the agent builds each request and checks it itself (#512, #598), from the
+  # study folder, as deep as the kind's level: figures 3, tables 2, listings 1
+  expect_true("## Build and check: each report, yourself" %in% ag)
+  expect_true(any(grepl("`Rscript run.R <request>` from the study folder", ag, fixed = TRUE)))
+  expect_true(any(grepl("Run `run.R` only to build a request", ag, fixed = TRUE)))
+  # (building on: the agent runs run.R for a request, so nothing says it runs nothing)
+  expect_true(tflspec:::.ai_build_on(d))
+  expect_false(any(grepl("You cannot run the check yourself", ag, fixed = TRUE)))
+  expect_true(any(grepl("You run only `Rscript run.R <request>`", ag, fixed = TRUE)))
+  expect_match(tflspec:::.ai_agent_prompt("s", build = TRUE), "run only `Rscript run.R <request>`", fixed = TRUE)
+  expect_false(grepl("run nothing", tflspec:::.ai_agent_prompt("s", build = TRUE), fixed = TRUE))
+  hd <- paste(tflspec:::.ai_agent_request_head("T-14-1-1", "T-14-1-1", build = TRUE), collapse = " ")
+  expect_match(hd, "run only `Rscript run.R T-14-1-1`", fixed = TRUE)
+  expect_false(grepl("run nothing", hd, fixed = TRUE))
+  expect_match(paste(readLines(file.path(d, "run.R")), collapse = " "),
+               "the agent runs it only for a request it built", fixed = TRUE)
+  expect_identical(which(ag == "## Build and check: each report, yourself") < which(ag == "## Before you stop"),
+                   TRUE)
+  expect_true("- Figures: level **3** -- the check, the program, the facts and the output." %in% ag)
+  expect_true(any(startsWith(ag, "- Tables: level **2** -- the check, the program and the facts (and the pages")))
+  expect_true("- Listings: level **1** -- the check and the program." %in% ag)
+  # study.yml's ai: review, kind by kind (the others as before); none: the
+  # person's check
+  sy <- readLines(file.path(d, "study.yml"), encoding = "UTF-8")
+  y <- yaml::read_yaml(file.path(d, "study.yml"))
+  y$ai$review <- list(listing = "none", table = 3L)
+  yaml::write_yaml(y, file.path(d, "study.yml"))
+  tflspec:::.ai_agent_files(d, overwrite = TRUE)
+  ag1 <- readLines(file.path(d, "ai", "AGENTS.md"), encoding = "UTF-8")
+  expect_true("- Figures: level **3** -- the check, the program, the facts and the output." %in% ag1)
+  expect_true("- Tables: level **3** -- the check, the program, the facts and the output." %in% ag1)
+  expect_true("- Listings: not built by you (the person runs the check)." %in% ag1)
+  y$ai$review <- "none"
+  yaml::write_yaml(y, file.path(d, "study.yml"))
+  tflspec:::.ai_agent_files(d, overwrite = TRUE)
+  ag0 <- readLines(file.path(d, "ai", "AGENTS.md"), encoding = "UTF-8")
+  expect_false("## Build and check: each report, yourself" %in% ag0)
+  expect_true(any(grepl("Do not run `run.R`.", ag0, fixed = TRUE)))
+  # (review none everywhere: the agent runs nothing -- the old text everywhere)
+  expect_true(any(grepl("You cannot run the check yourself", ag0, fixed = TRUE)))
+  expect_false(tflspec:::.ai_build_on(d))
+  expect_match(tflspec:::.ai_agent_prompt("s", build = FALSE), "run nothing, install nothing", fixed = TRUE)
+  expect_match(paste(tflspec:::.ai_agent_request_head("r1", "T-1", build = FALSE), collapse = " "),
+               "run nothing", fixed = TRUE)
+  expect_match(paste(readLines(file.path(d, "run.R")), collapse = " "), "the person runs it; the agent does not",
+               fixed = TRUE)
+  expect_false(any(grepl("{{", readLines(file.path(d, "run.R")), fixed = TRUE)))
+  y$ai$review <- list(table = 4L)
+  yaml::write_yaml(y, file.path(d, "study.yml"))
+  expect_error(tflspec:::.ai_agent_files(d, overwrite = TRUE), "table is 0 to 3, or none; not 4")
+  writeLines(sy, file.path(d, "study.yml"), useBytes = TRUE)
+  tflspec:::.ai_agent_files(d, overwrite = TRUE)
   expect_false(any(grepl("{{", ag, fixed = TRUE)))
   # the first message: the first two requests, then a stop
   expect_true(is.character(r$agent_prompt) && length(r$agent_prompt) == 1L)
-  expect_match(r$agent_prompt, "Do every request of requests/index.md", fixed = TRUE)
+  expect_match(r$agent_prompt, "Process each request on its own", fixed = TRUE)
   expect_match(r$agent_prompt, "ask me here, in English,", fixed = TRUE)
-  expect_match(r$agent_prompt, "(spec/outputs/<id>.yml)", fixed = TRUE)
+  expect_match(r$agent_prompt, "write its drafts", fixed = TRUE)
+  rq1 <- paste(readLines(file.path(d, r$requests$file[1L]), encoding = "UTF-8"), collapse = " ")
+  expect_match(rq1, "run only `Rscript run.R T-14-1-1`", fixed = TRUE)
   expect_match(r$agent_prompt, "review each draft against the list under \"Before you stop\"", fixed = TRUE)
   ag <- paste(readLines(file.path(d, "ai", "AGENTS.md"), encoding = "UTF-8"), collapse = "\n")
   expect_match(ag, "## Before you stop", fixed = TRUE)
   expect_match(ag, "defines a derived timepoint or population", fixed = TRUE)
-  # one message for every request, in index.md's order; "continue" goes on
-  expect_match(r$agent_prompt, "every request of requests/index.md", fixed = TRUE)
-  expect_match(r$agent_prompt, "\"continue\"", fixed = TRUE)
+  # one message: go on from progress.md, one request then the menu
+  expect_match(r$agent_prompt, "Go on from progress.md", fixed = TRUE)
+  expect_match(r$agent_prompt, "\"continue\" or c", fixed = TRUE)
   expect_identical(readLines(file.path(d, "ai", "agent_prompt.md"), warn = FALSE), r$agent_prompt)
   # the common instructions in ai/, the study folder's own AGENTS.md pointing to them
   root_ag <- readLines(file.path(d, "AGENTS.md"), warn = FALSE, encoding = "UTF-8")
@@ -113,6 +166,40 @@ test_that("tfl_ai_run(): the RTFs, ai/status.md; a second prepare keeps the deci
   dec <- readLines(file.path(d, "ai", "decisions.md"))
   tfl_ai_prepare(unit = "toc", d, ex_book(), adam = ad, quiet = TRUE, size = 3L, overwrite = TRUE)
   expect_identical(readLines(file.path(d, "ai", "decisions.md")), dec)
+})
+
+test_that("tfl_ai_run() keeps ai/progress.md: built, failed; a checked row stays unless the build failed", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  root <- withr::local_tempdir()
+  d <- file.path(root, "study")
+  ad <- agent_study(root)
+  tfl_ai_prepare(unit = "toc", d, ex_book(), adam = ad, quiet = TRUE, size = 3L)
+  ai_drafts_from_fixtures(d)
+  pf <- file.path(d, "ai", "progress.md")
+  pg0 <- readLines(pf, encoding = "UTF-8")
+  at <- function(x, q) which(startsWith(x, paste0("| ", q, " |")))
+  # one request run: its row built, the others still todo, the form kept
+  suppressMessages(tfl_ai_run(d, rtf = FALSE, requests = "demographics-1"))
+  pg <- readLines(pf, encoding = "UTF-8")
+  i <- at(pg, "demographics-1")
+  expect_length(i, 1L)
+  expect_identical(pg[i], sub("| todo |", "| built |", pg0[i], fixed = TRUE))
+  expect_identical(pg[-i], pg0[-i])
+  # a checked row stays when the request is built again
+  writeLines(sub("| built |", "| checked |", pg, fixed = TRUE), pf)
+  suppressMessages(tfl_ai_run(d, rtf = FALSE, requests = "demographics-1", rebuild = TRUE))
+  expect_match(readLines(pf, encoding = "UTF-8")[i], "| checked |", fixed = TRUE)
+  # a build that fails: failed, even from checked; the other columns stay
+  j <- at(pg0, "ae-1")
+  file.remove(file.path(ad, "adae.xpt"))
+  suppressMessages(tfl_ai_run(d, rtf = FALSE, requests = "ae-1"))
+  pg2 <- readLines(pf, encoding = "UTF-8")
+  expect_identical(pg2[j], sub("| todo |", "| failed |", pg0[j], fixed = TRUE))
+  expect_match(pg2[i], "| checked |", fixed = TRUE)
+  writeLines(sub("| failed |", "| checked |", pg2, fixed = TRUE), pf)
+  suppressMessages(tfl_ai_run(d, rtf = FALSE, requests = "ae-1"))
+  expect_match(readLines(pf, encoding = "UTF-8")[j], "| failed |", fixed = TRUE)
 })
 
 test_that("tfl_ai_run(): a report built again only when it changed; one request's; a build's repair", {
@@ -432,4 +519,123 @@ test_that("tfl_ai_prepare(define = ) writes the requests, the define's codes and
   expect_match(s, "M = Male | F = Female", fixed = TRUE)
   expect_match(s, "digits 2, format 8.2", fixed = TRUE)
   expect_match(s, "## Value level (define.xml)", fixed = TRUE)
+})
+
+test_that("tfl_ai_refresh_agents(): AGENTS.md again after study.yml's ai: changes", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  root <- withr::local_tempdir()
+  d <- file.path(root, "study")
+  ad <- agent_study(root)
+  tfl_ai_prepare(unit = "toc", d, ex_book(), adam = ad, quiet = TRUE, agent_reads = "adam")
+  expect_true(file.exists(file.path(d, "ai", "agent_inputs.yml")))
+  y <- yaml::read_yaml(file.path(d, "study.yml"))
+  y$ai$review <- list(table = 3L)
+  yaml::write_yaml(y, file.path(d, "study.yml"))
+  w <- tfl_ai_refresh_agents(d)
+  expect_true(any(grepl("AGENTS.md$", w)))
+  ag <- readLines(file.path(d, "ai", "AGENTS.md"), encoding = "UTF-8")
+  expect_true("- Tables: level **3** -- the check, the program, the facts and the output." %in% ag)
+  # (what prepare was given -- the ADaM read -- is still there)
+  expect_true(any(grepl("the ADaM in", ag, fixed = TRUE)))
+  # no record: the defaults, and it says so
+  file.remove(file.path(d, "ai", "agent_inputs.yml"))
+  expect_message(tfl_ai_refresh_agents(d), "no ai/agent_inputs.yml")
+})
+
+test_that("ai: run is one or batch; AGENTS.md holds both ways and the menu; the old setting is gone", {
+  agents_for <- function(run, per_chat = 0L) {
+    d <- withr::local_tempdir(.local_envir = parent.frame())
+    writeLines(c("study_id: X", "ai:", paste0("  run: ", run),
+                 paste0("  requests_per_chat: ", per_chat)), file.path(d, "study.yml"))
+    tflspec:::.ai_agent_files(d, overwrite = TRUE)
+    paste(readLines(file.path(d, "ai", "AGENTS.md"), warn = FALSE, encoding = "UTF-8"),
+          collapse = "\n")
+  }
+  old <- paste0("ask_", "when")
+  flat <- function(x) gsub("[[:space:]]+", " ", x)
+  for (run in c("one", "batch")) {
+    x <- agents_for(run)
+    # the one-request way, the batch way and the menu: always
+    expect_match(flat(x), "do not write the report until the person answers", fixed = TRUE)
+    expect_match(x, "**three times at most**", fixed = TRUE)
+    expect_match(x, "Do not ask now: take your default, note the question, go on.", fixed = TRUE)
+    expect_match(x, "## Batch <k>: <requests>", fixed = TRUE)
+    expect_match(x, "What next?", fixed = TRUE)
+    expect_match(x, "c = the next request", fixed = TRUE)
+    expect_match(x, "a = all the rest together", fixed = TRUE)
+    expect_match(x, "## When you are stuck", fixed = TRUE)
+    expect_match(x, "## Many requests: one at a time", fixed = TRUE)
+    expect_match(x, "| request | reports | status | batch | questions |", fixed = TRUE)
+    expect_match(x, "Start every request by reading `progress.md` and that request", fixed = TRUE)
+    expect_match(flat(x), "one at a time, in the order of `progress.md`", fixed = TRUE)
+    expect_false(grepl("{{", x, fixed = TRUE))
+    expect_false(grepl(old, x, fixed = TRUE))
+    # the new-chat sentence only with requests_per_chat > 0
+    expect_false(grepl("Open a new chat", x, fixed = TRUE))
+  }
+  expect_match(agents_for("one", 10L), "After 10 requests in this chat", fixed = TRUE)
+  expect_match(agents_for("one", 10L), "Open a new chat and give it agent_prompt.md", fixed = TRUE)
+  # a bad value errors
+  expect_error(tflspec:::.ai_run("later"), "study.yml ai: run is one or batch; not later")
+  expect_error(tflspec:::.ai_requests_per_chat(-1), "requests_per_chat is a whole number")
+  expect_error(tflspec:::.ai_requests_per_chat(1.5), "requests_per_chat is a whole number")
+  expect_identical(tflspec:::.ai_requests_per_chat(10), 10L)
+  # the old setting appears nowhere in inst/ (R/ and inst/ checked by hand with grep)
+  src <- system.file("ai", "agent", package = "tflspec")
+  for (f in list.files(src, full.names = TRUE)) {
+    expect_false(any(grepl(old, readLines(f, warn = FALSE, encoding = "UTF-8"), fixed = TRUE)), info = f)
+  }
+})
+
+test_that("ai: run reaches agent_prompt.md; requests_per_chat and ai/progress.md; a bad value errors", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  root <- withr::local_tempdir()
+  d <- file.path(root, "study")
+  ad <- agent_study(root)
+  r <- tfl_ai_prepare(unit = "toc", d, ex_book(), adam = ad, quiet = TRUE)
+  rd <- function(f) readLines(file.path(d, "ai", f), encoding = "UTF-8", warn = FALSE)
+  y <- yaml::read_yaml(file.path(d, "study.yml"))
+  expect_null(y$ai$run)
+  # the default, one: the prompt starts with one request, and says the menu's keys
+  p1 <- paste(rd("agent_prompt.md"), collapse = "\n")
+  expect_match(p1, "Start with ONE request", fixed = TRUE)
+  expect_match(p1, "c (the next request), a number", fixed = TRUE)
+  expect_match(p1, "Go on from progress.md: the first request not done.", fixed = TRUE)
+  expect_false(grepl("Start with a batch", p1, fixed = TRUE))
+  ag0 <- rd("AGENTS.md")
+  expect_false(any(grepl("{{", ag0, fixed = TRUE)))
+  expect_false(any(grepl("Open a new chat", ag0, fixed = TRUE)))
+  expect_true(any(grepl("What next?", ag0, fixed = TRUE)))
+  # progress.md: the initial table, every request todo, the batch column
+  pg <- rd("progress.md")
+  expect_true(any(grepl("| request | reports | status | batch | questions |", pg, fixed = TRUE)))
+  rows <- pg[grepl("| todo |", pg, fixed = TRUE)]
+  expect_identical(length(rows), nrow(r$requests))
+  expect_true(all(startsWith(rows, paste0("| ", r$requests$request, " |"))))
+  # not written over by a second prepare
+  writeLines(sub("| todo |", "| built |", pg, fixed = TRUE), file.path(d, "ai", "progress.md"))
+  tfl_ai_prepare(unit = "toc", d, ex_book(), adam = ad, quiet = TRUE, overwrite = TRUE)
+  expect_true(any(grepl("| built |", rd("progress.md"), fixed = TRUE)))
+  # batch: the prompt batches all; AGENTS.md still holds both ways
+  y$ai$run <- "batch"
+  y$ai$requests_per_chat <- 10L
+  yaml::write_yaml(y, file.path(d, "study.yml"))
+  tfl_ai_refresh_agents(d)
+  p2 <- paste(rd("agent_prompt.md"), collapse = "\n")
+  expect_match(p2, "Start with a batch of ALL the requests", fixed = TRUE)
+  expect_false(grepl("Start with ONE request", p2, fixed = TRUE))
+  ag <- rd("AGENTS.md")
+  expect_false(any(grepl("{{", ag, fixed = TRUE)))
+  expect_true(any(grepl("What next?", ag, fixed = TRUE)))
+  expect_true(any(grepl("Open a new chat and give it agent_prompt.md", ag, fixed = TRUE)))
+  # a request's decisions block: may apply, judged by the report
+  y$ai$run <- "sometimes"
+  yaml::write_yaml(y, file.path(d, "study.yml"))
+  expect_error(tfl_ai_refresh_agents(d), "ai: run is one or batch; not sometimes")
+  y$ai$run <- "one"
+  y$ai$requests_per_chat <- -2L
+  yaml::write_yaml(y, file.path(d, "study.yml"))
+  expect_error(tfl_ai_refresh_agents(d), "requests_per_chat is a whole number")
 })

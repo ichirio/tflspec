@@ -90,7 +90,10 @@
     out <- c(out, sprintf("- `%s`: %s (%s, layout %s%s%s)%s", tt$name[i], .ai_tpl_description(t),
                           tt$kind[i], tt$layout[i], from, pkg,
                           if (own) paste0(" -- own data: the report writes `data` steps `read`, the analysis ",
-                                          "set, `param`; not the template's own steps (`survfit`, `time_unit`)") else ""))
+                                          "set, `param`; not the template's own steps (`survfit`, `time_unit`)",
+                                          if (startsWith(tt$name[i], "km_")) paste0(
+                                            "; the arms' order: a `levels` data step on the arm ",
+                                            "variable, not `codelists`")) else ""))
     # (its catalog aliases: the same template, by another collection's name)
     al <- .tpl_aliases_of(tt$name[i])
     if (nrow(al)) {
@@ -285,7 +288,9 @@
     if (is.null(v)) next
     ok <- switch(x$type %||% "text",
                  flag = is.logical(v) && length(v) == 1L,
-                 number = is.numeric(v),
+                 # (YAML reads [0.25, 1, 2] -- decimals and whole numbers -- as a list)
+                 number = is.numeric(v) || (is.list(v) && length(v) &&
+                                              all(vapply(v, function(e) is.numeric(e) && length(e) == 1L, NA))),
                  vars = , levels = , text = , choice = is.character(v) || inherits(v, "tfl_r") ||
                    (is.list(v) && all(vapply(v, is.character, NA))),
                  TRUE)

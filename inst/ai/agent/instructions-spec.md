@@ -188,6 +188,20 @@ page:
     "2": {center: "Kaplan-Meier Plot of Overall Survival"}
 ```
 
+A figure's draft goes into the program as you write it, so the build holds
+it to these rules (every agent of tflspec#512 tripped on them):
+
+- A `code` step's text is pasted as it is: it assigns its own object
+  (`sm <- df |> ...`); `out:` only names it.
+- A dataset is in reach only when a `read` or `join` step names it (a
+  `subset` step does not load one); to use ADSL in a code step, read it.
+- The `args` of a `plot.add` call or a `call` layer are a mapping, one key
+  an argument; an R value is `!r` (`breaks: !r c(0.5, 1, 2)`,
+  `axis.text.x: !r element_text(angle = 45)`); a plain value is plain
+  (`scales: free_x`, not `'"free_x"'`).
+- A list of numbers in `template: args` (`x_breaks: [0.25, 0.5, 1, 2, 4]`)
+  is several numbers.
+
 ## The fields, exactly
 
 `ard.analysis_data`, one item each: `id`, `label`, `from` (a dataset of
@@ -326,11 +340,14 @@ Group: {RENALGR}"`.
 
 - **A figure's time axis**: its label carries the unit, `Time (Months)`
   (the data's `AVALU`), never `Time` alone.  A template's own argument
-  (`censor_marks`, `risk_table`) says what the figure shows -- the look
-  the study standard sets (`censor_shape`, the colours, the legend's
-  place) is not a `template: args:` item (the build refuses it): leave it
-  to the standard, under `ai: confirm` when the shell differs; a `layers:`
-  item is for what no argument does -- never both for one thing.
+  (`censor_marks`, `risk_table`) says what the figure shows.  The look
+  the shell asks for goes in `plot:`, over the study standard's: the axis
+  titles (`x_label: ""` for none), limits and steps (`x_by`, `y_min`,
+  `y_max`, `y_by`), `legend` and `legend_title`, and the colours of some
+  values (`colours: {CR: darkgreen, PD: "#D62728"}`, the `colour_by`
+  variable's values) -- never a `template: args:` item (the build refuses
+  it).  A `layers:` item is for what no argument or setting does -- never
+  both for one thing.
 - **A listing**: a listing column's `width:` in the shell's proportions,
   wide enough for its longest value (a subject id on one line) and its
   heading's longest word -- a short column too (`Age/Sex`, `64/M`: about

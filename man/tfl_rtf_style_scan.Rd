@@ -10,9 +10,10 @@ tfl_rtf_style_scan(rtf_dir)
 \item{rtf_dir}{The folder of RTF files.}
 }
 \value{
-A data frame: \code{file} (its name), \code{table} (its place in the file),
-\code{row} (in the table), \code{n_cells}, \code{width_twips} (the row's width),
-\code{rel_widths} (each cell's width as parts of the narrowest, \code{|}
+A data frame: \code{file} (its path under \code{rtf_dir}), \code{table} (its
+place in the file), \code{row} (in the table), \code{page} (the file's page it
+is on), \code{header} (a column header row, \verb{\\trhdr}), \code{n_cells},
+\code{width_twips} (the row's width), \code{rel_widths} (each cell's width as parts of the narrowest, \code{|}
 between them), \code{border_top}, \code{border_bottom} (one character a cell:
 \code{1} a border, \code{0} none), \code{font_size_pt}, \code{align} (one character a
 cell: \code{l}, \code{c}, \code{r}), \code{fonts} (the file's font table, \code{|} between).
@@ -23,7 +24,10 @@ row a table row, what its look is made of -- never its text: the cells'
 widths (\verb{\\cellx}), each cell's top and bottom border (\verb{\\clbrdrt},
 \verb{\\clbrdrb}), the font size (\verb{\\fs}), the cells' alignment (\verb{\\ql}, \verb{\\qc},
 \verb{\\qr}), and the file's fonts (its font table).  Rows in a run, with
-nothing but row definitions between them, are one table.
+nothing but row definitions between them, are one table.  A table that
+goes on over pages, as SAS's ODS RTF writes it (a page a section, the
+column header rows, \verb{\\trhdr}, again at the top of each), is one table:
+its later pages' header rows are dropped, so a header counts once.
 }
 \seealso{
 \code{\link[=tfl_ai_style_prompt]{tfl_ai_style_prompt()}}
