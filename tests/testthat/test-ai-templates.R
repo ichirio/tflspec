@@ -306,3 +306,39 @@ test_that("templates.md carries the facts a trial found only by building", {
   # (the short list, names only, has none)
   expect_false(any(grepl("note:", tflspec:::.ai_templates_list("table", short = TRUE), fixed = TRUE)))
 })
+
+test_that("a listing drafted from the listing template is checked as a template, a code SPEC as before", {
+  tpl <- tfl_ai_parse(aitpl_answer(
+    "tflspec_ai: {task: table, version: 1, outputs: [L-1]}",
+    "outputs:",
+    "  - id: L-1",
+    "    kind: listing",
+    "    label: Listing of adverse events",
+    "    template:",
+    "      name: listing",
+    "      args:",
+    "        data: ADAE",
+    "        columns:",
+    "          - {vars: [USUBJID], label: Subject}",
+    "          - {vars: [AEDECOD], label: Term}",
+    "    page: {titles: {\"1\": {center: Listing 16.2.1}}}",
+    "assumptions: []"), "table")
+  ctx <- tfl_ai_context("table", outputs = "L-1")
+  p <- tfl_ai_check(tpl, ctx)
+  expect_false(any(p$severity == "error"), info = paste(p$problem, collapse = "; "))
+  expect_false(any(grepl("no analysis set", p$problem, fixed = TRUE)))
+  # a code SPEC listing without an analysis set: still the error
+  code <- tfl_ai_parse(aitpl_answer(
+    "tflspec_ai: {task: table, version: 1, outputs: [L-1]}",
+    "outputs:",
+    "  - id: L-1",
+    "    kind: listing",
+    "    label: Listing of adverse events",
+    "    data: {source: dataset, dataset: ADAE}",
+    "    content:",
+    "      - plan_listing: {cols: [{listing_col: {vars: [USUBJID]}}]}",
+    "    page: {titles: {\"1\": {center: Listing 16.2.1}}}",
+    "assumptions: []"), "table")
+  pc <- tfl_ai_check(code, ctx)
+  expect_true(any(grepl("the listing names no analysis set", pc$problem, fixed = TRUE)))
+})

@@ -534,7 +534,7 @@
       }
     }
     # (a listing, drafted with the tables: R/ai_listing.R)
-    p <- rbind(p, if (identical(o[["kind"]], "listing")) .ai_check_listing_output(o, at, context, vars)
+    p <- rbind(p, if (identical(o[["kind"]], "listing")) .ai_check_listing_output(o, at, context, vars, from_template = !is.null(tp))
                else .ai_check_table_output(o, at, context, vars))
   }
   # (a report whose template is wrong: its run would say it again)
