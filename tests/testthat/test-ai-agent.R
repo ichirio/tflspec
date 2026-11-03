@@ -36,7 +36,23 @@ test_that("the agent's files: AGENTS.md, run.R, decisions; toc.yml; the paths; t
               "`spec/outputs/<id>.yml`")) {
     expect_true(any(grepl(k, ag, fixed = TRUE)), info = k)
   }
-  expect_false(any(grepl("Rscript run.R", ag, fixed = TRUE)))
+  # a figure: the agent builds it and looks at it itself (#512), from the study folder
+  expect_true("## Build and look: each figure, yourself" %in% ag)
+  expect_true(any(grepl("`Rscript run.R <request>` from the study folder", ag, fixed = TRUE)))
+  expect_true(any(grepl("Run `run.R` only to build a figure", ag, fixed = TRUE)))
+  expect_identical(which(ag == "## Build and look: each figure, yourself") < which(ag == "## Before you stop"),
+                   TRUE)
+  # study.yml's ai: self_build: [] -- none: the person's check builds
+  sy <- readLines(file.path(d, "study.yml"), encoding = "UTF-8")
+  y <- yaml::read_yaml(file.path(d, "study.yml"))
+  y$ai$self_build <- list()
+  yaml::write_yaml(y, file.path(d, "study.yml"))
+  tflspec:::.ai_agent_files(d, overwrite = TRUE)
+  ag0 <- readLines(file.path(d, "ai", "AGENTS.md"), encoding = "UTF-8")
+  expect_false(any(grepl("Build and look", ag0, fixed = TRUE)))
+  expect_true(any(grepl("Do not run `run.R`.", ag0, fixed = TRUE)))
+  writeLines(sy, file.path(d, "study.yml"), useBytes = TRUE)
+  tflspec:::.ai_agent_files(d, overwrite = TRUE)
   expect_false(any(grepl("{{", ag, fixed = TRUE)))
   # the first message: the first two requests, then a stop
   expect_true(is.character(r$agent_prompt) && length(r$agent_prompt) == 1L)

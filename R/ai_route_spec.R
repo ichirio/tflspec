@@ -28,7 +28,8 @@
   max_rounds = 3L,                      # asking again about one item: this many times, then "to confirm"
   footnotes_at = "footer",              # the shell's footnotes: the page's "footer" band, or the "table"'s footnotes
   language = "en",
-  titles_in_header = character()        # the output tokens the study standard's header prints (none: the report writes its titles)
+  titles_in_header = character(),       # the output tokens the study standard's header prints (none: the report writes its titles)
+  self_build = "figure"                 # the kinds the agent builds and looks at itself (run.R, the PNG); character(): none
 )
 
 # The settings, under the study standard's `ai:` keys (spec/defaults.yml:
@@ -46,6 +47,7 @@
   }
   s$max_rounds <- as.integer(s$max_rounds)
   s$carry <- as.character(unlist(s$carry))
+  s$self_build <- intersect(as.character(unlist(s$self_build)), "figure")
   s$footnotes_at <- match.arg(as.character(s$footnotes_at)[1L], c("footer", "table"))
   s
 }

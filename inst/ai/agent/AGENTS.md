@@ -413,7 +413,7 @@ a line.
 
 ## Never
 
-- Do not install packages or go online. Do not run `run.R`, and do not
+- Do not install packages or go online. {{run_rule}} Do not
   write programs, the study's own specification (outside this folder) or
   RTF files: the person's check does that. {{run_r}}
 - Do not open a file not listed under "What you read", and do not search

@@ -156,3 +156,35 @@ test_that("a design's preset written as a template is the design's preset, not a
                                                       template = list(name = "km_survival")))$name,
                    "km_survival")
 })
+
+test_that("a built figure's facts beside its PNG; a figure of the agent's own code is drawn (#512)", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("rtfreporter")
+  root <- withr::local_tempdir()
+  d <- file.path(root, "study")
+  tfl_ai_prepare(unit = "toc", d, fig_book(), adam = fig_study(root), quiet = TRUE, size = 3L)
+  ai_drafts_from_fixtures(d)
+  # the fallback after two fixes: the data steps, and one layer_code that draws the whole plot
+  f <- file.path(d, "ai", "spec", "outputs", "F-14-2-2.yml")
+  writeLines(c(
+    "id: F-14-2-2", "kind: figure", "label: Best overall response by arm", "population: ITT",
+    "extends: [defaults]",
+    "data:", "  source: code", "  steps:",
+    "    - {step: read, dataset: ADRS}", "    - {step: flag, variable: ITTFL}",
+    "    - {step: param, value: OVR}",
+    "content: []",
+    "layers:",
+    "  - {layer: layer_code, code: 'p <- ggplot(df, aes(AVISITN, AVAL, colour = TRT01P)) + geom_point() + labs(x = \"Visit\", y = \"Value\")'}",
+    "page:", "  titles:", "    '1': {center: Figure 14.2.2}"), f)
+  res <- suppressMessages(tfl_ai_run(d, requests = "figure-1"))
+  fr <- res$reports[res$reports$output_id == "F-14-2-2", ]
+  expect_false(is.na(fr$png), info = paste(fr$first, fr$rtf_problem))
+  facts <- sub("[.]png$", "-facts.txt", file.path(d, fr$png))
+  expect_true(file.exists(facts))
+  x <- readLines(facts, encoding = "UTF-8")
+  expect_true("- x: Visit" %in% x)
+  expect_true(any(grepl("^- 1[.] geom_point: [1-9][0-9]* row", x)))
+  expect_true(any(grepl("^- x axis: from", x)))
+  expect_true(any(grepl("^- colour: ", x)))
+})
