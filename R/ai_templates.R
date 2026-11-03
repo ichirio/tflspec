@@ -69,6 +69,26 @@
   s
 }
 
+# A line a template's block adds: a fact the agent found only by building
+.ai_tpl_notes <- list(
+  param_change = paste0(
+    "`baseline: true` adds a Baseline column (rows, with `layout: rows`) from the same ",
+    "records `where` keeps: with `where: ONTRTFL == \"Y\"` the baseline is empty; for a ",
+    "baseline, `where: ONTRTFL == \"Y\" | ABLFL == \"Y\"`."),
+  shift = paste0(
+    "a code list on `baseline` must list `Missing` and `Total` too, or the build fails; ",
+    "the table's values are the code list's labels, so write `levels` as the labels ",
+    "(`Low`, not `LOW`): the rows are then `levels`, `Missing`, `Total` (else Missing and ",
+    "Total come first)."),
+  lab_shift = paste0(
+    "a code list on `baseline` must list `Missing` and `Total` too, or the build fails; ",
+    "the table's values are the code list's labels, so write `levels` as the labels ",
+    "(`Low`, not `LOW`): the rows are then `levels`, `Missing`, `Total` (else Missing and ",
+    "Total come first)."),
+  km_survival = paste0(
+    "the log-rank p-value is shown by default: set `pvalue: false` when the shell shows ",
+    "none."))
+
 # The templates a request may answer with: one block each -- name, what it
 # is, its kind and layout (a variant: of which), then a line a parameter
 # (the target ones marked: population, subset, where).  `kinds`: the kinds
@@ -94,6 +114,10 @@
                                           if (startsWith(tt$name[i], "km_")) paste0(
                                             "; the arms' order: a `levels` data step on the arm ",
                                             "variable, not `codelists`")) else ""))
+    # (what a trial found only by building: a line under the template)
+    if (!short && !is.null(.ai_tpl_notes[[tt$name[i]]])) {
+      out <- c(out, paste0("  - note: ", .ai_tpl_notes[[tt$name[i]]]))
+    }
     # (its catalog aliases: the same template, by another collection's name)
     al <- .tpl_aliases_of(tt$name[i])
     if (nrow(al)) {
