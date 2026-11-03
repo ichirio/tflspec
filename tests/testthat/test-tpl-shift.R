@@ -140,3 +140,42 @@ test_that("shift: built with a code list on the categories, the rows run Low ...
   expect_identical(unique(t$BNRIND[t$group == "ALT"]),
                    c("Low", "Normal", "High", "Missing", "Total"))
 })
+
+test_that("shift: Missing and Total need not be in the code list; the program maps the codes as the build does", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("cards")
+  skip_if_not_installed("dplyr")
+  skip_if_not_installed("rtfreporter")
+  d <- sh_study(withr::local_tempdir())
+  rows <- function(...) lapply(list(...), function(v) list(value = v[1L], label = v[2L]))
+  cl <- rows(c("LOW", "Low"), c("NORMAL", "Normal"), c("HIGH", "High"))
+  args <- list(population = "SAF", where = 'PARAMCD %in% c("ALT", "HGB")', param_page = FALSE,
+               levels = c("LOW", "NORMAL", "HIGH"))
+  r <- sh_report(d, args, codelists = list(BNRIND = cl, ANRIND = cl))
+  t <- as.data.frame(suppressMessages(rtfreporter::plan_apply(r$plan, "table")))
+  t[] <- lapply(t, function(v) if (is.factor(v)) as.character(v) else v)
+  expect_identical(unique(t$BNRIND[t$group == "ALT"]),
+                   c("Low", "Normal", "High", "Missing", "Total"))
+  # the report's own list keeps its values; the template added the two
+  expect_identical(vapply(r$ro$codelists$BNRIND, function(x) x$value, ""),
+                   c("LOW", "NORMAL", "HIGH", "Missing", "Total"))
+  # the program writes the codes with their labels
+  code <- tfl_content_code(r$ro, pipe = "|>")
+  expect_true(any(grepl("LOW = \"Low\"", code, fixed = TRUE)))
+  # run by a child R: the same rows and labels
+  rscript <- file.path(R.home("bin"), "Rscript")
+  withr::local_envvar(R_LIBS = paste(.libPaths(), collapse = .Platform$path.sep))
+  has <- suppressWarnings(system2(rscript, c("-e", shQuote("cat(requireNamespace('tflspec', quietly = TRUE))")),
+                                  stdout = TRUE, stderr = FALSE))
+  skip_if_not(identical(utils::tail(has, 1L), "TRUE"), "tflspec is not installed where a child R looks")
+  w <- withr::local_tempdir()
+  withr::local_dir(w)
+  saveRDS(r$ard, "ard.rds")
+  writeLines(c("library(rtfreporter)", "ard <- readRDS('ard.rds')", code,
+               "saveRDS(plan_apply(plan, 'table'), 'tab.rds')"), "prog.R")
+  out <- suppressWarnings(system2(rscript, "prog.R", stdout = TRUE, stderr = TRUE))
+  expect_true(file.exists("tab.rds"), info = paste(out, collapse = "
+"))
+  expect_identical(readRDS("tab.rds"), rtfreporter::plan_apply(r$plan, "table"))
+})

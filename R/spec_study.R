@@ -234,6 +234,7 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   }
   output$data <- if (length(acc$data)) acc$data else output$data
   output$codelists <- acc$codelists
+  if (!is.null(tpl$x$codelists)) output$codelists <- .tpl_add_codelists(acc$codelists, tpl$x$codelists)
   output$content <- .any_label_default(acc$content, output, study)
   # the study's rounding: the setup's option, so the program leaves it out
   attr(output, "study_rounding") <- .study_rounding(study)

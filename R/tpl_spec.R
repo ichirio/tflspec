@@ -176,6 +176,35 @@
   args
 }
 
+# The labels of .tpl_levels() named by their codes when a list's codes differ
+# from its labels (`c(LOW = "Low")`), so the program maps them as the build does
+.tpl_levels_coded <- function(levels, vars, codelists) {
+  for (v in names(levels)) {
+    cl <- codelists[[v]]
+    if (is.character(cl)) next
+    val <- vapply(cl, function(r) as.character(r$value), "")
+    if (!identical(unname(val), unname(levels[[v]]))) names(levels[[v]]) <- val
+  }
+  levels
+}
+
+# A template's code lists (`codelists` of its result) added to the report's:
+# the report's list keeps its values, the template's gives the ones it lacks
+.tpl_add_codelists <- function(cl, add) {
+  for (v in names(add)) {
+    have <- cl[[v]]
+    if (is.null(have)) {
+      cl[[v]] <- add[[v]]
+      next
+    }
+    rows <- .tpl_cl_rows(have)
+    vals <- vapply(rows, function(r) as.character(r$value), "")
+    new <- Filter(function(r) !as.character(r$value) %in% vals, add[[v]])
+    if (length(new)) cl[[v]] <- c(rows, new)
+  }
+  cl
+}
+
 # A report's ard: over the template's: an entry of the report's replaces the
 # template's of the same id, the others go after
 .merge_ard <- function(tpl, own) {
@@ -235,6 +264,7 @@ tfl_template_to_spec <- function(output, study) {
   output$content <- if (inherits(ro$content, "tfl_r")) ro$content else .tpl_own_part(ro$content)
   # a figure's design: its settings, the template's under the report's
   if (!is.null(ro$plot)) output$plot <- ro$plot
+  if (!is.null(e$x$codelists)) output$codelists <- .tpl_add_codelists(output$codelists, e$x$codelists)
   output$template <- NULL
   output
 }
@@ -384,6 +414,7 @@ tfl_template_to_spec <- function(output, study) {
   vars <- setdiff(unlist(lapply(lv, function(it) names(it$args))), c("variable", ".drop_empty"))
   vars <- intersect(vars, names(output$codelists))
   levels <- .tpl_levels(vars, output$codelists)
+  levels <- .tpl_levels_coded(levels, vars, output$codelists)
   cl <- if (length(levels)) c("# the code lists: each value in its order, as the table shows it",
                               .codelists_lines(levels), "")
   call <- do.call(.spec_call, c(if (generic) list(.tpl_call_name(t, TRUE), .spec_sym(data), called)
