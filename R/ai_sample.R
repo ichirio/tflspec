@@ -68,8 +68,9 @@
   # their own whose seed is put back, so nothing else changes
   add_bmi <- function(df) {
     ge <- globalenv()
-    old <- if (exists(".Random.seed", envir = ge)) get(".Random.seed", envir = ge)
-    on.exit(if (is.null(old)) rm(".Random.seed", envir = ge) else assign(".Random.seed", old, envir = ge))
+    nm <- ".Random.seed"
+    old <- if (exists(nm, envir = ge)) get(nm, envir = ge)
+    on.exit(if (is.null(old)) rm(list = nm, envir = ge) else assign(nm, old, envir = ge))
     set.seed(20260101L)
     n <- nrow(df)
     male <- as.character(df$SEX) %in% "M"
