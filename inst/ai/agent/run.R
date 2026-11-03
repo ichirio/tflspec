@@ -1,4 +1,4 @@
-# The check from the command line (the person runs it; the agent does not):
+# The check from the command line ({{who_runs}}):
 # reads every draft in ai/spec/outputs/, checks it, writes it anew, builds
 # each report's ARD and RTF -- only those that changed since the last run
 # (ai/built.csv) -- and writes ai/status.md and ai/questions.md.

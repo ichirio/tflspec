@@ -200,7 +200,7 @@ tfl_data_code <- function(output, study, ard = TRUE) {
   ro <- tfl_resolve_output(output, study)
   own <- ro$data %||% list(source = "ard")
   objs <- list()
-  if (identical(own$source, "dataset") && identical(ro$kind, "table")) objs$data <- own
+  if (identical(own$source, "dataset") && ro$kind %in% c("table", "listing")) objs$data <- own
   else objs[[as.character(own$object %||% "ard")]] <- list(source = "ard")
   for (p in .content_parts(ro$content)) {
     if (is.null(objs[[p$object]])) objs[[p$object]] <- p$data %||% list(source = "ard")

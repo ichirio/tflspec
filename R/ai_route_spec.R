@@ -483,6 +483,14 @@ tfl_ai_confirm <- function(study_dir, where = c("both", "drafts", "adopted")) {
       readLines(system.file("ai", "agent", "instructions-figure-limits.md", package = "tflspec"),
                 warn = FALSE, encoding = "UTF-8")
     }
+    # (the chat-paste form below is for a chat without files; here the answer is the files)
+    at <- which(old == "## Your answer")
+    if (length(at)) {
+      old <- append(old, c("", paste0(
+        "**In the study kit your answer is the files** `ai/spec/outputs/<id>.yml`, one a report ",
+        "(see *The skeleton*, below); the form that follows, one fenced block, is for a chat ",
+        "without files.")), after = at[1L])
+    }
     .ai_write_text(c(old, "", txt, if (length(lim)) c("", lim)), f)
   }
   invisible(NULL)

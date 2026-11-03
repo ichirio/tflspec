@@ -232,7 +232,7 @@ tfl_rtf_style_tables <- function(rtf_dir) {
 # A text's paragraphs (\par), each its alignment and its plain text; the
 # empty ones dropped
 .rtf_paras <- function(x) {
-  ps <- strsplit(x, "\\\\par(?![a-z])", perl = TRUE)[[1L]]
+  ps <- strsplit(x, "\\\\(par|cell|row)(?![a-z])", perl = TRUE)[[1L]]
   out <- lapply(ps, function(p) {
     al <- regmatches(p, gregexpr("\\\\q[lcrj](?![a-z])", p, perl = TRUE))[[1L]]
     txt <- .rtf_plain(p)

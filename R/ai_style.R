@@ -79,6 +79,9 @@ tfl_rtf_style_scan <- function(rtf_dir) {
     ent <- gsub("\\\\[a-z]+-?[0-9]* ?", "", sub(";.*$", "", ent), perl = TRUE)
     trimws(gsub("^[0-9]+", "", ent))
   } else character()
+  # a page's running header and footer, laid out in rows, are not a table
+  x <- .rtf_drop_groups(x, c("header", "headerl", "headerr", "headerf",
+                             "footer", "footerl", "footerr", "footerf"))
   # the document's size, for a row that says none of its own
   first_row <- regexpr("\\\\trowd", x, perl = TRUE)
   pre <- if (first_row > 0L) substring(x, 1L, first_row) else x
@@ -100,7 +103,7 @@ tfl_rtf_style_scan <- function(rtf_dir) {
     e <- ends[ends > s][1L]
     if (is.na(e)) break
     gap <- if (prev_end > 0L) substring(x, prev_end, s - 1L) else ""
-    if (prev_end < 0L || grepl("\\\\par(?![a-z])", gap, perl = TRUE)) {
+    if (prev_end < 0L || grepl("\\\\(par|sect|page)(?![a-z])", gap, perl = TRUE)) {
       tbl <- tbl + 1L
       k <- 0L
     }
