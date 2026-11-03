@@ -101,7 +101,8 @@ next calls until `numbers` is given again.
 ```yaml
 ai:
   language: ja          # the chat's language ("en" by default)
-  ask_when: request     # the request's reports' questions together; "report": one by one; "end": all at the end
+  run: one              # "one": one request, then a menu; "batch": all the requests, the questions at the end
+  requests_per_chat: 0  # stop after this many requests and ask for a new chat (0: no limit)
   carry: [all, dataset, section]   # which decisions apply to a later report without asking
   max_rounds: 3         # one item asked again at most this many times, then marked to confirm
   footnotes_at: footer  # where the shell's footnotes go: "footer", or "table"
@@ -157,33 +158,60 @@ the names of the files to read. A request longer than `max_chars` is split.
    `page: titles` and the shell's footnotes (`footnotes_at`) -- and under
    `ai:`, its `assumptions` (each `from: D<n>`) and what is to `confirm`.
    No header rows, pages, borders or fonts: the study's
-   defaults and your builder do those. Then it goes on to the next request.
+   defaults and your builder do those. Then it goes on as `run` says (below).
 5. When every request is done it stops and tells you the files written,
    the decisions added and what is to confirm. Check them (step 6). You can
-   stop it between requests and say **"continue"** later: it goes on from
-   the first request with a draft missing (or one the check refused), your
-   decisions kept.
+   stop it between requests and say **"c"** (or "continue") later: it goes
+   on from `ai/progress.md`, your decisions kept.
 
 A question about the work rather than a report (a file missing, a request
 unclear) it asks in the chat too.
 
-### Asking at the end (`ask_when: end`)
+### How the agent works through the requests (`run`)
 
-With `ai: ask_when: end` in `study.yml`, the agent does not stop at the chat
-between requests. It takes its default for every question, notes the question
-in `ai/questions-end.md`, builds and checks everything, and asks all of them
-in **one message at the end**. You answer only what you want changed; only the
-reports that cite a changed answer are written and built again. Use it for a
-large batch you do not want to wait at.
+`study.yml` `ai: run` says how the agent starts; the default is `one`.
+- **`one`** (default): the agent takes ONE request: its questions in the chat,
+  its drafts, its build and check. Then it stops at a menu:
+  `c` = the next request, a number = the next N together (e.g. `5`),
+  `a` = all the rest together. Use it to try a request and check it, then
+  answer `a` to send the rest in one go. (`続ける`, `次`, `continue` also mean
+  `c`; `全部`, `all` mean `a`.)
+- **`batch`**: everything at once, with one round of questions at the end.
+  The agent takes its default for every question, notes the question in
+  `ai/questions-end.md` (a section for each batch), builds and checks
+  everything, and asks all of them in **one message**. You answer only what you
+  want changed; only the reports that cite a changed answer are written and
+  built again.
+
+Each request is processed on its own, and everything goes into files as it
+goes (the drafts, `ai/decisions.md`, `ai/questions-end.md`, and the row of
+`ai/progress.md`, the work queue). If the agent's chat is summarized or fails,
+it goes on from those files. Whether an earlier decision holds for a report is
+judged by that report, when it is processed.
 
 **Read every default, not only the questions: the defaults can differ from
 run to run.** `ai/defaults.md` lists them, the most important first (what
 changes the numbers, then the rows and statistics, then the text and the
-look); the end message posts the first two groups in full. Change one the
+look); a batch's end message posts the first two groups in full. Change one the
 same way as an answer (`D<n>: ...` or `<report> <item>: ...`).
 
-On the sample (3 requests, 5 reports): 1 interruption instead of 2, and the
-rework after 2 changed answers was one report, about 1-2 minutes.
+**How long (estimates)**
+
+| Way | Study | Questions come | Agent's run | Your question time | After your answers |
+|---|---|---|---|---|---|
+| one, then "all the rest" | 1 shell / 2 reports | after about 1 min (that request's) | about 5-6 min | a few min | the build, about 2-3 min |
+| one, then "all the rest" | 50 shells / 100 reports | first request: after about 1 min; then one batch after about 5 h | about 5 h | about 20-40 min | about 1-2 min a changed report |
+| batch | 50 shells / 100 reports | one batch after about 5 h | about 5 h | about 20-40 min | about 1-2 min a changed report |
+
+Estimates; they will be updated from a 24-report test.
+
+For a long run, raise VS Code's `chat.agent.maxRequests` (25 by default: the
+agent pauses for "continue?" after 25 steps) and let Rscript run without
+asking: `chat.tools.terminal.autoApprove: {"/^Rscript /": true}`.
+
+VS Code summarizes a long chat by itself; the agent goes on from
+`ai/progress.md`. Set `ai: requests_per_chat` to stop after that many requests
+instead.
 
 ## 6. Check the drafts, write the YAML, make the RTF
 
@@ -424,6 +452,9 @@ your company.
   `Rscript -e "packageVersion('tflspec')"`.
 - [ ] The company's AI folder: the past TFLs and `company_hints.yml`, if you
   use them.
+- [ ] For a long run: raise VS Code's `chat.agent.maxRequests` (25 by default:
+  the agent pauses for "continue?" after 25 steps), and let Rscript run without
+  asking: `chat.tools.terminal.autoApprove: {"/^Rscript /": true}`.
 
 ## When it does not work
 
@@ -440,5 +471,6 @@ your company.
 | `tfl_build_ard()` stops: `The package "broom" (>= 1.0.8) is required.` | `install.packages("broom")` (another package named so: install it too) |
 | `tfl_build_ard()` stops | find the report: `tfl_build_ard(st, dir = ".", output_id = "T-14-1-1", save = FALSE)` |
 | The agent says R cannot be run | run `Rscript run.R <request>` yourself, then tell the agent "done" |
+| The agent stops and says it is stuck | do what its message says (`/compact`, a new chat with `ai/agent_prompt.md`, or allow Rscript), then type `c`; it resumes from `ai/progress.md` |
 | `<id>-facts.txt` says a table runs over a page | the builder sets the pages; the agent marks it *to confirm* |
 | `AGENTS.md` still shows the old review levels | `tfl_ai_refresh_agents(".")` |
