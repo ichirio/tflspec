@@ -2,35 +2,37 @@
 % Please edit documentation in R/ai_style.R
 \name{tfl_ai_style_prompt}
 \alias{tfl_ai_style_prompt}
-\title{A prompt for an AI agent to survey a company's past TFLs for their look}
+\title{A prompt for an AI agent to learn a company's conventions from its past TFLs}
 \usage{
 tfl_ai_style_prompt(rtf_dir, out = NULL, dir = NULL)
 }
 \arguments{
-\item{rtf_dir}{The folder of the past RTF reports.}
+\item{rtf_dir}{The folder of the past RTF reports (a subfolder a study).}
 
-\item{out}{The file the agent writes its survey to (YAML); its folder
-gets the prompt and the numbers too.  \code{NULL}: \code{ai_style.yml} under
-\verb{standards/} of tflspec's data folder (\code{\link[tools:userdir]{tools::R_user_dir()}}).}
+\item{out}{The file the agent writes what it learned to (YAML); its
+folder gets the prompt and the numbers too.  \code{NULL}: \code{learned.yml}
+under \verb{ai/style/} of tflspec's data folder (\code{\link[tools:R_user_dir]{tools::R_user_dir()}}).}
 
-\item{dir}{Instead of \code{out}: the folder (\code{out} is \code{ai_style.yml} in it).}
+\item{dir}{Instead of \code{out}: the folder (\code{out} is \code{learned.yml} in it).}
 }
 \value{
 The prompt (a \code{tfl_ai_text}), with the files' paths in its
-attribute \code{files} (\code{prompt}, \code{scan}, \code{result}).
+attribute \code{files} (\code{prompt}, \code{scan}, \code{tables}, \code{result}).
 }
 \description{
-Writes what an AI agent needs to tell how a company's past reports look,
-so that a company standard can be written from it: the prompt
-(\code{ai_style_prompt.md}) and the numbers R read out of the RTF files
-(\code{ai_style_scan.csv}, \code{\link[=tfl_rtf_style_scan]{tfl_rtf_style_scan()}}: cell widths, borders,
-sizes, alignment -- no text of the reports).  The agent opens the RTF
-files where it needs to, counts the forms -- where the lines are drawn,
-the stub's width to the value columns', the fonts, how titles and
-footnotes are aligned -- and writes the most common ones, with their
-counts, to \code{out}, which \code{\link[=tfl_ai_style_read]{tfl_ai_style_read()}} reads.  Nothing is sent
-anywhere; nothing of the reports' text is written.
+Writes what an AI agent needs to learn how a company's past reports are
+made, by the kind of report, so that the company standard can take it in
+(tflspec#547): R's numbers of the reports' look (\code{scan.csv},
+\code{\link[=tfl_rtf_style_scan]{tfl_rtf_style_scan()}}; \code{tables.csv}, one row a table,
+\code{\link[=tfl_rtf_style_tables]{tfl_rtf_style_tables()}}) and the prompt (\code{prompt.md}).  The agent
+opens a few files of each kind for what R cannot read -- the statistics
+and their labels, the n (\%) and header N forms, the decimals, the sort,
+the footnotes' wording -- and writes the conventions it found, a kind at
+a time, with how many of the files it read show each, to \code{out}
+(\code{learned.yml}), which \code{\link[=tfl_ai_style_read]{tfl_ai_style_read()}} reads and
+\code{\link[=tfl_ai_style_diff]{tfl_ai_style_diff()}} sets against the company standard.  Nothing is
+sent anywhere; the files and what is learned stay in the folder.
 }
 \seealso{
-\code{\link[=tfl_ai_style_read]{tfl_ai_style_read()}}
+\code{\link[=tfl_ai_style_read]{tfl_ai_style_read()}}, \code{\link[=tfl_ai_style_diff]{tfl_ai_style_diff()}}
 }

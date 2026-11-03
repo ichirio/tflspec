@@ -7,14 +7,15 @@
 #  the end), how wide the stub is to the value columns, the fonts and
 #  sizes, how titles and footnotes are aligned.  R reads the numbers out of
 #  the RTF files (tfl_rtf_style_scan(): each table row's cell widths,
-#  borders, size and alignment -- never a cell's text); an AI agent, given
-#  the prompt and that table, counts the forms and writes the most common
-#  ones to a YAML file; tfl_ai_style_read() shows it.  What becomes of it
-#  (a company standard) is the person's to decide once they have seen it.
+#  borders, size and alignment -- never a cell's text; tfl_rtf_style_tables():
+#  a table's); an AI agent, given the prompt and those tables, opens a few
+#  reports of each kind and writes their conventions to a YAML file;
+#  tfl_ai_style_read() shows it, tfl_ai_style_diff() sets it against the
+#  company standard.  What is adopted is the person's to decide.
 # ============================================================================
 
 .ai_style_default_out <- function() {
-  file.path(tools::R_user_dir("tflspec", "data"), "standards", "ai_style.yml")
+  file.path(tools::R_user_dir("tflspec", "data"), "ai", "style", "learned.yml")
 }
 
 #' The look of a folder of RTF reports, as numbers
@@ -159,142 +160,183 @@ tfl_rtf_style_scan <- function(rtf_dir) {
   d
 }
 
-#' A prompt for an AI agent to survey a company's past TFLs for their look
+#' A prompt for an AI agent to learn a company's conventions from its past TFLs
 #'
-#' Writes what an AI agent needs to tell how a company's past reports look,
-#' so that a company standard can be written from it: the prompt
-#' (`ai_style_prompt.md`) and the numbers R read out of the RTF files
-#' (`ai_style_scan.csv`, [tfl_rtf_style_scan()]: cell widths, borders,
-#' sizes, alignment -- no text of the reports).  The agent opens the RTF
-#' files where it needs to, counts the forms -- where the lines are drawn,
-#' the stub's width to the value columns', the fonts, how titles and
-#' footnotes are aligned -- and writes the most common ones, with their
-#' counts, to `out`, which [tfl_ai_style_read()] reads.  Nothing is sent
-#' anywhere; nothing of the reports' text is written.
+#' Writes what an AI agent needs to learn how a company's past reports are
+#' made, by the kind of report, so that the company standard can take it in
+#' (tflspec#547): R's numbers of the reports' look (`scan.csv`,
+#' [tfl_rtf_style_scan()]; `tables.csv`, one row a table,
+#' [tfl_rtf_style_tables()]) and the prompt (`prompt.md`).  The agent
+#' opens a few files of each kind for what R cannot read -- the statistics
+#' and their labels, the n (%) and header N forms, the decimals, the sort,
+#' the footnotes' wording -- and writes the conventions it found, a kind at
+#' a time, with how many of the files it read show each, to `out`
+#' (`learned.yml`), which [tfl_ai_style_read()] reads and
+#' [tfl_ai_style_diff()] sets against the company standard.  Nothing is
+#' sent anywhere; the files and what is learned stay in the folder.
 #'
-#' @param rtf_dir The folder of the past RTF reports.
-#' @param out The file the agent writes its survey to (YAML); its folder
-#'   gets the prompt and the numbers too.  `NULL`: `ai_style.yml` under
-#'   `standards/` of tflspec's data folder ([tools::R_user_dir()]).
-#' @param dir Instead of `out`: the folder (`out` is `ai_style.yml` in it).
+#' @param rtf_dir The folder of the past RTF reports (a subfolder a study).
+#' @param out The file the agent writes what it learned to (YAML); its
+#'   folder gets the prompt and the numbers too.  `NULL`: `learned.yml`
+#'   under `ai/style/` of tflspec's data folder ([tools::R_user_dir()]).
+#' @param dir Instead of `out`: the folder (`out` is `learned.yml` in it).
 #' @return The prompt (a `tfl_ai_text`), with the files' paths in its
-#'   attribute `files` (`prompt`, `scan`, `result`).
-#' @seealso [tfl_ai_style_read()]
+#'   attribute `files` (`prompt`, `scan`, `tables`, `result`).
+#' @seealso [tfl_ai_style_read()], [tfl_ai_style_diff()]
 #' @export
 tfl_ai_style_prompt <- function(rtf_dir, out = NULL, dir = NULL) {
   if (!is.character(rtf_dir) || length(rtf_dir) != 1L || !dir.exists(rtf_dir)) {
     .ard_stop("tfl_ai_style_prompt(): `rtf_dir` is a folder of RTF files.")
   }
-  out <- out %||% if (!is.null(dir)) file.path(dir, "ai_style.yml") else .ai_style_default_out()
+  out <- out %||% if (!is.null(dir)) file.path(dir, "learned.yml") else .ai_style_default_out()
   where <- dirname(out)
   dir.create(where, recursive = TRUE, showWarnings = FALSE)
+  write_csv <- function(d, f) {
+    con <- file(f, open = "w", encoding = "UTF-8")
+    on.exit(close(con))
+    utils::write.csv(d, con, row.names = FALSE)
+  }
   scan <- tfl_rtf_style_scan(rtf_dir)
-  f_scan <- file.path(where, "ai_style_scan.csv")
-  con <- file(f_scan, open = "w", encoding = "UTF-8")
-  utils::write.csv(scan, con, row.names = FALSE)
-  close(con)
-  n_files <- length(unique(scan$file))
-  n_tables <- nrow(unique(scan[c("file", "table")]))
+  f_scan <- file.path(where, "scan.csv")
+  write_csv(scan, f_scan)
+  tabs <- tfl_rtf_style_tables(rtf_dir)
+  f_tabs <- file.path(where, "tables.csv")
+  write_csv(tabs, f_tabs)
+  n_files <- length(unique(tabs$file))
   norm <- function(p) normalizePath(p, winslash = "/", mustWork = FALSE)
+  # the files to open: three a kind at most, the newest first
+  mt <- file.mtime(file.path(rtf_dir, tabs$file))
+  by_kind <- split(tabs$file[order(mt, decreasing = TRUE)], tabs$kind[order(mt, decreasing = TRUE)])
+  kinds <- intersect(.ai_style_kinds, names(by_kind))
+  kinds <- c(kinds, setdiff(names(by_kind), kinds))
+  open_lines <- vapply(kinds, function(k) {
+    f <- unique(by_kind[[k]])
+    sprintf("- `%s` (%d table(s)): %s", k, sum(tabs$kind == k),
+            paste0("`", utils::head(f, 3L), "`", collapse = ", "))
+  }, "")
+  keys <- .ai_style_keys
+  key_lines <- sprintf("- `%s`: %s%s", keys$key, keys$what,
+                       ifelse(keys$from == "numbers", " (from `tables.csv`; open a file only to settle it)", ""))
   text <- c(
-    "# Survey the look of a company's past TFLs",
+    "# Learn a company's conventions from its past TFLs",
     "",
-    sprintf("The folder `%s` holds a company's past tables, figures and listings as RTF files (%d files, %d tables found).",
-            norm(rtf_dir), n_files, n_tables),
-    "Count how they look, so that a company standard can be written from what they already do. Report forms and counts only: never copy a report's text (titles, labels, numbers) anywhere.",
+    sprintf("The folder `%s` holds a company's past tables, figures and listings as RTF files, a subfolder a study (%d files, %d tables found).",
+            norm(rtf_dir), n_files, nrow(tabs)),
+    "Learn how this company makes each kind of report, so that its company standard can take it in and every study's AI drafts follow it.",
+    "Write forms, not content: never copy a study's numbers, treatment names or study ids. Where a form holds them, write a placeholder (`xx`, `<treatment>`, `<population>`).",
     "",
-    "## What R read out for you",
+    "## What R read for you",
     "",
-    sprintf("`%s`: one row a table row, the numbers of its look (no text):", norm(f_scan)),
+    sprintf("- `%s`: one row a table -- `kind` (R's guess from the title: %s), `title`, `header_rows`, `n_cols`, `stub_ratio` (the first column's width to a value column's), `rules` (where lines are drawn: `above_header`, `under_spanner`, `under_header`, `body`, `end`), `font`, `font_size_pt`, `stub_align`, `value_align` (`l`, `c`, `r`), `orientation`, `margins_in`, `title_place` / `footnote_place` (`header` / `footer` of the page, `before` / `after` the table), `title_align`, `footnote_align`, `footnotes` (their number).",
+            norm(f_tabs), paste0("`", .ai_style_kinds, "`", collapse = ", ")),
+    sprintf("- `%s`: the same, one row a table row (cell widths, borders, alignment), when a table needs a closer look.", norm(f_scan)),
     "",
-    "- `file`, `table` (its place in the file; rows in a run with nothing but row definitions between them), `row` (in the table).",
-    "- `n_cells`, `width_twips`, `rel_widths`: the cells' widths as parts of the narrowest (`3 | 1 | 1 | 1`: the stub three times a value column).",
-    "- `border_top`, `border_bottom`: one character a cell, `1` a border on that side (`\\clbrdrt` / `\\clbrdrb`), `0` none -- `0111` is a line over the last three cells (a spanner's underline).",
-    "- `font_size_pt` (`\\fs` / 2), `align` (one letter a cell: `l`, `c`, `r`), `fonts` (the file's font table).",
+    "A guessed kind can be wrong: when a table's title says otherwise, use the right kind and say so in `notes`.",
     "",
-    "Work from this table; open an RTF file only to settle what it leaves unclear (which rows are the column header, a table's kind). In RTF a row is `\\trowd ... \\row`; each cell's settings end with its `\\cellx<right edge, twips>`; `\\clbrdrt` / `\\clbrdrb` before it are its top / bottom border; a title or footnote may be a one-cell row or a paragraph (`\\pard ... \\par`).",
+    "## The files to open",
     "",
-    "## What to count",
+    "Open these (the newest first) for what R cannot read; open more of a kind only when they disagree:",
     "",
-    "1. Lines: where the tables draw them -- above the table, above and below the column header, under each spanner of a header of several rows (over which columns: the spanned ones only, or the whole width), between row groups, at the end of the table, above the footnotes. The common patterns and how many tables have each.",
-    "2. Column widths: the stub (the first, row-label column) to a value column, by the kind of table (demographics, adverse events, laboratory, efficacy, listings ...) where you can tell it; the common ratios and their counts.",
-    "3. Fonts and sizes: the body's, the titles', the footnotes'.",
-    "4. Alignment: titles, footnotes, the column header, the stub, the values.",
+    open_lines,
+    "",
+    "In RTF a cell's text ends with `\\cell` and a row with `\\row`; titles and footnotes are in the page's `{\\header ...}` / `{\\footer ...}` or in paragraphs (`\\par`) before and after the table.",
+    "",
+    "## What to learn, by kind",
+    "",
+    "For each kind, as many of these as the files show:",
+    "",
+    key_lines,
+    "",
+    "Write a convention every kind shares (the font, the page, the titles' place) once, under `all`.",
     "",
     "## What to write",
     "",
-    sprintf("Write the survey to `%s` (UTF-8), in this form -- the forms you found, most common first, each with `count` (tables, or files for fonts):", norm(out)),
+    sprintf("Write `%s` (UTF-8) in this form. Each convention: `value` (the form, in words or with placeholders), `seen` (how many of the files you read for it show it) and `of` (how many you read). Where the files differ, write the commonest form and name the others in `notes`.",
+            norm(out)),
     "",
     "```yaml",
-    sprintf("tfl_style_survey: {version: 1, files: %d, tables: %d}", n_files, n_tables),
-    "borders:",
-    "  - {form: \"above the table, under the column header, at the end\", count: 34}",
-    "  - {form: \"above the table, under the column header\", count: 6}",
-    "column_header:",
-    "  - {form: \"two rows: a line under each spanner, over its columns only\", count: 12}",
-    "  - {form: \"one row\", count: 20}",
-    "widths:",
-    "  - {kind: demographics, form: \"stub 3 : values 1\", count: 10}",
-    "  - {kind: adverse events, form: \"stub 4 : values 1\", count: 8}",
-    "fonts:",
-    "  - {form: \"Courier New 9 pt\", count: 40}",
-    "titles:",
-    "  - {form: \"centred\", count: 38}",
-    "footnotes:",
-    "  - {form: \"left\", count: 40}",
-    "notes: \"anything a person should know: exceptions, files that could not be read\"",
+    sprintf("tfl_style_learned: {version: 2, files: %d, tables: %d}", n_files, nrow(tabs)),
+    "kinds:",
+    "  all:",
+    "    font: {value: \"Courier New 9 pt\", seen: 12, of: 12}",
+    "    titles: {value: \"page header, centred: Table <number> / <title> / (<population>)\", seen: 12, of: 12}",
+    "  demog:",
+    "    evidence: [STUDY-B/t_dm.rtf, STUDY-A/t14_1_1.rtf]",
+    "    n_form: {value: \"(N=xx)\", seen: 2, of: 2}",
+    "    categorical: {value: \"xx (xx.x%)\", seen: 2, of: 2}",
+    "    continuous: {value: \"n | Mean (SD) | Median | Min, Max\", seen: 2, of: 2}",
+    "    digits: {value: \"mean and median one more than the data, SD two more\", seen: 1, of: 2}",
+    "    stub_ratio: {value: \"3\", seen: 2, of: 2}",
+    "  ae_soc_pt:",
+    "    first_row: {value: \"Any TEAE\", seen: 3, of: 3}",
+    "    sort: {value: \"SOC and PT by descending frequency in the total column\", seen: 3, of: 3}",
+    "notes: \"anything the person should know: exceptions, kinds guessed wrong, files that could not be read\"",
     "```",
     "",
-    "Then tell the person the file is written; they read it with `tflspec::tfl_ai_style_read()`.")
-  f_prompt <- file.path(where, "ai_style_prompt.md")
+    "Then tell the person the file is written: they read it with `tflspec::tfl_ai_style_read()` and set it against the company standard with `tflspec::tfl_ai_style_diff()`.")
+  f_prompt <- file.path(where, "prompt.md")
   .ai_write_text(text, f_prompt)
   structure(paste(text, collapse = "\n"), class = "tfl_ai_text",
-            files = c(prompt = f_prompt, scan = f_scan, result = out))
+            files = c(prompt = f_prompt, scan = f_scan, tables = f_tabs, result = out))
 }
 
-#' Read an AI agent's survey of a company's past TFLs
+#' Read what an AI agent learned from a company's past TFLs
 #'
-#' The survey [tfl_ai_style_prompt()] asks the agent to write: the forms of
-#' the reports' look (lines, column header, widths, fonts, alignment) and
-#' how many tables have each.
+#' The conventions [tfl_ai_style_prompt()] asks the agent to write
+#' (`learned.yml`): by kind of report, each convention's form and how many
+#' of the files the agent read show it.  A form fewer than half of them
+#' show is kept, but to be adopted by hand only (`adopt`), as is a
+#' convention whose name is none of those the prompt asks for.
 #'
-#' @param file The survey (YAML); `NULL`: [tfl_ai_style_prompt()]'s default.
-#' @return A data frame, one row a form: `section` (`borders`,
-#'   `column_header`, `widths`, `fonts`, `titles`, `footnotes`), `kind` (a
-#'   table kind, for widths), `form`, `count`; in the order written.  Its
-#'   attribute `text` is a short summary, a line a section (the commonest
-#'   form and its count), which `print()` shows; `files` / `tables` the
-#'   survey's counts and `notes` its notes.
+#' @param file The agent's file (YAML); `NULL`: [tfl_ai_style_prompt()]'s
+#'   default.
+#' @return A data frame, one row a convention, in the order written:
+#'   `kind` (`all` for every kind), `key`, `value`, `seen`, `of`,
+#'   `evidence` (the kind's files the agent read, ` | ` between), `adopt`
+#'   (`"proposed"`, or `"by hand"`: fewer than half the files, no count,
+#'   or a name the prompt does not know).  Its attribute `text` is a short
+#'   summary (a line a convention), which `print()` shows; `files` /
+#'   `tables` the counts the file gives and `notes` its notes.
+#' @seealso [tfl_ai_style_diff()]
 #' @export
 tfl_ai_style_read <- function(file = NULL) {
   file <- file %||% .ai_style_default_out()
-  if (!file.exists(file)) .ard_stop(sprintf("tfl_ai_style_read(): no survey at %s yet.", file))
-  y <- tryCatch(yaml::read_yaml(file), error = function(e) {
+  if (!file.exists(file)) .ard_stop(sprintf("tfl_ai_style_read(): nothing learned at %s yet.", file))
+  # (n, N, y as text: a statistic is called n)
+  y <- tryCatch(yaml::read_yaml(file, handlers = .yaml_handlers()), error = function(e) {
     .ard_stop(sprintf("tfl_ai_style_read(): %s is not YAML: %s", file, conditionMessage(e)))
   })
-  secs <- c("borders", "column_header", "widths", "fonts", "titles", "footnotes")
+  if (!is.list(y) || !is.list(y$kinds)) {
+    .ard_stop(sprintf("tfl_ai_style_read(): %s has no `kinds:` (see tfl_ai_style_prompt()'s prompt).", file))
+  }
+  one <- function(v) if (length(v)) paste(as.character(unlist(v)), collapse = " | ") else NA_character_
+  count <- function(v) suppressWarnings(as.integer(one(v)))
   rows <- list()
-  for (s in secs) {
-    for (e in y[[s]] %||% list()) {
-      if (!is.list(e)) e <- list(form = as.character(e))
-      cnt <- suppressWarnings(as.integer(e$count %||% NA))
+  for (k in names(y$kinds)) {
+    e <- y$kinds[[k]]
+    if (!is.list(e)) next
+    ev <- one(e$evidence)
+    for (key in setdiff(names(e), "evidence")) {
+      v <- e[[key]]
+      if (!is.list(v) || is.null(names(v))) v <- list(value = v)
       rows[[length(rows) + 1L]] <- data.frame(
-        section = s, kind = as.character(e$kind %||% NA_character_),
-        form = as.character(e$form %||% NA_character_), count = cnt, stringsAsFactors = FALSE)
+        kind = k, key = key, value = one(v$value), seen = count(v$seen), of = count(v$of),
+        evidence = ev, stringsAsFactors = FALSE)
     }
   }
-  out <- do.call(rbind, c(list(data.frame(section = character(), kind = character(),
-                                          form = character(), count = integer(),
+  out <- do.call(rbind, c(list(data.frame(kind = character(), key = character(), value = character(),
+                                          seen = integer(), of = integer(), evidence = character(),
                                           stringsAsFactors = FALSE)), rows))
-  hdr <- y$tfl_style_survey %||% list()
-  text <- c(sprintf("Survey of %s file(s), %s table(s)", hdr$files %||% "?", hdr$tables %||% "?"),
-            unlist(lapply(secs, function(s) {
-              d <- out[out$section == s, , drop = FALSE]
-              if (!nrow(d)) return(NULL)
-              d <- d[order(-ifelse(is.na(d$count), -1L, d$count)), , drop = FALSE]
-              sprintf("%s: %s%s (%s)", s, if (!is.na(d$kind[1L])) paste0(d$kind[1L], ", ") else "",
-                      d$form[1L], if (is.na(d$count[1L])) "?" else d$count[1L])
-            })))
+  share <- out$seen / out$of
+  out$adopt <- ifelse(!is.na(share) & out$of > 0L & share >= 0.5 & out$key %in% .ai_style_keys$key,
+                      "proposed", "by hand")
+  rownames(out) <- NULL
+  hdr <- y$tfl_style_learned %||% list()
+  text <- c(sprintf("Learned from %s file(s), %s table(s)", hdr$files %||% "?", hdr$tables %||% "?"),
+            if (nrow(out)) sprintf("%s: %s = %s (%s of %s)%s", out$kind, out$key, out$value,
+                                   ifelse(is.na(out$seen), "?", out$seen),
+                                   ifelse(is.na(out$of), "?", out$of),
+                                   ifelse(out$adopt == "by hand", " -- by hand", "")))
   structure(out, class = c("tfl_ai_style", "data.frame"), text = text,
             files = hdr$files, tables = hdr$tables, notes = y$notes)
 }
