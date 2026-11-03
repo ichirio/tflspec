@@ -14,10 +14,11 @@ tpl_forest_hr(
   x_breaks = NULL,
   size_by_n = FALSE,
   bold_headings = FALSE,
+  n_by_arm = NULL,
   plot = NULL
 )
 
-tpl_forest_layout(fig)
+tpl_forest_layout(fig, n_by_arm = NULL)
 }
 \arguments{
 \item{ard}{The study ARD's rows of this report.}
@@ -37,6 +38,11 @@ other arm, each row saying which.}
 \item{size_by_n}{\code{TRUE}: each point's size by its subjects.}
 
 \item{bold_headings}{\code{TRUE}: the subgroups' headings bold.}
+
+\item{n_by_arm}{The arms (as the data write them) whose events and
+subjects (\code{events/N}) show in the text column, a column each headed by
+the arm, in place of N; \code{NULL}: N.  \code{tpl_forest_layout()} takes the
+same.}
 
 \item{plot}{The figure's settings over the template's (\code{x_label},
 \code{y_by}, \code{legend} ..., as a designed figure's \verb{plot:}).}

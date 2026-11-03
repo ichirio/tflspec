@@ -26,7 +26,7 @@
   },
   waterfall = function(a) .tpl_wf_design(a$value, a$by_response, a$param, a$data, a$where),
   forest_hr = function(a) {
-    f <- .tpl_forest_design(a$group, a$subgroups, a$comparison)
+    f <- .tpl_forest_design(a$group, a$subgroups, a$comparison, .tpl_forest_look_args(a))
     # (the text column beside it: tpl_forest_layout(), after the report's items)
     f$content <- Filter(function(it) !identical(it$fn, "text_column"), f$content)
     f
@@ -184,7 +184,12 @@
     if (length(pre)) c("# the numbers it prints, from the ARD", pre, ""),
     section("plot"),
     .tpl_fig_chain(if (is.null(form$assemble)) name else "fig", call, terms, own),
-    if (!is.null(form$assemble)) sprintf("%s <- %s(fig)", name, form$assemble))
+    if (!is.null(form$assemble)) {
+      # (the call's arguments the assembly needs too: the same values)
+      aa <- intersect(form$assemble_args, keep)
+      sprintf("%s <- %s(%s)", name, form$assemble,
+              paste(c("fig", arg_code[match(aa, keep)]), collapse = ", "))
+    })
   code <- .code_lines(code)
   code <- .fig_rename_df(code, tfl_fig_data_name(list(data = steps)))
   code <- .fig_tidy_names(code)

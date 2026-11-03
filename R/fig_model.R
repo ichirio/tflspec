@@ -2684,7 +2684,7 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
 # The code step of a forest plot: the rows to draw (the comparison arm, not
 # the reference), their label, text and y; a subgroup whose model did not
 # converge has no point (NE)
-.forest_est_code <- function(group, subgroups, comparison = NULL) {
+.forest_est_code <- function(group, subgroups, comparison = NULL, n_by_arm = NULL) {
   sub <- if (length(subgroups)) c(
     "    subgroup = case_when(",
     paste0(sprintf("      !is.na(%s) ~ \"%s\"", subgroups, subgroups), ","),
@@ -2696,6 +2696,16 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
   if (is.null(comparison)) lvl <- sprintf("paste(%s, %s, sep = \": \")", lvl, group)
   paste(c(
     "est <- est |>",
+    if (length(n_by_arm)) c(
+      "  # each arm's events / subjects (its own row of the model), a column an arm",
+      if (length(subgroups)) sprintf("  group_by(%s) |>", paste(subgroups, collapse = ", ")),
+      "  mutate(",
+      paste0(sprintf("    n_arm%d = sprintf(\"%%s/%%s\", first(n_event[%s == %s]), first(n_obs[%s == %s]))",
+                     seq_along(n_by_arm), group, vapply(n_by_arm, q, ""), group,
+                     vapply(n_by_arm, q, "")),
+             c(rep(",", length(n_by_arm) - 1L), "")),
+      "  ) |>",
+      if (length(subgroups)) "  ungroup() |>"),
     "  # the reference arm has no interval; a subgroup whose model did not",
     "  # converge (no events in an arm) has no point: NE",
     "  filter(!is.na(conf.low)) |>",
@@ -2722,6 +2732,7 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
       "  mutate(",
       "    label = ifelse(head | subgroup == \"All subjects\", level, paste0(\"    \", level)),",
       "    n = ifelse(head, \"\", as.character(n_obs)),",
+      if (length(n_by_arm)) "    across(starts_with(\"n_arm\"), ~ ifelse(head, \"\", .x)),",
       "    txt = ifelse(head, \"\", txt),",
       "    y = rev(row_number())",
       "  )")
