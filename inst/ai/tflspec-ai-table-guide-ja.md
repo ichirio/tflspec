@@ -30,7 +30,8 @@ mystudy/
 信頼区間に要ります）:
 
 ```r
-install.packages(c("remotes", "cards", "cardx", "haven", "broom"))
+# tflplanner の記事も同じ一覧を入れます
+install.packages(c("remotes", "cards", "cardx", "haven", "broom", "broom.helpers", "parameters", "dplyr", "tidyr", "readxl", "officer", "ggsurvfit", "patchwork"))
 remotes::install_github(c("ichirio/rtfreporter", "ichirio/tflspec"))
 ```
 
@@ -83,7 +84,7 @@ TOC とシェルが別のブックのとき: `tfl_ai_prepare("mystudy",
 make = FALSE)`（参照だけ。依頼には参照として残る）か、`numbers = list(t14.1.1 =
 "Table 14.1.1")`（そのシートで作る番号。ほかの番号は参照だけ）で直します。TOC に
 無い番号を `TRUE` にすると、警告を出してそのまま帳票にします。どのシートにも番号が
-書かれていない TOC の項目は、その番号（`Table 15.2.4.2.b` のような枝番付きも）を
+書かれていない TOC の項目は、その番号（`Table 15.2.4.2.b` のように最後にパート記号が付いた番号も）を
 書いたシートが 1 つだけならそのシートの帳票にし（`source` が `"guess"`）、2 つ以上
 なら各シートの候補として示します。直した内容は依頼を書くときに
 `ai/sheet_numbers.csv` に保存され、次に `numbers` を渡すまで以後の呼び出しで
@@ -97,7 +98,7 @@ ai:
   language: ja          # チャットの言語（既定は "en"）
   ask_when: request     # 依頼の帳票の質問をまとめて聞く。"report": 1 帳票ずつ
   carry: [all, dataset, section]   # どの決定を聞かずに後の帳票へ適用するか
-  max_rounds: 3         # 同じ項目を聞き直す最大回数。超えたら要確認の印
+  max_rounds: 3         # 同じ項目を聞き直す最大回数。超えたら要確認
   footnotes_at: footer  # シェルの脚注の置き場所: "footer" または "table"
   review: {figure: 3, table: 2, listing: 1}  # エージェントが作った帳票を確かめる深さ: 0〜3、または none
 ```
@@ -106,7 +107,7 @@ ai:
 
 | 読むもの | 読まないもの |
 |---|---|
-| 渡された依頼と、そこに名前のあるファイル: `ai/instructions-*.md`、`ai/templates.md`、`ai/adam_summary.md`、`spec/data.yml`、`spec/defaults.yml`、`ai/decisions.md` | **XPT ファイル**、レコードを含むデータ全般（被験者 ID、日付、結果）。ほかのフォルダ、ほかのファイル |
+| 渡された依頼と、そこに名前のあるファイル: `ai/instructions-*.md`、`ai/templates.md`、`ai/adam_summary.md`、`spec/data.yml`、`spec/defaults.yml`、`ai/decisions.md`、`ai/reference/`（会社の規約とヒント。あるとき） | **XPT ファイル**、レコードを含むデータ全般（被験者 ID、日付、結果）。ほかのフォルダ、ほかのファイル |
 
 会社が試験データに使うことを認めた AI を使ってください。エージェントに渡るのは
 ADaM の要約で、データではありません。`AGENTS.md` に、開いてよいものが書かれます。
@@ -114,7 +115,8 @@ ADaM の要約で、データではありません。`AGENTS.md` に、開いて
 （シェルの文字が切れて見えるとき、依頼が示す場所を読む）と ADaM（変数の値を確かめる。
 データのファイルをエディタで開くことはしない）も、PC にある道具で読めます。
 `docs = ` で文書（SAP、データガイド）を渡すと、`ai/docs/` に写されます。
-エージェントは何も入れず、何も実行しません。
+エージェントは何も入れません。実行するのは 1 つのコマンド `Rscript run.R <依頼名>` だけで、
+下書きの帳票を作って確かめるために使います（7 節）。
 
 各依頼は数千文字です。エージェントの手順、その帳票に当てはまる決定、帳票の TOC の行と
 シェル、読むファイルの名前が入ります。`max_chars` を超える依頼は分けられます。
@@ -131,7 +133,7 @@ ADaM の要約で、データではありません。`AGENTS.md` に、開いて
    条件）を、番号付きで**質問**します。質問には帳票の id とタイトル、選択肢と既定が
    書かれます。**チャットで答えて**ください。「default」と答えると既定を採ります。
    答えで決まらないときは同じ項目をもう一度聞き（最大 3 回）、それでも決まらなければ
-   最も可能性の高い選択肢を採って*要確認*の印を付けます。
+   最も可能性の高い選択肢を採って*要確認*にします。
 3. 答えは `ai/decisions.md` に 1 決定 1 行で記録され
    （`- D1 [all] treatment_var.SAF: TRT01A (chat, T-14-3-1)`）、以後の帳票に適用されます。
    決定が成り立つと確信できるとき（決定の範囲が `all`、またはその帳票のデータセット・
@@ -140,9 +142,10 @@ ADaM の要約で、データではありません。`AGENTS.md` に、開いて
 4. エージェントは各帳票の**骨組み**を `ai/spec/outputs/<id>.yml` に書きます:
    `id`、`kind`、`label`、`population`、`data`、`ard`（解析データ、解析）、内容
    （合うテンプレートがあればテンプレート、なければ `table_plan` と `plan_cells`）、
-   シェルに桁数があればその桁数、`page: titles` とシェルの脚注（`footnotes_at`）。
+   シェルに桁数があればその桁数、`plan_columns: {widths}`（シェルの比率から）、
+   `page: titles` とシェルの脚注（`footnotes_at`）。
    `ai:` の下には、`assumptions`（それぞれ `from: D<n>`）と `confirm`（要確認）が
-   入ります。列幅、見出し行、ページ、罫線、フォントは書きません。それらは試験の
+   入ります。見出し行、ページ、罫線、フォントは書きません。それらは試験の
    既定とビルダーが担当します。そのあと次の依頼に進みます。
 5. すべての依頼が終わると止まり、書いたファイル、足した決定、要確認のことを知らせます。
    それを確かめてください（手順 6）。依頼の合間に止めて、あとで **「continue」** と
@@ -209,6 +212,107 @@ tfl_ai_run(".")   # もう一度確かめ、帳票ごとに ARD と RTF: ai/outp
 tflplanner で試験として開けます（`spec/toc.yml` に帳票の一覧）。前の形の試験
 （下書きが `spec/outputs/` にある）は `tfl_ai_migrate()` で移せます。
 
+## 7. エージェントが自分の下書きを作って確かめる
+
+依頼の下書きを書いたあと、エージェントは試験のフォルダで `Rscript run.R <依頼名>` を
+実行します。R が下書きを確かめ、ARD と RTF を作り、図を描きます。ADaM を読むのは
+R で、エージェントではありません。
+
+出力フォルダの各 RTF の隣（下書きを別にしている試験では `ai/output/tfl/`。図の PNG も
+ここ）に、R が次を書きます:
+
+- `<id>.R`: その帳票のプログラム。
+- `<id>-facts.txt`: できあがったものを言葉にしたもの。表では、見出し、行、空のセル、
+  続いてページ（使った行数と 1 ページに入る行数、ページのヘッダーとフッター）。
+  図では、ラベル、軸、凡例、レイヤー。
+
+エージェントはこれらをシェルと見比べ、下書きを直して作り直します。直すのは**最大 2 回**
+です。それでも違うときは、図は自分の ggplot2 コードで描き、表は下書きのまま差分を
+*要確認*として残します。
+
+**確かめる深さ**は、帳票の種類ごとに決まります:
+
+| レベル | エージェントが読むもの |
+|---|---|
+| `0` | 検査の結果: `ai/status.md`、直しの依頼 |
+| `1` | ＋プログラム（`<id>.R`） |
+| `2` | ＋ facts（`<id>-facts.txt`） |
+| `3` | ＋出力: 図の PNG、表のページ |
+| `none` | その種類は作らない。あなたが `run.R` を実行する |
+
+既定は、図が 3、表が 2（表が 1 ページを超えるときはページも読む）、Listing が 1 です。
+`study.yml` の `ai: review: {figure: 3, table: 2, listing: 1}` で変えます。試験標準の
+`spec/defaults.yml` に会社の既定を書いてもかまいません。変えたあとは、エージェントへの
+指示を書き直します:
+
+```r
+tfl_ai_refresh_agents(".")   # study.yml から AGENTS.md を書き直す。下書きと決定は残る
+```
+
+tflplanner では、AI タブの選択欄が同じことをします。
+
+実測の一例: 見本の試験で 5 帳票を 1 回回すと、どのレベルでも 110〜120k トークンで
+した。深さによる費用の差は小さいということです。
+
+エージェントが R を実行できないとき（ターミナルが拒否される、R が見つからない）は、
+そう伝えて、あなたに `Rscript run.R <依頼名>`（または tflplanner の AI タブ）の実行を
+頼みます。そのあと、同じファイルを読みます。
+
+## 8. 過去の TFL から会社のヒントを作る
+
+会社の帳票には、その会社らしい作りがあります。エージェントは過去の RTF からそれを学び、
+すべての試験で使うヒントとして残せます。
+
+会社の AI フォルダは、オプション `tflspec.ai_home` です（tflplanner は `<home>/ai` に
+します）:
+
+```text
+ai/                     会社の AI フォルダ
+  past_tfl/             過去の RTF、1 試験 1 サブフォルダ
+  AGENTS-learn.md       tflspec が書く: エージェントへの課題（手順 2）
+  learn/                tflspec が書く: R が RTF から読んだもの
+  company_hints.yml     エージェントが書く: ヒント（手順 4）
+  reference/            会社の規約（あれば）
+```
+
+tflplanner を使わないときは、先にフォルダを決めます: `options(tflspec.ai_home = "C:/.../company-ai")`
+（または各呼び出しに `dir =` を渡します）。
+
+1. 過去の RTF の表を `past_tfl/` に写します。エージェントに見せてよいファイルだけを
+   使ってください。
+2. `tfl_ai_style_prompt(standard = <会社標準>)` を実行します。会社標準は `kind`・`key`・
+   `value` のデータフレームです。標準がなくても動きます。
+
+   ```r
+   options(tflspec.ai_home = "C:/.../company-ai")
+   std <- data.frame(kind = c("all", "demog", "ae_soc_pt"),
+                     key = c("font", "n_form", "first_row"),
+                     value = c("Courier New 9 pt", "(N=xx)", "Any TEAE"))
+   tfl_ai_style_prompt(standard = std)
+   ```
+
+   kind は次のとおりです: all, demog, ae_soc_pt, ae, param_change, shift, listing, figure, other。
+   key は次のとおりです: rules, spanner_rule, stub_ratio, font, orientation, titles, footnotes, n_form, categorical, zero, continuous, digits, stub_heading, first_row, sort。
+
+3. AI フォルダを VS Code で開き、エージェントに `AGENTS-learn.md` を渡します。
+4. エージェントが `company_hints.yml` を書きます。この会社の帳票の特徴を種類ごとに、
+   何本のファイルに見られたかを添えて書きます。ファイルが会社標準と違う点は
+   `conflicts:` に並べ、ヒントとしては書きません。
+5. `tfl_ai_style_read()` で読みます。1 行ずつ採用する必要はありません。
+
+これ以後に準備する試験には、`ai/reference/` にそのコピーが入ります。すでに準備した
+試験には `tfl_ai_refresh_agents(".")` で入ります。
+
+試験のエージェントが決めるときの優先順位:
+
+1. シェル、SAP、試験の文書、標準
+2. ヒント（`from: "company hints"`。半数に満たないファイルにしか見られないヒントは
+   *要確認*にする）
+3. 通常の慣習
+4. あなたへの質問
+
+ヒントがシェル、SAP、標準に優先することはありません。
+
 ## 1 試験分（200 表くらいまで）を回す
 
 1. **小さく始める**: 種類ごとに 1 依頼（`T-14-1-1`、`T-14-3-1` …）を頼み、RTF を
@@ -237,6 +341,8 @@ SPEC だけを頼みます。この設定は各依頼の 1 行目（`<!-- templa
 
 ## 見本で試す（10 分）
 
+これは tflspec 自身の腫瘍の見本です（5 帳票、下書きは同梱）。tflplanner の AI タブには別の見本、試験 DMY-001（8 帳票、エージェントが下書きしたもの）があります。そちらは tflplanner の記事を見てください。
+
 tflspec 同梱のファイル（4 表と KM 図 1 つの TOC/SHELL ワークブック、XPT にした
 見本 ADaM、5 帳票それぞれの保存済みの下書き。エージェントが書いた物）で
 一通り動かします。最後の行が 5 帳票すべて `ok` と表示すれば準備完了です。
@@ -261,6 +367,20 @@ tfl_ai_collect_answers(d)            # 5 reports in 5 requests (the figure its o
 
 `ai/` フォルダ（依頼、決定、下書き）は残してください。共有は社内だけに。
 
+## 会社の PC で始める前に
+
+- [ ] エージェントのチャットで、ターミナルで `Rscript --version` を実行するよう頼みます。
+  - 実行を許されない、または VS Code が毎回確認してくるときは、作って確かめる手順は
+    あなたが `Rscript run.R` を実行する形になります（7 節）。
+  - `Rscript` が見つからないときは、`AGENTS.md` に、R 自身の `Rscript.exe` を探す
+    PowerShell の書き方があります。
+- [ ] エージェントに、作った PNG（`ai/output/tfl/<id>.png`）を開いて、何が見えるか言わせ
+  ます。画像が見えなければ、代わりに `<id>-facts.txt` を読むので、何も変えなくて
+  かまいません。
+- [ ] ターミナルが見つける R にパッケージが入っているか確かめます:
+  `Rscript -e "packageVersion('tflspec')"`。
+- [ ] 会社の AI フォルダ: 使うなら、過去の TFL と `company_hints.yml`。
+
 ## うまくいかない時
 
 | 見えたもの | すること |
@@ -275,3 +395,6 @@ tfl_ai_collect_answers(d)            # 5 reports in 5 requests (the figure its o
 | 2〜3 回直しても同じエラー | `ai/spec/outputs/<id>.yml` を手で（またはビルダーで）直し、手順 6 を実行 |
 | `tfl_build_ard()` が止まる: `The package "broom" (>= 1.0.8) is required.` | `install.packages("broom")`（ほかのパッケージの名前が出たときも、それを入れる） |
 | `tfl_build_ard()` が止まる | 帳票を絞って探す: `tfl_build_ard(st, dir = ".", output_id = "T-14-1-1", save = FALSE)` |
+| エージェントが R を実行できないと言う | 自分で `Rscript run.R <依頼名>` を実行し、エージェントに「done」と伝える |
+| `<id>-facts.txt` に、表が 1 ページを超えるとある | ページはビルダーが決めるので、エージェントは*要確認*にする |
+| `AGENTS.md` に古い確認レベルが残っている | `tfl_ai_refresh_agents(".")` |
