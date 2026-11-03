@@ -1215,12 +1215,13 @@ tfl_ai_batches <- function(x, size = 8L, types = "table", families = NULL) {
   if (!is.null(families) && (!is.character(families) || is.null(names(families)))) {
     .ard_stop(sprintf("%s: `families` is a named character vector of regular expressions.", fn))
   }
+  if (!"type" %in% names(toc)) toc$type <- rep(NA_character_, nrow(toc))
+  if (!is.null(types)) toc <- toc[is.na(toc$type) | toc$type %in% types, , drop = FALSE]
+  # (none of these types -- a TOC of figures only, asked for tables: none)
   if (!nrow(toc)) {
     return(data.frame(output_id = character(), title = character(), family = character(),
-                      batch = character(), stringsAsFactors = FALSE))
+                      batch = character(), shell_id = character(), stringsAsFactors = FALSE))
   }
-  if (!"type" %in% names(toc)) toc$type <- NA_character_
-  if (!is.null(types)) toc <- toc[is.na(toc$type) | toc$type %in% types, , drop = FALSE]
   fam <- c(families, .ai_families)
   text <- if ("text" %in% names(toc)) ifelse(is.na(toc$title), toc$text, toc$title) else toc$title
   text[is.na(text)] <- ""

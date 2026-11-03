@@ -472,6 +472,9 @@ tfl_fig_objects <- function(design) {
     .ff("theme", "choice", "Theme", "boxed", pp_themes),
     .ff("base_size", "number", "Base font size", 10),
     .ff("legend", "choice", "Legend", "bottom", .fig_legends),
+    .ff("colours", "text", "Own colours",
+        help = "This figure's colours for some values of the colour variable, over the palette's: CR = darkgreen, PD = #D62728 (in YAML, a mapping)."),
+    .ff("legend_title", "text", "Legend title", help = "The legend's title; blank: none."),
     .ff("legend_labels", "expr", "Legend labels",
         help = "R: a character vector named by the colour variable's values, the legend's text for each (an arm with its median: the km_survival template's legend_median makes one)."),
     # (its size is its report's: the report sheet's figure_width_in /
@@ -1159,8 +1162,16 @@ tfl_read_fig_design <- function(path) {
         sprintf("paste0(%s)", paste(q(parts), collapse = sprintf(", %s, ", yc)))
       } else q(v("label"))
       list(code = c(lbl("reference line labels"),
-        sprintf("p <- p + annotate(\"text\", x = Inf, y = %s, label = %s, hjust = -0.3, size = %s)",
-                yc, lab, num("size"))),
+        # (with panels (facet_by), a layer of its own data: annotate()'s
+        # vectors no longer fit the rows it repeats in every panel)
+        if (is.null(.pv(plot, "facet_by"))) {
+          sprintf("p <- p + annotate(\"text\", x = Inf, y = %s, label = %s, hjust = -0.3, size = %s)",
+                  yc, lab, num("size"))
+        } else {
+          sprintf(paste0("p <- p + geom_text(data = data.frame(y = %s, label = %s), ",
+                         "aes(x = Inf, y = y, label = label), hjust = -0.3, size = %s, inherit.aes = FALSE)"),
+                  yc, lab, num("size"))
+        }),
         # room right of the panel, after the theme (which would reset it)
         after = "p <- p + theme(plot.margin = margin(5.5, 50, 5.5, 5.5))   # room for the labels",
         clip_off = TRUE)
@@ -1340,6 +1351,35 @@ tfl_read_fig_design <- function(path) {
 # (tfl_fig_setup_code()), whose tfl_colours() gives the palette (and
 # tfl_shapes() / tfl_linetypes() the arms' shapes and line types, `arm`)
 .fig_palette_code <- function(plot, setup = FALSE, arm = c(shape = FALSE, linetype = FALSE)) {
+  out <- .fig_palette_base(plot, setup, arm)
+  own <- .fig_own_colours(plot)
+  if (is.null(own) || is.null(plot$colour_by)) return(out)
+  # the figure's own colours over the palette's (one assignment: the
+  # figure's content items read `pal` as its expression)
+  i <- max(grep("^pal <- ", out))
+  out[i] <- sprintf("pal <- replace(%s, %s, %s)", sub("^pal <- ", "", out[i]),
+                    vec_code(names(own)), vec_code(unname(own)))
+  out
+}
+
+# A figure's own colours (`plot.colours`): a mapping value -> colour, a
+# named vector, or a text "CR = darkgreen, PD = #D62728"; NULL when none
+.fig_own_colours <- function(plot) {
+  x <- plot$colours
+  if (is.null(x) || !length(x) || (length(x) == 1L && (is.na(x) || identical(x, "")))) return(NULL)
+  if (is.list(x)) x <- unlist(x)
+  if (is.null(names(x))) {
+    parts <- trimws(strsplit(paste(x, collapse = ","), ",", fixed = TRUE)[[1L]])
+    kv <- strsplit(parts[nzchar(parts)], "=", fixed = TRUE)
+    if (!all(lengths(kv) == 2L)) {
+      stop("plot.colours: value = colour pairs, e.g. CR = darkgreen, PD = #D62728.", call. = FALSE)
+    }
+    x <- stats::setNames(trimws(vapply(kv, `[[`, "", 2L)), trimws(vapply(kv, `[[`, "", 1L)))
+  }
+  stats::setNames(as.character(x), names(x))
+}
+
+.fig_palette_base <- function(plot, setup = FALSE, arm = c(shape = FALSE, linetype = FALSE)) {
   pname <- .pv(plot, "palette")
   pal <- tfl_fig_palettes()[[pname]]
   if (is.null(pal)) stop("Unknown palette: ", pname, call. = FALSE)
@@ -1482,7 +1522,11 @@ tfl_read_fig_design <- function(path) {
   ard_pre <- unlist(lapply(lc, `[[`, "pre"))
   clip <- any(vapply(lc, function(x) isTRUE(x$clip_off), logical(1)))
   ax <- .fig_axis_code(plot, any(kinds == "risk_table"), fit_of(), clip)
-  first <- if (length(lc) && !is.null(lc[[1L]]$base)) sub("^p <- ", "", lc[[1L]]$base) else "ggplot()"
+  # the chain starts from the layer that is the plot itself (ggsurvfit(), a
+  # call with base: true) wherever it is -- a report's own layer_code may
+  # come before a template's layers
+  at <- which(vapply(lc, function(x) !is.null(x$base), NA))[1L]
+  first <- if (!is.na(at)) sub("^p <- ", "", lc[[at]]$base) else "ggplot()"
   panels <- Filter(Negate(is.null), lapply(lc, `[[`, "panel"))
   add_res <- .fig_plot_add_code(plot$add %||% list(), gg$version)
   guard_v <- c(unlist(lapply(lc, `[[`, "guard")), add_res$guard)
@@ -1493,7 +1537,12 @@ tfl_read_fig_design <- function(path) {
   needs <- setdiff(unique(c(unlist(lapply(lc, `[[`, "package")), add_res$pkgs)), "ggplot2")
   if (any(kinds %in% c("km_curve", "km_ci", "censor_mark"))) libs <- unique(c(libs, "ggsurvfit"))
   uses_pd <- any(vapply(layers, function(l) .lgl(l$dodge), logical(1)))
-  lab <- function(f) { x <- .pv(plot, f); if (!is.null(x)) q(x) }
+  # (an axis title written empty is no title: NULL, not the variable's name)
+  lab <- function(f) {
+    if (f != "title" && identical(plot[[f]], "")) return("NULL")
+    x <- .pv(plot, f)
+    if (!is.null(x)) q(x)
+  }
   labs_args <- c(if (!is.null(lab("x_label"))) paste("x =", lab("x_label")),
                  if (!is.null(lab("y_label"))) paste("y =", lab("y_label")),
                  if (!is.null(lab("title"))) paste("title =", lab("title")))
@@ -1526,22 +1575,29 @@ tfl_read_fig_design <- function(path) {
     # keys long enough to show the arms' line types
     if (arm[["linetype"]]) 'theme(legend.key.width = unit(2.5, "lines"))',
     if (!.lgl(.pv(plot, "x_text"))) "theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())",
-    as.list(pp_q_legend(.pv(plot, "legend"))))
-  # the chain: the layers (the user's layer code as a statement), the
-  # figure's settings, what goes after them, the plot.add calls
+    # the legend's title: blank unless the figure says it
+    if (!is.null(.pv(plot, "legend_title"))) {
+      sprintf("labs(%s)", paste(sprintf("%s = %s", c("colour", "fill", "shape", "linetype"),
+                                        q(.pv(plot, "legend_title"))), collapse = ", "))
+    },
+    as.list(pp_q_legend(.pv(plot, "legend"), title_blank = is.null(.pv(plot, "legend_title")))))
+  # the chain: the layers, the figure's settings, what goes after them,
+  # the plot.add calls, then the user's layer code (statements, in their
+  # order: the last word over the settings)
   items <- list()
+  own <- list()
   for (i in seq_along(lc)) {
     x <- lc[[i]]
     if (!is.null(x$panel) || is.null(x$code)) next
     if (identical(kinds[i], "layer_code")) {
-      items <- c(items, list(list(stmt = layers[[i]]$code, label = layers[[i]]$label)))
+      own <- c(own, list(list(stmt = layers[[i]]$code, label = layers[[i]]$label)))
     } else {
       items <- c(items, lapply(.fig_terms(x$code), function(t) list(term = t)))
     }
   }
   tail_terms <- c(finish, .fig_terms(unlist(lapply(lc, `[[`, "after"))),
                   .fig_terms(add_res$lines))
-  items <- c(items, lapply(tail_terms, function(t) list(term = t)))
+  items <- c(items, lapply(tail_terms, function(t) list(term = t)), own)
   chain <- .fig_chain_lines(name, first, items)
   panel_data <- unlist(lapply(lc, function(x) if (!is.null(x$panel)) x$data))
   panel_code <- unlist(lapply(lc, function(x) if (!is.null(x$panel)) x$chain))
@@ -2628,7 +2684,7 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
 # The code step of a forest plot: the rows to draw (the comparison arm, not
 # the reference), their label, text and y; a subgroup whose model did not
 # converge has no point (NE)
-.forest_est_code <- function(group, subgroups, comparison = NULL) {
+.forest_est_code <- function(group, subgroups, comparison = NULL, n_by_arm = NULL) {
   sub <- if (length(subgroups)) c(
     "    subgroup = case_when(",
     paste0(sprintf("      !is.na(%s) ~ \"%s\"", subgroups, subgroups), ","),
@@ -2640,6 +2696,16 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
   if (is.null(comparison)) lvl <- sprintf("paste(%s, %s, sep = \": \")", lvl, group)
   paste(c(
     "est <- est |>",
+    if (length(n_by_arm)) c(
+      "  # each arm's events / subjects (its own row of the model), a column an arm",
+      if (length(subgroups)) sprintf("  group_by(%s) |>", paste(subgroups, collapse = ", ")),
+      "  mutate(",
+      paste0(sprintf("    n_arm%d = sprintf(\"%%s/%%s\", first(n_event[%s == %s]), first(n_obs[%s == %s]))",
+                     seq_along(n_by_arm), group, vapply(n_by_arm, q, ""), group,
+                     vapply(n_by_arm, q, "")),
+             c(rep(",", length(n_by_arm) - 1L), "")),
+      "  ) |>",
+      if (length(subgroups)) "  ungroup() |>"),
     "  # the reference arm has no interval; a subgroup whose model did not",
     "  # converge (no events in an arm) has no point: NE",
     "  filter(!is.na(conf.low)) |>",
@@ -2666,6 +2732,7 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
       "  mutate(",
       "    label = ifelse(head | subgroup == \"All subjects\", level, paste0(\"    \", level)),",
       "    n = ifelse(head, \"\", as.character(n_obs)),",
+      if (length(n_by_arm)) "    across(starts_with(\"n_arm\"), ~ ifelse(head, \"\", .x)),",
       "    txt = ifelse(head, \"\", txt),",
       "    y = rev(row_number())",
       "  )")

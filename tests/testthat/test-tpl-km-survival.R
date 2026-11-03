@@ -152,3 +152,57 @@ test_that("km_survival(legend_median = TRUE): each arm's median (95% CI) in the 
   q <- tfl_tpl(df, "km_survival", by = TRT01A, time_unit = "days", risk_table = FALSE)
   expect_s3_class(q$scales$get_scales("colour")$labels, "waiver")
 })
+
+test_that("km_survival takes the report's plot.x_by / x_max for its axis, its arguments first", {
+  km_skip()
+  d <- tempfile()
+  on.exit(unlink(d, recursive = TRUE))
+  dir.create(d)
+  file.copy(list.files(system.file("extdata", "spec-yaml", package = "tflspec"),
+                       full.names = TRUE), d, recursive = TRUE)
+  s <- tfl_read_study_spec(d)
+  km <- function(args, plot) {
+    o <- tfl_output("F-9", "figure",
+                    data = list(steps = list(list(step = "read", dataset = "ADTTE"),
+                                             list(step = "param", value = "PFS"))),
+                    template = list(name = "km_survival", args = c(list(by = "TRT01A"), args)))
+    o$plot <- plot
+    x <- tfl_template_to_spec(o, s)
+    unlist(lapply(x$data$steps, function(st) if (identical(st$step, "code")) st$code))
+  }
+  expect_true("x_breaks <- seq(0, 30, by = 6)" %in% km(list(), list(x_by = 6, x_max = 30)))
+  expect_true("x_breaks <- seq(0, max(fit$time), by = 6)" %in% km(list(), list(x_by = 6)))
+  expect_true("x_breaks <- seq(0, max(fit$time), by = 3)" %in% km(list(x_step = 3), list(x_by = 6)))
+  expect_true("x_breaks <- pretty(c(0, max(fit$time)))" %in% km(list(), list(x_label = "Months")))
+})
+
+test_that("a report's own layer_code with a template: statements on p after the call; the design from its base layer", {
+  km_skip()
+  d <- tempfile()
+  on.exit(unlink(d, recursive = TRUE))
+  dir.create(d)
+  file.copy(list.files(system.file("extdata", "spec-yaml", package = "tflspec"),
+                       full.names = TRUE), d, recursive = TRUE)
+  s <- tfl_read_study_spec(d)
+  own <- tfl_item("layer_code", list(label = "a note", code = paste(
+    "txt <- paste('n =', nrow(df))",
+    "p <- p + ggplot2::annotate('text', x = 1, y = 0.1, label = txt)", sep = "\n")))
+  o <- tfl_output("F-9", "figure",
+                  data = list(steps = list(list(step = "read", dataset = "ADTTE"),
+                                           list(step = "param", value = "PFS"))),
+                  template = list(name = "km_survival", args = list(by = "TRT01A")),
+                  content = list(own))
+  ro <- tfl_resolve_output(o, s)
+  # the program's call: into p, the statements, then content
+  a <- tfl_content_code(ro)
+  i <- which(startsWith(a, "p <- tflspec::tfl_tpl("))
+  expect_length(i, 1L)
+  expect_true(any(a == "# a note"))
+  expect_identical(a[[length(a)]], "content <- p")
+  expect_false(inherits(tryCatch(parse(text = a), error = function(e) e), "error"))
+  # the design form (what tfl_ai_run draws): the curves first, whatever the order
+  b <- tflspec:::.content_fig_code(ro)
+  expect_true(any(startsWith(b, "p <- ggsurvfit(")))
+  expect_false(any(b == "p <- ggplot() +"))
+  expect_false(inherits(tryCatch(parse(text = b), error = function(e) e), "error"))
+})

@@ -259,9 +259,13 @@ tfl_template_run <- function(name, x, ..., codelists = NULL, sets = NULL) {
 # columns -- the study's plan_stub(name, before) must not take them away.
 .tpl_shape_keys <- list(plan_stub = "vars")
 
-# An item of the look: a look verb with none of its shape keys
+# An item of the look: a look verb with none of its shape keys.  (The blank
+# row between a table's parts -- pk_conc's listing and its summary -- is
+# the table's shape: the study's plan_blanks() between groups must not take
+# it away.)
 .tpl_is_look <- function(it) {
-  it$fn %in% names(.tpl_look) && !any(names(it$args) %in% .tpl_shape_keys[[it$fn]])
+  it$fn %in% names(.tpl_look) && !any(names(it$args) %in% .tpl_shape_keys[[it$fn]]) &&
+    !identical(it$args$where, "between_parts")
 }
 
 # A value of the same shape, changed: each string with a mark after it (its
@@ -579,7 +583,7 @@ tfl_use_company_templates <- function(path, package = basename(path),
     "  - normalize_ard: {}",
     "  - plan_cells: {default: \"{n:.0f} ({p:.1f%})\"}",
     "  - plan_digits: {rounding: sas}",
-    "  - plan_stub: {name: row_label, before: true}",
+    "  - plan_stub: {name: row_label, heading: \"\", before: true}",
     "  - plan_blanks: {where: between_groups, first: true, last: true}"))
   put("README.md", c(
     paste0("# ", package),

@@ -1163,7 +1163,7 @@
         ) +
         scale_fill_manual(values = pal, breaks = names(pal), na.value = "grey80") +
         coord_cartesian(ylim = c(0, 110)) +
-        labs(y = "Response rate (%) with 95% CI [CR+PR]") +
+        labs(x = NULL, y = "Response rate (%) with 95% CI [CR+PR]") +
         theme_minimal(base_size = 10) +
         theme(
           axis.title        = element_text(size = 10),
@@ -1250,7 +1250,7 @@
           position = position_stack(vjust = 0.5)
         ) +
         scale_fill_manual(values = pal, breaks = names(pal), na.value = "grey80") +
-        labs(y = "Subjects (%)") +
+        labs(x = NULL, y = "Subjects (%)") +
         theme_minimal(base_size = 10) +
         theme(
           axis.title        = element_text(size = 10),
@@ -1956,7 +1956,7 @@
         ) +
         geom_point(data = sg, aes(x = TRT01A, y = mean), shape = 3, size = 3) +
         scale_fill_manual(values = pal, breaks = names(pal), na.value = "grey80") +
-        labs(y = "ALT") +
+        labs(x = NULL, y = "ALT") +
         theme_minimal(base_size = 10) +
         theme(
           axis.title        = element_text(size = 10),

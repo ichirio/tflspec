@@ -28,7 +28,10 @@
   max_rounds = 3L,                      # asking again about one item: this many times, then "to confirm"
   footnotes_at = "footer",              # the shell's footnotes: the page's "footer" band, or the "table"'s footnotes
   language = "en",
-  titles_in_header = character()        # the output tokens the study standard's header prints (none: the report writes its titles)
+  titles_in_header = character(),       # the output tokens the study standard's header prints (none: the report writes its titles)
+  # how deep the agent checks each kind of report it built itself (run.R):
+  # 0 the check, 1 + the program, 2 + the facts, 3 + the output; "none": the person's check
+  review = list(figure = 3L, table = 2L, listing = 1L)
 )
 
 # The settings, under the study standard's `ai:` keys (spec/defaults.yml:
@@ -42,10 +45,14 @@
     }
     ai <- if (is.list(y)) y$ai else NULL
     if (!is.list(ai)) next
-    for (k in intersect(names(s), names(ai))) if (!is.null(ai[[k]])) s[[k]] <- ai[[k]]
+    for (k in intersect(names(s), names(ai))) if (!is.null(ai[[k]])) {
+      # (review: kind by kind, the ones not said as before)
+      s[[k]] <- if (identical(k, "review") && is.list(ai[[k]])) utils::modifyList(s[[k]], ai[[k]]) else ai[[k]]
+    }
   }
   s$max_rounds <- as.integer(s$max_rounds)
   s$carry <- as.character(unlist(s$carry))
+  s$review <- .ai_review_levels(s$review)
   s$footnotes_at <- match.arg(as.character(s$footnotes_at)[1L], c("footer", "table"))
   s
 }
@@ -245,8 +252,10 @@ tfl_ai_decisions_write <- function(study_dir, x) {
 
 # A draft's `ai:` block (assumptions, confirm), by report, from
 # ai/spec/outputs/*.yml; kept while the check writes the drafts anew.  A
-# file YAML cannot read, or with no `id`, is in `bad` (by the file's name)
-# with why: the check refuses it, and the agent fixes its form.
+# file YAML cannot read, with no `id`, or that is no report file (a call's
+# `args` given as a text ...), is in `bad` (by the file's name) with why:
+# the check refuses it alone, and the agent fixes its form; the other
+# drafts are read and built.
 .ai_draft_blocks <- function(study_dir) {
   area <- file.path(study_dir, "ai", "spec", "outputs")
   out <- list(blocks = list(), bad = character())
@@ -265,7 +274,20 @@ tfl_ai_decisions_write <- function(study_dir, x) {
       out$bad[id] <- sprintf("its `id` is %s, not the file's name: name the file after the id",
                              as.character(y$id)[1L])
     } else {
-      out$blocks[[id]] <- list(file = f, ai = y$ai, y = y)
+      # read as the file's id: the same report written another way is no error here
+      y_id <- y
+      y_id$id <- id
+      rd <- tryCatch(.output_from_list(y_id, f), error = function(e) e)
+      if (inherits(rd, "error")) {
+        why <- .ai_one_line(conditionMessage(rd))
+        if (grepl("`args` is a named list", why, fixed = TRUE)) {
+          why <- paste0(why, " A call's `args` (plot.add, a `call` layer) is a mapping, one key an ",
+                        "argument, `!r` for R: {fn: theme, args: {axis.text.x: !r element_text(angle = 45)}}.")
+        }
+        out$bad[id] <- paste("the report file cannot be read:", why)
+      } else {
+        out$blocks[[id]] <- list(file = f, ai = y$ai, y = y)
+      }
     }
   }
   out

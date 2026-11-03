@@ -1,6 +1,6 @@
 # The AI's reports always say their column widths: what an answer leaves
-# out, R writes -- a table's once it is built (rtfreporter's
-# default_col_widths()), a listing's when the answer is read -- with the
+# out, R writes -- a table's once it is built (tflspec's rule,
+# .tfl_default_widths()), a listing's when the answer is read -- with the
 # assumption that they are the default ones
 
 test_that("a table with no widths gets the usual layout's in its report file, when read and when built", {
@@ -27,28 +27,16 @@ test_that("a table with no widths gets the usual layout's in its report file, wh
   expect_true(file.exists(file.path(d, "ai", "widths.yml")))
   res <- suppressMessages(tfl_ai_run(d, requests = c("demographics-1", "ae-1")))
   files <- res$reports$file[res$reports$request %in% c("demographics-1", "ae-1")]
-  # (rtfreporter's default_col_widths(): one width a printed column, by
-  # name; before it, the stub 3 -- a hierarchy's 4 -- to the values' 1)
-  dcw <- exists("default_col_widths", envir = asNamespace("rtfreporter"), inherits = FALSE)
+  # (tflspec's rule: one width a printed column, by name, in characters;
+  # the stub at least 12)
   for (f in files) {
     y <- yaml::read_yaml(file.path(d, f))
     pc <- Filter(function(it) identical(names(it), "plan_columns"), y$content)
     expect_length(pc, 1L)
     w <- pc[[1L]]$plan_columns$widths
-    if (dcw) {
-      expect_null(w$.values, info = f)
-      expect_true(length(w) >= 2L && all(unlist(w) > 0), info = f)
-    } else {
-      expect_identical(w$.values, 1L, info = f)
-      stub <- unlist(w[names(w) != ".values"])
-      expect_true(length(stub) >= 1L && all(stub >= 2L), info = f)
-    }
-  }
-  if (!dcw) {
-    # the AE table (a hierarchy): its stub 4
-    ae <- yaml::read_yaml(file.path(d, files[grepl("T-14-3-1", files)]))
-    w <- Filter(function(it) identical(names(it), "plan_columns"), ae$content)[[1L]]$plan_columns$widths
-    expect_true(any(unlist(w[names(w) != ".values"]) == 4L))
+    expect_null(w$.values, info = f)
+    expect_true(length(w) >= 2L && all(unlist(w) > 0), info = f)
+    expect_true(w[[1L]] >= 12L, info = f)
   }
   # each report whose widths R set says so: an assumption
   ass <- yaml::read_yaml(file.path(d, "spec", "_assumptions.yml"))
@@ -59,6 +47,38 @@ test_that("a table with no widths gets the usual layout's in its report file, wh
   res2 <- suppressMessages(tfl_ai_run(d, requests = c("demographics-1", "ae-1")))
   b <- res2$reports$built[res2$reports$request %in% c("demographics-1", "ae-1")]
   expect_true(all(b == "kept"))
+})
+
+test_that("the default rule: the user's three tiers, the row headings keeping their content", {
+  w <- function(body, stub = 1L, ...) tflspec:::.tfl_default_widths(body, stub, ...)
+  vals <- function(k) stats::setNames(as.list(rep("40 (51.3%)", k)), paste0("C", seq_len(k)))
+  tab <- function(stub, k) as.data.frame(c(list(row_label = stub), vals(k)))
+  age <- c("Age group, n (%)", "    65-80")
+  # 1: each value 60 / (n + 1) % of the 120, the stub the rest -- 70:30,
+  # 60:20:20, 55:15:15:15
+  expect_identical(unname(as.vector(w(tab(age, 1)))), c(84L, 36L))
+  expect_identical(unname(as.vector(w(tab(age, 2)))), c(72L, 24L, 24L))
+  x <- w(tab(age, 3))
+  expect_identical(unname(as.vector(x)), c(66L, 18L, 18L, 18L))
+  expect_identical(attr(x, "tier"), 1L)
+  expect_identical(names(x), c("row_label", "C1", "C2", "C3"))
+  # 2: ten value columns of 12 leave nothing; of 8 (two lines) the stub its
+  # content (18)
+  y <- w(tab(age, 10))
+  expect_identical(attr(y, "tier"), 2L)
+  expect_true(all(y[-1L] == 8L))
+  expect_identical(unname(y[1L]), 40L)
+  # a long stub (28, kept up to 30) with twelve columns stays at 2: 24 is
+  # less than it keeps, but two value columns or more
+  long <- "a long row heading of text"
+  t2 <- w(tab(long, 12))
+  expect_identical(attr(t2, "tier"), 2L)
+  expect_identical(unname(t2[1L]), 24L)
+  # 3: with fourteen, 8 is left: all equal, the stub two
+  z <- w(tab(long, 14))
+  expect_identical(attr(z, "tier"), 3L)
+  expect_identical(unname(z[1L]), 2L * unname(z[2L]))
+  expect_true(all(z[-1L] == z[2L]))
 })
 
 test_that("a table that says its widths is left as it is", {

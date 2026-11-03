@@ -697,6 +697,8 @@ tfl_fig_content_from_design <- function(design) {
   kinds <- vapply(layers, function(l) l$layer %||% "", "")
   ard_layers <- layers[kinds == "ard_number"]
   pname <- .pv(plot, "palette")
+  # (the figure's own colours: its `pal`, not the setup's palette scale)
+  scale_pal <- if (is.null(.fig_own_colours(plot))) pname
   items <- list()
   for (t in .fig_split_plus(main)) {
     txt <- .fig_deparse(t)
@@ -708,7 +710,7 @@ tfl_fig_content_from_design <- function(design) {
       items <- c(items, list(tfl_item("tfl_ard_number", .fig_plain_args(l))))
       next
     }
-    pal_scale <- .fig_pal_scale(t, pname)
+    pal_scale <- if (!is.null(scale_pal)) .fig_pal_scale(t, scale_pal)
     if (!is.null(pal_scale)) {
       items <- c(items, list(pal_scale))
       next

@@ -646,7 +646,22 @@ tfl_ai_unpack(a, "study")                           # spec/outputs/<id>.yml, spe
   `tfl_ai_prepare(toc, shells = )`; another workbook added to the study's
   requests: `tfl_ai_prepare(..., add = TRUE)`.  A figure of the TOC is a request
   of its own (`figure-1` ...: its shell, a figure report to draft), drawn by
-  `tfl_ai_run()` (PNG and RTF); `workbook = "file"` (set when
+  `tfl_ai_run()` (PNG and RTF, and `<id>-facts.txt` beside the PNG: its
+  labels, axes, legends and layers in words); beside each report's RTF,
+  `<id>.R` (its program: the analysis set, the records, the analysis, the
+  content) and, for a table or a listing, `<id>-facts.txt` (its header,
+  its rows, the empty cells, then its pages: the lines each holds, about,
+  against what a page holds).  The agent builds each request itself and
+  checks what R made against the shell, as deep as `study.yml`'s `ai:
+  review` says for the kind (`0` `ai/status.md` and the repairs, `1` and
+  the program, `2` and the facts, `3` and the output: a figure's PNG, a
+  table's pages; `none`: the person's check; figures 3, tables 2 -- the
+  pages too when over a page -- listings 1 by default; the study
+  standard's `spec/defaults.yml` may say it first): after the draft,
+  `Rscript run.R <request>` from the study folder, a fix and a build again
+  -- two fixes at most, then a figure as its own ggplot2 code (one
+  `layer_code` that makes `p`), a table kept and what still differs marked
+  to confirm; an agent that cannot run R asks the person to run `run.R`; `workbook = "file"` (set when
   `agent_reads` has `"workbook"`) has each request say where its reports'
   shells are in the workbook file, for the agent to read that place alone.
 * `tfl_ai_context("table", examples = "study/spec/outputs/T-14-3-1.yml")`
@@ -903,13 +918,13 @@ back): rename the value or choose another separator.
 
 **Template SPEC (prototype):** `tfl_tpl` `tfl_tpl_args` `tfl_tpl_help` `tfl_templates` `tfl_template_expand` `tfl_template_to_spec` `tfl_template` `tfl_param` `tfl_template_params` `tfl_template_variant` `tfl_template_run` `tfl_test_templates` `tfl_use_company_templates`
 `tpl_demog` `tpl_summary` `tpl_disposition` `tpl_ae_soc_pt` `tpl_ae_pt_freq` `tpl_ae_max_grade` `tpl_hierarchical`
-`tpl_shift` `tpl_lab_shift` `tpl_listing` `tpl_km_table` `tpl_param_change` `tpl_lab_abnormal` `tpl_ae_eair` `tpl_ancova` `tpl_mean_se` `tpl_mean_ci` `tpl_waterfall` `tpl_forest_hr` `tpl_forest_layout` `tpl_orr` `tpl_stat_block` `tpl_ae_overview`
+`tpl_shift` `tpl_lab_shift` `tpl_listing` `tpl_km_table` `tpl_param_change` `tpl_pk_conc` `tpl_lab_abnormal` `tpl_ae_eair` `tpl_ancova` `tpl_mean_se` `tpl_mean_ci` `tpl_waterfall` `tpl_forest_hr` `tpl_forest_layout` `tpl_orr` `tpl_stat_block` `tpl_ae_overview`
 `tfl_read_template_sheets` `tfl_write_template_yaml`
 
 **AI-assisted drafting:** `tfl_ai_tasks` `tfl_ai_context` `tfl_ai_schema`
 `tfl_ai_prompt` `tfl_ai_parse` `tfl_ai_check` `tfl_ai_repair_prompt`
 `tfl_ai_diff` `tfl_ai_read_shell` `tfl_ai_adam_summary` `tfl_ai_doc_text` `tfl_ai_batches`
-`tfl_ai_write_requests` `tfl_ai_collect_answers` `tfl_ai_adopt` `tfl_ai_adopted_diff` `tfl_ai_style_prompt` `tfl_ai_style_read` `tfl_rtf_style_scan` `tfl_ai_migrate` `tfl_ai_outputs` `tfl_ai_assumptions` `tfl_ai_study_init`
+`tfl_ai_write_requests` `tfl_ai_collect_answers` `tfl_ai_adopt` `tfl_ai_adopted_diff` `tfl_ai_style_prompt` `tfl_ai_style_read` `tfl_ai_style_diff` `tfl_ai_style_adopt` `tfl_ai_reference_build` `tfl_rtf_style_scan` `tfl_rtf_style_tables` `tfl_ai_migrate` `tfl_ai_outputs` `tfl_ai_assumptions` `tfl_ai_study_init`
 `tfl_ai_prepare` `tfl_ai_sample_study` `tfl_ai_requests` `tfl_fill_widths` `tfl_ai_run` `tfl_ai_compare`
 
 **ARD spec:** `tfl_ard_spec` `tfl_read_ard_spec` `tfl_write_ard_spec`

@@ -87,6 +87,30 @@ test_that("as rows: the value's rows, then the change's; none at baseline", {
   expect_identical(names(t), c("group1", "group2", "group3", "label", "Drug X", "Control"))
 })
 
+test_that("the digits: the same as fixed cells, and a parameter's own by plan_digits(PARAM = )", {
+  pc_skip()
+  x <- tfl_template_expand("param_change", pc_args)
+  ard <- pc_ard(x)
+  p <- do.call(tpl_param_change, c(list(ard), pc_args))
+  t <- pc_tab(p)
+  # the template's digits: what its cells used to fix
+  fixed <- list(n = "{N:.0f}", `Mean (SD)` = "{mean:.1f} ({sd:.2f})",
+                Median = "{median:.1f}", `Min, Max` = "{min:.1f}, {max:.1f}")
+  expect_identical(t, pc_tab(do.call(tpl_param_change, c(list(ard), pc_args, list(cells = fixed)))))
+  # a parameter's digits by its value, as the table holds it (PARAM's label)
+  alt <- unique(as.character(adlb$PARAM[adlb$PARAMCD == "ALT"]))
+  d <- pc_tab(p |> rtfreporter::plan_digits(PARAM = stats::setNames(
+    list(c(mean = 2, sd = 3, min = 0, max = 0)), alt)))
+  if (identical(d, t)) skip("rtfreporter without digits by a row key's value (#794)")
+  m <- t$label == "Mean (SD)"
+  r <- t$label == "Min, Max"
+  a <- t$group1 == alt
+  expect_match(d[["Drug X____Value"]][m & a], "^[0-9]+\\.[0-9]{2} \\([0-9]+\\.[0-9]{3}\\)$")
+  expect_match(d[["Drug X____Value"]][r & a], "^[0-9]+, [0-9]+$")
+  # the other parameter keeps the template's
+  expect_identical(d[!a, ], t[!a, ])
+})
+
 test_that("the arm and its N over its two columns", {
   pc_skip()
   x <- tfl_template_expand("param_change", pc_args)

@@ -188,6 +188,20 @@ page:
     "2": {center: "Kaplan-Meier Plot of Overall Survival"}
 ```
 
+A figure's draft goes into the program as you write it, so the build holds
+it to these rules (every agent of tflspec#512 tripped on them):
+
+- A `code` step's text is pasted as it is: it assigns its own object
+  (`sm <- df |> ...`); `out:` only names it.
+- A dataset is in reach only when a `read` or `join` step names it (a
+  `subset` step does not load one); to use ADSL in a code step, read it.
+- The `args` of a `plot.add` call or a `call` layer are a mapping, one key
+  an argument; an R value is `!r` (`breaks: !r c(0.5, 1, 2)`,
+  `axis.text.x: !r element_text(angle = 45)`); a plain value is plain
+  (`scales: free_x`, not `'"free_x"'`).
+- A list of numbers in `template: args` (`x_breaks: [0.25, 0.5, 1, 2, 4]`)
+  is several numbers.
+
 ## The fields, exactly
 
 `ard.analysis_data`, one item each: `id`, `label`, `from` (a dataset of
@@ -227,7 +241,14 @@ needs that variable in `by`.
   With the template `ae_soc_pt` / `ae_ser_soc_pt`, the same list as its
   `sort` argument.
 - **Digits that differ by parameter** (a lab table: ALT one decimal, BILI
-  three): guarded cell templates, one a parameter, the last one for the
+  three): on the `param_change` template, `plan_digits` by the parameter
+  as the table holds it -- `PARAM`, the label `ai/adam_summary.md` lists:
+  `plan_digits: {PARAM: {"Alanine Aminotransferase (U/L)": {mean: 1, sd:
+  2, median: 1, min: 0, max: 0}, "Bilirubin (umol/L)": {mean: 2, sd: 3,
+  median: 2, min: 1, max: 1}}}` -- a parameter it leaves out keeps the
+  template's (one decimal, the SD two); its cells are written without
+  digits, so leave them as they are.  A code SPEC's own cells: guarded
+  cell templates, one a parameter, the last one for the
   rest -- `plan_cells: {continuous: [!r 'PARAMCD == "ALT" ~ "{mean:.1f}
   ({sd:.2f})"', !r 'PARAMCD == "BILI" ~ "{mean:.3f} ({sd:.4f})"', "{mean:.2f}
   ({sd:.3f})"]}` (a guard is `<row key> == "<value>" ~ "<template>"`, as
@@ -240,11 +261,9 @@ needs that variable in `by`.
   `PARAM`, the label `ai/adam_summary.md` lists -- `PARAM == "Alanine
   Aminotransferase (U/L)"`; a guard on the code (`PARAMCD == "ALT"`)
   matches nothing and every row takes the last template.  `plan_digits`
-  takes a key's value too, by the key as the table holds it --
-  `plan_digits: {PARAM: {"Alanine Aminotransferase (U/L)": {mean: 1, sd:
-  2, median: 1, min: 0, max: 0}}}` -- but it gives digits only to a cell
-  written without them (`{mean} ({sd})`); a template's cells have theirs,
-  so on a template the guards above are the way.
+  by a value gives digits only to a cell written without them (`{mean}
+  ({sd})`), as `param_change`'s are; a cell with its own (`{mean:.1f}`)
+  keeps them.
 - **Every row the shell shows** (Race's Multiple, ECOG 0 to 3): each
   value in `codelists` (value and label, in the shell's order) -- a value
   the data does not have too: it prints as a 0 row.  A value left out of
@@ -284,6 +303,12 @@ Group: {RENALGR}"`.
 - **A table with a second block of rows under it** (a listing of the
   values and their summary): `plan_append` with its own `data` and
   `content` (the instructions' item list), after the first table's items.
+- **PK concentrations by subject with their summary** (a row a subject
+  `ID/Age/Sex`, the time points across, BLQ; N, Mean, SD ... under them, a
+  page an analyte and arm): the template `pk_conc`, not a code SPEC --
+  `template: {name: pk_conc, args: {population: PK, blq: 'BLQFL == "Y"'}}`,
+  with `by` (the page groups), `time` / `time_order`, `subject`, `stats`
+  and `split_at` (a second block of columns) as the shell says.
 - **A shift table of counts** (baseline category down, worst post-baseline
   category across): the template `shift` (or `lab_shift` at one visit)
   keeps a subject once a parameter at its worst category, with a Missing
@@ -291,57 +316,37 @@ Group: {RENALGR}"`.
   parameters, the records after baseline the study counts) and what
   differs.
 - **A shift table with percents of the Total row** (the % of the arm's
-  subjects with a post-baseline value for the parameter): no template
-  yet; the worst category is a column key of the
-  ARD (`strata`), the baseline category the rows' variable (`variables`,
-  never `label`), the denominator the subjects a parameter each, and the
-  Total row `plan_total` with `direction: rows` from a second analysis of
-  the column key by the row keys:
+  subjects with a post-baseline value for the parameter, the Missing row
+  among them): the template `shift` with `percent_of: total` and a cell
+  with `{p}`; a worst category that differs by parameter (the SAP: low
+  first for HGB, NEUT, PLAT) in `worst_by`, by the parameter's value:
 
   ```yaml
-  ard:
-    analysis_data:
-      - id: lb_shift
-        label: "one row a subject and parameter: the baseline category, the worst post-baseline category"
-        from: ADLB
-        population: SAF
-        code: !r 'post <- dplyr::filter(adlb, USUBJID %in% adsl_sub$USUBJID, ONTRTFL == "Y", is.na(ABLFL) | ABLFL != "Y", !is.na(ANRIND)); base <- dplyr::distinct(dplyr::filter(adlb, ABLFL == "Y"), USUBJID, PARAMCD, .keep_all = TRUE)[, c("USUBJID", "PARAMCD", "BNRIND")]; worst <- dplyr::summarise(dplyr::group_by(post, USUBJID, TRT01A, PARAMCD), WORST = if (any(ANRIND == "HIGH")) "HIGH" else if (any(ANRIND == "LOW")) "LOW" else "NORMAL", .groups = "drop"); out <- dplyr::left_join(worst, base, by = c("USUBJID", "PARAMCD")); dplyr::mutate(out, BASECAT = dplyr::coalesce(BNRIND, "MISSING"))'
-      - id: lb_den
-        label: the subjects with a post-baseline value, a parameter each (the denominator)
-        from: lb_shift
-        keep: USUBJID | TRT01A | PARAMCD
-        distinct: USUBJID | PARAMCD
-    analyses:
-      - {id: SHIFT, method: categorical, data: lb_shift, by: [TRT01A, PARAMCD], strata: [WORST], variables: [BASECAT], denominator: lb_den}
-      - {id: TOTAL, method: categorical, data: lb_shift, by: [TRT01A, PARAMCD], variables: [WORST], denominator: lb_den}
-  content:
-    - normalize_ard: {}
-    - table_plan: {cols: [TRT01A, WORST], rows: {group1: PARAMCD}}
-    - plan_total: {label: Total, direction: rows, position: last}
-    - plan_cells: {categorical: "{n} ({p:.1f%})"}
-  codelists:
-    PARAMCD: [{value: ALT, label: Alanine Aminotransferase (U/L)}, {value: BILI, label: Bilirubin (umol/L)}]
-    WORST: [{value: LOW, label: Low}, {value: NORMAL, label: Normal}, {value: HIGH, label: High}]
-    BASECAT: [{value: LOW, label: Low}, {value: NORMAL, label: Normal}, {value: HIGH, label: High}, {value: MISSING, label: Missing}]
+  template:
+    name: shift
+    args:
+      population: SAF
+      where: 'PARAMCD %in% c("ALT", "AST", "BILI", "HGB", "NEUT", "PLAT") & ONTRTFL == "Y"'
+      percent_of: total
+      cell: "{n} ({p:.1f%}%)"
+      worst: [HIGH, LOW, NORMAL]
+      worst_by: {HGB: [LOW, HIGH, NORMAL], NEUT: [LOW, HIGH, NORMAL], PLAT: [LOW, HIGH, NORMAL]}
+      param_labels: {ALT: "Alanine Aminotransferase (U/L)", BILI: "Bilirubin (umol/L)"}
   ```
 
-  The labels the shell shows (Low, Normal, High; the parameter's name on
-  the PARAMCD rows, from `ai/adam_summary.md`'s codes) come from
-  `codelists` (value and label, in the shell's order -- a code list orders
-  too, so no `plan_levels` is needed); a category the code makes (`WORST`,
-  `BASECAT`) takes a code list like any column.
-
-  A `by` or `strata` key that code makes (`WORST`, `BASECAT`) is a column
-  of the ARD; a column that is neither a key nor the variable is not, and
-  `table_plan` cannot name it.
+  A zero count the SAP prints as `0`: the cell a guarded list, `cell:
+  [!r 'n == 0 ~ "0"', "{n} ({p:.1f%}%)"]`.
 
 - **A figure's time axis**: its label carries the unit, `Time (Months)`
   (the data's `AVALU`), never `Time` alone.  A template's own argument
-  (`censor_marks`, `risk_table`) says what the figure shows -- the look
-  the study standard sets (`censor_shape`, the colours, the legend's
-  place) is not a `template: args:` item (the build refuses it): leave it
-  to the standard, under `ai: confirm` when the shell differs; a `layers:`
-  item is for what no argument does -- never both for one thing.
+  (`censor_marks`, `risk_table`) says what the figure shows.  The look
+  the shell asks for goes in `plot:`, over the study standard's: the axis
+  titles (`x_label: ""` for none), limits and steps (`x_by`, `y_min`,
+  `y_max`, `y_by`), `legend` and `legend_title`, and the colours of some
+  values (`colours: {CR: darkgreen, PD: "#D62728"}`, the `colour_by`
+  variable's values) -- never a `template: args:` item (the build refuses
+  it).  A `layers:` item is for what no argument or setting does -- never
+  both for one thing.
 - **A listing**: a listing column's `width:` in the shell's proportions,
   wide enough for its longest value (a subject id on one line) and its
   heading's longest word -- a short column too (`Age/Sex`, `64/M`: about

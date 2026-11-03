@@ -262,6 +262,11 @@ skip it.  For each of the others, in order:
      the short ones.  An
      assumption, `item: widths`, `from: "programmer convention"` (or
      `from: shell`);
+   - the **stub heading** as the shell's (`System Organ Class / Preferred
+     Term`, `Visit / Statistic`): a template's `heading` argument where
+     it has one, else `plan_stub: {heading: "..."}`; a shell with none
+     leaves the study's blank.  An assumption, `item: stub heading`,
+     `from: shell`;
    - {{titles_rule}}
    - the **footnotes**, from the shell: {{footnotes_at}}
      A footnote that states what a decision replaced (the shell's old
@@ -408,7 +413,7 @@ a line.
 
 ## Never
 
-- Do not install packages or go online. Do not run `run.R`, and do not
+- Do not install packages or go online. {{run_rule}} Do not
   write programs, the study's own specification (outside this folder) or
   RTF files: the person's check does that. {{run_r}}
 - Do not open a file not listed under "What you read", and do not search

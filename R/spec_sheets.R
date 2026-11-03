@@ -128,7 +128,9 @@ tfl_sheets_from_spec <- function(study, outputs) {
         cells <- m[[line]]
         r <- list(output_id = id, line = line)
         if (inherits(cells, "tfl_unset")) { r$left <- "(none)"; add(band, r); next }
-        for (cn in c("left", "center", "right")) if (!is.null(cells[[cn]])) r[[cn]] <- cell(cells[[cn]])
+        for (cn in c("left", "center", "right", "row_height_twips")) {
+          if (!is.null(cells[[cn]])) r[[cn]] <- cell(cells[[cn]])
+        }
         add(band, r)
       }
     }
@@ -382,7 +384,8 @@ tfl_sheets_from_spec <- function(study, outputs) {
   switch(sh,
     report = c("output_id", "type", "file", "program", "pattern"),
     page = "output_id",
-    header = , footer = , titles = , footnotes = c("output_id", "line", "left", "center", "right"),
+    header = , footer = , titles = , footnotes = c("output_id", "line", "left", "center", "right",
+                                                   "row_height_twips"),
     tokens = c("output_id", "name", "value"),
     "output_id")
 }
@@ -425,7 +428,8 @@ tfl_sheets_from_spec <- function(study, outputs) {
 }
 
 .page_known <- c("header", "footer", "titles", "footnotes", "tokens", "page", "report",
-                 "rtf_page", "rtf_default_format", "rtf_document", "rtf_tables", "rtf_titles",
+                 "rtf_page", "rtf_style", "rtf_default_format", "rtf_document", "rtf_tables",
+                 "rtf_titles",
                  "rtf_footnotes", "rtf_figures", "rtf_header", "rtf_footer", "generate_rtfreport")
 
 # `page:`'s rtfreporter arguments as the page and report sheets' columns
@@ -433,6 +437,7 @@ tfl_sheets_from_spec <- function(study, outputs) {
 # each a named list of cells
 .page_columns <- function(page) {
   cell <- .sheet_cell
+  page <- .page_style_norm(page)
   pr <- list(page = list(), report = list())
   for (sh in names(.page_map)) {
     m <- .page_map[[sh]]
@@ -474,6 +479,7 @@ tfl_sheets_from_spec <- function(study, outputs) {
 # The rtfreporter arguments of a page no page or report sheet column says:
 # list(<fn> = list(<arg> = value)); a font table of more than one font whole
 .page_more <- function(page) {
+  page <- .page_style_norm(page)
   said <- character()
   for (sh in names(.page_map)) {
     m <- .page_map[[sh]]
@@ -486,7 +492,7 @@ tfl_sheets_from_spec <- function(study, outputs) {
   ft <- page$rtf_document$font_table
   if (length(ft) <= 1L) said <- c(said, "rtf_document.font_table")
   out <- list()
-  for (fn in intersect(names(page), c("rtf_page", "rtf_default_format", "rtf_document",
+  for (fn in intersect(names(page), c("rtf_page", "rtf_style", "rtf_document",
                                       "rtf_tables", "rtf_figures", "rtf_titles", "rtf_footnotes",
                                       "rtf_header", "rtf_footer", "generate_rtfreport"))) {
     a <- page[[fn]]

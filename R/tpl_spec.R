@@ -16,10 +16,26 @@
 .tpl_spec_of <- function(output) {
   t <- output$template
   if (!is.list(t) || is.null(t$name)) return(NULL)
+  # (a figure design's preset, not a template SPEC: the design's own)
+  if (.fig_preset_named(t)) return(NULL)
   if (!is.character(t$name) || length(t$name) != 1L || !nzchar(t$name)) {
     .ard_stop(sprintf("%s: `template: name:` is one template's name.", output$id))
   }
   list(name = t$name, args = as.list(t$args %||% list()))
+}
+
+# Is a `template: {name: }` a figure design's preset (tfl_fig_templates():
+# box_by_visit, swimmer_full ...) rather than a template SPEC?  An agent
+# writes the preset instructions-figure.md lists in the template SPEC's
+# form; a name the registry has is the template SPEC's -- unless both have
+# it (forest_hr, mean_se, mean_ci) and it is written without the `args`
+# the template SPEC needs: that can only be the preset
+.fig_preset_named <- function(t) {
+  if (!is.list(t) || !is.character(t$name) || length(t$name) != 1L) return(FALSE)
+  if (!t$name %in% tfl_fig_templates()$template) return(FALSE)
+  if (!exists(t$name, envir = .tpl_registry, inherits = FALSE)) return(TRUE)
+  need <- Filter(function(p) isTRUE(p$required), get0(t$name, envir = .tpl_registry, inherits = FALSE)$params)
+  length(need) > 0L && !any(names(need) %in% names(t$args))
 }
 
 # The study standard's value of a parameter that says where it is
@@ -127,6 +143,7 @@
   ts <- .tpl_spec_of(output)
   t <- .tpl_get(ts$name, sprintf("%s: template:", output$id))
   sa <- .tpl_study_args(t, ts$args, base, output$id, output, study)
+  sa$args <- .tpl_plot_axis_args(t, sa$args, output$plot)
   x <- tfl_template_expand(ts$name, sa$args, codelists = codelists,
                            population = study$data$populations)
   if (!identical(t$kind, output$kind)) {
@@ -142,6 +159,21 @@
                    x$content)
   }
   list(name = ts$name, args = sa$args, study = sa$study, x = x)
+}
+
+# A figure template that makes its x axis itself (its breaks and the times
+# at risk: km_survival's x_step, x_max) takes the report's `plot.x_by` /
+# `plot.x_max` for them when its arguments do not say them: the template's
+# axis would otherwise win over the report's settings
+.tpl_plot_axis_args <- function(t, args, plot) {
+  map <- c(x_step = "x_by", x_max = "x_max")
+  for (a in intersect(names(map), names(t$params))) {
+    v <- plot[[map[[a]]]]
+    if (is.null(args[[a]]) && !is.null(v) && length(v) == 1L && !is.na(v) && !identical(v, "")) {
+      args[[a]] <- as.numeric(v)
+    }
+  }
+  args
 }
 
 # A report's ard: over the template's: an entry of the report's replaces the

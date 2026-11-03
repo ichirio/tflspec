@@ -48,6 +48,8 @@
   }
   o <- tfl_output(paste0("tpl-", name), "figure", extends = "none",
                   data = list(source = "code", steps = f$stats), content = f$content)
+  # (settings given as a named vector, c(x_label = "Visit"), as a list)
+  if (!is.null(plot) && !is.list(plot)) plot <- as.list(plot)
   o$plot <- .merge_map(f$plot, plot)
   tfl_content_run(o, stats::setNames(list(data), as))
 }
@@ -192,12 +194,16 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
 # The figure templates whose program is not `content <- tpl_<name>(df, ...)`:
 # `input` the object the call takes; `assemble` the function the program
 # calls after the report's own items, on `fig` (the panels side by side)
-.tpl_fig_forms <- list(forest_hr = list(input = "ard", assemble = "tpl_forest_layout"))
+.tpl_fig_forms <- list(forest_hr = list(input = "ard", assemble = "tpl_forest_layout",
+                                        assemble_args = "n_by_arm"))
 
-# the text column beside the forest (the preset's), its layer
-.tpl_forest_text <- function() {
+# the text column beside the forest (the preset's), its layer: N, or each
+# arm's events / subjects headed by the arm (`n_by_arm`), then the HR
+.tpl_forest_text <- function(n_by_arm = NULL) {
+  n <- if (length(n_by_arm)) sprintf("%s = n_arm%d", n_by_arm, seq_along(n_by_arm)) else "N = n"
   list(layer = "text_column", data = "est", y = "y",
-       columns = "N = n | Hazard ratio (95% CI) = txt", width = 0.4)
+       columns = paste(c(n, "Hazard ratio (95% CI) = txt"), collapse = " | "),
+       width = if (length(n_by_arm)) min(0.6, 0.3 + 0.1 * length(n_by_arm)) else 0.4)
 }
 
 # columns given bare or as text, one or c(...) of them (a quosure)
@@ -213,14 +219,25 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
 }
 
 .tpl_forest_design <- function(group = "TRT01A", subgroups = c("SEX", "AGEGR1"),
-                               comparison = NULL) {
+                               comparison = NULL, look = list()) {
   d <- tfl_fig_template("forest_hr", group = group,
                         subgroups = paste(subgroups, collapse = ", "), comparison = comparison)
+  d <- .tpl_forest_look(d, look, length(subgroups) > 0L)
+  # each arm's events / subjects (#579): the ARD's n_event too, a column an arm
+  if (length(look$n_by_arm)) {
+    for (k in seq_along(d$data)) {
+      st <- d$data[[k]]
+      if (identical(st$step, "ard_stats")) d$data[[k]]$stats <- paste(st$stats, "n_event", sep = ", ")
+      if (identical(st$step, "code")) {
+        d$data[[k]]$code <- .forest_est_code(group, subgroups, comparison, look$n_by_arm)
+      }
+    }
+  }
   # the ARD read and the rows made: all the call's (no data steps)
   keep <- vapply(d$data, function(st) st$step %in% c("ard_stats", "code"), NA)
   layers <- Filter(function(l) !identical(l$layer, "text_column"), d$layers)
   list(steps = list(), stats = d$data[keep], plot = d$plot,
-       content = lapply(c(layers, list(.tpl_forest_text())),
+       content = lapply(c(layers, list(.tpl_forest_text(look$n_by_arm))),
                         function(l) tfl_item(l$layer, l[setdiff(names(l), "layer")])))
 }
 
@@ -235,10 +252,59 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
             doc = "the subgroups, each its levels' hazard ratios"),
   tfl_param("comparison", NULL, type = "levels", of = "group",
             doc = "the arm compared with the reference; NULL: every other arm"),
+  tfl_param("favours", NULL, type = "text", multiple = TRUE,
+            doc = "two labels under the axis, Favours <left> and Favours <right> (the arms); NULL: none"),
+  tfl_param("x_breaks", NULL, type = "number", multiple = TRUE,
+            doc = "the hazard ratio axis's ticks (0.25, 0.5, 1, 2, 4); NULL: ggplot2's"),
+  tfl_param("size_by_n", FALSE, type = "flag",
+            doc = "TRUE: each point's size by its subjects (n)"),
+  tfl_param("bold_headings", FALSE, type = "flag",
+            doc = "TRUE: the subgroups' headings bold"),
+  tfl_param("n_by_arm", NULL, type = "levels", of = "group", multiple = TRUE,
+            doc = "the arms whose events / subjects show, a column each headed by the arm, in place of N; NULL: N"),
   tfl_param("time", "AVAL", type = "vars", doc = "the time variable"),
   tfl_param("censor", "CNSR", type = "vars", doc = "the censoring variable"),
   .tpl_where_param(doc = "the records kept besides the parameter (R)")
 )
+
+# The forest's look its arguments ask for (#579): the favours labels under
+# the axis, the axis's ticks, the points sized by the subjects, the
+# subgroups' headings bold
+.tpl_forest_look <- function(d, look, headings = TRUE) {
+  fav <- look$favours
+  if (length(fav)) {
+    if (length(fav) != 2L) .ard_stop("forest_hr: `favours` is two labels, the left's and the right's.")
+    d$plot$x_label <- paste0(d$plot$x_label, "\n<- Favours ", fav[1L], strrep(" ", 12L),
+                             "Favours ", fav[2L], " ->")
+  }
+  if (length(look$x_breaks)) {
+    d$plot$add <- c(d$plot$add, list(list(fn = "scale_x_log10",
+                                          args = list(breaks = as.numeric(look$x_breaks)))))
+  }
+  if (isTRUE(look$size_by_n)) {
+    i <- which(vapply(d$layers, function(l) identical(l$layer, "point"), NA))
+    d$layers[[i]] <- list(layer = "geom", geom = "geom_point", data = "est",
+                          aes = "x = estimate | y = y | size = n_obs",
+                          params = "shape = 15, na.rm = TRUE")
+    d$plot$add <- c(d$plot$add, list(list(fn = "scale_size_area",
+                                          args = list(max_size = 5, guide = "none"))))
+  }
+  if (isTRUE(look$bold_headings) && headings) {
+    for (k in seq_along(d$plot$add)) {
+      a <- d$plot$add[[k]]
+      if (identical(a$fn, "theme") && !is.null(a$args$axis.text.y)) {
+        # (the axis's labels in the order of their breaks, est$y ascending)
+        d$plot$add[[k]]$args$axis.text.y$args$face <-
+          tfl_r("ifelse(est$head[order(est$y)], \"bold\", \"plain\")")
+      }
+    }
+  }
+  d
+}
+
+.tpl_forest_look_args <- function(a) {
+  a[intersect(names(a), c("favours", "x_breaks", "size_by_n", "bold_headings", "n_by_arm"))]
+}
 
 .tpl_forest_body <- function(a, ctx) {
   set <- paste(tolower(a$data), tolower(a$population), tolower(a$param), sep = "_")
@@ -250,11 +316,16 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
       id = set, label = sprintf("%s of %s, with the subgroups", a$param, a$population),
       from = a$data, population = a$population,
       where = tfl_r(.tpl_and(sprintf("PARAMCD == %s", q(a$param)), a$where)),
+      # (the arm compared last: the Cox model's reference is another arm,
+      # whatever the arms' order -- a study whose treatment arm comes first)
+      derive = if (length(a$comparison)) tfl_r(sprintf(
+        "%s = factor(%s, levels = c(setdiff(levels(factor(%s)), %s), %s))",
+        a$group, a$group, a$group, q(a$comparison[1L]), q(a$comparison[1L]))),
       add = if (length(a$subgroups)) as.list(a$subgroups)))),
     analyses = lapply(seq_len(nrow(an)), function(i) list(
       id = an$analysis_id[i], label = an$label[i], method = "custom", data = set,
       code = tfl_r(an$code[i]), purpose = "SECONDARY OUTCOME MEASURE")))
-  f <- .tpl_forest_design(a$group, a$subgroups, a$comparison)
+  f <- .tpl_forest_design(a$group, a$subgroups, a$comparison, .tpl_forest_look_args(a))
   c(list(ard = ard), .tpl_fig_body_of(f, list(), ctx))
 }
 
@@ -273,6 +344,15 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
 #' @param subgroups The subgroups (`c(SEX, AGEGR1)`), bare or as text.
 #' @param comparison The arm compared with the reference; `NULL`: every
 #'   other arm, each row saying which.
+#' @param favours Two labels under the axis: `Favours <left>` and
+#'   `Favours <right>`; `NULL`: none.
+#' @param x_breaks The hazard ratio axis's ticks; `NULL`: ggplot2's.
+#' @param size_by_n `TRUE`: each point's size by its subjects.
+#' @param bold_headings `TRUE`: the subgroups' headings bold.
+#' @param n_by_arm The arms (as the data write them) whose events and
+#'   subjects (`events/N`) show in the text column, a column each headed by
+#'   the arm, in place of N; `NULL`: N.  `tpl_forest_layout()` takes the
+#'   same.
 #' @param fig `tpl_forest_layout()`: the forest, with the report's own
 #'   items.
 #' @inheritParams tpl_mean_se
@@ -281,16 +361,19 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
 #' @seealso [tfl_template_expand()] for its ARD and design (the B use).
 #' @export
 tpl_forest_hr <- function(ard, group = "TRT01A", subgroups = c("SEX", "AGEGR1"),
-                          comparison = NULL, plot = NULL) {
+                          comparison = NULL, favours = NULL, x_breaks = NULL, size_by_n = FALSE,
+                          bold_headings = FALSE, n_by_arm = NULL, plot = NULL) {
   f <- .tpl_forest_design(.tpl_col(rlang::enquo(group)), .tpl_cols(rlang::enquo(subgroups)),
-                          comparison)
+                          comparison, list(favours = favours, x_breaks = x_breaks,
+                                           size_by_n = size_by_n, bold_headings = bold_headings,
+                                           n_by_arm = n_by_arm))
   f$content <- Filter(function(it) !identical(it$fn, "text_column"), f$content)
   .tpl_fig_draw("forest_hr", f, ard, plot, as = "ard")
 }
 
 #' @rdname tpl_forest_hr
 #' @export
-tpl_forest_layout <- function(fig) {
+tpl_forest_layout <- function(fig, n_by_arm = NULL) {
   # the rows the forest draws: its layers' data
   est <- NULL
   for (l in fig$layers) {
@@ -300,7 +383,10 @@ tpl_forest_layout <- function(fig) {
     }
   }
   if (is.null(est)) .ard_stop("tpl_forest_layout(): `fig` is a forest of tpl_forest_hr().")
-  l <- .tpl_forest_text()
+  if (length(n_by_arm) && !all(sprintf("n_arm%d", seq_along(n_by_arm)) %in% names(est))) {
+    .ard_stop("tpl_forest_layout(): `n_by_arm` is the arms tpl_forest_hr() was given.")
+  }
+  l <- .tpl_forest_text(n_by_arm)
   base <- tfl_fig_template("forest_hr")$plot$base_size
   x <- .fig_layer_code(l, 1L, list(base_size = base))
   w <- as.numeric(l$width)

@@ -331,7 +331,7 @@
     out
   }
   a <- pick("stub_", c(vars = "vars", name = "name", indent = "indent",
-                       summary = "group_summary", before = "before"))
+                       summary = "group_summary", before = "before", heading = "heading"))
   if (length(a)) do.call(add, c(list("plan_stub"), a))
   if (isTRUE(lay[["group_page"]])) {
     add("plan_paginate_group", col = lay[["group_col"]],
@@ -464,8 +464,9 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
                            normalize = TRUE) {
   sp <- .ard_spec_scope(.as_spec(spec, "table", "tfl_table_code",
                                  output_id = output_id), output_id)
-  # (the study sheet's rounding is the setup's option, tfl_report_setup_code())
-  items <- .items_for_program(.plan_content_items(sp))
+  # (the study sheet's rounding is the setup's option, tfl_report_setup_code());
+  # the items no column says (content_more), each in its place, too
+  items <- .items_for_program(.plan_content_more(.plan_content_items(sp), sp$tables))
   if (isTRUE(normalize)) {
     id <- output_id %||% attr(sp, "output_id")
     nz <- .normalize_spec_args(sp, ard_spec, id, "tfl_table_code", guess = TRUE)
@@ -1004,8 +1005,10 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
       },
       plan_stub = {
         map <- c(vars = "stub_vars", name = "stub_name", indent = "stub_indent",
-                 group_summary = "stub_summary", before = "stub_before")
+                 group_summary = "stub_summary", before = "stub_before", heading = "stub_heading")
         for (k in intersect(names(named), names(map))) lay[[map[[k]]]] <- named[[k]]
+        # (no heading, "", is a quoted cell: a blank one is the default)
+        if (identical(named$heading, "")) lay$stub_heading <- "\"\""
       },
       plan_paginate_group = {
         lay$group_page <- TRUE
@@ -1347,9 +1350,12 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
   # its parts) has no ARD to normalize
   if (identical(output$data$source, "dataset")) output$content <- .content_drop_data_steps(output$content)
   # a template SPEC (resolved): the template's call and the lines after it
-  # (the A use); `template = "items"` writes the items it stands for (B)
+  # (the A use); `template = "items"` writes the items it stands for (B),
+  # and so does a table of records (pk_conc: its parts' objects, each its
+  # plan, are the program's, not the call's)
   tp <- attr(output, "template")
-  if (!is.null(tp) && identical(match.arg(template), "call") && identical(output$kind, "table")) {
+  if (!is.null(tp) && identical(match.arg(template), "call") && identical(output$kind, "table") &&
+      !identical(output$data$source, "dataset")) {
     if (isTRUE(tp$ok)) {
       return(.content_tpl_code(output, data = data %||% output$data$object %||% "ard",
                                plan = plan, pipe = pipe))
@@ -1615,8 +1621,7 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
   st <- list(.spec_call("rtf_document",
                         font_table = if (!is.null(pg[["font"]])) list(list(name = pg[["font"]])),
                         page = if (length(page)) page,
-                        default_format = if (length(fmt))
-                          do.call(.spec_call, c(list("rtf_default_format"), fmt)),
+                        style = if (length(fmt)) do.call(.spec_call, c(list("rtf_style"), fmt)),
                         watermark = r$watermark,
                         program = prog,
                         program_fallback = fallback,
@@ -1724,7 +1729,7 @@ tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
 #' For a study of the YAML spec, give the study ([tfl_read_study_spec()]):
 #' its defaults' `page:` (`spec/defaults.yml`) are the study's --
 #' `rtf_document: font_table` (the first font's name) and
-#' `rtf_default_format: font_size_half_points`, `tokens`, `header` and
+#' `rtf_style: font_size_half_points` (an old `rtf_default_format`'s too), `tokens`, `header` and
 #' `footer` -- and the lines are the ones
 #' `tfl_report_code(output, setup = TRUE, study = )` refers to.
 #'
