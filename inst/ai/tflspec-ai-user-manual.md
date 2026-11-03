@@ -646,7 +646,14 @@ tfl_ai_unpack(a, "study")                           # spec/outputs/<id>.yml, spe
   `tfl_ai_prepare(toc, shells = )`; another workbook added to the study's
   requests: `tfl_ai_prepare(..., add = TRUE)`.  A figure of the TOC is a request
   of its own (`figure-1` ...: its shell, a figure report to draft), drawn by
-  `tfl_ai_run()` (PNG and RTF); `workbook = "file"` (set when
+  `tfl_ai_run()` (PNG and RTF, and `<id>-facts.txt` beside the PNG: its
+  labels, axes, legends and layers in words).  The agent builds each figure
+  itself (`study.yml` `ai: self_build: [figure]`, the default; `[]` for
+  none): after the draft, `Rscript run.R <request>` from the study folder,
+  then `ai/status.md` and the repairs, the PNG (or the facts) against the
+  shell, a fix and a build again -- two fixes at most, then that figure as
+  its own ggplot2 code (one `layer_code` that makes `p`), marked to
+  confirm; an agent that cannot run R asks the person to run `run.R`; `workbook = "file"` (set when
   `agent_reads` has `"workbook"`) has each request say where its reports'
   shells are in the workbook file, for the agent to read that place alone.
 * `tfl_ai_context("table", examples = "study/spec/outputs/T-14-3-1.yml")`

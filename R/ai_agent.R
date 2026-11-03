@@ -60,13 +60,24 @@
     "Python, R -- whichever works; install nothing. In PowerShell, put a text with ",
     "`$` in single quotes ('...'), or `$` is read as a variable. Do not open a ",
     "data file (`.xpt`, `.sas7bdat`) in the editor.")
+  # a figure built and looked at by the agent itself (study.yml ai: self_build)
+  build <- "figure" %in% .ai_spec_settings(dir)$self_build
   agents <- .ai_fill(agents, list(
+    run_rule = if (build) {
+      "Run `run.R` only to build a figure, as *Build and look* says; nothing else."
+    } else "Do not run `run.R`.",
     reads = paste(c(more, tools), collapse = ""),
     max_reads = as.character(max_reads),
     run_r = if (any(c("workbook", "adam") %in% reads)) {
       "Run a command only to read the files listed under \"What you read\"; nothing else."
-    } else "Do not run R or any other program."))
+    } else if (build) "Run no other program." else "Do not run R or any other program."))
   agents <- .ai_fill(agents, list(workbook = place(book), adam = place(adam)))
+  # the figures' build-and-look loop, before "Before you stop"
+  if (build) {
+    loop <- .ai_fill(rd("AGENTS-build-figure.md"), list(build_cmd = .ai_build_cmd(dir)))
+    agents <- sub("\n## Before you stop", paste0("\n", loop, "\n\n## Before you stop"), agents,
+                  fixed = TRUE)
+  }
   # the company's conventions (tfl_ai_reference_build()): a copy in ai/reference/,
   # read before the usual convention
   ref <- .ai_reference_copy(dir)
@@ -86,6 +97,17 @@
   put("run.R", rd("run.R"), again = TRUE)
   put(file.path("ai", "decisions.md"), rd("decisions.md"))
   out
+}
+
+# The command that builds one request's reports, from the study folder:
+# Rscript on run.R (no path of this PC: the study folder may move); in
+# PowerShell, R's own when Rscript is not on the PATH
+.ai_build_cmd <- function(dir) {
+  paste0("`Rscript run.R <request>` from the study folder (the folder of `run.R`, above `ai/`; ",
+         "the request's name, `figure-2`).  When `Rscript` is not found, in PowerShell: ",
+         "`& (Get-ChildItem \"$env:ProgramFiles/R/R-*/bin/Rscript.exe\", ",
+         "\"$env:LOCALAPPDATA/Programs/R/R-*/bin/Rscript.exe\" -ErrorAction SilentlyContinue | ",
+         "Select-Object -Last 1).FullName run.R <request>`")
 }
 
 # AGENTS.md's second step, and the same with the company's conventions first
@@ -241,6 +263,8 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
             # drawn by its program, as tflplanner draws it: the PNG, then the RTF
             fig <- if (!is.null(.tpl_spec_of(outs[[id]]))) .ai_tpl_fig_draw(st, o, out_dir) else
               .ai_fig_draw(st, id, out_dir)
+            # what it drew, in words, beside the PNG (the agent's check)
+            tryCatch(.ai_fig_facts_write(fig$plot, fig$png), error = function(e) NULL)
             if (isTRUE(rtf)) {
               suppressMessages(rtfreporter::generate_rtfreport(
                 tfl_report(o, content = fig$plot, study = st), f, overwrite = tfl_report_overwrite(o)))
@@ -289,7 +313,7 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
         if (inherits(made, "failed")) {
           r$rtf_problem[i] <- unclass(made)
           # the last run's RTF and PNG are not this answer's: gone
-          old_files <- c(file.path(out_dir, paste0(id, c(".rtf", ".png"))), b$rtf, b$png)
+          old_files <- c(file.path(out_dir, paste0(id, c(".rtf", ".png", "-facts.txt"))), b$rtf, b$png)
           old_files <- unique(old_files[!is.na(old_files) & nzchar(old_files)])
           unlink(old_files[file.exists(old_files)])
           # (said again by a run that does not build it)
