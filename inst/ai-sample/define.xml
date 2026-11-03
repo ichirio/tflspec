@@ -163,6 +163,9 @@
         <ItemRef ItemOID="IT.ADSL.LSTALVDT" OrderNumber="44" Mandatory="No"/>
         <ItemRef ItemOID="IT.ADSL.DCUTDT" OrderNumber="45" Mandatory="No"/>
         <ItemRef ItemOID="IT.ADSL.BSLD" OrderNumber="46" Mandatory="No"/>
+        <ItemRef ItemOID="IT.ADSL.HEIGHTBL" OrderNumber="47" Mandatory="No"/>
+        <ItemRef ItemOID="IT.ADSL.WEIGHTBL" OrderNumber="48" Mandatory="No"/>
+        <ItemRef ItemOID="IT.ADSL.BMIBL" OrderNumber="49" Mandatory="No" MethodOID="MT.BMIBL"/>
         <def:leaf ID="LF.ADSL" xlink:href="adsl.xpt"><def:title>adsl.xpt</def:title></def:leaf>
       </ItemGroupDef>
       <ItemGroupDef OID="IG.ADAE" Name="ADAE" Repeating="Yes" IsReferenceData="No" SASDatasetName="ADAE" Purpose="Analysis" def:Structure="One record per subject per adverse event" def:Class="OCCURRENCE DATA STRUCTURE" def:ArchiveLocationID="LF.ADAE">
@@ -569,6 +572,22 @@
         <def:Origin Type="Predecessor">
           <Description><TranslatedText xml:lang="en">DM.BSLD</TranslatedText></Description>
         </def:Origin>
+      </ItemDef>
+      <ItemDef OID="IT.ADSL.HEIGHTBL" Name="HEIGHTBL" SASFieldName="HEIGHTBL" DataType="float" Length="8">
+        <Description><TranslatedText xml:lang="en">Baseline Height (cm)</TranslatedText></Description>
+        <def:Origin Type="Predecessor">
+          <Description><TranslatedText xml:lang="en">VS.VSSTRESN</TranslatedText></Description>
+        </def:Origin>
+      </ItemDef>
+      <ItemDef OID="IT.ADSL.WEIGHTBL" Name="WEIGHTBL" SASFieldName="WEIGHTBL" DataType="float" Length="8">
+        <Description><TranslatedText xml:lang="en">Baseline Weight (kg)</TranslatedText></Description>
+        <def:Origin Type="Predecessor">
+          <Description><TranslatedText xml:lang="en">VS.VSSTRESN</TranslatedText></Description>
+        </def:Origin>
+      </ItemDef>
+      <ItemDef OID="IT.ADSL.BMIBL" Name="BMIBL" SASFieldName="BMIBL" DataType="float" Length="8">
+        <Description><TranslatedText xml:lang="en">Baseline BMI (kg/m2)</TranslatedText></Description>
+        <def:Origin Type="Derived"/>
       </ItemDef>
       <ItemDef OID="IT.ADAE.STUDYID" Name="STUDYID" SASFieldName="STUDYID" DataType="text" Length="7">
         <Description><TranslatedText xml:lang="en">Study Identifier</TranslatedText></Description>
@@ -1696,6 +1715,9 @@
       </MethodDef>
       <MethodDef OID="MT.TRTDURD" Name="Algorithm to derive TRTDURD" Type="Computation">
         <Description><TranslatedText xml:lang="en">TRTEDT - TRTSDT + 1.</TranslatedText></Description>
+      </MethodDef>
+      <MethodDef OID="MT.BMIBL" Name="Algorithm to derive BMIBL" Type="Computation">
+        <Description><TranslatedText xml:lang="en">BMIBL = WEIGHTBL / (HEIGHTBL / 100)^2, in kg/m2. HEIGHTBL and WEIGHTBL are the baseline height (cm) and weight (kg) from VS.</TranslatedText></Description>
       </MethodDef>
       <MethodDef OID="MT.ADY" Name="Study day" Type="Computation">
         <Description><TranslatedText xml:lang="en">ADT - TRTSDT + 1 when ADT &gt;= TRTSDT, else ADT - TRTSDT.</TranslatedText></Description>
