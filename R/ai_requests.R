@@ -537,7 +537,9 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
 #'   the count against the TOC (one TOC row can be several reports): a
 #'   data frame, one row a report: `request`, `toc`, `output_id`, `title`,
 #'   `split`, `listed` (`NA`: a request not answered or not read, its
-#'   reports as asked) and `status` (the report's, as in `reports`).  It is
+#'   reports as asked), `status` (the report's, as in `reports`) and `reason`
+#'   (why a report is a warning or an error, as `reports`' problems; `NA` for
+#'   `ok`).  It is
 #'   written to `ai/manifest.csv` (UTF-8) beside the requests' folder, anew
 #'   at each collection.
 #'   The paths are relative to `study_dir`.  Its print is a summary: each
@@ -661,7 +663,7 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
     sheet <- isTRUE(ctxs[[nm]]$context$sheet_mode)
     if (sheet) ids <- .ai_sheet_answer_ids(ids, a, nm, own)
     listed[[nm]] <- .ai_manifest_rows(parent[[nm]], a)
-    a <- .ai_answer_overall(a)
+    a <- .ai_answer_overall(a, .ai_spec_settings(study_dir)$language)
     pr <- tryCatch(tfl_ai_check(a, ctxs[[nm]]$context), error = function(e) e)
     # a figure's design under its report, as a table answer's reports
     if (identical(task, "figure") && !inherits(pr, "error")) {
@@ -928,10 +930,24 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
   key <- paste(out$request, out$output_id, sep = " | ")
   st <- out$status[match(paste(rows$request, rows$output_id, sep = " | "), key)]
   rows$status <- ifelse(is.na(st), "not answered", st)
+  # a warning or an error carries its reason (#511): the report's problems
+  # as tfl_ai_collect_answers()'s `reports` has them, joined by " / "; no
+  # such row is left without one
+  i <- match(paste(rows$request, rows$output_id, sep = " | "), key)
+  why <- out$problems_text[i]
+  why <- ifelse(is.na(why) | !nzchar(why), out$first[i], why)
+  why <- gsub("[\r\n]+", " / ", why)
+  rows$reason <- ifelse(rows$status == "ok", NA_character_, why)
+  rows$reason[rows$status == "not answered"] <-
+    "listed in the answer's `reports`, but the answer has no report file for it"
+  rows$reason[rows$status == "no answer"] <- "no draft has been written for it yet"
+  nil <- rows$status %in% c("warning", "error") & (is.na(rows$reason) | !nzchar(rows$reason))
+  rows$reason[nil] <- paste("no reason was recorded: read the report's problems in",
+                            "tfl_ai_collect_answers()$reports")
   # in the requests' order
   rows <- rows[order(match(rows$request, unique(out$request))), , drop = FALSE]
   rownames(rows) <- NULL
-  rows[c("request", "toc", "output_id", "title", "split", "listed", "status")]
+  rows[c("request", "toc", "output_id", "title", "split", "listed", "status", "reason")]
 }
 
 # An answer's reports under the ids its request asked for: a report named
@@ -961,7 +977,7 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
 # analysis with over_variables = TRUE: an answer that names the row and not
 # that gets it written into its analyses (the report file says it, so the
 # ARD and the file agree), and an assumption says so
-.ai_answer_overall <- function(a) {
+.ai_answer_overall <- function(a, language = "en") {
   for (i in seq_along(a$outputs)) {
     o <- a$outputs[[i]]
     nz <- Filter(function(it) identical(it$fn, "normalize_ard"), o$content %||% list())
@@ -983,8 +999,13 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
     a$outputs[[i]]$ard$analyses <- an
     row <- data.frame(output_id = names(a$outputs)[i], where = "ard.analyses",
                       item = an[[j]][["id"]] %||% "over_variables",
-                      assumption = paste("tflspec added over_variables = TRUE: the overall row",
-                                         "(normalize_ard overall) needs it"),
+                      assumption = if (.ai_is_ja(language)) {
+                        paste0("tflspec \u304c over_variables = TRUE \u3092\u8ffd\u52a0\u3057\u307e\u3057\u305f: ",
+                               "\u5168\u4f53\u306e\u884c\uff08normalize_ard \u306e overall\uff09\u306b\u5fc5\u8981\u306a\u305f\u3081")
+                      } else {
+                        paste("tflspec added over_variables = TRUE: the overall row",
+                              "(normalize_ard overall) needs it")
+                      },
                       value = "over_variables = TRUE",
                       question = NA_character_, stringsAsFactors = FALSE)
     a$assumption_rows <- rbind(a$assumption_rows %||% row[0L, , drop = FALSE], row)

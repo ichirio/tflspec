@@ -205,7 +205,13 @@
 #'   `counts` (`shells`,
 #'   `toc_items`, `no_shell`),
 #'   `sheets` (the workbook's sheets and their roles), `adam` (the
-#'   [tfl_ai_adam_summary()]: `datasets`, `variables`, `text`), `files` (the
+#'   [tfl_ai_adam_summary()]: `datasets`, `variables`, `text`), `data_paths`
+#'   (a study that has a `spec/data.yml` already: per dataset of it,
+#'   `in_data_yml` its path, `given` the ADaM file given (`NA`: none),
+#'   `exists` whether data.yml's file is there and `differs` whether the
+#'   file given is another file or type; a warning names the rows that are
+#'   missing or differ; `data.yml` is not changed; `NULL` for a new study),
+#'   `files` (the
 #'   files written, relative to `dir`), `hint` (what the workbook's reading
 #'   could not find -- no TOC, a report with no shell -- and what to pass),
 #'   `next_steps` (what to do next), `agent_prompt` (the first message to
@@ -283,6 +289,10 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
   }
   if (identical(workbook, "text") && "workbook" %in% agent_reads) workbook <- "file"
   dry <- isTRUE(dry_run)
+  # a study with a spec/data.yml already: its paths against the ADaM given
+  # (#515); data.yml itself is never changed here
+  has_data_yml <- file.exists(file.path(dir, "spec", "data.yml")) &&
+    file.exists(file.path(dir, "study.yml")) && !(isTRUE(overwrite) && !isTRUE(add))
   ai <- file.path(dir, "ai")
   files <- character()
   agent_files <- character()
@@ -301,6 +311,11 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
     if (!is.null(language)) .ai_study_yml_set(dir, "language", language)
   }
   adam_dir <- if (grepl("^(/|[A-Za-z]:)", adam)) adam else file.path(dir, adam)
+  data_paths <- if (has_data_yml) .ai_data_paths(dir, adam_dir)
+  if (length(.ai_data_paths_text(data_paths))) {
+    warning("spec/data.yml and the ADaM given differ (it is not changed here):\n",
+            paste0("  ", .ai_data_paths_text(data_paths), collapse = "\n"), call. = FALSE)
+  }
   # (where it is: the ADaM's summary, the workbook, then a request at a time)
   step <- function(s, i = 0L, n = 1L) if (is.function(progress)) progress(s, i, n)
   step("adam")
@@ -502,7 +517,7 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
                .ai_check_rel(.ai_workspace_write(dir), dir))
   }
   structure(list(requests = req, toc = tc, shells = shl, counts = counts,
-                 sheets = shell$sheets, numbers = nums, adam = ad,
+                 sheets = shell$sheets, numbers = nums, adam = ad, data_paths = data_paths,
                  files = unique(files), hint = hint, next_steps = nxt, dry_run = dry,
                  agent_prompt = agent_prompt, agent_files = agent_files,
                  templates = templates,
@@ -529,6 +544,9 @@ print.tfl_ai_prepared <- function(x, ...) {
   cat(sprintf("%d request(s)%s: %s\n", nrow(r), if (isTRUE(x$dry_run)) " to write" else "",
               paste(sprintf("%s (%d)", r$request, r$n), collapse = ", ")))
   if (length(x$hint)) cat(paste0("Note: ", x$hint, "\n"), sep = "")
+  if (length(.ai_data_paths_text(x$data_paths))) {
+    cat(paste0("Note: ", .ai_data_paths_text(x$data_paths), "\n"), sep = "")
+  }
   if (length(x$next_steps)) cat(paste0("Next: ", x$next_steps, "\n"), sep = "")
   invisible(x)
 }
