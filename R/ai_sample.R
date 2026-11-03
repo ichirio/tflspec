@@ -64,9 +64,28 @@
     df[append(setdiff(names(df), "FASFL"), "FASFL", after = match("ITTFL", names(df)))]
   }
 
+  # Baseline height, weight and BMI (invented): by sex, from a generator of
+  # their own whose seed is put back, so nothing else changes
+  add_bmi <- function(df) {
+    ge <- globalenv()
+    old <- if (exists(".Random.seed", envir = ge)) get(".Random.seed", envir = ge)
+    on.exit(if (is.null(old)) rm(".Random.seed", envir = ge) else assign(".Random.seed", old, envir = ge))
+    set.seed(20260101L)
+    n <- nrow(df)
+    male <- as.character(df$SEX) %in% "M"
+    h <- round(stats::rnorm(n, ifelse(male, 175, 162), 7), 1)
+    w <- round(stats::rnorm(n, 25.5, 3.5) * (h / 100)^2, 1)
+    lab <- function(x, l) structure(x, label = l)
+    df$HEIGHTBL <- lab(h, "Baseline Height (cm)")
+    df$WEIGHTBL <- lab(w, "Baseline Weight (kg)")
+    df$BMIBL <- lab(round(w / (h / 100)^2, 1), "Baseline BMI (kg/m2)")
+    df
+  }
+
   out <- lapply(names(.ai_sample_labels), function(nm) {
     x <- relabel(src[[nm]])
     if (nm %in% c("adsl", "adtte")) x <- add_fasfl(x)
+    if (nm == "adsl") x <- add_bmi(x)
     attr(x, "label") <- .ai_sample_labels[[nm]]
     x
   })
