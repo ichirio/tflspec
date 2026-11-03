@@ -66,3 +66,40 @@ test_that("tfl_ai_run(): each report's program and, for a table, its facts besid
   fig <- file.path(d, sub("[.]rtf$", ".R", r$rtf[r$output_id == "F-14-2-2"]))
   expect_true(file.exists(fig))
 })
+
+test_that("a report's program shows the code lists it uses, not the functions (#598)", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  root <- withr::local_tempdir()
+  d <- outs_study(root)
+  suppressMessages(tfl_ai_run(d, requests = "efficacy-1", rtf = FALSE))
+  old <- setwd(d)
+  on.exit(setwd(old), add = TRUE)
+  area_opt <- tflspec:::.ai_area_options(".")
+  on.exit(options(area_opt), add = TRUE)
+  st <- tfl_read_study_spec(".")
+  outs <- tfl_read_outputs(".", skip_bad = TRUE)
+  o <- tfl_resolve_output(outs[["T-14-2-1"]], st)
+  p <- tflspec:::.ai_report_program(o, st, "T-14-2-1")
+  expect_true(any(grepl("^cl_", p)))
+  expect_true(any(grepl("^# ---- code lists", p)))
+  expect_false(any(grepl("set_levels <- function", p, fixed = TRUE)))
+  expect_false(any(grepl("^# ---- the functions the program calls", p)))
+})
+
+test_that("a table's facts: the page's header and footer bands, the footer in the lines", {
+  skip_if_not_installed("rtfreporter")
+  df <- data.frame(Item = c("A", "B"), N = c("1", "2"), stringsAsFactors = FALSE)
+  doc <- rtfreporter::rtf_document() |>
+    rtfreporter::rtf_section(header = rtfreporter::rtf_header(list(c("Study 1", "Draft"))),
+                             footer = rtfreporter::rtf_footer(list("Source: ADAE; page {page}"))) |>
+    rtfreporter::rtf_tables(list(T1 = df), titles = "Table 1")
+  x <- tflspec:::.ai_table_facts(doc, "T-1")
+  expect_true("  Page footer: Source: ADAE; page {page}" %in% x)
+  expect_true("  Page header: Study 1 | Draft" %in% x)
+  bare <- rtfreporter::rtf_document() |> rtfreporter::rtf_tables(list(T1 = df), titles = "Table 1")
+  y <- tflspec:::.ai_table_facts(bare, "T-2")
+  expect_false(any(grepl("Page footer|Page header", y)))
+  n <- function(v) as.integer(sub(".*about ([0-9]+) lines.*", "\\1", grep("^Page 1:", v, value = TRUE)))
+  expect_equal(n(x), n(y) + 1L)
+})

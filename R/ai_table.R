@@ -944,8 +944,17 @@
     names(old)[names(old) == "sheet"] <- "where"
     mine <- !is.na(old$output_id) & old$output_id %in% ids
     # (an assumption the agent fixed from the person's answer: kept as fixed)
-    rows <- rbind(old[!mine, , drop = FALSE], .ai_asm_keep_fixed(old[mine, , drop = FALSE], a))
+    rows <- .ai_rbind_fill(old[!mine, , drop = FALSE], .ai_asm_keep_fixed(old[mine, , drop = FALSE], a))
     out <- c(out, .ai_asm_write(dir, rows))
   }
   invisible(normalizePath(out, winslash = "/"))
+}
+
+# Two data frames stacked, each given the other's missing columns as NA
+# (the union of the columns, in one order)
+.ai_rbind_fill <- function(x, y) {
+  cols <- union(names(x), names(y))
+  for (k in setdiff(cols, names(x))) x[[k]] <- rep(NA_character_, nrow(x))
+  for (k in setdiff(cols, names(y))) y[[k]] <- rep(NA_character_, nrow(y))
+  rbind(x[cols], y[cols])
 }

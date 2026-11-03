@@ -407,6 +407,10 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
         docs_from <- placed$from
         files <- c(files, placed$files)
       }
+      # (the inputs, kept for tfl_ai_refresh_agents())
+      .ai_agent_inputs_write(dir, templates = templates, adam = adam_at, book = book_at,
+                             reads = agent_reads, docs = refs, docs_from = docs_from,
+                             max_reads = agent_max_reads, add = isTRUE(add))
       files <- c(files, .ai_agent_files(dir, overwrite = overwrite && !isTRUE(add),
                                         templates = templates, adam = adam_at,
                                         book = book_at, reads = agent_reads,

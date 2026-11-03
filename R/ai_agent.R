@@ -12,6 +12,7 @@
 #  text; R/ai_route_spec.R fills its settings).
 #
 #    .ai_agent_files()   the instructions, run.R, questions / decisions
+#    tfl_ai_refresh_agents()  the instructions again, after study.yml's ai: changes
 #    tfl_ai_run()        collect, build, status, questions
 # ============================================================================
 
@@ -674,4 +675,69 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
     "When every request is done, review each draft against the list under \"Before you ",
     "stop\" in ai/AGENTS.md and fix what fails; then stop and tell me the files written, ",
     "the decisions added, what is to confirm, and what the review changed.")
+}
+
+# The inputs tfl_ai_prepare() gave .ai_agent_files(), kept in
+# ai/agent_inputs.yml for tfl_ai_refresh_agents().  With `add`, merged into
+# the file there: docs (with their docs_from) the union, in order; the
+# other values from this call.
+.ai_agent_inputs_write <- function(dir, templates, adam, book, reads, docs, docs_from,
+                                   max_reads, add = FALSE) {
+  f <- file.path(dir, "ai", "agent_inputs.yml")
+  docs <- as.character(docs %||% character())
+  from <- as.character(docs_from %||% character())
+  if (length(from) != length(docs)) from <- c(from, rep("", length(docs)))[seq_along(docs)]
+  old <- if (isTRUE(add) && file.exists(f)) .ai_agent_inputs_read(dir)
+  if (!is.null(old) && length(old$docs)) {
+    fresh <- !old$docs %in% docs
+    docs <- c(old$docs[fresh], docs)
+    from <- c(old$docs_from[fresh], from)
+  }
+  lst <- function(x) as.list(as.character(x %||% character()))
+  one <- function(x) if (length(x) && !is.na(x[1L])) as.character(x[1L])
+  x <- list(templates = isTRUE(templates), adam = one(adam), book = one(book),
+            reads = lst(reads), docs = lst(docs), docs_from = lst(from),
+            max_reads = as.integer(max_reads))
+  dir.create(dirname(f), recursive = TRUE, showWarnings = FALSE)
+  tryCatch(yaml::write_yaml(x, f), error = function(e) NULL)
+  invisible(f)
+}
+
+# The kept inputs as .ai_agent_files() takes them; NULL when there is no file
+.ai_agent_inputs_read <- function(dir) {
+  f <- file.path(dir, "ai", "agent_inputs.yml")
+  if (!file.exists(f)) return(NULL)
+  x <- yaml::read_yaml(f)
+  chr <- function(v) as.character(unlist(v, use.names = FALSE))
+  docs <- chr(x$docs)
+  from <- chr(x$docs_from)
+  if (length(from) != length(docs)) from <- c(from, rep("", length(docs)))[seq_along(docs)]
+  list(templates = isTRUE(x$templates), adam = x$adam, book = x$book,
+       reads = chr(x$reads), docs = docs, docs_from = from,
+       max_reads = as.integer(x$max_reads %||% 3L))
+}
+
+#' Write the agent's instructions again from the study's settings
+#'
+#' After study.yml's `ai:` keys change -- review, language, ... -- writes the
+#' agent's instructions again from the study's settings and the inputs
+#' [tfl_ai_prepare()] recorded (`ai/agent_inputs.yml`); the drafts, requests
+#' and decisions are not touched.
+#'
+#' @param study_dir The study folder (default: the working directory).
+#' @return The files written, invisibly.
+#' @seealso [tfl_ai_prepare()]
+#' @export
+tfl_ai_refresh_agents <- function(study_dir = ".") {
+  x <- .ai_agent_inputs_read(study_dir)
+  if (is.null(x)) {
+    message("tfl_ai_refresh_agents(): no ai/agent_inputs.yml (prepared before it was recorded): ",
+            "the defaults; run tfl_ai_prepare() again to keep the documents and reads.")
+    out <- .ai_agent_files(study_dir, overwrite = TRUE)
+  } else {
+    out <- .ai_agent_files(study_dir, overwrite = TRUE, templates = x$templates,
+                           adam = x$adam, book = x$book, reads = x$reads, docs = x$docs,
+                           docs_from = x$docs_from, max_reads = x$max_reads)
+  }
+  invisible(out)
 }
