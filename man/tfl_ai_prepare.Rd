@@ -264,7 +264,11 @@ the default: the request's reports' questions together; \code{"report"}:
 report by report), \code{carry} (which decision scopes apply to a later
 report without asking: \code{all}, \code{dataset}, \code{section}), \code{max_rounds} (how
 many times one item is asked again, 3), \code{footnotes_at} (\code{"footer"}, the
-default, or \code{"table"}: where the shell's footnotes go).
+default, or \code{"table"}: where the shell's footnotes go), \code{review} (how
+deep the agent checks each report it builds itself, by kind: \code{0} the
+check, \code{1} and the program, \code{2} and the facts -- what R made, in words
+-- \code{3} and the output (a figure's PNG, a table's pages); \code{none}: the
+person's check; \verb{\{figure: 3, table: 2, listing: 1\}} by default).
 }
 
 \examples{

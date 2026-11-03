@@ -36,21 +36,36 @@ test_that("the agent's files: AGENTS.md, run.R, decisions; toc.yml; the paths; t
               "`spec/outputs/<id>.yml`")) {
     expect_true(any(grepl(k, ag, fixed = TRUE)), info = k)
   }
-  # a figure: the agent builds it and looks at it itself (#512), from the study folder
-  expect_true("## Build and look: each figure, yourself" %in% ag)
+  # the agent builds each request and checks it itself (#512, #598), from the
+  # study folder, as deep as the kind's level: figures 3, tables 2, listings 1
+  expect_true("## Build and check: each report, yourself" %in% ag)
   expect_true(any(grepl("`Rscript run.R <request>` from the study folder", ag, fixed = TRUE)))
-  expect_true(any(grepl("Run `run.R` only to build a figure", ag, fixed = TRUE)))
-  expect_identical(which(ag == "## Build and look: each figure, yourself") < which(ag == "## Before you stop"),
+  expect_true(any(grepl("Run `run.R` only to build a request", ag, fixed = TRUE)))
+  expect_identical(which(ag == "## Build and check: each report, yourself") < which(ag == "## Before you stop"),
                    TRUE)
-  # study.yml's ai: self_build: [] -- none: the person's check builds
+  expect_true("- Figures: level **3** -- the check, the program, the facts and the output." %in% ag)
+  expect_true(any(startsWith(ag, "- Tables: level **2** -- the check, the program and the facts (and the pages")))
+  expect_true("- Listings: level **1** -- the check and the program." %in% ag)
+  # study.yml's ai: review, kind by kind (the others as before); none: the
+  # person's check
   sy <- readLines(file.path(d, "study.yml"), encoding = "UTF-8")
   y <- yaml::read_yaml(file.path(d, "study.yml"))
-  y$ai$self_build <- list()
+  y$ai$review <- list(listing = "none", table = 3L)
+  yaml::write_yaml(y, file.path(d, "study.yml"))
+  tflspec:::.ai_agent_files(d, overwrite = TRUE)
+  ag1 <- readLines(file.path(d, "ai", "AGENTS.md"), encoding = "UTF-8")
+  expect_true("- Figures: level **3** -- the check, the program, the facts and the output." %in% ag1)
+  expect_true("- Tables: level **3** -- the check, the program, the facts and the output." %in% ag1)
+  expect_true("- Listings: not built by you (the person runs the check)." %in% ag1)
+  y$ai$review <- "none"
   yaml::write_yaml(y, file.path(d, "study.yml"))
   tflspec:::.ai_agent_files(d, overwrite = TRUE)
   ag0 <- readLines(file.path(d, "ai", "AGENTS.md"), encoding = "UTF-8")
-  expect_false(any(grepl("Build and look", ag0, fixed = TRUE)))
+  expect_false(any(grepl("Build and check", ag0, fixed = TRUE)))
   expect_true(any(grepl("Do not run `run.R`.", ag0, fixed = TRUE)))
+  y$ai$review <- list(table = 4L)
+  yaml::write_yaml(y, file.path(d, "study.yml"))
+  expect_error(tflspec:::.ai_agent_files(d, overwrite = TRUE), "table is 0 to 3, or none; not 4")
   writeLines(sy, file.path(d, "study.yml"), useBytes = TRUE)
   tflspec:::.ai_agent_files(d, overwrite = TRUE)
   expect_false(any(grepl("{{", ag, fixed = TRUE)))

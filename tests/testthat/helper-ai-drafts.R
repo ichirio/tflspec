@@ -52,3 +52,22 @@ ai_drafts_from_fixtures <- function(study_dir, dir = test_path("fixtures", "answ
   }
   invisible(ids)
 }
+
+# The example oncology study (onco_toc_shell.xlsx, the package's ADaM) with the
+# stored answers as its drafts
+outs_study <- function(root) {
+  ad <- file.path(root, "adam")
+  dir.create(ad, recursive = TRUE, showWarnings = FALSE)
+  for (x in c("adsl", "adae", "adrs", "adlb", "adtte")) {
+    df <- getExportedValue("tflspec", x)
+    for (v in names(df)) if (is.factor(df[[v]])) df[[v]] <- as.character(df[[v]])
+    haven::write_xpt(df, file.path(ad, paste0(x, ".xpt")))
+  }
+  d <- file.path(root, "study")
+  book <- system.file("ai", "example", "onco_toc_shell.xlsx", package = "tflspec")
+  tfl_ai_prepare(unit = "toc", d, book, adam = normalizePath(ad, winslash = "/"),
+                 quiet = TRUE, size = 3L)
+  invisible(tfl_ai_migrate(d))
+  ai_drafts_from_fixtures(d)
+  d
+}
