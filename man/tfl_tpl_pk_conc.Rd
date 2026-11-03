@@ -14,7 +14,7 @@ The table template \code{pk_conc}, layout \code{listing_summary}. Its program is
    \code{data} \tab other \tab call \tab ADPC \tab  \tab the dataset of concentrations \cr
    \code{where} \tab other \tab call \tab  \tab  \tab the records kept (R), e.g. ANL01FL == "Y" \cr
    \code{by} \tab other \tab call \tab PARAM, TRT01A \tab settings.treatment \tab the groups: a page each (an analyte, an arm), the summary's too \cr
-   \code{heading} \tab other \tab call \tab  \tab  \tab a page's name in the titles (\{\if{html}{\out{<group>}}\}: its value); NULL: the groups' values, a line each \cr
+   \code{heading} \tab other \tab call \tab  \tab  \tab a page's name in the titles (\{<group>\}: its value); NULL: the groups' values, a line each \cr
    \code{time} \tab other \tab call \tab ATPT \tab  \tab the time point's variable (the columns) \cr
    \code{time_order} \tab other \tab call \tab ATPTN \tab  \tab the time points' order variable; NULL: by name \cr
    \code{times} \tab other \tab call \tab  \tab  \tab the time points, in order; NULL: by time_order \cr
@@ -22,13 +22,13 @@ The table template \code{pk_conc}, layout \code{listing_summary}. Its program is
    \code{blq} \tab other \tab call \tab  \tab  \tab the records below the limit of quantification (R), e.g. BLQFL == "Y": the listing prints blq_label for them; the summary reads the values \cr
    \code{blq_label} \tab other \tab call \tab BLQ \tab  \tab what the listing prints for a BLQ record \cr
    \code{cell} \tab other \tab call \tab \{value:.3s\} \tab  \tab a subject's value (3 significant digits) \cr
-   \code{subject} \tab other \tab call \tab \{USUBJID\}/\{AGE\}/\{SEX\} \tab  \tab a subject's row label (\{\if{html}{\out{<variable>}}\}) \cr
+   \code{subject} \tab other \tab call \tab \{USUBJID\}/\{AGE\}/\{SEX\} \tab  \tab a subject's row label (\{<variable>\}) \cr
    \code{subject_heading} \tab other \tab call \tab Subject ID/Age (years)/Gender \tab  \tab the subjects' column heading \cr
    \code{time_heading} \tab other \tab call \tab Time Relative to Dose \tab  \tab the heading over the time points \cr
    \code{summary_label} \tab other \tab call \tab Summary Statistics \tab  \tab the summary's heading row \cr
    \code{stats} \tab other \tab call \tab N = \{N:.0f\}; Mean = \{mean:.4s\}; SD = \{sd:.5s\}; SE = \{se:.... \tab  \tab the summary's rows: label = cell \cr
    \code{split_at} \tab other \tab call \tab  \tab  \tab the time point that starts a second block of columns (each block its pages, the group's first); NULL: one \cr
-   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: \if{html}{\out{<data>}}_\if{html}{\out{<population>}} \cr
+   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: <data>_<population> \cr
 }
 }
 

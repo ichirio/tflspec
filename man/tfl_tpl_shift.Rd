@@ -14,7 +14,7 @@ The table template \code{shift}, layout \code{shift}. Its program is one call, \
    \code{by} \tab other \tab call \tab TRT01A \tab settings.treatment \tab the column variable \cr
    \code{data} \tab other \tab call \tab ADLB \tab  \tab the dataset of records \cr
    \code{where} \tab other \tab call \tab  \tab  \tab the records kept (R): the visit, the parameters \cr
-   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: \if{html}{\out{<data>}}_\if{html}{\out{<population>}} \cr
+   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: <data>_<population> \cr
    \code{analysis_id} \tab other \tab call \tab SHIFT \tab  \tab the analysis's id \cr
    \code{param} \tab other \tab call \tab PARAMCD \tab  \tab the parameter's variable (a block of rows each) \cr
    \code{baseline} \tab other \tab call \tab BNRIND \tab  \tab the category at baseline (the rows) \cr
