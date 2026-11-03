@@ -380,3 +380,12 @@ test_that("a report type's data stage in `template: args:` stops, pointing to `d
                   template = list(name = "km", args = list(by = "TRT01A", param = "PFS")))
   expect_true(attr(tfl_resolve_output(o, s), "template")$ok)
 })
+
+test_that(".tpl_plot_over(): the template's add is joined once", {
+  b <- list(title = "T", add = list(list(fn = "scale_x_continuous"), list(fn = "scale_y_continuous")))
+  o <- list(add = list(list(fn = "annotate")))
+  once <- tflspec:::.tpl_plot_over(b, o)
+  expect_identical(vapply(once$add, `[[`, "", "fn"),
+                   c("scale_x_continuous", "scale_y_continuous", "annotate"))
+  expect_identical(tflspec:::.tpl_plot_over(b, once)$add, once$add)
+})

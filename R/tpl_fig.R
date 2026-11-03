@@ -43,7 +43,12 @@
 # template's first, then the given one) -- the template's own scales stay;
 # the rest merges as .merge_map() does
 .tpl_plot_over <- function(base, over) {
-  if (length(base$add) && length(over$add)) over$add <- c(base$add, over$add)
+  # (once: an `over` that already starts with the template's, resolved and
+  # saved, then resolved again, is not given them a second time)
+  if (length(base$add) && length(over$add) &&
+        !identical(utils::head(over$add, length(base$add)), base$add)) {
+    over$add <- c(base$add, over$add)
+  }
   .merge_map(base, over)
 }
 
