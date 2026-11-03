@@ -78,6 +78,13 @@
     agents <- sub("\n## Before you stop", paste0("\n", loop, "\n\n## Before you stop"), agents,
                   fixed = TRUE)
   }
+  # the company's conventions (tfl_ai_reference_build()): a copy in ai/reference/,
+  # read before the usual convention
+  ref <- .ai_reference_copy(dir)
+  out <- c(out, ref)
+  if (file.exists(file.path(dir, "ai", "reference", "conventions.md"))) {
+    agents <- sub(.ai_step2_usual, .ai_step2_company, agents, fixed = TRUE)
+  }
   # with templates: a template where it fits (each request lists them)
   if (isTRUE(templates)) agents <- paste(agents, rd("AGENTS-templates.md"), sep = "\n\n")
   # the common instructions in ai/; the study folder's own AGENTS.md (what
@@ -102,6 +109,13 @@
          "\"$env:LOCALAPPDATA/Programs/R/R-*/bin/Rscript.exe\" -ErrorAction SilentlyContinue | ",
          "Select-Object -Last 1).FullName run.R <request>`")
 }
+
+# AGENTS.md's second step, and the same with the company's conventions first
+.ai_step2_usual <- "**Else the usual convention settles it.**  Decide it as"
+.ai_step2_company <- paste0(
+  "**Else the company's convention, else the usual one, settles it.**  ",
+  "First `ai/reference/conventions.md`, the company's, for this kind of report: take what it ",
+  "says, as an assumption with `from: \"company convention\"`.  Else decide it as")
 
 # The lines a request starts with: the agent's steps, so a request read
 # alone says them.  `ids`: the request's reports, whose drafts it writes.
