@@ -3,10 +3,12 @@
 # incoming checks, the URLs (urlchecker) and the spelling (spelling, with
 # inst/WORDLIST).  Each part writes its findings to the job summary and an
 # artifact; a finding does not stop the other parts.  It also runs when this
-# file changes (a dispatch needs the file on the default branch first).
+# file changes on next (a dispatch needs the file on the default branch first).
+# Never on a pull request, so it cannot block one.
 on:
   workflow_dispatch:
   push:
+    branches: [next]
     paths: ['.github/workflows/cran-readiness.yaml']
 
 name: cran-readiness
