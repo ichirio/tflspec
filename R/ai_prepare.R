@@ -49,7 +49,11 @@
 #' report by report), `carry` (which decision scopes apply to a later
 #' report without asking: `all`, `dataset`, `section`), `max_rounds` (how
 #' many times one item is asked again, 3), `footnotes_at` (`"footer"`, the
-#' default, or `"table"`: where the shell's footnotes go).
+#' default, or `"table"`: where the shell's footnotes go), `review` (how
+#' deep the agent checks each report it builds itself, by kind: `0` the
+#' check, `1` and the program, `2` and the facts -- what R made, in words
+#' -- `3` and the output (a figure's PNG, a table's pages); `none`: the
+#' person's check; `{figure: 3, table: 2, listing: 1}` by default).
 #'
 #' @param dir The study folder.
 #' @param toc The TOC / SHELL workbook (`.xlsx` or `.xlsm`).

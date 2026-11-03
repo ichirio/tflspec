@@ -39,7 +39,11 @@
     s <- pp[[a]]
     if (is.null(s)) return(NULL)
     rng <- tryCatch(s$continuous_range %||% s$dimension(), error = function(e) NULL)
-    tl <- tryCatch(stats::na.omit(s$get_labels()), error = function(e) character())
+    tl <- as.character(tryCatch(stats::na.omit(s$get_labels()), error = function(e) character()))
+    # (many ticks: the first and the last few, and how many)
+    if (length(tl) > 15L) {
+      tl <- c(utils::head(tl, 6L), sprintf("... (%d ticks) ...", length(tl)), utils::tail(tl, 3L))
+    }
     sprintf("- %s axis: %s%s", a,
             if (is.numeric(rng)) sprintf("from %s to %s", signif(rng[1L], 4), signif(rng[2L], 4)) else "",
             if (length(tl)) sprintf("; ticks: %s", paste(as.character(tl), collapse = ", ")) else "")

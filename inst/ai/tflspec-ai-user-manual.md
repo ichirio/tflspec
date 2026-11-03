@@ -647,13 +647,21 @@ tfl_ai_unpack(a, "study")                           # spec/outputs/<id>.yml, spe
   requests: `tfl_ai_prepare(..., add = TRUE)`.  A figure of the TOC is a request
   of its own (`figure-1` ...: its shell, a figure report to draft), drawn by
   `tfl_ai_run()` (PNG and RTF, and `<id>-facts.txt` beside the PNG: its
-  labels, axes, legends and layers in words).  The agent builds each figure
-  itself (`study.yml` `ai: self_build: [figure]`, the default; `[]` for
-  none): after the draft, `Rscript run.R <request>` from the study folder,
-  then `ai/status.md` and the repairs, the PNG (or the facts) against the
-  shell, a fix and a build again -- two fixes at most, then that figure as
-  its own ggplot2 code (one `layer_code` that makes `p`), marked to
-  confirm; an agent that cannot run R asks the person to run `run.R`; `workbook = "file"` (set when
+  labels, axes, legends and layers in words); beside each report's RTF,
+  `<id>.R` (its program: the analysis set, the records, the analysis, the
+  content) and, for a table or a listing, `<id>-facts.txt` (its header,
+  its rows, the empty cells, then its pages: the lines each holds, about,
+  against what a page holds).  The agent builds each request itself and
+  checks what R made against the shell, as deep as `study.yml`'s `ai:
+  review` says for the kind (`0` `ai/status.md` and the repairs, `1` and
+  the program, `2` and the facts, `3` and the output: a figure's PNG, a
+  table's pages; `none`: the person's check; figures 3, tables 2 -- the
+  pages too when over a page -- listings 1 by default; the study
+  standard's `spec/defaults.yml` may say it first): after the draft,
+  `Rscript run.R <request>` from the study folder, a fix and a build again
+  -- two fixes at most, then a figure as its own ggplot2 code (one
+  `layer_code` that makes `p`), a table kept and what still differs marked
+  to confirm; an agent that cannot run R asks the person to run `run.R`; `workbook = "file"` (set when
   `agent_reads` has `"workbook"`) has each request say where its reports'
   shells are in the workbook file, for the agent to read that place alone.
 * `tfl_ai_context("table", examples = "study/spec/outputs/T-14-3-1.yml")`

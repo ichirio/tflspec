@@ -104,6 +104,7 @@ ai:
   carry: [all, dataset, section]   # which decisions apply to a later report without asking
   max_rounds: 3         # one item asked again at most this many times, then marked to confirm
   footnotes_at: footer  # where the shell's footnotes go: "footer", or "table"
+  review: {figure: 3, table: 2, listing: 1}  # how deep the agent checks what it built: 0-3, or none
 ```
 
 ## 4. What the agent reads

@@ -1,22 +1,5 @@
 # The AI's reports listed for the person (tfl_ai_outputs())
 
-outs_study <- function(root) {
-  ad <- file.path(root, "adam")
-  dir.create(ad, recursive = TRUE, showWarnings = FALSE)
-  for (x in c("adsl", "adae", "adrs", "adlb", "adtte")) {
-    df <- getExportedValue("tflspec", x)
-    for (v in names(df)) if (is.factor(df[[v]])) df[[v]] <- as.character(df[[v]])
-    haven::write_xpt(df, file.path(ad, paste0(x, ".xpt")))
-  }
-  d <- file.path(root, "study")
-  book <- system.file("ai", "example", "onco_toc_shell.xlsx", package = "tflspec")
-  tfl_ai_prepare(unit = "toc", d, book, adam = normalizePath(ad, winslash = "/"),
-                 quiet = TRUE, size = 3L)
-  invisible(tfl_ai_migrate(d))
-  ai_drafts_from_fixtures(d)
-  d
-}
-
 test_that("tfl_ai_outputs(): a row a report, its request's sheets, status, adoption", {
   skip_on_cran()
   skip_if_not_installed("haven")

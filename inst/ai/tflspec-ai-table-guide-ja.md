@@ -99,6 +99,7 @@ ai:
   carry: [all, dataset, section]   # どの決定を聞かずに後の帳票へ適用するか
   max_rounds: 3         # 同じ項目を聞き直す最大回数。超えたら要確認の印
   footnotes_at: footer  # シェルの脚注の置き場所: "footer" または "table"
+  review: {figure: 3, table: 2, listing: 1}  # エージェントが作った帳票を確かめる深さ: 0〜3、または none
 ```
 
 ## 4. エージェントが読むもの

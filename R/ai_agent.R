@@ -60,11 +60,13 @@
     "Python, R -- whichever works; install nothing. In PowerShell, put a text with ",
     "`$` in single quotes ('...'), or `$` is read as a variable. Do not open a ",
     "data file (`.xpt`, `.sas7bdat`) in the editor.")
-  # a figure built and looked at by the agent itself (study.yml ai: self_build)
-  build <- "figure" %in% .ai_spec_settings(dir)$self_build
+  # the reports the agent builds and checks itself, as deep as study.yml's
+  # ai: review says for each kind
+  review <- .ai_spec_settings(dir)$review
+  build <- any(!is.na(review))
   agents <- .ai_fill(agents, list(
     run_rule = if (build) {
-      "Run `run.R` only to build a figure, as *Build and look* says; nothing else."
+      "Run `run.R` only to build a request, as *Build and check* says; nothing else."
     } else "Do not run `run.R`.",
     reads = paste(c(more, tools), collapse = ""),
     max_reads = as.character(max_reads),
@@ -72,9 +74,10 @@
       "Run a command only to read the files listed under \"What you read\"; nothing else."
     } else if (build) "Run no other program." else "Do not run R or any other program."))
   agents <- .ai_fill(agents, list(workbook = place(book), adam = place(adam)))
-  # the figures' build-and-look loop, before "Before you stop"
+  # the build-and-check loop, before "Before you stop"
   if (build) {
-    loop <- .ai_fill(rd("AGENTS-build-figure.md"), list(build_cmd = .ai_build_cmd(dir)))
+    loop <- .ai_fill(rd("AGENTS-build-review.md"),
+                     list(build_cmd = .ai_build_cmd(dir), levels = .ai_review_text(review)))
     agents <- sub("\n## Before you stop", paste0("\n", loop, "\n\n## Before you stop"), agents,
                   fixed = TRUE)
   }
@@ -97,6 +100,20 @@
   put("run.R", rd("run.R"), again = TRUE)
   put(file.path("ai", "decisions.md"), rd("decisions.md"))
   out
+}
+
+# The levels as AGENTS.md says them, a kind a line
+.ai_review_text <- function(review) {
+  what <- c("the check alone (`ai/status.md`, the repairs)", "the check and the program",
+            "the check, the program and the facts", "the check, the program, the facts and the output")
+  kinds <- c(figure = "Figures", table = "Tables", listing = "Listings")
+  lines <- vapply(names(kinds), function(k) {
+    v <- review[[k]]
+    if (is.na(v)) return(sprintf("- %s: not built by you (the person runs the check).", kinds[[k]]))
+    extra <- if (identical(k, "table") && v == 2L) " (and the pages, when it is more than one page)" else ""
+    sprintf("- %s: level **%d** -- %s%s.", kinds[[k]], v, what[v + 1L], extra)
+  }, "", USE.NAMES = FALSE)
+  paste(lines, collapse = "\n")
 }
 
 # The command that builds one request's reports, from the study folder:
@@ -265,6 +282,7 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
               .ai_fig_draw(st, id, out_dir)
             # what it drew, in words, beside the PNG (the agent's check)
             tryCatch(.ai_fig_facts_write(fig$plot, fig$png), error = function(e) NULL)
+            .ai_review_write(o, st, id, f)
             if (isTRUE(rtf)) {
               suppressMessages(rtfreporter::generate_rtfreport(
                 tfl_report(o, content = fig$plot, study = st), f, overwrite = tfl_report_overwrite(o)))
@@ -273,11 +291,14 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
           } else if (identical(o$kind, "listing") && identical(o$data$source, "dataset")) {
             # a listing: its records (read with rtf = FALSE too), laid out
             recs <- .listing_data_of(o, st, ".")
-            if (isTRUE(rtf)) {
+            doc <- if (isTRUE(rtf)) {
               plan <- suppressMessages(tfl_content_run(o, recs))
-              suppressMessages(rtfreporter::generate_rtfreport(
-                tfl_report(o, content = plan, study = st), f, overwrite = tfl_report_overwrite(o)))
+              doc <- tfl_report(o, content = plan, study = st)
+              suppressMessages(rtfreporter::generate_rtfreport(doc, f, overwrite = tfl_report_overwrite(o)))
+              doc
             }
+            # its program and what it came out as, for the agent's review
+            .ai_review_write(o, st, id, f, doc)
             list(rtf = if (isTRUE(rtf)) f)
           } else {
             # (a table with parts -- a listing with its summary, pk_conc --
@@ -303,17 +324,19 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
                 widened <- TRUE
               }
             }
-            if (isTRUE(rtf)) {
-              suppressMessages(rtfreporter::generate_rtfreport(
-                tfl_report(o, content = plan, study = st), f, overwrite = tfl_report_overwrite(o)))
+            doc <- if (isTRUE(rtf)) {
+              doc <- tfl_report(o, content = plan, study = st)
+              suppressMessages(rtfreporter::generate_rtfreport(doc, f, overwrite = tfl_report_overwrite(o)))
+              doc
             }
+            .ai_review_write(o, st, id, f, doc)
             list(rtf = if (isTRUE(rtf)) f, widened = widened)
           }
         }, error = function(e) structure(.ai_one_line(conditionMessage(e)), class = "failed"))
         if (inherits(made, "failed")) {
           r$rtf_problem[i] <- unclass(made)
           # the last run's RTF and PNG are not this answer's: gone
-          old_files <- c(file.path(out_dir, paste0(id, c(".rtf", ".png", "-facts.txt"))), b$rtf, b$png)
+          old_files <- c(file.path(out_dir, paste0(id, c(".rtf", ".png", "-facts.txt", ".R"))), b$rtf, b$png)
           old_files <- unique(old_files[!is.na(old_files) & nzchar(old_files)])
           unlink(old_files[file.exists(old_files)])
           # (said again by a run that does not build it)

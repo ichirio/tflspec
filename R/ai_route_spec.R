@@ -29,7 +29,9 @@
   footnotes_at = "footer",              # the shell's footnotes: the page's "footer" band, or the "table"'s footnotes
   language = "en",
   titles_in_header = character(),       # the output tokens the study standard's header prints (none: the report writes its titles)
-  self_build = "figure"                 # the kinds the agent builds and looks at itself (run.R, the PNG); character(): none
+  # how deep the agent checks each kind of report it built itself (run.R):
+  # 0 the check, 1 + the program, 2 + the facts, 3 + the output; "none": the person's check
+  review = list(figure = 3L, table = 2L, listing = 1L)
 )
 
 # The settings, under the study standard's `ai:` keys (spec/defaults.yml:
@@ -43,11 +45,14 @@
     }
     ai <- if (is.list(y)) y$ai else NULL
     if (!is.list(ai)) next
-    for (k in intersect(names(s), names(ai))) if (!is.null(ai[[k]])) s[[k]] <- ai[[k]]
+    for (k in intersect(names(s), names(ai))) if (!is.null(ai[[k]])) {
+      # (review: kind by kind, the ones not said as before)
+      s[[k]] <- if (identical(k, "review") && is.list(ai[[k]])) utils::modifyList(s[[k]], ai[[k]]) else ai[[k]]
+    }
   }
   s$max_rounds <- as.integer(s$max_rounds)
   s$carry <- as.character(unlist(s$carry))
-  s$self_build <- intersect(as.character(unlist(s$self_build)), "figure")
+  s$review <- .ai_review_levels(s$review)
   s$footnotes_at <- match.arg(as.character(s$footnotes_at)[1L], c("footer", "table"))
   s
 }
