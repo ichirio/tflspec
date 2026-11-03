@@ -38,6 +38,6 @@ request's draft:
    (the x ticks)`.
 
 When R cannot be run here (the terminal is refused, or R is not found):
-say so once, stop building, and ask the person to run the check
-(`run.R`, or tflplanner's AI tab) and to tell you when it is done; then
-do steps 2 to 4 from the files it wrote.
+say so once, stop building, and ask the person to run `run.R` (it
+builds the figures; a check that only reads the drafts does not) and to
+tell you when it is done; then do steps 2 to 4 from the files it wrote.

@@ -653,7 +653,7 @@ tfl_ai_unpack(a, "study")                           # spec/outputs/<id>.yml, spe
   then `ai/status.md` and the repairs, the PNG (or the facts) against the
   shell, a fix and a build again -- two fixes at most, then that figure as
   its own ggplot2 code (one `layer_code` that makes `p`), marked to
-  confirm; an agent that cannot run R asks the person to run the check; `workbook = "file"` (set when
+  confirm; an agent that cannot run R asks the person to run `run.R`; `workbook = "file"` (set when
   `agent_reads` has `"workbook"`) has each request say where its reports'
   shells are in the workbook file, for the agent to read that place alone.
 * `tfl_ai_context("table", examples = "study/spec/outputs/T-14-3-1.yml")`
