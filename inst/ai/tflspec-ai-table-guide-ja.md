@@ -12,6 +12,51 @@ PC の R で動き、tflspec は何も送信しません。
 
 日本語版: 同じフォルダの `tflspec-ai-table-guide-ja.md`（`system.file("ai", package = "tflspec")`）。
 
+## おすすめの AI の環境
+
+| 水準 | 環境 |
+|---|---|
+| **確認済み** | Claude デスクトップアプリの Code タブ（Claude Code）で Opus または Fable。VS Code + GitHub Copilot（エージェントモード）で Fable（2026-11-02 に会社の PC で実施）。 |
+| **動くと見込むが未確認** | VS Code + Copilot で Opus（Opus は Claude Code でのみ試しました）。VS Code の Claude Code 拡張機能（Code タブと同じエンジン。単独では未確認）。Cursor など、試験フォルダのファイルを読み書きでき `Rscript` を実行できるエージェントツール: B の流れに従います。 |
+| **未検証** | Copilot の GPT 系モデル: Opus や Fable と同等とは考えないでください。 |
+| **おすすめしない** | Sonnet と Haiku。試しでは、Sonnet は数字が変わる決め方（シフト表の「最悪」。3 回中 2 回）を誤り、キットの決まりも破りました。Haiku は質問はよいものの、直しが当て推量です。 |
+
+Opus または Fable を選べるプランを選んでください。
+
+必要な条件:
+1. 試験フォルダをワークスペースとして開き、エージェントがその中で作業するようにします
+   （VS Code では 5 節の手順 1 のとおり `ai` ワークスペース）。
+2. エージェントがターミナルで `Rscript` を実行できること。できない場合は、あなたが
+   `Rscript run.R <request>` を実行して `c` と入力します。
+3. VS Code + Copilot では、設定（Ctrl+, を押して名前で検索）
+   （[VS Code の AI 設定](https://code.visualstudio.com/docs/agents/reference/ai-settings.md)）:
+   - `github.copilot.chat.summarizeAgentConversationHistory.enabled`: オン（既定）;
+   - `chat.agent.maxRequests`: 既定の 25 から、たとえば 1000 に上げる;
+   - `chat.tools.terminal.autoApprove`: `"/^Rscript /": true` を足す;
+   - 組織によって設定が固定されているときは、IT 部門に相談します。
+4. 本番の試験の前に、自分の PC で確かめます（末尾の「会社の PC で始める前に」）。
+
+### A. Claude デスクトップアプリの Code タブ
+
+1. Code タブを開き、入力欄の下のプロジェクトフォルダの選択で、試験フォルダ
+   （`run.R` があるフォルダ）を選びます。
+2. 入力欄の下のモデルピッカーで Opus または Fable を選びます。
+3. 最初のメッセージとして `ai/agent_prompt.md` の文を貼り付けます。
+4. 質問にチャットで答えます。止まるたびに `c`（次の依頼）、`5` などの数（次の 5 件を
+   まとめて）、`a`（残り全部をまとめて）のどれかを返します。
+5. 初めて `Rscript` の許可を求められたら許可します。作成と確認ができます。
+6. 行き詰まったと言われたら、そのメッセージのとおりにして、`c` と入力します。
+
+### B. VS Code の GitHub Copilot（エージェントモード）または Claude Code 拡張機能
+
+1. File > Open Folder: 5 節の `ai` ワークスペース（または試験フォルダ）を開きます。
+2. チャットを開きます。Copilot では Agent の選択とモデル（言語モデル）の選択を行います
+   （Fable は確認済み、Opus は見込み）。Claude Code 拡張機能では、入力欄の下の
+   モデル名をクリックして選びます。
+3. Copilot のみ: 上の条件 3 の三つの設定を行います（Ctrl+, を押して各名前で検索）。
+4. 以降は A と同じです: `ai/agent_prompt.md` を貼り付け、答え、`c` / 数 / `a`、
+   行き詰まったらメッセージに従います。
+
 ## 2. どこに何を置くか
 
 ```text

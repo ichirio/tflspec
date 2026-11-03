@@ -14,6 +14,53 @@ tflspec sends nothing.
 Japanese: `tflspec-ai-table-guide-ja.md` in the same folder
 (`system.file("ai", package = "tflspec")`).
 
+## Recommended AI setup
+
+| Level | Setup |
+|---|---|
+| **Verified** | The Claude desktop app's Code tab (Claude Code) with Opus or Fable. VS Code + GitHub Copilot (agent mode) with Fable, run on a company PC on 2026-11-02. |
+| **Expected to work, not yet tested** | VS Code + Copilot with Opus (Opus was tested on Claude Code only). The Claude Code extension for VS Code (the same engine as the Code tab; not separately verified). Cursor and other agent tools that can read and write files in the study folder and run `Rscript`: follow B's flow. |
+| **Not verified** | GPT models in Copilot: do not treat them as equivalent to Opus or Fable. |
+| **Not recommended** | Sonnet and Haiku. In the trials Sonnet decided a rule that changes the numbers wrongly (a shift table's "worst" value, 2 of 3 runs) and broke the kit's rules; Haiku asks well but its repairs are guesses. |
+
+Choose a plan where Opus or Fable can be selected.
+
+Requirements:
+1. Open the study folder as the workspace, so that the agent works inside it
+   (VS Code: the `ai` workspace, as section 5 step 1 says).
+2. The agent can run `Rscript` in the terminal. If it cannot, you run
+   `Rscript run.R <request>` and type `c`.
+3. VS Code + Copilot, in Settings (Ctrl+, and search the name)
+   ([VS Code AI settings](https://code.visualstudio.com/docs/agents/reference/ai-settings.md)):
+   - `github.copilot.chat.summarizeAgentConversationHistory.enabled`: on (the default);
+   - `chat.agent.maxRequests`: raise it from 25 to, for example, 1000;
+   - `chat.tools.terminal.autoApprove`: add `"/^Rscript /": true`;
+   - if a setting is locked by your organization, ask IT.
+4. Check these on your PC before a real study ("Before you start on the
+   company PC", at the end).
+
+### A. The Claude desktop app, Code tab
+
+1. Open the Code tab. Under the prompt box, click the project folder control
+   and choose the study folder (the one with `run.R`).
+2. In the model picker (under the prompt box), choose Opus or Fable.
+3. Paste the text of `ai/agent_prompt.md` as the first message.
+4. Answer its questions in the chat. At each stop reply `c` (the next
+   request), a number such as `5` (the next 5 together) or `a` (all the rest).
+5. Allow `Rscript` when it asks the first time, so that it builds and checks.
+6. When it says it is stuck, do what its message says, then type `c`.
+
+### B. VS Code, with GitHub Copilot (agent mode) or the Claude Code extension
+
+1. File > Open Folder: the `ai` workspace as section 5 says (or the study folder).
+2. Open the chat. In Copilot choose the Agent session control and the
+   language model (Fable verified; Opus expected). In the Claude Code
+   extension, click the model name at the bottom of the prompt box.
+3. Copilot only: set the three settings of requirement 3 (Ctrl+, and search
+   each name).
+4. Then as in A: paste `ai/agent_prompt.md`; answer; `c` / a number / `a`;
+   when it is stuck, follow its message.
+
 ## 2. What goes where
 
 ```text
