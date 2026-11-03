@@ -1069,7 +1069,9 @@ cat(tfl_report_code(sp, content = "plan"), sep = "\n")
   `mean_ci`, `ttest`, `wilcox`, `chisq`, `fisher`, `cmh`, `prop_diff`,
   `lsmeans`, `lsmeans_diff`, `km`, `logrank`, `abnormal`, `incidence_rate`,
   `regression`, `anova`, `kruskal`, `paired_ttest`, `paired_wilcox`,
-  `mcnemar`, `km_diff`, `custom` — or any
+  `mcnemar`, `km_diff`, `hierarchical_count` (event counts),
+  `onesample_ttest`, `onesample_wilcox`, `smd`, `poisson`, `oneway`, `aov`,
+  `mcnemar_long`, `custom` — or any
   `pkg::function` (`cards::`, `cardx::`), or a function of the study's own
   that the study key `source` loads (`ard_riskdiff_mn`): it takes the
   analysis data first, `by` and `variables` as bare column names, and gives
@@ -1146,7 +1148,8 @@ cat(tfl_report_code(sp, content = "plan"), sep = "\n")
 - `args`: more arguments as R (`over_variables = TRUE, overall = TRUE`),
   read as the arguments of a call — any order; refused if not R.
 - `formats`: `mean=xx.x | p=xx.x% | AGE:sd=xx.xx` — the `xx` part says the
-  decimals only. The program gives them to the cards call itself
+  decimals only; `estimate=xx.xx*1000` is the value times 1000 (a rate per
+  1,000 person-years). The program gives them to the cards call itself
   (`fmt_fun = everything() ~ modifyList(fmt_default, list(mean = 1L))`,
   over the catalog's defaults `fmt_default`); a function that takes no
   `fmt_fun` (cardx's tests, CIs and models, a study's own function,

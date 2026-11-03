@@ -179,12 +179,18 @@ helper_rows <- list(
        "a statistic of the statistics catalog with its own function (tfl_stats[...])"),
   list("cards::label_round", "digits", has(".fmt_r"), "column `formats` (xx.x, 2)",
        "the number of decimals"),
-  list("cards::label_round", "scale", "partial", "column `formats` (xx.x%)",
-       "100 only (a proportion as a percent); another scale is R in args / post"),
+  # (since 2026-11-03 the formats column takes xx.x*1000: any scale)
+  if (isTRUE(tryCatch(ns$.fmt_ok("xx.x*1000"), error = function(e) FALSE))) {
+    list("cards::label_round", "scale", TRUE, "column `formats` (xx.x%, xx.x*1000)",
+         "100 (a proportion as a percent) or any whole number (a rate per 1,000)")
+  } else {
+    list("cards::label_round", "scale", "partial", "column `formats` (xx.x%)",
+         "100 only (a proportion as a percent); another scale is R in args / post")
+  },
   list("cards::label_round", "width", "by design", "",
        "[by design] the cell's width and alignment are rtfreporter's (decimal alignment), not padded text"),
   list("cards::alias_as_fmt_fun", "x", has(".fmt_r"), "column `formats`",
-       "a number of decimals, xx.x, xx.x%, pvalue"),
+       "a number of decimals, xx.x, xx.x%, xx.x*1000, pvalue"),
   list("cards::alias_as_fmt_fun", "variable", has(".fmt_fun_arg"), "column `formats` (AGE:sd=xx.xx)",
        "a variable's own format"),
   list("cards::alias_as_fmt_fun", "stat_name", has(".fmt_r"), "column `formats` (sd=xx.xx)",

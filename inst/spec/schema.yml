@@ -1107,8 +1107,9 @@ rtf_footer:
       - column: formats
         description: 'Display formats, statistic=format, | between them; VAR:statistic=format
           for one variable. xx.x = one decimal (the x''s count only after the point),
-          xx.x% = a proportion as a percent, a number = decimals, pvalue = <0.001
-          or 3 decimals; blank: the statistic''s default.'
+          xx.x% = a proportion as a percent, xx.x*1000 = the value times 1000 (a rate
+          per 1,000), a number = decimals, pvalue = <0.001 or 3 decimals; blank: the
+          statistic''s default.'
         example: mean=xx.x | p=xx.x%
       - column: args
         description: 'More arguments of the call, as R (data and population are bound),

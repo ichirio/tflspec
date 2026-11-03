@@ -518,7 +518,7 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
     f <- .parse_formats(a$formats[i])
     bad <- names(f)[is.na(f) | !.fmt_ok(f)]
     if (length(bad)) add(i, "formats", sprintf(
-      "%s / %s: formats are statistic=format, the format xx.x, xx.x%%, a number of decimals or pvalue (%s)",
+      "%s / %s: formats are statistic=format, the format xx.x, xx.x%%, xx.x*1000, a number of decimals or pvalue (%s)",
       a$output_id[i], a$analysis_id[i], paste(bad, collapse = ", ")))
   }
   cust <- which(a$method %in% "custom" & is.na(a$code))
@@ -1183,7 +1183,9 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
          missing = "missing", "result")
 }
 
-.fmt_ok <- function(f) grepl("^(x+(\\.x+)?%?|[0-9]+|pvalue)$", f)
+.fmt_ok <- function(f) {
+  grepl("^(x+(\\.x+)?(%|[*][1-9][0-9]*)?|[0-9]+|pvalue)$", f)
+}
 
 # `mean=xx.x | AGE:sd=xx.xx` as a named vector
 .parse_formats <- function(x) {
@@ -1251,7 +1253,8 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 #' `fmt_fun` argument, where a reader sees them next to the statistics:
 #' `fmt_fun = everything() ~ modifyList(fmt_default, list(mean = 2L))`, a
 #' variable's own (`BMIBL:sd=3`) with its own list.  An integer is
-#' that many decimals, `xx.x%` is `label_round(1, scale = 100)` and
+#' that many decimals, `xx.x%` is `label_round(1, scale = 100)`,
+#' `xx.x*1000` is `label_round(1, scale = 1000)` and
 #' `pvalue` the program's `fmt_pvalue()` (`<0.001` or 3 decimals);
 #' `cards::apply_fmt_fun()` then fills `stat_fmt`.  What takes no `fmt_fun`
 #' gets the same formats after the call, from `fmt_ard()`: cardx's tests, CIs

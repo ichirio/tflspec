@@ -51,15 +51,19 @@ by weight.  A keyword writes the same code as its function, so this
 measures how easily a SPEC is written, not what it can say; the argument
 percentages do not move with it.
 
-| ard_*() with a method keyword | 2026-11-02 before | 2026-11-02 after |
-|---|---:|---:|
-| weight 3 | 21 of 27 | **23 of 27** |
-| weight 2 | 0 of 19 | **5 of 19** |
-| weight 1 | 0 of 8 | 0 of 8 |
+| ard_*() with a method keyword | 2026-11-02 before | 2026-11-02 after | 2026-11-03 after |
+|---|---:|---:|---:|
+| weight 3 | 21 of 27 | 23 of 27 | **24 of 27** |
+| weight 2 | 0 of 19 | 5 of 19 | **12 of 19** |
+| weight 1 | 0 of 8 | 0 of 8 | 0 of 8 |
 
 (weight 3 without a keyword: `ard_stack()`, `ard_hierarchical()`,
-`ard_hierarchical_count()`, `ard_stack_hierarchical_count()` -- the
-`hierarchical` keyword's siblings, written by their name.)
+`ard_hierarchical_count()` -- the stacked counts' building blocks, written
+by their name.  Weight 2 without: `ard_strata()`, `ard_pairwise()` (they
+wrap another analysis), `ard_mvsummary()`, `ard_tabulate_rows()`,
+`ard_attributes()`, `ard_stats_anova()` (models compared: `anova` is
+`car::Anova()`'s table) and `ard_regression_basic()` (`regression` with
+fewer columns).)
 
 cards 0.9.0, cardx 0.3.4; 71 functions, 412 arguments (2026-11-01 scope:
 313 of the ard_*() and post helpers' own, 72 passed on, 27 of the code
@@ -77,6 +81,11 @@ and CI helpers; `label_round(width =)` left out by design).
 
 2026-11-02 (the same scope and cards / cardx): 99.5% before and after (411
 yes / 1 partial); the run added keywords (above), not arguments.
+
+2026-11-03 (the same scope; cards 0.9.0, cardx 0.3.4): **99.5% before (411
+yes / 1 partial), 100.0% after (412 / 0)** -- cards' code helpers 92.5% to
+100.0%: the formats column takes `xx.x*1000`, `label_round(scale =)`'s
+other scales.  Weight-3 functions 99.3% to 100.0%.
 
 (2026-11-01 before: the tflspec of this branch before the run, on the wider
 scope -- the 17 newly catalogued passed-on arguments could be written as R
@@ -100,6 +109,40 @@ function, but the catalog did not describe it and its value was not
 judged: partial.  2026-10-31 before: the same, with
 `update_ard_fmt_fun()` in the `post` scope -- written as R in `post`, its
 names checked, its values not judged.)
+
+### Added 2026-11-03
+
+* Eight method keywords, each its function by another name (the same code;
+  a row naming the function is the keyword's, in the ARS too):
+  * `hierarchical_count` -- `cards::ard_stack_hierarchical_count()`: the
+    number of events (records, not subjects) by SOC / PT, the AE tables'
+    "events" column; its denominator is the population unless `args` says
+    another (`overall = TRUE` gives the total column);
+  * `onesample_ttest` / `onesample_wilcox` --
+    `cardx::ard_stats_t_test_onesample()` / `_wilcox_test_onesample()`:
+    the change from baseline within each arm, with CI and p-value
+    (`mu = 0`);
+  * `smd` -- `cardx::ard_smd_smd()`: the standardized mean difference of
+    two arms (baseline balance);
+  * `poisson` -- `cardx::ard_stats_poisson_test()`: a rate, or two arms'
+    rate ratio (variables: the events and the person-time columns);
+  * `oneway` -- `cardx::ard_stats_oneway_test()` (Welch's one-way ANOVA) and
+    `aov` -- `cardx::ard_stats_aov()` (a model's ANOVA): `formula =` in
+    `args`;
+  * `mcnemar_long` -- `cardx::ard_stats_mcnemar_test_long()`: McNemar's
+    test on long data (a record per subject and visit, `id = USUBJID`), the
+    shift tables' test.
+  The ARS lays out the one-sample tests as values (estimate, CI,
+  p-value), `smd` as a test of values, `mcnemar_long` as a test of counts,
+  `hierarchical_count` as counts (`n`).
+* A format times a number: `estimate=xx.xx*1000` is
+  `cards::label_round(2, scale = 1000)` -- an incidence rate per 1,000
+  person-years from cardx's rate per person-year.  The formats check takes
+  it (`xx.x*`, `*0` and `xx.x%*100` are refused).
+* Fix: the program's `fmt_ard()` keeps a factor statistic as text too
+  (`ard_survival_survfit_diff()`'s `reference_level` was given a number
+  of decimals: a warning, `stat_fmt` NA).
+* Each keyword has an exact case (`tests/testthat/fixtures/ard-cases.R`).
 
 ### Added 2026-11-02
 
@@ -207,12 +250,10 @@ names checked, its values not judged.)
 
 The scope is close to its ceiling; what is left and what is next:
 
-Every argument in scope is described and its value judged but one.  What
-is left:
+Every argument in scope is described and its value judged (since
+2026-11-03).  What is left:
 
-1. `label_round(scale =)`: the formats column says 100 only (`xx.x%`); a
-   rate per 1,000 is `ard_incidence_rate(unit_label =)` or R in `post`
-   (`update_ard_fmt_fun(fmt_fun = cards::label_round(1, scale = 1000))`).
+1. (closed 2026-11-03: `label_round(scale =)` is the format `xx.x*1000`.)
 2. A `post` step of the study's own or of another package that sets formats
    is not moved: the format step after it gives the defaults.
 3. A `custom` row's code: only its cards / cardx calls written with the
@@ -270,6 +311,12 @@ Percentage: yes counts 1, partial 0.5.
 | 2026-11-01 after  | 49.6% (308 / 17 / 313 of 638) | 58.1% (308 / 17 / 220 of 545) | 43 / 5 / 66 |
 | 2026-11-02 before | 51.6% (325 / 19 / 304 of 648) | 58.8% (325 / 19 / 225 of 569) | 41 / 7 / 67 |
 | 2026-11-02 after  | 51.8% (326 / 19 / 303 of 648) | 59.2% (326 / 19 / 222 of 567) | 42 / 6 / 67 |
+| 2026-11-03 before / after | 51.8% (326 / 19 / 303 of 648) | 59.2% (326 / 19 / 222 of 567) | 42 / 6 / 67 |
+
+(2026-11-03: rtfreporter@next ffdf080 (its changes since 825d4d7 are checks,
+pagination fixes and validation tests: no new argument) and tflspec@next
+29dae66 merged; the run went to cards / cardx -- nothing new a SPEC
+writes here, the table is unchanged.)
 
 (2026-11-02 before: tflspec@next merged into the branch (#569:
 `page.rtf_style`, rtfreporter's `rtf_style()`; #564 ...) and

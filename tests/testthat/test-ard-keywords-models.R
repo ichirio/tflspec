@@ -1,7 +1,9 @@
 # The keywords of the model-based and the safety analyses (cmh, prop_diff,
 # lsmeans, lsmeans_diff, km, logrank, abnormal, incidence_rate, regression,
-# anova, kruskal, paired_ttest, paired_wilcox, mcnemar, km_diff): each is
-# its cardx function, by another name -- the same code; the ARS names the
+# anova, kruskal, paired_ttest, paired_wilcox, mcnemar, km_diff,
+# onesample_ttest, onesample_wilcox, smd, poisson, oneway, aov,
+# mcnemar_long; hierarchical_count, cards'): each is its function, by
+# another name -- the same code; the ARS names the
 # method by its keyword.
 
 test_that("a keyword of a cardx analysis writes its function's call", {
@@ -20,7 +22,14 @@ test_that("a keyword of a cardx analysis writes its function's call", {
           paired_ttest = "cardx::ard_stats_paired_t_test",
           paired_wilcox = "cardx::ard_stats_paired_wilcox_test",
           mcnemar = "cardx::ard_stats_mcnemar_test",
-          km_diff = "cardx::ard_survival_survfit_diff")
+          km_diff = "cardx::ard_survival_survfit_diff",
+          onesample_ttest = "cardx::ard_stats_t_test_onesample",
+          onesample_wilcox = "cardx::ard_stats_wilcox_test_onesample",
+          smd = "cardx::ard_smd_smd",
+          poisson = "cardx::ard_stats_poisson_test",
+          oneway = "cardx::ard_stats_oneway_test",
+          aov = "cardx::ard_stats_aov",
+          mcnemar_long = "cardx::ard_stats_mcnemar_test_long")
   expect_identical(keys$call[match(names(kw), keys$method)], unname(kw))
   expect_true(all(keys$kind[match(names(kw), keys$method)] == "none"))
   # no defaults: a row naming the function gets nothing the keyword adds
@@ -44,7 +53,16 @@ test_that("a keyword of a cardx analysis writes its function's call", {
          variables = "AGE"),
     list(method = "km_diff", dataset = "ADTTE", population_id = "SAF",
          args = paste("x = survival::survfit(survival::Surv(AVAL, 1 - CNSR) ~ TRTA,",
-                      "data = data), times = 60")))
+                      "data = data), times = 60")),
+    list(method = "onesample_ttest", population_id = "SAF", by = "TRT01A",
+         variables = "AGE", args = "mu = 75"),
+    list(method = "smd", population_id = "SAF", by = "SEX", variables = "AGE"),
+    list(method = "poisson", dataset = "ADTTE", population_id = "SAF",
+         variables = "CNSR | AVAL"),
+    list(method = "aov", population_id = "SAF",
+         args = "formula = AGE ~ TRT01A + SEX"),
+    list(method = "mcnemar_long", dataset = "ADLB", population_id = "SAF",
+         by = "AVISITN", variables = "LBNRIND", args = "id = USUBJID"))
   for (r in rows) {
     f <- r
     f$method <- keys$call[match(r$method, keys$method)]
@@ -95,11 +113,59 @@ test_that("a difference in Kaplan-Meier estimates builds; its text statistic sta
   sp <- exact_spec(list(method = "km_diff", dataset = "ADTTE", population_id = "SAF",
                         args = paste("x = survival::survfit(survival::Surv(AVAL, 1 - CNSR) ~ TRTA,",
                                      "data = data), times = c(30, 90)")))
-  ard <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE))
+  ard <- expect_no_warning(suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE)))
   # cardx gives `method` a number of decimals; fmt_ard() keeps it as text
   m <- ard[ard$stat_name == "method", ]
   expect_gt(nrow(m), 0L)
   expect_identical(unlist(m$stat_fmt), unlist(m$stat))
+  # and the reference arm, a factor, as its text (no warning)
+  rl <- ard[ard$stat_name == "reference_level", ]
+  expect_gt(nrow(rl), 0L)
+  expect_identical(unlist(rl$stat_fmt), vapply(rl$stat, as.character, ""))
   est <- ard[ard$stat_name == "estimate", ]
   expect_true(all(grepl("^-?[0-9]+[.][0-9]{2}$", unlist(est$stat_fmt))))
+})
+
+test_that("hierarchical_count: the nested event counts, with the population as denominator", {
+  keys <- tfl_ard_methods()
+  k <- match("hierarchical_count", keys$method)
+  expect_identical(keys$call[k], "cards::ard_stack_hierarchical_count")
+  expect_identical(keys$defaults[k], "denominator = population")
+  row <- list(method = "hierarchical_count", dataset = "ADAE",
+              population_id = "SAF", by = "TRTA", variables = "AESOC | AEDECOD")
+  code <- paste(tfl_ard_code(exact_spec(row), save = FALSE), collapse = "\n")
+  # (the program: library(cards); the population is adsl_sub)
+  expect_match(code, "ard_stack_hierarchical_count(", fixed = TRUE)
+  expect_match(code, "denominator = adsl_sub", fixed = TRUE)
+  # a row naming the function and the denominator writes the same call
+  f <- row
+  f$method <- "cards::ard_stack_hierarchical_count"
+  f$args <- "denominator = population"
+  expect_identical(tfl_ard_code(exact_spec(row), save = FALSE),
+                   tfl_ard_code(exact_spec(f), save = FALSE))
+  m <- tfl_ars(exact_spec(row))$methods
+  expect_identical(m[[1L]]$id, "Mth_hierarchical_count")
+  expect_identical(m[[1L]]$name, "Nested event counts")
+  expect_identical(vapply(m[[1L]]$operations, `[[`, "", "label"), "n")
+})
+
+test_that("the ARS lays out the one-sample, balance, rate and one-way tests by their keyword", {
+  ops <- function(row) {
+    m <- tfl_ars(exact_spec(row))$methods[[1L]]
+    list(id = m$id, ops = vapply(m$operations, `[[`, "", "label"))
+  }
+  o <- ops(list(method = "cardx::ard_stats_t_test_onesample", population_id = "SAF",
+                by = "TRT01A", variables = "AGE"))
+  expect_identical(o$id, "Mth_onesample_ttest")
+  expect_identical(o$ops, c("estimate", "conf.low", "conf.high", "p.value"))
+  o <- ops(list(method = "smd", population_id = "SAF", by = "SEX", variables = "AGE"))
+  expect_identical(o$id, "Mth_smd")
+  expect_identical(o$ops, "estimate")
+  o <- ops(list(method = "oneway", population_id = "SAF",
+                args = "formula = AGE ~ TRT01A"))
+  expect_identical(o$id, "Mth_oneway")
+  expect_identical(o$ops, "p.value")
+  o <- ops(list(method = "mcnemar_long", dataset = "ADLB", population_id = "SAF",
+                by = "AVISITN", variables = "LBNRIND", args = "id = USUBJID"))
+  expect_identical(o$id, "Mth_mcnemar_long")
 })

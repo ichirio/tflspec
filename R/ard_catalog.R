@@ -16,8 +16,8 @@
 # (continuous_summary_fns()); one with `fun` is computed by that function
 # of the non-missing values, written into the ARD program.  `fmt` is the
 # format stat_fmt gets unless the method or the analysis says another:
-# xx.x (1 decimal), xx.x% (a proportion as a percent), a number of
-# decimals, or pvalue (<0.001 / 0.xxx).
+# xx.x (1 decimal), xx.x% (a proportion as a percent), xx.x*1000 (times
+# 1000), a number of decimals, or pvalue (<0.001 / 0.xxx).
 .ard_statistics_builtin <- function() {
   q <- function(p) sprintf(
     "function(x) stats::quantile(x, %s, type = 2, names = FALSE)", p)
@@ -113,7 +113,7 @@
 
 # The keywords an analysis's `method` may name, and the call each stands for.
 .ard_methods_builtin <- function() {
-  data.frame(
+  d <- data.frame(
     method = c("continuous", "categorical", "dichotomous", "missing",
                "hierarchical", "max", "subjects", "total_n",
                "proportion_ci", "mean_ci", "ttest", "wilcox", "chisq",
@@ -200,6 +200,37 @@
       "differences in Kaplan-Meier survival between the arms at times, with CI (args: x = survival::survfit(survival::Surv(AVAL, 1 - CNSR) ~ TRTA, data = data), times = c(6, 12)); by and variables blank",
       "any R code in `code`; data and population are bound"),
     stringsAsFactors = FALSE)
+  # since 2026-11-03: AE event counts and the one-sample, balance, rate and
+  # one-way tests clinical tables use, each its function by another name
+  more <- data.frame(
+    method = c("hierarchical_count", "onesample_ttest", "onesample_wilcox",
+               "smd", "poisson", "oneway", "aov", "mcnemar_long"),
+    label = c("Nested event counts", "One-sample t test",
+              "One-sample Wilcoxon signed-rank test",
+              "Standardized mean difference", "Poisson rate test",
+              "One-way ANOVA (Welch)", "Analysis of variance",
+              "McNemar's test, long data"),
+    call = c("cards::ard_stack_hierarchical_count",
+             "cardx::ard_stats_t_test_onesample",
+             "cardx::ard_stats_wilcox_test_onesample", "cardx::ard_smd_smd",
+             "cardx::ard_stats_poisson_test", "cardx::ard_stats_oneway_test",
+             "cardx::ard_stats_aov", "cardx::ard_stats_mcnemar_test_long"),
+    kind = "none", defaults = c("denominator = population", rep("", 7L)),
+    statistics = "", formats = "",
+    note = c(
+      "events (records, not subjects) at each level of a hierarchy, e.g. AEBODSYS | AEDECOD; with by and denominator for the overall column (args: overall = TRUE)",
+      "one-sample t test of each variable's mean against mu, e.g. the change from baseline in each arm (by), with CI (args: mu = 0)",
+      "one-sample Wilcoxon signed-rank test of each variable against mu, in each `by` group (args: mu = 0, conf.int = TRUE)",
+      "standardized mean difference between the two `by` groups, e.g. baseline balance (args: std.error = TRUE)",
+      "exact Poisson test of a rate, or the ratio of two arms' rates (by, two levels); variables are the events and the person-time columns, in that order",
+      "one-way ANOVA across the groups, not assuming equal variances (args: formula = AGE ~ TRT01A); by and variables blank",
+      "analysis of variance of a model (args: formula = CHG ~ TRTA + BASE); by and variables blank",
+      "McNemar's test on long data, a record per subject and `by` level, e.g. baseline and week 12 responses (args: id = USUBJID)"),
+    stringsAsFactors = FALSE)
+  last <- nrow(d)
+  d <- rbind(d[-last, ], more, d[last, ])
+  rownames(d) <- NULL
+  d
 }
 
 #' The methods an analysis row may name
@@ -268,8 +299,10 @@ tfl_ard_methods <- function() {
 #' An analysis's `formats` are `statistic=format` pairs, `|` between them
 #' (`mean=xx.xx | sd=xx.xxx`); `VARIABLE:statistic=format` for one variable
 #' only.  A format is `xx.x` (as many x after the point as decimals),
-#' `xx.x%` (a proportion as a percent), a number of decimals, or `pvalue`
-#' (`<0.001`, else 3 decimals).
+#' `xx.x%` (a proportion as a percent), `xx.x*1000` (the value times 1000,
+#' with that many decimals: a rate per 1,000 person-years written from a
+#' rate per person-year), a number of decimals, or `pvalue` (`<0.001`, else
+#' 3 decimals).
 #'
 #' The catalog is the built-in one unless
 #' `options(tflspec.ard_statistics = )` holds another, or a function that

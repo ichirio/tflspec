@@ -297,12 +297,17 @@
 
 # A format of the spec as R that cards' fmt_fun takes: an integer is that
 # many decimals (cards::label_round(d)), xx.x% a proportion as a percent,
-# pvalue the program's fmt_pvalue()
+# xx.x*1000 the value times 1000 (a rate per 1,000), pvalue the program's
+# fmt_pvalue()
 .fmt_r <- function(f) {
   if (identical(f, "pvalue")) return("fmt_pvalue")
+  scale <- if (endsWith(f, "%")) "100" else if (grepl("*", f, fixed = TRUE)) {
+    sub("^[^*]*[*]", "", f)
+  }
+  f <- sub("(%|[*][0-9]+)$", "", f)
   d <- if (grepl("^[0-9]+$", f)) as.integer(f) else
-    nchar(sub("^[^.]*[.]?", "", sub("%$", "", f)))
-  if (endsWith(f, "%")) sprintf("cards::label_round(%d, scale = 100)", d) else
+    nchar(sub("^[^.]*[.]?", "", f))
+  if (!is.null(scale)) sprintf("cards::label_round(%d, scale = %s)", d, scale) else
     sprintf("%dL", d)
 }
 

@@ -294,7 +294,7 @@ test_that("a function's method carries its call, its file and its statistics", {
          population_id = "SAF", by = "TRT01A", variables = "AGE",
          args = "exact = FALSE"),
     list(output_id = "T1", analysis_id = "S",
-         method = "cardx::ard_stats_t_test_onesample",
+         method = "cardx::ard_stats_mood_test",
          population_id = "SAF", by = "TRT01A", variables = "AGE"))))
   sp$study <- rbind(sp$study, data.frame(key = "source", value = "R/ard_mine.R"))
   ars <- tfl_ars(sp, dir = dir)
@@ -310,9 +310,9 @@ test_that("a function's method carries its call, its file and its statistics", {
   ops <- vapply(m$operations, function(o) o$label %||% o$name, "")
   expect_setequal(ops, c("statistic", "p.value"))
   # a package's function no keyword names: its call too, instead of "f(...)"
-  s <- Filter(function(m) grepl("cardx::ard_stats_t_test_onesample", m$codeTemplate$code %||% ""),
+  s <- Filter(function(m) grepl("cardx::ard_stats_mood_test", m$codeTemplate$code %||% ""),
               ars$methods)[[1L]]
-  expect_match(s$codeTemplate$code, "cardx::ard_stats_t_test_onesample(data", fixed = TRUE)
+  expect_match(s$codeTemplate$code, "cardx::ard_stats_mood_test(data", fixed = TRUE)
   # without the folder: the call, no file, the default operation
   ars0 <- tfl_ars(sp, dir = withr::local_tempdir())
   m0 <- Filter(function(m) grepl("ard_mine", m$codeTemplate$code %||% ""),
