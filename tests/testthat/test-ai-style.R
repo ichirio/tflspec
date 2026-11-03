@@ -98,35 +98,56 @@ test_that("titles written as paragraphs before the table, footnotes after it", {
 })
 
 test_that("tfl_ai_style_prompt(): the numbers, the tables and the files to open by kind (#547)", {
-  d <- tempfile("style-")
-  dir.create(d)
-  on.exit(unlink(d, recursive = TRUE), add = TRUE)
-  out <- file.path(d, "style", "learned.yml")
-  p <- tfl_ai_style_prompt(sas_dir(), out = out)
+  d <- withr::local_tempdir()
+  home <- file.path(d, "ai")
+  # no rtf_dir: past_tfl/ of the folder
+  dir.create(file.path(home, "past_tfl"), recursive = TRUE)
+  file.copy(list.files(sas_dir(), full.names = TRUE), file.path(home, "past_tfl"), recursive = TRUE)
+  p <- tfl_ai_style_prompt(dir = home)
   f <- attr(p, "files")
-  expect_identical(names(f), c("prompt", "scan", "tables", "result"))
+  expect_identical(names(f), c("prompt", "scan", "tables", "standard", "result"))
   expect_true(all(file.exists(f[c("prompt", "scan", "tables")])))
-  expect_identical(unname(f["result"]), out)
-  expect_identical(basename(f[c("prompt", "scan", "tables")]),
-                   c("prompt.md", "scan.csv", "tables.csv"))
+  expect_true(is.na(f[["standard"]]))
+  expect_identical(unname(f["result"]), file.path(home, "company_hints.yml"))
+  expect_identical(unname(f[c("prompt", "scan", "tables")]),
+                   file.path(home, c("AGENTS-learn.md", "learn/scan.csv", "learn/tables.csv")))
   tabs <- utils::read.csv(f[["tables"]], stringsAsFactors = FALSE)
   expect_identical(nrow(tabs), 4L)
   expect_match(p, "4 files, 4 tables found", fixed = TRUE)
+  expect_match(p, "# Learn this company's hints from its past TFLs", fixed = TRUE)
   # a kind a line, its files
   expect_match(p, "- `demog` (1 table(s)): `DMY-901/t_dm.rtf`", fixed = TRUE)
   expect_match(p, "- `listing` (1 table(s)): `DMY-902/l_ae.rtf`", fixed = TRUE)
   # every convention asked for; the form of the answer
   for (k in tflspec:::.ai_style_keys$key) expect_match(p, sprintf("- `%s`: ", k), fixed = TRUE)
-  expect_match(p, "tfl_style_learned: {version: 2, files: 4, tables: 4}", fixed = TRUE)
-  expect_match(p, normalizePath(out, winslash = "/", mustWork = FALSE), fixed = TRUE)
-  # `dir`: the answer's file in it
-  p2 <- tfl_ai_style_prompt(sas_dir(), dir = file.path(d, "home"))
-  expect_identical(unname(attr(p2, "files")["result"]), file.path(d, "home", "learned.yml"))
-  expect_error(tfl_ai_style_prompt(file.path(d, "nowhere"), out = out), "a folder of RTF files")
+  expect_match(p, "tfl_company_hints: {version: 1, files: 4, tables: 4, written: <YYYY-MM-DD>}", fixed = TRUE)
+  expect_match(p, "conflicts:", fixed = TRUE)
+  expect_match(p, normalizePath(f[["result"]], winslash = "/", mustWork = FALSE), fixed = TRUE)
+  # no standard
+  expect_match(p, "## The company standard wins", fixed = TRUE)
+  expect_match(p, "No company standard was given", fixed = TRUE)
+  expect_false(file.exists(file.path(home, "learn", "standard.csv")))
+  # a standard: written, and the prompt says it wins
+  std <- data.frame(kind = c("all", "demog"), key = c("font", "n_form"),
+                    value = c("Courier New 9 pt", "N = xx"))
+  p2 <- tfl_ai_style_prompt(dir = home, standard = std)
+  expect_true(file.exists(file.path(home, "learn", "standard.csv")))
+  expect_identical(utils::read.csv(file.path(home, "learn", "standard.csv"))$key, c("font", "n_form"))
+  expect_identical(unname(attr(p2, "files")["standard"]), file.path(home, "learn", "standard.csv"))
+  expect_match(p2, "## The company standard wins", fixed = TRUE)
+  expect_false(grepl("No company standard was given", p2, fixed = TRUE))
+  expect_match(p2, "write no hint for that point", fixed = TRUE)
+  expect_error(tfl_ai_style_prompt(dir = home, standard = list()), "`kind`, `key` and `value`")
+  # the option sets the folder; an explicit rtf_dir; a missing folder
+  withr::local_options(tflspec.ai_home = file.path(d, "opt"))
+  p3 <- tfl_ai_style_prompt(sas_dir())
+  expect_identical(unname(attr(p3, "files")["result"]), file.path(d, "opt", "company_hints.yml"))
+  expect_error(tfl_ai_style_prompt(file.path(d, "nowhere")), "a folder of RTF files")
+  expect_error(tfl_ai_style_prompt(), "a folder of RTF files")
 })
 
 learned_lines <- c(
-  "tfl_style_learned: {version: 2, files: 4, tables: 4}",
+  "tfl_company_hints: {version: 1, files: 4, tables: 4, written: 2026-11-03}",
   "kinds:",
   "  all:",
   "    font: {value: \"Times New Roman 9 pt\", seen: 4, of: 4}",
@@ -136,8 +157,11 @@ learned_lines <- c(
   "    zero: {value: \"0\", seen: 1, of: 3}",
   "    continuous: {value: [n, Mean (SD), Median, \"Min, Max\"], seen: 2, of: 2}",
   "    house_rule: {value: \"bold totals\", seen: 2, of: 2}",
+  "    notes: \"a blank row before each SOC\"",
   "  ae_soc_pt:",
   "    first_row: \"Any TEAE\"",
+  "conflicts:",
+  "  - {kind: demog, key: n_form, standard: \"N = xx\", files: \"(N=xx)\", seen: 2, of: 2}",
   "notes: \"one listing could not be read\"")
 
 test_that("tfl_ai_style_read(): a convention a row; a form few files show, by hand (#547)", {
@@ -160,9 +184,32 @@ test_that("tfl_ai_style_read(): a convention a row; a form few files show, by ha
   expect_true("demog: n_form = (N=xx) (2 of 2)" %in% txt)
   expect_true("demog: zero = 0 (1 of 3) -- by hand" %in% txt)
   expect_output(print(x), "one listing could not be read", fixed = TRUE)
+  # notes by kind ("" the top level's), not a convention; the conflicts
+  nt <- attr(x, "notes")
+  expect_identical(names(nt), c("", "demog"))
+  expect_identical(unname(nt), c("one listing could not be read", "a blank row before each SOC"))
+  cf <- attr(x, "conflicts")
+  expect_identical(names(cf), c("kind", "key", "standard", "files", "seen", "of"))
+  expect_identical(nrow(cf), 1L)
+  expect_identical(unlist(cf[1L, ], use.names = FALSE), c("demog", "n_form", "N = xx", "(N=xx)", "2", "2"))
+  expect_true("1 conflict(s) with the company standard" %in% txt)
   expect_error(tfl_ai_style_read(file.path(d, "none.yml")), "nothing learned")
   writeLines("borders: []", out)
+  expect_error(tfl_ai_style_read(out), "tfl_company_hints")
+  writeLines("tfl_style_learned: {version: 2}
+kinds: {}", out)
+  expect_error(tfl_ai_style_read(out), "tfl_company_hints")
+  writeLines("tfl_company_hints: {version: 1}", out)
   expect_error(tfl_ai_style_read(out), "has no `kinds:`")
+  # no notes, no conflicts: empty
+  writeLines(c("tfl_company_hints: {version: 1}", "kinds:", "  all:", "    font: Arial"), out)
+  y <- tfl_ai_style_read(out)
+  expect_identical(nrow(attr(y, "conflicts")), 0L)
+  expect_identical(attr(y, "notes"), stats::setNames("", ""))
+  # the default file: company_hints.yml in the AI folder
+  withr::local_options(tflspec.ai_home = d)
+  file.copy(out, file.path(d, "company_hints.yml"))
+  expect_identical(tfl_ai_style_read()$key, "font")
 })
 
 test_that("tfl_ai_style_diff(): learned against the standard; `all` stands for every kind (#547)", {

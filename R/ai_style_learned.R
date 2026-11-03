@@ -2,9 +2,10 @@
 #  What an agent learned from past TFLs, set against the company standard
 #  (tflspec#547, step 2)
 # ----------------------------------------------------------------------------
-#  tfl_ai_style_prompt() asks for these conventions, a kind of report at a
-#  time; tfl_ai_style_read() reads them; tfl_ai_style_diff() lines them up
-#  with the company standard's, for the person to adopt a line at a time.
+#  tfl_ai_style_prompt() asks for these hints, a kind of report at a time
+#  (company_hints.yml); tfl_ai_style_read() reads them; tfl_ai_style_diff()
+#  lines them up with the company standard's, for the person who wants to
+#  start a standard from them to adopt a line at a time.
 #  The standard itself is the app's (tflplanner's company standards): it
 #  comes here as a data frame of kind, key and value.
 # ============================================================================
@@ -60,7 +61,7 @@
 #' @seealso [tfl_ai_style_prompt()]
 #' @examples
 #' f <- tempfile(fileext = ".yml")
-#' writeLines(c("tfl_style_learned: {version: 2, files: 3, tables: 9}",
+#' writeLines(c("tfl_company_hints: {version: 1, files: 3, tables: 9}",
 #'              "kinds:",
 #'              "  demog:",
 #'              "    n_form: {value: \"(N=xx)\", seen: 3, of: 3}",
