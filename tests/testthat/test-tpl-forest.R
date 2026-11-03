@@ -62,6 +62,9 @@ test_that("in a study: the ARD built; A (the call, the layout) = B (the design) 
   expect_match(q$labels$x %||% b$plot$labels$x, "<- Favours Drug A", fixed = TRUE)
   face <- q$theme$axis.text.y$face
   expect_true(all(c("bold", "plain") %in% face))
+  # bold exactly at the heading rows, in the order the axis lists its labels
+  ylab <- b$layout$panel_params[[1L]]$y$get_labels()
+  expect_identical(face == "bold", ylab %in% c("SEX", "AGEGR1"))
   expect_s3_class(tpl_forest_layout(q), "patchwork")
 })
 

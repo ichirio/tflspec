@@ -293,7 +293,7 @@
       list(fn = "theme", args = list(legend.title = tfl_r("element_text()")))))
   }
   # the escape hatch: any other setting, over the template's
-  if (length(a$plot)) f$plot <- .merge_map(f$plot, a$plot)
+  if (length(a$plot)) f$plot <- .tpl_plot_over(f$plot, a$plot)
   if (isTRUE(a$pvalue)) {
     loc <- a$pvalue_location %||% "annotation"
     f$content <- c(f$content, list(tfl_item("call", list(
