@@ -85,6 +85,8 @@ test_that("tfl_ai_context('toc', datasets = ) takes the metadata frame", {
 })
 
 test_that("tfl_ai_review(metadata = ): unknown names and levels are the AI's to fix", {
+  # about 10 s or more; CI runs it on every configuration
+  skip_on_cran()
   d <- file.path(tempdir(), "ai-review-metadata")
   unlink(d, recursive = TRUE)
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
