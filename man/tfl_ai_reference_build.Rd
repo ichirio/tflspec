@@ -11,8 +11,9 @@ tfl_ai_reference_build(conventions, dir = NULL, notes = NULL)
 \code{value} (kind \code{all} for every kind), such as \code{\link[=tfl_ai_style_adopt]{tfl_ai_style_adopt()}}
 returns.}
 
-\item{dir}{The pack's folder; \code{NULL}: the option \code{tflspec.ai_reference},
-else \verb{ai/reference/} of tflspec's data folder (\code{\link[tools:R_user_dir]{tools::R_user_dir()}}).}
+\item{dir}{The pack's folder; \code{NULL}: \verb{reference/} in the company's AI
+folder (the option \code{tflspec.ai_home}, else \verb{ai/} of tflspec's data
+folder, \code{\link[tools:R_user_dir]{tools::R_user_dir()}}).}
 
 \item{notes}{Lines the agent should read first (the company's own words),
 or \code{NULL}.}

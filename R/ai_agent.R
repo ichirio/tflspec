@@ -82,12 +82,14 @@
     agents <- sub("\n## Before you stop", paste0("\n", loop, "\n\n## Before you stop"), agents,
                   fixed = TRUE)
   }
-  # the company's conventions (tfl_ai_reference_build()): a copy in ai/reference/,
-  # read before the usual convention
+  # the company's conventions (tfl_ai_reference_build()) and hints (the agent's
+  # company_hints.yml): a copy in ai/reference/, read before the usual convention
   ref <- .ai_reference_copy(dir)
   out <- c(out, ref)
-  if (file.exists(file.path(dir, "ai", "reference", "conventions.md"))) {
-    agents <- sub(.ai_step2_usual, .ai_step2_company, agents, fixed = TRUE)
+  has_conv <- file.exists(file.path(dir, "ai", "reference", "conventions.md"))
+  has_hints <- file.exists(file.path(dir, "ai", "reference", "company_hints.yml"))
+  if (has_conv || has_hints) {
+    agents <- sub(.ai_step2_usual, .ai_step2_with(has_conv, has_hints), agents, fixed = TRUE)
   }
   # with templates: a template where it fits (each request lists them)
   if (isTRUE(templates)) agents <- paste(agents, rd("AGENTS-templates.md"), sep = "\n\n")
@@ -128,12 +130,27 @@
          "Select-Object -Last 1).FullName run.R <request>`")
 }
 
-# AGENTS.md's second step, and the same with the company's conventions first
+# AGENTS.md's second step, and the same with the company's conventions and
+# hints first (what ai/reference/ holds)
 .ai_step2_usual <- "**Else the usual convention settles it.**  Decide it as"
-.ai_step2_company <- paste0(
-  "**Else the company's convention, else the usual one, settles it.**  ",
-  "First `ai/reference/conventions.md`, the company's, for this kind of report: take what it ",
-  "says, as an assumption with `from: \"company convention\"`.  Else decide it as")
+.ai_step2_with <- function(conventions = TRUE, hints = TRUE) {
+  paste0(
+    "**Else the company's ",
+    paste(c(if (conventions) "conventions", if (hints) "hints"), collapse = ", then its "),
+    ", then the usual convention, settle it.**  ",
+    if (conventions) paste0(
+      "`ai/reference/conventions.md` is the company standard's, by kind of report: take what it ",
+      "says, as an assumption with `from: \"company convention\"`.  "),
+    if (hints) paste0(
+      "`ai/reference/company_hints.yml` is how this company's past reports were made, by kind ",
+      "(`kinds: <kind>: <point>: {value, seen, of}`, a kind's own point before `all`'s): a hint ",
+      "settles only what the shell, the SAP, the study's documents and the company standard leave ",
+      "open -- where one of them says the point, it wins, and the hint is not used.  Take a hint as ",
+      "an assumption with `from: \"company hints\"`; a hint seen in fewer than half the files read ",
+      "(`seen` below half of `of`) is weak: take it and add the point to `ai: confirm`.  A point ",
+      "under `conflicts:` is the standard's: follow the standard.  "),
+    "Else decide it as")
+}
 
 # The lines a request starts with: the agent's steps, so a request read
 # alone says them.  `ids`: the request's reports, whose drafts it writes.

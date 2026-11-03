@@ -763,6 +763,20 @@ r <- tfl_ai_review("XYZ-001", toc = toc)                    # writes the two pro
 summary(r)                                                  # who x level
 ```
 
+### 9.4 The company's hints from its past TFLs
+
+The company has an AI folder (option `tflspec.ai_home`; tflplanner's `<home>/ai`).
+The person puts the past RTF reports in `past_tfl/` (a subfolder a study).
+`tfl_ai_style_prompt()` reads their look into `learn/` and writes `AGENTS-learn.md`;
+the agent, given it, writes `company_hints.yml`: how the company makes each kind of
+report (the company standard wins: a point it says gets no hint; a difference is
+listed under `conflicts:`).  The file stays beside the standard, never merged.
+Every study prepared for an agent gets a copy in `ai/reference/`; its agent reads it
+after the documents and the standard and before its general knowledge
+(`from: "company hints"`; a hint seen in under half the files is put to `ai: confirm`).
+`tfl_ai_style_read()` shows the file; `tfl_ai_style_diff()`, `tfl_ai_style_adopt()`
+and `tfl_ai_reference_build()` are optional, to start a company standard.
+
 ---
 
 ## 10. Composing with tflplanner

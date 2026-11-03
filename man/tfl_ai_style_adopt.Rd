@@ -29,7 +29,7 @@ of the result -- the company standard's store -- is the app's.
 }
 \examples{
 f <- tempfile(fileext = ".yml")
-writeLines(c("tfl_style_learned: {version: 2, files: 3, tables: 9}",
+writeLines(c("tfl_company_hints: {version: 1, files: 3, tables: 9}",
              "kinds:",
              "  demog:",
              "    n_form: {value: \"(N=xx)\", seen: 3, of: 3}"), f)
