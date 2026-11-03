@@ -541,6 +541,12 @@
   rbind(p, .ai_check_table_run(outs[setdiff(names(outs), bad)], context))
 }
 
+# A list of rows, each a mapping with a `value`: a code list's form
+.ai_codelist_shaped <- function(x) {
+  is.list(x) && length(x) > 0L && is.null(names(x)) &&
+    all(vapply(x, function(r) is.list(r) && "value" %in% names(r), NA))
+}
+
 .ai_check_table_output <- function(o, at, context, vars) {
   p <- .ai_problems()
   add <- function(where, what, severity = "error") {
@@ -564,6 +570,14 @@
   }
   if (!is.na(o[["population"]])) chk_pop("population", o[["population"]])
   if (is.na(o[["label"]])) add("label", "the report has no label (its title)", "warning")
+  # a code list under `page:` is ignored there: it belongs under `codelists:`
+  for (k in setdiff(names(o[["page"]]), .page_known)) {
+    if (.ai_codelist_shaped(o[["page"]][[k]])) {
+      add(paste("page", k), sprintf(paste0(
+        "is a code list (rows of value / label) under `page:`, where it is ignored; ",
+        "put it under `codelists:` (`codelists: {%s: [...]}`)"), k))
+    }
+  }
   # the ARD
   ad <- o[["ard"]]$analysis_data %||% list()
   an <- o[["ard"]]$analyses %||% list()

@@ -301,7 +301,7 @@ test_that("templates.md carries the facts a trial found only by building", {
   }
   expect_match(note("param_change"), "ONTRTFL == \"Y\" | ABLFL == \"Y\"", fixed = TRUE)
   expect_match(note("shift"), "must list `Missing` and `Total`", fixed = TRUE)
-  expect_match(note("lab_shift"), "write `levels` as the labels", fixed = TRUE)
+  expect_match(note("lab_shift"), "write `levels` as the code list's labels", fixed = TRUE)
   expect_match(note("km_survival"), "`pvalue: false`", fixed = TRUE)
   # (the short list, names only, has none)
   expect_false(any(grepl("note:", tflspec:::.ai_templates_list("table", short = TRUE), fixed = TRUE)))

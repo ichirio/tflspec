@@ -1199,6 +1199,22 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
     sprintf("TRUE ~ %s", m(a$worst))), collapse = ", "), ")")
 }
 
+# The categories `lv` (codes or labels) as the ARD holds them for a column:
+# a value of its code list as the list's label, the others as they are
+.tpl_shift_labels <- function(lv, var, codelists) {
+  cl <- codelists[[var]]
+  if (is.null(cl)) return(lv)
+  if (is.character(cl)) {
+    val <- names(cl) %||% unname(cl)
+    lab <- unname(cl)
+  } else {
+    val <- vapply(cl, function(r) as.character(r$value), "")
+    lab <- vapply(cl, function(r) as.character(r$label %||% r$value), "")
+  }
+  i <- match(lv, val)
+  ifelse(is.na(i), lv, lab[i])
+}
+
 .tpl_shift_body <- function(a, ctx) {
   set <- a$data_id %||% paste0(tolower(a$data), "_", tolower(a$population))
   worst <- length(a$worst) > 0L
@@ -1238,9 +1254,13 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
   # the columns: the ARD's order (the code list applied when it is made),
   # or `by_levels` when the report says them
   by_lv <- a$by_levels
-  base_lv <- c(a$levels, if (worst) c(a$missing_label, a$total_label))
+  # (as the ARD holds them: the code list's labels when the column has one;
+  # the Missing and Total rows of the code, last)
+  post_lv <- .tpl_shift_labels(a$levels, a$post, ctx$codelists)
+  base_lv <- c(.tpl_shift_labels(a$levels, a$baseline, ctx$codelists),
+               if (worst) c(a$missing_label, a$total_label))
   lv <- c(if (length(by_lv)) stats::setNames(list(by_lv), a$by),
-          stats::setNames(list(base_lv, a$levels), c(a$baseline, ".label")))
+          stats::setNames(list(base_lv, post_lv), c(a$baseline, ".label")))
   content <- c(
     list(tfl_item("table_plan", list(cols = c(a$by, ".label"),
                                      rows = list(group = a$param), label = a$baseline)),
