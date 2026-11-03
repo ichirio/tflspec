@@ -1417,7 +1417,7 @@ tfl_build_ard <- function(spec, dir = ".", output_id = NULL, save = TRUE,
   owd <- setwd(dir)
   on.exit(setwd(owd), add = TRUE)
   e <- new.env(parent = globalenv())
-  eval(parse(text = code, encoding = "UTF-8"), envir = e)
+  .eval_study_code(code, e, spec, ".")
   .ard_optional_note(spec, e, output_id)
   invisible(e$ard)
 }

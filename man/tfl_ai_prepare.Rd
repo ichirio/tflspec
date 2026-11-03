@@ -205,7 +205,13 @@ among the sheets; \code{"set by the person"} for \code{"saved"} and \code{"given
 \code{counts} (\code{shells},
 \code{toc_items}, \code{no_shell}),
 \code{sheets} (the workbook's sheets and their roles), \code{adam} (the
-\code{\link[=tfl_ai_adam_summary]{tfl_ai_adam_summary()}}: \code{datasets}, \code{variables}, \code{text}), \code{files} (the
+\code{\link[=tfl_ai_adam_summary]{tfl_ai_adam_summary()}}: \code{datasets}, \code{variables}, \code{text}), \code{data_paths}
+(a study that has a \code{spec/data.yml} already: per dataset of it,
+\code{in_data_yml} its path, \code{given} the ADaM file given (\code{NA}: none),
+\code{exists} whether data.yml's file is there and \code{differs} whether the
+file given is another file or type; a warning names the rows that are
+missing or differ; \code{data.yml} is not changed; \code{NULL} for a new study),
+\code{files} (the
 files written, relative to \code{dir}), \code{hint} (what the workbook's reading
 could not find -- no TOC, a report with no shell -- and what to pass),
 \code{next_steps} (what to do next), \code{agent_prompt} (the first message to

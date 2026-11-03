@@ -944,7 +944,7 @@
   .ai_widths_on_read(answer$outputs, paths, dir)
   out <- paths
   a <- answer$assumption_rows
-  aw <- .ai_widths_assumptions(unset)
+  aw <- .ai_widths_assumptions(unset, .ai_spec_settings(dir)$language)
   if (!is.null(aw)) {
     if (is.null(a) || !nrow(a)) {
       a <- aw

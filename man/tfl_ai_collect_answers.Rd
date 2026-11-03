@@ -84,7 +84,9 @@ The manifest is every report the drafts make, for the person to check
 the count against the TOC (one TOC row can be several reports): a
 data frame, one row a report: \code{request}, \code{toc}, \code{output_id}, \code{title},
 \code{split}, \code{listed} (\code{NA}: a request not answered or not read, its
-reports as asked) and \code{status} (the report's, as in \code{reports}).  It is
+reports as asked), \code{status} (the report's, as in \code{reports}) and \code{reason}
+(why a report is a warning or an error, as \code{reports}' problems; \code{NA} for
+\code{ok}).  It is
 written to \code{ai/manifest.csv} (UTF-8) beside the requests' folder, anew
 at each collection.
 The paths are relative to \code{study_dir}.  Its print is a summary: each

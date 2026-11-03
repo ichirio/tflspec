@@ -269,6 +269,8 @@ stop is *Running the requests*, below: one, or a batch.  For each request:
      confirm:
        - {where: content, item: plan_cells, why: "the shell shows n (%) but not whether the % is of the arm or of all"}
    ```
+   Write every assumption, confirm item and question in the chat's language
+   (`ai: language`: {{language}}); keys and values stay as they are.
    How the output looks is never a question, and nothing of it is written
    but the column widths (step 5, an assumption `item: widths`).
 7. **Read the draft once more before you save it**, against the list
@@ -403,6 +405,8 @@ Review each draft against this list and fix what fails:
   draft has;
 - every free-text value (`label`, titles, footnotes, assumption text) is
   in double quotes -- always one with `: ` or `#` in it;
+- every assumption, confirm item and question is in the chat's language
+  (`ai: language`: {{language}}); keys and values stay as they are;
 - a template with its own data (`km_survival`, `km_cumulative`) has
   `data.steps` of `read`, the analysis set and `param`, and none of the
   template's own steps (`survfit`, `time_unit`);

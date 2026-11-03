@@ -460,6 +460,10 @@ tfl_ai_collect_answers(d)            # 5 reports in 5 requests (the figure its o
 
 `ai/` フォルダ（依頼、決定、下書き）は残してください。共有は社内だけに。
 
+## 既知の制限
+
+- `shift` / `lab_shift`: ベースラインのコードリストに Missing と Total を入れて、`levels` はコードリストのラベル（Low, Normal, High）で書きます。
+
 ## 会社の PC で始める前に
 
 - [ ] エージェントのチャットで、ターミナルで `Rscript --version` を実行するよう頼みます。
