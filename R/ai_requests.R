@@ -372,12 +372,14 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
     ub <- plan$ub
     noshell <- plan$noshell
     fig_names <- names(plan$figs)
-    figs <- unname(vapply(plan$figs, function(u) if (length(u$ids)) u$ids[1L] else u$sheet, ""))
+    # (a sheet's figure request: every report of the sheet)
+    figs <- unname(lapply(plan$figs, function(u) if (length(u$ids)) u$ids else u$sheet))
     fig_sheets <- unname(vapply(plan$figs, `[[`, "", "sheet"))
     batches <- names(ub)
     n_req <- length(ub) + length(figs) + as.integer(length(noshell) > 0L)
   } else {
     batches <- unique(b$batch)
+    figs <- as.list(figs)
     n_req <- length(batches) + length(figs)
   }
   tick <- function(i) if (is.function(progress)) progress("request", i, n_req)
@@ -411,8 +413,13 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
   }
   for (k in seq_along(figs)) {
     # (a sheet's figure: the sheet whole, its candidates first)
-    fp <- if (sheet_mode) fig_prompt_of(figs[k], sheet = fig_sheets[k]) else fig_prompt_of(figs[k])
-    r <- stats::setNames(list(c(fp, list(ids = figs[k]))), fig_names[k])
+    fp <- if (sheet_mode) fig_prompt_of(figs[[k]][1L], sheet = fig_sheets[k]) else fig_prompt_of(figs[[k]])
+    # (a sheet of several reports: the context of each, for its own check,
+    # and the reports listed at the request's head)
+    more <- stats::setNames(lapply(figs[[k]][-1L], function(id) fig_prompt_of(id, sheet = fig_sheets[k])$context),
+                            figs[[k]][-1L])
+    if (length(more)) fp$text <- paste0(.ai_fig_ids_text(shell, figs[[k]]), fp$text)
+    r <- stats::setNames(list(c(fp, list(ids = figs[[k]], figs = more))), fig_names[k])
     write_req(r)
     req <- c(req, r)
     fam <- c(fam, "figure")
@@ -438,7 +445,7 @@ tfl_ai_write_requests <- function(study_dir, shell, adam, size = NULL,
     # PC's path -- a copied study checks its answers against its own files)
     if (!is.null(ctx$study_dir)) ctx$study_dir <- "."
     list(ids = req[[i]]$ids, context = ctx, family = fam[i],
-         book = book_of(req[[i]]$ids))
+         book = book_of(req[[i]]$ids), figs = req[[i]]$figs)
   }), names(req))
   saveRDS(c(old, new), cf)
   idx <- tfl_ai_requests(study_dir, requests = dir)
@@ -548,6 +555,10 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
                       fn, sQuote(file.path(study_dir, requests), FALSE), study_dir))
   }
   ctxs <- readRDS(cf)
+  # (a figure request of several reports is checked a report at a time)
+  sp <- .ai_split_figures(ctxs)
+  ctxs <- sp$ctxs
+  parent <- sp$parent
   # the agent's drafts (ai/spec/outputs/<id>.yml) are the answers: each
   # request's become one answer in a folder of the check's own, read as an
   # answer is; the drafts' `ai:` blocks (assumptions, confirm) are put back
@@ -623,8 +634,8 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
       step(nm, "answer",
            # (what the person says in the agent's chat: its paths from ai/)
            .ai_paths_from_ai(sprintf("ask the agent for %s: it asks what is not settled, then writes %s",
-                                     rel(requests, paste0(nm, ".md")), drafts_of(ids))),
-           request = rel(requests, paste0(nm, ".md")), drafts = drafts_of(ids))
+                                     rel(requests, paste0(parent[[nm]], ".md")), drafts_of(ids))),
+           request = rel(requests, paste0(parent[[nm]], ".md")), drafts = drafts_of(ids))
       next
     }
     task <- ctxs[[nm]]$context$task %||% "table"
@@ -649,7 +660,7 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
     a <- .ai_answer_as_asked(a, ids)
     sheet <- isTRUE(ctxs[[nm]]$context$sheet_mode)
     if (sheet) ids <- .ai_sheet_answer_ids(ids, a, nm, own)
-    listed[[nm]] <- .ai_manifest_rows(nm, a)
+    listed[[nm]] <- .ai_manifest_rows(parent[[nm]], a)
     a <- .ai_answer_overall(a)
     pr <- tryCatch(tfl_ai_check(a, ctxs[[nm]]$context), error = function(e) e)
     # a figure's design under its report, as a table answer's reports
@@ -766,6 +777,18 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
     rows[[nm]] <- rbind(bad_rows[[nm]], rows[[nm]])
     do.call(step, c(list(nm), bad_step[[nm]]))
   }
+  # (a split figure request's reports: its own again, the first step that
+  # is not done standing for the request)
+  for (p in unique(parent[parent != names(parent)])) {
+    kids <- intersect(names(parent)[parent == p], names(nxt))
+    pick <- kids[order(nk[kids] == "done")][1L]
+    nxt[p] <- nxt[[pick]]
+    nk[p] <- nk[[pick]]
+    na[p] <- na[pick]
+    nxt <- nxt[setdiff(names(nxt), setdiff(kids, p))]
+    nk <- nk[setdiff(names(nk), setdiff(kids, p))]
+    na <- na[setdiff(names(na), setdiff(kids, p))]
+  }
   out <- do.call(rbind, rows)
   rownames(out) <- NULL
   out$type <- vapply(out$request, function(r) ctxs[[r]]$context$task %||% "table", "",
@@ -780,6 +803,7 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
                      yml, NA_character_)
   rp <- rel(repairs, paste0(out$request, ".md"))
   out$repair <- ifelse(file.exists(file.path(study_dir, rp)), rp, NA_character_)
+  out$request <- unname(parent[out$request])
   # each assumption its id and kind (ai/assumption_ids.csv), kept across collections
   asm <- .ai_asm_stamp(study_dir)
   asm <- asm[is.na(asm$output_id) | asm$output_id %in% out$output_id,
@@ -787,7 +811,7 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
              drop = FALSE]
   rownames(asm) <- NULL
   # each request's setting: answered with templates where they fit, or not
-  tpl <- vapply(ctxs, function(x) isTRUE(x$context$ai_templates), NA)
+  tpl <- vapply(ctxs[unique(unname(parent))], function(x) isTRUE(x$context$ai_templates), NA)
   # the TOC items the requests were written from (sheet requests: their
   # keys; NA: not known)
   keys <- unique(unlist(lapply(ctxs, function(x) x$context$toc_keys), use.names = FALSE))
@@ -803,6 +827,41 @@ tfl_ai_collect_answers <- function(study_dir, requests = file.path("ai", "reques
                  toc_items = if (length(keys)) length(keys[!is.na(keys)]) else NA_integer_,
                  manifest = man, manifest_file = rel(dirname(requests), "manifest.csv")),
             class = "tfl_ai_collected")
+}
+
+# A figure request of several reports (one shell sheet's) as one request a
+# report, for the check: each answer is one figure.  The first keeps the
+# request's name, the others are `<request>-<id>`, each with its report's
+# context (`figs`).  `parent` names the request each stands for.
+.ai_split_figures <- function(ctxs) {
+  parent <- stats::setNames(names(ctxs), names(ctxs))
+  out <- list()
+  for (nm in names(ctxs)) {
+    x <- ctxs[[nm]]
+    if (!identical(x$context$task, "figure") || length(x$ids) < 2L) {
+      out[[nm]] <- x
+      next
+    }
+    out[[nm]] <- x
+    out[[nm]]$ids <- x$ids[1L]
+    for (id in x$ids[-1L]) {
+      k <- make.unique(c(names(ctxs), names(out), paste0(nm, "-", .ai_file_id(id))), sep = "-")
+      k <- k[length(k)]
+      out[[k]] <- x
+      out[[k]]$ids <- id
+      out[[k]]$context <- x$figs[[id]] %||% x$context
+      parent[k] <- nm
+    }
+  }
+  list(ctxs = out, parent = parent)
+}
+
+# The reports of a figure request, for the request's head
+.ai_fig_ids_text <- function(shell, ids) {
+  ttl <- shell$toc$title[match(ids, shell$toc$output_id)]
+  paste0(paste(c(sprintf("This request has %d reports, one figure each (write a design for each, as", length(ids)),
+                 "ai/spec/outputs/<id>.yml; the context below is the first's):",
+                 sprintf("- %s%s", ids, ifelse(is.na(ttl), "", paste0(": ", ttl)))), collapse = "\n"), "\n\n")
 }
 
 # A sheet's request's reports, as its answer names them: those it was asked
