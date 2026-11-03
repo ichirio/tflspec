@@ -486,3 +486,64 @@ test_that("tfl_ai_refresh_agents(): AGENTS.md again after study.yml's ai: change
   file.remove(file.path(d, "ai", "agent_inputs.yml"))
   expect_message(tfl_ai_refresh_agents(d), "no ai/agent_inputs.yml")
 })
+
+test_that("ai: ask_when: request, report or end -- AGENTS.md says when the agent asks", {
+  agents_for <- function(ask) {
+    s <- tflspec:::.ai_spec_defaults
+    s$ask_when <- ask
+    src <- system.file("ai", "agent", package = "tflspec")
+    rd <- function(f) paste(readLines(file.path(src, f), warn = FALSE, encoding = "UTF-8"),
+                            collapse = "\n")
+    tflspec:::.ai_spec_agents(rd("AGENTS.md"), s)
+  }
+  now <- agents_for("request")
+  end <- agents_for("end")
+  rep <- agents_for("report")
+  # "request": today's text
+  flat <- function(x) gsub("[[:space:]]+", " ", x)
+  expect_match(flat(now), "do not write the report until the person answers", fixed = TRUE)
+  expect_match(now, "For the request's reports together, before you write any of them:", fixed = TRUE)
+  expect_match(flat(now), "You stop only to ask questions (then wait for the answers)", fixed = TRUE)
+  expect_false(grepl("questions-end.md", now, fixed = TRUE))
+  expect_match(rep, "Report by report, before you write it:", fixed = TRUE)
+  # "end": the defaults taken, the questions noted, one stop at the end
+  expect_match(end, "questions-end.md", fixed = TRUE)
+  expect_match(end, "You stop once, at the end", fixed = TRUE)
+  expect_match(end, "ai/defaults.md", fixed = TRUE)
+  expect_false(grepl("do not write the report until", end, fixed = TRUE))
+  expect_false(grepl("stop until", end, fixed = TRUE))
+  expect_false(grepl("then wait for the answers", end, fixed = TRUE))
+  expect_false(grepl("**stop and wait**: do not", end, fixed = TRUE))
+  # every placeholder filled, in each mode
+  for (x in list(now, rep, end)) {
+    for (k in c("{{ask_", "{{language}}", "{{questions_file}}", "{{titles_rule}}", "{{footnotes_at}}")) {
+      expect_false(grepl(k, x, fixed = TRUE), info = k)
+    }
+  }
+  # a bad value errors, in the review levels' style
+  expect_error(tflspec:::.ai_ask_when("later"), "study.yml ai: ask_when is request, report, end; not later")
+})
+
+test_that("study.yml ai: ask_when: end reaches ai/AGENTS.md; a bad value errors", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  root <- withr::local_tempdir()
+  d <- file.path(root, "study")
+  ad <- agent_study(root)
+  tfl_ai_prepare(unit = "toc", d, ex_book(), adam = ad, quiet = TRUE)
+  ag0 <- readLines(file.path(d, "ai", "AGENTS.md"), encoding = "UTF-8")
+  expect_false(any(grepl("{{", ag0, fixed = TRUE)))
+  expect_true(any(grepl("do not write the report until", ag0, fixed = TRUE)))
+  y <- yaml::read_yaml(file.path(d, "study.yml"))
+  y$ai$ask_when <- "end"
+  yaml::write_yaml(y, file.path(d, "study.yml"))
+  tfl_ai_refresh_agents(d)
+  ag <- readLines(file.path(d, "ai", "AGENTS.md"), encoding = "UTF-8")
+  expect_false(any(grepl("{{", ag, fixed = TRUE)))
+  expect_true(any(grepl("questions-end.md", ag, fixed = TRUE)))
+  expect_true(any(grepl("You stop once, at the end", ag, fixed = TRUE)))
+  expect_false(any(grepl("do not write the report until", ag, fixed = TRUE)))
+  y$ai$ask_when <- "sometimes"
+  yaml::write_yaml(y, file.path(d, "study.yml"))
+  expect_error(tfl_ai_refresh_agents(d), "ask_when is request, report, end; not sometimes")
+})

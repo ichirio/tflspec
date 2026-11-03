@@ -189,3 +189,60 @@ tfl_ai_assumptions <- function(study_dir) {
   rownames(out) <- NULL
   out
 }
+
+# ---- ai/defaults.md: every default the drafts took, the most important first ----
+
+# How much an assumption changes the output: 1 the numbers (the data and the
+# analyses, or an item about the population, the denominator, a filter, the
+# arms, the parameter, the visit, the baseline, the worst case, missing
+# values, what is counted, a derivation), 2 the rows or the statistics (the
+# content, the code lists, a template; or the rows, statistics, sort order,
+# levels, categories, a total), 3 the text or the look (titles, footnotes,
+# labels, widths -- wherever they are written --, digits, the page)
+.ai_impact_class <- function(where, item) {
+  where <- trimws(ifelse(is.na(where), "", as.character(where)))
+  item <- trimws(ifelse(is.na(item), "", as.character(item)))
+  one <- paste0("population|analysis set|denominator|filter|where|arm|treatment|",
+                "parameter|visit|baseline|worst|missing|counted|derivation")
+  two <- "rows|statistics|sort|order|levels|categories|total"
+  # (column widths are the look, wherever they are written)
+  ifelse(grepl("width", item, ignore.case = TRUE), 3L,
+         ifelse(grepl("^(data|ard)", where, ignore.case = TRUE) | grepl(one, item, ignore.case = TRUE), 1L,
+                ifelse(grepl("^(content|codelists|template)", where, ignore.case = TRUE) |
+                         grepl(two, item, ignore.case = TRUE), 2L, 3L)))
+}
+
+# ai/defaults.md: every report's `ai: assumptions`, read as
+# tfl_ai_assumptions() reads them, in three groups by how much they change
+# the output; a line a default, the lines of a group by report id; a
+# report's width lines in one.  The path.
+.ai_defaults_write <- function(study_dir) {
+  a <- tfl_ai_assumptions(study_dir)
+  a$class <- if (nrow(a)) .ai_impact_class(a$where, a$item) else integer()
+  say <- function(x, y) ifelse(!is.na(x) & nzchar(trimws(x)), trimws(x), ifelse(is.na(y), "", trimws(y)))
+  a$text <- say(a$assumption, a$value)
+  a$src <- ifelse(is.na(a$from) | !nzchar(trimws(a$from)), "not stated", trimws(a$from))
+  a$id <- ifelse(is.na(a$output_id), "", trimws(a$output_id))
+  wid <- a$class == 3L & grepl("width", ifelse(is.na(a$item), "", a$item), ignore.case = TRUE)
+  # (a report's widths: the first line, the others folded into it)
+  keep <- !(wid & duplicated(paste(a$id, wid)))
+  a <- a[keep, , drop = FALSE]
+  a <- a[order(a$class, a$id, method = "radix"), , drop = FALSE]
+  line <- function(x) {
+    if (!nrow(x)) return("- (none)")
+    sprintf("- %s %s/%s: %s (from: %s)", x$id, ifelse(is.na(x$where), "", x$where),
+            ifelse(is.na(x$item), "", x$item), x$text, x$src)
+  }
+  title <- c("Changes the numbers", "Changes the rows or statistics", "Changes the text or the look")
+  body <- unlist(lapply(1:3, function(k) {
+    x <- a[a$class == k, , drop = FALSE]
+    c(sprintf("## %d. %s (%d)", k, title[k], nrow(x)), "", line(x), "")
+  }))
+  f <- file.path(study_dir, "ai", "defaults.md")
+  .ai_write_text(c("# Defaults", "",
+                   paste("Every default the drafts took, the most important first.",
+                         "The questions (ai/questions-end.md) are the ones the agent was unsure of;",
+                         "read these too."),
+                   "", body), f)
+  f
+}

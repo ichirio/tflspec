@@ -23,7 +23,7 @@
 # The agent's settings: the package's defaults, under study.yml's
 # `ai:` keys (ask_when, carry, max_questions, language)
 .ai_spec_defaults <- list(
-  ask_when = "request",                 # "request": once per request, before writing; "report": per report
+  ask_when = "request",                 # "request": once per request, before writing; "report": per report; "end": the defaults taken, every question at the end
   carry = c("all", "dataset", "section"),  # a decision applies without asking when its scope is one of these (and the agent is sure)
   max_rounds = 3L,                      # asking again about one item: this many times, then "to confirm"
   footnotes_at = "footer",              # the shell's footnotes: the page's "footer" band, or the "table"'s footnotes
@@ -53,14 +53,49 @@
   s$max_rounds <- as.integer(s$max_rounds)
   s$carry <- as.character(unlist(s$carry))
   s$review <- .ai_review_levels(s$review)
+  s$ask_when <- .ai_ask_when(s$ask_when)
   s$footnotes_at <- match.arg(as.character(s$footnotes_at)[1L], c("footer", "table"))
   s
 }
 
-# AGENTS-spec.md filled from the settings
-.ai_spec_agents <- function(text, s) {
+# study.yml ai: ask_when, checked: "request", "report" or "end"
+.ai_ask_when <- function(x) {
+  ok <- c("request", "report", "end")
+  v <- as.character(unlist(x))[1L]
+  if (is.na(v) || !v %in% ok) {
+    .ard_stop(sprintf("study.yml ai: ask_when is %s; not %s.", paste(ok, collapse = ", "),
+                      format(if (is.na(v)) "" else v)))
+  }
+  v
+}
+
+# AGENTS-spec.md filled from the settings.  Step 3 (when the agent asks) is
+# AGENTS-ask-now.md or AGENTS-ask-end.md, by `ask_when`; `asks` holds the two
+# texts (named `now`, `end`), else they are read from the package
+.ai_spec_agents <- function(text, s, asks = NULL) {
   lang <- .ai_language_name(s$language)
-.ai_fill(text, list(
+  end <- identical(s$ask_when, "end")
+  if (is.null(asks)) {
+    src <- system.file("ai", "agent", package = "tflspec")
+    rd <- function(f) paste(readLines(file.path(src, f), warn = FALSE, encoding = "UTF-8"),
+                            collapse = "\n")
+    asks <- list(now = rd("AGENTS-ask-now.md"), end = rd("AGENTS-ask-end.md"))
+  }
+  .ai_fill(text, list(
+    ask_step = if (end) asks$end else asks$now,
+    ask_intro = if (end) {
+      paste0("you take your default, note the question in `ai/questions-end.md` and go on: ",
+             "the person answers once, at the end (step 3).")
+    } else "you **ask the person in the chat**, in {{language}}, before you write -- and stop until they answer.",
+    ask_stop = if (end) {
+      paste0("You stop once, at the end, to ask every question together (step 3), ",
+             "or when every request is done;")
+    } else paste0("You stop only to ask questions (then wait for the answers), or when every request is done;"),
+    ask_work = if (end) {
+      paste0("do not stop: note it in `ai/questions-end.md` as a `BLOCKER` entry, ",
+             "go on with the other requests, and ask it at the end.")
+    } else "ask it in the chat too, and wait for the answer.",
+    questions_file = if (end) ", `ai/questions-end.md`" else "",
     language = lang,
     ask_when = if (identical(s$ask_when, "report")) {
       "Report by report, before you write it:"

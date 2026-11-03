@@ -101,7 +101,7 @@ next calls until `numbers` is given again.
 ```yaml
 ai:
   language: ja          # the chat's language ("en" by default)
-  ask_when: request     # the request's reports' questions together; "report": one by one
+  ask_when: request     # the request's reports' questions together; "report": one by one; "end": all at the end
   carry: [all, dataset, section]   # which decisions apply to a later report without asking
   max_rounds: 3         # one item asked again at most this many times, then marked to confirm
   footnotes_at: footer  # where the shell's footnotes go: "footer", or "table"
@@ -166,6 +166,24 @@ the names of the files to read. A request longer than `max_chars` is split.
 
 A question about the work rather than a report (a file missing, a request
 unclear) it asks in the chat too.
+
+### Asking at the end (`ask_when: end`)
+
+With `ai: ask_when: end` in `study.yml`, the agent does not stop at the chat
+between requests. It takes its default for every question, notes the question
+in `ai/questions-end.md`, builds and checks everything, and asks all of them
+in **one message at the end**. You answer only what you want changed; only the
+reports that cite a changed answer are written and built again. Use it for a
+large batch you do not want to wait at.
+
+**Read every default, not only the questions: the defaults can differ from
+run to run.** `ai/defaults.md` lists them, the most important first (what
+changes the numbers, then the rows and statistics, then the text and the
+look); the end message posts the first two groups in full. Change one the
+same way as an answer (`D<n>: ...` or `<report> <item>: ...`).
+
+On the sample (3 requests, 5 reports): 1 interruption instead of 2, and the
+rework after 2 changed answers was one report, about 1-2 minutes.
 
 ## 6. Check the drafts, write the YAML, make the RTF
 

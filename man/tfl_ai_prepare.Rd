@@ -261,7 +261,11 @@ the first request with a draft missing.
 \code{spec/defaults.yml} may say them under its own \verb{ai:} key first):
 \code{language} (the chat's: \code{"en"}, \code{"ja"} ...), \code{ask_when} (\code{"request"},
 the default: the request's reports' questions together; \code{"report"}:
-report by report), \code{carry} (which decision scopes apply to a later
+report by report; \code{"end"}: the agent takes its default for every question,
+notes it in \code{ai/questions-end.md}, goes on, and asks everything in one
+message at the end, with \code{ai/defaults.md}, the defaults it took, the most
+important first -- only the reports an answer changes are then written
+again), \code{carry} (which decision scopes apply to a later
 report without asking: \code{all}, \code{dataset}, \code{section}), \code{max_rounds} (how
 many times one item is asked again, 3), \code{footnotes_at} (\code{"footer"}, the
 default, or \code{"table"}: where the shell's footnotes go), \code{review} (how

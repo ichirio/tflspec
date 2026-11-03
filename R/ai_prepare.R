@@ -46,7 +46,11 @@
 #' `spec/defaults.yml` may say them under its own `ai:` key first):
 #' `language` (the chat's: `"en"`, `"ja"` ...), `ask_when` (`"request"`,
 #' the default: the request's reports' questions together; `"report"`:
-#' report by report), `carry` (which decision scopes apply to a later
+#' report by report; `"end"`: the agent takes its default for every question,
+#' notes it in `ai/questions-end.md`, goes on, and asks everything in one
+#' message at the end, with `ai/defaults.md`, the defaults it took, the most
+#' important first -- only the reports an answer changes are then written
+#' again), `carry` (which decision scopes apply to a later
 #' report without asking: `all`, `dataset`, `section`), `max_rounds` (how
 #' many times one item is asked again, 3), `footnotes_at` (`"footer"`, the
 #' default, or `"table"`: where the shell's footnotes go), `review` (how
@@ -388,11 +392,12 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
       book_at <- .ai_from_study(dir, toc)
       # each request says the agent's steps at its head, then the decisions
       # that apply to its reports
+      ask_when_ <- .ai_spec_settings(dir)$ask_when
       for (i in seq_len(nrow(req))) {
         f <- file.path(dir, req$file[i])
         ids <- strsplit(req$outputs[i], ", ", fixed = TRUE)[[1L]]
         dec <- .ai_decisions_block(dir, ids, section = .ai_request_section(shell, req$outputs[i]))
-        txt <- c(.ai_agent_request_head(req$request[i], ids = ids), dec,
+        txt <- c(.ai_agent_request_head(req$request[i], ids = ids, ask_when = ask_when_), dec,
                  readLines(f, warn = FALSE, encoding = "UTF-8"))
         .ai_write_text(txt, f)
         req$chars[i] <- nchar(.ai_paths_from_ai(paste(txt, collapse = "\n")))

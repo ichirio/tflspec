@@ -14,9 +14,8 @@ and the study's standard, a decision; 2) when they do not settle it, as
 an experienced statistical programmer would -- the usual convention for
 that kind of table -- written as an assumption with
 `from: "programmer convention"`, so that QC sees it; 3) only what neither
-settles **and** would change the numbers or the structure, you **ask the
-person in the chat**, in {{language}}, before you write -- and stop until
-they answer.  Their answers go into `ai/decisions.md`, which you read
+settles **and** would change the numbers or the structure, {{ask_intro}}
+Their answers go into `ai/decisions.md`, which you read
 first and follow for every report after.
 
 A draft must be a valid specification: the YAML well formed, every key
@@ -188,34 +187,7 @@ skip it.  For each of the others, in order:
      later;
    - a specific programming note or derivation rule over a generic
      footnote (footnotes are often stale), and the question says so.
-3. {{ask_when}} **Ask them in the chat**, in {{language}}, numbered,
-   the message starting with the progress tag (*Progress*, below):
-   `[n/N] <request> (<report ids>)`.
-   **Collect every question first** -- every item of step 2, for every
-   report of the request -- and ask them together in **one message**;
-   never one at a time, waiting for an answer between them.  A follow-up
-   question only when an answer raises a new point.  Each
-   question says **which report it is about -- its id and its title --**
-   and the item, the choices you see, and the one you would take if the
-   person says "default".  **End every question with an example answer**,
-   one line, `例: ...` in Japanese (`e.g. ...` in English): the answer as
-   the programmer would type it, holding every piece the draft needs --
-   the title's label, the condition, the variable, which source is wrong
-   -- so that the person sees what to answer, and can paste it as it is
-   or edit it.  The example follows your default choice; for a question
-   of sources that disagree, give one `例:` line for each choice (`(a)`,
-   `(b)` ...), so that the person picks one, not your default by
-   pasting.  A choice alone ("SAFFL") is not an answer.
-   - a population conflict:
-     `例: シェルのとおり Safety Analysis Set（SAFFL = 'Y'）、実治療 TRT01A。TOC の Full Analysis Set は誤り。`
-   - a denominator:
-     `例: 分母は Total 行（post-baseline 値が 1 つ以上ある被験者）。食い違う脚注は削除。`
-   A question that holds for every report of the
-   request says so.  Then **stop and wait**: do not write the report until
-   the person answers.  There is no limit to the questions; ask what you
-   need, each once.  When an answer does not settle the item, ask again,
-   saying what was unclear: **three times at most** for one item; then
-   take the likeliest choice and mark it *to confirm* (step 6).
+3. {{ask_step}}
 4. **Record the answers**: for each one, add one line to
    `ai/decisions.md` (the form is at the top of that file: its id, scope,
    topic, the decision, where it came from).  Change nothing already
@@ -301,7 +273,7 @@ skip it.  For each of the others, in order:
    to you with its problems; one you checked yourself seldom does.
 8. Go on to the next request.  A question about the work rather than a
    report (a file the request names is missing, the request is unclear):
-   ask it in the chat too, and wait for the answer.
+   {{ask_work}}
 
 When every request is done, **review the drafts** (*Before you stop*,
 below), then **stop** and tell the person: the report files written
@@ -317,9 +289,7 @@ far you have got:
   (`[3/6] Starting T-LB-SUM (14.3.4.1); 3 left`);
 - when a request's drafts are written: `[3/6] 完了: 14.3.4.1。次: T-LB-SHIFT`
   (`[3/6] Done: 14.3.4.1; next: T-LB-SHIFT`) -- and **go straight on to
-  the next request**: do not wait for a "continue".  You stop only to
-  ask questions (then wait for the answers), or when every request is
-  done;
+  the next request**: do not wait for a "continue".  {{ask_stop}}
 - a question message starts with the same tag (step 3).
 
 `n` is the request's number of `N` in `ai/requests/index.md`.  Keep the
@@ -422,7 +392,7 @@ a line.
   `spec/data.yml`, `spec/defaults.yml`, `run.R`, `AGENTS.md` or
   `.github/copilot-instructions.md`.
 - Write only `ai/spec/outputs/`, `ai/decisions.md` (add lines, change
-  nothing a person wrote) and `ai/progress.md`.
+  nothing a person wrote), `ai/progress.md`{{questions_file}}.
 - Do not guess what defines a report: take it from the documents, else
   from the usual convention (an assumption, `from: "programmer
   convention"`), else ask -- and do not ask what those settle, nor about a

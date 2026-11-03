@@ -35,7 +35,8 @@
     out <<- c(out, f)
   }
   # the instructions, with the study's settings (study.yml's ai: keys)
-  agents <- .ai_spec_agents(rd("AGENTS.md"), .ai_spec_settings(dir))
+  agents <- .ai_spec_agents(rd("AGENTS.md"), .ai_spec_settings(dir),
+                            list(now = rd("AGENTS-ask-now.md"), end = rd("AGENTS-ask-end.md")))
   place <- function(p) if (length(p) && !is.na(p[1L])) sprintf("`%s`", p[1L]) else
     "(where the request says)"
   # what the agent may open besides the requests: the workbook and the ADaM
@@ -154,13 +155,15 @@
 
 # The lines a request starts with: the agent's steps, so a request read
 # alone says them.  `ids`: the request's reports, whose drafts it writes.
-.ai_agent_request_head <- function(request, ids = character()) {
+.ai_agent_request_head <- function(request, ids = character(), ask_when = "request") {
   files <- paste(sprintf("`ai/spec/outputs/%s.yml`", ids), collapse = ", ")
   c("<!-- tflspec: agent -->",
     paste0("> **For the agent** (ai/AGENTS.md): read `ai/decisions.md` and the decisions below, ",
            "then settle each open point as ai/AGENTS.md says -- the documents, else the usual ",
            "convention (an assumption), else a question in the chat (only what you may not decide ",
-           "alone) -- and wait for the answers. Then write each report's skeleton as its file: ", files, ". ",
+           if (identical(ask_when, "end")) {
+             "alone) -- take your default and note it in `ai/questions-end.md`, as ai/AGENTS.md says: do not wait. Then write each report's skeleton as its file: "
+           } else "alone) -- and wait for the answers. Then write each report's skeleton as its file: ", files, ". ",
            "Record the answers in `ai/decisions.md`; mark what you could not settle under `ai: confirm`. ",
            "Read only this request and the files it names; do not look for others, install nothing, ",
            "run nothing. Write nothing of the look but the column widths."),
@@ -381,6 +384,8 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
   .ai_build_repairs(study_dir, r)
   res$reports <- r
   res <- .ai_run_next(res)
+  # every default the drafts took, the most important first
+  .ai_defaults_write(study_dir)
   .ai_write_text(.ai_status_text(res), file.path(study_dir, "ai", "status.md"))
   message(sprintf("%s; see ai/status.md.", .ai_count_text(res)))
   invisible(res)
@@ -561,7 +566,8 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
   r <- res$reports
   cell <- function(x) ifelse(is.na(x), "", gsub("|", "/", x, fixed = TRUE))
   nxt <- res$next_steps
-  c(sprintf("# Status (written by run.R, %s)", format(Sys.time(), "%Y-%m-%d %H:%M")),
+  c(sprintf("# Status (written by run.R, %s; the defaults the drafts took: ai/defaults.md)",
+            format(Sys.time(), "%Y-%m-%d %H:%M")),
     "",
     paste0(.ai_count_text(res), "."),
     "",

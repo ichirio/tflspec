@@ -610,7 +610,15 @@ tfl_ai_unpack(a, "study")                           # spec/outputs/<id>.yml, spe
   builder; `tfl_ai_confirm()` lists them, `tfl_check_spec()` shows them as
   `check` rows).  `study.yml`'s `ai:` keys set its rules (`language`,
   `ask_when`, `carry`, `max_rounds`, `footnotes_at`; the study standard's
-  `spec/defaults.yml` may say them first).  It reads the request and the
+  `spec/defaults.yml` may say them first).  `ask_when` is `request` (the
+  default: a request's questions together, before its reports), `report`
+  (one report at a time) or `end`: the agent takes its default for every
+  question, notes it in `ai/questions-end.md`, writes and builds every
+  report, and asks all the questions in one message at the end; only the
+  reports an answer changes are written again.  `run.R` writes
+  `ai/defaults.md` in every mode: every assumption of the drafts, the ones
+  that change the numbers first -- read it too, as the defaults can differ
+  from run to run.  It reads the request and the
   files it names only (`agent_reads = c("workbook", "adam")` and `docs =`
   allow more; a document inside the study folder -- its `docs/` -- is read
   where it is, one outside is copied into `ai/docs/`; a `.docx`, `.pdf` or
