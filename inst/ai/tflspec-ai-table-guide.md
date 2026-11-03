@@ -26,8 +26,8 @@ Japanese: `tflspec-ai-table-guide-ja.md` in the same folder
 Choose a plan where Opus or Fable can be selected.
 
 Requirements:
-1. Open the study folder as the workspace, so that the agent works inside it
-   (VS Code: the `ai` workspace, as section 5 step 1 says).
+1. Open the study's `ai` folder as the workspace, so that the agent works
+   inside it alone (VS Code: `ai/<study>.code-workspace`, section 5 step 1).
 2. The agent can run `Rscript` in the terminal. If it cannot, you run
    `Rscript run.R <request>` and type `c`.
 3. VS Code + Copilot, in Settings (Ctrl+, and search the name)
@@ -42,7 +42,7 @@ Requirements:
 ### A. The Claude desktop app, Code tab
 
 1. Open the Code tab. Under the prompt box, click the project folder control
-   and choose the study folder (the one with `run.R`).
+   and choose the study's `ai` folder (the one with `agent_prompt.md`).
 2. In the model picker (under the prompt box), choose Opus or Fable.
 3. Paste the text of `ai/agent_prompt.md` as the first message.
 4. Answer its questions in the chat. At each stop reply `c` (the next
@@ -52,7 +52,7 @@ Requirements:
 
 ### B. VS Code, with GitHub Copilot (agent mode) or the Claude Code extension
 
-1. File > Open Folder: the `ai` workspace as section 5 says (or the study folder).
+1. Double-click `ai/<study>.code-workspace` (or File > Open Workspace from File), as section 5 says.
 2. Open the chat. In Copilot choose the Agent session control and the
    language model (Fable verified; Opus expected). In the Claude Code
    extension, click the model name at the bottom of the prompt box.
