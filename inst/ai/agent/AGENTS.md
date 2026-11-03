@@ -375,7 +375,9 @@ request `todo`; if it is missing, write it at your first start from
 ```
 
 `status` is one of `todo`, `asked` (one request: questions asked, waiting),
-`drafted`, `built`, `checked`, `blocked`, `reworked`. `batch` is the batch's
+`drafted`, `built`, `checked`, `blocked`, `reworked`, `failed` (`run.R` sets
+`built` or `failed` after a build; a `checked` row stays unless the build
+failed). `batch` is the batch's
 number (empty in the one-request way). Update one row as you go. A new chat
 starts from the first row that is not `checked` (or not `built`, when the
 review is none). (`ai/status.md` is `run.R`'s: do not write it.)

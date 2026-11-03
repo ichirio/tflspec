@@ -192,7 +192,9 @@ judged by that report, when it is processed.
 **Read every default, not only the questions: the defaults can differ from
 run to run.** `ai/defaults.md` lists them, the most important first (what
 changes the numbers, then the rows and statistics, then the text and the
-look); a batch's end message posts the first two groups in full. Change one the
+look); its first section lists the defaults the agent chose itself, merged by
+topic, and a batch's end message posts that section's first two groups in
+full, with the count of the rest. Change one the
 same way as an answer (`D<n>: ...` or `<report> <item>: ...`).
 
 **How long (estimates)**

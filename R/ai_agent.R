@@ -410,6 +410,8 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
   # a report that passed its checks but could not be built: a repair, as
   # for an answer with errors
   .ai_build_repairs(study_dir, r)
+  # the requests built in this run: their rows in ai/progress.md
+  .ai_progress_built(study_dir, r, todo)
   res$reports <- r
   res <- .ai_run_next(res)
   # every default the drafts took, the most important first
@@ -757,6 +759,44 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
                    "| request | reports | status | batch | questions |",
                    "|---|---|---|---|---|",
                    sprintf("| %s | %s | todo | | |", req$request, req$outputs)), f)
+  invisible(f)
+}
+
+# After a run, the status of the requests it built, in ai/progress.md (when
+# it is there): `built` when all the request's reports built, `failed` when
+# one did not.  A row at `checked` or `reworked` stays, unless the build
+# failed; the other columns are not touched.  `r` is the run's reports,
+# `todo` the rows it built.
+.ai_progress_built <- function(dir, r, todo) {
+  f <- file.path(dir, "ai", "progress.md")
+  if (!file.exists(f) || !length(todo)) return(invisible(NULL))
+  req <- unique(r$request[todo])
+  req <- req[!is.na(req)]
+  failed <- vapply(req, function(q) {
+    any(!is.na(r$rtf_problem[r$request %in% q]) & nzchar(r$rtf_problem[r$request %in% q]))
+  }, NA)
+  ok <- vapply(req, function(q) all(r$built[r$request %in% q] %in% c("built", "kept")), NA)
+  new <- ifelse(failed, "failed", ifelse(ok, "built", NA_character_))
+  names(new) <- req
+  x <- readLines(f, warn = FALSE, encoding = "UTF-8")
+  head <- grep("^[|]", x)
+  if (!length(head)) return(invisible(NULL))
+  cells <- strsplit(x[head[1L]], "|", fixed = TRUE)[[1L]]
+  at <- match("status", trimws(cells))
+  if (is.na(at)) return(invisible(NULL))
+  changed <- FALSE
+  for (i in head[-1L]) {
+    cl <- strsplit(x[i], "|", fixed = TRUE)[[1L]]
+    q <- trimws(cl[2L])
+    if (length(cl) < at || !q %in% req || is.na(new[[q]])) next
+    old <- trimws(cl[at])
+    if (identical(old, new[[q]]) || (old %in% c("checked", "reworked") && new[[q]] != "failed")) next
+    pad <- regmatches(cl[at], regexec("^(\\s*).*?(\\s*)$", cl[at]))[[1L]]
+    cl[at] <- paste0(if (nzchar(pad[2L])) pad[2L] else " ", new[[q]], if (nzchar(pad[3L])) pad[3L] else " ")
+    x[i] <- paste0(paste(cl, collapse = "|"), if (grepl("[|]\\s*$", x[i])) "|" else "")
+    changed <- TRUE
+  }
+  if (changed) .ai_write_text(x, f)
   invisible(f)
 }
 

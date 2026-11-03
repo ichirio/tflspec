@@ -168,6 +168,40 @@ test_that("tfl_ai_run(): the RTFs, ai/status.md; a second prepare keeps the deci
   expect_identical(readLines(file.path(d, "ai", "decisions.md")), dec)
 })
 
+test_that("tfl_ai_run() keeps ai/progress.md: built, failed; a checked row stays unless the build failed", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  root <- withr::local_tempdir()
+  d <- file.path(root, "study")
+  ad <- agent_study(root)
+  tfl_ai_prepare(unit = "toc", d, ex_book(), adam = ad, quiet = TRUE, size = 3L)
+  ai_drafts_from_fixtures(d)
+  pf <- file.path(d, "ai", "progress.md")
+  pg0 <- readLines(pf, encoding = "UTF-8")
+  at <- function(x, q) which(startsWith(x, paste0("| ", q, " |")))
+  # one request run: its row built, the others still todo, the form kept
+  suppressMessages(tfl_ai_run(d, rtf = FALSE, requests = "demographics-1"))
+  pg <- readLines(pf, encoding = "UTF-8")
+  i <- at(pg, "demographics-1")
+  expect_length(i, 1L)
+  expect_identical(pg[i], sub("| todo |", "| built |", pg0[i], fixed = TRUE))
+  expect_identical(pg[-i], pg0[-i])
+  # a checked row stays when the request is built again
+  writeLines(sub("| built |", "| checked |", pg, fixed = TRUE), pf)
+  suppressMessages(tfl_ai_run(d, rtf = FALSE, requests = "demographics-1", rebuild = TRUE))
+  expect_match(readLines(pf, encoding = "UTF-8")[i], "| checked |", fixed = TRUE)
+  # a build that fails: failed, even from checked; the other columns stay
+  j <- at(pg0, "ae-1")
+  file.remove(file.path(ad, "adae.xpt"))
+  suppressMessages(tfl_ai_run(d, rtf = FALSE, requests = "ae-1"))
+  pg2 <- readLines(pf, encoding = "UTF-8")
+  expect_identical(pg2[j], sub("| todo |", "| failed |", pg0[j], fixed = TRUE))
+  expect_match(pg2[i], "| checked |", fixed = TRUE)
+  writeLines(sub("| failed |", "| checked |", pg2, fixed = TRUE), pf)
+  suppressMessages(tfl_ai_run(d, rtf = FALSE, requests = "ae-1"))
+  expect_match(readLines(pf, encoding = "UTF-8")[j], "| failed |", fixed = TRUE)
+})
+
 test_that("tfl_ai_run(): a report built again only when it changed; one request's; a build's repair", {
   skip_on_cran()
   skip_if_not_installed("haven")
