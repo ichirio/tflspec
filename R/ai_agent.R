@@ -38,10 +38,23 @@
   agents <- .ai_spec_agents(rd("AGENTS.md"), .ai_spec_settings(dir))
   place <- function(p) if (length(p) && !is.na(p[1L])) sprintf("`%s`", p[1L]) else
     "(where the request says)"
-  # what the agent may open besides the requests: the workbook and the ADaM
-  # when the person allows them, the documents the person gave; read with
-  # whatever the PC has, not R alone
+  # the company's conventions (tfl_ai_reference_build()) and hints (the agent's
+  # company_hints.yml): a copy in ai/reference/, read before the usual convention
+  ref <- .ai_reference_copy(dir)
+  out <- c(out, ref)
+  has_conv <- file.exists(file.path(dir, "ai", "reference", "conventions.md"))
+  has_hints <- file.exists(file.path(dir, "ai", "reference", "company_hints.yml"))
+  # what the agent may open besides the requests: the company's reference, the
+  # workbook and the ADaM when the person allows them, the documents the person
+  # gave; read with whatever the PC has, not R alone
   more <- c(
+    if (has_conv || has_hints) paste0(
+      "
+- the company's reference, ",
+      paste(sprintf("`ai/reference/%s`", c(if (has_conv) "conventions.md",
+                                           if (has_hints) "company_hints.yml")), collapse = " and "),
+      ", for the second of the three steps below (the usual convention): read once and ",
+      "follow it for every request;"),
     if ("workbook" %in% reads) paste0(
       "\n- the TOC / SHELL workbook {{workbook}}, to check what a shell's text leaves ",
       "unclear (its shape, merged cells, a text that looks cut): read only the place ",
@@ -64,8 +77,12 @@
   # the reports the agent builds and checks itself, as deep as study.yml's
   # ai: review says for each kind
   review <- .ai_spec_settings(dir)$review
-  build <- any(!is.na(review))
+  build <- .ai_build_on(dir)
   agents <- .ai_fill(agents, list(
+    check_rule = if (build) {
+      paste0("You run only `Rscript run.R <request>`, to build and check a request as *Build and ",
+             "check* says; nothing else.  Before it, write")
+    } else "You cannot run the check yourself, so write",
     run_rule = if (build) {
       "Run `run.R` only to build a request, as *Build and check* says; nothing else."
     } else "Do not run `run.R`.",
@@ -82,12 +99,6 @@
     agents <- sub("\n## Before you stop", paste0("\n", loop, "\n\n## Before you stop"), agents,
                   fixed = TRUE)
   }
-  # the company's conventions (tfl_ai_reference_build()) and hints (the agent's
-  # company_hints.yml): a copy in ai/reference/, read before the usual convention
-  ref <- .ai_reference_copy(dir)
-  out <- c(out, ref)
-  has_conv <- file.exists(file.path(dir, "ai", "reference", "conventions.md"))
-  has_hints <- file.exists(file.path(dir, "ai", "reference", "company_hints.yml"))
   if (has_conv || has_hints) {
     agents <- sub(.ai_step2_usual, .ai_step2_with(has_conv, has_hints), agents, fixed = TRUE)
   }
@@ -100,7 +111,10 @@
   put(file.path(".github", "copilot-instructions.md"), rd("AGENTS-root.md"), again = TRUE)
   # (the workspace on ai/ alone: Copilot's copy there too, its paths from ai/)
   put(file.path("ai", ".github", "copilot-instructions.md"), rd("AGENTS-root.md"), again = TRUE)
-  put("run.R", rd("run.R"), again = TRUE)
+  put("run.R", .ai_fill(rd("run.R"), list(who_runs = if (build) {
+    paste0("the person runs it; the agent runs it only for a request it built: ",
+           "`Rscript run.R <request>`")
+  } else "the person runs it; the agent does not")), again = TRUE)
   put(file.path("ai", "decisions.md"), rd("decisions.md"))
   out
 }
@@ -122,6 +136,9 @@
 # The command that builds one request's reports, from the study folder:
 # Rscript on run.R (no path of this PC: the study folder may move); in
 # PowerShell, R's own when Rscript is not on the PATH
+# Whether the agent builds and checks itself: some review level is not none
+.ai_build_on <- function(dir) any(!is.na(.ai_spec_settings(dir)$review))
+
 .ai_build_cmd <- function(dir) {
   paste0("`Rscript run.R <request>` from the study folder (the folder of `run.R`, above `ai/`; ",
          "the request's name, `figure-2`).  When `Rscript` is not found, in PowerShell: ",
@@ -154,7 +171,7 @@
 
 # The lines a request starts with: the agent's steps, so a request read
 # alone says them.  `ids`: the request's reports, whose drafts it writes.
-.ai_agent_request_head <- function(request, ids = character()) {
+.ai_agent_request_head <- function(request, ids = character(), build = FALSE) {
   files <- paste(sprintf("`ai/spec/outputs/%s.yml`", ids), collapse = ", ")
   c("<!-- tflspec: agent -->",
     paste0("> **For the agent** (ai/AGENTS.md): read `ai/decisions.md` and the decisions below, ",
@@ -163,7 +180,9 @@
            "alone) -- and wait for the answers. Then write each report's skeleton as its file: ", files, ". ",
            "Record the answers in `ai/decisions.md`; mark what you could not settle under `ai: confirm`. ",
            "Read only this request and the files it names; do not look for others, install nothing, ",
-           "run nothing. Write nothing of the look but the column widths."),
+           if (build) paste0("run only `Rscript run.R ", request, "`, as ai/AGENTS.md's *Build and check* says. ") else
+             "run nothing. ",
+           "Write nothing of the look but the column widths."),
     "", "---", "")
 }
 
@@ -221,7 +240,14 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
   }
   # the agent's study facts again when spec/ changed since they were written
   .ai_study_facts_write(study_dir, if_older = TRUE)
-  res <- tfl_ai_collect_answers(study_dir)
+  # the run's messages (the template notes, the ARD's unused rows) go to
+  # ai/build.log, appended per run; warnings and errors stay on the console
+  log_lines <- character()
+  log_message <- function(m) {
+    log_lines <<- c(log_lines, sub("\n$", "", conditionMessage(m)))
+    invokeRestart("muffleMessage")
+  }
+  res <- withCallingHandlers(tfl_ai_collect_answers(study_dir), message = log_message)
   r <- res$reports
   r$rtf <- NA_character_
   r$png <- NA_character_
@@ -257,7 +283,8 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
     for (i in setdiff(todo, which(r$request %in% requests))) keep_as(i)
     todo <- intersect(todo, which(r$request %in% requests))
   }
-  if (length(todo)) {
+  built_any <- length(todo) > 0L
+  withCallingHandlers(if (length(todo)) {
     old <- setwd(study_dir)
     on.exit(setwd(old), add = TRUE)
     # (a study with the AI's drafts apart: they are read and built, into ai/output)
@@ -375,7 +402,8 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
       }
       .ai_built_write(".", done)
     }
-  }
+  }, message = log_message)
+  if (built_any || length(log_lines)) .ai_build_log_write(study_dir, log_lines)
   # a report that passed its checks but could not be built: a repair, as
   # for an answer with errors
   .ai_build_repairs(study_dir, r)
@@ -384,6 +412,17 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
   .ai_write_text(.ai_status_text(res), file.path(study_dir, "ai", "status.md"))
   message(sprintf("%s; see ai/status.md.", .ai_count_text(res)))
   invisible(res)
+}
+
+# The build's messages, appended to ai/build.log under the run's date
+.ai_build_log_write <- function(dir, lines) {
+  f <- file.path(dir, "ai", "build.log")
+  dir.create(dirname(f), recursive = TRUE, showWarnings = FALSE)
+  old <- if (file.exists(f)) readLines(f, warn = FALSE, encoding = "UTF-8") else character()
+  .ai_write_text(c(old, if (length(old)) "",
+                   sprintf("# %s: run.R", format(Sys.time(), "%Y-%m-%d %H:%M")),
+                   if (length(lines)) lines else "(no messages)"), f)
+  invisible(f)
 }
 
 # ---- what the last run built: ai/built.csv ---------------------------------------
@@ -563,6 +602,8 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
   nxt <- res$next_steps
   c(sprintf("# Status (written by run.R, %s)", format(Sys.time(), "%Y-%m-%d %H:%M")),
     "",
+    "Messages: ai/build.log",
+    "",
     paste0(.ai_count_text(res), "."),
     "",
     .ai_templates_status(res$templates),
@@ -673,7 +714,7 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
 # The requests are not named: the agent does every one of
 # ai/requests/index.md in order, and "continue" goes on from the first
 # with a draft missing.
-.ai_agent_prompt <- function(study, templates = FALSE, language = "en") {
+.ai_agent_prompt <- function(study, templates = FALSE, language = "en", build = FALSE) {
   paste0("The workspace is the ai folder of the study ", study,
     ": every path is from it; open nothing outside it. ",
     "Read ai/AGENTS.md and follow it. Do every request of ai/requests/index.md, top to bottom; ",
@@ -686,7 +727,9 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
     if (isTRUE(templates)) " (a template where one fits, ai/AGENTS.md)" else "",
     ", nothing of the look but the column widths, and mark what you could not settle under ai: confirm; go straight ",
     "on to the next request without waiting for me -- stop only to ask, or when every request ",
-    "is done. Read only the request and the files it names; run nothing, install nothing. ",
+    "is done. Read only the request and the files it names; ",
+    if (build) paste0("run only `Rscript run.R <request>` (ai/AGENTS.md: *Build and check*), ",
+                      "install nothing. ") else "run nothing, install nothing. ",
     "If I say \"stop\", finish the step in hand, write ai/progress.md and stop, saying where; ",
     "when I say \"continue\", go on from ai/progress.md. ",
     "When every request is done, review each draft against the list under \"Before you ",

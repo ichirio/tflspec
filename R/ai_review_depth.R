@@ -209,6 +209,17 @@
   x[nzchar(x)]
 }
 
+# A title's or a footnote's row as its text: a row is the text (named by its
+# alignment, c / l / r) or a list of the text, its alignment and flags
+.ai_row_text <- function(x) {
+  if (is.list(x) && !is.null(x$text)) return(paste(as.character(unlist(x$text)), collapse = " "))
+  if (is.list(x)) {
+    k <- names(x) %in% c("c", "l", "r", "")
+    if (any(k)) x <- x[k]
+  }
+  paste(as.character(unlist(x, use.names = FALSE)), collapse = " ")
+}
+
 .ai_pages_facts <- function(segs, geo, n_pages, sections = NULL) {
   over <- FALSE
   one <- function(s) {
@@ -224,8 +235,8 @@
       w <- vapply(seq_along(h$text), function(i) sum(cw[h$from[i]:h$to[i]], na.rm = TRUE), 1)
       max(.ai_text_lines(h$text, w, geo$hp))
     }, 1L))
-    tl <- vapply(s$title %||% list(), function(x) paste(unlist(x), collapse = " "), "")
-    fl <- vapply(s$footnote %||% list(), function(x) paste(unlist(x), collapse = " "), "")
+    tl <- vapply(s$title %||% list(), .ai_row_text, "")
+    fl <- vapply(s$footnote %||% list(), .ai_row_text, "")
     title_lines <- sum(.ai_text_lines(tl, geo$width, geo$hp))
     foot_lines <- sum(.ai_text_lines(fl, geo$width, geo$hp))
     sec <- if (length(sections)) sections[[min(s$section %||% 1L, length(sections))]]

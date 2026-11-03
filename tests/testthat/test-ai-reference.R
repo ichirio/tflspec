@@ -73,6 +73,7 @@ test_that("a study's agent files: the company's files copied, AGENTS.md's second
   # neither: the usual second step
   tflspec:::.ai_agent_files(study)
   expect_match(agents(), tflspec:::.ai_step2_usual, fixed = TRUE)
+  expect_false(grepl("the company's reference", agents(), fixed = TRUE))
   expect_false(dir.exists(file.path(study, "ai", "reference")))
   # hints only
   dir.create(home)
@@ -83,6 +84,9 @@ test_that("a study's agent files: the company's files copied, AGENTS.md's second
   expect_false(file.exists(ref("conventions.md")))
   a <- agents()
   expect_false(grepl(tflspec:::.ai_step2_usual, a, fixed = TRUE))
+  # (and "What you read" lists ai/reference/, the hints only)
+  expect_match(a, "- the company's reference, `reference/company_hints.yml`, for the second", fixed = TRUE)
+  expect_false(grepl("conventions.md`, for the second", a, fixed = TRUE))
   expect_match(a, "**Else the company's hints, then the usual convention, settle it.**", fixed = TRUE)
   expect_match(a, "from: \"company hints\"", fixed = TRUE)
   expect_false(grepl("company convention", a, fixed = TRUE))
@@ -104,6 +108,8 @@ test_that("a study's agent files: the company's files copied, AGENTS.md's second
   expect_match(a, "**Else the company's conventions, then its hints, then the usual convention, settle it.**",
                fixed = TRUE)
   expect_match(a, "`reference/conventions.md` is the company standard's, by kind of report", fixed = TRUE)
+  expect_match(a, "- the company's reference, `reference/conventions.md` and `reference/company_hints.yml`",
+               fixed = TRUE)
   expect_match(a, "from: \"company convention\"", fixed = TRUE)
   expect_match(a, "from: \"company hints\"", fixed = TRUE)
   # conventions only

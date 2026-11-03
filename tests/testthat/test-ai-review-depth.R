@@ -103,3 +103,31 @@ test_that("a table's facts: the page's header and footer bands, the footer in th
   n <- function(v) as.integer(sub(".*about ([0-9]+) lines.*", "\\1", grep("^Page 1:", v, value = TRUE)))
   expect_equal(n(x), n(y) + 1L)
 })
+
+test_that("the build log: the run's messages appended under its date", {
+  d <- withr::local_tempdir()
+  f <- tflspec:::.ai_build_log_write(d, c("14.1.1: a note.", "widen_ard(): 9 ARD rows were not used."))
+  expect_identical(basename(f), "build.log")
+  tflspec:::.ai_build_log_write(d, character())
+  x <- readLines(f, encoding = "UTF-8")
+  expect_match(x[1L], "^# [0-9-]+ [0-9:]+: run.R$")
+  expect_identical(x[2:3], c("14.1.1: a note.", "widen_ard(): 9 ARD rows were not used."))
+  expect_identical(x[4L], "")
+  expect_identical(x[6L], "(no messages)")
+})
+
+test_that("a table's facts: a title row with a heading flag prints its text only", {
+  skip_if_not_installed("rtfreporter")
+  df <- data.frame(Item = c("A", "B"), N = c("1", "2"), stringsAsFactors = FALSE)
+  doc <- rtfreporter::rtf_document() |>
+    rtfreporter::rtf_tables(list(rtfreporter::rtftable(df)),
+                            titles = list(list("Table 1", list(text = "Parameter: ALT", align = "left", heading = TRUE))),
+                            footnotes = list(list(list(text = "A note.", align = "left", heading = FALSE))))
+  x <- tflspec:::.ai_table_facts(doc, "T-1")
+  ti <- grep("^  Title: ", x, value = TRUE)
+  expect_identical(ti, "  Title: Table 1 / Parameter: ALT")
+  expect_false(any(grepl("left|TRUE", c(ti, grep("Footnotes", x, value = TRUE)))))
+  expect_true("  Footnotes: A note." %in% x)
+  expect_identical(tflspec:::.ai_row_text(c(c = "Table 1")), "Table 1")
+  expect_identical(tflspec:::.ai_row_text(list(text = "T", align = "left", heading = TRUE)), "T")
+})
