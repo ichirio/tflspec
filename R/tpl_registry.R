@@ -90,6 +90,7 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
         "rounding", "empty", "denominator", "stack_id", "stack_label"), "text"),
     k("widths", "list", fields = c("name", "text")),
     k("comparison", "levels", of = "group"),
+    k("n_by_arm", "levels", TRUE, of = "group"),
     k("by_levels", "levels", TRUE, of = "by"),
     k(c("levels", "worst"), "levels", TRUE, of = "post"),
     k("percent_of", "choice", choices = c("row", "total")),
