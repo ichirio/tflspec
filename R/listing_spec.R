@@ -283,7 +283,6 @@ tfl_listing_spec <- function(listings = NULL, listing_cols = NULL,
 #' @param output_id Only these listings; `NULL` for all.
 #' @export
 tfl_read_listing_spec <- function(path, output_id = NULL, check = TRUE) {
-  .ard_need("readxl", "tfl_read_listing_spec()")
   if (!file.exists(path)) .stop_no_file(path, "tfl_read_listing_spec")
   sheets <- readxl::excel_sheets(path)
   if (!"listings" %in% sheets) {
@@ -566,7 +565,6 @@ tfl_listing <- function(data, spec, output_id = NULL, type = "multiline") {
       "tfl_listing(data, spec).\n  The data comes first, as in ",
       "tfl_table_plan(data, spec)."))
   }
-  .spec_need_rtfreporter()
   x <- .listing_one(spec, output_id, "tfl_listing")
   l <- x$listing
   cols <- x$cols

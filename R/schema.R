@@ -503,7 +503,6 @@ tfl_schema_check <- function(item) {
   if (inherits(v, "tfl_call")) {
     a <- .schema_to_r(v$fn, v$args)
     if (identical(.schema_fn_name(v$fn), "cell_rows")) {
-      .spec_need_rtfreporter()
       return(do.call(rtfreporter::cell_rows, lapply(a, .schema_eval_guards)))
     }
     return(do.call(.spec_call, c(list(.schema_call_fun(v)), a)))

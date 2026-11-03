@@ -43,16 +43,7 @@
   if (exists(name, envir = asNamespace("tflspec"), inherits = FALSE)) {
     return(get(name, envir = asNamespace("tflspec"), mode = "function"))
   }
-  .spec_need_rtfreporter()
   get(name, envir = asNamespace("rtfreporter"), mode = "function")
-}
-
-.spec_need_rtfreporter <- function() {
-  if (!requireNamespace("rtfreporter", quietly = TRUE)) {
-    .ard_stop(paste0("This needs the rtfreporter package (the table engine ",
-                     "and the RTF renderer): install it, and library(rtfreporter) ",
-                     "for the code tflspec writes."))
-  }
 }
 
 .spec_eval <- function(x, env) {
@@ -1181,7 +1172,6 @@ tfl_content_run <- function(output, data) {
     .ard_stop(sprintf(paste0("tfl_content_run(): a %s's content is not run ",
                              "yet; tables, listings and figures, for now."), output$kind))
   }
-  .spec_need_rtfreporter()
   for (it in output$content) .schema_need_version(it)
   # plan_levels() the ARD already says: left out, as the program does
   if (identical(output$kind, "table")) output$content <- .levels_prune(output$content, output)
@@ -1552,7 +1542,6 @@ tfl_normalize_code <- function(spec, ard_spec = NULL, output_id = NULL,
 #' }
 #' @export
 tfl_table_plan <- function(data, spec, output_id = NULL, ...) {
-  .spec_need_rtfreporter()
   sp <- .ard_spec_scope(.as_spec(spec, "table", "tfl_table_plan",
                                  output_id = output_id), output_id)
   roles <- .plan_spec_roles(sp)
