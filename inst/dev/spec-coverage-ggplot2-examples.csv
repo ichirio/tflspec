@@ -99,7 +99,7 @@
 "ggplot2","geom_function","args","yes","geom_function","","geom",1,2
 "ggplot2","geom_function","color","yes","update_defaults","","geom",1,1
 "ggplot2","geom_function","colour","yes","geom_function","","geom",1,3
-"ggplot2","geom_function","fun","partial","geom_function; update_defaults","10 of 10 uses: as R: dnorm (geom_function(fun = dnorm, colour = ""red""))","geom",1,10
+"ggplot2","geom_function","fun","partial","geom_function; update_defaults","1 of 10 uses: as R: function(x) 0.5 * exp(-abs(x)) (geom_function(fun = function(x) 0.5 * exp(-abs(x))))","geom",1,10
 "ggplot2","geom_function","mapping","partial","geom_function","2 of 2 uses: as R: ""normal"" (geom_function(aes(colour = ""normal""), fun = dnorm))","geom",1,2
 "ggplot2","geom_function","n","yes","geom_function","","geom",1,1
 "ggplot2","geom_function","xlim","partial","geom_function","2 of 2 uses: as R: c(-1, 1) (geom_function(fun = dnorm, colour = ""red"", xlim = c(-1, 1)))","geom",1,2
@@ -130,7 +130,7 @@
 "ggplot2","geom_line","arrow","yes","geom_path","","geom",3,2
 "ggplot2","geom_line","colour","yes","geom_path; geom_polygon","","geom",3,2
 "ggplot2","geom_line","data","yes","geom_polygon","","geom",3,1
-"ggplot2","geom_line","key_glyph","partial","draw_key; geom_path","1 of 3 uses: as R: draw_key_rect (geom_line(key_glyph = draw_key_rect))","geom",3,3
+"ggplot2","geom_line","key_glyph","yes","draw_key; geom_path","","geom",3,3
 "ggplot2","geom_line","lineend","yes","aes_linetype_size_shape; scale_linewidth","","geom",3,3
 "ggplot2","geom_line","linetype","yes","aes_linetype_size_shape","","geom",3,3
 "ggplot2","geom_line","linewidth","yes","aes_linetype_size_shape; geom_polygon","","geom",3,2
@@ -193,8 +193,8 @@
 "ggplot2","geom_segment","mapping","partial","aes_position; geom_segment","2 of 7 uses: as R: ""segment"" (geom_segment(aes(x = x1, y = y1, xend = x2, yend = y2, colour = ""segment""), data = df))","geom",3,7
 "ggplot2","geom_segment","size","partial","aes_position; geom_segment","2 of 2 uses: geom_segment has no argument `size` (it has: mapping, stat, position, arrow, arrow.fill, lineend, linejoin, na.rm, show.legend, inherit.aes, data, x, y, xend, yend, colour, linewidth, linetype, alpha, group, key_glyph, layout) (geom_segment(aes(yend = 0, xend = x), size = 10))","geom",3,2
 "ggplot2","geom_smooth","","yes","coord_cartesian; geom_smooth; gg-add","","geom",2,4
-"ggplot2","geom_smooth","formula","partial","element; geom_smooth","2 of 2 uses: as R: y ~ x (geom_smooth(formula = y ~ x, method = ""lm""))","geom",2,2
-"ggplot2","geom_smooth","method","partial","element; geom_abline; geom_smooth","3 of 5 uses: as R: lm (geom_smooth(method = lm, se = FALSE))","geom",2,5
+"ggplot2","geom_smooth","formula","yes","element; geom_smooth","","geom",2,2
+"ggplot2","geom_smooth","method","yes","element; geom_abline; geom_smooth","","geom",2,5
 "ggplot2","geom_smooth","orientation","yes","geom_smooth","","geom",2,1
 "ggplot2","geom_smooth","se","yes","fortify.lm; geom_abline; geom_smooth","","geom",2,5
 "ggplot2","geom_smooth","span","yes","geom_smooth","","geom",2,2
@@ -290,13 +290,13 @@
 "ggplot2","scale_colour_brewer","name","yes","scale_brewer","","scale",2,1
 "ggplot2","scale_colour_brewer","palette","yes","scale_brewer","","scale",2,2
 "ggplot2","scale_colour_continuous","palette","yes","scale_colour_continuous","","scale",1,1
-"ggplot2","scale_colour_discrete","palette","partial","scale_colour_discrete","1 of 1 uses: as R: scales::pal_brewer(palette = ""Dark2"") (scale_colour_discrete(palette = scales::pal_brewer(palette = ""Dark2"")))","scale",1,1
+"ggplot2","scale_colour_discrete","palette","yes","scale_colour_discrete","","scale",1,1
 "ggplot2","scale_colour_gradient","high","yes","scale_gradient","","scale",2,2
 "ggplot2","scale_colour_gradient","low","yes","scale_gradient","","scale",2,2
 "ggplot2","scale_colour_gradient","na.value","yes","scale_gradient","","scale",2,1
 "ggplot2","scale_colour_gradient2","","yes","scale_gradient","","scale",2,1
 "ggplot2","scale_colour_gradientn","colours","partial","scale_gradient","1 of 2 uses: as R: terrain.colors(10) (scale_colour_gradientn(colours = terrain.colors(10)))","scale",1,2
-"ggplot2","scale_colour_gradientn","rescaler","partial","scale_gradient","1 of 1 uses: as R: ~scales::rescale_mid(.x, mid = 0) (scale_colour_gradientn(colours = c(""blue"", ""dodgerblue"", ""white"", ""orange"", ""red""), rescaler = ~scales::rescale_mid(.x, mid = 0)))","scale",1,1
+"ggplot2","scale_colour_gradientn","rescaler","yes","scale_gradient","","scale",1,1
 "ggplot2","scale_colour_grey","","yes","scale_grey","","scale",1,3
 "ggplot2","scale_colour_grey","end","yes","scale_grey","","scale",1,1
 "ggplot2","scale_colour_grey","na.value","yes","scale_grey","","scale",1,1
@@ -361,7 +361,7 @@
 "ggplot2","scale_x_binned","","yes","geom_histogram; scale_binned","","scale",1,2
 "ggplot2","scale_x_continuous","breaks","partial","guide_axis_logticks; scale_continuous","1 of 3 uses: as R: c(-10^(4:0), 0, 10^(0:4)) (scale_x_continuous(breaks = c(-10^(4:0), 0, 10^(0:4)), transform = ""pseudo_log""))","scale",3,3
 "ggplot2","scale_x_continuous","guide","yes","guide_axis","","scale",3,1
-"ggplot2","scale_x_continuous","labels","partial","annotation_logticks; scale_continuous","2 of 3 uses: as R: scales::label_math(10^.x) (scale_x_continuous(name = ""body"", labels = scales::label_math(10^.x)))","scale",3,3
+"ggplot2","scale_x_continuous","labels","partial","annotation_logticks; scale_continuous","1 of 3 uses: as R: 10^.x (scale_x_continuous(name = ""body"", labels = scales::label_math(10^.x)))","scale",3,3
 "ggplot2","scale_x_continuous","limits","yes","coord_cartesian; scale_continuous","","scale",3,4
 "ggplot2","scale_x_continuous","name","yes","annotation_logticks; scale_continuous","","scale",3,2
 "ggplot2","scale_x_continuous","transform","yes","guide_axis_logticks","","scale",3,1
@@ -372,23 +372,23 @@
 "ggplot2","scale_x_datetime","date_breaks","yes","sec_axis","","scale",1,1
 "ggplot2","scale_x_datetime","date_labels","yes","sec_axis","","scale",1,2
 "ggplot2","scale_x_datetime","name","yes","sec_axis","","scale",1,2
-"ggplot2","scale_x_datetime","sec.axis","partial","sec_axis","2 of 2 uses: as R: scales::label_time(""%I %p"") (scale_x_datetime(""Date"", date_labels = ""%b %d"", date_breaks = ""6 hour"", sec.axis = dup_axis(name = ""Time of Day"", labels = scales::label_time(""%I %p""))))","scale",1,2
+"ggplot2","scale_x_datetime","sec.axis","yes","sec_axis","","scale",1,2
 "ggplot2","scale_x_discrete","expand","yes","expansion","","scale",3,2
 "ggplot2","scale_x_log10","","yes","geom_histogram","","scale",3,2
-"ggplot2","scale_x_log10","breaks","partial","annotation_logticks","1 of 1 uses: as R: scales::trans_breaks(""log10"", function(x) 10^x) (scale_x_log10(breaks = scales::trans_breaks(""log10"", function(x) 10^x), labels = scales::trans_format(""log10"", scales::math_format(10^.x))))","scale",3,1
+"ggplot2","scale_x_log10","breaks","partial","annotation_logticks","1 of 1 uses: as R: function(x) 10^x (scale_x_log10(breaks = scales::trans_breaks(""log10"", function(x) 10^x), labels = scales::trans_format(""log10"", scales::math_format(10^.x))))","scale",3,1
 "ggplot2","scale_x_log10","guide","yes","guide_axis_logticks","","scale",3,1
-"ggplot2","scale_x_log10","labels","partial","annotation_logticks","1 of 1 uses: as R: scales::trans_format(""log10"", scales::math_format(10^.x)) (scale_x_log10(breaks = scales::trans_breaks(""log10"", function(x) 10^x), labels = scales::trans_format(""log10"", scales::math_format(10^.x))))","scale",3,1
+"ggplot2","scale_x_log10","labels","partial","annotation_logticks","1 of 1 uses: as R: scales::math_format(10^.x) (scale_x_log10(breaks = scales::trans_breaks(""log10"", function(x) 10^x), labels = scales::trans_format(""log10"", scales::math_format(10^.x))))","scale",3,1
 "ggplot2","scale_x_reverse","","yes","coord_flip","","scale",2,1
 "ggplot2","scale_y_continuous","breaks","yes","geom_dotplot","","scale",3,1
 "ggplot2","scale_y_continuous","expand","yes","expansion; geom_rug","","scale",3,3
-"ggplot2","scale_y_continuous","labels","partial","annotation_logticks; scale_continuous","3 of 3 uses: as R: scales::label_math(10^.x) (scale_y_continuous(name = ""brain"", labels = scales::label_math(10^.x)))","scale",3,3
+"ggplot2","scale_y_continuous","labels","partial","annotation_logticks; scale_continuous","1 of 3 uses: as R: 10^.x (scale_y_continuous(name = ""brain"", labels = scales::label_math(10^.x)))","scale",3,3
 "ggplot2","scale_y_continuous","name","yes","annotation_logticks; geom_dotplot; scale_continuous; sec_axis","","scale",3,4
-"ggplot2","scale_y_continuous","sec.axis","partial","sec_axis","3 of 4 uses: as R: ~. + 10 (scale_y_continuous(sec.axis = sec_axis(~. + 10)))","scale",3,4
-"ggplot2","scale_y_continuous","transform","partial","scale_continuous","1 of 1 uses: as R: scales::transform_reciprocal() (scale_y_continuous(transform = scales::transform_reciprocal()))","scale",3,1
+"ggplot2","scale_y_continuous","sec.axis","partial","sec_axis","2 of 4 uses: as R: derive() (scale_y_continuous(""Miles/gallon"", sec.axis = sec_axis(~. + 10, name = derive())))","scale",3,4
+"ggplot2","scale_y_continuous","transform","yes","scale_continuous","","scale",3,1
 "ggplot2","scale_y_log10","","yes","scale_continuous","","scale",3,1
-"ggplot2","scale_y_log10","breaks","partial","annotation_logticks","1 of 1 uses: as R: scales::trans_breaks(""log10"", function(x) 10^x) (scale_y_log10(breaks = scales::trans_breaks(""log10"", function(x) 10^x), labels = scales::trans_format(""log10"", scales::math_format(10^.x))))","scale",3,1
+"ggplot2","scale_y_log10","breaks","partial","annotation_logticks","1 of 1 uses: as R: function(x) 10^x (scale_y_log10(breaks = scales::trans_breaks(""log10"", function(x) 10^x), labels = scales::trans_format(""log10"", scales::math_format(10^.x))))","scale",3,1
 "ggplot2","scale_y_log10","guide","yes","guide_axis_logticks","","scale",3,1
-"ggplot2","scale_y_log10","labels","partial","annotation_logticks","1 of 1 uses: as R: scales::trans_format(""log10"", scales::math_format(10^.x)) (scale_y_log10(breaks = scales::trans_breaks(""log10"", function(x) 10^x), labels = scales::trans_format(""log10"", scales::math_format(10^.x))))","scale",3,1
+"ggplot2","scale_y_log10","labels","partial","annotation_logticks","1 of 1 uses: as R: scales::math_format(10^.x) (scale_y_log10(breaks = scales::trans_breaks(""log10"", function(x) 10^x), labels = scales::trans_format(""log10"", scales::math_format(10^.x))))","scale",3,1
 "ggplot2","scale_y_reverse","","yes","coord_flip; scale_continuous","","scale",2,2
 "ggplot2","scale_y_sqrt","","yes","geom_histogram; scale_continuous","","scale",1,2
 "ggplot2","xlim","limits","yes","geom_bin_2d; geom_density; geom_density_2d; geom_function; geom_segment; lims; scale_continuous","","scale",2,10
@@ -412,7 +412,7 @@
 "ggplot2","stat_function","alpha","yes","geom_function","","stat",1,1
 "ggplot2","stat_function","color","yes","geom_function","","stat",1,1
 "ggplot2","stat_function","fill","yes","geom_function","","stat",1,1
-"ggplot2","stat_function","fun","partial","geom_function","3 of 3 uses: as R: dnorm (stat_function(fun = dnorm, geom = ""point""))","stat",1,3
+"ggplot2","stat_function","fun","yes","geom_function","","stat",1,3
 "ggplot2","stat_function","geom","yes","geom_function","","stat",1,3
 "ggplot2","stat_function","n","yes","geom_function","","stat",1,1
 "ggplot2","stat_identity","","yes","stat_identity","","stat",1,1
@@ -422,28 +422,28 @@
     list(x = x[hull], y = y[hull])
 })) (stat_manual(fun = with, args = list(expr = quote({     hull <- chull(x, y)     list(x = x[hull], y = y[hull]) })), geom = ""polygon"", fill = NA))","stat",1,5
 "ggplot2","stat_manual","fill","yes","stat_manual","","stat",1,3
-"ggplot2","stat_manual","fun","partial","stat_manual","6 of 6 uses: as R: make_hull (stat_manual(geom = ""polygon"", fun = make_hull, fill = NA))","stat",1,6
+"ggplot2","stat_manual","fun","yes","stat_manual","","stat",1,6
 "ggplot2","stat_manual","geom","yes","stat_manual","","stat",1,5
 "ggplot2","stat_manual","shape","yes","stat_manual","","stat",1,1
 "ggplot2","stat_manual","size","yes","stat_manual","","stat",1,1
 "ggplot2","stat_smooth","","yes","lims","","stat",1,1
 "ggplot2","stat_summary","colour","yes","stat_summary","","stat",3,5
-"ggplot2","stat_summary","fun","partial","stat_summary","2 of 5 uses: as R: mean (stat_summary(fun = mean, geom = ""line""))","stat",3,5
+"ggplot2","stat_summary","fun","yes","stat_summary","","stat",3,5
 "ggplot2","stat_summary","fun.data","yes","stat_summary","","stat",3,2
-"ggplot2","stat_summary","fun.max","partial","stat_summary","1 of 1 uses: as R: max (stat_summary(fun = mean, fun.min = min, fun.max = max, colour = ""red""))","stat",3,1
-"ggplot2","stat_summary","fun.min","partial","stat_summary","1 of 1 uses: as R: min (stat_summary(fun = mean, fun.min = min, fun.max = max, colour = ""red""))","stat",3,1
+"ggplot2","stat_summary","fun.max","yes","stat_summary","","stat",3,1
+"ggplot2","stat_summary","fun.min","yes","stat_summary","","stat",3,1
 "ggplot2","stat_summary","geom","yes","stat_summary","","stat",3,4
 "ggplot2","stat_summary","linewidth","yes","stat_summary","","stat",3,2
 "ggplot2","stat_summary","mapping","yes","stat_summary","","stat",3,1
 "ggplot2","stat_summary","size","yes","stat_summary","","stat",3,4
 "ggplot2","stat_summary_2d","","yes","stat_summary_2d","","stat",1,1
-"ggplot2","stat_summary_2d","fun","partial","stat_summary_2d","3 of 4 uses: as R: function(x) sum(x^2) (stat_summary_2d(fun = function(x) sum(x^2)))","stat",1,4
+"ggplot2","stat_summary_2d","fun","partial","stat_summary_2d","1 of 4 uses: as R: function(x) sum(x^2) (stat_summary_2d(fun = function(x) sum(x^2)))","stat",1,4
 "ggplot2","stat_summary_2d","fun.args","yes","stat_summary_2d","","stat",1,1
 "ggplot2","stat_summary_bin","fun","yes","stat_summary","","stat",2,1
 "ggplot2","stat_summary_bin","geom","yes","stat_summary","","stat",2,1
 "ggplot2","stat_summary_bin","orientation","yes","stat_summary","","stat",2,1
 "ggplot2","stat_summary_hex","","yes","stat_summary_2d","","stat",1,1
-"ggplot2","stat_summary_hex","fun","partial","stat_summary_2d","1 of 1 uses: as R: ~sum(.x^2) (stat_summary_hex(fun = ~sum(.x^2)))","stat",1,1
+"ggplot2","stat_summary_hex","fun","yes","stat_summary_2d","","stat",1,1
 "ggplot2","arrow","ends","yes","guide_bins","","theme",1,1
 "ggplot2","arrow","length","yes","guide_bins","","theme",1,1
 "ggplot2","element_line","colour","yes","get_theme; subtheme","","theme",3,3
@@ -467,7 +467,7 @@
 "ggplot2","theme","legend.position","yes","geom_bar; position_stack","","theme",3,2
 "ggplot2","theme","line","yes","complete_theme","","theme",3,1
 "ggplot2","theme","palette.colour.continuous","yes","scale_colour_continuous","","theme",3,2
-"ggplot2","theme","palette.colour.discrete","partial","scale_colour_discrete","1 of 1 uses: as R: scales::pal_grey() (theme(palette.colour.discrete = scales::pal_grey()))","theme",3,1
+"ggplot2","theme","palette.colour.discrete","yes","scale_colour_discrete","","theme",3,1
 "ggplot2","theme","panel.background","yes","element; theme","","theme",3,4
 "ggplot2","theme","panel.border","yes","theme","","theme",3,1
 "ggplot2","theme","panel.grid.major","yes","theme","","theme",3,2

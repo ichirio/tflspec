@@ -124,8 +124,60 @@ tfl_plot <- function(name, items = list(), from = "own") {
   unique(c(.fig_object_args, own))
 }
 
-# A value of an item as the R it stands for (a language object)
-.fig_value_lang <- function(v, arg = "", objects = .fig_object_args) {
+# The types an item's arguments are written and read by (parsed), by name:
+# its function's card, with the stat or geom it names (fun.data of
+# geom_pointrange(stat = "summary")); only the arguments given
+.fig_arg_types <- function(fn, args = list()) {
+  nms <- names(args) %||% character()
+  if (!length(nms) || !is.character(fn) || length(fn) != 1L) return(list())
+  # (the stat or geom an item names is read from its text)
+  given <- lapply(args, function(x) if (is.character(x) && length(x) == 1L) x)
+  ent <- tryCatch(.schema_item_entry(tfl_schema(fn), fn, given), error = function(e) NULL)
+  if (is.null(ent)) return(list())
+  out <- lapply(stats::setNames(nms, nms), function(k) {
+    t <- ent$args[[k]]$type
+    if (!is.null(t)) .schema_type(t)
+  })
+  Filter(Negate(is.null), out)
+}
+
+# a type's alternatives (a type of one kind is its one)
+.fig_type_alts <- function(ty) if (identical(ty$kind, "either")) ty$args else list(ty)
+
+# A text value of a type that is code: a function by its name, written
+# bare (fun.data = mean_se, Hmisc::smean.cl.normal), a formula as its text
+# written as the formula (formula = y ~ x); NULL for text written as text
+# -- the first of the type's alternatives the value has decides (method:
+# "lm" of string|r stays "lm")
+.fig_text_lang <- function(v, ty) {
+  for (t in .fig_type_alts(ty)) {
+    if (!.schema_ok(v, t)) next
+    if (identical(t$kind, "function")) {
+      if (!grepl("::", v, fixed = TRUE)) return(as.name(v))
+      return(call("::", as.name(sub("::.*$", "", v)), as.name(sub("^.*::", "", v))))
+    }
+    if (identical(t$kind, "tilde")) return(str2lang(v))
+    return(NULL)
+  }
+  NULL
+}
+
+# whether a type takes a call of `f` by name (call<label_*>: scales'
+# label_percent); a call<> of no names takes no other package's
+.fig_type_takes_call <- function(ty, f) {
+  if (is.null(ty)) return(FALSE)
+  any(vapply(.fig_type_alts(ty), function(t) {
+    identical(t$kind, "call") && length(t$args) > 0L && .schema_call_named(f, unlist(t$args))
+  }, NA))
+}
+
+.fig_type_has <- function(ty, kind) {
+  !is.null(ty) && any(vapply(.fig_type_alts(ty), function(t) identical(t$kind, kind), NA))
+}
+
+# A value of an item as the R it stands for (a language object); `type`,
+# the argument's (parsed), says a text that is code (.fig_text_lang())
+.fig_value_lang <- function(v, arg = "", objects = .fig_object_args, type = NULL) {
   if (inherits(v, "tfl_unset")) {
     warning(sprintf(paste0("A figure's `%s` is !unset, which removes a key in the layering; ",
                            "NULL is !r NULL: written as NULL."), arg), call. = FALSE)
@@ -133,8 +185,9 @@ tfl_plot <- function(name, items = list(), from = "own") {
   }
   if (inherits(v, "tfl_r")) return(str2lang(as.character(unclass(v))))
   if (inherits(v, "tfl_call")) {
+    ty <- .fig_arg_types(v$fn, v$args %||% list())
     a <- lapply(stats::setNames(names(v$args %||% list()), names(v$args %||% list())),
-                function(k) .fig_value_lang(v$args[[k]], k))
+                function(k) .fig_value_lang(v$args[[k]], k, type = ty[[k]]))
     # unit(0.5, "cm"), rel(1.2): their leading arguments by position, as
     # they are written
     lead <- .fig_by_position[[v$fn]]
@@ -151,6 +204,10 @@ tfl_plot <- function(name, items = list(), from = "own") {
     return(as.call(c(list(as.name("aes")), a)))
   }
   if (arg %in% objects && is.character(v) && length(v) == 1L) return(as.name(v))
+  if (!is.null(type) && is.character(v) && length(v) == 1L && is.null(names(v))) {
+    w <- .fig_text_lang(v, type)
+    if (!is.null(w)) return(w)
+  }
   # an argument R takes as a list (fun.args = list(mult = 1.96))
   if (arg %in% .fig_list_args && is.list(v)) {
     el <- lapply(seq_along(v), function(i) .fig_value_lang(v[[i]], names(v)[i] %||% ""))
@@ -200,7 +257,8 @@ tfl_plot <- function(name, items = list(), from = "own") {
 .fig_item_lang <- function(it) {
   a <- it$args %||% list()
   obj <- .fig_objects_of(it$fn)
-  args <- lapply(stats::setNames(names(a), names(a)), function(k) .fig_value_lang(a[[k]], k, obj))
+  ty <- .fig_arg_types(it$fn, a)
+  args <- lapply(stats::setNames(names(a), names(a)), function(k) .fig_value_lang(a[[k]], k, obj, ty[[k]]))
   # facet_grid()'s rows and cols by their columns: vars(SEX), as ggplot2
   # takes them together (not "SEX")
   if (identical(it$fn, "facet_grid")) {
@@ -256,17 +314,35 @@ tfl_plot <- function(name, items = list(), from = "own") {
 # A call's argument as an item's value: a constant as it is, a column of
 # aes() by its name, an object (data, fit) by its name, a constructor of
 # constants (position_dodge, element_text ...) as {fn:, args:}, anything
-# else as R (!r)
-.fig_lang_value <- function(x, arg = "", objects = .fig_object_args) {
+# else as R (!r).  `type`, the argument's (parsed), reads code as a typed
+# value: a function by its name as the name (fun = mean: "mean"), a
+# formula as its text (formula = y ~ x: "y ~ x"), a call of another
+# package the type names as {fn:, args:} (labels =
+# scales::label_percent()).
+.fig_lang_value <- function(x, arg = "", objects = .fig_object_args, type = NULL) {
   if (is.null(x)) return(tfl_r("NULL"))
   if (is.atomic(x) && length(x) == 1L) return(x)
   if (is.name(x)) {
     if (arg %in% objects) return(as.character(x))
-    return(tfl_r(as.character(x)))
+    nm <- as.character(x)
+    if (.fig_type_has(type, "function") && .schema_is_fun_name(nm)) return(nm)
+    # a smooth's method by its function (method = lm) is its name, as
+    # ggplot2 takes it; a legend key's draw_key_rect its "rect"
+    if (identical(arg, "method") && nm %in% c("lm", "glm", "loess")) return(nm)
+    if (identical(arg, "key_glyph") && startsWith(nm, "draw_key_")) return(sub("^draw_key_", "", nm))
+    return(tfl_r(nm))
   }
   if (is.call(x)) {
     f <- if (is.name(x[[1L]])) as.character(x[[1L]]) else .fig_deparse(x[[1L]])
     a <- as.list(x)[-1L]
+    # Hmisc::smean.cl.normal, a function by its name
+    if (identical(f, "::") && .fig_type_has(type, "function") && .schema_is_fun_name(.fig_deparse(x))) {
+      return(.fig_deparse(x))
+    }
+    if (identical(f, "~") && .fig_type_has(type, "tilde")) {
+      txt <- .fig_deparse(x)
+      if (.schema_is_tilde(txt) && identical(str2lang(txt), x)) return(txt)
+    }
     if (identical(f, "aes") && identical(arg, "mapping")) {
       # aes(displ, hwy): the first two unnamed are x and y, as aes() takes them
       nm <- names(a) %||% rep("", length(a))
@@ -304,16 +380,29 @@ tfl_plot <- function(name, items = list(), from = "own") {
     # theme(), unit(), rel(), sec_axis() ...): {fn:, args:}, its positional
     # arguments named by its formals, an argument that is no constant as R
     # in it
-    if (.fig_reads_as_call(f)) {
-      named <- .fig_name_args(x, .fig_find_fun(f))
+    # (scales' percent_format() bare, the package attached: scales::)
+    fq <- .fig_scales_name(f)
+    if (.fig_reads_as_call(f) || .fig_type_takes_call(type, fq)) {
+      named <- .fig_name_args(x, .fig_find_fun(fq))
       a <- as.list(named)[-1L]
       if (all(nzchar(names(a) %||% rep("", length(a))))) {
-        vals <- lapply(stats::setNames(names(a), names(a)), function(k) .fig_lang_value(a[[k]], k))
-        return(tfl_call(f, vals))
+        ty <- .fig_arg_types(fq, lapply(a, function(e) if (is.character(e)) e))
+        vals <- lapply(stats::setNames(names(a), names(a)),
+                       function(k) .fig_lang_value(a[[k]], k, type = ty[[k]]))
+        return(tfl_call(fq, vals))
       }
     }
   }
   tfl_r(.fig_deparse_r(x))
+}
+
+# a function of scales called bare (percent_format(), the package
+# attached) by its pkg::name, as the code writes it; any other as it is
+.fig_scales_name <- function(f) {
+  if (grepl("::", f, fixed = TRUE) || !requireNamespace("scales", quietly = TRUE) ||
+      !f %in% getNamespaceExports("scales")) return(f)
+  if (requireNamespace("ggplot2", quietly = TRUE) && f %in% getNamespaceExports("ggplot2")) return(f)
+  paste0("scales::", f)
 }
 
 # whether a call in an argument is read as {fn:, args:}: the constructors
@@ -385,7 +474,8 @@ tfl_plot <- function(name, items = list(), from = "own") {
   }
   names(a) <- nm
   obj <- .fig_objects_of(f)
-  args <- lapply(stats::setNames(nm, nm), function(k) .fig_lang_value(a[[k]], k, obj))
+  ty <- .fig_arg_types(f, lapply(a, function(e) if (is.character(e)) e))
+  args <- lapply(stats::setNames(nm, nm), function(k) .fig_lang_value(a[[k]], k, obj, ty[[k]]))
   if (f %in% c("facet_wrap", "facet_grid")) args <- .fig_facet_args(f, a, args)
   tfl_item(f, args)
 }

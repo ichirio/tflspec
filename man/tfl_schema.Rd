@@ -59,8 +59,12 @@ The types, in a short notation: \code{string}, \code{integer}, \code{number} (a
 number written as arithmetic of numbers, \verb{!r 1/5}, is one),
 \code{logical}, \code{enum[a|b]}, \code{column}, \code{stat}, \code{template}, \code{r} (\code{!r}),
 \code{formula} (\code{!r}, written \verb{~ <text>}), \code{guard} (\code{!r}, a two-sided
-\code{cond ~ "text"}), \code{call} and \verb{call<fn>}
-(\verb{\{fn:, args:\}}), \verb{list<T>} (a sequence), \verb{vec<K, V>} (a map that is a
+\code{cond ~ "text"}), \code{function} (a function by its name, \code{mean_se} or
+\code{Hmisc::smean.cl.normal}, written bare: \code{fun.data = mean_se}), \code{tilde}
+(a formula as its text, \code{y ~ x} or \code{~ . / 7}, written as the formula),
+\code{call} and \verb{call<fn>} (\verb{\{fn:, args:\}}; \verb{call<label_*>} takes any
+function whose name the pattern matches, of any package:
+\code{{fn: scales::label_percent}}), \verb{list<T>} (a sequence), \verb{vec<K, V>} (a map that is a
 named vector in R), \verb{map<K, V>} (a map that is a named list),
 \verb{rows<f1, f2, ...>} (a sequence of maps that is a data frame) and \code{T|U}
 (either).

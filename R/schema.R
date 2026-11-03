@@ -75,8 +75,12 @@
 #' number written as arithmetic of numbers, `!r 1/5`, is one),
 #' `logical`, `enum[a|b]`, `column`, `stat`, `template`, `r` (`!r`),
 #' `formula` (`!r`, written `~ <text>`), `guard` (`!r`, a two-sided
-#' `cond ~ "text"`), `call` and `call<fn>`
-#' (`{fn:, args:}`), `list<T>` (a sequence), `vec<K, V>` (a map that is a
+#' `cond ~ "text"`), `function` (a function by its name, `mean_se` or
+#' `Hmisc::smean.cl.normal`, written bare: `fun.data = mean_se`), `tilde`
+#' (a formula as its text, `y ~ x` or `~ . / 7`, written as the formula),
+#' `call` and `call<fn>` (`{fn:, args:}`; `call<label_*>` takes any
+#' function whose name the pattern matches, of any package:
+#' `{fn: scales::label_percent}`), `list<T>` (a sequence), `vec<K, V>` (a map that is a
 #' named vector in R), `map<K, V>` (a map that is a named list),
 #' `rows<f1, f2, ...>` (a sequence of maps that is a data frame) and `T|U`
 #' (either).
@@ -222,7 +226,33 @@ tfl_schema <- function(fn = NULL) {
 }
 
 .schema_scalars <- c("string", "integer", "number", "logical", "column", "stat",
-                     "template", "enum")
+                     "template", "enum", "function", "tilde")
+
+# a function by its name (mean_se, Hmisc::smean.cl.normal): a name R
+# writes bare, or pkg::name
+.schema_fun_name_re <- "^([A-Za-z][A-Za-z0-9.]*::)?([A-Za-z]|[.][A-Za-z._])[A-Za-z0-9._]*$"
+.schema_is_fun_name <- function(v) {
+  is.character(v) && length(v) == 1L && !is.na(v) && grepl(.schema_fun_name_re, v) &&
+    !sub("^.*::", "", v) %in% c("TRUE", "FALSE", "NULL", "NA", "Inf", "NaN", "function",
+                                "if", "else", "for", "while", "repeat", "in", "next", "break")
+}
+
+# a formula as its text (y ~ x, ~ . / 7): text that parses as one
+.schema_is_tilde <- function(v) {
+  if (!is.character(v) || length(v) != 1L || is.na(v) || !grepl("~", v, fixed = TRUE)) return(FALSE)
+  e <- tryCatch(str2lang(v), error = function(err) NULL)
+  is.call(e) && identical(e[[1L]], as.name("~"))
+}
+
+# whether a call's function is one a call<...> type names: by its name
+# (the package left out), or a pattern of it (label_*)
+.schema_call_named <- function(f, names) {
+  if (!length(names)) return(TRUE)
+  nm <- .schema_fn_name(f)
+  if (nm %in% names) return(TRUE)
+  pat <- names[grepl("*", names, fixed = TRUE)]
+  any(vapply(pat, function(p) grepl(utils::glob2rx(p), nm), NA))
+}
 
 # ---- checking an item ----------------------------------------------------------
 
@@ -431,7 +461,7 @@ tfl_schema_check <- function(item) {
     if (inherits(v, "cell_rows")) return("cell_rows" %in% unlist(ty$args))
     if (!inherits(v, c("tfl_call", "tfl_spec_call"))) return(FALSE)
     f <- if (inherits(v, "tfl_call")) v$fn else v$fun
-    return(!length(ty$args) || .schema_fn_name(f) %in% ty$args)
+    return(.schema_call_named(f, unlist(ty$args)))
   }
   if (k == "list") {
     if (inherits(v, c("tfl_r", "tfl_call"))) return(FALSE)
@@ -456,6 +486,8 @@ tfl_schema_check <- function(item) {
     integer = is.numeric(v) && !is.na(v) && v == round(v),
     number = is.numeric(v),
     enum = as.character(v) %in% ty$args,
+    "function" = .schema_is_fun_name(v),
+    tilde = .schema_is_tilde(v),
     is.character(v) || is.numeric(v) || is.logical(v))
 }
 

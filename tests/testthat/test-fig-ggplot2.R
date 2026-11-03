@@ -32,7 +32,7 @@ test_that("a geom drawn by another stat takes that stat's parameters (geom_step(
             position = tfl_call("position_dodge", list(width = 0.3)))
   expect_identical(nrow(gg_problems("geom_pointrange", a)), 0L)
   expect_identical(gg_code("geom_pointrange", a),
-                   paste0("geom_pointrange(stat = \"summary\", fun.data = \"mean_se\", ",
+                   paste0("geom_pointrange(stat = \"summary\", fun.data = mean_se, ",
                           "fun.args = list(mult = 1.96), position = position_dodge(width = 0.3))"))
   expect_identical(nrow(gg_problems("geom_line", list(stat = "summary", fun = "mean"))), 0L)
   expect_identical(nrow(gg_problems("geom_path", list(stat = "ellipse", level = 0.9, type = "norm"))), 0L)
@@ -52,7 +52,8 @@ test_that("a list argument is written list() and read back as a map", {
   expect_identical(.fig_deparse(e), "geom_smooth(method = \"glm\", method.args = list(family = \"binomial\"))")
   back <- .fig_lang_item(str2lang("stat_summary(fun.data = mean_cl_normal, fun.args = list(conf.int = 0.9))"))
   expect_identical(back$args$fun.args, list(conf.int = 0.9))
-  expect_s3_class(back$args$fun.data, "tfl_r")
+  # a function by its name: the name (written back bare)
+  expect_identical(back$args$fun.data, "mean_cl_normal")
   # override.aes inside a guide
   g <- .fig_lang_item(str2lang("guides(colour = guide_legend(override.aes = list(linetype = 0, size = 3)))"))
   expect_s3_class(g$args$colour, "tfl_call")
@@ -383,4 +384,103 @@ test_that("the code of the new cards runs: limits, log ticks, labellers, theme_s
   if (rlang::is_installed("hexbin")) {
     expect_length(gg_build(d2, "x, y", list(list("geom_hex", list(bins = 5L))))$data, 1L)
   }
+})
+
+test_that("a function by its name is the name, written bare (fun.data = mean_se)", {
+  expect_true(.schema_ok("mean_se", .schema_type("function")))
+  expect_true(.schema_ok("Hmisc::smean.cl.normal", .schema_type("function")))
+  for (bad in c("mean se", "1fun", "TRUE", "mean(x)", "~ mean(.x)")) {
+    expect_false(.schema_ok(bad, .schema_type("function")), info = bad)
+  }
+  # mean +/- SE by visit, with the range of min and max
+  a <- list(geom = "pointrange", fun = "mean", fun.min = "min", fun.max = "max")
+  expect_identical(nrow(gg_problems("stat_summary", a)), 0L)
+  expect_identical(gg_code("stat_summary", a),
+                   "stat_summary(geom = \"pointrange\", fun = mean, fun.min = min, fun.max = max)")
+  expect_identical(gg_code("geom_errorbar", list(stat = "summary", fun.data = "Hmisc::smean.cl.normal")),
+                   "geom_errorbar(stat = \"summary\", fun.data = Hmisc::smean.cl.normal)")
+  # a value that is no name is an error of the check
+  p <- gg_problems("stat_summary", list(fun.data = "mean se"))
+  expect_identical(p$arg, "fun.data")
+  expect_identical(p$level, "error")
+  # read from code and back
+  for (code in c("stat_summary(fun = mean, fun.min = min, fun.max = max, colour = \"red\")",
+                 "geom_function(fun = dnorm, colour = \"red\")",
+                 "stat_summary(fun.data = Hmisc::smean.cl.normal)",
+                 "scale_colour_gradient(oob = scales::oob_squish)")) {
+    it <- .fig_lang_item(str2lang(code))
+    expect_false(any(vapply(it$args, inherits, NA, "tfl_r")), info = code)
+    expect_identical(nrow(tfl_schema_check(it)), 0L, info = code)
+    expect_identical(.fig_deparse(.fig_item_lang(it)), code)
+  }
+  # a smooth's method and a legend key by their functions: the names ggplot2 takes
+  it <- .fig_lang_item(quote(geom_smooth(method = lm, se = FALSE)))
+  expect_identical(it$args$method, "lm")
+  expect_identical(.fig_deparse(.fig_item_lang(it)), "geom_smooth(method = \"lm\", se = FALSE)")
+  expect_identical(.fig_lang_item(quote(geom_line(key_glyph = draw_key_rect)))$args$key_glyph, "rect")
+  # a function of the figure's own (not a name ggplot2 takes as text) stays R
+  expect_s3_class(.fig_lang_item(quote(geom_smooth(method = my_fit)))$args$method, "tfl_r")
+})
+
+test_that("a formula is its text, written as the formula (formula = y ~ x, ~ . / 7)", {
+  expect_true(.schema_ok("y ~ x", .schema_type("tilde")))
+  expect_true(.schema_ok("~. + 10", .schema_type("tilde")))
+  expect_false(.schema_ok("y + x", .schema_type("tilde")))
+  expect_false(.schema_ok("y ~ (x", .schema_type("tilde")))
+  a <- list(method = "lm", formula = "y ~ poly(x, 2)", se = FALSE)
+  expect_identical(nrow(gg_problems("geom_smooth", a)), 0L)
+  expect_identical(gg_code("geom_smooth", a),
+                   "geom_smooth(method = \"lm\", formula = y ~ poly(x, 2), se = FALSE)")
+  # a secondary axis of weeks from days
+  sec <- tfl_call("sec_axis", list(transform = "~ . / 7", name = "Weeks"))
+  expect_identical(nrow(gg_problems("scale_x_continuous", list(sec.axis = sec))), 0L)
+  expect_identical(gg_code("scale_x_continuous", list(sec.axis = sec)),
+                   "scale_x_continuous(sec.axis = sec_axis(transform = ~./7, name = \"Weeks\"))")
+  for (code in c("geom_smooth(formula = y ~ x, method = \"lm\")",
+                 "scale_y_continuous(sec.axis = sec_axis(transform = ~. + 10))",
+                 "stat_summary_2d(fun = ~sum(.x^2))")) {
+    it <- .fig_lang_item(str2lang(code))
+    expect_identical(nrow(tfl_schema_check(it)), 0L, info = code)
+    expect_identical(.fig_deparse(.fig_item_lang(it)), code)
+  }
+  expect_identical(.fig_lang_item(quote(geom_smooth(formula = y ~ x)))$args$formula, "y ~ x")
+  # the formula draws as written
+  skip_if_not_installed("ggplot2")
+  d <- data.frame(x = 1:10, y = (1:10)^2)
+  p <- ggplot2::ggplot(d, ggplot2::aes(x, y)) +
+    eval(.fig_item_lang(tfl_item("geom_smooth", list(method = "lm", formula = "y ~ poly(x, 2)"))),
+         asNamespace("ggplot2"))
+  expect_s3_class(ggplot2::ggplot_build(p), "ggplot_built")
+})
+
+test_that("scales' labels, breaks, transformations and palettes are {fn:, args:}", {
+  pct <- tfl_call("scales::label_percent", list(accuracy = 1))
+  expect_identical(nrow(gg_problems("scale_y_continuous", list(labels = pct))), 0L)
+  expect_identical(gg_code("scale_y_continuous", list(labels = pct)),
+                   "scale_y_continuous(labels = scales::label_percent(accuracy = 1))")
+  expect_identical(nrow(gg_problems("scale_x_continuous", list(
+    breaks = tfl_call("scales::breaks_width", list(width = 4)),
+    transform = tfl_call("scales::transform_log", list(base = 2))))), 0L)
+  expect_identical(nrow(gg_problems("scale_colour_discrete", list(
+    palette = tfl_call("scales::pal_brewer", list(palette = "Dark2"))))), 0L)
+  # a call the argument does not take is an error
+  p <- gg_problems("scale_y_continuous", list(labels = tfl_call("scales::breaks_width", list(width = 4))))
+  expect_identical(p$level, "error")
+  # read from code (and percent_format() of the scales attached as scales::)
+  for (code in c("scale_y_continuous(labels = scales::label_percent(accuracy = 1))",
+                 "scale_x_continuous(breaks = scales::breaks_width(4), labels = scales::label_number(accuracy = 0.1))",
+                 "scale_y_continuous(transform = scales::transform_reciprocal())",
+                 "scale_x_datetime(sec.axis = dup_axis(labels = scales::label_time(\"%I %p\")))",
+                 "scale_colour_discrete(palette = scales::pal_brewer(palette = \"Dark2\"))")) {
+    it <- .fig_lang_item(str2lang(code))
+    expect_false(any(vapply(it$args, inherits, NA, "tfl_r")), info = code)
+    expect_identical(nrow(tfl_schema_check(it)), 0L, info = code)
+  }
+  it <- .fig_lang_item(quote(scale_x_continuous(breaks = scales::breaks_width(4))))
+  expect_identical(it$args$breaks, tfl_call("scales::breaks_width", list(width = 4)))
+  expect_identical(.fig_deparse(.fig_item_lang(it)), "scale_x_continuous(breaks = scales::breaks_width(width = 4))")
+  it <- .fig_lang_item(quote(scale_y_continuous(labels = percent_format())))
+  expect_identical(it$args$labels$fn, "scales::percent_format")
+  # another package's call where none is typed stays R
+  expect_s3_class(.fig_lang_item(quote(scale_y_continuous(labels = mypkg::lab())))$args$labels, "tfl_r")
 })

@@ -103,7 +103,8 @@ test_that("ggplot2's code reads as typed items: aes() by position, facets as col
     "theme(legend.key.size = unit(units = \"cm\", x = 1))")
   sec <- rt_item("scale_y_continuous(sec.axis = sec_axis(~ . * 2, name = \"Twice\"))")
   expect_identical(sec$args$sec.axis$fn, "sec_axis")
-  expect_s3_class(sec$args$sec.axis$args$transform, "tfl_r")
+  # (a formula as its text, the type tilde)
+  expect_identical(sec$args$sec.axis$args$transform, "~. * 2")
   expect_identical(rt_item("guides(x = guide_axis_logticks(long = 2))")$args$x,
                    tfl_call("guide_axis_logticks", list(long = 2)))
   expect_identical(rt_item("guides(fill = guide_colourbar(theme = theme(legend.direction = \"horizontal\")))")$args$fill,
@@ -111,8 +112,11 @@ test_that("ggplot2's code reads as typed items: aes() by position, facets as col
   # a name in a constructor stays R in it
   d <- rt_item("geom_col(position = position_dodge(width = w))")$args$position
   expect_identical(d, tfl_call("position_dodge", list(width = tfl_r("w"))))
-  # vars() and another package's function are no constructors of a value
-  expect_s3_class(rt_item("scale_x_continuous(labels = scales::label_percent())")$args$labels, "tfl_r")
+  # vars() and another package's function are no constructors of a value,
+  # but a call of scales the argument's type names (label_*)
+  expect_identical(rt_item("scale_x_continuous(labels = scales::label_percent())")$args$labels,
+                   tfl_call("scales::label_percent", list()))
+  expect_s3_class(rt_item("scale_x_continuous(labels = mypkg::lab())")$args$labels, "tfl_r")
   # a named vector of constants as a map; 1:5 as the numbers
   v <- rt_item("scale_colour_manual(values = c(Placebo = \"grey50\", Drug = \"red\"))")$args$values
   expect_identical(v, list(Placebo = "grey50", Drug = "red"))

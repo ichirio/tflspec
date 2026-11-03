@@ -359,6 +359,56 @@ What is left (partial): a function given by name (`fun = mean`, `method
 R is the SPEC's form for them.  No: `expand_limits(positions)`, a data
 frame given by position.
 
+### Round 6 (2026-11-03): a function by its name, a formula, scales' helpers
+
+The examples' measure (round 5), rerun after three typed forms for what
+was R:
+
+| Examples | Before | After |
+|---|---:|---:|
+| **ggplot2: geoms, scales, coords, themes, facets, guides, labs, positions** | **94.5%** | **95.3%** |
+| geom_*() | 95.2% | 95.7% |
+| scale_*() | 92.1% | 93.9% |
+| theme(), elements | 96.8% | 97.0% |
+| coord_*(), facets, guides, labs, positions | unchanged | unchanged |
+| **stat_*()** (shown apart) | **92.1%** | **97.1%** |
+| uses yes / partial / no | 1100 / 169 / 3 | 1141 / 128 / 3 |
+
+The arguments' and the aesthetics' measures stay at 100% (3409 arguments,
+826 aesthetics; `spec-coverage-ggplot2.csv` unchanged).
+
+Round 6:
+
+- A function by its name, the type `function`: `fun`, `fun.data`,
+  `fun.min`, `fun.max` (stat_summary(), stat_summary_bin(), a geom with
+  `stat: summary`, stat_function() / geom_function(), stat_manual(),
+  stat_summary_2d()), a scale's `oob` and `rescaler`, sec_axis()'s
+  `transform`.  The SPEC writes the name (`fun.data: mean_se`,
+  `fun.data: Hmisc::smean.cl.normal`, `oob: scales::oob_squish`), the
+  check takes a name R writes bare (an error for `mean se`), the code
+  writes it bare: `stat_summary(fun = mean, fun.min = min, fun.max =
+  max)`; read back from that code as the names (before: `!r mean`).
+- A formula as its text, the type `tilde`: geom_smooth()'s `formula: y ~
+  poly(x, 2)`, sec_axis()'s `transform: ~ . / 7`, a lambda `fun: ~
+  sum(.x^2)`, written as the formula (before: only `!r y ~ x`).
+- scales' helpers as `{fn:, args:}`: a scale's `labels`
+  (`{fn: scales::label_percent, args: {accuracy: 1}}`, `label_*`,
+  `*_format`), `breaks` / `minor_breaks` (`breaks_width`, `breaks_pretty`,
+  `extended_breaks` ...), `transform` (`transform_log`, `*_trans`),
+  `palette` (`pal_brewer` ...), on the scales and on sec_axis() /
+  dup_axis(); `call<label_*>` in the type notation takes a function by a
+  pattern of its name.  Read from code too (`percent_format()` of the
+  scales attached as `scales::percent_format`).
+- From code: a smooth's `method = lm` (glm, loess) is `"lm"`, a legend's
+  `key_glyph = draw_key_rect` is `"rect"`, as ggplot2 takes them.
+
+What is left (partial): a mapping's expressions (`factor(cyl)`,
+`after_stat(count)`, `after_scale(alpha(colour, 0.4))`: R in the mapping),
+objects of the example (`values = cols`, `labeller = to_string`), dates
+(`Sys.Date() - 30`), grobs, R inside a scales helper
+(`label_math(10^.x)`).  Next: a typed form for a mapping's `after_stat()`
+and `factor()` of a column.
+
 ### The extension packages (ggsurvfit, ggrepel, ggh4x, ggtext, ggnewscale, patchwork)
 
 The same measure, the same file (`package` says which), over the

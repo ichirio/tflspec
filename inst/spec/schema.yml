@@ -2647,8 +2647,8 @@ scale_x_continuous:
     - {label: {en: Range and breaks, ja: 範囲と刻み}, args: [limits, breaks]}
   args:
     limits: {type: "list<number>|r", label: {en: Range, ja: 範囲}}
-    breaks: {type: "list<number>|r", label: {en: Breaks, ja: 目盛り}}
-    labels: {type: "list<string>|r", label: {en: Tick labels, ja: 目盛りのラベル}}
+    breaks: {type: "list<number>|call<breaks_*, extended_breaks, pretty_breaks>|r", label: {en: Breaks, ja: 目盛り}}
+    labels: {type: "list<string>|call<label_*, *_format>|r", label: {en: Tick labels, ja: 目盛りのラベル}}
     expand: {type: "call<expansion>|list<number>|r", label: {en: Expansion, ja: 余白}}
 
 scale_y_continuous:
@@ -2662,8 +2662,8 @@ scale_y_continuous:
     - {label: {en: Range and breaks, ja: 範囲と刻み}, args: [limits, breaks]}
   args:
     limits: {type: "list<number>|r", label: {en: Range, ja: 範囲}}
-    breaks: {type: "list<number>|r", label: {en: Breaks, ja: 目盛り}}
-    labels: {type: "list<string>|r", label: {en: Tick labels, ja: 目盛りのラベル}}
+    breaks: {type: "list<number>|call<breaks_*, extended_breaks, pretty_breaks>|r", label: {en: Breaks, ja: 目盛り}}
+    labels: {type: "list<string>|call<label_*, *_format>|r", label: {en: Tick labels, ja: 目盛りのラベル}}
     expand: {type: "call<expansion>|list<number>|r", label: {en: Expansion, ja: 余白}}
 
 scale_x_log10:

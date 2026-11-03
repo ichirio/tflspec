@@ -16,7 +16,7 @@ layer,na.rm,logical,Drop missing silently,欠測を黙って除く,
 layer,show.legend,"logical|vec<string, logical>|r",In the legend,凡例に出す,"TRUE, FALSE, or by aesthetic ({colour: true, fill: false})."
 layer,inherit.aes,logical,Use the plot's mapping,plot のマッピングを使う,
 layer,orientation,enum[x|y]|r,Orientation,向き,"y: a horizontal layer (bars, error bars, box plots along y)."
-layer,key_glyph,string|r,Legend key,凡例の印,"How the legend draws the layer: point, path, rect, timeseries ..."
+layer,key_glyph,string|r,Legend key,凡例の印,"How the legend draws the layer: point, path, rect, timeseries ... (draw_key_rect read from code is rect)."
 layer,layout,string|integer|list<integer>|r,Panels drawn in,描く面,"ggplot2 4.0: fixed (every panel), fixed_rows, fixed_cols, or the panel numbers."
 layer,colour,string|r,Colour,色,A fixed colour for all (a mapped one goes in mapping).
 layer,color,string,Colour,色,
@@ -50,10 +50,10 @@ layer,xintercept,number|list<number>|r,X of the line(s),線の x,
 layer,yintercept,number|list<number>|r,Y of the line(s),線の y,
 layer,intercept,number|list<number>|r,Intercept,切片,
 layer,slope,number|list<number>|r,Slope,傾き,
-layer,fun,string|r,Summary function,要約の関数,"stat summary: the y of each x, e.g. mean or median (with fun.min / fun.max)."
-layer,fun.data,string|r,Summary function (y and range),要約の関数（値と範囲）,"stat summary: y, ymin and ymax at once: mean_se (mean +/- SE), mean_cl_normal (t interval, Hmisc), mean_cl_boot, median_hilow, mean_sdl."
-layer,fun.min,string|r,Lower end function,下端の関数,"stat summary: ymin, e.g. min, or !r function(y) mean(y) - sd(y)."
-layer,fun.max,string|r,Upper end function,上端の関数,
+layer,fun,function|tilde|r,Function,関数,"A function by its name, written bare: stat summary's y of each x (mean, median; with fun.min / fun.max), stat function's curve (dnorm); ~ sum(.x^2) as a formula; or !r function(y) ..."
+layer,fun.data,function|r,Summary function (y and range),要約の関数（値と範囲）,"stat summary: y, ymin and ymax at once: mean_se (mean +/- SE), mean_cl_normal (t interval, Hmisc), mean_cl_boot, median_hilow, mean_sdl; a function by its name, written bare (fun.data = mean_se)."
+layer,fun.min,function|r,Lower end function,下端の関数,"stat summary: ymin, a function by its name (min), or !r function(y) mean(y) - sd(y)."
+layer,fun.max,function|r,Upper end function,上端の関数,"stat summary: ymax, a function by its name (max)."
 layer,fun.args,"map<string, string|number|logical>|r",Arguments of the summary function,要約の関数の引数,"Passed on to fun.data / fun: {mult: 1.96} for mean_se, {conf.int: 0.9} for mean_cl_normal."
 layer,pad,logical,Pad the ends,両端を延ばす,stat ecdf: the curve starts at 0 and ends at 1 beyond the data (FALSE: from the first to the last value).
 layer,n,integer|r,Number of points,点の数,stat ecdf: NULL (every value) or the points to interpolate; stat smooth / density: points to evaluate.
@@ -66,8 +66,8 @@ layer,breaks,list<number>|r,Bin breaks,ビンの境界,
 layer,boundary,number,Bin boundary,ビンの境界の基点,
 layer,center,number,Bin centre,ビンの中心の基点,
 layer,closed,enum[right|left],Closed side of the bins,ビンの閉じた側,
-layer,method,string|r,Smoothing method,平滑化の方法,"lm, glm, loess, gam; or !r a function."
-layer,formula,r,Model formula,モデル式,!r y ~ x
+layer,method,string|r,Smoothing method,平滑化の方法,"lm, glm, loess, gam (the code writes them ""lm"", as ggplot2 takes them; lm read from code is lm); or !r a function."
+layer,formula,tilde|r,Model formula,モデル式,"y ~ x, y ~ poly(x, 2): written as the formula."
 layer,se,logical,Confidence band,信頼帯,
 layer,span,number,Loess span,loess の幅,
 layer,method.args,"map<string, string|number|logical>|r",Arguments of the method,方法の引数,{family: binomial}; written as list().
@@ -158,23 +158,23 @@ layer,contour,logical,Draw contours,等高線を描く,
 layer,contour_var,enum[density|ndensity|count],Contoured variable,等高線の変数,
 layer,z.range,list<number>|r,Range of z,z の範囲,
 scale,name,string|r,Title,タイトル,The axis or legend title; !r NULL for none.
-scale,breaks,list<number|string>|r,Breaks,目盛り,"The values with a tick or a key; !r NULL for none, !r seq(0, 52, by = 4)."
-scale,minor_breaks,list<number>|r,Minor breaks,補助目盛り,
+scale,breaks,"list<number|string>|call<breaks_*, extended_breaks, pretty_breaks, trans_breaks, log_breaks>|r",Breaks,目盛り,"The values with a tick or a key; {fn: scales::breaks_width, args: {width: 4}}; !r NULL for none, !r seq(0, 52, by = 4)."
+scale,minor_breaks,"list<number>|call<breaks_*, minor_breaks_*>|r",Minor breaks,補助目盛り,
 scale,n.breaks,integer,Number of breaks,目盛りの数,
-scale,labels,"list<string>|vec<string, string>|r",Labels,目盛りのラベル,"In the order of the breaks, or by value ({A: Placebo}); !r scales::percent."
+scale,labels,"list<string>|vec<string, string>|call<label_*, *_format>|r",Labels,目盛りのラベル,"In the order of the breaks, or by value ({A: Placebo}); !r scales::percent."
 scale,limits,list<number|string>|r,Range,範囲,"Data outside it are dropped (to zoom, use coord_cartesian()); NA keeps that end."
 scale,expand,call<expansion>|list<number>|r,Expansion,余白,"{fn: expansion, args: {mult: [0, 0.05]}}; [0, 0] for none."
-scale,oob,r,Out of bounds,範囲外の扱い,!r scales::oob_squish keeps them at the edge; the default drops them.
+scale,oob,function|r,Out of bounds,範囲外の扱い,"scales::oob_squish keeps them at the edge, scales::oob_keep keeps them (a function by its name, written bare); the default drops them."
 scale,na.value,string|number,Missing,欠測の値,
 scale,guide,string|call|r,Legend,凡例,"legend, colourbar, none, or {fn: guide_legend, args: {nrow: 1}}."
 scale,position,enum[left|right|top|bottom],Position,位置,
-scale,transform,string|r,Transformation,変換,"log10, sqrt, reverse, identity ...; ggplot2 before 3.5 calls it trans."
+scale,transform,"string|call<transform_*, *_trans, trans_new, new_transform>|r",Transformation,変換,"log10, sqrt, reverse, identity ..., or {fn: scales::transform_log, args: {base: 2}}; ggplot2 before 3.5 calls it trans."
 scale,sec.axis,"call<sec_axis, dup_axis>|r",Secondary axis,第2軸,"{fn: dup_axis} or {fn: sec_axis, args: {transform: !r ~ . / 7, name: Weeks}}."
 scale,drop,logical,Drop unused levels,使わない水準を除く,
 scale,na.translate,logical,Show missing,欠測を表示,
 scale,values,"vec<string, string|number>|list<string|number>|r",Values,値,By level ({Placebo: grey50}) or in the order of the levels.
 scale,aesthetics,string|list<string>,Aesthetics,対象のマッピング,"colour, fill, or both ([colour, fill])."
-scale,palette,string|number|list<string>|r,Palette,パレット,"Brewer: Set1, Dark2, Paired, Blues, RdBu ... (or its number)."
+scale,palette,"string|number|list<string>|call<pal_*>|r",Palette,パレット,"Brewer: Set1, Dark2, Paired, Blues, RdBu ... (or its number)."
 scale,type,enum[seq|div|qual],Palette type,パレットの種類,
 scale,direction,integer,Palette direction,パレットの向き,-1 reverses it.
 scale,low,string,Low colour,低い値の色,
@@ -203,7 +203,7 @@ scale,nice.breaks,logical,Nice breaks,切りのよい目盛り,
 scale,alpha,number,Transparency,透明度,viridis: 0 (clear) to 1 (opaque).
 scale,continuous.limits,list<number>|r,Continuous limits,連続の範囲,ggplot2 3.5: a discrete position scale's range when continuous data join it.
 scale,fallback.palette,r,Fallback palette,予備のパレット,ggplot2 4.0: the colours used beyond the palette's (!r).
-scale,rescaler,r,Rescaler,再尺度化,!r scales::rescale_mid; how values map to 0-1.
+scale,rescaler,function|tilde|r,Rescaler,再尺度化,"How values map to 0-1: scales::rescale_mid (a function by its name), or ~ scales::rescale_mid(.x, mid = 0)."
 scale,space,enum[Lab],Colour space,色空間,
 scale,right,logical,Bins closed on the right,区間を右で閉じる,A binned scale: a value on a break goes to the bin below (TRUE).
 coord,xlim,list<number>|r,X range,x の範囲,Zooms without dropping data (unlike a scale's limits).
@@ -256,20 +256,20 @@ theme,line,"call<element_line, element_blank>|r",All lines,すべての線,
 theme,rect,"call<element_rect, element_blank>|r",All rectangles,すべての矩形,
 theme,title,"call<element_text, element_blank, element_markdown>|r",All titles,すべてのタイトル,
 theme,aspect.ratio,number,Aspect ratio of the panel,面の縦横比,
-theme,palette.colour.discrete,string|list<string|number>|r,Default colour palette (discrete),既定の色のパレット（離散）,"ggplot2 4.0: what a colour scale uses when given no palette: values, a palette's name, or a function (!r)."
-theme,palette.colour.continuous,string|list<string|number>|r,Default colour palette (continuous),既定の色のパレット（連続）,"ggplot2 4.0: what a colour scale uses when given no palette: values, a palette's name, or a function (!r)."
-theme,palette.fill.discrete,string|list<string|number>|r,Default fill palette (discrete),既定の塗りのパレット（離散）,"ggplot2 4.0: what a fill scale uses when given no palette: values, a palette's name, or a function (!r)."
-theme,palette.fill.continuous,string|list<string|number>|r,Default fill palette (continuous),既定の塗りのパレット（連続）,"ggplot2 4.0: what a fill scale uses when given no palette: values, a palette's name, or a function (!r)."
-theme,palette.alpha.discrete,string|list<string|number>|r,Default alpha palette (discrete),既定の透明度のパレット（離散）,"ggplot2 4.0: what a alpha scale uses when given no palette: values, a palette's name, or a function (!r)."
-theme,palette.alpha.continuous,string|list<string|number>|r,Default alpha palette (continuous),既定の透明度のパレット（連続）,"ggplot2 4.0: what a alpha scale uses when given no palette: values, a palette's name, or a function (!r)."
-theme,palette.linewidth.discrete,string|list<string|number>|r,Default linewidth palette (discrete),既定の線の太さのパレット（離散）,"ggplot2 4.0: what a linewidth scale uses when given no palette: values, a palette's name, or a function (!r)."
-theme,palette.linewidth.continuous,string|list<string|number>|r,Default linewidth palette (continuous),既定の線の太さのパレット（連続）,"ggplot2 4.0: what a linewidth scale uses when given no palette: values, a palette's name, or a function (!r)."
-theme,palette.size.discrete,string|list<string|number>|r,Default size palette (discrete),既定の大きさのパレット（離散）,"ggplot2 4.0: what a size scale uses when given no palette: values, a palette's name, or a function (!r)."
-theme,palette.size.continuous,string|list<string|number>|r,Default size palette (continuous),既定の大きさのパレット（連続）,"ggplot2 4.0: what a size scale uses when given no palette: values, a palette's name, or a function (!r)."
-theme,palette.shape.discrete,string|list<string|number>|r,Default shape palette (discrete),既定の形のパレット（離散）,"ggplot2 4.0: what a shape scale uses when given no palette: values, a palette's name, or a function (!r)."
-theme,palette.shape.continuous,string|list<string|number>|r,Default shape palette (continuous),既定の形のパレット（連続）,"ggplot2 4.0: what a shape scale uses when given no palette: values, a palette's name, or a function (!r)."
-theme,palette.linetype.discrete,string|list<string|number>|r,Default linetype palette (discrete),既定の線種のパレット（離散）,"ggplot2 4.0: what a linetype scale uses when given no palette: values, a palette's name, or a function (!r)."
-theme,palette.linetype.continuous,string|list<string|number>|r,Default linetype palette (continuous),既定の線種のパレット（連続）,"ggplot2 4.0: what a linetype scale uses when given no palette: values, a palette's name, or a function (!r)."
+theme,palette.colour.discrete,"string|list<string|number>|call<pal_*>|r",Default colour palette (discrete),既定の色のパレット（離散）,"ggplot2 4.0: what a colour scale uses when given no palette: values, a palette's name, or a function (!r)."
+theme,palette.colour.continuous,"string|list<string|number>|call<pal_*>|r",Default colour palette (continuous),既定の色のパレット（連続）,"ggplot2 4.0: what a colour scale uses when given no palette: values, a palette's name, or a function (!r)."
+theme,palette.fill.discrete,"string|list<string|number>|call<pal_*>|r",Default fill palette (discrete),既定の塗りのパレット（離散）,"ggplot2 4.0: what a fill scale uses when given no palette: values, a palette's name, or a function (!r)."
+theme,palette.fill.continuous,"string|list<string|number>|call<pal_*>|r",Default fill palette (continuous),既定の塗りのパレット（連続）,"ggplot2 4.0: what a fill scale uses when given no palette: values, a palette's name, or a function (!r)."
+theme,palette.alpha.discrete,"string|list<string|number>|call<pal_*>|r",Default alpha palette (discrete),既定の透明度のパレット（離散）,"ggplot2 4.0: what a alpha scale uses when given no palette: values, a palette's name, or a function (!r)."
+theme,palette.alpha.continuous,"string|list<string|number>|call<pal_*>|r",Default alpha palette (continuous),既定の透明度のパレット（連続）,"ggplot2 4.0: what a alpha scale uses when given no palette: values, a palette's name, or a function (!r)."
+theme,palette.linewidth.discrete,"string|list<string|number>|call<pal_*>|r",Default linewidth palette (discrete),既定の線の太さのパレット（離散）,"ggplot2 4.0: what a linewidth scale uses when given no palette: values, a palette's name, or a function (!r)."
+theme,palette.linewidth.continuous,"string|list<string|number>|call<pal_*>|r",Default linewidth palette (continuous),既定の線の太さのパレット（連続）,"ggplot2 4.0: what a linewidth scale uses when given no palette: values, a palette's name, or a function (!r)."
+theme,palette.size.discrete,"string|list<string|number>|call<pal_*>|r",Default size palette (discrete),既定の大きさのパレット（離散）,"ggplot2 4.0: what a size scale uses when given no palette: values, a palette's name, or a function (!r)."
+theme,palette.size.continuous,"string|list<string|number>|call<pal_*>|r",Default size palette (continuous),既定の大きさのパレット（連続）,"ggplot2 4.0: what a size scale uses when given no palette: values, a palette's name, or a function (!r)."
+theme,palette.shape.discrete,"string|list<string|number>|call<pal_*>|r",Default shape palette (discrete),既定の形のパレット（離散）,"ggplot2 4.0: what a shape scale uses when given no palette: values, a palette's name, or a function (!r)."
+theme,palette.shape.continuous,"string|list<string|number>|call<pal_*>|r",Default shape palette (continuous),既定の形のパレット（連続）,"ggplot2 4.0: what a shape scale uses when given no palette: values, a palette's name, or a function (!r)."
+theme,palette.linetype.discrete,"string|list<string|number>|call<pal_*>|r",Default linetype palette (discrete),既定の線種のパレット（離散）,"ggplot2 4.0: what a linetype scale uses when given no palette: values, a palette's name, or a function (!r)."
+theme,palette.linetype.continuous,"string|list<string|number>|call<pal_*>|r",Default linetype palette (continuous),既定の線種のパレット（連続）,"ggplot2 4.0: what a linetype scale uses when given no palette: values, a palette's name, or a function (!r)."
 theme,axis.title,"call<element_text, element_blank, element_markdown>|r",Axis titles,軸のタイトル,
 theme,axis.title.x,"call<element_text, element_blank, element_markdown>|r",X axis title,x 軸のタイトル,
 theme,axis.title.y,"call<element_text, element_blank, element_markdown>|r",Y axis title,y 軸のタイトル,
@@ -431,10 +431,10 @@ position,dodge.width,number,Dodge width,ずらし幅,
 position,orientation,enum[x|y],Orientation,向き,
 helper,mult,number|list<number>,Multiplicative expansion,割合の余白,"[0, 0.05]: none below, 5% above."
 helper,add,number|list<number>,Additive expansion,加える余白,In data units.
-helper,transform,r,Transformation,変換,!r ~ . / 7
+helper,transform,tilde|function|r,Transformation,変換,"~ . / 7 (a formula), or a function by its name."
 helper,name,string|r,Title,タイトル,
-helper,breaks,list<number>|r,Breaks,目盛り,
-helper,labels,list<string>|r,Labels,ラベル,
+helper,breaks,"list<number>|call<breaks_*, extended_breaks, pretty_breaks, log_breaks>|r",Breaks,目盛り,
+helper,labels,"list<string>|call<label_*, *_format>|r",Labels,ラベル,
 helper,guide,string|call|r,Guide,凡例,
 helper,angle,number,Arrowhead angle,矢じりの角度,
 helper,length,call<unit>|r,Arrowhead length,矢じりの長さ,
