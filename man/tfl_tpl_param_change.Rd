@@ -23,7 +23,7 @@ The table template \code{param_change}, layout \code{summary}. Its program is on
    \code{baseline_label} \tab other \tab call \tab Baseline \tab  \tab the baseline's heading \cr
    \code{value_label} \tab other \tab call \tab Value \tab  \tab the value's heading \cr
    \code{change_label} \tab other \tab call \tab Change from baseline \tab  \tab the change's heading \cr
-   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: \if{html}{\out{<data>}}_\if{html}{\out{<population>}} \cr
+   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: <data>_<population> \cr
    \code{data_label} \tab other \tab call \tab  \tab  \tab the analysis data's label \cr
    \code{statistics} \tab other \tab call \tab N, mean, sd, median, min, max \tab  \tab the statistics the ARD has \cr
    \code{cells} \tab other \tab call \tab n = \{N:.0f\}; Mean (SD) = \{mean\} (\{sd\}); Median = \{median\}... \tab plan_cells.continuous \tab the rows of a value or a change \cr

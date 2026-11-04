@@ -12,7 +12,7 @@ The table template \code{km_table}, layout \code{km_table}. Its program is one c
    \code{by} \tab other \tab call \tab TRT01A \tab settings.treatment \tab the column variable \cr
    \code{by_levels} \tab other \tab call \tab  \tab  \tab its values in order; NULL: its code list's \cr
    \code{median_label} \tab other \tab call \tab Median (95\% CI) \tab  \tab the median's row \cr
-   \code{time_prefix} \tab other \tab call \tab Day \tab  \tab a rate's row: \if{html}{\out{<prefix>}} \if{html}{\out{<time>}} \cr
+   \code{time_prefix} \tab other \tab call \tab Day \tab  \tab a rate's row: <prefix> <time> \cr
    \code{time_unit} \tab other \tab call \tab days \tab  \tab the times' unit, in the median block's heading \cr
    \code{drop_time_0} \tab other \tab call \tab TRUE \tab  \tab leave out the rate at time 0 \cr
 }
