@@ -16,7 +16,13 @@
 #' report is made of:
 #'
 #' * `tfl_r()`: a string of R code, written as the `!r` tag (`where: !r
-#'   "p > 0.5"`); kept as it is and put into the program unquoted.
+#'   "p > 0.5"`); kept as it is and put into the program unquoted.  A
+#'   condition in a language-neutral subset (column names, numbers,
+#'   strings, `== != < <= > >=`, `& | !`, `%in% c(...)`, `is.na()`,
+#'   parentheses) is written, and read, without the tag in a slot that
+#'   takes only R (`plan_filter(where)`): a Python reader can parse it
+#'   without R.  `!r` stays for the rest of R (`between()`), and is still
+#'   read everywhere.
 #' * `tfl_unset()`: the `!unset` tag -- a value a report sets to nothing,
 #'   overriding its defaults (writing nothing leaves the default).  It is
 #'   resolved when the defaults are layered; the generators never see one.
@@ -329,10 +335,10 @@ tfl_read_output <- function(path) {
     if (identical(.schema_fn_name(names(el)), .spec_part$fn)) {
       return(tfl_item(names(el), .part_in(args), "own"))
     }
-    return(tfl_item(names(el), .rounding_lower(names(el), .calls_in(args)), "own"))
+    return(tfl_item(names(el), .rounding_lower(names(el), .neutral_in(names(el), .calls_in(args))), "own"))
   }
   if (is.list(el) && !is.null(el$fn)) {
-    return(tfl_item(el$fn, .calls_in(el$args %||% list()), el$from %||% "own"))
+    return(tfl_item(el$fn, .neutral_in(el$fn, .calls_in(el$args %||% list())), el$from %||% "own"))
   }
   stop("A content item is `- fn: {args}`.", call. = FALSE)
 }
@@ -371,7 +377,7 @@ tfl_read_output <- function(path) {
 tfl_write_output <- function(x, path) {
   if (!inherits(x, "tfl_output")) stop("tfl_write_output(): `x` is a tfl_output.", call. = FALSE)
   y <- .output_to_list(x)
-  txt <- yaml::as.yaml(y, indent.mapping.sequence = TRUE, handlers = .yaml_out_handlers())
+  txt <- yaml::as.yaml(y, indent.mapping.sequence = TRUE, handlers = .yaml_out_handlers(neutral = TRUE))
   dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
   writeLines(txt, path, useBytes = TRUE)
   invisible(path)
@@ -379,8 +385,12 @@ tfl_write_output <- function(x, path) {
 
 # written: !r and !unset by their tags; a logical as true / false (not
 # yes / no, which the reader keeps as text)
-.yaml_out_handlers <- function() {
-  list(tfl_r = function(x) structure(as.character(x), tag = "!r"),
+.yaml_out_handlers <- function(neutral = FALSE) {
+  # (`neutral`: a report file writes a neutral condition untagged, R/neutral.R)
+  list(tfl_r = function(x) {
+         s <- as.character(unclass(x))
+         if (neutral && isTRUE(.neutral_expr(s))) s else structure(s, tag = "!r")
+       },
        tfl_unset = function(x) structure("", tag = "!unset"),
        logical = .yaml_logical)
 }

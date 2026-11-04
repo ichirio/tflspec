@@ -281,10 +281,10 @@ tfl_schema_check <- function(item) {
       next
     }
     if (a %in% names(ent$args) && !is.null(ent$args[[a]]$type)) {
-      msg <- .schema_fits(v, .schema_type(ent$args[[a]]$type))
+      msg <- .schema_fits(v, .schema_type(ent$args[[a]]$type), a)
       if (!is.null(msg)) bad(a, msg)
     } else if (!is.null(dots) && identical(dots$style, "positional") && identical(a, dots$key)) {
-      msg <- .schema_fits(v, .schema_type(dots$type))
+      msg <- .schema_fits(v, .schema_type(dots$type), a)
       if (!is.null(msg)) bad(a, msg)
     } else if (!is.null(.schema_removed[[fn]][[a]])) {
       bad(a, sprintf("%s(%s = ) was removed in rtfreporter 0.9.0: %s", fn, a,
@@ -296,7 +296,7 @@ tfl_schema_check <- function(item) {
         bad(a, sprintf(paste0("plan_cells: `%s` is a row's label, not a variable or a kind: ",
                               "put the rows under their kind (continuous: {\"%s\": ...})"), a, a))
       } else if (!is.null(dots) && identical(dots$style, "named")) {
-        msg <- .schema_fits(v, .schema_type(dots$type))
+        msg <- .schema_fits(v, .schema_type(dots$type), a)
         if (!is.null(msg)) bad(a, msg)
       } else if (!is.null(f) && "..." %in% names(f) && is.null(ent)) {
         next                                 # a function of `...` the schema does not cover
@@ -362,16 +362,26 @@ tfl_schema_check <- function(item) {
 }
 
 # NULL when `v` (as the spec holds it) has the type, else what is wrong
-.schema_fits <- function(v, ty) {
-  ok <- .schema_ok(v, ty)
-  if (ok) return(NULL)
+.schema_fits <- function(v, ty, a = "") {
+  nx <- .schema_pure_r(ty)
+  if (.schema_ok(v, ty, nx)) return(if (nx) .neutral_literal_msg(v, a))
+  # a slot that takes only R: a string that is no neutral condition, and
+  # how to write R; a slot that also takes a string says nothing of `!r`
+  if (nx) {
+    m <- .neutral_refusal(v, a)
+    if (!is.null(m)) return(m)
+  }
   sprintf("is %s; it takes %s", .schema_what(v), .schema_show(ty))
 }
 
-.schema_ok <- function(v, ty) {
+# `nx`: a slot of only R, where a neutral string (R/neutral.R) is a condition
+.schema_ok <- function(v, ty, nx = FALSE) {
   k <- ty$kind
-  if (k == "either") return(any(vapply(ty$args, function(t) .schema_ok(v, t), NA)))
-  if (k %in% c("r", "formula", "guard")) return(inherits(v, c("tfl_r", "tfl_spec_expr", "tfl_spec_formula", "formula")))
+  if (k == "either") return(any(vapply(ty$args, function(t) .schema_ok(v, t, nx), NA)))
+  if (k %in% c("r", "formula", "guard")) {
+    return(inherits(v, c("tfl_r", "tfl_spec_expr", "tfl_spec_formula", "formula")) ||
+             (nx && is.character(v) && length(v) == 1L && isTRUE(.neutral_expr(v))))
+  }
   if (k == "call") {
     if (inherits(v, "cell_rows")) return("cell_rows" %in% unlist(ty$args))
     if (!inherits(v, c("tfl_call", "tfl_spec_call"))) return(FALSE)
@@ -381,7 +391,7 @@ tfl_schema_check <- function(item) {
   if (k == "list") {
     if (inherits(v, c("tfl_r", "tfl_call"))) return(FALSE)
     el <- if (is.list(v)) v else as.list(v)
-    return(all(vapply(el, function(e) .schema_ok(e, ty$args[[1L]]), NA)))
+    return(all(vapply(el, function(e) .schema_ok(e, ty$args[[1L]], nx), NA)))
   }
   if (k %in% c("vec", "map")) {
     if (inherits(v, c("tfl_r", "tfl_call")) || is.data.frame(v)) return(FALSE)
@@ -490,6 +500,17 @@ tfl_schema_check <- function(item) {
 
 # a value as R takes it, from the spec's form
 .schema_value_to_r <- function(v, ty) {
+  # a slot of only R: each string is a neutral condition or an error, each
+  # element of a list on its own (never the string as a string literal)
+  if (.schema_pure_r(ty)) {
+    if (is.character(v) && !inherits(v, c("tfl_r", "tfl_unset"))) {
+      if (length(v) != 1L) return(lapply(as.list(v), .schema_value_to_r, ty = ty))
+      if (!isTRUE(.neutral_expr(v))) .ard_stop(.neutral_refusal(v, "an argument"))
+      v <- tfl_r(v)
+    } else if (is.list(v) && !is.object(v)) {
+      return(lapply(v, .schema_value_to_r, ty = ty))
+    }
+  }
   if (inherits(v, "tfl_r")) {
     txt <- as.character(unclass(v))
     # a guard (`n == 0 ~ "0"`) is the formula itself; a `where` is
