@@ -227,8 +227,41 @@
       "analysis of variance of a model (args: formula = CHG ~ TRTA + BASE); by and variables blank",
       "McNemar's test on long data, a record per subject and `by` level, e.g. baseline and week 12 responses (args: id = USUBJID)"),
     stringsAsFactors = FALSE)
+  # since 2026-11-04: the record counts, labels, nested-model test, effect
+  # sizes, Mood's test and the model checks, each its function by another
+  # name
+  more2 <- data.frame(
+    method = c("records", "labels", "nested_models", "regression_basic",
+               "cohens_d", "hedges_g", "paired_cohens_d", "paired_hedges_g",
+               "mood", "vif", "wald"),
+    label = c("Number of records", "Variable labels",
+              "Test of nested models", "Model estimates (basic)",
+              "Cohen's d", "Hedges' g", "Paired Cohen's d",
+              "Paired Hedges' g", "Mood's test of scale",
+              "Variance inflation factors", "Wald test of model terms"),
+    call = c("cards::ard_tabulate_rows", "cards::ard_attributes",
+             "cardx::ard_stats_anova", "cardx::ard_regression_basic",
+             "cardx::ard_effectsize_cohens_d", "cardx::ard_effectsize_hedges_g",
+             "cardx::ard_effectsize_paired_cohens_d",
+             "cardx::ard_effectsize_paired_hedges_g",
+             "cardx::ard_stats_mood_test", "cardx::ard_car_vif",
+             "cardx::ard_aod_wald_test"),
+    kind = "none", defaults = "", statistics = "", formats = "",
+    note = c(
+      "the number of records (rows, not subjects) in each `by` group, e.g. the number of adverse events per arm",
+      "the variables' labels (and classes), e.g. for a table's row headings",
+      "nested models compared, e.g. a treatment-by-subgroup interaction (args: formulas = list(AVALC ~ TRTA + SEX, AVALC ~ TRTA * SEX), method = \"glm\", method.args = list(family = binomial)); by and variables blank",
+      "a model's estimates with fewer columns than `regression` (args: formula = CHG ~ TRTA + BASE, method = \"lm\")",
+      "Cohen's d between the two `by` groups, with CI",
+      "Hedges' g (Cohen's d corrected for small samples) between the two `by` groups, with CI",
+      "Cohen's d of paired data, the two `by` levels of each subject (args: id = USUBJID)",
+      "Hedges' g of paired data, the two `by` levels of each subject (args: id = USUBJID)",
+      "Mood's two-sample test of scale between the `by` groups (two of them)",
+      "variance inflation factors of a model's terms (args: x = lm(CHG ~ TRTA + BASE + AGE, data = data)); by and variables blank",
+      "Wald tests of a model's terms (args: x = glm(AVALN ~ TRTA + SEX, family = binomial, data = data)); by and variables blank"),
+    stringsAsFactors = FALSE)
   last <- nrow(d)
-  d <- rbind(d[-last, ], more, d[last, ])
+  d <- rbind(d[-last, ], more, more2, d[last, ])
   rownames(d) <- NULL
   d
 }

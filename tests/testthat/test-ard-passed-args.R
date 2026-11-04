@@ -161,3 +161,29 @@ test_that("the median's CI takes wilcox.test()'s exact and correct", {
                                  args = "exact = \"no\"")),
                  "ard_continuous_ci\\(exact = \\) is TRUE or FALSE")
 })
+
+test_that("a passed-on name the function it reaches does not have is said", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  test_row <- function(method, args, variables = "AGE")
+    list(method = method, population_id = "SAF", by = "TRT01A",
+         variables = variables, args = args)
+  # t.test.default() ignores a name it does not have: the typo is said
+  expect_warning(exact_spec(test_row("ttest", "var.eqaul = TRUE")),
+                 "ard_stats_t_test\\(\\) has no argument `var.eqaul`, and passes it on to stats::t.test\\(\\)")
+  expect_warning(exact_spec(test_row("chisq", "corect = FALSE", "SEX")),
+                 "passes it on to stats::chisq.test\\(\\), which has none either")
+  # a name of the function's own, the catalog's or the one reached: none
+  expect_no_warning(exact_spec(test_row("ttest", "var.equal = TRUE, paired = FALSE")))
+  expect_no_warning(exact_spec(test_row("chisq", "rescale.p = FALSE", "SEX")))
+  # a name for a function that passes `...` on again (broom.helpers'
+  # tidier, car's methods): not judged
+  expect_no_warning(exact_spec(list(
+    method = "regression", population_id = "SAF",
+    args = "formula = AGE ~ TRT01A, method = \"lm\", tidy_extra = 1")))
+  # the median's CI reaches t.test() or wilcox.test(): either one's names
+  expect_no_warning(exact_spec(test_row(
+    "mean_ci", "method = \"wilcox.test\", exact = FALSE, correct = FALSE")))
+  expect_warning(exact_spec(test_row("mean_ci", "exatc = FALSE")),
+                 "stats::t.test\\(\\) / stats::wilcox.test\\(\\)")
+})

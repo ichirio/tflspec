@@ -1073,7 +1073,10 @@ cat(tfl_report_code(sp, content = "plan"), sep = "\n")
   `regression`, `anova`, `kruskal`, `paired_ttest`, `paired_wilcox`,
   `mcnemar`, `km_diff`, `hierarchical_count` (event counts),
   `onesample_ttest`, `onesample_wilcox`, `smd`, `poisson`, `oneway`, `aov`,
-  `mcnemar_long`, `custom` — or any
+  `mcnemar_long`, `records` (record counts), `labels`, `nested_models`
+  (e.g. an interaction test), `regression_basic`, `cohens_d`, `hedges_g`,
+  `paired_cohens_d`, `paired_hedges_g`, `mood`, `vif`, `wald`, `custom` —
+  or any
   `pkg::function` (`cards::`, `cardx::`), or a function of the study's own
   that the study key `source` loads (`ard_riskdiff_mn`): it takes the
   analysis data first, `by` and `variables` as bare column names, and gives

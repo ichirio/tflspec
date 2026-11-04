@@ -2,7 +2,9 @@
 # lsmeans, lsmeans_diff, km, logrank, abnormal, incidence_rate, regression,
 # anova, kruskal, paired_ttest, paired_wilcox, mcnemar, km_diff,
 # onesample_ttest, onesample_wilcox, smd, poisson, oneway, aov,
-# mcnemar_long; hierarchical_count, cards'): each is its function, by
+# mcnemar_long, nested_models, regression_basic, cohens_d, hedges_g,
+# paired_cohens_d, paired_hedges_g, mood, vif, wald; hierarchical_count,
+# records, labels, cards'): each is its function, by
 # another name -- the same code; the ARS names the
 # method by its keyword.
 
@@ -29,7 +31,18 @@ test_that("a keyword of a cardx analysis writes its function's call", {
           poisson = "cardx::ard_stats_poisson_test",
           oneway = "cardx::ard_stats_oneway_test",
           aov = "cardx::ard_stats_aov",
-          mcnemar_long = "cardx::ard_stats_mcnemar_test_long")
+          mcnemar_long = "cardx::ard_stats_mcnemar_test_long",
+          records = "cards::ard_tabulate_rows",
+          labels = "cards::ard_attributes",
+          nested_models = "cardx::ard_stats_anova",
+          regression_basic = "cardx::ard_regression_basic",
+          cohens_d = "cardx::ard_effectsize_cohens_d",
+          hedges_g = "cardx::ard_effectsize_hedges_g",
+          paired_cohens_d = "cardx::ard_effectsize_paired_cohens_d",
+          paired_hedges_g = "cardx::ard_effectsize_paired_hedges_g",
+          mood = "cardx::ard_stats_mood_test",
+          vif = "cardx::ard_car_vif",
+          wald = "cardx::ard_aod_wald_test")
   expect_identical(keys$call[match(names(kw), keys$method)], unname(kw))
   expect_true(all(keys$kind[match(names(kw), keys$method)] == "none"))
   # no defaults: a row naming the function gets nothing the keyword adds
@@ -62,13 +75,31 @@ test_that("a keyword of a cardx analysis writes its function's call", {
     list(method = "aov", population_id = "SAF",
          args = "formula = AGE ~ TRT01A + SEX"),
     list(method = "mcnemar_long", dataset = "ADLB", population_id = "SAF",
-         by = "AVISITN", variables = "LBNRIND", args = "id = USUBJID"))
+         by = "AVISITN", variables = "LBNRIND", args = "id = USUBJID"),
+    list(method = "records", dataset = "ADAE", population_id = "SAF",
+         by = "TRTA"),
+    list(method = "labels", population_id = "SAF", variables = "AGE | SEX"),
+    list(method = "nested_models", population_id = "SAF",
+         args = "formulas = list(AGE ~ TRT01A, AGE ~ TRT01A * SEX), method = \"lm\""),
+    list(method = "regression_basic", population_id = "SAF",
+         args = "formula = AGE ~ TRT01A + SEX, method = \"lm\""),
+    list(method = "cohens_d", population_id = "SAF", by = "SEX",
+         variables = "AGE"),
+    list(method = "paired_hedges_g", dataset = "ADLB", population_id = "SAF",
+         by = "AVISITN", variables = "AVAL", args = "id = USUBJID"),
+    list(method = "mood", population_id = "SAF", by = "SEX", variables = "AGE"),
+    list(method = "vif", population_id = "SAF",
+         args = "x = lm(AGE ~ TRT01A + SEX + BMIBL, data = data)"),
+    list(method = "wald", population_id = "SAF",
+         args = "x = glm(SEX == \"F\" ~ TRT01A + AGE, family = binomial, data = data)"))
   for (r in rows) {
     f <- r
     f$method <- keys$call[match(r$method, keys$method)]
     a <- tfl_ard_code(exact_spec(r), save = FALSE)
     expect_identical(a, tfl_ard_code(exact_spec(f), save = FALSE), label = r$method)
-    expect_true(any(grepl(paste0(f$method, "("), a, fixed = TRUE)), label = r$method)
+    # (cards' functions are written without cards::, after library(cards))
+    expect_true(any(grepl(paste0(sub("^cards::", "", f$method), "("), a, fixed = TRUE)),
+                label = r$method)
   }
 })
 
@@ -168,4 +199,51 @@ test_that("the ARS lays out the one-sample, balance, rate and one-way tests by t
   o <- ops(list(method = "mcnemar_long", dataset = "ADLB", population_id = "SAF",
                 by = "AVISITN", variables = "LBNRIND", args = "id = USUBJID"))
   expect_identical(o$id, "Mth_mcnemar_long")
+})
+
+test_that("the ARS lays out the record counts, effect sizes, Mood's and the model tests by their keyword", {
+  ops <- function(row) {
+    m <- tfl_ars(exact_spec(row))$methods[[1L]]
+    list(id = m$id, name = m$name, ops = vapply(m$operations, `[[`, "", "label"))
+  }
+  o <- ops(list(method = "cards::ard_tabulate_rows", dataset = "ADAE",
+                population_id = "SAF", by = "TRTA"))
+  expect_identical(o$id, "Mth_records")
+  expect_identical(o$name, "Number of records")
+  expect_identical(o$ops, "n")
+  o <- ops(list(method = "cardx::ard_effectsize_hedges_g", population_id = "SAF",
+                by = "SEX", variables = "AGE"))
+  expect_identical(o$id, "Mth_hedges_g")
+  expect_identical(o$ops, c("estimate", "conf.low", "conf.high"))
+  o <- ops(list(method = "mood", population_id = "SAF", by = "SEX",
+                variables = "AGE"))
+  expect_identical(o$id, "Mth_mood")
+  expect_identical(o$ops, "p.value")
+  o <- ops(list(method = "nested_models", population_id = "SAF",
+                args = "formulas = list(AGE ~ TRT01A, AGE ~ TRT01A * SEX), method = \"lm\""))
+  expect_identical(o$id, "Mth_nested_models")
+  expect_identical(o$name, "Test of nested models")
+  expect_identical(o$ops, "p.value")
+  o <- ops(list(method = "vif", population_id = "SAF",
+                args = "x = lm(AGE ~ TRT01A + SEX, data = data)"))
+  expect_identical(o$id, "Mth_vif")
+})
+
+test_that("a treatment-by-subgroup interaction: nested_models gives the models' p-value", {
+  skip_on_cran()
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("broom")
+  skip_if_not_installed("dplyr")
+  adam <- exact_data()
+  dir <- exact_dir(adam)
+  on.exit(unlink(dir, recursive = TRUE))
+  sp <- exact_spec(list(method = "nested_models", population_id = "SAF",
+                        args = "formulas = list(AGE ~ TRT01A + SEX, AGE ~ TRT01A * SEX), method = \"lm\""))
+  ard <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE))
+  pop <- adam$ADSL[adam$ADSL$SAFFL == "Y", ]
+  want <- stats::anova(stats::lm(AGE ~ TRT01A + SEX, data = pop),
+                       stats::lm(AGE ~ TRT01A * SEX, data = pop))
+  p <- ard[ard$stat_name == "p.value", ]
+  expect_equal(unlist(p$stat)[!is.na(unlist(p$stat))],
+               want[["Pr(>F)"]][2L], tolerance = 1e-10)
 })

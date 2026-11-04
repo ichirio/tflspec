@@ -135,6 +135,10 @@
     onesample_ttest = , onesample_wilcox = , poisson = c("estimate",
       "conf.low", "conf.high", "p.value"),
     smd = "estimate",
+    records = "n",
+    cohens_d = , hedges_g = , paired_cohens_d = ,
+    paired_hedges_g = c("estimate", "conf.low", "conf.high"),
+    mood = , nested_models = , wald = "p.value",
     ttest = , wilcox = , chisq = , fisher = , cmh = , logrank = , kruskal = ,
     paired_ttest = , paired_wilcox = , mcnemar = , mcnemar_long = ,
     oneway = "p.value",
@@ -161,8 +165,11 @@
                     "onesample_wilcox")) return("value")
   if (method %in% c("categorical", "dichotomous", "max", "hierarchical",
                     "hierarchical_count", "subjects", "proportion_ci",
-                    "total_n")) return("count")
-  if (method %in% c("ttest", "wilcox", "kruskal", "smd")) return("test_value")
+                    "total_n", "records")) return("count")
+  if (method %in% c("ttest", "wilcox", "kruskal", "smd", "mood", "cohens_d",
+                    "hedges_g", "paired_cohens_d", "paired_hedges_g")) {
+    return("test_value")
+  }
   if (method %in% c("chisq", "fisher", "cmh", "mcnemar", "mcnemar_long")) {
     return("test_count")
   }

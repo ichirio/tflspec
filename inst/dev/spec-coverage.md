@@ -51,19 +51,26 @@ by weight.  A keyword writes the same code as its function, so this
 measures how easily a SPEC is written, not what it can say; the argument
 percentages do not move with it.
 
-| ard_*() with a method keyword | 2026-11-02 before | 2026-11-02 after | 2026-11-03 after |
-|---|---:|---:|---:|
-| weight 3 | 21 of 27 | 23 of 27 | **24 of 27** |
-| weight 2 | 0 of 19 | 5 of 19 | **12 of 19** |
-| weight 1 | 0 of 8 | 0 of 8 | 0 of 8 |
+| ard_*() with a method keyword | 2026-11-02 before | 2026-11-02 after | 2026-11-03 after | 2026-11-04 before* | 2026-11-04 after |
+|---|---:|---:|---:|---:|---:|
+| weight 3 | 21 of 27 | 23 of 27 | 24 of 27 | 24 of 27 | **24 of 27** |
+| weight 2 | 0 of 19 | 5 of 19 | 12 of 19 | 12 of 23 | **20 of 23** |
+| weight 1 | 0 of 8 | 0 of 8 | 0 of 8 | 0 of 4 | **3 of 4** |
 
-(weight 3 without a keyword: `ard_stack()`, `ard_hierarchical()`,
-`ard_hierarchical_count()` -- the stacked counts' building blocks, written
-by their name.  Weight 2 without: `ard_strata()`, `ard_pairwise()` (they
-wrap another analysis), `ard_mvsummary()`, `ard_tabulate_rows()`,
-`ard_attributes()`, `ard_stats_anova()` (models compared: `anova` is
-`car::Anova()`'s table) and `ard_regression_basic()` (`regression` with
-fewer columns).)
+\* 2026-11-04 corrects the weights: the measure named the effect sizes
+`ard_stats_cohens_d()` / `ard_stats_paired_cohens_d()`, which cardx does
+not have, so its four `ard_effectsize_*()` (Cohen's d, Hedges' g, paired)
+were weight 1.  They are weight 2 now.  The argument percentages do not
+move (every argument is yes).
+
+(Without a keyword after 2026-11-04 -- weight 3: `ard_stack()`,
+`ard_hierarchical()`, `ard_hierarchical_count()`, the stacked counts'
+building blocks, written by their name.  Weight 2: `ard_strata()` and
+`ard_pairwise()`, which wrap another analysis (a function in `args`), and
+`ard_mvsummary()`, a summary by the study's own function (`custom` or a
+study function says it more plainly).  Weight 1: `ard_identity()`,
+statistics already computed.  Every cardx `ard_*()` but the survey designs
+has a keyword.)
 
 cards 0.9.0, cardx 0.3.4; 71 functions, 412 arguments (2026-11-01 scope:
 313 of the ard_*() and post helpers' own, 72 passed on, 27 of the code
@@ -87,6 +94,11 @@ yes / 1 partial), 100.0% after (412 / 0)** -- cards' code helpers 92.5% to
 100.0%: the formats column takes `xx.x*1000`, `label_round(scale =)`'s
 other scales.  Weight-3 functions 99.3% to 100.0%.
 
+2026-11-04 (the same scope; cards 0.9.0, cardx 0.3.4, still the CRAN
+versions): **100.0% before and after (412 yes / 0 partial)**.  The run
+added keywords (above) and a check of the names a function passes on
+(below), not arguments.
+
 (2026-11-01 before: the tflspec of this branch before the run, on the wider
 scope -- the 17 newly catalogued passed-on arguments could be written as R
 in `args` and reached their function, but were not described and their
@@ -109,6 +121,39 @@ function, but the catalog did not describe it and its value was not
 judged: partial.  2026-10-31 before: the same, with
 `update_ard_fmt_fun()` in the `post` scope -- written as R in `post`, its
 names checked, its values not judged.)
+
+### Added 2026-11-04
+
+* Eleven method keywords, each its function by another name (the same code;
+  a row naming the function is the keyword's, in the ARS too):
+  * `records` -- `cards::ard_tabulate_rows()`: the number of records (not
+    subjects) in each `by` group, e.g. the number of adverse events per
+    arm; the ARS lays it out as counts (`n`).
+  * `labels` -- `cards::ard_attributes()`: the variables' labels.
+  * `nested_models` -- `cardx::ard_stats_anova()`: nested models compared
+    (`formulas = list(AVALC ~ TRTA + SEX, AVALC ~ TRTA * SEX)`), the
+    treatment-by-subgroup interaction test of a forest plot's table; the
+    ARS's operation is `p.value`.  A test builds it and compares the
+    p-value with `stats::anova()` of the two `lm()` fits.
+  * `regression_basic` -- `cardx::ard_regression_basic()`.
+  * `cohens_d`, `hedges_g`, `paired_cohens_d`, `paired_hedges_g` --
+    `cardx::ard_effectsize_*()`: effect sizes with CI, laid out as a test
+    of values (`estimate`, `conf.low`, `conf.high`).
+  * `mood` -- `cardx::ard_stats_mood_test()` (`p.value`).
+  * `vif` -- `cardx::ard_car_vif()`; `wald` -- `cardx::ard_aod_wald_test()`
+    (`p.value`): a model's checks, the model in `args` (`x = lm(...)`).
+  * Each has an exact case in `fixtures/ard-cases.R` (the row's ARD against
+    the hand-written call).
+* **A name passed on through `...` is checked against the function it
+  reaches.**  `ard_stats_t_test(var.eqaul = TRUE)` reaches
+  `stats::t.test()`, whose default method ignores a name it does not
+  have: the typo gave the default silently.  `tfl_ard_spec()` now warns
+  when a name is neither the cardx function's, nor the catalog's
+  (`passed_args.csv`), nor an argument of the function it is passed to (its
+  default and formula methods too).  Only stats and survival functions are
+  judged; broom.helpers, car, effectsize and smd pass `...` on again.  This
+  closes most of gap 4 below.  The checks of `args` moved from
+  `R/ard_spec.R` (1994 lines) to `R/ard_args_check.R`.
 
 ### Added 2026-11-03
 
@@ -259,10 +304,12 @@ Every argument in scope is described and its value judged (since
 3. A `custom` row's code: only its cards / cardx calls written with the
    package are judged (not `ard_tabulate()` after `library(cards)`, not a
    name bound to a function).
-4. A passed-on argument's name is not checked (a function that passes `...`
-   on takes any name); the catalog names the ones clinical tables use, not
-   every argument of the function they reach (`stats::aov()`'s, `car::vif(type
-   =)` -- a method's argument, not the generic's -- are not described).
+4. A passed-on argument's name is checked (since 2026-11-04) only when it
+   reaches a stats or survival function; one passed to broom.helpers, car,
+   effectsize or smd, which pass `...` on again, is not.  The catalog
+   names the arguments clinical tables use, not every argument of the
+   function they reach (`stats::aov()`'s, `car::vif(type =)` -- a method's
+   argument, not the generic's -- are not described).
 5. Not in scope by design: `rename_ard_groups_shift()` /
    `_reverse()` (the table code reads the by columns in the row's order:
    reorder `by` instead), `bind_ard()` (tflspec #118), the `mock_*()`
@@ -312,6 +359,15 @@ Percentage: yes counts 1, partial 0.5.
 | 2026-11-02 before | 51.6% (325 / 19 / 304 of 648) | 58.8% (325 / 19 / 225 of 569) | 41 / 7 / 67 |
 | 2026-11-02 after  | 51.8% (326 / 19 / 303 of 648) | 59.2% (326 / 19 / 222 of 567) | 42 / 6 / 67 |
 | 2026-11-03 before / after | 51.8% (326 / 19 / 303 of 648) | 59.2% (326 / 19 / 222 of 567) | 42 / 6 / 67 |
+| 2026-11-04 before / after | 51.6% (326 / 19 / 305 of 650) | 59.0% (326 / 19 / 224 of 569) | 41 / 7 / 67 |
+
+(2026-11-04: rtfreporter@next fc1a438 and tflspec@next a9c791a merged.
+rtfreporter's one new argument is `render_format` ("png" or "emf", #888)
+of `rtfplot()` and `rtf_figures()`: a figure's, not passed on yet, which
+takes the share from 59.2% to 59.0%.  It is left to the figure SPEC's
+routine: with "emf", `render_dpi` and `png_device` must not be given, and
+the report code gives them for every figure.  The run went to cards /
+cardx; the table and listing SPEC's share is unchanged.)
 
 (2026-11-03: rtfreporter@next ffdf080 (its changes since 825d4d7 are checks,
 pagination fixes and validation tests: no new argument) and tflspec@next
@@ -389,6 +445,8 @@ could usefully close next:
 2. `rtfplot(width_twips =, height_twips =)` (the figure SPEC's).
 3. `rtf_table_style()` as a value (`plan_style(style = )` of a company's
    own style object): its fields are said one by one today.
+4. `rtf_figures(render_format =)` / `rtfplot(render_format =)` (EMF
+   figures, rtfreporter#888): the figure SPEC's.
 
 ## ggplot2 (figure SPEC)
 
