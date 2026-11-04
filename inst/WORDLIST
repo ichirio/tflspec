@@ -102,8 +102,10 @@ PARAMN
 PARCAT
 PHUSE
 PNG's
+PRs
 PTs
 PhUSE
+Pharma
 Postbaseline
 PowerShell
 R's
@@ -115,6 +117,7 @@ RStudio
 RStudio's
 RTF's
 RTFs
+Rebase
 Rscript
 SAEs
 SAF
@@ -184,6 +187,8 @@ cowplot
 dataset's
 define's
 demog
+dev
+devtools
 df
 discon
 dplyr
@@ -230,6 +235,7 @@ kind's
 ldm
 level's
 linetype
+lintr
 md
 normalization's
 oldrel
@@ -253,6 +259,7 @@ postbaseline
 pvalue
 rds
 readxl
+rebase
 risktable
 rlang
 roxygen
@@ -285,16 +292,21 @@ testthat
 tfl
 tflplanner
 tflplanner's
+tflspec
 tflspec's
 tibbles
 tidyverse
 topline
+tpl
 transaminase
 trea
 twips
+ubuntu
+upstream's
 variant's
 vars
 visit's
+withr
 workspace's
 writexl
 www
