@@ -129,6 +129,10 @@
   for (k in as_arg) args[[k]] <- own_plot[[k]]
   keep <- c(keep, setdiff(as_arg, keep))
   own_plot <- .merge_map(if (generic) args$plot, own_plot[setdiff(names(own_plot), as_arg)])
+  # (the draft's `add` pieces are layer specs, not values `plot =` takes:
+  # they follow the call as `+` terms, after the template's own, as it joins them)
+  plot_add <- own_plot$add
+  own_plot$add <- NULL
   arg_code <- vapply(keep, function(k) {
     v <- args[[k]]
     col <- identical(t$params[[k]]$type, "vars") && is.character(v) && length(v) >= 1L
@@ -151,6 +155,11 @@
   needs <- character()
   n_lab <- 0L
   own <- list()
+  for (pa in plot_add) {
+    res <- .fig_call_code(pa)
+    terms <- c(terms, res$call)
+    needs <- c(needs, res$pkgs)
+  }
   for (i in seq_along(tp$rest)) {
     x <- .fig_item_as_piece(tp$rest[[i]])
     # the report's own R code: statements on `p`, after the other items
