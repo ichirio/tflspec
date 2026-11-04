@@ -730,7 +730,7 @@
 #' prefix names:
 #' \describe{
 #'   \item{`pages_*`}{[rtfreporter::plan_paginate_rows()]: `max_rows`, `split`,
-#'     `break_before` (row positions to cut before, `20 | 40`, with
+#'     `break_before` (the column `pages_break_before`: row positions to cut before, `20 | 40`, with
 #'     `split = rows`), `min_group_rows`, `cont_label`, `page_by` (BY
 #'     pages: the column(s) partitioning the body first, the row budget
 #'     inside each), `heading` (each BY page's name from a template,
@@ -1869,7 +1869,6 @@ tfl_read_table_spec <- function(path, output_id = NULL) {
     .ard_stop("`path` must name one or more .xlsx workbooks.")
   }
   for (f in path) .ard_spec_xlsx_path(f, "tfl_read_table_spec")
-  .ard_need("readxl", "tfl_read_table_spec()")
   sheets <- list()
   from <- character()
   for (f in path) {
@@ -2352,7 +2351,6 @@ tfl_read_report_spec <- function(path, output_id = NULL) {
 #' @seealso [tfl_read_report_spec()], [tfl_report_path()]
 #' @export
 tfl_report <- function(spec, output_id = NULL, content, study = NULL) {
-  .spec_need_rtfreporter()
   if (!is.null(output_id) && !(is.character(output_id) &&
                                length(output_id) == 1L)) {
     .ard_stop(paste0(
@@ -2536,7 +2534,6 @@ tfl_report_overwrite <- function(output, study = NULL) {
 #' @seealso [tfl_table_spec()], [tfl_write_table_spec()], [rtfreporter::table_plan()]
 #' @export
 tfl_as_table_spec <- function(x, output_id = NULL, compare = TRUE) {
-  .spec_need_rtfreporter()
   if (inherits(x, "tfl_table_spec")) return(x)
   if (is.list(x) && !inherits(x, "table_plan") && length(x) &&
       all(vapply(x, inherits, NA, "table_plan"))) {

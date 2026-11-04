@@ -50,6 +50,7 @@
 # expression -- a tidyselect argument (`by = ARM`) selects as it does in
 # the program -- and evaluated in `env`.
 .ard_call_run <- function(res, env) {
+  .ard_need("dplyr", "running an analysis call")
   if (is.null(res$call)) {
     return(.ard_steps_run(eval(str2lang(as.character(res$code)), env), res, env))
   }

@@ -85,7 +85,10 @@
     "then `Missing`, then `Total`."),
   km_survival = paste0(
     "the log-rank p-value is shown by default: set `pvalue: false` when the shell shows ",
-    "none."))
+    "none."),
+  forest_hr = paste0(
+    "the subgroup headings read the common ADaM variables' labels (SEX Sex, AGEGR1 Age ",
+    "group, REGION1 Region ...); `subgroup_labels: {ECOGBL: ECOG}` gives the shell's own."))
 
 # The templates a request may answer with: one block each -- name, what it
 # is, its kind and layout (a variant: of which), then a line a parameter

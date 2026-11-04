@@ -60,6 +60,7 @@
 #' @export
 tfl_ars_ard <- function(ars, adam, dir = tempfile("tfl_ars_"), keep = FALSE) {
   .ard_need("siera", "tfl_ars_ard()")
+  .ard_need("dplyr", "tfl_ars_ard()")
   if (!inherits(ars, "tfl_ars") || !identical(attr(ars, "profile"), "siera")) {
     .ard_stop("`ars` must be a tfl_ars(profile = \"siera\").")
   }

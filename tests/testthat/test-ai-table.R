@@ -259,6 +259,8 @@ test_that("the table context and prompt: the reports, the study's files, the dat
 # ---- the answer -----------------------------------------------------------------
 
 test_that("the stored answer reads, checks clean in its context, and unpacks", {
+  # about 10 s or more; CI runs it on every configuration
+  skip_on_cran()
   d <- ai_table_study()
   toc <- tfl_ai_read_shell(ai_xlsx())$toc
   ctx <- tfl_ai_context("table", outputs = toc$output_id[toc$type == "table"],

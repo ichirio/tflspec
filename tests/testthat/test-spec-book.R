@@ -1,6 +1,8 @@
 ex <- function(f) system.file("extdata", "ard-spec", f, package = "tflspec")
 
 test_that("a table spec is written with its sheets only, a report spec with its", {
+  # about 10 s or more; CI runs it on every configuration
+  skip_on_cran()
   skip_if_not_installed("readxl")
   sp <- tfl_read_report_spec(ex(c("report.xlsx", "study.xlsx")))
   tf <- withr::local_tempfile(fileext = ".xlsx")

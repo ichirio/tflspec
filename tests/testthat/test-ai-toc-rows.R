@@ -60,6 +60,8 @@ test_that("a TOC without a shell column reads as before: the number, its sheet",
 
 
 test_that("a company's TOC: a request a shell sheet, the TOC items sharing it its candidates", {
+  # about 10 s or more; CI runs it on every configuration
+  skip_on_cran()
   skip_if_not_installed("openxlsx")
   skip_if_not_installed("haven")
   f <- company_toc_book(tempfile(fileext = ".xlsx"))

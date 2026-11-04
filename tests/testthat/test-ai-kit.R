@@ -60,6 +60,8 @@ test_that("the blank study unpacks, reads, and its items are what the schema tak
 })
 
 test_that("the example's answer reads, reviews clean, and is the example TOC's", {
+  # about 10 s or more; CI runs it on every configuration
+  skip_on_cran()
   d <- kit_study()
   outs <- tfl_read_outputs(d)
   expect_setequal(names(outs), c("T-1", "T-2", "L-1", "F-1"))
@@ -115,6 +117,8 @@ test_that("the example runs on the sample data: the ARD, the tables, the listing
 })
 
 test_that("tfl_ai_review(): a flawed answer gives the AI its fixes and writes the two prompts", {
+  # about 10 s or more; CI runs it on every configuration
+  skip_on_cran()
   d <- kit_study("ai-kit-flawed")
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   t1 <- file.path(d, "spec", "outputs", "T-1.yml")

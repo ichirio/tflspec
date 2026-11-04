@@ -16,5 +16,4 @@ in Diastolic BP (mmHg)"}`
    `- {step: code, code: 'rt$label <- sprintf("%.1f%% (%d/%d)", rt$rate, rt$x, rt$n)', label: "One-line label rate (n/N)"}`
 5. Arms come in alphabetical order (Control first): a `levels` step on the arm variable, in the data steps before the plot. The palette follows the order.
    `- {step: levels, variable: TRT01P, levels: Drug X | Control}` (the arms in the shell's order)
-6. `forest_hr` subgroup headings print the variable names (AGEGR1): rebuild the y scale from the plot's own data.
-   `{layer: layer_code, code: 'e <- Filter(function(l) is.data.frame(l$data) && all(c("y", "label", "head") %in% names(l$data)), p$layers)[[1]]$data; e$label <- ifelse(e$head, c(AGEGR1 = "Age group", SEX = "Sex")[e$label], e$label); p <- p + ggplot2::scale_y_continuous(breaks = e$y, labels = e$label, expand = ggplot2::expansion(add = 0.6))'}`
+6. `forest_hr` subgroup headings: the argument `subgroup_labels` (`{AGEGR1: Age group, SEX: Sex}`), not a layer; the common ADaM variables read their label without it.
