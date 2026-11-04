@@ -26,8 +26,8 @@ Builds the \code{\link[rtfreporter:table_plan]{rtfreporter::table_plan()}} a tab
 \code{tables} sheet go into \code{table_plan()}, and the other sheets become the
 plan's first layers through the same verbs \code{\link[=tfl_table_code]{tfl_table_code()}} writes ---
 so a verb written afterwards still wins, which is how one report departs
-from the study's workbook in a line of code.  Like \code{table_plan()}, the data
-comes first, so it pipes.
+from the study's workbook in a line of code.  The data comes first, so it
+pipes.
 }
 \examples{
 if (requireNamespace("cards", quietly = TRUE) &&

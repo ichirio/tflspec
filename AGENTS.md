@@ -70,6 +70,9 @@ Breaking: no
   `devtools::document()` after a roxygen change.
 - Keep the line endings of the files you edit.
 - Split a source file before it passes 2,000 lines.
+- Explain a feature by what it does, not by comparison with another package;
+  name another package only when it is the actual subject (an engine, a
+  dependency, an adapter).
 
 ## Tests
 
