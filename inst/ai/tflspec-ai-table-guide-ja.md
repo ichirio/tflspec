@@ -462,7 +462,7 @@ tfl_ai_collect_answers(d)            # 5 reports in 5 requests (the figure its o
 
 ## 既知の制限
 
-- `shift` / `lab_shift`: ベースラインのコードリストに Missing と Total を入れて、`levels` はコードリストのラベル（Low, Normal, High）で書きます。
+（今のところありません）
 
 ## 会社の PC で始める前に
 

@@ -273,3 +273,67 @@ test_that("shift: header_n = FALSE and param_page = FALSE show no N (#630)", {
                                              param_page = FALSE))
   expect_length(z$ard$analyses, 1L)
 })
+
+# the report with code lists whose codes differ from the labels, and the
+# program it writes run by a child R
+sh_codelist_program <- function(d, cl, extra, rscript) {
+  paged <- is.null(extra$param_page)
+  info <- if (paged) "default" else "param_page = FALSE"
+  args <- c(list(population = "SAF", where = 'PARAMCD %in% c("ALT", "HGB")',
+                 levels = c("LOW", "NORMAL", "HIGH")), extra)
+  r <- sh_report(d, args, codelists = list(BNRIND = cl, ANRIND = cl))
+  t <- as.data.frame(suppressMessages(rtfreporter::plan_apply(r$plan, "table")))
+  t[] <- lapply(t, function(v) if (is.factor(v)) as.character(v) else v)
+  rws <- c("Low", "Normal", "High", "Missing", "Total")
+  if (paged) {
+    pg <- suppressMessages(rtfreporter::plan_apply(r$plan, "pages"))
+    expect_length(pg, 2L)
+    for (g in pg) {
+      expect_identical(unique(as.character(g$data$row_label)), rws, info = info)
+      h <- unique(vapply(g$col_header[[1L]], function(z) as.character(z$label), ""))
+      expect_true(all(grepl("\\(N=[0-9]+\\)", h[-1L])), info = info)
+    }
+  } else {
+    expect_identical(unique(t$BNRIND[t$group == "ALT"]), rws, info = info)
+  }
+  # the report's own list keeps its values; the template added the two
+  expect_identical(vapply(r$ro$codelists$BNRIND, function(x) x$value, ""),
+                   c("LOW", "NORMAL", "HIGH", "Missing", "Total"))
+  # the program writes the codes with their labels
+  code <- tfl_content_code(r$ro, pipe = "|>")
+  expect_true(any(grepl("LOW = \"Low\"", code, fixed = TRUE)))
+  # run by a child R: the same rows and labels (and, paged, the same pages)
+  w <- withr::local_tempdir()
+  withr::local_dir(w)
+  saveRDS(r$ard, "ard.rds")
+  writeLines(c("library(rtfreporter)", "ard <- readRDS('ard.rds')", code,
+               "saveRDS(plan_apply(plan, 'table'), 'tab.rds')",
+               "saveRDS(plan_apply(plan, 'pages'), 'pages.rds')"), "prog.R")
+  out <- suppressWarnings(system2(rscript, "prog.R", stdout = TRUE, stderr = TRUE))
+  expect_true(file.exists("tab.rds"), info = paste(out, collapse = "
+"))
+  expect_identical(readRDS("tab.rds"), rtfreporter::plan_apply(r$plan, "table"))
+  expect_identical(readRDS("pages.rds"), suppressMessages(rtfreporter::plan_apply(r$plan, "pages")))
+}
+
+test_that("shift: Missing and Total need not be in the code list; the program maps the codes as the build does", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("cards")
+  skip_if_not_installed("dplyr")
+  skip_if_not_installed("rtfreporter")
+  d <- sh_study(withr::local_tempdir())
+  rows <- function(...) lapply(list(...), function(v) list(value = v[1L], label = v[2L]))
+  cl <- rows(c("LOW", "Low"), c("NORMAL", "Normal"), c("HIGH", "High"))
+  rscript <- file.path(R.home("bin"), "Rscript")
+  withr::local_envvar(R_LIBS = paste(.libPaths(), collapse = .Platform$path.sep))
+  has <- suppressWarnings(system2(rscript, c("-e", shQuote("cat(requireNamespace('tflspec', quietly = TRUE))")),
+                                  stdout = TRUE, stderr = FALSE))
+  skip_if_not(identical(utils::tail(has, 1L), "TRUE"), "tflspec is not installed where a child R looks")
+  # param_page = FALSE, and the default (a page a parameter, each with its N)
+  for (pp in list(list(param_page = FALSE), list())) {
+    # (the page N needs rtfreporter#898, as the #630 tests do)
+    if (is.null(pp$param_page)) sn_skip()
+    sh_codelist_program(d, cl, pp, rscript)
+  }
+})

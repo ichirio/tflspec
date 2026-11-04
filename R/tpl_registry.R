@@ -1219,6 +1219,26 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
   ifelse(is.na(i), lv, lab[i])
 }
 
+# The baseline column's code list with the Missing and Total rows the
+# analysis data's code adds (value = label), or NULL: the template's
+# `codelists`, which the report's own lists take the values they lack from
+.tpl_shift_codelists <- function(a, worst, codelists) {
+  cl <- codelists[[a$baseline]]
+  if (is.null(cl) || !worst) return(NULL)
+  rows <- .tpl_cl_rows(cl)
+  extra <- c(a$missing_label, a$total_label)
+  rows <- c(rows, lapply(extra, function(v) list(value = v, label = v)))
+  stats::setNames(list(rows), a$baseline)
+}
+
+# A code list as rows of value / label (a program's named or plain vector
+# of codes too)
+.tpl_cl_rows <- function(cl) {
+  if (!is.character(cl)) return(cl)
+  val <- names(cl) %||% unname(cl)
+  lapply(seq_along(cl), function(i) list(value = val[[i]], label = unname(cl)[[i]]))
+}
+
 .tpl_shift_body <- function(a, ctx) {
   set <- a$data_id %||% paste0(tolower(a$data), "_", tolower(a$population))
   worst <- length(a$worst) > 0L
@@ -1295,7 +1315,8 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
       tfl_item("plan_paginate_rows", list(page_by = "group", heading = a$param_heading,
                                           heading_at = "title")),
       tfl_item("plan_hide", list(cols = list("group")))))
-  list(ard = ard, data = list(source = "ard"), content = content)
+  list(ard = ard, data = list(source = "ard"), content = content,
+       codelists = .tpl_shift_codelists(a, worst, ctx$codelists))
 }
 
 .tfl_template("shift", kind = "table", layout = "shift",
