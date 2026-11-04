@@ -280,6 +280,17 @@
 # a layer of a stat that computes them (geom_bar's count) needs the stat's,
 # any other its geom's.  NULL when the layer cannot be made.
 .schema_layer_required <- function(fn, args) {
+  l <- .schema_layer_obj(fn, args)
+  if (is.null(l)) return(NULL)
+  nm <- sub("^.*::", "", fn)
+  if (startsWith(nm, "stat_") || !inherits(l$stat, "StatIdentity")) l$stat$required_aes else
+    l$geom$required_aes
+}
+
+# The installed layer an item makes (its stat and geom as it names them),
+# or NULL
+.schema_layer_obj <- function(fn, args) {
+  if (!is.character(fn) || length(fn) != 1L) return(NULL)
   pkg <- if (grepl("::", fn, fixed = TRUE)) sub("::.*$", "", fn) else
     tfl_schema(fn)$package %||% "ggplot2"
   nm <- sub("^.*::", "", fn)
@@ -291,8 +302,7 @@
   if ("fun" %in% names(formals(f))) pass$fun <- identity
   l <- tryCatch(suppressWarnings(suppressMessages(do.call(f, pass))), error = function(e) NULL)
   if (!inherits(l, "Layer")) return(NULL)
-  if (startsWith(nm, "stat_") || !inherits(l$stat, "StatIdentity")) l$stat$required_aes else
-    l$geom$required_aes
+  l
 }
 
 # A plot's layers each given the aesthetics they need: mapped by the layer,

@@ -83,6 +83,21 @@ required one's alternatives (\code{ymin} or \code{xmin}: a bar across).  A
 figure's plot is checked for them: a layer missing a required
 aesthetic, neither mapped nor given a value nor inherited from
 \code{ggplot()}'s mapping, warns.
+
+A mapping's value is a column's name (\code{colour: TRTA}), or an
+expression of a mapping's form, written as its text, untagged:
+a call of \code{factor()}, \code{as.factor()}, \code{ordered()}, \code{as.numeric()},
+\code{as.integer()}, \code{as.character()}, \code{interaction()}, \code{reorder()},
+\code{rev()}, \code{abs()}, \code{sqrt()}, \code{exp()}, \code{log()} / \code{log2()} / \code{log10()} /
+\code{log1p()}, \code{round()}, \code{after_stat()}, \code{after_scale()} or \code{stage()},
+of columns, constants, their arithmetic and \code{c()}, \code{sum()}, \code{max()},
+\code{min()}, \code{mean()}, \code{median()}, \code{length()}, \code{alpha()}, \code{pmin()},
+\code{pmax()}, \code{cumsum()} (\code{x: factor(AVISITN)}, \code{y: after_stat(density)},
+\code{x: reorder(USUBJID, -PCHG)}, \code{fill: after_scale(alpha(colour, 0.4))});
+a number is a constant (\code{group: 1}).  Any other R is \code{!r}.  The check
+warns for a text of neither form (it is written as a column of that
+name) and for a variable of \code{after_stat()} the layer's stat does not
+compute (\code{after_stat(densty)}).
 }
 \examples{
 names(tfl_schema())

@@ -397,7 +397,11 @@ content:
   the schema's figure catalog -- ggplot2, ggsurvfit, patchwork, and
   ggrepel, ggnewscale, ggh4x, ggtext, written `pkg::fn` in the code; a
   function it does not have, `pkg::fn`, is written by its formals).
-- `mapping:` is `aes()`: a map of columns (`!r` for an expression); a
+- `mapping:` is `aes()`: a map of columns, or of an expression written as
+  its text (`x: factor(AVISITN)`, `y: after_stat(density)`, `x:
+  reorder(USUBJID, -PCHG)`, `fill: after_scale(alpha(colour, 0.4))`:
+  factor(), reorder(), log10(), after_stat(), after_scale(), stage() ...
+  of columns and arithmetic; `!r` for other R); a
   constant is the function's argument, not the mapping (`colour: grey50`).
   `data:` and a fit name an object of the data steps.  `NULL` is `!r
   NULL`; `!unset` removes what a layer below set.  `scale_colour_tfl`,

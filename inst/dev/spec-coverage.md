@@ -409,6 +409,55 @@ objects of the example (`values = cols`, `labeller = to_string`), dates
 (`label_math(10^.x)`).  Next: a typed form for a mapping's `after_stat()`
 and `factor()` of a column.
 
+### Round 7 (2026-11-04): a mapping's expressions
+
+The examples' measure (round 5), rerun after a typed form for what a
+mapping takes besides a column:
+
+| Examples | Before | After |
+|---|---:|---:|
+| **ggplot2: geoms, scales, coords, themes, facets, guides, labs, positions** | **95.3%** | **96.1%** |
+| geom_*() | 95.7% | 97.6% |
+| scale_*(), coord_*(), theme(), facets, guides, labs, positions | unchanged | unchanged |
+| **stat_*()** (shown apart) | **97.1%** | **98.4%** |
+| uses yes / partial / no | 1141 / 128 / 3 | 1180 / 89 / 3 |
+
+The arguments' and the aesthetics' measures stay at 100% (3409 arguments,
+826 aesthetics; `spec-coverage-ggplot2.csv` unchanged).
+
+Round 7 (R/fig_aes.R):
+
+- A mapping's value is a column's name, or an expression of a mapping's
+  form written as its text, untagged (before: `!r`): a call of factor(),
+  as.factor(), ordered(), as.numeric(), as.integer(), as.character(),
+  interaction(), reorder(), rev(), abs(), sqrt(), exp(), log() / log2() /
+  log10() / log1p(), round(), signif(), paste() / paste0(), sprintf(),
+  format(), cut_width() / cut_interval() / cut_number(), after_stat(),
+  after_scale() or stage(), or arithmetic, of columns, constants and
+  sum(), max(), min(), mean(), median(), length(), alpha(), pmin(),
+  pmax(), cumsum(), c().  `x: factor(AVISITN)`, `y: after_stat(density)`,
+  `y: after_stat(count / sum(count))`, `x: reorder(USUBJID, -PCHG)` (a
+  waterfall), `ymin: mean - se` (mean +/- SE), `label: paste0(n, " (",
+  pct, "%)")`, `fill: after_scale(alpha(colour, 0.4))`.  Written as it
+  is; read back from code as its text.
+- A constant: a number (`group: 1`, before written `` `1` ``), a text in
+  its quotes (`colour: '"Overall"'`, a legend's label); a column's name in
+  backticks (`` `a b` ``).
+- The check: a text that is neither a column's name nor of the form warns
+  (it is written as a column of that name); an after_stat()'s variable
+  the layer's stat does not compute warns (`after_stat(densty)` of
+  geom_histogram; of geom_step(stat = "ecdf") only `ecdf`), the
+  variables by stat (count, bin, density, ecdf, summary, boxplot,
+  ydensity, smooth, qq, sum, 2-d bins, contours ...) tested against the
+  installed ggplot2's layer data.
+
+What is left (partial): R outside the form (`cut_width()` is in it now;
+`n[!duplicated(group)]`, `ifelse()`), objects of the example (`values =
+cols`, `labeller = to_string`), dates (`Sys.Date() - 30`), grobs, R
+inside a scales helper (`label_math(10^.x)`); `size` of line geoms
+(deprecated, a warning by design).  Next: the guides' examples (88.2%)
+and the facets' (92.4%).
+
 ### The extension packages (ggsurvfit, ggrepel, ggh4x, ggtext, ggnewscale, patchwork)
 
 The same measure, the same file (`package` says which), over the

@@ -199,8 +199,13 @@ tfl_plot <- function(name, items = list(), from = "own") {
     return(as.call(c(list(.fig_fn_sym(v$fn)), a)))
   }
   if (identical(arg, "mapping") && is.list(v)) {
+    # a column by its name, an expression of a mapping's form (factor(AVISITN),
+    # after_stat(density)) as it is written (R/fig_aes.R)
     a <- lapply(v, function(e) if (inherits(e, "tfl_r")) str2lang(as.character(unclass(e)))
-                               else as.name(e))
+                               else if (is.numeric(e) || is.logical(e)) {
+                                 if (is.integer(e)) as.numeric(e[[1L]]) else e[[1L]]
+                               }
+                               else .fig_aes_lang(e) %||% as.name(e))
     return(as.call(c(list(as.name("aes")), a)))
   }
   if (arg %in% objects && is.character(v) && length(v) == 1L) return(as.name(v))
@@ -350,7 +355,13 @@ tfl_plot <- function(name, items = list(), from = "own") {
       if (length(un) <= 2L) nm[un] <- c("x", "y")[seq_along(un)]
       if (any(!nzchar(nm)) || anyDuplicated(nm)) return(tfl_r(.fig_deparse_r(x)))
       names(a) <- nm
-      out <- lapply(a, function(e) if (is.name(e)) as.character(e) else tfl_r(.fig_deparse_r(e)))
+      out <- lapply(a, function(e) {
+        if (is.name(e)) return(as.character(e))
+        # a constant of a number (group = 1): the number; a text in its
+        # quotes (colour = "Overall": '"Overall"')
+        if ((is.numeric(e) || is.logical(e)) && length(e) == 1L) return(e)
+        .fig_aes_text(e) %||% tfl_r(.fig_deparse_r(e))
+      })
       return(out)
     }
     if (identical(f, "list") && arg %in% .fig_list_args && length(a) &&

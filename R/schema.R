@@ -100,6 +100,21 @@
 #' aesthetic, neither mapped nor given a value nor inherited from
 #' `ggplot()`'s mapping, warns.
 #'
+#' A mapping's value is a column's name (`colour: TRTA`), or an
+#' expression of a mapping's form, written as its text, untagged:
+#' a call of `factor()`, `as.factor()`, `ordered()`, `as.numeric()`,
+#' `as.integer()`, `as.character()`, `interaction()`, `reorder()`,
+#' `rev()`, `abs()`, `sqrt()`, `exp()`, `log()` / `log2()` / `log10()` /
+#' `log1p()`, `round()`, `after_stat()`, `after_scale()` or `stage()`,
+#' of columns, constants, their arithmetic and `c()`, `sum()`, `max()`,
+#' `min()`, `mean()`, `median()`, `length()`, `alpha()`, `pmin()`,
+#' `pmax()`, `cumsum()` (`x: factor(AVISITN)`, `y: after_stat(density)`,
+#' `x: reorder(USUBJID, -PCHG)`, `fill: after_scale(alpha(colour, 0.4))`);
+#' a number is a constant (`group: 1`).  Any other R is `!r`.  The check
+#' warns for a text of neither form (it is written as a column of that
+#' name) and for a variable of `after_stat()` the layer's stat does not
+#' compute (`after_stat(densty)`).
+#'
 #' @param fn A function's name (`"plan_cells"`), or `NULL` for all.
 #' @return The function's entry (`package`, `description`, `dots`, `args`;
 #'   `rank`, its place in the recommended order, and `stage`, `"mapping"`,
@@ -329,6 +344,8 @@ tfl_schema_check <- function(item) {
   if (identical(fn, "geom") && identical(ent$figure, "layer")) .schema_check_geom(item, bad)
   # a layer's mapping: aesthetics it has (R/spec_figure.R)
   .schema_check_mapping(fn, ent, item$args$mapping, bad)
+  # its values: columns, or expressions of a mapping's form (R/fig_aes.R)
+  .schema_check_aes_values(fn, ent, item$args %||% list(), bad)
   f <- .schema_formals(fn, ent)
   if (is.null(ent) && is.null(f)) {
     bad("", sprintf("%s is a function neither the schema nor its package has", fn))
