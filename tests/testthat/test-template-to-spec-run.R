@@ -63,29 +63,40 @@ test_that("every template: its RTF as a template report = as the code SPEC tfl_t
   writeLines(c(
     "# (a study's setup attaches rtfreporter, never tflspec)",
     "library(rtfreporter)",
-    "d <- commandArgs(TRUE)[1]; part <- commandArgs(TRUE)[2]; ids <- commandArgs(TRUE)[-(1:2)]",
+    "d <- commandArgs(TRUE)[1]; part <- commandArgs(TRUE)[2]; sdir <- commandArgs(TRUE)[3]",
+    "ids <- commandArgs(TRUE)[-(1:3)]",
     "res <- lapply(ids, function(id) {",
-    "  f <- file.path(d, 'spec', 'outputs', paste0(id, '.yml'))",
-    "  run <- function() tryCatch(tflspec::tfl_run_output(id, dir = d), error = function(e) e)",
+    "  f <- file.path(sdir, 'spec', 'outputs', paste0(id, '.yml'))",
+    "  run <- function() tryCatch(tflspec::tfl_run_output(id, dir = sdir), error = function(e) e)",
     "  a <- run()",
     "  if (!inherits(a, 'error')) file.copy(a, file.path(d, paste0(id, '-A.rtf')), overwrite = TRUE)",
     "  b <- tryCatch({",
-    "    st <- tflspec::tfl_read_study_spec(d)",
+    "    st <- tflspec::tfl_read_study_spec(sdir)",
     "    tflspec::tfl_write_output(tflspec::tfl_template_to_spec(tflspec::tfl_read_output(f), st), f)",
     "    run()", "  }, error = function(e) e)",
     "  if (!inherits(b, 'error')) file.copy(b, file.path(d, paste0(id, '-B.rtf')), overwrite = TRUE)",
     "  msg <- function(x) if (inherits(x, 'error')) gsub('[\\r\\n]+', ' ', conditionMessage(x)) else ''",
     "  data.frame(id = id, a = msg(a), b = msg(b))",
     "})",
-    "write.csv(do.call(rbind, res), file.path(d, paste0('tsr-', part, '.csv')), row.names = FALSE)"),
+    "csv <- file.path(d, paste0('tsr-', part, '.csv'))",
+    "write.csv(do.call(rbind, res), paste0(csv, '.tmp'), row.names = FALSE)",
+    "file.rename(paste0(csv, '.tmp'), csv)"),
     file.path(w, "run.R"))
   # (the reports are independent: a few children build them side by side,
-  # each its own share, the slow ones spread over them)
-  n_child <- max(1L, min(4L, length(ids), parallel::detectCores(), na.rm = TRUE))
+  # each its own share, the slow ones spread over them; each builds in a
+  # copy of the study holding only its share's reports -- a run reads every
+  # report of its study -- and leaves the RTFs and its csv in `d`)
+  n_child <- min(4L, length(ids))
   share <- rep_len(seq_len(n_child), length(ids))
+  sds <- file.path(w, paste0("study-", seq_len(n_child)))
+  for (k in seq_len(n_child)) {
+    file.copy(d, w, recursive = TRUE)
+    file.rename(file.path(w, basename(d)), sds[k])
+    unlink(file.path(sds[k], "spec", "outputs", paste0(unname(ids)[share != k], ".yml")))
+  }
   logs <- file.path(w, paste0("child-", seq_len(n_child), ".log"))
   for (k in seq_len(n_child)) {
-    system2(rscript, c(file.path(w, "run.R"), d, k, unname(ids)[share == k]),
+    system2(rscript, c(file.path(w, "run.R"), d, k, sds[k], unname(ids)[share == k]),
             stdout = logs[k], stderr = logs[k], wait = FALSE)
   }
   csvs <- file.path(d, paste0("tsr-", seq_len(n_child), ".csv"))
