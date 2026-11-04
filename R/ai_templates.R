@@ -79,16 +79,18 @@
     "`levels` are the data's values, in order (`LOW`, `NORMAL`, `HIGH`); to print other ",
     "text (`Low`), give the report's `codelists` for both the post and the baseline ",
     "column (value, label), and `levels` may then be the codes or the labels; ",
-    "`Missing` and `Total` need not be in the code list: the rows are `levels`, then ",
-    "`Missing`, then `Total` (with a code list for the baseline they always print, ",
+    "`Missing` and `Total` are the template's rows: not in `levels`, and they need not ",
+    "be in the code list; the rows are `levels`, then `Missing`, then `Total` (with a ",
+    "code list for the baseline they always print, ",
     "empty when nobody is in them; without one, `Missing` prints only when a subject ",
     "has no baseline value)."),
   lab_shift = paste0(
     "`levels` are the data's values, in order (`LOW`, `NORMAL`, `HIGH`); to print other ",
     "text (`Low`), give the report's `codelists` for both the post and the baseline ",
     "column (value, label), and `levels` may then be the codes or the labels; ",
-    "`Missing` and `Total` need not be in the code list: the rows are `levels`, then ",
-    "`Missing`, then `Total` (with a code list for the baseline they always print, ",
+    "`Missing` and `Total` are the template's rows: not in `levels`, and they need not ",
+    "be in the code list; the rows are `levels`, then `Missing`, then `Total` (with a ",
+    "code list for the baseline they always print, ",
     "empty when nobody is in them; without one, `Missing` prints only when a subject ",
     "has no baseline value)."),
   km_survival = paste0(
@@ -380,8 +382,8 @@
     })), error = function(e) character())
   }
   where <- sprintf("%s (%s)", sprintf("%s.%s", toupper(ds), post), paste(vals, collapse = ", "))
-  one <- function(k, ok, allowed_in, fix, wont = "they will not print") {
-    entries <- texts(args[[k]])
+  one <- function(k, ok, allowed_in, fix, wont = "they will not print",
+                  entries = texts(args[[k]])) {
     if (is.null(entries)) return()
     good <- entries %in% ok
     if (all(good)) return()
@@ -396,12 +398,21 @@
         k, real, bad, where, allowed_in, fix))
     }
   }
+  # (the Missing and Total rows are the template's: an entry of them in
+  # `levels` would be a second one -- the build stops on the duplicate)
+  lv <- texts(args$levels)
+  own <- c(texts(arg("missing_label")), texts(arg("total_label")))
+  for (e in unique(lv[lv %in% own])) {
+    p <- .ai_problem(p, paste(at, "template args levels"), sprintf(
+      "levels of template %s: `%s` is a row the template adds: leave it out of `levels`", real, e))
+  }
   # (a code list's text counts when both columns have it: one column's alone
   # leaves the other unmatched)
   one("levels", c(vals, intersect(cl_text(post), cl_text(base))),
       sprintf(" or a value or label the report's `codelists` give for both %s and %s", post, base),
       sprintf(paste0("`levels` are the data's values; for other printed text give ",
-                     "`codelists` with value and label for %s and %s"), post, base))
+                     "`codelists` with value and label for %s and %s"), post, base),
+      entries = lv[!lv %in% own])
   one("worst", vals, " (a code list's label does not count)",
       "`worst` is matched against the data's values, before any code list: write the values",
       wont = "they rank nothing, so check the order")

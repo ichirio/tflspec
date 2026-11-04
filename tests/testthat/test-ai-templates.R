@@ -304,6 +304,8 @@ test_that("templates.md carries the facts a trial found only by building", {
   expect_match(note("shift"), "`levels` are the data's values", fixed = TRUE)
   expect_match(note("shift"), "give the report's `codelists` for both the post and the baseline", fixed = TRUE)
   expect_no_match(note("shift"), "codes or its labels", fixed = TRUE)
+  expect_match(note("shift"), "`Missing` and `Total` are the template's rows: not in `levels`", fixed = TRUE)
+  expect_match(note("lab_shift"), "`Missing` and `Total` are the template's rows: not in `levels`", fixed = TRUE)
   expect_match(note("lab_shift"), "`levels` are the data's values", fixed = TRUE)
   expect_no_match(note("lab_shift"), "codes or its labels", fixed = TRUE)
   expect_match(note("km_survival"), "`pvalue: false`", fixed = TRUE)
@@ -380,10 +382,11 @@ test_that("a listing drafted from the listing template is built (RTF)", {
 
 # shift's `levels` and `worst` against the data's values (#636)
 aitpl_shift_answer <- function(template = "shift", args = "levels: [Low, Normal, High]", codelists = FALSE,
-                                cl_vars = c("ANRIND", "BNRIND")) {
+                                cl_vars = c("ANRIND", "BNRIND"), cl_missing = FALSE) {
   cl <- c("    codelists:",
           paste0("      ", cl_vars,
-                 ": [{value: LOW, label: Low}, {value: NORMAL, label: Normal}, {value: HIGH, label: High}]"))
+                 ": [{value: LOW, label: Low}, {value: NORMAL, label: Normal}, {value: HIGH, label: High}",
+                 if (cl_missing) ", {value: Missing, label: Missing}", "]"))
   tfl_ai_parse(aitpl_answer(
     "tflspec_ai: {task: table, version: 1, outputs: [T-14-3-4]}",
     "outputs:",
@@ -446,4 +449,22 @@ test_that("shift: `worst` is matched with the data's values, a code list's label
   expect_match(p$problem, "Normal match no value", fixed = TRUE)
   expect_match(p$problem, "they rank nothing, so check the order", fixed = TRUE)
   expect_no_match(p$problem, "will not print", fixed = TRUE)
+})
+
+test_that("shift: `Missing` and `Total` in `levels` are the template's rows: an error, whatever the code lists or `worst` (#636)", {
+  for (cl in c(FALSE, TRUE)) {
+    p <- aitpl_shift_check(args = "levels: [LOW, NORMAL, HIGH, Missing]", codelists = cl, cl_missing = cl)
+    expect_identical(p$severity, "error", info = cl)
+    expect_match(p$problem, "`Missing` is a row the template adds: leave it out of `levels`", fixed = TRUE)
+  }
+  # (worst unset; Total; a label of the report's own)
+  p <- aitpl_shift_check(args = c("levels: [LOW, NORMAL, HIGH, Total]", "worst: ~"))
+  expect_match(p$problem, "`Total` is a row the template adds", fixed = TRUE)
+  p <- aitpl_shift_check(args = c("levels: [LOW, NORMAL, HIGH, Absent]", "missing_label: Absent"))
+  expect_match(p$problem, "`Absent` is a row the template adds", fixed = TRUE)
+  # (the others of the entries are still judged)
+  p <- aitpl_shift_check(args = "levels: [Low, Missing]")
+  expect_length(p$problem, 2L)
+  # nothing more to say of the data's values with them left out
+  expect_identical(nrow(aitpl_shift_check(args = "levels: [LOW, NORMAL, HIGH]")), 0L)
 })
