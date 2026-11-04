@@ -668,7 +668,7 @@ rtf_style:
 
 rtf_default_format:
   package: rtfreporter
-  description: "The document's text defaults: deprecated in rtfreporter (rtf_style()); an old SPEC's page.rtf_default_format is read as rtf_style's shared level."
+  description: "The document's text defaults: removed in rtfreporter 0.9.0 (rtf_style()); an old SPEC's page.rtf_default_format is read as rtf_style's shared level. A legacy page key only: tflspec never writes a call to it."
   args:
     font_size_half_points: {type: integer}
     row_height_twips: {type: integer}
