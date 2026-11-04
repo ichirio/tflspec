@@ -496,6 +496,10 @@ tfl_ai_collect_answers(d)            # 5 reports in 5 requests (the figure its o
 Keep the `ai/` folder (requests, decisions, drafts) -- share it only within
 your company.
 
+## Known limits
+
+- shift / lab_shift: list Missing and Total in the baseline's code list, and write `levels` as the code list's labels (Low, Normal, High).
+
 ## Before you start on the company PC
 
 - [ ] In the agent's chat, ask it to run `Rscript --version` in the terminal.

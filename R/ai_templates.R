@@ -444,6 +444,7 @@
   for (r in reads) {
     i <- match(r, have)
     if (is.na(i)) .ard_stop(sprintf("%s reads %s, which spec/data.yml does not list.", o$id, r))
+    .data_file_must_exist(r, ds[[i]]$path, ".")
     data[[tolower(r)]] <- .ai_read_dataset(ds[[i]]$path)
   }
   if (length(o$ard$analyses %||% list())) {

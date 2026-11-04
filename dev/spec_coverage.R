@@ -27,12 +27,12 @@ sch <- tflspec::tfl_schema()
 sch <- sch[vapply(sch, function(e) identical(e$package %||% "rtfreporter", "rtfreporter"), NA)]
 
 # the page: functions (R/spec_report.R passes on the schema's arguments)
-page_fns <- c("rtf_page", "rtf_default_format", "rtf_document", "rtf_tables",
+page_fns <- c("rtf_page", "rtf_document", "rtf_tables",
               "rtf_figures", "rtf_titles", "rtf_footnotes", "rtf_header",
               "rtf_footer", "generate_rtfreport")
 # arguments tflspec fills itself (the pipe, the page's lines, the study)
 implicit <- list(
-  rtf_document = c(page = "page.rtf_page", default_format = "page.rtf_default_format",
+  rtf_document = c(page = "page.rtf_page",
                    tokens = "page.tokens (+ OUTPUT_ID / OUTPUT_LABEL)",
                    file = "the study's RTF path (toc / settings)"),
   rtf_tables = c(doc = "the pipe", tables = "the content",

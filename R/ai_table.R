@@ -534,7 +534,7 @@
       }
     }
     # (a listing, drafted with the tables: R/ai_listing.R)
-    p <- rbind(p, if (identical(o[["kind"]], "listing")) .ai_check_listing_output(o, at, context, vars)
+    p <- rbind(p, if (identical(o[["kind"]], "listing")) .ai_check_listing_output(o, at, context, vars, from_template = !is.null(tp))
                else .ai_check_table_output(o, at, context, vars))
   }
   # (a report whose template is wrong: its run would say it again)
@@ -944,7 +944,7 @@
   .ai_widths_on_read(answer$outputs, paths, dir)
   out <- paths
   a <- answer$assumption_rows
-  aw <- .ai_widths_assumptions(unset)
+  aw <- .ai_widths_assumptions(unset, .ai_spec_settings(dir)$language)
   if (!is.null(aw)) {
     if (is.null(a) || !nrow(a)) {
       a <- aw

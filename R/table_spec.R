@@ -730,7 +730,7 @@
 #' prefix names:
 #' \describe{
 #'   \item{`pages_*`}{[rtfreporter::plan_paginate_rows()]: `max_rows`, `split`,
-#'     `break_before` (row positions to cut before, `20 | 40`, with
+#'     `break_before` (the column `pages_break_before`: row positions to cut before, `20 | 40`, with
 #'     `split = rows`), `min_group_rows`, `cont_label`, `page_by` (BY
 #'     pages: the column(s) partitioning the body first, the row budget
 #'     inside each), `heading` (each BY page's name from a template,

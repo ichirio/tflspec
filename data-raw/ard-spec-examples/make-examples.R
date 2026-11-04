@@ -611,7 +611,7 @@ code_doc <- function(id, plan) {
       page = list(orientation = "landscape", paper_size = "A4",
                   margin_top_in = 0.5, margin_left_in = 0.5,
                   margin_right_in = 0.5, margin_bottom_in = 0.5),
-      default_format = rtf_default_format(footnote_width = "page"),
+      style = rtf_style(footnote_width = "page"),
       program = prog) |>
       rtf_section(secinfo = list(header = hdr)) |>
       rtf_tables(plan, font_size_half_points = 14) |>
