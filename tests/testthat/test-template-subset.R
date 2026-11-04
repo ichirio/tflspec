@@ -64,7 +64,8 @@ test_that("expanded: subset on the set's ADSL; a records data takes its subjects
   expect_match(d[[2L]]$code, "& ANL01FL == \"Y\")", fixed = TRUE)
   # (the page N's data set reads the set's records, so the subset's subjects)
   expect_identical(d[[3L]]$from, "adlb_saf")
-  expect_match(d[[3L]]$code, "dplyr::filter(adlb_saf, BNRIND == \"Total\")", fixed = TRUE)  # every record: a records data of the set takes the subjects
+  expect_match(d[[3L]]$code, "dplyr::filter(adlb_saf, BNRIND == \"Total\")", fixed = TRUE)
+  # every record: a records data of the set takes the subjects
   y <- tfl_template_expand("lab_shift", list(population = "SAF", visit = "WEEK 2",
                                              params = "ALT", subset = "PART == \"Part 1\"",
                                              where = "ANL01FL == \"Y\"", worst = NULL))
