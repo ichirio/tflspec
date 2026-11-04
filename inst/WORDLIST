@@ -104,6 +104,7 @@ PHUSE
 PNG's
 PTs
 PhUSE
+Pharma
 Postbaseline
 PowerShell
 R's
@@ -184,6 +185,7 @@ cowplot
 dataset's
 define's
 demog
+dev
 df
 discon
 dplyr
@@ -285,10 +287,12 @@ testthat
 tfl
 tflplanner
 tflplanner's
+tflspec
 tflspec's
 tibbles
 tidyverse
 topline
+tpl
 transaminase
 trea
 twips
