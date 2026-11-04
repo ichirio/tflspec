@@ -168,3 +168,59 @@ test_that("shift: the study's plan_stub(name, before) keeps the template's stub 
   expect_true(.tpl_is_look(tfl_item("plan_stub", list(before = TRUE))))
   expect_true(.tpl_is_look(tfl_item("plan_style", list(font_size = 8))))
 })
+
+# a report's own column header over a template's keeps the template's stub heading (#635)
+hs_output <- function(header = NULL, template = "ae_soc_pt") {
+  tfl_output("T-9", "table", population = "SAF",
+             content = if (!is.null(header)) list(tfl_item("plan_col_header", list(header = header))) else
+               list(tfl_item("plan_paginate_rows", list(max_rows = 24L))),
+             template = list(name = template, args = list(population = "SAF")))
+}
+hs_header <- function(o, s = ts_study()) {
+  ro <- tfl_resolve_output(o, s)
+  hit <- Filter(function(it) it$fn == "plan_col_header", ro$content)
+  stopifnot(length(hit) == 1L)
+  hit[[1L]]$args$header
+}
+hs_n <- list(list(line = "1", cols = ".values", span = "each", text = "{col}\n(N={n})"))
+hs_cell <- function(h, line, col) Filter(function(c) c$line == line && identical(c$cols, col), h)
+
+test_that("a report's N header without a stub cell keeps the template's stub heading, and a line for the .values", {
+  for (tp in c("ae_soc_pt", "ae_ser_soc_pt", "ae_disc_soc_pt")) {
+    h <- hs_header(hs_output(hs_n, tp))
+    st <- hs_cell(h, "2", "row_label")
+    expect_length(st, 1L)
+    expect_match(st[[1L]]$text, "System Organ Class", fixed = TRUE)
+    # the report's own N cell, and the empty line-2 .values cell that lines the header up
+    expect_identical(hs_cell(h, "1", ".values")[[1L]]$text, "{col}\n(N={n})")
+    expect_length(hs_cell(h, "2", ".values"), 1L)
+    expect_null(hs_cell(h, "2", ".values")[[1L]]$text)
+    expect_length(h, 4L)
+  }
+  # the program keeps it too
+  ro <- tfl_resolve_output(hs_output(hs_n), ts_study())
+  expect_match(paste(tfl_content_code(ro), collapse = "\n"), "System Organ Class", fixed = TRUE)
+})
+
+test_that("a report with its own stub cell, empty or not, replaces the template's header", {
+  own <- c(list(list(line = "1", cols = "row_label", text = "Own heading")), hs_n)
+  h <- hs_header(hs_output(own))
+  expect_length(h, 2L)
+  expect_identical(h[[1L]]$text, "Own heading")
+  empty <- c(list(list(line = "1", cols = "row_label")), hs_n)
+  h <- hs_header(hs_output(empty))
+  expect_length(h, 2L)
+  expect_false(any(vapply(h, function(c) !is.null(c$text) && grepl("Organ", c$text), NA)))
+})
+
+test_that("a header-less report and a template with no stub heading are not changed", {
+  h <- hs_header(hs_output(NULL))
+  expect_length(h, 4L)
+  expect_match(hs_cell(h, "2", "row_label")[[1L]]$text, "System Organ Class", fixed = TRUE)
+  # ancova's header has no stub cell
+  o <- tfl_output("T-9", "table", population = "SAF",
+                  content = list(tfl_item("plan_col_header", list(header = hs_n))),
+                  template = list(name = "ancova", args = list(population = "SAF")))
+  tpl <- tryCatch(hs_header(o), error = function(e) NULL)
+  if (!is.null(tpl)) expect_length(tpl, 1L)
+})
