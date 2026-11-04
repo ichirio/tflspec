@@ -150,6 +150,8 @@ test_that("a figure of items runs and is written by the report's functions", {
 })
 
 test_that("the figure catalog: every function and argument is the installed package's", {
+  # about 10 s or more; CI runs it on every configuration
+  skip_on_cran()
   s <- .schema_all(figure = FALSE)
   fig <- Filter(function(e) !is.null(e$figure) && !is.null(e$rank), s)
   expect_gte(length(fig), 60L)

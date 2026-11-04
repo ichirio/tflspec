@@ -259,6 +259,8 @@ test_that("the table context and prompt: the reports, the study's files, the dat
 # ---- the answer -----------------------------------------------------------------
 
 test_that("the stored answer reads, checks clean in its context, and unpacks", {
+  # about 10 s or more; CI runs it on every configuration
+  skip_on_cran()
   d <- ai_table_study()
   toc <- tfl_ai_read_shell(ai_xlsx())$toc
   ctx <- tfl_ai_context("table", outputs = toc$output_id[toc$type == "table"],
@@ -391,4 +393,19 @@ test_that("an ADaM folder: one file a dataset, .sas7bdat > .xpt > .rds > .parque
   if (!requireNamespace("arrow", quietly = TRUE)) {
     expect_error(tflspec:::.ai_adam_read_one(file.path(d, "advs.parquet"), "f()"), "'arrow' package")
   }
+})
+
+test_that("a code list under `page:` is a problem naming the key and where it belongs", {
+  d <- ai_table_study()
+  ctx <- tfl_ai_context("table", outputs = c("T-14-1-1", "T-14-2-1"),
+                        datasets = tfl_ai_adam_summary(file.path(d, "adam")), study_dir = d)
+  x <- sub("    page:\n      titles:\n",
+           paste0("    page:\n      ECOGBL:\n        - {value: '0', label: '0'}\n",
+                  "        - {value: '1', label: '1'}\n      titles:\n"),
+           paste(ai_answer(), collapse = "\n"), fixed = TRUE)
+  p <- tfl_ai_check(tfl_ai_parse(x, "table"), ctx)
+  hit <- grepl("page ECOGBL", p$where, fixed = TRUE)
+  expect_true(any(hit))
+  expect_match(p$problem[hit][1L], "put it under `codelists:`", fixed = TRUE)
+  expect_identical(p$severity[hit][1L], "error")
 })

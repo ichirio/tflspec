@@ -208,6 +208,47 @@ back$cells[, c("variable", "row", "template")]
 back$layout[, "pages_max_rows", drop = FALSE]
 ```
 
+## Cell styles, page breaks, column pages and borders
+
+Four more things are a few cells of a sheet. The sheets are shown here as
+data frames (fictional); the same cells go in the workbook.
+
+`cell_styles`: one row per `plan_cell_style()`, in order. `cols` takes
+`|`-separated columns (`.values` is every value column), `header = TRUE`
+styles the column header, `where` is an R condition over the table's columns:
+
+```{r, eval = FALSE}
+cell_styles <- data.frame(
+  output_id = "T-AE", cols = c(NA, "Placebo | .values"),
+  header = c("TRUE", NA), where = c(NA, 'label == "Any TEAE"'),
+  bold = "TRUE", color = c(NA, "#CC0000"))
+```
+
+`layout`: `pages_break_before` lists row positions to cut before (with
+`pages_split = rows`). The `colpages_*` columns cut the columns into pages:
+`colpages_cut_by` is a separator in the column names (one page per key
+before it), `colpages_fit` puts every page on page 1's scale (`FALSE` keeps
+each column's width), and `colpages_allow_span_break = FALSE` never cuts
+inside a spanning header cell:
+
+```{r, eval = FALSE}
+layout <- data.frame(
+  output_id = "T-LB", pages_split = "rows", pages_break_before = "20 | 40",
+  colpages_cut_by = "____", colpages_fit = "FALSE",
+  colpages_allow_span_break = "FALSE")
+```
+
+`style`: `border_header`, `border_spanning`, `border_body`,
+`border_first_row` and `border_last_row` give the sides drawn for one kind
+of row (`top | bottom`, or `none`). Use them in place of `border`, not
+with it:
+
+```{r, eval = FALSE}
+style <- data.frame(
+  output_id = "T-AE", border_header = "top | bottom",
+  border_body = "none", border_last_row = "bottom")
+```
+
 ## Reports and several workbooks
 
 A table spec is usually read together with its report spec (the page,

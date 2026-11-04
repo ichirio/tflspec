@@ -64,7 +64,17 @@ test_that("in a study: the ARD built; A (the call, the layout) = B (the design) 
   expect_true(all(c("bold", "plain") %in% face))
   # bold exactly at the heading rows, in the order the axis lists its labels
   ylab <- b$layout$panel_params[[1L]]$y$get_labels()
-  expect_identical(face == "bold", ylab %in% c("SEX", "AGEGR1"))
+  expect_identical(face == "bold", ylab %in% c("Sex", "Age group"))
+  # the headings by their label (the common ADaM variables'), the levels' rows as they were
+  expect_true(all(c("Sex", "Age group") %in% ylab))
+  expect_false(any(c("SEX", "AGEGR1") %in% ylab))
+  # a label given for the variable: its heading, bold on it
+  g <- tpl_forest_hr(ard, group = TRT01A, subgroups = c(SEX, AGEGR1), bold_headings = TRUE,
+                     subgroup_labels = c(SEX = "Gender"))
+  gb <- suppressWarnings(ggplot2::ggplot_build(g))
+  glab <- gb$layout$panel_params[[1L]]$y$get_labels()
+  expect_true(all(c("Gender", "Age group") %in% glab))
+  expect_identical(g$theme$axis.text.y$face == "bold", glab %in% c("Gender", "Age group"))
   expect_s3_class(tpl_forest_layout(q), "patchwork")
 })
 
@@ -150,4 +160,41 @@ test_that("n_by_arm: each arm's events / subjects, a column each; the call's loo
   q <- tfl_tpl(ard, "forest_hr", subgroups = SEX, favours = c("Drug X", "Control"))
   expect_match(q$labels$x %||% suppressWarnings(ggplot2::ggplot_build(q))$plot$labels$x,
                "<- Favours Drug X", fixed = TRUE)
+})
+
+test_that("subgroup_labels: the headings by label; the levels' rows and the order stay", {
+  skip_if_not_installed("dplyr")
+  rows <- function(code) {
+    est <- data.frame(SEX = c("F", "M", NA, NA, NA), AGEGR1 = c(NA, NA, "<65", ">=65", NA),
+                      STRATA1 = NA_character_, TRT01A = "Drug", estimate = 1, conf.low = 0.5, conf.high = 2, n_obs = 10L)
+    est <- rbind(est, transform(est, SEX = NA, AGEGR1 = NA)[1L, ])
+    env <- list2env(list(est = est), parent = asNamespace("dplyr"))
+    eval(parse(text = code), env)
+    env$est
+  }
+  heads <- function(e) e$label[e$head]
+  # default: the common ADaM variables' label, the name for the others
+  x <- tfl_template_expand("forest_hr", list(param = "OS", population = "ITT",
+                                             subgroups = c("SEX", "AGEGR1", "STRATA1")))
+  code <- x$data$steps[[2L]]$code
+  expect_match(code, "sg_label <- c(SEX = \"Sex\", AGEGR1 = \"Age group\")", fixed = TRUE)
+  e <- rows(code)
+  expect_identical(heads(e), c("Sex", "Age group"))
+  expect_true(all(c("    F: Drug", "    M: Drug", "    <65: Drug", "    >=65: Drug") %in% e$label))
+  # given: over the default, for a variable of the template's subgroups only
+  y <- tfl_template_expand("forest_hr", list(param = "OS", population = "ITT",
+                                             subgroups = c("SEX", "AGEGR1"),
+                                             subgroup_labels = list(SEX = "Gender", ECOGBL = "ECOG")))
+  expect_match(y$data$steps[[2L]]$code, "sg_label <- c(SEX = \"Gender\", AGEGR1 = \"Age group\")",
+               fixed = TRUE)
+  expect_identical(heads(rows(y$data$steps[[2L]]$code)), c("Gender", "Age group"))
+  # a variable's own name when nothing labels it; the old code when no subgroup has a label
+  z <- tfl_template_expand("forest_hr", list(param = "OS", population = "ITT", subgroups = "STRATA1"))
+  expect_false(grepl("sg_label", z$data$steps[[2L]]$code, fixed = TRUE))
+  w <- tfl_template_expand("forest_hr", list(param = "OS", population = "ITT", subgroups = "STRATA1",
+                                             subgroup_labels = c(STRATA1 = "Stratum")))
+  expect_match(w$data$steps[[2L]]$code, "STRATA1 = \"Stratum\"", fixed = TRUE)
+  expect_error(tfl_template_expand("forest_hr", list(param = "OS", population = "ITT",
+                                                     subgroup_labels = c("Sex"))), "named")
+  expect_identical(tfl_template_params("forest_hr")$subgroup_labels$type, "list")
 })

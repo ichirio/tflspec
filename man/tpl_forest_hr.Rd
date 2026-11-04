@@ -15,6 +15,7 @@ tpl_forest_hr(
   size_by_n = FALSE,
   bold_headings = FALSE,
   n_by_arm = NULL,
+  subgroup_labels = NULL,
   plot = NULL
 )
 
@@ -43,6 +44,12 @@ other arm, each row saying which.}
 subjects (\code{events/N}) show in the text column, a column each headed by
 the arm, in place of N; \code{NULL}: N.  \code{tpl_forest_layout()} takes the
 same.}
+
+\item{subgroup_labels}{The subgroups' headings, a named vector, a
+variable = its label (\code{c(SEX = "Sex", AGEGR1 = "Age group")}); a
+variable not given reads the common ADaM variables' label (\code{SEX},
+\code{AGEGR1}, \code{RACE}, \code{REGION1}, \code{ECOGBL} ...), else its name.  The
+levels' rows are not changed.}
 
 \item{plot}{The figure's settings over the template's (\code{x_label},
 \code{y_by}, \code{legend} ..., as a designed figure's \verb{plot:}).}

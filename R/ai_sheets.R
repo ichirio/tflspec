@@ -493,7 +493,7 @@
     }),
     lapply(names(plan$figs), function(nm) {
       u <- plan$figs[[nm]]
-      row(nm, "figure", "figure", u$ids[seq_len(min(1L, length(u$ids)))], u$sheet)
+      row(nm, "figure", "figure", u$ids, u$sheet)
     }),
     if (length(plan$noshell)) list(row(plan$noshell_name, "table", "other", plan$noshell, character())))
   empty <- data.frame(request = character(), type = character(), family = character(),

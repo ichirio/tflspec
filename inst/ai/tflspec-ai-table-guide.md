@@ -14,13 +14,60 @@ tflspec sends nothing.
 Japanese: `tflspec-ai-table-guide-ja.md` in the same folder
 (`system.file("ai", package = "tflspec")`).
 
+## Recommended AI setup
+
+| Level | Setup |
+|---|---|
+| **Verified** | The Claude desktop app's Code tab (Claude Code) with Opus or Fable. VS Code + GitHub Copilot (agent mode) with Fable, run on a company PC on 2026-11-02. |
+| **Expected to work, not yet tested** | VS Code + Copilot with Opus (Opus was tested on Claude Code only). The Claude Code extension for VS Code (the same engine as the Code tab; not separately verified). Cursor and other agent tools that can read and write files in the study folder and run `Rscript`: follow B's flow. |
+| **Not verified** | GPT models in Copilot: do not treat them as equivalent to Opus or Fable. |
+| **Not recommended** | Sonnet and Haiku. In the trials Sonnet decided a rule that changes the numbers wrongly (a shift table's "worst" value, 2 of 3 runs) and broke the kit's rules; Haiku asks well but its repairs are guesses. |
+
+Choose a plan where Opus or Fable can be selected.
+
+Requirements:
+1. Open the study's `ai` folder as the workspace, so that the agent works
+   inside it alone (VS Code: `ai/<study>.code-workspace`, section 5 step 1).
+2. The agent can run `Rscript` in the terminal. If it cannot, you run
+   `Rscript run.R <request>` from the study folder and type `c`.
+3. VS Code + Copilot, in Settings (Ctrl+, and search the name)
+   ([VS Code AI settings](https://code.visualstudio.com/docs/agents/reference/ai-settings.md)):
+   - `github.copilot.chat.summarizeAgentConversationHistory.enabled`: on (the default);
+   - `chat.agent.maxRequests`: raise it from 25 to, for example, 1000;
+   - `chat.tools.terminal.autoApprove`: add `"/^Rscript /": true`;
+   - if a setting is locked by your organization, ask IT.
+4. Check these on your PC before a real study ("Before you start on the
+   company PC", at the end).
+
+### A. The Claude desktop app, Code tab
+
+1. Open the Code tab. Under the prompt box, click the project folder control
+   and choose the study's `ai` folder (the one with `agent_prompt.md`).
+2. In the model picker (under the prompt box), choose Opus or Fable.
+3. Paste the text of `ai/agent_prompt.md` as the first message.
+4. Answer its questions in the chat. At each stop reply `c` (the next
+   request), a number such as `5` (the next 5 together) or `a` (all the rest).
+5. Allow `Rscript` when it asks the first time, so that it builds and checks.
+6. When it says it is stuck, do what its message says, then type `c`.
+
+### B. VS Code, with GitHub Copilot (agent mode) or the Claude Code extension
+
+1. Double-click `ai/<study>.code-workspace` (or File > Open Workspace from File), as section 5 says.
+2. Open the chat. In Copilot choose the Agent session control and the
+   language model (Fable verified; Opus expected). In the Claude Code
+   extension, click the model name at the bottom of the prompt box.
+3. Copilot only: set the three settings of requirement 3 (Ctrl+, and search
+   each name).
+4. Then as in A: paste `ai/agent_prompt.md`; answer; `c` / a number / `a`;
+   when it is stuck, follow its message.
+
 ## 2. What goes where
 
 ```text
 mystudy/
   TOC_SHELL.xlsx        your TOC and shells (one workbook)
   adam/                 adsl.xpt, adae.xpt, adlb.xpt ...
-  AGENTS.md             written by tflspec: "read ai/AGENTS.md" (step 3)
+  AGENTS.md             written by tflspec, at the study root: "read ai/AGENTS.md" (step 3)
   ai/AGENTS.md          written by tflspec: the agent's instructions (step 3)
   ai/requests/          written by tflspec: one file a request (step 3)
   ai/decisions.md       your answers from the chat, one line each (step 5)
@@ -34,8 +81,15 @@ intervals need):
 ```r
 # tflplanner's article installs the same list
 install.packages(c("remotes", "cards", "cardx", "haven", "broom", "broom.helpers", "parameters", "dplyr", "tidyr", "readxl", "officer", "ggsurvfit", "patchwork"))
-remotes::install_github(c("ichirio/rtfreporter", "ichirio/tflspec"))
+ref <- "ai-test-2026-11-09"  # the trial's tag; use the one you were given
+remotes::install_github(paste0("ichirio/rtfreporter@", ref), upgrade = "never")
+remotes::install_github(paste0("ichirio/tflspec@", ref), upgrade = "never")
+remotes::install_github(paste0("ichirio/tflplanner@", ref), upgrade = "never")
 ```
+
+Use the tag you were given (or `next` for the development version).  To try
+the flow on a ready sample first: `tflplanner::create_ai_sample_study()` (see
+tflplanner's AI article).
 
 ## 3. What to run
 
@@ -43,7 +97,7 @@ remotes::install_github(c("ichirio/rtfreporter", "ichirio/tflspec"))
 library(tflspec)
 r <- tfl_ai_prepare("mystudy", "mystudy/TOC_SHELL.xlsx", adam = "adam",
                     study_id = "ABC-123", language = "Japanese")
-r                                   # request, outputs, characters; the next steps
+r                                   # sheets, shell sheets, requests; then "Next:" lines
 ```
 
 One call does the steps: the study folder when there is none (`study.yml`,
@@ -56,8 +110,9 @@ report by default: `T-14-1-1.md` ...; `size = 3` groups a family's reports,
 every request would repeat written once (`ai/instructions-table.md`,
 `ai/instructions-figure.md`, `ai/templates.md`), and the agent's files:
 `ai/AGENTS.md` (its instructions: what it reads, how it asks, what a draft
-holds), `AGENTS.md` and `.github/copilot-instructions.md` (short: read
-`ai/AGENTS.md`), `run.R`, `ai/decisions.md` and `ai/agent_prompt.md` (its
+holds), `AGENTS.md` and `.github/copilot-instructions.md` (at the study root, and
+again in `ai/`; short: read `ai/AGENTS.md`, which is the one the agent
+follows), `run.R`, `ai/decisions.md` and `ai/agent_prompt.md` (its
 one message). A figure of the TOC is a request of its own (`figure-1.md` ...):
 its shell, and a figure report to draft. The steps one at a time:
 `tfl_ai_study_init()`, `tfl_ai_adam_summary()`, `tfl_ai_read_shell()`,
@@ -122,7 +177,7 @@ read the workbook (the place a request names, when a shell's text looks
 cut) and the ADaM (a variable's values, never a data file in the editor),
 with whatever tool the PC has; `docs = ` gives it documents (a SAP, a data
 guide), copied into `ai/docs/`. It installs nothing. It runs one command,
-`Rscript run.R <request>`, to build what it drafted and check it (section 7).
+`Rscript ../run.R <request>` (from `ai/`, its workspace), to build what it drafted and check it (section 7).
 
 Each request is a few thousand characters: the agent's steps, the
 decisions that apply to its reports, its reports' TOC rows and shells, and
@@ -131,7 +186,8 @@ the names of the files to read. A request longer than `max_chars` is split.
 ## 5. The agent's questions, your decisions, its drafts
 
 1. Open the study's `ai` folder in VS Code -- double-click
-   `ai/mystudy.code-workspace`: the agent sees that folder alone, not
+   `ai/<study>.code-workspace` (`<study>` is the study folder's name, here
+   `ai/mystudy.code-workspace`): the agent sees that folder alone, not
    `spec/`, the programs or the data -- and give the agent's chat the text of
    `ai/agent_prompt.md`, once: it does every request of
    `ai/requests/index.md` in order, one after the other.
@@ -190,7 +246,7 @@ it goes on from those files. Whether an earlier decision holds for a report is
 judged by that report, when it is processed.
 
 **Read every default, not only the questions: the defaults can differ from
-run to run.** `ai/defaults.md` lists them, the most important first (what
+run to run.** `ai/defaults.md` (written by `run.R`'s first build) lists them, the most important first (what
 changes the numbers, then the rows and statistics, then the text and the
 look); its first section lists the defaults the agent chose itself, merged by
 topic, and a batch's end message posts that section's first two groups in
@@ -279,8 +335,8 @@ drafts in `spec/outputs/`) moves with `tfl_ai_migrate()`.
 
 ## 7. The agent builds and checks its own drafts
 
-After a request's drafts, the agent runs `Rscript run.R <request>` from the
-study folder. R checks the drafts, builds the ARD and the RTF and draws the
+After a request's drafts, the agent runs `Rscript ../run.R <request>` from
+`ai/` (its workspace; you run `Rscript run.R <request>` from the study folder). R checks the drafts, builds the ARD and the RTF and draws the
 figures. R reads the ADaM; the agent does not.
 
 Beside each RTF in the output folder (`ai/output/tfl/` when the drafts are
@@ -322,7 +378,7 @@ Measured on the sample study: a run of 5 reports took 110-120k tokens at
 every level, so the depth costs little.
 
 When the agent cannot run R (the terminal is refused, or R is not found), it
-says so and asks you to run `Rscript run.R <request>` (or tflplanner's AI
+says so and asks you to run `Rscript run.R <request>` from the study folder (or tflplanner's AI
 tab). Then it reads the same files.
 
 ## 8. The company's hints from past TFLs
@@ -440,6 +496,10 @@ tfl_ai_collect_answers(d)            # 5 reports in 5 requests (the figure its o
 Keep the `ai/` folder (requests, decisions, drafts) -- share it only within
 your company.
 
+## Known limits
+
+(none at present)
+
 ## Before you start on the company PC
 
 - [ ] In the agent's chat, ask it to run `Rscript --version` in the terminal.
@@ -472,7 +532,7 @@ your company.
 | the same error after 2-3 repairs | correct `ai/spec/outputs/<id>.yml` by hand (or in the builder), then run step 6 |
 | `tfl_build_ard()` stops: `The package "broom" (>= 1.0.8) is required.` | `install.packages("broom")` (another package named so: install it too) |
 | `tfl_build_ard()` stops | find the report: `tfl_build_ard(st, dir = ".", output_id = "T-14-1-1", save = FALSE)` |
-| The agent says R cannot be run | run `Rscript run.R <request>` yourself, then tell the agent "done" |
+| The agent says R cannot be run | run `Rscript run.R <request>` yourself, from the study folder, then tell the agent "done" |
 | The agent stops and says it is stuck | do what its message says (`/compact`, a new chat with `ai/agent_prompt.md`, or allow Rscript), then type `c`; it resumes from `ai/progress.md` |
 | `<id>-facts.txt` says a table runs over a page | the builder sets the pages; the agent marks it *to confirm* |
 | `AGENTS.md` still shows the old review levels | `tfl_ai_refresh_agents(".")` |

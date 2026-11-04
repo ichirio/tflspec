@@ -2681,10 +2681,36 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
   stats::setNames(var, heading)
 }
 
+# The common ADaM subgroup variables' labels: a forest's headings read them
+# unless the report gives its own (`subgroup_labels`)
+.forest_labels <- c(SEX = "Sex", AGEGR1 = "Age group", AGEGR2 = "Age group", RACE = "Race",
+                    ETHNIC = "Ethnicity", REGION1 = "Region", COUNTRY = "Country", ECOGBL = "ECOG")
+
+# The subgroups' labels, a named character vector of those that differ from
+# the variable's name: the given (a named vector or list) over the common ones
+.forest_sub_labels <- function(subgroups, given = NULL) {
+  lab <- .forest_labels[intersect(names(.forest_labels), subgroups)]
+  given <- unlist(given)
+  if (length(given)) {
+    if (is.null(names(given)) || !all(nzchar(names(given)))) {
+      stop("`subgroup_labels` is named by the subgroup variable: c(SEX = \"Sex\").", call. = FALSE)
+    }
+    lab[intersect(names(given), subgroups)] <- as.character(given[intersect(names(given), subgroups)])
+  }
+  lab[!is.na(lab) & lab != names(lab)]
+}
+
+# a name as R writes it in c(): backticked when it is not a syntax name
+.forest_name <- function(x) ifelse(make.names(x) == x, x, paste0("`", x, "`"))
+
 # The code step of a forest plot: the rows to draw (the comparison arm, not
 # the reference), their label, text and y; a subgroup whose model did not
 # converge has no point (NE)
-.forest_est_code <- function(group, subgroups, comparison = NULL, n_by_arm = NULL) {
+.forest_est_code <- function(group, subgroups, comparison = NULL, n_by_arm = NULL,
+                             subgroup_labels = NULL) {
+  # the headings' text: a subgroup's label (the given, else the common ADaM
+  # variables'), the variable's name when it has none
+  lab <- .forest_sub_labels(subgroups, subgroup_labels)
   sub <- if (length(subgroups)) c(
     "    subgroup = case_when(",
     paste0(sprintf("      !is.na(%s) ~ \"%s\"", subgroups, subgroups), ","),
@@ -2721,10 +2747,15 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
     "  )",
     if (length(subgroups)) c(
       "# a heading row above each subgroup's levels, the levels indented",
+      if (length(lab)) c(
+        "# (the headings read the subgroups' labels, a variable's name when it has none)",
+        sprintf("sg_label <- c(%s)", paste(sprintf("%s = %s", vapply(names(lab), .forest_name, ""),
+                                                   q(lab)), collapse = ", "))),
       "heads <- est |>",
       "  filter(subgroup != \"All subjects\") |>",
       "  distinct(subgroup) |>",
-      "  mutate(level = subgroup, head = TRUE)",
+      if (length(lab)) "  mutate(level = coalesce(unname(sg_label[subgroup]), subgroup), head = TRUE)"
+      else "  mutate(level = subgroup, head = TRUE)",
       "est <- est |>",
       "  mutate(head = FALSE) |>",
       "  bind_rows(heads) |>",

@@ -24,7 +24,7 @@ The figure template \code{km_cumulative}, layout \code{km}: a variant of \code{k
    \code{risk_statistics} \tab other \tab call \tab  \tab  \tab the risk table's rows (add_risktable(risktable_stats = )); NULL: n.risk \cr
    \code{x_max} \tab usual \tab call \tab  \tab  \tab the x axis's end (x_breaks <- seq(0, x_max, by = x_step)); NULL: the last time \cr
    \code{x_step} \tab usual \tab call \tab  \tab  \tab the x axis's step, the risk table's times; NULL: pretty() \cr
-   \code{x_label} \tab usual \tab call \tab  \tab  \tab the x axis's title (labs(x = )); NULL: Time (\if{html}{\out{<unit>}}) \cr
+   \code{x_label} \tab usual \tab call \tab  \tab  \tab the x axis's title (labs(x = )); NULL: Time (<unit>) \cr
    \code{y_min} \tab other \tab call \tab  \tab  \tab the y axis's start (coord_cartesian(ylim = )); NULL: 0 \cr
    \code{y_max} \tab other \tab call \tab  \tab  \tab the y axis's end; NULL: 1 \cr
    \code{y_step} \tab other \tab call \tab  \tab km.y_by \tab the y axis's step (scale_y_continuous(breaks = )); NULL: the figure style's \cr

@@ -69,6 +69,27 @@
   s
 }
 
+# A line a template's block adds: a fact the agent found only by building
+.ai_tpl_notes <- list(
+  param_change = paste0(
+    "`baseline: true` adds a Baseline column (rows, with `layout: rows`) from the same ",
+    "records `where` keeps: with `where: ONTRTFL == \"Y\"` the baseline is empty; for a ",
+    "baseline, `where: ONTRTFL == \"Y\" | ABLFL == \"Y\"`."),
+  shift = paste0(
+    "`levels` may be the code list's codes or its labels (`Low`, `Normal`, `High`); ",
+    "`Missing` and `Total` need not be in the code list: the rows are `levels`, ",
+    "then `Missing`, then `Total`."),
+  lab_shift = paste0(
+    "`levels` may be the code list's codes or its labels (`Low`, `Normal`, `High`); ",
+    "`Missing` and `Total` need not be in the code list: the rows are `levels`, ",
+    "then `Missing`, then `Total`."),
+  km_survival = paste0(
+    "the log-rank p-value is shown by default: set `pvalue: false` when the shell shows ",
+    "none."),
+  forest_hr = paste0(
+    "the subgroup headings read the common ADaM variables' labels (SEX Sex, AGEGR1 Age ",
+    "group, REGION1 Region ...); `subgroup_labels: {ECOGBL: ECOG}` gives the shell's own."))
+
 # The templates a request may answer with: one block each -- name, what it
 # is, its kind and layout (a variant: of which), then a line a parameter
 # (the target ones marked: population, subset, where).  `kinds`: the kinds
@@ -94,6 +115,10 @@
                                           if (startsWith(tt$name[i], "km_")) paste0(
                                             "; the arms' order: a `levels` data step on the arm ",
                                             "variable, not `codelists`")) else ""))
+    # (what a trial found only by building: a line under the template)
+    if (!short && !is.null(.ai_tpl_notes[[tt$name[i]]])) {
+      out <- c(out, paste0("  - note: ", .ai_tpl_notes[[tt$name[i]]]))
+    }
     # (its catalog aliases: the same template, by another collection's name)
     al <- .tpl_aliases_of(tt$name[i])
     if (nrow(al)) {
@@ -419,6 +444,7 @@
   for (r in reads) {
     i <- match(r, have)
     if (is.na(i)) .ard_stop(sprintf("%s reads %s, which spec/data.yml does not list.", o$id, r))
+    .data_file_must_exist(r, ds[[i]]$path, ".")
     data[[tolower(r)]] <- .ai_read_dataset(ds[[i]]$path)
   }
   if (length(o$ard$analyses %||% list())) {

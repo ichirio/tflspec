@@ -179,6 +179,7 @@ tfl_output_contents <- function(output, study, dir = ".") {
     if (is.na(i)) .ard_stop(sprintf("%s reads %s, which spec/data.yml does not list.", o$id, r))
     p <- ds[[i]]$path
     if (!grepl("^([A-Za-z]:)?[/\\\\]", p)) p <- file.path(dir, p)
+    .data_file_must_exist(r, ds[[i]]$path, dir)
     data[[tolower(r)]] <- .ai_read_dataset(p)
   }
   # the report's analysis data its reads name (`data:`): its data part of
@@ -193,7 +194,7 @@ tfl_output_contents <- function(output, study, dir = ".") {
     eval(parse(text = tfl_helpers_code()), env)
     wd <- setwd(dir)
     on.exit(setwd(wd), add = TRUE)
-    eval(parse(text = code), env)
+    .eval_study_code(code, env, study, ".")
     for (id in ids) data[[id]] <- get(id, envir = env)
   }
   data
@@ -224,7 +225,7 @@ tfl_output_contents <- function(output, study, dir = ".") {
   eval(parse(text = tfl_helpers_code()), env)
   wd <- setwd(dir)
   on.exit(setwd(wd), add = TRUE)
-  eval(parse(text = code), env)
+  .eval_study_code(code, env, study, ".")
   get("data", envir = env, inherits = FALSE)
 }
 
@@ -280,7 +281,6 @@ tfl_output_contents <- function(output, study, dir = ".") {
 #' @seealso [tfl_output_contents()], [tfl_report()]
 #' @export
 tfl_run_output <- function(output, dir = ".", overwrite = TRUE) {
-  .spec_need_rtfreporter()
   if (is.character(output) && length(output) == 1L) {
     output <- if (file.exists(output)) tfl_read_output(output) else tfl_read_outputs(dir)[[output]]
   }

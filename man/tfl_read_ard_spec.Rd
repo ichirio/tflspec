@@ -48,3 +48,26 @@ with their package (\code{cards::ard_tabulate(data, denominatr = ...)},
 an \code{ard_stack()} too; the rest of the code is the program's.
 }
 
+\section{The analyses sheet}{
+
+\code{strata} names the variables the analysis is repeated within (cards'
+strata: a subgroup, a parameter by visit), \code{|} between them.
+\code{denominator} says what the percentages are of: \code{population}, \code{row},
+\code{column} or \code{cell}, another population, a dataset, an analysis data,
+an object, or numbers (\code{86}, or \code{c("Drug X" = 86, "Placebo" = 85)}, each
+named by a value of the one \code{by}); blank is the method's default.  A
+\code{custom} analysis takes neither (its code says it), and a method whose
+function has no such argument is refused.
+
+\code{method} is a keyword of \code{\link[=tfl_ard_methods]{tfl_ard_methods()}}, a \verb{pkg::function}, or a
+function of the study's own: the study key \code{source} (on the \code{study}
+sheet, \code{|} between files, relative to the study folder) names the R
+files that define it.
+
+\code{args} is read as the arguments of a call, in R
+(\code{conf.level = 0.9}), and one that does not parse is refused.  An
+argument a column also gives (\code{by}, \code{variables}, \code{strata},
+\code{denominator}, \code{statistics}, \code{overall}) may not be in both: write it
+in one place.
+}
+

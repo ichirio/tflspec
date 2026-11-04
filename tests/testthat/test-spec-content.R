@@ -91,7 +91,7 @@ test_that("tfl_schema_check(): a wrong argument or value is said, a right one pa
   p <- tfl_schema_check(tfl_item("plan_paginate_rows", list(max_rows = "many")))
   expect_identical(p$arg, "max_rows")
   expect_match(p$message, "integer")
-  p <- tfl_schema_check(tfl_item("plan_cell_style", list(where = "p > 0.5")))
+  p <- tfl_schema_check(tfl_item("plan_cell_style", list(where = 5)))
   expect_match(p$message, "formula")
   expect_identical(nrow(tfl_schema_check(tfl_item("plan_cell_style",
     list(where = tfl_r("p > 0.5"), bold = TRUE)))), 0L)

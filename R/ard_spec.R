@@ -283,6 +283,27 @@ tfl_read_ard_spec <- function(path, check = TRUE, statistics = NULL,
 #'   with their package (`cards::ard_tabulate(data, denominatr = ...)`,
 #'   `cardx::ard_categorical_ci(..., method = "wilson_cc")`), inside a pipe or
 #'   an `ard_stack()` too; the rest of the code is the program's.
+#'
+#' @section The analyses sheet:
+#' `strata` names the variables the analysis is repeated within (cards'
+#' strata: a subgroup, a parameter by visit), `|` between them.
+#' `denominator` says what the percentages are of: `population`, `row`,
+#' `column` or `cell`, another population, a dataset, an analysis data,
+#' an object, or numbers (`86`, or `c("Drug X" = 86, "Placebo" = 85)`, each
+#' named by a value of the one `by`); blank is the method's default.  A
+#' `custom` analysis takes neither (its code says it), and a method whose
+#' function has no such argument is refused.
+#'
+#' `method` is a keyword of [tfl_ard_methods()], a `pkg::function`, or a
+#' function of the study's own: the study key `source` (on the `study`
+#' sheet, `|` between files, relative to the study folder) names the R
+#' files that define it.
+#'
+#' `args` is read as the arguments of a call, in R
+#' (`conf.level = 0.9`), and one that does not parse is refused.  An
+#' argument a column also gives (`by`, `variables`, `strata`,
+#' `denominator`, `statistics`, `overall`) may not be in both: write it
+#' in one place.
 #' @export
 tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   old <- .set_catalogs(statistics, methods)
@@ -1503,7 +1524,7 @@ tfl_build_ard <- function(spec, dir = ".", output_id = NULL, save = TRUE,
   owd <- setwd(dir)
   on.exit(setwd(owd), add = TRUE)
   e <- new.env(parent = globalenv())
-  eval(parse(text = code, encoding = "UTF-8"), envir = e)
+  .eval_study_code(code, e, spec, ".")
   .ard_optional_note(spec, e, output_id)
   invisible(e$ard)
 }

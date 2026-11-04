@@ -217,6 +217,8 @@ tfl_tpl_help <- function(name, study = NULL, population = NULL,
   x <- gsub("`", "'", x, fixed = TRUE)
   x <- gsub("[", "\\[", x, fixed = TRUE)
   x <- gsub("]", "\\]", x, fixed = TRUE)
+  # a <name> placeholder is not an HTML tag (the HTML manual check)
+  x <- gsub("<", "&lt;", x, fixed = TRUE)
   gsub("\n", " ", x, fixed = TRUE)
 }
 

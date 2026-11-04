@@ -81,11 +81,10 @@
   build <- .ai_build_on(dir)
   agents <- .ai_fill(agents, list(
     check_rule = if (build) {
-      paste0("You run only `Rscript run.R <request>`, to build and check a request as *Build and ",
-             "check* says; nothing else.  Before it, write")
-    } else "You cannot run the check yourself, so write",
+      "You build and check each request yourself, as *Build and check* says (below)."
+    } else "You cannot run the check yourself, so be exact.",
     run_rule = if (build) {
-      "Run `run.R` only to build a request, as *Build and check* says; nothing else."
+      "Run only `Rscript ../run.R <request>`, to build a request as *Build and check* says; nothing else."
     } else "Do not run `run.R`.",
     reads = paste(c(more, tools), collapse = ""),
     max_reads = as.character(max_reads),
@@ -114,7 +113,7 @@
   put(file.path("ai", ".github", "copilot-instructions.md"), rd("AGENTS-root.md"), again = TRUE)
   put("run.R", .ai_fill(rd("run.R"), list(who_runs = if (build) {
     paste0("the person runs it; the agent runs it only for a request it built: ",
-           "`Rscript run.R <request>`")
+           "`Rscript ../run.R <request>` from `ai/`")
   } else "the person runs it; the agent does not")), again = TRUE)
   put(file.path("ai", "decisions.md"), rd("decisions.md"))
   out
@@ -134,18 +133,18 @@
   paste(lines, collapse = "\n")
 }
 
-# The command that builds one request's reports, from the study folder:
-# Rscript on run.R (no path of this PC: the study folder may move); in
+# The command that builds one request's reports, from the agent's workspace
+# `ai/`: Rscript on ../run.R (no path of this PC: the study folder may move); in
 # PowerShell, R's own when Rscript is not on the PATH
 # Whether the agent builds and checks itself: some review level is not none
 .ai_build_on <- function(dir) any(!is.na(.ai_spec_settings(dir)$review))
 
 .ai_build_cmd <- function(dir) {
-  paste0("`Rscript run.R <request>` from the study folder (the folder of `run.R`, above `ai/`; ",
-         "the request's name, `figure-2`).  When `Rscript` is not found, in PowerShell: ",
+  paste0("`Rscript ../run.R <request>`, run from this folder (`ai/`; `run.R` is in the study folder ",
+         "above it; the request's name, `figure-2`).  When `Rscript` is not found, in PowerShell: ",
          "`& (Get-ChildItem \"$env:ProgramFiles/R/R-*/bin/Rscript.exe\", ",
          "\"$env:LOCALAPPDATA/Programs/R/R-*/bin/Rscript.exe\" -ErrorAction SilentlyContinue | ",
-         "Select-Object -Last 1).FullName run.R <request>`")
+         "Select-Object -Last 1).FullName ../run.R <request>`")
 }
 
 # AGENTS.md's second step, and the same with the company's conventions and
@@ -183,7 +182,7 @@
            "Then write each report's skeleton as its file: ", files, ". ",
            "Record the answers in `ai/decisions.md`; mark what you could not settle under `ai: confirm`. ",
            "Read only this request and the files it names; do not look for others, install nothing, ",
-           if (build) paste0("run only `Rscript run.R ", request, "`, as ai/AGENTS.md's *Build and check* says. ") else
+           if (build) paste0("run only `Rscript ../run.R ", request, "`, as ai/AGENTS.md's *Build and check* says. ") else
              "run nothing. ",
            "Write nothing of the look but the column widths."),
     "", "---", "")
@@ -238,9 +237,6 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
   fn <- "tfl_ai_run()"
   # (the study's own path: the run builds from inside it)
   here <- normalizePath(study_dir, winslash = "/", mustWork = FALSE)
-  if (isTRUE(rtf) && !requireNamespace("rtfreporter", quietly = TRUE)) {
-    .ard_stop(sprintf("%s: the RTF needs the rtfreporter package; or rtf = FALSE.", fn))
-  }
   # the agent's study facts again when spec/ changed since they were written
   .ai_study_facts_write(study_dir, if_older = TRUE)
   # the run's messages (the template notes, the ARD's unused rows) go to
@@ -532,7 +528,7 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
     .ai_write_text(c(
       sprintf("# Repair: %s -- could not be built", q), "",
       "The drafts passed their checks, but a report could not be built. Fix its draft",
-      sprintf("(ai/spec/outputs/<id>.yml) and run `Rscript run.R %s`.", q), "",
+      sprintf("(ai/spec/outputs/<id>.yml) and run `Rscript ../run.R %s` from `ai/`.", q), "",
       "## Could not be built", "",
       sprintf("- %s: %s", b$output_id, b$rtf_problem)), .ai_build_repair_file(dir, q))
     # (counted as a repair of the request's first draft, for tfl_ai_compare())
@@ -741,7 +737,7 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
       "build and check them, and then stop and show the menu. "),
     "At the menu I answer with c (the next request), a number (that many requests together) or ",
     "a (all the rest together). Read only the request and the files it names; ",
-    if (build) paste0("run only `Rscript run.R <request>` (ai/AGENTS.md: *Build and check*), ",
+    if (build) paste0("run only `Rscript ../run.R <request>` (ai/AGENTS.md: *Build and check*), ",
                       "install nothing. ") else "run nothing, install nothing. ",
     "If I say \"stop\", finish the step in hand, write ai/progress.md and stop, saying where; ",
     "when I say \"continue\" or c, go on from ai/progress.md. ",

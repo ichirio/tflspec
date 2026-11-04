@@ -29,7 +29,7 @@ is missing; a draft that breaks the form is not.
 
 This folder -- the study's `ai/` -- is your workspace: every path below
 is from it, and every file you read or write is in it.  Never open a
-path outside it (`../`).
+path outside it (`../`), except to run `../run.R` as *Build and check* says.
 
 ## What you read
 
@@ -269,6 +269,8 @@ stop is *Running the requests*, below: one, or a batch.  For each request:
      confirm:
        - {where: content, item: plan_cells, why: "the shell shows n (%) but not whether the % is of the arm or of all"}
    ```
+   Write every assumption, confirm item and question in the chat's language
+   (`ai: language`: {{language}}); keys and values stay as they are.
    How the output looks is never a question, and nothing of it is written
    but the column widths (step 5, an assumption `item: widths`).
 7. **Read the draft once more before you save it**, against the list
@@ -403,6 +405,8 @@ Review each draft against this list and fix what fails:
   draft has;
 - every free-text value (`label`, titles, footnotes, assumption text) is
   in double quotes -- always one with `: ` or `#` in it;
+- every assumption, confirm item and question is in the chat's language
+  (`ai: language`: {{language}}); keys and values stay as they are;
 - a template with its own data (`km_survival`, `km_cumulative`) has
   `data.steps` of `read`, the analysis set and `param`, and none of the
   template's own steps (`survfit`, `time_unit`);
@@ -490,7 +494,7 @@ Then, in this order:
    choose:
    - "type `/compact` in this chat, then `c`";
    - "open a new chat, give it `ai/agent_prompt.md`, then type `c`";
-   - "allow `Rscript` (or run `Rscript run.R <request>` yourself), then type
+   - "allow `Rscript` (or run `Rscript run.R <request>` yourself, from the study folder), then type
      `c`".
 
 Never loop: never retry the same failing step more than three times.

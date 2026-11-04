@@ -125,7 +125,7 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
     k("x_breaks", "number", TRUE),
     k(c("count_cell", "any_row_label"), "text"),
     # a variable's heading each: given by name, merged with the default's
-    k(c("labels", "param_labels"), "list", fields = nv, merge = TRUE),
+    k(c("labels", "param_labels", "subgroup_labels"), "list", fields = nv, merge = TRUE),
     # the rows: given, they are the rows (no merge)
     k("cells", "list", fields = c("label", "template")),
     k("flags", "list", TRUE, fields = c("id", "label", "where")),
@@ -1149,7 +1149,11 @@ tpl_disposition <- function(ard, population, ..., codelists = NULL) {
   tfl_param("param_page", TRUE, type = "flag",
             doc = "TRUE: a page a parameter, named in the titles by `param_heading`"),
   tfl_param("param_heading", "Parameter: {value}",
-            doc = "a parameter's page name (`{value}`: the parameter)")
+            doc = "a parameter's page name (`{value}`: the parameter)"),
+  tfl_param("header_n", TRUE, type = "flag", doc = paste(
+    "TRUE: each page's arm headings show the arm's subjects for that parameter",
+    "(N=); FALSE: the arm only. Only with `param_page`: one page of several",
+    "parameters has no one N"))
 )
 names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
 
@@ -1199,6 +1203,42 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
     sprintf("TRUE ~ %s", m(a$worst))), collapse = ", "), ")")
 }
 
+# The categories `lv` (codes or labels) as the ARD holds them for a column:
+# a value of its code list as the list's label, the others as they are
+.tpl_shift_labels <- function(lv, var, codelists) {
+  cl <- codelists[[var]]
+  if (is.null(cl)) return(lv)
+  if (is.character(cl)) {
+    val <- names(cl) %||% unname(cl)
+    lab <- unname(cl)
+  } else {
+    val <- vapply(cl, function(r) as.character(r$value), "")
+    lab <- vapply(cl, function(r) as.character(r$label %||% r$value), "")
+  }
+  i <- match(lv, val)
+  ifelse(is.na(i), lv, lab[i])
+}
+
+# The baseline column's code list with the Missing and Total rows the
+# analysis data's code adds (value = label), or NULL: the template's
+# `codelists`, which the report's own lists take the values they lack from
+.tpl_shift_codelists <- function(a, worst, codelists) {
+  cl <- codelists[[a$baseline]]
+  if (is.null(cl) || !worst) return(NULL)
+  rows <- .tpl_cl_rows(cl)
+  extra <- c(a$missing_label, a$total_label)
+  rows <- c(rows, lapply(extra, function(v) list(value = v, label = v)))
+  stats::setNames(list(rows), a$baseline)
+}
+
+# A code list as rows of value / label (a program's named or plain vector
+# of codes too)
+.tpl_cl_rows <- function(cl) {
+  if (!is.character(cl)) return(cl)
+  val <- names(cl) %||% unname(cl)
+  lapply(seq_along(cl), function(i) list(value = val[[i]], label = unname(cl)[[i]]))
+}
+
 .tpl_shift_body <- function(a, ctx) {
   set <- a$data_id %||% paste0(tolower(a$data), "_", tolower(a$population))
   worst <- length(a$worst) > 0L
@@ -1213,6 +1253,9 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
     .ard_stop("shift: percent_of = \"total\" counts a subject once a parameter; give `worst`.")
   }
   den <- paste0(set, "_den")
+  # each page's N: the arm's subjects for the page's parameter, from the
+  # same records as the table (the Total row's, or the set's own)
+  page_n <- isTRUE(a$param_page) && isTRUE(a$header_n)
   ard <- list(
     analysis_data = c(
       if (sub) list(list(id = subj, label = .tpl_set_label(a$population, ctx$population),
@@ -1223,24 +1266,31 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
         where = if (!worst && !is.null(a$where)) tfl_r(a$where)))),
       # (written as R: a `keep` would keep the columns the analysis reads,
       # the baseline's among them, and cards would look for its levels)
-      if (total) list(list(
+      if (total || page_n) list(list(
         id = den, label = "the subjects with a category after baseline, a parameter each",
         from = set,
         code = tfl_r(sprintf("dplyr::distinct(%s, %s)",
-                             if (length(a$total_label))
+                             if (worst && length(a$total_label))
                                sprintf("dplyr::filter(%s, %s == \"%s\")", set, a$baseline,
                                        a$total_label) else set,
                              paste(c("USUBJID", a$by, a$param), collapse = ", ")))))),
-    analyses = list(Filter(Negate(is.null), list(
-      id = a$analysis_id, method = "categorical", data = set,
-      by = c(a$by, a$param, a$baseline), variables = a$post,
-      denominator = if (total) den))))
+    analyses = c(
+      list(Filter(Negate(is.null), list(
+        id = a$analysis_id, method = "categorical", data = set,
+        by = c(a$by, a$param, a$baseline), variables = a$post,
+        denominator = if (total) den))),
+      if (page_n) list(list(id = paste0(a$analysis_id, "_N"), method = "categorical",
+                            data = den, by = a$param, variables = a$by))))
   # the columns: the ARD's order (the code list applied when it is made),
   # or `by_levels` when the report says them
   by_lv <- a$by_levels
-  base_lv <- c(a$levels, if (worst) c(a$missing_label, a$total_label))
+  # (as the ARD holds them: the code list's labels when the column has one;
+  # the Missing and Total rows of the code, last)
+  post_lv <- .tpl_shift_labels(a$levels, a$post, ctx$codelists)
+  base_lv <- c(.tpl_shift_labels(a$levels, a$baseline, ctx$codelists),
+               if (worst) c(a$missing_label, a$total_label))
   lv <- c(if (length(by_lv)) stats::setNames(list(by_lv), a$by),
-          stats::setNames(list(base_lv, a$levels), c(a$baseline, ".label")))
+          stats::setNames(list(base_lv, post_lv), c(a$baseline, ".label")))
   content <- c(
     list(tfl_item("table_plan", list(cols = c(a$by, ".label"),
                                      rows = list(group = a$param), label = a$baseline)),
@@ -1252,15 +1302,21 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
     list(tfl_item("plan_stub", list(vars = c(if (!isTRUE(a$param_page)) "group", a$baseline),
                                     name = "row_label",
                                     before = TRUE)),
-         tfl_item("plan_col_header", list(header = list(
-           list(line = "1", cols = ".values", span = a$by, text = "{col1}"),
+         tfl_item("plan_col_header", c(list(header = list(
+           list(line = "1", cols = ".values", span = a$by,
+                text = if (page_n) "{col1} (N={n})" else "{col1}"),
            list(line = "2", cols = "row_label", text = a$heading),
-           list(line = "2", cols = ".values", span = "each", text = "{col}"))))),
-    if (isTRUE(a$param_page)) list(
+           list(line = "2", cols = ".values", span = "each", text = "{col}"))),
+           if (page_n) list(values = list(n = TRUE))))),
+    if (page_n) list(
+      tfl_item("plan_paginate_group", list(keep = FALSE, heading = a$param_heading,
+                                           heading_at = "title")))
+    else if (isTRUE(a$param_page)) list(
       tfl_item("plan_paginate_rows", list(page_by = "group", heading = a$param_heading,
                                           heading_at = "title")),
       tfl_item("plan_hide", list(cols = list("group")))))
-  list(ard = ard, data = list(source = "ard"), content = content)
+  list(ard = ard, data = list(source = "ard"), content = content,
+       codelists = .tpl_shift_codelists(a, worst, ctx$codelists))
 }
 
 .tfl_template("shift", kind = "table", layout = "shift",
@@ -1274,7 +1330,7 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
                   .tpl_where_param(doc = "the records kept besides the visit and parameters (R)")),
              .tpl_shift_params[c("by", "data_id", "by_levels", "param_labels", "levels",
                                  "worst", "worst_by", "percent_of", "cell", "missing_label",
-                                 "total_label", "param_page", "param_heading")]),
+                                 "total_label", "param_page", "param_heading", "header_n")]),
   body = function(a, ctx) {
     b <- lapply(.tpl_shift_params, `[[`, "default")
     for (k in intersect(names(a), names(b))) b[k] <- list(a[[k]])

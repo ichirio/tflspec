@@ -25,7 +25,6 @@
 #'   (keys of the spec the workbook lacks), `files` (written).
 #' @export
 tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
-  .ard_need("readxl", "tfl_import_spec_xlsx()")
   if (!file.exists(path)) stop("tfl_import_spec_xlsx(): no file ", path, call. = FALSE)
   spec <- .spec_dir(dir)
   sheets <- readxl::excel_sheets(path)

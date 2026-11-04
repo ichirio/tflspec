@@ -15,7 +15,7 @@ The table template \code{lab_shift}, layout \code{shift}. Its program is one cal
    \code{params} \tab required \tab call \tab  \tab  \tab the PARAMCD values \cr
    \code{where} \tab other \tab call \tab  \tab  \tab the records kept besides the visit and parameters (R) \cr
    \code{by} \tab other \tab call \tab TRT01A \tab settings.treatment \tab the column variable \cr
-   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: \if{html}{\out{<data>}}_\if{html}{\out{<population>}} \cr
+   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: <data>_<population> \cr
    \code{by_levels} \tab other \tab call \tab  \tab  \tab the column variable's values in order; NULL: the ARD's (its code list) \cr
    \code{param_labels} \tab other \tab call \tab  \tab  \tab each parameter's heading (a named vector); given by name, merged \cr
    \code{levels} \tab other \tab call \tab LOW, NORMAL, HIGH \tab  \tab the categories, in order \cr
@@ -27,6 +27,7 @@ The table template \code{lab_shift}, layout \code{shift}. Its program is one cal
    \code{total_label} \tab other \tab call \tab Total \tab  \tab the row of all the subjects; NULL: none \cr
    \code{param_page} \tab other \tab call \tab TRUE \tab  \tab TRUE: a page a parameter, named in the titles by 'param_heading' \cr
    \code{param_heading} \tab other \tab call \tab Parameter: \{value\} \tab  \tab a parameter's page name ('\{value\}': the parameter) \cr
+   \code{header_n} \tab other \tab call \tab TRUE \tab  \tab TRUE: each page's arm headings show the arm's subjects for that parameter (N=); FALSE: the arm only. Only with 'param_page': one page of several parameters has no one N \cr
 }
 }
 

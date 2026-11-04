@@ -200,7 +200,7 @@
     identical(o$kind, "table") && !inherits(o$content, "tfl_r") && !.ai_has_widths(o)
   }, NA))
   set <- character()
-  if (!length(todo) || !requireNamespace("rtfreporter", quietly = TRUE)) return(invisible(set))
+  if (!length(todo)) return(invisible(set))
   paths <- normalizePath(paths, winslash = "/", mustWork = FALSE)
   old <- setwd(dir)
   on.exit(setwd(old), add = TRUE)
@@ -244,13 +244,29 @@
 
 # The assumption a report whose widths R set carries: they are the default
 # ones, for now (none when the answer gave them, read from the shell)
-.ai_widths_assumptions <- function(ids) {
+.ai_widths_assumptions <- function(ids, language = "en") {
   if (!length(ids)) return(NULL)
+  ja <- .ai_is_ja(language)
   data.frame(output_id = ids, where = "content", item = "widths",
-             assumption = paste("Column widths: the default proportions, set for now because",
-                                "the shell's widths were not read (tflspec's rule: each value column",
-                                "its share of the page, the row headings the rest)"),
+             assumption = if (ja) {
+               paste0("\u5217\u5e45: \u65e2\u5b9a\u306e\u6bd4\u7387\u3092\u4eee\u306b\u8a2d\u5b9a\u3057\u307e\u3057\u305f",
+                      "\uff08\u30b7\u30a7\u30eb\u306e\u5217\u5e45\u3092\u8aad\u307f\u53d6\u308c\u306a\u304b\u3063\u305f\u305f\u3081\u3002",
+                      "tflspec \u306e\u898f\u5247: \u5024\u306e\u5217\u306f\u305d\u308c\u305e\u308c\u30da\u30fc\u30b8\u306e\u4e00\u5b9a\u306e\u5272\u5408\u3001",
+                      "\u884c\u898b\u51fa\u3057\u306f\u6b8b\u308a\uff09")
+             } else {
+               paste("Column widths: the default proportions, set for now because",
+                     "the shell's widths were not read (tflspec's rule: each value column",
+                     "its share of the page, the row headings the rest)")
+             },
              value = "default widths",
-             question = "Are the column widths as the shell wants?",
+             question = if (ja) "\u5217\u5e45\u306f\u30b7\u30a7\u30eb\u306e\u3068\u304a\u308a\u3067\u3059\u304b\uff1f"
+                        else "Are the column widths as the shell wants?",
              stringsAsFactors = FALSE)
+}
+
+# Is the chat's language (study.yml's `ai: language`, "ja" or its name)
+# Japanese?  The texts the tool adds to a report's assumptions follow it
+.ai_is_ja <- function(language) {
+  x <- tolower(as.character(language %||% "en")[1L])
+  !is.na(x) && x %in% c("ja", "jp", "japanese", "ja-jp", "\u65e5\u672c\u8a9e")
 }

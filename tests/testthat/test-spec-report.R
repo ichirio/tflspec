@@ -73,7 +73,7 @@ test_that("page:'s calls check against their schema", {
   typo <- tfl_schema_check(tfl_item("rtf_page", list(orientaton = "portrait")))
   expect_identical(typo$level, "warning")
   skip_if_not_installed("rtfreporter")
-  for (fn in c("rtf_page", "rtf_style", "rtf_default_format", "rtf_document", "rtf_tables",
+  for (fn in c("rtf_page", "rtf_style", "rtf_document", "rtf_tables",
                "rtf_figures", "rtf_titles", "rtf_footnotes")) {
     expect_true(all(names(tfl_schema(fn)$args) %in%
                       names(formals(getExportedValue("rtfreporter", fn)))), info = fn)

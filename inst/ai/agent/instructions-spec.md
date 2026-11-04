@@ -367,7 +367,7 @@ Group: {RENALGR}"`.
 | `{left: MedDRA version 27.0, fictional dictionary.}` | `{left: "MedDRA version 27.0, fictional dictionary."}` -- a comma, a colon or `#` in a text: quote it |
 | `label: Shift Table of Laboratory Values: Baseline versus Worst` | `label: "Shift Table of Laboratory Values: Baseline versus Worst"` -- `: ` inside a value is a YAML error; quote every free text |
 | `template: {name: km_survival, ...}` with `data.steps` holding `survfit`, or with no `data.steps` | the data stage only: `read`, the analysis set, `param` -- the template makes `time_unit` and `survfit` |
-| `where: TRTEMFL == "Y"` | `where: !r TRTEMFL == "Y"` -- R code carries `!r` |
+| `where: !r TRTEMFL == "Y"` (works, but needs no tag) | `where: TRTEMFL == "Y"` -- a condition is written bare (names, numbers, strings, `== != < <= > >=`, `& \| !`, `%in% c(...)`, `is.na()`, parentheses); R beyond that (`between()`) carries `!r` |
 | `data: [{step: read, dataset: ADTTE}, ...]` | `data: {source: code, steps: [{step: read, dataset: ADTTE}, ...]}` |
 | an analysis with `data: lb_worst` **and** `population: SAF` | one of the two: `data` alone, or `dataset` with `population` |
 | an analysis data with `code` **and** `where` / `add` / `derive` | `code` with `id`, `label`, `from`, `population` only |

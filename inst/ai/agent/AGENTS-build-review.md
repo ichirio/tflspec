@@ -17,6 +17,8 @@ drafts, for the reports of a kind built here:
    figures (R reads the ADaM; you do not).  It takes a minute or so.
    Beside each report's RTF it writes `<id>.R` (the report's program) and
    `<id>-facts.txt` (what it made, in words).  Do not open the RTF.
+   run.R rewrites each draft in a normal form after a build: read a draft again
+   before you edit it.
 2. **Read** `ai/status.md` (level 0): each report's status and its files.
    When the check or the build failed, read `ai/repairs/<request>.md` or
    `ai/repairs/<request>-build.md` (the first error, and where), fix the
