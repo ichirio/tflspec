@@ -451,13 +451,13 @@ tfl_schema_check <- function(item) {
     }
     ty <- .schema_arg_type(ent, a)
     if (!is.null(dots) && identical(dots$style, "positional") && identical(a, dots$key)) {
-      v <- .schema_value_to_r(v, ty, strict)
+      v <- .schema_value_to_r(v, ty, strict, a)
       el <- if (is.list(v) && !is.object(v) && is.null(names(v))) v else list(v)
       out <- c(out, el)
       names(out)[length(out) - length(el) + seq_along(el)] <- ""
       next
     }
-    out[[a]] <- .schema_value_to_r(v, ty, strict)
+    out[[a]] <- .schema_value_to_r(v, ty, strict, a)
   }
   out
 }
@@ -502,18 +502,18 @@ tfl_schema_check <- function(item) {
 }
 
 # a value as R takes it, from the spec's form
-.schema_value_to_r <- function(v, ty, strict = TRUE) {
+.schema_value_to_r <- function(v, ty, strict = TRUE, a = "an argument") {
   # a slot of only R: each string is a neutral condition or an error, each
   # element of a list on its own (never the string as a string literal)
   if (.schema_pure_r(ty)) {
     if (is.character(v) && !inherits(v, c("tfl_r", "tfl_unset"))) {
       if (!strict && !.schema_has(ty, "formula") &&
           !all(vapply(v, function(s) isTRUE(.neutral_expr(s)), NA))) return(v)
-      if (length(v) != 1L) return(lapply(as.list(v), .schema_value_to_r, ty = ty, strict = strict))
-      if (!isTRUE(.neutral_expr(v))) .ard_stop(.neutral_refusal(v, "an argument"))
+      if (length(v) != 1L) return(lapply(as.list(v), .schema_value_to_r, ty = ty, strict = strict, a = a))
+      if (!isTRUE(.neutral_expr(v))) .ard_stop(.neutral_refusal(v, a))
       v <- tfl_r(v)
     } else if (is.list(v) && !is.object(v)) {
-      return(lapply(v, .schema_value_to_r, ty = ty, strict = strict))
+      return(lapply(v, .schema_value_to_r, ty = ty, strict = strict, a = a))
     }
   }
   if (inherits(v, "tfl_r")) {

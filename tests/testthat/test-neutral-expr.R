@@ -149,4 +149,5 @@ test_that("only a slot of only R is written untagged; a mixed slot keeps `!r`", 
 test_that("a lone name in a slot of only R but not a formula is written as before", {
   expect_identical(.schema_to_r("facet_wrap", list(facets = "PARAM"))$facets, "PARAM")
   expect_error(.schema_to_r("plan_filter", list(where = "PARAM")), "neutral")
+  expect_error(.schema_to_r("plan_filter", list(where = "between(AGE, 1, 2)")), "`where`", fixed = TRUE)
 })
