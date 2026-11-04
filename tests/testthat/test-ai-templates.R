@@ -301,7 +301,11 @@ test_that("templates.md carries the facts a trial found only by building", {
   }
   expect_match(note("param_change"), "ONTRTFL == \"Y\" | ABLFL == \"Y\"", fixed = TRUE)
   expect_match(note("shift"), "need not be in the code list", fixed = TRUE)
-  expect_match(note("lab_shift"), "codes or its labels", fixed = TRUE)
+  expect_match(note("shift"), "`levels` are the data's values", fixed = TRUE)
+  expect_match(note("shift"), "give the report's `codelists` for both the post and the baseline", fixed = TRUE)
+  expect_no_match(note("shift"), "codes or its labels", fixed = TRUE)
+  expect_match(note("lab_shift"), "`levels` are the data's values", fixed = TRUE)
+  expect_no_match(note("lab_shift"), "codes or its labels", fixed = TRUE)
   expect_match(note("km_survival"), "`pvalue: false`", fixed = TRUE)
   # (the short list, names only, has none)
   expect_false(any(grepl("note:", tflspec:::.ai_templates_list("table", short = TRUE), fixed = TRUE)))
@@ -372,4 +376,63 @@ test_that("a listing drafted from the listing template is built (RTF)", {
   rp <- res$reports
   expect_identical(rp$status[rp$output_id == "T-14-2-1"], "ok")
   expect_true(file.exists(file.path(d, rp$rtf[rp$output_id == "T-14-2-1"])))
+})
+
+# shift's `levels` and `worst` against the data's values (#636)
+aitpl_shift_answer <- function(template = "shift", args = "levels: [Low, Normal, High]", codelists = FALSE) {
+  cl <- c("    codelists:",
+          paste0("      ", c("ANRIND", "BNRIND"),
+                 ": [{value: LOW, label: Low}, {value: NORMAL, label: Normal}, {value: HIGH, label: High}]"))
+  tfl_ai_parse(aitpl_answer(
+    "tflspec_ai: {task: table, version: 1, outputs: [T-14-3-4]}",
+    "outputs:",
+    "  - id: T-14-3-4",
+    "    kind: table",
+    "    label: Shift table",
+    "    population: SAF",
+    if (codelists) cl,
+    "    template:",
+    sprintf("      name: %s", template),
+    "      args:",
+    paste0("        ", args),
+    "assumptions: []"), "table")
+}
+aitpl_shift_check <- function(..., datasets = TRUE) {
+  ds <- if (datasets) tfl_ai_adam_summary(list(ADLB = tflspec::adlb, ADSL = tflspec::adsl))
+  p <- tfl_ai_check(aitpl_shift_answer(...), tfl_ai_context("table", outputs = "T-14-3-4", datasets = ds))
+  p[grepl("template args (levels|worst)", p$where), , drop = FALSE]
+}
+
+test_that("shift: `levels` that match no value of the data are an error, unless a code list gives the text (#636)", {
+  # the data's ANRIND values: HIGH, LOW, NORMAL (tflspec::adlb)
+  expect_setequal(unique(tflspec::adlb$ANRIND), c("HIGH", "LOW", "NORMAL"))
+  p <- aitpl_shift_check()
+  expect_identical(p$severity, "error")
+  expect_match(p$problem, "Low, Normal, High match no value of ADLB.ANRIND (HIGH, LOW, NORMAL)", fixed = TRUE)
+  expect_match(p$problem, "`levels` are the data's values; for other printed text give `codelists` with value and label",
+               fixed = TRUE)
+  # a code list for both columns: the labels are the printed text
+  expect_identical(nrow(aitpl_shift_check(codelists = TRUE)), 0L)
+  # the data's values
+  expect_identical(nrow(aitpl_shift_check(args = "levels: [LOW, NORMAL, HIGH]")), 0L)
+  # a value the data lacks, besides: said, but a shell may have one
+  p <- aitpl_shift_check(args = "levels: [LOW, NORMAL, HIGH, VERY HIGH]")
+  expect_identical(p$severity, "warning")
+  expect_match(p$problem, "VERY HIGH match no value", fixed = TRUE)
+  expect_match(p$problem, "will not print", fixed = TRUE)
+  # the data not known: nothing to say
+  expect_identical(nrow(aitpl_shift_check(datasets = FALSE)), 0L)
+  # lab_shift: its post / baseline are ANRIND / BNRIND
+  p <- aitpl_shift_check("lab_shift", c("visit: Week 4", "params: [ALT]", "levels: [Low, Normal, High]"))
+  expect_identical(p$severity, "error")
+  expect_match(p$problem, "of template lab_shift", fixed = TRUE)
+})
+
+test_that("shift: `worst` is matched with the data's values, a code list's label does not count (#636)", {
+  p <- aitpl_shift_check(args = "worst: [Low, Normal, High]", codelists = TRUE)
+  expect_identical(p$severity, "error")
+  expect_match(p$problem, "worst of template shift: Low, Normal, High match no value", fixed = TRUE)
+  expect_identical(nrow(aitpl_shift_check(args = "worst: [HIGH, LOW, NORMAL]", codelists = TRUE)), 0L)
+  p <- aitpl_shift_check(args = "worst: [HIGH, LOW, Normal]")
+  expect_identical(p$severity, "warning")
 })

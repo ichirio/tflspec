@@ -516,6 +516,8 @@
         bad <- c(bad, names(outs)[i])
         next
       }
+      # (shift: `levels` / `worst` against the data's values, when the kit has them)
+      p <- rbind(p, .ai_check_shift_levels(tp, o$codelists, vars, at))
       if (!is.null(o$ard)) {
         bad <- c(bad, names(outs)[i])
         p <- .ai_problem(p, paste(at, "ard"), paste(

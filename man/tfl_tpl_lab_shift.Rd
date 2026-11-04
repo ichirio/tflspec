@@ -18,7 +18,7 @@ The table template \code{lab_shift}, layout \code{shift}. Its program is one cal
    \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: <data>_<population> \cr
    \code{by_levels} \tab other \tab call \tab  \tab  \tab the column variable's values in order; NULL: the ARD's (its code list) \cr
    \code{param_labels} \tab other \tab call \tab  \tab  \tab each parameter's heading (a named vector); given by name, merged \cr
-   \code{levels} \tab other \tab call \tab LOW, NORMAL, HIGH \tab  \tab the categories, in order \cr
+   \code{levels} \tab other \tab call \tab LOW, NORMAL, HIGH \tab  \tab the categories, in order: the data's values (LOW); other printed text comes from the report's codelists (value, label) for the post and the baseline columns \cr
    \code{worst} \tab other \tab call \tab HIGH, LOW, NORMAL \tab  \tab a subject once a parameter, at its worst category after baseline, the categories from the worst; NULL: every record (the baseline's records too) \cr
    \code{worst_by} \tab other \tab call \tab  \tab  \tab a parameter's own order from the worst, by its value (HGB: LOW, HIGH, NORMAL); the others take 'worst' \cr
    \code{percent_of} \tab other \tab call \tab row \tab  \tab what a cell's \{p\} is of: "row" the subjects of its baseline category, "total" the Total row -- the arm's subjects with a category after baseline for the parameter (the Missing row among them) \cr

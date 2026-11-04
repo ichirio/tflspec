@@ -19,7 +19,7 @@ The table template \code{shift}, layout \code{shift}. Its program is one call, \
    \code{param} \tab other \tab call \tab PARAMCD \tab  \tab the parameter's variable (a block of rows each) \cr
    \code{baseline} \tab other \tab call \tab BNRIND \tab  \tab the category at baseline (the rows) \cr
    \code{post} \tab other \tab call \tab ANRIND \tab  \tab the category after it (the columns under each arm) \cr
-   \code{levels} \tab other \tab call \tab LOW, NORMAL, HIGH \tab  \tab the categories, in order \cr
+   \code{levels} \tab other \tab call \tab LOW, NORMAL, HIGH \tab  \tab the categories, in order: the data's values (LOW); other printed text comes from the report's codelists (value, label) for the post and the baseline columns \cr
    \code{by_levels} \tab other \tab call \tab  \tab  \tab the column variable's values in order; NULL: the ARD's (its code list) \cr
    \code{param_labels} \tab other \tab call \tab  \tab  \tab each parameter's heading (a named vector); given by name, merged \cr
    \code{cell} \tab other \tab call \tab \{n\} \tab  \tab a cell's template \cr
