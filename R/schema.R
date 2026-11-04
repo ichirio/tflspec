@@ -439,6 +439,9 @@ tfl_schema_check <- function(item) {
   ent <- tfl_schema(fn)
   dots <- ent$dots
   out <- list()
+  # (a string that is no condition stops in plan_filter and in a formula's
+  # slot; elsewhere -- facet_wrap(facets = "PARAM") -- it is written as before)
+  strict <- identical(.schema_fn_name(fn), "plan_filter")
   for (a in names(args)) {
     v <- args[[a]]
     if (inherits(v, "tfl_unset")) {
@@ -448,13 +451,13 @@ tfl_schema_check <- function(item) {
     }
     ty <- .schema_arg_type(ent, a)
     if (!is.null(dots) && identical(dots$style, "positional") && identical(a, dots$key)) {
-      v <- .schema_value_to_r(v, ty)
+      v <- .schema_value_to_r(v, ty, strict)
       el <- if (is.list(v) && !is.object(v) && is.null(names(v))) v else list(v)
       out <- c(out, el)
       names(out)[length(out) - length(el) + seq_along(el)] <- ""
       next
     }
-    out[[a]] <- .schema_value_to_r(v, ty)
+    out[[a]] <- .schema_value_to_r(v, ty, strict)
   }
   out
 }
@@ -499,16 +502,18 @@ tfl_schema_check <- function(item) {
 }
 
 # a value as R takes it, from the spec's form
-.schema_value_to_r <- function(v, ty) {
+.schema_value_to_r <- function(v, ty, strict = TRUE) {
   # a slot of only R: each string is a neutral condition or an error, each
   # element of a list on its own (never the string as a string literal)
   if (.schema_pure_r(ty)) {
     if (is.character(v) && !inherits(v, c("tfl_r", "tfl_unset"))) {
-      if (length(v) != 1L) return(lapply(as.list(v), .schema_value_to_r, ty = ty))
+      if (!strict && !.schema_has(ty, "formula") &&
+          !all(vapply(v, function(s) isTRUE(.neutral_expr(s)), NA))) return(v)
+      if (length(v) != 1L) return(lapply(as.list(v), .schema_value_to_r, ty = ty, strict = strict))
       if (!isTRUE(.neutral_expr(v))) .ard_stop(.neutral_refusal(v, "an argument"))
       v <- tfl_r(v)
     } else if (is.list(v) && !is.object(v)) {
-      return(lapply(v, .schema_value_to_r, ty = ty))
+      return(lapply(v, .schema_value_to_r, ty = ty, strict = strict))
     }
   }
   if (inherits(v, "tfl_r")) {

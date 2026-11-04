@@ -376,8 +376,11 @@ tfl_read_output <- function(path) {
 #' @export
 tfl_write_output <- function(x, path) {
   if (!inherits(x, "tfl_output")) stop("tfl_write_output(): `x` is a tfl_output.", call. = FALSE)
+  # (a neutral condition of a slot of only R untagged: R/neutral.R)
+  if (is.list(x$content) && !inherits(x$content, "tfl_r")) x$content <- .neutral_out_items(x$content)
+  for (i in seq_along(x$contents)) x$contents[[i]]$content <- .neutral_out_items(x$contents[[i]]$content)
   y <- .output_to_list(x)
-  txt <- yaml::as.yaml(y, indent.mapping.sequence = TRUE, handlers = .yaml_out_handlers(neutral = TRUE))
+  txt <- yaml::as.yaml(y, indent.mapping.sequence = TRUE, handlers = .yaml_out_handlers())
   dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
   writeLines(txt, path, useBytes = TRUE)
   invisible(path)
@@ -385,12 +388,8 @@ tfl_write_output <- function(x, path) {
 
 # written: !r and !unset by their tags; a logical as true / false (not
 # yes / no, which the reader keeps as text)
-.yaml_out_handlers <- function(neutral = FALSE) {
-  # (`neutral`: a report file writes a neutral condition untagged, R/neutral.R)
-  list(tfl_r = function(x) {
-         s <- as.character(unclass(x))
-         if (neutral && isTRUE(.neutral_expr(s))) s else structure(s, tag = "!r")
-       },
+.yaml_out_handlers <- function() {
+  list(tfl_r = function(x) structure(as.character(x), tag = "!r"),
        tfl_unset = function(x) structure("", tag = "!unset"),
        logical = .yaml_logical)
 }

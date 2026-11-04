@@ -90,6 +90,35 @@
   args
 }
 
+# The other way, for the writer: a neutral `tfl_r` of a slot of only R becomes
+# the plain string (a mixed slot, a data step keep `!r`)
+.neutral_out <- function(fn, args) {
+  ent <- tryCatch(tfl_schema(fn), error = function(e) NULL)
+  if (is.null(ent)) return(args)
+  plain <- function(v) {
+    if (inherits(v, "tfl_r") && isTRUE(.neutral_expr(as.character(unclass(v))))) {
+      return(as.character(unclass(v)))
+    }
+    if (is.list(v) && !is.object(v)) return(lapply(v, plain))
+    v
+  }
+  for (a in names(args)) {
+    if (.schema_pure_r(.schema_arg_type(ent, a))) args[[a]] <- plain(args[[a]])
+  }
+  args
+}
+
+.neutral_out_items <- function(items) {
+  lapply(items, function(it) {
+    if (inherits(it, "tfl_plot")) {
+      it$items <- .neutral_out_items(it$items)
+    } else if (inherits(it, "tfl_item") && !identical(it$fn, ".r") && !.is_part(it)) {
+      it$args <- .neutral_out(it$fn, it$args)
+    }
+    it
+  })
+}
+
 # the check's wording of a string (or strings) a pure slot refuses
 .neutral_refusal <- function(v, a) {
   plain <- function(x) is.character(x) && !inherits(x, c("tfl_r", "tfl_unset"))

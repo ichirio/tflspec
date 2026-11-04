@@ -113,3 +113,40 @@ test_that("tfl_check_spec() on the example study finds nothing new", {
   p <- tfl_check_spec(d)
   expect_false(any(grepl("neutral|string literal", p$message)))
 })
+
+test_that("only a slot of only R is written untagged; a mixed slot keeps `!r`", {
+  g <- tempfile(fileext = ".yml")
+  on.exit(unlink(g))
+  rt <- function(items, ...) {
+    tfl_write_output(tfl_output("T-1", "table", content = items, ...), g)
+    tfl_read_output(g)
+  }
+  # enum|list<integer>|r
+  it <- tfl_item("plan_blanks", list(where = tfl_r("n == 0")))
+  expect_identical(rt(list(it))$content[[1]]$args$where, tfl_r("n == 0"))
+  expect_true(any(grepl("!r", readLines(g), fixed = TRUE)))
+  # string|r
+  it <- tfl_item("plan_col_header", list(span = tfl_r("x == 1")))
+  expect_identical(rt(list(it))$content[[1]]$args$span, tfl_r("x == 1"))
+  expect_true(any(grepl("!r", readLines(g), fixed = TRUE)))
+  # map<string, column|r>
+  it <- tfl_item("geom_line", list(mapping = list(colour = tfl_r("x == 1"))))
+  back <- rt(list(it))$content[[1]]$args$mapping$colour
+  expect_identical(back, tfl_r("x == 1"))
+  # the data steps and a report's own R keep what they had
+  o <- tfl_output("T-1", "table", data = list(source = "code", steps = list(tfl_r("x > 1"))),
+                  content = list(tfl_item("plan_filter", list(where = tfl_r("n > 0")))))
+  tfl_write_output(o, g)
+  txt <- readLines(g)
+  expect_true(any(grepl("!r x > 1", txt, fixed = TRUE)))
+  expect_true(any(grepl("where: n > 0", txt, fixed = TRUE)))
+  # a slot of only R: untagged
+  tfl_write_output(tfl_output("T-1", "table", content = list(
+    tfl_item("plan_cell_style", list(where = tfl_r("p > 0.5"))))), g)
+  expect_false(any(grepl("!r", readLines(g), fixed = TRUE)))
+})
+
+test_that("a lone name in a slot of only R but not a formula is written as before", {
+  expect_identical(.schema_to_r("facet_wrap", list(facets = "PARAM"))$facets, "PARAM")
+  expect_error(.schema_to_r("plan_filter", list(where = "PARAM")), "neutral")
+})
