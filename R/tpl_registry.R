@@ -1149,7 +1149,11 @@ tpl_disposition <- function(ard, population, ..., codelists = NULL) {
   tfl_param("param_page", TRUE, type = "flag",
             doc = "TRUE: a page a parameter, named in the titles by `param_heading`"),
   tfl_param("param_heading", "Parameter: {value}",
-            doc = "a parameter's page name (`{value}`: the parameter)")
+            doc = "a parameter's page name (`{value}`: the parameter)"),
+  tfl_param("header_n", TRUE, type = "flag", doc = paste(
+    "TRUE: each page's arm headings show the arm's subjects for that parameter",
+    "(N=); FALSE: the arm only. Only with `param_page`: one page of several",
+    "parameters has no one N"))
 )
 names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
 
@@ -1229,6 +1233,9 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
     .ard_stop("shift: percent_of = \"total\" counts a subject once a parameter; give `worst`.")
   }
   den <- paste0(set, "_den")
+  # each page's N: the arm's subjects for the page's parameter, from the
+  # same records as the table (the Total row's, or the set's own)
+  page_n <- isTRUE(a$param_page) && isTRUE(a$header_n)
   ard <- list(
     analysis_data = c(
       if (sub) list(list(id = subj, label = .tpl_set_label(a$population, ctx$population),
@@ -1239,18 +1246,21 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
         where = if (!worst && !is.null(a$where)) tfl_r(a$where)))),
       # (written as R: a `keep` would keep the columns the analysis reads,
       # the baseline's among them, and cards would look for its levels)
-      if (total) list(list(
+      if (total || page_n) list(list(
         id = den, label = "the subjects with a category after baseline, a parameter each",
         from = set,
         code = tfl_r(sprintf("dplyr::distinct(%s, %s)",
-                             if (length(a$total_label))
+                             if (worst && length(a$total_label))
                                sprintf("dplyr::filter(%s, %s == \"%s\")", set, a$baseline,
                                        a$total_label) else set,
                              paste(c("USUBJID", a$by, a$param), collapse = ", ")))))),
-    analyses = list(Filter(Negate(is.null), list(
-      id = a$analysis_id, method = "categorical", data = set,
-      by = c(a$by, a$param, a$baseline), variables = a$post,
-      denominator = if (total) den))))
+    analyses = c(
+      list(Filter(Negate(is.null), list(
+        id = a$analysis_id, method = "categorical", data = set,
+        by = c(a$by, a$param, a$baseline), variables = a$post,
+        denominator = if (total) den))),
+      if (page_n) list(list(id = paste0(a$analysis_id, "_N"), method = "categorical",
+                            data = den, by = a$param, variables = a$by))))
   # the columns: the ARD's order (the code list applied when it is made),
   # or `by_levels` when the report says them
   by_lv <- a$by_levels
@@ -1272,11 +1282,16 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
     list(tfl_item("plan_stub", list(vars = c(if (!isTRUE(a$param_page)) "group", a$baseline),
                                     name = "row_label",
                                     before = TRUE)),
-         tfl_item("plan_col_header", list(header = list(
-           list(line = "1", cols = ".values", span = a$by, text = "{col1}"),
+         tfl_item("plan_col_header", c(list(header = list(
+           list(line = "1", cols = ".values", span = a$by,
+                text = if (page_n) "{col1} (N={n})" else "{col1}"),
            list(line = "2", cols = "row_label", text = a$heading),
-           list(line = "2", cols = ".values", span = "each", text = "{col}"))))),
-    if (isTRUE(a$param_page)) list(
+           list(line = "2", cols = ".values", span = "each", text = "{col}"))),
+           if (page_n) list(values = list(n = TRUE))))),
+    if (page_n) list(
+      tfl_item("plan_paginate_group", list(keep = FALSE, heading = a$param_heading,
+                                           heading_at = "title")))
+    else if (isTRUE(a$param_page)) list(
       tfl_item("plan_paginate_rows", list(page_by = "group", heading = a$param_heading,
                                           heading_at = "title")),
       tfl_item("plan_hide", list(cols = list("group")))))
@@ -1294,7 +1309,7 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
                   .tpl_where_param(doc = "the records kept besides the visit and parameters (R)")),
              .tpl_shift_params[c("by", "data_id", "by_levels", "param_labels", "levels",
                                  "worst", "worst_by", "percent_of", "cell", "missing_label",
-                                 "total_label", "param_page", "param_heading")]),
+                                 "total_label", "param_page", "param_heading", "header_n")]),
   body = function(a, ctx) {
     b <- lapply(.tpl_shift_params, `[[`, "default")
     for (k in intersect(names(a), names(b))) b[k] <- list(a[[k]])
