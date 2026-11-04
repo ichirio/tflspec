@@ -156,7 +156,10 @@ test_that("shift: a subject once at its worst, a Missing and a Total row, a page
   lv <- Filter(function(i) i$fn == "plan_levels", x$content)[[1L]]$args
   expect_identical(lv$BNRIND, c("LOW", "NORMAL", "HIGH", "Missing", "Total"))
   fns <- vapply(x$content, `[[`, "", "fn")
-  expect_true(all(c("plan_paginate_rows", "plan_hide") %in% fns))
+  # (the page's N on: a group a page, the parameter out of the stub, no hide)
+  expect_true("plan_paginate_group" %in% fns)
+  expect_false(any(c("plan_paginate_rows", "plan_hide") %in% fns))
+  expect_identical(x$ard$analysis_data[[2L]]$id, "adlb_saf_den")
   # every record, as before: no code, no extra rows, the parameter in the stub
   r <- tfl_template_expand("shift", c(a, list(worst = NULL, param_page = FALSE)))
   expect_null(r$ard$analysis_data[[1L]]$code)
