@@ -213,14 +213,20 @@ test_that("a report with its own stub cell, empty or not, replaces the template'
   expect_false(any(vapply(h, function(c) !is.null(c$text) && grepl("Organ", c$text), NA)))
 })
 
-test_that("a header-less report and a template with no stub heading are not changed", {
+test_that("a header-less report is not changed, and a template with no header of its own adds no stub", {
   h <- hs_header(hs_output(NULL))
   expect_length(h, 4L)
   expect_match(hs_cell(h, "2", "row_label")[[1L]]$text, "System Organ Class", fixed = TRUE)
-  # ancova's header has no stub cell
-  o <- tfl_output("T-9", "table", population = "SAF",
-                  content = list(tfl_item("plan_col_header", list(header = hs_n))),
-                  template = list(name = "ancova", args = list(population = "SAF")))
-  tpl <- tryCatch(hs_header(o), error = function(e) NULL)
-  if (!is.null(tpl)) expect_length(tpl, 1L)
+  # demog's own header has no stub cell: only the report's cell
+  expect_no_condition(h <- hs_header(hs_output(hs_n, "demog")))
+  expect_identical(h, hs_n)
+})
+
+test_that("a study layer's header below (the template has none) is not brought back as a stub", {
+  # the study's defaults head the stub "Characteristic"; demog makes no header, so the
+  # item below the report's is the study's, not the template's: only the report's cell
+  o <- hs_output(hs_n, "demog")
+  o$extends <- "defaults"
+  expect_no_condition(h <- hs_header(o))
+  expect_identical(h, hs_n)
 })
