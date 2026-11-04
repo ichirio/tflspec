@@ -549,7 +549,6 @@ tfl_define_profile <- function(name = "p21") {
 #' @export
 tfl_read_define_spec <- function(path, map = NULL, profile = "p21") {
   fn <- "tfl_read_define_spec()"
-  .ard_need("readxl", fn)
   if (!is.character(path) || length(path) != 1L || !file.exists(path)) {
     .ard_stop(sprintf("%s: no file '%s'.", fn, path))
   }

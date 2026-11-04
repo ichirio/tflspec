@@ -39,8 +39,10 @@ sp <- tfl_ard_spec(list(
   analyses = data.frame(output_id = "T1", analysis_id = "AGE",
                         method = "continuous", population_id = "SAF",
                         by = "TRT01A", variables = "AGE")))
-old <- options(tflspec.paths = c(path_adam = "data/adam"),
-               tflspec.attached = "cards")
-cat(tfl_ard_code(sp, part = "body"), sep = "\n")
-options(old)
+if (requireNamespace("cards", quietly = TRUE)) {
+  old <- options(tflspec.paths = c(path_adam = "data/adam"),
+                 tflspec.attached = "cards")
+  cat(tfl_ard_code(sp, part = "body"), sep = "\n")
+  options(old)
+}
 }

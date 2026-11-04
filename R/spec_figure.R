@@ -293,8 +293,7 @@
   if (!requireNamespace("ggplot2", quietly = TRUE) || !nm %in% getNamespaceExports("ggplot2")) {
     return(NULL)
   }
-  if (requireNamespace("rtfreporter", quietly = TRUE) &&
-      nm %in% getNamespaceExports("rtfreporter")) {
+  if (nm %in% getNamespaceExports("rtfreporter")) {
     return(NULL)
   }
   kind <- .schema_gg_kind(nm)

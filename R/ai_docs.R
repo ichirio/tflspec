@@ -134,7 +134,6 @@ tfl_ai_doc_text <- function(path, file = NULL) {
 
 # A workbook: each sheet a heading and a table of its cells, as text
 .ai_doc_xlsx <- function(path, fn) {
-  .ai_doc_need("readxl", tools::file_ext(path), fn)
   out <- character()
   for (sh in readxl::excel_sheets(path)) {
     d <- tryCatch(suppressMessages(readxl::read_excel(path, sh, col_names = FALSE,

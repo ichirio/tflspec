@@ -200,7 +200,7 @@
     identical(o$kind, "table") && !inherits(o$content, "tfl_r") && !.ai_has_widths(o)
   }, NA))
   set <- character()
-  if (!length(todo) || !requireNamespace("rtfreporter", quietly = TRUE)) return(invisible(set))
+  if (!length(todo)) return(invisible(set))
   paths <- normalizePath(paths, winslash = "/", mustWork = FALSE)
   old <- setwd(dir)
   on.exit(setwd(old), add = TRUE)

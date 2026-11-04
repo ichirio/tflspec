@@ -37,7 +37,6 @@
 #' @export
 tfl_as_listing_spec <- function(x, output_id = "L", dataset = NA_character_,
                                 compare = TRUE) {
-  .spec_need_rtfreporter()
   lost <- character()
   miss <- function(...) lost <<- c(lost, sprintf(...))
   data <- NULL
