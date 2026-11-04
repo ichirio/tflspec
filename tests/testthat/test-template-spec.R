@@ -136,6 +136,8 @@ test_that("the sheets (and the study's ARD program) take a template report's ana
 })
 
 test_that("every template as a template SPEC: resolved as its items written out (B), the study's layers on both", {
+  # about 10 s or more; CI runs it on every configuration
+  skip_on_cran()
   s <- ts_study()
   # its analysis set, as data.yml defines it (a figure's subjects)
   s$data$populations <- list(list(id = "SAF", dataset = "ADSL", where = tfl_r("SAFFL == \"Y\"")))

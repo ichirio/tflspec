@@ -7,14 +7,14 @@
 #  Every study's agent files carry a copy (ai/reference/, copied again when
 #  the pack changed), and AGENTS.md's second step reads it before the usual
 #  convention: an open point it settles is `from: "company convention"`.
-#  The pack is the app's (tflplanner's home); tflspec's own data folder when
-#  no app says where (option tflspec.ai_reference).
+#  The pack is optional: it starts a company standard.  It sits in the
+#  company's AI folder (.ai_home(), option tflspec.ai_home) beside
+#  company_hints.yml, which the agent writes from the past TFLs
+#  (tfl_ai_style_prompt()); a study's copy holds both, and its agent reads the
+#  hints after the documents and the standard, before its general knowledge.
 # ============================================================================
 
-.ai_reference_dir <- function() {
-  getOption("tflspec.ai_reference") %||%
-    file.path(tools::R_user_dir("tflspec", "data"), "ai", "reference")
-}
+.ai_reference_dir <- function() file.path(.ai_home(), "reference")
 
 #' Adopt conventions learned from past TFLs
 #'
@@ -35,7 +35,7 @@
 #' @seealso [tfl_ai_reference_build()]
 #' @examples
 #' f <- tempfile(fileext = ".yml")
-#' writeLines(c("tfl_style_learned: {version: 2, files: 3, tables: 9}",
+#' writeLines(c("tfl_company_hints: {version: 1, files: 3, tables: 9}",
 #'              "kinds:",
 #'              "  demog:",
 #'              "    n_form: {value: \"(N=xx)\", seen: 3, of: 3}"), f)
@@ -83,8 +83,9 @@ tfl_ai_style_adopt <- function(diff, rows = NULL, standard = NULL) {
 #' @param conventions The conventions: a data frame with `kind`, `key` and
 #'   `value` (kind `all` for every kind), such as [tfl_ai_style_adopt()]
 #'   returns.
-#' @param dir The pack's folder; `NULL`: the option `tflspec.ai_reference`,
-#'   else `ai/reference/` of tflspec's data folder ([tools::R_user_dir()]).
+#' @param dir The pack's folder; `NULL`: `reference/` in the company's AI
+#'   folder (the option `tflspec.ai_home`, else `ai/` of tflspec's data
+#'   folder, [tools::R_user_dir()]).
 #' @param notes Lines the agent should read first (the company's own words),
 #'   or `NULL`.
 #' @return The files written, invisibly.
@@ -152,19 +153,19 @@ tfl_ai_reference_build <- function(conventions, dir = NULL, notes = NULL) {
   x
 }
 
-# A study's copy of the pack (ai/reference/): copied when the pack has a
-# file the copy lacks or that differs; NULL when there is no pack.  The
-# files written.
+# A study's copy of the company's files (ai/reference/): every .md of the
+# pack and company_hints.yml, copied when the copy lacks it or differs; NULL
+# when there is none.  The files written.
 .ai_reference_copy <- function(study_dir) {
   src <- .ai_reference_dir()
-  fs <- if (dir.exists(src)) list.files(src, "[.]md$") else character()
-  if (!length(fs)) return(NULL)
+  from <- c(if (dir.exists(src)) file.path(src, list.files(src, "[.]md$")),
+            file.path(.ai_home(), "company_hints.yml")[file.exists(file.path(.ai_home(), "company_hints.yml"))])
+  if (!length(from)) return(NULL)
   to <- file.path(study_dir, "ai", "reference")
   dir.create(to, recursive = TRUE, showWarnings = FALSE)
   out <- character()
-  for (f in fs) {
-    a <- file.path(src, f)
-    b <- file.path(to, f)
+  for (a in from) {
+    b <- file.path(to, basename(a))
     if (!file.exists(b) || !identical(unname(tools::md5sum(a)), unname(tools::md5sum(b)))) {
       file.copy(a, b, overwrite = TRUE)
       out <- c(out, b)

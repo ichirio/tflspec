@@ -37,10 +37,12 @@ d <- tempfile()
 dir.create(d)
 writeLines(c("{\\\\rtf1\\\\ansi{\\\\fonttbl{\\\\f0 Courier New;}}",
   "{\\\\header\\\\pard\\\\qc Table 14.1.1\\\\par\\\\pard\\\\qc Demographic Characteristics\\\\par}",
-  "\\\\trowd\\\\trhdr\\\\clbrdrt\\\\brdrs\\\\clbrdrb\\\\brdrs\\\\cellx3000\\\\clbrdrt\\\\brdrs\\\\clbrdrb\\\\brdrs\\\\cellx4500",
+  paste0("\\\\trowd\\\\trhdr\\\\clbrdrt\\\\brdrs\\\\clbrdrb\\\\brdrs\\\\cellx3000",
+         "\\\\clbrdrt\\\\brdrs\\\\clbrdrb\\\\brdrs\\\\cellx4500"),
   "\\\\pard\\\\intbl\\\\ql \\\\cell\\\\pard\\\\intbl\\\\qc Drug X\\\\cell\\\\row",
   "\\\\trowd\\\\clbrdrb\\\\brdrs\\\\cellx3000\\\\clbrdrb\\\\brdrs\\\\cellx4500",
-  "\\\\pard\\\\intbl\\\\ql Age\\\\cell\\\\pard\\\\intbl\\\\qc 54\\\\cell\\\\row}"), file.path(d, "t.rtf"))
+  "\\\\pard\\\\intbl\\\\ql Age\\\\cell\\\\pard\\\\intbl\\\\qc 54\\\\cell\\\\row}"),
+  file.path(d, "t.rtf"))
 tfl_rtf_style_tables(d)[, c("kind", "header_rows", "stub_ratio", "rules")]
 }
 \seealso{

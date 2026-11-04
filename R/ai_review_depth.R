@@ -44,7 +44,18 @@
   ard <- tryCatch({
     x <- tfl_ard_code(st, output_id = id, save = FALSE)
     i <- grep("^# ---- data ----", x)
-    if (length(i) && any(grepl("^# ---- analyses ----", x))) x[i[1L]:length(x)]
+    cl <- grep("^# ---- code lists", x)
+    if (length(i) && any(grepl("^# ---- analyses ----", x))) {
+      # (the code lists the program uses come first, then the data on;
+      # never the functions every program calls)
+      keep <- x[i[1L]:length(x)]
+      if (length(cl) && cl[1L] < i[1L]) {
+        heads <- grep("^# ---- ", x)
+        end <- min(heads[heads > cl[1L]], length(x) + 1L) - 1L
+        keep <- c(x[cl[1L]:end], keep)
+      }
+      keep
+    }
   }, error = function(e) NULL)
   data <- tryCatch(unlist(tfl_data_code(o, st, ard = FALSE), use.names = FALSE),
                    error = function(e) NULL)
@@ -67,12 +78,13 @@
   for (k in seq_along(lay$pages)) {
     for (s in lay$pages[[k]]$segments) if (inherits(s$content, "rtftable")) {
       s$page <- k
+      s$section <- lay$pages[[k]]$section
       segs[[length(segs) + 1L]] <- s
     }
   }
   if (!length(segs)) return(sprintf("# %s: no table was laid out.", id))
   first <- segs[[1L]]$content
-  pages <- .ai_pages_facts(segs, geo, length(lay$pages))
+  pages <- .ai_pages_facts(segs, geo, length(lay$pages), doc$sections)
   over <- attr(pages, "over")
   c(sprintf("# %s: what R made, in words (read this, not the RTF)", id),
     if (length(lay$pages) > 1L || over) {
@@ -188,7 +200,27 @@
   pmax(1L, as.integer(ceiling(w / pmax(width_in - 0.1, 0.2))))
 }
 
-.ai_pages_facts <- function(segs, geo, n_pages) {
+# A page band's (rtf_header() / rtf_footer()) lines as stored: a row's
+# cells apart by " | " (empty ones left out), the rows in order
+.ai_band_lines <- function(b) {
+  x <- vapply(b$rows %||% list(), function(r) {
+    paste(Filter(nzchar, as.character(unlist(r, use.names = FALSE))), collapse = " | ")
+  }, "")
+  x[nzchar(x)]
+}
+
+# A title's or a footnote's row as its text: a row is the text (named by its
+# alignment, c / l / r) or a list of the text, its alignment and flags
+.ai_row_text <- function(x) {
+  if (is.list(x) && !is.null(x$text)) return(paste(as.character(unlist(x$text)), collapse = " "))
+  if (is.list(x)) {
+    k <- names(x) %in% c("c", "l", "r", "")
+    if (any(k)) x <- x[k]
+  }
+  paste(as.character(unlist(x, use.names = FALSE)), collapse = " ")
+}
+
+.ai_pages_facts <- function(segs, geo, n_pages, sections = NULL) {
   over <- FALSE
   one <- function(s) {
     tb <- s$content
@@ -203,12 +235,16 @@
       w <- vapply(seq_along(h$text), function(i) sum(cw[h$from[i]:h$to[i]], na.rm = TRUE), 1)
       max(.ai_text_lines(h$text, w, geo$hp))
     }, 1L))
-    tl <- vapply(s$title %||% list(), function(x) paste(unlist(x), collapse = " "), "")
-    fl <- vapply(s$footnote %||% list(), function(x) paste(unlist(x), collapse = " "), "")
+    tl <- vapply(s$title %||% list(), .ai_row_text, "")
+    fl <- vapply(s$footnote %||% list(), .ai_row_text, "")
     title_lines <- sum(.ai_text_lines(tl, geo$width, geo$hp))
     foot_lines <- sum(.ai_text_lines(fl, geo$width, geo$hp))
+    sec <- if (length(sections)) sections[[min(s$section %||% 1L, length(sections))]]
+    ph <- .ai_band_lines(sec$header)
+    pf <- .ai_band_lines(sec$footer)
+    band_lines <- sum(.ai_text_lines(pf, geo$width, geo$hp))
     used <- title_lines + 1L + head_lines + sum(row_lines) + length(tb$blank_rows) +
-      if (foot_lines) 1L + foot_lines else 0L
+      (if (foot_lines) 1L + foot_lines else 0L) + band_lines
     wrapped <- sum(row_lines > 1L)
     fit <- if (used <= geo$lines) "fits" else {
       sprintf("about %d lines more than a page holds: Word carries them on to another page", used - geo$lines)
@@ -219,7 +255,9 @@
       if (wrapped) sprintf("  %d rows wrap onto more lines (a cell wider than its column).", wrapped),
       if (nrow(d)) sprintf("  The first row \"%s\", the last \"%s\".", .ai_label(d[[1L]][1L]), .ai_label(d[[1L]][nrow(d)])),
       if (length(tl)) paste0("  Title: ", paste(tl, collapse = " / ")),
-      if (length(fl)) paste0("  Footnotes: ", paste(fl, collapse = " / ")))
+      if (length(fl)) paste0("  Footnotes: ", paste(fl, collapse = " / ")),
+      if (length(ph)) paste0("  Page header: ", paste(ph, collapse = " / ")),
+      if (length(pf)) paste0("  Page footer: ", paste(pf, collapse = " / ")))
   }
   lines <- unlist(lapply(segs, one))
   structure(c(sprintf("%d page(s) (%s; about %d lines a page; nothing is measured: Word may differ a little).",

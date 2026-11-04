@@ -9,14 +9,23 @@
 #  the RTF files (tfl_rtf_style_scan(): each table row's cell widths,
 #  borders, size and alignment -- never a cell's text; tfl_rtf_style_tables():
 #  a table's); an AI agent, given the prompt and those tables, opens a few
-#  reports of each kind and writes their conventions to a YAML file;
-#  tfl_ai_style_read() shows it, tfl_ai_style_diff() sets it against the
-#  company standard.  What is adopted is the person's to decide.
+#  reports of each kind and writes the company's hints to a YAML file
+#  (company_hints.yml, in the company's AI folder, .ai_home()); study agents
+#  read it after the study's documents and the company standard, before
+#  their general knowledge.  tfl_ai_style_read() shows it;
+#  tfl_ai_style_diff() / tfl_ai_style_adopt() are an optional path to start
+#  a company standard from it, which is the person's to decide.
 # ============================================================================
 
-.ai_style_default_out <- function() {
-  file.path(tools::R_user_dir("tflspec", "data"), "ai", "style", "learned.yml")
+#  The company's AI folder (option tflspec.ai_home; tflplanner sets it to
+#  <tflplanner.home>/ai): past_tfl/ (the past RTFs), AGENTS-learn.md (the
+#  learning kit), learn/ (what R read), company_hints.yml (what the agent
+#  writes) and reference/ (the optional pack, tfl_ai_reference_build()).
+.ai_home <- function() {
+  getOption("tflspec.ai_home") %||% file.path(tools::R_user_dir("tflspec", "data"), "ai")
 }
+
+.ai_style_default_out <- function() file.path(.ai_home(), "company_hints.yml")
 
 #' The look of a folder of RTF reports, as numbers
 #'
@@ -70,6 +79,9 @@ tfl_rtf_style_scan <- function(rtf_dir) {
     ent <- gsub("\\\\[a-z]+-?[0-9]* ?", "", sub(";.*$", "", ent), perl = TRUE)
     trimws(gsub("^[0-9]+", "", ent))
   } else character()
+  # a page's running header and footer, laid out in rows, are not a table
+  x <- .rtf_drop_groups(x, c("header", "headerl", "headerr", "headerf",
+                             "footer", "footerl", "footerr", "footerf"))
   # the document's size, for a row that says none of its own
   first_row <- regexpr("\\\\trowd", x, perl = TRUE)
   pre <- if (first_row > 0L) substring(x, 1L, first_row) else x
@@ -91,7 +103,7 @@ tfl_rtf_style_scan <- function(rtf_dir) {
     e <- ends[ends > s][1L]
     if (is.na(e)) break
     gap <- if (prev_end > 0L) substring(x, prev_end, s - 1L) else ""
-    if (prev_end < 0L || grepl("\\\\par(?![a-z])", gap, perl = TRUE)) {
+    if (prev_end < 0L || grepl("\\\\(par|sect|page)(?![a-z])", gap, perl = TRUE)) {
       tbl <- tbl + 1L
       k <- 0L
     }
@@ -160,37 +172,55 @@ tfl_rtf_style_scan <- function(rtf_dir) {
   d
 }
 
-#' A prompt for an AI agent to learn a company's conventions from its past TFLs
+#' A learning kit for an AI agent to write a company's hints from its past TFLs
 #'
 #' Writes what an AI agent needs to learn how a company's past reports are
-#' made, by the kind of report, so that the company standard can take it in
-#' (tflspec#547): R's numbers of the reports' look (`scan.csv`,
-#' [tfl_rtf_style_scan()]; `tables.csv`, one row a table,
-#' [tfl_rtf_style_tables()]) and the prompt (`prompt.md`).  The agent
+#' made, by the kind of report, and to write it down as the company's
+#' hints (tflspec#547): R's numbers of the reports' look (`learn/scan.csv`,
+#' [tfl_rtf_style_scan()]; `learn/tables.csv`, one row a table,
+#' [tfl_rtf_style_tables()]) and the prompt (`AGENTS-learn.md`).  The agent
 #' opens a few files of each kind for what R cannot read -- the statistics
 #' and their labels, the n (%) and header N forms, the decimals, the sort,
 #' the footnotes' wording -- and writes the conventions it found, a kind at
-#' a time, with how many of the files it read show each, to `out`
-#' (`learned.yml`), which [tfl_ai_style_read()] reads and
-#' [tfl_ai_style_diff()] sets against the company standard.  Nothing is
-#' sent anywhere; the files and what is learned stay in the folder.
+#' a time, with how many of the files it read show each, to
+#' `company_hints.yml`.  The file is kept beside the company standard, never
+#' merged into it: every study prepared for an agent afterwards gets a copy,
+#' and its agent takes a hint where the shell, the SAP, the study's
+#' documents and the company standard say nothing, before its general
+#' knowledge.  [tfl_ai_style_read()] shows it as a table.  Nothing is sent
+#' anywhere; the files and what is learned stay in the folder.
+#'
+#' The folder is the company's AI folder (`dir`; default the option
+#' `tflspec.ai_home`, else `ai/` of tflspec's data folder,
+#' [tools::R_user_dir()]; tflplanner sets it to `ai/` of its home):
+#' `past_tfl/` (the past RTF reports, a subfolder a study: the person puts
+#' them there), `AGENTS-learn.md`, `learn/` and `company_hints.yml`.
 #'
 #' @param rtf_dir The folder of the past RTF reports (a subfolder a study).
-#' @param out The file the agent writes what it learned to (YAML); its
-#'   folder gets the prompt and the numbers too.  `NULL`: `learned.yml`
-#'   under `ai/style/` of tflspec's data folder ([tools::R_user_dir()]).
-#' @param dir Instead of `out`: the folder (`out` is `learned.yml` in it).
+#'   `NULL`: `past_tfl/` in `dir`.
+#' @param dir The company's AI folder.  `NULL`: the option
+#'   `tflspec.ai_home`, else `ai/` of tflspec's data folder.
+#' @param standard The company standard's conventions, or `NULL` for none:
+#'   a data frame with `kind`, `key` and `value` (kind `all` for every
+#'   kind), as [tfl_ai_style_diff()] takes it.  Given, it is written to
+#'   `learn/standard.csv`, and the agent writes no hint for a point the
+#'   standard says: where the past TFLs differ from it, it lists the point
+#'   under `conflicts:`.
 #' @return The prompt (a `tfl_ai_text`), with the files' paths in its
-#'   attribute `files` (`prompt`, `scan`, `tables`, `result`).
+#'   attribute `files` (`prompt`, `scan`, `tables`, `standard` -- `NA` when
+#'   none --, `result`).
 #' @seealso [tfl_ai_style_read()], [tfl_ai_style_diff()]
 #' @export
-tfl_ai_style_prompt <- function(rtf_dir, out = NULL, dir = NULL) {
+tfl_ai_style_prompt <- function(rtf_dir = NULL, dir = NULL, standard = NULL) {
+  dir <- dir %||% .ai_home()
+  rtf_dir <- rtf_dir %||% file.path(dir, "past_tfl")
   if (!is.character(rtf_dir) || length(rtf_dir) != 1L || !dir.exists(rtf_dir)) {
     .ard_stop("tfl_ai_style_prompt(): `rtf_dir` is a folder of RTF files.")
   }
-  out <- out %||% if (!is.null(dir)) file.path(dir, "learned.yml") else .ai_style_default_out()
-  where <- dirname(out)
+  std <- if (is.null(standard)) NULL else .ai_conventions_frame(standard, "tfl_ai_style_prompt()")
+  where <- file.path(dir, "learn")
   dir.create(where, recursive = TRUE, showWarnings = FALSE)
+  out <- file.path(dir, "company_hints.yml")
   write_csv <- function(d, f) {
     con <- file(f, open = "w", encoding = "UTF-8")
     on.exit(close(con))
@@ -202,6 +232,11 @@ tfl_ai_style_prompt <- function(rtf_dir, out = NULL, dir = NULL) {
   tabs <- tfl_rtf_style_tables(rtf_dir)
   f_tabs <- file.path(where, "tables.csv")
   write_csv(tabs, f_tabs)
+  f_std <- NA_character_
+  if (!is.null(std)) {
+    f_std <- file.path(where, "standard.csv")
+    write_csv(std[, c("kind", "key", "value")], f_std)
+  }
   n_files <- length(unique(tabs$file))
   norm <- function(p) normalizePath(p, winslash = "/", mustWork = FALSE)
   # the files to open: three a kind at most, the newest first
@@ -217,12 +252,18 @@ tfl_ai_style_prompt <- function(rtf_dir, out = NULL, dir = NULL) {
   keys <- .ai_style_keys
   key_lines <- sprintf("- `%s`: %s%s", keys$key, keys$what,
                        ifelse(keys$from == "numbers", " (from `tables.csv`; open a file only to settle it)", ""))
+  wins <- if (is.null(std)) {
+    "No company standard was given: write every convention you find."
+  } else {
+    sprintf("`%s` is the company standard, by kind (`kind`, `key`, `value`; kind `all` for every kind). Where it says a point (a key, under the kind or under `all`), write no hint for that point. Where the past TFLs differ from it, write the point under `conflicts:` (the standard's value, what the files show, how many) and not as a hint. Never write a hint that contradicts the standard.",
+            norm(f_std))
+  }
   text <- c(
-    "# Learn a company's conventions from its past TFLs",
+    "# Learn this company's hints from its past TFLs",
     "",
     sprintf("The folder `%s` holds a company's past tables, figures and listings as RTF files, a subfolder a study (%d files, %d tables found).",
             norm(rtf_dir), n_files, nrow(tabs)),
-    "Learn how this company makes each kind of report, so that its company standard can take it in and every study's AI drafts follow it.",
+    "Write how this company makes each kind of report, as hints for every study's AI agent: a study's agent takes a hint where the study's documents and the company standard say nothing, before its general knowledge.",
     "Write forms, not content: never copy a study's numbers, treatment names or study ids. Where a form holds them, write a placeholder (`xx`, `<treatment>`, `<population>`).",
     "",
     "## What R read for you",
@@ -249,13 +290,17 @@ tfl_ai_style_prompt <- function(rtf_dir, out = NULL, dir = NULL) {
     "",
     "Write a convention every kind shares (the font, the page, the titles' place) once, under `all`.",
     "",
+    "## The company standard wins",
+    "",
+    wins,
+    "",
     "## What to write",
     "",
     sprintf("Write `%s` (UTF-8) in this form. Each convention: `value` (the form, in words or with placeholders), `seen` (how many of the files you read for it show it) and `of` (how many you read). Where the files differ, write the commonest form and name the others in `notes`.",
             norm(out)),
     "",
     "```yaml",
-    sprintf("tfl_style_learned: {version: 2, files: %d, tables: %d}", n_files, nrow(tabs)),
+    sprintf("tfl_company_hints: {version: 1, files: %d, tables: %d, written: <YYYY-MM-DD>}", n_files, nrow(tabs)),
     "kinds:",
     "  all:",
     "    font: {value: \"Courier New 9 pt\", seen: 12, of: 12}",
@@ -267,36 +312,50 @@ tfl_ai_style_prompt <- function(rtf_dir, out = NULL, dir = NULL) {
     "    continuous: {value: \"n | Mean (SD) | Median | Min, Max\", seen: 2, of: 2}",
     "    digits: {value: \"mean and median one more than the data, SD two more\", seen: 1, of: 2}",
     "    stub_ratio: {value: \"3\", seen: 2, of: 2}",
+    "    notes: \"a blank row before each SOC; PT indented 2 spaces\"",
     "  ae_soc_pt:",
     "    first_row: {value: \"Any TEAE\", seen: 3, of: 3}",
     "    sort: {value: \"SOC and PT by descending frequency in the total column\", seen: 3, of: 3}",
+    "conflicts:",
+    "  - {kind: demog, key: n_form, standard: \"N = xx\", files: \"(N=xx)\", seen: 3, of: 3}",
     "notes: \"anything the person should know: exceptions, kinds guessed wrong, files that could not be read\"",
     "```",
     "",
-    "Then tell the person the file is written: they read it with `tflspec::tfl_ai_style_read()` and set it against the company standard with `tflspec::tfl_ai_style_diff()`.")
-  f_prompt <- file.path(where, "prompt.md")
+    "Under each kind, an optional `notes` is for features none of the keys above covers. `<YYYY-MM-DD>` is today's date: fill in your own.",
+    "",
+    "Then tell the person `company_hints.yml` is written. Every study prepared for an agent afterwards gets a copy and reads it; no one needs to adopt it. `tflspec::tfl_ai_style_read()` shows it as a table.")
+  f_prompt <- file.path(dir, "AGENTS-learn.md")
   .ai_write_text(text, f_prompt)
   structure(paste(text, collapse = "\n"), class = "tfl_ai_text",
-            files = c(prompt = f_prompt, scan = f_scan, tables = f_tabs, result = out))
+            files = c(prompt = f_prompt, scan = f_scan, tables = f_tabs, standard = f_std,
+                      result = out))
 }
 
-#' Read what an AI agent learned from a company's past TFLs
+#' Read the company's hints an AI agent wrote from its past TFLs
 #'
-#' The conventions [tfl_ai_style_prompt()] asks the agent to write
-#' (`learned.yml`): by kind of report, each convention's form and how many
-#' of the files the agent read show it.  A form fewer than half of them
+#' The hints [tfl_ai_style_prompt()] asks the agent to write
+#' (`company_hints.yml`): by kind of report, each convention's form and how
+#' many of the files the agent read show it.  A form fewer than half of them
 #' show is kept, but to be adopted by hand only (`adopt`), as is a
-#' convention whose name is none of those the prompt asks for.
+#' convention whose name is none of those the prompt asks for.  (Study
+#' agents read the file as it is; adopting is only for starting a company
+#' standard, see [tfl_ai_style_diff()].)
 #'
-#' @param file The agent's file (YAML); `NULL`: [tfl_ai_style_prompt()]'s
-#'   default.
+#' @param file The agent's file (YAML), with the header `tfl_company_hints`;
+#'   `NULL`: `company_hints.yml` in the company's AI folder (the option
+#'   `tflspec.ai_home`, else `ai/` of tflspec's data folder,
+#'   [tools::R_user_dir()]).
 #' @return A data frame, one row a convention, in the order written:
 #'   `kind` (`all` for every kind), `key`, `value`, `seen`, `of`,
 #'   `evidence` (the kind's files the agent read, ` | ` between), `adopt`
 #'   (`"proposed"`, or `"by hand"`: fewer than half the files, no count,
 #'   or a name the prompt does not know).  Its attribute `text` is a short
-#'   summary (a line a convention), which `print()` shows; `files` /
-#'   `tables` the counts the file gives and `notes` its notes.
+#'   summary (a line a convention and the conflicts' count), which `print()`
+#'   shows; `files` / `tables` the counts the file gives; `notes` a named
+#'   character vector of the notes, by kind (`""` the top level's);
+#'   `conflicts` a data frame (`kind`, `key`, `standard`, `files`, `seen`,
+#'   `of`) of the points where the past TFLs differ from the company
+#'   standard (0 rows for none).
 #' @seealso [tfl_ai_style_diff()]
 #' @export
 tfl_ai_style_read <- function(file = NULL) {
@@ -306,17 +365,22 @@ tfl_ai_style_read <- function(file = NULL) {
   y <- tryCatch(yaml::read_yaml(file, handlers = .yaml_handlers()), error = function(e) {
     .ard_stop(sprintf("tfl_ai_style_read(): %s is not YAML: %s", file, conditionMessage(e)))
   })
-  if (!is.list(y) || !is.list(y$kinds)) {
+  if (!is.list(y) || is.null(y$tfl_company_hints)) {
+    .ard_stop(sprintf("tfl_ai_style_read(): %s has no `tfl_company_hints:` header (see tfl_ai_style_prompt()'s prompt).", file))
+  }
+  if (!is.list(y$kinds)) {
     .ard_stop(sprintf("tfl_ai_style_read(): %s has no `kinds:` (see tfl_ai_style_prompt()'s prompt).", file))
   }
   one <- function(v) if (length(v)) paste(as.character(unlist(v)), collapse = " | ") else NA_character_
   count <- function(v) suppressWarnings(as.integer(one(v)))
   rows <- list()
+  notes <- stats::setNames(if (length(y$notes)) one(y$notes) else "", "")
   for (k in names(y$kinds)) {
     e <- y$kinds[[k]]
     if (!is.list(e)) next
+    if (!is.null(e$notes)) notes[[k]] <- one(e$notes)
     ev <- one(e$evidence)
-    for (key in setdiff(names(e), "evidence")) {
+    for (key in setdiff(names(e), c("evidence", "notes"))) {
       v <- e[[key]]
       if (!is.list(v) || is.null(names(v))) v <- list(value = v)
       rows[[length(rows) + 1L]] <- data.frame(
@@ -331,20 +395,33 @@ tfl_ai_style_read <- function(file = NULL) {
   out$adopt <- ifelse(!is.na(share) & out$of > 0L & share >= 0.5 & out$key %in% .ai_style_keys$key,
                       "proposed", "by hand")
   rownames(out) <- NULL
-  hdr <- y$tfl_style_learned %||% list()
+  # the points where the past TFLs differ from the company standard
+  cf <- lapply(y$conflicts, function(e) {
+    if (!is.list(e)) return(NULL)
+    data.frame(kind = one(e$kind), key = one(e$key), standard = one(e$standard),
+               files = one(e$files), seen = count(e$seen), of = count(e$of),
+               stringsAsFactors = FALSE)
+  })
+  conflicts <- do.call(rbind, c(list(data.frame(
+    kind = character(), key = character(), standard = character(), files = character(),
+    seen = integer(), of = integer(), stringsAsFactors = FALSE)), cf))
+  hdr <- y$tfl_company_hints
+  if (!is.list(hdr)) hdr <- list()
   text <- c(sprintf("Learned from %s file(s), %s table(s)", hdr$files %||% "?", hdr$tables %||% "?"),
             if (nrow(out)) sprintf("%s: %s = %s (%s of %s)%s", out$kind, out$key, out$value,
                                    ifelse(is.na(out$seen), "?", out$seen),
                                    ifelse(is.na(out$of), "?", out$of),
-                                   ifelse(out$adopt == "by hand", " -- by hand", "")))
+                                   ifelse(out$adopt == "by hand", " -- by hand", "")),
+            sprintf("%d conflict(s) with the company standard", nrow(conflicts)))
   structure(out, class = c("tfl_ai_style", "data.frame"), text = text,
-            files = hdr$files, tables = hdr$tables, notes = y$notes)
+            files = hdr$files, tables = hdr$tables, notes = notes, conflicts = conflicts)
 }
 
 #' @export
 print.tfl_ai_style <- function(x, ...) {
   cat(attr(x, "text"), sep = "\n")
   n <- attr(x, "notes")
-  if (length(n) && nzchar(n)) cat("notes:", n, "\n")
+  n <- n[!is.na(n) & nzchar(n)]
+  for (i in seq_along(n)) cat(if (nzchar(names(n)[i])) paste0("notes (", names(n)[i], "):") else "notes:", n[[i]], "\n")
   invisible(x)
 }

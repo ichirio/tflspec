@@ -2,13 +2,15 @@
 % Please edit documentation in R/ai_style.R
 \name{tfl_ai_style_read}
 \alias{tfl_ai_style_read}
-\title{Read what an AI agent learned from a company's past TFLs}
+\title{Read the company's hints an AI agent wrote from its past TFLs}
 \usage{
 tfl_ai_style_read(file = NULL)
 }
 \arguments{
-\item{file}{The agent's file (YAML); \code{NULL}: \code{\link[=tfl_ai_style_prompt]{tfl_ai_style_prompt()}}'s
-default.}
+\item{file}{The agent's file (YAML), with the header \code{tfl_company_hints};
+\code{NULL}: \code{company_hints.yml} in the company's AI folder (the option
+\code{tflspec.ai_home}, else \verb{ai/} of tflspec's data folder,
+\code{\link[tools:R_user_dir]{tools::R_user_dir()}}).}
 }
 \value{
 A data frame, one row a convention, in the order written:
@@ -16,15 +18,21 @@ A data frame, one row a convention, in the order written:
 \code{evidence} (the kind's files the agent read, \code{|} between), \code{adopt}
 (\code{"proposed"}, or \code{"by hand"}: fewer than half the files, no count,
 or a name the prompt does not know).  Its attribute \code{text} is a short
-summary (a line a convention), which \code{print()} shows; \code{files} /
-\code{tables} the counts the file gives and \code{notes} its notes.
+summary (a line a convention and the conflicts' count), which \code{print()}
+shows; \code{files} / \code{tables} the counts the file gives; \code{notes} a named
+character vector of the notes, by kind (\code{""} the top level's);
+\code{conflicts} a data frame (\code{kind}, \code{key}, \code{standard}, \code{files}, \code{seen},
+\code{of}) of the points where the past TFLs differ from the company
+standard (0 rows for none).
 }
 \description{
-The conventions \code{\link[=tfl_ai_style_prompt]{tfl_ai_style_prompt()}} asks the agent to write
-(\code{learned.yml}): by kind of report, each convention's form and how many
-of the files the agent read show it.  A form fewer than half of them
+The hints \code{\link[=tfl_ai_style_prompt]{tfl_ai_style_prompt()}} asks the agent to write
+(\code{company_hints.yml}): by kind of report, each convention's form and how
+many of the files the agent read show it.  A form fewer than half of them
 show is kept, but to be adopted by hand only (\code{adopt}), as is a
-convention whose name is none of those the prompt asks for.
+convention whose name is none of those the prompt asks for.  (Study
+agents read the file as it is; adopting is only for starting a company
+standard, see \code{\link[=tfl_ai_style_diff]{tfl_ai_style_diff()}}.)
 }
 \seealso{
 \code{\link[=tfl_ai_style_diff]{tfl_ai_style_diff()}}

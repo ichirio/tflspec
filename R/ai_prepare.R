@@ -38,15 +38,22 @@
 #' `.github/copilot-instructions.md` (short: read `ai/AGENTS.md`), `run.R`
 #' ([tfl_ai_run()]: the check from the command line, with the ARD and RTF)
 #' and `ai/decisions.md`, which is never written over.  One message
-#' (`ai/agent_prompt.md`) starts the agent on every request of
-#' `ai/requests/index.md` in order; stopped, it goes on at "continue" from
-#' the first request with a draft missing.
+#' (`ai/agent_prompt.md`) starts the agent: with one request, then a menu, or
+#' with a batch of all the requests (`ai: run`); `ai/progress.md`, the work
+#' queue (every request `todo`; never written over), says where it goes on.
 #'
 #' `study.yml`'s `ai:` keys set the agent's rules (the study standard's
 #' `spec/defaults.yml` may say them under its own `ai:` key first):
-#' `language` (the chat's: `"en"`, `"ja"` ...), `ask_when` (`"request"`,
-#' the default: the request's reports' questions together; `"report"`:
-#' report by report), `carry` (which decision scopes apply to a later
+#' `language` (the chat's: `"en"`, `"ja"` ...), `run` (`"one"`, the
+#' default: the agent processes one request -- its questions in the chat, its
+#' drafts, its build and check -- and stops at a menu: the next request, the
+#' next N together, or all the rest; `"batch"`: all the requests at once, the
+#' agent taking its default for every question, noting it in
+#' `ai/questions-end.md`, and asking all of them in one message at the end,
+#' with `ai/defaults.md`, the defaults it took, the most important first --
+#' only the reports an answer changes are then written again),
+#' `requests_per_chat` (0, no limit: after that many requests the agent stops
+#' and asks for a new chat), `carry` (which decision scopes apply to a later
 #' report without asking: `all`, `dataset`, `section`), `max_rounds` (how
 #' many times one item is asked again, 3), `footnotes_at` (`"footer"`, the
 #' default, or `"table"`: where the shell's footnotes go), `review` (how
@@ -198,7 +205,13 @@
 #'   `counts` (`shells`,
 #'   `toc_items`, `no_shell`),
 #'   `sheets` (the workbook's sheets and their roles), `adam` (the
-#'   [tfl_ai_adam_summary()]: `datasets`, `variables`, `text`), `files` (the
+#'   [tfl_ai_adam_summary()]: `datasets`, `variables`, `text`), `data_paths`
+#'   (a study that has a `spec/data.yml` already: per dataset of it,
+#'   `in_data_yml` its path, `given` the ADaM file given (`NA`: none),
+#'   `exists` whether data.yml's file is there and `differs` whether the
+#'   file given is another file or type; a warning names the rows that are
+#'   missing or differ; `data.yml` is not changed; `NULL` for a new study),
+#'   `files` (the
 #'   files written, relative to `dir`), `hint` (what the workbook's reading
 #'   could not find -- no TOC, a report with no shell -- and what to pass),
 #'   `next_steps` (what to do next), `agent_prompt` (the first message to
@@ -276,6 +289,10 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
   }
   if (identical(workbook, "text") && "workbook" %in% agent_reads) workbook <- "file"
   dry <- isTRUE(dry_run)
+  # a study with a spec/data.yml already: its paths against the ADaM given
+  # (#515); data.yml itself is never changed here
+  has_data_yml <- file.exists(file.path(dir, "spec", "data.yml")) &&
+    file.exists(file.path(dir, "study.yml")) && !(isTRUE(overwrite) && !isTRUE(add))
   ai <- file.path(dir, "ai")
   files <- character()
   agent_files <- character()
@@ -294,6 +311,11 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
     if (!is.null(language)) .ai_study_yml_set(dir, "language", language)
   }
   adam_dir <- if (grepl("^(/|[A-Za-z]:)", adam)) adam else file.path(dir, adam)
+  data_paths <- if (has_data_yml) .ai_data_paths(dir, adam_dir)
+  if (length(.ai_data_paths_text(data_paths))) {
+    warning("spec/data.yml and the ADaM given differ (it is not changed here):\n",
+            paste0("  ", .ai_data_paths_text(data_paths), collapse = "\n"), call. = FALSE)
+  }
   # (where it is: the ADaM's summary, the workbook, then a request at a time)
   step <- function(s, i = 0L, n = 1L) if (is.function(progress)) progress(s, i, n)
   step("adam")
@@ -392,7 +414,7 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
         f <- file.path(dir, req$file[i])
         ids <- strsplit(req$outputs[i], ", ", fixed = TRUE)[[1L]]
         dec <- .ai_decisions_block(dir, ids, section = .ai_request_section(shell, req$outputs[i]))
-        txt <- c(.ai_agent_request_head(req$request[i], ids = ids), dec,
+        txt <- c(.ai_agent_request_head(req$request[i], ids = ids, build = .ai_build_on(dir)), dec,
                  readLines(f, warn = FALSE, encoding = "UTF-8"))
         .ai_write_text(txt, f)
         req$chars[i] <- nchar(.ai_paths_from_ai(paste(txt, collapse = "\n")))
@@ -407,6 +429,10 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
         docs_from <- placed$from
         files <- c(files, placed$files)
       }
+      # (the inputs, kept for tfl_ai_refresh_agents())
+      .ai_agent_inputs_write(dir, templates = templates, adam = adam_at, book = book_at,
+                             reads = agent_reads, docs = refs, docs_from = docs_from,
+                             max_reads = agent_max_reads, add = isTRUE(add))
       files <- c(files, .ai_agent_files(dir, overwrite = overwrite && !isTRUE(add),
                                         templates = templates, adam = adam_at,
                                         book = book_at, reads = agent_reads,
@@ -425,7 +451,7 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
                         paste0(.ai_file_id(basename(normalizePath(dir, mustWork = FALSE))),
                                ".code-workspace"))),
       paste0("in the agent's chat, one message: ai/agent_prompt.md; answer its questions ",
-             "there; \"continue\" when it stopped"),
+             "there; at its menu: c (the next request), a number (that many together) or a (all the rest)"),
       paste0("check the drafts: tflplanner's \"Check\" (tfl_ai_collect_answers()), ",
              "finish them in the builder, adopt them (tfl_ai_adopt())"))
   }
@@ -478,17 +504,20 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
   # -- and the first one or two requests only: the person asks for the rest
   agent_prompt <- .ai_paths_from_ai(.ai_agent_prompt(
     basename(normalizePath(dir, mustWork = FALSE)), templates = templates,
-    language = .ai_spec_settings(dir)$language))
+    language = .ai_spec_settings(dir)$language, run = .ai_spec_settings(dir)$run,
+    build = .ai_build_on(dir)))
   # and as a file, to copy from
   if (!dry) {
     .ai_write_text(agent_prompt, file.path(ai, "agent_prompt.md"))
+    # the work queue: every request todo (never written over)
+    .ai_progress_write(dir, req)
     # the study's facts the agent read from spec/, and the workspace on ai/
     files <- c(files, "ai/agent_prompt.md",
                .ai_check_rel(.ai_study_facts_write(dir), dir),
                .ai_check_rel(.ai_workspace_write(dir), dir))
   }
   structure(list(requests = req, toc = tc, shells = shl, counts = counts,
-                 sheets = shell$sheets, numbers = nums, adam = ad,
+                 sheets = shell$sheets, numbers = nums, adam = ad, data_paths = data_paths,
                  files = unique(files), hint = hint, next_steps = nxt, dry_run = dry,
                  agent_prompt = agent_prompt, agent_files = agent_files,
                  templates = templates,
@@ -515,6 +544,9 @@ print.tfl_ai_prepared <- function(x, ...) {
   cat(sprintf("%d request(s)%s: %s\n", nrow(r), if (isTRUE(x$dry_run)) " to write" else "",
               paste(sprintf("%s (%d)", r$request, r$n), collapse = ", ")))
   if (length(x$hint)) cat(paste0("Note: ", x$hint, "\n"), sep = "")
+  if (length(.ai_data_paths_text(x$data_paths))) {
+    cat(paste0("Note: ", .ai_data_paths_text(x$data_paths), "\n"), sep = "")
+  }
   if (length(x$next_steps)) cat(paste0("Next: ", x$next_steps, "\n"), sep = "")
   invisible(x)
 }

@@ -155,7 +155,10 @@
   # a figure of items runs after the study's figure setup (theme_tfl(),
   # scale_colour_tfl(), tfl_colours()), as its program does
   if (new) eval(parse(text = tfl_fig_setup_code()), env)
-  if (!is.null(data$ard)) eval(parse(text = tfl_helpers_code()), env)
+  # (the study's helpers: the ARD's readers, and set_levels() of the code lists)
+  if (!is.null(data$ard) || any(grepl("set_levels(", code, fixed = TRUE))) {
+    eval(parse(text = tfl_helpers_code()), env)
+  }
   eval(parse(text = .fig_strip_library(code)), env)
   get("content", envir = env, inherits = FALSE)
 }

@@ -17,6 +17,8 @@ drafts, for the reports of a kind built here:
    figures (R reads the ADaM; you do not).  It takes a minute or so.
    Beside each report's RTF it writes `<id>.R` (the report's program) and
    `<id>-facts.txt` (what it made, in words).  Do not open the RTF.
+   run.R rewrites each draft in a normal form after a build: read a draft again
+   before you edit it.
 2. **Read** `ai/status.md` (level 0): each report's status and its files.
    When the check or the build failed, read `ai/repairs/<request>.md` or
    `ai/repairs/<request>-build.md` (the first error, and where), fix the
@@ -25,7 +27,10 @@ drafts, for the reports of a kind built here:
    level:
    - level 1, **the program** `<id>.R` (its data and analyses steps): the
      analysis set and the filters, the variables, the denominator, the
-     statistics.
+     statistics.  For a listing, `<id>.R` is its records' steps (the
+     dataset, the filter, the sort) and its layout: read its facts' first
+     lines (the rows and the columns) too, to check the filter and the
+     sort.
    - level 2, **the facts** `<id>-facts.txt`: a table's header rows (each
      arm, its N), its rows in their order, its empty cells and the
      missing values printed; a figure's labels, axes, legends and layers
@@ -47,7 +52,9 @@ drafts, for the reports of a kind built here:
      confirm` that says so (where the shell breaks the pages, if it
      shows), not a fix.
 4. **Fix** what differs and build again (1).  At most **two** fixes a
-   report.  Where it still fails or still differs after the second:
+   report.  A build that fails is not a fix: fix what its repair names
+   and build again.  When a fix breaks something else, stop: keep the
+   draft and mark what differs to confirm.  Where it still fails or still differs after the second:
    - a figure: draw it with your own ggplot2 code -- keep the data steps
      (a `code` step where a piece will not do) and make `layers:` one
      layer that draws the whole plot, `{layer: layer_code, code: 'p <-

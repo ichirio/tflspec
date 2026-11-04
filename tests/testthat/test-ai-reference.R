@@ -3,7 +3,7 @@
 
 learned_file <- function(d) {
   f <- file.path(d, "learned.yml")
-  writeLines(c("tfl_style_learned: {version: 2, files: 3, tables: 9}",
+  writeLines(c("tfl_company_hints: {version: 1, files: 3, tables: 9}",
                "kinds:",
                "  all:",
                "    font: {value: \"Courier New 9 pt\", seen: 3, of: 3}",
@@ -56,31 +56,82 @@ test_that("tfl_ai_reference_build(): the conventions by kind, for an agent", {
   expect_error(tfl_ai_reference_build(list()), "`kind`, `key` and `value`")
 })
 
-test_that("a study's agent files: the pack copied, AGENTS.md's second step reads it first", {
+test_that("a study's agent files: the company's files copied, AGENTS.md's second step reads them first", {
   d <- withr::local_tempdir()
   study <- file.path(d, "study")
   dir.create(study)
-  withr::local_options(tflspec.ai_reference = file.path(d, "ref"))
-  # no pack: the usual second step
+  home <- file.path(d, "ai")
+  withr::local_options(tflspec.ai_home = home)
+  agents <- function() paste(readLines(file.path(study, "ai", "AGENTS.md"), encoding = "UTF-8"),
+                             collapse = "
+")
+  ref <- function(f) file.path(study, "ai", "reference", f)
+  hints <- function(v) writeLines(c("tfl_company_hints: {version: 1, files: 3, tables: 9}",
+                                    "kinds:", "  all:",
+                                    sprintf("    font: {value: \"%s\", seen: 3, of: 3}", v)),
+                                  file.path(home, "company_hints.yml"))
+  # neither: the usual second step
   tflspec:::.ai_agent_files(study)
-  a <- paste(readLines(file.path(study, "ai", "AGENTS.md"), encoding = "UTF-8"), collapse = "\n")
-  expect_match(a, tflspec:::.ai_step2_usual, fixed = TRUE)
+  expect_match(agents(), tflspec:::.ai_step2_usual, fixed = TRUE)
+  expect_false(grepl("the company's reference", agents(), fixed = TRUE))
   expect_false(dir.exists(file.path(study, "ai", "reference")))
-  # a pack: copied, and read before the usual convention
-  tfl_ai_reference_build(data.frame(kind = "demog", key = "n_form", value = "(N=xx)"))
+  # hints only
+  dir.create(home)
+  hints("Courier New 9 pt")
   w <- tflspec:::.ai_agent_files(study, overwrite = TRUE)
-  expect_true(file.exists(file.path(study, "ai", "reference", "conventions.md")))
-  expect_true(file.path(study, "ai", "reference", "conventions.md") %in% w)
-  a <- paste(readLines(file.path(study, "ai", "AGENTS.md"), encoding = "UTF-8"), collapse = "\n")
+  expect_true(file.exists(ref("company_hints.yml")))
+  expect_true(ref("company_hints.yml") %in% w)
+  expect_false(file.exists(ref("conventions.md")))
+  a <- agents()
   expect_false(grepl(tflspec:::.ai_step2_usual, a, fixed = TRUE))
+  # (and "What you read" lists ai/reference/, the hints only)
+  expect_match(a, "- the company's reference, `reference/company_hints.yml`, for the second", fixed = TRUE)
+  expect_false(grepl("conventions.md`, for the second", a, fixed = TRUE))
+  expect_match(a, "**Else the company's hints, then the usual convention, settle it.**", fixed = TRUE)
+  expect_match(a, "from: \"company hints\"", fixed = TRUE)
+  expect_false(grepl("company convention", a, fixed = TRUE))
   # (its paths from ai/, the agent's folder)
-  expect_match(a, "First `reference/conventions.md`, the company's", fixed = TRUE)
+  expect_match(a, "`reference/company_hints.yml` is how this company's past reports were made", fixed = TRUE)
+  expect_match(a, "A point under `conflicts:` is the standard's", fixed = TRUE)
   # unchanged: not copied again; changed: copied
   w2 <- tflspec:::.ai_agent_files(study, overwrite = TRUE)
   expect_false(any(grepl("reference", w2, fixed = TRUE)))
-  tfl_ai_reference_build(data.frame(kind = "demog", key = "n_form", value = "N = xx"))
+  hints("Arial 10 pt")
   w3 <- tflspec:::.ai_agent_files(study, overwrite = TRUE)
-  expect_true(file.path(study, "ai", "reference", "conventions.md") %in% w3)
-  expect_true(any(grepl("N = xx", readLines(file.path(study, "ai", "reference", "conventions.md")),
-                        fixed = TRUE)))
+  expect_true(ref("company_hints.yml") %in% w3)
+  expect_true(any(grepl("Arial 10 pt", readLines(ref("company_hints.yml")), fixed = TRUE)))
+  # both
+  tfl_ai_reference_build(data.frame(kind = "demog", key = "n_form", value = "(N=xx)"))
+  w4 <- tflspec:::.ai_agent_files(study, overwrite = TRUE)
+  expect_true(ref("conventions.md") %in% w4)
+  a <- agents()
+  expect_match(a, "**Else the company's conventions, then its hints, then the usual convention, settle it.**",
+               fixed = TRUE)
+  expect_match(a, "`reference/conventions.md` is the company standard's, by kind of report", fixed = TRUE)
+  expect_match(a, "- the company's reference, `reference/conventions.md` and `reference/company_hints.yml`",
+               fixed = TRUE)
+  expect_match(a, "from: \"company convention\"", fixed = TRUE)
+  expect_match(a, "from: \"company hints\"", fixed = TRUE)
+  # conventions only
+  unlink(file.path(home, "company_hints.yml"))
+  unlink(file.path(study, "ai", "reference"), recursive = TRUE)
+  tflspec:::.ai_agent_files(study, overwrite = TRUE)
+  expect_false(file.exists(ref("company_hints.yml")))
+  a <- agents()
+  expect_match(a, "**Else the company's conventions, then the usual convention, settle it.**", fixed = TRUE)
+  expect_match(a, "from: \"company convention\"", fixed = TRUE)
+  expect_false(grepl("company hints", a, fixed = TRUE))
+  expect_false(grepl(tflspec:::.ai_step2_usual, a, fixed = TRUE))
+  # changed conventions: copied
+  tfl_ai_reference_build(data.frame(kind = "demog", key = "n_form", value = "N = xx"))
+  w5 <- tflspec:::.ai_agent_files(study, overwrite = TRUE)
+  expect_true(ref("conventions.md") %in% w5)
+  expect_true(any(grepl("N = xx", readLines(ref("conventions.md")), fixed = TRUE)))
+  # the usual step stays once in AGENTS.md's own text
+  src <- readLines(system.file("ai", "agent", "AGENTS.md", package = "tflspec"), encoding = "UTF-8")
+  expect_identical(lengths(regmatches(paste(src, collapse = "
+"),
+                                      gregexpr(tflspec:::.ai_step2_usual, paste(src, collapse = "
+"),
+                                               fixed = TRUE))), 1L)
 })

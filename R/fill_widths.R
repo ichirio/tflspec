@@ -99,7 +99,7 @@ tfl_fill_widths <- function(study_dir = ".", output_id = NULL, assumption = TRUE
     names(old)[names(old) == "sheet"] <- "where"
     # (one a report: a report given widths again keeps the one it had)
     have <- old$output_id[old$item %in% "widths"]
-    aw <- .ai_widths_assumptions(setdiff(set, have))
+    aw <- .ai_widths_assumptions(setdiff(set, have), .ai_spec_settings(study_dir)$language)
     if (!is.null(aw)) {
       for (k in setdiff(names(old), names(aw))) aw[[k]] <- NA_character_
       .ai_asm_write(study_dir, rbind(old, aw[names(old)]))

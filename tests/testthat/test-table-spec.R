@@ -511,6 +511,8 @@ test_that("a report can drop the running footer and use the page sheet", {
 })
 
 test_that("a definition can be split over workbooks, and a sheet said once", {
+  # about 10 s or more; CI runs it on every configuration
+  skip_on_cran()
   skip_if_not_installed("writexl"); skip_if_not_installed("readxl")
   a <- tempfile(fileext = ".xlsx"); b <- tempfile(fileext = ".xlsx")
   on.exit(unlink(c(a, b)), add = TRUE)

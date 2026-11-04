@@ -204,7 +204,7 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
     layers <- c(list(tl), layers, list(tlook))
     output$ard <- .merge_ard(tpl$x$ard, output$ard)
     # a figure's design: its settings (`plot:`) under the report's own
-    if (!is.null(tpl$x$plot)) output$plot <- .merge_map(tpl$x$plot, output$plot)
+    if (!is.null(tpl$x$plot)) output$plot <- .tpl_plot_over(tpl$x$plot, output$plot)
   }
   own <- list(data = output$data %||% list(), codelists = output$codelists,
               content = output$content, page = output$page)

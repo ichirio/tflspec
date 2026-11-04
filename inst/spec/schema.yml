@@ -87,7 +87,7 @@ plan_digits:
   stage: finishing
   tier: usual
   description: The digits of each statistic, as a house rule.
-  dots: {style: named, type: "number|string|vec<stat, number|string>|map<string, number|string|vec<stat, number|string>>", description: "By variable, kind (continuous / categorical) or `default`: one number for every statistic, or one a statistic; \"3s\" for three significant digits. By a row key's value (a lab table's parameter): the key, then each value's digits -- one number, or one a statistic (`PARAMCD: {ALT: 1, BILI: {mean: 2, sd: 3}}`); a value no row has is ignored.", example: {continuous: {mean: 1, sd: 2}, AGE: 0, PARAMCD: {ALT: 1, BILI: {mean: 2, sd: 3}}}}
+  dots: {style: named, type: "number|string|vec<stat, number|string>|map<string, number|string|vec<stat, number|string>>", description: "By variable, kind (continuous / categorical) or `default`: one number for every statistic, or one a statistic; \"3s\" for three significant digits. By a row key's value (a lab table's parameter): the key, then each value's digits -- one number, or one a statistic (`PARAM: {\"Alanine Aminotransferase (U/L)\": 1, \"Bilirubin (umol/L)\": {mean: 2, sd: 3}}`); on the `param_change` template the key is `PARAM`, the parameter's label (the name `ai/adam_summary.md` lists), as the table prints it, not `PARAMCD`, which matches nothing there; a value no row has is ignored.", example: {continuous: {mean: 1, sd: 2}, AGE: 0, PARAM: {"Alanine Aminotransferase (U/L)": 1, "Bilirubin (umol/L)": {mean: 2, sd: 3}}}}
   args:
     rounding: {label: "Rounding", type: "enum[sas|r|iec60559]", description: The tie-breaking family.}
     .rows: {label: "Decimals by row", type: "vec<string, integer|string>", description: "The digits of a statistic row (a table with stats = rows), by its label."}
@@ -668,7 +668,7 @@ rtf_style:
 
 rtf_default_format:
   package: rtfreporter
-  description: "The document's text defaults: deprecated in rtfreporter (rtf_style()); an old SPEC's page.rtf_default_format is read as rtf_style's shared level."
+  description: "The document's text defaults: removed in rtfreporter 0.9.0 (rtf_style()); an old SPEC's page.rtf_default_format is read as rtf_style's shared level. A legacy page key only: tflspec never writes a call to it."
   args:
     font_size_half_points: {type: integer}
     row_height_twips: {type: integer}

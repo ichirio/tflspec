@@ -15,10 +15,10 @@ sh_study <- function(root) {
   d
 }
 
-sh_report <- function(d, args) {
+sh_report <- function(d, args, codelists = list()) {
   f <- file.path(d, "spec", "outputs", "T-SH.yml")
   tfl_write_output(tfl_output("T-SH", "table", population = "SAF", extends = "defaults",
-                              template = list(name = "shift", args = args)), f)
+                              codelists = codelists, template = list(name = "shift", args = args)), f)
   st <- tfl_read_study_spec(d)
   ard <- suppressMessages(tfl_build_ard(st, output_id = "T-SH", dir = d, save = FALSE))
   ro <- tfl_resolve_output(tfl_read_output(f), st)
@@ -97,4 +97,46 @@ test_that("shift: worst_by gives a parameter its own order from the worst", {
   # percent_of total needs a subject once a parameter
   expect_error(tfl_template_expand("shift", list(population = "SAF", worst = NULL,
                                                  percent_of = "total")), "give `worst`")
+})
+
+test_that("shift: the rows are in the code list's labels, Missing and Total last", {
+  rows <- function(...) lapply(list(...), function(v) list(value = v[1L], label = v[2L]))
+  lv <- function(cl) {
+    x <- tfl_template_expand("shift", list(population = "SAF"), codelists = cl)
+    Filter(function(it) it$fn == "plan_levels", x$content)[[1L]]$args
+  }
+  cl <- rows(c("LOW", "Low"), c("NORMAL", "Normal"), c("HIGH", "High"))
+  # codes in `levels`, labels in the ARD: the table's values are the labels
+  a <- lv(list(BNRIND = cl, ANRIND = cl))
+  expect_identical(a$BNRIND, c("Low", "Normal", "High", "Missing", "Total"))
+  expect_identical(a$.label, c("Low", "Normal", "High"))
+  # named codes (a program's `c(LOW = "Low")`) the same
+  nm <- c(LOW = "Low", NORMAL = "Normal", HIGH = "High")
+  expect_identical(lv(list(BNRIND = nm, ANRIND = nm))$BNRIND, a$BNRIND)
+  # no code list, or `levels` given as the labels: as they are
+  expect_identical(lv(NULL)$BNRIND, c("LOW", "NORMAL", "HIGH", "Missing", "Total"))
+  y <- tfl_template_expand("shift", list(population = "SAF", levels = c("Low", "Normal", "High")),
+                           codelists = list(BNRIND = cl, ANRIND = cl))
+  expect_identical(Filter(function(it) it$fn == "plan_levels", y$content)[[1L]]$args$BNRIND,
+                   a$BNRIND)
+})
+
+test_that("shift: built with a code list on the categories, the rows run Low ... Total", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("cards")
+  skip_if_not_installed("dplyr")
+  skip_if_not_installed("rtfreporter")
+  d <- sh_study(withr::local_tempdir())
+  rows <- function(...) lapply(list(...), function(v) list(value = v[1L], label = v[2L]))
+  cl <- rows(c("LOW", "Low"), c("NORMAL", "Normal"), c("HIGH", "High"))
+  # (Missing and Total are still listed: the analysis data holds them)
+  r <- sh_report(d, list(population = "SAF", where = 'PARAMCD %in% c("ALT", "HGB")',
+                         param_page = FALSE),
+                 codelists = list(BNRIND = c(cl, rows(c("Missing", "Missing"), c("Total", "Total"))),
+                                  ANRIND = cl))
+  t <- as.data.frame(suppressMessages(rtfreporter::plan_apply(r$plan, "table")))
+  t[] <- lapply(t, function(v) if (is.factor(v)) as.character(v) else v)
+  expect_identical(unique(t$BNRIND[t$group == "ALT"]),
+                   c("Low", "Normal", "High", "Missing", "Total"))
 })
