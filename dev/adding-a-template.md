@@ -2,17 +2,23 @@
 
 This guide takes you from nothing to a template in a pull request. A person
 or an agent can follow it step by step. Read `CONTRIBUTING.md` first for the
-workflow and the rules (branch from `next`, no `Version:` or `NEWS.md`
-change, fictional data only, ASCII-only R source).
+workflow and the rules (branch from `main` and open the pull request against
+`main`, no `Version:` or `NEWS.md` change, fictional data only, ASCII-only R
+source). `AGENTS.md` has the git steps.
 
 Commands run from the package root. Where a step names a function, find it
 by name: line numbers move.
 
 ## 0. Set up once
 
+The library needs these packages: cards, rtfreporter (`DESCRIPTION` asks for
+0.8.2.9100 or later and takes it from `ichirio/rtfreporter@next`), testthat,
+devtools, lintr, haven and withr. The template tests skip without cards and
+haven, and test files call withr. Some tests (`tpl-lab-abnormal`, for one)
+also use dplyr; `DESCRIPTION` lists the rest under Suggests.
+
 ```r
 install.packages(".", repos = NULL, type = "source")   # or devtools::install()
-library(tflspec)
 Sys.setenv(NOT_CRAN = "true")   # run the tests CRAN would skip
 ```
 
@@ -54,22 +60,29 @@ with yours.
 
    ```r
    tfl_template_variant("ae_severe_soc_pt", from = "ae_soc_pt",
-     label = "Severe adverse events by SOC and PT",
-     example = list(population = "SAF"), ai = FALSE,
+     label = "Severe adverse events by SOC and PT", ai = FALSE,
      defaults = list(where = "TRTEMFL == \"Y\" & AESEV == \"SEVERE\"",
                      any_row_label = "Any severe TEAE"))
    ```
 
    Keep every string ASCII. Check the names and values you filter on against
-   the bundled data, for example `table(adae$AESEV)`.
+   the bundled data first, for example `table(adae$AESEV)`. Filter on a whole
+   value with `==`, never on part of a string (`grepl()`): a value like
+   "NOT SEVERE" contains "SEVERE".
+
+   The definition has no `example =`. A variant uses the example of the
+   template it comes from; give it an `example =` only when its help page
+   should show other parameters (`stf_t02_demog` does).
 
 2. **Set `ai`.** See "The `ai` trap" below. A first contribution sets
    `ai = FALSE`.
 
 3. **Add its example** to `.tpl_examples` in `R/tpl_company.R`: one line,
-   the parameters a test run uses. `test-template-company.R` fails if a
+   the parameters a test run uses. Every variant needs this line, whether or
+   not its definition has an `example =`: `test-template-company.R` fails if a
    registered template has no entry (it compares `tfl_templates()$name` with
-   `names(.tpl_examples)`).
+   `names(.tpl_examples)`), and `test-template-spec.R` and
+   `test-template-to-spec-run.R` read the example from `.tpl_examples` only.
 
    ```r
    ae_severe_soc_pt = list(population = "SAF"),
@@ -87,11 +100,14 @@ with yours.
 
 5. **Make the help page.** Run `devtools::document()`. It writes
    `man/tfl_tpl_ae_severe_soc_pt.Rd`, and `test-tpl-docs.R` checks that it
-   exists and has a row for each parameter. If `document()` also changes Rd
-   files that have nothing to do with your template, revert those
-   (`git checkout -- man/<file>.Rd`); stage only your own.
+   exists and has a row for each parameter. `document()` may print that
+   roxygen2 is older or newer than the `RoxygenNote` in `DESCRIPTION`, and it
+   may rewrite Rd files you did not touch. Revert those
+   (`git checkout -- man/<file>.Rd`, and `DESCRIPTION` if it changed); stage
+   only your own.
 
-6. **Write its tests** in `tests/testthat/test-tpl-<name>.R`. Model the file
+6. **Write its tests** in `tests/testthat/test-tpl-<name>.R`, with the name's
+   underscores written as hyphens: `test-tpl-ae-severe-soc-pt.R`. Model the file
    on `tests/testthat/test-tpl-ae-pt-freq.R`: a test of the expanded items
    (`tfl_template_expand()`), then a test of the table against the key
    (see "Computing the key"). A variant has no `tpl_<name>()` function;
@@ -189,29 +205,37 @@ the definition, and give the key a comment that says what it counts.
 ## 6. Run the tests
 
 Install again, then run these (each is a `filter` of
-`testthat::test_dir("tests/testthat", filter = ...)`):
+`testthat::test_dir("tests/testthat", filter = ...)`). In a filter too, the
+name's underscores become hyphens: `tpl-ae-severe-soc-pt`.
 
 | Filter | What it checks |
 |--------|----------------|
-| `tpl-<name>` | your own test file |
+| `tpl-<name>` (hyphens) | your own test file |
 | `template-company` | the example exists and expands |
 | `tfl-tpl` | the registry and the `ai` list |
 | `tpl-docs` | the help page exists, a row for each parameter |
 | `tpl-help` | the help text of the templates |
 | `tpl-catalog` | the catalog, if you added a row |
 | `template-spec` | every template as a template SPEC |
-| `template-to-spec-run` | every template built to an RTF (needs `haven`) |
+| `template-to-spec-run` | every template built to an RTF (needs `haven`; takes about 10 minutes: run it last) |
 
 ```r
 for (f in c("tpl-<name>", "template-company", "tfl-tpl", "tpl-docs", "tpl-help",
             "template-spec", "template-to-spec-run")) {
-  testthat::test_dir("tests/testthat", filter = f)
+  testthat::test_dir("tests/testthat", filter = f,
+                     package = "tflspec", load_package = "installed")
 }
 lintr::lint_package()
 ```
 
-Then open the pull request as `CONTRIBUTING.md` describes. A pull request
-runs the tests and lint; the maintainers run the wider checks on `next`.
+`package` and `load_package` run the tests against the installed package. A
+plain `test_dir()` fails `tpl-docs` and `tpl-help` with `could not find
+function ".tpl_rd"`.
+
+Then open the pull request against `main` as `CONTRIBUTING.md` describes, and
+fill the "User-visible change (for NEWS)" field of the template. A pull request
+against `main` runs the full R-CMD-check and builds the pkgdown site; lint is
+not in CI, so run it yourself.
 
 ## 7. What the Shiny app needs
 
