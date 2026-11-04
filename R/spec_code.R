@@ -152,6 +152,8 @@
 }
 
 .spec_code_line <- function(x) {
+  # (a tfl_r is its text, never a deparsed structure())
+  if (inherits(x, "tfl_r")) return(paste(as.character(unclass(x)), collapse = " "))
   if (inherits(x, "tfl_spec_sym")) return(x$name)
   if (inherits(x, "tfl_spec_expr")) return(x$text)
   if (inherits(x, "tfl_spec_formula")) return(paste("~", x$text))
