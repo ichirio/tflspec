@@ -380,7 +380,7 @@
     })), error = function(e) character())
   }
   where <- sprintf("%s (%s)", sprintf("%s.%s", toupper(ds), post), paste(vals, collapse = ", "))
-  one <- function(k, ok, allowed_in, fix) {
+  one <- function(k, ok, allowed_in, fix, wont = "they will not print") {
     entries <- texts(args[[k]])
     if (is.null(entries)) return()
     good <- entries %in% ok
@@ -388,20 +388,23 @@
     bad <- paste(entries[!good], collapse = ", ")
     p <<- if (any(good)) {
       .ai_problem(p, paste(at, "template args", k), sprintf(
-        "%s of template %s: %s match no value of %s%s; they will not print",
-        k, real, bad, where, allowed_in), "warning")
+        "%s of template %s: %s match no value of %s%s; %s",
+        k, real, bad, where, allowed_in, wont), "warning")
     } else {
       .ai_problem(p, paste(at, "template args", k), sprintf(
         "%s of template %s: %s match no value of %s%s; %s",
         k, real, bad, where, allowed_in, fix))
     }
   }
-  one("levels", c(vals, cl_text(post), cl_text(base)),
-      " or value or label of the report's codelists",
+  # (a code list's text counts when both columns have it: one column's alone
+  # leaves the other unmatched)
+  one("levels", c(vals, intersect(cl_text(post), cl_text(base))),
+      sprintf(" or a value or label the report's `codelists` give for both %s and %s", post, base),
       sprintf(paste0("`levels` are the data's values; for other printed text give ",
                      "`codelists` with value and label for %s and %s"), post, base))
   one("worst", vals, " (a code list's label does not count)",
-      "`worst` is matched against the data's values, before any code list: write the values")
+      "`worst` is matched against the data's values, before any code list: write the values",
+      wont = "they rank nothing, so check the order")
   p
 }
 

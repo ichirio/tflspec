@@ -379,9 +379,10 @@ test_that("a listing drafted from the listing template is built (RTF)", {
 })
 
 # shift's `levels` and `worst` against the data's values (#636)
-aitpl_shift_answer <- function(template = "shift", args = "levels: [Low, Normal, High]", codelists = FALSE) {
+aitpl_shift_answer <- function(template = "shift", args = "levels: [Low, Normal, High]", codelists = FALSE,
+                                cl_vars = c("ANRIND", "BNRIND")) {
   cl <- c("    codelists:",
-          paste0("      ", c("ANRIND", "BNRIND"),
+          paste0("      ", cl_vars,
                  ": [{value: LOW, label: Low}, {value: NORMAL, label: Normal}, {value: HIGH, label: High}]"))
   tfl_ai_parse(aitpl_answer(
     "tflspec_ai: {task: table, version: 1, outputs: [T-14-3-4]}",
@@ -413,6 +414,12 @@ test_that("shift: `levels` that match no value of the data are an error, unless 
                fixed = TRUE)
   # a code list for both columns: the labels are the printed text
   expect_identical(nrow(aitpl_shift_check(codelists = TRUE)), 0L)
+  # a list for one column only leaves the other unmatched: the same silent failure
+  for (v in c("ANRIND", "BNRIND")) {
+    p <- aitpl_shift_check(codelists = TRUE, cl_vars = v)
+    expect_identical(p$severity, "error", info = v)
+    expect_match(p$problem, "both ANRIND and BNRIND", fixed = TRUE)
+  }
   # the data's values
   expect_identical(nrow(aitpl_shift_check(args = "levels: [LOW, NORMAL, HIGH]")), 0L)
   # a value the data lacks, besides: said, but a shell may have one
@@ -435,4 +442,8 @@ test_that("shift: `worst` is matched with the data's values, a code list's label
   expect_identical(nrow(aitpl_shift_check(args = "worst: [HIGH, LOW, NORMAL]", codelists = TRUE)), 0L)
   p <- aitpl_shift_check(args = "worst: [HIGH, LOW, Normal]")
   expect_identical(p$severity, "warning")
+  # (an unmatched `worst` entry ranks nothing: not "will not print")
+  expect_match(p$problem, "Normal match no value", fixed = TRUE)
+  expect_match(p$problem, "they rank nothing, so check the order", fixed = TRUE)
+  expect_no_match(p$problem, "will not print", fixed = TRUE)
 })
