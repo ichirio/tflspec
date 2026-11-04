@@ -140,7 +140,11 @@
       if (isTRUE(x$multiple)) what <- paste0(what, ", several")
       if (!is.null(x$of)) what <- paste0(what, " of ", x$of)
       if (length(x$choices)) what <- paste0(what, ": ", paste(x$choices, collapse = " | "))
-      if (length(x$fields)) what <- paste0(what, " {", paste(x$fields, collapse = ", "), "}")
+      if (.tpl_is_name_text(x)) {
+        what <- "mapping, name: text"
+      } else if (length(x$fields)) {
+        what <- paste0(what, " {", paste(x$fields, collapse = ", "), "}")
+      }
       tgt <- if (identical(x$group, "target") || (is.null(x$group) && x$name %in% target)) " [target]" else ""
       out <- c(out, sprintf("  - `%s`%s%s (%s) = %s%s", x$name, tgt,
                             if (isTRUE(x$required)) "*" else "", what, .ai_tpl_value(x$default),
@@ -311,6 +315,15 @@
   for (x in params) {
     v <- args[[x$name]]
     if (is.null(v)) next
+    # (a map written as a list of {name, text} is read as the mapping; one
+    # that cannot be read says so here, not at the expanded item)
+    if (.tpl_is_name_text(x)) {
+      chk <- tryCatch(.tpl_name_text_map(v, nm, x$name, "tfl_ai_check()"), error = function(e) e)
+      if (inherits(chk, "error")) {
+        add(paste("template args", x$name), sub("^[^:]*: ", "", conditionMessage(chk)))
+        next
+      }
+    }
     ok <- switch(x$type %||% "text",
                  flag = is.logical(v) && length(v) == 1L,
                  # (YAML reads [0.25, 1, 2] -- decimals and whole numbers -- as a list)
