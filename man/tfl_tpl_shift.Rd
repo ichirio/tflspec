@@ -31,6 +31,7 @@ The table template \code{shift}, layout \code{shift}. Its program is one call, \
    \code{total_label} \tab other \tab call \tab Total \tab  \tab the row of all the subjects; NULL: none \cr
    \code{param_page} \tab other \tab call \tab TRUE \tab  \tab TRUE: a page a parameter, named in the titles by 'param_heading' \cr
    \code{param_heading} \tab other \tab call \tab Parameter: \{value\} \tab  \tab a parameter's page name ('\{value\}': the parameter) \cr
+   \code{header_n} \tab other \tab call \tab TRUE \tab  \tab TRUE: each page's arm headings show the arm's subjects for that parameter (N=); FALSE: the arm only. Only with 'param_page': one page of several parameters has no one N \cr
 }
 }
 
