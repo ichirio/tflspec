@@ -52,5 +52,4 @@ lintr::lint_package()      # should be clean
 devtools::document()
 ```
 
-The continuous integration runs the full test suite and `R CMD check` on
-your pull request.
+A pull request runs the tests and lint; the maintainers run the wider checks on `next`.

@@ -43,8 +43,8 @@ be one of `from`'s parameters: `names(tfl_template_params("ae_soc_pt"))`.
 
 ## 2. The variant path
 
-The example below makes a fictional variant, `ae_rel_soc_pt`: treatment-
-emergent adverse events judged related to the study drug. Replace the names
+The example below makes a fictional variant, `ae_severe_soc_pt`: treatment-
+emergent adverse events graded severe. Replace the names
 with yours.
 
 1. **Define it** in `R/tpl_registry.R`, next to the variants of the same
@@ -53,15 +53,15 @@ with yours.
    shape of `stf_t02_demog`, below `demog`.
 
    ```r
-   tfl_template_variant("ae_rel_soc_pt", from = "ae_soc_pt",
-     label = "Related adverse events by SOC and PT",
+   tfl_template_variant("ae_severe_soc_pt", from = "ae_soc_pt",
+     label = "Severe adverse events by SOC and PT",
      example = list(population = "SAF"), ai = FALSE,
-     defaults = list(where = "TRTEMFL == \"Y\" & AEREL == \"RELATED\"",
-                     any_row_label = "Any related TEAE"))
+     defaults = list(where = "TRTEMFL == \"Y\" & AESEV == \"SEVERE\"",
+                     any_row_label = "Any severe TEAE"))
    ```
 
    Keep every string ASCII. Check the names and values you filter on against
-   the bundled data, for example `table(adae$AEREL)`.
+   the bundled data, for example `table(adae$AESEV)`.
 
 2. **Set `ai`.** See "The `ai` trap" below. A first contribution sets
    `ai = FALSE`.
@@ -72,7 +72,7 @@ with yours.
    `names(.tpl_examples)`).
 
    ```r
-   ae_rel_soc_pt = list(population = "SAF"),
+   ae_severe_soc_pt = list(population = "SAF"),
    ```
 
    Put it next to the template it comes from. Mind the comma at the end of
@@ -81,12 +81,12 @@ with yours.
 4. **Add its help page block** to `R/tpl_docs.R`, in alphabetical order:
 
    ```r
-   #' @eval .tpl_rd("ae_rel_soc_pt")
+   #' @eval .tpl_rd("ae_severe_soc_pt")
    NULL
    ```
 
 5. **Make the help page.** Run `devtools::document()`. It writes
-   `man/tfl_tpl_ae_rel_soc_pt.Rd`, and `test-tpl-docs.R` checks that it
+   `man/tfl_tpl_ae_severe_soc_pt.Rd`, and `test-tpl-docs.R` checks that it
    exists and has a row for each parameter. If `document()` also changes Rd
    files that have nothing to do with your template, revert those
    (`git checkout -- man/<file>.Rd`); stage only your own.
@@ -94,7 +94,7 @@ with yours.
 6. **Write its tests** in `tests/testthat/test-tpl-<name>.R`. Model the file
    on `tests/testthat/test-tpl-ae-pt-freq.R`: a test of the expanded items
    (`tfl_template_expand()`), then a test of the table against the key
-   (step 4 of "Computing the key"). A variant has no `tpl_<name>()` function;
+   (see "Computing the key"). A variant has no `tpl_<name>()` function;
    call it with `tfl_tpl(ard, "<name>", population = "SAF")`.
 
 7. **Optional: a catalog row** in `inst/templates/catalog.csv`, only when the
@@ -168,15 +168,15 @@ Count them from the bundled data in plain R, then expect those numbers.
 test_that("the table: the any-event row is the key", {
   skip_if_not_installed("cards")
   saf <- adsl[adsl$SAFFL == "Y", ]
-  ae <- adae[adae$SAFFL == "Y" & adae$TRTEMFL == "Y" & adae$AEREL == "RELATED", ]
+  ae <- adae[adae$SAFFL == "Y" & adae$TRTEMFL == "Y" & adae$AESEV == "SEVERE", ]
   # the key: the subjects with at least one such event, by arm
   key <- tapply(ae$USUBJID, ae$TRT01A, function(u) length(unique(u)))
   ard <- cards::ard_stack_hierarchical(ae, variables = c(AEBODSYS, AEDECOD),
                                        by = TRT01A, denominator = saf,
                                        id = USUBJID, over_variables = TRUE)
-  p <- tfl_tpl(ard, "ae_rel_soc_pt", population = "SAF")
+  p <- tfl_tpl(ard, "ae_severe_soc_pt", population = "SAF")
   tab <- as.data.frame(suppressMessages(rtfreporter::plan_apply(p, "table")))
-  expect_identical(tab$group1[1L], "Any related TEAE")
+  expect_identical(tab$group1[1L], "Any severe TEAE")
   expect_identical(as.integer(sub(" .*", "", tab[["Drug X"]][1L])),
                    as.integer(key[["Drug X"]]))
 })
@@ -210,8 +210,8 @@ for (f in c("tpl-<name>", "template-company", "tfl-tpl", "tpl-docs", "tpl-help",
 lintr::lint_package()
 ```
 
-Then open the pull request as `CONTRIBUTING.md` describes. The continuous
-integration runs everything else.
+Then open the pull request as `CONTRIBUTING.md` describes. A pull request
+runs the tests and lint; the maintainers run the wider checks on `next`.
 
 ## 7. What the Shiny app needs
 
