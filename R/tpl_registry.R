@@ -125,7 +125,7 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
     k("x_breaks", "number", TRUE),
     k(c("count_cell", "any_row_label"), "text"),
     # a variable's heading each: given by name, merged with the default's
-    k(c("labels", "param_labels"), "list", fields = nv, merge = TRUE),
+    k(c("labels", "param_labels", "subgroup_labels"), "list", fields = nv, merge = TRUE),
     # the rows: given, they are the rows (no merge)
     k("cells", "list", fields = c("label", "template")),
     k("flags", "list", TRUE, fields = c("id", "label", "where")),
