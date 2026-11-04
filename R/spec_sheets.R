@@ -368,8 +368,8 @@ tfl_sheets_from_spec <- function(study, outputs) {
   list(table = table, planner = .rows_df(planner, c("output_id", "description", "setup_code", "process_code",
                                                      "section", "population", "datasets", "batches")),
        ard = ard,
-       listing = list(listings = .rows_df(listings, c("output_id", .listing_sheets$listings)),
-                      listing_cols = .rows_df(listing_cols, c("output_id", .listing_sheets$listing_cols)),
+       listing = list(listings = .rows_df(listings, .listing_sheets$listings),
+                      listing_cols = .rows_df(listing_cols, .listing_sheets$listing_cols),
                       figures = .rows_df(fig_rows, c("output_id", "datasets", "ard"))),
        figures = figures, study = s$study,
        not_converted = if (length(nc)) do.call(rbind, nc) else

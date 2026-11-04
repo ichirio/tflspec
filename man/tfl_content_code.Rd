@@ -9,7 +9,8 @@ tfl_content_code(
   data = NULL,
   plan = "plan",
   pipe = NULL,
-  template = c("call", "items")
+  template = c("call", "items"),
+  study = NULL
 )
 }
 \arguments{
@@ -37,6 +38,11 @@ normalization).  A figure's template (\code{km_survival}): its data steps
 written out, then \verb{content <- tfl_tpl(<data>, "<name>", ...)} and the
 report's own items \code{+}-ed after it; \code{"items"} (or a report that
 replaces one of the template's layers) writes its design.}
+
+\item{study}{The study (\code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}) or its folder; for a listing
+of records (erb{data: \{source: dataset\}}) the code starts with its data
+part, as \code{\link[=tfl_listing_code]{tfl_listing_code()}} \code{part = "data"} writes it (the dataset
+read, its condition, code lists and order).  \code{NULL}: the content only.}
 }
 \value{
 The code, one element a line.

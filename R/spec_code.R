@@ -1302,6 +1302,10 @@ tfl_content_run <- function(output, data) {
 #'   written out, then `content <- tfl_tpl(<data>, "<name>", ...)` and the
 #'   report's own items `+`-ed after it; `"items"` (or a report that
 #'   replaces one of the template's layers) writes its design.
+#' @param study The study ([tfl_read_study_spec()]) or its folder; for a listing
+#'   of records (`data: {source: dataset}`) the code starts with its data
+#'   part, as [tfl_listing_code()] `part = "data"` writes it (the dataset
+#'   read, its condition, code lists and order).  `NULL`: the content only.
 #' @return The code, one element a line.
 #' @examples
 #' out <- tfl_output("T-1", "table", content = list(
@@ -1312,7 +1316,7 @@ tfl_content_run <- function(output, data) {
 #' @seealso [tfl_table_code()] for a table workbook; [tfl_schema()].
 #' @export
 tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
-                             template = c("call", "items")) {
+                             template = c("call", "items"), study = NULL) {
   if (!inherits(output, "tfl_output")) {
     .ard_stop("tfl_content_code(): `output` is a report, tfl_output().")
   }
@@ -1341,6 +1345,7 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
                              "yet; tables, listings and figures, for now."), output$kind))
   }
   for (it in output$content) .schema_need_version(it)
+  if (identical(output$kind, "listing")) output$content <- .content_listing_labels(output$content)
   # the study's rounding is the setup's option, not a report's item
   if (!is.null(attr(output, "study_rounding"))) {
     output$content <- .items_for_program(output$content, attr(output, "study_rounding"))
@@ -1381,8 +1386,39 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
       .schema_fn_name(it$fn) %in% .content_data_steps, NA))
     data <- output$data$object %||% if (pre) "ard" else "data"
   }
-  .content_table_code(output$content, data = data, plan = plan, pipe = pipe,
-                      kind = output$kind)
+  # a listing of records: its data part first, the sheets' writer's
+  recs <- if (!is.null(study) && identical(output$kind, "listing") &&
+              identical(output$data$source, "dataset")) .content_listing_data(output, study)
+  c(recs, if (length(recs)) "",
+    .content_table_code(output$content, data = data, plan = plan, pipe = pipe,
+                        kind = output$kind))
+}
+
+# A listing's data part for its content code: tfl_listing_code(part =
+# "data"), the one writer both paths share (R/spec_parts.R)
+.content_listing_data <- function(output, study) {
+  if (is.character(study) && length(study) == 1L) study <- tfl_read_study_spec(study)
+  spec <- .ard_spec_of_study(study, output_id = output$id)$spec
+  .records_code(output, output$data, "data", spec)
+}
+
+# A listing's labels as the sheets write them (.listing_label(): a
+# backslash-n is a line break), the one place for both paths
+.content_listing_labels <- function(content) {
+  fix <- function(a) {
+    for (nm in intersect(c("label", "sep"), names(a))) {
+      if (is.character(a[[nm]])) a[[nm]] <- .listing_label(a[[nm]])
+    }
+    a
+  }
+  lapply(content, function(it) {
+    if (!identical(.schema_fn_name(it$fn), "plan_listing")) return(it)
+    it$args$cols <- lapply(it$args$cols, function(cl) {
+      if (is.list(cl) && is.list(cl$args)) cl$args <- fix(cl$args)
+      cl
+    })
+    it
+  })
 }
 
 # A table's or a listing's data steps as code, one element a line: each
