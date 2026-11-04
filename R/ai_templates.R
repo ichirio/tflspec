@@ -76,13 +76,23 @@
     "records `where` keeps: with `where: ONTRTFL == \"Y\"` the baseline is empty; for a ",
     "baseline, `where: ONTRTFL == \"Y\" | ABLFL == \"Y\"`."),
   shift = paste0(
-    "`levels` may be the code list's codes or its labels (`Low`, `Normal`, `High`); ",
-    "`Missing` and `Total` need not be in the code list: the rows are `levels`, ",
-    "then `Missing`, then `Total`."),
+    "`levels` are the data's values, in order (`LOW`, `NORMAL`, `HIGH`); to print other ",
+    "text (`Low`), give the report's `codelists` for both the post and the baseline ",
+    "column (value, label), and `levels` may then be the codes or the labels; ",
+    "`Missing` and `Total` are the template's rows: not in `levels`, and they need not ",
+    "be in the code list; the rows are `levels`, then `Missing`, then `Total` (with a ",
+    "code list for the baseline they always print, ",
+    "empty when nobody is in them; without one, `Missing` prints only when a subject ",
+    "has no baseline value)."),
   lab_shift = paste0(
-    "`levels` may be the code list's codes or its labels (`Low`, `Normal`, `High`); ",
-    "`Missing` and `Total` need not be in the code list: the rows are `levels`, ",
-    "then `Missing`, then `Total`."),
+    "`levels` are the data's values, in order (`LOW`, `NORMAL`, `HIGH`); to print other ",
+    "text (`Low`), give the report's `codelists` for both the post and the baseline ",
+    "column (value, label), and `levels` may then be the codes or the labels; ",
+    "`Missing` and `Total` are the template's rows: not in `levels`, and they need not ",
+    "be in the code list; the rows are `levels`, then `Missing`, then `Total` (with a ",
+    "code list for the baseline they always print, ",
+    "empty when nobody is in them; without one, `Missing` prints only when a subject ",
+    "has no baseline value)."),
   km_survival = paste0(
     "the log-rank p-value is shown by default: set `pvalue: false` when the shell shows ",
     "none."),
@@ -327,6 +337,85 @@
                                                   paste(x$choices, collapse = ", ")))
     }
   }
+  p
+}
+
+# A shift template's `levels` and `worst` against the data's values (the
+# kit's `vars`: a variable's `levels`, ` | ` between the values, NA when the
+# data was not read, the variable has too many values or is not coded).
+# `levels` are the data's values; the report's `codelists` (value, label) for
+# the post and the baseline column give other printed text, so a code list's
+# values and labels pass too.  `worst` is matched against the raw data before
+# any code list (.tpl_shift_code()): the data's values only.  No entry
+# matches: an error; some do not: a warning (a category the data lacks has
+# no row or column).  Nothing is said when the values are not known.
+.ai_check_shift_levels <- function(tp, codelists, vars, at) {
+  p <- .ai_problems()
+  nm <- .ai_scalar_text(tp$name)
+  if (is.null(nm) || is.null(vars) || !all(c("dataset", "variable", "levels") %in% names(vars))) {
+    return(p)
+  }
+  real <- if (nm %in% tfl_templates()$name) nm else
+    tryCatch(.tpl_alias_target(nm, "tfl_ai_check()"), error = function(e) NULL)
+  if (is.null(real) || !real %in% c("shift", "lab_shift")) return(p)
+  args <- tp$args %||% list()
+  pp <- tfl_template_params(real)
+  # (lab_shift has no data / baseline / post parameter: the shift defaults)
+  arg <- function(k) args[[k]] %||% (pp[[k]] %||% .tpl_shift_params[[k]])$default
+  texts <- function(v) {
+    if (is.null(v) || inherits(v, "tfl_r")) return(NULL)
+    v <- unlist(v, use.names = FALSE)
+    if (is.character(v) && length(v) && !anyNA(v)) v else NULL
+  }
+  ds <- texts(arg("data"))
+  post <- texts(arg("post"))
+  base <- texts(arg("baseline"))
+  if (length(ds) != 1L || length(post) != 1L || length(base) != 1L) return(p)
+  r <- which(vars$dataset == toupper(ds) & vars$variable == post)
+  have <- if (length(r)) vars$levels[r[1L]] else NA_character_
+  if (is.na(have) || !nzchar(have)) return(p)
+  vals <- strsplit(have, " | ", fixed = TRUE)[[1L]]
+  # (a report's code list for a column: its values and its labels)
+  cl_text <- function(v) {
+    tryCatch(unlist(lapply(.tpl_cl_rows(codelists[[v]]), function(r) {
+      c(as.character(r$value), as.character(r$label))
+    })), error = function(e) character())
+  }
+  where <- sprintf("%s (%s)", sprintf("%s.%s", toupper(ds), post), paste(vals, collapse = ", "))
+  one <- function(k, ok, allowed_in, fix, wont = "they will not print",
+                  entries = texts(args[[k]])) {
+    if (is.null(entries)) return()
+    good <- entries %in% ok
+    if (all(good)) return()
+    bad <- paste(entries[!good], collapse = ", ")
+    p <<- if (any(good)) {
+      .ai_problem(p, paste(at, "template args", k), sprintf(
+        "%s of template %s: %s match no value of %s%s; %s",
+        k, real, bad, where, allowed_in, wont), "warning")
+    } else {
+      .ai_problem(p, paste(at, "template args", k), sprintf(
+        "%s of template %s: %s match no value of %s%s; %s",
+        k, real, bad, where, allowed_in, fix))
+    }
+  }
+  # (the Missing and Total rows are the template's: an entry of them in
+  # `levels` would be a second one -- the build stops on the duplicate)
+  lv <- texts(args$levels)
+  own <- c(texts(arg("missing_label")), texts(arg("total_label")))
+  for (e in unique(lv[lv %in% own])) {
+    p <- .ai_problem(p, paste(at, "template args levels"), sprintf(
+      "levels of template %s: `%s` is a row the template adds: leave it out of `levels`", real, e))
+  }
+  # (a code list's text counts when both columns have it: one column's alone
+  # leaves the other unmatched)
+  one("levels", c(vals, intersect(cl_text(post), cl_text(base))),
+      sprintf(" or a value or label the report's `codelists` give for both %s and %s", post, base),
+      sprintf(paste0("`levels` are the data's values; for other printed text give ",
+                     "`codelists` with value and label for %s and %s"), post, base),
+      entries = lv[!lv %in% own])
+  one("worst", vals, " (a code list's label does not count)",
+      "`worst` is matched against the data's values, before any code list: write the values",
+      wont = "they rank nothing, so check the order")
   p
 }
 
