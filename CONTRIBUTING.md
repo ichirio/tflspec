@@ -85,6 +85,7 @@ devtools::document()
 
 A pull request against `main` runs the full R-CMD-check: R CMD check on
 ubuntu (R devel, release, oldrel and 4.2), macOS and Windows, with ggplot2 3.5
-and 4.0 and the oldest cards and cardx. It also builds the pkgdown site. Lint is
-not in CI: run it yourself. (The maintainers' pull requests into `next` run
-only a quick test job.)
+and 4.0 and the oldest cards and cardx. It also builds the pkgdown site. A lint
+job runs on every pull request; run `lintr::lint_package()` before a push too,
+so that it does not fail there. (The maintainers' pull requests into `next` run
+the lint job and a quick test job.)
