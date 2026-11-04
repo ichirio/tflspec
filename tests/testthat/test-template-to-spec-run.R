@@ -63,7 +63,7 @@ test_that("every template: its RTF as a template report = as the code SPEC tfl_t
   writeLines(c(
     "# (a study's setup attaches rtfreporter, never tflspec)",
     "library(rtfreporter)",
-    "d <- commandArgs(TRUE)[1]; ids <- commandArgs(TRUE)[-1]",
+    "d <- commandArgs(TRUE)[1]; part <- commandArgs(TRUE)[2]; ids <- commandArgs(TRUE)[-(1:2)]",
     "res <- lapply(ids, function(id) {",
     "  f <- file.path(d, 'spec', 'outputs', paste0(id, '.yml'))",
     "  run <- function() tryCatch(tflspec::tfl_run_output(id, dir = d), error = function(e) e)",
@@ -77,13 +77,28 @@ test_that("every template: its RTF as a template report = as the code SPEC tfl_t
     "  msg <- function(x) if (inherits(x, 'error')) gsub('[\\r\\n]+', ' ', conditionMessage(x)) else ''",
     "  data.frame(id = id, a = msg(a), b = msg(b))",
     "})",
-    "write.csv(do.call(rbind, res), file.path(d, 'tsr.csv'), row.names = FALSE)"),
+    "write.csv(do.call(rbind, res), file.path(d, paste0('tsr-', part, '.csv')), row.names = FALSE)"),
     file.path(w, "run.R"))
-  out <- suppressWarnings(system2(rscript, c(file.path(w, "run.R"), d, unname(ids)),
-                                  stdout = TRUE, stderr = TRUE))
-  csv <- file.path(d, "tsr.csv")
-  expect_true(file.exists(csv), info = paste(utils::tail(out, 20L), collapse = "\n"))
-  r <- utils::read.csv(csv, colClasses = "character", na.strings = character())
+  # (the reports are independent: a few children build them side by side,
+  # each its own share, the slow ones spread over them)
+  n_child <- max(1L, min(4L, length(ids), parallel::detectCores(), na.rm = TRUE))
+  share <- rep_len(seq_len(n_child), length(ids))
+  logs <- file.path(w, paste0("child-", seq_len(n_child), ".log"))
+  for (k in seq_len(n_child)) {
+    system2(rscript, c(file.path(w, "run.R"), d, k, unname(ids)[share == k]),
+            stdout = logs[k], stderr = logs[k], wait = FALSE)
+  }
+  csvs <- file.path(d, paste0("tsr-", seq_len(n_child), ".csv"))
+  # (each child writes its csv last, errors of a build recorded: wait for
+  # them all, 30 minutes at most)
+  t0 <- Sys.time()
+  while (!all(file.exists(csvs)) && difftime(Sys.time(), t0, units = "mins") < 30) {
+    Sys.sleep(1)
+  }
+  out <- unlist(lapply(logs, function(l) if (file.exists(l)) readLines(l, warn = FALSE)))
+  expect_true(all(file.exists(csvs)), info = paste(utils::tail(out, 20L), collapse = "\n"))
+  r <- do.call(rbind, lapply(csvs[file.exists(csvs)], utils::read.csv,
+                             colClasses = "character", na.strings = character()))
   # (the run's date and time, wherever a footer prints them, are not the report)
   rtf <- function(p) {
     x <- readLines(p, warn = FALSE)
