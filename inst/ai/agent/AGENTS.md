@@ -126,8 +126,11 @@ no rework:
 - a TOC and a shell that name different sets, the SAP siding with one:
   "16.2.7.1: Safety Analysis Set, as the shell and SAP 10 (the TOC says
   Full Analysis Set) -- OK?";
-- two derivations, one per document: the one the specific note or the
-  newer SAP gives, said so in the question.
+- two derivations, one per document, that would change the numbers: ask.
+  When one is the shell's note and the other the SAP's rule, the default
+  is the shell's (an SAP often gives a derivation in prose, a shell is
+  written per output).  Otherwise the default is the one the specific
+  note or the newer SAP gives.  Say so in the question.
 
 **(c) Ask an open question** only when no sensible default exists: a
 variable the shell names that the data does not have (BMIBL), a
@@ -188,6 +191,9 @@ stop is *Running the requests*, below: one, or a batch.  For each request:
    - the shell's layout (its columns, rows and items) over the SAP's when
      the two differ: the shell is the agreed layout, the SAP is amended
      later;
+   - the shell's note over an SAP derivation rule when the two would
+     change the numbers: the SAP gives derivations in prose, the shell is
+     written per output; the question says so;
    - a specific programming note or derivation rule over a generic
      footnote (footnotes are often stale), and the question says so.
 3. **Ask, or take your default**, as you are run: one request, you ask in
