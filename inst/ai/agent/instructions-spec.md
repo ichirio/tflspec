@@ -223,7 +223,7 @@ anova, kruskal, paired_ttest, paired_wilcox, mcnemar, km_diff,
 hierarchical_count, onesample_ttest, onesample_wilcox, smd, poisson,
 oneway, aov, mcnemar_long, records, labels, nested_models,
 regression_basic, cohens_d, hedges_g, paired_cohens_d, paired_hedges_g,
-mood, vif, wald, custom (or a `pkg::function` the instructions list).  `denominator` is `population`,
+mood, vif, wald, stack, subgroups, pairwise (a `parent`'s), custom (or a `pkg::function` the instructions list).  `denominator` is `population`,
 `row`, `column`, `cell`, or an analysis data's id.
 
 `table_plan`: `cols` names a `by` variable of the analyses (the arms),

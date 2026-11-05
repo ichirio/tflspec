@@ -51,11 +51,11 @@ by weight.  A keyword writes the same code as its function, so this
 measures how easily a SPEC is written, not what it can say; the argument
 percentages do not move with it.
 
-| ard_*() with a method keyword | 2026-11-02 before | 2026-11-02 after | 2026-11-03 after | 2026-11-04 before* | 2026-11-04 after |
-|---|---:|---:|---:|---:|---:|
-| weight 3 | 21 of 27 | 23 of 27 | 24 of 27 | 24 of 27 | **24 of 27** |
-| weight 2 | 0 of 19 | 5 of 19 | 12 of 19 | 12 of 23 | **20 of 23** |
-| weight 1 | 0 of 8 | 0 of 8 | 0 of 8 | 0 of 4 | **3 of 4** |
+| ard_*() with a method keyword | 2026-11-02 before | 2026-11-02 after | 2026-11-03 after | 2026-11-04 before* | 2026-11-04 after | 2026-11-05 after |
+|---|---:|---:|---:|---:|---:|---:|
+| weight 3 | 21 of 27 | 23 of 27 | 24 of 27 | 24 of 27 | 24 of 27 | **25 of 27** |
+| weight 2 | 0 of 19 | 5 of 19 | 12 of 19 | 12 of 23 | 20 of 23 | **22 of 23** |
+| weight 1 | 0 of 8 | 0 of 8 | 0 of 8 | 0 of 4 | 3 of 4 | **3 of 4** |
 
 \* 2026-11-04 corrects the weights: the measure named the effect sizes
 `ard_stats_cohens_d()` / `ard_stats_paired_cohens_d()`, which cardx does
@@ -63,14 +63,15 @@ not have, so its four `ard_effectsize_*()` (Cohen's d, Hedges' g, paired)
 were weight 1.  They are weight 2 now.  The argument percentages do not
 move (every argument is yes).
 
-(Without a keyword after 2026-11-04 -- weight 3: `ard_stack()`,
-`ard_hierarchical()`, `ard_hierarchical_count()`, the stacked counts'
-building blocks, written by their name.  Weight 2: `ard_strata()` and
-`ard_pairwise()`, which wrap another analysis (a function in `args`), and
-`ard_mvsummary()`, a summary by the study's own function (`custom` or a
-study function says it more plainly).  Weight 1: `ard_identity()`,
-statistics already computed.  Every cardx `ard_*()` but the survey designs
-has a keyword.)
+(Without a keyword after 2026-11-05 -- weight 3: `ard_hierarchical()`
+and `ard_hierarchical_count()`, the stacked counts' building blocks
+(`hierarchical` / `hierarchical_count` are their stacked forms; one
+keyword a function), written by their name.  Weight 2: `ard_mvsummary()`,
+a summary by the study's own function (`custom` or a study function says
+it more plainly).  Weight 1: `ard_identity()`, statistics already
+computed.  Every cardx `ard_*()` but the survey designs has a keyword;
+since 2026-11-05 so have the three that run other analyses, `ard_stack()`,
+`ard_strata()` and `ard_pairwise()`.)
 
 cards 0.9.0, cardx 0.3.4; 71 functions, 412 arguments (2026-11-01 scope:
 313 of the ard_*() and post helpers' own, 72 passed on, 27 of the code
@@ -99,6 +100,12 @@ versions): **100.0% before and after (412 yes / 0 partial)**.  The run
 added keywords (above) and a check of the names a function passes on
 (below), not arguments.
 
+2026-11-05 (the same scope; cards 0.9.0, cardx 0.3.4, still the CRAN
+versions): **100.0% before and after (412 yes / 0 partial)**.  The run
+added the wrappers' keywords (above) and closed two of the gaps below
+(3: a `custom` row's calls by a plain name; 4: the names passed on to
+`car::Anova()`), not arguments.
+
 (2026-11-01 before: the tflspec of this branch before the run, on the wider
 scope -- the 17 newly catalogued passed-on arguments could be written as R
 in `args` and reached their function, but were not described and their
@@ -121,6 +128,40 @@ function, but the catalog did not describe it and its value was not
 judged: partial.  2026-10-31 before: the same, with
 `update_ard_fmt_fun()` in the `post` scope -- written as R in `post`, its
 names checked, its values not judged.)
+
+### Added 2026-11-05
+
+* Three method keywords for the functions that run other analyses (the
+  rows whose `parent` names this one), each its function by another name
+  -- the same code:
+  * `stack` -- `cards::ard_stack()`: several analyses on the same data and
+    `by` (a demographics table's summaries and counts; `overall = TRUE` for
+    its Total column);
+  * `subgroups` -- `cards::ard_strata()`: an analysis within each level of
+    `strata` (a response rate's difference in each subgroup of a forest
+    plot's table);
+  * `pairwise` -- `cards::ard_pairwise()`: an analysis for each pair of the
+    levels of the one column in `variables`, `include = "Placebo"` for each
+    arm against placebo.
+  Every check of a parent row (one analysis inside `subgroups` /
+  `pairwise`, ONE column for `pairwise`, no `overall` on `subgroups`) and
+  the ARS's flattening take the keyword as the function.  A test writes
+  the three by keyword and by function (the same code), builds the ARD and
+  compares the `pairwise` p-values with `cards::ard_pairwise(include =
+  "Placebo")` called by hand.
+* **A `custom` row's calls by a plain name are judged too** (gap 3): after
+  `library(cards)`, `ard_tabulate(data, denominatr = population)` is
+  `cards::ard_tabulate()`'s call and said as one -- any function cards or
+  cardx defines and exports (cards' first; not the tidyselect helpers they
+  re-export), unless the code binds the name itself (`ard_tabulate <-
+  ...`, a function's argument, a loop's variable).
+* **A name `ard_car_anova()` passes on is looked for in `car::Anova()`'s
+  method of the model** (gap 4): `x = lm(...), tpye = "III"` reaches
+  `car:::Anova.lm()`, whose `...` takes nothing else -- the typo gave type
+  II silently.  A name R matches by its beginning (`typ =` is `type =`)
+  is the argument's.  The model is the call `x` writes (`lm`, `glm`, `coxph`,
+  `stats::aov` ...; a name, `x = fit`, or a model car has no method for is
+  not judged).
 
 ### Added 2026-11-04
 
@@ -301,12 +342,14 @@ Every argument in scope is described and its value judged (since
 1. (closed 2026-11-03: `label_round(scale =)` is the format `xx.x*1000`.)
 2. A `post` step of the study's own or of another package that sets formats
    is not moved: the format step after it gives the defaults.
-3. A `custom` row's code: only its cards / cardx calls written with the
-   package are judged (not `ard_tabulate()` after `library(cards)`, not a
-   name bound to a function).
-4. A passed-on argument's name is checked (since 2026-11-04) only when it
-   reaches a stats or survival function; one passed to broom.helpers, car,
-   effectsize or smd, which pass `...` on again, is not.  The catalog
+3. A `custom` row's code: its cards / cardx calls written with the
+   package or (since 2026-11-05) by a plain name cards / cardx exports are
+   judged; a function bound to another name (`f <- cards::ard_tabulate`)
+   is not.
+4. A passed-on argument's name is checked (since 2026-11-04) when it
+   reaches a stats or survival function, and (since 2026-11-05) the
+   `car::Anova()` method of a model written in `x`; one passed to
+   broom.helpers, effectsize or smd, which pass `...` on again, is not.  The catalog
    names the arguments clinical tables use, not every argument of the
    function they reach (`stats::aov()`'s, `car::vif(type =)` -- a method's
    argument, not the generic's -- are not described).
@@ -360,6 +403,14 @@ Percentage: yes counts 1, partial 0.5.
 | 2026-11-02 after  | 51.8% (326 / 19 / 303 of 648) | 59.2% (326 / 19 / 222 of 567) | 42 / 6 / 67 |
 | 2026-11-03 before / after | 51.8% (326 / 19 / 303 of 648) | 59.2% (326 / 19 / 222 of 567) | 42 / 6 / 67 |
 | 2026-11-04 before / after | 51.6% (326 / 19 / 305 of 650) | 59.0% (326 / 19 / 224 of 569) | 41 / 7 / 67 |
+| 2026-11-05 before / after | 51.6% (326 / 19 / 305 of 650) | 59.0% (326 / 19 / 224 of 569) | 41 / 7 / 67 |
+
+(2026-11-05: rtfreporter@next 0872829 (its changes since fc1a438 are the
+listing's wrapping of a value with a separator, the flextable / huxtable
+adapters' options, tests and quality documents: no new exported argument)
+and tflspec@next 48d8a3b merged; the run went to cards / cardx -- the
+table is unchanged.  The "no" rows left are the lower-level table API the
+plan verbs stand for; the SPEC-relevant gaps are the four below.)
 
 (2026-11-04: rtfreporter@next fc1a438 and tflspec@next a9c791a merged.
 rtfreporter's one new argument is `render_format` ("png" or "emf", #888)

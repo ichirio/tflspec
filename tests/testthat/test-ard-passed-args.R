@@ -187,3 +187,31 @@ test_that("a passed-on name the function it reaches does not have is said", {
   expect_warning(exact_spec(test_row("mean_ci", "exatc = FALSE")),
                  "stats::t.test\\(\\) / stats::wilcox.test\\(\\)")
 })
+
+test_that("a name passed on to car::Anova() is looked for in the model's method", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("car")
+  anova_row <- function(args) list(method = "anova", population_id = "SAF",
+                                   args = args)
+  # Anova.lm() ignores a name it does not have: type II, silently
+  expect_warning(exact_spec(anova_row(
+    "x = lm(AGE ~ TRT01A + SEX, data = data), tpye = \"III\"")),
+    "ard_car_anova\\(\\) has no argument `tpye`, and passes it on to car's Anova.lm\\(\\)")
+  # a name R matches by its beginning is the argument's (typ = is type =)
+  expect_no_warning(exact_spec(anova_row(
+    "x = lm(AGE ~ TRT01A + SEX, data = data), typ = \"III\"")))
+  expect_warning(exact_spec(anova_row(paste(
+    "x = stats::glm(I(SEX == \"F\") ~ TRT01A, family = binomial, data = data),",
+    "test.statistc = \"Wald\""))),
+    "Anova.glm\\(\\)")
+  # the method's own names, the catalog's: none
+  expect_no_warning(exact_spec(anova_row(
+    "x = lm(AGE ~ TRT01A + SEX, data = data), type = \"III\", white.adjust = \"hc3\"")))
+  expect_no_warning(exact_spec(anova_row(paste(
+    "x = glm(I(SEX == \"F\") ~ TRT01A, family = binomial, data = data),",
+    "test.statistic = \"Wald\", error.estimate = \"pearson\""))))
+  # a model by a name, or one car has no method for: not judged
+  expect_no_warning(exact_spec(anova_row("x = fit, tpye = 3")))
+  expect_no_warning(exact_spec(anova_row("x = my_model(data), tpye = 3")))
+})

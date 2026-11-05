@@ -38,7 +38,8 @@
     known <- c(names(fm), ".overall", ".missing", "by", "variables", "strata",
                "denominator", "statistic")
     if ("..." %in% names(fm) && !.dots_checked(call)) {
-      out <- c(out, .passed_args_unknown(tag, call, setdiff(given, known)))
+      out <- c(out, .passed_args_unknown(tag, call, setdiff(given, known),
+                                         a$args[i]))
       next
     }
     bad <- setdiff(given, known)
@@ -237,9 +238,11 @@
 # row's code (`cards::ard_tabulate(data, variables = SEX, denominatr =
 # population)`, `cardx::ard_categorical_ci(data, ..., method = "wilsn")`):
 # their arguments' names against the function's (its data.frame method's,
-# as `args`), their values by the catalog's kinds.  Only a call written
-# with its package (cards:: / cardx::); the rest of the code is the
-# program's.
+# as `args`), their values by the catalog's kinds.  A call written with its
+# package (cards:: / cardx::), or -- since 2026-11-05 -- by the plain name of
+# a function cards or cardx exports (`ard_tabulate(...)` after
+# `library(cards)`) when the code does not bind that name itself; the rest
+# of the code is the program's.
 .custom_args_unknown <- function(a) {
   out <- character()
   code <- a$code %||% rep(NA_character_, nrow(a))
@@ -253,15 +256,26 @@
 }
 
 # The calls of cards' and cardx's functions (pkg::fun(...)) in parsed code,
-# outermost first, those inside their arguments too
+# outermost first, those inside their arguments too.  A call by a plain
+# name cards or cardx exports (cards' first) is one of them, written with
+# its package, unless the code binds that name (`ard_tabulate <- ...`,
+# a function's argument of that name).
 .ard_code_calls <- function(ex) {
   found <- list()
+  own <- .code_bound_names(ex)
+  exports <- if (length(ex)) .ard_exports() else character()
   walk <- function(e) {
     if (!is.call(e)) return(invisible())
     head <- e[[1L]]
+    pkg <- if (is.name(head) && !as.character(head) %in% own)
+      unname(exports[as.character(head)]) else NA_character_
     if (is.call(head) && identical(head[[1L]], as.name("::")) &&
         as.character(head[[2L]]) %in% c("cards", "cardx")) {
       found[[length(found) + 1L]] <<- e
+    } else if (!is.na(pkg)) {
+      q <- e
+      q[[1L]] <- call("::", as.name(pkg), head)
+      found[[length(found) + 1L]] <<- q
     } else if (is.call(head)) {
       walk(head)
     }
@@ -270,6 +284,52 @@
   }
   for (k in seq_along(ex)) walk(ex[[k]])
   found
+}
+
+# The functions cards and cardx define and export (not those they re-export
+# from tidyselect / dplyr), as their package by name: cards' first.  Empty
+# when neither is installed.
+.ard_exports <- function() {
+  out <- character()
+  for (pkg in c("cards", "cardx")) {
+    if (!requireNamespace(pkg, quietly = TRUE)) next
+    ns <- asNamespace(pkg)
+    nm <- setdiff(getNamespaceExports(pkg), names(out))
+    own <- vapply(nm, function(n) {
+      f <- get0(n, envir = ns, inherits = FALSE)
+      is.function(f) && identical(environment(f), ns)
+    }, NA)
+    out <- c(out, stats::setNames(rep(pkg, sum(own)), nm[own]))
+  }
+  out
+}
+
+# The names parsed code binds: assigned (`<-`, `=`, `->`, `assign("x")`),
+# a function's arguments, a for loop's variable
+.code_bound_names <- function(ex) {
+  out <- character()
+  walk <- function(e) {
+    if (!is.call(e)) return(invisible())
+    head <- e[[1L]]
+    if (is.name(head)) {
+      h <- as.character(head)
+      if (h %in% c("<-", "=", "<<-") && is.name(e[[2L]])) {
+        out <<- c(out, as.character(e[[2L]]))
+      } else if (h %in% c("->", "->>") && is.name(e[[3L]])) {
+        out <<- c(out, as.character(e[[3L]]))
+      } else if (h == "assign" && length(e) > 1L && is.character(e[[2L]])) {
+        out <<- c(out, e[[2L]])
+      } else if (h == "function") {
+        out <<- c(out, names(e[[2L]]))
+      } else if (h == "for" && is.name(e[[2L]])) {
+        out <<- c(out, as.character(e[[2L]]))
+      }
+    }
+    for (k in seq_along(e)) if (is.call(e[[k]])) walk(e[[k]])
+    invisible()
+  }
+  for (k in seq_along(ex)) walk(ex[[k]])
+  unique(out)
 }
 
 # What is wrong with one call of a cards / cardx function, `pkg::fun(...)`:
@@ -324,12 +384,15 @@
 # there is ignored or stops).  broom.helpers, car, effectsize and smd pass
 # `...` on again (to the tidier, a model's method ...), so a name not
 # theirs may still be right: not judged.
-.passed_args_unknown <- function(tag, call, given) {
+.passed_args_unknown <- function(tag, call, given, args = NA_character_) {
   if (!length(given)) return(character())
   d <- .ard_catalog_rows("passed_args.csv", "tflspec.ard_passed_args",
                          c("call", "arg"))
   d <- d[d$call == call, , drop = FALSE]
   to <- unique(d$passed_to)
+  if (identical(to, "car::Anova")) {
+    return(.anova_args_unknown(tag, call, given, args, d$arg))
+  }
   if (!length(to) || !all(sub("::.*$", "", to) %in% c("stats", "survival"))) {
     return(character())
   }
@@ -364,4 +427,36 @@
   })
   fs <- c(list(f), Filter(is.function, ms))
   setdiff(unique(unlist(lapply(fs, function(g) names(formals(g))))), "...")
+}
+
+# The same for cardx::ard_car_anova(), which passes `...` to car::Anova():
+# since 2026-11-05 a name is looked for in the method of the model that
+# `x` fits (`x = lm(...)`: car's Anova.lm(); glm, coxph, aov, mlm ... the
+# same), whose `...` takes nothing else -- `tpye = "III"` would be ignored
+# and give type II.  A name R matches by its beginning (`typ = ` is
+# `type = `) is the argument's.  A model by a name (`x = fit`), or one car has no
+# method for, is not judged.
+.anova_args_unknown <- function(tag, call, given, args, catalogued) {
+  if (!requireNamespace("car", quietly = TRUE)) return(character())
+  x <- tryCatch(.args_list(args)[["x"]], error = function(e) NULL)
+  if (!is.call(x)) return(character())
+  fit <- sub("^.*::", "", paste(deparse(x[[1L]]), collapse = ""))
+  m <- tryCatch(utils::getS3method("Anova", fit, optional = TRUE,
+                                   envir = asNamespace("car")),
+                error = function(e) NULL)
+  if (!is.function(m)) return(character())
+  fm <- names(formals(m))
+  has <- setdiff(unique(c(names(formals(car::Anova)), fm)), "...")
+  bad <- setdiff(given, c(has, catalogued))
+  # a name that begins one argument before the method's `...` is that
+  # argument, as R matches it (`typ = "III"` is `type =`)
+  before <- fm[seq_len(match("...", fm, nomatch = length(fm) + 1L) - 1L)]
+  bad <- bad[is.na(pmatch(bad, before))]
+  if (!length(bad)) return(character())
+  sprintf(paste(
+    "%s: cardx %s's %s() has no argument %s, and passes it on to car's",
+    "Anova.%s(), which has none either (it has: %s); it would be ignored"),
+    tag, utils::packageVersion("cardx"), sub("^.*::", "", call),
+    paste0("`", bad, "`", collapse = ", "), fit,
+    paste(setdiff(has, c("mod", "x")), collapse = ", "))
 }

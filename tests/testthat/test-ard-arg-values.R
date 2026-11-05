@@ -220,3 +220,45 @@ test_that("a custom row's cards / cardx calls are judged as args and post are", 
   expect_identical(vapply(calls, function(e) deparse(e[[1L]]), ""),
                    c("cards::ard_stack", "cards::ard_summary"))
 })
+
+test_that("a custom row's calls by the plain name of a cards / cardx function are judged too", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  custom <- function(code) list(method = "custom", population_id = "SAF",
+                                code = code)
+  # after library(cards): ard_tabulate() is cards::ard_tabulate()
+  expect_warning(exact_spec(custom(paste(
+    "library(cards)",
+    "ard_tabulate(data, by = TRT01A, variables = SEX, denominatr = population)",
+    sep = "\n"))),
+    "T / A: `code` ard_tabulate\\(\\) has no argument `denominatr`")
+  # cardx's, in a pipe
+  expect_warning(exact_spec(custom(paste(
+    "data |> ard_categorical_ci(by = TRT01A, variables = SEX,",
+    "method = \"wilson_cc\")"))),
+    "ard_categorical_ci\\(method = \\) is one of \"waldcc\"")
+  # a name the code binds is its own, not cards'
+  expect_no_warning(exact_spec(custom(paste(
+    "ard_tabulate <- function(data, ...) cards::ard_tabulate(data, ...)",
+    "ard_tabulate(data, by = TRT01A, variables = SEX, denominatr = 1)",
+    sep = "\n"))))
+  expect_no_warning(exact_spec(custom(paste(
+    "f <- function(ard_summary) ard_summary(data, mean = 1)",
+    "f(function(...) NULL)", sep = "\n"))))
+  # what fits passes, a re-exported selector is not judged as cards'
+  expect_no_warning(exact_spec(custom(paste(
+    "ard_tabulate(data, by = TRT01A, variables = everything(),",
+    "denominator = population)"))))
+  ex <- parse(text = "x <- ard_summary(data, variables = AGE)\nmean(x$stat)")
+  calls <- .ard_code_calls(ex)
+  expect_identical(vapply(calls, function(e) deparse(e[[1L]]), ""),
+                   "cards::ard_summary")
+  expect_identical(.code_bound_names(parse(text = paste(
+    "a <- 1; 2 -> b; assign(\"cc\", 3)", "for (i in 1:2) NULL",
+    "g <- function(x, y = 1) x", sep = "\n"))),
+    c("a", "b", "cc", "i", "g", "x", "y"))
+  ex <- .ard_exports()
+  expect_identical(ex[["ard_tabulate"]], "cards")
+  expect_identical(ex[["ard_stats_t_test"]], "cardx")
+  expect_false("everything" %in% names(ex))
+})

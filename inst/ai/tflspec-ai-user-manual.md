@@ -1075,7 +1075,8 @@ cat(tfl_report_code(sp, content = "plan"), sep = "\n")
   `onesample_ttest`, `onesample_wilcox`, `smd`, `poisson`, `oneway`, `aov`,
   `mcnemar_long`, `records` (record counts), `labels`, `nested_models`
   (e.g. an interaction test), `regression_basic`, `cohens_d`, `hedges_g`,
-  `paired_cohens_d`, `paired_hedges_g`, `mood`, `vif`, `wald`, `custom` —
+  `paired_cohens_d`, `paired_hedges_g`, `mood`, `vif`, `wald`, `stack`,
+  `subgroups`, `pairwise` (a parent's: below), `custom` —
   or any
   `pkg::function` (`cards::`, `cardx::`), or a function of the study's own
   that the study key `source` loads (`ard_riskdiff_mn`): it takes the
@@ -1117,10 +1118,12 @@ cat(tfl_report_code(sp, content = "plan"), sep = "\n")
   an analysis `..._TOTAL` without the grouping). Not inside a parent (put
   it on the parent), not on `custom` / `subjects`.
 - `parent`: the analysis this one runs inside, when that one's method is
-  `cards::ard_stack` (several analyses on the same data and `by`, plus the
-  by counts and the total N with `args` `.total_n = TRUE`),
-  `cards::ard_strata` (within the subgroups of its `by` / `strata`) or
-  `cards::ard_pairwise` (each pair of the levels of its one `variables`).
+  `stack` / `cards::ard_stack` (several analyses on the same data and `by`,
+  plus the by counts and the total N with `args` `.total_n = TRUE`),
+  `subgroups` / `cards::ard_strata` (within the subgroups of its `by` /
+  `strata`) or `pairwise` / `cards::ard_pairwise` (each pair of the levels
+  of its one `variables`; `args` `include = "Placebo"` for each arm against
+  placebo).
   The rows inside leave `dataset` / `population_id` / `where` (and in a
   stack `by`) blank: they are the parent's. The program writes one call,
   `cards::ard_stack(adsl_sub, .by = ARM, cards::ard_summary(variables =

@@ -281,11 +281,16 @@ tfl_read_ard_spec <- function(path, check = TRUE, statistics = NULL,
 #'   step's `filter = n >= 2`).  A name or a call is the program's to judge.
 #'   A name a cardx function passes on through `...` to a stats or survival
 #'   function that has no such argument either is said too
-#'   (`ard_stats_t_test(var.eqaul = TRUE)`: `t.test()` would ignore it).
+#'   (`ard_stats_t_test(var.eqaul = TRUE)`: `t.test()` would ignore it), and
+#'   one `ard_car_anova()` passes on to the `car::Anova()` method of the
+#'   model its `x` fits (`x = lm(...), tpye = "III"`: `Anova.lm()` would
+#'   ignore it and give type II).
 #'   The same for the cards / cardx calls in a `custom` row's `code`, written
 #'   with their package (`cards::ard_tabulate(data, denominatr = ...)`,
-#'   `cardx::ard_categorical_ci(..., method = "wilson_cc")`), inside a pipe or
-#'   an `ard_stack()` too; the rest of the code is the program's.
+#'   `cardx::ard_categorical_ci(..., method = "wilson_cc")`) or by the plain
+#'   name of a function cards or cardx exports (`ard_tabulate(...)` after
+#'   `library(cards)`, unless the code binds that name itself), inside a pipe
+#'   or an `ard_stack()` too; the rest of the code is the program's.
 #'
 #' @section The analyses sheet:
 #' `strata` names the variables the analysis is repeated within (cards'
@@ -475,8 +480,9 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
       add(i, "overall", sprintf(paste(
         "%s: inside %s the overall is the parent's: set `overall` on its row"),
         tag, a$parent[i]))
-    } else if (a$method[i] %in% c("custom", "subjects", "cards::ard_strata",
-                                  "cards::ard_pairwise")) {
+    } else if (.wrapper_call(a$method[i]) %in% c("custom", "subjects",
+                                                 "cards::ard_strata",
+                                                 "cards::ard_pairwise")) {
       add(i, "overall", sprintf("%s: a `%s` analysis takes no `overall`%s",
                                 tag, a$method[i],
                                 if (identical(a$method[i], "custom"))
@@ -562,6 +568,8 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 # computed, not on what.  The problems as rows (.ard_problem()).
 .ard_parent_problems <- function(a) {
   par <- a$parent %||% rep(NA_character_, nrow(a))
+  # a wrapper's keyword (`stack`, `subgroups`, `pairwise`) as its function
+  wm <- .wrapper_call(a$method)
   pr <- list(.spec_problems_empty())
   add <- function(i, field, message) {
     pr[[length(pr) + 1L]] <<- .ard_problem(a, i, field, message)
@@ -575,10 +583,11 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
       next
     }
     p <- p[1L]
-    if (!a$method[p] %in% .ard_wrappers) {
+    if (!wm[p] %in% .ard_wrappers) {
       add(i, "parent", sprintf(paste(
         "%s: its parent %s runs no other analyses -- a parent's method is",
-        "one of %s"), tag(i), par[i], paste(.ard_wrappers, collapse = ", ")))
+        "one of %s"), tag(i), par[i],
+        paste(c(names(.ard_wrapper_keywords), .ard_wrappers), collapse = ", ")))
       next
     }
     if (!is.na(par[p])) {
@@ -586,7 +595,7 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
                                tag(i), par[i]))
     }
     own <- c(intersect("data", names(a)), "dataset", "population_id", "where",
-             if (identical(a$method[p], "cards::ard_stack")) c("by", "strata"))
+             if (identical(wm[p], "cards::ard_stack")) c("by", "strata"))
     set <- own[!is.na(unlist(a[i, own]))]
     if (length(set)) {
       add(i, set[1L], sprintf(
@@ -594,7 +603,7 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
         paste0("`", set, "`", collapse = ", "),
         if (length(set) > 1L) "are" else "is", par[i]))
     }
-    if (a$method[i] %in% c("subjects", "custom", .ard_wrappers)) {
+    if (wm[i] %in% c("subjects", "custom", .ard_wrappers)) {
       add(i, "method", sprintf("%s: a `%s` analysis cannot run inside %s",
                                tag(i), a$method[i], par[i]))
     }
@@ -604,21 +613,21 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
         "`data` or `population`"), tag(i), par[i]))
     }
   }
-  for (p in which(a$method %in% .ard_wrappers)) {
+  for (p in which(wm %in% .ard_wrappers)) {
     kids <- which(!is.na(par) & par == a$analysis_id[p] &
                     a$output_id == a$output_id[p])
     if (!length(kids)) next
-    if (!identical(a$method[p], "cards::ard_stack") && length(kids) > 1L) {
+    if (!identical(wm[p], "cards::ard_stack") && length(kids) > 1L) {
       add(p, "method", sprintf("%s: %s runs one analysis; %d name it as parent",
                                tag(p), a$method[p], length(kids)))
     }
-    if (identical(a$method[p], "cards::ard_pairwise") &&
+    if (identical(wm[p], "cards::ard_pairwise") &&
         length(.split_bar(a$variables[p])) != 1L) {
       add(p, "variables", sprintf(
         "%s: ard_pairwise() compares the pairs of ONE column's levels: `variables`",
         tag(p)))
     }
-    if (identical(a$method[p], "cards::ard_stack")) {
+    if (identical(wm[p], "cards::ard_stack")) {
       v <- unlist(lapply(kids, function(k) .split_bar(a$variables[k])))
       if (anyDuplicated(v)) {
         add(p, "variables", sprintf(paste(
@@ -649,17 +658,18 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 .ard_spec_flat <- function(a) {
   par <- a$parent %||% rep(NA_character_, nrow(a))
   if (all(is.na(par))) return(a)
+  wm <- .wrapper_call(a$method)
   drop <- logical(nrow(a))
   for (i in which(!is.na(par))) {
     p <- which(a$output_id == a$output_id[i] & a$analysis_id == par[i])[1L]
     if (is.na(p)) next
     for (cn in c("dataset", "population_id", "where")) a[[cn]][i] <- a[[cn]][p]
     # a stack's overall (.overall = TRUE) is each of its analyses'
-    if (identical(a$method[p], "cards::ard_stack") && !is.null(a$overall)) {
+    if (identical(wm[p], "cards::ard_stack") && !is.null(a$overall)) {
       a$overall[i] <- a$overall[p]
     }
     grp <- c(.split_bar(a$by[p]),
-             if (!identical(a$method[p], "cards::ard_stack"))
+             if (!identical(wm[p], "cards::ard_stack"))
                c(.split_bar(a$strata[p]), .split_bar(a$by[i])))
     a$by[i] <- if (length(grp)) paste(unique(grp), collapse = " | ") else NA
     drop[p] <- TRUE

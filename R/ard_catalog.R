@@ -260,8 +260,21 @@
       "variance inflation factors of a model's terms (args: x = lm(CHG ~ TRTA + BASE + AGE, data = data)); by and variables blank",
       "Wald tests of a model's terms (args: x = glm(AVALN ~ TRTA + SEX, family = binomial, data = data)); by and variables blank"),
     stringsAsFactors = FALSE)
+  # since 2026-11-05: the functions that run other analyses (the rows whose
+  # `parent` names this one), each its function by another name
+  more3 <- data.frame(
+    method = names(.ard_wrapper_keywords),
+    label = c("Several analyses together", "Within each subgroup",
+              "Each pair of groups"),
+    call = unname(.ard_wrapper_keywords),
+    kind = "none", defaults = "", statistics = "", formats = "",
+    note = c(
+      "runs the analyses whose `parent` is this one on the same data, by the same `by` (e.g. a demographics table's summaries and counts; overall = TRUE for a Total column)",
+      "runs the analysis whose `parent` is this one within each level of `strata` (and `by`), e.g. a response rate's difference in each subgroup of a forest plot's table",
+      "runs the analysis whose `parent` is this one for each pair of levels of the one column in `variables`, e.g. each arm against placebo (args: include = \"Placebo\")"),
+    stringsAsFactors = FALSE)
   last <- nrow(d)
-  d <- rbind(d[-last, ], more, more2, d[last, ])
+  d <- rbind(d[-last, ], more, more2, more3, d[last, ])
   rownames(d) <- NULL
   d
 }

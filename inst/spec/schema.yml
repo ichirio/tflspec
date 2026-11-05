@@ -1026,9 +1026,10 @@ rtf_footer:
         example: AGE
       - column: parent
         description: 'The analysis this one runs inside: an analysis of the same report
-          whose method is cards::ard_stack (several analyses on the same data and
-          by, with the by counts and the total N), cards::ard_strata (within subgroups)
-          or cards::ard_pairwise (each pair of groups). It takes the parent''s dataset,
+          whose method is stack / cards::ard_stack (several analyses on the same data
+          and by, with the by counts and the total N), subgroups / cards::ard_strata
+          (within subgroups) or pairwise / cards::ard_pairwise (each pair of groups).
+          It takes the parent''s dataset,
           population_id and where (and in a stack its by), so leave those blank; blank:
           an analysis of its own.'
         example: DEMO

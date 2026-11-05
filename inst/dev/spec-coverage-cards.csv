@@ -329,22 +329,22 @@
 "cardx","ard_survival_survdiff","data","yes","method: logrank (or cardx::ard_survival_survdiff); column `data`","the analysis row's column","cardx ard_*()",3
 "cardx","ard_survival_survdiff","rho","yes","method: logrank (or cardx::ard_survival_survdiff); args","inst/ard/args.csv: number; its value judged","cardx ard_*()",3
 "cardx","ard_survival_survdiff","timefix","yes","method: logrank (or cardx::ard_survival_survdiff); args","passed on to survival::survdiff; inst/ard/passed_args.csv: logical; its value judged","cardx ard_*()",3
-"cards","ard_stack","data","yes","method: cards::ard_stack; column `data`","the analysis row's column","cards ard_*()",3
-"cards","ard_stack",".by","yes","method: cards::ard_stack; column `by`","the analysis row's column","cards ard_*()",3
-"cards","ard_stack",".overall","yes","method: cards::ard_stack; args","inst/ard/args.csv: logical; its value judged","cards ard_*()",3
-"cards","ard_stack",".missing","yes","method: cards::ard_stack; args","inst/ard/args.csv: logical; its value judged","cards ard_*()",3
-"cards","ard_stack",".attributes","yes","method: cards::ard_stack; args","inst/ard/args.csv: logical; its value judged","cards ard_*()",3
-"cards","ard_stack",".total_n","yes","method: cards::ard_stack; args","inst/ard/args.csv: logical; its value judged","cards ard_*()",3
-"cards","ard_stack",".shuffle","yes","method: cards::ard_stack; args","inst/ard/args.csv: logical; its value judged","cards ard_*()",3
-"cards","ard_stack",".by_stats","yes","method: cards::ard_stack; args","inst/ard/args.csv: logical; its value judged","cards ard_*()",3
-"cards","ard_strata",".data","yes","method: cards::ard_strata; column `data`","the analysis row's column","cards ard_*()",2
-"cards","ard_strata",".by","yes","method: cards::ard_strata; column `by`","the analysis row's column","cards ard_*()",2
-"cards","ard_strata",".strata","yes","method: cards::ard_strata; column `strata`","the analysis row's column","cards ard_*()",2
-"cards","ard_strata",".f","yes","method: cards::ard_strata; args","inst/ard/args.csv: code; its value judged","cards ard_*()",2
-"cards","ard_pairwise","data","yes","method: cards::ard_pairwise; column `data`","the analysis row's column","cards ard_*()",2
-"cards","ard_pairwise","variable","yes","method: cards::ard_pairwise; column `variables`","the analysis row's column","cards ard_*()",2
-"cards","ard_pairwise",".f","yes","method: cards::ard_pairwise; args","inst/ard/args.csv: code; its value judged","cards ard_*()",2
-"cards","ard_pairwise","include","yes","method: cards::ard_pairwise; args","inst/ard/args.csv: code; its value judged","cards ard_*()",2
+"cards","ard_stack","data","yes","method: stack (or cards::ard_stack); column `data`","the analysis row's column","cards ard_*()",3
+"cards","ard_stack",".by","yes","method: stack (or cards::ard_stack); column `by`","the analysis row's column","cards ard_*()",3
+"cards","ard_stack",".overall","yes","method: stack (or cards::ard_stack); args","inst/ard/args.csv: logical; its value judged","cards ard_*()",3
+"cards","ard_stack",".missing","yes","method: stack (or cards::ard_stack); args","inst/ard/args.csv: logical; its value judged","cards ard_*()",3
+"cards","ard_stack",".attributes","yes","method: stack (or cards::ard_stack); args","inst/ard/args.csv: logical; its value judged","cards ard_*()",3
+"cards","ard_stack",".total_n","yes","method: stack (or cards::ard_stack); args","inst/ard/args.csv: logical; its value judged","cards ard_*()",3
+"cards","ard_stack",".shuffle","yes","method: stack (or cards::ard_stack); args","inst/ard/args.csv: logical; its value judged","cards ard_*()",3
+"cards","ard_stack",".by_stats","yes","method: stack (or cards::ard_stack); args","inst/ard/args.csv: logical; its value judged","cards ard_*()",3
+"cards","ard_strata",".data","yes","method: subgroups (or cards::ard_strata); column `data`","the analysis row's column","cards ard_*()",2
+"cards","ard_strata",".by","yes","method: subgroups (or cards::ard_strata); column `by`","the analysis row's column","cards ard_*()",2
+"cards","ard_strata",".strata","yes","method: subgroups (or cards::ard_strata); column `strata`","the analysis row's column","cards ard_*()",2
+"cards","ard_strata",".f","yes","method: subgroups (or cards::ard_strata); args","inst/ard/args.csv: code; its value judged","cards ard_*()",2
+"cards","ard_pairwise","data","yes","method: pairwise (or cards::ard_pairwise); column `data`","the analysis row's column","cards ard_*()",2
+"cards","ard_pairwise","variable","yes","method: pairwise (or cards::ard_pairwise); column `variables`","the analysis row's column","cards ard_*()",2
+"cards","ard_pairwise",".f","yes","method: pairwise (or cards::ard_pairwise); args","inst/ard/args.csv: code; its value judged","cards ard_*()",2
+"cards","ard_pairwise","include","yes","method: pairwise (or cards::ard_pairwise); args","inst/ard/args.csv: code; its value judged","cards ard_*()",2
 "cards","ard_mvsummary","data","yes","method: cards::ard_mvsummary; column `data`","the analysis row's column","cards ard_*()",2
 "cards","ard_mvsummary","variables","yes","method: cards::ard_mvsummary; column `variables`","the analysis row's column","cards ard_*()",2
 "cards","ard_mvsummary","by","yes","method: cards::ard_mvsummary; column `by`","the analysis row's column","cards ard_*()",2

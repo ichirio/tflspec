@@ -1535,6 +1535,20 @@
 .ard_wrappers <- c("cards::ard_stack", "cards::ard_strata",
                    "cards::ard_pairwise")
 
+# The method keywords of those functions (since 2026-11-05): `stack`,
+# `subgroups` and `pairwise` are the functions by other names.
+.ard_wrapper_keywords <- c(stack = "cards::ard_stack",
+                           subgroups = "cards::ard_strata",
+                           pairwise = "cards::ard_pairwise")
+
+# a method as the function it calls when it is one of the wrappers' keywords;
+# any other method as it is
+.wrapper_call <- function(m) {
+  k <- !is.na(m) & m %in% names(.ard_wrapper_keywords)
+  m[k] <- unname(.ard_wrapper_keywords[m[k]])
+  m
+}
+
 # One analysis that runs others (its `parent` rows), as the call a person
 # writes: cards::ard_stack(data, .by = ARM, ard_summary(...), ...).
 # The rows inside take the parent's data, analysis set and condition; in a
@@ -1542,6 +1556,7 @@
 # computed them, the stack's own (the by counts, the total N) with the
 # parent's id; inside ard_strata() / ard_pairwise() the one analysis's id.
 .ard_wrapper_lines <- function(x, r, kids, keys, subj, data, name) {
+  r$method <- .wrapper_call(r$method)
   pid <- r$population_id
   pop <- if (!is.na(pid)) paste0("pop_", .r_name(pid))
   pop_name <- if (is.null(pop)) "NULL" else pop
