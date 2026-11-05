@@ -4,7 +4,7 @@
 \alias{tfl_report_codelists}
 \title{A report's code lists, with the ones its layers give}
 \usage{
-tfl_report_codelists(study, outputs = NULL)
+tfl_report_codelists(study, outputs = NULL, rows = NULL)
 }
 \arguments{
 \item{study}{The study's spec, as \code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}} reads it.}
@@ -12,6 +12,12 @@ tfl_report_codelists(study, outputs = NULL)
 \item{outputs}{The reports, as \code{\link[=tfl_sheets_from_spec]{tfl_sheets_from_spec()}} takes them: a
 list of \code{tfl_output} named by id.  \code{NULL} (default): the study's own
 files, read as \code{\link[=tfl_sheets_from_yaml]{tfl_sheets_from_yaml()}} reads them.}
+
+\item{rows}{The reports' own code list rows (the sheets' \code{codelists},
+a template's lists among them), when the caller has them: the sheets are
+then not made again.  The result keeps the columns of \code{rows} (a layer's
+rows have \code{NA} there), and a row of a report not in \code{outputs} stays.
+\code{NULL} (default): made from \code{outputs}.}
 }
 \value{
 A data frame of the sheets' \code{codelists} rows (\code{output_id},

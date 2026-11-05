@@ -136,7 +136,7 @@
                p, "tflspec_ard_spec_error")
   }
   list(spec = tfl_ard_spec(ard), codelists = .report_codelists(study, tfl_read_outputs(study$dir, skip_bad = TRUE),
-                               b, output_id))
+                               b$table$codelists, output_id))
 }
 
 #' A report's code lists, with the ones its layers give
@@ -160,6 +160,11 @@
 #' @param outputs The reports, as [tfl_sheets_from_spec()] takes them: a
 #'   list of `tfl_output` named by id.  `NULL` (default): the study's own
 #'   files, read as [tfl_sheets_from_yaml()] reads them.
+#' @param rows The reports' own code list rows (the sheets' `codelists`,
+#'   a template's lists among them), when the caller has them: the sheets are
+#'   then not made again.  The result keeps the columns of `rows` (a layer's
+#'   rows have `NA` there), and a row of a report not in `outputs` stays.
+#'   `NULL` (default): made from `outputs`.
 #' @return A data frame of the sheets' `codelists` rows (`output_id`,
 #'   `variable`, `value`, `label`, `order`, `under`), the reports in the
 #'   TOC's order; every row has its report (no `NA` `output_id`), and zero
@@ -169,7 +174,7 @@
 #' d <- system.file("extdata", "spec-yaml", package = "tflspec")
 #' tfl_report_codelists(tfl_read_study_spec(d))
 #' @export
-tfl_report_codelists <- function(study, outputs = NULL) {
+tfl_report_codelists <- function(study, outputs = NULL, rows = NULL) {
   if (!inherits(study, "tfl_study_spec")) {
     .ard_stop("tfl_report_codelists(): `study` is a study's spec, tfl_read_study_spec().")
   }
@@ -179,15 +184,20 @@ tfl_report_codelists <- function(study, outputs = NULL) {
     }
     outputs <- tfl_read_outputs(study$dir, skip_bad = TRUE)
   }
-  .report_codelists(study, outputs, tfl_sheets_from_spec(study, outputs))
+  if (is.null(rows)) rows <- tfl_sheets_from_spec(study, outputs)$table$codelists
+  .report_codelists(study, outputs, rows)
 }
 
-# (`sheets`: the sheets of the same reports, when the caller has them;
-# `output_id`: only these reports' rows)
-.report_codelists <- function(study, outputs, sheets, output_id = NULL) {
-  own <- .codelists_of_reports(sheets$table$codelists)
+# (`rows`: the reports' own code list rows; `output_id`: only these reports')
+.report_codelists <- function(study, outputs, rows, output_id = NULL) {
+  own <- .codelists_of_reports(rows)
+  if (is.null(own)) own <- data.frame(output_id = character())
+  for (cn in setdiff(c("output_id", "variable", "value", "label", "order", "under"), names(own))) {
+    own[[cn]] <- rep(NA_character_, nrow(own))
+  }
   toc_ids <- vapply(study$toc$outputs %||% list(), function(e) e$id %||% NA_character_, "")
   ids <- vapply(outputs, function(o) o$id, "")
+  ids_all <- ids
   ord <- order(match(ids, toc_ids, nomatch = length(toc_ids) + 1L), seq_along(ids))
   outputs <- outputs[ord]
   ids <- ids[ord]
@@ -195,7 +205,7 @@ tfl_report_codelists <- function(study, outputs = NULL) {
     outputs <- outputs[ids %in% output_id]
     ids <- ids[ids %in% output_id]
   }
-  rows <- lapply(seq_along(outputs), function(i) {
+  made <- lapply(seq_along(outputs), function(i) {
     mine <- own[own$output_id == ids[i], , drop = FALSE]
     below <- tryCatch(.layers_below(outputs[[i]], study)$acc$codelists, error = function(e) {
       .ard_stop(sprintf("%s: %s", ids[i], conditionMessage(e)))
@@ -204,7 +214,9 @@ tfl_report_codelists <- function(study, outputs = NULL) {
     below <- below[setdiff(names(below), mine$variable)]
     rbind(mine, .codelist_rows_of(ids[i], below, names(own)))
   })
-  out <- do.call(rbind, c(list(own[0L, , drop = FALSE]), rows))
+  # (a report of the rows that is not among the outputs: kept, last)
+  rest <- own[!own$output_id %in% ids_all & (is.null(output_id) | own$output_id %in% output_id), , drop = FALSE]
+  out <- do.call(rbind, c(list(own[0L, , drop = FALSE]), made, list(rest)))
   rownames(out) <- NULL
   out
 }

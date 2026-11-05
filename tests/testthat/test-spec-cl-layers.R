@@ -204,3 +204,46 @@ test_that("tfl_report_codelists(): the sheets' shape, none when no report has a 
   expect_identical(cl, tfl_report_codelists(st, tfl_read_outputs(d)))
   expect_error(tfl_report_codelists(list()), "tfl_read_study_spec")
 })
+
+test_that("tfl_report_codelists(rows =): the caller's own rows, the sheets not made again (#647)", {
+  skip_on_cran()
+  own <- c("codelists:", "  RACE: [{value: WHITE, label: OwnWhite}]")
+  d <- cll_study(defaults = cll_sex, reports = list("T-A" = list(extends = "[defaults]", codelists = own),
+                                                    "T-B" = list(extends = "[defaults]")))
+  st <- tfl_read_study_spec(d)
+  sheets <- tfl_sheets_from_yaml(d)$table$codelists
+  base <- tfl_report_codelists(st)
+  # the sheets' rows given: the same as made
+  expect_identical(tfl_report_codelists(st, rows = sheets), base)
+  # the sheets are not made when the rows are given
+  testthat::local_mocked_bindings(tfl_sheets_from_spec = function(...) stop("sheets made"),
+                                  .package = "tflspec")
+  expect_identical(tfl_report_codelists(st, rows = sheets), base)
+  # a changed row is what comes back
+  chg <- sheets
+  chg$label[chg$variable == "RACE"] <- "Changed"
+  cl <- tfl_report_codelists(st, rows = chg)
+  expect_identical(cl$label[cl$variable == "RACE"], "Changed")
+  expect_identical(cl$label[cl$variable == "SEX"], rep(c("DefM", "DefF"), 2L))
+  # a column of the caller's is kept, NA on a layer's rows
+  chg$note <- "mine"
+  cl <- tfl_report_codelists(st, rows = chg)
+  expect_identical(names(cl), c(names(sheets), "note"))
+  expect_identical(cl$note[cl$variable == "RACE"], "mine")
+  expect_true(all(is.na(cl$note[cl$variable == "SEX"])))
+  # a report only in the rows stays, after the others, with nothing added
+  extra <- chg[1L, ]
+  extra$output_id <- "T-Z"
+  cl <- tfl_report_codelists(st, rows = rbind(chg, extra))
+  expect_identical(cl$output_id[nrow(cl)], "T-Z")
+  expect_identical(sum(cl$output_id == "T-Z"), 1L)
+  # a row of no report is dropped, as in the default
+  na <- chg[1L, ]
+  na$output_id <- NA_character_
+  expect_false(anyNA(tfl_report_codelists(st, rows = rbind(chg, na))$output_id))
+  # none given: the layers' lists, in the standard columns
+  none <- tfl_report_codelists(st, rows = sheets[0L, c("output_id", "variable")])
+  expect_identical(names(none), c("output_id", "variable", "value", "label", "order", "under"))
+  expect_identical(nrow(none), 4L)
+  expect_identical(nrow(tfl_report_codelists(st, list(), rows = sheets[0L, ])), 0L)
+})
