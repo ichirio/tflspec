@@ -23,6 +23,15 @@ test_that("forest_hr: the report's ARD (its Cox analyses) and the design that re
   expect_identical(vapply(y$content, `[[`, "", "fn"), c("vline", "errorbar_h", "geom", "text_column"))
   expect_error(tfl_template_expand("forest_hr", list(param = "PFS", population = "SAF", favours = "A")),
                "two labels")
+  # bold headings: the axis's labels are y_labels (made with the rows); nothing changes without it
+  bold <- tfl_template_expand("forest_hr", list(param = "PFS", population = "SAF", bold_headings = TRUE))
+  code <- function(x) paste(vapply(x$data$steps, function(s) as.character(s$code %||% ""), ""), collapse = "
+")
+  expect_match(code(bold), "y_labels <- as.expression(Map(", fixed = TRUE)
+  expect_identical(as.character(bold$plot$add[[1L]]$args$labels), "y_labels")
+  plain <- tfl_template_expand("forest_hr", list(param = "PFS", population = "SAF"))
+  expect_false(grepl("y_labels", code(plain), fixed = TRUE))
+  expect_identical(as.character(plain$plot$add[[1L]]$args$labels), "est$label")
 })
 
 test_that("in a study: the ARD built; A (the call, the layout) = B (the design) = the template SPEC", {
@@ -53,28 +62,33 @@ test_that("in a study: the ARD built; A (the call, the layout) = B (the design) 
   expect_s3_class(tpl_forest_layout(p), "patchwork")
   expect_error(tpl_forest_layout(ggplot2::ggplot()), "a forest of tpl_forest_hr")
   # the shells' look (#579): favours labels, ticks, points by n, bold headings
-  q <- tpl_forest_hr(ard, group = TRT01A, subgroups = c(SEX, AGEGR1), favours = c("Drug A", "Drug B"),
-                     x_breaks = c(0.5, 1, 2), size_by_n = TRUE, bold_headings = TRUE)
-  b <- suppressWarnings(ggplot2::ggplot_build(q))
+  # (no warning from ggplot2: the bold is the axis's labels, not a vector in element_text())
+  expect_no_warning(q <- tpl_forest_hr(ard, group = TRT01A, subgroups = c(SEX, AGEGR1),
+                                       favours = c("Drug A", "Drug B"), x_breaks = c(0.5, 1, 2),
+                                       size_by_n = TRUE, bold_headings = TRUE))
+  expect_no_warning(b <- ggplot2::ggplot_build(q))
   pts <- ggplot2::layer_data(q, 3L)
   expect_true(length(unique(stats::na.omit(pts$size))) > 1L)
   expect_true(all(stats::na.omit(b$layout$panel_params[[1L]]$x$get_labels()) %in% c("0.5", "1", "2")))
   expect_match(q$labels$x %||% b$plot$labels$x, "<- Favours Drug A", fixed = TRUE)
-  face <- q$theme$axis.text.y$face
-  expect_true(all(c("bold", "plain") %in% face))
-  # bold exactly at the heading rows, in the order the axis lists its labels
+  expect_null(q$theme$axis.text.y$face)
+  # bold exactly at the heading rows, in the order the axis lists its labels:
+  # a heading is bold("<text>"), a level's row its text as it is
+  bold_text <- function(lab) vapply(lab, function(l) if (is.call(l)) as.character(l[[2L]]) else NA_character_, "")
   ylab <- b$layout$panel_params[[1L]]$y$get_labels()
-  expect_identical(face == "bold", ylab %in% c("Sex", "Age group"))
-  # the headings by their label (the common ADaM variables'), the levels' rows as they were
-  expect_true(all(c("Sex", "Age group") %in% ylab))
-  expect_false(any(c("SEX", "AGEGR1") %in% ylab))
-  # a label given for the variable: its heading, bold on it
+  expect_identical(unname(bold_text(ylab)[!is.na(bold_text(ylab))]), c("Sex", "Age group"))
+  expect_identical(unname(vapply(ylab, is.call, NA)), c(FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE))
+  # the levels' rows (indented, plain text) and the subgroup levels' text as it is: <65, >=65
+  expect_true(all(c("    F: Control", "    <65: Control", "    >=65: Control") %in% unlist(ylab[!vapply(ylab, is.call, NA)])))
+  # the headings by their label (the common ADaM variables'), not the variable's name
+  expect_false(any(c("SEX", "AGEGR1") %in% bold_text(ylab)))
+  # a label given for the variable: its heading, bold on it (any text, quotes and symbols, as it is)
   g <- tpl_forest_hr(ard, group = TRT01A, subgroups = c(SEX, AGEGR1), bold_headings = TRUE,
-                     subgroup_labels = c(SEX = "Gender"))
-  gb <- suppressWarnings(ggplot2::ggplot_build(g))
+                     subgroup_labels = c(SEX = "Gender", AGEGR1 = "Age <65 / >=65 \"x\""))
+  gb <- ggplot2::ggplot_build(g)
   glab <- gb$layout$panel_params[[1L]]$y$get_labels()
-  expect_true(all(c("Gender", "Age group") %in% glab))
-  expect_identical(g$theme$axis.text.y$face == "bold", glab %in% c("Gender", "Age group"))
+  expect_identical(unname(bold_text(glab)[vapply(glab, is.call, NA)]), c("Gender", "Age <65 / >=65 \"x\""))
+  expect_identical(unname(vapply(glab, is.call, NA)), c(FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE))
   expect_s3_class(tpl_forest_layout(q), "patchwork")
 })
 

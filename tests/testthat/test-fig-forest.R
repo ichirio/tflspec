@@ -94,6 +94,11 @@ test_that("the forest template is in parts, with its analyses, and its design ch
   expect_match(.forest_est_code("TRT01P", character(), "B"), 'level = "All subjects"', fixed = TRUE)
   expect_false(grepl("heading row", .forest_est_code("TRT01P", character()), fixed = TRUE))
   expect_match(.forest_est_code("TRT01P", "SEX"), "a heading row above each subgroup", fixed = TRUE)
+  # bold headings: one helper (the axis's labels as plotmath), only when asked
+  expect_false(grepl("y_labels", .forest_est_code("TRT01P", "SEX"), fixed = TRUE))
+  expect_false(grepl("y_labels", .forest_est_code("TRT01P", character(), bold_headings = TRUE), fixed = TRUE))
+  expect_match(.forest_est_code("TRT01P", "SEX", bold_headings = TRUE),
+               "y_labels <- as.expression(Map(function(l, h) if (h) bquote(bold(.(l))) else l,", fixed = TRUE)
 })
 
 test_that("text_column: its columns, a panel at the right; not with one below", {
