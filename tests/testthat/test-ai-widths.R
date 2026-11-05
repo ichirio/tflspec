@@ -231,16 +231,17 @@ test_that("a layer's change makes the widths of a rewritten draft again (#639)",
                                     list(value = "HIGH", label = "High")))
   yaml::write_yaml(y, f)
   # the same draft written again (its text unchanged): the layer it extends
-  # is what changed.  (The template keeps its own column names here -- the
-  # list only reorders them -- so what is asserted is that the widths are
-  # made again for the draft as the layers now make it.)
+  # is what changed.  Since #655 a layer's code list reaches the ARD, so the
+  # list renames the columns (____LOW -> ____Low): the widths are made again
+  # for the draft as the layers now make it, and name the new columns.
   aw639_draft(d)
   r2 <- aw639_run(d)
   expect_identical(r2$rp$status, "ok")
   expect_false(is.na(r2$rp$rtf))
   expect_false(identical(r2$entry$draft, r1$entry$draft))
   expect_identical(names(r2$entry$widths), names(r2$widths))
-  expect_setequal(names(r2$widths), names(r1$widths))
+  expect_true(any(grepl("____Low$", names(r2$widths))))
+  expect_false(any(grepl("____LOW$", names(r2$widths))))
 })
 
 test_that("an old-form ai/widths.yml naming columns that are gone does not stop a build (#639)", {
