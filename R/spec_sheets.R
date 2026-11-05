@@ -299,6 +299,21 @@ tfl_sheets_from_spec <- function(study, outputs) {
       if (!(code_content && identical(names(fd), "layers"))) figures[[id]] <- fd
     }
   }
+  # a pattern with no page rows keeps its place: one report row, `@<name>`
+  # and nothing else (#662)
+  for (nm in names(s$patterns)) {
+    has <- any(vapply(.ard_spec_pattern_sheets, function(sh) any(vapply(
+      rows[[sh]] %||% list(), function(r) identical(r$output_id, paste0("@", nm)), NA)), NA))
+    if (!has) add("report", list(output_id = paste0("@", nm)))
+  }
+  # the layers' code lists have no sheet of their own (a report's own are
+  # its rows): they stay in the YAML
+  if (length(s$defaults$codelists)) note(NA_character_, "codelists", "the defaults' code lists (defaults.yml) stay in YAML, not on the sheets")
+  for (nm in names(s$patterns)) {
+    if (length(s$patterns[[nm]]$codelists)) {
+      note(paste0("@", nm), "codelists", "a pattern's code lists stay in YAML, not on the sheets")
+    }
+  }
   # the setup code on the planner sheet's study row
   planner <- c(list(list(output_id = NA_character_, description = "(every report)",
                          setup_code = if (!is.null(s$study$setup)) cell(s$study$setup) else NA_character_,
