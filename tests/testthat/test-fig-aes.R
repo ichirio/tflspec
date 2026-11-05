@@ -249,3 +249,78 @@ test_that("a condition is of the form: a comparison, ifelse(), cut(), is.na(), %
   ld <- ggplot2::layer_data(g)
   expect_identical(length(unique(ld$fill)), 2L)
 })
+
+test_that("a column that is not syntactic keeps its backticks in the SPEC, and is no expression", {
+  d <- data.frame(`A-B` = c(1, 2, 3), `N/A` = c(2, 3, 5), `Grade >= 3` = c("y", "n", "y"),
+                  `p-value` = c(0.01, 0.2, 0.5), PCHG = c(-45, 10, -31), check.names = FALSE)
+  codes <- c("geom_point(mapping = aes(x = `A-B`, y = `N/A`))",
+             "geom_point(mapping = aes(colour = `Grade >= 3`))",
+             "geom_point(mapping = aes(x = `p-value`))")
+  for (code in codes) {
+    it <- .fig_lang_item(str2lang(code))
+    expect_false(any(vapply(it$args$mapping, inherits, NA, "tfl_r")), info = code)
+    expect_identical(nrow(tfl_schema_check(it)), 0L, info = code)
+    # code to SPEC to code: the same
+    expect_identical(.fig_deparse(.fig_item_lang(it)), code)
+  }
+  m <- .fig_lang_item(str2lang(codes[1L]))$args$mapping
+  expect_identical(m, list(x = "`A-B`", y = "`N/A`"))
+  expect_identical(.fig_lang_item(str2lang(codes[2L]))$args$mapping$colour, "`Grade >= 3`")
+  # a name that is syntactic is its text, as before
+  expect_identical(.fig_lang_item(quote(geom_point(aes(x = AVAL))))$args$mapping$x, "AVAL")
+  # the SPEC's text wholly one backticked name is that column, and the
+  # text of a column is read back the same through the SPEC's own text
+  expect_identical(.fig_deparse(.fig_value_lang(list(x = "`A-B`"), "mapping")), "aes(x = `A-B`)")
+  expect_identical(.fig_lang_value(.fig_value_lang(list(x = "`A-B`"), "mapping"), "mapping")$x, "`A-B`")
+  # a condition is still a condition
+  e <- quote(geom_col(mapping = aes(fill = PCHG <= -30)))
+  it <- .fig_lang_item(e)
+  expect_identical(it$args$mapping$fill, "PCHG <= -30")
+  expect_identical(.fig_deparse(.fig_item_lang(it)), .fig_deparse(e))
+  # each one draws, as ggplot2's own does
+  skip_if_not_installed("ggplot2")
+  for (code in codes) {
+    it <- .fig_lang_item(str2lang(code))
+    g <- ggplot2::ggplot(d, ggplot2::aes(PCHG, PCHG)) + eval(.fig_item_lang(it), asNamespace("ggplot2"))
+    ld <- ggplot2::layer_data(g)
+    expect_identical(nrow(ld), 3L, info = code)
+  }
+  g <- ggplot2::ggplot(d, ggplot2::aes(PCHG, PCHG)) + eval(.fig_item_lang(.fig_lang_item(str2lang(codes[1L]))), asNamespace("ggplot2"))
+  expect_equal(ggplot2::layer_data(g)$x, d$`A-B`)
+  expect_equal(ggplot2::layer_data(g)$y, d$`N/A`)
+  g <- ggplot2::ggplot(d, ggplot2::aes(PCHG, PCHG)) + eval(.fig_item_lang(.fig_lang_item(str2lang(codes[2L]))), asNamespace("ggplot2"))
+  expect_identical(length(unique(ggplot2::layer_data(g)$colour)), 2L)
+  # the condition's draws too
+  g <- ggplot2::ggplot(d, ggplot2::aes(PCHG, PCHG)) + eval(.fig_item_lang(.fig_lang_item(quote(geom_point(
+    mapping = aes(x = PCHG, y = PCHG, colour = PCHG <= -30))))), asNamespace("ggplot2"))
+  expect_identical(length(unique(ggplot2::layer_data(g)$colour)), 2L)
+})
+
+test_that("a hand-written text without backticks is an expression, and the check says so", {
+  # (the PR's rule: a text that parses as an expression of the form is one)
+  expect_identical(.fig_deparse(.fig_value_lang(list(x = "A-B"), "mapping")), "aes(x = A - B)")
+  p <- aes_problems("geom_point", list(mapping = list(x = "A-B", y = "N/A")))
+  expect_identical(p$level, c("warning", "warning"))
+  expect_match(p$message[1L], "read as an expression (A - B)", fixed = TRUE)
+  expect_match(p$message[1L], "needs backticks", fixed = TRUE)
+  expect_match(p$message[2L], "read as an expression (N/A)", fixed = TRUE)
+  # in backticks it is the column, and quiet
+  expect_identical(nrow(aes_problems("geom_point", list(mapping = list(x = "`A-B`", y = "`N/A`")))), 0L)
+  # a condition, a call, or arithmetic written with spaces is no mistake
+  for (txt in c("PCHG <= -30", "factor(AVISITN)", "mean - se", "AVAL/2")) {
+    expect_identical(nrow(aes_problems("geom_point", list(mapping = list(x = txt)))), 0L, info = txt)
+  }
+  # a text that does not parse is a column, as written: no warning ...
+  expect_identical(.fig_deparse(.fig_value_lang(list(x = "Week 1"), "mapping")), "aes(x = `Week 1`)")
+  expect_identical(nrow(aes_problems("geom_point", list(mapping = list(x = "Week 1", y = "my col")))), 0L)
+  # ... but one with a bracket, an expression with a part missing, still warns
+  p <- aes_problems("geom_point", list(mapping = list(x = "factor(AVISITN", y = "Week 1")))
+  expect_identical(nrow(p), 1L)
+  expect_match(p$message, "neither a column's name nor an expression")
+  # "Week 1" draws as a column
+  skip_if_not_installed("ggplot2")
+  d <- data.frame(`Week 1` = c(1, 2, 3), y = c(2, 3, 5), check.names = FALSE)
+  it <- tfl_item("geom_point", list(mapping = list(x = "Week 1", y = "y")))
+  g <- ggplot2::ggplot(d) + eval(.fig_item_lang(it), asNamespace("ggplot2"))
+  expect_equal(ggplot2::layer_data(g)$x, d$`Week 1`)
+})

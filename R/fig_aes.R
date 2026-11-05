@@ -67,11 +67,19 @@
   all(vapply(as.list(e)[-1L], part, NA))
 }
 
+# A column's name as the SPEC's text: the name itself, in backticks when it
+# is not syntactic (`A-B`, `Grade >= 3`), so that the text of a column is
+# never the text of an expression (`A-B` is a column, A-B is a difference)
+.fig_col_text <- function(nm) {
+  if (!nzchar(nm) || make.names(nm) == nm) nm else deparse(as.name(nm), backtick = TRUE)
+}
+
 # A mapping's value of the SPEC as its R: a column's name (`TRTA`, or
-# `` `a b` `` in backticks) its name, an expression of the form
-# (`factor(AVISITN)`, `mean - se`) its call, a text in quotes
-# (`'"Overall"'`) that text, a constant label; NULL for a text that is
-# none of them (written as a column's name, in backticks, as before)
+# `` `a b` `` wholly in backticks: that column, whatever its name), an
+# expression of the form (`factor(AVISITN)`, `mean - se`) its call, a text
+# in quotes (`'"Overall"'`) that text, a constant label; NULL for a text
+# that is none of them (written as a column's name, in backticks, as
+# before)
 .fig_aes_lang <- function(v) {
   if (!is.character(v) || length(v) != 1L || is.na(v)) return(NULL)
   if (make.names(v) == v) return(as.name(v))
@@ -142,9 +150,31 @@
 # aesthetics
 .fig_stat_any <- c("x", "y", "group", "PANEL", "flipped_aes", "xmin", "xmax", "ymin", "ymax")
 
+# A text that does not parse and has no bracket or quote in it ("Week 1"):
+# a column's name, written as that column
+.fig_aes_plain_name <- function(v) {
+  if (!nzchar(trimws(v))) return(FALSE)
+  ok <- tryCatch({
+    str2lang(v)
+    TRUE
+  }, error = function(err) FALSE)
+  !ok && !any(strsplit(v, "")[[1L]] %in% c("(", ")", "[", "]", "{", "}", "\"", "'", "`"))
+}
+
+# Could the text of `e` be a column's name as well: arithmetic or a
+# comparison of names, written without a space (`A-B`, `N/A`, `p-value`)?
+# It is read as the expression; a column of that name needs backticks.
+.fig_aes_name_like <- function(e, v) {
+  is.call(e) && length(e) == 3L && is.name(e[[1L]]) &&
+    as.character(e[[1L]]) %in% setdiff(.fig_aes_ops, c("(", "!")) &&
+    !grepl("[[:space:]]", v) && all(vapply(as.list(e)[-1L], is.name, NA))
+}
+
 # A mapping's values judged: a text neither a column's name nor of the
-# form warns (it would be written as a column of that name); an
-# after_stat()'s variable that the layer's stat does not compute warns.
+# form warns (it would be written as a column of that name; not a text
+# that is plainly a name, "Week 1"); a text that could be a column's name
+# but is read as an expression warns; an after_stat()'s variable that the
+# layer's stat does not compute warns.
 # `args`, the item's (its stat, its geom).
 .schema_check_aes_values <- function(fn, ent, args, bad) {
   mapping <- args$mapping
@@ -155,11 +185,17 @@
     if (!is.character(v) || length(v) != 1L || is.object(v) || is.na(v)) next
     e <- .fig_aes_lang(v)
     if (is.null(e)) {
+      if (.fig_aes_plain_name(v)) next
       bad("mapping", sprintf(paste0("the mapping's `%s: %s` is neither a column's name nor an ",
                                     "expression of a mapping's form (factor(), after_stat(), ",
                                     "reorder() ... of columns): written as a column of that name; ",
                                     "!r for other R"), k, v), "warning")
       next
+    }
+    if (.fig_aes_name_like(e, v)) {
+      bad("mapping", sprintf(paste0("the mapping's `%s: %s` is read as an expression (%s), not as a ",
+                                    "column of that name: a column with that name needs backticks, ",
+                                    "%s: \"`%s`\""), k, v, .fig_deparse(e), k, v), "warning")
     }
     used <- .fig_aes_stat_vars(e)
     if (!length(used)) next

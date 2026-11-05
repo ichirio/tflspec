@@ -394,7 +394,8 @@ tfl_plot <- function(name, items = list(), from = "own") {
       if (any(!nzchar(nm)) || anyDuplicated(nm)) return(tfl_r(.fig_deparse_r(x)))
       names(a) <- nm
       out <- lapply(a, function(e) {
-        if (is.name(e)) return(as.character(e))
+        # (a name that is not syntactic keeps its backticks: `A-B`)
+        if (is.name(e)) return(.fig_col_text(as.character(e)))
         # a constant of a number (group = 1): the number; a text in its
         # quotes (colour = "Overall": '"Overall"')
         if ((is.numeric(e) || is.logical(e)) && length(e) == 1L) return(e)

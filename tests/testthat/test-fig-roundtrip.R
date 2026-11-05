@@ -169,3 +169,25 @@ test_that("the code read and written back draws the same as ggplot2's", {
     expect_true(isTRUE(all.equal(built(orig), built(back), check.environment = FALSE)), info = t)
   }
 })
+
+test_that("a column that is not syntactic is read and written back as ggplot2's own: same code, same plot", {
+  skip_if_not_installed("ggplot2")
+  d <- data.frame(`A-B` = c(1, 2, 3), `N/A` = c(2, 3, 5), `Grade >= 3` = c("y", "n", "y"),
+                  `p-value` = c(0.01, 0.2, 0.5), PCHG = c(-45, 10, -31), check.names = FALSE)
+  terms <- c("geom_point(mapping = aes(x = `A-B`, y = `N/A`))",
+             "geom_point(mapping = aes(colour = `Grade >= 3`))",
+             "geom_point(mapping = aes(x = `p-value`))",
+             "geom_point(mapping = aes(colour = PCHG <= -30))")
+  for (t in terms) {
+    expect_identical(rt_code(t), t)
+    expect_identical(nrow(tfl_schema_check(rt_item(t))), 0L, info = t)
+    orig <- ggplot2::layer_data(ggplot2::ggplot(d, ggplot2::aes(PCHG, PCHG)) +
+                                  eval(str2lang(t), asNamespace("ggplot2")))
+    back <- ggplot2::layer_data(ggplot2::ggplot(d, ggplot2::aes(PCHG, PCHG)) +
+                                  eval(.fig_item_lang(rt_item(t)), asNamespace("ggplot2")))
+    expect_equal(back, orig, info = t)
+  }
+  # the mapping's text of the first, and of a column that is syntactic
+  expect_identical(rt_item(terms[1L])$args$mapping, list(x = "`A-B`", y = "`N/A`"))
+  expect_identical(rt_item("geom_point(aes(x = PCHG))")$args$mapping, list(x = "PCHG"))
+})
