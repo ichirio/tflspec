@@ -144,3 +144,19 @@ test_that("tfl_ai_review(): a flawed answer gives the AI its fixes and writes th
   expect_true(any(grepl("For the AI", out)))
   expect_error(tfl_ai_review(d, toc = kit_toc()), "overwrite")
 })
+
+test_that("tfl_ai_review(): spec/codelists.yml's lists to copy from are no finding (#649)", {
+  skip_on_cran()
+  d <- kit_study("ai-kit-codelists")
+  on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  without <- tfl_ai_review(d, toc = kit_toc(), write = FALSE)
+  writeLines("ANRIND: [{value: LOW, label: Low}, {value: HIGH, label: High}]",
+             file.path(d, "spec", "codelists.yml"))
+  r <- tfl_ai_review(d, toc = kit_toc(), write = FALSE)
+  expect_false("S01" %in% r$rule)
+  expect_identical(sort(r$rule), sort(without$rule))
+  # the code lists the K13 findings list are the reports' own
+  k13 <- r[r$rule == "K13" & r$sheet == "codelists", ]
+  expect_false(anyNA(k13$output_id))
+  expect_false(any(grepl("ANRIND", r$message, fixed = TRUE)))
+})

@@ -316,3 +316,58 @@ test_that("tfl_ai_run(): both figures of one request are drawn", {
   expect_identical(fr$output_id, c("F-14-2-3", "F-14-2-4"))
   expect_true(all(file.exists(file.path(d, c(fr$png, fr$rtf)))))
 })
+
+# a figure of a study with spec/codelists.yml (lists to copy from): the rows
+# of no report do not stop its drawing (#649)
+fig_codelists_study <- function(own = FALSE) {
+  root <- withr::local_tempdir(.local_envir = parent.frame())
+  d <- file.path(root, "study")
+  tfl_ai_prepare(unit = "toc", d, fig_book(), adam = fig_study(root), quiet = TRUE, size = 3L)
+  ai_drafts_from_fixtures(d)
+  f <- file.path(d, "ai", "spec", "outputs", "F-14-2-2.yml")
+  writeLines(c(
+    "id: F-14-2-2", "kind: figure", "label: Best overall response by arm", "population: ITT",
+    "extends: [defaults]",
+    "data:", "  source: code", "  steps:",
+    if (own) c("    - {step: read, dataset: ADTTE}", "    - {step: flag, variable: ITTFL}",
+               "    - {step: param, value: OS}") else
+      c("    - {step: read, dataset: ADRS}", "    - {step: flag, variable: ITTFL}",
+        "    - {step: param, value: OVR}"),
+    "content: []",
+    if (own) c("codelists:", "  TRT01P:",
+               "    - {value: Control, label: Own Control}", "    - {value: Drug X, label: Own Drug X}"),
+    if (own) c("template:", "  name: km_survival", "  args: {by: TRT01P, time_unit: months}") else c("layers:",
+    "  - {layer: layer_code, code: 'p <- ggplot(df, aes(AVISITN, AVAL, colour = TRT01P)) + geom_point() + labs(x = \"Visit\", y = \"Value\")'}"),
+    "page:", "  titles:", "    '1': {center: Figure 14.2.2}"), f)
+  d
+}
+
+test_that("a figure of a study with spec/codelists.yml is drawn (#649)", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("rtfreporter")
+  d <- fig_codelists_study()
+  writeLines("ANRIND: [{value: LOW, label: Low}, {value: HIGH, label: High}]",
+             file.path(d, "spec", "codelists.yml"))
+  res <- suppressMessages(tfl_ai_run(d, requests = "figure-1"))
+  fr <- res$reports[res$reports$output_id == "F-14-2-2", ]
+  expect_false(grepl("output_id", fr$rtf_problem %||% "", fixed = TRUE), info = fr$rtf_problem)
+  expect_false(is.na(fr$png), info = paste(fr$first, fr$rtf_problem))
+  expect_true(file.exists(file.path(d, fr$png)))
+})
+
+test_that("a figure's own code list applies, not the file's of the same variable (#649)", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("rtfreporter")
+  skip_if_not_installed("ggsurvfit")
+  d <- fig_codelists_study(own = TRUE)
+  writeLines("TRT01P: [{value: Control, label: File Control}, {value: Drug X, label: File Drug X}]",
+             file.path(d, "spec", "codelists.yml"))
+  res <- suppressMessages(tfl_ai_run(d, requests = "figure-1"))
+  fr <- res$reports[res$reports$output_id == "F-14-2-2", ]
+  expect_false(is.na(fr$png), info = paste(fr$first, fr$rtf_problem))
+  x <- readLines(sub("[.]png$", "-facts.txt", file.path(d, fr$png)), encoding = "UTF-8")
+  expect_true(any(grepl("Own Control", x, fixed = TRUE)), info = paste(x, collapse = "\n"))
+  expect_false(any(grepl("File ", x, fixed = TRUE)))
+})

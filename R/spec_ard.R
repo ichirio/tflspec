@@ -185,8 +185,7 @@ tfl_report_codelists <- function(study, outputs = NULL) {
 # (`sheets`: the sheets of the same reports, when the caller has them;
 # `output_id`: only these reports' rows)
 .report_codelists <- function(study, outputs, sheets, output_id = NULL) {
-  own <- sheets$table$codelists
-  own <- own[!is.na(own$output_id), , drop = FALSE]
+  own <- .codelists_of_reports(sheets$table$codelists)
   toc_ids <- vapply(study$toc$outputs %||% list(), function(e) e$id %||% NA_character_, "")
   ids <- vapply(outputs, function(o) o$id, "")
   ord <- order(match(ids, toc_ids, nomatch = length(toc_ids) + 1L), seq_along(ids))
@@ -221,4 +220,16 @@ tfl_report_codelists <- function(study, outputs = NULL) {
       order = as.character(i), under = .sheet_cell(e$under))
   }
   .rows_df(rows, cols)
+}
+
+# The sheets' code lists without spec/codelists.yml's rows (no `output_id`):
+# those are lists to copy from, which the sheets keep for the round trip, not
+# any report's, so what builds, draws or reviews a report leaves them out
+# (.codelists_check() still refuses a workbook's row with no report).  NULL
+# and zero rows stay as they are.
+.codelists_of_reports <- function(cl) {
+  if (is.data.frame(cl) && nrow(cl) && "output_id" %in% names(cl)) {
+    cl <- cl[!is.na(cl$output_id), , drop = FALSE]
+  }
+  cl
 }
