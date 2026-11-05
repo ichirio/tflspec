@@ -1161,20 +1161,26 @@ tfl_read_fig_design <- function(path) {
       lab <- if (length(parts) > 1L) {
         sprintf("paste0(%s)", paste(q(parts), collapse = sprintf(", %s, ", yc)))
       } else q(v("label"))
-      list(code = c(lbl("reference line labels"),
+      facet <- !is.null(.pv(plot, "facet_by"))
+      res <- list(code = c(lbl("reference line labels"),
         # (with panels (facet_by), a layer of its own data: annotate()'s
-        # vectors no longer fit the rows it repeats in every panel)
-        if (is.null(.pv(plot, "facet_by"))) {
+        # vectors no longer fit the rows it repeats in every panel; the label
+        # is inside each panel, at the left, just above its line)
+        if (!facet) {
           sprintf("p <- p + annotate(\"text\", x = Inf, y = %s, label = %s, hjust = -0.3, size = %s)",
                   yc, lab, num("size"))
         } else {
           sprintf(paste0("p <- p + geom_text(data = data.frame(y = %s, label = %s), ",
-                         "aes(x = Inf, y = y, label = label), hjust = -0.3, size = %s, inherit.aes = FALSE)"),
+                         "aes(x = -Inf, y = y, label = label), hjust = -0.1, vjust = -0.5, size = %s, ",
+                         "inherit.aes = FALSE)"),
                   yc, lab, num("size"))
-        }),
+        }))
+      if (!facet) {
         # room right of the panel, after the theme (which would reset it)
-        after = "p <- p + theme(plot.margin = margin(5.5, 50, 5.5, 5.5))   # room for the labels",
-        clip_off = TRUE)
+        res$after <- "p <- p + theme(plot.margin = margin(5.5, 50, 5.5, 5.5))   # room for the labels"
+        res$clip_off <- TRUE
+      }
+      res
     },
     risk_table = {
       fit <- v("fit")
