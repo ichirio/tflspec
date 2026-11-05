@@ -74,7 +74,9 @@
   param_change = paste0(
     "`baseline: true` adds a Baseline column (rows, with `layout: rows`) from the same ",
     "records `where` keeps: with `where: ONTRTFL == \"Y\"` the baseline is empty; for a ",
-    "baseline, `where: ONTRTFL == \"Y\" | ABLFL == \"Y\"`."),
+    "baseline, `where: ONTRTFL == \"Y\" | ABLFL == \"Y\"`. The stub's heading goes in the ",
+    "template's `heading` argument: a `plan_stub: {heading: ...}` is not printed (the ",
+    "template's header wins)."),
   shift = paste0(
     "`levels` are the data's values, in order (`LOW`, `NORMAL`, `HIGH`); to print other ",
     "text (`Low`), give the report's `codelists` for both the post and the baseline ",
@@ -430,6 +432,20 @@
       "`worst` is matched against the data's values, before any code list: write the values",
       wont = "they rank nothing, so check the order")
   p
+}
+
+# A draft report's code lists as its build has them: its own over the ones
+# of the layers it extends (per variable, as tfl_report_codelists() gives
+# them).  NULL when the draft extends something and the study cannot be
+# read (or cannot give the layers): they are not known, so a check on
+# them is left out.
+.ai_draft_codelists <- function(o, study) {
+  own <- o$codelists %||% list()
+  if (!length(o$extends) || identical(o$extends, "none")) return(.codelists_norm(own))
+  if (is.null(study)) return(NULL)
+  below <- tryCatch(.layers_below(o, study)$acc$codelists, error = function(e) NULL)
+  if (is.null(below)) return(NULL)
+  .codelists_norm(.merge_map(below, own) %||% list())
 }
 
 # A template report as the items it stands for (its own after them): as

@@ -311,6 +311,31 @@ test_that("a map of name and text also takes a list of {name, text}: the mapping
                'PARAMCD == "HGB" ~ match(ANRIND, c("LOW", "HIGH", "NORMAL"))', fixed = TRUE)
 })
 
+test_that("demog: labels as a list of {name, text} are read like the mapping, the default labels kept (#640)", {
+  lab <- function(e) Filter(function(it) it$fn == "plan_labels", e$content)[[1L]]$args$variable
+  args <- list(population = "SAF", by = "TRT01A", categorical = c("AGEGR1", "SEX", "RACE", "ETHNIC"))
+  m <- tfl_template_expand("demog", c(args, list(labels = list(
+    AGE = "Age (years)", SEX = "Sex, n (%)", RACE = "Race, n (%)"))))
+  # the list as a YAML draft writes it, read by yaml
+  y <- yaml::yaml.load(paste0(
+    "labels:
+",
+    "  - {name: AGE, text: \"Age (years)\"}
+",
+    "  - {name: SEX, text: \"Sex, n (%)\"}
+",
+    "  - {name: RACE, text: \"Race, n (%)\"}
+"))
+  l <- tfl_template_expand("demog", c(args, y))
+  expect_identical(l, m)
+  # the three given, the template's others kept (never the variable names)
+  d <- lab(tfl_template_expand("demog", args))
+  expect_identical(lab(l)[c("AGE", "SEX", "RACE")],
+                   list(AGE = "Age (years)", SEX = "Sex, n (%)", RACE = "Race, n (%)"))
+  expect_identical(lab(l)[c("AGEGR1", "ETHNIC")], d[c("AGEGR1", "ETHNIC")])
+  expect_identical(lab(l)[["ETHNIC"]], "Ethnicity, n (%)")
+})
+
 test_that("a map given as a list that is not {name, text} stops, naming the parameter and the mapping", {
   ex <- function(v) tfl_template_expand("shift", list(population = "SAF", param_labels = v))
   expect_error(ex(list(list(name = "ALT"))), "parameter 'param_labels'.*`name` and `text` only.*mapping.*param_labels: [{]ALT")

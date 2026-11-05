@@ -214,6 +214,7 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   composed <- !is.null(tpl) && .tpl_composes(own$data, tpl$x)
   if (composed) own$data <- .tpl_compose_data(own$data, tpl$x, output$id, tpl$name)
   below <- acc$content
+  own$content <- .stub_keep_name(own$content, below)
   if (!is.null(tpl)) own$content <- .hdr_keep_stub(own$content, below)
   acc <- .layer_over(acc, own)
   if ((isTRUE(provenance) || !is.null(tpl)) && !inherits(acc$content, "tfl_r")) {
@@ -244,6 +245,23 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   output <- .page_font_to_plan(output)
   attr(output, "resolved") <- TRUE
   output
+}
+
+# A report's own plan_stub with no `name` keeps the name of the plan_stub it
+# replaces from the layers below (the study's, `row_label`): a plan_stub item
+# replaces that one as a whole, and the stub column would be called by its
+# columns' names, so `plan_columns(widths = )` could not name it.  A name the
+# report writes wins; with no plan_stub below, nothing changes.  Only `name`.
+.stub_keep_name <- function(own, below) {
+  if (inherits(own, "tfl_r") || inherits(below, "tfl_r") || !length(own)) return(own)
+  is_stub <- function(it) identical(it$fn, "plan_stub")
+  b <- Filter(is_stub, below)
+  nm <- if (length(b)) b[[1L]]$args$name
+  if (is.null(nm)) return(own)
+  for (i in which(vapply(own, is_stub, NA))) {
+    if (is.null(own[[i]]$args$name)) own[[i]]$args$name <- nm
+  }
+  own
 }
 
 # A report's own plan_col_header over a template's (not a study layer's:

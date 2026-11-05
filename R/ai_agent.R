@@ -362,7 +362,7 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
                 outs[[id]] <- w
                 tfl_write_output(w, file.path(.outputs_dir("."), paste0(id, ".yml")))
                 pc <- Filter(function(it) identical(it$fn, "plan_columns"), w$content)
-                .ai_widths_remember(".", id, pc[[1L]]$args$widths)
+                .ai_widths_remember(".", id, pc[[1L]]$args$widths, .ai_widths_print(outs[[id]], st))
                 o <- tfl_resolve_output(w, st)
                 if (isTRUE(rtf)) plan <- suppressMessages(tfl_content_run(o, ard))
                 widened <- TRUE

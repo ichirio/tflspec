@@ -105,3 +105,171 @@ test_that("a listing's columns get widths from their variables and headers", {
   t1 <- tfl_output("T-1", "table", content = list(tfl_item("table_plan", list(cols = "TRT01A"))))
   expect_identical(.ai_listing_widths(t1, vars), t1)
 })
+
+# ---- remembered widths are tied to the draft they were made for (#639) ----
+# ai/widths.yml holds, per report, the widths and a fingerprint of the draft
+# (resolved over its layers, widths left out): a rewritten draft that changes
+# the columns gets widths made again, not the old names.
+
+aw639_study <- function(root) {
+  ad <- file.path(root, "adam")
+  dir.create(ad, recursive = TRUE, showWarnings = FALSE)
+  for (x in c("adsl", "adlb")) {
+    df <- getExportedValue("tflspec", x)
+    for (v in names(df)) if (is.factor(df[[v]])) df[[v]] <- as.character(df[[v]])
+    haven::write_xpt(df, file.path(ad, paste0(x, ".xpt")))
+  }
+  d <- file.path(root, "study")
+  tfl_ai_prepare(unit = "toc", d, system.file("ai", "example", "onco_toc_shell.xlsx", package = "tflspec"),
+                 adam = normalizePath(ad, winslash = "/"), quiet = TRUE, size = 3L)
+  d
+}
+
+# the Issue's draft: the shift template, its codelists optional, its widths optional
+aw639_draft <- function(d, codelists = FALSE, title = "Table 14.3.5", widths = NULL) {
+  cl <- c("    codelists:",
+          paste0("      ", c("ANRIND", "BNRIND"),
+                 ": [{value: LOW, label: Low}, {value: NORMAL, label: Normal}, {value: HIGH, label: High}]"))
+  ai_drafts_from_answer(d, paste(c("```yaml",
+    "tflspec_ai: {task: table, version: 1, outputs: [T-14-3-5]}",
+    "outputs:",
+    "  - id: T-14-3-5",
+    "    kind: table",
+    "    label: Shift table",
+    "    population: SAF",
+    "    extends: [defaults]",
+    if (codelists) cl,
+    "    template:",
+    "      name: shift",
+    "      args: {data: ADLB, where: \"ONTRTFL == 'Y'\", percent_of: total}",
+    if (!is.null(widths)) c("    content:", paste0("      - plan_columns: {widths: ", widths, "}")),
+    sprintf("    page: {titles: {\"1\": {center: %s}}}", title),
+    "assumptions: []", "```"), collapse = "\n"), "table")
+}
+
+aw639_run <- function(d) {
+  res <- suppressMessages(tfl_ai_run(d, requests = "labs-1"))
+  rp <- res$reports[res$reports$output_id == "T-14-3-5", , drop = FALSE]
+  y <- yaml::read_yaml(file.path(d, rp$file))
+  pc <- Filter(function(it) identical(names(it), "plan_columns"), y$content)
+  list(rp = rp, widths = if (length(pc)) pc[[1L]]$plan_columns$widths,
+       entry = yaml::read_yaml(file.path(d, "ai", "widths.yml"))[["T-14-3-5"]],
+       key = tflspec:::.ai_built_read(d)$key[tflspec:::.ai_built_read(d)$output_id == "T-14-3-5"])
+}
+
+aw639_skip <- function() {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("cards")
+  skip_if_not_installed("rtfreporter")
+}
+
+test_that("a rewritten draft that adds codelists gets widths for its new columns (#639)", {
+  aw639_skip()
+  d <- aw639_study(withr::local_tempdir())
+  aw639_draft(d)
+  r1 <- aw639_run(d)
+  expect_identical(r1$rp$status, "ok")
+  expect_true(any(grepl("____LOW$", names(r1$widths))))
+  expect_false(any(grepl("____Low$", names(r1$widths))))
+  # the entry: the widths and a fingerprint of the draft
+  expect_named(r1$entry, c("draft", "widths"), ignore.order = TRUE)
+  expect_true(is.character(r1$entry$draft) && length(r1$entry$draft) == 1L)
+  # rewritten with codelists, still no widths
+  aw639_draft(d, codelists = TRUE)
+  r2 <- aw639_run(d)
+  expect_identical(r2$rp$status, "ok")
+  expect_false(is.na(r2$rp$rtf))
+  expect_true(file.exists(file.path(d, r2$rp$rtf)))
+  expect_true(any(grepl("____Low$", names(r2$widths))))
+  expect_false(any(grepl("____LOW$", names(r2$widths))))
+  expect_false(identical(r2$entry$draft, r1$entry$draft))
+  expect_identical(names(r2$entry$widths), names(r2$widths))
+})
+
+test_that("a draft run again is kept, and a read-time build that cannot be made does not lose that (#639)", {
+  aw639_skip()
+  d <- aw639_study(withr::local_tempdir())
+  aw639_draft(d)
+  # (the widths are not made when the answer is read: run.R's build gives them)
+  testthat::local_mocked_bindings(.ai_widths_on_read = function(...) invisible(character()),
+                                  .package = "tflspec")
+  r1 <- aw639_run(d)
+  expect_identical(r1$rp$built, "built")
+  expect_true(length(r1$widths) > 1L)
+  r2 <- aw639_run(d)
+  expect_identical(r2$rp$built, "kept")
+  expect_identical(r2$key, r1$key)
+  expect_identical(r2$widths, r1$widths)
+  expect_identical(r2$entry, r1$entry)
+})
+
+test_that("a rewrite that changes only a title gets the same widths (#639)", {
+  aw639_skip()
+  d <- aw639_study(withr::local_tempdir())
+  aw639_draft(d)
+  r1 <- aw639_run(d)
+  aw639_draft(d, title = "Table 14.3.5 shift")
+  r2 <- aw639_run(d)
+  expect_identical(r2$rp$status, "ok")
+  expect_identical(r2$rp$built, "built")
+  expect_identical(r2$widths, r1$widths)
+  expect_false(identical(r2$entry$draft, r1$entry$draft))
+})
+
+test_that("a layer's change makes the widths of a rewritten draft again (#639)", {
+  aw639_skip()
+  d <- aw639_study(withr::local_tempdir())
+  aw639_draft(d)
+  r1 <- aw639_run(d)
+  expect_true(any(grepl("____LOW$", names(r1$widths))))
+  f <- file.path(d, "spec", "defaults.yml")
+  y <- yaml::read_yaml(f)
+  y$codelists <- list(ANRIND = list(list(value = "LOW", label = "Low"), list(value = "NORMAL", label = "Normal"),
+                                    list(value = "HIGH", label = "High")),
+                      BNRIND = list(list(value = "LOW", label = "Low"), list(value = "NORMAL", label = "Normal"),
+                                    list(value = "HIGH", label = "High")))
+  yaml::write_yaml(y, f)
+  # the same draft written again (its text unchanged): the layer it extends
+  # is what changed.  Since #655 a layer's code list reaches the ARD, so the
+  # list renames the columns (____LOW -> ____Low): the widths are made again
+  # for the draft as the layers now make it, and name the new columns.
+  aw639_draft(d)
+  r2 <- aw639_run(d)
+  expect_identical(r2$rp$status, "ok")
+  expect_false(is.na(r2$rp$rtf))
+  expect_false(identical(r2$entry$draft, r1$entry$draft))
+  expect_identical(names(r2$entry$widths), names(r2$widths))
+  expect_true(any(grepl("____Low$", names(r2$widths))))
+  expect_false(any(grepl("____LOW$", names(r2$widths))))
+})
+
+test_that("an old-form ai/widths.yml naming columns that are gone does not stop a build (#639)", {
+  aw639_skip()
+  d <- aw639_study(withr::local_tempdir())
+  aw639_draft(d)
+  r1 <- aw639_run(d)
+  # (before: the widths alone, by the old column names)
+  yaml::write_yaml(list(`T-14-3-5` = r1$entry$widths), file.path(d, "ai", "widths.yml"))
+  aw639_draft(d, codelists = TRUE)
+  r2 <- aw639_run(d)
+  expect_identical(r2$rp$status, "ok")
+  expect_false(is.na(r2$rp$rtf))
+  expect_true(any(grepl("____Low$", names(r2$widths))))
+  # and it is remembered in the new form
+  expect_named(r2$entry, c("draft", "widths"), ignore.order = TRUE)
+})
+
+test_that("a draft with its own widths is left alone (#639)", {
+  aw639_skip()
+  d <- aw639_study(withr::local_tempdir())
+  aw639_draft(d)
+  r1 <- aw639_run(d)
+  own <- r1$widths
+  own[[1L]] <- own[[1L]] + 2L
+  txt <- paste0("{", paste(sprintf("\"%s\": %s", names(own), unlist(own)), collapse = ", "), "}")
+  aw639_draft(d, widths = txt)
+  r2 <- aw639_run(d)
+  expect_identical(r2$rp$status, "ok")
+  expect_identical(r2$widths, own)
+})
