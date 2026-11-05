@@ -236,14 +236,16 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
   d <- tfl_fig_template("forest_hr", group = group,
                         subgroups = paste(subgroups, collapse = ", "), comparison = comparison)
   d <- .tpl_forest_look(d, look, length(subgroups) > 0L)
-  # each arm's events / subjects (#579): the ARD's n_event too, a column an arm
-  if (length(look$n_by_arm)) {
-    for (k in seq_along(d$data)) {
-      st <- d$data[[k]]
-      if (identical(st$step, "ard_stats")) d$data[[k]]$stats <- paste(st$stats, "n_event", sep = ", ")
-      if (identical(st$step, "code")) {
-        d$data[[k]]$code <- .forest_est_code(group, subgroups, comparison, look$n_by_arm)
-      }
+  # each arm's events / subjects (#579): the ARD's n_event too, a column an
+  # arm; the headings' labels: the rows' code made with them
+  for (k in seq_along(d$data)) {
+    st <- d$data[[k]]
+    if (identical(st$step, "ard_stats") && length(look$n_by_arm)) {
+      d$data[[k]]$stats <- paste(st$stats, "n_event", sep = ", ")
+    }
+    if (identical(st$step, "code")) {
+      d$data[[k]]$code <- .forest_est_code(group, subgroups, comparison, look$n_by_arm,
+                                           look$subgroup_labels)
     }
   }
   # the ARD read and the rows made: all the call's (no data steps)
@@ -263,6 +265,10 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
   tfl_param("group", "TRT01A", type = "vars", doc = "the arms compared (the Cox model's term)"),
   tfl_param("subgroups", c("SEX", "AGEGR1"), type = "vars", multiple = TRUE,
             doc = "the subgroups, each its levels' hazard ratios"),
+  tfl_param("subgroup_labels", NULL, type = "list", multiple = FALSE, fields = c("name", "text"),
+            doc = paste("the subgroups' headings, a variable = its label (SEX: Sex, AGEGR1: Age group);",
+                        "a variable not given: the common ADaM variables' label (SEX, AGEGR1, RACE,",
+                        "REGION1, ECOGBL ...), else its name; the levels' rows are not changed")),
   tfl_param("comparison", NULL, type = "levels", of = "group",
             doc = "the arm compared with the reference; NULL: every other arm"),
   tfl_param("favours", NULL, type = "text", multiple = TRUE,
@@ -317,7 +323,8 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
 }
 
 .tpl_forest_look_args <- function(a) {
-  a[intersect(names(a), c("favours", "x_breaks", "size_by_n", "bold_headings", "n_by_arm"))]
+  a[intersect(names(a), c("favours", "x_breaks", "size_by_n", "bold_headings", "n_by_arm",
+                          "subgroup_labels"))]
 }
 
 .tpl_forest_body <- function(a, ctx) {
@@ -363,6 +370,11 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
 #' @param x_breaks The hazard ratio axis's ticks; `NULL`: ggplot2's.
 #' @param size_by_n `TRUE`: each point's size by its subjects.
 #' @param bold_headings `TRUE`: the subgroups' headings bold.
+#' @param subgroup_labels The subgroups' headings, a named vector, a
+#'   variable = its label (`c(SEX = "Sex", AGEGR1 = "Age group")`); a
+#'   variable not given reads the common ADaM variables' label (`SEX`,
+#'   `AGEGR1`, `RACE`, `REGION1`, `ECOGBL` ...), else its name.  The
+#'   levels' rows are not changed.
 #' @param n_by_arm The arms (as the data write them) whose events and
 #'   subjects (`events/N`) show in the text column, a column each headed by
 #'   the arm, in place of N; `NULL`: N.  `tpl_forest_layout()` takes the
@@ -376,11 +388,12 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
 #' @export
 tpl_forest_hr <- function(ard, group = "TRT01A", subgroups = c("SEX", "AGEGR1"),
                           comparison = NULL, favours = NULL, x_breaks = NULL, size_by_n = FALSE,
-                          bold_headings = FALSE, n_by_arm = NULL, plot = NULL) {
+                          bold_headings = FALSE, n_by_arm = NULL, subgroup_labels = NULL,
+                          plot = NULL) {
   f <- .tpl_forest_design(.tpl_col(rlang::enquo(group)), .tpl_cols(rlang::enquo(subgroups)),
                           comparison, list(favours = favours, x_breaks = x_breaks,
                                            size_by_n = size_by_n, bold_headings = bold_headings,
-                                           n_by_arm = n_by_arm))
+                                           n_by_arm = n_by_arm, subgroup_labels = subgroup_labels))
   f$content <- Filter(function(it) !identical(it$fn, "text_column"), f$content)
   .tpl_fig_draw("forest_hr", f, ard, plot, as = "ard")
 }

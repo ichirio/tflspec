@@ -281,7 +281,6 @@ tfl_output_contents <- function(output, study, dir = ".") {
 #' @seealso [tfl_output_contents()], [tfl_report()]
 #' @export
 tfl_run_output <- function(output, dir = ".", overwrite = TRUE) {
-  .spec_need_rtfreporter()
   if (is.character(output) && length(output) == 1L) {
     output <- if (file.exists(output)) tfl_read_output(output) else tfl_read_outputs(dir)[[output]]
   }

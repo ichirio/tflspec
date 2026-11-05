@@ -237,9 +237,6 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
   fn <- "tfl_ai_run()"
   # (the study's own path: the run builds from inside it)
   here <- normalizePath(study_dir, winslash = "/", mustWork = FALSE)
-  if (isTRUE(rtf) && !requireNamespace("rtfreporter", quietly = TRUE)) {
-    .ard_stop(sprintf("%s: the RTF needs the rtfreporter package; or rtf = FALSE.", fn))
-  }
   # the agent's study facts again when spec/ changed since they were written
   .ai_study_facts_write(study_dir, if_older = TRUE)
   # the run's messages (the template notes, the ARD's unused rows) go to

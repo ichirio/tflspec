@@ -277,8 +277,10 @@ sheet column is which verb's argument: `pages_max_rows` is
 `tfl_schema(fn)` (the file `inst/spec/schema.yml`); `tfl_schema_check(item)`
 checks one item; an argument the function does not have is an error.
 Write values as YAML: a list `[TRT01A, SEX]`, a map `{AGE: Age (years)}`,
-a number, `true` / `false`.  `!r` marks R code (`where: !r SAFFL == "Y"`,
-`args: !r over_variables = TRUE`) and is kept for what only R can say;
+a number, `true` / `false`.  A condition is written bare
+(`where: SAFFL == "Y"`: names, numbers, strings, `== != < <= > >=`, `& | !`,
+`%in% c(...)`, `is.na()`, parentheses); `!r` marks R beyond that
+(`args: !r over_variables = TRUE`) and is kept for what only R can say;
 `{fn: rtf_border, args: {top: single}}` is a nested call; `!unset`
 removes what a layer below set.
 

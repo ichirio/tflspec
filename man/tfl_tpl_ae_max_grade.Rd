@@ -18,7 +18,7 @@ The table template \code{ae_max_grade}, layout \code{hierarchical}. Its program 
    \code{by} \tab other \tab call \tab TRT01A \tab settings.treatment \tab the column variable \cr
    \code{data} \tab other \tab call \tab ADAE \tab  \tab the dataset of records \cr
    \code{where} \tab other \tab call \tab TRTEMFL == "Y" \tab  \tab the records kept (R) \cr
-   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: \if{html}{\out{<data>}}_\if{html}{\out{<population>}} \cr
+   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: <data>_<population> \cr
    \code{overall} \tab other \tab call \tab Any TEAE \tab  \tab the any-record row's label \cr
    \code{any_grade} \tab other \tab call \tab Any grade \tab  \tab the label of a term's count at any grade \cr
    \code{sort} \tab other \tab call \tab n \tab  \tab the SOCs and PTs by their count, most first ("n"), or by "name" \cr

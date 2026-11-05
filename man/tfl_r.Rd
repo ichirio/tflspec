@@ -88,7 +88,13 @@ report is made of:
 }
 \details{
 \itemize{
-\item \code{tfl_r()}: a string of R code, written as the \code{!r} tag (\verb{where: !r "p > 0.5"}); kept as it is and put into the program unquoted.
+\item \code{tfl_r()}: a string of R code, written as the \code{!r} tag (\verb{where: !r "p > 0.5"}); kept as it is and put into the program unquoted.  A
+condition in a language-neutral subset (column names, numbers,
+strings, \verb{== != < <= > >=}, \verb{& | !}, \verb{\%in\% c(...)}, \verb{is.na()},
+parentheses) is written, and read, without the tag in a slot that
+takes only R (\code{plan_filter(where)}): a Python reader can parse it
+without R.  \code{!r} stays for the rest of R (\code{between()}), and is still
+read everywhere.
 \item \code{tfl_unset()}: the \code{!unset} tag -- a value a report sets to nothing,
 overriding its defaults (writing nothing leaves the default).  It is
 resolved when the defaults are layered; the generators never see one.

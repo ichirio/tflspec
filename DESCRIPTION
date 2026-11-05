@@ -32,11 +32,11 @@ Imports:
     openxlsx,
     readxl,
     rlang,
+    rtfreporter (>= 0.8.2.9100),
     yaml,
     stats,
     utils
 Suggests:
-    rtfreporter (>= 0.8.2.9100),
     arrow,
     broom,
     broom.helpers,

@@ -518,8 +518,9 @@ lines) are `[USUBJID, AGE]`.  `label` is the column header, exactly; a
 line break in it is the two characters backslash and `n`.  `width`
 (characters) only when the shell's column widths are drawn;
 `collapse_repeats: true` on the subject column when the shell prints the
-subject once for several rows.  Rows per page:
-`plan_paginate_rows: {max_rows: ...}` only when the shell says it.
+subject once for several rows.
+A listing with no page size pages at 22 rows (the header on every page);
+write `plan_paginate_rows: {max_rows: ...}` only when the shell says otherwise.
 
 The variable names: `USUBJID`, the arm (`TRTA`, or `TRT01A`), `AEBODSYS`,
 `AEDECOD`, `AESTDTC` / `ASTDY`, `AESEV`, `AESER`, `AEREL`, `AEOUT`,

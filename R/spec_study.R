@@ -214,6 +214,7 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   composed <- !is.null(tpl) && .tpl_composes(own$data, tpl$x)
   if (composed) own$data <- .tpl_compose_data(own$data, tpl$x, output$id, tpl$name)
   below <- acc$content
+  if (!is.null(tpl)) own$content <- .hdr_keep_stub(own$content, below)
   acc <- .layer_over(acc, own)
   if ((isTRUE(provenance) || !is.null(tpl)) && !inherits(acc$content, "tfl_r")) {
     prov <- .content_provenance(acc$content, output$content, layers, below)
@@ -234,13 +235,38 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   }
   output$data <- if (length(acc$data)) acc$data else output$data
   output$codelists <- acc$codelists
+  if (!is.null(tpl$x$codelists)) output$codelists <- .tpl_add_codelists(acc$codelists, tpl$x$codelists)
   output$content <- .any_label_default(acc$content, output, study)
+  output$content <- .listing_rows_default(output$content, output$kind, provenance)
   # the study's rounding: the setup's option, so the program leaves it out
   attr(output, "study_rounding") <- .study_rounding(study)
   output$page <- acc$page
   output <- .page_font_to_plan(output)
   attr(output, "resolved") <- TRUE
   output
+}
+
+# A report's own plan_col_header over a template's (not a study layer's:
+# the item below must be the template's) with no cell for the template's
+# stub column (a cell whose `cols` is not .values) keeps the template's stub
+# cells, and an empty .values cell for a line only the stub then has.  Any
+# stub cell of the report, even an empty one, replaces the item as before.
+.hdr_keep_stub <- function(own, below) {
+  if (inherits(own, "tfl_r") || inherits(below, "tfl_r") || !length(own)) return(own)
+  cell_cols <- function(h) unlist(lapply(h, function(c) as.character(unlist(c$cols))))
+  tpl <- Filter(function(it) identical(it$fn, "plan_col_header") &&
+                  startsWith(it$from %||% "", "template:"), below)
+  th <- if (length(tpl)) tpl[[1L]]$args$header
+  stub <- Filter(function(c) !all(as.character(unlist(c$cols)) == ".values"), th)
+  if (!length(stub)) return(own)
+  for (i in which(vapply(own, function(it) identical(it$fn, "plan_col_header"), NA))) {
+    h <- own[[i]]$args$header
+    if (!length(h) || any(cell_cols(h) %in% cell_cols(stub))) next
+    lines <- setdiff(vapply(stub, function(c) as.character(c$line), ""),
+                     vapply(h, function(c) as.character(c$line), ""))
+    own[[i]]$args$header <- c(stub, h, lapply(lines, function(l) list(line = l, cols = ".values")))
+  }
+  own
 }
 
 # Each resolved item's provenance, argument by argument (`arg_from`: "own",
@@ -607,6 +633,26 @@ tfl_write_study_part <- function(study, part = c("defaults", "patterns", "codeli
         length(it$args$hierarchy)) it$args$overall <- lab
     it
   })
+}
+
+# A listing with no page size pages at the rows a page the `listing` template
+# has (.listing_rows_a_page): a plan_listing and no plan_paginate_rows or
+# plan_paginate_group among the resolved items (the report's, a template's or
+# a pattern's say it; the study's defaults do not reach a listing) gets
+# plan_paginate_rows(max_rows) last, from the "defaults".  Built and written
+# in the program, not in the report's file; code (`tfl_r`) and a figure are
+# left alone.
+.listing_rows_a_page <- 22L
+.listing_rows_default <- function(items, kind = NULL, provenance = FALSE) {
+  if (inherits(items, "tfl_r") || identical(kind, "figure")) return(items)
+  fns <- vapply(items, function(it) as.character(it$fn), "")
+  if (!"plan_listing" %in% fns || any(c("plan_paginate_rows", "plan_paginate_group") %in% fns)) return(items)
+  it <- tfl_item("plan_paginate_rows", list(max_rows = .listing_rows_a_page), from = "defaults")
+  if (isTRUE(provenance)) {
+    it$arg_from <- c(max_rows = "defaults")
+    it$below <- NULL
+  }
+  c(items, list(it))
 }
 
 # The folder of a study's report files: spec/outputs, or -- while the AI's

@@ -420,8 +420,7 @@
   if (!requireNamespace(pkg, quietly = TRUE) || !nm %in% getNamespaceExports(pkg)) {
     return(NULL)
   }
-  if (requireNamespace("rtfreporter", quietly = TRUE) &&
-      nm %in% getNamespaceExports("rtfreporter")) {
+  if (nm %in% getNamespaceExports("rtfreporter")) {
     return(NULL)
   }
   kind <- if (identical(pkg, "ggplot2")) .schema_gg_kind(nm) else .schema_ext_kind(nm, pkg)

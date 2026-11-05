@@ -498,7 +498,7 @@ your company.
 
 ## Known limits
 
-- shift / lab_shift: list Missing and Total in the baseline's code list, and write `levels` as the code list's labels (Low, Normal, High).
+(none at present)
 
 ## Before you start on the company PC
 

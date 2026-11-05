@@ -253,6 +253,18 @@ test_that("in a study: km_cumulative (STF Figure 1's sample) from ADTTE and from
 ")
   expect_identical(lengths(regmatches(txt3, gregexpr("annotate(", txt3, fixed = TRUE))), 1L)
   expect_false(grepl("scale_y_continuous", txt3, fixed = TRUE))
+  expect_false(grepl("plot = list(add", txt3, fixed = TRUE))
+  # (the program runs in a fresh environment and draws the build's plot: the
+  # template's scales kept, the draft's layer added)
+  a3 <- tfl_content_code(ro3)
+  env3 <- new.env(parent = .fig_pkg_env(c(attr(a3, "libs"), "tflspec")))
+  for (n in names(data)) assign(n, data[[n]], envir = env3)
+  eval(parse(text = tfl_fig_setup_code()), env3)
+  eval(parse(text = a3), env3)
+  built <- suppressMessages(tfl_content_run(ro3, data))
+  expect_identical(vapply(env3$content$layers, function(l) class(l$geom)[1L], ""),
+                   vapply(built$layers, function(l) class(l$geom)[1L], ""))
+  expect_identical(tplfig_png(env3$content), tplfig_png(built))
   # ADSL: no parameter, the event, the time
   o2 <- tfl_output("F-9-adsl", "figure", population = "SAF", label = "KM", extends = "defaults",
                    data = list(steps = list(
