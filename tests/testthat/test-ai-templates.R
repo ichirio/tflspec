@@ -468,3 +468,18 @@ test_that("shift: `Missing` and `Total` in `levels` are the template's rows: an 
   # nothing more to say of the data's values with them left out
   expect_identical(nrow(aitpl_shift_check(args = "levels: [LOW, NORMAL, HIGH]")), 0L)
 })
+
+test_that("shift, lab_shift: a draft with `post_header` passes the kit check; the note names it (#642)", {
+  ds <- tfl_ai_adam_summary(list(ADLB = tflspec::adlb, ADSL = tflspec::adsl))
+  ctx <- tfl_ai_context("table", outputs = "T-14-3-4", datasets = ds)
+  ok <- c("levels: [LOW, NORMAL, HIGH]", "post_header: 'Worst post-baseline [a]: {col}'")
+  p <- tfl_ai_check(aitpl_shift_answer(args = ok), ctx)
+  expect_identical(nrow(p[grepl("template args", p$where), , drop = FALSE]), 0L)
+  p <- tfl_ai_check(aitpl_shift_answer("lab_shift", c("visit: Week 4", "params: [ALT]", ok)), ctx)
+  expect_identical(nrow(p[grepl("template args", p$where), , drop = FALSE]), 0L)
+  # an argument the template lacks is said (the check is looking)
+  bad <- tfl_ai_check(aitpl_shift_answer(args = c(ok[1L], "post_heading: x")), ctx)
+  expect_true(any(grepl("post_heading", bad$problem, fixed = TRUE)))
+  expect_match(.ai_tpl_notes$shift, "`post_header`", fixed = TRUE)
+  expect_match(.ai_tpl_notes$lab_shift, "`post_header`", fixed = TRUE)
+})

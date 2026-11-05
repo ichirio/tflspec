@@ -83,7 +83,8 @@
     "be in the code list; the rows are `levels`, then `Missing`, then `Total` (with a ",
     "code list for the baseline they always print, ",
     "empty when nobody is in them; without one, `Missing` prints only when a subject ",
-    "has no baseline value)."),
+    "has no baseline value); a group text over the categories (`Worst post-baseline ",
+    "[a]: Low`) is `post_header` (`{col}`: the category), not the code list's label."),
   lab_shift = paste0(
     "`levels` are the data's values, in order (`LOW`, `NORMAL`, `HIGH`); to print other ",
     "text (`Low`), give the report's `codelists` for both the post and the baseline ",
@@ -92,7 +93,8 @@
     "be in the code list; the rows are `levels`, then `Missing`, then `Total` (with a ",
     "code list for the baseline they always print, ",
     "empty when nobody is in them; without one, `Missing` prints only when a subject ",
-    "has no baseline value)."),
+    "has no baseline value); a group text over the categories (`Worst post-baseline ",
+    "[a]: Low`) is `post_header` (`{col}`: the category), not the code list's label."),
   km_survival = paste0(
     "the log-rank p-value is shown by default: set `pvalue: false` when the shell shows ",
     "none."),
