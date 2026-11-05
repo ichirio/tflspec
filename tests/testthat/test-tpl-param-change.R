@@ -256,3 +256,120 @@ test_that("a page a parameter: the parameter's name in the titles, once a page",
   expect_length(grep("Parameter: Aspartate Aminotransferase (U/L)", r, fixed = TRUE), 1L)
   expect_length(grep("Alanine Aminotransferase (U/L)", r, fixed = TRUE), 1L)
 })
+
+# the stub's heading (#641): param_change's `heading`, and a report's own plan_stub
+pch_study <- function() tfl_read_study_spec(system.file("extdata", "spec-yaml", package = "tflspec"))
+# a report extending the study's defaults, resolved, run on the ARD the program makes
+pch_run <- function(content = list(), args = list(), extends = "defaults", template = TRUE) {
+  a <- utils::modifyList(pc_args, args)
+  o <- tfl_output("T-PCH", "table", population = "SAF", extends = extends, content = content,
+                  template = if (template) list(name = "param_change", args = a))
+  ro <- tfl_resolve_output(o, pch_study())
+  ard <- pc_ard(tfl_template_expand("param_change", a))
+  p <- suppressMessages(tfl_content_run(ro, ard))
+  f <- tempfile(fileext = ".rtf")
+  suppressWarnings(suppressMessages(rtfreporter::generate_rtfreport(
+    rtfreporter::rtf_tables(rtfreporter::rtf_document(), rtfreporter::plan_apply(p)), f)))
+  list(ro = ro, tab = pc_tab(p), rtf = paste(readLines(f), collapse = "\n"),
+       code = paste(tfl_content_code(ro), collapse = "\n"))
+}
+pch_hdr <- function(args, ...) {
+  x <- tfl_template_expand("param_change", utils::modifyList(pc_args, args))
+  h <- Filter(function(i) i$fn == "plan_col_header", x$content)[[1L]]$args$header
+  h
+}
+
+test_that("heading: the stub's cell in the header, on the second row with cols, the only row with rows", {
+  pc_skip()
+  # no heading: the header as it was
+  for (lay in c("cols", "rows")) {
+    h <- pch_hdr(list(layout = lay))
+    expect_false("row_label" %in% unlist(lapply(h, `[[`, "cols")))
+    expect_length(h, if (lay == "cols") 2L else 1L)
+  }
+  hc <- pch_hdr(list(heading = "Visit / Statistic"))
+  expect_identical(hc[[2L]], list(line = "2", cols = "row_label", text = "Visit / Statistic"))
+  expect_length(hc, 3L)
+  hr <- pch_hdr(list(layout = "rows", heading = "Visit / Statistic"))
+  expect_identical(hr[[1L]], list(line = "1", cols = "row_label", text = "Visit / Statistic"))
+  expect_length(hr, 2L)
+  # built: in the printed header, in the stub's cell of the table and the RTF
+  for (lay in c("cols", "rows")) {
+    r <- pch_run(args = list(layout = lay, heading = "Visit / Statistic"))
+    expect_match(r$rtf, "Visit / Statistic", fixed = TRUE)
+    expect_match(r$code, "Visit / Statistic", fixed = TRUE)
+    # (the same table, the stub column's header the only difference)
+    r0 <- pch_run(args = list(layout = lay))
+    expect_false(grepl("Visit / Statistic", r0$rtf, fixed = TRUE))
+    expect_identical(r$tab, r0$tab)
+  }
+  p <- do.call(tpl_param_change, c(list(pc_ard(tfl_template_expand("param_change", pc_args))),
+                                   pc_args, list(heading = "Visit / Statistic")))
+  expect_s3_class(p, "table_plan")
+})
+
+test_that("a report's plan_stub keeps the stub's name from the layers below (widths row_label builds)", {
+  pc_skip()
+  w <- list(tfl_item("plan_columns", list(widths = list(row_label = 2, .values = 1))))
+  st <- function(r) Filter(function(it) it$fn == "plan_stub", r$ro$content)
+  # the issue's draft: the report's plan_stub with a heading, and widths by the stub's name
+  r <- pch_run(c(list(tfl_item("plan_stub", list(heading = "Visit / Statistic"))), w))
+  expect_length(st(r), 1L)
+  expect_identical(st(r)[[1L]]$args$name, "row_label")
+  expect_identical(st(r)[[1L]]$args$heading, "Visit / Statistic")
+  # (it builds: the widths name the stub column `row_label`; the plan was applied)
+  expect_true(nrow(r$tab) > 0L)
+  # a name the report writes wins: widths name `other`, and `row_label` is no column
+  wo <- list(tfl_item("plan_columns", list(widths = list(other = 2, .values = 1))))
+  r3 <- pch_run(c(list(tfl_item("plan_stub", list(name = "other", heading = "H"))), wo))
+  expect_identical(st(r3)[[1L]]$args$name, "other")
+  expect_error(pch_run(c(list(tfl_item("plan_stub", list(name = "other", heading = "H"))), w)),
+               "names 'row_label', not a column")
+})
+
+test_that("the template's heading is printed, the report's plan_stub heading is not (the template's header wins)", {
+  pc_skip()
+  w <- list(tfl_item("plan_columns", list(widths = list(row_label = 2, .values = 1))))
+  r <- pch_run(c(list(tfl_item("plan_stub", list(heading = "Own heading"))), w),
+               args = list(heading = "Visit / Statistic"))
+  expect_match(r$rtf, "Visit / Statistic", fixed = TRUE)
+  expect_false(grepl("Own heading", r$rtf, fixed = TRUE))
+})
+
+test_that("a table with its own plan_stub and no name takes the layers' name; extends: none does not", {
+  pc_skip()
+  st <- function(r) Filter(function(it) it$fn == "plan_stub", r$content)
+  base <- list(tfl_item("table_plan", list(cols = "TRT01A", rows = list(group = "variable"))))
+  ro <- tfl_resolve_output(tfl_output("T-N", "table", population = "SAF", extends = "defaults",
+                                      content = list(tfl_item("plan_stub", list(indent = 2L)))),
+                           pch_study())
+  expect_identical(st(ro)[[1L]]$args, list(indent = 2L, name = "row_label"))
+  # the layers' item as it is, the report's other arguments kept; only `name` comes over
+  expect_false("before" %in% names(st(ro)[[1L]]$args))
+  # built: the study's header names `row_label` (it failed on the stub's old name), and the
+  # program says the name
+  saf <- adsl[adsl$SAFFL == "Y", ]
+  ard <- rtfreporter::normalize_ard(cards::bind_ard(
+    cards::ard_tabulate(saf, variables = TRT01A),
+    cards::ard_tabulate(saf, by = TRT01A, variables = c(AGEGR1, SEX))))
+  ro <- tfl_resolve_output(tfl_output("T-N", "table", population = "SAF", extends = "defaults",
+                                      content = c(base, list(tfl_item("plan_stub", list(indent = 2L))))),
+                           pch_study())
+  p <- suppressMessages(tfl_content_run(ro, ard))
+  f <- withr::local_tempfile(fileext = ".rtf")
+  suppressWarnings(suppressMessages(rtfreporter::generate_rtfreport(
+    rtfreporter::rtf_tables(rtfreporter::rtf_document(), rtfreporter::plan_apply(p)), f)))
+  expect_match(paste(readLines(f), collapse = "\n"), "Characteristic\\cell", fixed = TRUE)
+  expect_match(paste(tfl_content_code(ro), collapse = "\n"),
+               "plan_stub(indent = 2, name = \"row_label\")", fixed = TRUE)
+  # no plan_stub below (extends: none): as written
+  rn <- tfl_resolve_output(tfl_output("T-N", "table", population = "SAF", extends = "none",
+                                      content = list(tfl_item("plan_stub", list(indent = 2L)))),
+                           pch_study())
+  expect_identical(st(rn)[[1L]]$args, list(indent = 2L))
+  # a report with no plan_stub: the layers' item, as before
+  r0 <- tfl_resolve_output(tfl_output("T-N", "table", population = "SAF", extends = "defaults",
+                                      content = list(tfl_item("plan_paginate_rows", list(max_rows = 9L)))),
+                           pch_study())
+  expect_identical(st(r0)[[1L]]$args, list(name = "row_label", before = TRUE))
+})

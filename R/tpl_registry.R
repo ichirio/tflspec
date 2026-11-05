@@ -1558,7 +1558,8 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
   tfl_param("param_page", TRUE, type = "flag",
             doc = "TRUE: a page a parameter, named in the titles by `param_heading`"),
   tfl_param("param_heading", "Parameter: {value}",
-            doc = "a parameter's page name (`{value}`: the parameter)")
+            doc = "a parameter's page name (`{value}`: the parameter)"),
+  tfl_param("heading", NULL, doc = "the label column's heading")
 )
 names(.tpl_pc_params) <- vapply(.tpl_pc_params, `[[`, "", "name")
 
@@ -1616,9 +1617,12 @@ names(.tpl_pc_params) <- vapply(.tpl_pc_params, `[[`, "", "name")
          tfl_item("plan_cells", list(continuous = as.list(a$cells))),
          .tpl_param_change_digits(),
          tfl_item("plan_sort", list(keys = c("group1", "group2", "group3"))),
-         tfl_item("plan_col_header", list(header = list(
-           list(line = "1", cols = ".values", span = "each", text = "{col}
-(N={n})")))))
+         # (one header row: the stub's heading is in it)
+         tfl_item("plan_col_header", list(header = c(
+           if (length(a$heading)) list(list(line = "1", cols = "row_label",
+                                            text = paste(a$heading, collapse = "\n"))),
+           list(list(line = "1", cols = ".values", span = "each", text = "{col}
+(N={n})"))))))
   } else {
     list(tfl_item("table_plan", list(cols = c(a$by, "variable"), rows = list(
            group1 = "PARAM", group2 = "AVISIT"))),
@@ -1626,10 +1630,13 @@ names(.tpl_pc_params) <- vapply(.tpl_pc_params, `[[`, "", "name")
          .tpl_param_change_digits(),
          # the arm and its N over its two columns (the N is the arm's, not
          # a value's or a change's)
-         tfl_item("plan_col_header", list(header = list(
-           list(line = "1", cols = ".values", span = a$by, text = "{col1}
-(N={n})"),
-           list(line = "2", cols = ".values", span = "each", text = "{col}")))))
+         # (the stub's heading on the second row, as shift's)
+         tfl_item("plan_col_header", list(header = c(
+           list(list(line = "1", cols = ".values", span = a$by, text = "{col1}
+(N={n})")),
+           if (length(a$heading)) list(list(line = "2", cols = "row_label",
+                                            text = paste(a$heading, collapse = "\n"))),
+           list(list(line = "2", cols = ".values", span = "each", text = "{col}"))))))
   }
   content <- c(plan, list(
     tfl_item("plan_labels", list(variable = c(

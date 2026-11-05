@@ -74,7 +74,9 @@
   param_change = paste0(
     "`baseline: true` adds a Baseline column (rows, with `layout: rows`) from the same ",
     "records `where` keeps: with `where: ONTRTFL == \"Y\"` the baseline is empty; for a ",
-    "baseline, `where: ONTRTFL == \"Y\" | ABLFL == \"Y\"`."),
+    "baseline, `where: ONTRTFL == \"Y\" | ABLFL == \"Y\"`. The stub's heading goes in the ",
+    "template's `heading` argument: a `plan_stub: {heading: ...}` is not printed (the ",
+    "template's header wins)."),
   shift = paste0(
     "`levels` are the data's values, in order (`LOW`, `NORMAL`, `HIGH`); to print other ",
     "text (`Low`), give the report's `codelists` for both the post and the baseline ",

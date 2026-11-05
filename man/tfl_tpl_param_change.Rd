@@ -29,6 +29,7 @@ The table template \code{param_change}, layout \code{summary}. Its program is on
    \code{cells} \tab other \tab call \tab n = \{N:.0f\}; Mean (SD) = \{mean\} (\{sd\}); Median = \{median\}... \tab plan_cells.continuous \tab the rows of a value or a change \cr
    \code{param_page} \tab other \tab call \tab TRUE \tab  \tab TRUE: a page a parameter, named in the titles by 'param_heading' \cr
    \code{param_heading} \tab other \tab call \tab Parameter: \{value\} \tab  \tab a parameter's page name ('\{value\}': the parameter) \cr
+   \code{heading} \tab other \tab call \tab  \tab  \tab the label column's heading \cr
 }
 }
 
