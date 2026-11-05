@@ -516,16 +516,19 @@
         bad <- c(bad, names(outs)[i])
         next
       }
-      # (shift: `levels` / `worst` against the data's values, when the kit has them)
-      p <- rbind(p, .ai_check_shift_levels(tp, o$codelists, vars, at))
+      # (shift: `levels` / `worst` against the data's values, when the kit has
+      # them; the code lists are the report's own and its layers', which
+      # need the study)
+      if (is.null(st) && !is.null(context$study_dir)) {
+        st <- tryCatch(tfl_read_study_spec(context$study_dir), error = function(e) NULL)
+      }
+      cl <- .ai_draft_codelists(o, st)
+      if (!is.null(cl)) p <- rbind(p, .ai_check_shift_levels(tp, cl, vars, at))
       if (!is.null(o$ard)) {
         bad <- c(bad, names(outs)[i])
         p <- .ai_problem(p, paste(at, "ard"), paste(
           "a report has `template` or `ard`, not both: the template makes the analyses"))
         next
-      }
-      if (is.null(st) && !is.null(context$study_dir)) {
-        st <- tryCatch(tfl_read_study_spec(context$study_dir), error = function(e) NULL)
       }
       o <- tryCatch(.ai_template_items(o, st), error = function(e) e)
       if (inherits(o, "error")) {

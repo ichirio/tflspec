@@ -135,5 +135,90 @@
     .spec_stop(paste(c("The ARD definition is not valid:", p$message), collapse = "\n  "),
                p, "tflspec_ard_spec_error")
   }
-  list(spec = tfl_ard_spec(ard), codelists = b$table$codelists)
+  list(spec = tfl_ard_spec(ard), codelists = .report_codelists(study, tfl_read_outputs(study$dir, skip_bad = TRUE),
+                               b, output_id))
+}
+
+#' A report's code lists, with the ones its layers give
+#'
+#' `tfl_report_codelists()` gives the code lists the ARD program of each
+#' report is written with.  A report's code lists can come from the layers
+#' it extends -- the study's `defaults.yml`, a pattern -- as well as from its
+#' own file ([tfl_resolve_output()] puts them together for the RTF); the
+#' sheets ([tfl_sheets_from_yaml()]) hold a report's own only, so that they
+#' stay the round trip back to the YAML.  This is the sheets' `codelists`
+#' rows with the layers' lists added, report by report.
+#'
+#' For each report and variable there is one list: the report's own when
+#' it has one (a template's own lists among them, as the sheets hold them),
+#' else the one of the layers it extends (a pattern's over the defaults').
+#' A report that extends nothing (`extends: none`) has only its own.  The
+#' study's `spec/codelists.yml` is no layer: its lists are lists to copy
+#' from, and apply to no report unless the report's own file has them.
+#'
+#' @param study The study's spec, as [tfl_read_study_spec()] reads it.
+#' @param outputs The reports, as [tfl_sheets_from_spec()] takes them: a
+#'   list of `tfl_output` named by id.  `NULL` (default): the study's own
+#'   files, read as [tfl_sheets_from_yaml()] reads them.
+#' @return A data frame of the sheets' `codelists` rows (`output_id`,
+#'   `variable`, `value`, `label`, `order`, `under`), the reports in the
+#'   TOC's order; every row has its report (no `NA` `output_id`), and zero
+#'   rows when no report has a list.  [tfl_ard_code()] and [tfl_build_ard()]
+#'   write a study's ARD with these.
+#' @examples
+#' d <- system.file("extdata", "spec-yaml", package = "tflspec")
+#' tfl_report_codelists(tfl_read_study_spec(d))
+#' @export
+tfl_report_codelists <- function(study, outputs = NULL) {
+  if (!inherits(study, "tfl_study_spec")) {
+    .ard_stop("tfl_report_codelists(): `study` is a study's spec, tfl_read_study_spec().")
+  }
+  if (is.null(outputs)) {
+    if (is.null(study$dir)) {
+      .ard_stop("tfl_report_codelists(): give the reports (`outputs`), or read the study with tfl_read_study_spec(dir).")
+    }
+    outputs <- tfl_read_outputs(study$dir, skip_bad = TRUE)
+  }
+  .report_codelists(study, outputs, tfl_sheets_from_spec(study, outputs))
+}
+
+# (`sheets`: the sheets of the same reports, when the caller has them;
+# `output_id`: only these reports' rows)
+.report_codelists <- function(study, outputs, sheets, output_id = NULL) {
+  own <- sheets$table$codelists
+  own <- own[!is.na(own$output_id), , drop = FALSE]
+  toc_ids <- vapply(study$toc$outputs %||% list(), function(e) e$id %||% NA_character_, "")
+  ids <- vapply(outputs, function(o) o$id, "")
+  ord <- order(match(ids, toc_ids, nomatch = length(toc_ids) + 1L), seq_along(ids))
+  outputs <- outputs[ord]
+  ids <- ids[ord]
+  if (!is.null(output_id)) {
+    outputs <- outputs[ids %in% output_id]
+    ids <- ids[ids %in% output_id]
+  }
+  rows <- lapply(seq_along(outputs), function(i) {
+    mine <- own[own$output_id == ids[i], , drop = FALSE]
+    below <- tryCatch(.layers_below(outputs[[i]], study)$acc$codelists, error = function(e) {
+      .ard_stop(sprintf("%s: %s", ids[i], conditionMessage(e)))
+    })
+    below <- .codelists_norm(below)
+    below <- below[setdiff(names(below), mine$variable)]
+    rbind(mine, .codelist_rows_of(ids[i], below, names(own)))
+  })
+  out <- do.call(rbind, c(list(own[0L, , drop = FALSE]), rows))
+  rownames(out) <- NULL
+  out
+}
+
+# Code lists (a variable's entries: value, label, under) as the sheets'
+# rows of one report
+.codelist_rows_of <- function(id, lists, cols) {
+  rows <- list()
+  for (v in names(lists)) for (i in seq_along(lists[[v]])) {
+    e <- lists[[v]][[i]]
+    rows[[length(rows) + 1L]] <- list(
+      output_id = id, variable = v, value = .sheet_cell(e$value), label = .sheet_cell(e$label),
+      order = as.character(i), under = .sheet_cell(e$under))
+  }
+  .rows_df(rows, cols)
 }
