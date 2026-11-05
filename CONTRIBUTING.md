@@ -35,6 +35,9 @@ fork's `main` up to date the same way ("Update the fork's main" there).
   Non-ASCII is fine in comments and roxygen.
 - Change the code, its tests and its roxygen text together.
 - Keep the line endings of the files you edit.
+- Explain a feature by what it does, not by comparison with another package;
+  name another package only when it is the actual subject (an engine, a
+  dependency, an adapter).
 
 ## The change record
 

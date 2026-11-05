@@ -236,6 +236,31 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
   if (is.character(default)) unlist(m) else m
 }
 
+# A parameter that is a map of name to text (type list, fields name and text,
+# not several): `param_labels: {ALT: "..."}`
+.tpl_is_name_text <- function(p) {
+  identical(p$type, "list") && !isTRUE(p$multiple) && setequal(p$fields, c("name", "text"))
+}
+
+# A map's value written as a list of {name, text} (the type the kit prints),
+# as the mapping: `[{name: ALT, text: "..."}]` is `{ALT: "..."}`.  A value
+# that is not such a list (a mapping, a vector, NULL, a tfl_r) stays as it
+# is; a list that cannot be read as a mapping stops, naming the parameter.
+.tpl_name_text_map <- function(v, tname, pname, fn) {
+  if (!is.list(v) || inherits(v, "tfl_r") || !length(v) || !is.null(names(v))) return(v)
+  bad <- function(why) {
+    .ard_stop(sprintf(paste0("%s: template %s, parameter %s: %s. Write the mapping, ",
+                             "`%s: {ALT: \"...\"}`."), fn, tname, sQuote(pname, FALSE), why, pname))
+  }
+  ok <- vapply(v, function(e) is.list(e) && setequal(names(e), c("name", "text")) &&
+                 length(names(e)) == 2L, NA)
+  if (!all(ok)) bad("a list takes items of `name` and `text` only")
+  nm <- vapply(v, function(e) if (is.character(e$name) && length(e$name) == 1L) e$name else NA_character_, "")
+  if (anyNA(nm) || !all(nzchar(nm))) bad("each `name` is a text")
+  if (anyDuplicated(nm)) bad(sprintf("`name` %s is given twice", sQuote(nm[duplicated(nm)][1L], FALSE)))
+  stats::setNames(lapply(v, `[[`, "text"), nm)
+}
+
 # The arguments as the body sees them: given (NULL too) > the template's default.
 .tpl_args <- function(t, args, fn) {
   unknown <- setdiff(names(args), names(t$params))
@@ -249,6 +274,7 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
   out <- lapply(t$params, function(p) {
     if (!p$name %in% names(args)) return(p$default)
     v <- args[[p$name]]
+    if (.tpl_is_name_text(p)) v <- .tpl_name_text_map(v, t$name, p$name, fn)
     if (isTRUE(p$merge) && length(p$default) && length(v) && !is.null(names(v))) {
       v <- .tpl_merge_named(p$default, v)
     }
@@ -1396,7 +1422,7 @@ tpl_lab_shift <- function(ard, population, ..., codelists = NULL) {
       where = if (!is.null(a$where)) tfl_r(a$where), sort = a$sort))
     content <- list(
       tfl_item("plan_listing", list(cols = cols, type = "multiline")),
-      tfl_item("plan_paginate_rows", list(max_rows = 22L)))
+      tfl_item("plan_paginate_rows", list(max_rows = .listing_rows_a_page)))
     list(data = data, content = content)
   })
 
@@ -1532,7 +1558,8 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
   tfl_param("param_page", TRUE, type = "flag",
             doc = "TRUE: a page a parameter, named in the titles by `param_heading`"),
   tfl_param("param_heading", "Parameter: {value}",
-            doc = "a parameter's page name (`{value}`: the parameter)")
+            doc = "a parameter's page name (`{value}`: the parameter)"),
+  tfl_param("heading", NULL, doc = "the label column's heading")
 )
 names(.tpl_pc_params) <- vapply(.tpl_pc_params, `[[`, "", "name")
 
@@ -1590,9 +1617,12 @@ names(.tpl_pc_params) <- vapply(.tpl_pc_params, `[[`, "", "name")
          tfl_item("plan_cells", list(continuous = as.list(a$cells))),
          .tpl_param_change_digits(),
          tfl_item("plan_sort", list(keys = c("group1", "group2", "group3"))),
-         tfl_item("plan_col_header", list(header = list(
-           list(line = "1", cols = ".values", span = "each", text = "{col}
-(N={n})")))))
+         # (one header row: the stub's heading is in it)
+         tfl_item("plan_col_header", list(header = c(
+           if (length(a$heading)) list(list(line = "1", cols = "row_label",
+                                            text = paste(a$heading, collapse = "\n"))),
+           list(list(line = "1", cols = ".values", span = "each", text = "{col}
+(N={n})"))))))
   } else {
     list(tfl_item("table_plan", list(cols = c(a$by, "variable"), rows = list(
            group1 = "PARAM", group2 = "AVISIT"))),
@@ -1600,11 +1630,17 @@ names(.tpl_pc_params) <- vapply(.tpl_pc_params, `[[`, "", "name")
          .tpl_param_change_digits(),
          # the arm and its N over its two columns (the N is the arm's, not
          # a value's or a change's)
-         tfl_item("plan_col_header", list(header = list(
-           list(line = "1", cols = ".values", span = a$by, text = "{col1}
-(N={n})"),
-           list(line = "2", cols = ".values", span = "each", text = "{col}")))))
+         # (the stub's heading on the second row, as shift's)
+         tfl_item("plan_col_header", list(header = c(
+           list(list(line = "1", cols = ".values", span = a$by, text = "{col1}
+(N={n})")),
+           if (length(a$heading)) list(list(line = "2", cols = "row_label",
+                                            text = paste(a$heading, collapse = "\n"))),
+           list(list(line = "2", cols = ".values", span = "each", text = "{col}"))))))
   }
+  # (the heading is the stub's cell: the template names the stub column, as
+  # shift's plan_stub does, when no study layer has a plan_stub)
+  if (length(a$heading)) plan <- c(plan, list(tfl_item("plan_stub", list(name = "row_label"))))
   content <- c(plan, list(
     tfl_item("plan_labels", list(variable = c(
       if (isTRUE(a$baseline)) list(BASE = a$baseline_label),

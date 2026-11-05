@@ -301,7 +301,13 @@ test_that("templates.md carries the facts a trial found only by building", {
   }
   expect_match(note("param_change"), "ONTRTFL == \"Y\" | ABLFL == \"Y\"", fixed = TRUE)
   expect_match(note("shift"), "need not be in the code list", fixed = TRUE)
-  expect_match(note("lab_shift"), "codes or its labels", fixed = TRUE)
+  expect_match(note("shift"), "`levels` are the data's values", fixed = TRUE)
+  expect_match(note("shift"), "give the report's `codelists` for both the post and the baseline", fixed = TRUE)
+  expect_no_match(note("shift"), "codes or its labels", fixed = TRUE)
+  expect_match(note("shift"), "`Missing` and `Total` are the template's rows: not in `levels`", fixed = TRUE)
+  expect_match(note("lab_shift"), "`Missing` and `Total` are the template's rows: not in `levels`", fixed = TRUE)
+  expect_match(note("lab_shift"), "`levels` are the data's values", fixed = TRUE)
+  expect_no_match(note("lab_shift"), "codes or its labels", fixed = TRUE)
   expect_match(note("km_survival"), "`pvalue: false`", fixed = TRUE)
   # (the short list, names only, has none)
   expect_false(any(grepl("note:", tflspec:::.ai_templates_list("table", short = TRUE), fixed = TRUE)))
@@ -372,4 +378,166 @@ test_that("a listing drafted from the listing template is built (RTF)", {
   rp <- res$reports
   expect_identical(rp$status[rp$output_id == "T-14-2-1"], "ok")
   expect_true(file.exists(file.path(d, rp$rtf[rp$output_id == "T-14-2-1"])))
+})
+
+# shift's `levels` and `worst` against the data's values (#636)
+aitpl_shift_answer <- function(template = "shift", args = "levels: [Low, Normal, High]", codelists = FALSE,
+                                cl_vars = c("ANRIND", "BNRIND"), cl_missing = FALSE, extends = "none") {
+  cl <- c("    codelists:",
+          paste0("      ", cl_vars,
+                 ": [{value: LOW, label: Low}, {value: NORMAL, label: Normal}, {value: HIGH, label: High}",
+                 if (cl_missing) ", {value: Missing, label: Missing}", "]"))
+  tfl_ai_parse(aitpl_answer(
+    "tflspec_ai: {task: table, version: 1, outputs: [T-14-3-4]}",
+    "outputs:",
+    "  - id: T-14-3-4",
+    "    kind: table",
+    "    label: Shift table",
+    "    population: SAF",
+    if (codelists) cl,
+    paste0("    extends: ", extends),
+    "    template:",
+    sprintf("      name: %s", template),
+    "      args:",
+    paste0("        ", args),
+    "assumptions: []"), "table")
+}
+aitpl_shift_check <- function(..., datasets = TRUE, study_dir = NULL) {
+  ds <- if (datasets) tfl_ai_adam_summary(list(ADLB = tflspec::adlb, ADSL = tflspec::adsl))
+  p <- tfl_ai_check(aitpl_shift_answer(...),
+                    tfl_ai_context("table", outputs = "T-14-3-4", datasets = ds, study_dir = study_dir))
+  p[grepl("template args (levels|worst)", p$where), , drop = FALSE]
+}
+
+test_that("shift: `levels` that match no value of the data are an error, unless a code list gives the text (#636)", {
+  # the data's ANRIND values: HIGH, LOW, NORMAL (tflspec::adlb)
+  expect_setequal(unique(tflspec::adlb$ANRIND), c("HIGH", "LOW", "NORMAL"))
+  p <- aitpl_shift_check()
+  expect_identical(p$severity, "error")
+  expect_match(p$problem, "Low, Normal, High match no value of ADLB.ANRIND (HIGH, LOW, NORMAL)", fixed = TRUE)
+  expect_match(p$problem, "`levels` are the data's values; for other printed text give `codelists` with value and label",
+               fixed = TRUE)
+  # a code list for both columns: the labels are the printed text
+  expect_identical(nrow(aitpl_shift_check(codelists = TRUE)), 0L)
+  # a list for one column only leaves the other unmatched: the same silent failure
+  for (v in c("ANRIND", "BNRIND")) {
+    p <- aitpl_shift_check(codelists = TRUE, cl_vars = v)
+    expect_identical(p$severity, "error", info = v)
+    expect_match(p$problem, "both ANRIND and BNRIND", fixed = TRUE)
+  }
+  # the data's values
+  expect_identical(nrow(aitpl_shift_check(args = "levels: [LOW, NORMAL, HIGH]")), 0L)
+  # a value the data lacks, besides: said, but a shell may have one
+  p <- aitpl_shift_check(args = "levels: [LOW, NORMAL, HIGH, VERY HIGH]")
+  expect_identical(p$severity, "warning")
+  expect_match(p$problem, "VERY HIGH match no value", fixed = TRUE)
+  expect_match(p$problem, "will not print", fixed = TRUE)
+  # the data not known: nothing to say
+  expect_identical(nrow(aitpl_shift_check(datasets = FALSE)), 0L)
+  # lab_shift: its post / baseline are ANRIND / BNRIND
+  p <- aitpl_shift_check("lab_shift", c("visit: Week 4", "params: [ALT]", "levels: [Low, Normal, High]"))
+  expect_identical(p$severity, "error")
+  expect_match(p$problem, "of template lab_shift", fixed = TRUE)
+})
+
+test_that("shift: `worst` is matched with the data's values, a code list's label does not count (#636)", {
+  p <- aitpl_shift_check(args = "worst: [Low, Normal, High]", codelists = TRUE)
+  expect_identical(p$severity, "error")
+  expect_match(p$problem, "worst of template shift: Low, Normal, High match no value", fixed = TRUE)
+  expect_identical(nrow(aitpl_shift_check(args = "worst: [HIGH, LOW, NORMAL]", codelists = TRUE)), 0L)
+  p <- aitpl_shift_check(args = "worst: [HIGH, LOW, Normal]")
+  expect_identical(p$severity, "warning")
+  # (an unmatched `worst` entry ranks nothing: not "will not print")
+  expect_match(p$problem, "Normal match no value", fixed = TRUE)
+  expect_match(p$problem, "they rank nothing, so check the order", fixed = TRUE)
+  expect_no_match(p$problem, "will not print", fixed = TRUE)
+})
+
+test_that("shift: `Missing` and `Total` in `levels` are the template's rows: an error, whatever the code lists or `worst` (#636)", {
+  for (cl in c(FALSE, TRUE)) {
+    p <- aitpl_shift_check(args = "levels: [LOW, NORMAL, HIGH, Missing]", codelists = cl, cl_missing = cl)
+    expect_identical(p$severity, "error", info = cl)
+    expect_match(p$problem, "`Missing` is a row the template adds: leave it out of `levels`", fixed = TRUE)
+  }
+  # (worst unset; Total; a label of the report's own)
+  p <- aitpl_shift_check(args = c("levels: [LOW, NORMAL, HIGH, Total]", "worst: ~"))
+  expect_match(p$problem, "`Total` is a row the template adds", fixed = TRUE)
+  p <- aitpl_shift_check(args = c("levels: [LOW, NORMAL, HIGH, Absent]", "missing_label: Absent"))
+  expect_match(p$problem, "`Absent` is a row the template adds", fixed = TRUE)
+  # (the others of the entries are still judged)
+  p <- aitpl_shift_check(args = "levels: [Low, Missing]")
+  expect_length(p$problem, 2L)
+  # nothing more to say of the data's values with them left out
+  expect_identical(nrow(aitpl_shift_check(args = "levels: [LOW, NORMAL, HIGH]")), 0L)
+})
+
+# a draft's levels covered by the code lists of the layers it extends (#647)
+aitpl_layer_study <- function(defaults = NULL, pattern = NULL, env = parent.frame()) {
+  d <- withr::local_tempdir(.local_envir = env)
+  dir.create(file.path(d, "spec", "outputs"), recursive = TRUE)
+  writeLines("study_id: CL-1", file.path(d, "study.yml"))
+  writeLines(c("content: []", if (length(defaults)) c("codelists:", paste0("  ", defaults))),
+             file.path(d, "spec", "defaults.yml"))
+  if (length(pattern)) {
+    dir.create(file.path(d, "spec", "patterns"))
+    writeLines(c("codelists:", paste0("  ", pattern)), file.path(d, "spec", "patterns", "pp.yml"))
+  }
+  d
+}
+aitpl_layer_lists <- paste0(c("ANRIND", "BNRIND"),
+  ": [{value: LOW, label: Low}, {value: NORMAL, label: Normal}, {value: HIGH, label: High}]")
+
+test_that("shift: `levels` covered by the code lists of the layers the draft extends pass (#647)", {
+  skip_on_cran()
+  d <- aitpl_layer_study(defaults = aitpl_layer_lists)
+  expect_identical(nrow(aitpl_shift_check(extends = "defaults", study_dir = d)), 0L)
+  # a pattern's, the draft extending it
+  dp <- aitpl_layer_study(pattern = aitpl_layer_lists)
+  expect_identical(nrow(aitpl_shift_check(extends = "[patterns/pp, defaults]", study_dir = dp)), 0L)
+  # not a layer the draft extends: not its lists
+  p <- aitpl_shift_check(extends = "none", study_dir = d)
+  expect_identical(p$severity, "error")
+  p <- aitpl_shift_check(extends = "defaults", study_dir = dp)
+  expect_identical(p$severity, "error")
+  # lab_shift: the same lists
+  expect_identical(nrow(aitpl_shift_check("lab_shift", c("visit: Week 4", "params: [ALT]", "levels: [Low, Normal, High]"),
+                                          extends = "defaults", study_dir = d)), 0L)
+})
+
+test_that("shift: `levels` the layers' lists do not cover are the same error as with the report's own list (#647)", {
+  skip_on_cran()
+  d <- aitpl_layer_study(defaults = aitpl_layer_lists)
+  own <- aitpl_shift_check(args = "levels: [Low, Normal, Extreme]", codelists = TRUE)
+  layer <- aitpl_shift_check(args = "levels: [Low, Normal, Extreme]", extends = "defaults", study_dir = d)
+  expect_identical(layer$severity, own$severity)
+  expect_identical(layer$problem, own$problem)
+  # one column's list only (the other column's has none): the error of the own lists
+  one <- aitpl_layer_study(defaults = aitpl_layer_lists[1])
+  p <- aitpl_shift_check(extends = "defaults", study_dir = one)
+  expect_identical(p$severity, "error")
+  expect_match(p$problem, "both ANRIND and BNRIND", fixed = TRUE)
+  # the draft's own list of one column and the layer's of the other: both are the report's
+  mix <- aitpl_shift_check(codelists = TRUE, cl_vars = "ANRIND", extends = "defaults",
+                           study_dir = aitpl_layer_study(defaults = aitpl_layer_lists[2]))
+  expect_identical(nrow(mix), 0L)
+})
+
+test_that("shift: a draft that extends and a study that cannot be read leave the check out (#647)", {
+  skip_on_cran()
+  d <- aitpl_layer_study(defaults = aitpl_layer_lists)
+  ctx <- tfl_ai_context("table", outputs = "T-14-3-4", study_dir = d,
+                        datasets = tfl_ai_adam_summary(list(ADLB = tflspec::adlb, ADSL = tflspec::adsl)))
+  # (read when the context was made; not readable when the answer is checked)
+  writeLines("codelists: [", file.path(d, "spec", "defaults.yml"))
+  expect_error(tfl_read_study_spec(d))
+  chk <- function(extends) {
+    p <- tfl_ai_check(aitpl_shift_answer(extends = extends), ctx)
+    p[grepl("template args (levels|worst)", p$where), , drop = FALSE]
+  }
+  expect_identical(nrow(chk("defaults")), 0L)
+  # a draft that extends nothing needs no study: its own lists are all
+  expect_identical(chk("none")$severity, "error")
+  # no study in the context: the same
+  ctx$study_dir <- NULL
+  expect_identical(nrow(chk("defaults")), 0L)
 })

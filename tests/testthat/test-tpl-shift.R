@@ -337,3 +337,22 @@ test_that("shift: Missing and Total need not be in the code list; the program ma
     sh_codelist_program(d, cl, pp, rscript)
   }
 })
+
+test_that("shift: param_labels as a list of {name, text} builds, the page's Parameter line the label (#637)", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("cards")
+  skip_if_not_installed("dplyr")
+  skip_if_not_installed("rtfreporter")
+  d <- sh_study(withr::local_tempdir())
+  lab <- "Alanine Aminotransferase (U/L)"
+  args <- list(population = "SAF", where = 'PARAMCD == "ALT"')
+  r <- sh_report(d, c(args, list(param_labels = list(list(name = "ALT", text = lab)))))
+  t <- as.data.frame(suppressMessages(rtfreporter::plan_apply(r$plan, "table")))
+  expect_true(any(as.character(t$group) == lab))
+  m <- sh_report(d, c(args, list(param_labels = list(ALT = lab))))
+  tm <- as.data.frame(suppressMessages(rtfreporter::plan_apply(m$plan, "table")))
+  expect_identical(t, tm)
+  pg <- suppressMessages(rtfreporter::plan_apply(r$plan, "pages"))
+  expect_identical(names(pg), paste("Parameter:", lab))
+})

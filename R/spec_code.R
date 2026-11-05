@@ -1552,8 +1552,8 @@ tfl_normalize_code <- function(spec, ard_spec = NULL, output_id = NULL,
 #' `tables` sheet go into `table_plan()`, and the other sheets become the
 #' plan's first layers through the same verbs [tfl_table_code()] writes ---
 #' so a verb written afterwards still wins, which is how one report departs
-#' from the study's workbook in a line of code.  Like `table_plan()`, the data
-#' comes first, so it pipes.
+#' from the study's workbook in a line of code.  The data comes first, so it
+#' pipes.
 #'
 #' @param data The normalized ARD, as [rtfreporter::table_plan()] takes it.
 #' @param spec A table definition ([tfl_read_table_spec()],

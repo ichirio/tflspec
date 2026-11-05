@@ -277,7 +277,7 @@
       "A listing (`kind: listing`) prints records, not statistics: it has no `ard: analyses` and no `table_plan`.", "",
       "- `data`*: the records: `{source: dataset, dataset: <ADaM dataset>, population: <analysis set id>, where: !r '<R condition on its columns>', sort: [<variable>, -<variable, descending>]}`; or `{source: dataset, data: <an analysis_data id of this report>}`, that data in `ard: analysis_data` (its `population` there), when the records need more than a condition (ADSL's columns added, derived columns).",
       "- The analysis set is required: `data.population`, or the analysis data's. A dataset of parameters (PARAMCD: ADLB, ADVS ...) is kept to the shell's (`where: !r 'PARAMCD == \"ALT\"'`) or shows PARAM / PARAMCD in a column. When the shell does not say them, ask -- do not guess.",
-      "- `content`*: one `plan_listing` item, its `cols` the shell's columns in order, each `{fn: listing_col, args: {vars: [<variables stacked in the column>], label: <header>, width: <characters>, collapse_repeats: true}}` (`collapse_repeats`: a value printed once while it repeats, as a subject's id); `type: multiline` unless the shell is one line a record. Then, if the shell says how many rows a page, `plan_paginate_rows: {max_rows: <n>}`.",
+      "- `content`*: one `plan_listing` item, its `cols` the shell's columns in order, each `{fn: listing_col, args: {vars: [<variables stacked in the column>], label: <header>, width: <characters>, collapse_repeats: true}}` (`collapse_repeats`: a value printed once while it repeats, as a subject's id); `type: multiline` unless the shell is one line a record. A listing with no page size pages at 22 rows (the header on every page); write `plan_paginate_rows: {max_rows: <n>}` only when the shell says otherwise.",
       "- `page`: its titles and footnotes, as a table's.",
       "",
       fn_lines("plan_listing"), fn_lines("listing_col"), "")
@@ -516,14 +516,19 @@
         bad <- c(bad, names(outs)[i])
         next
       }
+      # (shift: `levels` / `worst` against the data's values, when the kit has
+      # them; the code lists are the report's own and its layers', which
+      # need the study)
+      if (is.null(st) && !is.null(context$study_dir)) {
+        st <- tryCatch(tfl_read_study_spec(context$study_dir), error = function(e) NULL)
+      }
+      cl <- .ai_draft_codelists(o, st)
+      if (!is.null(cl)) p <- rbind(p, .ai_check_shift_levels(tp, cl, vars, at))
       if (!is.null(o$ard)) {
         bad <- c(bad, names(outs)[i])
         p <- .ai_problem(p, paste(at, "ard"), paste(
           "a report has `template` or `ard`, not both: the template makes the analyses"))
         next
-      }
-      if (is.null(st) && !is.null(context$study_dir)) {
-        st <- tryCatch(tfl_read_study_spec(context$study_dir), error = function(e) NULL)
       }
       o <- tryCatch(.ai_template_items(o, st), error = function(e) e)
       if (inherits(o, "error")) {
@@ -935,9 +940,16 @@
   unset <- .ai_widths_unset(answer$outputs)
   # (a listing's columns their widths, where the answer gave none: R/ai_widths.R)
   answer$outputs <- lapply(answer$outputs, .ai_listing_widths, vars = answer$vars)
-  # (a table's widths R gave it on an earlier run)
+  # (a table's widths R gave it on an earlier run, while its draft is the
+  # one they were made for)
   known <- .ai_widths_read(dir)
-  answer$outputs <- lapply(answer$outputs, .ai_widths_again, known = known)
+  if (length(known)) {
+    old <- setwd(dir)
+    tryCatch({
+      st <- tryCatch(tfl_read_study_spec("."), error = function(e) NULL)
+      answer$outputs <- lapply(answer$outputs, .ai_widths_again, known = known, st = st)
+    }, finally = setwd(old))
+  }
   for (i in seq_along(ids)) tfl_write_output(answer$outputs[[i]], paths[i])
   # a table with no widths: built here when its data can be read, its
   # widths from its printed columns (else run.R gives them when it builds)
