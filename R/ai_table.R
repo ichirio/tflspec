@@ -942,9 +942,10 @@
   known <- .ai_widths_read(dir)
   if (length(known)) {
     old <- setwd(dir)
-    st <- tryCatch(tfl_read_study_spec("."), error = function(e) NULL)
-    answer$outputs <- lapply(answer$outputs, .ai_widths_again, known = known, st = st)
-    setwd(old)
+    tryCatch({
+      st <- tryCatch(tfl_read_study_spec("."), error = function(e) NULL)
+      answer$outputs <- lapply(answer$outputs, .ai_widths_again, known = known, st = st)
+    }, finally = setwd(old))
   }
   for (i in seq_along(ids)) tfl_write_output(answer$outputs[[i]], paths[i])
   # a table with no widths: built here when its data can be read, its
