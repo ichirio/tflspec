@@ -271,3 +271,46 @@ test_that("a figure's own colours over the palette, and its legend title (#577)"
 "),
                "legend.title = element_blank()", fixed = TRUE)
 })
+
+test_that("ref_label with facet_by is drawn inside each panel, and asks for no margin", {
+  mk <- function(facet) {
+    plot <- list(x_label = "Visit", y_label = "Value")
+    if (facet) plot$facet_by <- "TRT"
+    tfl_fig_design(
+      data = list(list(step = "code", code = paste0(
+        'df <- data.frame(TRT = rep(c("A", "B"), each = 3), x = rep(1:3, 2), ',
+        'y = c(1, 2, 3, 2, 3, 4))'))),
+      plot = plot,
+      layers = list(list(layer = "geom", geom = "geom_line", data = "df", aes = "x = x | y = y"),
+                    list(layer = "ref_label", y = "2.5", label = "Limit")))
+  }
+  lines_of <- function(facet) tfl_fig_design_code(mk(facet), save = FALSE, name = "fig")
+  # (the code is wrapped over lines: its words, one space apart)
+  flat <- function(facet) gsub("[[:space:]]+", " ", paste(lines_of(facet), collapse = " "))
+  code_f <- flat(TRUE)
+  expect_match(code_f, "aes(x = -Inf, y = y, label = label), hjust = -0.1, vjust = -0.5,",
+               fixed = TRUE)
+  expect_false(grepl("margin(5.5, 50", code_f, fixed = TRUE))
+  expect_false(grepl("clip", code_f, fixed = TRUE))
+
+  # without panels: the label right of the panel, the margin and clip off, as before
+  code_n <- flat(FALSE)
+  expect_match(code_n, "annotate(\"text\", x = Inf, y = 2.5, label = \"Limit\", hjust = -0.3",
+               fixed = TRUE)
+  expect_match(code_n, "margin(5.5, 50, 5.5, 5.5)", fixed = TRUE)
+  expect_match(code_n, "coord_cartesian(clip = \"off\")", fixed = TRUE)
+
+  # drawn: the label row sits at the left edge of every panel
+  env <- new.env()
+  pdf(NULL)
+  on.exit(dev.off(), add = TRUE)
+  suppressMessages(eval(parse(text = lines_of(TRUE)), envir = env))
+  b <- ggplot2::ggplot_build(env$fig)
+  rows <- Filter(function(d) "label" %in% names(d), b$data)
+  expect_length(rows, 1L)
+  rows <- rows[[1L]]
+  expect_equal(nrow(rows), 2L)
+  expect_setequal(as.character(rows$PANEL), c("1", "2"))
+  expect_true(all(rows$x == -Inf))
+  expect_true(all(rows$y == 2.5))
+})
