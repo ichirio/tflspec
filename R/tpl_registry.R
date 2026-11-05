@@ -1396,7 +1396,7 @@ tpl_lab_shift <- function(ard, population, ..., codelists = NULL) {
       where = if (!is.null(a$where)) tfl_r(a$where), sort = a$sort))
     content <- list(
       tfl_item("plan_listing", list(cols = cols, type = "multiline")),
-      tfl_item("plan_paginate_rows", list(max_rows = 22L)))
+      tfl_item("plan_paginate_rows", list(max_rows = .listing_rows_a_page)))
     list(data = data, content = content)
   })
 
