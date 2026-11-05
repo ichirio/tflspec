@@ -135,5 +135,11 @@
     .spec_stop(paste(c("The ARD definition is not valid:", p$message), collapse = "\n  "),
                p, "tflspec_ard_spec_error")
   }
-  list(spec = tfl_ard_spec(ard), codelists = b$table$codelists)
+  # the code lists of the reports: spec/codelists.yml's rows (no report) are
+  # lists to copy from, which the sheets keep, not the build's
+  cl <- b$table$codelists
+  if (is.data.frame(cl) && nrow(cl) && "output_id" %in% names(cl)) {
+    cl <- cl[!is.na(cl$output_id), , drop = FALSE]
+  }
+  list(spec = tfl_ard_spec(ard), codelists = cl)
 }
