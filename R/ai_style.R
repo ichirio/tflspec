@@ -46,7 +46,9 @@
 #'   `width_twips` (the row's width), `rel_widths` (each cell's width as parts of the narrowest, ` | `
 #'   between them), `border_top`, `border_bottom` (one character a cell:
 #'   `1` a border, `0` none), `font_size_pt`, `align` (one character a
-#'   cell: `l`, `c`, `r`), `fonts` (the file's font table, ` | ` between).
+#'   cell: `l`, `c`, `r`), `fonts` (the file's font table, ` | ` between),
+#'   `font_uses` (the fonts the row's text switches to, `\fN`, by name, one
+#'   for each use, ` | ` between).
 #' @seealso [tfl_ai_style_prompt()]
 #' @export
 tfl_rtf_style_scan <- function(rtf_dir) {
@@ -57,7 +59,7 @@ tfl_rtf_style_scan <- function(rtf_dir) {
                       n_cells = integer(), width_twips = integer(), rel_widths = character(),
                       border_top = character(), border_bottom = character(),
                       font_size_pt = numeric(), align = character(), fonts = character(),
-                      stringsAsFactors = FALSE)
+                      font_uses = character(), stringsAsFactors = FALSE)
   rows <- lapply(fs, function(f) {
     x <- paste(readLines(f, warn = FALSE, encoding = "latin1"), collapse = "\n")
     # (its path under the folder: a study's subfolder and the file)
@@ -69,16 +71,22 @@ tfl_rtf_style_scan <- function(rtf_dir) {
   out
 }
 
+# A file's font table: the names, each named by its font number
+.rtf_font_table <- function(x) {
+  ft <- regmatches(x, regexpr("\\{\\\\fonttbl.*?\\}\\}", x, perl = TRUE))
+  if (!length(ft)) return(character())
+  ent <- strsplit(ft, "{\\f", fixed = TRUE)[[1L]]
+  ent <- ent[grepl("^[0-9]", ent)]
+  num <- sub("^([0-9]+).*$", "\\1", ent)
+  # (each entry's name: what is left of it without its control words)
+  ent <- gsub("\\\\[a-z]+-?[0-9]* ?", "", sub(";.*$", "", ent), perl = TRUE)
+  stats::setNames(trimws(gsub("^[0-9]+", "", ent)), num)
+}
+
 # One file's table rows (see tfl_rtf_style_scan())
 .rtf_style_rows <- function(x, name) {
-  ft <- regmatches(x, regexpr("\\{\\\\fonttbl.*?\\}\\}", x, perl = TRUE))
-  # (each entry's name: what is left of it without its control words)
-  fonts <- if (length(ft)) {
-    ent <- strsplit(ft, "{\\f", fixed = TRUE)[[1L]]
-    ent <- ent[grepl("^[0-9]", ent)]
-    ent <- gsub("\\\\[a-z]+-?[0-9]* ?", "", sub(";.*$", "", ent), perl = TRUE)
-    trimws(gsub("^[0-9]+", "", ent))
-  } else character()
+  font_tbl <- .rtf_font_table(x)
+  fonts <- unname(font_tbl)
   # a page's running header and footer, laid out in rows, are not a table
   x <- .rtf_drop_groups(x, c("header", "headerl", "headerr", "headerf",
                              "footer", "footerl", "footerr", "footerf"))
@@ -117,19 +125,26 @@ tfl_rtf_style_scan <- function(rtf_dir) {
     w[w <= 0L] <- NA_integer_
     rel <- if (all(is.na(w))) NA_character_ else
       paste(round(w / min(w, na.rm = TRUE), 1L), collapse = " | ")
-    bt <- paste(ifelse(grepl("\\\\clbrdrt", defs), "1", "0"), collapse = "")
-    bb <- paste(ifelse(grepl("\\\\clbrdrb", defs), "1", "0"), collapse = "")
+    # (a side's border kind follows its control word: \brdrnone / \brdrnil
+    # after it is no border)
+    bt <- paste(ifelse(grepl("\\\\clbrdrt(?!\\\\brdr(none|nil)(?![a-z]))", defs, perl = TRUE), "1", "0"), collapse = "")
+    bb <- paste(ifelse(grepl("\\\\clbrdrb(?!\\\\brdr(none|nil)(?![a-z]))", defs, perl = TRUE), "1", "0"), collapse = "")
     body <- sub("(?s)^.*\\\\cellx-?[0-9]+", "", r, perl = TRUE)
     fsz <- regmatches(r, regexpr("\\\\fs[0-9]+", r))
     al <- regmatches(body, gregexpr("\\\\q[lcrj](?![a-z])", body, perl = TRUE))[[1L]]
     al <- paste(substring(al, 3L, 3L), collapse = "")
+    # the fonts the row's text switches to (\fN), by name, one for each use
+    fn <- regmatches(body, gregexpr("\\\\f[0-9]+(?![0-9a-z])", body, perl = TRUE))[[1L]]
+    fu <- unname(font_tbl[substring(fn, 3L)])
+    fu <- fu[!is.na(fu)]
     out[[length(out) + 1L]] <- data.frame(
       file = name, table = tbl, row = k, page = 1L + sum(pb < s),
       header = grepl("\\\\trhdr(?![a-z])", defs[1L], perl = TRUE),
       n_cells = length(cx), width_twips = max(cx),
       rel_widths = rel, border_top = bt, border_bottom = bb,
       font_size_pt = if (length(fsz)) as.numeric(substring(fsz, 4L)) / 2 else doc_pt,
-      align = al, fonts = paste(fonts, collapse = " | "), .cx = paste(cx, collapse = ","),
+      align = al, fonts = paste(fonts, collapse = " | "),
+      font_uses = paste(fu, collapse = " | "), .cx = paste(cx, collapse = ","),
       stringsAsFactors = FALSE)
     prev_end <- e + 4L
   }
@@ -238,6 +253,11 @@ tfl_ai_style_prompt <- function(rtf_dir = NULL, dir = NULL, standard = NULL) {
     write_csv(std[, c("kind", "key", "value")], f_std)
   }
   n_files <- length(unique(tabs$file))
+  if (!nrow(tabs)) {
+    n_rtf <- length(list.files(rtf_dir, pattern = "[.]rtf$", recursive = TRUE, ignore.case = TRUE))
+    warning(sprintf("tfl_ai_style_prompt(): no table found in %s (%d RTF file(s)); figures are not read. The prompt is written without any.",
+                    rtf_dir, n_rtf), call. = FALSE)
+  }
   norm <- function(p) normalizePath(p, winslash = "/", mustWork = FALSE)
   # the files to open: three a kind at most, the newest first
   mt <- file.mtime(file.path(rtf_dir, tabs$file))
@@ -269,7 +289,7 @@ tfl_ai_style_prompt <- function(rtf_dir = NULL, dir = NULL, standard = NULL) {
     "## What R read for you",
     "",
     sprintf("- `%s`: one row a table -- `kind` (R's guess from the title: %s), `title`, `header_rows`, `n_cols`, `stub_ratio` (the first column's width to a value column's), `rules` (where lines are drawn: `above_header`, `under_spanner`, `under_header`, `body`, `end`), `font`, `font_size_pt`, `stub_align`, `value_align` (`l`, `c`, `r`), `orientation`, `margins_in`, `title_place` / `footnote_place` (`header` / `footer` of the page, `before` / `after` the table), `title_align`, `footnote_align`, `footnotes` (their number).",
-            norm(f_tabs), paste0("`", .ai_style_kinds, "`", collapse = ", ")),
+            norm(f_tabs), paste0("`", setdiff(.ai_style_kinds, "all"), "`", collapse = ", ")),
     sprintf("- `%s`: the same, one row a table row (cell widths, borders, alignment), when a table needs a closer look.", norm(f_scan)),
     "",
     "A guessed kind can be wrong: when a table's title says otherwise, use the right kind and say so in `notes`.",
