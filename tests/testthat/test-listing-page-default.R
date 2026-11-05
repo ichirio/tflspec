@@ -149,6 +149,8 @@ test_that("a table with no plan_listing, and a report's own code, get nothing", 
   code <- tfl_r("content <- rtfreporter::table_plan(adae) |> rtfreporter::plan_listing()")
   o <- tfl_output("L-9", "listing", extends = "none", content = code)
   expect_identical(tfl_resolve_output(o, st)$content, code)
+  f <- tfl_output("F-1", "figure", extends = "none", content = list(tfl_item("plan_listing", list())))
+  expect_identical(vapply(tfl_resolve_output(f, st)$content, `[[`, "", "fn"), "plan_listing")
 })
 
 test_that("the program carries the page size, and the file is not given it", {

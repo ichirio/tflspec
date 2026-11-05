@@ -190,9 +190,11 @@ test_that("the defaults' content is a table's: a figure or a listing takes their
   for (kind in c("figure", "listing")) {
     o <- tfl_output("X-1", kind, content = list(tfl_item("plan_listing", list())))
     r <- tfl_resolve_output(o, s)
-    # (none of the defaults'; a plan_listing with no page size is given its 22 rows, #638)
-    fns <- vapply(r$content, `[[`, "", "fn")
-    expect_identical(fns[fns != "plan_paginate_rows"], "plan_listing", info = kind)
+    # (none of the defaults'; a listing with no page size is given its 22 rows, #638;
+    # a figure is given nothing)
+    expect_identical(vapply(r$content, `[[`, "", "fn"),
+                     if (kind == "listing") c("plan_listing", "plan_paginate_rows") else "plan_listing",
+                     info = kind)
     # the page still comes from the defaults
     expect_identical(r$page$header[["1"]]$right, "DRAFT", info = kind)
   }

@@ -237,7 +237,7 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   output$codelists <- acc$codelists
   if (!is.null(tpl$x$codelists)) output$codelists <- .tpl_add_codelists(acc$codelists, tpl$x$codelists)
   output$content <- .any_label_default(acc$content, output, study)
-  output$content <- .listing_rows_default(output$content, provenance)
+  output$content <- .listing_rows_default(output$content, output$kind, provenance)
   # the study's rounding: the setup's option, so the program leaves it out
   attr(output, "study_rounding") <- .study_rounding(study)
   output$page <- acc$page
@@ -637,13 +637,14 @@ tfl_write_study_part <- function(study, part = c("defaults", "patterns", "codeli
 
 # A listing with no page size pages at the rows a page the `listing` template
 # has (.listing_rows_a_page): a plan_listing and no plan_paginate_rows or
-# plan_paginate_group among the resolved items (the report's, a template's, a
-# pattern's or the study's defaults say it) gets plan_paginate_rows(max_rows)
-# last, from the "defaults".  Built and written in the program, not in the
-# report's file; code (`tfl_r`) is left alone.
+# plan_paginate_group among the resolved items (the report's, a template's or
+# a pattern's say it; the study's defaults do not reach a listing) gets
+# plan_paginate_rows(max_rows) last, from the "defaults".  Built and written
+# in the program, not in the report's file; code (`tfl_r`) and a figure are
+# left alone.
 .listing_rows_a_page <- 22L
-.listing_rows_default <- function(items, provenance = FALSE) {
-  if (inherits(items, "tfl_r")) return(items)
+.listing_rows_default <- function(items, kind = NULL, provenance = FALSE) {
+  if (inherits(items, "tfl_r") || identical(kind, "figure")) return(items)
   fns <- vapply(items, function(it) as.character(it$fn), "")
   if (!"plan_listing" %in% fns || any(c("plan_paginate_rows", "plan_paginate_group") %in% fns)) return(items)
   it <- tfl_item("plan_paginate_rows", list(max_rows = .listing_rows_a_page), from = "defaults")
