@@ -1520,6 +1520,11 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
 
 # ---- param_change: parameters' value and change from baseline at each visit -------
 
+# The Mean (SD) cell's second choice, for a group with no SD (n = 1): the
+# mean and a dash.  THE ONE LINE to change how the missing SD prints:
+# "{mean}" alone leaves the SD blank (#673)
+.tpl_pc_no_sd <- "{mean} (-)"
+
 # The cells' digits: one decimal for the mean, the median and the range, two
 # for the SD -- a report's plan_digits(PARAM = c("<label>" = ...)) comes
 # before them for its parameters (rtfreporter's order: a row key's value,
@@ -1552,7 +1557,7 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
             doc = "the statistics the ARD has"),
   # (the cells name no digits: the template's plan_digits() gives them,
   # so a report's plan_digits(PARAM = ) can give a parameter its own)
-  tfl_param("cells", list(n = "{N:.0f}", `Mean (SD)` = "{mean} ({sd})",
+  tfl_param("cells", list(n = "{N:.0f}", `Mean (SD)` = c("{mean} ({sd})", .tpl_pc_no_sd),
                           Median = "{median}", `Min, Max` = "{min}, {max}"),
             doc = "the rows of a value or a change", study = "plan_cells.continuous"),
   tfl_param("param_page", TRUE, type = "flag",

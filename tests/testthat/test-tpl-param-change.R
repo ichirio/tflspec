@@ -111,6 +111,71 @@ test_that("the digits: the same as fixed cells, and a parameter's own by plan_di
   expect_identical(d[!a, ], t[!a, ])
 })
 
+test_that("Mean (SD) keeps the mean when a group has one subject: n = 1 prints the mean, n >= 2 and n = 0 as before (#673)", {
+  pc_skip()
+  # Control has 2 subjects with a change at CYCLE 17, 1 at CYCLE 18, none at CYCLE 20
+  a1 <- list(population = "SAF", data = "ADLB", params = "ALT", param_order = NULL,
+             visits = c("CYCLE 17 DAY 1", "CYCLE 18 DAY 1", "CYCLE 20 DAY 1"))
+  ard <- pc_ard(tfl_template_expand("param_change", a1))
+  t <- pc_tab(do.call(tpl_param_change, c(list(ard), a1)))
+  # the template's cell for a group with no SD: the one place that says how it prints
+  no_sd <- function(mean) gsub("{mean}", mean, tflspec:::.tpl_pc_no_sd, fixed = TRUE)
+  m <- t$label == "Mean (SD)"
+  v1 <- m & t$group2 == "CYCLE 17 DAY 1"
+  v2 <- m & t$group2 == "CYCLE 18 DAY 1"
+  v0 <- m & t$group2 == "CYCLE 20 DAY 1"
+  ctl <- adlb[adlb$PARAMCD == "ALT" & adlb$TRT01A == "Control" & !is.na(adlb$CHG), ]
+  one <- ctl[ctl$AVISIT == "CYCLE 18 DAY 1", ]
+  expect_identical(nrow(one), 1L)
+  # n = 1: the mean, to the template's digits (one decimal), not a blank cell
+  expect_identical(t[["Control____Value"]][v2], no_sd(sprintf("%.1f", one$AVAL)))
+  expect_identical(t[["Control____Change from baseline"]][v2], no_sd(sprintf("%.1f", one$CHG)))
+  # n = 2: the mean and the SD as before
+  two <- ctl[ctl$AVISIT == "CYCLE 17 DAY 1", ]
+  expect_identical(nrow(two), 2L)
+  expect_identical(t[["Control____Change from baseline"]][v1],
+                   sprintf("%.1f (%.2f)", mean(two$CHG), stats::sd(two$CHG)))
+  # n = 0: no mean either, the cell stays blank
+  expect_true(is.na(t[["Control____Value"]][v0]))
+  expect_true(is.na(t[["Control____Change from baseline"]][v0]))
+  # every other cell is what the cell without a fallback gave
+  old <- list(n = "{N:.0f}", `Mean (SD)` = "{mean} ({sd})", Median = "{median}",
+              `Min, Max` = "{min}, {max}")
+  o <- pc_tab(do.call(tpl_param_change, c(list(ard), a1, list(cells = old))))
+  expect_true(is.na(o[["Control____Value"]][v2]))  # (it was blank at n = 1)
+  cols <- setdiff(names(t), c("Control____Value", "Control____Change from baseline"))
+  expect_identical(t[cols], o[cols])
+  expect_identical(t[!v2, ], o[!v2, ])
+})
+
+test_that("the fallback cell takes the template's digits and a parameter's own, as the first does", {
+  pc_skip()
+  a1 <- list(population = "SAF", data = "ADLB", params = "ALT", param_order = NULL,
+             visits = c("CYCLE 17 DAY 1", "CYCLE 18 DAY 1"))
+  ard <- pc_ard(tfl_template_expand("param_change", a1))
+  p <- do.call(tpl_param_change, c(list(ard), a1))
+  t <- pc_tab(p)
+  v1 <- t$label == "Mean (SD)" & t$group2 == "CYCLE 17 DAY 1"
+  v2 <- t$label == "Mean (SD)" & t$group2 == "CYCLE 18 DAY 1"
+  # the template's: one decimal for the mean, two for the SD
+  expect_match(t[["Control____Value"]][v1], "^[0-9]+\\.[0-9] \\([0-9]+\\.[0-9]{2}\\)$")
+  expect_match(t[["Control____Value"]][v2], "^[0-9]+\\.[0-9]\\b")
+  expect_false(grepl("\\.[0-9]{2}", t[["Control____Value"]][v2]))
+  # a parameter's own, on both forms
+  alt <- unique(as.character(adlb$PARAM[adlb$PARAMCD == "ALT"]))
+  d <- pc_tab(p |> rtfreporter::plan_digits(PARAM = stats::setNames(
+    list(c(mean = 2, sd = 3)), alt)))
+  if (identical(d, t)) skip("rtfreporter without digits by a row key's value (#794)")
+  expect_match(d[["Control____Value"]][v1], "^[0-9]+\\.[0-9]{2} \\([0-9]+\\.[0-9]{3}\\)$")
+  expect_match(d[["Control____Value"]][v2], "^[0-9]+\\.[0-9]{2}\\b")
+  expect_false(grepl("\\.[0-9]{3}", d[["Control____Value"]][v2]))
+  # the same two forms as cells a report sets
+  fb <- gsub("{mean}", "{mean:.1f}", tflspec:::.tpl_pc_no_sd, fixed = TRUE)
+  both <- list(n = "{N:.0f}", `Mean (SD)` = c("{mean:.1f} ({sd:.2f})", fb),
+               Median = "{median}", `Min, Max` = "{min}, {max}")
+  expect_identical(t, pc_tab(do.call(tpl_param_change, c(list(ard), a1, list(cells = both)))))
+})
+
 test_that("the arm and its N over its two columns", {
   pc_skip()
   x <- tfl_template_expand("param_change", pc_args)
