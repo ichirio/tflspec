@@ -2649,7 +2649,7 @@ scale_x_continuous:
     limits: {type: "list<number>|r", label: {en: Range, ja: 範囲}}
     breaks: {type: "list<number>|call<seq, breaks_*, extended_breaks, pretty_breaks>|r", label: {en: Breaks, ja: 目盛り}}
     labels: {type: "list<string>|call<label_*, *_format>|r", label: {en: Tick labels, ja: 目盛りのラベル}}
-    expand: {type: "call<expansion>|list<number>|r", label: {en: Expansion, ja: 余白}}
+    expand: {type: "call<expansion, expand_scale, waiver>|list<number>|r", label: {en: Expansion, ja: 余白}}
 
 scale_y_continuous:
   package: ggplot2
@@ -2664,7 +2664,7 @@ scale_y_continuous:
     limits: {type: "list<number>|r", label: {en: Range, ja: 範囲}}
     breaks: {type: "list<number>|call<seq, breaks_*, extended_breaks, pretty_breaks>|r", label: {en: Breaks, ja: 目盛り}}
     labels: {type: "list<string>|call<label_*, *_format>|r", label: {en: Tick labels, ja: 目盛りのラベル}}
-    expand: {type: "call<expansion>|list<number>|r", label: {en: Expansion, ja: 余白}}
+    expand: {type: "call<expansion, expand_scale, waiver>|list<number>|r", label: {en: Expansion, ja: 余白}}
 
 scale_x_log10:
   package: ggplot2

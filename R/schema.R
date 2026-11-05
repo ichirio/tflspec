@@ -122,7 +122,10 @@
 #' `fill: after_scale(alpha(colour, 0.4))`, a waterfall's
 #' `fill: PCHG <= -30` or `fill: ifelse(PCHG <= -30, "PR", "SD/PD")`;
 #' in YAML a text that starts with `!` is quoted, `'!is.na(ADT)'`);
-#' a number is a constant (`group: 1`).  Any other R is `!r`.  The check
+#' a number is a constant (`group: 1`).  A column whose name R does not
+#' write bare is written in backticks (`` x: `A-B` ``, as code is read
+#' back); written tight (`A-B`) it is read as the expression, and the
+#' check warns.  Any other R is `!r`.  The check
 #' warns for a text of neither form (it is written as a column of that
 #' name) and for a variable of `after_stat()` the layer's stat does not
 #' compute (`after_stat(densty)`).

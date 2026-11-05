@@ -551,3 +551,10 @@ test_that("base R's values as calls: seq() breaks, alpha() colours, palettes, a 
     eval(.fig_item_lang(tfl_item("scale_x_continuous", list(breaks = wk))), asNamespace("ggplot2"))
   expect_true(all(c(0, 4, 48) %in% ggplot2::ggplot_build(g2)$layout$panel_params[[1L]]$x$breaks))
 })
+
+test_that("a scale's expand takes waiver() and expand_scale() too", {
+  for (f in c("waiver", "expand_scale", "expansion")) {
+    expect_identical(nrow(gg_problems("scale_x_continuous", list(expand = tfl_call(f, list())))), 0L, info = f)
+    expect_identical(nrow(gg_problems("scale_y_discrete", list(expand = tfl_call(f, list())))), 0L, info = f)
+  }
+})

@@ -163,7 +163,7 @@ scale,minor_breaks,"list<number>|call<seq, breaks_*, minor_breaks_*>|r",Minor br
 scale,n.breaks,integer,Number of breaks,目盛りの数,
 scale,labels,"list<string>|vec<string, string>|call<label_*, *_format>|r",Labels,目盛りのラベル,"In the order of the breaks, or by value ({A: Placebo}); !r scales::percent."
 scale,limits,list<number|string>|r,Range,範囲,"Data outside it are dropped (to zoom, use coord_cartesian()); NA keeps that end."
-scale,expand,call<expansion>|list<number>|r,Expansion,余白,"{fn: expansion, args: {mult: [0, 0.05]}}; [0, 0] for none."
+scale,expand,"call<expansion, expand_scale, waiver>|list<number>|r",Expansion,余白,"{fn: expansion, args: {mult: [0, 0.05]}}; [0, 0] for none."
 scale,oob,function|r,Out of bounds,範囲外の扱い,"scales::oob_squish keeps them at the edge, scales::oob_keep keeps them (a function by its name, written bare); the default drops them."
 scale,na.value,"string|number|call<alpha>",Missing,欠測の値,
 scale,guide,string|call|r,Legend,凡例,"legend, colourbar, none, or {fn: guide_legend, args: {nrow: 1}}."

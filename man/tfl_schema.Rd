@@ -106,7 +106,10 @@ arithmetic and \code{c()}, \code{sum()}, \code{max()}, \code{min()}, \code{mean(
 \code{fill: after_scale(alpha(colour, 0.4))}, a waterfall's
 \code{fill: PCHG <= -30} or \code{fill: ifelse(PCHG <= -30, "PR", "SD/PD")};
 in YAML a text that starts with \code{!} is quoted, \code{'!is.na(ADT)'});
-a number is a constant (\code{group: 1}).  Any other R is \code{!r}.  The check
+a number is a constant (\code{group: 1}).  A column whose name R does not
+write bare is written in backticks (\code{x: `A-B`}, as code is read
+back); written tight (\code{A-B}) it is read as the expression, and the
+check warns.  Any other R is \code{!r}.  The check
 warns for a text of neither form (it is written as a column of that
 name) and for a variable of \code{after_stat()} the layer's stat does not
 compute (\code{after_stat(densty)}).
