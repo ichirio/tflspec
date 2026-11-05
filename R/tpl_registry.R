@@ -19,7 +19,8 @@
 #' @param study Where the study standard's value of it is, taken when the
 #'   report's template SPEC does not give it: `"output.population"` (the
 #'   report's `population:`), `"settings.treatment"` (`study.yml`'s
-#'   `settings: treatment:`), or `"<verb>.<argument>"`
+#'   `settings: treatment:`), `"settings.sd_missing"` (its `settings:
+#'   sd_missing:`), or `"<verb>.<argument>"`
 #'   (`"plan_cells.continuous"`: that argument of the study's defaults (and
 #'   pattern) item).  `NULL`: tflspec's for its name (`population`, `by`,
 #'   `group`), else the template's own default only.
@@ -162,7 +163,9 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
     if (length(p) == 1L && !is.na(p)) p
   },
   # the study's treatment variable (study.yml `settings: treatment:`)
-  settings.treatment = function(output, study) study$study$settings$treatment
+  settings.treatment = function(output, study) study$study$settings$treatment,
+  # what prints for a missing SD (summary, demog, param_change)
+  settings.sd_missing = function(output, study) study$study$settings$sd_missing
 )
 
 # tflspec's parameters' study sources by name: the analysis set and the
@@ -552,6 +555,34 @@ tpl_demog <- function(ard, population, ..., codelists = NULL) {
 
 # ---- summary: continuous variables by a column key, the layout ------------------
 
+# The Mean (SD) cell as a choice (rtfreporter's fallback chain: a cell whose
+# statistics are not all there is NA and the next is tried): the mean and its
+# SD, else -- a group of one has no SD -- the mean and `mark` in place of the
+# SD; "" for the mean alone.  `mean` and `sd` are the statistics' tokens
+# with their digits, if any.
+.tpl_mean_sd <- function(mean = "{mean}", sd = "{sd}", mark = "-") {
+  c(paste0(mean, " (", sd, ")"), if (nzchar(mark)) paste0(mean, " (", mark, ")") else mean)
+}
+
+# The cells a template runs with: its default, with the Mean (SD) cell's mark
+# `sd_missing`; cells a report (or the study) gave are its own, left as given
+.tpl_sd_missing <- function(cells, default, sd_missing, mean = "{mean}", sd = "{sd}") {
+  if (!is.character(sd_missing) || length(sd_missing) != 1L || is.na(sd_missing) ||
+      grepl("[{}]", sd_missing)) {
+    .ard_stop("`sd_missing` is one text without { or } (\"-\", \"NA\", or \"\" for the mean alone).")
+  }
+  if (identical(cells, default)) cells[["Mean (SD)"]] <- .tpl_mean_sd(mean, sd, sd_missing)
+  cells
+}
+
+# `sd_missing`: one parameter for the templates with a Mean (SD) cell
+.tpl_sd_missing_param <- function() {
+  tfl_param("sd_missing", "-", type = "text", study = "settings.sd_missing",
+            doc = paste("what prints in place of the SD when a group has no SD (n = 1):",
+                        "{mean} (<sd_missing>); \"\" prints the mean alone;",
+                        "no effect when `cells` is given"))
+}
+
 .tpl_summary_params <- list(
   tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
   .tpl_subset_param(),
@@ -563,9 +594,10 @@ tpl_demog <- function(ard, population, ..., codelists = NULL) {
   tfl_param("labels", NULL, tier = "usual",
             doc = "each variable's heading; given by name, merged (RACE: ~ drops one)"),
   tfl_param("order", NULL, doc = "the variables' order (plan_levels(variable = )); NULL: the continuous, then the categorical"),
-  tfl_param("cells", list(n = "{N:.0f}", `Mean (SD)` = "{mean:.1f} ({sd:.2f})",
+  tfl_param("cells", list(n = "{N:.0f}", `Mean (SD)` = .tpl_mean_sd("{mean:.1f}", "{sd:.2f}"),
                           Median = "{median:.1f}", `Min, Max` = "{min:.0f}, {max:.0f}"),
             tier = "usual", doc = "the rows of each continuous variable", study = "plan_cells.continuous"),
+  .tpl_sd_missing_param(),
   tfl_param("count_cell", NULL, study = "plan_cells.categorical",
             doc = "a categorical value's cell, n (%) (plan_cells(categorical = )); NULL: the study standard's"),
   tfl_param("continuous_statistics", c("N", "mean", "sd", "median", "min", "max"),
@@ -577,6 +609,7 @@ tpl_demog <- function(ard, population, ..., codelists = NULL) {
   tfl_param("stack", FALSE, doc = "TRUE: the ARD as one cards::ard_stack() call")
 )
 names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
+.tpl_summary_cells <- .tpl_summary_params$cells$default
 
 .tpl_summary_body <- function(a, ctx) {
   if (!length(a$continuous) && !length(a$categorical)) {
@@ -627,7 +660,9 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
       by = a$by, overall = ov, variables = a$categorical, optional = opt("categorical"),
       statistics = a$categorical_statistics, purpose = "PRIMARY OUTCOME MEASURE"))))
   vars <- c(a$continuous, a$categorical)
-  cells <- nn(list(continuous = if (length(a$continuous)) as.list(a$cells),
+  cells <- nn(list(continuous = if (length(a$continuous)) as.list(
+                     .tpl_sd_missing(a$cells, .tpl_summary_cells, a[["sd_missing"]] %||% "-",
+                                     mean = "{mean:.1f}", sd = "{sd:.2f}")),
                    categorical = a$count_cell))
   content <- c(
     list(tfl_item("table_plan", list(cols = a$by, rows = list(group = "variable")))),
@@ -1520,11 +1555,6 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
 
 # ---- param_change: parameters' value and change from baseline at each visit -------
 
-# The Mean (SD) cell's second choice, for a group with no SD (n = 1): the
-# mean and a dash.  THE ONE LINE to change how the missing SD prints:
-# "{mean}" alone leaves the SD blank (#673)
-.tpl_pc_no_sd <- "{mean} (-)"
-
 # The cells' digits: one decimal for the mean, the median and the range, two
 # for the SD -- a report's plan_digits(PARAM = c("<label>" = ...)) comes
 # before them for its parameters (rtfreporter's order: a row key's value,
@@ -1557,9 +1587,10 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
             doc = "the statistics the ARD has"),
   # (the cells name no digits: the template's plan_digits() gives them,
   # so a report's plan_digits(PARAM = ) can give a parameter its own)
-  tfl_param("cells", list(n = "{N:.0f}", `Mean (SD)` = c("{mean} ({sd})", .tpl_pc_no_sd),
+  tfl_param("cells", list(n = "{N:.0f}", `Mean (SD)` = .tpl_mean_sd(),
                           Median = "{median}", `Min, Max` = "{min}, {max}"),
             doc = "the rows of a value or a change", study = "plan_cells.continuous"),
+  .tpl_sd_missing_param(),
   tfl_param("param_page", TRUE, type = "flag",
             doc = "TRUE: a page a parameter, named in the titles by `param_heading`"),
   tfl_param("param_heading", "Parameter: {value}",
@@ -1567,6 +1598,7 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
   tfl_param("heading", NULL, doc = "the label column's heading")
 )
 names(.tpl_pc_params) <- vapply(.tpl_pc_params, `[[`, "", "name")
+.tpl_pc_cells <- .tpl_pc_params$cells$default
 
 # A template's rows as a named list, label -> cell template: also from the
 # items' form a GUI and an agent write, [{label: , template: }, ...]
@@ -1580,7 +1612,7 @@ names(.tpl_pc_params) <- vapply(.tpl_pc_params, `[[`, "", "name")
 }
 
 .tpl_pc_body <- function(a, ctx) {
-  a$cells <- .tpl_cells_named(a$cells)
+  a$cells <- .tpl_sd_missing(.tpl_cells_named(a$cells), .tpl_pc_cells, a[["sd_missing"]] %||% "-")
   rows_in <- identical(match.arg(a$layout, c("cols", "rows")), "rows")
   pop <- a$population
   subj <- paste0("adsl_", tolower(pop))

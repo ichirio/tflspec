@@ -54,6 +54,33 @@ test_that("study.yml's settings: treatment: the templates' by", {
   expect_identical(ss_an(ro, "CONT")$by, "TRT01A")
 })
 
+test_that("study.yml's settings: sd_missing: what prints for a missing SD; the report's argument wins (#673)", {
+  mark <- function(ro) {
+    cl <- Filter(function(i) identical(i$fn, "plan_cells"), ro$content)[[1L]]$args$continuous
+    cl[["Mean (SD)"]]
+  }
+  s <- ss_study("TRT01P")
+  s$study$settings$sd_missing <- "NA"
+  ro <- ss_resolve("demog", list(), s)
+  expect_identical(attr(ro, "template")$args$sd_missing, "NA")
+  expect_true("sd_missing" %in% attr(ro, "template")$study)
+  expect_identical(mark(ro), c("{mean:.1f} ({sd:.2f})", "{mean:.1f} (NA)"))
+  # the report's template: args: wins, and says so
+  expect_message(ro2 <- ss_resolve("demog", list(sd_missing = ""), s),
+                 "overrides the study standard \\(settings.sd_missing\\)")
+  expect_identical(mark(ro2), c("{mean:.1f} ({sd:.2f})", "{mean:.1f}"))
+  # param_change too
+  pc <- list(data = "ADLB", params = "ALT")
+  expect_identical(mark(ss_resolve("param_change", pc, s)), c("{mean} ({sd})", "{mean} (NA)"))
+  expect_identical(mark(suppressMessages(ss_resolve("param_change", c(pc, list(sd_missing = "~")), s))),
+                   c("{mean} ({sd})", "{mean} (~)"))
+  # no setting: the template's `-`
+  expect_identical(mark(ss_resolve("demog", list(), ss_study(NULL))), c("{mean:.1f} ({sd:.2f})", "{mean:.1f} (-)"))
+  # a setting with braces stops
+  s$study$settings$sd_missing <- "{sd}"
+  expect_error(ss_resolve("demog", list(), s), "sd_missing")
+})
+
 test_that("first to last: the report's argument, the study standard, the variant's, from's", {
   on.exit(rm("demog_arm", envir = .tpl_registry))
   tfl_template_variant("demog_arm", from = "demog", defaults = list(by = "ARM"))
