@@ -6,7 +6,7 @@
 \usage{
 tfl_write_study_part(
   study,
-  part = c("defaults", "patterns", "codelists", "data", "toc"),
+  part = c("defaults", "patterns", "data", "toc"),
   path = NULL,
   name = NULL
 )
@@ -14,7 +14,7 @@ tfl_write_study_part(
 \arguments{
 \item{study}{A \code{tfl_study_spec}.}
 
-\item{part}{\code{"defaults"}, \code{"patterns"} (one, by \code{name}), \code{"codelists"},
+\item{part}{\code{"defaults"}, \code{"patterns"} (one, by \code{name}),
 \code{"data"} or \code{"toc"}.}
 
 \item{path}{The file; \code{NULL}: the study's own (\code{spec/defaults.yml},
@@ -28,7 +28,7 @@ tfl_write_study_part(
 \description{
 Writes the study-level file of one part of a \code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}
 result -- what a builder changes for the whole study (the rounding of
-every table, a pattern, a code list) -- in the form the reader reads.
+every table, a pattern) -- in the form the reader reads.
 }
 \examples{
 d <- system.file("extdata", "spec-yaml", package = "tflspec")
