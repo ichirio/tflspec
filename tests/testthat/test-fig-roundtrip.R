@@ -191,3 +191,51 @@ test_that("a column that is not syntactic is read and written back as ggplot2's 
   expect_identical(rt_item(terms[1L])$args$mapping, list(x = "`A-B`", y = "`N/A`"))
   expect_identical(rt_item("geom_point(aes(x = PCHG))")$args$mapping, list(x = "PCHG"))
 })
+
+test_that("facet_wrap() on a column that is not syntactic is written as vars(), and draws", {
+  skip_if_not_installed("ggplot2")
+  d <- data.frame(x = 1:4, y = c(2, 3, 5, 4), g = c("a", "a", "b", "b"), f = c("u", "v", "u", "v"),
+                  `A b` = c("a", "a", "b", "b"), `A-B` = c("p", "q", "p", "q"), check.names = FALSE)
+  base <- ggplot2::ggplot(d, ggplot2::aes(x, y)) + ggplot2::geom_point()
+  panels <- function(code) {
+    nrow(ggplot2::ggplot_build(base + eval(code, asNamespace("ggplot2")))$layout$layout)
+  }
+  # ggplot2's code, read as the SPEC's text and written back: the column in vars(), as facet_grid()'s
+  cases <- list("facet_wrap(~`A b`)" = c("`A b`", "facet_wrap(facets = vars(`A b`))", 2L),
+                "facet_wrap(~`A-B`)" = c("`A-B`", "facet_wrap(facets = vars(`A-B`))", 2L),
+                "facet_wrap(vars(`A b`), ncol = 1)" = c("`A b`", "facet_wrap(facets = vars(`A b`), ncol = 1)", 2L))
+  for (t in names(cases)) {
+    it <- rt_item(t)
+    expect_identical(it$args$facets, cases[[t]][1L], info = t)
+    expect_identical(nrow(tfl_schema_check(it)), 0L, info = t)
+    expect_identical(rt_code(t), cases[[t]][2L], info = t)
+    expect_identical(panels(.fig_item_lang(it)), as.integer(cases[[t]][3L]), info = t)
+    expect_identical(panels(.fig_item_lang(it)), panels(str2lang(t)), info = t)
+  }
+  # several columns, one of them not syntactic
+  expect_identical(rt_item("facet_wrap(~ `A b` + g)")$args$facets, list("`A b`", "g"))
+  expect_identical(rt_code("facet_wrap(~ `A b` + g)"), "facet_wrap(facets = vars(`A b`, g))")
+  expect_identical(panels(.fig_item_lang(rt_item("facet_wrap(~ `A b` + f)"))), 4L)
+  # a hand-written text draws: "A b" does not parse, it is the column
+  for (v in list("A b", list("A b", "f"), "`A b`", "`A-B`")) {
+    it <- tfl_item("facet_wrap", list(facets = v))
+    expect_identical(nrow(tfl_schema_check(it)), 0L, info = deparse(v))
+    expect_match(.fig_deparse(.fig_item_lang(it)), "^facet_wrap\\(facets = vars\\(", info = deparse(v))
+    expect_gte(panels(.fig_item_lang(it)), 2L)
+  }
+  expect_identical(.fig_deparse(.fig_item_lang(tfl_item("facet_wrap", list(facets = "A b")))),
+                   "facet_wrap(facets = vars(`A b`))")
+  # syntactic columns are written as before
+  expect_identical(rt_code("facet_wrap(~g)"), "facet_wrap(facets = \"g\")")
+  expect_identical(rt_code("facet_wrap(~ g + f)"), "facet_wrap(facets = c(\"g\", \"f\"))")
+  expect_identical(rt_code("facet_wrap(vars(g, f), ncol = 2)"), "facet_wrap(facets = c(\"g\", \"f\"), ncol = 2)")
+  expect_identical(.fig_deparse(.fig_item_lang(tfl_item("facet_wrap", list(facets = "`g`")))),
+                   "facet_wrap(facets = \"`g`\")")
+  # a formula text and an expression text are as before
+  expect_identical(.fig_deparse(.fig_item_lang(tfl_item("facet_wrap", list(facets = "~g + f")))),
+                   "facet_wrap(facets = \"~g + f\")")
+  expect_identical(.fig_deparse(.fig_item_lang(tfl_item("facet_wrap", list(facets = "toupper(g)")))),
+                   "facet_wrap(facets = \"toupper(g)\")")
+  # facet_grid is as it was
+  expect_identical(rt_code("facet_grid(`A b` ~ g)"), "facet_grid(rows = vars(`A b`), cols = vars(g))")
+})

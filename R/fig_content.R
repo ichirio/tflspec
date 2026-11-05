@@ -305,6 +305,16 @@ tfl_plot <- function(name, items = list(), from = "own") {
       }
     }
   }
+  # facet_wrap()'s facets: a column that is not syntactic (`A b`) in vars(),
+  # as facet_grid() takes it (ggplot2 parses a string: "A b" fails); the
+  # syntactic ones are written as they are
+  if (identical(it$fn, "facet_wrap") && !is.null(a$facets) && !inherits(a$facets, c("tfl_r", "tfl_call"))) {
+    v <- a$facets
+    if (is.null(names(v)) && (is.character(v) || (is.list(v) && all(vapply(v, is.character, NA))))) {
+      w <- .fig_facet_vars(unlist(v))
+      if (!is.null(w)) args$facets <- w
+    }
+  }
   key <- .fig_positional_key(it$fn)
   if (!is.null(key) && key %in% names(a) && !inherits(a[[key]], c("tfl_r", "tfl_call"))) {
     i <- match(key, names(args))
@@ -312,6 +322,30 @@ tfl_plot <- function(name, items = list(), from = "own") {
     args <- c(args[seq_len(i - 1L)], pos, args[-seq_len(i)])
   }
   as.call(c(list(.fig_fn_sym(it$fn)), args))
+}
+
+# facet_wrap()'s facets (the texts of a SPEC) as vars(), when one is a column
+# that is not syntactic: a name in backticks (`A b`), or a text that does not
+# parse ("A b"); NULL when none is (they are written as before).  A text
+# that parses as another expression (AGE > 65) is that expression in vars();
+# a formula text (~ A + B) is not for vars(): NULL.
+.fig_facet_vars <- function(txt) {
+  if (anyNA(txt) || !all(nzchar(txt))) return(NULL)
+  need <- FALSE
+  parts <- list()
+  for (t in txt) {
+    e <- tryCatch(str2lang(t), error = function(err) NULL)
+    if (is.null(e) && !identical(t, "NULL")) {
+      e <- as.name(t)
+      need <- TRUE
+    } else if (is.name(e)) {
+      need <- need || make.names(as.character(e)) != as.character(e)
+    } else if (is.call(e) && identical(e[[1L]], as.name("~"))) {
+      return(NULL)
+    }
+    parts <- c(parts, list(e))
+  }
+  if (need) as.call(c(list(as.name("vars")), parts))
 }
 
 # the key a figure function's card names its positional `...` by (xlim:
@@ -535,8 +569,10 @@ tfl_plot <- function(name, items = list(), from = "own") {
 # facet_grid(SEX ~ TRTA), facet_grid(rows = vars(SEX)), . for none.  Any
 # other (an expression of a column) stays R.
 .fig_facet_args <- function(f, a, args) {
+  # (facet_wrap()'s column that is not syntactic keeps its backticks: `A b`)
+  col_text <- if (identical(f, "facet_wrap")) .fig_col_text else identity
   cols_of <- function(x) {
-    if (is.name(x)) return(if (identical(x, as.name("."))) character() else as.character(x))
+    if (is.name(x)) return(if (identical(x, as.name("."))) character() else col_text(as.character(x)))
     if (!is.call(x)) return(NULL)
     op <- .fig_deparse(x[[1L]])
     if (identical(op, "+") && length(x) == 3L) {
@@ -546,7 +582,7 @@ tfl_plot <- function(name, items = list(), from = "own") {
     }
     if (identical(op, "vars") && length(x) > 1L && is.null(names(x)) &&
         all(vapply(as.list(x)[-1L], is.name, NA))) {
-      return(vapply(as.list(x)[-1L], as.character, ""))
+      return(vapply(as.list(x)[-1L], function(n) col_text(as.character(n)), ""))
     }
     NULL
   }
