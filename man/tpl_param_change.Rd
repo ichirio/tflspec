@@ -16,7 +16,7 @@ report.}
 \code{visits}, \code{where}, \code{by}, \code{layout}, \code{param_order}, \code{visit_order},
 \code{baseline}, \code{baseline_label}, \code{value_label}, \code{change_label}, \code{statistics},
 \code{cells} (label = template, or a list of \code{list(label = , template = )}),
-\code{param_page}, \code{param_heading} ...}
+\code{param_page}, \code{param_heading}, \code{heading} ...}
 
 \item{codelists}{The report's code lists, for the order and labels of
 values; \code{NULL} takes the ARD's.}
