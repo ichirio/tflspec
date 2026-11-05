@@ -236,6 +236,31 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
   if (is.character(default)) unlist(m) else m
 }
 
+# A parameter that is a map of name to text (type list, fields name and text,
+# not several): `param_labels: {ALT: "..."}`
+.tpl_is_name_text <- function(p) {
+  identical(p$type, "list") && !isTRUE(p$multiple) && setequal(p$fields, c("name", "text"))
+}
+
+# A map's value written as a list of {name, text} (the type the kit prints),
+# as the mapping: `[{name: ALT, text: "..."}]` is `{ALT: "..."}`.  A value
+# that is not such a list (a mapping, a vector, NULL, a tfl_r) stays as it
+# is; a list that cannot be read as a mapping stops, naming the parameter.
+.tpl_name_text_map <- function(v, tname, pname, fn) {
+  if (!is.list(v) || inherits(v, "tfl_r") || !length(v) || !is.null(names(v))) return(v)
+  bad <- function(why) {
+    .ard_stop(sprintf(paste0("%s: template %s, parameter %s: %s. Write the mapping, ",
+                             "`%s: {ALT: \"...\"}`."), fn, tname, sQuote(pname, FALSE), why, pname))
+  }
+  ok <- vapply(v, function(e) is.list(e) && setequal(names(e), c("name", "text")) &&
+                 length(names(e)) == 2L, NA)
+  if (!all(ok)) bad("a list takes items of `name` and `text` only")
+  nm <- vapply(v, function(e) if (is.character(e$name) && length(e$name) == 1L) e$name else NA_character_, "")
+  if (anyNA(nm) || !all(nzchar(nm))) bad("each `name` is a text")
+  if (anyDuplicated(nm)) bad(sprintf("`name` %s is given twice", sQuote(nm[duplicated(nm)][1L], FALSE)))
+  stats::setNames(lapply(v, `[[`, "text"), nm)
+}
+
 # The arguments as the body sees them: given (NULL too) > the template's default.
 .tpl_args <- function(t, args, fn) {
   unknown <- setdiff(names(args), names(t$params))
@@ -249,6 +274,7 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
   out <- lapply(t$params, function(p) {
     if (!p$name %in% names(args)) return(p$default)
     v <- args[[p$name]]
+    if (.tpl_is_name_text(p)) v <- .tpl_name_text_map(v, t$name, p$name, fn)
     if (isTRUE(p$merge) && length(p$default) && length(v) && !is.null(names(v))) {
       v <- .tpl_merge_named(p$default, v)
     }

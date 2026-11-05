@@ -265,7 +265,7 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
   tfl_param("group", "TRT01A", type = "vars", doc = "the arms compared (the Cox model's term)"),
   tfl_param("subgroups", c("SEX", "AGEGR1"), type = "vars", multiple = TRUE,
             doc = "the subgroups, each its levels' hazard ratios"),
-  tfl_param("subgroup_labels", NULL, type = "list", fields = c("name", "text"),
+  tfl_param("subgroup_labels", NULL, type = "list", multiple = FALSE, fields = c("name", "text"),
             doc = paste("the subgroups' headings, a variable = its label (SEX: Sex, AGEGR1: Age group);",
                         "a variable not given: the common ADaM variables' label (SEX, AGEGR1, RACE,",
                         "REGION1, ECOGBL ...), else its name; the levels' rows are not changed")),

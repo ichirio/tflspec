@@ -266,3 +266,87 @@ test_that("demog: a categorical variable the labels do not name has no label row
   expect_false("ECOGBL" %in% names(v))
   expect_true(all(c("AGE", "AGEGR1", "SEX") %in% names(v)))
 })
+
+# ---- a map written as a list of {name, text} (#637) -------------------------
+
+nt <- function(...) {
+  x <- list(...)
+  unname(Map(function(n, t) list(name = n, text = t), names(x), x))
+}
+
+test_that("a map of name and text also takes a list of {name, text}: the mapping's expansion", {
+  pl <- function(e) Filter(function(it) it$fn == "plan_labels", e$content)
+  for (tn in c("shift", "lab_shift")) {
+    extra <- if (tn == "lab_shift") list(visit = "Week 24", params = c("ALT", "HGB")) else list()
+    m <- tfl_template_expand(tn, c(list(population = "SAF",
+                                        param_labels = list(ALT = "Alanine Aminotransferase (U/L)", HGB = "Hemoglobin")), extra))
+    l <- tfl_template_expand(tn, c(list(population = "SAF", param_labels = nt(
+      ALT = "Alanine Aminotransferase (U/L)", HGB = "Hemoglobin")), extra))
+    expect_identical(l, m, info = tn)
+    expect_identical(pl(l)[[1L]]$args$PARAMCD$ALT, "Alanine Aminotransferase (U/L)", info = tn)
+  }
+  # labels, merged with the default's: only these names change
+  m <- tfl_template_expand("demog", list(population = "SAF", labels = list(AGE = "Age (y)")))
+  l <- tfl_template_expand("demog", list(population = "SAF", labels = nt(AGE = "Age (y)")))
+  expect_identical(l, m)
+  d <- tfl_template_expand("demog", list(population = "SAF"))
+  a <- unlist(pl(l)[[1L]]$args)
+  a0 <- unlist(pl(d)[[1L]]$args)
+  expect_identical(names(a), names(a0))
+  expect_identical(unname(a[names(a) != "AGE" & !endsWith(names(a), ".AGE")]),
+                   unname(a0[names(a0) != "AGE" & !endsWith(names(a0), ".AGE")]))
+  expect_true(any(a == "Age (y)"))
+  expect_false(any(a0 == "Age (y)"))
+  # subgroup_labels (forest_hr) and worst_by (shift)
+  fa <- list(population = "SAF", param = "PFS")
+  m <- tfl_template_expand("forest_hr", c(fa, list(subgroup_labels = list(SEX = "Gender"))))
+  l <- tfl_template_expand("forest_hr", c(fa, list(subgroup_labels = nt(SEX = "Gender"))))
+  expect_identical(l, m)
+  expect_match(as.character(l$data$steps[[length(l$data$steps)]]$code %||% unlist(l$data)),
+               'sg_label <- c(SEX = "Gender"', fixed = TRUE)
+  m <- tfl_template_expand("shift", list(population = "SAF", worst_by = list(HGB = "LOW, HIGH, NORMAL")))
+  l <- tfl_template_expand("shift", list(population = "SAF", worst_by = nt(HGB = "LOW, HIGH, NORMAL")))
+  expect_identical(l, m)
+  expect_match(as.character(l$ard$analysis_data[[1L]]$code),
+               'PARAMCD == "HGB" ~ match(ANRIND, c("LOW", "HIGH", "NORMAL"))', fixed = TRUE)
+})
+
+test_that("a map given as a list that is not {name, text} stops, naming the parameter and the mapping", {
+  ex <- function(v) tfl_template_expand("shift", list(population = "SAF", param_labels = v))
+  expect_error(ex(list(list(name = "ALT"))), "parameter 'param_labels'.*`name` and `text` only.*mapping.*param_labels: [{]ALT")
+  expect_error(ex(list(list(name = "ALT", text = "a", unit = "U/L"))), "parameter 'param_labels'.*mapping")
+  expect_error(ex(list(list(name = "ALT", text = "a"), list(name = "ALT", text = "b"))),
+               "parameter 'param_labels'.*`name` 'ALT' is given twice.*mapping")
+  expect_error(ex(list(list(name = "ALT", text = "a"), "HGB")), "parameter 'param_labels'.*mapping")
+  # as they were: a mapping, a character vector, NULL
+  expect_no_error(ex(list(ALT = "a")))
+  expect_no_error(ex(c(ALT = "a")))
+  expect_no_error(ex(NULL))
+  # a several-records parameter is untouched: flags, a list of records
+  x <- tfl_template_expand("ae_overview", list(population = "SAF",
+    flags = list(list(id = "SER", label = "Serious", where = 'AESER == "Y"'))))
+  expect_true(length(x$ard$analyses) > 0L)
+})
+
+test_that("the kit prints a map of name and text as a mapping, and checks the list form", {
+  txt <- strsplit(tflspec:::.ai_templates_file_text(), "
+", fixed = TRUE)[[1L]]   # (ai/templates.md)
+  expect_true(any(grepl("`param_labels` (mapping, name: text) = ~", txt, fixed = TRUE)))
+  expect_true(any(grepl("`subgroup_labels` (mapping, name: text) = ~", txt, fixed = TRUE)))
+  expect_true(any(grepl("`worst_by` (mapping, name: text)", txt, fixed = TRUE)))
+  expect_false(any(grepl("list {name, text}", txt, fixed = TRUE)))
+  expect_true(any(grepl("`flags` (list, several {id, label, where})", txt, fixed = TRUE)))
+  expect_true(any(grepl("`cells` (list {label, template})", txt, fixed = TRUE)))
+  chk <- function(args) {
+    a <- tfl_ai_parse(paste(c("```yaml", "tflspec_ai: {task: table, version: 1, outputs: [T-1]}",
+      "outputs:", "  - id: T-1", "    kind: table", "    template:", "      name: shift",
+      paste0("      args: ", args), "assumptions: []", "```"), collapse = "\n"), "table")
+    tfl_ai_check(a, tfl_ai_context("table", outputs = "T-1"))
+  }
+  p <- chk("{population: SAF, param_labels: [{name: ALT, text: Alanine Aminotransferase (U/L)}]}")
+  expect_false(any(grepl("plan_labels|param_labels", p$problem)), info = paste(p$problem, collapse = "; "))
+  p <- chk("{population: SAF, param_labels: [{name: ALT}]}")
+  expect_true(any(grepl("param_labels", p$problem, fixed = TRUE) & p$severity == "error"))
+  expect_false(any(grepl("plan_labels", p$problem, fixed = TRUE)))
+  expect_true(any(grepl("mapping", p$problem, fixed = TRUE)))
+})
