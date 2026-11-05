@@ -170,7 +170,10 @@
 
 # The widths R gave a study's tables (ai/widths.yml, by report): an answer
 # read again (every run.R reads them all) keeps them, and the report its
-# key -- not built again for widths it had
+# key -- not built again for widths it had.  Each entry holds the widths and
+# a fingerprint of the draft they were made for (.ai_widths_print()): they
+# are put back only while the draft is that one, else made again from its
+# build.
 .ai_widths_file <- function(dir) file.path(dir, "ai", "widths.yml")
 
 .ai_widths_read <- function(dir) {
@@ -179,17 +182,47 @@
   tryCatch(yaml::read_yaml(f), error = function(e) list()) %||% list()
 }
 
-.ai_widths_remember <- function(dir, id, w) {
+.ai_widths_remember <- function(dir, id, w, print = NULL) {
   x <- .ai_widths_read(dir)
-  x[[id]] <- w
+  x[[id]] <- c(if (!is.null(print)) list(draft = print), list(widths = w))
   .ai_write_text(yaml::as.yaml(x), .ai_widths_file(dir))
 }
 
-# A table of the answer with no widths of its own: those R gave it before
-.ai_widths_again <- function(o, known) {
-  if (!identical(o$kind, "table") || is.null(known[[o$id]]) || .ai_has_widths(o) ||
+# A fingerprint of a report as the widths are made from it: resolved over
+# its layers (a layer's code list counts), the widths of its plan_columns
+# left out (so it is the same before and after they are written), as the
+# text its file would hold.  NULL when it cannot be resolved.
+.ai_widths_print <- function(o, st) {
+  tryCatch({
+    ro <- tfl_resolve_output(o, st)
+    items <- ro$content
+    if (is.list(items) && !inherits(items, "tfl_r")) {
+      items <- lapply(items, function(it) {
+        if (identical(it$fn, "plan_columns")) it$args$widths <- NULL
+        it$from <- NULL
+        it
+      })
+      keep <- vapply(items, function(it) !(identical(it$fn, "plan_columns") && !length(it$args)), NA)
+      ro$content <- items[keep]
+    }
+    y <- .output_to_list(ro)
+    # (the draft's own notes are not what the columns are made from)
+    y$ai <- NULL
+    txt <- yaml::as.yaml(y, handlers = .yaml_out_handlers())
+    rlang::hash(yaml::as.yaml(yaml::yaml.load(txt)))
+  }, error = function(e) NULL)
+}
+
+# A table of the answer with no widths of its own: those R gave it before,
+# while its draft is the one they were made for (`st`: the study)
+.ai_widths_again <- function(o, known, st) {
+  e <- known[[o$id]]
+  if (!identical(o$kind, "table") || is.null(e) || .ai_has_widths(o) ||
       inherits(o$content, "tfl_r")) return(o)
-  .ai_put_widths(o, known[[o$id]])
+  if (!is.list(e) || !is.character(e$draft) || !is.list(e$widths) || is.null(st)) return(o)
+  now <- .ai_widths_print(o, st)
+  if (is.null(now) || !identical(now, e$draft)) return(o)
+  .ai_put_widths(o, e$widths)
 }
 
 # The tables of an answer just written with no widths: each built (its
@@ -221,7 +254,7 @@
     if (is.null(w)) next
     tfl_write_output(w, paths[i])
     pc <- Filter(function(it) identical(it$fn, "plan_columns"), w$content)
-    if (isTRUE(remember)) .ai_widths_remember(".", o$id, pc[[1L]]$args$widths)
+    if (isTRUE(remember)) .ai_widths_remember(".", o$id, pc[[1L]]$args$widths, .ai_widths_print(o, st))
     set <- c(set, o$id)
   }
   invisible(set)
