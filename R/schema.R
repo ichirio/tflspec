@@ -78,9 +78,15 @@
 #' `cond ~ "text"`), `function` (a function by its name, `mean_se` or
 #' `Hmisc::smean.cl.normal`, written bare: `fun.data = mean_se`), `tilde`
 #' (a formula as its text, `y ~ x` or `~ . / 7`, written as the formula),
+#' `date` (a date as its text, `2024-01-01`; a sequence of them, `NA` an
+#' open end, written `as.Date(c("2024-01-01", NA))`),
 #' `call` and `call<fn>` (`{fn:, args:}`; `call<label_*>` takes any
 #' function whose name the pattern matches, of any package:
-#' `{fn: scales::label_percent}`), `list<T>` (a sequence), `vec<K, V>` (a map that is a
+#' `{fn: scales::label_percent}`; base R's that clinical figures write as
+#' a value are typed where they fit: `seq()` for breaks,
+#' `{fn: seq, args: {from: 0, to: 52, by: 4}}` written `seq(0, 52, by = 4)`;
+#' `alpha()` for a colour; grDevices' palettes, `hcl.colors()` ..., for a
+#' scale's colours), `list<T>` (a sequence), `vec<K, V>` (a map that is a
 #' named vector in R), `map<K, V>` (a map that is a named list),
 #' `rows<f1, f2, ...>` (a sequence of maps that is a data frame) and `T|U`
 #' (either).
@@ -105,11 +111,17 @@
 #' a call of `factor()`, `as.factor()`, `ordered()`, `as.numeric()`,
 #' `as.integer()`, `as.character()`, `interaction()`, `reorder()`,
 #' `rev()`, `abs()`, `sqrt()`, `exp()`, `log()` / `log2()` / `log10()` /
-#' `log1p()`, `round()`, `after_stat()`, `after_scale()` or `stage()`,
-#' of columns, constants, their arithmetic and `c()`, `sum()`, `max()`,
-#' `min()`, `mean()`, `median()`, `length()`, `alpha()`, `pmin()`,
-#' `pmax()`, `cumsum()` (`x: factor(AVISITN)`, `y: after_stat(density)`,
-#' `x: reorder(USUBJID, -PCHG)`, `fill: after_scale(alpha(colour, 0.4))`);
+#' `log1p()`, `round()`, `after_stat()`, `after_scale()`, `stage()`,
+#' `ifelse()`, `cut()`, `is.na()`, `nchar()`, `toupper()` / `tolower()`,
+#' `substr()` or `trimws()`, or of the arithmetic or a comparison (`<`,
+#' `<=`, `==`, `!=`, `%in%`, `!`, `&`, `|`), of columns, constants, their
+#' arithmetic and `c()`, `sum()`, `max()`, `min()`, `mean()`, `median()`,
+#' `length()`, `alpha()`, `pmin()`, `pmax()`, `cumsum()`, `[`,
+#' `duplicated()`, `unique()`, `rank()` (`x: factor(AVISITN)`,
+#' `y: after_stat(density)`, `x: reorder(USUBJID, -PCHG)`,
+#' `fill: after_scale(alpha(colour, 0.4))`, a waterfall's
+#' `fill: PCHG <= -30` or `fill: ifelse(PCHG <= -30, "PR", "SD/PD")`;
+#' in YAML a text that starts with `!` is quoted, `'!is.na(ADT)'`);
 #' a number is a constant (`group: 1`).  Any other R is `!r`.  The check
 #' warns for a text of neither form (it is written as a column of that
 #' name) and for a variable of `after_stat()` the layer's stat does not
@@ -241,7 +253,14 @@ tfl_schema <- function(fn = NULL) {
 }
 
 .schema_scalars <- c("string", "integer", "number", "logical", "column", "stat",
-                     "template", "enum", "function", "tilde")
+                     "template", "enum", "function", "tilde", "date")
+
+# a date as its text, 2024-01-01 (a date scale's limits, breaks)
+.schema_date_re <- "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+.schema_is_date <- function(v) {
+  is.character(v) && length(v) == 1L && !is.na(v) && grepl(.schema_date_re, v) &&
+    !is.na(suppressWarnings(as.Date(v, optional = TRUE)))
+}
 
 # a function by its name (mean_se, Hmisc::smean.cl.normal): a name R
 # writes bare, or pkg::name
@@ -515,6 +534,7 @@ tfl_schema_check <- function(item) {
     enum = as.character(v) %in% ty$args,
     "function" = .schema_is_fun_name(v),
     tilde = .schema_is_tilde(v),
+    date = .schema_is_date(v) || (is.logical(v) && is.na(v)),
     is.character(v) || is.numeric(v) || is.logical(v))
 }
 

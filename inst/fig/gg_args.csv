@@ -18,9 +18,9 @@ layer,inherit.aes,logical,Use the plot's mapping,plot のマッピングを使�
 layer,orientation,enum[x|y]|r,Orientation,向き,"y: a horizontal layer (bars, error bars, box plots along y)."
 layer,key_glyph,string|r,Legend key,凡例の印,"How the legend draws the layer: point, path, rect, timeseries ... (draw_key_rect read from code is rect)."
 layer,layout,string|integer|list<integer>|r,Panels drawn in,描く面,"ggplot2 4.0: fixed (every panel), fixed_rows, fixed_cols, or the panel numbers."
-layer,colour,string|r,Colour,色,A fixed colour for all (a mapped one goes in mapping).
+layer,colour,"string|call<alpha>|r",Colour,色,A fixed colour for all (a mapped one goes in mapping).
 layer,color,string,Colour,色,
-layer,fill,string|r,Fill,塗り,
+layer,fill,"string|call<alpha>|r",Fill,塗り,
 layer,alpha,number,Transparency,透明度,0 (clear) to 1 (opaque).
 layer,linewidth,number,Line width,線の太さ,In mm.
 layer,linetype,string|number,Line type,線種,"solid, dashed, dotted, dotdash, longdash, twodash, or 0-6."
@@ -62,7 +62,7 @@ layer,type,enum[t|norm|euclid],Ellipse type,楕円の種類,stat ellipse: t (mul
 layer,segments,integer,Segments of the ellipse,楕円の分割数,
 layer,bins,integer|r,Number of bins,ビンの数,
 layer,binwidth,number|list<number>|r,Bin width,ビンの幅,
-layer,breaks,list<number>|r,Bin breaks,ビンの境界,
+layer,breaks,"list<number>|call<seq>|r",Bin breaks,ビンの境界,
 layer,boundary,number,Bin boundary,ビンの境界の基点,
 layer,center,number,Bin centre,ビンの中心の基点,
 layer,closed,enum[right|left],Closed side of the bins,ビンの閉じた側,
@@ -158,30 +158,30 @@ layer,contour,logical,Draw contours,等高線を描く,
 layer,contour_var,enum[density|ndensity|count],Contoured variable,等高線の変数,
 layer,z.range,list<number>|r,Range of z,z の範囲,
 scale,name,string|r,Title,タイトル,The axis or legend title; !r NULL for none.
-scale,breaks,"list<number|string>|call<breaks_*, extended_breaks, pretty_breaks, trans_breaks, log_breaks>|r",Breaks,目盛り,"The values with a tick or a key; {fn: scales::breaks_width, args: {width: 4}}; !r NULL for none, !r seq(0, 52, by = 4)."
-scale,minor_breaks,"list<number>|call<breaks_*, minor_breaks_*>|r",Minor breaks,補助目盛り,
+scale,breaks,"list<number|string>|call<seq, breaks_*, extended_breaks, pretty_breaks, trans_breaks, log_breaks>|r",Breaks,目盛り,"The values with a tick or a key; {fn: scales::breaks_width, args: {width: 4}}; !r NULL for none, !r seq(0, 52, by = 4)."
+scale,minor_breaks,"list<number>|call<seq, breaks_*, minor_breaks_*>|r",Minor breaks,補助目盛り,
 scale,n.breaks,integer,Number of breaks,目盛りの数,
 scale,labels,"list<string>|vec<string, string>|call<label_*, *_format>|r",Labels,目盛りのラベル,"In the order of the breaks, or by value ({A: Placebo}); !r scales::percent."
 scale,limits,list<number|string>|r,Range,範囲,"Data outside it are dropped (to zoom, use coord_cartesian()); NA keeps that end."
 scale,expand,call<expansion>|list<number>|r,Expansion,余白,"{fn: expansion, args: {mult: [0, 0.05]}}; [0, 0] for none."
 scale,oob,function|r,Out of bounds,範囲外の扱い,"scales::oob_squish keeps them at the edge, scales::oob_keep keeps them (a function by its name, written bare); the default drops them."
-scale,na.value,string|number,Missing,欠測の値,
+scale,na.value,"string|number|call<alpha>",Missing,欠測の値,
 scale,guide,string|call|r,Legend,凡例,"legend, colourbar, none, or {fn: guide_legend, args: {nrow: 1}}."
 scale,position,enum[left|right|top|bottom],Position,位置,
 scale,transform,"string|call<transform_*, *_trans, trans_new, new_transform>|r",Transformation,変換,"log10, sqrt, reverse, identity ..., or {fn: scales::transform_log, args: {base: 2}}; ggplot2 before 3.5 calls it trans."
 scale,sec.axis,"call<sec_axis, dup_axis>|r",Secondary axis,第2軸,"{fn: dup_axis} or {fn: sec_axis, args: {transform: !r ~ . / 7, name: Weeks}}."
 scale,drop,logical,Drop unused levels,使わない水準を除く,
 scale,na.translate,logical,Show missing,欠測を表示,
-scale,values,"vec<string, string|number>|list<string|number>|r",Values,値,By level ({Placebo: grey50}) or in the order of the levels.
+scale,values,"vec<string, string|number>|list<string|number>|call<hcl.colors, gray.colors, grey.colors, rainbow, heat.colors, terrain.colors, topo.colors, cm.colors, palette.colors>|r",Values,値,By level ({Placebo: grey50}) or in the order of the levels.
 scale,aesthetics,string|list<string>,Aesthetics,対象のマッピング,"colour, fill, or both ([colour, fill])."
 scale,palette,"string|number|list<string>|call<pal_*>|r",Palette,パレット,"Brewer: Set1, Dark2, Paired, Blues, RdBu ... (or its number)."
 scale,type,enum[seq|div|qual],Palette type,パレットの種類,
 scale,direction,integer,Palette direction,パレットの向き,-1 reverses it.
-scale,low,string,Low colour,低い値の色,
-scale,mid,string,Middle colour,中央の色,
-scale,high,string,High colour,高い値の色,
+scale,low,"string|call<alpha>",Low colour,低い値の色,
+scale,mid,"string|call<alpha>",Middle colour,中央の色,
+scale,high,"string|call<alpha>",High colour,高い値の色,
 scale,midpoint,number,Middle value,中央の値,
-scale,colours,list<string>|r,Colours,色,
+scale,colours,"list<string>|call<hcl.colors, gray.colors, grey.colors, rainbow, heat.colors, terrain.colors, topo.colors, cm.colors, palette.colors>|r",Colours,色,
 scale,colors,list<string>,Colours,色,
 scale,option,string,Viridis option,viridis の種類,"A (magma), B (inferno), C (plasma), D (viridis), E (cividis)."
 scale,begin,number,Start of the palette,パレットの始まり,
@@ -357,7 +357,7 @@ theme,plot.tag.location,enum[panel|plot|margin],Tag placed in,タグの配置先
 theme,strip.switch.pad.wrap,call<unit>|r,Strip padding (switched wrap),ストリップの余白（wrap 入替時）,
 element,family,string,Font family,フォント,
 element,face,enum[plain|italic|bold|bold.italic],Font face,書体,
-element,colour,string|r,Colour,色,
+element,colour,"string|call<alpha>|r",Colour,色,
 element,color,string,Colour,色,
 element,size,number|call<rel>|r,Size,大きさ,"Text in points, or {fn: rel, args: {x: 0.8}}."
 element,hjust,number,Horizontal justification,横の位置合わせ,
@@ -365,7 +365,7 @@ element,vjust,number,Vertical justification,縦の位置合わせ,
 element,angle,number,Angle,角度,
 element,lineheight,number,Line height,行の高さ,
 element,margin,"call<margin, margin_auto, margin_part>|r",Margin,余白,
-element,fill,string|r,Fill,塗り,!r NA for none.
+element,fill,"string|call<alpha>|r",Fill,塗り,!r NA for none.
 element,linewidth,number|call<rel>|r,Line width,線の太さ,
 element,linetype,string|number,Line type,線種,
 element,lineend,enum[butt|round|square],Line ends,線端,
@@ -433,7 +433,7 @@ helper,mult,number|list<number>,Multiplicative expansion,割合の余白,"[0, 0.
 helper,add,number|list<number>,Additive expansion,加える余白,In data units.
 helper,transform,tilde|function|r,Transformation,変換,"~ . / 7 (a formula), or a function by its name."
 helper,name,string|r,Title,タイトル,
-helper,breaks,"list<number>|call<breaks_*, extended_breaks, pretty_breaks, log_breaks>|r",Breaks,目盛り,
+helper,breaks,"list<number>|call<seq, breaks_*, extended_breaks, pretty_breaks, log_breaks>|r",Breaks,目盛り,
 helper,labels,"list<string>|call<label_*, *_format>|r",Labels,ラベル,
 helper,guide,string|call|r,Guide,凡例,
 helper,angle,number,Arrowhead angle,矢じりの角度,

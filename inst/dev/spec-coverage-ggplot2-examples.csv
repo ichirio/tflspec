@@ -53,7 +53,7 @@
 "ggplot2","geom_boxplot","","yes","Coord; coord_flip; geom_boxplot","","geom",3,6
 "ggplot2","geom_boxplot","colour","yes","geom_boxplot; position_jitter","","geom",3,2
 "ggplot2","geom_boxplot","fill","yes","geom_boxplot","","geom",3,1
-"ggplot2","geom_boxplot","mapping","partial","aes_eval; geom_boxplot; position_dodge","2 of 7 uses: as R: hwy < 30 (geom_boxplot(aes(colour = hwy < 30)))","geom",3,7
+"ggplot2","geom_boxplot","mapping","yes","aes_eval; geom_boxplot; position_dodge","","geom",3,7
 "ggplot2","geom_boxplot","notch","yes","geom_boxplot","","geom",3,1
 "ggplot2","geom_boxplot","outlier.alpha","yes","geom_boxplot","","geom",3,1
 "ggplot2","geom_boxplot","outlier.colour","yes","geom_boxplot","","geom",3,1
@@ -81,7 +81,7 @@
 "ggplot2","geom_density","bounds","yes","geom_density","","geom",2,1
 "ggplot2","geom_density","bw","yes","aes_eval","","geom",2,2
 "ggplot2","geom_density","color","yes","geom_density","","geom",2,2
-"ggplot2","geom_density","mapping","partial","aes_eval","1 of 1 uses: as R: after_stat(count/sum(n[!duplicated(group)])) (geom_density(aes(colour = factor(cyl), fill = after_scale(alpha(colour, 0.3)), y = after_stat(count/sum(n[!duplicated(group)]))), position = ""stack"", bw = 1))","geom",2,1
+"ggplot2","geom_density","mapping","yes","aes_eval","","geom",2,1
 "ggplot2","geom_density","position","yes","aes_eval","","geom",2,1
 "ggplot2","geom_density_2d","","yes","geom_contour; geom_density_2d","","geom",1,2
 "ggplot2","geom_dotplot","","yes","geom_dotplot","","geom",1,1
@@ -148,7 +148,7 @@
 "ggplot2","geom_point","","yes","Guide; aes; aes_linetype_size_shape; aes_position; annotate; annotation_custom; annotation_logticks; annotation_raster; as_labeller; benchplot; coord_cartesian; coord_fixed; coord_radial; element; expand_limits; facet_grid; facet_null; facet_wrap; fortify-multcomp; fortify.lm; geom_abline; geom_bar; geom_count; geom_density_2d; geom_jitter; geom_path; geom_point; geom_quantile; geom_rug; geom_segment; geom_smooth; geom_spoke; geom_text; get_alt_text; get_guide_data; get_strip_labels; get_theme; gg-add; ggplot; guide_axis; guide_axis_stack; guide_axis_theta; guide_custom; label_bquote; labellers; labs; layer; lims; position_nudge; print.ggplot; register_theme_elements; scale_colour_continuous; scale_colour_discrete; scale_continuous; scale_size; sec_axis; stat_connect; stat_ellipse; stat_manual; stat_summary; subtheme; summarise_plot; theme; update_defaults; update_ggplot; update_labels; vars","","geom",3,104
 "ggplot2","geom_point","alpha","yes","reexports; scale_manual; stat_unique","","geom",3,4
 "ggplot2","geom_point","color","yes","position_jitter","","geom",3,1
-"ggplot2","geom_point","colour","partial","aes_linetype_size_shape; facet_grid; geom_point; ggplot; reexports","1 of 10 uses: as R: alpha(""blue"", 0.5) (geom_point(colour = alpha(""blue"", 0.5)))","geom",3,10
+"ggplot2","geom_point","colour","yes","aes_linetype_size_shape; facet_grid; geom_point; ggplot; reexports","","geom",3,10
 "ggplot2","geom_point","data","partial","facet_grid; fortify-multcomp; ggplot","1 of 6 uses: as R: tidy(smry) (geom_point(aes(size = adj.p.value), data = tidy(smry)))","geom",3,6
 "ggplot2","geom_point","fill","yes","aes_linetype_size_shape; geom_point; scale_shape","","geom",3,3
 "ggplot2","geom_point","mapping","yes","aes; aes_linetype_size_shape; annotation_borders; expand_limits; fortify-multcomp; geom_point; ggplot; ggtheme; guide_bins; guide_colourbar; position_jitter; position_stack; scale_alpha; scale_brewer; scale_gradient; scale_grey; scale_identity; scale_manual; scale_shape; scale_steps; scale_viridis","","geom",3,48
@@ -295,7 +295,7 @@
 "ggplot2","scale_colour_gradient","low","yes","scale_gradient","","scale",2,2
 "ggplot2","scale_colour_gradient","na.value","yes","scale_gradient","","scale",2,1
 "ggplot2","scale_colour_gradient2","","yes","scale_gradient","","scale",2,1
-"ggplot2","scale_colour_gradientn","colours","partial","scale_gradient","1 of 2 uses: as R: terrain.colors(10) (scale_colour_gradientn(colours = terrain.colors(10)))","scale",1,2
+"ggplot2","scale_colour_gradientn","colours","yes","scale_gradient","","scale",1,2
 "ggplot2","scale_colour_gradientn","rescaler","yes","scale_gradient","","scale",1,1
 "ggplot2","scale_colour_grey","","yes","scale_grey","","scale",1,3
 "ggplot2","scale_colour_grey","end","yes","scale_grey","","scale",1,1
@@ -309,7 +309,7 @@
 "ggplot2","scale_colour_manual","values","partial","scale_manual","6 of 7 uses: as R: cols (scale_colour_manual(values = cols))","scale",3,7
 "ggplot2","scale_colour_steps","","yes","scale_steps","","scale",1,1
 "ggplot2","scale_colour_steps2","","yes","scale_steps","","scale",1,1
-"ggplot2","scale_colour_stepsn","colours","partial","scale_steps","1 of 1 uses: as R: terrain.colors(10) (scale_colour_stepsn(colours = terrain.colors(10)))","scale",1,1
+"ggplot2","scale_colour_stepsn","colours","yes","scale_steps","","scale",1,1
 "ggplot2","scale_colour_viridis_d","","yes","scale_viridis","","scale",1,1
 "ggplot2","scale_colour_viridis_d","name","yes","scale_viridis","","scale",1,1
 "ggplot2","scale_colour_viridis_d","option","yes","scale_viridis","","scale",1,2
@@ -328,7 +328,7 @@
 "ggplot2","scale_fill_gradient","high","yes","scale_gradient","","scale",2,1
 "ggplot2","scale_fill_gradient","low","yes","scale_gradient","","scale",2,1
 "ggplot2","scale_fill_gradient","na.value","yes","scale_gradient","","scale",2,1
-"ggplot2","scale_fill_gradientn","colours","partial","scale_gradient","1 of 1 uses: as R: terrain.colors(10) (scale_fill_gradientn(colours = terrain.colors(10)))","scale",1,1
+"ggplot2","scale_fill_gradientn","colours","yes","scale_gradient","","scale",1,1
 "ggplot2","scale_fill_identity","","yes","scale_identity","","scale",1,1
 "ggplot2","scale_fill_identity","breaks","partial","scale_identity","1 of 1 uses: as R: df$colour (scale_fill_identity(""trt"", labels = letters[1:4], breaks = df$colour, guide = ""legend""))","scale",1,1
 "ggplot2","scale_fill_identity","guide","yes","scale_identity","","scale",1,2

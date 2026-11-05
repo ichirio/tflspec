@@ -14,12 +14,17 @@
 #    mapping: {ymin: mean - se, ymax: mean + se}           # mean +/- SE
 #    mapping: {label: paste0(n, " (", pct, "%)")}
 #    mapping: {colour: '"Overall"'}                       # a constant label
+#    mapping: {fill: PCHG <= -30}                         # a condition
+#    mapping: {fill: ifelse(PCHG <= -30, "Response", "No response")}
+#    mapping: {colour: cut(PCHG, c(-Inf, -30, 20, Inf))}
+#    mapping: {shape: is.na(ADT)}
 #
 #  The form: a call of one of `.fig_aes_fns` (factor(), as.numeric(),
 #  interaction(), reorder(), log10(), paste0(), sprintf(), after_stat(),
-#  after_scale(), stage() ...) or of the arithmetic, its arguments
-#  columns (the names), constants, the arithmetic of them and a few
-#  summaries (sum(), max(), mean() ...); a text in quotes.
+#  after_scale(), stage(), ifelse(), cut(), is.na() ...), of the
+#  arithmetic or of a comparison (<, <=, ==, !=, %in%, !, &, |), its
+#  arguments columns (the names), constants, the arithmetic of them and
+#  a few summaries (sum(), max(), mean() ...); a text in quotes.
 #  Anything else is R (`!r`).  The check reads the form (a text that is
 #  neither a column's name nor of the form warns) and the variables of an
 #  after_stat(): those the layer's stat computes, or an aesthetic.
@@ -30,15 +35,21 @@
                   "as.character", "interaction", "reorder", "rev", "abs", "sqrt",
                   "exp", "log", "log2", "log10", "log1p", "round", "signif",
                   "paste", "paste0", "sprintf", "format", "cut_width", "cut_interval",
-                  "cut_number", "after_stat", "after_scale", "stage")
+                  "cut_number", "after_stat", "after_scale", "stage",
+                  # a condition and its categories (a waterfall's response,
+                  # a value above the normal range, a missing date)
+                  "ifelse", "cut", "is.na", "nchar", "toupper", "tolower",
+                  "substr", "trimws")
 
 # the operators a mapping's expression may be of, at its top too
 # (ymin: mean - se)
-.fig_aes_ops <- c("+", "-", "*", "/", "^", "(")
+.fig_aes_ops <- c("+", "-", "*", "/", "^", "(",
+                  "<", ">", "<=", ">=", "==", "!=", "%in%", "!", "&", "|")
 
 # the functions and operators inside it, besides those
 .fig_aes_inner <- c(.fig_aes_ops, "c", "sum", "max", "min", "mean",
-                    "median", "length", "alpha", "pmin", "pmax", "cumsum")
+                    "median", "length", "alpha", "pmin", "pmax", "cumsum",
+                    "[", "duplicated", "unique", "rank", "n_distinct")
 
 # Is `e` (a language object) a mapping's expression of the form: a call
 # of `.fig_aes_fns` or of the arithmetic, whose parts are names, constants

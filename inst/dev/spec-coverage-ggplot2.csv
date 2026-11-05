@@ -1257,13 +1257,13 @@
 "ggplot2","scale_y_reverse","position","yes","schema.yml: scale_y_reverse; gg_args.csv","","scale",2
 "ggplot2","scale_y_reverse","fallback.palette","yes","schema.yml: scale_y_reverse; gg_args.csv","","scale",2
 "ggplot2","scale_x_date","name","yes","schema.yml: scale_x_date; gg_args.csv","","scale",2
-"ggplot2","scale_x_date","breaks","yes","schema.yml: scale_x_date; gg_args.csv","","scale",2
+"ggplot2","scale_x_date","breaks","yes","schema.yml: scale_x_date","","scale",2
 "ggplot2","scale_x_date","date_breaks","yes","schema.yml: scale_x_date; gg_args.csv","","scale",2
 "ggplot2","scale_x_date","labels","yes","schema.yml: scale_x_date; gg_args.csv","","scale",2
 "ggplot2","scale_x_date","date_labels","yes","schema.yml: scale_x_date; gg_args.csv","","scale",2
 "ggplot2","scale_x_date","minor_breaks","yes","schema.yml: scale_x_date; gg_args.csv","","scale",2
 "ggplot2","scale_x_date","date_minor_breaks","yes","schema.yml: scale_x_date; gg_args.csv","","scale",2
-"ggplot2","scale_x_date","limits","yes","schema.yml: scale_x_date; gg_args.csv","","scale",2
+"ggplot2","scale_x_date","limits","yes","schema.yml: scale_x_date","","scale",2
 "ggplot2","scale_x_date","expand","yes","schema.yml: scale_x_date; gg_args.csv","","scale",2
 "ggplot2","scale_x_date","oob","yes","schema.yml: scale_x_date; gg_args.csv","","scale",2
 "ggplot2","scale_x_date","guide","yes","schema.yml: scale_x_date; gg_args.csv","","scale",2
@@ -1414,13 +1414,13 @@
 "ggplot2","scale_y_sqrt","position","yes","schema.yml: scale_y_sqrt; gg_args.csv","","scale",1
 "ggplot2","scale_y_sqrt","fallback.palette","yes","schema.yml: scale_y_sqrt; gg_args.csv","","scale",1
 "ggplot2","scale_y_date","name","yes","schema.yml: scale_y_date; gg_args.csv","","scale",1
-"ggplot2","scale_y_date","breaks","yes","schema.yml: scale_y_date; gg_args.csv","","scale",1
+"ggplot2","scale_y_date","breaks","yes","schema.yml: scale_y_date","","scale",1
 "ggplot2","scale_y_date","date_breaks","yes","schema.yml: scale_y_date; gg_args.csv","","scale",1
 "ggplot2","scale_y_date","labels","yes","schema.yml: scale_y_date; gg_args.csv","","scale",1
 "ggplot2","scale_y_date","date_labels","yes","schema.yml: scale_y_date; gg_args.csv","","scale",1
 "ggplot2","scale_y_date","minor_breaks","yes","schema.yml: scale_y_date; gg_args.csv","","scale",1
 "ggplot2","scale_y_date","date_minor_breaks","yes","schema.yml: scale_y_date; gg_args.csv","","scale",1
-"ggplot2","scale_y_date","limits","yes","schema.yml: scale_y_date; gg_args.csv","","scale",1
+"ggplot2","scale_y_date","limits","yes","schema.yml: scale_y_date","","scale",1
 "ggplot2","scale_y_date","expand","yes","schema.yml: scale_y_date; gg_args.csv","","scale",1
 "ggplot2","scale_y_date","oob","yes","schema.yml: scale_y_date; gg_args.csv","","scale",1
 "ggplot2","scale_y_date","guide","yes","schema.yml: scale_y_date; gg_args.csv","","scale",1

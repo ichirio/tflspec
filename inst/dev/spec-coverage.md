@@ -458,6 +458,60 @@ inside a scales helper (`label_math(10^.x)`); `size` of line geoms
 (deprecated, a warning by design).  Next: the guides' examples (88.2%)
 and the facets' (92.4%).
 
+### Round 8 (2026-11-05): base R's values, and conditions in a mapping
+
+The examples' measure (round 5), rerun after typed forms for what
+clinical figures write with base R in a value or a mapping:
+
+| Examples | Before | After |
+|---|---:|---:|
+| **ggplot2: geoms, scales, coords, themes, facets, guides, labs, positions** | **96.1%** | **96.6%** |
+| geom_*() | 97.6% | 97.9% |
+| scale_*() | 93.9% | 95.4% |
+| coord_*(), theme(), facets, guides, labs, positions | unchanged | unchanged |
+| **stat_*()** (shown apart) | **98.4%** | **98.4%** |
+| uses yes / partial / no | 1180 / 89 / 3 | 1187 / 82 / 3 |
+
+The arguments' and the aesthetics' measures stay at 100% (3409 arguments,
+826 aesthetics; `spec-coverage-ggplot2.csv` rerun, only the date scales'
+`where` changes).  ggplot2's examples rarely write the forms below; the
+clinical figures do (an axis of weeks, a waterfall coloured by response,
+a band in a transparent grey).
+
+- A condition is of a mapping's form (R/fig_aes.R): the comparisons (`<`,
+  `<=`, `==`, `!=`, `%in%`), `!`, `&`, `|`, and `ifelse()`, `cut()`,
+  `is.na()`, `nchar()`, `toupper()` / `tolower()`, `substr()`,
+  `trimws()`; inside one also `[`, `duplicated()`, `unique()`, `rank()`.
+  `fill: PCHG <= -30`, `fill: ifelse(PCHG <= -30, "PR", "SD/PD")`,
+  `colour: cut(PCHG, c(-Inf, -30, 20, Inf))`, `shape: '!is.na(ADT)'`
+  (in YAML a text that starts with `!` is quoted).  Before: `!r`.
+- `seq()` is a value of breaks: `{fn: seq, args: {from: 0, to: 52, by: 4}}`,
+  written `seq(0, 52, by = 4)` (a scale's `breaks` and `minor_breaks`,
+  the continuous position scales' cards, a histogram's `breaks`).
+- `alpha()` is a colour: a layer's `colour` / `fill`, an element's, a
+  continuous scale's `low` / `mid` / `high` / `na.value`
+  (`alpha("grey50", 0.4)`).
+- grDevices' palettes are a scale's `colours` (gradientn, stepsn) and a
+  manual scale's `values`: `hcl.colors()`, `palette.colors()`,
+  `gray.colors()`, `rainbow()`, `heat.colors()`, `terrain.colors()`,
+  `topo.colors()`, `cm.colors()`.
+- A date: the new type `date`, a date as its text (`2024-01-01`), for
+  scale_x_date() / scale_y_date()'s `limits` and `breaks`; `NA` (YAML's
+  text "NA") an open end; written `as.Date(c("2024-01-01", NA))` and
+  read back from it.  Before, `limits: [2024-01-01, NA]` was written as
+  text, which a date scale does not take.
+- These calls are read from code as `{fn:, args:}` with their positional
+  arguments named (`.fig_find_value_fun()`: base R's and grDevices'
+  functions, seq()'s default method), and written back by position
+  (`.fig_by_position`).
+
+What is left (partial): objects of the example (`values = cols`,
+`labeller = to_string`, `breaks = price_bins`), `Sys.Date()` (not a
+constant), grobs and rasters, R inside a scales helper (`label_math(10^.x)`),
+a function written inline (`fun = function(x) ...`), `size` of line geoms
+(deprecated, a warning by design).  Next: the guides' examples (88.2%) and
+the facets' (92.4%: `facet_wrap(year ~ cyl)`, a labeller's function).
+
 ### The extension packages (ggsurvfit, ggrepel, ggh4x, ggtext, ggnewscale, patchwork)
 
 The same measure, the same file (`package` says which), over the

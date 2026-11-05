@@ -213,6 +213,12 @@ tfl_plot <- function(name, items = list(), from = "own") {
     w <- .fig_text_lang(v, type)
     if (!is.null(w)) return(w)
   }
+  # dates of a date scale (limits: [2024-01-01, NA]): as.Date(c(...))
+  if (.fig_type_dates(type) && .fig_is_dates(v)) {
+    d <- lapply(as.list(v), function(e) if (.fig_is_na_end(e)) NA else as.character(e))
+    inner <- if (length(d) == 1L) d[[1L]] else as.call(c(list(as.name("c")), d))
+    return(call("as.Date", inner))
+  }
   # an argument R takes as a list (fun.args = list(mult = 1.96))
   if (arg %in% .fig_list_args && is.list(v)) {
     el <- lapply(seq_along(v), function(i) .fig_value_lang(v[[i]], names(v)[i] %||% ""))
@@ -229,9 +235,34 @@ tfl_plot <- function(name, items = list(), from = "own") {
   as.call(c(list(as.name("c")), as.list(v)))
 }
 
+# whether a type takes dates: a sequence whose elements may be a `date`
+.fig_type_dates <- function(ty) {
+  !is.null(ty) && any(vapply(.fig_type_alts(ty), function(t) {
+    identical(t$kind, "list") && .schema_has(t$args[[1L]], "date")
+  }, NA))
+}
+
+# a value that is dates: a sequence of dates as their text (2024-01-01) and
+# NA, one date at least, no names
+.fig_is_dates <- function(v) {
+  if (!is.null(names(v)) || !length(v) || inherits(v, c("tfl_r", "tfl_call"))) return(FALSE)
+  el <- as.list(v)
+  if (!all(vapply(el, function(e) length(e) == 1L, NA))) return(FALSE)
+  is_na <- vapply(el, .fig_is_na_end, NA)
+  any(!is_na) && all(vapply(el[!is_na], .schema_is_date, NA))
+}
+
+# an open end of a range: NA, or YAML's NA read as the text "NA"
+.fig_is_na_end <- function(e) is.atomic(e) && length(e) == 1L && (is.na(e) || identical(e, "NA"))
+
 # the functions whose leading arguments are written by position (when given
-# first, in this order)
-.fig_by_position <- list(unit = c("x", "units"), rel = "x")
+# first, in this order): unit(0.5, "cm"), rel(1.2), seq(0, 52, by = 4),
+# alpha("grey50", 0.4), hcl.colors(3, "Dark 3")
+.fig_by_position <- list(unit = c("x", "units"), rel = "x", seq = c("from", "to"),
+                         alpha = c("colour", "alpha"), hcl.colors = c("n", "palette"),
+                         palette.colors = c("n", "palette"), gray.colors = "n",
+                         grey.colors = "n", rainbow = "n", heat.colors = "n",
+                         terrain.colors = "n", topo.colors = "n", cm.colors = "n")
 
 # the arguments R takes as a list, not a vector: a map of the spec is
 # written list(...) and read back from it
@@ -348,6 +379,13 @@ tfl_plot <- function(name, items = list(), from = "own") {
       txt <- .fig_deparse(x)
       if (.schema_is_tilde(txt) && identical(str2lang(txt), x)) return(txt)
     }
+    # a date scale's dates: as.Date("2024-01-01"), as.Date(c("2024-01-01", NA))
+    if (identical(f, "as.Date") && length(a) == 1L && .fig_type_dates(type)) {
+      d <- a[[1L]]
+      if (is.call(d) && identical(d[[1L]], as.name("c"))) d <- as.list(d)[-1L]
+      d <- lapply(as.list(d), function(e) if (is.atomic(e) && length(e) == 1L && is.na(e)) NA else e)
+      if (length(d) && is.null(names(d)) && .fig_is_dates(d)) return(unlist(d))
+    }
     if (identical(f, "aes") && identical(arg, "mapping")) {
       # aes(displ, hwy): the first two unnamed are x and y, as aes() takes them
       nm <- names(a) %||% rep("", length(a))
@@ -394,7 +432,7 @@ tfl_plot <- function(name, items = list(), from = "own") {
     # (scales' percent_format() bare, the package attached: scales::)
     fq <- .fig_scales_name(f)
     if (.fig_reads_as_call(f) || .fig_type_takes_call(type, fq)) {
-      named <- .fig_name_args(x, .fig_find_fun(fq))
+      named <- .fig_name_args(x, .fig_find_value_fun(fq))
       a <- as.list(named)[-1L]
       if (all(nzchar(names(a) %||% rep("", length(a))))) {
         ty <- .fig_arg_types(fq, lapply(a, function(e) if (is.character(e)) e))
@@ -549,6 +587,22 @@ tfl_plot <- function(name, items = list(), from = "own") {
     if (requireNamespace(pkg, quietly = TRUE) &&
         (exists(f, envir = asNamespace(pkg), inherits = FALSE) || f %in% getNamespaceExports(pkg))) {
       return(getExportedValue(pkg, f))
+    }
+  }
+  NULL
+}
+
+# The function a value's call is of: as .fig_find_fun(), and base R's that
+# a value is a call of (seq(0, 52, by = 4), as.Date(), grDevices' palettes
+# hcl.colors(3, "Dark 3")) -- seq()'s arguments its default method's
+.fig_find_value_fun <- function(f) {
+  fun <- .fig_find_fun(f)
+  if (!is.null(fun)) return(fun)
+  if (identical(f, "seq")) return(seq.default)
+  for (pkg in c("base", "grDevices")) {
+    if (exists(f, envir = asNamespace(pkg), inherits = FALSE)) {
+      fun <- get(f, envir = asNamespace(pkg))
+      if (is.function(fun)) return(fun)
     }
   }
   NULL

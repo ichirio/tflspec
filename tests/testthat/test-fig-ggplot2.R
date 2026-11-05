@@ -484,3 +484,70 @@ test_that("scales' labels, breaks, transformations and palettes are {fn:, args:}
   # another package's call where none is typed stays R
   expect_s3_class(.fig_lang_item(quote(scale_y_continuous(labels = mypkg::lab())))$args$labels, "tfl_r")
 })
+
+test_that("base R's values as calls: seq() breaks, alpha() colours, palettes, a date scale's dates", {
+  # weeks 0 to 52 by 4
+  wk <- tfl_call("seq", list(from = 0, to = 52, by = 4))
+  expect_identical(nrow(gg_problems("scale_x_continuous", list(breaks = wk))), 0L)
+  expect_identical(gg_code("scale_x_continuous", list(breaks = wk)),
+                   "scale_x_continuous(breaks = seq(0, 52, by = 4))")
+  expect_identical(nrow(gg_problems("geom_histogram", list(breaks = wk))), 0L)
+  # a colour with its transparency, in a layer, an element and a scale
+  a <- tfl_call("alpha", list(colour = "grey50", alpha = 0.4))
+  expect_identical(nrow(gg_problems("geom_hline", list(yintercept = 0, colour = a))), 0L)
+  expect_identical(gg_code("geom_ribbon", list(fill = a)), "geom_ribbon(fill = alpha(\"grey50\", 0.4))")
+  expect_identical(nrow(gg_problems("element_line", list(colour = a))), 0L)
+  expect_identical(nrow(gg_problems("scale_fill_gradient", list(low = "white", high = a))), 0L)
+  # grDevices' palettes as a scale's colours or values
+  pal <- tfl_call("hcl.colors", list(n = 5, palette = "Blues"))
+  expect_identical(nrow(gg_problems("scale_fill_gradientn", list(colours = pal))), 0L)
+  expect_identical(gg_code("scale_fill_gradientn", list(colours = pal)),
+                   "scale_fill_gradientn(colours = hcl.colors(5, \"Blues\"))")
+  expect_identical(nrow(gg_problems("scale_colour_manual", list(
+    values = tfl_call("palette.colors", list(n = 3, palette = "Okabe-Ito"))))), 0L)
+  # a call the argument does not take is an error
+  p <- gg_problems("scale_x_continuous", list(breaks = tfl_call("hcl.colors", list(n = 3))))
+  expect_identical(p$level, "error")
+  # a date scale's dates, NA an open end (YAML's NA is the text "NA")
+  expect_true(.schema_ok("2024-01-01", .schema_type("date")))
+  for (bad in c("2024-13-01", "01/01/2024", "2024-1-1")) expect_false(.schema_ok(bad, .schema_type("date")), info = bad)
+  expect_identical(nrow(gg_problems("scale_x_date", list(limits = list("2024-01-01", "NA")))), 0L)
+  expect_identical(gg_code("scale_x_date", list(limits = list("2024-01-01", "NA"))),
+                   "scale_x_date(limits = as.Date(c(\"2024-01-01\", NA)))")
+  expect_identical(gg_code("scale_y_date", list(breaks = list("2024-06-01"))),
+                   "scale_y_date(breaks = as.Date(\"2024-06-01\"))")
+  # (a continuous scale's limits are not dates)
+  expect_identical(gg_code("scale_x_continuous", list(limits = list(0, 52))), "scale_x_continuous(limits = c(0, 52))")
+  # read from code and back
+  for (code in c("scale_x_continuous(breaks = seq(0, 52, by = 4))",
+                 "geom_point(colour = alpha(\"blue\", 0.5))",
+                 "theme(panel.grid = element_line(colour = alpha(\"grey50\", 0.3)))",
+                 "scale_colour_gradientn(colours = hcl.colors(5, \"Blues\"))",
+                 "scale_fill_gradientn(colours = terrain.colors(10))",
+                 "scale_x_date(limits = as.Date(c(\"2024-01-01\", NA)))",
+                 "scale_x_date(breaks = as.Date(\"2024-06-01\"))")) {
+    it <- .fig_lang_item(str2lang(code))
+    bare <- function(v) inherits(v, "tfl_r") || (inherits(v, "tfl_call") && any(vapply(v$args, bare, NA)))
+    expect_false(any(vapply(it$args, bare, NA)), info = code)
+    expect_identical(nrow(tfl_schema_check(it)), 0L, info = code)
+    expect_identical(.fig_deparse(.fig_item_lang(it)), code)
+  }
+  expect_identical(.fig_lang_item(quote(scale_x_continuous(breaks = seq(0, 52, 4))))$args$breaks, wk)
+  expect_identical(.fig_lang_item(quote(scale_x_date(limits = as.Date(c("2024-01-01", NA)))))$args$limits,
+                   c("2024-01-01", NA))
+  # as.Date() where no dates are typed stays R
+  expect_s3_class(.fig_lang_item(quote(scale_x_continuous(limits = as.Date("2024-01-01"))))$args$limits, "tfl_r")
+  # the code draws
+  skip_if_not_installed("ggplot2")
+  d <- data.frame(day = as.Date("2024-01-01") + 0:200, wk = 0:200 / 4, y = 1)
+  items <- list(tfl_item("geom_point", list(colour = a)),
+                tfl_item("scale_x_date", list(limits = list("2024-01-01", "NA"),
+                                              breaks = list("2024-01-01", "2024-04-01"))))
+  g <- Reduce(`+`, lapply(items, function(it) eval(.fig_item_lang(it), asNamespace("ggplot2"))),
+              ggplot2::ggplot(d, ggplot2::aes(day, y)))
+  b <- ggplot2::ggplot_build(g)
+  expect_identical(length(b$layout$panel_params[[1L]]$x$breaks[!is.na(b$layout$panel_params[[1L]]$x$breaks)]), 2L)
+  g2 <- ggplot2::ggplot(d, ggplot2::aes(wk, y)) + ggplot2::geom_point() +
+    eval(.fig_item_lang(tfl_item("scale_x_continuous", list(breaks = wk))), asNamespace("ggplot2"))
+  expect_true(all(c(0, 4, 48) %in% ggplot2::ggplot_build(g2)$layout$panel_params[[1L]]$x$breaks))
+})

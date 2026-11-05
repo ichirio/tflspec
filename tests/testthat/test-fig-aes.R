@@ -127,11 +127,11 @@ test_that("a mapping's expression of the form is written as it is, and read back
     expect_identical(.fig_lang_value(w, "mapping")$x, .fig_deparse(str2lang(txt)), info = txt)
   }
   # any other R stays R, both ways; a column is its name
-  r <- .fig_lang_value(quote(aes(y = ifelse(AVAL > 0, 1, 2), x = AVISITN)), "mapping")
+  r <- .fig_lang_value(quote(aes(y = dplyr::if_else(AVAL > 0, 1, 2), x = AVISITN)), "mapping")
   expect_s3_class(r$y, "tfl_r")
   expect_identical(r$x, "AVISITN")
-  expect_identical(.fig_deparse(.fig_value_lang(list(y = tfl_r("ifelse(a, 1, 2)")), "mapping")),
-                   "aes(y = ifelse(a, 1, 2))")
+  expect_identical(.fig_deparse(.fig_value_lang(list(y = tfl_r("dplyr::if_else(a, 1, 2)")), "mapping")),
+                   "aes(y = dplyr::if_else(a, 1, 2))")
   # a number is a constant (group = 1), both ways
   expect_identical(.fig_deparse(.fig_value_lang(list(group = 1L), "mapping")), "aes(group = 1)")
   expect_identical(.fig_lang_value(quote(aes(group = 1)), "mapping")$group, 1)
@@ -150,9 +150,9 @@ test_that("a mapping's expression of the form is written as it is, and read back
 test_that("the form: calls of the mapping's functions, of columns, constants and arithmetic", {
   ok <- c("factor(A)", "as.numeric(A)", "after_stat(density)", "after_stat(count/max(count))",
           "reorder(A, -B)", "stage(A, after_scale = alpha(fill, 0.5))", "rev(factor(A))")
-  ok <- c(ok, "A + B", "mean - 1.96 * se", "(A + B)/2")
-  no <- c("ifelse(A, 1, 2)", "factor(A)[1]", "after_stat(get(\"x\"))", "function(x) x",
-          "factor(toupper(A))", "A$B")
+  ok <- c(ok, "A + B", "mean - 1.96 * se", "(A + B)/2", "ifelse(A, 1, 2)", "factor(toupper(A))")
+  no <- c("factor(A)[1]", "after_stat(get(\"x\"))", "function(x) x", "A$B",
+          "dplyr::if_else(A, 1, 2)", "Sys.Date() - ADT", "ifelse(A, system(\"ls\"), 2)")
   for (t in ok) expect_true(.fig_aes_form(str2lang(t)), info = t)
   for (t in no) expect_false(.fig_aes_form(str2lang(t)), info = t)
   expect_identical(.fig_aes_stat_vars(quote(after_stat(count / sum(count)))), "count")
@@ -214,4 +214,38 @@ test_that("a figure's code maps the expressions as written, and draws", {
   ld <- ggplot2::layer_data(g)
   expect_equal(sum(ld$y), 1)
   expect_identical(nrow(.schema_check_plot_aes(p)), 0L)
+})
+
+test_that("a condition is of the form: a comparison, ifelse(), cut(), is.na(), %in%", {
+  # a waterfall's response, a value above the normal range, a missing date,
+  # categories of change
+  for (txt in c("PCHG <= -30", "ifelse(PCHG <= -30, \"Response\", \"No response\")",
+                "AVAL > ANRHI", "!is.na(ADT)", "AVISIT %in% c(\"Week 4\", \"Week 8\")",
+                "cut(PCHG, c(-Inf, -30, 20, Inf))", "AVAL > ANRHI | AVAL < ANRLO",
+                "PARAMCD == \"SYSBP\" & AVAL >= 140",
+                "after_stat(count/sum(n[!duplicated(group)]))", "toupper(substr(SEX, 1, 1))")) {
+    e <- str2lang(txt)
+    expect_true(.fig_aes_form(e), info = txt)
+    w <- .fig_value_lang(list(fill = .fig_deparse(e)), "mapping")
+    expect_identical(w[[2L]], e, info = txt)
+    expect_identical(.fig_lang_value(w, "mapping")$fill, .fig_deparse(e), info = txt)
+  }
+  # an index is inside the form only
+  expect_false(.fig_aes_form(quote(n[!duplicated(group)])))
+  # read from code and back, the check quiet
+  for (code in c("geom_col(mapping = aes(x = reorder(USUBJID, -PCHG), y = PCHG, fill = PCHG <= -30))",
+                 "geom_point(mapping = aes(x = ADY, y = AVAL, shape = !is.na(ADT)))")) {
+    it <- .fig_lang_item(str2lang(code))
+    expect_false(any(vapply(it$args$mapping, inherits, NA, "tfl_r")), info = code)
+    expect_identical(nrow(tfl_schema_check(it)), 0L, info = code)
+    expect_identical(.fig_deparse(.fig_item_lang(it)), code)
+  }
+  # a waterfall coloured by response draws
+  skip_if_not_installed("ggplot2")
+  d <- data.frame(USUBJID = c("01", "02", "03"), PCHG = c(-45, 10, -31))
+  it <- tfl_item("geom_col", list(mapping = list(x = "reorder(USUBJID, -PCHG)", y = "PCHG",
+                                                 fill = "ifelse(PCHG <= -30, \"PR\", \"SD/PD\")")))
+  g <- ggplot2::ggplot(d) + eval(.fig_item_lang(it), asNamespace("ggplot2"))
+  ld <- ggplot2::layer_data(g)
+  expect_identical(length(unique(ld$fill)), 2L)
 })
