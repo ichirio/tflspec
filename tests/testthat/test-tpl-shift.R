@@ -356,3 +356,127 @@ test_that("shift: param_labels as a list of {name, text} builds, the page's Para
   pg <- suppressMessages(rtfreporter::plan_apply(r$plan, "pages"))
   expect_identical(names(pg), paste("Parameter:", lab))
 })
+
+# ---- post_header: the header over each post-baseline category (#642) ----
+
+# a report of `shift` or `lab_shift` (the sample study of sh_study()), the
+# plan, the ARD and the resolved output
+ph_report <- function(d, name, args, codelists = list()) {
+  args <- c(list(population = "SAF"),
+            if (name == "lab_shift") list(visit = "CYCLE 2 DAY 1", params = "HGB")
+            else list(where = 'PARAMCD == "HGB" & AVISIT == "CYCLE 2 DAY 1"'),
+            args)
+  f <- file.path(d, "spec", "outputs", "T-PH.yml")
+  tfl_write_output(tfl_output("T-PH", "table", population = "SAF", extends = "defaults",
+                              codelists = codelists, template = list(name = name, args = args)), f)
+  st <- tfl_read_study_spec(d)
+  ard <- suppressMessages(tfl_build_ard(st, output_id = "T-PH", dir = d, save = FALSE))
+  ro <- tfl_resolve_output(tfl_read_output(f), st)
+  list(ard = ard, ro = ro, st = st, plan = suppressMessages(tfl_content_run(ro, ard)))
+}
+
+# line 2 of a page's header, the values' cells
+ph_line2 <- function(pg) {
+  as.character(pg$col_header[[2L]])
+}
+
+ph_skip <- function() {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("cards")
+  skip_if_not_installed("dplyr")
+  skip_if_not_installed("rtfreporter")
+}
+
+test_that("shift, lab_shift: post_header prints its text over each category, the label or the code (#642)", {
+  ph_skip()
+  d <- sh_study(withr::local_tempdir())
+  txt <- "Worst post-baseline [a]: {col}"
+  rows <- function(...) lapply(list(...), function(v) list(value = v[1L], label = v[2L]))
+  cl <- rows(c("LOW", "Low"), c("NORMAL", "Normal"), c("HIGH", "High"))
+  for (nm in c("shift", "lab_shift")) {
+    for (with_cl in c(FALSE, TRUE)) {
+      info <- paste(nm, if (with_cl) "with codelists" else "without")
+      ccl <- if (with_cl) list(BNRIND = cl, ANRIND = cl) else list()
+      cats <- if (with_cl) c("Low", "Normal", "High") else c("LOW", "NORMAL", "HIGH")
+      want <- paste0("Worst post-baseline [a]: ", cats)
+      r <- ph_report(d, nm, list(post_header = txt), ccl)
+      pg <- suppressMessages(rtfreporter::plan_apply(r$plan, "pages"))
+      expect_length(pg, 1L)
+      for (g in pg) {
+        l2 <- ph_line2(g)
+        # the label column's heading, then the categories under each arm
+        expect_identical(l2[1L], "Parameter / Baseline", info = info)
+        expect_identical(unique(l2[-1L]), want, info = info)
+        expect_length(l2, 1L + 2L * 3L)
+      }
+      f <- withr::local_tempfile(fileext = ".rtf")
+      suppressMessages(rtfreporter::generate_rtfreport(
+        rtfreporter::rtf_tables(rtfreporter::rtf_document(), r$plan), f, overwrite = TRUE))
+      rtf <- paste(readLines(f, warn = FALSE), collapse = "\n")
+      for (w in want) expect_true(grepl(w, rtf, fixed = TRUE), info = paste(info, w))
+      # without the argument: the categories alone, as before
+      r0 <- ph_report(d, nm, list(), ccl)
+      pg0 <- suppressMessages(rtfreporter::plan_apply(r0$plan, "pages"))
+      expect_identical(unique(ph_line2(pg0[[1L]])[-1L]), cats, info = info)
+    }
+  }
+})
+
+test_that("shift, lab_shift: post_header with no {col}, or header_n = FALSE, prints as written (#642)", {
+  ph_skip()
+  d <- sh_study(withr::local_tempdir())
+  for (nm in c("shift", "lab_shift")) {
+    r <- ph_report(d, nm, list(post_header = "Worst [a]", header_n = FALSE))
+    pg <- suppressMessages(rtfreporter::plan_apply(r$plan, "pages"))
+    expect_identical(unique(ph_line2(pg[[1L]])[-1L]), "Worst [a]", info = nm)
+    # header_n = FALSE: line 1 is the arms only, line 2 as above
+    expect_identical(unique(vapply(pg[[1L]]$col_header[[1L]],
+                                   function(z) as.character(z$label), "")),
+                     c("", "Drug X", "Control"), info = nm)
+    r2 <- ph_report(d, nm, list(post_header = "{col} [a]", header_n = FALSE))
+    pg2 <- suppressMessages(rtfreporter::plan_apply(r2$plan, "pages"))
+    expect_identical(unique(ph_line2(pg2[[1L]])[-1L]),
+                     c("LOW [a]", "NORMAL [a]", "HIGH [a]"), info = nm)
+  }
+})
+
+test_that("shift, lab_shift: the default post_header is {col}, the expansion as before; the ARD is the same (#642)", {
+  base <- list(population = "SAF", visit = "V", params = "ALT")
+  for (nm in c("shift", "lab_shift")) {
+    a <- if (nm == "shift") list(population = "SAF") else base
+    x <- tfl_template_expand(nm, a)
+    y <- tfl_template_expand(nm, c(a, list(post_header = "{col}")))
+    z <- tfl_template_expand(nm, c(a, list(post_header = "Worst post-baseline [a]: {col}")))
+    expect_identical(y, x, info = nm)
+    h <- function(e) Filter(function(it) it$fn == "plan_col_header", e$content)[[1L]]$args$header
+    expect_identical(h(x)[[3L]]$text, "{col}", info = nm)
+    expect_identical(h(z)[[3L]]$text, "Worst post-baseline [a]: {col}", info = nm)
+    # only that text differs
+    expect_identical(z$ard, x$ard, info = nm)
+    expect_identical(z$codelists, x$codelists, info = nm)
+    h2 <- h(z)
+    h2[[3L]]$text <- "{col}"
+    expect_identical(h2, h(x), info = nm)
+  }
+})
+
+test_that("shift, lab_shift: post_header leaves the ARD and its program unchanged (#642)", {
+  ph_skip()
+  d <- sh_study(withr::local_tempdir())
+  rows <- function(...) lapply(list(...), function(v) list(value = v[1L], label = v[2L]))
+  cl <- rows(c("LOW", "Low"), c("NORMAL", "Normal"), c("HIGH", "High"))
+  for (nm in c("shift", "lab_shift")) {
+    r0 <- ph_report(d, nm, list(), list(ANRIND = cl, BNRIND = cl))
+    r1 <- ph_report(d, nm, list(post_header = "Worst post-baseline [a]: {col}"),
+                    list(ANRIND = cl, BNRIND = cl))
+    expect_identical(r1$ard, r0$ard, info = nm)
+    # the code list's labels stay the categories' names
+    expect_identical(r1$ro$codelists$ANRIND, r0$ro$codelists$ANRIND, info = nm)
+    expect_identical(vapply(r1$ro$codelists$ANRIND, function(x) x$label, ""),
+                     c("Low", "Normal", "High"), info = nm)
+    # the program that builds the ARD
+    expect_identical(tfl_ard_code(r1$st, output_id = "T-PH", save = FALSE),
+                     tfl_ard_code(r0$st, output_id = "T-PH", save = FALSE), info = nm)
+  }
+})

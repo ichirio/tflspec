@@ -24,6 +24,7 @@ The table template \code{shift}, layout \code{shift}. Its program is one call, \
    \code{param_labels} \tab other \tab call \tab  \tab  \tab each parameter's heading (a named vector); given by name, merged \cr
    \code{cell} \tab other \tab call \tab \{n\} \tab  \tab a cell's template \cr
    \code{heading} \tab other \tab call \tab Parameter / Baseline \tab  \tab the label column's heading \cr
+   \code{post_header} \tab other \tab call \tab \{col\} \tab  \tab the header over each post-baseline category ('\{col\}': the category) \cr
    \code{worst} \tab other \tab call \tab HIGH, LOW, NORMAL \tab  \tab a subject once a parameter, at its worst category after baseline, the categories from the worst; NULL: every record (the baseline's records too) \cr
    \code{worst_by} \tab other \tab call \tab  \tab  \tab a parameter's own order from the worst, by its value (HGB: LOW, HIGH, NORMAL); the others take 'worst' \cr
    \code{percent_of} \tab other \tab call \tab row \tab  \tab what a cell's \{p\} is of: "row" the subjects of its baseline category, "total" the Total row -- the arm's subjects with a category after baseline for the parameter (the Missing row among them) \cr
