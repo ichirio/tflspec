@@ -115,24 +115,24 @@ test_that("a study with spec/codelists.yml builds its ARD as without the file (#
   saveRDS(getExportedValue("tflspec", "adsl"), file.path(dir, "data", "adam", "adsl.rds"))
   without <- suppressMessages(tfl_build_ard(tfl_read_study_spec(dir), dir = dir,
                                             output_id = "T-1", save = FALSE))
+  code_without <- tfl_ard_code(tfl_read_study_spec(dir), "T-1", save = FALSE)
   sa_codelists_file(dir, "ANRIND: [{value: LOW, label: Low}, {value: HIGH, label: High}]")
   st <- tfl_read_study_spec(dir)
   with <- suppressMessages(tfl_build_ard(st, dir = dir, output_id = "T-1", save = FALSE))
   expect_gt(nrow(with), 0L)
   expect_identical(as.data.frame(with)[c("output_id", "variable", "stat_name")],
                    as.data.frame(without)[c("output_id", "variable", "stat_name")])
-  # the file is the sheets\' too, for the round trip
+  # the file is the sheets' too, for the round trip
   cl <- tfl_sheets_from_yaml(dir)$table$codelists
   expect_identical(cl$variable, c("ANRIND", "ANRIND"))
   expect_true(all(is.na(cl$output_id)))
-  # the program does not apply the unused list
+  # the program does not apply the unused list: it is the one without the file
   code <- tfl_ard_code(st, "T-1", save = FALSE)
   expect_false(any(grepl("ANRIND|HIGH", code)))
-  expect_identical(code, tfl_ard_code(tfl_read_study_spec(sa_codelists_file(dir, "{}")),
-                                      "T-1", save = FALSE))
+  expect_identical(code, code_without)
 })
 
-test_that("a report\'s own code list wins over the file\'s of the same variable (#649)", {
+test_that("a report's own code list wins over the file's of the same variable (#649)", {
   dir <- sa_yaml_study(withr::local_tempdir())
   f <- file.path(dir, "spec", "outputs", "T-2.yml")
   writeLines(c(readLines(f), "codelists:", "  SEX:", "    - {value: M, label: Men}",

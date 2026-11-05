@@ -135,11 +135,17 @@
     .spec_stop(paste(c("The ARD definition is not valid:", p$message), collapse = "\n  "),
                p, "tflspec_ard_spec_error")
   }
-  # the code lists of the reports: spec/codelists.yml's rows (no report) are
-  # lists to copy from, which the sheets keep, not the build's
-  cl <- b$table$codelists
+  list(spec = tfl_ard_spec(ard), codelists = .codelists_of_reports(b$table$codelists))
+}
+
+# The sheets' code lists without spec/codelists.yml's rows (no `output_id`):
+# those are lists to copy from, which the sheets keep for the round trip, not
+# any report's, so what builds, draws or reviews a report leaves them out
+# (.codelists_check() still refuses a workbook's row with no report).  NULL
+# and zero rows stay as they are.
+.codelists_of_reports <- function(cl) {
   if (is.data.frame(cl) && nrow(cl) && "output_id" %in% names(cl)) {
     cl <- cl[!is.na(cl$output_id), , drop = FALSE]
   }
-  list(spec = tfl_ard_spec(ard), codelists = cl)
+  cl
 }
