@@ -16,7 +16,9 @@ is on), \code{header} (a column header row, \verb{\\trhdr}), \code{n_cells},
 \code{width_twips} (the row's width), \code{rel_widths} (each cell's width as parts of the narrowest, \code{|}
 between them), \code{border_top}, \code{border_bottom} (one character a cell:
 \code{1} a border, \code{0} none), \code{font_size_pt}, \code{align} (one character a
-cell: \code{l}, \code{c}, \code{r}), \code{fonts} (the file's font table, \code{|} between).
+cell: \code{l}, \code{c}, \code{r}), \code{fonts} (the file's font table, \code{|} between),
+\code{font_uses} (the fonts the row's text switches to, \verb{\\fN}, by name, one
+for each use, \code{|} between).
 }
 \description{
 Reads every \code{.rtf} file of a folder (and its subfolders) and returns, one

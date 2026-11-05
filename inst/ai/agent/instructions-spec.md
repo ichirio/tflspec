@@ -5,7 +5,7 @@ A draft is a report file, `ai/spec/outputs/<id>.yml`, in the form above
 report's skeleton and nothing of its look:
 
 - `id`, `kind` (`table`, `listing`, `figure`), `label` (the TOC's title;
-  when the shell's differs, the TOC's, and an assumption that says so),
+  when the printed title differs, an assumption that says so),
   `population` (the analysis set's id from `spec/data.yml`), `extends:
   [defaults]`;
 - `data` (`{source: ard}` for a table of statistics; a listing's records as
@@ -26,7 +26,12 @@ report's skeleton and nothing of its look:
   define (`[define.xml: digits 1]` on a variable, or its "Value level"
   section by parameter): those are the study's digits, use them and say
   so in an assumption (`from: define`);
-- `page: titles` (the shell's title lines), and the shell's footnotes:
+- `page: titles`: the title lines of the shell for this report; the TOC's
+  only when no title for this report can be read from the shell.  (A TOC
+  row for one shell that covers several reports often has only the common
+  part of the title, without Part 1 or Part 2.)  `label` stays the TOC's
+  title.  When the two differ, say so in an assumption; it is not a
+  question.  And the shell's footnotes:
   {{footnotes_at}}
   A footnote is the shell's text as it is: never reworded, none added.  A
   footnote of a statistic the table does not show (`SD = Standard

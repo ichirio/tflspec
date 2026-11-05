@@ -8,7 +8,7 @@
 #' The workbook [tfl_write_spec_xlsx()] wrote, edited in Excel, read back:
 #' each row is matched by its key (`toc`: `id`; `datasets`: `dataset`;
 #' `populations`: `id`; `analysis_data` and `analyses`: `output_id` + `id`;
-#' `codelists`: `output_id` + `variable` + `value`; `tokens`: `output_id` +
+#' `codelists`: `output_id` + `variable` + `value` (every row names its report); `tokens`: `output_id` +
 #' `name`; `header` / `footer` / `titles` / `footnotes`: `output_id` +
 #' `line`; `page` / `report`: `output_id`; `listing_cols`: `output_id` +
 #' `vars`) and the item it names is updated with the row's cells; a row
@@ -94,6 +94,9 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
     set_file(rel, y)
   }
 
+  # a code list is a report's: a row with no report stops the import, as in a table spec
+  .codelists_check(rd("codelists"))
+
   # study-wide rows
   update_rows("toc", "toc.yml", "outputs", "id", list_cols = c("sets", "datasets"))
   update_rows("datasets", "data.yml", "datasets", "dataset", r_cols = "derive")
@@ -141,12 +144,12 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
     set_file(rel, y)
   })
   by_scope("codelists", function(id, part) {
-    rel <- if (is.na(id)) "codelists.yml" else scope_rel(id)
+    if (is.na(id)) return()
+    rel <- scope_rel(id)
     y <- get_file(rel)
     for (v in unique(part$variable)) {
       pv <- part[part$variable == v, , drop = FALSE]
-      base <- if (is.na(id)) y else y$codelists
-      rows <- base[[v]] %||% list()
+      rows <- y$codelists[[v]] %||% list()
       for (i in seq_len(nrow(pv))) {
         j <- .find_row(rows, list("value"), pv$value[i])
         m <- list(value = pv$value[i])
@@ -166,7 +169,7 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
           rows[[j]]$under <- un
         }
       }
-      if (is.na(id)) y[[v]] <- rows else y$codelists[[v]] <- rows
+      y$codelists[[v]] <- rows
     }
     set_file(rel, y)
   })

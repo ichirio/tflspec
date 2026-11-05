@@ -53,9 +53,6 @@ tfl_write_spec_xlsx <- function(dir, path) {
     .flat_page(sc$layer$page, sc$id, add_rows, note)
     if (length(sc$layer$content)) note(sc$id, "content", "the layers (content) are not rows")
   }
-  for (v in names(s$codelists)) {
-    add_rows("codelists", lapply(s$codelists[[v]], function(e) c(list(output_id = NA_character_, variable = v), e)))
-  }
   # each report
   for (id in names(outs)) {
     o <- outs[[id]]

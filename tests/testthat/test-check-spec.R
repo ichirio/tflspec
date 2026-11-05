@@ -113,4 +113,5 @@ test_that("page: titles under a study header that prints the label, title and po
   expect_identical(s$titles_in_header, c("OUTPUT_LABEL", "OUTPUT_TITLE", "OUTPUT_POPULATION"))
   expect_match(tflspec:::.ai_titles_text(s$titles_in_header), "no `page: titles`", fixed = TRUE)
   expect_match(tflspec:::.ai_titles_text(character()), "`page: titles`, from the shell", fixed = TRUE)
+  expect_match(tflspec:::.ai_titles_text(character()), "the TOC's title only when none", fixed = TRUE)
 })

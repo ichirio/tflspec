@@ -317,8 +317,8 @@ test_that("tfl_ai_run(): both figures of one request are drawn", {
   expect_true(all(file.exists(file.path(d, c(fr$png, fr$rtf)))))
 })
 
-# a figure of a study with spec/codelists.yml (lists to copy from): the rows
-# of no report do not stop its drawing (#649)
+# a figure of a study with a spec/codelists.yml left in it: the file is not
+# read, and does not stop its drawing (#649, #659)
 fig_codelists_study <- function(own = FALSE) {
   root <- withr::local_tempdir(.local_envir = parent.frame())
   d <- file.path(root, "study")
@@ -342,7 +342,7 @@ fig_codelists_study <- function(own = FALSE) {
   d
 }
 
-test_that("a figure of a study with spec/codelists.yml is drawn (#649)", {
+test_that("a figure of a study with spec/codelists.yml is drawn, the file ignored (#649, #659)", {
   skip_on_cran()
   skip_if_not_installed("haven")
   skip_if_not_installed("rtfreporter")
@@ -356,7 +356,7 @@ test_that("a figure of a study with spec/codelists.yml is drawn (#649)", {
   expect_true(file.exists(file.path(d, fr$png)))
 })
 
-test_that("a figure's own code list applies, not the file's of the same variable (#649)", {
+test_that("a figure's own code list applies, not the file's of the same variable (#649, #659)", {
   skip_on_cran()
   skip_if_not_installed("haven")
   skip_if_not_installed("rtfreporter")
