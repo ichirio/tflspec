@@ -2707,7 +2707,7 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
 # the reference), their label, text and y; a subgroup whose model did not
 # converge has no point (NE)
 .forest_est_code <- function(group, subgroups, comparison = NULL, n_by_arm = NULL,
-                             subgroup_labels = NULL) {
+                             subgroup_labels = NULL, bold_headings = FALSE) {
   # the headings' text: a subgroup's label (the given, else the common ADaM
   # variables'), the variable's name when it has none
   lab <- .forest_sub_labels(subgroups, subgroup_labels)
@@ -2766,7 +2766,11 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
       if (length(n_by_arm)) "    across(starts_with(\"n_arm\"), ~ ifelse(head, \"\", .x)),",
       "    txt = ifelse(head, \"\", txt),",
       "    y = rev(row_number())",
-      "  )")
+      "  )",
+      if (isTRUE(bold_headings)) c(
+        "# the axis's labels, the headings bold (plotmath; bquote() keeps the text as it is)",
+        "y_labels <- as.expression(Map(function(l, h) if (h) bquote(bold(.(l))) else l,",
+        "                              est$label, est$head))"))
     else c(
       "est <- est |>",
       "  mutate(label = level, n = as.character(n_obs), y = rev(row_number()))")),
