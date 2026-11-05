@@ -432,6 +432,20 @@
   p
 }
 
+# A draft report's code lists as its build has them: its own over the ones
+# of the layers it extends (per variable, as tfl_report_codelists() gives
+# them).  NULL when the draft extends something and the study cannot be
+# read (or cannot give the layers): they are not known, so a check on
+# them is left out.
+.ai_draft_codelists <- function(o, study) {
+  own <- o$codelists %||% list()
+  if (!length(o$extends) || identical(o$extends, "none")) return(.codelists_norm(own))
+  if (is.null(study)) return(NULL)
+  below <- tryCatch(.layers_below(o, study)$acc$codelists, error = function(e) NULL)
+  if (is.null(below)) return(NULL)
+  .codelists_norm(.merge_map(below, own) %||% list())
+}
+
 # A template report as the items it stands for (its own after them): as
 # tfl_template_to_spec() writes it with the study, else from the template
 # alone (the study's defaults of its parameters then not taken)

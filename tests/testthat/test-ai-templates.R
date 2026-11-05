@@ -382,7 +382,7 @@ test_that("a listing drafted from the listing template is built (RTF)", {
 
 # shift's `levels` and `worst` against the data's values (#636)
 aitpl_shift_answer <- function(template = "shift", args = "levels: [Low, Normal, High]", codelists = FALSE,
-                                cl_vars = c("ANRIND", "BNRIND"), cl_missing = FALSE) {
+                                cl_vars = c("ANRIND", "BNRIND"), cl_missing = FALSE, extends = "none") {
   cl <- c("    codelists:",
           paste0("      ", cl_vars,
                  ": [{value: LOW, label: Low}, {value: NORMAL, label: Normal}, {value: HIGH, label: High}",
@@ -395,15 +395,17 @@ aitpl_shift_answer <- function(template = "shift", args = "levels: [Low, Normal,
     "    label: Shift table",
     "    population: SAF",
     if (codelists) cl,
+    paste0("    extends: ", extends),
     "    template:",
     sprintf("      name: %s", template),
     "      args:",
     paste0("        ", args),
     "assumptions: []"), "table")
 }
-aitpl_shift_check <- function(..., datasets = TRUE) {
+aitpl_shift_check <- function(..., datasets = TRUE, study_dir = NULL) {
   ds <- if (datasets) tfl_ai_adam_summary(list(ADLB = tflspec::adlb, ADSL = tflspec::adsl))
-  p <- tfl_ai_check(aitpl_shift_answer(...), tfl_ai_context("table", outputs = "T-14-3-4", datasets = ds))
+  p <- tfl_ai_check(aitpl_shift_answer(...),
+                    tfl_ai_context("table", outputs = "T-14-3-4", datasets = ds, study_dir = study_dir))
   p[grepl("template args (levels|worst)", p$where), , drop = FALSE]
 }
 
@@ -467,4 +469,75 @@ test_that("shift: `Missing` and `Total` in `levels` are the template's rows: an 
   expect_length(p$problem, 2L)
   # nothing more to say of the data's values with them left out
   expect_identical(nrow(aitpl_shift_check(args = "levels: [LOW, NORMAL, HIGH]")), 0L)
+})
+
+# a draft's levels covered by the code lists of the layers it extends (#647)
+aitpl_layer_study <- function(defaults = NULL, pattern = NULL, env = parent.frame()) {
+  d <- withr::local_tempdir(.local_envir = env)
+  dir.create(file.path(d, "spec", "outputs"), recursive = TRUE)
+  writeLines("study_id: CL-1", file.path(d, "study.yml"))
+  writeLines(c("content: []", if (length(defaults)) c("codelists:", paste0("  ", defaults))),
+             file.path(d, "spec", "defaults.yml"))
+  if (length(pattern)) {
+    dir.create(file.path(d, "spec", "patterns"))
+    writeLines(c("codelists:", paste0("  ", pattern)), file.path(d, "spec", "patterns", "pp.yml"))
+  }
+  d
+}
+aitpl_layer_lists <- paste0(c("ANRIND", "BNRIND"),
+  ": [{value: LOW, label: Low}, {value: NORMAL, label: Normal}, {value: HIGH, label: High}]")
+
+test_that("shift: `levels` covered by the code lists of the layers the draft extends pass (#647)", {
+  skip_on_cran()
+  d <- aitpl_layer_study(defaults = aitpl_layer_lists)
+  expect_identical(nrow(aitpl_shift_check(extends = "defaults", study_dir = d)), 0L)
+  # a pattern's, the draft extending it
+  dp <- aitpl_layer_study(pattern = aitpl_layer_lists)
+  expect_identical(nrow(aitpl_shift_check(extends = "[patterns/pp, defaults]", study_dir = dp)), 0L)
+  # not a layer the draft extends: not its lists
+  p <- aitpl_shift_check(extends = "none", study_dir = d)
+  expect_identical(p$severity, "error")
+  p <- aitpl_shift_check(extends = "defaults", study_dir = dp)
+  expect_identical(p$severity, "error")
+  # lab_shift: the same lists
+  expect_identical(nrow(aitpl_shift_check("lab_shift", c("visit: Week 4", "params: [ALT]", "levels: [Low, Normal, High]"),
+                                          extends = "defaults", study_dir = d)), 0L)
+})
+
+test_that("shift: `levels` the layers' lists do not cover are the same error as with the report's own list (#647)", {
+  skip_on_cran()
+  d <- aitpl_layer_study(defaults = aitpl_layer_lists)
+  own <- aitpl_shift_check(args = "levels: [Low, Normal, Extreme]", codelists = TRUE)
+  layer <- aitpl_shift_check(args = "levels: [Low, Normal, Extreme]", extends = "defaults", study_dir = d)
+  expect_identical(layer$severity, own$severity)
+  expect_identical(layer$problem, own$problem)
+  # one column's list only (the other column's has none): the error of the own lists
+  one <- aitpl_layer_study(defaults = aitpl_layer_lists[1])
+  p <- aitpl_shift_check(extends = "defaults", study_dir = one)
+  expect_identical(p$severity, "error")
+  expect_match(p$problem, "both ANRIND and BNRIND", fixed = TRUE)
+  # the draft's own list of one column and the layer's of the other: both are the report's
+  mix <- aitpl_shift_check(codelists = TRUE, cl_vars = "ANRIND", extends = "defaults",
+                           study_dir = aitpl_layer_study(defaults = aitpl_layer_lists[2]))
+  expect_identical(nrow(mix), 0L)
+})
+
+test_that("shift: a draft that extends and a study that cannot be read leave the check out (#647)", {
+  skip_on_cran()
+  d <- aitpl_layer_study(defaults = aitpl_layer_lists)
+  ctx <- tfl_ai_context("table", outputs = "T-14-3-4", study_dir = d,
+                        datasets = tfl_ai_adam_summary(list(ADLB = tflspec::adlb, ADSL = tflspec::adsl)))
+  # (read when the context was made; not readable when the answer is checked)
+  writeLines("codelists: [", file.path(d, "spec", "defaults.yml"))
+  expect_error(tfl_read_study_spec(d))
+  chk <- function(extends) {
+    p <- tfl_ai_check(aitpl_shift_answer(extends = extends), ctx)
+    p[grepl("template args (levels|worst)", p$where), , drop = FALSE]
+  }
+  expect_identical(nrow(chk("defaults")), 0L)
+  # a draft that extends nothing needs no study: its own lists are all
+  expect_identical(chk("none")$severity, "error")
+  # no study in the context: the same
+  ctx$study_dir <- NULL
+  expect_identical(nrow(chk("defaults")), 0L)
 })
