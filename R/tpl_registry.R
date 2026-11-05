@@ -1638,6 +1638,9 @@ names(.tpl_pc_params) <- vapply(.tpl_pc_params, `[[`, "", "name")
                                             text = paste(a$heading, collapse = "\n"))),
            list(list(line = "2", cols = ".values", span = "each", text = "{col}"))))))
   }
+  # (the heading is the stub's cell: the template names the stub column, as
+  # shift's plan_stub does, when no study layer has a plan_stub)
+  if (length(a$heading)) plan <- c(plan, list(tfl_item("plan_stub", list(name = "row_label"))))
   content <- c(plan, list(
     tfl_item("plan_labels", list(variable = c(
       if (isTRUE(a$baseline)) list(BASE = a$baseline_label),

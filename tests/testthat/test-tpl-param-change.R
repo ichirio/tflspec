@@ -373,3 +373,31 @@ test_that("a table with its own plan_stub and no name takes the layers' name; ex
                            pch_study())
   expect_identical(st(r0)[[1L]]$args, list(name = "row_label", before = TRUE))
 })
+
+test_that("heading with no study plan_stub (extends: none, tpl_param_change()) builds: the template names the stub", {
+  pc_skip()
+  for (lay in c("cols", "rows")) {
+    # no heading: no plan_stub of the template's (the expansion as it was)
+    x0 <- tfl_template_expand("param_change", utils::modifyList(pc_args, list(layout = lay)))
+    expect_false("plan_stub" %in% vapply(x0$content, `[[`, "", "fn"))
+    r <- pch_run(args = list(layout = lay, heading = "Visit / Statistic"), extends = "none")
+    expect_match(r$rtf, "Visit / Statistic", fixed = TRUE)
+    a <- c(pc_args, layout = lay, heading = "Visit / Statistic")
+    p <- do.call(tpl_param_change, c(list(pc_ard(tfl_template_expand("param_change", a))), a))
+    expect_identical(pc_tab(p), r$tab)
+  }
+  # a study's own plan_stub wins, the template supplies only the name
+  s <- pch_study()
+  s$defaults$content <- lapply(s$defaults$content, function(it) {
+    if (it$fn == "plan_stub") it$args <- list(name = "stub_x", indent = 3L)
+    it
+  })
+  o <- tfl_output("T-PCH", "table", population = "SAF", extends = "defaults",
+                  template = list(name = "param_change",
+                                  args = utils::modifyList(pc_args, list(heading = "H"))))
+  ro <- tfl_resolve_output(o, s)
+  st <- Filter(function(it) it$fn == "plan_stub", ro$content)
+  expect_length(st, 1L)
+  expect_identical(st[[1L]]$args$indent, 3L)
+  expect_identical(st[[1L]]$args$name, "stub_x")
+})
