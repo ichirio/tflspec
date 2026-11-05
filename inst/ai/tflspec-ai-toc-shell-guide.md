@@ -518,7 +518,8 @@ lines) are `[USUBJID, AGE]`.  `label` is the column header, exactly; a
 line break in it is the two characters backslash and `n`.  `width`
 (characters) only when the shell's column widths are drawn;
 `collapse_repeats: true` on the subject column when the shell prints the
-subject once for several rows.
+subject once for several rows.  That column has to be wide enough for its
+longest value on one line: a value that wraps repeats on every record.
 A listing with no page size pages at 22 rows (the header on every page);
 write `plan_paginate_rows: {max_rows: ...}` only when the shell says otherwise.
 

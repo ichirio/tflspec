@@ -25,7 +25,11 @@ report's skeleton and nothing of its look:
   show them per row -- unless `ai/adam_summary.md` lists them from the
   define (`[define.xml: digits 1]` on a variable, or its "Value level"
   section by parameter): those are the study's digits, use them and say
-  so in an assumption (`from: define`);
+  so in an assumption (`from: define`).  When the value level gives
+  digits for some parameters of a variable and not for this one, the
+  variable-level digits are not known to be the collected precision.
+  This defines the report's numbers: ask, with the variable-level
+  digits as the default offered;
 - `page: titles` (the shell's title lines), and the shell's footnotes:
   {{footnotes_at}}
   A footnote is the shell's text as it is: never reworded, none added.  A

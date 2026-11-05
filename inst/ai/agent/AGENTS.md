@@ -180,6 +180,10 @@ stop is *Running the requests*, below: one, or a batch.  For each request:
      do not settle -- with your default, to confirm (tier (b), above) --
      or what has no sensible default (tier (c)).  A layout the shell and
      the SAP show differently is not a question: the shell's (tier (a)).
+   - Ask for the digits of a parameter that has none at the define's
+     value level while others of the variable have: the variable-level
+     digits are not known to be the collected precision.  Offer them as
+     the default.
    **Your default choice** (the one you take when the person says
    "default"):
    - never a variable or a value that `ai/adam_summary.md` does not list
