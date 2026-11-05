@@ -1,6 +1,6 @@
 # The YAML spec (design: _archive/spec-format-redesign-2026-10-14.md).
 #
-# A study is study.yml and spec/: data.yml, defaults.yml, codelists.yml,
+# A study is study.yml and spec/: data.yml, defaults.yml,
 # patterns/<name>.yml, toc.yml and outputs/<id>.yml -- one file a report.
 # A report file is `data:` (what it reads), `content:` (an ordered list of
 # layers, one item one call of the target package: a plan verb, a listing

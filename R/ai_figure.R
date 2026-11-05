@@ -67,7 +67,7 @@
   args <- args[names(args) %in% names(formals(tfl_fig_design))]
   design <- do.call(tfl_fig_design, args)
   code <- tfl_fig_design_code(design, id, setup = TRUE, save = TRUE, name = "fig",
-                              codelists = .codelists_of_reports(sh$table$codelists))
+                              codelists = sh$table$codelists)
   reads <- unique(toupper(attr(code, "reads") %||% character()))
   # (its packages around it, none attached)
   env <- new.env(parent = .fig_pkg_env(attr(code, "libs")))

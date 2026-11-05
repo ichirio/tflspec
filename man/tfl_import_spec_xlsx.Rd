@@ -22,7 +22,7 @@ Invisibly, a list: \code{changes} (a data frame: \code{sheet}, \code{key},
 The workbook \code{\link[=tfl_write_spec_xlsx]{tfl_write_spec_xlsx()}} wrote, edited in Excel, read back:
 each row is matched by its key (\code{toc}: \code{id}; \code{datasets}: \code{dataset};
 \code{populations}: \code{id}; \code{analysis_data} and \code{analyses}: \code{output_id} + \code{id};
-\code{codelists}: \code{output_id} + \code{variable} + \code{value}; \code{tokens}: \code{output_id} +
+\code{codelists}: \code{output_id} + \code{variable} + \code{value} (every row names its report); \code{tokens}: \code{output_id} +
 \code{name}; \code{header} / \code{footer} / \code{titles} / \code{footnotes}: \code{output_id} +
 \code{line}; \code{page} / \code{report}: \code{output_id}; \code{listing_cols}: \code{output_id} +
 \code{vars}) and the item it names is updated with the row's cells; a row

@@ -39,9 +39,7 @@ rows with the layers' lists added, report by report.
 For each report and variable there is one list: the report's own when
 it has one (a template's own lists among them, as the sheets hold them),
 else the one of the layers it extends (a pattern's over the defaults').
-A report that extends nothing (\code{extends: none}) has only its own.  The
-study's \code{spec/codelists.yml} is no layer: its lists are lists to copy
-from, and apply to no report unless the report's own file has them.
+A report that extends nothing (\code{extends: none}) has only its own.
 }
 \examples{
 d <- system.file("extdata", "spec-yaml", package = "tflspec")

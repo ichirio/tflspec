@@ -6,7 +6,6 @@
 #   spec/defaults.yml         what every report starts from (a report's shape),
 #                             and the study's styles: the look a report picks
 #                             (`styles: {compact: {content, page}}`, `style:`)
-#   spec/codelists.yml        code lists to copy from (templates)
 #   spec/patterns/<name>.yml  a layer a report may extend (a report's shape)
 #   spec/toc.yml              the reports in order
 #   spec/outputs/**/*.yml     one report a file (or several, `outputs:`)
@@ -21,14 +20,15 @@
 #' `tfl_read_study_spec()` reads the study-level files (every one optional)
 #' and `tfl_read_outputs()` the report files under `spec/outputs/`
 #' (subfolders too; a file with `outputs:` holds several).  An id in two
-#' files stops the read.
+#' files stops the read.  A `spec/codelists.yml` is not read (a code list is
+#' a report's or a layer's), with a message.
 #'
 #' @param dir The study folder (holds `study.yml` and `spec/`).
 #' @param skip_bad `TRUE` to leave out a report file that cannot be read, with a
 #'   warning naming it (`tfl_read_outputs()`); `FALSE` (default) to stop there.
 #' @return `tfl_read_study_spec()`: a list of class `tfl_study_spec` --
 #'   `study`, `data`, `defaults`, `styles` (by name: `defaults.yml`'s
-#'   `styles:`, the look a report picks with `style:`), `codelists`,
+#'   `styles:`, the look a report picks with `style:`),
 #'   `patterns` (by name), `toc`, `dir`.  `tfl_read_outputs()`: a named list of `tfl_output`, by id.
 #' @examples
 #' d <- system.file("extdata", "spec-yaml", package = "tflspec")
@@ -52,6 +52,10 @@ tfl_read_study_spec <- function(dir) {
   .check_spec_version(study$spec_version, file.path(dir, "study.yml"))
   dflt <- rd(file.path(spec, "defaults.yml"))
   styles <- dflt$styles %||% list()
+  if (file.exists(file.path(spec, "codelists.yml"))) {
+    message("spec/codelists.yml is not read: a code list is a report's or a layer's ",
+            "(`codelists:` in spec/defaults.yml or the report's file).")
+  }
   .study_templates(spec, study$id %||% basename(normalizePath(dir, "/", mustWork = FALSE)))
   structure(list(
     study = study,
@@ -59,7 +63,6 @@ tfl_read_study_spec <- function(dir) {
     defaults = .layer_from_list(dflt, "defaults"),
     styles = stats::setNames(lapply(names(styles), function(nm)
       .layer_from_list(styles[[nm]], paste0("style:", nm))), names(styles)),
-    codelists = rd(file.path(spec, "codelists.yml")) %||% list(),
     patterns = patterns,
     toc = rd(file.path(spec, "toc.yml")) %||% list(),
     # rtfreporter's options for every program of the study (defaults.yml's
@@ -573,10 +576,10 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
 #'
 #' Writes the study-level file of one part of a [tfl_read_study_spec()]
 #' result -- what a builder changes for the whole study (the rounding of
-#' every table, a pattern, a code list) -- in the form the reader reads.
+#' every table, a pattern) -- in the form the reader reads.
 #'
 #' @param study A `tfl_study_spec`.
-#' @param part `"defaults"`, `"patterns"` (one, by `name`), `"codelists"`,
+#' @param part `"defaults"`, `"patterns"` (one, by `name`),
 #'   `"data"` or `"toc"`.
 #' @param path The file; `NULL`: the study's own (`spec/defaults.yml`,
 #'   `spec/patterns/<name>.yml` ...).
@@ -590,7 +593,7 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
 #' identical(tfl_read_study_spec(d)$defaults$content[[1]]$fn,
 #'           yaml::read_yaml(f)$content[[1]] |> names())
 #' @export
-tfl_write_study_part <- function(study, part = c("defaults", "patterns", "codelists", "data", "toc"),
+tfl_write_study_part <- function(study, part = c("defaults", "patterns", "data", "toc"),
                                  path = NULL, name = NULL) {
   fn <- "tfl_write_study_part()"
   if (!inherits(study, "tfl_study_spec")) .ard_stop(sprintf("%s: `study` is a tfl_study_spec.", fn))
@@ -618,7 +621,6 @@ tfl_write_study_part <- function(study, part = c("defaults", "patterns", "codeli
       }
       layer_out(study$patterns[[name]])
     },
-    codelists = study$codelists,
     data = .calls_out(study$data),
     toc = study$toc)
   if (is.null(path)) {

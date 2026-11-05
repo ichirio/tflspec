@@ -536,8 +536,6 @@
     f <- tempfile(fileext = ".xlsx")
     on.exit(unlink(f), add = TRUE)
     ok <- tryCatch({
-      # (spec/codelists.yml's lists to copy from are no report's: left out)
-      b$table$codelists <- .codelists_of_reports(b$table$codelists)
       tfl_write_specs(f, ard = tfl_ard_spec(b$ard), table = tfl_table_spec(b$table),
                       report = tfl_table_spec(b$table), listing = tfl_listing_spec(b$listing))
       TRUE

@@ -152,9 +152,7 @@
 #' For each report and variable there is one list: the report's own when
 #' it has one (a template's own lists among them, as the sheets hold them),
 #' else the one of the layers it extends (a pattern's over the defaults').
-#' A report that extends nothing (`extends: none`) has only its own.  The
-#' study's `spec/codelists.yml` is no layer: its lists are lists to copy
-#' from, and apply to no report unless the report's own file has them.
+#' A report that extends nothing (`extends: none`) has only its own.
 #'
 #' @param study The study's spec, as [tfl_read_study_spec()] reads it.
 #' @param outputs The reports, as [tfl_sheets_from_spec()] takes them: a
@@ -190,7 +188,8 @@ tfl_report_codelists <- function(study, outputs = NULL, rows = NULL) {
 
 # (`rows`: the reports' own code list rows; `output_id`: only these reports')
 .report_codelists <- function(study, outputs, rows, output_id = NULL) {
-  own <- .codelists_of_reports(rows)
+  own <- rows
+  if (is.data.frame(own) && nrow(own) && "output_id" %in% names(own)) own <- own[!is.na(own$output_id), , drop = FALSE]
   if (is.null(own)) own <- data.frame(output_id = character())
   for (cn in setdiff(c("output_id", "variable", "value", "label", "order", "under"), names(own))) {
     own[[cn]] <- rep(NA_character_, nrow(own))
@@ -232,16 +231,4 @@ tfl_report_codelists <- function(study, outputs = NULL, rows = NULL) {
       order = as.character(i), under = .sheet_cell(e$under))
   }
   .rows_df(rows, cols)
-}
-
-# The sheets' code lists without spec/codelists.yml's rows (no `output_id`):
-# those are lists to copy from, which the sheets keep for the round trip, not
-# any report's, so what builds, draws or reviews a report leaves them out
-# (.codelists_check() still refuses a workbook's row with no report).  NULL
-# and zero rows stay as they are.
-.codelists_of_reports <- function(cl) {
-  if (is.data.frame(cl) && nrow(cl) && "output_id" %in% names(cl)) {
-    cl <- cl[!is.na(cl$output_id), , drop = FALSE]
-  }
-  cl
 }
