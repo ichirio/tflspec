@@ -38,11 +38,13 @@
     known <- c(names(fm), ".overall", ".missing", "by", "variables", "strata",
                "denominator", "statistic")
     if ("..." %in% names(fm) && !.dots_checked(call)) {
-      out <- c(out, .passed_args_unknown(tag, call, setdiff(given, known),
-                                         a$args[i]))
+      # (a name R matches by its beginning is the function's own argument)
+      out <- c(out, .passed_args_unknown(
+        tag, call, .args_not_matched(setdiff(given, known), names(fm)),
+        a$args[i]))
       next
     }
-    bad <- setdiff(given, known)
+    bad <- .args_not_matched(setdiff(given, known), names(fm))
     if (!length(bad)) next
     has <- setdiff(names(fm), c("...", if (isTRUE(attr(fm, "data_first"))) names(fm)[1L]))
     out <- c(out, sprintf(
@@ -96,7 +98,7 @@
 
 # What an argument of kind `code` (or `levels`) holds, when cards / cardx
 # take one shape of R only: a list or formula of cards' selectors
-# (`fmt_fun = everything() ~ 1L`, `value = list(AEREL = "Y")`), a list
+# (`fmt_fun = AGE ~ list(mean = 1L)`, `value = list(AEREL = "Y")`), a list
 # (`method.args = list(var.equal = TRUE)`), names (`stats_to_remove`), a
 # function (`tidy_fun`, `.f`), a model (`x = lm(...)`), an expression of
 # the ARD's columns (a `post` step's `filter`, `expr`, `rows`).  An
@@ -135,8 +137,9 @@
     shape <- if (identical(kind, "levels")) "selectors" else
       .ard_code_shape(fn, arg)
     if (is.na(shape)) return(NULL)
-    # (a call that makes the value -- rep(0.25, 4L), seq_len(3) -- is the
-    # program's, as a name is)
+    # (a call that makes the value -- rep(0.25, 4L), seq_len(3),
+    # stats::setNames(list(2L), "mean") -- is the program's, as a name is;
+    # a literal list(...) or formula is not "made")
     made <- is.call(e) && is.null(v) &&
       !is_call_of(e, "list") && !is_call_of(e, "~")
     ok <- switch(shape,
@@ -147,17 +150,17 @@
         (is.numeric(v) && length(v) == 1L && v >= 0 && v == round(v)) ||
         (is.character(v) && length(v) == 1L && .fmt_string_ok(v)),
       scalar = made || (!is.null(v) && length(v) == 1L),
-      selectors = is_call_of(e, "list") || is_call_of(e, "~"),
-      list = is_call_of(e, "list"),
-      character = is.character(v),
-      `function` = is_fn(e),
+      selectors = made || is_call_of(e, "list") || is_call_of(e, "~"),
+      list = made || is_call_of(e, "list"),
+      character = made || is.character(v),
+      `function` = made || is_fn(e),
       call = is.call(e) && is.null(v),
       expression = is.call(e) || is.logical(v),
-      sort = is_call_of(e, "list") || is_call_of(e, "~") ||
+      sort = made || is_call_of(e, "list") || is_call_of(e, "~") ||
         (is.character(v) && length(v) == 1L && v %in% .split_bar(choices)))
     if (ok) return(NULL)
     want <- switch(shape,
-      selectors = "a list (list(AGE = 1L)) or a formula (everything() ~ 1L)",
+      selectors = "a list (list(mean = 1L)) or a formula (AGE ~ list(mean = 1L))",
       list = "a list: list(...)",
       character = "names in quotes: c(\"term\", \"label\")",
       `function` = "a function: pkg::fun, function(x) ... or ~ ...",
@@ -218,16 +221,23 @@
 
 # The arguments of a `post` step its function does not have (a cards
 # helper: add_calculated_row(expr =, stat_name =) ...), and the values that
-# do not fit theirs, one line per step.  A step of a function with `...`
-# its code does not check, or of a study's own function, is not judged.
+# do not fit theirs, one line per step.  A step written by the plain name of
+# a function cards or cardx exports is judged as if written with its
+# package, as a `custom` row's code is (the step's outermost call only).  A
+# step of a function with `...` its code does not check, or of any other
+# name (a study's own function), is not judged.
 .post_args_unknown <- function(a) {
   out <- character()
   post <- a$post %||% rep(NA_character_, nrow(a))
+  exports <- if (any(!is.na(post))) .ard_exports() else character()
   for (i in which(!is.na(post))) {
     tag <- paste(a$output_id[i], a$analysis_id[i], sep = " / ")
     for (st in .split_post(post[i])) {
       e <- tryCatch(str2lang(st), error = function(e) NULL)
       if (!is.call(e)) next
+      if (is.name(e[[1L]]) && as.character(e[[1L]]) %in% names(exports)) {
+        e[[1L]] <- call("::", as.name(exports[[as.character(e[[1L]])]]), e[[1L]])
+      }
       out <- c(out, .call_args_problems(tag, e, "post"))
     }
   }
@@ -332,9 +342,10 @@
   unique(out)
 }
 
-# What is wrong with one call of a cards / cardx function, `pkg::fun(...)`:
-# the arguments it does not have (`where`: the column it is written in,
-# post or code) and the values that do not fit theirs.  An `ard_*()`
+# What is wrong with one call of a cards / cardx function, `pkg::fun(...)`
+# (a plain name is made `pkg::fun` before, by the callers): the arguments it
+# does not have (`where`: the column it is written in, post or code) and
+# the values that do not fit theirs.  An `ard_*()`
 # generic is judged by its data.frame method, as `args` is; a function
 # with `...` its code does not check takes any name.
 .call_args_problems <- function(tag, e, where) {
@@ -352,12 +363,23 @@
     collapse = ", ")
   out <- if (length(given)) .ard_arg_value_problems(tag, fn, args) else character()
   if ("..." %in% fm && !.dots_checked(fn)) return(out)
-  bad <- setdiff(given, fm)
+  bad <- .args_not_matched(given, fm)
   if (length(bad)) out <- c(out, sprintf(
     "%s: `%s` %s() has no argument %s (it has: %s); the program would stop on it",
     tag, where, sub("^.*::", "", fn), paste0("`", bad, "`", collapse = ", "),
     paste(setdiff(fm, c("...", fm[1L])), collapse = ", ")))
   out
+}
+
+# Of the names `given`, those that match no argument in `fm` (a function's
+# argument names, in their order) the way R matches them: exactly, or by
+# the beginning of one argument before the `...` (`denom` is `denominator`).
+# A beginning that fits two arguments is not a match: R stops on it.
+.args_not_matched <- function(given, fm) {
+  before <- fm[seq_len(match("...", fm, nomatch = length(fm) + 1L) - 1L)]
+  hit <- vapply(given, function(g)
+    g %in% fm || sum(startsWith(before, g)) == 1L, NA)
+  given[!hit]
 }
 
 # Does the function check its `...` (rlang::check_dots_empty() /
@@ -398,8 +420,11 @@
   }
   has <- lapply(to, .passed_to_formals)
   if (any(vapply(has, is.null, NA))) return(character())
-  has <- unique(unlist(has))
-  bad <- setdiff(given, c(has, d$arg))
+  has <- unlist(has, recursive = FALSE)
+  # (a name that begins an argument before a method's `...` is that
+  # argument: `var.eq` is `var.equal` of t.test.default())
+  bad <- setdiff(given, d$arg)
+  for (fm in has) bad <- .args_not_matched(bad, fm)
   if (!length(bad)) return(character())
   pkg <- sub("::.*$", "", call)
   sprintf(paste(
@@ -408,12 +433,14 @@
     tag, pkg, utils::packageVersion(pkg), sub("^.*::", "", call),
     paste0("`", bad, "`", collapse = ", "),
     paste0(to, "()", collapse = " / "),
-    paste(setdiff(has, c("...", "x", "y", "formula", "data")), collapse = ", "))
+    paste(setdiff(unique(unlist(has)), c("...", "x", "y", "formula", "data")),
+          collapse = ", "))
 }
 
 # The arguments a function a cardx function passes `...` on to takes: its
 # own and its default and formula methods' (stats::t.test() is a generic:
-# t.test.default() names `var.equal`).  NULL when it cannot be found.
+# t.test.default() names `var.equal`), one vector of names, in their order,
+# for each of them.  NULL when it cannot be found.
 .passed_to_formals <- function(to) {
   pkg <- sub("::.*$", "", to)
   fn <- sub("^.*::", "", to)
@@ -426,7 +453,7 @@
              error = function(e) NULL)
   })
   fs <- c(list(f), Filter(is.function, ms))
-  setdiff(unique(unlist(lapply(fs, function(g) names(formals(g))))), "...")
+  lapply(fs, function(g) names(formals(g)))
 }
 
 # The same for cardx::ard_car_anova(), which passes `...` to car::Anova():
@@ -447,11 +474,8 @@
   if (!is.function(m)) return(character())
   fm <- names(formals(m))
   has <- setdiff(unique(c(names(formals(car::Anova)), fm)), "...")
-  bad <- setdiff(given, c(has, catalogued))
-  # a name that begins one argument before the method's `...` is that
-  # argument, as R matches it (`typ = "III"` is `type =`)
-  before <- fm[seq_len(match("...", fm, nomatch = length(fm) + 1L) - 1L)]
-  bad <- bad[is.na(pmatch(bad, before))]
+  # (`typ = "III"` is `type =`, as R matches it)
+  bad <- .args_not_matched(setdiff(given, c(has, catalogued)), fm)
   if (!length(bad)) return(character())
   sprintf(paste(
     "%s: cardx %s's %s() has no argument %s, and passes it on to car's",

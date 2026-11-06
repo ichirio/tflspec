@@ -173,6 +173,14 @@ test_that("a passed-on name the function it reaches does not have is said", {
                  "ard_stats_t_test\\(\\) has no argument `var.eqaul`, and passes it on to stats::t.test\\(\\)")
   expect_warning(exact_spec(test_row("chisq", "corect = FALSE", "SEX")),
                  "passes it on to stats::chisq.test\\(\\), which has none either")
+  # a name R matches by its beginning is the argument's (var.eq is var.equal)
+  expect_no_warning(exact_spec(test_row("ttest", "var.eq = TRUE")))
+  expect_no_warning(exact_spec(test_row("chisq", "resc = FALSE", "SEX")))
+  expect_warning(exact_spec(test_row("ttest", "var.eqaul = TRUE")),
+                 "has no argument `var.eqaul`")
+  expect_identical(
+    .passed_args_unknown("T / A", "cardx::ard_stats_t_test", "var.eq", "var.eq = TRUE"),
+    character())
   # a name of the function's own, the catalog's or the one reached: none
   expect_no_warning(exact_spec(test_row("ttest", "var.equal = TRUE, paired = FALSE")))
   expect_no_warning(exact_spec(test_row("chisq", "rescale.p = FALSE", "SEX")))
