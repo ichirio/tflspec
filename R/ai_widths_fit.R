@@ -41,6 +41,18 @@
   !is.null(info) && identical(info$how, "template") && length(info$miss) > 0L
 }
 
+# The fit's time grows with the number of records (about 30 s at 500,000),
+# and its widths come from a quantile of the cells' widths, so a sample gives
+# them as well: on 50,000 and 500,000 records the 5,000-row sample gave the
+# same widths.  So above this many records the fit is made on an even-spaced
+# sample of that size (no random numbers: the same data, the same widths).
+.ai_fit_rows <- 5000L
+
+.ai_fit_sample <- function(recs, n = .ai_fit_rows) {
+  if (nrow(recs) <= n) return(recs)
+  recs[unique(round(seq(1, nrow(recs), length.out = n))), , drop = FALSE]
+}
+
 # The widths fit_listing_widths() gives the listing's columns -- one a
 # column, in order -- from its data as its program reads it (the `where`,
 # the subjects, the code lists: .listing_data_of()), at the report's page
@@ -67,6 +79,7 @@
   if (length(gone)) {
     stop(sprintf("%s not in the listing's data", paste(gone, collapse = ", ")), call. = FALSE)
   }
+  recs <- .ai_fit_sample(recs)
   pg <- .page_args(ro$page$rtf_page)
   sty <- .page_style(ro$page)
   font <- sty$table$font %||% sty$font

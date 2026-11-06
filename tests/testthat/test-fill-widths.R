@@ -242,3 +242,22 @@ test_that("a dataset that cannot be read falls back to the guess too", {
   expect_identical(set, "L-1")
   expect_identical(fw_code_w(d, "L-1")[1L], 12L)
 })
+
+test_that("above 5,000 records the fit is made on an even-spaced sample, and gives the full fit's widths", {
+  fw_skip()
+  set.seed(5)
+  adae <- tflspec:::.ai_chr(tflspec::adae)
+  big <- adae[sample(nrow(adae), 20000L, replace = TRUE), ]
+  rownames(big) <- NULL
+  # a short data set is not sampled
+  expect_identical(tflspec:::.ai_fit_sample(adae), adae)
+  s <- tflspec:::.ai_fit_sample(big)
+  expect_identical(nrow(s), 5000L)
+  # no random numbers: the same rows every time
+  expect_identical(tflspec:::.ai_fit_sample(big), s)
+  vs <- c("USUBJID", "TRT01A", "AEDECOD", "ASTDT", "AENDT", "AESEV", "AEREL")
+  spec <- rtfreporter::listing_spec(lapply(vs, function(v) rtfreporter::listing_col(v, label = v)))
+  w <- function(d) vapply(rtfreporter::fit_listing_widths(d, spec)$cols, function(cl) cl$width, 1L)
+  expect_identical(w(s), w(big))
+  expect_identical(w(tflspec:::.ai_fit_sample(big)), w(s))
+})
