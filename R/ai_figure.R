@@ -52,6 +52,13 @@
                  assumption_rows = rows), class = "tfl_ai_answer")
 }
 
+# The figure's code lists as its resolved path has them: its own over the
+# ones of the layers it extends (tfl_report_codelists(), for this report
+# only: the sheets' rows hold its own)
+.ai_fig_codelists <- function(st, id, rows) {
+  tfl_report_codelists(st, outputs = tfl_read_outputs(".", skip_bad = TRUE)[id], rows = rows)
+}
+
 # A figure of the study drawn as tflplanner draws it: the report file back
 # as its design (tfl_sheets_from_yaml()), its program
 # (tfl_fig_design_code()), the datasets it reads from spec/data.yml; the
@@ -67,7 +74,7 @@
   args <- args[names(args) %in% names(formals(tfl_fig_design))]
   design <- do.call(tfl_fig_design, args)
   code <- tfl_fig_design_code(design, id, setup = TRUE, save = TRUE, name = "fig",
-                              codelists = sh$table$codelists)
+                              codelists = .ai_fig_codelists(st, id, sh$table$codelists))
   reads <- unique(toupper(attr(code, "reads") %||% character()))
   # (its packages around it, none attached)
   env <- new.env(parent = .fig_pkg_env(attr(code, "libs")))
@@ -86,6 +93,8 @@
   # after the study's figure setup (theme_tfl(), the palettes, the days in
   # a month), as the program runs after programs/tfl/fig_setup.R
   code <- c(tfl_fig_setup_code(), .fig_strip_library(code))
+  # (the study's helpers: set_levels() of the code lists)
+  if (any(grepl("set_levels(", code, fixed = TRUE))) eval(parse(text = tfl_helpers_code()), env)
   suppressMessages(suppressWarnings(eval(parse(text = code), env)))
   fig <- get("fig", envir = env, inherits = FALSE)
   .ai_fig_nothing_drawn(fig, id)

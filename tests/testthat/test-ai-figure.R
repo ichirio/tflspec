@@ -371,3 +371,82 @@ test_that("a figure's own code list applies, not the file's of the same variable
   expect_true(any(grepl("Own Control", x, fixed = TRUE)), info = paste(x, collapse = "\n"))
   expect_false(any(grepl("File ", x, fixed = TRUE)))
 })
+
+# a figure of the agent's own layer_code, with `codelists` lines of its own
+# (in its file) and in the study's defaults.yml (in a layer it extends)
+fig_cl_study <- function(own = NULL, layer = NULL) {
+  root <- withr::local_tempdir(.local_envir = parent.frame())
+  d <- file.path(root, "study")
+  tfl_ai_prepare(unit = "toc", d, fig_book(), adam = fig_study(root), quiet = TRUE, size = 3L)
+  ai_drafts_from_fixtures(d)
+  if (length(layer)) {
+    f <- file.path(d, "spec", "defaults.yml")
+    writeLines(c(readLines(f), "codelists:", layer), f)
+  }
+  writeLines(c(
+    "id: F-14-2-2", "kind: figure", "label: Best overall response by arm", "population: ITT",
+    "extends: [defaults]",
+    "data:", "  source: code", "  steps:",
+    "    - {step: read, dataset: ADRS}", "    - {step: flag, variable: ITTFL}",
+    "    - {step: param, value: OVR}",
+    "content: []",
+    if (length(own)) c("codelists:", own),
+    "layers:",
+    "  - {layer: layer_code, code: 'p <- ggplot(df, aes(AVISITN, AVAL, colour = TRT01P)) + geom_point()'}",
+    "page:", "  titles:", "    '1': {center: Figure 14.2.2}"),
+    file.path(d, "ai", "spec", "outputs", "F-14-2-2.yml"))
+  d
+}
+
+# the figure of the study drawn as the kit draws it: its plot
+fig_cl_draw <- function(d, id = "F-14-2-2") {
+  old <- setwd(d)
+  on.exit(setwd(old))
+  opt <- tflspec:::.ai_area_options(".")
+  on.exit(options(opt), add = TRUE)
+  st <- tfl_read_study_spec(".")
+  tflspec:::.ai_fig_draw(st, id, "out")$plot
+}
+
+# the colour variable's levels and the legend's labels of a drawn plot
+fig_cl_levels <- function(p) {
+  b <- ggplot2::ggplot_build(p)
+  sc <- b$plot$scales$get_scales("colour")
+  list(levels = levels(p$data$TRT01P), labels = if (!is.null(sc)) sc$get_labels())
+}
+
+test_that("a figure with layer_code and its own codelists is drawn (set_levels is around it) (#652)", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("rtfreporter")
+  d <- fig_cl_study(own = c("  TRT01P:", "    - {value: Control, label: Own Control}",
+                            "    - {value: Drug X, label: Own Drug X}"))
+  res <- suppressMessages(tfl_ai_run(d, requests = "figure-1"))
+  fr <- res$reports[res$reports$output_id == "F-14-2-2", ]
+  expect_false(grepl("set_levels", fr$rtf_problem %||% "", fixed = TRUE), info = fr$rtf_problem)
+  expect_false(is.na(fr$png), info = paste(fr$first, fr$rtf_problem))
+  expect_true(file.exists(file.path(d, fr$png)))
+  expect_identical(fig_cl_levels(fig_cl_draw(d))$levels, c("Own Control", "Own Drug X"))
+})
+
+test_that("a figure's code list from a layer it extends is the draw's, as its own would be (#656)", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("rtfreporter")
+  # (Drug X first: the order is the list's, not the data's)
+  entries <- function(pre) c(sprintf("    - {value: Drug X, label: %s Drug X}", pre),
+                             sprintf("    - {value: Control, label: %s Control}", pre))
+  in_layer <- fig_cl_draw(fig_cl_study(layer = c("  TRT01P:", entries("List"))))
+  in_own <- fig_cl_draw(fig_cl_study(own = c("  TRT01P:", entries("List"))))
+  expect_identical(fig_cl_levels(in_layer), fig_cl_levels(in_own))
+  expect_identical(fig_cl_levels(in_layer)$levels, c("List Drug X", "List Control"))
+  expect_identical(fig_cl_levels(in_layer)$labels, c("List Drug X", "List Control"))
+  # the report's own list over its layer's, for the same variable
+  both <- fig_cl_draw(fig_cl_study(own = c("  TRT01P:", entries("Own")),
+                                   layer = c("  TRT01P:", entries("Layer"))))
+  expect_identical(fig_cl_levels(both)$levels, c("Own Drug X", "Own Control"))
+  # a layer's list on a variable the data has not stops nothing
+  other <- fig_cl_draw(fig_cl_study(layer = c("  TRT01P:", entries("List"),
+                                              "  NOSUCHVAR:", "    - {value: a, label: A}")))
+  expect_identical(fig_cl_levels(other)$levels, c("List Drug X", "List Control"))
+})
