@@ -24,13 +24,26 @@
 #' characters (a cell on two lines), unless that leaves the row headings
 #' less than two value columns (16 characters): then all columns equal and
 #' the row headings two;
-#' a listing's columns get a width from their variables and headers.  Each
+#' a listing's columns get a width from their variables and headers (the
+#' first guess; see below).  Each
 #' report it writes widths into gets an assumption in
 #' `spec/_assumptions.yml` (item `widths`): the widths are the default ones,
 #' set for now.  Its program ([tfl_report_code()]) then writes them too.
 #'
 #' A report that says its widths is left as it is.  A table that cannot be
 #' built (its data missing) is left too, and named in a message.
+#'
+#' A listing (code, or the `listing` template) whose data can be read gets
+#' its widths from `rtfreporter::fit_listing_widths()` instead: the records
+#' as its program reads them (its `where`, its subjects), the report's page
+#' and font, written as whole numbers (`listing_col(width = )`; for the
+#' template, the `width` of each entry of `template: args: columns:`), and
+#' its assumption's value is `fitted widths` (else `default widths`).  A
+#' column that has a width is never changed; the others are fitted around it.
+#' Where the data cannot be read (no ADaM yet, a column the data lacks, an
+#' older rtfreporter, columns too many for the page), a code listing gets
+#' the first guess, as above, and the template is left as it is.  Reading
+#' the data never makes the function fail.
 #'
 #' @param study_dir The study folder.
 #' @param output_id The reports, by id; `NULL` (default): every report in
@@ -80,12 +93,15 @@ tfl_fill_widths <- function(study_dir = ".", output_id = NULL, assumption = TRUE
   # alone, quietly
   unset <- setdiff(unset, .ai_widths_inherited(outs[unset], study_dir))
   # the listings: their columns, from their variables and headers
-  lst <- intersect(unset, names(outs)[vapply(outs, function(o) identical(o$kind, "listing"), NA)])
-  for (id in lst) {
+  # (fitted to the data where it can be read, else a guess: R/ai_widths_fit.R)
+  lst <- names(outs)[vapply(outs, function(o) identical(o$kind, "listing") && .ai_listing_todo(o), NA)]
+  lw <- .ai_listing_widths_set(outs[lst], study_dir)
+  outs[lst] <- lw$outs
+  for (id in lw$written) {
     i <- match(id, names(outs))
-    outs[[i]] <- .ai_listing_widths(outs[[i]])
     tfl_write_output(outs[[i]], paths[i])
   }
+  lst <- lw$written
   # the tables: built, their widths from the printed table
   tab <- .ai_widths_on_read(outs, paths, study_dir, remember = FALSE)
   set <- c(lst, tab)
@@ -99,7 +115,8 @@ tfl_fill_widths <- function(study_dir = ".", output_id = NULL, assumption = TRUE
     names(old)[names(old) == "sheet"] <- "where"
     # (one a report: a report given widths again keeps the one it had)
     have <- old$output_id[old$item %in% "widths"]
-    aw <- .ai_widths_assumptions(setdiff(set, have), .ai_spec_settings(study_dir)$language)
+    aw <- .ai_widths_assumptions(setdiff(set, have), .ai_spec_settings(study_dir)$language,
+                                 fitted = lw$fitted)
     if (!is.null(aw)) {
       for (k in setdiff(names(old), names(aw))) aw[[k]] <- NA_character_
       .ai_asm_write(study_dir, rbind(old, aw[names(old)]))
