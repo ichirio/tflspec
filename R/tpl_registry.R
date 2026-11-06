@@ -152,6 +152,11 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
     where = if (!is.null(w)) as.character(w), by = "USUBJID", how = "semi")))
 }
 
+# A parameter of several lines (a heading) as the one text of a header cell:
+# the lines joined by a line break, as the hierarchical tables write theirs;
+# none given stays none
+.tpl_lines <- function(x) if (length(x)) paste(x, collapse = "\n")
+
 # The study's own settings a template parameter may take its value from
 # (tfl_param(study = )), besides "<verb>.<argument>" of the study's
 # defaults: the one list of their names.  Each is function(output, study).
@@ -1376,7 +1381,7 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
          tfl_item("plan_col_header", c(list(header = list(
            list(line = "1", cols = ".values", span = a$by,
                 text = if (page_n) "{col1} (N={n})" else "{col1}"),
-           list(line = "2", cols = "row_label", text = a$heading),
+           list(line = "2", cols = "row_label", text = .tpl_lines(a$heading)),
            list(line = "2", cols = ".values", span = "each", text = a$post_header))),
            if (page_n) list(values = list(n = TRUE))))),
     if (page_n) list(
@@ -1909,7 +1914,7 @@ tpl_stat_block <- function(ard, ..., codelists = NULL) {
         tfl_item("plan_labels", list(RESP = c("TRUE" = ""))),
         tfl_item("plan_col_header", list(header = list(
           list(line = "1", cols = ".values", span = a$by, text = "{col1} (N={n1})"),
-          list(line = "2", cols = "row_label", text = a$heading),
+          list(line = "2", cols = "row_label", text = .tpl_lines(a$heading)),
           list(line = "2", cols = ".values", span = "each", text = "{col}"))))))
       return(list(ard = ard, data = list(source = "ard"), content = content))
     }
@@ -1921,7 +1926,7 @@ tpl_stat_block <- function(ard, ..., codelists = NULL) {
       levels_item, labels_item,
       tfl_item("plan_col_header", list(header = list(
         list(line = "1", cols = ".values", span = "each", text = "{col}"),
-        list(line = "2", cols = "row_label", text = a$heading),
+        list(line = "2", cols = "row_label", text = .tpl_lines(a$heading)),
         list(line = "2", cols = ".values", span = "each", text = "(N={n})")))))
     list(ard = ard, data = list(source = "ard"), content = content)
   })
@@ -2000,7 +2005,7 @@ tpl_orr <- function(ard, population = "ITT", ..., codelists = NULL) {
       tfl_item("plan_col_header", list(header = list(
         list(line = "1", cols = "group"),
         list(line = "1", cols = ".values", span = "each", text = "{col}"),
-        list(line = "2", cols = "group", text = a$heading),
+        list(line = "2", cols = "group", text = .tpl_lines(a$heading)),
         list(line = "2", cols = ".values", span = "each", text = "(N={n})")))),
       # the look is the template's (a report changes it with an item of its own)
       tfl_item("plan_paginate_rows", list(max_rows = 30L, split = "group_safe")))

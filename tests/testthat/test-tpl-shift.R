@@ -491,3 +491,25 @@ test_that("shift: a where with | is its own argument of the filter (no brackets 
   expect_length(args, 3L)
   expect_identical(deparse(args[[3L]]), w)
 })
+
+test_that("a heading of two lines: one header text with a line break, as the hierarchical tables write it", {
+  two <- c("Line one", "Line two")
+  code_of <- function(name, args) {
+    x <- tfl_template_expand(name, c(list(population = "SAF"), args))
+    o <- tfl_output("T-1", "table", data = x$data, content = x$content)
+    suppressMessages(tfl_content_code(o, pipe = "|>"))
+  }
+  for (nm in c("ae_overview", "lab_abnormal", "orr", "shift")) {
+    code <- code_of(nm, list(heading = two))
+    expect_true(any(grepl("Line one\\nLine two", code, fixed = TRUE)), info = nm)
+    # one line: its text, as before
+    one <- code_of(nm, list(heading = "Only line"))
+    expect_true(any(grepl("\"Only line\"", one, fixed = TRUE)), info = nm)
+  }
+  # orr's other layout
+  expect_true(any(grepl("Line one\\nLine two", code_of("orr", list(heading = two, stat_layout = "cols")),
+                        fixed = TRUE)))
+  # the template's own heading line, none given: no text added
+  expect_null(tflspec:::.tpl_lines(NULL))
+  expect_identical(tflspec:::.tpl_lines(two), "Line one\nLine two")
+})
