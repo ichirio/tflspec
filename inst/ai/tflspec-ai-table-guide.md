@@ -147,8 +147,9 @@ report all the same (with a warning). A TOC item no sheet writes or names
 whose number (with a part letter: `Table 15.2.4.2.b`) one sheet writes is
 made that sheet's report (`source` `"guess"`); written in two sheets, it is
 a candidate of each. The correction is saved as
-`ai/sheet_numbers.csv` when the requests are written, and used by the
-next calls until `numbers` is given again.
+`ai/sheet_numbers.csv` when the requests are written (a dry run saves it
+too once the study's `ai/` folder exists, and makes nothing else), and
+used by the next calls until `numbers` is given again.
 
 **The agent's rules** are `study.yml`'s `ai:` keys (the study standard's
 `spec/defaults.yml` may say them first; `study.yml` wins):
