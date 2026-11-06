@@ -19,6 +19,7 @@ The table template \code{stf_t02_demog}, layout \code{summary}: a variant of \co
    \code{labels} \tab usual \tab call \tab SEX = Sex, n (\%); AGE = Age, years; AGEGR1 = Age groups (... \tab  \tab each variable's heading; given by name, merged (RACE: ~ drops one) \cr
    \code{order} \tab other \tab call \tab SEX, AGE, AGEGR1, RACE, ETHNIC, COUNTRY \tab plan_levels.variable \tab the variables' order (plan_levels(variable = )); NULL: the continuous, then the categorical \cr
    \code{cells} \tab usual \tab call \tab Mean (SD) = \{mean:.1f\} (\{sd:.2f\}); Median (min, max) = \{m... \tab plan_cells.continuous \tab the rows of each continuous variable \cr
+   \code{sd_missing} \tab other \tab call \tab - \tab settings.sd_missing \tab what prints in place of the SD when a group has no SD (n = 1): \{mean\} (<sd_missing>); "" prints the mean alone; no effect when 'cells' is given \cr
    \code{count_cell} \tab other \tab call \tab  \tab plan_cells.categorical \tab a categorical value's cell, n (\%) (plan_cells(categorical = )); NULL: the study standard's \cr
    \code{continuous_statistics} \tab other \tab call \tab N, mean, sd, median, min, max \tab  \tab the continuous statistics the ARD has \cr
    \code{categorical_statistics} \tab other \tab call \tab n, p \tab  \tab the categorical statistics the ARD has; NULL: cards' own \cr

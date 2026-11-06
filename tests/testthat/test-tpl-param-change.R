@@ -111,6 +111,94 @@ test_that("the digits: the same as fixed cells, and a parameter's own by plan_di
   expect_identical(d[!a, ], t[!a, ])
 })
 
+# Control has 2 subjects with a change at CYCLE 17, 1 at CYCLE 18, none at CYCLE 20
+pc_n1_args <- list(population = "SAF", data = "ADLB", params = "ALT", param_order = NULL,
+                   visits = c("CYCLE 17 DAY 1", "CYCLE 18 DAY 1", "CYCLE 20 DAY 1"))
+# the Mean (SD) row of the Control columns, a visit a cell: n = 2, n = 1, n = 0
+pc_n1_cells <- function(ard, ...) {
+  t <- pc_tab(do.call(tpl_param_change, c(list(ard), pc_n1_args, list(...))))
+  m <- t$label == "Mean (SD)"
+  list(t = t, m = m, value = t[["Control____Value"]][m],
+       change = t[["Control____Change from baseline"]][m])
+}
+
+test_that("Mean (SD) keeps the mean when a group has one subject: n = 1 prints the mean and `-`, n >= 2 and n = 0 as before (#673)", {
+  pc_skip()
+  ard <- pc_ard(tfl_template_expand("param_change", pc_n1_args))
+  r <- pc_n1_cells(ard)
+  ctl <- adlb[adlb$PARAMCD == "ALT" & adlb$TRT01A == "Control" & !is.na(adlb$CHG), ]
+  one <- ctl[ctl$AVISIT == "CYCLE 18 DAY 1", ]
+  two <- ctl[ctl$AVISIT == "CYCLE 17 DAY 1", ]
+  expect_identical(c(nrow(two), nrow(one)), c(2L, 1L))
+  # n = 1: the mean, to the template's digits (one decimal), not a blank cell
+  expect_identical(r$value[2L], sprintf("%.1f (-)", one$AVAL))
+  expect_identical(r$change[2L], sprintf("%.1f (-)", one$CHG))
+  # n = 2: the mean and the SD as before
+  expect_identical(r$change[1L], sprintf("%.1f (%.2f)", mean(two$CHG), stats::sd(two$CHG)))
+  # n = 0: no mean either, the cell stays blank
+  expect_true(is.na(r$value[3L]) && is.na(r$change[3L]))
+  # every other cell is what the cell without a fallback gave
+  old <- list(n = "{N:.0f}", `Mean (SD)` = "{mean} ({sd})", Median = "{median}",
+              `Min, Max` = "{min}, {max}")
+  o <- pc_n1_cells(ard, cells = old)
+  expect_true(is.na(o$value[2L]) && is.na(o$change[2L]))  # (blank at n = 1)
+  expect_identical(r$t[!(r$m & r$t$group2 == "CYCLE 18 DAY 1"), ],
+                   o$t[!(o$m & o$t$group2 == "CYCLE 18 DAY 1"), ])
+  expect_identical(r$t[r$m & r$t$group2 == "CYCLE 18 DAY 1", 1:5],
+                   o$t[o$m & o$t$group2 == "CYCLE 18 DAY 1", 1:5])
+})
+
+test_that("sd_missing: what prints in place of the SD ('NA', '' for the mean alone); a report's cells are its own", {
+  pc_skip()
+  ard <- pc_ard(tfl_template_expand("param_change", pc_n1_args))
+  one <- adlb[adlb$PARAMCD == "ALT" & adlb$TRT01A == "Control" & adlb$AVISIT == "CYCLE 18 DAY 1" &
+                !is.na(adlb$CHG), ]
+  expect_identical(pc_n1_cells(ard, sd_missing = "NA")$value[2L], sprintf("%.1f (NA)", one$AVAL))
+  r <- pc_n1_cells(ard, sd_missing = "")
+  expect_identical(r$value[2L], sprintf("%.1f", one$AVAL))
+  expect_identical(r$change[2L], sprintf("%.1f", one$CHG))
+  # (n = 2 and n = 0 do not change)
+  d <- pc_n1_cells(ard)
+  expect_identical(r$value[c(1L, 3L)], d$value[c(1L, 3L)])
+  expect_identical(r$t[r$t$group2 != "CYCLE 18 DAY 1", ], d$t[d$t$group2 != "CYCLE 18 DAY 1", ])
+  # the mark is a text without braces
+  expect_error(tfl_template_expand("param_change", c(pc_n1_args, list(sd_missing = "{sd}"))), "sd_missing")
+  expect_error(tfl_template_expand("param_change", c(pc_n1_args, list(sd_missing = c("a", "b")))), "sd_missing")
+  # a report that sets `cells` itself is not touched
+  own <- list(n = "{N:.0f}", `Mean (SD)` = "{mean:.1f} ({sd:.2f})", Median = "{median}",
+              `Min, Max` = "{min}, {max}")
+  expect_identical(pc_n1_cells(ard, cells = own, sd_missing = "NA")$value[2L], NA_character_)
+})
+
+test_that("the fallback cell takes the template's digits and a parameter's own, as the first does", {
+  pc_skip()
+  a1 <- pc_n1_args
+  a1$visits <- a1$visits[1:2]
+  ard <- pc_ard(tfl_template_expand("param_change", a1))
+  p <- do.call(tpl_param_change, c(list(ard), a1))
+  t <- pc_tab(p)
+  v1 <- t$label == "Mean (SD)" & t$group2 == "CYCLE 17 DAY 1"
+  v2 <- t$label == "Mean (SD)" & t$group2 == "CYCLE 18 DAY 1"
+  # the template's: one decimal for the mean, two for the SD
+  expect_match(t[["Control____Value"]][v1], "^[0-9]+\\.[0-9] \\([0-9]+\\.[0-9]{2}\\)$")
+  expect_match(t[["Control____Value"]][v2], "^[0-9]+\\.[0-9] \\(-\\)$")
+  # a parameter's own, on both forms
+  alt <- unique(as.character(adlb$PARAM[adlb$PARAMCD == "ALT"]))
+  d <- pc_tab(p |> rtfreporter::plan_digits(PARAM = stats::setNames(
+    list(c(mean = 2, sd = 3)), alt)))
+  if (identical(d, t)) skip("rtfreporter without digits by a row key's value (#794)")
+  expect_match(d[["Control____Value"]][v1], "^[0-9]+\\.[0-9]{2} \\([0-9]+\\.[0-9]{3}\\)$")
+  expect_match(d[["Control____Value"]][v2], "^[0-9]+\\.[0-9]{2} \\(-\\)$")
+  p0 <- do.call(tpl_param_change, c(list(ard), a1, list(sd_missing = "")))
+  d0 <- pc_tab(p0 |> rtfreporter::plan_digits(PARAM = stats::setNames(
+    list(c(mean = 2, sd = 3)), alt)))
+  expect_match(d0[["Control____Value"]][v2], "^[0-9]+\\.[0-9]{2}$")
+  # the same two forms as cells a report sets
+  both <- list(n = "{N:.0f}", `Mean (SD)` = c("{mean:.1f} ({sd:.2f})", "{mean:.1f} (-)"),
+               Median = "{median}", `Min, Max` = "{min}, {max}")
+  expect_identical(t, pc_tab(do.call(tpl_param_change, c(list(ard), a1, list(cells = both)))))
+})
+
 test_that("the arm and its N over its two columns", {
   pc_skip()
   x <- tfl_template_expand("param_change", pc_args)
