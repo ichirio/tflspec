@@ -130,3 +130,57 @@ test_that("a study with none of them has no such note", {
   x <- rts_trip(rts_study(list("outputs/T-1.yml" = rts_table())))
   expect_false(any(x$sh$not_converted$part %in% c("options", "styles", "style")))
 })
+
+# -- item 4: code lists of the defaults and of patterns ------------------------------
+
+# the sample study with its report's code list moved to the defaults (and a
+# pattern with a list of its own)
+rts_cl_study <- function(env = parent.frame()) {
+  d <- withr::local_tempdir(.local_envir = env)
+  file.copy(list.files(system.file("extdata", "spec-yaml", package = "tflspec"), full.names = TRUE),
+            d, recursive = TRUE)
+  f <- file.path(d, "outputs", "T-14-1-1.yml")
+  l <- readLines(f)
+  i <- grep("^codelists:", l)
+  j <- i + 1L
+  while (grepl("^ ", l[j])) j <- j + 1L
+  writeLines(l[-(i:(j - 1L))], f)
+  writeLines(c(readLines(file.path(d, "defaults.yml")), l[i:(j - 1L)]), file.path(d, "defaults.yml"))
+  dir.create(file.path(d, "patterns"))
+  writeLines(c("codelists:", "  SEX: [F, M]"), file.path(d, "patterns", "p.yml"))
+  writeLines(c("datasets:", "  - dataset: ADSL", "    level: ADaM", "    path: adam/adsl.xpt",
+               "populations:", "  - id: SAF", "    dataset: ADSL", '    where: !r SAFFL == "Y"',
+               "    label: Safety Population"), file.path(d, "data.yml"))
+  writeLines(c("study_id: S-1", "title: t", "keys:", "  id: USUBJID"), file.path(d, "study.yml"))
+  d
+}
+
+test_that("the defaults' and a pattern's code lists are named in the notes, and reach the file", {
+  d <- rts_cl_study()
+  x <- rts_trip(d)
+  nc <- x$sh$not_converted
+  n <- nc[nc$part == "codelists", ]
+  expect_identical(nrow(n), 2L)
+  expect_match(n$reason[is.na(n$output)], "defaults.yml: TRT01A", fixed = TRUE)
+  expect_match(n$reason[n$output %in% "@p"], "patterns/p.yml: SEX", fixed = TRUE)
+  written <- x$nc[vapply(x$nc, function(e) identical(e$sheet, "codelists"), NA)]
+  expect_length(written, 2L)
+  expect_true(any(grepl("1 part|2 parts", x$msgs)))
+})
+
+test_that("a program differs when an analysis reads the variable the defaults' list is for", {
+  skip_if_not_installed("cards")
+  d <- rts_cl_study()
+  x <- rts_trip(d)
+  ard <- function(dir) {
+    paste(tfl_ard_code(tfl_read_study_spec(dir), output_id = "T-14-1-1", save = FALSE), collapse = "\n")
+  }
+  before <- ard(d)
+  after <- ard(x$to)
+  # the list sets TRT01A's values, order and labels in the ARD's data ...
+  expect_match(before, "set_levels(TRT01A = cl_trt01a)", fixed = TRUE)
+  expect_match(before, "Drug X 200 mg", fixed = TRUE)
+  # ... and the study written from the sheets has not got it
+  expect_false(grepl("set_levels(TRT01A", after, fixed = TRUE))
+  expect_false(grepl("Drug X 200 mg", after, fixed = TRUE))
+})

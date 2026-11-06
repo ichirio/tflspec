@@ -326,16 +326,6 @@ tfl_sheets_from_spec <- function(study, outputs) {
       rows[[sh]] %||% list(), function(r) identical(r$output_id, paste0("@", nm)), NA)), NA))
     if (!has) add("report", list(output_id = paste0("@", nm)))
   }
-  # the layers' code lists have no sheet of their own (a report's own are
-  # its rows): they stay in the YAML
-  if (length(s$defaults$codelists)) note(NA_character_, "codelists", "the defaults' code lists (defaults.yml) stay in YAML, not on the sheets")
-  for (nm in names(s$patterns)) {
-    if (length(s$patterns[[nm]]$codelists)) {
-      note(paste0("@", nm), "codelists", "a pattern's code lists stay in YAML, not on the sheets")
-    }
-  }
-  # the setup code on the planner sheet's study row
-  planner <- c(list(list(output_id = NA_character_, description = "(every report)",
   # defaults.yml's options: and styles:, and the style: a report picks, have
   # no sheet or column to be put on: said (#689)
   if (length(s$options)) {
@@ -352,6 +342,26 @@ tfl_sheets_from_spec <- function(study, outputs) {
                                " is not kept: no sheet or column holds it; the report no longer picks its look"))
     }
   }
+  # the layers' code lists have no sheet of their own (a report's own are
+  # its rows): they stay in the YAML
+  # (in the YAML they stay; a study written from the sheets has not got them,
+  # and a report that reads the variable is then made without the list: its
+  # ARD program loses the set_levels() step -- the values' order and labels, #689)
+  cl_said <- function(cl, whose, file) paste0(
+    whose, " code lists (", file, ": ", paste(names(cl), collapse = ", "), ") stay in YAML, not on the sheets: ",
+    "a study written from the sheets has not got them, so a report that reads one of these variables ",
+    "is made without the list and its ARD program does not set the values' order and labels")
+  if (length(s$defaults$codelists)) {
+    note(NA_character_, "codelists", cl_said(s$defaults$codelists, "the defaults'", "defaults.yml"))
+  }
+  for (nm in names(s$patterns)) {
+    if (length(s$patterns[[nm]]$codelists)) {
+      note(paste0("@", nm), "codelists", cl_said(s$patterns[[nm]]$codelists, "a pattern's",
+                                                  paste0("patterns/", nm, ".yml")))
+    }
+  }
+  # the setup code on the planner sheet's study row
+  planner <- c(list(list(output_id = NA_character_, description = "(every report)",
                          setup_code = if (!is.null(s$study$setup)) cell(s$study$setup) else NA_character_,
                          process_code = NA_character_, section = NA_character_, population = NA_character_,
                          datasets = NA_character_, batches = NA_character_)), planner)
