@@ -127,6 +127,10 @@
               doc = "TRUE: each arm's legend text has its median survival and 95% CI, \"Drug X: 12.3 (9.8, 15.1)\" (from the fit; NE when not reached)"),
     tfl_param("legend_median_digits", 1L, type = "number",
               doc = "the decimals of the median and its CI in the legend"),
+    tfl_param("legend_median_text", "{arm}: {median} ({lcl}, {ucl})", type = "text",
+              doc = paste0("the wording of that legend text, with {arm}, {median}, {lcl} and {ucl} for the arm ",
+                           "and its median and 95% CI limits (any may be left out or repeated): ",
+                           "\"{arm}, Median (95% CI): {median} ({lcl}, {ucl})\"; no effect without `legend_median`")),
     tfl_param("pvalue", FALSE, type = "flag", tier = "usual",
               doc = "the log-rank p-value (add_pvalue())"),
     tfl_param("pvalue_location", "annotation", type = "choice", choices = c("annotation", "caption"),
@@ -149,6 +153,41 @@
     if (identical(it$fn, fn)) for (k in names(set)) it$args[[k]] <- set[[k]]
     it
   })
+}
+
+# The legend's median wording: its default, and the tokens it takes (each
+# the R expression of its value, from the fit's summary)
+.tpl_km_median_text <- "{arm}: {median} ({lcl}, {ucl})"
+.tpl_km_median_tokens <- c(
+  arm = "arm_of",
+  median = "fmt_med(med[, \"median\"])",
+  lcl = "fmt_med(med[, grep(\"LCL$\", colnames(med))[1]])",
+  ucl = "fmt_med(med[, grep(\"UCL$\", colnames(med))[1]])")
+
+# The R expression for the legend's labels from the wording `text`: a
+# sprintf() whose format has a %s for each token, the arguments in token
+# order (a literal % doubled); no token: the text itself, once an arm
+.tpl_km_median_label <- function(text) {
+  if (!is.character(text) || length(text) != 1L || is.na(text)) {
+    .ard_stop("`legend_median_text` is one text (\"{arm}: {median} ({lcl}, {ucl})\").")
+  }
+  allowed <- names(.tpl_km_median_tokens)
+  tokens <- regmatches(text, gregexpr("[{][^{}]*[}]", text))[[1L]]
+  bad <- setdiff(unique(tokens), sprintf("{%s}", allowed))
+  rest <- gsub("[{][^{}]*[}]", "", text)
+  if (length(bad) || grepl("[{}]", rest)) {
+    .ard_stop(sprintf("`legend_median_text`: %s is not one of %s.",
+                      paste(if (length(bad)) bad else regmatches(rest, regexpr("[{}]", rest)), collapse = ", "),
+                      paste(sprintf("{%s}", allowed), collapse = ", ")))
+  }
+  if (!length(tokens)) return(sprintf("rep(%s, length(arm_of))", q(text)))
+  lit <- gsub("%", "%%", strsplit(paste0(text, "\001"), "[{][^{}]*[}]")[[1L]], fixed = TRUE)
+  lit[length(lit)] <- sub("\001$", "", lit[length(lit)])
+  fmt <- paste0(paste0(lit[-length(lit)], "%s", collapse = ""), lit[length(lit)])
+  args <- unname(.tpl_km_median_tokens[substr(tokens, 2L, nchar(tokens) - 1L)])
+  first <- seq_len(min(2L, length(args)))
+  paste0("sprintf(", q(fmt), ", ", paste(args[first], collapse = ", "),
+         if (length(args) > 2L) paste0(",\n  ", paste(args[-first], collapse = ", ")), ")")
 }
 
 # The layout's design: the preset's (tfl_fig_template("km_ci"), every
@@ -189,6 +228,7 @@
   # step after it, and the scales' labels
   if (isTRUE(a$legend_median)) {
     dg <- as.integer(a$legend_median_digits %||% 1L)
+    lab <- .tpl_km_median_label(a$legend_median_text %||% .tpl_km_median_text)
     f$stats <- append(f$stats, list(list(step = "code",
       label = "the legend's text: each arm's median survival (95% CI)",
       code = paste0(
@@ -196,8 +236,7 @@
         "if (!is.matrix(med)) med <- matrix(med, nrow = 1, dimnames = list(\"All\", names(med)))\n",
         "fmt_med <- function(x) ifelse(is.na(x), \"NE\", formatC(x, format = \"f\", digits = ", dg, "))\n",
         "arm_of <- sub(\"^[^=]*=\", \"\", rownames(med))\n",
-        "legend_labels <- stats::setNames(sprintf(\"%s: %s (%s, %s)\", arm_of, fmt_med(med[, \"median\"]),\n",
-        "  fmt_med(med[, grep(\"LCL$\", colnames(med))[1]]), fmt_med(med[, grep(\"UCL$\", colnames(med))[1]])), arm_of)"))),
+        "legend_labels <- stats::setNames(", lab, ", arm_of)"))),
       fit)
     f$plot$legend_labels <- tfl_r("legend_labels")
   }
