@@ -223,7 +223,7 @@ tfl_ai_decisions_write <- function(study_dir, x) {
   f <- file.path(study_dir, "ai", "decisions.md")
   if (!file.exists(f)) {
     dir.create(dirname(f), recursive = TRUE, showWarnings = FALSE)
-    .ai_write_text(paste(readLines(system.file("ai", "agent", "decisions-spec.md", package = "tflspec"),
+    .ai_write_text(paste(readLines(system.file("ai", "agent", "decisions.md", package = "tflspec"),
                                    warn = FALSE, encoding = "UTF-8"), collapse = "\n"), f)
   }
   have <- tfl_ai_decisions_read(study_dir)

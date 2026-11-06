@@ -353,7 +353,7 @@ page:
 | a listing with its summary under it (the PK samples) | the listing as the table (`table_plan: {cols: ATPT, rows: {subject: !r '~ "{USUBJID}/{AGE}/{SEX}"'}, value: AVAL}`), the summary as a part: `plan_append: {name: summary, data: {source: ard}, content: [...]}`, the whole-table items after it |
 | a p-value column (Fisher / chi-square of a categorical, Kruskal-Wallis / one-way of a continuous, a t-test of two arms) | one analysis a test with the counts' `by` and `variables` (`method: fisher`, `kruskal` ...), and `plan_compare: {p: "{p.value:.3f}"}` -- the column named as you like, the p-value on the variable's first row |
 | every subject, no flag | `population: ALL` (in `spec/data.yml` beside the flags' sets) |
-| the KM legend with each arm's median (95% CI) | the template: `template: {name: km_survival, args: {legend_median: true}}`; by hand, the plot's `legend_labels` (R: a vector named by the arms) |
+| the KM legend with each arm's median (95% CI) | the template: `template: {name: km_survival, args: {legend_median: true}}`; the wording is `legend_median_text` with `{arm}`, `{median}`, `{lcl}`, `{ucl}` (default `"{arm}: {median} ({lcl}, {ucl})"`), e.g. `args: {legend_median: true, legend_median_text: "{arm}, Median (95% CI): {median} ({lcl}, {ucl})"}`; by hand, the plot's `legend_labels` (R: a vector named by the arms) |
 
 The keys of `ard:` are the ARD sheets' columns (Appendix A.1) under their
 YAML names (`id`, `population`); the methods are `tfl_ard_methods()`.  The

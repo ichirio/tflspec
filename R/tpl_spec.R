@@ -141,9 +141,10 @@
 # The template expanded for a report: its arguments with the study's
 # defaults (`base`: the layers' content below the report) and the report's
 # code lists (`codelists`: the layers' and its own)
-.tpl_expand_for <- function(output, study, base, codelists) {
+.tpl_expand_for <- function(output, study, base, codelists, warn = TRUE) {
   ts <- .tpl_spec_of(output)
   t <- .tpl_get(ts$name, sprintf("%s: template:", output$id))
+  if (warn) .tpl_plot_unused_warn(t, output)
   sa <- .tpl_study_args(t, ts$args, base, output$id, output, study)
   sa$args <- .tpl_plot_axis_args(t, sa$args, output$plot)
   x <- tfl_template_expand(ts$name, sa$args, codelists = codelists,
@@ -161,6 +162,39 @@
                    x$content)
   }
   list(name = ts$name, args = sa$args, study = sa$study, x = x)
+}
+
+# The keys of the report's `plot:` that do nothing in a Kaplan-Meier type:
+# its look (hidden, the study's figure style) that the figure's settings
+# and the type's own reading of `plot:` do not take (.tpl_km_look_what)
+.tpl_plot_unused <- function(t, plot) {
+  if (!identical(t$layout, "km") || !length(plot)) return(character())
+  look <- intersect(names(Filter(function(p) isTRUE(p$hidden), t$params)), .tpl_km_look)
+  intersect(names(plot), setdiff(look, c(.fig_plot_fields()$field, .tpl_km_plot_routed)))
+}
+
+# What it says: the key, the template, and where the setting comes from
+# instead when the study's figure style has it
+.tpl_plot_unused_text <- function(t, key) {
+  style <- sub("^km[.]", "", t$params[[key]]$study %||% "")
+  what <- .tpl_km_look_what[key]
+  if (is.na(what)) what <- sprintf("its `%s`", key)
+  sprintf("plot: %s has no effect in template %s: %s %s.", key, t$name, what,
+          if (nzchar(style)) sprintf("comes from the study's figure style (%s)", style)
+          else "is the template's own")
+}
+
+# Said once a key, as a warning of class `tfl_plot_key_unused` (the draft
+# check and tfl_check_spec() take it as a problem of the report).  The
+# build goes on.
+.tpl_plot_unused_warn <- function(t, output) {
+  for (k in .tpl_plot_unused(t, output$plot)) {
+    text <- .tpl_plot_unused_text(t, k)
+    warning(structure(class = c("tfl_plot_key_unused", "warning", "condition"),
+                      list(message = paste0(output$id, ": ", text), call = NULL, id = output$id,
+                           key = k, template = t$name, text = text)))
+  }
+  invisible()
 }
 
 # A figure template that makes its x axis itself (its breaks and the times
@@ -262,8 +296,9 @@ tfl_template_to_spec <- function(output, study) {
   if (!inherits(study, "tfl_study_spec")) .ard_stop("tfl_template_to_spec(): `study` is a tfl_study_spec.")
   if (is.null(.tpl_spec_of(output))) return(output)
   below <- .layers_below(output, study)
+  # (the resolve below says what `plot:` does not reach, once)
   e <- .tpl_expand_for(output, study, below$acc$content,
-                       .merge_map(below$acc$codelists, output$codelists))
+                       .merge_map(below$acc$codelists, output$codelists), warn = FALSE)
   # the content: what the resolved report has from the template and its own
   # file, argument by argument -- the study's layers (a template's look they
   # win over among them) stay the layers', so the report resolves the same

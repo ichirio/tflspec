@@ -533,15 +533,23 @@
   tpp <- .ai_check_template(tp, "", kinds = "figure")
   tpp$where <- trimws(tpp$where)
   p <- rbind(p, tpp)
+  # a `plot:` key that does nothing in the template: a warning (the figure
+  # still builds); the template alone says it, no study needed
+  t <- tryCatch(.tpl_get(tp$name, "tfl_ai_check()"), error = function(e) NULL)
+  for (k in if (!is.null(t)) .tpl_plot_unused(t, answer$design$plot)) {
+    p <- .ai_problem(p, paste("plot", k), .tpl_plot_unused_text(t, k), "warning")
+  }
   if (any(tpp$severity == "error") || is.null(context$study_dir)) return(p)
   st <- tryCatch(tfl_read_study_spec(context$study_dir), error = function(e) e)
   if (inherits(st, "error")) return(p)
   o <- .ai_tpl_fig_output(answer$design, want %||% answer$output_id %||% "F-1", context)
-  r <- tryCatch({
+  # (said above, not again by the resolve)
+  r <- tryCatch(withCallingHandlers({
     ro <- tfl_resolve_output(o, st)
     suppressMessages(tfl_content_code(ro, template = "items"))
     NULL
-  }, error = function(e) .ai_one_line(conditionMessage(e)))
+  }, tfl_plot_key_unused = function(w) invokeRestart("muffleWarning")),
+  error = function(e) .ai_one_line(conditionMessage(e)))
   if (!is.null(r)) p <- .ai_problem(p, "template", paste("could not be written:", r))
   # (its data steps, when the report says them: the analysis set kept --
   # the parameter the template's own check says)

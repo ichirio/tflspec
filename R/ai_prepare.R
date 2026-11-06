@@ -82,7 +82,10 @@
 #' @param dry_run `TRUE` to read the workbook and the ADaM and write
 #'   nothing: the same result, to look at before the requests are written
 #'   (its `requests` are the TOC's batches, without `chars` and `file`;
-#'   `files` is empty).
+#'   `files` is empty).  The one thing it keeps is `numbers`, the person's
+#'   corrected report numbers, in `ai/sheet_numbers.csv` when the study's
+#'   `ai/` folder is there already (`files` then names that file); a dry run
+#'   never makes `ai/` or the study folder.
 #' @param define,adam_spec The study's `define.xml`, or its ADaM spec
 #'   workbook (Pinnacle 21 layout), for the ADaM summary
 #'   ([tfl_ai_adam_summary()]): its code lists in their order with their
@@ -171,8 +174,9 @@
 #'   the first in the workbook's order; the others listed in `sheets`), one
 #'   the rule made and no sheet makes now has none (the no-shell request's,
 #'   counted in `counts`).  Saved as `ai/sheet_numbers.csv`
-#'   (`sheet`, `number`, `make`, UTF-8) when the requests are written (not
-#'   by a dry run), and read by a later call; given again, it goes over the
+#'   (`sheet`, `number`, `make`, UTF-8) when the requests are written, and
+#'   by a dry run when the study's `ai/` folder is there already (a dry run
+#'   on a new study keeps nothing), and read by a later call; given again, it goes over the
 #'   saved rows (a row of the same sheet and number replaced, `NA` taking
 #'   it out) and the file keeps the result.  `NULL` (default): the saved file, if any.
 #'   With `unit = "sheet"` only.
@@ -342,8 +346,10 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
       shell <- .ai_sheet_numbers_apply(shell, over, fn)
     }
     nums <- shell$sheet_numbers %||% rule
-    # (given: saved for the next call when the requests are written)
-    if (!dry && !is.null(numbers)) {
+    # (given: saved for the next call when the requests are written, and at a
+    # dry run when the study's ai/ is there already -- a dry run never makes
+    # it: an ai/ made early starts the migration)
+    if (!is.null(numbers) && (!dry || dir.exists(ai))) {
       files <- c(files, .ai_sheet_numbers_write(dir, over))
     }
   } else nums <- .ai_sheet_numbers_rule(shell)

@@ -153,6 +153,76 @@ test_that("km_survival(legend_median = TRUE): each arm's median (95% CI) in the 
   expect_s3_class(q$scales$get_scales("colour")$labels, "waiver")
 })
 
+# The code that makes the legend's labels, from the template's expansion
+km_labels_code <- function(template = "km_survival", ...) {
+  k <- tfl_template_expand(template, list(by = "TRT01A", legend_median = TRUE, ...))
+  code <- unlist(lapply(k$data$steps, function(st) if (identical(st$step, "code")) st$code))
+  grep("legend_labels <- ", strsplit(code, "\n")[[1]], fixed = TRUE, value = TRUE)
+}
+
+test_that("legend_median_text: the default text gives the code it always did", {
+  old <- paste0('legend_labels <- stats::setNames(sprintf("%s: %s (%s, %s)", arm_of, fmt_med(med[, "median"]),\n',
+                '  fmt_med(med[, grep("LCL$", colnames(med))[1]]), fmt_med(med[, grep("UCL$", colnames(med))[1]])), arm_of)')
+  k <- tfl_template_expand("km_survival", list(by = "TRT01A", legend_median = TRUE))
+  code <- unlist(lapply(k$data$steps, function(st) if (identical(st$step, "code")) st$code))
+  expect_true(any(grepl(old, code, fixed = TRUE)))
+  for (tpl in c("km_survival", "km_cumulative", "km")) {
+    a <- list(by = "TRT01A", legend_median = TRUE, param = if (tpl == "km") "PFS")
+    b <- c(a, list(legend_median_text = "{arm}: {median} ({lcl}, {ucl})"))
+    expect_identical(tfl_template_expand(tpl, b)$data$steps, tfl_template_expand(tpl, a)$data$steps)
+  }
+})
+
+test_that("legend_median_text: tokens left out, repeated and reordered; a % and quotes kept", {
+  # the sprintf() the text becomes: a %s a token, the arguments in token order, a literal % doubled
+  lab <- km_labels_code(legend_median_text = "{arm}, Median (95% CI): {median} ({lcl}, {ucl})")
+  expect_true(grepl('sprintf("%s, Median (95%% CI): %s (%s, %s)", arm_of, fmt_med(med[, "median"]),', lab[1], fixed = TRUE))
+  lab <- km_labels_code(legend_median_text = "{median} [{ucl}-{lcl}] {arm} {arm}")
+  expect_true(grepl('sprintf("%s [%s-%s] %s %s", fmt_med(med[, "median"]), fmt_med(med[, grep("UCL$"', lab[1], fixed = TRUE))
+  lab <- km_labels_code(legend_median_text = "\"{arm}\" \\ 5%")
+  expect_true(grepl('sprintf("\\"%s\\" \\\\ 5%%", arm_of)', lab[1], fixed = TRUE))
+  expect_error(parse(text = lab), NA)
+  # no token: the text, for each arm
+  expect_true(grepl('rep("Median", length(arm_of))', km_labels_code(legend_median_text = "Median"), fixed = TRUE))
+  # without legend_median the text has no effect, whatever it is
+  k <- tfl_template_expand("km_survival", list(by = "TRT01A", legend_median_text = "{nope}"))
+  expect_false(any(grepl("legend_labels", unlist(lapply(k$data$steps, `[[`, "code")), fixed = TRUE)))
+})
+
+test_that("legend_median_text: a token that is not one of the four is an error naming the argument", {
+  for (tpl in c("km_survival", "km_cumulative")) {
+    expect_error(tfl_template_expand(tpl, list(by = "TRT01A", legend_median = TRUE,
+                                               legend_median_text = "{arm}: {mean} ({lcl}, {ucl})")),
+                 "`legend_median_text`: {mean} is not one of {arm}, {median}, {lcl}, {ucl}", fixed = TRUE)
+  }
+  expect_error(tfl_template_expand("km_survival", list(by = "TRT01A", legend_median = TRUE,
+                                                       legend_median_text = "{arm} {")),
+               "`legend_median_text`", fixed = TRUE)
+})
+
+test_that("legend_median_text: the figure builds from the generated code, in both types", {
+  km_skip()
+  saf <- adsl$USUBJID[adsl$SAFFL == "Y"]
+  df <- adtte[adtte$PARAMCD == "PFS" & adtte$USUBJID %in% saf, ]
+  arms <- sort(unique(as.character(df$TRT01A)))
+  for (tpl in c("km_survival", "km_cumulative")) {
+    p <- tfl_tpl(df, tpl, by = TRT01A, time_unit = "days", risk_table = FALSE, legend_median = TRUE,
+                 legend_median_text = "{arm}, Median (95% CI): {median} ({lcl}, {ucl})")
+    lab <- p$scales$get_scales("colour")$labels
+    expect_identical(sort(names(lab)), arms)
+    expect_true(all(grepl("^.+, Median \\(95% CI\\): (NE|[0-9.]+) [(](NE|[0-9.]+), (NE|[0-9.]+)[)]$", lab)))
+    q <- tfl_tpl(df, tpl, by = TRT01A, time_unit = "days", risk_table = FALSE, legend_median = TRUE,
+                 legend_median_text = "{lcl} | {arm} | {arm} | \"{median}\" \\ 5%")
+    lab <- q$scales$get_scales("colour")$labels
+    expect_true(all(grepl("^(NE|[0-9.]+) [|] .+ [|] .+ [|] \"(NE|[0-9.]+)\" \\\\ 5%$", lab)))
+    expect_identical(unname(sub("^[^|]*[|] ([^|]*) [|] ([^|]*) [|].*$", "\\1", lab)), names(lab))
+  }
+  # the default text: the labels it always made
+  d <- tfl_tpl(df, "km_survival", by = TRT01A, time_unit = "days", risk_table = FALSE, legend_median = TRUE,
+               legend_median_text = "{arm}: {median} ({lcl}, {ucl})")
+  expect_true(all(grepl("^.+: (NE|[0-9.]+) [(](NE|[0-9.]+), (NE|[0-9.]+)[)]$", d$scales$get_scales("colour")$labels)))
+})
+
 test_that("km_survival takes the report's plot.x_by / x_max for its axis, its arguments first", {
   km_skip()
   d <- tempfile()
