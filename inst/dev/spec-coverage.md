@@ -518,36 +518,419 @@ line over time with mean +/- SE, bar, scatter, heat map and CDF plots use;
 2 sometimes; 1 rarely.  Deprecated and internal arguments (`size` of line
 geoms, `fun.y`, `trans`, `label.size` ...) are left out.
 
-Two rounds.  The first counted 2015 arguments (156 functions and geoms with
+Three rounds.  The first counted 2015 arguments (156 functions and geoms with
 a stat); the second widened the scope by 19 functions (line widths, binned / stepped / default
 colour scales, scale_x_time(), guide_axis_logticks() for a forest plot's
 ratio axis, guide_axis_theta() / guide_axis_stack(), filled contours) to
-2303 arguments of 175 functions.
+2303 arguments of 175 functions; the third (2026-10-31) to ggplot2's
+other functions of a plot -- 89 more functions, 3409 arguments of 264:
+the limits (xlim(), ylim(), lims(), expand_limits()), annotation_logticks()
+/ _custom() / _raster(), a facet's vars() and labellers, the other scales
+of a size, an alpha, a shape, a line type and width, a colour or fill by
+date, ordinal and binned, scale_discrete_manual() and the identity scales,
+coord_transform(), facet_null(), theme_test(), ggplot2 4.0's
+theme_sub_*() and element_geom() / _point() / _polygon(), rel(), unit(),
+arrow(), margin_auto() / _part(), guide_custom(), geom_hex() and the
+rarer stat_*() (2-d bins and summaries, contours, 2-d density, quantile,
+align, connect, manual).
 
-| Scope | Start | Round 1 | Round 2 (wider scope: before / after) |
-|---|---:|---:|---:|
-| **ggplot2: geoms (with their stats), scales, coords, themes, facets, guides, labs, positions** | **24.7%** | **94.9%** | **91.4% / 100.0%** |
-| geom_*() | 55.9% | 91.4% | 90.6% / 100.0% |
-| a geom with another stat (geom_step(stat = "ecdf"), geom_pointrange(stat = "summary") ...) | 0.0% | 100.0% | 100.0% / 100.0% |
-| scale_*() and expansion() / sec_axis() / dup_axis() | 8.1% | 95.9% | 87.7% / 100.0% |
-| coord_*() | 34.5% | 98.8% | 98.8% / 100.0% |
-| theme(), complete themes, element_*(), margin() | 5.0% | 91.2% | 91.2% / 100.0% |
-| facet_wrap() / facet_grid() | 57.4% | 100.0% | 100.0% / 100.0% |
-| guides() and guide_*() | 10.7% | 97.3% | 86.8% / 100.0% |
-| labs(), xlab(), ylab(), ggtitle(), annotate() | 38.8% | 97.4% | 97.4% / 100.0% |
-| position_*() | 0.0% | 100.0% | 100.0% / 100.0% |
-| **stat_*()** (shown apart) | **44.2%** | **73.1%** | **73.1% / 100.0%** |
+| Scope | Start | Round 1 | Round 2 (wider scope: before / after) | Round 3 (wider scope: before / after) |
+|---|---:|---:|---:|---:|
+| **ggplot2: geoms (with their stats), scales, coords, themes, facets, guides, labs, positions** | **24.7%** | **94.9%** | **91.4% / 100.0%** | **84.2% / 100.0%** |
+| geom_*() | 55.9% | 91.4% | 90.6% / 100.0% | 99.4% / 100.0% |
+| a geom with another stat (geom_step(stat = "ecdf"), geom_pointrange(stat = "summary") ...) | 0.0% | 100.0% | 100.0% / 100.0% | 100.0% / 100.0% |
+| scale_*(), the limits and expansion() / sec_axis() / dup_axis() | 8.1% | 95.9% | 87.7% / 100.0% | 80.7% / 100.0% |
+| coord_*() | 34.5% | 98.8% | 98.8% / 100.0% | 92.9% / 100.0% |
+| theme(), theme_sub_*(), complete themes, element_*(), margin(), rel(), unit() | 5.0% | 91.2% | 91.2% / 100.0% | 75.0% / 100.0% |
+| facet_wrap() / facet_grid() / facet_null(), vars(), labellers | 57.4% | 100.0% | 100.0% / 100.0% | 32.5% / 100.0% |
+| guides() and guide_*() | 10.7% | 97.3% | 86.8% / 100.0% | 97.4% / 100.0% |
+| labs(), xlab(), ylab(), ggtitle(), annotate(), annotation_*() | 38.8% | 97.4% | 97.4% / 100.0% | 69.2% / 100.0% |
+| position_*() | 0.0% | 100.0% | 100.0% / 100.0% | 100.0% / 100.0% |
+| **stat_*()** (shown apart) | **44.2%** | **73.1%** | **73.1% / 100.0%** | **82.4% / 100.0%** |
 
 Round 2, 2303 arguments: before 1533 yes / 770 partial / 0 no; after 2303
-yes.  (ggplot2 4.0's `box_gp`, `whisker_gp` ... are left out: geom_boxplot()
-makes them from `whisker.colour` and the like, and given too they clash.)
+yes.  Round 3, 3409 arguments: before 2303 yes / 1054 partial / 52 no
+(xlim(), lims(), annotation_logticks(), the labellers, vars() were an
+error of the check: no kind without a prefix); after 3409 yes.  (ggplot2
+4.0's `box_gp`, `whisker_gp` ... are left out: geom_boxplot() makes them
+from `whisker.colour` and the like, and given too they clash.)
 
 100% is this measure's ceiling, not ggplot2's: every argument in the scope
 has a card and a type, which says the GUI shows it and the check types its
 value; the tests run the code of a sample of them (test-fig-ggplot2.R).
-Next: the extension packages (ggsurvfit, ggh4x, ggrepel, ggtext,
-ggnewscale, patchwork), and the scope's edge (geom_sf, geom_hex, the
-rarer stat_*()).
+The extension packages are measured apart (below).  Left out by design:
+maps and simple features (geom_sf*, coord_sf, coord_map / _quickmap,
+geom_map, annotation_map / _borders), the deprecated (geom_errorbarh,
+stat_spoke), the
+programming helpers (aes_*(), layer(), ggproto ...), and ggplot2's other
+spellings, which are not counted: the script checks that each of the 33
+(scale_color_*, guide_colorbar, guide_colorsteps, theme_grey, stat_bin2d,
+geom_density2d ...) reads as its function's card.
+
+Round 3:
+
+- A function of a plot without the prefix has a kind: xlim(), ylim() and
+  lims() a scale's, annotation_*() and expand_limits() a layer's, vars(),
+  labeller() and the label_*() labellers helpers (`.schema_gg_kind()`);
+  before, the check said "a function neither the schema nor its package
+  has".
+- `xlim(0, 52)`: a card's positional `...` is written by position and read
+  back (`limits: [0, 52]` in the SPEC), not `xlim(limits = c(0, 52))`.
+- ggplot2's other spellings read as the card of the function they spell
+  (`.schema_gg_alias()`: scale_color_manual is scale_colour_manual's card);
+  the generated code keeps the name written.
+- theme_sub_*() (ggplot2 4.0) are typed as the settings they stand for:
+  theme_sub_axis_bottom(text =) is axis.text.x.bottom, an element_text;
+  theme_sub_legend(position =) theme()'s legend.position.
+- A facet's `labeller` takes a labeller's call ({fn: label_wrap_gen, args:
+  {width: 20}}, {fn: labeller, args: {PARAMCD: !r label_both}});
+  facet_wrap()'s `facets` the columns (`facets: PARAMCD`), as ggplot2 takes
+  them (before: only !r vars(PARAMCD)).
+- 89 cards (inst/spec/schema.yml), the arguments without a kind's type
+  typed there: annotation_logticks()'s `base`, `sides`, `scaled`,
+  `outside`, `short` / `mid` / `long`; element_geom()'s `ink`, `paper`,
+  `accent`, `fontsize` ...; stat_connect()'s `connection`; unit()'s and
+  rel()'s `x`; guide_custom()'s `grob`.
+
+Round 4 (2026-11-01): a layer's aesthetics.  The arguments' measure says
+nothing of what a layer's `mapping` takes, so each aesthetic of each layer
+in the scope is a row of its own (`argument` "aes: ymin": 826 rows, 719 of
+ggplot2's geoms and stats, 107 of the extensions' layers): **yes** when the
+check judges a mapping's names (an unknown aesthetic warns) and the card
+marks it as ggplot2 does -- required (or one of its alternatives:
+geom_errorbar's `ymin` or `xmin`, a bar across) when the layer's
+`required_aes` say so, not required when they do not; **partial** when one
+of the two holds; **no** neither.  The same weights; the arguments' table
+above is unchanged (3409 arguments, 100%).
+
+| Aesthetics | Before | After |
+|---|---:|---:|
+| **ggplot2, the arguments and the geoms' aesthetics together** | **89.5%** | **100.0%** |
+| geom_*()'s aesthetics | 42.1% | 100.0% |
+| **stat_*()'s aesthetics** (shown apart) | **47.0%** | **100.0%** |
+| the extensions' layers' aesthetics (ggrepel, ggtext, ggsurvfit) | 50.0% | 100.0% |
+| rows yes / partial / no | 0 / 754 / 72 | 826 / 0 / 0 |
+
+Before, no mapping's names were checked (`geom_line(mapping = {colr:
+TRTA})` passed), and 16 cards wrote the aesthetic `y` bare, which YAML
+reads as TRUE: `tfl_schema("geom_line")$aes_required` was `x, TRUE`, and
+`y` came last, from the installed layer.  The 72 "no" rows: the `y` of
+those cards, and the cards that marked x of an "x|y" layer (geom_bar,
+geom_errorbar, stat_ecdf ...) with no word of y, or a fill ggplot2 does
+not need (geom_tile, geom_raster).
+
+Round 4:
+
+- A layer's `mapping` is checked: an aesthetic the layer (its geom and its
+  stat, the stat it is given too) does not have warns, as ggplot2's
+  "Ignoring unknown aesthetics" does; ggplot2's other spellings (`color`,
+  `pch`, `lwd`) are its own.
+- A plot is checked for the aesthetics its layers need (ggplot2's
+  `required_aes`, of the stat when the stat computes them: geom_bar's x or
+  y, geom_step(stat = "ecdf")'s x or y): mapped in the layer, given a
+  value (`geom_hline(yintercept = 0)`) or inherited from the first item's
+  `ggplot(mapping =)` unless `inherit.aes: false`.  A missing one warns
+  (`geom_errorbar needs the aesthetic ymax (or xmax)`), a note of
+  tfl_check_spec(); ggplot2 would stop at the draw.  A plot not begun by
+  ggplot() or a mapping written as R is not judged.
+- The cards (inst/spec/schema.yml, 34 layers) mark what ggplot2 needs,
+  with `or:` for the alternatives (`x: {required: true, or: [y]}`), and
+  write `"y"` quoted; `tfl_schema()` says them as `aes_required` and
+  `aes_or`.  geom_hline / _vline / _abline say `yintercept`, `xintercept`,
+  `slope` and `intercept`.
+
+### Round 5 (2026-11-02): ggplot2's own examples, through a SPEC and back
+
+The arguments' and the aesthetics' measures are at their ceiling: they say
+a SPEC can name every argument and the check types it, not that what
+ggplot2's users write reads as a SPEC and draws the same.  A third measure
+does: `dev/spec-coverage-ggplot2-examples.R` takes every call of a
+function in the scope in the examples of ggplot2's help pages (759 calls,
+1272 uses of an argument, 138 functions; read from the installed ggplot2,
+not copied), reads it as a SPEC item (`.fig_lang_item()`, what tflspec
+reads from R code), checks it, writes it back (`.fig_item_lang()`) and
+draws the example with that code in its place (data, layout, theme,
+labels and the scales' labels compared with the original's).  One row an
+argument as the examples write it: `spec-coverage-ggplot2-examples.csv`
+(the same columns, and `uses`).
+
+- **yes**: read as a typed value (not `!r`), no problem of the check on it,
+  and it draws the same (`!r NULL` and a number written as arithmetic,
+  `!r 1/5`, count as typed: the check judges them).
+- **partial**: read as R, or with R in it, or a warning of the check; it
+  draws the same.
+- **no**: an error of the check, the call not read as an item, or drawn
+  otherwise (or not at all).
+
+An example that does not draw the same twice by itself (data at random,
+a global theme, a package not installed) is not judged on its drawing; a
+call inside a function's definition (`aes({{ x }})`) is left out.  The
+same weights.
+
+| Examples | Before | After |
+|---|---:|---:|
+| **ggplot2: geoms, scales, coords, themes, facets, guides, labs, positions** | **89.7%** | **94.5%** |
+| weight-3 functions only | 85.0% | 91.2% |
+| geom_*() | 90.6% | 95.2% |
+| scale_*() | 87.2% | 92.1% |
+| coord_*() | 96.1% | 99.4% |
+| theme(), elements | 94.1% | 96.8% |
+| facets | 82.2% | 92.4% |
+| guides | 72.0% | 88.2% |
+| labs(), annotate(), annotation_*() | 89.3% | 96.8% |
+| position_*() | 100.0% | 100.0% |
+| **stat_*()** (shown apart) | **90.8%** | **92.1%** |
+| uses yes / partial / no | 986 / 248 / 35 | 1100 / 169 / 3 |
+
+Round 5:
+
+- The check (false problems on ggplot2's own code): a layer's argument by
+  ggplot2's other spelling (`color =`, `pch =`, `lty =`) is the aesthetic
+  it spells; a layer takes what it passes on to `layer()` (`key_glyph`,
+  ggplot2 4.0's `layout`) and its position's (4.0's `geom_text(nudge_x =)`,
+  and `nudge_x` / `nudge_y` as aesthetics); `theme()` takes 4.0's
+  `palette.colour.discrete` ... (14 settings, typed); a number written as
+  arithmetic of numbers (`!r 1/5`, `!r -0.4 * pi`) is a number.
+- Types (`inst/fig/gg_args.csv`, schema.yml): the vector forms ggplot2
+  takes (`annotate(label = c(...))`, a 2-d `binwidth`, `expand = c(0.1,
+  0.1)` on the position scales' cards, a 4.0 `palette` as colours), R where
+  a value may be computed (`colours`, `colour`, `fill`, `quantiles`,
+  `bins`, `args`, `lineend`, the geoms' and ggplot()'s `data`),
+  `margin_auto()` / `margin_part()` as a margin, `facet_grid()`'s `rows` /
+  `cols` as columns.  (`|r` comes last: the GUI's field is the same.)
+- The reader: `aes(displ, hwy)` is x and y; a facet's variables as its
+  columns (`~A`, `vars(A, B)`, `A ~ B`, `. ~ B`); any constructor of a
+  value (a position, a guide, an element, `theme()`, `unit()`, `rel()`,
+  `sec_axis()`, `margin_auto()` ...) as `{fn:, args:}`, its positional
+  arguments named and R in it (before: R, unless every argument was named
+  and a constant); a named vector of constants as a map; `1:5` as the
+  numbers.  Fix: R of several statements (`function(d) { ...; ... }`,
+  `quote({ ... })`) was joined into one line that did not parse; it keeps
+  its lines.
+- The writer: `unit()` and `rel()` by position (`unit(0.5, "cm")`, was
+  `unit(x = 0.5, units = "cm")`); `facet_grid()`'s columns as `vars(SEX)`
+  (ggplot2 takes no text for rows with cols).
+
+What is left (partial): a function given by name (`fun = mean`, `method
+= lm`, `fun = dnorm`), the labels and breaks functions of scales
+(`scales::label_math()`), objects of the example (`values = cols`,
+`breaks = price_bins`), dates (`Sys.Date() - 30`), and grobs:
+R is the SPEC's form for them.  No: `expand_limits(positions)`, a data
+frame given by position.
+
+### Round 6 (2026-11-03): a function by its name, a formula, scales' helpers
+
+The examples' measure (round 5), rerun after three typed forms for what
+was R:
+
+| Examples | Before | After |
+|---|---:|---:|
+| **ggplot2: geoms, scales, coords, themes, facets, guides, labs, positions** | **94.5%** | **95.3%** |
+| geom_*() | 95.2% | 95.7% |
+| scale_*() | 92.1% | 93.9% |
+| theme(), elements | 96.8% | 97.0% |
+| coord_*(), facets, guides, labs, positions | unchanged | unchanged |
+| **stat_*()** (shown apart) | **92.1%** | **97.1%** |
+| uses yes / partial / no | 1100 / 169 / 3 | 1141 / 128 / 3 |
+
+The arguments' and the aesthetics' measures stay at 100% (3409 arguments,
+826 aesthetics; `spec-coverage-ggplot2.csv` unchanged).
+
+Round 6:
+
+- A function by its name, the type `function`: `fun`, `fun.data`,
+  `fun.min`, `fun.max` (stat_summary(), stat_summary_bin(), a geom with
+  `stat: summary`, stat_function() / geom_function(), stat_manual(),
+  stat_summary_2d()), a scale's `oob` and `rescaler`, sec_axis()'s
+  `transform`.  The SPEC writes the name (`fun.data: mean_se`,
+  `fun.data: Hmisc::smean.cl.normal`, `oob: scales::oob_squish`), the
+  check takes a name R writes bare (an error for `mean se`), the code
+  writes it bare: `stat_summary(fun = mean, fun.min = min, fun.max =
+  max)`; read back from that code as the names (before: `!r mean`).
+- A formula as its text, the type `tilde`: geom_smooth()'s `formula: y ~
+  poly(x, 2)`, sec_axis()'s `transform: ~ . / 7`, a lambda `fun: ~
+  sum(.x^2)`, written as the formula (before: only `!r y ~ x`).
+- scales' helpers as `{fn:, args:}`: a scale's `labels`
+  (`{fn: scales::label_percent, args: {accuracy: 1}}`, `label_*`,
+  `*_format`), `breaks` / `minor_breaks` (`breaks_width`, `breaks_pretty`,
+  `extended_breaks` ...), `transform` (`transform_log`, `*_trans`),
+  `palette` (`pal_brewer` ...), on the scales and on sec_axis() /
+  dup_axis(); `call<label_*>` in the type notation takes a function by a
+  pattern of its name.  Read from code too (`percent_format()` of the
+  scales attached as `scales::percent_format`).
+- From code: a smooth's `method = lm` (glm, loess) is `"lm"`, a legend's
+  `key_glyph = draw_key_rect` is `"rect"`, as ggplot2 takes them.
+
+What is left (partial): a mapping's expressions (`factor(cyl)`,
+`after_stat(count)`, `after_scale(alpha(colour, 0.4))`: R in the mapping),
+objects of the example (`values = cols`, `labeller = to_string`), dates
+(`Sys.Date() - 30`), grobs, R inside a scales helper
+(`label_math(10^.x)`).  Next: a typed form for a mapping's `after_stat()`
+and `factor()` of a column.
+
+### Round 7 (2026-11-04): a mapping's expressions
+
+The examples' measure (round 5), rerun after a typed form for what a
+mapping takes besides a column:
+
+| Examples | Before | After |
+|---|---:|---:|
+| **ggplot2: geoms, scales, coords, themes, facets, guides, labs, positions** | **95.3%** | **96.1%** |
+| geom_*() | 95.7% | 97.6% |
+| scale_*(), coord_*(), theme(), facets, guides, labs, positions | unchanged | unchanged |
+| **stat_*()** (shown apart) | **97.1%** | **98.4%** |
+| uses yes / partial / no | 1141 / 128 / 3 | 1180 / 89 / 3 |
+
+The arguments' and the aesthetics' measures stay at 100% (3409 arguments,
+826 aesthetics; `spec-coverage-ggplot2.csv` unchanged).
+
+Round 7 (R/fig_aes.R):
+
+- A mapping's value is a column's name, or an expression of a mapping's
+  form written as its text, untagged (before: `!r`): a call of factor(),
+  as.factor(), ordered(), as.numeric(), as.integer(), as.character(),
+  interaction(), reorder(), rev(), abs(), sqrt(), exp(), log() / log2() /
+  log10() / log1p(), round(), signif(), paste() / paste0(), sprintf(),
+  format(), cut_width() / cut_interval() / cut_number(), after_stat(),
+  after_scale() or stage(), or arithmetic, of columns, constants and
+  sum(), max(), min(), mean(), median(), length(), alpha(), pmin(),
+  pmax(), cumsum(), c().  `x: factor(AVISITN)`, `y: after_stat(density)`,
+  `y: after_stat(count / sum(count))`, `x: reorder(USUBJID, -PCHG)` (a
+  waterfall), `ymin: mean - se` (mean +/- SE), `label: paste0(n, " (",
+  pct, "%)")`, `fill: after_scale(alpha(colour, 0.4))`.  Written as it
+  is; read back from code as its text.
+- A constant: a number (`group: 1`, before written `` `1` ``), a text in
+  its quotes (`colour: '"Overall"'`, a legend's label); a column's name in
+  backticks (`` `a b` ``).
+- The check: a text that is neither a column's name nor of the form warns
+  (it is written as a column of that name); an after_stat()'s variable
+  the layer's stat does not compute warns (`after_stat(densty)` of
+  geom_histogram; of geom_step(stat = "ecdf") only `ecdf`), the
+  variables by stat (count, bin, density, ecdf, summary, boxplot,
+  ydensity, smooth, qq, sum, 2-d bins, contours ...) tested against the
+  installed ggplot2's layer data.
+
+What is left (partial): R outside the form (`cut_width()` is in it now;
+`n[!duplicated(group)]`, `ifelse()`), objects of the example (`values =
+cols`, `labeller = to_string`), dates (`Sys.Date() - 30`), grobs, R
+inside a scales helper (`label_math(10^.x)`); `size` of line geoms
+(deprecated, a warning by design).  Next: the guides' examples (88.2%)
+and the facets' (92.4%).
+
+### Round 8 (2026-11-05): base R's values, and conditions in a mapping
+
+The examples' measure (round 5), rerun after typed forms for what
+clinical figures write with base R in a value or a mapping:
+
+| Examples | Before | After |
+|---|---:|---:|
+| **ggplot2: geoms, scales, coords, themes, facets, guides, labs, positions** | **96.1%** | **96.6%** |
+| geom_*() | 97.6% | 97.9% |
+| scale_*() | 93.9% | 95.4% |
+| coord_*(), theme(), facets, guides, labs, positions | unchanged | unchanged |
+| **stat_*()** (shown apart) | **98.4%** | **98.4%** |
+| uses yes / partial / no | 1180 / 89 / 3 | 1187 / 82 / 3 |
+
+The arguments' and the aesthetics' measures stay at 100% (3409 arguments,
+826 aesthetics; `spec-coverage-ggplot2.csv` rerun, only the date scales'
+`where` changes).  ggplot2's examples rarely write the forms below; the
+clinical figures do (an axis of weeks, a waterfall coloured by response,
+a band in a transparent grey).
+
+- A condition is of a mapping's form (R/fig_aes.R): the comparisons (`<`,
+  `<=`, `==`, `!=`, `%in%`), `!`, `&`, `|`, and `ifelse()`, `cut()`,
+  `is.na()`, `nchar()`, `toupper()` / `tolower()`, `substr()`,
+  `trimws()`; inside one also `[`, `duplicated()`, `unique()`, `rank()`.
+  `fill: PCHG <= -30`, `fill: ifelse(PCHG <= -30, "PR", "SD/PD")`,
+  `colour: cut(PCHG, c(-Inf, -30, 20, Inf))`, `shape: '!is.na(ADT)'`
+  (in YAML a text that starts with `!` is quoted).  Before: `!r`.
+- `seq()` is a value of breaks: `{fn: seq, args: {from: 0, to: 52, by: 4}}`,
+  written `seq(0, 52, by = 4)` (a scale's `breaks` and `minor_breaks`,
+  the continuous position scales' cards, a histogram's `breaks`).
+- `alpha()` is a colour: a layer's `colour` / `fill`, an element's, a
+  continuous scale's `low` / `mid` / `high` / `na.value`
+  (`alpha("grey50", 0.4)`).
+- grDevices' palettes are a scale's `colours` (gradientn, stepsn) and a
+  manual scale's `values`: `hcl.colors()`, `palette.colors()`,
+  `gray.colors()`, `rainbow()`, `heat.colors()`, `terrain.colors()`,
+  `topo.colors()`, `cm.colors()`.
+- A date: the new type `date`, a date as its text (`2024-01-01`), for
+  scale_x_date() / scale_y_date()'s `limits` and `breaks`; `NA` (YAML's
+  text "NA") an open end; written `as.Date(c("2024-01-01", NA))` and
+  read back from it.  Before, `limits: [2024-01-01, NA]` was written as
+  text, which a date scale does not take.
+- These calls are read from code as `{fn:, args:}` with their positional
+  arguments named (`.fig_find_value_fun()`: base R's and grDevices'
+  functions, seq()'s default method), and written back by position
+  (`.fig_by_position`).
+
+What is left (partial): objects of the example (`values = cols`,
+`labeller = to_string`, `breaks = price_bins`), `Sys.Date()` (not a
+constant), grobs and rasters, R inside a scales helper (`label_math(10^.x)`),
+a function written inline (`fun = function(x) ...`), `size` of line geoms
+(deprecated, a warning by design).  Next: the guides' examples (88.2%) and
+the facets' (92.4%: `facet_wrap(year ~ cyl)`, a labeller's function).
+
+### The extension packages (ggsurvfit, ggrepel, ggh4x, ggtext, ggnewscale, patchwork)
+
+The same measure, the same file (`package` says which), over the
+functions of a plot of the extension packages tflspec suggests: 46
+functions, 351 arguments (ggsurvfit 1.2.1, ggrepel 0.9.8, ggh4x 0.3.1,
+ggtext 0.2.0, ggnewscale 0.5.2, patchwork 1.3.2).  Weights: 3 for a KM
+plot's (ggsurvfit(), add_risktable(), add_censor_mark(),
+add_confidence_interval(), add_pvalue(), scale_ggsurvfit()), a label that
+avoids overlaps (geom_text_repel()), markdown text (element_markdown())
+and patchwork's arrangement (wrap_plots(), plot_layout(),
+plot_annotation()); 2 sometimes; 1 rarely.  A function with no card is
+named `pkg::fn` in a SPEC (`ggh4x::facet_manual`).
+
+| Package | 2026-10-30 before | 2026-10-30 after |
+|---|---:|---:|
+| **extensions, weighted** | **58.9%** (106 yes / 240 partial / 5 no) | **100.0%** (351 yes) |
+| ggsurvfit | 52.8% | 100.0% |
+| ggrepel | 69.6% | 100.0% |
+| ggh4x | 62.2% | 100.0% |
+| ggtext | 77.0% | 100.0% |
+| ggnewscale | 90.0% | 100.0% |
+| patchwork | 45.6% | 100.0% |
+
+ggplot2 itself stayed at 100.0% (2303 arguments; 3409 after round 3).
+
+Added in this run:
+
+- An extension's function without a card is its kind's, by `pkg::fn`
+  (`.schema_ext_kind()`): ggh4x's facets, strips and element lists,
+  ggtext's elements and geoms, ggsurvfit's `add_*()`, patchwork's
+  arrangement; before, `ggh4x::facet_grid2` was checked by its formals
+  only and `patchwork::plot_spacer()` was an error ("neither the schema
+  nor its package has").
+- Cards for 26 more functions: ggsurvfit's `add_legend_title()`,
+  `add_risktable_strata_symbol()`, `stat_stepribbon()`,
+  `scale_ggsurvfit()`, `theme_ggsurvfit_default()` / `_KMunicate()`,
+  `theme_risktable_default()` / `_boxed()`; ggrepel's
+  `position_nudge_repel()`; ggh4x's `facet_grid2()`, `facet_wrap2()`,
+  `force_panelsizes()`, `strip_nested()` / `_themed()` / `_vanilla()`,
+  `elem_list_text()` / `_rect()`; ggtext's `element_textbox()`,
+  `geom_textbox()`; ggnewscale's `new_scale()`; patchwork's
+  `plot_spacer()`, `wrap_elements()`, `inset_element()`, `guide_area()`,
+  `area()`, `free()`.
+- Typed by kind (`inst/fig/gg_args.csv`, 123 rows, new kinds `plot`,
+  `ggsurvfit_layer`, `compose`): the risk table's `risktable_stats`,
+  `stats_label`, `risktable_group`, `risktable_height`, `combine_groups`,
+  `theme`; `add_pvalue()`'s `caption`, `location`, `rho`, `pvalue_fun`;
+  `add_quantile()`'s `y_value` / `x_value`; ggrepel's `box.padding`,
+  `point.padding`, `min.segment.length`, `force`, `max.overlaps`, `seed`
+  ...; ggh4x's `independent`, `remove_labels`, `strip`, `nest_line`,
+  `bleed`, `render_empty`; ggtext's `halign`, `padding`, `box.colour`,
+  `width`, `orientation`; patchwork's `design`, `guides`, `axes`,
+  `tag_levels`, `inset_element()`'s place and plot (an object by name).
+  A card's shown `...` arguments are typed too (add_quantile's
+  `linetype`, add_censor_mark's `shape`).
+- `x_scales`, `y_scales` and `stats_label` are written `list(...)`.
+- Fixes: ggrepel's `direction` is `both|y|x` (it was typed as
+  geom_step's `hv|vh|mid`, so `direction: y` was an error); a ggsurvfit
+  theme or `stat_stepribbon()` on a plain ggplot attaches ggsurvfit, a
+  patchwork function inside a plot attaches patchwork.
 
 What made the difference, round 1:
 

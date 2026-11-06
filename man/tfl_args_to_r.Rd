@@ -31,7 +31,12 @@ the item's arguments, each value in the form the spec file holds it
 \verb{\{fn:, args:\}} for a call of constants), and checks them
 (\code{\link[=tfl_schema_check]{tfl_schema_check()}}).  A figure's functions (\code{ggplot}, \code{geom_line},
 \code{labs} ...) are read as the figure's content reads them: \code{aes()} as a
-map of columns, the plot's data by its name.
+map of columns (\code{aes(AVAL, CHG)} is x and y), the plot's data by its
+name, a facet's variables as its columns (\code{facet_grid(SEX ~ TRTA)} is
+\verb{rows: SEX, cols: TRTA}), a value's constructor (a position, a guide,
+an element, \code{theme()}, \code{unit()}, \code{rel()}, \code{sec_axis()} ...) as
+\verb{\{fn:, args:\}} with its arguments named and any that is no constant as
+\code{!r} in it, \code{1:5} as the numbers.
 }
 \examples{
 tfl_args_to_r("plan_cells", list(categorical = "{n} ({p:.1f\%})"))

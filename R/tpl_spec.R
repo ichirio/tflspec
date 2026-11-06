@@ -116,7 +116,9 @@
   }
   if (length(hidden)) {
     .ard_stop(sprintf(paste0("%s: template %s takes %s from the study standard, not from ",
-                             "`template: args:`; change it with the report's own items or `plot:`."),
+                             "`template: args:`; a figure setting (`plot:`: the title, axes, legend, theme, palette, ",
+                             "base_size, and the Kaplan-Meier types' risk_title) is set there; ",
+                             "the rest is the study's figure style."),
                       id, t$name, paste(sQuote(hidden, FALSE), collapse = ", ")))
   }
   .tpl_data_said(t, output, id)
@@ -172,6 +174,14 @@
     if (is.null(args[[a]]) && !is.null(v) && length(v) == 1L && !is.na(v) && !identical(v, "")) {
       args[[a]] <- as.numeric(v)
     }
+  }
+  # the risk table's heading (a report type hides risk_title as the study's
+  # figure style): the report's `plot.risk_title` goes to the template as its
+  # own `plot` setting, which the template reads
+  v <- plot$risk_title
+  if ("risk_title" %in% names(t$params) && is.null(args$plot$risk_title) &&
+        is.character(v) && length(v) == 1L && !is.na(v) && nzchar(v)) {
+    args$plot <- c(args$plot, list(risk_title = v))
   }
   args
 }

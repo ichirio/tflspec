@@ -175,6 +175,22 @@ test_that("the ADaM summary: variables, labels, types, short value lists, no rec
   expect_match(format(m), "SEX (char): F | M [missing: 2 of 4]", fixed = TRUE)
   expect_match(format(m), "AGE (num) [missing: 1 of 4]", fixed = TRUE)
   expect_match(format(m), "## ADXX (4 records, 2 subjects, 3 variables)", fixed = TRUE)
+  # all of a variable's missing values "" (a transport file's): blank, not
+  # missing; a mix with NA stays missing; real NA stays missing (#678)
+  bl <- tfl_ai_adam_summary(list(adzz = data.frame(
+    USUBJID = c("1", "2", "3", "4"), FLB = c("Y", "", "", ""), FLM = c("Y", "", NA, ""),
+    FLN = c("Y", NA, NA, "Y"), FLF = factor(c("Y", "", "", "Y")), FLO = c("Y", "Y", "Y", "Y"))))
+  expect_identical(bl$variables$blank, c(0L, 3L, 2L, 0L, 2L, 0L))
+  expect_identical(bl$variables$missing, c(0L, 3L, 3L, 2L, 2L, 0L))
+  tb <- format(bl)
+  expect_match(tb, "FLB (char): Y [blank: 3 of 4]", fixed = TRUE)
+  expect_match(tb, "FLM (char): Y [missing: 3 of 4]", fixed = TRUE)
+  expect_match(tb, "FLN (char): Y [missing: 2 of 4]", fixed = TRUE)
+  expect_match(tb, "FLF (char): | Y [blank: 2 of 4]", fixed = TRUE)
+  expect_match(tb, "FLO (char): Y [missing: none]", fixed = TRUE)
+  expect_match(tb, "is.na()` does not find them", fixed = TRUE)
+  # the summary as a prompt's datasets: the blank count is not one of its columns
+  expect_no_error(tflspec:::.ai_ctx_datasets(bl, "tfl_ai_context()"))
   n <- tfl_ai_adam_summary(list(adyy = data.frame(A = 1)))
   expect_true(is.na(n$datasets$subjects))
   expect_match(format(n), "## ADYY (1 records, 1 variables)", fixed = TRUE)

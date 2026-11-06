@@ -46,22 +46,47 @@
 #'
 #' A figure's functions: the file has a card for those a clinical figure
 #' uses (the geoms and the stats -- those with no geom of their own and
-#' those with one --, scales, coordinates, complete themes and `theme()`,
-#' elements, guides, positions); any other function of a plot `ggplot2`
-#' exports (`scale_shape_identity`, `guide_custom`) is its formals.  The
+#' those with one --, scales and the limits `xlim()`, `ylim()`, `lims()`,
+#' `expand_limits()`, coordinates, complete themes, `theme()` and its
+#' parts `theme_sub_*()`, elements, guides, positions, `annotation_*()`,
+#' a facet's `vars()` and labellers); any other function of a plot
+#' `ggplot2` exports (`coord_quickmap`, `geom_sf_text`) is its
+#' formals.  `ggplot2`'s other spellings (`scale_color_manual`,
+#' `guide_colorbar`, `theme_grey`, `stat_bin2d`) read as the card of the
+#' function they spell, and the code keeps the name written.  So
+#' are the extension packages' (ggsurvfit's `add_risktable()` and themes,
+#' ggrepel, ggh4x's facets and strips, ggtext's elements, ggnewscale,
+#' patchwork's arrangement): those a clinical figure uses have a card, any
+#' other of a plot is named `pkg::fn` (`ggh4x::facet_manual`).  The
 #' arguments the functions of one kind share -- a layer's `stat`,
 #' `position`, `fun.data`, `pad`; a scale's `name`, `breaks`, `labels`,
 #' `sec.axis`; `theme()`'s settings, each its element -- are typed and
 #' labelled by `inst/fig/gg_args.csv` for every function that takes them.
 #' A geom given another `stat` (`geom_step(stat = "ecdf")`) is checked
 #' with that stat's parameters too, a stat given another `geom` with that
-#' geom's.
+#' geom's.  A layer takes what any layer passes on to `layer()`
+#' (`key_glyph`, ggplot2 4.0's `layout`) and its position's (ggplot2 4.0's
+#' `nudge_x` / `nudge_y` of `geom_text()`); an argument by ggplot2's other
+#' spelling of an aesthetic (`color`, `pch`, `lty`) is checked as the one
+#' it spells.  `theme()` takes ggplot2 4.0's default palettes
+#' (`palette.colour.discrete` ...).
 #'
-#' The types, in a short notation: `string`, `integer`, `number`,
+#' The types, in a short notation: `string`, `integer`, `number` (a
+#' number written as arithmetic of numbers, `!r 1/5`, is one),
 #' `logical`, `enum[a|b]`, `column`, `stat`, `template`, `r` (`!r`),
 #' `formula` (`!r`, written `~ <text>`), `guard` (`!r`, a two-sided
-#' `cond ~ "text"`), `call` and `call<fn>`
-#' (`{fn:, args:}`), `list<T>` (a sequence), `vec<K, V>` (a map that is a
+#' `cond ~ "text"`), `function` (a function by its name, `mean_se` or
+#' `Hmisc::smean.cl.normal`, written bare: `fun.data = mean_se`), `tilde`
+#' (a formula as its text, `y ~ x` or `~ . / 7`, written as the formula),
+#' `date` (a date as its text, `2024-01-01`; a sequence of them, `NA` an
+#' open end, written `as.Date(c("2024-01-01", NA))`),
+#' `call` and `call<fn>` (`{fn:, args:}`; `call<label_*>` takes any
+#' function whose name the pattern matches, of any package:
+#' `{fn: scales::label_percent}`; base R's that clinical figures write as
+#' a value are typed where they fit: `seq()` for breaks,
+#' `{fn: seq, args: {from: 0, to: 52, by: 4}}` written `seq(0, 52, by = 4)`;
+#' `alpha()` for a colour; grDevices' palettes, `hcl.colors()` ..., for a
+#' scale's colours), `list<T>` (a sequence), `vec<K, V>` (a map that is a
 #' named vector in R), `map<K, V>` (a map that is a named list),
 #' `rows<f1, f2, ...>` (a sequence of maps that is a data frame) and `T|U`
 #' (either).
@@ -72,6 +97,38 @@
 #' is what the AI kit and the reference read), and `main: true` for the
 #' arguments a form shows from the start (the others folded under the
 #' function's other arguments).  `colour` is a colour's text (`#RRGGBB`).
+#'
+#' A layer's entry (`geom_errorbar`) says its aesthetics too: `aes`, the
+#' names a `mapping` takes (an unknown one warns, as ggplot2 does;
+#' `color` is `colour`), `aes_required`, those it needs, and `aes_or`, a
+#' required one's alternatives (`ymin` or `xmin`: a bar across).  A
+#' figure's plot is checked for them: a layer missing a required
+#' aesthetic, neither mapped nor given a value nor inherited from
+#' `ggplot()`'s mapping, warns.
+#'
+#' A mapping's value is a column's name (`colour: TRTA`), or an
+#' expression of a mapping's form, written as its text, untagged:
+#' a call of `factor()`, `as.factor()`, `ordered()`, `as.numeric()`,
+#' `as.integer()`, `as.character()`, `interaction()`, `reorder()`,
+#' `rev()`, `abs()`, `sqrt()`, `exp()`, `log()` / `log2()` / `log10()` /
+#' `log1p()`, `round()`, `after_stat()`, `after_scale()`, `stage()`,
+#' `ifelse()`, `cut()`, `is.na()`, `nchar()`, `toupper()` / `tolower()`,
+#' `substr()` or `trimws()`, or of the arithmetic or a comparison (`<`,
+#' `<=`, `==`, `!=`, `%in%`, `!`, `&`, `|`), of columns, constants, their
+#' arithmetic and `c()`, `sum()`, `max()`, `min()`, `mean()`, `median()`,
+#' `length()`, `alpha()`, `pmin()`, `pmax()`, `cumsum()`, `[`,
+#' `duplicated()`, `unique()`, `rank()` (`x: factor(AVISITN)`,
+#' `y: after_stat(density)`, `x: reorder(USUBJID, -PCHG)`,
+#' `fill: after_scale(alpha(colour, 0.4))`, a waterfall's
+#' `fill: PCHG <= -30` or `fill: ifelse(PCHG <= -30, "PR", "SD/PD")`;
+#' in YAML a text that starts with `!` is quoted, `'!is.na(ADT)'`);
+#' a number is a constant (`group: 1`).  A column whose name R does not
+#' write bare is written in backticks (`` x: `A-B` ``, as code is read
+#' back); written tight (`A-B`) it is read as the expression, and the
+#' check warns.  Any other R is `!r`.  The check
+#' warns for a text of neither form (it is written as a column of that
+#' name) and for a variable of `after_stat()` the layer's stat does not
+#' compute (`after_stat(densty)`).
 #'
 #' @param fn A function's name (`"plan_cells"`), or `NULL` for all.
 #' @return The function's entry (`package`, `description`, `dots`, `args`;
@@ -92,6 +149,15 @@ tfl_schema <- function(fn = NULL) {
   # the file's entries first; a figure's layer, made from the designer's
   # catalog, only for a name the file does not have
   ent <- .schema_all(figure = FALSE)[[nm]]
+  # ggplot2's other spelling of a function with a card (scale_color_manual):
+  # that card
+  if (is.null(ent) && (!grepl("::", fn, fixed = TRUE) || startsWith(fn, "ggplot2::"))) {
+    to <- .schema_gg_alias(nm)
+    if (!identical(to, nm) && identical(.schema_all(figure = FALSE)[[to]]$package, "ggplot2") &&
+        requireNamespace("ggplot2", quietly = TRUE) && nm %in% getNamespaceExports("ggplot2")) {
+      return(tfl_schema(to))
+    }
+  }
   # a catalog layer of ggplot2 (geom_line): its own entry over what the
   # installed layer takes -- its geom's and stat's parameters, its
   # aesthetics (they come through `...`)
@@ -102,6 +168,10 @@ tfl_schema <- function(fn = NULL) {
       # the catalog's aesthetics (those it needs marked) and the layer's own
       cat_aes <- ent$aes %||% list()
       ent$aes_required <- names(Filter(function(a) isTRUE(a$required), cat_aes))
+      # a required one's alternatives (geom_errorbar's x or y: the bars
+      # upright or across)
+      ors <- lapply(cat_aes[ent$aes_required], function(a) as.character(unlist(a$or)))
+      ent$aes_or <- ors[lengths(ors) > 0L]
       ent$aes <- unique(c(names(cat_aes), gg$aes))
     }
   }
@@ -111,7 +181,9 @@ tfl_schema <- function(fn = NULL) {
     (if (grepl("^(geom|stat)_", nm)) .schema_ggplot_entry(fn)) %||%
     # any other function of a plot ggplot2 exports (scale_colour_brewer,
     # theme_bw, guide_axis): by its formals (R/spec_figure.R)
-    (if (!grepl("::", fn, fixed = TRUE) || startsWith(fn, "ggplot2::")) .schema_gg_entry(nm))
+    (if (!grepl("::", fn, fixed = TRUE) || startsWith(fn, "ggplot2::")) .schema_gg_entry(nm)
+     # one of an extension's (ggh4x::facet_grid2, patchwork::inset_element)
+     else .schema_gg_entry(nm, sub("::.*$", "", fn)))
   if (is.null(ent)) return(NULL)
   # a figure's function: the arguments its kind shares, typed
   if (!is.null(ent$figure)) ent <- .schema_fig_common(ent, nm)
@@ -184,7 +256,40 @@ tfl_schema <- function(fn = NULL) {
 }
 
 .schema_scalars <- c("string", "integer", "number", "logical", "column", "stat",
-                     "template", "enum")
+                     "template", "enum", "function", "tilde", "date")
+
+# a date as its text, 2024-01-01 (a date scale's limits, breaks)
+.schema_date_re <- "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+.schema_is_date <- function(v) {
+  is.character(v) && length(v) == 1L && !is.na(v) && grepl(.schema_date_re, v) &&
+    !is.na(suppressWarnings(as.Date(v, optional = TRUE)))
+}
+
+# a function by its name (mean_se, Hmisc::smean.cl.normal): a name R
+# writes bare, or pkg::name
+.schema_fun_name_re <- "^([A-Za-z][A-Za-z0-9.]*::)?([A-Za-z]|[.][A-Za-z._])[A-Za-z0-9._]*$"
+.schema_is_fun_name <- function(v) {
+  is.character(v) && length(v) == 1L && !is.na(v) && grepl(.schema_fun_name_re, v) &&
+    !sub("^.*::", "", v) %in% c("TRUE", "FALSE", "NULL", "NA", "Inf", "NaN", "function",
+                                "if", "else", "for", "while", "repeat", "in", "next", "break")
+}
+
+# a formula as its text (y ~ x, ~ . / 7): text that parses as one
+.schema_is_tilde <- function(v) {
+  if (!is.character(v) || length(v) != 1L || is.na(v) || !grepl("~", v, fixed = TRUE)) return(FALSE)
+  e <- tryCatch(str2lang(v), error = function(err) NULL)
+  is.call(e) && identical(e[[1L]], as.name("~"))
+}
+
+# whether a call's function is one a call<...> type names: by its name
+# (the package left out), or a pattern of it (label_*)
+.schema_call_named <- function(f, names) {
+  if (!length(names)) return(TRUE)
+  nm <- .schema_fn_name(f)
+  if (nm %in% names) return(TRUE)
+  pat <- names[grepl("*", names, fixed = TRUE)]
+  any(vapply(pat, function(p) grepl(utils::glob2rx(p), nm), NA))
+}
 
 # ---- checking an item ----------------------------------------------------------
 
@@ -226,7 +331,8 @@ tfl_schema_check <- function(item) {
                     message = character(), stringsAsFactors = FALSE)
   # a figure's named plot: its items, each; a figure's R item: R
   if (inherits(item, "tfl_plot")) {
-    return(do.call(rbind, c(list(out), lapply(item$items, tfl_schema_check))))
+    return(do.call(rbind, c(list(out), lapply(item$items, tfl_schema_check),
+                            list(.schema_check_plot_aes(item)))))
   }
   if (identical(fn, ".r")) return(out)
   # a part (another plan's rows under the table's): its own items, each, and
@@ -258,6 +364,10 @@ tfl_schema_check <- function(item) {
   # a figure's own ggplot2 layer: the layer function's aesthetics and
   # parameters (R/spec_figure.R)
   if (identical(fn, "geom") && identical(ent$figure, "layer")) .schema_check_geom(item, bad)
+  # a layer's mapping: aesthetics it has (R/spec_figure.R)
+  .schema_check_mapping(fn, ent, item$args$mapping, bad)
+  # its values: columns, or expressions of a mapping's form (R/fig_aes.R)
+  .schema_check_aes_values(fn, ent, item$args %||% list(), bad)
   f <- .schema_formals(fn, ent)
   if (is.null(ent) && is.null(f)) {
     bad("", sprintf("%s is a function neither the schema nor its package has", fn))
@@ -271,17 +381,20 @@ tfl_schema_check <- function(item) {
   for (a in names(args)) {
     v <- args[[a]]
     if (inherits(v, "tfl_unset")) next
+    # a layer's argument by ggplot2's other spelling (color, pch, lwd) is
+    # the aesthetic it spells, as ggplot2 reads it
+    ka <- .schema_layer_arg_name(ent, a, known)
     # a figure's arrangement item says how it joins the plots (op: "&")
     if (identical(a, "op") && !is.null(ent$figure)) {
       if (!v %in% c("+", "&")) bad(a, "op is + or &")
       next
     }
-    if (!is.null(ent$args[[a]]$renamed_to)) {
-      bad(a, .schema_renamed_text(fn, a, ent$args[[a]]), "warning")
+    if (!is.null(ent$args[[ka]]$renamed_to)) {
+      bad(a, .schema_renamed_text(fn, a, ent$args[[ka]]), "warning")
       next
     }
-    if (a %in% names(ent$args) && !is.null(ent$args[[a]]$type)) {
-      msg <- .schema_fits(v, .schema_type(ent$args[[a]]$type), a)
+    if (ka %in% names(ent$args) && !is.null(ent$args[[ka]]$type)) {
+      msg <- .schema_fits(v, .schema_type(ent$args[[ka]]$type), a)
       if (!is.null(msg)) bad(a, msg)
       if (is.null(msg) && !.fig_is_figure_fn(fn)) {
         for (p in .schema_check_calls_in(v)) bad(a, p$message, p$level)
@@ -292,7 +405,7 @@ tfl_schema_check <- function(item) {
     } else if (!is.null(.schema_removed[[fn]][[a]])) {
       bad(a, sprintf("%s(%s = ) was removed in rtfreporter 0.9.0: %s", fn, a,
                      .schema_removed[[fn]][[a]]))
-    } else if (!a %in% known) {
+    } else if (!ka %in% known) {
       if (identical(fn, "plan_cells") && !a %in% .cells_kinds && make.names(a) != a) {
         # a row's label as an entry of its own ("Mean (SD)": [...]) names
         # no variable: it goes under its kind (continuous: {"Mean (SD)": ...})
@@ -332,6 +445,17 @@ tfl_schema_check <- function(item) {
   }
   if (is.list(v) && !is.object(v)) return(do.call(c, lapply(v, .schema_check_calls_in)))
   list()
+}
+
+# The name a layer's argument is checked by: ggplot2's own spelling of an
+# aesthetic (color is colour, pch shape, lty linetype) when the layer has
+# that one and not the name given; any other as it is
+.schema_layer_arg_name <- function(ent, a, known) {
+  if (!identical(ent$figure, "layer") || a %in% known || !requireNamespace("ggplot2", quietly = TRUE)) {
+    return(a)
+  }
+  std <- ggplot2::standardise_aes_names(a)
+  if (std %in% known) std else a
 }
 
 # Arguments rtfreporter removed, and where what they said goes now: the
@@ -410,7 +534,7 @@ tfl_schema_check <- function(item) {
     if (inherits(v, "cell_rows")) return("cell_rows" %in% unlist(ty$args))
     if (!inherits(v, c("tfl_call", "tfl_spec_call"))) return(FALSE)
     f <- if (inherits(v, "tfl_call")) v$fn else v$fun
-    return(!length(ty$args) || .schema_fn_name(f) %in% ty$args)
+    return(.schema_call_named(f, unlist(ty$args)))
   }
   if (k == "list") {
     if (inherits(v, c("tfl_r", "tfl_call"))) return(FALSE)
@@ -427,14 +551,34 @@ tfl_schema_check <- function(item) {
     if (is.data.frame(v)) return(all(names(v) %in% ty$args))
     return(is.list(v) && all(vapply(v, function(r) is.list(r) && all(names(r) %in% ty$args), NA)))
   }
-  # a scalar
+  # a scalar; a number written as arithmetic of constants (!r 1/5, !r -0.4 * pi)
+  if (k %in% c("number", "integer") && inherits(v, "tfl_r")) v <- .schema_r_number(v) %||% v
   if (is.list(v) || inherits(v, c("tfl_r", "tfl_call")) || length(v) != 1L) return(FALSE)
   switch(k,
     logical = is.logical(v),
     integer = is.numeric(v) && !is.na(v) && v == round(v),
     number = is.numeric(v),
     enum = as.character(v) %in% ty$args,
+    "function" = .schema_is_fun_name(v),
+    tilde = .schema_is_tilde(v),
+    date = .schema_is_date(v) || (is.logical(v) && is.na(v)),
     is.character(v) || is.numeric(v) || is.logical(v))
+}
+
+# An !r expression that is arithmetic of numbers (1/5, -0.4 * pi, 2^10) as
+# the number it is, else NULL: a number of the spec written as R reads
+.schema_r_number <- function(v) {
+  e <- tryCatch(str2lang(as.character(unclass(v))), error = function(err) NULL)
+  ok <- function(x) {
+    if (is.numeric(x)) return(length(x) == 1L)
+    if (is.name(x)) return(as.character(x) %in% c("pi", "Inf"))
+    if (!is.call(x) || !is.name(x[[1L]])) return(FALSE)
+    if (!as.character(x[[1L]]) %in% c("+", "-", "*", "/", "^", "(")) return(FALSE)
+    all(vapply(as.list(x)[-1L], ok, NA))
+  }
+  if (is.null(e) || !ok(e)) return(NULL)
+  n <- eval(e, baseenv())
+  if (is.numeric(n) && length(n) == 1L && !is.na(n)) n
 }
 
 .schema_show <- function(ty) {
