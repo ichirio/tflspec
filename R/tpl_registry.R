@@ -115,7 +115,7 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
         "analysis_label", "overall", "any_grade", "cat_id", "cat_label", "ci_id", "ci_label",
         "ci_method", "groupn_label", "median_label", "time_prefix", "time_unit", "unit",
         "when", "visit_label", "param_label", "baseline_label", "value_label", "change_label", "cell", "start",
-        "missing_label", "param_heading"),
+        "missing_label", "param_heading", "sd_missing"),
       "text"),
     k(c("heading", "statistics", "cat_statistics", "continuous_statistics",
         "categorical_statistics"), "text", TRUE),
