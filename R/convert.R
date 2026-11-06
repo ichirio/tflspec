@@ -571,6 +571,11 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
       if (!is.na(lr$where[1L])) { data$where <- tfl_r(gsub("\r\n?", "\n", lr$where[1L])); note(id, "listings", 1, "where", "kept as R text (!r)", lr$where[1L]) }
       if (!is.na(lr$sort[1L])) data$sort <- as.list(.conv_split(lr$sort[1L]))
     }
+    # its rework step (the planner row's process_code, a table's too): data.steps
+    if (!is.null(prow) && nrow(prow) && !is.na(prow$process_code[1L])) {
+      data$steps <- list(tfl_r(gsub("\r\n?", "\n", prow$process_code[1L])))
+      note(id, "_tflplanner", id, "process_code", "the listing's rework step kept as R text (data.steps)", prow$process_code[1L])
+    }
     # rtfreporter's chain: plan_listing(listing_col(...), ..., type, sep ...)
     # |> plan_blanks(where = "records") |> plan_paginate_rows(max_rows)
     cols <- .conv_rows(lc, note, id, "listing_cols", list_cols = "vars", drop = c("output_id", "note", "more"))
