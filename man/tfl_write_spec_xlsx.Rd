@@ -22,7 +22,7 @@ parts that are rows to \code{path}: \code{toc}, \code{datasets}, \code{populatio
 \code{analysis_data}, \code{analyses}, \code{codelists}, \code{tokens}, \code{header}, \code{footer},
 \code{titles}, \code{footnotes}, \code{page}, \code{report}, \code{listing_cols}, and
 \verb{_not_in_xlsx} (what the workbook does not hold: \verb{content:}, \code{!r}
-values, nested calls, a figure's plot).  Lists are written \code{a | b};
+values, nested calls, a figure's plot, the data catalog's \code{groups}).  Lists are written \code{a | b};
 R text as it is (the columns that hold R are known).  The workbook is a
 view for Excel; an import back changes only these rows, by their keys.
 }

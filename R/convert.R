@@ -68,8 +68,10 @@ tfl_convert_sheets_to_yaml <- function(from, to, content_fn = NULL, overwrite = 
 #'   `planner` (tflplanner's `_tflplanner` sheet: the report list and the
 #'   setup code), `ard` (the ARD sheets), `listing` (`listings`,
 #'   `listing_cols`), `figures` (a figure's design list, by id), `study`
-#'   (study.yml's fields).  What the app holds, or what the workbooks read
-#'   as.
+#'   (study.yml's fields), `not_converted` ([tfl_sheets_from_yaml()]'s notes
+#'   on what the sheets could not hold: listed in `_not_converted.yml` too,
+#'   with one message saying how many).  What the app holds, or what the
+#'   workbooks read as.
 #' @export
 tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALSE,
                                  figures = c("design", "items")) {
@@ -87,6 +89,27 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   lf <- sheets$listing
   figs <- sheets$figures %||% list()
   meta <- sheets$study %||% list()
+  # the study sheet's rows no table spec reads (study.yml's `settings:` keys
+  # of the app's own: the treatment variable ...) are not the bridge's: set
+  # aside here and written back to settings below, not a stop (#689).  The
+  # value as the study.yml had it (sheets$study) where the row says the same.
+  extra_settings <- list()
+  if (!is.null(sp$study) && nrow(sp$study)) {
+    # (only a key study.yml really had: a typed key the study never had still
+    # reaches the bridge's stop, "The `study` sheet has a key it does not read")
+    ex <- !is.na(sp$study$key) & !sp$study$key %in% names(.ard_spec_study_keys) &
+      sp$study$key %in% names(meta$settings)
+    if (any(ex)) {
+      for (i in which(ex)) {
+        k <- sp$study$key[i]
+        v <- sp$study$value[i]
+        orig <- meta$settings[[k]]
+        if (!is.null(orig) && identical(.sheet_cell(orig), v)) v <- orig
+        extra_settings[k] <- list(v)
+      }
+      sp$study <- sp$study[!ex, , drop = FALSE]
+    }
+  }
   if (dir.exists(to) && !overwrite && length(list.files(to, recursive = TRUE))) {
     stop("tfl_yaml_from_sheets(): ", to, " is not empty (overwrite = TRUE to write over it).",
          call. = FALSE)
@@ -140,6 +163,12 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     dr <- sp$report[is.na(sp$report$output_id) | !nzchar(sp$report$output_id), , drop = FALSE]
     for (k in c("file", "program")) {
       if (nrow(dr) && k %in% names(dr) && !is.na(dr[[k]][1L])) study$settings[[k]] <- dr[[k]][1L]
+    }
+  }
+  for (k in names(extra_settings)) {
+    v <- extra_settings[[k]]
+    if (!is.null(v) && !(is.atomic(v) && length(v) == 1L && is.na(v))) {
+      study$settings[[k]] <- extra_settings[[k]]
     }
   }
   if (!is.null(ard$study) && nrow(ard$study)) {
@@ -273,6 +302,17 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   }
   put("spec/toc.yml", list(outputs = toc))
 
+  # what tfl_sheets_from_yaml() could not hold (its `not_converted`: output,
+  # part, reason) is listed with the rest, and said once; a study that lost
+  # nothing says nothing
+  sh_nc <- sheets$not_converted
+  if (is.data.frame(sh_nc) && nrow(sh_nc) && all(c("output", "part", "reason") %in% names(sh_nc))) {
+    for (i in seq_len(nrow(sh_nc))) note(sh_nc$output[i], sh_nc$part[i], NA, NA, sh_nc$reason[i])
+    message(sprintf(paste0("tfl_yaml_from_sheets(): %d part%s of the spec the sheets could not hold %s ",
+                           "listed in spec/_not_converted.yml."),
+                    nrow(sh_nc), if (nrow(sh_nc) == 1L) "" else "s",
+                    if (nrow(sh_nc) == 1L) "is" else "are"))
+  }
   nc_df <- .nc_frame(nc)
   put("spec/_not_converted.yml", list(not_converted = lapply(seq_len(nrow(nc_df)), function(i) as.list(nc_df[i, ]))))
   invisible(list(to = to, files = files, not_converted = nc_df))
@@ -539,10 +579,19 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   codelists <- list()
   extra <- list()
   items <- NULL
-  if (kind == "figure" && !is.null(fig) && identical(figures, "items")) {
+  y <- if (kind == "figure" && !is.null(fig)) {
+    if (is.character(fig)) .conv_read_fig(fig) else fig
+  }
+  # a figure written as items already (its design list's `content`, as
+  # tfl_sheets_from_yaml() puts it, #689): read back as it was, whichever
+  # `figures` says -- there is nothing of the designer's to convert
+  by_items <- !is.null(y) && is.null(y$layers) && is.list(y$content) && length(y$content) > 0L
+  if (by_items) {
+    items <- list(data = if (!is.null(y$data)) list(steps = y$data),
+                  content = lapply(unname(y$content), .item_from_list), template = y$template)
+  } else if (kind == "figure" && !is.null(fig) && identical(figures, "items")) {
     # the design's content of function calls (R/fig_content.R); a design
     # it cannot convert stays the designer's, said
-    y <- if (is.character(fig)) .conv_read_fig(fig) else fig
     items <- tryCatch(tfl_fig_content_from_design(y), error = function(e) {
       note(id, "figure", id, NA, paste("kept as the designer's pieces:", conditionMessage(e)))
       NULL
@@ -553,8 +602,8 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     content <- items$content
     if (!is.null(items$template)) extra$template <- items$template
     if (!is.null(y$ggplot2_version)) extra$ggplot2_version <- y$ggplot2_version
+    if (by_items) for (k in c("plot", "plots", "compose")) if (!is.null(y[[k]])) extra[[k]] <- y[[k]]
   } else if (kind == "figure" && !is.null(fig)) {
-    y <- if (is.character(fig)) .conv_read_fig(fig) else fig
     data <- list(source = "code")
     if (!is.null(y$data)) data$steps <- y$data
     if (!is.null(y$stats)) data$stats <- y$stats
@@ -811,7 +860,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
 # An old figure design (spec/figures/<id>.yml) read as the designer wrote and
 # read it (tfl_read_fig_design()): YAML 1.1, so its yes / no are TRUE / FALSE
 # (x_log: yes, na.rm: yes), unlike the new spec's reader
-.conv_read_fig <- function(path) yaml::read_yaml(path, handlers = list(r = tfl_r))
+.conv_read_fig <- function(path) yaml::read_yaml(path, handlers = list(r = tfl_r, unset = function(x) tfl_unset()))
 
 # the data frames of a list of sheets with their text's CRLF / CR as LF
 .conv_lf_sheets <- function(x) {
