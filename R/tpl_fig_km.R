@@ -215,7 +215,7 @@
                 linewidth = a$median_linewidth)
   } else .tpl_km_drop(ct, "hline")
   rt <- isTRUE(a$risk_table %||% TRUE)
-  ct <- if (rt) .tpl_km_set(ct, "risk_table", title = a$risk_title, size = a$risk_size,
+  ct <- if (rt) .tpl_km_set(ct, "risk_table", title = a$plot$risk_title %||% a$risk_title, size = a$risk_size,
                             height = a$risk_height) else .tpl_km_drop(ct, "risk_table")
   f$content <- ct
   # the figure's settings the arguments say
@@ -329,8 +329,11 @@
 }
 
 # The look: the figure style standard's (tfl_param(study = "km.<key>")),
-# not a report type's arguments; a report changes it with `+` layers or
-# `plot:`.  (The layout `km` keeps them, the types hide them.)
+# not a report type's arguments.  A report's `plot:` sets the figure
+# settings among them: theme, palette and base_size (the plot's arguments,
+# .tpl_km_plot_args) and risk_title (the risk table's title); the others
+# are the study's figure style, or the report's own `+` layers.  (The
+# layout `km` keeps them all, the types hide them.)
 .tpl_km_look <- c("censor_shape", "censor_size", "censor_stroke", "median_linetype",
                   "median_colour", "median_linewidth", "risk_title", "risk_height", "risk_size",
                   "linewidth", "palette", "theme", "base_size", "ci_alpha")
