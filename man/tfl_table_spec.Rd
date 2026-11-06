@@ -191,7 +191,7 @@ The key \code{.stat_group} then names them in \code{cols} (\code{TRT01A | .stat_
 (\code{plan_levels(variable = c("AGE", "SEX"))}: the values of the ARD's
 \code{variable} column; one not numbered comes after, in the ARD's order).}
 \item{\code{levels}}{The order of its values: \verb{Grade 0 | Grade 1 | Total};
-erb{F = Female | M = Male} gives each value its text too (a named order,
+\code{F = Female | M = Male} gives each value its text too (a named order,
 \code{plan_levels(SEX = c(F = "Female", M = "Male"))}).}
 \item{\code{empty_levels}}{\code{show} (blank, the default) or \code{hide}: whether
 its values that no record has -- a code list's value, counted 0 in

@@ -40,7 +40,7 @@ report's own items \code{+}-ed after it; \code{"items"} (or a report that
 replaces one of the template's layers) writes its design.}
 
 \item{study}{The study (\code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}) or its folder; for a listing
-of records (erb{data: \{source: dataset\}}) the code starts with its data
+of records (\code{data: {source: dataset}}) the code starts with its data
 part, as \code{\link[=tfl_listing_code]{tfl_listing_code()}} \code{part = "data"} writes it (the dataset
 read, its condition, code lists and order).  \code{NULL}: the content only.}
 }
