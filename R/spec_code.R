@@ -658,6 +658,9 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
   .plan_content_more(items, sp$tables)
 }
 
+# the verbs whose columns say a part of an item and content_more the rest
+.rest_verbs <- c("plan_columns", "plan_col_header", "plan_labels")
+
 # the items the sheets cannot say, from the tables rows' content_more (YAML,
 # tfl_sheets_from_spec()): each put by its verb's rank among the sheets'
 # items; a table_plan() there is the table's whole (its row says none of it)
@@ -667,6 +670,17 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
   if (!length(more)) return(items)
   if (any(vapply(more, function(it) identical(it$fn, "table_plan"), NA))) {
     items <- Filter(function(it) !identical(it$fn, "table_plan"), items)
+  }
+  # (a verb's rest -- what its columns could not say -- is put with the
+  # sheets' item of that verb: one item, as it was written)
+  for (fn in .rest_verbs) {
+    im <- which(vapply(more, function(it) identical(it$fn, fn), NA))
+    ix <- which(vapply(items, function(it) identical(it$fn, fn), NA))
+    if (length(im) == 1L && length(ix) == 1L &&
+        !length(intersect(names(items[[ix]]$args), names(more[[im]]$args)))) {
+      items[[ix]]$args <- c(items[[ix]]$args, more[[im]]$args)
+      more <- more[-im]
+    }
   }
   for (it in more) items <- .insert_by_rank(items, it)
   # (a normalize_ard() there is the table's own, the tables row's overall_label /
@@ -769,15 +783,87 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
   out
 }
 
+# The arguments of these verbs that no sheet has a column for, and that the
+# bridge keeps apart as the item's rest instead of sending the whole item out
+# (#689): what the columns can say stays on the sheets' rows.  `span` is
+# the header lines', kept with them when the cells cannot say it.
+.bridge_rest_names <- function(fn) {
+  switch(fn,
+    plan_columns = c("cell_format", "column_widths_twips"),
+    plan_col_header = c("header_sep", "span"),
+    character())
+}
+
+# Whether an item's arguments (those the sheets say) hold a text a cell does
+# not keep: a blank, or a blank at either end (a separator " / ", a heading
+# "  Total"), which the sheets read trimmed.  The item with a rest then goes
+# whole, as for any other verb, so that nothing it says changes (#689).
+# plan_col_header's cell texts may be blank ("" is no text), plan_labels'
+# headings may not (a blank one is a value).
+.cell_unsafe <- function(fn, args) {
+  edge <- function(x) {
+    x <- unlist(x, use.names = FALSE)
+    is.character(x) && any(!is.na(x) & grepl("^\\s|\\s$", x))
+  }
+  switch(fn,
+    plan_columns = edge(args$sep),
+    plan_col_header = {
+      h <- args$header
+      edge(args$lines) || edge(if (is.data.frame(h)) h$text else lapply(h, function(cl) cl[["text"]]))
+    },
+    plan_labels = {
+      x <- unlist(args, use.names = FALSE)
+      is.character(x) && (edge(x) || any(!is.na(x) & !nzchar(x)))
+    },
+    FALSE)
+}
+
+# plan_col_header(lines = , span = ): each cell's span, as .plan_header_lines()
+# works it out -- one value for every cell, or a list a header row, a value a
+# cell named as the row's cells are -- as one character vector a row, with NA
+# for "one" (a blank `span` cell).  NULL when the span is not a plain value
+# the cells can hold (an expression, a list of the wrong length ...).
+.lines_span <- function(lines, span) {
+  no <- c("tfl_r", "tfl_call", "tfl_unset", "tfl_formula")
+  if (inherits(span, no)) return(NULL)
+  if (!is.list(lines) || !length(lines)) return(NULL)
+  if (is.list(span) && length(span) != length(lines)) return(NULL)
+  out <- vector("list", length(lines))
+  for (i in seq_along(lines)) {
+    nm <- names(lines[[i]])
+    sp <- if (is.list(span)) span[[i]] else span
+    if (inherits(sp, no) || !length(sp)) return(NULL)
+    v <- vapply(seq_along(nm), function(j) {
+      s1 <- if (!is.null(names(sp)) && nm[j] %in% names(sp)) sp[[nm[j]]] else
+        if (is.null(names(sp))) sp[[1L]] else "each"
+      if (!is.character(s1) || length(s1) != 1L || is.na(s1) || inherits(s1, no)) NA_character_
+      else if (identical(s1, "one")) "" else s1
+    }, "")
+    if (anyNA(v)) return(NULL)
+    out[[i]] <- ifelse(v == "", NA_character_, v)
+  }
+  out
+}
+
 # A table's content written to the sheets a workbook has -- the inverse of
 # .plan_content_items(), verb by verb, in the sheets' own forms (`a | b`,
 # `name = value`, a newline as \n).  What a sheet cannot say (plan_after(),
 # a second plan_digits(), an expression as a label ...) is listed in
 # attr(, "not_converted") and left out, never written approximately.  The
 # app reads its grids from this while the workbook form is still its own.
+#
+# plan_columns(), plan_col_header() and plan_labels() are the exception to
+# "an item the sheets cannot say goes whole" (#689): what their columns can
+# say is written, and the arguments they cannot are the item's rest, an
+# item of the same verb in attr(, "not_converted_rest") -- not lost, so no
+# note.  An item with nothing the sheets can say goes whole as for any verb.
 .plan_sheets_from_content <- function(items, output_id = NULL) {
   id <- if (is.null(output_id)) NA_character_ else output_id
   lost <- character()
+  rest <- list()
+  ra <- list()
+  orig <- list()
+  rest_add <- function(name) ra[name] <<- list(orig[[name]])
   # (the items a miss is in, by their place among the items not
   # normalize_ard(): attr(, "not_converted_at"), the caller keeps them whole)
   lost_at <- integer()
@@ -889,10 +975,16 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
     nm <- names(a) %||% rep("", length(a))
     pos <- a[!nzchar(nm)]
     named <- a[nzchar(nm)]
+    orig <- items[[cur]]$args %||% list()
+    ra <- list()
+    # (the arguments of these verbs no sheet has a column for are the item's
+    # rest; `span` with header lines is the branch's)
+    span_here <- identical(fn, "plan_col_header") && !is.null(named$lines)
+    take <- setdiff(intersect(names(named), .bridge_rest_names(fn)), if (span_here) "span")
     # an argument no branch below reads, or a positional one the verb's
     # branch does not take, would be dropped without a word: the item goes
     # whole to the caller's content_more instead (#689)
-    unread <- .bridge_unread(fn, names(named), length(pos))
+    unread <- .bridge_unread(fn, setdiff(names(named), c(take, if (span_here) "span")), length(pos))
     if (length(unread)) {
       miss(fn, sprintf("%s: no sheet says it", paste(unread, collapse = ", ")))
       next
@@ -902,6 +994,9 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
       miss(fn, "a second call (a sheet holds one)"); next
     }
     seen <- c(seen, fn)
+    for (k in take) rest_add(k)
+    named <- named[setdiff(names(named), take)]
+    snap <- list(tb, study, vars, cells, lay, sty, cols, cstyles, hdr, codes, labelled)
     switch(fn,
       table_plan = {
         if (!is.null(named$cols)) tb$cols <- bar(named$cols)
@@ -969,6 +1064,10 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
         # call or an earlier one) is not "put together" with the first --
         # the item goes whole to content_more (#689)
         twice <- function(v, x) v %in% labelled && !identical(vars[[v]]$label, x)
+        # (what the variables sheet cannot say stays the item's rest, by its
+        # name; `variable` is never split: the sheets read every heading
+        # under it, so a part of it kept apart would replace the rest)
+        keep_rest <- function(v, why) if (identical(v, "variable")) miss(fn, why) else rest_add(v)
         for (v in names(named)) {
           x <- named[[v]]
           if (is.list(x) && length(x) &&
@@ -991,8 +1090,8 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
           # data variable's are its code list's already (the ARD has them)
           if (is.character(x) && !is.null(names(x)) && !anyNA(names(x)) && all(nzchar(names(x)))) {
             if (!v %in% own) {
-              miss(fn, sprintf(paste0("%s: a data variable's value labels go in the ",
-                                      "report's code list (the ARD program puts them on the data)"), v))
+              keep_rest(v, sprintf(paste0("%s: a data variable's value labels go in the ",
+                                          "report's code list (the ARD program puts them on the data)"), v))
               next
             }
             for (k in seq_along(x)) {
@@ -1002,10 +1101,10 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
             next
           }
           if (!is.character(x) || length(x) != 1L) {
-            miss(fn, sprintf("%s: a value's labels stay in code", v)); next
+            keep_rest(v, sprintf("%s: a value's labels stay in code", v)); next
           }
           if (twice(v, x)) {
-            miss(fn, sprintf("%s: a second text for its heading", v)); next
+            keep_rest(v, sprintf("%s: a second text for its heading", v)); next
           }
           var_row(v); vars[[v]]$label <- x
           labelled <- c(labelled, v)
@@ -1115,11 +1214,25 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
       },
       plan_col_header = {
         h <- named$header
-        if (!is.null(named$lines)) {
-          h <- do.call(rbind, lapply(seq_along(named$lines), function(i) {
-            l <- named$lines[[i]]
-            data.frame(line = as.character(i), cols = names(l), text = unname(l),
-                       stringsAsFactors = FALSE)
+        lines <- named$lines
+        # a span over the header lines is a cell of the `span` column, as
+        # .plan_header_lines() makes it; one that is no plain value, or with no
+        # lines to span, stays the rest -- with the lines it belongs to
+        csp <- NULL
+        if (!is.null(named$span)) {
+          csp <- if (!is.null(lines)) .lines_span(lines, named$span)
+          if (is.null(csp)) {
+            rest_add("span")
+            if (!is.null(lines)) { rest_add("lines"); lines <- NULL }
+          }
+        }
+        if (!is.null(lines)) {
+          h <- do.call(rbind, lapply(seq_along(lines), function(i) {
+            l <- lines[[i]]
+            d <- data.frame(line = as.character(i), cols = names(l), text = unname(l),
+                            stringsAsFactors = FALSE)
+            if (!is.null(csp)) d$span <- csp[[i]]
+            d
           }))
         }
         if (is.data.frame(h)) {
@@ -1133,24 +1246,35 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
           if (all(vapply(v, function(e) is.character(e) && length(e) == 1L, NA))) {
             tb$header_n <- if (identical(names(v), "n")) v$n
                            else paste(paste(names(v), "=", unlist(v)), collapse = " | ")
-          } else miss(fn, "values other than page / table")
+          } else rest_add("values")
         }
         if (!is.null(named$col_header_align)) sty$col_header_align <- named$col_header_align
       },
       plan_columns = {
         w <- named$widths
         if (!is.null(w)) {
-          if (is.null(names(w))) miss(fn, "widths by position (a sheet names its columns)")
+          if (is.null(names(w)) || !all(nzchar(names(w)))) rest_add("widths")
           else for (cn in names(w)) { col_row(cn); cols[[cn]]$rel_width <- w[[cn]] }
         }
         for (cn in named$decimal) { col_row(cn); cols[[cn]]$decimal_split <- TRUE }
         rt <- named$row_title
-        if (is.numeric(rt)) miss(fn, "row_title by position")
+        if (is.numeric(unlist(rt))) rest_add("row_title")
         else for (cn in rt) { col_row(cn); cols[[cn]]$row_title <- TRUE }
         if (!is.null(named$auto_width)) sty$auto_width <- named$auto_width
         if (!is.null(named$sep)) tb$sep <- named$sep
       },
       miss(fn, "a verb no sheet holds"))
+    # the item's rest: with a part the sheets say it is kept beside it; with
+    # nothing else the sheets say, the item goes whole as before
+    if (length(ra) && !cur %in% lost_at) {
+      if (identical(snap, list(tb, study, vars, cells, lay, sty, cols, cstyles, hdr, codes, labelled))) {
+        miss(fn, sprintf("%s: no sheet says it", paste(names(ra), collapse = ", ")))
+      } else if (.cell_unsafe(fn, orig[setdiff(names(orig), names(ra))])) {
+        miss(fn, "a text the sheets would not keep, with arguments they cannot say")
+      } else {
+        rest[[length(rest) + 1L]] <- tfl_item(items[[cur]]$fn, ra[intersect(names(orig), names(ra))])
+      }
+    }
   }
   # one sheet's rows as text, the way a workbook holds them
   txt <- function(v) {
@@ -1194,6 +1318,7 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
   }
   attr(sp, "not_converted") <- lost
   attr(sp, "not_converted_at") <- sort(unique(lost_at[!is.na(lost_at)]))
+  attr(sp, "not_converted_rest") <- rest
   sp
 }
 

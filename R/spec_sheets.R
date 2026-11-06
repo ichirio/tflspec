@@ -120,7 +120,9 @@ tfl_sheets_from_spec <- function(study, outputs) {
       keep <- keep[-out]
       if (!length(keep)) { sp <- list(); break }
     }
-    more <- c(more, items[setdiff(seq_along(items), keep)])
+    # (and the rest of a plan_columns() / plan_col_header() / plan_labels()
+    # whose columns say a part: the arguments no column says)
+    more <- c(more, items[setdiff(seq_along(items), keep)], attr(sp, "not_converted_rest"))
     if (length(more)) more_rows[[key]] <<- more
     for (sh in names(sp)) {
       d <- sp[[sh]]
