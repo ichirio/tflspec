@@ -76,6 +76,23 @@ test_that("the settings: the package's, under study.yml's ai: keys; the language
   expect_identical(tflspec:::.ai_language_name("Deutsch"), "Deutsch")
 })
 
+test_that("decisions: a new study's file starts from the shipped decisions.md, the first decision D1", {
+  d <- file.path(withr::local_tempdir(), "study")
+  dir.create(file.path(d, "ai"), recursive = TRUE)
+  expect_no_warning(f <- tfl_ai_decisions_write(d, data.frame(scope = "all", topic = "denominator",
+                                                              decision = "the arm's subjects")))
+  shipped <- readLines(system.file("ai", "agent", "decisions.md", package = "tflspec"),
+                       warn = FALSE, encoding = "UTF-8")
+  expect_gt(length(shipped), 0L)
+  got <- readLines(f, warn = FALSE, encoding = "UTF-8")
+  # the header the kit copies, then the decision
+  expect_identical(got, c(shipped, "- D1 [all] denominator: the arm's subjects (person)"))
+  # the header's example line is no decision
+  r <- tfl_ai_decisions_read(d)
+  expect_identical(r$id, "D1")
+  expect_identical(r$topic, "denominator")
+})
+
 test_that("prepare(): AGENTS.md asks and writes the drafts; the requests carry the decisions; the check reads the drafts", {
   skip_on_cran()
   skip_if_not_installed("haven")
@@ -93,6 +110,9 @@ test_that("prepare(): AGENTS.md asks and writes the drafts; the requests carry t
   expect_false(dir.exists(file.path(d, "ai", "answers")))
   dec <- readLines(file.path(d, "ai", "decisions.md"), warn = FALSE, encoding = "UTF-8")
   expect_true(any(grepl("D<n> \\[<scope>\\]", dec)))
+  # (the file a new study's first decision starts from)
+  expect_identical(dec, readLines(system.file("ai", "agent", "decisions.md", package = "tflspec"),
+                                  warn = FALSE, encoding = "UTF-8"))
   # the shared instructions say what a draft holds, once
   ins <- readLines(file.path(d, "ai", "instructions-table.md"), warn = FALSE, encoding = "UTF-8")
   expect_identical(sum(startsWith(ins, "## The skeleton (what a draft holds)")), 1L)

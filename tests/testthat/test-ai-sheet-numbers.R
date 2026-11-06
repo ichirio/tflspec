@@ -229,6 +229,44 @@ test_that("a TOC item with no shell: one sheet writing its part makes it (out of
   expect_identical(dr$requests$outputs[dr$requests$request == "no-shell"], "Table 20.9")
 })
 
+test_that("a dry run keeps the corrected numbers when ai/ is there already, and makes nothing", {
+  skip_if_not_installed("openxlsx")
+  skip_if_not_installed("haven")
+  f <- numbers_book(tempfile(fileext = ".xlsx"))
+  d <- numbers_study()
+  on.exit(unlink(c(f, d), recursive = TRUE), add = TRUE)
+  off <- data.frame(sheet = "t14.1.1", number = "Table 14.2.1", make = FALSE)
+  # no ai/: nothing kept, nothing made (ai/ would start the migration)
+  dr <- prep_numbers(d, f, dry_run = TRUE, numbers = off)
+  expect_identical(dr$numbers$source[2L], "given")
+  expect_false(dir.exists(file.path(d, "ai")))
+  expect_false(file.exists(file.path(d, "study.yml")))
+  expect_length(dr$files, 0L)
+  expect_false("saved" %in% prep_numbers(d, f, dry_run = TRUE)$numbers$source)
+  # ai/ there: the numbers are kept, and only they
+  dir.create(file.path(d, "ai"))
+  dr <- prep_numbers(d, f, dry_run = TRUE, numbers = off)
+  csv <- file.path(d, "ai", "sheet_numbers.csv")
+  expect_identical(list.files(file.path(d, "ai")), "sheet_numbers.csv")
+  expect_identical(dr$files, "ai/sheet_numbers.csv")
+  expect_false(file.exists(file.path(d, "study.yml")))
+  expect_identical(utils::read.csv(csv)$number, "Table 14.2.1")
+  # a later call reads them, a dry run or not
+  dr2 <- prep_numbers(d, f, dry_run = TRUE)
+  expect_identical(dr2$numbers$source[2L], "saved")
+  expect_false(dr2$numbers$make[2L])
+  expect_identical(dr2$files, character())
+  r <- prep_numbers(d, f)
+  expect_identical(r$numbers$source[2L], "saved")
+  # NA takes a row out: back to the rule
+  dr3 <- prep_numbers(d, f, dry_run = TRUE,
+                      numbers = data.frame(sheet = "t14.1.1", number = "Table 14.2.1", make = NA))
+  expect_identical(nrow(utils::read.csv(csv)), 0L)
+  expect_false("saved" %in% prep_numbers(d, f, dry_run = TRUE)$numbers$source)
+  expect_identical(dr3$numbers$source[2L], "rule")
+  expect_true(dr3$numbers$make[2L])
+})
+
 test_that("numbers: a TOC item given to a sheet that does not write it is that sheet's", {
   skip_if_not_installed("openxlsx")
   skip_if_not_installed("haven")

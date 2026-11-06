@@ -66,7 +66,10 @@ are written again on every call (the drafts are kept).}
 \item{dry_run}{\code{TRUE} to read the workbook and the ADaM and write
 nothing: the same result, to look at before the requests are written
 (its \code{requests} are the TOC's batches, without \code{chars} and \code{file};
-\code{files} is empty).}
+\code{files} is empty).  The one thing it keeps is \code{numbers}, the person's
+corrected report numbers, in \code{ai/sheet_numbers.csv} when the study's
+\code{ai/} folder is there already (\code{files} then names that file); a dry run
+never makes \code{ai/} or the study folder.}
 
 \item{adam_summary}{A \code{\link[=tfl_ai_adam_summary]{tfl_ai_adam_summary()}} result to use instead of
 reading the ADaM again (a previous call's \verb{$adam}); read again when
@@ -138,8 +141,9 @@ item made in a sheet has that sheet as its shell (made in several,
 the first in the workbook's order; the others listed in \code{sheets}), one
 the rule made and no sheet makes now has none (the no-shell request's,
 counted in \code{counts}).  Saved as \code{ai/sheet_numbers.csv}
-(\code{sheet}, \code{number}, \code{make}, UTF-8) when the requests are written (not
-by a dry run), and read by a later call; given again, it goes over the
+(\code{sheet}, \code{number}, \code{make}, UTF-8) when the requests are written, and
+by a dry run when the study's \code{ai/} folder is there already (a dry run
+on a new study keeps nothing), and read by a later call; given again, it goes over the
 saved rows (a row of the same sheet and number replaced, \code{NA} taking
 it out) and the file keeps the result.  \code{NULL} (default): the saved file, if any.
 With \code{unit = "sheet"} only.}
