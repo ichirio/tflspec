@@ -134,7 +134,17 @@ tfl_sheets_from_spec <- function(study, outputs) {
   norm_rows <- list()
   more_rows <- list()
   table_rows(s$defaults$content, NA_character_)
-  for (nm in names(s$patterns)) table_rows(s$patterns[[nm]]$content, paste0("@", nm))
+  # (a pattern has rows of the report and page sheets only -- no tables row
+  # -- so its content cannot be put on the sheets: said, by pattern, #689)
+  for (nm in names(s$patterns)) {
+    pc <- s$patterns[[nm]]$content
+    if (inherits(pc, "tfl_r") || length(pc)) {
+      fns <- if (inherits(pc, "tfl_r")) "R code" else unique(vapply(pc, function(it) it$fn, ""))
+      note(paste0("@", nm), "content", paste0(
+        "a pattern's content (", paste(fns, collapse = ", "), ") is not kept: a pattern's rows are the ",
+        "report and page sheets', none holds its layers; the reports that extend it do not get them back"))
+    }
+  }
 
   # -- the page parts ----------------------------------------------------------
   page_rows <- function(page, id) {

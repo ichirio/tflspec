@@ -89,6 +89,24 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   lf <- sheets$listing
   figs <- sheets$figures %||% list()
   meta <- sheets$study %||% list()
+  # the study sheet's rows no table spec reads (study.yml's `settings:` keys
+  # of the app's own: the treatment variable ...) are not the bridge's: set
+  # aside here and written back to settings below, not a stop (#689).  The
+  # value as the study.yml had it (sheets$study) where the row says the same.
+  extra_settings <- list()
+  if (!is.null(sp$study) && nrow(sp$study)) {
+    ex <- !is.na(sp$study$key) & !sp$study$key %in% names(.ard_spec_study_keys)
+    if (any(ex)) {
+      for (i in which(ex)) {
+        k <- sp$study$key[i]
+        v <- sp$study$value[i]
+        orig <- meta$settings[[k]]
+        if (!is.null(orig) && identical(.sheet_cell(orig), v)) v <- orig
+        extra_settings[k] <- list(v)
+      }
+      sp$study <- sp$study[!ex, , drop = FALSE]
+    }
+  }
   if (dir.exists(to) && !overwrite && length(list.files(to, recursive = TRUE))) {
     stop("tfl_yaml_from_sheets(): ", to, " is not empty (overwrite = TRUE to write over it).",
          call. = FALSE)
@@ -142,6 +160,11 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     dr <- sp$report[is.na(sp$report$output_id) | !nzchar(sp$report$output_id), , drop = FALSE]
     for (k in c("file", "program")) {
       if (nrow(dr) && k %in% names(dr) && !is.na(dr[[k]][1L])) study$settings[[k]] <- dr[[k]][1L]
+    }
+  }
+  for (k in names(extra_settings)) {
+    if (!is.null(extra_settings[[k]]) && !(is.atomic(extra_settings[[k]]) && is.na(extra_settings[[k]]))) {
+      study$settings[[k]] <- extra_settings[[k]]
     }
   }
   if (!is.null(ard$study) && nrow(ard$study)) {

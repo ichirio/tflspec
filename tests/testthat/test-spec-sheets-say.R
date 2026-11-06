@@ -184,3 +184,50 @@ test_that("a program differs when an analysis reads the variable the defaults' l
   expect_false(grepl("set_levels(TRT01A", after, fixed = TRUE))
   expect_false(grepl("Drug X 200 mg", after, fixed = TRUE))
 })
+
+# -- item 5: what stopped the whole conversion ---------------------------------------
+
+test_that("a pattern with content items no longer stops the conversion: dropped, named", {
+  for (cs in list(c("content:", "  - plan_cells: {categorical: '{n}'}"),
+                  c("content:", "  - plan_footnotes: {pages: [Note]}", "page:", "  tokens: {A: b}"))) {
+    d <- rts_study(list("patterns/p.yml" = cs,
+                        "outputs/T-1.yml" = rts_table(extends = c("defaults", "patterns/p"))))
+    x <- rts_trip(d)
+    nc <- x$sh$not_converted
+    expect_identical(nc$output[nc$part == "content"], "@p")
+    expect_match(nc$reason[nc$part == "content"], "a pattern's content (", fixed = TRUE)
+    expect_true("content" %in% vapply(x$nc, function(e) e$sheet, ""))
+    # the pattern's page part stays, the report still extends it
+    back <- tfl_read_outputs(x$to)[["T-1"]]
+    expect_true("patterns/p" %in% back$extends)
+    expect_length(tfl_read_study_spec(x$to)$patterns$p$content, 0L)
+  }
+  # a pattern with page parts only says nothing
+  d <- rts_study(list("patterns/p.yml" = c("page:", "  tokens: {A: b}"),
+                      "outputs/T-1.yml" = rts_table(extends = c("defaults", "patterns/p"))))
+  expect_false(any(rts_trip(d)$sh$not_converted$part %in% "content"))
+})
+
+test_that("a study.yml settings: key the sheet does not read is kept, not a stop", {
+  study <- c("study_id: MIN-1", "title: minimal", "settings:", "  rounding: sas",
+             "  treatment: TRT01A", "  retries: 3", "  custom: {a: 1, b: [x, y]}")
+  d <- rts_study(list("outputs/T-1.yml" = rts_table()), study = study)
+  x <- rts_trip(d)
+  st <- yaml::read_yaml(file.path(x$to, "study.yml"))$settings
+  expect_identical(st$rounding, "sas")
+  expect_identical(st$treatment, "TRT01A")
+  # (the value as study.yml had it, where the sheet's text says the same)
+  expect_identical(st$retries, 3L)
+  expect_identical(st$custom, list(a = 1L, b = c("x", "y")))
+  expect_identical(length(x$msgs), 0L)
+})
+
+test_that("a study sheet key the table spec does not read is kept from the sheet alone, too", {
+  d <- rts_study(list("outputs/T-1.yml" = rts_table()))
+  sh <- tfl_sheets_from_yaml(d)
+  sh$study$settings <- NULL
+  sh$table$study <- rbind(sh$table$study, data.frame(key = "treatment", value = "TRT01P"))
+  to <- withr::local_tempdir()
+  tfl_yaml_from_sheets(sh, to, overwrite = TRUE)
+  expect_identical(yaml::read_yaml(file.path(to, "study.yml"))$settings$treatment, "TRT01P")
+})
