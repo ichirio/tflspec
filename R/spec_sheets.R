@@ -84,9 +84,15 @@ tfl_sheets_from_spec <- function(study, outputs) {
     is_nz <- vapply(items, function(it) identical(it$fn, "normalize_ard"), NA)
     nz <- items[is_nz]
     items <- items[!is_nz]
-    if (length(nz) && !is.na(id) && length(nz[[1L]]$args)) norm_rows[[id]] <<- nz[[1L]]$args
-    # (a second normalize_ard(): kept with the items the sheets cannot say)
-    more <- nz[-1L]
+    # the defaults have no tables row to read the arguments from, and a
+    # second normalize_ard() no row of its own: all of them are kept whole
+    # with the items the sheets cannot say (#689).  A single one with
+    # arguments is tried on the tables row below, and kept whole too when
+    # reading the row does not give its arguments back.
+    whole <- length(nz) > 1L ||
+      (is.na(id) && any(vapply(nz, function(it) length(it$args) > 0L, NA)))
+    if (length(nz) && !whole && !is.na(id) && length(nz[[1L]]$args)) norm_rows[[id]] <<- nz[[1L]]$args
+    more <- if (whole) nz else list()
     nz <- nz[seq_len(min(1L, length(nz)))]
     key <- if (is.na(id)) ".defaults" else id
     if (!length(items)) { if (length(more)) more_rows[[key]] <<- more; return() }
@@ -355,7 +361,11 @@ tfl_sheets_from_spec <- function(study, outputs) {
     tb$note[i] <- as.character(nt)
     table$tables <- tb
   }
-  # a table's normalize_ard() arguments on its tables row
+  # a table's normalize_ard() arguments on its tables row -- when reading
+  # the row (and the report's hierarchical analysis) gives the same
+  # arguments back; else the item, whole, in content_more (#689: keys,
+  # hierarchy, drop_contexts, drop_key_variables have no column, and a
+  # hierarchy is read from the first hierarchical analysis)
   for (id in names(norm_rows)) {
     a <- norm_rows[[id]]
     tb <- table$tables
@@ -371,6 +381,11 @@ tfl_sheets_from_spec <- function(study, outputs) {
       }, ""), collapse = " | "))
       if (!is.null(a$stack_sep)) put("stack_sep", encodeString(as.character(a$stack_sep), quote = "\""))
       if (isTRUE(a$stack_nest)) put("stack_nest", "TRUE")
+    }
+    got <- tryCatch(.conv_normalize_args(list(tables = tb), ard, id), error = function(e) NULL)
+    if (is.null(got) || !identical(.nz_canon(got), .nz_canon(a))) {
+      more_rows[[id]] <- c(list(tfl_item("normalize_ard", a)), more_rows[[id]])
+      next
     }
     table$tables <- tb
   }
@@ -437,6 +452,20 @@ tfl_sheets_from_spec <- function(study, outputs) {
   }, "")), stringsAsFactors = FALSE)
   names(d) <- cols
   d
+}
+
+# normalize_ard()'s arguments in one form to compare (the sheets give them
+# back as a bar-split vector, YAML may hold a list of single values): names
+# in order, a list of single values as a vector
+.nz_canon <- function(x) {
+  if (is.list(x)) {
+    x <- lapply(unclass(x), .nz_canon)
+    if (!is.null(names(x))) x <- x[order(names(x))]
+    else if (length(x) && all(vapply(x, function(e) is.atomic(e) && length(e) == 1L, NA))) x <- unlist(x)
+    return(x)
+  }
+  attributes(x) <- NULL
+  x
 }
 
 # a table's rework step: the first `!r` among its data steps (a figure's

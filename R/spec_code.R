@@ -460,12 +460,16 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
   # (the study sheet's rounding is the setup's option, tfl_report_setup_code());
   # the items no column says (content_more), each in its place, too
   items <- .items_for_program(.plan_content_more(.plan_content_items(sp), sp$tables))
+  # (a normalize_ard() in content_more is the table's own: not one more
+  # from the definitions)
   if (isTRUE(normalize)) {
     id <- output_id %||% attr(sp, "output_id")
-    nz <- .normalize_spec_args(sp, ard_spec, id, "tfl_table_code", guess = TRUE)
+    own_nz <- any(vapply(items, function(it) identical(it$fn, "normalize_ard"), NA))
+    nz <- if (!own_nz) list(tfl_item("normalize_ard",
+      .normalize_spec_args(sp, ard_spec, id, "tfl_table_code", guess = TRUE)))
     # plan_levels() the ARD already says, left out as from a YAML file
     # (.levels_prune()); not when the program's data part makes the data
-    items <- c(list(tfl_item("normalize_ard", nz)), .levels_prune_sheets(items, sp, ard_spec, id))
+    items <- c(nz, .levels_prune_sheets(items, sp, ard_spec, id))
   }
   .content_table_code(items, data = data, plan = plan, pipe = pipe)
 }

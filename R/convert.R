@@ -209,7 +209,9 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
       } else {
         # every table starts from the ARD made a table's rows (the program's
         # normalize_ard()): once, for all of them
-        defaults$content <- .items_to_list(c(list(tfl_item("normalize_ard", list())), items))
+        # (unless the defaults say their own, with arguments)
+        has_nz <- any(vapply(items, function(it) identical(it$fn, "normalize_ard"), NA))
+        defaults$content <- .items_to_list(c(if (!has_nz) list(tfl_item("normalize_ard", list())), items))
       }
     } else if (any(vapply(c("tables", "variables", "cells", "layout", "columns", "style", "col_header", "cell_styles"),
                         function(s) nrow(scope(sp[[s]], NA)) > 0L, NA))) {
@@ -625,7 +627,12 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
       if (!is.null(content_fn)) {
         content <- .conv_items(content_fn(sp, id))
         nz <- .conv_normalize_args(sp, ard, id, note)
-        if (length(nz)) content <- c(list(tfl_item("normalize_ard", nz)), content)
+        # (a normalize_ard() the sheets could not say, in content_more, is the
+        # table's: not another from its hierarchical analysis as well; at
+        # the head, where the derived one goes)
+        is_nz <- vapply(content, function(it) identical(it$fn, "normalize_ard"), NA)
+        if (any(is_nz)) content <- c(content[is_nz], content[!is_nz])
+        else if (length(nz)) content <- c(list(tfl_item("normalize_ard", nz)), content)
         # a records table (table_plan(value = ), its parts by plan_append()):
         # its data the planner row's dataset, not the ARD
         if (any(vapply(content, function(it) identical(it$fn, "table_plan") && !is.null(it$args$value), NA)) &&

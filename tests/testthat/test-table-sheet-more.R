@@ -205,6 +205,86 @@ test_that("the bridge's guard: an argument no branch reads is named, never dropp
   expect_true(is.null(sp$columns) || !nrow(sp$columns))
 })
 
+test_that("normalize_ard(): keys, hierarchy, drop_contexts, drop_key_variables go whole", {
+  content <- list(
+    tfl_item("normalize_ard", list(keys = list("AGE", "SEX"), hierarchy = list("AEBODSYS", "AEDECOD"),
+                                   drop_contexts = list("alpha", "beta"), drop_key_variables = TRUE)),
+    tfl_item("table_plan", list(cols = "TRT01A", rows = list(group = "variable"))))
+  d <- t689_study(content)
+  r <- t689_trip(d)
+  tb <- r$sh$table$tables
+  expect_match(tb$content_more[tb$output_id %in% "T-1"], "- normalize_ard:", fixed = TRUE)
+  expect_match(tb$content_more[tb$output_id %in% "T-1"], "drop_key_variables", fixed = TRUE)
+  back <- tfl_read_outputs(r$to)[["T-1"]]
+  # one normalize_ard(), not the defaults' as well
+  expect_identical(sum(vapply(back$content, function(it) identical(it$fn, "normalize_ard"), NA)), 1L)
+  expect_setequal(t689_items(r$to), t689_items(d))
+  expect_identical(t689_code(r$to), t689_code(d))
+  expect_match(paste(t689_code(r$to), collapse = "\n"), "drop_key_variables = TRUE", fixed = TRUE)
+})
+
+test_that("normalize_ard(): a hierarchy the report's first hierarchical analysis does not give stays whole", {
+  # the ae_max_grade shape: three hierarchical analyses, the first one
+  # with two levels; the table's hierarchy has three
+  an <- function(id, vars) list(id = id, method = "hierarchical", dataset = "ADAE", population = "SAF",
+                                by = "TRT01A", variables = as.list(vars))
+  ard <- list(analyses = list(an("A1", c("AEBODSYS", "AESEV")), an("A2", c("AEBODSYS", "AESEV")),
+                              an("A3", c("AEBODSYS", "AEDECOD", "AESEV"))))
+  content <- list(
+    tfl_item("normalize_ard", list(hierarchy = list("AEBODSYS", "AEDECOD", "AESEV"))),
+    tfl_item("table_plan", list(cols = "TRT01A", rows = list(group1 = "AEBODSYS", group2 = "AEDECOD"),
+                                label = list(label = "AESEV"))))
+  d <- t689_study(content, ard = ard)
+  r <- t689_trip(d)
+  tb <- r$sh$table$tables
+  expect_match(tb$content_more[tb$output_id %in% "T-1"], "AESEV", fixed = TRUE)
+  back <- tfl_read_outputs(r$to)[["T-1"]]
+  nz <- Filter(function(it) identical(it$fn, "normalize_ard"), back$content)
+  expect_length(nz, 1L)
+  expect_identical(as.character(unlist(nz[[1L]]$args$hierarchy)), c("AEBODSYS", "AEDECOD", "AESEV"))
+  expect_setequal(t689_items(r$to), t689_items(d))
+  expect_identical(t689_code(r$to), t689_code(d))
+  # the same hierarchy as the first analysis has: on the sheets, as before
+  ard2 <- list(analyses = list(an("A1", c("AEBODSYS", "AEDECOD", "AESEV"))))
+  d2 <- t689_study(content, ard = ard2)
+  r2 <- t689_trip(d2)
+  tb2 <- r2$sh$table$tables
+  expect_true(is.null(tb2$content_more) || all(is.na(tb2$content_more)))
+  expect_setequal(t689_items(r2$to), t689_items(d2))
+  expect_identical(t689_code(r2$to), t689_code(d2))
+})
+
+test_that("normalize_ard(): the defaults' arguments go whole too", {
+  d <- t689_study(t689_head, defaults = list(
+    tfl_item("normalize_ard", list(drop_contexts = list("alpha"))),
+    tfl_item("plan_paginate_rows", list(max_rows = 25L))))
+  r <- t689_trip(d)
+  tb <- r$sh$table$tables
+  expect_match(tb$content_more[is.na(tb$output_id)], "drop_contexts", fixed = TRUE)
+  back <- tfl_read_study_spec(r$to)$defaults$content
+  nz <- Filter(function(it) identical(it$fn, "normalize_ard"), back)
+  expect_length(nz, 1L)
+  expect_identical(as.character(unlist(nz[[1L]]$args$drop_contexts)), "alpha")
+})
+
+test_that("a template's hierarchy (ae_max_grade) comes back whole", {
+  skip_if_not_installed("rtfreporter")
+  d <- t689_study(t689_head)
+  s <- tfl_read_study_spec(d)
+  o <- tfl_output("T-mg", "table", population = "SAF", extends = "defaults",
+                  template = list(name = "ae_max_grade",
+                                  args = list(population = "SAF", hierarchy = c("AEBODSYS", "AEDECOD"))))
+  b <- suppressMessages(tfl_template_to_spec(o, s))
+  hier <- function(x) {
+    nz <- Filter(function(it) identical(it$fn, "normalize_ard"), x$content)
+    as.character(unlist(nz[[1L]]$args$hierarchy))
+  }
+  expect_identical(hier(b), c("AEBODSYS", "AEDECOD", "AESEV"))
+  suppressMessages(tfl_write_output(b, file.path(d, "spec", "outputs", "T-mg.yml")))
+  r <- t689_trip(d)
+  expect_identical(hier(tfl_read_outputs(r$to)[["T-mg"]]), c("AEBODSYS", "AEDECOD", "AESEV"))
+})
+
 test_that("plan_paginate_cols(col_header = ): that item goes whole, the rest of the report stays", {
   content <- c(t689_head, list(tfl_item("plan_paginate_cols", list(at = 2L, col_header = "Continued"))))
   d <- t689_study(content)
