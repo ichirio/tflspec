@@ -106,3 +106,27 @@ test_that("what a figure of items has no place for is named in the notes, by rep
   expect_match(nc$reason[nc$output %in% "F-1"], "object is not kept", fixed = TRUE)
   expect_true(any(vapply(x2$nc, function(e) identical(e$output, "F-1"), NA)))
 })
+
+# -- item 3: options:, styles:, style: have no place on the sheets -------------------
+
+test_that("defaults.yml options:, styles: and a report's style: are named in the notes", {
+  d <- rts_study(list(
+    "defaults.yml" = c("options:", "  rtfreporter.png_device: ragg", "styles:", "  compact:",
+                       "    page: {rtf_style: {font_size_half_points: 16}}", "content: []"),
+    "outputs/T-1.yml" = rts_table("T-1", "defaults", "style: compact")))
+  x <- rts_trip(d)
+  nc <- x$sh$not_converted
+  expect_match(nc$reason[nc$part == "options"], "rtfreporter.png_device", fixed = TRUE)
+  expect_match(nc$reason[nc$part == "styles"], "compact", fixed = TRUE)
+  expect_identical(nc$output[nc$part == "style"], "T-1")
+  # and they reach the person: the file, one message
+  expect_true(all(c("options", "styles", "style") %in% vapply(x$nc, function(e) e$sheet, "")))
+  expect_identical(sum(grepl("3 parts", x$msgs, fixed = TRUE)), 1L)
+  # what the sheets cannot hold is gone from the YAML: said, not hidden
+  expect_null(tfl_read_outputs(x$to)[["T-1"]]$style)
+})
+
+test_that("a study with none of them has no such note", {
+  x <- rts_trip(rts_study(list("outputs/T-1.yml" = rts_table())))
+  expect_false(any(x$sh$not_converted$part %in% c("options", "styles", "style")))
+})

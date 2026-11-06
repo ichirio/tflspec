@@ -336,6 +336,22 @@ tfl_sheets_from_spec <- function(study, outputs) {
   }
   # the setup code on the planner sheet's study row
   planner <- c(list(list(output_id = NA_character_, description = "(every report)",
+  # defaults.yml's options: and styles:, and the style: a report picks, have
+  # no sheet or column to be put on: said (#689)
+  if (length(s$options)) {
+    note(NA_character_, "options", paste0(
+      "defaults.yml options: (", paste(names(s$options), collapse = ", "), ") is not kept: no sheet or column holds it"))
+  }
+  if (length(s$styles)) {
+    note(NA_character_, "styles", paste0(
+      "defaults.yml styles: (", paste(names(s$styles), collapse = ", "), ") is not kept: no sheet or column holds it"))
+  }
+  for (id in names(outs)) {
+    if (length(outs[[id]]$style)) {
+      note(id, "style", paste0("style: ", paste(unlist(outs[[id]]$style), collapse = ", "),
+                               " is not kept: no sheet or column holds it; the report no longer picks its look"))
+    }
+  }
                          setup_code = if (!is.null(s$study$setup)) cell(s$study$setup) else NA_character_,
                          process_code = NA_character_, section = NA_character_, population = NA_character_,
                          datasets = NA_character_, batches = NA_character_)), planner)
