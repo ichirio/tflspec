@@ -34,6 +34,7 @@ The figure template \code{km_cumulative}, layout \code{km}: a variant of \code{k
    \code{legend_title} \tab other \tab call \tab  \tab  \tab the legend's title (labs(colour = )); NULL: none \cr
    \code{legend_median} \tab usual \tab call \tab FALSE \tab  \tab TRUE: each arm's legend text has its median survival and 95\% CI, "Drug X: 12.3 (9.8, 15.1)" (from the fit; NE when not reached) \cr
    \code{legend_median_digits} \tab other \tab call \tab 1 \tab  \tab the decimals of the median and its CI in the legend \cr
+   \code{legend_median_text} \tab other \tab call \tab \{arm\}: \{median\} (\{lcl\}, \{ucl\}) \tab  \tab the wording of that legend text, with \{arm\}, \{median\}, \{lcl\} and \{ucl\} for the arm and its median and 95\% CI limits (any may be left out or repeated): "\{arm\}, Median (95\% CI): \{median\} (\{lcl\}, \{ucl\})"; no effect without 'legend_median' \cr
    \code{pvalue} \tab usual \tab call \tab TRUE \tab  \tab the log-rank p-value (add_pvalue()) \cr
    \code{pvalue_location} \tab other \tab call \tab annotation \tab  \tab where the p-value goes (add_pvalue(location = )) \cr
    \code{title} \tab other \tab call \tab  \tab  \tab the figure's title (labs(title = )) \cr
