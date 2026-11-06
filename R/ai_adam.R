@@ -120,7 +120,9 @@
 #'   `variables` (one row a variable: `dataset`, `dataset_label`,
 #'   `variable`, `label`, `kind`, `levels` -- ` | ` between the values --
 #'   as [tfl_adam_metadata()] gives it; `missing`, how many records have no
-#'   value (`NA`, and `""` for a character variable); and `codes`: what each code of a
+#'   value (`NA`, and `""` for a character variable); `blank`, how many of
+#'   them are `""` (a variable whose missing values are all `""` is shown as
+#'   `[blank: ...]`, not `[missing: ...]`); and `codes`: what each code of a
 #'   code variable stands for, `"1 = <65 | 2 = >=65"`, from its value labels
 #'   or the variable it pairs with -- `AGEGR1N` and `AGEGR1`, `ARMCD` and
 #'   `ARM`, `PARAMCD` and `PARAM` -- when each code has one text) and `datasets` (`dataset`, `label`,
@@ -157,6 +159,9 @@ tfl_ai_adam_summary <- function(path, datasets = NULL, max_levels = 15L, file = 
   vars <- meta[c("dataset", "dataset_label", "variable", "label", "kind", "levels")]
   vars$missing <- vapply(seq_len(nrow(vars)), function(i) {
     .ai_adam_missing(x[[vars$dataset[i]]][[vars$variable[i]]])
+  }, 1L)
+  vars$blank <- vapply(seq_len(nrow(vars)), function(i) {
+    .ai_adam_blank(x[[vars$dataset[i]]][[vars$variable[i]]])
   }, 1L)
   # what a code stands for: its value labels (a SAS format read with the
   # data), or the variable it pairs with (AGEGR1N / AGEGR1, ARMCD / ARM,
@@ -216,6 +221,14 @@ print.tfl_ai_adam <- function(x, ...) {
   miss <- is.na(v)
   if (is.character(v)) miss <- miss | !nzchar(trimws(v))
   sum(miss)
+}
+
+# How many of a variable's values are "" (a character or factor variable):
+# a dataset read from a transport file holds "" for no value, not NA
+.ai_adam_blank <- function(v) {
+  if (is.factor(v)) v <- as.character(v)
+  if (!is.character(v)) return(0L)
+  sum(!is.na(v) & !nzchar(trimws(v)))
 }
 
 # ", 120 subjects" after the records; nothing without a USUBJID
@@ -313,7 +326,10 @@ print.tfl_ai_adam <- function(x, ...) {
     "",
     paste0("Each line: `NAME (type) Label: values [missing: ...]`. The values are listed for a ",
            "character variable with few of them, as the data holds them; `[missing: 3 of 120]` ",
-           "is how many records have no value (NA, or blank); no record is shown.",
+           "is how many records have no value (NA); `[blank: 3 of 120]`, how many hold \"\" and none ",
+           "is NA (a mix of both is `missing`); no record is shown. A dataset read from a transport ",
+           "file holds \"\" for no value, so a condition on a `blank` variable uses `== \"\"` or ",
+           "`!= \"Y\"`: `is.na()` does not find them.",
            if (any(!is.na(vars$codes))) paste0(
              " A code variable shows what each code stands for: ",
              "`[codes: 1 = <65 | 2 = >=65]`."),
@@ -351,8 +367,9 @@ print.tfl_ai_adam <- function(x, ...) {
                     ifelse(is.na(v$levels), "", paste0(": ", v$levels)),
                     ifelse(is.na(v$codes %||% NA), "", paste0(" [codes: ", v$codes, "]")),
                     ifelse(is.na(v$define %||% NA), "", paste0(" [", define, ": ", v$define, "]")),
-                    " [missing: ", ifelse(v$missing == 0L, "none",
-                                          paste(v$missing, "of", ds$records[i])), "]")
+                    # (all of them "": blank -- a condition on it is not is.na())
+                    ifelse(v$missing > 0L & (v$blank %||% 0L) == v$missing, " [blank: ", " [missing: "),
+                    ifelse(v$missing == 0L, "none", paste(v$missing, "of", ds$records[i])), "]")
     c(sprintf("## %s%s (%s records%s, %d variables)", ds$dataset[i],
               if (is.na(ds$label[i])) "" else paste0(": ", ds$label[i]),
               format(ds$records[i], big.mark = ","), .ai_adam_subjects(ds$subjects[i]),

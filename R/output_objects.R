@@ -194,7 +194,7 @@ tfl_output_contents <- function(output, study, dir = ".") {
     eval(parse(text = tfl_helpers_code()), env)
     wd <- setwd(dir)
     on.exit(setwd(wd), add = TRUE)
-    .eval_study_code(code, env, study, ".")
+    .eval_study_code(code, env, study, ".", output_id = o$id)
     for (id in ids) data[[id]] <- get(id, envir = env)
   }
   data
@@ -225,7 +225,7 @@ tfl_output_contents <- function(output, study, dir = ".") {
   eval(parse(text = tfl_helpers_code()), env)
   wd <- setwd(dir)
   on.exit(setwd(wd), add = TRUE)
-  .eval_study_code(code, env, study, ".")
+  .eval_study_code(code, env, study, ".", output_id = o$id)
   get("data", envir = env, inherits = FALSE)
 }
 
