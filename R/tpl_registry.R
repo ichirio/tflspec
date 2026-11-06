@@ -115,7 +115,7 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
         "analysis_label", "overall", "any_grade", "cat_id", "cat_label", "ci_id", "ci_label",
         "ci_method", "groupn_label", "median_label", "time_prefix", "time_unit", "unit",
         "when", "visit_label", "param_label", "baseline_label", "value_label", "change_label", "cell", "start",
-        "missing_label", "param_heading", "sd_missing"),
+        "missing_label", "param_heading", "post_header", "sd_missing"),
       "text"),
     k(c("heading", "statistics", "cat_statistics", "continuous_statistics",
         "categorical_statistics"), "text", TRUE),
@@ -1194,6 +1194,9 @@ tpl_disposition <- function(ard, population, ..., codelists = NULL) {
             doc = "each parameter's heading (a named vector); given by name, merged"),
   tfl_param("cell", "{n}", doc = "a cell's template"),
   tfl_param("heading", "Parameter / Baseline", doc = "the label column's heading"),
+  tfl_param("post_header", "{col}", doc = paste(
+    "the header over each post-baseline category",
+    "(`{col}`: the category)")),
   tfl_param("worst", c("HIGH", "LOW", "NORMAL"), doc = paste(
     "a subject once a parameter, at its worst category after baseline, the",
     "categories from the worst; NULL: every record (the baseline's records too)")),
@@ -1367,7 +1370,7 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
            list(line = "1", cols = ".values", span = a$by,
                 text = if (page_n) "{col1} (N={n})" else "{col1}"),
            list(line = "2", cols = "row_label", text = a$heading),
-           list(line = "2", cols = ".values", span = "each", text = "{col}"))),
+           list(line = "2", cols = ".values", span = "each", text = a$post_header))),
            if (page_n) list(values = list(n = TRUE))))),
     if (page_n) list(
       tfl_item("plan_paginate_group", list(keep = FALSE, heading = a$param_heading,
@@ -1390,8 +1393,9 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
                   tfl_param("params", required = TRUE, doc = "the PARAMCD values"),
                   .tpl_where_param(doc = "the records kept besides the visit and parameters (R)")),
              .tpl_shift_params[c("by", "data_id", "by_levels", "param_labels", "levels",
-                                 "worst", "worst_by", "percent_of", "cell", "missing_label",
-                                 "total_label", "param_page", "param_heading", "header_n")]),
+                                 "worst", "worst_by", "percent_of", "cell", "post_header",
+                                 "missing_label", "total_label", "param_page",
+                                 "param_heading", "header_n")]),
   body = function(a, ctx) {
     b <- lapply(.tpl_shift_params, `[[`, "default")
     for (k in intersect(names(a), names(b))) b[k] <- list(a[[k]])

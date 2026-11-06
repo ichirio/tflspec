@@ -221,7 +221,6 @@ spec/data.yml               the data catalog: datasets, populations
 spec/toc.yml                the reports, in order
 spec/defaults.yml           what every report starts from
 spec/patterns/<name>.yml    a layer a report may extend
-spec/codelists.yml          code lists to copy from (optional)
 spec/outputs/<id>.yml       one report a file
 spec/_<name>.yml            a note, never read (_assumptions.yml)
 ```

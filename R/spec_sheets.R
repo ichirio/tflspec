@@ -143,13 +143,6 @@ tfl_sheets_from_spec <- function(study, outputs) {
   page_rows(s$defaults$page, NA_character_)
   for (nm in names(s$patterns)) page_rows(s$patterns[[nm]]$page, paste0("@", nm))
 
-  # -- the code list templates --------------------------------------------------
-  for (v in names(s$codelists)) for (i in seq_along(s$codelists[[v]])) {
-    e <- s$codelists[[v]][[i]]
-    add("codelists", list(output_id = NA_character_, variable = v, value = cell(e$value), label = cell(e$label), order = as.character(i),
-                          under = cell(e$under)))
-  }
-
   # -- the ARD's study-wide sheets ----------------------------------------------
   ard <- list()
   keys <- s$study$keys %||% list()

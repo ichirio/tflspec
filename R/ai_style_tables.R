@@ -105,13 +105,17 @@ tfl_rtf_style_tables <- function(rtf_dir) {
   pg <- min(d$page)
   tt <- doc$titles[[min(pg, length(doc$titles))]] %||% list(place = "none", align = NA, text = character())
   fn <- doc$footnotes[[min(pg, length(doc$footnotes))]] %||% list(place = "none", align = NA, text = character())
+  # the font the table's cells use, the commonest; the file's default font
+  # (\deff, else the font table's first) when the rows name none
+  uses <- unlist(strsplit(d$font_uses[nzchar(d$font_uses)], " | ", fixed = TRUE))
+  font_used <- if (length(uses)) mode(uses) else doc$font_default %||% NA_character_
   data.frame(
     file = d$file[1L], table = d$table[1L], pages = length(unique(d$page)),
     kind = .rtf_kind_guess(tt$text), title = paste(tt$text, collapse = " / "),
     header_rows = nrow(hd), body_rows = nrow(bd), n_cols = last$n_cells,
     rel_widths = last$rel_widths, stub_ratio = ratio,
     rules = paste(names(rules)[rules], collapse = " | "),
-    font = strsplit(d$fonts[1L], " | ", fixed = TRUE)[[1L]][1L] %||% NA_character_,
+    font = font_used,
     font_size_pt = suppressWarnings(as.numeric(mode(as.character(
       if (nrow(bd)) bd$font_size_pt else hd$font_size_pt)))),
     stub_align = stub_al, value_align = val_al,
@@ -161,12 +165,12 @@ tfl_rtf_style_tables <- function(rtf_dir) {
   ends <- gregexpr("\\\\row(?![a-z])", body, perl = TRUE)[[1L]]
   before <- if (first > 0L) .rtf_paras(substring(body, 1L, first - 1L)) else list()
   after <- if (ends[1L] > 0L) .rtf_paras(substring(body, max(ends) + 4L)) else list()
-  side <- function(groups, paras, place_g, place_p, title) {
+  side <- function(groups, paras, place_g, place_p) {
     from_g <- lapply(groups, function(g) {
       p <- .rtf_paras(g)
-      # (a page header's running line -- the company, the page number --
-      # is not a title: its lines with a page field or no words)
-      if (title) p <- Filter(function(e) !e$page_no, p)
+      # (a page header's or footer's running line -- the company, the page
+      # number -- is not a title or a footnote: its lines with a page field)
+      p <- Filter(function(e) !e$page_no, p)
       if (length(p)) list(place = place_g, align = .rtf_mode(vapply(p, `[[`, "", "align")),
                           text = vapply(p, `[[`, "", "text")) else NULL
     })
@@ -180,8 +184,14 @@ tfl_rtf_style_tables <- function(rtf_dir) {
   }
   list(orientation = if (land) "landscape" else "portrait",
        margins = if (anyNA(mg)) NA_character_ else paste(round(mg / 1440, 2), collapse = " | "),
-       titles = side(heads, before, "header", "before", TRUE),
-       footnotes = side(foots, after, "footer", "after", FALSE))
+       font_default = {
+         ft <- .rtf_font_table(x)
+         deff <- regmatches(x, regexpr("\\\\deff[0-9]+", x, perl = TRUE))
+         dn <- if (length(deff)) substring(deff, 6L) else NA_character_
+         if (!is.na(dn) && dn %in% names(ft)) unname(ft[dn]) else if (length(ft)) unname(ft[1L]) else NA_character_
+       },
+       titles = side(heads, before, "header", "before"),
+       footnotes = side(foots, after, "footer", "after"))
 }
 
 .rtf_mode <- function(v) {
