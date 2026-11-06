@@ -431,7 +431,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     d <- scope(sp[[s]], id)
     if (is.null(d) || !nrow(d)) next
     rows <- .conv_rows(d[1L, , drop = FALSE], note, id, s,
-                       drop = c("output_id", "note", "type", "pattern", "file", "program"))
+                       drop = c("output_id", "note", "type", "pattern", "extends", "file", "program"))
     for (k in names(rows[[1L]])) page <- .page_put(page, s, k, rows[[1L]][[k]], note, id)
   }
   page
@@ -534,6 +534,20 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   rrow <- scope(sp$report, id)
   pattern <- if (nrow(rrow) && !is.null(rrow$pattern) && !is.na(rrow$pattern[1L])) rrow$pattern[1L]
   extends <- c(if (!is.null(pattern)) paste0("patterns/", sub("^@", "", pattern)), "defaults")
+  # the `extends` cell, when the report has one, says the chain as written
+  # (`none` stays `none`); its first pattern has to be the `pattern` cell's
+  if (nrow(rrow) && !is.null(rrow$extends) && !is.na(rrow$extends[1L]) && nzchar(trimws(rrow$extends[1L]))) {
+    chain <- trimws(strsplit(rrow$extends[1L], "|", fixed = TRUE)[[1L]])
+    chain <- chain[nzchar(chain)]
+    first <- grep("^patterns/", chain, value = TRUE)[1L]
+    said <- if (is.null(pattern)) NA_character_ else paste0("patterns/", sub("^@", "", pattern))
+    if (!identical(first, said)) {
+      stop("report ", sQuote(id), ": the `pattern` cell (", if (is.na(said)) "blank" else sQuote(sub("^patterns/", "@", said)),
+           ") and the `extends` cell (", sQuote(paste(chain, collapse = " | ")),
+           ") name different patterns; change one of them.", call. = FALSE)
+    }
+    extends <- chain
+  }
   data <- NULL
   content <- list()
   codelists <- list()
