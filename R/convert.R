@@ -552,10 +552,19 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   codelists <- list()
   extra <- list()
   items <- NULL
-  if (kind == "figure" && !is.null(fig) && identical(figures, "items")) {
+  y <- if (kind == "figure" && !is.null(fig)) {
+    if (is.character(fig)) .conv_read_fig(fig) else fig
+  }
+  # a figure written as items already (its design list's `content`, as
+  # tfl_sheets_from_yaml() puts it, #689): read back as it was, whichever
+  # `figures` says -- there is nothing of the designer's to convert
+  by_items <- !is.null(y) && is.null(y$layers) && is.list(y$content) && length(y$content) > 0L
+  if (by_items) {
+    items <- list(data = if (!is.null(y$data)) list(steps = y$data),
+                  content = lapply(unname(y$content), .item_from_list), template = y$template)
+  } else if (kind == "figure" && !is.null(fig) && identical(figures, "items")) {
     # the design's content of function calls (R/fig_content.R); a design
     # it cannot convert stays the designer's, said
-    y <- if (is.character(fig)) .conv_read_fig(fig) else fig
     items <- tryCatch(tfl_fig_content_from_design(y), error = function(e) {
       note(id, "figure", id, NA, paste("kept as the designer's pieces:", conditionMessage(e)))
       NULL
@@ -566,8 +575,8 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     content <- items$content
     if (!is.null(items$template)) extra$template <- items$template
     if (!is.null(y$ggplot2_version)) extra$ggplot2_version <- y$ggplot2_version
+    if (by_items) for (k in c("plot", "plots", "compose")) if (!is.null(y[[k]])) extra[[k]] <- y[[k]]
   } else if (kind == "figure" && !is.null(fig)) {
-    y <- if (is.character(fig)) .conv_read_fig(fig) else fig
     data <- list(source = "code")
     if (!is.null(y$data)) data$steps <- y$data
     if (!is.null(y$stats)) data$stats <- y$stats
@@ -824,7 +833,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
 # An old figure design (spec/figures/<id>.yml) read as the designer wrote and
 # read it (tfl_read_fig_design()): YAML 1.1, so its yes / no are TRUE / FALSE
 # (x_log: yes, na.rm: yes), unlike the new spec's reader
-.conv_read_fig <- function(path) yaml::read_yaml(path, handlers = list(r = tfl_r))
+.conv_read_fig <- function(path) yaml::read_yaml(path, handlers = list(r = tfl_r, unset = function(x) tfl_unset()))
 
 # the data frames of a list of sheets with their text's CRLF / CR as LF
 .conv_lf_sheets <- function(x) {

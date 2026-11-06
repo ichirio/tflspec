@@ -61,3 +61,48 @@ test_that("a study that lost nothing says nothing, and its list is the converter
   expect_identical(length(x$msgs), 0L)
   expect_identical(length(x$nc), nrow(x$r$not_converted))
 })
+
+# -- item 2: a figure written as items -------------------------------------------
+
+rts_fig <- function(id = "F-1", top = NULL, data_extra = NULL) {
+  c(paste0("id: ", id), "kind: figure", "label: Fig one", "population: SAF", "extends: none", top,
+    "data:", data_extra, "  steps:", "    - {step: read, dataset: ADTTE}", "    - {step: param, value: PFS}",
+    "content:", "  - ggplot: {data: data, mapping: {x: AVAL, y: AGE}}", "  - geom_point: {size: 2}",
+    "  - scale_x_continuous: {limits: !r 'c(0, 10)'}", "  - labs: {x: Time}")
+}
+
+test_that("a figure written as items comes back with its items and data, either figures =", {
+  d <- rts_study(list("outputs/F-1.yml" = rts_fig()))
+  a <- tfl_read_outputs(d)[["F-1"]]
+  for (fg in c("design", "items")) {
+    x <- rts_trip(d, figures = fg)
+    b <- tfl_read_outputs(x$to)[["F-1"]]
+    expect_length(b$content, 4L)
+    expect_identical(b$content, a$content, info = fg)
+    expect_identical(b$data, a$data, info = fg)
+    expect_false(any(x$sh$not_converted$output %in% "F-1"), info = fg)
+  }
+  # the design list as a file (spec/figures/<id>.yml) keeps the items too
+  f <- withr::local_tempfile(fileext = ".yml")
+  tfl_write_fig_design(x$sh$figures[["F-1"]], f)
+  expect_match(paste(readLines(f), collapse = "\n"), "limits: !r c(0, 10)", fixed = TRUE)
+  y <- .conv_read_fig(f)
+  expect_identical(lapply(y$content, .item_from_list), a$content)
+})
+
+test_that("what a figure of items has no place for is named in the notes, by report id", {
+  d <- rts_study(list("outputs/F-1.yml" = rts_fig(top = "ggplot2_version: 4.0.0")))
+  x <- rts_trip(d)
+  expect_false(any(x$sh$not_converted$output %in% "F-1"))
+  expect_identical(tfl_read_outputs(x$to)[["F-1"]]$ggplot2_version, "4.0.0")
+  # the designer's plot settings beside the items are the design list's too
+  d1 <- rts_study(list("outputs/F-1.yml" = rts_fig(top = c("plot:", "  title: T", "  theme: minimal"))))
+  x1 <- rts_trip(d1)
+  expect_false(any(x1$sh$not_converted$output %in% "F-1"))
+  expect_identical(tfl_read_outputs(x1$to)[["F-1"]]$plot, tfl_read_outputs(d1)[["F-1"]]$plot)
+  d2 <- rts_study(list("outputs/F-1.yml" = sub("steps:", "object: ard\n  steps:", rts_fig(), fixed = TRUE)))
+  x2 <- rts_trip(d2)
+  nc <- x2$sh$not_converted
+  expect_match(nc$reason[nc$output %in% "F-1"], "object is not kept", fixed = TRUE)
+  expect_true(any(vapply(x2$nc, function(e) identical(e$output, "F-1"), NA)))
+})
