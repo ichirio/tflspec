@@ -340,3 +340,145 @@ test_that("two plan_labels items naming a heading twice: the second stays whole"
   tb2 <- r2$sh$table$tables
   expect_true(is.null(tb2$content_more) || all(is.na(tb2$content_more)))
 })
+
+# ---- normalize_ard(): what the columns can say is on the tables row, always ----
+# The tables row says overall_label, stack, stack_sep and stack_nest of a
+# table's normalize_ard(); the rest (hierarchy, keys, drop_contexts, ...) is an
+# item in content_more -- with no arguments when the row says it all and only
+# the hierarchy is the report's own.  Read back, the item's arguments stand,
+# and the row's cells go on top.
+
+tnz_ard <- function(vars) {
+  list(analyses = list(list(id = "A1", method = "hierarchical", dataset = "ADAE", population = "SAF",
+                            by = "TRT01A", variables = as.list(vars))))
+}
+tnz_plan <- tfl_item("table_plan", list(cols = "TRT01A", rows = list(group1 = "AEBODSYS", group2 = "AEDECOD"),
+                                        label = list(label = "AESEV")))
+.nz_canon_t <- function(x) tflspec:::.nz_canon(x)
+tnz_nz <- function(dir, id = "T-1") {
+  nz <- Filter(function(it) identical(it$fn, "normalize_ard"), tfl_read_outputs(dir)[[id]]$content)
+  if (length(nz)) nz[[1L]]$args
+}
+tnz_cm <- function(sh, id = "T-1") {
+  tb <- sh$table$tables
+  v <- tb$content_more[tb$output_id %in% id]
+  if (length(v) && !is.na(v)) v else NA_character_
+}
+# the table sheets through a workbook (tfl_write_table_spec() / tfl_read_table_spec()) and back to YAML
+tnz_book <- function(sh, env = parent.frame()) {
+  f <- withr::local_tempfile(fileext = ".xlsx", .local_envir = env)
+  keep <- intersect(names(sh$table), c("study", names(tflspec:::.ard_spec_schema())))
+  tfl_write_table_spec(tfl_table_spec(sh$table[keep]), f)
+  wb <- unclass(tfl_read_table_spec(f))
+  sh2 <- sh
+  sh2$table[intersect(names(wb), keep)] <- wb[intersect(names(wb), keep)]
+  to <- withr::local_tempdir(.local_envir = env)
+  suppressMessages(tfl_yaml_from_sheets(sh2, to, overwrite = TRUE))
+  list(sh = sh2, to = to)
+}
+
+tnz_cases <- list(
+  # the hierarchy has three levels, the first hierarchical analysis two: the sheets cannot read it back
+  hier_overall = list(
+    nz = list(hierarchy = list("AEBODSYS", "AEDECOD", "AESEV"), overall = "Any adverse event"),
+    ard = tnz_ard(c("AEBODSYS", "AESEV")), more = "- normalize_ard:", row = c(overall_label = "Any adverse event")),
+  # the report's own normalize_ard() says no hierarchy though the analysis has one
+  overall_only = list(
+    nz = list(overall = "Any adverse event"),
+    ard = tnz_ard(c("AEBODSYS", "AEDECOD", "AESEV")), more = "- normalize_ard: {}", row = c(overall_label = "Any adverse event")),
+  keys_overall = list(
+    nz = list(keys = list("AGE", "SEX"), overall = "Any adverse event"),
+    ard = NULL, more = "keys:", row = c(overall_label = "Any adverse event")),
+  hier_keys_stack = list(
+    nz = list(hierarchy = list("AEBODSYS", "AEDECOD", "AESEV"), keys = list("AGE"),
+              stack = list(subgroup = list("ALL", "SEX")), stack_sep = " / "),
+    ard = NULL, more = "keys:", row = c(stack = "subgroup = ALL, SEX", stack_sep = "\" / \"")),
+  drop_overall = list(
+    nz = list(drop_contexts = list("alpha"), overall = "Any adverse event"),
+    ard = NULL, more = "drop_contexts:", row = c(overall_label = "Any adverse event")))
+
+test_that("normalize_ard(): the tables row has what its columns say, the item the rest, in memory and through a workbook", {
+  skip_if_not_installed("openxlsx")
+  for (nm in names(tnz_cases)) {
+    cs <- tnz_cases[[nm]]
+    d <- t689_study(list(tfl_item("normalize_ard", cs$nz), tnz_plan), ard = cs$ard)
+    sh <- tfl_sheets_from_yaml(d)
+    tb <- sh$table$tables
+    for (col in names(cs$row)) expect_identical(tb[[col]][tb$output_id %in% "T-1"], unname(cs$row[col]), info = paste(nm, col))
+    expect_match(tnz_cm(sh), cs$more, fixed = TRUE, info = nm)
+    # what the row says is not in the item as well
+    expect_false(grepl("overall:|stack:|stack_sep:|stack_nest:", tnz_cm(sh)), info = nm)
+    want <- .nz_canon_t(tnz_nz(d))
+    for (route in c("memory", "workbook")) {
+      r <- if (route == "memory") t689_trip(d) else tnz_book(sh)
+      expect_identical(.nz_canon_t(tnz_nz(r$to)), want, info = paste(nm, route))
+      expect_identical(t689_code(r$to), t689_code(d), info = paste(nm, route))
+      # one normalize_ard(), not another from the analysis
+      back <- tfl_read_outputs(r$to)[["T-1"]]
+      expect_identical(sum(vapply(back$content, function(it) identical(it$fn, "normalize_ard"), NA)), 1L, info = paste(nm, route))
+    }
+  }
+})
+
+test_that("normalize_ard(): {overall} with a hierarchical analysis present comes back without a hierarchy", {
+  d <- t689_study(list(tfl_item("normalize_ard", list(overall = "Any adverse event")), tnz_plan),
+                  ard = tnz_ard(c("AEBODSYS", "AEDECOD", "AESEV")))
+  sh <- tfl_sheets_from_yaml(d)
+  expect_identical(tnz_cm(sh), "- normalize_ard: {}")
+  r <- t689_trip(d)
+  expect_named(tnz_nz(r$to), "overall")
+  expect_false(grepl("hierarchy", paste(t689_code(r$to), collapse = "\n"), fixed = TRUE))
+})
+
+test_that("normalize_ard(): the overall_label cell edited after writing wins on reading", {
+  skip_if_not_installed("openxlsx")
+  for (nm in c("hier_overall", "keys_overall", "overall_only")) {
+    cs <- tnz_cases[[nm]]
+    d <- t689_study(list(tfl_item("normalize_ard", cs$nz), tnz_plan), ard = cs$ard)
+    sh <- tfl_sheets_from_yaml(d)
+    sh$table$tables$overall_label[sh$table$tables$output_id %in% "T-1"] <- "Any event, edited"
+    for (route in c("memory", "workbook")) {
+      if (route == "memory") {
+        to <- withr::local_tempdir()
+        suppressMessages(tfl_yaml_from_sheets(sh, to, overwrite = TRUE))
+        r <- list(to = to)
+      } else r <- tnz_book(sh)
+      a <- tnz_nz(r$to)
+      expect_identical(a$overall, "Any event, edited", info = paste(nm, route))
+      # the rest of the item as written
+      other <- setdiff(names(cs$nz), "overall")
+      expect_identical(.nz_canon_t(a[other]), .nz_canon_t(tnz_nz(d)[other]), info = paste(nm, route))
+      expect_match(paste(t689_code(r$to), collapse = "\n"), "Any event, edited", fixed = TRUE)
+    }
+  }
+})
+
+test_that("normalize_ard(): a table the row can fully say has no content_more item", {
+  nz <- list(hierarchy = list("AEBODSYS", "AEDECOD"), overall = "Any adverse event")
+  plan <- tfl_item("table_plan", list(cols = "TRT01A", rows = list(group1 = "AEBODSYS"), label = list(label = "AEDECOD")))
+  for (ard in list(NULL, tnz_ard(c("AEBODSYS", "AEDECOD")))) {
+    d <- t689_study(list(tfl_item("normalize_ard", nz), plan), ard = ard)
+    sh <- tfl_sheets_from_yaml(d)
+    expect_true(is.na(tnz_cm(sh)))
+    expect_identical(sh$table$tables$overall_label[sh$table$tables$output_id %in% "T-1"], "Any adverse event")
+    r <- t689_trip(d)
+    expect_identical(.nz_canon_t(tnz_nz(r$to)), .nz_canon_t(tnz_nz(d)))
+  }
+})
+
+test_that("normalize_ard(): a card's {overall} bridged without the report's ARD keeps the overall_label cell", {
+  # (tflplanner's content-only save: the report's ARD is left out, so the
+  # hierarchy the rows and label say is guessed, and the item has none)
+  plan <- tfl_item("table_plan", list(cols = "TRT01A", rows = list(group1 = "AEBODSYS"), label = list(label = "AEDECOD")))
+  d <- t689_study(list(tfl_item("normalize_ard", list(overall = "Any adverse event")), plan))
+  s <- tfl_read_study_spec(d)
+  o <- tfl_read_outputs(d)[["T-1"]]
+  sh <- tfl_sheets_from_spec(s, list("T-1" = o))
+  tb <- sh$table$tables
+  expect_identical(tb$overall_label[tb$output_id %in% "T-1"], "Any adverse event")
+  expect_identical(tnz_cm(sh), "- normalize_ard: {}")
+  # the app's reading of the sheets (the content the cards show) has the cell on the item
+  its <- tflspec:::.plan_content_from_sheets(sh$table, "T-1", own = TRUE)
+  nz <- Filter(function(it) identical(it$fn, "normalize_ard"), its)
+  expect_identical(nz[[1L]]$args, list(overall = "Any adverse event"))
+})
