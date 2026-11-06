@@ -591,7 +591,7 @@ tpl_demog <- function(ard, population, ..., codelists = NULL) {
 .tpl_sd_missing_param <- function() {
   tfl_param("sd_missing", "-", type = "text", study = "settings.sd_missing",
             doc = paste("what prints in place of the SD when a group has no SD (n = 1):",
-                        "{mean} (<sd_missing>); \"\" prints the mean alone;",
+                        "{mean} (<sd_missing>); \"\" in study.yml or a report's YAML prints the mean alone;",
                         "no effect when `cells` is given"))
 }
 
@@ -1208,7 +1208,7 @@ tpl_disposition <- function(ard, population, ..., codelists = NULL) {
   tfl_param("heading", "Parameter / Baseline", doc = "the label column's heading"),
   tfl_param("post_header", "{col}", doc = paste(
     "the header over each post-baseline category",
-    "(`{col}`: the category)")),
+    "(`{col}`: the category; a typed \\n breaks the line)")),
   tfl_param("worst", c("HIGH", "LOW", "NORMAL"), doc = paste(
     "a subject once a parameter, at its worst category after baseline, the",
     "categories from the worst; NULL: every record (the baseline's records too)")),
