@@ -1,0 +1,495 @@
+"package","function","argument","covered","where","note","group","weight","uses"
+"ggplot2","coord_cartesian","","yes","Layout","","coord",3,1
+"ggplot2","coord_cartesian","clip","yes","annotation_logticks; geom_rug","","coord",3,3
+"ggplot2","coord_cartesian","expand","yes","coord_cartesian","","coord",3,2
+"ggplot2","coord_cartesian","ratio","yes","coord_cartesian","","coord",3,1
+"ggplot2","coord_cartesian","xlim","partial","coord_cartesian; lims","1 of 4 uses: as R: c(Sys.Date() - 30, NA) (coord_cartesian(xlim = c(Sys.Date() - 30, NA), ylim = c(10, 20)))","coord",3,4
+"ggplot2","coord_cartesian","ylim","yes","lims","","coord",3,1
+"ggplot2","coord_fixed","","yes","scale_identity; stat_ellipse","","coord",1,2
+"ggplot2","coord_fixed","ratio","yes","coord_fixed","","coord",1,3
+"ggplot2","coord_fixed","xlim","yes","coord_fixed","","coord",1,1
+"ggplot2","coord_flip","","yes","coord_flip; position_stack","","coord",3,4
+"ggplot2","coord_polar","","yes","get_guide_data","","coord",1,1
+"ggplot2","coord_radial","","yes","guide_axis_theta","","coord",1,1
+"ggplot2","coord_radial","end","yes","coord_radial","","coord",1,2
+"ggplot2","coord_radial","expand","yes","coord_radial","","coord",1,1
+"ggplot2","coord_radial","inner.radius","yes","coord_radial","","coord",1,2
+"ggplot2","coord_radial","rlim","yes","coord_radial","","coord",1,1
+"ggplot2","coord_radial","start","yes","coord_radial","","coord",1,2
+"ggplot2","coord_radial","theta","yes","coord_radial","","coord",1,1
+"ggplot2","coord_radial","thetalim","yes","coord_radial","","coord",1,1
+"ggplot2","coord_transform","x","yes","annotation_logticks; geom_histogram; guide_axis_logticks","","coord",2,4
+"ggplot2","coord_transform","y","yes","annotation_logticks; guide_axis_logticks","","coord",2,2
+"ggplot2","facet_grid","axes","yes","facet_grid","","facet",3,1
+"ggplot2","facet_grid","axis.labels","yes","facet_grid","","facet",3,1
+"ggplot2","facet_grid","cols","yes","as_labeller; benchplot; facet_grid; get_strip_labels; label_bquote; labellers","","facet",3,10
+"ggplot2","facet_grid","labeller","partial","as_labeller; label_bquote; labellers","5 of 5 uses: as R: to_string (facet_grid(cyl ~ am, labeller = labeller(am = to_string)))","facet",3,5
+"ggplot2","facet_grid","rows","yes","as_labeller; facet_grid; geom_ribbon; get_strip_labels; label_bquote; scale_linetype","","facet",3,10
+"ggplot2","facet_grid","scales","yes","facet_grid","","facet",3,2
+"ggplot2","facet_grid","space","yes","facet_grid","","facet",3,1
+"ggplot2","facet_null","","yes","Layout","","facet",1,1
+"ggplot2","facet_wrap","dir","yes","facet_wrap","","facet",3,1
+"ggplot2","facet_wrap","facets","partial","as_labeller; facet_wrap; geom_abline; geom_histogram; geom_map; geom_smooth; get_guide_data; get_strip_labels; guide_axis; scale_shape; summarise_plot; vars","1 of 17 uses: as R: year ~ cyl (facet_wrap(year ~ cyl))","facet",3,17
+"ggplot2","facet_wrap","labeller","partial","as_labeller","2 of 2 uses: as R: to_string (facet_wrap(~am, labeller = to_string))","facet",3,2
+"ggplot2","facet_wrap","nrow","yes","facet_wrap","","facet",3,1
+"ggplot2","facet_wrap","scales","yes","geom_histogram; get_guide_data","","facet",3,2
+"ggplot2","geom_abline","","yes","geom_abline","","geom",2,1
+"ggplot2","geom_abline","intercept","yes","geom_abline","","geom",2,2
+"ggplot2","geom_abline","slope","yes","geom_abline","","geom",2,1
+"ggplot2","geom_area","","yes","coord_flip; geom_ribbon","","geom",2,2
+"ggplot2","geom_area","mapping","yes","geom_ribbon; position_stack","","geom",2,9
+"ggplot2","geom_area","orientation","yes","coord_flip; geom_ribbon","","geom",2,2
+"ggplot2","geom_area","position","yes","position_stack","","geom",2,1
+"ggplot2","geom_area","stat","yes","geom_ribbon","","geom",2,1
+"ggplot2","geom_bar","","yes","aes_eval; geom_bar; geom_histogram; position_stack; scale_discrete; stat_summary","","geom",3,7
+"ggplot2","geom_bar","mapping","yes","expansion; geom_bar; scale_binned; scale_gradient","","geom",3,7
+"ggplot2","geom_bar","position","yes","geom_bar; position_dodge; position_stack","","geom",3,6
+"ggplot2","geom_bar","stat","yes","scale_gradient","","geom",3,1
+"ggplot2","geom_bar","width","yes","coord_radial","","geom",3,1
+"ggplot2","geom_bin_2d","","yes","geom_bin_2d","","geom",1,1
+"ggplot2","geom_bin_2d","bins","partial","geom_bin_2d","1 of 2 uses: as R: list(x = 30, y = 10) (geom_bin_2d(bins = list(x = 30, y = 10)))","geom",1,2
+"ggplot2","geom_bin_2d","binwidth","yes","geom_bin_2d","","geom",1,1
+"ggplot2","geom_blank","","yes","annotation_custom","","geom",1,1
+"ggplot2","geom_boxplot","","yes","Coord; coord_flip; geom_boxplot","","geom",3,6
+"ggplot2","geom_boxplot","colour","yes","geom_boxplot; position_jitter","","geom",3,2
+"ggplot2","geom_boxplot","fill","yes","geom_boxplot","","geom",3,1
+"ggplot2","geom_boxplot","mapping","yes","aes_eval; geom_boxplot; position_dodge","","geom",3,7
+"ggplot2","geom_boxplot","notch","yes","geom_boxplot","","geom",3,1
+"ggplot2","geom_boxplot","outlier.alpha","yes","geom_boxplot","","geom",3,1
+"ggplot2","geom_boxplot","outlier.colour","yes","geom_boxplot","","geom",3,1
+"ggplot2","geom_boxplot","outlier.shape","yes","aes_eval; geom_boxplot","","geom",3,3
+"ggplot2","geom_boxplot","outlier.size","yes","position_jitterdodge","","geom",3,1
+"ggplot2","geom_boxplot","varwidth","yes","geom_boxplot; position_dodge","","geom",3,2
+"ggplot2","geom_col","","yes","geom_bar","","geom",3,1
+"ggplot2","geom_col","colour","yes","position_dodge","","geom",3,1
+"ggplot2","geom_col","fill","yes","position_dodge","","geom",3,1
+"ggplot2","geom_col","just","yes","geom_bar","","geom",3,2
+"ggplot2","geom_col","mapping","yes","position_stack","","geom",3,2
+"ggplot2","geom_col","position","partial","geom_linerange; position_dodge; position_stack","1 of 5 uses: as R: dodge (geom_col(position = dodge))","geom",3,5
+"ggplot2","geom_contour","","yes","geom_contour","","geom",1,1
+"ggplot2","geom_count","","yes","geom_count; scale_size","","geom",1,3
+"ggplot2","geom_count","mapping","yes","geom_count","","geom",1,4
+"ggplot2","geom_crossbar","mapping","yes","geom_linerange","","geom",2,1
+"ggplot2","geom_crossbar","width","yes","geom_linerange","","geom",2,1
+"ggplot2","geom_curve","arrow","yes","geom_segment","","geom",1,1
+"ggplot2","geom_curve","curvature","yes","geom_segment","","geom",1,2
+"ggplot2","geom_curve","data","yes","geom_segment","","geom",1,4
+"ggplot2","geom_curve","mapping","yes","geom_segment","","geom",1,4
+"ggplot2","geom_density","","yes","geom_density; geom_function; guide_axis_logticks","","geom",2,7
+"ggplot2","geom_density","adjust","yes","geom_density","","geom",2,2
+"ggplot2","geom_density","alpha","yes","geom_density","","geom",2,1
+"ggplot2","geom_density","bounds","yes","geom_density","","geom",2,1
+"ggplot2","geom_density","bw","yes","aes_eval","","geom",2,2
+"ggplot2","geom_density","color","yes","geom_density","","geom",2,2
+"ggplot2","geom_density","mapping","yes","aes_eval","","geom",2,1
+"ggplot2","geom_density","position","yes","aes_eval","","geom",2,1
+"ggplot2","geom_density_2d","","yes","geom_contour; geom_density_2d","","geom",1,2
+"ggplot2","geom_dotplot","","yes","geom_dotplot","","geom",1,1
+"ggplot2","geom_dotplot","binwidth","yes","geom_dotplot","","geom",1,8
+"ggplot2","geom_dotplot","dotsize","yes","geom_dotplot","","geom",1,1
+"ggplot2","geom_dotplot","fill","yes","geom_dotplot","","geom",1,1
+"ggplot2","geom_dotplot","method","yes","geom_dotplot","","geom",1,1
+"ggplot2","geom_dotplot","stackdir","yes","geom_dotplot","","geom",1,2
+"ggplot2","geom_dotplot","stackratio","yes","geom_dotplot","","geom",1,1
+"ggplot2","geom_dotplot","stroke","yes","geom_dotplot","","geom",1,1
+"ggplot2","geom_errorbar","mapping","yes","geom_linerange; position_dodge","","geom",3,7
+"ggplot2","geom_errorbar","position","partial","geom_linerange; position_dodge","1 of 5 uses: as R: dodge (geom_errorbar(aes(ymin = lower, ymax = upper), position = dodge, width = 0.25))","geom",3,5
+"ggplot2","geom_errorbar","width","yes","geom_linerange; position_dodge","","geom",3,6
+"ggplot2","geom_freqpoly","binwidth","yes","geom_histogram","","geom",1,2
+"ggplot2","geom_function","args","yes","geom_function","","geom",1,2
+"ggplot2","geom_function","color","yes","update_defaults","","geom",1,1
+"ggplot2","geom_function","colour","yes","geom_function","","geom",1,3
+"ggplot2","geom_function","fun","partial","geom_function; update_defaults","1 of 10 uses: as R: function(x) 0.5 * exp(-abs(x)) (geom_function(fun = function(x) 0.5 * exp(-abs(x))))","geom",1,10
+"ggplot2","geom_function","mapping","yes","geom_function","","geom",1,2
+"ggplot2","geom_function","n","yes","geom_function","","geom",1,1
+"ggplot2","geom_function","xlim","partial","geom_function","2 of 2 uses: as R: c(-1, 1) (geom_function(fun = dnorm, colour = ""red"", xlim = c(-1, 1)))","geom",1,2
+"ggplot2","geom_hex","","yes","geom_hex","","geom",1,1
+"ggplot2","geom_histogram","","yes","coord_flip; geom_histogram; update_defaults","","geom",2,6
+"ggplot2","geom_histogram","bins","yes","geom_histogram","","geom",2,1
+"ggplot2","geom_histogram","binwidth","partial","geom_bar; geom_histogram; position_stack; scale_viridis","1 of 11 uses: as R: function(x) 2 * IQR(x)/(length(x)^(1/3)) (geom_histogram(binwidth = function(x) 2 * IQR(x)/(length(x)^(1/3))))","geom",2,11
+"ggplot2","geom_histogram","boundary","yes","geom_histogram","","geom",2,2
+"ggplot2","geom_histogram","breaks","partial","geom_histogram","2 of 2 uses: as R: price_bins (geom_histogram(breaks = price_bins, color = ""black""))","geom",2,2
+"ggplot2","geom_histogram","color","yes","geom_histogram","","geom",2,2
+"ggplot2","geom_histogram","mapping","yes","aes_eval; geom_histogram","","geom",2,3
+"ggplot2","geom_histogram","position","yes","position_stack; scale_viridis","","geom",2,2
+"ggplot2","geom_hline","data","yes","geom_abline","","geom",3,2
+"ggplot2","geom_hline","linewidth","yes","scale_linetype","","geom",3,1
+"ggplot2","geom_hline","mapping","yes","geom_abline; scale_linetype","","geom",3,3
+"ggplot2","geom_hline","size","partial","aes_linetype_size_shape","1 of 1 uses: geom_hline has no argument `size` (it has: mapping, stat, position, yintercept, na.rm, show.legend, inherit.aes, data, lineend, colour, linewidth, linetype, alpha, group, key_glyph, layout) (geom_hline(yintercept = 25, size = 3.5))","geom",3,1
+"ggplot2","geom_hline","yintercept","yes","aes_linetype_size_shape; fortify.lm; geom_abline; position_stack","","geom",3,5
+"ggplot2","geom_jitter","","yes","expansion; geom_jitter; geom_rug; position_jitter","","geom",3,8
+"ggplot2","geom_jitter","height","yes","geom_jitter; position_jitter","","geom",3,2
+"ggplot2","geom_jitter","mapping","yes","geom_jitter","","geom",3,1
+"ggplot2","geom_jitter","position","yes","position_jitter","","geom",3,1
+"ggplot2","geom_jitter","width","yes","geom_boxplot; geom_jitter; position_jitter","","geom",3,4
+"ggplot2","geom_label","","yes","geom_text","","geom",2,1
+"ggplot2","geom_label","colour","yes","geom_text","","geom",2,1
+"ggplot2","geom_label","fontface","yes","geom_text","","geom",2,1
+"ggplot2","geom_label","mapping","yes","geom_text","","geom",2,1
+"ggplot2","geom_line","","yes","geom_path; lims; scale_date; sec_axis","","geom",3,7
+"ggplot2","geom_line","arrow","yes","geom_path","","geom",3,2
+"ggplot2","geom_line","colour","yes","geom_path; geom_polygon","","geom",3,2
+"ggplot2","geom_line","data","yes","geom_polygon","","geom",3,1
+"ggplot2","geom_line","key_glyph","yes","draw_key; geom_path","","geom",3,3
+"ggplot2","geom_line","lineend","yes","aes_linetype_size_shape; scale_linewidth","","geom",3,3
+"ggplot2","geom_line","linetype","yes","aes_linetype_size_shape","","geom",3,3
+"ggplot2","geom_line","linewidth","yes","aes_linetype_size_shape; geom_polygon","","geom",3,2
+"ggplot2","geom_line","mapping","yes","aes_linetype_size_shape; geom_linerange; geom_ribbon; position_stack; scale_linetype","","geom",3,8
+"ggplot2","geom_line","orientation","yes","geom_path","","geom",3,1
+"ggplot2","geom_line","position","yes","position_stack","","geom",3,2
+"ggplot2","geom_linerange","data","partial","fortify-multcomp","1 of 1 uses: as R: tidy(ci) (geom_linerange(aes(ymin = conf.low, ymax = conf.high), data = tidy(ci)))","geom",2,1
+"ggplot2","geom_linerange","mapping","yes","fortify-multcomp; geom_linerange; position_dodge","","geom",2,5
+"ggplot2","geom_linerange","position","yes","position_dodge","","geom",2,2
+"ggplot2","geom_path","","yes","geom_path","","geom",1,1
+"ggplot2","geom_path","lineend","yes","geom_path","","geom",1,2
+"ggplot2","geom_path","linejoin","yes","geom_path","","geom",1,1
+"ggplot2","geom_path","linewidth","yes","geom_path","","geom",1,3
+"ggplot2","geom_path","mapping","yes","geom_path","","geom",1,1
+"ggplot2","geom_point","","yes","Guide; aes; aes_linetype_size_shape; aes_position; annotate; annotation_custom; annotation_logticks; annotation_raster; as_labeller; benchplot; coord_cartesian; coord_fixed; coord_radial; element; expand_limits; facet_grid; facet_null; facet_wrap; fortify-multcomp; fortify.lm; geom_abline; geom_bar; geom_count; geom_density_2d; geom_jitter; geom_path; geom_point; geom_quantile; geom_rug; geom_segment; geom_smooth; geom_spoke; geom_text; get_alt_text; get_guide_data; get_strip_labels; get_theme; gg-add; ggplot; guide_axis; guide_axis_stack; guide_axis_theta; guide_custom; label_bquote; labellers; labs; layer; lims; position_nudge; print.ggplot; register_theme_elements; scale_colour_continuous; scale_colour_discrete; scale_continuous; scale_size; sec_axis; stat_connect; stat_ellipse; stat_manual; stat_summary; subtheme; summarise_plot; theme; update_defaults; update_ggplot; update_labels; vars","","geom",3,104
+"ggplot2","geom_point","alpha","yes","reexports; scale_manual; stat_unique","","geom",3,4
+"ggplot2","geom_point","color","yes","position_jitter","","geom",3,1
+"ggplot2","geom_point","colour","yes","aes_linetype_size_shape; facet_grid; geom_point; ggplot; reexports","","geom",3,10
+"ggplot2","geom_point","data","partial","facet_grid; fortify-multcomp; ggplot","1 of 6 uses: as R: tidy(smry) (geom_point(aes(size = adj.p.value), data = tidy(smry)))","geom",3,6
+"ggplot2","geom_point","fill","yes","aes_linetype_size_shape; geom_point; scale_shape","","geom",3,3
+"ggplot2","geom_point","mapping","yes","aes; aes_linetype_size_shape; annotation_borders; expand_limits; fortify-multcomp; geom_point; ggplot; ggtheme; guide_bins; guide_colourbar; position_jitter; position_stack; scale_alpha; scale_brewer; scale_gradient; scale_grey; scale_identity; scale_manual; scale_shape; scale_steps; scale_viridis","","geom",3,48
+"ggplot2","geom_point","na.rm","yes","annotation_logticks; guide_axis_logticks","","geom",3,3
+"ggplot2","geom_point","pch","yes","position_jitterdodge","","geom",3,1
+"ggplot2","geom_point","position","partial","Position; geom_ribbon; position_jitter; position_jitterdodge; position_stack","3 of 6 uses: as R: position_rank(width = 0.5) (geom_point(position = position_rank(width = 0.5)))","geom",3,6
+"ggplot2","geom_point","shape","yes","aes_linetype_size_shape; geom_point; scale_manual","","geom",3,6
+"ggplot2","geom_point","size","yes","aes_linetype_size_shape; facet_grid; geom_point; geom_ribbon; ggplot; scale_identity; scale_manual; scale_shape","","geom",3,18
+"ggplot2","geom_point","stat","yes","geom_ribbon; stat_unique","","geom",3,2
+"ggplot2","geom_point","stroke","yes","geom_point","","geom",3,2
+"ggplot2","geom_pointrange","","yes","aes_position; fortify-multcomp","","geom",3,2
+"ggplot2","geom_pointrange","mapping","yes","geom_linerange","","geom",3,1
+"ggplot2","geom_polygon","colour","yes","coord_map; fortify.map","","geom",1,3
+"ggplot2","geom_polygon","fill","yes","coord_map","","geom",1,2
+"ggplot2","geom_polygon","mapping","yes","fortify.map; geom_polygon; map_data","","geom",1,6
+"ggplot2","geom_quantile","","yes","geom_quantile","","geom",1,1
+"ggplot2","geom_quantile","alpha","yes","geom_quantile","","geom",1,1
+"ggplot2","geom_quantile","colour","yes","geom_quantile","","geom",1,1
+"ggplot2","geom_quantile","lambda","yes","geom_quantile","","geom",1,1
+"ggplot2","geom_quantile","linewidth","yes","geom_quantile","","geom",1,1
+"ggplot2","geom_quantile","method","yes","geom_quantile","","geom",1,2
+"ggplot2","geom_quantile","quantiles","partial","geom_quantile","1 of 2 uses: as R: q10 (geom_quantile(quantiles = q10))","geom",1,2
+"ggplot2","geom_raster","interpolate","yes","geom_tile","","geom",1,1
+"ggplot2","geom_raster","mapping","yes","geom_tile; scale_gradient","","geom",1,3
+"ggplot2","geom_rect","colour","yes","geom_tile","","geom",2,1
+"ggplot2","geom_rect","mapping","yes","geom_tile","","geom",2,1
+"ggplot2","geom_ribbon","fill","yes","geom_ribbon","","geom",3,1
+"ggplot2","geom_ribbon","mapping","yes","aes_eval; geom_ribbon","","geom",3,3
+"ggplot2","geom_ribbon","outline.type","yes","aes_eval","","geom",3,1
+"ggplot2","geom_ribbon","stat","yes","aes_eval","","geom",3,1
+"ggplot2","geom_rug","","yes","geom_rug","","geom",1,2
+"ggplot2","geom_rug","alpha","yes","geom_rug","","geom",1,1
+"ggplot2","geom_rug","length","yes","geom_rug","","geom",1,1
+"ggplot2","geom_rug","outside","yes","geom_rug","","geom",1,2
+"ggplot2","geom_rug","position","yes","geom_rug","","geom",1,1
+"ggplot2","geom_rug","sides","yes","geom_rug","","geom",1,3
+"ggplot2","geom_segment","arrow","yes","aes_position; geom_segment","","geom",3,5
+"ggplot2","geom_segment","data","yes","geom_segment","","geom",3,1
+"ggplot2","geom_segment","lineend","partial","geom_segment","1 of 2 uses: as R: df2$lineend (geom_segment(lineend = df2$lineend, linejoin = df2$linejoin, size = 3, arrow = arrow(length = unit(0.3, ""inches""))))","geom",3,2
+"ggplot2","geom_segment","linejoin","partial","geom_segment","1 of 1 uses: as R: df2$linejoin (geom_segment(lineend = df2$lineend, linejoin = df2$linejoin, size = 3, arrow = arrow(length = unit(0.3, ""inches""))))","geom",3,1
+"ggplot2","geom_segment","linewidth","yes","geom_segment","","geom",3,1
+"ggplot2","geom_segment","mapping","yes","aes_position; geom_segment","","geom",3,7
+"ggplot2","geom_segment","size","partial","aes_position; geom_segment","2 of 2 uses: geom_segment has no argument `size` (it has: mapping, stat, position, arrow, arrow.fill, lineend, linejoin, na.rm, show.legend, inherit.aes, data, x, y, xend, yend, colour, linewidth, linetype, alpha, group, key_glyph, layout) (geom_segment(aes(yend = 0, xend = x), size = 10))","geom",3,2
+"ggplot2","geom_smooth","","yes","coord_cartesian; geom_smooth; gg-add","","geom",2,4
+"ggplot2","geom_smooth","formula","yes","element; geom_smooth","","geom",2,2
+"ggplot2","geom_smooth","method","yes","element; geom_abline; geom_smooth","","geom",2,5
+"ggplot2","geom_smooth","orientation","yes","geom_smooth","","geom",2,1
+"ggplot2","geom_smooth","se","yes","fortify.lm; geom_abline; geom_smooth","","geom",2,5
+"ggplot2","geom_smooth","span","yes","geom_smooth","","geom",2,2
+"ggplot2","geom_spoke","mapping","yes","geom_spoke","","geom",1,2
+"ggplot2","geom_spoke","radius","yes","geom_spoke","","geom",1,1
+"ggplot2","geom_step","","yes","geom_path","","geom",3,1
+"ggplot2","geom_text","","yes","geom_text","","geom",3,2
+"ggplot2","geom_text","angle","yes","geom_text","","geom",3,1
+"ggplot2","geom_text","check_overlap","yes","geom_text","","geom",3,1
+"ggplot2","geom_text","hjust","yes","aes_eval; geom_segment; geom_text","","geom",3,3
+"ggplot2","geom_text","key_glyph","yes","geom_text","","geom",3,2
+"ggplot2","geom_text","mapping","partial","aes_eval; geom_text; position_nudge; position_stack","1 of 14 uses: as R: c(-0.1, 0.1, -0.1, 0.1) (geom_text(aes(label = y, nudge_y = c(-0.1, 0.1, -0.1, 0.1))))","geom",3,14
+"ggplot2","geom_text","nudge_x","yes","geom_segment; geom_text","","geom",3,2
+"ggplot2","geom_text","nudge_y","yes","geom_text; position_nudge","","geom",3,2
+"ggplot2","geom_text","parse","yes","geom_text","","geom",3,1
+"ggplot2","geom_text","position","yes","position_nudge; position_stack","","geom",3,4
+"ggplot2","geom_text","size","yes","geom_text","","geom",3,1
+"ggplot2","geom_text","stat","yes","aes_eval","","geom",3,2
+"ggplot2","geom_text","vjust","yes","geom_text","","geom",3,1
+"ggplot2","geom_tile","colour","yes","geom_tile","","geom",3,2
+"ggplot2","geom_tile","fill","yes","get_geom_defaults","","geom",3,1
+"ggplot2","geom_tile","mapping","yes","geom_tile; guide_colourbar; guide_coloursteps; scale_brewer; scale_identity; scale_viridis","","geom",3,10
+"ggplot2","geom_violin","","yes","geom_violin","","geom",2,2
+"ggplot2","geom_vline","xintercept","yes","geom_abline","","geom",3,2
+"ggplot2","guides","colour","partial","Guide; get_guide_data","1 of 2 uses: as R: guide_describe(""bottom"") (guides(colour = guide_describe(""bottom"")))","guide",3,2
+"ggplot2","guides","custom","partial","guide_custom","3 of 3 uses: as R: circle (guides(custom = guide_custom(circle, title = ""My circle"")))","guide",3,3
+"ggplot2","guides","fill","yes","guide_colourbar","","guide",3,9
+"ggplot2","guides","size","partial","guide_bins; guide_colourbar","1 of 4 uses: as R: my_arrow (guides(size = guide_bins(theme = theme(legend.axis.line = element_line(arrow = my_arrow)))))","guide",3,4
+"ggplot2","guides","theta","yes","guide_axis_theta","","guide",3,1
+"ggplot2","guides","x","partial","guide_axis; guide_axis_logticks; guide_axis_stack","1 of 7 uses: as R: guide_axis_stack(""axis"", guide_axis(cap = ""both"")) (guides(x = guide_axis_stack(""axis"", guide_axis(cap = ""both""))))","guide",3,7
+"ggplot2","guides","y","yes","guide_axis_logticks","","guide",3,2
+"ggplot2","guides","y.sec","yes","guide_axis","","guide",3,1
+"ggplot2","annotate","alpha","yes","aes_position; annotate","","labs",3,2
+"ggplot2","annotate","colour","yes","annotate; geom_text; ggsf","","labs",3,4
+"ggplot2","annotate","fill","yes","aes_position","","labs",3,1
+"ggplot2","annotate","geom","yes","aes_position; annotate; geom_text; ggsf","","labs",3,11
+"ggplot2","annotate","label","yes","annotate; geom_text","","labs",3,6
+"ggplot2","annotate","linewidth","yes","annotate","","labs",3,1
+"ggplot2","annotate","parse","yes","annotate","","labs",3,2
+"ggplot2","annotate","size","yes","annotate; geom_text; ggsf","","labs",3,3
+"ggplot2","annotate","x","yes","annotate; geom_text; ggsf","","labs",3,9
+"ggplot2","annotate","xend","yes","annotate","","labs",3,1
+"ggplot2","annotate","xmax","yes","aes_position; annotate","","labs",3,2
+"ggplot2","annotate","xmin","yes","aes_position; annotate","","labs",3,2
+"ggplot2","annotate","y","yes","annotate; geom_text; ggsf","","labs",3,9
+"ggplot2","annotate","yend","yes","annotate","","labs",3,1
+"ggplot2","annotate","ymax","yes","aes_position; annotate","","labs",3,3
+"ggplot2","annotate","ymin","yes","aes_position; annotate","","labs",3,3
+"ggplot2","annotation_custom","grob","partial","annotation_custom","2 of 2 uses: as R: grid::roundrectGrob() (annotation_custom(grob = grid::roundrectGrob(), xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf))","labs",1,2
+"ggplot2","annotation_custom","xmax","yes","annotation_custom","","labs",1,2
+"ggplot2","annotation_custom","xmin","yes","annotation_custom","","labs",1,2
+"ggplot2","annotation_custom","ymax","yes","annotation_custom","","labs",1,2
+"ggplot2","annotation_custom","ymin","yes","annotation_custom","","labs",1,2
+"ggplot2","annotation_logticks","","yes","annotation_logticks","","labs",2,2
+"ggplot2","annotation_logticks","long","yes","annotation_logticks","","labs",2,1
+"ggplot2","annotation_logticks","mid","yes","annotation_logticks","","labs",2,1
+"ggplot2","annotation_logticks","outside","yes","annotation_logticks","","labs",2,1
+"ggplot2","annotation_logticks","scaled","yes","annotation_logticks","","labs",2,1
+"ggplot2","annotation_logticks","short","yes","annotation_logticks","","labs",2,1
+"ggplot2","annotation_logticks","sides","yes","annotation_logticks","","labs",2,4
+"ggplot2","annotation_raster","interpolate","yes","annotation_raster","","labs",1,1
+"ggplot2","annotation_raster","raster","partial","annotation_raster","4 of 4 uses: as R: rainbow (annotation_raster(rainbow, 15, 20, 3, 4))","labs",1,4
+"ggplot2","annotation_raster","xmax","yes","annotation_raster","","labs",1,4
+"ggplot2","annotation_raster","xmin","yes","annotation_raster","","labs",1,4
+"ggplot2","annotation_raster","ymax","yes","annotation_raster","","labs",1,4
+"ggplot2","annotation_raster","ymin","yes","annotation_raster","","labs",1,4
+"ggplot2","labs","alt","partial","get_alt_text","1 of 1 uses: as R: paste(""A scatterplot showing the negative correlation between engine"", ""displacement as a function of highway miles per gallon"") (labs(alt = paste(""A scatterplot showing the negative correlation between engine"", ""displacement as a function of highway miles per gallon"")))","labs",3,1
+"ggplot2","labs","caption","yes","ggtheme; labs","","labs",3,2
+"ggplot2","labs","colour","yes","ggtheme; labs","","labs",3,2
+"ggplot2","labs","dictionary","yes","labs","","labs",3,1
+"ggplot2","labs","subtitle","yes","ggtheme; labs","","labs",3,2
+"ggplot2","labs","tag","yes","ggtheme; labs","","labs",3,2
+"ggplot2","labs","title","yes","ggtheme; labs; theme","","labs",3,7
+"ggplot2","labs","x","yes","ggtheme; labs; scale_continuous","","labs",3,3
+"ggplot2","labs","y","yes","ggtheme; scale_continuous","","labs",3,2
+"ggplot2","ylab","label","yes","geom_histogram","","labs",1,1
+"ggplot2","position_dodge","width","yes","geom_linerange","","position",3,1
+"ggplot2","position_jitter","height","yes","position_jitter","","position",2,1
+"ggplot2","position_jitter","seed","yes","position_jitter","","position",2,1
+"ggplot2","position_jitter","width","yes","position_jitter","","position",2,1
+"ggplot2","expand_limits","","no","geom_map","3 of 3 uses: read as R, the whole call (expand_limits(positions))","scale",2,3
+"ggplot2","expand_limits","colour","partial","expand_limits","2 of 2 uses: as R: seq(2, 10, by = 2) (expand_limits(colour = seq(2, 10, by = 2)))","scale",2,2
+"ggplot2","expand_limits","x","partial","expand_limits; geom_map","1 of 3 uses: as R: states_map$long (expand_limits(x = states_map$long, y = states_map$lat))","scale",2,3
+"ggplot2","expand_limits","y","partial","expand_limits; geom_map","1 of 3 uses: as R: states_map$lat (expand_limits(x = states_map$long, y = states_map$lat))","scale",2,3
+"ggplot2","lims","colour","yes","lims","","scale",1,2
+"ggplot2","lims","x","partial","lims","1 of 1 uses: as R: c(Sys.Date() - 30, NA) (lims(x = c(Sys.Date() - 30, NA), y = c(10, 20)))","scale",1,1
+"ggplot2","lims","y","yes","lims","","scale",1,1
+"ggplot2","scale_alpha","name","yes","scale_alpha","","scale",1,1
+"ggplot2","scale_alpha","range","yes","scale_alpha","","scale",1,1
+"ggplot2","scale_colour_binned","","yes","scale_colour_continuous","","scale",1,1
+"ggplot2","scale_colour_binned","guide","yes","guide_bins","","scale",1,1
+"ggplot2","scale_colour_brewer","","yes","scale_brewer","","scale",2,1
+"ggplot2","scale_colour_brewer","name","yes","scale_brewer","","scale",2,1
+"ggplot2","scale_colour_brewer","palette","yes","scale_brewer","","scale",2,2
+"ggplot2","scale_colour_continuous","palette","yes","scale_colour_continuous","","scale",1,1
+"ggplot2","scale_colour_discrete","palette","yes","scale_colour_discrete","","scale",1,1
+"ggplot2","scale_colour_gradient","high","yes","scale_gradient","","scale",2,2
+"ggplot2","scale_colour_gradient","low","yes","scale_gradient","","scale",2,2
+"ggplot2","scale_colour_gradient","na.value","yes","scale_gradient","","scale",2,1
+"ggplot2","scale_colour_gradient2","","yes","scale_gradient","","scale",2,1
+"ggplot2","scale_colour_gradientn","colours","yes","scale_gradient","","scale",1,2
+"ggplot2","scale_colour_gradientn","rescaler","yes","scale_gradient","","scale",1,1
+"ggplot2","scale_colour_grey","","yes","scale_grey","","scale",1,3
+"ggplot2","scale_colour_grey","end","yes","scale_grey","","scale",1,1
+"ggplot2","scale_colour_grey","na.value","yes","scale_grey","","scale",1,1
+"ggplot2","scale_colour_hue","l","yes","geom_text","","scale",1,1
+"ggplot2","scale_colour_identity","","yes","scale_identity","","scale",1,1
+"ggplot2","scale_colour_manual","aesthetics","yes","scale_manual","","scale",3,1
+"ggplot2","scale_colour_manual","breaks","yes","scale_manual","","scale",3,1
+"ggplot2","scale_colour_manual","labels","yes","scale_manual","","scale",3,1
+"ggplot2","scale_colour_manual","limits","yes","scale_manual","","scale",3,2
+"ggplot2","scale_colour_manual","values","partial","scale_manual","6 of 7 uses: as R: cols (scale_colour_manual(values = cols))","scale",3,7
+"ggplot2","scale_colour_steps","","yes","scale_steps","","scale",1,1
+"ggplot2","scale_colour_steps2","","yes","scale_steps","","scale",1,1
+"ggplot2","scale_colour_stepsn","colours","yes","scale_steps","","scale",1,1
+"ggplot2","scale_colour_viridis_d","","yes","scale_viridis","","scale",1,1
+"ggplot2","scale_colour_viridis_d","name","yes","scale_viridis","","scale",1,1
+"ggplot2","scale_colour_viridis_d","option","yes","scale_viridis","","scale",1,2
+"ggplot2","scale_fill_binned","","yes","guide_coloursteps","","scale",1,1
+"ggplot2","scale_fill_binned","breaks","yes","guide_coloursteps","","scale",1,2
+"ggplot2","scale_fill_binned","guide","yes","guide_coloursteps","","scale",1,2
+"ggplot2","scale_fill_binned","show.limits","yes","guide_coloursteps","","scale",1,1
+"ggplot2","scale_fill_continuous","breaks","yes","guide_colourbar","","scale",1,1
+"ggplot2","scale_fill_continuous","guide","yes","guide_colourbar","","scale",1,5
+"ggplot2","scale_fill_continuous","limits","yes","guide_colourbar","","scale",1,1
+"ggplot2","scale_fill_discrete","breaks","yes","position_stack","","scale",1,1
+"ggplot2","scale_fill_distiller","","yes","scale_brewer","","scale",1,1
+"ggplot2","scale_fill_distiller","direction","yes","scale_brewer","","scale",1,1
+"ggplot2","scale_fill_distiller","palette","yes","scale_brewer","","scale",1,2
+"ggplot2","scale_fill_fermenter","","yes","scale_brewer","","scale",1,1
+"ggplot2","scale_fill_gradient","high","yes","scale_gradient","","scale",2,1
+"ggplot2","scale_fill_gradient","low","yes","scale_gradient","","scale",2,1
+"ggplot2","scale_fill_gradient","na.value","yes","scale_gradient","","scale",2,1
+"ggplot2","scale_fill_gradientn","colours","yes","scale_gradient","","scale",1,1
+"ggplot2","scale_fill_identity","","yes","scale_identity","","scale",1,1
+"ggplot2","scale_fill_identity","breaks","partial","scale_identity","1 of 1 uses: as R: df$colour (scale_fill_identity(""trt"", labels = letters[1:4], breaks = df$colour, guide = ""legend""))","scale",1,1
+"ggplot2","scale_fill_identity","guide","yes","scale_identity","","scale",1,2
+"ggplot2","scale_fill_identity","labels","partial","scale_identity","1 of 1 uses: as R: letters[1:4] (scale_fill_identity(""trt"", labels = letters[1:4], breaks = df$colour, guide = ""legend""))","scale",1,1
+"ggplot2","scale_fill_identity","name","yes","scale_identity","","scale",1,1
+"ggplot2","scale_fill_ordinal","guide","yes","geom_point","","scale",1,1
+"ggplot2","scale_fill_viridis_b","","yes","scale_viridis","","scale",1,1
+"ggplot2","scale_fill_viridis_c","","yes","scale_viridis","","scale",1,1
+"ggplot2","scale_fill_viridis_c","option","yes","scale_viridis","","scale",1,1
+"ggplot2","scale_fill_viridis_d","","yes","scale_viridis","","scale",1,1
+"ggplot2","scale_fill_viridis_d","direction","yes","scale_viridis","","scale",1,1
+"ggplot2","scale_linetype_identity","","yes","scale_linetype","","scale",1,1
+"ggplot2","scale_linewidth","name","yes","scale_linewidth","","scale",2,1
+"ggplot2","scale_linewidth","range","yes","scale_linewidth","","scale",2,1
+"ggplot2","scale_linewidth_binned","","yes","scale_linewidth","","scale",1,1
+"ggplot2","scale_radius","","yes","scale_size","","scale",1,1
+"ggplot2","scale_radius","range","yes","geom_text","","scale",1,1
+"ggplot2","scale_shape","name","yes","scale_shape","","scale",1,1
+"ggplot2","scale_shape","solid","yes","scale_shape","","scale",1,2
+"ggplot2","scale_shape_identity","","yes","aes_linetype_size_shape; scale_shape","","scale",1,4
+"ggplot2","scale_shape_manual","values","yes","geom_point","","scale",3,1
+"ggplot2","scale_size","guide","yes","guide_colourbar","","scale",1,2
+"ggplot2","scale_size","name","yes","scale_size","","scale",1,1
+"ggplot2","scale_size","range","yes","scale_size","","scale",1,1
+"ggplot2","scale_size","transform","yes","fortify-multcomp","","scale",1,1
+"ggplot2","scale_size_area","","yes","annotation_borders; geom_count; scale_size","","scale",1,5
+"ggplot2","scale_size_area","max_size","yes","geom_count","","scale",1,3
+"ggplot2","scale_size_binned","","yes","guide_bins; scale_size","","scale",1,3
+"ggplot2","scale_size_identity","","yes","scale_identity","","scale",1,1
+"ggplot2","scale_x_binned","","yes","geom_histogram; scale_binned","","scale",1,2
+"ggplot2","scale_x_continuous","breaks","partial","guide_axis_logticks; scale_continuous","1 of 3 uses: as R: c(-10^(4:0), 0, 10^(0:4)) (scale_x_continuous(breaks = c(-10^(4:0), 0, 10^(0:4)), transform = ""pseudo_log""))","scale",3,3
+"ggplot2","scale_x_continuous","guide","yes","guide_axis","","scale",3,1
+"ggplot2","scale_x_continuous","labels","partial","annotation_logticks; scale_continuous","1 of 3 uses: as R: 10^.x (scale_x_continuous(name = ""body"", labels = scales::label_math(10^.x)))","scale",3,3
+"ggplot2","scale_x_continuous","limits","yes","coord_cartesian; scale_continuous","","scale",3,4
+"ggplot2","scale_x_continuous","name","yes","annotation_logticks; scale_continuous","","scale",3,2
+"ggplot2","scale_x_continuous","transform","yes","guide_axis_logticks","","scale",3,1
+"ggplot2","scale_x_date","date_breaks","yes","scale_date","","scale",2,1
+"ggplot2","scale_x_date","date_labels","yes","scale_date","","scale",2,2
+"ggplot2","scale_x_date","date_minor_breaks","yes","scale_date","","scale",2,1
+"ggplot2","scale_x_date","limits","partial","scale_date","1 of 1 uses: as R: c(Sys.Date() - 7, NA) (scale_x_date(limits = c(Sys.Date() - 7, NA)))","scale",2,1
+"ggplot2","scale_x_datetime","date_breaks","yes","sec_axis","","scale",1,1
+"ggplot2","scale_x_datetime","date_labels","yes","sec_axis","","scale",1,2
+"ggplot2","scale_x_datetime","name","yes","sec_axis","","scale",1,2
+"ggplot2","scale_x_datetime","sec.axis","yes","sec_axis","","scale",1,2
+"ggplot2","scale_x_discrete","expand","yes","expansion","","scale",3,2
+"ggplot2","scale_x_log10","","yes","geom_histogram","","scale",3,2
+"ggplot2","scale_x_log10","breaks","partial","annotation_logticks","1 of 1 uses: as R: function(x) 10^x (scale_x_log10(breaks = scales::trans_breaks(""log10"", function(x) 10^x), labels = scales::trans_format(""log10"", scales::math_format(10^.x))))","scale",3,1
+"ggplot2","scale_x_log10","guide","yes","guide_axis_logticks","","scale",3,1
+"ggplot2","scale_x_log10","labels","partial","annotation_logticks","1 of 1 uses: as R: scales::math_format(10^.x) (scale_x_log10(breaks = scales::trans_breaks(""log10"", function(x) 10^x), labels = scales::trans_format(""log10"", scales::math_format(10^.x))))","scale",3,1
+"ggplot2","scale_x_reverse","","yes","coord_flip","","scale",2,1
+"ggplot2","scale_y_continuous","breaks","yes","geom_dotplot","","scale",3,1
+"ggplot2","scale_y_continuous","expand","yes","expansion; geom_rug","","scale",3,3
+"ggplot2","scale_y_continuous","labels","partial","annotation_logticks; scale_continuous","1 of 3 uses: as R: 10^.x (scale_y_continuous(name = ""brain"", labels = scales::label_math(10^.x)))","scale",3,3
+"ggplot2","scale_y_continuous","name","yes","annotation_logticks; geom_dotplot; scale_continuous; sec_axis","","scale",3,4
+"ggplot2","scale_y_continuous","sec.axis","partial","sec_axis","2 of 4 uses: as R: derive() (scale_y_continuous(""Miles/gallon"", sec.axis = sec_axis(~. + 10, name = derive())))","scale",3,4
+"ggplot2","scale_y_continuous","transform","yes","scale_continuous","","scale",3,1
+"ggplot2","scale_y_log10","","yes","scale_continuous","","scale",3,1
+"ggplot2","scale_y_log10","breaks","partial","annotation_logticks","1 of 1 uses: as R: function(x) 10^x (scale_y_log10(breaks = scales::trans_breaks(""log10"", function(x) 10^x), labels = scales::trans_format(""log10"", scales::math_format(10^.x))))","scale",3,1
+"ggplot2","scale_y_log10","guide","yes","guide_axis_logticks","","scale",3,1
+"ggplot2","scale_y_log10","labels","partial","annotation_logticks","1 of 1 uses: as R: scales::math_format(10^.x) (scale_y_log10(breaks = scales::trans_breaks(""log10"", function(x) 10^x), labels = scales::trans_format(""log10"", scales::math_format(10^.x))))","scale",3,1
+"ggplot2","scale_y_reverse","","yes","coord_flip; scale_continuous","","scale",2,2
+"ggplot2","scale_y_sqrt","","yes","geom_histogram; scale_continuous","","scale",1,2
+"ggplot2","xlim","limits","yes","geom_bin_2d; geom_density; geom_density_2d; geom_function; geom_segment; lims; scale_continuous","","scale",2,10
+"ggplot2","ylim","limits","yes","geom_bin_2d; geom_density_2d; geom_map","","scale",2,3
+"ggplot2","stat_bin_2d","bins","yes","coord_cartesian","","stat",1,1
+"ggplot2","stat_bin_2d","colour","yes","coord_cartesian","","stat",1,1
+"ggplot2","stat_connect","connection","partial","stat_connect","2 of 3 uses: as R: zigzag (stat_connect(aes(colour = ""zigzag""), connection = zigzag))","stat",1,3
+"ggplot2","stat_connect","mapping","yes","stat_connect","","stat",1,2
+"ggplot2","stat_ecdf","","yes","stat_ecdf","","stat",3,1
+"ggplot2","stat_ecdf","colour","yes","stat_ecdf","","stat",3,1
+"ggplot2","stat_ecdf","data","yes","stat_ecdf","","stat",3,1
+"ggplot2","stat_ecdf","geom","yes","stat_ecdf","","stat",3,2
+"ggplot2","stat_ecdf","linewidth","yes","stat_ecdf","","stat",3,1
+"ggplot2","stat_ecdf","mapping","yes","stat_ecdf","","stat",3,1
+"ggplot2","stat_ecdf","pad","yes","stat_ecdf","","stat",3,1
+"ggplot2","stat_ellipse","","yes","stat_ellipse","","stat",2,2
+"ggplot2","stat_ellipse","geom","yes","stat_ellipse","","stat",2,1
+"ggplot2","stat_ellipse","level","yes","stat_ellipse","","stat",2,1
+"ggplot2","stat_ellipse","linetype","yes","stat_ellipse","","stat",2,2
+"ggplot2","stat_ellipse","type","yes","stat_ellipse","","stat",2,4
+"ggplot2","stat_function","alpha","yes","geom_function","","stat",1,1
+"ggplot2","stat_function","color","yes","geom_function","","stat",1,1
+"ggplot2","stat_function","fill","yes","geom_function","","stat",1,1
+"ggplot2","stat_function","fun","yes","geom_function","","stat",1,3
+"ggplot2","stat_function","geom","yes","geom_function","","stat",1,3
+"ggplot2","stat_function","n","yes","geom_function","","stat",1,1
+"ggplot2","stat_identity","","yes","stat_identity","","stat",1,1
+"ggplot2","stat_manual","","yes","stat_manual","","stat",1,1
+"ggplot2","stat_manual","args","partial","stat_manual","5 of 5 uses: as R: list(expr = quote({
+    hull <- chull(x, y)
+    list(x = x[hull], y = y[hull])
+})) (stat_manual(fun = with, args = list(expr = quote({     hull <- chull(x, y)     list(x = x[hull], y = y[hull]) })), geom = ""polygon"", fill = NA))","stat",1,5
+"ggplot2","stat_manual","fill","yes","stat_manual","","stat",1,3
+"ggplot2","stat_manual","fun","yes","stat_manual","","stat",1,6
+"ggplot2","stat_manual","geom","yes","stat_manual","","stat",1,5
+"ggplot2","stat_manual","shape","yes","stat_manual","","stat",1,1
+"ggplot2","stat_manual","size","yes","stat_manual","","stat",1,1
+"ggplot2","stat_smooth","","yes","lims","","stat",1,1
+"ggplot2","stat_summary","colour","yes","stat_summary","","stat",3,5
+"ggplot2","stat_summary","fun","yes","stat_summary","","stat",3,5
+"ggplot2","stat_summary","fun.data","yes","stat_summary","","stat",3,2
+"ggplot2","stat_summary","fun.max","yes","stat_summary","","stat",3,1
+"ggplot2","stat_summary","fun.min","yes","stat_summary","","stat",3,1
+"ggplot2","stat_summary","geom","yes","stat_summary","","stat",3,4
+"ggplot2","stat_summary","linewidth","yes","stat_summary","","stat",3,2
+"ggplot2","stat_summary","mapping","yes","stat_summary","","stat",3,1
+"ggplot2","stat_summary","size","yes","stat_summary","","stat",3,4
+"ggplot2","stat_summary_2d","","yes","stat_summary_2d","","stat",1,1
+"ggplot2","stat_summary_2d","fun","partial","stat_summary_2d","1 of 4 uses: as R: function(x) sum(x^2) (stat_summary_2d(fun = function(x) sum(x^2)))","stat",1,4
+"ggplot2","stat_summary_2d","fun.args","yes","stat_summary_2d","","stat",1,1
+"ggplot2","stat_summary_bin","fun","yes","stat_summary","","stat",2,1
+"ggplot2","stat_summary_bin","geom","yes","stat_summary","","stat",2,1
+"ggplot2","stat_summary_bin","orientation","yes","stat_summary","","stat",2,1
+"ggplot2","stat_summary_hex","","yes","stat_summary_2d","","stat",1,1
+"ggplot2","stat_summary_hex","fun","yes","stat_summary_2d","","stat",1,1
+"ggplot2","arrow","ends","yes","guide_bins","","theme",1,1
+"ggplot2","arrow","length","yes","guide_bins","","theme",1,1
+"ggplot2","element_line","colour","yes","get_theme; subtheme","","theme",3,3
+"ggplot2","element_text","color","yes","register_theme_elements","","theme",3,1
+"ggplot2","element_text","colour","yes","merge_element; subtheme; update_ggplot","","theme",3,4
+"ggplot2","element_text","hjust","yes","register_theme_elements","","theme",3,1
+"ggplot2","element_text","size","yes","merge_element","","theme",3,1
+"ggplot2","element_text","vjust","yes","register_theme_elements","","theme",3,1
+"ggplot2","theme","axis.line","yes","element; guide_axis_stack; theme","","theme",3,3
+"ggplot2","theme","axis.line.x.bottom","partial","subtheme","1 of 1 uses: as R: red_line (theme(axis.title.x.bottom = red_text, axis.text.x.bottom = red_text, axis.line.x.bottom = red_line, axis.ticks.x.bottom = red_line))","theme",3,1
+"ggplot2","theme","axis.text","yes","element; theme","","theme",3,3
+"ggplot2","theme","axis.text.x","yes","theme","","theme",3,1
+"ggplot2","theme","axis.text.x.bottom","partial","subtheme","1 of 1 uses: as R: red_text (theme(axis.title.x.bottom = red_text, axis.text.x.bottom = red_text, axis.line.x.bottom = red_line, axis.ticks.x.bottom = red_line))","theme",3,1
+"ggplot2","theme","axis.ticks","yes","theme","","theme",3,1
+"ggplot2","theme","axis.ticks.length.x","yes","theme","","theme",3,1
+"ggplot2","theme","axis.ticks.length.y","yes","theme","","theme",3,1
+"ggplot2","theme","axis.ticks.x.bottom","partial","subtheme","1 of 1 uses: as R: red_line (theme(axis.title.x.bottom = red_text, axis.text.x.bottom = red_text, axis.line.x.bottom = red_line, axis.ticks.x.bottom = red_line))","theme",3,1
+"ggplot2","theme","axis.title.x.bottom","partial","subtheme","1 of 1 uses: as R: red_text (theme(axis.title.x.bottom = red_text, axis.text.x.bottom = red_text, axis.line.x.bottom = red_line, axis.ticks.x.bottom = red_line))","theme",3,1
+"ggplot2","theme","axis.title.y","yes","theme","","theme",3,1
+"ggplot2","theme","geom","yes","element; get_geom_defaults","","theme",3,2
+"ggplot2","theme","legend.position","yes","geom_bar; position_stack","","theme",3,2
+"ggplot2","theme","line","yes","complete_theme","","theme",3,1
+"ggplot2","theme","palette.colour.continuous","yes","scale_colour_continuous","","theme",3,2
+"ggplot2","theme","palette.colour.discrete","yes","scale_colour_discrete","","theme",3,1
+"ggplot2","theme","panel.background","yes","element; theme","","theme",3,4
+"ggplot2","theme","panel.border","yes","theme","","theme",3,1
+"ggplot2","theme","panel.grid.major","yes","theme","","theme",3,2
+"ggplot2","theme","panel.grid.major.y","yes","theme","","theme",3,1
+"ggplot2","theme","panel.grid.minor","yes","annotation_logticks","","theme",3,2
+"ggplot2","theme","panel.grid.minor.y","yes","theme","","theme",3,1
+"ggplot2","theme","panel.ontop","yes","theme","","theme",3,1
+"ggplot2","theme","plot.background","yes","annotation_custom; element; theme","","theme",3,3
+"ggplot2","theme","plot.margin","yes","element; geom_rug","","theme",3,2
+"ggplot2","theme","plot.title","yes","theme","","theme",3,1
+"ggplot2","theme","strip.text.y","yes","facet_grid","","theme",3,1
+"ggplot2","theme","text","yes","get_theme","","theme",3,2
+"ggplot2","theme_bw","","yes","annotation_custom; annotation_logticks; get_theme; ggtheme; scale_grey","","theme",3,7
+"ggplot2","theme_classic","","yes","ggtheme","","theme",3,1
+"ggplot2","theme_dark","","yes","ggtheme","","theme",1,1
+"ggplot2","theme_gray","","yes","calc_element; get_theme; ggtheme","","theme",1,4
+"ggplot2","theme_light","","yes","ggtheme","","theme",1,1
+"ggplot2","theme_linedraw","","yes","ggtheme","","theme",1,1
+"ggplot2","theme_minimal","","yes","ggtheme","","theme",2,1
+"ggplot2","theme_sub_axis_bottom","line","partial","subtheme","1 of 1 uses: as R: red_line (theme_sub_axis_bottom(title = red_text, text = red_text, line = red_line, ticks = red_line))","theme",1,1
+"ggplot2","theme_sub_axis_bottom","text","partial","subtheme","1 of 1 uses: as R: red_text (theme_sub_axis_bottom(title = red_text, text = red_text, line = red_line, ticks = red_line))","theme",1,1
+"ggplot2","theme_sub_axis_bottom","ticks","partial","subtheme","1 of 1 uses: as R: red_line (theme_sub_axis_bottom(title = red_text, text = red_text, line = red_line, ticks = red_line))","theme",1,1
+"ggplot2","theme_sub_axis_bottom","title","partial","subtheme","1 of 1 uses: as R: red_text (theme_sub_axis_bottom(title = red_text, text = red_text, line = red_line, ticks = red_line))","theme",1,1
+"ggplot2","theme_void","","yes","ggtheme; scale_shape","","theme",1,2
+"ggplot2","theme_void","base_size","yes","scale_linetype","","theme",1,1

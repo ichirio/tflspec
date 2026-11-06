@@ -95,6 +95,60 @@ test_that("tfl_read_template_sheets(): the Excel example, as report files", {
   expect_identical(unlist(back$template$args$categorical), a$categorical)
 })
 
+# demog's ARD where Control has one subject with an age (n = 1), or none (n = 0)
+dm_ard <- function(control = c("one", "none")) {
+  control <- match.arg(control)
+  saf <- adsl[adsl$SAFFL == "Y", ]
+  ctl <- which(saf$TRT01A == "Control")
+  if (control == "one") saf <- saf[-ctl[-1L], ] else saf$AGE[ctl] <- NA
+  cards::bind_ard(
+    cards::ard_tabulate(saf, variables = TRT01A),
+    cards::ard_summary(saf, by = TRT01A, variables = AGE),
+    cards::ard_tabulate(saf, by = TRT01A, variables = c(AGEGR1, SEX, RACE, ETHNIC)))
+}
+# demog's Age Mean (SD) row: Drug X, Control
+dm_age <- function(ard, ...) {
+  t <- as.data.frame(suppressMessages(rtfreporter::plan_apply(
+    suppressMessages(tpl_demog(ard, population = "SAF", ...)), "table")))
+  unlist(t[t$label == "Mean (SD)", c("Drug X", "Control")], use.names = FALSE)
+}
+
+test_that("demog: Mean (SD) keeps the mean when a group has one subject; sd_missing says what prints (#673)", {
+  skip_if_not_installed("cards")
+  ard1 <- dm_ard("one")
+  saf <- adsl[adsl$SAFFL == "Y", ]
+  ctl1 <- saf$AGE[saf$TRT01A == "Control"][1L]
+  drug <- saf$AGE[saf$TRT01A == "Drug X"]
+  # n >= 2: as before; n = 1: the mean and `-`, to the template's digits
+  expect_identical(dm_age(ard1), c(sprintf("%.1f (%.2f)", mean(drug), stats::sd(drug)),
+                                   sprintf("%.1f (-)", ctl1)))
+  expect_identical(dm_age(ard1, sd_missing = "NA")[2L], sprintf("%.1f (NA)", ctl1))
+  one <- dm_age(ard1, sd_missing = "")
+  expect_identical(one, c(dm_age(ard1)[1L], sprintf("%.1f", ctl1)))
+  # n = 0: blank, whatever the mark
+  ard0 <- dm_ard("none")
+  expect_true(is.na(dm_age(ard0)[2L]))
+  expect_true(is.na(dm_age(ard0, sd_missing = "")[2L]))
+  # cells the report gives are its own: sd_missing has no effect
+  own <- list(n = "{N:.0f}", `Mean (SD)` = "{mean:.1f} ({sd:.2f})")
+  expect_true(is.na(dm_age(ard1, cells = own, sd_missing = "NA")[2L]))
+  # a mark that is not a text without braces stops
+  expect_error(tfl_template_expand("demog", list(population = "SAF", sd_missing = "{sd}")), "sd_missing")
+  expect_error(tfl_template_expand("demog", list(population = "SAF", sd_missing = NA_character_)), "sd_missing")
+  # the default cell: the mean and its SD, else the mean and the mark
+  x <- tfl_template_expand("demog", list(population = "SAF"))
+  expect_identical(tpl_item(x, "plan_cells")$args$continuous[["Mean (SD)"]],
+                   c("{mean:.1f} ({sd:.2f})", "{mean:.1f} (-)"))
+  y <- tfl_template_expand("demog", list(population = "SAF", sd_missing = ""))
+  expect_identical(tpl_item(y, "plan_cells")$args$continuous[["Mean (SD)"]],
+                   c("{mean:.1f} ({sd:.2f})", "{mean:.1f}"))
+  # (the rest of the cells, the template's)
+  expect_identical(tpl_item(y, "plan_cells")$args$continuous[-2L],
+                   tpl_item(x, "plan_cells")$args$continuous[-2L])
+  expect_true("sd_missing" %in% names(tfl_template_params("param_change")))
+  expect_identical(tfl_template_params("summary")$sd_missing$study, "settings.sd_missing")
+})
+
 test_that("summary: categorical variables too; disposition on it", {
   x <- tfl_template_expand("summary", list(population = "SAF", categorical = c("AGEGR1", "SEX"),
                                            categorical_statistics = NULL))

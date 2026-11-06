@@ -17,6 +17,6 @@
         continuous  | AGE (variant:demog)                                                          | the continuous variables, in order
         categorical | AGEGR1, SEX, RACE, ETHNIC (variant:demog)                                    | the categorical variables, in order
         labels      | AGE = Age (years); AGEGR1 = Age group, n (%); SEX = Sex, ... (variant:demog) | each variable's heading; given by name, merged (RACE: ~ drops one)
-        cells       | n = {N:.0f}; Mean (SD) = {mean:.1f} ({sd:.2f}); Median = ... (template)      | the rows of each continuous variable
+        cells       | n = {N:.0f}; Mean (SD) = {mean:.1f} ({sd:.2f}), {mean:.1f... (template)      | the rows of each continuous variable
         total       | FALSE (template)                                                             | TRUE: a Total column (each analysis again without `by`, plan_total())
 
