@@ -338,6 +338,20 @@
                   "median_colour", "median_linewidth", "risk_title", "risk_height", "risk_size",
                   "linewidth", "palette", "theme", "base_size", "ci_alpha")
 
+# What a report's `plot:` does not reach of the look: the look less the
+# figure's own settings (.fig_plot_fields(): theme, palette, base_size) and
+# the keys the types read from `plot:` (risk_title, .tpl_km_plot_routed).
+# tfl_resolve_output() warns of them (.tpl_plot_unused()); the second is
+# what each one is, for the warning's text.  Both are derived from the
+# look, so a key added to it is in the warning until a test says what it is.
+.tpl_km_plot_routed <- "risk_title"
+.tpl_km_look_what <- c(
+  censor_shape = "its censor marks' shape", censor_size = "its censor marks' size",
+  censor_stroke = "its censor marks' stroke", median_linetype = "its median line's linetype",
+  median_colour = "its median line's colour", median_linewidth = "its median line's width",
+  risk_height = "its risk table's height", risk_size = "its risk table's text size",
+  linewidth = "its curves' line width", ci_alpha = "its confidence band's transparency")
+
 # The data stage: a report type's data are the report's own `data:` steps
 # (the layout `km` keeps them as its arguments)
 .tpl_km_data_stage <- c("population", "subset", "data", "param", "where", "event")

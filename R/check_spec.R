@@ -135,7 +135,12 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE) {
           invokeRestart("muffleWarning")
         })
     }
-    ro <- tryCatch(tfl_resolve_output(o, study), error = function(e) e)
+    # (a `plot:` key that does nothing in the template: a warning of the report)
+    ro <- tryCatch(withCallingHandlers(tfl_resolve_output(o, study),
+      tfl_plot_key_unused = function(w) {
+        add(output_id = id, part = "plot", item = w$key, level = "warning", message = w$text)
+        invokeRestart("muffleWarning")
+      }), error = function(e) e)
     if (inherits(ro, "error")) {
       add(output_id = id, part = "content", item = "", level = "error", message = one(ro))
       next
