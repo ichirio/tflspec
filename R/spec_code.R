@@ -508,11 +508,55 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
 # the functions a table's content may apply to the data before its plan
 .content_data_steps <- c("normalize_ard")
 
-# The content without its data steps (normalize_ard()): when the report's
-# `data.steps` make the data, the normalization is theirs, not the
-# study defaults' as well
+# The content without its data steps (normalize_ard()): for a table of
+# records (no ARD to normalize), a listing or a figure, and the report's
+# own data code (`source: code`), whose steps make the data on their own.  A
+# table's Rework (.content_rework()) comes after the content's normalize_ard()
 .content_drop_data_steps <- function(content) {
   Filter(function(it) !.schema_fn_name(it$fn) %in% .content_data_steps, content)
+}
+
+# A table's Rework (`data.steps`, the old process_code): optional R after
+# the normalize_ard() of the content and before table_plan(), starting
+# from `data`.  Not a table of records (`source: dataset`: no ARD to
+# normalize), nor the report's own data code (`source: code`), nor a
+# listing or a figure: their steps stand alone, as they always did.
+.content_rework <- function(output) {
+  identical(output$kind, "table") &&
+    !(output$data$source %||% "ard") %in% c("dataset", "code") &&
+    length(.content_r_steps(output)) > 0L
+}
+
+# The content split into its normalize_ard() items and the rest
+.content_rework_split <- function(content) {
+  pre <- vapply(content, function(it) .schema_fn_name(it$fn) %in% .content_data_steps, NA)
+  list(pre = content[pre], rest = content[!pre])
+}
+
+# The one check both routes make: a Rework starts from `data` and leaves
+# `data`, so it names `data` somewhere.  Code that does not parse is left
+# to R: the program (and tfl_content_run()) stop with R's own message.
+.content_rework_need_data <- function(steps, who) {
+  ok <- tryCatch("data" %in% all.names(parse(text = steps, keep.source = FALSE)),
+                 error = function(e) TRUE)
+  if (!ok) {
+    .ard_stop(sprintf("%s: the data.steps leave no `data`, the data the plan is made from.", who))
+  }
+  invisible(TRUE)
+}
+
+# The line that makes `data` before a Rework: the content's normalize_ard()
+# with its arguments, else the ARD as it is
+.content_rework_normalize_code <- function(pre, object, pipe = NULL) {
+  if (!length(pre)) return(paste("data <-", object))
+  op <- .ard_pipe_op(pipe)
+  calls <- vapply(.content_calls(pre), function(s) .spec_call_code(.content_print(s)), "")
+  one <- paste("data <-", object, op, paste(calls, collapse = paste0(" ", op, " ")))
+  if (length(calls) == 1L && !grepl("\n", calls, fixed = TRUE) && nchar(one) <= 80L) return(one)
+  lines <- c(object, paste0("  ", calls))
+  lines[-length(lines)] <- paste(lines[-length(lines)], op)
+  lines[1L] <- paste("data <-", lines[1L])
+  unlist(strsplit(lines, "\n", fixed = TRUE))
 }
 
 # plan_cells()'s entries in the order the sheets path writes them
@@ -1145,8 +1189,10 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
 #' @param output A report ([tfl_output()]), resolved.
 #' @param data The data the content starts from: the ARD (or the normalized
 #'   ARD when the content has no `normalize_ard()` item).  With
-#'   `data.steps` (R that makes `data` from the output's `data.object`,
-#'   `ard` by default), the object the steps start from.  For a figure, a
+#'   `data.steps` (a table's Rework), the object the output names
+#'   (`data.object`, `ard` by default): `data` is that object after the
+#'   content's `normalize_ard()` (as it is when the content has none), and
+#'   the steps start from `data`.  For a figure, a
 #'   named list of the objects its code reads: the datasets by their names
 #'   in lower case (`adtte`), and `ard`.
 #' @return For a table, the [rtfreporter::table_plan()]; for a figure, the
@@ -1181,6 +1227,24 @@ tfl_content_run <- function(output, data) {
   # its parts) has no ARD to normalize
   if (identical(output$data$source, "dataset")) output$content <- .content_drop_data_steps(output$content)
   steps <- .content_r_steps(output)
+  if (.content_rework(output)) {
+    # a Rework runs as the program runs it: `data` is the output's object
+    # normalized (the content's normalize_ard(), else as it is), the steps
+    # leave the data the plan is made from
+    .content_rework_need_data(steps, "tfl_content_run()")
+    sp <- .content_rework_split(output$content)
+    env <- new.env(parent = globalenv())
+    obj <- output$data$object %||% "ard"
+    assign(obj, data, envir = env)
+    x <- data
+    for (cl in .content_calls(sp$pre)) {
+      x <- do.call(.spec_fun(cl$fun), c(list(x), lapply(cl$args, .spec_eval, env = emptyenv())))
+    }
+    assign("data", x, envir = env)
+    eval(parse(text = steps), env)
+    return(.content_table_run(sp$rest, get("data", envir = env, inherits = FALSE),
+                              kind = output$kind))
+  }
   if (length(steps)) {
     # the steps run as the program runs them: the output's object bound
     # to `data`, and what they leave in `data` is the plan's data
@@ -1274,9 +1338,15 @@ tfl_content_run <- function(output, data) {
 #' @param output A report ([tfl_output()]), resolved.
 #' @param data The name of the object the pipe starts from; `NULL`: the
 #'   output's `data$object`, else `ard` when the content normalizes it
-#'   (a `normalize_ard()` item), else `data`.  With `data.steps` (R that
-#'   makes `data` from the output's object, the old process_code), the
-#'   steps come first, as they are written, and the pipe starts from `data`.
+#'   (a `normalize_ard()` item), else `data`.  A table with `data.steps`
+#'   (its Rework, the old process_code: optional R after `normalize_ard()`
+#'   and before `table_plan()`) starts with `data <- ard |> normalize_ard(...)`
+#'   (the content's own item with its arguments; `data <- ard` when it has
+#'   none; `ard` is the output's object), then the steps as they are written,
+#'   which start from `data` and leave `data`, and the pipe starts from
+#'   `data`.  Steps that never name `data` are an error.  A table of records
+#'   (`source: dataset`) and the report's own data code (`source: code`)
+#'   have their steps alone, as they are written.
 #' @param plan The name the plan is assigned to.
 #' @param pipe `"|>"`, `"%>%"` or `"rstudio"` (RStudio's Insert Pipe
 #'   Operator); `NULL` follows `getOption("rtfreporter.ard_pipe")`, else
@@ -1362,9 +1432,20 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
   }
   # the object the pipe starts from: the output's own name for it, else
   # the ARD when the content normalizes it, else the normalized data
-  # the data's steps (`data.steps`, the old process_code): R that makes
-  # `data` from the output's object, written as it is, before the plan
+  # the data's steps (`data.steps`, the Rework, the old process_code): R
+  # on `data`, written as it is, between the normalization and the plan
   steps <- .content_r_steps(output)
+  if (.content_rework(output)) {
+    # `data <- ard |> normalize_ard(...)` (the content's, else `data <- ard`),
+    # the Rework as it is written, the plan from `data`
+    .content_rework_need_data(steps, "tfl_content_code()")
+    sp <- .content_rework_split(output$content)
+    return(c(.drop_attached_ns(
+               .content_rework_normalize_code(sp$pre, output$data$object %||% "ard", pipe)),
+             steps, "",
+             .content_table_code(sp$rest, data = data %||% "data",
+                                 plan = plan, pipe = pipe, kind = output$kind)))
+  }
   if (length(steps)) {
     # the steps make the data: no normalize_ard() of the defaults after them
     return(c(steps, "", .content_table_code(.content_drop_data_steps(output$content),

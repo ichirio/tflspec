@@ -11,8 +11,10 @@ tfl_content_run(output, data)
 
 \item{data}{The data the content starts from: the ARD (or the normalized
 ARD when the content has no \code{normalize_ard()} item).  With
-\code{data.steps} (R that makes \code{data} from the output's \code{data.object},
-\code{ard} by default), the object the steps start from.  For a figure, a
+\code{data.steps} (a table's Rework), the object the output names
+(\code{data.object}, \code{ard} by default): \code{data} is that object after the
+content's \code{normalize_ard()} (as it is when the content has none), and
+the steps start from \code{data}.  For a figure, a
 named list of the objects its code reads: the datasets by their names
 in lower case (\code{adtte}), and \code{ard}.}
 }
