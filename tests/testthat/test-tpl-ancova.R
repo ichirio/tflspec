@@ -172,3 +172,14 @@ test_that("in a study: the ARD program runs, the table from its ARD", {
   expect_true(nrow(t) > 0L)
   expect_true(any(t$label == "p-value"))
 })
+
+test_that("a where with | keeps its brackets: only the parameter's records at the visit", {
+  w <- "ONTRTFL == \"Y\" | ABLFL == \"Y\""
+  x <- tfl_template_expand("ancova", c(an_args, list(where = w)))
+  wh <- as.character(x$ard$analysis_data[[2L]]$where)
+  expect_identical(wh, paste0("PARAMCD == \"SYSBP\" & AVISIT == \"CYCLE 2 DAY 1\" & (", w, ")"))
+  kept <- advs[eval(parse(text = wh), advs), ]
+  expect_gt(nrow(kept), 0L)
+  expect_identical(unique(kept$PARAMCD), "SYSBP")
+  expect_identical(unique(kept$AVISIT), "CYCLE 2 DAY 1")
+})

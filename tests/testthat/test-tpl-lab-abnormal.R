@@ -203,3 +203,16 @@ test_that("in a study: the ARD program runs, the table from its ARD", {
   expect_identical(unique(t$label), c("LOW", "HIGH"))
   expect_length(unique(t$group), 6L)
 })
+
+test_that("a where with | keeps its brackets: only the selected parameters' records", {
+  w <- "ONTRTFL == \"Y\" | ABLFL == \"Y\""
+  x <- tfl_template_expand("lab_abnormal", list(population = "SAF", levels = c("LOW", "HIGH"),
+                                                params = "ALT", where = w, baseline_normal = TRUE,
+                                                param_order = NULL))
+  wh <- as.character(x$ard$analysis_data[[2L]]$where)
+  expect_identical(wh, paste0("(", w, ") & PARAMCD %in% c(\"ALT\") & BNRIND == \"NORMAL\""))
+  kept <- adlb[eval(parse(text = wh), adlb), ]
+  expect_gt(nrow(kept), 0L)
+  expect_identical(unique(kept$PARAMCD), "ALT")
+  expect_identical(unique(kept$BNRIND), "NORMAL")
+})
