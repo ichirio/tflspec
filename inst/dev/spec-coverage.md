@@ -26,7 +26,13 @@ the generated code writes from a row's columns -- cards'
 `continuous_summary_fns()` (the statistics column), `label_round()`,
 `alias_as_fmt_fun()` and `apply_fmt_fun()` (the formats column) -- and
 cardx's `proportion_ci_*()` (the choices of `ard_categorical_ci(method =)`,
-whose arguments are `ard_categorical_ci()`'s).
+whose arguments are `ard_categorical_ci()`'s).  Since 2026-11-06 also the
+arguments of the model cardx fits itself, written in `method.args =
+list(...)` or in a model's call in `x`: `survival::survfit()` (with
+`survfitKM()`, where its `...` go), `survival::coxph()` (with
+`coxph.control()`), `stats::glm()` (with `glm.control()`), `stats::lm()`
+and `mmrm::mmrm()` (with `mmrm_control()`) -- the Kaplan-Meier, Cox,
+logistic, ANCOVA and MMRM models, catalogued in `inst/ard/model_args.csv`.
 
 * **yes**: the row's own column writes it, or the catalog describes it
   (its kind and a hint: the GUI shows it) and the check judges the value
@@ -106,6 +112,27 @@ added the wrappers' keywords (above) and closed two of the gaps below
 (3: a `custom` row's calls by a plain name; 4: the names passed on to
 `car::Anova()`), not arguments.
 
+2026-11-06 (wider scope; cards 0.9.0, cardx 0.3.4, still the CRAN
+versions; survival 3.8, mmrm 0.3.19): the model arguments are 41 more
+arguments of 5 functions (weight 3; 32 more left out by design: the
+population's `subset`, starting values, multi-state, computing).
+
+| Scope (2026-11-06, wider) | 2026-11-06 before | 2026-11-06 after |
+|---|---:|---:|
+| **cards / cardx, weighted** | **95.9%** (412 yes / 41 partial) | **99.9%** (452 / 1) |
+| cards ard_*() | 100.0% | 100.0% |
+| cardx ard_*() | 100.0% | 100.0% |
+| cards post helpers | 100.0% | 100.0% |
+| cards code helpers | 100.0% | 100.0% |
+| cardx CI helpers | 100.0% | 100.0% |
+| cardx model arguments (new) | 50.0% (0 / 41) | 98.6% (40 / 1) |
+| weight-3 functions only | 93.6% | 99.8% |
+
+(2026-11-06 before: tflspec@next d220f07 on the wider scope -- a model's
+argument could be written as R in `method.args` and reached the model, but
+was neither described nor its name checked: partial.  On the 2026-11-05
+scope the run starts and ends at 100.0%.)
+
 (2026-11-01 before: the tflspec of this branch before the run, on the wider
 scope -- the 17 newly catalogued passed-on arguments could be written as R
 in `args` and reached their function, but were not described and their
@@ -128,6 +155,39 @@ function, but the catalog did not describe it and its value was not
 judged: partial.  2026-10-31 before: the same, with
 `update_ard_fmt_fun()` in the `post` scope -- written as R in `post`, its
 names checked, its values not judged.)
+
+### Added 2026-11-06
+
+* **The arguments of the model cardx fits** (`inst/ard/model_args.csv`, 41
+  arguments of 5 model functions, `tfl_ard_model_args()`): the
+  Kaplan-Meier interval (`km`: `method.args = list(conf.type = "log-log")`,
+  SAS PROC LIFETEST's; `conf.int`, `conf.lower`, `stype`, `ctype`,
+  `start.time`, `robust`, `cluster` ...), a Cox model's ties (`regression`
+  with `method = "coxph"`: `method.args = list(ties = "breslow")`, PROC
+  PHREG's; `robust`, `cluster`, `iter.max` ...), a logistic or Poisson
+  model's `family` / `offset` (`glm`), an ANCOVA's `weights` / `contrasts`
+  (`lm`), and MMRM's degrees of freedom (`lsmeans` / `lsmeans_diff` with
+  `method = "mmrm", package = "mmrm"`: `method.args = list(method =
+  "Kenward-Roger")`, PROC MIXED's DDFM=KR; `reml`, `vcov`).
+* `tfl_ard_spec()` looks for each name in the installed model function
+  and where its `...` go (`survfitKM()`, `coxph.control()`,
+  `glm.control()`, `mmrm_control()`): `conf.tpye =`, `tise =`, `metod =`
+  would stop the program, `wieghts =` would be ignored by `lm()` -- each
+  is said when the spec is read, as a warning.  The model is the one
+  `method` / `package` name (`"glm"` with the default package is
+  `stats::glm`), or survival::survfit() for `km`; a study's own model
+  function, or one whose `...` take anything, is not judged.  `formula =`
+  / `data =` in `method.args` are cardx's own (the program would stop).
+* Their values are judged by kind: one of the choices (`conf.type =
+  "loglog"`, `ties = "breslov"`, `method = "KR"`), a number (`conf.int =
+  95` is between 0 and 1), TRUE / FALSE, a column not in quotes
+  (`cluster = "SITEID"` would stop `coxph()`), a family (`family = 1`).
+* The same for a model's call written in `x`: `km_diff`'s `x =
+  survival::survfit(..., conf.type = "log-log")`, `wald`'s `x = glm(...,
+  fmaily = binomial)`; and in a `custom` row's cardx call.
+* A test builds a `km` row with the log-log interval and compares it with
+  `cardx::ard_survival_survfit(method.args = list(conf.type = "log-log"))`
+  called by hand and with `survival::survfit()`'s own limits.
 
 ### Added 2026-11-05
 
@@ -353,7 +413,13 @@ Every argument in scope is described and its value judged (since
    names the arguments clinical tables use, not every argument of the
    function they reach (`stats::aov()`'s, `car::vif(type =)` -- a method's
    argument, not the generic's -- are not described).
-5. Not in scope by design: `rename_ard_groups_shift()` /
+5. (since 2026-11-06) A model's argument is checked for the five model
+   functions catalogued (survfit, coxph, glm, lm, mmrm); another model
+   (`survival::survreg()`, `MASS::glm.nb()`, `nlme::gls()`, a study's own)
+   takes its names as written.  `mmrm(covariance =)` -- a `cov_struct()`
+   call, when the formula has no structure -- is taken as R (partial).
+   A list made by the program (`method.args = my_args`) is the program's.
+6. Not in scope by design: `rename_ard_groups_shift()` /
    `_reverse()` (the table code reads the by columns in the row's order:
    reorder `by` instead), `bind_ard()` (tflspec #118), the `mock_*()`
    shells.  A denominator of numbers is the denominator column (`86`,
@@ -404,6 +470,13 @@ Percentage: yes counts 1, partial 0.5.
 | 2026-11-03 before / after | 51.8% (326 / 19 / 303 of 648) | 59.2% (326 / 19 / 222 of 567) | 42 / 6 / 67 |
 | 2026-11-04 before / after | 51.6% (326 / 19 / 305 of 650) | 59.0% (326 / 19 / 224 of 569) | 41 / 7 / 67 |
 | 2026-11-05 before / after | 51.6% (326 / 19 / 305 of 650) | 59.0% (326 / 19 / 224 of 569) | 41 / 7 / 67 |
+| 2026-11-06 before / after | 51.6% (326 / 19 / 305 of 650) | 59.0% (326 / 19 / 224 of 569) | 41 / 7 / 67 |
+
+(2026-11-06: rtfreporter@next 1e1a693 (its changes since 0872829 are text
+tokens filled once, natural order of long digit runs in file names, wording
+and validation records: no new exported argument) and tflspec@next d220f07;
+the run went to cards / cardx -- the table is unchanged.  The gaps are the
+four below.)
 
 (2026-11-05: rtfreporter@next 0872829 (its changes since fc1a438 are the
 listing's wrapping of a value with a separator, the flextable / huxtable

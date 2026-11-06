@@ -966,7 +966,7 @@ back): rename the value or choose another separator.
 **ARD spec:** `tfl_ard_spec` `tfl_read_ard_spec` `tfl_write_ard_spec`
 `tfl_ard_spec_template` `tfl_ard_code` `tfl_ard_data_names` `tfl_build_ard` `tfl_ard_for`
 `tfl_ard_spec_hash` `tfl_ard_methods` `tfl_ard_as_custom` `tfl_ard_statistics`
-`tfl_ard_functions` `tfl_ard_args` `tfl_write_ard` `tfl_read_ard` `tfl_check_ard` `tfl_check_ard_function` `tfl_ard_function_template` `tfl_ard_function_info` `tfl_ard_conditions`
+`tfl_ard_functions` `tfl_ard_args` `tfl_ard_model_args` `tfl_write_ard` `tfl_read_ard` `tfl_check_ard` `tfl_check_ard_function` `tfl_ard_function_template` `tfl_ard_function_info` `tfl_ard_conditions`
 
 **CDISC ARS:** `tfl_ars` `tfl_write_ars_json` `tfl_check_ars`
 `tfl_ars_unmapped` `tfl_ars_ard` `tfl_read_ars_json` `tfl_ars_to_specs`
@@ -1099,9 +1099,13 @@ cat(tfl_report_code(sp, content = "plan"), sep = "\n")
   `tfl_ard_args("cardx::ard_categorical_ci")` one function's arguments
   (default, required, what fills each, the analysis row's column it goes
   in: `by` / `variables` / `strata` / `denominator` / `statistics`, else
-  `args`). Not offered, by design: the old names (`replaced_by` gives the
-  new one), the survey-design functions (their input is not a data frame)
-  and `ard_formals()` (not an analysis). cards >= 0.8.0, cardx >= 0.3.1.
+  `args`); `tfl_ard_model_args("survfit", "survival")` the arguments of a
+  model cardx fits, written in `method.args = list(...)` (`conf.type =
+  "log-log"`, `ties = "breslow"`, `family = binomial`, mmrm's `method =
+  "Kenward-Roger"`), whose names and values the check judges. Not
+  offered, by design: the old names (`replaced_by` gives the new one),
+  the survey-design functions (their input is not a data frame) and
+  `ard_formals()` (not an analysis). cards >= 0.8.0, cardx >= 0.3.1.
 - `data`: an analysis data (`data_id`) instead of `dataset` /
   `population_id` (not both); the analysis set is its population, and the
   analysis's `where` is applied on top of its conditions. `denominator` may

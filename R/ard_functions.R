@@ -236,6 +236,11 @@ tfl_ard_functions <- function(installed = TRUE) {
 #' (`call`, `arg`, `passed_to`, `default`, `kind`, `hint`, `choices`); a
 #' company adds rows with `options(tflspec.ard_passed_args = <data frame>)`.
 #'
+#' The arguments of a model cardx fits itself, written in `method.args =
+#' list(...)` (`list(conf.type = "log-log")` of a Kaplan-Meier estimate,
+#' `list(ties = "breslow")` of a Cox model), are the model function's:
+#' [tfl_ard_model_args()] lists them.
+#'
 #' @param call The function, as an analysis names it: `"cards::ard_summary"`.
 #' @return A data frame, one row per argument (`...` left out, the
 #'   arguments it passes on through `...` after its own): `arg`, `default`,

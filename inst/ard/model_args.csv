@@ -1,0 +1,42 @@
+fn,arg,default,kind,hint,choices
+survival::survfit,conf.int,0.95,number,"Confidence level of the Kaplan-Meier estimates' intervals, between 0 and 1 (0.95).",
+survival::survfit,conf.type,log,choice,"How the interval is computed: log (survival's default), log-log (SAS PROC LIFETEST's default), plain, logit, arcsin or none.",log | log-log | plain | none | logit | arcsin
+survival::survfit,conf.lower,usual,choice,"The lower limit's standard error: usual (default), peto or modified (Dorey and Korn).",usual | peto | modified
+survival::survfit,se.fit,TRUE,logical,"TRUE (default): the standard errors, and so the intervals, are computed.",
+survival::survfit,stype,1,choice,"How survival is estimated: 1 the Kaplan-Meier product (default), 2 exp(-cumulative hazard).",1 | 2
+survival::survfit,ctype,1,choice,"The cumulative hazard: 1 Nelson-Aalen (default), 2 with the Fleming-Harrington correction for ties.",1 | 2
+survival::survfit,timefix,TRUE,logical,"TRUE (default): times that differ only by rounding are taken as tied.",
+survival::survfit,start.time,,number,"Survival from this time on: the estimate conditional on surviving to it.",
+survival::survfit,weights,,variable,"Case weights: a column of the data, not in quotes (WTS).",
+survival::survfit,id,,variable,"The subject column, not in quotes (USUBJID), when a subject has several rows.",
+survival::survfit,robust,,logical,"TRUE: robust (infinitesimal jackknife) standard errors of the estimates.",
+survival::survfit,cluster,,variable,"The cluster of the robust standard errors: a column, not in quotes (USUBJID).",
+survival::coxph,ties,efron,choice,"How tied event times are handled: efron (survival's default), breslow (SAS PROC PHREG's default) or exact.",efron | breslow | exact
+survival::coxph,robust,,logical,"TRUE: robust (sandwich) standard errors.",
+survival::coxph,cluster,,variable,"The cluster of the robust standard errors: a column, not in quotes (SITEID).",
+survival::coxph,weights,,variable,"Case weights: a column of the data, not in quotes (WTS).",
+survival::coxph,id,,variable,"The subject column, not in quotes (USUBJID), when a subject has several rows.",
+survival::coxph,singular.ok,TRUE,logical,"TRUE (default): a term that cannot be estimated is dropped, not an error.",
+survival::coxph,iter.max,20,number,"The most iterations the fit takes (coxph.control()).",
+survival::coxph,timefix,TRUE,logical,"TRUE (default): times that differ only by rounding are taken as tied (coxph.control()).",
+survival::coxph,eps,1e-09,number,"The fit's convergence tolerance (coxph.control()).",
+survival::coxph,outer.max,10,number,"The most outer iterations of a penalized fit (coxph.control()).",
+stats::glm,family,gaussian,family,"The error distribution and link: binomial (logistic regression: odds ratios), poisson (rates), binomial(link = ""probit"") ...",
+stats::glm,weights,,variable,"Prior weights: a column of the data, not in quotes (WTS).",
+stats::glm,offset,,variable,"An offset of the linear predictor: log(EXPDUR) for a Poisson rate model.",
+stats::glm,contrasts,NULL,list,"The contrasts of the factors: list(TRT01P = ""contr.sum"").",
+stats::glm,singular.ok,TRUE,logical,"TRUE (default): a term that cannot be estimated is dropped, not an error.",
+stats::glm,maxit,25,number,"The most iterations the fit takes (glm.control()).",
+stats::glm,epsilon,1e-08,number,"The fit's convergence tolerance (glm.control()).",
+stats::glm,trace,FALSE,logical,"TRUE: the iterations are printed (glm.control()).",
+stats::lm,weights,,variable,"Weights: a column of the data, not in quotes (WTS).",
+stats::lm,offset,,variable,"An offset of the linear predictor: a column, not in quotes.",
+stats::lm,contrasts,NULL,list,"The contrasts of the factors: list(TRT01P = ""contr.sum"").",
+stats::lm,singular.ok,TRUE,logical,"TRUE (default): a term that cannot be estimated is dropped, not an error.",
+mmrm::mmrm,reml,TRUE,logical,"TRUE (default): REML; FALSE: maximum likelihood (Kenward-Roger needs REML).",
+mmrm::mmrm,method,Satterthwaite,choice,"The degrees of freedom of the tests and intervals: Satterthwaite (default), Kenward-Roger (SAS PROC MIXED's DDFM=KR), Residual or Between-Within (mmrm_control()).",Satterthwaite | Kenward-Roger | Residual | Between-Within
+mmrm::mmrm,vcov,,choice,"The estimates' covariance (mmrm_control(); by default the method's): Asymptotic, Empirical (sandwich), Empirical-Bias-Reduced, Empirical-Jackknife, Kenward-Roger or Kenward-Roger-Linear.",Asymptotic | Empirical | Empirical-Bias-Reduced | Empirical-Jackknife | Kenward-Roger | Kenward-Roger-Linear
+mmrm::mmrm,covariance,NULL,code,"The covariance structure when the formula has none: cov_struct(""us"", visits = ""AVISIT"", subject = ""USUBJID"").",
+mmrm::mmrm,contrasts,NULL,list,"The contrasts of the factors: list(TRT01P = ""contr.sum"").",
+mmrm::mmrm,accept_singular,TRUE,logical,"TRUE (default): a term that cannot be estimated is dropped, not an error (mmrm_control()).",
+mmrm::mmrm,weights,NULL,variable,"Weights: a column of the data, not in quotes (WTS).",

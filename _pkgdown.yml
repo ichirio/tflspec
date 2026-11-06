@@ -107,6 +107,7 @@ reference:
       - tfl_ard_statistics
       - tfl_ard_functions
       - tfl_ard_args
+      - tfl_ard_model_args
       - tfl_ard_as_custom
       - tfl_ard_function_template
       - tfl_ard_function_info

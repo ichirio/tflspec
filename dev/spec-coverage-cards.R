@@ -16,7 +16,10 @@
 # continuous_summary_fns(), label_round(), alias_as_fmt_fun(),
 # apply_fmt_fun(): the statistics and formats columns) and cardx's
 # proportion_ci_*() (ard_categorical_ci(method =)'s choices, their
-# arguments ard_categorical_ci()'s).
+# arguments ard_categorical_ci()'s), and since 2026-11-06 the arguments of
+# the model cardx fits, written in `method.args` (survival::survfit(),
+# survival::coxph(), stats::glm(), stats::lm(), mmrm::mmrm(): the
+# Kaplan-Meier, Cox, logistic, ANCOVA and MMRM models; inst/ard/model_args.csv).
 #
 # Status of an argument:
 #   yes      an analysis row's own column writes it (by, variables, strata,
@@ -216,6 +219,80 @@ for (h in helper_rows) {
     if (identical(h[[3L]], "by design")) "no" else h[[3L]]
   grp <- if (startsWith(h[[1L]], "cardx")) "cardx CI helpers" else "cards code helpers"
   add(grp, h[[1L]], h[[2L]], st, h[[4L]], h[[5L]])
+}
+
+# ---- the arguments of the model cardx fits (since 2026-11-06) -------------
+# Written in `method.args = list(...)` of ard_survival_survfit() (to
+# survival::survfit()), ard_regression(), ard_emmeans_*() and
+# ard_stats_anova() (to `package::method()`: a Cox, logistic, ANCOVA or
+# MMRM model), or in a model's call in `x` (ard_survival_survfit_diff(x =
+# survival::survfit(...))).  The model function's own arguments and those
+# its `...` reach (survfitKM(), glm.control(), coxph.control(),
+# mmrm_control()); formula and data are cardx's, x and y the fit's own.
+# A tflspec before inst/ard/model_args.csv takes them as R, its names not
+# checked: partial.
+model_fns <- list(
+  `survival::survfit` = c("survival:::survfit.formula", "survival:::survfitKM"),
+  `survival::coxph` = c("survival::coxph", "survival::coxph.control"),
+  `stats::glm` = c("stats::glm", "stats::glm.control"),
+  `stats::lm` = "stats::lm",
+  `mmrm::mmrm` = c("mmrm::mmrm", "mmrm::mmrm_control", "mmrm:::h_get_optimizers"))
+model_by_design <- c(
+  subset = "the population's and the analysis's where",
+  na.action = "the analysis data's missing values are the derivation's",
+  model = "a part of the fitted object", qr = "a part of the fitted object",
+  method = "the fitting routine (glm.fit, qr)", control = "written as its parts",
+  init = "starting values", start = "starting values", etastart = "starting values",
+  mustart = "starting values", tt = "time-dependent terms", statedata = "multi-state",
+  istate = "multi-state", etype = "multi-state", error = "multi-state",
+  influence = "a part of the fitted object", type = "survfitKM()'s internal",
+  entry = "a part of the fitted object", time0 = "multi-state",
+  nocenter = "centring", n_cores = "computing", optimizer = "computing",
+  optimizer_fun = "computing", optimizer_args = "computing",
+  optimizer_control = "computing", disable_theta_vcov = "computing",
+  emmeans_gcomp_vars = "emmeans' own", drop_visit_levels = "computing",
+  optimizers = "computing", toler.chol = "numerical tolerance",
+  toler.inf = "numerical tolerance", survcheckallow = "data checks")
+mfun <- function(k) {
+  pkg <- sub(":::?.*$", "", k)
+  if (!requireNamespace(pkg, quietly = TRUE)) return(NULL)
+  get0(sub("^.*:::?", "", k), envir = asNamespace(pkg), mode = "function")
+}
+mcat <- utils::read.csv("inst/ard/model_args.csv", stringsAsFactors = FALSE,
+                        na.strings = "")
+has_model_check <- exists(".model_args_problems", ns)
+model_judged <- c("logical", "number", "choice", "text", "variable", "family", "list")
+for (key in names(model_fns)) {
+  fs <- lapply(model_fns[[key]], mfun)
+  if (any(vapply(fs, is.null, NA))) next
+  args <- setdiff(unique(unlist(lapply(fs, function(f) names(formals(f))))),
+                  c("formula", "data", "...", "x", "y"))
+  # (the arguments a method keyword writes them for)
+  via <- switch(key,
+    `survival::survfit` = "method: km / km_diff; args: method.args = list(...) or x = survival::survfit(...)",
+    `mmrm::mmrm` = "method: lsmeans / lsmeans_diff (method = \"mmrm\", package = \"mmrm\"); args: method.args",
+    sprintf("method: regression / lsmeans / nested_models (method = \"%s\"); args: method.args or x = %s(...)",
+            sub("^.*::", "", key), key))
+  w3 <- c(w3, key)
+  for (a in args) {
+    r <- mcat[mcat$fn == key & mcat$arg == a, , drop = FALSE]
+    if (a %in% names(model_by_design) && !nrow(r)) {
+      add("cardx model arguments", key, a, "no", via,
+          paste0("[by design] ", model_by_design[[a]]))
+    } else if (!has_model_check) {
+      add("cardx model arguments", key, a, "partial", via,
+          "R in method.args / the model's call; not described, its name not checked")
+    } else if (nrow(r) && r$kind[1L] %in% model_judged) {
+      add("cardx model arguments", key, a, "yes", via,
+          paste0("inst/ard/model_args.csv: ", r$kind[1L], "; its name and value judged"))
+    } else if (nrow(r)) {
+      add("cardx model arguments", key, a, "partial", via,
+          paste0("inst/ard/model_args.csv: ", r$kind[1L], "; its name checked, R taken as it is"))
+    } else {
+      add("cardx model arguments", key, a, "partial", via,
+          "R in method.args; its name checked against the installed function, not described")
+    }
+  }
 }
 
 cov <- do.call(rbind, rows)
