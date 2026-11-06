@@ -106,3 +106,130 @@ test_that("a table the sheets say whole: no content_more, as before", {
   back <- tfl_read_outputs(tsm_back(sh))[["T-14-1-1"]]
   expect_identical(tsm_key(back$content), tsm_key(tfl_read_outputs(d)[["T-14-1-1"]]$content))
 })
+
+# ---- what the sheets dropped without a word (#689) ---------------------------
+# Each case goes YAML -> sheets -> YAML and compares the report's parsed
+# content and the code it writes.
+
+# a one-table study: the defaults normalize the ARD (as the converter writes
+# them), the report says its data is the ARD
+t689_study <- function(content, ard = NULL, defaults = list(tfl_item("normalize_ard", list())),
+                       env = parent.frame()) {
+  d <- withr::local_tempdir(.local_envir = env)
+  dir.create(file.path(d, "spec", "outputs"), recursive = TRUE)
+  writeLines(c("study_id: T-689", "title: t689", "settings:", "  rounding: sas",
+               "  output_path: output/tfl", "  program_dir: programs/tfl",
+               "  file: '{output_id}.rtf'", "keys:", "  id: USUBJID"),
+             file.path(d, "study.yml"))
+  writeLines(c("datasets:", "  - dataset: ADSL", "    level: ADaM", "    path: adam/adsl.xpt",
+               "  - dataset: ADAE", "    level: ADaM", "    path: adam/adae.xpt",
+               "populations:", "  - id: SAF", "    dataset: ADSL",
+               "    where: !r SAFFL == \"Y\"", "    label: Safety Population"),
+             file.path(d, "spec", "data.yml"))
+  y <- list(content = tflspec:::.items_to_list(defaults))
+  writeLines(yaml::as.yaml(y, indent.mapping.sequence = TRUE,
+                           handlers = tflspec:::.yaml_out_handlers()),
+             file.path(d, "spec", "defaults.yml"))
+  o <- tfl_output("T-1", "table", label = "One", population = "SAF", extends = "defaults",
+                  data = list(source = "ard", object = "ard"), content = content, ard = ard)
+  tfl_write_output(o, file.path(d, "spec", "outputs", "T-1.yml"))
+  d
+}
+
+t689_trip <- function(d, env = parent.frame()) {
+  sh <- tfl_sheets_from_yaml(d)
+  to <- withr::local_tempdir(.local_envir = env)
+  suppressMessages(tfl_yaml_from_sheets(sh, to, overwrite = TRUE))
+  list(sh = sh, to = to)
+}
+
+t689_code <- function(d, id = "T-1") {
+  out <- tfl_resolve_output(suppressMessages(tfl_read_outputs(d))[[id]], tfl_read_study_spec(d))
+  suppressMessages(tfl_content_code(out, pipe = "|>"))
+}
+
+# the report's items as a comparison key, the table_plan first as read
+t689_items <- function(d, id = "T-1") tsm_key(suppressMessages(tfl_read_outputs(d))[[id]]$content)
+
+t689_head <- list(tfl_item("table_plan", list(cols = "TRT01A", rows = list(group = "variable"))))
+
+test_that("plan_columns / plan_col_header with an argument no sheet says: whole in content_more", {
+  content <- c(t689_head, list(
+    tfl_item("plan_columns", list(widths = list(row_label = 3, .values = 2),
+                                  column_widths_twips = list(1000L, 2000L, 2000L),
+                                  cell_format = "right_align")),
+    tfl_item("plan_col_header", list(span = "TRT01A", header_sep = " / ",
+                                     col_header_align = "center")),
+    tfl_item("plan_paginate_rows", list(max_rows = 30L))))
+  d <- t689_study(content)
+  r <- t689_trip(d)
+  tb <- r$sh$table$tables
+  cm <- tb$content_more[tb$output_id %in% "T-1"]
+  expect_match(cm, "- plan_columns:", fixed = TRUE)
+  expect_match(cm, "column_widths_twips", fixed = TRUE)
+  expect_match(cm, "- plan_col_header:", fixed = TRUE)
+  expect_match(cm, "header_sep", fixed = TRUE)
+  # never both: the widths and the alignment are not on the other sheets
+  cl <- r$sh$table$columns
+  expect_false(any(cl$output_id %in% "T-1"))
+  st <- r$sh$table$style
+  expect_false(any(!is.na(st$col_header_align[st$output_id %in% "T-1"])))
+  # what the sheets say whole stays on them
+  expect_identical(r$sh$table$layout$pages_max_rows[r$sh$table$layout$output_id %in% "T-1"], "30")
+  expect_false(any(r$sh$not_converted$output %in% "T-1"))
+  expect_setequal(t689_items(r$to), t689_items(d))
+  expect_identical(t689_code(r$to), t689_code(d))
+})
+
+test_that("the bridge's guard: an argument no branch reads is named, never dropped", {
+  un <- tflspec:::.bridge_unread
+  expect_identical(un("plan_columns", c("widths", "cell_format", "column_widths_twips"), 0L),
+                   c("cell_format", "column_widths_twips"))
+  expect_identical(un("plan_col_header", c("lines", "span", "header_sep"), 0L),
+                   c("span", "header_sep"))
+  expect_identical(un("plan_paginate_cols", c("at", "col_header"), 0L), "col_header")
+  expect_identical(un("plan_paginate_rows", c("max_rows", "page_by"), 0L), character())
+  expect_identical(un("plan_labels", "AGE", 1L), "an unnamed argument")
+  expect_identical(un("plan_hide", character(), 2L), character())
+  # every argument the schema lists for these verbs is read or named
+  for (fn in c("plan_columns", "plan_col_header", "plan_stub", "plan_blanks", "plan_total",
+               "plan_row_group", "plan_paginate_group", "plan_style")) {
+    args <- names(tfl_schema(fn)$args)
+    expect_type(un(fn, args, 0L), "character")
+  }
+  # the bridge itself: the item's other rows are not written
+  items <- list(tfl_item("plan_columns", list(widths = list(row_label = 3), cell_format = "x")))
+  sp <- tflspec:::.plan_sheets_from_content(items, "T-1")
+  expect_identical(attr(sp, "not_converted_at"), 1L)
+  expect_match(attr(sp, "not_converted"), "cell_format", fixed = TRUE)
+  expect_true(is.null(sp$columns) || !nrow(sp$columns))
+})
+
+test_that("plan_paginate_cols(col_header = ): that item goes whole, the rest of the report stays", {
+  content <- c(t689_head, list(tfl_item("plan_paginate_cols", list(at = 2L, col_header = "Continued"))))
+  d <- t689_study(content)
+  r <- t689_trip(d)
+  tb <- r$sh$table$tables
+  i <- tb$output_id %in% "T-1"
+  expect_match(tb$content_more[i], "- plan_paginate_cols:", fixed = TRUE)
+  expect_identical(tb$cols[i], "TRT01A")
+  expect_identical(tb$rows[i], "group = variable")
+  expect_false(any(r$sh$not_converted$output %in% "T-1"))
+  lay <- r$sh$table$layout
+  expect_false(any(!is.na(lay$colpages_at[lay$output_id %in% "T-1"])))
+  expect_setequal(t689_items(r$to), t689_items(d))
+  expect_identical(t689_code(r$to), t689_code(d))
+})
+
+test_that("an item the sheets refuse goes whole, the report's others stay", {
+  # a cell style that styles nothing has no row the sheets accept
+  content <- c(t689_head, list(tfl_item("plan_cell_style", list(cols = list("AGE")))))
+  d <- t689_study(content)
+  r <- t689_trip(d)
+  tb <- r$sh$table$tables
+  i <- tb$output_id %in% "T-1"
+  expect_match(tb$content_more[i], "- plan_cell_style:", fixed = TRUE)
+  expect_identical(tb$cols[i], "TRT01A")
+  expect_setequal(t689_items(r$to), t689_items(d))
+})
+

@@ -722,6 +722,46 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
   vars
 }
 
+# The arguments of an item that .plan_sheets_from_content() has no place
+# for: the named ones its verb's branch does not read, and unnamed ones
+# where the verb takes none.  The bridge notes them as a miss, so the caller
+# keeps the item whole in content_more instead of dropping them (#689).
+# `NULL` below: the verb's names are data (a variable's, a statistic's), or
+# the verb is no sheet's (it is a miss anyway).
+.bridge_unread <- function(fn, arg_names, n_pos) {
+  layer <- function(prefix) {
+    cn <- names(.ard_spec_types$layout)
+    sub(paste0("^", prefix), "", cn[startsWith(cn, prefix)])
+  }
+  reads <- switch(fn,
+    table_plan = c("cols", "rows", "label", "show_keys", "stat", "value"),
+    plan_sort = c("stat", "keep"),
+    plan_total = c("label", "position"),
+    plan_filter = c("any", "parents", "by"),
+    plan_stub = c("vars", "name", "indent", "group_summary", "before", "heading"),
+    plan_paginate_group = c("col", "keep", "heading", "heading_at"),
+    plan_row_group = c("mode", "collapse", "group_col"),
+    plan_blanks = c("where", "first", "last", "counted"),
+    plan_paginate_rows = layer("pages_"),
+    plan_paginate_cols = layer("colpages_"),
+    plan_style = names(.ard_spec_types$style),
+    plan_cell_style = c(names(.ard_spec_types$cell_styles), "border"),
+    plan_hide = character(),
+    plan_col_header = c("header", "lines", "values", "col_header_align"),
+    plan_columns = c("widths", "decimal", "row_title", "auto_width", "sep"),
+    NULL)
+  # (the verbs whose names are data: plan_levels, plan_labels, plan_nest,
+  # plan_stat_groups, plan_compare, plan_digits, plan_cells -- no name guard)
+  by_name <- c("plan_levels", "plan_labels", "plan_nest", "plan_stat_groups",
+               "plan_compare", "plan_digits", "plan_cells")
+  out <- if (is.null(reads)) character() else setdiff(arg_names, reads)
+  if (n_pos && (!is.null(reads) || fn %in% by_name) &&
+      !fn %in% c("plan_sort", "plan_hide", "plan_filter", "plan_cells")) {
+    out <- c(out, "an unnamed argument")
+  }
+  out
+}
+
 # A table's content written to the sheets a workbook has -- the inverse of
 # .plan_content_items(), verb by verb, in the sheets' own forms (`a | b`,
 # `name = value`, a newline as \n).  What a sheet cannot say (plan_after(),
@@ -842,6 +882,14 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
     nm <- names(a) %||% rep("", length(a))
     pos <- a[!nzchar(nm)]
     named <- a[nzchar(nm)]
+    # an argument no branch below reads, or a positional one the verb's
+    # branch does not take, would be dropped without a word: the item goes
+    # whole to the caller's content_more instead (#689)
+    unread <- .bridge_unread(fn, names(named), length(pos))
+    if (length(unread)) {
+      miss(fn, sprintf("%s: no sheet says it", paste(unread, collapse = ", ")))
+      next
+    }
     if (fn %in% seen && !fn %in% c("plan_cell_style", "plan_levels", "plan_labels",
                                    "plan_digits")) {
       miss(fn, "a second call (a sheet holds one)"); next

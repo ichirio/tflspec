@@ -97,7 +97,18 @@ tfl_sheets_from_spec <- function(study, outputs) {
     # out, and the bridge run again on the rest
     keep <- seq_along(items)
     repeat {
-      sp <- bridge(c(nz, items[keep]), if (is.na(id)) NULL else id)
+      sp <- tryCatch(bridge(c(nz, items[keep]), if (is.na(id)) NULL else id), error = function(e) e)
+      # (the sheets refuse the rows of an item: which one, tried each alone;
+      # that one goes whole too, not the report's whole content)
+      if (inherits(sp, "error")) {
+        refused <- vapply(keep, function(k) inherits(tryCatch(
+          bridge(c(nz, items[k]), if (is.na(id)) NULL else id), error = function(e) e), "error"), NA)
+        if (!any(refused)) stop(sp)
+        out <- which(refused)
+        keep <- keep[-out]
+        if (!length(keep)) { sp <- list(); break }
+        next
+      }
       out <- attr(sp, "not_converted_at") %||% integer()
       if (!length(out)) break
       keep <- keep[-out]
