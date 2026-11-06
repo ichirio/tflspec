@@ -374,9 +374,10 @@ tfl_template_run <- function(name, x, ..., codelists = NULL, sets = NULL) {
 # A parameter that is the analysis set or the treatment: by its name, or a
 # treatment variable as its default
 .tpl_study_kind <- function(p) {
-  p$name %in% c(names(.tpl_param_study), "pop", "arm", "trt", "treatment") ||
-    any(as.character(unlist(p$default)) %in% c("TRT01A", "TRT01P", "TRTA", "TRTP", "ARM",
-                                               "ACTARM"))
+  !isTRUE(p$no_study) &&
+    (p$name %in% c(names(.tpl_param_study), "pop", "arm", "trt", "treatment") ||
+       any(as.character(unlist(p$default)) %in% c("TRT01A", "TRT01P", "TRTA", "TRTP", "ARM",
+                                                  "ACTARM")))
 }
 
 #' Test templates: no parameter is the look, each has its type

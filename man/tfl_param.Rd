@@ -35,7 +35,9 @@ report's \verb{population:}), \code{"settings.treatment"} (\code{study.yml}'s
 \verb{settings: treatment:}), \code{"settings.sd_missing"} (its \verb{settings: sd_missing:}), or \code{"<verb>.<argument>"}
 (\code{"plan_cells.continuous"}: that argument of the study's defaults (and
 pattern) item).  \code{NULL}: tflspec's for its name (\code{population}, \code{by},
-\code{group}), else the template's own default only.}
+\code{group}), else the template's own default only.  \code{FALSE}: none, for a
+parameter that shares such a name and is not the study's (the listing's
+\code{by}, the variables that divide it).}
 
 \item{type}{What its value is, for an input form: \code{"vars"} (variable
 names), \code{"levels"} (values of a variable), \code{"flag"} (\code{TRUE} /
