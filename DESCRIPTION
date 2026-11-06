@@ -59,6 +59,7 @@ Suggests:
     patchwork,
     pdftools,
     rstudioapi,
+    scales,
     siera (>= 0.5.6),
     smd,
     survival,
