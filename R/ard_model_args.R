@@ -279,7 +279,7 @@ tfl_ard_model_args <- function(method, package = "base") {
   shown <- paste(deparse(e, width.cutoff = 500L), collapse = " ")
   if (identical(kind, "variable")) {
     if (is.name(e) || is.call(e) || is.null(e)) return(NULL)
-    return(sprintf("is a column of the data, not in quotes (WTS); got %s", shown))
+    return(sprintf("is a column of the data, not in quotes; got %s", shown))
   }
   if (identical(kind, "family")) {
     if (is.name(e) || is.call(e) || is.character(e)) return(NULL)

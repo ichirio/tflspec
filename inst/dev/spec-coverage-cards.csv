@@ -502,7 +502,7 @@
 "stats","lm","singular.ok","yes","method: regression / lsmeans / nested_models (method = ""lm""); args: method.args or x = stats::lm(...)","inst/ard/model_args.csv: logical; its name and value judged","cardx model arguments",3
 "stats","lm","contrasts","yes","method: regression / lsmeans / nested_models (method = ""lm""); args: method.args or x = stats::lm(...)","inst/ard/model_args.csv: list; its name and value judged","cardx model arguments",3
 "stats","lm","offset","yes","method: regression / lsmeans / nested_models (method = ""lm""); args: method.args or x = stats::lm(...)","inst/ard/model_args.csv: variable; its name and value judged","cardx model arguments",3
-"mmrm","mmrm","weights","yes","method: lsmeans / lsmeans_diff (method = ""mmrm"", package = ""mmrm""); args: method.args","inst/ard/model_args.csv: variable; its name and value judged","cardx model arguments",3
+"mmrm","mmrm","weights","partial","method: lsmeans / lsmeans_diff (method = ""mmrm"", package = ""mmrm""); args: method.args","inst/ard/model_args.csv: code; its name checked, R taken as it is","cardx model arguments",3
 "mmrm","mmrm","covariance","partial","method: lsmeans / lsmeans_diff (method = ""mmrm"", package = ""mmrm""); args: method.args","inst/ard/model_args.csv: code; its name checked, R taken as it is","cardx model arguments",3
 "mmrm","mmrm","contrasts","yes","method: lsmeans / lsmeans_diff (method = ""mmrm"", package = ""mmrm""); args: method.args","inst/ard/model_args.csv: list; its name and value judged","cardx model arguments",3
 "mmrm","mmrm","reml","yes","method: lsmeans / lsmeans_diff (method = ""mmrm"", package = ""mmrm""); args: method.args","inst/ard/model_args.csv: logical; its name and value judged","cardx model arguments",3

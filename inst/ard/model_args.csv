@@ -39,4 +39,4 @@ mmrm::mmrm,vcov,,choice,"The estimates' covariance (mmrm_control(); by default t
 mmrm::mmrm,covariance,NULL,code,"The covariance structure when the formula has none: cov_struct(""us"", visits = ""AVISIT"", subject = ""USUBJID"").",
 mmrm::mmrm,contrasts,NULL,list,"The contrasts of the factors: list(TRT01P = ""contr.sum"").",
 mmrm::mmrm,accept_singular,TRUE,logical,"TRUE (default): a term that cannot be estimated is dropped, not an error (mmrm_control()).",
-mmrm::mmrm,weights,NULL,variable,"Weights: a column of the data, not in quotes (WTS).",
+mmrm::mmrm,weights,NULL,code,"Weights: a numeric vector as long as the data (d$W), not a column name: mmrm() does not look a column up by name.",

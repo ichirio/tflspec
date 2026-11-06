@@ -136,6 +136,9 @@ test_that("MMRM's degrees of freedom are written in method.args", {
   # mmrm_control()'s names are mmrm()'s
   expect_no_warning(exact_spec(mmrm_row(
     "method.args = list(method = \"Kenward-Roger\", reml = TRUE)")))
+  # mmrm() takes a vector, not a column name: neither form is judged as a column
+  expect_no_warning(exact_spec(mmrm_row("method.args = list(weights = WTS)")))
+  expect_no_warning(exact_spec(mmrm_row("method.args = list(weights = data$WTS)")))
   expect_warning(exact_spec(mmrm_row("method.args = list(method = \"KR\")")),
                  "mmrm\\(method = \\) is one of \"Satterthwaite\", \"Kenward-Roger\"")
   expect_warning(exact_spec(mmrm_row("method.args = list(metod = \"Kenward-Roger\")")),

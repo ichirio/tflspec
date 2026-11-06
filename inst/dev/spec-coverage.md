@@ -119,14 +119,14 @@ population's `subset`, starting values, multi-state, computing).
 
 | Scope (2026-11-06, wider) | 2026-11-06 before | 2026-11-06 after |
 |---|---:|---:|
-| **cards / cardx, weighted** | **95.9%** (412 yes / 41 partial) | **99.9%** (452 / 1) |
+| **cards / cardx, weighted** | **95.9%** (412 yes / 41 partial) | **99.8%** (451 / 2) |
 | cards ard_*() | 100.0% | 100.0% |
 | cardx ard_*() | 100.0% | 100.0% |
 | cards post helpers | 100.0% | 100.0% |
 | cards code helpers | 100.0% | 100.0% |
 | cardx CI helpers | 100.0% | 100.0% |
-| cardx model arguments (new) | 50.0% (0 / 41) | 98.6% (40 / 1) |
-| weight-3 functions only | 93.6% | 99.8% |
+| cardx model arguments (new) | 50.0% (0 / 41) | 97.1% (39 / 2) |
+| weight-3 functions only | 93.6% | 99.6% |
 
 (2026-11-06 before: tflspec@next d220f07 on the wider scope -- a model's
 argument could be written as R in `method.args` and reached the model, but
@@ -417,7 +417,9 @@ Every argument in scope is described and its value judged (since
    functions catalogued (survfit, coxph, glm, lm, mmrm); another model
    (`survival::survreg()`, `MASS::glm.nb()`, `nlme::gls()`, a study's own)
    takes its names as written.  `mmrm(covariance =)` -- a `cov_struct()`
-   call, when the formula has no structure -- is taken as R (partial).
+   call, when the formula has no structure -- is taken as R (partial), and
+   so is `mmrm(weights =)`: a numeric vector as long as the data (`d$W`),
+   not a column name, so it is not judged as one.
    A list made by the program (`method.args = my_args`) is the program's.
 6. Not in scope by design: `rename_ard_groups_shift()` /
    `_reverse()` (the table code reads the by columns in the row's order:
