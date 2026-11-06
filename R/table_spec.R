@@ -336,6 +336,8 @@
   if ("note" %in% names(d)) out$note <- as.character(d$note)
   body <- setdiff(allowed, "output_id")
   keep <- rowSums(!is.na(out[body])) > 0L
+  # (a report row of only `@<name>` is a pattern with no page content: its place, #662)
+  if (identical(sheet, "report")) keep <- keep | .ard_spec_is_pattern(out$output_id)
   out[keep, , drop = FALSE]
 }
 
