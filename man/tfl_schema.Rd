@@ -30,22 +30,47 @@ The same file is what the GUI's help and the AI kit's schema read.
 \details{
 A figure's functions: the file has a card for those a clinical figure
 uses (the geoms and the stats -- those with no geom of their own and
-those with one --, scales, coordinates, complete themes and \code{theme()},
-elements, guides, positions); any other function of a plot \code{ggplot2}
-exports (\code{scale_shape_identity}, \code{guide_custom}) is its formals.  The
+those with one --, scales and the limits \code{xlim()}, \code{ylim()}, \code{lims()},
+\code{expand_limits()}, coordinates, complete themes, \code{theme()} and its
+parts \verb{theme_sub_*()}, elements, guides, positions, \verb{annotation_*()},
+a facet's \code{vars()} and labellers); any other function of a plot
+\code{ggplot2} exports (\code{coord_quickmap}, \code{geom_sf_text}) is its
+formals.  \code{ggplot2}'s other spellings (\code{scale_color_manual},
+\code{guide_colorbar}, \code{theme_grey}, \code{stat_bin2d}) read as the card of the
+function they spell, and the code keeps the name written.  So
+are the extension packages' (ggsurvfit's \code{add_risktable()} and themes,
+ggrepel, ggh4x's facets and strips, ggtext's elements, ggnewscale,
+patchwork's arrangement): those a clinical figure uses have a card, any
+other of a plot is named \code{pkg::fn} (\code{ggh4x::facet_manual}).  The
 arguments the functions of one kind share -- a layer's \code{stat},
 \code{position}, \code{fun.data}, \code{pad}; a scale's \code{name}, \code{breaks}, \code{labels},
 \code{sec.axis}; \code{theme()}'s settings, each its element -- are typed and
 labelled by \code{inst/fig/gg_args.csv} for every function that takes them.
 A geom given another \code{stat} (\code{geom_step(stat = "ecdf")}) is checked
 with that stat's parameters too, a stat given another \code{geom} with that
-geom's.
+geom's.  A layer takes what any layer passes on to \code{layer()}
+(\code{key_glyph}, ggplot2 4.0's \code{layout}) and its position's (ggplot2 4.0's
+\code{nudge_x} / \code{nudge_y} of \code{geom_text()}); an argument by ggplot2's other
+spelling of an aesthetic (\code{color}, \code{pch}, \code{lty}) is checked as the one
+it spells.  \code{theme()} takes ggplot2 4.0's default palettes
+(\code{palette.colour.discrete} ...).
 
-The types, in a short notation: \code{string}, \code{integer}, \code{number},
+The types, in a short notation: \code{string}, \code{integer}, \code{number} (a
+number written as arithmetic of numbers, \verb{!r 1/5}, is one),
 \code{logical}, \code{enum[a|b]}, \code{column}, \code{stat}, \code{template}, \code{r} (\code{!r}),
 \code{formula} (\code{!r}, written \verb{~ <text>}), \code{guard} (\code{!r}, a two-sided
-\code{cond ~ "text"}), \code{call} and \verb{call<fn>}
-(\verb{\{fn:, args:\}}), \verb{list<T>} (a sequence), \verb{vec<K, V>} (a map that is a
+\code{cond ~ "text"}), \code{function} (a function by its name, \code{mean_se} or
+\code{Hmisc::smean.cl.normal}, written bare: \code{fun.data = mean_se}), \code{tilde}
+(a formula as its text, \code{y ~ x} or \code{~ . / 7}, written as the formula),
+\code{date} (a date as its text, \code{2024-01-01}; a sequence of them, \code{NA} an
+open end, written \code{as.Date(c("2024-01-01", NA))}),
+\code{call} and \verb{call<fn>} (\verb{\{fn:, args:\}}; \verb{call<label_*>} takes any
+function whose name the pattern matches, of any package:
+\code{{fn: scales::label_percent}}; base R's that clinical figures write as
+a value are typed where they fit: \code{seq()} for breaks,
+\code{{fn: seq, args: {from: 0, to: 52, by: 4}}} written \code{seq(0, 52, by = 4)};
+\code{alpha()} for a colour; grDevices' palettes, \code{hcl.colors()} ..., for a
+scale's colours), \verb{list<T>} (a sequence), \verb{vec<K, V>} (a map that is a
 named vector in R), \verb{map<K, V>} (a map that is a named list),
 \verb{rows<f1, f2, ...>} (a sequence of maps that is a data frame) and \code{T|U}
 (either).
@@ -56,6 +81,38 @@ English name (a GUI translates it and writes "label (argument)"),
 is what the AI kit and the reference read), and \code{main: true} for the
 arguments a form shows from the start (the others folded under the
 function's other arguments).  \code{colour} is a colour's text (\verb{#RRGGBB}).
+
+A layer's entry (\code{geom_errorbar}) says its aesthetics too: \code{aes}, the
+names a \code{mapping} takes (an unknown one warns, as ggplot2 does;
+\code{color} is \code{colour}), \code{aes_required}, those it needs, and \code{aes_or}, a
+required one's alternatives (\code{ymin} or \code{xmin}: a bar across).  A
+figure's plot is checked for them: a layer missing a required
+aesthetic, neither mapped nor given a value nor inherited from
+\code{ggplot()}'s mapping, warns.
+
+A mapping's value is a column's name (\code{colour: TRTA}), or an
+expression of a mapping's form, written as its text, untagged:
+a call of \code{factor()}, \code{as.factor()}, \code{ordered()}, \code{as.numeric()},
+\code{as.integer()}, \code{as.character()}, \code{interaction()}, \code{reorder()},
+\code{rev()}, \code{abs()}, \code{sqrt()}, \code{exp()}, \code{log()} / \code{log2()} / \code{log10()} /
+\code{log1p()}, \code{round()}, \code{after_stat()}, \code{after_scale()}, \code{stage()},
+\code{ifelse()}, \code{cut()}, \code{is.na()}, \code{nchar()}, \code{toupper()} / \code{tolower()},
+\code{substr()} or \code{trimws()}, or of the arithmetic or a comparison (\code{<},
+\code{<=}, \code{==}, \code{!=}, \verb{\%in\%}, \code{!}, \code{&}, \code{|}), of columns, constants, their
+arithmetic and \code{c()}, \code{sum()}, \code{max()}, \code{min()}, \code{mean()}, \code{median()},
+\code{length()}, \code{alpha()}, \code{pmin()}, \code{pmax()}, \code{cumsum()}, \code{[},
+\code{duplicated()}, \code{unique()}, \code{rank()} (\code{x: factor(AVISITN)},
+\code{y: after_stat(density)}, \code{x: reorder(USUBJID, -PCHG)},
+\code{fill: after_scale(alpha(colour, 0.4))}, a waterfall's
+\code{fill: PCHG <= -30} or \code{fill: ifelse(PCHG <= -30, "PR", "SD/PD")};
+in YAML a text that starts with \code{!} is quoted, \code{'!is.na(ADT)'});
+a number is a constant (\code{group: 1}).  A column whose name R does not
+write bare is written in backticks (\code{x: `A-B`}, as code is read
+back); written tight (\code{A-B}) it is read as the expression, and the
+check warns.  Any other R is \code{!r}.  The check
+warns for a text of neither form (it is written as a column of that
+name) and for a variable of \code{after_stat()} the layer's stat does not
+compute (\code{after_stat(densty)}).
 }
 \examples{
 names(tfl_schema())
