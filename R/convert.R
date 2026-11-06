@@ -68,8 +68,10 @@ tfl_convert_sheets_to_yaml <- function(from, to, content_fn = NULL, overwrite = 
 #'   `planner` (tflplanner's `_tflplanner` sheet: the report list and the
 #'   setup code), `ard` (the ARD sheets), `listing` (`listings`,
 #'   `listing_cols`), `figures` (a figure's design list, by id), `study`
-#'   (study.yml's fields).  What the app holds, or what the workbooks read
-#'   as.
+#'   (study.yml's fields), `not_converted` ([tfl_sheets_from_yaml()]'s notes
+#'   on what the sheets could not hold: listed in `_not_converted.yml` too,
+#'   with one message saying how many).  What the app holds, or what the
+#'   workbooks read as.
 #' @export
 tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALSE,
                                  figures = c("design", "items")) {
@@ -273,6 +275,17 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   }
   put("spec/toc.yml", list(outputs = toc))
 
+  # what tfl_sheets_from_yaml() could not hold (its `not_converted`: output,
+  # part, reason) is listed with the rest, and said once; a study that lost
+  # nothing says nothing
+  sh_nc <- sheets$not_converted
+  if (is.data.frame(sh_nc) && nrow(sh_nc) && all(c("output", "part", "reason") %in% names(sh_nc))) {
+    for (i in seq_len(nrow(sh_nc))) note(sh_nc$output[i], sh_nc$part[i], NA, NA, sh_nc$reason[i])
+    message(sprintf(paste0("tfl_yaml_from_sheets(): %d part%s of the spec the sheets could not hold %s ",
+                           "listed in spec/_not_converted.yml."),
+                    nrow(sh_nc), if (nrow(sh_nc) == 1L) "" else "s",
+                    if (nrow(sh_nc) == 1L) "is" else "are"))
+  }
   nc_df <- .nc_frame(nc)
   put("spec/_not_converted.yml", list(not_converted = lapply(seq_len(nrow(nc_df)), function(i) as.list(nc_df[i, ]))))
   invisible(list(to = to, files = files, not_converted = nc_df))
