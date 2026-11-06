@@ -245,7 +245,8 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
     }
     if (identical(st$step, "code")) {
       d$data[[k]]$code <- .forest_est_code(group, subgroups, comparison, look$n_by_arm,
-                                           look$subgroup_labels)
+                                           look$subgroup_labels,
+                                           isTRUE(look$bold_headings) && length(subgroups) > 0L)
     }
   }
   # the ARD read and the rows made: all the call's (no data steps)
@@ -309,13 +310,13 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
                                           args = list(max_size = 5, guide = "none"))))
   }
   if (isTRUE(look$bold_headings) && headings) {
+    # the headings bold by the axis's own labels (plotmath: `y_labels`, made
+    # with the rows), not a vector in element_text(), which ggplot2 does
+    # not support
     for (k in seq_along(d$plot$add)) {
       a <- d$plot$add[[k]]
-      if (identical(a$fn, "theme") && !is.null(a$args$axis.text.y)) {
-        # (the axis's labels in the order the breaks are given, est's own rows:
-        # ggplot2 keeps that order, it does not sort the breaks)
-        d$plot$add[[k]]$args$axis.text.y$args$face <-
-          tfl_r("ifelse(est$head, \"bold\", \"plain\")")
+      if (identical(a$fn, "scale_y_continuous") && !is.null(a$args$labels)) {
+        d$plot$add[[k]]$args$labels <- tfl_r("y_labels")
       }
     }
   }

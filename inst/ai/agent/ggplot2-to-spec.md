@@ -73,7 +73,7 @@ p <- ggplot(sm, aes(AVISIT, mean, colour = TRT01A, group = TRT01A)) +
 | `ggsurvfit()` + `add_censor_mark()` + `add_confidence_interval()` + `add_risktable()` | `km_curve` (`type: risk` for 1 - S(t)), `censor_mark`, `km_ci`, `risk_table` |
 | the n of each group at each x, under the plot | `{layer: n_table, ...}` |
 | text columns at the right (a forest's N and HR (95% CI)) | `{layer: text_column, ...}` |
-| labels at reference lines, right of the panel | `{layer: ref_label, y: 20, -30, label: "{y}%"}` |
+| labels at reference lines, right of the panel (inside each panel with `facet_by`) | `{layer: ref_label, y: 20, -30, label: "{y}%"}` |
 | any other geom or stat | `{layer: geom, geom: geom_xxx, data: df, aes: x = A \| y = B, params: alpha = 0.3}` |
 | a ggplot2 or extension function with exact arguments | `{layer: call, fn: ..., aes: ..., args: ...}` |
 | `annotate(...)`, `guides(...)`, a `theme()` that `plot` cannot say | `{layer: layer_code, code: 'p <- p + annotate(...)'}`. It runs after the settings, so its `theme()` and `labs()` have the last word |

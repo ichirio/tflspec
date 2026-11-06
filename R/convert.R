@@ -10,7 +10,7 @@
 #' `spec/ard_definition.json` (or `spec/ard_spec.xlsx`),
 #' `spec/listing_figure_spec.xlsx`, `spec/figures/<id>.yml` -- and writes
 #' the YAML spec to `to`: `study.yml`, `spec/data.yml`, `spec/defaults.yml`,
-#' `spec/codelists.yml`, `spec/patterns/<name>.yml`, `spec/toc.yml` and one
+#' `spec/patterns/<name>.yml`, `spec/toc.yml` and one
 #' `spec/outputs/<id>.yml` a report.  Loose files (a table and a report
 #' workbook alone) convert too: `from` may be a folder holding them.
 #'
@@ -219,11 +219,6 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     if (length(pg)) defaults$page <- pg
   }
   put("spec/defaults.yml", defaults)
-
-  # spec/codelists.yml: the lists with no report (templates)
-  if (!is.null(sp$codelists) && nrow(scope(sp$codelists, NA))) {
-    put("spec/codelists.yml", .conv_codelists(scope(sp$codelists, NA)))
-  }
 
   # spec/patterns/<name>.yml
   pats <- unique(unlist(lapply(.ard_spec_pattern_sheets, function(s) {

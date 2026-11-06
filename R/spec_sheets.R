@@ -143,13 +143,6 @@ tfl_sheets_from_spec <- function(study, outputs) {
   page_rows(s$defaults$page, NA_character_)
   for (nm in names(s$patterns)) page_rows(s$patterns[[nm]]$page, paste0("@", nm))
 
-  # -- the code list templates --------------------------------------------------
-  for (v in names(s$codelists)) for (i in seq_along(s$codelists[[v]])) {
-    e <- s$codelists[[v]][[i]]
-    add("codelists", list(output_id = NA_character_, variable = v, value = cell(e$value), label = cell(e$label), order = as.character(i),
-                          under = cell(e$under)))
-  }
-
   # -- the ARD's study-wide sheets ----------------------------------------------
   ard <- list()
   keys <- s$study$keys %||% list()
@@ -297,6 +290,21 @@ tfl_sheets_from_spec <- function(study, outputs) {
       # a figure that is its own code and nothing of the designer's has no
       # design
       if (!(code_content && identical(names(fd), "layers"))) figures[[id]] <- fd
+    }
+  }
+  # a pattern with no page rows keeps its place: one report row, `@<name>`
+  # and nothing else (#662)
+  for (nm in names(s$patterns)) {
+    has <- any(vapply(.ard_spec_pattern_sheets, function(sh) any(vapply(
+      rows[[sh]] %||% list(), function(r) identical(r$output_id, paste0("@", nm)), NA)), NA))
+    if (!has) add("report", list(output_id = paste0("@", nm)))
+  }
+  # the layers' code lists have no sheet of their own (a report's own are
+  # its rows): they stay in the YAML
+  if (length(s$defaults$codelists)) note(NA_character_, "codelists", "the defaults' code lists (defaults.yml) stay in YAML, not on the sheets")
+  for (nm in names(s$patterns)) {
+    if (length(s$patterns[[nm]]$codelists)) {
+      note(paste0("@", nm), "codelists", "a pattern's code lists stay in YAML, not on the sheets")
     }
   }
   # the setup code on the planner sheet's study row

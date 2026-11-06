@@ -25,7 +25,11 @@ report's skeleton and nothing of its look:
   show them per row -- unless `ai/adam_summary.md` lists them from the
   define (`[define.xml: digits 1]` on a variable, or its "Value level"
   section by parameter): those are the study's digits, use them and say
-  so in an assumption (`from: define`);
+  so in an assumption (`from: define`).  When the value level gives
+  digits for some parameters of a variable and not for this one, the
+  variable-level digits are not known to be the collected precision.
+  This defines the report's numbers: ask, with the variable-level
+  digits as the default offered;
 - `page: titles`: the title lines of the shell for this report; the TOC's
   only when no title for this report can be read from the shell.  (A TOC
   row for one shell that covers several reports often has only the common

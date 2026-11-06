@@ -171,15 +171,15 @@ test_that("the sheets hold a report's own lists only: no row for a layer's (#647
   expect_identical(tfl_report_codelists(tfl_read_study_spec(d))$output_id, c("T-A", "T-A"))
 })
 
-test_that("spec/codelists.yml's lists stay no report's, beside a layer's list (#647)", {
+test_that("a spec/codelists.yml left in the study is ignored, beside a layer's list (#647, #659)", {
   skip_on_cran()
   d <- cll_study(defaults = cll_sex,
                  file = c("SEX: [{value: M, label: FileM}, {value: F, label: FileF}]",
                           "ANRIND: [{value: LOW, label: Low}]"),
                  reports = list("T-A" = list(extends = "[defaults]"), "T-E" = list(extends = "none")))
-  st <- tfl_read_study_spec(d)
-  # the sheets keep the file's rows (a round trip), with no report
-  expect_true(anyNA(tfl_sheets_from_yaml(d)$table$codelists$output_id))
+  expect_message(st <- tfl_read_study_spec(d), "spec/codelists.yml is not read", fixed = TRUE)
+  # the sheets have no row for it
+  expect_identical(nrow(tfl_sheets_from_yaml(d)$table$codelists), 0L)
   cl <- tfl_report_codelists(st)
   expect_false(anyNA(cl$output_id))
   expect_identical(cl$label, c("DefM", "DefF"))

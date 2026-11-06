@@ -18,14 +18,15 @@ warning naming it (\code{tfl_read_outputs()}); \code{FALSE} (default) to stop th
 \value{
 \code{tfl_read_study_spec()}: a list of class \code{tfl_study_spec} --
 \code{study}, \code{data}, \code{defaults}, \code{styles} (by name: \code{defaults.yml}'s
-\verb{styles:}, the look a report picks with \verb{style:}), \code{codelists},
+\verb{styles:}, the look a report picks with \verb{style:}),
 \code{patterns} (by name), \code{toc}, \code{dir}.  \code{tfl_read_outputs()}: a named list of \code{tfl_output}, by id.
 }
 \description{
 \code{tfl_read_study_spec()} reads the study-level files (every one optional)
 and \code{tfl_read_outputs()} the report files under \verb{spec/outputs/}
 (subfolders too; a file with \verb{outputs:} holds several).  An id in two
-files stops the read.
+files stops the read.  A \code{spec/codelists.yml} is not read (a code list is
+a report's or a layer's), with a message.
 }
 \examples{
 d <- system.file("extdata", "spec-yaml", package = "tflspec")

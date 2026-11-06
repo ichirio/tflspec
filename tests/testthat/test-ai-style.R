@@ -269,3 +269,75 @@ test_that("a running header laid out in rows is not a table; the kind is guessed
   # titles written with no separator are still told apart
   expect_identical(tflspec:::.rtf_kind_guess(c("Table 14.3.5", "Shift Table of ALT")), "shift")
 })
+
+# one table, `pre` before it and `post` after it, in a file of its own (#547)
+style_rtf <- function(d, f, head, pre = character(), post = character(), cell = "\\pard\\intbl\\ql ",
+                      border = "\\clbrdrb\\brdrs") {
+  writeLines(c(paste0("{\\rtf1\\ansi", head, "\\paperw12240\\paperh15840"), pre,
+               paste0("\\trowd\\trhdr", border, "\\cellx3000", border, "\\cellx4500"),
+               paste0(cell, "\\cell", cell, "Drug\\cell\\row"),
+               paste0("\\trowd\\cellx3000\\cellx4500", cell, "Age\\cell", cell, "54\\cell\\row"),
+               post, "}"), file.path(d, f))
+}
+
+test_that("the font is the one the table's cells use, not the font table's first (#547)", {
+  d <- withr::local_tempdir()
+  tbl <- "{\\fonttbl{\\f0 Courier New;}{\\f2 Arial;}}"
+  style_rtf(d, "used.rtf", tbl, cell = "\\pard\\intbl\\f2\\fs18\\ql ")
+  # no \fN in the rows: the default font, \deff, else the first
+  style_rtf(d, "deff.rtf", paste0("\\deff2", tbl))
+  style_rtf(d, "first.rtf", tbl)
+  t <- tfl_rtf_style_tables(d)
+  rownames(t) <- t$file
+  expect_identical(t["used.rtf", "font"], "Arial")
+  expect_identical(t["deff.rtf", "font"], "Arial")
+  expect_identical(t["first.rtf", "font"], "Courier New")
+})
+
+test_that("a footer holding only the page number leaves the footnotes after the table (#547)", {
+  d <- withr::local_tempdir()
+  tbl <- "{\\fonttbl{\\f0 Arial;}}"
+  page <- "{\\footer\\pard\\qr Page {\\field{\\*\\fldinst PAGE}} of {\\field{\\*\\fldinst NUMPAGES}}\\par}"
+  style_rtf(d, "page.rtf", tbl, pre = page, post = c("\\pard\\ql Note: x.\\par", "\\pard\\ql Source: y.\\par"))
+  # a footer with real text still wins
+  text <- "{\\footer\\pard\\ql Note: z.\\par\\pard\\qr Page {\\field{\\*\\fldinst PAGE}}\\par}"
+  style_rtf(d, "text.rtf", tbl, pre = text, post = "\\pard\\ql Note: x.\\par")
+  t <- tfl_rtf_style_tables(d)
+  rownames(t) <- t$file
+  expect_identical(t["page.rtf", "footnote_place"], "after")
+  expect_identical(t["page.rtf", "footnotes"], 2L)
+  expect_identical(t["text.rtf", "footnote_place"], "footer")
+  expect_identical(t["text.rtf", "footnotes"], 1L)
+})
+
+test_that("a border that is none is not a border (#547)", {
+  d <- withr::local_tempdir()
+  tbl <- "{\\fonttbl{\\f0 Arial;}}"
+  style_rtf(d, "none.rtf", tbl, border = "\\clbrdrt\\brdrnone\\clbrdrb\\brdrnone")
+  style_rtf(d, "nil.rtf", tbl, border = "\\clbrdrt\\brdrnil\\clbrdrb\\brdrnil")
+  style_rtf(d, "real.rtf", tbl, border = "\\clbrdrt\\brdrs\\clbrdrb\\brdrs")
+  s <- tfl_rtf_style_scan(d)
+  expect_true(all(s$border_top[s$file %in% c("none.rtf", "nil.rtf")] == "00"))
+  expect_true(all(s$border_bottom[s$file %in% c("none.rtf", "nil.rtf")] == "00"))
+  expect_true(all(s$border_top[s$file == "real.rtf"][1L] == "11"))
+  expect_true(all(s$border_bottom[s$file == "real.rtf"][1L] == "11"))
+  t <- tfl_rtf_style_tables(d)
+  rownames(t) <- t$file
+  expect_identical(t["none.rtf", "rules"], "")
+  expect_match(t["real.rtf", "rules"], "above_header", fixed = TRUE)
+})
+
+test_that("a folder with no tables: a warning naming it, the prompt still written; the prompt's kinds leave out `all` (#547)", {
+  d <- withr::local_tempdir()
+  fig <- file.path(d, "figs")
+  dir.create(fig)
+  writeLines("{\\rtf1\\ansi{\\fonttbl{\\f0 Arial;}}\\pard Figure 14.1 Kaplan-Meier\\par}", file.path(fig, "f1.rtf"))
+  expect_warning(p <- tfl_ai_style_prompt(dir = file.path(d, "home"), rtf_dir = fig),
+                 "1 RTF file.*figures are not read")
+  expect_true(file.exists(attr(p, "files")[["prompt"]]))
+  expect_match(p, "0 tables found", fixed = TRUE)
+  expect_warning(tfl_ai_style_prompt(dir = file.path(d, "home2"), rtf_dir = withr::local_tempdir()),
+                 "0 RTF file")
+  expect_match(p, "R's guess from the title: `demog`", fixed = TRUE)
+  expect_no_match(p, "guess from the title: `all`", fixed = TRUE)
+})
