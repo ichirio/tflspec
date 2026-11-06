@@ -222,14 +222,42 @@ test_that("a study.yml settings: key the sheet does not read is kept, not a stop
   expect_identical(length(x$msgs), 0L)
 })
 
-test_that("a study sheet key the table spec does not read is kept from the sheet alone, too", {
-  d <- rts_study(list("outputs/T-1.yml" = rts_table()))
+test_that("a vector setting is written back as the vector", {
+  study <- c("study_id: MIN-1", "title: minimal", "settings:", "  rounding: sas", "  foo: [a, b]")
+  x <- rts_trip(rts_study(list("outputs/T-1.yml" = rts_table()), study = study))
+  st <- yaml::read_yaml(file.path(x$to, "study.yml"))$settings
+  expect_identical(st$foo, c("a", "b"))
+  expect_identical(st$rounding, "sas")
+})
+
+test_that("a typed key study.yml never had still stops, with or without sheets$study", {
+  d <- rts_study(list("outputs/T-1.yml" = rts_table()),
+                 study = c("study_id: MIN-1", "title: minimal", "settings:", "  rounding: sas", "  treatment: TRT01A"))
   sh <- tfl_sheets_from_yaml(d)
-  sh$study$settings <- NULL
-  sh$table$study <- rbind(sh$table$study, data.frame(key = "treatment", value = "TRT01P"))
+  sh$table$study <- rbind(sh$table$study, data.frame(key = "roundng", value = "sas"))
   to <- withr::local_tempdir()
+  expect_error(tfl_yaml_from_sheets(sh, to, overwrite = TRUE), "it does not read")
+  sh$study <- NULL
+  expect_error(tfl_yaml_from_sheets(sh, to, overwrite = TRUE), "it does not read")
+  # a key study.yml had is kept
+  sh <- tfl_sheets_from_yaml(d)
   tfl_yaml_from_sheets(sh, to, overwrite = TRUE)
-  expect_identical(yaml::read_yaml(file.path(to, "study.yml"))$settings$treatment, "TRT01P")
+  expect_identical(yaml::read_yaml(file.path(to, "study.yml"))$settings$treatment, "TRT01A")
+})
+
+test_that("a pattern's content in each form the reader accepts is named, not an error", {
+  forms <- list(
+    calls = c("content:", "  - plan_cells: {categorical: '{n}'}", "  - plan_blanks: {where: records}"),
+    fn_form = c("content:", "  - {fn: plan_cells, args: {categorical: '{n}'}}"),
+    r_item = c("content:", "  - !r 'plan_cells(categorical = \"{n}\")'"),
+    r_content = "content: !r 'function(x) x'")
+  for (nm in names(forms)) {
+    d <- rts_study(list("patterns/p.yml" = forms[[nm]],
+                        "outputs/T-1.yml" = rts_table(extends = c("defaults", "patterns/p"))))
+    x <- rts_trip(d)
+    nc <- x$sh$not_converted
+    expect_identical(nc$output[nc$part == "content"], "@p", info = nm)
+  }
 })
 
 # -- item 6: the flat workbook ----------------------------------------------------------

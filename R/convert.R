@@ -95,7 +95,10 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   # value as the study.yml had it (sheets$study) where the row says the same.
   extra_settings <- list()
   if (!is.null(sp$study) && nrow(sp$study)) {
-    ex <- !is.na(sp$study$key) & !sp$study$key %in% names(.ard_spec_study_keys)
+    # (only a key study.yml really had: a typed key the study never had still
+    # reaches the bridge's stop, "The `study` sheet has a key it does not read")
+    ex <- !is.na(sp$study$key) & !sp$study$key %in% names(.ard_spec_study_keys) &
+      sp$study$key %in% names(meta$settings)
     if (any(ex)) {
       for (i in which(ex)) {
         k <- sp$study$key[i]
@@ -163,7 +166,8 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     }
   }
   for (k in names(extra_settings)) {
-    if (!is.null(extra_settings[[k]]) && !(is.atomic(extra_settings[[k]]) && is.na(extra_settings[[k]]))) {
+    v <- extra_settings[[k]]
+    if (!is.null(v) && !(is.atomic(v) && length(v) == 1L && is.na(v))) {
       study$settings[[k]] <- extra_settings[[k]]
     }
   }
