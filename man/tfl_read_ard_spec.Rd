@@ -42,6 +42,18 @@ the choices (\code{method = "wilson"}), text in quotes, a formula, a column,
 a list (\code{method.args = list(...)}), a list or formula of selectors
 (\code{fmt_fun = everything() ~ 1L}), an expression not in quotes (a \code{post}
 step's \code{filter = n >= 2}).  A name or a call is the program's to judge.
+A name a cardx function passes on through \code{...} to a stats or survival
+function that has no such argument either is said too
+(\code{ard_stats_t_test(var.eqaul = TRUE)}: \code{t.test()} would ignore it), and
+one \code{ard_car_anova()} passes on to the \code{car::Anova()} method of the
+model its \code{x} fits (\verb{x = lm(...), tpye = "III"}: \code{Anova.lm()} would
+ignore it and give type II).
+The same for the cards / cardx calls in a \code{custom} row's \code{code}, written
+with their package (\code{cards::ard_tabulate(data, denominatr = ...)},
+\code{cardx::ard_categorical_ci(..., method = "wilson_cc")}) or by the plain
+name of a function cards or cardx exports (\code{ard_tabulate(...)} after
+\code{library(cards)}, unless the code binds that name itself), inside a pipe
+or an \code{ard_stack()} too; the rest of the code is the program's.
 }
 
 \section{The analyses sheet}{

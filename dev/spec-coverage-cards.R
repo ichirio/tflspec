@@ -8,8 +8,15 @@
 # Run with the tflspec to measure installed, and cards / cardx from CRAN.
 #
 # Scope: every ard_*() cards and cardx export (their data.frame method's
-# arguments, as tfl_ard_args() reads them), and cards' helpers an analysis
-# row writes in its `post` column (inst/ard/utilities.csv, use "post").
+# arguments, as tfl_ard_args() reads them, and the arguments they pass on
+# through `...` to the function doing the work: inst/ard/passed_args.csv),
+# cards' helpers an analysis row writes in its `post` column
+# (inst/ard/utilities.csv, use "post") and, since 2026-11-01, the helpers
+# the generated code writes from a row's columns (cards'
+# continuous_summary_fns(), label_round(), alias_as_fmt_fun(),
+# apply_fmt_fun(): the statistics and formats columns) and cardx's
+# proportion_ci_*() (ard_categorical_ci(method =)'s choices, their
+# arguments ard_categorical_ci()'s).
 #
 # Status of an argument:
 #   yes      an analysis row's own column writes it (by, variables, strata,
@@ -72,9 +79,15 @@ w2 <- c("cards::ard_strata", "cards::ard_pairwise", "cards::ard_mvsummary",
         "cardx::ard_regression_basic", "cardx::ard_survival_survfit_diff",
         "cardx::ard_stats_oneway_test", "cardx::ard_stats_t_test_onesample",
         "cardx::ard_stats_wilcox_test_onesample", "cardx::ard_smd_smd",
-        "cardx::ard_stats_cohens_d", "cardx::ard_stats_paired_cohens_d",
+        "cardx::ard_effectsize_cohens_d", "cardx::ard_effectsize_paired_cohens_d",
+        "cardx::ard_effectsize_hedges_g", "cardx::ard_effectsize_paired_hedges_g",
         "cardx::ard_stats_mantelhaen_test", "cards::diff_ard_hierarchical",
-        "cards::update_ard_stat_label", "cards::replace_null_statistic")
+        "cards::update_ard_stat_label", "cards::replace_null_statistic",
+        "cards::update_ard_fmt_fun")
+w3 <- c(w3, "cards::continuous_summary_fns", "cards::label_round",
+        "cardx::proportion_ci_wilson", "cardx::proportion_ci_clopper_pearson")
+w2 <- c(w2, "cards::alias_as_fmt_fun", "cards::apply_fmt_fun",
+        "cardx::proportion_ci_wald", "cardx::proportion_ci_strat_wilson")
 weight <- function(call) if (call %in% w3) 3 else if (call %in% w2) 2 else 1
 
 rows <- list()
@@ -86,6 +99,10 @@ add <- function(group, fn, arg, s, where = "", note = "") {
 }
 
 # ---- the ard_*() functions ----------------------------------------------
+# (and the arguments each passes on through `...`, the scope's: this
+# checkout's catalog, so a tflspec before it is measured on the same scope)
+scope_passed <- utils::read.csv("inst/ard/passed_args.csv", stringsAsFactors = FALSE)
+cat_file <- function(to) if (nzchar(to)) "inst/ard/passed_args.csv" else "inst/ard/args.csv"
 f <- tfl_ard_functions()
 keys <- tfl_ard_methods()
 for (i in seq_len(nrow(f))) {
@@ -96,8 +113,18 @@ for (i in seq_len(nrow(f))) {
   kw <- keys$method[keys$call == call]
   via <- if (length(kw)) sprintf("method: %s (or %s)", kw[1L], call) else
     paste("method:", call)
+  # the arguments it passes on through `...` (inst/ard/passed_args.csv):
+  # in scope whichever tflspec is measured; one before tfl_ard_args() gave
+  # them is written as R in args, passed on, not described
+  passed <- if ("passed_to" %in% names(a)) a$passed_to else rep("", nrow(a))
+  extra <- scope_passed[scope_passed$call == call & !scope_passed$arg %in% a$arg, ]
+  for (k in seq_len(nrow(extra))) {
+    add(grp, call, extra$arg[k], if (f$offered[i]) "partial" else "no", paste0(via, "; args"),
+        paste0("passed on to ", extra$passed_to[k], "; R in args, not described"))
+  }
   for (j in seq_len(nrow(a))) {
     arg <- a$arg[j]
+    to <- if (nzchar(passed[j])) paste0("passed on to ", passed[j], "; ") else ""
     if (!f$offered[i]) {
       add(grp, call, arg, "no", via, "[by design] not offered for a new analysis")
     } else if (a$column[j] != "args") {
@@ -105,10 +132,10 @@ for (i in seq_len(nrow(f))) {
           "the analysis row's column")
     } else if (nzchar(a$hint[j]) && judged(a$kind[j], arg, call)) {
       add(grp, call, arg, "yes", paste0(via, "; args"),
-          paste0("inst/ard/args.csv: ", a$kind[j], "; its value judged"))
+          paste0(to, cat_file(passed[j]), ": ", a$kind[j], "; its value judged"))
     } else if (nzchar(a$hint[j])) {
       add(grp, call, arg, "partial", paste0(via, "; args"),
-          paste0("inst/ard/args.csv: ", a$kind[j], "; R taken as it is"))
+          paste0(to, cat_file(passed[j]), ": ", a$kind[j], "; R taken as it is"))
     } else {
       add(grp, call, arg, "partial", paste0(via, "; args"),
           paste0("R in args; kind from its default (", a$kind[j], "), no hint"))
@@ -140,6 +167,57 @@ for (k in which(u$use == "post")) {
   }
 }
 
+# ---- the helpers the generated code writes from a row's columns ----------
+# (the statistics and formats columns; tflspec writes the call itself).
+# A tflspec before the formats column wrote fmt_fun (.fmt_r) or the
+# statistics column continuous_summary_fns() (.stat_arg): no.
+has <- function(f) exists(f, ns)
+helper_rows <- list(
+  list("cards::continuous_summary_fns", "summaries", has(".stat_arg"),
+       "column `statistics` (a continuous analysis)", "cards' own statistics, in the order asked"),
+  list("cards::continuous_summary_fns", "other_stats", has(".stat_arg"),
+       "column `statistics`; tfl_ard_statistics(fun =)",
+       "a statistic of the statistics catalog with its own function (tfl_stats[...])"),
+  list("cards::label_round", "digits", has(".fmt_r"), "column `formats` (xx.x, 2)",
+       "the number of decimals"),
+  # (since 2026-11-03 the formats column takes xx.x*1000: any scale)
+  if (isTRUE(tryCatch(ns$.fmt_ok("xx.x*1000"), error = function(e) FALSE))) {
+    list("cards::label_round", "scale", TRUE, "column `formats` (xx.x%, xx.x*1000)",
+         "100 (a proportion as a percent) or any whole number (a rate per 1,000)")
+  } else {
+    list("cards::label_round", "scale", "partial", "column `formats` (xx.x%)",
+         "100 only (a proportion as a percent); another scale is R in args / post")
+  },
+  list("cards::label_round", "width", "by design", "",
+       "[by design] the cell's width and alignment are rtfreporter's (decimal alignment), not padded text"),
+  list("cards::alias_as_fmt_fun", "x", has(".fmt_r"), "column `formats`",
+       "a number of decimals, xx.x, xx.x%, xx.x*1000, pvalue"),
+  list("cards::alias_as_fmt_fun", "variable", has(".fmt_fun_arg"), "column `formats` (AGE:sd=xx.xx)",
+       "a variable's own format"),
+  list("cards::alias_as_fmt_fun", "stat_name", has(".fmt_r"), "column `formats` (sd=xx.xx)",
+       "a statistic's format"),
+  list("cards::apply_fmt_fun", "x", TRUE, "the pipe", "the analysis's ARD"),
+  list("cards::apply_fmt_fun", "replace", has(".post_fmt_split"), "tflspec fills it",
+       "TRUE after a post step that sets formats"))
+ci_map <- c(x = "column `variables` (and `by`)", conf.level = "args: conf.level",
+            correct = "args: method = \"waldcc\" / \"wilsoncc\" / \"strat_wilsoncc\"",
+            strata = "args: strata", weights = "args: weights",
+            max.iterations = "args: max.iterations")
+for (fn in grep("^proportion_ci_", getNamespaceExports("cardx"), value = TRUE)) {
+  for (arg in names(formals(getExportedValue("cardx", fn)))) {
+    helper_rows[[length(helper_rows) + 1L]] <- list(
+      paste0("cardx::", fn), arg, arg %in% names(ci_map),
+      paste0("method: proportion_ci (cardx::ard_categorical_ci); ", ci_map[arg] %||% ""),
+      "ard_categorical_ci()'s argument, its value judged there")
+  }
+}
+for (h in helper_rows) {
+  st <- if (isTRUE(h[[3L]])) "yes" else if (identical(h[[3L]], FALSE)) "no" else
+    if (identical(h[[3L]], "by design")) "no" else h[[3L]]
+  grp <- if (startsWith(h[[1L]], "cardx")) "cardx CI helpers" else "cards code helpers"
+  add(grp, h[[1L]], h[[2L]], st, h[[4L]], h[[5L]])
+}
+
 cov <- do.call(rbind, rows)
 out <- commandArgs(TRUE)[1L]
 if (is.na(out)) out <- "inst/dev/spec-coverage-cards.csv"
@@ -162,3 +240,19 @@ cat(sprintf("cards %s, cardx %s\n", utils::packageVersion("cards"),
 cat("all:               ", pct(cov), "\n")
 for (g in unique(cov$group)) cat(sprintf("%-19s %s\n", g, pct(cov[cov$group == g, ])))
 cat("weight-3 functions:", pct(cov[cov$weight == 3, ]), "\n")
+
+# Since 2026-11-02: the ard_*() functions a method keyword names (the name a
+# GUI offers and a person reads: "Kruskal-Wallis test", not
+# cardx::ard_stats_kruskal_test), by weight.  A keyword writes the same code
+# as its function: this measures how a SPEC is written, not what it can say.
+kw_calls <- tfl_ard_methods()$call
+fa <- unique(cov[cov$group %in% c("cards ard_*()", "cardx ard_*()") &
+                   !startsWith(cov$note, "[by design]"),
+                 c("package", "function", "weight")])
+fa$keyword <- paste0(fa$package, "::", fa$`function`) %in% kw_calls
+for (w in 3:1) {
+  d <- fa[fa$weight == w, ]
+  cat(sprintf("weight-%d ard_*() with a keyword: %d of %d%s\n", w, sum(d$keyword),
+              nrow(d), if (any(!d$keyword)) paste0(" (not: ", paste(
+                d$`function`[!d$keyword], collapse = ", "), ")") else ""))
+}

@@ -396,6 +396,9 @@ tfl_schema_check <- function(item) {
     if (ka %in% names(ent$args) && !is.null(ent$args[[ka]]$type)) {
       msg <- .schema_fits(v, .schema_type(ent$args[[ka]]$type), a)
       if (!is.null(msg)) bad(a, msg)
+      if (is.null(msg) && !.fig_is_figure_fn(fn)) {
+        for (p in .schema_check_calls_in(v)) bad(a, p$message, p$level)
+      }
     } else if (!is.null(dots) && identical(dots$style, "positional") && identical(a, dots$key)) {
       msg <- .schema_fits(v, .schema_type(dots$type), a)
       if (!is.null(msg)) bad(a, msg)
@@ -421,6 +424,27 @@ tfl_schema_check <- function(item) {
     }
   }
   out
+}
+
+# The problems of the calls inside a value ({fn: rtf_border, args: {top:
+# {fn: rtf_border_line, args: {style: wavy}}}}), each the schema has an
+# entry for, by that entry: a list of (level, message), the message naming
+# the call ("rtf_border_line(style = ) is ...").
+.schema_check_calls_in <- function(v) {
+  if (inherits(v, "tfl_call")) {
+    if (is.null(tfl_schema(v$fn))) return(list())
+    p <- .schema_check_item(list(fn = v$fn, args = v$args %||% list()), part = FALSE)
+    fn <- .schema_fn_name(v$fn)
+    return(lapply(seq_len(nrow(p)), function(i) list(
+      level = p$level[i],
+      message = if (identical(p$fn[i], v$fn) && nzchar(p$arg[i]))
+        sprintf("%s(%s = )%s%s", fn, p$arg[i],
+                if (grepl("^[A-Za-z_.][A-Za-z0-9_.]*\\(", p$message[i])) ": " else " ",
+                p$message[i]) else
+        sprintf("%s(): %s", fn, p$message[i]))))
+  }
+  if (is.list(v) && !is.object(v)) return(do.call(c, lapply(v, .schema_check_calls_in)))
+  list()
 }
 
 # The name a layer's argument is checked by: ggplot2's own spelling of an

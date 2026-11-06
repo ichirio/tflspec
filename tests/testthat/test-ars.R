@@ -294,8 +294,9 @@ test_that("a function's method carries its call, its file and its statistics", {
          population_id = "SAF", by = "TRT01A", variables = "AGE",
          args = "exact = FALSE"),
     list(output_id = "T1", analysis_id = "S",
-         method = "cardx::ard_stats_kruskal_test",
-         population_id = "SAF", by = "TRT01A", variables = "AGE"))))
+         method = "cards::ard_hierarchical",
+         population_id = "SAF", by = "TRT01A", variables = "AGEGR1",
+         args = "id = USUBJID"))))
   sp$study <- rbind(sp$study, data.frame(key = "source", value = "R/ard_mine.R"))
   ars <- tfl_ars(sp, dir = dir)
   m <- Filter(function(m) grepl("ard_mine", m$codeTemplate$code %||% ""),
@@ -309,10 +310,11 @@ test_that("a function's method carries its call, its file and its statistics", {
   # its operations: the statistics it declares (as_cards_fn(stat_names = ))
   ops <- vapply(m$operations, function(o) o$label %||% o$name, "")
   expect_setequal(ops, c("statistic", "p.value"))
-  # a package's function: its call too, instead of "f(...)"
-  s <- Filter(function(m) grepl("cardx::ard_stats_kruskal_test", m$codeTemplate$code %||% ""),
-              ars$methods)[[1L]]
-  expect_match(s$codeTemplate$code, "cardx::ard_stats_kruskal_test(data", fixed = TRUE)
+  # a package's function no keyword names: its call too, instead of "f(...)"
+  # (cards::ard_hierarchical(): every cardx ard_*() has a keyword now)
+  s <- Filter(function(m) grepl("ard_hierarchical(", m$codeTemplate$code %||% "",
+                                fixed = TRUE), ars$methods)[[1L]]
+  expect_match(s$codeTemplate$code, "ard_hierarchical(data", fixed = TRUE)
   # without the folder: the call, no file, the default operation
   ars0 <- tfl_ars(sp, dir = withr::local_tempdir())
   m0 <- Filter(function(m) grepl("ard_mine", m$codeTemplate$code %||% ""),

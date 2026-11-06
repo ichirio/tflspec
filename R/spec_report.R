@@ -70,6 +70,9 @@
                         style = if (length(fmt)) do.call(.spec_call, c(list("rtf_style"), fmt)),
                         # a word, or its look too: {fn: rtf_watermark, args: }
                         watermark = .page_call_value(doc_a$watermark),
+                        # colours declared ahead ("#RRGGBB"), a vector
+                        color_table = if (length(doc_a$color_table))
+                          as.character(unlist(doc_a$color_table)),
                         program = in_dir(prog),
                         program_fallback = if (is.null(prog) && !is.na(id)) in_dir(id),
                         tokens = doc_tokens,
@@ -267,7 +270,7 @@
 .band_style_args <- c("border", "width_twips", "width", "row_height_twips",
                       "font_size_half_points", "font", "markup", "cell_padding_left_twips",
                       "cell_padding_right_twips", "cell_padding_top_twips",
-                      "cell_padding_bottom_twips", "drop_empty_rows")
+                      "cell_padding_bottom_twips", "drop_empty_rows", "color")
 .band_style <- function(pg, band) {
   a <- .page_args(pg[[paste0("rtf_", band)]])
   a <- a[intersect(.band_style_args, names(a))]
