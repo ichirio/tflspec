@@ -158,3 +158,18 @@ test_that("an AI draft with pk_conc builds in tfl_ai_run(): the parts' objects, 
   w <- pc[[1L]]$plan_columns$widths
   expect_identical(names(w), c("row_label", ".values"))
 })
+
+test_that("pk_conc: a where with | keeps its brackets in the summary's records", {
+  w <- "ATPT == \"24 hr\" | ATPT == \"8 hr\""
+  x <- tfl_template_expand("pk_conc", list(population = "PK", where = w))
+  ad <- x$ard$analysis_data
+  # the listing's records: the condition alone; the summary's: bracketed
+  expect_identical(as.character(ad[[2L]]$where), w)
+  expect_identical(as.character(ad[[3L]]$where), paste0("(", w, ") & !is.na(AVAL)"))
+  pc <- pk_adpc(adsl)
+  k <- pc[eval(parse(text = ad[[3L]]$where), pc), ]
+  expect_true(all(k$ATPT %in% c("24 hr", "8 hr")))
+  expect_false(anyNA(k$AVAL))
+  y <- tfl_template_expand("pk_conc", list(population = "PK", where = "BLQFL == \"N\""))
+  expect_identical(as.character(y$ard$analysis_data[[3L]]$where), "BLQFL == \"N\" & !is.na(AVAL)")
+})

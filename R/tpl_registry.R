@@ -358,6 +358,13 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
   paste(x, collapse = " & ")
 }
 
+# A vector of conditions together (`&`), each in brackets when it is an
+# "or" (what `.tpl_and()` does for the conditions it is given one each, here
+# all the elements of the vectors); NULL when none
+.tpl_and_all <- function(x) {
+  do.call(.tpl_and, as.list(unlist(x, use.names = FALSE)))
+}
+
 # A template's items with the report's subjects (`subset`): the analysis
 # set's ADSL data keeps them (its `where`), and a records data of the set
 # takes its subjects from it (`subjects`: the three stages); a figure's
@@ -1635,7 +1642,7 @@ names(.tpl_pc_params) <- vapply(.tpl_pc_params, `[[`, "", "name")
     list(id = subj, label = .tpl_set_label(pop, ctx$population), from = "ADSL",
          population = pop),
     nn(list(id = set, label = a$data_label, from = a$data, subjects = subj,
-            where = if (length(where)) tfl_r(paste(where, collapse = " & ")),
+            where = if (length(where)) tfl_r(.tpl_and_all(where)),
             derive = if (length(ord)) tfl_r(paste(ord, collapse = " | ")))),
     # the change: the records that have one (no baseline visit's, so its
     # change cells stay empty)

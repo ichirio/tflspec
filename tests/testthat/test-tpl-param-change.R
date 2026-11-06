@@ -489,3 +489,18 @@ test_that("heading with no study plan_stub (extends: none, tpl_param_change()) b
   expect_identical(st[[1L]]$args$indent, 3L)
   expect_identical(st[[1L]]$args$name, "stub_x")
 })
+
+test_that("a where with | keeps its brackets: only the selected parameter's records", {
+  x <- tfl_template_expand("param_change", list(population = "SAF", data = "ADLB", params = "ALT",
+                                                where = "ONTRTFL == \"Y\" | ABLFL == \"Y\""))
+  w <- as.character(x$ard$analysis_data[[2L]]$where)
+  expect_identical(w, "(ONTRTFL == \"Y\" | ABLFL == \"Y\") & PARAMCD %in% c(\"ALT\")")
+  kept <- adlb[eval(parse(text = w), adlb), ]
+  expect_gt(nrow(kept), 0L)
+  expect_identical(unique(kept$PARAMCD), "ALT")
+  # no | : as before, no brackets
+  y <- tfl_template_expand("param_change", list(population = "SAF", data = "ADLB", params = "ALT",
+                                                where = "ONTRTFL == \"Y\""))
+  expect_identical(as.character(y$ard$analysis_data[[2L]]$where),
+                   "ONTRTFL == \"Y\" & PARAMCD %in% c(\"ALT\")")
+})

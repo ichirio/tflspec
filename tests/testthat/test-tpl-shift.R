@@ -480,3 +480,14 @@ test_that("shift, lab_shift: post_header leaves the ARD and its program unchange
                      tfl_ard_code(r0$st, output_id = "T-PH", save = FALSE), info = nm)
   }
 })
+
+test_that("shift: a where with | is its own argument of the filter (no brackets needed)", {
+  w <- "ONTRTFL == \"Y\" | ABLFL == \"Y\""
+  x <- tfl_template_expand("shift", list(population = "SAF", where = w))
+  code <- strsplit(as.character(x$ard$analysis_data[[1L]]$code), "
+", fixed = TRUE)[[1L]]
+  f <- parse(text = grep("dplyr::filter(d,", code, fixed = TRUE, value = TRUE))[[1L]][[3L]]
+  args <- as.list(f)[-(1:2)]
+  expect_length(args, 3L)
+  expect_identical(deparse(args[[3L]]), w)
+})
