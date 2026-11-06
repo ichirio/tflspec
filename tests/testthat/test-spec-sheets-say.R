@@ -231,3 +231,119 @@ test_that("a study sheet key the table spec does not read is kept from the sheet
   tfl_yaml_from_sheets(sh, to, overwrite = TRUE)
   expect_identical(yaml::read_yaml(file.path(to, "study.yml"))$settings$treatment, "TRT01P")
 })
+
+# -- item 6: the flat workbook ----------------------------------------------------------
+
+rts_flat_study <- function(env = parent.frame()) {
+  rts_study(list(
+    "data.yml" = c("datasets:", "  - dataset: ADSL", "    level: ADaM", "    path: adam/adsl.xpt",
+                   "populations:", "  - id: SAF", "    dataset: ADSL", '    where: !r SAFFL == "Y"',
+                   "    label: Safety Population",
+                   "records:", "  - {id: SAE, dataset: ADSL, where: !r AESER == 'Y', label: Serious events}",
+                   "objects:", "  - {id: n_saf, code: !r 200L, label: Subjects of the safety set}",
+                   "groups:", "  - id: AGEG", "    label: Age group", "    levels:",
+                   "      - {level: Young, where: !r AGE < 65}", "      - {level: Old, where: !r AGE >= 65}"),
+    "defaults.yml" = c("page:", "  header:", "    1: {left: A, row_height_twips: 360}",
+                       "    2: {left: B, right: C}", "  footer:", "    1: {left: F, row_height_twips: 240}",
+                       "  titles:", "    1: {center: T, row_height_twips: 400}",
+                       "  footnotes:", "    1: {left: N, row_height_twips: 200}",
+                       "  rtf_document:", "    watermark: {fn: rtf_watermark, args: {text: DRAFT, angle: 30.0}}",
+                       "content: []"),
+    "outputs/T-1.yml" = rts_table(),
+    "outputs/T-2.yml" = c(rts_table("T-2")[1:5], "page:", "  titles:", "    1: {center: Own, row_height_twips: 500}",
+                          rts_table("T-2")[-(1:5)])), env = env)
+}
+
+# a study's YAML files as parsed lists, the tags kept
+rts_parsed <- function(d) {
+  fs <- list.files(d, "[.]ya?ml$", recursive = TRUE, full.names = TRUE)
+  stats::setNames(lapply(fs, yaml::read_yaml, handlers = .yaml_handlers()), sub(d, "", fs, fixed = TRUE))
+}
+
+test_that("an unedited write and import changes nothing: the lines' heights stay", {
+  skip_if_not_installed("openxlsx")
+  skip_if_not_installed("readxl")
+  d <- rts_flat_study()
+  before <- rts_parsed(d)
+  xl <- withr::local_tempfile(fileext = ".xlsx")
+  tfl_write_spec_xlsx(d, xl)
+  msgs <- character()
+  r <- withCallingHandlers(tfl_import_spec_xlsx(d, xl, write = TRUE),
+                           message = function(m) { msgs <<- c(msgs, conditionMessage(m)); invokeRestart("muffleMessage") })
+  expect_identical(nrow(r$changes), 0L)
+  expect_identical(r$added, character())
+  expect_identical(r$missing, character())
+  expect_identical(r$ignored, character())
+  expect_identical(msgs, character())
+  expect_identical(rts_parsed(d), before)
+  # the heights are there
+  y <- yaml::read_yaml(file.path(d, "spec", "defaults.yml"), handlers = .yaml_handlers())
+  expect_identical(y$page$header[["1"]]$row_height_twips, 360L)
+  expect_identical(y$page$titles[["1"]]$row_height_twips, 400L)
+  expect_identical(y$page$footnotes[["1"]]$row_height_twips, 200L)
+  expect_identical(y$page$footer[["1"]]$row_height_twips, 240L)
+})
+
+test_that("an edit to a line's text keeps the line's height", {
+  skip_if_not_installed("openxlsx")
+  skip_if_not_installed("readxl")
+  d <- rts_flat_study()
+  xl <- withr::local_tempfile(fileext = ".xlsx")
+  tfl_write_spec_xlsx(d, xl)
+  wb <- openxlsx::loadWorkbook(xl)
+  h <- openxlsx::read.xlsx(wb, "header")
+  h$left[h$line == "1"] <- "A (edited)"
+  openxlsx::writeData(wb, "header", h)
+  openxlsx::saveWorkbook(wb, xl, overwrite = TRUE)
+  r <- tfl_import_spec_xlsx(d, xl, write = TRUE)
+  expect_identical(r$changes$to[r$changes$sheet == "header"], "left=A (edited); row_height_twips=360")
+  y <- yaml::read_yaml(file.path(d, "spec", "defaults.yml"), handlers = .yaml_handlers())
+  expect_identical(y$page$header[["1"]]$left, "A (edited)")
+  expect_identical(y$page$header[["1"]]$row_height_twips, 360L)
+})
+
+test_that("an edit to the records or objects sheet is said, per sheet, and not taken in", {
+  skip_if_not_installed("openxlsx")
+  skip_if_not_installed("readxl")
+  d <- rts_flat_study()
+  xl <- withr::local_tempfile(fileext = ".xlsx")
+  w <- tfl_write_spec_xlsx(d, xl)
+  expect_true(all(c("records", "objects") %in% w$sheets))
+  wb <- openxlsx::loadWorkbook(xl)
+  r1 <- openxlsx::read.xlsx(wb, "records")
+  r1$label[1L] <- "EDITED"
+  openxlsx::writeData(wb, "records", r1)
+  openxlsx::saveWorkbook(wb, xl, overwrite = TRUE)
+  msgs <- character()
+  r <- withCallingHandlers(tfl_import_spec_xlsx(d, xl, write = TRUE),
+                           message = function(m) { msgs <<- c(msgs, conditionMessage(m)); invokeRestart("muffleMessage") })
+  expect_identical(r$ignored, "records")
+  expect_length(msgs, 1L)
+  expect_match(msgs, "the records sheet was changed", fixed = TRUE)
+  expect_identical(nrow(r$changes), 0L)
+  y <- yaml::read_yaml(file.path(d, "spec", "data.yml"), handlers = .yaml_handlers())
+  expect_identical(y$records[[1L]]$label, "Serious events")
+  # both sheets edited: a message each
+  wb <- openxlsx::loadWorkbook(xl)
+  o1 <- openxlsx::read.xlsx(wb, "objects")
+  o1$label[1L] <- "EDITED TOO"
+  openxlsx::writeData(wb, "objects", o1)
+  openxlsx::saveWorkbook(wb, xl, overwrite = TRUE)
+  msgs <- character()
+  r2 <- withCallingHandlers(tfl_import_spec_xlsx(d, xl, write = FALSE),
+                            message = function(m) { msgs <<- c(msgs, conditionMessage(m)); invokeRestart("muffleMessage") })
+  expect_setequal(r2$ignored, c("records", "objects"))
+  expect_length(msgs, 2L)
+})
+
+test_that("the data catalog's groups are listed in _not_in_xlsx", {
+  skip_if_not_installed("openxlsx")
+  w <- tfl_write_spec_xlsx(rts_flat_study(), withr::local_tempfile(fileext = ".xlsx"))
+  expect_false("groups" %in% w$sheets)
+  n <- w$not_in_xlsx
+  expect_true(any(n$part == "groups"))
+  expect_match(n$reason[n$part == "groups"], "no sheet", fixed = TRUE)
+  # a study with none says nothing of them
+  w2 <- tfl_write_spec_xlsx(rts_study(list("outputs/T-1.yml" = rts_table())), withr::local_tempfile(fileext = ".xlsx"))
+  expect_false(any(w2$not_in_xlsx$part == "groups"))
+})
