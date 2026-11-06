@@ -962,6 +962,10 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
         }
       },
       plan_labels = {
+        # a variable's heading is one cell: a second text for it (from this
+        # call or an earlier one) is not "put together" with the first --
+        # the item goes whole to content_more (#689)
+        twice <- function(v, x) v %in% labelled && !identical(vars[[v]]$label, x)
         for (v in names(named)) {
           x <- named[[v]]
           if (is.list(x) && length(x) &&
@@ -972,6 +976,9 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
           if (identical(v, "variable") && is.character(x) && !is.null(names(x)) &&
               !anyNA(names(x)) && all(nzchar(names(x)))) {
             for (n in names(x)) {
+              if (twice(n, unname(x[[n]]))) {
+                miss(fn, sprintf("%s: a second text for its heading", n)); next
+              }
               var_row(n); vars[[n]]$label <- unname(x[[n]])
               labelled <- c(labelled, n)
             }
@@ -993,6 +1000,9 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
           }
           if (!is.character(x) || length(x) != 1L) {
             miss(fn, sprintf("%s: a value's labels stay in code", v)); next
+          }
+          if (twice(v, x)) {
+            miss(fn, sprintf("%s: a second text for its heading", v)); next
           }
           var_row(v); vars[[v]]$label <- x
           labelled <- c(labelled, v)
