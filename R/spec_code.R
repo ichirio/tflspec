@@ -669,7 +669,10 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
     items <- Filter(function(it) !identical(it$fn, "table_plan"), items)
   }
   for (it in more) items <- .insert_by_rank(items, it)
-  .table_plan_first(items)
+  # (a normalize_ard() there is the table's own, the tables row's overall_label /
+  # stack cells on it: tfl_table_code(), the YAML converter and the
+  # app's reading of the sheets all come through here)
+  .table_plan_first(.nz_with_row(items, tables))
 }
 
 # A call as the program writes it: an argument the schema marks

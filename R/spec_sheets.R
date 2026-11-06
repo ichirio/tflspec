@@ -361,11 +361,14 @@ tfl_sheets_from_spec <- function(study, outputs) {
     tb$note[i] <- as.character(nt)
     table$tables <- tb
   }
-  # a table's normalize_ard() arguments on its tables row -- when reading
-  # the row (and the report's hierarchical analysis) gives the same
-  # arguments back; else the item, whole, in content_more (#689: keys,
-  # hierarchy, drop_contexts, drop_key_variables have no column, and a
-  # hierarchy is read from the first hierarchical analysis)
+  # a table's normalize_ard() arguments: what the columns can say (overall,
+  # stack, stack_sep, stack_nest) is always on its tables row; when reading
+  # the row (and the report's hierarchical analysis) gives all the
+  # arguments back, that is all; else the rest -- hierarchy, keys,
+  # drop_contexts, drop_key_variables, which have no column, or a hierarchy
+  # other than the first hierarchical analysis's -- is an item in
+  # content_more, possibly with no arguments (.nz_with_row() reads the two
+  # together)
   for (id in names(norm_rows)) {
     a <- norm_rows[[id]]
     tb <- table$tables
@@ -382,12 +385,19 @@ tfl_sheets_from_spec <- function(study, outputs) {
       if (!is.null(a$stack_sep)) put("stack_sep", encodeString(as.character(a$stack_sep), quote = "\""))
       if (isTRUE(a$stack_nest)) put("stack_nest", "TRUE")
     }
-    got <- tryCatch(.conv_normalize_args(list(tables = tb), ard, id), error = function(e) NULL)
-    if (is.null(got) || !identical(.nz_canon(got), .nz_canon(a))) {
-      more_rows[[id]] <- c(list(tfl_item("normalize_ard", a)), more_rows[[id]])
-      next
-    }
     table$tables <- tb
+    got <- tryCatch(.conv_normalize_args(list(tables = tb), ard, id), error = function(e) NULL)
+    # (an overall runs only with a hierarchy: one a card leaves to the ARD is the
+    # one read back; a stack alone runs without, so its missing hierarchy means something)
+    if (!is.null(got) && !is.null(a$overall) && is.null(a$hierarchy) && !is.null(got$hierarchy)) {
+      a$hierarchy <- got$hierarchy
+    }
+    if (is.null(got) || !identical(.nz_canon(got), .nz_canon(a))) {
+      # (a stack_sep / stack_nest with no stack: the row cannot say it)
+      on_row <- c("overall", "stack", if (!is.null(a$stack)) c("stack_sep", "stack_nest"))
+      rest <- a[setdiff(names(a), on_row)]
+      more_rows[[id]] <- c(list(tfl_item("normalize_ard", rest)), more_rows[[id]])
+    }
   }
   # a table's items the sheets cannot say on its tables row (content_more)
   for (key in names(more_rows)) {
@@ -466,6 +476,29 @@ tfl_sheets_from_spec <- function(study, outputs) {
   }
   attributes(x) <- NULL
   x
+}
+
+# A table's normalize_ard() item from content_more with the tables row's
+# overall_label, stack, stack_sep and stack_nest on it, where the row has
+# them (they win over the same names in the item): the item holds what the
+# columns cannot say, and its arguments stand as written -- the hierarchy
+# comes from it, not from the hierarchical analysis.  `tables`: the table's
+# tables rows (the first is read).  With none or two such items, `items` as
+# they are (a second normalize_ard() is whole, with no row).
+.nz_with_row <- function(items, tables) {
+  is_nz <- vapply(items, function(it) identical(it$fn, "normalize_ard"), NA)
+  if (sum(is_nz) != 1L || !is.data.frame(tables) || !nrow(tables)) return(items)
+  # (a table's own row, not the defaults' blank one)
+  t <- tables
+  if ("output_id" %in% names(t) && any(!is.na(t$output_id))) t <- t[!is.na(t$output_id), , drop = FALSE]
+  t <- t[1L, , drop = FALSE]
+  t$output_id <- "x"
+  row <- .conv_normalize_args(list(tables = t), NULL, "x")
+  k <- which(is_nz)
+  args <- items[[k]]$args %||% list()
+  for (n in intersect(names(row), c("overall", "stack", "stack_sep", "stack_nest"))) args[n] <- list(row[[n]])
+  items[[k]]$args <- args
+  items
 }
 
 # a table's rework step: the first `!r` among its data steps (a figure's
