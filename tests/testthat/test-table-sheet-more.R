@@ -382,20 +382,24 @@ tnz_cases <- list(
   hier_overall = list(
     nz = list(hierarchy = list("AEBODSYS", "AEDECOD", "AESEV"), overall = "Any adverse event"),
     ard = tnz_ard(c("AEBODSYS", "AESEV")), more = "- normalize_ard:", row = c(overall_label = "Any adverse event")),
-  # the report's own normalize_ard() says no hierarchy though the analysis has one
-  overall_only = list(
-    nz = list(overall = "Any adverse event"),
-    ard = tnz_ard(c("AEBODSYS", "AEDECOD", "AESEV")), more = "- normalize_ard: {}", row = c(overall_label = "Any adverse event")),
+  # (an item with an overall and the analysis's hierarchy: the hierarchy is the item's)
+  keys_overall_hier = list(
+    nz = list(keys = list("AGE", "SEX"), overall = "Any adverse event"),
+    ard = tnz_ard(c("AEBODSYS", "AEDECOD")), more = "hierarchy:", row = c(overall_label = "Any adverse event"),
+    back = list(keys = list("AGE", "SEX"), hierarchy = list("AEBODSYS", "AEDECOD"), overall = "Any adverse event")),
   keys_overall = list(
     nz = list(keys = list("AGE", "SEX"), overall = "Any adverse event"),
-    ard = NULL, more = "keys:", row = c(overall_label = "Any adverse event")),
+    ard = NULL, more = "keys:", row = c(overall_label = "Any adverse event"),
+    # (the hierarchy the rows and label say: an overall needs one)
+    back = list(keys = list("AGE", "SEX"), hierarchy = list("AEBODSYS", "AEDECOD", "AESEV"), overall = "Any adverse event")),
   hier_keys_stack = list(
     nz = list(hierarchy = list("AEBODSYS", "AEDECOD", "AESEV"), keys = list("AGE"),
               stack = list(subgroup = list("ALL", "SEX")), stack_sep = " / "),
     ard = NULL, more = "keys:", row = c(stack = "subgroup = ALL, SEX", stack_sep = "\" / \"")),
   drop_overall = list(
     nz = list(drop_contexts = list("alpha"), overall = "Any adverse event"),
-    ard = NULL, more = "drop_contexts:", row = c(overall_label = "Any adverse event")))
+    ard = NULL, more = "drop_contexts:", row = c(overall_label = "Any adverse event"),
+    back = list(drop_contexts = list("alpha"), hierarchy = list("AEBODSYS", "AEDECOD", "AESEV"), overall = "Any adverse event")))
 
 test_that("normalize_ard(): the tables row has what its columns say, the item the rest, in memory and through a workbook", {
   skip_if_not_installed("openxlsx")
@@ -408,11 +412,13 @@ test_that("normalize_ard(): the tables row has what its columns say, the item th
     expect_match(tnz_cm(sh), cs$more, fixed = TRUE, info = nm)
     # what the row says is not in the item as well
     expect_false(grepl("overall:|stack:|stack_sep:|stack_nest:", tnz_cm(sh)), info = nm)
-    want <- .nz_canon_t(tnz_nz(d))
+    want <- .nz_canon_t(cs$back %||% tnz_nz(d))
     for (route in c("memory", "workbook")) {
       r <- if (route == "memory") t689_trip(d) else tnz_book(sh)
       expect_identical(.nz_canon_t(tnz_nz(r$to)), want, info = paste(nm, route))
-      expect_identical(t689_code(r$to), t689_code(d), info = paste(nm, route))
+      if (is.null(cs$back)) expect_identical(t689_code(r$to), t689_code(d), info = paste(nm, route))
+      else expect_match(paste(t689_code(r$to), collapse = "
+"), "hierarchy = c(", fixed = TRUE, info = paste(nm, route))
       # one normalize_ard(), not another from the analysis
       back <- tfl_read_outputs(r$to)[["T-1"]]
       expect_identical(sum(vapply(back$content, function(it) identical(it$fn, "normalize_ard"), NA)), 1L, info = paste(nm, route))
@@ -420,19 +426,57 @@ test_that("normalize_ard(): the tables row has what its columns say, the item th
   }
 })
 
-test_that("normalize_ard(): {overall} with a hierarchical analysis present comes back without a hierarchy", {
+test_that("normalize_ard(): {overall} with a hierarchical analysis: the analysis's hierarchy, no item", {
+  # (an overall runs only with a hierarchy)
   d <- t689_study(list(tfl_item("normalize_ard", list(overall = "Any adverse event")), tnz_plan),
                   ard = tnz_ard(c("AEBODSYS", "AEDECOD", "AESEV")))
   sh <- tfl_sheets_from_yaml(d)
-  expect_identical(tnz_cm(sh), "- normalize_ard: {}")
+  expect_true(is.na(tnz_cm(sh)))
+  tb <- sh$table$tables
+  expect_identical(tb$overall_label[tb$output_id %in% "T-1"], "Any adverse event")
   r <- t689_trip(d)
-  expect_named(tnz_nz(r$to), "overall")
+  expect_identical(.nz_canon_t(tnz_nz(r$to)),
+                   .nz_canon_t(list(hierarchy = list("AEBODSYS", "AEDECOD", "AESEV"), overall = "Any adverse event")))
+})
+
+test_that("normalize_ard(): {stack} with a hierarchical analysis keeps its empty item, no hierarchy back", {
+  d <- t689_study(list(tfl_item("normalize_ard", list(stack = list(subgroup = list("ALL", "SEX")))), tnz_plan),
+                  ard = tnz_ard(c("AEBODSYS", "AEDECOD")))
+  sh <- tfl_sheets_from_yaml(d)
+  expect_identical(tnz_cm(sh), "- normalize_ard: {}")
+  tb <- sh$table$tables
+  expect_identical(tb$stack[tb$output_id %in% "T-1"], "subgroup = ALL, SEX")
+  r <- t689_trip(d)
+  expect_named(tnz_nz(r$to), "stack")
   expect_false(grepl("hierarchy", paste(t689_code(r$to), collapse = "\n"), fixed = TRUE))
+})
+
+test_that("normalize_ard(): the program written for {overall} and {keys, overall} runs on a hierarchical ARD", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("rtfreporter")
+  set.seed(1)
+  dm <- data.frame(USUBJID = sprintf("S%02d", 1:30), TRT01A = rep(c("A", "B"), 15), stringsAsFactors = FALSE)
+  ae <- data.frame(USUBJID = sample(dm$USUBJID, 40, TRUE), AEBODSYS = sample(c("GI", "Skin"), 40, TRUE))
+  ae$AEDECOD <- ifelse(ae$AEBODSYS == "GI", sample(c("Nausea", "Vomit"), 40, TRUE), sample(c("Rash", "Itch"), 40, TRUE))
+  ae <- merge(ae, dm)
+  ard <- cards::ard_stack_hierarchical(ae, variables = c(AEBODSYS, AEDECOD), by = TRT01A, denominator = dm,
+                                       id = USUBJID, over_variables = TRUE, statistic = ~ c("n", "p"))
+  plan <- tfl_item("table_plan", list(cols = "TRT01A", rows = list(group1 = "AEBODSYS"), label = list(label = "AEDECOD")))
+  for (nz in list(list(overall = "Any adverse event"), list(keys = list("AEBODSYS"), overall = "Any adverse event"))) {
+    d <- t689_study(list(tfl_item("normalize_ard", nz), plan), ard = tnz_ard(c("AEBODSYS", "AEDECOD")))
+    sh <- tfl_sheets_from_yaml(d)
+    code <- tfl_table_code(sh$table, "T-1", ard_spec = tfl_ard_spec(sh$ard))
+    i <- grep("normalize_ard", code)[1L]
+    j <- grep("table_plan", code)[1L]
+    txt <- sub("\\s*\\|>\\s*$", "", paste(code[i:(j - 1L)], collapse = "\n"))
+    e <- list2env(list(ard = ard, normalize_ard = rtfreporter::normalize_ard))
+    expect_no_error(eval(parse(text = paste("ard |>", txt)), e))
+  }
 })
 
 test_that("normalize_ard(): the overall_label cell edited after writing wins on reading", {
   skip_if_not_installed("openxlsx")
-  for (nm in c("hier_overall", "keys_overall", "overall_only")) {
+  for (nm in c("hier_overall", "keys_overall", "keys_overall_hier")) {
     cs <- tnz_cases[[nm]]
     d <- t689_study(list(tfl_item("normalize_ard", cs$nz), tnz_plan), ard = cs$ard)
     sh <- tfl_sheets_from_yaml(d)
@@ -476,9 +520,6 @@ test_that("normalize_ard(): a card's {overall} bridged without the report's ARD 
   sh <- tfl_sheets_from_spec(s, list("T-1" = o))
   tb <- sh$table$tables
   expect_identical(tb$overall_label[tb$output_id %in% "T-1"], "Any adverse event")
-  expect_identical(tnz_cm(sh), "- normalize_ard: {}")
-  # the app's reading of the sheets (the content the cards show) has the cell on the item
-  its <- tflspec:::.plan_content_from_sheets(sh$table, "T-1", own = TRUE)
-  nz <- Filter(function(it) identical(it$fn, "normalize_ard"), its)
-  expect_identical(nz[[1L]]$args, list(overall = "Any adverse event"))
+  # (the guessed hierarchy is the one an overall needs: no item, as before #692)
+  expect_true(is.na(tnz_cm(sh)))
 })

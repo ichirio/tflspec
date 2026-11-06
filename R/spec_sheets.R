@@ -387,6 +387,11 @@ tfl_sheets_from_spec <- function(study, outputs) {
     }
     table$tables <- tb
     got <- tryCatch(.conv_normalize_args(list(tables = tb), ard, id), error = function(e) NULL)
+    # (an overall runs only with a hierarchy: one a card leaves to the ARD is the
+    # one read back; a stack alone runs without, so its missing hierarchy means something)
+    if (!is.null(got) && !is.null(a$overall) && is.null(a$hierarchy) && !is.null(got$hierarchy)) {
+      a$hierarchy <- got$hierarchy
+    }
     if (is.null(got) || !identical(.nz_canon(got), .nz_canon(a))) {
       # (a stack_sep / stack_nest with no stack: the row cannot say it)
       on_row <- c("overall", "stack", if (!is.null(a$stack)) c("stack_sep", "stack_nest"))
