@@ -8,7 +8,7 @@ population: SAF
 extends: [defaults]
 template:
   name: km_survival
-  args: {by: TRT01A, time_unit: months, median_line: false}
+  args: {by: TRT01A, time_unit: months, median_line: false, pvalue: false}
 data:
   source: code
   steps:
@@ -23,5 +23,5 @@ page:
     "1": {center: "Figure 14.2.1"}
 ai:
   assumptions:
-    - {where: template, item: km_survival, assumption: "the standard KM plot: the shell has the number at risk and the p-value too", value: km_survival}
+    - {where: template, item: km_survival, assumption: "the KM plot with the number at risk and no p-value on the shell, so pvalue: false (it prints otherwise)", value: km_survival}
 ```
