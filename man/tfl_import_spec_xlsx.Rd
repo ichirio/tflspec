@@ -16,7 +16,9 @@ tfl_import_spec_xlsx(dir, path, write = TRUE)
 \value{
 Invisibly, a list: \code{changes} (a data frame: \code{sheet}, \code{key},
 \code{column}, \code{from}, \code{to}), \code{added} (keys new to the spec), \code{missing}
-(keys of the spec the workbook lacks), \code{files} (written).
+(keys of the spec the workbook lacks), \code{ignored} (the sheets that were
+changed in the workbook but are not read back, \code{records} and \code{objects};
+each also said in a message), \code{files} (written).
 }
 \description{
 The workbook \code{\link[=tfl_write_spec_xlsx]{tfl_write_spec_xlsx()}} wrote, edited in Excel, read back:
@@ -28,5 +30,9 @@ each row is matched by its key (\code{toc}: \code{id}; \code{datasets}: \code{da
 \code{vars}) and the item it names is updated with the row's cells; a row
 with a new key is added; an item the workbook no longer has is reported
 (\code{missing}), not removed.  Cells read as the converter reads sheets: \code{a | b} a list, \code{(none)} an \code{!unset}, the columns that hold R as \code{!r}.
-Nothing else of the YAML files changes.
+Nothing else of the YAML files changes: a line's height
+(\code{row_height_twips}), which the workbook has no column for, stays as it
+is.  The \code{records} and \code{objects} sheets are written but not read back; a
+change made to one in the workbook is said in a message and listed in
+\code{ignored}.
 }

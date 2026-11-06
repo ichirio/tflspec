@@ -277,9 +277,29 @@
 
 # The assumption a report whose widths R set carries: they are the default
 # ones, for now (none when the answer gave them, read from the shell)
-.ai_widths_assumptions <- function(ids, language = "en") {
+.ai_widths_assumptions <- function(ids, language = "en", fitted = character()) {
   if (!length(ids)) return(NULL)
   ja <- .ai_is_ja(language)
+  out <- .ai_widths_assumptions_default(ids, ja)
+  # a listing whose widths were fitted to its data says so (value `fitted
+  # widths`; the others `default widths`)
+  at <- out$output_id %in% fitted
+  if (any(at)) {
+    out$assumption[at] <- if (ja) {
+      paste0("\u5217\u5e45: \u30c7\u30fc\u30bf\u304b\u3089\u8a08\u7b97\u3057\u305f\u5024\u3092\u4eee\u306b\u8a2d\u5b9a\u3057\u307e\u3057\u305f",
+             "\uff08rtfreporter \u306e fit_listing_widths() \u3067\u3001",
+             "\u5e33\u7968\u306e\u30da\u30fc\u30b8\u3068\u30d5\u30a9\u30f3\u30c8\u304b\u3089\uff09\u3002",
+             "\u6570\u5b57\u306f\u76f4\u305b\u307e\u3059")
+    } else {
+      paste("Column widths: fitted to the study's data for now (rtfreporter's",
+            "fit_listing_widths(), at the report's page and font); change the numbers as needed")
+    }
+    out$value[at] <- "fitted widths"
+  }
+  out
+}
+
+.ai_widths_assumptions_default <- function(ids, ja) {
   data.frame(output_id = ids, where = "content", item = "widths",
              assumption = if (ja) {
                paste0("\u5217\u5e45: \u65e2\u5b9a\u306e\u6bd4\u7387\u3092\u4eee\u306b\u8a2d\u5b9a\u3057\u307e\u3057\u305f",

@@ -136,7 +136,17 @@ tfl_sheets_from_spec <- function(study, outputs) {
   norm_rows <- list()
   more_rows <- list()
   table_rows(s$defaults$content, NA_character_)
-  for (nm in names(s$patterns)) table_rows(s$patterns[[nm]]$content, paste0("@", nm))
+  # (a pattern has rows of the report and page sheets only -- no tables row
+  # -- so its content cannot be put on the sheets: said, by pattern, #689)
+  for (nm in names(s$patterns)) {
+    pc <- s$patterns[[nm]]$content
+    if (inherits(pc, "tfl_r") || length(pc)) {
+      fns <- if (inherits(pc, "tfl_r")) "R code" else unique(vapply(pc, function(it) it$fn, ""))
+      note(paste0("@", nm), "content", paste0(
+        "a pattern's content (", paste(fns, collapse = ", "), ") is not kept: a pattern's rows are the ",
+        "report and page sheets', none holds its layers; the reports that extend it do not get them back"))
+    }
+  }
 
   # -- the page parts ----------------------------------------------------------
   page_rows <- function(page, id) {
@@ -297,9 +307,19 @@ tfl_sheets_from_spec <- function(study, outputs) {
       if (length(more)) lr$content_more <- .sheet_more_out(more, items = TRUE)
       listings[[length(listings) + 1L]] <- lr
     } else if (o$kind == "figure" && .fig_new_content(o$content)) {
-      # a figure of items (R/fig_content.R): its data and items as they are
-      figures[[id]] <- list(template = o$template, data = o$data$steps,
-                            content = .items_to_list(o$content))
+      # a figure of items (R/fig_content.R): its data and items as they are,
+      # the design list's `content` (read back by .conv_output(), #689)
+      fd <- list(template = o$template, data = o$data$steps, content = .items_to_list(o$content))
+      for (k in c("ggplot2_version", "plot", "plots", "compose")) if (!is.null(o[[k]])) fd[[k]] <- o[[k]]
+      figures[[id]] <- fd
+      # what the design list has no place for is said, by the report
+      lost <- c(setdiff(names(o$data), c("steps", "code", "datasets", "ard", "source")),
+                if (!is.null(o$data$source) && !identical(o$data$source, "code")) "source")
+      lost <- c(lost, setdiff(names(o), c(.output_fields, "template", "ggplot2_version", "plot", "plots", "compose")))
+      if (length(lost)) {
+        note(id, "figure", paste0("a figure of items: ", paste(unique(lost), collapse = ", "),
+                                   " is not kept (the design list has no place for it)"))
+      }
     } else if (o$kind == "figure") {
       # (the report's design: an item of a function call its piece)
       oc <- o
@@ -318,12 +338,38 @@ tfl_sheets_from_spec <- function(study, outputs) {
       rows[[sh]] %||% list(), function(r) identical(r$output_id, paste0("@", nm)), NA)), NA))
     if (!has) add("report", list(output_id = paste0("@", nm)))
   }
+  # defaults.yml's options: and styles:, and the style: a report picks, have
+  # no sheet or column to be put on: said (#689)
+  if (length(s$options)) {
+    note(NA_character_, "options", paste0(
+      "defaults.yml options: (", paste(names(s$options), collapse = ", "), ") is not kept: no sheet or column holds it"))
+  }
+  if (length(s$styles)) {
+    note(NA_character_, "styles", paste0(
+      "defaults.yml styles: (", paste(names(s$styles), collapse = ", "), ") is not kept: no sheet or column holds it"))
+  }
+  for (id in names(outs)) {
+    if (length(outs[[id]]$style)) {
+      note(id, "style", paste0("style: ", paste(unlist(outs[[id]]$style), collapse = ", "),
+                               " is not kept: no sheet or column holds it; the report no longer picks its look"))
+    }
+  }
   # the layers' code lists have no sheet of their own (a report's own are
   # its rows): they stay in the YAML
-  if (length(s$defaults$codelists)) note(NA_character_, "codelists", "the defaults' code lists (defaults.yml) stay in YAML, not on the sheets")
+  # (in the YAML they stay; a study written from the sheets has not got them,
+  # and a report that reads the variable is then made without the list: its
+  # ARD program loses the set_levels() step -- the values' order and labels, #689)
+  cl_said <- function(cl, whose, file) paste0(
+    whose, " code lists (", file, ": ", paste(names(cl), collapse = ", "), ") stay in YAML, not on the sheets: ",
+    "a study written from the sheets has not got them, so a report that reads one of these variables ",
+    "is made without the list and its ARD program does not set the values' order and labels")
+  if (length(s$defaults$codelists)) {
+    note(NA_character_, "codelists", cl_said(s$defaults$codelists, "the defaults'", "defaults.yml"))
+  }
   for (nm in names(s$patterns)) {
     if (length(s$patterns[[nm]]$codelists)) {
-      note(paste0("@", nm), "codelists", "a pattern's code lists stay in YAML, not on the sheets")
+      note(paste0("@", nm), "codelists", cl_said(s$patterns[[nm]]$codelists, "a pattern's",
+                                                  paste0("patterns/", nm, ".yml")))
     }
   }
   # the setup code on the planner sheet's study row

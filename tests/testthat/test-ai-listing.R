@@ -81,7 +81,8 @@ test_that("the TOC's listing: a request of its own, its answer checked and built
   expect_identical(r$status, "ok")
   expect_true(file.exists(file.path(d, r$rtf)))
   x <- paste(readLines(file.path(d, r$rtf), warn = FALSE), collapse = " ")
-  expect_match(x, "Start day", fixed = TRUE)
+  # (the header wraps where the fitted column is narrower than it)
+  expect_match(x, "Start( |\\\\line )day")
   # the listing's program has its records' steps (the filter, the sort), not its layout alone
   p <- readLines(sub("[.]rtf$", ".R", file.path(d, r$rtf)), encoding = "UTF-8")
   expect_true("# ---- the records ----" %in% p)
