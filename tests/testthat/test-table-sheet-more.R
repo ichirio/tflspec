@@ -153,13 +153,14 @@ t689_items <- function(d, id = "T-1") tsm_key(suppressMessages(tfl_read_outputs(
 
 t689_head <- list(tfl_item("table_plan", list(cols = "TRT01A", rows = list(group = "variable"))))
 
-test_that("plan_columns / plan_col_header with an argument no sheet says: whole in content_more", {
+test_that("plan_columns / plan_col_header with an argument no sheet says: the rest in content_more", {
+  # (the arguments the columns say first, as the item is read back)
   content <- c(t689_head, list(
     tfl_item("plan_columns", list(widths = list(row_label = 3, .values = 2),
                                   column_widths_twips = list(1000L, 2000L, 2000L),
                                   cell_format = "right_align")),
-    tfl_item("plan_col_header", list(span = "TRT01A", header_sep = " / ",
-                                     col_header_align = "center")),
+    tfl_item("plan_col_header", list(col_header_align = "center", span = "TRT01A",
+                                     header_sep = " / ")),
     tfl_item("plan_paginate_rows", list(max_rows = 30L))))
   d <- t689_study(content)
   r <- t689_trip(d)
@@ -169,11 +170,12 @@ test_that("plan_columns / plan_col_header with an argument no sheet says: whole 
   expect_match(cm, "column_widths_twips", fixed = TRUE)
   expect_match(cm, "- plan_col_header:", fixed = TRUE)
   expect_match(cm, "header_sep", fixed = TRUE)
-  # never both: the widths and the alignment are not on the other sheets
+  # what the columns say is on the sheets, and only the rest in content_more
   cl <- r$sh$table$columns
-  expect_false(any(cl$output_id %in% "T-1"))
+  expect_identical(cl$rel_width[cl$output_id %in% "T-1"], c("3", "2"))
   st <- r$sh$table$style
-  expect_false(any(!is.na(st$col_header_align[st$output_id %in% "T-1"])))
+  expect_identical(st$col_header_align[st$output_id %in% "T-1"], "center")
+  expect_false(grepl("widths:|col_header_align", cm))
   # what the sheets say whole stays on them
   expect_identical(r$sh$table$layout$pages_max_rows[r$sh$table$layout$output_id %in% "T-1"], "30")
   expect_false(any(r$sh$not_converted$output %in% "T-1"))
@@ -198,7 +200,16 @@ test_that("the bridge's guard: an argument no branch reads is named, never dropp
     expect_type(un(fn, args, 0L), "character")
   }
   # the bridge itself: the item's other rows are not written
+  # an item with an argument no sheet says and one a sheet does: the sheet's is
+  # written, the other is the item's rest (test-table-sheet-rest.R); with
+  # nothing a sheet says, the item goes whole
   items <- list(tfl_item("plan_columns", list(widths = list(row_label = 3), cell_format = "x")))
+  sp <- tflspec:::.plan_sheets_from_content(items, "T-1")
+  expect_identical(attr(sp, "not_converted_at"), integer())
+  expect_identical(sp$columns$rel_width, "3")
+  expect_identical(attr(sp, "not_converted_rest")[[1L]]$args, list(cell_format = "x"))
+  expect_length(attr(sp, "not_converted"), 0L)
+  items <- list(tfl_item("plan_columns", list(cell_format = "x")))
   sp <- tflspec:::.plan_sheets_from_content(items, "T-1")
   expect_identical(attr(sp, "not_converted_at"), 1L)
   expect_match(attr(sp, "not_converted"), "cell_format", fixed = TRUE)
@@ -321,11 +332,12 @@ test_that("two plan_labels items naming a heading twice: the second stays whole"
   r <- t689_trip(d)
   v <- r$sh$table$variables
   # (the reader puts the two calls together: one item, RESP named twice with
-  # two texts; no cell holds both, so it goes whole -- not the second's text
-  # over the first's on the variables sheet)
-  expect_false(any(v$output_id %in% "T-1" & !is.na(v$label)))
+  # two texts; no cell holds both, so the first text is on the variables sheet
+  # and the second is the item's rest in content_more -- not the second's text
+  # over the first's)
+  expect_identical(v$label[v$output_id %in% "T-1" & v$variable %in% "RESP"], "Response rate")
   tb <- r$sh$table$tables
-  expect_match(tb$content_more[tb$output_id %in% "T-1"], "Response rate", fixed = TRUE)
+  expect_match(tb$content_more[tb$output_id %in% "T-1"], "RESP: ''", fixed = TRUE)
   back <- suppressMessages(tfl_read_outputs(r$to))[["T-1"]]
   labs <- Filter(function(it) identical(it$fn, "plan_labels"), back$content)
   expect_length(labs, 1L)
