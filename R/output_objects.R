@@ -229,6 +229,19 @@ tfl_output_contents <- function(output, study, dir = ".") {
   get("data", envir = env, inherits = FALSE)
 }
 
+# The error of reading a listing's records when it is a template's `by` that
+# the data does not have (dplyr: "object 'X' not found"): said as that
+.listing_by_hint <- function(e, ro) {
+  msg <- conditionMessage(e)
+  v <- regmatches(msg, regexec("object '([^']+)' not found", msg))[[1L]][-1L]
+  by <- as.character(unlist(attr(ro, "template")$args$by))
+  if (length(v) && v %in% by) {
+    .ard_stop(sprintf("`by` names %s, which the dataset %s does not have.", sQuote(v, FALSE),
+                      paste(ro$data$dataset, collapse = "")))
+  }
+  stop(e)
+}
+
 # A report's content object -- the plan of a table or a listing, the
 # figure(s) -- from the study's files, in the study folder (the working
 # directory): the data read, its ARD built, its content run.  What
@@ -252,7 +265,8 @@ tfl_output_contents <- function(output, study, dir = ".") {
   } else if (identical(ro$data$source, "dataset")) {
     # a listing's records (its own, or a template's: decided on the report
     # as resolved): its data step, as its program reads them
-    recs <- stage("the listing's records", .listing_data_of(ro, st, "."))
+    recs <- stage("the listing's records", tryCatch(
+      .listing_data_of(ro, st, "."), error = function(e) .listing_by_hint(e, ro)))
     stage(paste("the", kind), suppressMessages(tfl_content_run(ro, recs)))
   } else if (identical(kind, "figure")) {
     data <- stage("the figure's data", .contents_fig_data(ro, st, "."))
