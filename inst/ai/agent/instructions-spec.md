@@ -128,7 +128,7 @@ page:
     "1": {left: "MedDRA version 27.0, fictional dictionary."}
 ai:
   assumptions:
-    - {where: ard.analyses, item: where, assumption: "treatment-emergent is TRTEMFL == \"Y\"", value: "TRTEMFL == \"Y\"", from: D3}
+    - {where: ard.analyses, item: where, assumption: "treatment-emergent is TRTEMFL == 'Y'", value: "TRTEMFL == \"Y\"", from: D3}
   confirm:
     - {where: ard.analyses, item: denominator, why: "the shell shows n (%) but not whether the % is of the arm or of all"}
 ```

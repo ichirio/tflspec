@@ -82,7 +82,7 @@
     if (length(lv)) list(tfl_item("plan_levels", list(.label = lv))),
     list(tfl_item("plan_stub", list(vars = c("group", "label"), name = "row_label")),
          tfl_item("plan_col_header", list(header = list(
-           list(line = "1", cols = "row_label", text = a$heading),
+           list(line = "1", cols = "row_label", text = .tpl_lines(a$heading)),
            list(line = "1", cols = ".values", span = "each", text = "{col}\n(N={n})")))),
          tfl_item("plan_paginate_rows", list(max_rows = 30L, split = "group_safe"))))
   list(ard = list(analysis_data = sets, analyses = analyses),

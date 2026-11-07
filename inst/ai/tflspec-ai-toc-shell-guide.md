@@ -675,7 +675,7 @@ Run through it; the review will.
   ```yaml
   - where: spec/data.yml populations
     item: SAF
-    assumption: "Safety set: the flag SAFFL == \"Y\" on ADSL, because the TOC names the set SAF and no flag"
+    assumption: "Safety set: the flag SAFFL == 'Y' on ADSL, because the TOC names the set SAF and no flag"
     value: SAFFL == "Y"
     question: Is the safety set flagged by SAFFL?
   - output_id: T-1

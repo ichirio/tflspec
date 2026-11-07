@@ -290,6 +290,33 @@ tfl_ai_decisions_write <- function(study_dir, x) {
 
 # ---- the drafts as answers: the person's check --------------------------------
 
+# Where the YAML parser stopped, for the agent: the offending line of the
+# file (trimmed, cut to 120 characters) and, for a `"` inside a
+# double-quoted text, the one fix.  "" when the error names no line or the
+# file cannot be read as text.
+.ai_yaml_error_line <- function(msg, file) {
+  at <- regmatches(msg, gregexpr("line ([0-9]+)", msg))[[1L]]
+  if (!length(at) || !file.exists(file)) return("")
+  txt <- tryCatch(suppressWarnings(readLines(file, warn = FALSE, encoding = "UTF-8")),
+                  error = function(e) character())
+  # the line where it stopped; the line where the construct began when that
+  # is past the file's end or blank (a flow never closed)
+  ns <- rev(as.integer(sub("line ", "", at, fixed = TRUE)))
+  ns <- ns[!is.na(ns) & ns >= 1L & ns <= length(txt)]
+  ns <- ns[nzchar(trimws(txt[ns]))]
+  if (!length(ns)) return("")
+  n <- ns[1L]
+  ln <- trimws(txt[n])
+  # a `"` after the text's opening one, not escaped, and followed by more text
+  quoted <- grepl("did not find expected|mapping values are not allowed", msg) &&
+    grepl("\"[^\"]*\"([[:alnum:]_(]|\")", gsub("\\\\\"", "", ln))
+  show <- if (nchar(ln) > 120L) paste0(substr(ln, 1L, 117L), "...") else ln
+  .ai_one_line(paste0(
+    "Line ", n, " reads: ", show,
+    if (quoted) paste(" -- a `\"` inside a double-quoted text ends it; write a condition in a text",
+                      "with single quotes (`TRTEMFL == 'Y'`).")))
+}
+
 # A draft's `ai:` block (assumptions, confirm), by report, from
 # ai/spec/outputs/*.yml; kept while the check writes the drafts anew.  A
 # file YAML cannot read, with no `id`, or that is no report file (a call's
@@ -304,7 +331,8 @@ tfl_ai_decisions_write <- function(study_dir, x) {
     id <- sub("[.]ya?ml$", "", basename(f))
     y <- tryCatch(yaml::read_yaml(f, handlers = .yaml_handlers()), error = function(e) e)
     if (inherits(y, "error")) {
-      out$bad[id] <- paste("the YAML cannot be read:", .ai_one_line(conditionMessage(y)))
+      out$bad[id] <- trimws(paste("the YAML cannot be read:", .ai_one_line(conditionMessage(y)),
+                                  .ai_yaml_error_line(conditionMessage(y), f)))
     } else if (!is.list(y) || is.null(y$id)) {
       out$bad[id] <- "not a report file: no `id`"
     } else if (!identical(.ai_file_id(y$id), id) &&

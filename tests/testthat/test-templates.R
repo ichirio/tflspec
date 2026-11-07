@@ -239,6 +239,312 @@ test_that("listing: one row a record, a column's width part of its definition", 
   expect_s3_class(p, "table_plan")
 })
 
+# ---- listing: `by` divides the listing (a page or a block a value) ----------------
+
+# invented records: 4, 5 and 3 of three severities; a record is two rows (its
+# blank one), so 22 rows hold 11 records
+lby_data <- function() {
+  data.frame(
+    USUBJID = sprintf("S-%02d", c(1, 1, 2, 3, 1, 2, 2, 4, 5, 3, 4, 6)),
+    AEDECOD = sprintf("Event %02d", 1:12),
+    AESEV = rep(c("MILD", "MODERATE", "SEVERE"), c(4, 5, 3)),
+    SITEID = rep(c("101", "102"), 6),
+    stringsAsFactors = FALSE)
+}
+lby_cols <- list(list(vars = "USUBJID", label = "Subject"), list(vars = "AEDECOD", label = "Event"))
+lby_sev <- list(vars = "AESEV", label = "Severity")
+lby_x <- function(...) tfl_template_expand("listing", list(data = "ADAE", ...))
+lby_arg <- function(x, fn) Filter(function(it) identical(it$fn, fn), x$content)[[1L]]$args
+lby_fns <- function(x) vapply(x$content, `[[`, "", "fn")
+lby_listing_vars <- function(x) vapply(lby_arg(x, "plan_listing")$cols, function(cl) paste(cl$args$vars, collapse = "+"), "")
+
+test_that("listing by: the parameters", {
+  p <- tfl_template_params("listing")
+  expect_identical(p$by[c("type", "multiple")], list(type = "vars", multiple = TRUE))
+  # (not the study's treatment, which `by` is in the tables' templates)
+  expect_null(p$by$study)
+  expect_true(p$by$no_study)
+  expect_identical(tfl_template_params("shift")$by$study, "settings.treatment")
+  # (done twice, as the help page does: still none)
+  expect_null(.tpl_param_typed(p$by)$study)
+  expect_false(.tpl_study_kind(p$by))
+  expect_true(.tpl_study_kind(.tpl_param_typed(tfl_param("by", "TRT01A"))))
+  expect_identical(p$by_break$choices, c("page", "block"))
+  expect_identical(p$by_break$default, "page")
+  expect_identical(p$by_heading$type, "text")
+  expect_identical(names(p), c("data", "columns", "where", "subset", "sort", "by", "by_break", "by_heading"))
+})
+
+test_that("listing by, no by: the items as they were", {
+  x <- lby_x(columns = lby_cols, sort = c("USUBJID", "AEDECOD"), where = "AESEV == \"SEVERE\"")
+  expect_identical(lby_fns(x), c("plan_listing", "plan_paginate_rows"))
+  expect_identical(lby_arg(x, "plan_paginate_rows"), list(max_rows = 22L))
+  expect_identical(names(lby_arg(x, "plan_listing")), c("cols", "type"))
+  expect_identical(lby_listing_vars(x), c("USUBJID", "AEDECOD"))
+  expect_identical(x$data$sort, c("USUBJID", "AEDECOD"))
+  # by_break alone says nothing it could do
+  expect_identical(lby_fns(lby_x(columns = lby_cols, by = NULL)), c("plan_listing", "plan_paginate_rows"))
+  # the study's treatment is not a listing's `by`
+  d <- withr::local_tempdir()
+  dir.create(file.path(d, "spec", "outputs"), recursive = TRUE)
+  writeLines(c("datasets:", "  - dataset: ADAE", "    path: data/adae.rds"), file.path(d, "spec", "data.yml"))
+  writeLines(c("study_id: SS-1", "settings:", "  treatment: TRT01A"), file.path(d, "study.yml"))
+  o <- tfl_output("L-1", "listing", extends = "none",
+                  template = list(name = "listing", args = list(data = "ADAE", columns = lby_cols)))
+  ro <- tfl_resolve_output(o, tfl_read_study_spec(d))
+  expect_null(attr(ro, "template")$args$by)
+  expect_identical(vapply(ro$content, `[[`, "", "fn"), c("plan_listing", "plan_paginate_rows"))
+  expect_null(ro$data$sort)
+})
+
+test_that("listing by page: not printed unless a column is of it; the page named", {
+  x <- lby_x(columns = lby_cols, by = "AESEV")
+  expect_identical(lby_fns(x), c("plan_listing", "plan_hide", "plan_paginate_rows"))
+  # the variable is a hidden column of its own, last
+  expect_identical(lby_listing_vars(x), c("USUBJID", "AEDECOD", "AESEV"))
+  expect_identical(lby_arg(x, "plan_listing")$cols[[3L]]$args, list(vars = "AESEV"))
+  expect_identical(lby_arg(x, "plan_hide"), list(cols = list("AESEV")))
+  # a page per value, 22 rows within it; not printed, so the page says which value
+  expect_identical(lby_arg(x, "plan_paginate_rows"),
+                   list(max_rows = 22L, page_by = "AESEV", heading = "AESEV: {value}", heading_at = "title"))
+  # printed (a column of just it): not hidden, not named
+  y <- lby_x(columns = c(lby_cols, list(lby_sev)), by = "AESEV")
+  expect_identical(lby_fns(y), c("plan_listing", "plan_paginate_rows"))
+  expect_identical(lby_listing_vars(y), c("USUBJID", "AEDECOD", "AESEV"))
+  expect_identical(lby_arg(y, "plan_paginate_rows"), list(max_rows = 22L, page_by = "AESEV"))
+  # by_heading names the page, printed or not
+  z <- lby_x(columns = c(lby_cols, list(lby_sev)), by = "AESEV", by_heading = "Severity: {value}")
+  expect_identical(lby_arg(z, "plan_paginate_rows")$heading, "Severity: {value}")
+  expect_identical(lby_arg(z, "plan_paginate_rows")$heading_at, "title")
+  # a variable inside a column of several is not a column of it
+  w <- lby_x(columns = list(list(vars = c("USUBJID", "AESEV"))), by = "AESEV")
+  expect_identical(lby_listing_vars(w), c("USUBJID+AESEV", "AESEV"))
+  expect_identical(length(lby_arg(w, "plan_listing")$cols), 2L)
+  expect_true("plan_hide" %in% lby_fns(w))
+  # several: a token for each, by its name
+  s <- lby_x(columns = lby_cols, by = c("AESEV", "SITEID"))
+  pr <- lby_arg(s, "plan_paginate_rows")
+  expect_identical(pr$page_by, list("AESEV", "SITEID"))
+  expect_identical(pr$heading, "AESEV: {AESEV}\nSITEID: {SITEID}")
+  expect_identical(lby_arg(s, "plan_hide")$cols, list("AESEV", "SITEID"))
+  # one printed, one not: both named
+  m <- lby_x(columns = c(lby_cols, list(lby_sev)), by = c("AESEV", "SITEID"))
+  expect_identical(lby_arg(m, "plan_hide")$cols, list("SITEID"))
+  expect_identical(lby_arg(m, "plan_paginate_rows")$heading, "AESEV: {AESEV}\nSITEID: {SITEID}")
+})
+
+test_that("listing by: the records are ordered by the variables first, then sort", {
+  srt <- function(...) lby_x(columns = lby_cols, ...)$data$sort
+  expect_identical(srt(by = "AESEV"), "AESEV")
+  expect_identical(srt(by = "AESEV", sort = c("USUBJID", "AEDECOD")), c("AESEV", "USUBJID", "AEDECOD"))
+  # a `sort` that has the variable later: it moves first
+  expect_identical(srt(by = "AESEV", sort = c("USUBJID", "AESEV")), c("AESEV", "USUBJID"))
+  # and keeps its direction
+  expect_identical(srt(by = "AESEV", sort = c("-AESEV", "USUBJID")), c("-AESEV", "USUBJID"))
+  expect_identical(srt(by = c("AESEV", "SITEID"), sort = c("USUBJID", "-SITEID")),
+                   c("AESEV", "-SITEID", "USUBJID"))
+  # no by: the sort as given
+  expect_identical(srt(sort = c("-USUBJID", "AEDECOD")), c("-USUBJID", "AEDECOD"))
+})
+
+test_that("listing by block: one variable's records together; its column carries the value", {
+  x <- lby_x(columns = c(lby_cols, list(lby_sev)), by = "AESEV", by_break = "block")
+  expect_identical(lby_fns(x), c("plan_listing", "plan_row_group", "plan_paginate_rows"))
+  expect_identical(lby_arg(x, "plan_row_group"), list(mode = "value", group_col = "AESEV"))
+  expect_identical(lby_arg(x, "plan_paginate_rows"), list(max_rows = 22L))
+  expect_true(lby_arg(x, "plan_listing")$cols[[3L]]$args$collapse_repeats)
+  expect_null(lby_arg(x, "plan_listing")$cols[[1L]]$args$collapse_repeats)
+  expect_identical(x$data$sort, "AESEV")
+  # not printed: a hidden column of its own, carried the same
+  y <- lby_x(columns = lby_cols, by = "AESEV", by_break = "block")
+  expect_identical(lby_fns(y), c("plan_listing", "plan_hide", "plan_row_group", "plan_paginate_rows"))
+  expect_identical(lby_arg(y, "plan_listing")$cols[[3L]]$args, list(vars = "AESEV", collapse_repeats = TRUE))
+  expect_identical(lby_arg(y, "plan_hide"), list(cols = list("AESEV")))
+})
+
+test_that("listing by: what it will not take", {
+  expect_error(lby_x(columns = lby_cols, by = c("AESEV", "SITEID"), by_break = "block"), "one `by` variable")
+  expect_error(lby_x(columns = lby_cols, by = "AESEV", by_break = "block", by_heading = "{value}"),
+               "for `by_break` \"page\"")
+  expect_error(lby_x(columns = lby_cols, by_heading = "{value}"), "'by_heading' is about `by`")
+  expect_error(lby_x(columns = lby_cols, by_break = "block"), "'by_break' is about `by`")
+  expect_error(lby_x(columns = lby_cols, by = "AESEV", by_break = "pages"), "`by_break` is \"page\"")
+  expect_error(lby_x(columns = lby_cols, by = "AESEV", by_heading = c("a", "b")), "one text")
+})
+
+test_that("listing by: the data must have the variables, said so", {
+  dat <- lby_data()
+  expect_error(tpl_listing(dat, data = "ADAE", by = "NOSUCH", columns = lby_cols),
+               "tpl_listing(): `by` names 'NOSUCH', which the data does not have", fixed = TRUE)
+  expect_error(tfl_tpl(dat, "listing", data = "ADAE", by = c("AESEV", "NOSUCH"), columns = lby_cols),
+               "tfl_tpl(): `by` names 'NOSUCH', which the data does not have", fixed = TRUE)
+})
+
+# the pages of a plan: each page's events (the invented records' numbers)
+lby_events <- function(pages) {
+  lapply(pages, function(pg) as.integer(sub("Event ", "", grep("^Event", unlist(pg$data), value = TRUE))))
+}
+
+test_that("listing by page and block, as the plan pages it", {
+  skip_if_not_installed("rtfreporter")
+  dat <- lby_data()
+  plan <- function(...) rtfreporter::plan_apply(suppressMessages(tpl_listing(dat, data = "ADAE", ...)))
+  # no by: the pages cut at 22 rows, inside the severities
+  pn <- plan(columns = lby_cols)
+  expect_identical(unname(lby_events(pn)), list(1:11, 12L))
+  # a page a value, named after it when it is not printed
+  pp <- plan(columns = lby_cols, by = "AESEV")
+  expect_identical(unname(lby_events(pp)), list(1:4, 5:9, 10:12))
+  expect_identical(names(pp), c("AESEV: MILD", "AESEV: MODERATE", "AESEV: SEVERE"))
+  expect_false("AESEV" %in% names(pp[[1L]]$data))
+  # a block: SEVERE does not start on page 1 and go on, it moves whole to page 2
+  pb <- plan(columns = c(lby_cols, list(lby_sev)), by = "AESEV", by_break = "block")
+  expect_identical(unname(lby_events(pb)), list(1:9, 10:12))
+  expect_identical(vapply(pb, function(pg) nrow(pg$data), 1L, USE.NAMES = FALSE), c(18L, 6L))
+  # by is a variable of the data, not necessarily a column: the block is kept the same
+  pc <- plan(columns = lby_cols, by = "AESEV", by_break = "block")
+  expect_identical(unname(lby_events(pc)), list(1:9, 10:12))
+  expect_false("AESEV" %in% names(pc[[1L]]$data))
+})
+
+# a study of the invented records, the report a listing template, its RTF
+lby_run <- function(args, rows = seq_len(12L), extends = "none", env = parent.frame()) {
+  d <- withr::local_tempdir(.local_envir = env)
+  dir.create(file.path(d, "adam"))
+  haven::write_xpt(lby_data()[rows, ], file.path(d, "adam", "adae.xpt"))
+  haven::write_xpt(.ai_chr(tflspec::adsl), file.path(d, "adam", "adsl.xpt"))
+  suppressMessages(tfl_ai_study_init(d, adam = "adam", study_id = "XYZ"))
+  o <- tfl_output("L-1", "listing", label = "AEs", extends = extends,
+                  template = list(name = "listing", args = c(list(data = "ADAE"), args)),
+                  page = list(titles = list(`1` = list(center = "Listing 1"))))
+  tfl_write_output(o, file.path(d, "spec", "outputs", "L-1.yml"))
+  f <- withr::with_dir(d, suppressMessages(tfl_run_output("L-1", d, overwrite = TRUE)))
+  x <- paste(readLines(f, warn = FALSE), collapse = "\n")
+  # the page breaks (a section or a page command) cut the RTF into its pages:
+  # each page's events and heading line
+  secs <- strsplit(x, "\\\\(sect|page)(?![a-z])", perl = TRUE)[[1L]]
+  secs <- secs[grepl("Event [0-9]+", secs)]
+  list(events = lapply(secs, function(s)
+         as.integer(sub("Event ", "", regmatches(s, gregexpr("Event [0-9]+", s))[[1L]]))),
+       heading = vapply(secs, function(s) {
+         h <- regmatches(s, regexpr("(AESEV|Severity): [A-Z]+", s))
+         if (length(h)) h else NA_character_
+       }, "", USE.NAMES = FALSE),
+       n = function(txt) vapply(secs, function(s) lengths(regmatches(s, gregexpr(txt, s, fixed = TRUE))), 1L,
+                                    USE.NAMES = FALSE),
+       rtf = x, dir = d)
+}
+lby_skip <- function() {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("rtfreporter")
+  skip_if_not_installed("withr")
+}
+
+test_that("listing by page: the built RTF breaks at each value, the page named", {
+  lby_skip()
+  # (no by: the break falls inside a value)
+  r0 <- lby_run(list(columns = lby_cols))
+  expect_identical(r0$events, list(1:11, 12L))
+  # the records in the data in the opposite order: the pages are still in the variable's order
+  r1 <- lby_run(list(columns = lby_cols, by = "AESEV", sort = "AEDECOD"), rows = 12:1)
+  expect_identical(r1$events, list(1:4, 5:9, 10:12))
+  expect_identical(r1$heading, c("AESEV: MILD", "AESEV: MODERATE", "AESEV: SEVERE"))
+  # the variable is not a column: no column heading, no value in the rows
+  expect_false(grepl("Severity", r1$rtf, fixed = TRUE))
+  expect_identical(r1$n("MODERATE"), c(0L, 1L, 0L))
+  # printed, named by the report: its own words
+  r2 <- lby_run(list(columns = c(lby_cols, list(lby_sev)), by = "AESEV", sort = "AEDECOD",
+                     by_heading = "Severity: {value}"))
+  expect_identical(r2$events, list(1:4, 5:9, 10:12))
+  expect_identical(r2$heading, c("Severity: MILD", "Severity: MODERATE", "Severity: SEVERE"))
+  # printed, not named: the column says it
+  r3 <- lby_run(list(columns = c(lby_cols, list(lby_sev)), by = "AESEV", sort = "AEDECOD"))
+  expect_identical(r3$events, list(1:4, 5:9, 10:12))
+  expect_true(all(is.na(r3$heading)))
+  expect_true(grepl("Severity", r3$rtf, fixed = TRUE))
+  # two variables: a page for each pair that is there
+  r4 <- lby_run(list(columns = lby_cols, by = c("AESEV", "SITEID"), sort = "AEDECOD"))
+  expect_identical(r4$events, list(c(1L, 3L), c(2L, 4L), c(5L, 7L, 9L), c(6L, 8L), 11L, c(10L, 12L)))
+})
+
+test_that("listing by block: the built RTF keeps a value together on a page", {
+  lby_skip()
+  # no by: SEVERE starts on page 1 and goes on (22 rows, 11 records)
+  expect_identical(lby_run(list(columns = lby_cols))$events, list(1:11, 12L))
+  r <- lby_run(list(columns = c(lby_cols, list(lby_sev)), by = "AESEV", by_break = "block", sort = "AEDECOD"))
+  expect_identical(r$events, list(1:9, 10:12))
+  # each value printed once, at the top of its block
+  expect_identical(r$n("MILD"), c(1L, 0L))
+  expect_identical(r$n("MODERATE"), c(1L, 0L))
+  expect_identical(r$n("SEVERE"), c(0L, 1L))
+  # not a column: kept together all the same, nothing of it printed
+  u <- lby_run(list(columns = lby_cols, by = "AESEV", by_break = "block", sort = "AEDECOD"))
+  expect_identical(u$events, list(1:9, 10:12))
+  expect_false(any(grepl("SEVERE|MODERATE|MILD", u$rtf)))
+})
+
+test_that("listing by: the missing variable, said by the study run", {
+  lby_skip()
+  expect_error(lby_run(list(columns = lby_cols, by = "NOSUCH")),
+               "`by` names 'NOSUCH', which the dataset ADAE does not have")
+})
+
+test_that("listing by: as code, as items in a file and on the sheets, nothing lost", {
+  lby_skip()
+  d <- withr::local_tempdir()
+  dir.create(file.path(d, "adam"))
+  haven::write_xpt(lby_data(), file.path(d, "adam", "adae.xpt"))
+  haven::write_xpt(.ai_chr(tflspec::adsl), file.path(d, "adam", "adsl.xpt"))
+  suppressMessages(tfl_ai_study_init(d, adam = "adam", study_id = "XYZ"))
+  st <- tfl_read_study_spec(d)
+  # (a single-item list and a text are the same in a file)
+  norm <- function(a) {
+    if (inherits(a, "tfl_call")) { a$args <- norm(a$args); return(a) }
+    if (!is.list(a)) return(a)
+    a <- lapply(a, norm)
+    if (is.null(names(a)) && all(vapply(a, function(z) is.character(z) && length(z) == 1L, NA))) unlist(a) else a
+  }
+  key <- function(items) sort(vapply(items, function(it)
+    paste(it$fn, paste(deparse(norm(it$args)[order(names(it$args))]), collapse = "")), ""))
+  for (args in list(
+    list(columns = lby_cols, by = "AESEV", sort = "AEDECOD"),
+    list(columns = c(lby_cols, list(lby_sev)), by = "AESEV", by_heading = "Severity: {value}"),
+    list(columns = lby_cols, by = c("AESEV", "SITEID")),
+    list(columns = c(lby_cols, list(lby_sev)), by = "AESEV", by_break = "block"),
+    list(columns = lby_cols, by = "AESEV", by_break = "block", sort = "USUBJID"))) {
+    o <- tfl_output("L-1", "listing", label = "AEs", extends = "none",
+                    template = list(name = "listing", args = c(list(data = "ADAE"), args)))
+    ro <- tfl_resolve_output(o, st)
+    # the template's call keeps the arguments, as the report's file gives them
+    expect_identical(attr(ro, "template")$args$by, args$by)
+    expect_identical(attr(ro, "template")$args$by_break, args$by_break)
+    expect_identical(attr(ro, "template")$args$by_heading, args$by_heading)
+    # the program: the sort first by the variables, the divisions in the plan
+    code <- paste(tfl_content_code(ro, study = st), collapse = "\n")
+    expect_match(code, paste0("dplyr::arrange(", args$by[1L]), fixed = TRUE)
+    expect_match(code, if (identical(args$by_break, "block")) "plan_row_group(" else "page_by = ",
+                 fixed = TRUE)
+    # to items in a file
+    b <- tfl_template_to_spec(o, st)
+    expect_null(b$template)
+    expect_identical(key(b$content), key(Filter(function(it) it$from != "defaults", ro$content)))
+    expect_identical(unlist(b$data$sort), unlist(ro$data$sort))
+    f <- file.path(withr::local_tempdir(), "L-1.yml")
+    tfl_write_output(b, f)
+    back <- tfl_read_output(f)
+    expect_identical(key(back$content), key(b$content))
+    expect_identical(unlist(back$data$sort), unlist(b$data$sort))
+    # and on the sheets, back to a file
+    sh <- suppressMessages(tfl_sheets_from_spec(st, list(`L-1` = b)))
+    to <- withr::local_tempdir()
+    suppressMessages(tfl_yaml_from_sheets(sh, to, overwrite = TRUE))
+    sb <- tfl_read_outputs(to)[["L-1"]]
+    expect_identical(key(sb$content), key(b$content))
+    expect_identical(unlist(sb$data$sort), unlist(b$data$sort))
+  }
+})
+
 test_that("summary has no mean (CI) analysis of its own; km_table and orr", {
   x <- tfl_template_expand("summary", list(population = "SAF", continuous = "CHG",
                                            continuous_statistics = "N"))
