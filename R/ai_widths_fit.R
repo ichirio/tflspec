@@ -101,7 +101,7 @@
 # never stops it.  `dir` the study folder; `vars` the ADaM's variables, for
 # the guess.  Returns the outputs, and the ids of the listings given
 # `written` widths, `fitted` ones among them.
-.ai_listing_widths_set <- function(outs, dir, vars = NULL) {
+.ai_listing_widths_set <- function(outs, dir, vars = NULL, sheets = NULL) {
   written <- fitted <- character()
   todo <- names(outs)[vapply(outs, function(o) {
     identical(o$kind, "listing") && .ai_listing_todo(o)
@@ -111,7 +111,8 @@
   if (!is.null(old)) on.exit(setwd(old), add = TRUE)
   st <- if (!is.null(old)) tryCatch(tfl_read_study_spec("."), error = function(e) NULL)
   # (the study read into sheets once for all the listings, not once a listing)
-  sh <- if (!is.null(st)) tryCatch(tfl_sheets_from_yaml("."), error = function(e) NULL)
+  sh <- sheets
+  if (is.null(sh) && !is.null(st)) sh <- tryCatch(tfl_sheets_from_yaml("."), error = function(e) NULL)
   for (id in todo) {
     o <- outs[[id]]
     info <- .ai_listing_cols(o)
