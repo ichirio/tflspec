@@ -79,6 +79,15 @@
                             visit = visit_order, visit_label = visit_var, join_adsl = FALSE), "summary")
   # (no parameter named: the y axis' title says the statistic alone)
   if (is.null(param)) f$plot$y_label <- sub(" ALT$", "", f$plot$y_label)
+  # a blank ("") group or visit is a missing one, as a table counts it: the
+  # records are left out, and said (else a line or a visit of their own, the
+  # colours shifted, the value off its real visit)
+  f$stats <- c(list(list(step = "filter",
+    expr = sprintf("!is.na(%s) & %s != \"\" & !is.na(%s) & %s != \"\"", group, group, visit_var, visit_var),
+    label = sprintf("the records with an empty %s or %s have no place in a line: left out, with a warning",
+                    group, visit_var),
+    warn = sprintf("mean_%s: {n} records with an empty %s or %s were left out", interval, group, visit_var))),
+    f$stats)
   f
 }
 
@@ -112,6 +121,8 @@
 #' call draws the mean of each group at each visit, a line and points,
 #' with bars of +/- one standard error (`mean_se`) or the 95% confidence
 #' interval (`mean_ci`).  The means are made here, from the records.  A
+#' record with an empty or missing group or visit is left out, and a warning
+#' says how many; a mean of one record has no bar.  A
 #' report's own layers and settings go after the call with `+`.
 #'
 #' @param data The records: one a subject and visit, the parameter's.
@@ -158,6 +169,51 @@ tpl_mean_ci <- function(data, group = "TRT01A", value = "AVAL", visit_var = "AVI
     at <- match("param", vapply(f$steps, `[[`, "", "step"))
     f$steps <- append(f$steps, list(list(step = "filter", expr = where)), at)
   }
+  # one bar a subject.  No `where`: each subject's best change, the smallest
+  # value (the first of a tie, in the data's order), said when records were
+  # left out.  With `where` the records are the report's own: a subject with
+  # several is said, not reduced.  Then the bars beyond the axis, said.
+  v <- value
+  if (is.null(where)) {
+    one <- paste0(
+      "if (\"USUBJID\" %in% names(df) && anyDuplicated(df$USUBJID)) {\n",
+      "  n_records <- nrow(df)\n",
+      "  df <- df |>\n",
+      "    group_by(USUBJID) |>\n",
+      "    filter(row_number() == ifelse(all(is.na(", v, ")), 1L, which.min(", v, "))) |>\n",
+      "    ungroup()\n",
+      "  warning(\"waterfall: one bar a subject, the smallest ", v, " of each (the first of a tie): \",\n",
+      "          n_records - nrow(df), \" of \", n_records, \" records left out\", call. = FALSE)\n",
+      "}")
+    lab <- "one bar a subject: each subject's best (smallest) value, said when records are left out"
+  } else {
+    one <- paste0(
+      "if (\"USUBJID\" %in% names(df) && anyDuplicated(df$USUBJID)) {\n",
+      "  warning(\"waterfall: \", sum(table(df$USUBJID) > 1), \" subjects have more than one record, a bar for each; \",\n",
+      "          \"keep one a subject with `where`\", call. = FALSE)\n",
+      "}")
+    lab <- "one bar a subject: a subject with several records is said"
+  }
+  lo <- f$plot$y_min %||% -100
+  hi <- f$plot$y_max %||% 100
+  cut <- paste0(
+    "n_cut <- sum(df$", v, " < ", lo, " | df$", v, " > ", hi, ", na.rm = TRUE)\n",
+    "if (n_cut > 0) {\n",
+    "  warning(\"waterfall: \", n_cut, \" bars beyond the axis (", lo, " to ", hi, ") are cut off\", call. = FALSE)\n",
+    "}")
+  f$stats <- c(list(list(step = "code", label = lab, code = one),
+                    list(step = "code", label = "the bars beyond the y axis, said", code = cut)), f$stats)
+  # a subject with no response (blank or missing) is a bar of its own colour:
+  # in the legend as Missing, not a grey with no key
+  if (isTRUE(by_response)) {
+    k <- which(vapply(f$stats, function(s) identical(s$step, "levels") && identical(s$variable, "BOR"), NA))
+    if (length(k)) {
+      f$stats[[k]]$levels <- paste(f$stats[[k]]$levels, "Missing", sep = " | ")
+      f$stats <- append(f$stats, list(list(step = "derive", variable = "BOR",
+        expr = "ifelse(is.na(BOR) | BOR == \"\", \"Missing\", as.character(BOR))")), k - 1L)
+      f$plot$colours <- list(Missing = "grey80")
+    }
+  }
   f
 }
 
@@ -182,7 +238,12 @@ tpl_mean_ci <- function(data, group = "TRT01A", value = "AVAL", visit_var = "AVI
 #' record of each subject the report keeps (`where`), the best overall
 #' response joined when the bars are coloured by it), then one call draws
 #' them: one bar a subject, the largest change first, the lines at 0, +20%
-#' and -30%.  The bars' order is made here.  A report's own layers and
+#' and -30%.  The bars' order is made here.  A subject with several records
+#' is one bar, its smallest value (the first record of a tie), and a warning
+#' says how many records were left out; give the records you want with
+#' `where` in a report.  A bar beyond the axis (-100 to 100) is cut off, and
+#' a warning says how many.  A subject with no response (`by_response`) is a
+#' bar in its own colour, Missing in the legend.  A report's own layers and
 #' settings go after the call with `+`.
 #'
 #' @param data The records: one a subject.

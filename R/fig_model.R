@@ -979,7 +979,8 @@ tfl_read_fig_design <- function(path) {
         lohi <- switch(iv,
           se = c("mean - se", "mean + se"),
           sd = c("mean - sd", "mean + sd"),
-          ci = c("mean - qt(0.975, n - 1) * se", "mean + qt(0.975, n - 1) * se"))
+          ci = c("ifelse(n > 1, mean - qt(0.975, pmax(n - 1, 1)) * se, NA_real_)",
+                 "ifelse(n > 1, mean + qt(0.975, pmax(n - 1, 1)) * se, NA_real_)"))
         out <- c(out, paste0(v("name"), " <- ", src, " |>\n",
           sprintf("  filter(!is.na(%s)) |>\n", val),
           sprintf("  group_by(%s) |>\n", paste(by, collapse = ", ")),
@@ -993,7 +994,8 @@ tfl_read_fig_design <- function(path) {
         lohi <- switch(v("interval"),
           se = c("mean - se", "mean + se"),
           sd = c("mean - sd", "mean + sd"),
-          ci = c("mean - qt(0.975, n - 1) * se", "mean + qt(0.975, n - 1) * se"))
+          ci = c("ifelse(n > 1, mean - qt(0.975, pmax(n - 1, 1)) * se, NA_real_)",
+                 "ifelse(n > 1, mean + qt(0.975, pmax(n - 1, 1)) * se, NA_real_)"))
         out <- c(out, paste0(v("name"), " <- ", src, " |>\n",
           sprintf("  filter(!is.na(%s)) |>\n", val),
           sprintf("  group_by(%s) |>\n", paste(by, collapse = ", ")),
@@ -1296,7 +1298,9 @@ tfl_read_fig_design <- function(path) {
     x_breaks <- TRUE
   } else if (has_risk) {
     pre <- if (!is.null(x_by)) {
-      sprintf("x_breaks <- seq(%s, max(%s$time), by = %s)", x_min %||% 0, fit, x_by)
+      # (to the first break at or after the last time: the curves reach the axis' end)
+      sprintf("x_breaks <- seq(%s, %s + ceiling((max(%s$time) - %s) / %s - 1e-8) * %s, by = %s)",
+              x_min %||% 0, x_min %||% 0, fit, x_min %||% 0, x_by, x_by, x_by)
     } else sprintf("x_breaks <- pretty(c(%s, %s))", x_min %||% 0,
                    if (!is.null(x_max)) x_max else sprintf("max(%s$time)", fit))
     x_breaks <- TRUE
