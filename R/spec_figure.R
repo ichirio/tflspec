@@ -336,6 +336,10 @@
     if (inherit && is.null(global)) next
     req <- .schema_layer_required(fn, a)
     if (!length(req)) next
+    # geom_abline() gives the slope (1) and the intercept (0) itself when it
+    # has no mapping, and the other when it is given one of them
+    if (identical(.schema_fn_name(fn), "geom_abline") &&
+        (!length(m) || any(c("slope", "intercept") %in% names(a)))) next
     given <- c(std(names(m)), std(setdiff(names(a), c("mapping", "data"))), if (inherit) global)
     for (g in req) {
       alts <- strsplit(g, "|", fixed = TRUE)[[1L]]
@@ -516,11 +520,31 @@
 .schema_theme_sides <- c("x", "y", "top", "bottom", "left", "right", "x.top", "x.bottom",
                          "y.left", "y.right", "theta", "r", "inside")
 
+# The rows of inst/fig/gg_args.csv for a function of a kind: first those
+# written for it alone (the `only` column: function names, `pkg::fn` for an
+# extension's, `*` for any ending: ggh4x::facet_*), then the kind's shared
+# ones.  `via`: the layer function that also gives the item its parameters
+# (geom_bar(stat = "bin") has stat_bin()'s).
+.schema_gg_rows <- function(g, kind, key, via = NULL) {
+  g <- g[g$kind == kind, , drop = FALSE]
+  for_it <- function(only) {
+    pats <- trimws(strsplit(only, ",", fixed = TRUE)[[1L]])
+    any(vapply(pats, function(p) {
+      rx <- utils::glob2rx(p)
+      grepl(rx, key) || (!is.null(via) && grepl(rx, via))
+    }, NA))
+  }
+  own <- !is.na(g$only) & vapply(ifelse(is.na(g$only), "", g$only), for_it, NA)
+  # a row for other functions only is not this one's at all
+  g <- g[own | is.na(g$only), , drop = FALSE]
+  g[order(is.na(g$only)), , drop = FALSE]
+}
+
 # The entry with the shared arguments of its kind the function takes,
 # typed (an argument the catalog types itself stays as it says); any
 # other argument a scale takes through `...`, untyped.  `extra`: more
 # names the function takes (a layer's stat's parameters).
-.schema_fig_common <- function(ent, nm, extra = character()) {
+.schema_fig_common <- function(ent, nm, extra = character(), via = NULL) {
   kind <- ent$figure
   if (is.null(kind)) return(ent)
   takes <- unique(c(.schema_gg_takes(nm, ent$package %||% "ggplot2"), names(ent$args), extra))
@@ -530,7 +554,9 @@
   g <- .fig_gg_args()
   # a theme_sub_*() argument is the setting it stands for (below), not
   # theme()'s of its name (theme_sub_axis_x(text =) is axis.text.x)
-  g <- g[g$kind == kind & g$arg %in% takes & !startsWith(nm, "theme_sub_"), , drop = FALSE]
+  key <- if (identical(ent$package %||% "ggplot2", "ggplot2")) nm else paste0(ent$package, "::", nm)
+  g <- .schema_gg_rows(g, kind, key, via)
+  g <- g[g$arg %in% takes & !startsWith(nm, "theme_sub_"), , drop = FALSE]
   for (i in seq_len(nrow(g))) {
     a <- g$arg[i]
     old <- ent$args[[a]]
@@ -595,6 +621,7 @@
   pkg <- if (grepl("::", fn, fixed = TRUE)) sub("::.*$", "", fn)
   ent <- .schema_ggplot_entry(other)
   if (is.null(ent) && !is.null(pkg)) ent <- .schema_ggplot_entry(paste0(pkg, "::", other))
+  if (!is.null(ent)) ent$via <- other
   ent
 }
 
@@ -605,5 +632,5 @@
   if (is.null(ent) || is.null(part)) return(ent)
   for (k in setdiff(names(part$args), names(ent$args))) ent$args[[k]] <- part$args[[k]]
   ent$aes <- unique(c(ent$aes, part$aes))
-  .schema_fig_common(ent, .schema_fn_name(fn))
+  .schema_fig_common(ent, .schema_fn_name(fn), via = part$via)
 }
