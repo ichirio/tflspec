@@ -1865,7 +1865,7 @@ names(.tpl_pc_params) <- vapply(.tpl_pc_params, `[[`, "", "name")
 #'   `visits`, `where`, `by`, `layout`, `param_order`, `visit_order`,
 #'   `baseline`, `baseline_label`, `value_label`, `change_label`, `statistics`,
 #'   `cells` (label = template, or a list of `list(label = , template = )`),
-#'   `param_page`, `param_heading` ...
+#'   `param_page`, `param_heading`, `heading` ...
 #' @return A [rtfreporter::table_plan()].
 #' @export
 tpl_param_change <- function(ard, population, ..., codelists = NULL) {
