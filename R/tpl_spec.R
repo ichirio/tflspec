@@ -161,7 +161,51 @@
     x$content <- c(list(tfl_item("normalize_ard", list(), from = paste0("template:", ts$name))),
                    x$content)
   }
+  x$content <- .tpl_stub_first(x$content, base)
   list(name = ts$name, args = sa$args, study = sa$study, x = x)
+}
+
+# A stub the study folds first (its plan_stub(before = TRUE)) takes the
+# table's row keys away before anything reads them: a row group's
+# `collapse` and a header cell's `cols` that name a key name the stub's
+# column from then on (`row_label`).  The template, which does not know the
+# study's stub, names the keys.
+.tpl_stub_first <- function(items, base) {
+  if (inherits(items, "tfl_r") || inherits(base, "tfl_r") || !length(items)) return(items)
+  is_fn <- function(fn) function(it) identical(as.character(it$fn %||% ""), fn)
+  study <- Filter(is_fn("plan_stub"), base)
+  if (!length(study) || !isTRUE(study[[length(study)]]$args$before)) return(items)
+  own <- Filter(is_fn("plan_stub"), items)
+  own_args <- if (length(own)) own[[length(own)]]$args else list()
+  study_args <- study[[length(study)]]$args
+  stub <- c(own_args, study_args[setdiff(names(study_args), names(own_args))])
+  name <- stub$name
+  tp <- Filter(is_fn("table_plan"), items)
+  if (!length(tp) || !is.character(name) || length(name) != 1L) return(items)
+  rows <- tp[[1L]]$args$rows
+  # (a key is named by its name, else by its column)
+  keys <- as.character(unlist(rows))
+  if (length(names(rows))) keys <- ifelse(nzchar(names(rows)), names(rows), keys)
+  folded <- as.character(unlist(stub$vars))
+  if (!length(folded)) folded <- keys
+  swap <- function(x) {
+    v <- as.character(unlist(x))
+    if (!any(v %in% folded)) return(x)
+    v <- unique(replace(v, v %in% folded, name))
+    if (is.list(x)) as.list(v) else v
+  }
+  lapply(items, function(it) {
+    fn <- as.character(it$fn %||% "")
+    if (identical(fn, "plan_row_group") && length(it$args$collapse)) {
+      it$args$collapse <- swap(it$args$collapse)
+    } else if (identical(fn, "plan_col_header") && is.list(it$args$header)) {
+      it$args$header <- lapply(it$args$header, function(cell) {
+        if (is.list(cell) && length(cell$cols)) cell$cols <- swap(cell$cols)
+        cell
+      })
+    }
+    it
+  })
 }
 
 # The keys of the report's `plot:` that do nothing in a Kaplan-Meier type:

@@ -42,7 +42,9 @@ test_that("expanded: the event's day, each level's time at risk, the rates by ca
   expect_identical(as.character(d[[2L]]$where), "TRTEMFL == \"Y\"")
   expect_identical(as.character(d[[2L]]$derive), "DAY = ASTDY")
   expect_match(d[[5L]]$code, ".by = c(USUBJID, AEBODSYS, AEDECOD)", fixed = TRUE)
-  expect_match(d[[5L]]$code, "dplyr::if_else(EVENT, DAY, TRTDURD) / 365.25", fixed = TRUE)
+  # (the first day passes over a record with no day; none: the whole exposure)
+  expect_match(d[[5L]]$code, "min(DAY, na.rm = TRUE)", fixed = TRUE)
+  expect_match(d[[5L]]$code, "dplyr::if_else(EVENT & !is.na(DAY), DAY, TRTDURD) / 365.25", fixed = TRUE)
   expect_match(d[[3L]]$code, "AEBODSYS = \"Any TEAE\"", fixed = TRUE)
   an <- x$ard$analyses
   expect_identical(vapply(an, `[[`, "", "method")[-1L], rep("cardx::ard_incidence_rate", 3L))

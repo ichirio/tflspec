@@ -27,9 +27,12 @@ test_that("overall binds the call without its by under it: cards' overall rows",
   txt <- paste(tfl_ard_code(sp, part = "body"), collapse = "\n")
   # each call piped from its data, the Total's said
   expect_match(txt, "# (and the Total column: the same call without `by`)", fixed = TRUE)
-  expect_match(txt, "ard_sex <- bind_rows(\n  adsl_sub |>\n    ard_tabulate(\n      by = ARM,",
+  # (a blank text value counted as missing, first)
+  blank <- "mutate(across(where(is.character), ~ na_if(.x, \"\"))) |>"
+  expect_match(txt, paste0("ard_sex <- bind_rows(\n  adsl_sub |>\n    ", blank, "\n    ard_tabulate(\n      by = ARM,"),
                fixed = TRUE)
-  expect_match(txt, "),\n  adsl_sub |>\n    ard_tabulate(\n      variables = SEX,", fixed = TRUE)
+  expect_match(txt, paste0("),\n  adsl_sub |>\n    ", blank, "\n    ard_tabulate(\n      variables = SEX,"),
+               fixed = TRUE)
 
   ard <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE))
   pop <- subset(adam$ADSL, SAFFL == "Y")

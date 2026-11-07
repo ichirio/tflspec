@@ -34,7 +34,11 @@ exposure (\code{exposure}, ADSL's \code{TRTDURD}).  The rates are cardx's
 \details{
 The days to a subject's first event are the smallest \code{start}
 of their records of the term: \code{ASTDY} (the study standard), or R that
-makes the day from ADAE's columns, \code{ASTDT - TRTSDT + 1}.
+makes the day from ADAE's columns, \code{ASTDT - TRTSDT + 1}.  A record
+with no day is passed over for the smallest.  A subject whose records
+of a term all have no day still has the event: it is counted, at risk
+for the whole exposure, and the program says in a warning how many
+subjects that is.
 }
 \examples{
 x <- tfl_template_expand("ae_eair", list(population = "SAF"))
