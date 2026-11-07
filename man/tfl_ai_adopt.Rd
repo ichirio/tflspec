@@ -38,6 +38,13 @@ them into \verb{ai/output/}.  A draft the person finds finished is adopted:
 copied to \verb{spec/outputs/}, where the study's lists, programs and runs
 read it, and the AI never writes over it.  Adopting again after the AI
 redrafted a report replaces the adopted file only with \code{overwrite = TRUE} -- a person may have changed it since.
+
+A draft that has no column widths (it went through neither
+\code{\link[=tfl_ai_collect_answers]{tfl_ai_collect_answers()}} nor \code{run.R}) gets tflspec's first, as
+\code{\link[=tfl_fill_widths]{tfl_fill_widths()}} writes them -- into the draft, so that the adopted
+file is the draft -- with their assumption; a report that has its widths
+is adopted as it is.  Where they cannot be filled, the report is adopted
+without, and a message says so.
 }
 \seealso{
 \code{\link[=tfl_ai_migrate]{tfl_ai_migrate()}}, \code{\link[=tfl_ai_collect_answers]{tfl_ai_collect_answers()}}

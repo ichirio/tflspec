@@ -50,6 +50,13 @@
 #' redrafted a report replaces the adopted file only with `overwrite =
 #' TRUE` -- a person may have changed it since.
 #'
+#' A draft that has no column widths (it went through neither
+#' [tfl_ai_collect_answers()] nor `run.R`) gets tflspec's first, as
+#' [tfl_fill_widths()] writes them -- into the draft, so that the adopted
+#' file is the draft -- with their assumption; a report that has its widths
+#' is adopted as it is.  Where they cannot be filled, the report is adopted
+#' without, and a message says so.
+#'
 #' @param study_dir The study folder.
 #' @param outputs The reports to adopt (their ids); `NULL`, every draft.
 #' @param overwrite `TRUE` to write over a report already adopted (or
@@ -82,6 +89,17 @@ tfl_ai_adopt <- function(study_dir, outputs = NULL, overwrite = FALSE, dry_run =
   want <- outputs %||% ids
   dest_dir <- file.path(.spec_dir(study_dir), "outputs")
   dir.create(dest_dir, recursive = TRUE, showWarnings = FALSE)
+  # (a draft about to be adopted that has no widths gets tflspec's first,
+  # written into the draft: the study's file is then the draft, as when the
+  # draft went through tfl_ai_collect_answers() or tfl_ai_run())
+  if (!isTRUE(dry_run)) {
+    src_of <- drafts[match(want, ids)]
+    dest_of <- file.path(dest_dir, paste0(want, ".yml"))
+    todo <- !is.na(src_of) & (!file.exists(dest_of) | isTRUE(overwrite))
+    both <- todo & file.exists(dest_of)
+    todo[both] <- unname(tools::md5sum(src_of[both])) != unname(tools::md5sum(dest_of[both]))
+    if (any(todo)) .ai_adopt_widths(study_dir, a, want[todo])
+  }
   log <- .ai_adopted_read(study_dir)
   rows <- lapply(want, function(id) {
     src <- drafts[match(id, ids)]
@@ -129,6 +147,26 @@ tfl_ai_adopt <- function(study_dir, outputs = NULL, overwrite = FALSE, dry_run =
                     paste(kept, collapse = ", ")))
   }
   out
+}
+
+# The widths of the drafts about to be adopted, as tfl_fill_widths() writes
+# them into reports that have none (and tfl_ai_collect_answers() into the
+# AI's): written into the drafts in the drafts' folder `a`, with their
+# assumption.  A draft that has widths is not touched.  A failure never
+# stops the adoption: it says so, one line.
+.ai_adopt_widths <- function(study_dir, a, ids) {
+  old <- options(tflspec.outputs_dir = a)
+  on.exit(options(old), add = TRUE)
+  set <- tryCatch(tfl_fill_widths(study_dir, output_id = ids), error = function(e) {
+    message(sprintf("tfl_ai_adopt(): column widths were not filled (%s); the reports are adopted as they are.",
+                    conditionMessage(e)))
+    character()
+  })
+  if (length(set)) {
+    message(sprintf("tfl_ai_adopt(): %s had no column widths; tflspec's were written (see the assumptions).",
+                    paste(set, collapse = ", ")))
+  }
+  invisible(set)
 }
 
 #' Put a study's AI drafts apart from its own report files
