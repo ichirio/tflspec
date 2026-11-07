@@ -1187,6 +1187,12 @@ tpl_disposition <- function(ard, population, ..., codelists = NULL) {
 
 # ---- shift: a category at baseline by the same after it, the layout -------------
 
+# (the title row `{PAGE_HEADING}` of the report's page: titles puts it
+# above the last line, where the shell has it)
+.tpl_param_heading_doc <- paste(
+  "a parameter's page name (`{value}`: the parameter); the last title line,",
+  "or where the title line `{PAGE_HEADING}` is")
+
 .tpl_shift_params <- list(
   tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
   .tpl_subset_param(),
@@ -1225,7 +1231,7 @@ tpl_disposition <- function(ard, population, ..., codelists = NULL) {
   tfl_param("param_page", TRUE, type = "flag",
             doc = "TRUE: a page a parameter, named in the titles by `param_heading`"),
   tfl_param("param_heading", "Parameter: {value}",
-            doc = "a parameter's page name (`{value}`: the parameter)"),
+            doc = .tpl_param_heading_doc),
   tfl_param("header_n", TRUE, type = "flag", doc = paste(
     "TRUE: each page's arm headings show the arm's subjects for that parameter",
     "(N=); FALSE: the arm only. Only with `param_page`: one page of several",
@@ -1610,7 +1616,7 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
   tfl_param("param_page", TRUE, type = "flag",
             doc = "TRUE: a page a parameter, named in the titles by `param_heading`"),
   tfl_param("param_heading", "Parameter: {value}",
-            doc = "a parameter's page name (`{value}`: the parameter)"),
+            doc = .tpl_param_heading_doc),
   tfl_param("heading", NULL, doc = "the label column's heading")
 )
 names(.tpl_pc_params) <- vapply(.tpl_pc_params, `[[`, "", "name")

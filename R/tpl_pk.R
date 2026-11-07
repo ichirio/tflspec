@@ -30,7 +30,8 @@
             doc = "the groups: a page each (an analyte, an arm), the summary's too"),
   tfl_param("heading", NULL, doc = paste(
     "a page's name in the titles ({<group>}: its value); NULL: the groups'",
-    "values, a line each")),
+    "values, a line each; the last title line, or where the title line",
+    "`{PAGE_HEADING}` is")),
   tfl_param("time", "ATPT", doc = "the time point's variable (the columns)"),
   tfl_param("time_order", "ATPTN", doc = "the time points' order variable; NULL: by name"),
   tfl_param("times", NULL, doc = "the time points, in order; NULL: by time_order"),

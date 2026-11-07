@@ -490,6 +490,10 @@
              lines[keep], m[keep]))
 }
 
+# rtfreporter's mark of where a page's heading goes in the titles (a row of
+# its own: rtf_text_tokens())
+.page_heading_mark <- "{PAGE_HEADING}"
+
 # A band's line as rtfreporter takes it: its cells, c(l = , c = , r = ) (a
 # blank line centred); with a height of its own (`row_height_twips`, over
 # the band's) a row list -- a title's list(text = , align = ,
@@ -497,6 +501,15 @@
 # row_height_twips = ) (rtfreporter#125)
 .page_line <- function(cells, height, band) {
   if (!length(cells)) cells <- c(c = "")
+  # a title row that is only the mark of the page's heading ({PAGE_HEADING},
+  # rtfreporter's) is written as the row list, its alignment in `align`:
+  # rtfreporter reads the mark in a row's text, which a named c(l = ) is not
+  if (identical(band, "titles") && length(cells) == 1L &&
+      identical(unname(cells[[1L]]), .page_heading_mark)) {
+    return(c(list(text = .page_heading_mark,
+                  align = c(l = "left", c = "center", r = "right")[[names(cells)]]),
+             if (length(height) && !is.na(height)) list(row_height_twips = as.integer(height))))
+  }
   if (!length(height) || is.na(height)) return(cells)
   h <- as.integer(height)
   if (!identical(band, "titles")) return(list(columns = cells, row_height_twips = h))
