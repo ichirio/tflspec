@@ -2676,8 +2676,8 @@ scale_x_continuous:
     - {label: {en: Range and breaks, ja: 範囲と刻み}, args: [limits, breaks]}
   args:
     limits: {type: "list<number>|r", label: {en: Range, ja: 範囲}}
-    breaks: {type: "list<number>|call<seq, breaks_*, extended_breaks, pretty_breaks>|r", label: {en: Breaks, ja: 目盛り}}
-    labels: {type: "list<string>|call<label_*, *_format>|r", label: {en: Tick labels, ja: 目盛りのラベル}}
+    breaks: {type: "list<number>|call<seq, breaks_*, extended_breaks, pretty_breaks>|tilde|lambda|r", label: {en: Breaks, ja: 目盛り}}
+    labels: {type: "list<string>|call<label_*, *_format>|tilde|lambda|r", label: {en: Tick labels, ja: 目盛りのラベル}}
     expand: {type: "call<expansion, expand_scale, waiver>|list<number>|r", label: {en: Expansion, ja: 余白}}
 
 scale_y_continuous:
@@ -2691,8 +2691,8 @@ scale_y_continuous:
     - {label: {en: Range and breaks, ja: 範囲と刻み}, args: [limits, breaks]}
   args:
     limits: {type: "list<number>|r", label: {en: Range, ja: 範囲}}
-    breaks: {type: "list<number>|call<seq, breaks_*, extended_breaks, pretty_breaks>|r", label: {en: Breaks, ja: 目盛り}}
-    labels: {type: "list<string>|call<label_*, *_format>|r", label: {en: Tick labels, ja: 目盛りのラベル}}
+    breaks: {type: "list<number>|call<seq, breaks_*, extended_breaks, pretty_breaks>|tilde|lambda|r", label: {en: Breaks, ja: 目盛り}}
+    labels: {type: "list<string>|call<label_*, *_format>|tilde|lambda|r", label: {en: Tick labels, ja: 目盛りのラベル}}
     expand: {type: "call<expansion, expand_scale, waiver>|list<number>|r", label: {en: Expansion, ja: 余白}}
 
 scale_x_log10:
@@ -3394,7 +3394,7 @@ scale_x_date:
   visible: [date_breaks, date_labels, limits]
   args:
     limits: {type: "list<date|string|number>|r", label: {en: Range, ja: 範囲}, help: "Two dates, 2024-01-01 (NA: the data's); written as.Date(c(...))."}
-    breaks: {type: "list<date|string|number>|call<breaks_*, extended_breaks, pretty_breaks>|r", label: {en: Breaks, ja: 目盛り}, help: "Dates, 2024-01-01; or date_breaks (\"1 month\")."}
+    breaks: {type: "list<date|string|number>|call<breaks_*, extended_breaks, pretty_breaks>|tilde|lambda|r", label: {en: Breaks, ja: 目盛り}, help: "Dates, 2024-01-01; or date_breaks (\"1 month\")."}
 
 scale_y_date:
   package: ggplot2
@@ -3405,7 +3405,7 @@ scale_y_date:
   visible: [date_breaks, date_labels, limits]
   args:
     limits: {type: "list<date|string|number>|r", label: {en: Range, ja: 範囲}, help: "Two dates, 2024-01-01 (NA: the data's); written as.Date(c(...))."}
-    breaks: {type: "list<date|string|number>|call<breaks_*, extended_breaks, pretty_breaks>|r", label: {en: Breaks, ja: 目盛り}, help: "Dates, 2024-01-01; or date_breaks (\"1 month\")."}
+    breaks: {type: "list<date|string|number>|call<breaks_*, extended_breaks, pretty_breaks>|tilde|lambda|r", label: {en: Breaks, ja: 目盛り}, help: "Dates, 2024-01-01; or date_breaks (\"1 month\")."}
 
 scale_x_datetime:
   package: ggplot2

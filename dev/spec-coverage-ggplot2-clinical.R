@@ -298,3 +298,32 @@ fig_ribbon <- ggplot(mt, aes(x = AVISITN, y = CHG, colour = TRTA, fill = TRTA)) 
   stat_ellipse(aes(group = TRTA), type = "norm", level = 0.95, linetype = "dotted") +
   scale_fill_manual(values = c("grey40", "#1F78B4", "#E31A1C"), aesthetics = c("colour", "fill")) +
   ylab("Mean change (95% CI)")
+
+# the mean +/- SD and the median with its quartiles, the summaries written
+# out as functions (the GUI's geom_*(stat = "summary") form for one)
+fig_mean_sd <- ggplot(mt, aes(x = AVISITN, y = CHG, colour = TRTA)) +
+  stat_summary(fun = mean, fun.min = function(y) mean(y) - sd(y),
+               fun.max = function(y) mean(y) + sd(y), geom = "pointrange",
+               position = position_dodge(width = 0.6)) +
+  geom_errorbar(stat = "summary",
+                fun.data = \(y) data.frame(y = median(y), ymin = quantile(y, 0.25), ymax = quantile(y, 0.75)),
+                width = 0.3, linetype = "dotted", position = position_dodge(width = 0.6)) +
+  scale_x_continuous(breaks = c(0, 2, 4, 8, 12), labels = ~ ifelse(.x == 0, "Baseline", paste("Week", .x))) +
+  scale_y_continuous(labels = function(x) sprintf("%+.1f", x)) +
+  labs(x = NULL, y = "Mean (+/- SD) change from baseline", colour = NULL)
+
+# a forest plot on a log2 axis: the breaks as powers of 2, labels by a function
+fig_forest_log2 <- ggplot(fo, aes(x = hr, y = level, xmin = lcl, xmax = ucl)) +
+  geom_vline(xintercept = 1, linetype = "dashed") +
+  geom_pointrange(shape = 15) +
+  scale_x_continuous(transform = "log2", breaks = 2^(-2:2), limits = c(0.25, 4),
+                     labels = function(x) format(x, drop0trailing = TRUE)) +
+  scale_y_discrete(limits = rev) +
+  labs(x = "Hazard ratio (log2 scale)", y = NULL)
+
+# a lab value's distribution, the bin width by the Freedman-Diaconis rule
+fig_hist_fd <- ggplot(lv, aes(x = AVAL)) +
+  geom_histogram(binwidth = function(x) 2 * IQR(x) / length(x)^(1 / 3), fill = "grey70", colour = "white") +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.05))) +
+  facet_wrap(~ TRTA, ncol = 1) +
+  xlab("Value")

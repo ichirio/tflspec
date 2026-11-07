@@ -152,6 +152,10 @@ tfl_plot <- function(name, items = list(), from = "own") {
 # -- the first of the type's alternatives the value has decides (method:
 # "lm" of string|r stays "lm")
 .fig_text_lang <- function(v, ty) {
+  # a function written out (function(x) ..., \(x) ...) or a formula (~
+  # paste0(.x, "%")) is code before text: a scale's labels takes both
+  if (.fig_type_has(ty, "lambda") && .schema_is_lambda(v)) return(str2lang(v))
+  if (.fig_type_has(ty, "tilde") && .schema_is_tilde(v)) return(str2lang(v))
   for (t in .fig_type_alts(ty)) {
     if (!.schema_ok(v, t)) next
     if (identical(t$kind, "function")) {
@@ -422,6 +426,12 @@ tfl_plot <- function(name, items = list(), from = "own") {
     # Hmisc::smean.cl.normal, a function by its name
     if (identical(f, "::") && .fig_type_fun_name(type, .fig_deparse(x))) {
       return(.fig_deparse(x))
+    }
+    # a function written out (fun.min = function(y) mean(y) - sd(y)) as its text
+    if (identical(f, "function") && .fig_type_has(type, "lambda")) {
+      if (length(x) > 3L) x <- x[1:3]
+      txt <- .fig_deparse_r(x)
+      if (.schema_is_lambda(txt)) return(txt)
     }
     if (identical(f, "~") && .fig_type_has(type, "tilde")) {
       txt <- .fig_deparse(x)

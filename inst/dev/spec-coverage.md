@@ -942,6 +942,69 @@ form).  In ggplot2's examples: objects of the example (`values = cols`,
 `labeller = to_string`), grobs, `guide_axis_stack()`'s guides by position,
 `Sys.Date()`.
 
+### Round 10 (2026-11-07): functions written out, numbers written as arithmetic
+
+What a statistical programmer writes in place of a function's name: a
+summary's ends as functions (`fun.min = function(y) mean(y) - sd(y)`), a
+median and its quartiles as one (`fun.data = \(y) data.frame(...)`), a
+scale's labels (`labels = function(x) sprintf("%+.1f", x)`, `labels = ~
+paste("Week", .x)`), a bin width by a rule (Freedman-Diaconis), and a
+forest plot's log2 breaks as powers of 2 (`breaks = 2^(-2:2)`).  Three
+clinical figures that write them are added to the clinical measure
+(`fig_mean_sd`, `fig_forest_log2`, `fig_hist_fd`: 21 figures, 167 calls,
+415 uses); "before" is the measure of this round's figures with the
+tflspec before the round.
+
+| Clinical figures | Before | After |
+|---|---:|---:|
+| **ggplot2: geoms, scales, coords, themes, facets, guides, labs, positions** | **99.1%** | **99.5%** |
+| geom_*() | 98.1% | 98.8% |
+| scale_*() | 99.6% | 100.0% |
+| coord_*(), theme(), facets, guides, labs | 100.0% | 100.0% |
+| **stat_*()** (shown apart) | **98.1%** | **100.0%** |
+| arguments yes / partial / no | 242 / 9 / 0 | 249 / 2 / 0 |
+| uses yes / partial / no | 405 / 10 / 0 | 413 / 2 / 0 |
+
+ggplot2's own examples: **96.7% to 96.7%** (uses 1190 / 79 / 3 to 1195 /
+74 / 3; stat_*() 98.4% to 98.7%, scales 95.4% to 95.5%): `geom_function(fun
+= function(x) ...)`, `geom_histogram(binwidth = function(x) ...)`,
+`stat_summary_2d(fun = function(x) ...)`, `scale_x_continuous(breaks =
+c(-10^(4:0), 0, 10^(0:4)))` and `aes(nudge_y = c(-0.1, 0.1, ...))` are
+typed now.  The arguments' and the aesthetics' measures stay at 100%
+(3409 arguments, 826 aesthetics).
+
+Round 10:
+
+- A new type `lambda`: a function written out as its text
+  (`function(y) mean(y) - sd(y)`, `\(x) paste0(x, "%")`), checked to parse
+  as a function and written as the function; read from code as its text
+  (`\(x)` as `function(x)`; a body of several statements keeps its lines).
+  The arguments that take one (`inst/fig/gg_args.csv` and the cards):
+  `fun`, `fun.data`, `fun.min`, `fun.max` (stat_summary, stat_summary_bin
+  / _2d, stat_function, a geom with stat "summary"), `binwidth`, a scale's
+  `breaks`, `minor_breaks`, `labels`, `oob`, `rescaler`, sec_axis()'s
+  `transform`, ggsurvfit's `pvalue_fun`.  Before: `!r` only.
+- A formula `~ ...` (ggplot2's lambda) is typed for those too: `fun.data`,
+  `fun.min`, `fun.max`, `binwidth`, a scale's `breaks`, `minor_breaks` and
+  `labels` (before: `fun`, `rescaler` and `transform` only).
+- A function written out or a formula is code before text where the type
+  takes both (a scale's `labels: "~ paste('Week', .x)"` is the formula,
+  not the label "~ paste(...)").  **The generated code changes** for a
+  label text that parses as a formula or a function: it is written as
+  code.  No template or test of this repo writes one.
+- Numbers written as arithmetic of numbers, in `c()` and `:` too (`!r
+  2^(-2:2)`, `!r c(-10^(2:0), 0, 10^(0:2))`, `!r 0:4 * 12`), are a
+  `list<number>` (`.schema_r_numbers()`): a scale's `breaks` and `limits`,
+  `xlim` ...; the check judges them (before: R, untyped).  The SPEC keeps
+  them as written.
+
+What is left (partial), clinical: a layer's data subset as R of the
+figure's own objects (`km[km$censored, ]`; `~ subset(.x, censored)` is the
+typed form).  In ggplot2's examples: objects of the example (`values =
+cols`, `labeller = to_string`), grobs, `guide_axis_stack()`'s guides by
+position, `Sys.Date()`, scales' helpers given an expression
+(`scales::label_math(10^.x)`).
+
 ### The extension packages (ggsurvfit, ggrepel, ggh4x, ggtext, ggnewscale, patchwork)
 
 The same measure, the same file (`package` says which), over the

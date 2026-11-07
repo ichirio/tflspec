@@ -56,7 +56,8 @@ it spells.  \code{theme()} takes ggplot2 4.0's default palettes
 (\code{palette.colour.discrete} ...).
 
 The types, in a short notation: \code{string}, \code{integer}, \code{number} (a
-number written as arithmetic of numbers, \verb{!r 1/5}, is one),
+number written as arithmetic of numbers, \verb{!r 1/5}, is one; numbers so
+written, \verb{!r 2^(-2:2)}, are a \verb{list<number>}),
 \code{logical}, \code{enum[a|b]}, \code{column}, \code{stat}, \code{template}, \code{r} (\code{!r}),
 \code{formula} (\code{!r}, written \verb{~ <text>}), \code{guard} (\code{!r}, a two-sided
 \code{cond ~ "text"}), \code{function} (a function by its name, \code{mean_se} or
@@ -64,6 +65,9 @@ number written as arithmetic of numbers, \verb{!r 1/5}, is one),
 \verb{function<f1, f2>} (one of those functions by its name, written bare: a
 discrete scale's \code{limits: rev}, a facet's \code{labeller: label_both}), \code{tilde}
 (a formula as its text, \code{y ~ x} or \code{~ . / 7}, written as the formula),
+\code{lambda} (a function written out as its text, \code{function(y) mean(y) - sd(y)} or \code{\\(x) paste0(x, "\%")}, written as the function: a summary's
+\code{fun.min}, a scale's \code{labels}; a lambda or a formula is written as code
+where the type also takes text),
 \code{date} (a date as its text, \code{2024-01-01}; a sequence of them, \code{NA} an
 open end, written \code{as.Date(c("2024-01-01", NA))}),
 \code{call} and \verb{call<fn>} (\verb{\{fn:, args:\}}; \verb{call<label_*>} takes any

@@ -652,3 +652,74 @@ test_that("a layer's data as a formula of the plot's: ~ subset(.x, censored)", {
   p <- ggplot2::ggplot(d, ggplot2::aes(x, y)) + eval(.fig_item_lang(tfl_item("geom_point", a)), asNamespace("ggplot2"))
   expect_identical(nrow(ggplot2::get_layer_data(p)), 2L)
 })
+
+test_that("a function written out (lambda): a summary's fun.min, a scale's labels, a bin width", {
+  ty <- .schema_type("lambda")
+  expect_true(.schema_ok("function(y) mean(y) - sd(y)", ty))
+  expect_true(.schema_ok("\\(x) paste0(x, \"%\")", ty))
+  expect_false(.schema_ok("mean", ty))
+  expect_false(.schema_ok("function(y) mean(y", ty))
+  expect_false(.schema_ok("functional(y)", ty))
+  a <- list(fun = "mean", fun.min = "function(y) mean(y) - sd(y)",
+            fun.max = "function(y) mean(y) + sd(y)", geom = "pointrange")
+  expect_identical(nrow(gg_problems("stat_summary", a)), 0L)
+  expect_identical(gg_code("stat_summary", a[1:2]),
+                   "stat_summary(fun = mean, fun.min = function(y) mean(y) - sd(y))")
+  # the geom with the stat's form (the GUI's)
+  b <- list(stat = "summary", fun.data = "\\(y) data.frame(y = median(y), ymin = min(y), ymax = max(y))")
+  expect_identical(nrow(gg_problems("geom_errorbar", b)), 0L)
+  expect_identical(gg_code("geom_errorbar", b),
+                   "geom_errorbar(stat = \"summary\", fun.data = function(y) data.frame(y = median(y), ymin = min(y), ymax = max(y)))")
+  # a scale's labels: a function written out or a formula is code, a text is text
+  expect_identical(gg_code("scale_y_continuous", list(labels = "function(x) paste0(x, \"%\")")),
+                   "scale_y_continuous(labels = function(x) paste0(x, \"%\"))")
+  expect_identical(gg_code("scale_x_continuous", list(labels = "~ paste(\"Week\", .x)")),
+                   "scale_x_continuous(labels = ~paste(\"Week\", .x))")
+  expect_identical(gg_code("scale_x_continuous", list(labels = c("BL", "W4"))),
+                   "scale_x_continuous(labels = c(\"BL\", \"W4\"))")
+  expect_identical(nrow(gg_problems("geom_histogram", list(binwidth = "function(x) 2 * IQR(x) / length(x)^(1/3)"))), 0L)
+  # read from code: the text of the function (\(x) as function(x)), and back
+  it <- .fig_lang_item(quote(stat_summary(fun.min = function(y) mean(y) - sd(y), fun.max = \(y) max(y))))
+  expect_identical(it$args$fun.min, "function(y) mean(y) - sd(y)")
+  expect_identical(it$args$fun.max, "function(y) max(y)")
+  expect_identical(nrow(tfl_schema_check(it)), 0L)
+  it <- .fig_lang_item(quote(scale_y_continuous(labels = function(x) sprintf("%+.1f", x))))
+  expect_identical(it$args$labels, "function(x) sprintf(\"%+.1f\", x)")
+  # a function of several statements keeps its lines and parses back
+  f <- quote(stat_summary(fun = function(y) {
+    m <- mean(y)
+    m
+  }))
+  it <- .fig_lang_item(f)
+  expect_true(is.character(it$args$fun) && grepl("\n", it$args$fun, fixed = TRUE))
+  expect_true(.schema_is_lambda(it$args$fun))
+  # where no lambda goes, a function stays R
+  expect_s3_class(.fig_lang_item(quote(geom_point(colour = function(x) x)))$args$colour, "tfl_r")
+  # it draws
+  d <- data.frame(x = rep(1:2, each = 4), y = c(1, 2, 3, 4, 2, 4, 6, 8))
+  p <- ggplot2::ggplot(d, ggplot2::aes(x, y)) +
+    eval(.fig_item_lang(tfl_item("stat_summary", a)), asNamespace("ggplot2")) +
+    eval(.fig_item_lang(tfl_item("scale_y_continuous", list(labels = "function(x) paste0(x, \"%\")"))),
+         asNamespace("ggplot2"))
+  ld <- ggplot2::get_layer_data(p)
+  expect_equal(ld$ymin, c(2.5 - stats::sd(1:4), 5 - stats::sd(c(2, 4, 6, 8))))
+  b <- ggplot2::ggplot_build(p)
+  expect_true(all(grepl("%$", stats::na.omit(b$layout$panel_scales_y[[1L]]$get_labels()))))
+})
+
+test_that("numbers written as arithmetic are numbers where a list of numbers goes", {
+  expect_identical(.schema_r_numbers(tfl_r("2^(-2:2)")), c(0.25, 0.5, 1, 2, 4))
+  expect_identical(.schema_r_numbers(tfl_r("c(-10^(2:0), 0, 10^(0:2))")),
+                   c(-100, -10, -1, 0, 1, 10, 100))
+  expect_identical(.schema_r_numbers(tfl_r("0:4 * 12")), c(0, 12, 24, 36, 48))
+  expect_null(.schema_r_numbers(tfl_r("2^(-k:k)")))
+  expect_null(.schema_r_numbers(tfl_r("c(a = 1)")))
+  expect_null(.schema_r_numbers(tfl_r("log(2)")))
+  ty <- .schema_type("list<number>")
+  expect_true(.schema_ok(tfl_r("2^(-2:2)"), ty))
+  expect_false(.schema_ok(tfl_r("my_breaks"), ty))
+  expect_false(.schema_ok(tfl_r("2^(-2:2)"), .schema_type("list<logical>")))
+  a <- list(transform = "log2", breaks = tfl_r("2^(-2:2)"), limits = tfl_r("2^c(-2, 2)"))
+  expect_identical(nrow(gg_problems("scale_x_continuous", a)), 0L)
+  expect_identical(gg_code("scale_x_continuous", a[2]), "scale_x_continuous(breaks = 2^(-2:2))")
+})
