@@ -330,9 +330,9 @@ test_that("a table whose ARD stops the build is left, named, and the others are 
   expect_setequal(set, c("T-1", "T-3"))
   expect_identical(readLines(fw_file(d, "T-bad")), before)
   # all together first, then halved down to the one that stops it, which is
-  # built alone as before; the good ones are not built one by one
+  # left; the good ones are not built one by one
   expect_identical(n$sizes[1L], 3L)
-  expect_identical(sum(n$sizes == 1L), 4L)
+  expect_identical(sum(n$sizes == 1L), 3L)
   expect_identical(n$ard, length(n$sizes))
   d1 <- fw_tables("T-1")
   suppressMessages(tfl_fill_widths(d1))

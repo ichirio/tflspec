@@ -228,8 +228,8 @@
 # The ARD of the tables `ids`, built together (the study is read into sheets
 # once for all of them, not once a table).  One table's mistake stops the
 # build, so then the tables are halved and each half built, down to the one
-# that stops it: its entry is NULL (the caller builds it alone and says what
-# stops it).  A list by id.
+# that stops it: its entry is FALSE (built alone it stops the same way: the
+# caller leaves it).  A list by id.
 .ai_build_ard_split <- function(st, ids) {
   out <- stats::setNames(vector("list", length(ids)), ids)
   go <- function(ix) {
@@ -243,6 +243,8 @@
       h <- length(ix) %/% 2L
       go(ix[seq_len(h)])
       go(ix[-seq_len(h)])
+    } else {
+      out[ix] <<- list(FALSE)
     }
     invisible()
   }
@@ -272,14 +274,14 @@
   }, error = function(e) NULL))
   need <- todo[!vapply(ros, is.null, NA)]
   # their ARD is built once, for all of them (the study is read into sheets
-  # once, not once a table); a table the build stops on is built alone below,
-  # as before
+  # once, not once a table); a table the build stops on alone is left, as
+  # when it was built alone
   batch <- .ai_build_ard_split(st, vapply(outs[need], function(o) o$id, ""))
   for (k in seq_along(todo)) {
     i <- todo[[k]]
     o <- outs[[i]]
     ro <- ros[[k]]
-    if (is.null(ro)) next
+    if (is.null(ro) || isFALSE(batch[[o$id]])) next
     w <- tryCatch({
       ard <- batch[[o$id]] %||% suppressMessages(suppressWarnings(
         tfl_build_ard(st, dir = ".", output_id = o$id, save = FALSE)))
