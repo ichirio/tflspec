@@ -1139,6 +1139,10 @@ names(.tpl_mg_params) <- vapply(.tpl_mg_params, `[[`, "", "name")
          # each group's count at any grade: its records with no grade
          tfl_item("plan_total", list(label = a$any_grade, position = "first")))
   }
+  # (grades as columns: the arm x grade columns, and the any-grade column
+  # the total adds, are under the arm -- `{n1}`, the arm's N, is the one
+  # number the ARD gives all of them)
+  head_n <- if (rows_in) "{col}\n(N={n})\nn (%)" else "{col}\n(N={n1})\nn (%)"
   content <- c(
     list(tfl_item("normalize_ard", list(hierarchy = c(h, g))),
          # the overall block first, whatever the order of the others
@@ -1147,7 +1151,7 @@ names(.tpl_mg_params) <- vapply(.tpl_mg_params, `[[`, "", "name")
     list(tfl_item("plan_sort", list(keys = keys))),
     list(tfl_item("plan_col_header", list(header = list(
            list(line = "1", cols = "row_label"),
-           list(line = "1", cols = ".values", span = "each", text = "{col}\n(N={n})\nn (%)"),
+           list(line = "1", cols = ".values", span = "each", text = head_n),
            list(line = "2", cols = "row_label", text = paste(a$heading, collapse = "\n")),
            list(line = "2", cols = ".values")))),
          tfl_item("plan_paginate_rows", list(max_rows = 22L, split = "group_force"))))
@@ -1253,7 +1257,8 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
 # the column variable's margins, here the body's own variable)
 .tpl_shift_code <- function(a, subj) {
   q <- function(x) paste0("\"", x, "\"", collapse = ", ")
-  keep <- c("!ABLFL %in% \"Y\"", sprintf("!is.na(%s)", a$post), a$where)
+  # (a transport file holds "" for no value: not a category)
+  keep <- c("!ABLFL %in% \"Y\"", sprintf("!%s %%in%% c(NA, \"\")", a$post), a$where)
   paste(c(
     "# the records after baseline, the subjects' column variable",
     sprintf("d <- dplyr::inner_join(dplyr::select(%s, -dplyr::any_of(%s)),",
