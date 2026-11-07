@@ -285,6 +285,11 @@ tfl_sheets_from_spec <- function(study, outputs) {
         if (identical(it$fn, "plan_listing") && !"plan_listing" %in% said) {
           said <- c(said, it$fn)
           for (cl in a$cols %||% list()) {
+            # (a column written as a plain list, as R code or the xlsx import
+            # gives it, is the same call)
+            if (!inherits(cl, "tfl_call") && is.list(cl) && identical(cl$fn, "listing_col")) {
+              cl <- tfl_call("listing_col", cl$args %||% list(), package = cl$package)
+            }
             if (!inherits(cl, "tfl_call")) next
             row <- c(list(output_id = id), lapply(cl$args[intersect(names(cl$args), .listing_col_said)], cell))
             rest <- cl$args[setdiff(names(cl$args), .listing_col_said)]

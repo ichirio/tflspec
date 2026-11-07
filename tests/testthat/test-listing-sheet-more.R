@@ -86,3 +86,17 @@ test_that("a listing's R data.steps: on the planner row, and back (#689)", {
   expect_identical(code(to)[1L], as.character(step))
   expect_identical(code(to)[seq_along(code(d))], code(d))
 })
+
+test_that("a column given as a plain list is read as its listing_col() call", {
+  call <- list(tfl_call("listing_col", list(vars = list("USUBJID"), label = "Subject", width = 12L)),
+               tfl_call("listing_col", list(vars = list("AEDECOD"), label = "Term", rel_width = 2L)))
+  plain <- lapply(call, function(cl) list(fn = cl$fn, args = cl$args))
+  d <- lsm_study(list(tfl_item("plan_listing", list(cols = call, type = "listing"))))
+  st <- tfl_read_study_spec(d)
+  outs <- tfl_read_outputs(d)
+  want <- tfl_sheets_from_spec(st, outs)
+  outs[["L-1"]]$content[[1L]]$args$cols <- plain
+  got <- tfl_sheets_from_spec(st, outs)
+  expect_identical(got$listing$listing_cols, want$listing$listing_cols)
+  expect_identical(nrow(got$listing$listing_cols[got$listing$listing_cols$output_id %in% "L-1", ]), 2L)
+})
