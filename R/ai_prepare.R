@@ -146,7 +146,7 @@
 #'   SPEC; the requests (and `AGENTS.md`) list the templates registered now
 #'   -- tflspec's, a company's, the study's variants.  `FALSE`: the code
 #'   SPEC only, the requests as they were before templates.  The setting is
-#'   each request's first line (`templates: TRUE`) and `ai/status.md`'s.
+#'   a line near the top of each request (`templates: TRUE`) and `ai/status.md`'s.
 #' @param sheet_roles As [tfl_ai_read_shell()]: sheets' roles over the guess.
 #' @param unit A request's unit: `"sheet"` (default) a shell sheet -- what
 #'   the sheet writes first, then its name, then its TOC candidates (the

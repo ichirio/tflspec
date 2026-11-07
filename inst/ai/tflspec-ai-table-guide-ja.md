@@ -10,7 +10,7 @@
 **RTF** を作り、仕上げは tflplanner のビルダーで行って採用します。すべて手元の
 PC の R で動き、tflspec は何も送信しません。
 
-日本語版: 同じフォルダの `tflspec-ai-table-guide-ja.md`（`system.file("ai", package = "tflspec")`）。
+英語版: 同じフォルダの `tflspec-ai-table-guide.md`（`system.file("ai", package = "tflspec")`）。
 
 ## おすすめの AI の環境
 
@@ -130,7 +130,8 @@ TOC とシェルが別のブックのとき: `tfl_ai_prepare("mystudy",
 確かめます。`tfl_ai_prepare(..., dry_run = TRUE)$numbers` は、シートに書かれた
 （またはシート名にある）番号 1 つが 1 行で、`sheet`・`number`・`title`・
 `toc_id`（TOC の項目、無ければ `NA`）・`make`（そのシートの依頼で作る帳票か）・
-`source` です。参照として書かれただけの番号（「Table 14.2.1 を参照」）も規則では
+`source`・`reason`（推測した番号は、そのシートに合うと判断した理由。自分で指定した番号や
+保存した番号は `"set by the person"`。規則で作った番号は `NA`）です。参照として書かれただけの番号（「Table 14.2.1 を参照」）も規則では
 作る帳票になるので、`numbers = data.frame(sheet = "t14.1.1", number = "Table 14.2.1",
 make = FALSE)`（参照だけ。依頼には参照として残る）か、`numbers = list(t14.1.1 =
 "Table 14.1.1")`（そのシートで作る番号。ほかの番号は参照だけ）で直します。TOC に
@@ -412,8 +413,16 @@ tflplanner を使わないときは、先にフォルダを決めます: `option
 1. **小さく始める**: 種類ごとに 1 依頼（`T-14-1-1`、`T-14-3-1` …）を頼み、RTF を
    シェルと見比べる。
 2. **種類ごとに 1 本を手で直し**、それを見本にして依頼を書き直す。見本は種類の名前を
-   付けて渡すと、その種類の依頼にだけ入り、エージェントはそれに倣う:
-   `tfl_ai_prepare(..., examples = c(demographics = "spec/outputs/T-14-1-1.yml", ae = "spec/outputs/T-14-3-1.yml"), overwrite = TRUE)`。
+   付けて渡すと、その種類の依頼にだけ入り、エージェントはそれに倣う。`examples` を
+   取るのは `tfl_ai_write_requests()` で、`shell` と `adam` は `tfl_ai_prepare()` と同じ
+   作り方で渡す:
+   ```r
+   tfl_ai_write_requests("mystudy", tfl_ai_read_shell("mystudy/TOC_SHELL.xlsx"),
+                         tfl_ai_adam_summary("mystudy/adam"),
+                         examples = c(demographics = "spec/outputs/T-14-1-1.yml",
+                                      ae = "spec/outputs/T-14-3-1.yml"),
+                         overwrite = TRUE)
+   ```
 3. **進めながら確かめる**: `tfl_ai_collect_answers(".")` は、それまでに書かれた下書きを
    読みます。`size = 3`〜`5` で 1 つの種類の帳票を 1 依頼にまとめ、質問もまとめて聞きます。
 4. **決定は引き継がれる**: 範囲が `all` やデータセットの決定は以後のすべての帳票に
@@ -429,7 +438,7 @@ args}`、既定と違う引数だけ。テンプレートにない部分は帳�
 コード SPEC で答えます。`ai/templates.md` には、依頼を書くときに登録されていた
 テンプレート（tflspec の物、会社の物、試験の変種）が引数つきで並び、各依頼には
 その帳票に合いそうなテンプレートの名前が入ります。`templates = FALSE` はコード
-SPEC だけを頼みます。この設定は各依頼の 1 行目（`<!-- templates: TRUE -->`）と
+SPEC だけを頼みます。この設定は各依頼の先頭近くの行（`<!-- templates: TRUE -->`）と
 `ai/status.md` に書かれます。どちらを使ったかは `tfl_ai_compare()` が帳票ごとに
 1 行で示します。
 
