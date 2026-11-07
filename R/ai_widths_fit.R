@@ -58,7 +58,7 @@
 # the subjects, the code lists: .listing_data_of()), at the report's page
 # and font.  The working directory is the study folder; `st` the study.  An
 # error says why it cannot (the caller falls back to the guess).
-.ai_listing_fit_widths <- function(o, st) {
+.ai_listing_fit_widths <- function(o, st, sheets = NULL) {
   fit <- tryCatch(getExportedValue("rtfreporter", "fit_listing_widths"),
                   error = function(e) NULL)
   if (!is.function(fit)) stop("rtfreporter has no fit_listing_widths()", call. = FALSE)
@@ -73,7 +73,8 @@
                                          "layout", "wrap")]
   opts <- Filter(Negate(is.null), opts)
   spec <- do.call(rtfreporter::listing_spec, c(list(cols), opts))
-  recs <- suppressMessages(suppressWarnings(as.data.frame(.listing_data_of(ro, st, "."))))
+  ard <- if (!is.null(sheets)) .ard_spec_of_study(st, output_id = ro$id, sheets = sheets)$spec
+  recs <- suppressMessages(suppressWarnings(as.data.frame(.listing_data_of(ro, st, ".", ard = ard))))
   if (!nrow(recs)) stop("the listing's data has no records", call. = FALSE)
   gone <- setdiff(unique(unlist(lapply(cols, function(cl) cl$vars))), names(recs))
   if (length(gone)) {
@@ -109,11 +110,13 @@
   old <- tryCatch(setwd(dir), error = function(e) NULL)
   if (!is.null(old)) on.exit(setwd(old), add = TRUE)
   st <- if (!is.null(old)) tryCatch(tfl_read_study_spec("."), error = function(e) NULL)
+  # (the study read into sheets once for all the listings, not once a listing)
+  sh <- if (!is.null(st)) tryCatch(tfl_sheets_from_yaml("."), error = function(e) NULL)
   for (id in todo) {
     o <- outs[[id]]
     info <- .ai_listing_cols(o)
     w <- if (!is.null(st) && !is.null(info)) {
-      tryCatch(.ai_listing_fit_widths(o, st), error = function(e) NULL)
+      tryCatch(.ai_listing_fit_widths(o, st, sheets = sh), error = function(e) NULL)
     }
     if (!is.null(w) && length(w) == info$n) {
       for (k in info$miss) {

@@ -106,11 +106,12 @@
 # of the TOC (toc.yml): the program's sections follow it.  `output_id`:
 # those reports' rows alone (and the study's own), so that one report's
 # mistake stops that report, not every other.
-.ard_spec_of_study <- function(study, output_id = NULL) {
+.ard_spec_of_study <- function(study, output_id = NULL, sheets = NULL) {
   if (is.null(study$dir)) {
     .ard_stop("A YAML study's ARD: read the study with tfl_read_study_spec(dir).")
   }
-  b <- tfl_sheets_from_yaml(study$dir)
+  # (`sheets`: the study's sheets, when the caller has them already)
+  b <- sheets %||% tfl_sheets_from_yaml(study$dir)
   ids <- vapply(study$toc$outputs %||% list(), function(e) e$id %||% NA_character_, "")
   in_toc <- function(d) {
     if (is.null(d) || !nrow(d) || is.null(d$output_id)) return(d)
