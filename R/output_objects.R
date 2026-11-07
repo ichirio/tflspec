@@ -204,7 +204,7 @@ tfl_output_contents <- function(output, study, dir = ".") {
 # its program (tfl_listing_code(part = "data"): the dataset, or the
 # report's analysis data, its analysis set's subjects, its condition, its
 # order) run from the study folder
-.listing_data_of <- function(o, study, dir = ".") {
+.listing_data_of <- function(o, study, dir = ".", ard = NULL) {
   d <- o$data %||% list()
   txt <- function(x) {
     v <- unlist(lapply(x, as.character))
@@ -218,7 +218,8 @@ tfl_output_contents <- function(output, study, dir = ".") {
   sp <- tfl_listing_spec(l, data.frame(output_id = o$id, vars = "USUBJID"), check = FALSE)
   old <- options(tflspec.plain_ns = TRUE)
   on.exit(options(old), add = TRUE)
-  ard <- .ard_spec_of_study(study, output_id = o$id)$spec
+  # (`ard`: the ARD definition when the caller has it already)
+  if (is.null(ard)) ard <- .ard_spec_of_study(study, output_id = o$id)$spec
   code <- tfl_listing_code(sp, o$id, ard = ard, part = "data")
   if (is.null(code)) .ard_stop(sprintf("%s: the listing names no dataset.", o$id))
   env <- new.env(parent = globalenv())
