@@ -76,7 +76,9 @@
 #' `logical`, `enum[a|b]`, `column`, `stat`, `template`, `r` (`!r`),
 #' `formula` (`!r`, written `~ <text>`), `guard` (`!r`, a two-sided
 #' `cond ~ "text"`), `function` (a function by its name, `mean_se` or
-#' `Hmisc::smean.cl.normal`, written bare: `fun.data = mean_se`), `tilde`
+#' `Hmisc::smean.cl.normal`, written bare: `fun.data = mean_se`),
+#' `function<f1, f2>` (one of those functions by its name, written bare: a
+#' discrete scale's `limits: rev`, a facet's `labeller: label_both`), `tilde`
 #' (a formula as its text, `y ~ x` or `~ . / 7`, written as the formula),
 #' `date` (a date as its text, `2024-01-01`; a sequence of them, `NA` an
 #' open end, written `as.Date(c("2024-01-01", NA))`),
@@ -228,7 +230,8 @@ tfl_schema <- function(fn = NULL) {
   m <- regmatches(txt, regexec("^([a-z_]+)<(.*)>$", txt))[[1L]]
   if (length(m)) {
     inner <- .schema_split(m[3L], ",")
-    if (m[2L] %in% c("rows", "call")) {
+    # (function<rev>: a function of these names only)
+    if (m[2L] %in% c("rows", "call", "function")) {
       return(list(kind = m[2L], args = trimws(inner)))
     }
     return(list(kind = m[2L], args = lapply(inner, .schema_type)))
@@ -559,7 +562,8 @@ tfl_schema_check <- function(item) {
     integer = is.numeric(v) && !is.na(v) && v == round(v),
     number = is.numeric(v),
     enum = as.character(v) %in% ty$args,
-    "function" = .schema_is_fun_name(v),
+    "function" = .schema_is_fun_name(v) &&
+      (!length(ty$args) || .schema_call_named(v, unlist(ty$args))),
     tilde = .schema_is_tilde(v),
     date = .schema_is_date(v) || (is.logical(v) && is.na(v)),
     is.character(v) || is.numeric(v) || is.logical(v))
@@ -585,7 +589,9 @@ tfl_schema_check <- function(item) {
   k <- ty$kind
   if (k == "either") return(paste(vapply(ty$args, .schema_show, ""), collapse = " or "))
   if (k == "enum") return(paste0("one of ", paste(ty$args, collapse = ", ")))
-  if (k %in% c("rows", "call")) return(paste0(k, "<", paste(ty$args, collapse = ", "), ">"))
+  if (k %in% c("rows", "call", "function") && length(ty$args)) {
+    return(paste0(k, "<", paste(ty$args, collapse = ", "), ">"))
+  }
   if (length(ty$args)) return(paste0(k, "<", paste(vapply(ty$args, .schema_show, ""), collapse = ", "), ">"))
   k
 }

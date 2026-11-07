@@ -134,8 +134,10 @@ tfl_plot <- function(name, items = list(), from = "own") {
   given <- lapply(args, function(x) if (is.character(x) && length(x) == 1L) x)
   ent <- tryCatch(.schema_item_entry(tfl_schema(fn), fn, given), error = function(e) NULL)
   if (is.null(ent)) return(list())
+  # (a name of a card's named `...` takes its type: labeller(TRTA = label_both))
+  dots <- if (identical(ent$dots$style, "named")) ent$dots$type
   out <- lapply(stats::setNames(nms, nms), function(k) {
-    t <- ent$args[[k]]$type
+    t <- ent$args[[k]]$type %||% dots
     if (!is.null(t)) .schema_type(t)
   })
   Filter(Negate(is.null), out)
@@ -168,6 +170,14 @@ tfl_plot <- function(name, items = list(), from = "own") {
   if (is.null(ty)) return(FALSE)
   any(vapply(.fig_type_alts(ty), function(t) {
     identical(t$kind, "call") && length(t$args) > 0L && .schema_call_named(f, unlist(t$args))
+  }, NA))
+}
+
+# whether a name is a function a type takes by its name: a `function`
+# alternative, of any name or of the names it lists (function<rev>)
+.fig_type_fun_name <- function(ty, nm) {
+  !is.null(ty) && any(vapply(.fig_type_alts(ty), function(t) {
+    identical(t$kind, "function") && .schema_ok(nm, t)
   }, NA))
 }
 
@@ -208,7 +218,11 @@ tfl_plot <- function(name, items = list(), from = "own") {
                                else .fig_aes_lang(e) %||% as.name(e))
     return(as.call(c(list(as.name("aes")), a)))
   }
-  if (arg %in% objects && is.character(v) && length(v) == 1L) return(as.name(v))
+  if (arg %in% objects && is.character(v) && length(v) == 1L) {
+    # a layer's data as a formula of the plot's (~ subset(.x, censored))
+    if (.schema_is_tilde(v) && .fig_type_has(type, "tilde")) return(str2lang(v))
+    return(as.name(v))
+  }
   if (!is.null(type) && is.character(v) && length(v) == 1L && is.null(names(v))) {
     w <- .fig_text_lang(v, type)
     if (!is.null(w)) return(w)
@@ -395,7 +409,7 @@ tfl_plot <- function(name, items = list(), from = "own") {
   if (is.name(x)) {
     if (arg %in% objects) return(as.character(x))
     nm <- as.character(x)
-    if (.fig_type_has(type, "function") && .schema_is_fun_name(nm)) return(nm)
+    if (.fig_type_fun_name(type, nm)) return(nm)
     # a smooth's method by its function (method = lm) is its name, as
     # ggplot2 takes it; a legend key's draw_key_rect its "rect"
     if (identical(arg, "method") && nm %in% c("lm", "glm", "loess")) return(nm)
@@ -406,7 +420,7 @@ tfl_plot <- function(name, items = list(), from = "own") {
     f <- if (is.name(x[[1L]])) as.character(x[[1L]]) else .fig_deparse(x[[1L]])
     a <- as.list(x)[-1L]
     # Hmisc::smean.cl.normal, a function by its name
-    if (identical(f, "::") && .fig_type_has(type, "function") && .schema_is_fun_name(.fig_deparse(x))) {
+    if (identical(f, "::") && .fig_type_fun_name(type, .fig_deparse(x))) {
       return(.fig_deparse(x))
     }
     if (identical(f, "~") && .fig_type_has(type, "tilde")) {
@@ -442,8 +456,10 @@ tfl_plot <- function(name, items = list(), from = "own") {
       vals <- lapply(stats::setNames(names(a), names(a)), function(k) .fig_lang_value(a[[k]], k))
       if (!any(vapply(vals, inherits, NA, "tfl_r"))) return(vals)
     }
-    # a negative number, a vector of constants
+    # a negative number, a vector of constants (a negative number among
+    # them: limits = c(-100, 100), yintercept = c(-30, 20))
     if (identical(f, "-") && length(a) == 1L && is.numeric(a[[1L]])) return(-a[[1L]])
+    if (identical(f, "c") && length(a)) a <- lapply(a, .fig_lang_negative)
     if (identical(f, "c") && length(a) && is.null(names(a)) &&
         all(vapply(a, function(e) is.atomic(e) && length(e) == 1L, NA))) {
       return(unlist(a))
@@ -478,6 +494,13 @@ tfl_plot <- function(name, items = list(), from = "own") {
     }
   }
   tfl_r(.fig_deparse_r(x))
+}
+
+# an element of c(): a negative number (-30) as the number, any other as it is
+.fig_lang_negative <- function(e) {
+  if (is.call(e) && identical(e[[1L]], as.name("-")) && length(e) == 2L &&
+      is.numeric(e[[2L]]) && length(e[[2L]]) == 1L) return(-e[[2L]])
+  e
 }
 
 # a function of scales called bare (percent_format(), the package
@@ -590,6 +613,13 @@ tfl_plot <- function(name, items = list(), from = "own") {
   one_sided <- function(x) is.call(x) && identical(x[[1L]], as.name("~")) && length(x) == 2L
   two_sided <- function(x) is.call(x) && identical(x[[1L]], as.name("~")) && length(x) == 3L
   if (identical(f, "facet_wrap") && !is.null(a$facets)) {
+    # (year ~ cyl: facet_wrap() takes both sides' columns, as vars(year, cyl))
+    if (two_sided(a$facets)) {
+      l <- cols_of(a$facets[[2L]])
+      r <- cols_of(a$facets[[3L]])
+      if (!is.null(l) && !is.null(r) && length(c(l, r))) args$facets <- as_cols(c(l, r))
+      return(args)
+    }
     x <- if (one_sided(a$facets)) a$facets[[2L]] else a$facets
     v <- if (is.call(x) || one_sided(a$facets)) cols_of(x)
     if (length(v)) args$facets <- as_cols(v)

@@ -558,3 +558,97 @@ test_that("a scale's expand takes waiver() and expand_scale() too", {
     expect_identical(nrow(gg_problems("scale_y_discrete", list(expand = tfl_call(f, list())))), 0L, info = f)
   }
 })
+
+test_that("a negative number in c() is a constant: limits, reference lines, a zoom", {
+  for (code in c("scale_y_continuous(limits = c(-100, 100), breaks = c(-100, -30, 0, 20, 100))",
+                 "geom_hline(yintercept = c(-30, 20), linetype = \"dashed\")",
+                 "coord_cartesian(xlim = c(-25, 20), expand = FALSE)",
+                 "scale_fill_gradient2(limits = c(-1, 1), midpoint = 0)")) {
+    it <- .fig_lang_item(str2lang(code))
+    expect_false(any(vapply(it$args, inherits, NA, "tfl_r")), info = code)
+    expect_identical(nrow(tfl_schema_check(it)), 0L, info = code)
+    expect_identical(.fig_deparse(.fig_item_lang(it)), code)
+  }
+  expect_identical(.fig_lang_item(quote(scale_y_continuous(limits = c(-100, 100))))$args$limits, c(-100, 100))
+  # a named one too; anything else in c() stays R
+  expect_identical(.fig_lang_item(quote(scale_shape_manual(values = c(A = -1, B = 2))))$args$values,
+                   list(A = -1, B = 2))
+  expect_s3_class(.fig_lang_item(quote(scale_x_continuous(breaks = c(-x, 0))))$args$breaks, "tfl_r")
+})
+
+test_that("reference lines take one line type, colour and width a line", {
+  a <- list(yintercept = c(-30, 0, 20), linetype = c("dashed", "solid", "dashed"),
+            colour = c("grey40", "black", "grey40"), linewidth = c(0.4, 0.6, 0.4))
+  for (fn in c("geom_hline", "geom_vline")) {
+    b <- a
+    if (fn == "geom_vline") names(b)[1L] <- "xintercept"
+    expect_identical(nrow(gg_problems(fn, b)), 0L, info = fn)
+  }
+  expect_identical(gg_code("geom_hline", a[1:2]),
+                   "geom_hline(yintercept = c(-30, 0, 20), linetype = c(\"dashed\", \"solid\", \"dashed\"))")
+  expect_identical(gg_problems("geom_hline", list(linewidth = c("a", "b")))$level, "error")
+  p <- ggplot2::ggplot() + eval(.fig_item_lang(tfl_item("geom_hline", a[1:2])), asNamespace("ggplot2"))
+  expect_identical(ggplot2::layer_data(p)$linetype, c("dashed", "solid", "dashed"))
+})
+
+test_that("a function of named ones (function<rev>): a discrete scale's limits = rev, written bare", {
+  ty <- .schema_type("function<rev>")
+  expect_true(.schema_ok("rev", ty))
+  expect_false(.schema_ok("sort", ty))
+  expect_identical(.schema_show(ty), "function<rev>")
+  for (fn in c("scale_y_discrete", "scale_x_discrete", "scale_fill_manual", "scale_colour_brewer")) {
+    expect_identical(nrow(gg_problems(fn, list(limits = "rev"))), 0L, info = fn)
+    expect_identical(gg_code(fn, list(limits = "rev")), paste0(fn, "(limits = rev)"), info = fn)
+  }
+  # the levels themselves are text, as before
+  expect_identical(gg_code("scale_y_discrete", list(limits = c("Age", "Sex"))),
+                   "scale_y_discrete(limits = c(\"Age\", \"Sex\"))")
+  expect_identical(gg_code("scale_y_discrete", list(limits = "Placebo")),
+                   "scale_y_discrete(limits = \"Placebo\")")
+  it <- .fig_lang_item(quote(scale_y_discrete(limits = rev)))
+  expect_identical(it$args$limits, "rev")
+  # an object of the figure's own stays R
+  expect_s3_class(.fig_lang_item(quote(scale_y_discrete(limits = my_levels)))$args$limits, "tfl_r")
+  d <- data.frame(x = 1:3, y = c("a", "b", "c"))
+  p <- ggplot2::ggplot(d, ggplot2::aes(x, y)) + ggplot2::geom_point() +
+    eval(.fig_item_lang(tfl_item("scale_y_discrete", list(limits = "rev"))), asNamespace("ggplot2"))
+  expect_identical(as.numeric(ggplot2::get_layer_data(p)$y), c(3, 2, 1))
+})
+
+test_that("a labeller by its name is written bare, in a facet and in labeller()", {
+  for (code in c("facet_wrap(facets = \"PARAMCD\", labeller = label_both)",
+                 "facet_grid(rows = vars(vs), cols = vars(cyl), labeller = labeller(vs = label_both, .cols = label_value))",
+                 "facet_grid(rows = vars(PARAMCD), labeller = labeller(PARAMCD = label_wrap_gen(width = 10)))")) {
+    it <- .fig_lang_item(str2lang(code))
+    expect_identical(nrow(tfl_schema_check(it)), 0L, info = code)
+    expect_identical(.fig_deparse(.fig_item_lang(it)), code)
+  }
+  expect_identical(.fig_lang_item(quote(facet_wrap(~ A, labeller = label_both)))$args$labeller, "label_both")
+  # a labeller of the figure's own stays R
+  expect_s3_class(.fig_lang_item(quote(facet_wrap(~ A, labeller = to_string)))$args$labeller, "tfl_r")
+  # facet_wrap() of a two-sided formula: both sides' columns
+  expect_identical(.fig_lang_item(quote(facet_wrap(year ~ cyl)))$args$facets, list("year", "cyl"))
+})
+
+test_that("the default colour scales' type: colours or a palette function, gradient or viridis", {
+  expect_identical(nrow(gg_problems("scale_colour_discrete", list(type = c("black", "#1F78B4")))), 0L)
+  expect_identical(gg_code("scale_fill_discrete", list(type = c("black", "red"))),
+                   "scale_fill_discrete(type = c(\"black\", \"red\"))")
+  expect_identical(nrow(gg_problems("scale_fill_continuous", list(type = "viridis"))), 0L)
+  expect_identical(gg_problems("scale_fill_continuous", list(type = "rain bow"))$level, "error")
+  expect_identical(gg_code("scale_colour_continuous", list(type = "scale_colour_viridis_c")),
+                   "scale_colour_continuous(type = scale_colour_viridis_c)")
+})
+
+test_that("a layer's data as a formula of the plot's: ~ subset(.x, censored)", {
+  a <- list(data = "~ subset(.x, censored)", shape = 3)
+  expect_identical(nrow(gg_problems("geom_point", a)), 0L)
+  expect_identical(gg_code("geom_point", a), "geom_point(data = ~subset(.x, censored), shape = 3)")
+  # an object by its name, as before
+  expect_identical(gg_code("geom_point", list(data = "km_cens")), "geom_point(data = km_cens)")
+  it <- .fig_lang_item(quote(geom_point(data = ~ subset(.x, censored))))
+  expect_identical(it$args$data, "~subset(.x, censored)")
+  d <- data.frame(x = 1:4, y = 1:4, censored = c(TRUE, FALSE, TRUE, FALSE))
+  p <- ggplot2::ggplot(d, ggplot2::aes(x, y)) + eval(.fig_item_lang(tfl_item("geom_point", a)), asNamespace("ggplot2"))
+  expect_identical(nrow(ggplot2::get_layer_data(p)), 2L)
+})

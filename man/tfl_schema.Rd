@@ -60,7 +60,9 @@ number written as arithmetic of numbers, \verb{!r 1/5}, is one),
 \code{logical}, \code{enum[a|b]}, \code{column}, \code{stat}, \code{template}, \code{r} (\code{!r}),
 \code{formula} (\code{!r}, written \verb{~ <text>}), \code{guard} (\code{!r}, a two-sided
 \code{cond ~ "text"}), \code{function} (a function by its name, \code{mean_se} or
-\code{Hmisc::smean.cl.normal}, written bare: \code{fun.data = mean_se}), \code{tilde}
+\code{Hmisc::smean.cl.normal}, written bare: \code{fun.data = mean_se}),
+\verb{function<f1, f2>} (one of those functions by its name, written bare: a
+discrete scale's \code{limits: rev}, a facet's \code{labeller: label_both}), \code{tilde}
 (a formula as its text, \code{y ~ x} or \code{~ . / 7}, written as the formula),
 \code{date} (a date as its text, \code{2024-01-01}; a sequence of them, \code{NA} an
 open end, written \code{as.Date(c("2024-01-01", NA))}),

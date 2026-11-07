@@ -2156,7 +2156,7 @@ ggplot:
   layers: [layer]
   visible: [data, mapping]
   args:
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x: ~ subset(.x, censored)."}
     mapping: {type: "map<string, column|r>", label: {en: Mapping shared by the layers, ja: レイヤー共通のマッピング}}
 
 ggsurvfit:
@@ -2252,7 +2252,7 @@ geom_line:
   visible: [mapping, linewidth, alpha, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x: ~ subset(.x, censored)."}
     position: {type: "call|string|r", label: {en: Position, ja: 位置}}
 
 geom_point:
@@ -2265,7 +2265,7 @@ geom_point:
   visible: [mapping, shape, size, alpha, na.rm, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x: ~ subset(.x, censored)."}
     position: {type: "call|string|r", label: {en: Position, ja: 位置}}
 
 geom_errorbar:
@@ -2279,7 +2279,7 @@ geom_errorbar:
   visible: [mapping, width, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x: ~ subset(.x, censored)."}
     position: {type: "call|string|r", label: {en: Position, ja: 位置}}
 
 geom_pointrange:
@@ -2293,7 +2293,7 @@ geom_pointrange:
   visible: [mapping, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x: ~ subset(.x, censored)."}
     position: {type: "call|string|r", label: {en: Position, ja: 位置}}
 
 geom_col:
@@ -2307,7 +2307,7 @@ geom_col:
   visible: [mapping, width, position, colour, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x: ~ subset(.x, censored)."}
     position: {type: "call|string|r", label: {en: Position, ja: 位置}}
 
 geom_text:
@@ -2320,7 +2320,7 @@ geom_text:
   visible: [mapping, size, position, vjust, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x: ~ subset(.x, censored)."}
     position: {type: "call|string|r", label: {en: Position, ja: 位置}}
 
 geom_label:
@@ -2333,7 +2333,7 @@ geom_label:
   visible: [mapping, size, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x: ~ subset(.x, censored)."}
     position: {type: "call|string|r", label: {en: Position, ja: 位置}}
 
 geom_step:
@@ -2346,7 +2346,7 @@ geom_step:
   visible: [mapping]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x: ~ subset(.x, censored)."}
 
 geom_area:
   package: ggplot2
@@ -2358,7 +2358,7 @@ geom_area:
   visible: [mapping, alpha]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x: ~ subset(.x, censored)."}
 
 geom_ribbon:
   package: ggplot2
@@ -2371,7 +2371,7 @@ geom_ribbon:
   visible: [mapping, alpha]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x: ~ subset(.x, censored)."}
 
 geom_segment:
   package: ggplot2
@@ -2384,7 +2384,7 @@ geom_segment:
   visible: [mapping, linewidth, arrow, alpha]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x: ~ subset(.x, censored)."}
 
 geom_tile:
   package: ggplot2
@@ -2397,7 +2397,7 @@ geom_tile:
   visible: [mapping]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x: ~ subset(.x, censored)."}
 
 geom_boxplot:
   package: ggplot2
@@ -2409,7 +2409,7 @@ geom_boxplot:
   visible: [mapping, width, outlier.shape, alpha, position, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x: ~ subset(.x, censored)."}
     position: {type: "call|string|r", label: {en: Position, ja: 位置}}
 
 geom_violin:
@@ -2422,7 +2422,7 @@ geom_violin:
   visible: [mapping, position]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x: ~ subset(.x, censored)."}
     position: {type: "call|string|r", label: {en: Position, ja: 位置}}
 
 geom_histogram:
@@ -2435,7 +2435,7 @@ geom_histogram:
   visible: [mapping, bins]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x: ~ subset(.x, censored)."}
 
 geom_density:
   package: ggplot2
@@ -2447,7 +2447,7 @@ geom_density:
   visible: [mapping]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x: ~ subset(.x, censored)."}
 
 geom_jitter:
   package: ggplot2
@@ -2459,7 +2459,7 @@ geom_jitter:
   visible: [mapping, width, height, alpha, size]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x: ~ subset(.x, censored)."}
 
 geom_smooth:
   package: ggplot2
@@ -2472,7 +2472,7 @@ geom_smooth:
   visible: [mapping, method, se]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x: ~ subset(.x, censored)."}
 
 geom_hline:
   package: ggplot2
@@ -2484,8 +2484,12 @@ geom_hline:
   aes: {yintercept: {required: true}}
   visible: [mapping, yintercept, linetype, colour, linewidth]
   args:
+    linetype: {type: "string|number|list<string|number>", label: {en: Line type, ja: 線種}, description: "One for all, or one a line in their order (yintercept: [-30, 0, 20], linetype: [dashed, solid, dashed])."}
+    colour: {type: "string|call<alpha>|list<string>|r", label: {en: Colour, ja: 色}, description: "One for all, or one a line in their order."}
+    linewidth: {type: "number|list<number>", label: {en: Line width, ja: 線の太さ}, description: "One for all, or one a line in their order."}
+    alpha: {type: "number|list<number>", label: {en: Transparency, ja: 透明度}, description: "One for all, or one a line in their order."}
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x: ~ subset(.x, censored)."}
 
 geom_vline:
   package: ggplot2
@@ -2496,8 +2500,12 @@ geom_vline:
   aes: {xintercept: {required: true}}
   visible: [mapping, xintercept, linetype, colour, linewidth]
   args:
+    linetype: {type: "string|number|list<string|number>", label: {en: Line type, ja: 線種}, description: "One for all, or one a line in their order (yintercept: [-30, 0, 20], linetype: [dashed, solid, dashed])."}
+    colour: {type: "string|call<alpha>|list<string>|r", label: {en: Colour, ja: 色}, description: "One for all, or one a line in their order."}
+    linewidth: {type: "number|list<number>", label: {en: Line width, ja: 線の太さ}, description: "One for all, or one a line in their order."}
+    alpha: {type: "number|list<number>", label: {en: Transparency, ja: 透明度}, description: "One for all, or one a line in their order."}
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x: ~ subset(.x, censored)."}
 
 geom_abline:
   package: ggplot2
@@ -2508,8 +2516,12 @@ geom_abline:
   aes: {slope: {required: true}, intercept: {required: true}}
   visible: [mapping, intercept, slope, linetype, colour]
   args:
+    linetype: {type: "string|number|list<string|number>", label: {en: Line type, ja: 線種}, description: "One for all, or one a line in their order (yintercept: [-30, 0, 20], linetype: [dashed, solid, dashed])."}
+    colour: {type: "string|call<alpha>|list<string>|r", label: {en: Colour, ja: 色}, description: "One for all, or one a line in their order."}
+    linewidth: {type: "number|list<number>", label: {en: Line width, ja: 線の太さ}, description: "One for all, or one a line in their order."}
+    alpha: {type: "number|list<number>", label: {en: Transparency, ja: 透明度}, description: "One for all, or one a line in their order."}
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x: ~ subset(.x, censored)."}
 
 geom_text_repel:
   package: ggrepel
@@ -2522,7 +2534,7 @@ geom_text_repel:
   visible: [mapping, size]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x: ~ subset(.x, censored)."}
     direction: {type: "enum[both|y|x]", label: {en: Moved along, ja: 動かす向き}}
 
 geom_sina:
@@ -2536,7 +2548,7 @@ geom_sina:
   visible: [mapping, size, alpha]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x: ~ subset(.x, censored)."}
 
 
 # -- layers beyond the geoms --
@@ -2706,6 +2718,8 @@ scale_x_discrete:
   stage: finishing
   label: {en: X axis (groups), ja: x 軸（群）}
   visible: [limits, labels]
+  args:
+    limits: {type: "function<rev>|list<string|number>|r", label: {en: Levels, ja: 水準}, description: "The levels in their order (the axis or the legend), or rev: the levels reversed (a forest plot's rows from the top). Data outside them are dropped."}
 
 scale_colour_tfl:
   package: tflspec
@@ -2740,6 +2754,7 @@ scale_colour_manual:
   label: {en: Colours, ja: 色の割り当て}
   visible: [values, breaks]
   args:
+    limits: {type: "function<rev>|list<string|number>|r", label: {en: Levels, ja: 水準}, description: "The levels in their order (the axis or the legend), or rev: the levels reversed (a forest plot's rows from the top). Data outside them are dropped."}
     values: {type: "vec<string, string>|list<string>|call<hcl.colors, gray.colors, grey.colors, rainbow, heat.colors, terrain.colors, topo.colors, cm.colors, palette.colors>|r", label: {en: Colours, ja: 色}}
 
 scale_fill_manual:
@@ -2750,6 +2765,7 @@ scale_fill_manual:
   label: {en: Fill colours, ja: 塗りの割り当て}
   visible: [values, breaks]
   args:
+    limits: {type: "function<rev>|list<string|number>|r", label: {en: Levels, ja: 水準}, description: "The levels in their order (the axis or the legend), or rev: the levels reversed (a forest plot's rows from the top). Data outside them are dropped."}
     values: {type: "vec<string, string>|list<string>|call<hcl.colors, gray.colors, grey.colors, rainbow, heat.colors, terrain.colors, topo.colors, cm.colors, palette.colors>|r", label: {en: Colours, ja: 色}}
 
 scale_shape_manual:
@@ -2759,6 +2775,8 @@ scale_shape_manual:
   stage: finishing
   label: {en: Shapes, ja: 形の割り当て}
   visible: [values, breaks]
+  args:
+    limits: {type: "function<rev>|list<string|number>|r", label: {en: Levels, ja: 水準}, description: "The levels in their order (the axis or the legend), or rev: the levels reversed (a forest plot's rows from the top). Data outside them are dropped."}
 
 scale_linetype_manual:
   package: ggplot2
@@ -2767,6 +2785,8 @@ scale_linetype_manual:
   stage: finishing
   label: {en: Line types, ja: 線種の割り当て}
   visible: [values, breaks]
+  args:
+    limits: {type: "function<rev>|list<string|number>|r", label: {en: Levels, ja: 水準}, description: "The levels in their order (the axis or the legend), or rev: the levels reversed (a forest plot's rows from the top). Data outside them are dropped."}
 
 coord_cartesian:
   package: ggplot2
@@ -3330,6 +3350,8 @@ scale_y_discrete:
   stage: finishing
   label: {en: Y axis (groups), ja: y 軸（群）}
   visible: [limits, labels]
+  args:
+    limits: {type: "function<rev>|list<string|number>|r", label: {en: Levels, ja: 水準}, description: "The levels in their order (the axis or the legend), or rev: the levels reversed (a forest plot's rows from the top). Data outside them are dropped."}
 
 scale_x_reverse:
   package: ggplot2
@@ -3400,6 +3422,8 @@ scale_colour_brewer:
   stage: finishing
   label: {en: Colours (ColorBrewer), ja: 色（ColorBrewer）}
   visible: [palette, type, direction]
+  args:
+    limits: {type: "function<rev>|list<string|number>|r", label: {en: Levels, ja: 水準}, description: "The levels in their order (the axis or the legend), or rev: the levels reversed (a forest plot's rows from the top). Data outside them are dropped."}
 
 scale_fill_brewer:
   package: ggplot2
@@ -3408,6 +3432,8 @@ scale_fill_brewer:
   stage: finishing
   label: {en: Fill colours (ColorBrewer), ja: 塗り（ColorBrewer）}
   visible: [palette, type, direction]
+  args:
+    limits: {type: "function<rev>|list<string|number>|r", label: {en: Levels, ja: 水準}, description: "The levels in their order (the axis or the legend), or rev: the levels reversed (a forest plot's rows from the top). Data outside them are dropped."}
 
 scale_colour_distiller:
   package: ggplot2
@@ -3482,6 +3508,8 @@ scale_colour_viridis_d:
   stage: finishing
   label: {en: Colours (viridis), ja: 色（viridis）}
   visible: [option, begin, end]
+  args:
+    limits: {type: "function<rev>|list<string|number>|r", label: {en: Levels, ja: 水準}, description: "The levels in their order (the axis or the legend), or rev: the levels reversed (a forest plot's rows from the top). Data outside them are dropped."}
 
 scale_fill_viridis_d:
   package: ggplot2
@@ -3490,6 +3518,8 @@ scale_fill_viridis_d:
   stage: finishing
   label: {en: Fill colours (viridis), ja: 塗り（viridis）}
   visible: [option, begin, end]
+  args:
+    limits: {type: "function<rev>|list<string|number>|r", label: {en: Levels, ja: 水準}, description: "The levels in their order (the axis or the legend), or rev: the levels reversed (a forest plot's rows from the top). Data outside them are dropped."}
 
 scale_colour_viridis_c:
   package: ggplot2
@@ -3514,6 +3544,8 @@ scale_colour_grey:
   stage: finishing
   label: {en: Colours (greys), ja: 色（灰色）}
   visible: [start, end]
+  args:
+    limits: {type: "function<rev>|list<string|number>|r", label: {en: Levels, ja: 水準}, description: "The levels in their order (the axis or the legend), or rev: the levels reversed (a forest plot's rows from the top). Data outside them are dropped."}
 
 scale_fill_grey:
   package: ggplot2
@@ -3522,6 +3554,8 @@ scale_fill_grey:
   stage: finishing
   label: {en: Fill colours (greys), ja: 塗り（灰色）}
   visible: [start, end]
+  args:
+    limits: {type: "function<rev>|list<string|number>|r", label: {en: Levels, ja: 水準}, description: "The levels in their order (the axis or the legend), or rev: the levels reversed (a forest plot's rows from the top). Data outside them are dropped."}
 
 scale_colour_hue:
   package: ggplot2
@@ -3530,6 +3564,8 @@ scale_colour_hue:
   stage: finishing
   label: {en: Colours (hues), ja: 色（色相）}
   visible: [l, c, h.start]
+  args:
+    limits: {type: "function<rev>|list<string|number>|r", label: {en: Levels, ja: 水準}, description: "The levels in their order (the axis or the legend), or rev: the levels reversed (a forest plot's rows from the top). Data outside them are dropped."}
 
 scale_fill_hue:
   package: ggplot2
@@ -3538,6 +3574,8 @@ scale_fill_hue:
   stage: finishing
   label: {en: Fill colours (hues), ja: 塗り（色相）}
   visible: [l, c, h.start]
+  args:
+    limits: {type: "function<rev>|list<string|number>|r", label: {en: Levels, ja: 水準}, description: "The levels in their order (the axis or the legend), or rev: the levels reversed (a forest plot's rows from the top). Data outside them are dropped."}
 
 scale_colour_identity:
   package: ggplot2
@@ -3562,6 +3600,8 @@ scale_shape:
   stage: finishing
   label: {en: Shapes (default), ja: 形（既定）}
   visible: [solid, name]
+  args:
+    limits: {type: "function<rev>|list<string|number>|r", label: {en: Levels, ja: 水準}, description: "The levels in their order (the axis or the legend), or rev: the levels reversed (a forest plot's rows from the top). Data outside them are dropped."}
 
 scale_linetype:
   package: ggplot2
@@ -3570,6 +3610,8 @@ scale_linetype:
   stage: finishing
   label: {en: Line types (default), ja: 線種（既定）}
   visible: [name]
+  args:
+    limits: {type: "function<rev>|list<string|number>|r", label: {en: Levels, ja: 水準}, description: "The levels in their order (the axis or the legend), or rev: the levels reversed (a forest plot's rows from the top). Data outside them are dropped."}
 
 scale_size:
   package: ggplot2
@@ -3634,6 +3676,9 @@ scale_colour_discrete:
   stage: finishing
   label: {en: Colours (discrete default), ja: 色（離散の既定）}
   visible: [name, labels, limits]
+  args:
+    type: {type: "list<string>|function|r", label: {en: Colours, ja: 色}, description: "The colours in the order of the levels ([grey40, \"#1F78B4\"]), or a palette function by its name; ggplot2 3.3."}
+    limits: {type: "function<rev>|list<string|number>|r", label: {en: Levels, ja: 水準}, description: "The levels in their order (the axis or the legend), or rev: the levels reversed (a forest plot's rows from the top). Data outside them are dropped."}
 
 scale_fill_discrete:
   package: ggplot2
@@ -3642,6 +3687,9 @@ scale_fill_discrete:
   stage: finishing
   label: {en: Fills (discrete default), ja: 塗り（離散の既定）}
   visible: [name, labels, limits]
+  args:
+    type: {type: "list<string>|function|r", label: {en: Colours, ja: 色}, description: "The colours in the order of the levels ([grey40, \"#1F78B4\"]), or a palette function by its name; ggplot2 3.3."}
+    limits: {type: "function<rev>|list<string|number>|r", label: {en: Levels, ja: 水準}, description: "The levels in their order (the axis or the legend), or rev: the levels reversed (a forest plot's rows from the top). Data outside them are dropped."}
 
 scale_colour_continuous:
   package: ggplot2
@@ -3650,6 +3698,8 @@ scale_colour_continuous:
   stage: finishing
   label: {en: Colours (continuous default), ja: 色（連続の既定）}
   visible: [name, type, limits]
+  args:
+    type: {type: "enum[gradient|viridis]|function|r", label: {en: Palette type, ja: パレットの種類}, description: "gradient (scale_*_gradient()) or viridis (scale_*_viridis_c()), or a scale function by its name."}
 
 scale_fill_continuous:
   package: ggplot2
@@ -3658,6 +3708,8 @@ scale_fill_continuous:
   stage: finishing
   label: {en: Fills (continuous default), ja: 塗り（連続の既定）}
   visible: [name, type, limits]
+  args:
+    type: {type: "enum[gradient|viridis]|function|r", label: {en: Palette type, ja: パレットの種類}, description: "gradient (scale_*_gradient()) or viridis (scale_*_viridis_c()), or a scale function by its name."}
 
 scale_x_binned:
   package: ggplot2
@@ -4592,15 +4644,15 @@ labeller:
   rank: 509
   stage: finishing
   label: {en: Strip labels by variable, ja: 変数ごとのストリップのラベル}
-  description: "A facet's labeller: each variable its own (PARAMCD: !r label_wrap_gen(20), TRTA: !r label_both), or a lookup table."
+  description: "A facet's labeller: each variable its own (PARAMCD: {fn: label_wrap_gen, args: {width: 20}}, TRTA: label_both), or a lookup table."
   visible: [.default, .multi_line]
-  dots: {style: named, type: "r|call|vec<string, string>", description: "Variable: a labeller (!r label_both) or a lookup {code: label}."}
+  dots: {style: named, type: "function<label_value, label_both, label_context, label_parsed>|call<label_wrap_gen, label_bquote, as_labeller, label_value, label_both, label_context, label_parsed>|vec<string, string>|r|call", description: "Variable: a labeller by its name (label_both, written bare), a labeller's call ({fn: label_wrap_gen, args: {width: 20}}) or a lookup {code: label}."}
   args:
-    .rows: {type: "r|call|string", label: {en: Labeller of the rows, ja: 行のラベル}}
-    .cols: {type: "r|call|string", label: {en: Labeller of the columns, ja: 列のラベル}}
+    .rows: {type: "function<label_value, label_both, label_context, label_parsed>|call<label_wrap_gen, label_bquote, as_labeller, label_value, label_both, label_context, label_parsed>|r|call|string", label: {en: Labeller of the rows, ja: 行のラベル}}
+    .cols: {type: "function<label_value, label_both, label_context, label_parsed>|call<label_wrap_gen, label_bquote, as_labeller, label_value, label_both, label_context, label_parsed>|r|call|string", label: {en: Labeller of the columns, ja: 列のラベル}}
     keep.as.numeric: {type: logical, label: {en: Keep numbers, ja: 数値のまま}}
     .multi_line: {type: logical, label: {en: One line a variable, ja: 変数ごとに 1 行}}
-    .default: {type: "r|call|string", label: {en: Labeller of the others, ja: そのほかのラベル}, description: "!r label_value (the default)."}
+    .default: {type: "function<label_value, label_both, label_context, label_parsed>|call<label_wrap_gen, label_bquote, as_labeller, label_value, label_both, label_context, label_parsed>|r|call|string", label: {en: Labeller of the others, ja: そのほかのラベル}, description: "label_value (the default)."}
 
 label_value:
   package: ggplot2
@@ -4907,7 +4959,7 @@ geom_label_repel:
   visible: [mapping, size, max.overlaps, box.padding]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x: ~ subset(.x, censored)."}
     max.overlaps: {type: number, label: {en: Overlaps allowed, ja: 許す重なりの数}}
     direction: {type: "enum[both|y|x]", label: {en: Moved along, ja: 動かす向き}}
 
@@ -4922,7 +4974,7 @@ geom_richtext:
   visible: [mapping, size, label.padding]
   args:
     mapping: {type: "map<string, column|r>", label: {en: Mapping, ja: マッピング}}
-    data: {type: "object|r", label: {en: Data, ja: データ}}
+    data: {type: "object|tilde|r", label: {en: Data, ja: データ}, description: "The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x: ~ subset(.x, censored)."}
 
 new_scale_fill:
   package: ggnewscale
