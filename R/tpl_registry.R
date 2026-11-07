@@ -1146,7 +1146,8 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
 # the column variable's margins, here the body's own variable)
 .tpl_shift_code <- function(a, subj) {
   q <- function(x) paste0("\"", x, "\"", collapse = ", ")
-  keep <- c("!ABLFL %in% \"Y\"", sprintf("!is.na(%s)", a$post), a$where)
+  # (a transport file holds "" for no value: not a category)
+  keep <- c("!ABLFL %in% \"Y\"", sprintf("!%s %%in%% c(NA, \"\")", a$post), a$where)
   paste(c(
     "# the records after baseline, the subjects' column variable",
     sprintf("d <- dplyr::inner_join(dplyr::select(%s, -dplyr::any_of(%s)),",
@@ -1158,7 +1159,7 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
     sprintf("d <- dplyr::arrange(d, match(%s, c(%s)))", a$post, q(a$worst)),
     sprintf("d <- dplyr::distinct(d, USUBJID, %s, .keep_all = TRUE)", a$param),
     if (length(a$missing_label)) sprintf(
-      "d <- dplyr::mutate(d, %s = dplyr::coalesce(as.character(%s), \"%s\"))",
+      "d <- dplyr::mutate(d, %s = dplyr::coalesce(dplyr::na_if(as.character(%s), \"\"), \"%s\"))",
       a$baseline, a$baseline, a$missing_label),
     if (length(a$total_label)) c(
       "# the Total row: every subject once more, under the baseline's Total",
