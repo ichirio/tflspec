@@ -142,7 +142,17 @@ tfl_sheets_from_spec <- function(study, outputs) {
   norm_rows <- list()
   more_rows <- list()
   table_rows(s$defaults$content, NA_character_)
-  for (nm in names(s$patterns)) table_rows(s$patterns[[nm]]$content, paste0("@", nm))
+  # (a pattern has rows of the report and page sheets only -- no tables row
+  # -- so its content cannot be put on the sheets: said, by pattern, #689)
+  for (nm in names(s$patterns)) {
+    pc <- s$patterns[[nm]]$content
+    if (inherits(pc, "tfl_r") || length(pc)) {
+      fns <- if (inherits(pc, "tfl_r")) "R code" else unique(vapply(pc, function(it) it$fn, ""))
+      note(paste0("@", nm), "content", paste0(
+        "a pattern's content (", paste(fns, collapse = ", "), ") is not kept: a pattern's rows are the ",
+        "report and page sheets', none holds its layers; the reports that extend it do not get them back"))
+    }
+  }
 
   # -- the page parts ----------------------------------------------------------
   page_rows <- function(page, id) {
@@ -308,9 +318,19 @@ tfl_sheets_from_spec <- function(study, outputs) {
       if (length(more)) lr$content_more <- .sheet_more_out(more, items = TRUE)
       listings[[length(listings) + 1L]] <- lr
     } else if (o$kind == "figure" && .fig_new_content(o$content)) {
-      # a figure of items (R/fig_content.R): its data and items as they are
-      figures[[id]] <- list(template = o$template, data = o$data$steps,
-                            content = .items_to_list(o$content))
+      # a figure of items (R/fig_content.R): its data and items as they are,
+      # the design list's `content` (read back by .conv_output(), #689)
+      fd <- list(template = o$template, data = o$data$steps, content = .items_to_list(o$content))
+      for (k in c("ggplot2_version", "plot", "plots", "compose")) if (!is.null(o[[k]])) fd[[k]] <- o[[k]]
+      figures[[id]] <- fd
+      # what the design list has no place for is said, by the report
+      lost <- c(setdiff(names(o$data), c("steps", "code", "datasets", "ard", "source")),
+                if (!is.null(o$data$source) && !identical(o$data$source, "code")) "source")
+      lost <- c(lost, setdiff(names(o), c(.output_fields, "template", "ggplot2_version", "plot", "plots", "compose")))
+      if (length(lost)) {
+        note(id, "figure", paste0("a figure of items: ", paste(unique(lost), collapse = ", "),
+                                   " is not kept (the design list has no place for it)"))
+      }
     } else if (o$kind == "figure") {
       # (the report's design: an item of a function call its piece)
       oc <- o
@@ -329,12 +349,38 @@ tfl_sheets_from_spec <- function(study, outputs) {
       rows[[sh]] %||% list(), function(r) identical(r$output_id, paste0("@", nm)), NA)), NA))
     if (!has) add("report", list(output_id = paste0("@", nm)))
   }
+  # defaults.yml's options: and styles:, and the style: a report picks, have
+  # no sheet or column to be put on: said (#689)
+  if (length(s$options)) {
+    note(NA_character_, "options", paste0(
+      "defaults.yml options: (", paste(names(s$options), collapse = ", "), ") is not kept: no sheet or column holds it"))
+  }
+  if (length(s$styles)) {
+    note(NA_character_, "styles", paste0(
+      "defaults.yml styles: (", paste(names(s$styles), collapse = ", "), ") is not kept: no sheet or column holds it"))
+  }
+  for (id in names(outs)) {
+    if (length(outs[[id]]$style)) {
+      note(id, "style", paste0("style: ", paste(unlist(outs[[id]]$style), collapse = ", "),
+                               " is not kept: no sheet or column holds it; the report no longer picks its look"))
+    }
+  }
   # the layers' code lists have no sheet of their own (a report's own are
   # its rows): they stay in the YAML
-  if (length(s$defaults$codelists)) note(NA_character_, "codelists", "the defaults' code lists (defaults.yml) stay in YAML, not on the sheets")
+  # (in the YAML they stay; a study written from the sheets has not got them,
+  # and a report that reads the variable is then made without the list: its
+  # ARD program loses the set_levels() step -- the values' order and labels, #689)
+  cl_said <- function(cl, whose, file) paste0(
+    whose, " code lists (", file, ": ", paste(names(cl), collapse = ", "), ") stay in YAML, not on the sheets: ",
+    "a study written from the sheets has not got them, so a report that reads one of these variables ",
+    "is made without the list and its ARD program does not set the values' order and labels")
+  if (length(s$defaults$codelists)) {
+    note(NA_character_, "codelists", cl_said(s$defaults$codelists, "the defaults'", "defaults.yml"))
+  }
   for (nm in names(s$patterns)) {
     if (length(s$patterns[[nm]]$codelists)) {
-      note(paste0("@", nm), "codelists", "a pattern's code lists stay in YAML, not on the sheets")
+      note(paste0("@", nm), "codelists", cl_said(s$patterns[[nm]]$codelists, "a pattern's",
+                                                  paste0("patterns/", nm, ".yml")))
     }
   }
   # the setup code on the planner sheet's study row
@@ -374,11 +420,14 @@ tfl_sheets_from_spec <- function(study, outputs) {
     tb$note[i] <- as.character(nt)
     table$tables <- tb
   }
-  # a table's normalize_ard() arguments on its tables row -- when reading
-  # the row (and the report's hierarchical analysis) gives the same
-  # arguments back; else the item, whole, in content_more (#689: keys,
-  # hierarchy, drop_contexts, drop_key_variables have no column, and a
-  # hierarchy is read from the first hierarchical analysis)
+  # a table's normalize_ard() arguments: what the columns can say (overall,
+  # stack, stack_sep, stack_nest) is always on its tables row; when reading
+  # the row (and the report's hierarchical analysis) gives all the
+  # arguments back, that is all; else the rest -- hierarchy, keys,
+  # drop_contexts, drop_key_variables, which have no column, or a hierarchy
+  # other than the first hierarchical analysis's -- is an item in
+  # content_more, possibly with no arguments (.nz_with_row() reads the two
+  # together)
   for (id in names(norm_rows)) {
     a <- norm_rows[[id]]
     tb <- table$tables
@@ -395,12 +444,19 @@ tfl_sheets_from_spec <- function(study, outputs) {
       if (!is.null(a$stack_sep)) put("stack_sep", encodeString(as.character(a$stack_sep), quote = "\""))
       if (isTRUE(a$stack_nest)) put("stack_nest", "TRUE")
     }
-    got <- tryCatch(.conv_normalize_args(list(tables = tb), ard, id), error = function(e) NULL)
-    if (is.null(got) || !identical(.nz_canon(got), .nz_canon(a))) {
-      more_rows[[id]] <- c(list(tfl_item("normalize_ard", a)), more_rows[[id]])
-      next
-    }
     table$tables <- tb
+    got <- tryCatch(.conv_normalize_args(list(tables = tb), ard, id), error = function(e) NULL)
+    # (an overall runs only with a hierarchy: one a card leaves to the ARD is the
+    # one read back; a stack alone runs without, so its missing hierarchy means something)
+    if (!is.null(got) && !is.null(a$overall) && is.null(a$hierarchy) && !is.null(got$hierarchy)) {
+      a$hierarchy <- got$hierarchy
+    }
+    if (is.null(got) || !identical(.nz_canon(got), .nz_canon(a))) {
+      # (a stack_sep / stack_nest with no stack: the row cannot say it)
+      on_row <- c("overall", "stack", if (!is.null(a$stack)) c("stack_sep", "stack_nest"))
+      rest <- a[setdiff(names(a), on_row)]
+      more_rows[[id]] <- c(list(tfl_item("normalize_ard", rest)), more_rows[[id]])
+    }
   }
   # a table's items the sheets cannot say on its tables row (content_more)
   for (key in names(more_rows)) {
@@ -479,6 +535,29 @@ tfl_sheets_from_spec <- function(study, outputs) {
   }
   attributes(x) <- NULL
   x
+}
+
+# A table's normalize_ard() item from content_more with the tables row's
+# overall_label, stack, stack_sep and stack_nest on it, where the row has
+# them (they win over the same names in the item): the item holds what the
+# columns cannot say, and its arguments stand as written -- the hierarchy
+# comes from it, not from the hierarchical analysis.  `tables`: the table's
+# tables rows (the first is read).  With none or two such items, `items` as
+# they are (a second normalize_ard() is whole, with no row).
+.nz_with_row <- function(items, tables) {
+  is_nz <- vapply(items, function(it) identical(it$fn, "normalize_ard"), NA)
+  if (sum(is_nz) != 1L || !is.data.frame(tables) || !nrow(tables)) return(items)
+  # (a table's own row, not the defaults' blank one)
+  t <- tables
+  if ("output_id" %in% names(t) && any(!is.na(t$output_id))) t <- t[!is.na(t$output_id), , drop = FALSE]
+  t <- t[1L, , drop = FALSE]
+  t$output_id <- "x"
+  row <- .conv_normalize_args(list(tables = t), NULL, "x")
+  k <- which(is_nz)
+  args <- items[[k]]$args %||% list()
+  for (n in intersect(names(row), c("overall", "stack", "stack_sep", "stack_nest"))) args[n] <- list(row[[n]])
+  items[[k]]$args <- args
+  items
 }
 
 # a table's rework step: the first `!r` among its data steps (a figure's

@@ -2063,7 +2063,7 @@ tfl_table_spec_template <- function(ard, path = NULL, cols = NULL,
 .ard_spec_rtf_tokens <- c("PAGE", "TOTAL_PAGES", "BOOK_PAGE", "AUTO_PAGE",
                           "AUTO_TOTAL_PAGES", "SECTION_PAGES", "PROGRAM",
                           "PROGRAM_FULL", "PROGRAM_NAME", "PROGRAM_DIR",
-                          "DATETIME")
+                          "DATETIME", "PAGE_HEADING")
 
 .ard_spec_check_tokens <- function(d) {
   .pb_stop_first(.ard_spec_token_problems(d))

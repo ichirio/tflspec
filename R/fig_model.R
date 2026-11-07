@@ -645,8 +645,9 @@ print.tfl_fig_design <- function(x, ...) {
 
 .fig_design_list <- function(design) {
   x <- unclass(design)
+  # (a figure of items keeps its `content`: tfl_sheets_from_yaml()'s design list)
   x <- x[intersect(c("template", "ggplot2_version", "data", "plot", "layers",
-                     "plots", "compose"), names(x))]
+                     "plots", "compose", "content"), names(x))]
   if (length(x$plots)) x$plots <- lapply(x$plots, .fig_design_list)
   x[!vapply(x, function(v) is.null(v) || !length(v), logical(1))]
 }
@@ -654,8 +655,11 @@ print.tfl_fig_design <- function(x, ...) {
 #' @rdname tfl_fig_design
 #' @export
 tfl_write_fig_design <- function(design, path) {
-  writeLines(enc2utf8(yaml::as.yaml(.fig_design_list(design))), path,
-             useBytes = TRUE)
+  x <- .fig_design_list(design)
+  # (a figure's items: their `!r` and `!unset` written as tags)
+  txt <- if (length(x$content)) yaml::as.yaml(x, indent.mapping.sequence = TRUE,
+                                              handlers = .yaml_out_handlers()) else yaml::as.yaml(x)
+  writeLines(enc2utf8(txt), path, useBytes = TRUE)
   invisible(path)
 }
 
