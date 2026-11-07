@@ -72,12 +72,19 @@
 #' (`palette.colour.discrete` ...).
 #'
 #' The types, in a short notation: `string`, `integer`, `number` (a
-#' number written as arithmetic of numbers, `!r 1/5`, is one),
+#' number written as arithmetic of numbers, `!r 1/5`, is one; numbers so
+#' written, `!r 2^(-2:2)`, are a `list<number>`),
 #' `logical`, `enum[a|b]`, `column`, `stat`, `template`, `r` (`!r`),
 #' `formula` (`!r`, written `~ <text>`), `guard` (`!r`, a two-sided
 #' `cond ~ "text"`), `function` (a function by its name, `mean_se` or
-#' `Hmisc::smean.cl.normal`, written bare: `fun.data = mean_se`), `tilde`
+#' `Hmisc::smean.cl.normal`, written bare: `fun.data = mean_se`),
+#' `function<f1, f2>` (one of those functions by its name, written bare: a
+#' discrete scale's `limits: rev`, a facet's `labeller: label_both`), `tilde`
 #' (a formula as its text, `y ~ x` or `~ . / 7`, written as the formula),
+#' `lambda` (a function written out as its text, `function(y) mean(y) -
+#' sd(y)` or `\(x) paste0(x, "\%")`, written as the function: a summary's
+#' `fun.min`, a scale's `labels`; a lambda or a formula is written as code
+#' where the type also takes text),
 #' `date` (a date as its text, `2024-01-01`; a sequence of them, `NA` an
 #' open end, written `as.Date(c("2024-01-01", NA))`),
 #' `call` and `call<fn>` (`{fn:, args:}`; `call<label_*>` takes any
@@ -228,7 +235,8 @@ tfl_schema <- function(fn = NULL) {
   m <- regmatches(txt, regexec("^([a-z_]+)<(.*)>$", txt))[[1L]]
   if (length(m)) {
     inner <- .schema_split(m[3L], ",")
-    if (m[2L] %in% c("rows", "call")) {
+    # (function<rev>: a function of these names only)
+    if (m[2L] %in% c("rows", "call", "function")) {
       return(list(kind = m[2L], args = trimws(inner)))
     }
     return(list(kind = m[2L], args = lapply(inner, .schema_type)))
@@ -256,7 +264,7 @@ tfl_schema <- function(fn = NULL) {
 }
 
 .schema_scalars <- c("string", "integer", "number", "logical", "column", "stat",
-                     "template", "enum", "function", "tilde", "date")
+                     "template", "enum", "function", "tilde", "lambda", "date")
 
 # a date as its text, 2024-01-01 (a date scale's limits, breaks)
 .schema_date_re <- "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
@@ -279,6 +287,16 @@ tfl_schema <- function(fn = NULL) {
   if (!is.character(v) || length(v) != 1L || is.na(v) || !grepl("~", v, fixed = TRUE)) return(FALSE)
   e <- tryCatch(str2lang(v), error = function(err) NULL)
   is.call(e) && identical(e[[1L]], as.name("~"))
+}
+
+# a function written out as its text (function(x) mean(x) + sd(x), or
+# \(x) ...): text that parses as one
+.schema_is_lambda <- function(v) {
+  if (!is.character(v) || length(v) != 1L || is.na(v) || !grepl("^\\s*(function|\\\\)\\s*\\(", v)) {
+    return(FALSE)
+  }
+  e <- tryCatch(str2lang(v), error = function(err) NULL)
+  is.call(e) && identical(e[[1L]], as.name("function"))
 }
 
 # whether a call's function is one a call<...> type names: by its name
@@ -537,6 +555,8 @@ tfl_schema_check <- function(item) {
     return(.schema_call_named(f, unlist(ty$args)))
   }
   if (k == "list") {
+    # numbers written as arithmetic of numbers (!r 2^(-2:2), !r c(-10^(2:0), 0))
+    if (inherits(v, "tfl_r")) v <- .schema_r_numbers(v) %||% v
     if (inherits(v, c("tfl_r", "tfl_call"))) return(FALSE)
     el <- if (is.list(v)) v else as.list(v)
     return(all(vapply(el, function(e) .schema_ok(e, ty$args[[1L]], nx), NA)))
@@ -559,8 +579,10 @@ tfl_schema_check <- function(item) {
     integer = is.numeric(v) && !is.na(v) && v == round(v),
     number = is.numeric(v),
     enum = as.character(v) %in% ty$args,
-    "function" = .schema_is_fun_name(v),
+    "function" = .schema_is_fun_name(v) &&
+      (!length(ty$args) || .schema_call_named(v, unlist(ty$args))),
     tilde = .schema_is_tilde(v),
+    lambda = .schema_is_lambda(v),
     date = .schema_is_date(v) || (is.logical(v) && is.na(v)),
     is.character(v) || is.numeric(v) || is.logical(v))
 }
@@ -581,11 +603,31 @@ tfl_schema_check <- function(item) {
   if (is.numeric(n) && length(n) == 1L && !is.na(n)) n
 }
 
+# An !r expression that is numbers written as arithmetic of numbers, in
+# c() and `:` too (2^(-2:2), c(-10^(2:0), 0, 10^(0:2)), 0:4 * 12), as
+# those numbers (at most 1000), else NULL: numbers of the spec written as R
+.schema_r_numbers <- function(v) {
+  e <- tryCatch(str2lang(as.character(unclass(v))), error = function(err) NULL)
+  ok <- function(x) {
+    if (is.numeric(x)) return(length(x) == 1L)
+    if (is.name(x)) return(as.character(x) %in% c("pi", "Inf"))
+    if (!is.call(x) || !is.name(x[[1L]])) return(FALSE)
+    if (!as.character(x[[1L]]) %in% c("+", "-", "*", "/", "^", "(", ":", "c")) return(FALSE)
+    a <- as.list(x)[-1L]
+    is.null(names(a)) && all(vapply(a, ok, NA))
+  }
+  if (is.null(e) || !ok(e)) return(NULL)
+  n <- tryCatch(eval(e, baseenv()), error = function(err) NULL)
+  if (is.numeric(n) && length(n) >= 1L && length(n) <= 1000L && !anyNA(n)) as.numeric(n)
+}
+
 .schema_show <- function(ty) {
   k <- ty$kind
   if (k == "either") return(paste(vapply(ty$args, .schema_show, ""), collapse = " or "))
   if (k == "enum") return(paste0("one of ", paste(ty$args, collapse = ", ")))
-  if (k %in% c("rows", "call")) return(paste0(k, "<", paste(ty$args, collapse = ", "), ">"))
+  if (k %in% c("rows", "call", "function") && length(ty$args)) {
+    return(paste0(k, "<", paste(ty$args, collapse = ", "), ">"))
+  }
   if (length(ty$args)) return(paste0(k, "<", paste(vapply(ty$args, .schema_show, ""), collapse = ", "), ">"))
   k
 }

@@ -23,13 +23,13 @@
 "ggplot2","facet_grid","axes","yes","facet_grid","","facet",3,1
 "ggplot2","facet_grid","axis.labels","yes","facet_grid","","facet",3,1
 "ggplot2","facet_grid","cols","yes","as_labeller; benchplot; facet_grid; get_strip_labels; label_bquote; labellers","","facet",3,10
-"ggplot2","facet_grid","labeller","partial","as_labeller; label_bquote; labellers","5 of 5 uses: as R: to_string (facet_grid(cyl ~ am, labeller = labeller(am = to_string)))","facet",3,5
+"ggplot2","facet_grid","labeller","partial","as_labeller; label_bquote; labellers","4 of 5 uses: as R: to_string (facet_grid(cyl ~ am, labeller = labeller(am = to_string)))","facet",3,5
 "ggplot2","facet_grid","rows","yes","as_labeller; facet_grid; geom_ribbon; get_strip_labels; label_bquote; scale_linetype","","facet",3,10
 "ggplot2","facet_grid","scales","yes","facet_grid","","facet",3,2
 "ggplot2","facet_grid","space","yes","facet_grid","","facet",3,1
 "ggplot2","facet_null","","yes","Layout","","facet",1,1
 "ggplot2","facet_wrap","dir","yes","facet_wrap","","facet",3,1
-"ggplot2","facet_wrap","facets","partial","as_labeller; facet_wrap; geom_abline; geom_histogram; geom_map; geom_smooth; get_guide_data; get_strip_labels; guide_axis; scale_shape; summarise_plot; vars","1 of 17 uses: as R: year ~ cyl (facet_wrap(year ~ cyl))","facet",3,17
+"ggplot2","facet_wrap","facets","yes","as_labeller; facet_wrap; geom_abline; geom_histogram; geom_map; geom_smooth; get_guide_data; get_strip_labels; guide_axis; scale_shape; summarise_plot; vars","","facet",3,17
 "ggplot2","facet_wrap","labeller","partial","as_labeller","2 of 2 uses: as R: to_string (facet_wrap(~am, labeller = to_string))","facet",3,2
 "ggplot2","facet_wrap","nrow","yes","facet_wrap","","facet",3,1
 "ggplot2","facet_wrap","scales","yes","geom_histogram; get_guide_data","","facet",3,2
@@ -99,14 +99,14 @@
 "ggplot2","geom_function","args","yes","geom_function","","geom",1,2
 "ggplot2","geom_function","color","yes","update_defaults","","geom",1,1
 "ggplot2","geom_function","colour","yes","geom_function","","geom",1,3
-"ggplot2","geom_function","fun","partial","geom_function; update_defaults","1 of 10 uses: as R: function(x) 0.5 * exp(-abs(x)) (geom_function(fun = function(x) 0.5 * exp(-abs(x))))","geom",1,10
+"ggplot2","geom_function","fun","yes","geom_function; update_defaults","","geom",1,10
 "ggplot2","geom_function","mapping","yes","geom_function","","geom",1,2
 "ggplot2","geom_function","n","yes","geom_function","","geom",1,1
-"ggplot2","geom_function","xlim","partial","geom_function","2 of 2 uses: as R: c(-1, 1) (geom_function(fun = dnorm, colour = ""red"", xlim = c(-1, 1)))","geom",1,2
+"ggplot2","geom_function","xlim","yes","geom_function","","geom",1,2
 "ggplot2","geom_hex","","yes","geom_hex","","geom",1,1
 "ggplot2","geom_histogram","","yes","coord_flip; geom_histogram; update_defaults","","geom",2,6
 "ggplot2","geom_histogram","bins","yes","geom_histogram","","geom",2,1
-"ggplot2","geom_histogram","binwidth","partial","geom_bar; geom_histogram; position_stack; scale_viridis","1 of 11 uses: as R: function(x) 2 * IQR(x)/(length(x)^(1/3)) (geom_histogram(binwidth = function(x) 2 * IQR(x)/(length(x)^(1/3))))","geom",2,11
+"ggplot2","geom_histogram","binwidth","yes","geom_bar; geom_histogram; position_stack; scale_viridis","","geom",2,11
 "ggplot2","geom_histogram","boundary","yes","geom_histogram","","geom",2,2
 "ggplot2","geom_histogram","breaks","partial","geom_histogram","2 of 2 uses: as R: price_bins (geom_histogram(breaks = price_bins, color = ""black""))","geom",2,2
 "ggplot2","geom_histogram","color","yes","geom_histogram","","geom",2,2
@@ -115,7 +115,7 @@
 "ggplot2","geom_hline","data","yes","geom_abline","","geom",3,2
 "ggplot2","geom_hline","linewidth","yes","scale_linetype","","geom",3,1
 "ggplot2","geom_hline","mapping","yes","geom_abline; scale_linetype","","geom",3,3
-"ggplot2","geom_hline","size","partial","aes_linetype_size_shape","1 of 1 uses: geom_hline has no argument `size` (it has: mapping, stat, position, yintercept, na.rm, show.legend, inherit.aes, data, lineend, colour, linewidth, linetype, alpha, group, key_glyph, layout) (geom_hline(yintercept = 25, size = 3.5))","geom",3,1
+"ggplot2","geom_hline","size","partial","aes_linetype_size_shape","1 of 1 uses: geom_hline has no argument `size` (it has: mapping, stat, position, yintercept, na.rm, show.legend, inherit.aes, linetype, colour, linewidth, alpha, data, lineend, group, key_glyph, layout) (geom_hline(yintercept = 25, size = 3.5))","geom",3,1
 "ggplot2","geom_hline","yintercept","yes","aes_linetype_size_shape; fortify.lm; geom_abline; position_stack","","geom",3,5
 "ggplot2","geom_jitter","","yes","expansion; geom_jitter; geom_rug; position_jitter","","geom",3,8
 "ggplot2","geom_jitter","height","yes","geom_jitter; position_jitter","","geom",3,2
@@ -163,7 +163,7 @@
 "ggplot2","geom_pointrange","mapping","yes","geom_linerange","","geom",3,1
 "ggplot2","geom_polygon","colour","yes","coord_map; fortify.map","","geom",1,3
 "ggplot2","geom_polygon","fill","yes","coord_map","","geom",1,2
-"ggplot2","geom_polygon","mapping","yes","fortify.map; geom_polygon; map_data","","geom",1,6
+"ggplot2","geom_polygon","mapping","partial","fortify.map; geom_polygon; map_data","1 of 6 uses: the mapping's `fill: assault/murder` is read as an expression (assault/murder), not as a column of that name: a column with that name needs backticks, fill: ""`assault/murder`"" (geom_polygon(aes(group = group, fill = assault/murder)))","geom",1,6
 "ggplot2","geom_quantile","","yes","geom_quantile","","geom",1,1
 "ggplot2","geom_quantile","alpha","yes","geom_quantile","","geom",1,1
 "ggplot2","geom_quantile","colour","yes","geom_quantile","","geom",1,1
@@ -206,7 +206,7 @@
 "ggplot2","geom_text","check_overlap","yes","geom_text","","geom",3,1
 "ggplot2","geom_text","hjust","yes","aes_eval; geom_segment; geom_text","","geom",3,3
 "ggplot2","geom_text","key_glyph","yes","geom_text","","geom",3,2
-"ggplot2","geom_text","mapping","partial","aes_eval; geom_text; position_nudge; position_stack","1 of 14 uses: as R: c(-0.1, 0.1, -0.1, 0.1) (geom_text(aes(label = y, nudge_y = c(-0.1, 0.1, -0.1, 0.1))))","geom",3,14
+"ggplot2","geom_text","mapping","yes","aes_eval; geom_text; position_nudge; position_stack","","geom",3,14
 "ggplot2","geom_text","nudge_x","yes","geom_segment; geom_text","","geom",3,2
 "ggplot2","geom_text","nudge_y","yes","geom_text; position_nudge","","geom",3,2
 "ggplot2","geom_text","parse","yes","geom_text","","geom",3,1
@@ -359,7 +359,7 @@
 "ggplot2","scale_size_binned","","yes","guide_bins; scale_size","","scale",1,3
 "ggplot2","scale_size_identity","","yes","scale_identity","","scale",1,1
 "ggplot2","scale_x_binned","","yes","geom_histogram; scale_binned","","scale",1,2
-"ggplot2","scale_x_continuous","breaks","partial","guide_axis_logticks; scale_continuous","1 of 3 uses: as R: c(-10^(4:0), 0, 10^(0:4)) (scale_x_continuous(breaks = c(-10^(4:0), 0, 10^(0:4)), transform = ""pseudo_log""))","scale",3,3
+"ggplot2","scale_x_continuous","breaks","yes","guide_axis_logticks; scale_continuous","","scale",3,3
 "ggplot2","scale_x_continuous","guide","yes","guide_axis","","scale",3,1
 "ggplot2","scale_x_continuous","labels","partial","annotation_logticks; scale_continuous","1 of 3 uses: as R: 10^.x (scale_x_continuous(name = ""body"", labels = scales::label_math(10^.x)))","scale",3,3
 "ggplot2","scale_x_continuous","limits","yes","coord_cartesian; scale_continuous","","scale",3,4
@@ -437,7 +437,7 @@
 "ggplot2","stat_summary","mapping","yes","stat_summary","","stat",3,1
 "ggplot2","stat_summary","size","yes","stat_summary","","stat",3,4
 "ggplot2","stat_summary_2d","","yes","stat_summary_2d","","stat",1,1
-"ggplot2","stat_summary_2d","fun","partial","stat_summary_2d","1 of 4 uses: as R: function(x) sum(x^2) (stat_summary_2d(fun = function(x) sum(x^2)))","stat",1,4
+"ggplot2","stat_summary_2d","fun","yes","stat_summary_2d","","stat",1,4
 "ggplot2","stat_summary_2d","fun.args","yes","stat_summary_2d","","stat",1,1
 "ggplot2","stat_summary_bin","fun","yes","stat_summary","","stat",2,1
 "ggplot2","stat_summary_bin","geom","yes","stat_summary","","stat",2,1

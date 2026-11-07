@@ -1,6 +1,6 @@
 kind,arg,type,en,ja,help
 layer,mapping,"map<string, column|r>",Mapping,マッピング,"Aesthetic = column: {x: AVISITN, y: AVAL, colour: TRTA}; !r for an expression."
-layer,data,object|r,Data,データ,"The layer's own data (by default the plot's)."
+layer,data,object|tilde|r,Data,データ,"The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x: ~ subset(.x, censored) (the censored times of a KM plot)."
 layer,x,number|string|list<number|string>|r,X,x,"A fixed x (annotate(), a reference line); a mapped one goes in mapping."
 layer,y,number|string|list<number|string>|r,Y,y,
 layer,xmin,number|string|list<number|string>|r,X from,x の始まり,
@@ -50,10 +50,10 @@ layer,xintercept,number|list<number>|r,X of the line(s),線の x,
 layer,yintercept,number|list<number>|r,Y of the line(s),線の y,
 layer,intercept,number|list<number>|r,Intercept,切片,
 layer,slope,number|list<number>|r,Slope,傾き,
-layer,fun,function|tilde|r,Function,関数,"A function by its name, written bare: stat summary's y of each x (mean, median; with fun.min / fun.max), stat function's curve (dnorm); ~ sum(.x^2) as a formula; or !r function(y) ..."
-layer,fun.data,function|r,Summary function (y and range),要約の関数（値と範囲）,"stat summary: y, ymin and ymax at once: mean_se (mean +/- SE), mean_cl_normal (t interval, Hmisc), mean_cl_boot, median_hilow, mean_sdl; a function by its name, written bare (fun.data = mean_se)."
-layer,fun.min,function|r,Lower end function,下端の関数,"stat summary: ymin, a function by its name (min), or !r function(y) mean(y) - sd(y)."
-layer,fun.max,function|r,Upper end function,上端の関数,"stat summary: ymax, a function by its name (max)."
+layer,fun,function|tilde|lambda|r,Function,関数,"A function by its name, written bare: stat summary's y of each x (mean, median; with fun.min / fun.max), stat function's curve (dnorm); ~ sum(.x^2) as a formula; or written out, function(y) mean(y) + sd(y)."
+layer,fun.data,function|tilde|lambda|r,Summary function (y and range),要約の関数（値と範囲）,"stat summary: y, ymin and ymax at once: mean_se (mean +/- SE), mean_cl_normal (t interval, Hmisc), mean_cl_boot, median_hilow, mean_sdl; a function by its name, written bare (fun.data = mean_se); or written out, function(y) data.frame(y = median(y), ymin = min(y), ymax = max(y))."
+layer,fun.min,function|tilde|lambda|r,Lower end function,下端の関数,"stat summary: ymin, a function by its name (min), or written out: function(y) mean(y) - sd(y)."
+layer,fun.max,function|tilde|lambda|r,Upper end function,上端の関数,"stat summary: ymax, a function by its name (max), or written out: function(y) mean(y) + sd(y)."
 layer,fun.args,"map<string, string|number|logical>|r",Arguments of the summary function,要約の関数の引数,"Passed on to fun.data / fun: {mult: 1.96} for mean_se, {conf.int: 0.9} for mean_cl_normal."
 layer,pad,logical,Pad the ends,両端を延ばす,stat ecdf: the curve starts at 0 and ends at 1 beyond the data (FALSE: from the first to the last value).
 layer,n,integer|r,Number of points,点の数,stat ecdf: NULL (every value) or the points to interpolate; stat smooth / density: points to evaluate.
@@ -61,7 +61,7 @@ layer,level,number,Level,水準,stat ellipse: the confidence level of the ellips
 layer,type,enum[t|norm|euclid],Ellipse type,楕円の種類,stat ellipse: t (multivariate t) / norm / euclid.
 layer,segments,integer,Segments of the ellipse,楕円の分割数,
 layer,bins,integer|r,Number of bins,ビンの数,
-layer,binwidth,number|list<number>|r,Bin width,ビンの幅,
+layer,binwidth,number|list<number>|lambda|tilde|r,Bin width,ビンの幅,"A number, or a function of the data written out: function(x) 2 * IQR(x) / length(x)^(1/3)."
 layer,breaks,"list<number>|call<seq>|r",Bin breaks,ビンの境界,
 layer,boundary,number,Bin boundary,ビンの境界の基点,
 layer,center,number,Bin centre,ビンの中心の基点,
@@ -158,13 +158,13 @@ layer,contour,logical,Draw contours,等高線を描く,
 layer,contour_var,enum[density|ndensity|count],Contoured variable,等高線の変数,
 layer,z.range,list<number>|r,Range of z,z の範囲,
 scale,name,string|r,Title,タイトル,The axis or legend title; !r NULL for none.
-scale,breaks,"list<number|string>|call<seq, breaks_*, extended_breaks, pretty_breaks, trans_breaks, log_breaks>|r",Breaks,目盛り,"The values with a tick or a key; {fn: scales::breaks_width, args: {width: 4}}; !r NULL for none, !r seq(0, 52, by = 4)."
-scale,minor_breaks,"list<number>|call<seq, breaks_*, minor_breaks_*>|r",Minor breaks,補助目盛り,
+scale,breaks,"list<number|string>|call<seq, breaks_*, extended_breaks, pretty_breaks, trans_breaks, log_breaks>|tilde|lambda|r",Breaks,目盛り,"The values with a tick or a key; {fn: scales::breaks_width, args: {width: 4}}; !r NULL for none, !r seq(0, 52, by = 4)."
+scale,minor_breaks,"list<number>|call<seq, breaks_*, minor_breaks_*>|tilde|lambda|r",Minor breaks,補助目盛り,
 scale,n.breaks,integer,Number of breaks,目盛りの数,
-scale,labels,"list<string>|vec<string, string>|call<label_*, *_format>|r",Labels,目盛りのラベル,"In the order of the breaks, or by value ({A: Placebo}); !r scales::percent."
+scale,labels,"list<string>|vec<string, string>|call<label_*, *_format>|tilde|lambda|r",Labels,目盛りのラベル,"In the order of the breaks, or by value ({A: Placebo}); a function written out, function(x) paste0(x, ""%""), or ~ paste0(.x, ""%"")."
 scale,limits,list<number|string>|r,Range,範囲,"Data outside it are dropped (to zoom, use coord_cartesian()); NA keeps that end."
 scale,expand,"call<expansion, expand_scale, waiver>|list<number>|r",Expansion,余白,"{fn: expansion, args: {mult: [0, 0.05]}}; [0, 0] for none."
-scale,oob,function|r,Out of bounds,範囲外の扱い,"scales::oob_squish keeps them at the edge, scales::oob_keep keeps them (a function by its name, written bare); the default drops them."
+scale,oob,function|tilde|lambda|r,Out of bounds,範囲外の扱い,"scales::oob_squish keeps them at the edge, scales::oob_keep keeps them (a function by its name, written bare); the default drops them."
 scale,na.value,"string|number|call<alpha>",Missing,欠測の値,
 scale,guide,string|call|r,Legend,凡例,"legend, colourbar, none, or {fn: guide_legend, args: {nrow: 1}}."
 scale,position,enum[left|right|top|bottom],Position,位置,
@@ -203,7 +203,7 @@ scale,nice.breaks,logical,Nice breaks,切りのよい目盛り,
 scale,alpha,number,Transparency,透明度,viridis: 0 (clear) to 1 (opaque).
 scale,continuous.limits,list<number>|r,Continuous limits,連続の範囲,ggplot2 3.5: a discrete position scale's range when continuous data join it.
 scale,fallback.palette,r,Fallback palette,予備のパレット,ggplot2 4.0: the colours used beyond the palette's (!r).
-scale,rescaler,function|tilde|r,Rescaler,再尺度化,"How values map to 0-1: scales::rescale_mid (a function by its name), or ~ scales::rescale_mid(.x, mid = 0)."
+scale,rescaler,function|tilde|lambda|r,Rescaler,再尺度化,"How values map to 0-1: scales::rescale_mid (a function by its name), or ~ scales::rescale_mid(.x, mid = 0)."
 scale,space,enum[Lab],Colour space,色空間,
 scale,right,logical,Bins closed on the right,区間を右で閉じる,A binned scale: a value on a break goes to the bin below (TRUE).
 coord,xlim,list<number>|r,X range,x の範囲,Zooms without dropping data (unlike a scale's limits).
@@ -236,7 +236,7 @@ facet,ncol,integer,Columns,列の数,
 facet,scales,enum[fixed|free|free_x|free_y],Axes,軸,free_y: each panel its own y range.
 facet,space,enum[fixed|free|free_x|free_y],Panel sizes,面の大きさ,free_y: rows as tall as their range (with scales free_y).
 facet,shrink,logical,Shrink to the statistics,統計量の範囲に縮める,
-facet,labeller,"string|call<labeller, label_value, label_both, label_context, label_parsed, label_wrap_gen, label_bquote, as_labeller>|r",Strip labels,ストリップのラベル,"label_value, label_both, {fn: label_wrap_gen, args: {width: 20}}, {fn: labeller, args: {PARAMCD: !r label_wrap_gen(20)}}, or !r ..."
+facet,labeller,"function<label_value, label_both, label_context, label_parsed>|string|call<labeller, label_value, label_both, label_context, label_parsed, label_wrap_gen, label_bquote, as_labeller>|r",Strip labels,ストリップのラベル,"label_value, label_both (a labeller by its name, written bare), {fn: label_wrap_gen, args: {width: 20}}, {fn: labeller, args: {PARAMCD: !r label_wrap_gen(20)}}, or !r ..."
 facet,switch,enum[x|y|both],Strips on the other side,ストリップを反対側に,
 facet,strip.position,enum[top|bottom|left|right],Strip position,ストリップの位置,
 facet,dir,string,Order of the panels,面の並べ方,"h / v (or, ggplot2 4.0, lt, tl, rb ...)."
@@ -431,10 +431,10 @@ position,dodge.width,number,Dodge width,ずらし幅,
 position,orientation,enum[x|y],Orientation,向き,
 helper,mult,number|list<number>,Multiplicative expansion,割合の余白,"[0, 0.05]: none below, 5% above."
 helper,add,number|list<number>,Additive expansion,加える余白,In data units.
-helper,transform,tilde|function|r,Transformation,変換,"~ . / 7 (a formula), or a function by its name."
+helper,transform,tilde|function|lambda|r,Transformation,変換,"~ . / 7 (a formula), or a function by its name."
 helper,name,string|r,Title,タイトル,
-helper,breaks,"list<number>|call<seq, breaks_*, extended_breaks, pretty_breaks, log_breaks>|r",Breaks,目盛り,
-helper,labels,"list<string>|call<label_*, *_format>|r",Labels,ラベル,
+helper,breaks,"list<number>|call<seq, breaks_*, extended_breaks, pretty_breaks, log_breaks>|tilde|lambda|r",Breaks,目盛り,
+helper,labels,"list<string>|call<label_*, *_format>|tilde|lambda|r",Labels,ラベル,
 helper,guide,string|call|r,Guide,凡例,
 helper,angle,number,Arrowhead angle,矢じりの角度,
 helper,length,call<unit>|r,Arrowhead length,矢じりの長さ,
@@ -474,7 +474,7 @@ ggsurvfit_layer,x_value,number,At time,時点,"A line up at this time, across to
 ggsurvfit_layer,location,enum[caption|annotation],Placed,置き場所,"caption: under the plot; annotation: on it (x and y given)."
 ggsurvfit_layer,caption,string,Text,文字,"A glue template, {p.value} the log-rank p-value: ""Log-rank {p.value}""."
 ggsurvfit_layer,prepend_p,logical,Prepend p =,p = を前に付ける,
-ggsurvfit_layer,pvalue_fun,r,P-value format,p 値の形式,"!r function(x) format.pval(x, digits = 3); ggsurvfit's format_p by default."
+ggsurvfit_layer,pvalue_fun,function|lambda|r,P-value format,p 値の形式,"function(x) format.pval(x, digits = 3) (a function written out) or a function by its name; ggsurvfit's format_p by default."
 ggsurvfit_layer,rho,number,Test (rho),検定（rho）,"survdiff()'s rho: 0 the log-rank test, 1 the Peto-Peto Wilcoxon test."
 ggsurvfit_layer,title,string|r,Legend title,凡例のタイトル,Blank: the strata's variable.
 ggsurvfit_layer,symbol,string,Symbol,記号,The character before each group's row of the risk table (a filled box by default).
