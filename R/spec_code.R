@@ -863,7 +863,11 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
   rest <- list()
   ra <- list()
   orig <- list()
-  rest_add <- function(name) ra[name] <<- list(orig[[name]])
+  ra_why <- character()
+  rest_add <- function(name, why = NULL) {
+    ra[name] <<- list(orig[[name]])
+    if (!is.null(why)) ra_why <<- c(ra_why, why)
+  }
   # (the items a miss is in, by their place among the items not
   # normalize_ard(): attr(, "not_converted_at"), the caller keeps them whole)
   lost_at <- integer()
@@ -977,6 +981,7 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
     named <- a[nzchar(nm)]
     orig <- items[[cur]]$args %||% list()
     ra <- list()
+    ra_why <- character()
     # (the arguments of these verbs no sheet has a column for are the item's
     # rest; `span` with header lines is the branch's)
     span_here <- identical(fn, "plan_col_header") && !is.null(named$lines)
@@ -1067,7 +1072,7 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
         # (what the variables sheet cannot say stays the item's rest, by its
         # name; `variable` is never split: the sheets read every heading
         # under it, so a part of it kept apart would replace the rest)
-        keep_rest <- function(v, why) if (identical(v, "variable")) miss(fn, why) else rest_add(v)
+        keep_rest <- function(v, why) if (identical(v, "variable")) miss(fn, why) else rest_add(v, why)
         for (v in names(named)) {
           x <- named[[v]]
           if (is.list(x) && length(x) &&
@@ -1248,19 +1253,19 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
           if (all(vapply(v, function(e) is.character(e) && length(e) == 1L, NA))) {
             tb$header_n <- if (identical(names(v), "n")) v$n
                            else paste(paste(names(v), "=", unlist(v)), collapse = " | ")
-          } else rest_add("values")
+          } else rest_add("values", "values other than page / table")
         }
         if (!is.null(named$col_header_align)) sty$col_header_align <- named$col_header_align
       },
       plan_columns = {
         w <- named$widths
         if (!is.null(w)) {
-          if (is.null(names(w)) || !all(nzchar(names(w)))) rest_add("widths")
+          if (is.null(names(w)) || !all(nzchar(names(w)))) rest_add("widths", "widths by position (a sheet names its columns)")
           else for (cn in names(w)) { col_row(cn); cols[[cn]]$rel_width <- w[[cn]] }
         }
         for (cn in named$decimal) { col_row(cn); cols[[cn]]$decimal_split <- TRUE }
         rt <- named$row_title
-        if (is.numeric(unlist(rt))) rest_add("row_title")
+        if (is.numeric(unlist(rt))) rest_add("row_title", "row_title by position")
         else for (cn in rt) { col_row(cn); cols[[cn]]$row_title <- TRUE }
         if (!is.null(named$auto_width)) sty$auto_width <- named$auto_width
         if (!is.null(named$sep)) tb$sep <- named$sep
@@ -1270,7 +1275,8 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
     # nothing else the sheets say, the item goes whole as before
     if (length(ra) && !cur %in% lost_at) {
       if (identical(snap, list(tb, study, vars, cells, lay, sty, cols, cstyles, hdr, codes, labelled))) {
-        miss(fn, sprintf("%s: no sheet says it", paste(names(ra), collapse = ", ")))
+        # (the reasons the branch gave; "no sheet says it" for the arguments no sheet has a column for)
+        miss(fn, if (length(ra_why)) ra_why[1L] else sprintf("%s: no sheet says it", paste(names(ra), collapse = ", ")))
       } else if (.cell_unsafe(fn, orig[setdiff(names(orig), names(ra))])) {
         miss(fn, "a text the sheets would not keep, with arguments they cannot say")
       } else {
