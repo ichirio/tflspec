@@ -62,8 +62,23 @@
 #' -- `3` and the output (a figure's PNG, a table's pages); `none`: the
 #' person's check; `{figure: 3, table: 2, listing: 1}` by default).
 #'
+#' @section Repeating a call:
+#' A call that writes the requests (not `dry_run`) keeps the arguments it was
+#' given in `ai/prepare.yml` of the study folder -- by name, a path inside the
+#' study from its folder, the date-time and the tflspec version at its head
+#' ([tfl_ai_prepare_settings()] reads it and lists what the file holds and
+#' what is left out: `dir`, `overwrite`, `dry_run`, `quiet`, `progress`,
+#' `add`, `adam_summary`, `numbers`).  `tfl_ai_prepare(dir)` with no `toc`
+#' repeats them: the arguments given now go over the file's, so
+#' `tfl_ai_prepare(dir, language = "ja")` is the last call in Japanese.  A
+#' path of the file that is not there any more stops the call, naming the
+#' file and the setting; with no file, `toc` is asked for as always.  With
+#' `add = TRUE` the file keeps the first workbook's settings (see
+#' [tfl_ai_prepare_settings()]).  The agent does not read the file.
+#'
 #' @param dir The study folder.
-#' @param toc The TOC / SHELL workbook (`.xlsx` or `.xlsm`).
+#' @param toc The TOC / SHELL workbook (`.xlsx` or `.xlsm`).  Missing: the
+#'   last call's settings, `ai/prepare.yml` (see *Repeating a call*).
 #' @param adam The ADaM folder, from `dir` (relative) or absolute.
 #' @param study_id,title The study's id and title, for a new study folder.
 #' @param toc_sheet,sheets As [tfl_ai_read_shell()]: the TOC sheet when the
@@ -257,12 +272,18 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
                            numbers = NULL, agent_reads = character(),
                            docs = NULL, agent_max_reads = 3L,
                            define = NULL, adam_spec = NULL) {
+  if (missing(toc)) {
+    return(.ai_prepare_repeat(dir, match.call(), parent.frame(), "tfl_ai_prepare()"))
+  }
   unit <- match.arg(unit)
   if (isTRUE(quiet)) {
     cl <- match.call()
     cl$quiet <- FALSE
     return(suppressMessages(eval(cl, parent.frame())))
   }
+  # (the arguments given, for ai/prepare.yml, before any is changed)
+  call <- match.call()
+  kept_args <- .ai_prepare_given(call, environment())
   fn <- "tfl_ai_prepare()"
   templates <- .ai_templates_flag(templates, fn)
   workbook <- match.arg(workbook)
@@ -518,7 +539,13 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
     # the work queue: every request todo (never written over)
     .ai_progress_write(dir, req)
     # the study's facts the agent read from spec/, and the workspace on ai/
-    files <- c(files, "ai/agent_prompt.md",
+    # the settings, kept for tfl_ai_prepare(dir) (a failure to write it is a warning)
+    pf <- tryCatch(.ai_prepare_write(dir, kept_args, add = add), error = function(e) {
+      warning(sprintf("tfl_ai_prepare(): ai/prepare.yml was not written (%s).",
+                      conditionMessage(e)), call. = FALSE)
+      NULL
+    })
+    files <- c(files, "ai/agent_prompt.md", if (!is.null(pf)) "ai/prepare.yml",
                .ai_check_rel(.ai_study_facts_write(dir), dir),
                .ai_check_rel(.ai_workspace_write(dir), dir))
   }
