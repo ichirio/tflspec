@@ -24,6 +24,7 @@
   `survival::coxph` = "survival::coxph.control",
   `survival::survreg` = "survival::survreg.control",
   `stats::glm` = "stats::glm.control",
+  `MASS::glm.nb` = "stats::glm.control",
   `stats::lm` = character(),
   `stats::aov` = "stats::lm",
   `mmrm::mmrm` = c("mmrm::mmrm_control", "mmrm:::h_get_optimizers"))
@@ -92,17 +93,28 @@
 #' SAS's PROC LIFETEST gives), `method.args = list(ties = "breslow")` (a
 #' Cox model as SAS's PROC PHREG fits it), `method.args = list(family =
 #' binomial)` (a logistic model), `method.args = list(method =
-#' "Kenward-Roger")` (MMRM's degrees of freedom).  The same arguments are
+#' "Kenward-Roger")` (MMRM's degrees of freedom), `method.args =
+#' list(covariance = cov_struct("toep", visits = "AVISIT", subject =
+#' "USUBJID"))` (MMRM's covariance when the formula has none), `method =
+#' "glm.nb", package = "MASS"` with `method.args = list(link = log)` (a
+#' negative binomial rate model: exacerbations, recurrent events) and
+#' `method = "survreg", package = "survival"` with `method.args = list(dist
+#' = "lognormal")` (a parametric survival model).  The same arguments are
 #' the model's in a call written in `x`
 #' (`ard_survival_survfit_diff(x = survival::survfit(..., conf.type =
 #' "log-log"))`).
 #'
 #' `tfl_ard_spec()` looks for each name in the installed model function
-#' (and where its `...` go: survfit()'s survfitKM(), glm()'s glm.control(),
+#' (and where its `...` go: survfit()'s survfitKM(), glm()'s and glm.nb()'s
+#' glm.control(), survreg()'s survreg.control(),
 #' coxph()'s coxph.control(), mmrm()'s mmrm_control()) and judges the
 #' values this catalog describes by their kind: `conf.type = "loglog"`
 #' would stop the program, `tise = "breslow"` too, and `wieghts = W` would
-#' be ignored by `lm()`.  `formula` and `data` are cardx's to give.
+#' be ignored by `lm()`; a covariance type mmrm does not have
+#' (`cov_struct("un", ...)`, `~ un(AVISIT | USUBJID)`), the visit
+#' column not in quotes, `weights = "WTS"` given to mmrm() (a vector, not a
+#' column name), `link = logit` of glm.nb() and `init.theta = 0` too.
+#' `formula` and `data` are cardx's to give.
 #'
 #' The catalog is `inst/ard/model_args.csv` (`fn`, `arg`, `default`,
 #' `kind`, `hint`, `choices`); a company adds rows with
@@ -120,6 +132,7 @@
 #' @examples
 #' tfl_ard_model_args("survfit", "survival")
 #' tfl_ard_model_args("glm")
+#' tfl_ard_model_args("glm.nb", "MASS")
 #' @export
 tfl_ard_model_args <- function(method, package = "base") {
   key <- .model_key(method, package)
@@ -290,5 +303,99 @@ tfl_ard_model_args <- function(method, package = "base") {
     if (is.name(e) || is.call(e) || is.null(e)) return(NULL)
     return(sprintf("is a list: list(...); got %s", shown))
   }
+  if (identical(kind, "link")) return(.model_link_problem(e, choices, shown))
+  if (identical(kind, "vector")) {
+    # (a name or a call is the program's vector: d$WTS, rep(1, nrow(d)))
+    v <- .literal_value(e)
+    if (is.name(e) || is.null(e) || (is.call(e) && is.null(v)) ||
+        (is.numeric(v) && length(v) > 1L)) return(NULL)
+    return(sprintf(paste("is a numeric vector as long as the data (data$WTS), not",
+                         "a column name: %s() does not look a column up; got %s"),
+                   fn, shown))
+  }
+  if (identical(kind, "covariance")) return(.model_covariance_problem(e, shown))
+  if (identical(kind, "number") && arg %in% names(.model_number_floor)) {
+    v <- .literal_value(e)
+    lo <- .model_number_floor[[arg]]
+    if (is.numeric(v) && !anyNA(v) && any(if (lo[2L] > 0) v <= lo[1L] else v < lo[1L])) {
+      return(sprintf("is a number %s %s; got %s",
+                     if (lo[2L] > 0) "above" else "at least", lo[1L], shown))
+    }
+  }
   .arg_value_problem(arg, e, kind, choices, fn)
+}
+
+# The model numbers with a floor: c(floor, 1 when the floor itself is not
+# allowed).  glm.nb()'s theta starts above 0; survreg()'s fixed scale is 0
+# (estimated) or more; the iterations are 1 or more.
+.model_number_floor <- list(init.theta = c(0, 1), scale = c(0, 0),
+                            maxit = c(1, 0), maxiter = c(1, 0),
+                            iter.max = c(1, 0), outer.max = c(1, 0))
+
+# A link written as glm.nb() takes it: a name (log) or text ("log"), one of
+# the choices; a call (power(1/3)) is the program's
+.model_link_problem <- function(e, choices, shown) {
+  ch <- .split_bar(choices)
+  v <- if (is.name(e)) as.character(e) else .literal_value(e)
+  if (is.call(e) && is.null(v)) return(NULL)
+  if (is.character(v) && length(v) == 1L && v %in% ch) return(NULL)
+  sprintf("is one of %s (not in quotes: link = log); got %s",
+          paste(ch, collapse = ", "), shown)
+}
+
+# A covariance structure as mmrm() takes it in `covariance =`: a
+# cov_struct() call (its type one of mmrm's cov_types(), `visits` and
+# `subject` the columns in quotes) or a formula (~ us(AVISIT | USUBJID)).
+# A name is the program's object.
+.model_covariance_problem <- function(e, shown) {
+  if (is.name(e) || is.null(e)) return(NULL)
+  types <- if (requireNamespace("mmrm", quietly = TRUE)) {
+    tryCatch(unique(c(mmrm::cov_types(), mmrm::cov_types(c("abbr", "habbr")))),
+             error = function(err) NULL)
+  }
+  want <- paste("is cov_struct(\"us\", visits = \"AVISIT\", subject = \"USUBJID\")",
+                "or ~ us(AVISIT | USUBJID)")
+  head <- if (is.call(e)) paste(deparse(e[[1L]]), collapse = "") else ""
+  if (identical(head, "~")) {
+    rhs <- e[[length(e)]]
+    f <- if (is.call(rhs)) paste(deparse(rhs[[1L]]), collapse = "") else ""
+    ok_shape <- is.call(rhs) && length(rhs) == 2L && is.call(rhs[[2L]]) &&
+      identical(rhs[[2L]][[1L]], as.name("|"))
+    if (!ok_shape) return(sprintf("%s; got %s", want, shown))
+    if (!is.null(types) && !f %in% types) {
+      return(sprintf("%s: %s is not one of mmrm %s's cov_types() (%s); got %s",
+                     want, f, utils::packageVersion("mmrm"),
+                     paste(mmrm::cov_types("abbr"), collapse = ", "), shown))
+    }
+    return(NULL)
+  }
+  if (!head %in% c("cov_struct", "mmrm::cov_struct")) {
+    return(sprintf("%s; got %s", want, shown))
+  }
+  a <- as.list(e)[-1L]
+  nm <- names(a) %||% rep("", length(a))
+  pos <- c("type", "visits", "subject")
+  for (i in which(!nzchar(nm))) {
+    nm[i] <- setdiff(pos, nm)[1L]
+  }
+  names(a) <- nm
+  out <- character()
+  ty <- .literal_value(a[["type"]])
+  if (is.null(a[["type"]])) {
+    out <- c(out, "its type (\"us\", \"toep\", \"ar1\", \"cs\" ...) is not given")
+  } else if (is.character(ty) && !is.null(types) && !all(ty %in% types)) {
+    out <- c(out, sprintf("type \"%s\" is not one of mmrm %s's cov_types() (%s)",
+                          ty[1L], utils::packageVersion("mmrm"),
+                          paste(mmrm::cov_types("abbr"), collapse = ", ")))
+  }
+  for (k in c("visits", "subject")) {
+    if (is.null(a[[k]])) {
+      out <- c(out, sprintf("`%s` (the column, in quotes) is not given", k))
+    } else if (is.name(a[[k]])) {
+      out <- c(out, sprintf("`%s` is a column in quotes (\"%s\"), not %s", k,
+                            as.character(a[[k]]), as.character(a[[k]])))
+    }
+  }
+  if (!length(out)) return(NULL)
+  sprintf("%s: %s; got %s", want, paste(out, collapse = "; "), shown)
 }

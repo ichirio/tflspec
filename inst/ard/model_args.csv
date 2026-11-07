@@ -36,7 +36,26 @@ stats::lm,singular.ok,TRUE,logical,"TRUE (default): a term that cannot be estima
 mmrm::mmrm,reml,TRUE,logical,"TRUE (default): REML; FALSE: maximum likelihood (Kenward-Roger needs REML).",
 mmrm::mmrm,method,Satterthwaite,choice,"The degrees of freedom of the tests and intervals: Satterthwaite (default), Kenward-Roger (SAS PROC MIXED's DDFM=KR), Residual or Between-Within (mmrm_control()).",Satterthwaite | Kenward-Roger | Residual | Between-Within
 mmrm::mmrm,vcov,,choice,"The estimates' covariance (mmrm_control(); by default the method's): Asymptotic, Empirical (sandwich), Empirical-Bias-Reduced, Empirical-Jackknife, Kenward-Roger or Kenward-Roger-Linear.",Asymptotic | Empirical | Empirical-Bias-Reduced | Empirical-Jackknife | Kenward-Roger | Kenward-Roger-Linear
-mmrm::mmrm,covariance,NULL,code,"The covariance structure when the formula has none: cov_struct(""us"", visits = ""AVISIT"", subject = ""USUBJID"").",
+mmrm::mmrm,covariance,NULL,covariance,"The covariance structure when the formula has none: cov_struct(""us"", visits = ""AVISIT"", subject = ""USUBJID"") (its type one of mmrm's cov_types(), the columns in quotes), or ~ us(AVISIT | USUBJID).",
 mmrm::mmrm,contrasts,NULL,list,"The contrasts of the factors: list(TRT01P = ""contr.sum"").",
 mmrm::mmrm,accept_singular,TRUE,logical,"TRUE (default): a term that cannot be estimated is dropped, not an error (mmrm_control()).",
-mmrm::mmrm,weights,NULL,code,"Weights: a numeric vector as long as the data (d$W), not a column name: mmrm() does not look a column up by name.",
+mmrm::mmrm,weights,NULL,vector,"Weights: a numeric vector as long as the data (d$W), not a column name: mmrm() does not look a column up by name.",
+MASS::glm.nb,link,log,link,"The link of the negative binomial model: log (default: rate ratios), sqrt or identity, not in quotes.",log | sqrt | identity
+MASS::glm.nb,init.theta,,number,"A starting value of the dispersion theta (above 0); by default from a Poisson fit.",
+MASS::glm.nb,weights,,variable,"Prior weights: a column of the data, not in quotes (WTS).",
+MASS::glm.nb,contrasts,NULL,list,"The contrasts of the factors: list(TRT01P = ""contr.sum"").",
+MASS::glm.nb,maxit,25,number,"The most iterations the fit takes (glm.control()).",
+MASS::glm.nb,epsilon,1e-08,number,"The fit's convergence tolerance (glm.control()).",
+MASS::glm.nb,trace,FALSE,logical,"TRUE: the iterations are printed (glm.control()).",
+survival::survreg,dist,weibull,choice,"The distribution of the event times: weibull (default), exponential, lognormal, loglogistic, gaussian, logistic, extreme, rayleigh, loggaussian or t.",weibull | exponential | lognormal | loglogistic | gaussian | logistic | extreme | rayleigh | loggaussian | t
+survival::survreg,weights,,variable,"Case weights: a column of the data, not in quotes (WTS).",
+survival::survreg,scale,0,number,"A fixed scale (0, the default: estimated); scale = 1 with weibull is the exponential model.",
+survival::survreg,robust,FALSE,logical,"TRUE: robust (sandwich) standard errors.",
+survival::survreg,cluster,,variable,"The cluster of the robust standard errors: a column, not in quotes (SITEID).",
+survival::survreg,score,FALSE,logical,"TRUE: the score vector is kept in the fit.",
+survival::survreg,parms,NULL,list,"The distribution's parameters: list(df = 4) for dist = ""t"".",
+survival::survreg,maxiter,30,number,"The most iterations the fit takes (survreg.control()).",
+survival::survreg,rel.tolerance,1e-09,number,"The fit's relative convergence tolerance (survreg.control()).",
+survival::survreg,outer.max,10,number,"The most outer iterations of a penalized fit (survreg.control()).",
+survival::survreg,debug,0,number,"Above 0: the iterations are printed (survreg.control()).",
+survival::survreg,iter.max,30,number,"The same as maxiter, its older name (survreg.control()).",

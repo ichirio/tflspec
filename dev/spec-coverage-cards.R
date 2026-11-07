@@ -236,7 +236,15 @@ model_fns <- list(
   `survival::coxph` = c("survival::coxph", "survival::coxph.control"),
   `stats::glm` = c("stats::glm", "stats::glm.control"),
   `stats::lm` = "stats::lm",
-  `mmrm::mmrm` = c("mmrm::mmrm", "mmrm::mmrm_control", "mmrm:::h_get_optimizers"))
+  `mmrm::mmrm` = c("mmrm::mmrm", "mmrm::mmrm_control", "mmrm:::h_get_optimizers"),
+  # (since 2026-11-07: a negative binomial rate model, a parametric
+  # survival model)
+  `MASS::glm.nb` = c("MASS::glm.nb", "stats::glm.control"),
+  `survival::survreg` = c("survival::survreg", "survival::survreg.control"))
+# (weight 2: a negative binomial model is the rate model of recurrent
+# events -- exacerbations, relapses -- in some studies; weight 1: survreg()
+# is rarely a clinical table's model)
+model_weight <- c(`MASS::glm.nb` = 2, `survival::survreg` = 1)
 model_by_design <- c(
   subset = "the population's and the analysis's where",
   na.action = "the analysis data's missing values are the derivation's",
@@ -261,7 +269,8 @@ mfun <- function(k) {
 mcat <- utils::read.csv("inst/ard/model_args.csv", stringsAsFactors = FALSE,
                         na.strings = "")
 has_model_check <- exists(".model_args_problems", ns)
-model_judged <- c("logical", "number", "choice", "text", "variable", "family", "list")
+model_judged <- c("logical", "number", "choice", "text", "variable", "family", "list",
+                  "link", "vector", "covariance")
 for (key in names(model_fns)) {
   fs <- lapply(model_fns[[key]], mfun)
   if (any(vapply(fs, is.null, NA))) next
@@ -273,13 +282,23 @@ for (key in names(model_fns)) {
     `mmrm::mmrm` = "method: lsmeans / lsmeans_diff (method = \"mmrm\", package = \"mmrm\"); args: method.args",
     sprintf("method: regression / lsmeans / nested_models (method = \"%s\"); args: method.args or x = %s(...)",
             sub("^.*::", "", key), key))
-  w3 <- c(w3, key)
+  if (key %in% names(model_weight)) {
+    if (model_weight[[key]] == 2) w2 <- c(w2, key)
+  } else {
+    w3 <- c(w3, key)
+  }
+  # (a tflspec before the model catalog's MASS / survreg rows takes them as
+  # R, their names not checked)
+  checked <- has_model_check &&
+    (!key %in% names(model_weight) ||
+       key %in% names(get0(".model_dots_to", ns, ifnotfound = list())) &&
+       any(mcat$fn == key))
   for (a in args) {
     r <- mcat[mcat$fn == key & mcat$arg == a, , drop = FALSE]
     if (a %in% names(model_by_design) && !nrow(r)) {
       add("cardx model arguments", key, a, "no", via,
           paste0("[by design] ", model_by_design[[a]]))
-    } else if (!has_model_check) {
+    } else if (!checked) {
       add("cardx model arguments", key, a, "partial", via,
           "R in method.args / the model's call; not described, its name not checked")
     } else if (nrow(r) && r$kind[1L] %in% model_judged) {

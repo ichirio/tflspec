@@ -32,7 +32,10 @@ list(...)` or in a model's call in `x`: `survival::survfit()` (with
 `survfitKM()`, where its `...` go), `survival::coxph()` (with
 `coxph.control()`), `stats::glm()` (with `glm.control()`), `stats::lm()`
 and `mmrm::mmrm()` (with `mmrm_control()`) -- the Kaplan-Meier, Cox,
-logistic, ANCOVA and MMRM models, catalogued in `inst/ard/model_args.csv`.
+logistic, ANCOVA and MMRM models, catalogued in `inst/ard/model_args.csv`;
+since 2026-11-07 also `MASS::glm.nb()` (a negative binomial rate model,
+weight 2) and `survival::survreg()` (a parametric survival model, weight
+1), each with the control function its `...` reach.
 
 * **yes**: the row's own column writes it, or the catalog describes it
   (its kind and a hint: the GUI shows it) and the check judges the value
@@ -128,6 +131,29 @@ population's `subset`, starting values, multi-state, computing).
 | cardx model arguments (new) | 50.0% (0 / 41) | 97.1% (39 / 2) |
 | weight-3 functions only | 93.6% | 99.6% |
 
+2026-11-07 (wider scope; cards 0.9.0, cardx 0.3.4, still the CRAN
+versions; MASS 7.3-60.0.1, survival 3.8, mmrm 0.3.19): the two models are 19 more
+arguments of 2 functions (by design left out: their starting values,
+fitting routine, `control` written as its parts, the fit's parts).
+
+| Scope (2026-11-07, wider) | 2026-11-07 before | 2026-11-07 after |
+|---|---:|---:|
+| **cards / cardx, weighted** | **99.0%** (451 yes / 21 partial) | **100.0%** (472 / 0) |
+| cards ard_*() | 100.0% | 100.0% |
+| cardx ard_*() | 100.0% | 100.0% |
+| cards post helpers | 100.0% | 100.0% |
+| cards code helpers | 100.0% | 100.0% |
+| cardx CI helpers | 100.0% | 100.0% |
+| cardx model arguments | 89.3% (39 / 21) | 100.0% (60 / 0) |
+| weight-3 functions only | 99.6% | 100.0% |
+
+(2026-11-07 before: this branch before the run (tflspec@next d237a12
+merged), measured by this run's script: `mmrm(covariance =, weights =)`
+taken as R; glm.nb()'s arguments reached the model unchecked (its `...`
+were not known to go to `glm.control()`), survreg()'s names were checked
+but not described: partial.  On the 2026-11-06 scope the run goes from
+99.8% to 100.0%.)
+
 (2026-11-06 before: tflspec@next d220f07 on the wider scope -- a model's
 argument could be written as R in `method.args` and reached the model, but
 was neither described nor its name checked: partial.  On the 2026-11-05
@@ -155,6 +181,37 @@ function, but the catalog did not describe it and its value was not
 judged: partial.  2026-10-31 before: the same, with
 `update_ard_fmt_fun()` in the `post` scope -- written as R in `post`, its
 names checked, its values not judged.)
+
+### Added 2026-11-07
+
+* **MMRM's covariance structure judged** (`mmrm(covariance =)`, kind
+  `covariance`): `method.args = list(covariance = cov_struct("toep", visits
+  = "AVISIT", subject = "USUBJID"))` or `~ ar1(AVISIT | USUBJID)`, for a
+  formula without a structure.  A type mmrm does not have (`"un"`, `~
+  un(...)`: its `cov_types()` of the installed mmrm), `visits = AVISIT`
+  not in quotes, a missing `subject`, or text (`covariance = "us"`) is a
+  warning when the spec is read.
+* **mmrm(weights =) judged** (kind `vector`): a vector as long as the
+  data (`data$WTS`) or the program's name; a column's name in quotes
+  (`weights = "WTS"`) is said -- mmrm() does not look a column up.
+* **A negative binomial rate model** (`MASS::glm.nb()`: exacerbations,
+  relapses, recurrent events -- PROC GENMOD's DIST=NEGBIN): `method =
+  "glm.nb", package = "MASS"` in `regression` / `lsmeans` / `lsmeans_diff`
+  rows, or `x = MASS::glm.nb(...)`.  Its `link` (kind `link`: `log`,
+  `sqrt`, `identity`, a name or text; `link = logit` is said),
+  `init.theta` (above 0), `weights`, `contrasts` and glm.control()'s
+  `maxit` / `epsilon` / `trace` (its `...` go there: a name neither has is
+  said, as `lnik =`).  A test builds the rate ratios from a row and
+  compares them with `cardx::ard_regression(method = "glm.nb", ...)`
+  called by hand.
+* **A parametric survival model** (`survival::survreg()`): `dist` (one of
+  weibull, exponential, lognormal, loglogistic ...), `scale` (0 or more),
+  `robust`, `cluster`, `weights`, `parms`, and survreg.control()'s
+  `maxiter`, `rel.tolerance`, `outer.max`, `debug`.
+* A model number with a floor is judged: `init.theta = 0`, `scale = -1`,
+  `maxit = 0`.
+* `tfl_ard_model_args("glm.nb", "MASS")` / `("survreg", "survival")` list
+  them for a GUI.
 
 ### Added 2026-11-06
 
@@ -416,11 +473,12 @@ Every argument in scope is described and its value judged (since
 5. (since 2026-11-06) A model's argument is checked for the five model
    functions catalogued (survfit, coxph, glm, lm, mmrm); another model
    (`survival::survreg()`, `MASS::glm.nb()`, `nlme::gls()`, a study's own)
-   takes its names as written.  `mmrm(covariance =)` -- a `cov_struct()`
-   call, when the formula has no structure -- is taken as R (partial), and
-   so is `mmrm(weights =)`: a numeric vector as long as the data (`d$W`),
-   not a column name, so it is not judged as one.
-   A list made by the program (`method.args = my_args`) is the program's.
+   takes its names as written.  (Since 2026-11-07 also `MASS::glm.nb()`
+   and `survival::survreg()`, and `mmrm(covariance =, weights =)` are
+   judged.)  Left: `nlme::gls()` (its formula is `model =`, which cardx
+   does not give: not offered), a study's own model, and `cov_struct(group
+   =)`'s column, taken as written.  A list made by the program
+   (`method.args = my_args`) is the program's.
 6. Not in scope by design: `rename_ard_groups_shift()` /
    `_reverse()` (the table code reads the by columns in the row's order:
    reorder `by` instead), `bind_ard()` (tflspec #118), the `mock_*()`
@@ -473,6 +531,13 @@ Percentage: yes counts 1, partial 0.5.
 | 2026-11-04 before / after | 51.6% (326 / 19 / 305 of 650) | 59.0% (326 / 19 / 224 of 569) | 41 / 7 / 67 |
 | 2026-11-05 before / after | 51.6% (326 / 19 / 305 of 650) | 59.0% (326 / 19 / 224 of 569) | 41 / 7 / 67 |
 | 2026-11-06 before / after | 51.6% (326 / 19 / 305 of 650) | 59.0% (326 / 19 / 224 of 569) | 41 / 7 / 67 |
+| 2026-11-07 before / after | 51.6% (326 / 19 / 305 of 650) | 59.0% (326 / 19 / 224 of 569) | 41 / 7 / 67 |
+
+(2026-11-07: rtfreporter@next ccbcfe4 (its changes since 1e1a693 are
+widen_ard()'s labels, plan_digits()' message for a row key's value and the
+{PAGE_HEADING} title row -- which tflspec#703 takes up: no new exported
+argument) and tflspec@next d237a12; the run went to cards / cardx -- the
+table is unchanged.)
 
 (2026-11-06: rtfreporter@next 1e1a693 (its changes since 0872829 are text
 tokens filled once, natural order of long digit runs in file names, wording

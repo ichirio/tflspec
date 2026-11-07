@@ -7,7 +7,8 @@
 test_that("each catalogued model argument is one of the installed function's", {
   d <- .ard_catalog_csv("model_args.csv")
   expect_true(all(d$kind %in% c("logical", "number", "choice", "text", "code",
-                                "variable", "family", "list")))
+                                "variable", "family", "list", "link", "vector",
+                                "covariance")))
   expect_false(anyDuplicated(paste(d$fn, d$arg)) > 0L)
   for (key in unique(d$fn)) {
     has <- .model_arg_names(key)
@@ -139,6 +140,9 @@ test_that("MMRM's degrees of freedom are written in method.args", {
   # mmrm() takes a vector, not a column name: neither form is judged as a column
   expect_no_warning(exact_spec(mmrm_row("method.args = list(weights = WTS)")))
   expect_no_warning(exact_spec(mmrm_row("method.args = list(weights = data$WTS)")))
+  # ... but a column's name in quotes is not a vector
+  expect_warning(exact_spec(mmrm_row("method.args = list(weights = \"WTS\")")),
+                 "mmrm\\(weights = \\) is a numeric vector as long as the data")
   expect_warning(exact_spec(mmrm_row("method.args = list(method = \"KR\")")),
                  "mmrm\\(method = \\) is one of \"Satterthwaite\", \"Kenward-Roger\"")
   expect_warning(exact_spec(mmrm_row("method.args = list(metod = \"Kenward-Roger\")")),
@@ -211,4 +215,103 @@ test_that("method.args reaches the model: the log-log interval of a KM estimate"
   got <- unlist(built$stat[built$stat_name == "conf.low" & at60])
   expect_length(got, 3L)
   expect_equal(sort(unname(got)), sort(unname(lo)), tolerance = 1e-8)
+})
+
+test_that("MMRM's covariance structure in method.args is judged", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("mmrm")
+  mmrm_row <- function(extra) list(
+    method = "lsmeans_diff", dataset = "ADLB", population_id = "SAF",
+    args = paste("formula = AVAL ~ TRTA + AVISIT, method = \"mmrm\", package = \"mmrm\",",
+                 extra))
+  ok <- c(
+    "method.args = list(covariance = cov_struct(\"us\", visits = \"AVISIT\", subject = \"USUBJID\"))",
+    "method.args = list(covariance = mmrm::cov_struct(type = \"toep\", \"AVISIT\", \"USUBJID\"))",
+    "method.args = list(covariance = ~ ar1(AVISIT | USUBJID))",
+    "method.args = list(covariance = my_cov)")
+  for (x in ok) expect_no_warning(exact_spec(mmrm_row(x)), message = x)
+  expect_warning(exact_spec(mmrm_row(
+    "method.args = list(covariance = cov_struct(\"un\", visits = \"AVISIT\", subject = \"USUBJID\"))")),
+    "type \"un\" is not one of mmrm .*'s cov_types\\(\\)")
+  expect_warning(exact_spec(mmrm_row(
+    "method.args = list(covariance = cov_struct(\"us\", visits = AVISIT, subject = \"USUBJID\"))")),
+    "`visits` is a column in quotes \\(\"AVISIT\"\\)")
+  expect_warning(exact_spec(mmrm_row(
+    "method.args = list(covariance = cov_struct(\"us\", visits = \"AVISIT\"))")),
+    "`subject` \\(the column, in quotes\\) is not given")
+  expect_warning(exact_spec(mmrm_row("method.args = list(covariance = ~ un(AVISIT | USUBJID))")),
+                 "un is not one of mmrm")
+  expect_warning(exact_spec(mmrm_row("method.args = list(covariance = \"us\")")),
+                 "mmrm\\(covariance = \\) is cov_struct\\(")
+  m <- tfl_ard_model_args("mmrm", "mmrm")
+  expect_identical(m$kind[match(c("covariance", "weights"), m$arg)],
+                   c("covariance", "vector"))
+})
+
+test_that("a negative binomial model (MASS::glm.nb) has its arguments checked", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("MASS")
+  nb <- function(extra) list(
+    method = "regression", population_id = "SAF",
+    args = paste("formula = AGE ~ TRT01A + SEX, method = \"glm.nb\", package = \"MASS\",",
+                 "exponentiate = TRUE,", extra))
+  # glm.nb()'s own names and glm.control()'s, where its `...` go
+  expect_no_warning(exact_spec(nb("method.args = list(link = log, init.theta = 2, maxit = 50)")))
+  expect_no_warning(exact_spec(nb("method.args = list(link = \"sqrt\")")))
+  expect_warning(exact_spec(nb("method.args = list(lnik = log)")),
+                 "gives `lnik`, which MASS .*'s glm.nb\\(\\) does not have")
+  expect_warning(exact_spec(nb("method.args = list(link = logit)")),
+                 "glm.nb\\(link = \\) is one of log, sqrt, identity")
+  expect_warning(exact_spec(nb("method.args = list(init.theta = 0)")),
+                 "glm.nb\\(init.theta = \\) is a number above 0")
+  expect_warning(exact_spec(nb("method.args = list(weights = \"WTS\")")),
+                 "glm.nb\\(weights = \\) is a column of the data, not in quotes")
+  # a model's call in x
+  expect_warning(exact_spec(list(
+    method = "regression", population_id = "SAF",
+    args = "x = MASS::glm.nb(AGE ~ TRT01A, data = data, lnik = log)")),
+    "ard_regression\\(x = glm.nb\\(\\)\\) gives `lnik`")
+  g <- tfl_ard_model_args("glm.nb", "MASS")
+  expect_identical(g$fn[1L], "MASS::glm.nb")
+  expect_true(all(c("link", "init.theta", "maxit") %in% g$arg))
+  expect_true(all(g$described[match(c("link", "init.theta"), g$arg)]))
+})
+
+test_that("a parametric survival model (survival::survreg) has its arguments checked", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("survival")
+  sr <- function(extra) list(
+    method = "regression", dataset = "ADTTE", population_id = "SAF",
+    args = paste("formula = survival::Surv(AVAL, 1 - CNSR) ~ TRTA,",
+                 "method = \"survreg\", package = \"survival\",", extra))
+  expect_no_warning(exact_spec(sr("method.args = list(dist = \"lognormal\", maxiter = 50)")))
+  expect_warning(exact_spec(sr("method.args = list(dist = \"log-normal\")")),
+                 "survreg\\(dist = \\) is one of \"weibull\", \"exponential\"")
+  expect_warning(exact_spec(sr("method.args = list(scale = -1)")),
+                 "survreg\\(scale = \\) is a number at least 0")
+  expect_warning(exact_spec(sr("method.args = list(dsit = \"weibull\")")),
+                 "gives `dsit`, which survival .*'s survreg\\(\\) does not have")
+})
+
+test_that("method.args reaches a negative binomial model: its rate ratio", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("MASS")
+  skip_if_not_installed("broom.helpers")
+  adam <- exact_data()
+  dir <- exact_dir(adam)
+  on.exit(unlink(dir, recursive = TRUE))
+  cs <- list(
+    row = list(method = "regression", dataset = "ADSL", population_id = "SAF",
+               args = paste("formula = AGE ~ TRT01A, method = \"glm.nb\",",
+                            "package = \"MASS\", exponentiate = TRUE,",
+                            "method.args = list(link = log, init.theta = 5)")),
+    hand = paste("cardx::ard_regression(data, formula = AGE ~ TRT01A,",
+                 "method = \"glm.nb\", package = \"MASS\", exponentiate = TRUE,",
+                 "method.args = list(link = log, init.theta = 5))"))
+  r <- exact_run(cs, adam, dir)
+  expect_true(isTRUE(r$same), info = r$error)
 })
