@@ -9,6 +9,12 @@ test_that("the review levels: a kind each, the default for a kind not said, none
   expect_identical(lv(list(listing = "none", figure = FALSE)), c(figure = NA, table = 2L, listing = NA))
   expect_error(lv(list(tables = 2)), "the kinds are figure, table, listing; not tables")
   expect_error(lv(list(figure = "high")), "figure is 0 to 3, or none; not high")
+  # a list of values, or YAML's yes (TRUE), is no level
+  expect_error(lv(c(1, 2)), "figure is one value, 0 to 3 or none; not a list (1, 2)", fixed = TRUE)
+  expect_error(lv(list(table = c(0L, 3L))), "table is one value, 0 to 3 or none; not a list", fixed = TRUE)
+  expect_error(lv(TRUE), "figure is 0 to 3, or none; not yes / true", fixed = TRUE)
+  expect_error(lv(list(listing = TRUE)), "listing is 0 to 3, or none; not yes / true", fixed = TRUE)
+  expect_identical(lv(list(listing = FALSE)), c(figure = 3L, table = 2L, listing = NA))
 })
 
 test_that("a table's facts: its header, rows, empty cells; its pages, one over full", {

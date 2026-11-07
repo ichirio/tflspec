@@ -32,7 +32,6 @@ You process ONE request completely, and then stop at the menu:
    answer does not settle the item, ask again, saying what was unclear:
    **three times at most** for one item; then take the likeliest choice and
    mark it *to confirm* (step 6).
-3. Record the answers (step 4), write the drafts (steps 5 to 7), then build
-   and check them at the study's review depth (*Build and check*). Write the
+3. Record the answers (step 4), write the drafts (steps 5 to 7){{one_build}}. Write the
    decisions, the drafts and the row in `ai/progress.md` as you go.
 4. **Stop and show the menu** (*The menu*, below).

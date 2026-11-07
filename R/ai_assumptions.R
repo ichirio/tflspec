@@ -202,14 +202,18 @@ tfl_ai_assumptions <- function(study_dir) {
 .ai_impact_class <- function(where, item) {
   where <- trimws(ifelse(is.na(where), "", as.character(where)))
   item <- trimws(ifelse(is.na(item), "", as.character(item)))
-  one <- paste0("population|analysis set|denominator|filter|where|arm|treatment|",
-                "parameter|visit|baseline|worst|missing|counted|derivation")
-  two <- "rows|statistics|sort|order|levels|categories|total"
+  # (whole words, with a plural or a verb ending: "border" is not "order";
+  # an underscore divides words, as in `treatment_var`)
+  item <- gsub("_", " ", item, fixed = TRUE)
+  words <- function(w) paste0("\\b(?:", w, ")(?:s|es|ed|ing)?\\b")
+  one <- words(paste0("population|analysis set|denominator|filter|where|arm|treatment|",
+                      "parameter|visit|baseline|worst|missing|counted|derivation"))
+  two <- words("rows|statistics|sort|order|levels|categories|total")
   # (column widths are the look, wherever they are written)
   ifelse(grepl("width", item, ignore.case = TRUE), 3L,
-         ifelse(grepl("^(data|ard)", where, ignore.case = TRUE) | grepl(one, item, ignore.case = TRUE), 1L,
+         ifelse(grepl("^(data|ard)", where, ignore.case = TRUE) | grepl(one, item, ignore.case = TRUE, perl = TRUE), 1L,
                 ifelse(grepl("^(content|codelists|template)", where, ignore.case = TRUE) |
-                         grepl(two, item, ignore.case = TRUE), 2L, 3L)))
+                         grepl(two, item, ignore.case = TRUE, perl = TRUE), 2L, 3L)))
 }
 
 # Does an assumption's `from` cite a document (the shell, the SAP, the TOC,

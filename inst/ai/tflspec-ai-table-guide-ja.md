@@ -179,8 +179,9 @@ ADaM の要約で、データではありません。`AGENTS.md` に、開いて
 1. VS Code で試験の `ai` フォルダを開き（`ai/<試験>.code-workspace`（`<試験>` は試験フォルダの名前。例では `ai/mystudy.code-workspace`）をダブルクリック。
    エージェントにはそのフォルダだけが見え、`spec/`・プログラム・データは見えません）、
    エージェントのチャットに `ai/agent_prompt.md` の
-   文を 1 回だけ渡します。エージェントは `ai/requests/index.md` の依頼を順に、
-   1 つずつすべて行います。
+   文を 1 回だけ渡します。既定の `run: one` では、`ai/requests/index.md` の依頼を
+   まず 1 つだけ処理してメニューで止まり、続け方はそこで選びます。`run: batch` では
+   依頼をまとめて処理します（下の「エージェントが依頼を進めるやり方（`run`）」を参照）。
 2. エージェントが、各帳票を決めるのにまだ決まっていないこと（解析対象集団、
    パラメータ、治療の変数、パーセントの分母、何を数えるか、欠測値、サブグループの
    条件）を、番号付きで**質問**します。質問には帳票の id とタイトル、選択肢と既定が
@@ -200,7 +201,8 @@ ADaM の要約で、データではありません。`AGENTS.md` に、開いて
    `ai:` の下には、`assumptions`（それぞれ `from: D<n>`）と `confirm`（要確認）が
    入ります。見出し行、ページ、罫線、フォントは書きません。それらは試験の
    既定とビルダーが担当します。そのあとは `run` に従って進みます（下記）。
-5. すべての依頼が終わると止まり、書いたファイル、足した決定、要確認のことを知らせます。
+5. `run: one` では、依頼を 1 つ終えるたびにメニューで止まります（下の `run` の節を参照）。
+   すべての依頼が終わると止まり、書いたファイル、足した決定、要確認のことを知らせます。
    それを確かめてください（手順 6）。依頼の合間に止めて、あとで **「c」**（または「continue」）と
    伝えることもできます。エージェントは `ai/progress.md` から続け、あなたの決定は残ります。
 
@@ -456,7 +458,7 @@ r  <- tfl_ai_prepare(d, file.path(ex, "onco_toc_shell.xlsx"), adam = "adam",
 # the stored drafts stand in for the agent's: one a report
 invisible(file.copy(list.files(file.path(ex, "drafts"), full.names = TRUE),
                     file.path(d, "ai", "spec", "outputs"), overwrite = TRUE))
-tfl_ai_collect_answers(d)            # 5 reports in 5 requests (the figure its own): ok 5 ...
+tfl_ai_collect_answers(d)            # 5 reports in 4 requests (the figure its own): ok 5 ...
 ```
 
 `ai/` フォルダ（依頼、決定、下書き）は残してください。共有は社内だけに。
