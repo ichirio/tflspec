@@ -1219,6 +1219,8 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
         # .plan_header_lines() makes it; one that is no plain value, or with no
         # lines to span, stays the rest -- with the lines it belongs to
         csp <- NULL
+        # (`lines` with no span is "each" in rtfreporter; a blank span cell is "one")
+        if (is.null(named$span) && !is.null(lines)) csp <- .lines_span(lines, "each")
         if (!is.null(named$span)) {
           csp <- if (!is.null(lines)) .lines_span(lines, named$span)
           if (is.null(csp)) {

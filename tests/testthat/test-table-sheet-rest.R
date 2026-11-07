@@ -163,16 +163,14 @@ trc_cases <- list(
     },
     rest = list(plan_col_header = "header_sep")),
   lines_header_sep = list(
-    # (the cells carry no span, and a blank one is "one cell over the columns" while
-    # `lines` with no `span` is "each": the table differs, as before this change;
-    # the next test says so)
-    built = FALSE,
     content = list(trc_head, tfl_item("plan_col_header", list(
       lines = list(list(group = "", label = "Parameter", .values = "{col}")),
       header_sep = " / "))),
     cells = function(sh) {
       expect_identical(trc_col(sh, "col_header", "cols"), c("group", "label", ".values"))
       expect_identical(trc_col(sh, "col_header", "text"), c(NA, "Parameter", "{col}"))
+      # (`lines` with no `span` is "each": written, a blank cell would be one cell over the columns)
+      expect_identical(trc_col(sh, "col_header", "span"), rep("each", 3))
     },
     rest = list(plan_col_header = "header_sep")),
   lines_span = list(
@@ -279,18 +277,14 @@ test_that("round trip: the item's arguments and the table built are the original
   }
 })
 
-test_that("header lines with no span: the cells say none, as before", {
+test_that("header lines with no span (the sample defaults' form): the built header is the same after the round trip", {
   skip_if_not_installed("cards")
   ard <- trc_ard()
-  d <- trc_study(trc_cases$lines_header_sep$content)
+  d <- trc_study(list(trc_head, tfl_item("plan_col_header", list(
+    lines = list(list(group = "", .values = "{col}"), list(group = "Characteristic", .values = "Arm"))))))
   sh <- tfl_sheets_from_yaml(d)
-  expect_true(all(is.na(trc_col(sh, "col_header", "span"))))
-  # rtfreporter reads `lines` with no `span` as "each" and a header cell with a blank
-  # span as one cell over its columns: the built header differs, with or without the rest
-  d2 <- trc_study(list(trc_head, tfl_item("plan_col_header", list(
-    lines = list(list(group = "", label = "Parameter", .values = "{col}"))))))
-  expect_false(isTRUE(all.equal(unclass(trc_pages(d2, ard)[[1L]])$col_header,
-                                unclass(trc_pages(trc_trip(d2)$to, ard)[[1L]])$col_header)))
+  expect_identical(trc_col(sh, "col_header", "span"), rep("each", 4))
+  trc_same(trc_pages(d, ard), trc_pages(trc_trip(d, sh)$to, ard))
 })
 
 test_that("a cell edited after writing takes effect", {
