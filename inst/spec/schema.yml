@@ -837,7 +837,10 @@ rtf_footer:
           / _LISTING / _FIGURE change the words), {OUTPUT_TITLE} {OUTPUT_POPULATION}
           {OUTPUT_SECTION} {STUDY_ID} (blank unless the tokens sheet says them; a
           line left with nothing but them is not printed), and your own from the tokens
-          sheet ({STUDY} ...).'
+          sheet ({STUDY} ...). A titles line whose whole text is {PAGE_HEADING} is where
+          the page''s heading goes (a table with a page a parameter: "Parameter: ALT"),
+          in that line''s alignment; with no such line the heading is the last title
+          line, and a page with no heading prints nothing there.'
   - sheet: study
     description: 'What is one for the whole study: one row a key. Table / report keys:
       rounding, output_path, program_dir. ARD keys: id, output, source. No output_id.'

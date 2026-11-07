@@ -14,7 +14,7 @@ The table template \code{pk_conc}, layout \code{listing_summary}. Its program is
    \code{data} \tab other \tab call \tab ADPC \tab  \tab the dataset of concentrations \cr
    \code{where} \tab other \tab call \tab  \tab  \tab the records kept (R), e.g. ANL01FL == "Y" \cr
    \code{by} \tab other \tab call \tab PARAM, TRT01A \tab settings.treatment \tab the groups: a page each (an analyte, an arm), the summary's too \cr
-   \code{heading} \tab other \tab call \tab  \tab  \tab a page's name in the titles (\{<group>\}: its value); NULL: the groups' values, a line each \cr
+   \code{heading} \tab other \tab call \tab  \tab  \tab a page's name in the titles (\{<group>\}: its value); NULL: the groups' values, a line each; the last title line, or where the title line '\{PAGE_HEADING\}' is \cr
    \code{time} \tab other \tab call \tab ATPT \tab  \tab the time point's variable (the columns) \cr
    \code{time_order} \tab other \tab call \tab ATPTN \tab  \tab the time points' order variable; NULL: by name \cr
    \code{times} \tab other \tab call \tab  \tab  \tab the time points, in order; NULL: by time_order \cr
