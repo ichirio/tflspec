@@ -172,6 +172,30 @@ test_that("a code listing's and the listing template's widths are fitted to the 
   expect_length(suppressMessages(tfl_fill_widths(d)), 0L)
 })
 
+test_that("the listing template's `by` it does not print gets no width and takes none from the others", {
+  fw_skip()
+  d <- fw_study()
+  cols <- fw_tpl_cols()[-6L]  # no Severity column: AESEV is the hidden `by`
+  by_tpl <- function(id, brk) {
+    o <- fw_tpl(id, cols)
+    o$template$args$by <- "AESEV"
+    o$template$args$by_break <- brk
+    o
+  }
+  fw_put(d, fw_tpl("L-0", cols))
+  fw_put(d, by_tpl("L-P", "page"))
+  fw_put(d, by_tpl("L-B", "block"))
+  set <- suppressMessages(tfl_fill_widths(d))
+  expect_setequal(set, c("L-0", "L-P", "L-B"))
+  w0 <- fw_tpl_w(d, "L-0")
+  expect_false(anyNA(w0))
+  # the printed columns are fitted as if the hidden one were not there
+  expect_identical(fw_tpl_w(d, "L-P"), w0)
+  expect_identical(fw_tpl_w(d, "L-B"), w0)
+  # and the template's columns are its own: no width for the `by` variable
+  expect_length(tfl_read_output(fw_file(d, "L-P"))$template$args$columns, length(cols))
+})
+
 test_that("a width a person set stays; the fit gives the other columns theirs", {
   fw_skip()
   d <- fw_study()
