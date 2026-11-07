@@ -1845,6 +1845,12 @@ rtf_footer:
           that pattern -- the rows whose output_id is @<name>, which say only what
           differs from Standard. The report''s own rows go over its pattern''s.'
         example: Compact
+      - column: extends
+        description: 'What the report extends, when the pattern cell alone doesn''t
+          say it: a | b in order (defaults | patterns/p), or none. Blank: the pattern
+          cell''s pattern, then the defaults. Its first pattern has to be the pattern
+          cell''s.'
+        example: defaults | patterns/Compact
       - column: data_code
         description: 'The report''s own code for its data step, instead of the definition:
           R that leaves data (a table, a listing) or df (a figure); the datasets the
