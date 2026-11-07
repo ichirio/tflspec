@@ -14,7 +14,7 @@
 #' `analysis_data`, `analyses`, `codelists`, `tokens`, `header`, `footer`,
 #' `titles`, `footnotes`, `page`, `report`, `listing_cols`, and
 #' `_not_in_xlsx` (what the workbook does not hold: `content:`, `!r`
-#' values, nested calls, a figure's plot).  Lists are written `a | b`;
+#' values, nested calls, a figure's plot, the data catalog's `groups`).  Lists are written `a | b`;
 #' R text as it is (the columns that hold R are known).  The workbook is a
 #' view for Excel; an import back changes only these rows, by their keys.
 #'
@@ -42,10 +42,12 @@ tfl_write_spec_xlsx <- function(dir, path) {
   # the data catalog
   add_rows("datasets", lapply(s$data$datasets %||% list(), function(e) .flat_map(e, "datasets", NA, note)))
   add_rows("populations", lapply(s$data$populations %||% list(), function(e) .flat_map(e, "populations", NA, note)))
-  add_rows("records", lapply(s$data$records %||% list(), function(e) {
-    m <- .flat_map(e, "records", NA, note); m$record_id <- m$id; m$id <- NULL; m
-  }))
-  add_rows("objects", lapply(s$data$objects %||% list(), function(e) .flat_map(e, "objects", NA, note)))
+  add_rows("records", .flat_records_rows(s, note))
+  add_rows("objects", .flat_study_objects_rows(s, note))
+  # (condition-defined groups have no sheet in this workbook: said, not dropped, #689)
+  if (length(s$data$groups)) {
+    note(NA_character_, "groups", "condition-defined groups (data.yml groups:) have no sheet in this workbook")
+  }
   # the defaults and patterns: the page parts, the code list templates
   scopes <- c(list(list(id = NA_character_, layer = s$defaults)),
               lapply(names(s$patterns), function(n) list(id = paste0("@", n), layer = s$patterns[[n]])))
@@ -58,7 +60,7 @@ tfl_write_spec_xlsx <- function(dir, path) {
     o <- outs[[id]]
     if (inherits(o$content, "tfl_r")) note(id, "content", "the content as R code is not rows")
     else if (length(o$content)) note(id, "content", "the layers (content) are not rows")
-    for (e in o$ard$objects %||% list()) add_rows("objects", list(.flat_map(c(list(output_id = id), e), "objects", id, note)))
+    add_rows("objects", .flat_report_objects_rows(o, id, note))
     for (e in o$ard$analysis_data %||% list()) add_rows("analysis_data", list(.flat_map(c(list(output_id = id), e), "analysis_data", id, note)))
     for (e in o$ard$analyses %||% list()) {
       if (!is.null(e$denominator)) e$denominator <- .den_cell(e$denominator)
@@ -102,6 +104,20 @@ tfl_write_spec_xlsx <- function(dir, path) {
   written <- c(written, "_not_in_xlsx")
   openxlsx::saveWorkbook(wb, path, overwrite = TRUE)
   invisible(list(path = path, sheets = written, not_in_xlsx = nxd))
+}
+
+# the rows the records and objects sheets are written from (also what the
+# import compares an edited sheet with, tfl_import_spec_xlsx())
+.flat_records_rows <- function(s, note) {
+  lapply(s$data$records %||% list(), function(e) {
+    m <- .flat_map(e, "records", NA, note); m$record_id <- m$id; m$id <- NULL; m
+  })
+}
+.flat_study_objects_rows <- function(s, note) {
+  lapply(s$data$objects %||% list(), function(e) .flat_map(e, "objects", NA, note))
+}
+.flat_report_objects_rows <- function(o, id, note) {
+  lapply(o$ard$objects %||% list(), function(e) .flat_map(c(list(output_id = id), e), "objects", id, note))
 }
 
 # a map as one row of text cells: scalars as they are, vectors `a | b`, an

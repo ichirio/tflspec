@@ -460,12 +460,16 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
   # (the study sheet's rounding is the setup's option, tfl_report_setup_code());
   # the items no column says (content_more), each in its place, too
   items <- .items_for_program(.plan_content_more(.plan_content_items(sp), sp$tables))
+  # (a normalize_ard() in content_more is the table's own: not one more
+  # from the definitions)
   if (isTRUE(normalize)) {
     id <- output_id %||% attr(sp, "output_id")
-    nz <- .normalize_spec_args(sp, ard_spec, id, "tfl_table_code", guess = TRUE)
+    own_nz <- any(vapply(items, function(it) identical(it$fn, "normalize_ard"), NA))
+    nz <- if (!own_nz) list(tfl_item("normalize_ard",
+      .normalize_spec_args(sp, ard_spec, id, "tfl_table_code", guess = TRUE)))
     # plan_levels() the ARD already says, left out as from a YAML file
     # (.levels_prune()); not when the program's data part makes the data
-    items <- c(list(tfl_item("normalize_ard", nz)), .levels_prune_sheets(items, sp, ard_spec, id))
+    items <- c(nz, .levels_prune_sheets(items, sp, ard_spec, id))
   }
   .content_table_code(items, data = data, plan = plan, pipe = pipe)
 }
@@ -709,7 +713,10 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
     items <- Filter(function(it) !identical(it$fn, "table_plan"), items)
   }
   for (it in more) items <- .insert_by_rank(items, it)
-  .table_plan_first(items)
+  # (a normalize_ard() there is the table's own, the tables row's overall_label /
+  # stack cells on it: tfl_table_code(), the YAML converter and the
+  # app's reading of the sheets all come through here)
+  .table_plan_first(.nz_with_row(items, tables))
 }
 
 # A call as the program writes it: an argument the schema marks
@@ -764,6 +771,46 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
   }
   for (i in seq_along(seq_v)) vars[[seq_v[i]]]$order <- i
   vars
+}
+
+# The arguments of an item that .plan_sheets_from_content() has no place
+# for: the named ones its verb's branch does not read, and unnamed ones
+# where the verb takes none.  The bridge notes them as a miss, so the caller
+# keeps the item whole in content_more instead of dropping them (#689).
+# `NULL` below: the verb's names are data (a variable's, a statistic's), or
+# the verb is no sheet's (it is a miss anyway).
+.bridge_unread <- function(fn, arg_names, n_pos) {
+  layer <- function(prefix) {
+    cn <- names(.ard_spec_types$layout)
+    sub(paste0("^", prefix), "", cn[startsWith(cn, prefix)])
+  }
+  reads <- switch(fn,
+    table_plan = c("cols", "rows", "label", "show_keys", "stat", "value"),
+    plan_sort = c("stat", "keep"),
+    plan_total = c("label", "position"),
+    plan_filter = c("any", "parents", "by"),
+    plan_stub = c("vars", "name", "indent", "group_summary", "before", "heading"),
+    plan_paginate_group = c("col", "keep", "heading", "heading_at"),
+    plan_row_group = c("mode", "collapse", "group_col"),
+    plan_blanks = c("where", "first", "last", "counted"),
+    plan_paginate_rows = layer("pages_"),
+    plan_paginate_cols = layer("colpages_"),
+    plan_style = names(.ard_spec_types$style),
+    plan_cell_style = c(names(.ard_spec_types$cell_styles), "border"),
+    plan_hide = character(),
+    plan_col_header = c("header", "lines", "values", "col_header_align"),
+    plan_columns = c("widths", "decimal", "row_title", "auto_width", "sep"),
+    NULL)
+  # (the verbs whose names are data: plan_levels, plan_labels, plan_nest,
+  # plan_stat_groups, plan_compare, plan_digits, plan_cells -- no name guard)
+  by_name <- c("plan_levels", "plan_labels", "plan_nest", "plan_stat_groups",
+               "plan_compare", "plan_digits", "plan_cells")
+  out <- if (is.null(reads)) character() else setdiff(arg_names, reads)
+  if (n_pos && (!is.null(reads) || fn %in% by_name) &&
+      !fn %in% c("plan_sort", "plan_hide", "plan_filter", "plan_cells")) {
+    out <- c(out, "an unnamed argument")
+  }
+  out
 }
 
 # A table's content written to the sheets a workbook has -- the inverse of
@@ -886,6 +933,14 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
     nm <- names(a) %||% rep("", length(a))
     pos <- a[!nzchar(nm)]
     named <- a[nzchar(nm)]
+    # an argument no branch below reads, or a positional one the verb's
+    # branch does not take, would be dropped without a word: the item goes
+    # whole to the caller's content_more instead (#689)
+    unread <- .bridge_unread(fn, names(named), length(pos))
+    if (length(unread)) {
+      miss(fn, sprintf("%s: no sheet says it", paste(unread, collapse = ", ")))
+      next
+    }
     if (fn %in% seen && !fn %in% c("plan_cell_style", "plan_levels", "plan_labels",
                                    "plan_digits")) {
       miss(fn, "a second call (a sheet holds one)"); next
@@ -954,6 +1009,10 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
         }
       },
       plan_labels = {
+        # a variable's heading is one cell: a second text for it (from this
+        # call or an earlier one) is not "put together" with the first --
+        # the item goes whole to content_more (#689)
+        twice <- function(v, x) v %in% labelled && !identical(vars[[v]]$label, x)
         for (v in names(named)) {
           x <- named[[v]]
           if (is.list(x) && length(x) &&
@@ -964,6 +1023,9 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
           if (identical(v, "variable") && is.character(x) && !is.null(names(x)) &&
               !anyNA(names(x)) && all(nzchar(names(x)))) {
             for (n in names(x)) {
+              if (twice(n, unname(x[[n]]))) {
+                miss(fn, sprintf("%s: a second text for its heading", n)); next
+              }
               var_row(n); vars[[n]]$label <- unname(x[[n]])
               labelled <- c(labelled, n)
             }
@@ -985,6 +1047,9 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
           }
           if (!is.character(x) || length(x) != 1L) {
             miss(fn, sprintf("%s: a value's labels stay in code", v)); next
+          }
+          if (twice(v, x)) {
+            miss(fn, sprintf("%s: a second text for its heading", v)); next
           }
           var_row(v); vars[[v]]$label <- x
           labelled <- c(labelled, v)

@@ -30,7 +30,8 @@ than their content (at most 30 characters), value columns of 8
 characters (a cell on two lines), unless that leaves the row headings
 less than two value columns (16 characters): then all columns equal and
 the row headings two;
-a listing's columns get a width from their variables and headers.  Each
+a listing's columns get a width from their variables and headers (the
+first guess; see below).  Each
 report it writes widths into gets an assumption in
 \verb{spec/_assumptions.yml} (item \code{widths}): the widths are the default ones,
 set for now.  Its program (\code{\link[=tfl_report_code]{tfl_report_code()}}) then writes them too.
@@ -38,6 +39,18 @@ set for now.  Its program (\code{\link[=tfl_report_code]{tfl_report_code()}}) th
 \details{
 A report that says its widths is left as it is.  A table that cannot be
 built (its data missing) is left too, and named in a message.
+
+A listing (code, or the \code{listing} template) whose data can be read gets
+its widths from \code{rtfreporter::fit_listing_widths()} instead: the records
+as its program reads them (its \code{where}, its subjects), the report's page
+and font, written as whole numbers (\code{listing_col(width = )}; for the
+template, the \code{width} of each entry of \verb{template: args: columns:}), and
+its assumption's value is \verb{fitted widths} (else \verb{default widths}).  A
+column that has a width is never changed; the others are fitted around it.
+Where the data cannot be read (no ADaM yet, a column the data lacks, an
+older rtfreporter, columns too many for the page), a code listing gets
+the first guess, as above, and the template is left as it is.  Reading
+the data never makes the function fail.
 }
 \examples{
 \donttest{

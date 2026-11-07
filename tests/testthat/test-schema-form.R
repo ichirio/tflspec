@@ -50,3 +50,19 @@ test_that("plan_style()'s look takes its values: choices, numbers, logicals", {
   expect_false(ok(list(bold = "yes")))
   expect_false(ok(list(header_row_height_twips = "tall")))
 })
+
+test_that("plan_cells(stats = ): the schema's values are rtfreporter's, cells and rows", {
+  ty <- tfl_schema("plan_cells")$args$stats$type
+  expect_identical(ty, "enum[cells|rows]")
+  for (v in c("cells", "rows")) {
+    expect_identical(nrow(tfl_schema_check(tfl_item("plan_cells", list(stats = v)))), 0L, info = v)
+  }
+  bad <- tfl_schema_check(tfl_item("plan_cells", list(stats = "columns")))
+  expect_identical(bad$level, "error")
+  expect_match(bad$message, "cells, rows", fixed = TRUE)
+  # the sheets bridge takes the same two
+  for (v in c("cells", "rows")) {
+    sp <- tflspec:::.plan_sheets_from_content(list(tfl_item("plan_cells", list(stats = v))), "T-1")
+    expect_identical(sp$tables$stats, v)
+  }
+})

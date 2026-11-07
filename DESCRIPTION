@@ -44,6 +44,7 @@ Suggests:
     cards (>= 0.8.0),
     cardx (>= 0.3.1),
     dplyr,
+    effectsize,
     emmeans,
     ggh4x,
     ggnewscale,
