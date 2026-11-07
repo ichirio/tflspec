@@ -53,6 +53,7 @@ test_that("a token's name follows rtfreporter's rule", {
   expect_error(bad("1ST"), "upper case")
   expect_error(bad("PAGE"), "rtfreporter's own")
   expect_error(bad("PROGRAM_FULL"), "rtfreporter's own")
+  expect_error(bad("PAGE_HEADING"), "rtfreporter's own")
   expect_error(bad(NA), "needs a `name`")
   # one row a name in a scope
   expect_error(tk_spec(data.frame(output_id = c("T1", "T1"), name = "STUDY",
