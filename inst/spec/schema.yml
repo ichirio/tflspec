@@ -150,7 +150,7 @@ plan_cells:
   description: How the statistics become cell text.
   dots: {style: named, type: "template|map<string, template|list<guard|template>>|call<cell_rows>|list<guard|template>", description: "By variable, context, kind (continuous / categorical), stat group or `default`: one template, one a printed row (named by its label), cell_rows() for a cell of several lines, or guards (`!r \"n == 0 ~ '0'\"`) before the template, for the kind or for one of its rows.", example: {categorical: "{n:.0f} ({p:.1f%})", continuous: {"Mean (SD)": "{mean:.1f} ({sd:.2f})"}}}
   args:
-    stats: {label: "Statistics as", help: "How the statistics are laid out: \"cells\" one template a cell (n (%) in one cell), \"rows\" each statistic a row of its own. Blank: cells. e.g. \"rows\"", type: "enum[columns|rows]"}
+    stats: {label: "Statistics as", help: "How the statistics are laid out: \"cells\" one template a cell (n (%) in one cell), \"rows\" each statistic a row of its own. Blank: cells. e.g. \"rows\"", type: "enum[cells|rows]"}
     value: {label: "Values used", help: "Which value a template's {x} reads: the number (stat), which the template formats, or the ARD's formatted text (stat_fmt). Blank: stat. e.g. \"stat_fmt\"", type: string}
     na: {label: "Text for missing", help: "The text of a cell no template could fill (a statistic the ARD does not have). Blank: empty. e.g. \"-\"", type: string}
     notes: {label: "Notes of unused statistics", help: "FALSE: no note of the ARD's statistics that no template uses. Blank (TRUE): such statistics are listed when the table is made. e.g. FALSE", type: logical}
@@ -286,7 +286,7 @@ plan_style:
     border_first_row: {label: "First row's border", help: "The rule over the table's first row (the top of the table). e.g. \"top\"", type: "call<rtf_border>"}
     border_last_row: {label: "Last row's border", help: "The rule under the table's last row (the foot of the table). e.g. \"bottom\"", type: "call<rtf_border>"}
     align_count_pct: {main: true, label: "Align n (%)", type: "logical", help: "TRUE: the n and the (%) of a count cell line up from row to row. e.g. TRUE"}
-    border: {main: true, label: "Borders", type: "string", help: "The table's borders: \"tfl\" (rules over and under the header and under the last row) or \"none\"; another style as R (rtf_border()). Blank: tfl. e.g. \"none\""}
+    border: {main: true, label: "Borders", type: "string|call<rtf_border>", help: "The table's borders: \"tfl\" (rules over and under the header and under the last row) or \"none\"; another style as a border ({fn: rtf_border, args: {all: true, inside_h: true}}). Blank: tfl. e.g. \"none\""}
     font_size_half_points: {main: true, label: "Font size (half points)", type: "integer", help: "The table's font size in half points (18 = 9 pt). Blank: the document's. e.g. 16"}
     font: {label: "Font", help: "The table's font. Blank: the document's font. e.g. \"Arial\"", type: "string|vec<string, string>"}
     row_height_exact: {label: "Exact row height", help: "TRUE: the rows' height is exact (a longer text is cut); FALSE: it is the least height (a row grows). e.g. TRUE", type: "logical"}
@@ -434,10 +434,21 @@ plan_after:
 rtf_border:
   package: rtfreporter
   args:
-    top: {type: "logical|string"}
-    bottom: {type: "logical|string"}
-    left: {type: "logical|string"}
-    right: {type: "logical|string"}
+    all: {type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>", description: "The four outer edges at once; a side named wins over it."}
+    top: {type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>"}
+    bottom: {type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>"}
+    left: {type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>"}
+    right: {type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>"}
+    inside_h: {type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>", description: "The rules between the rows."}
+    inside_v: {type: "logical|enum[single|double|thick|dash|dot|none]|call<rtf_border_line>", description: "The rules between the cells."}
+
+rtf_border_line:
+  package: rtfreporter
+  description: "One side of a border with a look of its own: {fn: rtf_border_line, args: {style: double, width: 30, color: \"#003366\"}}."
+  args:
+    style: {type: "enum[single|double|thick|dash|dot|none]", description: "The line's style (default single); none removes an inherited rule."}
+    width: {type: integer, description: "The line's weight in twips (default 15, about 0.5 pt)."}
+    color: {type: string, description: "The line's colour as a hex string, e.g. \"#003366\" (default black)."}
 
 normalize_ard:
   package: rtfreporter
@@ -689,6 +700,7 @@ rtf_document:
     font_table: {type: "list<map<string, string|vec<enum[latin|east_asian|complex|hansi], string>>>", description: "The fonts, the first the document's: [{name: Arial}]; a name a family per script slot: [{name: {latin: Times New Roman, east_asian: MS Mincho}}]."}
     font_lang: {type: "vec<enum[latin|east_asian|complex], enum[ja|zh-Hans|zh-Hant|ko|ar|he|en]>", description: "The language of a font slot: {east_asian: ja}."}
     watermark: {type: "string|call<rtf_watermark>", description: "A word drawn behind every page (DRAFT), or its look too: {fn: rtf_watermark, args: {text: DRAFT, color: \"#FF0000\"}}."}
+    color_table: {type: "list<string>", description: "Colours declared in the document's colour table ahead, as \"#RRGGBB\": [\"#003366\", \"#C9372C\"] (the colours borders and cells use are added for you)."}
     program: {type: string}
     program_fallback: {type: string}
 
@@ -774,6 +786,7 @@ rtf_header:
     cell_padding_top_twips: {type: integer}
     cell_padding_bottom_twips: {type: integer}
     drop_empty_rows: {type: logical, description: "TRUE: a line whose own tokens are all empty is left out."}
+    color: {type: string, description: "The band's text colour, \"#7F7F7F\" (blank: the document's, black); added to the colour table."}
 
 rtf_footer:
   package: rtfreporter
@@ -791,6 +804,7 @@ rtf_footer:
     cell_padding_top_twips: {type: integer}
     cell_padding_bottom_twips: {type: integer}
     drop_empty_rows: {type: logical, description: "TRUE: a line whose own tokens are all empty is left out."}
+    color: {type: string, description: "The band's text colour, \"#7F7F7F\" (blank: the document's, black); added to the colour table."}
 
 # ---- the spec sheets' columns: the help of each, in the sheets' order -------
 # What tfl_spec_columns() returns (the xlsx's header comments, the GUI's ?,
@@ -1012,9 +1026,10 @@ rtf_footer:
         example: AGE
       - column: parent
         description: 'The analysis this one runs inside: an analysis of the same report
-          whose method is cards::ard_stack (several analyses on the same data and
-          by, with the by counts and the total N), cards::ard_strata (within subgroups)
-          or cards::ard_pairwise (each pair of groups). It takes the parent''s dataset,
+          whose method is stack / cards::ard_stack (several analyses on the same data
+          and by, with the by counts and the total N), subgroups / cards::ard_strata
+          (within subgroups) or pairwise / cards::ard_pairwise (each pair of groups).
+          It takes the parent''s dataset,
           population_id and where (and in a stack its by), so leave those blank; blank:
           an analysis of its own.'
         example: DEMO
@@ -1093,8 +1108,9 @@ rtf_footer:
       - column: formats
         description: 'Display formats, statistic=format, | between them; VAR:statistic=format
           for one variable. xx.x = one decimal (the x''s count only after the point),
-          xx.x% = a proportion as a percent, a number = decimals, pvalue = <0.001
-          or 3 decimals; blank: the statistic''s default.'
+          xx.x% = a proportion as a percent, xx.x*1000 = the value times 1000 (a rate
+          per 1,000), a number = decimals, pvalue = <0.001 or 3 decimals; blank: the
+          statistic''s default.'
         example: mean=xx.x | p=xx.x%
       - column: args
         description: 'More arguments of the call, as R (data and population are bound),
@@ -1105,7 +1121,8 @@ rtf_footer:
         description: 'Steps on the ARD after the call, each a call with the ARD left
           out, | between them: cards::add_calculated_row() (a statistic computed from
           others), cards::filter_ard_hierarchical() (only the rows that pass), cards::sort_ard_hierarchical(),
-          cards::diff_ard_hierarchical(), complete_hierarchy() (a code list''s values no
+          cards::diff_ard_hierarchical(), cards::update_ard_fmt_fun() (a format for some
+          rows: one arm''s mean, run after the defaults), complete_hierarchy() (a code list''s values no
           subject has, counted 0: written with the row''s variables and the code lists''
           `under`), or a function of your own that takes an ARD and gives one; blank:
           none.'

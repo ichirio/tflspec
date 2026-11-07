@@ -14,7 +14,7 @@ test_that("a value that does not fit its argument's kind is said", {
   expect_warning(exact_spec(ci("method = \"wilson_cc\"")),
                  "method = \\) is one of \"waldcc\", \"wald\"")
   expect_warning(exact_spec(ci("method = \"wilson\", value = \"Y\"")),
-                 "value = \\) is a list \\(list\\(AGE = 1L\\)\\) or a formula")
+                 "value = \\) is a list \\(list\\(mean = 1L\\)\\) or a formula \\(AGE ~ list\\(mean = 1L\\)\\)")
   expect_warning(exact_spec(list(method = "hierarchical", population_id = "SAF",
                                  by = "TRT01A", variables = "SEX | AGEGR1",
                                  args = "over_variables = \"yes\"")),
@@ -26,7 +26,7 @@ test_that("a value that does not fit its argument's kind is said", {
   expect_no_warning(exact_spec(ci("conf.level = 1 - 0.05")))
   expect_no_warning(exact_spec(list(method = "continuous", population_id = "SAF",
                                     variables = "AGE",
-                                    args = "fmt_fun = everything() ~ 1L")))
+                                    args = "fmt_fun = AGE ~ list(mean = 1L)")))
 })
 
 test_that("the value of each kind is judged", {
@@ -72,6 +72,84 @@ test_that("the value of each kind is judged", {
   expect_null(p("conf.level", "NA", "number"))
 })
 
+test_that("the arguments of one function's own shape are judged", {
+  p <- function(arg, code, fn)
+    .arg_value_problem(arg, str2lang(code), "code", "", fn)
+  # the stratified Wilson weights: numbers between 0 and 1 adding up to 1
+  expect_null(p("weights", "c(0.5, 0.3, 0.2)", "ard_categorical_ci"))
+  expect_null(p("weights", "rep(0.25, 4L)", "ard_categorical_ci"))
+  expect_null(p("weights", "w", "ard_categorical_ci"))
+  expect_match(p("weights", "c(0.5, 0.6)", "ard_categorical_ci"),
+               "numbers between 0 and 1 that add up to 1")
+  expect_match(p("weights", "\"w\"", "ard_categorical_ci"), "add up to 1")
+  # the levels a pairwise analysis compares: a vector
+  expect_null(p("include", "c(\"Placebo\", \"Drug A\")", "ard_pairwise"))
+  expect_null(p("include", "\"Placebo\"", "ard_pairwise"))
+  expect_null(p("include", "levels(data$TRT01A)[1:2]", "ard_pairwise"))
+  expect_match(p("include", "list(\"Placebo\")", "ard_pairwise"),
+               "the levels compared, as a vector")
+  expect_match(p("include", "TRUE", "ard_pairwise"), "as a vector")
+  # a calculated statistic's format: decimals, "xx.x" or a function
+  expect_null(p("fmt_fun", "2L", "add_calculated_row"))
+  expect_null(p("fmt_fun", "\"xx.x\"", "add_calculated_row"))
+  expect_null(p("fmt_fun", "\"xx.xx%\"", "add_calculated_row"))
+  expect_null(p("fmt_fun", "cards::label_round(1)", "add_calculated_row"))
+  expect_null(p("fmt_fun", "function(x) format(x, nsmall = 1)", "add_calculated_row"))
+  expect_match(p("fmt_fun", "1.5", "add_calculated_row"), "a whole number of decimals")
+  expect_match(p("fmt_fun", "\"x.x.x\"", "add_calculated_row"), "a format")
+  expect_match(p("fmt_fun", "\"xx%.x\"", "add_calculated_row"), "a format")
+  expect_match(p("fmt_fun", "TRUE", "add_calculated_row"), "a format")
+  expect_match(p("fmt_fun", "list(se = 2L)", "add_calculated_row"), "a format")
+  # the value a NULL statistic gets: one value
+  expect_null(p("value", "0", "replace_null_statistic"))
+  expect_null(p("value", "\"NE\"", "replace_null_statistic"))
+  expect_null(p("value", "NA", "replace_null_statistic"))
+  expect_match(p("value", "c(0, 1)", "replace_null_statistic"), "one value")
+  expect_match(p("value", "list(0)", "replace_null_statistic"), "one value")
+})
+
+test_that("cards takes the formats the check lets through", {
+  skip_if_not_installed("cards")
+  for (f in c("xx", "xx.x", "xx.xx%", "x.x")) {
+    expect_true(.fmt_string_ok(f), label = f)
+    expect_true(is.function(cards::alias_as_fmt_fun(f)), label = f)
+  }
+  for (f in c("x", "x.x.x", "xx%.x", "%xx", "9.9")) {
+    expect_false(.fmt_string_ok(f), label = f)
+    expect_error(cards::alias_as_fmt_fun(f), label = f)
+  }
+})
+
+test_that("a post step's calculated row is judged and runs", {
+  skip_if_not_installed("cards")
+  hier <- function(post) list(method = "continuous", population_id = "SAF",
+                              by = "TRT01A", variables = "AGE",
+                              statistics = "N | mean | sd", post = post)
+  expect_warning(exact_spec(hier(paste(
+    "cards::add_calculated_row(expr = sd / sqrt(N), stat_name = \"se\",",
+    "fmt_fun = \"x.x.x\")"))),
+    "add_calculated_row\\(fmt_fun = \\) is a whole number of decimals")
+  expect_warning(exact_spec(hier(
+    "cards::update_ard_fmt_fun(stat_names = \"mean\", fmt_fun = \"2 decimals\")")),
+    "update_ard_fmt_fun\\(fmt_fun = \\) is a whole number of decimals")
+  expect_warning(exact_spec(hier(
+    "cards::update_ard_fmt_fun(stat_names = \"mean\", fmt_fun = 2L, filtr = TRUE)")),
+    "`post` update_ard_fmt_fun\\(\\) has no argument `filtr`")
+  expect_warning(exact_spec(hier("cards::replace_null_statistic(value = c(0, 1))")),
+                 "replace_null_statistic\\(value = \\) is one value")
+  expect_no_warning(exact_spec(hier(paste(
+    "cards::add_calculated_row(expr = sd / sqrt(N), stat_name = \"se\",",
+    "fmt_fun = \"xx.xx\") | cards::replace_null_statistic(value = 0)"))))
+  # what the check lets through, cards runs
+  ard <- cards::ard_summary(cards::ADSL, by = ARM, variables = AGE,
+                            statistic = ~ cards::continuous_summary_fns(c("N", "mean", "sd")))
+  se <- cards::add_calculated_row(ard, expr = sd / sqrt(N), stat_name = "se",
+                                  fmt_fun = "xx.xx")
+  se <- cards::apply_fmt_fun(se)
+  v <- se$stat_fmt[se$stat_name == "se"]
+  expect_true(all(grepl("^ ?[0-9]+[.][0-9]{2}$", unlist(v))))
+})
+
 test_that("a function not of cards or cardx is not judged by the catalog's kinds", {
   expect_identical(.ard_arg_value_problems("T / A", "stats::t.test", "mu = \"a\""),
                    character())
@@ -98,10 +176,154 @@ test_that("a post step's arguments and values are said", {
 test_that("the catalog describes the post helpers' arguments", {
   skip_if_not_installed("cards")
   for (fn in c("add_calculated_row", "filter_ard_hierarchical",
-               "sort_ard_hierarchical", "update_ard_stat_label")) {
+               "sort_ard_hierarchical", "update_ard_stat_label",
+               "update_ard_fmt_fun")) {
     a <- tfl_ard_args(paste0("cards::", fn))
     expect_true(all(nzchar(a$hint[-1L])), label = fn)
   }
   s <- tfl_ard_args("cards::sort_ard_hierarchical")
   expect_identical(s$choices[s$arg == "sort"], "descending | alphanumeric")
+})
+
+test_that("a custom row's cards / cardx calls are judged as args and post are", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  custom <- function(code) list(method = "custom", population_id = "SAF",
+                                code = code)
+  # a name the function does not have
+  expect_warning(exact_spec(custom(
+    "cards::ard_tabulate(data, by = TRT01A, variables = SEX, denominatr = population)")),
+    "T / A: `code` ard_tabulate\\(\\) has no argument `denominatr`")
+  # a value that does not fit, inside a pipe and a stack
+  expect_warning(exact_spec(custom(paste(
+    "data |> cardx::ard_categorical_ci(by = TRT01A, variables = SEX,",
+    "method = \"wilson_cc\")"))),
+    "ard_categorical_ci\\(method = \\) is one of \"waldcc\"")
+  expect_warning(exact_spec(custom(paste(
+    "cards::ard_stack(data, .by = TRT01A,",
+    "cards::ard_summary(variables = AGE, fmt_fun = 1L))"))),
+    "ard_summary\\(fmt_fun = \\) is a list")
+  # several lines, an assignment, a post helper
+  expect_warning(exact_spec(custom(paste(
+    "x <- cards::ard_hierarchical(data, by = TRT01A, variables = c(AESOC, AEDECOD))",
+    "cards::sort_ard_hierarchical(x, sort = \"frequency\")", sep = "\n"))),
+    "sort_ard_hierarchical\\(sort = \\) is \"descending\"")
+  # what fits, and what is not cards' or cardx's, passes
+  expect_no_warning(exact_spec(custom(paste(
+    "data |> dplyr::filter(AGE > 18) |>",
+    "  cards::ard_tabulate(by = TRT01A, variables = SEX, denominator = population) |>",
+    "  cards::update_ard_fmt_fun(stat_names = \"p\", fmt_fun = \"xx.x%\")"))))
+  expect_no_warning(exact_spec(custom("my_ard(data, denominatr = 1)")))
+  # the calls found: outermost first, those in their arguments too
+  ex <- parse(text = "cards::ard_stack(data, cards::ard_summary(variables = AGE)) |> f()")
+  calls <- .ard_code_calls(ex)
+  expect_identical(vapply(calls, function(e) deparse(e[[1L]]), ""),
+                   c("cards::ard_stack", "cards::ard_summary"))
+})
+
+test_that("a custom row's calls by the plain name of a cards / cardx function are judged too", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  custom <- function(code) list(method = "custom", population_id = "SAF",
+                                code = code)
+  # after library(cards): ard_tabulate() is cards::ard_tabulate()
+  expect_warning(exact_spec(custom(paste(
+    "library(cards)",
+    "ard_tabulate(data, by = TRT01A, variables = SEX, denominatr = population)",
+    sep = "\n"))),
+    "T / A: `code` ard_tabulate\\(\\) has no argument `denominatr`")
+  # cardx's, in a pipe
+  expect_warning(exact_spec(custom(paste(
+    "data |> ard_categorical_ci(by = TRT01A, variables = SEX,",
+    "method = \"wilson_cc\")"))),
+    "ard_categorical_ci\\(method = \\) is one of \"waldcc\"")
+  # a name the code binds is its own, not cards'
+  expect_no_warning(exact_spec(custom(paste(
+    "ard_tabulate <- function(data, ...) cards::ard_tabulate(data, ...)",
+    "ard_tabulate(data, by = TRT01A, variables = SEX, denominatr = 1)",
+    sep = "\n"))))
+  expect_no_warning(exact_spec(custom(paste(
+    "f <- function(ard_summary) ard_summary(data, mean = 1)",
+    "f(function(...) NULL)", sep = "\n"))))
+  # what fits passes, a re-exported selector is not judged as cards'
+  expect_no_warning(exact_spec(custom(paste(
+    "ard_tabulate(data, by = TRT01A, variables = everything(),",
+    "denominator = population)"))))
+  ex <- parse(text = "x <- ard_summary(data, variables = AGE)\nmean(x$stat)")
+  calls <- .ard_code_calls(ex)
+  expect_identical(vapply(calls, function(e) deparse(e[[1L]]), ""),
+                   "cards::ard_summary")
+  expect_identical(.code_bound_names(parse(text = paste(
+    "a <- 1; 2 -> b; assign(\"cc\", 3)", "for (i in 1:2) NULL",
+    "g <- function(x, y = 1) x", sep = "\n"))),
+    c("a", "b", "cc", "i", "g", "x", "y"))
+  ex <- .ard_exports()
+  expect_identical(ex[["ard_tabulate"]], "cards")
+  expect_identical(ex[["ard_stats_t_test"]], "cardx")
+  expect_false("everything" %in% names(ex))
+})
+
+test_that("a call that makes the value is the program's for every shape", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  p <- function(arg, code, kind, fn = "")
+    .arg_value_problem(arg, str2lang(code), kind, "", fn)
+  expect_null(p("fmt_fun", "stats::setNames(list(2L), \"mean\")", "code"))
+  expect_null(p("stat_label", "mk()", "code"))
+  expect_null(p("method.args", "utils::modifyList(base, list(var.equal = TRUE))", "code"))
+  expect_null(p("stats_to_remove", "setdiff(a, b)", "code"))
+  expect_null(p("tidy_fun", "purrr::partial(f, conf.level = 0.9)", "code"))
+  expect_null(p("sort", "make_sort()", "code"))
+  # a value written as it is still has to fit
+  expect_match(p("fmt_fun", "\"a\"", "code"), "a list \\(list\\(mean = 1L\\)\\)")
+  expect_match(p("stats_to_remove", "list(\"a\")", "code"), "names in quotes")
+  expect_match(p("method.args", "~ x", "code"), "a list: list")
+  sm <- function(args) list(method = "continuous", population_id = "SAF",
+                            variables = "AGE", args = args)
+  expect_no_warning(exact_spec(sm(
+    "fmt_fun = stats::setNames(list(2L), \"mean\")")))
+  expect_warning(exact_spec(sm("fmt_fun = \"a\"")),
+                 "ard_summary\\(fmt_fun = \\) is a list")
+})
+
+test_that("a name R matches by its beginning is the argument's", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  expect_identical(.args_not_matched(c("denom", "denominatr", "by"),
+                                     c("data", "variables", "by", "denominator", "...")),
+                   "denominatr")
+  # after the `...` only the whole name; two arguments begin alike: R stops
+  expect_identical(.args_not_matched(c("na", "n"), c("x", "n.a", "n.b", "...", "na.rm")),
+                   c("na", "n"))
+  expect_identical(.args_not_matched("na.rm", c("x", "...", "na.rm")), character())
+  tab <- function(args) list(method = "categorical", population_id = "SAF",
+                             by = "TRT01A", variables = "SEX", args = args)
+  expect_no_warning(exact_spec(tab("denom = \"cell\"")))
+  expect_warning(exact_spec(tab("denomx = \"cell\"")),
+                 "ard_tabulate\\(\\) has no argument `denomx`")
+  # in a post step and a custom row's code too
+  hier <- function(post) list(method = "hierarchical", population_id = "SAF",
+                              dataset = "ADSL", by = "TRT01A",
+                              variables = "SEX | AGEGR1", post = post)
+  expect_no_warning(exact_spec(hier("cards::filter_ard_hierarchical(filt = n > 1)")))
+  expect_warning(exact_spec(hier("cards::filter_ard_hierarchical(filtr = n > 1)")),
+                 "no argument `filtr`")
+  expect_no_warning(exact_spec(list(method = "custom", population_id = "SAF",
+    code = "cards::ard_tabulate(data, by = TRT01A, variables = SEX, denom = \"cell\")")))
+})
+
+test_that("a post step by the plain name of a cards / cardx function is judged", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  cont <- function(post) list(method = "continuous", population_id = "SAF",
+                              by = "TRT01A", variables = "AGE",
+                              statistics = "N | mean | sd", post = post)
+  expect_warning(exact_spec(cont("add_calculated_row(nope = 1)")),
+                 "`post` add_calculated_row\\(\\) has no argument `nope`")
+  expect_no_warning(exact_spec(cont(
+    "add_calculated_row(expr = sd / sqrt(N), stat_name = \"se\")")))
+  expect_warning(exact_spec(cont(
+    "cards::add_calculated_row(nope = 1)")), "no argument `nope`")
+  # a name cards and cardx do not export is the study's own: not judged
+  expect_no_warning(exact_spec(cont("my_step(nope = 1)")))
 })

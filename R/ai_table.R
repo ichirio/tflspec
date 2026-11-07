@@ -938,8 +938,12 @@
   }
   # (the reports whose widths R sets: an assumption says so)
   unset <- .ai_widths_unset(answer$outputs)
-  # (a listing's columns their widths, where the answer gave none: R/ai_widths.R)
-  answer$outputs <- lapply(answer$outputs, .ai_listing_widths, vars = answer$vars)
+  # (a listing's columns their widths, where the answer gave none: fitted to
+  # its data where that can be read, else a guess; R/ai_widths_fit.R)
+  lw <- .ai_listing_widths_set(answer$outputs, dir, vars = answer$vars)
+  answer$outputs <- lw$outs
+  is_l <- vapply(answer$outputs, function(o) identical(o$kind, "listing"), NA)
+  unset <- names(answer$outputs)[names(answer$outputs) %in% c(setdiff(unset, names(answer$outputs)[is_l]), lw$written)]
   # (a table's widths R gave it on an earlier run, while its draft is the
   # one they were made for)
   known <- .ai_widths_read(dir)
@@ -956,7 +960,7 @@
   .ai_widths_on_read(answer$outputs, paths, dir)
   out <- paths
   a <- answer$assumption_rows
-  aw <- .ai_widths_assumptions(unset, .ai_spec_settings(dir)$language)
+  aw <- .ai_widths_assumptions(unset, .ai_spec_settings(dir)$language, fitted = lw$fitted)
   if (!is.null(aw)) {
     if (is.null(a) || !nrow(a)) {
       a <- aw

@@ -264,7 +264,7 @@ sections follow this order.
 | `id`, `kind`, `label`, `population` | as in the TOC; the file is named after `id` |
 | `extends` | the layers under it, nearest first: `[defaults]` (the usual), `[patterns/<name>, defaults]`, or `none` |
 | `ard` | the report's part of the study ARD: `analyses:` (the `analyses` sheet's rows, `analysis_id` as `id`, `population_id` as `population`) and `analysis_data:` (`data_id` as `id`) -- §A.1 |
-| `data` | what the report reads.  `source: ard` (a table: the study ARD, `object: ard`; `steps:` R on it); `source: dataset` (a listing: `dataset`, `where`, `sort`); `source: code` (a figure: `steps:`, the design's data steps of §7; or `code: !r ...`, the report's own R) |
+| `data` | what the report reads.  `source: ard` (a table: the study ARD, `object: ard`; `steps:` its Rework, optional R after the content's `normalize_ard()` and before `table_plan()`: it starts from `data`, which is the object normalized by the `normalize_ard` item (`data <- ard` when there is none), and leaves `data`; a Rework that never names `data` is an error); `source: dataset` (a listing: `dataset`, `where`, `sort`); `source: code` (a figure: `steps:`, the design's data steps of §7; or `code: !r ...`, the report's own R) |
 | `codelists` | by variable, a list of `{value, label}` in the order printed (the `codelists` sheet); a nested count's inner value may say `under:` (its parent's value, for `complete_hierarchy()`) |
 | `content` | the report, a list of items, each one call: `- plan_cells: {categorical: '{n} ({p:.1f%})'}`.  A table's items are rtfreporter's `normalize_ard()`, `table_plan()` and `plan_*()` verbs; a listing's `plan_listing()` (its columns `listing_col()` calls); a figure's the calls of its plot -- `ggplot`, `geom_*`, `scale_*`, `labs`, `theme` ..., and `tfl_image` last (§7.1).  Or `content: !r ...`, the report's own R |
 | `page` | the document: `titles`, `footnotes`, `header`, `footer` (maps by line number: `'1': {center: Table 14.1.1}`), `tokens`, and rtfreporter's calls by name (`rtf_page: {orientation: landscape}`, `rtf_tables: {auto_section: true}`, `rtf_document: {watermark: DRAFT}`); where a table's page names print is better said in its content, `plan_paginate_group: {heading_at: section}` -- a page's `rtf_tables: {auto_section: }` given wins |
@@ -1077,7 +1077,14 @@ cat(tfl_report_code(sp, content = "plan"), sep = "\n")
   `missing`, `hierarchical`, `max`, `subjects`, `total_n`, `proportion_ci`,
   `mean_ci`, `ttest`, `wilcox`, `chisq`, `fisher`, `cmh`, `prop_diff`,
   `lsmeans`, `lsmeans_diff`, `km`, `logrank`, `abnormal`, `incidence_rate`,
-  `custom` — or any
+  `regression`, `anova`, `kruskal`, `paired_ttest`, `paired_wilcox`,
+  `mcnemar`, `km_diff`, `hierarchical_count` (event counts),
+  `onesample_ttest`, `onesample_wilcox`, `smd`, `poisson`, `oneway`, `aov`,
+  `mcnemar_long`, `records` (record counts), `labels`, `nested_models`
+  (e.g. an interaction test), `regression_basic`, `cohens_d`, `hedges_g`,
+  `paired_cohens_d`, `paired_hedges_g`, `mood`, `vif`, `wald`, `stack`,
+  `subgroups`, `pairwise` (a parent's: below), `custom` —
+  or any
   `pkg::function` (`cards::`, `cardx::`), or a function of the study's own
   that the study key `source` loads (`ard_riskdiff_mn`): it takes the
   analysis data first, `by` and `variables` as bare column names, and gives
@@ -1118,10 +1125,12 @@ cat(tfl_report_code(sp, content = "plan"), sep = "\n")
   an analysis `..._TOTAL` without the grouping). Not inside a parent (put
   it on the parent), not on `custom` / `subjects`.
 - `parent`: the analysis this one runs inside, when that one's method is
-  `cards::ard_stack` (several analyses on the same data and `by`, plus the
-  by counts and the total N with `args` `.total_n = TRUE`),
-  `cards::ard_strata` (within the subgroups of its `by` / `strata`) or
-  `cards::ard_pairwise` (each pair of the levels of its one `variables`).
+  `stack` / `cards::ard_stack` (several analyses on the same data and `by`,
+  plus the by counts and the total N with `args` `.total_n = TRUE`),
+  `subgroups` / `cards::ard_strata` (within the subgroups of its `by` /
+  `strata`) or `pairwise` / `cards::ard_pairwise` (each pair of the levels
+  of its one `variables`; `args` `include = "Placebo"` for each arm against
+  placebo).
   The rows inside leave `dataset` / `population_id` / `where` (and in a
   stack `by`) blank: they are the parent's. The program writes one call,
   `cards::ard_stack(adsl_sub, .by = ARM, cards::ard_summary(variables =
@@ -1154,7 +1163,8 @@ cat(tfl_report_code(sp, content = "plan"), sep = "\n")
 - `args`: more arguments as R (`over_variables = TRUE, overall = TRUE`),
   read as the arguments of a call — any order; refused if not R.
 - `formats`: `mean=xx.x | p=xx.x% | AGE:sd=xx.xx` — the `xx` part says the
-  decimals only. The program gives them to the cards call itself
+  decimals only; `estimate=xx.xx*1000` is the value times 1000 (a rate per
+  1,000 person-years). The program gives them to the cards call itself
   (`fmt_fun = everything() ~ modifyList(fmt_default, list(mean = 1L))`,
   over the catalog's defaults `fmt_default`); a function that takes no
   `fmt_fun` (cardx's tests, CIs and models, a study's own function,

@@ -16,8 +16,8 @@
 # (continuous_summary_fns()); one with `fun` is computed by that function
 # of the non-missing values, written into the ARD program.  `fmt` is the
 # format stat_fmt gets unless the method or the analysis says another:
-# xx.x (1 decimal), xx.x% (a proportion as a percent), a number of
-# decimals, or pvalue (<0.001 / 0.xxx).
+# xx.x (1 decimal), xx.x% (a proportion as a percent), xx.x*1000 (times
+# 1000), a number of decimals, or pvalue (<0.001 / 0.xxx).
 .ard_statistics_builtin <- function() {
   q <- function(p) sprintf(
     "function(x) stats::quantile(x, %s, type = 2, names = FALSE)", p)
@@ -113,12 +113,14 @@
 
 # The keywords an analysis's `method` may name, and the call each stands for.
 .ard_methods_builtin <- function() {
-  data.frame(
+  d <- data.frame(
     method = c("continuous", "categorical", "dichotomous", "missing",
                "hierarchical", "max", "subjects", "total_n",
                "proportion_ci", "mean_ci", "ttest", "wilcox", "chisq",
                "fisher", "cmh", "prop_diff", "lsmeans", "lsmeans_diff", "km",
-               "logrank", "abnormal", "incidence_rate", "custom"),
+               "logrank", "abnormal", "incidence_rate", "regression", "anova",
+               "kruskal", "paired_ttest", "paired_wilcox", "mcnemar",
+               "km_diff", "custom"),
     # the name a person reads (a GUI's choice, a heading); `note` says more
     label = c("Summary statistics", "Counts and percents",
               "Count of one level", "Missing counts",
@@ -130,7 +132,10 @@
               "Difference in proportions", "Least-squares means",
               "Difference in least-squares means", "Kaplan-Meier estimates",
               "Log-rank test", "Abnormal post-baseline values",
-              "Incidence rate", "Custom R code"),
+              "Incidence rate", "Model estimates", "ANOVA / ANCOVA table",
+              "Kruskal-Wallis test", "Paired t test",
+              "Wilcoxon signed-rank test", "McNemar's test",
+              "Difference in Kaplan-Meier estimates", "Custom R code"),
     call = c("cards::ard_summary", "cards::ard_tabulate",
              "cards::ard_tabulate_value", "cards::ard_missing",
              "cards::ard_stack_hierarchical", "cardx::ard_tabulate_max",
@@ -142,20 +147,27 @@
              "cardx::ard_emmeans_emmeans", "cardx::ard_emmeans_contrast",
              "cardx::ard_survival_survfit", "cardx::ard_survival_survdiff",
              "cardx::ard_tabulate_abnormal", "cardx::ard_incidence_rate",
+             "cardx::ard_regression", "cardx::ard_car_anova",
+             "cardx::ard_stats_kruskal_test", "cardx::ard_stats_paired_t_test",
+             "cardx::ard_stats_paired_wilcox_test",
+             "cardx::ard_stats_mcnemar_test", "cardx::ard_survival_survfit_diff",
              "(code)"),
     kind = c("continuous", "categorical", "categorical", "missing",
              "categorical", "categorical", "categorical", "none", "none",
              "none", "none", "none", "none", "none", "none", "none", "none",
-             "none", "none", "none", "none", "none", "none"),
+             "none", "none", "none", "none", "none", "none", "none", "none",
+             "none", "none", "none", "none", "none"),
     defaults = c("", "", "", "", "denominator = population, id = <id>",
                  "denominator = population, id = <id>", "", "", "", "",
-                 "", "", "", "", "", "", "", "", "", "", "", "", ""),
+                 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+                 "", "", "", "", ""),
     statistics = c("", "", "", "", "", "", "", "", "", "", "", "", "",
-                   "", "", "", "", "", "", "", "", "", ""),
+                   "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+                   "", "", ""),
     formats = c("", "", "", "", "", "", "", "", paste(
       "estimate=xx.x% | conf.low=xx.x% | conf.high=xx.x%"),
       "estimate=xx.x | conf.low=xx.x | conf.high=xx.x", "", "", "", "",
-      "", "", "", "", "", "", "", "", ""),
+      "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""),
     note = c(
       "summary statistics of numeric variables",
       "counts and percents of each level",
@@ -179,8 +191,92 @@
       "log-rank test between arms (args: formula = survival::Surv(AVAL, 1 - CNSR) ~ TRT01P); by and variables blank",
       "subjects with an abnormal post-baseline value, by baseline (args: postbaseline = ANRIND, baseline = BNRIND, id = USUBJID)",
       "events per person-time with CI (args: time = <person-time column>, count = <events column>, id = USUBJID)",
+      "a model's estimates with CI, e.g. a Cox model's hazard ratio (args: formula = survival::Surv(AVAL, 1 - CNSR) ~ TRTA, method = \"coxph\", package = \"survival\", exponentiate = TRUE) or a logistic model's odds ratio (method = \"glm\", method.args = list(family = binomial), exponentiate = TRUE)",
+      "a model's ANOVA table, type II or III (args: x = lm(CHG ~ TRTA + BASE, data = data), type = \"III\"); by and variables blank",
+      "Kruskal-Wallis test across the `by` groups (two or more)",
+      "paired t test between the two `by` levels (e.g. two visits) of each subject (args: id = USUBJID)",
+      "Wilcoxon signed-rank test between the two `by` levels of each subject (args: id = USUBJID)",
+      "McNemar's test of variables x by, paired data (one record a subject, e.g. a baseline and a post-baseline response)",
+      "differences in Kaplan-Meier survival between the arms at times, with CI (args: x = survival::survfit(survival::Surv(AVAL, 1 - CNSR) ~ TRTA, data = data), times = c(6, 12)); by and variables blank",
       "any R code in `code`; data and population are bound"),
     stringsAsFactors = FALSE)
+  # since 2026-11-03: AE event counts and the one-sample, balance, rate and
+  # one-way tests clinical tables use, each its function by another name
+  more <- data.frame(
+    method = c("hierarchical_count", "onesample_ttest", "onesample_wilcox",
+               "smd", "poisson", "oneway", "aov", "mcnemar_long"),
+    label = c("Nested event counts", "One-sample t test",
+              "One-sample Wilcoxon signed-rank test",
+              "Standardized mean difference", "Poisson rate test",
+              "One-way ANOVA (Welch)", "Analysis of variance",
+              "McNemar's test, long data"),
+    call = c("cards::ard_stack_hierarchical_count",
+             "cardx::ard_stats_t_test_onesample",
+             "cardx::ard_stats_wilcox_test_onesample", "cardx::ard_smd_smd",
+             "cardx::ard_stats_poisson_test", "cardx::ard_stats_oneway_test",
+             "cardx::ard_stats_aov", "cardx::ard_stats_mcnemar_test_long"),
+    kind = "none", defaults = c("denominator = population", rep("", 7L)),
+    statistics = "", formats = "",
+    note = c(
+      "events (records, not subjects) at each level of a hierarchy, e.g. AEBODSYS | AEDECOD; with by and denominator for the overall column (args: overall = TRUE)",
+      "one-sample t test of each variable's mean against mu, e.g. the change from baseline in each arm (by), with CI (args: mu = 0)",
+      "one-sample Wilcoxon signed-rank test of each variable against mu, in each `by` group (args: mu = 0, conf.int = TRUE)",
+      "standardized mean difference between the two `by` groups, e.g. baseline balance (args: std.error = TRUE)",
+      "exact Poisson test of a rate, or the ratio of two arms' rates (by, two levels); variables are the events and the person-time columns, in that order",
+      "one-way ANOVA across the groups, not assuming equal variances (args: formula = AGE ~ TRT01A); by and variables blank",
+      "analysis of variance of a model (args: formula = CHG ~ TRTA + BASE); by and variables blank",
+      "McNemar's test on long data, a record per subject and `by` level, e.g. baseline and week 12 responses (args: id = USUBJID)"),
+    stringsAsFactors = FALSE)
+  # since 2026-11-04: the record counts, labels, nested-model test, effect
+  # sizes, Mood's test and the model checks, each its function by another
+  # name
+  more2 <- data.frame(
+    method = c("records", "labels", "nested_models", "regression_basic",
+               "cohens_d", "hedges_g", "paired_cohens_d", "paired_hedges_g",
+               "mood", "vif", "wald"),
+    label = c("Number of records", "Variable labels",
+              "Test of nested models", "Model estimates (basic)",
+              "Cohen's d", "Hedges' g", "Paired Cohen's d",
+              "Paired Hedges' g", "Mood's test of scale",
+              "Variance inflation factors", "Wald test of model terms"),
+    call = c("cards::ard_tabulate_rows", "cards::ard_attributes",
+             "cardx::ard_stats_anova", "cardx::ard_regression_basic",
+             "cardx::ard_effectsize_cohens_d", "cardx::ard_effectsize_hedges_g",
+             "cardx::ard_effectsize_paired_cohens_d",
+             "cardx::ard_effectsize_paired_hedges_g",
+             "cardx::ard_stats_mood_test", "cardx::ard_car_vif",
+             "cardx::ard_aod_wald_test"),
+    kind = "none", defaults = "", statistics = "", formats = "",
+    note = c(
+      "the number of records (rows, not subjects) in each `by` group, e.g. the number of adverse events per arm",
+      "the variables' labels (and classes), e.g. for a table's row headings",
+      "nested models compared, e.g. a treatment-by-subgroup interaction (args: formulas = list(AVALC ~ TRTA + SEX, AVALC ~ TRTA * SEX), method = \"glm\", method.args = list(family = binomial)); by and variables blank",
+      "a model's estimates with fewer columns than `regression` (args: formula = CHG ~ TRTA + BASE, method = \"lm\")",
+      "Cohen's d between the two `by` groups, with CI",
+      "Hedges' g (Cohen's d corrected for small samples) between the two `by` groups, with CI",
+      "Cohen's d of paired data, the two `by` levels of each subject (args: id = USUBJID)",
+      "Hedges' g of paired data, the two `by` levels of each subject (args: id = USUBJID)",
+      "Mood's two-sample test of scale between the `by` groups (two of them)",
+      "variance inflation factors of a model's terms (args: x = lm(CHG ~ TRTA + BASE + AGE, data = data)); by and variables blank",
+      "Wald tests of a model's terms (args: x = glm(AVALN ~ TRTA + SEX, family = binomial, data = data)); by and variables blank"),
+    stringsAsFactors = FALSE)
+  # since 2026-11-05: the functions that run other analyses (the rows whose
+  # `parent` names this one), each its function by another name
+  more3 <- data.frame(
+    method = names(.ard_wrapper_keywords),
+    label = c("Several analyses together", "Within each subgroup",
+              "Each pair of groups"),
+    call = unname(.ard_wrapper_keywords),
+    kind = "none", defaults = "", statistics = "", formats = "",
+    note = c(
+      "runs the analyses whose `parent` is this one on the same data, by the same `by` (e.g. a demographics table's summaries and counts; overall = TRUE for a Total column)",
+      "runs the analysis whose `parent` is this one within each level of `strata` (and `by`), e.g. a response rate's difference in each subgroup of a forest plot's table",
+      "runs the analysis whose `parent` is this one for each pair of levels of the one column in `variables`, e.g. each arm against placebo (args: include = \"Placebo\")"),
+    stringsAsFactors = FALSE)
+  last <- nrow(d)
+  d <- rbind(d[-last, ], more, more2, more3, d[last, ])
+  rownames(d) <- NULL
+  d
 }
 
 #' The methods an analysis row may name
@@ -249,8 +345,10 @@ tfl_ard_methods <- function() {
 #' An analysis's `formats` are `statistic=format` pairs, `|` between them
 #' (`mean=xx.xx | sd=xx.xxx`); `VARIABLE:statistic=format` for one variable
 #' only.  A format is `xx.x` (as many x after the point as decimals),
-#' `xx.x%` (a proportion as a percent), a number of decimals, or `pvalue`
-#' (`<0.001`, else 3 decimals).
+#' `xx.x%` (a proportion as a percent), `xx.x*1000` (the value times 1000,
+#' with that many decimals: a rate per 1,000 person-years written from a
+#' rate per person-year), a number of decimals, or `pvalue` (`<0.001`, else
+#' 3 decimals).
 #'
 #' The catalog is the built-in one unless
 #' `options(tflspec.ard_statistics = )` holds another, or a function that

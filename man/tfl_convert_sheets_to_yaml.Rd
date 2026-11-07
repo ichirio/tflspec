@@ -44,8 +44,10 @@ them; \code{"items"} its content of function calls, plot by plot
 \code{planner} (tflplanner's \verb{_tflplanner} sheet: the report list and the
 setup code), \code{ard} (the ARD sheets), \code{listing} (\code{listings},
 \code{listing_cols}), \code{figures} (a figure's design list, by id), \code{study}
-(study.yml's fields).  What the app holds, or what the workbooks read
-as.}
+(study.yml's fields), \code{not_converted} (\code{\link[=tfl_sheets_from_yaml]{tfl_sheets_from_yaml()}}'s notes
+on what the sheets could not hold: listed in \verb{_not_converted.yml} too,
+with one message saying how many).  What the app holds, or what the
+workbooks read as.}
 }
 \value{
 Invisibly, a list: \code{to}, \code{files} (paths written), \code{not_converted}
