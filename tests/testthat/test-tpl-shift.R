@@ -39,7 +39,8 @@ test_that("shift: percent_of total -- each arm's body rows add to 100% of its To
   skip_if_not_installed("rtfreporter")
   d <- sh_study(withr::local_tempdir())
   args <- list(population = "SAF", where = 'PARAMCD %in% c("ALT", "HGB")',
-               percent_of = "total", cell = "{n} ({p:.1f%}%)", param_page = FALSE)
+               percent_of = "total", missing_label = "Missing",
+               cell = "{n} ({p:.1f%}%)", param_page = FALSE)
   r <- sh_report(d, args)
   t <- as.data.frame(suppressMessages(rtfreporter::plan_apply(r$plan, "table")))
   t[] <- lapply(t, function(v) if (is.factor(v)) as.character(v) else v)
@@ -59,8 +60,8 @@ test_that("shift: percent_of total -- each arm's body rows add to 100% of its To
   }
   expect_true(any(t$BNRIND == "Missing" & t$group == "ALT" &
                     apply(t[vals], 1L, function(v) any(sh_pct(v) > 0))))
-  # by row (the default): the Total row's percents are each of 100%, as before
-  r0 <- sh_report(d, utils::modifyList(args, list(percent_of = NULL)))
+  # by row: the Total row's percents are each of 100%, as before
+  r0 <- sh_report(d, utils::modifyList(args, list(percent_of = "row")))
   t0 <- as.data.frame(suppressMessages(rtfreporter::plan_apply(r0$plan, "table")))
   t0[] <- lapply(t0, function(v) if (is.factor(v)) as.character(v) else v)
   low <- t0$BNRIND == "LOW" & t0$group == "ALT"
@@ -101,21 +102,27 @@ test_that("shift: worst_by gives a parameter its own order from the worst", {
 
 test_that("shift: the rows are in the code list's labels, Missing and Total last", {
   rows <- function(...) lapply(list(...), function(v) list(value = v[1L], label = v[2L]))
-  lv <- function(cl) {
-    x <- tfl_template_expand("shift", list(population = "SAF"), codelists = cl)
+  lv <- function(cl, ...) {
+    x <- tfl_template_expand("shift", list(population = "SAF", ...), codelists = cl)
     Filter(function(it) it$fn == "plan_levels", x$content)[[1L]]$args
   }
   cl <- rows(c("LOW", "Low"), c("NORMAL", "Normal"), c("HIGH", "High"))
   # codes in `levels`, labels in the ARD: the table's values are the labels
-  a <- lv(list(BNRIND = cl, ANRIND = cl))
+  # (no Missing row by default: a subject with no baseline is left out)
+  a0 <- lv(list(BNRIND = cl, ANRIND = cl))
+  expect_identical(a0$BNRIND, c("Low", "Normal", "High", "Total"))
+  a <- lv(list(BNRIND = cl, ANRIND = cl), missing_label = "Missing")
   expect_identical(a$BNRIND, c("Low", "Normal", "High", "Missing", "Total"))
   expect_identical(a$.label, c("Low", "Normal", "High"))
   # named codes (a program's `c(LOW = "Low")`) the same
   nm <- c(LOW = "Low", NORMAL = "Normal", HIGH = "High")
-  expect_identical(lv(list(BNRIND = nm, ANRIND = nm))$BNRIND, a$BNRIND)
+  expect_identical(lv(list(BNRIND = nm, ANRIND = nm), missing_label = "Missing")$BNRIND, a$BNRIND)
   # no code list, or `levels` given as the labels: as they are
-  expect_identical(lv(NULL)$BNRIND, c("LOW", "NORMAL", "HIGH", "Missing", "Total"))
-  y <- tfl_template_expand("shift", list(population = "SAF", levels = c("Low", "Normal", "High")),
+  expect_identical(lv(NULL, missing_label = "Missing")$BNRIND,
+                   c("LOW", "NORMAL", "HIGH", "Missing", "Total"))
+  expect_identical(lv(NULL)$BNRIND, c("LOW", "NORMAL", "HIGH", "Total"))
+  y <- tfl_template_expand("shift", list(population = "SAF", levels = c("Low", "Normal", "High"),
+                                         missing_label = "Missing"),
                            codelists = list(BNRIND = cl, ANRIND = cl))
   expect_identical(Filter(function(it) it$fn == "plan_levels", y$content)[[1L]]$args$BNRIND,
                    a$BNRIND)
@@ -132,7 +139,7 @@ test_that("shift: built with a code list on the categories, the rows run Low ...
   cl <- rows(c("LOW", "Low"), c("NORMAL", "Normal"), c("HIGH", "High"))
   # (Missing and Total are still listed: the analysis data holds them)
   r <- sh_report(d, list(population = "SAF", where = 'PARAMCD %in% c("ALT", "HGB")',
-                         param_page = FALSE),
+                         param_page = FALSE, missing_label = "Missing"),
                  codelists = list(BNRIND = c(cl, rows(c("Missing", "Missing"), c("Total", "Total"))),
                                   ANRIND = cl))
   t <- as.data.frame(suppressMessages(rtfreporter::plan_apply(r$plan, "table")))
@@ -207,7 +214,7 @@ test_that("shift: each page's header shows its parameter's N, counted per page (
   d <- sn_study(withr::local_tempdir(), drop = FALSE)
   expect_identical(sn_key(tflspec::adlb, "ALT"), c(`Drug X` = 75L, Control = 75L))
   expect_identical(sn_key(tflspec::adlb, "AST"), c(`Drug X` = 75L, Control = 75L))
-  p <- sn_report(d, list())
+  p <- sn_report(d, list(header_n = "tested"))
   pg <- suppressMessages(rtfreporter::plan_apply(p, "pages"))
   expect_identical(names(pg), c("Parameter: ALT", "Parameter: AST"))
   expect_identical(sn_hdr1(pg[[1L]]), c("", "Drug X (N=75)", "Control (N=75)"))
@@ -219,7 +226,7 @@ test_that("shift: a parameter with fewer subjects shows its own N on its own pag
   d <- sn_study(withr::local_tempdir())
   lb2 <- haven::read_xpt(file.path(d, "adam", "adlb.xpt"))
   # the key is not the template's: 65 / 70 for ALT, 75 / 75 for AST
-  p <- sn_report(d, list(percent_of = "total"))
+  p <- sn_report(d, list(header_n = "tested"))
   pg <- suppressMessages(rtfreporter::plan_apply(p, "pages"))
   alt <- sn_key(lb2, "ALT")
   ast <- sn_key(lb2, "AST")
@@ -252,26 +259,52 @@ test_that("shift: a parameter with fewer subjects shows its own N on its own pag
   expect_true(grepl("Control (N=75)", txt, fixed = TRUE))
 })
 
-test_that("shift: header_n = FALSE and param_page = FALSE show no N (#630)", {
+test_that("shift: header_n = 'none' shows no N; param_page = FALSE shows the set's N (#630)", {
   sn_skip()
   d <- sn_study(withr::local_tempdir())
-  for (args in list(list(header_n = FALSE), list(param_page = FALSE))) {
-    p <- sn_report(d, args)
-    pg <- suppressMessages(rtfreporter::plan_apply(p, "pages"))
-    for (g in pg) expect_false(any(grepl("N=", sn_hdr1(g), fixed = TRUE)))
+  p <- sn_report(d, list(header_n = "none"))
+  pg <- suppressMessages(rtfreporter::plan_apply(p, "pages"))
+  for (g in pg) expect_false(any(grepl("N=", sn_hdr1(g), fixed = TRUE)))
+  # (one page of several parameters has no tested N, but the set's N is one an arm)
+  p <- sn_report(d, list(param_page = FALSE))
+  pg <- suppressMessages(rtfreporter::plan_apply(p, "pages"))
+  saf <- tflspec::adsl[tflspec::adsl$SAFFL == "Y", ]
+  for (g in pg) {
+    expect_identical(sn_hdr1(g)[-1L], sprintf("%s (N=%d)", c("Drug X", "Control"),
+                                              c(sum(saf$TRT01A == "Drug X"),
+                                                sum(saf$TRT01A == "Control"))))
   }
-  pg <- suppressMessages(rtfreporter::plan_apply(sn_report(d, list(header_n = FALSE)), "pages"))
+  pt <- sn_report(d, list(param_page = FALSE, header_n = "tested"))
+  for (g in suppressMessages(rtfreporter::plan_apply(pt, "pages"))) {
+    expect_false(any(grepl("N=", sn_hdr1(g), fixed = TRUE)))
+  }
+  pg <- suppressMessages(rtfreporter::plan_apply(sn_report(d, list(header_n = "none")), "pages"))
   expect_identical(names(pg), c("Parameter: ALT", "Parameter: AST"))
   expect_identical(sn_hdr1(pg[[1L]]), c("", "Drug X", "Control"))
-  # the N's analysis is there only when it is shown
+  # the N's analysis is there only when it is shown: the set's GROUPN (default,
+  # with or without param_page), or the tested subjects' (only with param_page)
   x <- tfl_template_expand("lab_shift", list(population = "SAF", visit = "V", params = "ALT"))
-  expect_length(x$ard$analyses, 2L)
+  expect_identical(vapply(x$ard$analyses, `[[`, "", "id"), c("SHIFT", "GROUPN"))
+  expect_identical(x$ard$analyses[[2L]]$data, "adsl_saf")
   y <- tfl_template_expand("lab_shift", list(population = "SAF", visit = "V", params = "ALT",
-                                             header_n = FALSE))
+                                             header_n = "none"))
   expect_length(y$ard$analyses, 1L)
   z <- tfl_template_expand("lab_shift", list(population = "SAF", visit = "V", params = "ALT",
                                              param_page = FALSE))
-  expect_length(z$ard$analyses, 1L)
+  expect_identical(vapply(z$ard$analyses, `[[`, "", "id"), c("SHIFT", "GROUPN"))
+  t1 <- tfl_template_expand("lab_shift", list(population = "SAF", visit = "V", params = "ALT",
+                                              header_n = "tested"))
+  expect_identical(vapply(t1$ard$analyses, `[[`, "", "id"), c("SHIFT", "SHIFT_N"))
+  t2 <- tfl_template_expand("lab_shift", list(population = "SAF", visit = "V", params = "ALT",
+                                              header_n = "tested", param_page = FALSE))
+  expect_length(t2$ard$analyses, 1L)
+  # FALSE and TRUE are not values: an error naming the values
+  expect_error(tfl_template_expand("shift", list(population = "SAF", header_n = FALSE)),
+               "\"set\".*\"tested\".*\"none\"")
+  expect_error(tfl_template_expand("shift", list(population = "SAF", header_n = TRUE)),
+               "\"set\".*\"tested\".*\"none\"")
+  expect_error(tfl_template_expand("shift", list(population = "SAF", header_n = "x")),
+               "\"set\".*\"tested\".*\"none\"")
 })
 
 # the report with code lists whose codes differ from the labels, and the
@@ -280,7 +313,7 @@ sh_codelist_program <- function(d, cl, extra, rscript) {
   paged <- is.null(extra$param_page)
   info <- if (paged) "default" else "param_page = FALSE"
   args <- c(list(population = "SAF", where = 'PARAMCD %in% c("ALT", "HGB")',
-                 levels = c("LOW", "NORMAL", "HIGH")), extra)
+                 levels = c("LOW", "NORMAL", "HIGH"), missing_label = "Missing"), extra)
   r <- sh_report(d, args, codelists = list(BNRIND = cl, ANRIND = cl))
   t <- as.data.frame(suppressMessages(rtfreporter::plan_apply(r$plan, "table")))
   t[] <- lapply(t, function(v) if (is.factor(v)) as.character(v) else v)
@@ -423,18 +456,18 @@ test_that("shift, lab_shift: post_header prints its text over each category, the
   }
 })
 
-test_that("shift, lab_shift: post_header with no {col}, or header_n = FALSE, prints as written (#642)", {
+test_that("shift, lab_shift: post_header with no {col}, or header_n = 'none', prints as written (#642)", {
   ph_skip()
   d <- sh_study(withr::local_tempdir())
   for (nm in c("shift", "lab_shift")) {
-    r <- ph_report(d, nm, list(post_header = "Worst [a]", header_n = FALSE))
+    r <- ph_report(d, nm, list(post_header = "Worst [a]", header_n = "none"))
     pg <- suppressMessages(rtfreporter::plan_apply(r$plan, "pages"))
     expect_identical(unique(ph_line2(pg[[1L]])[-1L]), "Worst [a]", info = nm)
-    # header_n = FALSE: line 1 is the arms only, line 2 as above
+    # header_n = "none": line 1 is the arms only, line 2 as above
     expect_identical(unique(vapply(pg[[1L]]$col_header[[1L]],
                                    function(z) as.character(z$label), "")),
                      c("", "Drug X", "Control"), info = nm)
-    r2 <- ph_report(d, nm, list(post_header = "{col} [a]", header_n = FALSE))
+    r2 <- ph_report(d, nm, list(post_header = "{col} [a]", header_n = "none"))
     pg2 <- suppressMessages(rtfreporter::plan_apply(r2$plan, "pages"))
     expect_identical(unique(ph_line2(pg2[[1L]])[-1L]),
                      c("LOW [a]", "NORMAL [a]", "HIGH [a]"), info = nm)
@@ -488,8 +521,16 @@ test_that("shift: a where with | is its own argument of the filter (no brackets 
 ", fixed = TRUE)[[1L]]
   f <- parse(text = grep("dplyr::filter(d,", code, fixed = TRUE, value = TRUE))[[1L]][[3L]]
   args <- as.list(f)[-(1:2)]
-  expect_length(args, 3L)
-  expect_identical(deparse(args[[3L]]), w)
+  # (ABLFL, the post-baseline category, the baseline category -- a missing
+  # baseline is out by default -- and the where)
+  expect_length(args, 4L)
+  expect_identical(deparse(args[[4L]]), w)
+  # with a Missing row, no baseline filter: as before
+  y <- tfl_template_expand("shift", list(population = "SAF", where = w, missing_label = "Missing"))
+  code2 <- strsplit(as.character(y$ard$analysis_data[[1L]]$code), "
+", fixed = TRUE)[[1L]]
+  f2 <- parse(text = grep("dplyr::filter(d,", code2, fixed = TRUE, value = TRUE))[[1L]][[3L]]
+  expect_length(as.list(f2)[-(1:2)], 3L)
 })
 
 test_that("a heading of two lines: one header text with a line break, as the hierarchical tables write it", {
@@ -540,7 +581,7 @@ test_that("shift, lab_shift: a blank category after baseline is missing -- no co
   # (the transport file holds the missing text as "")
   expect_true(any(xpt$ANRIND == ""))
   tab <- function(how) {
-    p <- sn_report(sb_study(withr::local_tempdir(), how), list())
+    p <- sn_report(sb_study(withr::local_tempdir(), how), list(header_n = "tested"))
     t <- as.data.frame(suppressMessages(rtfreporter::plan_apply(p, "table")))
     t[] <- lapply(t, function(v) if (is.factor(v)) as.character(v) else v)
     list(table = t, pages = suppressMessages(rtfreporter::plan_apply(p, "pages")))
@@ -554,4 +595,109 @@ test_that("shift, lab_shift: a blank category after baseline is missing -- no co
   expect_identical(b$table, r$table)
   expect_identical(sn_hdr1(b$pages[[1L]]), sn_hdr1(r$pages[[1L]]))
   expect_identical(sn_hdr1(b$pages[[1L]])[2L], "Drug X (N=74)")
+})
+
+# ---- the defaults: a missing baseline is out, % of the tested, header N the set ----
+
+# the approved example (fictional data): one arm, one parameter. The arm's set
+# N = 25; 23 subjects have a value after baseline, 2 of them with no baseline.
+# The 21 with a baseline: LOW 3, NORMAL 15, HIGH 3; their worst after baseline:
+# from LOW 1 LOW and 2 NORMAL, from NORMAL 13 NORMAL and 2 HIGH, from HIGH 3
+# HIGH. The 2 with no baseline: 1 NORMAL, 1 HIGH.
+sd_study <- function(root) {
+  d <- file.path(root, "study")
+  dir.create(file.path(d, "adam"), recursive = TRUE)
+  sl <- tflspec::adsl
+  sl <- sl[sl$SAFFL == "Y" & sl$TRT01A == "Drug X", ][1:25, ]
+  one <- tflspec::adlb
+  one <- one[one$PARAMCD == "ALT" & !(one$ABLFL %in% "Y"), ][1L, ]
+  lb <- one[rep(1L, 23L), ]
+  lb$USUBJID <- sl$USUBJID[1:23]
+  lb$BNRIND <- c(rep("LOW", 3), rep("NORMAL", 15), rep("HIGH", 3), NA, NA)
+  lb$ANRIND <- c("LOW", "NORMAL", "NORMAL", rep("NORMAL", 13), "HIGH", "HIGH",
+                 rep("HIGH", 3), "NORMAL", "HIGH")
+  for (x in list(list("adsl", sl), list("adlb", lb))) {
+    haven::write_xpt(tflspec:::.ai_chr(x[[2L]]), file.path(d, "adam", paste0(x[[1L]], ".xpt")))
+  }
+  tfl_ai_study_init(d, adam = "adam", study_id = "SD-1")
+  d
+}
+
+sd_report <- function(d, args) {
+  f <- file.path(d, "spec", "outputs", "T-SD.yml")
+  tfl_write_output(tfl_output("T-SD", "table", population = "SAF", extends = "defaults",
+                              template = list(name = "shift",
+                                              args = c(list(population = "SAF",
+                                                            cell = "{n} ({p:.1f%})"), args))),
+                   f)
+  st <- tfl_read_study_spec(d)
+  ard <- suppressMessages(tfl_build_ard(st, output_id = "T-SD", dir = d, save = FALSE))
+  ro <- tfl_resolve_output(tfl_read_output(f), st)
+  p <- suppressMessages(tfl_content_run(ro, ard))
+  pg <- suppressMessages(rtfreporter::plan_apply(p, "pages"))
+  tab <- as.data.frame(suppressMessages(rtfreporter::plan_apply(p, "table")))
+  tab[] <- lapply(tab, function(v) if (is.factor(v)) as.character(v) else v)
+  list(ard = as.data.frame(ard), plan = p, header = sn_hdr1(pg[[1L]]), table = tab)
+}
+
+# a count n, N or p of the shift analysis from the ARD: the baseline category
+# `b` (a row), the category after it `a` (a column; NULL: the N of the row)
+sd_stat <- function(ard, b, a, stat) {
+  r <- ard[ard$analysis_id == "SHIFT" & ard$group3_level == b &
+             (is.null(a) | ard$variable_level == a) & ard$stat_name == stat, ]
+  stopifnot(nrow(r) >= 1L)
+  unique(as.numeric(unlist(r$stat)))
+}
+
+test_that("shift: the defaults -- a missing baseline is out, % of the tested, header N the set", {
+  sn_skip()
+  d <- sd_study(withr::local_tempdir())
+  # the default: the 2 subjects with no baseline are in no row, not in the Total or the %
+  x <- sd_report(d, list())
+  expect_identical(x$header, c("", "Drug X (N=25)"))
+  expect_false("Missing" %in% x$table$BNRIND)
+  expect_identical(x$table$BNRIND, c("LOW", "NORMAL", "HIGH", "Total"))
+  expect_equal(sd_stat(x$ard, "Total", "LOW", "N"), 21)
+  expect_equal(sd_stat(x$ard, "NORMAL", "HIGH", "n"), 2)
+  expect_equal(sd_stat(x$ard, "NORMAL", "HIGH", "p"), 2 / 21)
+  expect_equal(sd_stat(x$ard, "Total", "NORMAL", "n"), 15)
+  # (the ARD's counts, and the cells: LOW -> LOW 1, NORMAL -> NORMAL 13, HIGH -> HIGH 3)
+  expect_equal(sd_stat(x$ard, "LOW", "LOW", "n"), 1)
+  expect_equal(sd_stat(x$ard, "NORMAL", "NORMAL", "n"), 13)
+  expect_equal(sd_stat(x$ard, "HIGH", "HIGH", "n"), 3)
+  expect_identical(x$table[["Drug X____HIGH"]][x$table$BNRIND == "NORMAL"], "2 (9.5)")
+  expect_identical(x$table[["Drug X____LOW"]][x$table$BNRIND == "Total"], "1 (4.8)")
+  # the header N is the analysis set's, counted apart from the %: GROUPN
+  g <- x$ard[x$ard$analysis_id == "GROUPN" & x$ard$stat_name == "n", ]
+  expect_equal(as.numeric(unlist(g$stat)), 25)
+  # missing_label = "Missing" (opt-in): a Missing row, in the Total and the denominator
+  m <- sd_report(d, list(missing_label = "Missing"))
+  expect_identical(m$header, c("", "Drug X (N=25)"))
+  expect_identical(m$table$BNRIND, c("LOW", "NORMAL", "HIGH", "Missing", "Total"))
+  # (a row's N is the Total row's: the % denominator)
+  expect_equal(sd_stat(m$ard, "Missing", "LOW", "N"), 23)
+  expect_equal(sd_stat(m$ard, "Missing", "LOW", "n"), 0)
+  expect_equal(sd_stat(m$ard, "Missing", "NORMAL", "n"), 1)
+  expect_equal(sd_stat(m$ard, "Missing", "HIGH", "n"), 1)
+  expect_equal(sd_stat(m$ard, "Total", "LOW", "N"), 23)
+  expect_equal(sd_stat(m$ard, "NORMAL", "HIGH", "n"), 2)
+  expect_equal(sd_stat(m$ard, "NORMAL", "HIGH", "p"), 2 / 23)
+  expect_identical(m$table[["Drug X____HIGH"]][m$table$BNRIND == "NORMAL"], "2 (8.7)")
+  # header_n = "tested": the subjects in the Total row (21; with Missing 23)
+  t1 <- sd_report(d, list(header_n = "tested"))
+  expect_identical(t1$header, c("", "Drug X (N=21)"))
+  t2 <- sd_report(d, list(header_n = "tested", missing_label = "Missing"))
+  expect_identical(t2$header, c("", "Drug X (N=23)"))
+  # header_n = "none": no N
+  expect_identical(sd_report(d, list(header_n = "none"))$header, c("", "Drug X"))
+  # percent_of = "row": each row's % is of its baseline category (the old default)
+  r <- sd_report(d, list(percent_of = "row"))
+  expect_equal(sd_stat(r$ard, "NORMAL", "HIGH", "p"), 2 / 15)
+  expect_identical(r$header, c("", "Drug X (N=25)"))
+  # the RTF says the same
+  f <- withr::local_tempfile(fileext = ".rtf")
+  suppressMessages(rtfreporter::generate_rtfreport(
+    rtfreporter::rtf_tables(rtfreporter::rtf_document(), x$plan), f, overwrite = TRUE))
+  txt <- paste(readLines(f, warn = FALSE), collapse = "\n")
+  expect_true(grepl("Drug X (N=25)", txt, fixed = TRUE))
 })
