@@ -68,7 +68,8 @@ test_that("expanded: subset on the set's ADSL; a records data takes its subjects
   # every record: a records data of the set takes the subjects
   y <- tfl_template_expand("lab_shift", list(population = "SAF", visit = "WEEK 2",
                                              params = "ALT", subset = "PART == \"Part 1\"",
-                                             where = "ANL01FL == \"Y\"", worst = NULL))
+                                             where = "ANL01FL == \"Y\"", worst = NULL,
+                                             header_n = "tested"))
   d <- y$ard$analysis_data
   expect_identical(vapply(d, `[[`, "", "id"), c("adsl_saf", "adlb_saf", "adlb_saf_den"))
   expect_null(d[[2L]]$population)
@@ -119,6 +120,7 @@ test_that("in a study: a listing of ADAE (no PART) with subset lists Part 1's su
   e <- new.env(parent = .fig_pkg_env("dplyr"))
   old <- setwd(d)
   on.exit(setwd(old), add = TRUE)
+  eval(parse(text = tfl_helpers_code()), envir = e)
   eval(parse(text = code), envir = e)
   p1 <- sl$USUBJID[sl$PART == "Part 1"]
   te <- adae[adae$TRTEMFL == "Y", ]
@@ -217,6 +219,7 @@ test_that("a figure (km) of Part 1's subjects: A = B = the template SPEC", {
   env <- new.env(parent = .fig_pkg_env(c(attr(x$a, "libs"), "tflspec")))
   for (n in names(data)) assign(n, data[[n]], envir = env)
   eval(parse(text = tfl_fig_setup_code()), env)
+  eval(parse(text = tfl_helpers_code()), env)
   eval(parse(text = x$a), env)
   p1 <- sl$USUBJID[sl$SAFFL == "Y" & sl$PART == "Part 1"]
   expect_setequal(unique(env$adtte_pfs$USUBJID),

@@ -1225,18 +1225,38 @@ tfl_ard_spec_hash <- function(spec, output_id, dir = ".", codelists = NULL) {
 #' @export
 tfl_build_ard <- function(spec, dir = ".", output_id = NULL, save = TRUE,
                       statistics = NULL, methods = NULL, codelists = NULL) {
+  .ard_build(spec, dir = dir, output_id = output_id, save = save,
+             statistics = statistics, methods = methods, codelists = codelists)
+}
+
+# tfl_build_ard() with `sheets`: the study's sheets (tfl_sheets_from_yaml()),
+# when the caller has read them already (tfl_fill_widths() builds many
+# reports' ARD from one reading).  Not exported: tfl_build_ard() keeps its
+# arguments.  A YAML study's ARD definition is read once for the call: the
+# program and the note on the optional variables both use it.
+.ard_build <- function(spec, dir = ".", output_id = NULL, save = TRUE,
+                       statistics = NULL, methods = NULL, codelists = NULL,
+                       sheets = NULL) {
   # run where nothing is attached and no folder variable is defined
   old <- options(tflspec.paths = NULL, tflspec.attached = NULL,
                  tflspec.plain_ns = TRUE)
   on.exit(options(old), add = TRUE)
-  code <- tfl_ard_code(spec, output_id = output_id, save = save,
+  # a study of the YAML spec: its ARD definition and code lists from its
+  # files, once (tfl_ard_code() would read them again, and so would the note)
+  ard <- spec
+  if (inherits(spec, "tfl_study_spec")) {
+    st <- .ard_spec_of_study(spec, output_id = output_id, sheets = sheets)
+    ard <- st$spec
+    codelists <- codelists %||% st$codelists
+  }
+  code <- tfl_ard_code(ard, output_id = output_id, save = save,
                         statistics = statistics, methods = methods, dir = dir,
                         codelists = codelists)
   owd <- setwd(dir)
   on.exit(setwd(owd), add = TRUE)
   e <- new.env(parent = globalenv())
   .eval_study_code(code, e, spec, ".", output_id = output_id)
-  .ard_optional_note(spec, e, output_id)
+  .ard_optional_note(ard, e, output_id)
   invisible(e$ard)
 }
 

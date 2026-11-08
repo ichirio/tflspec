@@ -1214,6 +1214,12 @@ tpl_disposition <- function(ard, population, ..., codelists = NULL) {
 
 # ---- shift: a category at baseline by the same after it, the layout -------------
 
+# (the title row `{PAGE_HEADING}` of the report's page: titles puts it
+# above the last line, where the shell has it)
+.tpl_param_heading_doc <- paste(
+  "a parameter's page name (`{value}`: the parameter); the last title line,",
+  "or where the title line `{PAGE_HEADING}` is")
+
 .tpl_shift_params <- list(
   tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
   .tpl_subset_param(),
@@ -1242,21 +1248,26 @@ tpl_disposition <- function(ard, population, ..., codelists = NULL) {
   tfl_param("worst_by", NULL, doc = paste(
     "a parameter's own order from the worst, by its value (HGB: LOW, HIGH, NORMAL);",
     "the others take `worst`")),
-  tfl_param("percent_of", "row", doc = paste(
-    "what a cell's {p} is of: \"row\" the subjects of its baseline category,",
-    "\"total\" the Total row -- the arm's subjects with a category after",
-    "baseline for the parameter (the Missing row among them)")),
-  tfl_param("missing_label", "Missing",
-            doc = "the row of the subjects with no baseline category; NULL: none"),
+  tfl_param("percent_of", "total", doc = paste(
+    "what a cell's {p} is of, set apart from the header N (`header_n`):",
+    "\"total\" (default) the Total row -- the arm's subjects with both a baseline",
+    "and a category after baseline for the parameter, so the Total is 100%;",
+    "\"row\" the subjects of its baseline category")),
+  tfl_param("missing_label", NULL, doc = paste(
+    "the row of the subjects with no baseline category, counted in the Total and",
+    "in the % denominator; NULL (default): those subjects are left out of the",
+    "table, not in any row or N")),
   tfl_param("total_label", "Total", doc = "the row of all the subjects; NULL: none"),
   tfl_param("param_page", TRUE, type = "flag",
             doc = "TRUE: a page a parameter, named in the titles by `param_heading`"),
   tfl_param("param_heading", "Parameter: {value}",
-            doc = "a parameter's page name (`{value}`: the parameter)"),
-  tfl_param("header_n", TRUE, type = "flag", doc = paste(
-    "TRUE: each page's arm headings show the arm's subjects for that parameter",
-    "(N=); FALSE: the arm only. Only with `param_page`: one page of several",
-    "parameters has no one N"))
+            doc = .tpl_param_heading_doc),
+  tfl_param("header_n", "set", type = "choice", choices = c("set", "tested", "none"),
+            doc = paste(
+    "the arm headings' N, set apart from the % denominator (`percent_of`):",
+    "\"set\" (default): the arm's subjects in the analysis set (with `subset`);",
+    "\"tested\": the page's subjects with a baseline and a post-baseline category",
+    "(needs `param_page`); \"none\": no N"))
 )
 names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
 
@@ -1268,7 +1279,11 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
 .tpl_shift_code <- function(a, subj) {
   q <- function(x) paste0("\"", x, "\"", collapse = ", ")
   # (a transport file holds "" for no value: not a category)
-  keep <- c("!ABLFL %in% \"Y\"", sprintf("!%s %%in%% c(NA, \"\")", a$post), a$where)
+  keep <- c("!ABLFL %in% \"Y\"", sprintf("!%s %%in%% c(NA, \"\")", a$post),
+            # (no `missing_label`: a subject with no baseline category is out
+            # of the table -- no row, not in the Total or any N)
+            if (!length(a$missing_label)) sprintf("!%s %%in%% c(NA, \"\")", a$baseline),
+            a$where)
   paste(c(
     "# the records after baseline, the subjects' column variable",
     sprintf("d <- dplyr::inner_join(dplyr::select(%s, -dplyr::any_of(%s)),",
@@ -1354,12 +1369,28 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
   # parameter each (the Total row's records, or every subject once)
   total <- identical(a$percent_of, "total")
   if (total && !worst) {
-    .ard_stop("shift: percent_of = \"total\" counts a subject once a parameter; give `worst`.")
+    # (the default percent_of needs `worst`; given, it is an error)
+    if ("percent_of" %in% ctx$given) {
+      .ard_stop("shift: percent_of = \"total\" counts a subject once a parameter; give `worst`.")
+    }
+    total <- FALSE
   }
   den <- paste0(set, "_den")
-  # each page's N: the arm's subjects for the page's parameter, from the
-  # same records as the table (the Total row's, or the set's own)
-  page_n <- isTRUE(a$param_page) && isTRUE(a$header_n)
+  hn <- a$header_n
+  if (!(is.character(hn) && length(hn) == 1L && hn %in% c("set", "tested", "none"))) {
+    .ard_stop(paste0("shift: header_n takes \"set\" (the arm's subjects in the analysis ",
+                     "set), \"tested\" (the page's subjects with a baseline and a ",
+                     "post-baseline category) or \"none\" (no N)."))
+  }
+  # each page's N ("tested"): the arm's subjects for the page's parameter,
+  # from the same records as the table (the Total row's, or the set's own)
+  page_n <- isTRUE(a$param_page) && identical(hn, "tested")
+  # the set's N ("set"): GROUPN counts the arm in the analysis set's ADSL
+  # (the subset's subjects when there is one), as the other templates do
+  set_n <- identical(hn, "set")
+  # (with a `subset` the set's ADSL data is there: made here when `worst` is
+  # given, or by the build for the records)
+  gsubj <- paste0("adsl_", tolower(a$population))
   ard <- list(
     analysis_data = c(
       if (sub) list(list(id = subj, label = .tpl_set_label(a$population, ctx$population),
@@ -1377,14 +1408,19 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
                              if (worst && length(a$total_label))
                                sprintf("dplyr::filter(%s, %s == \"%s\")", set, a$baseline,
                                        a$total_label) else set,
-                             paste(c("USUBJID", a$by, a$param), collapse = ", ")))))),
+                             paste(c("USUBJID", a$by, a$param), collapse = ", "))))),
+      if (set_n && !length(a$subset)) list(list(
+        id = gsubj, label = .tpl_set_label(a$population, ctx$population),
+        from = "ADSL", population = a$population))),
     analyses = c(
       list(Filter(Negate(is.null), list(
         id = a$analysis_id, method = "categorical", data = set,
         by = c(a$by, a$param, a$baseline), variables = a$post,
         denominator = if (total) den))),
       if (page_n) list(list(id = paste0(a$analysis_id, "_N"), method = "categorical",
-                            data = den, by = a$param, variables = a$by))))
+                            data = den, by = a$param, variables = a$by)),
+      if (set_n) list(list(id = "GROUPN", method = "categorical", data = gsubj,
+                           variables = a$by, purpose = "PRIMARY OUTCOME MEASURE"))))
   # the columns: the ARD's order (the code list applied when it is made),
   # or `by_levels` when the report says them
   by_lv <- a$by_levels
@@ -1408,7 +1444,7 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
                                     before = TRUE)),
          tfl_item("plan_col_header", c(list(header = list(
            list(line = "1", cols = ".values", span = a$by,
-                text = if (page_n) "{col1} (N={n})" else "{col1}"),
+                text = if (page_n || set_n) "{col1} (N={n})" else "{col1}"),
            list(line = "2", cols = "row_label", text = .tpl_lines(a$heading)),
            list(line = "2", cols = ".values", span = "each", text = a$post_header))),
            if (page_n) list(values = list(n = TRUE))))),
@@ -1451,6 +1487,22 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
 #' parameter) by the same category after it (the columns, under each arm).
 #' `lab_shift` is the display template on it: the laboratory normal range
 #' indicator (`BNRIND` by `ANRIND`) at one visit, for some parameters.
+#'
+#' @details
+#' The header N and the percentage's denominator are set separately.
+#' `header_n` says the N printed in each arm's heading: by default
+#' (`"set"`) the arm's N in the analysis set (with `subset`); `"tested"`
+#' the arm's subjects in the Total row for the page's parameter (with
+#' `param_page`); `"none"` none. `percent_of` says what a cell's percentage
+#' is of: by default (`"total"`) the subjects with both a baseline and a
+#' post-baseline category for the parameter, so the Total row is 100%;
+#' `"row"` the subjects of the baseline category.
+#'
+#' A subject with no baseline category is left out of the table (in no row,
+#' not in the Total or any N) unless `missing_label` is given (for example
+#' `"Missing"`): then it has a row of its own, and is counted in the Total
+#' and in the percentage's denominator. A subject with no post-baseline
+#' category has nothing to shift and is never in the table.
 #'
 #' @inheritParams tpl_demog
 #' @param ... The template's other parameters (`tpl_shift()`: `by`, `data`,
@@ -1781,7 +1833,7 @@ tpl_km_table <- function(ard, ..., codelists = NULL) {
   tfl_param("param_page", TRUE, type = "flag",
             doc = "TRUE: a page a parameter, named in the titles by `param_heading`"),
   tfl_param("param_heading", "Parameter: {value}",
-            doc = "a parameter's page name (`{value}`: the parameter)"),
+            doc = .tpl_param_heading_doc),
   tfl_param("heading", NULL, doc = "the label column's heading")
 )
 names(.tpl_pc_params) <- vapply(.tpl_pc_params, `[[`, "", "name")

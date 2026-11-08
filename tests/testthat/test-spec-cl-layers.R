@@ -59,8 +59,9 @@ test_that("a shift report's code lists in the study defaults label its rows and 
   ard <- suppressMessages(tfl_build_ard(st, output_id = "T-SH", dir = d, save = FALSE))
   ro <- tfl_resolve_output(tfl_read_output(f), st)
   t <- as.data.frame(suppressMessages(rtfreporter::plan_apply(tfl_content_run(ro, ard), "table")))
-  # (the three levels written, then the template's two rows)
-  expect_identical(as.character(t$BNRIND), c("Low", "Normal", "High", "Missing", "Total"))
+  # (the three levels written, then the Total row; no Missing row: a missing
+  # baseline is out by default, missing_label = NULL)
+  expect_identical(as.character(t$BNRIND), c("Low", "Normal", "High", "Total"))
   expect_identical(unique(sub("^.*____", "", grep("____", names(t), value = TRUE))),
                    c("Low", "Normal", "High"))
 })

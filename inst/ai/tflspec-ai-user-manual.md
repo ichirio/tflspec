@@ -349,7 +349,7 @@ page:
 | titles and footnotes | `page: titles / footnotes`, by line number |
 | the rows in one arm's order (the SOCs and PTs by the Drug A 20 mg column, most first, ties alphabetical) | `plan_sort: {keys: [.overall, "-n@group1[Drug A 20 mg]", group1, .depth, "-n[Drug A 20 mg]", label]}` -- `-n@group1[<column>]` orders the SOCs by their own count in that column, `group1` right after it keeps each SOC's rows together when two SOCs tie, `-n[<column>]` the PTs by theirs, `-n` the count over every column; `group1` alone in place of the `@` key keeps the SOCs alphabetical; the AE templates' `sort` takes the same list |
 | digits that differ by parameter (ALT one decimal, bilirubin three) | guarded cell templates, one a parameter and the last for the rest: `plan_cells: {continuous: [!r 'PARAMCD == "ALT" ~ "{mean:.1f} ({sd:.2f})"', !r 'PARAMCD == "BILI" ~ "{mean:.3f} ({sd:.4f})"', "{mean:.2f} ({sd:.3f})"]}`; the same list under one row's label when only that row differs (`continuous: {"Mean (SD)": [...]}`; the label as an entry of its own, `plan_cells: {"Mean (SD)": [...]}`, is refused); a guard compares the value as the table has it (a key with a code list holds the label) |
-| a title line that changes with the page (`Parameter: <PARAM>`, a parameter a page) | `plan_paginate_rows: {page_by: [PARAMCD], heading: "Parameter: {PARAM}", heading_at: title}` (two keys: `page_by: [ANALYTE, RENALGR]`, a heading of two lines with `\n`); the heading goes under the report's titles on each page |
+| a title line that changes with the page (`Parameter: <PARAM>`, a parameter a page) | `plan_paginate_rows: {page_by: [PARAMCD], heading: "Parameter: {PARAM}", heading_at: title}` (two keys: `page_by: [ANALYTE, RENALGR]`, a heading of two lines with `\n`); the heading goes under the report's titles on each page, or where a titles line `{PAGE_HEADING}` is (the shell's Parameter line above the population line) |
 | a listing with its summary under it (the PK samples) | the listing as the table (`table_plan: {cols: ATPT, rows: {subject: !r '~ "{USUBJID}/{AGE}/{SEX}"'}, value: AVAL}`), the summary as a part: `plan_append: {name: summary, data: {source: ard}, content: [...]}`, the whole-table items after it |
 | a p-value column (Fisher / chi-square of a categorical, Kruskal-Wallis / one-way of a continuous, a t-test of two arms) | one analysis a test with the counts' `by` and `variables` (`method: fisher`, `kruskal` ...), and `plan_compare: {p: "{p.value:.3f}"}` -- the column named as you like, the p-value on the variable's first row |
 | every subject, no flag | `population: ALL` (in `spec/data.yml` beside the flags' sets) |
@@ -1375,6 +1375,8 @@ file.
 
 Page tokens in the running header / footer: `{PAGE}`, `{TOTAL_PAGES}`,
 `{PROGRAM}` (or `{PROGRAM_FULL}`, its absolute path), `{DATETIME}`.
+
+In the titles, a line whose whole text is `{PAGE_HEADING}` (a `left`, `center` or `right` cell of its own) is where the page's heading goes -- the `Parameter: ...` line of `shift`, `lab_shift`, `param_change` and `pk_conc`, or a `plan_paginate_rows` heading -- in that line's alignment. With no such line the heading is the last title line; a page with no heading prints nothing there.
 
 #### A.3.1 A company's TOC as report specs
 

@@ -4,11 +4,13 @@ test_that("mean_se / mean_ci: the design form; the summary the call's step", {
                              population = list(list(id = "SAF", dataset = "ADSL",
                                                     where = "SAFFL == \"Y\"")))
     st <- vapply(x$data$steps, `[[`, "", "step")
-    expect_identical(st, c("read", "join", "param", "filter", "levels", "summary"), info = nm)
-    expect_identical(x$call_steps, 1L)
+    # (the call's: the records with an empty group or visit left out, those
+    # with no value, the summary)
+    expect_identical(st, c("read", "join", "param", "filter", "levels", "filter", "filter", "summary"), info = nm)
+    expect_identical(x$call_steps, 3L)
     expect_identical(x$data$steps[[2L]]$how, "semi")
     expect_identical(vapply(x$content, `[[`, "", "fn"), c("line", "point", "errorbar"))
-    expect_identical(x$data$steps[[6L]]$interval, sub("mean_", "", nm))
+    expect_identical(x$data$steps[[8L]]$interval, sub("mean_", "", nm))
   }
   expect_identical(tfl_template_params("mean_se")$value$type, "vars")
 })
