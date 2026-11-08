@@ -254,6 +254,7 @@ plan_paginate_rows:
     page_by: {main: true, label: "Page by", help: "The columns whose value starts a new page first, each page named after it; the most rows a page applies within each. e.g. \"PARAM\"", type: "list<column>"}
     heading: {label: "Heading", help: "With page by one column: each page's name as a template, {value} the page's value and {n} its subjects. e.g. Treatment: {value} (N={n})", type: string}
     heading_at: {label: "Where the heading prints", help: "Where a page's name (its heading) prints: \"section\" the section header, \"title\" under the titles, \"none\" nowhere. Blank: the report's. e.g. \"title\"", type: "enum[section|title|none]"}
+    na_label: {label: "Name of a blank page", help: "With page by: the text a blank BY value (\"\" or NA) prints as in the page's heading. Blank: the value as it is. e.g. \"Not coded\"", type: string}
 
 plan_paginate_cols:
   package: rtfreporter

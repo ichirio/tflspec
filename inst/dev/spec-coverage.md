@@ -147,6 +147,31 @@ fitting routine, `control` written as its parts, the fit's parts).
 | cardx model arguments | 89.3% (39 / 21) | 100.0% (60 / 0) |
 | weight-3 functions only | 99.6% | 100.0% |
 
+2026-11-08 (wider scope; cards 0.9.0, cardx 0.3.4, still the CRAN
+versions; broom.helpers 1.23.0): the rest of the arguments
+`ard_regression()` / `ard_regression_basic()` pass on to
+`broom.helpers::tidy_plus_plus()` that clinical tables use -- 12 more
+arguments of each (pairwise contrasts, reference rows, labels; left out:
+`model_matrix_attr`, `instrumental_suffix`, `relabel_poly`,
+`disambiguate_*`, `group_by` / `group_labels` (multinomial models),
+`keep_model`, `tidy_post_fun`, `quiet`, `strict` -- rarely changed).
+
+| Scope (2026-11-08, wider) | 2026-11-08 before | 2026-11-08 after |
+|---|---:|---:|
+| **cards / cardx, weighted** | **99.4%** (472 yes / 24 partial) | **100.0%** (496 / 0) |
+| cards ard_*() | 100.0% | 100.0% |
+| cardx ard_*() | 98.8% (254 / 24) | 100.0% (278 / 0) |
+| cards post helpers | 100.0% | 100.0% |
+| cards code helpers | 100.0% | 100.0% |
+| cardx CI helpers | 100.0% | 100.0% |
+| cardx model arguments | 100.0% | 100.0% |
+| weight-3 functions only | 99.4% | 100.0% |
+
+(2026-11-08 before: tflspec@next 8a948f7 on the wider scope -- the 24
+arguments could be written as R in `args` and reached tidy_plus_plus(),
+but were not described and their values not judged: partial.  On the
+2026-11-07 scope the run starts and ends at 100.0%.)
+
 (2026-11-07 before: this branch before the run (tflspec@next d237a12
 merged), measured by this run's script: `mmrm(covariance =, weights =)`
 taken as R; glm.nb()'s arguments reached the model unchecked (its `...`
@@ -181,6 +206,38 @@ function, but the catalog did not describe it and its value was not
 judged: partial.  2026-10-31 before: the same, with
 `update_ard_fmt_fun()` in the `post` scope -- written as R in `post`, its
 names checked, its values not judged.)
+
+### Added 2026-11-08
+
+* **The pairwise comparisons of a model's arms** (`ard_regression()`'s
+  `add_pairwise_contrasts = TRUE`, by emmeans): each arm against each
+  other in one row -- `pairwise_variables` (the terms compared),
+  `pairwise_reverse` (Drug A / Placebo or the other way round),
+  `keep_model_terms`, `contrasts_adjust` (one of emmeans' adjustments:
+  `none`, `tukey`, `bonferroni`, `holm`, `sidak`, `dunnettx`, `mvt` ...; a
+  value not one of them is said) and `emmeans_args` (a list:
+  `list(type = "response")`).  A test builds an ANCOVA row's contrasts
+  and compares them with the arms' mean differences and the model's own
+  t test; `pairwise_reverse = FALSE` turns each sign.
+* **The reference rows and labels**: `no_reference_row` (columns),
+  `add_estimate_to_reference_rows` (a hazard ratio of 1.00 for placebo),
+  `variable_labels` (a list or formula), `term_labels` (labels by name:
+  `c(SEXM = "Male")`; a vector with no names is said),
+  `categorical_terms_pattern` (`"{level} vs {reference_level}"`),
+  `interaction_sep`.  `ard_regression_basic()` the same, with its own
+  default (`add_estimate_to_reference_rows = FALSE`).
+* **A name passed on to `tidy_plus_plus()` is looked for in it and in
+  broom's `tidy()` method of the model** (gap 4): `exponentaite = TRUE`
+  reached broom's `tidy.coxph()` / `tidy.glm()`, whose `...` is ignored --
+  the table showed log hazard (odds) ratios without a word.  The model is
+  the one `method` / `package` name or the call `x` writes (`lm`, `glm`,
+  `coxph`, `glm.nb` (`tidy.negbin()`), `survreg`, `mmrm` ...).  A name R
+  matches by its beginning (`exponent =`) is tidy_plus_plus()'s; a study's
+  own tidier (`tidy_fun =`), a model by a name (`x = fit`) or one broom has
+  no method for is not judged.
+* rtfreporter's new `plan_paginate_rows(na_label =)` (the name of a page
+  whose BY value is blank, rtfreporter@next 29e1c24) has a schema entry
+  (type, label, help); it was passed on by its formals before.
 
 ### Added 2026-11-07
 
@@ -464,9 +521,10 @@ Every argument in scope is described and its value judged (since
    judged; a function bound to another name (`f <- cards::ard_tabulate`)
    is not.
 4. A passed-on argument's name is checked (since 2026-11-04) when it
-   reaches a stats or survival function, and (since 2026-11-05) the
-   `car::Anova()` method of a model written in `x`; one passed to
-   broom.helpers, effectsize or smd, which pass `...` on again, is not.  The catalog
+   reaches a stats or survival function, (since 2026-11-05) the
+   `car::Anova()` method of a model written in `x` and (since 2026-11-08)
+   `broom.helpers::tidy_plus_plus()` with broom's tidier of the model; one
+   passed to effectsize or smd, which pass `...` on again, is not.  The catalog
    names the arguments clinical tables use, not every argument of the
    function they reach (`stats::aov()`'s, `car::vif(type =)` -- a method's
    argument, not the generic's -- are not described).
@@ -532,6 +590,15 @@ Percentage: yes counts 1, partial 0.5.
 | 2026-11-05 before / after | 51.6% (326 / 19 / 305 of 650) | 59.0% (326 / 19 / 224 of 569) | 41 / 7 / 67 |
 | 2026-11-06 before / after | 51.6% (326 / 19 / 305 of 650) | 59.0% (326 / 19 / 224 of 569) | 41 / 7 / 67 |
 | 2026-11-07 before / after | 51.6% (326 / 19 / 305 of 650) | 59.0% (326 / 19 / 224 of 569) | 41 / 7 / 67 |
+| 2026-11-08 before / after | 51.7% (327 / 19 / 305 of 651) | 59.0% (327 / 19 / 224 of 570) | 41 / 7 / 67 |
+
+(2026-11-08: rtfreporter@next 29e1c24 (its changes since ccbcfe4 are
+pagination under `page_by` -- a listing record kept whole, a stub's
+heading rows on each page, a total column's {n} -- and one new argument,
+`plan_paginate_rows(na_label =)`, the text a blank BY value prints as)
+and tflspec@next 8a948f7.  The new argument was passed on by its formals
+already (yes); the run gives it a schema entry (its type and help).  The
+run went mostly to cards / cardx.)
 
 (2026-11-07: rtfreporter@next ccbcfe4 (its changes since 1e1a693 are
 widen_ard()'s labels, plan_digits()' message for a row key's value and the

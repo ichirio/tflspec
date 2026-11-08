@@ -66,3 +66,17 @@ test_that("plan_cells(stats = ): the schema's values are rtfreporter's, cells an
     expect_identical(sp$tables$stats, v)
   }
 })
+
+test_that("plan_paginate_rows(na_label =) is in the schema and written as given", {
+  a <- tfl_schema()$plan_paginate_rows$args$na_label
+  expect_identical(a$type, "string")
+  it <- tfl_item("plan_paginate_rows", list(page_by = "PARAM", na_label = "Not coded"))
+  expect_identical(nrow(tfl_schema_check(it)), 0L)
+  o <- tfl_output("T", "table", data = list(source = "ard"), content = list(
+    tfl_item("table_plan", list(cols = "ARM", rows = list(param = "PARAMCD"))), it))
+  expect_match(paste(tfl_content_code(o), collapse = "\n"),
+               "plan_paginate_rows(page_by = \"PARAM\", na_label = \"Not coded\")",
+               fixed = TRUE)
+  skip_if_not_installed("rtfreporter")
+  expect_true("na_label" %in% names(formals(rtfreporter::plan_paginate_rows)))
+})

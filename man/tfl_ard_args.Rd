@@ -55,7 +55,10 @@ function wins over a \code{*} row.
 The arguments a function passes on through \code{...} to the function that
 does the work follow its own, with \code{passed_to} naming that function:
 \code{ard_regression(exponentiate = TRUE)} (hazard or odds ratios, to
-\code{broom.helpers::tidy_plus_plus()}), \code{ard_car_anova(type = "III")} (to
+\code{broom.helpers::tidy_plus_plus()}; so are \code{add_pairwise_contrasts = TRUE}
+with \code{contrasts_adjust = "none"}, each pair of arms compared by emmeans,
+\code{no_reference_row}, \code{add_estimate_to_reference_rows}, \code{emmeans_args},
+\code{term_labels} and \code{categorical_terms_pattern = "{level} vs {reference_level}"}), \code{ard_car_anova(type = "III")} (to
 \code{car::Anova()}), \code{ard_stats_t_test(var.equal = TRUE)},
 \code{ard_stats_chisq_test(correct = FALSE)},
 \code{ard_stats_mantelhaen_test(exact = TRUE)} ... (to \code{stats}' tests),
@@ -64,7 +67,9 @@ does the work follow its own, with \code{passed_to} naming that function:
 \code{ard_effectsize_cohens_d(pooled_sd = FALSE)} (to \code{effectsize}),
 \code{ard_survival_survdiff(timefix = FALSE)} (to \code{survival::survdiff()}).  They
 are written in \code{args} like the function's own, and their values are
-checked by their kind.  The catalog is \code{inst/ard/passed_args.csv}
+checked by their kind.  A name neither the function nor the one it
+reaches has is said when the spec is read (\code{exponentaite = TRUE} would
+be ignored by broom's \code{tidy()} method of the model: log hazard ratios).  The catalog is \code{inst/ard/passed_args.csv}
 (\code{call}, \code{arg}, \code{passed_to}, \code{default}, \code{kind}, \code{hint}, \code{choices}); a
 company adds rows with \verb{options(tflspec.ard_passed_args = <data frame>)}.
 
