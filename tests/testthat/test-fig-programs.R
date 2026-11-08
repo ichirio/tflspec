@@ -256,3 +256,64 @@ test_that("the preview (tfl_content_run) and the program give the figure's arms 
   eval(parse(text = .fig_strip_library(tfl_content_code(out))), env)
   expect_identical(levels(env$content$layers[[1]]$data$TRT01P), levels(p$layers[[1]]$data$TRT01P))
 })
+
+# a design whose filter drops one arm (Drug B): the legend, the strata and the
+# colours have the arms present only, in TRT01PN order; the colours are the
+# palette's by position among the arms present (as they were before the
+# arms were ordered by number)
+lv_fig_run <- function(d, ...) {
+  code <- as.character(tfl_fig_design_code(d, "F-9", setup = TRUE, save = FALSE))
+  env <- new.env(parent = .fig_pkg_env(c("dplyr", "ggplot2", "ggsurvfit", "patchwork")))
+  list2env(list(...), env)
+  eval(parse(text = tfl_fig_setup_code()), env)
+  eval(parse(text = tfl_helpers_code()), env)
+  grDevices::pdf(NULL)
+  on.exit(grDevices::dev.off())
+  suppressWarnings(suppressMessages(eval(parse(text = .fig_strip_library(code)), env)))
+  p <- env$fig
+  if (inherits(p, "patchwork")) p <- p[[1]]
+  b <- suppressWarnings(ggplot2::ggplot_build(p))
+  # (the hex colours: the arms'; a reference line is "grey50")
+  cols <- unique(stats::na.omit(unlist(lapply(b$data, function(z) z$colour))))
+  list(env = env, breaks = as.vector(b$plot$scales$get_scales("colour")$get_breaks()),
+       colours = cols[grepl("^#", cols)])
+}
+
+lv_with_filter <- function(d, after, expr) {
+  i <- which(vapply(d$data, function(s) identical(s$step, after), NA))[1L]
+  d$data <- append(d$data, list(list(step = "filter", expr = expr)), after = i)
+  d
+}
+
+test_that("a filter that drops an arm leaves no unused level in the legend, strata or colours", {
+  skip_if_not_installed("ggsurvfit")
+  skip_if_not_installed("patchwork")
+  adtte <- lv_adtte()
+  adsl <- adtte[!duplicated(adtte$USUBJID), c("USUBJID", "TRT01P", "TRT01PN", "FASFL")]
+  adsl$SAFFL <- "Y"
+  adlb <- do.call(rbind, lapply(1:2, function(v) data.frame(
+    USUBJID = adsl$USUBJID, PARAMCD = "ALT", AVISIT = paste("Week", v), AVISITN = v,
+    AVAL = 20 + seq_len(nrow(adsl)) + v, stringsAsFactors = FALSE)))
+  keep <- 'TRT01P != "Drug B"'
+  chk <- function(all, cut) {
+    expect_identical(all$breaks, c("Placebo", "Drug B", "Drug A"))
+    expect_identical(cut$breaks, c("Placebo", "Drug A"))
+    # the colours drawn are the palette's, for the arms present
+    expect_identical(names(cut$env$pal), cut$breaks)
+    expect_setequal(cut$colours, unname(cut$env$pal))
+    expect_length(cut$colours, 2L)
+    # the arms present keep their place: Placebo's colour is the same
+    expect_identical(unname(cut$env$pal[["Placebo"]]), unname(all$env$pal[["Placebo"]]))
+  }
+  km <- tfl_fig_template("km_ci", data = "ADTTE", param = "OS", group = "TRT01P")
+  a <- lv_fig_run(km, adtte = adtte, adsl = adsl)
+  b <- lv_fig_run(lv_with_filter(km, "read", keep), adtte = adtte, adsl = adsl)
+  chk(a, b)
+  expect_identical(names(b$env$fit$strata), c("TRT01P=Placebo", "TRT01P=Drug A"))
+  ms <- tfl_fig_template("mean_se", data = "ADLB", param = "ALT", group = "TRT01P")
+  a <- lv_fig_run(ms, adlb = adlb, adsl = adsl)
+  b <- lv_fig_run(lv_with_filter(ms, "flag", keep), adlb = adlb, adsl = adsl)
+  chk(a, b)
+  expect_identical(levels(b$env$sm$TRT01P)[levels(b$env$sm$TRT01P) %in% b$env$sm$TRT01P],
+                   c("Placebo", "Drug A"))
+})
