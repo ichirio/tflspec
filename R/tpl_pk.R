@@ -66,6 +66,8 @@
   # summary's (the values)
   rec <- function(id, label, where, derive) Filter(Negate(is.null), list(
     id = id, label = label, from = a$data, subjects = subj,
+    # (the arm is the analysis set's, from ADSL: not the parameter)
+    add = as.list(setdiff(a$by, c("PARAM", "PARAMCD"))),
     where = if (length(where)) tfl_r(.tpl_and_all(where)),
     derive = if (length(derive)) tfl_r(paste(derive, collapse = " | "))))
   sets <- list(

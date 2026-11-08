@@ -62,7 +62,9 @@
          population = pop),
     Filter(Negate(is.null), list(
       id = set, from = a$data, subjects = subj,
-      where = if (!is.null(a$where)) tfl_r(a$where), derive = tfl_r(paste("DAY =", a$start))))),
+      where = if (!is.null(a$where)) tfl_r(a$where), derive = tfl_r(paste("DAY =", a$start)),
+      # (the arm is the analysis set's, from ADSL)
+      add = as.list(a$by)))),
     lapply(levels, function(l) risk(l[[1L]], l[[2L]], l[[4L]])))
   # the rate of a level, the innermost term as the variable (the shape of a
   # hierarchical ARD: its own rows of each level)

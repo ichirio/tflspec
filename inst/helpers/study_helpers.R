@@ -47,25 +47,57 @@ reorder_by <- function(x, by) {
   stats::reorder(factor(x), by)
 }
 
-# The arms in their numeric order when the data has it: each arm variable
-# (TRT..., ARM..., ACTARM...) with the numeric pair of its name and N
-# (TRT01A by TRT01AN, ARM by ARMN) is made a factor in that order, as a
-# program's data step; one without its pair is left as it is.  A blank
-# (a subject of no arm, as an XPT holds a missing text) is missing, not a
-# level.  A code list set after wins.
-#   adsl |> order_arms()
-order_arms <- function(data) {
-  for (v in grep("^(TRT|ARM|ACTARM)", names(data), value = TRUE)) {
+# The order of the arms and of the categories, as factor levels set in the
+# data step, before the ARD: the display order, and a comparison's
+# reference, come from them.  The variables are the arm variables (TRT...,
+# ARM..., ACTARM...) and those `vars` names (the categories: "SEX",
+# "RACE"); each is made a factor, its levels in the order of
+#   1. its code list, given as `VAR = list` in `...` (set_levels() does it,
+#      with its stop on a value the list does not have);
+#   2. else its numeric pair, the name and N (TRT01A by TRT01AN, SEX by
+#      SEXN, RACE by RACEN, AGEGR1 by AGEGR1N): the value of the pair's
+#      lowest number first, equal numbers in the order the values come;
+#   3. else the fallback, which is what the ARD does without this step: the
+#      column is left as it is, and cards orders a text column's values by
+#      order(x, method = "radix") -- the C locale (byte order: digits, <, >,
+#      upper case, _, lower case), whatever the session's locale is.
+# (A factor made of a column with no pair would count a level the analysis
+# set has no record of, as 0: the fallback makes none.)
+# A factor already in the data keeps its levels; a column that is not text
+# (a number, a date) is left as it is; a variable the data does not have is
+# skipped.  A blank arm (a subject of no arm, as an XPT holds a missing
+# text) is missing, not a level.  A code list given later (set_levels())
+# wins.
+#   adsl |> order_levels()
+#   adsl |> order_levels(c("AGEGR1", "SEX", "RACE"))
+#   adsl |> order_levels(c("SEX", "RACE"), TRT01A = cl_trt01a)
+order_levels <- function(data, vars = NULL, ...) {
+  lists <- list(...)
+  if (length(lists)) data <- set_levels(data, ...)
+  arms <- grep("^(TRT|ARM|ACTARM)", names(data), value = TRUE)
+  arms <- arms[!grepl("N$", arms)]
+  for (v in unique(c(arms, vars))) {
+    if (!v %in% names(data) || v %in% names(lists) || is.factor(data[[v]])) next
     n <- paste0(v, "N")
-    if (grepl("N$", v) || !n %in% names(data) || is.factor(data[[v]])) next
+    if (!n %in% names(data) || !is.numeric(data[[n]])) next
+    if (!v %in% arms && !is.character(data[[v]])) next
     x <- as.character(data[[v]])
-    x[!is.na(x) & !nzchar(trimws(x))] <- NA
+    if (v %in% arms) x[!is.na(x) & !nzchar(trimws(x))] <- NA
     lv <- unique(x[!is.na(x)])
     first <- vapply(lv, function(l) suppressWarnings(min(data[[n]][x %in% l], na.rm = TRUE)), 0)
     data[[v]] <- factor(x, levels = lv[order(first, match(lv, lv))])
   }
   data
 }
+
+# The arms in their numeric order when the data has it: each arm variable
+# (TRT..., ARM..., ACTARM...) with the numeric pair of its name and N
+# (TRT01A by TRT01AN, ARM by ARMN) is made a factor in that order, as a
+# program's data step; one without its pair is left as it is.  A blank
+# (a subject of no arm, as an XPT holds a missing text) is missing, not a
+# level.  A code list set after wins.  order_levels() without categories.
+#   adsl |> order_arms()
+order_arms <- function(data) order_levels(data)
 
 # The ids in front: the report, the analysis and its analysis set.  A cards
 # ARD stays one (class card), so the study ARD is one too and cards' own

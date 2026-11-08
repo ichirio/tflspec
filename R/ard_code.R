@@ -223,7 +223,7 @@
 .ard_helper_names <- c("set_levels", "tag_ard", "fmt_pvalue", "fmt_ard",
                        "keep_stats", "save_ard", "fmt_default", "tfl_stats",
                        "complete_hierarchy", "relevel_ard", "drop_empty_groups",
-                       "ard_hierarchical_or_none", "order_arms")
+                       "ard_hierarchical_or_none", "order_arms", "order_levels")
 
 # the packages an ARD program attaches (its setup's library() calls), and
 # those R attaches itself: their functions without `pkg::`
@@ -871,6 +871,28 @@
                         if (length(levels)) .levels_step))
 }
 
+# The categories a program puts in their order (order_levels()): the
+# variables of its categorical analyses, those with no code list (the arms
+# are found by their names).  One the data has no numeric pair of (SEXN)
+# is left as it is: the ARD sorts it, as it always did.
+.ard_category_vars <- function(a, levels = NULL) {
+  if (is.null(a$method) || is.null(a$variables)) return(character())
+  keys <- tfl_ard_methods()
+  kind <- vapply(a$method, function(m) {
+    k <- .method_key(m, keys)
+    if (is.na(k)) "" else keys$kind[k]
+  }, "")
+  v <- unique(unlist(lapply(a$variables[kind == "categorical"], .split_bar)))
+  # (not the arms: order_levels() finds them by their names)
+  setdiff(v[!grepl("^(TRT|ARM|ACTARM)", v)], names(levels))
+}
+
+# order_levels() as a step of a read: the categories named when there are
+.order_levels_step <- function(cats) {
+  if (!length(cats)) return("order_levels()")
+  sprintf("order_levels(%s)", .lay(.c_str(cats), width = Inf))
+}
+
 # The datasets and populations analyses `a` (and analysis data `nad`)
 # read: their lines, with set_levels() when there are code lists
 .ard_data_lines <- function(x, a, nad, levels = NULL) {
@@ -884,18 +906,20 @@
                                      nad$from[nad$from %in% x$datasets$dataset],
                                      x$populations$dataset[
     x$populations$population_id %in% pops])))
-  # the arms in their numeric order when the data has it (TRT01A by
-  # TRT01AN, ARM by ARMN: order_arms(), a study helper), as every dataset
-  # is read -- a model's reference arm, a comparison's pairs, a table's
-  # columns -- before the code lists, whose order wins
+  # the arms and the categories in their numeric order when the data has it
+  # (TRT01A by TRT01AN, ARM by ARMN, SEX by SEXN, RACE by RACEN:
+  # order_levels(), a study helper), as every dataset is read -- a model's
+  # reference arm, a comparison's pairs, a table's columns -- before the code
+  # lists, whose order wins
   code <- character()
+  cats <- .ard_category_vars(a, levels)
   for (ds in used_ds) {
     r <- x$datasets[x$datasets$dataset == ds, ]
     obj <- .r_name(ds)
     d <- .split_bar(r$derive[1L])
     code <- c(code, .make_code(obj, .reader(r$path[1L]), c(
       if (length(d)) sprintf("dplyr::mutate(%s)", paste(d, collapse = ", ")),
-      "order_arms()",
+      .order_levels_step(cats),
       if (length(levels)) .levels_step)))
   }
   pop_code <- character()

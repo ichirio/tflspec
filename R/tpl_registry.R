@@ -1116,8 +1116,9 @@ names(.tpl_mg_params) <- vapply(.tpl_mg_params, `[[`, "", "name")
   # value: its grades join that row, as rows or as columns
   maxes[[1L]]$code <- sprintf("dplyr::mutate(%s, %s = \"%s\")", maxes[[1L]]$code, h[1L],
                               a$overall)
+  # (the arm is the analysis set's, from ADSL: add)
   d <- list(id = set, from = a$data, subjects = subj,
-            where = if (!is.null(a$where)) tfl_r(a$where))
+            where = if (!is.null(a$where)) tfl_r(a$where), add = as.list(a$by))
   an <- function(id, data, vars, over = FALSE) Filter(Negate(is.null), list(
     id = id, method = "hierarchical", data = data, by = a$by, variables = vars,
     denominator = subj, args = if (over) tfl_r("over_variables = TRUE"),
@@ -1795,9 +1796,11 @@ names(.tpl_pc_params) <- vapply(.tpl_pc_params, `[[`, "", "name")
   sets <- list(
     list(id = subj, label = .tpl_set_label(pop, ctx$population), from = "ADSL",
          population = pop),
+    # (the arm is the analysis set's, from ADSL: add)
     nn(list(id = set, label = a$data_label, from = a$data, subjects = subj,
             where = if (length(where)) tfl_r(.tpl_and_all(where)),
-            derive = if (length(ord)) tfl_r(paste(ord, collapse = " | ")))),
+            derive = if (length(ord)) tfl_r(paste(ord, collapse = " | ")),
+            add = as.list(a$by))),
     # the change: the records that have one (no baseline visit's, so its
     # change cells stay empty)
     nn(list(id = paste0(set, "_chg"), from = set, where = tfl_r("!is.na(CHG)"),
@@ -2044,9 +2047,11 @@ tpl_stat_block <- function(ard, ..., codelists = NULL) {
       analysis_data = list(
         list(id = subj, label = .tpl_set_label(a$population, ctx$population), from = "ADSL",
              population = a$population),
+        # (the arm is the analysis set's, from ADSL: add)
         list(id = rec, label = sprintf("%s records of %s", a$param, a$population),
              from = a$data, subjects = subj,
-             where = tfl_r(.tpl_and(sprintf("PARAMCD == \"%s\"", a$param), a$where))),
+             where = tfl_r(.tpl_and(sprintf("PARAMCD == \"%s\"", a$param), a$where)),
+             add = as.list(a$by)),
         list(id = set, from = rec, code = tfl_r(code),
              label = sprintf("%s of %s, each subject of the set a row", a$param, a$population))),
       analyses = list(
@@ -2155,8 +2160,10 @@ tpl_orr <- function(ard, population = "ITT", ..., codelists = NULL) {
       analysis_data = list(
         list(id = subj, label = .tpl_set_label(pop, ctx$population), from = "ADSL",
              population = pop),
+        # (the arm is the analysis set's, from ADSL: add)
         Filter(Negate(is.null), list(id = set, from = a$data, subjects = subj,
-                                     where = if (!is.null(a$where)) tfl_r(a$where)))),
+                                     where = if (!is.null(a$where)) tfl_r(a$where),
+                                     add = as.list(a$by)))),
       analyses = c(
         list(list(id = "GROUPN", method = "categorical", data = subj, variables = a$by,
                   purpose = "PRIMARY OUTCOME MEASURE")),

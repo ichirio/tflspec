@@ -343,7 +343,8 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
       derive = if (length(a$comparison)) tfl_r(sprintf(
         "%s = factor(%s, levels = c(setdiff(levels(factor(%s)), %s), %s))",
         a$group, a$group, a$group, q(a$comparison[1L]), q(a$comparison[1L]))),
-      add = if (length(a$subgroups)) as.list(a$subgroups)))),
+      # (the arm, and the subgroups, from ADSL: the arm is the analysis set's)
+      add = if (length(c(a$group, a$subgroups))) as.list(unique(c(a$group, a$subgroups)))))),
     analyses = lapply(seq_len(nrow(an)), function(i) list(
       id = an$analysis_id[i], label = an$label[i], method = "custom", data = set,
       code = tfl_r(an$code[i]), purpose = "SECONDARY OUTCOME MEASURE")))
