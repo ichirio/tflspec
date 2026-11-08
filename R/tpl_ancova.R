@@ -16,7 +16,7 @@
   tfl_param("response", "CHG", doc = "the response variable"),
   tfl_param("covariates", "BASE", doc = "the model's covariates besides the arm"),
   tfl_param("where", NULL, doc = "the records kept besides the parameter and visit (R)"),
-  tfl_param("ref", NULL, doc = "the reference arm; NULL: the last arm in the code list's order"),
+  tfl_param("ref", NULL, doc = "the reference arm, put first; NULL: the first arm in the code list's order, or in its number order"),
   tfl_param("adjust", "none", type = "choice", choices = .tpl_ancova_adjust,
             doc = "the multiplicity adjustment of the differences' CIs and p-values, as emmeans' adjust (none: no adjustment)")
 )
@@ -54,31 +54,32 @@
       list(id = "GROUPN", method = "categorical", data = subj, variables = a$by,
            purpose = "PRIMARY OUTCOME MEASURE"),
       an("LSMEAN", "emmeans", "LSMEAN", "variable_level"),
-      # the differences against the reference arm: put last, each pair is
-      # an arm minus it (emmeans' pairwise order)
+      # the differences against the reference arm: put first, each pair is
+      # an arm minus it (emmeans' trt.vs.ctrl, or revpairwise for Tukey)
       list(id = "LSDIFF", method = "custom", data = set, code = paste(c(
-        if (is.null(a$ref)) sprintf("ref <- tail(levels(factor(data$%s)), 1)", a$by) else
+        if (is.null(a$ref)) sprintf("ref <- levels(factor(data$%s))[1L]", a$by) else
           sprintf("ref <- \"%s\"", a$ref),
         "message(\"ancova: the reference arm is \", ref)",
         "data <- data |>",
-        "  # the reference arm last: each difference is an arm minus it",
-        sprintf("  dplyr::mutate(%s = factor(%s, levels = c(setdiff(levels(factor(%s)), ref), ref)))",
+        "  # the reference arm first (a relevel): each difference is an arm minus it",
+        sprintf("  dplyr::mutate(%s = factor(%s, levels = c(ref, setdiff(levels(factor(%s)), ref))))",
                 a$by, a$by, a$by),
         sprintf("fit <- stats::lm(%s ~ %s, data = data)", a$response,
                 paste(c(a$by, a$covariates), collapse = " + ")),
         if (identical(a$adjust, "tukey")) c(
           "# each other arm minus the reference arm, Tukey-adjusted.  emmeans changes \"tukey\"",
           "# to \"sidak\" for the contrast against one arm; the pairwise contrast keeps the",
-          "# Tukey family of all pairs, of which the rows against the reference arm are kept",
+          "# Tukey family of all pairs (\"revpairwise\": a later arm minus an earlier one, so",
+          "# \"arm - reference\"), of which the rows against the reference arm are kept",
           sprintf("diffs <- emmeans::emmeans(fit, specs = ~ %s, data = data) |>", a$by),
-          "  emmeans::contrast(method = \"pairwise\", adjust = \"tukey\") |>",
+          "  emmeans::contrast(method = \"revpairwise\", adjust = \"tukey\") |>",
           "  summary(infer = TRUE, level = 0.95)",
           "diffs <- diffs[endsWith(as.character(diffs$contrast), paste(\" -\", ref)), ]") else c(
           "# each other arm minus the reference arm, adjusted as `adjust` says (emmeans'",
           "# own default for these differences is not \"none\", so it is always given)",
           sprintf("diffs <- emmeans::emmeans(fit, specs = ~ %s, data = data) |>", a$by),
-          sprintf("  emmeans::contrast(method = \"trt.vs.ctrl\", ref = nlevels(data$%s), adjust = \"%s\") |>",
-                  a$by, a$adjust),
+          sprintf("  emmeans::contrast(method = \"trt.vs.ctrl\", ref = 1L, adjust = \"%s\") |>",
+                  a$adjust),
           "  summary(infer = TRUE, level = 0.95)"),
         "# the rows of cardx::ard_emmeans_contrast(): a statistic's rows, one a difference",
         "stat <- list(estimate = diffs$estimate, std.error = diffs$SE, df = diffs$df,",
@@ -134,7 +135,9 @@
 #' `ard_emmeans_emmeans()`; the differences are emmeans' own
 #' (`emmeans::contrast(method = "trt.vs.ctrl")`, each arm against the
 #' reference arm).  The
-#' reference arm is `ref`, else the last arm in the code list's order; the
+#' reference arm is the first level of the arm: the first arm in the code
+#' list's order, else in its number order (`TRT01AN`), else the data's.  `ref`
+#' only puts the named arm first (a relevel in the program).  The
 #' program says which (a message).  The p-value is
 #' written as the program's `fmt_pvalue()` writes it (`<0.001`, else 3
 #' decimals).
