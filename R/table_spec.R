@@ -1109,7 +1109,10 @@ print.tfl_table_spec <- function(x, ...) {
         paste(sQuote(ids), collapse = ", "), "); say which one:\n",
         "    tfl_read_table_spec(path, output_id = ", dQuote(ids[1L], FALSE), ")"))
     }
-    if (!length(ids)) return(sp)
+    if (!length(ids)) {
+      if (NROW(sp$page)) attr(sp, "page_study") <- .page_study_cols(sp$page, output_id)
+      return(sp)
+    }
     output_id <- ids
   }
   if (!length(ids)) {
@@ -1118,6 +1121,9 @@ print.tfl_table_spec <- function(x, ...) {
     if (is.character(output_id) && length(output_id) == 1L && !is.na(output_id)) {
       attr(sp, "output_id") <- output_id
     }
+    # every page row is the study's: the font, languages and size it says are
+    # the setup's options(), as for a report narrowed from its own rows
+    if (NROW(sp$page)) attr(sp, "page_study") <- .page_study_cols(sp$page, output_id)
     return(sp)
   }
   if (!is.character(output_id) || length(output_id) != 1L ||
@@ -1242,6 +1248,7 @@ print.tfl_table_spec <- function(x, ...) {
 
 # The study-wide options of the page sheet, rtfreporter's options they are
 .page_options <- c(font = "rtfreporter.font",
+                   font_lang = "rtfreporter.font_lang",
                    font_size_half_points = "rtfreporter.font_size_half_points")
 
 # Of the page's study-wide options, the ones the study's row (blank
