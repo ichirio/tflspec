@@ -27,5 +27,7 @@ A \code{\link[rtfreporter:table_plan]{rtfreporter::table_plan()}}.
 }
 \description{
 The best overall response (n (\%)) and the objective response rate with
-its 95\% CI, by arm.
+its 95\% CI, by arm.  Every subject of the analysis set is in N, and the
+rate's denominator: one with no record of the parameter, or a blank
+response, is no responder (and in no response category).
 }

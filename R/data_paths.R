@@ -43,15 +43,19 @@
 
 # The message for the first of `datasets` whose file is missing and that
 # `code` (or `only`: the datasets named) reads; NULL when none is missing
-.data_missing_message <- function(datasets, dir = ".", only = NULL, code = NULL) {
+# (`named_only`: NULL, too, when `code` names none of the missing files)
+.data_missing_message <- function(datasets, dir = ".", only = NULL, code = NULL,
+                                  named_only = FALSE) {
   if (!length(datasets)) return(NULL)
   chk <- .data_paths_check(datasets, dir)
-  bad <- which(!chk$exists)
+  # (a dataset data.yml gives no path is not a missing file)
+  bad <- which(!chk$exists & !is.na(chk$path) & nzchar(chk$path))
   if (!is.null(only)) bad <- bad[toupper(chk$dataset[bad]) %in% toupper(only)]
   if (!length(bad)) return(NULL)
   if (!is.null(code)) {
     named <- bad[vapply(bad, function(i) grepl(basename(chk$path[i]), code, fixed = TRUE), NA)]
     if (length(named)) bad <- named
+    else if (isTRUE(named_only)) return(NULL)
   }
   i <- bad[1L]
   .data_missing_text(chk$dataset[i], chk$path[i], chk$other[i])
@@ -65,9 +69,15 @@
   exprs <- if (is.character(code)) parse(text = code, encoding = "UTF-8") else code
   tryCatch(eval(exprs, envir = env), error = function(e) {
     ds <- if (inherits(study, "tfl_study_spec")) study$data$datasets else NULL
-    msg <- tryCatch(.data_missing_message(ds, dir = dir, code = txt), error = function(e2) NULL)
-    if (is.null(msg) || !grepl("cannot open|No such file|does not exist|Failed to open",
-                               conditionMessage(e), ignore.case = TRUE)) {
+    # (a missing file the code reads is its error, whatever language R says
+    # it in; else only an error that reads as a missing file)
+    msg <- tryCatch(.data_missing_message(ds, dir = dir, code = txt, named_only = TRUE),
+                    error = function(e2) NULL)
+    if (is.null(msg) && grepl("cannot open|No such file|does not exist|Failed to open",
+                              conditionMessage(e), ignore.case = TRUE)) {
+      msg <- tryCatch(.data_missing_message(ds, dir = dir, code = txt), error = function(e2) NULL)
+    }
+    if (is.null(msg)) {
       # (the failure path only: a program that ran is not looked at.  The
       # data it had made before it stopped is in `env`, nothing is run again)
       empty <- tryCatch(.empty_data_message(env, study, output_id), error = function(e2) NULL)

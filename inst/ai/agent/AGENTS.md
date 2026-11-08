@@ -22,14 +22,14 @@ first and follow for every report after.
 A draft must be a valid specification: the YAML well formed, every key
 and value as the schema in the instructions says.  {{check_rule}}
 Write exactly the forms the instructions and their examples show, and
-nothing else.  Quote every free-text value -- `label`, titles, footnotes, an assumption's text -- in double quotes.  Always quote a value that holds `: ` or `#`, or starts with `[ { * & ! | > ' " % @`, or is yes / no / on / off or a number you mean as text.
+nothing else.  Quote every free-text value -- `label`, titles, footnotes, an assumption's text -- in double quotes.  Always quote a value that holds `: ` or `#`, or starts with `[ { * & ! | > ' " % @`, or is yes / no / on / off or a number you mean as text.  A `"` inside a double-quoted text ends it and breaks the file, so write a condition in a text with single quotes (`TRTEMFL == 'Y'`).
 A draft that lacks something (an
 analysis set you were not told) is fine -- the person's check says what
 is missing; a draft that breaks the form is not.
 
 This folder -- the study's `ai/` -- is your workspace: every path below
 is from it, and every file you read or write is in it.  Never open a
-path outside it (`../`), except to run `../run.R` as *Build and check* says.
+path outside it (`../`){{run_except}}.
 
 ## What you read
 
@@ -274,7 +274,7 @@ stop is *Running the requests*, below: one, or a batch.  For each request:
    ```yaml
    ai:
      assumptions:
-       - {where: ard.analyses, item: where, assumption: "treatment-emergent is TRTEMFL == \"Y\"", value: "TRTEMFL == \"Y\"", from: D3}
+       - {where: ard.analyses, item: where, assumption: "treatment-emergent is TRTEMFL == 'Y'", value: "TRTEMFL == \"Y\"", from: D3}
        - {where: ard.analyses, item: denominator, assumption: "the percent is of the arm's subjects in the safety set, the usual denominator of an AE table", value: "SAF by TRT01A", from: "programmer convention"}
      confirm:
        - {where: content, item: plan_cells, why: "the shell shows n (%) but not whether the % is of the arm or of all"}
@@ -341,7 +341,7 @@ When no request is left, do not show the menu: finish (*Before you stop*).
 
 Each request is processed on its own: the common files plus ONE request.
 - Read the common files once: this file, the instructions, `ai/templates.md`,
-  `ai/adam_summary.md`, `study_facts.md`, `ai/reference/` and
+  `ai/adam_summary.md`, `study_facts.md`{{ref_common}} and
   `ai/decisions.md`. Then, for each request, read only that request and the
   files it names.
 - Do not reopen an earlier request, its shell, or its drafts. Only when

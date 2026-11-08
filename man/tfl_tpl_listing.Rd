@@ -14,6 +14,9 @@ The listing template \code{listing}, layout \code{listing}. Its program is one c
    \code{where} \tab other \tab call \tab  \tab  \tab the records kept (R) \cr
    \code{subset} \tab other \tab call \tab  \tab  \tab which subjects (R, on ADSL): a listing has no analysis set, so ADSL's subjects it keeps (a semi join) \cr
    \code{sort} \tab other \tab call \tab  \tab  \tab the records' order (variables) \cr
+   \code{by} \tab other \tab call \tab  \tab  \tab the variables that divide the listing ('by_break'); the records are ordered by them first, then by 'sort' \cr
+   \code{by_break} \tab other \tab call \tab page \tab  \tab how 'by' divides it: "page", each value starts a page; "block", one value's records stay together on a page where they fit (one 'by' variable) \cr
+   \code{by_heading} \tab other \tab call \tab  \tab  \tab with "page": the page's name, the last title line (\{value\} is its value; \{VARIABLE\} for each of several 'by' variables); left out, a variable the listing does not print names its page, "VARIABLE: value" \cr
 }
 }
 

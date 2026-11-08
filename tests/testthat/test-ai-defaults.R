@@ -13,6 +13,15 @@ test_that(".ai_impact_class(): the numbers, the rows or statistics, the text or 
   expect_identical(f("content", "widths"), 3L)
   expect_identical(f(NA, NA), 3L)
   expect_identical(f(c("data", "content", "page"), c("population", "sort", "footnotes")), c(1L, 2L, 3L))
+  # whole words: "border" is not "order", "pharmacokinetic" not "arm", "nowhere" not "where"
+  expect_identical(f("page", c("table border", "pharmacokinetic labels", "nowhere")), c(3L, 3L, 3L))
+  # the words still match, with a plural or an ending, and across an underscore
+  expect_identical(f("page", c("rows", "levels", "statistics", "categories", "totals", "sorted", "ordering")),
+                   rep(2L, 7L))
+  expect_identical(f("page", c("populations", "arms", "treatment_var", "analysis_set", "missing values",
+                               "filtered", "visits", "derivations", "where")),
+                   rep(1L, 9L))
+  expect_identical(f("page", c("sort order", "the table's order")), c(2L, 2L))
 })
 
 test_that("tfl_ai_run() writes ai/defaults.md: groups 1, 2, 3; widths in one line a report", {

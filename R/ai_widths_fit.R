@@ -69,6 +69,16 @@
   a <- lapply(step[[1L]]$args, .spec_eval, env = emptyenv())
   nm <- names(a) %||% rep("", length(a))
   cols <- unname(a[!nzchar(nm)])
+  # a column the plan hides (the `listing` template's `by` variable it does
+  # not print, plan_hide()) prints nothing and needs no width: left out of
+  # the fit, so the printed columns share the page, and NA for it
+  hidden <- unlist(lapply(Filter(function(cl) identical(cl$fun, "plan_hide"), pl$steps), function(cl) {
+    unlist(lapply(cl$args, .spec_eval, env = emptyenv()))
+  }))
+  shown <- !vapply(cols, function(cl) length(cl$vars) > 0L && all(cl$vars %in% hidden), NA)
+  if (!any(shown)) stop("the listing prints no column", call. = FALSE)
+  all_cols <- cols
+  cols <- cols[shown]
   opts <- a[nzchar(nm) & names(a) %in% c("type", "sep", "spacer", "spacer_rel_width",
                                          "layout", "wrap")]
   opts <- Filter(Negate(is.null), opts)
@@ -76,7 +86,7 @@
   ard <- if (!is.null(sheets)) .ard_spec_of_study(st, output_id = ro$id, sheets = sheets)$spec
   recs <- suppressMessages(suppressWarnings(as.data.frame(.listing_data_of(ro, st, ".", ard = ard))))
   if (!nrow(recs)) stop("the listing's data has no records", call. = FALSE)
-  gone <- setdiff(unique(unlist(lapply(cols, function(cl) cl$vars))), names(recs))
+  gone <- setdiff(unique(unlist(lapply(all_cols, function(cl) cl$vars))), names(recs))
   if (length(gone)) {
     stop(sprintf("%s not in the listing's data", paste(gone, collapse = ", ")), call. = FALSE)
   }
@@ -90,7 +100,9 @@
     font_size_half_points = as.integer(size))))
   w <- vapply(fitted$cols, function(cl) as.integer(cl$width), 1L)
   if (length(w) != length(cols) || anyNA(w)) stop("the columns could not be matched", call. = FALSE)
-  w
+  out <- rep(NA_integer_, length(all_cols))
+  out[shown] <- w
+  out
 }
 
 # The listings among `outs` given widths where their columns have none:
@@ -118,8 +130,14 @@
     w <- if (!is.null(st) && !is.null(info)) {
       tryCatch(.ai_listing_fit_widths(o, st, sheets = sh), error = function(e) NULL)
     }
+    # (the template's own columns: a hidden `by` column the template adds
+    # after them is not one of them)
+    if (!is.null(w) && identical(info$how, "template") && length(w) > info$n &&
+        all(is.na(w[-seq_len(info$n)]))) {
+      w <- w[seq_len(info$n)]
+    }
     if (!is.null(w) && length(w) == info$n) {
-      for (k in info$miss) {
+      for (k in info$miss[!is.na(w[info$miss])]) {
         if (identical(info$how, "code")) {
           o$content[[info$at]]$args$cols[[k]]$args$width <- w[k]
         } else {

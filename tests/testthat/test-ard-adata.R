@@ -58,7 +58,8 @@ test_that("the analysis data is made once, in order, for what a report reads", {
   # an analysis's own condition on top, under a name of its own; the
   # denominator as it is; the analysis set is the data's
   expect_true(any(code == "adae_sub <- filter(adae_ser, AESEV == \"SEVERE\")"))
-  expect_true(any(grepl("ard_ser <- adae_sub |>\n  ard_tabulate(", code, fixed = TRUE)))
+  expect_true(any(grepl("ard_ser <- adae_sub |>\n  mutate(across(where(is.character), ~ na_if(.x, \"\"))) |>\n  ard_tabulate(",
+                        code, fixed = TRUE)))
   expect_true(any(grepl("denominator = adae_subj,", code, fixed = TRUE)))
   expect_true(any(grepl("denominator = adsl_saf,", code, fixed = TRUE)))
   # formatted in the call (cards::ard_tabulate() takes fmt_fun)

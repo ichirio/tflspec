@@ -513,3 +513,45 @@ test_that("a heading of two lines: one header text with a line break, as the hie
   expect_null(tflspec:::.tpl_lines(NULL))
   expect_identical(tflspec:::.tpl_lines(two), "Line one\nLine two")
 })
+
+# a study whose ADLB holds one subject's ALT category at the visit as "" (how a
+# transport file holds NA), or has that subject's ALT records at the visit
+# dropped
+sb_study <- function(root, how = c("blank", "drop")) {
+  how <- match.arg(how)
+  d <- file.path(root, "study")
+  dir.create(file.path(d, "adam"), recursive = TRUE)
+  lb <- tflspec::adlb
+  sl <- tflspec::adsl
+  one <- sl$USUBJID[sl$SAFFL == "Y" & sl$TRT01A == "Drug X"][1L]
+  hit <- lb$USUBJID == one & lb$PARAMCD == "ALT" & lb$AVISIT == "CYCLE 2 DAY 1" & !(lb$ABLFL %in% "Y")
+  stopifnot(any(hit), !any(is.na(lb$ANRIND[hit])))
+  if (how == "blank") lb$ANRIND[hit] <- NA else lb <- lb[!hit, ]
+  for (x in list(list("adsl", sl), list("adlb", lb))) {
+    haven::write_xpt(tflspec:::.ai_chr(x[[2L]]), file.path(d, "adam", paste0(x[[1L]], ".xpt")))
+  }
+  tfl_ai_study_init(d, adam = "adam", study_id = "SB-1")
+  d
+}
+
+test_that("shift, lab_shift: a blank category after baseline is missing -- no column of its own, not in the N", {
+  sn_skip()
+  xpt <- haven::read_xpt(file.path(sb_study(withr::local_tempdir(), "blank"), "adam", "adlb.xpt"))
+  # (the transport file holds the missing text as "")
+  expect_true(any(xpt$ANRIND == ""))
+  tab <- function(how) {
+    p <- sn_report(sb_study(withr::local_tempdir(), how), list())
+    t <- as.data.frame(suppressMessages(rtfreporter::plan_apply(p, "table")))
+    t[] <- lapply(t, function(v) if (is.factor(v)) as.character(v) else v)
+    list(table = t, pages = suppressMessages(rtfreporter::plan_apply(p, "pages")))
+  }
+  b <- tab("blank")
+  # the columns under each arm are the categories, nothing else
+  vals <- grep("____", names(b$table), value = TRUE)
+  expect_true(all(sub("^.*____", "", vals) %in% c("LOW", "NORMAL", "HIGH")))
+  # the subject is in no column and not in the arm's N: as when it has no such record
+  r <- tab("drop")
+  expect_identical(b$table, r$table)
+  expect_identical(sn_hdr1(b$pages[[1L]]), sn_hdr1(r$pages[[1L]]))
+  expect_identical(sn_hdr1(b$pages[[1L]])[2L], "Drug X (N=74)")
+})
