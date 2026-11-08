@@ -2130,8 +2130,16 @@ tfl_check_fig_design <- function(design, adam = NULL, ggplot2_version = NULL,
   }
   cols <- objects[["df"]]
   f <- .fig_plot_fields()
+  # (a Kaplan-Meier template reads some `plot:` keys itself: the risk table's title)
+  tn <- if (is.list(design$template)) design$template$name else design$template
+  routed <- tryCatch(
+    if (is.character(tn) && length(tn) == 1L && identical(.tpl_get(tn, "")$layout, "km")) {
+      .tpl_km_plot_routed
+    } else character(),
+    error = function(e) character())
   for (nm in names(design$plot)) {
     r <- f[f$field == nm, , drop = FALSE]
+    if (!nrow(r) && nm %in% routed) next
     if (!nrow(r)) { add("plot", nm, "is not a figure setting"); next }
     v <- design$plot[[nm]]
     if (r$kind == "choice" && !is.na(r$choices) &&
