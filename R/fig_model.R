@@ -1379,12 +1379,20 @@ tfl_read_fig_design <- function(path) {
   if (is.null(x) || !length(x) || (length(x) == 1L && (is.na(x) || identical(x, "")))) return(NULL)
   if (is.list(x)) x <- unlist(x)
   if (is.null(names(x))) {
-    parts <- trimws(strsplit(paste(x, collapse = ","), ",", fixed = TRUE)[[1L]])
+    # split at the commas between pairs, not those inside a call's brackets
+    # (X = rgb(1,0,0))
+    parts <- trimws(strsplit(paste(x, collapse = ","), ",(?![^()]*\\))", perl = TRUE)[[1L]])
     kv <- strsplit(parts[nzchar(parts)], "=", fixed = TRUE)
     if (!all(lengths(kv) == 2L)) {
       stop("plot.colours: value = colour pairs, e.g. CR = darkgreen, PD = #D62728.", call. = FALSE)
     }
     x <- stats::setNames(trimws(vapply(kv, `[[`, "", 2L)), trimws(vapply(kv, `[[`, "", 1L)))
+  }
+  call_like <- grepl("(", x, fixed = TRUE)
+  if (any(call_like)) {
+    stop(sprintf(paste0("plot.colours: %s is a call, not a colour R reads: ",
+                        "give a colour name or a hex code (#D62728)."),
+                 paste0("`", x[call_like][1L], "`")), call. = FALSE)
   }
   stats::setNames(as.character(x), names(x))
 }

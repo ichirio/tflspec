@@ -314,3 +314,13 @@ test_that("ref_label with facet_by is drawn inside each panel, and asks for no m
   expect_true(all(rows$x == -Inf))
   expect_true(all(rows$y == 2.5))
 })
+
+test_that("plot.colours as text: split at the commas between pairs, and a call is said not to be a colour", {
+  own <- function(x) .fig_own_colours(list(colours = x))
+  expect_identical(own("CR = darkgreen, PD = #D62728"), c(CR = "darkgreen", PD = "#D62728"))
+  expect_identical(own("CR=darkgreen,PD=#D62728"), c(CR = "darkgreen", PD = "#D62728"))
+  expect_error(own("X = rgb(1,0,0), Y = blue"), "`rgb(1,0,0)` is a call, not a colour R reads", fixed = TRUE)
+  expect_error(own("X = blue, Y = rgb(1,0,0)"), "hex code")
+  expect_error(own("X = blue, Y"), "value = colour pairs")
+  expect_identical(own(c(X = "blue")), c(X = "blue"))
+})
