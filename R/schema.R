@@ -86,7 +86,10 @@
 #' `fun.min`, a scale's `labels`; a lambda or a formula is written as code
 #' where the type also takes text),
 #' `date` (a date as its text, `2024-01-01`; a sequence of them, `NA` an
-#' open end, written `as.Date(c("2024-01-01", NA))`),
+#' open end, written `as.Date(c("2024-01-01", NA))`: a date scale's
+#' `limits` and `breaks`, `coord_cartesian()`'s `xlim`, a reference line's
+#' `xintercept`, `annotate()`'s `x`; a text of that form is a date there,
+#' not a level of a discrete axis),
 #' `call` and `call<fn>` (`{fn:, args:}`; `call<label_*>` takes any
 #' function whose name the pattern matches, of any package:
 #' `{fn: scales::label_percent}`; base R's that clinical figures write as
@@ -120,7 +123,10 @@
 #' `rev()`, `abs()`, `sqrt()`, `exp()`, `log()` / `log2()` / `log10()` /
 #' `log1p()`, `round()`, `after_stat()`, `after_scale()`, `stage()`,
 #' `ifelse()`, `cut()`, `is.na()`, `nchar()`, `toupper()` / `tolower()`,
-#' `substr()` or `trimws()`, or of the arithmetic or a comparison (`<`,
+#' `substr()`, `trimws()`, `formatC()`, `prettyNum()`, `scales::percent()` /
+#' `number()` / `comma()` / `pvalue()`, forcats' `fct_rev()` /
+#' `fct_reorder()` / `fct_relevel()` / `fct_inorder()` / `fct_infreq()` or
+#' `stringr::str_wrap()` (by `pkg::fn` or bare), or of the arithmetic or a comparison (`<`,
 #' `<=`, `==`, `!=`, `%in%`, `!`, `&`, `|`), of columns, constants, their
 #' arithmetic and `c()`, `sum()`, `max()`, `min()`, `mean()`, `median()`,
 #' `length()`, `alpha()`, `pmin()`, `pmax()`, `cumsum()`, `[`,
@@ -591,7 +597,7 @@ tfl_schema_check <- function(item) {
       (!length(ty$args) || .schema_call_named(v, unlist(ty$args))),
     tilde = .schema_is_tilde(v),
     lambda = .schema_is_lambda(v),
-    date = .schema_is_date(v) || (is.logical(v) && is.na(v)),
+    date = .schema_is_date(v) || ((is.logical(v) || is.character(v)) && is.na(v)),
     is.character(v) || is.numeric(v) || is.logical(v))
 }
 

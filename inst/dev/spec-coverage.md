@@ -1145,6 +1145,76 @@ cols`, `labeller = to_string`), grobs, `guide_axis_stack()`'s guides by
 position, `Sys.Date()`, scales' helpers given an expression
 (`scales::label_math(10^.x)`).
 
+### Round 11 (2026-11-08): calendar dates, a part of the data by a function, everyday idioms
+
+What the clinical figures above left out and a statistical programmer
+writes every day: a timeline by calendar date (a data cut-off line, its
+label, the visible range as dates), subjects by worst grade with the
+stat's own counts and percentages, lab values against the normal range
+(the strips by a lookup, the points above it by a function of the data),
+the mean change with a bootstrap CI and the legend's keys redrawn, a heat
+map in colour steps, a KM-like plot with a second axis in weeks.  Six
+figures added to the clinical measure (`fig_dates`, `fig_ae_pct`,
+`fig_lab_range`, `fig_mean_boot`, `fig_heat_steps`, `fig_km_axis`: 27
+figures, 219 calls, 549 uses); "before" is the measure of these figures
+with the tflspec before the round.  A probe of 100 more everyday calls
+(scales' helpers, guides, facets' labellers, themes, positions, stats)
+found the rest below.
+
+| Clinical figures | Before | After |
+|---|---:|---:|
+| **ggplot2: geoms, scales, coords, themes, facets, guides, labs, positions** | **99.4%** | **99.6%** |
+| geom_*() | 98.7% | 99.0% |
+| scale_*() | 99.9% | 99.9% |
+| theme() | 99.7% | 100.0% |
+| labs(), annotate() | 99.6% | 100.0% |
+| coord_*(), facets, guides | 100.0% | 100.0% |
+| **stat_*()** (shown apart) | **100.0%** | **100.0%** |
+| arguments yes / partial / no | 285 / 6 / 0 | 288 / 3 / 0 |
+| uses yes / partial / no | 542 / 6 / 1 | 546 / 3 / 0 |
+
+ggplot2's own examples (round 5's measure): **96.7% to 96.7%** (uses 1195 /
+74 / 3, unchanged: they write none of these).  The arguments' and the
+aesthetics' measures stay at 100% (3409 arguments, 826 aesthetics).
+
+Round 11:
+
+- A date on a date axis where a reference or a place is given: a
+  reference line's `xintercept` / `yintercept`, `annotate()`'s and a
+  layer's fixed `x`, `y`, `xmin`, `xmax`, `ymin`, `ymax`, `xend`, `yend`,
+  `coord_cartesian()`'s `xlim` / `ylim` take `2025-01-31` (`NA` an open
+  end), written `as.Date("2025-01-31")`, read back from it (before: `!r`).
+  **The generated code changes** for a text of the form `YYYY-MM-DD` given
+  as a layer's fixed `x` or `y` (a level of a discrete axis that looks
+  like a date): it is written as a date.  No template or test of this repo
+  writes one.
+- A layer's `data` takes a function of the plot's data written out,
+  `function(d) subset(d, AVAL > ANRHI)` (type `lambda`, as the formula `~
+  subset(.x, ...)` before), written as the function.
+- `legend.justification` (and `legend.key.justification`) by its sides'
+  names, `[right, top]`: before, an error of the check, though ggplot2
+  takes it.
+- A theme's margin as a `unit()` of four sides, `theme(plot.margin =
+  unit(c(1, 1, 1, 1), "cm"))` (`plot.margin`, `legend.margin`,
+  `legend.box.margin`, `margins`, an element's `margin` and `padding`):
+  before, an error of the check.
+- A mapping's expression may call `formatC()`, `prettyNum()`,
+  `scales::percent()` / `number()` / `comma()` / `pvalue()`, forcats'
+  `fct_rev()` / `fct_reorder()` / `fct_relevel()` / `fct_inorder()` /
+  `fct_infreq()` and `stringr::str_wrap()`, by `pkg::fn` or bare
+  (`label: scales::percent(pct, accuracy = 1)`, a forest plot's `y:
+  forcats::fct_rev(level)`); before, `!r`.
+- `scale_*_gradientn(values = scales::rescale(c(-1, 0, 1)))`: the colours'
+  places as a call (`{fn: scales::rescale, args: {x: [-1, 0, 1]}}`), its
+  numbers typed.
+
+What is left (partial), clinical: a layer's data subset as R of the
+figure's own objects (`km[km$censored, ]`; `~ subset(.x, censored)` and
+`function(d) subset(d, censored)` are the typed forms), a scale's labels
+built by R (`c("BL", paste0("W", ...))`).  `method.args = list(family =
+binomial)` reads as R; `{family: binomial}` (written `"binomial"`, which
+glm() takes) is the typed form.
+
 ### The extension packages (ggsurvfit, ggrepel, ggh4x, ggtext, ggnewscale, patchwork)
 
 The same measure, the same file (`package` says which), over the

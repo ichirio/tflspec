@@ -69,7 +69,10 @@ discrete scale's \code{limits: rev}, a facet's \code{labeller: label_both}), \co
 \code{fun.min}, a scale's \code{labels}; a lambda or a formula is written as code
 where the type also takes text),
 \code{date} (a date as its text, \code{2024-01-01}; a sequence of them, \code{NA} an
-open end, written \code{as.Date(c("2024-01-01", NA))}),
+open end, written \code{as.Date(c("2024-01-01", NA))}: a date scale's
+\code{limits} and \code{breaks}, \code{coord_cartesian()}'s \code{xlim}, a reference line's
+\code{xintercept}, \code{annotate()}'s \code{x}; a text of that form is a date there,
+not a level of a discrete axis),
 \code{call} and \verb{call<fn>} (\verb{\{fn:, args:\}}; \verb{call<label_*>} takes any
 function whose name the pattern matches, of any package:
 \code{{fn: scales::label_percent}}; base R's that clinical figures write as
@@ -103,7 +106,10 @@ a call of \code{factor()}, \code{as.factor()}, \code{ordered()}, \code{as.numeri
 \code{rev()}, \code{abs()}, \code{sqrt()}, \code{exp()}, \code{log()} / \code{log2()} / \code{log10()} /
 \code{log1p()}, \code{round()}, \code{after_stat()}, \code{after_scale()}, \code{stage()},
 \code{ifelse()}, \code{cut()}, \code{is.na()}, \code{nchar()}, \code{toupper()} / \code{tolower()},
-\code{substr()} or \code{trimws()}, or of the arithmetic or a comparison (\code{<},
+\code{substr()}, \code{trimws()}, \code{formatC()}, \code{prettyNum()}, \code{scales::percent()} /
+\code{number()} / \code{comma()} / \code{pvalue()}, forcats' \code{fct_rev()} /
+\code{fct_reorder()} / \code{fct_relevel()} / \code{fct_inorder()} / \code{fct_infreq()} or
+\code{stringr::str_wrap()} (by \code{pkg::fn} or bare), or of the arithmetic or a comparison (\code{<},
 \code{<=}, \code{==}, \code{!=}, \verb{\%in\%}, \code{!}, \code{&}, \code{|}), of columns, constants, their
 arithmetic and \code{c()}, \code{sum()}, \code{max()}, \code{min()}, \code{mean()}, \code{median()},
 \code{length()}, \code{alpha()}, \code{pmin()}, \code{pmax()}, \code{cumsum()}, \code{[},

@@ -18,6 +18,8 @@
 #    mapping: {fill: ifelse(PCHG <= -30, "Response", "No response")}
 #    mapping: {colour: cut(PCHG, c(-Inf, -30, 20, Inf))}
 #    mapping: {shape: is.na(ADT)}
+#    mapping: {label: scales::percent(pct, accuracy = 1)}
+#    mapping: {y: forcats::fct_rev(PARAM)}                 # rows from the top
 #
 #  The form: a call of one of `.fig_aes_fns` (factor(), as.numeric(),
 #  interaction(), reorder(), log10(), paste0(), sprintf(), after_stat(),
@@ -39,7 +41,14 @@
                   # a condition and its categories (a waterfall's response,
                   # a value above the normal range, a missing date)
                   "ifelse", "cut", "is.na", "nchar", "toupper", "tolower",
-                  "substr", "trimws")
+                  "substr", "trimws",
+                  # a label's number as text, a factor's order, a long
+                  # label wrapped (by pkg::fn or bare, the package attached)
+                  "formatC", "prettyNum", "scales::percent", "scales::number",
+                  "scales::comma", "scales::pvalue", "fct_rev", "fct_reorder",
+                  "fct_relevel", "fct_inorder", "fct_infreq", "forcats::fct_rev",
+                  "forcats::fct_reorder", "forcats::fct_relevel", "forcats::fct_inorder",
+                  "forcats::fct_infreq", "str_wrap", "stringr::str_wrap")
 
 # the operators a mapping's expression may be of, at its top too
 # (ymin: mean - se)
@@ -55,16 +64,26 @@
 # of `.fig_aes_fns` or of the arithmetic, whose parts are names, constants
 # or calls of the form?
 .fig_aes_form <- function(e) {
-  if (!is.call(e) || !is.name(e[[1L]])) return(FALSE)
-  if (!as.character(e[[1L]]) %in% c(.fig_aes_fns, .fig_aes_ops)) return(FALSE)
+  if (!.fig_aes_head(e) %in% c(.fig_aes_fns, .fig_aes_ops)) return(FALSE)
   part <- function(x) {
     if (is.name(x)) return(nzchar(as.character(x)))
     if (is.atomic(x)) return(length(x) == 1L)
-    if (!is.call(x) || !is.name(x[[1L]])) return(FALSE)
-    if (!as.character(x[[1L]]) %in% c(.fig_aes_fns, .fig_aes_inner)) return(FALSE)
+    if (!.fig_aes_head(x) %in% c(.fig_aes_fns, .fig_aes_inner)) return(FALSE)
     all(vapply(as.list(x)[-1L], part, NA))
   }
   all(vapply(as.list(e)[-1L], part, NA))
+}
+
+# The function a call is of, as its text: `factor`, `scales::percent`;
+# NA for no call, or a call of a call
+.fig_aes_head <- function(x) {
+  if (!is.call(x)) return(NA_character_)
+  f <- x[[1L]]
+  if (is.name(f)) return(as.character(f))
+  if (is.call(f) && identical(f[[1L]], as.name("::")) && is.name(f[[2L]]) && is.name(f[[3L]])) {
+    return(paste0(as.character(f[[2L]]), "::", as.character(f[[3L]])))
+  }
+  NA_character_
 }
 
 # A column's name as the SPEC's text: the name itself, in backticks when it

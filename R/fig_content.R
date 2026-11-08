@@ -225,6 +225,8 @@ tfl_plot <- function(name, items = list(), from = "own") {
   if (arg %in% objects && is.character(v) && length(v) == 1L) {
     # a layer's data as a formula of the plot's (~ subset(.x, censored))
     if (.schema_is_tilde(v) && .fig_type_has(type, "tilde")) return(str2lang(v))
+    # or as a function of it written out (function(d) subset(d, HIGH))
+    if (.schema_is_lambda(v) && .fig_type_has(type, "lambda")) return(str2lang(v))
     return(as.name(v))
   }
   if (!is.null(type) && is.character(v) && length(v) == 1L && is.null(names(v))) {
@@ -280,7 +282,8 @@ tfl_plot <- function(name, items = list(), from = "own") {
                          alpha = c("colour", "alpha"), hcl.colors = c("n", "palette"),
                          palette.colors = c("n", "palette"), gray.colors = "n",
                          grey.colors = "n", rainbow = "n", heat.colors = "n",
-                         terrain.colors = "n", topo.colors = "n", cm.colors = "n")
+                         terrain.colors = "n", topo.colors = "n", cm.colors = "n",
+                         "scales::rescale" = "x")
 
 # the arguments R takes as a list, not a vector: a map of the spec is
 # written list(...) and read back from it

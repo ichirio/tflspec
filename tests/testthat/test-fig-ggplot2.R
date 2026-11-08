@@ -794,3 +794,104 @@ test_that("an argument whose values differ by function is typed by the function 
   }
   expect_identical(tfl_schema("scale_colour_brewer")$args$type$type, "enum[seq|div|qual]")
 })
+
+test_that("a date on a date axis: a reference line, annotate(), coord_cartesian()'s xlim", {
+  a <- list(xintercept = "2025-01-31", linetype = "dashed")
+  expect_identical(nrow(gg_problems("geom_vline", a)), 0L)
+  expect_identical(gg_code("geom_vline", a), "geom_vline(xintercept = as.Date(\"2025-01-31\"), linetype = \"dashed\")")
+  expect_identical(gg_code("geom_vline", list(xintercept = c("2025-01-31", "2025-06-30"))),
+                   "geom_vline(xintercept = as.Date(c(\"2025-01-31\", \"2025-06-30\")))")
+  # numbers stay numbers; a text that is no date is no reference line's
+  expect_identical(gg_code("geom_hline", list(yintercept = c(-30, 20))), "geom_hline(yintercept = c(-30, 20))")
+  expect_true(nrow(gg_problems("geom_vline", list(xintercept = "Week 4"))) > 0L)
+  b <- list(geom = "text", x = "2025-01-31", y = 12.5, label = "Data cut-off")
+  expect_identical(nrow(gg_problems("annotate", b)), 0L)
+  expect_identical(gg_code("annotate", b),
+                   "annotate(geom = \"text\", x = as.Date(\"2025-01-31\"), y = 12.5, label = \"Data cut-off\")")
+  # a level of a discrete axis that is no date stays text
+  expect_identical(gg_code("annotate", list(geom = "text", x = "Week 4", y = 1, label = "a")),
+                   "annotate(geom = \"text\", x = \"Week 4\", y = 1, label = \"a\")")
+  c1 <- list(xlim = c("2024-01-01", NA))
+  expect_identical(nrow(gg_problems("coord_cartesian", c1)), 0L)
+  expect_identical(gg_code("coord_cartesian", c1), "coord_cartesian(xlim = as.Date(c(\"2024-01-01\", NA)))")
+  # read from code and back
+  for (e in list(quote(geom_vline(xintercept = as.Date("2025-01-31"))),
+                 quote(annotate("text", x = as.Date("2025-01-31"), y = 1, label = "cut")),
+                 quote(coord_cartesian(xlim = as.Date(c("2024-01-01", NA)))))) {
+    it <- .fig_lang_item(e)
+    expect_false(any(vapply(it$args, inherits, NA, "tfl_r")), info = deparse(e))
+    expect_identical(nrow(tfl_schema_check(it)), 0L, info = deparse(e))
+  }
+  # it draws on a date axis
+  d <- data.frame(x = as.Date("2024-01-01") + 0:400, y = 1)
+  p <- ggplot2::ggplot(d, ggplot2::aes(x, y)) + ggplot2::geom_point() +
+    eval(.fig_item_lang(tfl_item("geom_vline", a)), asNamespace("ggplot2")) +
+    eval(.fig_item_lang(tfl_item("annotate", b)), asNamespace("ggplot2")) +
+    eval(.fig_item_lang(tfl_item("coord_cartesian", c1)), asNamespace("ggplot2"))
+  expect_no_error(suppressWarnings(ggplot2::ggplot_build(p)))
+})
+
+test_that("a layer's data as a function of the plot's, written out", {
+  a <- list(data = "function(d) subset(d, AVAL > ANRHI)", colour = "red")
+  expect_identical(nrow(gg_problems("geom_point", a)), 0L)
+  expect_identical(gg_code("geom_point", a), "geom_point(data = function(d) subset(d, AVAL > ANRHI), colour = \"red\")")
+  it <- .fig_lang_item(quote(geom_point(data = function(d) subset(d, HIGH), size = 2)))
+  expect_identical(it$args$data, "function(d) subset(d, HIGH)")
+  expect_identical(nrow(tfl_schema_check(it)), 0L)
+  # an object by its name and the formula as before
+  expect_identical(gg_code("geom_point", list(data = "km")), "geom_point(data = km)")
+  expect_identical(gg_code("geom_point", list(data = "~ subset(.x, censored)")), "geom_point(data = ~subset(.x, censored))")
+  d <- data.frame(x = 1:4, y = 1:4, HIGH = c(TRUE, FALSE, TRUE, FALSE))
+  p <- ggplot2::ggplot(d, ggplot2::aes(x, y)) + eval(.fig_item_lang(it), asNamespace("ggplot2"))
+  expect_identical(nrow(ggplot2::layer_data(p)), 2L)
+})
+
+test_that("legend.justification by its sides' names; a theme's margin as a unit", {
+  a <- list(legend.position = "inside", legend.justification = c("right", "top"))
+  expect_identical(nrow(gg_problems("theme", a)), 0L)
+  expect_identical(gg_code("theme", a["legend.justification"]),
+                   "theme(legend.justification = c(\"right\", \"top\"))")
+  expect_identical(nrow(gg_problems("theme", list(legend.justification = c(1, 1)))), 0L)
+  expect_true(nrow(gg_problems("theme", list(legend.justification = c("right", "up")))) > 0L)
+  m <- list(plot.margin = tfl_call("unit", list(x = c(1, 1, 1, 1), units = "cm")))
+  expect_identical(nrow(gg_problems("theme", m)), 0L)
+  expect_identical(gg_code("theme", m), "theme(plot.margin = unit(c(1, 1, 1, 1), \"cm\"))")
+  it <- .fig_lang_item(quote(theme(plot.margin = unit(c(1, 1, 1, 1), "cm"))))
+  expect_identical(nrow(tfl_schema_check(it)), 0L)
+  expect_identical(nrow(gg_problems("theme", list(legend.margin = tfl_call("margin", list(t = -5))))), 0L)
+  p <- ggplot2::ggplot(data.frame(x = 1, y = 1), ggplot2::aes(x, y)) + ggplot2::geom_point() +
+    eval(.fig_item_lang(tfl_item("theme", c(a, m))), asNamespace("ggplot2"))
+  grDevices::pdf(NULL)
+  on.exit(grDevices::dev.off())
+  expect_no_error(ggplot2::ggplotGrob(p))
+})
+
+test_that("a mapping's label by scales, a factor's order by forcats: of a mapping's form", {
+  for (e in list(quote(geom_text(aes(label = scales::percent(pct, accuracy = 1)))),
+                 quote(geom_point(aes(x = hr, y = forcats::fct_rev(level)))),
+                 quote(geom_point(aes(y = fct_reorder(level, hr)))),
+                 quote(geom_text(aes(label = formatC(est, format = "f", digits = 2)))),
+                 quote(geom_text(aes(label = stringr::str_wrap(term, 20)))))) {
+    it <- .fig_lang_item(e)
+    expect_false(any(vapply(it$args$mapping, inherits, NA, "tfl_r")), info = deparse(e))
+    expect_identical(nrow(tfl_schema_check(it)), 0L, info = deparse(e))
+    expect_identical(.fig_item_lang(it)[["mapping"]], e[[2L]], info = deparse(e))
+  }
+  expect_identical(.fig_aes_head(quote(scales::percent(x))), "scales::percent")
+  expect_identical(.fig_aes_head(quote(f(x)(y))), NA_character_)
+  # another package's function stays R
+  it <- .fig_lang_item(quote(geom_text(aes(label = foo::bar(x)))))
+  expect_s3_class(it$args$mapping$label, "tfl_r")
+  expect_true(nrow(gg_problems("geom_text", list(mapping = list(label = "foo::bar(x)")))) > 0L)
+})
+
+test_that("a gradient's colour places by scales::rescale()", {
+  a <- list(colours = c("blue", "white", "red"),
+            values = tfl_call("scales::rescale", list(x = c(-1, 0, 1))), limits = c(-1, 1))
+  expect_identical(nrow(gg_problems("scale_fill_gradientn", a)), 0L)
+  expect_identical(gg_code("scale_fill_gradientn", a["values"]),
+                   "scale_fill_gradientn(values = scales::rescale(c(-1, 0, 1)))")
+  it <- .fig_lang_item(quote(scale_fill_gradientn(colours = c("blue", "red"), values = scales::rescale(c(-1, 0, 1)))))
+  expect_s3_class(it$args$values, "tfl_call")
+  expect_identical(nrow(tfl_schema_check(it)), 0L)
+})

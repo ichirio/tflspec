@@ -1,14 +1,14 @@
 kind,arg,type,en,ja,help,only
 layer,mapping,"map<string, column|r>",Mapping,マッピング,"Aesthetic = column: {x: AVISITN, y: AVAL, colour: TRTA}; !r for an expression."
-layer,data,object|tilde|r,Data,データ,"The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x: ~ subset(.x, censored) (the censored times of a KM plot)."
-layer,x,number|string|list<number|string>|r,X,x,"A fixed x (annotate(), a reference line); a mapped one goes in mapping."
-layer,y,number|string|list<number|string>|r,Y,y,
-layer,xmin,number|string|list<number|string>|r,X from,x の始まり,
-layer,xmax,number|string|list<number|string>|r,X to,x の終わり,
-layer,ymin,number|string|list<number|string>|r,Y from,y の始まり,
-layer,ymax,number|string|list<number|string>|r,Y to,y の終わり,
-layer,xend,number|string|list<number|string>|r,X end,x の終点,
-layer,yend,number|string|list<number|string>|r,Y end,y の終点,
+layer,data,object|tilde|lambda|r,Data,データ,"The layer's own data (by default the plot's), or a part of the plot's data as a formula of .x, ~ subset(.x, censored) (the censored times of a KM plot), or as a function of it written out, function(d) subset(d, AVAL > ANRHI)."
+layer,x,number|string|list<number|string|date>|r,X,x,"A fixed x (annotate(), a reference line); a mapped one goes in mapping.  On a date axis a date, 2025-01-31 (written as.Date(""2025-01-31""))."
+layer,y,number|string|list<number|string|date>|r,Y,y,
+layer,xmin,number|string|list<number|string|date>|r,X from,x の始まり,
+layer,xmax,number|string|list<number|string|date>|r,X to,x の終わり,
+layer,ymin,number|string|list<number|string|date>|r,Y from,y の始まり,
+layer,ymax,number|string|list<number|string|date>|r,Y to,y の終わり,
+layer,xend,number|string|list<number|string|date>|r,X end,x の終点,
+layer,yend,number|string|list<number|string|date>|r,Y end,y の終点,
 layer,stat,string|r,Statistic,統計変換,"What the layer draws from the data: identity, summary (mean +/- SE), ecdf, count, bin, ellipse ...; its parameters (fun.data, pad, level ...) follow."
 layer,geom,string,Geom,描画の種類,"A stat_*() layer's drawing: point, line, step, errorbar, pointrange, path ..."
 layer,position,call|string|r,Position,位置,"identity, dodge, jitter, stack, fill, nudge, or {fn: position_dodge, args: {width: 0.3}}."
@@ -46,8 +46,8 @@ layer,parse,logical,Text as plotmath,数式として読む,
 layer,check_overlap,logical,Leave out overlapping text,重なる文字を省く,
 layer,nudge_x,number|list<number>|r,Nudge along x,x方向にずらす,
 layer,nudge_y,number|list<number>|r,Nudge along y,y方向にずらす,
-layer,xintercept,number|list<number>|r,X of the line(s),線の x,
-layer,yintercept,number|list<number>|r,Y of the line(s),線の y,
+layer,xintercept,number|list<number|date>|r,X of the line(s),線の x,"A number, or a date on a date axis, 2025-01-31 (written as.Date(""2025-01-31""))."
+layer,yintercept,number|list<number|date>|r,Y of the line(s),線の y,"A number, or a date on a date axis, 2025-01-31."
 layer,intercept,number|list<number>|r,Intercept,切片,
 layer,slope,number|list<number>|r,Slope,傾き,
 layer,fun,function|tilde|lambda|r,Function,関数,"A function by its name, written bare: stat summary's y of each x (mean, median; with fun.min / fun.max), stat function's curve (dnorm); ~ sum(.x^2) as a formula; or written out, function(y) mean(y) + sd(y)."
@@ -172,7 +172,7 @@ scale,transform,"string|call<transform_*, *_trans, trans_new, new_transform>|r",
 scale,sec.axis,"call<sec_axis, dup_axis>|r",Secondary axis,第2軸,"{fn: dup_axis} or {fn: sec_axis, args: {transform: !r ~ . / 7, name: Weeks}}."
 scale,drop,logical,Drop unused levels,使わない水準を除く,
 scale,na.translate,logical,Show missing,欠測を表示,
-scale,values,"vec<string, string|number>|list<string|number>|call<hcl.colors, gray.colors, grey.colors, rainbow, heat.colors, terrain.colors, topo.colors, cm.colors, palette.colors>|r",Values,値,By level ({Placebo: grey50}) or in the order of the levels.
+scale,values,"vec<string, string|number>|list<string|number>|call<hcl.colors, gray.colors, grey.colors, rainbow, heat.colors, terrain.colors, topo.colors, cm.colors, palette.colors, rescale>|r",Values,値,"By level ({Placebo: grey50}) or in the order of the levels; scale_*_gradientn(): the colours' places from 0 to 1, or {fn: scales::rescale, args: {x: [-1, 0, 1]}}."
 scale,aesthetics,string|list<string>,Aesthetics,対象のマッピング,"colour, fill, or both ([colour, fill])."
 scale,palette,"string|number|list<string>|call<pal_*>|r",Palette,パレット,"Brewer: Set1, Dark2, Paired, Blues, RdBu ... (or its number)."
 scale,type,enum[seq|div|qual],Palette type,パレットの種類,
@@ -206,8 +206,8 @@ scale,fallback.palette,r,Fallback palette,予備のパレット,ggplot2 4.0: the
 scale,rescaler,function|tilde|lambda|r,Rescaler,再尺度化,"How values map to 0-1: scales::rescale_mid (a function by its name), or ~ scales::rescale_mid(.x, mid = 0)."
 scale,space,enum[Lab],Colour space,色空間,
 scale,right,logical,Bins closed on the right,区間を右で閉じる,A binned scale: a value on a break goes to the bin below (TRUE).
-coord,xlim,list<number>|r,X range,x の範囲,Zooms without dropping data (unlike a scale's limits).
-coord,ylim,list<number>|r,Y range,y の範囲,
+coord,xlim,list<number|date>|r,X range,x の範囲,"Zooms without dropping data (unlike a scale's limits); on a date axis two dates, 2024-01-01 (NA: the data's)."
+coord,ylim,list<number|date>|r,Y range,y の範囲,
 coord,expand,logical,Expand the ranges,範囲に余白,FALSE: the axes start exactly at the limits.
 coord,default,logical,Default coordinates,既定の座標,
 coord,clip,enum[on|off],Clip,はみ出し,off: text and points may draw outside the panel.
@@ -284,7 +284,7 @@ theme,axis.line,"call<element_line, element_blank>|r",Axis lines,軸の線,
 theme,axis.line.x,"call<element_line, element_blank>|r",X axis line,x 軸の線,
 theme,axis.line.y,"call<element_line, element_blank>|r",Y axis line,y 軸の線,
 theme,legend.background,"call<element_rect, element_blank>|r",Legend background,凡例の背景,
-theme,legend.margin,"call<margin, margin_auto, margin_part>|r",Legend margin,凡例の余白,
+theme,legend.margin,"call<margin, margin_auto, margin_part, unit>|r",Legend margin,凡例の余白,
 theme,legend.spacing,call<unit>|r,Space between legends,凡例の間隔,
 theme,legend.key,"call<element_rect, element_blank>|r",Legend keys' background,凡例の印の背景,
 theme,legend.key.size,call<unit>|r,Legend key size,凡例の印の大きさ,
@@ -295,7 +295,7 @@ theme,legend.text,"call<element_text, element_blank, element_markdown>|r",Legend
 theme,legend.title,"call<element_text, element_blank, element_markdown>|r",Legend title,凡例のタイトル,element_blank: none.
 theme,legend.position.inside,list<number>|r,Legend inside at,凡例の内側の位置,"[0.8, 0.8]: x and y from 0 to 1, with legend.position: inside."
 theme,legend.direction,enum[horizontal|vertical],Legend direction,凡例の向き,
-theme,legend.justification,string|list<number>|r,Legend justification,凡例の位置合わせ,"top, left ... or [1, 1]."
+theme,legend.justification,string|list<number>|list<enum[left|right|center|top|bottom]>|r,Legend justification,凡例の位置合わせ,"top, left ... or [1, 1], or [right, top]."
 theme,legend.box,enum[horizontal|vertical],Legends arranged,複数の凡例の並べ方,
 theme,legend.box.just,string,Legends justified,複数の凡例の位置合わせ,
 theme,legend.byrow,logical,Keys by row,印を行ごとに,
@@ -322,7 +322,7 @@ theme,plot.caption,"call<element_text, element_blank, element_markdown, element_
 theme,plot.caption.position,enum[panel|plot],Caption aligned to,注の揃え先,
 theme,plot.tag,"call<element_text, element_blank>|r",Tag,タグ,
 theme,plot.tag.position,string|list<number>|r,Tag position,タグの位置,
-theme,plot.margin,"call<margin, margin_auto, margin_part>|r",Plot margin,図の余白,"{fn: margin, args: {t: 5, r: 5, b: 5, l: 5, unit: pt}}."
+theme,plot.margin,"call<margin, margin_auto, margin_part, unit>|r",Plot margin,図の余白,"{fn: margin, args: {t: 5, r: 5, b: 5, l: 5, unit: pt}}; or four sides as a unit, {fn: unit, args: {x: [1, 1, 1, 1], units: cm}}."
 theme,strip.background,"call<element_rect, element_blank>|r",Strip background,ストリップの背景,
 theme,strip.background.x,"call<element_rect, element_blank>|r",Strip background (x),ストリップの背景（x）,
 theme,strip.background.y,"call<element_rect, element_blank>|r",Strip background (y),ストリップの背景（y）,
@@ -336,19 +336,19 @@ theme,point,"call<element_point, element_blank>|r",All points,すべての点,gg
 theme,polygon,"call<element_polygon, element_blank>|r",All polygons,すべての多角形,ggplot2 4.0.
 theme,geom,call<element_geom>|r,Geoms' defaults,geom の既定,"ggplot2 4.0: {fn: element_geom, args: {ink: black, linewidth: 0.5, pointsize: 1.5}}."
 theme,spacing,call<unit>|r,Base spacing,基本の間隔,ggplot2 4.0: the unit other spacings are relative to.
-theme,margins,"call<margin, margin_auto, margin_part>|r",Base margins,基本の余白,ggplot2 4.0.
+theme,margins,"call<margin, margin_auto, margin_part, unit>|r",Base margins,基本の余白,ggplot2 4.0.
 theme,debug,logical,Show the text boxes,文字枠を表示,
 theme,header_family,string,Font of the titles,見出しのフォント,ggplot2 4.0: the font of titles and strips.
 theme,accent,string,Accent colour,強調色,ggplot2 4.0: the colour of smooths and the like.
 theme,axis.minor.ticks,"call<element_line, element_blank>|r",Minor ticks,副目盛り線,"ggplot2 3.5: by side, axis.minor.ticks.x.bottom ...; drawn with guide_axis(minor.ticks: TRUE)."
 theme,axis.minor.ticks.length,"call<unit, rel>|number|r",Minor tick length,副目盛り線の長さ,"{fn: rel, args: {x: 0.5}}: half the major ticks."
-theme,legend.key.justification,string|list<number>|r,Key justification,凡例の印の位置合わせ,ggplot2 3.5.
+theme,legend.key.justification,string|list<number>|list<enum[left|right|center|top|bottom]>|r,Key justification,凡例の印の位置合わせ,ggplot2 3.5.
 theme,legend.frame,"call<element_rect, element_blank>|r",Colour bar frame,カラーバーの枠,ggplot2 3.5.
 theme,legend.ticks,"call<element_line, element_blank>|r",Colour bar ticks,カラーバーの目盛り,ggplot2 3.5.
 theme,legend.ticks.length,"call<unit, rel>|number|r",Colour bar tick length,カラーバーの目盛りの長さ,ggplot2 3.5.
 theme,legend.axis.line,"call<element_line, element_blank>|r",Legend axis line,凡例の軸線,ggplot2 3.5 (guide_bins).
 theme,legend.location,enum[panel|plot],Legend aligned to,凡例の揃え先,"ggplot2 3.5: plot, a legend at the top aligned to the whole plot."
-theme,legend.box.margin,"call<margin, margin_auto, margin_part>|r",Legend box margin,凡例群の余白,
+theme,legend.box.margin,"call<margin, margin_auto, margin_part, unit>|r",Legend box margin,凡例群の余白,
 theme,legend.box.background,"call<element_rect, element_blank>|r",Legend box background,凡例群の背景,
 theme,legend.box.spacing,call<unit>|r,Legend box spacing,凡例群と面の間隔,
 theme,panel.widths,call<unit>|r,Panel widths,面の幅,"ggplot2 4.0: fixed widths, {fn: unit, args: {x: 6, units: cm}}."
@@ -364,7 +364,7 @@ element,hjust,number,Horizontal justification,横の位置合わせ,
 element,vjust,number,Vertical justification,縦の位置合わせ,
 element,angle,number,Angle,角度,
 element,lineheight,number,Line height,行の高さ,
-element,margin,"call<margin, margin_auto, margin_part>|r",Margin,余白,
+element,margin,"call<margin, margin_auto, margin_part, unit>|r",Margin,余白,
 element,fill,"string|call<alpha>|r",Fill,塗り,!r NA for none.
 element,linewidth,number|call<rel>|r,Line width,線の太さ,
 element,linetype,string|number,Line type,線種,
@@ -520,7 +520,7 @@ element,box.colour,string,Box colour,枠の色,
 element,box.color,string,Box colour,枠の色,
 element,halign,number,Alignment in the box (horizontal),枠内の横位置,"0 left, 0.5 centre, 1 right."
 element,valign,number,Alignment in the box (vertical),枠内の縦位置,
-element,padding,"call<margin, margin_auto, margin_part>|r",Padding,内側の余白,{fn: margin}
+element,padding,"call<margin, margin_auto, margin_part, unit>|r",Padding,内側の余白,{fn: margin}
 element,align_widths,logical,Same widths,幅をそろえる,
 element,align_heights,logical,Same heights,高さをそろえる,
 element,rotate_margins,logical,Margins rotate with the text,余白も回転,
