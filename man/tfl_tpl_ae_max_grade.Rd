@@ -12,7 +12,7 @@ The table template \code{ae_max_grade}, layout \code{hierarchical}. Its program 
    \code{population} \tab required \tab call \tab  \tab output.population \tab the analysis set's id (SAF) \cr
    \code{subset} \tab other \tab call \tab  \tab  \tab which subjects (R, on the analysis set's ADSL): PART == "Part 1" \cr
    \code{grade} \tab other \tab call \tab AESEV \tab  \tab the severity or grade variable (AESEV, AETOXGR) \cr
-   \code{grade_levels} \tab other \tab call \tab  \tab  \tab its values, lowest first; NULL: the code list of 'grade' \cr
+   \code{grade_levels} \tab other \tab call \tab  \tab  \tab its values, lowest first: the rank of the maximum, and the order the table shows them in; NULL: the code list of 'grade' \cr
    \code{grade_in} \tab other \tab call \tab rows \tab  \tab the grades as "rows" under each term, or as "cols" in each group \cr
    \code{hierarchy} \tab other \tab call \tab AEBODSYS, AEDECOD \tab  \tab the levels, outer first \cr
    \code{by} \tab other \tab call \tab TRT01A \tab settings.treatment \tab the column variable \cr

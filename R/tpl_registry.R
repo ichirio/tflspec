@@ -1077,7 +1077,8 @@ tpl_ae_pt_freq <- function(ard, population, ..., codelists = NULL) {
   .tpl_subset_param(),
   tfl_param("grade", "AESEV", doc = "the severity or grade variable (AESEV, AETOXGR)"),
   tfl_param("grade_levels", NULL,
-            doc = "its values, lowest first; NULL: the code list of `grade`"),
+            doc = paste("its values, lowest first: the rank of the maximum, and the order the",
+                        "table shows them in; NULL: the code list of `grade`")),
   tfl_param("grade_in", "rows", doc = "the grades as \"rows\" under each term, or as \"cols\" in each group"),
   tfl_param("hierarchy", c("AEBODSYS", "AEDECOD"), doc = "the levels, outer first"),
   tfl_param("by", "TRT01A", doc = "the column variable"),
@@ -1100,11 +1101,17 @@ names(.tpl_mg_params) <- vapply(.tpl_mg_params, `[[`, "", "name")
   set <- a$data_id %||% paste0(tolower(a$data), "_", tolower(pop))
   g <- a$grade
   h <- a$hierarchy
+  # the grades in their order: `grade_levels`, else the report's code list
   lv <- a$grade_levels %||% .tpl_levels(g, ctx$codelists)[[g]]
   # a record's rank: its grade among the levels (lowest first)
   rank <- if (length(lv)) {
     sprintf("match(%s, c(%s))", g, paste0("\"", lv, "\"", collapse = ", "))
   } else sprintf("xtfrm(%s)", g)
+  # the grades as the ARD holds them (the code list's labels), in their
+  # order on the table: a data step's factor order does not reach it --
+  # cards' hierarchical ARD puts the innermost variable's values in
+  # alphabetical order whatever its levels are -- so the plan says it
+  lv_ard <- if (length(lv)) .tpl_shift_labels(lv, g, ctx$codelists)
   # each subject's record of the highest grade: overall, in each SOC, in each PT
   top <- function(suffix, within) {
     list(id = paste0(set, "_max", suffix), from = set,
@@ -1138,7 +1145,8 @@ names(.tpl_mg_params) <- vapply(.tpl_mg_params, `[[`, "", "name")
   grp <- paste0("group", seq_len(if (rows_in) n else n - 1L))
   term_keys <- unlist(lapply(grp, function(k) c(if (by_n) sprintf("-n@%s", k), k)))
   keys <- c("levels(group1)", term_keys, ".depth",
-            if (!rows_in) c(if (by_n) "-n", "label"))
+            if (!rows_in) c(if (by_n) "-n", "label"),
+            if (rows_in && length(lv_ard)) "levels(label)")
   plan <- if (rows_in) {
     list(tfl_item("table_plan", list(
       cols = a$by, rows = stats::setNames(as.list(h), grp), label = list(label = g))))
@@ -1156,7 +1164,12 @@ names(.tpl_mg_params) <- vapply(.tpl_mg_params, `[[`, "", "name")
   content <- c(
     list(tfl_item("normalize_ard", list(hierarchy = c(h, g))),
          # the overall block first, whatever the order of the others
-         tfl_item("plan_levels", stats::setNames(list(a$overall), h[1L]))),
+         tfl_item("plan_levels", c(
+           stats::setNames(list(a$overall), h[1L]),
+           if (length(lv_ard)) {
+             if (rows_in) list(label = lv_ard)
+             else stats::setNames(list(c(a$any_grade, lv_ard)), g)
+           }))),
     plan,
     list(tfl_item("plan_sort", list(keys = keys))),
     list(tfl_item("plan_col_header", list(header = list(
@@ -1338,16 +1351,27 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
   ifelse(is.na(i), lv, lab[i])
 }
 
-# The baseline column's code list with the Missing and Total rows the
-# analysis data's code adds (value = label), or NULL: the template's
-# `codelists`, which the report's own lists take the values they lack from
+# The template's code lists, or NULL: the template's `codelists`, which the
+# report's own lists take the values they lack from.
+# - the post-baseline column's `levels` when the report has no list for it:
+#   its categories in their order, put on the data as set_levels() (a
+#   report's own list wins);
+# - the baseline column's list of the report with the Missing and Total rows
+#   the analysis data's code adds (value = label).  Without a list of the
+#   report's, the baseline's order stays plan_levels(): its Missing and
+#   Total rows are made by the analysis data's code, after the data is read.
 .tpl_shift_codelists <- function(a, worst, codelists) {
+  out <- list()
+  if (length(a$levels) && is.null(codelists[[a$post]])) {
+    out[[a$post]] <- lapply(a$levels, function(v) list(value = v, label = v))
+  }
   cl <- codelists[[a$baseline]]
-  if (is.null(cl) || !worst) return(NULL)
-  rows <- .tpl_cl_rows(cl)
-  extra <- c(a$missing_label, a$total_label)
-  rows <- c(rows, lapply(extra, function(v) list(value = v, label = v)))
-  stats::setNames(list(rows), a$baseline)
+  if (!is.null(cl) && worst) {
+    extra <- c(a$missing_label, a$total_label)
+    out[[a$baseline]] <- c(.tpl_cl_rows(cl),
+                           lapply(extra, function(v) list(value = v, label = v)))
+  }
+  if (length(out)) out
 }
 
 # A code list as rows of value / label (a program's named or plain vector
@@ -1426,16 +1450,19 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
   by_lv <- a$by_levels
   # (as the ARD holds them: the code list's labels when the column has one;
   # the Missing and Total rows of the code, last)
-  post_lv <- .tpl_shift_labels(a$levels, a$post, ctx$codelists)
   base_lv <- c(.tpl_shift_labels(a$levels, a$baseline, ctx$codelists),
                if (worst) c(a$missing_label, a$total_label))
+  own <- .tpl_shift_codelists(a, worst, ctx$codelists)
   lv <- c(if (length(by_lv)) stats::setNames(list(by_lv), a$by),
-          stats::setNames(list(base_lv, post_lv), c(a$baseline, ".label")))
+          stats::setNames(list(base_lv), a$baseline))
   content <- c(
     list(tfl_item("table_plan", list(cols = c(a$by, ".label"),
                                      rows = list(group = a$param), label = a$baseline)),
          tfl_item("plan_cells", list(categorical = a$cell)),
-         tfl_item("plan_levels", lv)),
+         tfl_item("plan_levels", c(lv, if (!is.null(own[[a$post]]))
+           # (the list makes the levels of the whole data: a category no
+           # record has is not shown, as the order plan_levels() gave never was)
+           list(.drop_empty = a$post)))),
     if (length(a$param_labels)) list(tfl_item("plan_labels", stats::setNames(
       list(as.list(a$param_labels)), a$param))),
     # (a page a parameter: the parameter in the titles, not the stub)
@@ -1456,7 +1483,7 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
                                           heading_at = "title")),
       tfl_item("plan_hide", list(cols = list("group")))))
   list(ard = ard, data = list(source = "ard"), content = content,
-       codelists = .tpl_shift_codelists(a, worst, ctx$codelists))
+       codelists = own)
 }
 
 .tfl_template("shift", kind = "table", layout = "shift",
@@ -2054,6 +2081,15 @@ tpl_stat_block <- function(ard, ..., codelists = NULL) {
 
 # ---- orr: best overall response and the objective response rate (95% CI) --------
 
+# The column variable's `by_levels` as a code list of the template (the data
+# step puts the arms in that order), unless the report has a list for it: the
+# report's own wins.  NULL: none.
+.tpl_by_codelist <- function(a, ctx) {
+  if (length(a$by_levels) && is.null(ctx$codelists[[a$by]])) {
+    stats::setNames(list(lapply(a$by_levels, function(v) list(value = v, label = v))), a$by)
+  }
+}
+
 .tfl_template("orr", kind = "table", layout = "stat_block",
   params = list(
     tfl_param("population", "ITT", doc = "the analysis set's id"),
@@ -2106,11 +2142,11 @@ tpl_stat_block <- function(ard, ..., codelists = NULL) {
              variables = a$category, denominator = subj),
         list(id = "ORR", method = "proportion_ci", data = set, by = a$by,
              variables = "RESP", args = tfl_r(ci_args))))
-    # (the arms' order: an order given, else the code list's, which the ARD
-    # program puts on the survfit / CI analysis too, relevel_ard())
-    by_lv <- a$by_levels
-    levels_item <- tfl_item("plan_levels", c(list(variable = c(a$category, "RESP")),
-                                             if (length(by_lv)) stats::setNames(list(by_lv), a$by)))
+    # (the arms' order: an order given, else the code list's -- the program
+    # puts it on the data, and on the survfit / CI analysis too, relevel_ard();
+    # the report's own list for the arms wins)
+    own <- .tpl_by_codelist(a, ctx)
+    levels_item <- tfl_item("plan_levels", list(variable = c(a$category, "RESP")))
     labels_item <- tfl_item("plan_labels", list(variable = stats::setNames(
       list("Best overall response, n (%)", sprintf("Objective response rate (%s)", resp)),
       c(a$category, "RESP"))))
@@ -2131,7 +2167,7 @@ tpl_stat_block <- function(ard, ..., codelists = NULL) {
           list(line = "1", cols = ".values", span = a$by, text = "{col1} (N={n1})"),
           list(line = "2", cols = "row_label", text = .tpl_lines(a$heading)),
           list(line = "2", cols = ".values", span = "each", text = "{col}"))))))
-      return(list(ard = ard, data = list(source = "ard"), content = content))
+      return(list(ard = ard, data = list(source = "ard"), content = content, codelists = own))
     }
     content <- list(
       tfl_item("table_plan", list(cols = a$by, rows = list(group = "variable"))),
@@ -2143,7 +2179,7 @@ tpl_stat_block <- function(ard, ..., codelists = NULL) {
         list(line = "1", cols = ".values", span = "each", text = "{col}"),
         list(line = "2", cols = "row_label", text = .tpl_lines(a$heading)),
         list(line = "2", cols = ".values", span = "each", text = "(N={n})")))))
-    list(ard = ard, data = list(source = "ard"), content = content)
+    list(ard = ard, data = list(source = "ard"), content = content, codelists = own)
   })
 
 #' Objective response: a table plan from the template `orr`
