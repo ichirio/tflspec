@@ -455,7 +455,9 @@ test_that("shift: `worst` is matched with the data's values, a code list's label
 
 test_that("shift: `Missing` and `Total` in `levels` are the template's rows: an error, whatever the code lists or `worst` (#636)", {
   for (cl in c(FALSE, TRUE)) {
-    p <- aitpl_shift_check(args = "levels: [LOW, NORMAL, HIGH, Missing]", codelists = cl, cl_missing = cl)
+    # (`Missing` is the template's row when `missing_label` is given)
+    p <- aitpl_shift_check(args = c("levels: [LOW, NORMAL, HIGH, Missing]", "missing_label: Missing"),
+                           codelists = cl, cl_missing = cl)
     expect_identical(p$severity, "error", info = cl)
     expect_match(p$problem, "`Missing` is a row the template adds: leave it out of `levels`", fixed = TRUE)
   }
@@ -465,7 +467,7 @@ test_that("shift: `Missing` and `Total` in `levels` are the template's rows: an 
   p <- aitpl_shift_check(args = c("levels: [LOW, NORMAL, HIGH, Absent]", "missing_label: Absent"))
   expect_match(p$problem, "`Absent` is a row the template adds", fixed = TRUE)
   # (the others of the entries are still judged)
-  p <- aitpl_shift_check(args = "levels: [Low, Missing]")
+  p <- aitpl_shift_check(args = c("levels: [Low, Missing]", "missing_label: Missing"))
   expect_length(p$problem, 2L)
   # nothing more to say of the data's values with them left out
   expect_identical(nrow(aitpl_shift_check(args = "levels: [LOW, NORMAL, HIGH]")), 0L)

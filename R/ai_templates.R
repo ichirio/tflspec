@@ -82,21 +82,23 @@
     "text (`Low`), give the report's `codelists` for both the post and the baseline ",
     "column (value, label), and `levels` may then be the codes or the labels; ",
     "`Missing` and `Total` are the template's rows: not in `levels`, and they need not ",
-    "be in the code list; the rows are `levels`, then `Missing`, then `Total` (with a ",
-    "code list for the baseline they always print, ",
-    "empty when nobody is in them; without one, `Missing` prints only when a subject ",
-    "has no baseline value); a group text over the categories (`Worst post-baseline ",
-    "[a]: Low`) is `post_header` (`{col}`: the category), not the code list's label."),
+    "be in the code list; the rows are `levels`, then `Missing` (only with ",
+    "`missing_label: Missing`: by default a subject with no baseline is left out), then ",
+    "`Total`; the header N (`header_n`: `set` by default) and the % denominator ",
+    "(`percent_of`: `total` by default) are set separately; a group text over the ",
+    "categories (`Worst post-baseline [a]: Low`) is `post_header` (`{col}`: the ",
+    "category), not the code list's label."),
   lab_shift = paste0(
     "`levels` are the data's values, in order (`LOW`, `NORMAL`, `HIGH`); to print other ",
     "text (`Low`), give the report's `codelists` for both the post and the baseline ",
     "column (value, label), and `levels` may then be the codes or the labels; ",
     "`Missing` and `Total` are the template's rows: not in `levels`, and they need not ",
-    "be in the code list; the rows are `levels`, then `Missing`, then `Total` (with a ",
-    "code list for the baseline they always print, ",
-    "empty when nobody is in them; without one, `Missing` prints only when a subject ",
-    "has no baseline value); a group text over the categories (`Worst post-baseline ",
-    "[a]: Low`) is `post_header` (`{col}`: the category), not the code list's label."),
+    "be in the code list; the rows are `levels`, then `Missing` (only with ",
+    "`missing_label: Missing`: by default a subject with no baseline is left out), then ",
+    "`Total`; the header N (`header_n`: `set` by default) and the % denominator ",
+    "(`percent_of`: `total` by default) are set separately; a group text over the ",
+    "categories (`Worst post-baseline [a]: Low`) is `post_header` (`{col}`: the ",
+    "category), not the code list's label."),
   km_survival = paste0(
     "the log-rank p-value is shown by default: set `pvalue: false` when the shell shows ",
     "none."),
@@ -344,12 +346,14 @@
                  number = is.numeric(v) || (is.list(v) && length(v) &&
                                               all(vapply(v, function(e) is.numeric(e) && length(e) == 1L, NA))),
                  vars = , levels = , text = , choice = is.character(v) || inherits(v, "tfl_r") ||
-                   (is.list(v) && all(vapply(v, is.character, NA))),
+                   (is.list(v) && all(vapply(v, is.character, NA))) ||
+                   # (a choice that lists "FALSE" takes the logical too: header_n: false)
+                   (isFALSE(v) && "FALSE" %in% x$choices),
                  TRUE)
     if (!isTRUE(ok)) {
       add(paste("template args", x$name), sprintf("of template %s is %s%s", nm, x$type,
                                                   if (isTRUE(x$multiple)) " (several)" else ""))
-    } else if (identical(x$type, "choice") && length(x$choices) && !all(unlist(v) %in% x$choices)) {
+    } else if (identical(x$type, "choice") && length(x$choices) && !all(as.character(unlist(v)) %in% x$choices)) {
       add(paste("template args", x$name), sprintf("of template %s is one of %s", nm,
                                                   paste(x$choices, collapse = ", ")))
     }

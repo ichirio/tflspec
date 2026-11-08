@@ -68,7 +68,8 @@ test_that("expanded: subset on the set's ADSL; a records data takes its subjects
   # every record: a records data of the set takes the subjects
   y <- tfl_template_expand("lab_shift", list(population = "SAF", visit = "WEEK 2",
                                              params = "ALT", subset = "PART == \"Part 1\"",
-                                             where = "ANL01FL == \"Y\"", worst = NULL))
+                                             where = "ANL01FL == \"Y\"", worst = NULL,
+                                             header_n = "tested"))
   d <- y$ard$analysis_data
   expect_identical(vapply(d, `[[`, "", "id"), c("adsl_saf", "adlb_saf", "adlb_saf_den"))
   expect_null(d[[2L]]$population)

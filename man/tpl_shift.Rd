@@ -32,3 +32,19 @@ parameter) by the same category after it (the columns, under each arm).
 \code{lab_shift} is the display template on it: the laboratory normal range
 indicator (\code{BNRIND} by \code{ANRIND}) at one visit, for some parameters.
 }
+\details{
+The header N and the percentage's denominator are set separately.
+\code{header_n} says the N printed in each arm's heading: by default
+(\code{"set"}) the arm's N in the analysis set (with \code{subset}); \code{"tested"}
+the arm's subjects in the Total row for the page's parameter (with
+\code{param_page}); \code{FALSE} none. \code{percent_of} says what a cell's percentage
+is of: by default (\code{"total"}) the subjects with both a baseline and a
+post-baseline category for the parameter, so the Total row is 100\%;
+\code{"row"} the subjects of the baseline category.
+
+A subject with no baseline category is left out of the table (in no row,
+not in the Total or any N) unless \code{missing_label} is given (for example
+\code{"Missing"}): then it has a row of its own, and is counted in the Total
+and in the percentage's denominator. A subject with no post-baseline
+category has nothing to shift and is never in the table.
+}
