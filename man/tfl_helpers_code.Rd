@@ -20,7 +20,10 @@ before the ARD: each in its code list's order, else its numeric pair's
 -- \code{TRT01A} by \code{TRT01AN}, \code{SEX} by \code{SEXN}, \code{RACE} by \code{RACEN} --, else
 as it is, which the ARD sorts: cards orders text by \code{order(x, method = "radix")},
 the C locale's byte order; a factor already in the data keeps
-its levels), \code{order_arms()} (the arm
+its levels; a blank is missing, not a level; \code{from = adsl} orders a
+records data's arm, which has no number of its own, by the matching arm
+and number of ADSL, the records' values kept and a value ADSL lacks
+last; a value with two numbers there is an error), \code{order_arms()} (the arm
 variables alone: \code{order_levels()} with no categories), \code{tag_ard()} (the report, analysis and
 analysis set in front of an analysis's ARD), \code{fmt_ard()} and
 \code{fmt_pvalue()} (formats after a call), \code{keep_stats()} (only the

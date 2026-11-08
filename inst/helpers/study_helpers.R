@@ -65,8 +65,8 @@ reorder_by <- function(x, by) {
 # set has no record of, as 0: the fallback makes none.)
 # A factor already in the data keeps its levels; a column that is not text
 # (a number, a date) is left as it is; a variable the data does not have is
-# skipped.  A blank arm (a subject of no arm, as an XPT holds a missing
-# text) is missing, not a level.  A code list given later (set_levels())
+# skipped.  A blank (a subject of no arm, a category with no value, as an
+# XPT holds a missing text) is missing, not a level.  A code list given later (set_levels())
 # wins.
 #   adsl |> order_levels()
 #   adsl |> order_levels(c("AGEGR1", "SEX", "RACE"))
@@ -99,10 +99,17 @@ order_levels <- function(data, vars = NULL, from = NULL, ...) {
       src <- from
       pair <- paste0(cand[1L], "N")
       key <- as.character(from[[cand[1L]]])
+      # the map of the value to its number is one to one: a value with two
+      # numbers has no order
+      nn <- tapply(src[[pair]], key, function(z) length(unique(z[!is.na(z)])))
+      if (any(nn[intersect(names(nn), x0)] > 1L, na.rm = TRUE)) {
+        stop(sprintf("order_levels(): %s has values with more than one %s in `from`: their order is not defined.",
+                     v, pair), call. = FALSE)
+      }
     }
     if (!v %in% arms && !is.character(data[[v]])) next
     x <- as.character(data[[v]])
-    if (v %in% arms) x[!is.na(x) & !nzchar(trimws(x))] <- NA
+    x[!is.na(x) & !nzchar(trimws(x))] <- NA
     lv <- unique(x[!is.na(x)])
     if (identical(src, data)) key <- x
     first <- vapply(lv, function(l) suppressWarnings(min(src[[pair]][key %in% l], na.rm = TRUE)), 0)

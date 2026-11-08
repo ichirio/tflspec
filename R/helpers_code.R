@@ -10,7 +10,10 @@
 #' -- `TRT01A` by `TRT01AN`, `SEX` by `SEXN`, `RACE` by `RACEN` --, else
 #' as it is, which the ARD sorts: cards orders text by `order(x, method =
 #' "radix")`, the C locale's byte order; a factor already in the data keeps
-#' its levels), `order_arms()` (the arm
+#' its levels; a blank is missing, not a level; `from = adsl` orders a
+#' records data's arm, which has no number of its own, by the matching arm
+#' and number of ADSL, the records' values kept and a value ADSL lacks
+#' last; a value with two numbers there is an error), `order_arms()` (the arm
 #' variables alone: `order_levels()` with no categories), `tag_ard()` (the report, analysis and
 #' analysis set in front of an analysis's ARD), `fmt_ard()` and
 #' `fmt_pvalue()` (formats after a call), `keep_stats()` (only the

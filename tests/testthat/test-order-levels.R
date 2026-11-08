@@ -138,3 +138,70 @@ test_that("RACE follows RACEN, SEX follows SEXN, where ADSL has the pair", {
   expect_identical(lev(ard0, "SEX"), c("F", "M"))
   expect_identical(lev(ard0, "RACE"), races[order(races, method = "radix")])
 })
+
+test_that("a blank category is missing, not a level (an XPT holds \"\" for a missing text)", {
+  e <- new.env()
+  sys.source(system.file("helpers", "study_helpers.R", package = "tflspec"), envir = e)
+  d <- data.frame(TRT01A = c("Placebo", "Drug", "Drug"), TRT01AN = c(1, 2, 2),
+                  RACE = c("WHITE", "", "ASIAN"), RACEN = c(1, NA, 2),
+                  SEX = c("F", " ", "M"), SEXN = c(2, NA, 1), stringsAsFactors = FALSE)
+  r <- e$order_levels(d, c("RACE", "SEX"))
+  expect_identical(levels(r$RACE), c("WHITE", "ASIAN"))
+  expect_true(is.na(r$RACE[2L]))
+  expect_identical(levels(r$SEX), c("M", "F"))
+  expect_true(is.na(r$SEX[2L]))
+})
+
+test_that("a records arm without its own number is ordered by ADSL's pair, its values kept", {
+  e <- new.env()
+  sys.source(system.file("helpers", "study_helpers.R", package = "tflspec"), envir = e)
+  adsl <- data.frame(TRT01A = c("Drug A", "Placebo", "Drug B", "Drug A"),
+                     TRT01AN = c(3, 1, 2, 3), stringsAsFactors = FALSE)
+  ae <- data.frame(TRTA = c("Drug A", "Placebo", "Drug B", "Drug A"), stringsAsFactors = FALSE)
+  r <- e$order_levels(ae, from = adsl)
+  expect_identical(levels(r$TRTA), c("Placebo", "Drug B", "Drug A"))
+  expect_identical(as.character(r$TRTA), ae$TRTA)   # no record dropped, no value changed
+  expect_identical(names(r), names(ae))
+  # a value ADSL does not have goes last
+  ae2 <- data.frame(TRTA = c("Drug A", "Other", "Placebo", "Drug B"), stringsAsFactors = FALSE)
+  expect_identical(levels(e$order_levels(ae2, from = adsl)$TRTA),
+                   c("Placebo", "Drug B", "Drug A", "Other"))
+  # a map that is not one to one (a value with two numbers) is an error naming the variable
+  bad <- data.frame(TRT01A = c("Placebo", "Drug A", "Drug A"), TRT01AN = c(1, 2, 3),
+                    stringsAsFactors = FALSE)
+  expect_error(e$order_levels(ae, from = bad), "TRTA has values with more than one TRT01AN")
+  # (numbers equal for two values are allowed: the order the values come)
+  same <- data.frame(TRT01A = c("Placebo", "Drug A", "Drug B"), TRT01AN = c(1, 2, 2),
+                     stringsAsFactors = FALSE)
+  expect_identical(levels(e$order_levels(ae, from = same)$TRTA), c("Placebo", "Drug A", "Drug B"))
+})
+
+test_that("a category value only outside the analysed data prints no row, unless a code list names it", {
+  skip_on_cran()
+  skip_if_not_installed("cards")
+  adam <- exact_data()
+  adam$ADSL$SAFFL <- "Y"
+  adam$ADSL$SAFFL[1L] <- "N"
+  adam$ADSL$RACE <- as.character(adam$ADSL$RACE)
+  adam$ADSL$RACE[1L] <- "NATIVE HAWAIIAN"   # only a subject outside the safety set has it
+  adam$ADSL$RACEN <- match(adam$ADSL$RACE, c("WHITE", "NATIVE HAWAIIAN", unique(adam$ADSL$RACE)))
+  dir <- exact_dir(adam)
+  spec <- exact_spec(list(method = "categorical", dataset = "ADSL", population_id = "SAF",
+                          by = "ARM", variables = "RACE"))
+  lev <- function(ard) unique(unlist(lapply(ard$variable_level[ard$variable == "RACE" &
+                                                                  ard$stat_name == "n"], as.character)))
+  code <- paste(tfl_ard_code(spec, part = "body"), collapse = "\n")
+  expect_match(code, "across(any_of(\"RACE\") & where(is.factor), droplevels)",
+               fixed = TRUE)
+  ard <- suppressMessages(tfl_build_ard(spec, dir = dir, save = FALSE))
+  expect_false("NATIVE HAWAIIAN" %in% lev(ard))
+  expect_identical(lev(ard)[1L], "WHITE")   # (RACEN's order)
+  # a code list names it: its zero row, as today; and the drop is not written
+  races <- c("WHITE", "NATIVE HAWAIIAN", setdiff(unique(adam$ADSL$RACE), c("WHITE", "NATIVE HAWAIIAN")))
+  cl <- data.frame(output_id = "T", variable = "RACE", value = races, label = races,
+                   order = seq_along(races))
+  code2 <- paste(tfl_ard_code(spec, part = "body", codelists = cl), collapse = "\n")
+  expect_false(grepl("droplevels", code2, fixed = TRUE))
+  ard2 <- suppressMessages(tfl_build_ard(spec, dir = dir, save = FALSE, codelists = cl))
+  expect_true("NATIVE HAWAIIAN" %in% lev(ard2))
+})
