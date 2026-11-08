@@ -669,7 +669,9 @@ tfl_ai_unpack(a, "study")                           # spec/outputs/<id>.yml, spe
   person tells the agent in its chat or changes in the builder.  The TOC and its shells in
   workbooks apart: `tfl_ai_read_shell(path, shells = )` /
   `tfl_ai_prepare(toc, shells = )`; another workbook added to the study's
-  requests: `tfl_ai_prepare(..., add = TRUE)`.  A figure of the TOC is a request
+  requests: `tfl_ai_prepare(..., add = TRUE)`.  A call that writes the requests keeps its
+  arguments in `ai/prepare.yml` (`tfl_ai_prepare_settings(dir)` reads it; the agent does not);
+  `tfl_ai_prepare(dir)` with no `toc` repeats them, the arguments given now over them.  A figure of the TOC is a request
   of its own (`figure-1` ...: its shell, a figure report to draft), drawn by
   `tfl_ai_run()` (PNG and RTF, and `<id>-facts.txt` beside the PNG: its
   labels, axes, legends and layers in words); beside each report's RTF,
@@ -964,7 +966,7 @@ back): rename the value or choose another separator.
 `tfl_ai_prompt` `tfl_ai_parse` `tfl_ai_check` `tfl_ai_repair_prompt`
 `tfl_ai_diff` `tfl_ai_read_shell` `tfl_ai_adam_summary` `tfl_ai_doc_text` `tfl_ai_batches`
 `tfl_ai_write_requests` `tfl_ai_collect_answers` `tfl_ai_adopt` `tfl_ai_adopted_diff` `tfl_ai_style_prompt` `tfl_ai_style_read` `tfl_ai_style_diff` `tfl_ai_style_adopt` `tfl_ai_reference_build` `tfl_rtf_style_scan` `tfl_rtf_style_tables` `tfl_ai_migrate` `tfl_ai_outputs` `tfl_ai_assumptions` `tfl_ai_study_init`
-`tfl_ai_prepare` `tfl_ai_refresh_agents` `tfl_ai_sample_study` `tfl_ai_requests` `tfl_fill_widths` `tfl_ai_run` `tfl_ai_compare`
+`tfl_ai_prepare` `tfl_ai_prepare_settings` `tfl_ai_refresh_agents` `tfl_ai_sample_study` `tfl_ai_requests` `tfl_fill_widths` `tfl_ai_run` `tfl_ai_compare`
 
 **ARD spec:** `tfl_ard_spec` `tfl_read_ard_spec` `tfl_write_ard_spec`
 `tfl_ard_spec_template` `tfl_ard_code` `tfl_ard_data_names` `tfl_build_ard` `tfl_ard_for`

@@ -190,12 +190,23 @@
     "", "---", "")
 }
 
+# A path made absolute.  A file that does not exist yet is put under its
+# nearest folder that does, so that both get the same long name and
+# resolved links (Windows short names, macOS /var -> /private/var).
+.ai_norm_path <- function(p) {
+  if (is.na(p)) return(NA_character_)
+  if (file.exists(p)) return(normalizePath(p, winslash = "/"))
+  up <- dirname(p)
+  if (identical(up, p)) return(normalizePath(p, winslash = "/", mustWork = FALSE))
+  paste0(sub("/$", "", .ai_norm_path(up)), "/", basename(p))
+}
+
 # A path as seen from the study folder `dir`: the part below it when it is
 # inside (however it was given), else the whole path
 .ai_from_study <- function(dir, p) {
   if (is.null(p) || !length(p) || is.na(p[1L])) return(NA_character_)
-  root <- paste0(normalizePath(dir, winslash = "/", mustWork = FALSE), "/")
-  q <- normalizePath(p, winslash = "/", mustWork = FALSE)
+  root <- paste0(.ai_norm_path(dir), "/")
+  q <- vapply(p, .ai_norm_path, "", USE.NAMES = FALSE)
   same <- if (.Platform$OS.type == "windows") startsWith(tolower(q), tolower(root)) else
     startsWith(q, root)
   ifelse(same, substring(q, nchar(root) + 1L), q)
