@@ -240,7 +240,7 @@ tfl_output_contents <- function(output, study, dir = ".") {
   msg <- conditionMessage(e)
   # (the name in quotes, not the English words: R may say it in another
   # language, with plain or curly quotes)
-  q <- regmatches(msg, gregexpr("['‘`][^'’`]+['’`]", msg))[[1L]]
+  q <- regmatches(msg, gregexpr("['\u2018`][^'\u2019`]+['\u2019`]", msg))[[1L]]
   by <- as.character(unlist(attr(ro, "template")$args$by))
   v <- intersect(gsub("^.|.$", "", q), by)[1L]
   if (!is.na(v)) {
