@@ -2332,8 +2332,11 @@ tfl_check_fig_design <- function(design, adam = NULL, ggplot2_version = NULL,
 #'   population's data), one string with `,` between them; each has its
 #'   analysis in the figure's own ARD and its rows on the plot under a
 #'   heading row.  `""`: all subjects only.
-#' @param comparison For `forest_hr`: the arm compared with the reference
-#'   (the group's first level); `NULL`: every other arm.
+#' @param comparison For `forest_hr`: the one arm to show, compared with the
+#'   reference; `NULL`: every other arm.  It is not the reference (a message
+#'   at run time says so).
+#' @param ref For `forest_hr`: the reference arm, put first in the figure's
+#'   own ARD (a relevel in the data step); `NULL`: the group's first level.
 #' @param form `"design"` (default): the figure designer's design
 #'   ([tfl_fig_design()]).  `"items"`: the figure report's `data:` and
 #'   `content:` of function calls ([tfl_fig_content_from_design()]): a
@@ -2362,7 +2365,7 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
                              category = "AVALC", responders = "CR, PR",
                              id = "USUBJID", duration = "TRTDURD",
                              join_adsl = NULL, title = NULL,
-                             subgroups = "SEX, AGEGR1", comparison = NULL,
+                             subgroups = "SEX, AGEGR1", comparison = NULL, ref = NULL,
                              form = c("design", "items"), ...) {
   form <- match.arg(form)
   if (identical(form, "items")) {
@@ -2445,8 +2448,11 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
       # the layers read `est` (the ARD), not df; the subgroups are joined
       # in the ARD's own analysis data
       join <- join_adsl %||% FALSE
+      if (!is.null(ref) && identical(ref, comparison)) {
+        .ard_stop("forest_hr: `comparison` is the reference arm (`ref`); the reference has no hazard ratio to show.")
+      }
       an <- tfl_fig_forest_analyses(data = data, param = param, pop = pop, group = group,
-                                    subgroups = sub, time = time, censor = censor)
+                                    subgroups = sub, time = time, censor = censor, ref = ref)
       d <- tfl_fig_design(
         template = template,
         data = drop(list(read(data), if (join) join_step(c(group, pop)),
@@ -2730,6 +2736,12 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
   lab[!is.na(lab) & lab != names(lab)]
 }
 
+# the reference arm first: a relevel of the arm (the first level is the reference)
+.forest_ref_derive <- function(group, ref) {
+  sprintf("%s = factor(%s, levels = c(%s, setdiff(levels(factor(%s)), %s)))",
+          group, group, q(ref), group, q(ref))
+}
+
 # a name as R writes it in c(): backticked when it is not a syntax name
 .forest_name <- function(x) ifelse(make.names(x) == x, x, paste0("`", x, "`"))
 
@@ -2751,6 +2763,14 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
   # no arm chosen: every other arm, and each row says which
   if (is.null(comparison)) lvl <- sprintf("paste(%s, %s, sep = \": \")", lvl, group)
   paste(c(
+    # the arm to show is an arm the model compared with the reference (the
+    # reference has an estimate but no interval)
+    if (!is.null(comparison)) c(
+      sprintf("if (!%s %%in%% est[[\"%s\"]][!is.na(est$conf.low)]) {", q(comparison), group),
+      sprintf("  stop(\"forest_hr: `comparison` (%s) is the reference arm or not an arm of the data\",",
+              comparison),
+      "       call. = FALSE)",
+      "}"),
     "est <- est |>",
     if (length(n_by_arm)) c(
       "  # each arm's events / subjects (its own row of the model), a column an arm",
@@ -2827,6 +2847,8 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
 #'   (`adtte_fas_os`), the population without its flag's `FL`: the rule
 #'   tflplanner names a data by.
 #' @param group The treatment variable; its first level is the reference.
+#' @param ref The reference arm, put first by a relevel in the analysis
+#'   data's `derive`; `NULL`: the first level (none derived).
 #' @param subgroups The subgroup variables (of the population's data), a
 #'   character vector or one string with `,` between them.
 #' @param time,censor The time and the censoring indicator (1 = censored).
@@ -2839,7 +2861,8 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
 #' @export
 tfl_fig_forest_analyses <- function(data = "ADTTE", param = "OS", pop = "FASFL",
                                     group = "TRT01P", subgroups = c("SEX", "AGEGR1"),
-                                    time = "AVAL", censor = "CNSR", id = "HR") {
+                                    time = "AVAL", censor = "CNSR", id = "HR",
+                                    ref = NULL) {
   subgroups <- .split_vals(paste(subgroups, collapse = ", "))
   data_id <- gsub("[^a-z0-9_.]", "_", tolower(paste(data, sub("FL$", "", pop), param, sep = "_")))
   # the event as the KM figures write it: CNSR == 0
@@ -2869,6 +2892,7 @@ tfl_fig_forest_analyses <- function(data = "ADTTE", param = "OS", pop = "FASFL",
     from = toupper(data), population_id = pop, where = sprintf("PARAMCD == %s", q(param)),
     add = if (length(subgroups)) paste(subgroups, collapse = " | ") else NA_character_,
     stringsAsFactors = FALSE)
+  if (!is.null(ref)) adata$derive <- .forest_ref_derive(group, ref)
   one <- function(aid, label, code) data.frame(
     analysis_id = aid, label = label, method = "custom", data = data_id, code = code,
     stringsAsFactors = FALSE)
