@@ -1146,7 +1146,8 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
 # the column variable's margins, here the body's own variable)
 .tpl_shift_code <- function(a, subj) {
   q <- function(x) paste0("\"", x, "\"", collapse = ", ")
-  keep <- c("!ABLFL %in% \"Y\"", sprintf("!is.na(%s)", a$post), a$where)
+  # (a transport file holds "" for no value: not a category)
+  keep <- c("!ABLFL %in% \"Y\"", sprintf("!%s %%in%% c(NA, \"\")", a$post), a$where)
   paste(c(
     "# the records after baseline, the subjects' column variable",
     sprintf("d <- dplyr::inner_join(dplyr::select(%s, -dplyr::any_of(%s)),",
@@ -1158,7 +1159,7 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
     sprintf("d <- dplyr::arrange(d, match(%s, c(%s)))", a$post, q(a$worst)),
     sprintf("d <- dplyr::distinct(d, USUBJID, %s, .keep_all = TRUE)", a$param),
     if (length(a$missing_label)) sprintf(
-      "d <- dplyr::mutate(d, %s = dplyr::coalesce(as.character(%s), \"%s\"))",
+      "d <- dplyr::mutate(d, %s = dplyr::coalesce(dplyr::na_if(as.character(%s), \"\"), \"%s\"))",
       a$baseline, a$baseline, a$missing_label),
     if (length(a$total_label)) c(
       "# the Total row: every subject once more, under the baseline's Total",
@@ -1673,15 +1674,29 @@ tpl_stat_block <- function(ard, ..., codelists = NULL) {
     ci_lab <- sprintf("%s%% CI", format(lvl * 100))
     ci_args <- sprintf("method = \"%s\"%s", a$ci_method,
                        if (isTRUE(all.equal(lvl, 0.95))) "" else sprintf(", conf.level = %s", format(lvl)))
+    # every subject of the analysis set is a row: one with no record of the
+    # parameter is no responder, in the N and the rate's denominator (a
+    # record's blank category is missing: no category's, no responder)
+    subj <- paste0("adsl_", tolower(a$population))
+    rec <- paste0(set, "_records")
+    code <- paste0(
+      sprintf("dplyr::left_join(\n  dplyr::select(%s, USUBJID, %s),\n", subj, a$by),
+      sprintf("  dplyr::select(%s, -dplyr::any_of(\"%s\")),\n", rec, a$by),
+      "  by = \"USUBJID\") |>\n",
+      sprintf("  dplyr::mutate(RESP = %s %%in%% c(%s))", a$category,
+              paste(sprintf("\"%s\"", a$responders), collapse = ", ")))
     ard <- list(
-      analysis_data = list(list(
-        id = set, from = a$data, population = a$population,
-        where = tfl_r(.tpl_and(sprintf("PARAMCD == \"%s\"", a$param), a$where)),
-        derive = tfl_r(sprintf("RESP = %s %%in%% c(%s)", a$category,
-                               paste(sprintf("\"%s\"", a$responders), collapse = ", "))))),
+      analysis_data = list(
+        list(id = subj, label = .tpl_set_label(a$population, ctx$population), from = "ADSL",
+             population = a$population),
+        list(id = rec, label = sprintf("%s records of %s", a$param, a$population),
+             from = a$data, subjects = subj,
+             where = tfl_r(.tpl_and(sprintf("PARAMCD == \"%s\"", a$param), a$where))),
+        list(id = set, from = rec, code = tfl_r(code),
+             label = sprintf("%s of %s, each subject of the set a row", a$param, a$population))),
       analyses = list(
         list(id = a$param, method = "categorical", data = set, by = a$by,
-             variables = a$category),
+             variables = a$category, denominator = subj),
         list(id = "ORR", method = "proportion_ci", data = set, by = a$by,
              variables = "RESP", args = tfl_r(ci_args))))
     # (the arms' order: an order given, else the code list's, which the ARD
@@ -1727,7 +1742,9 @@ tpl_stat_block <- function(ard, ..., codelists = NULL) {
 #' Objective response: a table plan from the template `orr`
 #'
 #' The best overall response (n (%)) and the objective response rate with
-#' its 95% CI, by arm.
+#' its 95% CI, by arm.  Every subject of the analysis set is in N, and the
+#' rate's denominator: one with no record of the parameter, or a blank
+#' response, is no responder (and in no response category).
 #'
 #' @inheritParams tpl_demog
 #' @param ... The template's other parameters: `by`, `by_levels`, `data`,
