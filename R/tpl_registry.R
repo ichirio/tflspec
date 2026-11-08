@@ -1262,13 +1262,12 @@ tpl_disposition <- function(ard, population, ..., codelists = NULL) {
             doc = "TRUE: a page a parameter, named in the titles by `param_heading`"),
   tfl_param("param_heading", "Parameter: {value}",
             doc = .tpl_param_heading_doc),
-  tfl_param("header_n", "set", type = "choice", choices = c("set", "tested", "FALSE"),
+  tfl_param("header_n", "set", type = "choice", choices = c("set", "tested", "none"),
             doc = paste(
     "the arm headings' N, set apart from the % denominator (`percent_of`):",
-    "\"set\" (default) the arm's N in the analysis set (with `subset`), one N an arm;",
-    "\"tested\" the arm's subjects in the Total row for the page's parameter (only",
-    "with `param_page`: one page of several parameters has no one N);",
-    "FALSE: the arm only"))
+    "\"set\" (default): the arm's subjects in the analysis set (with `subset`);",
+    "\"tested\": the page's subjects with a baseline and a post-baseline category",
+    "(needs `param_page`); \"none\": no N"))
 )
 names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
 
@@ -1378,10 +1377,10 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
   }
   den <- paste0(set, "_den")
   hn <- a$header_n
-  if (!(isFALSE(hn) || (is.character(hn) && length(hn) == 1L && hn %in% c("set", "tested")))) {
-    .ard_stop(paste0("shift: header_n takes \"set\" (the arm's N in the analysis set), ",
-                     "\"tested\" (the arm's subjects in the Total row for the page's ",
-                     "parameter) or FALSE (no N); TRUE is no longer a value."))
+  if (!(is.character(hn) && length(hn) == 1L && hn %in% c("set", "tested", "none"))) {
+    .ard_stop(paste0("shift: header_n takes \"set\" (the arm's subjects in the analysis ",
+                     "set), \"tested\" (the page's subjects with a baseline and a ",
+                     "post-baseline category) or \"none\" (no N)."))
   }
   # each page's N ("tested"): the arm's subjects for the page's parameter,
   # from the same records as the table (the Total row's, or the set's own)
@@ -1494,7 +1493,7 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
 #' `header_n` says the N printed in each arm's heading: by default
 #' (`"set"`) the arm's N in the analysis set (with `subset`); `"tested"`
 #' the arm's subjects in the Total row for the page's parameter (with
-#' `param_page`); `FALSE` none. `percent_of` says what a cell's percentage
+#' `param_page`); `"none"` none. `percent_of` says what a cell's percentage
 #' is of: by default (`"total"`) the subjects with both a baseline and a
 #' post-baseline category for the parameter, so the Total row is 100%;
 #' `"row"` the subjects of the baseline category.

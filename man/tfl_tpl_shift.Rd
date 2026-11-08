@@ -32,7 +32,7 @@ The table template \code{shift}, layout \code{shift}. Its program is one call, \
    \code{total_label} \tab other \tab call \tab Total \tab  \tab the row of all the subjects; NULL: none \cr
    \code{param_page} \tab other \tab call \tab TRUE \tab  \tab TRUE: a page a parameter, named in the titles by 'param_heading' \cr
    \code{param_heading} \tab other \tab call \tab Parameter: \{value\} \tab  \tab a parameter's page name ('\{value\}': the parameter); the last title line, or where the title line '\{PAGE_HEADING\}' is \cr
-   \code{header_n} \tab other \tab call \tab set \tab  \tab the arm headings' N, set apart from the \% denominator ('percent_of'): "set" (default) the arm's N in the analysis set (with 'subset'), one N an arm; "tested" the arm's subjects in the Total row for the page's parameter (only with 'param_page': one page of several parameters has no one N); FALSE: the arm only \cr
+   \code{header_n} \tab other \tab call \tab set \tab  \tab the arm headings' N, set apart from the \% denominator ('percent_of'): "set" (default): the arm's subjects in the analysis set (with 'subset'); "tested": the page's subjects with a baseline and a post-baseline category (needs 'param_page'); "none": no N \cr
 }
 }
 

@@ -346,9 +346,7 @@
                  number = is.numeric(v) || (is.list(v) && length(v) &&
                                               all(vapply(v, function(e) is.numeric(e) && length(e) == 1L, NA))),
                  vars = , levels = , text = , choice = is.character(v) || inherits(v, "tfl_r") ||
-                   (is.list(v) && all(vapply(v, is.character, NA))) ||
-                   # (a choice that lists "FALSE" takes the logical too: header_n: false)
-                   (isFALSE(v) && "FALSE" %in% x$choices),
+                   (is.list(v) && all(vapply(v, is.character, NA))),
                  TRUE)
     if (!isTRUE(ok)) {
       add(paste("template args", x$name), sprintf("of template %s is %s%s", nm, x$type,

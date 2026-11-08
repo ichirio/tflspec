@@ -37,7 +37,7 @@ The header N and the percentage's denominator are set separately.
 \code{header_n} says the N printed in each arm's heading: by default
 (\code{"set"}) the arm's N in the analysis set (with \code{subset}); \code{"tested"}
 the arm's subjects in the Total row for the page's parameter (with
-\code{param_page}); \code{FALSE} none. \code{percent_of} says what a cell's percentage
+\code{param_page}); \code{"none"} none. \code{percent_of} says what a cell's percentage
 is of: by default (\code{"total"}) the subjects with both a baseline and a
 post-baseline category for the parameter, so the Total row is 100\%;
 \code{"row"} the subjects of the baseline category.
