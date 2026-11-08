@@ -2851,7 +2851,9 @@ tfl_fig_forest_analyses <- function(data = "ADTTE", param = "OS", pop = "FASFL",
     one(id, "Hazard ratio, all subjects", all),
     do.call(rbind, lapply(subgroups, function(s) one(
       paste(id, s, sep = "_"), paste("Hazard ratio by", s),
-      paste0("cards::ard_strata(\n  data,\n  .strata = ", s, ",\n  .f = ~ ", reg(".x", "  "), "\n)")))))
+      # (a blank or missing subgroup value is no subgroup)
+      paste0("cards::ard_strata(\n  dplyr::filter(data, !is.na(", s, "), ", s, " != \"\"),\n  .strata = ", s,
+             ",\n  .f = ~ ", reg(".x", "  "), "\n)")))))
   rownames(an) <- NULL
   list(analysis_data = adata, analyses = an)
 }
