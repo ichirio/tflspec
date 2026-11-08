@@ -22,7 +22,7 @@ The table template \code{lab_abnormal}, layout \code{summary}. Its program is on
    \code{baseline_normal} \tab other \tab call \tab FALSE \tab  \tab only the subjects normal at baseline, in n and in the N \cr
    \code{baseline} \tab other \tab call \tab BNRIND \tab  \tab the category at baseline \cr
    \code{baseline_value} \tab other \tab call \tab NORMAL \tab  \tab the value of 'baseline' that is normal \cr
-   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: \if{html}{\out{<data>}}_\if{html}{\out{<population>}} \cr
+   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: <data>_<population> \cr
    \code{heading} \tab other \tab call \tab Parameter / Category \tab  \tab the label column's heading \cr
 }
 }

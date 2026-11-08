@@ -149,7 +149,6 @@
 }
 
 .ai_read_sheets <- function(path) {
-  .ard_need("readxl", "tfl_ai_review()")
   sh <- readxl::excel_sheets(path)
   stats::setNames(lapply(sh, function(s) {
     d <- as.data.frame(readxl::read_excel(path, s, col_types = "text"),

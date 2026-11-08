@@ -54,6 +54,7 @@ test_that("a plan's listing through its spec and a workbook gives the same RTF",
                      derive = NA_character_)
   code <- tfl_listing_code(back, "L-1", cat_)
   e <- new.env(parent = globalenv())
+  eval(parse(text = tfl_helpers_code()), e)
   owd <- setwd(dir)
   on.exit(setwd(owd), add = TRUE)
   eval(parse(text = code), e)

@@ -94,8 +94,8 @@ test_that("tfl_ai_run(): the figure drawn, its PNG and RTF; agent_prompt", {
   r <- tfl_ai_prepare(unit = "toc", d, fig_book(), adam = fig_study(root), quiet = TRUE, size = 3L)
   # (from the ai folder, the agent's workspace: a copy of it says the same)
   expect_match(r$agent_prompt, "Read AGENTS.md and follow it", fixed = TRUE)
-  expect_match(r$agent_prompt, "every request of requests/index.md", fixed = TRUE)
-  expect_false(grepl("run.R", r$agent_prompt, fixed = TRUE))
+  expect_match(r$agent_prompt, "Process each request on its own", fixed = TRUE)
+  expect_match(r$agent_prompt, "run only `Rscript ../run.R <request>`", fixed = TRUE)
   expect_false(grepl(normalizePath(root, winslash = "/"), r$agent_prompt, fixed = TRUE))
   expect_true("ai/agent_prompt.md" %in% r$files)
   expect_identical(paste(readLines(file.path(d, "ai", "agent_prompt.md"), encoding = "UTF-8"),
@@ -108,4 +108,345 @@ test_that("tfl_ai_run(): the figure drawn, its PNG and RTF; agent_prompt", {
   expect_true(all(file.exists(file.path(d, c(fr$png, fr$rtf)))))
   expect_gt(file.size(file.path(d, fr$png)), 10000)
   expect_true(all(!is.na(res$reports$rtf)))
+})
+
+test_that("an agent's figure draft with its layers as `layers:` (the instructions' form) is drawn", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("rtfreporter")
+  root <- withr::local_tempdir()
+  d <- file.path(root, "study")
+  tfl_ai_prepare(unit = "toc", d, fig_book(), adam = fig_study(root), quiet = TRUE, size = 3L)
+  ai_drafts_from_fixtures(d)
+  # the agent's file: no template, the layers beside an empty content
+  f <- file.path(d, "ai", "spec", "outputs", "F-14-2-2.yml")
+  writeLines(c(
+    "id: F-14-2-2", "kind: figure", "label: Best overall response by arm", "population: ITT",
+    "extends: [defaults]",
+    "data:", "  source: code", "  steps:",
+    "    - {step: read, dataset: ADRS}", "    - {step: flag, variable: ITTFL}",
+    "    - {step: param, value: OVR}",
+    "content: []",
+    "plot: {x_label: Arm, y_label: Subjects}",
+    "layers:", "  - {layer: point, x: AVISITN, y: AVAL}",
+    "page:", "  titles:", "    '1': {center: Figure 14.2.2}"), f)
+  o <- tfl_read_output(f)
+  fd <- tflspec:::.fig_design_of_output(o)
+  expect_identical(vapply(fd$layers, `[[`, "", "layer"), "point")
+  res <- suppressMessages(tfl_ai_run(d, requests = "figure-1"))
+  fr <- res$reports[res$reports$output_id == "F-14-2-2", ]
+  expect_false(is.na(fr$png), info = paste(fr$first, fr$rtf_problem))
+  expect_true(file.exists(file.path(d, fr$png)))
+})
+
+test_that("a design's preset written as a template is the design's preset, not a template SPEC", {
+  expect_true(tflspec:::.fig_preset_named(list(name = "box_by_visit")))
+  expect_false(tflspec:::.fig_preset_named(list(name = "km_survival")))
+  expect_false(tflspec:::.fig_preset_named(list(name = "no_such")))
+  expect_false(tflspec:::.fig_preset_named("box_by_visit"))
+  # a name of both (forest_hr): without the template SPEC's required
+  # arguments the preset, with them the template SPEC
+  expect_true(tflspec:::.fig_preset_named(list(name = "forest_hr")))
+  expect_false(tflspec:::.fig_preset_named(list(name = "forest_hr", args = list(param = "OS"))))
+  expect_null(tflspec:::.tpl_spec_of(tfl_output("F-3", "figure", template = list(name = "forest_hr"))))
+  o <- tfl_output("F-1", "figure", template = list(name = "box_by_visit"))
+  expect_null(tflspec:::.tpl_spec_of(o))
+  expect_identical(tflspec:::.fig_design_of_output(o)$template, "box_by_visit")
+  expect_identical(tflspec:::.tpl_spec_of(tfl_output("F-2", "figure",
+                                                      template = list(name = "km_survival")))$name,
+                   "km_survival")
+})
+
+test_that("a built figure's facts beside its PNG; a figure of the agent's own code is drawn (#512)", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("rtfreporter")
+  root <- withr::local_tempdir()
+  d <- file.path(root, "study")
+  tfl_ai_prepare(unit = "toc", d, fig_book(), adam = fig_study(root), quiet = TRUE, size = 3L)
+  ai_drafts_from_fixtures(d)
+  # the fallback after two fixes: the data steps, and one layer_code that draws the whole plot
+  f <- file.path(d, "ai", "spec", "outputs", "F-14-2-2.yml")
+  writeLines(c(
+    "id: F-14-2-2", "kind: figure", "label: Best overall response by arm", "population: ITT",
+    "extends: [defaults]",
+    "data:", "  source: code", "  steps:",
+    "    - {step: read, dataset: ADRS}", "    - {step: flag, variable: ITTFL}",
+    "    - {step: param, value: OVR}",
+    "content: []",
+    "layers:",
+    "  - {layer: layer_code, code: 'p <- ggplot(df, aes(AVISITN, AVAL, colour = TRT01P)) + geom_point() + labs(x = \"Visit\", y = \"Value\")'}",
+    "page:", "  titles:", "    '1': {center: Figure 14.2.2}"), f)
+  res <- suppressMessages(tfl_ai_run(d, requests = "figure-1"))
+  fr <- res$reports[res$reports$output_id == "F-14-2-2", ]
+  expect_false(is.na(fr$png), info = paste(fr$first, fr$rtf_problem))
+  facts <- sub("[.]png$", "-facts.txt", file.path(d, fr$png))
+  expect_true(file.exists(facts))
+  x <- readLines(facts, encoding = "UTF-8")
+  expect_true("- x: Visit" %in% x)
+  expect_true(any(grepl("^- 1[.] geom_point: [1-9][0-9]* row", x)))
+  expect_true(any(grepl("^- x axis: from", x)))
+  expect_true(any(grepl("^- colour: ", x)))
+})
+
+test_that("a km_survival draft with `codelists` for its arms is drawn (set_levels is around it)", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("rtfreporter")
+  skip_if_not_installed("ggsurvfit")
+  root <- withr::local_tempdir()
+  d <- file.path(root, "study")
+  tfl_ai_prepare(unit = "toc", d, fig_book(), adam = fig_study(root), quiet = TRUE, size = 3L)
+  ai_drafts_from_fixtures(d)
+  f <- file.path(d, "ai", "spec", "outputs", "F-14-2-2.yml")
+  writeLines(c(
+    "id: F-14-2-2", "kind: figure", "label: Kaplan-Meier Plot of Overall Survival", "population: ITT",
+    "extends: [defaults]",
+    "data:", "  source: code", "  steps:",
+    "    - {step: read, dataset: ADTTE}", "    - {step: flag, variable: ITTFL}",
+    "    - {step: param, value: OS}",
+    "content: []",
+    "codelists:", "  TRT01P:",
+    "    - {value: Control, label: Control}", "    - {value: Drug X, label: Drug X}",
+    "template:", "  name: km_survival", "  args: {by: TRT01P, time_unit: months}",
+    "page:", "  titles:", "    '1': {center: Figure 14.2.2}"), f)
+  res <- suppressMessages(tfl_ai_run(d, requests = "figure-1"))
+  fr <- res$reports[res$reports$output_id == "F-14-2-2", ]
+  expect_false(grepl("set_levels", fr$rtf_problem %||% "", fixed = TRUE), info = fr$rtf_problem)
+  expect_false(is.na(fr$png), info = paste(fr$first, fr$rtf_problem))
+  expect_true(file.exists(file.path(d, fr$png)))
+})
+
+test_that("codelists written as plain values are read as {value, label} (E9)", {
+  f <- withr::local_tempfile(fileext = ".yml")
+  writeLines(c("id: F-1", "kind: figure", "label: KM", "codelists:",
+               "  TRT01P: [Placebo, Drug A]",
+               "  SEX:", "    - {value: F, label: Female}"), f)
+  o <- tfl_read_output(f)
+  expect_identical(o$codelists$TRT01P[[2L]], list(value = "Drug A", label = "Drug A"))
+  expect_identical(o$codelists$SEX[[1L]], list(value = "F", label = "Female"))
+  rows <- tflspec:::.codelists_rows(o$codelists, "F-1")
+  expect_identical(rows$label, c("Placebo", "Drug A", "Female"))
+})
+
+# A figure shell sheet the TOC gives two reports (a KM plot and its subgroup
+# version): one request of both, each report its own design and program
+fig_two_book <- function(f) {
+  wb <- openxlsx::createWorkbook()
+  toc <- data.frame(`No.` = c("1", "2"), `Shell No.` = c("f.14.2.3", "f.14.2.3"),
+                    `Output No.` = c("F-14-2-3", "F-14-2-4"),
+                    Title = c("Kaplan-Meier Plot of Overall Survival", "Kaplan-Meier Plot of Overall Survival by Subgroup"),
+                    Population = c("ITT", "ITT"), check.names = FALSE, stringsAsFactors = FALSE)
+  openxlsx::addWorksheet(wb, "TOC")
+  openxlsx::writeData(wb, "TOC", toc, startRow = 2)
+  openxlsx::addWorksheet(wb, "f.14.2.3")
+  lines <- c("Figure 14.2.3  Kaplan-Meier Plot of Overall Survival", "ITT Analysis Set",
+             "X axis: Time (Months)", "Y axis: Survival Probability")
+  for (k in seq_along(lines)) openxlsx::writeData(wb, "f.14.2.3", lines[k], startRow = k, colNames = FALSE)
+  openxlsx::saveWorkbook(wb, f, overwrite = TRUE)
+  f
+}
+fig_two_draft <- function(d, id) {
+  txt <- readLines(test_path("fixtures", "answers-toc", "figure-1.md"), encoding = "UTF-8")
+  ai_drafts_from_answer(d, gsub("F-14-2-2", id, txt, fixed = TRUE), "figure")
+}
+
+test_that("a figure sheet of two TOC reports: one request with both ids, both in the plan", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("openxlsx")
+  root <- withr::local_tempdir()
+  b <- fig_two_book(file.path(root, "book.xlsx"))
+  d <- file.path(root, "study")
+  dir.create(d)
+  dry <- tfl_ai_prepare(d, b, adam = fig_study(root), quiet = TRUE, templates = FALSE, dry_run = TRUE)
+  expect_identical(dry$requests$request, "f.14.2.3")
+  expect_identical(dry$requests$outputs, "F-14-2-3, F-14-2-4")
+  expect_identical(dry$requests$n, 2L)
+  r <- tfl_ai_prepare(d, b, adam = fig_study(root), quiet = TRUE, templates = FALSE)
+  expect_identical(r$requests$outputs, "F-14-2-3, F-14-2-4")
+  expect_identical(tfl_ai_requests(d)$n, 2L)
+  txt <- paste(readLines(file.path(d, r$requests$file), encoding = "UTF-8"), collapse = "\n")
+  expect_match(txt, "This request has 2 reports, one figure each", fixed = TRUE)
+  expect_match(txt, "- F-14-2-4: Kaplan-Meier Plot of Overall Survival by Subgroup", fixed = TRUE)
+})
+
+test_that("a figure sheet of two reports: both drafts checked and written; one missing, the other kept", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("openxlsx")
+  root <- withr::local_tempdir()
+  b <- fig_two_book(file.path(root, "book.xlsx"))
+  d <- file.path(root, "study")
+  tfl_ai_prepare(d, b, adam = fig_study(root), quiet = TRUE, templates = FALSE)
+  fig_two_draft(d, "F-14-2-3")
+  # one draft: the other is asked for
+  res1 <- suppressMessages(tfl_ai_collect_answers(d))
+  expect_identical(unique(res1$reports$request), "f.14.2.3")
+  expect_identical(res1$reports$output_id, c("F-14-2-3", "F-14-2-4"))
+  expect_identical(res1$reports$status, c("ok", "no answer"))
+  expect_identical(res1$reports$file, c("ai/spec/outputs/F-14-2-3.yml", NA))
+  expect_match(res1$next_steps[["f.14.2.3"]], "f.14.2.3.md", fixed = TRUE)
+  expect_match(res1$next_steps[["f.14.2.3"]], "F-14-2-4.yml", fixed = TRUE)
+  # both drafts: both report files, the request's status
+  fig_two_draft(d, "F-14-2-4")
+  res <- suppressMessages(tfl_ai_collect_answers(d))
+  expect_identical(unique(res$reports$request), "f.14.2.3")
+  expect_identical(res$reports$status, c("ok", "ok"))
+  expect_true(all(file.exists(file.path(d, res$reports$file))))
+  expect_identical(names(res$next_steps), "f.14.2.3")
+  expect_identical(res$next_kind[["f.14.2.3"]], "done")
+  expect_identical(res$manifest$request, c("f.14.2.3", "f.14.2.3"))
+})
+
+test_that("tfl_ai_run(): both figures of one request are drawn", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("openxlsx")
+  skip_if_not_installed("rtfreporter")
+  skip_if_not_installed("ggsurvfit")
+  root <- withr::local_tempdir()
+  b <- fig_two_book(file.path(root, "book.xlsx"))
+  d <- file.path(root, "study")
+  tfl_ai_prepare(d, b, adam = fig_study(root), quiet = TRUE, templates = FALSE)
+  fig_two_draft(d, "F-14-2-3")
+  fig_two_draft(d, "F-14-2-4")
+  res <- suppressMessages(tfl_ai_run(d))
+  fr <- res$reports[res$reports$type == "figure", ]
+  expect_identical(fr$output_id, c("F-14-2-3", "F-14-2-4"))
+  expect_true(all(file.exists(file.path(d, c(fr$png, fr$rtf)))))
+})
+
+# a figure of a study with a spec/codelists.yml left in it: the file is not
+# read, and does not stop its drawing (#649, #659)
+fig_codelists_study <- function(own = FALSE) {
+  root <- withr::local_tempdir(.local_envir = parent.frame())
+  d <- file.path(root, "study")
+  tfl_ai_prepare(unit = "toc", d, fig_book(), adam = fig_study(root), quiet = TRUE, size = 3L)
+  ai_drafts_from_fixtures(d)
+  f <- file.path(d, "ai", "spec", "outputs", "F-14-2-2.yml")
+  writeLines(c(
+    "id: F-14-2-2", "kind: figure", "label: Best overall response by arm", "population: ITT",
+    "extends: [defaults]",
+    "data:", "  source: code", "  steps:",
+    if (own) c("    - {step: read, dataset: ADTTE}", "    - {step: flag, variable: ITTFL}",
+               "    - {step: param, value: OS}") else
+      c("    - {step: read, dataset: ADRS}", "    - {step: flag, variable: ITTFL}",
+        "    - {step: param, value: OVR}"),
+    "content: []",
+    if (own) c("codelists:", "  TRT01P:",
+               "    - {value: Control, label: Own Control}", "    - {value: Drug X, label: Own Drug X}"),
+    if (own) c("template:", "  name: km_survival", "  args: {by: TRT01P, time_unit: months}") else c("layers:",
+    "  - {layer: layer_code, code: 'p <- ggplot(df, aes(AVISITN, AVAL, colour = TRT01P)) + geom_point() + labs(x = \"Visit\", y = \"Value\")'}"),
+    "page:", "  titles:", "    '1': {center: Figure 14.2.2}"), f)
+  d
+}
+
+test_that("a figure of a study with spec/codelists.yml is drawn, the file ignored (#649, #659)", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("rtfreporter")
+  d <- fig_codelists_study()
+  writeLines("ANRIND: [{value: LOW, label: Low}, {value: HIGH, label: High}]",
+             file.path(d, "spec", "codelists.yml"))
+  res <- suppressMessages(tfl_ai_run(d, requests = "figure-1"))
+  fr <- res$reports[res$reports$output_id == "F-14-2-2", ]
+  expect_false(grepl("output_id", fr$rtf_problem %||% "", fixed = TRUE), info = fr$rtf_problem)
+  expect_false(is.na(fr$png), info = paste(fr$first, fr$rtf_problem))
+  expect_true(file.exists(file.path(d, fr$png)))
+})
+
+test_that("a figure's own code list applies, not the file's of the same variable (#649, #659)", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("rtfreporter")
+  skip_if_not_installed("ggsurvfit")
+  d <- fig_codelists_study(own = TRUE)
+  writeLines("TRT01P: [{value: Control, label: File Control}, {value: Drug X, label: File Drug X}]",
+             file.path(d, "spec", "codelists.yml"))
+  res <- suppressMessages(tfl_ai_run(d, requests = "figure-1"))
+  fr <- res$reports[res$reports$output_id == "F-14-2-2", ]
+  expect_false(is.na(fr$png), info = paste(fr$first, fr$rtf_problem))
+  x <- readLines(sub("[.]png$", "-facts.txt", file.path(d, fr$png)), encoding = "UTF-8")
+  expect_true(any(grepl("Own Control", x, fixed = TRUE)), info = paste(x, collapse = "\n"))
+  expect_false(any(grepl("File ", x, fixed = TRUE)))
+})
+
+# a figure of the agent's own layer_code, with `codelists` lines of its own
+# (in its file) and in the study's defaults.yml (in a layer it extends)
+fig_cl_study <- function(own = NULL, layer = NULL) {
+  root <- withr::local_tempdir(.local_envir = parent.frame())
+  d <- file.path(root, "study")
+  tfl_ai_prepare(unit = "toc", d, fig_book(), adam = fig_study(root), quiet = TRUE, size = 3L)
+  ai_drafts_from_fixtures(d)
+  if (length(layer)) {
+    f <- file.path(d, "spec", "defaults.yml")
+    writeLines(c(readLines(f), "codelists:", layer), f)
+  }
+  writeLines(c(
+    "id: F-14-2-2", "kind: figure", "label: Best overall response by arm", "population: ITT",
+    "extends: [defaults]",
+    "data:", "  source: code", "  steps:",
+    "    - {step: read, dataset: ADRS}", "    - {step: flag, variable: ITTFL}",
+    "    - {step: param, value: OVR}",
+    "content: []",
+    if (length(own)) c("codelists:", own),
+    "layers:",
+    "  - {layer: layer_code, code: 'p <- ggplot(df, aes(AVISITN, AVAL, colour = TRT01P)) + geom_point()'}",
+    "page:", "  titles:", "    '1': {center: Figure 14.2.2}"),
+    file.path(d, "ai", "spec", "outputs", "F-14-2-2.yml"))
+  d
+}
+
+# the figure of the study drawn as the kit draws it: its plot
+fig_cl_draw <- function(d, id = "F-14-2-2") {
+  old <- setwd(d)
+  on.exit(setwd(old))
+  opt <- tflspec:::.ai_area_options(".")
+  on.exit(options(opt), add = TRUE)
+  st <- tfl_read_study_spec(".")
+  tflspec:::.ai_fig_draw(st, id, "out")$plot
+}
+
+# the colour variable's levels and the legend's labels of a drawn plot
+fig_cl_levels <- function(p) {
+  b <- ggplot2::ggplot_build(p)
+  sc <- b$plot$scales$get_scales("colour")
+  list(levels = levels(p$data$TRT01P), labels = if (!is.null(sc)) sc$get_labels())
+}
+
+test_that("a figure with layer_code and its own codelists is drawn (set_levels is around it) (#652)", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("rtfreporter")
+  d <- fig_cl_study(own = c("  TRT01P:", "    - {value: Control, label: Own Control}",
+                            "    - {value: Drug X, label: Own Drug X}"))
+  res <- suppressMessages(tfl_ai_run(d, requests = "figure-1"))
+  fr <- res$reports[res$reports$output_id == "F-14-2-2", ]
+  expect_false(grepl("set_levels", fr$rtf_problem %||% "", fixed = TRUE), info = fr$rtf_problem)
+  expect_false(is.na(fr$png), info = paste(fr$first, fr$rtf_problem))
+  expect_true(file.exists(file.path(d, fr$png)))
+  expect_identical(fig_cl_levels(fig_cl_draw(d))$levels, c("Own Control", "Own Drug X"))
+})
+
+test_that("a figure's code list from a layer it extends is the draw's, as its own would be (#656)", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("rtfreporter")
+  # (Drug X first: the order is the list's, not the data's)
+  entries <- function(pre) c(sprintf("    - {value: Drug X, label: %s Drug X}", pre),
+                             sprintf("    - {value: Control, label: %s Control}", pre))
+  in_layer <- fig_cl_draw(fig_cl_study(layer = c("  TRT01P:", entries("List"))))
+  in_own <- fig_cl_draw(fig_cl_study(own = c("  TRT01P:", entries("List"))))
+  expect_identical(fig_cl_levels(in_layer), fig_cl_levels(in_own))
+  expect_identical(fig_cl_levels(in_layer)$levels, c("List Drug X", "List Control"))
+  expect_identical(fig_cl_levels(in_layer)$labels, c("List Drug X", "List Control"))
+  # the report's own list over its layer's, for the same variable
+  both <- fig_cl_draw(fig_cl_study(own = c("  TRT01P:", entries("Own")),
+                                   layer = c("  TRT01P:", entries("Layer"))))
+  expect_identical(fig_cl_levels(both)$levels, c("Own Drug X", "Own Control"))
+  # a layer's list on a variable the data has not stops nothing
+  other <- fig_cl_draw(fig_cl_study(layer = c("  TRT01P:", entries("List"),
+                                              "  NOSUCHVAR:", "    - {value: a, label: A}")))
+  expect_identical(fig_cl_levels(other)$levels, c("List Drug X", "List Control"))
 })

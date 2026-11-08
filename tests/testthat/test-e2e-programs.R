@@ -74,7 +74,7 @@ test_that("reorder_by(): the order variable's order, or the values' own with a m
   expect_identical(levels(f), c("ALT", "AST"))
 })
 
-test_that("ancova: the differences' filter compares text (a list column of names)", {
+test_that("ancova: the differences by emmeans' trt.vs.ctrl, adjusted as `adjust` says", {
   ep_skip()
   skip_if_not_installed("cardx")
   skip_if_not_installed("emmeans")
@@ -84,7 +84,8 @@ test_that("ancova: the differences' filter compares text (a list column of names
                               template = list(name = "ancova", args = list(
                                 data = "ADVS", param = "SYSBP", visit = "CYCLE 2 DAY 1"))), f)
   r <- ep_run_child(d, "T-AN")
-  expect_true(any(grepl("endsWith(as.character(unlist(variable_level))", r$code, fixed = TRUE)))
+  expect_true(any(grepl("method = \"trt.vs.ctrl\"", r$code, fixed = TRUE)))
+  expect_true(any(grepl("adjust = \"none\"", r$code, fixed = TRUE)))
   expect_false(is.null(r$ard), info = paste(r$out, collapse = "\n"))
   expect_false(any(grepl("non-character", r$out)))
   expect_true(any(r$ard$analysis_id == "LSDIFF"))

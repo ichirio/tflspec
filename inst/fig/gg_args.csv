@@ -1,4 +1,4 @@
-kind,arg,type,en,ja,help
+kind,arg,type,en,ja,help,only
 layer,mapping,"map<string, column|r>",Mapping,マッピング,"Aesthetic = column: {x: AVISITN, y: AVAL, colour: TRTA}; !r for an expression."
 layer,data,object|r,Data,データ,"The layer's own data (by default the plot's)."
 layer,x,number|string|list<number|string>|r,X,x,"A fixed x (annotate(), a reference line); a mapped one goes in mapping."
@@ -16,10 +16,11 @@ layer,na.rm,logical,Drop missing silently,欠測を黙って除く,
 layer,show.legend,"logical|vec<string, logical>|r",In the legend,凡例に出す,"TRUE, FALSE, or by aesthetic ({colour: true, fill: false})."
 layer,inherit.aes,logical,Use the plot's mapping,plot のマッピングを使う,
 layer,orientation,enum[x|y]|r,Orientation,向き,"y: a horizontal layer (bars, error bars, box plots along y)."
-layer,key_glyph,string|r,Legend key,凡例の印,"How the legend draws the layer: point, path, rect, timeseries ..."
-layer,colour,string,Colour,色,A fixed colour for all (a mapped one goes in mapping).
+layer,key_glyph,string|r,Legend key,凡例の印,"How the legend draws the layer: point, path, rect, timeseries ... (draw_key_rect read from code is rect)."
+layer,layout,string|integer|list<integer>|r,Panels drawn in,描く面,"ggplot2 4.0: fixed (every panel), fixed_rows, fixed_cols, or the panel numbers."
+layer,colour,"string|call<alpha>|r",Colour,色,A fixed colour for all (a mapped one goes in mapping).
 layer,color,string,Colour,色,
-layer,fill,string,Fill,塗り,
+layer,fill,"string|call<alpha>|r",Fill,塗り,
 layer,alpha,number,Transparency,透明度,0 (clear) to 1 (opaque).
 layer,linewidth,number,Line width,線の太さ,In mm.
 layer,linetype,string|number,Line type,線種,"solid, dashed, dotted, dotdash, longdash, twodash, or 0-6."
@@ -29,8 +30,8 @@ layer,stroke,number,Outline width of points,点の輪郭の太さ,
 layer,width,number,Width,幅,"Bars, box plots, error bars: the width of each (0.9 of the space by default)."
 layer,height,number,Height,高さ,
 layer,just,number,Justification of the bars,棒の位置合わせ,0.5 centres each bar on its x.
-layer,lineend,enum[butt|round|square],Line ends,線端,
-layer,linejoin,enum[round|mitre|bevel],Line joins,線の結合,
+layer,lineend,enum[butt|round|square]|r,Line ends,線端,
+layer,linejoin,enum[round|mitre|bevel]|r,Line joins,線の結合,
 layer,arrow,call<arrow>|r,Arrow,矢印,"{fn: arrow, args: {length: !r unit(2, 'mm'), type: closed}}."
 layer,direction,enum[hv|vh|mid],Step direction,階段の向き,hv: across then up (a KM or ECDF curve).
 layer,outline.type,enum[both|upper|lower|full],Outline,輪郭,
@@ -43,30 +44,30 @@ layer,fontface,string|number,Font face,書体,"plain, bold, italic, bold.italic.
 layer,lineheight,number,Line height,行の高さ,
 layer,parse,logical,Text as plotmath,数式として読む,
 layer,check_overlap,logical,Leave out overlapping text,重なる文字を省く,
-layer,nudge_x,number,Nudge along x,x方向にずらす,
-layer,nudge_y,number,Nudge along y,y方向にずらす,
+layer,nudge_x,number|list<number>|r,Nudge along x,x方向にずらす,
+layer,nudge_y,number|list<number>|r,Nudge along y,y方向にずらす,
 layer,xintercept,number|list<number>|r,X of the line(s),線の x,
 layer,yintercept,number|list<number>|r,Y of the line(s),線の y,
 layer,intercept,number|list<number>|r,Intercept,切片,
 layer,slope,number|list<number>|r,Slope,傾き,
-layer,fun,string|r,Summary function,要約の関数,"stat summary: the y of each x, e.g. mean or median (with fun.min / fun.max)."
-layer,fun.data,string|r,Summary function (y and range),要約の関数（値と範囲）,"stat summary: y, ymin and ymax at once: mean_se (mean +/- SE), mean_cl_normal (t interval, Hmisc), mean_cl_boot, median_hilow, mean_sdl."
-layer,fun.min,string|r,Lower end function,下端の関数,"stat summary: ymin, e.g. min, or !r function(y) mean(y) - sd(y)."
-layer,fun.max,string|r,Upper end function,上端の関数,
+layer,fun,function|tilde|r,Function,関数,"A function by its name, written bare: stat summary's y of each x (mean, median; with fun.min / fun.max), stat function's curve (dnorm); ~ sum(.x^2) as a formula; or !r function(y) ..."
+layer,fun.data,function|r,Summary function (y and range),要約の関数（値と範囲）,"stat summary: y, ymin and ymax at once: mean_se (mean +/- SE), mean_cl_normal (t interval, Hmisc), mean_cl_boot, median_hilow, mean_sdl; a function by its name, written bare (fun.data = mean_se)."
+layer,fun.min,function|r,Lower end function,下端の関数,"stat summary: ymin, a function by its name (min), or !r function(y) mean(y) - sd(y)."
+layer,fun.max,function|r,Upper end function,上端の関数,"stat summary: ymax, a function by its name (max)."
 layer,fun.args,"map<string, string|number|logical>|r",Arguments of the summary function,要約の関数の引数,"Passed on to fun.data / fun: {mult: 1.96} for mean_se, {conf.int: 0.9} for mean_cl_normal."
 layer,pad,logical,Pad the ends,両端を延ばす,stat ecdf: the curve starts at 0 and ends at 1 beyond the data (FALSE: from the first to the last value).
 layer,n,integer|r,Number of points,点の数,stat ecdf: NULL (every value) or the points to interpolate; stat smooth / density: points to evaluate.
 layer,level,number,Level,水準,stat ellipse: the confidence level of the ellipse (0.95); geom smooth: of the band.
 layer,type,enum[t|norm|euclid],Ellipse type,楕円の種類,stat ellipse: t (multivariate t) / norm / euclid.
 layer,segments,integer,Segments of the ellipse,楕円の分割数,
-layer,bins,integer,Number of bins,ビンの数,
-layer,binwidth,number|r,Bin width,ビンの幅,
-layer,breaks,list<number>|r,Bin breaks,ビンの境界,
+layer,bins,integer|r,Number of bins,ビンの数,
+layer,binwidth,number|list<number>|r,Bin width,ビンの幅,
+layer,breaks,"list<number>|call<seq>|r",Bin breaks,ビンの境界,
 layer,boundary,number,Bin boundary,ビンの境界の基点,
 layer,center,number,Bin centre,ビンの中心の基点,
 layer,closed,enum[right|left],Closed side of the bins,ビンの閉じた側,
-layer,method,string|r,Smoothing method,平滑化の方法,"lm, glm, loess, gam; or !r a function."
-layer,formula,r,Model formula,モデル式,!r y ~ x
+layer,method,string|r,Smoothing method,平滑化の方法,"lm, glm, loess, gam (the code writes them ""lm"", as ggplot2 takes them; lm read from code is lm); or !r a function."
+layer,formula,tilde|r,Model formula,モデル式,"y ~ x, y ~ poly(x, 2): written as the formula."
 layer,se,logical,Confidence band,信頼帯,
 layer,span,number,Loess span,loess の幅,
 layer,method.args,"map<string, string|number|logical>|r",Arguments of the method,方法の引数,{family: binomial}; written as list().
@@ -83,7 +84,7 @@ layer,staplewidth,number,Staples on the whiskers,ひげの先の横線,
 layer,trim,logical,Trim to the data,データの範囲で切る,
 layer,scale,enum[area|count|width],Scale of the violins,バイオリンの大きさの基準,
 layer,draw_quantiles,list<number>,Quantile lines,分位点の線,
-layer,quantiles,list<number>,Quantiles,分位点,
+layer,quantiles,list<number>|r,Quantiles,分位点,
 layer,adjust,number,Bandwidth multiplier,バンド幅の倍率,
 layer,kernel,string,Kernel,カーネル,
 layer,bw,number|string,Bandwidth,バンド幅,
@@ -149,7 +150,7 @@ layer,outside,logical,Rug outside the panel,目盛りを面の外に,
 layer,xseq,list<number>|r,X values,x の値,Where a smooth or a function is evaluated (by default n points over the range).
 layer,unique_loc,logical,One per location,位置ごとに一つ,
 layer,rule,enum[evenodd|winding],Fill rule,塗りの規則,A polygon with holes.
-layer,args,"map<string, string|number|logical|r>",Function arguments,関数の引数,"stat_function / geom_function: {mean: 0, sd: 1}, written list(...)."
+layer,args,"map<string, string|number|logical|r>|r",Function arguments,関数の引数,"stat_function / geom_function: {mean: 0, sd: 1}, written list(...)."
 layer,xlim,list<number>|r,X range,x の範囲,"stat_function: the range the function is drawn over, [0, 10]."
 layer,lambda,number,Smoothing of the quantiles,分位点回帰の平滑化,
 layer,h,list<number>|number|r,Bandwidth,バンド幅,A 2-d density's bandwidth (x and y).
@@ -157,30 +158,30 @@ layer,contour,logical,Draw contours,等高線を描く,
 layer,contour_var,enum[density|ndensity|count],Contoured variable,等高線の変数,
 layer,z.range,list<number>|r,Range of z,z の範囲,
 scale,name,string|r,Title,タイトル,The axis or legend title; !r NULL for none.
-scale,breaks,list<number|string>|r,Breaks,目盛り,"The values with a tick or a key; !r NULL for none, !r seq(0, 52, by = 4)."
-scale,minor_breaks,list<number>|r,Minor breaks,補助目盛り,
+scale,breaks,"list<number|string>|call<seq, breaks_*, extended_breaks, pretty_breaks, trans_breaks, log_breaks>|r",Breaks,目盛り,"The values with a tick or a key; {fn: scales::breaks_width, args: {width: 4}}; !r NULL for none, !r seq(0, 52, by = 4)."
+scale,minor_breaks,"list<number>|call<seq, breaks_*, minor_breaks_*>|r",Minor breaks,補助目盛り,
 scale,n.breaks,integer,Number of breaks,目盛りの数,
-scale,labels,"list<string>|vec<string, string>|r",Labels,目盛りのラベル,"In the order of the breaks, or by value ({A: Placebo}); !r scales::percent."
+scale,labels,"list<string>|vec<string, string>|call<label_*, *_format>|r",Labels,目盛りのラベル,"In the order of the breaks, or by value ({A: Placebo}); !r scales::percent."
 scale,limits,list<number|string>|r,Range,範囲,"Data outside it are dropped (to zoom, use coord_cartesian()); NA keeps that end."
-scale,expand,call<expansion>|list<number>|r,Expansion,余白,"{fn: expansion, args: {mult: [0, 0.05]}}; [0, 0] for none."
-scale,oob,r,Out of bounds,範囲外の扱い,!r scales::oob_squish keeps them at the edge; the default drops them.
-scale,na.value,string|number,Missing,欠測の値,
+scale,expand,"call<expansion, expand_scale, waiver>|list<number>|r",Expansion,余白,"{fn: expansion, args: {mult: [0, 0.05]}}; [0, 0] for none."
+scale,oob,function|r,Out of bounds,範囲外の扱い,"scales::oob_squish keeps them at the edge, scales::oob_keep keeps them (a function by its name, written bare); the default drops them."
+scale,na.value,"string|number|call<alpha>",Missing,欠測の値,
 scale,guide,string|call|r,Legend,凡例,"legend, colourbar, none, or {fn: guide_legend, args: {nrow: 1}}."
 scale,position,enum[left|right|top|bottom],Position,位置,
-scale,transform,string|r,Transformation,変換,"log10, sqrt, reverse, identity ...; ggplot2 before 3.5 calls it trans."
+scale,transform,"string|call<transform_*, *_trans, trans_new, new_transform>|r",Transformation,変換,"log10, sqrt, reverse, identity ..., or {fn: scales::transform_log, args: {base: 2}}; ggplot2 before 3.5 calls it trans."
 scale,sec.axis,"call<sec_axis, dup_axis>|r",Secondary axis,第2軸,"{fn: dup_axis} or {fn: sec_axis, args: {transform: !r ~ . / 7, name: Weeks}}."
 scale,drop,logical,Drop unused levels,使わない水準を除く,
 scale,na.translate,logical,Show missing,欠測を表示,
-scale,values,"vec<string, string|number>|list<string|number>|r",Values,値,By level ({Placebo: grey50}) or in the order of the levels.
+scale,values,"vec<string, string|number>|list<string|number>|call<hcl.colors, gray.colors, grey.colors, rainbow, heat.colors, terrain.colors, topo.colors, cm.colors, palette.colors>|r",Values,値,By level ({Placebo: grey50}) or in the order of the levels.
 scale,aesthetics,string|list<string>,Aesthetics,対象のマッピング,"colour, fill, or both ([colour, fill])."
-scale,palette,string|number|r,Palette,パレット,"Brewer: Set1, Dark2, Paired, Blues, RdBu ... (or its number)."
+scale,palette,"string|number|list<string>|call<pal_*>|r",Palette,パレット,"Brewer: Set1, Dark2, Paired, Blues, RdBu ... (or its number)."
 scale,type,enum[seq|div|qual],Palette type,パレットの種類,
 scale,direction,integer,Palette direction,パレットの向き,-1 reverses it.
-scale,low,string,Low colour,低い値の色,
-scale,mid,string,Middle colour,中央の色,
-scale,high,string,High colour,高い値の色,
+scale,low,"string|call<alpha>",Low colour,低い値の色,
+scale,mid,"string|call<alpha>",Middle colour,中央の色,
+scale,high,"string|call<alpha>",High colour,高い値の色,
 scale,midpoint,number,Middle value,中央の値,
-scale,colours,list<string>,Colours,色,
+scale,colours,"list<string>|call<hcl.colors, gray.colors, grey.colors, rainbow, heat.colors, terrain.colors, topo.colors, cm.colors, palette.colors>|r",Colours,色,
 scale,colors,list<string>,Colours,色,
 scale,option,string,Viridis option,viridis の種類,"A (magma), B (inferno), C (plasma), D (viridis), E (cividis)."
 scale,begin,number,Start of the palette,パレットの始まり,
@@ -202,7 +203,7 @@ scale,nice.breaks,logical,Nice breaks,切りのよい目盛り,
 scale,alpha,number,Transparency,透明度,viridis: 0 (clear) to 1 (opaque).
 scale,continuous.limits,list<number>|r,Continuous limits,連続の範囲,ggplot2 3.5: a discrete position scale's range when continuous data join it.
 scale,fallback.palette,r,Fallback palette,予備のパレット,ggplot2 4.0: the colours used beyond the palette's (!r).
-scale,rescaler,r,Rescaler,再尺度化,!r scales::rescale_mid; how values map to 0-1.
+scale,rescaler,function|tilde|r,Rescaler,再尺度化,"How values map to 0-1: scales::rescale_mid (a function by its name), or ~ scales::rescale_mid(.x, mid = 0)."
 scale,space,enum[Lab],Colour space,色空間,
 scale,right,logical,Bins closed on the right,区間を右で閉じる,A binned scale: a value on a break goes to the bin below (TRUE).
 coord,xlim,list<number>|r,X range,x の範囲,Zooms without dropping data (unlike a scale's limits).
@@ -216,7 +217,7 @@ coord,y,string|r,Y transformation,y の変換,
 coord,theta,enum[x|y],Angle variable,角度にする変数,
 coord,start,number,Start angle,始まりの角度,In radians from 12 o'clock.
 coord,direction,integer,Direction,向き,"1 clockwise, -1 anticlockwise."
-coord,reverse,enum[none|x|y|xy|theta|r|thetar],Reverse,反転,ggplot2 4.0.
+coord,reverse,enum[none|x|y|xy],Reverse,反転,ggplot2 4.0.
 coord,limx,list<number>|r,X range,x の範囲,
 coord,limy,list<number>|r,Y range,y の範囲,
 coord,inner.radius,number,Inner radius,内側の半径,
@@ -235,7 +236,7 @@ facet,ncol,integer,Columns,列の数,
 facet,scales,enum[fixed|free|free_x|free_y],Axes,軸,free_y: each panel its own y range.
 facet,space,enum[fixed|free|free_x|free_y],Panel sizes,面の大きさ,free_y: rows as tall as their range (with scales free_y).
 facet,shrink,logical,Shrink to the statistics,統計量の範囲に縮める,
-facet,labeller,string|r,Strip labels,ストリップのラベル,"label_value, label_both, label_wrap_gen(20), or !r labeller(...)."
+facet,labeller,"string|call<labeller, label_value, label_both, label_context, label_parsed, label_wrap_gen, label_bquote, as_labeller>|r",Strip labels,ストリップのラベル,"label_value, label_both, {fn: label_wrap_gen, args: {width: 20}}, {fn: labeller, args: {PARAMCD: !r label_wrap_gen(20)}}, or !r ..."
 facet,switch,enum[x|y|both],Strips on the other side,ストリップを反対側に,
 facet,strip.position,enum[top|bottom|left|right],Strip position,ストリップの位置,
 facet,dir,string,Order of the panels,面の並べ方,"h / v (or, ggplot2 4.0, lt, tl, rb ...)."
@@ -255,6 +256,20 @@ theme,line,"call<element_line, element_blank>|r",All lines,すべての線,
 theme,rect,"call<element_rect, element_blank>|r",All rectangles,すべての矩形,
 theme,title,"call<element_text, element_blank, element_markdown>|r",All titles,すべてのタイトル,
 theme,aspect.ratio,number,Aspect ratio of the panel,面の縦横比,
+theme,palette.colour.discrete,"string|list<string|number>|call<pal_*>|r",Default colour palette (discrete),既定の色のパレット（離散）,"ggplot2 4.0: what a colour scale uses when given no palette: values, a palette's name, or a function (!r)."
+theme,palette.colour.continuous,"string|list<string|number>|call<pal_*>|r",Default colour palette (continuous),既定の色のパレット（連続）,"ggplot2 4.0: what a colour scale uses when given no palette: values, a palette's name, or a function (!r)."
+theme,palette.fill.discrete,"string|list<string|number>|call<pal_*>|r",Default fill palette (discrete),既定の塗りのパレット（離散）,"ggplot2 4.0: what a fill scale uses when given no palette: values, a palette's name, or a function (!r)."
+theme,palette.fill.continuous,"string|list<string|number>|call<pal_*>|r",Default fill palette (continuous),既定の塗りのパレット（連続）,"ggplot2 4.0: what a fill scale uses when given no palette: values, a palette's name, or a function (!r)."
+theme,palette.alpha.discrete,"string|list<string|number>|call<pal_*>|r",Default alpha palette (discrete),既定の透明度のパレット（離散）,"ggplot2 4.0: what a alpha scale uses when given no palette: values, a palette's name, or a function (!r)."
+theme,palette.alpha.continuous,"string|list<string|number>|call<pal_*>|r",Default alpha palette (continuous),既定の透明度のパレット（連続）,"ggplot2 4.0: what a alpha scale uses when given no palette: values, a palette's name, or a function (!r)."
+theme,palette.linewidth.discrete,"string|list<string|number>|call<pal_*>|r",Default linewidth palette (discrete),既定の線の太さのパレット（離散）,"ggplot2 4.0: what a linewidth scale uses when given no palette: values, a palette's name, or a function (!r)."
+theme,palette.linewidth.continuous,"string|list<string|number>|call<pal_*>|r",Default linewidth palette (continuous),既定の線の太さのパレット（連続）,"ggplot2 4.0: what a linewidth scale uses when given no palette: values, a palette's name, or a function (!r)."
+theme,palette.size.discrete,"string|list<string|number>|call<pal_*>|r",Default size palette (discrete),既定の大きさのパレット（離散）,"ggplot2 4.0: what a size scale uses when given no palette: values, a palette's name, or a function (!r)."
+theme,palette.size.continuous,"string|list<string|number>|call<pal_*>|r",Default size palette (continuous),既定の大きさのパレット（連続）,"ggplot2 4.0: what a size scale uses when given no palette: values, a palette's name, or a function (!r)."
+theme,palette.shape.discrete,"string|list<string|number>|call<pal_*>|r",Default shape palette (discrete),既定の形のパレット（離散）,"ggplot2 4.0: what a shape scale uses when given no palette: values, a palette's name, or a function (!r)."
+theme,palette.shape.continuous,"string|list<string|number>|call<pal_*>|r",Default shape palette (continuous),既定の形のパレット（連続）,"ggplot2 4.0: what a shape scale uses when given no palette: values, a palette's name, or a function (!r)."
+theme,palette.linetype.discrete,"string|list<string|number>|call<pal_*>|r",Default linetype palette (discrete),既定の線種のパレット（離散）,"ggplot2 4.0: what a linetype scale uses when given no palette: values, a palette's name, or a function (!r)."
+theme,palette.linetype.continuous,"string|list<string|number>|call<pal_*>|r",Default linetype palette (continuous),既定の線種のパレット（連続）,"ggplot2 4.0: what a linetype scale uses when given no palette: values, a palette's name, or a function (!r)."
 theme,axis.title,"call<element_text, element_blank, element_markdown>|r",Axis titles,軸のタイトル,
 theme,axis.title.x,"call<element_text, element_blank, element_markdown>|r",X axis title,x 軸のタイトル,
 theme,axis.title.y,"call<element_text, element_blank, element_markdown>|r",Y axis title,y 軸のタイトル,
@@ -269,7 +284,7 @@ theme,axis.line,"call<element_line, element_blank>|r",Axis lines,軸の線,
 theme,axis.line.x,"call<element_line, element_blank>|r",X axis line,x 軸の線,
 theme,axis.line.y,"call<element_line, element_blank>|r",Y axis line,y 軸の線,
 theme,legend.background,"call<element_rect, element_blank>|r",Legend background,凡例の背景,
-theme,legend.margin,call<margin>|r,Legend margin,凡例の余白,
+theme,legend.margin,"call<margin, margin_auto, margin_part>|r",Legend margin,凡例の余白,
 theme,legend.spacing,call<unit>|r,Space between legends,凡例の間隔,
 theme,legend.key,"call<element_rect, element_blank>|r",Legend keys' background,凡例の印の背景,
 theme,legend.key.size,call<unit>|r,Legend key size,凡例の印の大きさ,
@@ -307,7 +322,7 @@ theme,plot.caption,"call<element_text, element_blank, element_markdown, element_
 theme,plot.caption.position,enum[panel|plot],Caption aligned to,注の揃え先,
 theme,plot.tag,"call<element_text, element_blank>|r",Tag,タグ,
 theme,plot.tag.position,string|list<number>|r,Tag position,タグの位置,
-theme,plot.margin,call<margin>|r,Plot margin,図の余白,"{fn: margin, args: {t: 5, r: 5, b: 5, l: 5, unit: pt}}."
+theme,plot.margin,"call<margin, margin_auto, margin_part>|r",Plot margin,図の余白,"{fn: margin, args: {t: 5, r: 5, b: 5, l: 5, unit: pt}}."
 theme,strip.background,"call<element_rect, element_blank>|r",Strip background,ストリップの背景,
 theme,strip.background.x,"call<element_rect, element_blank>|r",Strip background (x),ストリップの背景（x）,
 theme,strip.background.y,"call<element_rect, element_blank>|r",Strip background (y),ストリップの背景（y）,
@@ -321,7 +336,7 @@ theme,point,"call<element_point, element_blank>|r",All points,すべての点,gg
 theme,polygon,"call<element_polygon, element_blank>|r",All polygons,すべての多角形,ggplot2 4.0.
 theme,geom,call<element_geom>|r,Geoms' defaults,geom の既定,"ggplot2 4.0: {fn: element_geom, args: {ink: black, linewidth: 0.5, pointsize: 1.5}}."
 theme,spacing,call<unit>|r,Base spacing,基本の間隔,ggplot2 4.0: the unit other spacings are relative to.
-theme,margins,call<margin>|r,Base margins,基本の余白,ggplot2 4.0.
+theme,margins,"call<margin, margin_auto, margin_part>|r",Base margins,基本の余白,ggplot2 4.0.
 theme,debug,logical,Show the text boxes,文字枠を表示,
 theme,header_family,string,Font of the titles,見出しのフォント,ggplot2 4.0: the font of titles and strips.
 theme,accent,string,Accent colour,強調色,ggplot2 4.0: the colour of smooths and the like.
@@ -333,7 +348,7 @@ theme,legend.ticks,"call<element_line, element_blank>|r",Colour bar ticks,カラ
 theme,legend.ticks.length,"call<unit, rel>|number|r",Colour bar tick length,カラーバーの目盛りの長さ,ggplot2 3.5.
 theme,legend.axis.line,"call<element_line, element_blank>|r",Legend axis line,凡例の軸線,ggplot2 3.5 (guide_bins).
 theme,legend.location,enum[panel|plot],Legend aligned to,凡例の揃え先,"ggplot2 3.5: plot, a legend at the top aligned to the whole plot."
-theme,legend.box.margin,call<margin>|r,Legend box margin,凡例群の余白,
+theme,legend.box.margin,"call<margin, margin_auto, margin_part>|r",Legend box margin,凡例群の余白,
 theme,legend.box.background,"call<element_rect, element_blank>|r",Legend box background,凡例群の背景,
 theme,legend.box.spacing,call<unit>|r,Legend box spacing,凡例群と面の間隔,
 theme,panel.widths,call<unit>|r,Panel widths,面の幅,"ggplot2 4.0: fixed widths, {fn: unit, args: {x: 6, units: cm}}."
@@ -342,15 +357,15 @@ theme,plot.tag.location,enum[panel|plot|margin],Tag placed in,タグの配置先
 theme,strip.switch.pad.wrap,call<unit>|r,Strip padding (switched wrap),ストリップの余白（wrap 入替時）,
 element,family,string,Font family,フォント,
 element,face,enum[plain|italic|bold|bold.italic],Font face,書体,
-element,colour,string,Colour,色,
+element,colour,"string|call<alpha>|r",Colour,色,
 element,color,string,Colour,色,
 element,size,number|call<rel>|r,Size,大きさ,"Text in points, or {fn: rel, args: {x: 0.8}}."
 element,hjust,number,Horizontal justification,横の位置合わせ,
 element,vjust,number,Vertical justification,縦の位置合わせ,
 element,angle,number,Angle,角度,
 element,lineheight,number,Line height,行の高さ,
-element,margin,call<margin>|r,Margin,余白,
-element,fill,string|r,Fill,塗り,!r NA for none.
+element,margin,"call<margin, margin_auto, margin_part>|r",Margin,余白,
+element,fill,"string|call<alpha>|r",Fill,塗り,!r NA for none.
 element,linewidth,number|call<rel>|r,Line width,線の太さ,
 element,linetype,string|number,Line type,線種,
 element,lineend,enum[butt|round|square],Line ends,線端,
@@ -416,10 +431,10 @@ position,dodge.width,number,Dodge width,ずらし幅,
 position,orientation,enum[x|y],Orientation,向き,
 helper,mult,number|list<number>,Multiplicative expansion,割合の余白,"[0, 0.05]: none below, 5% above."
 helper,add,number|list<number>,Additive expansion,加える余白,In data units.
-helper,transform,r,Transformation,変換,!r ~ . / 7
+helper,transform,tilde|function|r,Transformation,変換,"~ . / 7 (a formula), or a function by its name."
 helper,name,string|r,Title,タイトル,
-helper,breaks,list<number>|r,Breaks,目盛り,
-helper,labels,list<string>|r,Labels,ラベル,
+helper,breaks,"list<number>|call<seq, breaks_*, extended_breaks, pretty_breaks, log_breaks>|r",Breaks,目盛り,
+helper,labels,"list<string>|call<label_*, *_format>|r",Labels,ラベル,
 helper,guide,string|call|r,Guide,凡例,
 helper,angle,number,Arrowhead angle,矢じりの角度,
 helper,length,call<unit>|r,Arrowhead length,矢じりの長さ,
@@ -442,5 +457,134 @@ labs,colour,string|r,Colour legend title,色の凡例のタイトル,
 labs,fill,string|r,Fill legend title,塗りの凡例のタイトル,
 labs,shape,string|r,Shape legend title,形の凡例のタイトル,
 labs,linetype,string|r,Line type legend title,線種の凡例のタイトル,
-labs,dictionary,"vec<string, string>",Labels by variable,変数ごとのラベル,"ggplot2 4.0: {AVAL: Value, TRTA: Treatment}: a variable's label wherever it is mapped."
+labs,dictionary,"vec<string, string>|r",Labels by variable,変数ごとのラベル,"ggplot2 4.0: {AVAL: Value, TRTA: Treatment}: a variable's label wherever it is mapped."
 labs,alt_insight,string|r,Alt text insight,代替テキストの要点,
+plot,linetype_aes,logical,Linetype by group,群ごとの線種,"TRUE: the groups told apart by linetype too (a black-and-white print)."
+plot,theme,call|r,Theme,テーマ,"{fn: theme_ggsurvfit_KMunicate}; theme_ggsurvfit_default() by default."
+ggsurvfit_layer,risktable_stats,list<string>|string,Statistics,統計量,"n.risk, cum.event, cum.censor, n.event, n.censor, estimate, conf.low, conf.high, or a glue template: ""{n.risk} ({cum.event})""."
+ggsurvfit_layer,risktable_group,enum[auto|strata|risktable_stats],Grouped by,まとめ方,"strata: one block a group; risktable_stats: one block a statistic."
+ggsurvfit_layer,risktable_height,number,Height (share),高さ（割合）,"The table's share of the figure's height, e.g. 0.25."
+ggsurvfit_layer,stats_label,"list<string>|map<string, string>",Statistic labels,統計量のラベル,"[At risk, Events], or by statistic: {n.risk: At risk}."
+ggsurvfit_layer,combine_groups,logical,One row a statistic,群をまとめる,"TRUE: the groups summed, one row a statistic."
+ggsurvfit_layer,theme,call|r,Theme,テーマ,"The risk table's: {fn: theme_risktable_boxed}, or !r theme_risktable_default(axis.text.y.size = 9)."
+ggsurvfit_layer,size,number,Text size,文字の大きさ,"In mm, as ggplot2's size."
+ggsurvfit_layer,type,enum[ribbon|lines],Drawn as,描き方,"ribbon: a band; lines: a line each side."
+ggsurvfit_layer,y_value,number,At survival,生存率の位置,"A line across at this survival (0.5: the median), down to the time axis."
+ggsurvfit_layer,x_value,number,At time,時点,"A line up at this time, across to the axis."
+ggsurvfit_layer,location,enum[caption|annotation],Placed,置き場所,"caption: under the plot; annotation: on it (x and y given)."
+ggsurvfit_layer,caption,string,Text,文字,"A glue template, {p.value} the log-rank p-value: ""Log-rank {p.value}""."
+ggsurvfit_layer,prepend_p,logical,Prepend p =,p = を前に付ける,
+ggsurvfit_layer,pvalue_fun,r,P-value format,p 値の形式,"!r function(x) format.pval(x, digits = 3); ggsurvfit's format_p by default."
+ggsurvfit_layer,rho,number,Test (rho),検定（rho）,"survdiff()'s rho: 0 the log-rank test, 1 the Peto-Peto Wilcoxon test."
+ggsurvfit_layer,title,string|r,Legend title,凡例のタイトル,Blank: the strata's variable.
+ggsurvfit_layer,symbol,string,Symbol,記号,The character before each group's row of the risk table (a filled box by default).
+ggsurvfit_layer,face,enum[plain|italic|bold|bold.italic],Font face,書体,
+ggsurvfit_layer,vjust,number,Vertical justification,縦の位置合わせ,
+scale,x_scales,"map<string, string|number|logical|list<number|string>|r>|r",X axis settings,x 軸の設定,"scale_x_continuous()'s arguments: {breaks: [0, 6, 12, 18, 24], expand: !r c(0.015, 0)}."
+scale,y_scales,"map<string, string|number|logical|list<number|string>|r>|r",Y axis settings,y 軸の設定,"scale_y_continuous()'s arguments: {limits: [0, 1], labels: !r scales::label_percent()}."
+helper,axis.text.y.size,number,Group label size,群ラベルの大きさ,In points.
+helper,plot.title.size,number,Title size,タイトルの大きさ,In points.
+layer,box.padding,number|call|r,Padding around the text,文字の周りの余白,"ggrepel: lines kept clear around each label (0.25); geom_textbox: the box's inner padding, !r unit(c(5.5, 5.5, 5.5, 5.5), ""pt"")."
+layer,point.padding,number|call|r,Padding around the point,点の周りの余白,In lines.
+layer,min.segment.length,number|call|r,Shortest segment drawn,線を描く最短の長さ,"0: a line from every label to its point; !r Inf: none."
+layer,force,number,Repulsion,反発の強さ,Between overlapping labels (1).
+layer,force_pull,number,Pull to the point,点への引き寄せ,(1)
+layer,max.time,number,Time limit (s),時間の上限（秒）,
+layer,max.iter,number,Iterations,反復回数,
+layer,max.overlaps,number|r,Overlaps allowed,許す重なりの数,"A label with more overlaps is left out; !r Inf keeps every label."
+layer,ylim,list<number>|r,Y range of the labels,ラベルの y の範囲,"!r c(NA, Inf): anywhere above the axis."
+layer,seed,number,Random seed,乱数のシード,The same layout each run.
+layer,verbose,logical,Report the time taken,経過を表示,
+layer,label.margin,call<unit>|r,Margin outside the box,枠の外の余白,
+layer,box.margin,call<unit>|r,Margin outside the box,枠の外の余白,
+layer,box.r,call<unit>|r,Rounded corners,角の丸み,
+layer,minwidth,call<unit>|r,Least width,最小の幅,
+layer,maxwidth,call<unit>|r,Most width,最大の幅,
+layer,minheight,call<unit>|r,Least height,最小の高さ,
+layer,maxheight,call<unit>|r,Most height,最大の高さ,
+layer,yvars,list<string>,Columns of the band,帯の列,"The y columns drawn as steps: [ymin, ymax]."
+layer,new_aes,string,Aesthetic,エステティック,"The aesthetic the layers after it get a new scale for: colour, fill, shape ..."
+facet,remove_labels,enum[none|rows|cols|x|y|all],Inner axis labels removed,内側の軸ラベルを除く,With axes = all: the inner panels' axes without their labels.
+facet,independent,enum[none|x|y|all],Independent axes,面ごとの軸,"With scales free: each panel its own range, not only each row or column."
+facet,nest_line,call<element_line>|call|logical|r,Line under nested strips,入れ子のストリップの線,{fn: element_line} draws it.
+facet,solo_line,logical,Line under a single strip too,単独のストリップにも線,
+facet,resect,call<unit>|r,Line shortened by,線を短くする長さ,"!r unit(1, ""mm"")."
+facet,render_empty,logical,Draw empty panels,空の面を描く,
+facet,strip,call|string|r,Strips,ストリップ,"{fn: strip_nested, args: {bleed: TRUE}}, {fn: strip_themed, args: {...}} or strip_vanilla."
+facet,bleed,logical,Strips merged across levels,ストリップをまたいでつなぐ,
+facet,trim_blank,logical,No blank panels at the end,末尾の空の面を除く,
+facet,respect,logical,Keep the aspect,縦横比を保つ,
+facet,total_width,call<unit>|r,Total width,全体の幅,"!r unit(15, ""cm"")."
+facet,total_height,call<unit>|r,Total height,全体の高さ,
+element,box.colour,string,Box colour,枠の色,
+element,box.color,string,Box colour,枠の色,
+element,halign,number,Alignment in the box (horizontal),枠内の横位置,"0 left, 0.5 centre, 1 right."
+element,valign,number,Alignment in the box (vertical),枠内の縦位置,
+element,padding,"call<margin, margin_auto, margin_part>|r",Padding,内側の余白,{fn: margin}
+element,align_widths,logical,Same widths,幅をそろえる,
+element,align_heights,logical,Same heights,高さをそろえる,
+element,rotate_margins,logical,Margins rotate with the text,余白も回転,
+element,width,call<unit>|r,Width,幅,"!r unit(1, ""npc""): the full width."
+element,height,call<unit>|r,Height,高さ,
+element,minwidth,call<unit>|r,Least width,最小の幅,
+element,maxwidth,call<unit>|r,Most width,最大の幅,
+element,minheight,call<unit>|r,Least height,最小の高さ,
+element,maxheight,call<unit>|r,Most height,最大の高さ,
+element,orientation,enum[upright|left-rotated|right-rotated|inverted],Orientation,向き,
+element,clip,enum[inherit|on|off],Clip,はみ出しの切り取り,
+element,bleed,logical,Strips merged across levels,ストリップをまたいでつなぐ,
+element,text_x,call|r,Strip text (x),ストリップの文字（x）,"Each strip's: {fn: elem_list_text, args: {colour: [red, blue]}}."
+element,text_y,call|r,Strip text (y),ストリップの文字（y）,
+element,background_x,call|r,Strip background (x),ストリップの背景（x）,"{fn: elem_list_rect, args: {fill: [grey90, white]}}."
+element,background_y,call|r,Strip background (y),ストリップの背景（y）,
+element,by_layer_x,logical,By nesting layer (x),入れ子の層ごと（x）,TRUE: the lists go by layer of strips; FALSE: by strip.
+element,by_layer_y,logical,By nesting layer (y),入れ子の層ごと（y）,
+compose,ncol,integer,Columns,列の数,
+compose,nrow,integer,Rows,行の数,
+compose,byrow,logical,By row,行の順,
+compose,widths,list<number>|r,Widths,幅,"Relative: [3, 1]."
+compose,heights,list<number>|r,Heights,高さ,"Relative: [3, 1]."
+compose,guides,enum[keep|collect|auto],Legends,凡例,collect: one legend for the plots that share it.
+compose,tag_level,enum[keep|new],Tag level,タグの階層,
+compose,design,string|r,Design,配置図,"Letters a plot each, a line a row: ""AAB\nCCB""; or !r c(area(1, 1), area(1, 2))."
+compose,axes,enum[keep|collect|collect_x|collect_y],Axes shared,軸をまとめる,collect: the axes the plots share drawn once.
+compose,axis_titles,enum[keep|collect|collect_x|collect_y],Axis titles shared,軸タイトルをまとめる,
+compose,title,string|r,Title,タイトル,
+compose,subtitle,string|r,Subtitle,サブタイトル,
+compose,caption,string|r,Caption,キャプション,
+compose,tag_levels,string|list<string>|r,Tags,タグ,"A, a, 1, i or I; [A, 1] for nested plots."
+compose,tag_prefix,string,Tag prefix,タグの前,
+compose,tag_suffix,string,Tag suffix,タグの後,
+compose,tag_sep,string,Tag separator,タグの区切り,
+compose,theme,call|r,Theme,テーマ,"Of the whole: {fn: theme, args: {plot.title: {fn: element_text, args: {size: 12}}}}."
+compose,panel,object,Plot (panel aligned),plot（パネルを揃える）,A plot or grob by its name.
+compose,plot,object,Plot (all of it aligned),plot（全体を揃える）,A plot or grob by its name.
+compose,full,object,Plot (the whole area),plot（全域）,A plot or grob by its name.
+compose,clip,logical,Clip,はみ出しを切る,
+compose,ignore_tag,logical,No tag,タグを付けない,
+compose,p,object,Inset plot,差し込む plot,A plot by its name.
+compose,left,number|call<unit>|r,Left,左,"0-1 of the area, or !r unit(1, ""cm"")."
+compose,bottom,number|call<unit>|r,Bottom,下,
+compose,right,number|call<unit>|r,Right,右,
+compose,top,number|call<unit>|r,Top,上,
+compose,align_to,enum[panel|plot|full],Placed relative to,位置の基準,
+compose,on_top,logical,On top,前面に,
+compose,t,integer,Top row,上の行,
+compose,l,integer,Left column,左の列,
+compose,b,integer,Bottom row,下の行,
+compose,r,integer,Right column,右の列,
+compose,type,enum[panel|label|space],Freed,自由にするもの,"panel: not aligned; label: axis titles kept near; space: no space kept."
+compose,side,string,Sides,辺,"Of trbl (top, right, bottom, left): ""lr""."
+ggsurvfit_layer,colour,string,Colour,色,
+ggsurvfit_layer,linetype,string|number,Line type,線種,"solid, dashed, dotted, or 1-6."
+ggsurvfit_layer,linewidth,number,Line width,線の太さ,In mm.
+ggsurvfit_layer,alpha,number,Transparency,透明度,0 (none) to 1.
+ggsurvfit_layer,shape,number|string,Shape,形,"3: a plus (a censor mark), 124: a bar."
+ggsurvfit_layer,stroke,number,Stroke,線の太さ（記号）,
+plot,linewidth,number,Line width,線の太さ,"The curves', in mm."
+facet,axes,enum[margins|x|y|all]|logical,Axes drawn,軸を描く面,margins: only the outer panels; all: every panel; x or y: the inner panels' axes of that direction (ggh4x).,ggh4x::facet_*
+facet,remove_labels,enum[none|x|y|all]|logical,Inner axis labels removed,内側の軸ラベルを除く,"With axes drawn on the inner panels: x, y or all of them without their labels (ggh4x).",ggh4x::facet_*
+facet,space,enum[fixed|free_x|free_y],Panel sizes,面の大きさ,"free_x: columns as wide as their range (with scales free_x); free_y: rows as tall as their range (facet_wrap takes no ""free"").",facet_wrap
+layer,drop,enum[none|all|extremes]|logical,Drop empty bins,空の区間を除く,"none keeps the bins with no count, all drops them, extremes drops those at both ends; TRUE is all, FALSE none.","stat_bin,geom_histogram,geom_freqpoly"
+coord,reverse,enum[none|theta|thetar|r],Reverse,反転,"theta: the angle, r: the radius, thetar: both (ggplot2 4.0).",coord_radial
+scale,type,string,Scale type,スケールの種類,"The scale the panels are drawn on, by the end of its function's name: continuous, discrete, binned, date, datetime, time, log10 ... (scale_x_<type>).","ggh4x::scale_x_facet,ggh4x::scale_y_facet"

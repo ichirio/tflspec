@@ -54,7 +54,7 @@
     blank_where = "blanks", blank_first = "bool", blank_last = "bool",
     blank_counted = "bool",
     stub_vars = "list", stub_name = "text", stub_indent = "int",
-    stub_summary = "text", stub_before = "bool",
+    stub_summary = "text", stub_before = "bool", stub_heading = "text",
     colpages_every = "int", colpages_at = "ids", colpages_keep = "ids",
     colpages_order = "list", colpages_cut_by = "text",
     colpages_fit = "bool", colpages_allow_span_break = "bool"),
@@ -63,6 +63,7 @@
     row_height_twips = "int", row_height_exact = "bool",
     header_row_height_twips = "int", blank_row_height_twips = "int",
     cell_padding_left_twips = "int", cell_padding_right_twips = "int",
+    cell_padding_top_twips = "int", cell_padding_bottom_twips = "int",
     font = "text", font_size_half_points = "int", table_align = "text",
     cell_valign = "text", markup = "text", blank_row_normalize = "text",
     border_header = "sides", border_spanning = "sides",
@@ -96,7 +97,7 @@
     footnote_font_size_half_points = "int", page_header = "bool",
     page_footer = "bool", watermark = "text", page_break = "bool", space_before = "int",
     first_rows = "int", cont_title = "text", figure_width_in = "text",
-    figure_height_in = "text", ard_source = "text", pattern = "text",
+    figure_height_in = "text", ard_source = "text", pattern = "text", extends = "text",
     data_code = "text", content_code = "text", ard_object = "text"),
   page = c(
     paper_size = "text", orientation = "text", width_in = "num",
@@ -106,10 +107,14 @@
     font = "text", font_lang = "text", font_size_half_points = "int", title_format = "text",
     footnote_format = "text", title_width = "text",
     footnote_width = "text", markup = "text", page_more = "text"),
-  header    = c(line = "int", left = "text", center = "text", right = "text"),
-  footer    = c(line = "int", left = "text", center = "text", right = "text"),
-  titles    = c(line = "int", left = "text", center = "text", right = "text"),
-  footnotes = c(line = "int", left = "text", center = "text", right = "text"),
+  header    = c(line = "int", left = "text", center = "text", right = "text",
+                row_height_twips = "int"),
+  footer    = c(line = "int", left = "text", center = "text", right = "text",
+                row_height_twips = "int"),
+  titles    = c(line = "int", left = "text", center = "text", right = "text",
+                row_height_twips = "int"),
+  footnotes = c(line = "int", left = "text", center = "text", right = "text",
+                row_height_twips = "int"),
   # tokens of one's own: {STUDY} in a header, footer, title or footnote
   tokens    = c(name = "text", value = "text"))
 
@@ -331,6 +336,8 @@
   if ("note" %in% names(d)) out$note <- as.character(d$note)
   body <- setdiff(allowed, "output_id")
   keep <- rowSums(!is.na(out[body])) > 0L
+  # (a report row of only `@<name>` is a pattern with no page content: its place, #662)
+  if (identical(sheet, "report")) keep <- keep | .ard_spec_is_pattern(out$output_id)
   out[keep, , drop = FALSE]
 }
 
@@ -725,7 +732,7 @@
 #' prefix names:
 #' \describe{
 #'   \item{`pages_*`}{[rtfreporter::plan_paginate_rows()]: `max_rows`, `split`,
-#'     `break_before` (row positions to cut before, `20 | 40`, with
+#'     `break_before` (the column `pages_break_before`: row positions to cut before, `20 | 40`, with
 #'     `split = rows`), `min_group_rows`, `cont_label`, `page_by` (BY
 #'     pages: the column(s) partitioning the body first, the row budget
 #'     inside each), `heading` (each BY page's name from a template,
@@ -742,7 +749,7 @@
 #'   \item{`blank_*`}{[rtfreporter::plan_blanks()]: `where`, `first`, `last`,
 #'     `counted`.}
 #'   \item{`stub_*`}{[rtfreporter::plan_stub()]: `vars`, `name`, `indent`, `summary`,
-#'     `before`.}
+#'     `before`, `heading` (the stub column's heading; `""`, quoted, for none).}
 #'   \item{`colpages_*`}{[rtfreporter::plan_paginate_cols()]: `every`, `at`,
 #'     `cut_by` (a separator in the column names, `____`: one block per
 #'     key), `keep`, `fit` (`TRUE`: every block on page 1's scale; `FALSE`:
@@ -786,7 +793,8 @@
 #' [rtfreporter::plan_style()]: `border`, `align_count_pct`, `font`,
 #' `font_size_half_points`, `row_height_twips`, `row_height_exact`,
 #' `header_row_height_twips`, `blank_row_height_twips`,
-#' `cell_padding_left_twips`, `cell_padding_right_twips`, `cell_valign`,
+#' `cell_padding_left_twips`, `cell_padding_right_twips`,
+#' `cell_padding_top_twips`, `cell_padding_bottom_twips`, `cell_valign`,
 #' `table_align`, `markup`, `blank_row_normalize`, and the rules of one
 #' kind of row, `border_header`, `border_spanning`, `border_body`,
 #' `border_first_row`, `border_last_row`: the sides drawn (`top | bottom`)
@@ -1101,7 +1109,10 @@ print.tfl_table_spec <- function(x, ...) {
         paste(sQuote(ids), collapse = ", "), "); say which one:\n",
         "    tfl_read_table_spec(path, output_id = ", dQuote(ids[1L], FALSE), ")"))
     }
-    if (!length(ids)) return(sp)
+    if (!length(ids)) {
+      if (NROW(sp$page)) attr(sp, "page_study") <- .page_study_cols(sp$page, output_id)
+      return(sp)
+    }
     output_id <- ids
   }
   if (!length(ids)) {
@@ -1110,6 +1121,9 @@ print.tfl_table_spec <- function(x, ...) {
     if (is.character(output_id) && length(output_id) == 1L && !is.na(output_id)) {
       attr(sp, "output_id") <- output_id
     }
+    # every page row is the study's: the font, languages and size it says are
+    # the setup's options(), as for a report narrowed from its own rows
+    if (NROW(sp$page)) attr(sp, "page_study") <- .page_study_cols(sp$page, output_id)
     return(sp)
   }
   if (!is.character(output_id) || length(output_id) != 1L ||
@@ -1162,6 +1176,13 @@ print.tfl_table_spec <- function(x, ...) {
         row <- d[!mine, , drop = FALSE]
         own <- d[mine, , drop = FALSE]
         for (cn in names(own)) if (!is.na(own[[cn]])) row[[cn]] <- own[[cn]]
+        # the items no column says: the defaults' and the report's both (a
+        # study's plan_stub(heading = ) beside a report's own item)
+        cm <- "content_more"
+        if (cm %in% names(own) && !is.na(own[[cm]]) && !is.na(d[[cm]][!mine][1L])) {
+          row[[cm]] <- .sheet_more_out(c(.sheet_more_in(d[[cm]][!mine][1L], items = TRUE),
+                                         .sheet_more_in(own[[cm]], items = TRUE)), items = TRUE)
+        }
         d <- row
       }
     } else if (identical(.ard_spec_keys[[s]], NA_character_)) {
@@ -1227,6 +1248,7 @@ print.tfl_table_spec <- function(x, ...) {
 
 # The study-wide options of the page sheet, rtfreporter's options they are
 .page_options <- c(font = "rtfreporter.font",
+                   font_lang = "rtfreporter.font_lang",
                    font_size_half_points = "rtfreporter.font_size_half_points")
 
 # Of the page's study-wide options, the ones the study's row (blank
@@ -1856,7 +1878,6 @@ tfl_read_table_spec <- function(path, output_id = NULL) {
     .ard_stop("`path` must name one or more .xlsx workbooks.")
   }
   for (f in path) .ard_spec_xlsx_path(f, "tfl_read_table_spec")
-  .ard_need("readxl", "tfl_read_table_spec()")
   sheets <- list()
   from <- character()
   for (f in path) {
@@ -2049,7 +2070,7 @@ tfl_table_spec_template <- function(ard, path = NULL, cols = NULL,
 .ard_spec_rtf_tokens <- c("PAGE", "TOTAL_PAGES", "BOOK_PAGE", "AUTO_PAGE",
                           "AUTO_TOTAL_PAGES", "SECTION_PAGES", "PROGRAM",
                           "PROGRAM_FULL", "PROGRAM_NAME", "PROGRAM_DIR",
-                          "DATETIME")
+                          "DATETIME", "PAGE_HEADING")
 
 .ard_spec_check_tokens <- function(d) {
   .pb_stop_first(.ard_spec_token_problems(d))
@@ -2186,8 +2207,8 @@ tfl_table_spec_template <- function(ard, path = NULL, cols = NULL,
     cells <- c(l = r[["left"]] %||% NA, c = r[["center"]] %||% NA,
                r = r[["right"]] %||% NA)
     cells <- cells[!is.na(cells)]
-    # a blank line is centred, as an unnamed c("") is
-    if (!length(cells)) c(c = "") else cells
+    # a blank line is centred, as an unnamed c("") is; a line's own height
+    .page_line(cells, r[["row_height_twips"]], sheet)
   })
 }
 
@@ -2279,7 +2300,7 @@ tfl_table_spec_template <- function(ard, path = NULL, cols = NULL,
 #' `header_dist_in`, `footer_dist_in` (the page, as [rtfreporter::rtf_document()] takes
 #' it), `font` (the document's font: `rtf_document(font_table = )`), and
 #' `font_size_half_points`, `title_format`, `footnote_format`,
-#' `title_width`, `footnote_width`, `markup` ([rtfreporter::rtf_default_format()]).
+#' `title_width`, `footnote_width`, `markup` ([rtfreporter::rtf_style()]'s shared level).
 #' The study's row (blank `output_id`) of `font` and `font_size_half_points`
 #' is the company's: [tfl_report_setup_code()] writes it once as
 #' `options(rtfreporter.font = , rtfreporter.font_size_half_points = )`.
@@ -2314,7 +2335,7 @@ tfl_read_report_spec <- function(path, output_id = NULL) {
 #' @param spec A report definition ([tfl_read_report_spec()]) narrowed to one
 #'   report, or the path(s) to read it from; or a report of the YAML spec
 #'   ([tfl_output()], resolved: [tfl_resolve_output()]), its `page:` the
-#'   calls -- `rtf_page`, `rtf_default_format`, `rtf_document`,
+#'   calls -- `rtf_page`, `rtf_style` (an old `rtf_default_format`: its shared level), `rtf_document`,
 #'   `rtf_tables` / `rtf_figures`, `rtf_titles`, `rtf_footnotes`, each its
 #'   arguments, and the lines of `header`, `footer`, `titles`, `footnotes`
 #'   and the `tokens`.
@@ -2339,7 +2360,6 @@ tfl_read_report_spec <- function(path, output_id = NULL) {
 #' @seealso [tfl_read_report_spec()], [tfl_report_path()]
 #' @export
 tfl_report <- function(spec, output_id = NULL, content, study = NULL) {
-  .spec_need_rtfreporter()
   if (!is.null(output_id) && !(is.character(output_id) &&
                                length(output_id) == 1L)) {
     .ard_stop(paste0(
@@ -2523,7 +2543,6 @@ tfl_report_overwrite <- function(output, study = NULL) {
 #' @seealso [tfl_table_spec()], [tfl_write_table_spec()], [rtfreporter::table_plan()]
 #' @export
 tfl_as_table_spec <- function(x, output_id = NULL, compare = TRUE) {
-  .spec_need_rtfreporter()
   if (inherits(x, "tfl_table_spec")) return(x)
   if (is.list(x) && !inherits(x, "table_plan") && length(x) &&
       all(vapply(x, inherits, NA, "table_plan"))) {
@@ -2749,6 +2768,7 @@ tfl_as_table_spec <- function(x, output_id = NULL, compare = TRUE) {
     put("stub_vars", st$vars); put("stub_name", st$name)
     put("stub_indent", st$indent); put("stub_summary", st$group_summary)
     if (isTRUE(st$before)) put("stub_before", TRUE)
+    put("stub_heading", st$heading)
   }
   g <- ly[["group"]]
   put("group_mode", g$group_by); put("group_collapse", g$collapse_repeats)

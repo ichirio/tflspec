@@ -42,5 +42,40 @@ the choices (\code{method = "wilson"}), text in quotes, a formula, a column,
 a list (\code{method.args = list(...)}), a list or formula of selectors
 (\code{fmt_fun = everything() ~ 1L}), an expression not in quotes (a \code{post}
 step's \code{filter = n >= 2}).  A name or a call is the program's to judge.
+A name a cardx function passes on through \code{...} to a stats or survival
+function that has no such argument either is said too
+(\code{ard_stats_t_test(var.eqaul = TRUE)}: \code{t.test()} would ignore it), and
+one \code{ard_car_anova()} passes on to the \code{car::Anova()} method of the
+model its \code{x} fits (\verb{x = lm(...), tpye = "III"}: \code{Anova.lm()} would
+ignore it and give type II).
+The same for the cards / cardx calls in a \code{custom} row's \code{code}, written
+with their package (\code{cards::ard_tabulate(data, denominatr = ...)},
+\code{cardx::ard_categorical_ci(..., method = "wilson_cc")}) or by the plain
+name of a function cards or cardx exports (\code{ard_tabulate(...)} after
+\code{library(cards)}, unless the code binds that name itself), inside a pipe
+or an \code{ard_stack()} too; the rest of the code is the program's.
+}
+
+\section{The analyses sheet}{
+
+\code{strata} names the variables the analysis is repeated within (cards'
+strata: a subgroup, a parameter by visit), \code{|} between them.
+\code{denominator} says what the percentages are of: \code{population}, \code{row},
+\code{column} or \code{cell}, another population, a dataset, an analysis data,
+an object, or numbers (\code{86}, or \code{c("Drug X" = 86, "Placebo" = 85)}, each
+named by a value of the one \code{by}); blank is the method's default.  A
+\code{custom} analysis takes neither (its code says it), and a method whose
+function has no such argument is refused.
+
+\code{method} is a keyword of \code{\link[=tfl_ard_methods]{tfl_ard_methods()}}, a \verb{pkg::function}, or a
+function of the study's own: the study key \code{source} (on the \code{study}
+sheet, \code{|} between files, relative to the study folder) names the R
+files that define it.
+
+\code{args} is read as the arguments of a call, in R
+(\code{conf.level = 0.9}), and one that does not parse is refused.  An
+argument a column also gives (\code{by}, \code{variables}, \code{strata},
+\code{denominator}, \code{statistics}, \code{overall}) may not be in both: write it
+in one place.
 }
 

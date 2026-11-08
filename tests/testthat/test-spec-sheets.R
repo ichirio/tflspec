@@ -167,12 +167,15 @@ lst_both <- function(d, output = NULL) {
   cat_ <- sh$ard$datasets
   cat_$path <- file.path(d, cat_$path)
   e1 <- new.env()
-  eval(parse(text = c("library(rtfreporter)", tfl_listing_code(ls, "L-16-2-7", cat_))), e1)
+  eval(parse(text = c("library(rtfreporter)", tfl_helpers_code(),
+                      tfl_listing_code(ls, "L-16-2-7", cat_))), e1)
   o <- output %||% tfl_resolve_output(outs[["L-16-2-7"]], s)
   e2 <- new.env()
-  eval(parse(text = c("library(rtfreporter)",
-                      tfl_listing_code(ls, "L-16-2-7", cat_, part = "data"),
-                      tfl_content_code(o, pipe = "|>"))), e2)
+  wd <- setwd(d)
+  on.exit(setwd(wd), add = TRUE)
+  eval(parse(text = c("library(rtfreporter)", tfl_helpers_code(),
+                      tfl_content_code(o, pipe = "|>", study = s))), e2)
+  setwd(wd)
   list(sheets = lst_rtf(e1$content),
        content = lst_rtf(suppressMessages(rtfreporter::plan_apply(e2$plan))),
        rows = nrow(e1$data))
@@ -188,21 +191,16 @@ test_that("a listing's content code, on the sheets' data, makes the sheets' list
   cc <- tfl_content_code(o, pipe = "|>")
   expect_identical(cc[1L], "plan <- table_plan(data) |>")
   expect_identical(utils::tail(cc, 1L), "  plan_paginate_rows(max_rows = 22)")
-  # (a label's `\n`, two characters in the file, is a line break on the
-  # sheets' path -- .listing_label() -- and is written as it is on the
-  # content's: here made a line break, see the test below)
-  nl <- function(x) gsub("\\n", "\n", x, fixed = TRUE)
-  pl <- which(vapply(o$content, function(it) identical(it$fn, "plan_listing"), NA))
-  for (k in seq_along(o$content[[pl]]$args$cols)) {
-    o$content[[pl]]$args$cols[[k]]$args$label <- nl(o$content[[pl]]$args$cols[[k]]$args$label)
-  }
+  # with the study, the data part first: the sheets' writer's
+  cs <- tfl_content_code(o, pipe = "|>", study = s)
+  expect_true(any(grepl("dplyr::arrange(TRT01AN, USUBJID, ASTDT)", cs, fixed = TRUE)))
+  expect_identical(utils::tail(cs, length(cc)), cc)
   r <- lst_both(d, o)
   expect_gt(r$rows, 0L)
   expect_identical(r$content, r$sheets)
 })
 
 test_that("a listing's label `\\n`: the same line break on both paths", {
-  skip("known difference (#304): tfl_content_code() writes a label's `\\n` as it is, the sheets a line break")
   skip_if_not_installed("cards")
   skip_if_not_installed("dplyr")
   skip_if_not_installed("rtfreporter")

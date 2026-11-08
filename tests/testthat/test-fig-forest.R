@@ -12,11 +12,16 @@ test_that("tfl_fig_forest_analyses() gives the rows of the figure's own ARD defi
   expect_identical(an$analyses$analysis_id, c("HR", "HR_SEX", "HR_AGEGR1"))
   expect_true(all(an$analyses$method == "custom"))
   # the model under a name, the event written as the KM figures write it
-  expect_identical(an$analyses$code[1], paste0(
+  # (the subjects the model leaves out are counted in a warning first)
+  expect_match(an$analyses$code[1], "n_no_arm <- sum((is.na(data$TRT01P) | data$TRT01P == \"\"))",
+               fixed = TRUE)
+  expect_match(an$analyses$code[1], "n_no_time <- ", fixed = TRUE)
+  expect_true(endsWith(an$analyses$code[1], paste0(
     "cox <- survival::coxph(survival::Surv(AVAL, CNSR == 0) ~ TRT01P, data = data)
 ",
-    "cardx::ard_regression(cox, exponentiate = TRUE)"))
-  expect_match(an$analyses$code[2], "  data,
+    "cardx::ard_regression(cox, exponentiate = TRUE)")))
+  # (a blank or missing subgroup value is no subgroup)
+  expect_match(an$analyses$code[2], "  dplyr::filter(data, !is.na(SEX), SEX != \"\"),
   .strata = SEX,
   .f = ~ cardx::ard_regression(",
                fixed = TRUE)
@@ -94,6 +99,11 @@ test_that("the forest template is in parts, with its analyses, and its design ch
   expect_match(.forest_est_code("TRT01P", character(), "B"), 'level = "All subjects"', fixed = TRUE)
   expect_false(grepl("heading row", .forest_est_code("TRT01P", character()), fixed = TRUE))
   expect_match(.forest_est_code("TRT01P", "SEX"), "a heading row above each subgroup", fixed = TRUE)
+  # bold headings: one helper (the axis's labels as plotmath), only when asked
+  expect_false(grepl("y_labels", .forest_est_code("TRT01P", "SEX"), fixed = TRUE))
+  expect_false(grepl("y_labels", .forest_est_code("TRT01P", character(), bold_headings = TRUE), fixed = TRUE))
+  expect_match(.forest_est_code("TRT01P", "SEX", bold_headings = TRUE),
+               "y_labels <- as.expression(Map(function(l, h) if (h) bquote(bold(.(l))) else l,", fixed = TRUE)
 })
 
 test_that("text_column: its columns, a panel at the right; not with one below", {

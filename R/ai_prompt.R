@@ -317,10 +317,6 @@ tfl_ai_prompt <- function(task, context = NULL, mode = c("chat", "api"),
   # file shared by the requests of the task, so with the header's place
   # holders; the request says its own header
   shared <- isTRUE(context$ai_files)
-  # (an agent's draft writes no column widths: rtfreporter's defaults)
-  if (shared && !is.null(parts$task)) {
-    parts$task <- sub("(?m)^- The column widths,[^\n]*\n", "", parts$task, perl = TRUE)
-  }
   header <- .ai_header_text(task, context$output_id, format, context$outputs)
   fill <- list(
     task = parts$task,

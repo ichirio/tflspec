@@ -38,21 +38,47 @@
 #' `.github/copilot-instructions.md` (short: read `ai/AGENTS.md`), `run.R`
 #' ([tfl_ai_run()]: the check from the command line, with the ARD and RTF)
 #' and `ai/decisions.md`, which is never written over.  One message
-#' (`ai/agent_prompt.md`) starts the agent on every request of
-#' `ai/requests/index.md` in order; stopped, it goes on at "continue" from
-#' the first request with a draft missing.
+#' (`ai/agent_prompt.md`) starts the agent: with one request, then a menu, or
+#' with a batch of all the requests (`ai: run`); `ai/progress.md`, the work
+#' queue (every request `todo`; never written over), says where it goes on.
 #'
 #' `study.yml`'s `ai:` keys set the agent's rules (the study standard's
 #' `spec/defaults.yml` may say them under its own `ai:` key first):
-#' `language` (the chat's: `"en"`, `"ja"` ...), `ask_when` (`"request"`,
-#' the default: the request's reports' questions together; `"report"`:
-#' report by report), `carry` (which decision scopes apply to a later
+#' `language` (the chat's: `"en"`, `"ja"` ...), `run` (`"one"`, the
+#' default: the agent processes one request -- its questions in the chat, its
+#' drafts, its build and check -- and stops at a menu: the next request, the
+#' next N together, or all the rest; `"batch"`: all the requests at once, the
+#' agent taking its default for every question, noting it in
+#' `ai/questions-end.md`, and asking all of them in one message at the end,
+#' with `ai/defaults.md`, the defaults it took, the most important first --
+#' only the reports an answer changes are then written again),
+#' `requests_per_chat` (0, no limit: after that many requests the agent stops
+#' and asks for a new chat), `carry` (which decision scopes apply to a later
 #' report without asking: `all`, `dataset`, `section`), `max_rounds` (how
 #' many times one item is asked again, 3), `footnotes_at` (`"footer"`, the
-#' default, or `"table"`: where the shell's footnotes go).
+#' default, or `"table"`: where the shell's footnotes go), `review` (how
+#' deep the agent checks each report it builds itself, by kind: `0` the
+#' check, `1` and the program, `2` and the facts -- what R made, in words
+#' -- `3` and the output (a figure's PNG, a table's pages); `none`: the
+#' person's check; `{figure: 3, table: 2, listing: 1}` by default).
+#'
+#' @section Repeating a call:
+#' A call that writes the requests (not `dry_run`) keeps the arguments it was
+#' given in `ai/prepare.yml` of the study folder -- by name, a path inside the
+#' study from its folder, the date-time and the tflspec version at its head
+#' ([tfl_ai_prepare_settings()] reads it and lists what the file holds and
+#' what is left out: `dir`, `overwrite`, `dry_run`, `quiet`, `progress`,
+#' `add`, `adam_summary`, `numbers`).  `tfl_ai_prepare(dir)` with no `toc`
+#' repeats them: the arguments given now go over the file's, so
+#' `tfl_ai_prepare(dir, language = "ja")` is the last call in Japanese.  A
+#' path of the file that is not there any more stops the call, naming the
+#' file and the setting; with no file, `toc` is asked for as always.  With
+#' `add = TRUE` the file keeps the first workbook's settings (see
+#' [tfl_ai_prepare_settings()]).  The agent does not read the file.
 #'
 #' @param dir The study folder.
-#' @param toc The TOC / SHELL workbook (`.xlsx` or `.xlsm`).
+#' @param toc The TOC / SHELL workbook (`.xlsx` or `.xlsm`).  Missing: the
+#'   last call's settings, `ai/prepare.yml` (see *Repeating a call*).
 #' @param adam The ADaM folder, from `dir` (relative) or absolute.
 #' @param study_id,title The study's id and title, for a new study folder.
 #' @param toc_sheet,sheets As [tfl_ai_read_shell()]: the TOC sheet when the
@@ -71,7 +97,10 @@
 #' @param dry_run `TRUE` to read the workbook and the ADaM and write
 #'   nothing: the same result, to look at before the requests are written
 #'   (its `requests` are the TOC's batches, without `chars` and `file`;
-#'   `files` is empty).
+#'   `files` is empty).  The one thing it keeps is `numbers`, the person's
+#'   corrected report numbers, in `ai/sheet_numbers.csv` when the study's
+#'   `ai/` folder is there already (`files` then names that file); a dry run
+#'   never makes `ai/` or the study folder.
 #' @param define,adam_spec The study's `define.xml`, or its ADaM spec
 #'   workbook (Pinnacle 21 layout), for the ADaM summary
 #'   ([tfl_ai_adam_summary()]): its code lists in their order with their
@@ -132,7 +161,7 @@
 #'   SPEC; the requests (and `AGENTS.md`) list the templates registered now
 #'   -- tflspec's, a company's, the study's variants.  `FALSE`: the code
 #'   SPEC only, the requests as they were before templates.  The setting is
-#'   each request's first line (`templates: TRUE`) and `ai/status.md`'s.
+#'   a line near the top of each request (`templates: TRUE`) and `ai/status.md`'s.
 #' @param sheet_roles As [tfl_ai_read_shell()]: sheets' roles over the guess.
 #' @param unit A request's unit: `"sheet"` (default) a shell sheet -- what
 #'   the sheet writes first, then its name, then its TOC candidates (the
@@ -160,8 +189,9 @@
 #'   the first in the workbook's order; the others listed in `sheets`), one
 #'   the rule made and no sheet makes now has none (the no-shell request's,
 #'   counted in `counts`).  Saved as `ai/sheet_numbers.csv`
-#'   (`sheet`, `number`, `make`, UTF-8) when the requests are written (not
-#'   by a dry run), and read by a later call; given again, it goes over the
+#'   (`sheet`, `number`, `make`, UTF-8) when the requests are written, and
+#'   by a dry run when the study's `ai/` folder is there already (a dry run
+#'   on a new study keeps nothing), and read by a later call; given again, it goes over the
 #'   saved rows (a row of the same sheet and number replaced, `NA` taking
 #'   it out) and the file keeps the result.  `NULL` (default): the saved file, if any.
 #'   With `unit = "sheet"` only.
@@ -194,7 +224,13 @@
 #'   `counts` (`shells`,
 #'   `toc_items`, `no_shell`),
 #'   `sheets` (the workbook's sheets and their roles), `adam` (the
-#'   [tfl_ai_adam_summary()]: `datasets`, `variables`, `text`), `files` (the
+#'   [tfl_ai_adam_summary()]: `datasets`, `variables`, `text`), `data_paths`
+#'   (a study that has a `spec/data.yml` already: per dataset of it,
+#'   `in_data_yml` its path, `given` the ADaM file given (`NA`: none),
+#'   `exists` whether data.yml's file is there and `differs` whether the
+#'   file given is another file or type; a warning names the rows that are
+#'   missing or differ; `data.yml` is not changed; `NULL` for a new study),
+#'   `files` (the
 #'   files written, relative to `dir`), `hint` (what the workbook's reading
 #'   could not find -- no TOC, a report with no shell -- and what to pass),
 #'   `next_steps` (what to do next), `agent_prompt` (the first message to
@@ -236,12 +272,18 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
                            numbers = NULL, agent_reads = character(),
                            docs = NULL, agent_max_reads = 3L,
                            define = NULL, adam_spec = NULL) {
+  if (missing(toc)) {
+    return(.ai_prepare_repeat(dir, match.call(), parent.frame(), "tfl_ai_prepare()"))
+  }
   unit <- match.arg(unit)
   if (isTRUE(quiet)) {
     cl <- match.call()
     cl$quiet <- FALSE
     return(suppressMessages(eval(cl, parent.frame())))
   }
+  # (the arguments given, for ai/prepare.yml, before any is changed)
+  call <- match.call()
+  kept_args <- .ai_prepare_given(call, environment())
   fn <- "tfl_ai_prepare()"
   templates <- .ai_templates_flag(templates, fn)
   workbook <- match.arg(workbook)
@@ -272,6 +314,10 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
   }
   if (identical(workbook, "text") && "workbook" %in% agent_reads) workbook <- "file"
   dry <- isTRUE(dry_run)
+  # a study with a spec/data.yml already: its paths against the ADaM given
+  # (#515); data.yml itself is never changed here
+  has_data_yml <- file.exists(file.path(dir, "spec", "data.yml")) &&
+    file.exists(file.path(dir, "study.yml")) && !(isTRUE(overwrite) && !isTRUE(add))
   ai <- file.path(dir, "ai")
   files <- character()
   agent_files <- character()
@@ -290,6 +336,11 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
     if (!is.null(language)) .ai_study_yml_set(dir, "language", language)
   }
   adam_dir <- if (grepl("^(/|[A-Za-z]:)", adam)) adam else file.path(dir, adam)
+  data_paths <- if (has_data_yml) .ai_data_paths(dir, adam_dir)
+  if (length(.ai_data_paths_text(data_paths))) {
+    warning("spec/data.yml and the ADaM given differ (it is not changed here):\n",
+            paste0("  ", .ai_data_paths_text(data_paths), collapse = "\n"), call. = FALSE)
+  }
   # (where it is: the ADaM's summary, the workbook, then a request at a time)
   step <- function(s, i = 0L, n = 1L) if (is.function(progress)) progress(s, i, n)
   step("adam")
@@ -316,8 +367,10 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
       shell <- .ai_sheet_numbers_apply(shell, over, fn)
     }
     nums <- shell$sheet_numbers %||% rule
-    # (given: saved for the next call when the requests are written)
-    if (!dry && !is.null(numbers)) {
+    # (given: saved for the next call when the requests are written, and at a
+    # dry run when the study's ai/ is there already -- a dry run never makes
+    # it: an ai/ made early starts the migration)
+    if (!is.null(numbers) && (!dry || dir.exists(ai))) {
       files <- c(files, .ai_sheet_numbers_write(dir, over))
     }
   } else nums <- .ai_sheet_numbers_rule(shell)
@@ -388,7 +441,7 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
         f <- file.path(dir, req$file[i])
         ids <- strsplit(req$outputs[i], ", ", fixed = TRUE)[[1L]]
         dec <- .ai_decisions_block(dir, ids, section = .ai_request_section(shell, req$outputs[i]))
-        txt <- c(.ai_agent_request_head(req$request[i], ids = ids), dec,
+        txt <- c(.ai_agent_request_head(req$request[i], ids = ids, build = .ai_build_on(dir)), dec,
                  readLines(f, warn = FALSE, encoding = "UTF-8"))
         .ai_write_text(txt, f)
         req$chars[i] <- nchar(.ai_paths_from_ai(paste(txt, collapse = "\n")))
@@ -403,6 +456,10 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
         docs_from <- placed$from
         files <- c(files, placed$files)
       }
+      # (the inputs, kept for tfl_ai_refresh_agents())
+      .ai_agent_inputs_write(dir, templates = templates, adam = adam_at, book = book_at,
+                             reads = agent_reads, docs = refs, docs_from = docs_from,
+                             max_reads = agent_max_reads, add = isTRUE(add))
       files <- c(files, .ai_agent_files(dir, overwrite = overwrite && !isTRUE(add),
                                         templates = templates, adam = adam_at,
                                         book = book_at, reads = agent_reads,
@@ -421,7 +478,7 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
                         paste0(.ai_file_id(basename(normalizePath(dir, mustWork = FALSE))),
                                ".code-workspace"))),
       paste0("in the agent's chat, one message: ai/agent_prompt.md; answer its questions ",
-             "there; \"continue\" when it stopped"),
+             "there; at its menu: c (the next request), a number (that many together) or a (all the rest)"),
       paste0("check the drafts: tflplanner's \"Check\" (tfl_ai_collect_answers()), ",
              "finish them in the builder, adopt them (tfl_ai_adopt())"))
   }
@@ -474,17 +531,26 @@ tfl_ai_prepare <- function(dir, toc, adam = "adam", study_id = "STUDY-01", title
   # -- and the first one or two requests only: the person asks for the rest
   agent_prompt <- .ai_paths_from_ai(.ai_agent_prompt(
     basename(normalizePath(dir, mustWork = FALSE)), templates = templates,
-    language = .ai_spec_settings(dir)$language))
+    language = .ai_spec_settings(dir)$language, run = .ai_spec_settings(dir)$run,
+    build = .ai_build_on(dir)))
   # and as a file, to copy from
   if (!dry) {
     .ai_write_text(agent_prompt, file.path(ai, "agent_prompt.md"))
+    # the work queue: every request todo (never written over)
+    .ai_progress_write(dir, req)
     # the study's facts the agent read from spec/, and the workspace on ai/
-    files <- c(files, "ai/agent_prompt.md",
+    # the settings, kept for tfl_ai_prepare(dir) (a failure to write it is a warning)
+    pf <- tryCatch(.ai_prepare_write(dir, kept_args, add = add), error = function(e) {
+      warning(sprintf("tfl_ai_prepare(): ai/prepare.yml was not written (%s).",
+                      conditionMessage(e)), call. = FALSE)
+      NULL
+    })
+    files <- c(files, "ai/agent_prompt.md", if (!is.null(pf)) "ai/prepare.yml",
                .ai_check_rel(.ai_study_facts_write(dir), dir),
                .ai_check_rel(.ai_workspace_write(dir), dir))
   }
   structure(list(requests = req, toc = tc, shells = shl, counts = counts,
-                 sheets = shell$sheets, numbers = nums, adam = ad,
+                 sheets = shell$sheets, numbers = nums, adam = ad, data_paths = data_paths,
                  files = unique(files), hint = hint, next_steps = nxt, dry_run = dry,
                  agent_prompt = agent_prompt, agent_files = agent_files,
                  templates = templates,
@@ -511,6 +577,9 @@ print.tfl_ai_prepared <- function(x, ...) {
   cat(sprintf("%d request(s)%s: %s\n", nrow(r), if (isTRUE(x$dry_run)) " to write" else "",
               paste(sprintf("%s (%d)", r$request, r$n), collapse = ", ")))
   if (length(x$hint)) cat(paste0("Note: ", x$hint, "\n"), sep = "")
+  if (length(.ai_data_paths_text(x$data_paths))) {
+    cat(paste0("Note: ", .ai_data_paths_text(x$data_paths), "\n"), sep = "")
+  }
   if (length(x$next_steps)) cat(paste0("Next: ", x$next_steps, "\n"), sep = "")
   invisible(x)
 }

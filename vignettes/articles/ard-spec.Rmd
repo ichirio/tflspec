@@ -179,7 +179,8 @@ knitr::kable(tfl_ard_methods()[, c("method", "label", "call")])
   the data (a parameter by visit).
 - **`denominator`**: what percentages are of -- `population`, `row`,
   `column`, `cell`, another population, a dataset or an analysis data.
-- **`formats`**: `mean=xx.x | p=xx.x%` (the `xx` part says the decimals).
+- **`formats`**: `mean=xx.x | p=xx.x%` (the `xx` part says the decimals;
+  `estimate=xx.xx*1000` is the value times 1000, a rate per 1,000).
 - **`args`**: more arguments, as R (`over_variables = TRUE`). A function
   that takes a formula gets it here: `formula = survival::Surv(AVAL, 1 -
   CNSR) ~ TRT01P`.

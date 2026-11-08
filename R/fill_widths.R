@@ -5,7 +5,7 @@
 #  column widths, so the person changes numbers rather than adds an argument,
 #  and the number of columns is right.  tfl_fill_widths() writes them into a
 #  report that has none -- a table's from its built table
-#  (rtfreporter::default_col_widths(), one width a printed column, by name),
+#  (tflspec's rule, .tfl_default_widths(), one width a printed column, by name),
 #  a listing's columns' from their variables and headers -- and says so with
 #  an assumption (item `widths`) in spec/_assumptions.yml.  Its program then
 #  writes them too: the widths are in the report.
@@ -16,16 +16,34 @@
 #' A report says its column widths: a table's `plan_columns(widths = )`, one
 #' width a printed column by name, a listing's `listing_col(width = )`.  For
 #' each report of the study that does not, this builds it (its ARD, its
-#' plan) and writes the widths rtfreporter uses when none are given
-#' ([rtfreporter::default_col_widths()]: the row headings by their content,
-#' the value columns sharing the rest) into its file, as numbers to change;
-#' a listing's columns get a width from their variables and headers.  Each
+#' plan) and writes tflspec's default widths into its file, as numbers to
+#' change: each value column 60 / (n + 1) % of the page (at least 12
+#' characters), the row headings the rest -- one value column 70:30, two
+#' 60:20:20, three 55:15:15:15; when that leaves the row headings less
+#' than their content (at most 30 characters), value columns of 8
+#' characters (a cell on two lines), unless that leaves the row headings
+#' less than two value columns (16 characters): then all columns equal and
+#' the row headings two;
+#' a listing's columns get a width from their variables and headers (the
+#' first guess; see below).  Each
 #' report it writes widths into gets an assumption in
 #' `spec/_assumptions.yml` (item `widths`): the widths are the default ones,
 #' set for now.  Its program ([tfl_report_code()]) then writes them too.
 #'
 #' A report that says its widths is left as it is.  A table that cannot be
 #' built (its data missing) is left too, and named in a message.
+#'
+#' A listing (code, or the `listing` template) whose data can be read gets
+#' its widths from `rtfreporter::fit_listing_widths()` instead: the records
+#' as its program reads them (its `where`, its subjects), the report's page
+#' and font, written as whole numbers (`listing_col(width = )`; for the
+#' template, the `width` of each entry of `template: args: columns:`), and
+#' its assumption's value is `fitted widths` (else `default widths`).  A
+#' column that has a width is never changed; the others are fitted around it.
+#' Where the data cannot be read (no ADaM yet, a column the data lacks, an
+#' older rtfreporter, columns too many for the page), a code listing gets
+#' the first guess, as above, and the template is left as it is.  Reading
+#' the data never makes the function fail.
 #'
 #' @param study_dir The study folder.
 #' @param output_id The reports, by id; `NULL` (default): every report in
@@ -75,14 +93,24 @@ tfl_fill_widths <- function(study_dir = ".", output_id = NULL, assumption = TRUE
   # alone, quietly
   unset <- setdiff(unset, .ai_widths_inherited(outs[unset], study_dir))
   # the listings: their columns, from their variables and headers
-  lst <- intersect(unset, names(outs)[vapply(outs, function(o) identical(o$kind, "listing"), NA)])
-  for (id in lst) {
+  # (fitted to the data where it can be read, else a guess: R/ai_widths_fit.R)
+  lst <- names(outs)[vapply(outs, function(o) identical(o$kind, "listing") && .ai_listing_todo(o), NA)]
+  # (the study read into sheets once, for the listings and for every table's
+  # build: the bridge is the slow part, and the widths written below are not
+  # what the ARD is made from)
+  # (nothing to fill: not read)
+  sheets <- if (length(lst) || length(unset)) {
+    tryCatch(tfl_sheets_from_yaml(study_dir), error = function(e) NULL)
+  }
+  lw <- .ai_listing_widths_set(outs[lst], study_dir, sheets = sheets)
+  outs[lst] <- lw$outs
+  for (id in lw$written) {
     i <- match(id, names(outs))
-    outs[[i]] <- .ai_listing_widths(outs[[i]])
     tfl_write_output(outs[[i]], paths[i])
   }
+  lst <- lw$written
   # the tables: built, their widths from the printed table
-  tab <- .ai_widths_on_read(outs, paths, study_dir, remember = FALSE)
+  tab <- .ai_widths_on_read(outs, paths, study_dir, remember = FALSE, sheets = sheets)
   set <- c(lst, tab)
   missed <- setdiff(intersect(unset, names(outs)), set)
   if (length(missed)) {
@@ -94,7 +122,8 @@ tfl_fill_widths <- function(study_dir = ".", output_id = NULL, assumption = TRUE
     names(old)[names(old) == "sheet"] <- "where"
     # (one a report: a report given widths again keeps the one it had)
     have <- old$output_id[old$item %in% "widths"]
-    aw <- .ai_widths_assumptions(setdiff(set, have))
+    aw <- .ai_widths_assumptions(setdiff(set, have), .ai_spec_settings(study_dir)$language,
+                                 fitted = lw$fitted)
     if (!is.null(aw)) {
       for (k in setdiff(names(old), names(aw))) aw[[k]] <- NA_character_
       .ai_asm_write(study_dir, rbind(old, aw[names(old)]))

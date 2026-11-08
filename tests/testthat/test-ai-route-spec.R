@@ -44,7 +44,8 @@ test_that("decisions: written as structured lines, read back; the older lines an
   b <- tflspec:::.ai_decisions_for(d, "T-14-3-5", datasets = "ADAE", settings = narrow)
   expect_identical(b$how[b$id %in% "D2"], "ask")
   blk <- tflspec:::.ai_decisions_block(d, "T-14-3-5", datasets = "ADAE")
-  expect_true(any(grepl("^## Decisions that apply", blk)))
+  expect_true(any(grepl("^## Decisions that may apply", blk)))
+  expect_true(any(grepl("Judge each one", blk, fixed = TRUE)))
   expect_true(any(grepl("D1 \\[all\\]", blk)))
 })
 
@@ -53,7 +54,9 @@ test_that("the settings: the package's, under study.yml's ai: keys; the language
   dir.create(d)
   s <- tflspec:::.ai_spec_settings(d)
   expect_identical(s$max_rounds, 3L)
-  expect_identical(s$ask_when, "request")
+  expect_identical(s$run, "one")
+  expect_identical(s$requests_per_chat, 0L)
+  expect_null(s[[paste0("ask_", "when")]])
   expect_identical(s$footnotes_at, "footer")
   writeLines(c("study_id: X", "ai:", "  language: ja", "  max_rounds: 2", "  carry: [all]"),
              file.path(d, "study.yml"))
@@ -73,6 +76,23 @@ test_that("the settings: the package's, under study.yml's ai: keys; the language
   expect_identical(tflspec:::.ai_language_name("Deutsch"), "Deutsch")
 })
 
+test_that("decisions: a new study's file starts from the shipped decisions.md, the first decision D1", {
+  d <- file.path(withr::local_tempdir(), "study")
+  dir.create(file.path(d, "ai"), recursive = TRUE)
+  expect_no_warning(f <- tfl_ai_decisions_write(d, data.frame(scope = "all", topic = "denominator",
+                                                              decision = "the arm's subjects")))
+  shipped <- readLines(system.file("ai", "agent", "decisions.md", package = "tflspec"),
+                       warn = FALSE, encoding = "UTF-8")
+  expect_gt(length(shipped), 0L)
+  got <- readLines(f, warn = FALSE, encoding = "UTF-8")
+  # the header the kit copies, then the decision
+  expect_identical(got, c(shipped, "- D1 [all] denominator: the arm's subjects (person)"))
+  # the header's example line is no decision
+  r <- tfl_ai_decisions_read(d)
+  expect_identical(r$id, "D1")
+  expect_identical(r$topic, "denominator")
+})
+
 test_that("prepare(): AGENTS.md asks and writes the drafts; the requests carry the decisions; the check reads the drafts", {
   skip_on_cran()
   skip_if_not_installed("haven")
@@ -83,20 +103,23 @@ test_that("prepare(): AGENTS.md asks and writes the drafts; the requests carry t
   ag <- readLines(file.path(d, "ai", "AGENTS.md"), warn = FALSE, encoding = "UTF-8")
   expect_true(any(grepl("<!-- tflspec route: spec -->", ag, fixed = TRUE)))
   expect_true(any(grepl("`spec/outputs/<id>.yml`", ag, fixed = TRUE)))
-  expect_true(any(grepl("three times at most", ag, fixed = TRUE)))
+  expect_true(any(grepl("questions-end.md", ag, fixed = TRUE)))
   expect_true(any(grepl("page: footer", ag, fixed = TRUE)))
   expect_true(any(grepl("in English", ag, fixed = TRUE)))
   expect_false(any(grepl("{{", ag, fixed = TRUE)))
   expect_false(dir.exists(file.path(d, "ai", "answers")))
   dec <- readLines(file.path(d, "ai", "decisions.md"), warn = FALSE, encoding = "UTF-8")
   expect_true(any(grepl("D<n> \\[<scope>\\]", dec)))
+  # (the file a new study's first decision starts from)
+  expect_identical(dec, readLines(system.file("ai", "agent", "decisions.md", package = "tflspec"),
+                                  warn = FALSE, encoding = "UTF-8"))
   # the shared instructions say what a draft holds, once
   ins <- readLines(file.path(d, "ai", "instructions-table.md"), warn = FALSE, encoding = "UTF-8")
   expect_identical(sum(startsWith(ins, "## The skeleton (what a draft holds)")), 1L)
   expect_true(any(grepl("page: footer", ins, fixed = TRUE)))
   pr <- readLines(file.path(d, "ai", "agent_prompt.md"), warn = FALSE, encoding = "UTF-8")
   expect_true(any(grepl("ask me here, in English", pr, fixed = TRUE)))
-  expect_true(any(grepl("spec/outputs/<id>.yml", pr, fixed = TRUE)))
+  expect_true(any(grepl("write its drafts", pr, fixed = TRUE)))
   # a request's head says the route; with a decision, the request lists it
   idx <- tfl_ai_requests(d)
   req <- idx$request[idx$outputs == "T-14-3-1" | grepl("T-14-3-1", idx$outputs)][1L]
@@ -107,7 +130,8 @@ test_that("prepare(): AGENTS.md asks and writes the drafts; the requests carry t
   tfl_ai_decisions_write(d, data.frame(scope = "all", topic = "treatment_var.SAF", decision = "TRT01A", source = "person"))
   tfl_ai_prepare(unit = "toc", d, rs_book(), adam = "adam", quiet = TRUE, size = 3L)
   rq <- readLines(file.path(d, "ai", "requests", paste0(req, ".md")), warn = FALSE, encoding = "UTF-8")
-  expect_true(any(grepl("^## Decisions that apply", rq)))
+  expect_true(any(grepl("^## Decisions that may apply", rq)))
+  expect_true(any(grepl("Judge each one", rq, fixed = TRUE)))
   expect_true(any(grepl("D1 [all] treatment_var.SAF: TRT01A", rq, fixed = TRUE)))
   # no draft yet: the next step says to ask the agent
   r0 <- suppressMessages(tfl_ai_collect_answers(d))
@@ -156,8 +180,102 @@ test_that("prepare(): AGENTS.md asks and writes the drafts; the requests carry t
   expect_match(st2$first, "T-14-3-5.yml: the YAML cannot be read", fixed = TRUE)
   expect_identical(r2$next_kind[[req2]], "fix_answer")
   expect_match(r2$next_args[[req2]]$drafts, "ai/spec/outputs/T-14-3-5.yml", fixed = TRUE)
+  # a draft YAML reads but that is no report file (a call's args as a text):
+  # refused alone with why; the other drafts are read as before
+  writeLines(c("id: T-14-3-5", "kind: table", "label: Lab",
+               "plot: {add: [{fn: theme, args: 'axis.text.x = element_blank()'}]}"),
+             file.path(area, "T-14-3-5.yml"))
+  r4 <- suppressMessages(tfl_ai_collect_answers(d))
+  st4 <- r4$reports[r4$reports$output_id == "T-14-3-5", ]
+  expect_identical(st4$status, "error")
+  expect_match(st4$first, "T-14-3-5.yml: the report file cannot be read", fixed = TRUE)
+  expect_match(st4$first, "`!r` for R", fixed = TRUE)
+  expect_identical(r4$reports$status[r4$reports$output_id == "T-14-3-1"],
+                   r2$reports$status[r2$reports$output_id == "T-14-3-1"])
+  unlink(file.path(area, "T-14-3-5.yml"))
   # a draft no request asks for: stray
   tfl_write_output(tfl_output("T-99-9-9", kind = "table", label = "x"), file.path(area, "T-99-9-9.yml"))
   r3 <- suppressMessages(tfl_ai_collect_answers(d))
   expect_identical(r3$stray, "ai/spec/outputs/T-99-9-9.yml")
+})
+
+test_that("a draft YAML cannot read: the status names the line, and a quote inside a double-quoted text its fix", {
+  d <- withr::local_tempdir()
+  area <- file.path(d, "ai", "spec", "outputs")
+  dir.create(area, recursive = TRUE)
+  # a `"` inside a double-quoted text (the flow form of an assumption)
+  writeLines(c("id: T-14-3-1", "kind: table", "ai:", "  assumptions:",
+               "    - {from: shell, text: \"TEAE is TRTEMFL == \"Y\"\"}"),
+             file.path(area, "T-14-3-1.yml"))
+  # another YAML error: the line, no quote hint
+  writeLines(c("id: T-14-3-2", "kind: table", "ai:", "  confirm:", "    - {item: [b, text: x]"),
+             file.path(area, "T-14-3-2.yml"))
+  # a good file
+  writeLines(c("id: T-14-3-3", "kind: table", "label: Lab"), file.path(area, "T-14-3-3.yml"))
+  r <- tflspec:::.ai_draft_blocks(d)
+  m1 <- r$bad[["T-14-3-1"]]
+  expect_match(m1, "^the YAML cannot be read: ")
+  expect_match(m1, "Parser error", fixed = TRUE)
+  expect_match(m1, "Line 5 reads: - {from: shell, text: \"TEAE is TRTEMFL == \"Y\"\"}", fixed = TRUE)
+  expect_match(m1, "inside a double-quoted text ends it", fixed = TRUE)
+  expect_match(m1, "TRTEMFL == 'Y'", fixed = TRUE)
+  expect_false(grepl("
+", m1))
+  m2 <- r$bad[["T-14-3-2"]]
+  expect_match(m2, "^the YAML cannot be read: ")
+  expect_match(m2, "Line 5 reads: - {item: [b, text: x]", fixed = TRUE)
+  expect_false(grepl("double-quoted", m2, fixed = TRUE))
+  expect_false("T-14-3-3" %in% names(r$bad))
+  expect_true("T-14-3-3" %in% names(r$blocks))
+  # a long line is cut
+  writeLines(c("id: T-14-3-4", "kind: table", paste0("label: [", strrep("x", 200))), file.path(area, "T-14-3-4.yml"))
+  m4 <- tflspec:::.ai_draft_blocks(d)$bad[["T-14-3-4"]]
+  expect_lt(nchar(m4), 450)
+  expect_match(m4, "...", fixed = TRUE)
+})
+
+test_that("the quote hint is given only when a value's own quote is inside its text", {
+  d <- withr::local_tempdir()
+  area <- file.path(d, "ai", "spec", "outputs")
+  dir.create(area, recursive = TRUE)
+  # a missing `}`: the first `"` opens a key, not a value -- no quote hint
+  writeLines(c("id: T-1", "kind: table", "page: {titles: {\"1\": {center: \"a\"}"),
+             file.path(area, "T-1.yml"))
+  # a condition with double quotes inside an assumption's text: the hint
+  writeLines(c("id: T-2", "kind: table", "ai:", "  assumptions:",
+               "    - text: \"x == \"Y\" in ADAE\"", "      from: shell"),
+             file.path(area, "T-2.yml"))
+  r <- tflspec:::.ai_draft_blocks(d)
+  m1 <- r$bad[["T-1"]]
+  expect_match(m1, "^the YAML cannot be read: ")
+  expect_match(m1, "Line ", fixed = TRUE)
+  expect_false(grepl("double-quoted", m1, fixed = TRUE))
+  expect_match(r$bad[["T-2"]], "inside a double-quoted text ends it", fixed = TRUE)
+  # the same line text, straight to the function
+  err <- function(ln) {
+    f <- withr::local_tempfile(fileext = ".yml")
+    writeLines(ln, f)
+    tflspec:::.ai_yaml_error_line("did not find expected key at line 1, column 1", f)
+  }
+  expect_false(grepl("double-quoted", err("page: {titles: {\"1\": {center: \"a\"}"), fixed = TRUE))
+  expect_match(err("assumption: \"x == \"Y\" in ADAE\""), "double-quoted", fixed = TRUE)
+  expect_match(err("- \"x == \"Y\" in ADAE\""), "double-quoted", fixed = TRUE)
+  expect_match(err("k: [\"a\"b]"), "double-quoted", fixed = TRUE)
+  expect_false(grepl("double-quoted", err("\"k\"x: 1"), fixed = TRUE))
+})
+
+test_that("ai: ask_when was removed: it is ignored, with one message that run replaces it", {
+  d <- file.path(withr::local_tempdir(), "study")
+  dir.create(d)
+  writeLines(c("study_id: X", "ai:", "  ask_when: always", "  max_rounds: 2"), file.path(d, "study.yml"))
+  expect_message(s <- tflspec:::.ai_spec_settings(d), "ask_when is ignored; `ai: run`")
+  expect_identical(s$max_rounds, 2L)
+  expect_null(s$ask_when)
+  # (said once for the file in a session)
+  expect_no_message(tflspec:::.ai_spec_settings(d))
+  # no ask_when: no message
+  d2 <- file.path(withr::local_tempdir(), "study")
+  dir.create(d2)
+  writeLines(c("study_id: X", "ai:", "  max_rounds: 2"), file.path(d2, "study.yml"))
+  expect_no_message(tflspec:::.ai_spec_settings(d2))
 })

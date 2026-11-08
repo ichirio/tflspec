@@ -204,6 +204,7 @@ test_that("a report program's figure: no save, its own name, the study's palette
   skip_if_not_installed("ggsurvfit")
   e <- new.env()
   eval(parse(text = tfl_fig_setup_code()), e)
+  eval(parse(text = tfl_helpers_code()), e)
   e$adtte <- data.frame(USUBJID = 1:6, PARAMCD = "TTDE", SAFFL = "Y",
                         TRT01A = rep(c("A", "B"), 3), AVAL = c(5, 8, 12, 3, 9, 15),
                         CNSR = c(0, 1, 0, 0, 1, 0))
@@ -238,4 +239,89 @@ test_that("a time's unit is a named constant of the setup, never a column", {
   eval(parse(text = .fig_unit_guard()), envir = e)
   expect_identical(e$days_per_month, 30)
   expect_identical(e$days_per_year, 365.25)
+})
+
+test_that("a figure's own colours over the palette, and its legend title (#577)", {
+  d <- tfl_fig_design(
+    data = list(list(step = "read", dataset = "ADSL")),
+    plot = list(colour_by = "TRT01A", colours = list(`Drug B` = "grey40"), legend_title = "Treatment"),
+    layers = list(list(layer = "point", x = "TRT01A", y = "TRTDURD", colour = "TRT01A")))
+  code <- tfl_fig_design_code(d, save = FALSE)
+  txt <- paste(code, collapse = "
+")
+  expect_match(txt, "pal <- replace(setNames(rep_len(", fixed = TRUE)
+  expect_match(txt, "lv), c(\"Drug B\"), c(\"grey40\"))", fixed = TRUE)
+  expect_match(txt, "labs(colour = \"Treatment\", fill = \"Treatment\"", fixed = TRUE)
+  expect_false(grepl("legend.title = element_blank()", txt, fixed = TRUE))
+  r <- run_design(d)
+  expect_true(r$png)
+  # with the setup, and as text
+  d$plot$colours <- "Drug B = grey40, Drug A = #D62728"
+  code <- paste(tfl_fig_design_code(d, setup = TRUE, save = FALSE), collapse = "
+")
+  expect_match(code, "pal <- replace(tfl_colours(\"treatment\", levels(factor(df$TRT01A))), c(\"Drug B\", \"Drug A\"), c(\"grey40\", \"#D62728\"))",
+               fixed = TRUE)
+  x <- tfl_fig_content_from_design(d)
+  fns <- vapply(x$content, function(it) it$fn, "")
+  expect_true("scale_colour_manual" %in% fns)
+  expect_false("scale_colour_tfl" %in% fns)
+  # without: as before
+  d$plot$colours <- NULL
+  d$plot$legend_title <- NULL
+  expect_match(paste(tfl_fig_design_code(d, save = FALSE), collapse = "
+"),
+               "legend.title = element_blank()", fixed = TRUE)
+})
+
+test_that("ref_label with facet_by is drawn inside each panel, and asks for no margin", {
+  mk <- function(facet) {
+    plot <- list(x_label = "Visit", y_label = "Value")
+    if (facet) plot$facet_by <- "TRT"
+    tfl_fig_design(
+      data = list(list(step = "code", code = paste0(
+        'df <- data.frame(TRT = rep(c("A", "B"), each = 3), x = rep(1:3, 2), ',
+        'y = c(1, 2, 3, 2, 3, 4))'))),
+      plot = plot,
+      layers = list(list(layer = "geom", geom = "geom_line", data = "df", aes = "x = x | y = y"),
+                    list(layer = "ref_label", y = "2.5", label = "Limit")))
+  }
+  lines_of <- function(facet) tfl_fig_design_code(mk(facet), save = FALSE, name = "fig")
+  # (the code is wrapped over lines: its words, one space apart)
+  flat <- function(facet) gsub("[[:space:]]+", " ", paste(lines_of(facet), collapse = " "))
+  code_f <- flat(TRUE)
+  expect_match(code_f, "aes(x = -Inf, y = y, label = label), hjust = -0.1, vjust = -0.5,",
+               fixed = TRUE)
+  expect_false(grepl("margin(5.5, 50", code_f, fixed = TRUE))
+  expect_false(grepl("clip", code_f, fixed = TRUE))
+
+  # without panels: the label right of the panel, the margin and clip off, as before
+  code_n <- flat(FALSE)
+  expect_match(code_n, "annotate(\"text\", x = Inf, y = 2.5, label = \"Limit\", hjust = -0.3",
+               fixed = TRUE)
+  expect_match(code_n, "margin(5.5, 50, 5.5, 5.5)", fixed = TRUE)
+  expect_match(code_n, "coord_cartesian(clip = \"off\")", fixed = TRUE)
+
+  # drawn: the label row sits at the left edge of every panel
+  env <- new.env()
+  pdf(NULL)
+  on.exit(dev.off(), add = TRUE)
+  suppressMessages(eval(parse(text = lines_of(TRUE)), envir = env))
+  b <- ggplot2::ggplot_build(env$fig)
+  rows <- Filter(function(d) "label" %in% names(d), b$data)
+  expect_length(rows, 1L)
+  rows <- rows[[1L]]
+  expect_equal(nrow(rows), 2L)
+  expect_setequal(as.character(rows$PANEL), c("1", "2"))
+  expect_true(all(rows$x == -Inf))
+  expect_true(all(rows$y == 2.5))
+})
+
+test_that("plot.colours as text: split at the commas between pairs, and a call is said not to be a colour", {
+  own <- function(x) .fig_own_colours(list(colours = x))
+  expect_identical(own("CR = darkgreen, PD = #D62728"), c(CR = "darkgreen", PD = "#D62728"))
+  expect_identical(own("CR=darkgreen,PD=#D62728"), c(CR = "darkgreen", PD = "#D62728"))
+  expect_error(own("X = rgb(1,0,0), Y = blue"), "`rgb(1,0,0)` is a call, not a colour R reads", fixed = TRUE)
+  expect_error(own("X = blue, Y = rgb(1,0,0)"), "hex code")
+  expect_error(own("X = blue, Y"), "value = colour pairs")
+  expect_identical(own(c(X = "blue")), c(X = "blue"))
 })

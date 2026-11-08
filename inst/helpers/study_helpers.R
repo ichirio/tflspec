@@ -47,25 +47,85 @@ reorder_by <- function(x, by) {
   stats::reorder(factor(x), by)
 }
 
+# The order of the arms and of the categories, as factor levels set in the
+# data step, before the ARD: the display order, and a comparison's
+# reference, come from them.  The variables are the arm variables (TRT...,
+# ARM..., ACTARM...) and those `vars` names (the categories: "SEX",
+# "RACE"); each is made a factor, its levels in the order of
+#   1. its code list, given as `VAR = list` in `...` (set_levels() does it,
+#      with its stop on a value the list does not have);
+#   2. else its numeric pair, the name and N (TRT01A by TRT01AN, SEX by
+#      SEXN, RACE by RACEN, AGEGR1 by AGEGR1N): the value of the pair's
+#      lowest number first, equal numbers in the order the values come;
+#   3. else the fallback, which is what the ARD does without this step: the
+#      column is left as it is, and cards orders a text column's values by
+#      order(x, method = "radix") -- the C locale (byte order: digits, <, >,
+#      upper case, _, lower case), whatever the session's locale is.
+# (A factor made of a column with no pair would count a level the analysis
+# set has no record of, as 0: the fallback makes none.)
+# A factor already in the data keeps its levels; a column that is not text
+# (a number, a date) is left as it is; a variable the data does not have is
+# skipped.  A blank (a subject of no arm, a category with no value, as an
+# XPT holds a missing text) is missing, not a level.  A code list given later (set_levels())
+# wins.
+#   adsl |> order_levels()
+#   adsl |> order_levels(c("AGEGR1", "SEX", "RACE"))
+#   adsl |> order_levels(c("SEX", "RACE"), TRT01A = cl_trt01a)
+# `from` (a data frame, ADSL): the arm of a data with no pair of its own (a
+# records data without TRT01AN) is ordered by the matching arm of `from`,
+# its values kept; a value `from` does not have goes last.
+#   adae |> order_levels(from = adsl)
+order_levels <- function(data, vars = NULL, from = NULL, ...) {
+  lists <- list(...)
+  if (length(lists)) data <- set_levels(data, ...)
+  arms <- grep("^(TRT|ARM|ACTARM)", names(data), value = TRUE)
+  arms <- arms[!grepl("N$", arms)]
+  for (v in unique(c(arms, vars))) {
+    if (!v %in% names(data) || v %in% names(lists) || is.factor(data[[v]])) next
+    n <- paste0(v, "N")
+    src <- data
+    pair <- n
+    if (!n %in% names(data) || !is.numeric(data[[n]])) {
+      # the records' arm with no pair of its own: the order of the matching
+      # arm of `from` (ADSL), by the values both have (TRTA by TRT01AN
+      # through ADSL's TRT01A and TRT01AN); the records' values are kept
+      if (!v %in% arms || !is.data.frame(from)) next
+      x0 <- unique(as.character(data[[v]]))
+      cand <- c(v, grep("^(TRT|ARM|ACTARM)", names(from), value = TRUE))
+      cand <- cand[cand %in% names(from) & !grepl("N$", cand) &
+                     paste0(cand, "N") %in% names(from)]
+      cand <- Filter(function(cn) any(x0 %in% as.character(from[[cn]])), unique(cand))
+      if (!length(cand)) next
+      src <- from
+      pair <- paste0(cand[1L], "N")
+      key <- as.character(from[[cand[1L]]])
+      # the map of the value to its number is one to one: a value with two
+      # numbers has no order
+      nn <- tapply(src[[pair]], key, function(z) length(unique(z[!is.na(z)])))
+      if (any(nn[intersect(names(nn), x0)] > 1L, na.rm = TRUE)) {
+        stop(sprintf("order_levels(): %s has values with more than one %s in `from`: their order is not defined.",
+                     v, pair), call. = FALSE)
+      }
+    }
+    if (!v %in% arms && !is.character(data[[v]])) next
+    x <- as.character(data[[v]])
+    x[!is.na(x) & !nzchar(trimws(x))] <- NA
+    lv <- unique(x[!is.na(x)])
+    if (identical(src, data)) key <- x
+    first <- vapply(lv, function(l) suppressWarnings(min(src[[pair]][key %in% l], na.rm = TRUE)), 0)
+    data[[v]] <- factor(x, levels = lv[order(first, match(lv, lv))])
+  }
+  data
+}
+
 # The arms in their numeric order when the data has it: each arm variable
 # (TRT..., ARM..., ACTARM...) with the numeric pair of its name and N
 # (TRT01A by TRT01AN, ARM by ARMN) is made a factor in that order, as a
 # program's data step; one without its pair is left as it is.  A blank
 # (a subject of no arm, as an XPT holds a missing text) is missing, not a
-# level.  A code list set after wins.
+# level.  A code list set after wins.  order_levels() without categories.
 #   adsl |> order_arms()
-order_arms <- function(data) {
-  for (v in grep("^(TRT|ARM|ACTARM)", names(data), value = TRUE)) {
-    n <- paste0(v, "N")
-    if (grepl("N$", v) || !n %in% names(data) || is.factor(data[[v]])) next
-    x <- as.character(data[[v]])
-    x[!is.na(x) & !nzchar(trimws(x))] <- NA
-    lv <- unique(x[!is.na(x)])
-    first <- vapply(lv, function(l) suppressWarnings(min(data[[n]][x %in% l], na.rm = TRUE)), 0)
-    data[[v]] <- factor(x, levels = lv[order(first, match(lv, lv))])
-  }
-  data
-}
+order_arms <- function(data) order_levels(data)
 
 # The ids in front: the report, the analysis and its analysis set.  A cards
 # ARD stays one (class card), so the study ARD is one too and cards' own
@@ -121,6 +181,11 @@ fmt_ard <- function(ard, formats = list(), skip = character()) {
       ard, variables = dplyr::all_of(unique(ard$variable[rows])),
       stat_names = s, fmt_fun = f[[k]])
   }
+  # a statistic that is text (a test's method, a reference level) stays
+  # text: cardx gives some of them a number of decimals
+  # (ard_survival_survfit_diff()'s method and its factor reference_level)
+  txt <- vapply(ard$stat, function(x) is.character(x) || is.factor(x), NA)
+  if (any(txt)) ard$fmt_fun[txt] <- list(as.character)
   cards::apply_fmt_fun(ard)
 }
 
@@ -183,7 +248,27 @@ relevel_ard <- function(ard, ...) {
 # with each group's N, and the by variable's counts (a header's N) -- no
 # SOC / PT rows.  The same arguments as cards::ard_stack_hierarchical().
 ard_hierarchical_or_none <- function(data, ...) {
-  if (nrow(data)) return(cards::ard_stack_hierarchical(data, ...))
+  if (nrow(data)) {
+    # a group (an arm) the records have none of: cards counts the groups of
+    # the data, so the arm would have no column.  The denominator's groups
+    # are added to the data's as levels no record has: the group's N, and
+    # 0 events.
+    cl <- match.call()
+    den <- tryCatch(eval(cl$denominator, parent.frame()), error = function(e) NULL)
+    if (is.data.frame(den)) {
+      for (v in intersect(all.vars(cl$by), intersect(names(data), names(den)))) {
+        lack <- setdiff(as.character(unique(den[[v]][!is.na(den[[v]])])),
+                        c(as.character(data[[v]]), if (is.factor(data[[v]])) levels(data[[v]])))
+        if (length(lack)) {
+          lv <- if (is.factor(data[[v]])) levels(data[[v]]) else sort(unique(data[[v]]))
+          # (in the denominator's order: the groups' order)
+          all <- if (is.factor(den[[v]])) levels(den[[v]]) else sort(unique(den[[v]]))
+          data[[v]] <- factor(data[[v]], levels = c(all[all %in% c(lv, lack)], setdiff(lv, all)))
+        }
+      }
+    }
+    return(cards::ard_stack_hierarchical(data, ...))
+  }
   cl <- match.call()
   env <- parent.frame()
   den <- eval(cl$denominator, env)

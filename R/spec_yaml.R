@@ -1,6 +1,6 @@
 # The YAML spec (design: _archive/spec-format-redesign-2026-10-14.md).
 #
-# A study is study.yml and spec/: data.yml, defaults.yml, codelists.yml,
+# A study is study.yml and spec/: data.yml, defaults.yml,
 # patterns/<name>.yml, toc.yml and outputs/<id>.yml -- one file a report.
 # A report file is `data:` (what it reads), `content:` (an ordered list of
 # layers, one item one call of the target package: a plan verb, a listing
@@ -16,7 +16,13 @@
 #' report is made of:
 #'
 #' * `tfl_r()`: a string of R code, written as the `!r` tag (`where: !r
-#'   "p > 0.5"`); kept as it is and put into the program unquoted.
+#'   "p > 0.5"`); kept as it is and put into the program unquoted.  A
+#'   condition in a language-neutral subset (column names, numbers,
+#'   strings, `== != < <= > >=`, `& | !`, `%in% c(...)`, `is.na()`,
+#'   parentheses) is written, and read, without the tag in a slot that
+#'   takes only R (`plan_filter(where)`): a Python reader can parse it
+#'   without R.  `!r` stays for the rest of R (`between()`), and is still
+#'   read everywhere.
 #' * `tfl_unset()`: the `!unset` tag -- a value a report sets to nothing,
 #'   overriding its defaults (writing nothing leaves the default).  It is
 #'   resolved when the defaults are layered; the generators never see one.
@@ -295,7 +301,7 @@ tfl_read_output <- function(path) {
     id = y$id, kind = y$kind, label = y$label, population = y$population,
     extends = as.character(unlist(extends)),
     ard = if (!is.null(y$ard)) .calls_in(y$ard),
-    data = .data_steps_in(.calls_in(y$data)), codelists = y$codelists %||% list(),
+    data = .data_steps_in(.calls_in(y$data)), codelists = .codelists_norm(y$codelists),
     content = content, page = .calls_in(y$page %||% list()))
   for (k in setdiff(names(y), c(.output_fields, "outputs", "base"))) out[[k]] <- .calls_in(y[[k]])
   # several objects on its pages (R/output_objects.R): their items as items
@@ -329,10 +335,10 @@ tfl_read_output <- function(path) {
     if (identical(.schema_fn_name(names(el)), .spec_part$fn)) {
       return(tfl_item(names(el), .part_in(args), "own"))
     }
-    return(tfl_item(names(el), .rounding_lower(names(el), .calls_in(args)), "own"))
+    return(tfl_item(names(el), .rounding_lower(names(el), .neutral_in(names(el), .calls_in(args))), "own"))
   }
   if (is.list(el) && !is.null(el$fn)) {
-    return(tfl_item(el$fn, .calls_in(el$args %||% list()), el$from %||% "own"))
+    return(tfl_item(el$fn, .neutral_in(el$fn, .calls_in(el$args %||% list())), el$from %||% "own"))
   }
   stop("A content item is `- fn: {args}`.", call. = FALSE)
 }
@@ -370,6 +376,9 @@ tfl_read_output <- function(path) {
 #' @export
 tfl_write_output <- function(x, path) {
   if (!inherits(x, "tfl_output")) stop("tfl_write_output(): `x` is a tfl_output.", call. = FALSE)
+  # (a neutral condition of a slot of only R untagged: R/neutral.R)
+  if (is.list(x$content) && !inherits(x$content, "tfl_r")) x$content <- .neutral_out_items(x$content)
+  for (i in seq_along(x$contents)) x$contents[[i]]$content <- .neutral_out_items(x$contents[[i]]$content)
   y <- .output_to_list(x)
   txt <- yaml::as.yaml(y, indent.mapping.sequence = TRUE, handlers = .yaml_out_handlers())
   dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
@@ -498,4 +507,16 @@ tfl_write_output <- function(x, path) {
   v <- ifelse(is.na(x), ".na", ifelse(x, "true", "false"))
   class(v) <- "verbatim"
   v
+}
+
+# A report's code lists as {value, label} entries: a value written alone
+# (`TRT01P: [Placebo, Drug A]`) is its own label
+.codelists_norm <- function(cl) {
+  if (!length(cl)) return(list())
+  lapply(cl, function(l) {
+    if (!is.list(l)) l <- as.list(l)
+    lapply(l, function(e) {
+      if (is.list(e)) e else list(value = e, label = e)
+    })
+  })
 }

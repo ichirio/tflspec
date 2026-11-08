@@ -1,5 +1,6 @@
 # ---- data ------------------------------------------------------------------
 adtte_ttde <- adtte |>
+  order_levels() |>
   filter(PARAMCD == "TTDE", SAFFL == "Y")
 
 est <- ard_stats(
@@ -30,10 +31,12 @@ est <- est |>
     across(c(estimate, conf.low, conf.high), ~ ifelse(ok, .x, NA))
   )
 # a heading row above each subgroup's levels, the levels indented
+# (the headings read the subgroups' labels, a variable's name when it has none)
+sg_label <- c(SEX = "Sex", AGEGR1 = "Age group")
 heads <- est |>
   filter(subgroup != "All subjects") |>
   distinct(subgroup) |>
-  mutate(level = subgroup, head = TRUE)
+  mutate(level = coalesce(unname(sg_label[subgroup]), subgroup), head = TRUE)
 est <- est |>
   mutate(head = FALSE) |>
   bind_rows(heads) |>

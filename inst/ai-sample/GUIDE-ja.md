@@ -26,7 +26,7 @@ tflplanner::add_shortcut()
 1. 「**新規試験**」の画面で、始め方が「**AI 連携用のサンプル**」になっていることを確かめます（もう 1 つの「**既存のサンプル**」は、AI を使わない見本の試験です）。
 2. 試験 ID は `DMY-001` のままにして、「**作成**」を押します。
 
-ここで作られるのは**材料だけ**です。ホームの `samples/ai-sample` の下に次ができます。試験そのもの（`studies/DMY-001`）はまだできません。試験は次の手順 1 の「**新規試験**」で作ります。
+ここで**試験**（`studies/DMY-001`）ができ、開きます。材料はまずホームの `samples/ai-sample` の下に書かれ、そこから試験の中にコピーされます（TOC・シェル・ADaM の仕様は試験の `docs/`、ADaM は `data/adam/`、SAP は `ai/docs/`）。材料は次のとおりです。
 
 - `adam/`: ADaM 5 つ（adsl・adae・adlb・advs・adtte の `.xpt`。haven が無い時は `.rds`）。advs はどのシェルでも使いません。
 - `inputs/toc.xlsx`: TOC（帳票 8 つ）。`inputs/shells.xlsx`: 注釈付きシェル（6 つ。1 シート＝1 シェル）。
@@ -35,21 +35,21 @@ tflplanner::add_shortcut()
 
 材料には、エージェントがチャットで質問すべき所をわざと残しています。黙って決めずに聞いてくるかを見てください。
 
-> R で材料だけを作ることもできます: `tflspec::tfl_ai_sample_study("C:/work/tflplanner-home/samples/ai-sample")`。この時は、次の手順 1 の欄を自分で入れます（新規試験・ID `DMY-001`、TOC / SHELL ブック・SHELL ブック・ADaM フォルダ・ADaM の仕様・参考資料に、上のファイル）。
+> R で材料だけを作ることもできます: `tflspec::tfl_ai_sample_study("C:/work/tflplanner-home/samples/ai-sample")`。この時は試験はできません。次の手順 1 の欄を自分で入れます（新規試験・ID `DMY-001`、TOC / SHELL ブック・SHELL ブック・ADaM フォルダ・ADaM の仕様・参考資料に、上のファイル）。
 
 ## 2. 手順 1「プロンプトを書く」
 
 「作成」を押すと、「**AI 連携**」タブの「**1 プロンプトを書く**」が開きます。次がもう入っています。
 
-- 「**新規試験**」、ID `DMY-001`、試験名
-- 「**TOC / SHELL ブック**」（`inputs/toc.xlsx`）、「**SHELL ブック**」（`inputs/shells.xlsx`）
-- 「**ADaM フォルダ**」（欄の下に「5 ファイル」と出ます）、「**ADaM の仕様**」（`inputs/adam_spec.xlsx`）
+- 「**開いている試験**」（`DMY-001`）
+- 「**TOC / SHELL ブック**」（試験の `docs/toc.xlsx`）、「**SHELL ブック**」（`docs/shells.xlsx`）
+- 「**ADaM フォルダ**」（`data/adam`。欄の下に「5 ファイル」と出ます）、「**ADaM の仕様**」（`docs/adam_spec.xlsx`）
 - 「**参考資料を追加**」の一覧に `sap.docx`
 
 1. 「**読み取って確かめる**」を押し、右側で確かめます。
    - TOC 項目が 8 つ、シェルが 6 つ。
    - 「シート」で `General conventions`（全帳票の共通の決まり）を「**その他のシート（シェルではない）**」に動かし、「**当てはめて読み直す**」を押します。左の「**全依頼に足すシート**」で `General conventions` を選びます。
-2. 「**依頼を書く**」を押します。ここで試験（`studies/DMY-001`）ができ、依頼とプロンプトが書かれます。
+2. 「**依頼を書く**」を押します。試験に依頼とプロンプトが書かれます。
 
 ## 3. 手順 2「エージェントで SPEC を作成」（VS Code）
 

@@ -34,7 +34,7 @@ place, in the definition and in the code.
 For a study of the YAML spec, give the study (\code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}):
 its defaults' \verb{page:} (\code{spec/defaults.yml}) are the study's --
 \code{rtf_document: font_table} (the first font's name) and
-\code{rtf_default_format: font_size_half_points}, \code{tokens}, \code{header} and
+\code{rtf_style: font_size_half_points} (an old \code{rtf_default_format}'s too), \code{tokens}, \code{header} and
 \code{footer} -- and the lines are the ones
 \code{tfl_report_code(output, setup = TRUE, study = )} refers to.
 }

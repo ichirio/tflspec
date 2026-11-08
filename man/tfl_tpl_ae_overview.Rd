@@ -14,7 +14,7 @@ The table template \code{ae_overview}, layout \code{summary}. Its program is one
    \code{by} \tab other \tab call \tab TRT01A \tab settings.treatment \tab the column variable \cr
    \code{data} \tab other \tab call \tab ADAE \tab  \tab the dataset of events \cr
    \code{where} \tab other \tab call \tab TRTEMFL == "Y" \tab  \tab the events kept (R): the treatment-emergent \cr
-   \code{data_id} \tab other \tab call \tab  \tab  \tab the events' analysis data's id; NULL: \if{html}{\out{<data>}}_\if{html}{\out{<population>}} \cr
+   \code{data_id} \tab other \tab call \tab  \tab  \tab the events' analysis data's id; NULL: <data>_<population> \cr
    \code{flags} \tab other \tab call \tab (id = ANY; label = Any TEAE); (id = REL; label = Any trea... \tab  \tab the rows, in order: each 'id' (the flag's name), 'label' (the row's text) and 'where' (R: the events it counts; none: every event kept) \cr
    \code{heading} \tab other \tab call \tab Subjects with \tab  \tab the label column's heading \cr
 }

@@ -10,7 +10,7 @@
 #' `spec/ard_definition.json` (or `spec/ard_spec.xlsx`),
 #' `spec/listing_figure_spec.xlsx`, `spec/figures/<id>.yml` -- and writes
 #' the YAML spec to `to`: `study.yml`, `spec/data.yml`, `spec/defaults.yml`,
-#' `spec/codelists.yml`, `spec/patterns/<name>.yml`, `spec/toc.yml` and one
+#' `spec/patterns/<name>.yml`, `spec/toc.yml` and one
 #' `spec/outputs/<id>.yml` a report.  Loose files (a table and a report
 #' workbook alone) convert too: `from` may be a folder holding them.
 #'
@@ -68,8 +68,10 @@ tfl_convert_sheets_to_yaml <- function(from, to, content_fn = NULL, overwrite = 
 #'   `planner` (tflplanner's `_tflplanner` sheet: the report list and the
 #'   setup code), `ard` (the ARD sheets), `listing` (`listings`,
 #'   `listing_cols`), `figures` (a figure's design list, by id), `study`
-#'   (study.yml's fields).  What the app holds, or what the workbooks read
-#'   as.
+#'   (study.yml's fields), `not_converted` ([tfl_sheets_from_yaml()]'s notes
+#'   on what the sheets could not hold: listed in `_not_converted.yml` too,
+#'   with one message saying how many).  What the app holds, or what the
+#'   workbooks read as.
 #' @export
 tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALSE,
                                  figures = c("design", "items")) {
@@ -87,6 +89,27 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   lf <- sheets$listing
   figs <- sheets$figures %||% list()
   meta <- sheets$study %||% list()
+  # the study sheet's rows no table spec reads (study.yml's `settings:` keys
+  # of the app's own: the treatment variable ...) are not the bridge's: set
+  # aside here and written back to settings below, not a stop (#689).  The
+  # value as the study.yml had it (sheets$study) where the row says the same.
+  extra_settings <- list()
+  if (!is.null(sp$study) && nrow(sp$study)) {
+    # (only a key study.yml really had: a typed key the study never had still
+    # reaches the bridge's stop, "The `study` sheet has a key it does not read")
+    ex <- !is.na(sp$study$key) & !sp$study$key %in% names(.ard_spec_study_keys) &
+      sp$study$key %in% names(meta$settings)
+    if (any(ex)) {
+      for (i in which(ex)) {
+        k <- sp$study$key[i]
+        v <- sp$study$value[i]
+        orig <- meta$settings[[k]]
+        if (!is.null(orig) && identical(.sheet_cell(orig), v)) v <- orig
+        extra_settings[k] <- list(v)
+      }
+      sp$study <- sp$study[!ex, , drop = FALSE]
+    }
+  }
   if (dir.exists(to) && !overwrite && length(list.files(to, recursive = TRUE))) {
     stop("tfl_yaml_from_sheets(): ", to, " is not empty (overwrite = TRUE to write over it).",
          call. = FALSE)
@@ -140,6 +163,12 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     dr <- sp$report[is.na(sp$report$output_id) | !nzchar(sp$report$output_id), , drop = FALSE]
     for (k in c("file", "program")) {
       if (nrow(dr) && k %in% names(dr) && !is.na(dr[[k]][1L])) study$settings[[k]] <- dr[[k]][1L]
+    }
+  }
+  for (k in names(extra_settings)) {
+    v <- extra_settings[[k]]
+    if (!is.null(v) && !(is.atomic(v) && length(v) == 1L && is.na(v))) {
+      study$settings[[k]] <- extra_settings[[k]]
     }
   }
   if (!is.null(ard$study) && nrow(ard$study)) {
@@ -209,7 +238,9 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
       } else {
         # every table starts from the ARD made a table's rows (the program's
         # normalize_ard()): once, for all of them
-        defaults$content <- .items_to_list(c(list(tfl_item("normalize_ard", list())), items))
+        # (unless the defaults say their own, with arguments)
+        has_nz <- any(vapply(items, function(it) identical(it$fn, "normalize_ard"), NA))
+        defaults$content <- .items_to_list(c(if (!has_nz) list(tfl_item("normalize_ard", list())), items))
       }
     } else if (any(vapply(c("tables", "variables", "cells", "layout", "columns", "style", "col_header", "cell_styles"),
                         function(s) nrow(scope(sp[[s]], NA)) > 0L, NA))) {
@@ -219,11 +250,6 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     if (length(pg)) defaults$page <- pg
   }
   put("spec/defaults.yml", defaults)
-
-  # spec/codelists.yml: the lists with no report (templates)
-  if (!is.null(sp$codelists) && nrow(scope(sp$codelists, NA))) {
-    put("spec/codelists.yml", .conv_codelists(scope(sp$codelists, NA)))
-  }
 
   # spec/patterns/<name>.yml
   pats <- unique(unlist(lapply(.ard_spec_pattern_sheets, function(s) {
@@ -276,6 +302,17 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   }
   put("spec/toc.yml", list(outputs = toc))
 
+  # what tfl_sheets_from_yaml() could not hold (its `not_converted`: output,
+  # part, reason) is listed with the rest, and said once; a study that lost
+  # nothing says nothing
+  sh_nc <- sheets$not_converted
+  if (is.data.frame(sh_nc) && nrow(sh_nc) && all(c("output", "part", "reason") %in% names(sh_nc))) {
+    for (i in seq_len(nrow(sh_nc))) note(sh_nc$output[i], sh_nc$part[i], NA, NA, sh_nc$reason[i])
+    message(sprintf(paste0("tfl_yaml_from_sheets(): %d part%s of the spec the sheets could not hold %s ",
+                           "listed in spec/_not_converted.yml."),
+                    nrow(sh_nc), if (nrow(sh_nc) == 1L) "" else "s",
+                    if (nrow(sh_nc) == 1L) "is" else "are"))
+  }
   nc_df <- .nc_frame(nc)
   put("spec/_not_converted.yml", list(not_converted = lapply(seq_len(nrow(nc_df)), function(i) as.list(nc_df[i, ]))))
   invisible(list(to = to, files = files, not_converted = nc_df))
@@ -411,6 +448,9 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
         v <- .conv_text(.conv_cell(d[[cn]][i], cn, character(), character(), note, id, s, i))
         if (!is.null(v)) cells[[cn]] <- v
       }
+      # (a line's own height, rtfreporter#125)
+      h <- suppressWarnings(as.integer(d[["row_height_twips"]][i] %||% NA))
+      if (length(h) && !is.na(h)) cells$row_height_twips <- h
       # a line of (none) in every cell: the line itself unset
       if (length(cells) && all(vapply(cells, inherits, NA, "tfl_unset"))) cells <- tfl_unset()
       m[[line]] <- cells
@@ -431,7 +471,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     d <- scope(sp[[s]], id)
     if (is.null(d) || !nrow(d)) next
     rows <- .conv_rows(d[1L, , drop = FALSE], note, id, s,
-                       drop = c("output_id", "note", "type", "pattern", "file", "program"))
+                       drop = c("output_id", "note", "type", "pattern", "extends", "file", "program"))
     for (k in names(rows[[1L]])) page <- .page_put(page, s, k, rows[[1L]][[k]], note, id)
   }
   page
@@ -446,9 +486,9 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     height_in = "rtf_page", margin_top_in = "rtf_page", margin_bottom_in = "rtf_page",
     margin_left_in = "rtf_page", margin_right_in = "rtf_page",
     header_dist_in = "rtf_page", footer_dist_in = "rtf_page",
-    font_size_half_points = "rtf_default_format", title_format = "rtf_default_format",
-    footnote_format = "rtf_default_format", title_width = "rtf_default_format",
-    footnote_width = "rtf_default_format", markup = "rtf_default_format"),
+    font_size_half_points = "rtf_style", title_format = "rtf_style",
+    footnote_format = "rtf_style", title_width = "rtf_style",
+    footnote_width = "rtf_style", markup = "rtf_style"),
   report = c(
     auto_section = "rtf_tables.auto_section", section_align = "rtf_tables.section_label_align",
     auto_title = "rtf_tables.auto_title", title_align = "rtf_tables.title_label_align",
@@ -534,15 +574,38 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
   rrow <- scope(sp$report, id)
   pattern <- if (nrow(rrow) && !is.null(rrow$pattern) && !is.na(rrow$pattern[1L])) rrow$pattern[1L]
   extends <- c(if (!is.null(pattern)) paste0("patterns/", sub("^@", "", pattern)), "defaults")
+  # the `extends` cell, when the report has one, says the chain as written
+  # (`none` stays `none`); its first pattern has to be the `pattern` cell's
+  if (nrow(rrow) && !is.null(rrow$extends) && !is.na(rrow$extends[1L]) && nzchar(trimws(rrow$extends[1L]))) {
+    chain <- trimws(strsplit(rrow$extends[1L], "|", fixed = TRUE)[[1L]])
+    chain <- chain[nzchar(chain)]
+    first <- grep("^patterns/", chain, value = TRUE)[1L]
+    said <- if (is.null(pattern)) NA_character_ else paste0("patterns/", sub("^@", "", pattern))
+    if (!identical(first, said)) {
+      stop("report ", sQuote(id), ": the `pattern` cell (", if (is.na(said)) "blank" else sQuote(sub("^patterns/", "@", said)),
+           ") and the `extends` cell (", sQuote(paste(chain, collapse = " | ")),
+           ") name different patterns; change one of them.", call. = FALSE)
+    }
+    extends <- chain
+  }
   data <- NULL
   content <- list()
   codelists <- list()
   extra <- list()
   items <- NULL
-  if (kind == "figure" && !is.null(fig) && identical(figures, "items")) {
+  y <- if (kind == "figure" && !is.null(fig)) {
+    if (is.character(fig)) .conv_read_fig(fig) else fig
+  }
+  # a figure written as items already (its design list's `content`, as
+  # tfl_sheets_from_yaml() puts it, #689): read back as it was, whichever
+  # `figures` says -- there is nothing of the designer's to convert
+  by_items <- !is.null(y) && is.null(y$layers) && is.list(y$content) && length(y$content) > 0L
+  if (by_items) {
+    items <- list(data = if (!is.null(y$data)) list(steps = y$data),
+                  content = lapply(unname(y$content), .item_from_list), template = y$template)
+  } else if (kind == "figure" && !is.null(fig) && identical(figures, "items")) {
     # the design's content of function calls (R/fig_content.R); a design
     # it cannot convert stays the designer's, said
-    y <- if (is.character(fig)) .conv_read_fig(fig) else fig
     items <- tryCatch(tfl_fig_content_from_design(y), error = function(e) {
       note(id, "figure", id, NA, paste("kept as the designer's pieces:", conditionMessage(e)))
       NULL
@@ -553,8 +616,8 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
     content <- items$content
     if (!is.null(items$template)) extra$template <- items$template
     if (!is.null(y$ggplot2_version)) extra$ggplot2_version <- y$ggplot2_version
+    if (by_items) for (k in c("plot", "plots", "compose")) if (!is.null(y[[k]])) extra[[k]] <- y[[k]]
   } else if (kind == "figure" && !is.null(fig)) {
-    y <- if (is.character(fig)) .conv_read_fig(fig) else fig
     data <- list(source = "code")
     if (!is.null(y$data)) data$steps <- y$data
     if (!is.null(y$stats)) data$stats <- y$stats
@@ -570,6 +633,11 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
       if (!is.na(lr$population_id[1L] %||% NA)) data$population <- lr$population_id[1L]
       if (!is.na(lr$where[1L])) { data$where <- tfl_r(gsub("\r\n?", "\n", lr$where[1L])); note(id, "listings", 1, "where", "kept as R text (!r)", lr$where[1L]) }
       if (!is.na(lr$sort[1L])) data$sort <- as.list(.conv_split(lr$sort[1L]))
+    }
+    # its rework step (the planner row's process_code, a table's too): data.steps
+    if (!is.null(prow) && nrow(prow) && !is.na(prow$process_code[1L])) {
+      data$steps <- list(tfl_r(gsub("\r\n?", "\n", prow$process_code[1L])))
+      note(id, "_tflplanner", id, "process_code", "the listing's rework step kept as R text (data.steps)", prow$process_code[1L])
     }
     # rtfreporter's chain: plan_listing(listing_col(...), ..., type, sep ...)
     # |> plan_blanks(where = "records") |> plan_paginate_rows(max_rows)
@@ -627,7 +695,12 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
       if (!is.null(content_fn)) {
         content <- .conv_items(content_fn(sp, id))
         nz <- .conv_normalize_args(sp, ard, id, note)
-        if (length(nz)) content <- c(list(tfl_item("normalize_ard", nz)), content)
+        # (a normalize_ard() the sheets could not say, in content_more, is the
+        # table's: not another from its hierarchical analysis as well; at
+        # the head, where the derived one goes)
+        is_nz <- vapply(content, function(it) identical(it$fn, "normalize_ard"), NA)
+        if (any(is_nz)) content <- c(content[is_nz], content[!is_nz])
+        else if (length(nz)) content <- c(list(tfl_item("normalize_ard", nz)), content)
         # a records table (table_plan(value = ), its parts by plan_append()):
         # its data the planner row's dataset, not the ARD
         if (any(vapply(content, function(it) identical(it$fn, "table_plan") && !is.null(it$args$value), NA)) &&
@@ -801,7 +874,7 @@ tfl_yaml_from_sheets <- function(sheets, to, content_fn = NULL, overwrite = FALS
 # An old figure design (spec/figures/<id>.yml) read as the designer wrote and
 # read it (tfl_read_fig_design()): YAML 1.1, so its yes / no are TRUE / FALSE
 # (x_log: yes, na.rm: yes), unlike the new spec's reader
-.conv_read_fig <- function(path) yaml::read_yaml(path, handlers = list(r = tfl_r))
+.conv_read_fig <- function(path) yaml::read_yaml(path, handlers = list(r = tfl_r, unset = function(x) tfl_unset()))
 
 # the data frames of a list of sheets with their text's CRLF / CR as LF
 .conv_lf_sheets <- function(x) {

@@ -60,6 +60,8 @@ test_that("the blank study unpacks, reads, and its items are what the schema tak
 })
 
 test_that("the example's answer reads, reviews clean, and is the example TOC's", {
+  # about 10 s or more; CI runs it on every configuration
+  skip_on_cran()
   d <- kit_study()
   outs <- tfl_read_outputs(d)
   expect_setequal(names(outs), c("T-1", "T-2", "L-1", "F-1"))
@@ -115,6 +117,8 @@ test_that("the example runs on the sample data: the ARD, the tables, the listing
 })
 
 test_that("tfl_ai_review(): a flawed answer gives the AI its fixes and writes the two prompts", {
+  # about 10 s or more; CI runs it on every configuration
+  skip_on_cran()
   d <- kit_study("ai-kit-flawed")
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   t1 <- file.path(d, "spec", "outputs", "T-1.yml")
@@ -139,4 +143,21 @@ test_that("tfl_ai_review(): a flawed answer gives the AI its fixes and writes th
   expect_true(any(grepl("spec/outputs/T-1.yml", rep_txt, fixed = TRUE)))
   expect_true(any(grepl("For the AI", out)))
   expect_error(tfl_ai_review(d, toc = kit_toc()), "overwrite")
+})
+
+test_that("tfl_ai_review(): a spec/codelists.yml left in the study is ignored, no finding (#649, #659)", {
+  skip_on_cran()
+  d <- kit_study("ai-kit-codelists")
+  on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  without <- tfl_ai_review(d, toc = kit_toc(), write = FALSE)
+  writeLines("ANRIND: [{value: LOW, label: Low}, {value: HIGH, label: High}]",
+             file.path(d, "spec", "codelists.yml"))
+  r <- tfl_ai_review(d, toc = kit_toc(), write = FALSE)
+  expect_false("S01" %in% r$rule)
+  expect_identical(sort(r$rule), sort(without$rule))
+  expect_identical(r$message, without$message)
+  # the code lists the K13 findings list are the reports' own
+  k13 <- r[r$rule == "K13" & r$sheet == "codelists", ]
+  expect_false(anyNA(k13$output_id))
+  expect_false(any(grepl("ANRIND", r$message, fixed = TRUE)))
 })

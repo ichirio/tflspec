@@ -58,3 +58,45 @@ test_that("a listing the columns say whole: no content_more, as before", {
   back <- tfl_read_outputs(to)[["L-1"]]
   expect_setequal(lsm_key(back$content), lsm_key(tfl_read_outputs(d)[["L-1"]]$content))
 })
+
+test_that("a listing's R data.steps: on the planner row, and back (#689)", {
+  step <- tfl_r("data <- dplyr::filter(data, SEX == \"F\")")
+  content <- list(
+    tfl_item("plan_listing", list(cols = list(
+      tfl_call("listing_col", list(vars = list("USUBJID"), label = "Subject", width = 12L))))),
+    tfl_item("plan_paginate_rows", list(max_rows = 20L)))
+  d <- withr::local_tempdir()
+  dir.create(file.path(d, "spec", "outputs"), recursive = TRUE)
+  writeLines(c("datasets:", "  - dataset: ADAE", "    path: data/adae.rds"),
+             file.path(d, "spec", "data.yml"))
+  o <- tfl_output("L-1", "listing", label = "Adverse events", extends = "none",
+                  data = list(source = "dataset", dataset = "ADAE", steps = list(step)),
+                  content = content)
+  tfl_write_output(o, file.path(d, "spec", "outputs", "L-1.yml"))
+  sh <- tfl_sheets_from_yaml(d)
+  expect_identical(sh$planner$process_code[sh$planner$output_id %in% "L-1"], as.character(step))
+  to <- withr::local_tempdir()
+  suppressMessages(tfl_yaml_from_sheets(sh, to, overwrite = TRUE))
+  back <- tfl_read_outputs(to)[["L-1"]]
+  expect_length(back$data$steps, 1L)
+  expect_identical(as.character(back$data$steps[[1L]]), as.character(step))
+  expect_s3_class(back$data$steps[[1L]], "tfl_r")
+  expect_setequal(lsm_key(back$content), lsm_key(tfl_read_outputs(d)[["L-1"]]$content))
+  code <- function(dir) tfl_content_code(tfl_read_outputs(dir)[["L-1"]], pipe = "|>")
+  expect_identical(code(to)[1L], as.character(step))
+  expect_identical(code(to)[seq_along(code(d))], code(d))
+})
+
+test_that("a column given as a plain list is read as its listing_col() call", {
+  call <- list(tfl_call("listing_col", list(vars = list("USUBJID"), label = "Subject", width = 12L)),
+               tfl_call("listing_col", list(vars = list("AEDECOD"), label = "Term", rel_width = 2L)))
+  plain <- lapply(call, function(cl) list(fn = cl$fn, args = cl$args))
+  d <- lsm_study(list(tfl_item("plan_listing", list(cols = call, type = "listing"))))
+  st <- tfl_read_study_spec(d)
+  outs <- tfl_read_outputs(d)
+  want <- tfl_sheets_from_spec(st, outs)
+  outs[["L-1"]]$content[[1L]]$args$cols <- plain
+  got <- tfl_sheets_from_spec(st, outs)
+  expect_identical(got$listing$listing_cols, want$listing$listing_cols)
+  expect_identical(nrow(got$listing$listing_cols[got$listing$listing_cols$output_id %in% "L-1", ]), 2L)
+})

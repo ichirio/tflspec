@@ -4,14 +4,15 @@ test_that("waterfall: the design form; the bars' order the call's step", {
   x <- tfl_template_expand("waterfall", list(param = "SUMDIAM", population = "SAF",
                                              where = "AVISIT == \"WEEK 12\""),
                            population = wf_pop)
+  # (the call's: one bar a subject said, the bars beyond the axis said, the order)
   expect_identical(vapply(x$data$steps, `[[`, "", "step"),
-                   c("read", "join", "param", "filter", "filter", "rank"))
+                   c("read", "join", "param", "filter", "filter", "code", "code", "rank"))
   expect_identical(x$data$steps[[4L]]$expr, "AVISIT == \"WEEK 12\"")
-  expect_identical(x$call_steps, 1L)
+  expect_identical(x$call_steps, 3L)
   r <- tfl_template_expand("waterfall", list(param = "SUMDIAM", by_response = TRUE))
   expect_identical(vapply(r$data$steps, `[[`, "", "step"),
-                   c("read", "param", "join", "filter", "rank", "levels"))
-  expect_identical(r$call_steps, 2L)
+                   c("read", "param", "join", "filter", "code", "code", "rank", "derive", "levels"))
+  expect_identical(r$call_steps, 5L)
   expect_identical(r$plot$colour_by, "BOR")
 })
 
@@ -52,4 +53,23 @@ test_that("in a study: A (the data steps, the call) = B (the design) = the templ
                  fixed = TRUE)
     expect_identical(grepl("PARAMCD == \"BOR\"", txt, fixed = TRUE), resp)
   }
+})
+
+test_that("tpl_waterfall(): a panel per arm, its settings as a named vector (#573)", {
+  skip_if_not_installed("dplyr")
+  df <- adtr[adtr$AVISIT == "WEEK 12" & !is.na(adtr$PCHG), ]
+  bor <- adrs[adrs$PARAMCD == "BOR", c("USUBJID", "AVALC")]
+  names(bor)[2L] <- "BOR"
+  df <- merge(df, bor, by = "USUBJID", all.x = TRUE)
+  for (resp in c(FALSE, TRUE)) {
+    # the reference lines' labels drawn in each panel
+    p <- tpl_waterfall(df, by_response = resp, plot = list(facet_by = "TRT01A"))
+    expect_type(tplfig_png(p), "character")
+    lab <- ggplot2::layer_data(p, 4L)
+    expect_identical(sort(unique(lab$label)), c("-30%", "20%"))
+    expect_identical(length(unique(lab$PANEL)), length(unique(df$TRT01A)))
+  }
+  # (the program's call writes the settings as list(); a named vector reads too)
+  q <- tpl_waterfall(df, plot = c(x_label = "Subjects", y_min = -100, y_max = 100))
+  expect_type(tplfig_png(q), "character")
 })

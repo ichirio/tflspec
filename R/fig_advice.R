@@ -131,6 +131,18 @@
       "Layers colour by %s, but the figure's 'Colours by' is empty: the palette is not applied.",
       .fix("set_plot", colour_by = unique(maps)[1L]), args = list(paste(unique(maps), collapse = ", ")))
   },
+  colours_unused = function(d, ctx) {
+    if (!is.null(d$plot$colour_by)) return(NULL)
+    own <- tryCatch(.fig_own_colours(d$plot), error = function(e) NULL)
+    if (!is.null(own)) return(.adv(
+      "colours_unused", "warning", "plot",
+      "The figure's own colours are not applied: its 'Colours by' (colour_by) is empty."))
+    pal <- d$plot$palette
+    if (is.character(pal) && length(pal) == 1L && !is.na(pal) && !identical(pal, "treatment")) .adv(
+      "colours_unused", "warning", "plot",
+      "The palette %s colours no groups: the figure's 'Colours by' (colour_by) is empty.",
+      args = list(pal))
+  },
   # ---- mean over time
   mean_n = function(d, ctx) {
     sm <- Filter(function(s) identical(s$step, "summary") && grepl("VISIT", toupper(s$by %||% "")), d$data)

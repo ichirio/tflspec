@@ -23,12 +23,14 @@ The table template \code{param_change}, layout \code{summary}. Its program is on
    \code{baseline_label} \tab other \tab call \tab Baseline \tab  \tab the baseline's heading \cr
    \code{value_label} \tab other \tab call \tab Value \tab  \tab the value's heading \cr
    \code{change_label} \tab other \tab call \tab Change from baseline \tab  \tab the change's heading \cr
-   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: \if{html}{\out{<data>}}_\if{html}{\out{<population>}} \cr
+   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: <data>_<population> \cr
    \code{data_label} \tab other \tab call \tab  \tab  \tab the analysis data's label \cr
    \code{statistics} \tab other \tab call \tab N, mean, sd, median, min, max \tab  \tab the statistics the ARD has \cr
-   \code{cells} \tab other \tab call \tab n = \{N:.0f\}; Mean (SD) = \{mean:.1f\} (\{sd:.2f\}); Median = ... \tab plan_cells.continuous \tab the rows of a value or a change \cr
+   \code{cells} \tab other \tab call \tab n = \{N:.0f\}; Mean (SD) = \{mean\} (\{sd\}), \{mean\} (-); Media... \tab plan_cells.continuous \tab the rows of a value or a change \cr
+   \code{sd_missing} \tab other \tab call \tab - \tab settings.sd_missing \tab what prints in place of the SD when a group has no SD (n = 1): \{mean\} (<sd_missing>); "" in study.yml or a report's YAML prints the mean alone; no effect when 'cells' is given \cr
    \code{param_page} \tab other \tab call \tab TRUE \tab  \tab TRUE: a page a parameter, named in the titles by 'param_heading' \cr
-   \code{param_heading} \tab other \tab call \tab Parameter: \{value\} \tab  \tab a parameter's page name ('\{value\}': the parameter) \cr
+   \code{param_heading} \tab other \tab call \tab Parameter: \{value\} \tab  \tab a parameter's page name ('\{value\}': the parameter); the last title line, or where the title line '\{PAGE_HEADING\}' is \cr
+   \code{heading} \tab other \tab call \tab  \tab  \tab the label column's heading \cr
 }
 }
 

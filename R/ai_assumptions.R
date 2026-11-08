@@ -189,3 +189,122 @@ tfl_ai_assumptions <- function(study_dir) {
   rownames(out) <- NULL
   out
 }
+
+# ---- ai/defaults.md: every default the drafts took, the most important first ----
+
+# How much an assumption changes the output: 1 the numbers (the data and the
+# analyses, or an item about the population, the denominator, a filter, the
+# arms, the parameter, the visit, the baseline, the worst case, missing
+# values, what is counted, a derivation), 2 the rows or the statistics (the
+# content, the code lists, a template; or the rows, statistics, sort order,
+# levels, categories, a total), 3 the text or the look (titles, footnotes,
+# labels, widths -- wherever they are written --, digits, the page)
+.ai_impact_class <- function(where, item) {
+  where <- trimws(ifelse(is.na(where), "", as.character(where)))
+  item <- trimws(ifelse(is.na(item), "", as.character(item)))
+  # (whole words, with a plural or a verb ending: "border" is not "order";
+  # an underscore divides words, as in `treatment_var`)
+  item <- gsub("_", " ", item, fixed = TRUE)
+  words <- function(w) paste0("\\b(?:", w, ")(?:s|es|ed|ing)?\\b")
+  one <- words(paste0("population|analysis set|denominator|filter|where|arm|treatment|",
+                      "parameter|visit|baseline|worst|missing|counted|derivation"))
+  two <- words("rows|statistics|sort|order|levels|categories|total")
+  # (column widths are the look, wherever they are written)
+  ifelse(grepl("width", item, ignore.case = TRUE), 3L,
+         ifelse(grepl("^(data|ard)", where, ignore.case = TRUE) | grepl(one, item, ignore.case = TRUE, perl = TRUE), 1L,
+                ifelse(grepl("^(content|codelists|template)", where, ignore.case = TRUE) |
+                         grepl(two, item, ignore.case = TRUE, perl = TRUE), 2L, 3L)))
+}
+
+# Does an assumption's `from` cite a document (the shell, the SAP, the TOC,
+# the define, the adam_summary, a dataset such as ADSL, a D<n> decision from
+# the chat)?  The others are the agent's own: "programmer convention",
+# "company convention", "company hints", "(default, Q<n>)", or nothing
+.ai_from_is_document <- function(x) {
+  x <- ifelse(is.na(x), "", trimws(as.character(x)))
+  grepl("\\b(shell|sap|toc|define|adam)\\b|adam_summary", x, ignore.case = TRUE) |
+    grepl("^D[0-9]+\\b|\\bAD[A-Z]{2,}\\b", x)
+}
+
+# Report ids in the order a person counts them (14.1.2 before 14.1.10)
+.ai_natural_key <- function(x) {
+  x <- as.character(x)
+  m <- gregexpr("[0-9]+", x)
+  regmatches(x, m) <- lapply(regmatches(x, m), function(d) formatC(suppressWarnings(as.integer(d)), width = 6L, flag = "0"))
+  x
+}
+
+# The agent's own defaults merged by topic across the reports: the same
+# impact class, `where`, `item` and value one line, with the reports it
+# covers; by class, then by the number of reports, descending.  `a` has
+# `class`, `id`, `where`, `item`, `text`, `value`, `src`.  The lines.
+.ai_defaults_topics <- function(a, k) {
+  a <- a[a$class == k, , drop = FALSE]
+  if (!nrow(a)) return("- (none)")
+  val <- ifelse(is.na(a$value) | !nzchar(trimws(a$value)), a$text, trimws(a$value))
+  key <- paste(.ai_asm_norm(a$where), .ai_asm_norm(a$item), .ai_asm_norm(val), sep = "|")
+  grp <- split(seq_len(nrow(a)), factor(key, levels = unique(key)))
+  one <- lapply(grp, function(i) {
+    ids <- unique(a$id[i])
+    ids <- ids[order(.ai_natural_key(ids), method = "radix")]
+    list(item = if (is.na(a$item[i[1L]]) || !nzchar(trimws(a$item[i[1L]]))) a$where[i[1L]] else a$item[i[1L]],
+         val = val[i[1L]], ids = ids, src = unique(a$src[i]))
+  })
+  n <- vapply(one, function(z) length(z$ids), integer(1))
+  first <- vapply(one, function(z) .ai_natural_key(z$ids[1L]), character(1))
+  one <- one[order(-n, first, method = "radix")]
+  vapply(one, function(z) {
+    n <- length(z$ids)
+    ids <- if (n <= 6L) paste(z$ids, collapse = ", ") else paste0(paste(z$ids[1:5], collapse = ", "), ", ... +", n - 5L)
+    sprintf("- %s: %s (%d report%s: %s) (from: %s)", z$item, z$val, n, if (n == 1L) "" else "s",
+            ids, paste(z$src, collapse = ", "))
+  }, character(1), USE.NAMES = FALSE)
+}
+
+# ai/defaults.md: every report's `ai: assumptions`, read as
+# tfl_ai_assumptions() reads them, in three groups by how much they change
+# the output.  First "For the person": the defaults the agent chose (its
+# `from` is no document), merged by topic across the reports; then every
+# default, by report: a line a default, the lines of a group by report id;
+# a report's width lines in one.  The path.
+.ai_defaults_write <- function(study_dir) {
+  a <- tfl_ai_assumptions(study_dir)
+  a$class <- if (nrow(a)) .ai_impact_class(a$where, a$item) else integer()
+  say <- function(x, y) ifelse(!is.na(x) & nzchar(trimws(x)), trimws(x), ifelse(is.na(y), "", trimws(y)))
+  a$text <- say(a$assumption, a$value)
+  a$src <- ifelse(is.na(a$from) | !nzchar(trimws(a$from)), "not stated", trimws(a$from))
+  a$id <- ifelse(is.na(a$output_id), "", trimws(a$output_id))
+  wid <- a$class == 3L & grepl("width", ifelse(is.na(a$item), "", a$item), ignore.case = TRUE)
+  # (a report's widths: the first line, the others folded into it)
+  keep <- !(wid & duplicated(paste(a$id, wid)))
+  a <- a[keep, , drop = FALSE]
+  a <- a[order(a$class, a$id, method = "radix"), , drop = FALSE]
+  line <- function(x) {
+    if (!nrow(x)) return("- (none)")
+    sprintf("- %s %s/%s: %s (from: %s)", x$id, ifelse(is.na(x$where), "", x$where),
+            ifelse(is.na(x$item), "", x$item), x$text, x$src)
+  }
+  title <- c("Changes the numbers", "Changes the rows or statistics", "Changes the text or the look")
+  own <- a[!.ai_from_is_document(a$from), , drop = FALSE]
+  person <- unlist(lapply(1:3, function(k) {
+    z <- .ai_defaults_topics(own, k)
+    c(sprintf("### %d. %s (%d)", k, title[k], if (identical(z, "- (none)")) 0L else length(z)), "", z, "")
+  }))
+  body <- unlist(lapply(1:3, function(k) {
+    x <- a[a$class == k, , drop = FALSE]
+    c(sprintf("### %d. %s (%d)", k, title[k], nrow(x)), "", line(x), "")
+  }))
+  f <- file.path(study_dir, "ai", "defaults.md")
+  .ai_write_text(c("# Defaults", "",
+                   paste("Every default the drafts took, the most important first.",
+                         "The questions (ai/questions-end.md) are the ones the agent was unsure of;",
+                         "read these too."),
+                   "",
+                   "## For the person: the defaults the agent chose", "",
+                   paste("Only the defaults whose source is no document (not the shell, the SAP, the TOC,",
+                         "the define, a dataset or a decision from the chat): the agent's own conventions.",
+                         "A line a topic across the reports, the most reports first."),
+                   "", person,
+                   "## Every default, by report", "", body), f)
+  f
+}

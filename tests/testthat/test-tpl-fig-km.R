@@ -89,11 +89,24 @@ test_that("the former km_simple / km_risk_table / km_ci: km_survival with argume
     # (the subjects with an empty group left out, with a warning: the
     # call's step before the time's unit)
     at <- match("time_unit", vapply(want$data$steps, `[[`, "", "step"))
-    want$data$steps <- append(want$data$steps, list(list(step = "filter",
-      expr = "!is.na(TRT01A) & TRT01A != \"\"",
-      label = "the subjects with an empty TRT01A have no curve: left out, with a warning",
-      warn = "km_survival: {n} subjects with an empty TRT01A were left out")), at - 1L)
-    want$call_steps <- want$call_steps + 1L
+    # (the subjects with no time or censoring flag left out too, and a
+    # dataset of several parameters stopped: the call's steps before them)
+    want$data$steps <- append(want$data$steps, list(
+      list(step = "code",
+           label = "one parameter only: several in the data would be pooled",
+           code = paste0("if (\"PARAMCD\" %in% names(df) && length(unique(df$PARAMCD)) > 1) {\n",
+                         "  stop(\"km_survival: the data has more than one PARAMCD (\", ",
+                         "toString(sort(unique(df$PARAMCD))),\n",
+                         "       \"); keep one in the data steps (a param step)\", call. = FALSE)\n}")),
+      list(step = "filter",
+           expr = "!is.na(TRT01A) & TRT01A != \"\"",
+           label = "the subjects with an empty TRT01A have no curve: left out, with a warning",
+           warn = "km_survival: {n} subjects with an empty TRT01A were left out"),
+      list(step = "filter",
+           expr = "!is.na(AVAL) & !is.na(CNSR)",
+           label = "the subjects with no AVAL or CNSR have no place on a curve: left out, with a warning",
+           warn = "km_survival: {n} subjects with a missing AVAL or CNSR were left out")), at - 1L)
+    want$call_steps <- want$call_steps + 3L
     for (k in c("content", "plot", "data", "call_steps")) {
       expect_identical(x[[k]], want[[k]], info = paste(nm, k))
     }
@@ -138,7 +151,8 @@ test_that("km: the arguments and what the design has for them", {
   e <- x(ci = "bars")
   expect_identical(calls(e), c("geom_errorbar", "add_risktable"))
   expect_match(e$data$steps[[length(e$data$steps)]]$code, "summary(fit, times = x_breaks", fixed = TRUE)
-  expect_match(x(ci = "bars", ci_times = c(4, 8))$data$steps[[7L]]$code, "times = c(4, 8)", fixed = TRUE)
+  bars <- x(ci = "bars", ci_times = c(4, 8))$data$steps
+  expect_true(any(vapply(bars, function(s) grepl("times = c(4, 8)", s$code %||% "", fixed = TRUE), NA)))
   # the y axis: the risk, in %
   e <- x(y_type = "risk", y_percent = TRUE)
   expect_identical(e$content[[1L]]$args$type, "risk")
@@ -151,7 +165,7 @@ test_that("km: the arguments and what the design has for them", {
   expect_false("censor_mark" %in% fns(x(censor_marks = FALSE)))
   e <- x(risk_table = FALSE)
   expect_null(calls(e))
-  expect_identical(e$call_steps, 3L)
+  expect_identical(e$call_steps, 5L)
   expect_identical(e$data$steps[[length(e$data$steps) - 1L]]$step, "time_unit")
   # the axis: its end and step
   e <- x(x_max = 52, x_step = 4)
@@ -159,10 +173,12 @@ test_that("km: the arguments and what the design has for them", {
   # the data steps: the event, the unit, no parameter (ADSL)
   e <- tfl_template_expand("km", list(data = "ADSL", by = "TRT01A", time = "TRTDURD", time_unit = "weeks",
                                       event = "EOTSTT == \"DISCONTINUED\""))
-  expect_identical(steps(e), c("read", "derive", "filter", "time_unit", "survfit", "code"))
+  expect_identical(steps(e), c("read", "derive", "code", "filter", "filter", "time_unit", "survfit", "code"))
   expect_identical(e$data$steps[[2L]]$expr, "as.integer(!(EOTSTT == \"DISCONTINUED\"))")
-  expect_identical(e$data$steps[[5L]]$censor, "CNSR")
-  expect_identical(e$data$steps[[4L]]$unit, "weeks")
+  expect_identical(e$data$steps[[7L]]$censor, "CNSR")
+  expect_identical(e$data$steps[[6L]]$unit, "weeks")
+  # (no parameter: the check of one is the data's, which has no PARAMCD here)
+  expect_match(e$data$steps[[3L]]$code, "PARAMCD", fixed = TRUE)
   # the escape hatch: any other setting
   expect_identical(x(plot = list(dpi = 150))$plot$dpi, 150)
   # the parameters: their stage and tier
@@ -192,6 +208,14 @@ test_that("tfl_tpl(): a figure's call; the data step's parameters are not its", 
   # the escape hatch: `plot =`
   q <- tfl_tpl(df, "km_cumulative", by = TRT01A, plot = list(title = "Figure 1"))
   expect_identical(q$labels$title, "Figure 1")
+  # a draft's `plot$add` goes after the template's own, not instead of them
+  q <- tfl_tpl(df, "km_cumulative", by = TRT01A, time_unit = "weeks", y_percent = TRUE, x_step = 4,
+               plot = list(add = list(list(fn = "annotate", args = list(
+                 geom = "label", x = -Inf, y = Inf, label = "Median 10 (95% CI 8, 12)")))))
+  expect_true(any(vapply(q$layers, function(l) inherits(l$geom, "GeomLabel"), NA)))
+  yl <- ggplot2::ggplot_build(q)$layout$panel_scales_y[[1L]]
+  expect_identical(yl$get_labels(c(0, 0.5, 1)), c("0%", "50%", "100%"))
+  expect_equal(ggplot2::ggplot_build(q)$layout$panel_scales_x[[1L]]$get_breaks()[1:3], c(0, 4, 8))
   # a report's own items `+`-ed after it
   r <- p + ggplot2::geom_vline(xintercept = 12)
   expect_true(any(vapply(r$layers, function(l) inherits(l$geom, "GeomVline"), NA)))
@@ -231,6 +255,33 @@ test_that("in a study: km_cumulative (STF Figure 1's sample) from ADTTE and from
   expect_match(items, "geom_errorbar(", fixed = TRUE)
   expect_match(items, "scales::label_percent()", fixed = TRUE)
   expect_match(items, "add_pvalue(", fixed = TRUE)
+  # a report's own `plot: add:` follows the template's scales, in the resolved design and the program's call
+  o3 <- o1
+  o3$id <- "F-9-add"
+  o3$plot <- list(add = list(list(fn = "annotate", args = list(geom = "label", x = -Inf, y = -Inf,
+                                                              label = "Median 40"))))
+  f3 <- file.path(d, "spec", "outputs", "F-9-add.yml")
+  tfl_write_output(o3, f3)
+  ro3 <- tfl_resolve_output(tfl_read_output(f3), tfl_read_study_spec(d))
+  expect_identical(vapply(ro3$plot$add, `[[`, "", "fn"),
+                   c("scale_x_continuous", "scale_y_continuous", "annotate"))
+  txt3 <- paste(tfl_content_code(ro3), collapse = "
+")
+  expect_identical(lengths(regmatches(txt3, gregexpr("annotate(", txt3, fixed = TRUE))), 1L)
+  expect_false(grepl("scale_y_continuous", txt3, fixed = TRUE))
+  expect_false(grepl("plot = list(add", txt3, fixed = TRUE))
+  # (the program runs in a fresh environment and draws the build's plot: the
+  # template's scales kept, the draft's layer added)
+  a3 <- tfl_content_code(ro3)
+  env3 <- new.env(parent = .fig_pkg_env(c(attr(a3, "libs"), "tflspec")))
+  for (n in names(data)) assign(n, data[[n]], envir = env3)
+  eval(parse(text = tfl_fig_setup_code()), env3)
+  eval(parse(text = tfl_helpers_code()), env3)
+  eval(parse(text = a3), env3)
+  built <- suppressMessages(tfl_content_run(ro3, data))
+  expect_identical(vapply(env3$content$layers, function(l) class(l$geom)[1L], ""),
+                   vapply(built$layers, function(l) class(l$geom)[1L], ""))
+  expect_identical(tplfig_png(env3$content), tplfig_png(built))
   # ADSL: no parameter, the event, the time
   o2 <- tfl_output("F-9-adsl", "figure", population = "SAF", label = "KM", extends = "defaults",
                    data = list(steps = list(
@@ -357,4 +408,13 @@ test_that("a report type's data stage in `template: args:` stops, pointing to `d
   o <- tfl_output("F-9", "figure", extends = "none",
                   template = list(name = "km", args = list(by = "TRT01A", param = "PFS")))
   expect_true(attr(tfl_resolve_output(o, s), "template")$ok)
+})
+
+test_that(".tpl_plot_over(): the template's add is joined once", {
+  b <- list(title = "T", add = list(list(fn = "scale_x_continuous"), list(fn = "scale_y_continuous")))
+  o <- list(add = list(list(fn = "annotate")))
+  once <- tflspec:::.tpl_plot_over(b, o)
+  expect_identical(vapply(once$add, `[[`, "", "fn"),
+                   c("scale_x_continuous", "scale_y_continuous", "annotate"))
+  expect_identical(tflspec:::.tpl_plot_over(b, once)$add, once$add)
 })

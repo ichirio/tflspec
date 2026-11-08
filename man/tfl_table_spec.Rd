@@ -191,7 +191,7 @@ The key \code{.stat_group} then names them in \code{cols} (\code{TRT01A | .stat_
 (\code{plan_levels(variable = c("AGE", "SEX"))}: the values of the ARD's
 \code{variable} column; one not numbered comes after, in the ARD's order).}
 \item{\code{levels}}{The order of its values: \verb{Grade 0 | Grade 1 | Total};
-\verb{F = Female | M = Male} gives each value its text too (a named order,
+\code{F = Female | M = Male} gives each value its text too (a named order,
 \code{plan_levels(SEX = c(F = "Female", M = "Male"))}).}
 \item{\code{empty_levels}}{\code{show} (blank, the default) or \code{hide}: whether
 its values that no record has -- a code list's value, counted 0 in
@@ -256,7 +256,7 @@ One row per report, each column one argument of the plan verb its
 prefix names:
 \describe{
 \item{\verb{pages_*}}{\code{\link[rtfreporter:plan_paginate_rows]{rtfreporter::plan_paginate_rows()}}: \code{max_rows}, \code{split},
-\code{break_before} (row positions to cut before, \code{20 | 40}, with
+\code{break_before} (the column \code{pages_break_before}: row positions to cut before, \code{20 | 40}, with
 \code{split = rows}), \code{min_group_rows}, \code{cont_label}, \code{page_by} (BY
 pages: the column(s) partitioning the body first, the row budget
 inside each), \code{heading} (each BY page's name from a template,
@@ -273,7 +273,7 @@ the report's \code{rtf_tables(auto_section = , auto_title = )}.}
 \item{\verb{blank_*}}{\code{\link[rtfreporter:plan_blanks]{rtfreporter::plan_blanks()}}: \code{where}, \code{first}, \code{last},
 \code{counted}.}
 \item{\verb{stub_*}}{\code{\link[rtfreporter:plan_stub]{rtfreporter::plan_stub()}}: \code{vars}, \code{name}, \code{indent}, \code{summary},
-\code{before}.}
+\code{before}, \code{heading} (the stub column's heading; \code{""}, quoted, for none).}
 \item{\verb{colpages_*}}{\code{\link[rtfreporter:plan_paginate_cols]{rtfreporter::plan_paginate_cols()}}: \code{every}, \code{at},
 \code{cut_by} (a separator in the column names, \verb{____}: one block per
 key), \code{keep}, \code{fit} (\code{TRUE}: every block on page 1's scale; \code{FALSE}:
@@ -323,7 +323,8 @@ One row per report, each column an argument of
 \code{\link[rtfreporter:plan_style]{rtfreporter::plan_style()}}: \code{border}, \code{align_count_pct}, \code{font},
 \code{font_size_half_points}, \code{row_height_twips}, \code{row_height_exact},
 \code{header_row_height_twips}, \code{blank_row_height_twips},
-\code{cell_padding_left_twips}, \code{cell_padding_right_twips}, \code{cell_valign},
+\code{cell_padding_left_twips}, \code{cell_padding_right_twips},
+\code{cell_padding_top_twips}, \code{cell_padding_bottom_twips}, \code{cell_valign},
 \code{table_align}, \code{markup}, \code{blank_row_normalize}, and the rules of one
 kind of row, \code{border_header}, \code{border_spanning}, \code{border_body},
 \code{border_first_row}, \code{border_last_row}: the sides drawn (\code{top | bottom})

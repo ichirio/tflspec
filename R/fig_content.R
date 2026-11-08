@@ -124,8 +124,60 @@ tfl_plot <- function(name, items = list(), from = "own") {
   unique(c(.fig_object_args, own))
 }
 
-# A value of an item as the R it stands for (a language object)
-.fig_value_lang <- function(v, arg = "", objects = .fig_object_args) {
+# The types an item's arguments are written and read by (parsed), by name:
+# its function's card, with the stat or geom it names (fun.data of
+# geom_pointrange(stat = "summary")); only the arguments given
+.fig_arg_types <- function(fn, args = list()) {
+  nms <- names(args) %||% character()
+  if (!length(nms) || !is.character(fn) || length(fn) != 1L) return(list())
+  # (the stat or geom an item names is read from its text)
+  given <- lapply(args, function(x) if (is.character(x) && length(x) == 1L) x)
+  ent <- tryCatch(.schema_item_entry(tfl_schema(fn), fn, given), error = function(e) NULL)
+  if (is.null(ent)) return(list())
+  out <- lapply(stats::setNames(nms, nms), function(k) {
+    t <- ent$args[[k]]$type
+    if (!is.null(t)) .schema_type(t)
+  })
+  Filter(Negate(is.null), out)
+}
+
+# a type's alternatives (a type of one kind is its one)
+.fig_type_alts <- function(ty) if (identical(ty$kind, "either")) ty$args else list(ty)
+
+# A text value of a type that is code: a function by its name, written
+# bare (fun.data = mean_se, Hmisc::smean.cl.normal), a formula as its text
+# written as the formula (formula = y ~ x); NULL for text written as text
+# -- the first of the type's alternatives the value has decides (method:
+# "lm" of string|r stays "lm")
+.fig_text_lang <- function(v, ty) {
+  for (t in .fig_type_alts(ty)) {
+    if (!.schema_ok(v, t)) next
+    if (identical(t$kind, "function")) {
+      if (!grepl("::", v, fixed = TRUE)) return(as.name(v))
+      return(call("::", as.name(sub("::.*$", "", v)), as.name(sub("^.*::", "", v))))
+    }
+    if (identical(t$kind, "tilde")) return(str2lang(v))
+    return(NULL)
+  }
+  NULL
+}
+
+# whether a type takes a call of `f` by name (call<label_*>: scales'
+# label_percent); a call<> of no names takes no other package's
+.fig_type_takes_call <- function(ty, f) {
+  if (is.null(ty)) return(FALSE)
+  any(vapply(.fig_type_alts(ty), function(t) {
+    identical(t$kind, "call") && length(t$args) > 0L && .schema_call_named(f, unlist(t$args))
+  }, NA))
+}
+
+.fig_type_has <- function(ty, kind) {
+  !is.null(ty) && any(vapply(.fig_type_alts(ty), function(t) identical(t$kind, kind), NA))
+}
+
+# A value of an item as the R it stands for (a language object); `type`,
+# the argument's (parsed), says a text that is code (.fig_text_lang())
+.fig_value_lang <- function(v, arg = "", objects = .fig_object_args, type = NULL) {
   if (inherits(v, "tfl_unset")) {
     warning(sprintf(paste0("A figure's `%s` is !unset, which removes a key in the layering; ",
                            "NULL is !r NULL: written as NULL."), arg), call. = FALSE)
@@ -133,16 +185,40 @@ tfl_plot <- function(name, items = list(), from = "own") {
   }
   if (inherits(v, "tfl_r")) return(str2lang(as.character(unclass(v))))
   if (inherits(v, "tfl_call")) {
+    ty <- .fig_arg_types(v$fn, v$args %||% list())
     a <- lapply(stats::setNames(names(v$args %||% list()), names(v$args %||% list())),
-                function(k) .fig_value_lang(v$args[[k]], k))
+                function(k) .fig_value_lang(v$args[[k]], k, type = ty[[k]]))
+    # unit(0.5, "cm"), rel(1.2): their leading arguments by position, as
+    # they are written
+    lead <- .fig_by_position[[v$fn]]
+    if (!is.null(lead)) {
+      n <- 0L
+      while (n < length(a) && n < length(lead) && identical(names(a)[n + 1L], lead[n + 1L])) n <- n + 1L
+      names(a)[seq_len(n)] <- ""
+    }
     return(as.call(c(list(.fig_fn_sym(v$fn)), a)))
   }
   if (identical(arg, "mapping") && is.list(v)) {
+    # a column by its name, an expression of a mapping's form (factor(AVISITN),
+    # after_stat(density)) as it is written (R/fig_aes.R)
     a <- lapply(v, function(e) if (inherits(e, "tfl_r")) str2lang(as.character(unclass(e)))
-                               else as.name(e))
+                               else if (is.numeric(e) || is.logical(e)) {
+                                 if (is.integer(e)) as.numeric(e[[1L]]) else e[[1L]]
+                               }
+                               else .fig_aes_lang(e) %||% as.name(e))
     return(as.call(c(list(as.name("aes")), a)))
   }
   if (arg %in% objects && is.character(v) && length(v) == 1L) return(as.name(v))
+  if (!is.null(type) && is.character(v) && length(v) == 1L && is.null(names(v))) {
+    w <- .fig_text_lang(v, type)
+    if (!is.null(w)) return(w)
+  }
+  # dates of a date scale (limits: [2024-01-01, NA]): as.Date(c(...))
+  if (.fig_type_dates(type) && .fig_is_dates(v)) {
+    d <- lapply(as.list(v), function(e) if (.fig_is_na_end(e)) NA else as.character(e))
+    inner <- if (length(d) == 1L) d[[1L]] else as.call(c(list(as.name("c")), d))
+    return(call("as.Date", inner))
+  }
   # an argument R takes as a list (fun.args = list(mult = 1.96))
   if (arg %in% .fig_list_args && is.list(v)) {
     el <- lapply(seq_along(v), function(i) .fig_value_lang(v[[i]], names(v)[i] %||% ""))
@@ -159,9 +235,39 @@ tfl_plot <- function(name, items = list(), from = "own") {
   as.call(c(list(as.name("c")), as.list(v)))
 }
 
+# whether a type takes dates: a sequence whose elements may be a `date`
+.fig_type_dates <- function(ty) {
+  !is.null(ty) && any(vapply(.fig_type_alts(ty), function(t) {
+    identical(t$kind, "list") && .schema_has(t$args[[1L]], "date")
+  }, NA))
+}
+
+# a value that is dates: a sequence of dates as their text (2024-01-01) and
+# NA, one date at least, no names
+.fig_is_dates <- function(v) {
+  if (!is.null(names(v)) || !length(v) || inherits(v, c("tfl_r", "tfl_call"))) return(FALSE)
+  el <- as.list(v)
+  if (!all(vapply(el, function(e) length(e) == 1L, NA))) return(FALSE)
+  is_na <- vapply(el, .fig_is_na_end, NA)
+  any(!is_na) && all(vapply(el[!is_na], .schema_is_date, NA))
+}
+
+# an open end of a range: NA, or YAML's NA read as the text "NA"
+.fig_is_na_end <- function(e) is.atomic(e) && length(e) == 1L && (is.na(e) || identical(e, "NA"))
+
+# the functions whose leading arguments are written by position (when given
+# first, in this order): unit(0.5, "cm"), rel(1.2), seq(0, 52, by = 4),
+# alpha("grey50", 0.4), hcl.colors(3, "Dark 3")
+.fig_by_position <- list(unit = c("x", "units"), rel = "x", seq = c("from", "to"),
+                         alpha = c("colour", "alpha"), hcl.colors = c("n", "palette"),
+                         palette.colors = c("n", "palette"), gray.colors = "n",
+                         grey.colors = "n", rainbow = "n", heat.colors = "n",
+                         terrain.colors = "n", topo.colors = "n", cm.colors = "n")
+
 # the arguments R takes as a list, not a vector: a map of the spec is
 # written list(...) and read back from it
-.fig_list_args <- c("fun.args", "method.args", "args", "dparams", "override.aes")
+.fig_list_args <- c("fun.args", "method.args", "args", "dparams", "override.aes",
+                    "x_scales", "y_scales", "stats_label")
 
 # a function as the code calls it: bare for the packages the figure's
 # program attaches (ggplot2, ggsurvfit, patchwork) and tflspec's own,
@@ -182,15 +288,84 @@ tfl_plot <- function(name, items = list(), from = "own") {
   ent$package
 }
 
-# An item as its call
+# An item as its call; a card's positional `...` (xlim's limits) written
+# by position, xlim(0, 52)
 .fig_item_lang <- function(it) {
   a <- it$args %||% list()
   obj <- .fig_objects_of(it$fn)
-  args <- lapply(stats::setNames(names(a), names(a)), function(k) .fig_value_lang(a[[k]], k, obj))
+  ty <- .fig_arg_types(it$fn, a)
+  args <- lapply(stats::setNames(names(a), names(a)), function(k) .fig_value_lang(a[[k]], k, obj, ty[[k]]))
+  # facet_grid()'s rows and cols by their columns: vars(SEX), as ggplot2
+  # takes them together (not "SEX")
+  if (identical(it$fn, "facet_grid")) {
+    for (k in intersect(c("rows", "cols"), names(a))) {
+      v <- a[[k]]
+      if (is.character(v) || (is.list(v) && !is.object(v) && all(vapply(v, is.character, NA)))) {
+        args[[k]] <- as.call(c(list(as.name("vars")), lapply(unlist(v), as.name)))
+      }
+    }
+  }
+  # facet_wrap()'s facets: a column that is not syntactic (`A b`) in vars(),
+  # as facet_grid() takes it (ggplot2 parses a string: "A b" fails); the
+  # syntactic ones are written as they are
+  if (identical(it$fn, "facet_wrap") && !is.null(a$facets) && !inherits(a$facets, c("tfl_r", "tfl_call"))) {
+    v <- a$facets
+    if (is.null(names(v)) && (is.character(v) || (is.list(v) && all(vapply(v, is.character, NA))))) {
+      w <- .fig_facet_vars(unlist(v))
+      if (!is.null(w)) args$facets <- w
+    }
+  }
+  key <- .fig_positional_key(it$fn)
+  if (!is.null(key) && key %in% names(a) && !inherits(a[[key]], c("tfl_r", "tfl_call"))) {
+    i <- match(key, names(args))
+    pos <- lapply(unname(as.list(a[[key]])), .fig_value_lang, arg = key, objects = obj)
+    args <- c(args[seq_len(i - 1L)], pos, args[-seq_len(i)])
+  }
   as.call(c(list(.fig_fn_sym(it$fn)), args))
 }
 
+# facet_wrap()'s facets (the texts of a SPEC) as vars(), when one is a column
+# that is not syntactic: a name in backticks (`A b`), or a text that does not
+# parse ("A b"); NULL when none is (they are written as before).  A text
+# that parses as another expression (AGE > 65) is that expression in vars();
+# a formula text (~ A + B) is not for vars(): NULL.
+.fig_facet_vars <- function(txt) {
+  if (anyNA(txt) || !all(nzchar(txt))) return(NULL)
+  need <- FALSE
+  parts <- list()
+  for (t in txt) {
+    e <- tryCatch(str2lang(t), error = function(err) NULL)
+    if (is.null(e) && !identical(t, "NULL")) {
+      e <- as.name(t)
+      need <- TRUE
+    } else if (is.name(e)) {
+      need <- need || make.names(as.character(e)) != as.character(e)
+    } else if (is.call(e) && identical(e[[1L]], as.name("~"))) {
+      return(NULL)
+    }
+    parts <- c(parts, list(e))
+  }
+  if (need) as.call(c(list(as.name("vars")), parts))
+}
+
+# the key a figure function's card names its positional `...` by (xlim:
+# limits), or NULL
+.fig_positional_key <- function(fn) {
+  dots <- .schema_all(figure = FALSE)[[.schema_fn_name(fn)]]$dots
+  if (identical(dots$style, "positional")) dots$key
+}
+
 .fig_deparse <- function(e) paste(deparse(e, width.cutoff = 500L), collapse = " ")
+
+# An expression as the text of its !r: on one line, or on its lines when
+# one line is not the same R (a function's body of several statements,
+# quote({ a <- 1; b }))
+.fig_deparse_r <- function(e) {
+  one <- .fig_deparse(e)
+  back <- tryCatch(str2lang(one), error = function(err) NULL)
+  if (!is.null(back) && identical(back, e)) return(one)
+  paste(deparse(e, width.cutoff = 500L), collapse = "\n")
+}
 
 # A call as the code writes it: on one line when it fits, else one
 # argument a line
@@ -209,19 +384,57 @@ tfl_plot <- function(name, items = list(), from = "own") {
 # A call's argument as an item's value: a constant as it is, a column of
 # aes() by its name, an object (data, fit) by its name, a constructor of
 # constants (position_dodge, element_text ...) as {fn:, args:}, anything
-# else as R (!r)
-.fig_lang_value <- function(x, arg = "", objects = .fig_object_args) {
+# else as R (!r).  `type`, the argument's (parsed), reads code as a typed
+# value: a function by its name as the name (fun = mean: "mean"), a
+# formula as its text (formula = y ~ x: "y ~ x"), a call of another
+# package the type names as {fn:, args:} (labels =
+# scales::label_percent()).
+.fig_lang_value <- function(x, arg = "", objects = .fig_object_args, type = NULL) {
   if (is.null(x)) return(tfl_r("NULL"))
   if (is.atomic(x) && length(x) == 1L) return(x)
   if (is.name(x)) {
     if (arg %in% objects) return(as.character(x))
-    return(tfl_r(as.character(x)))
+    nm <- as.character(x)
+    if (.fig_type_has(type, "function") && .schema_is_fun_name(nm)) return(nm)
+    # a smooth's method by its function (method = lm) is its name, as
+    # ggplot2 takes it; a legend key's draw_key_rect its "rect"
+    if (identical(arg, "method") && nm %in% c("lm", "glm", "loess")) return(nm)
+    if (identical(arg, "key_glyph") && startsWith(nm, "draw_key_")) return(sub("^draw_key_", "", nm))
+    return(tfl_r(nm))
   }
   if (is.call(x)) {
     f <- if (is.name(x[[1L]])) as.character(x[[1L]]) else .fig_deparse(x[[1L]])
     a <- as.list(x)[-1L]
+    # Hmisc::smean.cl.normal, a function by its name
+    if (identical(f, "::") && .fig_type_has(type, "function") && .schema_is_fun_name(.fig_deparse(x))) {
+      return(.fig_deparse(x))
+    }
+    if (identical(f, "~") && .fig_type_has(type, "tilde")) {
+      txt <- .fig_deparse(x)
+      if (.schema_is_tilde(txt) && identical(str2lang(txt), x)) return(txt)
+    }
+    # a date scale's dates: as.Date("2024-01-01"), as.Date(c("2024-01-01", NA))
+    if (identical(f, "as.Date") && length(a) == 1L && .fig_type_dates(type)) {
+      d <- a[[1L]]
+      if (is.call(d) && identical(d[[1L]], as.name("c"))) d <- as.list(d)[-1L]
+      d <- lapply(as.list(d), function(e) if (is.atomic(e) && length(e) == 1L && is.na(e)) NA else e)
+      if (length(d) && is.null(names(d)) && .fig_is_dates(d)) return(unlist(d))
+    }
     if (identical(f, "aes") && identical(arg, "mapping")) {
-      out <- lapply(a, function(e) if (is.name(e)) as.character(e) else tfl_r(.fig_deparse(e)))
+      # aes(displ, hwy): the first two unnamed are x and y, as aes() takes them
+      nm <- names(a) %||% rep("", length(a))
+      un <- which(!nzchar(nm))
+      if (length(un) <= 2L) nm[un] <- c("x", "y")[seq_along(un)]
+      if (any(!nzchar(nm)) || anyDuplicated(nm)) return(tfl_r(.fig_deparse_r(x)))
+      names(a) <- nm
+      out <- lapply(a, function(e) {
+        # (a name that is not syntactic keeps its backticks: `A-B`)
+        if (is.name(e)) return(.fig_col_text(as.character(e)))
+        # a constant of a number (group = 1): the number; a text in its
+        # quotes (colour = "Overall": '"Overall"')
+        if ((is.numeric(e) || is.logical(e)) && length(e) == 1L) return(e)
+        .fig_aes_text(e) %||% tfl_r(.fig_deparse_r(e))
+      })
       return(out)
     }
     if (identical(f, "list") && arg %in% .fig_list_args && length(a) &&
@@ -235,16 +448,80 @@ tfl_plot <- function(name, items = list(), from = "own") {
         all(vapply(a, function(e) is.atomic(e) && length(e) == 1L, NA))) {
       return(unlist(a))
     }
-    if (f %in% .fig_constructors && all(nzchar(names(a) %||% rep("", length(a))))) {
-      vals <- lapply(stats::setNames(names(a), names(a)), function(k) .fig_lang_value(a[[k]], k))
-      if (!any(vapply(vals, inherits, NA, "tfl_r"))) return(tfl_call(f, vals))
+    # a named vector of constants (values = c(A = "red", B = "blue")) as a
+    # map, which is written back c(...)
+    if (identical(f, "c") && length(a) && all(nzchar(names(a) %||% "")) && !anyDuplicated(names(a)) &&
+        all(vapply(a, function(e) is.atomic(e) && length(e) == 1L && !is.null(e), NA)) &&
+        !arg %in% .fig_list_args) {
+      return(lapply(a, identity))
+    }
+    # 1:5 (whole numbers): the numbers
+    if (identical(f, ":") && all(vapply(a, function(e) is.numeric(e) && length(e) == 1L &&
+                                         e == round(e), NA)) && abs(a[[2L]] - a[[1L]]) < 100) {
+      return(as.numeric(seq(a[[1L]], a[[2L]])))
+    }
+    # a constructor of a plot's value (a position, a guide, an element,
+    # theme(), unit(), rel(), sec_axis() ...): {fn:, args:}, its positional
+    # arguments named by its formals, an argument that is no constant as R
+    # in it
+    # (scales' percent_format() bare, the package attached: scales::)
+    fq <- .fig_scales_name(f)
+    if (.fig_reads_as_call(f) || .fig_type_takes_call(type, fq)) {
+      named <- .fig_name_args(x, .fig_find_value_fun(fq))
+      a <- as.list(named)[-1L]
+      if (all(nzchar(names(a) %||% rep("", length(a))))) {
+        ty <- .fig_arg_types(fq, lapply(a, function(e) if (is.character(e)) e))
+        vals <- lapply(stats::setNames(names(a), names(a)),
+                       function(k) .fig_lang_value(a[[k]], k, type = ty[[k]]))
+        return(tfl_call(fq, vals))
+      }
     }
   }
-  tfl_r(.fig_deparse(x))
+  tfl_r(.fig_deparse_r(x))
 }
 
-# the constructors an argument is written as {fn:, args:} when its own
-# arguments are constants
+# a function of scales called bare (percent_format(), the package
+# attached) by its pkg::name, as the code writes it; any other as it is
+.fig_scales_name <- function(f) {
+  if (grepl("::", f, fixed = TRUE) || !requireNamespace("scales", quietly = TRUE) ||
+      !f %in% getNamespaceExports("scales")) return(f)
+  if (requireNamespace("ggplot2", quietly = TRUE) && f %in% getNamespaceExports("ggplot2")) return(f)
+  paste0("scales::", f)
+}
+
+# whether a call in an argument is read as {fn:, args:}: the constructors
+# below, and ggplot2's functions of a guide, a position, an element, a
+# theme and the helpers (expansion(), sec_axis(), margin_auto(), unit(),
+# labeller() ...); not vars() (its columns are no arguments)
+.fig_reads_as_call <- function(f) {
+  if (f %in% .fig_constructors) return(TRUE)
+  if (identical(f, "vars") || grepl("::", f, fixed = TRUE)) return(FALSE)
+  k <- .schema_gg_kind(f)
+  !is.na(k) && k %in% c("guide", "position", "element", "theme", "helper") &&
+    requireNamespace("ggplot2", quietly = TRUE) && f %in% getNamespaceExports("ggplot2")
+}
+
+# A call with its positional arguments named by the function's formals, in
+# the order written; as it is when `fun` is no closure or cannot name them
+.fig_name_args <- function(e, fun) {
+  given <- names(as.list(e)[-1L]) %||% rep("", length(e) - 1L)
+  if (is.null(fun) || !is.function(fun) || is.primitive(fun)) return(e)
+  m <- tryCatch(match.call(fun, e, expand.dots = TRUE), error = function(err) NULL)
+  if (is.null(m)) return(e)
+  # match.call() puts them in the formals' order and names the positional
+  # ones -- those (not named as given) take the positional places, in
+  # their order
+  mn <- names(as.list(m)[-1L])
+  pos <- setdiff(mn, given[nzchar(given)])
+  ord <- given
+  if (length(pos) >= sum(!nzchar(ord))) ord[!nzchar(ord)] <- pos[seq_len(sum(!nzchar(ord)))]
+  if (all(nzchar(ord)) && !anyNA(ord) && setequal(ord, mn)) {
+    return(as.call(c(list(m[[1L]]), as.list(m)[-1L][ord])))
+  }
+  m
+}
+
+# the constructors an argument is written as {fn:, args:}
 .fig_constructors <- c("position_dodge", "position_dodge2", "position_jitter",
                        "position_jitterdodge", "position_nudge", "position_stack",
                        "position_fill", "position_identity",
@@ -259,37 +536,81 @@ tfl_plot <- function(name, items = list(), from = "own") {
 .fig_lang_item <- function(e, env = NULL) {
   f <- .fig_deparse(e[[1L]])
   fun <- .fig_find_fun(f, env)
-  given <- names(as.list(e)[-1L]) %||% rep("", length(e) - 1L)
-  if (!is.null(fun) && is.function(fun) && !is.primitive(fun)) {
-    m <- tryCatch(match.call(fun, e, expand.dots = TRUE), error = function(err) NULL)
-    if (!is.null(m)) {
-      # the arguments in the order they were written: match.call() puts
-      # them in the formals' order and names the positional ones -- those
-      # (not named as given) take the positional places, in their order
-      mn <- names(as.list(m)[-1L])
-      pos <- setdiff(mn, given[nzchar(given)])
-      ord <- given
-      ord[!nzchar(ord)] <- pos[seq_len(sum(!nzchar(ord)))]
-      if (!anyNA(ord) && setequal(ord, mn)) {
-        e <- as.call(c(list(m[[1L]]), as.list(m)[-1L][ord]))
-      } else {
-        e <- m
-      }
-    }
-  }
+  e <- .fig_name_args(e, fun)
   a <- as.list(e)[-1L]
   nm <- names(a) %||% rep("", length(a))
   # an aes() given first, unnamed (geom_line(aes(...)))
   for (i in which(!nzchar(nm))) {
     if (is.call(a[[i]]) && identical(.fig_deparse(a[[i]][[1L]]), "aes")) nm[i] <- "mapping"
   }
+  # a card's positional `...` (xlim(0, 52)): its key, when they are constants
+  key <- .fig_positional_key(f)
+  if (any(!nzchar(nm)) && !is.null(key) && !key %in% nm) {
+    pos <- lapply(a[!nzchar(nm)], .fig_lang_value, arg = key)
+    if (all(vapply(pos, function(v) is.atomic(v) && length(v) == 1L && !is.object(v), NA))) {
+      a <- c(a[nzchar(nm)], stats::setNames(list(as.call(c(list(as.name("c")), unname(pos)))), key))
+      nm <- names(a)
+    }
+  }
   if (any(!nzchar(nm))) {
     # an argument the function's formals cannot name: the whole call as R
-    return(tfl_item(".r", list(code = tfl_r(.fig_deparse(e)))))
+    return(tfl_item(".r", list(code = tfl_r(.fig_deparse_r(e)))))
   }
   names(a) <- nm
   obj <- .fig_objects_of(f)
-  tfl_item(f, lapply(stats::setNames(nm, nm), function(k) .fig_lang_value(a[[k]], k, obj)))
+  ty <- .fig_arg_types(f, lapply(a, function(e) if (is.character(e)) e))
+  args <- lapply(stats::setNames(nm, nm), function(k) .fig_lang_value(a[[k]], k, obj, ty[[k]]))
+  if (f %in% c("facet_wrap", "facet_grid")) args <- .fig_facet_args(f, a, args)
+  tfl_item(f, args)
+}
+
+# A facet's variables as its columns, the SPEC's form (facets: PARAMCD,
+# rows: [SEX], cols: [TRTA]): facet_wrap(~PARAMCD), facet_wrap(vars(A, B)),
+# facet_grid(SEX ~ TRTA), facet_grid(rows = vars(SEX)), . for none.  Any
+# other (an expression of a column) stays R.
+.fig_facet_args <- function(f, a, args) {
+  # (facet_wrap()'s column that is not syntactic keeps its backticks: `A b`)
+  col_text <- if (identical(f, "facet_wrap")) .fig_col_text else identity
+  cols_of <- function(x) {
+    if (is.name(x)) return(if (identical(x, as.name("."))) character() else col_text(as.character(x)))
+    if (!is.call(x)) return(NULL)
+    op <- .fig_deparse(x[[1L]])
+    if (identical(op, "+") && length(x) == 3L) {
+      l <- cols_of(x[[2L]])
+      r <- cols_of(x[[3L]])
+      return(if (is.null(l) || is.null(r)) NULL else c(l, r))
+    }
+    if (identical(op, "vars") && length(x) > 1L && is.null(names(x)) &&
+        all(vapply(as.list(x)[-1L], is.name, NA))) {
+      return(vapply(as.list(x)[-1L], function(n) col_text(as.character(n)), ""))
+    }
+    NULL
+  }
+  as_cols <- function(v) if (length(v) == 1L) v else as.list(v)
+  one_sided <- function(x) is.call(x) && identical(x[[1L]], as.name("~")) && length(x) == 2L
+  two_sided <- function(x) is.call(x) && identical(x[[1L]], as.name("~")) && length(x) == 3L
+  if (identical(f, "facet_wrap") && !is.null(a$facets)) {
+    x <- if (one_sided(a$facets)) a$facets[[2L]] else a$facets
+    v <- if (is.call(x) || one_sided(a$facets)) cols_of(x)
+    if (length(v)) args$facets <- as_cols(v)
+    return(args)
+  }
+  if (identical(f, "facet_grid")) {
+    if (two_sided(a$rows) && is.null(a$cols)) {
+      r <- cols_of(a$rows[[2L]])
+      cc <- cols_of(a$rows[[3L]])
+      if (is.null(r) || is.null(cc) || !length(c(r, cc))) return(args)
+      out <- args[setdiff(names(args), "rows")]
+      i <- match("rows", names(args))
+      new <- c(if (length(r)) list(rows = as_cols(r)), if (length(cc)) list(cols = as_cols(cc)))
+      return(c(out[seq_len(i - 1L)], new, out[seq_along(out) >= i]))
+    }
+    for (k in intersect(c("rows", "cols"), names(a))) {
+      v <- if (is.call(a[[k]]) && identical(a[[k]][[1L]], as.name("vars"))) cols_of(a[[k]])
+      if (length(v)) args[[k]] <- as_cols(v)
+    }
+  }
+  args
 }
 
 .fig_find_fun <- function(f, env = NULL) {
@@ -299,9 +620,26 @@ tfl_plot <- function(name, items = list(), from = "own") {
   }
   if (!is.null(env) && exists(f, envir = env, mode = "function")) return(get(f, envir = env, mode = "function"))
   for (pkg in c("ggplot2", "ggsurvfit", "patchwork", "scales")) {
+    # (an export of the package or one it passes on: ggplot2's unit(), grid's)
     if (requireNamespace(pkg, quietly = TRUE) &&
-        exists(f, envir = asNamespace(pkg), inherits = FALSE)) {
+        (exists(f, envir = asNamespace(pkg), inherits = FALSE) || f %in% getNamespaceExports(pkg))) {
       return(getExportedValue(pkg, f))
+    }
+  }
+  NULL
+}
+
+# The function a value's call is of: as .fig_find_fun(), and base R's that
+# a value is a call of (seq(0, 52, by = 4), as.Date(), grDevices' palettes
+# hcl.colors(3, "Dark 3")) -- seq()'s arguments its default method's
+.fig_find_value_fun <- function(f) {
+  fun <- .fig_find_fun(f)
+  if (!is.null(fun)) return(fun)
+  if (identical(f, "seq")) return(seq.default)
+  for (pkg in c("base", "grDevices")) {
+    if (exists(f, envir = asNamespace(pkg), inherits = FALSE)) {
+      fun <- get(f, envir = asNamespace(pkg))
+      if (is.function(fun)) return(fun)
     }
   }
   NULL
@@ -318,7 +656,7 @@ tfl_plot <- function(name, items = list(), from = "own") {
 .fig_content_code <- function(output, name = "content") {
   parts <- .fig_split_content(output$content)
   lv <- .codelist_levels(.codelists_rows(output$codelists, output$id), output$id)
-  d <- .fig_steps_code(output$data$steps %||% list(), lv)
+  d <- .fig_steps_code(output$data$steps %||% list(), lv, order = TRUE)
   head <- if (length(lv)) .codelists_head(lv)
   plots <- parts$plots
   one <- length(plots) == 1L
@@ -357,7 +695,11 @@ tfl_plot <- function(name, items = list(), from = "own") {
         terms <- c(terms, .fig_term_text(.fig_item_lang(it)))
         pk <- if (grepl("::", it$fn, fixed = TRUE)) sub("::.*$", "", it$fn) else .fig_fn_package(fn)
         if (!is.null(pk) && !pk %in% .fig_attached) needs <- c(needs, pk)
-        if (fn %in% c("ggsurvfit", "ggcuminc") || startsWith(fn, "add_")) libs <- c(libs, "ggsurvfit")
+        if (fn %in% c("ggsurvfit", "ggcuminc") || startsWith(fn, "add_") || identical(pk, "ggsurvfit")) {
+          libs <- c(libs, "ggsurvfit")
+        }
+        # patchwork's inside one plot (p + inset_element(...))
+        if (identical(pk, "patchwork")) libs <- c(libs, "patchwork")
       }
       lines <- .fig_plus_chain(target, terms)
     }
@@ -547,6 +889,8 @@ tfl_fig_content_from_design <- function(design) {
   kinds <- vapply(layers, function(l) l$layer %||% "", "")
   ard_layers <- layers[kinds == "ard_number"]
   pname <- .pv(plot, "palette")
+  # (the figure's own colours: its `pal`, not the setup's palette scale)
+  scale_pal <- if (is.null(.fig_own_colours(plot))) pname
   items <- list()
   for (t in .fig_split_plus(main)) {
     txt <- .fig_deparse(t)
@@ -558,7 +902,7 @@ tfl_fig_content_from_design <- function(design) {
       items <- c(items, list(tfl_item("tfl_ard_number", .fig_plain_args(l))))
       next
     }
-    pal_scale <- .fig_pal_scale(t, pname)
+    pal_scale <- if (!is.null(scale_pal)) .fig_pal_scale(t, scale_pal)
     if (!is.null(pal_scale)) {
       items <- c(items, list(pal_scale))
       next
@@ -665,7 +1009,12 @@ tfl_fig_content_from_design <- function(design) {
 #' `{fn:, args:}` for a call of constants), and checks them
 #' ([tfl_schema_check()]).  A figure's functions (`ggplot`, `geom_line`,
 #' `labs` ...) are read as the figure's content reads them: `aes()` as a
-#' map of columns, the plot's data by its name.
+#' map of columns (`aes(AVAL, CHG)` is x and y), the plot's data by its
+#' name, a facet's variables as its columns (`facet_grid(SEX ~ TRTA)` is
+#' `rows: SEX, cols: TRTA`), a value's constructor (a position, a guide,
+#' an element, `theme()`, `unit()`, `rel()`, `sec_axis()` ...) as
+#' `{fn:, args:}` with its arguments named and any that is no constant as
+#' `!r` in it, `1:5` as the numbers.
 #'
 #' @param fn The function's name (`plan_cells`, `geom_line`).
 #' @param args The item's arguments, a named list.
@@ -736,8 +1085,7 @@ tfl_args_from_r <- function(fn, text) {
   # (NULL is the R text NULL: before is.atomic(), TRUE for NULL before R 4.4)
   if (is.null(x)) return(.spec_expr("NULL"))
   if (is.atomic(x)) return(x)
-  env <- new.env(parent = if (requireNamespace("rtfreporter", quietly = TRUE))
-    asNamespace("rtfreporter") else baseenv())
+  env <- new.env(parent = asNamespace("rtfreporter"))
   v <- tryCatch(eval(x, env), error = function(e) NULL)
   if (!is.null(v) && !is.function(v)) return(v)
   .spec_expr(.fig_deparse(x))

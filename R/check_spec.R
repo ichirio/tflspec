@@ -135,7 +135,12 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE) {
           invokeRestart("muffleWarning")
         })
     }
-    ro <- tryCatch(tfl_resolve_output(o, study), error = function(e) e)
+    # (a `plot:` key that does nothing in the template: a warning of the report)
+    ro <- tryCatch(withCallingHandlers(tfl_resolve_output(o, study),
+      tfl_plot_key_unused = function(w) {
+        add(output_id = id, part = "plot", item = w$key, level = "warning", message = w$text)
+        invokeRestart("muffleWarning")
+      }), error = function(e) e)
     if (inherits(ro, "error")) {
       add(output_id = id, part = "content", item = "", level = "error", message = one(ro))
       next
@@ -172,8 +177,17 @@ tfl_check_spec <- function(study, output_id = NULL, build = FALSE) {
       next
     }
     form_ok <- TRUE
+    # (the cells plan_stat_groups() names -- a column's heading, "n (%)" --
+    # are plan_cells() entries of their own, no row's label)
+    groups <- as.character(unlist(lapply(
+      Filter(function(it) identical(it$fn, "plan_stat_groups"), ro$content),
+      function(it) names(it$args))))
+    groups <- groups[nzchar(groups) & !startsWith(groups, ".")]
     for (it in ro$content) {
       p <- tfl_schema_check(it)
+      if (nrow(p) && identical(it$fn, "plan_cells") && length(groups)) {
+        p <- p[!(p$arg %in% groups & grepl("is a row's label", p$message, fixed = TRUE)), , drop = FALSE]
+      }
       if (nrow(p)) {
         # (an argument the function does not have stops the program: an
         # error; the schema's other warnings -- a renamed argument -- are

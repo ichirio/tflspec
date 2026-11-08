@@ -127,6 +127,10 @@
               doc = "TRUE: each arm's legend text has its median survival and 95% CI, \"Drug X: 12.3 (9.8, 15.1)\" (from the fit; NE when not reached)"),
     tfl_param("legend_median_digits", 1L, type = "number",
               doc = "the decimals of the median and its CI in the legend"),
+    tfl_param("legend_median_text", "{arm}: {median} ({lcl}, {ucl})", type = "text",
+              doc = paste0("the wording of that legend text, with {arm}, {median}, {lcl} and {ucl} for the arm ",
+                           "and its median and 95% CI limits (any may be left out or repeated): ",
+                           "\"{arm}, Median (95% CI): {median} ({lcl}, {ucl})\"; no effect without `legend_median`")),
     tfl_param("pvalue", FALSE, type = "flag", tier = "usual",
               doc = "the log-rank p-value (add_pvalue())"),
     tfl_param("pvalue_location", "annotation", type = "choice", choices = c("annotation", "caption"),
@@ -149,6 +153,41 @@
     if (identical(it$fn, fn)) for (k in names(set)) it$args[[k]] <- set[[k]]
     it
   })
+}
+
+# The legend's median wording: its default, and the tokens it takes (each
+# the R expression of its value, from the fit's summary)
+.tpl_km_median_text <- "{arm}: {median} ({lcl}, {ucl})"
+.tpl_km_median_tokens <- c(
+  arm = "arm_of",
+  median = "fmt_med(med[, \"median\"])",
+  lcl = "fmt_med(med[, grep(\"LCL$\", colnames(med))[1]])",
+  ucl = "fmt_med(med[, grep(\"UCL$\", colnames(med))[1]])")
+
+# The R expression for the legend's labels from the wording `text`: a
+# sprintf() whose format has a %s for each token, the arguments in token
+# order (a literal % doubled); no token: the text itself, once an arm
+.tpl_km_median_label <- function(text) {
+  if (!is.character(text) || length(text) != 1L || is.na(text)) {
+    .ard_stop("`legend_median_text` is one text (\"{arm}: {median} ({lcl}, {ucl})\").")
+  }
+  allowed <- names(.tpl_km_median_tokens)
+  tokens <- regmatches(text, gregexpr("[{][^{}]*[}]", text))[[1L]]
+  bad <- setdiff(unique(tokens), sprintf("{%s}", allowed))
+  rest <- gsub("[{][^{}]*[}]", "", text)
+  if (length(bad) || grepl("[{}]", rest)) {
+    .ard_stop(sprintf("`legend_median_text`: %s is not one of %s.",
+                      paste(if (length(bad)) bad else regmatches(rest, regexpr("[{}]", rest)), collapse = ", "),
+                      paste(sprintf("{%s}", allowed), collapse = ", ")))
+  }
+  if (!length(tokens)) return(sprintf("rep(%s, length(arm_of))", q(text)))
+  lit <- gsub("%", "%%", strsplit(paste0(text, "\001"), "[{][^{}]*[}]")[[1L]], fixed = TRUE)
+  lit[length(lit)] <- sub("\001$", "", lit[length(lit)])
+  fmt <- paste0(paste0(lit[-length(lit)], "%s", collapse = ""), lit[length(lit)])
+  args <- unname(.tpl_km_median_tokens[substr(tokens, 2L, nchar(tokens) - 1L)])
+  first <- seq_len(min(2L, length(args)))
+  paste0("sprintf(", q(fmt), ", ", paste(args[first], collapse = ", "),
+         if (length(args) > 2L) paste0(",\n  ", paste(args[-first], collapse = ", ")), ")")
 }
 
 # The layout's design: the preset's (tfl_fig_template("km_ci"), every
@@ -174,6 +213,15 @@
   tu <- kinds() == "time_unit"
   f$stats <- c(f$steps[tu], f$stats)
   f$steps <- f$steps[!tu]
+  # the subjects with no time or no censoring flag: survfit() drops them
+  # without a word (and the risk table with them), so left out, and said
+  time_var <- a$time %||% "AVAL"
+  f$stats <- c(list(list(step = "filter",
+    expr = sprintf("!is.na(%s) & !is.na(%s)", time_var, censor),
+    label = sprintf("the subjects with no %s or %s have no place on a curve: left out, with a warning",
+                    time_var, censor),
+    warn = sprintf("%s: {n} subjects with a missing %s or %s were left out", name, time_var, censor))),
+    f$stats)
   # the subjects with an empty group: no curve of theirs (survfit2() would
   # draw one with no name, and a row at risk with none), left out and said
   if (!is.null(a$by)) {
@@ -182,6 +230,16 @@
       label = sprintf("the subjects with an empty %s have no curve: left out, with a warning", a$by),
       warn = sprintf("%s: {n} subjects with an empty %s were left out", name, a$by))), f$stats)
   }
+  # a dataset of several parameters pooled gives twice the subjects: stopped
+  # (km: the `param` argument; the report types: a param step of the data)
+  f$stats <- c(list(list(step = "code",
+    label = "one parameter only: several in the data would be pooled",
+    code = paste0(
+      "if (\"PARAMCD\" %in% names(df) && length(unique(df$PARAMCD)) > 1) {\n",
+      "  stop(\"", name, ": the data has more than one PARAMCD (\", toString(sort(unique(df$PARAMCD))),\n",
+      "       \"); ", if (identical(name, "km")) "give `param`, the one to analyse" else
+        "keep one in the data steps (a param step)", "\", call. = FALSE)\n",
+      "}"))), f$stats)
   fit <- match("survfit", vapply(f$stats, function(s) s$step %||% "", ""))
   if (!is.null(a$conf_type)) f$stats[[fit]]$conf_type <- a$conf_type
   if (!is.null(a$conf_level)) f$stats[[fit]]$conf_level <- a$conf_level
@@ -189,15 +247,17 @@
   # step after it, and the scales' labels
   if (isTRUE(a$legend_median)) {
     dg <- as.integer(a$legend_median_digits %||% 1L)
+    lab <- .tpl_km_median_label(a$legend_median_text %||% .tpl_km_median_text)
     f$stats <- append(f$stats, list(list(step = "code",
       label = "the legend's text: each arm's median survival (95% CI)",
       code = paste0(
         "med <- summary(fit)$table\n",
         "if (!is.matrix(med)) med <- matrix(med, nrow = 1, dimnames = list(\"All\", names(med)))\n",
-        "fmt_med <- function(x) ifelse(is.na(x), \"NE\", formatC(x, format = \"f\", digits = ", dg, "))\n",
+        "fmt_med <- function(x) {\n",
+        "  ifelse(is.na(x), \"NE\", formatC(rtfreporter::round_num(x, ", dg, "), format = \"f\", digits = ", dg, "))\n",
+        "}\n",
         "arm_of <- sub(\"^[^=]*=\", \"\", rownames(med))\n",
-        "legend_labels <- stats::setNames(sprintf(\"%s: %s (%s, %s)\", arm_of, fmt_med(med[, \"median\"]),\n",
-        "  fmt_med(med[, grep(\"LCL$\", colnames(med))[1]]), fmt_med(med[, grep(\"UCL$\", colnames(med))[1]])), arm_of)"))),
+        "legend_labels <- stats::setNames(", lab, ", arm_of)"))),
       fit)
     f$plot$legend_labels <- tfl_r("legend_labels")
   }
@@ -215,7 +275,7 @@
                 linewidth = a$median_linewidth)
   } else .tpl_km_drop(ct, "hline")
   rt <- isTRUE(a$risk_table %||% TRUE)
-  ct <- if (rt) .tpl_km_set(ct, "risk_table", title = a$risk_title, size = a$risk_size,
+  ct <- if (rt) .tpl_km_set(ct, "risk_table", title = a$plot$risk_title %||% a$risk_title, size = a$risk_size,
                             height = a$risk_height) else .tpl_km_drop(ct, "risk_table")
   f$content <- ct
   # the figure's settings the arguments say
@@ -232,8 +292,12 @@
   bars <- identical(a$ci, "bars")
   if (rt || bars || !is.null(a$x_max) || !is.null(a$x_step)) {
     to <- if (!is.null(a$x_max)) format(a$x_max) else "max(fit$time)"
-    br <- if (!is.null(a$x_step)) sprintf("seq(0, %s, by = %s)", to, format(a$x_step))
-          else sprintf("pretty(c(0, %s))", to)
+    # (no x_max: the last break at or after the last time, else the curves'
+    # end is cut off the axis)
+    st <- if (!is.null(a$x_step)) format(a$x_step)
+    br <- if (is.null(a$x_step)) sprintf("pretty(c(0, %s))", to)
+          else if (!is.null(a$x_max)) sprintf("seq(0, %s, by = %s)", to, st)
+          else sprintf("seq(0, ceiling(%s / %s - 1e-8) * %s, by = %s)", to, st, st, st)
     f$stats <- c(f$stats, list(list(step = "code", label = if (rt) "the x axis's breaks, the times at risk"
                                     else "the x axis's breaks", code = paste("x_breaks <-", br))))
     f$plot$add <- c(f$plot$add, list(list(fn = "scale_x_continuous", args = c(list(
@@ -293,7 +357,7 @@
       list(fn = "theme", args = list(legend.title = tfl_r("element_text()")))))
   }
   # the escape hatch: any other setting, over the template's
-  if (length(a$plot)) f$plot <- .merge_map(f$plot, a$plot)
+  if (length(a$plot)) f$plot <- .tpl_plot_over(f$plot, a$plot)
   if (isTRUE(a$pvalue)) {
     loc <- a$pvalue_location %||% "annotation"
     f$content <- c(f$content, list(tfl_item("call", list(
@@ -329,11 +393,28 @@
 }
 
 # The look: the figure style standard's (tfl_param(study = "km.<key>")),
-# not a report type's arguments; a report changes it with `+` layers or
-# `plot:`.  (The layout `km` keeps them, the types hide them.)
+# not a report type's arguments.  A report's `plot:` sets the figure
+# settings among them: theme, palette and base_size (the plot's arguments,
+# .tpl_km_plot_args) and risk_title (the risk table's title); the others
+# are the study's figure style, or the report's own `+` layers.  (The
+# layout `km` keeps them all, the types hide them.)
 .tpl_km_look <- c("censor_shape", "censor_size", "censor_stroke", "median_linetype",
                   "median_colour", "median_linewidth", "risk_title", "risk_height", "risk_size",
                   "linewidth", "palette", "theme", "base_size", "ci_alpha")
+
+# What a report's `plot:` does not reach of the look: the look less the
+# figure's own settings (.fig_plot_fields(): theme, palette, base_size) and
+# the keys the types read from `plot:` (risk_title, .tpl_km_plot_routed).
+# tfl_resolve_output() warns of them (.tpl_plot_unused()); the second is
+# what each one is, for the warning's text.  Both are derived from the
+# look, so a key added to it is in the warning until a test says what it is.
+.tpl_km_plot_routed <- "risk_title"
+.tpl_km_look_what <- c(
+  censor_shape = "its censor marks' shape", censor_size = "its censor marks' size",
+  censor_stroke = "its censor marks' stroke", median_linetype = "its median line's linetype",
+  median_colour = "its median line's colour", median_linewidth = "its median line's width",
+  risk_height = "its risk table's height", risk_size = "its risk table's text size",
+  linewidth = "its curves' line width", ci_alpha = "its confidence band's transparency")
 
 # The data stage: a report type's data are the report's own `data:` steps
 # (the layout `km` keeps them as its arguments)

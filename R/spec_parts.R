@@ -200,7 +200,7 @@ tfl_data_code <- function(output, study, ard = TRUE) {
   ro <- tfl_resolve_output(output, study)
   own <- ro$data %||% list(source = "ard")
   objs <- list()
-  if (identical(own$source, "dataset") && identical(ro$kind, "table")) objs$data <- own
+  if (identical(own$source, "dataset") && ro$kind %in% c("table", "listing")) objs$data <- own
   else objs[[as.character(own$object %||% "ard")]] <- list(source = "ard")
   for (p in .content_parts(ro$content)) {
     if (is.null(objs[[p$object]])) objs[[p$object]] <- p$data %||% list(source = "ard")
@@ -227,16 +227,27 @@ tfl_data_code <- function(output, study, ard = TRUE) {
 }
 
 # a dataset's records as a listing's data part, made under `name`
+# The R steps of a records data (`data.steps`: a template's subset), as the
+# lines of a listing's rework; NULL when none
+.records_rework <- function(data) {
+  if (!identical(data[["source"]], "dataset") || is.null(data[["steps"]])) return(NULL)
+  s <- .content_r_steps(list(kind = "listing", data = data))
+  if (length(s)) s
+}
+
 .records_code <- function(o, data, name, ard_spec) {
   txt <- function(x) {
     v <- unlist(lapply(x, as.character))
     if (!length(v)) NA_character_ else paste(v, collapse = " | ")
   }
+  # (a resolved report with no analysis set has NA)
+  pop <- Filter(Negate(is.na), as.list(data[["population"]] %||% o$population))
   l <- data.frame(output_id = o$id, dataset = txt(data[["dataset"]]), data = txt(data[["data"]]),
-                  population_id = txt(data[["population"]] %||% o$population),
+                  population_id = txt(pop),
                   where = txt(data[["where"]]), sort = txt(data[["sort"]]), stringsAsFactors = FALSE)
   sp <- tfl_listing_spec(l, data.frame(output_id = o$id, vars = "USUBJID"), check = FALSE)
-  code <- tfl_listing_code(sp, o$id, ard = ard_spec, part = "data")
+  code <- tfl_listing_code(sp, o$id, ard = ard_spec, part = "data",
+                           rework = .records_rework(data))
   at <- grep("^data <- ", code)
   if (length(at)) code[at] <- sub("^data <- ", paste0(name, " <- "), code[at])
   code

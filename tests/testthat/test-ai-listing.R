@@ -81,7 +81,24 @@ test_that("the TOC's listing: a request of its own, its answer checked and built
   expect_identical(r$status, "ok")
   expect_true(file.exists(file.path(d, r$rtf)))
   x <- paste(readLines(file.path(d, r$rtf), warn = FALSE), collapse = " ")
-  expect_match(x, "Start day", fixed = TRUE)
+  # (the header wraps where the fitted column is narrower than it)
+  expect_match(x, "Start( |\\\\line )day")
+  # the listing's program has its records' steps (the filter, the sort), not its layout alone
+  p <- readLines(sub("[.]rtf$", ".R", file.path(d, r$rtf)), encoding = "UTF-8")
+  expect_true("# ---- the records ----" %in% p)
+  expect_true(any(grepl("AESER == \"Y\"", p, fixed = TRUE)))
+  expect_true(any(grepl("arrange(", p, fixed = TRUE)))
+  expect_true(which(p == "# ---- the records ----") < which(p == "# ---- content ----"))
+  # the run's messages are in ai/build.log, under the run's date; status.md says so
+  lg <- readLines(file.path(d, "ai", "build.log"), encoding = "UTF-8")
+  expect_match(lg[1L], "^# [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9:]+: run.R$")
+  st <- readLines(file.path(d, "ai", "status.md"), encoding = "UTF-8")
+  expect_true("Messages: ai/build.log" %in% st)
+  # a second run appends
+  suppressMessages(tfl_ai_run(d, requests = req, rebuild = TRUE))
+  lg2 <- readLines(file.path(d, "ai", "build.log"), encoding = "UTF-8")
+  expect_gt(length(lg2), length(lg))
+  expect_identical(sum(grepl("^# [0-9]{4}-", lg2)), 2L)
 })
 
 test_that("a listing's answer: no analysis set, a dataset of parameters not kept, a column not in the data -- errors", {

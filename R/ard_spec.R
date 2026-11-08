@@ -279,6 +279,39 @@ tfl_read_ard_spec <- function(path, check = TRUE, statistics = NULL,
 #'   a list (`method.args = list(...)`), a list or formula of selectors
 #'   (`fmt_fun = everything() ~ 1L`), an expression not in quotes (a `post`
 #'   step's `filter = n >= 2`).  A name or a call is the program's to judge.
+#'   A name a cardx function passes on through `...` to a stats or survival
+#'   function that has no such argument either is said too
+#'   (`ard_stats_t_test(var.eqaul = TRUE)`: `t.test()` would ignore it), and
+#'   one `ard_car_anova()` passes on to the `car::Anova()` method of the
+#'   model its `x` fits (`x = lm(...), tpye = "III"`: `Anova.lm()` would
+#'   ignore it and give type II).
+#'   The same for the cards / cardx calls in a `custom` row's `code`, written
+#'   with their package (`cards::ard_tabulate(data, denominatr = ...)`,
+#'   `cardx::ard_categorical_ci(..., method = "wilson_cc")`) or by the plain
+#'   name of a function cards or cardx exports (`ard_tabulate(...)` after
+#'   `library(cards)`, unless the code binds that name itself), inside a pipe
+#'   or an `ard_stack()` too; the rest of the code is the program's.
+#'
+#' @section The analyses sheet:
+#' `strata` names the variables the analysis is repeated within (cards'
+#' strata: a subgroup, a parameter by visit), `|` between them.
+#' `denominator` says what the percentages are of: `population`, `row`,
+#' `column` or `cell`, another population, a dataset, an analysis data,
+#' an object, or numbers (`86`, or `c("Drug X" = 86, "Placebo" = 85)`, each
+#' named by a value of the one `by`); blank is the method's default.  A
+#' `custom` analysis takes neither (its code says it), and a method whose
+#' function has no such argument is refused.
+#'
+#' `method` is a keyword of [tfl_ard_methods()], a `pkg::function`, or a
+#' function of the study's own: the study key `source` (on the `study`
+#' sheet, `|` between files, relative to the study folder) names the R
+#' files that define it.
+#'
+#' `args` is read as the arguments of a call, in R
+#' (`conf.level = 0.9`), and one that does not parse is refused.  An
+#' argument a column also gives (`by`, `variables`, `strata`,
+#' `denominator`, `statistics`, `overall`) may not be in both: write it
+#' in one place.
 #' @export
 tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   old <- .set_catalogs(statistics, methods)
@@ -447,8 +480,9 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
       add(i, "overall", sprintf(paste(
         "%s: inside %s the overall is the parent's: set `overall` on its row"),
         tag, a$parent[i]))
-    } else if (a$method[i] %in% c("custom", "subjects", "cards::ard_strata",
-                                  "cards::ard_pairwise")) {
+    } else if (.wrapper_call(a$method[i]) %in% c("custom", "subjects",
+                                                 "cards::ard_strata",
+                                                 "cards::ard_pairwise")) {
       add(i, "overall", sprintf("%s: a `%s` analysis takes no `overall`%s",
                                 tag, a$method[i],
                                 if (identical(a$method[i], "custom"))
@@ -514,7 +548,7 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
     f <- .parse_formats(a$formats[i])
     bad <- names(f)[is.na(f) | !.fmt_ok(f)]
     if (length(bad)) add(i, "formats", sprintf(
-      "%s / %s: formats are statistic=format, the format xx.x, xx.x%%, a number of decimals or pvalue (%s)",
+      "%s / %s: formats are statistic=format, the format xx.x, xx.x%%, xx.x*1000, a number of decimals or pvalue (%s)",
       a$output_id[i], a$analysis_id[i], paste(bad, collapse = ", ")))
   }
   cust <- which(a$method %in% "custom" & is.na(a$code))
@@ -534,6 +568,8 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 # computed, not on what.  The problems as rows (.ard_problem()).
 .ard_parent_problems <- function(a) {
   par <- a$parent %||% rep(NA_character_, nrow(a))
+  # a wrapper's keyword (`stack`, `subgroups`, `pairwise`) as its function
+  wm <- .wrapper_call(a$method)
   pr <- list(.spec_problems_empty())
   add <- function(i, field, message) {
     pr[[length(pr) + 1L]] <<- .ard_problem(a, i, field, message)
@@ -547,10 +583,11 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
       next
     }
     p <- p[1L]
-    if (!a$method[p] %in% .ard_wrappers) {
+    if (!wm[p] %in% .ard_wrappers) {
       add(i, "parent", sprintf(paste(
         "%s: its parent %s runs no other analyses -- a parent's method is",
-        "one of %s"), tag(i), par[i], paste(.ard_wrappers, collapse = ", ")))
+        "one of %s"), tag(i), par[i],
+        paste(c(names(.ard_wrapper_keywords), .ard_wrappers), collapse = ", ")))
       next
     }
     if (!is.na(par[p])) {
@@ -558,7 +595,7 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
                                tag(i), par[i]))
     }
     own <- c(intersect("data", names(a)), "dataset", "population_id", "where",
-             if (identical(a$method[p], "cards::ard_stack")) c("by", "strata"))
+             if (identical(wm[p], "cards::ard_stack")) c("by", "strata"))
     set <- own[!is.na(unlist(a[i, own]))]
     if (length(set)) {
       add(i, set[1L], sprintf(
@@ -566,7 +603,7 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
         paste0("`", set, "`", collapse = ", "),
         if (length(set) > 1L) "are" else "is", par[i]))
     }
-    if (a$method[i] %in% c("subjects", "custom", .ard_wrappers)) {
+    if (wm[i] %in% c("subjects", "custom", .ard_wrappers)) {
       add(i, "method", sprintf("%s: a `%s` analysis cannot run inside %s",
                                tag(i), a$method[i], par[i]))
     }
@@ -576,21 +613,21 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
         "`data` or `population`"), tag(i), par[i]))
     }
   }
-  for (p in which(a$method %in% .ard_wrappers)) {
+  for (p in which(wm %in% .ard_wrappers)) {
     kids <- which(!is.na(par) & par == a$analysis_id[p] &
                     a$output_id == a$output_id[p])
     if (!length(kids)) next
-    if (!identical(a$method[p], "cards::ard_stack") && length(kids) > 1L) {
+    if (!identical(wm[p], "cards::ard_stack") && length(kids) > 1L) {
       add(p, "method", sprintf("%s: %s runs one analysis; %d name it as parent",
                                tag(p), a$method[p], length(kids)))
     }
-    if (identical(a$method[p], "cards::ard_pairwise") &&
+    if (identical(wm[p], "cards::ard_pairwise") &&
         length(.split_bar(a$variables[p])) != 1L) {
       add(p, "variables", sprintf(
         "%s: ard_pairwise() compares the pairs of ONE column's levels: `variables`",
         tag(p)))
     }
-    if (identical(a$method[p], "cards::ard_stack")) {
+    if (identical(wm[p], "cards::ard_stack")) {
       v <- unlist(lapply(kids, function(k) .split_bar(a$variables[k])))
       if (anyDuplicated(v)) {
         add(p, "variables", sprintf(paste(
@@ -621,17 +658,18 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 .ard_spec_flat <- function(a) {
   par <- a$parent %||% rep(NA_character_, nrow(a))
   if (all(is.na(par))) return(a)
+  wm <- .wrapper_call(a$method)
   drop <- logical(nrow(a))
   for (i in which(!is.na(par))) {
     p <- which(a$output_id == a$output_id[i] & a$analysis_id == par[i])[1L]
     if (is.na(p)) next
     for (cn in c("dataset", "population_id", "where")) a[[cn]][i] <- a[[cn]][p]
     # a stack's overall (.overall = TRUE) is each of its analyses'
-    if (identical(a$method[p], "cards::ard_stack") && !is.null(a$overall)) {
+    if (identical(wm[p], "cards::ard_stack") && !is.null(a$overall)) {
       a$overall[i] <- a$overall[p]
     }
     grp <- c(.split_bar(a$by[p]),
-             if (!identical(a$method[p], "cards::ard_stack"))
+             if (!identical(wm[p], "cards::ard_stack"))
                c(.split_bar(a$strata[p]), .split_bar(a$by[i])))
     a$by[i] <- if (length(grp)) paste(unique(grp), collapse = " | ") else NA
     drop[p] <- TRUE
@@ -864,229 +902,6 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
   sprintf("the installed %s %s has no %s()", pkg, utils::packageVersion(pkg), fn)
 }
 
-# The arguments in `args` the installed function does not have, one line
-# per analysis: "T1 / AGE: cards 0.9.0's ard_summary() has no argument
-# `nope` (it has: by, variables, ...)".  A keyword's function is the
-# catalog's; `custom`, a subject flag and a study's own function are not
-# looked at.  The names tflspec takes for itself (.overall, .missing) and
-# the column arguments are known.  A function with `...` is judged only
-# when its own code checks them (rlang's check_dots_empty() /
-# check_dots_used(), as cards' functions do): one that passes them on
-# (cardx::ard_car_anova(type = ) to car::Anova()) takes what it does not
-# name.  Then the values written as they are (.ard_arg_value_problems()),
-# and the arguments of the `post` steps (.post_args_unknown()).
-.ard_args_unknown <- function(x) {
-  a <- x$analyses
-  keys <- tfl_ard_methods()
-  out <- character()
-  for (i in which(!is.na(a$args))) {
-    m <- a$method[i]
-    if (identical(m, "custom")) next
-    k <- .method_key(m, keys)
-    call <- if (is.na(k)) m else keys$call[k]
-    if (startsWith(call, "(") || !grepl("::", call, fixed = TRUE)) next
-    fm <- .ard_formals(call)
-    if (is.null(fm)) next
-    pkg <- sub("::.*$", "", call)
-    tag <- paste(a$output_id[i], a$analysis_id[i], sep = " / ")
-    out <- c(out, .ard_arg_value_problems(tag, call, a$args[i]))
-    if ("..." %in% names(fm) && !.dots_checked(call)) next
-    given <- tryCatch(.args_given(a$args[i]), error = function(e) character())
-    known <- c(names(fm), ".overall", ".missing", "by", "variables", "strata",
-               "denominator", "statistic")
-    bad <- setdiff(given, known)
-    if (!length(bad)) next
-    has <- setdiff(names(fm), c("...", if (isTRUE(attr(fm, "data_first"))) names(fm)[1L]))
-    out <- c(out, sprintf(
-      "%s: %s %s's %s() has no argument %s (it has: %s); the program would stop on it",
-      tag, pkg, utils::packageVersion(pkg),
-      sub("^.*::", "", call), paste0("`", bad, "`", collapse = ", "),
-      paste(has, collapse = ", ")))
-  }
-  c(out, .post_args_unknown(a))
-}
-
-# What is wrong with the values `args` writes, by the argument's kind
-# (tfl_ard_args()): `overall = "yes"` (TRUE or FALSE), `conf.level = 95`
-# (between 0 and 1), `method = "wilsoncc"` (not one of the function's
-# choices), `method.args = 0.9` (a list), `formula = 1` (a formula).  A
-# value that is a name (an object of the program: a code list,
-# `population`) is the program's to judge; so is a function not of cards
-# or cardx.
-.ard_arg_value_problems <- function(tag, call, args) {
-  # cards' and cardx's: the catalog's kinds are written for them
-  if (!sub("::.*$", "", call) %in% c("cards", "cardx")) return(character())
-  given <- tryCatch(.args_list(args), error = function(e) list())
-  nm <- names(given) %||% rep("", length(given))
-  given <- given[nzchar(nm)]
-  if (!length(given)) return(character())
-  d <- tryCatch(tfl_ard_args(call), error = function(e) NULL)
-  if (is.null(d)) return(character())
-  fn <- sub("^.*::", "", call)
-  out <- character()
-  for (arg in intersect(names(given), d$arg)) {
-    r <- d[d$arg == arg, ]
-    p <- .arg_value_problem(arg, given[[arg]], r$kind, r$choices, fn)
-    if (!is.null(p)) out <- c(out, sprintf("%s: %s(%s = ) %s", tag, fn, arg, p))
-  }
-  out
-}
-
-# A value written as it is -- TRUE, 0.9, "wilson", c(0.25, 0.5), -1 -- as
-# that value; NULL for a name or a call of anything else
-.literal_value <- function(e) {
-  if (is.atomic(e) && length(e) == 1L) return(e)
-  if (is.call(e) && identical(e[[1L]], as.name("-")) && length(e) == 2L &&
-      is.numeric(e[[2L]])) return(-e[[2L]])
-  if (is.call(e) && identical(e[[1L]], as.name("c")) && length(e) > 1L) {
-    v <- lapply(as.list(e)[-1L], .literal_value)
-    if (any(vapply(v, is.null, NA))) return(NULL)
-    return(unlist(v))
-  }
-  NULL
-}
-
-# What an argument of kind `code` (or `levels`) holds, when cards / cardx
-# take one shape of R only: a list or formula of cards' selectors
-# (`fmt_fun = everything() ~ 1L`, `value = list(AEREL = "Y")`), a list
-# (`method.args = list(var.equal = TRUE)`), names (`stats_to_remove`), a
-# function (`tidy_fun`, `.f`), a model (`x = lm(...)`), an expression of
-# the ARD's columns (a `post` step's `filter`, `expr`, `rows`).  An
-# argument of one function only is `function$arg`; NA: any R (`weights`,
-# `include`, replace_null_statistic(value = )).
-.ard_code_shapes <- c(
-  fmt_fun = "selectors", stat_label = "selectors", value = "selectors",
-  label = "selectors", abnormal = "list", formulas = "list",
-  method.args = "list", stats_to_remove = "character", tidy_fun = "function",
-  .f = "function", x = "call", expr = "expression", filter = "expression",
-  rows = "expression", by_level = "list", levels = "list", sort = "sort",
-  `add_calculated_row$fmt_fun` = NA, `replace_null_statistic$value` = NA)
-
-.ard_code_shape <- function(fn, arg) {
-  key <- paste0(fn, "$", arg)
-  if (key %in% names(.ard_code_shapes)) return(unname(.ard_code_shapes[key]))
-  if (arg %in% names(.ard_code_shapes)) unname(.ard_code_shapes[arg]) else NA_character_
-}
-
-# Why the value (an expression, as written) does not fit an argument of
-# this kind, or NULL
-.arg_value_problem <- function(arg, e, kind, choices = "", fn = "") {
-  if (is.name(e) || is.null(e)) return(NULL)
-  v <- .literal_value(e)
-  if (!is.null(v) && anyNA(v)) return(NULL)
-  shown <- paste(deparse(e, width.cutoff = 500L), collapse = " ")
-  is_fn <- function(e) is.call(e) && (identical(e[[1L]], as.name("function")) ||
-    identical(e[[1L]], as.name("::")) || identical(e[[1L]], as.name("~")))
-  is_call_of <- function(e, f) is.call(e) && identical(e[[1L]], as.name(f))
-  if (kind %in% c("code", "levels")) {
-    shape <- if (identical(kind, "levels")) "selectors" else
-      .ard_code_shape(fn, arg)
-    if (is.na(shape)) return(NULL)
-    ok <- switch(shape,
-      selectors = is_call_of(e, "list") || is_call_of(e, "~"),
-      list = is_call_of(e, "list"),
-      character = is.character(v),
-      `function` = is_fn(e),
-      call = is.call(e) && is.null(v),
-      expression = is.call(e) || is.logical(v),
-      sort = is_call_of(e, "list") || is_call_of(e, "~") ||
-        (is.character(v) && length(v) == 1L && v %in% .split_bar(choices)))
-    if (ok) return(NULL)
-    want <- switch(shape,
-      selectors = "a list (list(AGE = 1L)) or a formula (everything() ~ 1L)",
-      list = "a list: list(...)",
-      character = "names in quotes: c(\"term\", \"label\")",
-      `function` = "a function: pkg::fun, function(x) ... or ~ ...",
-      call = "R that makes the object: lm(AVAL ~ TRT01P, data = data)",
-      expression = "an expression of the ARD's statistics, not in quotes: n >= 2",
-      sort = "\"descending\", \"alphanumeric\", or a list of them by variable")
-    return(sprintf("is %s; got %s", want, shown))
-  }
-  # a call (a formula, paste0(...), an object's part): the program's
-  if (is.null(v)) return(NULL)
-  if (identical(kind, "logical") && !(is.logical(v) && length(v) == 1L)) {
-    return(sprintf("is TRUE or FALSE; got %s", shown))
-  }
-  if (identical(kind, "number")) {
-    if (!is.numeric(v)) return(sprintf("is a number; got %s", shown))
-    if (arg %in% c("conf.level", "conf.int") && any(v <= 0 | v >= 1)) {
-      return(sprintf("is between 0 and 1 (0.95 for 95%%); got %s", shown))
-    }
-  }
-  if (identical(kind, "choice") && nzchar(choices %||% "")) {
-    ch <- .split_bar(choices)
-    if (!is.character(v) || !all(v %in% ch)) {
-      return(sprintf("is one of %s; got %s",
-                     paste0("\"", ch, "\"", collapse = ", "), shown))
-    }
-  }
-  if (kind %in% c("column", "columns") && !is.character(v)) {
-    return(sprintf("is a column of the data (USUBJID); got %s", shown))
-  }
-  if (identical(kind, "text") && !is.character(v)) {
-    return(sprintf("is text in quotes; got %s", shown))
-  }
-  if (identical(kind, "formula")) {
-    if (!is.character(v)) {
-      return(sprintf("is a formula (AVAL ~ TRT01P) or R text of one; got %s", shown))
-    }
-    bad <- tryCatch({
-      str2lang(v)
-      NULL
-    }, error = function(err) conditionMessage(err))
-    if (!is.null(bad)) return(sprintf("does not read as R (%s)", gsub("\\s+", " ", bad)))
-  }
-  NULL
-}
-
-# The arguments of a `post` step its function does not have (a cards
-# helper: add_calculated_row(expr =, stat_name =) ...), and the values that
-# do not fit theirs, one line per step.  A step of a function with `...`
-# its code does not check, or of a study's own function, is not judged.
-.post_args_unknown <- function(a) {
-  out <- character()
-  post <- a$post %||% rep(NA_character_, nrow(a))
-  for (i in which(!is.na(post))) {
-    tag <- paste(a$output_id[i], a$analysis_id[i], sep = " / ")
-    for (st in .split_post(post[i])) {
-      e <- tryCatch(str2lang(st), error = function(e) NULL)
-      if (!is.call(e)) next
-      fn <- paste(deparse(e[[1L]]), collapse = "")
-      if (!grepl("^[A-Za-z.][A-Za-z0-9.]*::[A-Za-z._][A-Za-z0-9._]*$", fn)) next
-      f <- .ard_fun(fn)
-      if (is.null(f)) next
-      fm <- names(formals(f))
-      given <- names(as.list(e)[-1L]) %||% character()
-      given <- given[nzchar(given)]
-      args <- paste(vapply(given, function(g)
-        paste0(.r_arg_name(g), " = ", paste(deparse(e[[g]], width.cutoff = 500L),
-                                            collapse = " ")), ""),
-        collapse = ", ")
-      if (length(given)) out <- c(out, .ard_arg_value_problems(tag, fn, args))
-      if ("..." %in% fm && !.dots_checked(fn)) next
-      bad <- setdiff(given, fm)
-      if (length(bad)) out <- c(out, sprintf(
-        "%s: `post` %s() has no argument %s (it has: %s); the program would stop on it",
-        tag, sub("^.*::", "", fn), paste0("`", bad, "`", collapse = ", "),
-        paste(setdiff(fm, c("...", fm[1L])), collapse = ", ")))
-    }
-  }
-  out
-}
-
-# Does the function check its `...` (rlang::check_dots_empty() /
-# check_dots_used())?  Then an argument it does not name stops it.
-.dots_checked <- function(call) {
-  f <- .ard_fun(call)
-  if (is.null(f)) return(FALSE)
-  m <- tryCatch(utils::getS3method(sub("^.*::", "", call), "data.frame",
-                                   optional = TRUE, envir = environment(f)),
-                error = function(e) NULL)
-  code <- paste(deparse(body(if (is.function(m)) m else f)), collapse = "
-")
-  grepl("check_dots_(empty|used)", code)
-}
-
 # the continuous statistics the ARD program computes (not cards)
 .computed_stats <- function() {
   d <- tfl_ard_statistics("continuous")
@@ -1100,7 +915,9 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
          missing = "missing", "result")
 }
 
-.fmt_ok <- function(f) grepl("^(x+(\\.x+)?%?|[0-9]+|pvalue)$", f)
+.fmt_ok <- function(f) {
+  grepl("^(x+(\\.x+)?(%|[*][1-9][0-9]*)?|[0-9]+|pvalue)$", f)
+}
 
 # `mean=xx.x | AGE:sd=xx.xx` as a named vector
 .parse_formats <- function(x) {
@@ -1168,7 +985,8 @@ tfl_ard_spec <- function(x, statistics = NULL, methods = NULL) {
 #' `fmt_fun` argument, where a reader sees them next to the statistics:
 #' `fmt_fun = everything() ~ modifyList(fmt_default, list(mean = 2L))`, a
 #' variable's own (`BMIBL:sd=3`) with its own list.  An integer is
-#' that many decimals, `xx.x%` is `label_round(1, scale = 100)` and
+#' that many decimals, `xx.x%` is `label_round(1, scale = 100)`,
+#' `xx.x*1000` is `label_round(1, scale = 1000)` and
 #' `pvalue` the program's `fmt_pvalue()` (`<0.001` or 3 decimals);
 #' `cards::apply_fmt_fun()` then fills `stat_fmt`.  What takes no `fmt_fun`
 #' gets the same formats after the call, from `fmt_ard()`: cardx's tests, CIs
@@ -1407,18 +1225,38 @@ tfl_ard_spec_hash <- function(spec, output_id, dir = ".", codelists = NULL) {
 #' @export
 tfl_build_ard <- function(spec, dir = ".", output_id = NULL, save = TRUE,
                       statistics = NULL, methods = NULL, codelists = NULL) {
+  .ard_build(spec, dir = dir, output_id = output_id, save = save,
+             statistics = statistics, methods = methods, codelists = codelists)
+}
+
+# tfl_build_ard() with `sheets`: the study's sheets (tfl_sheets_from_yaml()),
+# when the caller has read them already (tfl_fill_widths() builds many
+# reports' ARD from one reading).  Not exported: tfl_build_ard() keeps its
+# arguments.  A YAML study's ARD definition is read once for the call: the
+# program and the note on the optional variables both use it.
+.ard_build <- function(spec, dir = ".", output_id = NULL, save = TRUE,
+                       statistics = NULL, methods = NULL, codelists = NULL,
+                       sheets = NULL) {
   # run where nothing is attached and no folder variable is defined
   old <- options(tflspec.paths = NULL, tflspec.attached = NULL,
                  tflspec.plain_ns = TRUE)
   on.exit(options(old), add = TRUE)
-  code <- tfl_ard_code(spec, output_id = output_id, save = save,
+  # a study of the YAML spec: its ARD definition and code lists from its
+  # files, once (tfl_ard_code() would read them again, and so would the note)
+  ard <- spec
+  if (inherits(spec, "tfl_study_spec")) {
+    st <- .ard_spec_of_study(spec, output_id = output_id, sheets = sheets)
+    ard <- st$spec
+    codelists <- codelists %||% st$codelists
+  }
+  code <- tfl_ard_code(ard, output_id = output_id, save = save,
                         statistics = statistics, methods = methods, dir = dir,
                         codelists = codelists)
   owd <- setwd(dir)
   on.exit(setwd(owd), add = TRUE)
   e <- new.env(parent = globalenv())
-  eval(parse(text = code, encoding = "UTF-8"), envir = e)
-  .ard_optional_note(spec, e, output_id)
+  .eval_study_code(code, e, spec, ".", output_id = output_id)
+  .ard_optional_note(ard, e, output_id)
   invisible(e$ard)
 }
 

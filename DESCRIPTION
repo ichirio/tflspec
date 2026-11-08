@@ -32,11 +32,11 @@ Imports:
     openxlsx,
     readxl,
     rlang,
+    rtfreporter (>= 0.8.2.9100),
     yaml,
     stats,
     utils
 Suggests:
-    rtfreporter (>= 0.8.2.9100),
     arrow,
     broom,
     broom.helpers,
@@ -44,6 +44,7 @@ Suggests:
     cards (>= 0.8.0),
     cardx (>= 0.3.1),
     dplyr,
+    effectsize,
     emmeans,
     ggh4x,
     ggnewscale,
@@ -59,6 +60,7 @@ Suggests:
     patchwork,
     pdftools,
     rstudioapi,
+    scales,
     siera (>= 0.5.6),
     smd,
     survival,

@@ -1163,7 +1163,7 @@
         ) +
         scale_fill_manual(values = pal, breaks = names(pal), na.value = "grey80") +
         coord_cartesian(ylim = c(0, 110)) +
-        labs(y = "Response rate (%) with 95% CI [CR+PR]") +
+        labs(x = NULL, y = "Response rate (%) with 95% CI [CR+PR]") +
         theme_minimal(base_size = 10) +
         theme(
           axis.title        = element_text(size = 10),
@@ -1250,7 +1250,7 @@
           position = position_stack(vjust = 0.5)
         ) +
         scale_fill_manual(values = pal, breaks = names(pal), na.value = "grey80") +
-        labs(y = "Subjects (%)") +
+        labs(x = NULL, y = "Subjects (%)") +
         theme_minimal(base_size = 10) +
         theme(
           axis.title        = element_text(size = 10),
@@ -1569,7 +1569,7 @@
         filter(!is.na(AVAL)) |>
         group_by(TRT01A, AVISITN, AVISIT) |>
         summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") |>
-        mutate(se = sd / sqrt(n), lo = mean - qt(0.975, n - 1) * se, hi = mean + qt(0.975, n - 1) * se)
+        mutate(se = sd / sqrt(n), lo = ifelse(n > 1, mean - qt(0.975, pmax(n - 1, 1)) * se, NA_real_), hi = ifelse(n > 1, mean + qt(0.975, pmax(n - 1, 1)) * se, NA_real_))
       
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A
@@ -1956,7 +1956,7 @@
         ) +
         geom_point(data = sg, aes(x = TRT01A, y = mean), shape = 3, size = 3) +
         scale_fill_manual(values = pal, breaks = names(pal), na.value = "grey80") +
-        labs(y = "ALT") +
+        labs(x = NULL, y = "ALT") +
         theme_minimal(base_size = 10) +
         theme(
           axis.title        = element_text(size = 10),
@@ -2537,10 +2537,12 @@
           across(c(estimate, conf.low, conf.high), ~ ifelse(ok, .x, NA))
         )
       # a heading row above each subgroup's levels, the levels indented
+      # (the headings read the subgroups' labels, a variable's name when it has none)
+      sg_label <- c(SEX = "Sex", AGEGR1 = "Age group")
       heads <- est |>
         filter(subgroup != "All subjects") |>
         distinct(subgroup) |>
-        mutate(level = subgroup, head = TRUE)
+        mutate(level = coalesce(unname(sg_label[subgroup]), subgroup), head = TRUE)
       est <- est |>
         mutate(head = FALSE) |>
         bind_rows(heads) |>

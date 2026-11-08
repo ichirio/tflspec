@@ -53,6 +53,7 @@ test_that("a token's name follows rtfreporter's rule", {
   expect_error(bad("1ST"), "upper case")
   expect_error(bad("PAGE"), "rtfreporter's own")
   expect_error(bad("PROGRAM_FULL"), "rtfreporter's own")
+  expect_error(bad("PAGE_HEADING"), "rtfreporter's own")
   expect_error(bad(NA), "needs a `name`")
   # one row a name in a scope
   expect_error(tk_spec(data.frame(output_id = c("T1", "T1"), name = "STUDY",
@@ -182,7 +183,7 @@ test_that("only a report with its own header writes it", {
   expect_match(l, "OUTPUT_TITLE = \"\"", fixed = TRUE)
   hd <- rbind(setup_spec()$header,
               data.frame(output_id = "T-14-1-1", line = "1", left = "Own",
-                         center = NA, right = NA))
+                         center = NA, right = NA, row_height_twips = NA))
   t <- paste(tfl_report_code(setup_spec(header = hd), "T-14-1-1",
                              content = "pages", setup = TRUE), collapse = "\n")
   expect_match(t, "rtf_header(", fixed = TRUE)

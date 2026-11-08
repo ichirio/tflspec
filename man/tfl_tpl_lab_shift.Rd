@@ -15,15 +15,20 @@ The table template \code{lab_shift}, layout \code{shift}. Its program is one cal
    \code{params} \tab required \tab call \tab  \tab  \tab the PARAMCD values \cr
    \code{where} \tab other \tab call \tab  \tab  \tab the records kept besides the visit and parameters (R) \cr
    \code{by} \tab other \tab call \tab TRT01A \tab settings.treatment \tab the column variable \cr
-   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: \if{html}{\out{<data>}}_\if{html}{\out{<population>}} \cr
+   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: <data>_<population> \cr
    \code{by_levels} \tab other \tab call \tab  \tab  \tab the column variable's values in order; NULL: the ARD's (its code list) \cr
    \code{param_labels} \tab other \tab call \tab  \tab  \tab each parameter's heading (a named vector); given by name, merged \cr
    \code{levels} \tab other \tab call \tab LOW, NORMAL, HIGH \tab  \tab the categories, in order \cr
    \code{worst} \tab other \tab call \tab HIGH, LOW, NORMAL \tab  \tab a subject once a parameter, at its worst category after baseline, the categories from the worst; NULL: every record (the baseline's records too) \cr
-   \code{missing_label} \tab other \tab call \tab Missing \tab  \tab the row of the subjects with no baseline category; NULL: none \cr
+   \code{worst_by} \tab other \tab call \tab  \tab  \tab a parameter's own order from the worst, by its value (HGB: LOW, HIGH, NORMAL); the others take 'worst' \cr
+   \code{percent_of} \tab other \tab call \tab total \tab  \tab what a cell's \{p\} is of, set apart from the header N ('header_n'): "total" (default) the Total row -- the arm's subjects with both a baseline and a category after baseline for the parameter, so the Total is 100\%; "row" the subjects of its baseline category \cr
+   \code{cell} \tab other \tab call \tab \{n\} \tab  \tab a cell's template \cr
+   \code{post_header} \tab other \tab call \tab \{col\} \tab  \tab the header over each post-baseline category ('\{col\}': the category; a typed \\n breaks the line) \cr
+   \code{missing_label} \tab other \tab call \tab  \tab  \tab the row of the subjects with no baseline category, counted in the Total and in the \% denominator; NULL (default): those subjects are left out of the table, not in any row or N \cr
    \code{total_label} \tab other \tab call \tab Total \tab  \tab the row of all the subjects; NULL: none \cr
    \code{param_page} \tab other \tab call \tab TRUE \tab  \tab TRUE: a page a parameter, named in the titles by 'param_heading' \cr
-   \code{param_heading} \tab other \tab call \tab Parameter: \{value\} \tab  \tab a parameter's page name ('\{value\}': the parameter) \cr
+   \code{param_heading} \tab other \tab call \tab Parameter: \{value\} \tab  \tab a parameter's page name ('\{value\}': the parameter); the last title line, or where the title line '\{PAGE_HEADING\}' is \cr
+   \code{header_n} \tab other \tab call \tab set \tab  \tab the arm headings' N, set apart from the \% denominator ('percent_of'): "set" (default): the arm's subjects in the analysis set (with 'subset'); "tested": the page's subjects with a baseline and a post-baseline category (needs 'param_page'); "none": no N \cr
 }
 }
 

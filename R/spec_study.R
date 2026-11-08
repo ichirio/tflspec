@@ -6,7 +6,6 @@
 #   spec/defaults.yml         what every report starts from (a report's shape),
 #                             and the study's styles: the look a report picks
 #                             (`styles: {compact: {content, page}}`, `style:`)
-#   spec/codelists.yml        code lists to copy from (templates)
 #   spec/patterns/<name>.yml  a layer a report may extend (a report's shape)
 #   spec/toc.yml              the reports in order
 #   spec/outputs/**/*.yml     one report a file (or several, `outputs:`)
@@ -21,14 +20,15 @@
 #' `tfl_read_study_spec()` reads the study-level files (every one optional)
 #' and `tfl_read_outputs()` the report files under `spec/outputs/`
 #' (subfolders too; a file with `outputs:` holds several).  An id in two
-#' files stops the read.
+#' files stops the read.  A `spec/codelists.yml` is not read (a code list is
+#' a report's or a layer's), with a message.
 #'
 #' @param dir The study folder (holds `study.yml` and `spec/`).
 #' @param skip_bad `TRUE` to leave out a report file that cannot be read, with a
 #'   warning naming it (`tfl_read_outputs()`); `FALSE` (default) to stop there.
 #' @return `tfl_read_study_spec()`: a list of class `tfl_study_spec` --
 #'   `study`, `data`, `defaults`, `styles` (by name: `defaults.yml`'s
-#'   `styles:`, the look a report picks with `style:`), `codelists`,
+#'   `styles:`, the look a report picks with `style:`),
 #'   `patterns` (by name), `toc`, `dir`.  `tfl_read_outputs()`: a named list of `tfl_output`, by id.
 #' @examples
 #' d <- system.file("extdata", "spec-yaml", package = "tflspec")
@@ -52,6 +52,10 @@ tfl_read_study_spec <- function(dir) {
   .check_spec_version(study$spec_version, file.path(dir, "study.yml"))
   dflt <- rd(file.path(spec, "defaults.yml"))
   styles <- dflt$styles %||% list()
+  if (file.exists(file.path(spec, "codelists.yml"))) {
+    message("spec/codelists.yml is not read: a code list is a report's or a layer's ",
+            "(`codelists:` in spec/defaults.yml or the report's file).")
+  }
   .study_templates(spec, study$id %||% basename(normalizePath(dir, "/", mustWork = FALSE)))
   structure(list(
     study = study,
@@ -59,7 +63,6 @@ tfl_read_study_spec <- function(dir) {
     defaults = .layer_from_list(dflt, "defaults"),
     styles = stats::setNames(lapply(names(styles), function(nm)
       .layer_from_list(styles[[nm]], paste0("style:", nm))), names(styles)),
-    codelists = rd(file.path(spec, "codelists.yml")) %||% list(),
     patterns = patterns,
     toc = rd(file.path(spec, "toc.yml")) %||% list(),
     # rtfreporter's options for every program of the study (defaults.yml's
@@ -204,7 +207,7 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
     layers <- c(list(tl), layers, list(tlook))
     output$ard <- .merge_ard(tpl$x$ard, output$ard)
     # a figure's design: its settings (`plot:`) under the report's own
-    if (!is.null(tpl$x$plot)) output$plot <- .merge_map(tpl$x$plot, output$plot)
+    if (!is.null(tpl$x$plot)) output$plot <- .tpl_plot_over(tpl$x$plot, output$plot)
   }
   own <- list(data = output$data %||% list(), codelists = output$codelists,
               content = output$content, page = output$page)
@@ -214,6 +217,8 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   composed <- !is.null(tpl) && .tpl_composes(own$data, tpl$x)
   if (composed) own$data <- .tpl_compose_data(own$data, tpl$x, output$id, tpl$name)
   below <- acc$content
+  own$content <- .stub_keep_name(own$content, below)
+  if (!is.null(tpl)) own$content <- .hdr_keep_stub(own$content, below)
   acc <- .layer_over(acc, own)
   if ((isTRUE(provenance) || !is.null(tpl)) && !inherits(acc$content, "tfl_r")) {
     prov <- .content_provenance(acc$content, output$content, layers, below)
@@ -234,13 +239,55 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   }
   output$data <- if (length(acc$data)) acc$data else output$data
   output$codelists <- acc$codelists
+  if (!is.null(tpl$x$codelists)) output$codelists <- .tpl_add_codelists(acc$codelists, tpl$x$codelists)
   output$content <- .any_label_default(acc$content, output, study)
+  output$content <- .listing_rows_default(output$content, output$kind, provenance)
   # the study's rounding: the setup's option, so the program leaves it out
   attr(output, "study_rounding") <- .study_rounding(study)
   output$page <- acc$page
   output <- .page_font_to_plan(output)
   attr(output, "resolved") <- TRUE
   output
+}
+
+# A report's own plan_stub with no `name` keeps the name of the plan_stub it
+# replaces from the layers below (the study's, `row_label`): a plan_stub item
+# replaces that one as a whole, and the stub column would be called by its
+# columns' names, so `plan_columns(widths = )` could not name it.  A name the
+# report writes wins; with no plan_stub below, nothing changes.  Only `name`.
+.stub_keep_name <- function(own, below) {
+  if (inherits(own, "tfl_r") || inherits(below, "tfl_r") || !length(own)) return(own)
+  is_stub <- function(it) identical(it$fn, "plan_stub")
+  b <- Filter(is_stub, below)
+  nm <- if (length(b)) b[[1L]]$args$name
+  if (is.null(nm)) return(own)
+  for (i in which(vapply(own, is_stub, NA))) {
+    if (is.null(own[[i]]$args$name)) own[[i]]$args$name <- nm
+  }
+  own
+}
+
+# A report's own plan_col_header over a template's (not a study layer's:
+# the item below must be the template's) with no cell for the template's
+# stub column (a cell whose `cols` is not .values) keeps the template's stub
+# cells, and an empty .values cell for a line only the stub then has.  Any
+# stub cell of the report, even an empty one, replaces the item as before.
+.hdr_keep_stub <- function(own, below) {
+  if (inherits(own, "tfl_r") || inherits(below, "tfl_r") || !length(own)) return(own)
+  cell_cols <- function(h) unlist(lapply(h, function(c) as.character(unlist(c$cols))))
+  tpl <- Filter(function(it) identical(it$fn, "plan_col_header") &&
+                  startsWith(it$from %||% "", "template:"), below)
+  th <- if (length(tpl)) tpl[[1L]]$args$header
+  stub <- Filter(function(c) !all(as.character(unlist(c$cols)) == ".values"), th)
+  if (!length(stub)) return(own)
+  for (i in which(vapply(own, function(it) identical(it$fn, "plan_col_header"), NA))) {
+    h <- own[[i]]$args$header
+    if (!length(h) || any(cell_cols(h) %in% cell_cols(stub))) next
+    lines <- setdiff(vapply(stub, function(c) as.character(c$line), ""),
+                     vapply(h, function(c) as.character(c$line), ""))
+    own[[i]]$args$header <- c(stub, h, lapply(lines, function(l) list(line = l, cols = ".values")))
+  }
+  own
 }
 
 # Each resolved item's provenance, argument by argument (`arg_from`: "own",
@@ -336,7 +383,10 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   list(data = .merge_map(base$data, over$data),
        codelists = .merge_map(base$codelists, over$codelists),
        content = .merge_content(base$content, over$content),
-       page = .merge_map(base$page, over$page))
+       # (an old page.rtf_default_format is its own layer's rtf_style shared
+       # level, before the layers meet: a near layer's old key beats a far
+       # layer's new one)
+       page = .merge_map(.page_style_norm(base$page), .page_style_norm(over$page)))
 }
 
 # a map over a map: by key; an !unset removes the key; two maps recurse; a
@@ -526,10 +576,10 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
 #'
 #' Writes the study-level file of one part of a [tfl_read_study_spec()]
 #' result -- what a builder changes for the whole study (the rounding of
-#' every table, a pattern, a code list) -- in the form the reader reads.
+#' every table, a pattern) -- in the form the reader reads.
 #'
 #' @param study A `tfl_study_spec`.
-#' @param part `"defaults"`, `"patterns"` (one, by `name`), `"codelists"`,
+#' @param part `"defaults"`, `"patterns"` (one, by `name`),
 #'   `"data"` or `"toc"`.
 #' @param path The file; `NULL`: the study's own (`spec/defaults.yml`,
 #'   `spec/patterns/<name>.yml` ...).
@@ -543,7 +593,7 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
 #' identical(tfl_read_study_spec(d)$defaults$content[[1]]$fn,
 #'           yaml::read_yaml(f)$content[[1]] |> names())
 #' @export
-tfl_write_study_part <- function(study, part = c("defaults", "patterns", "codelists", "data", "toc"),
+tfl_write_study_part <- function(study, part = c("defaults", "patterns", "data", "toc"),
                                  path = NULL, name = NULL) {
   fn <- "tfl_write_study_part()"
   if (!inherits(study, "tfl_study_spec")) .ard_stop(sprintf("%s: `study` is a tfl_study_spec.", fn))
@@ -571,7 +621,6 @@ tfl_write_study_part <- function(study, part = c("defaults", "patterns", "codeli
       }
       layer_out(study$patterns[[name]])
     },
-    codelists = study$codelists,
     data = .calls_out(study$data),
     toc = study$toc)
   if (is.null(path)) {
@@ -604,6 +653,26 @@ tfl_write_study_part <- function(study, part = c("defaults", "patterns", "codeli
         length(it$args$hierarchy)) it$args$overall <- lab
     it
   })
+}
+
+# A listing with no page size pages at the rows a page the `listing` template
+# has (.listing_rows_a_page): a plan_listing and no plan_paginate_rows or
+# plan_paginate_group among the resolved items (the report's, a template's or
+# a pattern's say it; the study's defaults do not reach a listing) gets
+# plan_paginate_rows(max_rows) last, from the "defaults".  Built and written
+# in the program, not in the report's file; code (`tfl_r`) and a figure are
+# left alone.
+.listing_rows_a_page <- 22L
+.listing_rows_default <- function(items, kind = NULL, provenance = FALSE) {
+  if (inherits(items, "tfl_r") || identical(kind, "figure")) return(items)
+  fns <- vapply(items, function(it) as.character(it$fn), "")
+  if (!"plan_listing" %in% fns || any(c("plan_paginate_rows", "plan_paginate_group") %in% fns)) return(items)
+  it <- tfl_item("plan_paginate_rows", list(max_rows = .listing_rows_a_page), from = "defaults")
+  if (isTRUE(provenance)) {
+    it$arg_from <- c(max_rows = "defaults")
+    it$below <- NULL
+  }
+  c(items, list(it))
 }
 
 # The folder of a study's report files: spec/outputs, or -- while the AI's

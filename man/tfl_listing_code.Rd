@@ -34,7 +34,9 @@ rtfreporter's \code{listing_spec()} types).}
 or sorts by are put on its data after its condition (\verb{cl_<variable>}
 and \code{set_levels()}, see \code{\link[=tfl_helpers_code]{tfl_helpers_code()}}) -- each such column a
 factor in its list's order (it sorts so), its values as the list has
-them.}
+them.  Before them the arms are put in their numeric order by
+\code{order_levels()} (\code{TRT01A} by \code{TRT01AN}; a list wins), so a sort on
+an arm sorts so.}
 
 \item{part}{\code{"all"} (the whole of it), \code{"data"} (the data, up to its
 order: what a report's content step of its own code reads as \code{data})

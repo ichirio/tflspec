@@ -277,7 +277,7 @@
       "A listing (`kind: listing`) prints records, not statistics: it has no `ard: analyses` and no `table_plan`.", "",
       "- `data`*: the records: `{source: dataset, dataset: <ADaM dataset>, population: <analysis set id>, where: !r '<R condition on its columns>', sort: [<variable>, -<variable, descending>]}`; or `{source: dataset, data: <an analysis_data id of this report>}`, that data in `ard: analysis_data` (its `population` there), when the records need more than a condition (ADSL's columns added, derived columns).",
       "- The analysis set is required: `data.population`, or the analysis data's. A dataset of parameters (PARAMCD: ADLB, ADVS ...) is kept to the shell's (`where: !r 'PARAMCD == \"ALT\"'`) or shows PARAM / PARAMCD in a column. When the shell does not say them, ask -- do not guess.",
-      "- `content`*: one `plan_listing` item, its `cols` the shell's columns in order, each `{fn: listing_col, args: {vars: [<variables stacked in the column>], label: <header>, width: <characters>, collapse_repeats: true}}` (`collapse_repeats`: a value printed once while it repeats, as a subject's id); `type: multiline` unless the shell is one line a record. Then, if the shell says how many rows a page, `plan_paginate_rows: {max_rows: <n>}`.",
+      "- `content`*: one `plan_listing` item, its `cols` the shell's columns in order, each `{fn: listing_col, args: {vars: [<variables stacked in the column>], label: <header>, width: <characters>, collapse_repeats: true}}` (`collapse_repeats`: a value printed once while it repeats, as a subject's id; that column has to be wide enough for its longest value on one line: a value that wraps repeats on every record); `type: multiline` unless the shell is one line a record. A listing with no page size pages at 22 rows (the header on every page); write `plan_paginate_rows: {max_rows: <n>}` only when the shell says otherwise.",
       "- `page`: its titles and footnotes, as a table's.",
       "",
       fn_lines("plan_listing"), fn_lines("listing_col"), "")
@@ -516,14 +516,19 @@
         bad <- c(bad, names(outs)[i])
         next
       }
+      # (shift: `levels` / `worst` against the data's values, when the kit has
+      # them; the code lists are the report's own and its layers', which
+      # need the study)
+      if (is.null(st) && !is.null(context$study_dir)) {
+        st <- tryCatch(tfl_read_study_spec(context$study_dir), error = function(e) NULL)
+      }
+      cl <- .ai_draft_codelists(o, st)
+      if (!is.null(cl)) p <- rbind(p, .ai_check_shift_levels(tp, cl, vars, at))
       if (!is.null(o$ard)) {
         bad <- c(bad, names(outs)[i])
         p <- .ai_problem(p, paste(at, "ard"), paste(
           "a report has `template` or `ard`, not both: the template makes the analyses"))
         next
-      }
-      if (is.null(st) && !is.null(context$study_dir)) {
-        st <- tryCatch(tfl_read_study_spec(context$study_dir), error = function(e) NULL)
       }
       o <- tryCatch(.ai_template_items(o, st), error = function(e) e)
       if (inherits(o, "error")) {
@@ -534,11 +539,17 @@
       }
     }
     # (a listing, drafted with the tables: R/ai_listing.R)
-    p <- rbind(p, if (identical(o[["kind"]], "listing")) .ai_check_listing_output(o, at, context, vars)
+    p <- rbind(p, if (identical(o[["kind"]], "listing")) .ai_check_listing_output(o, at, context, vars, from_template = !is.null(tp))
                else .ai_check_table_output(o, at, context, vars))
   }
   # (a report whose template is wrong: its run would say it again)
   rbind(p, .ai_check_table_run(outs[setdiff(names(outs), bad)], context))
+}
+
+# A list of rows, each a mapping with a `value`: a code list's form
+.ai_codelist_shaped <- function(x) {
+  is.list(x) && length(x) > 0L && is.null(names(x)) &&
+    all(vapply(x, function(r) is.list(r) && "value" %in% names(r), NA))
 }
 
 .ai_check_table_output <- function(o, at, context, vars) {
@@ -564,6 +575,14 @@
   }
   if (!is.na(o[["population"]])) chk_pop("population", o[["population"]])
   if (is.na(o[["label"]])) add("label", "the report has no label (its title)", "warning")
+  # a code list under `page:` is ignored there: it belongs under `codelists:`
+  for (k in setdiff(names(o[["page"]]), .page_known)) {
+    if (.ai_codelist_shaped(o[["page"]][[k]])) {
+      add(paste("page", k), sprintf(paste0(
+        "is a code list (rows of value / label) under `page:`, where it is ignored; ",
+        "put it under `codelists:` (`codelists: {%s: [...]}`)"), k))
+    }
+  }
   # the ARD
   ad <- o[["ard"]]$analysis_data %||% list()
   an <- o[["ard"]]$analyses %||% list()
@@ -724,7 +743,8 @@
         "error" else "warning"
       add(paste(w, if (nzchar(chk$arg[r])) paste("field", chk$arg[r]) else ""), chk$message[r], sev)
     }
-    for (a in .ai_required_args(it$fn)) {
+    # (a part's plan is its own data and content, not a `part` argument)
+    for (a in if (!.is_part(it)) .ai_required_args(it$fn)) {
       if (!a %in% names(it$args)) add(w, sprintf("%s needs `%s`", it$fn, a))
     }
   }
@@ -766,7 +786,7 @@
     for (line in names(m)) {
       cells <- m[[line]]
       if (!is.list(cells) || is.null(names(cells))) next
-      odd <- setdiff(names(cells), c("left", "center", "right"))
+      odd <- setdiff(names(cells), c("left", "center", "right", "row_height_twips"))
       if (length(odd)) {
         add(sprintf("page %s %s", band, line), sprintf(paste(
           "has %s besides left / center / right: a text with a comma must be quoted",
@@ -918,18 +938,29 @@
   }
   # (the reports whose widths R sets: an assumption says so)
   unset <- .ai_widths_unset(answer$outputs)
-  # (a listing's columns their widths, where the answer gave none: R/ai_widths.R)
-  answer$outputs <- lapply(answer$outputs, .ai_listing_widths, vars = answer$vars)
-  # (a table's widths R gave it on an earlier run)
+  # (a listing's columns their widths, where the answer gave none: fitted to
+  # its data where that can be read, else a guess; R/ai_widths_fit.R)
+  lw <- .ai_listing_widths_set(answer$outputs, dir, vars = answer$vars)
+  answer$outputs <- lw$outs
+  is_l <- vapply(answer$outputs, function(o) identical(o$kind, "listing"), NA)
+  unset <- names(answer$outputs)[names(answer$outputs) %in% c(setdiff(unset, names(answer$outputs)[is_l]), lw$written)]
+  # (a table's widths R gave it on an earlier run, while its draft is the
+  # one they were made for)
   known <- .ai_widths_read(dir)
-  answer$outputs <- lapply(answer$outputs, .ai_widths_again, known = known)
+  if (length(known)) {
+    old <- setwd(dir)
+    tryCatch({
+      st <- tryCatch(tfl_read_study_spec("."), error = function(e) NULL)
+      answer$outputs <- lapply(answer$outputs, .ai_widths_again, known = known, st = st)
+    }, finally = setwd(old))
+  }
   for (i in seq_along(ids)) tfl_write_output(answer$outputs[[i]], paths[i])
   # a table with no widths: built here when its data can be read, its
   # widths from its printed columns (else run.R gives them when it builds)
   .ai_widths_on_read(answer$outputs, paths, dir)
   out <- paths
   a <- answer$assumption_rows
-  aw <- .ai_widths_assumptions(unset)
+  aw <- .ai_widths_assumptions(unset, .ai_spec_settings(dir)$language, fitted = lw$fitted)
   if (!is.null(aw)) {
     if (is.null(a) || !nrow(a)) {
       a <- aw
@@ -943,8 +974,17 @@
     names(old)[names(old) == "sheet"] <- "where"
     mine <- !is.na(old$output_id) & old$output_id %in% ids
     # (an assumption the agent fixed from the person's answer: kept as fixed)
-    rows <- rbind(old[!mine, , drop = FALSE], .ai_asm_keep_fixed(old[mine, , drop = FALSE], a))
+    rows <- .ai_rbind_fill(old[!mine, , drop = FALSE], .ai_asm_keep_fixed(old[mine, , drop = FALSE], a))
     out <- c(out, .ai_asm_write(dir, rows))
   }
   invisible(normalizePath(out, winslash = "/"))
+}
+
+# Two data frames stacked, each given the other's missing columns as NA
+# (the union of the columns, in one order)
+.ai_rbind_fill <- function(x, y) {
+  cols <- union(names(x), names(y))
+  for (k in setdiff(cols, names(x))) x[[k]] <- rep(NA_character_, nrow(x))
+  for (k in setdiff(cols, names(y))) y[[k]] <- rep(NA_character_, nrow(y))
+  rbind(x[cols], y[cols])
 }

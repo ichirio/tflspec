@@ -1,6 +1,10 @@
 # ---- ancova: the change from baseline at one visit, an ANCOVA ----------------------
 # (registered at the end of tpl_registry.R: R reads this file before it)
 
+# emmeans' `adjust` values (?emmeans::summary.emmGrid, "P-value adjustments")
+.tpl_ancova_adjust <- c("none", "tukey", "dunnettx", "sidak", "bonferroni", "holm", "hommel",
+                        "hochberg", "BH", "BY", "fdr", "mvt", "scheffe")
+
 .tpl_ancova_params <- function() list(
   tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
   .tpl_subset_param(),
@@ -12,16 +16,26 @@
   tfl_param("response", "CHG", doc = "the response variable"),
   tfl_param("covariates", "BASE", doc = "the model's covariates besides the arm"),
   tfl_param("where", NULL, doc = "the records kept besides the parameter and visit (R)"),
-  tfl_param("ref", NULL, doc = "the reference arm; NULL: the last arm in the code list's order")
+  tfl_param("ref", NULL, doc = "the reference arm; NULL: the last arm in the code list's order"),
+  tfl_param("adjust", "none", type = "choice", choices = .tpl_ancova_adjust,
+            doc = "the multiplicity adjustment of the differences' CIs and p-values, as emmeans' adjust (none: no adjustment)")
 )
 
 .tpl_ancova_body <- function(a, ctx) {
   pop <- a$population
+  if (!is.character(a$adjust) || length(a$adjust) != 1L || !a$adjust %in% .tpl_ancova_adjust) {
+    .ard_stop(sprintf("ancova: `adjust` is %s; it must be one of %s (emmeans' multiplicity adjustments).",
+                      paste(format(a$adjust), collapse = ", "),
+                      paste(sprintf("\"%s\"", .tpl_ancova_adjust), collapse = ", ")))
+  }
   subj <- paste0("adsl_", tolower(pop))
   set <- paste0(tolower(a$data), "_", tolower(pop), "_", tolower(a$param))
   where <- c(sprintf("PARAMCD == \"%s\" & AVISIT == \"%s\"", a$param, a$visit), a$where)
   model <- sprintf("formula = %s ~ %s, method = \"lm\"", a$response,
                    paste(c(a$by, a$covariates), collapse = " + "))
+  # cardx's label of the model: with covariates, "adjusted"
+  method_label <- if (length(a$covariates) > 0L) "Least-squares adjusted mean difference" else
+    "Least-squares mean difference"
   # an arm's LS mean and a difference as the arm's column: the arm (the
   # difference's first) as the group, the statistics' block as the variable
   post <- function(what, level) sprintf(paste(
@@ -35,7 +49,7 @@
       list(id = subj, label = .tpl_set_label(pop, ctx$population), from = "ADSL",
            population = pop),
       list(id = set, from = a$data, subjects = subj,
-           where = tfl_r(paste(where, collapse = " & ")))),
+           where = tfl_r(.tpl_and_all(where)))),
     analyses = list(
       list(id = "GROUPN", method = "categorical", data = subj, variables = a$by,
            purpose = "PRIMARY OUTCOME MEASURE"),
@@ -46,17 +60,44 @@
         if (is.null(a$ref)) sprintf("ref <- tail(levels(factor(data$%s)), 1)", a$by) else
           sprintf("ref <- \"%s\"", a$ref),
         "message(\"ancova: the reference arm is \", ref)",
-        "lsdiff <- data |>",
+        "data <- data |>",
         "  # the reference arm last: each difference is an arm minus it",
-        sprintf("  dplyr::mutate(%s = factor(%s, levels = c(setdiff(levels(factor(%s)), ref), ref))) |>",
+        sprintf("  dplyr::mutate(%s = factor(%s, levels = c(setdiff(levels(factor(%s)), ref), ref)))",
                 a$by, a$by, a$by),
-        sprintf("  cardx::ard_emmeans_contrast(%s)", model),
-        "# one difference a row (with three arms or more, cardx gives them in one)",
-        "rows <- rep(seq_len(nrow(lsdiff)), lengths(lsdiff$stat))",
-        "lsdiff <- dplyr::mutate(lsdiff[rows, ], variable_level = as.list(unlist(lsdiff$variable_level)),",
-        "  stat = unlist(lapply(lsdiff$stat, as.list), recursive = FALSE))",
-        "dplyr::filter(lsdiff, endsWith(as.character(unlist(variable_level)), paste(\" -\", ref)))"),
-        collapse = "\n"),
+        sprintf("fit <- stats::lm(%s ~ %s, data = data)", a$response,
+                paste(c(a$by, a$covariates), collapse = " + ")),
+        if (identical(a$adjust, "tukey")) c(
+          "# each other arm minus the reference arm, Tukey-adjusted.  emmeans changes \"tukey\"",
+          "# to \"sidak\" for the contrast against one arm; the pairwise contrast keeps the",
+          "# Tukey family of all pairs, of which the rows against the reference arm are kept",
+          sprintf("diffs <- emmeans::emmeans(fit, specs = ~ %s, data = data) |>", a$by),
+          "  emmeans::contrast(method = \"pairwise\", adjust = \"tukey\") |>",
+          "  summary(infer = TRUE, level = 0.95)",
+          "diffs <- diffs[endsWith(as.character(diffs$contrast), paste(\" -\", ref)), ]") else c(
+          "# each other arm minus the reference arm, adjusted as `adjust` says (emmeans'",
+          "# own default for these differences is not \"none\", so it is always given)",
+          sprintf("diffs <- emmeans::emmeans(fit, specs = ~ %s, data = data) |>", a$by),
+          sprintf("  emmeans::contrast(method = \"trt.vs.ctrl\", ref = nlevels(data$%s), adjust = \"%s\") |>",
+                  a$by, a$adjust),
+          "  summary(infer = TRUE, level = 0.95)"),
+        "# the rows of cardx::ard_emmeans_contrast(): a statistic's rows, one a difference",
+        "stat <- list(estimate = diffs$estimate, std.error = diffs$SE, df = diffs$df,",
+        "  conf.low = diffs$lower.CL, conf.high = diffs$upper.CL, p.value = diffs$p.value,",
+        sprintf("  conf.level = rep(0.95, nrow(diffs)), method = rep(\"%s\", nrow(diffs)))",
+                method_label),
+        "labels <- c(estimate = \"Mean Difference\", std.error = \"Standard Error\",",
+        "  df = \"Degrees of Freedom\", conf.low = \"CI Lower Bound\", conf.high = \"CI Upper Bound\",",
+        "  p.value = \"p-value\", conf.level = \"CI Confidence Level\", method = \"method\")",
+        "cards::as_card(dplyr::tibble(",
+        sprintf("  group1 = \"%s\", variable = \"contrast\",", a$by),
+        "  variable_level = rep(as.list(as.character(diffs$contrast)), length(stat)),",
+        "  context = \"emmeans_contrast\", stat_name = rep(names(stat), each = nrow(diffs)),",
+        "  stat_label = unname(labels[stat_name]),",
+        "  stat = unname(unlist(lapply(stat, as.list), recursive = FALSE)),",
+        "  fmt_fun = lapply(stat_name, function(n) if (n == \"method\") as.character else 1L),",
+        "  warning = list(NULL), error = list(NULL)), check = FALSE)"),
+        collapse = "
+"),
         post = post("DIFF",
                     "lapply(variable_level, sub, pattern = \" - .*\", replacement = \"\")"),
         # the p-value as the program's fmt_pvalue() writes it (<0.001)
@@ -89,16 +130,36 @@
 #' of covariance: `<response> ~ <by> + <covariates>` (`CHG ~ TRT01A +
 #' BASE`), a linear model.  Each arm's n and LS mean (SE, 95% CI), and the
 #' difference in LS means of each other arm minus the reference arm (SE,
-#' 95% CI, p-value) in that arm's column, from cardx's
-#' `ard_emmeans_emmeans()` and `ard_emmeans_contrast()` (emmeans).  The
+#' 95% CI, p-value) in that arm's column.  The LS means are cardx's
+#' `ard_emmeans_emmeans()`; the differences are emmeans' own
+#' (`emmeans::contrast(method = "trt.vs.ctrl")`, each arm against the
+#' reference arm).  The
 #' reference arm is `ref`, else the last arm in the code list's order; the
 #' program says which (a message).  The p-value is
 #' written as the program's `fmt_pvalue()` writes it (`<0.001`, else 3
 #' decimals).
 #'
+#' `adjust` is the multiplicity adjustment of the differences' CIs and
+#' p-values, one of emmeans' `adjust` values (see "P-value adjustments"
+#' in [emmeans::summary.emmGrid()]): `"none"`, `"tukey"`, `"dunnettx"`,
+#' `"sidak"`, `"bonferroni"`, `"holm"`, `"hommel"`, `"hochberg"`, `"BH"`,
+#' `"BY"`, `"fdr"`, `"mvt"` or `"scheffe"`.  **The default is `"none"`: no
+#' adjustment.**  Before this argument existed, a table with three arms or
+#' more was Tukey-adjusted without saying so (cardx's
+#' `ard_emmeans_contrast()` takes emmeans' pairwise contrast, whose default
+#' is Tukey); with two arms nothing was adjusted, and `"none"` gives the
+#' same table.  Pass `adjust` always, even `"none"`: emmeans' own default
+#' for these differences is `"dunnettx"`.  For differences against one
+#' reference arm, `"tukey"` is the Tukey adjustment over all pairs of arms
+#' (emmeans' pairwise contrast), of which the table shows the differences
+#' against the reference arm, and it gives the table as it was before this
+#' argument for three arms or more.
+#' `"mvt"` is a Monte Carlo method: its numbers change a little from run
+#' to run unless the seed is set.
+#'
 #' @inheritParams tpl_demog
 #' @param ... The template's other parameters: `data`, `param`, `visit`
-#'   (required), `by`, `response`, `covariates`, `where`, `ref`.
+#'   (required), `by`, `response`, `covariates`, `where`, `ref`, `adjust`.
 #' @return A [rtfreporter::table_plan()].
 #' @examples
 #' x <- tfl_template_expand("ancova", list(population = "SAF", data = "ADVS",

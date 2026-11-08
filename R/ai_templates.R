@@ -69,6 +69,43 @@
   s
 }
 
+# A line a template's block adds: a fact the agent found only by building
+.ai_tpl_notes <- list(
+  param_change = paste0(
+    "`baseline: true` adds a Baseline column (rows, with `layout: rows`) from the same ",
+    "records `where` keeps: with `where: ONTRTFL == \"Y\"` the baseline is empty; for a ",
+    "baseline, `where: ONTRTFL == \"Y\" | ABLFL == \"Y\"`. The stub's heading goes in the ",
+    "template's `heading` argument: a `plan_stub: {heading: ...}` is not printed (the ",
+    "template's header wins)."),
+  shift = paste0(
+    "`levels` are the data's values, in order (`LOW`, `NORMAL`, `HIGH`); to print other ",
+    "text (`Low`), give the report's `codelists` for both the post and the baseline ",
+    "column (value, label), and `levels` may then be the codes or the labels; ",
+    "`Missing` and `Total` are the template's rows: not in `levels`, and they need not ",
+    "be in the code list; the rows are `levels`, then `Missing` (only with ",
+    "`missing_label: Missing`: by default a subject with no baseline is left out), then ",
+    "`Total`; the header N (`header_n`: `set` by default) and the % denominator ",
+    "(`percent_of`: `total` by default) are set separately; a group text over the ",
+    "categories (`Worst post-baseline [a]: Low`) is `post_header` (`{col}`: the ",
+    "category), not the code list's label."),
+  lab_shift = paste0(
+    "`levels` are the data's values, in order (`LOW`, `NORMAL`, `HIGH`); to print other ",
+    "text (`Low`), give the report's `codelists` for both the post and the baseline ",
+    "column (value, label), and `levels` may then be the codes or the labels; ",
+    "`Missing` and `Total` are the template's rows: not in `levels`, and they need not ",
+    "be in the code list; the rows are `levels`, then `Missing` (only with ",
+    "`missing_label: Missing`: by default a subject with no baseline is left out), then ",
+    "`Total`; the header N (`header_n`: `set` by default) and the % denominator ",
+    "(`percent_of`: `total` by default) are set separately; a group text over the ",
+    "categories (`Worst post-baseline [a]: Low`) is `post_header` (`{col}`: the ",
+    "category), not the code list's label."),
+  km_survival = paste0(
+    "the log-rank p-value is shown by default: set `pvalue: false` when the shell shows ",
+    "none."),
+  forest_hr = paste0(
+    "the subgroup headings read the common ADaM variables' labels (SEX Sex, AGEGR1 Age ",
+    "group, REGION1 Region ...); `subgroup_labels: {ECOGBL: ECOG}` gives the shell's own."))
+
 # The templates a request may answer with: one block each -- name, what it
 # is, its kind and layout (a variant: of which), then a line a parameter
 # (the target ones marked: population, subset, where).  `kinds`: the kinds
@@ -90,7 +127,14 @@
     out <- c(out, sprintf("- `%s`: %s (%s, layout %s%s%s)%s", tt$name[i], .ai_tpl_description(t),
                           tt$kind[i], tt$layout[i], from, pkg,
                           if (own) paste0(" -- own data: the report writes `data` steps `read`, the analysis ",
-                                          "set, `param`; not the template's own steps (`survfit`, `time_unit`)") else ""))
+                                          "set, `param`; not the template's own steps (`survfit`, `time_unit`)",
+                                          if (startsWith(tt$name[i], "km_")) paste0(
+                                            "; the arms' order: a `levels` data step on the arm ",
+                                            "variable, not `codelists`")) else ""))
+    # (what a trial found only by building: a line under the template)
+    if (!short && !is.null(.ai_tpl_notes[[tt$name[i]]])) {
+      out <- c(out, paste0("  - note: ", .ai_tpl_notes[[tt$name[i]]]))
+    }
     # (its catalog aliases: the same template, by another collection's name)
     al <- .tpl_aliases_of(tt$name[i])
     if (nrow(al)) {
@@ -112,7 +156,11 @@
       if (isTRUE(x$multiple)) what <- paste0(what, ", several")
       if (!is.null(x$of)) what <- paste0(what, " of ", x$of)
       if (length(x$choices)) what <- paste0(what, ": ", paste(x$choices, collapse = " | "))
-      if (length(x$fields)) what <- paste0(what, " {", paste(x$fields, collapse = ", "), "}")
+      if (.tpl_is_name_text(x)) {
+        what <- "mapping, name: text"
+      } else if (length(x$fields)) {
+        what <- paste0(what, " {", paste(x$fields, collapse = ", "), "}")
+      }
       tgt <- if (identical(x$group, "target") || (is.null(x$group) && x$name %in% target)) " [target]" else ""
       out <- c(out, sprintf("  - `%s`%s%s (%s) = %s%s", x$name, tgt,
                             if (isTRUE(x$required)) "*" else "", what, .ai_tpl_value(x$default),
@@ -283,21 +331,125 @@
   for (x in params) {
     v <- args[[x$name]]
     if (is.null(v)) next
+    # (a map written as a list of {name, text} is read as the mapping; one
+    # that cannot be read says so here, not at the expanded item)
+    if (.tpl_is_name_text(x)) {
+      chk <- tryCatch(.tpl_name_text_map(v, nm, x$name, "tfl_ai_check()"), error = function(e) e)
+      if (inherits(chk, "error")) {
+        add(paste("template args", x$name), sub("^[^:]*: ", "", conditionMessage(chk)))
+        next
+      }
+    }
     ok <- switch(x$type %||% "text",
                  flag = is.logical(v) && length(v) == 1L,
-                 number = is.numeric(v),
+                 # (YAML reads [0.25, 1, 2] -- decimals and whole numbers -- as a list)
+                 number = is.numeric(v) || (is.list(v) && length(v) &&
+                                              all(vapply(v, function(e) is.numeric(e) && length(e) == 1L, NA))),
                  vars = , levels = , text = , choice = is.character(v) || inherits(v, "tfl_r") ||
                    (is.list(v) && all(vapply(v, is.character, NA))),
                  TRUE)
     if (!isTRUE(ok)) {
       add(paste("template args", x$name), sprintf("of template %s is %s%s", nm, x$type,
                                                   if (isTRUE(x$multiple)) " (several)" else ""))
-    } else if (identical(x$type, "choice") && length(x$choices) && !all(unlist(v) %in% x$choices)) {
+    } else if (identical(x$type, "choice") && length(x$choices) && !all(as.character(unlist(v)) %in% x$choices)) {
       add(paste("template args", x$name), sprintf("of template %s is one of %s", nm,
                                                   paste(x$choices, collapse = ", ")))
     }
   }
   p
+}
+
+# A shift template's `levels` and `worst` against the data's values (the
+# kit's `vars`: a variable's `levels`, ` | ` between the values, NA when the
+# data was not read, the variable has too many values or is not coded).
+# `levels` are the data's values; the report's `codelists` (value, label) for
+# the post and the baseline column give other printed text, so a code list's
+# values and labels pass too.  `worst` is matched against the raw data before
+# any code list (.tpl_shift_code()): the data's values only.  No entry
+# matches: an error; some do not: a warning (a category the data lacks has
+# no row or column).  Nothing is said when the values are not known.
+.ai_check_shift_levels <- function(tp, codelists, vars, at) {
+  p <- .ai_problems()
+  nm <- .ai_scalar_text(tp$name)
+  if (is.null(nm) || is.null(vars) || !all(c("dataset", "variable", "levels") %in% names(vars))) {
+    return(p)
+  }
+  real <- if (nm %in% tfl_templates()$name) nm else
+    tryCatch(.tpl_alias_target(nm, "tfl_ai_check()"), error = function(e) NULL)
+  if (is.null(real) || !real %in% c("shift", "lab_shift")) return(p)
+  args <- tp$args %||% list()
+  pp <- tfl_template_params(real)
+  # (lab_shift has no data / baseline / post parameter: the shift defaults)
+  arg <- function(k) args[[k]] %||% (pp[[k]] %||% .tpl_shift_params[[k]])$default
+  texts <- function(v) {
+    if (is.null(v) || inherits(v, "tfl_r")) return(NULL)
+    v <- unlist(v, use.names = FALSE)
+    if (is.character(v) && length(v) && !anyNA(v)) v else NULL
+  }
+  ds <- texts(arg("data"))
+  post <- texts(arg("post"))
+  base <- texts(arg("baseline"))
+  if (length(ds) != 1L || length(post) != 1L || length(base) != 1L) return(p)
+  r <- which(vars$dataset == toupper(ds) & vars$variable == post)
+  have <- if (length(r)) vars$levels[r[1L]] else NA_character_
+  if (is.na(have) || !nzchar(have)) return(p)
+  vals <- strsplit(have, " | ", fixed = TRUE)[[1L]]
+  # (a report's code list for a column: its values and its labels)
+  cl_text <- function(v) {
+    tryCatch(unlist(lapply(.tpl_cl_rows(codelists[[v]]), function(r) {
+      c(as.character(r$value), as.character(r$label))
+    })), error = function(e) character())
+  }
+  where <- sprintf("%s (%s)", sprintf("%s.%s", toupper(ds), post), paste(vals, collapse = ", "))
+  one <- function(k, ok, allowed_in, fix, wont = "they will not print",
+                  entries = texts(args[[k]])) {
+    if (is.null(entries)) return()
+    good <- entries %in% ok
+    if (all(good)) return()
+    bad <- paste(entries[!good], collapse = ", ")
+    p <<- if (any(good)) {
+      .ai_problem(p, paste(at, "template args", k), sprintf(
+        "%s of template %s: %s match no value of %s%s; %s",
+        k, real, bad, where, allowed_in, wont), "warning")
+    } else {
+      .ai_problem(p, paste(at, "template args", k), sprintf(
+        "%s of template %s: %s match no value of %s%s; %s",
+        k, real, bad, where, allowed_in, fix))
+    }
+  }
+  # (the Missing and Total rows are the template's: an entry of them in
+  # `levels` would be a second one -- the build stops on the duplicate)
+  lv <- texts(args$levels)
+  own <- c(texts(arg("missing_label")), texts(arg("total_label")))
+  for (e in unique(lv[lv %in% own])) {
+    p <- .ai_problem(p, paste(at, "template args levels"), sprintf(
+      "levels of template %s: `%s` is a row the template adds: leave it out of `levels`", real, e))
+  }
+  # (a code list's text counts when both columns have it: one column's alone
+  # leaves the other unmatched)
+  one("levels", c(vals, intersect(cl_text(post), cl_text(base))),
+      sprintf(" or a value or label the report's `codelists` give for both %s and %s", post, base),
+      sprintf(paste0("`levels` are the data's values; for other printed text give ",
+                     "`codelists` with value and label for %s and %s"), post, base),
+      entries = lv[!lv %in% own])
+  one("worst", vals, " (a code list's label does not count)",
+      "`worst` is matched against the data's values, before any code list: write the values",
+      wont = "they rank nothing, so check the order")
+  p
+}
+
+# A draft report's code lists as its build has them: its own over the ones
+# of the layers it extends (per variable, as tfl_report_codelists() gives
+# them).  NULL when the draft extends something and the study cannot be
+# read (or cannot give the layers): they are not known, so a check on
+# them is left out.
+.ai_draft_codelists <- function(o, study) {
+  own <- o$codelists %||% list()
+  if (!length(o$extends) || identical(o$extends, "none")) return(.codelists_norm(own))
+  if (is.null(study)) return(NULL)
+  below <- tryCatch(.layers_below(o, study)$acc$codelists, error = function(e) NULL)
+  if (is.null(below)) return(NULL)
+  .codelists_norm(.merge_map(below, own) %||% list())
 }
 
 # A template report as the items it stands for (its own after them): as
@@ -323,8 +475,9 @@
 
 # The answer's template, its data stage (`data`: a design's data steps,
 # before the template's call: read, the analysis set, param, filter) and
-# its own layers (each a mapping, a design's layer); a design's other
-# parts beside it are not read
+# its own layers (each a mapping, a design's layer) and its settings
+# (`plot`, over the template's, as a report written by hand); a design's
+# other parts beside it are not read
 .ai_read_tpl_figure <- function(x, p) {
   layers <- x$layers %||% list()
   if (!is.list(layers) || !is.null(names(layers)) ||
@@ -338,11 +491,16 @@
     p <- .ai_problem(p, "data", "is a list of data steps, each a mapping that starts with its `step`")
     data <- NULL
   }
-  for (k in intersect(names(x), c("stats", "plot", "plots", "compose"))) {
+  plot <- x$plot
+  if (!is.null(plot) && (!is.list(plot) || (length(plot) && is.null(names(plot))))) {
+    p <- .ai_problem(p, "plot", "is a mapping of the figure's settings (x_label, y_by, legend ...)")
+    plot <- NULL
+  }
+  for (k in intersect(names(x), c("stats", "plots", "compose"))) {
     p <- .ai_problem(p, k, "is a design's part: with a template it is not read (the template makes it)",
                      "warning")
   }
-  list(design = structure(list(template = x$template, data = data, layers = layers),
+  list(design = structure(list(template = x$template, data = data, layers = layers, plot = plot),
                          class = "tfl_ai_tpl_figure"),
        problems = p)
 }
@@ -355,11 +513,13 @@
   content <- lapply(design$layers %||% list(), function(l) {
     tfl_item(l$layer, l[setdiff(names(l), "layer")])
   })
-  tfl_output(id, kind = "figure", label = if (length(ttl)) ttl[1L] else NA_character_,
-             population = if (length(pop)) pop else NA_character_,
-             template = list(name = tp$name, args = tp$args %||% list()), content = content,
-             data = if (length(design$data)) list(steps = design$data) else NULL,
-             page = if (length(ttl)) list(titles = as.list(ttl)) else list())
+  o <- tfl_output(id, kind = "figure", label = if (length(ttl)) ttl[1L] else NA_character_,
+                  population = if (length(pop)) pop else NA_character_,
+                  template = list(name = tp$name, args = tp$args %||% list()), content = content,
+                  data = if (length(design$data)) list(steps = design$data) else NULL,
+                  page = if (length(ttl)) list(titles = as.list(ttl)) else list())
+  if (length(design$plot)) o$plot <- design$plot
+  o
 }
 
 # Its checks: the request's figure, the template's name and arguments, and
@@ -375,15 +535,23 @@
   tpp <- .ai_check_template(tp, "", kinds = "figure")
   tpp$where <- trimws(tpp$where)
   p <- rbind(p, tpp)
+  # a `plot:` key that does nothing in the template: a warning (the figure
+  # still builds); the template alone says it, no study needed
+  t <- tryCatch(.tpl_get(tp$name, "tfl_ai_check()"), error = function(e) NULL)
+  for (k in if (!is.null(t)) .tpl_plot_unused(t, answer$design$plot)) {
+    p <- .ai_problem(p, paste("plot", k), .tpl_plot_unused_text(t, k), "warning")
+  }
   if (any(tpp$severity == "error") || is.null(context$study_dir)) return(p)
   st <- tryCatch(tfl_read_study_spec(context$study_dir), error = function(e) e)
   if (inherits(st, "error")) return(p)
   o <- .ai_tpl_fig_output(answer$design, want %||% answer$output_id %||% "F-1", context)
-  r <- tryCatch({
+  # (said above, not again by the resolve)
+  r <- tryCatch(withCallingHandlers({
     ro <- tfl_resolve_output(o, st)
     suppressMessages(tfl_content_code(ro, template = "items"))
     NULL
-  }, error = function(e) .ai_one_line(conditionMessage(e)))
+  }, tfl_plot_key_unused = function(w) invokeRestart("muffleWarning")),
+  error = function(e) .ai_one_line(conditionMessage(e)))
   if (!is.null(r)) p <- .ai_problem(p, "template", paste("could not be written:", r))
   # (its data steps, when the report says them: the analysis set kept --
   # the parameter the template's own check says)
@@ -406,6 +574,7 @@
   for (r in reads) {
     i <- match(r, have)
     if (is.na(i)) .ard_stop(sprintf("%s reads %s, which spec/data.yml does not list.", o$id, r))
+    .data_file_must_exist(r, ds[[i]]$path, ".")
     data[[tolower(r)]] <- .ai_read_dataset(ds[[i]]$path)
   }
   if (length(o$ard$analyses %||% list())) {

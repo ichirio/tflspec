@@ -9,7 +9,8 @@ tfl_content_code(
   data = NULL,
   plan = "plan",
   pipe = NULL,
-  template = c("call", "items")
+  template = c("call", "items"),
+  study = NULL
 )
 }
 \arguments{
@@ -17,9 +18,15 @@ tfl_content_code(
 
 \item{data}{The name of the object the pipe starts from; \code{NULL}: the
 output's \code{data$object}, else \code{ard} when the content normalizes it
-(a \code{normalize_ard()} item), else \code{data}.  With \code{data.steps} (R that
-makes \code{data} from the output's object, the old process_code), the
-steps come first, as they are written, and the pipe starts from \code{data}.}
+(a \code{normalize_ard()} item), else \code{data}.  A table with \code{data.steps}
+(its Rework, the old process_code: optional R after \code{normalize_ard()}
+and before \code{table_plan()}) starts with \code{data <- ard |> normalize_ard(...)}
+(the content's own item with its arguments; \code{data <- ard} when it has
+none; \code{ard} is the output's object), then the steps as they are written,
+which start from \code{data} and leave \code{data}, and the pipe starts from
+\code{data}.  Steps that never name \code{data} are an error.  A table of records
+(\code{source: dataset}) and the report's own data code (\code{source: code})
+have their steps alone, as they are written.}
 
 \item{plan}{The name the plan is assigned to.}
 
@@ -37,6 +44,11 @@ normalization).  A figure's template (\code{km_survival}): its data steps
 written out, then \verb{content <- tfl_tpl(<data>, "<name>", ...)} and the
 report's own items \code{+}-ed after it; \code{"items"} (or a report that
 replaces one of the template's layers) writes its design.}
+
+\item{study}{The study (\code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}}) or its folder; for a listing
+of records (\code{data: {source: dataset}}) the code starts with its data
+part, as \code{\link[=tfl_listing_code]{tfl_listing_code()}} \code{part = "data"} writes it (the dataset
+read, its condition, code lists and order).  \code{NULL}: the content only.}
 }
 \value{
 The code, one element a line.

@@ -151,7 +151,8 @@ test_that("stat_fmt of each kind of format", {
   expect_equal(pick("AGE", "AGE", "cv"), "11.4")           # computed, xx.x
   # categorical: a proportion as a percent
   expect_equal(pick("SEX", "SEX", "p"), "61.6")            # default xx.x%
-  expect_equal(pick("SEX", "AGEGR1", "p"), "48.84")       # AGEGR1:p=xx.xx%
+  # (the first level: AGEGR1 follows AGEGR1N, "<65" first, not the C locale's "65-80")
+  expect_equal(pick("SEX", "AGEGR1", "p"), "16.28")       # AGEGR1:p=xx.xx%
   expect_equal(pick("F", "SEX", "p"), "62")                # p=xx%
   expect_equal(pick("SER", "ANYSER", "p"), "0.00")         # ANYSER:p=2
   # p-values: 3 decimals, or <0.001
@@ -255,4 +256,33 @@ test_that("an analysis's formats are in its cards call; the rest after it", {
   expect_match(txt, paste0(
     "  apply_fmt_fun() |>\n",
     "  tag_ard(report_id, \"ST\", population = \"SAF\")"), fixed = TRUE)
+})
+
+test_that("a format times a number: a rate per 1,000 (cards::label_round(scale =))", {
+  expect_identical(.fmt_r("xx.x*1000"), "cards::label_round(1, scale = 1000)")
+  expect_identical(.fmt_r("xx*100"), "cards::label_round(0, scale = 100)")
+  expect_identical(.fmt_r("xx.x%"), "cards::label_round(1, scale = 100)")
+  expect_identical(.fmt_r("xx.xx"), "2L")
+  expect_true(all(.fmt_ok(c("xx.x*1000", "xx*100", "xx.xx*365"))))
+  expect_false(any(.fmt_ok(c("xx.x*", "xx.x*0", "xx.x%*100", "*1000", "xx.x*1e3"))))
+  # the check says the format
+  expect_error(fmt_spec(list(list(analysis_id = "A", method = "continuous",
+                                 variables = "AGE", formats = "mean=xx.x*"))),
+               "xx.x*1000, a number of decimals or pvalue (mean)", fixed = TRUE)
+  skip_on_cran()
+  skip_if_not_installed("cardx")
+  adam <- exact_data()
+  dir <- exact_dir(adam)
+  on.exit(unlink(dir, recursive = TRUE), add = TRUE)
+  row <- list(method = "incidence_rate", dataset = "ADTTE", population_id = "SAF",
+              by = "TRTA", args = "time = AVAL, count = CNSR, id = USUBJID",
+              formats = "estimate=xx.xx*1000 | conf.low=xx.xx*1000 | conf.high=xx.xx*1000")
+  sp <- exact_spec(row)
+  code <- paste(tfl_ard_code(sp, save = FALSE), collapse = "\n")
+  expect_match(code, "estimate = label_round(2, scale = 1000)", fixed = TRUE)
+  ard <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE))
+  est <- ard[ard$stat_name == "estimate", ]
+  expect_gt(nrow(est), 0L)
+  expect_identical(unlist(est$stat_fmt),
+                   sprintf("%.2f", vapply(est$stat, unlist, 0) * 1000))
 })

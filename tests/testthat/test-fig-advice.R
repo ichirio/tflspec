@@ -70,3 +70,30 @@ test_that("text visits with no order, and a waterfall's usual marks", {
   a <- tfl_fig_advice(w)
   expect_true(all(c("waterfall_ref", "waterfall_x") %in% a$rule))
 })
+
+test_that("own colours or a palette with no 'Colours by' are said to do nothing", {
+  mk <- function(plot) tfl_fig_design(
+    data = list(list(step = "read", dataset = "ADSL")),
+    plot = plot,
+    layers = list(list(layer = "point", x = "AGE", y = "TRTDURD")))
+  rule <- function(d) {
+    a <- tfl_fig_advice(d)
+    a[a$rule == "colours_unused", , drop = FALSE]
+  }
+  a <- rule(mk(list(colours = "Drug B = grey40")))
+  expect_identical(nrow(a), 1L)
+  expect_identical(a$level, "warning")
+  expect_match(a$message, "own colours are not applied.*colour_by")
+  a <- rule(mk(list(colours = list(`Drug B` = "grey40"))))
+  expect_identical(nrow(a), 1L)
+  a <- rule(mk(list(palette = "response")))
+  expect_identical(nrow(a), 1L)
+  expect_match(a$message, "palette response colours no groups.*colour_by")
+  # with 'Colours by', and the default palette (the templates', with or without it): nothing
+  expect_identical(nrow(rule(mk(list(colour_by = "TRT01A", colours = "Drug B = grey40")))), 0L)
+  expect_identical(nrow(rule(mk(list(colour_by = "TRT01A", palette = "response")))), 0L)
+  expect_identical(nrow(rule(mk(list(palette = "treatment")))), 0L)
+  expect_identical(nrow(rule(mk(list()))), 0L)
+  # a colour that cannot be read is no advice (the design's code says so)
+  expect_identical(nrow(rule(mk(list(colours = "Drug B")))), 0L)
+})

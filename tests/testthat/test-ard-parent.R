@@ -92,6 +92,75 @@ test_that("ard_strata() and ard_pairwise() run their one analysis with .x", {
   expect_identical(exact_numbers(mine), exact_numbers(hand))
 })
 
+test_that("stack, subgroups and pairwise: the wrappers' keywords write their calls", {
+  skip_on_cran()
+  skip_if_not_installed("cardx")
+  keys <- tfl_ard_methods()
+  expect_identical(keys$call[match(c("stack", "subgroups", "pairwise"), keys$method)],
+                   c("cards::ard_stack", "cards::ard_strata", "cards::ard_pairwise"))
+  adam <- exact_data()
+  dir <- exact_dir(adam)
+  by_kw <- parent_spec(list(
+    list(analysis_id = "DEMO", method = "stack", dataset = "ADSL",
+         population_id = "SAF", by = "ARM", overall = "TRUE"),
+    list(analysis_id = "CONT", parent = "DEMO", method = "continuous",
+         variables = "AGE"),
+    list(analysis_id = "BYSEX", method = "subgroups", dataset = "ADSL",
+         population_id = "SAF", strata = "SEX"),
+    list(analysis_id = "AGE", parent = "BYSEX", method = "continuous",
+         by = "ARM", variables = "AGE"),
+    list(analysis_id = "PAIRS", method = "pairwise", dataset = "ADSL",
+         population_id = "SAF", variables = "ARM",
+         args = "include = \"Placebo\""),
+    list(analysis_id = "TT", parent = "PAIRS", method = "ttest", by = "ARM",
+         variables = "AGE", statistics = "estimate | p.value")))
+  by_fn <- by_kw
+  by_fn$analyses$method <- .wrapper_call(by_fn$analyses$method)
+  expect_identical(by_fn$analyses$method[c(1L, 3L, 5L)],
+                   c("cards::ard_stack", "cards::ard_strata", "cards::ard_pairwise"))
+  # the same code as the functions' names (but the definition's own hash)
+  code <- tfl_ard_code(by_kw, part = "body")
+  same <- function(cd) cd[!grepl("definition = ", cd, fixed = TRUE)]
+  expect_identical(same(code), same(tfl_ard_code(by_fn, part = "body")))
+  txt <- paste(code, collapse = "\n")
+  expect_match(txt, "ard_stack(\n    .by = ARM,", fixed = TRUE)
+  expect_match(txt, ".overall = TRUE", fixed = TRUE)
+  expect_match(txt, "ard_strata(\n    .strata = SEX,", fixed = TRUE)
+  expect_match(txt, "ard_pairwise(\n    variable = ARM,", fixed = TRUE)
+  ard <- suppressMessages(tfl_build_ard(by_kw, dir = dir, save = FALSE))
+  # (the stack's own rows, its by counts, are the parent's)
+  expect_setequal(unique(ard$analysis_id), c("DEMO", "CONT", "AGE", "TT"))
+  # each arm against placebo only
+  pop <- subset(adam$ADSL, SAFFL == "Y")
+  hand <- cards::ard_pairwise(pop, variable = ARM, include = "Placebo",
+                              .f = ~ cardx::ard_stats_t_test(.x, by = ARM, variables = AGE))
+  tt <- ard[ard$analysis_id == "TT" & ard$stat_name == "p.value", ]
+  expect_equal(sort(unname(unlist(tt$stat))),
+               sort(unname(vapply(hand, function(h)
+                 unlist(h$stat[h$stat_name == "p.value"]), 0))))
+  # ARS sees the analyses inside, on the parent's data and groups
+  f <- .ard_spec_flat(by_kw$analyses)
+  expect_setequal(f$analysis_id, c("CONT", "AGE", "TT"))
+  expect_identical(f$by[f$analysis_id == "AGE"], "SEX | ARM")
+  expect_identical(f$by[f$analysis_id == "CONT"], "ARM")
+  # what a keyword's row may not say is refused as for the function
+  expect_error(parent_spec(list(
+    list(analysis_id = "S", method = "subgroups", dataset = "ADSL", strata = "SEX"),
+    list(analysis_id = "A", parent = "S", method = "continuous", variables = "AGE"),
+    list(analysis_id = "B", parent = "S", method = "continuous", variables = "BMIBL"))),
+    "runs one analysis")
+  expect_error(parent_spec(list(
+    list(analysis_id = "P", method = "pairwise", dataset = "ADSL",
+         variables = "ARM | SEX"),
+    list(analysis_id = "A", parent = "P", method = "ttest", by = "ARM",
+         variables = "AGE"))),
+    "ONE column")
+  expect_error(parent_spec(list(
+    list(analysis_id = "S", method = "subgroups", dataset = "ADSL",
+         strata = "SEX", by = "ARM", overall = "TRUE"))),
+    "takes no `overall`")
+})
+
 test_that("what a row inside another may not say is refused", {
   base <- list(analysis_id = "DEMO", method = "cards::ard_stack",
                dataset = "ADSL", population_id = "SAF", by = "ARM")
@@ -178,4 +247,48 @@ test_that("post: steps on the ARD after the call", {
     list(analysis_id = "S", method = "cards::ard_stack", dataset = "ADSL", by = "ARM"),
     list(analysis_id = "A", parent = "S", method = "continuous", variables = "AGE",
          post = "cards::sort_ard_hierarchical()"))), "goes on the parent's row")
+})
+
+test_that("post: a format set by update_ard_fmt_fun() is not the default's", {
+  skip_on_cran()
+  skip_if_not_installed("cards")
+  adam <- exact_data()
+  dir <- exact_dir(adam)
+  sp <- parent_spec(list(list(
+    analysis_id = "CONT", method = "continuous", dataset = "ADSL",
+    population_id = "SAF", by = "ARM", variables = "AGE",
+    statistics = "N | mean | sd",
+    post = paste("cards::update_ard_fmt_fun(stat_names = \"mean\", fmt_fun = 3L,",
+                 "filter = group1_level == \"Placebo\")"))))
+  # after the format step, and the ARD formatted again
+  txt <- paste(tfl_ard_code(sp, part = "body"), collapse = "\n")
+  expect_match(txt, paste0("fmt_ard(fmt_default) |>\n  update_ard_fmt_fun(stat_names = \"mean\", ",
+                           "fmt_fun = 3L, filter = group1_level == \"Placebo\") |>\n",
+                           "  apply_fmt_fun(replace = TRUE) |>"), fixed = TRUE)
+  ard <- suppressMessages(tfl_build_ard(sp, dir = dir, save = FALSE))
+  m <- ard[ard$stat_name == "mean", ]
+  arm <- vapply(m$group1_level, function(v) as.character(v[[1L]]), "")
+  fmt <- vapply(m$stat_fmt, function(v) as.character(v[[1L]]), "")
+  dec <- nchar(sub("^[^.]*[.]?", "", fmt))
+  expect_identical(dec[arm == "Placebo"], 3L)
+  expect_true(all(dec[arm != "Placebo"] != 3L))
+  # a row without such a step: as before
+  expect_identical(.post_fmt_split(list("cards::sort_ard_hierarchical()"))$after, NULL)
+  # a calculated statistic's own format: said again after the format step
+  # (se has a default format of its own, which would win)
+  sp2 <- parent_spec(list(list(
+    analysis_id = "CONT", method = "continuous", dataset = "ADSL",
+    population_id = "SAF", by = "ARM", variables = "AGE",
+    statistics = "N | mean | sd",
+    post = paste("cards::add_calculated_row(expr = sd / sqrt(N), stat_name = \"se\",",
+                 "fmt_fun = 4L)"))))
+  txt <- paste(tfl_ard_code(sp2, part = "body"), collapse = "\n")
+  expect_match(txt, paste0("fmt_ard(fmt_default) |>\n  update_ard_fmt_fun(stat_names = \"se\", ",
+                           "fmt_fun = 4L) |>\n  apply_fmt_fun(replace = TRUE) |>"), fixed = TRUE)
+  ard <- suppressMessages(tfl_build_ard(sp2, dir = dir, save = FALSE))
+  se <- vapply(ard$stat_fmt[ard$stat_name == "se"], function(v) as.character(v[[1L]]), "")
+  expect_true(all(nchar(sub("^[^.]*[.]", "", se)) == 4L))
+  # without fmt_fun, the default's
+  expect_identical(.post_fmt_split(list(
+    "cards::add_calculated_row(expr = sd / sqrt(N), stat_name = \"se\")"))$after, NULL)
 })

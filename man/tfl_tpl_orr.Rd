@@ -18,7 +18,7 @@ The table template \code{orr}, layout \code{stat_block}. Its program is one call
    \code{category} \tab other \tab call \tab AVALC \tab  \tab the response category's variable \cr
    \code{responders} \tab other \tab call \tab CR, PR \tab  \tab the categories that respond \cr
    \code{where} \tab other \tab call \tab  \tab  \tab the records kept besides the parameter (R) \cr
-   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: \if{html}{\out{<data>}}_\if{html}{\out{<param>}} \cr
+   \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: <data>_<param> \cr
    \code{ci_method} \tab other \tab call \tab clopper-pearson \tab  \tab the rate's CI (cardx's method) \cr
    \code{conf_level} \tab other \tab call \tab 0.95 \tab  \tab the rate's CI's level \cr
    \code{stat_layout} \tab other \tab call \tab rows \tab  \tab the rate and its CI: "rows", under each other in the arm's column, or "cols", each arm's two columns (stat_block) \cr

@@ -1,0 +1,139 @@
+# How deep the agent checks what it built (study.yml ai: review, #598):
+# the levels, and the program and the facts tfl_ai_run() writes for it
+
+test_that("the review levels: a kind each, the default for a kind not said, none", {
+  lv <- tflspec:::.ai_review_levels
+  expect_identical(lv(list()), c(figure = 3L, table = 2L, listing = 1L))
+  expect_identical(lv(list(table = 3)), c(figure = 3L, table = 3L, listing = 1L))
+  expect_identical(lv(1), c(figure = 1L, table = 1L, listing = 1L))
+  expect_identical(lv(list(listing = "none", figure = FALSE)), c(figure = NA, table = 2L, listing = NA))
+  expect_error(lv(list(tables = 2)), "the kinds are figure, table, listing; not tables")
+  expect_error(lv(list(figure = "high")), "figure is 0 to 3, or none; not high")
+  # a list of values, or YAML's yes (TRUE), is no level
+  expect_error(lv(c(1, 2)), "figure is one value, 0 to 3 or none; not a list (1, 2)", fixed = TRUE)
+  expect_error(lv(list(table = c(0L, 3L))), "table is one value, 0 to 3 or none; not a list", fixed = TRUE)
+  expect_error(lv(TRUE), "figure is 0 to 3, or none; not yes / true", fixed = TRUE)
+  expect_error(lv(list(listing = TRUE)), "listing is 0 to 3, or none; not yes / true", fixed = TRUE)
+  expect_identical(lv(list(listing = FALSE)), c(figure = 3L, table = 2L, listing = NA))
+})
+
+test_that("a table's facts: its header, rows, empty cells; its pages, one over full", {
+  skip_if_not_installed("rtfreporter")
+  df <- data.frame(Item = c("Sex, n (%)", sprintf("  Row %02d", 1:59)),
+                   A = c("", sprintf("%d (%.1f)", 1:59, 1:59 / 2)),
+                   B = c("", "NA (NA)", "", sprintf("%d", 3:59)), stringsAsFactors = FALSE)
+  doc <- rtfreporter::rtf_document() |>
+    rtfreporter::rtf_tables(list(T1 = df), titles = c("Table 1", "Things"), footnotes = "A note.")
+  x <- tflspec:::.ai_table_facts(doc, "T-1")
+  expect_identical(x[1:2], c("# T-1: what R made, in words (read this, not the RTF)",
+                             "More than one page (1 laid out, one over full): read *The pages* too."))
+  expect_true("3 columns, 60 rows (and 0 blank rows between them)." %in% x)
+  expect_true("  1: Item | A | B" %in% x)
+  expect_true("Rows (the first 20 and the last 20):" %in% x)
+  expect_true("  ... 20 rows ..." %in% x)
+  # the heading row's empty cells are not counted; a row's are
+  expect_true("Empty cells (in a row with others): 1, in the rows \"Row 02\"." %in% x)
+  expect_true("Missing values printed (NA, NaN, Inf): 1, in the rows \"Row 01\"." %in% x)
+  pg <- x[(which(x == "## The pages") + 2L):length(x)]
+  expect_match(pg[1L], "^1 page\\(s\\) \\(letter landscape, 9 pt; about 46 lines a page")
+  expect_match(pg[2L], "^Page 1: 2 title lines, 1 header lines, 60 rows .* lines more than a page holds")
+  expect_true("  Title: Table 1 / Things" %in% pg)
+  expect_true("  Footnotes: A note." %in% pg)
+  # a short one fits
+  doc2 <- rtfreporter::rtf_document() |> rtfreporter::rtf_tables(list(T1 = df[1:5, ]), titles = "Table 2")
+  y <- tflspec:::.ai_table_facts(doc2, "T-2")
+  expect_identical(y[2L], "One page.")
+  expect_true(any(grepl("lines; fits.", y, fixed = TRUE)))
+})
+
+test_that("tfl_ai_run(): each report's program and, for a table, its facts beside its RTF", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("rtfreporter")
+  root <- withr::local_tempdir()
+  d <- outs_study(root)
+  res <- suppressMessages(tfl_ai_run(d, requests = c("ae-1", "figure-1")))
+  r <- res$reports
+  rtf <- r$rtf[r$output_id == "T-14-3-1"]
+  expect_false(is.na(rtf))
+  base <- file.path(d, sub("[.]rtf$", "", rtf))
+  # the program: the analysis set, the records, the analysis and the content
+  p <- readLines(paste0(base, ".R"), encoding = "UTF-8")
+  expect_identical(p[1L], "# T-14-3-1: the program that makes it, as tflspec writes it from the draft.")
+  expect_true(any(grepl("filter(adsl, SAFFL == \"Y\")", p, fixed = TRUE)))
+  expect_true(any(grepl("filter(TRTEMFL == \"Y\")", p, fixed = TRUE)))
+  expect_true("# ---- content ----" %in% p)
+  expect_false(any(grepl("^set_levels <- function", p)))
+  # the facts
+  f <- readLines(paste0(base, "-facts.txt"), encoding = "UTF-8")
+  expect_true(all(c("## The table", "## The pages") %in% f))
+  expect_true(any(grepl("(N=80)", f, fixed = TRUE)))
+  # a figure: its program too (its facts are beside its PNG)
+  fig <- file.path(d, sub("[.]rtf$", ".R", r$rtf[r$output_id == "F-14-2-2"]))
+  expect_true(file.exists(fig))
+})
+
+test_that("a report's program shows the code lists it uses, not the functions (#598)", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  root <- withr::local_tempdir()
+  d <- outs_study(root)
+  suppressMessages(tfl_ai_run(d, requests = "efficacy-1", rtf = FALSE))
+  old <- setwd(d)
+  on.exit(setwd(old), add = TRUE)
+  area_opt <- tflspec:::.ai_area_options(".")
+  on.exit(options(area_opt), add = TRUE)
+  st <- tfl_read_study_spec(".")
+  outs <- tfl_read_outputs(".", skip_bad = TRUE)
+  o <- tfl_resolve_output(outs[["T-14-2-1"]], st)
+  p <- tflspec:::.ai_report_program(o, st, "T-14-2-1")
+  expect_true(any(grepl("^cl_", p)))
+  expect_true(any(grepl("^# ---- code lists", p)))
+  expect_false(any(grepl("set_levels <- function", p, fixed = TRUE)))
+  expect_false(any(grepl("^# ---- the functions the program calls", p)))
+})
+
+test_that("a table's facts: the page's header and footer bands, the footer in the lines", {
+  skip_if_not_installed("rtfreporter")
+  df <- data.frame(Item = c("A", "B"), N = c("1", "2"), stringsAsFactors = FALSE)
+  doc <- rtfreporter::rtf_document() |>
+    rtfreporter::rtf_section(header = rtfreporter::rtf_header(list(c("Study 1", "Draft"))),
+                             footer = rtfreporter::rtf_footer(list("Source: ADAE; page {page}"))) |>
+    rtfreporter::rtf_tables(list(T1 = df), titles = "Table 1")
+  x <- tflspec:::.ai_table_facts(doc, "T-1")
+  expect_true("  Page footer: Source: ADAE; page {page}" %in% x)
+  expect_true("  Page header: Study 1 | Draft" %in% x)
+  bare <- rtfreporter::rtf_document() |> rtfreporter::rtf_tables(list(T1 = df), titles = "Table 1")
+  y <- tflspec:::.ai_table_facts(bare, "T-2")
+  expect_false(any(grepl("Page footer|Page header", y)))
+  n <- function(v) as.integer(sub(".*about ([0-9]+) lines.*", "\\1", grep("^Page 1:", v, value = TRUE)))
+  expect_equal(n(x), n(y) + 1L)
+})
+
+test_that("the build log: the run's messages appended under its date", {
+  d <- withr::local_tempdir()
+  f <- tflspec:::.ai_build_log_write(d, c("14.1.1: a note.", "widen_ard(): 9 ARD rows were not used."))
+  expect_identical(basename(f), "build.log")
+  tflspec:::.ai_build_log_write(d, character())
+  x <- readLines(f, encoding = "UTF-8")
+  expect_match(x[1L], "^# [0-9-]+ [0-9:]+: run.R$")
+  expect_identical(x[2:3], c("14.1.1: a note.", "widen_ard(): 9 ARD rows were not used."))
+  expect_identical(x[4L], "")
+  expect_identical(x[6L], "(no messages)")
+})
+
+test_that("a table's facts: a title row with a heading flag prints its text only", {
+  skip_if_not_installed("rtfreporter")
+  df <- data.frame(Item = c("A", "B"), N = c("1", "2"), stringsAsFactors = FALSE)
+  doc <- rtfreporter::rtf_document() |>
+    rtfreporter::rtf_tables(list(rtfreporter::rtftable(df)),
+                            titles = list(list("Table 1", list(text = "Parameter: ALT", align = "left", heading = TRUE))),
+                            footnotes = list(list(list(text = "A note.", align = "left", heading = FALSE))))
+  x <- tflspec:::.ai_table_facts(doc, "T-1")
+  ti <- grep("^  Title: ", x, value = TRUE)
+  expect_identical(ti, "  Title: Table 1 / Parameter: ALT")
+  expect_false(any(grepl("left|TRUE", c(ti, grep("Footnotes", x, value = TRUE)))))
+  expect_true("  Footnotes: A note." %in% x)
+  expect_identical(tflspec:::.ai_row_text(c(c = "Table 1")), "Table 1")
+  expect_identical(tflspec:::.ai_row_text(list(text = "T", align = "left", heading = TRUE)), "T")
+})

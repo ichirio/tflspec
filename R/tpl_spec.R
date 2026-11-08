@@ -16,10 +16,26 @@
 .tpl_spec_of <- function(output) {
   t <- output$template
   if (!is.list(t) || is.null(t$name)) return(NULL)
+  # (a figure design's preset, not a template SPEC: the design's own)
+  if (.fig_preset_named(t)) return(NULL)
   if (!is.character(t$name) || length(t$name) != 1L || !nzchar(t$name)) {
     .ard_stop(sprintf("%s: `template: name:` is one template's name.", output$id))
   }
   list(name = t$name, args = as.list(t$args %||% list()))
+}
+
+# Is a `template: {name: }` a figure design's preset (tfl_fig_templates():
+# box_by_visit, swimmer_full ...) rather than a template SPEC?  An agent
+# writes the preset instructions-figure.md lists in the template SPEC's
+# form; a name the registry has is the template SPEC's -- unless both have
+# it (forest_hr, mean_se, mean_ci) and it is written without the `args`
+# the template SPEC needs: that can only be the preset
+.fig_preset_named <- function(t) {
+  if (!is.list(t) || !is.character(t$name) || length(t$name) != 1L) return(FALSE)
+  if (!t$name %in% tfl_fig_templates()$template) return(FALSE)
+  if (!exists(t$name, envir = .tpl_registry, inherits = FALSE)) return(TRUE)
+  need <- Filter(function(p) isTRUE(p$required), get0(t$name, envir = .tpl_registry, inherits = FALSE)$params)
+  length(need) > 0L && !any(names(need) %in% names(t$args))
 }
 
 # The study standard's value of a parameter that says where it is
@@ -100,7 +116,9 @@
   }
   if (length(hidden)) {
     .ard_stop(sprintf(paste0("%s: template %s takes %s from the study standard, not from ",
-                             "`template: args:`; change it with the report's own items or `plot:`."),
+                             "`template: args:`; a figure setting (`plot:`: the title, axes, legend, theme, palette, ",
+                             "base_size, and the Kaplan-Meier types' risk_title) is set there; ",
+                             "the rest is the study's figure style."),
                       id, t$name, paste(sQuote(hidden, FALSE), collapse = ", ")))
   }
   .tpl_data_said(t, output, id)
@@ -123,10 +141,12 @@
 # The template expanded for a report: its arguments with the study's
 # defaults (`base`: the layers' content below the report) and the report's
 # code lists (`codelists`: the layers' and its own)
-.tpl_expand_for <- function(output, study, base, codelists) {
+.tpl_expand_for <- function(output, study, base, codelists, warn = TRUE) {
   ts <- .tpl_spec_of(output)
   t <- .tpl_get(ts$name, sprintf("%s: template:", output$id))
+  if (warn) .tpl_plot_unused_warn(t, output)
   sa <- .tpl_study_args(t, ts$args, base, output$id, output, study)
+  sa$args <- .tpl_plot_axis_args(t, sa$args, output$plot)
   x <- tfl_template_expand(ts$name, sa$args, codelists = codelists,
                            population = study$data$populations)
   if (!identical(t$kind, output$kind)) {
@@ -141,7 +161,136 @@
     x$content <- c(list(tfl_item("normalize_ard", list(), from = paste0("template:", ts$name))),
                    x$content)
   }
+  x$content <- .tpl_stub_first(x$content, base)
   list(name = ts$name, args = sa$args, study = sa$study, x = x)
+}
+
+# A stub the study folds first (its plan_stub(before = TRUE)) takes the
+# table's row keys away before anything reads them: a row group's
+# `collapse` and a header cell's `cols` that name a key name the stub's
+# column from then on (`row_label`).  The template, which does not know the
+# study's stub, names the keys.
+.tpl_stub_first <- function(items, base) {
+  if (inherits(items, "tfl_r") || inherits(base, "tfl_r") || !length(items)) return(items)
+  is_fn <- function(fn) function(it) identical(as.character(it$fn %||% ""), fn)
+  study <- Filter(is_fn("plan_stub"), base)
+  if (!length(study) || !isTRUE(study[[length(study)]]$args$before)) return(items)
+  own <- Filter(is_fn("plan_stub"), items)
+  own_args <- if (length(own)) own[[length(own)]]$args else list()
+  study_args <- study[[length(study)]]$args
+  stub <- c(own_args, study_args[setdiff(names(study_args), names(own_args))])
+  name <- stub$name
+  tp <- Filter(is_fn("table_plan"), items)
+  if (!length(tp) || !is.character(name) || length(name) != 1L) return(items)
+  rows <- tp[[1L]]$args$rows
+  # (a key is named by its name, else by its column)
+  keys <- as.character(unlist(rows))
+  if (length(names(rows))) keys <- ifelse(nzchar(names(rows)), names(rows), keys)
+  folded <- as.character(unlist(stub$vars))
+  if (!length(folded)) folded <- keys
+  swap <- function(x) {
+    v <- as.character(unlist(x))
+    if (!any(v %in% folded)) return(x)
+    v <- unique(replace(v, v %in% folded, name))
+    if (is.list(x)) as.list(v) else v
+  }
+  lapply(items, function(it) {
+    fn <- as.character(it$fn %||% "")
+    if (identical(fn, "plan_row_group") && length(it$args$collapse)) {
+      it$args$collapse <- swap(it$args$collapse)
+    } else if (identical(fn, "plan_col_header") && is.list(it$args$header)) {
+      it$args$header <- lapply(it$args$header, function(cell) {
+        if (is.list(cell) && length(cell$cols)) cell$cols <- swap(cell$cols)
+        cell
+      })
+    }
+    it
+  })
+}
+
+# The keys of the report's `plot:` that do nothing in a Kaplan-Meier type:
+# its look (hidden, the study's figure style) that the figure's settings
+# and the type's own reading of `plot:` do not take (.tpl_km_look_what)
+.tpl_plot_unused <- function(t, plot) {
+  if (!identical(t$layout, "km") || !length(plot)) return(character())
+  look <- intersect(names(Filter(function(p) isTRUE(p$hidden), t$params)), .tpl_km_look)
+  intersect(names(plot), setdiff(look, c(.fig_plot_fields()$field, .tpl_km_plot_routed)))
+}
+
+# What it says: the key, the template, and where the setting comes from
+# instead when the study's figure style has it
+.tpl_plot_unused_text <- function(t, key) {
+  style <- sub("^km[.]", "", t$params[[key]]$study %||% "")
+  what <- .tpl_km_look_what[key]
+  if (is.na(what)) what <- sprintf("its `%s`", key)
+  sprintf("plot: %s has no effect in template %s: %s %s.", key, t$name, what,
+          if (nzchar(style)) sprintf("comes from the study's figure style (%s)", style)
+          else "is the template's own")
+}
+
+# Said once a key, as a warning of class `tfl_plot_key_unused` (the draft
+# check and tfl_check_spec() take it as a problem of the report).  The
+# build goes on.
+.tpl_plot_unused_warn <- function(t, output) {
+  for (k in .tpl_plot_unused(t, output$plot)) {
+    text <- .tpl_plot_unused_text(t, k)
+    warning(structure(class = c("tfl_plot_key_unused", "warning", "condition"),
+                      list(message = paste0(output$id, ": ", text), call = NULL, id = output$id,
+                           key = k, template = t$name, text = text)))
+  }
+  invisible()
+}
+
+# A figure template that makes its x axis itself (its breaks and the times
+# at risk: km_survival's x_step, x_max) takes the report's `plot.x_by` /
+# `plot.x_max` for them when its arguments do not say them: the template's
+# axis would otherwise win over the report's settings
+.tpl_plot_axis_args <- function(t, args, plot) {
+  map <- c(x_step = "x_by", x_max = "x_max")
+  for (a in intersect(names(map), names(t$params))) {
+    v <- plot[[map[[a]]]]
+    if (is.null(args[[a]]) && !is.null(v) && length(v) == 1L && !is.na(v) && !identical(v, "")) {
+      args[[a]] <- as.numeric(v)
+    }
+  }
+  # the risk table's heading (a report type hides risk_title as the study's
+  # figure style): the report's `plot.risk_title` goes to the template as its
+  # own `plot` setting, which the template reads
+  v <- plot$risk_title
+  if ("risk_title" %in% names(t$params) && is.null(args$plot$risk_title) &&
+        is.character(v) && length(v) == 1L && !is.na(v) && nzchar(v)) {
+    args$plot <- c(args$plot, list(risk_title = v))
+  }
+  args
+}
+
+# The labels of .tpl_levels() named by their codes when a list's codes differ
+# from its labels (`c(LOW = "Low")`), so the program maps them as the build does
+.tpl_levels_coded <- function(levels, vars, codelists) {
+  for (v in names(levels)) {
+    cl <- codelists[[v]]
+    if (is.character(cl)) next
+    val <- vapply(cl, function(r) as.character(r$value), "")
+    if (!identical(unname(val), unname(levels[[v]]))) names(levels[[v]]) <- val
+  }
+  levels
+}
+
+# A template's code lists (`codelists` of its result) added to the report's:
+# the report's list keeps its values, the template's gives the ones it lacks
+.tpl_add_codelists <- function(cl, add) {
+  for (v in names(add)) {
+    have <- cl[[v]]
+    if (is.null(have)) {
+      cl[[v]] <- add[[v]]
+      next
+    }
+    rows <- .tpl_cl_rows(have)
+    vals <- vapply(rows, function(r) as.character(r$value), "")
+    new <- Filter(function(r) !as.character(r$value) %in% vals, add[[v]])
+    if (length(new)) cl[[v]] <- c(rows, new)
+  }
+  cl
 }
 
 # A report's ard: over the template's: an entry of the report's replaces the
@@ -191,8 +340,9 @@ tfl_template_to_spec <- function(output, study) {
   if (!inherits(study, "tfl_study_spec")) .ard_stop("tfl_template_to_spec(): `study` is a tfl_study_spec.")
   if (is.null(.tpl_spec_of(output))) return(output)
   below <- .layers_below(output, study)
+  # (the resolve below says what `plot:` does not reach, once)
   e <- .tpl_expand_for(output, study, below$acc$content,
-                       .merge_map(below$acc$codelists, output$codelists))
+                       .merge_map(below$acc$codelists, output$codelists), warn = FALSE)
   # the content: what the resolved report has from the template and its own
   # file, argument by argument -- the study's layers (a template's look they
   # win over among them) stay the layers', so the report resolves the same
@@ -203,6 +353,7 @@ tfl_template_to_spec <- function(output, study) {
   output$content <- if (inherits(ro$content, "tfl_r")) ro$content else .tpl_own_part(ro$content)
   # a figure's design: its settings, the template's under the report's
   if (!is.null(ro$plot)) output$plot <- ro$plot
+  if (!is.null(e$x$codelists)) output$codelists <- .tpl_add_codelists(output$codelists, e$x$codelists)
   output$template <- NULL
   output
 }
@@ -299,8 +450,6 @@ tfl_template_to_spec <- function(output, study) {
   paste(c(pkg, v), collapse = " ")
 }
 
-# A template report's program (the A use): the template's call, the
-# arguments its SPEC gives and the study's defaults it took (not the ones
 # The template's call as a program writes it: `tflspec::tfl_tpl` (a table's
 # or a listing's), `tflspec::tpl_<name>` (a figure's), a package's own
 # template with its `pkg::`; one made in the session bare.  A study's
@@ -319,6 +468,16 @@ tfl_template_to_spec <- function(output, study) {
   if (has) paste0(pkg, "::", fn) else fn
 }
 
+# An argument's !r values, in a list too, written as the R they are
+# (`n == 0 ~ "0"`), not as the text they are held in
+.tpl_r_code <- function(x) {
+  if (inherits(x, "tfl_r")) return(.spec_expr(as.character(unclass(x))))
+  if (is.list(x) && !is.object(x)) x[] <- lapply(x, .tpl_r_code)
+  x
+}
+
+# A template report's program (the A use): the template's call, the
+# arguments its SPEC gives and the study's defaults it took (not the ones
 # left at the template's own default), the code lists it reads at the head;
 # then the study's and the report's own lines, each marked
 .content_tpl_code <- function(output, data = "ard", plan = "plan", pipe = NULL) {
@@ -337,11 +496,14 @@ tfl_template_to_spec <- function(output, study) {
     called <- t$root %||% t$from
   }
   generic <- identical(t$call, "tfl_tpl")
+  # an !r value (a guard in `count_cell`'s list) as the R it is
+  args <- .tpl_r_code(args)
   # the code lists the template reads: those its plan_levels() item names
   lv <- Filter(function(it) identical(it$fn, "plan_levels"), tp$items)
   vars <- setdiff(unlist(lapply(lv, function(it) names(it$args))), c("variable", ".drop_empty"))
   vars <- intersect(vars, names(output$codelists))
   levels <- .tpl_levels(vars, output$codelists)
+  levels <- .tpl_levels_coded(levels, vars, output$codelists)
   cl <- if (length(levels)) c("# the code lists: each value in its order, as the table shows it",
                               .codelists_lines(levels), "")
   call <- do.call(.spec_call, c(if (generic) list(.tpl_call_name(t, TRUE), .spec_sym(data), called)

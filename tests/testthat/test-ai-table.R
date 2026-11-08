@@ -90,6 +90,12 @@ test_that("the tables in batches of one family", {
   own <- tfl_ai_batches(toc, families = c(anything = "(?i)anything"))
   expect_identical(own$family[own$output_id == "T-5"], "anything")
   expect_error(tfl_ai_batches(data.frame(x = 1)), "output_id")
+  # a TOC of figures only, asked for its tables: none (not an error)
+  figs <- data.frame(output_id = c("F-1", "F-2"), title = c("KM plot", "Waterfall"),
+                     type = "figure")
+  b <- tfl_ai_batches(figs)
+  expect_identical(nrow(b), 0L)
+  expect_identical(tfl_ai_batches(figs, types = "figure")$output_id, c("F-1", "F-2"))
 })
 
 # ---- the ADaM summary and the study folder ------------------------------------
@@ -169,6 +175,22 @@ test_that("the ADaM summary: variables, labels, types, short value lists, no rec
   expect_match(format(m), "SEX (char): F | M [missing: 2 of 4]", fixed = TRUE)
   expect_match(format(m), "AGE (num) [missing: 1 of 4]", fixed = TRUE)
   expect_match(format(m), "## ADXX (4 records, 2 subjects, 3 variables)", fixed = TRUE)
+  # all of a variable's missing values "" (a transport file's): blank, not
+  # missing; a mix with NA stays missing; real NA stays missing (#678)
+  bl <- tfl_ai_adam_summary(list(adzz = data.frame(
+    USUBJID = c("1", "2", "3", "4"), FLB = c("Y", "", "", ""), FLM = c("Y", "", NA, ""),
+    FLN = c("Y", NA, NA, "Y"), FLF = factor(c("Y", "", "", "Y")), FLO = c("Y", "Y", "Y", "Y"))))
+  expect_identical(bl$variables$blank, c(0L, 3L, 2L, 0L, 2L, 0L))
+  expect_identical(bl$variables$missing, c(0L, 3L, 3L, 2L, 2L, 0L))
+  tb <- format(bl)
+  expect_match(tb, "FLB (char): Y [blank: 3 of 4]", fixed = TRUE)
+  expect_match(tb, "FLM (char): Y [missing: 3 of 4]", fixed = TRUE)
+  expect_match(tb, "FLN (char): Y [missing: 2 of 4]", fixed = TRUE)
+  expect_match(tb, "FLF (char): | Y [blank: 2 of 4]", fixed = TRUE)
+  expect_match(tb, "FLO (char): Y [missing: none]", fixed = TRUE)
+  expect_match(tb, "is.na()` does not find them", fixed = TRUE)
+  # the summary as a prompt's datasets: the blank count is not one of its columns
+  expect_no_error(tflspec:::.ai_ctx_datasets(bl, "tfl_ai_context()"))
   n <- tfl_ai_adam_summary(list(adyy = data.frame(A = 1)))
   expect_true(is.na(n$datasets$subjects))
   expect_match(format(n), "## ADYY (1 records, 1 variables)", fixed = TRUE)
@@ -253,6 +275,8 @@ test_that("the table context and prompt: the reports, the study's files, the dat
 # ---- the answer -----------------------------------------------------------------
 
 test_that("the stored answer reads, checks clean in its context, and unpacks", {
+  # about 10 s or more; CI runs it on every configuration
+  skip_on_cran()
   d <- ai_table_study()
   toc <- tfl_ai_read_shell(ai_xlsx())$toc
   ctx <- tfl_ai_context("table", outputs = toc$output_id[toc$type == "table"],
@@ -385,4 +409,19 @@ test_that("an ADaM folder: one file a dataset, .sas7bdat > .xpt > .rds > .parque
   if (!requireNamespace("arrow", quietly = TRUE)) {
     expect_error(tflspec:::.ai_adam_read_one(file.path(d, "advs.parquet"), "f()"), "'arrow' package")
   }
+})
+
+test_that("a code list under `page:` is a problem naming the key and where it belongs", {
+  d <- ai_table_study()
+  ctx <- tfl_ai_context("table", outputs = c("T-14-1-1", "T-14-2-1"),
+                        datasets = tfl_ai_adam_summary(file.path(d, "adam")), study_dir = d)
+  x <- sub("    page:\n      titles:\n",
+           paste0("    page:\n      ECOGBL:\n        - {value: '0', label: '0'}\n",
+                  "        - {value: '1', label: '1'}\n      titles:\n"),
+           paste(ai_answer(), collapse = "\n"), fixed = TRUE)
+  p <- tfl_ai_check(tfl_ai_parse(x, "table"), ctx)
+  hit <- grepl("page ECOGBL", p$where, fixed = TRUE)
+  expect_true(any(hit))
+  expect_match(p$problem[hit][1L], "put it under `codelists:`", fixed = TRUE)
+  expect_identical(p$severity[hit][1L], "error")
 })

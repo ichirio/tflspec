@@ -12,7 +12,9 @@ figures, turned into R programs that use rtfreporter. Exports start with `tfl_`.
 - Do not change `Version`, `NEWS.md` or the AI manuals' version line in a PR.
   Put the NEWS point in the PR description; the version is bumped only for a
   tagged snapshot or a CRAN submission.
-- Branch from `main`; do not stack PRs. One open PR at a time per group of files.
+- Maintainers branch from `next` and open PRs against it; outside contributors
+  use `main` (see `CONTRIBUTING.md`). Do not stack PRs. One open PR at a time per
+  group of files.
 - When a PR is ready, add the `automerge` label. If it must wait for another PR
   (a new sheet column needs tflplanner's translation first), write one line in
   its description: `merge-after: tflplanner#123`.

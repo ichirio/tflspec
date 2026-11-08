@@ -18,8 +18,8 @@ make exactly the tables the shells show.
 
 Two rules above all:
 
-1. **Copy, do not compose.**  A title is the TOC's title, character for
-   character.  A row label is the shell's.  A footnote is the shell's or
+1. **Copy, do not compose.**  A printed title is the shell's title for
+   the report, else the TOC's, character for character.  A row label is the shell's.  A footnote is the shell's or
    the TOC's.  Never improve the wording.
 2. **Everything you guessed goes in `spec/_assumptions.yml`** (§9).  A
    shell never says which dataset a row comes from, what a percent is of,
@@ -140,12 +140,13 @@ mention them in the assumptions only when they change what you write
 ### 2.4 What to write from the TOC
 
 - **`spec/toc.yml`**: `outputs:`, one entry a report in the TOC's order:
-  `id`, `kind` (`table` / `listing` / `figure`), `label` (the title, the
+  `id`, `kind` (`table` / `listing` / `figure`), `label` (the TOC's title, the
   line that names the output -- Title2 in the usual layout), `section`
   (the heading's number, `'14.1'`, quoted), `population` (the population
   `id`).
-- **Each report file's `page:`**: `titles:` by line number, the TOC's
-  title lines then the population, each `{center: ...}` (`left` when the
+- **Each report file's `page:`**: `titles:` by line number, the shell's
+  title lines for the report (the TOC's when the shell has none for it; an
+  assumption when they differ from `label`) then the population, each `{center: ...}` (`left` when the
   shell shows them left-aligned); `footnotes:` by line number, each
   `{left: ...}`.  Line numbers are quoted keys: `'1':`, `'2':`.
 - **`spec/defaults.yml`'s `page:`** for what every output shares: the
@@ -167,7 +168,8 @@ A table shell has, top to bottom:
 
 1. The **running header** (study, "Page x of y", "Confidential") --
    `defaults.yml`'s `page.header`.
-2. The **titles** -- already in the TOC; the shell confirms them.
+2. The **titles** -- the TOC has them; the shell's title lines for the
+   report are the ones printed.
 3. The **column header**: the arms ("Placebo", "Drug X 10 mg"), often a
    `Total`, often `(N=xx)` under each, sometimes a spanner over several
    columns ("Drug X" over "10 mg" and "20 mg"), sometimes a label over
@@ -518,8 +520,10 @@ lines) are `[USUBJID, AGE]`.  `label` is the column header, exactly; a
 line break in it is the two characters backslash and `n`.  `width`
 (characters) only when the shell's column widths are drawn;
 `collapse_repeats: true` on the subject column when the shell prints the
-subject once for several rows.  Rows per page:
-`plan_paginate_rows: {max_rows: ...}` only when the shell says it.
+subject once for several rows.  That column has to be wide enough for its
+longest value on one line: a value that wraps repeats on every record.
+A listing with no page size pages at 22 rows (the header on every page);
+write `plan_paginate_rows: {max_rows: ...}` only when the shell says otherwise.
 
 The variable names: `USUBJID`, the arm (`TRTA`, or `TRT01A`), `AEBODSYS`,
 `AEDECOD`, `AESTDTC` / `ASTDY`, `AESEV`, `AESER`, `AEREL`, `AEOUT`,
@@ -578,7 +582,7 @@ The figure's titles and footnotes are its `page:`, as a table's.
 
 ## 7. The page
 
-From the TOC (§2.4): each report's `page.titles` and `page.footnotes`.
+From the shell (else the TOC, §2.4): each report's `page.titles` and `page.footnotes`.
 From the shells' page, once in `spec/defaults.yml`'s `page:`: the
 `header` and `footer` lines, the page (`rtf_page: {orientation:
 landscape, paper_size: letter}` -- ask when not shown), the font when the
@@ -671,7 +675,7 @@ Run through it; the review will.
   ```yaml
   - where: spec/data.yml populations
     item: SAF
-    assumption: "Safety set: the flag SAFFL == \"Y\" on ADSL, because the TOC names the set SAF and no flag"
+    assumption: "Safety set: the flag SAFFL == 'Y' on ADSL, because the TOC names the set SAF and no flag"
     value: SAFFL == "Y"
     question: Is the safety set flagged by SAFFL?
   - output_id: T-1

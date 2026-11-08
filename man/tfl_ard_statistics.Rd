@@ -25,8 +25,10 @@ function written into the ARD program.
 An analysis's \code{formats} are \code{statistic=format} pairs, \code{|} between them
 (\code{mean=xx.xx | sd=xx.xxx}); \code{VARIABLE:statistic=format} for one variable
 only.  A format is \code{xx.x} (as many x after the point as decimals),
-\verb{xx.x\%} (a proportion as a percent), a number of decimals, or \code{pvalue}
-(\verb{<0.001}, else 3 decimals).
+\verb{xx.x\%} (a proportion as a percent), \code{xx.x*1000} (the value times 1000,
+with that many decimals: a rate per 1,000 person-years written from a
+rate per person-year), a number of decimals, or \code{pvalue} (\verb{<0.001}, else
+3 decimals).
 
 The catalog is the built-in one unless
 \code{options(tflspec.ard_statistics = )} holds another, or a function that

@@ -107,6 +107,7 @@ reference:
       - tfl_ard_statistics
       - tfl_ard_functions
       - tfl_ard_args
+      - tfl_ard_model_args
       - tfl_ard_as_custom
       - tfl_ard_function_template
       - tfl_ard_function_info
@@ -183,6 +184,7 @@ reference:
       - tfl_write_spec_xlsx
       - tfl_import_spec_xlsx
       - tfl_sheets_from_yaml
+      - tfl_report_codelists
   - title: Table spec and table plan
     desc: >
       A table as a workbook: its roles and the rtfreporter plan verbs it
@@ -236,6 +238,7 @@ reference:
       - tpl_orr
       - tpl_stat_block
       - tpl_ae_overview
+      - tpl_pk_conc
       - tfl_read_template_sheets
       - tfl_write_template_yaml
   - title: Template SPEC, a company's templates
@@ -439,12 +442,18 @@ reference:
       - tfl_ai_batches
       - tfl_ai_write_requests
       - tfl_ai_prepare
+      - tfl_ai_prepare_settings
+      - tfl_ai_refresh_agents
       - tfl_ai_collect_answers
       - tfl_ai_adopt
       - tfl_ai_adopted_diff
       - tfl_ai_style_prompt
       - tfl_ai_style_read
+      - tfl_ai_style_diff
+      - tfl_ai_style_adopt
+      - tfl_ai_reference_build
       - tfl_rtf_style_scan
+      - tfl_rtf_style_tables
       - tfl_ai_migrate
       - tfl_ai_outputs
       - tfl_ai_assumptions

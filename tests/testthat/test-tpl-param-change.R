@@ -87,6 +87,118 @@ test_that("as rows: the value's rows, then the change's; none at baseline", {
   expect_identical(names(t), c("group1", "group2", "group3", "label", "Drug X", "Control"))
 })
 
+test_that("the digits: the same as fixed cells, and a parameter's own by plan_digits(PARAM = )", {
+  pc_skip()
+  x <- tfl_template_expand("param_change", pc_args)
+  ard <- pc_ard(x)
+  p <- do.call(tpl_param_change, c(list(ard), pc_args))
+  t <- pc_tab(p)
+  # the template's digits: what its cells used to fix
+  fixed <- list(n = "{N:.0f}", `Mean (SD)` = "{mean:.1f} ({sd:.2f})",
+                Median = "{median:.1f}", `Min, Max` = "{min:.1f}, {max:.1f}")
+  expect_identical(t, pc_tab(do.call(tpl_param_change, c(list(ard), pc_args, list(cells = fixed)))))
+  # a parameter's digits by its value, as the table holds it (PARAM's label)
+  alt <- unique(as.character(adlb$PARAM[adlb$PARAMCD == "ALT"]))
+  d <- pc_tab(p |> rtfreporter::plan_digits(PARAM = stats::setNames(
+    list(c(mean = 2, sd = 3, min = 0, max = 0)), alt)))
+  if (identical(d, t)) skip("rtfreporter without digits by a row key's value (#794)")
+  m <- t$label == "Mean (SD)"
+  r <- t$label == "Min, Max"
+  a <- t$group1 == alt
+  expect_match(d[["Drug X____Value"]][m & a], "^[0-9]+\\.[0-9]{2} \\([0-9]+\\.[0-9]{3}\\)$")
+  expect_match(d[["Drug X____Value"]][r & a], "^[0-9]+, [0-9]+$")
+  # the other parameter keeps the template's
+  expect_identical(d[!a, ], t[!a, ])
+})
+
+# Control has 2 subjects with a change at CYCLE 17, 1 at CYCLE 18, none at CYCLE 20
+pc_n1_args <- list(population = "SAF", data = "ADLB", params = "ALT", param_order = NULL,
+                   visits = c("CYCLE 17 DAY 1", "CYCLE 18 DAY 1", "CYCLE 20 DAY 1"))
+# the Mean (SD) row of the Control columns, a visit a cell: n = 2, n = 1, n = 0
+pc_n1_cells <- function(ard, ...) {
+  t <- pc_tab(do.call(tpl_param_change, c(list(ard), pc_n1_args, list(...))))
+  m <- t$label == "Mean (SD)"
+  list(t = t, m = m, value = t[["Control____Value"]][m],
+       change = t[["Control____Change from baseline"]][m])
+}
+
+test_that("Mean (SD) keeps the mean when a group has one subject: n = 1 prints the mean and `-`, n >= 2 and n = 0 as before (#673)", {
+  pc_skip()
+  ard <- pc_ard(tfl_template_expand("param_change", pc_n1_args))
+  r <- pc_n1_cells(ard)
+  ctl <- adlb[adlb$PARAMCD == "ALT" & adlb$TRT01A == "Control" & !is.na(adlb$CHG), ]
+  one <- ctl[ctl$AVISIT == "CYCLE 18 DAY 1", ]
+  two <- ctl[ctl$AVISIT == "CYCLE 17 DAY 1", ]
+  expect_identical(c(nrow(two), nrow(one)), c(2L, 1L))
+  # n = 1: the mean, to the template's digits (one decimal), not a blank cell
+  expect_identical(r$value[2L], sprintf("%.1f (-)", one$AVAL))
+  expect_identical(r$change[2L], sprintf("%.1f (-)", one$CHG))
+  # n = 2: the mean and the SD as before
+  expect_identical(r$change[1L], sprintf("%.1f (%.2f)", mean(two$CHG), stats::sd(two$CHG)))
+  # n = 0: no mean either, the cell stays blank
+  expect_true(is.na(r$value[3L]) && is.na(r$change[3L]))
+  # every other cell is what the cell without a fallback gave
+  old <- list(n = "{N:.0f}", `Mean (SD)` = "{mean} ({sd})", Median = "{median}",
+              `Min, Max` = "{min}, {max}")
+  o <- pc_n1_cells(ard, cells = old)
+  expect_true(is.na(o$value[2L]) && is.na(o$change[2L]))  # (blank at n = 1)
+  expect_identical(r$t[!(r$m & r$t$group2 == "CYCLE 18 DAY 1"), ],
+                   o$t[!(o$m & o$t$group2 == "CYCLE 18 DAY 1"), ])
+  expect_identical(r$t[r$m & r$t$group2 == "CYCLE 18 DAY 1", 1:5],
+                   o$t[o$m & o$t$group2 == "CYCLE 18 DAY 1", 1:5])
+})
+
+test_that("sd_missing: what prints in place of the SD ('NA', '' for the mean alone); a report's cells are its own", {
+  pc_skip()
+  ard <- pc_ard(tfl_template_expand("param_change", pc_n1_args))
+  one <- adlb[adlb$PARAMCD == "ALT" & adlb$TRT01A == "Control" & adlb$AVISIT == "CYCLE 18 DAY 1" &
+                !is.na(adlb$CHG), ]
+  expect_identical(pc_n1_cells(ard, sd_missing = "NA")$value[2L], sprintf("%.1f (NA)", one$AVAL))
+  r <- pc_n1_cells(ard, sd_missing = "")
+  expect_identical(r$value[2L], sprintf("%.1f", one$AVAL))
+  expect_identical(r$change[2L], sprintf("%.1f", one$CHG))
+  # (n = 2 and n = 0 do not change)
+  d <- pc_n1_cells(ard)
+  expect_identical(r$value[c(1L, 3L)], d$value[c(1L, 3L)])
+  expect_identical(r$t[r$t$group2 != "CYCLE 18 DAY 1", ], d$t[d$t$group2 != "CYCLE 18 DAY 1", ])
+  # the mark is a text without braces
+  expect_error(tfl_template_expand("param_change", c(pc_n1_args, list(sd_missing = "{sd}"))), "sd_missing")
+  expect_error(tfl_template_expand("param_change", c(pc_n1_args, list(sd_missing = c("a", "b")))), "sd_missing")
+  # a report that sets `cells` itself is not touched
+  own <- list(n = "{N:.0f}", `Mean (SD)` = "{mean:.1f} ({sd:.2f})", Median = "{median}",
+              `Min, Max` = "{min}, {max}")
+  expect_identical(pc_n1_cells(ard, cells = own, sd_missing = "NA")$value[2L], NA_character_)
+})
+
+test_that("the fallback cell takes the template's digits and a parameter's own, as the first does", {
+  pc_skip()
+  a1 <- pc_n1_args
+  a1$visits <- a1$visits[1:2]
+  ard <- pc_ard(tfl_template_expand("param_change", a1))
+  p <- do.call(tpl_param_change, c(list(ard), a1))
+  t <- pc_tab(p)
+  v1 <- t$label == "Mean (SD)" & t$group2 == "CYCLE 17 DAY 1"
+  v2 <- t$label == "Mean (SD)" & t$group2 == "CYCLE 18 DAY 1"
+  # the template's: one decimal for the mean, two for the SD
+  expect_match(t[["Control____Value"]][v1], "^[0-9]+\\.[0-9] \\([0-9]+\\.[0-9]{2}\\)$")
+  expect_match(t[["Control____Value"]][v2], "^[0-9]+\\.[0-9] \\(-\\)$")
+  # a parameter's own, on both forms
+  alt <- unique(as.character(adlb$PARAM[adlb$PARAMCD == "ALT"]))
+  d <- pc_tab(p |> rtfreporter::plan_digits(PARAM = stats::setNames(
+    list(c(mean = 2, sd = 3)), alt)))
+  if (identical(d, t)) skip("rtfreporter without digits by a row key's value (#794)")
+  expect_match(d[["Control____Value"]][v1], "^[0-9]+\\.[0-9]{2} \\([0-9]+\\.[0-9]{3}\\)$")
+  expect_match(d[["Control____Value"]][v2], "^[0-9]+\\.[0-9]{2} \\(-\\)$")
+  p0 <- do.call(tpl_param_change, c(list(ard), a1, list(sd_missing = "")))
+  d0 <- pc_tab(p0 |> rtfreporter::plan_digits(PARAM = stats::setNames(
+    list(c(mean = 2, sd = 3)), alt)))
+  expect_match(d0[["Control____Value"]][v2], "^[0-9]+\\.[0-9]{2}$")
+  # the same two forms as cells a report sets
+  both <- list(n = "{N:.0f}", `Mean (SD)` = c("{mean:.1f} ({sd:.2f})", "{mean:.1f} (-)"),
+               Median = "{median}", `Min, Max` = "{min}, {max}")
+  expect_identical(t, pc_tab(do.call(tpl_param_change, c(list(ard), a1, list(cells = both)))))
+})
+
 test_that("the arm and its N over its two columns", {
   pc_skip()
   x <- tfl_template_expand("param_change", pc_args)
@@ -231,4 +343,164 @@ test_that("a page a parameter: the parameter's name in the titles, once a page",
   expect_length(grep("Parameter: Alanine Aminotransferase (U/L)", r, fixed = TRUE), 1L)
   expect_length(grep("Parameter: Aspartate Aminotransferase (U/L)", r, fixed = TRUE), 1L)
   expect_length(grep("Alanine Aminotransferase (U/L)", r, fixed = TRUE), 1L)
+})
+
+# the stub's heading (#641): param_change's `heading`, and a report's own plan_stub
+pch_study <- function() tfl_read_study_spec(system.file("extdata", "spec-yaml", package = "tflspec"))
+# a report extending the study's defaults, resolved, run on the ARD the program makes
+pch_run <- function(content = list(), args = list(), extends = "defaults", template = TRUE) {
+  a <- utils::modifyList(pc_args, args)
+  o <- tfl_output("T-PCH", "table", population = "SAF", extends = extends, content = content,
+                  template = if (template) list(name = "param_change", args = a))
+  ro <- tfl_resolve_output(o, pch_study())
+  ard <- pc_ard(tfl_template_expand("param_change", a))
+  p <- suppressMessages(tfl_content_run(ro, ard))
+  f <- tempfile(fileext = ".rtf")
+  suppressWarnings(suppressMessages(rtfreporter::generate_rtfreport(
+    rtfreporter::rtf_tables(rtfreporter::rtf_document(), rtfreporter::plan_apply(p)), f)))
+  list(ro = ro, tab = pc_tab(p), rtf = paste(readLines(f), collapse = "\n"),
+       code = paste(tfl_content_code(ro), collapse = "\n"))
+}
+pch_hdr <- function(args, ...) {
+  x <- tfl_template_expand("param_change", utils::modifyList(pc_args, args))
+  h <- Filter(function(i) i$fn == "plan_col_header", x$content)[[1L]]$args$header
+  h
+}
+
+test_that("heading: the stub's cell in the header, on the second row with cols, the only row with rows", {
+  pc_skip()
+  # no heading: the header as it was
+  for (lay in c("cols", "rows")) {
+    h <- pch_hdr(list(layout = lay))
+    expect_false("row_label" %in% unlist(lapply(h, `[[`, "cols")))
+    expect_length(h, if (lay == "cols") 2L else 1L)
+  }
+  hc <- pch_hdr(list(heading = "Visit / Statistic"))
+  expect_identical(hc[[2L]], list(line = "2", cols = "row_label", text = "Visit / Statistic"))
+  expect_length(hc, 3L)
+  hr <- pch_hdr(list(layout = "rows", heading = "Visit / Statistic"))
+  expect_identical(hr[[1L]], list(line = "1", cols = "row_label", text = "Visit / Statistic"))
+  expect_length(hr, 2L)
+  # built: in the printed header, in the stub's cell of the table and the RTF
+  for (lay in c("cols", "rows")) {
+    r <- pch_run(args = list(layout = lay, heading = "Visit / Statistic"))
+    expect_match(r$rtf, "Visit / Statistic", fixed = TRUE)
+    expect_match(r$code, "Visit / Statistic", fixed = TRUE)
+    # (the same table, the stub column's header the only difference)
+    r0 <- pch_run(args = list(layout = lay))
+    expect_false(grepl("Visit / Statistic", r0$rtf, fixed = TRUE))
+    expect_identical(r$tab, r0$tab)
+  }
+  p <- do.call(tpl_param_change, c(list(pc_ard(tfl_template_expand("param_change", pc_args))),
+                                   pc_args, list(heading = "Visit / Statistic")))
+  expect_s3_class(p, "table_plan")
+})
+
+test_that("a report's plan_stub keeps the stub's name from the layers below (widths row_label builds)", {
+  pc_skip()
+  w <- list(tfl_item("plan_columns", list(widths = list(row_label = 2, .values = 1))))
+  st <- function(r) Filter(function(it) it$fn == "plan_stub", r$ro$content)
+  # the issue's draft: the report's plan_stub with a heading, and widths by the stub's name
+  r <- pch_run(c(list(tfl_item("plan_stub", list(heading = "Visit / Statistic"))), w))
+  expect_length(st(r), 1L)
+  expect_identical(st(r)[[1L]]$args$name, "row_label")
+  expect_identical(st(r)[[1L]]$args$heading, "Visit / Statistic")
+  # (it builds: the widths name the stub column `row_label`; the plan was applied)
+  expect_true(nrow(r$tab) > 0L)
+  # a name the report writes wins: widths name `other`, and `row_label` is no column
+  wo <- list(tfl_item("plan_columns", list(widths = list(other = 2, .values = 1))))
+  r3 <- pch_run(c(list(tfl_item("plan_stub", list(name = "other", heading = "H"))), wo))
+  expect_identical(st(r3)[[1L]]$args$name, "other")
+  expect_error(pch_run(c(list(tfl_item("plan_stub", list(name = "other", heading = "H"))), w)),
+               "names 'row_label', not a column")
+})
+
+test_that("the template's heading is printed, the report's plan_stub heading is not (the template's header wins)", {
+  pc_skip()
+  w <- list(tfl_item("plan_columns", list(widths = list(row_label = 2, .values = 1))))
+  r <- pch_run(c(list(tfl_item("plan_stub", list(heading = "Own heading"))), w),
+               args = list(heading = "Visit / Statistic"))
+  expect_match(r$rtf, "Visit / Statistic", fixed = TRUE)
+  expect_false(grepl("Own heading", r$rtf, fixed = TRUE))
+})
+
+test_that("a table with its own plan_stub and no name takes the layers' name; extends: none does not", {
+  pc_skip()
+  st <- function(r) Filter(function(it) it$fn == "plan_stub", r$content)
+  base <- list(tfl_item("table_plan", list(cols = "TRT01A", rows = list(group = "variable"))))
+  ro <- tfl_resolve_output(tfl_output("T-N", "table", population = "SAF", extends = "defaults",
+                                      content = list(tfl_item("plan_stub", list(indent = 2L)))),
+                           pch_study())
+  expect_identical(st(ro)[[1L]]$args, list(indent = 2L, name = "row_label"))
+  # the layers' item as it is, the report's other arguments kept; only `name` comes over
+  expect_false("before" %in% names(st(ro)[[1L]]$args))
+  # built: the study's header names `row_label` (it failed on the stub's old name), and the
+  # program says the name
+  saf <- adsl[adsl$SAFFL == "Y", ]
+  ard <- rtfreporter::normalize_ard(cards::bind_ard(
+    cards::ard_tabulate(saf, variables = TRT01A),
+    cards::ard_tabulate(saf, by = TRT01A, variables = c(AGEGR1, SEX))))
+  ro <- tfl_resolve_output(tfl_output("T-N", "table", population = "SAF", extends = "defaults",
+                                      content = c(base, list(tfl_item("plan_stub", list(indent = 2L))))),
+                           pch_study())
+  p <- suppressMessages(tfl_content_run(ro, ard))
+  f <- withr::local_tempfile(fileext = ".rtf")
+  suppressWarnings(suppressMessages(rtfreporter::generate_rtfreport(
+    rtfreporter::rtf_tables(rtfreporter::rtf_document(), rtfreporter::plan_apply(p)), f)))
+  expect_match(paste(readLines(f), collapse = "\n"), "Characteristic\\cell", fixed = TRUE)
+  expect_match(paste(tfl_content_code(ro), collapse = "\n"),
+               "plan_stub(indent = 2, name = \"row_label\")", fixed = TRUE)
+  # no plan_stub below (extends: none): as written
+  rn <- tfl_resolve_output(tfl_output("T-N", "table", population = "SAF", extends = "none",
+                                      content = list(tfl_item("plan_stub", list(indent = 2L)))),
+                           pch_study())
+  expect_identical(st(rn)[[1L]]$args, list(indent = 2L))
+  # a report with no plan_stub: the layers' item, as before
+  r0 <- tfl_resolve_output(tfl_output("T-N", "table", population = "SAF", extends = "defaults",
+                                      content = list(tfl_item("plan_paginate_rows", list(max_rows = 9L)))),
+                           pch_study())
+  expect_identical(st(r0)[[1L]]$args, list(name = "row_label", before = TRUE))
+})
+
+test_that("heading with no study plan_stub (extends: none, tpl_param_change()) builds: the template names the stub", {
+  pc_skip()
+  for (lay in c("cols", "rows")) {
+    # no heading: no plan_stub of the template's (the expansion as it was)
+    x0 <- tfl_template_expand("param_change", utils::modifyList(pc_args, list(layout = lay)))
+    expect_false("plan_stub" %in% vapply(x0$content, `[[`, "", "fn"))
+    r <- pch_run(args = list(layout = lay, heading = "Visit / Statistic"), extends = "none")
+    expect_match(r$rtf, "Visit / Statistic", fixed = TRUE)
+    a <- c(pc_args, layout = lay, heading = "Visit / Statistic")
+    p <- do.call(tpl_param_change, c(list(pc_ard(tfl_template_expand("param_change", a))), a))
+    expect_identical(pc_tab(p), r$tab)
+  }
+  # a study's own plan_stub wins, the template supplies only the name
+  s <- pch_study()
+  s$defaults$content <- lapply(s$defaults$content, function(it) {
+    if (it$fn == "plan_stub") it$args <- list(name = "stub_x", indent = 3L)
+    it
+  })
+  o <- tfl_output("T-PCH", "table", population = "SAF", extends = "defaults",
+                  template = list(name = "param_change",
+                                  args = utils::modifyList(pc_args, list(heading = "H"))))
+  ro <- tfl_resolve_output(o, s)
+  st <- Filter(function(it) it$fn == "plan_stub", ro$content)
+  expect_length(st, 1L)
+  expect_identical(st[[1L]]$args$indent, 3L)
+  expect_identical(st[[1L]]$args$name, "stub_x")
+})
+
+test_that("a where with | keeps its brackets: only the selected parameter's records", {
+  x <- tfl_template_expand("param_change", list(population = "SAF", data = "ADLB", params = "ALT",
+                                                where = "ONTRTFL == \"Y\" | ABLFL == \"Y\""))
+  w <- as.character(x$ard$analysis_data[[2L]]$where)
+  expect_identical(w, "(ONTRTFL == \"Y\" | ABLFL == \"Y\") & PARAMCD %in% c(\"ALT\")")
+  kept <- adlb[eval(parse(text = w), adlb), ]
+  expect_gt(nrow(kept), 0L)
+  expect_identical(unique(kept$PARAMCD), "ALT")
+  # no | : as before, no brackets
+  y <- tfl_template_expand("param_change", list(population = "SAF", data = "ADLB", params = "ALT",
+                                                where = "ONTRTFL == \"Y\""))
+  expect_identical(as.character(y$ard$analysis_data[[2L]]$where),
+                   "ONTRTFL == \"Y\" & PARAMCD %in% c(\"ALT\")")
 })

@@ -99,7 +99,7 @@ test_that("the B file in the figure designer: the report's own items seen, saved
   expect_identical(unclass(back), unclass(design))
   # the design read back writes the report's figure
   expect_identical(as.character(tfl_fig_design_code(back, plot_id = "F-14-2-3", save = FALSE,
-                                                    name = "content")),
+                                                    name = "content", order_arms = TRUE)),
                    tflspec:::.content_fig_code(tfl_resolve_output(b, st)))
 })
 
@@ -124,7 +124,8 @@ test_that("a report that replaces a template's layer: its design, not the call",
 
 test_that("a figure template's body says the steps its call makes (call_steps)", {
   k <- tfl_template_expand("km_survival", list(param = "PFS", by = "TRT01A", risk_table = FALSE))
-  expect_identical(k$call_steps, 3L)
+  # (the one-parameter check, the two filters, the time's unit, the fit)
+  expect_identical(k$call_steps, 5L)
   expect_identical(k$data$steps[[length(k$data$steps)]]$step, "survfit")
   t <- .tpl_get("km_survival", "test")
   suppressMessages(tfl_template("km_nocall", "figure", "km", params = t$params,
@@ -151,4 +152,130 @@ test_that("km_survival(legend_median = TRUE): each arm's median (95% CI) in the 
   # without it, the legend's text is the arms' values
   q <- tfl_tpl(df, "km_survival", by = TRT01A, time_unit = "days", risk_table = FALSE)
   expect_s3_class(q$scales$get_scales("colour")$labels, "waiver")
+})
+
+# The code that makes the legend's labels, from the template's expansion
+km_labels_code <- function(template = "km_survival", ...) {
+  k <- tfl_template_expand(template, list(by = "TRT01A", legend_median = TRUE, ...))
+  code <- unlist(lapply(k$data$steps, function(st) if (identical(st$step, "code")) st$code))
+  grep("legend_labels <- ", unlist(strsplit(code, "\n")), fixed = TRUE, value = TRUE)
+}
+
+test_that("legend_median_text: the default text gives the code it always did", {
+  old <- paste0('legend_labels <- stats::setNames(sprintf("%s: %s (%s, %s)", arm_of, fmt_med(med[, "median"]),\n',
+                '  fmt_med(med[, grep("LCL$", colnames(med))[1]]), fmt_med(med[, grep("UCL$", colnames(med))[1]])), arm_of)')
+  k <- tfl_template_expand("km_survival", list(by = "TRT01A", legend_median = TRUE))
+  code <- unlist(lapply(k$data$steps, function(st) if (identical(st$step, "code")) st$code))
+  expect_true(any(grepl(old, code, fixed = TRUE)))
+  for (tpl in c("km_survival", "km_cumulative", "km")) {
+    a <- list(by = "TRT01A", legend_median = TRUE, param = if (tpl == "km") "PFS")
+    b <- c(a, list(legend_median_text = "{arm}: {median} ({lcl}, {ucl})"))
+    expect_identical(tfl_template_expand(tpl, b)$data$steps, tfl_template_expand(tpl, a)$data$steps)
+  }
+})
+
+test_that("legend_median_text: tokens left out, repeated and reordered; a % and quotes kept", {
+  # the sprintf() the text becomes: a %s a token, the arguments in token order, a literal % doubled
+  lab <- km_labels_code(legend_median_text = "{arm}, Median (95% CI): {median} ({lcl}, {ucl})")
+  expect_true(grepl('sprintf("%s, Median (95%% CI): %s (%s, %s)", arm_of, fmt_med(med[, "median"]),', lab[1], fixed = TRUE))
+  lab <- km_labels_code(legend_median_text = "{median} [{ucl}-{lcl}] {arm} {arm}")
+  expect_true(grepl('sprintf("%s [%s-%s] %s %s", fmt_med(med[, "median"]), fmt_med(med[, grep("UCL$"', lab[1], fixed = TRUE))
+  lab <- km_labels_code(legend_median_text = "\"{arm}\" \\ 5%")
+  expect_true(grepl('sprintf("\\"%s\\" \\\\ 5%%", arm_of)', lab[1], fixed = TRUE))
+  expect_error(parse(text = lab), NA)
+  # no token: the text, for each arm
+  expect_true(grepl('rep("Median", length(arm_of))', km_labels_code(legend_median_text = "Median"), fixed = TRUE))
+  # without legend_median the text has no effect, whatever it is
+  k <- tfl_template_expand("km_survival", list(by = "TRT01A", legend_median_text = "{nope}"))
+  expect_false(any(grepl("legend_labels", unlist(lapply(k$data$steps, `[[`, "code")), fixed = TRUE)))
+})
+
+test_that("legend_median_text: a token that is not one of the four is an error naming the argument", {
+  for (tpl in c("km_survival", "km_cumulative")) {
+    expect_error(tfl_template_expand(tpl, list(by = "TRT01A", legend_median = TRUE,
+                                               legend_median_text = "{arm}: {mean} ({lcl}, {ucl})")),
+                 "`legend_median_text`: {mean} is not one of {arm}, {median}, {lcl}, {ucl}", fixed = TRUE)
+  }
+  expect_error(tfl_template_expand("km_survival", list(by = "TRT01A", legend_median = TRUE,
+                                                       legend_median_text = "{arm} {")),
+               "`legend_median_text`", fixed = TRUE)
+})
+
+test_that("legend_median_text: the figure builds from the generated code, in both types", {
+  km_skip()
+  saf <- adsl$USUBJID[adsl$SAFFL == "Y"]
+  df <- adtte[adtte$PARAMCD == "PFS" & adtte$USUBJID %in% saf, ]
+  arms <- sort(unique(as.character(df$TRT01A)))
+  for (tpl in c("km_survival", "km_cumulative")) {
+    p <- tfl_tpl(df, tpl, by = TRT01A, time_unit = "days", risk_table = FALSE, legend_median = TRUE,
+                 legend_median_text = "{arm}, Median (95% CI): {median} ({lcl}, {ucl})")
+    lab <- p$scales$get_scales("colour")$labels
+    expect_identical(sort(names(lab)), arms)
+    expect_true(all(grepl("^.+, Median \\(95% CI\\): (NE|[0-9.]+) [(](NE|[0-9.]+), (NE|[0-9.]+)[)]$", lab)))
+    q <- tfl_tpl(df, tpl, by = TRT01A, time_unit = "days", risk_table = FALSE, legend_median = TRUE,
+                 legend_median_text = "{lcl} | {arm} | {arm} | \"{median}\" \\ 5%")
+    lab <- q$scales$get_scales("colour")$labels
+    expect_true(all(grepl("^(NE|[0-9.]+) [|] .+ [|] .+ [|] \"(NE|[0-9.]+)\" \\\\ 5%$", lab)))
+    expect_identical(unname(sub("^[^|]*[|] ([^|]*) [|] ([^|]*) [|].*$", "\\1", lab)), names(lab))
+  }
+  # the default text: the labels it always made
+  d <- tfl_tpl(df, "km_survival", by = TRT01A, time_unit = "days", risk_table = FALSE, legend_median = TRUE,
+               legend_median_text = "{arm}: {median} ({lcl}, {ucl})")
+  expect_true(all(grepl("^.+: (NE|[0-9.]+) [(](NE|[0-9.]+), (NE|[0-9.]+)[)]$", d$scales$get_scales("colour")$labels)))
+})
+
+test_that("km_survival takes the report's plot.x_by / x_max for its axis, its arguments first", {
+  km_skip()
+  d <- tempfile()
+  on.exit(unlink(d, recursive = TRUE))
+  dir.create(d)
+  file.copy(list.files(system.file("extdata", "spec-yaml", package = "tflspec"),
+                       full.names = TRUE), d, recursive = TRUE)
+  s <- tfl_read_study_spec(d)
+  km <- function(args, plot) {
+    o <- tfl_output("F-9", "figure",
+                    data = list(steps = list(list(step = "read", dataset = "ADTTE"),
+                                             list(step = "param", value = "PFS"))),
+                    template = list(name = "km_survival", args = c(list(by = "TRT01A"), args)))
+    o$plot <- plot
+    x <- tfl_template_to_spec(o, s)
+    unlist(lapply(x$data$steps, function(st) if (identical(st$step, "code")) st$code))
+  }
+  expect_true("x_breaks <- seq(0, 30, by = 6)" %in% km(list(), list(x_by = 6, x_max = 30)))
+  # (no x_max: to the first break at or after the last time)
+  expect_true("x_breaks <- seq(0, ceiling(max(fit$time) / 6 - 1e-8) * 6, by = 6)" %in% km(list(), list(x_by = 6)))
+  expect_true("x_breaks <- seq(0, ceiling(max(fit$time) / 3 - 1e-8) * 3, by = 3)" %in%
+                km(list(x_step = 3), list(x_by = 6)))
+  expect_true("x_breaks <- pretty(c(0, max(fit$time)))" %in% km(list(), list(x_label = "Months")))
+})
+
+test_that("a report's own layer_code with a template: statements on p after the call; the design from its base layer", {
+  km_skip()
+  d <- tempfile()
+  on.exit(unlink(d, recursive = TRUE))
+  dir.create(d)
+  file.copy(list.files(system.file("extdata", "spec-yaml", package = "tflspec"),
+                       full.names = TRUE), d, recursive = TRUE)
+  s <- tfl_read_study_spec(d)
+  own <- tfl_item("layer_code", list(label = "a note", code = paste(
+    "txt <- paste('n =', nrow(df))",
+    "p <- p + ggplot2::annotate('text', x = 1, y = 0.1, label = txt)", sep = "\n")))
+  o <- tfl_output("F-9", "figure",
+                  data = list(steps = list(list(step = "read", dataset = "ADTTE"),
+                                           list(step = "param", value = "PFS"))),
+                  template = list(name = "km_survival", args = list(by = "TRT01A")),
+                  content = list(own))
+  ro <- tfl_resolve_output(o, s)
+  # the program's call: into p, the statements, then content
+  a <- tfl_content_code(ro)
+  i <- which(startsWith(a, "p <- tflspec::tfl_tpl("))
+  expect_length(i, 1L)
+  expect_true(any(a == "# a note"))
+  expect_identical(a[[length(a)]], "content <- p")
+  expect_false(inherits(tryCatch(parse(text = a), error = function(e) e), "error"))
+  # the design form (what tfl_ai_run draws): the curves first, whatever the order
+  b <- tflspec:::.content_fig_code(ro)
+  expect_true(any(startsWith(b, "p <- ggsurvfit(")))
+  expect_false(any(b == "p <- ggplot() +"))
+  expect_false(inherits(tryCatch(parse(text = b), error = function(e) e), "error"))
 })

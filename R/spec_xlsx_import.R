@@ -8,24 +8,29 @@
 #' The workbook [tfl_write_spec_xlsx()] wrote, edited in Excel, read back:
 #' each row is matched by its key (`toc`: `id`; `datasets`: `dataset`;
 #' `populations`: `id`; `analysis_data` and `analyses`: `output_id` + `id`;
-#' `codelists`: `output_id` + `variable` + `value`; `tokens`: `output_id` +
+#' `codelists`: `output_id` + `variable` + `value` (every row names its report); `tokens`: `output_id` +
 #' `name`; `header` / `footer` / `titles` / `footnotes`: `output_id` +
 #' `line`; `page` / `report`: `output_id`; `listing_cols`: `output_id` +
 #' `vars`) and the item it names is updated with the row's cells; a row
 #' with a new key is added; an item the workbook no longer has is reported
 #' (`missing`), not removed.  Cells read as the converter reads sheets: `a
 #' | b` a list, `(none)` an `!unset`, the columns that hold R as `!r`.
-#' Nothing else of the YAML files changes.
+#' Nothing else of the YAML files changes: a line's height
+#' (`row_height_twips`), which the workbook has no column for, stays as it
+#' is.  The `records` and `objects` sheets are written but not read back; a
+#' change made to one in the workbook is said in a message and listed in
+#' `ignored`.
 #'
 #' @param dir The study folder (or its `spec/`).
 #' @param path The workbook.
 #' @param write Write the changed YAML files? `FALSE` only reports.
 #' @return Invisibly, a list: `changes` (a data frame: `sheet`, `key`,
 #'   `column`, `from`, `to`), `added` (keys new to the spec), `missing`
-#'   (keys of the spec the workbook lacks), `files` (written).
+#'   (keys of the spec the workbook lacks), `ignored` (the sheets that were
+#'   changed in the workbook but are not read back, `records` and `objects`;
+#'   each also said in a message), `files` (written).
 #' @export
 tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
-  .ard_need("readxl", "tfl_import_spec_xlsx()")
   if (!file.exists(path)) stop("tfl_import_spec_xlsx(): no file ", path, call. = FALSE)
   spec <- .spec_dir(dir)
   sheets <- readxl::excel_sheets(path)
@@ -95,6 +100,29 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
     set_file(rel, y)
   }
 
+  # a code list is a report's: a row with no report stops the import, as in a table spec
+  .codelists_check(rd("codelists"))
+
+  # the records and objects sheets are written but not read back: a sheet
+  # that was edited in Excel is said, per sheet, not ignored in silence (#689)
+  no_note <- function(...) NULL
+  was <- tryCatch({
+    s0 <- tfl_read_study_spec(dir)
+    o0 <- suppressWarnings(tfl_read_outputs(dir, skip_bad = TRUE))
+    list(records = .flat_records_rows(s0, no_note),
+         objects = c(.flat_study_objects_rows(s0, no_note),
+                     unlist(lapply(names(o0), function(id) .flat_report_objects_rows(o0[[id]], id, no_note)),
+                            recursive = FALSE)))
+  }, error = function(e) list())
+  for (sh in names(was)) {
+    d <- rd(sh)
+    if (!is.null(d) && .flat_sheet_edited(d, was[[sh]])) {
+      st$ignored <- c(st$ignored, sh)
+      message("tfl_import_spec_xlsx(): the ", sh, " sheet was changed in the workbook; the import does not read it, ",
+              "so the change is not taken in (edit data.yml, or the report's ard: objects).")
+    }
+  }
+
   # study-wide rows
   update_rows("toc", "toc.yml", "outputs", "id", list_cols = c("sets", "datasets"))
   update_rows("datasets", "data.yml", "datasets", "dataset", r_cols = "derive")
@@ -142,12 +170,12 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
     set_file(rel, y)
   })
   by_scope("codelists", function(id, part) {
-    rel <- if (is.na(id)) "codelists.yml" else scope_rel(id)
+    if (is.na(id)) return()
+    rel <- scope_rel(id)
     y <- get_file(rel)
     for (v in unique(part$variable)) {
       pv <- part[part$variable == v, , drop = FALSE]
-      base <- if (is.na(id)) y else y$codelists
-      rows <- base[[v]] %||% list()
+      rows <- y$codelists[[v]] %||% list()
       for (i in seq_len(nrow(pv))) {
         j <- .find_row(rows, list("value"), pv$value[i])
         m <- list(value = pv$value[i])
@@ -167,7 +195,7 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
           rows[[j]]$under <- un
         }
       }
-      if (is.na(id)) y[[v]] <- rows else y$codelists[[v]] <- rows
+      y$codelists[[v]] <- rows
     }
     set_file(rel, y)
   })
@@ -183,7 +211,16 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
           v <- .conv_cell(part[[cn]][i], cn, character(), character(), function(...) NULL, NA, band, i)
           if (!is.null(v)) cells[[cn]] <- v
         }
+        # (a line's own height, rtfreporter#125)
+        h <- suppressWarnings(as.integer(part[["row_height_twips"]][i] %||% NA))
+        if (length(h) && !is.na(h)) cells$row_height_twips <- h
         if (length(cells) && all(vapply(cells, inherits, NA, "tfl_unset"))) cells <- tfl_unset()
+        # (the flat workbook writes left, center and right only: a line's height,
+        # which it has no column for, stays as the YAML has it, #689)
+        old_h <- if (is.list(m[[line]]) && !inherits(m[[line]], "tfl_unset")) m[[line]]$row_height_twips
+        if (!"row_height_twips" %in% names(part) && !is.null(old_h) && is.list(cells)) {
+          cells$row_height_twips <- old_h
+        }
         key <- paste(if (is.na(id)) "" else id, line, sep = " / ")
         if (is.null(m[[line]])) st$added <- c(st$added, paste0(band, ": ", key))
         else if (!identical(.flat_text(m[[line]]), .flat_text(cells))) {
@@ -218,7 +255,9 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
       rel <- scope_rel(id)
       y <- get_file(rel)
       page <- y$page %||% list()
-      before <- .page_columns(page)[[sh]]
+      # (the page as the writer read it, calls resolved: a watermark is a call;
+      # unedited, its cell is what the page says)
+      before <- .page_columns(.calls_in(page))[[sh]]
       for (cn in setdiff(names(part), "output_id")) {
         v <- .conv_cell(part[[cn]][1L], cn, character(), character(), function(...) NULL, NA, sh, 1L)
         if (is.null(v)) next
@@ -245,10 +284,29 @@ tfl_import_spec_xlsx <- function(dir, path, write = TRUE) {
   }
   ch <- if (length(st$changes)) do.call(rbind, st$changes) else
     data.frame(sheet = character(), key = character(), column = character(), from = character(), to = character(), stringsAsFactors = FALSE)
-  invisible(list(changes = ch, added = st$added, missing = st$missing, files = written))
+  invisible(list(changes = ch, added = st$added, missing = st$missing, ignored = st$ignored, files = written))
 }
 
-.imp_state <- function() { e <- new.env(); e$changes <- list(); e$added <- character(); e$missing <- character(); e }
+.imp_state <- function() {
+  e <- new.env(); e$changes <- list(); e$added <- character(); e$missing <- character()
+  e$ignored <- character(); e
+}
+
+# Is a sheet of the workbook other than the rows it was written from?  Text
+# cells, a blank as NA; the columns in either order.
+.flat_sheet_edited <- function(d, rows) {
+  blank <- function(x) { x <- as.character(x); x[!is.na(x) & !nzchar(trimws(x))] <- NA_character_; x }
+  d <- d[rowSums(!is.na(d)) > 0L, , drop = FALSE]
+  if (!length(rows)) return(nrow(d) > 0L)
+  e <- .rows_frame(rows)
+  if (nrow(e) != nrow(d)) return(TRUE)
+  for (cn in union(names(e), names(d))) {
+    a <- if (cn %in% names(e)) blank(e[[cn]]) else rep(NA_character_, nrow(e))
+    b <- if (cn %in% names(d)) blank(d[[cn]]) else rep(NA_character_, nrow(d))
+    if (!identical(a, b)) return(TRUE)
+  }
+  FALSE
+}
 
 # the rows of one report's list (ard.analyses ...) or its content items of
 # one function (a listing's columns), updated by key

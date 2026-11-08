@@ -12,11 +12,30 @@ argument: `spec-coverage-cards.csv` (columns `package`, `function`,
 `argument`, `covered`, `where`, `note`, `group`, `weight`), made by
 `dev/spec-coverage-cards.R` from the installed cards / cardx (their
 data.frame methods' formals, as `tfl_ard_args()` reads them) and the
-catalog (`inst/ard/functions.csv`, `args.csv`).  Scope: every exported
-`ard_*()`, and cards' helpers a row writes in `post` (`add_calculated_row()`,
-`filter_ard_hierarchical()`, `sort_ard_hierarchical()`,
-`diff_ard_hierarchical()`, `replace_null_statistic()`,
-`update_ard_stat_label()`).
+catalog (`inst/ard/functions.csv`, `args.csv`, `passed_args.csv`).  Scope:
+every exported `ard_*()` -- its own arguments and, since 2026-10-30, the
+arguments it passes on through `...` to the function doing the work
+(`ard_regression(exponentiate =)` to `broom.helpers::tidy_plus_plus()`,
+`ard_car_anova(type =)` to `car::Anova()`, `ard_stats_t_test(var.equal =)`
+to `stats::t.test()` ...: 55 arguments of 18 functions) -- and cards' helpers
+a row writes in `post` (`add_calculated_row()`, `filter_ard_hierarchical()`,
+`sort_ard_hierarchical()`, `diff_ard_hierarchical()`,
+`replace_null_statistic()`, `update_ard_stat_label()` and, since
+2026-10-31, `update_ard_fmt_fun()`).  Since 2026-11-01 also the helpers
+the generated code writes from a row's columns -- cards'
+`continuous_summary_fns()` (the statistics column), `label_round()`,
+`alias_as_fmt_fun()` and `apply_fmt_fun()` (the formats column) -- and
+cardx's `proportion_ci_*()` (the choices of `ard_categorical_ci(method =)`,
+whose arguments are `ard_categorical_ci()`'s).  Since 2026-11-06 also the
+arguments of the model cardx fits itself, written in `method.args =
+list(...)` or in a model's call in `x`: `survival::survfit()` (with
+`survfitKM()`, where its `...` go), `survival::coxph()` (with
+`coxph.control()`), `stats::glm()` (with `glm.control()`), `stats::lm()`
+and `mmrm::mmrm()` (with `mmrm_control()`) -- the Kaplan-Meier, Cox,
+logistic, ANCOVA and MMRM models, catalogued in `inst/ard/model_args.csv`;
+since 2026-11-07 also `MASS::glm.nb()` (a negative binomial rate model,
+weight 2) and `survival::survreg()` (a parametric survival model, weight
+1), each with the control function its `...` reach.
 
 * **yes**: the row's own column writes it, or the catalog describes it
   (its kind and a hint: the GUI shows it) and the check judges the value
@@ -34,52 +53,438 @@ percentage is the functions' mean weighted by their use in clinical tables:
 summary and shift, vital signs and model-based efficacy (ANCOVA / LS means,
 CMH, KM, log-rank, Cox, incidence rates) use; 2 sometimes; 1 rarely.
 
-cards 0.9.0, cardx 0.3.4; 60 functions, 308 arguments.
+Since 2026-11-02 the measure also counts the ard_*() functions a method
+keyword names (`tfl_ard_methods()`: the name a GUI offers and a person
+reads, "Kruskal-Wallis test" rather than `cardx::ard_stats_kruskal_test`),
+by weight.  A keyword writes the same code as its function, so this
+measures how easily a SPEC is written, not what it can say; the argument
+percentages do not move with it.
 
-| Scope | 2026-10-29 before | 2026-10-29 after |
+| ard_*() with a method keyword | 2026-11-02 before | 2026-11-02 after | 2026-11-03 after | 2026-11-04 before* | 2026-11-04 after | 2026-11-05 after |
+|---|---:|---:|---:|---:|---:|---:|
+| weight 3 | 21 of 27 | 23 of 27 | 24 of 27 | 24 of 27 | 24 of 27 | **25 of 27** |
+| weight 2 | 0 of 19 | 5 of 19 | 12 of 19 | 12 of 23 | 20 of 23 | **22 of 23** |
+| weight 1 | 0 of 8 | 0 of 8 | 0 of 8 | 0 of 4 | 3 of 4 | **3 of 4** |
+
+\* 2026-11-04 corrects the weights: the measure named the effect sizes
+`ard_stats_cohens_d()` / `ard_stats_paired_cohens_d()`, which cardx does
+not have, so its four `ard_effectsize_*()` (Cohen's d, Hedges' g, paired)
+were weight 1.  They are weight 2 now.  The argument percentages do not
+move (every argument is yes).
+
+(Without a keyword after 2026-11-05 -- weight 3: `ard_hierarchical()`
+and `ard_hierarchical_count()`, the stacked counts' building blocks
+(`hierarchical` / `hierarchical_count` are their stacked forms; one
+keyword a function), written by their name.  Weight 2: `ard_mvsummary()`,
+a summary by the study's own function (`custom` or a study function says
+it more plainly).  Weight 1: `ard_identity()`, statistics already
+computed.  Every cardx `ard_*()` but the survey designs has a keyword;
+since 2026-11-05 so have the three that run other analyses, `ard_stack()`,
+`ard_strata()` and `ard_pairwise()`.)
+
+cards 0.9.0, cardx 0.3.4; 71 functions, 412 arguments (2026-11-01 scope:
+313 of the ard_*() and post helpers' own, 72 passed on, 27 of the code
+and CI helpers; `label_round(width =)` left out by design).
+
+| Scope (2026-11-01, wider) | 2026-11-01 before | 2026-11-01 after |
 |---|---:|---:|
-| **cards / cardx, weighted** | **75.9%** (153 yes / 155 partial) | **99.3%** (304 / 4) |
-| cards ard_*() | 79.9% | 99.4% |
-| cardx ard_*() | 76.0% | 99.8% |
-| cards post helpers | 63.9% | 96.1% |
-| weight-3 functions only | 75.1% | 99.6% |
+| **cards / cardx, weighted** | **98.3%** (394 yes / 18 partial) | **99.5%** (411 / 1) |
+| cards ard_*() | 100.0% | 100.0% |
+| cardx ard_*() | 97.6% (237 / 17) | 100.0% (254 / 0) |
+| cards post helpers | 100.0% | 100.0% |
+| cards code helpers (new) | 92.5% (8 / 1) | 92.5% (8 / 1) |
+| cardx CI helpers (new) | 100.0% | 100.0% |
+| weight-3 functions only | 98.3% | 99.3% |
 
-### Added in this run
+2026-11-02 (the same scope and cards / cardx): 99.5% before and after (411
+yes / 1 partial); the run added keywords (above), not arguments.
 
-* The check judges the values `args` writes, by each argument's kind in the
-  catalog (`.ard_arg_value_problems()`, a warning of `tfl_ard_spec()` like
-  an unknown argument): `overall = "yes"`, `conf.level = 95`,
-  `method = "wilson_cc"` (not one of `ard_categorical_ci()`'s choices),
-  `unit_label = 100`, `formula = 1`, `id = 1`, `method.args = "x"`,
-  `value = "Y"` (a list or formula of selectors), `tidy_fun = "tidy"`,
-  `x = "fit"`, `stats_to_remove = term`.  Only cards' and cardx's functions;
-  a name or a call is the program's to judge.
-* A `post` step's arguments are checked against its function
-  (`filter_ard_hierarchical(filtr = )`), and their values as above
-  (`filter = "n > 1"` in quotes, `sort = "frequency"`).
-* The catalog describes the post helpers' arguments (18 rows of
-  `inst/ard/args.csv`: `expr`, `stat_name`, `filter`, `var`, `keep_empty`,
-  `sort` with its choices, `by_level`, `levels`, `rows`, `stat_names` ...).
-* Eight method keywords for the model-based and safety analyses, each its
-  cardx function by a name a person reads (and the ARS's method name):
-  `cmh` (ard_stats_mantelhaen_test), `prop_diff` (ard_stats_prop_test),
-  `lsmeans` / `lsmeans_diff` (ard_emmeans_emmeans / _contrast), `km`
-  (ard_survival_survfit), `logrank` (ard_survival_survdiff), `abnormal`
-  (ard_tabulate_abnormal), `incidence_rate` (ard_incidence_rate).
+2026-11-03 (the same scope; cards 0.9.0, cardx 0.3.4): **99.5% before (411
+yes / 1 partial), 100.0% after (412 / 0)** -- cards' code helpers 92.5% to
+100.0%: the formats column takes `xx.x*1000`, `label_round(scale =)`'s
+other scales.  Weight-3 functions 99.3% to 100.0%.
+
+2026-11-04 (the same scope; cards 0.9.0, cardx 0.3.4, still the CRAN
+versions): **100.0% before and after (412 yes / 0 partial)**.  The run
+added keywords (above) and a check of the names a function passes on
+(below), not arguments.
+
+2026-11-05 (the same scope; cards 0.9.0, cardx 0.3.4, still the CRAN
+versions): **100.0% before and after (412 yes / 0 partial)**.  The run
+added the wrappers' keywords (above) and closed two of the gaps below
+(3: a `custom` row's calls by a plain name; 4: the names passed on to
+`car::Anova()`), not arguments.
+
+2026-11-06 (wider scope; cards 0.9.0, cardx 0.3.4, still the CRAN
+versions; survival 3.8, mmrm 0.3.19): the model arguments are 41 more
+arguments of 5 functions (weight 3; 32 more left out by design: the
+population's `subset`, starting values, multi-state, computing).
+
+| Scope (2026-11-06, wider) | 2026-11-06 before | 2026-11-06 after |
+|---|---:|---:|
+| **cards / cardx, weighted** | **95.9%** (412 yes / 41 partial) | **99.8%** (451 / 2) |
+| cards ard_*() | 100.0% | 100.0% |
+| cardx ard_*() | 100.0% | 100.0% |
+| cards post helpers | 100.0% | 100.0% |
+| cards code helpers | 100.0% | 100.0% |
+| cardx CI helpers | 100.0% | 100.0% |
+| cardx model arguments (new) | 50.0% (0 / 41) | 97.1% (39 / 2) |
+| weight-3 functions only | 93.6% | 99.6% |
+
+2026-11-07 (wider scope; cards 0.9.0, cardx 0.3.4, still the CRAN
+versions; MASS 7.3-60.0.1, survival 3.8, mmrm 0.3.19): the two models are 19 more
+arguments of 2 functions (by design left out: their starting values,
+fitting routine, `control` written as its parts, the fit's parts).
+
+| Scope (2026-11-07, wider) | 2026-11-07 before | 2026-11-07 after |
+|---|---:|---:|
+| **cards / cardx, weighted** | **99.0%** (451 yes / 21 partial) | **100.0%** (472 / 0) |
+| cards ard_*() | 100.0% | 100.0% |
+| cardx ard_*() | 100.0% | 100.0% |
+| cards post helpers | 100.0% | 100.0% |
+| cards code helpers | 100.0% | 100.0% |
+| cardx CI helpers | 100.0% | 100.0% |
+| cardx model arguments | 89.3% (39 / 21) | 100.0% (60 / 0) |
+| weight-3 functions only | 99.6% | 100.0% |
+
+(2026-11-07 before: this branch before the run (tflspec@next d237a12
+merged), measured by this run's script: `mmrm(covariance =, weights =)`
+taken as R; glm.nb()'s arguments reached the model unchecked (its `...`
+were not known to go to `glm.control()`), survreg()'s names were checked
+but not described: partial.  On the 2026-11-06 scope the run goes from
+99.8% to 100.0%.)
+
+(2026-11-06 before: tflspec@next d220f07 on the wider scope -- a model's
+argument could be written as R in `method.args` and reached the model, but
+was neither described nor its name checked: partial.  On the 2026-11-05
+scope the run starts and ends at 100.0%.)
+
+(2026-11-01 before: the tflspec of this branch before the run, on the wider
+scope -- the 17 newly catalogued passed-on arguments could be written as R
+in `args` and reached their function, but were not described and their
+values not judged: partial.  On the 2026-10-31 scope the run starts and
+ends at 100.0%.)
+
+Earlier runs, on their scope:
+
+| Scope | 2026-10-29 before | 2026-10-29 after | 2026-10-30 before (wider scope) | 2026-10-30 after | 2026-10-31 before (+ update_ard_fmt_fun) | 2026-10-31 after |
+|---|---:|---:|---:|---:|---:|---:|
+| **cards / cardx, weighted** | **75.9%** (153 yes / 155 partial) | **99.3%** (304 / 4) | **93.0%** (304 / 59) | **99.3%** (359 / 4) | **99.0%** (362 / 6) | **100.0%** (368 / 0) |
+| cards ard_*() | 79.9% | 99.4% | 99.4% | 99.4% | 99.4% | 100.0% |
+| cardx ard_*() | 76.0% | 99.8% | 89.3% | 99.8% | 99.8% | 100.0% |
+| cards post helpers | 63.9% | 96.1% | 96.1% | 96.1% | 94.2% | 100.0% |
+| weight-3 functions only | 75.1% | 99.6% | 93.1% | 99.6% | 99.6% | 100.0% |
+
+(2026-10-30 before: the tflspec of `next` measured on the wider scope -- a
+passed-on argument could be written as R in `args` and reached the
+function, but the catalog did not describe it and its value was not
+judged: partial.  2026-10-31 before: the same, with
+`update_ard_fmt_fun()` in the `post` scope -- written as R in `post`, its
+names checked, its values not judged.)
+
+### Added 2026-11-07
+
+* **MMRM's covariance structure judged** (`mmrm(covariance =)`, kind
+  `covariance`): `method.args = list(covariance = cov_struct("toep", visits
+  = "AVISIT", subject = "USUBJID"))` or `~ ar1(AVISIT | USUBJID)`, for a
+  formula without a structure.  A type mmrm does not have (`"un"`, `~
+  un(...)`: its `cov_types()` of the installed mmrm), `visits = AVISIT`
+  not in quotes, a missing `subject`, or text (`covariance = "us"`) is a
+  warning when the spec is read.
+* **mmrm(weights =) judged** (kind `vector`): a vector as long as the
+  data (`data$WTS`) or the program's name; a column's name in quotes
+  (`weights = "WTS"`) is said -- mmrm() does not look a column up.
+* **A negative binomial rate model** (`MASS::glm.nb()`: exacerbations,
+  relapses, recurrent events -- PROC GENMOD's DIST=NEGBIN): `method =
+  "glm.nb", package = "MASS"` in `regression` / `lsmeans` / `lsmeans_diff`
+  rows, or `x = MASS::glm.nb(...)`.  Its `link` (kind `link`: `log`,
+  `sqrt`, `identity`, a name or text; `link = logit` is said),
+  `init.theta` (above 0), `weights`, `contrasts` and glm.control()'s
+  `maxit` / `epsilon` / `trace` (its `...` go there: a name neither has is
+  said, as `lnik =`).  A test builds the rate ratios from a row and
+  compares them with `cardx::ard_regression(method = "glm.nb", ...)`
+  called by hand.
+* **A parametric survival model** (`survival::survreg()`): `dist` (one of
+  weibull, exponential, lognormal, loglogistic ...), `scale` (0 or more),
+  `robust`, `cluster`, `weights`, `parms`, and survreg.control()'s
+  `maxiter`, `rel.tolerance`, `outer.max`, `debug`.
+* A model number with a floor is judged: `init.theta = 0`, `scale = -1`,
+  `maxit = 0`.
+* `tfl_ard_model_args("glm.nb", "MASS")` / `("survreg", "survival")` list
+  them for a GUI.
+
+### Added 2026-11-06
+
+* **The arguments of the model cardx fits** (`inst/ard/model_args.csv`, 41
+  arguments of 5 model functions, `tfl_ard_model_args()`): the
+  Kaplan-Meier interval (`km`: `method.args = list(conf.type = "log-log")`,
+  SAS PROC LIFETEST's; `conf.int`, `conf.lower`, `stype`, `ctype`,
+  `start.time`, `robust`, `cluster` ...), a Cox model's ties (`regression`
+  with `method = "coxph"`: `method.args = list(ties = "breslow")`, PROC
+  PHREG's; `robust`, `cluster`, `iter.max` ...), a logistic or Poisson
+  model's `family` / `offset` (`glm`), an ANCOVA's `weights` / `contrasts`
+  (`lm`), and MMRM's degrees of freedom (`lsmeans` / `lsmeans_diff` with
+  `method = "mmrm", package = "mmrm"`: `method.args = list(method =
+  "Kenward-Roger")`, PROC MIXED's DDFM=KR; `reml`, `vcov`).
+* `tfl_ard_spec()` looks for each name in the installed model function
+  and where its `...` go (`survfitKM()`, `coxph.control()`,
+  `glm.control()`, `mmrm_control()`): `conf.tpye =`, `tise =`, `metod =`
+  would stop the program, `wieghts =` would be ignored by `lm()` -- each
+  is said when the spec is read, as a warning.  The model is the one
+  `method` / `package` name (`"glm"` with the default package is
+  `stats::glm`), or survival::survfit() for `km`; a study's own model
+  function, or one whose `...` take anything, is not judged.  `formula =`
+  / `data =` in `method.args` are cardx's own (the program would stop).
+* Their values are judged by kind: one of the choices (`conf.type =
+  "loglog"`, `ties = "breslov"`, `method = "KR"`), a number (`conf.int =
+  95` is between 0 and 1), TRUE / FALSE, a column not in quotes
+  (`cluster = "SITEID"` would stop `coxph()`), a family (`family = 1`).
+* The same for a model's call written in `x`: `km_diff`'s `x =
+  survival::survfit(..., conf.type = "log-log")`, `wald`'s `x = glm(...,
+  fmaily = binomial)`; and in a `custom` row's cardx call.
+* A test builds a `km` row with the log-log interval and compares it with
+  `cardx::ard_survival_survfit(method.args = list(conf.type = "log-log"))`
+  called by hand and with `survival::survfit()`'s own limits.
+
+### Added 2026-11-05
+
+* Three method keywords for the functions that run other analyses (the
+  rows whose `parent` names this one), each its function by another name
+  -- the same code:
+  * `stack` -- `cards::ard_stack()`: several analyses on the same data and
+    `by` (a demographics table's summaries and counts; `overall = TRUE` for
+    its Total column);
+  * `subgroups` -- `cards::ard_strata()`: an analysis within each level of
+    `strata` (a response rate's difference in each subgroup of a forest
+    plot's table);
+  * `pairwise` -- `cards::ard_pairwise()`: an analysis for each pair of the
+    levels of the one column in `variables`, `include = "Placebo"` for each
+    arm against placebo.
+  Every check of a parent row (one analysis inside `subgroups` /
+  `pairwise`, ONE column for `pairwise`, no `overall` on `subgroups`) and
+  the ARS's flattening take the keyword as the function.  A test writes
+  the three by keyword and by function (the same code), builds the ARD and
+  compares the `pairwise` p-values with `cards::ard_pairwise(include =
+  "Placebo")` called by hand.
+* **A `custom` row's calls by a plain name are judged too** (gap 3): after
+  `library(cards)`, `ard_tabulate(data, denominatr = population)` is
+  `cards::ard_tabulate()`'s call and said as one -- any function cards or
+  cardx defines and exports (cards' first; not the tidyselect helpers they
+  re-export), unless the code binds the name itself (`ard_tabulate <-
+  ...`, a function's argument, a loop's variable).
+* **A name `ard_car_anova()` passes on is looked for in `car::Anova()`'s
+  method of the model** (gap 4): `x = lm(...), tpye = "III"` reaches
+  `car:::Anova.lm()`, whose `...` takes nothing else -- the typo gave type
+  II silently.  A name R matches by its beginning (`typ =` is `type =`)
+  is the argument's.  The model is the call `x` writes (`lm`, `glm`, `coxph`,
+  `stats::aov` ...; a name, `x = fit`, or a model car has no method for is
+  not judged).
+
+### Added 2026-11-04
+
+* Eleven method keywords, each its function by another name (the same code;
+  a row naming the function is the keyword's, in the ARS too):
+  * `records` -- `cards::ard_tabulate_rows()`: the number of records (not
+    subjects) in each `by` group, e.g. the number of adverse events per
+    arm; the ARS lays it out as counts (`n`).
+  * `labels` -- `cards::ard_attributes()`: the variables' labels.
+  * `nested_models` -- `cardx::ard_stats_anova()`: nested models compared
+    (`formulas = list(AVALC ~ TRTA + SEX, AVALC ~ TRTA * SEX)`), the
+    treatment-by-subgroup interaction test of a forest plot's table; the
+    ARS's operation is `p.value`.  A test builds it and compares the
+    p-value with `stats::anova()` of the two `lm()` fits.
+  * `regression_basic` -- `cardx::ard_regression_basic()`.
+  * `cohens_d`, `hedges_g`, `paired_cohens_d`, `paired_hedges_g` --
+    `cardx::ard_effectsize_*()`: effect sizes with CI, laid out as a test
+    of values (`estimate`, `conf.low`, `conf.high`).
+  * `mood` -- `cardx::ard_stats_mood_test()` (`p.value`).
+  * `vif` -- `cardx::ard_car_vif()`; `wald` -- `cardx::ard_aod_wald_test()`
+    (`p.value`): a model's checks, the model in `args` (`x = lm(...)`).
+  * Each has an exact case in `fixtures/ard-cases.R` (the row's ARD against
+    the hand-written call).
+* **A name passed on through `...` is checked against the function it
+  reaches.**  `ard_stats_t_test(var.eqaul = TRUE)` reaches
+  `stats::t.test()`, whose default method ignores a name it does not
+  have: the typo gave the default silently.  `tfl_ard_spec()` now warns
+  when a name is neither the cardx function's, nor the catalog's
+  (`passed_args.csv`), nor an argument of the function it is passed to (its
+  default and formula methods too).  Only stats and survival functions are
+  judged; broom.helpers, car, effectsize and smd pass `...` on again.  This
+  closes most of gap 4 below.  The checks of `args` moved from
+  `R/ard_spec.R` (1994 lines) to `R/ard_args_check.R`.
+
+### Added 2026-11-03
+
+* Eight method keywords, each its function by another name (the same code;
+  a row naming the function is the keyword's, in the ARS too):
+  * `hierarchical_count` -- `cards::ard_stack_hierarchical_count()`: the
+    number of events (records, not subjects) by SOC / PT, the AE tables'
+    "events" column; its denominator is the population unless `args` says
+    another (`overall = TRUE` gives the total column);
+  * `onesample_ttest` / `onesample_wilcox` --
+    `cardx::ard_stats_t_test_onesample()` / `_wilcox_test_onesample()`:
+    the change from baseline within each arm, with CI and p-value
+    (`mu = 0`);
+  * `smd` -- `cardx::ard_smd_smd()`: the standardized mean difference of
+    two arms (baseline balance);
+  * `poisson` -- `cardx::ard_stats_poisson_test()`: a rate, or two arms'
+    rate ratio (variables: the events and the person-time columns);
+  * `oneway` -- `cardx::ard_stats_oneway_test()` (Welch's one-way ANOVA) and
+    `aov` -- `cardx::ard_stats_aov()` (a model's ANOVA): `formula =` in
+    `args`;
+  * `mcnemar_long` -- `cardx::ard_stats_mcnemar_test_long()`: McNemar's
+    test on long data (a record per subject and visit, `id = USUBJID`), the
+    shift tables' test.
+  The ARS lays out the one-sample tests as values (estimate, CI,
+  p-value), `smd` as a test of values, `mcnemar_long` as a test of counts,
+  `hierarchical_count` as counts (`n`).
+* A format times a number: `estimate=xx.xx*1000` is
+  `cards::label_round(2, scale = 1000)` -- an incidence rate per 1,000
+  person-years from cardx's rate per person-year.  The formats check takes
+  it (`xx.x*`, `*0` and `xx.x%*100` are refused).
+* Fix: the program's `fmt_ard()` keeps a factor statistic as text too
+  (`ard_survival_survfit_diff()`'s `reference_level` was given a number
+  of decimals: a warning, `stat_fmt` NA).
+* Each keyword has an exact case (`tests/testthat/fixtures/ard-cases.R`).
+
+### Added 2026-11-02
+
+* Seven method keywords for the analyses clinical tables use most that had
+  none, each its cardx function by another name (the same code; a row
+  naming the function is the keyword's, in the ARS too):
+  * `regression` -- `cardx::ard_regression()`: a model's estimates with CI,
+    a Cox model's hazard ratio or a logistic model's odds ratio
+    (`exponentiate = TRUE`);
+  * `anova` -- `cardx::ard_car_anova()`: a model's ANOVA table, type II / III
+    (`x = lm(CHG ~ TRTA + BASE, data = data), type = "III"`);
+  * `kruskal` -- `cardx::ard_stats_kruskal_test()`;
+  * `paired_ttest` / `paired_wilcox` -- `cardx::ard_stats_paired_t_test()` /
+    `_paired_wilcox_test()` (two visits of each subject, `id = USUBJID`);
+  * `mcnemar` -- `cardx::ard_stats_mcnemar_test()`;
+  * `km_diff` -- `cardx::ard_survival_survfit_diff()`: the difference in
+    Kaplan-Meier survival between arms at times, with CI.
+  The ARS lays out `kruskal` as a test of values, `mcnemar` as a test of
+  counts, both with `p.value`; the paired tests give `p.value`.
+* Fix: a `km_diff` (`cardx::ard_survival_survfit_diff()`) row failed in the
+  format step: cardx gives its text statistic `method` a number of
+  decimals, which `cards::apply_fmt_fun()` cannot apply.  The program's
+  `fmt_ard()` (`inst/helpers/study_helpers.R`) now keeps a text statistic
+  as text.
+* Each keyword has an exact case (`tests/testthat/fixtures/ard-cases.R`):
+  the spec row's ARD against the hand-written cards / cardx call.
+
+### Added 2026-11-01
+
+* More arguments cardx functions pass on through `...`, described in
+  `inst/ard/passed_args.csv` and their values judged (17 arguments of 9
+  functions):
+  * `ard_continuous_ci()`: `alternative` (to `stats::t.test()`), `exact`
+    and `correct` (`method = "wilcox.test"`, the median's CI, to
+    `stats::wilcox.test()`);
+  * `ard_survival_survdiff(timefix =)` (to `survival::survdiff()`);
+  * `ard_stats_mood_test(alternative =)` (to `stats::mood.test()`);
+  * `ard_smd_smd()`: `gref` (the reference group) and `na.rm` (to
+    `smd::smd()`);
+  * the effect sizes, `ard_effectsize_cohens_d()` / `_hedges_g()`:
+    `pooled_sd`, `mu`, `alternative`; their paired forms `mu`,
+    `alternative` (to `effectsize`).
+  The tests run them: Mood's one-sided p-value, the SMD's sign with
+  `gref = 2L`, Cohen's d with `pooled_sd = FALSE`, the median's CI with
+  `exact = FALSE, correct = FALSE` -- each against the function called
+  directly.
+* A `custom` row's code is no longer taken whole: its calls of cards' and
+  cardx's functions written with their package (`cards::ard_tabulate(data,
+  denominatr = population)`, `data |> cardx::ard_categorical_ci(method =
+  "wilson_cc")`, `cards::ard_summary()` inside `cards::ard_stack()`, a
+  `post` helper on a name the code assigns) have their arguments' names
+  checked against the function (an `ard_*()` generic's data.frame method)
+  and their values judged by the catalog's kinds, a warning of
+  `tfl_ard_spec()` as for `args` and `post`.  The rest of the code is the
+  program's.
+* The measure's scope takes in the helpers the generated code writes and
+  cardx's CI helpers (see above): all written by a row's columns except
+  `label_round(scale =)` (100 only, by `xx.x%`: partial).
+
+### Added 2026-10-31
+
+* The last values taken as R are judged by their shape:
+  * `ard_categorical_ci(weights = )` (the stratified Wilson weights): numbers
+    between 0 and 1 that add up to 1, one a stratum (`c(0.5, 0.3, 0.2)`);
+  * `ard_pairwise(include = )`: a vector of the levels compared
+    (`c("Placebo", "Drug A")`), not a list or a formula;
+  * `add_calculated_row(fmt_fun = )`: a whole number of decimals (`2L`), a
+    format cards takes (`"xx.x"`, `"xx.x%"`: an `x`, then `x`'s, one point at
+    most, `%` only at the end) or a function (`cards::label_round(1)`);
+  * `replace_null_statistic(value = )`: one value (`NA`, `0`, `"NE"`).
+  A call that makes the value (`rep(0.25, 4L)`) or a name is the program's.
+* `update_ard_fmt_fun()` is a described `post` step (`variables`,
+  `stat_names`, `fmt_fun`, `filter`): a format for some rows only, e.g. one
+  arm's mean with 3 decimals (`filter = group1_level == "Placebo"`).  Its
+  format is no longer lost: a `post` step that sets formats now runs after
+  the format step (`fmt_ard()`, which gives every statistic its default) and
+  the ARD is formatted again, `cards::apply_fmt_fun(replace = TRUE)`.
+  The same for `add_calculated_row(stat_name = "se", fmt_fun = 4L)`: `se`
+  has a default format, which used to win; its format is now said again
+  after the format step (`update_ard_fmt_fun(stat_names = "se", fmt_fun =
+  4L)`).
+* `?tfl_ard_args` says which shapes a `code` argument's value is checked by.
+
+### Added 2026-10-30
+
+* The arguments a cardx function passes on through `...`, described and
+  their values judged (`inst/ard/passed_args.csv`, `tfl_ard_args()`'s new
+  `passed_to` column; a company adds rows with
+  `options(tflspec.ard_passed_args =)`):
+  * `ard_regression()` / `ard_regression_basic()` to
+    `broom.helpers::tidy_plus_plus()`: `exponentiate` (hazard, odds and rate
+    ratios), `conf.level`, `conf.int`, `intercept`, `add_reference_rows`,
+    `add_header_rows`, `add_n`, `show_single_row`, `include`;
+  * `ard_car_anova()` to `car::Anova()`: `type` ("II" / "III", or 2 / 3:
+    a number among the choices is taken as a number), `test.statistic`;
+  * the tests to `stats`: `alternative`, `mu`, `var.equal` (t tests, one-way
+    ANOVA), `exact` / `correct` (Wilcoxon, CMH, McNemar, chi-square, the
+    test of proportions), `simulate.p.value` / `B` (chi-square, Fisher), `r`
+    (Poisson).
+* The tests run them: a 2 x 2 chi-square with `correct = FALSE` is
+  `chisq.test(correct = FALSE)`'s p-value, and a Cox model's row with
+  `exponentiate = TRUE` gives `exp(coef(coxph()))`.
 
 ### Where the gaps are
 
 The scope is close to its ceiling; what is left and what is next:
 
-1. Taken as R (any value is right for some use): `ard_categorical_ci(weights = )`,
-   `ard_pairwise(include = )`, `add_calculated_row(fmt_fun = )` (a number of
-   decimals or a function), `replace_null_statistic(value = )`.
-2. A `custom` row's code is run as it is: nothing in it is judged.
-3. Next: the model functions' own arguments (`ard_regression()` passes
-   `...` to the model; `ard_car_anova(type = )`), the denominators' shapes
-   in `args` (`denominator = data.frame(...)`), and a wider scope (the
-   helpers the generated code writes: `continuous_summary_fns()`,
-   `label_round()`).
+Every argument in scope is described and its value judged (since
+2026-11-03).  What is left:
+
+1. (closed 2026-11-03: `label_round(scale =)` is the format `xx.x*1000`.)
+2. A `post` step of the study's own or of another package that sets formats
+   is not moved: the format step after it gives the defaults.
+3. A `custom` row's code: its cards / cardx calls written with the
+   package or (since 2026-11-05) by a plain name cards / cardx exports are
+   judged; a function bound to another name (`f <- cards::ard_tabulate`)
+   is not.
+4. A passed-on argument's name is checked (since 2026-11-04) when it
+   reaches a stats or survival function, and (since 2026-11-05) the
+   `car::Anova()` method of a model written in `x`; one passed to
+   broom.helpers, effectsize or smd, which pass `...` on again, is not.  The catalog
+   names the arguments clinical tables use, not every argument of the
+   function they reach (`stats::aov()`'s, `car::vif(type =)` -- a method's
+   argument, not the generic's -- are not described).
+5. (since 2026-11-06) A model's argument is checked for the five model
+   functions catalogued (survfit, coxph, glm, lm, mmrm); another model
+   (`survival::survreg()`, `MASS::glm.nb()`, `nlme::gls()`, a study's own)
+   takes its names as written.  (Since 2026-11-07 also `MASS::glm.nb()`
+   and `survival::survreg()`, and `mmrm(covariance =, weights =)` are
+   judged.)  Left: `nlme::gls()` (its formula is `model =`, which cardx
+   does not give: not offered), a study's own model, and `cov_struct(group
+   =)`'s column, taken as written.  A list made by the program
+   (`method.args = my_args`) is the program's.
+6. Not in scope by design: `rename_ard_groups_shift()` /
+   `_reverse()` (the table code reads the by columns in the row's order:
+   reorder `by` instead), `bind_ard()` (tflspec #118), the `mock_*()`
+   shells.  A denominator of numbers is the denominator column (`86`,
+   `c("Drug X" = 86, "Placebo" = 85)`); a data frame written in `args` is
+   the program's.
 
 ## rtfreporter (table SPEC)
 
@@ -99,8 +504,12 @@ and `inst/spec/schema.yml`.
   content item the schema has no entry for (no check, rank or help).
 * **no**: a SPEC cannot write it.
 * Notes `[helper]`: options, inspection helpers, code writers, file
-  assemblers, the validation kit and deprecated arguments -- no SPEC item
-  by design.  `[out of scope]`: `plan_layers()`, designed in another session.
+  assemblers, the validation kit, `plan_apply()` (`rtf_tables()` takes the
+  plan itself), deprecated and superseded arguments, and -- since
+  2026-10-31 -- rtfreporter's own deprecated exports
+  (`rtfreporter:::.deprecated_exports`: the old border constructors,
+  `paginate()`, `assemble_toc()` ..., removed in 0.9.0 and left out of
+  rtfreporter's own API measure) -- no SPEC item by design.  `[out of scope]`: `plan_layers()`, designed in another session.
 
 Percentage: yes counts 1, partial 0.5.
 
@@ -110,6 +519,82 @@ Percentage: yes counts 1, partial 0.5.
 | 2026-10-28 after  | 43.3% (300 / 24 / 396 of 720) | 49.1% (300 / 24 / 312) | 40 / 6 / 89 |
 | 2026-10-29 before | 43.7% (305 / 25 / 397 of 727) | 49.6% (305 / 25 / 310 of 640) | 41 / 6 / 90 |
 | 2026-10-29 after  | 43.8% (306 / 25 / 396 of 727) | 49.8% (306 / 25 / 309 of 640) | 41 / 6 / 90 |
+| 2026-10-30 before | 43.8% (306 / 25 / 397 of 728) | 49.7% (306 / 25 / 310 of 641) | 41 / 6 / 90 |
+| 2026-10-30 after  | 44.3% (310 / 25 / 393 of 728) | 50.3% (310 / 25 / 306 of 641) | 43 / 5 / 89 |
+| 2026-10-31 before | 44.3% (310 / 25 / 393 of 728) | 50.3% (310 / 25 / 306 of 641) | 43 / 5 / 89 |
+| 2026-10-31 after  | 45.4% (310 / 41 / 377 of 728) | 57.2% (310 / 41 / 227 of 578) | 43 / 5 / 89 |
+| 2026-11-01 before | 51.7% (310 / 40 / 288 of 638) | 57.9% (310 / 40 / 220 of 570) | 43 / 5 / 66 |
+| 2026-11-01 after  | 49.6% (308 / 17 / 313 of 638) | 58.1% (308 / 17 / 220 of 545) | 43 / 5 / 66 |
+| 2026-11-02 before | 51.6% (325 / 19 / 304 of 648) | 58.8% (325 / 19 / 225 of 569) | 41 / 7 / 67 |
+| 2026-11-02 after  | 51.8% (326 / 19 / 303 of 648) | 59.2% (326 / 19 / 222 of 567) | 42 / 6 / 67 |
+| 2026-11-03 before / after | 51.8% (326 / 19 / 303 of 648) | 59.2% (326 / 19 / 222 of 567) | 42 / 6 / 67 |
+| 2026-11-04 before / after | 51.6% (326 / 19 / 305 of 650) | 59.0% (326 / 19 / 224 of 569) | 41 / 7 / 67 |
+| 2026-11-05 before / after | 51.6% (326 / 19 / 305 of 650) | 59.0% (326 / 19 / 224 of 569) | 41 / 7 / 67 |
+| 2026-11-06 before / after | 51.6% (326 / 19 / 305 of 650) | 59.0% (326 / 19 / 224 of 569) | 41 / 7 / 67 |
+| 2026-11-07 before / after | 51.6% (326 / 19 / 305 of 650) | 59.0% (326 / 19 / 224 of 569) | 41 / 7 / 67 |
+
+(2026-11-07: rtfreporter@next ccbcfe4 (its changes since 1e1a693 are
+widen_ard()'s labels, plan_digits()' message for a row key's value and the
+{PAGE_HEADING} title row -- which tflspec#703 takes up: no new exported
+argument) and tflspec@next d237a12; the run went to cards / cardx -- the
+table is unchanged.)
+
+(2026-11-06: rtfreporter@next 1e1a693 (its changes since 0872829 are text
+tokens filled once, natural order of long digit runs in file names, wording
+and validation records: no new exported argument) and tflspec@next d220f07;
+the run went to cards / cardx -- the table is unchanged.  The gaps are the
+four below.)
+
+(2026-11-05: rtfreporter@next 0872829 (its changes since fc1a438 are the
+listing's wrapping of a value with a separator, the flextable / huxtable
+adapters' options, tests and quality documents: no new exported argument)
+and tflspec@next 48d8a3b merged; the run went to cards / cardx -- the
+table is unchanged.  The "no" rows left are the lower-level table API the
+plan verbs stand for; the SPEC-relevant gaps are the four below.)
+
+(2026-11-04: rtfreporter@next fc1a438 and tflspec@next a9c791a merged.
+rtfreporter's one new argument is `render_format` ("png" or "emf", #888)
+of `rtfplot()` and `rtf_figures()`: a figure's, not passed on yet, which
+takes the share from 59.2% to 59.0%.  It is left to the figure SPEC's
+routine: with "emf", `render_dpi` and `png_device` must not be given, and
+the report code gives them for every figure.  The run went to cards /
+cardx; the table and listing SPEC's share is unchanged.)
+
+(2026-11-03: rtfreporter@next ffdf080 (its changes since 825d4d7 are checks,
+pagination fixes and validation tests: no new argument) and tflspec@next
+29dae66 merged; the run went to cards / cardx -- nothing new a SPEC
+writes here, the table is unchanged.)
+
+(2026-11-02 before: tflspec@next merged into the branch (#569:
+`page.rtf_style`, rtfreporter's `rtf_style()`; #564 ...) and
+rtfreporter@next (825d4d7: `rtf_style()`, the cells' top / bottom padding,
+the bands' `color`).  After: `page.rtf_header.color` /
+`page.rtf_footer.color` passed on, and the measure's corrections --
+`rtf_document(style =)` is written from `page.rtf_style` (yes; it was
+counted as not passed on), `rtf_document(default_format =)` is deprecated
+(by `style =`) and `rtf_style(...)` is not an argument (rtfreporter stops
+on one): helpers.  The corrections alone leave 58.8%.)
+
+(2026-11-01: rtfreporter@next no longer exports its deprecated functions
+(the old border constructors, `assemble_*()`, `format_count_pct()` ...: 90
+arguments, 23 functions, most of them helpers already).  Nothing new a
+SPEC writes in this run, which went to cards / cardx; after it: tflspec@next
+(#543) no longer passes `rtf_tables(font_size_half_points =,
+read_attributes =)` on, which rtfreporter deprecated with the rest of
+`rtf_tables()`' table-format arguments (`rtfreporter:::.rtf_tables_fmt_args`,
+removed in 0.9.0).  Those 25 are now helpers -- the plan verbs and
+`rtftable()` say them -- and leave the SPEC-relevant count.)
+
+(2026-10-31: the measure's corrections only, nothing new a SPEC writes --
+rtfreporter's deprecated exports and the superseded `rtf_section(secinfo =)`
+/ `generate_rtfreport(report =)` are helpers (63 arguments out of the
+SPEC-relevant count); `rtf_table_style()`'s 15 fields are said by
+`plan_style()`'s own arguments, `rtf_tables(col_spec = )` by
+`plan_cell_style(cols =)` and `generate_rtfreport(program =,
+program_fallback =)` by `rtf_document()`, which tflspec fills: partial.)
+
+(2026-10-30 before is rtfreporter@next with one more argument,
+`fmt_value_paren(rounding =)`.)
 
 (2026-10-29 before is rtfreporter@next with 7 more arguments --
 `plan_append()`, `table_plan(value = )`, `rtfreporter_validation_kit()` --
@@ -117,11 +602,26 @@ and the measure's corrections: `rtf_tables(style = )` is said by
 `plan_style()`'s `rtf_table_style()` fields (partial), `read_gt` is
 deprecated, the validation kit a helper.)
 
-### Added in this run
+### Added 2026-11-02
 
-* `rtf_tables(read_attributes = )`: `page.rtf_tables.read_attributes` (a
-  logical in the schema), passed on for a report of one content and of
-  several.
+* A running band's text colour: `page.rtf_header.color` /
+  `page.rtf_footer.color` (`"#7F7F7F"`), passed on to rtfreporter's
+  `rtf_header(color =)` / `rtf_footer(color =)` in the report's call and the
+  study setup's `study_header` / `study_footer`; the colour is added to the
+  document's colour table.
+
+### Added 2026-10-30
+
+* A border's side with a look of its own: `rtf_border_line()` (`style`,
+  `width`, `color`) in the schema, a side of `rtf_border()` taking
+  `{fn: rtf_border_line, args: {style: double, width: 30}}`; `rtf_border()`'s
+  `all`, `inside_h` and `inside_v` typed; `plan_style(border =)` takes an
+  `rtf_border()` call besides "tfl" / "none".
+* The schema check looks inside a call a value holds: a wrong style in
+  `{fn: rtf_border, args: {top: {fn: rtf_border_line, args: {style: wavy}}}}`
+  is said as `rtf_border(top = ): rtf_border_line(style = ) is ...` (table and
+  listing items; the figure items are checked as before).
+* `rtf_document(color_table =)`: `page.rtf_document.color_table`, passed on.
 
 ### Where the gaps are
 
@@ -131,14 +631,13 @@ Most "no" rows are rtfreporter's lower-level table API -- `rtftable()`,
 stand for: a SPEC says the plan, not these calls.  The gaps that a SPEC
 could usefully close next:
 
-1. The border constructors as values (`rtf_border_tfl()`, `rtf_border_box()`,
-   `rtf_border_top()` ..., `rtf_table_border()`): a border argument takes
-   only `{fn: rtf_border}` in the schema.
-2. `rtf_tables(col_spec = )` (per-column align / bold ...): only
-   `plan_columns(decimal =, row_title =)` say a part of it.
-3. `rtf_section(page =, secinfo =)`, `rtf_document(color_table =)`,
-   `generate_rtfreport(program =, report =)`, `rtfplot(width_twips =,
-   height_twips =)`.
+1. `rtf_section(page =)`: a section of its own header from a page on (a
+   report of several objects, `contents:`, could give each its own).
+2. `rtfplot(width_twips =, height_twips =)` (the figure SPEC's).
+3. `rtf_table_style()` as a value (`plan_style(style = )` of a company's
+   own style object): its fields are said one by one today.
+4. `rtf_figures(render_format =)` / `rtfplot(render_format =)` (EMF
+   figures, rtfreporter#888): the figure SPEC's.
 
 ## ggplot2 (figure SPEC)
 
@@ -159,36 +658,419 @@ line over time with mean +/- SE, bar, scatter, heat map and CDF plots use;
 2 sometimes; 1 rarely.  Deprecated and internal arguments (`size` of line
 geoms, `fun.y`, `trans`, `label.size` ...) are left out.
 
-Two rounds.  The first counted 2015 arguments (156 functions and geoms with
+Three rounds.  The first counted 2015 arguments (156 functions and geoms with
 a stat); the second widened the scope by 19 functions (line widths, binned / stepped / default
 colour scales, scale_x_time(), guide_axis_logticks() for a forest plot's
 ratio axis, guide_axis_theta() / guide_axis_stack(), filled contours) to
-2303 arguments of 175 functions.
+2303 arguments of 175 functions; the third (2026-10-31) to ggplot2's
+other functions of a plot -- 89 more functions, 3409 arguments of 264:
+the limits (xlim(), ylim(), lims(), expand_limits()), annotation_logticks()
+/ _custom() / _raster(), a facet's vars() and labellers, the other scales
+of a size, an alpha, a shape, a line type and width, a colour or fill by
+date, ordinal and binned, scale_discrete_manual() and the identity scales,
+coord_transform(), facet_null(), theme_test(), ggplot2 4.0's
+theme_sub_*() and element_geom() / _point() / _polygon(), rel(), unit(),
+arrow(), margin_auto() / _part(), guide_custom(), geom_hex() and the
+rarer stat_*() (2-d bins and summaries, contours, 2-d density, quantile,
+align, connect, manual).
 
-| Scope | Start | Round 1 | Round 2 (wider scope: before / after) |
-|---|---:|---:|---:|
-| **ggplot2: geoms (with their stats), scales, coords, themes, facets, guides, labs, positions** | **24.7%** | **94.9%** | **91.4% / 100.0%** |
-| geom_*() | 55.9% | 91.4% | 90.6% / 100.0% |
-| a geom with another stat (geom_step(stat = "ecdf"), geom_pointrange(stat = "summary") ...) | 0.0% | 100.0% | 100.0% / 100.0% |
-| scale_*() and expansion() / sec_axis() / dup_axis() | 8.1% | 95.9% | 87.7% / 100.0% |
-| coord_*() | 34.5% | 98.8% | 98.8% / 100.0% |
-| theme(), complete themes, element_*(), margin() | 5.0% | 91.2% | 91.2% / 100.0% |
-| facet_wrap() / facet_grid() | 57.4% | 100.0% | 100.0% / 100.0% |
-| guides() and guide_*() | 10.7% | 97.3% | 86.8% / 100.0% |
-| labs(), xlab(), ylab(), ggtitle(), annotate() | 38.8% | 97.4% | 97.4% / 100.0% |
-| position_*() | 0.0% | 100.0% | 100.0% / 100.0% |
-| **stat_*()** (shown apart) | **44.2%** | **73.1%** | **73.1% / 100.0%** |
+| Scope | Start | Round 1 | Round 2 (wider scope: before / after) | Round 3 (wider scope: before / after) |
+|---|---:|---:|---:|---:|
+| **ggplot2: geoms (with their stats), scales, coords, themes, facets, guides, labs, positions** | **24.7%** | **94.9%** | **91.4% / 100.0%** | **84.2% / 100.0%** |
+| geom_*() | 55.9% | 91.4% | 90.6% / 100.0% | 99.4% / 100.0% |
+| a geom with another stat (geom_step(stat = "ecdf"), geom_pointrange(stat = "summary") ...) | 0.0% | 100.0% | 100.0% / 100.0% | 100.0% / 100.0% |
+| scale_*(), the limits and expansion() / sec_axis() / dup_axis() | 8.1% | 95.9% | 87.7% / 100.0% | 80.7% / 100.0% |
+| coord_*() | 34.5% | 98.8% | 98.8% / 100.0% | 92.9% / 100.0% |
+| theme(), theme_sub_*(), complete themes, element_*(), margin(), rel(), unit() | 5.0% | 91.2% | 91.2% / 100.0% | 75.0% / 100.0% |
+| facet_wrap() / facet_grid() / facet_null(), vars(), labellers | 57.4% | 100.0% | 100.0% / 100.0% | 32.5% / 100.0% |
+| guides() and guide_*() | 10.7% | 97.3% | 86.8% / 100.0% | 97.4% / 100.0% |
+| labs(), xlab(), ylab(), ggtitle(), annotate(), annotation_*() | 38.8% | 97.4% | 97.4% / 100.0% | 69.2% / 100.0% |
+| position_*() | 0.0% | 100.0% | 100.0% / 100.0% | 100.0% / 100.0% |
+| **stat_*()** (shown apart) | **44.2%** | **73.1%** | **73.1% / 100.0%** | **82.4% / 100.0%** |
 
 Round 2, 2303 arguments: before 1533 yes / 770 partial / 0 no; after 2303
-yes.  (ggplot2 4.0's `box_gp`, `whisker_gp` ... are left out: geom_boxplot()
-makes them from `whisker.colour` and the like, and given too they clash.)
+yes.  Round 3, 3409 arguments: before 2303 yes / 1054 partial / 52 no
+(xlim(), lims(), annotation_logticks(), the labellers, vars() were an
+error of the check: no kind without a prefix); after 3409 yes.  (ggplot2
+4.0's `box_gp`, `whisker_gp` ... are left out: geom_boxplot() makes them
+from `whisker.colour` and the like, and given too they clash.)
 
 100% is this measure's ceiling, not ggplot2's: every argument in the scope
 has a card and a type, which says the GUI shows it and the check types its
 value; the tests run the code of a sample of them (test-fig-ggplot2.R).
-Next: the extension packages (ggsurvfit, ggh4x, ggrepel, ggtext,
-ggnewscale, patchwork), and the scope's edge (geom_sf, geom_hex, the
-rarer stat_*()).
+The extension packages are measured apart (below).  Left out by design:
+maps and simple features (geom_sf*, coord_sf, coord_map / _quickmap,
+geom_map, annotation_map / _borders), the deprecated (geom_errorbarh,
+stat_spoke), the
+programming helpers (aes_*(), layer(), ggproto ...), and ggplot2's other
+spellings, which are not counted: the script checks that each of the 33
+(scale_color_*, guide_colorbar, guide_colorsteps, theme_grey, stat_bin2d,
+geom_density2d ...) reads as its function's card.
+
+Round 3:
+
+- A function of a plot without the prefix has a kind: xlim(), ylim() and
+  lims() a scale's, annotation_*() and expand_limits() a layer's, vars(),
+  labeller() and the label_*() labellers helpers (`.schema_gg_kind()`);
+  before, the check said "a function neither the schema nor its package
+  has".
+- `xlim(0, 52)`: a card's positional `...` is written by position and read
+  back (`limits: [0, 52]` in the SPEC), not `xlim(limits = c(0, 52))`.
+- ggplot2's other spellings read as the card of the function they spell
+  (`.schema_gg_alias()`: scale_color_manual is scale_colour_manual's card);
+  the generated code keeps the name written.
+- theme_sub_*() (ggplot2 4.0) are typed as the settings they stand for:
+  theme_sub_axis_bottom(text =) is axis.text.x.bottom, an element_text;
+  theme_sub_legend(position =) theme()'s legend.position.
+- A facet's `labeller` takes a labeller's call ({fn: label_wrap_gen, args:
+  {width: 20}}, {fn: labeller, args: {PARAMCD: !r label_both}});
+  facet_wrap()'s `facets` the columns (`facets: PARAMCD`), as ggplot2 takes
+  them (before: only !r vars(PARAMCD)).
+- 89 cards (inst/spec/schema.yml), the arguments without a kind's type
+  typed there: annotation_logticks()'s `base`, `sides`, `scaled`,
+  `outside`, `short` / `mid` / `long`; element_geom()'s `ink`, `paper`,
+  `accent`, `fontsize` ...; stat_connect()'s `connection`; unit()'s and
+  rel()'s `x`; guide_custom()'s `grob`.
+
+Round 4 (2026-11-01): a layer's aesthetics.  The arguments' measure says
+nothing of what a layer's `mapping` takes, so each aesthetic of each layer
+in the scope is a row of its own (`argument` "aes: ymin": 826 rows, 719 of
+ggplot2's geoms and stats, 107 of the extensions' layers): **yes** when the
+check judges a mapping's names (an unknown aesthetic warns) and the card
+marks it as ggplot2 does -- required (or one of its alternatives:
+geom_errorbar's `ymin` or `xmin`, a bar across) when the layer's
+`required_aes` say so, not required when they do not; **partial** when one
+of the two holds; **no** neither.  The same weights; the arguments' table
+above is unchanged (3409 arguments, 100%).
+
+| Aesthetics | Before | After |
+|---|---:|---:|
+| **ggplot2, the arguments and the geoms' aesthetics together** | **89.5%** | **100.0%** |
+| geom_*()'s aesthetics | 42.1% | 100.0% |
+| **stat_*()'s aesthetics** (shown apart) | **47.0%** | **100.0%** |
+| the extensions' layers' aesthetics (ggrepel, ggtext, ggsurvfit) | 50.0% | 100.0% |
+| rows yes / partial / no | 0 / 754 / 72 | 826 / 0 / 0 |
+
+Before, no mapping's names were checked (`geom_line(mapping = {colr:
+TRTA})` passed), and 16 cards wrote the aesthetic `y` bare, which YAML
+reads as TRUE: `tfl_schema("geom_line")$aes_required` was `x, TRUE`, and
+`y` came last, from the installed layer.  The 72 "no" rows: the `y` of
+those cards, and the cards that marked x of an "x|y" layer (geom_bar,
+geom_errorbar, stat_ecdf ...) with no word of y, or a fill ggplot2 does
+not need (geom_tile, geom_raster).
+
+Round 4:
+
+- A layer's `mapping` is checked: an aesthetic the layer (its geom and its
+  stat, the stat it is given too) does not have warns, as ggplot2's
+  "Ignoring unknown aesthetics" does; ggplot2's other spellings (`color`,
+  `pch`, `lwd`) are its own.
+- A plot is checked for the aesthetics its layers need (ggplot2's
+  `required_aes`, of the stat when the stat computes them: geom_bar's x or
+  y, geom_step(stat = "ecdf")'s x or y): mapped in the layer, given a
+  value (`geom_hline(yintercept = 0)`) or inherited from the first item's
+  `ggplot(mapping =)` unless `inherit.aes: false`.  A missing one warns
+  (`geom_errorbar needs the aesthetic ymax (or xmax)`), a note of
+  tfl_check_spec(); ggplot2 would stop at the draw.  A plot not begun by
+  ggplot() or a mapping written as R is not judged.
+- The cards (inst/spec/schema.yml, 34 layers) mark what ggplot2 needs,
+  with `or:` for the alternatives (`x: {required: true, or: [y]}`), and
+  write `"y"` quoted; `tfl_schema()` says them as `aes_required` and
+  `aes_or`.  geom_hline / _vline / _abline say `yintercept`, `xintercept`,
+  `slope` and `intercept`.
+
+### Round 5 (2026-11-02): ggplot2's own examples, through a SPEC and back
+
+The arguments' and the aesthetics' measures are at their ceiling: they say
+a SPEC can name every argument and the check types it, not that what
+ggplot2's users write reads as a SPEC and draws the same.  A third measure
+does: `dev/spec-coverage-ggplot2-examples.R` takes every call of a
+function in the scope in the examples of ggplot2's help pages (759 calls,
+1272 uses of an argument, 138 functions; read from the installed ggplot2,
+not copied), reads it as a SPEC item (`.fig_lang_item()`, what tflspec
+reads from R code), checks it, writes it back (`.fig_item_lang()`) and
+draws the example with that code in its place (data, layout, theme,
+labels and the scales' labels compared with the original's).  One row an
+argument as the examples write it: `spec-coverage-ggplot2-examples.csv`
+(the same columns, and `uses`).
+
+- **yes**: read as a typed value (not `!r`), no problem of the check on it,
+  and it draws the same (`!r NULL` and a number written as arithmetic,
+  `!r 1/5`, count as typed: the check judges them).
+- **partial**: read as R, or with R in it, or a warning of the check; it
+  draws the same.
+- **no**: an error of the check, the call not read as an item, or drawn
+  otherwise (or not at all).
+
+An example that does not draw the same twice by itself (data at random,
+a global theme, a package not installed) is not judged on its drawing; a
+call inside a function's definition (`aes({{ x }})`) is left out.  The
+same weights.
+
+| Examples | Before | After |
+|---|---:|---:|
+| **ggplot2: geoms, scales, coords, themes, facets, guides, labs, positions** | **89.7%** | **94.5%** |
+| weight-3 functions only | 85.0% | 91.2% |
+| geom_*() | 90.6% | 95.2% |
+| scale_*() | 87.2% | 92.1% |
+| coord_*() | 96.1% | 99.4% |
+| theme(), elements | 94.1% | 96.8% |
+| facets | 82.2% | 92.4% |
+| guides | 72.0% | 88.2% |
+| labs(), annotate(), annotation_*() | 89.3% | 96.8% |
+| position_*() | 100.0% | 100.0% |
+| **stat_*()** (shown apart) | **90.8%** | **92.1%** |
+| uses yes / partial / no | 986 / 248 / 35 | 1100 / 169 / 3 |
+
+Round 5:
+
+- The check (false problems on ggplot2's own code): a layer's argument by
+  ggplot2's other spelling (`color =`, `pch =`, `lty =`) is the aesthetic
+  it spells; a layer takes what it passes on to `layer()` (`key_glyph`,
+  ggplot2 4.0's `layout`) and its position's (4.0's `geom_text(nudge_x =)`,
+  and `nudge_x` / `nudge_y` as aesthetics); `theme()` takes 4.0's
+  `palette.colour.discrete` ... (14 settings, typed); a number written as
+  arithmetic of numbers (`!r 1/5`, `!r -0.4 * pi`) is a number.
+- Types (`inst/fig/gg_args.csv`, schema.yml): the vector forms ggplot2
+  takes (`annotate(label = c(...))`, a 2-d `binwidth`, `expand = c(0.1,
+  0.1)` on the position scales' cards, a 4.0 `palette` as colours), R where
+  a value may be computed (`colours`, `colour`, `fill`, `quantiles`,
+  `bins`, `args`, `lineend`, the geoms' and ggplot()'s `data`),
+  `margin_auto()` / `margin_part()` as a margin, `facet_grid()`'s `rows` /
+  `cols` as columns.  (`|r` comes last: the GUI's field is the same.)
+- The reader: `aes(displ, hwy)` is x and y; a facet's variables as its
+  columns (`~A`, `vars(A, B)`, `A ~ B`, `. ~ B`); any constructor of a
+  value (a position, a guide, an element, `theme()`, `unit()`, `rel()`,
+  `sec_axis()`, `margin_auto()` ...) as `{fn:, args:}`, its positional
+  arguments named and R in it (before: R, unless every argument was named
+  and a constant); a named vector of constants as a map; `1:5` as the
+  numbers.  Fix: R of several statements (`function(d) { ...; ... }`,
+  `quote({ ... })`) was joined into one line that did not parse; it keeps
+  its lines.
+- The writer: `unit()` and `rel()` by position (`unit(0.5, "cm")`, was
+  `unit(x = 0.5, units = "cm")`); `facet_grid()`'s columns as `vars(SEX)`
+  (ggplot2 takes no text for rows with cols).
+
+What is left (partial): a function given by name (`fun = mean`, `method
+= lm`, `fun = dnorm`), the labels and breaks functions of scales
+(`scales::label_math()`), objects of the example (`values = cols`,
+`breaks = price_bins`), dates (`Sys.Date() - 30`), and grobs:
+R is the SPEC's form for them.  No: `expand_limits(positions)`, a data
+frame given by position.
+
+### Round 6 (2026-11-03): a function by its name, a formula, scales' helpers
+
+The examples' measure (round 5), rerun after three typed forms for what
+was R:
+
+| Examples | Before | After |
+|---|---:|---:|
+| **ggplot2: geoms, scales, coords, themes, facets, guides, labs, positions** | **94.5%** | **95.3%** |
+| geom_*() | 95.2% | 95.7% |
+| scale_*() | 92.1% | 93.9% |
+| theme(), elements | 96.8% | 97.0% |
+| coord_*(), facets, guides, labs, positions | unchanged | unchanged |
+| **stat_*()** (shown apart) | **92.1%** | **97.1%** |
+| uses yes / partial / no | 1100 / 169 / 3 | 1141 / 128 / 3 |
+
+The arguments' and the aesthetics' measures stay at 100% (3409 arguments,
+826 aesthetics; `spec-coverage-ggplot2.csv` unchanged).
+
+Round 6:
+
+- A function by its name, the type `function`: `fun`, `fun.data`,
+  `fun.min`, `fun.max` (stat_summary(), stat_summary_bin(), a geom with
+  `stat: summary`, stat_function() / geom_function(), stat_manual(),
+  stat_summary_2d()), a scale's `oob` and `rescaler`, sec_axis()'s
+  `transform`.  The SPEC writes the name (`fun.data: mean_se`,
+  `fun.data: Hmisc::smean.cl.normal`, `oob: scales::oob_squish`), the
+  check takes a name R writes bare (an error for `mean se`), the code
+  writes it bare: `stat_summary(fun = mean, fun.min = min, fun.max =
+  max)`; read back from that code as the names (before: `!r mean`).
+- A formula as its text, the type `tilde`: geom_smooth()'s `formula: y ~
+  poly(x, 2)`, sec_axis()'s `transform: ~ . / 7`, a lambda `fun: ~
+  sum(.x^2)`, written as the formula (before: only `!r y ~ x`).
+- scales' helpers as `{fn:, args:}`: a scale's `labels`
+  (`{fn: scales::label_percent, args: {accuracy: 1}}`, `label_*`,
+  `*_format`), `breaks` / `minor_breaks` (`breaks_width`, `breaks_pretty`,
+  `extended_breaks` ...), `transform` (`transform_log`, `*_trans`),
+  `palette` (`pal_brewer` ...), on the scales and on sec_axis() /
+  dup_axis(); `call<label_*>` in the type notation takes a function by a
+  pattern of its name.  Read from code too (`percent_format()` of the
+  scales attached as `scales::percent_format`).
+- From code: a smooth's `method = lm` (glm, loess) is `"lm"`, a legend's
+  `key_glyph = draw_key_rect` is `"rect"`, as ggplot2 takes them.
+
+What is left (partial): a mapping's expressions (`factor(cyl)`,
+`after_stat(count)`, `after_scale(alpha(colour, 0.4))`: R in the mapping),
+objects of the example (`values = cols`, `labeller = to_string`), dates
+(`Sys.Date() - 30`), grobs, R inside a scales helper
+(`label_math(10^.x)`).  Next: a typed form for a mapping's `after_stat()`
+and `factor()` of a column.
+
+### Round 7 (2026-11-04): a mapping's expressions
+
+The examples' measure (round 5), rerun after a typed form for what a
+mapping takes besides a column:
+
+| Examples | Before | After |
+|---|---:|---:|
+| **ggplot2: geoms, scales, coords, themes, facets, guides, labs, positions** | **95.3%** | **96.1%** |
+| geom_*() | 95.7% | 97.6% |
+| scale_*(), coord_*(), theme(), facets, guides, labs, positions | unchanged | unchanged |
+| **stat_*()** (shown apart) | **97.1%** | **98.4%** |
+| uses yes / partial / no | 1141 / 128 / 3 | 1180 / 89 / 3 |
+
+The arguments' and the aesthetics' measures stay at 100% (3409 arguments,
+826 aesthetics; `spec-coverage-ggplot2.csv` unchanged).
+
+Round 7 (R/fig_aes.R):
+
+- A mapping's value is a column's name, or an expression of a mapping's
+  form written as its text, untagged (before: `!r`): a call of factor(),
+  as.factor(), ordered(), as.numeric(), as.integer(), as.character(),
+  interaction(), reorder(), rev(), abs(), sqrt(), exp(), log() / log2() /
+  log10() / log1p(), round(), signif(), paste() / paste0(), sprintf(),
+  format(), cut_width() / cut_interval() / cut_number(), after_stat(),
+  after_scale() or stage(), or arithmetic, of columns, constants and
+  sum(), max(), min(), mean(), median(), length(), alpha(), pmin(),
+  pmax(), cumsum(), c().  `x: factor(AVISITN)`, `y: after_stat(density)`,
+  `y: after_stat(count / sum(count))`, `x: reorder(USUBJID, -PCHG)` (a
+  waterfall), `ymin: mean - se` (mean +/- SE), `label: paste0(n, " (",
+  pct, "%)")`, `fill: after_scale(alpha(colour, 0.4))`.  Written as it
+  is; read back from code as its text.
+- A constant: a number (`group: 1`, before written `` `1` ``), a text in
+  its quotes (`colour: '"Overall"'`, a legend's label); a column's name in
+  backticks (`` `a b` ``).
+- The check: a text that is neither a column's name nor of the form warns
+  (it is written as a column of that name); an after_stat()'s variable
+  the layer's stat does not compute warns (`after_stat(densty)` of
+  geom_histogram; of geom_step(stat = "ecdf") only `ecdf`), the
+  variables by stat (count, bin, density, ecdf, summary, boxplot,
+  ydensity, smooth, qq, sum, 2-d bins, contours ...) tested against the
+  installed ggplot2's layer data.
+
+What is left (partial): R outside the form (`cut_width()` is in it now;
+`n[!duplicated(group)]`, `ifelse()`), objects of the example (`values =
+cols`, `labeller = to_string`), dates (`Sys.Date() - 30`), grobs, R
+inside a scales helper (`label_math(10^.x)`); `size` of line geoms
+(deprecated, a warning by design).  Next: the guides' examples (88.2%)
+and the facets' (92.4%).
+
+### Round 8 (2026-11-05): base R's values, and conditions in a mapping
+
+The examples' measure (round 5), rerun after typed forms for what
+clinical figures write with base R in a value or a mapping:
+
+| Examples | Before | After |
+|---|---:|---:|
+| **ggplot2: geoms, scales, coords, themes, facets, guides, labs, positions** | **96.1%** | **96.6%** |
+| geom_*() | 97.6% | 97.9% |
+| scale_*() | 93.9% | 95.4% |
+| coord_*(), theme(), facets, guides, labs, positions | unchanged | unchanged |
+| **stat_*()** (shown apart) | **98.4%** | **98.4%** |
+| uses yes / partial / no | 1180 / 89 / 3 | 1187 / 82 / 3 |
+
+The arguments' and the aesthetics' measures stay at 100% (3409 arguments,
+826 aesthetics; `spec-coverage-ggplot2.csv` rerun, only the date scales'
+`where` changes).  ggplot2's examples rarely write the forms below; the
+clinical figures do (an axis of weeks, a waterfall coloured by response,
+a band in a transparent grey).
+
+- A condition is of a mapping's form (R/fig_aes.R): the comparisons (`<`,
+  `<=`, `==`, `!=`, `%in%`), `!`, `&`, `|`, and `ifelse()`, `cut()`,
+  `is.na()`, `nchar()`, `toupper()` / `tolower()`, `substr()`,
+  `trimws()`; inside one also `[`, `duplicated()`, `unique()`, `rank()`.
+  `fill: PCHG <= -30`, `fill: ifelse(PCHG <= -30, "PR", "SD/PD")`,
+  `colour: cut(PCHG, c(-Inf, -30, 20, Inf))`, `shape: '!is.na(ADT)'`
+  (in YAML a text that starts with `!` is quoted).  Before: `!r`.
+- `seq()` is a value of breaks: `{fn: seq, args: {from: 0, to: 52, by: 4}}`,
+  written `seq(0, 52, by = 4)` (a scale's `breaks` and `minor_breaks`,
+  the continuous position scales' cards, a histogram's `breaks`).
+- `alpha()` is a colour: a layer's `colour` / `fill`, an element's, a
+  continuous scale's `low` / `mid` / `high` / `na.value`
+  (`alpha("grey50", 0.4)`).
+- grDevices' palettes are a scale's `colours` (gradientn, stepsn) and a
+  manual scale's `values`: `hcl.colors()`, `palette.colors()`,
+  `gray.colors()`, `rainbow()`, `heat.colors()`, `terrain.colors()`,
+  `topo.colors()`, `cm.colors()`.
+- A date: the new type `date`, a date as its text (`2024-01-01`), for
+  scale_x_date() / scale_y_date()'s `limits` and `breaks`; `NA` (YAML's
+  text "NA") an open end; written `as.Date(c("2024-01-01", NA))` and
+  read back from it.  Before, `limits: [2024-01-01, NA]` was written as
+  text, which a date scale does not take.
+- These calls are read from code as `{fn:, args:}` with their positional
+  arguments named (`.fig_find_value_fun()`: base R's and grDevices'
+  functions, seq()'s default method), and written back by position
+  (`.fig_by_position`).
+
+What is left (partial): objects of the example (`values = cols`,
+`labeller = to_string`, `breaks = price_bins`), `Sys.Date()` (not a
+constant), grobs and rasters, R inside a scales helper (`label_math(10^.x)`),
+a function written inline (`fun = function(x) ...`), `size` of line geoms
+(deprecated, a warning by design).  Next: the guides' examples (88.2%) and
+the facets' (92.4%: `facet_wrap(year ~ cyl)`, a labeller's function).
+
+### The extension packages (ggsurvfit, ggrepel, ggh4x, ggtext, ggnewscale, patchwork)
+
+The same measure, the same file (`package` says which), over the
+functions of a plot of the extension packages tflspec suggests: 46
+functions, 351 arguments (ggsurvfit 1.2.1, ggrepel 0.9.8, ggh4x 0.3.1,
+ggtext 0.2.0, ggnewscale 0.5.2, patchwork 1.3.2).  Weights: 3 for a KM
+plot's (ggsurvfit(), add_risktable(), add_censor_mark(),
+add_confidence_interval(), add_pvalue(), scale_ggsurvfit()), a label that
+avoids overlaps (geom_text_repel()), markdown text (element_markdown())
+and patchwork's arrangement (wrap_plots(), plot_layout(),
+plot_annotation()); 2 sometimes; 1 rarely.  A function with no card is
+named `pkg::fn` in a SPEC (`ggh4x::facet_manual`).
+
+| Package | 2026-10-30 before | 2026-10-30 after |
+|---|---:|---:|
+| **extensions, weighted** | **58.9%** (106 yes / 240 partial / 5 no) | **100.0%** (351 yes) |
+| ggsurvfit | 52.8% | 100.0% |
+| ggrepel | 69.6% | 100.0% |
+| ggh4x | 62.2% | 100.0% |
+| ggtext | 77.0% | 100.0% |
+| ggnewscale | 90.0% | 100.0% |
+| patchwork | 45.6% | 100.0% |
+
+ggplot2 itself stayed at 100.0% (2303 arguments; 3409 after round 3).
+
+Added in this run:
+
+- An extension's function without a card is its kind's, by `pkg::fn`
+  (`.schema_ext_kind()`): ggh4x's facets, strips and element lists,
+  ggtext's elements and geoms, ggsurvfit's `add_*()`, patchwork's
+  arrangement; before, `ggh4x::facet_grid2` was checked by its formals
+  only and `patchwork::plot_spacer()` was an error ("neither the schema
+  nor its package has").
+- Cards for 26 more functions: ggsurvfit's `add_legend_title()`,
+  `add_risktable_strata_symbol()`, `stat_stepribbon()`,
+  `scale_ggsurvfit()`, `theme_ggsurvfit_default()` / `_KMunicate()`,
+  `theme_risktable_default()` / `_boxed()`; ggrepel's
+  `position_nudge_repel()`; ggh4x's `facet_grid2()`, `facet_wrap2()`,
+  `force_panelsizes()`, `strip_nested()` / `_themed()` / `_vanilla()`,
+  `elem_list_text()` / `_rect()`; ggtext's `element_textbox()`,
+  `geom_textbox()`; ggnewscale's `new_scale()`; patchwork's
+  `plot_spacer()`, `wrap_elements()`, `inset_element()`, `guide_area()`,
+  `area()`, `free()`.
+- Typed by kind (`inst/fig/gg_args.csv`, 123 rows, new kinds `plot`,
+  `ggsurvfit_layer`, `compose`): the risk table's `risktable_stats`,
+  `stats_label`, `risktable_group`, `risktable_height`, `combine_groups`,
+  `theme`; `add_pvalue()`'s `caption`, `location`, `rho`, `pvalue_fun`;
+  `add_quantile()`'s `y_value` / `x_value`; ggrepel's `box.padding`,
+  `point.padding`, `min.segment.length`, `force`, `max.overlaps`, `seed`
+  ...; ggh4x's `independent`, `remove_labels`, `strip`, `nest_line`,
+  `bleed`, `render_empty`; ggtext's `halign`, `padding`, `box.colour`,
+  `width`, `orientation`; patchwork's `design`, `guides`, `axes`,
+  `tag_levels`, `inset_element()`'s place and plot (an object by name).
+  A card's shown `...` arguments are typed too (add_quantile's
+  `linetype`, add_censor_mark's `shape`).
+- `x_scales`, `y_scales` and `stats_label` are written `list(...)`.
+- Fixes: ggrepel's `direction` is `both|y|x` (it was typed as
+  geom_step's `hv|vh|mid`, so `direction: y` was an error); a ggsurvfit
+  theme or `stat_stepribbon()` on a plain ggplot attaches ggsurvfit, a
+  patchwork function inside a plot attaches patchwork.
 
 What made the difference, round 1:
 

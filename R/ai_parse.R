@@ -422,6 +422,9 @@ print.tfl_ai_answer <- function(x, ...) {
 
 .ai_read_design <- function(x) {
   p <- .ai_problems()
+  # a design's preset written as a template (`template: {name: box_by_visit}`):
+  # the design's `template:` as its name
+  if (.fig_preset_named(x$template)) x$template <- x$template$name
   # a figure template (`template: {name, args}`, a mapping), its own layers
   if (is.list(x$template) && !is.null(x$template$name)) return(.ai_read_tpl_figure(x, p))
   for (k in c("data", "stats", "layers")) {

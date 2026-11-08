@@ -10,10 +10,16 @@ tpl_forest_hr(
   group = "TRT01A",
   subgroups = c("SEX", "AGEGR1"),
   comparison = NULL,
+  favours = NULL,
+  x_breaks = NULL,
+  size_by_n = FALSE,
+  bold_headings = FALSE,
+  n_by_arm = NULL,
+  subgroup_labels = NULL,
   plot = NULL
 )
 
-tpl_forest_layout(fig)
+tpl_forest_layout(fig, n_by_arm = NULL)
 }
 \arguments{
 \item{ard}{The study ARD's rows of this report.}
@@ -24,6 +30,26 @@ tpl_forest_layout(fig)
 
 \item{comparison}{The arm compared with the reference; \code{NULL}: every
 other arm, each row saying which.}
+
+\item{favours}{Two labels under the axis: \verb{Favours <left>} and
+\verb{Favours <right>}; \code{NULL}: none.}
+
+\item{x_breaks}{The hazard ratio axis's ticks; \code{NULL}: ggplot2's.}
+
+\item{size_by_n}{\code{TRUE}: each point's size by its subjects.}
+
+\item{bold_headings}{\code{TRUE}: the subgroups' headings bold.}
+
+\item{n_by_arm}{The arms (as the data write them) whose events and
+subjects (\code{events/N}) show in the text column, a column each headed by
+the arm, in place of N; \code{NULL}: N.  \code{tpl_forest_layout()} takes the
+same.}
+
+\item{subgroup_labels}{The subgroups' headings, a named vector, a
+variable = its label (\code{c(SEX = "Sex", AGEGR1 = "Age group")}); a
+variable not given reads the common ADaM variables' label (\code{SEX},
+\code{AGEGR1}, \code{RACE}, \code{REGION1}, \code{ECOGBL} ...), else its name.  The
+levels' rows are not changed.}
 
 \item{plot}{The figure's settings over the template's (\code{x_label},
 \code{y_by}, \code{legend} ..., as a designed figure's \verb{plot:}).}

@@ -37,7 +37,7 @@
   # rounding = ) wins where it differs)
   rnd <- .study_rounding(study)
   if (!is.null(rnd) && is.null(opts[["rtfreporter.rounding"]])) opts[["rtfreporter.rounding"]] <- rnd
-  sz <- .page_args(pg$rtf_default_format)$font_size_half_points
+  sz <- .page_style(pg)$font_size_half_points
   if (!is.null(sz)) {
     n <- suppressWarnings(as.integer(sz))
     opts[[.page_options[["font_size_half_points"]]]] <- if (is.na(n)) sz else n

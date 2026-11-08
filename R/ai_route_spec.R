@@ -13,7 +13,7 @@
 #
 #    .ai_spec_settings()      study.yml's ai: keys over the defaults
 #    tfl_ai_decisions_*()     ai/decisions.md read and written
-#    .ai_decisions_block()    a request's "Decisions that apply"
+#    .ai_decisions_block()    a request's "Decisions that may apply"
 #    .ai_drafts_to_answers()  the drafts as the check's answers
 #    tfl_ai_confirm()         what is marked to confirm
 # ============================================================================
@@ -21,14 +21,18 @@
 # ---- the settings ------------------------------------------------------------
 
 # The agent's settings: the package's defaults, under study.yml's
-# `ai:` keys (ask_when, carry, max_questions, language)
+# `ai:` keys (run, requests_per_chat, carry, max_rounds, language ...)
 .ai_spec_defaults <- list(
-  ask_when = "request",                 # "request": once per request, before writing; "report": per report
+  run = "one",                           # "one": one request, its questions, its build, then a menu; "batch": all the requests, the questions at the end
+  requests_per_chat = 0L,               # stop after this many requests in one chat (0: no limit)
   carry = c("all", "dataset", "section"),  # a decision applies without asking when its scope is one of these (and the agent is sure)
   max_rounds = 3L,                      # asking again about one item: this many times, then "to confirm"
   footnotes_at = "footer",              # the shell's footnotes: the page's "footer" band, or the "table"'s footnotes
   language = "en",
-  titles_in_header = character()        # the output tokens the study standard's header prints (none: the report writes its titles)
+  titles_in_header = character(),       # the output tokens the study standard's header prints (none: the report writes its titles)
+  # how deep the agent checks each kind of report it built itself (run.R):
+  # 0 the check, 1 + the program, 2 + the facts, 3 + the output; "none": the person's check
+  review = list(figure = 3L, table = 2L, listing = 1L)
 )
 
 # The settings, under the study standard's `ai:` keys (spec/defaults.yml:
@@ -42,32 +46,109 @@
     }
     ai <- if (is.list(y)) y$ai else NULL
     if (!is.list(ai)) next
-    for (k in intersect(names(s), names(ai))) if (!is.null(ai[[k]])) s[[k]] <- ai[[k]]
+    .ai_say_ask_when(ai, f)
+    for (k in intersect(names(s), names(ai))) if (!is.null(ai[[k]])) {
+      # (review: kind by kind, the ones not said as before)
+      s[[k]] <- if (identical(k, "review") && is.list(ai[[k]])) utils::modifyList(s[[k]], ai[[k]]) else ai[[k]]
+    }
   }
   s$max_rounds <- as.integer(s$max_rounds)
   s$carry <- as.character(unlist(s$carry))
+  s$review <- .ai_review_levels(s$review)
+  s$run <- .ai_run(s$run)
+  s$requests_per_chat <- .ai_requests_per_chat(s$requests_per_chat)
   s$footnotes_at <- match.arg(as.character(s$footnotes_at)[1L], c("footer", "table"))
   s
 }
 
-# AGENTS-spec.md filled from the settings
-.ai_spec_agents <- function(text, s) {
+# `ai: ask_when` was removed (#606; `run` replaces it) and is ignored: say so,
+# once a session for each file, as the settings are read many times
+.ai_said <- new.env(parent = emptyenv())
+.ai_say_ask_when <- function(ai, file) {
+  key <- normalizePath(file, winslash = "/", mustWork = FALSE)
+  if (!"ask_when" %in% names(ai) || isTRUE(.ai_said[[key]])) return(invisible())
+  .ai_said[[key]] <- TRUE
+  message(basename(file), " ai: ask_when is ignored; `ai: run` (one or batch) replaces it.")
+  invisible()
+}
+
+# study.yml ai: run, checked: "one" or "batch"
+.ai_run <- function(x) {
+  ok <- c("one", "batch")
+  v <- as.character(unlist(x))[1L]
+  if (is.na(v) || !v %in% ok) {
+    .ard_stop(sprintf("study.yml ai: run is %s; not %s.", paste(ok, collapse = " or "),
+                      format(if (is.na(v)) "" else v)))
+  }
+  v
+}
+
+# study.yml ai: requests_per_chat, checked: an integer >= 0
+.ai_requests_per_chat <- function(x) {
+  v <- suppressWarnings(as.numeric(unlist(x))[1L])
+  if (is.na(v) || v < 0 || v != round(v)) {
+    .ard_stop(sprintf("study.yml ai: requests_per_chat is a whole number, 0 or more; not %s.",
+                      format(paste(unlist(x), collapse = " "))))
+  }
+  as.integer(v)
+}
+
+# AGENTS-spec.md filled from the settings.  AGENTS.md always holds both ways
+# of running (AGENTS-run-one.md: one request, then the menu; AGENTS-run-batch.md:
+# a batch, the questions at the end); `run` only decides how the agent starts
+# (agent_prompt.md).  `runs` holds the two texts (named `one`, `batch`), else
+# they are read from the package
+.ai_spec_agents <- function(text, s, runs = NULL) {
   lang <- .ai_language_name(s$language)
-.ai_fill(text, list(
+  if (is.null(runs)) {
+    src <- system.file("ai", "agent", package = "tflspec")
+    rd <- function(f) paste(readLines(file.path(src, f), warn = FALSE, encoding = "UTF-8"),
+                            collapse = "\n")
+    runs <- list(one = rd("AGENTS-run-one.md"), batch = rd("AGENTS-run-batch.md"))
+  }
+  # what depends on the agent building and checking itself (review not none
+  # everywhere): the texts of the two ways of running
+  build <- any(!is.na(s$review))
+  n <- s$requests_per_chat
+  .ai_fill(text, list(
+    run_one = runs$one,
+    run_batch = runs$batch,
+    run_except = if (build) ", except to run `../run.R` as *Build and check* says" else "",
+    one_build = if (build) paste0(", then build\n   and check them at the study's review depth ",
+                                  "(*Build and check*)") else "",
+    batch_build = if (build) ", then build and check them (*Build and check*)" else "",
+    batch_done = if (build) "built and checked" else "drafted",
+    batch_defaults = if (build) paste0(
+      "then **the defaults you chose yourself**, from the first section of\n",
+      "  `ai/defaults.md`, *For the person: the defaults the agent chose* (the\n",
+      "  defaults whose source is no document -- your conventions -- merged by\n",
+      "  topic across the reports): its groups 1 and 2 in full (*Changes the\n",
+      "  numbers*, *Changes the rows or statistics*), then the count of the rest\n",
+      "  (group 3 and the defaults a document gave), with \"see ai/defaults.md\".\n",
+      "  `run.R` writes that file from the drafts' assumptions, the most important\n",
+      "  first; read it before you post, and say in a line that **the defaults can\n",
+      "  differ from run to run, so the person should read them too**") else paste0(
+      "no list of the defaults you chose yourself: `ai/defaults.md` is written by\n",
+      "  `run.R`, which you do not run, so do not read it or cite it; each default you\n",
+      "  took is in its entry above"),
+    rework_build = if (build) "Build and check only the reworked requests (*Build and check*)." else
+      "Do not build or check them: the person runs the check.",
+    per_chat = if (isTRUE(n > 0L)) sprintf(paste0(
+      "\n- After %d requests in this chat, finish the current one, update ",
+      "`ai/progress.md` and stop with \"Open a new chat and give it ai/agent_prompt.md; ",
+      "it goes on from ai/progress.md\"."), n) else "",
     language = lang,
-    ask_when = if (identical(s$ask_when, "report")) {
-      "Report by report, before you write it:"
-    } else "For the request's reports together, before you write any of them:",
     carry_section = if ("section" %in% s$carry) " or its TOC section" else "",
     footnotes_at = .ai_footnotes_text(s$footnotes_at),
     titles_rule = .ai_titles_text(s$titles_in_header)))
 }
 
-# The titles: the shell's, as `page: titles` -- unless the study standard's
+# The titles: the shell's (the TOC's when the shell has none for the report), as `page: titles` -- unless the study standard's
 # header prints the label, the title and the population from the report's
 # `label:` and `population:` (its tokens): then none, or they print twice
 .ai_titles_text <- function(tokens) {
-  if (!length(tokens)) return("`page: titles`, from the shell;")
+  if (!length(tokens)) return(paste0("`page: titles`, from the shell (the TOC's title only when none for this ",
+                                  "report can be read from the shell; an assumption when it differs from `label`);"))
   sprintf(paste0("**no `page: titles`**: the study's header prints the report's label, title ",
                  "and population itself (%s) from `label:` and `population:` -- write those two ",
                  "keys (the title as the shell shows it, in `label:`), and no titles, or they print twice;"),
@@ -177,7 +258,7 @@ tfl_ai_decisions_write <- function(study_dir, x) {
   f <- file.path(study_dir, "ai", "decisions.md")
   if (!file.exists(f)) {
     dir.create(dirname(f), recursive = TRUE, showWarnings = FALSE)
-    .ai_write_text(paste(readLines(system.file("ai", "agent", "decisions-spec.md", package = "tflspec"),
+    .ai_write_text(paste(readLines(system.file("ai", "agent", "decisions.md", package = "tflspec"),
                                    warn = FALSE, encoding = "UTF-8"), collapse = "\n"), f)
   }
   have <- tfl_ai_decisions_read(study_dir)
@@ -219,7 +300,7 @@ tfl_ai_decisions_write <- function(study_dir, x) {
 }
 
 # The lines a request carries: the decisions that apply to its reports and
-# those to ask about (a request's "Decisions that apply")
+# those to ask about (a request's "Decisions that may apply")
 .ai_decisions_block <- function(study_dir, ids, datasets = character(), section = NA_character_) {
   s <- .ai_spec_settings(study_dir)
   rows <- do.call(rbind, lapply(ids, function(id) {
@@ -233,8 +314,9 @@ tfl_ai_decisions_write <- function(study_dir, x) {
   ask <- rows[rows$how == "ask", , drop = FALSE]
   apply_ <- apply_[!duplicated(apply_$line), , drop = FALSE]
   ask <- ask[!duplicated(ask$line), , drop = FALSE]
-  c("## Decisions that apply", "",
-    if (nrow(apply_)) c("Apply these without asking (write an assumption with `from: D<n>`):", "",
+  c("## Decisions that may apply", "",
+    if (nrow(apply_)) c(paste0("Judge each one for these reports: apply it (`from: D<n>`) only when it clearly ",
+                               "holds for this report; else ask, as AGENTS.md *Decisions* says:"), "",
                         vapply(seq_len(nrow(apply_)), function(i) line_of(apply_[i, ]), "")),
     if (nrow(ask)) c("", "These were decided for other reports; ask whether they hold here too:", "",
                      vapply(seq_len(nrow(ask)), function(i) line_of(ask[i, ]), "")),
@@ -243,10 +325,41 @@ tfl_ai_decisions_write <- function(study_dir, x) {
 
 # ---- the drafts as answers: the person's check --------------------------------
 
+# Where the YAML parser stopped, for the agent: the offending line of the
+# file (trimmed, cut to 120 characters) and, for a `"` inside a
+# double-quoted text, the one fix.  "" when the error names no line or the
+# file cannot be read as text.
+.ai_yaml_error_line <- function(msg, file) {
+  at <- regmatches(msg, gregexpr("line ([0-9]+)", msg))[[1L]]
+  if (!length(at) || !file.exists(file)) return("")
+  txt <- tryCatch(suppressWarnings(readLines(file, warn = FALSE, encoding = "UTF-8")),
+                  error = function(e) character())
+  # the line where it stopped; the line where the construct began when that
+  # is past the file's end or blank (a flow never closed)
+  ns <- rev(as.integer(sub("line ", "", at, fixed = TRUE)))
+  ns <- ns[!is.na(ns) & ns >= 1L & ns <= length(txt)]
+  ns <- ns[nzchar(trimws(txt[ns]))]
+  if (!length(ns)) return("")
+  n <- ns[1L]
+  ln <- trimws(txt[n])
+  # the first `"` opens a value (after `: `, `[`, `, ` or `- `), and a `"` after
+  # it, not escaped, is followed by more text
+  ln_ <- gsub("\\\\\"", "", ln)
+  quoted <- grepl("did not find expected|mapping values are not allowed", msg) &&
+    grepl("^[^\"]*(: |\\[ ?|, |(^|[[:space:]])- )\"[^\"]*\"([[:alnum:]_(]|\")", ln_)
+  show <- if (nchar(ln) > 120L) paste0(substr(ln, 1L, 117L), "...") else ln
+  .ai_one_line(paste0(
+    "Line ", n, " reads: ", show,
+    if (quoted) paste(" -- a `\"` inside a double-quoted text ends it; write a condition in a text",
+                      "with single quotes (`TRTEMFL == 'Y'`).")))
+}
+
 # A draft's `ai:` block (assumptions, confirm), by report, from
 # ai/spec/outputs/*.yml; kept while the check writes the drafts anew.  A
-# file YAML cannot read, or with no `id`, is in `bad` (by the file's name)
-# with why: the check refuses it, and the agent fixes its form.
+# file YAML cannot read, with no `id`, or that is no report file (a call's
+# `args` given as a text ...), is in `bad` (by the file's name) with why:
+# the check refuses it alone, and the agent fixes its form; the other
+# drafts are read and built.
 .ai_draft_blocks <- function(study_dir) {
   area <- file.path(study_dir, "ai", "spec", "outputs")
   out <- list(blocks = list(), bad = character())
@@ -255,7 +368,8 @@ tfl_ai_decisions_write <- function(study_dir, x) {
     id <- sub("[.]ya?ml$", "", basename(f))
     y <- tryCatch(yaml::read_yaml(f, handlers = .yaml_handlers()), error = function(e) e)
     if (inherits(y, "error")) {
-      out$bad[id] <- paste("the YAML cannot be read:", .ai_one_line(conditionMessage(y)))
+      out$bad[id] <- trimws(paste("the YAML cannot be read:", .ai_one_line(conditionMessage(y)),
+                                  .ai_yaml_error_line(conditionMessage(y), f)))
     } else if (!is.list(y) || is.null(y$id)) {
       out$bad[id] <- "not a report file: no `id`"
     } else if (!identical(.ai_file_id(y$id), id) &&
@@ -265,7 +379,20 @@ tfl_ai_decisions_write <- function(study_dir, x) {
       out$bad[id] <- sprintf("its `id` is %s, not the file's name: name the file after the id",
                              as.character(y$id)[1L])
     } else {
-      out$blocks[[id]] <- list(file = f, ai = y$ai, y = y)
+      # read as the file's id: the same report written another way is no error here
+      y_id <- y
+      y_id$id <- id
+      rd <- tryCatch(.output_from_list(y_id, f), error = function(e) e)
+      if (inherits(rd, "error")) {
+        why <- .ai_one_line(conditionMessage(rd))
+        if (grepl("`args` is a named list", why, fixed = TRUE)) {
+          why <- paste0(why, " A call's `args` (plot.add, a `call` layer) is a mapping, one key an ",
+                        "argument, `!r` for R: {fn: theme, args: {axis.text.x: !r element_text(angle = 45)}}.")
+        }
+        out$bad[id] <- paste("the report file cannot be read:", why)
+      } else {
+        out$blocks[[id]] <- list(file = f, ai = y$ai, y = y)
+      }
     }
   }
   out
@@ -456,7 +583,20 @@ tfl_ai_confirm <- function(study_dir, where = c("both", "drafts", "adopted")) {
   for (f in list.files(file.path(study_dir, "ai"), "^instructions-.*[.]md$", full.names = TRUE)) {
     old <- readLines(f, warn = FALSE, encoding = "UTF-8")
     if (any(grepl("^## The skeleton (what a draft holds)", old, fixed = TRUE))) next
-    .ai_write_text(c(old, "", txt), f)
+    # (the figure's file ends with what a template or a step cannot do)
+    lim <- if (basename(f) == "instructions-figure.md") {
+      readLines(system.file("ai", "agent", "instructions-figure-limits.md", package = "tflspec"),
+                warn = FALSE, encoding = "UTF-8")
+    }
+    # (the chat-paste form below is for a chat without files; here the answer is the files)
+    at <- which(old == "## Your answer")
+    if (length(at)) {
+      old <- append(old, c("", paste0(
+        "**In the study kit your answer is the files** `ai/spec/outputs/<id>.yml`, one a report ",
+        "(see *The skeleton*, below); the form that follows, one fenced block, is for a chat ",
+        "without files.")), after = at[1L])
+    }
+    .ai_write_text(c(old, "", txt, if (length(lim)) c("", lim)), f)
   }
   invisible(NULL)
 }

@@ -150,3 +150,160 @@ test_that("orr: a subject with no BOR record is a non-responder in N; a blank re
   expect_equal(bv_stat(a2, "RESP", c("TRUE", "FALSE"), "Drug X", "N", "ORR")[1L],
                sum(itt$TRT01P == "Drug X"))
 })
+
+test_that("forest_hr: a blank subgroup value is no subgroup", {
+  bv_skip()
+  skip_if_not_installed("survival")
+  # the subgroups are the population's (ADSL's) columns
+  tt <- tflspec::adtte
+  ad <- tflspec::adsl
+  pfs <- tt$USUBJID[tt$PARAMCD == "PFS" & tt$SAFFL == "Y"]
+  ad$SEX[ad$USUBJID %in% pfs[c(2, 30, 60)]] <- ""
+  d <- bv_study(withr::local_tempdir(), list(adsl = ad, adtte = tt))
+  tfl_write_output(tfl_output("F-1", "figure", population = "SAF", extends = "defaults",
+                              template = list(name = "forest_hr",
+                                              args = list(param = "PFS", population = "SAF"))),
+                   file.path(d, "spec", "outputs", "F-1.yml"))
+  a <- suppressWarnings(bv_ard(d, "F-1"))
+  lv <- unique(a$group1_level[a$analysis_id == "HR_SEX"])
+  expect_setequal(lv, c("F", "M"))
+  # the other subgroup as it was
+  expect_true(all(c("<65", ">=65") %in% a$group1_level[a$analysis_id == "HR_AGEGR1"]))
+  p <- tt[tt$PARAMCD == "PFS" & tt$SAFFL == "Y", ]
+  p$SEX <- ad$SEX[match(p$USUBJID, ad$USUBJID)]
+  n <- bv_stat(a, "TRT01A", "Control", "F", "n_obs", "HR_SEX")
+  expect_equal(n, sum(p$TRT01A == "Control" & p$SEX == "F"))
+})
+
+test_that("ae_eair: an event with no day uses the subject's other events; none: counted, warned", {
+  bv_skip()
+  ae <- tflspec::adae
+  ad <- tflspec::adsl
+  te <- ae[ae$TRTEMFL == "Y" & ae$SAFFL == "Y", ]
+  # a subject with two events of one term: the first by day has no day
+  pair <- names(which(table(paste(te$USUBJID, te$AEDECOD, sep = "|")) >= 2L))
+  expect_true(length(pair) > 0L)
+  one <- strsplit(pair[1L], "|", fixed = TRUE)[[1L]][1L]
+  i <- which(paste(ae$USUBJID, ae$AEDECOD, sep = "|") == pair[1L] & ae$TRTEMFL == "Y")
+  ae$ASTDY[i[which.min(ae$ASTDY[i])]] <- NA
+  d <- bv_study(withr::local_tempdir(), list(adsl = ad, adae = ae))
+  bv_put(d, "T-E", "ae_eair", list(population = "SAF"))
+  expect_no_warning(a <- bv_ard(d, "T-E"))
+  s <- ad[ad$SAFFL == "Y", ]
+  first_day <- function(aes) {
+    t2 <- aes[aes$TRTEMFL == "Y" & aes$SAFFL == "Y", ]
+    tapply(t2$ASTDY, t2$USUBJID, function(x) if (all(is.na(x))) NA_real_ else min(x, na.rm = TRUE))
+  }
+  years <- function(sa, day) {
+    sum(ifelse(sa$USUBJID %in% names(day) & !is.na(day[sa$USUBJID]), day[sa$USUBJID], sa$TRTDURD)) / 365.25
+  }
+  day <- first_day(ae)
+  for (arm in c("Drug X", "Control")) {
+    sa <- s[s$TRT01A == arm, ]
+    expect_equal(bv_stat(a, "AEBODSYS", "Any TEAE", arm, "n_events", "EAIR"),
+                 sum(sa$USUBJID %in% names(day)), info = arm)
+    expect_equal(bv_stat(a, "AEBODSYS", "Any TEAE", arm, "tot_person_time", "EAIR"),
+                 years(sa, day), info = arm)
+  }
+  # a subject whose events all have no day: counted, the whole exposure, one warning
+  ae2 <- ae
+  ae2$ASTDY[ae2$USUBJID == one & ae2$TRTEMFL == "Y"] <- NA
+  d2 <- bv_study(withr::local_tempdir(), list(adsl = ad, adae = ae2))
+  bv_put(d2, "T-E", "ae_eair", list(population = "SAF"))
+  w <- character()
+  a2 <- withCallingHandlers(bv_ard(d2, "T-E"), warning = function(e) {
+    w <<- c(w, conditionMessage(e))
+    invokeRestart("muffleWarning")
+  })
+  expect_match(w, "1 subject(s) have an event with no start day", fixed = TRUE, all = FALSE)
+  arm <- ad$TRT01A[ad$USUBJID == one]
+  sa <- s[s$TRT01A == arm, ]
+  day2 <- first_day(ae2)
+  expect_equal(bv_stat(a2, "AEBODSYS", "Any TEAE", arm, "n_events", "EAIR"),
+               sum(sa$USUBJID %in% names(day2)))
+  expect_equal(bv_stat(a2, "AEBODSYS", "Any TEAE", arm, "tot_person_time", "EAIR"), years(sa, day2))
+  # no missing day: no warning
+  d3 <- bv_study(withr::local_tempdir(), list(adsl = ad, adae = tflspec::adae))
+  bv_put(d3, "T-E", "ae_eair", list(population = "SAF"))
+  expect_no_warning(bv_ard(d3, "T-E"))
+})
+
+test_that("stat_block: the study's stub folded first, built to RTF, the numbers as without it", {
+  bv_skip()
+  d <- bv_study(withr::local_tempdir(), list(adsl = tflspec::adsl, adrs = tflspec::adrs))
+  cells <- list(N = "{N}", "ORR(%) 95%CI" = c("{n} ({estimate:.1f%})", "{conf.low:.1f%}, {conf.high:.1f%}"))
+  for (ext in c("defaults", "none")) {
+    id <- paste0("T-SB-", ext)
+    o <- tfl_output(id, "table", population = "ITT", extends = ext,
+      ard = list(
+        analysis_data = list(list(id = "adrs_bor", from = "ADRS", population = "ITT",
+                                  where = tfl_r("PARAMCD == \"BOR\""),
+                                  derive = tfl_r("RESP = AVALC %in% c(\"CR\", \"PR\")"))),
+        analyses = list(list(id = "ORR", method = "proportion_ci", data = "adrs_bor", by = "TRT01P",
+                             variables = "RESP"))),
+      template = list(name = "stat_block", args = list(by = "TRT01P", variable = "RESP", cells = cells)))
+    tfl_write_output(o, file.path(d, "spec", "outputs", paste0(id, ".yml")))
+  }
+  f1 <- suppressMessages(tfl_run_output("T-SB-defaults", dir = d))
+  f2 <- suppressMessages(tfl_run_output("T-SB-none", dir = d))
+  for (f in c(f1, f2)) {
+    rtf <- paste(readLines(f, warn = FALSE), collapse = " ")
+    expect_true(grepl("32 (39.0)", rtf, fixed = TRUE), info = f)
+    expect_true(grepl("27.9, 50.2", rtf, fixed = TRUE), info = f)
+    expect_true(grepl("14 (17.9)", rtf, fixed = TRUE), info = f)
+  }
+  # the study's stub: the keys' name is the stub's column from then on
+  st <- tfl_read_study_spec(d)
+  ro <- tfl_resolve_output(tfl_read_outputs(d)[["T-SB-defaults"]], st)
+  g <- Filter(function(it) it$fn == "plan_row_group", ro$content)[[1L]]
+  expect_identical(unlist(g$args$collapse), "row_label")
+  h <- Filter(function(it) it$fn == "plan_col_header", ro$content)[[1L]]
+  expect_true("row_label" %in% unlist(lapply(h$args$header, `[[`, "cols")))
+  ro0 <- tfl_resolve_output(tfl_read_outputs(d)[["T-SB-none"]], st)
+  g0 <- Filter(function(it) it$fn == "plan_row_group", ro0$content)[[1L]]
+  expect_identical(unlist(g0$args$collapse), "group")
+})
+
+test_that(".tpl_stub_first(): only the keys the study's stub folds first are renamed", {
+  item <- tfl_item
+  items <- list(item("table_plan", list(cols = "ARM", rows = list(group = "variable", sub = "SUB"))),
+                item("plan_row_group", list(mode = "value", collapse = list("group", "sub"))),
+                item("plan_col_header", list(header = list(
+                  list(line = "2", cols = "group", text = "x"),
+                  list(line = "2", cols = ".values", span = "each", text = "{col}")))))
+  stub <- list(item("plan_stub", list(name = "row_label", before = TRUE)))
+  r <- .tpl_stub_first(items, stub)
+  expect_identical(unlist(r[[2L]]$args$collapse), "row_label")
+  expect_identical(r[[3L]]$args$header[[1L]]$cols, "row_label")
+  expect_identical(r[[3L]]$args$header[[2L]]$cols, ".values")
+  # folded last (the default), or no stub: as it was
+  expect_identical(.tpl_stub_first(items, list(item("plan_stub", list(name = "row_label")))), items)
+  expect_identical(.tpl_stub_first(items, list()), items)
+  # the template's own vars say which keys fold
+  own <- c(items, list(item("plan_stub", list(vars = "group", name = "row_label"))))
+  r2 <- .tpl_stub_first(own, stub)
+  expect_identical(unlist(r2[[2L]]$args$collapse), c("row_label", "sub"))
+})
+
+test_that("tfl_check_spec() accepts orr's columns layout and stat_block's cells", {
+  bv_skip()
+  d <- bv_study(withr::local_tempdir(), list(adsl = tflspec::adsl, adrs = tflspec::adrs))
+  bv_put(d, "T-O4", "orr", list(population = "ITT", stat_layout = "cols"), population = "ITT")
+  bv_put(d, "T-O5", "orr", list(population = "ITT", stat_layout = "cols", conf_level = 0.9),
+         population = "ITT")
+  cells <- list(N = "{N}", "ORR(%) 95%CI" = c("{n} ({estimate:.1f%})", "{conf.low:.1f%}, {conf.high:.1f%}"))
+  tfl_write_output(tfl_output("T-SB", "table", population = "ITT", extends = "defaults",
+    ard = list(
+      analysis_data = list(list(id = "adrs_bor", from = "ADRS", population = "ITT",
+                                where = tfl_r("PARAMCD == \"BOR\""),
+                                derive = tfl_r("RESP = AVALC %in% c(\"CR\", \"PR\")"))),
+      analyses = list(list(id = "ORR", method = "proportion_ci", data = "adrs_bor", by = "TRT01P",
+                           variables = "RESP"))),
+    template = list(name = "stat_block", args = list(by = "TRT01P", variable = "RESP", cells = cells))),
+    file.path(d, "spec", "outputs", "T-SB.yml"))
+  p <- suppressMessages(tfl_check_spec(d))
+  expect_identical(nrow(p[p$level == "error", ]), 0L)
+  # a row label that no plan_stat_groups() names is still wrong
+  p2 <- tfl_schema_check(tfl_item("plan_cells", list("Mean (SD)" = "{mean}")))
+  expect_match(p2$message, "is a row's label")
+})

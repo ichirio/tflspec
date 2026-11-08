@@ -101,3 +101,44 @@ test_that("a YAML study's ARD program: its reports' analyses, in the TOC's order
   expect_identical(tfl_ard_code(st, "T-1", part = "body"),
                    tfl_ard_code(.ard_spec_of_study(st)$spec, "T-1", part = "body"))
 })
+
+# a spec/codelists.yml left in a study is not read (a message, no layer)
+sa_codelists_file <- function(dir, lines) {
+  writeLines(lines, file.path(dir, "spec", "codelists.yml"))
+  dir
+}
+
+test_that("a study with spec/codelists.yml builds its ARD as without the file (#649, #659)", {
+  skip_on_cran()
+  dir <- sa_yaml_study(withr::local_tempdir())
+  dir.create(file.path(dir, "data", "adam"), recursive = TRUE)
+  saveRDS(getExportedValue("tflspec", "adsl"), file.path(dir, "data", "adam", "adsl.rds"))
+  without <- suppressMessages(tfl_build_ard(tfl_read_study_spec(dir), dir = dir,
+                                            output_id = "T-1", save = FALSE))
+  code_without <- tfl_ard_code(tfl_read_study_spec(dir), "T-1", save = FALSE)
+  sa_codelists_file(dir, "ANRIND: [{value: LOW, label: Low}, {value: HIGH, label: High}]")
+  expect_message(st <- tfl_read_study_spec(dir), "spec/codelists.yml is not read", fixed = TRUE)
+  with <- suppressMessages(tfl_build_ard(st, dir = dir, output_id = "T-1", save = FALSE))
+  expect_gt(nrow(with), 0L)
+  expect_identical(as.data.frame(with)[c("output_id", "variable", "stat_name")],
+                   as.data.frame(without)[c("output_id", "variable", "stat_name")])
+  # nor is it the sheets'
+  expect_identical(nrow(tfl_sheets_from_yaml(dir)$table$codelists), 0L)
+  # the program does not apply the unused list: it is the one without the file
+  code <- tfl_ard_code(st, "T-1", save = FALSE)
+  expect_false(any(grepl("ANRIND|HIGH", code)))
+  expect_identical(code, code_without)
+})
+
+test_that("a report's own code list applies, not the file's of the same variable (#649, #659)", {
+  dir <- sa_yaml_study(withr::local_tempdir())
+  f <- file.path(dir, "spec", "outputs", "T-2.yml")
+  writeLines(c(readLines(f), "codelists:", "  SEX:", "    - {value: M, label: Men}",
+               "    - {value: F, label: Women}"), f)
+  base <- tfl_ard_code(tfl_read_study_spec(dir), "T-2", save = FALSE)
+  expect_true(any(grepl("Women", base)))
+  sa_codelists_file(dir, "SEX: [{value: F, label: Girls}, {value: M, label: Boys}]")
+  code <- tfl_ard_code(suppressMessages(tfl_read_study_spec(dir)), "T-2", save = FALSE)
+  expect_identical(code, base)
+  expect_false(any(grepl("Girls|Boys", code)))
+})

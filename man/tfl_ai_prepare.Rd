@@ -41,7 +41,8 @@ tfl_ai_prepare(
 \arguments{
 \item{dir}{The study folder.}
 
-\item{toc}{The TOC / SHELL workbook (\code{.xlsx} or \code{.xlsm}).}
+\item{toc}{The TOC / SHELL workbook (\code{.xlsx} or \code{.xlsm}).  Missing: the
+last call's settings, \code{ai/prepare.yml} (see \emph{Repeating a call}).}
 
 \item{adam}{The ADaM folder, from \code{dir} (relative) or absolute.}
 
@@ -66,7 +67,10 @@ are written again on every call (the drafts are kept).}
 \item{dry_run}{\code{TRUE} to read the workbook and the ADaM and write
 nothing: the same result, to look at before the requests are written
 (its \code{requests} are the TOC's batches, without \code{chars} and \code{file};
-\code{files} is empty).}
+\code{files} is empty).  The one thing it keeps is \code{numbers}, the person's
+corrected report numbers, in \code{ai/sheet_numbers.csv} when the study's
+\code{ai/} folder is there already (\code{files} then names that file); a dry run
+never makes \code{ai/} or the study folder.}
 
 \item{adam_summary}{A \code{\link[=tfl_ai_adam_summary]{tfl_ai_adam_summary()}} result to use instead of
 reading the ADaM again (a previous call's \verb{$adam}); read again when
@@ -98,7 +102,7 @@ report's own content items for what it does not cover), else as a code
 SPEC; the requests (and \code{AGENTS.md}) list the templates registered now
 -- tflspec's, a company's, the study's variants.  \code{FALSE}: the code
 SPEC only, the requests as they were before templates.  The setting is
-each request's first line (\code{templates: TRUE}) and \code{ai/status.md}'s.}
+a line near the top of each request (\code{templates: TRUE}) and \code{ai/status.md}'s.}
 
 \item{progress}{\code{NULL}, or a function(step, i, n) called as the work goes:
 \code{step} \code{"adam"} (the ADaM's summary), \code{"workbook"} (the TOC / SHELL
@@ -138,8 +142,9 @@ item made in a sheet has that sheet as its shell (made in several,
 the first in the workbook's order; the others listed in \code{sheets}), one
 the rule made and no sheet makes now has none (the no-shell request's,
 counted in \code{counts}).  Saved as \code{ai/sheet_numbers.csv}
-(\code{sheet}, \code{number}, \code{make}, UTF-8) when the requests are written (not
-by a dry run), and read by a later call; given again, it goes over the
+(\code{sheet}, \code{number}, \code{make}, UTF-8) when the requests are written, and
+by a dry run when the study's \code{ai/} folder is there already (a dry run
+on a new study keeps nothing), and read by a later call; given again, it goes over the
 saved rows (a row of the same sheet and number replaced, \code{NA} taking
 it out) and the file keeps the result.  \code{NULL} (default): the saved file, if any.
 With \code{unit = "sheet"} only.}
@@ -205,7 +210,13 @@ among the sheets; \code{"set by the person"} for \code{"saved"} and \code{"given
 \code{counts} (\code{shells},
 \code{toc_items}, \code{no_shell}),
 \code{sheets} (the workbook's sheets and their roles), \code{adam} (the
-\code{\link[=tfl_ai_adam_summary]{tfl_ai_adam_summary()}}: \code{datasets}, \code{variables}, \code{text}), \code{files} (the
+\code{\link[=tfl_ai_adam_summary]{tfl_ai_adam_summary()}}: \code{datasets}, \code{variables}, \code{text}), \code{data_paths}
+(a study that has a \code{spec/data.yml} already: per dataset of it,
+\code{in_data_yml} its path, \code{given} the ADaM file given (\code{NA}: none),
+\code{exists} whether data.yml's file is there and \code{differs} whether the
+file given is another file or type; a warning names the rows that are
+missing or differ; \code{data.yml} is not changed; \code{NULL} for a new study),
+\code{files} (the
 files written, relative to \code{dir}), \code{hint} (what the workbook's reading
 could not find -- no TOC, a report with no shell -- and what to pass),
 \code{next_steps} (what to do next), \code{agent_prompt} (the first message to
@@ -253,18 +264,45 @@ it asks, what a draft holds), \code{AGENTS.md} and
 \code{.github/copilot-instructions.md} (short: read \code{ai/AGENTS.md}), \code{run.R}
 (\code{\link[=tfl_ai_run]{tfl_ai_run()}}: the check from the command line, with the ARD and RTF)
 and \code{ai/decisions.md}, which is never written over.  One message
-(\code{ai/agent_prompt.md}) starts the agent on every request of
-\code{ai/requests/index.md} in order; stopped, it goes on at "continue" from
-the first request with a draft missing.
+(\code{ai/agent_prompt.md}) starts the agent: with one request, then a menu, or
+with a batch of all the requests (\verb{ai: run}); \code{ai/progress.md}, the work
+queue (every request \code{todo}; never written over), says where it goes on.
 
 \code{study.yml}'s \verb{ai:} keys set the agent's rules (the study standard's
 \code{spec/defaults.yml} may say them under its own \verb{ai:} key first):
-\code{language} (the chat's: \code{"en"}, \code{"ja"} ...), \code{ask_when} (\code{"request"},
-the default: the request's reports' questions together; \code{"report"}:
-report by report), \code{carry} (which decision scopes apply to a later
+\code{language} (the chat's: \code{"en"}, \code{"ja"} ...), \code{run} (\code{"one"}, the
+default: the agent processes one request -- its questions in the chat, its
+drafts, its build and check -- and stops at a menu: the next request, the
+next N together, or all the rest; \code{"batch"}: all the requests at once, the
+agent taking its default for every question, noting it in
+\code{ai/questions-end.md}, and asking all of them in one message at the end,
+with \code{ai/defaults.md}, the defaults it took, the most important first --
+only the reports an answer changes are then written again),
+\code{requests_per_chat} (0, no limit: after that many requests the agent stops
+and asks for a new chat), \code{carry} (which decision scopes apply to a later
 report without asking: \code{all}, \code{dataset}, \code{section}), \code{max_rounds} (how
 many times one item is asked again, 3), \code{footnotes_at} (\code{"footer"}, the
-default, or \code{"table"}: where the shell's footnotes go).
+default, or \code{"table"}: where the shell's footnotes go), \code{review} (how
+deep the agent checks each report it builds itself, by kind: \code{0} the
+check, \code{1} and the program, \code{2} and the facts -- what R made, in words
+-- \code{3} and the output (a figure's PNG, a table's pages); \code{none}: the
+person's check; \verb{\{figure: 3, table: 2, listing: 1\}} by default).
+}
+
+\section{Repeating a call}{
+
+A call that writes the requests (not \code{dry_run}) keeps the arguments it was
+given in \code{ai/prepare.yml} of the study folder -- by name, a path inside the
+study from its folder, the date-time and the tflspec version at its head
+(\code{\link[=tfl_ai_prepare_settings]{tfl_ai_prepare_settings()}} reads it and lists what the file holds and
+what is left out: \code{dir}, \code{overwrite}, \code{dry_run}, \code{quiet}, \code{progress},
+\code{add}, \code{adam_summary}, \code{numbers}).  \code{tfl_ai_prepare(dir)} with no \code{toc}
+repeats them: the arguments given now go over the file's, so
+\code{tfl_ai_prepare(dir, language = "ja")} is the last call in Japanese.  A
+path of the file that is not there any more stops the call, naming the
+file and the setting; with no file, \code{toc} is asked for as always.  With
+\code{add = TRUE} the file keeps the first workbook's settings (see
+\code{\link[=tfl_ai_prepare_settings]{tfl_ai_prepare_settings()}}).  The agent does not read the file.
 }
 
 \examples{

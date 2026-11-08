@@ -24,7 +24,7 @@ The figure template \code{km_survival}, layout \code{km}: a variant of \code{km}
    \code{risk_statistics} \tab other \tab call \tab  \tab  \tab the risk table's rows (add_risktable(risktable_stats = )); NULL: n.risk \cr
    \code{x_max} \tab usual \tab call \tab  \tab  \tab the x axis's end (x_breaks <- seq(0, x_max, by = x_step)); NULL: the last time \cr
    \code{x_step} \tab usual \tab call \tab  \tab  \tab the x axis's step, the risk table's times; NULL: pretty() \cr
-   \code{x_label} \tab usual \tab call \tab  \tab  \tab the x axis's title (labs(x = )); NULL: Time (\if{html}{\out{<unit>}}) \cr
+   \code{x_label} \tab usual \tab call \tab  \tab  \tab the x axis's title (labs(x = )); NULL: Time (<unit>) \cr
    \code{y_min} \tab other \tab call \tab  \tab  \tab the y axis's start (coord_cartesian(ylim = )); NULL: 0 \cr
    \code{y_max} \tab other \tab call \tab  \tab  \tab the y axis's end; NULL: 1 \cr
    \code{y_step} \tab other \tab call \tab  \tab km.y_by \tab the y axis's step (scale_y_continuous(breaks = )); NULL: the figure style's \cr
@@ -34,6 +34,7 @@ The figure template \code{km_survival}, layout \code{km}: a variant of \code{km}
    \code{legend_title} \tab other \tab call \tab  \tab  \tab the legend's title (labs(colour = )); NULL: none \cr
    \code{legend_median} \tab usual \tab call \tab FALSE \tab  \tab TRUE: each arm's legend text has its median survival and 95\% CI, "Drug X: 12.3 (9.8, 15.1)" (from the fit; NE when not reached) \cr
    \code{legend_median_digits} \tab other \tab call \tab 1 \tab  \tab the decimals of the median and its CI in the legend \cr
+   \code{legend_median_text} \tab other \tab call \tab \{arm\}: \{median\} (\{lcl\}, \{ucl\}) \tab  \tab the wording of that legend text, with \{arm\}, \{median\}, \{lcl\} and \{ucl\} for the arm and its median and 95\% CI limits (any may be left out or repeated): "\{arm\}, Median (95\% CI): \{median\} (\{lcl\}, \{ucl\})"; no effect without 'legend_median' \cr
    \code{pvalue} \tab usual \tab call \tab TRUE \tab  \tab the log-rank p-value (add_pvalue()) \cr
    \code{pvalue_location} \tab other \tab call \tab annotation \tab  \tab where the p-value goes (add_pvalue(location = )) \cr
    \code{title} \tab other \tab call \tab  \tab  \tab the figure's title (labs(title = )) \cr
