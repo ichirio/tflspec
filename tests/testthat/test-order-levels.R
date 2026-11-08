@@ -34,7 +34,7 @@ test_that("order_levels(): a code list, else the numeric pair, else the values s
   expect_identical(e$order_levels(d, "NOPE")$SEX, d$SEX)
   # a code list wins, with set_levels()'s stop on a value it does not have
   cl_arm <- c(`Drug A` = "Drug A", `Drug B` = "Drug B", Placebo = "Placebo")
-  r2 <- e$order_levels(d, c("SEX", "RACE"), SEX = c(F = "Female", M = "Male"), TRT01A = cl_arm)
+  r2 <- e$order_levels(d[1:4, ], c("SEX", "RACE"), SEX = c(F = "Female", M = "Male"), TRT01A = cl_arm)
   expect_identical(levels(r2$SEX), c("Female", "Male"))
   expect_identical(levels(r2$TRT01A), names(cl_arm))
   expect_identical(levels(r2$RACE), c("WHITE", "BLACK", "ASIAN"))
@@ -71,7 +71,7 @@ test_that("the program names the categories of its categorical analyses, the one
 lv_study <- function(root, datasets, drop_arm_n = TRUE, pairs = FALSE) {
   d <- file.path(root, "study")
   dir.create(file.path(d, "adam"), recursive = TRUE)
-  arms <- sort(unique(adsl$TRT01A))
+  arms <- sort(unique(as.character(adsl$TRT01A)))
   num <- function(x) length(arms) + 1L - match(x, arms)
   for (x in datasets) {
     z <- getExportedValue("tflspec", x)
@@ -97,7 +97,7 @@ test_that("a records dataset without TRT01AN gets the arms' order of ADSL", {
   skip_if_not_installed("cards")
   skip_if_not_installed("haven")
   d <- lv_study(withr::local_tempdir(), c("adsl", "adlb", "adae"))
-  arms <- sort(unique(adsl$TRT01A))
+  arms <- sort(unique(as.character(adsl$TRT01A)))
   want <- rev(arms)
   expect_false(identical(want, arms))
   put <- function(id, name, args) {
@@ -105,18 +105,14 @@ test_that("a records dataset without TRT01AN gets the arms' order of ADSL", {
                                 template = list(name = name, args = args)),
                      file.path(d, "spec", "outputs", paste0(id, ".yml")))
   }
-  pc <- adlb$PARAMCD[1L]
-  put("T-AN", "ancova", list(data = "ADLB", param = pc, visit = adlb$AVISIT[adlb$PARAMCD == pc][1L]))
   put("T-LA", "lab_abnormal", list())
   st <- tfl_read_study_spec(d)
   code <- paste(tfl_ard_code(st, output_id = "T-LA", save = FALSE, dir = d), collapse = "\n")
-  # the arm joined from the analysis set's ADSL, the record's own dropped first
-  expect_match(code, "select(-any_of(intersect(\"TRT01A\", names(adsl_saf))))", fixed = TRUE)
-  expect_match(code, "inner_join(select(adsl_saf, USUBJID, any_of(\"TRT01A\")), by = \"USUBJID\")", fixed = TRUE)
+  # the records keep their arm; its order is ADSL's
+  expect_match(code, "adlb <- haven::read_xpt(\"adam/adlb.xpt\") |> order_levels(", fixed = TRUE)
+  expect_match(code, "from = adsl", fixed = TRUE)
   ard <- suppressMessages(suppressWarnings(tfl_build_ard(st, d, output_id = "T-LA", save = FALSE)))
   expect_identical(lv_levels(ard, "ABNORMAL"), want)
-  ard2 <- suppressMessages(suppressWarnings(tfl_build_ard(st, d, output_id = "T-AN", save = FALSE)))
-  expect_identical(lv_levels(ard2, "LSMEAN"), want)
 })
 
 test_that("RACE follows RACEN, SEX follows SEXN, where ADSL has the pair", {

@@ -888,9 +888,10 @@
 }
 
 # order_levels() as a step of a read: the categories named when there are
-.order_levels_step <- function(cats) {
-  if (!length(cats)) return("order_levels()")
-  sprintf("order_levels(%s)", .lay(.c_str(cats), width = Inf))
+.order_levels_step <- function(cats, from = NULL) {
+  args <- c(if (length(cats)) .lay(.c_str(cats), width = Inf),
+            if (length(from)) paste("from =", from))
+  sprintf("order_levels(%s)", paste(args, collapse = ", "))
 }
 
 # The datasets and populations analyses `a` (and analysis data `nad`)
@@ -913,13 +914,16 @@
   # lists, whose order wins
   code <- character()
   cats <- .ard_category_vars(a, levels)
+  # (ADSL first: the other datasets' arms are ordered by its)
+  has_adsl <- "ADSL" %in% toupper(used_ds)
+  used_ds <- used_ds[order(toupper(used_ds) != "ADSL")]
   for (ds in used_ds) {
     r <- x$datasets[x$datasets$dataset == ds, ]
     obj <- .r_name(ds)
     d <- .split_bar(r$derive[1L])
     code <- c(code, .make_code(obj, .reader(r$path[1L]), c(
       if (length(d)) sprintf("dplyr::mutate(%s)", paste(d, collapse = ", ")),
-      .order_levels_step(cats),
+      .order_levels_step(cats, if (has_adsl && toupper(ds) != "ADSL") "adsl"),
       if (length(levels)) .levels_step)))
   }
   pop_code <- character()

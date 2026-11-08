@@ -71,7 +71,11 @@ reorder_by <- function(x, by) {
 #   adsl |> order_levels()
 #   adsl |> order_levels(c("AGEGR1", "SEX", "RACE"))
 #   adsl |> order_levels(c("SEX", "RACE"), TRT01A = cl_trt01a)
-order_levels <- function(data, vars = NULL, ...) {
+# `from` (a data frame, ADSL): the arm of a data with no pair of its own (a
+# records data without TRT01AN) is ordered by the matching arm of `from`,
+# its values kept; a value `from` does not have goes last.
+#   adae |> order_levels(from = adsl)
+order_levels <- function(data, vars = NULL, from = NULL, ...) {
   lists <- list(...)
   if (length(lists)) data <- set_levels(data, ...)
   arms <- grep("^(TRT|ARM|ACTARM)", names(data), value = TRUE)
@@ -79,12 +83,29 @@ order_levels <- function(data, vars = NULL, ...) {
   for (v in unique(c(arms, vars))) {
     if (!v %in% names(data) || v %in% names(lists) || is.factor(data[[v]])) next
     n <- paste0(v, "N")
-    if (!n %in% names(data) || !is.numeric(data[[n]])) next
+    src <- data
+    pair <- n
+    if (!n %in% names(data) || !is.numeric(data[[n]])) {
+      # the records' arm with no pair of its own: the order of the matching
+      # arm of `from` (ADSL), by the values both have (TRTA by TRT01AN
+      # through ADSL's TRT01A and TRT01AN); the records' values are kept
+      if (!v %in% arms || !is.data.frame(from)) next
+      x0 <- unique(as.character(data[[v]]))
+      cand <- c(v, grep("^(TRT|ARM|ACTARM)", names(from), value = TRUE))
+      cand <- cand[cand %in% names(from) & !grepl("N$", cand) &
+                     paste0(cand, "N") %in% names(from)]
+      cand <- Filter(function(cn) any(x0 %in% as.character(from[[cn]])), unique(cand))
+      if (!length(cand)) next
+      src <- from
+      pair <- paste0(cand[1L], "N")
+      key <- as.character(from[[cand[1L]]])
+    }
     if (!v %in% arms && !is.character(data[[v]])) next
     x <- as.character(data[[v]])
     if (v %in% arms) x[!is.na(x) & !nzchar(trimws(x))] <- NA
     lv <- unique(x[!is.na(x)])
-    first <- vapply(lv, function(l) suppressWarnings(min(data[[n]][x %in% l], na.rm = TRUE)), 0)
+    if (identical(src, data)) key <- x
+    first <- vapply(lv, function(l) suppressWarnings(min(src[[pair]][key %in% l], na.rm = TRUE)), 0)
     data[[v]] <- factor(x, levels = lv[order(first, match(lv, lv))])
   }
   data

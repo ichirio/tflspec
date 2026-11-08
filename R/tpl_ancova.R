@@ -34,9 +34,8 @@
     analysis_data = list(
       list(id = subj, label = .tpl_set_label(pop, ctx$population), from = "ADSL",
            population = pop),
-      # (the arm is the analysis set's, from ADSL: add)
       list(id = set, from = a$data, subjects = subj,
-           where = tfl_r(.tpl_and_all(where)), add = as.list(a$by))),
+           where = tfl_r(.tpl_and_all(where)))),
     analyses = list(
       list(id = "GROUPN", method = "categorical", data = subj, variables = a$by,
            purpose = "PRIMARY OUTCOME MEASURE"),
