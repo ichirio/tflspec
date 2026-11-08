@@ -95,7 +95,14 @@ tfl_fill_widths <- function(study_dir = ".", output_id = NULL, assumption = TRUE
   # the listings: their columns, from their variables and headers
   # (fitted to the data where it can be read, else a guess: R/ai_widths_fit.R)
   lst <- names(outs)[vapply(outs, function(o) identical(o$kind, "listing") && .ai_listing_todo(o), NA)]
-  lw <- .ai_listing_widths_set(outs[lst], study_dir)
+  # (the study read into sheets once, for the listings and for every table's
+  # build: the bridge is the slow part, and the widths written below are not
+  # what the ARD is made from)
+  # (nothing to fill: not read)
+  sheets <- if (length(lst) || length(unset)) {
+    tryCatch(tfl_sheets_from_yaml(study_dir), error = function(e) NULL)
+  }
+  lw <- .ai_listing_widths_set(outs[lst], study_dir, sheets = sheets)
   outs[lst] <- lw$outs
   for (id in lw$written) {
     i <- match(id, names(outs))
@@ -103,7 +110,7 @@ tfl_fill_widths <- function(study_dir = ".", output_id = NULL, assumption = TRUE
   }
   lst <- lw$written
   # the tables: built, their widths from the printed table
-  tab <- .ai_widths_on_read(outs, paths, study_dir, remember = FALSE)
+  tab <- .ai_widths_on_read(outs, paths, study_dir, remember = FALSE, sheets = sheets)
   set <- c(lst, tab)
   missed <- setdiff(intersect(unset, names(outs)), set)
   if (length(missed)) {

@@ -1,5 +1,6 @@
 # ---- data ------------------------------------------------------------------
 adtte_ttde <- adtte |>
+  order_levels() |>
   filter(PARAMCD == "TTDE", SAFFL == "Y")
 
 # AVAL in days, from each record's unit, AVALU (days when the data has no AVALU)

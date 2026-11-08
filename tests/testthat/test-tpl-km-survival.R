@@ -99,7 +99,7 @@ test_that("the B file in the figure designer: the report's own items seen, saved
   expect_identical(unclass(back), unclass(design))
   # the design read back writes the report's figure
   expect_identical(as.character(tfl_fig_design_code(back, plot_id = "F-14-2-3", save = FALSE,
-                                                    name = "content")),
+                                                    name = "content", order_arms = TRUE)),
                    tflspec:::.content_fig_code(tfl_resolve_output(b, st)))
 })
 

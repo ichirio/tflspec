@@ -167,7 +167,8 @@ lst_both <- function(d, output = NULL) {
   cat_ <- sh$ard$datasets
   cat_$path <- file.path(d, cat_$path)
   e1 <- new.env()
-  eval(parse(text = c("library(rtfreporter)", tfl_listing_code(ls, "L-16-2-7", cat_))), e1)
+  eval(parse(text = c("library(rtfreporter)", tfl_helpers_code(),
+                      tfl_listing_code(ls, "L-16-2-7", cat_))), e1)
   o <- output %||% tfl_resolve_output(outs[["L-16-2-7"]], s)
   e2 <- new.env()
   wd <- setwd(d)
