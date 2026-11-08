@@ -50,7 +50,7 @@
 #'   report with a template (`template: {name, args}`) where one fits --
 #'   the templates registered when the requests are written listed in
 #'   `ai/templates.md`, each request naming the ones likely for its reports,
-#'   its first line `<!-- templates: TRUE -->` -- else as a code SPEC.
+#'   a line near its top, `<!-- templates: TRUE -->` -- else as a code SPEC.
 #'   `FALSE`: the code SPEC only.
 #' @param progress `NULL`, or a function(step, i, n) called as the requests
 #'   are made: `step` `"request"`, `i` of `n` written (0 first) -- for a
@@ -1104,7 +1104,8 @@ print.tfl_ai_collected <- function(x, ...) {
                 nrow(man), if (length(toc)) sprintf(" from %d TOC row(s)", length(toc)) else ""))
     odd <- c(if (any(man$status == "not answered"))
                sprintf("%d in a request's `reports` list but with no draft", sum(man$status == "not answered")),
-             if (any(man$listed %in% FALSE))
+             # (the drafts have no `reports` list to be missing from: only an answer that has one)
+             if (any(man$listed %in% TRUE) && any(man$listed %in% FALSE))
                sprintf("%d in a draft but not in its request's `reports` list", sum(man$listed %in% FALSE)))
     cat(if (length(odd)) sprintf(" -- %s", paste(odd, collapse = ", ")) else "", "\n", sep = "")
   }

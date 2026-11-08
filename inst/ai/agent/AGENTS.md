@@ -29,7 +29,7 @@ is missing; a draft that breaks the form is not.
 
 This folder -- the study's `ai/` -- is your workspace: every path below
 is from it, and every file you read or write is in it.  Never open a
-path outside it (`../`), except to run `../run.R` as *Build and check* says.
+path outside it (`../`){{run_except}}.
 
 ## What you read
 
@@ -341,7 +341,7 @@ When no request is left, do not show the menu: finish (*Before you stop*).
 
 Each request is processed on its own: the common files plus ONE request.
 - Read the common files once: this file, the instructions, `ai/templates.md`,
-  `ai/adam_summary.md`, `study_facts.md`, `ai/reference/` and
+  `ai/adam_summary.md`, `study_facts.md`{{ref_common}} and
   `ai/decisions.md`. Then, for each request, read only that request and the
   files it names.
 - Do not reopen an earlier request, its shell, or its drafts. Only when

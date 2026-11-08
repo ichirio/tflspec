@@ -137,7 +137,9 @@ Check before the first request:
 which numbers each shell sheet makes: `tfl_ai_prepare(..., dry_run =
 TRUE)$numbers` has a row a number a sheet writes (or its name has) --
 `sheet`, `number`, `title`, `toc_id` (the TOC item, `NA` none), `make`
-(made a report of that sheet's request), `source`. A number written only
+(made a report of that sheet's request), `source`, `reason` (for a guess,
+how the number matches the sheet; `"set by the person"` for one you gave
+or saved; `NA` for the rule's). A number written only
 as a reference ("see Table 14.2.1") is made by the rule too: correct it
 with `numbers = data.frame(sheet = "t14.1.1", number = "Table 14.2.1",
 make = FALSE)` (reference only: the request still shows it), or
@@ -190,8 +192,10 @@ the names of the files to read. A request longer than `max_chars` is split.
    `ai/<study>.code-workspace` (`<study>` is the study folder's name, here
    `ai/mystudy.code-workspace`): the agent sees that folder alone, not
    `spec/`, the programs or the data -- and give the agent's chat the text of
-   `ai/agent_prompt.md`, once: it does every request of
-   `ai/requests/index.md` in order, one after the other.
+   `ai/agent_prompt.md`, once. With the default `run: one` it starts with ONE
+   request of `ai/requests/index.md`, then stops at a menu where you choose how
+   to go on; with `run: batch` it takes the requests together (see *How the
+   agent works through the requests (`run`)*, below).
 2. The agent **asks you**, numbered, what defines each report and is not
    settled -- the analysis set, a parameter, the treatment variable, the
    denominator of a percent, what is counted, missing values, a subgroup's
@@ -216,7 +220,8 @@ the names of the files to read. A request longer than `max_chars` is split.
    `ai:`, its `assumptions` (each `from: D<n>`) and what is to `confirm`.
    No header rows, pages, borders or fonts: the study's
    defaults and your builder do those. Then it goes on as `run` says (below).
-5. When every request is done it stops and tells you the files written,
+5. With `run: one` it stops after each request, at the menu (see `run`,
+   below). When every request is done it stops and tells you the files written,
    the decisions added and what is to confirm. Check them (step 6). You can
    stop it between requests and say **"c"** (or "continue") later: it goes
    on from `ai/progress.md`, your decisions kept.
@@ -444,8 +449,15 @@ The hints never override the shell, the SAP or the standard.
    ...), and check its RTF against the shell.
 2. **Fix one table of each family by hand**, then write the requests again
    with them as examples, named by family -- each request gets its own
-   family's, and the agent follows it:
-   `tfl_ai_prepare(..., examples = c(demographics = "spec/outputs/T-14-1-1.yml", ae = "spec/outputs/T-14-3-1.yml"), overwrite = TRUE)`.
+   family's, and the agent follows it. `tfl_ai_write_requests()` takes
+   `examples`; `shell` and `adam` are made as `tfl_ai_prepare()` makes them:
+   ```r
+   tfl_ai_write_requests("mystudy", tfl_ai_read_shell("mystudy/TOC_SHELL.xlsx"),
+                         tfl_ai_adam_summary("mystudy/adam"),
+                         examples = c(demographics = "spec/outputs/T-14-1-1.yml",
+                                      ae = "spec/outputs/T-14-3-1.yml"),
+                         overwrite = TRUE)
+   ```
 3. **Check as it goes**: `tfl_ai_collect_answers(".")` reads the drafts
    written so far; `size = 3` to `5` groups a family's reports in one
    request, their questions asked together.
@@ -463,8 +475,8 @@ own content items for what the template does not do), else as a code SPEC.
 `ai/templates.md` lists the templates registered when the requests were
 written -- tflspec's, the company's, the study's variants -- with their
 arguments, and each request names the ones likely for its reports.
-`templates = FALSE`: the code SPEC only. The setting is each request's
-first line (`<!-- templates: TRUE -->`) and `ai/status.md`'s.
+`templates = FALSE`: the code SPEC only. The setting is a line near the
+top of each request (`<!-- templates: TRUE -->`) and `ai/status.md`'s.
 `tfl_ai_compare()` says, a row a report, which was used.
 
 ## Try it on the sample (10 minutes)
@@ -491,7 +503,7 @@ r  <- tfl_ai_prepare(d, file.path(ex, "onco_toc_shell.xlsx"), adam = "adam",
 # the stored drafts stand in for the agent's: one a report
 invisible(file.copy(list.files(file.path(ex, "drafts"), full.names = TRUE),
                     file.path(d, "ai", "spec", "outputs"), overwrite = TRUE))
-tfl_ai_collect_answers(d)            # 5 reports in 5 requests (the figure its own): ok 5 ...
+tfl_ai_collect_answers(d)            # 5 reports in 4 requests (the figure its own): ok 5 ...
 ```
 
 Keep the `ai/` folder (requests, decisions, drafts) -- share it only within

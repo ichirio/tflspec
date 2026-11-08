@@ -86,3 +86,111 @@ test_that("a report adopted that spec/toc.yml does not list gets its entry, afte
   invisible(tfl_ai_adopt(d, overwrite = TRUE))
   expect_length(yaml::read_yaml(file.path(d, "spec", "toc.yml"))$outputs, 5L)
 })
+
+# ---- adopting a draft that has no widths: tflspec's are written (#690) ----
+
+aw_study <- function(env = parent.frame()) {
+  d <- withr::local_tempdir(.local_envir = env)
+  dir.create(file.path(d, "adam"))
+  saveRDS(tflspec::adsl, file.path(d, "adam", "adsl.rds"))
+  saveRDS(tflspec::adae, file.path(d, "adam", "adae.rds"))
+  invisible(tfl_ai_study_init(d, adam = "adam", study_id = "ONCO-01", overwrite = TRUE))
+  dir.create(file.path(d, "ai", "spec", "outputs"), recursive = TRUE)
+  d
+}
+aw_table <- function(d, id, widths = FALSE) {
+  o <- tfl_output(id, "table", population = "SAF")
+  o$extends <- list("defaults")
+  o$ard <- list(analyses = list(list(id = "AGE", method = "continuous", dataset = "ADSL",
+                                     population = "SAF", by = list("TRT01A"),
+                                     variables = list("AGE"))))
+  o$data <- list(source = "ard")
+  o$content <- list(tfl_item("table_plan", list(cols = "TRT01A", rows = list(group = "variable"))),
+                    tfl_item("plan_cells", list(continuous = list(n = "{N:.0f}"))))
+  if (widths) {
+    o$content <- c(o$content, list(tfl_item("plan_columns",
+                                            list(widths = list(row_label = 2, .values = 1)))))
+  }
+  tfl_write_output(o, file.path(d, "ai", "spec", "outputs", paste0(id, ".yml")))
+}
+aw_listing <- function(d, id) {
+  cl <- function(v, label, width) tfl_call("listing_col", list(vars = list(v), label = label, width = width))
+  o <- tfl_output(id, "listing", label = id, extends = "defaults",
+                  data = list(source = "dataset", dataset = "ADAE", population = "SAF"),
+                  content = list(tfl_item("plan_listing", list(type = "multiline", cols = list(
+                    cl("USUBJID", "Subject", 20L), cl("AEDECOD", "Preferred term", 40L))))))
+  tfl_write_output(o, file.path(d, "ai", "spec", "outputs", paste0(id, ".yml")))
+}
+aw_md5 <- function(...) unname(tools::md5sum(file.path(...)))
+aw_widths <- function(f) {
+  pc <- Filter(function(it) identical(it$fn, "plan_columns"), tfl_read_output(f)$content)
+  if (length(pc)) pc[[1L]]$args$widths else NULL
+}
+
+test_that("tfl_ai_adopt(): a draft with no widths is adopted with tflspec's, the draft too; adopted again, nothing new", {
+  skip_if_not_installed("rtfreporter")
+  d <- aw_study()
+  aw_table(d, "T-1")
+  dr <- file.path(d, "ai", "spec", "outputs", "T-1.yml")
+  st <- file.path(d, "spec", "outputs", "T-1.yml")
+  expect_null(aw_widths(dr))
+  expect_message(r <- tfl_ai_adopt(d, "T-1"), "T-1 had no column widths")
+  expect_identical(r$status, "adopted")
+  # one width a printed column (row headings and two arms: 60:20:20)
+  w <- unlist(aw_widths(st))
+  expect_length(w, 3L)
+  expect_equal(unname(w / sum(w)), c(0.6, 0.2, 0.2))
+  expect_identical(aw_md5(d, "ai", "spec", "outputs", "T-1.yml"), aw_md5(d, "spec", "outputs", "T-1.yml"))
+  # its assumption, once
+  asm <- yaml::read_yaml(file.path(d, "spec", "_assumptions.yml"))
+  expect_identical(sum(vapply(asm, function(x) identical(x$item, "widths") && identical(x$output_id, "T-1"), NA)), 1L)
+  # the RTF says the widths
+  f <- suppressMessages(tfl_run_output("T-1", d))
+  l <- readLines(f, warn = FALSE)
+  row <- tail(l[startsWith(l, "\\trowd") & grepl("cellx", l)], 1L)
+  cx <- as.integer(regmatches(row, gregexpr("(?<=cellx)[0-9]+", row, perl = TRUE))[[1L]])
+  expect_equal(round(diff(c(0L, cx)) / max(cx), 2), c(0.6, 0.2, 0.2))
+  # adopted again: the same, nothing written
+  before <- c(aw_md5(d, "spec", "outputs", "T-1.yml"), aw_md5(d, "spec", "_assumptions.yml"),
+              aw_md5(d, "ai", "adopted.csv"))
+  expect_no_message(r2 <- tfl_ai_adopt(d, "T-1"))
+  expect_identical(r2$status, "same")
+  expect_identical(before, c(aw_md5(d, "spec", "outputs", "T-1.yml"), aw_md5(d, "spec", "_assumptions.yml"),
+                             aw_md5(d, "ai", "adopted.csv")))
+  # the draft is not newer than its adoption
+  expect_identical(tfl_ai_outputs(d)$adopted[tfl_ai_outputs(d)$output_id == "T-1"], "yes")
+  # a dry run writes nothing
+  aw_table(d, "T-2")
+  m <- aw_md5(d, "ai", "spec", "outputs", "T-2.yml")
+  expect_identical(tfl_ai_adopt(d, "T-2", dry_run = TRUE)$status, "new")
+  expect_identical(aw_md5(d, "ai", "spec", "outputs", "T-2.yml"), m)
+})
+
+test_that("tfl_ai_adopt(): a table with widths and a listing with its widths set are adopted byte for byte", {
+  skip_if_not_installed("rtfreporter")
+  d <- aw_study()
+  aw_table(d, "T-1", widths = TRUE)
+  aw_listing(d, "L-1")
+  ids <- c("T-1", "L-1")
+  m <- vapply(ids, function(i) aw_md5(d, "ai", "spec", "outputs", paste0(i, ".yml")), "")
+  expect_no_message(r <- tfl_ai_adopt(d))
+  expect_identical(sort(r$status), c("adopted", "adopted"))
+  for (i in ids) {
+    expect_identical(aw_md5(d, "spec", "outputs", paste0(i, ".yml")), m[[i]])
+    expect_identical(aw_md5(d, "ai", "spec", "outputs", paste0(i, ".yml")), m[[i]])
+  }
+  expect_false(file.exists(file.path(d, "spec", "_assumptions.yml")))
+})
+
+test_that("tfl_ai_adopt(): widths that cannot be filled never stop the adoption", {
+  skip_if_not_installed("rtfreporter")
+  d <- aw_study()
+  aw_table(d, "T-1")
+  # a draft that cannot be read stops tfl_fill_widths()
+  writeLines(c("id: [", "  broken"), file.path(d, "ai", "spec", "outputs", "T-9.yml"))
+  m <- aw_md5(d, "ai", "spec", "outputs", "T-1.yml")
+  expect_message(r <- tfl_ai_adopt(d, "T-1"), "column widths were not filled")
+  expect_identical(r$status, "adopted")
+  expect_identical(aw_md5(d, "spec", "outputs", "T-1.yml"), m)
+  expect_identical(aw_md5(d, "ai", "spec", "outputs", "T-1.yml"), m)
+})

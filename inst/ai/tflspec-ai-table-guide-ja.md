@@ -10,7 +10,7 @@
 **RTF** を作り、仕上げは tflplanner のビルダーで行って採用します。すべて手元の
 PC の R で動き、tflspec は何も送信しません。
 
-日本語版: 同じフォルダの `tflspec-ai-table-guide-ja.md`（`system.file("ai", package = "tflspec")`）。
+英語版: 同じフォルダの `tflspec-ai-table-guide.md`（`system.file("ai", package = "tflspec")`）。
 
 ## おすすめの AI の環境
 
@@ -130,7 +130,8 @@ TOC とシェルが別のブックのとき: `tfl_ai_prepare("mystudy",
 確かめます。`tfl_ai_prepare(..., dry_run = TRUE)$numbers` は、シートに書かれた
 （またはシート名にある）番号 1 つが 1 行で、`sheet`・`number`・`title`・
 `toc_id`（TOC の項目、無ければ `NA`）・`make`（そのシートの依頼で作る帳票か）・
-`source` です。参照として書かれただけの番号（「Table 14.2.1 を参照」）も規則では
+`source`・`reason`（推測した番号は、そのシートに合うと判断した理由。自分で指定した番号や
+保存した番号は `"set by the person"`。規則で作った番号は `NA`）です。参照として書かれただけの番号（「Table 14.2.1 を参照」）も規則では
 作る帳票になるので、`numbers = data.frame(sheet = "t14.1.1", number = "Table 14.2.1",
 make = FALSE)`（参照だけ。依頼には参照として残る）か、`numbers = list(t14.1.1 =
 "Table 14.1.1")`（そのシートで作る番号。ほかの番号は参照だけ）で直します。TOC に
@@ -179,8 +180,9 @@ ADaM の要約で、データではありません。`AGENTS.md` に、開いて
 1. VS Code で試験の `ai` フォルダを開き（`ai/<試験>.code-workspace`（`<試験>` は試験フォルダの名前。例では `ai/mystudy.code-workspace`）をダブルクリック。
    エージェントにはそのフォルダだけが見え、`spec/`・プログラム・データは見えません）、
    エージェントのチャットに `ai/agent_prompt.md` の
-   文を 1 回だけ渡します。エージェントは `ai/requests/index.md` の依頼を順に、
-   1 つずつすべて行います。
+   文を 1 回だけ渡します。既定の `run: one` では、`ai/requests/index.md` の依頼を
+   まず 1 つだけ処理してメニューで止まり、続け方はそこで選びます。`run: batch` では
+   依頼をまとめて処理します（下の「エージェントが依頼を進めるやり方（`run`）」を参照）。
 2. エージェントが、各帳票を決めるのにまだ決まっていないこと（解析対象集団、
    パラメータ、治療の変数、パーセントの分母、何を数えるか、欠測値、サブグループの
    条件）を、番号付きで**質問**します。質問には帳票の id とタイトル、選択肢と既定が
@@ -200,7 +202,8 @@ ADaM の要約で、データではありません。`AGENTS.md` に、開いて
    `ai:` の下には、`assumptions`（それぞれ `from: D<n>`）と `confirm`（要確認）が
    入ります。見出し行、ページ、罫線、フォントは書きません。それらは試験の
    既定とビルダーが担当します。そのあとは `run` に従って進みます（下記）。
-5. すべての依頼が終わると止まり、書いたファイル、足した決定、要確認のことを知らせます。
+5. `run: one` では、依頼を 1 つ終えるたびにメニューで止まります（下の `run` の節を参照）。
+   すべての依頼が終わると止まり、書いたファイル、足した決定、要確認のことを知らせます。
    それを確かめてください（手順 6）。依頼の合間に止めて、あとで **「c」**（または「continue」）と
    伝えることもできます。エージェントは `ai/progress.md` から続け、あなたの決定は残ります。
 
@@ -412,8 +415,16 @@ tflplanner を使わないときは、先にフォルダを決めます: `option
 1. **小さく始める**: 種類ごとに 1 依頼（`T-14-1-1`、`T-14-3-1` …）を頼み、RTF を
    シェルと見比べる。
 2. **種類ごとに 1 本を手で直し**、それを見本にして依頼を書き直す。見本は種類の名前を
-   付けて渡すと、その種類の依頼にだけ入り、エージェントはそれに倣う:
-   `tfl_ai_prepare(..., examples = c(demographics = "spec/outputs/T-14-1-1.yml", ae = "spec/outputs/T-14-3-1.yml"), overwrite = TRUE)`。
+   付けて渡すと、その種類の依頼にだけ入り、エージェントはそれに倣う。`examples` を
+   取るのは `tfl_ai_write_requests()` で、`shell` と `adam` は `tfl_ai_prepare()` と同じ
+   作り方で渡す:
+   ```r
+   tfl_ai_write_requests("mystudy", tfl_ai_read_shell("mystudy/TOC_SHELL.xlsx"),
+                         tfl_ai_adam_summary("mystudy/adam"),
+                         examples = c(demographics = "spec/outputs/T-14-1-1.yml",
+                                      ae = "spec/outputs/T-14-3-1.yml"),
+                         overwrite = TRUE)
+   ```
 3. **進めながら確かめる**: `tfl_ai_collect_answers(".")` は、それまでに書かれた下書きを
    読みます。`size = 3`〜`5` で 1 つの種類の帳票を 1 依頼にまとめ、質問もまとめて聞きます。
 4. **決定は引き継がれる**: 範囲が `all` やデータセットの決定は以後のすべての帳票に
@@ -429,7 +440,7 @@ args}`、既定と違う引数だけ。テンプレートにない部分は帳�
 コード SPEC で答えます。`ai/templates.md` には、依頼を書くときに登録されていた
 テンプレート（tflspec の物、会社の物、試験の変種）が引数つきで並び、各依頼には
 その帳票に合いそうなテンプレートの名前が入ります。`templates = FALSE` はコード
-SPEC だけを頼みます。この設定は各依頼の 1 行目（`<!-- templates: TRUE -->`）と
+SPEC だけを頼みます。この設定は各依頼の先頭近くの行（`<!-- templates: TRUE -->`）と
 `ai/status.md` に書かれます。どちらを使ったかは `tfl_ai_compare()` が帳票ごとに
 1 行で示します。
 
@@ -456,7 +467,7 @@ r  <- tfl_ai_prepare(d, file.path(ex, "onco_toc_shell.xlsx"), adam = "adam",
 # the stored drafts stand in for the agent's: one a report
 invisible(file.copy(list.files(file.path(ex, "drafts"), full.names = TRUE),
                     file.path(d, "ai", "spec", "outputs"), overwrite = TRUE))
-tfl_ai_collect_answers(d)            # 5 reports in 5 requests (the figure its own): ok 5 ...
+tfl_ai_collect_answers(d)            # 5 reports in 4 requests (the figure its own): ok 5 ...
 ```
 
 `ai/` フォルダ（依頼、決定、下書き）は残してください。共有は社内だけに。

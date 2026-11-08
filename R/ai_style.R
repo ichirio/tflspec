@@ -99,6 +99,8 @@ tfl_rtf_style_scan <- function(rtf_dir) {
   # whether they are one table (row definitions only) or two
   at <- gregexpr("\\\\trowd", x, perl = TRUE)[[1L]]
   if (at[1L] < 0L) return(NULL)
+  # (footnotes written as one-cell rows after the table are not tables)
+  at <- setdiff(at, .rtf_footnote_starts(x))
   ends <- gregexpr("\\\\row(?![a-z])", x, perl = TRUE)[[1L]]
   # the page breaks (SAS ODS RTF: a \sect a page; Word: \page)
   pb <- gregexpr("\\\\(sect|page)(?![a-z])", x, perl = TRUE)[[1L]]

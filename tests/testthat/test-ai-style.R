@@ -341,3 +341,68 @@ test_that("a folder with no tables: a warning naming it, the prompt still writte
   expect_match(p, "R's guess from the title: `demog`", fixed = TRUE)
   expect_no_match(p, "guess from the title: `all`", fixed = TRUE)
 })
+
+# rtfreporter's RTF (fixtures/rtfreporter-rtf, make-fixtures.R): the page
+# number is words in the header row, the footnote a one-cell row (#711)
+test_that("rtfreporter RTF: the page header is not the title, a footnote row is not a table (#711)", {
+  t <- tfl_rtf_style_tables(test_path("fixtures", "rtfreporter-rtf"))
+  expect_identical(nrow(t), 1L)
+  expect_identical(t$file, "DMY-001/t_dm.rtf")
+  expect_identical(t$kind, "demog")
+  expect_identical(t$title_place, "before")
+  expect_identical(t$title_align, "c")
+  expect_identical(t$title, paste("Table 14.1.1", "Demographic and Baseline Characteristics",
+                                  "Safety Population", sep = " / "))
+  expect_identical(c(t$header_rows, t$body_rows, t$n_cols), c(1L, 4L, 3L))
+  expect_false(grepl("Page|Example Pharma", t$title))
+  s <- tfl_rtf_style_scan(test_path("fixtures", "rtfreporter-rtf"))
+  expect_identical(unique(s$table), 1L)
+  expect_identical(nrow(s), 5L)
+})
+
+test_that("a page-number line in words is not a title; its row goes whole, a title line stays (#711)", {
+  d <- withr::local_tempdir()
+  tbl <- "{\\fonttbl{\\f0 Arial;}}"
+  row <- function(txt) paste0("\\trowd\\cellx3000\\cellx6000\\pard\\intbl\\ql ", txt[1L],
+                              "\\cell\\pard\\intbl\\qr ", txt[2L], "\\cell\\row")
+  for (v in c("Page 1 of 1", "Page 2", "page 3 of 12", "Page 1/4", "1 of 3")) {
+    style_rtf(d, paste0("row-", gsub("[^0-9a-z]", "_", v), ".rtf"), tbl,
+              pre = c(paste0("{\\header ", row(c("DMY-001", v)), "}"),
+                      "\\pard\\qc Table 14.2.1\\par\\pard\\qc Shift Table of ALT\\par"))
+  }
+  # a page-number paragraph beside the title lines of the header
+  style_rtf(d, "para.rtf", tbl, pre = "{\\header\\pard\\qr Page 1 of 1\\par\\pard\\qc Table 14.2.1\\par\\pard\\qc Shift Table of ALT\\par}")
+  # a title that only starts with the word
+  style_rtf(d, "word.rtf", tbl, pre = "{\\header\\pard\\qc Page 1 of 1 Summary\\par}")
+  t <- tfl_rtf_style_tables(d)
+  rownames(t) <- t$file
+  rows <- t[grepl("^row-", t$file), ]
+  expect_identical(nrow(rows), 5L)
+  expect_identical(unique(rows$title_place), "before")
+  expect_identical(unique(rows$title), "Table 14.2.1 / Shift Table of ALT")
+  expect_identical(unique(rows$kind), "shift")
+  expect_identical(t["para.rtf", "title_place"], "header")
+  expect_identical(t["para.rtf", "title"], "Table 14.2.1 / Shift Table of ALT")
+  expect_identical(t["word.rtf", "title"], "Page 1 of 1 Summary")
+})
+
+test_that("one-cell rows after the table are its footnotes; a one-column table alone is still a table (#711)", {
+  d <- withr::local_tempdir()
+  tbl <- "{\\fonttbl{\\f0 Arial;}}"
+  note <- function(txt) paste0("\\trowd\\cellx6000\\pard\\intbl\\ql ", txt, "\\cell\\row")
+  style_rtf(d, "notes.rtf", tbl, pre = "\\pard\\qc Table 14.2.1\\par",
+            post = c("{\\pard\\fs2\\par}", note("Note: x."), note("Source: y.")))
+  # no break between the table and a one-cell row: still the table's rows
+  style_rtf(d, "joined.rtf", tbl, post = note("Total"))
+  # only one-cell rows: a table
+  writeLines(c("{\\rtf1\\ansi", note("a"), note("b"), "}"), file.path(d, "one.rtf"))
+  t <- tfl_rtf_style_tables(d)
+  rownames(t) <- t$file
+  expect_identical(nrow(t), 3L)
+  expect_identical(t["notes.rtf", "body_rows"], 1L)
+  expect_identical(t["notes.rtf", "footnote_place"], "after")
+  expect_identical(t["notes.rtf", "footnotes"], 2L)
+  expect_identical(t["joined.rtf", "body_rows"], 2L)
+  expect_identical(t["one.rtf", "n_cols"], 1L)
+  expect_identical(t["one.rtf", "body_rows"], 1L)
+})
