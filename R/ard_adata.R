@@ -74,6 +74,18 @@
   NA_character_
 }
 
+# The analysis data whose subjects an analysis data keeps (`subjects`; the
+# nearest one, from the data itself up the rows it is made from), or NULL
+# when none: the report's analysis set as it counts them, a subset applied
+.adata_subjects_of <- function(ad, id) {
+  if (is.null(ad) || length(id) != 1L || is.na(id)) return(NULL)
+  for (d in rev(.adata_chain(ad, id))) {
+    s <- ad$subjects[match(d, ad$data_id)] %||% NA
+    if (!is.na(s)) return(s)
+  }
+  NULL
+}
+
 # The data a row's `add` takes its columns from: the data whose subjects it
 # keeps, else its analysis set's (`pop_<id>`); NA when none
 .adata_add_from <- function(ad, id) {
@@ -102,9 +114,22 @@
   while (length(new <- setdiff(unique(unlist(lapply(ids, function(id)
     .adata_chain(ad, id)))), all))) {
     all <- c(all, new)
-    ids <- intersect(stats::na.omit(ad$subjects[match(new, ad$data_id)]), ad$data_id)
+    ids <- intersect(c(stats::na.omit(ad$subjects[match(new, ad$data_id)]),
+                       .adata_code_reads(ad, new)), ad$data_id)
   }
   ad$data_id[ad$data_id %in% all]
+}
+
+# The analysis data the code of the rows `ids` reads by name (a data made
+# by `code` may read another of its report's: a template's subset set)
+.adata_code_reads <- function(ad, ids) {
+  code <- ad$code[match(ids, ad$data_id)] %||% NA
+  code <- code[!is.na(code)]
+  if (!length(code)) return(character())
+  unique(unlist(lapply(code, function(x) {
+    intersect(tryCatch(all.names(parse(text = x, keep.source = FALSE)),
+                       error = function(e) character()), ad$data_id)
+  })))
 }
 
 # The problems of the sheet and of the analyses' `data`, as rows
