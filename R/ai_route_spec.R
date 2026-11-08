@@ -46,6 +46,7 @@
     }
     ai <- if (is.list(y)) y$ai else NULL
     if (!is.list(ai)) next
+    .ai_say_ask_when(ai, f)
     for (k in intersect(names(s), names(ai))) if (!is.null(ai[[k]])) {
       # (review: kind by kind, the ones not said as before)
       s[[k]] <- if (identical(k, "review") && is.list(ai[[k]])) utils::modifyList(s[[k]], ai[[k]]) else ai[[k]]
@@ -58,6 +59,17 @@
   s$requests_per_chat <- .ai_requests_per_chat(s$requests_per_chat)
   s$footnotes_at <- match.arg(as.character(s$footnotes_at)[1L], c("footer", "table"))
   s
+}
+
+# `ai: ask_when` was removed (#606; `run` replaces it) and is ignored: say so,
+# once a session for each file, as the settings are read many times
+.ai_said <- new.env(parent = emptyenv())
+.ai_say_ask_when <- function(ai, file) {
+  key <- normalizePath(file, winslash = "/", mustWork = FALSE)
+  if (!"ask_when" %in% names(ai) || isTRUE(.ai_said[[key]])) return(invisible())
+  .ai_said[[key]] <- TRUE
+  message(basename(file), " ai: ask_when is ignored; `ai: run` (one or batch) replaces it.")
+  invisible()
 }
 
 # study.yml ai: run, checked: "one" or "batch"
@@ -94,10 +106,33 @@
                             collapse = "\n")
     runs <- list(one = rd("AGENTS-run-one.md"), batch = rd("AGENTS-run-batch.md"))
   }
+  # what depends on the agent building and checking itself (review not none
+  # everywhere): the texts of the two ways of running
+  build <- any(!is.na(s$review))
   n <- s$requests_per_chat
   .ai_fill(text, list(
     run_one = runs$one,
     run_batch = runs$batch,
+    run_except = if (build) ", except to run `../run.R` as *Build and check* says" else "",
+    one_build = if (build) paste0(", then build\n   and check them at the study's review depth ",
+                                  "(*Build and check*)") else "",
+    batch_build = if (build) ", then build and check them (*Build and check*)" else "",
+    batch_done = if (build) "built and checked" else "drafted",
+    batch_defaults = if (build) paste0(
+      "then **the defaults you chose yourself**, from the first section of\n",
+      "  `ai/defaults.md`, *For the person: the defaults the agent chose* (the\n",
+      "  defaults whose source is no document -- your conventions -- merged by\n",
+      "  topic across the reports): its groups 1 and 2 in full (*Changes the\n",
+      "  numbers*, *Changes the rows or statistics*), then the count of the rest\n",
+      "  (group 3 and the defaults a document gave), with \"see ai/defaults.md\".\n",
+      "  `run.R` writes that file from the drafts' assumptions, the most important\n",
+      "  first; read it before you post, and say in a line that **the defaults can\n",
+      "  differ from run to run, so the person should read them too**") else paste0(
+      "no list of the defaults you chose yourself: `ai/defaults.md` is written by\n",
+      "  `run.R`, which you do not run, so do not read it or cite it; each default you\n",
+      "  took is in its entry above"),
+    rework_build = if (build) "Build and check only the reworked requests (*Build and check*)." else
+      "Do not build or check them: the person runs the check.",
     per_chat = if (isTRUE(n > 0L)) sprintf(paste0(
       "\n- After %d requests in this chat, finish the current one, update ",
       "`ai/progress.md` and stop with \"Open a new chat and give it ai/agent_prompt.md; ",
@@ -307,9 +342,11 @@ tfl_ai_decisions_write <- function(study_dir, x) {
   if (!length(ns)) return("")
   n <- ns[1L]
   ln <- trimws(txt[n])
-  # a `"` after the text's opening one, not escaped, and followed by more text
+  # the first `"` opens a value (after `: `, `[`, `, ` or `- `), and a `"` after
+  # it, not escaped, is followed by more text
+  ln_ <- gsub("\\\\\"", "", ln)
   quoted <- grepl("did not find expected|mapping values are not allowed", msg) &&
-    grepl("\"[^\"]*\"([[:alnum:]_(]|\")", gsub("\\\\\"", "", ln))
+    grepl("^[^\"]*(: |\\[ ?|, |(^|[[:space:]])- )\"[^\"]*\"([[:alnum:]_(]|\")", ln_)
   show <- if (nchar(ln) > 120L) paste0(substr(ln, 1L, 117L), "...") else ln
   .ai_one_line(paste0(
     "Line ", n, " reads: ", show,

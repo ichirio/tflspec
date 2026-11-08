@@ -24,8 +24,16 @@
                       paste(.ai_review_kinds, collapse = ", "), paste(bad, collapse = ", ")))
   }
   vapply(.ai_review_kinds, function(k) {
-    v <- unlist(if (is.null(x[[k]])) d[[k]] else x[[k]])[1L]
-    # (YAML reads `no` as FALSE)
+    vs <- unlist(if (is.null(x[[k]])) d[[k]] else x[[k]])
+    if (length(vs) > 1L) {
+      .ard_stop(sprintf("study.yml ai: review: %s is one value, 0 to 3 or none; not a list (%s).",
+                        k, paste(format(vs), collapse = ", ")))
+    }
+    v <- vs[1L]
+    # (YAML reads `yes` as TRUE: no level, and `no` as FALSE: none)
+    if (isTRUE(v)) {
+      .ard_stop(sprintf("study.yml ai: review: %s is 0 to 3, or none; not yes / true.", k))
+    }
     if (isFALSE(v) || (is.character(v) && tolower(v) %in% c("none", "off", "no"))) return(NA_integer_)
     n <- suppressWarnings(as.integer(v))
     if (is.na(n) || !n %in% 0:3) {
