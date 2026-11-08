@@ -66,12 +66,20 @@
                 a$by, a$by, a$by),
         sprintf("fit <- stats::lm(%s ~ %s, data = data)", a$response,
                 paste(c(a$by, a$covariates), collapse = " + ")),
-        "# each other arm minus the reference arm, adjusted as `adjust` says (emmeans'",
-        "# own default for these differences is not \"none\", so it is always given)",
-        sprintf("diffs <- emmeans::emmeans(fit, specs = ~ %s, data = data) |>", a$by),
-        sprintf("  emmeans::contrast(method = \"trt.vs.ctrl\", ref = nlevels(data$%s), adjust = \"%s\") |>",
-                a$by, a$adjust),
-        "  summary(infer = TRUE, level = 0.95)",
+        if (identical(a$adjust, "tukey")) c(
+          "# each other arm minus the reference arm, Tukey-adjusted.  emmeans changes \"tukey\"",
+          "# to \"sidak\" for the contrast against one arm; the pairwise contrast keeps the",
+          "# Tukey family of all pairs, of which the rows against the reference arm are kept",
+          sprintf("diffs <- emmeans::emmeans(fit, specs = ~ %s, data = data) |>", a$by),
+          "  emmeans::contrast(method = \"pairwise\", adjust = \"tukey\") |>",
+          "  summary(infer = TRUE, level = 0.95)",
+          "diffs <- diffs[endsWith(as.character(diffs$contrast), paste(\" -\", ref)), ]") else c(
+          "# each other arm minus the reference arm, adjusted as `adjust` says (emmeans'",
+          "# own default for these differences is not \"none\", so it is always given)",
+          sprintf("diffs <- emmeans::emmeans(fit, specs = ~ %s, data = data) |>", a$by),
+          sprintf("  emmeans::contrast(method = \"trt.vs.ctrl\", ref = nlevels(data$%s), adjust = \"%s\") |>",
+                  a$by, a$adjust),
+          "  summary(infer = TRUE, level = 0.95)"),
         "# the rows of cardx::ard_emmeans_contrast(): a statistic's rows, one a difference",
         "stat <- list(estimate = diffs$estimate, std.error = diffs$SE, df = diffs$df,",
         "  conf.low = diffs$lower.CL, conf.high = diffs$upper.CL, p.value = diffs$p.value,",
@@ -142,8 +150,10 @@
 #' is Tukey); with two arms nothing was adjusted, and `"none"` gives the
 #' same table.  Pass `adjust` always, even `"none"`: emmeans' own default
 #' for these differences is `"dunnettx"`.  For differences against one
-#' reference arm, emmeans changes `"tukey"` (which is for all pairs) to
-#' `"sidak"` and says so in a message; it does not give the old table.
+#' reference arm, `"tukey"` is the Tukey adjustment over all pairs of arms
+#' (emmeans' pairwise contrast), of which the table shows the differences
+#' against the reference arm, and it gives the table as it was before this
+#' argument for three arms or more.
 #' `"mvt"` is a Monte Carlo method: its numbers change a little from run
 #' to run unless the seed is set.
 #'

@@ -46,8 +46,10 @@ more was Tukey-adjusted without saying so (cardx's
 is Tukey); with two arms nothing was adjusted, and \code{"none"} gives the
 same table.  Pass \code{adjust} always, even \code{"none"}: emmeans' own default
 for these differences is \code{"dunnettx"}.  For differences against one
-reference arm, emmeans changes \code{"tukey"} (which is for all pairs) to
-\code{"sidak"} and says so in a message; it does not give the old table.
+reference arm, \code{"tukey"} is the Tukey adjustment over all pairs of arms
+(emmeans' pairwise contrast), of which the table shows the differences
+against the reference arm, and it gives the table as it was before this
+argument for three arms or more.
 \code{"mvt"} is a Monte Carlo method: its numbers change a little from run
 to run unless the seed is set.
 }

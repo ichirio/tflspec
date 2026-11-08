@@ -183,12 +183,12 @@ test_that("adjust: the default is no adjustment, as lm and a t-test give it by h
   }
 })
 
-test_that("adjust = \"tukey\", \"dunnettx\" and the others: emmeans' own numbers", {
+test_that("adjust = \"dunnettx\" and the others: emmeans' own numbers", {
   an_skip()
   d <- an_data(three = TRUE)
   d$TRT01A <- factor(d$TRT01A, levels = c("Drug X", "Drug Y", "Control"))
   em <- emmeans::emmeans(stats::lm(CHG ~ TRT01A + BASE, data = d), ~ TRT01A)
-  for (adj in c("tukey", "dunnettx", "sidak", "bonferroni", "holm", "scheffe")) {
+  for (adj in c("dunnettx", "sidak", "bonferroni", "holm", "scheffe")) {
     ref <- as.data.frame(suppressMessages(summary(
       emmeans::contrast(em, "trt.vs.ctrl", ref = 3L, adjust = adj), infer = TRUE)))
     k <- an_diffs(adj)
@@ -202,6 +202,30 @@ test_that("adjust = \"tukey\", \"dunnettx\" and the others: emmeans' own numbers
   }
   # an adjusted p-value is never below the unadjusted one
   expect_true(all(an_diffs("dunnettx")$p.value >= an_diffs("none")$p.value))
+})
+
+test_that("adjust = \"tukey\": the all-pairs Tukey family, as cardx's pairwise contrast gave it", {
+  an_skip()
+  x <- tfl_template_expand("ancova", c(an_args, list(adjust = "tukey")))
+  code <- x$ard$analyses[[3L]]$code
+  expect_match(code, "method = \"pairwise\", adjust = \"tukey\"", fixed = TRUE)
+  expect_no_match(code, "trt.vs.ctrl", fixed = TRUE)
+  k <- an_diffs("tukey")
+  d <- an_data(three = TRUE)
+  old <- cardx::ard_emmeans_contrast(d, formula = CHG ~ TRT01A + BASE, method = "lm",
+                                     response_type = "continuous")
+  g <- function(s) unlist(old$stat[old$stat_name == s])
+  lab <- unlist(old$variable_level[old$stat_name == "estimate"])
+  keep <- endsWith(lab, " - Control")
+  expect_identical(sum(keep), 2L)
+  expect_identical(k$contrast, lab[keep])
+  expect_equal(k$estimate, g("estimate")[keep])
+  expect_equal(k$conf.low, g("conf.low")[keep])
+  expect_equal(k$conf.high, g("conf.high")[keep])
+  expect_equal(k$p.value, g("p.value")[keep])
+  # not the single-step trt.vs.ctrl family (emmeans changes tukey to sidak there)
+  s <- an_diffs("sidak")
+  expect_false(isTRUE(all.equal(k$p.value, s$p.value)))
 })
 
 test_that("adjust: every emmeans value runs; any other is refused with a message", {
