@@ -979,7 +979,8 @@ tfl_read_fig_design <- function(path) {
         lohi <- switch(iv,
           se = c("mean - se", "mean + se"),
           sd = c("mean - sd", "mean + sd"),
-          ci = c("mean - qt(0.975, n - 1) * se", "mean + qt(0.975, n - 1) * se"))
+          ci = c("ifelse(n > 1, mean - qt(0.975, pmax(n - 1, 1)) * se, NA_real_)",
+                 "ifelse(n > 1, mean + qt(0.975, pmax(n - 1, 1)) * se, NA_real_)"))
         out <- c(out, paste0(v("name"), " <- ", src, " |>\n",
           sprintf("  filter(!is.na(%s)) |>\n", val),
           sprintf("  group_by(%s) |>\n", paste(by, collapse = ", ")),
@@ -993,7 +994,8 @@ tfl_read_fig_design <- function(path) {
         lohi <- switch(v("interval"),
           se = c("mean - se", "mean + se"),
           sd = c("mean - sd", "mean + sd"),
-          ci = c("mean - qt(0.975, n - 1) * se", "mean + qt(0.975, n - 1) * se"))
+          ci = c("ifelse(n > 1, mean - qt(0.975, pmax(n - 1, 1)) * se, NA_real_)",
+                 "ifelse(n > 1, mean + qt(0.975, pmax(n - 1, 1)) * se, NA_real_)"))
         out <- c(out, paste0(v("name"), " <- ", src, " |>\n",
           sprintf("  filter(!is.na(%s)) |>\n", val),
           sprintf("  group_by(%s) |>\n", paste(by, collapse = ", ")),
@@ -1296,7 +1298,9 @@ tfl_read_fig_design <- function(path) {
     x_breaks <- TRUE
   } else if (has_risk) {
     pre <- if (!is.null(x_by)) {
-      sprintf("x_breaks <- seq(%s, max(%s$time), by = %s)", x_min %||% 0, fit, x_by)
+      # (to the first break at or after the last time: the curves reach the axis' end)
+      sprintf("x_breaks <- seq(%s, %s + ceiling((max(%s$time) - %s) / %s - 1e-8) * %s, by = %s)",
+              x_min %||% 0, x_min %||% 0, fit, x_min %||% 0, x_by, x_by, x_by)
     } else sprintf("x_breaks <- pretty(c(%s, %s))", x_min %||% 0,
                    if (!is.null(x_max)) x_max else sprintf("max(%s$time)", fit))
     x_breaks <- TRUE
@@ -2842,8 +2846,21 @@ tfl_fig_forest_analyses <- function(data = "ADTTE", param = "OS", pop = "FASFL",
   model <- sprintf("survival::coxph(survival::Surv(%s, %s == 0) ~ %s, data = %%s)", time, censor, group)
   # all subjects: the model under a name, then its ARD; within a subgroup,
   # the same inside ard_strata()
-  all <- paste0("cox <- ", sprintf(model, "data"), "\n",
-                "cardx::ard_regression(cox, exponentiate = TRUE)")
+  # (the subjects the model leaves out without a word -- no arm, no time or
+  # censoring flag -- are said, with their count)
+  no_arm <- sprintf("(is.na(data$%s) | data$%s == \"\")", group, group)
+  said <- function(cond, id, text) paste0(
+    "n_", id, " <- sum(", cond, ")\n",
+    "if (n_", id, " > 0) {\n",
+    "  warning(\"forest_hr: \", n_", id, ", \" subjects with ", text,
+    " were left out of the Cox model\", call. = FALSE)\n",
+    "}\n")
+  all <- paste0(
+    said(no_arm, "no_arm", sprintf("an empty or missing %s", group)),
+    said(sprintf("!%s & (is.na(data$%s) | is.na(data$%s))", no_arm, time, censor),
+         "no_time", sprintf("a missing %s or %s", time, censor)),
+    "cox <- ", sprintf(model, "data"), "\n",
+    "cardx::ard_regression(cox, exponentiate = TRUE)")
   reg <- function(d, in_ = "") paste0(
     "cardx::ard_regression(\n", in_, "  ", sprintf(model, d), ",\n", in_,
     "  exponentiate = TRUE\n", in_, ")")

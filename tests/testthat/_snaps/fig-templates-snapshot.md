@@ -1569,7 +1569,7 @@
         filter(!is.na(AVAL)) |>
         group_by(TRT01A, AVISITN, AVISIT) |>
         summarise(n = n(), mean = mean(AVAL), sd = sd(AVAL), .groups = "drop") |>
-        mutate(se = sd / sqrt(n), lo = mean - qt(0.975, n - 1) * se, hi = mean + qt(0.975, n - 1) * se)
+        mutate(se = sd / sqrt(n), lo = ifelse(n > 1, mean - qt(0.975, pmax(n - 1, 1)) * se, NA_real_), hi = ifelse(n > 1, mean + qt(0.975, pmax(n - 1, 1)) * se, NA_real_))
       
       # ---- plot ------------------------------------------------------------------
       # the treatment palette, a colour for each TRT01A

@@ -12,10 +12,14 @@ test_that("tfl_fig_forest_analyses() gives the rows of the figure's own ARD defi
   expect_identical(an$analyses$analysis_id, c("HR", "HR_SEX", "HR_AGEGR1"))
   expect_true(all(an$analyses$method == "custom"))
   # the model under a name, the event written as the KM figures write it
-  expect_identical(an$analyses$code[1], paste0(
+  # (the subjects the model leaves out are counted in a warning first)
+  expect_match(an$analyses$code[1], "n_no_arm <- sum((is.na(data$TRT01P) | data$TRT01P == \"\"))",
+               fixed = TRUE)
+  expect_match(an$analyses$code[1], "n_no_time <- ", fixed = TRUE)
+  expect_true(endsWith(an$analyses$code[1], paste0(
     "cox <- survival::coxph(survival::Surv(AVAL, CNSR == 0) ~ TRT01P, data = data)
 ",
-    "cardx::ard_regression(cox, exponentiate = TRUE)"))
+    "cardx::ard_regression(cox, exponentiate = TRUE)")))
   # (a blank or missing subgroup value is no subgroup)
   expect_match(an$analyses$code[2], "  dplyr::filter(data, !is.na(SEX), SEX != \"\"),
   .strata = SEX,
