@@ -233,6 +233,65 @@ test_that("mean_ci: a group with one record at a visit has no bar and no warning
   expect_match(code, "ifelse(n > 1, mean - qt(0.975, pmax(n - 1, 1)) * se, NA_real_)", fixed = TRUE)
 })
 
+test_that("mean_se / mean_ci: a record with no value is left out, with a warning and its count", {
+  skip_if_not_installed("dplyr")
+  df <- e2e_mean_df()
+  expect_false(anyNA(df$AVAL))
+  df$TRT01A <- as.character(df$TRT01A)
+  df$AVAL[c(2L, 3L)] <- NA
+  # (a blank group and no value at once: counted once, as the group's)
+  df$TRT01A[4L] <- ""
+  df$AVAL[4L] <- NA
+  for (nm in c("mean_se", "mean_ci")) {
+    f <- get(paste0("tpl_", nm))
+    w <- character()
+    p <- withCallingHandlers(f(e2e_visits(df), group = TRT01A, param = "SYSBP"),
+                             warning = function(x) {
+                               w <<- c(w, conditionMessage(x))
+                               invokeRestart("muffleWarning")
+                             })
+    expect_identical(w, c(sprintf("%s: 1 records with an empty TRT01A or AVISIT were left out", nm),
+                          sprintf("%s: 2 records with a missing AVAL were left out", nm)), info = nm)
+    # the means of the records that are left
+    clean <- f(e2e_visits(df[-(2:4), ]), group = TRT01A, param = "SYSBP")
+    expect_identical(ggplot2::layer_data(p, 2L), ggplot2::layer_data(clean, 2L), info = nm)
+    expect_no_warning(f(e2e_visits(df[-(2:4), ]), group = TRT01A, param = "SYSBP"))
+  }
+  # the variable averaged is the one named
+  chg <- e2e_mean_df()
+  chg$CHG[5L] <- NA
+  expect_warning(tpl_mean_se(e2e_visits(chg), group = TRT01A, value = CHG, param = "SYSBP"),
+                 sprintf("mean_se: %d records with a missing CHG were left out", sum(is.na(chg$CHG))),
+                 fixed = TRUE)
+})
+
+test_that("mean_se in a study: records with no value reach the summary, which says them", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  vs <- tflspec::advs
+  k <- which(vs$PARAMCD == "SYSBP")[c(3L, 9L, 20L)]
+  vs$AVAL[k] <- NA
+  d <- tempfile()
+  on.exit(unlink(d, recursive = TRUE))
+  e2e_study(d, list(adsl = tflspec::adsl, advs = vs), "F-1", "mean_se",
+            list(param = "SYSBP", population = "SAF", data = "ADVS", group = "TRT01A"))
+  # the data step no longer drops them unseen
+  x <- tfl_template_expand("mean_se", list(param = "SYSBP", data = "ADVS"))
+  exprs <- unlist(lapply(x$data$steps, function(s) if (identical(s$step, "filter")) s$expr))
+  expect_true("!is.na(AVISITN)" %in% exprs)
+  expect_false(any(grepl("!is.na(AVAL) & !is.na(AVISITN)", exprs, fixed = TRUE)))
+  w <- character()
+  withCallingHandlers(suppressMessages(tfl_run_output("F-1", dir = d)),
+                      warning = function(x) {
+                        w <<- c(w, conditionMessage(x))
+                        invokeRestart("muffleWarning")
+                      })
+  saf <- tflspec::adsl$USUBJID[tflspec::adsl$SAFFL == "Y"]
+  n <- sum(is.na(vs$AVAL[k]) & vs$USUBJID[k] %in% saf)
+  expect_gt(n, 0L)
+  expect_true(any(grepl(sprintf("mean_se: %d records with a missing AVAL were left out", n), w, fixed = TRUE)))
+})
+
 test_that("waterfall: one bar a subject by default, each subject's smallest value, said", {
   skip_if_not_installed("dplyr")
   d <- data.frame(USUBJID = c("A", "A", "B", "B", "B", "C"),
@@ -315,4 +374,81 @@ test_that("waterfall: a bar beyond the axis is cut off with a warning and its co
   expect_no_warning(tpl_waterfall(df))
   df$PCHG[1:2] <- c(140, 250)
   expect_warning(tpl_waterfall(df), "waterfall: 2 bars beyond the axis (-100 to 100) are cut off", fixed = TRUE)
+})
+
+test_that("forest_hr: subjects with no arm, no time or no censoring flag are said, with their count", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("survival")
+  skip_if_not_installed("dplyr")
+  adtte <- e2e_pfs()
+  ids <- tflspec::adsl$USUBJID[tflspec::adsl$SAFFL == "Y"]
+  adtte <- adtte[adtte$USUBJID %in% ids, ]
+  run <- function(tte) {
+    d <- tempfile()
+    on.exit(unlink(d, recursive = TRUE))
+    e2e_study(d, list(adsl = tflspec::adsl, adtte = tte), "F-1", "forest_hr",
+              list(param = "PFS", population = "SAF", group = "TRT01A", subgroups = c("SEX", "AGEGR1")))
+    w <- character()
+    withCallingHandlers(suppressMessages(tfl_run_output("F-1", dir = d)),
+                        warning = function(x) {
+                          w <<- c(w, conditionMessage(x))
+                          invokeRestart("muffleWarning")
+                        })
+    w[grepl("^forest_hr", w)]
+  }
+  # clean: no word
+  expect_identical(run(adtte), character())
+  # a blank arm, a missing arm; a missing time, a missing flag, both
+  bad <- adtte
+  bad$TRT01A <- as.character(bad$TRT01A)
+  bad$TRT01A[1L] <- ""
+  bad$TRT01A[2L] <- NA
+  bad$AVAL[3L] <- NA
+  bad$CNSR[4L] <- NA
+  bad$AVAL[5L] <- NA
+  bad$CNSR[5L] <- NA
+  # (a subject with no arm and no time: the arm's)
+  bad$AVAL[1L] <- NA
+  expect_identical(run(bad), c(
+    "forest_hr: 2 subjects with an empty or missing TRT01A were left out of the Cox model",
+    "forest_hr: 3 subjects with a missing AVAL or CNSR were left out of the Cox model"))
+  # the code: the model is as it was, the words before it
+  an <- tfl_fig_forest_analyses("ADTTE", "PFS", "SAFFL", "TRT01A", c("SEX", "AGEGR1"), time = "TIME", censor = "FLAG")$analyses
+  expect_match(an$code[1L], "is.na(data$TIME) | is.na(data$FLAG)", fixed = TRUE)
+  expect_match(an$code[1L], "cox <- survival::coxph(survival::Surv(TIME, FLAG == 0) ~ TRT01A, data = data)", fixed = TRUE)
+  expect_no_match(an$code[2L], "warning(", fixed = TRUE)
+})
+
+test_that("forest_hr: a blank text arm is left out of every model, as the warning says", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("survival")
+  skip_if_not_installed("dplyr")
+  adtte <- e2e_pfs()
+  ids <- tflspec::adsl$USUBJID[tflspec::adsl$SAFFL == "Y"]
+  adtte <- adtte[adtte$USUBJID %in% ids, ]
+  adtte$TRT01A <- as.character(adtte$TRT01A)
+  adtte$TRT01A[c(1L, 2L)] <- ""
+  d <- tempfile()
+  on.exit(unlink(d, recursive = TRUE))
+  e2e_study(d, list(adsl = tflspec::adsl, adtte = adtte), "F-1", "forest_hr",
+            list(param = "PFS", population = "SAF", group = "TRT01A", subgroups = c("SEX", "AGEGR1")))
+  st <- tfl_read_study_spec(d)
+  w <- character()
+  ard <- withCallingHandlers(suppressMessages(tfl_build_ard(st, d, output_id = "F-1", save = FALSE)),
+                             warning = function(x) {
+                               w <<- c(w, conditionMessage(x))
+                               invokeRestart("muffleWarning")
+                             })
+  expect_true("forest_hr: 2 subjects with an empty or missing TRT01A were left out of the Cox model" %in% w)
+  lv <- unlist(ard$variable_level[ard$variable == "TRT01A"])
+  expect_false("" %in% lv)
+  # the overall model and each subgroup's: the subjects with an arm
+  n <- function(id) sum(unlist(ard$stat[ard$analysis_id == id & ard$stat_name == "n_obs"]))
+  expect_equal(n("HR"), nrow(adtte) - 2L)
+  expect_lte(n("HR_AGEGR1"), nrow(adtte) - 2L)
+  expect_gte(n("HR_AGEGR1"), nrow(adtte) - 2L - sum(is.na(adtte$AGEGR1)))
 })

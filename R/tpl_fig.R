@@ -79,6 +79,15 @@
                             visit = visit_order, visit_label = visit_var, join_adsl = FALSE), "summary")
   # (no parameter named: the y axis' title says the statistic alone)
   if (is.null(param)) f$plot$y_label <- sub(" ALT$", "", f$plot$y_label)
+  # the data step keeps the records with a visit; the ones with no value are
+  # the summary's, which says them (a step that dropped them here would not)
+  f$steps <- lapply(f$steps, function(s) {
+    if (identical(s$step, "filter") &&
+          identical(s$expr, sprintf("!is.na(%s) & !is.na(%s)", value, visit_order))) {
+      s$expr <- sprintf("!is.na(%s)", visit_order)
+    }
+    s
+  })
   # a blank ("") group or visit is a missing one, as a table counts it: the
   # records are left out, and said (else a line or a visit of their own, the
   # colours shifted, the value off its real visit)
@@ -88,6 +97,13 @@
                     group, visit_var),
     warn = sprintf("mean_%s: {n} records with an empty %s or %s were left out", interval, group, visit_var))),
     f$stats)
+  # a record with no value is no point in a mean: the summary leaves it out,
+  # without a word -- said, with the count (after the empty group or visit,
+  # whose records are counted there)
+  f$stats <- append(f$stats, list(list(step = "filter",
+    expr = sprintf("!is.na(%s)", value),
+    label = sprintf("the records with a missing %s have no place in a mean: left out, with a warning", value),
+    warn = sprintf("mean_%s: {n} records with a missing %s were left out", interval, value))), 1L)
   f
 }
 
@@ -121,8 +137,8 @@
 #' call draws the mean of each group at each visit, a line and points,
 #' with bars of +/- one standard error (`mean_se`) or the 95% confidence
 #' interval (`mean_ci`).  The means are made here, from the records.  A
-#' record with an empty or missing group or visit is left out, and a warning
-#' says how many; a mean of one record has no bar.  A
+#' record with an empty or missing group, visit or value is left out, and a
+#' warning says how many; a mean of one record has no bar.  A
 #' report's own layers and settings go after the call with `+`.
 #'
 #' @param data The records: one a subject and visit, the parameter's.
@@ -401,9 +417,15 @@ tpl_waterfall <- function(data, value = "PCHG", by_response = FALSE, plot = NULL
       where = tfl_r(.tpl_and(sprintf("PARAMCD == %s", q(a$param)), a$where)),
       # (the arm compared last: the Cox model's reference is another arm,
       # whatever the arms' order -- a study whose treatment arm comes first)
-      derive = if (length(a$comparison)) tfl_r(sprintf(
-        "%s = factor(%s, levels = c(setdiff(levels(factor(%s)), %s), %s))",
-        a$group, a$group, a$group, q(a$comparison[1L]), q(a$comparison[1L]))),
+      # (a blank arm is a missing one first: coxph keeps "" as an arm of its
+      # own, and the model and the subgroups' models read this data)
+      derive = tfl_r(paste(c(
+        sprintf("%s = replace(%s, !is.na(%s) & as.character(%s) == \"\", NA)",
+                a$group, a$group, a$group, a$group),
+        if (length(a$comparison)) sprintf(
+          "%s = factor(%s, levels = c(setdiff(levels(factor(%s)), %s), %s))",
+          a$group, a$group, a$group, q(a$comparison[1L]), q(a$comparison[1L]))),
+        collapse = " | ")),
       add = if (length(a$subgroups)) as.list(a$subgroups)))),
     analyses = lapply(seq_len(nrow(an)), function(i) list(
       id = an$analysis_id[i], label = an$label[i], method = "custom", data = set,

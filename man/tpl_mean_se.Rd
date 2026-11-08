@@ -51,8 +51,8 @@ records with a value and a visit, the visits in their order), then one
 call draws the mean of each group at each visit, a line and points,
 with bars of +/- one standard error (\code{mean_se}) or the 95\% confidence
 interval (\code{mean_ci}).  The means are made here, from the records.  A
-record with an empty or missing group or visit is left out, and a warning
-says how many; a mean of one record has no bar.  A
+record with an empty or missing group, visit or value is left out, and a
+warning says how many; a mean of one record has no bar.  A
 report's own layers and settings go after the call with \code{+}.
 }
 \examples{

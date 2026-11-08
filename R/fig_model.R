@@ -2830,8 +2830,21 @@ tfl_fig_forest_analyses <- function(data = "ADTTE", param = "OS", pop = "FASFL",
   model <- sprintf("survival::coxph(survival::Surv(%s, %s == 0) ~ %s, data = %%s)", time, censor, group)
   # all subjects: the model under a name, then its ARD; within a subgroup,
   # the same inside ard_strata()
-  all <- paste0("cox <- ", sprintf(model, "data"), "\n",
-                "cardx::ard_regression(cox, exponentiate = TRUE)")
+  # (the subjects the model leaves out without a word -- no arm, no time or
+  # censoring flag -- are said, with their count)
+  no_arm <- sprintf("(is.na(data$%s) | data$%s == \"\")", group, group)
+  said <- function(cond, id, text) paste0(
+    "n_", id, " <- sum(", cond, ")\n",
+    "if (n_", id, " > 0) {\n",
+    "  warning(\"forest_hr: \", n_", id, ", \" subjects with ", text,
+    " were left out of the Cox model\", call. = FALSE)\n",
+    "}\n")
+  all <- paste0(
+    said(no_arm, "no_arm", sprintf("an empty or missing %s", group)),
+    said(sprintf("!%s & (is.na(data$%s) | is.na(data$%s))", no_arm, time, censor),
+         "no_time", sprintf("a missing %s or %s", time, censor)),
+    "cox <- ", sprintf(model, "data"), "\n",
+    "cardx::ard_regression(cox, exponentiate = TRUE)")
   reg <- function(d, in_ = "") paste0(
     "cardx::ard_regression(\n", in_, "  ", sprintf(model, d), ",\n", in_,
     "  exponentiate = TRUE\n", in_, ")")
