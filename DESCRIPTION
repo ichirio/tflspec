@@ -71,6 +71,6 @@ Suggests:
     writexl,
     xml2
 Remotes:
-    ichirio/rtfreporter@next
+    ichirio/rtfreporter
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.1.1
