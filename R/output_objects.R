@@ -219,14 +219,18 @@ tfl_output_contents <- function(output, study, dir = ".") {
   old <- options(tflspec.plain_ns = TRUE)
   on.exit(options(old), add = TRUE)
   ard <- .ard_spec_of_study(study, output_id = o$id)$spec
-  code <- tfl_listing_code(sp, o$id, ard = ard, part = "data")
+  rw <- .records_rework(d)
+  code <- tfl_listing_code(sp, o$id, ard = ard, part = "data", rework = rw)
   if (is.null(code)) .ard_stop(sprintf("%s: the listing names no dataset.", o$id))
   env <- new.env(parent = globalenv())
   eval(parse(text = tfl_helpers_code()), env)
   wd <- setwd(dir)
   on.exit(setwd(wd), add = TRUE)
   .eval_study_code(code, env, study, ".", output_id = o$id)
-  get("data", envir = env, inherits = FALSE)
+  recs <- get("data", envir = env, inherits = FALSE)
+  # (the data's steps are done in it: the content run does not run them again)
+  if (!is.null(rw) && is.data.frame(recs)) attr(recs, "tfl_steps_done") <- TRUE
+  recs
 }
 
 # The error of reading a listing's records when it is a template's `by` that

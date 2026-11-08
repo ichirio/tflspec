@@ -1425,6 +1425,8 @@ tfl_content_run <- function(output, data) {
   # its parts) has no ARD to normalize
   if (identical(output$data$source, "dataset")) output$content <- .content_drop_data_steps(output$content)
   steps <- .content_r_steps(output)
+  # (records made by .listing_data_of() have the steps done)
+  if (isTRUE(attr(data, "tfl_steps_done"))) steps <- character()
   if (.content_rework(output)) {
     # a Rework runs as the program runs it: `data` is the output's object
     # normalized (the content's normalize_ard(), else as it is), the steps
@@ -1645,6 +1647,16 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
                                  plan = plan, pipe = pipe, kind = output$kind)))
   }
   if (length(steps)) {
+    # a listing of a study's records: its data part makes them, the steps
+    # in it (the rework: .records_rework()), where the steps stand alone
+    # for a program that has made `data`
+    if (!is.null(study) && identical(output$kind, "listing") &&
+        identical(output$data$source, "dataset")) {
+      return(c(.content_listing_data(output, study), "",
+               .content_table_code(.content_drop_data_steps(output$content),
+                                   data = data %||% "data", plan = plan, pipe = pipe,
+                                   kind = output$kind)))
+    }
     # the steps make the data: no normalize_ard() of the defaults after them
     return(c(steps, "", .content_table_code(.content_drop_data_steps(output$content),
                                             data = data %||% "data",

@@ -432,7 +432,9 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
   }
   # a listing has no analysis set: the records of ADSL's subjects the
   # subset keeps, a semi join after its own condition (its data's rework)
-  if (identical(out$data$source, "dataset")) {
+  # (not a table of records that reads an analysis data of the ARD: its
+  # subjects are narrowed above)
+  if (identical(out$data$source, "dataset") && is.null(out$data[["data"]])) {
     e <- tryCatch(str2lang(s), error = function(err) NULL)
     w <- if (!is.null(e)) paste(vapply(.and_parts(e), .expr_text, ""), collapse = ", ") else s
     out$data$steps <- c(out$data$steps, list(tfl_r(paste0(
@@ -899,16 +901,24 @@ names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
   d <- list(id = set, label = a[["data_label"]], from = a[["data"]], subjects = subj,
             where = if (!is.null(a$where)) tfl_r(a$where))
   nn <- function(x) Filter(Negate(is.null), x)
+  # "data": the percentages' denominator is the records' subjects -- the
+  # set's subjects with a record kept, one row each (so within the subset)
+  rec_den <- identical(a$denominator, "data")
+  den_id <- paste0(set, "_den")
   ard <- list(
-    analysis_data = list(
+    analysis_data = c(list(
       list(id = subj, label = .tpl_set_label(pop, ctx$population), from = "ADSL",
            population = pop),
       nn(d)),
+      if (rec_den) list(list(
+        id = den_id, label = "the subjects with a record kept", from = set,
+        code = tfl_r(sprintf("dplyr::distinct(%s, %s)", set,
+                             paste(c("USUBJID", a$by), collapse = ", ")))))),
     analyses = list(nn(list(
       id = a[["analysis_id"]] %||% "AE", label = a[["analysis_label"]] %||% ctx$template$label,
       method = "hierarchical", data = set,
       by = a$by, overall = if (isTRUE(a[["total"]])) TRUE, variables = a$hierarchy,
-      denominator = if (identical(a$denominator, "data")) NULL else a$denominator %||% subj,
+      denominator = if (rec_den) den_id else a$denominator %||% subj,
       args = if (!is.null(overall)) tfl_r("over_variables = TRUE"),
       purpose = "PRIMARY OUTCOME MEASURE"))))
   n <- length(a$hierarchy)
