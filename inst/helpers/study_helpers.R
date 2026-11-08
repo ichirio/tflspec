@@ -183,7 +183,27 @@ relevel_ard <- function(ard, ...) {
 # with each group's N, and the by variable's counts (a header's N) -- no
 # SOC / PT rows.  The same arguments as cards::ard_stack_hierarchical().
 ard_hierarchical_or_none <- function(data, ...) {
-  if (nrow(data)) return(cards::ard_stack_hierarchical(data, ...))
+  if (nrow(data)) {
+    # a group (an arm) the records have none of: cards counts the groups of
+    # the data, so the arm would have no column.  The denominator's groups
+    # are added to the data's as levels no record has: the group's N, and
+    # 0 events.
+    cl <- match.call()
+    den <- tryCatch(eval(cl$denominator, parent.frame()), error = function(e) NULL)
+    if (is.data.frame(den)) {
+      for (v in intersect(all.vars(cl$by), intersect(names(data), names(den)))) {
+        lack <- setdiff(as.character(unique(den[[v]][!is.na(den[[v]])])),
+                        c(as.character(data[[v]]), if (is.factor(data[[v]])) levels(data[[v]])))
+        if (length(lack)) {
+          lv <- if (is.factor(data[[v]])) levels(data[[v]]) else sort(unique(data[[v]]))
+          # (in the denominator's order: the groups' order)
+          all <- if (is.factor(den[[v]])) levels(den[[v]]) else sort(unique(den[[v]]))
+          data[[v]] <- factor(data[[v]], levels = c(all[all %in% c(lv, lack)], setdiff(lv, all)))
+        }
+      }
+    }
+    return(cards::ard_stack_hierarchical(data, ...))
+  }
   cl <- match.call()
   env <- parent.frame()
   den <- eval(cl$denominator, env)

@@ -1358,7 +1358,10 @@
     # a subject-level flag: has the subject any record of the data?
     flag <- if (length(.split_bar(r$variables))) .split_bar(r$variables)[1L] else
       make.names(r$analysis_id)
-    return(c(comment, .pipe_code(name, pop_name, c(
+    # (the subjects of the analysis set as the report's data keeps them --
+    # its subset applied --, not the whole set)
+    base <- .adata_subjects_of(x$analysis_data, .data_col(r)) %||% pop_name
+    return(c(comment, .pipe_code(name, base, c(
       list(sprintf("dplyr::mutate(%s = %s %%in%% %s$%s)", flag, subj, data, subj)),
       list(node), steps))))
   }
