@@ -1,8 +1,8 @@
-# The lists a template used to say with plan_levels() are the data step's
-# now: shift's `levels` of the post-baseline category and orr's `by_levels`
-# are code lists of the template, which the report's own list for the same
-# variable wins over.  ae_max_grade's `grade_levels` order the grades on the
-# table through the plan (cards' hierarchical ARD sorts them alphabetically).
+# orr's `by_levels` are the arms' code list of the template (the data step
+# puts the arms in that order), which the report's own list for the column
+# wins over.  ae_max_grade orders its grades on the table through the plan
+# (cards' hierarchical ARD sorts them alphabetically).  shift's `levels` stay
+# a plan_levels(): a code list would stop the program on a value it lacks.
 
 lvs_study <- function(root, data = c("adsl", "adlb")) {
   d <- file.path(root, "study")
@@ -49,60 +49,12 @@ lvs_skip <- function() {
   skip_if_not_installed("rtfreporter")
 }
 
-test_that("shift: the post-baseline categories are a code list of the template, not a plan_levels()", {
+test_that("shift: the template gives the post-baseline categories as .label in plan_levels, no code list", {
   x <- tfl_template_expand("shift", list(population = "SAF", missing_label = "Missing"))
-  expect_identical(vapply(x$codelists$ANRIND, `[[`, "", "value"), c("LOW", "NORMAL", "HIGH"))
-  # (the baseline's Missing and Total rows are made by the analysis data's
-  # code, so its order stays a plan_levels())
-  expect_null(x$codelists$BNRIND)
+  expect_null(x$codelists$ANRIND)
   a <- Filter(function(it) it$fn == "plan_levels", x$content)[[1L]]$args
-  expect_identical(names(a), c("BNRIND", ".drop_empty"))
-  expect_identical(a$BNRIND, c("LOW", "NORMAL", "HIGH", "Missing", "Total"))
-  expect_identical(a$.drop_empty, "ANRIND")
-  # a report's list for the column: the template adds nothing, and does not
-  # hide the list's empty levels
-  cl <- list(list(value = "HIGH", label = "High"), list(value = "NORMAL", label = "Normal"),
-             list(value = "LOW", label = "Low"))
-  y <- tfl_template_expand("shift", list(population = "SAF"), codelists = list(ANRIND = cl))
-  expect_null(y$codelists$ANRIND)
-  expect_identical(names(Filter(function(it) it$fn == "plan_levels", y$content)[[1L]]$args),
-                   "BNRIND")
-  # lab_shift is the same
-  z <- tfl_template_expand("lab_shift", list(population = "SAF", visit = "WEEK 8", params = "ALT"))
-  expect_identical(vapply(z$codelists$ANRIND, `[[`, "", "value"), c("LOW", "NORMAL", "HIGH"))
-})
-
-test_that("shift: the program puts the categories in the data step; the report's list wins", {
-  lvs_skip()
-  args <- list(population = "SAF", where = 'PARAMCD %in% c("ALT", "HGB")', param_page = FALSE)
-  r <- lvs_report(lvs_study(withr::local_tempdir()), "shift", args)
-  expect_true(any(grepl("cl_anrind <- c(LOW = \"LOW\", NORMAL = \"NORMAL\", HIGH = \"HIGH\")",
-                        r$code, fixed = TRUE)))
-  expect_true(any(grepl("ANRIND = cl_anrind", r$code, fixed = TRUE)))
-  # the plan says no order of the post-baseline categories
-  plan_code <- paste(tfl_content_code(r$ro, pipe = "|>"), collapse = "\n")
-  expect_false(grepl(".label = ", plan_code, fixed = TRUE))
-  expect_identical(lvs_seen(r$ard, "ANRIND"), c("LOW", "NORMAL", "HIGH"))
-  # the report's own list wins, labels and all
-  cl <- list(list(value = "HIGH", label = "High"), list(value = "NORMAL", label = "Normal"),
-             list(value = "LOW", label = "Low"))
-  r2 <- lvs_report(lvs_study(withr::local_tempdir()), "shift", args, codelists = list(ANRIND = cl))
-  expect_identical(vapply(r2$ro$codelists$ANRIND, `[[`, "", "value"), c("HIGH", "NORMAL", "LOW"))
-  expect_false(any(grepl("cl_anrind <- c(LOW", r2$code, fixed = TRUE)))
-  expect_identical(lvs_seen(r2$ard, "ANRIND"), c("High", "Normal", "Low"))
-  cols <- grep("____", names(lvs_table(r2)), value = TRUE)
-  expect_identical(unique(sub("^.*____", "", cols)), c("High", "Normal", "Low"))
-})
-
-test_that("shift: a category the data has no record of is not a column (the order never added one)", {
-  lvs_skip()
-  args <- list(population = "SAF", where = 'PARAMCD %in% c("ALT", "HGB")', param_page = FALSE,
-               levels = c("LOW", "NORMAL", "HIGH", "CRITICAL"))
-  r <- lvs_report(lvs_study(withr::local_tempdir()), "shift", args)
-  expect_true("CRITICAL" %in% lvs_seen(r$ard, "ANRIND"))
-  nm <- names(lvs_table(r))
-  expect_false(any(grepl("CRITICAL", nm, fixed = TRUE)))
-  expect_true(any(grepl("____HIGH$", nm)))
+  expect_identical(a$.label, c("LOW", "NORMAL", "HIGH"))
+  expect_false(".drop_empty" %in% names(a))
 })
 
 test_that("orr: by_levels are the arms' code list of the template; the report's list wins", {

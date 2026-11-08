@@ -113,8 +113,7 @@ test_that("shift: the rows are in the code list's labels, Missing and Total last
   expect_identical(a0$BNRIND, c("Low", "Normal", "High", "Total"))
   a <- lv(list(BNRIND = cl, ANRIND = cl), missing_label = "Missing")
   expect_identical(a$BNRIND, c("Low", "Normal", "High", "Missing", "Total"))
-  # (the post-baseline categories' order is the data step's: no .label)
-  expect_null(a$.label)
+  expect_identical(a$.label, c("Low", "Normal", "High"))
   # named codes (a program's `c(LOW = "Low")`) the same
   nm <- c(LOW = "Low", NORMAL = "Normal", HIGH = "High")
   expect_identical(lv(list(BNRIND = nm, ANRIND = nm), missing_label = "Missing")$BNRIND, a$BNRIND)
@@ -644,10 +643,8 @@ sd_report <- function(d, args) {
 # a count n, N or p of the shift analysis from the ARD: the baseline category
 # `b` (a row), the category after it `a` (a column; NULL: the N of the row)
 sd_stat <- function(ard, b, a, stat) {
-  # (the post-baseline category is a factor in the ARD: its text)
-  lev <- vapply(ard$variable_level, function(z) as.character(unlist(z))[1L], "")
   r <- ard[ard$analysis_id == "SHIFT" & ard$group3_level == b &
-             (is.null(a) | lev == a) & ard$stat_name == stat, ]
+             (is.null(a) | ard$variable_level == a) & ard$stat_name == stat, ]
   stopifnot(nrow(r) >= 1L)
   unique(as.numeric(unlist(r$stat)))
 }

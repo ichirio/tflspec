@@ -1351,27 +1351,16 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
   ifelse(is.na(i), lv, lab[i])
 }
 
-# The template's code lists, or NULL: the template's `codelists`, which the
-# report's own lists take the values they lack from.
-# - the post-baseline column's `levels` when the report has no list for it:
-#   its categories in their order, put on the data as set_levels() (a
-#   report's own list wins);
-# - the baseline column's list of the report with the Missing and Total rows
-#   the analysis data's code adds (value = label).  Without a list of the
-#   report's, the baseline's order stays plan_levels(): its Missing and
-#   Total rows are made by the analysis data's code, after the data is read.
+# The baseline column's code list with the Missing and Total rows the
+# analysis data's code adds (value = label), or NULL: the template's
+# `codelists`, which the report's own lists take the values they lack from
 .tpl_shift_codelists <- function(a, worst, codelists) {
-  out <- list()
-  if (length(a$levels) && is.null(codelists[[a$post]])) {
-    out[[a$post]] <- lapply(a$levels, function(v) list(value = v, label = v))
-  }
   cl <- codelists[[a$baseline]]
-  if (!is.null(cl) && worst) {
-    extra <- c(a$missing_label, a$total_label)
-    out[[a$baseline]] <- c(.tpl_cl_rows(cl),
-                           lapply(extra, function(v) list(value = v, label = v)))
-  }
-  if (length(out)) out
+  if (is.null(cl) || !worst) return(NULL)
+  rows <- .tpl_cl_rows(cl)
+  extra <- c(a$missing_label, a$total_label)
+  rows <- c(rows, lapply(extra, function(v) list(value = v, label = v)))
+  stats::setNames(list(rows), a$baseline)
 }
 
 # A code list as rows of value / label (a program's named or plain vector
@@ -1450,19 +1439,16 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
   by_lv <- a$by_levels
   # (as the ARD holds them: the code list's labels when the column has one;
   # the Missing and Total rows of the code, last)
+  post_lv <- .tpl_shift_labels(a$levels, a$post, ctx$codelists)
   base_lv <- c(.tpl_shift_labels(a$levels, a$baseline, ctx$codelists),
                if (worst) c(a$missing_label, a$total_label))
-  own <- .tpl_shift_codelists(a, worst, ctx$codelists)
   lv <- c(if (length(by_lv)) stats::setNames(list(by_lv), a$by),
-          stats::setNames(list(base_lv), a$baseline))
+          stats::setNames(list(base_lv, post_lv), c(a$baseline, ".label")))
   content <- c(
     list(tfl_item("table_plan", list(cols = c(a$by, ".label"),
                                      rows = list(group = a$param), label = a$baseline)),
          tfl_item("plan_cells", list(categorical = a$cell)),
-         tfl_item("plan_levels", c(lv, if (!is.null(own[[a$post]]))
-           # (the list makes the levels of the whole data: a category no
-           # record has is not shown, as the order plan_levels() gave never was)
-           list(.drop_empty = a$post)))),
+         tfl_item("plan_levels", lv)),
     if (length(a$param_labels)) list(tfl_item("plan_labels", stats::setNames(
       list(as.list(a$param_labels)), a$param))),
     # (a page a parameter: the parameter in the titles, not the stub)
@@ -1483,7 +1469,7 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
                                           heading_at = "title")),
       tfl_item("plan_hide", list(cols = list("group")))))
   list(ard = ard, data = list(source = "ard"), content = content,
-       codelists = own)
+       codelists = .tpl_shift_codelists(a, worst, ctx$codelists))
 }
 
 .tfl_template("shift", kind = "table", layout = "shift",
