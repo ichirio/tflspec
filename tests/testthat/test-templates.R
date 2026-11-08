@@ -150,6 +150,24 @@ test_that("shift: a subject once at its worst, a Missing and a Total row, a page
   expect_false(any(body$ABLFL %in% "Y"))
   expect_identical(sum(d$BNRIND == "Total"), nrow(body))
   expect_true("Missing" %in% body$BNRIND)
+  # a transport file's "" for no value: a blank after baseline is no record,
+  # a blank at baseline is Missing
+  lb2 <- lb
+  post <- which(lb2$PARAMCD == "AST" & !lb2$ABLFL %in% "Y")
+  s1 <- lb2$USUBJID[post[1L]]
+  s2 <- setdiff(lb2$USUBJID[post], s1)[1L]
+  lb2$ANRIND[post[lb2$USUBJID[post] == s1]] <- ""
+  lb2$BNRIND[lb2$PARAMCD == "AST" & lb2$USUBJID == s2] <- ""
+  d2 <- local({
+    adlb <- lb2
+    adsl_sub <- adsl[adsl$SAFFL == "Y", ]
+    eval(parse(text = ad$code))
+  })
+  expect_false(any(d2$ANRIND %in% ""))
+  expect_false(any(d2$BNRIND %in% ""))
+  expect_false(any(d2$USUBJID == s1 & d2$PARAMCD == "AST"))
+  expect_true(any(d2$USUBJID == s2 & d2$PARAMCD == "AST" &
+                    d2$BNRIND == "Missing"))
   # the worst: a subject with any HIGH after baseline is HIGH
   one <- lb[lb$PARAMCD == "ALT" & !lb$ABLFL %in% "Y" & lb$ANRIND %in% "HIGH", "USUBJID"][1L]
   expect_identical(body$ANRIND[body$USUBJID == one & body$PARAMCD == "ALT"], "HIGH")
