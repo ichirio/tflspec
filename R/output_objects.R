@@ -237,9 +237,12 @@ tfl_output_contents <- function(output, study, dir = ".") {
 # the data does not have (dplyr: "object 'X' not found"): said as that
 .listing_by_hint <- function(e, ro) {
   msg <- conditionMessage(e)
-  v <- regmatches(msg, regexec("object '([^']+)' not found", msg))[[1L]][-1L]
+  # (the name in quotes, not the English words: R may say it in another
+  # language, with plain or curly quotes)
+  q <- regmatches(msg, gregexpr("['‘`][^'’`]+['’`]", msg))[[1L]]
   by <- as.character(unlist(attr(ro, "template")$args$by))
-  if (length(v) && v %in% by) {
+  v <- intersect(gsub("^.|.$", "", q), by)[1L]
+  if (!is.na(v)) {
     .ard_stop(sprintf("`by` names %s, which the dataset %s does not have.", sQuote(v, FALSE),
                       paste(ro$data$dataset, collapse = "")))
   }
