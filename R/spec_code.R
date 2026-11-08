@@ -340,7 +340,8 @@
                         break_before = "break_before",
                         min_group_rows = "min_group_rows",
                         cont_label = "cont_label", page_by = "page_by",
-                        heading = "heading", heading_at = "heading_at"))
+                        heading = "heading", heading_at = "heading_at",
+                        na_label = "na_label"))
   if (length(a)) do.call(add, c(list("plan_paginate_rows"), a))
   a <- pick("colpages_", c(at = "at", cut_by = "cut_by", every = "every",
                            keep = "keep", fit = "fit",

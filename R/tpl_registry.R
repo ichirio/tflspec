@@ -111,7 +111,7 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
     k(c("layout", "direction"), "choice", choices = c("cols", "rows")),
     # the listing's `by`: how it divides the listing, and a page's name
     k("by_break", "choice", choices = c("page", "block")),
-    k("by_heading", "text"),
+    k(c("by_heading", "by_na_label"), "text"),
     k("grade_in", "choice", choices = c("rows", "cols")),
     k("min_pct_in", "choice", choices = c("any", "all", "total")),
     # what the report is of: the analysis set, which subjects, which records
@@ -1491,11 +1491,18 @@ tpl_lab_shift <- function(ard, population, ..., codelists = NULL) {
       "by them first, then by `sort`")),
     tfl_param("by_break", "page", type = "choice", choices = c("page", "block"), doc = paste(
       "how `by` divides it: \"page\", each value starts a page; \"block\", one value's",
-      "records stay together on a page where they fit (one `by` variable)")),
+      "records stay together on a page where they fit (one `by` variable); the value",
+      "prints once at the top of its block only when the `by` column is the first",
+      "printed column (a change in a column to its left starts the repeats again), so",
+      "put it first")),
     tfl_param("by_heading", NULL, type = "text", doc = paste(
       "with \"page\": the page's name, the last title line ({value} is its value;",
       "{VARIABLE} for each of several `by` variables); left out, a variable the listing",
-      "does not print names its page, \"VARIABLE: value\""))
+      "does not print names its page, \"VARIABLE: value\"")),
+    tfl_param("by_na_label", NULL, type = "text", doc = paste(
+      "with \"page\": the text a blank or missing `by` value prints as in the page's",
+      "name (`{value}`, `{VARIABLE}`); left out, nothing, so \"Severity: {value}\"",
+      "prints \"Severity: \""))
   ),
   body = function(a, ctx) {
     # a column's width is part of its definition (each column its own), the
@@ -1531,7 +1538,8 @@ tpl_lab_shift <- function(ard, population, ..., codelists = NULL) {
 # (plan_row_group(group_col = ), plan_paginate_rows() cutting whole groups);
 # its column is carried down the records (collapse_repeats), so the value
 # prints once at the top of its block and again at the top of a page that
-# continues it.
+# continues it, when that column is the first printed one (collapse_repeats
+# starts again when a column to its left changes).
 .listing_by <- function(a, given, cols) {
   by <- as.character(unlist(a$by))
   brk <- a$by_break
@@ -1539,8 +1547,9 @@ tpl_lab_shift <- function(ard, population, ..., codelists = NULL) {
     .ard_stop("template listing: `by_break` is \"page\" (a page a value) or \"block\" (a value's records together).")
   }
   if (!length(by)) {
-    asked <- unique(c(intersect(c("by_break", "by_heading"), given),
-                      if (length(a$by_heading)) "by_heading"))
+    asked <- unique(c(intersect(c("by_break", "by_heading", "by_na_label"), given),
+                      if (length(a$by_heading)) "by_heading",
+                      if (length(a$by_na_label)) "by_na_label"))
     if (length(asked)) {
       .ard_stop(sprintf("template listing: %s is about `by`, the variables that divide the listing; give `by`.",
                         paste(sQuote(asked, FALSE), collapse = " and ")))
@@ -1552,6 +1561,13 @@ tpl_lab_shift <- function(ard, population, ..., codelists = NULL) {
   }
   if (identical(brk, "block") && length(a$by_heading)) {
     .ard_stop("template listing: `by_heading` names a page: it is for `by_break` \"page\".")
+  }
+  if (identical(brk, "block") && length(a$by_na_label)) {
+    .ard_stop("template listing: `by_na_label` names a page's blank value: it is for `by_break` \"page\".")
+  }
+  if (length(a$by_na_label) &&
+      (length(a$by_na_label) > 1L || !is.character(a$by_na_label) || is.na(a$by_na_label))) {
+    .ard_stop("template listing: `by_na_label` is one text.")
   }
   if (length(a$by_heading) > 1L || (length(a$by_heading) && !is.character(a$by_heading))) {
     .ard_stop("template listing: `by_heading` is one text.")
@@ -1581,7 +1597,8 @@ tpl_lab_shift <- function(ard, population, ..., codelists = NULL) {
         paste(sprintf("%s: {%s}", by, by), collapse = "\n")
     }
     c(list(page_by = if (length(by) == 1L) by else as.list(by)),
-      if (length(heading)) list(heading = heading, heading_at = "title"))
+      if (length(heading)) list(heading = heading, heading_at = "title"),
+      if (length(a$by_na_label)) list(na_label = a$by_na_label))
   }
   list(vars = by, cols = cols, items = items, paginate = paginate)
 }
@@ -1621,7 +1638,11 @@ tpl_lab_shift <- function(ard, population, ..., codelists = NULL) {
 #' it; `"block"` keeps one variable's records together on a page where they
 #' fit ([rtfreporter::plan_row_group()]'s `group_col`), the value printed
 #' once at the top of its block, and again at the top of a page that
-#' continues it.  A `by` variable is not printed as a column unless
+#' continues it, when the `by` column is the first printed column (the
+#' repeats start again when a column to its left changes, so put it
+#' first).  `by_na_label` is the text a blank or missing `by` value prints as
+#' in a page's name ([rtfreporter::plan_paginate_rows()]'s `na_label`;
+#' `"page"` only).  A `by` variable is not printed as a column unless
 #' `columns` has a column of just that variable (for `"block"` that column
 #' prints the value once a block; one not printed keeps the block together
 #' without marking it).  A page whose variable is not printed is named
@@ -1635,8 +1656,9 @@ tpl_lab_shift <- function(ard, population, ..., codelists = NULL) {
 #' @param ... The template's parameters: `columns` (a list of columns, each
 #'   `list(vars = , label = , width = , collapse_repeats = )`), `where`,
 #'   `sort`, `by` (the variables that divide the listing), `by_break`
-#'   (`"page"` or `"block"`) and `by_heading` (a page's name: `"{value}"` is
-#'   its value, with several `by` variables `"{VARIABLE}"` for each);
+#'   (`"page"` or `"block"`), `by_heading` (a page's name: `"{value}"` is
+#'   its value, with several `by` variables `"{VARIABLE}"` for each) and
+#'   `by_na_label` (the text of a blank `by` value in that name);
 #'   `data` names the dataset in the spec (`"ADAE"`).
 #' @return A [rtfreporter::table_plan()] of a listing.
 #' @export

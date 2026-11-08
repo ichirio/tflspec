@@ -48,6 +48,7 @@
     pages_break_before = "ids",
     pages_min_group_rows = "int", pages_cont_label = "text",
     pages_page_by = "list", pages_heading = "text", pages_heading_at = "text",
+    pages_na_label = "text",
     group_col = "text", group_mode = "text", group_collapse = "flex",
     group_page = "bool", group_keep = "bool", group_heading = "text",
     group_heading_at = "text",
@@ -2789,6 +2790,7 @@ tfl_as_table_spec <- function(x, output_id = NULL, compare = TRUE) {
   put("pages_page_by", pg$page_by)
   put("pages_heading", pg[[".heading"]])
   put("pages_heading_at", pg[[".heading_at"]])
+  put("pages_na_label", pg[[".na_label"]])
   cp <- ly[["colpages"]]
   put("colpages_every", cp$every); put("colpages_at", cp$at)
   put("colpages_keep", cp$keep); put("colpages_order", cp$order)
