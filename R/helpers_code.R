@@ -4,8 +4,17 @@
 #' `set_levels()` (the code lists on a data: each listed column a factor in
 #' the list's order, its values as the list has them in the ARD; a value
 #' not listed stops the program), `reorder_by()` (a column in another's
-#' order when the data has it: `PARAM` by `PARAMN`), `order_arms()` (the arm
-#' variables in their numeric pairs' order: `TRT01A` by `TRT01AN`), `tag_ard()` (the report, analysis and
+#' order when the data has it: `PARAM` by `PARAMN`), `order_levels()` (the arm
+#' variables and the categories it names as factors, set in the data step
+#' before the ARD: each in its code list's order, else its numeric pair's
+#' -- `TRT01A` by `TRT01AN`, `SEX` by `SEXN`, `RACE` by `RACEN` --, else
+#' as it is, which the ARD sorts: cards orders text by `order(x, method =
+#' "radix")`, the C locale's byte order; a factor already in the data keeps
+#' its levels; a blank is missing, not a level; `from = adsl` orders a
+#' records data's arm, which has no number of its own, by the matching arm
+#' and number of ADSL, the records' values kept and a value ADSL lacks
+#' last; a value with two numbers there is an error), `order_arms()` (the arm
+#' variables alone: `order_levels()` with no categories), `tag_ard()` (the report, analysis and
 #' analysis set in front of an analysis's ARD), `fmt_ard()` and
 #' `fmt_pvalue()` (formats after a call), `keep_stats()` (only the
 #' statistics asked for), `ard_hierarchical_or_none()` (nested counts,

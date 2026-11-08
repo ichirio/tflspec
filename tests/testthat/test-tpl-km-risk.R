@@ -12,7 +12,7 @@ test_that("km_survival, its band too: ggsurvfit's risk table, a layer of the cur
     expect_identical(rt$args$stats_label, "Number of Patients at Risk")
     expect_identical("km_ci" %in% fns, nm == "band")
     expect_true("hline" %in% fns)
-    expect_identical(x$call_steps, 4L)
+    expect_identical(x$call_steps, 6L)
     expect_identical(x$plot$add[[1L]]$fn, "scale_x_continuous")
   }
 })
@@ -247,4 +247,30 @@ test_that("tfl_template_to_spec() says a plot: key that does nothing once", {
       invokeRestart("muffleWarning")
     }))
   expect_identical(n, 1L)
+})
+
+test_that("tfl_check_spec() accepts the plot: keys a Kaplan-Meier template reads, risk_title among them", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  d <- tempfile()
+  on.exit(unlink(d, recursive = TRUE))
+  tplfig_study(d, c("adsl", "adtte"), "KMR-7")
+  figure_errors <- function(plot, nm = "km_survival") {
+    o <- km_plot_report(nm, plot)
+    tfl_write_output(o, file.path(d, "spec", "outputs", paste0(o$id, ".yml")))
+    p <- suppressMessages(suppressWarnings(tfl_check_spec(d)))
+    p[p$part == "figure" & p$level == "error", , drop = FALSE]
+  }
+  for (nm in c("km_survival", "km_cumulative")) {
+    expect_identical(nrow(figure_errors(list(risk_title = "Patients at risk"), nm)), 0L, info = nm)
+    # the other keys the types read from plot: (the title, axes, legend and theme)
+    ok <- list(risk_title = "N at risk", title = "KM", x_label = "Months", y_label = "Probability",
+               legend = "bottom", theme = "minimal", base_size = 11, y_min = 0, y_max = 1,
+               x_min = 0, x_max = 24, x_by = 6, y_by = 0.25)
+    expect_identical(nrow(figure_errors(ok, nm)), 0L, info = nm)
+  }
+  # a key that is no figure setting is still an error, risk_title beside it or not
+  e <- figure_errors(list(risk_title = "N at risk", no_such_key = 1))
+  expect_identical(e$item, "plot$no_such_key")
+  expect_match(e$message, "is not a figure setting")
 })

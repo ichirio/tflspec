@@ -13,7 +13,7 @@ report.}
 \item{population}{The analysis set's id (\code{"SAF"}).}
 
 \item{...}{The template's other parameters: \code{data}, \code{param}, \code{visit}
-(required), \code{by}, \code{response}, \code{covariates}, \code{where}, \code{ref}.}
+(required), \code{by}, \code{response}, \code{covariates}, \code{where}, \code{ref}, \code{adjust}.}
 
 \item{codelists}{The report's code lists, for the order and labels of
 values; \code{NULL} takes the ARD's.}
@@ -25,12 +25,33 @@ A \code{\link[rtfreporter:table_plan]{rtfreporter::table_plan()}}.
 A parameter's change from baseline (\code{CHG}) at one visit, by an analysis
 of covariance: \verb{<response> ~ <by> + <covariates>} (\code{CHG ~ TRT01A + BASE}), a linear model.  Each arm's n and LS mean (SE, 95\% CI), and the
 difference in LS means of each other arm minus the reference arm (SE,
-95\% CI, p-value) in that arm's column, from cardx's
-\code{ard_emmeans_emmeans()} and \code{ard_emmeans_contrast()} (emmeans).  The
+95\% CI, p-value) in that arm's column.  The LS means are cardx's
+\code{ard_emmeans_emmeans()}; the differences are emmeans' own
+(\code{emmeans::contrast(method = "trt.vs.ctrl")}, each arm against the
+reference arm).  The
 reference arm is \code{ref}, else the last arm in the code list's order; the
 program says which (a message).  The p-value is
 written as the program's \code{fmt_pvalue()} writes it (\verb{<0.001}, else 3
 decimals).
+}
+\details{
+\code{adjust} is the multiplicity adjustment of the differences' CIs and
+p-values, one of emmeans' \code{adjust} values (see "P-value adjustments"
+in \code{\link[emmeans:summary.emmGrid]{emmeans::summary.emmGrid()}}): \code{"none"}, \code{"tukey"}, \code{"dunnettx"},
+\code{"sidak"}, \code{"bonferroni"}, \code{"holm"}, \code{"hommel"}, \code{"hochberg"}, \code{"BH"},
+\code{"BY"}, \code{"fdr"}, \code{"mvt"} or \code{"scheffe"}.  \strong{The default is \code{"none"}: no
+adjustment.}  Before this argument existed, a table with three arms or
+more was Tukey-adjusted without saying so (cardx's
+\code{ard_emmeans_contrast()} takes emmeans' pairwise contrast, whose default
+is Tukey); with two arms nothing was adjusted, and \code{"none"} gives the
+same table.  Pass \code{adjust} always, even \code{"none"}: emmeans' own default
+for these differences is \code{"dunnettx"}.  For differences against one
+reference arm, \code{"tukey"} is the Tukey adjustment over all pairs of arms
+(emmeans' pairwise contrast), of which the table shows the differences
+against the reference arm, and it gives the table as it was before this
+argument for three arms or more.
+\code{"mvt"} is a Monte Carlo method: its numbers change a little from run
+to run unless the seed is set.
 }
 \examples{
 x <- tfl_template_expand("ancova", list(population = "SAF", data = "ADVS",

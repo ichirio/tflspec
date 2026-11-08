@@ -979,7 +979,8 @@ tfl_read_fig_design <- function(path) {
         lohi <- switch(iv,
           se = c("mean - se", "mean + se"),
           sd = c("mean - sd", "mean + sd"),
-          ci = c("mean - qt(0.975, n - 1) * se", "mean + qt(0.975, n - 1) * se"))
+          ci = c("ifelse(n > 1, mean - qt(0.975, pmax(n - 1, 1)) * se, NA_real_)",
+                 "ifelse(n > 1, mean + qt(0.975, pmax(n - 1, 1)) * se, NA_real_)"))
         out <- c(out, paste0(v("name"), " <- ", src, " |>\n",
           sprintf("  filter(!is.na(%s)) |>\n", val),
           sprintf("  group_by(%s) |>\n", paste(by, collapse = ", ")),
@@ -993,7 +994,8 @@ tfl_read_fig_design <- function(path) {
         lohi <- switch(v("interval"),
           se = c("mean - se", "mean + se"),
           sd = c("mean - sd", "mean + sd"),
-          ci = c("mean - qt(0.975, n - 1) * se", "mean + qt(0.975, n - 1) * se"))
+          ci = c("ifelse(n > 1, mean - qt(0.975, pmax(n - 1, 1)) * se, NA_real_)",
+                 "ifelse(n > 1, mean + qt(0.975, pmax(n - 1, 1)) * se, NA_real_)"))
         out <- c(out, paste0(v("name"), " <- ", src, " |>\n",
           sprintf("  filter(!is.na(%s)) |>\n", val),
           sprintf("  group_by(%s) |>\n", paste(by, collapse = ", ")),
@@ -1296,7 +1298,9 @@ tfl_read_fig_design <- function(path) {
     x_breaks <- TRUE
   } else if (has_risk) {
     pre <- if (!is.null(x_by)) {
-      sprintf("x_breaks <- seq(%s, max(%s$time), by = %s)", x_min %||% 0, fit, x_by)
+      # (to the first break at or after the last time: the curves reach the axis' end)
+      sprintf("x_breaks <- seq(%s, %s + ceiling((max(%s$time) - %s) / %s - 1e-8) * %s, by = %s)",
+              x_min %||% 0, x_min %||% 0, fit, x_min %||% 0, x_by, x_by, x_by)
     } else sprintf("x_breaks <- pretty(c(%s, %s))", x_min %||% 0,
                    if (!is.null(x_max)) x_max else sprintf("max(%s$time)", fit))
     x_breaks <- TRUE
@@ -1379,12 +1383,20 @@ tfl_read_fig_design <- function(path) {
   if (is.null(x) || !length(x) || (length(x) == 1L && (is.na(x) || identical(x, "")))) return(NULL)
   if (is.list(x)) x <- unlist(x)
   if (is.null(names(x))) {
-    parts <- trimws(strsplit(paste(x, collapse = ","), ",", fixed = TRUE)[[1L]])
+    # split at the commas between pairs, not those inside a call's brackets
+    # (X = rgb(1,0,0))
+    parts <- trimws(strsplit(paste(x, collapse = ","), ",(?![^()]*\\))", perl = TRUE)[[1L]])
     kv <- strsplit(parts[nzchar(parts)], "=", fixed = TRUE)
     if (!all(lengths(kv) == 2L)) {
       stop("plot.colours: value = colour pairs, e.g. CR = darkgreen, PD = #D62728.", call. = FALSE)
     }
     x <- stats::setNames(trimws(vapply(kv, `[[`, "", 2L)), trimws(vapply(kv, `[[`, "", 1L)))
+  }
+  call_like <- grepl("(", x, fixed = TRUE)
+  if (any(call_like)) {
+    stop(sprintf(paste0("plot.colours: %s is a call, not a colour R reads: ",
+                        "give a colour name or a hex code (#D62728)."),
+                 paste0("`", x[call_like][1L], "`")), call. = FALSE)
   }
   stats::setNames(as.character(x), names(x))
 }
@@ -2130,8 +2142,16 @@ tfl_check_fig_design <- function(design, adam = NULL, ggplot2_version = NULL,
   }
   cols <- objects[["df"]]
   f <- .fig_plot_fields()
+  # (a Kaplan-Meier template reads some `plot:` keys itself: the risk table's title)
+  tn <- if (is.list(design$template)) design$template$name else design$template
+  routed <- tryCatch(
+    if (is.character(tn) && length(tn) == 1L && identical(.tpl_get(tn, "")$layout, "km")) {
+      .tpl_km_plot_routed
+    } else character(),
+    error = function(e) character())
   for (nm in names(design$plot)) {
     r <- f[f$field == nm, , drop = FALSE]
+    if (!nrow(r) && nm %in% routed) next
     if (!nrow(r)) { add("plot", nm, "is not a figure setting"); next }
     v <- design$plot[[nm]]
     if (r$kind == "choice" && !is.na(r$choices) &&
@@ -2826,8 +2846,21 @@ tfl_fig_forest_analyses <- function(data = "ADTTE", param = "OS", pop = "FASFL",
   model <- sprintf("survival::coxph(survival::Surv(%s, %s == 0) ~ %s, data = %%s)", time, censor, group)
   # all subjects: the model under a name, then its ARD; within a subgroup,
   # the same inside ard_strata()
-  all <- paste0("cox <- ", sprintf(model, "data"), "\n",
-                "cardx::ard_regression(cox, exponentiate = TRUE)")
+  # (the subjects the model leaves out without a word -- no arm, no time or
+  # censoring flag -- are said, with their count)
+  no_arm <- sprintf("(is.na(data$%s) | data$%s == \"\")", group, group)
+  said <- function(cond, id, text) paste0(
+    "n_", id, " <- sum(", cond, ")\n",
+    "if (n_", id, " > 0) {\n",
+    "  warning(\"forest_hr: \", n_", id, ", \" subjects with ", text,
+    " were left out of the Cox model\", call. = FALSE)\n",
+    "}\n")
+  all <- paste0(
+    said(no_arm, "no_arm", sprintf("an empty or missing %s", group)),
+    said(sprintf("!%s & (is.na(data$%s) | is.na(data$%s))", no_arm, time, censor),
+         "no_time", sprintf("a missing %s or %s", time, censor)),
+    "cox <- ", sprintf(model, "data"), "\n",
+    "cardx::ard_regression(cox, exponentiate = TRUE)")
   reg <- function(d, in_ = "") paste0(
     "cardx::ard_regression(\n", in_, "  ", sprintf(model, d), ",\n", in_,
     "  exponentiate = TRUE\n", in_, ")")
@@ -2843,7 +2876,9 @@ tfl_fig_forest_analyses <- function(data = "ADTTE", param = "OS", pop = "FASFL",
     one(id, "Hazard ratio, all subjects", all),
     do.call(rbind, lapply(subgroups, function(s) one(
       paste(id, s, sep = "_"), paste("Hazard ratio by", s),
-      paste0("cards::ard_strata(\n  data,\n  .strata = ", s, ",\n  .f = ~ ", reg(".x", "  "), "\n)")))))
+      # (a blank or missing subgroup value is no subgroup)
+      paste0("cards::ard_strata(\n  dplyr::filter(data, !is.na(", s, "), ", s, " != \"\"),\n  .strata = ", s,
+             ",\n  .f = ~ ", reg(".x", "  "), "\n)")))))
   rownames(an) <- NULL
   list(analysis_data = adata, analyses = an)
 }

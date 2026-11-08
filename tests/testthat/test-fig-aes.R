@@ -324,3 +324,23 @@ test_that("a hand-written text without backticks is an expression, and the check
   g <- ggplot2::ggplot(d) + eval(.fig_item_lang(it), asNamespace("ggplot2"))
   expect_equal(ggplot2::layer_data(g)$x, d$`Week 1`)
 })
+
+test_that("geom_abline() has its slope and intercept without a mapping, and a mapping needs both", {
+  w <- function(...) {
+    tfl_schema_check(aes_plot(tfl_item("ggplot", list(mapping = list(x = "X", y = "Y"))), ...))
+  }
+  for (args in list(list(), list(slope = 2), list(intercept = 1), list(slope = 2, intercept = 1))) {
+    expect_identical(nrow(w(tfl_item("geom_abline", args))), 0L, info = deparse(args))
+  }
+  expect_identical(nrow(w(tfl_item("geom", list(geom = "geom_abline")))), 0L)
+  # a mapping that gives one: ggplot2 stops at the draw for the other
+  p <- w(tfl_item("geom_abline", list(mapping = list(slope = "S"))))
+  expect_match(p$message, "geom_abline needs the aesthetic `intercept`", fixed = TRUE)
+  expect_identical(nrow(w(tfl_item("geom_abline", list(mapping = list(slope = "S", intercept = "I"))))), 0L)
+  # the other reference lines are not given anything
+  expect_match(w(tfl_item("geom_vline", list()))$message, "needs the aesthetic `xintercept`", fixed = TRUE)
+  expect_match(w(tfl_item("geom_hline", list()))$message, "needs the aesthetic `yintercept`", fixed = TRUE)
+  skip_if_not_installed("ggplot2")
+  g <- ggplot2::ggplot(data.frame(X = 1:3, Y = 1:3), ggplot2::aes(X, Y)) + ggplot2::geom_abline()
+  expect_no_error(ggplot2::ggplot_build(g))
+})

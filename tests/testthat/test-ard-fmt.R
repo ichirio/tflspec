@@ -151,7 +151,8 @@ test_that("stat_fmt of each kind of format", {
   expect_equal(pick("AGE", "AGE", "cv"), "11.4")           # computed, xx.x
   # categorical: a proportion as a percent
   expect_equal(pick("SEX", "SEX", "p"), "61.6")            # default xx.x%
-  expect_equal(pick("SEX", "AGEGR1", "p"), "48.84")       # AGEGR1:p=xx.xx%
+  # (the first level: AGEGR1 follows AGEGR1N, "<65" first, not the C locale's "65-80")
+  expect_equal(pick("SEX", "AGEGR1", "p"), "16.28")       # AGEGR1:p=xx.xx%
   expect_equal(pick("F", "SEX", "p"), "62")                # p=xx%
   expect_equal(pick("SER", "ANYSER", "p"), "0.00")         # ANYSER:p=2
   # p-values: 3 decimals, or <0.001

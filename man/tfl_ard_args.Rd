@@ -67,6 +67,10 @@ are written in \code{args} like the function's own, and their values are
 checked by their kind.  The catalog is \code{inst/ard/passed_args.csv}
 (\code{call}, \code{arg}, \code{passed_to}, \code{default}, \code{kind}, \code{hint}, \code{choices}); a
 company adds rows with \verb{options(tflspec.ard_passed_args = <data frame>)}.
+
+The arguments of a model cardx fits itself, written in \code{method.args = list(...)} (\code{list(conf.type = "log-log")} of a Kaplan-Meier estimate,
+\code{list(ties = "breslow")} of a Cox model), are the model function's:
+\code{\link[=tfl_ard_model_args]{tfl_ard_model_args()}} lists them.
 }
 \examples{
 tfl_ard_args("cardx::ard_categorical_ci")

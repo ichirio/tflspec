@@ -111,7 +111,8 @@
     .ard_stop("A YAML study's ARD: read the study with tfl_read_study_spec(dir).")
   }
   # (`sheets`: the study's sheets, when the caller has them already)
-  b <- sheets %||% tfl_sheets_from_yaml(study$dir)
+  b <- sheets %||% .sheets_of_study(study$dir)
+
   ids <- vapply(study$toc$outputs %||% list(), function(e) e$id %||% NA_character_, "")
   in_toc <- function(d) {
     if (is.null(d) || !nrow(d) || is.null(d$output_id)) return(d)

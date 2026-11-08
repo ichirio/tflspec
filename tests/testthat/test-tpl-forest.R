@@ -98,7 +98,9 @@ test_that("comparison: the Cox model's reference is the other arm, whatever the 
   expect_match(unclass(x$ard$analysis_data[[1L]]$derive),
                "TRT01P = factor(TRT01P, levels = c(setdiff(levels(factor(TRT01P)), \"Drug X\"), \"Drug X\"))",
                fixed = TRUE)
-  expect_null(tfl_template_expand("forest_hr", list(param = "OS", population = "ITT"))$ard$analysis_data[[1L]]$derive)
+  # (no comparison: only the blank arm made missing)
+  expect_identical(as.vector(unclass(tfl_template_expand("forest_hr", list(param = "OS", population = "ITT"))$ard$analysis_data[[1L]]$derive)),
+                   "TRT01A = replace(TRT01A, !is.na(TRT01A) & as.character(TRT01A) == \"\", NA)")
   skip_on_cran()
   fr_skip()
   skip_if_not_installed("haven")

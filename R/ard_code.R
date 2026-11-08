@@ -223,7 +223,7 @@
 .ard_helper_names <- c("set_levels", "tag_ard", "fmt_pvalue", "fmt_ard",
                        "keep_stats", "save_ard", "fmt_default", "tfl_stats",
                        "complete_hierarchy", "relevel_ard", "drop_empty_groups",
-                       "ard_hierarchical_or_none", "order_arms")
+                       "ard_hierarchical_or_none", "order_arms", "order_levels")
 
 # the packages an ARD program attaches (its setup's library() calls), and
 # those R attaches itself: their functions without `pkg::`
@@ -592,7 +592,7 @@
 # `population`: written as the program's names.  A `custom` row: its code.
 .analysis_node <- function(r, keys, subj, has, den = NULL, data = "data",
                            population = "population", fmt_fun = NULL,
-                           program = TRUE) {
+                           program = TRUE, codelists = NULL) {
   m <- r$method
   k <- .method_key(m, keys)
   fn <- if (is.na(k)) m else keys$call[k]
@@ -631,14 +631,21 @@
     gsub("\\bpopulation\\b", population, d, perl = TRUE)
   }
   first <- .data_arg(fn, has)
-  if (!is.null(first)) first <- data
+  # (a categorical analysis counts a blank text value as missing, not as a
+  # category: the program only, the ARS model shows the call itself)
+  # (not in a stack, whose children have no data of their own)
+  if (!is.null(first)) first <- if (isTRUE(program) && identical(fn, "cards::ard_tabulate") &&
+                                     is.character(data) && length(data) == 1L && nzchar(data) &&
+                                     !identical(data, "NULL")) {
+    .blank_as_na(data, .unlisted_vars(r, codelists))
+  } else data
   # a program's nested counts: through the study helper that makes the ARD
   # of no records too (cards stops on none); the call as ARS shows it: cards'
   call_as <- if (isTRUE(program) && identical(fn, "cards::ard_stack_hierarchical")) {
     "ard_hierarchical_or_none"
   } else fn
   .cl(call_as, c(
-    as.list(first),
+    if (inherits(first, "tfl_cl")) list(first) else as.list(first),
     if (!is.null(by)) list(by = by),
     if (!identical(fn, "cards::ard_total_n") && !is.null(vars))
       list(variables = vars),
@@ -648,6 +655,55 @@
     unname(user),
     if (!is.null(fmt_fun)) list(fmt_fun = fmt_fun)))
 }
+
+# `data` with its blank text values missing: an .xpt holds "" for a missing
+# value, and cards counts it as a category of its own (its n on the
+# variable's heading row, in the denominators).  Only the data a categorical
+# analysis counts: a listing shows "" as blank, and a condition on "" in
+# a data step still reads it.
+# A category variable that is a factor and has no code list loses the levels
+# the analysed data has no value of (order_levels() gave it every value of
+# the whole dataset, by its numeric pair): as a text column, it prints no
+# row for a value the population and the filters left out.  A code list's
+# variable keeps its levels (its zero row), as the arms do.
+.blank_as_na <- function(data, drop = NULL) {
+  .cl("dplyr::mutate", c(list(data, .blank_across()),
+                         if (length(drop)) list(.drop_across(drop))))
+}
+
+# The row's variables with no code list (`codelists`: the list of its
+# report, named by variable), the arms apart
+.unlisted_vars <- function(r, codelists = NULL) {
+  v <- unique(.split_bar(r$variables))
+  setdiff(v[!grepl("^(TRT|ARM|ACTARM)", v)], names(codelists))
+}
+
+.drop_across <- function(vars) {
+  .cl("dplyr::across", list(
+    paste(.lay(.cl("dplyr::any_of", list(.c_str(vars))), width = Inf),
+          "& dplyr::where(is.factor)"),
+    "droplevels"))
+}
+
+.blank_across <- function() {
+  .cl("dplyr::across", list(.cl("dplyr::where", list("is.character")),
+                            "~ dplyr::na_if(.x, \"\")"))
+}
+
+# Is `x` the first argument .blank_as_na() writes for `data`?  (A call that
+# went through the call list and back has lost nothing but its class marks.)
+# The head is a mutate of the data with the blank step first, then the drop
+# of the unused levels when it has one.
+.is_blank_head <- function(x, data) {
+  inherits(x, "tfl_cl") && identical(x$fn, "dplyr::mutate") && length(x$args) >= 2L &&
+    identical(x$args[[1L]], data) &&
+    identical(.lay(x$args[[2L]], width = Inf), .lay(.blank_across(), width = Inf)) &&
+    (length(x$args) == 2L || (length(x$args) == 3L &&
+       startsWith(.lay(x$args[[3L]], width = Inf), "dplyr::across(dplyr::any_of(")))
+}
+
+# The head's step after its data: the mutate's own arguments
+.blank_head_step <- function(x) .cl("dplyr::mutate", x$args[-1L])
 
 # The call as code (the ARS model shows it)
 .analysis_body <- function(r, keys, subj, has, den = NULL, data = "data",
@@ -845,6 +901,29 @@
                         if (length(levels)) .levels_step))
 }
 
+# The categories a program puts in their order (order_levels()): the
+# variables of its categorical analyses, those with no code list (the arms
+# are found by their names).  One the data has no numeric pair of (SEXN)
+# is left as it is: the ARD sorts it, as it always did.
+.ard_category_vars <- function(a, levels = NULL) {
+  if (is.null(a$method) || is.null(a$variables)) return(character())
+  keys <- tfl_ard_methods()
+  kind <- vapply(a$method, function(m) {
+    k <- .method_key(m, keys)
+    if (is.na(k)) "" else keys$kind[k]
+  }, "")
+  v <- unique(unlist(lapply(a$variables[kind == "categorical"], .split_bar)))
+  # (not the arms: order_levels() finds them by their names)
+  setdiff(v[!grepl("^(TRT|ARM|ACTARM)", v)], names(levels))
+}
+
+# order_levels() as a step of a read: the categories named when there are
+.order_levels_step <- function(cats, from = NULL) {
+  args <- c(if (length(cats)) .lay(.c_str(cats), width = Inf),
+            if (length(from)) paste("from =", from))
+  sprintf("order_levels(%s)", paste(args, collapse = ", "))
+}
+
 # The datasets and populations analyses `a` (and analysis data `nad`)
 # read: their lines, with set_levels() when there are code lists
 .ard_data_lines <- function(x, a, nad, levels = NULL) {
@@ -858,18 +937,23 @@
                                      nad$from[nad$from %in% x$datasets$dataset],
                                      x$populations$dataset[
     x$populations$population_id %in% pops])))
-  # the arms in their numeric order when the data has it (TRT01A by
-  # TRT01AN, ARM by ARMN: order_arms(), a study helper), as every dataset
-  # is read -- a model's reference arm, a comparison's pairs, a table's
-  # columns -- before the code lists, whose order wins
+  # the arms and the categories in their numeric order when the data has it
+  # (TRT01A by TRT01AN, ARM by ARMN, SEX by SEXN, RACE by RACEN:
+  # order_levels(), a study helper), as every dataset is read -- a model's
+  # reference arm, a comparison's pairs, a table's columns -- before the code
+  # lists, whose order wins
   code <- character()
+  cats <- .ard_category_vars(a, levels)
+  # (ADSL first: the other datasets' arms are ordered by its)
+  has_adsl <- "ADSL" %in% toupper(used_ds)
+  used_ds <- used_ds[order(toupper(used_ds) != "ADSL")]
   for (ds in used_ds) {
     r <- x$datasets[x$datasets$dataset == ds, ]
     obj <- .r_name(ds)
     d <- .split_bar(r$derive[1L])
     code <- c(code, .make_code(obj, .reader(r$path[1L]), c(
       if (length(d)) sprintf("dplyr::mutate(%s)", paste(d, collapse = ", ")),
-      "order_arms()",
+      .order_levels_step(cats, if (has_adsl && toupper(ds) != "ADSL") "adsl"),
       if (length(levels)) .levels_step)))
   }
   pop_code <- character()
@@ -1329,6 +1413,11 @@
 .data_pipe <- function(name, node, data, steps) {
   a <- if (inherits(node, "tfl_cl")) node$args
   first <- if (length(a)) names(a)[1L] %||% ""
+  if (identical(first, "") && .is_blank_head(a[[1L]], data)) {
+    node$args <- a[-1L]
+    return(.pipe_code(name, data, c(list(.blank_head_step(a[[1L]])),
+                                    list(node), steps)))
+  }
   if (identical(first, "") && identical(a[[1L]], data) && !identical(data, "NULL")) {
     node$args <- a[-1L]
     return(.pipe_code(name, data, c(list(node), steps)))
@@ -1341,6 +1430,13 @@
 .piped <- function(node, data) {
   a <- if (inherits(node, "tfl_cl")) node$args
   first <- if (length(a)) names(a)[1L] %||% ""
+  if (identical(first, "") && .is_blank_head(a[[1L]], data)) {
+    node$args <- a[-1L]
+    return(paste0(data, " |>\n  ",
+                  gsub("\n", "\n  ", .lay(.blank_head_step(a[[1L]]), lead = 2L),
+                       fixed = TRUE), " |>\n  ",
+                  gsub("\n", "\n  ", .lay(node, lead = 4L), fixed = TRUE)))
+  }
   if (!identical(first, "") || !identical(a[[1L]], data)) return(node)
   node$args <- a[-1L]
   paste0(data, " |>\n  ", gsub("\n", "\n  ", .lay(node, lead = 4L), fixed = TRUE))
@@ -1365,8 +1461,9 @@
   # the formats in the call (fmt_fun), when the function takes them and
   # nothing changes the ARD after it; else after it (fmt_ard())
   fmt_fun <- .call_fmt_fun(r, keys, given, fmt)
+  lv <- attr(x, "levels")[[r$output_id]]
   node <- .analysis_node(r, keys, subj, has, den, data = data,
-                         population = pop_name, fmt_fun = fmt_fun)
+                         population = pop_name, fmt_fun = fmt_fun, codelists = lv)
   # overall: the same call without its by too, bound under it -- cards'
   # overall rows, no group, which a table reads as its Total column
   if (isTRUE(.ard_yes(r$overall %||% NA)) && !is.na(r$by) &&
@@ -1376,7 +1473,7 @@
     total <- TRUE
     node <- .cl("dplyr::bind_rows", list(.piped(node, data), .piped(.analysis_node(
       r0, keys, subj, has, den, data = data, population = pop_name,
-      fmt_fun = fmt_fun), data)))
+      fmt_fun = fmt_fun, codelists = lv), data)))
   } else {
     total <- FALSE
   }
@@ -1396,7 +1493,10 @@
     # a subject-level flag: has the subject any record of the data?
     flag <- if (length(.split_bar(r$variables))) .split_bar(r$variables)[1L] else
       make.names(r$analysis_id)
-    return(c(comment, .pipe_code(name, pop_name, c(
+    # (the subjects of the analysis set as the report's data keeps them --
+    # its subset applied --, not the whole set)
+    base <- .adata_subjects_of(x$analysis_data, .data_col(r)) %||% pop_name
+    return(c(comment, .pipe_code(name, base, c(
       list(sprintf("dplyr::mutate(%s = %s %%in%% %s$%s)", flag, subj, data, subj)),
       list(node), steps))))
   }
@@ -1682,8 +1782,9 @@
            .parse_formats(r$formats))
   fmt <- fmt[!duplicated(names(fmt), fromLast = TRUE)]
   fmt_fun <- .call_fmt_fun(r, keys, given, fmt)
+  lv <- attr(x, "levels")[[r$output_id]]
   node <- .analysis_node(r, keys, subj, has, den, data = data,
-                         population = pop_name, fmt_fun = fmt_fun)
+                         population = pop_name, fmt_fun = fmt_fun, codelists = lv)
   overall <- isTRUE(.ard_yes(r$overall %||% NA)) && !is.na(r$by) &&
     !call_fn %in% c("(code)", "(subjects)")
   keep <- if (!kind %in% c("continuous", "categorical", "missing") &&

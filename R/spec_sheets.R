@@ -16,6 +16,14 @@
 #' read (or changed in memory, not written yet): `tfl_sheets_from_yaml(dir)`
 #' is `tfl_sheets_from_spec(tfl_read_study_spec(dir), tfl_read_outputs(dir))`.
 #'
+#' What a report extends: its row on the `report` sheet has a `pattern` cell
+#' (the first pattern, `@<name>`), and an `extends` cell (`a | b`, or `none`)
+#' only when the chain is not `[<pattern>, defaults]` as the `pattern` cell
+#' alone says it: `extends: none`, a pattern after the defaults, a pattern
+#' alone, two patterns.  `tfl_yaml_from_sheets()` reads the cell as the chain,
+#' in its order; an `extends` cell whose first pattern is not the `pattern`
+#' cell's is an error (one of the two was edited).
+#'
 #' @param dir The study folder (or its `spec/`).
 #' @param study The study's spec, as [tfl_read_study_spec()] reads it.
 #' @param outputs The reports, as [tfl_read_outputs()] reads them: a list of
@@ -120,7 +128,9 @@ tfl_sheets_from_spec <- function(study, outputs) {
       keep <- keep[-out]
       if (!length(keep)) { sp <- list(); break }
     }
-    more <- c(more, items[setdiff(seq_along(items), keep)])
+    # (and the rest of a plan_columns() / plan_col_header() / plan_labels()
+    # whose columns say a part: the arguments no column says)
+    more <- c(more, items[setdiff(seq_along(items), keep)], attr(sp, "not_converted_rest"))
     if (length(more)) more_rows[[key]] <<- more
     for (sh in names(sp)) {
       d <- sp[[sh]]
@@ -216,6 +226,11 @@ tfl_sheets_from_spec <- function(study, outputs) {
     rr <- list(output_id = id, type = o$kind)
     pat <- grep("^patterns/", o$extends, value = TRUE)
     if (length(pat)) rr$pattern <- paste0("@", substring(pat[1L], 10L))
+    # (what the pattern cell alone reads back as is [first pattern, defaults];
+    # any other chain -- the order flipped, `none`, a pattern alone, two
+    # patterns -- is said in the `extends` cell)
+    if (!identical(as.character(unlist(o$extends)),
+                   c(if (length(pat)) pat[1L], "defaults"))) rr$extends <- .sheet_cell(o$extends)
     for (k in c("file", "program")) if (!is.null(e[[k]])) rr[[k]] <- cell(e[[k]])
     # the report row: its kind, pattern, file and program here, its
     # rtfreporter arguments from page_rows() -- one row
@@ -283,6 +298,11 @@ tfl_sheets_from_spec <- function(study, outputs) {
         if (identical(it$fn, "plan_listing") && !"plan_listing" %in% said) {
           said <- c(said, it$fn)
           for (cl in a$cols %||% list()) {
+            # (a column written as a plain list, as R code or the xlsx import
+            # gives it, is the same call)
+            if (!inherits(cl, "tfl_call") && is.list(cl) && identical(cl$fn, "listing_col")) {
+              cl <- tfl_call("listing_col", cl$args %||% list(), package = cl$package)
+            }
             if (!inherits(cl, "tfl_call")) next
             row <- c(list(output_id = id), lapply(cl$args[intersect(names(cl$args), .listing_col_said)], cell))
             rest <- cl$args[setdiff(names(cl$args), .listing_col_said)]
@@ -472,7 +492,7 @@ tfl_sheets_from_spec <- function(study, outputs) {
   sc <- .ard_spec_schema()[[sh]]
   if (!is.null(sc)) return(sc)
   switch(sh,
-    report = c("output_id", "type", "file", "program", "pattern"),
+    report = c("output_id", "type", "file", "program", "pattern", "extends"),
     page = "output_id",
     header = , footer = , titles = , footnotes = c("output_id", "line", "left", "center", "right",
                                                    "row_height_twips"),

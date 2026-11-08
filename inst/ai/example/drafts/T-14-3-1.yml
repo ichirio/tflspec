@@ -73,6 +73,6 @@ ai:
   assumptions:
     - where: ard.analyses
       item: where
-      assumption: treatment-emergent is TRTEMFL == "Y"
+      assumption: "treatment-emergent is TRTEMFL == 'Y'"
       question: Is TRTEMFL the treatment-emergent flag?
 

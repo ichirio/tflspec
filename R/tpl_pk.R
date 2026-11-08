@@ -30,7 +30,8 @@
             doc = "the groups: a page each (an analyte, an arm), the summary's too"),
   tfl_param("heading", NULL, doc = paste(
     "a page's name in the titles ({<group>}: its value); NULL: the groups'",
-    "values, a line each")),
+    "values, a line each; the last title line, or where the title line",
+    "`{PAGE_HEADING}` is")),
   tfl_param("time", "ATPT", doc = "the time point's variable (the columns)"),
   tfl_param("time_order", "ATPTN", doc = "the time points' order variable; NULL: by name"),
   tfl_param("times", NULL, doc = "the time points, in order; NULL: by time_order"),
@@ -59,7 +60,10 @@
   tm <- a$time
   q <- function(x) sprintf("\"%s\"", gsub("\"", "\\\"", x, fixed = TRUE))
   order <- if (length(a$time_order)) sprintf("%s = reorder_by(%s, %s)", tm, tm, a$time_order)
-  # the listing's records (a BLQ one missing: it prints `blq_label`) and the
+  # a BLQ record is -Inf in the listing's value (its cell prints blq_label);
+  # a missing value or an absent time point is empty
+  blq_value <- sprintf("%s = ifelse(%s, -Inf, %s)", a$value, a$blq, a$value)
+  # the listing's records (a BLQ one -Inf: it prints `blq_label`) and the
   # summary's (the values)
   rec <- function(id, label, where, derive) Filter(Negate(is.null), list(
     id = id, label = label, from = a$data, subjects = subj,
@@ -69,7 +73,7 @@
     list(id = subj, label = .tpl_set_label(pop, ctx$population), from = "ADSL",
          population = pop),
     rec(set, "the subjects' concentrations", a$where,
-        c(order, if (length(a$blq)) sprintf("%s = ifelse(%s, NA, %s)", a$value, a$blq, a$value))),
+        c(order, if (length(a$blq)) blq_value)),
     rec(paste0(set, "_s"), "the concentrations summarised",
         c(a$where, sprintf("!is.na(%s)", a$value)), order))
   analyses <- list(list(id = "CONC", method = "continuous", data = paste0(set, "_s"),
@@ -81,11 +85,14 @@
       block = tfl_r(sprintf("~ %s", q(a$summary_label)))))),
     tfl_item("plan_cells", list(continuous = as.list(a$stats))))
   heading <- a$heading %||% paste0("{", a$by, "}", collapse = "\n")
+  # (one group: the page's value is `{value}`; its variable's name says it too)
+  if (length(a$by) == 1L) heading <- gsub(paste0("{", a$by, "}"), "{value}", heading, fixed = TRUE)
   content <- c(
     list(tfl_item("table_plan", list(cols = tm, rows = list(
            subject = tfl_r(sprintf("~ %s", q(a$subject)))), value = a$value)),
-         tfl_item("plan_cells", Filter(Negate(is.null), list(
-           default = a$cell, na = if (length(a$blq)) a$blq_label))),
+         tfl_item("plan_cells", if (length(a$blq)) list(
+           default = list(tfl_r(sprintf("value == -Inf ~ %s", q(a$blq_label))), a$cell),
+           na = "") else list(default = a$cell)),
          tfl_item(.spec_part$fn, list(name = "summary", data = list(source = "ard"),
                                       content = summary))),
     if (length(a$times)) list(tfl_item("plan_levels", stats::setNames(list(a$times), tm))),

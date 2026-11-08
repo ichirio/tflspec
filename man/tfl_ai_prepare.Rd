@@ -41,7 +41,8 @@ tfl_ai_prepare(
 \arguments{
 \item{dir}{The study folder.}
 
-\item{toc}{The TOC / SHELL workbook (\code{.xlsx} or \code{.xlsm}).}
+\item{toc}{The TOC / SHELL workbook (\code{.xlsx} or \code{.xlsm}).  Missing: the
+last call's settings, \code{ai/prepare.yml} (see \emph{Repeating a call}).}
 
 \item{adam}{The ADaM folder, from \code{dir} (relative) or absolute.}
 
@@ -101,7 +102,7 @@ report's own content items for what it does not cover), else as a code
 SPEC; the requests (and \code{AGENTS.md}) list the templates registered now
 -- tflspec's, a company's, the study's variants.  \code{FALSE}: the code
 SPEC only, the requests as they were before templates.  The setting is
-each request's first line (\code{templates: TRUE}) and \code{ai/status.md}'s.}
+a line near the top of each request (\code{templates: TRUE}) and \code{ai/status.md}'s.}
 
 \item{progress}{\code{NULL}, or a function(step, i, n) called as the work goes:
 \code{step} \code{"adam"} (the ADaM's summary), \code{"workbook"} (the TOC / SHELL
@@ -286,6 +287,22 @@ deep the agent checks each report it builds itself, by kind: \code{0} the
 check, \code{1} and the program, \code{2} and the facts -- what R made, in words
 -- \code{3} and the output (a figure's PNG, a table's pages); \code{none}: the
 person's check; \verb{\{figure: 3, table: 2, listing: 1\}} by default).
+}
+
+\section{Repeating a call}{
+
+A call that writes the requests (not \code{dry_run}) keeps the arguments it was
+given in \code{ai/prepare.yml} of the study folder -- by name, a path inside the
+study from its folder, the date-time and the tflspec version at its head
+(\code{\link[=tfl_ai_prepare_settings]{tfl_ai_prepare_settings()}} reads it and lists what the file holds and
+what is left out: \code{dir}, \code{overwrite}, \code{dry_run}, \code{quiet}, \code{progress},
+\code{add}, \code{adam_summary}, \code{numbers}).  \code{tfl_ai_prepare(dir)} with no \code{toc}
+repeats them: the arguments given now go over the file's, so
+\code{tfl_ai_prepare(dir, language = "ja")} is the last call in Japanese.  A
+path of the file that is not there any more stops the call, naming the
+file and the setting; with no file, \code{toc} is asked for as always.  With
+\code{add = TRUE} the file keeps the first workbook's settings (see
+\code{\link[=tfl_ai_prepare_settings]{tfl_ai_prepare_settings()}}).  The agent does not read the file.
 }
 
 \examples{

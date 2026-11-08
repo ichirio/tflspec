@@ -71,7 +71,7 @@ workbook its reports' shells are in.}
 report with a template (\verb{template: \{name, args\}}) where one fits --
 the templates registered when the requests are written listed in
 \code{ai/templates.md}, each request naming the ones likely for its reports,
-its first line \verb{<!-- templates: TRUE -->} -- else as a code SPEC.
+a line near its top, \verb{<!-- templates: TRUE -->} -- else as a code SPEC.
 \code{FALSE}: the code SPEC only.}
 
 \item{progress}{\code{NULL}, or a function(step, i, n) called as the requests

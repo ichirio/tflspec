@@ -11,7 +11,10 @@ tpl_listing(x, ...)
 
 \item{...}{The template's parameters: \code{columns} (a list of columns, each
 \code{list(vars = , label = , width = , collapse_repeats = )}), \code{where},
-\code{sort}; \code{data} names the dataset in the spec (\code{"ADAE"}).}
+\code{sort}, \code{by} (the variables that divide the listing), \code{by_break}
+(\code{"page"} or \code{"block"}) and \code{by_heading} (a page's name: \code{"{value}"} is
+its value, with several \code{by} variables \code{"{VARIABLE}"} for each);
+\code{data} names the dataset in the spec (\code{"ADAE"}).}
 }
 \value{
 A \code{\link[rtfreporter:table_plan]{rtfreporter::table_plan()}} of a listing.
@@ -23,4 +26,21 @@ cell), its heading, its width and whether a repeated value is printed
 once.  The look is the template's: one record over lines as needed
 (\code{multiline}) and 22 rows a page, which a study's style or a report's own
 item changes.
+}
+\details{
+\code{by} divides the listing by the values of variables.  \code{by_break} \code{"page"}
+(the default) starts a page for each value
+(\code{\link[rtfreporter:plan_paginate_rows]{rtfreporter::plan_paginate_rows()}}'s \code{page_by}), 22 rows a page within
+it; \code{"block"} keeps one variable's records together on a page where they
+fit (\code{\link[rtfreporter:plan_row_group]{rtfreporter::plan_row_group()}}'s \code{group_col}), the value printed
+once at the top of its block, and again at the top of a page that
+continues it.  A \code{by} variable is not printed as a column unless
+\code{columns} has a column of just that variable (for \code{"block"} that column
+prints the value once a block; one not printed keeps the block together
+without marking it).  A page whose variable is not printed is named
+as the last title line, \code{"AESEV: MODERATE"}, or by \code{by_heading}.  The
+records are ordered by the \code{by} variables first, then by \code{sort}; the data
+of \code{tpl_listing()} is the program's own, in its order, so it is ordered
+by the program (a value that comes back later is one page, a block is a
+run of rows).
 }

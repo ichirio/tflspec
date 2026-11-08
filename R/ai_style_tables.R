@@ -16,7 +16,11 @@
 #' ODS RTF is read as it is written: the titles and footnotes in each
 #' page's `\header` / `\footer` (or as paragraphs before and after the
 #' table), a page a section, the column header rows (`\trhdr`) repeated on
-#' each page and counted once.
+#' each page and counted once.  rtfreporter's RTF is read too: its page
+#' header's line "Page 1 of 1" (the page number written out, not as a
+#' field) is the page-number line, not a title, so the titles are the
+#' paragraphs before the table; a footnote written as a one-cell row after
+#' the table is a footnote, not a table.
 #'
 #' @param rtf_dir The folder of RTF files (a subfolder a study).
 #' @return A data frame, one row a table: `file`, `table`, `pages`, `kind`
@@ -163,14 +167,19 @@ tfl_rtf_style_tables <- function(rtf_dir) {
                                 "\\*"))
   first <- regexpr("\\\\trowd", body, perl = TRUE)
   ends <- gregexpr("\\\\row(?![a-z])", body, perl = TRUE)[[1L]]
+  # (footnotes written as one-cell rows after the table are paragraphs
+  # after it: the table ends at the row before them)
+  foot <- .rtf_footnote_starts(body)
+  if (length(foot)) ends <- ends[ends < min(foot)]
   before <- if (first > 0L) .rtf_paras(substring(body, 1L, first - 1L)) else list()
   after <- if (ends[1L] > 0L) .rtf_paras(substring(body, max(ends) + 4L)) else list()
   side <- function(groups, paras, place_g, place_p) {
     from_g <- lapply(groups, function(g) {
-      p <- .rtf_paras(g)
       # (a page header's or footer's running line -- the company, the page
-      # number -- is not a title or a footnote: its lines with a page field)
-      p <- Filter(function(e) !e$page_no, p)
+      # number -- is not a title or a footnote: its lines with a page field,
+      # and a row with the page number written out, "Page 1 of 1")
+      pieces <- strsplit(gsub("(\\\\row)(?![a-z])", "\\1\001", g, perl = TRUE), "\001", fixed = TRUE)[[1L]]
+      p <- unlist(lapply(pieces, .rtf_running_free), recursive = FALSE)
       if (length(p)) list(place = place_g, align = .rtf_mode(vapply(p, `[[`, "", "align")),
                           text = vapply(p, `[[`, "", "text")) else NULL
     })
@@ -192,6 +201,48 @@ tfl_rtf_style_tables <- function(rtf_dir) {
        },
        titles = side(heads, before, "header", "before"),
        footnotes = side(foots, after, "footer", "after"))
+}
+
+# A piece of a header or footer (up to a \row) without its running lines:
+# a paragraph with a page field goes; a table row that holds the page number
+# written out ("Page 1 of 1") goes whole, with its other cells (the study,
+# the company) -- it is a running line.  What lies before the row stays; a
+# paragraph that is only the page number in words goes.
+.rtf_running_free <- function(piece) {
+  at <- regexpr("(?s)\\\\trowd(?![a-z])(?!.*\\\\trowd)", piece, perl = TRUE)
+  p <- .rtf_paras(piece)
+  if (at > 0L && any(vapply(.rtf_paras(substring(piece, at)), `[[`, NA, "page_words"))) {
+    p <- .rtf_paras(substring(piece, 1L, at - 1L))
+  }
+  Filter(function(e) !e$page_no && !e$page_words, p)
+}
+
+# Where the footnotes written as rows begin: when the rows end in a run of
+# one-cell rows, after a table of more cells and a break (\par ...), that
+# run is footnotes -- the start of each of its rows (rtfreporter writes a
+# footnote so)
+.rtf_footnote_starts <- function(x) {
+  at <- gregexpr("\\\\trowd(?![a-z])", x, perl = TRUE)[[1L]]
+  if (at[1L] < 0L) return(integer())
+  ends <- gregexpr("\\\\row(?![a-z])", x, perl = TRUE)[[1L]]
+  e <- vapply(at, function(s) {
+    v <- ends[ends > s]
+    if (length(v)) v[1L] else NA_integer_
+  }, 0L)
+  at <- at[!is.na(e)]
+  e <- e[!is.na(e)]
+  k <- length(at)
+  if (k < 2L) return(integer())
+  one <- vapply(seq_len(k), function(i) {
+    r <- substring(x, at[i], e[i])
+    lengths(regmatches(r, gregexpr("\\\\cellx", r)))
+  }, 0L) == 1L
+  run <- rev(cumprod(rev(one))) == 1L
+  if (!any(run) || all(run)) return(integer())
+  first <- which(run)[1L]
+  gap <- substring(x, e[first - 1L] + 4L, at[first] - 1L)
+  if (!grepl("\\\\(par|sect|page)(?![a-z])", gap, perl = TRUE)) return(integer())
+  at[first:k]
 }
 
 .rtf_mode <- function(v) {
@@ -250,7 +301,9 @@ tfl_rtf_style_tables <- function(rtf_dir) {
     txt <- .rtf_plain(p)
     if (!nzchar(txt)) return(NULL)
     list(align = if (length(al)) substring(al[length(al)], 3L, 3L) else "l", text = txt,
-         page_no = grepl("fldinst\\s*(PAGE|NUMPAGES)|\\\\chpgn", p, perl = TRUE))
+         page_no = grepl("fldinst\\s*(PAGE|NUMPAGES)|\\\\chpgn", p, perl = TRUE),
+         page_words = grepl("^page\\s+[0-9]+(\\s*(of|/)\\s*[0-9]+)?$|^[0-9]+\\s+of\\s+[0-9]+$", txt,
+                            ignore.case = TRUE, perl = TRUE))
   })
   Filter(Negate(is.null), out)
 }

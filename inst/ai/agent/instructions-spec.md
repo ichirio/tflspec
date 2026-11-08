@@ -128,7 +128,7 @@ page:
     "1": {left: "MedDRA version 27.0, fictional dictionary."}
 ai:
   assumptions:
-    - {where: ard.analyses, item: where, assumption: "treatment-emergent is TRTEMFL == \"Y\"", value: "TRTEMFL == \"Y\"", from: D3}
+    - {where: ard.analyses, item: where, assumption: "treatment-emergent is TRTEMFL == 'Y'", value: "TRTEMFL == \"Y\"", from: D3}
   confirm:
     - {where: ard.analyses, item: denominator, why: "the shell shows n (%) but not whether the % is of the arm or of all"}
 ```
@@ -287,7 +287,12 @@ needs that variable in `by`.
   parameter a page): the templates `param_change` and `shift` do it
   themselves (`param_page`, `param_heading`); else `plan_paginate_rows: {page_by: [PARAMCD], heading:
   "Parameter: {PARAM}", heading_at: title}` -- the heading goes under the
-  report's titles on each page; `{PARAM}` is that page's value of the
+  report's titles on each page, as their last line.  A shell with the
+  Parameter line **above** the population line writes it where it is, a
+  `page: titles` row whose whole text is `{PAGE_HEADING}` (`"3": {left:
+  "{PAGE_HEADING}"}` between the shell's second and its population line;
+  the row's alignment is the line's).  With no such row the heading is the
+  last title line; `{PARAM}` is that page's value of the
   column.  `page_by` names a column the table holds, as it holds it: a
   `table_plan` whose `rows: {group1: PARAM}` makes the column `group1`,
   so `page_by: [group1]`, `heading: "Parameter: {value}"` and
@@ -357,9 +362,12 @@ Group: {RENALGR}"`.
   titles (`x_label: ""` for none), limits and steps (`x_by`, `y_min`,
   `y_max`, `y_by`), `legend` and `legend_title`, and the colours of some
   values (`colours: {CR: darkgreen, PD: "#D62728"}`, the `colour_by`
-  variable's values) -- never a `template: args:` item (the build refuses
-  it).  A `layers:` item is for what no argument or setting does -- never
-  both for one thing.
+  variable's values).  Prefer `plot:` for them.  `x_by`, `y_by` and
+  `colours` work only in `plot:`; `km_survival` and `km_cumulative` also
+  take `x_label`, `y_label`, `x_max`, `x_step`, `y_min`, `y_max`,
+  `y_step`, `legend` and `legend_title` as `template: args:` items;
+  set one thing in one place only.  A `layers:` item is for what no argument or
+  setting does -- never both for one thing.
 - **A listing**: a listing column's `width:` in the shell's proportions,
   wide enough for its longest value (a subject id on one line) and its
   heading's longest word -- a short column too (`Age/Sex`, `64/M`: about
