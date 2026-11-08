@@ -155,7 +155,8 @@ tfl_output_contents <- function(output, study, dir = ".") {
     if (identical(o$kind, "figure")) {
       data <- .contents_fig_data(ro, study, dir)
       if (identical(ro$data$source, "ard") || length(o$ard$analyses %||% list())) data$ard <- get_ard()
-      return(suppressMessages(suppressWarnings(tfl_content_run(ro, data))))
+      # (the warnings stay, as a table's do)
+      return(suppressMessages(tfl_content_run(ro, data)))
     }
     if (identical(o$kind, "listing")) {
       # a listing's records: its data step, as its program reads them; its
@@ -204,7 +205,7 @@ tfl_output_contents <- function(output, study, dir = ".") {
 # its program (tfl_listing_code(part = "data"): the dataset, or the
 # report's analysis data, its analysis set's subjects, its condition, its
 # order) run from the study folder
-.listing_data_of <- function(o, study, dir = ".") {
+.listing_data_of <- function(o, study, dir = ".", ard = NULL) {
   d <- o$data %||% list()
   txt <- function(x) {
     v <- unlist(lapply(x, as.character))
@@ -218,7 +219,8 @@ tfl_output_contents <- function(output, study, dir = ".") {
   sp <- tfl_listing_spec(l, data.frame(output_id = o$id, vars = "USUBJID"), check = FALSE)
   old <- options(tflspec.plain_ns = TRUE)
   on.exit(options(old), add = TRUE)
-  ard <- .ard_spec_of_study(study, output_id = o$id)$spec
+  # (`ard`: the ARD definition when the caller has it already)
+  if (is.null(ard)) ard <- .ard_spec_of_study(study, output_id = o$id)$spec
   rw <- .records_rework(d)
   code <- tfl_listing_code(sp, o$id, ard = ard, part = "data", rework = rw)
   if (is.null(code)) .ard_stop(sprintf("%s: the listing names no dataset.", o$id))
@@ -280,7 +282,9 @@ tfl_output_contents <- function(output, study, dir = ".") {
     if (length(ro$ard$analyses %||% list())) {
       data$ard <- stage("the ARD", tfl_build_ard(st, ".", output_id = ro$id, save = FALSE))
     }
-    stage("the figure", suppressMessages(suppressWarnings(tfl_content_run(ro, data))))
+    # (the warnings stay: the template's own -- subjects or records left out,
+    # bars cut off -- are the user's to see, as a table's are)
+    stage("the figure", suppressMessages(tfl_content_run(ro, data)))
   } else {
     ard <- stage("the ARD", suppressMessages(tfl_build_ard(st, dir = ".", output_id = ro$id, save = FALSE)))
     if (!is.null(ard$output_id)) ard <- ard[ard$output_id %in% ro$id, , drop = FALSE]

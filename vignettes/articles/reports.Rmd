@@ -98,6 +98,13 @@ A cell of the header, footer, titles or footnotes may say a token:
   replaces it, and `(none)` takes it out. They go to
   `rtf_document(tokens = )`.
 
+A titles line whose whole text is `{PAGE_HEADING}` is where the page's
+heading goes -- the `Parameter: ...` line of a table with a page a
+parameter -- so a shell with it above the population line writes it
+there, in that line's alignment. With no such line the heading is the
+last title line, as before, and a page with no heading prints nothing
+there.
+
 A value that is the same for every report -- the sponsor, the protocol,
 the cut-off -- is written once, as a study row of the `tokens` sheet;
 the header and footer say `{SPONSOR}` and never repeat it.

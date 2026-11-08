@@ -225,6 +225,33 @@
   .ai_put_widths(o, e$widths)
 }
 
+# The ARD of the tables `ids`, built together (the study is read into sheets
+# once for all of them, not once a table).  One table's mistake stops the
+# build, so then the tables are halved and each half built, down to the one
+# that stops it: its entry is FALSE (built alone it stops the same way: the
+# caller leaves it).  A list by id.
+.ai_build_ard_split <- function(st, ids) {
+  out <- stats::setNames(vector("list", length(ids)), ids)
+  go <- function(ix) {
+    if (!length(ix)) return(invisible())
+    ard <- tryCatch(suppressMessages(suppressWarnings(
+      tfl_build_ard(st, dir = ".", output_id = ids[ix], save = FALSE))),
+      error = function(e) NULL)
+    if (!is.null(ard)) {
+      for (k in ix) out[k] <<- list(ard)
+    } else if (length(ix) > 1L) {
+      h <- length(ix) %/% 2L
+      go(ix[seq_len(h)])
+      go(ix[-seq_len(h)])
+    } else {
+      out[ix] <<- list(FALSE)
+    }
+    invisible()
+  }
+  go(seq_along(ids))
+  out
+}
+
 # The tables of an answer just written with no widths: each built (its
 # ARD, its plan) from the study folder, its widths written into its file
 # and remembered; a table that cannot be built is left to run.R
@@ -239,17 +266,28 @@
   on.exit(setwd(old), add = TRUE)
   st <- tryCatch(tfl_read_study_spec("."), error = function(e) NULL)
   if (is.null(st)) return(invisible(set))
-  for (i in todo) {
+  # the tables to build: resolved first (one the study's defaults give widths,
+  # or that cannot be resolved, is not built)
+  ros <- lapply(todo, function(i) tryCatch({
+    ro <- tfl_resolve_output(outs[[i]], st)
+    if (.ai_has_widths(ro)) NULL else ro
+  }, error = function(e) NULL))
+  need <- todo[!vapply(ros, is.null, NA)]
+  # their ARD is built once, for all of them (the study is read into sheets
+  # once, not once a table); a table the build stops on alone is left, as
+  # when it was built alone
+  batch <- .ai_build_ard_split(st, vapply(outs[need], function(o) o$id, ""))
+  for (k in seq_along(todo)) {
+    i <- todo[[k]]
     o <- outs[[i]]
+    ro <- ros[[k]]
+    if (is.null(ro) || isFALSE(batch[[o$id]])) next
     w <- tryCatch({
-      ro <- tfl_resolve_output(o, st)
-      if (.ai_has_widths(ro)) NULL else {
-        ard <- suppressMessages(suppressWarnings(
-          tfl_build_ard(st, dir = ".", output_id = o$id, save = FALSE)))
-        if (!is.null(ard$output_id)) ard <- ard[ard$output_id %in% o$id, , drop = FALSE]
-        plan <- suppressMessages(suppressWarnings(tfl_content_run(ro, ard)))
-        .ai_table_widths(o, ro, plan)
-      }
+      ard <- batch[[o$id]] %||% suppressMessages(suppressWarnings(
+        tfl_build_ard(st, dir = ".", output_id = o$id, save = FALSE)))
+      if (!is.null(ard$output_id)) ard <- ard[ard$output_id %in% o$id, , drop = FALSE]
+      plan <- suppressMessages(suppressWarnings(tfl_content_run(ro, ard)))
+      .ai_table_widths(o, ro, plan)
     }, error = function(e) NULL)
     if (is.null(w)) next
     tfl_write_output(w, paths[i])

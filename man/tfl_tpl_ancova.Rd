@@ -19,6 +19,7 @@ The table template \code{ancova}, layout \code{summary}. Its program is one call
    \code{covariates} \tab other \tab call \tab BASE \tab  \tab the model's covariates besides the arm \cr
    \code{where} \tab other \tab call \tab  \tab  \tab the records kept besides the parameter and visit (R) \cr
    \code{ref} \tab other \tab call \tab  \tab  \tab the reference arm; NULL: the last arm in the code list's order \cr
+   \code{adjust} \tab other \tab call \tab none \tab  \tab the multiplicity adjustment of the differences' CIs and p-values, as emmeans' adjust (none: no adjustment) \cr
 }
 }
 

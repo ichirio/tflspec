@@ -4,14 +4,15 @@ test_that("waterfall: the design form; the bars' order the call's step", {
   x <- tfl_template_expand("waterfall", list(param = "SUMDIAM", population = "SAF",
                                              where = "AVISIT == \"WEEK 12\""),
                            population = wf_pop)
+  # (the call's: one bar a subject said, the bars beyond the axis said, the order)
   expect_identical(vapply(x$data$steps, `[[`, "", "step"),
-                   c("read", "join", "param", "filter", "filter", "rank"))
+                   c("read", "join", "param", "filter", "filter", "code", "code", "rank"))
   expect_identical(x$data$steps[[4L]]$expr, "AVISIT == \"WEEK 12\"")
-  expect_identical(x$call_steps, 1L)
+  expect_identical(x$call_steps, 3L)
   r <- tfl_template_expand("waterfall", list(param = "SUMDIAM", by_response = TRUE))
   expect_identical(vapply(r$data$steps, `[[`, "", "step"),
-                   c("read", "param", "join", "filter", "rank", "levels"))
-  expect_identical(r$call_steps, 2L)
+                   c("read", "param", "join", "filter", "code", "code", "rank", "derive", "levels"))
+  expect_identical(r$call_steps, 5L)
   expect_identical(r$plot$colour_by, "BOR")
 })
 

@@ -287,7 +287,12 @@ needs that variable in `by`.
   parameter a page): the templates `param_change` and `shift` do it
   themselves (`param_page`, `param_heading`); else `plan_paginate_rows: {page_by: [PARAMCD], heading:
   "Parameter: {PARAM}", heading_at: title}` -- the heading goes under the
-  report's titles on each page; `{PARAM}` is that page's value of the
+  report's titles on each page, as their last line.  A shell with the
+  Parameter line **above** the population line writes it where it is, a
+  `page: titles` row whose whole text is `{PAGE_HEADING}` (`"3": {left:
+  "{PAGE_HEADING}"}` between the shell's second and its population line;
+  the row's alignment is the line's).  With no such row the heading is the
+  last title line; `{PARAM}` is that page's value of the
   column.  `page_by` names a column the table holds, as it holds it: a
   `table_plan` whose `rows: {group1: PARAM}` makes the column `group1`,
   so `page_by: [group1]`, `heading: "Parameter: {value}"` and

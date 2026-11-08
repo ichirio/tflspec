@@ -26,7 +26,12 @@ The A use of a figure's template SPEC: the program makes the records
 record of each subject the report keeps (\code{where}), the best overall
 response joined when the bars are coloured by it), then one call draws
 them: one bar a subject, the largest change first, the lines at 0, +20\%
-and -30\%.  The bars' order is made here.  A report's own layers and
+and -30\%.  The bars' order is made here.  A subject with several records
+is one bar, its smallest value (the first record of a tie), and a warning
+says how many records were left out; give the records you want with
+\code{where} in a report.  A bar beyond the axis (-100 to 100) is cut off, and
+a warning says how many.  A subject with no response (\code{by_response}) is a
+bar in its own colour, Missing in the legend.  A report's own layers and
 settings go after the call with \code{+}.
 }
 \examples{
