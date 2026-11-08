@@ -5,7 +5,7 @@ test_that("every tflspec template parameter has its type declared", {
   skip_on_cran()
   types <- c("vars", "levels", "flag", "number", "text", "choice", "list")
   # the names that mean two things are typed in each template
-  own <- c("param", "sort", "variable", "rows", "label", "stat_layout")
+  own <- c("param", "sort", "variable", "rows", "label", "stat_layout", "adjust")
   for (n in tfl_templates()$name) {
     for (p in tfl_template_params(n)) {
       at <- paste0(n, "$", p$name)

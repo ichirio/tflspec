@@ -17,9 +17,8 @@
   tfl_param("covariates", "BASE", doc = "the model's covariates besides the arm"),
   tfl_param("where", NULL, doc = "the records kept besides the parameter and visit (R)"),
   tfl_param("ref", NULL, doc = "the reference arm; NULL: the last arm in the code list's order"),
-  tfl_param("adjust", "none", type = "choice", choices = .tpl_ancova_adjust, doc = paste(
-    "the multiplicity adjustment of the differences' CIs and p-values (emmeans' `adjust`);",
-    "\"none\": no adjustment"))
+  tfl_param("adjust", "none", type = "choice", choices = .tpl_ancova_adjust,
+            doc = "the multiplicity adjustment of the differences' CIs and p-values, as emmeans' adjust (none: no adjustment)")
 )
 
 .tpl_ancova_body <- function(a, ctx) {
