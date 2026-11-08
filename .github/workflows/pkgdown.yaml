@@ -8,9 +8,9 @@ on:
     branches-ignore: [next]
   release:
     types: [published]
-  # a nightly build of next, about 22:00 JST: the site is built, not deployed
+  # a nightly build of next, about 1:00 JST: the site is built, not deployed
   schedule:
-    - cron: "0 13 * * *"
+    - cron: "0 16 * * *"
   workflow_dispatch:
 
 name: pkgdown
