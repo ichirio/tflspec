@@ -50,7 +50,7 @@
 #'   report with a template (`template: {name, args}`) where one fits --
 #'   the templates registered when the requests are written listed in
 #'   `ai/templates.md`, each request naming the ones likely for its reports,
-#'   its first line `<!-- templates: TRUE -->` -- else as a code SPEC.
+#'   a line near its top, `<!-- templates: TRUE -->` -- else as a code SPEC.
 #'   `FALSE`: the code SPEC only.
 #' @param progress `NULL`, or a function(step, i, n) called as the requests
 #'   are made: `step` `"request"`, `i` of `n` written (0 first) -- for a

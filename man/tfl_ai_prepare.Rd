@@ -101,7 +101,7 @@ report's own content items for what it does not cover), else as a code
 SPEC; the requests (and \code{AGENTS.md}) list the templates registered now
 -- tflspec's, a company's, the study's variants.  \code{FALSE}: the code
 SPEC only, the requests as they were before templates.  The setting is
-each request's first line (\code{templates: TRUE}) and \code{ai/status.md}'s.}
+a line near the top of each request (\code{templates: TRUE}) and \code{ai/status.md}'s.}
 
 \item{progress}{\code{NULL}, or a function(step, i, n) called as the work goes:
 \code{step} \code{"adam"} (the ADaM's summary), \code{"workbook"} (the TOC / SHELL

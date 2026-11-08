@@ -357,9 +357,12 @@ Group: {RENALGR}"`.
   titles (`x_label: ""` for none), limits and steps (`x_by`, `y_min`,
   `y_max`, `y_by`), `legend` and `legend_title`, and the colours of some
   values (`colours: {CR: darkgreen, PD: "#D62728"}`, the `colour_by`
-  variable's values) -- never a `template: args:` item (the build refuses
-  it).  A `layers:` item is for what no argument or setting does -- never
-  both for one thing.
+  variable's values).  Prefer `plot:` for them.  `x_by`, `y_by` and
+  `colours` work only in `plot:`; `km_survival` and `km_cumulative` also
+  take `x_label`, `y_label`, `x_max`, `x_step`, `y_min`, `y_max`,
+  `y_step`, `legend` and `legend_title` as `template: args:` items;
+  set one thing in one place only.  A `layers:` item is for what no argument or
+  setting does -- never both for one thing.
 - **A listing**: a listing column's `width:` in the shell's proportions,
   wide enough for its longest value (a subject id on one line) and its
   heading's longest word -- a short column too (`Age/Sex`, `64/M`: about
