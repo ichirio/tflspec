@@ -39,6 +39,7 @@ tplfig_check <- function(o, d, data) {
   env <- new.env(parent = .fig_pkg_env(c(attr(a, "libs"), "tflspec")))
   for (n in names(data)) assign(n, data[[n]], envir = env)
   eval(parse(text = tfl_fig_setup_code()), env)
+  eval(parse(text = tfl_helpers_code()), env)
   eval(parse(text = a), env)
   testthat::expect_identical(tplfig_png(env$content), png_t)
   # B: the written-out report, read back

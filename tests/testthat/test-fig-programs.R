@@ -131,7 +131,7 @@ test_that("a step after a named object changes it, in its pipe; code lists go on
     plot = list(colour_by = "TRT01A"),
     layers = list(list(layer = "point", data = "sm", x = "TRT01A", y = "mean")))
   code <- paste(tfl_fig_design_code(d, "F", setup = TRUE, codelists = cl), collapse = "\n")
-  expect_match(code, "df <- adsl |>\n  set_levels(TRT01A = cl_trt01a)", fixed = TRUE)
+  expect_match(code, "df <- adsl |>\n  order_levels() |>\n  set_levels(TRT01A = cl_trt01a)", fixed = TRUE)
   expect_match(code, "mutate(se = sd / sqrt(n), lo = mean - se, hi = mean + se) |>\n  mutate(lo2 = lo * 2)",
                fixed = TRUE)
 })
@@ -169,4 +169,90 @@ test_that("an axis title written empty is no title", {
   d$plot$x_label <- NULL
   expect_match(paste(tfl_fig_design_code(d), collapse = "
 "), "labs(y = \"Age\")", fixed = TRUE)
+})
+
+# a fictional study (DMY-001, Example Pharma): Placebo = 1, Drug B = 2,
+# Drug A = 3, so the arms' alphabetical order is not their TRT01PN order
+lv_adtte <- function() {
+  arms <- c("Drug A", "Placebo", "Drug B")
+  n <- c(3, 1, 2)
+  i <- rep(1:3, each = 8)
+  data.frame(USUBJID = sprintf("DMY-001-%02d", seq_along(i)),
+             TRT01P = arms[i], TRT01PN = n[i], FASFL = "Y",
+             PARAMCD = "OS", AVAL = 10 * (seq_along(i) %% 8 + 1) + i,
+             AVALU = "DAYS", CNSR = rep(c(0, 1), 12), stringsAsFactors = FALSE)
+}
+
+lv_fig_data <- function(code, adtte = lv_adtte(), ...) {
+  code <- as.character(code)
+  code <- code[seq_len(grep("^# ---- plot", code)[1L] - 1L)]
+  env <- new.env(parent = .fig_pkg_env(c("dplyr", "ggsurvfit")))
+  assign("adtte", adtte, envir = env)
+  # (the figure setup's days: the data part uses them)
+  env$days_per_week <- 7
+  env$days_per_month <- 30.4375
+  env$days_per_year <- 365.25
+  for (n in names(list(...))) assign(n, list(...)[[n]], envir = env)
+  eval(parse(text = tfl_helpers_code()), env)
+  eval(parse(text = .fig_strip_library(code)), env)
+  env
+}
+
+test_that("a figure's data puts the arms in their number order first, a code list wins", {
+  skip_if_not_installed("ggsurvfit")
+  d <- tfl_fig_template("km_ci", data = "ADTTE", param = "OS", group = "TRT01P")
+  code <- tfl_fig_design_code(d, "F-9", setup = TRUE)
+  # first step after the read, before the filter
+  expect_true(any(grepl("adtte_os <- adtte |>\n  order_levels() |>\n  filter(",
+                        paste(code, collapse = "\n"), fixed = TRUE)))
+  env <- lv_fig_data(code)
+  expect_identical(levels(env$adtte_os$TRT01P), c("Placebo", "Drug B", "Drug A"))
+  expect_identical(names(env$fit$strata), paste0("TRT01P=", c("Placebo", "Drug B", "Drug A")))
+  # a script of its own has no study helpers: no order_levels() ...
+  expect_false(any(grepl("order_levels", tfl_fig_design_code(d, "F-9"), fixed = TRUE)))
+  # ... unless asked for
+  expect_true(any(grepl("order_levels", tfl_fig_design_code(d, "F-9", order_arms = TRUE),
+                        fixed = TRUE)))
+  # (a code list given: the helpers are there)
+  # with code lists (which need the helpers too) the step is there, before them
+  cl <- data.frame(output_id = "F-9", variable = "TRT01P",
+                   value = c("Drug A", "Drug B", "Placebo"), label = NA, order = 1:3)
+  code2 <- tfl_fig_design_code(d, "F-9", codelists = cl)
+  expect_lt(grep("order_levels()", code2, fixed = TRUE)[1],
+            grep("set_levels(", code2, fixed = TRUE)[1])
+  env2 <- lv_fig_data(code2)
+  expect_identical(levels(env2$df$TRT01P %||% env2$adtte_os$TRT01P), c("Drug A", "Drug B", "Placebo"))
+})
+
+test_that("a figure that joins ADSL orders a records data's arm by ADSL's", {
+  skip_if_not_installed("ggsurvfit")
+  adtte <- lv_adtte()
+  adtte$TRT01PN <- NULL
+  adsl <- adtte[!duplicated(adtte$USUBJID), c("USUBJID", "TRT01P")]
+  adsl$TRT01PN <- c(Placebo = 1, `Drug B` = 2, `Drug A` = 3)[adsl$TRT01P]
+  d <- tfl_fig_design(
+    data = list(list(step = "read", dataset = "ADTTE"),
+                list(step = "join", dataset = "ADSL", by = "USUBJID", vars = "TRT01PN")),
+    plot = list(colour_by = "TRT01P"), layers = list())
+  code <- tfl_fig_design_code(d, "F-9", setup = TRUE)
+  expect_true(any(grepl("order_levels(from = adsl)", code, fixed = TRUE)))
+  env <- lv_fig_data(code, adtte = adtte, adsl = adsl)
+  expect_identical(levels(env$df$TRT01P), c("Placebo", "Drug B", "Drug A"))
+})
+
+test_that("the preview (tfl_content_run) and the program give the figure's arms the same order", {
+  skip_if_not_installed("ggplot2")
+  steps <- list(list(step = "read", dataset = "ADTTE"))
+  out <- tfl_output("F-9", "figure", data = list(source = "code", steps = steps),
+                    content = list(tfl_item("point", list(x = "TRT01P", y = "AVAL"))))
+  # the program has the step, so does the preview's code
+  expect_true(any(grepl("order_levels()", tfl_content_code(out), fixed = TRUE)))
+  p <- tfl_content_run(out, list(adtte = lv_adtte()))
+  expect_identical(levels(p$layers[[1]]$data$TRT01P), c("Placebo", "Drug B", "Drug A"))
+  # the same through the program's own text, run with the helpers
+  env <- new.env(parent = .fig_pkg_env("ggplot2"))
+  env$adtte <- lv_adtte()
+  eval(parse(text = tfl_helpers_code()), env)
+  eval(parse(text = .fig_strip_library(tfl_content_code(out))), env)
+  expect_identical(levels(env$content$layers[[1]]$data$TRT01P), levels(p$layers[[1]]$data$TRT01P))
 })

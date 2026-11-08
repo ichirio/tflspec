@@ -93,8 +93,9 @@
   # after the study's figure setup (theme_tfl(), the palettes, the days in
   # a month), as the program runs after programs/tfl/fig_setup.R
   code <- c(tfl_fig_setup_code(), .fig_strip_library(code))
-  # (the study's helpers: set_levels() of the code lists)
-  if (any(grepl("set_levels(", code, fixed = TRUE))) eval(parse(text = tfl_helpers_code()), env)
+  # (the study's helpers: set_levels() of the code lists, order_levels() of the arms)
+  if (any(grepl("set_levels(", code, fixed = TRUE)) ||
+      any(grepl("order_levels(", code, fixed = TRUE))) eval(parse(text = tfl_helpers_code()), env)
   suppressMessages(suppressWarnings(eval(parse(text = code), env)))
   fig <- get("fig", envir = env, inherits = FALSE)
   .ai_fig_nothing_drawn(fig, id)

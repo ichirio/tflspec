@@ -22,7 +22,8 @@ test_that("a figure report's code is its design's", {
                     content = list(tfl_item("point", list(x = "AGE", y = "WEIGHTBL"))))
   expect_identical(tfl_content_code(out),
                    as.character(tfl_fig_design_code(design, plot_id = "F-1",
-                                                    save = FALSE, name = "content")))
+                                                    save = FALSE, name = "content",
+                                                    order_arms = TRUE)))
   skip_if_not_installed("ggplot2")
   skip_if_not_installed("cards")
   p <- tfl_content_run(out, list(adsl = cards::ADSL))

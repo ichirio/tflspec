@@ -99,7 +99,7 @@ test_that("the code: from the definition or its workbook, one listing at a time"
   # its condition and its order, one statement (dplyr)
   # (and its dates as they print, in the same pipe)
   expect_true(any(startsWith(code, paste0(
-    "data <- adae |>\n  dplyr::filter(AESEV == 'SEVERE') |>\n",
+    "data <- adae |>\n  order_levels() |>\n  dplyr::filter(AESEV == 'SEVERE') |>\n",
     "  dplyr::arrange(USUBJID, dplyr::desc(ASTDY)) |>\n  dplyr::mutate("))))
   expect_false(any(grepl("lapply(", code, fixed = TRUE)))
   # the listing's code lists, on its columns: each a factor, it sorts so
@@ -149,6 +149,7 @@ test_that("tfl_listing() gives the pages the code gives", {
   saveRDS(adae, rds)
   cat <- data.frame(dataset = "ADAE", path = rds, derive = NA)
   env <- new.env(parent = asNamespace("rtfreporter"))
+  eval(parse(text = tfl_helpers_code()), env)
   eval(parse(text = tfl_listing_code(sp, "L-1", cat)), env)
   pages <- tfl_listing(adae, sp, "L-1")
   expect_identical(pages, env$content)
@@ -203,4 +204,71 @@ test_that("an .rda (or .RData) file holding one dataset is read, in the code and
   got <- tfl_read_adam(d)
   expect_identical(names(got), c("ADAE", "ADSL"))
   expect_identical(got$ADSL, adsl)
+})
+
+# a fictional study (DMY-001, Example Pharma): Placebo = 1, Drug B = 2,
+# Drug A = 3, so the arms' alphabetical order is not their TRT01AN order
+lv_arms <- function() {
+  data.frame(TRT01A = c("Drug A", "Placebo", "Drug B", "Drug A", "Placebo", "Drug B"),
+             TRT01AN = c(3, 1, 2, 3, 1, 2))
+}
+
+lv_listing_run <- function(code, ...) {
+  env <- new.env(parent = asNamespace("rtfreporter"))
+  eval(parse(text = tfl_helpers_code()), env)
+  for (n in names(list(...))) assign(n, list(...)[[n]], envir = env)
+  eval(parse(text = code), env)
+  env
+}
+
+test_that("a listing sorted by an arm sorts in the arm's number order, a code list wins", {
+  adae <- cbind(USUBJID = sprintf("DMY-001-%02d", 1:6), lv_arms(),
+                AEDECOD = c("Rash", "Cough", "Fever", "Nausea", "Fatigue", "Headache"),
+                stringsAsFactors = FALSE)
+  rds <- normalizePath(tempfile(fileext = ".rds"), winslash = "/", mustWork = FALSE)
+  saveRDS(adae, rds)
+  cat <- data.frame(dataset = "ADAE", path = rds, derive = NA)
+  sp <- tfl_listing_spec(list(
+    listings = data.frame(output_id = "L-9", dataset = "ADAE", sort = "TRT01A | USUBJID"),
+    listing_cols = data.frame(output_id = "L-9", vars = c("USUBJID", "TRT01A"))))
+  code <- tfl_listing_code(sp, "L-9", cat)
+  # first step of its data, before the code lists and the sort
+  expect_true(any(grepl("data <- adae |>\n  order_levels() |>\n  dplyr::arrange(TRT01A, USUBJID)",
+                        code, fixed = TRUE)))
+  d <- lv_listing_run(code)$data
+  expect_identical(levels(d$TRT01A), c("Placebo", "Drug B", "Drug A"))
+  expect_identical(as.character(d$TRT01A), rep(c("Placebo", "Drug B", "Drug A"), each = 2))
+  # a code list of the arm wins over its number
+  cl <- data.frame(output_id = "L-9", variable = "TRT01A",
+                   value = c("Drug A", "Drug B", "Placebo"),
+                   label = c("Drug A", "Drug B", "Placebo"), order = c("1", "2", "3"))
+  code2 <- tfl_listing_code(sp, "L-9", cat, codelists = cl)
+  expect_match(paste(code2, collapse = "\n"), "order_levels() |>\n  set_levels(TRT01A = cl_trt01a) |>",
+               fixed = TRUE)
+  d2 <- lv_listing_run(code2)$data
+  expect_identical(levels(d2$TRT01A), c("Drug A", "Drug B", "Placebo"))
+  expect_identical(as.character(d2$TRT01A), rep(c("Drug A", "Drug B", "Placebo"), each = 2))
+})
+
+test_that("a listing of records with no arm number is ordered by ADSL's when ADSL is read too", {
+  adsl <- cbind(USUBJID = sprintf("DMY-001-%02d", 1:3),
+                data.frame(TRT01A = c("Drug A", "Placebo", "Drug B"), TRT01AN = c(3, 1, 2)),
+                stringsAsFactors = FALSE)
+  adae <- data.frame(USUBJID = rep(adsl$USUBJID, 2),
+                     TRT01A = rep(adsl$TRT01A, 2), stringsAsFactors = FALSE)
+  r1 <- normalizePath(tempfile(fileext = ".rds"), winslash = "/", mustWork = FALSE)
+  r2 <- normalizePath(tempfile(fileext = ".rds"), winslash = "/", mustWork = FALSE)
+  saveRDS(adae, r1)
+  saveRDS(adsl, r2)
+  cat <- data.frame(dataset = c("ADAE", "ADSL"), path = c(r1, r2), derive = NA)
+  sp <- tfl_listing_spec(list(
+    listings = data.frame(output_id = "L-9", dataset = "ADAE", sort = "TRT01A"),
+    listing_cols = data.frame(output_id = "L-9", vars = c("USUBJID", "TRT01A"))))
+  rw <- "data <- dplyr::semi_join(data, adsl, by = \"USUBJID\")"
+  code <- tfl_listing_code(sp, "L-9", cat, rework = rw)
+  expect_true("data <- order_levels(adae, from = adsl)" %in% code)
+  d <- lv_listing_run(code)$data
+  expect_identical(levels(d$TRT01A), c("Placebo", "Drug B", "Drug A"))
+  # ADSL is not read: the arms alone
+  expect_false(any(grepl("from = adsl", tfl_listing_code(sp, "L-9", cat), fixed = TRUE)))
 })

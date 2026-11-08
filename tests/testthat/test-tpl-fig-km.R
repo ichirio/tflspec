@@ -260,6 +260,7 @@ test_that("in a study: km_cumulative (STF Figure 1's sample) from ADTTE and from
   env3 <- new.env(parent = .fig_pkg_env(c(attr(a3, "libs"), "tflspec")))
   for (n in names(data)) assign(n, data[[n]], envir = env3)
   eval(parse(text = tfl_fig_setup_code()), env3)
+  eval(parse(text = tfl_helpers_code()), env3)
   eval(parse(text = a3), env3)
   built <- suppressMessages(tfl_content_run(ro3, data))
   expect_identical(vapply(env3$content$layers, function(l) class(l$geom)[1L], ""),
