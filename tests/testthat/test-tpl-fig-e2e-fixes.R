@@ -302,15 +302,17 @@ test_that("waterfall: one bar a subject by default, each subject's smallest valu
                  fixed = TRUE)
   b <- ggplot2::layer_data(p, 1L)
   expect_identical(nrow(b), 3L)
-  # the largest first: C 30, A -10, B -20
-  expect_identical(b$y, c(30, -10, -20))
+  # the largest first: C 30, A -10, B -20 (a bar's value as ymin + ymax: ggplot2
+  # before 4.0 puts a negative bar's y at 0)
+  expect_identical(b$ymin + b$ymax, c(30, -10, -20))
   # a tie: the first record in the data
   kept <- p$layers[[1L]]$data
   expect_identical(kept$AVISIT[kept$USUBJID == "A"], "W6")
   # one record a subject: nothing said, nothing changed
   one <- d[c(1L, 4L, 6L), ]
   expect_no_warning(q <- tpl_waterfall(one, value = PCHG))
-  expect_identical(ggplot2::layer_data(q, 1L)$y, c(30, -10, -20))
+  bq <- ggplot2::layer_data(q, 1L)
+  expect_identical(bq$ymin + bq$ymax, c(30, -10, -20))
   # a subject with no value is not a bar (its record is no record)
   expect_identical(nrow(ggplot2::layer_data(suppressWarnings(tpl_waterfall(rbind(d, d[1L, ]), value = PCHG)), 1L)), 3L)
 })
