@@ -1,5 +1,6 @@
 # ---- data ------------------------------------------------------------------
 adsl_fas <- adsl |>
+  order_levels() |>
   filter(FASFL == "Y") |>
   left_join(
     adrs |> filter(PARAMCD == "BOR") |> select(USUBJID, BOR = AVALC),

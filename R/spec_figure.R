@@ -121,8 +121,11 @@
   if (.fig_new_content(output$content)) return(.fig_content_code(output))
   # (the design as its list: tfl_fig_design_code() reads it as a design)
   design <- .fig_design_of_output(output)
+  # (the report's program runs after the study's helpers: the arms in their
+  # numeric order, as the figure of items has them)
   tfl_fig_design_code(design, plot_id = output$id, save = FALSE, name = "content",
-                      codelists = .codelists_rows(output$codelists, output$id))
+                      codelists = .codelists_rows(output$codelists, output$id),
+                      order_arms = TRUE)
 }
 
 # the figure made: its code run on the objects it reads (`data`: a named
@@ -155,8 +158,10 @@
   # a figure of items runs after the study's figure setup (theme_tfl(),
   # scale_colour_tfl(), tfl_colours()), as its program does
   if (new) eval(parse(text = tfl_fig_setup_code()), env)
-  # (the study's helpers: the ARD's readers, and set_levels() of the code lists)
-  if (!is.null(data$ard) || any(grepl("set_levels(", code, fixed = TRUE))) {
+  # (the study's helpers: the ARD's readers, and set_levels() of the code
+  # lists and order_levels() of the arms)
+  if (!is.null(data$ard) || any(grepl("set_levels(", code, fixed = TRUE)) ||
+      any(grepl("order_levels(", code, fixed = TRUE))) {
     eval(parse(text = tfl_helpers_code()), env)
   }
   eval(parse(text = .fig_strip_library(code)), env)

@@ -53,7 +53,8 @@
 
 .fig_compose_code <- function(design, plot_id, gg, setup = FALSE, save = TRUE,
                               name = "fig", levels = NULL,
-                              width_in = 7.5, height_in = 4.5) {
+                              width_in = 7.5, height_in = 4.5,
+                              order = isTRUE(setup) || length(levels) > 0L) {
   nms <- names(design$plots)
   # each figure is made as fig_<name>; one that is wrapped (a patchwork of
   # panels, a risk table) is made as `fig` first
@@ -61,10 +62,10 @@
     d <- .fig_as_design(design$plots[[i]])
     # (the code lists once, at the head: below)
     b <- .fig_design_body(d, gg, setup = setup, levels = levels,
-                          codelists_head = FALSE)
+                          codelists_head = FALSE, order = order)
     if (b$risktable || b$patch) b else
       .fig_design_body(d, gg, setup = setup, name = paste0("fig_", nms[i]),
-                       levels = levels, codelists_head = FALSE)
+                       levels = levels, codelists_head = FALSE, order = order)
   })
   comp <- design$compose %||% list()
   layout <- .fig_layout_code(comp$layout %||% .fig_layout_default(design), nms)

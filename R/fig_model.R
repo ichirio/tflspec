@@ -736,7 +736,7 @@ tfl_read_fig_design <- function(path) {
 .fig_named_steps <- c("survfit", "summary", "summary_by", "rate", "count", "subset",
                       "ard_stats", "function")
 
-.fig_steps_code <- function(steps, levels = NULL) {
+.fig_steps_code <- function(steps, levels = NULL, order = FALSE) {
   out <- character()
   pipe <- character()
   reads <- character()
@@ -771,6 +771,11 @@ tfl_read_fig_design <- function(path) {
     cur
   }
   io <- .fig_step_io(steps)
+  # the design joins ADSL: a dataset read is ordered by ADSL's arms where it
+  # has no number of its own
+  adsl_joined <- any(vapply(steps, function(z) {
+    identical(z$step, "join") && identical(toupper(.fv(z, "dataset", "join") %||% ""), "ADSL")
+  }, NA))
   for (i in seq_along(steps)) {
     s <- steps[[i]]
     k <- s$step
@@ -824,7 +829,11 @@ tfl_read_fig_design <- function(path) {
         } else {
           ds <- toupper(v("dataset"))
           reads <- c(reads, ds)
-          pipe <- pp_ds_name(ds)
+          # the arms in their numeric order (TRT01P by TRT01PN), first of
+          # the pipe -- before any filter or fit (the study's helper
+          # order_levels(); the code lists, set later, win)
+          pipe <- c(pp_ds_name(ds), if (order) .order_levels_step(
+            NULL, if (adsl_joined && ds != "ADSL") pp_ds_name("ADSL")))
         }
       },
       join = {
@@ -840,7 +849,10 @@ tfl_read_fig_design <- function(path) {
         }
         semi <- identical(v("how"), "semi")
         sel <- paste(c(by, if (!semi) vars), collapse = ", ")
+        # ADSL's arms it brings in their numeric order
+        ord <- order && !semi && ds == "ADSL" && any(grepl("^(TRT|ARM|ACTARM)", vars))
         add(paste0(if (semi) "semi_join" else "left_join", "(\n    ", pp_ds_name(ds),
+                   if (ord) " |> order_levels()",
                    if (!is.null(w)) paste0(" |> filter(", w, ")"),
                    " |> select(", sel, "),\n    by = ", q(by), "\n  )"))
       },
@@ -1518,9 +1530,10 @@ tfl_read_fig_design <- function(path) {
 # figure is itself a patchwork (panels below it); `risktable`: a
 # ggsurvfit with add_risktable (a patchwork once built).
 .fig_design_body <- function(design, gg, setup = FALSE, name = "fig",
-                             levels = NULL, codelists_head = TRUE) {
+                             levels = NULL, codelists_head = TRUE,
+                             order = isTRUE(setup) || length(levels) > 0L) {
   plot <- design$plot
-  d <- .fig_steps_code(design$data, levels)
+  d <- .fig_steps_code(design$data, levels, order = order)
   head <- if (length(levels) && codelists_head) .codelists_head(levels)
   layers <- design$layers
   # the arms' shapes and line types, when the standard has them
@@ -1705,6 +1718,10 @@ tfl_read_fig_design <- function(path) {
 #' @param save `FALSE` leaves out saving the PNG: the code makes the
 #'   figure only (a report program writes it into its RTF, at its size on
 #'   the page: [tfl_fig_page_size()]).
+#' @param order_arms `TRUE` puts the arms in their numeric order with
+#'   `order_levels()` (a study helper, see [tfl_helpers_code()]), first step of
+#'   each dataset read; the default, `NULL`, does so with `setup = TRUE` or
+#'   `codelists`, the code that needs the helpers.
 #' @param width_in,height_in The saved PNG's size in inches (`save`): a
 #'   report's figure is its page's ([tfl_fig_page_size()]).
 #' @param name The name the figure is given.
@@ -1713,7 +1730,10 @@ tfl_read_fig_design <- function(path) {
 #'   `value`, `label`, `order`): the rows of `plot_id` are put on the
 #'   figure's data, last of its data steps -- each listed column a factor
 #'   in its list's order, its values as the list has them (`cl_<variable>`
-#'   and `set_levels()`, see [tfl_helpers_code()]).
+#'   and `set_levels()`, see [tfl_helpers_code()]).  The arms
+#'   are first put in their numeric order by `order_levels()` (`TRT01P` by
+#'   `TRT01PN`), first step of each dataset read (see `order_arms`); a code
+#'   list wins.
 #'
 #' The script has two sections: `# ---- data ----` (the steps' pipes, one
 #' an object; the axis breaks; a panel's data) and `# ---- plot ----` (the
@@ -1727,16 +1747,19 @@ tfl_read_fig_design <- function(path) {
 #' @export
 tfl_fig_design_code <- function(design, plot_id = "fig", ggplot2_version = NULL,
                                 setup = FALSE, save = TRUE, name = "fig",
-                                codelists = NULL, width_in = 7.5, height_in = 4.5) {
+                                codelists = NULL, width_in = 7.5, height_in = 4.5,
+                                order_arms = NULL) {
   design <- if (inherits(design, "tfl_fig_design")) design else .fig_design_from_list(design)
   gg <- .fig_target_version(ggplot2_version, design)
   # the report's code lists (its rows of the codelists sheet): on the
   # figure's data, last of its data steps
   lv <- .codelist_levels(codelists, plot_id)
+  order <- if (is.null(order_arms)) isTRUE(setup) || length(lv) > 0L else isTRUE(order_arms)
   if (length(design$plots)) {
     return(.fig_compose_code(design, plot_id, gg, setup = setup,
                              save = save, name = name, levels = lv,
-                             width_in = width_in, height_in = height_in))
+                             width_in = width_in, height_in = height_in,
+                             order = order))
   }
   whole <- Filter(function(l) identical(l$layer, "figure"), design$layers)
   if (length(whole)) {
@@ -1746,7 +1769,8 @@ tfl_fig_design_code <- function(design, plot_id = "fig", ggplot2_version = NULL,
     return(.drop_attached_ns(do.call(fn, c(list(style = w$style %||% NULL,
                                                 plot_id = plot_id), args))))
   }
-  b <- .fig_design_body(design, gg, setup = setup, name = name, levels = lv)
+  b <- .fig_design_body(design, gg, setup = setup, name = name, levels = lv,
+                        order = order)
   code <- c(
     # a script of its own says what it is and attaches its packages; with
     # the study's setup, the program around it does both
