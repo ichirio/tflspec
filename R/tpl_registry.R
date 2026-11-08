@@ -1253,7 +1253,8 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
 # the column variable's margins, here the body's own variable)
 .tpl_shift_code <- function(a, subj) {
   q <- function(x) paste0("\"", x, "\"", collapse = ", ")
-  keep <- c("!ABLFL %in% \"Y\"", sprintf("!is.na(%s)", a$post), a$where)
+  # (a transport file holds "" for no value: not a category)
+  keep <- c("!ABLFL %in% \"Y\"", sprintf("!%s %%in%% c(NA, \"\")", a$post), a$where)
   paste(c(
     "# the records after baseline, the subjects' column variable",
     sprintf("d <- dplyr::inner_join(dplyr::select(%s, -dplyr::any_of(%s)),",
