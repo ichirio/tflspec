@@ -27,23 +27,15 @@ this instead of asking:
   `Q<n> BLOCKER [<request>] <report id>: ...`, set its row `blocked`, say it
   in the progress line, and go on with the other reports.
 - **Never stop and wait mid-batch.** Go straight on, request after request:
-  write the drafts, then build and check them (*Build and check*), and fill
+  write the drafts{{batch_build}}, and fill
   the row of `ai/progress.md` (with the `batch` number) as you go.
 
-When every request of the batch is built and checked, **ask everything at
+When every request of the batch is {{batch_done}}, **ask everything at
 once**. Post this as one message, in {{language}}:
 - the batch's questions from `ai/questions-end.md` (this batch's section
   only): the blockers first, then the rest by request;
 - each entry with the default you took and its `例:` lines;
-- then **the defaults you chose yourself**, from the first section of
-  `ai/defaults.md`, *For the person: the defaults the agent chose* (the
-  defaults whose source is no document -- your conventions -- merged by
-  topic across the reports): its groups 1 and 2 in full (*Changes the
-  numbers*, *Changes the rows or statistics*), then the count of the rest
-  (group 3 and the defaults a document gave), with "see ai/defaults.md".
-  `run.R` writes that file from the drafts' assumptions, the most important
-  first; read it before you post, and say in a line that **the defaults can
-  differ from run to run, so the person should read them too**;
+- {{batch_defaults}};
 - at the end: "Answer only what you want changed (Q<n>: ...); the others
   keep their default.  Change a default the same way: `D<n>: ...` or
   `<report> <item>: ...`."
@@ -59,7 +51,7 @@ Then **stop and wait**. When the person answers:
   The blockers answered are written now.
 - Mark the rows `reworked` (changed) or `checked` (not changed) in
   `ai/progress.md`.
-- Build and check only the reworked requests (*Build and check*).
+- {{rework_build}}
 - Then say what changed, report by report, and **show the menu again** when
   requests remain (*The menu*), else finish (*Before you stop*).
 

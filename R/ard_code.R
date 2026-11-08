@@ -631,14 +631,19 @@
     gsub("\\bpopulation\\b", population, d, perl = TRUE)
   }
   first <- .data_arg(fn, has)
-  if (!is.null(first)) first <- data
+  # (a categorical analysis counts a blank text value as missing, not as a
+  # category: the program only, the ARS model shows the call itself)
+  # (not in a stack, whose children have no data of their own)
+  if (!is.null(first)) first <- if (isTRUE(program) && identical(fn, "cards::ard_tabulate") &&
+                                     is.character(data) && length(data) == 1L && nzchar(data) &&
+                                     !identical(data, "NULL")) .blank_as_na(data) else data
   # a program's nested counts: through the study helper that makes the ARD
   # of no records too (cards stops on none); the call as ARS shows it: cards'
   call_as <- if (isTRUE(program) && identical(fn, "cards::ard_stack_hierarchical")) {
     "ard_hierarchical_or_none"
   } else fn
   .cl(call_as, c(
-    as.list(first),
+    if (inherits(first, "tfl_cl")) list(first) else as.list(first),
     if (!is.null(by)) list(by = by),
     if (!identical(fn, "cards::ard_total_n") && !is.null(vars))
       list(variables = vars),
@@ -647,6 +652,27 @@
     as.list(dflt),
     unname(user),
     if (!is.null(fmt_fun)) list(fmt_fun = fmt_fun)))
+}
+
+# `data` with its blank text values missing: an .xpt holds "" for a missing
+# value, and cards counts it as a category of its own (its n on the
+# variable's heading row, in the denominators).  Only the data a categorical
+# analysis counts: a listing shows "" as blank, and a condition on "" in
+# a data step still reads it.
+.blank_as_na <- function(data) {
+  .cl("dplyr::mutate", list(data, .blank_across()))
+}
+
+.blank_across <- function() {
+  .cl("dplyr::across", list(.cl("dplyr::where", list("is.character")),
+                            "~ dplyr::na_if(.x, \"\")"))
+}
+
+# Is `x` the first argument .blank_as_na() writes for `data`?  (A call that
+# went through the call list and back has lost nothing but its class marks.)
+.is_blank_head <- function(x, data) {
+  inherits(x, "tfl_cl") && identical(x$fn, "dplyr::mutate") &&
+    identical(.lay(x, width = Inf), .lay(.blank_as_na(data), width = Inf))
 }
 
 # The call as code (the ARS model shows it)
@@ -1329,6 +1355,11 @@
 .data_pipe <- function(name, node, data, steps) {
   a <- if (inherits(node, "tfl_cl")) node$args
   first <- if (length(a)) names(a)[1L] %||% ""
+  if (identical(first, "") && .is_blank_head(a[[1L]], data)) {
+    node$args <- a[-1L]
+    return(.pipe_code(name, data, c(list(.cl("dplyr::mutate", list(.blank_across()))),
+                                    list(node), steps)))
+  }
   if (identical(first, "") && identical(a[[1L]], data) && !identical(data, "NULL")) {
     node$args <- a[-1L]
     return(.pipe_code(name, data, c(list(node), steps)))
@@ -1341,6 +1372,13 @@
 .piped <- function(node, data) {
   a <- if (inherits(node, "tfl_cl")) node$args
   first <- if (length(a)) names(a)[1L] %||% ""
+  if (identical(first, "") && .is_blank_head(a[[1L]], data)) {
+    node$args <- a[-1L]
+    return(paste0(data, " |>\n  ",
+                  gsub("\n", "\n  ", .lay(.cl("dplyr::mutate", list(.blank_across())), lead = 2L),
+                       fixed = TRUE), " |>\n  ",
+                  gsub("\n", "\n  ", .lay(node, lead = 4L), fixed = TRUE)))
+  }
   if (!identical(first, "") || !identical(a[[1L]], data)) return(node)
   node$args <- a[-1L]
   paste0(data, " |>\n  ", gsub("\n", "\n  ", .lay(node, lead = 4L), fixed = TRUE))
@@ -1396,7 +1434,10 @@
     # a subject-level flag: has the subject any record of the data?
     flag <- if (length(.split_bar(r$variables))) .split_bar(r$variables)[1L] else
       make.names(r$analysis_id)
-    return(c(comment, .pipe_code(name, pop_name, c(
+    # (the subjects of the analysis set as the report's data keeps them --
+    # its subset applied --, not the whole set)
+    base <- .adata_subjects_of(x$analysis_data, .data_col(r)) %||% pop_name
+    return(c(comment, .pipe_code(name, base, c(
       list(sprintf("dplyr::mutate(%s = %s %%in%% %s$%s)", flag, subj, data, subj)),
       list(node), steps))))
   }

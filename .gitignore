@@ -3,3 +3,5 @@
 .RData
 dev/samples/
 dev/out/
+tests/testthat/_problems/
+tests/testthat/testthat-problems.rds

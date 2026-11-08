@@ -87,6 +87,8 @@
       "Run only `Rscript ../run.R <request>`, to build a request as *Build and check* says; nothing else."
     } else "Do not run `run.R`.",
     reads = paste(c(more, tools), collapse = ""),
+    # (ai/reference/ is a common file only when it is listed under "What you read")
+    ref_common = if (has_conv || has_hints) ", `ai/reference/`" else "",
     max_reads = as.character(max_reads),
     run_r = if (any(c("workbook", "adam") %in% reads)) {
       "Run a command only to read the files listed under \"What you read\"; nothing else."
@@ -727,14 +729,17 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
     ", nothing of the look but the column widths, and mark what you could not settle under ai: confirm. ",
     if (identical(run, "batch")) paste0(
       "Start with a batch of ALL the requests that are left, as ai/AGENTS.md says: do not ask me now; ",
-      "take your defaults and note every question in ai/questions-end.md; build and check each request; ",
-      "when all are built, post the questions and the defaults in one message, in ",
+      "take your defaults and note every question in ai/questions-end.md; ",
+      if (build) "build and check each request; when all are built, post" else
+        "write each request's drafts; when all are drafted, post",
+      " the questions and the defaults in one message, in ",
       .ai_language_name(language), ", and wait for my answers. ") else paste0(
       "Start with ONE request: ask me here, in ", .ai_language_name(language),
       ", only what defines its reports and neither the documents nor the usual convention ",
       "settles (ai/AGENTS.md: what to decide yourself, what to confirm, what to ask), numbered, with the ",
       "choices and your default -- then wait for my answers. Record them in ai/decisions.md, write the drafts, ",
-      "build and check them, and then stop and show the menu. "),
+      if (build) "build and check them, and then stop and show the menu. " else
+        "and then stop and show the menu. "),
     "At the menu I answer with c (the next request), a number (that many requests together) or ",
     "a (all the rest together). Read only the request and the files it names; ",
     if (build) paste0("run only `Rscript ../run.R <request>` (ai/AGENTS.md: *Build and check*), ",

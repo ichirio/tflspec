@@ -91,6 +91,37 @@ test_that("the agent's files: AGENTS.md, run.R, decisions; toc.yml; the paths; t
   expect_match(paste(readLines(file.path(d, "run.R")), collapse = " "), "the person runs it; the agent does not",
                fixed = TRUE)
   expect_false(any(grepl("{{", readLines(file.path(d, "run.R")), fixed = TRUE)))
+  # review none: nothing sends the agent to build, check or run ../run.R, and the
+  # batch posts nothing from ai/defaults.md (only run.R writes it)
+  expect_false(any(grepl("Build and check", ag0, fixed = TRUE)))
+  expect_false(any(grepl("../run.R", ag0, fixed = TRUE)))
+  expect_false(any(grepl("build and check", ag0, fixed = TRUE)))
+  expect_false(any(grepl("{{", ag0, fixed = TRUE)))
+  expect_true(any(grepl("no list of the defaults you chose yourself", ag0, fixed = TRUE)))
+  expect_true(any(grepl("Do not build or check them", ag0, fixed = TRUE)))
+  for (run in c("one", "batch")) {
+    p0 <- tflspec:::.ai_agent_prompt("s", run = run, build = FALSE)
+    expect_false(grepl("build", p0, fixed = TRUE), info = run)
+    expect_match(tflspec:::.ai_agent_prompt("s", run = run, build = TRUE), "build and check", fixed = TRUE)
+  }
+  # (review on: the defaults of ai/defaults.md are posted, and ai/reference/ is
+  # a common file only when the study has one)
+  y$ai$review <- NULL
+  yaml::write_yaml(y, file.path(d, "study.yml"))
+  tflspec:::.ai_agent_files(d, overwrite = TRUE)
+  ag2 <- readLines(file.path(d, "ai", "AGENTS.md"), encoding = "UTF-8")
+  expect_true(any(grepl("Build and check only the reworked requests", ag2, fixed = TRUE)))
+  expect_true(any(grepl("from the first section of", ag2, fixed = TRUE)))
+  expect_true(any(grepl("`study_facts.md` and", ag2, fixed = TRUE)))
+  expect_false(any(grepl("reference/", ag2, fixed = TRUE)))
+  dir.create(file.path(d, "ai", "reference"))
+  writeLines("# conventions", file.path(d, "ai", "reference", "conventions.md"))
+  tflspec:::.ai_agent_files(d, overwrite = TRUE)
+  ag3 <- readLines(file.path(d, "ai", "AGENTS.md"), encoding = "UTF-8")
+  expect_true(any(grepl("`study_facts.md`, `reference/` and", ag3, fixed = TRUE)))
+  unlink(file.path(d, "ai", "reference"), recursive = TRUE)
+  y$ai$review <- "none"
+  yaml::write_yaml(y, file.path(d, "study.yml"))
   y$ai$review <- list(table = 4L)
   yaml::write_yaml(y, file.path(d, "study.yml"))
   expect_error(tflspec:::.ai_agent_files(d, overwrite = TRUE), "table is 0 to 3, or none; not 4")

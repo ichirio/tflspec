@@ -115,7 +115,7 @@ test_that("the catalog's new cards: labelled, their shown arguments typed, each 
   g <- .fig_gg_args()
   expect_true(all(g$kind %in% c(unname(.schema_gg_prefix), "labs", "helper", "plot", "ggsurvfit_layer",
                                 "compose")))
-  expect_false(anyDuplicated(paste(g$kind, g$arg)) > 0L)
+  expect_false(anyDuplicated(paste(g$kind, g$arg, g$only)) > 0L)
   for (t in unique(g$type)) expect_false(is.null(.schema_type(t)$kind), info = t)
 })
 
@@ -722,4 +722,75 @@ test_that("numbers written as arithmetic are numbers where a list of numbers goe
   a <- list(transform = "log2", breaks = tfl_r("2^(-2:2)"), limits = tfl_r("2^c(-2, 2)"))
   expect_identical(nrow(gg_problems("scale_x_continuous", a)), 0L)
   expect_identical(gg_code("scale_x_continuous", a[2]), "scale_x_continuous(breaks = 2^(-2:2))")
+})
+
+test_that("an argument whose values differ by function is typed by the function (ggh4x, stat_bin, facet_wrap, coord_radial)", {
+  skip_if_not_installed("ggh4x")
+  skip_if_not(utils::packageVersion("ggplot2") >= "4.0.0")
+  wrong <- function(fn, args) nrow(gg_problems(fn, args)) > 0L
+  built <- function(layer, only_x = FALSE) {
+    d <- data.frame(x = 1:20, y = 1:20, P = rep(c("a", "b"), 10))
+    g <- if (only_x) ggplot2::ggplot(d, ggplot2::aes(x)) else {
+      ggplot2::ggplot(d, ggplot2::aes(x, y)) + ggplot2::geom_point()
+    }
+    tryCatch({
+      suppressMessages(ggplot2::ggplot_build(g + layer))
+      TRUE
+    }, error = function(e) FALSE)
+  }
+  # ggh4x's facets: axes and remove_labels are margins|x|y|all and none|x|y|all
+  for (fn in c("ggh4x::facet_wrap2", "ggh4x::facet_nested_wrap")) {
+    for (v in c("margins", "x", "y", "all")) {
+      expect_false(wrong(fn, list(facets = tfl_r("~P"), axes = v)), info = paste(fn, v))
+      expect_true(built(ggh4x::facet_wrap2(~P, axes = v)), info = v)
+    }
+    expect_true(wrong(fn, list(facets = tfl_r("~P"), axes = "all_x")), info = fn)
+  }
+  expect_false(built(ggh4x::facet_wrap2(~P, axes = "all_x")))
+  for (fn in c("ggh4x::facet_grid2", "ggh4x::facet_nested", "ggh4x::facet_manual")) {
+    expect_false(wrong(fn, list(axes = "y")), info = fn)
+    expect_true(wrong(fn, list(axes = "all_y")), info = fn)
+    expect_false(wrong(fn, list(remove_labels = "x")), info = fn)
+    expect_true(wrong(fn, list(remove_labels = "rows")), info = fn)
+  }
+  expect_false(wrong("ggh4x::facet_wrap2", list(facets = tfl_r("~P"), axes = TRUE)))
+  # ggplot2's own facets keep theirs
+  expect_false(wrong("facet_wrap", list(facets = "P", axes = "all_x")))
+  expect_true(wrong("facet_wrap", list(facets = "P", axes = "x")))
+  expect_false(wrong("facet_grid", list(axes = "all_y")))
+  # facet_wrap's space has no "free"; facet_grid's has
+  expect_false(wrong("facet_wrap", list(facets = "P", space = "free_x")))
+  expect_true(wrong("facet_wrap", list(facets = "P", space = "free")))
+  expect_true(built(ggplot2::facet_wrap(~P, space = "free_x", scales = "free_x")))
+  expect_false(built(ggplot2::facet_wrap(~P, space = "free")))
+  expect_false(wrong("facet_grid", list(space = "free")))
+  # drop of the bins: none|all|extremes (TRUE and FALSE are read as all and none)
+  for (fn in c("geom_histogram", "stat_bin", "geom_freqpoly")) {
+    expect_false(wrong(fn, list(drop = "extremes")), info = fn)
+    expect_false(wrong(fn, list(drop = TRUE)), info = fn)
+    expect_true(wrong(fn, list(drop = "x")), info = fn)
+  }
+  expect_false(wrong("geom_bar", list(stat = "bin", drop = "all")))
+  expect_true(wrong("geom_bar", list(stat = "bin", drop = "x")))
+  expect_true(built(ggplot2::geom_histogram(drop = "extremes", bins = 5), only_x = TRUE))
+  expect_false(built(ggplot2::geom_histogram(drop = "x", bins = 5), only_x = TRUE))
+  for (fn in c("stat_bin_2d", "stat_ydensity", "stat_summary_hex")) {
+    expect_false(wrong(fn, list(drop = FALSE)), info = fn)
+    expect_true(wrong(fn, list(drop = "extremes")), info = fn)
+  }
+  # reverse: coord_radial takes theta|thetar|r|none, the others none|x|y|xy
+  for (v in c("none", "theta", "thetar", "r")) expect_false(wrong("coord_radial", list(reverse = v)), info = v)
+  for (v in c("x", "y", "xy")) expect_true(wrong("coord_radial", list(reverse = v)), info = v)
+  expect_true(built(ggplot2::coord_radial(reverse = "r")))
+  expect_false(built(ggplot2::coord_radial(reverse = "x")))
+  for (fn in c("coord_cartesian", "coord_transform", "coord_trans")) {
+    for (v in c("none", "x", "y", "xy")) expect_false(wrong(fn, list(reverse = v)), info = paste(fn, v))
+    for (v in c("theta", "r", "thetar")) expect_true(wrong(fn, list(reverse = v)), info = paste(fn, v))
+  }
+  # ggh4x's scale_x_facet(type = ) is the end of a scale function's name
+  for (fn in c("ggh4x::scale_x_facet", "ggh4x::scale_y_facet")) {
+    expect_false(wrong(fn, list(expr = tfl_r("P == 'a'"), type = "log10")), info = fn)
+    expect_identical(tfl_schema(fn)$args$type$type, "string")
+  }
+  expect_identical(tfl_schema("scale_colour_brewer")$args$type$type, "enum[seq|div|qual]")
 })

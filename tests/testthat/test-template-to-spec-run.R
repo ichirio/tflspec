@@ -106,7 +106,12 @@ test_that("every template: its RTF as a template report = as the code SPEC tfl_t
   while (!all(file.exists(csvs)) && difftime(Sys.time(), t0, units = "mins") < 30) {
     Sys.sleep(1)
   }
-  out <- unlist(lapply(logs, function(l) if (file.exists(l)) readLines(l, warn = FALSE)))
+  # (a child may still hold its log open after its csv is written: on Windows
+  # reading it then fails, "Permission denied"; the log is only for the message)
+  out <- unlist(lapply(logs, function(l) {
+    if (file.exists(l)) tryCatch(suppressWarnings(readLines(l, warn = FALSE)),
+                                 error = function(e) character())
+  }))
   expect_true(all(file.exists(csvs)), info = paste(utils::tail(out, 20L), collapse = "\n"))
   r <- do.call(rbind, lapply(csvs[file.exists(csvs)], utils::read.csv,
                              colClasses = "character", na.strings = character()))

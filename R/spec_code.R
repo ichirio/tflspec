@@ -512,11 +512,55 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
 # the functions a table's content may apply to the data before its plan
 .content_data_steps <- c("normalize_ard")
 
-# The content without its data steps (normalize_ard()): when the report's
-# `data.steps` make the data, the normalization is theirs, not the
-# study defaults' as well
+# The content without its data steps (normalize_ard()): for a table of
+# records (no ARD to normalize), a listing or a figure, and the report's
+# own data code (`source: code`), whose steps make the data on their own.  A
+# table's Rework (.content_rework()) comes after the content's normalize_ard()
 .content_drop_data_steps <- function(content) {
   Filter(function(it) !.schema_fn_name(it$fn) %in% .content_data_steps, content)
+}
+
+# A table's Rework (`data.steps`, the old process_code): optional R after
+# the normalize_ard() of the content and before table_plan(), starting
+# from `data`.  Not a table of records (`source: dataset`: no ARD to
+# normalize), nor the report's own data code (`source: code`), nor a
+# listing or a figure: their steps stand alone, as they always did.
+.content_rework <- function(output) {
+  identical(output$kind, "table") &&
+    !(output$data$source %||% "ard") %in% c("dataset", "code") &&
+    length(.content_r_steps(output)) > 0L
+}
+
+# The content split into its normalize_ard() items and the rest
+.content_rework_split <- function(content) {
+  pre <- vapply(content, function(it) .schema_fn_name(it$fn) %in% .content_data_steps, NA)
+  list(pre = content[pre], rest = content[!pre])
+}
+
+# The one check both routes make: a Rework starts from `data` and leaves
+# `data`, so it names `data` somewhere.  Code that does not parse is left
+# to R: the program (and tfl_content_run()) stop with R's own message.
+.content_rework_need_data <- function(steps, who) {
+  ok <- tryCatch("data" %in% all.names(parse(text = steps, keep.source = FALSE)),
+                 error = function(e) TRUE)
+  if (!ok) {
+    .ard_stop(sprintf("%s: the data.steps leave no `data`, the data the plan is made from.", who))
+  }
+  invisible(TRUE)
+}
+
+# The line that makes `data` before a Rework: the content's normalize_ard()
+# with its arguments, else the ARD as it is
+.content_rework_normalize_code <- function(pre, object, pipe = NULL) {
+  if (!length(pre)) return(paste("data <-", object))
+  op <- .ard_pipe_op(pipe)
+  calls <- vapply(.content_calls(pre), function(s) .spec_call_code(.content_print(s)), "")
+  one <- paste("data <-", object, op, paste(calls, collapse = paste0(" ", op, " ")))
+  if (length(calls) == 1L && !grepl("\n", calls, fixed = TRUE) && nchar(one) <= 80L) return(one)
+  lines <- c(object, paste0("  ", calls))
+  lines[-length(lines)] <- paste(lines[-length(lines)], op)
+  lines[1L] <- paste("data <-", lines[1L])
+  unlist(strsplit(lines, "\n", fixed = TRUE))
 }
 
 # plan_cells()'s entries in the order the sheets path writes them
@@ -658,6 +702,9 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
   .plan_content_more(items, sp$tables)
 }
 
+# the verbs whose columns say a part of an item and content_more the rest
+.rest_verbs <- c("plan_columns", "plan_col_header", "plan_labels")
+
 # the items the sheets cannot say, from the tables rows' content_more (YAML,
 # tfl_sheets_from_spec()): each put by its verb's rank among the sheets'
 # items; a table_plan() there is the table's whole (its row says none of it)
@@ -667,6 +714,17 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
   if (!length(more)) return(items)
   if (any(vapply(more, function(it) identical(it$fn, "table_plan"), NA))) {
     items <- Filter(function(it) !identical(it$fn, "table_plan"), items)
+  }
+  # (a verb's rest -- what its columns could not say -- is put with the
+  # sheets' item of that verb: one item, as it was written)
+  for (fn in .rest_verbs) {
+    im <- which(vapply(more, function(it) identical(it$fn, fn), NA))
+    ix <- which(vapply(items, function(it) identical(it$fn, fn), NA))
+    if (length(im) == 1L && length(ix) == 1L &&
+        !length(intersect(names(items[[ix]]$args), names(more[[im]]$args)))) {
+      items[[ix]]$args <- c(items[[ix]]$args, more[[im]]$args)
+      more <- more[-im]
+    }
   }
   for (it in more) items <- .insert_by_rank(items, it)
   # (a normalize_ard() there is the table's own, the tables row's overall_label /
@@ -769,15 +827,91 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
   out
 }
 
+# The arguments of these verbs that no sheet has a column for, and that the
+# bridge keeps apart as the item's rest instead of sending the whole item out
+# (#689): what the columns can say stays on the sheets' rows.  `span` is
+# the header lines', kept with them when the cells cannot say it.
+.bridge_rest_names <- function(fn) {
+  switch(fn,
+    plan_columns = c("cell_format", "column_widths_twips"),
+    plan_col_header = c("header_sep", "span"),
+    character())
+}
+
+# Whether an item's arguments (those the sheets say) hold a text a cell does
+# not keep: a blank, or a blank at either end (a separator " / ", a heading
+# "  Total"), which the sheets read trimmed.  The item with a rest then goes
+# whole, as for any other verb, so that nothing it says changes (#689).
+# plan_col_header's cell texts may be blank ("" is no text), plan_labels'
+# headings may not (a blank one is a value).
+.cell_unsafe <- function(fn, args) {
+  edge <- function(x) {
+    x <- unlist(x, use.names = FALSE)
+    is.character(x) && any(!is.na(x) & grepl("^\\s|\\s$", x))
+  }
+  switch(fn,
+    plan_columns = edge(args$sep),
+    plan_col_header = {
+      h <- args$header
+      edge(args$lines) || edge(if (is.data.frame(h)) h$text else lapply(h, function(cl) cl[["text"]]))
+    },
+    plan_labels = {
+      x <- unlist(args, use.names = FALSE)
+      is.character(x) && (edge(x) || any(!is.na(x) & !nzchar(x)))
+    },
+    FALSE)
+}
+
+# plan_col_header(lines = , span = ): each cell's span, as .plan_header_lines()
+# works it out -- one value for every cell, or a list a header row, a value a
+# cell named as the row's cells are -- as one character vector a row, with NA
+# for "one" (a blank `span` cell).  NULL when the span is not a plain value
+# the cells can hold (an expression, a list of the wrong length ...).
+.lines_span <- function(lines, span) {
+  no <- c("tfl_r", "tfl_call", "tfl_unset", "tfl_formula")
+  if (inherits(span, no)) return(NULL)
+  if (!is.list(lines) || !length(lines)) return(NULL)
+  if (is.list(span) && length(span) != length(lines)) return(NULL)
+  out <- vector("list", length(lines))
+  for (i in seq_along(lines)) {
+    nm <- names(lines[[i]])
+    sp <- if (is.list(span)) span[[i]] else span
+    if (inherits(sp, no) || !length(sp)) return(NULL)
+    v <- vapply(seq_along(nm), function(j) {
+      s1 <- if (!is.null(names(sp)) && nm[j] %in% names(sp)) sp[[nm[j]]] else
+        if (is.null(names(sp))) sp[[1L]] else "each"
+      if (!is.character(s1) || length(s1) != 1L || is.na(s1) || inherits(s1, no)) NA_character_
+      else if (identical(s1, "one")) "" else s1
+    }, "")
+    if (anyNA(v)) return(NULL)
+    out[[i]] <- ifelse(v == "", NA_character_, v)
+  }
+  out
+}
+
 # A table's content written to the sheets a workbook has -- the inverse of
 # .plan_content_items(), verb by verb, in the sheets' own forms (`a | b`,
 # `name = value`, a newline as \n).  What a sheet cannot say (plan_after(),
 # a second plan_digits(), an expression as a label ...) is listed in
 # attr(, "not_converted") and left out, never written approximately.  The
 # app reads its grids from this while the workbook form is still its own.
+#
+# plan_columns(), plan_col_header() and plan_labels() are the exception to
+# "an item the sheets cannot say goes whole" (#689): what their columns can
+# say is written, and the arguments they cannot are the item's rest, an
+# item of the same verb in attr(, "not_converted_rest") -- not lost, so no
+# note.  An item with nothing the sheets can say goes whole as for any verb.
 .plan_sheets_from_content <- function(items, output_id = NULL) {
   id <- if (is.null(output_id)) NA_character_ else output_id
   lost <- character()
+  rest <- list()
+  ra <- list()
+  orig <- list()
+  ra_why <- character()
+  rest_add <- function(name, why = NULL) {
+    ra[name] <<- list(orig[[name]])
+    if (!is.null(why)) ra_why <<- c(ra_why, why)
+  }
   # (the items a miss is in, by their place among the items not
   # normalize_ard(): attr(, "not_converted_at"), the caller keeps them whole)
   lost_at <- integer()
@@ -889,10 +1023,17 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
     nm <- names(a) %||% rep("", length(a))
     pos <- a[!nzchar(nm)]
     named <- a[nzchar(nm)]
+    orig <- items[[cur]]$args %||% list()
+    ra <- list()
+    ra_why <- character()
+    # (the arguments of these verbs no sheet has a column for are the item's
+    # rest; `span` with header lines is the branch's)
+    span_here <- identical(fn, "plan_col_header") && !is.null(named$lines)
+    take <- setdiff(intersect(names(named), .bridge_rest_names(fn)), if (span_here) "span")
     # an argument no branch below reads, or a positional one the verb's
     # branch does not take, would be dropped without a word: the item goes
     # whole to the caller's content_more instead (#689)
-    unread <- .bridge_unread(fn, names(named), length(pos))
+    unread <- .bridge_unread(fn, setdiff(names(named), c(take, if (span_here) "span")), length(pos))
     if (length(unread)) {
       miss(fn, sprintf("%s: no sheet says it", paste(unread, collapse = ", ")))
       next
@@ -902,6 +1043,9 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
       miss(fn, "a second call (a sheet holds one)"); next
     }
     seen <- c(seen, fn)
+    for (k in take) rest_add(k)
+    named <- named[setdiff(names(named), take)]
+    snap <- list(tb, study, vars, cells, lay, sty, cols, cstyles, hdr, codes, labelled)
     switch(fn,
       table_plan = {
         if (!is.null(named$cols)) tb$cols <- bar(named$cols)
@@ -969,6 +1113,10 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
         # call or an earlier one) is not "put together" with the first --
         # the item goes whole to content_more (#689)
         twice <- function(v, x) v %in% labelled && !identical(vars[[v]]$label, x)
+        # (what the variables sheet cannot say stays the item's rest, by its
+        # name; `variable` is never split: the sheets read every heading
+        # under it, so a part of it kept apart would replace the rest)
+        keep_rest <- function(v, why) if (identical(v, "variable")) miss(fn, why) else rest_add(v, why)
         for (v in names(named)) {
           x <- named[[v]]
           if (is.list(x) && length(x) &&
@@ -991,8 +1139,8 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
           # data variable's are its code list's already (the ARD has them)
           if (is.character(x) && !is.null(names(x)) && !anyNA(names(x)) && all(nzchar(names(x)))) {
             if (!v %in% own) {
-              miss(fn, sprintf(paste0("%s: a data variable's value labels go in the ",
-                                      "report's code list (the ARD program puts them on the data)"), v))
+              keep_rest(v, sprintf(paste0("%s: a data variable's value labels go in the ",
+                                          "report's code list (the ARD program puts them on the data)"), v))
               next
             }
             for (k in seq_along(x)) {
@@ -1002,10 +1150,10 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
             next
           }
           if (!is.character(x) || length(x) != 1L) {
-            miss(fn, sprintf("%s: a value's labels stay in code", v)); next
+            keep_rest(v, sprintf("%s: a value's labels stay in code", v)); next
           }
           if (twice(v, x)) {
-            miss(fn, sprintf("%s: a second text for its heading", v)); next
+            keep_rest(v, sprintf("%s: a second text for its heading", v)); next
           }
           var_row(v); vars[[v]]$label <- x
           labelled <- c(labelled, v)
@@ -1115,11 +1263,27 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
       },
       plan_col_header = {
         h <- named$header
-        if (!is.null(named$lines)) {
-          h <- do.call(rbind, lapply(seq_along(named$lines), function(i) {
-            l <- named$lines[[i]]
-            data.frame(line = as.character(i), cols = names(l), text = unname(l),
-                       stringsAsFactors = FALSE)
+        lines <- named$lines
+        # a span over the header lines is a cell of the `span` column, as
+        # .plan_header_lines() makes it; one that is no plain value, or with no
+        # lines to span, stays the rest -- with the lines it belongs to
+        csp <- NULL
+        # (`lines` with no span is "each" in rtfreporter; a blank span cell is "one")
+        if (is.null(named$span) && !is.null(lines)) csp <- .lines_span(lines, "each")
+        if (!is.null(named$span)) {
+          csp <- if (!is.null(lines)) .lines_span(lines, named$span)
+          if (is.null(csp)) {
+            rest_add("span")
+            if (!is.null(lines)) { rest_add("lines"); lines <- NULL }
+          }
+        }
+        if (!is.null(lines)) {
+          h <- do.call(rbind, lapply(seq_along(lines), function(i) {
+            l <- lines[[i]]
+            d <- data.frame(line = as.character(i), cols = names(l), text = unname(l),
+                            stringsAsFactors = FALSE)
+            if (!is.null(csp)) d$span <- csp[[i]]
+            d
           }))
         }
         if (is.data.frame(h)) {
@@ -1133,24 +1297,36 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
           if (all(vapply(v, function(e) is.character(e) && length(e) == 1L, NA))) {
             tb$header_n <- if (identical(names(v), "n")) v$n
                            else paste(paste(names(v), "=", unlist(v)), collapse = " | ")
-          } else miss(fn, "values other than page / table")
+          } else rest_add("values", "values other than page / table")
         }
         if (!is.null(named$col_header_align)) sty$col_header_align <- named$col_header_align
       },
       plan_columns = {
         w <- named$widths
         if (!is.null(w)) {
-          if (is.null(names(w))) miss(fn, "widths by position (a sheet names its columns)")
+          if (is.null(names(w)) || !all(nzchar(names(w)))) rest_add("widths", "widths by position (a sheet names its columns)")
           else for (cn in names(w)) { col_row(cn); cols[[cn]]$rel_width <- w[[cn]] }
         }
         for (cn in named$decimal) { col_row(cn); cols[[cn]]$decimal_split <- TRUE }
         rt <- named$row_title
-        if (is.numeric(rt)) miss(fn, "row_title by position")
+        if (is.numeric(unlist(rt))) rest_add("row_title", "row_title by position")
         else for (cn in rt) { col_row(cn); cols[[cn]]$row_title <- TRUE }
         if (!is.null(named$auto_width)) sty$auto_width <- named$auto_width
         if (!is.null(named$sep)) tb$sep <- named$sep
       },
       miss(fn, "a verb no sheet holds"))
+    # the item's rest: with a part the sheets say it is kept beside it; with
+    # nothing else the sheets say, the item goes whole as before
+    if (length(ra) && !cur %in% lost_at) {
+      if (identical(snap, list(tb, study, vars, cells, lay, sty, cols, cstyles, hdr, codes, labelled))) {
+        # (the reasons the branch gave; "no sheet says it" for the arguments no sheet has a column for)
+        miss(fn, if (length(ra_why)) ra_why[1L] else sprintf("%s: no sheet says it", paste(names(ra), collapse = ", ")))
+      } else if (.cell_unsafe(fn, orig[setdiff(names(orig), names(ra))])) {
+        miss(fn, "a text the sheets would not keep, with arguments they cannot say")
+      } else {
+        rest[[length(rest) + 1L]] <- tfl_item(items[[cur]]$fn, ra[intersect(names(orig), names(ra))])
+      }
+    }
   }
   # one sheet's rows as text, the way a workbook holds them
   txt <- function(v) {
@@ -1194,6 +1370,7 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
   }
   attr(sp, "not_converted") <- lost
   attr(sp, "not_converted_at") <- sort(unique(lost_at[!is.na(lost_at)]))
+  attr(sp, "not_converted_rest") <- rest
   sp
 }
 
@@ -1210,8 +1387,10 @@ tfl_table_code <- function(spec, output_id = NULL, data = "ard",
 #' @param output A report ([tfl_output()]), resolved.
 #' @param data The data the content starts from: the ARD (or the normalized
 #'   ARD when the content has no `normalize_ard()` item).  With
-#'   `data.steps` (R that makes `data` from the output's `data.object`,
-#'   `ard` by default), the object the steps start from.  For a figure, a
+#'   `data.steps` (a table's Rework), the object the output names
+#'   (`data.object`, `ard` by default): `data` is that object after the
+#'   content's `normalize_ard()` (as it is when the content has none), and
+#'   the steps start from `data`.  For a figure, a
 #'   named list of the objects its code reads: the datasets by their names
 #'   in lower case (`adtte`), and `ard`.
 #' @return For a table, the [rtfreporter::table_plan()]; for a figure, the
@@ -1246,6 +1425,26 @@ tfl_content_run <- function(output, data) {
   # its parts) has no ARD to normalize
   if (identical(output$data$source, "dataset")) output$content <- .content_drop_data_steps(output$content)
   steps <- .content_r_steps(output)
+  # (records made by .listing_data_of() have the steps done)
+  if (isTRUE(attr(data, "tfl_steps_done"))) steps <- character()
+  if (.content_rework(output)) {
+    # a Rework runs as the program runs it: `data` is the output's object
+    # normalized (the content's normalize_ard(), else as it is), the steps
+    # leave the data the plan is made from
+    .content_rework_need_data(steps, "tfl_content_run()")
+    sp <- .content_rework_split(output$content)
+    env <- new.env(parent = globalenv())
+    obj <- output$data$object %||% "ard"
+    assign(obj, data, envir = env)
+    x <- data
+    for (cl in .content_calls(sp$pre)) {
+      x <- do.call(.spec_fun(cl$fun), c(list(x), lapply(cl$args, .spec_eval, env = emptyenv())))
+    }
+    assign("data", x, envir = env)
+    eval(parse(text = steps), env)
+    return(.content_table_run(sp$rest, get("data", envir = env, inherits = FALSE),
+                              kind = output$kind))
+  }
   if (length(steps)) {
     # the steps run as the program runs them: the output's object bound
     # to `data`, and what they leave in `data` is the plan's data
@@ -1339,9 +1538,15 @@ tfl_content_run <- function(output, data) {
 #' @param output A report ([tfl_output()]), resolved.
 #' @param data The name of the object the pipe starts from; `NULL`: the
 #'   output's `data$object`, else `ard` when the content normalizes it
-#'   (a `normalize_ard()` item), else `data`.  With `data.steps` (R that
-#'   makes `data` from the output's object, the old process_code), the
-#'   steps come first, as they are written, and the pipe starts from `data`.
+#'   (a `normalize_ard()` item), else `data`.  A table with `data.steps`
+#'   (its Rework, the old process_code: optional R after `normalize_ard()`
+#'   and before `table_plan()`) starts with `data <- ard |> normalize_ard(...)`
+#'   (the content's own item with its arguments; `data <- ard` when it has
+#'   none; `ard` is the output's object), then the steps as they are written,
+#'   which start from `data` and leave `data`, and the pipe starts from
+#'   `data`.  Steps that never name `data` are an error.  A table of records
+#'   (`source: dataset`) and the report's own data code (`source: code`)
+#'   have their steps alone, as they are written.
 #' @param plan The name the plan is assigned to.
 #' @param pipe `"|>"`, `"%>%"` or `"rstudio"` (RStudio's Insert Pipe
 #'   Operator); `NULL` follows `getOption("rtfreporter.ard_pipe")`, else
@@ -1427,10 +1632,31 @@ tfl_content_code <- function(output, data = NULL, plan = "plan", pipe = NULL,
   }
   # the object the pipe starts from: the output's own name for it, else
   # the ARD when the content normalizes it, else the normalized data
-  # the data's steps (`data.steps`, the old process_code): R that makes
-  # `data` from the output's object, written as it is, before the plan
+  # the data's steps (`data.steps`, the Rework, the old process_code): R
+  # on `data`, written as it is, between the normalization and the plan
   steps <- .content_r_steps(output)
+  if (.content_rework(output)) {
+    # `data <- ard |> normalize_ard(...)` (the content's, else `data <- ard`),
+    # the Rework as it is written, the plan from `data`
+    .content_rework_need_data(steps, "tfl_content_code()")
+    sp <- .content_rework_split(output$content)
+    return(c(.drop_attached_ns(
+               .content_rework_normalize_code(sp$pre, output$data$object %||% "ard", pipe)),
+             steps, "",
+             .content_table_code(sp$rest, data = data %||% "data",
+                                 plan = plan, pipe = pipe, kind = output$kind)))
+  }
   if (length(steps)) {
+    # a listing of a study's records: its data part makes them, the steps
+    # in it (the rework: .records_rework()), where the steps stand alone
+    # for a program that has made `data`
+    if (!is.null(study) && identical(output$kind, "listing") &&
+        identical(output$data$source, "dataset")) {
+      return(c(.content_listing_data(output, study), "",
+               .content_table_code(.content_drop_data_steps(output$content),
+                                   data = data %||% "data", plan = plan, pipe = pipe,
+                                   kind = output$kind)))
+    }
     # the steps make the data: no normalize_ard() of the defaults after them
     return(c(steps, "", .content_table_code(.content_drop_data_steps(output$content),
                                             data = data %||% "data",

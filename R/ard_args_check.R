@@ -18,7 +18,9 @@
 # (cardx::ard_car_anova(type = ) to car::Anova()) takes what it does not
 # name, and the name is looked for in the function it reaches
 # (.passed_args_unknown()).  Then the values written as they are (.ard_arg_value_problems()),
-# and the arguments of the `post` steps (.post_args_unknown()).
+# the arguments of the model cardx fits (`method.args = list(...)`, a
+# model's call in `x`: .model_args_problems()) and the arguments of the
+# `post` steps (.post_args_unknown()).
 .ard_args_unknown <- function(x) {
   a <- x$analyses
   keys <- tfl_ard_methods()
@@ -33,7 +35,8 @@
     if (is.null(fm)) next
     pkg <- sub("::.*$", "", call)
     tag <- paste(a$output_id[i], a$analysis_id[i], sep = " / ")
-    out <- c(out, .ard_arg_value_problems(tag, call, a$args[i]))
+    out <- c(out, .ard_arg_value_problems(tag, call, a$args[i]),
+             .model_args_problems(tag, call, a$args[i]))
     given <- tryCatch(.args_given(a$args[i]), error = function(e) character())
     known <- c(names(fm), ".overall", ".missing", "by", "variables", "strata",
                "denominator", "statistic")
@@ -361,7 +364,9 @@
     paste0(.r_arg_name(g), " = ", paste(deparse(e[[g]], width.cutoff = 500L),
                                         collapse = " ")), ""),
     collapse = ", ")
-  out <- if (length(given)) .ard_arg_value_problems(tag, fn, args) else character()
+  out <- if (length(given)) {
+    c(.ard_arg_value_problems(tag, fn, args), .model_args_problems(tag, fn, args))
+  } else character()
   if ("..." %in% fm && !.dots_checked(fn)) return(out)
   bad <- .args_not_matched(given, fm)
   if (length(bad)) out <- c(out, sprintf(

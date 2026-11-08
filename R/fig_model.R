@@ -1379,12 +1379,20 @@ tfl_read_fig_design <- function(path) {
   if (is.null(x) || !length(x) || (length(x) == 1L && (is.na(x) || identical(x, "")))) return(NULL)
   if (is.list(x)) x <- unlist(x)
   if (is.null(names(x))) {
-    parts <- trimws(strsplit(paste(x, collapse = ","), ",", fixed = TRUE)[[1L]])
+    # split at the commas between pairs, not those inside a call's brackets
+    # (X = rgb(1,0,0))
+    parts <- trimws(strsplit(paste(x, collapse = ","), ",(?![^()]*\\))", perl = TRUE)[[1L]])
     kv <- strsplit(parts[nzchar(parts)], "=", fixed = TRUE)
     if (!all(lengths(kv) == 2L)) {
       stop("plot.colours: value = colour pairs, e.g. CR = darkgreen, PD = #D62728.", call. = FALSE)
     }
     x <- stats::setNames(trimws(vapply(kv, `[[`, "", 2L)), trimws(vapply(kv, `[[`, "", 1L)))
+  }
+  call_like <- grepl("(", x, fixed = TRUE)
+  if (any(call_like)) {
+    stop(sprintf(paste0("plot.colours: %s is a call, not a colour R reads: ",
+                        "give a colour name or a hex code (#D62728)."),
+                 paste0("`", x[call_like][1L], "`")), call. = FALSE)
   }
   stats::setNames(as.character(x), names(x))
 }
@@ -2130,8 +2138,16 @@ tfl_check_fig_design <- function(design, adam = NULL, ggplot2_version = NULL,
   }
   cols <- objects[["df"]]
   f <- .fig_plot_fields()
+  # (a Kaplan-Meier template reads some `plot:` keys itself: the risk table's title)
+  tn <- if (is.list(design$template)) design$template$name else design$template
+  routed <- tryCatch(
+    if (is.character(tn) && length(tn) == 1L && identical(.tpl_get(tn, "")$layout, "km")) {
+      .tpl_km_plot_routed
+    } else character(),
+    error = function(e) character())
   for (nm in names(design$plot)) {
     r <- f[f$field == nm, , drop = FALSE]
+    if (!nrow(r) && nm %in% routed) next
     if (!nrow(r)) { add("plot", nm, "is not a figure setting"); next }
     v <- design$plot[[nm]]
     if (r$kind == "choice" && !is.na(r$choices) &&
@@ -2843,7 +2859,9 @@ tfl_fig_forest_analyses <- function(data = "ADTTE", param = "OS", pop = "FASFL",
     one(id, "Hazard ratio, all subjects", all),
     do.call(rbind, lapply(subgroups, function(s) one(
       paste(id, s, sep = "_"), paste("Hazard ratio by", s),
-      paste0("cards::ard_strata(\n  data,\n  .strata = ", s, ",\n  .f = ~ ", reg(".x", "  "), "\n)")))))
+      # (a blank or missing subgroup value is no subgroup)
+      paste0("cards::ard_strata(\n  dplyr::filter(data, !is.na(", s, "), ", s, " != \"\"),\n  .strata = ", s,
+             ",\n  .f = ~ ", reg(".x", "  "), "\n)")))))
   rownames(an) <- NULL
   list(analysis_data = adata, analyses = an)
 }

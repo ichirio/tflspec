@@ -120,7 +120,9 @@ tfl_sheets_from_spec <- function(study, outputs) {
       keep <- keep[-out]
       if (!length(keep)) { sp <- list(); break }
     }
-    more <- c(more, items[setdiff(seq_along(items), keep)])
+    # (and the rest of a plan_columns() / plan_col_header() / plan_labels()
+    # whose columns say a part: the arguments no column says)
+    more <- c(more, items[setdiff(seq_along(items), keep)], attr(sp, "not_converted_rest"))
     if (length(more)) more_rows[[key]] <<- more
     for (sh in names(sp)) {
       d <- sp[[sh]]
@@ -283,6 +285,11 @@ tfl_sheets_from_spec <- function(study, outputs) {
         if (identical(it$fn, "plan_listing") && !"plan_listing" %in% said) {
           said <- c(said, it$fn)
           for (cl in a$cols %||% list()) {
+            # (a column written as a plain list, as R code or the xlsx import
+            # gives it, is the same call)
+            if (!inherits(cl, "tfl_call") && is.list(cl) && identical(cl$fn, "listing_col")) {
+              cl <- tfl_call("listing_col", cl$args %||% list(), package = cl$package)
+            }
             if (!inherits(cl, "tfl_call")) next
             row <- c(list(output_id = id), lapply(cl$args[intersect(names(cl$args), .listing_col_said)], cell))
             rest <- cl$args[setdiff(names(cl$args), .listing_col_said)]
