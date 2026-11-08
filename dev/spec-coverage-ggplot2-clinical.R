@@ -327,3 +327,106 @@ fig_hist_fd <- ggplot(lv, aes(x = AVAL)) +
   scale_y_continuous(expand = expansion(mult = c(0, 0.05))) +
   facet_wrap(~ TRTA, ncol = 1) +
   xlab("Value")
+
+# Round 11: what the figures above leave out and a statistical programmer
+# writes every day -- calendar dates, a statistic's own labels
+# (after_stat()), a strip's labels by a lookup, a part of the data by a
+# function, the scales' helpers for breaks, a second axis, a legend's keys
+# redrawn, colour steps of a heat map.
+
+# subjects' time on study by calendar date (enrolment, data cut-off)
+dt <- data.frame(USUBJID = sprintf("S-%03d", 1:12), TRTA = rep(arm, 4),
+                 start = as.Date("2024-01-15") + sort(sample(0:240, 12)))
+dt$end <- dt$start + sample(60:400, 12)
+fig_dates <- ggplot(dt, aes(y = reorder(USUBJID, start), colour = TRTA)) +
+  geom_linerange(aes(xmin = start, xmax = end), linewidth = 2.5) +
+  geom_vline(xintercept = as.Date("2025-01-31"), linetype = "dashed") +
+  annotate("text", x = as.Date("2025-01-31"), y = 12.5, label = "Data cut-off", hjust = -0.05, size = 3) +
+  scale_x_date(date_breaks = "3 months", date_labels = "%b %Y", date_minor_breaks = "1 month",
+               limits = as.Date(c("2024-01-01", "2025-06-30")), expand = expansion(add = c(0, 10))) +
+  scale_colour_brewer(palette = "Set1", name = NULL) +
+  labs(x = NULL, y = "Subject") +
+  theme_bw() +
+  theme(legend.position = "top", axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+
+# the subjects with an AE by grade: counts and percentages the stat computes
+ag <- data.frame(TRTA = sample(arm, 200, replace = TRUE),
+                 AETOXGR = factor(sample(1:4, 200, replace = TRUE, prob = c(4, 3, 2, 1))))
+fig_ae_pct <- ggplot(ag, aes(x = TRTA, fill = AETOXGR)) +
+  geom_bar(aes(y = after_stat(count / sum(count))), position = position_dodge(preserve = "single")) +
+  geom_text(aes(label = after_stat(count), y = after_stat(count / sum(count))), stat = "count",
+            position = position_dodge(width = 0.9), vjust = -0.3, size = 2.5) +
+  scale_y_continuous(labels = scales::label_percent(accuracy = 1), breaks = scales::breaks_width(0.05),
+                     expand = expansion(mult = c(0, 0.08))) +
+  scale_fill_manual(values = c("1" = "#FEE5D9", "2" = "#FCAE91", "3" = "#FB6A4A", "4" = "#CB181D"),
+                    labels = c("Grade 1", "Grade 2", "Grade 3", "Grade 4"), name = "Worst grade") +
+  guides(fill = guide_legend(nrow = 1, byrow = TRUE, override.aes = list(colour = "grey30"))) +
+  labs(x = NULL, y = "Subjects (%)") +
+  theme_classic() +
+  theme(legend.position = "bottom", plot.margin = margin(5.5, 20, 5.5, 5.5),
+        axis.title.y = element_text(margin = margin(r = 8)))
+
+# lab values by visit against the normal range, the strips by a lookup and a
+# part of the data by a function
+lr <- expand.grid(USUBJID = 1:15, AVISITN = c(0, 2, 4, 8, 12), PARAMCD = c("ALT", "CREAT"))
+lr$AVAL <- stats::rlnorm(nrow(lr), ifelse(lr$PARAMCD == "ALT", 3.2, 4.4), 0.35)
+lr$ANRHI <- ifelse(lr$PARAMCD == "ALT", 40, 110)
+lr$HIGH <- lr$AVAL > lr$ANRHI
+fig_lab_range <- ggplot(lr, aes(x = AVISITN, y = AVAL, group = USUBJID)) +
+  geom_line(colour = "grey70", linewidth = 0.3) +
+  geom_point(data = function(d) subset(d, HIGH), colour = "#E31A1C", size = 1.5) +
+  geom_hline(aes(yintercept = ANRHI), linetype = "dashed", colour = "#E31A1C") +
+  stat_summary(aes(group = 1), fun = median, geom = "line", linewidth = 1) +
+  facet_wrap(~ PARAMCD, scales = "free_y", nrow = 1,
+             labeller = as_labeller(c(ALT = "Alanine aminotransferase (U/L)", CREAT = "Creatinine (umol/L)"))) +
+  scale_x_continuous(breaks = c(0, 2, 4, 8, 12), labels = c("BL", paste0("W", c(2, 4, 8, 12)))) +
+  scale_y_continuous(limits = c(0, NA), breaks = scales::breaks_pretty(n = 6),
+                     sec.axis = dup_axis(name = NULL, labels = NULL)) +
+  labs(x = "Visit", y = NULL) +
+  theme_bw() +
+  theme(strip.text = element_text(hjust = 0), panel.border = element_rect(colour = "black", fill = NA))
+
+# the mean change by visit and treatment, the groups an interaction, the
+# CI by bootstrap, the legend's keys redrawn
+fig_mean_boot <- ggplot(mt, aes(x = factor(AVISITN), y = CHG, colour = TRTA,
+                                group = interaction(TRTA, AVISITN > 0))) +
+  stat_summary(fun.data = mean_cl_boot, fun.args = list(conf.int = 0.95, B = 200), geom = "errorbar",
+               width = 0.2, position = position_dodge(width = 0.5)) +
+  stat_summary(fun = mean, geom = "point", size = 2, position = position_dodge(width = 0.5)) +
+  stat_summary(fun = mean, geom = "text", aes(label = after_stat(sprintf("%.1f", y))),
+               vjust = -1.2, size = 2.5, position = position_dodge(width = 0.5), show.legend = FALSE) +
+  geom_hline(yintercept = 0, linetype = "dotted") +
+  scale_x_discrete(labels = c("0" = "Baseline", "2" = "Week 2", "4" = "Week 4", "8" = "Week 8", "12" = "Week 12")) +
+  scale_colour_manual(values = c("grey40", "#1F78B4", "#E31A1C"), name = NULL) +
+  guides(colour = guide_legend(override.aes = list(linetype = 0, size = 3))) +
+  labs(x = NULL, y = "Mean change (95% bootstrap CI)") +
+  theme_bw() +
+  theme(legend.position = "bottom", legend.key.size = unit(0.4, "cm"),
+        legend.margin = margin(0, 0, 0, 0), legend.box.margin = margin(-8, 0, 0, 0))
+
+# a heat map of the change by subject and visit, the colour in steps
+hs <- expand.grid(USUBJID = sprintf("S-%02d", 1:20), AVISITN = c(2, 4, 8, 12))
+hs$PCHG <- round(stats::rnorm(nrow(hs), -10, 25))
+fig_heat_steps <- ggplot(hs, aes(x = factor(AVISITN), y = USUBJID, fill = PCHG)) +
+  geom_tile(colour = "grey90") +
+  scale_fill_steps2(low = "#2166AC", mid = "white", high = "#B2182B", midpoint = 0,
+                    breaks = c(-50, -30, 0, 20, 50), limits = c(-100, 100), oob = scales::squish,
+                    name = "% change") +
+  scale_x_discrete(position = "top", expand = c(0, 0)) +
+  guides(fill = guide_coloursteps(show.limits = TRUE, even.steps = FALSE)) +
+  labs(x = "Week", y = NULL) +
+  theme_minimal(base_size = 9) +
+  theme(panel.grid = element_blank(), legend.key.height = unit(1.5, "cm"))
+
+# a KM-like step with the numbers at risk under it, a second axis in weeks
+fig_km_axis <- ggplot(km, aes(x = time, y = surv, colour = TRTA, linetype = TRTA)) +
+  geom_step() +
+  geom_point(data = ~ subset(.x, censored), shape = "|", size = 3, show.legend = FALSE) +
+  scale_x_continuous(breaks = scales::breaks_width(6), sec.axis = sec_axis(~ . * 52 / 12, name = "Weeks",
+                                                                           breaks = seq(0, 208, by = 26))) +
+  scale_y_continuous(labels = scales::label_percent(), limits = c(0, 1)) +
+  scale_linetype_manual(values = c("solid", "longdash", "dotdash")) +
+  coord_cartesian(xlim = c(0, 48), ylim = c(0, NA)) +
+  labs(x = "Months", y = "Event-free (%)", colour = NULL, linetype = NULL) +
+  theme_classic() +
+  theme(legend.position = "inside", legend.position.inside = c(1, 1), legend.justification = c("right", "top"))
