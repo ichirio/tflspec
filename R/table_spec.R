@@ -1242,6 +1242,7 @@ print.tfl_table_spec <- function(x, ...) {
 
 # The study-wide options of the page sheet, rtfreporter's options they are
 .page_options <- c(font = "rtfreporter.font",
+                   font_lang = "rtfreporter.font_lang",
                    font_size_half_points = "rtfreporter.font_size_half_points")
 
 # Of the page's study-wide options, the ones the study's row (blank

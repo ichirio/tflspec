@@ -81,3 +81,54 @@ test_that("the sheets say the slots and the languages, and give them back", {
   page <- tflspec:::.page_put(list(), "page", "font", "Arial", function(...) NULL, NA)
   expect_identical(page$rtf_document$font_table[[1L]]$name, "Arial")
 })
+
+test_that("a sheets-only study's setup writes the slots and languages as the YAML route does", {
+  sp <- tfl_table_spec(
+    report = data.frame(output_id = c(NA, "T-1"), type = c("table", NA)),
+    page = data.frame(output_id = NA,
+                      font = "latin = Times New Roman | east_asian = MS Mincho",
+                      font_lang = "east_asian = ja", font_size_half_points = "20"))
+  st <- structure(list(defaults = list(page = list(
+    rtf_document = list(font_table = list(list(name = fs_slots)), font_lang = list(east_asian = "ja")),
+    rtf_style = list(font_size_half_points = 20L)))),
+    class = "tfl_study_spec")
+  from_sheets <- tfl_report_setup_code(sp)
+  expect_identical(from_sheets, tflspec:::.study_setup_code(st))
+  code <- paste(from_sheets, collapse = "\n")
+  expect_match(code, "rtfreporter.font = c(latin = \"Times New Roman\", east_asian = \"MS Mincho\")",
+               fixed = TRUE)
+  expect_match(code, "rtfreporter.font_lang = c(east_asian = \"ja\")", fixed = TRUE)
+  # a program written with the setup leaves the study's font to the options
+  prog <- paste(tfl_report_code(sp, "T-1", content = "pages", setup = TRUE), collapse = "\n")
+  expect_false(grepl("font_lang", prog, fixed = TRUE))
+})
+
+test_that("a sheets-only study's setup gives the RTF the slots' charset and language", {
+  skip_if_not_installed("rtfreporter", "0.8.2.9025")
+  sp <- tfl_table_spec(
+    report = data.frame(output_id = c(NA, "T-1"), type = c("table", NA)),
+    page = data.frame(output_id = NA,
+                      font = "latin = Courier New | east_asian = MS Mincho",
+                      font_lang = "east_asian = ja"))
+  old <- options(rtfreporter.font = NULL, rtfreporter.font_lang = NULL)
+  on.exit(options(old), add = TRUE)
+  eval(parse(text = tfl_report_setup_code(sp)), globalenv())
+  # (a document that says no font of its own takes the setup's options)
+  doc <- rtfreporter::rtf_tables(rtfreporter::rtf_document(),
+                                 rtfreporter::as_rtftables(data.frame(a = "1")))
+  f <- tempfile(fileext = ".rtf")
+  on.exit(unlink(f), add = TRUE)
+  suppressMessages(rtfreporter::generate_rtfreport(doc, f, overwrite = TRUE, program = "p.R"))
+  rtf <- paste(readLines(f, warn = FALSE), collapse = "\n")
+  expect_match(rtf, "\\fcharset128 MS Mincho", fixed = TRUE)
+  expect_match(rtf, "\\langfe1041", fixed = TRUE)
+})
+
+test_that("a single font name in the sheets' setup is written as before", {
+  sp <- tfl_table_spec(
+    report = data.frame(output_id = NA, type = "table"),
+    page = data.frame(output_id = NA, font = "Courier New", font_size_half_points = "20"))
+  expect_identical(tfl_report_setup_code(sp),
+                   c("options(", "  rtfreporter.font = \"Courier New\",",
+                     "  rtfreporter.font_size_half_points = 20", ")"))
+})

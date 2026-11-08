@@ -2062,6 +2062,9 @@ tfl_report_setup_code <- function(spec) {
   if (!is.null(pg) && nrow(pg)) {
     pg <- .ard_spec_typed(pg[1L, ], "page")[names(.page_options)]
     pg <- pg[!vapply(pg, is.null, NA)]
+    # (a family, or one per script slot: "latin = X | east_asian = Y", as the
+    # YAML route writes it; font_lang the same, a language per slot)
+    for (k in intersect(c("font", "font_lang"), names(pg))) pg[[k]] <- .font_slots_value(.conv_slots(pg[[k]]))
     if (length(pg)) {
       names(pg) <- .page_options[names(pg)]
       out <- c(out, .spec_call_code(do.call(.spec_call, c(list("options"), pg)), 0L))
