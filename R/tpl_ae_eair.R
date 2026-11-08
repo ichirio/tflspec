@@ -27,18 +27,30 @@
     one <- function(x, q = "") {
       if (length(x) == 1L) paste0(q, x, q) else sprintf("c(%s)", paste0(q, x, q, collapse = ", "))
     }
+    # (a subject with an event of a term whose start days are all missing is
+    # an event at risk for the whole exposure, said once, at the finest level)
+    warn <- if (identical(suffix, "_risk_pt")) paste0(
+      sprintf("no_day <- dplyr::summarise(%s, no_day = all(is.na(DAY)), .by = %s)\n", set, one(ks)),
+      "if (any(no_day$no_day)) {\n",
+      "  warning(sprintf(\"%d subject(s) have an event with no start day: counted as an event, ",
+      "at risk for their whole exposure.\",\n",
+      "                  dplyr::n_distinct(no_day$USUBJID[no_day$no_day])), call. = FALSE)\n",
+      "}\n")
     code <- paste0(
+      warn,
       sprintf("%s |>\n  dplyr::select(USUBJID, %s, %s) |>\n", subj, a$by, a$exposure),
-      "  # the day of each subject's first event of each term (none: NA)\n",
+      "  # the first day of each subject's events of each term (none: NA)\n",
       if (length(keys)) sprintf("  dplyr::cross_join(dplyr::distinct(%s, %s)) |>\n", set,
                                 paste(keys, collapse = ", ")),
-      sprintf("  dplyr::left_join(dplyr::summarise(%s, DAY = min(DAY), .by = %s),\n", set, one(ks)),
+      sprintf(paste0("  dplyr::left_join(dplyr::summarise(%s,\n",
+                     "    DAY = if (all(is.na(DAY))) NA_real_ else min(DAY, na.rm = TRUE),\n",
+                     "    EVENT = TRUE, .by = %s),\n"), set, one(ks)),
       sprintf("    by = %s) |>\n", one(ks, "\"")),
       if (!length(keys)) sprintf("  # the overall row's own SOC\n  dplyr::mutate(%s = \"%s\") |>\n",
                                  h[1L], a$overall),
-      "  # at risk to the first event, else for the whole exposure (years)\n",
-      "  dplyr::mutate(EVENT = !is.na(DAY),\n",
-      sprintf("    YEARS = dplyr::if_else(EVENT, DAY, %s) / 365.25)", a$exposure))
+      "  # at risk to the first event with a day, else for the whole exposure (years)\n",
+      "  dplyr::mutate(EVENT = !is.na(EVENT),\n",
+      sprintf("    YEARS = dplyr::if_else(EVENT & !is.na(DAY), DAY, %s) / 365.25)", a$exposure))
     list(id = paste0(set, suffix), label = paste("each subject's time at risk of", what),
          from = set, code = code)
   }
@@ -108,7 +120,11 @@
 #'
 #' @details The days to a subject's first event are the smallest `start`
 #'   of their records of the term: `ASTDY` (the study standard), or R that
-#'   makes the day from ADAE's columns, `ASTDT - TRTSDT + 1`.
+#'   makes the day from ADAE's columns, `ASTDT - TRTSDT + 1`.  A record
+#'   with no day is passed over for the smallest.  A subject whose records
+#'   of a term all have no day still has the event: it is counted, at risk
+#'   for the whole exposure, and the program says in a warning how many
+#'   subjects that is.
 #'
 #' @inheritParams tpl_demog
 #' @param ... The template's other parameters: `data`, `where`, `by`,

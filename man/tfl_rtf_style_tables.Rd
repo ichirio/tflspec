@@ -30,7 +30,11 @@ agent) who writes a company standard from what past reports do.  SAS's
 ODS RTF is read as it is written: the titles and footnotes in each
 page's \verb{\\header} / \verb{\\footer} (or as paragraphs before and after the
 table), a page a section, the column header rows (\verb{\\trhdr}) repeated on
-each page and counted once.
+each page and counted once.  rtfreporter's RTF is read too: its page
+header's line "Page 1 of 1" (the page number written out, not as a
+field) is the page-number line, not a title, so the titles are the
+paragraphs before the table; a footnote written as a one-cell row after
+the table is a footnote, not a table.
 }
 \examples{
 d <- tempfile()

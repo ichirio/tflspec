@@ -204,6 +204,24 @@ test_that("shift: a subject once at its worst, a Missing and a Total row, a page
   expect_false(any(body$ABLFL %in% "Y"))
   expect_identical(sum(d$BNRIND == "Total"), nrow(body))
   expect_true("Missing" %in% body$BNRIND)
+  # a transport file's "" for no value: a blank after baseline is no record,
+  # a blank at baseline is Missing
+  lb2 <- lb
+  post <- which(lb2$PARAMCD == "AST" & !lb2$ABLFL %in% "Y")
+  s1 <- lb2$USUBJID[post[1L]]
+  s2 <- setdiff(lb2$USUBJID[post], s1)[1L]
+  lb2$ANRIND[post[lb2$USUBJID[post] == s1]] <- ""
+  lb2$BNRIND[lb2$PARAMCD == "AST" & lb2$USUBJID == s2] <- ""
+  d2 <- local({
+    adlb <- lb2
+    adsl_sub <- adsl[adsl$SAFFL == "Y", ]
+    eval(parse(text = ad$code))
+  })
+  expect_false(any(d2$ANRIND %in% ""))
+  expect_false(any(d2$BNRIND %in% ""))
+  expect_false(any(d2$USUBJID == s1 & d2$PARAMCD == "AST"))
+  expect_true(any(d2$USUBJID == s2 & d2$PARAMCD == "AST" &
+                    d2$BNRIND == "Missing"))
   # the worst: a subject with any HIGH after baseline is HIGH
   one <- lb[lb$PARAMCD == "ALT" & !lb$ABLFL %in% "Y" & lb$ANRIND %in% "HIGH", "USUBJID"][1L]
   expect_identical(body$ANRIND[body$USUBJID == one & body$PARAMCD == "ALT"], "HIGH")
@@ -555,8 +573,11 @@ test_that("summary has no mean (CI) analysis of its own; km_table and orr", {
   expect_match(k$data$steps[[1L]], "Median (95% CI)", fixed = TRUE)
   expect_false(grepl("== \"0\"", tfl_template_expand("km_table", list(drop_time_0 = FALSE))$data$steps[[1L]]))
   o <- tfl_template_expand("orr", list(responders = c("CR", "PR", "SD")))
-  expect_identical(as.character(o$ard$analysis_data[[1L]]$derive),
-                   'RESP = AVALC %in% c("CR", "PR", "SD")')
+  # (every subject of the set a row: the set's subjects, then the records joined to them)
+  expect_identical(vapply(o$ard$analysis_data, `[[`, "", "id"),
+                   c("adsl_itt", "adrs_bor_records", "adrs_bor"))
+  expect_match(as.character(o$ard$analysis_data[[3L]]$code),
+               'dplyr::mutate(RESP = AVALC %in% c("CR", "PR", "SD"))', fixed = TRUE)
   expect_identical(tpl_item(o, "plan_labels")$args$variable$RESP, "Objective response rate (CR + PR + SD)")
   expect_true(all(c("km_table", "orr") %in% tfl_templates()$name))
   # vs_change's table is param_change(baseline = TRUE), test-tpl-param-change.R

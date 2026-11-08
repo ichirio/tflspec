@@ -220,23 +220,30 @@ tfl_output_contents <- function(output, study, dir = ".") {
   old <- options(tflspec.plain_ns = TRUE)
   on.exit(options(old), add = TRUE)
   ard <- .ard_spec_of_study(study, output_id = o$id)$spec
-  code <- tfl_listing_code(sp, o$id, ard = ard, part = "data")
+  rw <- .records_rework(d)
+  code <- tfl_listing_code(sp, o$id, ard = ard, part = "data", rework = rw)
   if (is.null(code)) .ard_stop(sprintf("%s: the listing names no dataset.", o$id))
   env <- new.env(parent = globalenv())
   eval(parse(text = tfl_helpers_code()), env)
   wd <- setwd(dir)
   on.exit(setwd(wd), add = TRUE)
   .eval_study_code(code, env, study, ".", output_id = o$id)
-  get("data", envir = env, inherits = FALSE)
+  recs <- get("data", envir = env, inherits = FALSE)
+  # (the data's steps are done in it: the content run does not run them again)
+  if (!is.null(rw) && is.data.frame(recs)) attr(recs, "tfl_steps_done") <- TRUE
+  recs
 }
 
 # The error of reading a listing's records when it is a template's `by` that
 # the data does not have (dplyr: "object 'X' not found"): said as that
 .listing_by_hint <- function(e, ro) {
   msg <- conditionMessage(e)
-  v <- regmatches(msg, regexec("object '([^']+)' not found", msg))[[1L]][-1L]
+  # (the name in quotes, not the English words: R may say it in another
+  # language, with plain or curly quotes)
+  q <- regmatches(msg, gregexpr("['\u2018`][^'\u2019`]+['\u2019`]", msg))[[1L]]
   by <- as.character(unlist(attr(ro, "template")$args$by))
-  if (length(v) && v %in% by) {
+  v <- intersect(gsub("^.|.$", "", q), by)[1L]
+  if (!is.na(v)) {
     .ard_stop(sprintf("`by` names %s, which the dataset %s does not have.", sQuote(v, FALSE),
                       paste(ro$data$dataset, collapse = "")))
   }

@@ -20,7 +20,8 @@ test_that("tfl_fig_forest_analyses() gives the rows of the figure's own ARD defi
     "cox <- survival::coxph(survival::Surv(AVAL, CNSR == 0) ~ TRT01P, data = data)
 ",
     "cardx::ard_regression(cox, exponentiate = TRUE)")))
-  expect_match(an$analyses$code[2], "  data,
+  # (a blank or missing subgroup value is no subgroup)
+  expect_match(an$analyses$code[2], "  dplyr::filter(data, !is.na(SEX), SEX != \"\"),
   .strata = SEX,
   .f = ~ cardx::ard_regression(",
                fixed = TRUE)

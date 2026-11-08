@@ -125,3 +125,38 @@ test_that("in a study: the ARD program runs (its analysis data made from the rec
   t <- mg_tab(suppressMessages(tfl_content_run(ro, ard)))
   expect_true(nrow(t) > 0L)
 })
+
+test_that("grade_in = cols: the arm's N is over every column, the any-grade column too", {
+  skip_on_cran()
+  mg_skip()
+  skip_if_not_installed("haven")
+  d <- tempfile()
+  on.exit(unlink(d, recursive = TRUE))
+  dir.create(file.path(d, "adam"), recursive = TRUE)
+  for (x in c("adsl", "adae")) {
+    haven::write_xpt(tflspec:::.ai_chr(getExportedValue("tflspec", x)),
+                     file.path(d, "adam", paste0(x, ".xpt")))
+  }
+  tfl_ai_study_init(d, adam = "adam", study_id = "MG-2")
+  saf <- tflspec::adsl[tflspec::adsl$SAFFL == "Y", ]
+  arms <- unique(saf$TRT01A)
+  for (any in c("Any grade", "Total")) {
+    o <- tfl_output("T-9-3", "table", population = "SAF", extends = "defaults",
+                    template = list(name = "ae_max_grade",
+                                    args = list(population = "SAF", grade_levels = mg_lv,
+                                                grade_in = "cols", any_grade = any)))
+    f <- file.path(d, "spec", "outputs", "T-9-3.yml")
+    tfl_write_output(o, f)
+    st <- tfl_read_study_spec(d)
+    ard <- suppressMessages(tfl_build_ard(st, output_id = "T-9-3", dir = d, save = FALSE))
+    ro <- tfl_resolve_output(tfl_read_output(f), st)
+    # no header number is lost (rtfreporter warns of one it cannot read)
+    expect_no_warning(p <- suppressMessages(tfl_content_run(ro, ard)))
+    expect_no_warning(pg <- suppressMessages(rtfreporter::plan_apply(p, "pages")))
+    # the arm's N over each of its columns: the any-grade one and the grades
+    want <- unlist(lapply(arms, function(a) {
+      sprintf("%s\n(N=%d)\nn (%%)", c(any, mg_lv), sum(saf$TRT01A == a))
+    }))
+    expect_identical(pg[[1L]]$col_header[[1L]], c("", want), info = any)
+  }
+})

@@ -432,7 +432,9 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
   }
   # a listing has no analysis set: the records of ADSL's subjects the
   # subset keeps, a semi join after its own condition (its data's rework)
-  if (identical(out$data$source, "dataset")) {
+  # (not a table of records that reads an analysis data of the ARD: its
+  # subjects are narrowed above)
+  if (identical(out$data$source, "dataset") && is.null(out$data[["data"]])) {
     e <- tryCatch(str2lang(s), error = function(err) NULL)
     w <- if (!is.null(e)) paste(vapply(.and_parts(e), .expr_text, ""), collapse = ", ") else s
     out$data$steps <- c(out$data$steps, list(tfl_r(paste0(
@@ -899,16 +901,24 @@ names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
   d <- list(id = set, label = a[["data_label"]], from = a[["data"]], subjects = subj,
             where = if (!is.null(a$where)) tfl_r(a$where))
   nn <- function(x) Filter(Negate(is.null), x)
+  # "data": the percentages' denominator is the records' subjects -- the
+  # set's subjects with a record kept, one row each (so within the subset)
+  rec_den <- identical(a$denominator, "data")
+  den_id <- paste0(set, "_den")
   ard <- list(
-    analysis_data = list(
+    analysis_data = c(list(
       list(id = subj, label = .tpl_set_label(pop, ctx$population), from = "ADSL",
            population = pop),
       nn(d)),
+      if (rec_den) list(list(
+        id = den_id, label = "the subjects with a record kept", from = set,
+        code = tfl_r(sprintf("dplyr::distinct(%s, %s)", set,
+                             paste(c("USUBJID", a$by), collapse = ", ")))))),
     analyses = list(nn(list(
       id = a[["analysis_id"]] %||% "AE", label = a[["analysis_label"]] %||% ctx$template$label,
       method = "hierarchical", data = set,
       by = a$by, overall = if (isTRUE(a[["total"]])) TRUE, variables = a$hierarchy,
-      denominator = if (identical(a$denominator, "data")) NULL else a$denominator %||% subj,
+      denominator = if (rec_den) den_id else a$denominator %||% subj,
       args = if (!is.null(overall)) tfl_r("over_variables = TRUE"),
       purpose = "PRIMARY OUTCOME MEASURE"))))
   n <- length(a$hierarchy)
@@ -1139,6 +1149,10 @@ names(.tpl_mg_params) <- vapply(.tpl_mg_params, `[[`, "", "name")
          # each group's count at any grade: its records with no grade
          tfl_item("plan_total", list(label = a$any_grade, position = "first")))
   }
+  # (grades as columns: the arm x grade columns, and the any-grade column
+  # the total adds, are under the arm -- `{n1}`, the arm's N, is the one
+  # number the ARD gives all of them)
+  head_n <- if (rows_in) "{col}\n(N={n})\nn (%)" else "{col}\n(N={n1})\nn (%)"
   content <- c(
     list(tfl_item("normalize_ard", list(hierarchy = c(h, g))),
          # the overall block first, whatever the order of the others
@@ -1147,7 +1161,7 @@ names(.tpl_mg_params) <- vapply(.tpl_mg_params, `[[`, "", "name")
     list(tfl_item("plan_sort", list(keys = keys))),
     list(tfl_item("plan_col_header", list(header = list(
            list(line = "1", cols = "row_label"),
-           list(line = "1", cols = ".values", span = "each", text = "{col}\n(N={n})\nn (%)"),
+           list(line = "1", cols = ".values", span = "each", text = head_n),
            list(line = "2", cols = "row_label", text = paste(a$heading, collapse = "\n")),
            list(line = "2", cols = ".values")))),
          tfl_item("plan_paginate_rows", list(max_rows = 22L, split = "group_force"))))
@@ -1253,7 +1267,8 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
 # the column variable's margins, here the body's own variable)
 .tpl_shift_code <- function(a, subj) {
   q <- function(x) paste0("\"", x, "\"", collapse = ", ")
-  keep <- c("!ABLFL %in% \"Y\"", sprintf("!is.na(%s)", a$post), a$where)
+  # (a transport file holds "" for no value: not a category)
+  keep <- c("!ABLFL %in% \"Y\"", sprintf("!%s %%in%% c(NA, \"\")", a$post), a$where)
   paste(c(
     "# the records after baseline, the subjects' column variable",
     sprintf("d <- dplyr::inner_join(dplyr::select(%s, -dplyr::any_of(%s)),",
@@ -1865,7 +1880,7 @@ names(.tpl_pc_params) <- vapply(.tpl_pc_params, `[[`, "", "name")
 #'   `visits`, `where`, `by`, `layout`, `param_order`, `visit_order`,
 #'   `baseline`, `baseline_label`, `value_label`, `change_label`, `statistics`,
 #'   `cells` (label = template, or a list of `list(label = , template = )`),
-#'   `param_page`, `param_heading` ...
+#'   `param_page`, `param_heading`, `heading` ...
 #' @return A [rtfreporter::table_plan()].
 #' @export
 tpl_param_change <- function(ard, population, ..., codelists = NULL) {
@@ -2014,15 +2029,29 @@ tpl_stat_block <- function(ard, ..., codelists = NULL) {
     ci_lab <- sprintf("%s%% CI", format(lvl * 100))
     ci_args <- sprintf("method = \"%s\"%s", a$ci_method,
                        if (isTRUE(all.equal(lvl, 0.95))) "" else sprintf(", conf.level = %s", format(lvl)))
+    # every subject of the analysis set is a row: one with no record of the
+    # parameter is no responder, in the N and the rate's denominator (a
+    # record's blank category is missing: no category's, no responder)
+    subj <- paste0("adsl_", tolower(a$population))
+    rec <- paste0(set, "_records")
+    code <- paste0(
+      sprintf("dplyr::left_join(\n  dplyr::select(%s, USUBJID, %s),\n", subj, a$by),
+      sprintf("  dplyr::select(%s, -dplyr::any_of(\"%s\")),\n", rec, a$by),
+      "  by = \"USUBJID\") |>\n",
+      sprintf("  dplyr::mutate(RESP = %s %%in%% c(%s))", a$category,
+              paste(sprintf("\"%s\"", a$responders), collapse = ", ")))
     ard <- list(
-      analysis_data = list(list(
-        id = set, from = a$data, population = a$population,
-        where = tfl_r(.tpl_and(sprintf("PARAMCD == \"%s\"", a$param), a$where)),
-        derive = tfl_r(sprintf("RESP = %s %%in%% c(%s)", a$category,
-                               paste(sprintf("\"%s\"", a$responders), collapse = ", "))))),
+      analysis_data = list(
+        list(id = subj, label = .tpl_set_label(a$population, ctx$population), from = "ADSL",
+             population = a$population),
+        list(id = rec, label = sprintf("%s records of %s", a$param, a$population),
+             from = a$data, subjects = subj,
+             where = tfl_r(.tpl_and(sprintf("PARAMCD == \"%s\"", a$param), a$where))),
+        list(id = set, from = rec, code = tfl_r(code),
+             label = sprintf("%s of %s, each subject of the set a row", a$param, a$population))),
       analyses = list(
         list(id = a$param, method = "categorical", data = set, by = a$by,
-             variables = a$category),
+             variables = a$category, denominator = subj),
         list(id = "ORR", method = "proportion_ci", data = set, by = a$by,
              variables = "RESP", args = tfl_r(ci_args))))
     # (the arms' order: an order given, else the code list's, which the ARD
@@ -2068,7 +2097,9 @@ tpl_stat_block <- function(ard, ..., codelists = NULL) {
 #' Objective response: a table plan from the template `orr`
 #'
 #' The best overall response (n (%)) and the objective response rate with
-#' its 95% CI, by arm.
+#' its 95% CI, by arm.  Every subject of the analysis set is in N, and the
+#' rate's denominator: one with no record of the parameter, or a blank
+#' response, is no responder (and in no response category).
 #'
 #' @inheritParams tpl_demog
 #' @param ... The template's other parameters: `by`, `by_levels`, `data`,

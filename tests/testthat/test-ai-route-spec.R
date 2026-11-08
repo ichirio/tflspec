@@ -233,3 +233,49 @@ test_that("a draft YAML cannot read: the status names the line, and a quote insi
   expect_lt(nchar(m4), 450)
   expect_match(m4, "...", fixed = TRUE)
 })
+
+test_that("the quote hint is given only when a value's own quote is inside its text", {
+  d <- withr::local_tempdir()
+  area <- file.path(d, "ai", "spec", "outputs")
+  dir.create(area, recursive = TRUE)
+  # a missing `}`: the first `"` opens a key, not a value -- no quote hint
+  writeLines(c("id: T-1", "kind: table", "page: {titles: {\"1\": {center: \"a\"}"),
+             file.path(area, "T-1.yml"))
+  # a condition with double quotes inside an assumption's text: the hint
+  writeLines(c("id: T-2", "kind: table", "ai:", "  assumptions:",
+               "    - text: \"x == \"Y\" in ADAE\"", "      from: shell"),
+             file.path(area, "T-2.yml"))
+  r <- tflspec:::.ai_draft_blocks(d)
+  m1 <- r$bad[["T-1"]]
+  expect_match(m1, "^the YAML cannot be read: ")
+  expect_match(m1, "Line ", fixed = TRUE)
+  expect_false(grepl("double-quoted", m1, fixed = TRUE))
+  expect_match(r$bad[["T-2"]], "inside a double-quoted text ends it", fixed = TRUE)
+  # the same line text, straight to the function
+  err <- function(ln) {
+    f <- withr::local_tempfile(fileext = ".yml")
+    writeLines(ln, f)
+    tflspec:::.ai_yaml_error_line("did not find expected key at line 1, column 1", f)
+  }
+  expect_false(grepl("double-quoted", err("page: {titles: {\"1\": {center: \"a\"}"), fixed = TRUE))
+  expect_match(err("assumption: \"x == \"Y\" in ADAE\""), "double-quoted", fixed = TRUE)
+  expect_match(err("- \"x == \"Y\" in ADAE\""), "double-quoted", fixed = TRUE)
+  expect_match(err("k: [\"a\"b]"), "double-quoted", fixed = TRUE)
+  expect_false(grepl("double-quoted", err("\"k\"x: 1"), fixed = TRUE))
+})
+
+test_that("ai: ask_when was removed: it is ignored, with one message that run replaces it", {
+  d <- file.path(withr::local_tempdir(), "study")
+  dir.create(d)
+  writeLines(c("study_id: X", "ai:", "  ask_when: always", "  max_rounds: 2"), file.path(d, "study.yml"))
+  expect_message(s <- tflspec:::.ai_spec_settings(d), "ask_when is ignored; `ai: run`")
+  expect_identical(s$max_rounds, 2L)
+  expect_null(s$ask_when)
+  # (said once for the file in a session)
+  expect_no_message(tflspec:::.ai_spec_settings(d))
+  # no ask_when: no message
+  d2 <- file.path(withr::local_tempdir(), "study")
+  dir.create(d2)
+  writeLines(c("study_id: X", "ai:", "  max_rounds: 2"), file.path(d2, "study.yml"))
+  expect_no_message(tflspec:::.ai_spec_settings(d2))
+})
