@@ -252,6 +252,7 @@
     "      align: right",
     "      border_header: {fn: rtf_border, args: {top: true, bottom: true}}",
     "      border_last_row: {fn: rtf_border, args: {bottom: true}}",
+    "      border_group: {fn: rtf_border, args: {bottom: true}}",
     "  - plan_cell_style: {cols: row_label, align: left}",
     "page:",
     "  rtf_page: {orientation: landscape}",
