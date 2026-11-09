@@ -135,7 +135,8 @@
       "Do not build or check them: the person runs the check.",
     per_chat = if (isTRUE(n > 0L)) sprintf(paste0(
       "\n- After %d requests in this chat, finish the current one, update ",
-      "`ai/progress.md` and stop with \"Open a new chat and give it ai/agent_prompt.md; ",
+      "`ai/progress.md` and stop with \"Open a new chat and give it ai/agent_prompt.md ",
+      "(it starts: First read AGENTS.md in this folder and follow it); ",
       "it goes on from ai/progress.md\"."), n) else "",
     language = lang,
     carry_section = if ("section" %in% s$carry) " or its TOC section" else "",

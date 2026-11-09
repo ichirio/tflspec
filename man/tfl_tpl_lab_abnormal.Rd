@@ -24,6 +24,7 @@ The table template \code{lab_abnormal}, layout \code{summary}. Its program is on
    \code{baseline_value} \tab other \tab call \tab NORMAL \tab  \tab the value of 'baseline' that is normal \cr
    \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: <data>_<population> \cr
    \code{heading} \tab other \tab call \tab Parameter / Category \tab  \tab the label column's heading \cr
+   \code{header_n} \tab other \tab call \tab set \tab  \tab the arm headings' N, set apart from the cells' N (a parameter's subjects with a value): "set" (default): the arm's subjects in the analysis set (with 'subset'); "tested": the arm's subjects with a record kept (after 'where', 'params' and 'baseline_normal'), one N for all the parameters; "none": no N.  "denominator" is not one N here, the cells' N differs by parameter \cr
 }
 }
 

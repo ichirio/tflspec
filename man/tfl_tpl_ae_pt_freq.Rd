@@ -24,6 +24,8 @@ The table template \code{ae_pt_freq}, layout \code{hierarchical}. Its program is
    \code{min_pct_in} \tab other \tab call \tab any \tab  \tab where min_pct is met: "any" column, "all" of them, or the "total" column \cr
    \code{sort_by} \tab other \tab call \tab  \tab  \tab the column (a value of 'by') whose counts order the PTs; NULL: the Total column with min_pct_in = "total", else the code list's first value of 'by', else all the columns \cr
    \code{heading} \tab other \tab call \tab Preferred Term \tab  \tab the label column's heading \cr
+   \code{denominator} \tab other \tab call \tab  \tab  \tab the percentages' denominator: NULL (default): the analysis set's subjects; "data": the subjects with a record kept; a number: that many subjects in every column; numbers named by the values of 'by' ('c("Drug X" = 60, "Control" = 55)'): that many in each column; the id of an analysis data ('adsl_itt', or one of the report's own): its subjects in each column \cr
+   \code{header_n} \tab other \tab call \tab denominator \tab  \tab the arm headings' N: "denominator" (default): the arm's subjects the percentages are of ('denominator'); "set": the same, when 'denominator' is NULL (the analysis set); "tested": the same, when 'denominator' is "data" (the records' subjects); a header N apart from the denominator is not supported yet; "none": no N \cr
 }
 }
 

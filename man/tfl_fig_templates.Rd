@@ -32,6 +32,7 @@ tfl_fig_template(
   title = NULL,
   subgroups = "SEX, AGEGR1",
   comparison = NULL,
+  ref = NULL,
   form = c("design", "items"),
   ...
 )
@@ -71,8 +72,12 @@ population's data), one string with \verb{,} between them; each has its
 analysis in the figure's own ARD and its rows on the plot under a
 heading row.  \code{""}: all subjects only.}
 
-\item{comparison}{For \code{forest_hr}: the arm compared with the reference
-(the group's first level); \code{NULL}: every other arm.}
+\item{comparison}{For \code{forest_hr}: the one arm to show, compared with the
+reference; \code{NULL}: every other arm.  It is not the reference (a message
+at run time says so).}
+
+\item{ref}{For \code{forest_hr}: the reference arm, put first in the figure's
+own ARD (a relevel in the data step); \code{NULL}: the group's first level.}
 
 \item{form}{\code{"design"} (default): the figure designer's design
 (\code{\link[=tfl_fig_design]{tfl_fig_design()}}).  \code{"items"}: the figure report's \verb{data:} and

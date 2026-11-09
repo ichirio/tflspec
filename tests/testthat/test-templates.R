@@ -188,7 +188,9 @@ test_that("shift and lab_shift: baseline by post category, a block a parameter",
 test_that("shift: a subject once at its worst, a Missing and a Total row, a page a parameter", {
   skip_if_not_installed("dplyr")
   skip_if_not_installed("cards")
-  a <- list(population = "SAF", where = 'PARAMCD %in% c("ALT", "AST")')
+  # (a Missing row and the tested subjects' N: the options of the old defaults)
+  a <- list(population = "SAF", where = 'PARAMCD %in% c("ALT", "AST")',
+            missing_label = "Missing", header_n = "tested")
   x <- tfl_template_expand("shift", a)
   ad <- x$ard$analysis_data[[1L]]
   expect_null(ad$where)
@@ -232,8 +234,30 @@ test_that("shift: a subject once at its worst, a Missing and a Total row, a page
   expect_true("plan_paginate_group" %in% fns)
   expect_false(any(c("plan_paginate_rows", "plan_hide") %in% fns))
   expect_identical(x$ard$analysis_data[[2L]]$id, "adlb_saf_den")
+  # the defaults: a missing baseline is out (no Missing row), the header N is the
+  # set's (a page a parameter by paginate_rows, the parameter hidden)
+  dflt <- tfl_template_expand("shift", list(population = "SAF"))
+  expect_identical(Filter(function(i) i$fn == "plan_levels", dflt$content)[[1L]]$args$BNRIND,
+                   c("LOW", "NORMAL", "HIGH", "Total"))
+  expect_match(dflt$ard$analysis_data[[1L]]$code, '!BNRIND %in% c(NA, "")', fixed = TRUE)
+  expect_identical(dflt$ard$analyses[[1L]]$denominator, "adlb_saf_den")
+  expect_true(all(c("plan_paginate_rows", "plan_hide") %in% vapply(dflt$content, `[[`, "", "fn")))
+  expect_false("plan_paginate_group" %in% vapply(dflt$content, `[[`, "", "fn"))
+  # run on the records: the subject with no baseline is in no row and not in the Total
+  d3 <- local({
+    adlb <- lb
+    adsl_sub <- adsl[adsl$SAFFL == "Y", ]
+    eval(parse(text = dflt$ard$analysis_data[[1L]]$code))
+  })
+  gone <- lb$USUBJID[1L]
+  expect_false(any(d3$USUBJID == gone & d3$PARAMCD == "ALT"))
+  expect_false(any(d3$BNRIND %in% c(NA, "", "Missing")))
+  expect_true(any(d3$USUBJID == gone & d3$PARAMCD == "AST"))
   # every record, as before: no code, no extra rows, the parameter in the stub
+  # (the default percent_of "total" needs a subject once a parameter: by row here)
+  a$header_n <- "set"
   r <- tfl_template_expand("shift", c(a, list(worst = NULL, param_page = FALSE)))
+  expect_null(r$ard$analyses[[1L]]$denominator)
   expect_null(r$ard$analysis_data[[1L]]$code)
   expect_identical(as.character(r$ard$analysis_data[[1L]]$where), a$where)
   expect_false(any(c("plan_paginate_rows", "plan_hide") %in%
@@ -290,7 +314,7 @@ test_that("listing by: the parameters", {
   expect_identical(p$by_break$choices, c("page", "block"))
   expect_identical(p$by_break$default, "page")
   expect_identical(p$by_heading$type, "text")
-  expect_identical(names(p), c("data", "columns", "where", "subset", "sort", "by", "by_break", "by_heading"))
+  expect_identical(names(p), c("data", "columns", "where", "subset", "sort", "by", "by_break", "by_heading", "by_na_label"))
 })
 
 test_that("listing by, no by: the items as they were", {

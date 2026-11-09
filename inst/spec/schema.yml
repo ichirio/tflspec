@@ -254,7 +254,7 @@ plan_paginate_rows:
     page_by: {main: true, label: "Page by", help: "The columns whose value starts a new page first, each page named after it; the most rows a page applies within each. e.g. \"PARAM\"", type: "list<column>"}
     heading: {label: "Heading", help: "With page by one column: each page's name as a template, {value} the page's value and {n} its subjects. e.g. Treatment: {value} (N={n})", type: string}
     heading_at: {label: "Where the heading prints", help: "Where a page's name (its heading) prints: \"section\" the section header, \"title\" under the titles, \"none\" nowhere. Blank: the report's. e.g. \"title\"", type: "enum[section|title|none]"}
-    na_label: {label: "Name of a blank page", help: "With page by: the text a blank BY value (\"\" or NA) prints as in the page's heading. Blank: the value as it is. e.g. \"Not coded\"", type: string}
+    na_label: {label: "Blank value's text", help: "With page by: the text a blank or missing page value prints as, in the page's heading ({value}) and its name. Blank: nothing, so \"Severity: {value}\" prints \"Severity: \". e.g. \"(Missing)\"", type: string}
 
 plan_paginate_cols:
   package: rtfreporter
@@ -1424,6 +1424,11 @@ rtf_footer:
         description: 'With pages_page_by: where each BY page''s name prints, as group_heading_at
           (plan_paginate_rows(heading_at = )); blank: as the report says.'
         example: section
+      - column: pages_na_label
+        description: 'With pages_page_by: the text a blank or missing BY value prints
+          as in the page''s heading and name (plan_paginate_rows(na_label = )); blank:
+          empty.'
+        example: (Missing)
       - column: group_col
         description: 'With group_page = TRUE: the column whose values each start a
           page (plan_paginate_group(col = )); blank: the outermost row key.'

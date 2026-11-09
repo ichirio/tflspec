@@ -736,7 +736,7 @@ tfl_read_fig_design <- function(path) {
 .fig_named_steps <- c("survfit", "summary", "summary_by", "rate", "count", "subset",
                       "ard_stats", "function")
 
-.fig_steps_code <- function(steps, levels = NULL) {
+.fig_steps_code <- function(steps, levels = NULL, order = FALSE) {
   out <- character()
   pipe <- character()
   reads <- character()
@@ -771,6 +771,11 @@ tfl_read_fig_design <- function(path) {
     cur
   }
   io <- .fig_step_io(steps)
+  # the design joins ADSL: a dataset read is ordered by ADSL's arms where it
+  # has no number of its own
+  adsl_joined <- any(vapply(steps, function(z) {
+    identical(z$step, "join") && identical(toupper(.fv(z, "dataset", "join") %||% ""), "ADSL")
+  }, NA))
   for (i in seq_along(steps)) {
     s <- steps[[i]]
     k <- s$step
@@ -824,7 +829,11 @@ tfl_read_fig_design <- function(path) {
         } else {
           ds <- toupper(v("dataset"))
           reads <- c(reads, ds)
-          pipe <- pp_ds_name(ds)
+          # the arms in their numeric order (TRT01P by TRT01PN), first of
+          # the pipe -- before any filter or fit (the study's helper
+          # order_levels(); the code lists, set later, win)
+          pipe <- c(pp_ds_name(ds), if (order) .order_levels_step(
+            NULL, if (adsl_joined && ds != "ADSL") pp_ds_name("ADSL")))
         }
       },
       join = {
@@ -840,7 +849,10 @@ tfl_read_fig_design <- function(path) {
         }
         semi <- identical(v("how"), "semi")
         sel <- paste(c(by, if (!semi) vars), collapse = ", ")
+        # ADSL's arms it brings in their numeric order
+        ord <- order && !semi && ds == "ADSL" && any(grepl("^(TRT|ARM|ACTARM)", vars))
         add(paste0(if (semi) "semi_join" else "left_join", "(\n    ", pp_ds_name(ds),
+                   if (ord) " |> order_levels()",
                    if (!is.null(w)) paste0(" |> filter(", w, ")"),
                    " |> select(", sel, "),\n    by = ", q(by), "\n  )"))
       },
@@ -1518,9 +1530,10 @@ tfl_read_fig_design <- function(path) {
 # figure is itself a patchwork (panels below it); `risktable`: a
 # ggsurvfit with add_risktable (a patchwork once built).
 .fig_design_body <- function(design, gg, setup = FALSE, name = "fig",
-                             levels = NULL, codelists_head = TRUE) {
+                             levels = NULL, codelists_head = TRUE,
+                             order = isTRUE(setup) || length(levels) > 0L) {
   plot <- design$plot
-  d <- .fig_steps_code(design$data, levels)
+  d <- .fig_steps_code(design$data, levels, order = order)
   head <- if (length(levels) && codelists_head) .codelists_head(levels)
   layers <- design$layers
   # the arms' shapes and line types, when the standard has them
@@ -1705,6 +1718,10 @@ tfl_read_fig_design <- function(path) {
 #' @param save `FALSE` leaves out saving the PNG: the code makes the
 #'   figure only (a report program writes it into its RTF, at its size on
 #'   the page: [tfl_fig_page_size()]).
+#' @param order_arms `TRUE` puts the arms in their numeric order with
+#'   `order_levels()` (a study helper, see [tfl_helpers_code()]), first step of
+#'   each dataset read; the default, `NULL`, does so with `setup = TRUE` or
+#'   `codelists`, the code that needs the helpers.
 #' @param width_in,height_in The saved PNG's size in inches (`save`): a
 #'   report's figure is its page's ([tfl_fig_page_size()]).
 #' @param name The name the figure is given.
@@ -1713,7 +1730,10 @@ tfl_read_fig_design <- function(path) {
 #'   `value`, `label`, `order`): the rows of `plot_id` are put on the
 #'   figure's data, last of its data steps -- each listed column a factor
 #'   in its list's order, its values as the list has them (`cl_<variable>`
-#'   and `set_levels()`, see [tfl_helpers_code()]).
+#'   and `set_levels()`, see [tfl_helpers_code()]).  The arms
+#'   are first put in their numeric order by `order_levels()` (`TRT01P` by
+#'   `TRT01PN`), first step of each dataset read (see `order_arms`); a code
+#'   list wins.
 #'
 #' The script has two sections: `# ---- data ----` (the steps' pipes, one
 #' an object; the axis breaks; a panel's data) and `# ---- plot ----` (the
@@ -1727,16 +1747,19 @@ tfl_read_fig_design <- function(path) {
 #' @export
 tfl_fig_design_code <- function(design, plot_id = "fig", ggplot2_version = NULL,
                                 setup = FALSE, save = TRUE, name = "fig",
-                                codelists = NULL, width_in = 7.5, height_in = 4.5) {
+                                codelists = NULL, width_in = 7.5, height_in = 4.5,
+                                order_arms = NULL) {
   design <- if (inherits(design, "tfl_fig_design")) design else .fig_design_from_list(design)
   gg <- .fig_target_version(ggplot2_version, design)
   # the report's code lists (its rows of the codelists sheet): on the
   # figure's data, last of its data steps
   lv <- .codelist_levels(codelists, plot_id)
+  order <- if (is.null(order_arms)) isTRUE(setup) || length(lv) > 0L else isTRUE(order_arms)
   if (length(design$plots)) {
     return(.fig_compose_code(design, plot_id, gg, setup = setup,
                              save = save, name = name, levels = lv,
-                             width_in = width_in, height_in = height_in))
+                             width_in = width_in, height_in = height_in,
+                             order = order))
   }
   whole <- Filter(function(l) identical(l$layer, "figure"), design$layers)
   if (length(whole)) {
@@ -1746,7 +1769,8 @@ tfl_fig_design_code <- function(design, plot_id = "fig", ggplot2_version = NULL,
     return(.drop_attached_ns(do.call(fn, c(list(style = w$style %||% NULL,
                                                 plot_id = plot_id), args))))
   }
-  b <- .fig_design_body(design, gg, setup = setup, name = name, levels = lv)
+  b <- .fig_design_body(design, gg, setup = setup, name = name, levels = lv,
+                        order = order)
   code <- c(
     # a script of its own says what it is and attaches its packages; with
     # the study's setup, the program around it does both
@@ -2142,13 +2166,9 @@ tfl_check_fig_design <- function(design, adam = NULL, ggplot2_version = NULL,
   }
   cols <- objects[["df"]]
   f <- .fig_plot_fields()
-  # (a Kaplan-Meier template reads some `plot:` keys itself: the risk table's title)
-  tn <- if (is.list(design$template)) design$template$name else design$template
-  routed <- tryCatch(
-    if (is.character(tn) && length(tn) == 1L && identical(.tpl_get(tn, "")$layout, "km")) {
-      .tpl_km_plot_routed
-    } else character(),
-    error = function(e) character())
+  # (a template reads some `plot:` keys itself: the Kaplan-Meier types, the risk
+  # table's title)
+  routed <- .fig_plot_routed(design)
   for (nm in names(design$plot)) {
     r <- f[f$field == nm, , drop = FALSE]
     if (!nrow(r) && nm %in% routed) next
@@ -2332,8 +2352,11 @@ tfl_check_fig_design <- function(design, adam = NULL, ggplot2_version = NULL,
 #'   population's data), one string with `,` between them; each has its
 #'   analysis in the figure's own ARD and its rows on the plot under a
 #'   heading row.  `""`: all subjects only.
-#' @param comparison For `forest_hr`: the arm compared with the reference
-#'   (the group's first level); `NULL`: every other arm.
+#' @param comparison For `forest_hr`: the one arm to show, compared with the
+#'   reference; `NULL`: every other arm.  It is not the reference (a message
+#'   at run time says so).
+#' @param ref For `forest_hr`: the reference arm, put first in the figure's
+#'   own ARD (a relevel in the data step); `NULL`: the group's first level.
 #' @param form `"design"` (default): the figure designer's design
 #'   ([tfl_fig_design()]).  `"items"`: the figure report's `data:` and
 #'   `content:` of function calls ([tfl_fig_content_from_design()]): a
@@ -2362,7 +2385,7 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
                              category = "AVALC", responders = "CR, PR",
                              id = "USUBJID", duration = "TRTDURD",
                              join_adsl = NULL, title = NULL,
-                             subgroups = "SEX, AGEGR1", comparison = NULL,
+                             subgroups = "SEX, AGEGR1", comparison = NULL, ref = NULL,
                              form = c("design", "items"), ...) {
   form <- match.arg(form)
   if (identical(form, "items")) {
@@ -2445,8 +2468,11 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
       # the layers read `est` (the ARD), not df; the subgroups are joined
       # in the ARD's own analysis data
       join <- join_adsl %||% FALSE
+      if (!is.null(ref) && identical(ref, comparison)) {
+        .ard_stop("forest_hr: `comparison` is the reference arm (`ref`); the reference has no hazard ratio to show.")
+      }
       an <- tfl_fig_forest_analyses(data = data, param = param, pop = pop, group = group,
-                                    subgroups = sub, time = time, censor = censor)
+                                    subgroups = sub, time = time, censor = censor, ref = ref)
       d <- tfl_fig_design(
         template = template,
         data = drop(list(read(data), if (join) join_step(c(group, pop)),
@@ -2730,6 +2756,12 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
   lab[!is.na(lab) & lab != names(lab)]
 }
 
+# the reference arm first: a relevel of the arm (the first level is the reference)
+.forest_ref_derive <- function(group, ref) {
+  sprintf("%s = factor(%s, levels = c(%s, setdiff(levels(factor(%s)), %s)))",
+          group, group, q(ref), group, q(ref))
+}
+
 # a name as R writes it in c(): backticked when it is not a syntax name
 .forest_name <- function(x) ifelse(make.names(x) == x, x, paste0("`", x, "`"))
 
@@ -2751,6 +2783,14 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
   # no arm chosen: every other arm, and each row says which
   if (is.null(comparison)) lvl <- sprintf("paste(%s, %s, sep = \": \")", lvl, group)
   paste(c(
+    # the arm to show is an arm the model compared with the reference (the
+    # reference has an estimate but no interval)
+    if (!is.null(comparison)) c(
+      sprintf("if (!%s %%in%% est[[\"%s\"]][!is.na(est$conf.low)]) {", q(comparison), group),
+      sprintf("  stop(\"forest_hr: `comparison` (%s) is the reference arm or not an arm of the data\",",
+              comparison),
+      "       call. = FALSE)",
+      "}"),
     "est <- est |>",
     if (length(n_by_arm)) c(
       "  # each arm's events / subjects (its own row of the model), a column an arm",
@@ -2827,6 +2867,8 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
 #'   (`adtte_fas_os`), the population without its flag's `FL`: the rule
 #'   tflplanner names a data by.
 #' @param group The treatment variable; its first level is the reference.
+#' @param ref The reference arm, put first by a relevel in the analysis
+#'   data's `derive`; `NULL`: the first level (none derived).
 #' @param subgroups The subgroup variables (of the population's data), a
 #'   character vector or one string with `,` between them.
 #' @param time,censor The time and the censoring indicator (1 = censored).
@@ -2839,7 +2881,8 @@ tfl_fig_template <- function(template, data = NULL, param = NULL, pop = NULL,
 #' @export
 tfl_fig_forest_analyses <- function(data = "ADTTE", param = "OS", pop = "FASFL",
                                     group = "TRT01P", subgroups = c("SEX", "AGEGR1"),
-                                    time = "AVAL", censor = "CNSR", id = "HR") {
+                                    time = "AVAL", censor = "CNSR", id = "HR",
+                                    ref = NULL) {
   subgroups <- .split_vals(paste(subgroups, collapse = ", "))
   data_id <- gsub("[^a-z0-9_.]", "_", tolower(paste(data, sub("FL$", "", pop), param, sep = "_")))
   # the event as the KM figures write it: CNSR == 0
@@ -2869,6 +2912,7 @@ tfl_fig_forest_analyses <- function(data = "ADTTE", param = "OS", pop = "FASFL",
     from = toupper(data), population_id = pop, where = sprintf("PARAMCD == %s", q(param)),
     add = if (length(subgroups)) paste(subgroups, collapse = " | ") else NA_character_,
     stringsAsFactors = FALSE)
+  if (!is.null(ref)) adata$derive <- .forest_ref_derive(group, ref)
   one <- function(aid, label, code) data.frame(
     analysis_id = aid, label = label, method = "custom", data = data_id, code = code,
     stringsAsFactors = FALSE)
@@ -2891,4 +2935,19 @@ tfl_fig_forest_analyses <- function(data = "ADTTE", param = "OS", pop = "FASFL",
     if (inherits(it, "tfl_plot")) it$items <- .fig_mark_from(it$items, from)
     it
   })
+}
+
+# The `plot:` keys of a figure design that its template reads itself, not
+# figure settings: by the template's layout; a design without the template
+# (the expanded one) by the layer the key went to (.tpl_plot_routed)
+.fig_plot_routed <- function(design) {
+  tn <- if (is.list(design$template)) design$template$name else design$template
+  layout <- if (is.character(tn) && length(tn) == 1L) {
+    tryCatch(.tpl_get(tn, "")$layout, error = function(e) NULL)
+  }
+  if (is.null(layout)) {
+    ls <- Filter(is.list, design$layers %||% list())
+    layout <- names(Filter(function(has) any(vapply(ls, has, NA)), .tpl_plot_routed_layer))
+  }
+  as.character(unlist(.tpl_plot_routed[intersect(layout, names(.tpl_plot_routed))], use.names = FALSE))
 }

@@ -59,14 +59,39 @@
   if (is.na(t)) NULL else unname(t)
 }
 
-# A parameter's value as one short line of YAML
+# A parameter's value as one line of YAML -- whole: the agent copies it, so
+# it is never cut (a long one goes on its own line under the parameter)
 .ai_tpl_value <- function(v) {
   if (is.null(v)) return("~")
   # (a named vector as the mapping a report writes)
   if (is.atomic(v) && !is.null(names(v))) v <- as.list(v)
-  s <- .ai_yaml_flow(v)
-  if (nchar(s) > 70L) s <- paste0(substr(s, 1L, 67L), "...")
-  s
+  .ai_yaml_flow(v)
+}
+
+# A long default goes under its parameter, on a line of its own
+.ai_tpl_long <- 70L
+
+# What the km report types read that is not an ordinary parameter, from the
+# registry's own objects: the `plot:` keys the template routes (risk_title:
+# .tpl_plot_routed), the figure's own `plot:` settings the look shares
+# (theme, palette, base_size) and the look the study's figure style sets,
+# which `plot:` does not take (.tpl_km_look, .tpl_km_look_what)
+.ai_tpl_plot_lines <- function(t) {
+  routed <- .tpl_plot_routed[[t$layout]]
+  look <- .tpl_plot_unused(t, stats::setNames(rep(list(1), length(.tpl_km_look)), .tpl_km_look))
+  if (is.null(routed) || !length(look)) return(character())
+  own <- intersect(names(Filter(function(p) isTRUE(p$hidden), t$params)),
+                   intersect(.tpl_km_look, .fig_plot_fields()$field))
+  what <- .tpl_km_look_what[look]
+  c(sprintf("  - settings that are not parameters (they have no place in `template: args`): %s",
+            paste(sprintf("`%s` (a `plot:` key of the report, read by the template)", routed), collapse = ", ")),
+    sprintf("    - write `plot: {%s: \"<the shell's text>\"}` in the report, beside the template, not as an argument",
+            routed[1L]),
+    if (length(own)) sprintf("    - `plot: {%s: <value>}` are the figure's own settings (accepted)",
+                             paste(own, collapse = ": <value>, ")),
+    sprintf("    - the look is the study's figure style, set once for the study (`%s`), not in a report: %s; a `plot:` key of these names is rejected (tfl_check_spec() and tfl_check_fig_design() give an error), and `template: args` has no such argument: leave them out",
+            paste(sprintf("km.%s", look), collapse = ", "),
+            paste(sprintf("`%s` %s", look, sub("^its ", "", what)), collapse = ", ")))
 }
 
 # A line a template's block adds: a fact the agent found only by building
@@ -82,21 +107,23 @@
     "text (`Low`), give the report's `codelists` for both the post and the baseline ",
     "column (value, label), and `levels` may then be the codes or the labels; ",
     "`Missing` and `Total` are the template's rows: not in `levels`, and they need not ",
-    "be in the code list; the rows are `levels`, then `Missing`, then `Total` (with a ",
-    "code list for the baseline they always print, ",
-    "empty when nobody is in them; without one, `Missing` prints only when a subject ",
-    "has no baseline value); a group text over the categories (`Worst post-baseline ",
-    "[a]: Low`) is `post_header` (`{col}`: the category), not the code list's label."),
+    "be in the code list; the rows are `levels`, then `Missing` (only with ",
+    "`missing_label: Missing`: by default a subject with no baseline is left out), then ",
+    "`Total`; the header N (`header_n`: `set` by default) and the % denominator ",
+    "(`percent_of`: `total` by default) are set separately; a group text over the ",
+    "categories (`Worst post-baseline [a]: Low`) is `post_header` (`{col}`: the ",
+    "category), not the code list's label."),
   lab_shift = paste0(
     "`levels` are the data's values, in order (`LOW`, `NORMAL`, `HIGH`); to print other ",
     "text (`Low`), give the report's `codelists` for both the post and the baseline ",
     "column (value, label), and `levels` may then be the codes or the labels; ",
     "`Missing` and `Total` are the template's rows: not in `levels`, and they need not ",
-    "be in the code list; the rows are `levels`, then `Missing`, then `Total` (with a ",
-    "code list for the baseline they always print, ",
-    "empty when nobody is in them; without one, `Missing` prints only when a subject ",
-    "has no baseline value); a group text over the categories (`Worst post-baseline ",
-    "[a]: Low`) is `post_header` (`{col}`: the category), not the code list's label."),
+    "be in the code list; the rows are `levels`, then `Missing` (only with ",
+    "`missing_label: Missing`: by default a subject with no baseline is left out), then ",
+    "`Total`; the header N (`header_n`: `set` by default) and the % denominator ",
+    "(`percent_of`: `total` by default) are set separately; a group text over the ",
+    "categories (`Worst post-baseline [a]: Low`) is `post_header` (`{col}`: the ",
+    "category), not the code list's label."),
   km_survival = paste0(
     "the log-rank p-value is shown by default: set `pvalue: false` when the shell shows ",
     "none."),
@@ -160,10 +187,16 @@
         what <- paste0(what, " {", paste(x$fields, collapse = ", "), "}")
       }
       tgt <- if (identical(x$group, "target") || (is.null(x$group) && x$name %in% target)) " [target]" else ""
+      val <- .ai_tpl_value(x$default)
+      long <- nchar(val) > .ai_tpl_long
       out <- c(out, sprintf("  - `%s`%s%s (%s) = %s%s", x$name, tgt,
-                            if (isTRUE(x$required)) "*" else "", what, .ai_tpl_value(x$default),
+                            if (isTRUE(x$required)) "*" else "", what,
+                            if (long) "(the default, whole, on the next line)" else val,
                             if (!is.null(x$doc) && nzchar(x$doc)) paste0(": ", x$doc) else ""))
+      if (long) out <- c(out, paste0("    ", val))
     }
+    # (what the template reads that is not a parameter)
+    if (!short) out <- c(out, .ai_tpl_plot_lines(t))
   }
   out
 }
@@ -349,7 +382,7 @@
     if (!isTRUE(ok)) {
       add(paste("template args", x$name), sprintf("of template %s is %s%s", nm, x$type,
                                                   if (isTRUE(x$multiple)) " (several)" else ""))
-    } else if (identical(x$type, "choice") && length(x$choices) && !all(unlist(v) %in% x$choices)) {
+    } else if (identical(x$type, "choice") && length(x$choices) && !all(as.character(unlist(v)) %in% x$choices)) {
       add(paste("template args", x$name), sprintf("of template %s is one of %s", nm,
                                                   paste(x$choices, collapse = ", ")))
     }

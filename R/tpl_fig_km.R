@@ -409,6 +409,17 @@
 # what each one is, for the warning's text.  Both are derived from the
 # look, so a key added to it is in the warning until a test says what it is.
 .tpl_km_plot_routed <- "risk_title"
+# The keys a figure template reads from the report's `plot:`, by layout.  The
+# figure design a template makes (tfl_sheets_from_spec(): what tflplanner
+# opens) has no template any more, only the layer the key went to, so the
+# design check (.fig_plot_routed()) takes a key by the template's layout or,
+# without the template, by that layer (`km`: the risk table, drawn by risk_table
+# or ggsurvfit's add_risktable).
+.tpl_plot_routed <- list(km = .tpl_km_plot_routed)
+.tpl_plot_routed_layer <- list(km = function(l) {
+  identical(l$layer, "risk_table") ||
+    (identical(l$layer, "call") && identical(l$fn, "add_risktable"))
+})
 .tpl_km_look_what <- c(
   censor_shape = "its censor marks' shape", censor_size = "its censor marks' size",
   censor_stroke = "its censor marks' stroke", median_linetype = "its median line's linetype",

@@ -1,5 +1,6 @@
 # ---- data ------------------------------------------------------------------
 adtte_ttde <- adtte |>
+  order_levels() |>
   filter(PARAMCD == "TTDE", SAFFL == "Y")
 
 est <- ard_stats(
@@ -11,6 +12,10 @@ est <- ard_stats(
 )
 
 # the rows to draw: the comparison arm, a heading row per subgroup
+if (!"Xanomeline High Dose" %in% est[["TRT01A"]][!is.na(est$conf.low)]) {
+  stop("forest_hr: `comparison` (Xanomeline High Dose) is the reference arm or not an arm of the data",
+       call. = FALSE)
+}
 est <- est |>
   # the reference arm has no interval; a subgroup whose model did not
   # converge (no events in an arm) has no point: NE

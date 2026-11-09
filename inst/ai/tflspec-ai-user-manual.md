@@ -513,8 +513,9 @@ analyses do, and the figure starts from it.
   looks for each address in it.  `ard_value()`, `ard_stats()` and
   `ard_fingerprint()` are study helpers (`tfl_helpers_code()`).
 - A forest plot's numbers are an ARD of its own: `tfl_fig_template("forest_hr",
-  data, param, pop, group, subgroups = "SEX, AGEGR1", comparison = <the
-  arm against the reference>)` reads `ard_stats` of the analyses `HR`,
+  data, param, pop, group, subgroups = "SEX, AGEGR1", ref = <the reference
+  arm, put first; NULL: the first level>, comparison = <the one arm to show
+  against the reference>)` reads `ard_stats` of the analyses `HR`,
   `HR_SEX`, `HR_AGEGR1` (a Cox model of all subjects, one within each
   subgroup variable through `cards::ard_strata()`, each a `custom`
   analysis), which `tfl_fig_forest_analyses()` gives as rows of the
@@ -620,7 +621,7 @@ tfl_ai_unpack(a, "study")                           # spec/outputs/<id>.yml, spe
   builder; `tfl_ai_confirm()` lists them, `tfl_check_spec()` shows them as
   `check` rows).  `study.yml`'s `ai:` keys set its rules (`language`,
   `run`, `requests_per_chat`, `carry`, `max_rounds`, `footnotes_at`; the study
-  standard's `spec/defaults.yml` may say them first).  `run` is `one` (the
+  standard's `spec/defaults.yml` may say them first).  `language` is the chat's language (`en` by default, `ja` for Japanese; `tfl_ai_prepare(language = "Japanese")` writes it): the agent's questions, assumptions and confirm items are in it, keys and values stay as they are.  `run` is `one` (the
   default): the agent processes one request -- its questions in the chat, its
   drafts, its build and check -- and stops at a menu (`c` the next request, a
   number N the next N together, `a` all the rest).  `batch` (or the menu's
@@ -1314,7 +1315,7 @@ cells  <- data.frame(output_id = "T-14-3-1", template = "{n} ({p:.1f%})")
 | `pages_max_rows`, `pages_split`, `pages_break_before`, `pages_min_group_rows`, `pages_cont_label`, `pages_page_by` | `plan_paginate_rows()` (`page_by`: BY pages, the row budget inside each) |
 | `group_mode`, `group_collapse` | `plan_row_group()` |
 | `group_page`, `group_col`, `group_keep`, `group_heading`, `group_heading_at` | `plan_paginate_group(col, keep, heading, heading_at)` — one page per value; `group_heading = Treatment: {value} (N={n})` names each page (the `auto_section` heading) with the value and its N from the ARD (bind `cards::ard_tabulate(adsl, variables = TRT01A)`); `group_heading_at = section` prints it in the section header (`title`: under the titles), so the report needs no `auto_section` |
-| `pages_heading`, `pages_heading_at` | `plan_paginate_rows(page_by, heading, heading_at)` | each BY page named like `group_heading`, and printed where `pages_heading_at` says, a page per arm with a row budget inside |
+| `pages_heading`, `pages_heading_at`, `pages_na_label` | `plan_paginate_rows(page_by, heading, heading_at, na_label)` | each BY page named like `group_heading`, and printed where `pages_heading_at` says, a page per arm with a row budget inside |
 | `blank_where`, `blank_first`, `blank_last`, `blank_counted` | `plan_blanks()` |
 | `stub_vars`, `stub_name`, `stub_heading`, `stub_indent`, `stub_summary`, `stub_before` | `plan_stub()` (`stub_heading`: the stub column's heading; `""` quoted for none) |
 | `colpages_every`, `colpages_at`, `colpages_cut_by`, `colpages_keep`, `colpages_fit`, `colpages_allow_span_break`, `colpages_order` | `plan_paginate_cols()` |

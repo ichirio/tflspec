@@ -45,7 +45,8 @@ test_that("a template's look is under the study's layers (they say the look), it
                     continuous = "AGE", categorical = c("AGEGR1", "SEX"))))
   ro <- tfl_resolve_output(o, s)
   pr <- ro$content[[match("plan_paginate_rows", vapply(ro$content, `[[`, "", "fn"))]]
-  expect_identical(pr$args, list(max_rows = 40L))
+  # (the study's max_rows over the layout's split, argument by argument)
+  expect_identical(pr$args, list(max_rows = 40L, split = "group_safe"))
   expect_identical(pr$from, "defaults")
   code <- tfl_content_code(ro, pipe = "|>")
   expect_match(code, "plan_paginate_rows(max_rows = 40)", fixed = TRUE, all = FALSE)
@@ -61,13 +62,14 @@ test_that("a template's look is under the study's layers (they say the look), it
   expect_identical(tab(e$plan), tab(b))
   # B written out: the study's look stays the study's, the same table
   w <- tfl_template_to_spec(o, s)
-  expect_false("plan_paginate_rows" %in% vapply(w$content, `[[`, "", "fn"))
+  wp <- Filter(function(it) identical(it$fn, "plan_paginate_rows"), w$content)
+  expect_false(any(vapply(wp, function(it) "max_rows" %in% names(it$args), NA)))
   expect_identical(tab(suppressMessages(tfl_content_run(tfl_resolve_output(w, s), ard))), tab(b))
   # a report's own look still wins
   o$content <- list(tfl_item("plan_paginate_rows", list(max_rows = 24L)))
   r2 <- tfl_resolve_output(o, s)
   expect_identical(r2$content[[match("plan_paginate_rows", vapply(r2$content, `[[`, "", "fn"))]]$args,
-                   list(max_rows = 24L))
+                   list(max_rows = 24L, split = "group_safe"))
 })
 
 test_that("titles_at / footnotes_at: the report's titles in the running header, its footnotes in the footer", {

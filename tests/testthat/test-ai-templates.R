@@ -455,7 +455,9 @@ test_that("shift: `worst` is matched with the data's values, a code list's label
 
 test_that("shift: `Missing` and `Total` in `levels` are the template's rows: an error, whatever the code lists or `worst` (#636)", {
   for (cl in c(FALSE, TRUE)) {
-    p <- aitpl_shift_check(args = "levels: [LOW, NORMAL, HIGH, Missing]", codelists = cl, cl_missing = cl)
+    # (`Missing` is the template's row when `missing_label` is given)
+    p <- aitpl_shift_check(args = c("levels: [LOW, NORMAL, HIGH, Missing]", "missing_label: Missing"),
+                           codelists = cl, cl_missing = cl)
     expect_identical(p$severity, "error", info = cl)
     expect_match(p$problem, "`Missing` is a row the template adds: leave it out of `levels`", fixed = TRUE)
   }
@@ -465,7 +467,7 @@ test_that("shift: `Missing` and `Total` in `levels` are the template's rows: an 
   p <- aitpl_shift_check(args = c("levels: [LOW, NORMAL, HIGH, Absent]", "missing_label: Absent"))
   expect_match(p$problem, "`Absent` is a row the template adds", fixed = TRUE)
   # (the others of the entries are still judged)
-  p <- aitpl_shift_check(args = "levels: [Low, Missing]")
+  p <- aitpl_shift_check(args = c("levels: [Low, Missing]", "missing_label: Missing"))
   expect_length(p$problem, 2L)
   # nothing more to say of the data's values with them left out
   expect_identical(nrow(aitpl_shift_check(args = "levels: [LOW, NORMAL, HIGH]")), 0L)
@@ -555,4 +557,54 @@ test_that("shift: a draft that extends and a study that cannot be read leave the
   # no study in the context: the same
   ctx$study_dir <- NULL
   expect_identical(nrow(chk("defaults")), 0L)
+})
+
+test_that("templates.md never cuts a default, and names the km settings that are not parameters", {
+  skip_on_cran()
+  skip_if_not_installed("haven")
+  skip_if_not_installed("ggsurvfit")
+  txt <- tflspec:::.ai_templates_list(c("table", "listing", "figure"))
+  # (every default is there whole: a cut one ends in "...")
+  for (n in tfl_templates()$name) {
+    for (x in tflspec:::.tpl_shown(tfl_template_params(n))) {
+      v <- tflspec:::.ai_tpl_value(x$default)
+      expect_true(any(grepl(v, txt, fixed = TRUE)), info = paste(n, x$name))
+    }
+  }
+  expect_false(any(grepl("= [^:]*[.][.][.]$", txt)))
+  # a long default is whole, on the line under its parameter
+  i <- grep("^  - `cells`.*whole, on the next line", txt)
+  expect_true(length(i) >= 1L)
+  expect_match(txt[i[1L] + 1L], "^    ")
+  expect_true(any(grepl("cells", txt, fixed = TRUE)))
+  # the km types: risk_title and the look, from the registry
+  for (nm in c("km_survival", "km_cumulative")) {
+    at <- grep(sprintf("^- `%s`:", nm), txt)
+    expect_length(at, 1L)
+    nxt <- grep("^- ", txt)
+    blk <- txt[at:(c(nxt[nxt > at], length(txt) + 1L)[1L] - 1L)]
+    blk <- paste(blk, collapse = "
+")
+    expect_match(blk, "`risk_title`", fixed = TRUE, info = nm)
+    expect_match(blk, "plot: {risk_title:", fixed = TRUE, info = nm)
+    expect_match(blk, "`censor_shape`", fixed = TRUE, info = nm)
+  }
+  # a report written as the block says passes the draft check
+  d <- tempfile()
+  on.exit(unlink(d, recursive = TRUE))
+  tplfig_study(d, c("adsl", "adtte"), "AIT-1")
+  o <- tfl_output("F-9-ait", "figure", population = "SAF", label = "KM", extends = "defaults",
+                  data = list(steps = list(list(step = "read", dataset = "ADTTE"),
+                                           list(step = "param", value = "PFS"))),
+                  template = list(name = "km_survival", args = list(by = "TRT01A")))
+  o$plot <- list(risk_title = "Number at risk")
+  tfl_write_output(o, file.path(d, "spec", "outputs", "F-9-ait.yml"))
+  p <- suppressMessages(suppressWarnings(tfl_check_spec(d)))
+  expect_identical(nrow(p[p$level == "error", , drop = FALSE]), 0L)
+  # and a look key under plot: is the error the block says
+  o$plot <- list(risk_title = "Number at risk", censor_shape = 2)
+  tfl_write_output(o, file.path(d, "spec", "outputs", "F-9-ait.yml"))
+  p <- suppressMessages(suppressWarnings(tfl_check_spec(d)))
+  expect_identical(p$item[p$level == "error"], "plot$censor_shape")
+  expect_identical(tfl_check_fig_design(tflspec:::.fig_design_of_output(o))$field, "censor_shape")
 })

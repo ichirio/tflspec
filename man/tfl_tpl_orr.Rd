@@ -23,6 +23,7 @@ The table template \code{orr}, layout \code{stat_block}. Its program is one call
    \code{conf_level} \tab other \tab call \tab 0.95 \tab  \tab the rate's CI's level \cr
    \code{stat_layout} \tab other \tab call \tab rows \tab  \tab the rate and its CI: "rows", under each other in the arm's column, or "cols", each arm's two columns (stat_block) \cr
    \code{heading} \tab other \tab call \tab Response \tab  \tab the label column's heading \cr
+   \code{header_n} \tab other \tab call \tab set \tab  \tab the arm headings' N: "set" (default) or "denominator": the arm's subjects in the analysis set (with 'subset'), the percentages' and the rate's base; "none": no N. "tested" is not supported, the rate row's base is the analysis set \cr
 }
 }
 

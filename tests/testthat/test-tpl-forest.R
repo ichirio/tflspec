@@ -92,13 +92,20 @@ test_that("in a study: the ARD built; A (the call, the layout) = B (the design) 
   expect_s3_class(tpl_forest_layout(q), "patchwork")
 })
 
-test_that("comparison: the Cox model's reference is the other arm, whatever the arms' order", {
+test_that("ref: the reference arm is put first by a relevel; comparison only shows one arm", {
   x <- tfl_template_expand("forest_hr", list(param = "OS", population = "ITT", group = "TRT01P",
-                                             comparison = "Drug X"))
+                                             ref = "Drug X"))
   expect_match(unclass(x$ard$analysis_data[[1L]]$derive),
-               "TRT01P = factor(TRT01P, levels = c(setdiff(levels(factor(TRT01P)), \"Drug X\"), \"Drug X\"))",
+               "TRT01P = factor(TRT01P, levels = c(\"Drug X\", setdiff(levels(factor(TRT01P)), \"Drug X\")))",
                fixed = TRUE)
-  # (no comparison: only the blank arm made missing)
+  # comparison does not reorder the arms (the data step is the blank arm made missing only)
+  y <- tfl_template_expand("forest_hr", list(param = "OS", population = "ITT", group = "TRT01P",
+                                             comparison = "Drug X"))
+  expect_false(grepl("factor(", unclass(y$ard$analysis_data[[1L]]$derive), fixed = TRUE))
+  expect_error(tfl_template_expand("forest_hr", list(param = "OS", population = "ITT",
+                                                     ref = "Drug X", comparison = "Drug X")),
+               "`comparison` is the reference arm")
+  # (no ref: only the blank arm made missing)
   expect_identical(as.vector(unclass(tfl_template_expand("forest_hr", list(param = "OS", population = "ITT"))$ard$analysis_data[[1L]]$derive)),
                    "TRT01A = replace(TRT01A, !is.na(TRT01A) & as.character(TRT01A) == \"\", NA)")
   skip_on_cran()
@@ -111,7 +118,7 @@ test_that("comparison: the Cox model's reference is the other arm, whatever the 
   o <- tfl_output("F-9-2", "figure", population = "SAF", label = "Forest", extends = "defaults",
                   template = list(name = "forest_hr", args = list(
                     param = "OS", population = "SAF", group = "TRT01P", subgroups = "SEX",
-                    comparison = "Drug X")))
+                    ref = "Control", comparison = "Drug X")))
   tfl_write_output(o, file.path(d, "spec", "outputs", "F-9-2.yml"))
   st <- tfl_read_study_spec(d)
   ard <- suppressMessages(tfl_build_ard(st, output_id = "F-9-2", dir = d, save = FALSE))
@@ -213,4 +220,96 @@ test_that("subgroup_labels: the headings by label; the levels' rows and the orde
   expect_error(tfl_template_expand("forest_hr", list(param = "OS", population = "ITT",
                                                      subgroup_labels = c("Sex"))), "named")
   expect_identical(tfl_template_params("forest_hr")$subgroup_labels$type, "list")
+})
+
+# ---- the reference is the first level (#722): Placebo = 1, Drug B = 2, Drug A = 3 ----
+fr_arms <- c("Placebo", "Drug B", "Drug A")
+fr_data <- function() {
+  set.seed(7220)
+  n <- 120L
+  d <- data.frame(USUBJID = sprintf("DMY-%03d", seq_len(n)),
+                  TRT01A = rep(fr_arms, each = n / 3L), TRT01AN = rep(1:3, each = n / 3L),
+                  SEX = rep(c("F", "M"), length.out = n))
+  d$AVAL <- stats::rexp(n, rate = c(0.10, 0.07, 0.05)[d$TRT01AN])
+  d$CNSR <- stats::rbinom(n, 1L, 0.3)
+  # the data step's factor (order_levels()): the arm in the order of TRT01AN
+  d$TRT01A <- factor(d$TRT01A, levels = fr_arms)
+  d
+}
+# the template's data step (derive) and its overall Cox analysis, run on the data
+fr_hr <- function(ref = NULL) {
+  x <- tfl_template_expand("forest_hr", c(list(param = "OS", population = "ITT", group = "TRT01A",
+                                               subgroups = "SEX"),
+                                          if (!is.null(ref)) list(ref = ref)))
+  d <- fr_data()
+  for (e in strsplit(as.character(unclass(x$ard$analysis_data[[1L]]$derive)), " | ", fixed = TRUE)[[1L]]) {
+    d <- eval(parse(text = sprintf("dplyr::mutate(d, %s)", e)))
+  }
+  ard <- suppressWarnings(eval(parse(text = x$ard$analyses[[1L]]$code), list(data = d)))
+  # the rows the figure's ard_stats() step gives: an estimate for every arm
+  # (the reference's is 1), an interval for the others
+  a <- ard[ard$stat_name %in% c("estimate", "conf.low", "conf.high"), ]
+  arm <- vapply(a$variable_level, function(v) as.character(v[[1L]]), "")
+  num <- function(s) {
+    z <- a$stat[a$stat_name == s]
+    stats::setNames(vapply(z, function(v) as.numeric(v[[1L]]), 0), arm[a$stat_name == s])
+  }
+  arms <- arm[a$stat_name == "estimate"]
+  list(x = x, est = data.frame(
+    TRT01A = arms, estimate = unname(num("estimate")),
+    conf.low = unname(num("conf.low")[arms]), conf.high = unname(num("conf.high")[arms]),
+    n_obs = 40L))
+}
+
+test_that("ref: the default reference is Placebo (the first level); ref = Drug B makes it Drug B", {
+  fr_skip()
+  d <- fr_data()
+  for (ref in list(NULL, "Placebo", "Drug B")) {
+    used <- ref %||% "Placebo"
+    r <- fr_hr(ref)
+    d2 <- d
+    d2$TRT01A <- stats::relevel(d2$TRT01A, ref = used)
+    fit <- survival::coxph(survival::Surv(AVAL, CNSR == 0) ~ TRT01A, data = d2)
+    hr <- exp(stats::coef(fit))
+    names(hr) <- sub("^TRT01A", "", names(hr))
+    others <- setdiff(fr_arms, used)
+    expect_setequal(r$est$TRT01A, fr_arms)
+    expect_true(is.na(r$est$conf.low[r$est$TRT01A == used]), info = used)
+    expect_equal(stats::setNames(r$est$estimate, r$est$TRT01A)[others], hr[others],
+                 tolerance = 1e-6, info = used)
+    ci <- exp(stats::confint.default(fit))
+    rownames(ci) <- sub("^TRT01A", "", rownames(ci))
+    expect_equal(r$est$conf.low[match(others, r$est$TRT01A)], unname(ci[others, 1L]),
+                 tolerance = 1e-6, info = used)
+    expect_equal(r$est$conf.high[match(others, r$est$TRT01A)], unname(ci[others, 2L]),
+                 tolerance = 1e-6, info = used)
+  }
+})
+
+test_that("comparison: shows only that arm, with the HR it has without the filter; the reference is refused", {
+  fr_skip()
+  r <- fr_hr()
+  run <- function(code, est) eval(parse(text = code), list2env(list(est = est),
+                                                              parent = asNamespace("dplyr")))
+  all <- run(tflspec:::.forest_est_code("TRT01A", character()), r$est)
+  one <- run(tflspec:::.forest_est_code("TRT01A", character(), "Drug A"), r$est)
+  expect_identical(nrow(all), 2L)
+  expect_setequal(all$TRT01A, c("Drug B", "Drug A"))
+  expect_identical(nrow(one), 1L)
+  expect_identical(one$txt, all$txt[all$TRT01A == "Drug A"])
+  expect_identical(one$level, "All subjects")
+  # comparison = the reference (Placebo, the first level: no row of its own): refused at run time
+  expect_error(run(tflspec:::.forest_est_code("TRT01A", character(), "Placebo"), r$est),
+               "`comparison` (Placebo) is the reference arm or not an arm", fixed = TRUE)
+  # ... and with ref given, before any run
+  expect_error(tfl_template_expand("forest_hr", list(param = "OS", population = "ITT", ref = "Drug B",
+                                                    comparison = "Drug B")),
+               "`comparison` is the reference arm")
+  expect_error(tfl_fig_template("forest_hr", ref = "Drug B", comparison = "Drug B"),
+               "`comparison` is the reference arm")
+  # tfl_fig_template(ref =): the analysis data's derive relevels the arm
+  an <- tfl_fig_forest_analyses("ADTTE", "OS", "FASFL", "TRT01A", "SEX", ref = "Drug B")
+  expect_identical(an$analysis_data$derive,
+                   "TRT01A = factor(TRT01A, levels = c(\"Drug B\", setdiff(levels(factor(TRT01A)), \"Drug B\")))")
+  expect_false("derive" %in% names(tfl_fig_forest_analyses("ADTTE", "OS", "FASFL", "TRT01A", "SEX")$analysis_data))
 })

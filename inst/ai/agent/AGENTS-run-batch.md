@@ -36,9 +36,11 @@ once**. Post this as one message, in {{language}}:
   only): the blockers first, then the rest by request;
 - each entry with the default you took and its `例:` lines;
 - {{batch_defaults}};
+- the defaults listed once more, one line each, so that a default is
+  never kept by silence alone;
 - at the end: "Answer only what you want changed (Q<n>: ...); the others
   keep their default.  Change a default the same way: `D<n>: ...` or
-  `<report> <item>: ...`."
+  `<report> <item>: ...`.  OK to keep all the other defaults?"
 
 Then **stop and wait**. When the person answers:
 - For each changed answer, change that decision's line in

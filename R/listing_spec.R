@@ -402,7 +402,9 @@ print.tfl_listing_spec <- function(x, ...) {
 #'   or sorts by are put on its data after its condition (`cl_<variable>`
 #'   and `set_levels()`, see [tfl_helpers_code()]) -- each such column a
 #'   factor in its list's order (it sorts so), its values as the list has
-#'   them.
+#'   them.  Before them the arms are put in their numeric order by
+#'   `order_levels()` (`TRT01A` by `TRT01AN`; a list wins), so a sort on
+#'   an arm sorts so.
 #' @param part `"all"` (the whole of it), `"data"` (the data, up to its
 #'   order: what a report's content step of its own code reads as `data`)
 #'   or `"content"` (the listing laid out from a `data` made before -- by a
@@ -507,6 +509,15 @@ tfl_listing_code <- function(spec, output_id = NULL, datasets = NULL,
   syms <- if (!is.null(rework)) tryCatch(all.names(parse(text = rework, keep.source = FALSE)),
                                          error = function(e) character())
   also <- setdiff(datasets$dataset[.r_name(datasets$dataset) %in% syms], l$dataset)
+  # a listing that reads a dataset itself: the arms in their numeric order
+  # (TRT01A by TRT01AN: order_levels(), a study helper) before the code
+  # lists and the sort; the arm of a records data with no number of its own
+  # by ADSL's, when ADSL is read too.  (An own data went through it in the
+  # ARD program's data part.)
+  if (!own) {
+    from <- if (toupper(l$dataset) != "ADSL" && "ADSL" %in% toupper(also)) .r_name("ADSL")
+    steps <- c(.order_levels_step(NULL, from), steps)
+  }
   read <- if (own) {
     made <- .ard_data_part(ard, l$output_id, data = if (!is.na(l_data)) l_data else character(),
                            population_id = if (is.na(l_data)) l_pop,
