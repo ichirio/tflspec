@@ -288,9 +288,9 @@ test_that("ae_overview: header_n \"set\" is today's, \"none\" drops the N; \"tes
   expect_false(any(grepl("N=", hn_all(n), fixed = TRUE)))
   expect_identical(hn_texts(n), hn_texts(x)[-4L])
   expect_error(hn_expand("ae_overview", header_n = "tested"),
-               hn_msg("ae_overview", "tested", paste0("is not supported: the subjects method ",
-                        "takes no base other than the analysis set; ",
-                        "use header_n = \"set\" or \"none\".")), fixed = TRUE)
+               hn_msg("ae_overview", "tested", paste0("is not supported: use header_n = \"set\", ",
+                        "\"denominator\" (the data the percentages are of; \"data\" for the subjects ",
+                        "with an event kept) or \"none\".")), fixed = TRUE)
 })
 
 # ---- shift, lab_shift ----
