@@ -38,7 +38,25 @@
   add <- function(...) rows[[length(rows) + 1L]] <<- .check_rows(output_id = id, ...)
   # (a template by name alone, `template: km_simple`, or with its arguments)
   tpl <- o$template
-  args <- if (is.list(tpl)) tpl$args %||% list() else list()
+  args <- if (is.list(tpl)) {
+    tryCatch(.tpl_spec_of(o)$args, error = function(e) NULL) %||% tpl$args %||% list()
+  } else {
+    list()
+  }
+  # the analysis set is the report's `population:`: a template argument that
+  # differs from it is a conflict (the one equal to it, or with no report
+  # `population:`, is used and not said)
+  if ("population" %in% names(args) && is.list(tpl) && is.character(tpl$name) &&
+      !is.null(tryCatch(.tpl_get(tpl$name, "tfl_check_spec()")$params$population,
+                        error = function(e) NULL))) {
+    rp <- o$population
+    if (length(rp) == 1L && !is.na(rp) && !identical(as.character(args$population), as.character(rp))) {
+      add(part = "template", item = "population", level = "warning", message = sprintf(paste0(
+        "template argument `population` (%s) differs from the report's `population:` (%s): the report is built ",
+        "with the template's; make the report's `population:` the one to use and remove the template's"),
+        args$population[1L], rp))
+    }
+  }
   tx <- .check_texts(list(content = o$content, template = args, layers = o$layers))
   # {p:.1%}: a precision then `%`, no type between them
   bad <- if (!is.null(tx)) tx[grepl("[{][^{}:]+:[^{}]*[.][0-9]+%[}]", tx$text), , drop = FALSE]
@@ -50,6 +68,8 @@
       "(Unknown format spec): write \"%s\" (`.1f%%`: times 100, one decimal, no %% sign; ",
       "the sign after the brace)"), bad$text[i], fix))
   }
+  # every cell template: its statistics, its formats (R/check_spec_cells.R)
+  rows[[length(rows) + 1L]] <- .check_cell_rows(o, id)
   # a figure's piece turned off by its argument and added as a layer
   if (identical(o$kind, "figure") && length(o$layers)) {
     lay <- vapply(o$layers, function(l) as.character(l$layer %||% ""), "")

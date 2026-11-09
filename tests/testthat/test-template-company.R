@@ -8,10 +8,9 @@ tc_forget <- function(names) {
   rm(list = intersect(names, ls(reg)), envir = reg)
 }
 
-test_that("tflspec's own templates take no look as a parameter, and each example expands", {
-  look <- tfl_test_templates()
-  expect_identical(look$param[look$status == "look"], character(0))
-  expect_identical(sum(grepl("^not checked", look$status)), 0L, info = paste(look$status, collapse = "; "))
+test_that("tflspec's own templates have no finding, and each example expands", {
+  found <- tfl_test_templates()
+  expect_identical(nrow(found), 0L, info = paste(found$status, collapse = "; "))
   for (t in tfl_templates()$name) {
     ex <- tflspec:::.tpl_examples[[t]]
     if (is.null(ex)) next
@@ -22,7 +21,7 @@ test_that("tflspec's own templates take no look as a parameter, and each example
   expect_setequal(tfl_templates()$name, names(tflspec:::.tpl_examples))
 })
 
-test_that("tfl_template(): registered from outside, listed, replaced with a message, a look parameter warned", {
+test_that("tfl_template(): registered from outside, listed, replaced with a message, a look parameter is no finding", {
   withr::defer(tc_forget(c("tc_ages", "tc_wide")))
   tfl_template("tc_ages", kind = "table", layout = "summary",
     params = list(tfl_param("population", "SAF")),
@@ -40,16 +39,15 @@ test_that("tfl_template(): registered from outside, listed, replaced with a mess
     body = function(a, ctx) tfl_template_expand("summary", list(population = a$population,
                                                                 continuous = "AGE"))),
     "replaces")
-  # a parameter that ends in the look
-  expect_warning(tfl_template("tc_wide", kind = "table", layout = "summary",
-    params = list(tfl_param("population", "SAF"), tfl_param("widths", c(row_label = 4))),
+  # a parameter that ends in the look: a parameter with a default, no warning
+  expect_no_warning(tfl_template("tc_wide", kind = "table", layout = "summary",
+    params = list(tfl_param("population", "SAF"), tfl_param("widths", c(row_label = 4), type = "number")),
     body = function(a, ctx) {
       x <- tfl_template_expand("summary", list(population = a$population, continuous = "AGE"))
       x$content <- c(x$content, list(tfl_item("plan_columns", list(widths = a$widths))))
       x
-    }), "`widths` \\(plan_columns\\(widths\\)\\)")
-  look <- tfl_test_templates("tc_wide")
-  expect_identical(look$param[look$status == "look"], "widths")
+    }))
+  expect_identical(setdiff(tfl_test_templates("tc_wide")$status, "no subset"), character(0))
   expect_error(tfl_template("tc bad", "table", "summary", list(), function(a, ctx) NULL), "one name")
   expect_error(tfl_template("tc_x", "table", "summary", list("population"), function(a, ctx) NULL),
                "tfl_param")
@@ -98,8 +96,8 @@ test_that("tfl_use_company_templates(): a package to start from, whose templates
   expect_identical(tt$from[match(c("acmetpl_demog", "acmetpl_ae_soc_pt"), tt$name)],
                    c("demog", "ae_soc_pt"))
   # its tests' checks
-  look <- tfl_test_templates(c("acmetpl_demog", "acmetpl_ae_soc_pt"))
-  expect_identical(look$param[look$status == "look"], character(0))
+  found <- tfl_test_templates(c("acmetpl_demog", "acmetpl_ae_soc_pt"))
+  expect_identical(nrow(found), 0L)
   x <- tfl_template_expand("acmetpl_ae_soc_pt", list(population = "SAF"))
   expect_true(all(vapply(x$content, `[[`, "", "from") == "template:acmetpl_ae_soc_pt"))
   expect_error(tfl_use_company_templates(d), "not empty")

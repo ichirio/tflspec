@@ -9,23 +9,48 @@
 #' A template parameter
 #'
 #' One parameter of a template ([tfl_template()]): its name, default and
-#' what it is.  A template has few, and none of them is the look (a font,
-#' a width, the rows a page): the study's styles and defaults say that.
+#' what it is.  What the template's purpose and scope decide is fixed; the
+#' rest is a parameter with a default, the look too (the style, the
+#' widths, the rows a page): a report changes it with an argument, or with
+#' a card appended after the template's (the study's styles and defaults
+#' sit under both).
 #'
 #' @param name The parameter's name.
-#' @param default Its default value; `NULL` for none.
-#' @param required `TRUE` when a report must give it.
+#' @param default Its default value; `NULL` for none.  With `study`, the
+#'   fallback: the value when the study standard has none.  [tfl_unset()]
+#'   (`!unset` in a YAML): leave the argument out of the call, so the inner
+#'   function's own default applies (distinct from `NA` and `NULL`); a
+#'   report's `!unset` does the same over any default, and so does a study
+#'   value or fallback that is `!unset`.  `tfl_tpl_args()` shows it as
+#'   `(none)`.
+#' @param required `TRUE` when a report must give it.  With `study`: stop
+#'   when neither the report nor the study standard gives it.
 #' @param doc One line saying what it is.
-#' @param study Where the study standard's value of it is, taken when the
-#'   report's template SPEC does not give it: `"output.population"` (the
-#'   report's `population:`), `"settings.treatment"` (`study.yml`'s
-#'   `settings: treatment:`), `"settings.sd_missing"` (its `settings:
-#'   sd_missing:`), or `"<verb>.<argument>"`
-#'   (`"plan_cells.continuous"`: that argument of the study's defaults (and
-#'   pattern) item).  `NULL`: tflspec's for its name (`population`, `by`,
-#'   `group`), else the template's own default only.  `FALSE`: none, for a
-#'   parameter that shares such a name and is not the study's (the listing's
-#'   `by`, the variables that divide it).
+#' @param study A reference to the study standard: where the study's value
+#'   of this parameter is, taken when the report's template SPEC does not
+#'   give it.  The study standard is the study's own copy of the company
+#'   standard (`study.yml`'s `settings:` and `spec/defaults.yml`), never
+#'   the company's.  One reader resolves any key, so a new one needs no
+#'   code:
+#'   * `"settings.<name>"`: `study.yml`'s `settings: <name>:`
+#'     (`"settings.sd_missing"`);
+#'   * `"<verb>.<argument>[.<name>]"`: that argument of the verb's item in
+#'     `spec/defaults.yml`'s `content:` (`"plan_cells.continuous"`; a
+#'     named-dots argument's own name as the last part); patterns and a
+#'     style set are not read;
+#'   * `"figure_style.<key>"` (`"figure_style.km.theme"`: the type, then the
+#'     key): `defaults.yml`'s `figure_style:`, else tflspec's built-in
+#'     figure style;
+#'   * `"output.<field>"`: the report's own field (`"output.population"`).
+#'
+#'   Three forms: with `default`, the study's value else that fallback;
+#'   with neither `default` nor `required`, the study's value else the
+#'   parameter is left unset (the inner function's own default applies:
+#'   a rounding); with `required = TRUE`, the study's value else a stop.
+#'   `NULL`: tflspec's for its name (`population`, `by`, `group`), else the
+#'   template's own default only.  `FALSE`: none, for a parameter that
+#'   shares such a name and is not the study's (the listing's `by`, the
+#'   variables that divide it).
 #' @param type What its value is, for an input form: `"vars"` (variable
 #'   names), `"levels"` (values of a variable), `"flag"` (`TRUE` /
 #'   `FALSE`), `"number"`, `"text"` (also an R condition, an id, a label),
@@ -65,6 +90,7 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
   if (!is.null(type)) type <- match.arg(type, .tpl_param_types)
   if (!is.null(tier)) tier <- match.arg(tier, c("required", "usual", "other"))
   stage <- match.arg(stage, c("call", "data"))
+  .tpl_study_key_check(study, name)
   structure(list(name = name, default = default, required = isTRUE(required),
                  doc = doc, study = study, type = type, multiple = multiple, of = of,
                  choices = choices, fields = fields, group = group, tier = tier,
@@ -73,6 +99,30 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
 }
 
 .tpl_param_types <- c("vars", "levels", "flag", "number", "text", "choice", "list")
+
+# A study reference's key must be one the reader can follow: a part of
+# the study standard (`settings`, `figure_style`), the report's own field
+# (`output`), or a verb of defaults.yml (`plan_cells`: one rtfreporter has).
+# `km` is the Kaplan-Meier params' company figure style, read as before
+# until their batch moves it to `figure_style`.
+.tpl_study_roots <- c("settings", "output", "figure_style", "km")
+.tpl_study_key_check <- function(key, name = NULL) {
+  if (is.null(key) || isFALSE(key)) return(invisible(key))
+  what <- if (is.null(name)) "" else sprintf(" (parameter %s)", name)
+  if (!is.character(key) || length(key) != 1L || is.na(key) ||
+      !grepl("^[A-Za-z][A-Za-z0-9_]*([.][A-Za-z0-9_]+)+$", key)) {
+    .ard_stop(sprintf(paste0("tfl_param(): `study` is a key of the study standard%s: ",
+                             "\"settings.<name>\" or \"<verb>.<argument>\"."), what))
+  }
+  verb <- sub("[.].*$", "", key)
+  if (!verb %in% .tpl_study_roots &&
+      !verb %in% tryCatch(getNamespaceExports("rtfreporter"), error = function(e) verb)) {
+    .ard_stop(sprintf(paste0("tfl_param(): `study = \"%s\"`%s: %s is not a verb of the study's ",
+                             "defaults.yml (a plan_*() function of rtfreporter), nor `settings`, ",
+                             "`figure_style` or `output`."), key, what, sQuote(verb, FALSE)))
+  }
+  invisible(key)
+}
 
 # tflspec's parameters' types by name (a template's tfl_param(type = )
 # says it where a name means two things: `param`, `sort`)
@@ -162,26 +212,14 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
 # none given stays none
 .tpl_lines <- function(x) if (length(x)) paste(x, collapse = "\n")
 
-# The study's own settings a template parameter may take its value from
-# (tfl_param(study = )), besides "<verb>.<argument>" of the study's
-# defaults: the one list of their names.  Each is function(output, study).
-.tpl_study_sources <- list(
-  # the report's analysis set (its `population:`)
-  # (none when the report names none: NA is tfl_output()'s "not given")
-  output.population = function(output, study) {
-    p <- output$population
-    if (length(p) == 1L && !is.na(p)) p
-  },
-  # the study's treatment variable (study.yml `settings: treatment:`)
-  settings.treatment = function(output, study) study$study$settings$treatment,
-  # what prints for a missing SD (summary, demog, param_change)
-  settings.sd_missing = function(output, study) study$study$settings$sd_missing
-)
-
-# tflspec's parameters' study sources by name: the analysis set and the
-# treatment are the study's (a parameter's own `study =` wins)
-.tpl_param_study <- c(population = "output.population", by = "settings.treatment",
-                      group = "settings.treatment")
+# A parameter's study reference by its name, until each family drops it:
+# the analysis set is the report's (`population:`), the treatment the study's
+# (a parameter's own `study =` wins).  (`by` and `group` are required with
+# no reference in the new design, canon 1.14; each family's batch drops the
+# fill, so this table is the last per-name rule.)  One reader reads them
+# and every other key: .tpl_study_read().
+.tpl_study_by_name <- c(population = "output.population", by = "settings.treatment",
+                        group = "settings.treatment")
 
 # A parameter's type filled in: as declared, by its name, else from its
 # default (a company's template that says none: `guessed`, which
@@ -194,8 +232,8 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
     p$study <- NULL
     p$no_study <- TRUE
   }
-  if (is.null(p$study) && !isTRUE(p$no_study) && p$name %in% names(.tpl_param_study)) {
-    p$study <- .tpl_param_study[[p$name]]
+  if (is.null(p$study) && !isTRUE(p$no_study) && p$name %in% names(.tpl_study_by_name)) {
+    p$study <- .tpl_study_by_name[[p$name]]
   }
   by_name <- .tpl_param_kinds[[p$name]]
   if (is.null(p$type) && !is.null(by_name)) {
@@ -219,16 +257,19 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
 
 # Register a template: its kind, layout, parameters and body.  The body is
 # function(args, context) returning list(ard = , data = , content = ): the
-# report's items, `content` a list of tfl_item().
+# report's items, `content` a list of tfl_item().  `parts`: where each
+# parameter acts, list(ard = <names>, content = <names>), for a SPEC written
+# as `template: {name, ard:, content:}`; NULL: the template takes the two
+# parts' names as written (every name in either).
 .tfl_template <- function(name, kind, layout, params, body, label = NULL, call = NULL,
-                          package = "tflspec", example = NULL, ai = FALSE) {
+                          package = "tflspec", example = NULL, ai = FALSE, parts = NULL) {
   params <- lapply(params, .tpl_param_typed)
   names(params) <- vapply(params, `[[`, "", "name")
   # (a table's or a listing's call is the one tfl_tpl(); a figure's its own)
   call <- call %||% if (identical(kind, "figure")) paste0("tpl_", name) else "tfl_tpl"
   assign(name, list(name = name, kind = kind, layout = layout, params = params, body = body,
                     label = label, call = call, package = package,
-                    example = example, ai = isTRUE(ai)),
+                    example = example, ai = isTRUE(ai), parts = parts),
          envir = .tpl_registry)
   invisible(name)
 }
@@ -294,17 +335,24 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
   out <- lapply(t$params, function(p) {
     if (!p$name %in% names(args)) return(p$default)
     v <- args[[p$name]]
+    if (inherits(v, "tfl_unset")) return(v)
     if (.tpl_is_name_text(p)) v <- .tpl_name_text_map(v, t$name, p$name, fn)
     if (isTRUE(p$merge) && length(p$default) && length(v) && !is.null(names(v))) {
       v <- .tpl_merge_named(p$default, v)
     }
     v
   })
+  # `!unset` (a report's value or a template's default): the parameter is
+  # left out -- the body reads it as NULL, and the call written omits it, so
+  # the inner function's own default applies.  Recorded in `unset`.
+  unset <- vapply(out, inherits, NA, "tfl_unset")
+  if (any(unset)) out[unset] <- list(NULL)
   miss <- vapply(t$params, function(p) p$required && is.null(out[[p$name]]), NA)
   if (any(miss)) {
     .ard_stop(sprintf("%s: template %s needs %s.", fn, t$name,
                       paste(sQuote(names(miss)[miss], FALSE), collapse = ", ")))
   }
+  attr(out, "unset") <- names(unset)[unset]
   out
 }
 
@@ -331,8 +379,11 @@ tfl_template_expand <- function(name, args = list(), codelists = NULL,
   fn <- "tfl_template_expand()"
   t <- .tpl_get(name, fn)
   a <- .tpl_args(t, args, fn)
-  out <- t$body(a, list(codelists = codelists, population = population, given = names(args),
+  # (an unset parameter is not given: the inner function's default applies)
+  out <- t$body(a, list(codelists = codelists, population = population,
+                        given = setdiff(names(args), attr(a, "unset")),
                         template = list(name = t$name, label = t$label)))
+  out$unset <- attr(a, "unset")
   # a figure's: how many of the data's last steps its call (tpl_<name>())
   # makes -- the statistics; the program writes the steps before them
   if (identical(t$kind, "figure")) {
@@ -752,7 +803,8 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
       statistics = a$categorical_statistics, denominator = dn$value,
       purpose = "PRIMARY OUTCOME MEASURE"))))
   vars <- c(a$continuous, a$categorical)
-  cells <- nn(list(continuous = if (length(a$continuous)) as.list(
+  # (`cells` unset: no continuous cells in the call, plan_cells()'s own)
+  cells <- nn(list(continuous = if (length(a$continuous) && length(a$cells)) as.list(
                      .tpl_sd_missing(a$cells, .tpl_summary_cells, a[["sd_missing"]] %||% "-",
                                      mean = "{mean:.1f}", sd = "{sd:.2f}")),
                    categorical = a$count_cell))
@@ -2557,12 +2609,11 @@ tpl_ae_overview <- function(ard, population = "SAF", ..., codelists = NULL) {
 
 # ---- the templates in files of their own (R/tpl_<name>.R, read before this one) ----
 
-# A file's own templates (R/tpl_fig.R ...): its parameters' types by name,
-# study sources and examples, added to the shared tables.  Called from a
+# A file's own templates (R/tpl_fig.R ...): its parameters' types by name
+# and examples, added to the shared tables.  Called from a
 # .tpl_*_register() below, while the package loads.
-.tpl_extend <- function(param_kinds = NULL, study_sources = NULL, examples = NULL) {
+.tpl_extend <- function(param_kinds = NULL, examples = NULL) {
   if (length(param_kinds)) .tpl_param_kinds[names(param_kinds)] <<- param_kinds
-  if (length(study_sources)) .tpl_study_sources[names(study_sources)] <<- study_sources
   if (length(examples)) .tpl_examples[names(examples)] <<- examples
   invisible(NULL)
 }

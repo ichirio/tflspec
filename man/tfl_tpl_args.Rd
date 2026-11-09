@@ -12,7 +12,8 @@ tfl_tpl_args(name, study = NULL, population = NULL)
 \item{study}{The study standard: a \code{\link[=tfl_read_study_spec]{tfl_read_study_spec()}} object or a
 study's spec folder; \code{NULL} for none (the \code{study} column is then
 \code{NA}).  Its \code{defaults.yml} content is where a parameter's
-\code{"<verb>.<argument>"} source is read, \code{study.yml}'s \verb{settings: treatment:} the \code{by} (\code{"settings.treatment"}).}
+\code{"<verb>.<argument>"} source is read, \code{study.yml}'s \verb{settings:} the
+\code{"settings.<name>"} ones (\code{"settings.treatment"} for the \code{by}).}
 
 \item{population}{The report's analysis set: the value of the
 parameters taken from the report's \verb{population:}
@@ -23,12 +24,15 @@ A data frame, one row a parameter in the template's order:
 \code{param}, \code{tier} (\code{"required"}, \code{"usual"}, \code{"other"}), \code{stage}
 (\code{"call"}, an argument of the template's call, or \code{"data"}, of a step
 preparing the analysis data: \code{\link[=tfl_param]{tfl_param()}}\verb{(stage = )}), \code{type},
-\code{required}, \code{default} (the layout's, a short text), \code{variant} (the
-default a variant changes it to, else \code{NA}), \code{study} (the study
-standard's value, else \code{NA}), \code{effective} (the value that takes
-effect), \code{layer} (where it is from: \code{"study"}, \code{"variant:<name>"} or
-\code{"template"}), \code{maps_to} (its study source, \code{"plan_stub.indent"}, or
-the verb its doc names) and \code{doc}.
+\code{required}, \code{default} (the layout's, a short text; the reference for a
+parameter that has one), \code{variant} (the default a variant changes it
+to, else \code{NA}), \code{study} (the study standard's value, else \code{NA}),
+\code{effective} (the value that takes effect), \code{layer} (where it is from:
+\code{"study: <key>"}, \code{"report"}, \code{"fallback"}, \code{"variant:<name>"},
+\code{"template"} or \code{"default"}), \code{maps_to} (its study source,
+\code{"plan_stub.indent"}, or the verb its doc names), \code{doc}, \code{study_key}
+(its reference, else \code{NA}) and \code{fallback} (the value it takes when
+the study has none: a variant's default else the layout's; \code{NA} none).
 }
 \description{
 Each parameter of a registered template (\code{\link[=tfl_templates]{tfl_templates()}}): its tier,
@@ -39,12 +43,22 @@ variant's default, then the layout's default; this table has no
 report, so its \code{effective} value is the one a report that does not
 give the parameter gets.
 }
+\details{
+A parameter that refers to the study standard (\code{tfl_param(study = )})
+shows its reference in \code{default}: \code{"study: <key>, else <fallback>"}, or
+\code{"study: <key>, no fallback"} (left unset when the study has none), or
+\code{"study: <key>, required"}.  Its \code{layer} is then \code{"study: <key>"} when
+the study has a value, else \code{"fallback"} (or \code{"default"} when it has
+none); the report's own field (\code{population}) is \code{"report"}.  A default
+or a value that is \code{!unset} (\code{\link[=tfl_unset]{tfl_unset()}}: the argument is left out of
+the call) is shown as \code{(none)}.
+}
 \examples{
 a <- tfl_tpl_args("demog")
 a[a$tier != "other", c("param", "effective", "layer")]
 s <- tfl_read_study_spec(system.file("extdata", "spec-yaml", package = "tflspec"))
 a <- tfl_tpl_args("demog", study = s, population = "SAF")
-a[a$layer == "study", c("param", "effective", "maps_to")]
+a[startsWith(a$layer, "study"), c("param", "effective", "study_key")]
 }
 \seealso{
 \code{\link[=tfl_tpl_help]{tfl_tpl_help()}} to print it; \code{\link[=tfl_tpl]{tfl_tpl()}} to run a template.

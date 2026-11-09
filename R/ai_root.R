@@ -116,8 +116,75 @@
 .ai_workspace_write <- function(dir) {
   name <- .ai_file_id(basename(normalizePath(dir, winslash = "/", mustWork = FALSE)))
   f <- file.path(dir, "ai", paste0(name, ".code-workspace"))
-  .ai_write_text(paste(c("{", "  \"folders\": [{\"path\": \".\"}]", "}"), collapse = "\n"), f)
+  .ai_write_text(.ai_json(list(
+    folders = list(list(path = ".")),
+    settings = list(
+      # VS Code reads AGENTS.md and the Copilot instruction files, and
+      # asks about every terminal command but `Rscript ../run.R <request>`
+      chat.useAgentsMdFile = TRUE,
+      github.copilot.chat.codeGeneration.useInstructionFiles = TRUE,
+      chat.tools.terminal.enableAutoApprove = TRUE,
+      chat.tools.terminal.autoApprove = stats::setNames(
+        list(TRUE), "/^Rscript \\.\\./run\\.R [A-Za-z0-9._-]+$/")))), f)
   invisible(f)
+}
+
+# A list as pretty JSON text
+.ai_json <- function(x) {
+  paste(as.character(jsonlite::toJSON(x, auto_unbox = TRUE, pretty = TRUE)), collapse = "\n")
+}
+
+# ai/CLAUDE.md: Claude Code reads AGENTS.md only when no CLAUDE.md is in the
+# folder or above it; this one makes it read ai/AGENTS.md anyway
+.ai_claude_md_marker <- "<!-- tflspec: this file makes Claude Code read AGENTS.md -->"
+.ai_claude_md_text <- function() c(.ai_claude_md_marker, "@AGENTS.md")
+
+# ai/.claude/settings.json (Claude Code's project settings): the one command
+# the agent may run, the files it may write, no installs, no network, and no
+# file outside ai/
+.ai_claude_settings <- function() {
+  list(permissions = list(
+    allow = c("Bash(Rscript ../run.R *)",
+              "Edit(spec/outputs/**)", "Write(spec/outputs/**)",
+              "Edit(decisions.md)", "Write(decisions.md)",
+              "Edit(progress.md)", "Write(progress.md)",
+              "Edit(questions-end.md)", "Write(questions-end.md)"),
+    deny = c("Bash(pip *)", "Bash(curl *)", "Bash(wget *)", "Bash(Rscript -e *)",
+             "Bash(R *)", "WebFetch", "WebSearch", "Read(../**)", "Edit(../**)"),
+    blockReadsOutsideWorkingDirectories = TRUE,
+    blockWritesOutsideWorkingDirectories = TRUE))
+}
+
+# Whether a settings.json is one the kit wrote (now or in an older version):
+# the same text, or its two permissions the kit always sets
+.ai_claude_settings_is_kit <- function(text) {
+  if (identical(text, .ai_json(.ai_claude_settings()))) return(TRUE)
+  x <- tryCatch(jsonlite::fromJSON(text), error = function(e) NULL)
+  is.list(x) && all(c("Bash(Rscript ../run.R *)") %in% x$permissions$allow) &&
+    "Bash(pip *)" %in% x$permissions$deny
+}
+
+# Write the two Claude Code files into ai/.  A file there that the kit did not
+# write (the person's own CLAUDE.md or settings.json) is left alone, with a
+# message; one the kit wrote is written again only with `overwrite`.  The
+# paths written.
+.ai_claude_files <- function(dir, overwrite = FALSE) {
+  one <- function(rel, text, is_kit) {
+    f <- file.path(dir, "ai", rel)
+    if (file.exists(f)) {
+      cur <- paste(readLines(f, warn = FALSE, encoding = "UTF-8"), collapse = "\n")
+      if (!is_kit(cur)) {
+        message(sprintf("tfl_ai_prepare(): ai/%s is not the kit's own, so it is left as it is.", rel))
+        return(NULL)
+      }
+      if (!isTRUE(overwrite)) return(NULL)
+    }
+    .ai_write_text(text, f)
+  }
+  c(one("CLAUDE.md", .ai_claude_md_text(),
+        function(cur) startsWith(cur, "<!-- tflspec:")),
+    one(file.path(".claude", "settings.json"), .ai_json(.ai_claude_settings()),
+        .ai_claude_settings_is_kit))
 }
 
 # Whether a file in ai/ is one the agent reads (its instructions, requests,

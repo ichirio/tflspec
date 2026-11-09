@@ -535,6 +535,4 @@ tpl_forest_layout <- function(fig, n_by_arm = NULL) {
       f <- .tpl_wf_design(a$value, a$by_response, a$param, a$data, a$where)
       .tpl_fig_body_of(f, a[setdiff(names(a), "where")], ctx)
     }, label = "Waterfall of each subject's change", call = "tfl_tpl")
-  # the study's figure style: the km parameters' study values
-  .tpl_extend(study_sources = .tpl_km_style_sources())
 }
