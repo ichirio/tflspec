@@ -12,8 +12,9 @@ tpl_listing(x, ...)
 \item{...}{The template's parameters: \code{columns} (a list of columns, each
 \code{list(vars = , label = , width = , collapse_repeats = )}), \code{where},
 \code{sort}, \code{by} (the variables that divide the listing), \code{by_break}
-(\code{"page"} or \code{"block"}) and \code{by_heading} (a page's name: \code{"{value}"} is
-its value, with several \code{by} variables \code{"{VARIABLE}"} for each);
+(\code{"page"} or \code{"block"}), \code{by_heading} (a page's name: \code{"{value}"} is
+its value, with several \code{by} variables \code{"{VARIABLE}"} for each) and
+\code{by_na_label} (the text of a blank \code{by} value in that name);
 \code{data} names the dataset in the spec (\code{"ADAE"}).}
 }
 \value{
@@ -34,7 +35,11 @@ item changes.
 it; \code{"block"} keeps one variable's records together on a page where they
 fit (\code{\link[rtfreporter:plan_row_group]{rtfreporter::plan_row_group()}}'s \code{group_col}), the value printed
 once at the top of its block, and again at the top of a page that
-continues it.  A \code{by} variable is not printed as a column unless
+continues it, when the \code{by} column is the first printed column (the
+repeats start again when a column to its left changes, so put it
+first).  \code{by_na_label} is the text a blank or missing \code{by} value prints as
+in a page's name (\code{\link[rtfreporter:plan_paginate_rows]{rtfreporter::plan_paginate_rows()}}'s \code{na_label};
+\code{"page"} only).  A \code{by} variable is not printed as a column unless
 \code{columns} has a column of just that variable (for \code{"block"} that column
 prints the value once a block; one not printed keeps the block together
 without marking it).  A page whose variable is not printed is named

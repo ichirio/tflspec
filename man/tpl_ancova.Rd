@@ -29,7 +29,9 @@ difference in LS means of each other arm minus the reference arm (SE,
 \code{ard_emmeans_emmeans()}; the differences are emmeans' own
 (\code{emmeans::contrast(method = "trt.vs.ctrl")}, each arm against the
 reference arm).  The
-reference arm is \code{ref}, else the last arm in the code list's order; the
+reference arm is the first level of the arm: the first arm in the code
+list's order, else in its number order (\code{TRT01AN}), else the data's.  \code{ref}
+only puts the named arm first (a relevel in the program).  The
 program says which (a message).  The p-value is
 written as the program's \code{fmt_pvalue()} writes it (\verb{<0.001}, else 3
 decimals).

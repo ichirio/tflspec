@@ -8,7 +8,10 @@
 # The code lists on a data: each listed column a factor, in its list's
 # order, each value as the list has it in the ARD (a list without names:
 # the values themselves).  A value its list does not have stops the
-# program and says which (a missing value does not: it stays missing).
+# program and says which (a missing value does not: it stays missing).  A
+# blank text value (an XPT holds a missing text as a blank, whitespace
+# only too) is a missing value: it becomes NA, is not reported, and is not
+# a level, as in order_levels().
 #   set_levels(adsl, SEX = c(F = "Female", M = "Male"), TRT01A = cl_trt01a)
 set_levels <- function(data, ...) {
   lists <- list(...)
@@ -16,6 +19,7 @@ set_levels <- function(data, ...) {
     cl <- lists[[v]]
     values <- if (is.null(names(cl))) unname(cl) else names(cl)
     x <- as.character(data[[v]])
+    x[!is.na(x) & !nzchar(trimws(x))] <- NA
     # (a column the list was put on already -- a data made from another --
     # holds the labels: those are the values they label)
     lab <- unname(cl)
