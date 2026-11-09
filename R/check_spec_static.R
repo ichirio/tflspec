@@ -43,7 +43,9 @@
   } else {
     list()
   }
-  # the analysis set is the report's `population:`, not a template argument
+  # the analysis set is the report's `population:`: a template argument that
+  # differs from it is a conflict (the one equal to it, or with no report
+  # `population:`, is used and not said)
   if ("population" %in% names(args) && is.list(tpl) && is.character(tpl$name) &&
       !is.null(tryCatch(.tpl_get(tpl$name, "tfl_check_spec()")$params$population,
                         error = function(e) NULL))) {
@@ -53,10 +55,6 @@
         "template argument `population` (%s) differs from the report's `population:` (%s): the report is built ",
         "with the template's; make the report's `population:` the one to use and remove the template's"),
         args$population[1L], rp))
-    } else {
-      add(part = "template", item = "population", level = "warning", message = paste0(
-        "move the template's `population` to the report's `population:` field: ",
-        "the analysis set is the report's, not a template argument"))
     }
   }
   tx <- .check_texts(list(content = o$content, template = args, layers = o$layers))

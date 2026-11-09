@@ -131,20 +131,18 @@ test_that("population: args differing from the report's: built with the template
   expect_identical(r$ard$analysis_data[[1L]]$population, "ITT")
 })
 
-test_that("tfl_check_spec(): a template's population gives a warning row, naming both when it differs", {
+test_that("tfl_check_spec(): a template's population that differs from the report's gives a warning row naming both", {
   mk <- function(args, population = "SAF") tp_output(list(name = "demog", args = args), population)
   p <- tflspec:::.check_static_rows(mk(list(continuous = "AGE")), "T1")
   expect_identical(nrow(p), 0L)
-  p <- tflspec:::.check_static_rows(mk(list(population = "SAF", continuous = "AGE")), "T1")
-  expect_identical(p$level, "warning")
-  expect_identical(p$item, "population")
-  expect_match(p$message, "move the template's `population` to the report's `population:`", fixed = TRUE)
-  p <- tflspec:::.check_static_rows(mk(list(population = "SAF"), population = NULL), "T1")
-  expect_identical(p$level, "warning")
-  p <- tflspec:::.check_static_rows(tp_output(list(name = "demog", ard = list(population = "SAF"))), "T1")
-  expect_identical(p$level, "warning")
+  # equal to the report's, or the report has none: used, no row
+  expect_identical(nrow(tflspec:::.check_static_rows(mk(list(population = "SAF", continuous = "AGE")), "T1")), 0L)
+  expect_identical(nrow(tflspec:::.check_static_rows(mk(list(population = "SAF"), population = NULL), "T1")), 0L)
+  expect_identical(nrow(tflspec:::.check_static_rows(
+    tp_output(list(name = "demog", ard = list(population = "SAF"))), "T1")), 0L)
   p <- tflspec:::.check_static_rows(mk(list(population = "ITT")), "T1")
   expect_identical(p$level, "warning")
+  expect_identical(p$item, "population")
   expect_match(p$message, "(ITT) differs from the report's `population:` (SAF)", fixed = TRUE)
   expect_match(p$message, "make the report's `population:` the one to use", fixed = TRUE)
 })
