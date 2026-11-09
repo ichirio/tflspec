@@ -47,10 +47,10 @@ test_that("resolved: the template's items between the study's layers and the rep
   from <- vapply(ro$content, `[[`, "", "from")
   fns <- vapply(ro$content, `[[`, "", "fn")
   expect_true("template:demog" %in% from)
-  # the report's own item replaces the template's
+  # the report's own item updates the template's argument by argument
   pr <- ro$content[[match("plan_paginate_rows", fns)]]
   expect_identical(pr$from, "own")
-  expect_identical(pr$args, list(max_rows = 24L))
+  expect_identical(pr$args, list(max_rows = 24L, split = "group_safe"))
   # a named-dots verb: the template's key and the study's beside it
   pc <- ro$content[[match("plan_cells", fns)]]
   expect_true(all(c("continuous", "categorical") %in% names(pc$args)))

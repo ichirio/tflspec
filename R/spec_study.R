@@ -310,7 +310,7 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
     k <- (seen[[it$fn]] %||% 0L) + 1L
     seen[[it$fn]] <- k
     keys <- names(it$args) %||% character()
-    if (.dots_named(it$fn) && length(keys)) {
+    if (.arg_keyed(it$fn, items) && length(keys)) {
       from <- vapply(keys, function(key) {
         for (layer in stack) {
           hit <- Filter(function(x) identical(x$fn, it$fn) && key %in% names(x$args), layer)
@@ -422,13 +422,29 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
 }
 
 # The content, a layer over the layers below (S1's finding on the sample's
-# 12 tables, 2026-10-14):
-# * a verb whose `...` is named (plan_cells, plan_labels, plan_levels,
-#   plan_digits, plan_stat_groups, plan_compare: the schema's dots style
-#   "named") merges by key -- the report's keys win, the layers' others
-#   stay, in the layers' order first -- as the sheets layered them;
-# * any other verb: the report's items replace every item of that verb
-#   below, in the place the first of them had;
+# 12 tables, 2026-10-14; widened to every plan verb 2026-11-09).  An
+# appended card overrides only what it writes.  By the verb's merge kind
+# (.merge_kind()):
+# * "dots": a verb whose `...` is named (plan_cells, plan_labels,
+#   plan_levels, plan_digits, plan_nest, plan_stat_groups, plan_compare: the
+#   schema's dots style "named") merges by key -- the report's keys win, the
+#   layers' others stay, in the layers' order first;
+# * "stack": a verb that stacks several items (.stack_verbs: plan_cell_style,
+#   plan_filter, plan_hide, plan_after, plan_append): the layers' items stay
+#   where they are and the report's go right after the last of them, as
+#   rtfreporter accumulates them;
+# * "arg": any other plan verb (one item per table), when the layers below
+#   have one item of it: the report's items are folded onto that one in
+#   order, argument by argument (.merge_by_arg) -- the report's win, one it
+#   leaves out stays (a template's page_by, decimal, where survive a
+#   report's max_rows, widths, a style key; titles are replaced whole, as a
+#   positional argument is one argument).  rtfreporter merges two calls of
+#   these the same way, last wins per argument.  `NULL` or `!unset` takes
+#   the layers' argument away.  With several items below, the report's
+#   replace them;
+# * "whole": anything else (a figure's ggplot calls, table_plan ...): the
+#   report's items replace every item of that verb below, in the place the
+#   first of them had;
 # * a verb only the report has goes where the generators' order puts it
 #   (the schema's `rank`), else last.
 .merge_content <- function(base, over) {
@@ -438,28 +454,108 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   if (!length(over)) return(.table_plan_first(base))
   if (!length(base)) return(.table_plan_first(over))
   fns_over <- unique(vapply(over, `[[`, "", "fn"))
+  n_base <- table(vapply(base, `[[`, "", "fn"))
   out <- list()
   placed <- character()
+  seen <- list()
   for (it in base) {
-    if (it$fn %in% fns_over) {
-      if (!it$fn %in% placed) {
-        own <- Filter(function(o) identical(o$fn, it$fn), over)
-        if (.dots_named(it$fn) && length(own) == 1L) {
-          merged <- own[[1L]]
-          merged$args <- .merge_dots(it$args, own[[1L]]$args)
-          out <- c(out, list(merged))
-        } else {
-          out <- c(out, own)
-        }
+    if (!it$fn %in% fns_over) {
+      out <- c(out, list(it))
+      next
+    }
+    own <- Filter(function(o) identical(o$fn, it$fn), over)
+    kind <- .merge_kind(it$fn)
+    if (kind == "stack") {
+      # the layers' items stay; the report's follow the last of them
+      out <- c(out, list(it))
+      seen[[it$fn]] <- (seen[[it$fn]] %||% 0L) + 1L
+      if (seen[[it$fn]] == n_base[[it$fn]]) {
+        out <- c(out, own)
         placed <- c(placed, it$fn)
       }
-    } else {
-      out <- c(out, list(it))
+    } else if (!it$fn %in% placed) {
+      if (kind == "dots" && length(own) == 1L) {
+        merged <- own[[1L]]
+        merged$args <- .merge_dots(it$args, own[[1L]]$args)
+        out <- c(out, list(merged))
+      } else if (kind == "arg" && n_base[[it$fn]] == 1L) {
+        merged <- own[[1L]]
+        merged$args <- it$args
+        for (o in own) {
+          merged$args <- .merge_by_arg(.drop_alternatives(it$fn, merged$args, o$args), o$args)
+        }
+        out <- c(out, list(merged))
+      } else {
+        out <- c(out, own)
+      }
+      placed <- c(placed, it$fn)
     }
   }
   rest <- Filter(function(o) !o$fn %in% placed, over)
   for (o in rest) out <- .insert_by_rank(out, o)
   .table_plan_first(out)
+}
+
+# the plan verbs that stack several items: an appended card adds to them
+.stack_verbs <- c("plan_cell_style", "plan_filter", "plan_hide", "plan_after", "plan_append")
+
+# how a report's item of `fn` meets the layers' (see .merge_content):
+# "dots" (by key), "stack" (added after), "arg" (argument by argument), or
+# "whole" (replaced; not a plan verb)
+.merge_kind <- function(fn) {
+  if (!startsWith(fn, "plan_")) return("whole")
+  if (.dots_named(fn)) return("dots")
+  if (fn %in% .stack_verbs) return("stack")
+  "arg"
+}
+
+# arguments that cannot be given together (rtfreporter stops on both): the
+# header of plan_col_header is `header` or `lines`.  When the over writes one
+# of a group, the base's others go.
+.arg_alternatives <- list(plan_col_header = list(c("header", "lines")))
+
+.drop_alternatives <- function(fn, base, over) {
+  for (grp in .arg_alternatives[[fn]]) {
+    wrote <- intersect(grp, names(over))
+    if (length(wrote)) base[setdiff(grp, wrote)] <- NULL
+  }
+  base
+}
+
+# the base's arguments updated by the over's, by name: the over's value
+# replaces the base's whole; an argument over leaves out stays; NULL and
+# !unset take it away.  When both values are maps (a named list, all names
+# set: widths = list(...), a style's keys), they merge by key, one level:
+# the over's key wins, an !unset or NULL key goes
+.merge_by_arg <- function(base, over) {
+  base <- base %||% list()
+  for (k in names(over)) {
+    if (!nzchar(k)) next
+    v <- over[[k]]
+    if (is.null(v) || inherits(v, "tfl_unset")) {
+      base[[k]] <- NULL
+    } else if (.is_map(v) && .is_map(base[[k]])) {
+      b <- base[[k]]
+      for (kk in names(v)) {
+        vv <- v[[kk]]
+        b[[kk]] <- if (inherits(vv, "tfl_unset")) NULL else vv
+      }
+      base[[k]] <- b
+    } else {
+      base[[k]] <- v
+    }
+  }
+  base
+}
+
+# does the item of `fn` in `items` keep its arguments' origin one by one?  A
+# named-dots verb always; any other single-item plan verb when it is the
+# only one of its kind (then it is the merged item, or the one that replaced
+# the others)
+.arg_keyed <- function(fn, items) {
+  kind <- .merge_kind(fn)
+  kind == "dots" || (kind == "arg" &&
+    sum(vapply(items, function(x) identical(x$fn, fn), NA)) == 1L)
 }
 
 # a verb whose `...` is a map by name (the schema says); FALSE without a schema
