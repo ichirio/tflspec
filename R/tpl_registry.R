@@ -356,6 +356,24 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
   out
 }
 
+# A parameter the body cannot do without a value for: `!unset` on it stops
+# with a message that names it.  A check of a parameter's value (a choice,
+# a range) lets an unset value through to here, so it is never reported as
+# a wrong value; what unset means for each parameter is the template's own
+# decision, made parameter by parameter.
+.tpl_unset_stop <- function(a, name, tn) {
+  if (name %in% attr(a, "unset")) {
+    .ard_stop(sprintf("%s: `%s` cannot be left unset (!unset).", tn, name))
+  }
+  invisible(a)
+}
+
+# A choice parameter's value, checked (match.arg()); `!unset` stops as above
+.tpl_choice <- function(a, name, choices, tn, value = a[[name]]) {
+  .tpl_unset_stop(a, name, tn)
+  match.arg(value, choices)
+}
+
 #' Expand a template into a report's items
 #'
 #' The B use of a template SPEC: the items its parameters stand for, to
@@ -953,6 +971,7 @@ names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
 # The values are "denominator", "set", "tested" and "none".
 .tpl_header_n <- function(a, ctx, allowed, why) {
   tn <- ctx$template$name %||% "template"
+  .tpl_unset_stop(a, "header_n", tn)
   hn <- a$header_n %||% allowed[1L]
   if (!(is.character(hn) && length(hn) == 1L && !is.na(hn) &&
         hn %in% c("denominator", "set", "tested", "none"))) {
@@ -1067,9 +1086,9 @@ names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
 
 # The rows kept: `min_pct` % of subjects or more, in any column, every
 # column, or the Total column (plan_filter()); NULL when none is set
-.tpl_min_pct_items <- function(min_pct, min_pct_in = "any", by = NULL) {
+.tpl_min_pct_items <- function(min_pct, min_pct_in = "any", by = NULL, a = NULL, tn = "template") {
   if (is.null(min_pct)) return(NULL)
-  in_ <- match.arg(min_pct_in, c("any", "all", "total"))
+  in_ <- .tpl_choice(a, "min_pct_in", c("any", "all", "total"), tn, value = min_pct_in)
   cond <- sprintf("p >= %s", format(min_pct / 100))
   if (identical(in_, "total")) cond <- sprintf("%s & %s == \"Total\"", cond, by)
   list(tfl_item("plan_filter", c(list(where = tfl_r(cond)),
@@ -1119,7 +1138,7 @@ names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
       label = list(label = a$hierarchy[n])))),
     # (the columns' order is the ARD's: the code list applied when it is made)
     tfl_item("plan_sort", list(keys = a$sort))),
-    .tpl_min_pct_items(a[["min_pct"]], a$min_pct_in, a$by),
+    .tpl_min_pct_items(a[["min_pct"]], a$min_pct_in, a$by, a, ctx$template$name),
     if (length(cells)) list(tfl_item("plan_cells", cells)),
     if (isTRUE(a[["total"]])) list(tfl_item("plan_total", list(position = "last"))),
     # (the layout's column header, its counts' line: the study standard's wins)
@@ -1208,13 +1227,14 @@ tpl_hierarchical <- function(ard, population, hierarchy, ..., codelists = NULL) 
 names(.tpl_pt_params) <- vapply(.tpl_pt_params, `[[`, "", "name")
 
 .tpl_pt_body <- function(a, ctx) {
-  in_ <- match.arg(a$min_pct_in, c("any", "all", "total"))
+  in_ <- .tpl_choice(a, "min_pct_in", c("any", "all", "total"), ctx$template$name)
   # hierarchical's ARD and items, of one level (the term); then its own
   # order, the terms kept and the page
   # (hierarchical's defaults for what ae_pt_freq does not take)
   h <- lapply(.tpl_hier_params, `[[`, "default")
   # (its own ids and labels too: the layout's body reads them when given)
   h[names(a)] <- a
+  attr(h, "unset") <- attr(a, "unset")
   h$hierarchy <- a$term
   h$min_pct <- NULL
   h$any_row <- !is.null(a$overall)
@@ -1287,7 +1307,7 @@ tpl_ae_pt_freq <- function(ard, population, ..., codelists = NULL) {
 names(.tpl_mg_params) <- vapply(.tpl_mg_params, `[[`, "", "name")
 
 .tpl_mg_body <- function(a, ctx) {
-  rows_in <- identical(match.arg(a$grade_in, c("rows", "cols")), "rows")
+  rows_in <- identical(.tpl_choice(a, "grade_in", c("rows", "cols"), ctx$template$name), "rows")
   pop <- a$population
   subj <- paste0("adsl_", tolower(pop))
   # (the header N is the stack's own denominator: only the text changes)
@@ -1338,7 +1358,7 @@ names(.tpl_mg_params) <- vapply(.tpl_mg_params, `[[`, "", "name")
       an("AE_MAX_SOC", maxes[[2L]]$id, c(h[1L], g)),
       an("AE_MAX_PT", maxes[[3L]]$id, c(h, g))))
   n <- length(h)
-  by_n <- identical(match.arg(a$sort, c("n", "name")), "n")
+  by_n <- identical(.tpl_choice(a, "sort", c("n", "name"), ctx$template$name), "n")
   # the terms' row keys (as rows: every level; as columns: all but the PT,
   # the label); each term after its own count (most first), or by name
   grp <- paste0("group", seq_len(if (rows_in) n else n - 1L))
@@ -1583,6 +1603,7 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
     total <- FALSE
   }
   den <- paste0(set, "_den")
+  .tpl_unset_stop(a, "header_n", ctx$template$name %||% "shift")
   hn <- a$header_n
   if (!(is.character(hn) && length(hn) == 1L && hn %in% c("set", "tested", "none"))) {
     .ard_stop(paste0("shift: header_n takes \"set\" (the arm's subjects in the analysis ",
@@ -1687,6 +1708,7 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
   body = function(a, ctx) {
     b <- lapply(.tpl_shift_params, `[[`, "default")
     for (k in intersect(names(a), names(b))) b[k] <- list(a[[k]])
+    attr(b, "unset") <- attr(a, "unset")
     b$where <- .tpl_and(sprintf("AVISIT == \"%s\" & PARAMCD %%in%% c(%s)", a$visit,
                                 paste(sprintf("\"%s\"", a$params), collapse = ", ")),
                         a$where)
@@ -1806,6 +1828,7 @@ tpl_lab_shift <- function(ard, population, ..., codelists = NULL) {
 # starts again when a column to its left changes).
 .listing_by <- function(a, given, cols) {
   by <- as.character(unlist(a$by))
+  .tpl_unset_stop(a, "by_break", "listing")
   brk <- a$by_break
   if (length(brk) != 1L || is.na(brk) || !brk %in% c("page", "block")) {
     .ard_stop("template listing: `by_break` is \"page\" (a page a value) or \"block\" (a value's records together).")
@@ -2064,7 +2087,7 @@ names(.tpl_pc_params) <- vapply(.tpl_pc_params, `[[`, "", "name")
 
 .tpl_pc_body <- function(a, ctx) {
   a$cells <- .tpl_sd_missing(.tpl_cells_named(a$cells), .tpl_pc_cells, a[["sd_missing"]] %||% "-")
-  rows_in <- identical(match.arg(a$layout, c("cols", "rows")), "rows")
+  rows_in <- identical(.tpl_choice(a, "layout", c("cols", "rows"), ctx$template$name), "rows")
   pop <- a$population
   subj <- paste0("adsl_", tolower(pop))
   set <- a$data_id %||% paste0(tolower(a$data), "_", tolower(pop))
@@ -2209,7 +2232,8 @@ tpl_param_change <- function(ard, population, ..., codelists = NULL) {
 .tpl_stat_block_body <- function(a, ctx = NULL, others = NULL, rows_key = NULL,
                                  header = TRUE, levels = FALSE) {
   cells <- .tpl_cells_list(a$cells)
-  dir <- match.arg(a$direction %||% "cols", c("cols", "rows"))
+  dir <- .tpl_choice(a, "direction", c("cols", "rows"), ctx$template$name %||% "template",
+                     value = a$direction %||% "cols")
   rows <- a$rows
   # the row keys, by name: the variable's (or a display template's), then
   # the report's (subgroup, subgroup_level); no label column -- a block's
@@ -2361,7 +2385,8 @@ tpl_stat_block <- function(ard, ..., codelists = NULL) {
     labels_item <- tfl_item("plan_labels", list(variable = stats::setNames(
       list("Best overall response, n (%)", sprintf("Objective response rate (%s)", resp)),
       c(a$category, "RESP"))))
-    if (identical(match.arg(a$stat_layout %||% "rows", c("rows", "cols")), "cols")) {
+    if (identical(.tpl_choice(a, "stat_layout", c("rows", "cols"), ctx$template$name,
+                              value = a$stat_layout %||% "rows"), "cols")) {
       # each arm's two columns, the rate and its CI (stat_block); the best
       # overall response's n (%) in the first, by its own (categorical) cell
       blk <- Filter(Negate(is.null), .tpl_stat_block_body(list(
