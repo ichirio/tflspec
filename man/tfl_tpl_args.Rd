@@ -49,7 +49,9 @@ shows its reference in \code{default}: \code{"study: <key>, else <fallback>"}, o
 \code{"study: <key>, no fallback"} (left unset when the study has none), or
 \code{"study: <key>, required"}.  Its \code{layer} is then \code{"study: <key>"} when
 the study has a value, else \code{"fallback"} (or \code{"default"} when it has
-none); the report's own field (\code{population}) is \code{"report"}.
+none); the report's own field (\code{population}) is \code{"report"}.  A default
+or a value that is \code{!unset} (\code{\link[=tfl_unset]{tfl_unset()}}: the argument is left out of
+the call) is shown as \code{(none)}.
 }
 \examples{
 a <- tfl_tpl_args("demog")
