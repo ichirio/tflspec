@@ -99,7 +99,7 @@ test_that("the B file in the figure designer: the report's own items seen, saved
   expect_identical(unclass(back), unclass(design))
   # the design read back writes the report's figure
   expect_identical(as.character(tfl_fig_design_code(back, plot_id = "F-14-2-3", save = FALSE,
-                                                    name = "content")),
+                                                    name = "content", order_arms = TRUE)),
                    tflspec:::.content_fig_code(tfl_resolve_output(b, st)))
 })
 
@@ -124,7 +124,8 @@ test_that("a report that replaces a template's layer: its design, not the call",
 
 test_that("a figure template's body says the steps its call makes (call_steps)", {
   k <- tfl_template_expand("km_survival", list(param = "PFS", by = "TRT01A", risk_table = FALSE))
-  expect_identical(k$call_steps, 3L)
+  # (the one-parameter check, the two filters, the time's unit, the fit)
+  expect_identical(k$call_steps, 5L)
   expect_identical(k$data$steps[[length(k$data$steps)]]$step, "survfit")
   t <- .tpl_get("km_survival", "test")
   suppressMessages(tfl_template("km_nocall", "figure", "km", params = t$params,
@@ -157,7 +158,7 @@ test_that("km_survival(legend_median = TRUE): each arm's median (95% CI) in the 
 km_labels_code <- function(template = "km_survival", ...) {
   k <- tfl_template_expand(template, list(by = "TRT01A", legend_median = TRUE, ...))
   code <- unlist(lapply(k$data$steps, function(st) if (identical(st$step, "code")) st$code))
-  grep("legend_labels <- ", strsplit(code, "\n")[[1]], fixed = TRUE, value = TRUE)
+  grep("legend_labels <- ", unlist(strsplit(code, "\n")), fixed = TRUE, value = TRUE)
 }
 
 test_that("legend_median_text: the default text gives the code it always did", {
@@ -241,8 +242,10 @@ test_that("km_survival takes the report's plot.x_by / x_max for its axis, its ar
     unlist(lapply(x$data$steps, function(st) if (identical(st$step, "code")) st$code))
   }
   expect_true("x_breaks <- seq(0, 30, by = 6)" %in% km(list(), list(x_by = 6, x_max = 30)))
-  expect_true("x_breaks <- seq(0, max(fit$time), by = 6)" %in% km(list(), list(x_by = 6)))
-  expect_true("x_breaks <- seq(0, max(fit$time), by = 3)" %in% km(list(x_step = 3), list(x_by = 6)))
+  # (no x_max: to the first break at or after the last time)
+  expect_true("x_breaks <- seq(0, ceiling(max(fit$time) / 6 - 1e-8) * 6, by = 6)" %in% km(list(), list(x_by = 6)))
+  expect_true("x_breaks <- seq(0, ceiling(max(fit$time) / 3 - 1e-8) * 3, by = 3)" %in%
+                km(list(x_step = 3), list(x_by = 6)))
   expect_true("x_breaks <- pretty(c(0, max(fit$time)))" %in% km(list(), list(x_label = "Months")))
 })
 

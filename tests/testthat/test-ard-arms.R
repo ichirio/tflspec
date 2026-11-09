@@ -27,11 +27,11 @@ test_that("the program orders the arms of every dataset it reads", {
   by_arm <- exact_spec(list(method = "categorical", dataset = "ADSL",
                             population_id = "SAF", by = "ARM", variables = "SEX"))
   code <- paste(tfl_ard_code(by_arm, part = "body"), collapse = "\n")
-  expect_match(code, "adsl <- readRDS(\"adam/ADSL.rds\") |> order_arms()", fixed = TRUE)
+  expect_match(code, "adsl <- readRDS(\"adam/ADSL.rds\") |> order_levels(\"SEX\")", fixed = TRUE)
   no_arm <- exact_spec(list(method = "categorical", dataset = "ADSL",
                             population_id = "SAF", by = "SEX", variables = "AGEGR1"))
   code2 <- paste(tfl_ard_code(no_arm, part = "body"), collapse = "\n")
-  expect_true(grepl("order_arms()", code2, fixed = TRUE))   # (a model's reference arm too)
+  expect_true(grepl("order_levels(", code2, fixed = TRUE))   # (a model's reference arm too)
   # the ARD's groups in ARMN's order, not the alphabet's
   adam <- exact_data()
   adam$ADSL$ARMN <- c(Placebo = 1, `Xanomeline Low Dose` = 2, `Xanomeline High Dose` = 3)[adam$ADSL$ARM]

@@ -285,3 +285,119 @@ test_that("above 5,000 records the fit is made on an even-spaced sample, and giv
   expect_identical(w(s), w(big))
   expect_identical(w(tflspec:::.ai_fit_sample(big)), w(s))
 })
+
+# ---- the tables' ARD is built once for all of them; the listings read the study once ----
+
+fw_tables <- function(ids, bad = character(), env = parent.frame()) {
+  d <- withr::local_tempdir(.local_envir = env)
+  dir.create(file.path(d, "adam"))
+  saveRDS(tflspec::adsl, file.path(d, "adam", "adsl.rds"))
+  invisible(tfl_ai_study_init(d, adam = "adam", study_id = "ONCO-01", overwrite = TRUE))
+  for (id in ids) {
+    o <- tfl_output(id, "table", population = "SAF")
+    o$extends <- list("defaults")
+    o$ard <- list(analyses = list(list(id = "AGE", method = "continuous",
+                                       dataset = if (id %in% bad) "NOSUCH" else "ADSL",
+                                       population = "SAF", by = list("TRT01A"),
+                                       variables = list("AGE"))))
+    o$data <- list(source = "ard")
+    o$content <- list(tfl_item("table_plan", list(cols = "TRT01A", rows = list(group = "variable"))),
+                      tfl_item("plan_cells", list(continuous = list(
+                        n = "{N:.0f}", "Mean (SD)" = "{mean:.1f} ({sd:.2f})"))))
+    tfl_write_output(o, file.path(d, "spec", "outputs", paste0(id, ".yml")))
+  }
+  d
+}
+fw_count <- function(env = parent.frame()) {
+  n <- new.env()
+  n$ard <- 0L
+  n$sheets <- 0L
+  ard <- tflspec:::.ard_build
+  sheets <- tflspec::tfl_sheets_from_yaml
+  testthat::local_mocked_bindings(
+    .ard_build = function(spec, dir = ".", output_id = NULL, ...) {
+      n$ard <- n$ard + 1L
+      n$sizes <- c(n$sizes, length(output_id))
+      ard(spec, dir = dir, output_id = output_id, ...)
+    },
+    tfl_sheets_from_yaml = function(...) { n$sheets <- n$sheets + 1L; sheets(...) },
+    .package = "tflspec", .env = env)
+  n
+}
+
+test_that("the tables' ARD is built once for all of them, with the widths each gets alone", {
+  skip_if_not_installed("rtfreporter")
+  ids <- c("T-1", "T-2", "T-3")
+  d <- fw_tables(ids)
+  n <- fw_count()
+  set <- suppressMessages(tfl_fill_widths(d))
+  expect_setequal(set, ids)
+  expect_identical(n$ard, 1L)
+  # the study read into sheets once for the call, not once a build
+  expect_identical(n$sheets, 1L)
+  # each alone (a copy of the study): the same widths
+  for (id in ids) {
+    d1 <- fw_tables(ids)
+    expect_identical(suppressMessages(tfl_fill_widths(d1, output_id = id)), id)
+    expect_identical(readLines(fw_file(d1, id)), readLines(fw_file(d, id)))
+  }
+  # nothing left to fill: no ARD is built
+  n$ard <- 0L
+  n$sheets <- 0L
+  expect_length(suppressMessages(tfl_fill_widths(d)), 0L)
+  expect_identical(n$ard, 0L)
+  expect_identical(n$sheets, 0L)
+})
+
+test_that("a table whose ARD stops the build is left, named, and the others are filled alone", {
+  skip_if_not_installed("rtfreporter")
+  d <- fw_tables(c("T-1", "T-bad", "T-3"), bad = "T-bad")
+  n <- fw_count()
+  before <- readLines(fw_file(d, "T-bad"))
+  expect_message(set <- tfl_fill_widths(d), "T-bad could not be built")
+  expect_setequal(set, c("T-1", "T-3"))
+  expect_identical(readLines(fw_file(d, "T-bad")), before)
+  # all together first, then halved down to the one that stops it, which is
+  # left; the good ones are not built one by one
+  expect_identical(n$sizes[1L], 3L)
+  expect_identical(sum(n$sizes == 1L), 3L)
+  expect_identical(n$ard, length(n$sizes))
+  # (several builds, one reading of the study)
+  expect_gt(n$ard, 1L)
+  expect_identical(n$sheets, 1L)
+  d1 <- fw_tables("T-1")
+  suppressMessages(tfl_fill_widths(d1))
+  expect_identical(readLines(fw_file(d1, "T-1")), readLines(fw_file(d, "T-1")))
+})
+
+test_that("the study is read into sheets once for all the listings, not once a listing", {
+  fw_skip()
+  d <- fw_study()
+  fw_put(d, fw_code("L-1", fw_cols()))
+  fw_put(d, fw_code("L-2", fw_cols(), var = "AEDECOD"))
+  fw_put(d, fw_tpl("L-3", fw_tpl_cols()))
+  n <- fw_count()
+  set <- suppressMessages(tfl_fill_widths(d))
+  expect_setequal(set, c("L-1", "L-2", "L-3"))
+  expect_identical(n$sheets, 1L)
+  # the widths are the fitted ones
+  expect_false(anyNA(fw_code_w(d, "L-1")))
+  expect_false(anyNA(fw_tpl_w(d, "L-3")))
+  ass <- yaml::read_yaml(file.path(d, "spec", "_assumptions.yml"))
+  wa <- Filter(function(x) identical(x$item, "widths"), ass)
+  expect_true(all(vapply(wa, `[[`, "", "value") == "fitted widths"))
+})
+
+test_that("one tfl_build_ard() call runs the sheets bridge once, and gives the ARD it gave", {
+  skip_if_not_installed("rtfreporter")
+  d <- fw_tables(c("T-1", "T-2"))
+  st <- tfl_read_study_spec(d)
+  n <- fw_count()
+  got <- tfl_build_ard(st, dir = d, save = FALSE)
+  expect_identical(n$sheets, 1L)
+  # given the sheets, none is read; the same ARD
+  sh <- tfl_sheets_from_yaml(d)
+  n$sheets <- 0L
+  expect_identical(tflspec:::.ard_build(st, dir = d, save = FALSE, sheets = sh), got)
+  expect_identical(n$sheets, 0L)
+})

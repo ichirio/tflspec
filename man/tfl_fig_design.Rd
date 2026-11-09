@@ -32,7 +32,8 @@ tfl_fig_design_code(
   name = "fig",
   codelists = NULL,
   width_in = 7.5,
-  height_in = 4.5
+  height_in = 4.5,
+  order_arms = NULL
 )
 
 tfl_check_fig_design(design, adam = NULL, ggplot2_version = NULL, ard = NULL)
@@ -90,7 +91,10 @@ the page: \code{\link[=tfl_fig_page_size]{tfl_fig_page_size()}}).}
 \code{value}, \code{label}, \code{order}): the rows of \code{plot_id} are put on the
 figure's data, last of its data steps -- each listed column a factor
 in its list's order, its values as the list has them (\verb{cl_<variable>}
-and \code{set_levels()}, see \code{\link[=tfl_helpers_code]{tfl_helpers_code()}}).
+and \code{set_levels()}, see \code{\link[=tfl_helpers_code]{tfl_helpers_code()}}).  The arms
+are first put in their numeric order by \code{order_levels()} (\code{TRT01P} by
+\code{TRT01PN}), first step of each dataset read (see \code{order_arms}); a code
+list wins.
 
 The script has two sections: \verb{# ---- data ----} (the steps' pipes, one
 an object; the axis breaks; a panel's data) and \verb{# ---- plot ----} (the
@@ -104,6 +108,11 @@ it reads an ARD as \code{ard}, through an \code{ard_stats} step or an
 
 \item{width_in, height_in}{The saved PNG's size in inches (\code{save}): a
 report's figure is its page's (\code{\link[=tfl_fig_page_size]{tfl_fig_page_size()}}).}
+
+\item{order_arms}{\code{TRUE} puts the arms in their numeric order with
+\code{order_levels()} (a study helper, see \code{\link[=tfl_helpers_code]{tfl_helpers_code()}}), first step of
+each dataset read; the default, \code{NULL}, does so with \code{setup = TRUE} or
+\code{codelists}, the code that needs the helpers.}
 
 \item{adam}{The data (\code{\link[=tfl_read_adam]{tfl_read_adam()}}): the variables and PARAMCDs the
 design names are looked for in it.}

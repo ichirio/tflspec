@@ -213,6 +213,15 @@
   tu <- kinds() == "time_unit"
   f$stats <- c(f$steps[tu], f$stats)
   f$steps <- f$steps[!tu]
+  # the subjects with no time or no censoring flag: survfit() drops them
+  # without a word (and the risk table with them), so left out, and said
+  time_var <- a$time %||% "AVAL"
+  f$stats <- c(list(list(step = "filter",
+    expr = sprintf("!is.na(%s) & !is.na(%s)", time_var, censor),
+    label = sprintf("the subjects with no %s or %s have no place on a curve: left out, with a warning",
+                    time_var, censor),
+    warn = sprintf("%s: {n} subjects with a missing %s or %s were left out", name, time_var, censor))),
+    f$stats)
   # the subjects with an empty group: no curve of theirs (survfit2() would
   # draw one with no name, and a row at risk with none), left out and said
   if (!is.null(a$by)) {
@@ -221,6 +230,16 @@
       label = sprintf("the subjects with an empty %s have no curve: left out, with a warning", a$by),
       warn = sprintf("%s: {n} subjects with an empty %s were left out", name, a$by))), f$stats)
   }
+  # a dataset of several parameters pooled gives twice the subjects: stopped
+  # (km: the `param` argument; the report types: a param step of the data)
+  f$stats <- c(list(list(step = "code",
+    label = "one parameter only: several in the data would be pooled",
+    code = paste0(
+      "if (\"PARAMCD\" %in% names(df) && length(unique(df$PARAMCD)) > 1) {\n",
+      "  stop(\"", name, ": the data has more than one PARAMCD (\", toString(sort(unique(df$PARAMCD))),\n",
+      "       \"); ", if (identical(name, "km")) "give `param`, the one to analyse" else
+        "keep one in the data steps (a param step)", "\", call. = FALSE)\n",
+      "}"))), f$stats)
   fit <- match("survfit", vapply(f$stats, function(s) s$step %||% "", ""))
   if (!is.null(a$conf_type)) f$stats[[fit]]$conf_type <- a$conf_type
   if (!is.null(a$conf_level)) f$stats[[fit]]$conf_level <- a$conf_level
@@ -234,7 +253,9 @@
       code = paste0(
         "med <- summary(fit)$table\n",
         "if (!is.matrix(med)) med <- matrix(med, nrow = 1, dimnames = list(\"All\", names(med)))\n",
-        "fmt_med <- function(x) ifelse(is.na(x), \"NE\", formatC(x, format = \"f\", digits = ", dg, "))\n",
+        "fmt_med <- function(x) {\n",
+        "  ifelse(is.na(x), \"NE\", formatC(rtfreporter::round_num(x, ", dg, "), format = \"f\", digits = ", dg, "))\n",
+        "}\n",
         "arm_of <- sub(\"^[^=]*=\", \"\", rownames(med))\n",
         "legend_labels <- stats::setNames(", lab, ", arm_of)"))),
       fit)
@@ -271,8 +292,12 @@
   bars <- identical(a$ci, "bars")
   if (rt || bars || !is.null(a$x_max) || !is.null(a$x_step)) {
     to <- if (!is.null(a$x_max)) format(a$x_max) else "max(fit$time)"
-    br <- if (!is.null(a$x_step)) sprintf("seq(0, %s, by = %s)", to, format(a$x_step))
-          else sprintf("pretty(c(0, %s))", to)
+    # (no x_max: the last break at or after the last time, else the curves'
+    # end is cut off the axis)
+    st <- if (!is.null(a$x_step)) format(a$x_step)
+    br <- if (is.null(a$x_step)) sprintf("pretty(c(0, %s))", to)
+          else if (!is.null(a$x_max)) sprintf("seq(0, %s, by = %s)", to, st)
+          else sprintf("seq(0, ceiling(%s / %s - 1e-8) * %s, by = %s)", to, st, st, st)
     f$stats <- c(f$stats, list(list(step = "code", label = if (rt) "the x axis's breaks, the times at risk"
                                     else "the x axis's breaks", code = paste("x_breaks <-", br))))
     f$plot$add <- c(f$plot$add, list(list(fn = "scale_x_continuous", args = c(list(

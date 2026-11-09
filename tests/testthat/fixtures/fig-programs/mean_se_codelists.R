@@ -4,9 +4,10 @@
 cl_trta <- c("Placebo", "Xanomeline Low Dose", "Xanomeline High Dose")
 
 advs_sysbp <- advs |>
+  order_levels(from = adsl) |>
   filter(PARAMCD == "SYSBP") |>
   left_join(
-    adsl |> select(USUBJID, TRTA, SAFFL),
+    adsl |> order_levels() |> select(USUBJID, TRTA, SAFFL),
     by = "USUBJID"
   ) |>
   filter(SAFFL == "Y", !is.na(AVAL) & !is.na(AVISITN)) |>

@@ -204,6 +204,7 @@ test_that("a report program's figure: no save, its own name, the study's palette
   skip_if_not_installed("ggsurvfit")
   e <- new.env()
   eval(parse(text = tfl_fig_setup_code()), e)
+  eval(parse(text = tfl_helpers_code()), e)
   e$adtte <- data.frame(USUBJID = 1:6, PARAMCD = "TTDE", SAFFL = "Y",
                         TRT01A = rep(c("A", "B"), 3), AVAL = c(5, 8, 12, 3, 9, 15),
                         CNSR = c(0, 1, 0, 0, 1, 0))

@@ -710,7 +710,7 @@ tfl_plot <- function(name, items = list(), from = "own") {
 .fig_content_code <- function(output, name = "content") {
   parts <- .fig_split_content(output$content)
   lv <- .codelist_levels(.codelists_rows(output$codelists, output$id), output$id)
-  d <- .fig_steps_code(output$data$steps %||% list(), lv)
+  d <- .fig_steps_code(output$data$steps %||% list(), lv, order = TRUE)
   head <- if (length(lv)) .codelists_head(lv)
   plots <- parts$plots
   one <- length(plots) == 1L

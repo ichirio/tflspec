@@ -837,7 +837,10 @@ rtf_footer:
           / _LISTING / _FIGURE change the words), {OUTPUT_TITLE} {OUTPUT_POPULATION}
           {OUTPUT_SECTION} {STUDY_ID} (blank unless the tokens sheet says them; a
           line left with nothing but them is not printed), and your own from the tokens
-          sheet ({STUDY} ...).'
+          sheet ({STUDY} ...). A titles line whose whole text is {PAGE_HEADING} is where
+          the page''s heading goes (a table with a page a parameter: "Parameter: ALT"),
+          in that line''s alignment; with no such line the heading is the last title
+          line, and a page with no heading prints nothing there.'
   - sheet: study
     description: 'What is one for the whole study: one row a key. Table / report keys:
       rounding, output_path, program_dir. ARD keys: id, output, source. No output_id.'
@@ -1845,6 +1848,12 @@ rtf_footer:
           that pattern -- the rows whose output_id is @<name>, which say only what
           differs from Standard. The report''s own rows go over its pattern''s.'
         example: Compact
+      - column: extends
+        description: 'What the report extends, when the pattern cell alone doesn''t
+          say it: a | b in order (defaults | patterns/p), or none. Blank: the pattern
+          cell''s pattern, then the defaults. Its first pattern has to be the pattern
+          cell''s.'
+        example: defaults | patterns/Compact
       - column: data_code
         description: 'The report''s own code for its data step, instead of the definition:
           R that leaves data (a table, a listing) or df (a figure); the datasets the
