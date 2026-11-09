@@ -32,7 +32,7 @@ outputs:
     extends: [defaults]
     template:
       name: ae_soc_pt
-      args: {any_row_label: "Subjects with at least one TEAE"}
+      args: {by: TRT01A, hierarchy: [AEBODSYS, AEDECOD], any_row_label: "Subjects with at least one TEAE"}
     content:
       - plan_paginate_rows: {max_rows: 18}
     page:

@@ -9,7 +9,8 @@ hn_texts <- function(x) {
 hn_all <- function(x) unlist(hn_texts(x))
 hn_ids <- function(x) vapply(x$ard$analyses, function(a) a$id, "")
 hn_expand <- function(name, args = list(), ...) {
-  tfl_template_expand(name, c(list(population = "SAF"), args, list(...)))
+  tfl_template_expand(name, c(list(population = "SAF"),
+                              utils::modifyList(stack_req(name), c(args, list(...)))))
 }
 hn_msg <- function(tpl, x, why) {
   sprintf("%s: header_n = \"%s\" %s", tpl, x, why)

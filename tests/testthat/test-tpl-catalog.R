@@ -18,7 +18,7 @@ test_that("the catalog: every STF item once, aliases unique, templates registere
 })
 
 test_that("an alias runs its template as itself", {
-  a <- list(population = "SAF")
+  a <- c(list(population = "SAF"), stack_req("ae_soc_pt"))
   # the same items; each says the name it was written with
   ea <- tfl_template_expand("stf_t14_ae_soc_pt", a)
   et <- tfl_template_expand("ae_soc_pt", a)

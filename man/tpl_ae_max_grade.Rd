@@ -33,7 +33,8 @@ column (\code{any_grade}).  The grades' order is \code{grade_levels}, or the cod
 list of \code{grade}.
 }
 \examples{
-x <- tfl_template_expand("ae_max_grade", list(population = "SAF",
+x <- tfl_template_expand("ae_max_grade", list(population = "SAF", by = "TRT01A",
+                         hierarchy = c("AEBODSYS", "AEDECOD"),
                          grade_levels = c("MILD", "MODERATE", "SEVERE")))
 vapply(x$ard$analysis_data, `[[`, "", "id")
 }

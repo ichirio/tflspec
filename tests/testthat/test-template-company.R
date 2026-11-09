@@ -98,7 +98,7 @@ test_that("tfl_use_company_templates(): a package to start from, whose templates
   # its tests' checks
   found <- tfl_test_templates(c("acmetpl_demog", "acmetpl_ae_soc_pt"))
   expect_identical(nrow(found), 0L)
-  x <- tfl_template_expand("acmetpl_ae_soc_pt", list(population = "SAF"))
+  x <- tfl_template_expand("acmetpl_ae_soc_pt", c(list(population = "SAF"), stack_req("ae_soc_pt")))
   expect_true(all(vapply(x$content, `[[`, "", "from") == "template:acmetpl_ae_soc_pt"))
   expect_error(tfl_use_company_templates(d), "not empty")
   expect_error(tfl_use_company_templates(file.path(tempdir(), "x"), package = "1bad"), "not a package name")

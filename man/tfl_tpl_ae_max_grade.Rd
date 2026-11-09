@@ -9,13 +9,12 @@ The table template \code{ae_max_grade}, layout \code{hierarchical}. Its program 
 \section{Parameters}{
 \tabular{llllll}{
    Parameter \tab Tier \tab Stage \tab Default \tab Maps to \tab What \cr
-   \code{population} \tab required \tab call \tab report: population, required \tab output.population \tab the analysis set's id (SAF) \cr
    \code{subset} \tab other \tab call \tab  \tab  \tab which subjects (R, on the analysis set's ADSL): PART == "Part 1" \cr
    \code{grade} \tab other \tab call \tab AESEV \tab  \tab the severity or grade variable (AESEV, AETOXGR) \cr
    \code{grade_levels} \tab other \tab call \tab  \tab  \tab its values, lowest first; NULL: the code list of 'grade' \cr
    \code{grade_in} \tab other \tab call \tab rows \tab  \tab the grades as "rows" under each term, or as "cols" in each group \cr
-   \code{hierarchy} \tab other \tab call \tab AEBODSYS, AEDECOD \tab  \tab the levels, outer first \cr
-   \code{by} \tab other \tab call \tab study: settings.treatment, else TRT01A \tab settings.treatment \tab the column variable \cr
+   \code{hierarchy} \tab required \tab call \tab  \tab  \tab the levels, outer first \cr
+   \code{by} \tab required \tab call \tab study: settings.treatment, required \tab settings.treatment \tab the column variable (the columns; required, no default) \cr
    \code{data} \tab other \tab call \tab ADAE \tab  \tab the dataset of records \cr
    \code{where} \tab other \tab call \tab TRTEMFL == "Y" \tab  \tab the records kept (R) \cr
    \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: <data>_<population> \cr
@@ -31,7 +30,7 @@ The table template \code{ae_max_grade}, layout \code{hierarchical}. Its program 
 \section{Example}{
 
 
-\if{html}{\out{<div class="sourceCode">}}\preformatted{plan <- tfl_tpl(ard, "ae_max_grade", population = "SAF", grade_levels = c("MILD", "MODERATE", "SEVERE"))
+\if{html}{\out{<div class="sourceCode">}}\preformatted{plan <- tfl_tpl(ard, "ae_max_grade", population = "SAF", by = "TRT01A", hierarchy = c("AEBODSYS", "AEDECOD"), grade_levels = c("MILD", "MODERATE", "SEVERE"))
 }\if{html}{\out{</div>}}
 }
 

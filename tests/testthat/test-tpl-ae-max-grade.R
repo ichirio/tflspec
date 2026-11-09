@@ -24,7 +24,7 @@ mg_skip <- function() {
 }
 
 test_that("expanded: the highest record overall, in each SOC and PT; the overall block pinned", {
-  x <- tfl_template_expand("ae_max_grade", list(population = "SAF", grade_levels = mg_lv))
+  x <- tfl_template_expand("ae_max_grade", list(population = "SAF", by = "TRT01A", hierarchy = c("AEBODSYS", "AEDECOD"), grade_levels = mg_lv))
   ids <- vapply(x$ard$analysis_data, `[[`, "", "id")
   expect_identical(ids, c("adsl_saf", "adae_saf", "adae_saf_max", "adae_saf_max_soc", "adae_saf_max_pt"))
   code <- vapply(x$ard$analysis_data[3:5], `[[`, "", "code")
@@ -38,20 +38,20 @@ test_that("expanded: the highest record overall, in each SOC and PT; the overall
   expect_true(all(c("normalize_ard", "plan_levels", "table_plan", "plan_sort") %in% fns))
   keys <- Filter(function(it) it$fn == "plan_sort", x$content)[[1L]]$args$keys
   expect_identical(keys[1:3], c("levels(group1)", "-n@group1", "group1"))
-  nm <- tfl_template_expand("ae_max_grade", list(population = "SAF", sort = "name"))
+  nm <- tfl_template_expand("ae_max_grade", list(population = "SAF", by = "TRT01A", hierarchy = c("AEBODSYS", "AEDECOD"), sort = "name"))
   nk <- Filter(function(it) it$fn == "plan_sort", nm$content)[[1L]]$args$keys
   expect_false(any(grepl("-n@", nk, fixed = TRUE)))
   # no levels: the grade's own order
-  y <- tfl_template_expand("ae_max_grade", list(population = "SAF"))
+  y <- tfl_template_expand("ae_max_grade", list(population = "SAF", by = "TRT01A", hierarchy = c("AEBODSYS", "AEDECOD")))
   expect_match(y$ard$analysis_data[[3L]]$code, "xtfrm(AESEV)", fixed = TRUE)
 })
 
 test_that("as rows: the overall block and its grades, then each SOC's own rows, then its PTs", {
   mg_skip()
   for (ov in c("Any TEAE", "Subjects with at least one TEAE")) {
-    x <- tfl_template_expand("ae_max_grade", list(population = "SAF", grade_levels = mg_lv,
+    x <- tfl_template_expand("ae_max_grade", list(population = "SAF", by = "TRT01A", hierarchy = c("AEBODSYS", "AEDECOD"), grade_levels = mg_lv,
                                                   overall = ov))
-    t <- mg_tab(tpl_ae_max_grade(mg_ard(x), "SAF", grade_levels = mg_lv, overall = ov))
+    t <- mg_tab(tpl_ae_max_grade(mg_ard(x), "SAF", by = "TRT01A", hierarchy = c("AEBODSYS", "AEDECOD"), grade_levels = mg_lv, overall = ov))
     expect_identical(t$group1[1:4], rep(ov, 4L), info = ov)
     expect_identical(as.character(t$label[2:4]), mg_lv, info = ov)
     soc <- t$group1[5L]
@@ -66,9 +66,9 @@ test_that("as rows: the overall block and its grades, then each SOC's own rows, 
 
 test_that("as columns: each arm's Any grade first; the overall row one row", {
   mg_skip()
-  x <- tfl_template_expand("ae_max_grade", list(population = "SAF", grade_levels = mg_lv,
+  x <- tfl_template_expand("ae_max_grade", list(population = "SAF", by = "TRT01A", hierarchy = c("AEBODSYS", "AEDECOD"), grade_levels = mg_lv,
                                                 grade_in = "cols"))
-  t <- mg_tab(tpl_ae_max_grade(mg_ard(x), "SAF", grade_levels = mg_lv, grade_in = "cols"))
+  t <- mg_tab(tpl_ae_max_grade(mg_ard(x), "SAF", by = "TRT01A", hierarchy = c("AEBODSYS", "AEDECOD"), grade_levels = mg_lv, grade_in = "cols"))
   arms <- c("Drug X", "Control")
   expect_identical(setdiff(names(t), c("group1", "label")),
                    unlist(lapply(arms, function(a) paste0(a, "____", c("Any grade", mg_lv)))))
@@ -83,9 +83,9 @@ test_that("the overall block first even when a SOC has its count (a tie)", {
   # every subject with an event has one in this SOC
   soc1 <- names(sort(table(ae$AEBODSYS), decreasing = TRUE))[1L]
   ae <- ae[ae$USUBJID %in% ae$USUBJID[ae$AEBODSYS == soc1], ]
-  x <- tfl_template_expand("ae_max_grade", list(population = "SAF", grade_levels = mg_lv,
+  x <- tfl_template_expand("ae_max_grade", list(population = "SAF", by = "TRT01A", hierarchy = c("AEBODSYS", "AEDECOD"), grade_levels = mg_lv,
                                                 overall = "ZZ last by name"))
-  t <- mg_tab(tpl_ae_max_grade(mg_ard(x, ae), "SAF", grade_levels = mg_lv,
+  t <- mg_tab(tpl_ae_max_grade(mg_ard(x, ae), "SAF", by = "TRT01A", hierarchy = c("AEBODSYS", "AEDECOD"), grade_levels = mg_lv,
                                overall = "ZZ last by name"))
   expect_identical(t$group1[1L], "ZZ last by name")
   expect_identical(t[["Drug X"]][1L], t[["Drug X"]][t$group1 %in% soc1 & is.na(t$group2) &
@@ -94,9 +94,9 @@ test_that("the overall block first even when a SOC has its count (a tie)", {
 
 test_that("A (the call) = B (the items as the report's content)", {
   mg_skip()
-  x <- tfl_template_expand("ae_max_grade", list(population = "SAF", grade_levels = mg_lv))
+  x <- tfl_template_expand("ae_max_grade", list(population = "SAF", by = "TRT01A", hierarchy = c("AEBODSYS", "AEDECOD"), grade_levels = mg_lv))
   ard <- mg_ard(x)
-  a <- mg_tab(tpl_ae_max_grade(ard, "SAF", grade_levels = mg_lv))
+  a <- mg_tab(tpl_ae_max_grade(ard, "SAF", by = "TRT01A", hierarchy = c("AEBODSYS", "AEDECOD"), grade_levels = mg_lv))
   b <- suppressMessages(tfl_content_run(tfl_output("T-1", "table", content = x$content), ard))
   expect_identical(mg_tab(b), a)
 })
@@ -115,8 +115,7 @@ test_that("in a study: the ARD program runs (its analysis data made from the rec
   tfl_ai_study_init(d, adam = "adam", study_id = "MG-1")
   o <- tfl_output("T-9-2", "table", population = "SAF", label = "AEs by maximum severity",
                   extends = "defaults",
-                  template = list(name = "ae_max_grade", args = list(population = "SAF",
-                                                                     grade_levels = mg_lv)))
+                  template = list(name = "ae_max_grade", args = list(by = "TRT01A", hierarchy = c("AEBODSYS", "AEDECOD"), grade_levels = mg_lv)))
   tfl_write_output(o, file.path(d, "spec", "outputs", "T-9-2.yml"))
   st <- tfl_read_study_spec(d)
   ard <- suppressMessages(tfl_build_ard(st, output_id = "T-9-2", dir = d, save = FALSE))
@@ -143,7 +142,7 @@ test_that("grade_in = cols: the arm's N is over every column, the any-grade colu
   for (any in c("Any grade", "Total")) {
     o <- tfl_output("T-9-3", "table", population = "SAF", extends = "defaults",
                     template = list(name = "ae_max_grade",
-                                    args = list(population = "SAF", grade_levels = mg_lv,
+                                    args = list(by = "TRT01A", hierarchy = c("AEBODSYS", "AEDECOD"), grade_levels = mg_lv,
                                                 grade_in = "cols", any_grade = any)))
     f <- file.path(d, "spec", "outputs", "T-9-3.yml")
     tfl_write_output(o, f)

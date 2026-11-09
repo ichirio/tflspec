@@ -211,8 +211,7 @@ test_that("the switch helper: false for every template; a switched one reads no 
   expect_true(length(ro1$page) > 0L)
   # another template of the same study is not switched
   o2 <- tfl_output("T-10", "table", population = "SAF",
-                   template = list(name = "ae_soc_pt", args = list(population = "SAF",
-                                                                  hierarchy = c("AEBODSYS", "AEDECOD"))))
+                   template = list(name = "ae_soc_pt", args = list(by = "TRT01A", hierarchy = c("AEBODSYS", "AEDECOD"))))
   expect_true("defaults" %in% vapply(tfl_resolve_output(o2, s)$content,
                                       function(it) it$from %||% "", ""))
 })

@@ -57,7 +57,7 @@ test_that("templates = TRUE / FALSE: the setting at each request's head; FALSE a
   # all of them, with their arguments, in the file every request names
   tp <- paste(readLines(file.path(d1, "ai", "templates.md"), encoding = "UTF-8"), collapse = "
 ")
-  expect_match(tp, "- `ae_soc_pt`: Adverse events by SOC and PT (FDA STF Table 14) (table, layout hierarchical; variant of hierarchical)", fixed = TRUE)
+  expect_match(tp, "- `ae_soc_pt`: Adverse events by SOC and PT (FDA STF Table 14) (table, layout hierarchical)", fixed = TRUE)
   expect_match(tp, "  - `population` [target]*", fixed = TRUE)
   expect_match(tp, "  - `where` [target] (text) = \"TRTEMFL == \\\"Y\\\"\"", fixed = TRUE)
   expect_match(tp, "- `km_survival`:", fixed = TRUE)
@@ -107,7 +107,7 @@ test_that("answers with templates: checked, written, built (RTF, PNG); a bad arg
     "    label: Treatment-Emergent Adverse Events by System Organ Class and Preferred Term",
     "    population: SAF",
     "    extends: [defaults]",
-    "    template: {name: ae_soc_pt}",
+    "    template: {name: ae_soc_pt, args: {by: TRT01A, hierarchy: [AEBODSYS, AEDECOD]}}",
     "    content:",
     "      - plan_paginate_rows: {max_rows: 18}",
     "    page: {titles: {\"1\": {center: Table 14.3.1}}}",

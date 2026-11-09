@@ -30,16 +30,20 @@ test_that("tfl_tpl_args(): one row a parameter, the template's order and tiers",
   expect_false(any(startsWith(a$layer, "study")))
 })
 
-test_that("tfl_tpl_args(): a variant of a variant, each default its own variant's", {
+test_that("tfl_tpl_args(): a template of its own, its defaults written out; the hierarchy required", {
   a <- tfl_tpl_args("ae_ser_soc_pt")
   r <- function(nm) a[a$param == nm, , drop = FALSE]
-  expect_identical(r("where")$layer, "variant:ae_ser_soc_pt")
+  expect_identical(r("where")$layer, "template")
+  expect_identical(r("where")$effective, "TRTEMFL == \"Y\" & AESER == \"Y\"")
+  expect_identical(r("any_row")$effective, "TRUE")
   expect_identical(r("any_row_label")$effective, "Any SAE")
-  # (the hierarchy is ae_soc_pt's)
-  expect_identical(r("hierarchy")$layer, "variant:ae_soc_pt")
   expect_identical(r("hierarchy")$tier, "required")
-  expect_false(r("hierarchy")$required)
+  expect_true(r("hierarchy")$required)
+  expect_true(is.na(r("hierarchy")$default))
   expect_identical(r("data")$layer, "template")
+  # no variant column set, no variant layer
+  expect_true(all(is.na(a$variant)))
+  expect_false(any(grepl("^variant", a$layer)))
 })
 
 test_that("tfl_tpl_args(): the study standard's values, layer study: <key>", {
@@ -68,7 +72,7 @@ test_that("tfl_tpl_help(): the head, the tiers, its table invisibly", {
   expect_snapshot(tfl_tpl_help("demog", tier = c("required", "usual")))
   out <- capture.output(a <- tfl_tpl_help("ae_ser_soc_pt", tier = "required"))
   expect_identical(out[1L],
-                   "ae_ser_soc_pt (table, layout hierarchical; variant of ae_soc_pt; tflspec)")
+                   "ae_ser_soc_pt (table, layout hierarchical; tflspec)")
   expect_false(any(grepl("^usual", out)))
   expect_identical(a, tfl_tpl_args("ae_ser_soc_pt"))
   out <- capture.output(tfl_tpl_help("hierarchical"))

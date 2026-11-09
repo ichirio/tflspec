@@ -913,21 +913,43 @@ tfl_templates <- function(source = NULL) {
   "\"tested\": the same, when `denominator` is \"data\" (the records' subjects); a header N",
   "apart from the denominator is not supported yet; \"none\": no N")
 
-# the stack templates' `denominator` (hierarchical, ae_soc_pt and its
-# variants, ae_pt_freq, ae_max_grade)
+# the stack templates' `denominator` (hierarchical, ae_soc_pt, ae_ser_soc_pt,
+# ae_disc_soc_pt, ae_pt_freq, ae_max_grade)
 .tpl_den_doc <- paste(
   "the percentages' denominator: NULL (default): the analysis set's subjects; \"data\": the",
   "subjects with a record kept; a number: that many subjects in every column; numbers named by",
   "the values of `by` (`c(\"Drug X\" = 60, \"Control\" = 55)`): that many in each column; the id of",
   "an analysis data (`adsl_itt`, or one of the report's own): its subjects in each column")
 
-.tpl_hier_params <- list(
-  tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
+# The analysis set is the report's `population:` field, not a template
+# parameter (canon 1.8): the parameter stays in the record, hidden, for the
+# body to read; a report's `template:` SPEC cannot give it.
+.tpl_population_param <- function() {
+  p <- tfl_param("population", required = TRUE,
+                 doc = "the analysis set's id: the report's `population:` field, not a template parameter")
+  p$hidden <- TRUE
+  p
+}
+
+# The `by` of the stack templates: the column variable, required (canon
+# 1.14: not always the treatment group, so no default)
+.tpl_by_param <- function(doc = "the column variable (the columns; required, no default)") {
+  tfl_param("by", required = TRUE, doc = doc)
+}
+
+# The stack family's parameters (hierarchical, ae_soc_pt, ae_ser_soc_pt,
+# ae_disc_soc_pt): a helper each template calls, giving its own defaults
+# by name (`...`), so no template reads another's definition at run time.
+# `hierarchy` (the variable set) and `by` have no default (canon 1.12, 1.14).
+.tpl_hier_params <- function(...) {
+  own <- list(...)
+  p <- list(
+  .tpl_population_param(),
   .tpl_subset_param(),
   tfl_param("hierarchy", required = TRUE, doc = "the levels, outer first"),
   tfl_param("data", "ADAE", doc = "the dataset of records"),
   tfl_param("where", NULL, tier = "usual", doc = "the records kept (R)"),
-  tfl_param("by", "TRT01A", tier = "usual", doc = "the column variable"),
+  .tpl_by_param(),
   tfl_param("any_row", FALSE, tier = "usual",
             doc = "TRUE: the row of the subjects with any record, first"),
   tfl_param("any_row_label", "Any event", doc = "that row's label"),
@@ -945,8 +967,13 @@ tfl_templates <- function(source = NULL) {
   tfl_param("total", FALSE, doc = "TRUE: a Total column (the analysis again without `by`, plan_total())"),
   tfl_param("header_n", "denominator", type = "choice",
             choices = c("denominator", "set", "tested", "none"), doc = .tpl_header_n_stack_doc)
-)
-names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
+  )
+  names(p) <- vapply(p, `[[`, "", "name")
+  unknown <- setdiff(names(own), names(p))
+  if (length(unknown)) stop("no hierarchical parameter ", unknown[1L], call. = FALSE)
+  for (k in names(own)) p[[k]]$default <- own[[k]]
+  p
+}
 
 # header_n, checked: `allowed` the values the template takes (the first is
 # the default); any other stops with "<template>: header_n = "<x>" <why>".
@@ -1133,24 +1160,32 @@ names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
 }
 
 .tfl_template("hierarchical", kind = "table", layout = "hierarchical",
-              params = .tpl_hier_params, body = .tpl_hier_body)
+              params = .tpl_hier_params(), body = .tpl_hier_body)
 
-# ae_soc_pt: treatment-emergent AEs by SOC and PT -- hierarchical's
-# parameters, its own defaults; FDA's serious and discontinuation tables
-# its variants
-tfl_template_variant("ae_soc_pt", from = "hierarchical", ai = TRUE,
+# ae_soc_pt, ae_ser_soc_pt, ae_disc_soc_pt: treatment-emergent AEs by SOC
+# and PT, and FDA's serious and discontinuation tables.  Three templates of
+# their own (canon 1.11: no variant, no parent): the shared parameters from
+# `.tpl_hier_params()` and the shared body, each with its defaults written
+# out.  The hierarchy is not among them (canon 1.12: required).
+.tfl_template("ae_soc_pt", kind = "table", layout = "hierarchical", ai = TRUE,
   label = "Adverse events by SOC and PT (FDA STF Table 14)",
-  example = list(population = "SAF"),
-  defaults = list(hierarchy = c("AEBODSYS", "AEDECOD"), where = "TRTEMFL == \"Y\"",
-                  any_row = TRUE, any_row_label = "Any TEAE"))
-tfl_template_variant("ae_ser_soc_pt", from = "ae_soc_pt",
+  example = list(population = "SAF", by = "TRT01A", hierarchy = c("AEBODSYS", "AEDECOD")),
+  params = .tpl_hier_params(where = "TRTEMFL == \"Y\"", any_row = TRUE,
+                            any_row_label = "Any TEAE"),
+  body = .tpl_hier_body)
+.tfl_template("ae_ser_soc_pt", kind = "table", layout = "hierarchical", ai = TRUE,
   label = "Serious adverse events by SOC and PT (FDA STF Table 10)",
-  defaults = list(where = "TRTEMFL == \"Y\" & AESER == \"Y\"",
-                  any_row_label = "Any SAE"))
-tfl_template_variant("ae_disc_soc_pt", from = "ae_soc_pt",
+  example = list(population = "SAF", by = "TRT01A", hierarchy = c("AEBODSYS", "AEDECOD")),
+  params = .tpl_hier_params(where = "TRTEMFL == \"Y\" & AESER == \"Y\"", any_row = TRUE,
+                            any_row_label = "Any SAE"),
+  body = .tpl_hier_body)
+.tfl_template("ae_disc_soc_pt", kind = "table", layout = "hierarchical", ai = TRUE,
   label = "Adverse events leading to treatment discontinuation by SOC and PT (FDA STF Table 12)",
-  defaults = list(where = "TRTEMFL == \"Y\" & AEACN == \"DRUG WITHDRAWN\"",
-                  any_row_label = "Subjects with at least one AE leading to treatment discontinuation"))
+  example = list(population = "SAF", by = "TRT01A", hierarchy = c("AEBODSYS", "AEDECOD")),
+  params = .tpl_hier_params(where = "TRTEMFL == \"Y\" & AEACN == \"DRUG WITHDRAWN\"",
+                            any_row = TRUE,
+                            any_row_label = "Subjects with at least one AE leading to treatment discontinuation"),
+  body = .tpl_hier_body)
 
 #' Adverse events by SOC and PT: a table plan from the template `ae_soc_pt`
 #'
@@ -1183,10 +1218,10 @@ tpl_hierarchical <- function(ard, population, hierarchy, ..., codelists = NULL) 
 # ---- ae_pt_freq: PTs alone, by decreasing frequency (>= x%) -----------------
 
 .tpl_pt_params <- list(
-  tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
+  .tpl_population_param(),
   .tpl_subset_param(),
-  tfl_param("term", "AEDECOD", doc = "the term variable (the PT)"),
-  tfl_param("by", "TRT01A", doc = "the column variable"),
+  tfl_param("term", required = TRUE, doc = "the term variable (the PT: AEDECOD)"),
+  .tpl_by_param(),
   tfl_param("data", "ADAE", doc = "the dataset of records"),
   tfl_param("where", "TRTEMFL == \"Y\"", doc = "the records kept (R)"),
   tfl_param("data_id", NULL, doc = "the analysis data's id; NULL: <data>_<population>"),
@@ -1212,7 +1247,7 @@ names(.tpl_pt_params) <- vapply(.tpl_pt_params, `[[`, "", "name")
   # hierarchical's ARD and items, of one level (the term); then its own
   # order, the terms kept and the page
   # (hierarchical's defaults for what ae_pt_freq does not take)
-  h <- lapply(.tpl_hier_params, `[[`, "default")
+  h <- lapply(.tpl_hier_params(), `[[`, "default")
   # (its own ids and labels too: the layout's body reads them when given)
   h[names(a)] <- a
   h$hierarchy <- a$term
@@ -1253,7 +1288,8 @@ names(.tpl_pt_params) <- vapply(.tpl_pt_params, `[[`, "", "name")
 #'   `overall`, `min_pct`, `min_pct_in`, `sort_by`, `heading` ...
 #' @return A [rtfreporter::table_plan()].
 #' @examples
-#' tfl_template_expand("ae_pt_freq", list(population = "SAF", min_pct = 5))$content
+#' tfl_template_expand("ae_pt_freq", list(population = "SAF", by = "TRT01A", term = "AEDECOD",
+#'                                         min_pct = 5))$content
 #' @export
 tpl_ae_pt_freq <- function(ard, population, ..., codelists = NULL) {
   .tpl_object("ae_pt_freq", ard, c(list(population = population), list(...)),
@@ -1263,14 +1299,14 @@ tpl_ae_pt_freq <- function(ard, population, ..., codelists = NULL) {
 # ---- ae_max_grade: SOC / PT by the maximum severity or grade -----------------
 
 .tpl_mg_params <- list(
-  tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
+  .tpl_population_param(),
   .tpl_subset_param(),
   tfl_param("grade", "AESEV", doc = "the severity or grade variable (AESEV, AETOXGR)"),
   tfl_param("grade_levels", NULL,
             doc = "its values, lowest first; NULL: the code list of `grade`"),
   tfl_param("grade_in", "rows", doc = "the grades as \"rows\" under each term, or as \"cols\" in each group"),
-  tfl_param("hierarchy", c("AEBODSYS", "AEDECOD"), doc = "the levels, outer first"),
-  tfl_param("by", "TRT01A", doc = "the column variable"),
+  tfl_param("hierarchy", required = TRUE, doc = "the levels, outer first"),
+  .tpl_by_param(),
   tfl_param("data", "ADAE", doc = "the dataset of records"),
   tfl_param("where", "TRTEMFL == \"Y\"", doc = "the records kept (R)"),
   tfl_param("data_id", NULL, doc = "the analysis data's id; NULL: <data>_<population>"),
@@ -1395,7 +1431,8 @@ names(.tpl_mg_params) <- vapply(.tpl_mg_params, `[[`, "", "name")
 #'   `heading` ...
 #' @return A [rtfreporter::table_plan()].
 #' @examples
-#' x <- tfl_template_expand("ae_max_grade", list(population = "SAF",
+#' x <- tfl_template_expand("ae_max_grade", list(population = "SAF", by = "TRT01A",
+#'                          hierarchy = c("AEBODSYS", "AEDECOD"),
 #'                          grade_levels = c("MILD", "MODERATE", "SEVERE")))
 #' vapply(x$ard$analysis_data, `[[`, "", "id")
 #' @export

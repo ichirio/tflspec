@@ -44,7 +44,7 @@ hn_base <- list(
 
 # the report: its template built to the table step; NULL, or what stopped it
 hn_try <- function(tpl, ..., pop = "SAF") {
-  args <- utils::modifyList(as.list(hn_base[[tpl]]), list(...))
+  args <- utils::modifyList(utils::modifyList(stack_req(tpl), as.list(hn_base[[tpl]])), list(...))
   d <- hn_study()
   o <- tfl_output("T-1", "table", population = pop, label = "T-1", extends = "defaults",
                   template = list(name = tpl, args = args))

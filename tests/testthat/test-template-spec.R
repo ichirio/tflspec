@@ -148,8 +148,10 @@ test_that("every template as a template SPEC: resolved as its items written out 
                             identical(p$stage, "data"), NA))) {
       list(steps = list(list(step = "read", dataset = "ADTTE"), list(step = "param", value = "PFS")))
     }
+    # (a template that takes the analysis set from the report: not in its args)
+    ex <- report_example(nm)
     o <- tfl_output(paste0("X-", nm), tp$kind[tp$name == nm], population = "SAF",
-                    template = list(name = nm, args = .tpl_examples[[nm]]), data = own)
+                    template = list(name = nm, args = ex), data = own)
     ro <- tfl_resolve_output(o, s)
     rb <- tfl_resolve_output(tfl_template_to_spec(o, s), s)
     expect_identical(lapply(ro$content, unclass), lapply(rb$content, unclass), info = nm)
@@ -174,7 +176,8 @@ hs_output <- function(header = NULL, template = "ae_soc_pt") {
   tfl_output("T-9", "table", population = "SAF",
              content = if (!is.null(header)) list(tfl_item("plan_col_header", list(header = header))) else
                list(tfl_item("plan_paginate_rows", list(max_rows = 24L))),
-             template = list(name = template, args = list(population = "SAF")))
+             template = list(name = template,
+                             args = if (identical(template, "demog")) list(population = "SAF") else stack_req(template)))
 }
 hs_header <- function(o, s = ts_study()) {
   ro <- tfl_resolve_output(o, s)

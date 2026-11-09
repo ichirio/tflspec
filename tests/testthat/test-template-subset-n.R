@@ -71,8 +71,7 @@ test_that("denominator = \"data\": the records' subjects, within the subset", {
   s <- sn_study(withr::local_tempdir())
   sub <- "PART == \"Part 1\""
   for (tpl in c("ae_soc_pt", "hierarchical", "ae_ser_soc_pt", "ae_disc_soc_pt")) {
-    a <- list(population = "SAF", subset = sub, denominator = "data")
-    if (tpl == "hierarchical") a$hierarchy <- c("AEBODSYS", "AEDECOD")
+    a <- c(list(population = "SAF", subset = sub, denominator = "data"), stack_req(tpl))
     # (the records, narrowed to the subset, one row a subject, are the denominator)
     x <- tfl_template_expand(tpl, a)
     expect_identical(x$ard$analyses[[1L]]$denominator, paste0(x$ard$analysis_data[[2L]]$id, "_den"))
@@ -80,7 +79,7 @@ test_that("denominator = \"data\": the records' subjects, within the subset", {
     expect_identical(as.character(x$ard$analysis_data[[1L]]$where), sub)
   }
   # the header N of ae_soc_pt: Part 1's subjects with a record kept
-  x <- sn_rtf(s$dir, "T-N2", "ae_soc_pt", list(population = "SAF", subset = sub,
+  x <- sn_rtf(s$dir, "T-N2", "ae_soc_pt", list(by = "TRT01A", hierarchy = c("AEBODSYS", "AEDECOD"), subset = sub,
                                                 where = "TRTEMFL == \"Y\"", denominator = "data"))
   ae <- tflspec::adae
   p1 <- s$adsl$USUBJID[s$adsl$SAFFL == "Y" & s$adsl$PART == "Part 1"]
@@ -88,7 +87,7 @@ test_that("denominator = \"data\": the records' subjects, within the subset", {
   n <- tapply(ae$USUBJID, ae$TRT01A, function(u) length(unique(u)))
   expect_identical(sn_n(x, names(n)), as.integer(n))
   # the default: the subset's subjects, record or none
-  y <- sn_rtf(s$dir, "T-N2", "ae_soc_pt", list(population = "SAF", subset = sub))
+  y <- sn_rtf(s$dir, "T-N2", "ae_soc_pt", list(by = "TRT01A", hierarchy = c("AEBODSYS", "AEDECOD"), subset = sub))
   m <- table(s$adsl$TRT01A[s$adsl$USUBJID %in% p1])
   expect_identical(sn_n(y, names(m)), as.integer(m))
 })
@@ -144,7 +143,7 @@ test_that("ae_max_grade keeps an arm that where leaves no record, with its N and
   s <- sn_study(withr::local_tempdir())
   w <- "TRTEMFL == \"Y\" & TRT01A == \"Drug X\""
   for (sub in list(NULL, "PART == \"Part 1\"")) {
-    a <- list(population = "SAF", where = w)
+    a <- c(stack_req("ae_max_grade"), list(where = w))
     if (!is.null(sub)) a$subset <- sub
     x <- sn_rtf(s$dir, "T-N7", "ae_max_grade", a)
     keep <- s$adsl$SAFFL == "Y" & (is.null(sub) | s$adsl$PART == "Part 1")

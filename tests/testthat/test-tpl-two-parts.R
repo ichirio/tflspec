@@ -23,7 +23,7 @@ test_that("every table template: the example as flat args: and as ard:/content: 
   expect_gt(length(nm), 15L)
   done <- 0L
   for (t in nm) {
-    ex <- tflspec:::.tpl_examples[[t]]
+    ex <- report_example(t)
     if (is.null(ex) || !length(ex)) ex <- list()
     flat <- tp_output(list(name = t, args = ex))
     two <- tp_output(c(list(name = t), tp_split(ex)))

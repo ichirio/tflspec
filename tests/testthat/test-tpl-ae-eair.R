@@ -35,7 +35,7 @@ eair_skip <- function() {
 }
 
 test_that("expanded: the event's day, each level's time at risk, the rates by cardx", {
-  x <- tfl_template_expand("ae_eair", list(population = "SAF"))
+  x <- tfl_template_expand("ae_eair", list(population = "SAF", by = "TRT01A", hierarchy = c("AEBODSYS", "AEDECOD")))
   d <- x$ard$analysis_data
   expect_identical(vapply(d, `[[`, "", "id"), c("adsl_saf", "adae_saf", "adae_saf_risk",
                                                 "adae_saf_risk_soc", "adae_saf_risk_pt"))
@@ -51,7 +51,7 @@ test_that("expanded: the event's day, each level's time at risk, the rates by ca
   expect_match(an[[4L]]$post, "variable = group3", fixed = TRUE)
   expect_match(an[[2L]]$args, "n_person_time = 100", fixed = TRUE)
   # the day as R, the rate per 1000 person-years
-  y <- tfl_template_expand("ae_eair", list(population = "SAF", start = "ASTDT - TRTSDT + 1",
+  y <- tfl_template_expand("ae_eair", list(population = "SAF", by = "TRT01A", hierarchy = c("AEBODSYS", "AEDECOD"), start = "ASTDT - TRTSDT + 1",
                                            per = 1000))
   expect_identical(as.character(y$ard$analysis_data[[2L]]$derive), "DAY = ASTDT - TRTSDT + 1")
   expect_match(y$ard$analyses[[2L]]$args, "n_person_time = 1000", fixed = TRUE)
@@ -59,8 +59,8 @@ test_that("expanded: the event's day, each level's time at risk, the rates by ca
 
 test_that("a PT's rate by hand: its subjects over their time at risk, per 100 person-years", {
   eair_skip()
-  x <- tfl_template_expand("ae_eair", list(population = "SAF"))
-  t <- eair_tab(tpl_ae_eair(eair_ard(x), "SAF"))
+  x <- tfl_template_expand("ae_eair", list(population = "SAF", by = "TRT01A", hierarchy = c("AEBODSYS", "AEDECOD")))
+  t <- eair_tab(tpl_ae_eair(eair_ard(x), "SAF", by = "TRT01A", hierarchy = c("AEBODSYS", "AEDECOD")))
   saf <- adsl[adsl$SAFFL == "Y" & adsl$TRT01A == "Drug X", ]
   ae <- adae[adae$TRTEMFL == "Y" & adae$AEDECOD == "Nausea" & adae$USUBJID %in% saf$USUBJID, ]
   first <- tapply(ae$ASTDY, ae$USUBJID, min)
@@ -76,9 +76,9 @@ test_that("a PT's rate by hand: its subjects over their time at risk, per 100 pe
 
 test_that("A (the call) = B (the items as the report's content)", {
   eair_skip()
-  x <- tfl_template_expand("ae_eair", list(population = "SAF"))
+  x <- tfl_template_expand("ae_eair", list(population = "SAF", by = "TRT01A", hierarchy = c("AEBODSYS", "AEDECOD")))
   ard <- eair_ard(x)
-  ta <- eair_tab(tpl_ae_eair(ard, "SAF"))
+  ta <- eair_tab(tpl_ae_eair(ard, "SAF", by = "TRT01A", hierarchy = c("AEBODSYS", "AEDECOD")))
   b <- suppressMessages(tfl_content_run(tfl_output("T-1", "table", content = x$content), ard))
   expect_identical(eair_tab(b), ta)
   hd <- Filter(function(it) it$fn == "plan_col_header", x$content)[[1L]]$args$header
@@ -98,7 +98,7 @@ test_that("in a study: the ARD program runs, the table from its ARD", {
   }
   tfl_ai_study_init(d, adam = "adam", study_id = "EAIR-1")
   o <- tfl_output("T-9-3", "table", population = "SAF", label = "EAIR by SOC and PT",
-                  extends = "defaults", template = list(name = "ae_eair", args = list(population = "SAF")))
+                  extends = "defaults", template = list(name = "ae_eair", args = list(by = "TRT01A", hierarchy = c("AEBODSYS", "AEDECOD"))))
   tfl_write_output(o, file.path(d, "spec", "outputs", "T-9-3.yml"))
   st <- tfl_read_study_spec(d)
   ard <- suppressMessages(tfl_build_ard(st, output_id = "T-9-3", dir = d, save = FALSE))

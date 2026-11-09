@@ -9,12 +9,11 @@ The table template \code{ae_eair}, layout \code{hierarchical}. Its program is on
 \section{Parameters}{
 \tabular{llllll}{
    Parameter \tab Tier \tab Stage \tab Default \tab Maps to \tab What \cr
-   \code{population} \tab required \tab call \tab report: population, required \tab output.population \tab the analysis set's id (SAF) \cr
    \code{subset} \tab other \tab call \tab  \tab  \tab which subjects (R, on the analysis set's ADSL): PART == "Part 1" \cr
    \code{data} \tab other \tab call \tab ADAE \tab  \tab the dataset of records \cr
    \code{where} \tab other \tab call \tab TRTEMFL == "Y" \tab  \tab the records kept (R) \cr
-   \code{by} \tab other \tab call \tab study: settings.treatment, else TRT01A \tab settings.treatment \tab the column variable \cr
-   \code{hierarchy} \tab other \tab call \tab AEBODSYS, AEDECOD \tab  \tab the levels, outer first \cr
+   \code{by} \tab required \tab call \tab study: settings.treatment, required \tab settings.treatment \tab the column variable (the columns; required, no default) \cr
+   \code{hierarchy} \tab required \tab call \tab  \tab  \tab the levels, outer first \cr
    \code{exposure} \tab other \tab call \tab TRTDURD \tab  \tab the ADSL variable of the days of exposure \cr
    \code{start} \tab other \tab call \tab ASTDY \tab  \tab the event's day from the start of treatment: a variable or R (ASTDT - TRTSDT + 1) \cr
    \code{per} \tab other \tab call \tab 100 \tab  \tab the rate per this many person-years \cr
@@ -41,7 +40,7 @@ The aliases follow the numbering of these publications, and the titles are short
 \section{Example}{
 
 
-\if{html}{\out{<div class="sourceCode">}}\preformatted{plan <- tfl_tpl(ard, "ae_eair", population = "SAF")
+\if{html}{\out{<div class="sourceCode">}}\preformatted{plan <- tfl_tpl(ard, "ae_eair", population = "SAF", by = "TRT01A", hierarchy = c("AEBODSYS", "AEDECOD"))
 }\if{html}{\out{</div>}}
 }
 

@@ -40,13 +40,13 @@ test_that("tfl_template_expand(): the items, marked as the template's", {
 })
 
 test_that("ae_soc_pt: the hierarchical layout with its own defaults", {
-  x <- tfl_template_expand("ae_soc_pt", list(population = "SAF"))
+  x <- tfl_template_expand("ae_soc_pt", list(population = "SAF", by = "TRT01A", hierarchy = c("AEBODSYS", "AEDECOD")))
   expect_identical(x$ard$analyses[[1L]]$variables, c("AEBODSYS", "AEDECOD"))
   expect_s3_class(x$ard$analysis_data[[2L]]$where, "tfl_r")
   expect_identical(x$content[[1L]]$args$overall, "Any TEAE")
   expect_identical(x$content[[2L]]$args$rows, list(group1 = "AEBODSYS"))
   # the layout itself: no overall row, no where
-  h <- tfl_template_expand("hierarchical", list(population = "SAF",
+  h <- tfl_template_expand("hierarchical", list(population = "SAF", by = "TRT01A",
                                                 hierarchy = c("AEBODSYS", "AEDECOD")))
   expect_null(h$content[[1L]]$args$overall)
   expect_null(h$ard$analyses[[1L]]$args)
@@ -610,14 +610,14 @@ test_that("summary has no mean (CI) analysis of its own; km_table and orr", {
 
 test_that("hierarchical of one level; demog and ae_pt_freq on their layouts", {
   # one level: the term alone, no row keys (it stopped: the keys' names)
-  h <- tfl_template_expand("hierarchical", list(population = "SAF", hierarchy = "AEDECOD"))
+  h <- tfl_template_expand("hierarchical", list(population = "SAF", by = "TRT01A", hierarchy = "AEDECOD"))
   tp <- h$content[[2L]]$args
   expect_null(tp$rows)
   expect_identical(tp$label, list(label = "AEDECOD"))
   # ae_pt_freq is hierarchical's ARD and items of one level, with its own
   # order, filter and page
-  p <- tfl_template_expand("ae_pt_freq", list(population = "SAF", min_pct = 5))
-  h1 <- tfl_template_expand("hierarchical", list(population = "SAF", hierarchy = "AEDECOD",
+  p <- tfl_template_expand("ae_pt_freq", list(population = "SAF", by = "TRT01A", term = "AEDECOD", min_pct = 5))
+  h1 <- tfl_template_expand("hierarchical", list(population = "SAF", by = "TRT01A", hierarchy = "AEDECOD",
     where = "TRTEMFL == \"Y\"", any_row = TRUE, any_row_label = "Any TEAE"))
   # (its own ids and labels: the layout's are its parameters no more)
   k <- c("method", "data", "by", "variables", "denominator", "args")

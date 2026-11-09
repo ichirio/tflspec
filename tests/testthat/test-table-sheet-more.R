@@ -284,7 +284,7 @@ test_that("a template's hierarchy (ae_max_grade) comes back whole", {
   s <- tfl_read_study_spec(d)
   o <- tfl_output("T-mg", "table", population = "SAF", extends = "defaults",
                   template = list(name = "ae_max_grade",
-                                  args = list(population = "SAF", hierarchy = c("AEBODSYS", "AEDECOD"))))
+                                  args = list(by = "TRT01A", hierarchy = c("AEBODSYS", "AEDECOD"))))
   b <- suppressMessages(tfl_template_to_spec(o, s))
   hier <- function(x) {
     nz <- Filter(function(it) identical(it$fn, "normalize_ard"), x$content)

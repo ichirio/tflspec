@@ -47,7 +47,8 @@ test_that("tfl_tpl(): the same plan as the template's own function; its errors",
   expect_identical(sort(t$name[t$ai]), c("ae_disc_soc_pt", "ae_ser_soc_pt", "ae_soc_pt", "demog",
                                           "km_cumulative", "km_survival"))
   expect_match(t$label[t$name == "ae_ser_soc_pt"], "FDA STF Table 10", fixed = TRUE)
-  expect_identical(t$from[t$name == "ae_ser_soc_pt"], "ae_soc_pt")
+  # (a template of its own, not a variant)
+  expect_true(is.na(t$from[t$name == "ae_ser_soc_pt"]))
 })
 
 test_that("the layouts' parameters: what a report changes; the look is the study standard's", {
@@ -92,15 +93,15 @@ test_that("the layouts' parameters: what a report changes; the look is the study
   expect_true(isTRUE(tfl_template_expand("demog", list(population = "SAF"))$ard$analyses[[2L]]$optional))
   expect_null(tfl_template_expand("demog", list(population = "SAF", continuous = "AGE"))$ard$analyses[[2L]]$optional)
   # hierarchical: min_pct the shared filter, the Total column
-  h <- tfl_template_expand("ae_soc_pt", list(population = "SAF", min_pct = 5, total = TRUE))
+  h <- tfl_template_expand("ae_soc_pt", list(population = "SAF", by = "TRT01A", hierarchy = c("AEBODSYS", "AEDECOD"), min_pct = 5, total = TRUE))
   hf <- vapply(h$content, `[[`, "", "fn")
   expect_true(all(c("plan_filter", "plan_total") %in% hf))
   expect_true(isTRUE(h$ard$analyses[[1L]]$overall))
-  # the nested variant: its root's parameters, its own and its parent's defaults
+  # a template of its own: its defaults written out, the hierarchy required
   v <- tfl_template_params("ae_ser_soc_pt")
   expect_identical(v$where$default, "TRTEMFL == \"Y\" & AESER == \"Y\"")
-  expect_identical(v$hierarchy$default, c("AEBODSYS", "AEDECOD"))
-  expect_false(v$hierarchy$required)
+  expect_null(v$hierarchy$default)
+  expect_true(v$hierarchy$required)
 })
 
 tt_study <- function(root) {
@@ -181,9 +182,8 @@ test_that("in a study: ae_ser_soc_pt is ae_soc_pt with its defaults; ae_soc_pt's
   tt_skip()
   skip_if_not_installed("haven")
   d <- tt_study(withr::local_tempdir())
-  f1 <- tt_report(d, "T-SAE", "ae_ser_soc_pt", list(population = "SAF"))
-  f2 <- tt_report(d, "T-SAE2", "ae_soc_pt", list(
-    population = "SAF", where = "TRTEMFL == \"Y\" & AESER == \"Y\"", any_row = TRUE,
+  f1 <- tt_report(d, "T-SAE", "ae_ser_soc_pt", list(by = "TRT01A", hierarchy = c("AEBODSYS", "AEDECOD")))
+  f2 <- tt_report(d, "T-SAE2", "ae_soc_pt", list(by = "TRT01A", hierarchy = c("AEBODSYS", "AEDECOD"), where = "TRTEMFL == \"Y\" & AESER == \"Y\"", any_row = TRUE,
     any_row_label = "Any SAE"))
   a <- tt_tab(tt_run(d, "T-SAE", f1)$plan)
   b <- tt_tab(tt_run(d, "T-SAE2", f2)$plan)
@@ -193,8 +193,8 @@ test_that("in a study: ae_ser_soc_pt is ae_soc_pt with its defaults; ae_soc_pt's
   code <- tfl_content_code(tt_run(d, "T-SAE", f1)$ro, pipe = "|>")
   expect_true(any(grepl("\"ae_ser_soc_pt\",", code, fixed = TRUE)))
   # min_pct: fewer rows than all (the sample's terms: 5% or more in some column)
-  f3 <- tt_report(d, "T-SOC", "ae_soc_pt", list(population = "SAF"))
-  f4 <- tt_report(d, "T-SOC10", "ae_soc_pt", list(population = "SAF", min_pct = 10))
+  f3 <- tt_report(d, "T-SOC", "ae_soc_pt", list(by = "TRT01A", hierarchy = c("AEBODSYS", "AEDECOD")))
+  f4 <- tt_report(d, "T-SOC10", "ae_soc_pt", list(by = "TRT01A", hierarchy = c("AEBODSYS", "AEDECOD"), min_pct = 10))
   all <- tt_tab(tt_run(d, "T-SOC", f3)$plan)
   ten <- tt_tab(tt_run(d, "T-SOC10", f4)$plan)
   expect_lt(nrow(ten), nrow(all))
@@ -222,14 +222,14 @@ test_that("the layout's own page and column header: the study standard's replace
   ro <- res("summary", list(continuous = "AGE"))
   pg <- fn_args(ro, "plan_paginate_rows")
   expect_identical(pg[[length(pg)]]$args, list(max_rows = 15L, split = "group_safe"))
-  hp <- fn_args(res("ae_soc_pt", list()), "plan_paginate_rows")
+  hp <- fn_args(res("ae_soc_pt", stack_req("ae_soc_pt")), "plan_paginate_rows")
   expect_identical(hp[[length(hp)]]$args, list(max_rows = 15L, split = "group_force"))
   # hierarchical's column header is its shape (the counts' "n (%)" line, the
   # levels' heading): a standard's general header (Characteristic, (N=n))
   # does not replace it
   s$defaults$content <- c(s$defaults$content, list(tfl_item("plan_col_header", list(
     header = list(list(line = "1", cols = ".values", span = "each", text = "{col}"))))))
-  hh <- fn_args(res("ae_soc_pt", list()), "plan_col_header")
+  hh <- fn_args(res("ae_soc_pt", stack_req("ae_soc_pt")), "plan_col_header")
   expect_length(hh, 1L)
   expect_identical(hh[[1L]]$args$header[[2L]]$text, "{col}\n(N={n})\nn (%)")
 })

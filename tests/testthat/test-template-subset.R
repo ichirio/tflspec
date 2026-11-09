@@ -47,7 +47,7 @@ test_that("every table and figure template takes subset; a records template wher
 })
 
 test_that("expanded: subset on the set's ADSL; a records data takes its subjects", {
-  x <- tfl_template_expand("ae_soc_pt", list(population = "SAF", subset = "PART == \"Part 1\""))
+  x <- tfl_template_expand("ae_soc_pt", list(population = "SAF", by = "TRT01A", hierarchy = c("AEBODSYS", "AEDECOD"), subset = "PART == \"Part 1\""))
   d <- x$ard$analysis_data
   expect_identical(as.character(d[[1L]]$where), "PART == \"Part 1\"")
   expect_identical(d[[2L]]$subjects, "adsl_saf")
@@ -142,7 +142,8 @@ test_that("in a study: demog and ae_soc_pt of Part 1's subjects; N and counts th
     tfl_output("T-9-1", "table", population = "SAF", label = "Demographics, Part 1",
                extends = "defaults", template = list(name = "demog", args = sub)),
     tfl_output("T-9-2", "table", population = "SAF", label = "TEAEs, Part 1",
-               extends = "defaults", template = list(name = "ae_soc_pt", args = sub)),
+               extends = "defaults",
+               template = list(name = "ae_soc_pt", args = c(sub, stack_req("ae_soc_pt")))),
     # the same set's name in another report, every subject: its own
     tfl_output("T-9-3", "table", population = "SAF", label = "Demographics",
                extends = "defaults", template = list(name = "demog")))

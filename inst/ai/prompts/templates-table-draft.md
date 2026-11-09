@@ -23,7 +23,7 @@ population: SAF
 extends: [defaults]
 template:
   name: ae_soc_pt
-  args: {any_row_label: "Subjects with at least one TEAE"}
+  args: {by: TRT01A, hierarchy: [AEBODSYS, AEDECOD], any_row_label: "Subjects with at least one TEAE"}
 page:
   titles:
     "1": {center: "Table 14.3.1"}

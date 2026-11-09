@@ -32,5 +32,6 @@ adverse events), in every column (\code{"all"}) or in the Total column
 (\code{"total"}).
 }
 \examples{
-tfl_template_expand("ae_pt_freq", list(population = "SAF", min_pct = 5))$content
+tfl_template_expand("ae_pt_freq", list(population = "SAF", by = "TRT01A", term = "AEDECOD",
+                                        min_pct = 5))$content
 }

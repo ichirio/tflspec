@@ -2,10 +2,10 @@
 # the values of `by`, or an analysis data's id (D2a).  Templates: hierarchical,
 # ae_soc_pt, ae_ser_soc_pt, ae_disc_soc_pt, ae_pt_freq, ae_max_grade.
 
-dv_args <- list(
-  hierarchical = list(hierarchy = c("AEBODSYS", "AEDECOD")),
-  ae_soc_pt = list(), ae_ser_soc_pt = list(), ae_disc_soc_pt = list(),
-  ae_pt_freq = list(), ae_max_grade = list())
+dv_args <- stats::setNames(
+  lapply(c("hierarchical", "ae_soc_pt", "ae_ser_soc_pt", "ae_disc_soc_pt", "ae_pt_freq", "ae_max_grade"),
+         stack_req),
+  c("hierarchical", "ae_soc_pt", "ae_ser_soc_pt", "ae_disc_soc_pt", "ae_pt_freq", "ae_max_grade"))
 dv_codelists <- list(TRT01A = c("Drug X", "Control"))
 dv_pops <- list(list(id = "SAF", label = "Safety Analysis Set"),
                 list(id = "ITT", label = "Intent-To-Treat Analysis Set"))
@@ -13,6 +13,10 @@ dv_pops <- list(list(id = "SAF", label = "Safety Analysis Set"),
 dv_expand <- function(name, args = list(), ...) {
   tfl_template_expand(name, c(list(population = "SAF"), dv_args[[name]], args, list(...)),
                       codelists = dv_codelists, population = dv_pops)
+}
+# (the template with the arguments it needs and has no default for: the variable set and `by`)
+dv_expand_with <- function(tpl, args, codelists = NULL) {
+  tfl_template_expand(tpl, c(list(population = "SAF"), dv_args[[tpl]], args), codelists = codelists)
 }
 dv_dens <- function(x) lapply(x$ard$analyses, function(a) a$denominator)
 dv_ids <- function(x) vapply(x$ard$analysis_data, function(d) d$id, "")
@@ -154,16 +158,15 @@ test_that("numbers named by the values of by: the names, the numbers, the arms",
   # (a code list as the YAML holds it: rows of value / label)
   cl <- list(TRT01A = list(list(value = "Drug X", label = "Drug X (mg)"),
                            list(value = "Control", label = "Control")))
-  expect_error(tfl_template_expand(tpl, list(population = "SAF", denominator = c("Drug X (mg)" = 10,
+  expect_error(dv_expand_with(tpl, list(denominator = c("Drug X (mg)" = 10,
                                                                                   Control = 8)),
                                    codelists = cl),
                "denominator names \"Drug X (mg)\", not a value of TRT01A (Drug X, Control).",
                fixed = TRUE)
-  expect_silent(tfl_template_expand(tpl, list(population = "SAF", denominator = c("Drug X" = 10,
-                                                                                   Control = 8)),
-                                    codelists = cl))
+  expect_silent(dv_expand_with(tpl, list(denominator = c("Drug X" = 10, Control = 8)),
+                               codelists = cl))
   # (no code list: the arms are the data's, which a template cannot see)
-  expect_silent(tfl_template_expand(tpl, list(population = "SAF", denominator = c("Drug X" = 10))))
+  expect_silent(dv_expand_with(tpl, list(denominator = c("Drug X" = 10))))
 })
 
 test_that("anything else stops with the list of what denominator takes", {
@@ -265,7 +268,7 @@ dv_study <- function(root) {
 dv_report <- function(s, name, args, own = NULL) {
   f <- file.path(s$dir, "spec", "outputs", "T-DV.yml")
   tfl_write_output(tfl_output("T-DV", "table", population = "SAF", extends = "defaults",
-                              template = list(name = name, args = c(list(population = "SAF"), args)),
+                              template = list(name = name, args = utils::modifyList(dv_args[[name]], as.list(args))),
                               ard = own), f)
   st <- tfl_read_study_spec(s$dir)
   ard <- suppressMessages(tfl_build_ard(st, output_id = "T-DV", dir = s$dir, save = FALSE))
@@ -303,8 +306,8 @@ test_that("an analysis data the report does not have stops, naming what it has",
   dv_skip()
   s <- dv_study(withr::local_tempdir())
   o <- tfl_output("T-DV", "table", population = "SAF", extends = "defaults",
-                  template = list(name = "ae_soc_pt", args = list(population = "SAF",
-                                                                  denominator = "adsl_zzz")))
+                  template = list(name = "ae_soc_pt", args = c(stack_req("ae_soc_pt"),
+                                                               list(denominator = "adsl_zzz"))))
   st <- tfl_read_study_spec(s$dir)
   expect_error(tfl_resolve_output(o, st),
                  paste0("T-DV: template ae_soc_pt: denominator \"adsl_zzz\" is not an analysis data ",
@@ -456,7 +459,7 @@ test_that("a named vector is a small data frame in the program; a number is a nu
   code <- function(den) {
     tfl_write_output(tfl_output("T-DV", "table", population = "SAF", extends = "defaults",
                                 template = list(name = "ae_soc_pt",
-                                                args = list(population = "SAF", denominator = den))), f)
+                                                args = c(stack_req("ae_soc_pt"), list(denominator = den)))), f)
     st <- tfl_read_study_spec(s$dir)
     paste(suppressMessages(tfl_ard_code(st, output_id = "T-DV")), collapse = "\n")
   }

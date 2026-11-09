@@ -187,7 +187,7 @@ test_that("ae_eair: an event with no day uses the subject's other events; none: 
   i <- which(paste(ae$USUBJID, ae$AEDECOD, sep = "|") == pair[1L] & ae$TRTEMFL == "Y")
   ae$ASTDY[i[which.min(ae$ASTDY[i])]] <- NA
   d <- bv_study(withr::local_tempdir(), list(adsl = ad, adae = ae))
-  bv_put(d, "T-E", "ae_eair", list(population = "SAF"))
+  bv_put(d, "T-E", "ae_eair", list(by = "TRT01A", hierarchy = c("AEBODSYS", "AEDECOD")))
   expect_no_warning(a <- bv_ard(d, "T-E"))
   s <- ad[ad$SAFFL == "Y", ]
   first_day <- function(aes) {
@@ -209,7 +209,7 @@ test_that("ae_eair: an event with no day uses the subject's other events; none: 
   ae2 <- ae
   ae2$ASTDY[ae2$USUBJID == one & ae2$TRTEMFL == "Y"] <- NA
   d2 <- bv_study(withr::local_tempdir(), list(adsl = ad, adae = ae2))
-  bv_put(d2, "T-E", "ae_eair", list(population = "SAF"))
+  bv_put(d2, "T-E", "ae_eair", list(by = "TRT01A", hierarchy = c("AEBODSYS", "AEDECOD")))
   w <- character()
   a2 <- withCallingHandlers(bv_ard(d2, "T-E"), warning = function(e) {
     w <<- c(w, conditionMessage(e))
@@ -224,7 +224,7 @@ test_that("ae_eair: an event with no day uses the subject's other events; none: 
   expect_equal(bv_stat(a2, "AEBODSYS", "Any TEAE", arm, "tot_person_time", "EAIR"), years(sa, day2))
   # no missing day: no warning
   d3 <- bv_study(withr::local_tempdir(), list(adsl = ad, adae = tflspec::adae))
-  bv_put(d3, "T-E", "ae_eair", list(population = "SAF"))
+  bv_put(d3, "T-E", "ae_eair", list(by = "TRT01A", hierarchy = c("AEBODSYS", "AEDECOD")))
   expect_no_warning(bv_ard(d3, "T-E"))
 })
 

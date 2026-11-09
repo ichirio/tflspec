@@ -151,7 +151,7 @@ population: SAF
 extends: [defaults]
 template:
   name: ae_soc_pt
-  args: {population: SAF, by: TRT01A}
+  args: {by: TRT01A, hierarchy: [AEBODSYS, AEDECOD]}
 page:
   titles:
     "1": {center: Table 14.3.1}

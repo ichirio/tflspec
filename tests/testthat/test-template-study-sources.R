@@ -42,7 +42,7 @@ test_that("the report's population: the template's population, written in its pr
 
 test_that("study.yml's settings: treatment: the templates' by", {
   s <- ss_study("TRT01P")
-  ro <- ss_resolve("ae_soc_pt", list(), s)
+  ro <- ss_resolve("ae_soc_pt", list(hierarchy = c("AEBODSYS", "AEDECOD")), s)
   expect_identical(ss_an(ro, "AE")$by, "TRT01P")
   ro <- ss_resolve("demog", list(), s)
   expect_identical(ss_an(ro, "CONT")$by, "TRT01P")

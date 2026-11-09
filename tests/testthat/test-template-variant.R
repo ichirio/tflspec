@@ -160,9 +160,10 @@ test_that("ae_soc_pt: the YAML's template:, A and B make the same RTF", {
   ard <- cards::ard_stack_hierarchical(ae, variables = c(AEBODSYS, AEDECOD), by = TRT01A,
                                        denominator = saf, id = USUBJID, over_variables = TRUE)
   o <- tfl_output("T-9", "table", population = "SAF", label = "AEs",
-                  template = list(name = "ae_soc_pt_all", args = list(population = "SAF")))
+                  template = list(name = "ae_soc_pt_all",
+                                  args = list(by = "TRT01A", hierarchy = c("AEBODSYS", "AEDECOD"))))
   r <- tv_rtfs(o, ard, s)
-  expect_match(paste(r$code, collapse = "\n"), "plan <- tflspec::tfl_tpl(\n  ard,\n  \"hierarchical\",", fixed = TRUE)
+  expect_match(paste(r$code, collapse = "\n"), "plan <- tflspec::tfl_tpl(\n  ard,\n  \"ae_soc_pt\",", fixed = TRUE)
   expect_match(paste(r$code, collapse = "\n"), "any_row_label = \"Any AE\"", fixed = TRUE)
   expect_identical(r$a, r$yaml)
   expect_identical(r$b, r$yaml)

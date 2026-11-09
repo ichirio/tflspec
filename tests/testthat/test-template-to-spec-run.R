@@ -36,7 +36,7 @@ tsr_output <- function(nm) {
   }
   tfl_output(paste0("X-", gsub("_", "-", nm)), tp$kind[tp$name == nm], population = "SAF",
              label = nm, template = list(name = nm, args = utils::modifyList(
-               tflspec:::.tpl_examples[[nm]], tsr_args[[nm]] %||% list(), keep.null = FALSE)),
+               report_example(nm), tsr_args[[nm]] %||% list(), keep.null = FALSE)),
              data = own)
 }
 

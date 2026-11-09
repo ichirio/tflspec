@@ -41,6 +41,7 @@ for the whole exposure, and the program says in a warning how many
 subjects that is.
 }
 \examples{
-x <- tfl_template_expand("ae_eair", list(population = "SAF"))
+x <- tfl_template_expand("ae_eair", list(population = "SAF", by = "TRT01A",
+                         hierarchy = c("AEBODSYS", "AEDECOD")))
 vapply(x$ard$analyses, `[[`, "", "method")
 }

@@ -2,12 +2,12 @@
 # (registered at the end of tpl_registry.R: R reads this file before it)
 
 .tpl_eair_params <- function() list(
-  tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
+  .tpl_population_param(),
   .tpl_subset_param(),
   tfl_param("data", "ADAE", doc = "the dataset of records"),
   tfl_param("where", "TRTEMFL == \"Y\"", doc = "the records kept (R)"),
-  tfl_param("by", "TRT01A", doc = "the column variable"),
-  tfl_param("hierarchy", c("AEBODSYS", "AEDECOD"), doc = "the levels, outer first"),
+  .tpl_by_param(),
+  tfl_param("hierarchy", required = TRUE, doc = "the levels, outer first"),
   tfl_param("exposure", "TRTDURD", doc = "the ADSL variable of the days of exposure"),
   tfl_param("start", "ASTDY",
             doc = "the event's day from the start of treatment: a variable or R (ASTDT - TRTSDT + 1)"),
@@ -131,7 +131,8 @@
 #'   `hierarchy`, `exposure`, `start`, `per`, `overall`.
 #' @return A [rtfreporter::table_plan()].
 #' @examples
-#' x <- tfl_template_expand("ae_eair", list(population = "SAF"))
+#' x <- tfl_template_expand("ae_eair", list(population = "SAF", by = "TRT01A",
+#'                          hierarchy = c("AEBODSYS", "AEDECOD")))
 #' vapply(x$ard$analyses, `[[`, "", "method")
 #' @export
 tpl_ae_eair <- function(ard, population, ..., codelists = NULL) {
