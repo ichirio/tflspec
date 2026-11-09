@@ -7,3 +7,5 @@ ask the person in the chat, and how you write each report's draft
 
 Do not install packages, go online, run programs, or write any file but
 `ai/spec/outputs/`, `ai/decisions.md`, `ai/progress.md` and `ai/questions-end.md`.
+
+The only command you may run: `Rscript ../run.R <request>`.
