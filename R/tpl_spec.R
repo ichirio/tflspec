@@ -400,7 +400,7 @@ tfl_template_to_spec <- function(output, study) {
   for (it in items) {
     keys <- names(it$args) %||% character()
     af <- it$arg_from %||% stats::setNames(rep(it$from %||% "own", length(keys)), keys)
-    k <- if (.dots_named(it$fn) && length(keys)) keys[vapply(af[keys], mine, NA)] else NULL
+    k <- if (.arg_keyed(it$fn, items) && length(keys)) keys[vapply(af[keys], mine, NA)] else NULL
     keep <- if (is.null(k)) mine(it$from %||% "own") else length(k) > 0L
     if (!keep) next
     if (!is.null(k)) it$args <- it$args[k]
@@ -433,7 +433,7 @@ tfl_template_to_spec <- function(output, study) {
       if (length(not_tpl) || (identical(it$fn, "table_plan") && !identical(it$from, tag))) ok <- FALSE
       next
     }
-    if (.dots_named(it$fn) && length(keys)) {
+    if (.arg_keyed(it$fn, items) && length(keys)) {
       for (s in unique(af[not_tpl])) {
         rest <- c(rest, list(tfl_item(it$fn, it$args[keys[af == s]], from = s)))
       }

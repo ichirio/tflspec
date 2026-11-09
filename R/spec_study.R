@@ -310,7 +310,7 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
     k <- (seen[[it$fn]] %||% 0L) + 1L
     seen[[it$fn]] <- k
     keys <- names(it$args) %||% character()
-    if (.dots_named(it$fn) && length(keys)) {
+    if (.arg_keyed(it$fn, items) && length(keys)) {
       from <- vapply(keys, function(key) {
         for (layer in stack) {
           hit <- Filter(function(x) identical(x$fn, it$fn) && key %in% names(x$args), layer)
@@ -427,8 +427,17 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
 #   plan_digits, plan_stat_groups, plan_compare: the schema's dots style
 #   "named") merges by key -- the report's keys win, the layers' others
 #   stay, in the layers' order first -- as the sheets layered them;
-# * any other verb: the report's items replace every item of that verb
-#   below, in the place the first of them had;
+# * an appearance verb (plan_paginate_rows, plan_columns, plan_blanks,
+#   plan_style: .merge_by_arg_verbs), when the layers below have one item of
+#   it and the report has one: the one item, the layers' arguments updated
+#   by the report's by argument name -- the report's win, one it leaves out
+#   stays (a template's page_by, decimal, where survive a report's
+#   max_rows, widths, a style key).  rtfreporter merges two calls of these
+#   the same way, last wins per argument.  `NULL` or `!unset` in the
+#   report's argument takes the layers' value away;
+# * any other verb (and these when either side has several items): the
+#   report's items replace every item of that verb below, in the place the
+#   first of them had;
 # * a verb only the report has goes where the generators' order puts it
 #   (the schema's `rank`), else last.
 .merge_content <- function(base, over) {
@@ -448,6 +457,11 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
           merged <- own[[1L]]
           merged$args <- .merge_dots(it$args, own[[1L]]$args)
           out <- c(out, list(merged))
+        } else if (it$fn %in% .merge_by_arg_verbs && length(own) == 1L &&
+                   sum(vapply(base, function(b) identical(b$fn, it$fn), NA)) == 1L) {
+          merged <- own[[1L]]
+          merged$args <- .merge_by_arg(it$args, own[[1L]]$args)
+          out <- c(out, list(merged))
         } else {
           out <- c(out, own)
         }
@@ -460,6 +474,31 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   rest <- Filter(function(o) !o$fn %in% placed, over)
   for (o in rest) out <- .insert_by_rank(out, o)
   .table_plan_first(out)
+}
+
+# the appearance verbs: a report's single call updates a single item below
+# argument by argument (see .merge_content)
+.merge_by_arg_verbs <- c("plan_paginate_rows", "plan_columns", "plan_blanks", "plan_style")
+
+# the base's arguments updated by the over's, by name, shallow: the over's
+# value replaces the base's whole; an argument over leaves out stays; NULL
+# and !unset take it away
+.merge_by_arg <- function(base, over) {
+  base <- base %||% list()
+  for (k in names(over)) {
+    if (!nzchar(k)) next
+    v <- over[[k]]
+    base[[k]] <- if (inherits(v, "tfl_unset")) NULL else v
+  }
+  base
+}
+
+# does the item of `fn` in `items` keep its arguments' origin one by one?  A
+# named-dots verb always; an appearance verb when it is the only one of its
+# kind (then it is the merged item, or the one that replaced the others)
+.arg_keyed <- function(fn, items) {
+  .dots_named(fn) || (fn %in% .merge_by_arg_verbs &&
+    sum(vapply(items, function(x) identical(x$fn, fn), NA)) == 1L)
 }
 
 # a verb whose `...` is a map by name (the schema says); FALSE without a schema
