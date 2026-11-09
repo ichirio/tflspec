@@ -145,6 +145,9 @@
 .spec_code_line <- function(x) {
   # (a tfl_r is its text, never a deparsed structure())
   if (inherits(x, "tfl_r")) return(paste(as.character(unclass(x)), collapse = " "))
+  # (an `!unset` argument of a template's call: the marker is needed there,
+  # leaving the argument out would bring the template's default back)
+  if (inherits(x, "tfl_unset")) return("tflspec::tfl_unset()")
   if (inherits(x, "tfl_spec_sym")) return(x$name)
   if (inherits(x, "tfl_spec_expr")) return(x$text)
   if (inherits(x, "tfl_spec_formula")) return(paste("~", x$text))

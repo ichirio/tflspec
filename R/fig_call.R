@@ -97,6 +97,7 @@ tfl_fig_calls <- function() .fig_calls()
 # expression (unquoted) instead of a quoted string.
 .fig_arg_code <- function(x, expr = FALSE, needs_env = NULL) {
   if (is.null(x)) return("NULL")
+  if (inherits(x, "tfl_unset")) return("tflspec::tfl_unset()")
   if (.is_r(x)) return(as.character(x)[1L])
   if (is.list(x)) {
     nms <- names(x)

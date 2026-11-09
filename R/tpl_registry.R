@@ -377,6 +377,24 @@ tfl_param <- function(name, default = NULL, required = FALSE, doc = NULL, study 
   out
 }
 
+# A parameter the body cannot do without a value for: `!unset` on it stops
+# with a message that names it.  A check of a parameter's value (a choice,
+# a range) lets an unset value through to here, so it is never reported as
+# a wrong value; what unset means for each parameter is the template's own
+# decision, made parameter by parameter.
+.tpl_unset_stop <- function(a, name, tn) {
+  if (name %in% attr(a, "unset")) {
+    .ard_stop(sprintf("%s: `%s` cannot be left unset (!unset).", tn, name))
+  }
+  invisible(a)
+}
+
+# A choice parameter's value, checked (match.arg()); `!unset` stops as above
+.tpl_choice <- function(a, name, choices, tn, value = a[[name]]) {
+  .tpl_unset_stop(a, name, tn)
+  match.arg(value, choices)
+}
+
 #' Expand a template into a report's items
 #'
 #' The B use of a template SPEC: the items its parameters stand for, to
@@ -1031,6 +1049,7 @@ names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
 # The values are "denominator", "set", "tested" and "none".
 .tpl_header_n <- function(a, ctx, allowed, why) {
   tn <- ctx$template$name %||% "template"
+  .tpl_unset_stop(a, "header_n", tn)
   hn <- a$header_n %||% allowed[1L]
   if (!(is.character(hn) && length(hn) == 1L && !is.na(hn) &&
         hn %in% c("denominator", "set", "tested", "none"))) {
@@ -1158,9 +1177,9 @@ names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
 
 # The rows kept: `min_pct` % of subjects or more, in any column, every
 # column, or the Total column (plan_filter()); NULL when none is set
-.tpl_min_pct_items <- function(min_pct, min_pct_in = "any", by = NULL) {
+.tpl_min_pct_items <- function(min_pct, min_pct_in = "any", by = NULL, a = NULL, tn = "template") {
   if (is.null(min_pct)) return(NULL)
-  in_ <- match.arg(min_pct_in, c("any", "all", "total"))
+  in_ <- .tpl_choice(a, "min_pct_in", c("any", "all", "total"), tn, value = min_pct_in)
   cond <- sprintf("p >= %s", format(min_pct / 100))
   if (identical(in_, "total")) cond <- sprintf("%s & %s == \"Total\"", cond, by)
   list(tfl_item("plan_filter", c(list(where = tfl_r(cond)),
@@ -1210,7 +1229,7 @@ names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
       label = list(label = a$hierarchy[n])))),
     # (the columns' order is the ARD's: the code list applied when it is made)
     tfl_item("plan_sort", list(keys = a$sort))),
-    .tpl_min_pct_items(a[["min_pct"]], a$min_pct_in, a$by),
+    .tpl_min_pct_items(a[["min_pct"]], a$min_pct_in, a$by, a, ctx$template$name),
     if (length(cells)) list(tfl_item("plan_cells", cells)),
     if (isTRUE(a[["total"]])) list(tfl_item("plan_total", list(position = "last"))),
     # (the layout's column header, its counts' line: the study standard's wins)
@@ -1299,13 +1318,14 @@ tpl_hierarchical <- function(ard, population, hierarchy, ..., codelists = NULL) 
 names(.tpl_pt_params) <- vapply(.tpl_pt_params, `[[`, "", "name")
 
 .tpl_pt_body <- function(a, ctx) {
-  in_ <- match.arg(a$min_pct_in, c("any", "all", "total"))
+  in_ <- .tpl_choice(a, "min_pct_in", c("any", "all", "total"), ctx$template$name)
   # hierarchical's ARD and items, of one level (the term); then its own
   # order, the terms kept and the page
   # (hierarchical's defaults for what ae_pt_freq does not take)
   h <- lapply(.tpl_hier_params, `[[`, "default")
   # (its own ids and labels too: the layout's body reads them when given)
   h[names(a)] <- a
+  attr(h, "unset") <- attr(a, "unset")
   h$hierarchy <- a$term
   h$min_pct <- NULL
   h$any_row <- !is.null(a$overall)
@@ -1358,7 +1378,8 @@ tpl_ae_pt_freq <- function(ard, population, ..., codelists = NULL) {
   .tpl_subset_param(),
   tfl_param("grade", "AESEV", doc = "the severity or grade variable (AESEV, AETOXGR)"),
   tfl_param("grade_levels", NULL,
-            doc = "its values, lowest first; NULL: the code list of `grade`"),
+            doc = paste("its values, lowest first: the rank of the maximum, and the order the",
+                        "table shows them in; NULL: the code list of `grade`")),
   tfl_param("grade_in", "rows", doc = "the grades as \"rows\" under each term, or as \"cols\" in each group"),
   tfl_param("hierarchy", c("AEBODSYS", "AEDECOD"), doc = "the levels, outer first"),
   tfl_param("by", "TRT01A", doc = "the column variable"),
@@ -1378,7 +1399,7 @@ tpl_ae_pt_freq <- function(ard, population, ..., codelists = NULL) {
 names(.tpl_mg_params) <- vapply(.tpl_mg_params, `[[`, "", "name")
 
 .tpl_mg_body <- function(a, ctx) {
-  rows_in <- identical(match.arg(a$grade_in, c("rows", "cols")), "rows")
+  rows_in <- identical(.tpl_choice(a, "grade_in", c("rows", "cols"), ctx$template$name), "rows")
   pop <- a$population
   subj <- paste0("adsl_", tolower(pop))
   # (the header N is the stack's own denominator: only the text changes)
@@ -1391,11 +1412,17 @@ names(.tpl_mg_params) <- vapply(.tpl_mg_params, `[[`, "", "name")
   den_id <- paste0(set, "_den")
   g <- a$grade
   h <- a$hierarchy
+  # the grades in their order: `grade_levels`, else the report's code list
   lv <- a$grade_levels %||% .tpl_levels(g, ctx$codelists)[[g]]
   # a record's rank: its grade among the levels (lowest first)
   rank <- if (length(lv)) {
     sprintf("match(%s, c(%s))", g, paste0("\"", lv, "\"", collapse = ", "))
   } else sprintf("xtfrm(%s)", g)
+  # the grades as the ARD holds them (the code list's labels), in their
+  # order on the table: a data step's factor order does not reach it --
+  # cards' hierarchical ARD puts the innermost variable's values in
+  # alphabetical order whatever its levels are -- so the plan says it
+  lv_ard <- if (length(lv)) .tpl_shift_labels(lv, g, ctx$codelists)
   # each subject's record of the highest grade: overall, in each SOC, in each PT
   top <- function(suffix, within) {
     list(id = paste0(set, "_max", suffix), from = set,
@@ -1429,13 +1456,14 @@ names(.tpl_mg_params) <- vapply(.tpl_mg_params, `[[`, "", "name")
       an("AE_MAX_SOC", maxes[[2L]]$id, c(h[1L], g)),
       an("AE_MAX_PT", maxes[[3L]]$id, c(h, g))))
   n <- length(h)
-  by_n <- identical(match.arg(a$sort, c("n", "name")), "n")
+  by_n <- identical(.tpl_choice(a, "sort", c("n", "name"), ctx$template$name), "n")
   # the terms' row keys (as rows: every level; as columns: all but the PT,
   # the label); each term after its own count (most first), or by name
   grp <- paste0("group", seq_len(if (rows_in) n else n - 1L))
   term_keys <- unlist(lapply(grp, function(k) c(if (by_n) sprintf("-n@%s", k), k)))
   keys <- c("levels(group1)", term_keys, ".depth",
-            if (!rows_in) c(if (by_n) "-n", "label"))
+            if (!rows_in) c(if (by_n) "-n", "label"),
+            if (rows_in && length(lv_ard)) "levels(label)")
   plan <- if (rows_in) {
     list(tfl_item("table_plan", list(
       cols = a$by, rows = stats::setNames(as.list(h), grp), label = list(label = g))))
@@ -1454,7 +1482,12 @@ names(.tpl_mg_params) <- vapply(.tpl_mg_params, `[[`, "", "name")
   content <- c(
     list(tfl_item("normalize_ard", list(hierarchy = c(h, g))),
          # the overall block first, whatever the order of the others
-         tfl_item("plan_levels", stats::setNames(list(a$overall), h[1L]))),
+         tfl_item("plan_levels", c(
+           stats::setNames(list(a$overall), h[1L]),
+           if (length(lv_ard)) {
+             if (rows_in) list(label = lv_ard)
+             else stats::setNames(list(c(a$any_grade, lv_ard)), g)
+           }))),
     plan,
     list(tfl_item("plan_sort", list(keys = keys))),
     list(tfl_item("plan_col_header", list(header = list(
@@ -1674,6 +1707,7 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
     total <- FALSE
   }
   den <- paste0(set, "_den")
+  .tpl_unset_stop(a, "header_n", ctx$template$name %||% "shift")
   hn <- a$header_n
   if (!(is.character(hn) && length(hn) == 1L && hn %in% c("set", "tested", "none"))) {
     .ard_stop(paste0("shift: header_n takes \"set\" (the arm's subjects in the analysis ",
@@ -1778,6 +1812,7 @@ names(.tpl_shift_params) <- vapply(.tpl_shift_params, `[[`, "", "name")
   body = function(a, ctx) {
     b <- lapply(.tpl_shift_params, `[[`, "default")
     for (k in intersect(names(a), names(b))) b[k] <- list(a[[k]])
+    attr(b, "unset") <- attr(a, "unset")
     b$where <- .tpl_and(sprintf("AVISIT == \"%s\" & PARAMCD %%in%% c(%s)", a$visit,
                                 paste(sprintf("\"%s\"", a$params), collapse = ", ")),
                         a$where)
@@ -1897,6 +1932,7 @@ tpl_lab_shift <- function(ard, population, ..., codelists = NULL) {
 # starts again when a column to its left changes).
 .listing_by <- function(a, given, cols) {
   by <- as.character(unlist(a$by))
+  .tpl_unset_stop(a, "by_break", "listing")
   brk <- a$by_break
   if (length(brk) != 1L || is.na(brk) || !brk %in% c("page", "block")) {
     .ard_stop("template listing: `by_break` is \"page\" (a page a value) or \"block\" (a value's records together).")
@@ -2155,7 +2191,7 @@ names(.tpl_pc_params) <- vapply(.tpl_pc_params, `[[`, "", "name")
 
 .tpl_pc_body <- function(a, ctx) {
   a$cells <- .tpl_sd_missing(.tpl_cells_named(a$cells), .tpl_pc_cells, a[["sd_missing"]] %||% "-")
-  rows_in <- identical(match.arg(a$layout, c("cols", "rows")), "rows")
+  rows_in <- identical(.tpl_choice(a, "layout", c("cols", "rows"), ctx$template$name), "rows")
   pop <- a$population
   subj <- paste0("adsl_", tolower(pop))
   set <- a$data_id %||% paste0(tolower(a$data), "_", tolower(pop))
@@ -2300,7 +2336,8 @@ tpl_param_change <- function(ard, population, ..., codelists = NULL) {
 .tpl_stat_block_body <- function(a, ctx = NULL, others = NULL, rows_key = NULL,
                                  header = TRUE, levels = FALSE) {
   cells <- .tpl_cells_list(a$cells)
-  dir <- match.arg(a$direction %||% "cols", c("cols", "rows"))
+  dir <- .tpl_choice(a, "direction", c("cols", "rows"), ctx$template$name %||% "template",
+                     value = a$direction %||% "cols")
   rows <- a$rows
   # the row keys, by name: the variable's (or a display template's), then
   # the report's (subgroup, subgroup_level); no label column -- a block's
@@ -2379,6 +2416,15 @@ tpl_stat_block <- function(ard, ..., codelists = NULL) {
 
 # ---- orr: best overall response and the objective response rate (95% CI) --------
 
+# The column variable's `by_levels` as a code list of the template (the data
+# step puts the arms in that order), unless the report has a list for it: the
+# report's own wins.  NULL: none.
+.tpl_by_codelist <- function(a, ctx) {
+  if (length(a$by_levels) && is.null(ctx$codelists[[a$by]])) {
+    stats::setNames(list(lapply(a$by_levels, function(v) list(value = v, label = v))), a$by)
+  }
+}
+
 .tfl_template("orr", kind = "table", layout = "stat_block",
   params = list(
     tfl_param("population", "ITT", doc = "the analysis set's id"),
@@ -2444,15 +2490,16 @@ tpl_stat_block <- function(ard, ..., codelists = NULL) {
         if (!identical(hn, "none")) list(list(
           id = "GROUPN", method = "categorical", data = subj, variables = a$by,
           purpose = "PRIMARY OUTCOME MEASURE"))))
-    # (the arms' order: an order given, else the code list's, which the ARD
-    # program puts on the survfit / CI analysis too, relevel_ard())
-    by_lv <- a$by_levels
-    levels_item <- tfl_item("plan_levels", c(list(variable = c(a$category, "RESP")),
-                                             if (length(by_lv)) stats::setNames(list(by_lv), a$by)))
+    # (the arms' order: an order given, else the code list's -- the program
+    # puts it on the data, and on the survfit / CI analysis too, relevel_ard();
+    # the report's own list for the arms wins)
+    own <- .tpl_by_codelist(a, ctx)
+    levels_item <- tfl_item("plan_levels", list(variable = c(a$category, "RESP")))
     labels_item <- tfl_item("plan_labels", list(variable = stats::setNames(
       list("Best overall response, n (%)", sprintf("Objective response rate (%s)", resp)),
       c(a$category, "RESP"))))
-    if (identical(match.arg(a$stat_layout %||% "rows", c("rows", "cols")), "cols")) {
+    if (identical(.tpl_choice(a, "stat_layout", c("rows", "cols"), ctx$template$name,
+                              value = a$stat_layout %||% "rows"), "cols")) {
       # each arm's two columns, the rate and its CI (stat_block); the best
       # overall response's n (%) in the first, by its own (categorical) cell
       blk <- Filter(Negate(is.null), .tpl_stat_block_body(list(
@@ -2469,7 +2516,7 @@ tpl_stat_block <- function(ard, ..., codelists = NULL) {
           list(line = "1", cols = ".values", span = a$by, text = if (identical(hn, "none")) "{col1}" else "{col1} (N={n1})"),
           list(line = "2", cols = "row_label", text = .tpl_lines(a$heading)),
           list(line = "2", cols = ".values", span = "each", text = "{col}"))))))
-      return(list(ard = ard, data = list(source = "ard"), content = content))
+      return(list(ard = ard, data = list(source = "ard"), content = content, codelists = own))
     }
     content <- list(
       tfl_item("table_plan", list(cols = a$by, rows = list(group = "variable"))),
@@ -2482,7 +2529,7 @@ tpl_stat_block <- function(ard, ..., codelists = NULL) {
         list(line = "2", cols = "row_label", text = .tpl_lines(a$heading))),
         if (!identical(hn, "none")) list(
           list(line = "2", cols = ".values", span = "each", text = "(N={n})"))))))
-    list(ard = ard, data = list(source = "ard"), content = content)
+    list(ard = ard, data = list(source = "ard"), content = content, codelists = own)
   })
 
 #' Objective response: a table plan from the template `orr`
