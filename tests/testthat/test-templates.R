@@ -314,7 +314,7 @@ test_that("listing by: the parameters", {
   expect_identical(p$by_break$choices, c("page", "block"))
   expect_identical(p$by_break$default, "page")
   expect_identical(p$by_heading$type, "text")
-  expect_identical(names(p), c("data", "columns", "where", "subset", "sort", "by", "by_break", "by_heading"))
+  expect_identical(names(p), c("data", "columns", "where", "subset", "sort", "by", "by_break", "by_heading", "by_na_label"))
 })
 
 test_that("listing by, no by: the items as they were", {

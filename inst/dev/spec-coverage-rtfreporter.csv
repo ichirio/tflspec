@@ -278,6 +278,7 @@
 "rtfreporter","plan_paginate_rows","page_by","yes","content: plan_paginate_rows","schema.yml type"
 "rtfreporter","plan_paginate_rows","heading","yes","content: plan_paginate_rows","schema.yml type"
 "rtfreporter","plan_paginate_rows","heading_at","yes","content: plan_paginate_rows","schema.yml type"
+"rtfreporter","plan_paginate_rows","na_label","yes","content: plan_paginate_rows","schema.yml type"
 "rtfreporter","plan_row_group",".plan","yes","the pipe",""
 "rtfreporter","plan_row_group","mode","yes","content: plan_row_group","schema.yml type"
 "rtfreporter","plan_row_group","collapse","yes","content: plan_row_group","schema.yml type"

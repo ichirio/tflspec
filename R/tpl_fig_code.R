@@ -26,7 +26,8 @@
   },
   waterfall = function(a) .tpl_wf_design(a$value, a$by_response, a$param, a$data, a$where),
   forest_hr = function(a) {
-    f <- .tpl_forest_design(a$group, a$subgroups, a$comparison, .tpl_forest_look_args(a))
+    f <- .tpl_forest_design(a$group, a$subgroups, a$comparison, .tpl_forest_look_args(a),
+                            ref = a$ref)
     # (the text column beside it: tpl_forest_layout(), after the report's items)
     f$content <- Filter(function(it) !identical(it$fn, "text_column"), f$content)
     f
