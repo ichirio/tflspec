@@ -69,7 +69,7 @@
     cell_valign = "text", markup = "text", blank_row_normalize = "text",
     border_header = "sides", border_spanning = "sides",
     border_body = "sides", border_first_row = "sides",
-    border_last_row = "sides",
+    border_last_row = "sides", border_group = "sides",
     # the table's default look (rtf_table_style()'s fields) and width
     header_align = "text", header_bold = "bool", header_italic = "bool",
     align = "text", bold = "bool", italic = "bool", underline = "bool",
@@ -798,7 +798,8 @@
 #' `cell_padding_top_twips`, `cell_padding_bottom_twips`, `cell_valign`,
 #' `table_align`, `markup`, `blank_row_normalize`, and the rules of one
 #' kind of row, `border_header`, `border_spanning`, `border_body`,
-#' `border_first_row`, `border_last_row`: the sides drawn (`top | bottom`)
+#' `border_first_row`, `border_last_row`, `border_group` (the rule under
+#' each row group's last row): the sides drawn (`top | bottom`)
 #' or `none`, as [rtfreporter::rtf_border()] takes them.  `border` and the
 #' `border_*` columns are one or the other.  The table's default look,
 #' `header_align`, `header_bold`, `header_italic`, `align`, `bold`,
