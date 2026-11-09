@@ -10,12 +10,12 @@ an_three <- function(x) {
   x$TRT01A[x$USUBJID %in% y] <- "Drug Y"
   x
 }
-an_arms <- function(three) if (three) c("Drug X", "Drug Y", "Control") else c("Drug X", "Control")
+an_arms <- function(three) if (three) c("Control", "Drug X", "Drug Y") else c("Control", "Drug X")
 an_data <- function(shift = 0, three = FALSE) {
   saf <- adsl$USUBJID[adsl$SAFFL == "Y"]
   d <- advs[advs$USUBJID %in% saf & advs$PARAMCD == "SYSBP" & advs$AVISIT == "CYCLE 2 DAY 1", ]
   if (three) d <- an_three(d)
-  # the arms' order of a code list: Control last
+  # the arms' order of a code list: Control (the reference) first
   d$TRT01A <- factor(d$TRT01A, levels = an_arms(three))
   d$CHG[d$TRT01A == "Drug X"] <- d$CHG[d$TRT01A == "Drug X"] + shift
   d
@@ -65,11 +65,11 @@ test_that("expanded: the records of the parameter and visit, the model by cardx"
   an <- x$ard$analyses
   expect_identical(vapply(an, `[[`, "", "method"),
                    c("categorical", "cardx::ard_emmeans_emmeans", "custom"))
-  expect_match(an[[3L]]$code, "ref <- tail(levels(factor(data$TRT01A)), 1)", fixed = TRUE)
+  expect_match(an[[3L]]$code, "ref <- levels(factor(data$TRT01A))[1L]", fixed = TRUE)
   expect_match(an[[3L]]$code, "fit <- stats::lm(CHG ~ TRT01A + BASE, data = data)", fixed = TRUE)
   expect_match(an[[3L]]$code, "emmeans::emmeans(fit, specs = ~ TRT01A, data = data)", fixed = TRUE)
   expect_match(an[[3L]]$code,
-               "emmeans::contrast(method = \"trt.vs.ctrl\", ref = nlevels(data$TRT01A), adjust = \"none\")",
+               "emmeans::contrast(method = \"trt.vs.ctrl\", ref = 1L, adjust = \"none\")",
                fixed = TRUE)
   expect_identical(as.character(an[[2L]]$args), "formula = CHG ~ TRT01A + BASE, method = \"lm\"")
   y <- tfl_template_expand("ancova", c(an_args, list(response = "PCHG",
@@ -89,7 +89,7 @@ test_that("the LS means and their difference: as emmeans gives them", {
   an_skip()
   x <- tfl_template_expand("ancova", an_args)
   t <- an_tab(do.call(tpl_ancova, c(list(suppressMessages(an_ard(x))), an_args)))
-  expect_identical(names(t), c("group", "label", "Drug X", "Control"))
+  expect_identical(names(t), c("group", "label", "Control", "Drug X"))
   em <- emmeans::emmeans(stats::lm(CHG ~ TRT01A + BASE, data = an_data()), "TRT01A")
   s <- as.data.frame(summary(em))
   for (arm in c("Drug X", "Control")) {
@@ -99,7 +99,7 @@ test_that("the LS means and their difference: as emmeans gives them", {
     expect_identical(t[[arm]][t$label == "95% CI"][1L],
                      sprintf("(%.2f, %.2f)", r$lower.CL, r$upper.CL), info = arm)
   }
-  pr <- as.data.frame(summary(emmeans::contrast(em, "pairwise"), infer = TRUE))
+  pr <- as.data.frame(summary(emmeans::contrast(em, "revpairwise"), infer = TRUE))
   diff <- t$label == "Difference (SE)"
   expect_identical(t[["Drug X"]][diff], sprintf("%.2f (%.2f)", pr$estimate, pr$SE))
   expect_true(is.na(t$Control[diff]))
@@ -112,7 +112,7 @@ test_that("a p-value below 0.0001: as the program's fmt_pvalue() writes it", {
   expect_identical(x$ard$analyses[[3L]]$formats, "p.value=pvalue")
   t <- an_tab(do.call(tpl_ancova, c(list(suppressMessages(an_ard(x, shift = 10))), an_args)))
   fit <- stats::lm(CHG ~ TRT01A + BASE, data = an_data(shift = 10))
-  expect_lt(summary(fit)$coefficients["TRT01AControl", "Pr(>|t|)"], 1e-4)
+  expect_lt(summary(fit)$coefficients["TRT01ADrug X", "Pr(>|t|)"], 1e-4)
   expect_identical(t[["Drug X"]][t$label == "p-value"], "<0.001")
 })
 
@@ -128,7 +128,7 @@ test_that("A (the call) = B (the items as the report's content)", {
 
 test_that("three arms: each other arm minus the reference, in its own column", {
   an_skip()
-  # the reference: the last arm (Control), or `ref`
+  # the reference: the first arm (Control), or `ref`
   for (ref in list(NULL, "Drug Y")) {
     a <- c(an_args, list(ref = ref))
     x <- tfl_template_expand("ancova", a)
@@ -136,7 +136,7 @@ test_that("three arms: each other arm minus the reference, in its own column", {
     expect_message(ard <- an_ard(x, three = TRUE),
                    paste("ancova: the reference arm is", used), fixed = TRUE)
     t <- an_tab(do.call(tpl_ancova, c(list(ard), a)))
-    expect_identical(names(t), c("group", "label", "Drug X", "Drug Y", "Control"))
+    expect_identical(names(t), c("group", "label", "Control", "Drug X", "Drug Y"))
     d <- an_data(three = TRUE)
     d$TRT01A <- stats::relevel(d$TRT01A, ref = used)
     fit <- stats::lm(CHG ~ TRT01A + BASE, data = d)
@@ -186,11 +186,10 @@ test_that("adjust: the default is no adjustment, as lm and a t-test give it by h
 test_that("adjust = \"dunnettx\" and the others: emmeans' own numbers", {
   an_skip()
   d <- an_data(three = TRUE)
-  d$TRT01A <- factor(d$TRT01A, levels = c("Drug X", "Drug Y", "Control"))
   em <- emmeans::emmeans(stats::lm(CHG ~ TRT01A + BASE, data = d), ~ TRT01A)
   for (adj in c("dunnettx", "sidak", "bonferroni", "holm", "scheffe")) {
     ref <- as.data.frame(suppressMessages(summary(
-      emmeans::contrast(em, "trt.vs.ctrl", ref = 3L, adjust = adj), infer = TRUE)))
+      emmeans::contrast(em, "trt.vs.ctrl", ref = 1L, adjust = adj), infer = TRUE)))
     k <- an_diffs(adj)
     expect_identical(k$contrast, as.character(ref$contrast), info = adj)
     expect_equal(k$estimate, ref$estimate, info = adj)
@@ -208,10 +207,13 @@ test_that("adjust = \"tukey\": the all-pairs Tukey family, as cardx's pairwise c
   an_skip()
   x <- tfl_template_expand("ancova", c(an_args, list(adjust = "tukey")))
   code <- x$ard$analyses[[3L]]$code
-  expect_match(code, "method = \"pairwise\", adjust = \"tukey\"", fixed = TRUE)
+  expect_match(code, "method = \"revpairwise\", adjust = \"tukey\"", fixed = TRUE)
   expect_no_match(code, "trt.vs.ctrl", fixed = TRUE)
   k <- an_diffs("tukey")
+  # cardx's pairwise contrast with the reference arm last, as before this
+  # argument put it first: the same numbers
   d <- an_data(three = TRUE)
+  d$TRT01A <- factor(d$TRT01A, levels = c("Drug X", "Drug Y", "Control"))
   old <- cardx::ard_emmeans_contrast(d, formula = CHG ~ TRT01A + BASE, method = "lm",
                                      response_type = "continuous")
   g <- function(s) unlist(old$stat[old$stat_name == s])
@@ -279,4 +281,115 @@ test_that("a where with | keeps its brackets: only the parameter's records at th
   expect_gt(nrow(kept), 0L)
   expect_identical(unique(kept$PARAMCD), "SYSBP")
   expect_identical(unique(kept$AVISIT), "CYCLE 2 DAY 1")
+})
+
+# ---- the reference is the first level (#722): Placebo = 1, Drug B = 2, Drug A = 3 ----
+# (alphabetical order is Drug A, Drug B, Placebo, so the default shows the level order)
+rf_arms <- c("Placebo", "Drug B", "Drug A")
+rf_data <- function() {
+  set.seed(722)
+  n <- 60L
+  d <- data.frame(USUBJID = sprintf("DMY-%03d", seq_len(n)),
+                  TRT01A = rep(rf_arms, each = 20L), TRT01AN = rep(1:3, each = 20L),
+                  BASE = stats::rnorm(n, 100, 10))
+  d$CHG <- -0.1 * d$BASE + c(0, -3, -6)[d$TRT01AN] + stats::rnorm(n, 0, 4)
+  # the data step's factor (order_levels()): the arm in the order of TRT01AN
+  d$TRT01A <- factor(d$TRT01A, levels = rf_arms)
+  d
+}
+# the analysis's own code on these data: the message, the rows before the post step
+rf_run <- function(ref = NULL, adjust = "none", d = rf_data()) {
+  a <- c(an_args, if (!is.null(ref)) list(ref = ref), list(adjust = adjust))
+  x <- tfl_template_expand("ancova", a)
+  msg <- character()
+  k <- withCallingHandlers(eval(parse(text = x$ard$analyses[[3L]]$code), list(data = d)),
+                           message = function(m) {
+                             msg <<- c(msg, trimws(conditionMessage(m)))
+                             invokeRestart("muffleMessage")
+                           })
+  one <- function(s) unlist(k$stat[k$stat_name == s])
+  list(msg = msg, x = x, k = data.frame(
+    contrast = unlist(k$variable_level[k$stat_name == "estimate"]),
+    estimate = one("estimate"), se = one("std.error"), df = one("df"),
+    conf.low = one("conf.low"), conf.high = one("conf.high"), p.value = one("p.value")))
+}
+
+test_that("reference: the default is the first level (Placebo), `ref` puts another arm first", {
+  an_skip()
+  d <- rf_data()
+  for (ref in list(NULL, "Placebo", "Drug B")) {
+    used <- ref %||% "Placebo"
+    for (adj in c("none", "tukey")) {
+      r <- rf_run(ref, adj)
+      expect_identical(r$msg, paste("ancova: the reference arm is", used), info = paste(used, adj))
+      # by hand: lm on the arm relevelled to the reference; each other arm minus it
+      d2 <- d
+      d2$TRT01A <- stats::relevel(d2$TRT01A, ref = used)
+      fit <- stats::lm(CHG ~ TRT01A + BASE, data = d2)
+      cf <- summary(fit)$coefficients
+      others <- setdiff(rf_arms, used)
+      expect_identical(r$k$contrast, paste(others, "-", used), info = paste(used, adj))
+      for (arm in others) {
+        i <- r$k$contrast == paste(arm, "-", used)
+        e <- cf[paste0("TRT01A", arm), "Estimate"]
+        se <- cf[paste0("TRT01A", arm), "Std. Error"]
+        tt <- e / se
+        q <- if (adj == "none") stats::qt(0.975, fit$df.residual) else
+          stats::qtukey(0.95, 3, fit$df.residual) / sqrt(2)
+        p <- if (adj == "none") 2 * stats::pt(-abs(tt), fit$df.residual) else
+          stats::ptukey(sqrt(2) * abs(tt), 3, fit$df.residual, lower.tail = FALSE)
+        info <- paste(used, adj, arm)
+        expect_equal(r$k$estimate[i], e, info = info)
+        expect_equal(r$k$se[i], se, info = info)
+        expect_equal(r$k$conf.low[i], e - q * se, info = info)
+        expect_equal(r$k$conf.high[i], e + q * se, info = info)
+        expect_equal(r$k$p.value[i], p, info = info)
+      }
+    }
+  }
+  # the arm minus the reference, whatever the reference: Drug A - Placebo is
+  # the negative of Placebo - Drug A
+  a <- rf_run("Placebo")$k
+  b <- rf_run("Drug A")$k
+  expect_equal(a$estimate[a$contrast == "Drug A - Placebo"],
+               -b$estimate[b$contrast == "Placebo - Drug A"])
+})
+
+test_that("reference: the table says `vs Placebo`, and its columns show the contrast's sign", {
+  an_skip()
+  d <- rf_data()
+  sl <- d[!duplicated(d$USUBJID), ]
+  for (ref in c("Placebo", "Drug B")) {
+    r <- rf_run(ref)
+    a <- c(an_args, list(ref = ref))
+    lab <- Filter(function(it) identical(it$fn, "plan_labels"), r$x$content)
+    expect_length(lab, 1L)
+    expect_match(paste(unlist(lab[[1L]]$args), collapse = "|"),
+                 paste0("Difference in LS means (vs ", ref, ")"), fixed = TRUE)
+    k <- eval(parse(text = r$x$ard$analyses[[3L]]$code), list(data = d))
+    k <- suppressMessages(cards::apply_fmt_fun(
+      cards::update_ard_fmt_fun(k, stat_names = "p.value", fmt_fun = an_pvalue)))
+    m <- cardx::ard_emmeans_emmeans(d, formula = CHG ~ TRT01A + BASE, method = "lm")
+    as_arm <- function(z, what, level) {
+      z$group1_level <- level
+      z$variable <- what
+      z$variable_level <- list(NULL)
+      z
+    }
+    ard <- cards::bind_ard(
+      cards::ard_tabulate(sl, variables = TRT01A),
+      as_arm(m, "LSMEAN", m$variable_level),
+      as_arm(k, "DIFF", lapply(k$variable_level, sub, pattern = " - .*", replacement = "")))
+    t <- an_tab(do.call(tpl_ancova, c(list(ard), a)))
+    expect_true(any(grepl(paste0("vs ", ref, ")"), t$group, fixed = TRUE) |
+                  grepl(paste0("vs ", ref, ")"), t$label, fixed = TRUE)), info = ref)
+    # the reference arm's column has no difference; each other arm's is its estimate
+    diff <- t$label == "Difference (SE)"
+    expect_true(is.na(t[[ref]][diff]), info = ref)
+    for (arm in setdiff(rf_arms, ref)) {
+      i <- r$k$contrast == paste(arm, "-", ref)
+      expect_identical(t[[arm]][diff], sprintf("%.2f (%.2f)", r$k$estimate[i], r$k$se[i]),
+                       info = paste(ref, arm))
+    }
+  }
 })

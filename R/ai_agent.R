@@ -113,6 +113,8 @@
   put(file.path(".github", "copilot-instructions.md"), rd("AGENTS-root.md"), again = TRUE)
   # (the workspace on ai/ alone: Copilot's copy there too, its paths from ai/)
   put(file.path("ai", ".github", "copilot-instructions.md"), rd("AGENTS-root.md"), again = TRUE)
+  # (Claude Code: CLAUDE.md that imports AGENTS.md, and the project settings)
+  out <- c(out, .ai_claude_files(dir, overwrite = overwrite))
   put("run.R", .ai_fill(rd("run.R"), list(who_runs = if (build) {
     paste0("the person runs it; the agent runs it only for a request it built: ",
            "`Rscript ../run.R <request>` from `ai/`")
@@ -732,9 +734,10 @@ tfl_ai_run <- function(study_dir = ".", rtf = TRUE, requests = NULL, rebuild = F
 # ai/requests/index.md in order, and "continue" goes on from the first
 # with a draft missing.
 .ai_agent_prompt <- function(study, templates = FALSE, language = "en", run = "one", build = FALSE) {
-  paste0("The workspace is the ai folder of the study ", study,
+  paste0("First read ai/AGENTS.md in this folder and follow it. ",
+    "The workspace is the ai folder of the study ", study,
     ": every path is from it; open nothing outside it. ",
-    "Read ai/AGENTS.md and follow it. Go on from ai/progress.md: the first request not done. ",
+    "Go on from ai/progress.md: the first request not done. ",
     "Process each request on its own: read ai/progress.md, ai/decisions.md and that request ",
     "(only it), write its drafts", if (isTRUE(templates)) " (a template where one fits, ai/AGENTS.md)" else "",
     ", nothing of the look but the column widths, and mark what you could not settle under ai: confirm. ",

@@ -17,7 +17,10 @@ the answer lists it; else its TOC entry's id -- a part's, its
 number's),
 \code{output_id}, \code{title} (as the answer lists it, else its report file's
 label), \code{population} (its analysis set), \code{split} (how its TOC row is
-split for it), \code{request}, \code{status} (\code{ok}, \code{warning}, \code{error}, \verb{no answer}, \verb{not answered}; \code{draft} for a report file no answer lists),
+split for it), \code{request}, \code{status} (\code{ok}, \code{warning}, \code{error}, \verb{no answer}, \verb{not answered}; \code{draft} for a report file no answer lists).
+A report a request asked for (\code{\link[=tfl_ai_requests]{tfl_ai_requests()}}) that has no
+manifest row and no draft is a row all the same, \verb{not answered}
+(it has no draft to adopt),
 \code{rtf} (its RTF, \code{NA} when none), \code{problem} (why it has none),
 \code{adopted} (\code{no}; \code{yes}; \verb{yes, draft newer} -- the draft differs from
 the study's file adopted from it) and \code{file} (its draft report file).

@@ -52,8 +52,7 @@ test_that("a variant: from's parameters and types, its own defaults; listed with
   # demog itself: summary's parameters with its own defaults
   expect_identical(tt$from[tt$name == "demog"], "summary")
   expect_identical(tt$call[tt$name == "demog_as"], "tfl_tpl")
-  # its look parameters take the study standard's values: no plain "look"
-  expect_false("look" %in% tfl_test_templates("demog_as")$status)
+  expect_identical(nrow(tfl_test_templates("demog_as")), 0L)
   expect_error(tfl_template_variant("x", from = "demog", defaults = list(colour = 1)),
                "no parameter 'colour'")
   expect_error(tfl_template_variant("x", from = "nope"), "no template")
@@ -167,22 +166,4 @@ test_that("ae_soc_pt: the YAML's template:, A and B make the same RTF", {
   expect_match(paste(r$code, collapse = "\n"), "any_row_label = \"Any AE\"", fixed = TRUE)
   expect_identical(r$a, r$yaml)
   expect_identical(r$b, r$yaml)
-})
-
-test_that("a study's spec/templates/*.R: registered when the study is read", {
-  on.exit(tv_drop("demog_study"))
-  d <- tempfile()
-  on.exit(unlink(d, recursive = TRUE), add = TRUE)
-  dir.create(file.path(d, "spec", "templates"), recursive = TRUE)
-  writeLines(c("# the study's demographics",
-               "tflspec::tfl_template_variant(\"demog_study\", from = \"demog\",",
-               "  defaults = list(categorical = \"SEX\"))"),
-             file.path(d, "spec", "templates", "demog.R"))
-  tfl_read_study_spec(d)
-  tt <- tfl_templates()
-  expect_identical(tt$package[tt$name == "demog_study"],
-                   sprintf("study %s: spec/templates/demog.R", basename(d)))
-  expect_identical(tfl_template_params("demog_study")$categorical$default, "SEX")
-  writeLines("stop('no')", file.path(d, "spec", "templates", "bad.R"))
-  expect_error(tfl_read_study_spec(d), "spec/templates/bad.R: no")
 })

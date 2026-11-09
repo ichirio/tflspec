@@ -4,17 +4,17 @@
 \alias{tfl_tpl_lab_abnormal}
 \title{lab_abnormal: the template lab_abnormal}
 \description{
-The table template \code{lab_abnormal}, layout \code{summary}. Its program is one call, \code{tfl_tpl(ard, "lab_abnormal", ...)}; a parameter a report leaves out takes the study standard's value, else the variant's default, else the layout's.
+The table template \code{lab_abnormal}, layout \code{summary}. Its program is one call, \code{tfl_tpl(ard, "lab_abnormal", ...)}; a parameter a report leaves out takes the study standard's value (the Default column names the key) else its fallback, else the variant's default, else the layout's.
 }
 \section{Parameters}{
 \tabular{llllll}{
    Parameter \tab Tier \tab Stage \tab Default \tab Maps to \tab What \cr
-   \code{population} \tab required \tab call \tab  \tab output.population \tab the analysis set's id (SAF) \cr
+   \code{population} \tab required \tab call \tab report: population, required \tab output.population \tab the analysis set's id (SAF) \cr
    \code{subset} \tab other \tab call \tab  \tab  \tab which subjects (R, on the analysis set's ADSL): PART == "Part 1" \cr
    \code{data} \tab other \tab call \tab ADLB \tab  \tab the dataset of records \cr
    \code{params} \tab other \tab call \tab  \tab  \tab the PARAMCD values; NULL: all \cr
    \code{where} \tab other \tab call \tab  \tab  \tab the records kept (R), e.g. ONTRTFL == "Y" \cr
-   \code{by} \tab other \tab call \tab TRT01A \tab settings.treatment \tab the column variable \cr
+   \code{by} \tab other \tab call \tab study: settings.treatment, else TRT01A \tab settings.treatment \tab the column variable \cr
    \code{param_order} \tab other \tab call \tab PARAMN \tab  \tab the parameters' order variable; NULL: by name \cr
    \code{category} \tab other \tab call \tab ANRIND \tab  \tab the category's variable (ANRIND, a criterion's MCRIT1ML) \cr
    \code{levels} \tab other \tab call \tab  \tab  \tab the values counted, in order (lowest first); NULL: the code list's \cr
@@ -24,6 +24,7 @@ The table template \code{lab_abnormal}, layout \code{summary}. Its program is on
    \code{baseline_value} \tab other \tab call \tab NORMAL \tab  \tab the value of 'baseline' that is normal \cr
    \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: <data>_<population> \cr
    \code{heading} \tab other \tab call \tab Parameter / Category \tab  \tab the label column's heading \cr
+   \code{header_n} \tab other \tab call \tab set \tab  \tab the arm headings' N, set apart from the cells' N (a parameter's subjects with a value): "set" (default): the arm's subjects in the analysis set (with 'subset'); "tested": the arm's subjects with a record kept (after 'where', 'params' and 'baseline_normal'), one N for all the parameters; "none": no N.  "denominator" is not one N here, the cells' N differs by parameter \cr
 }
 }
 

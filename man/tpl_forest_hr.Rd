@@ -9,6 +9,7 @@ tpl_forest_hr(
   ard,
   group = "TRT01A",
   subgroups = c("SEX", "AGEGR1"),
+  ref = NULL,
   comparison = NULL,
   favours = NULL,
   x_breaks = NULL,
@@ -28,8 +29,12 @@ tpl_forest_layout(fig, n_by_arm = NULL)
 
 \item{subgroups}{The subgroups (\code{c(SEX, AGEGR1)}), bare or as text.}
 
-\item{comparison}{The arm compared with the reference; \code{NULL}: every
-other arm, each row saying which.}
+\item{ref}{The reference arm the ARD was made with (the template's \code{ref});
+the call only checks that \code{comparison} is not it.  \code{NULL}: the first
+arm in the code list's order, or in its number order.}
+
+\item{comparison}{The one arm to show, compared with the reference (not
+the reference itself); \code{NULL}: every other arm, each row saying which.}
 
 \item{favours}{Two labels under the axis: \verb{Favours <left>} and
 \verb{Favours <right>}; \code{NULL}: none.}

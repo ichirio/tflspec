@@ -4,18 +4,18 @@
 \alias{tfl_tpl_param_change}
 \title{param_change: the template param_change}
 \description{
-The table template \code{param_change}, layout \code{summary}. Its program is one call, \code{tfl_tpl(ard, "param_change", ...)}; a parameter a report leaves out takes the study standard's value, else the variant's default, else the layout's.
+The table template \code{param_change}, layout \code{summary}. Its program is one call, \code{tfl_tpl(ard, "param_change", ...)}; a parameter a report leaves out takes the study standard's value (the Default column names the key) else its fallback, else the variant's default, else the layout's.
 }
 \section{Parameters}{
 \tabular{llllll}{
    Parameter \tab Tier \tab Stage \tab Default \tab Maps to \tab What \cr
-   \code{population} \tab required \tab call \tab  \tab output.population \tab the analysis set's id (SAF) \cr
+   \code{population} \tab required \tab call \tab report: population, required \tab output.population \tab the analysis set's id (SAF) \cr
    \code{subset} \tab other \tab call \tab  \tab  \tab which subjects (R, on the analysis set's ADSL): PART == "Part 1" \cr
    \code{data} \tab required \tab call \tab  \tab  \tab the BDS dataset (ADLB, ADVS, ADEG) \cr
    \code{params} \tab other \tab call \tab  \tab  \tab the PARAMCD values, in the data's order; NULL: all \cr
    \code{visits} \tab other \tab call \tab  \tab  \tab the AVISIT values; NULL: all \cr
    \code{where} \tab other \tab call \tab  \tab  \tab the records kept (R), e.g. ANL01FL == "Y" \cr
-   \code{by} \tab other \tab call \tab TRT01A \tab settings.treatment \tab the column variable \cr
+   \code{by} \tab other \tab call \tab study: settings.treatment, else TRT01A \tab settings.treatment \tab the column variable \cr
    \code{layout} \tab other \tab call \tab cols \tab  \tab cols: each arm's value and change side by side; rows: the value's rows, then the change's, under each visit \cr
    \code{param_order} \tab other \tab call \tab PARAMN \tab  \tab the parameters' order variable; NULL: by name \cr
    \code{visit_order} \tab other \tab call \tab AVISITN \tab  \tab the visits' order variable; NULL: by name \cr
@@ -26,8 +26,8 @@ The table template \code{param_change}, layout \code{summary}. Its program is on
    \code{data_id} \tab other \tab call \tab  \tab  \tab the analysis data's id; NULL: <data>_<population> \cr
    \code{data_label} \tab other \tab call \tab  \tab  \tab the analysis data's label \cr
    \code{statistics} \tab other \tab call \tab N, mean, sd, median, min, max \tab  \tab the statistics the ARD has \cr
-   \code{cells} \tab other \tab call \tab n = \{N:.0f\}; Mean (SD) = \{mean\} (\{sd\}), \{mean\} (-); Media... \tab plan_cells.continuous \tab the rows of a value or a change \cr
-   \code{sd_missing} \tab other \tab call \tab - \tab settings.sd_missing \tab what prints in place of the SD when a group has no SD (n = 1): \{mean\} (<sd_missing>); "" in study.yml or a report's YAML prints the mean alone; no effect when 'cells' is given \cr
+   \code{cells} \tab other \tab call \tab study: plan_cells.continuous, else n = \{N:.0f\}; Mean (SD) = \{mean\} (\{sd\}), \{mean\} (-); Media... \tab plan_cells.continuous \tab the rows of a value or a change \cr
+   \code{sd_missing} \tab other \tab call \tab study: settings.sd_missing, else - \tab settings.sd_missing \tab what prints in place of the SD when a group has no SD (n = 1): \{mean\} (<sd_missing>); "" in study.yml or a report's YAML prints the mean alone; no effect when 'cells' is given \cr
    \code{param_page} \tab other \tab call \tab TRUE \tab  \tab TRUE: a page a parameter, named in the titles by 'param_heading' \cr
    \code{param_heading} \tab other \tab call \tab Parameter: \{value\} \tab  \tab a parameter's page name ('\{value\}': the parameter); the last title line, or where the title line '\{PAGE_HEADING\}' is \cr
    \code{heading} \tab other \tab call \tab  \tab  \tab the label column's heading \cr

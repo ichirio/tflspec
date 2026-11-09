@@ -26,7 +26,10 @@ from the draft: adopting writes over it, with \code{overwrite = TRUE}),
 A data frame, one row a report: \code{output_id}, \code{status}
 (\code{adopted}, \code{same} -- the study's file is the draft already --, \code{kept}
 -- the study's file differs and was left, pass \code{overwrite = TRUE} --,
-\verb{no draft}), \code{file} (the study's file), \code{toc} (\code{added}: its entry was
+\code{skipped (error)} -- the draft has an error and was not copied; the
+error is in \code{problem} --, \verb{no draft}), \code{file} (the study's file; \code{NA}
+for \code{skipped (error)} and \verb{no draft}), \code{problem} (the draft's first
+error for \code{skipped (error)}, else \code{NA}), \code{toc} (\code{added}: its entry was
 added to \code{spec/toc.yml}; with \code{dry_run}, \code{add}).  The adoptions are recorded in
 \code{ai/adopted.csv} (the report, when, the draft's md5).
 }
@@ -38,13 +41,23 @@ them into \verb{ai/output/}.  A draft the person finds finished is adopted:
 copied to \verb{spec/outputs/}, where the study's lists, programs and runs
 read it, and the AI never writes over it.  Adopting again after the AI
 redrafted a report replaces the adopted file only with \code{overwrite = TRUE} -- a person may have changed it since.
-
+}
+\details{
 A draft that has no column widths (it went through neither
 \code{\link[=tfl_ai_collect_answers]{tfl_ai_collect_answers()}} nor \code{run.R}) gets tflspec's first, as
 \code{\link[=tfl_fill_widths]{tfl_fill_widths()}} writes them -- into the draft, so that the adopted
 file is the draft -- with their assumption; a report that has its widths
 is adopted as it is.  Where they cannot be filled, the report is adopted
 without, and a message says so.
+
+A draft with an error -- its YAML cannot be read as a report file, or
+the last collection (\code{\link[=tfl_ai_collect_answers]{tfl_ai_collect_answers()}}, \code{ai/manifest.csv}, when
+not older than the draft) marked it \code{error} -- is never copied, and
+never written over a study file: it is skipped (\code{skipped (error)}), the
+other drafts are adopted, and one message names each skipped report with
+its first error.  Drafts with warnings are adopted.  When every draft
+asked for has an error, nothing is copied (and it is not an R error).
+A report with no draft (a request never answered) is \verb{no draft}, quietly.
 }
 \seealso{
 \code{\link[=tfl_ai_migrate]{tfl_ai_migrate()}}, \code{\link[=tfl_ai_collect_answers]{tfl_ai_collect_answers()}}

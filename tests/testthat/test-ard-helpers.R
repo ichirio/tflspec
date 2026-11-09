@@ -198,6 +198,22 @@ test_that("set_levels() on a column that holds the list's labels already keeps t
   expect_error(e$set_levels(data.frame(WORST = "Mid"), WORST = cl), "WORST has values its code list does not")
 })
 
+test_that("set_levels(): a blank text value is missing, not a value the list lacks; an unknown one still stops", {
+  e <- new.env()
+  sys.source(system.file("helpers", "study_helpers.R", package = "tflspec"), envir = e)
+  cl <- c(LOW = "Low", NORMAL = "Normal", HIGH = "High")
+  d <- data.frame(WORST = c("HIGH", "", NA, "  ", "LOW"), stringsAsFactors = FALSE)
+  r <- e$set_levels(d, WORST = cl)
+  expect_identical(levels(r$WORST), c("Low", "Normal", "High"))
+  expect_identical(is.na(r$WORST), c(FALSE, TRUE, TRUE, TRUE, FALSE))
+  expect_identical(as.character(r$WORST[c(1L, 5L)]), c("High", "Low"))
+  expect_error(e$set_levels(data.frame(WORST = c("", "Mid")), WORST = cl),
+               "WORST has values its code list does not: \"Mid\"", fixed = TRUE)
+  # a factor with the labels already still works, its blank staying missing
+  f <- e$set_levels(r, WORST = cl)
+  expect_identical(f$WORST, r$WORST)
+})
+
 test_that("tag_ard() refuses what is not a cards ARD (a custom analysis's plain data frame)", {
   e <- new.env()
   sys.source(system.file("helpers", "study_helpers.R", package = "tflspec"), envir = e)

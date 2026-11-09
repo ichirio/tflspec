@@ -23,21 +23,46 @@ tfl_param(
 \arguments{
 \item{name}{The parameter's name.}
 
-\item{default}{Its default value; \code{NULL} for none.}
+\item{default}{Its default value; \code{NULL} for none.  With \code{study}, the
+fallback: the value when the study standard has none.  \code{\link[=tfl_unset]{tfl_unset()}}
+(\code{!unset} in a YAML): leave the argument out of the call, so the inner
+function's own default applies (distinct from \code{NA} and \code{NULL}); a
+report's \code{!unset} does the same over any default, and so does a study
+value or fallback that is \code{!unset}.  \code{tfl_tpl_args()} shows it as
+\code{(none)}.}
 
-\item{required}{\code{TRUE} when a report must give it.}
+\item{required}{\code{TRUE} when a report must give it.  With \code{study}: stop
+when neither the report nor the study standard gives it.}
 
 \item{doc}{One line saying what it is.}
 
-\item{study}{Where the study standard's value of it is, taken when the
-report's template SPEC does not give it: \code{"output.population"} (the
-report's \verb{population:}), \code{"settings.treatment"} (\code{study.yml}'s
-\verb{settings: treatment:}), \code{"settings.sd_missing"} (its \verb{settings: sd_missing:}), or \code{"<verb>.<argument>"}
-(\code{"plan_cells.continuous"}: that argument of the study's defaults (and
-pattern) item).  \code{NULL}: tflspec's for its name (\code{population}, \code{by},
-\code{group}), else the template's own default only.  \code{FALSE}: none, for a
-parameter that shares such a name and is not the study's (the listing's
-\code{by}, the variables that divide it).}
+\item{study}{A reference to the study standard: where the study's value
+of this parameter is, taken when the report's template SPEC does not
+give it.  The study standard is the study's own copy of the company
+standard (\code{study.yml}'s \verb{settings:} and \code{spec/defaults.yml}), never
+the company's.  One reader resolves any key, so a new one needs no
+code:
+\itemize{
+\item \code{"settings.<name>"}: \code{study.yml}'s \verb{settings: <name>:}
+(\code{"settings.sd_missing"});
+\item \code{"<verb>.<argument>[.<name>]"}: that argument of the verb's item in
+\code{spec/defaults.yml}'s \verb{content:} (\code{"plan_cells.continuous"}; a
+named-dots argument's own name as the last part); patterns and a
+style set are not read;
+\item \code{"figure_style.<key>"} (\code{"figure_style.km.theme"}: the type, then the
+key): \code{defaults.yml}'s \verb{figure_style:}, else tflspec's built-in
+figure style;
+\item \code{"output.<field>"}: the report's own field (\code{"output.population"}).
+}
+
+Three forms: with \code{default}, the study's value else that fallback;
+with neither \code{default} nor \code{required}, the study's value else the
+parameter is left unset (the inner function's own default applies:
+a rounding); with \code{required = TRUE}, the study's value else a stop.
+\code{NULL}: tflspec's for its name (\code{population}, \code{by}, \code{group}), else the
+template's own default only.  \code{FALSE}: none, for a parameter that
+shares such a name and is not the study's (the listing's \code{by}, the
+variables that divide it).}
 
 \item{type}{What its value is, for an input form: \code{"vars"} (variable
 names), \code{"levels"} (values of a variable), \code{"flag"} (\code{TRUE} /
@@ -78,8 +103,11 @@ A \code{tfl_param}.
 }
 \description{
 One parameter of a template (\code{\link[=tfl_template]{tfl_template()}}): its name, default and
-what it is.  A template has few, and none of them is the look (a font,
-a width, the rows a page): the study's styles and defaults say that.
+what it is.  What the template's purpose and scope decide is fixed; the
+rest is a parameter with a default, the look too (the style, the
+widths, the rows a page): a report changes it with an argument, or with
+a card appended after the template's (the study's styles and defaults
+sit under both).
 }
 \examples{
 tfl_param("population", "SAF", doc = "the analysis set's id")

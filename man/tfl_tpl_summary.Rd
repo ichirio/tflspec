@@ -4,23 +4,23 @@
 \alias{tfl_tpl_summary}
 \title{summary: the template summary}
 \description{
-The table template \code{summary}, layout \code{summary}. Its program is one call, \code{tfl_tpl(ard, "summary", ...)}; a parameter a report leaves out takes the study standard's value, else the variant's default, else the layout's.
+The table template \code{summary}, layout \code{summary}. Its program is one call, \code{tfl_tpl(ard, "summary", ...)}; a parameter a report leaves out takes the study standard's value (the Default column names the key) else its fallback, else the variant's default, else the layout's.
 }
 \section{Parameters}{
 \tabular{llllll}{
    Parameter \tab Tier \tab Stage \tab Default \tab Maps to \tab What \cr
-   \code{population} \tab required \tab call \tab  \tab output.population \tab the analysis set's id (SAF) \cr
+   \code{population} \tab required \tab call \tab report: population, required \tab output.population \tab the analysis set's id (SAF) \cr
    \code{subset} \tab other \tab call \tab  \tab  \tab which subjects (R, on the analysis set's ADSL): PART == "Part 1" \cr
    \code{data} \tab other \tab call \tab ADSL \tab  \tab the dataset \cr
    \code{where} \tab other \tab call \tab  \tab  \tab the records kept (R), for a dataset other than ADSL \cr
-   \code{by} \tab usual \tab call \tab TRT01A \tab settings.treatment \tab the column variable \cr
+   \code{by} \tab usual \tab call \tab study: settings.treatment, else TRT01A \tab settings.treatment \tab the column variable \cr
    \code{continuous} \tab usual \tab call \tab  \tab  \tab the continuous variables, in order \cr
    \code{categorical} \tab usual \tab call \tab  \tab  \tab the categorical variables, in order \cr
    \code{labels} \tab usual \tab call \tab  \tab  \tab each variable's heading; given by name, merged (RACE: ~ drops one) \cr
    \code{order} \tab other \tab call \tab  \tab plan_levels.variable \tab the variables' order (plan_levels(variable = )); NULL: the continuous, then the categorical \cr
-   \code{cells} \tab usual \tab call \tab n = \{N:.0f\}; Mean (SD) = \{mean:.1f\} (\{sd:.2f\}), \{mean:.1f... \tab plan_cells.continuous \tab the rows of each continuous variable \cr
-   \code{sd_missing} \tab other \tab call \tab - \tab settings.sd_missing \tab what prints in place of the SD when a group has no SD (n = 1): \{mean\} (<sd_missing>); "" in study.yml or a report's YAML prints the mean alone; no effect when 'cells' is given \cr
-   \code{count_cell} \tab other \tab call \tab  \tab plan_cells.categorical \tab a categorical value's cell, n (\%) (plan_cells(categorical = )); NULL: the study standard's \cr
+   \code{cells} \tab usual \tab call \tab study: plan_cells.continuous, else n = \{N:.0f\}; Mean (SD) = \{mean:.1f\} (\{sd:.2f\}), \{mean:.1f... \tab plan_cells.continuous \tab the rows of each continuous variable \cr
+   \code{sd_missing} \tab other \tab call \tab study: settings.sd_missing, else - \tab settings.sd_missing \tab what prints in place of the SD when a group has no SD (n = 1): \{mean\} (<sd_missing>); "" in study.yml or a report's YAML prints the mean alone; no effect when 'cells' is given \cr
+   \code{count_cell} \tab other \tab call \tab study: plan_cells.categorical, no fallback \tab plan_cells.categorical \tab a categorical value's cell, n (\%) (plan_cells(categorical = )); NULL: the study standard's \cr
    \code{continuous_statistics} \tab other \tab call \tab N, mean, sd, median, min, max \tab  \tab the continuous statistics the ARD has \cr
    \code{categorical_statistics} \tab other \tab call \tab n, p \tab  \tab the categorical statistics the ARD has; NULL: cards' own \cr
    \code{total} \tab usual \tab call \tab FALSE \tab plan_total \tab TRUE: a Total column (each analysis again without 'by', plan_total()) \cr

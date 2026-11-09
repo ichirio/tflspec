@@ -109,6 +109,15 @@ shell and the SAP differ:
   `Cycle 2 Day 1`, not the data's `CYCLE 2 DAY 1`: a code list or
   labels).
 
+**A rule of the SAP you do not follow is named.**  The SAP's extra
+column ("All Drug A"), its extra variables or overview rows, its "a zero
+category is not shown" where the shell lists the row, its colours and
+line types for a figure, its rule for a visit: when you take the shell's
+instead, or leave the rule out, say which rule in an assumption (`from:
+shell`, and the SAP's section and what it says in the `assumption`), or
+in a `confirm` item when the person should decide.  Naming it is not
+asking: tier (a) stays without a question, but never without the name.
+
 **(b) Decide a default, and ask only to confirm it** -- for what changes
 the numbers when the documents disagree or say nothing: the analysis
 set, the treatment variable, a subset, a flag or a derivation
@@ -200,6 +209,22 @@ stop is *Running the requests*, below: one, or a batch.  For each request:
      written per output; the question says so;
    - a specific programming note or derivation rule over a generic
      footnote (footnotes are often stale), and the question says so.
+   **How to word a question** (so that it is easy to answer):
+   - One decision, one question.  Several open points that are one choice
+     ("follow the shell or the SAP for this table") are asked once, with a
+     list of what changes (the worst rule, the missing baseline, the
+     denominator), not as three questions.
+   - Quote each source in one line ("shell: ...", "SAP 9.4: ..."), and say
+     which number or row changes with the choice.
+   - Give your recommendation with its reason ("SAP 9.4 is newer and
+     specific to the parameter"), not only "the specific one wins".
+   - A point the documents cannot settle (the precision of a lab value):
+     show what the data gives (the decimals seen in the values) and ask
+     the person to confirm it, not to choose blind.
+   - Do not put a change to a document ("the SAP is to be corrected") in
+     the choices.  The person decides the report, not the documents.
+   - A default the person accepts by silence is said again at the end
+     (*Running the requests*): list the defaults and ask "OK to keep all?".
 3. **Ask, or take your default**, as you are run: one request, you ask in
    the chat; in a batch, you take your default and note the question
    (*Running the requests*, below).
@@ -232,7 +257,17 @@ stop is *Running the requests*, below: one, or a batch.  For each request:
    - a **zero count** as the SAP or the standard says (`0`, no percent):
      a guarded cell -- a template's `count_cell: [!r 'n == 0 ~ "0"',
      "{n} ({p:.1f%}%)"]`, a code SPEC's `plan_cells: {categorical: [...]}`
-     with the same list;
+     with the same list.  When the SAP prints a small percent as `<0.1%`,
+     the cell has three lines, the guards first:
+     `[!r 'n == 0 ~ "0"', !r 'p > 0 & p < 0.0005 ~ "{n} (<0.1%)"',
+     "{n} ({p:.1f%}%)"]`;
+   - a **Mean (SD)** cell when the SAP says the SD is not shown for a small
+     n (for example n < 3): a guard before the template, in a template's
+     `cells` or a code SPEC's `plan_cells: {continuous: [...]}`:
+     `Mean (SD): [!r 'N < 3 ~ "{mean:.1f} (-)"', "{mean:.1f} ({sd:.2f})"]`.
+     A template's own default drops the SD only for n = 1; at n = 2 it
+     prints one.  Write the guard even when no group in this study can be
+     that small, unless an assumption says why it cannot be;
    - the **column widths**, always, as a programmer sets them: a table's
      `plan_columns: {widths: {row_label: 3, .values: 1}}`
      (relative; `row_label` is the stub, `.values` every value column), a
@@ -246,7 +281,10 @@ stop is *Running the requests*, below: one, or a batch.  For each request:
      column too (`Age/Sex`, `64/M`: about 10).  The widths are scaled to
      the page, so their sum fits it (a landscape page about 120
      characters): take the room from the long text column (a term), not
-     the short ones.  An
+     the short ones.  A column whose text wraps (a word cut across two
+     lines, `GASTROINTEST` / `INAL`) is too narrow: widen it, taking the
+     room from a column with space to spare.  Widths are for tables and
+     listings only; a figure has none, write none.  An
      assumption, `item: widths`, `from: "programmer convention"` (or
      `from: shell`);
    - the **stub heading** as the shell's (`System Organ Class / Preferred
@@ -412,7 +450,7 @@ Review each draft against this list and fix what fails:
 - a derived timepoint or population a footnote or a document defines is
   made by its rule, not taken from the data;
 - nothing of the look is written but the column widths, which every
-  draft has;
+  table and listing draft has (a figure has none);
 - every free-text value (`label`, titles, footnotes, assumption text) is
   in double quotes -- always one with `: ` or `#` in it;
 - every assumption, confirm item and question is in the chat's language

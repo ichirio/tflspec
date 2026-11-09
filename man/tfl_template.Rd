@@ -52,19 +52,19 @@ templates (\code{\link[=tfl_ai_prepare]{tfl_ai_prepare()}}\code{(templates = TRU
 A template's definition: its kind, the layout it is built on, its few
 parameters (\code{\link[=tfl_param]{tfl_param()}}) and its body, a function of the parameters'
 values and the report's context that returns the report's items.  A
-company's package calls it when it is loaded (\code{.onLoad()}), and so does
-a study's \verb{spec/templates/<name>.R}.  The usual body is a tflspec
+company's package calls it when it is loaded (\code{.onLoad()}); a study has
+no templates of its own (a report of a study changes a template's
+arguments or adds cards after it).  The usual body is a tflspec
 template's with the company's defaults (\code{\link[=tfl_template_params]{tfl_template_params()}} to
 start from, \code{\link[=tfl_template_expand]{tfl_template_expand()}} in the body); see
 \code{\link[=tfl_use_company_templates]{tfl_use_company_templates()}}.
 }
 \details{
 A name already registered is replaced, with a message (a company's
-\code{demog} over tflspec's: the package loaded later wins).  A parameter
-that ends in the look -- the rows a page, column widths, the digits, the
-blank rows, the style -- is warned about: the study's styles and
-defaults say those, and a template parameter would beat them
-(\code{\link[=tfl_test_templates]{tfl_test_templates()}} finds them).
+\code{demog} over tflspec's: the package loaded later wins).  The look -- the
+rows a page, column widths, the digits, the blank rows, the style -- may
+be a parameter with a default, like any other not decided by the
+template's purpose and scope.
 }
 \examples{
 tfl_template("my_ages", kind = "table", layout = "summary",
