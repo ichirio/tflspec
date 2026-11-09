@@ -171,6 +171,32 @@
   .tpl_sd_missing(cells, .tpl_demog_cells, sd_missing, mean = "{mean}", sd = "{sd}")
 }
 
+# `widths = "auto"` of a template report that was resolved with no code list for `by`
+# (the arms are not known then): the arms come from the ARD when the plan is made, as
+# tfl_tpl() takes them, so the report and the program's call agree.  The plan_columns
+# item is where the template puts it (before plan_paginate_rows); a plan_columns the
+# layers or the report give is left alone.
+.tpl_auto_widths <- function(output, data) {
+  tp <- attr(output, "template")
+  if (is.null(tp) || !identical(output$kind, "table") || !is.data.frame(data)) return(output$content)
+  t <- tryCatch(.tpl_get(tp$name, "tfl_content_run()"), error = function(e) NULL)
+  if (is.null(t$params$widths)) return(output$content)
+  w <- if ("widths" %in% names(tp$args)) tp$args$widths else t$params$widths$default
+  by <- tp$args$by
+  if (!identical(w, "auto") || !is.character(by) || length(by) != 1L || !is.null(output$codelists[[by]]) ||
+      !all(c("group1", "group1_level") %in% names(data))) return(output$content)
+  fns <- vapply(output$content, function(it) it$fn, "")
+  if ("plan_columns" %in% fns) return(output$content)
+  arms <- unique(as.character(unlist(data$group1_level[!is.na(data$group1) & data$group1 == by])))
+  arms <- arms[!is.na(arms) & nzchar(arms)]
+  if (!length(arms)) return(output$content)
+  total <- if ("total" %in% names(tp$args)) tp$args$total else t$params$total$default
+  n <- length(arms) + isTRUE(total)
+  it <- tfl_item("plan_columns", list(widths = c(35, rep(65 / n, n))), from = paste0("template:", tp$name))
+  at <- match("plan_paginate_rows", fns)
+  if (is.na(at)) c(output$content, list(it)) else append(output$content, list(it), after = at - 1L)
+}
+
 .tpl_demog_body <- function(a, ctx) {
   cont <- a$continuous
   cat <- a$categorical

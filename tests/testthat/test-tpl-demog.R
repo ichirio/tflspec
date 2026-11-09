@@ -496,6 +496,33 @@ test_that("tfl_tpl: the arms come from the ARD for the widths (stf_t02_demog's a
   expect_equal(b1_item(w, "plan_columns")[[1L]]$args$widths, c(35, rep(65 / 3, 3)))
 })
 
+test_that("widths auto: a report with no code list for the arms takes them from the ARD, as tfl_tpl() does", {
+  d <- b1_folder(na = FALSE)
+  o <- b1_out("stf_t02_demog", b1_fda()[-1L])
+  tfl_write_output(o, file.path(d, "spec", "outputs", "T-9.yml"))
+  st <- tfl_read_study_spec(d)
+  ard <- suppressMessages(tfl_build_ard(st, output_id = "T-9", dir = d, save = FALSE))
+  ro <- tfl_resolve_output(tfl_read_outputs(d)[["T-9"]], st)
+  # (resolved: no plan_columns, the arms are not known)
+  expect_length(b1_item(ro, "plan_columns"), 0L)
+  ro$content <- tflspec:::.tpl_auto_widths(ro, ard)
+  fns <- vapply(ro$content, `[[`, "", "fn")
+  expect_identical(sum(fns == "plan_columns"), 1L)
+  expect_identical(which(fns == "plan_columns") + 1L, which(fns == "plan_paginate_rows"))
+  expect_equal(b1_item(ro, "plan_columns")[[1L]]$args$widths, c(35, rep(65 / 3, 3)))
+  # a plan_columns the report gives is left alone; widths NULL (demog) makes none
+  ro2 <- tfl_resolve_output(tfl_read_outputs(d)[["T-9"]], st)
+  ro2$content <- c(ro2$content, list(tfl_item("plan_columns", list(widths = c(40, 30, 30, 0)))))
+  expect_identical(sum(vapply(tflspec:::.tpl_auto_widths(ro2, ard), `[[`, "", "fn") == "plan_columns"), 1L)
+  o3 <- b1_out("demog", c(list(by = "TRT01A"), list(continuous = "AGE")))
+  tfl_write_output(o3, file.path(d, "spec", "outputs", "T-9.yml"))
+  ro3 <- tfl_resolve_output(tfl_read_outputs(d)[["T-9"]], st)
+  expect_length(b1_item(list(content = tflspec:::.tpl_auto_widths(ro3, ard)), "plan_columns"), 0L)
+  # the run itself
+  p <- suppressMessages(tfl_content_run(ro, ard))
+  expect_s3_class(p, "table_plan")
+})
+
 # ---- !unset, one test per template looping every parameter --------------------
 
 # What each parameter stands for: `args` (over the base) that make the step happen, and
