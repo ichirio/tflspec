@@ -465,6 +465,7 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   out <- list()
   placed <- character()
   seen <- list()
+  used <- list()
   for (it in base) {
     if (!it$fn %in% fns_over) {
       out <- c(out, list(it))
@@ -473,11 +474,22 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
     own <- Filter(function(o) identical(o$fn, it$fn), over)
     kind <- .merge_kind(it$fn)
     if (kind == "stack") {
-      # the layers' items stay; the report's follow the last of them
-      out <- c(out, list(it))
+      # the layers' items stay; the report's follow the last of them.  A
+      # report's item that is the layers' one again (the same arguments; a
+      # plan_append part of the same name) updates it by argument instead of
+      # adding a second (a saved report that repeats its template's part)
+      hit <- .stack_same(it, own, used[[it$fn]])
+      if (length(hit)) {
+        upd <- own[[hit]]
+        upd$args <- .merge_by_arg(it$args, own[[hit]]$args)
+        out <- c(out, list(upd))
+        used[[it$fn]] <- c(used[[it$fn]], hit)
+      } else {
+        out <- c(out, list(it))
+      }
       seen[[it$fn]] <- (seen[[it$fn]] %||% 0L) + 1L
       if (seen[[it$fn]] == n_base[[it$fn]]) {
-        out <- c(out, own)
+        out <- c(out, own[setdiff(seq_along(own), used[[it$fn]])])
         placed <- c(placed, it$fn)
       }
     } else if (!it$fn %in% placed) {
@@ -501,6 +513,19 @@ tfl_resolve_output <- function(output, study, provenance = FALSE) {
   rest <- Filter(function(o) !o$fn %in% placed, over)
   for (o in rest) out <- .insert_by_rank(out, o)
   .table_plan_first(out)
+}
+
+# the report's item of a stacking verb that is the layers' `it` again: a
+# plan_append part of the same `name`, or any other item with the same
+# arguments; its index in `own` (not one already `used`), else none
+.stack_same <- function(it, own, used = integer()) {
+  for (i in setdiff(seq_along(own), used)) {
+    o <- own[[i]]
+    if (identical(it$args, o$args)) return(i)
+    if (identical(it$fn, "plan_append") && !is.null(it$args$name) &&
+        identical(it$args$name, o$args$name)) return(i)
+  }
+  integer()
 }
 
 # the plan verbs that stack several items: an appended card adds to them

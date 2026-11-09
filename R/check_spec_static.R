@@ -68,6 +68,8 @@
       "(Unknown format spec): write \"%s\" (`.1f%%`: times 100, one decimal, no %% sign; ",
       "the sign after the brace)"), bad$text[i], fix))
   }
+  # every cell template: its statistics, its formats (R/check_spec_cells.R)
+  rows[[length(rows) + 1L]] <- .check_cell_rows(o, id)
   # a figure's piece turned off by its argument and added as a layer
   if (identical(o$kind, "figure") && length(o$layers)) {
     lay <- vapply(o$layers, function(l) as.character(l$layer %||% ""), "")
