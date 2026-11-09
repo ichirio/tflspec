@@ -621,7 +621,7 @@ tfl_ai_unpack(a, "study")                           # spec/outputs/<id>.yml, spe
   builder; `tfl_ai_confirm()` lists them, `tfl_check_spec()` shows them as
   `check` rows).  `study.yml`'s `ai:` keys set its rules (`language`,
   `run`, `requests_per_chat`, `carry`, `max_rounds`, `footnotes_at`; the study
-  standard's `spec/defaults.yml` may say them first).  `run` is `one` (the
+  standard's `spec/defaults.yml` may say them first).  `language` is the chat's language (`en` by default, `ja` for Japanese; `tfl_ai_prepare(language = "Japanese")` writes it): the agent's questions, assumptions and confirm items are in it, keys and values stay as they are.  `run` is `one` (the
   default): the agent processes one request -- its questions in the chat, its
   drafts, its build and check -- and stops at a menu (`c` the next request, a
   number N the next N together, `a` all the rest).  `batch` (or the menu's

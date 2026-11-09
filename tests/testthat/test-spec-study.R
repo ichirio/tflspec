@@ -123,8 +123,8 @@ test_that("a named-dots verb (plan_cells) merges by key; another verb is replace
   # the layers' `default` stays, the report's `continuous` map merges by key
   expect_identical(names(cells), c("default", "continuous"))
   expect_identical(cells$continuous, list(n = "{N}", Mean = "{mean}"))
-  # plan_blanks is replaced whole: no `first` any more
-  expect_identical(r$content[[3L]]$args, list(last = FALSE))
+  # plan_blanks merges by argument (an appearance verb): `first` stays, `last` is the report's
+  expect_identical(r$content[[3L]]$args, list(first = TRUE, last = FALSE))
   # plan_labels by key: AGE stays, SEX is the report's
   expect_identical(r$content[[4L]]$args, list(AGE = "Age", SEX = "Gender"))
 })

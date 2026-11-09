@@ -71,12 +71,19 @@ report's skeleton and nothing of its look:
 Not in a draft, ever: header rows (`plan_col_header`, but the N under the
 arm above), pages (`plan_paginate_*`), blank rows, borders, fonts,
 `plan_style`.  The study's defaults and the person's builder do those.
-The column widths are in every draft: `plan_columns: {widths: {...}}`
-for a table, `width:` for a listing column (ai/AGENTS.md, step 5).
+The column widths are in every table and listing draft: `plan_columns:
+{widths: {...}}` for a table, `width:` for a listing column (ai/AGENTS.md,
+step 5).  A figure has no column widths: write none.
 A zero count the SAP or the standard prints as `0`: a guarded list (a
 guard sees the cell's statistics), a template's `count_cell: [!r 'n == 0
 ~ "0"', "{n} ({p:.1f%}%)"]` or a code SPEC's `plan_cells: {categorical:
 [!r 'n == 0 ~ "0"', "{n} ({p:.1f%}%)"]}`.
+When the SAP prints a small percent as `<0.1%`, the cell has three lines:
+`[!r 'n == 0 ~ "0"', !r 'p > 0 & p < 0.0005 ~ "{n} (<0.1%)"', "{n} ({p:.1f%}%)"]`.
+A Mean (SD) cell whose SD is not shown for a small n (the SAP: n < 3) has
+the guard before the template: `Mean (SD): [!r 'N < 3 ~ "{mean:.1f} (-)"',
+"{mean:.1f} ({sd:.2f})"]`.  A template's default drops the SD only at
+n = 1.
 What the study's defaults (`spec/defaults.yml`, the company standard)
 already give -- the cell rules, the digits -- is not written again; a
 cell form or an N the shell shows otherwise is (above).

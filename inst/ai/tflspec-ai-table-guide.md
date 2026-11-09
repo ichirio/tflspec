@@ -16,14 +16,16 @@ Japanese: `tflspec-ai-table-guide-ja.md` in the same folder
 
 ## Recommended AI setup
 
+The recommended models are Fable, Opus and GPT-SOL.
+
 | Level | Setup |
 |---|---|
 | **Verified** | The Claude desktop app's Code tab (Claude Code) with Opus or Fable. VS Code + GitHub Copilot (agent mode) with Fable, run on a company PC on 2026-11-02. |
 | **Expected to work, not yet tested** | VS Code + Copilot with Opus (Opus was tested on Claude Code only). The Claude Code extension for VS Code (the same engine as the Code tab; not separately verified). Cursor and other agent tools that can read and write files in the study folder and run `Rscript`: follow B's flow. |
-| **Not verified** | GPT models in Copilot: do not treat them as equivalent to Opus or Fable. |
+| **Not verified** | Other GPT models in Copilot: do not treat them as equivalent to Fable, Opus or GPT-SOL. |
 | **Not recommended** | Sonnet and Haiku. In the trials Sonnet decided a rule that changes the numbers wrongly (a shift table's "worst" value, 2 of 3 runs) and broke the kit's rules; Haiku asks well but its repairs are guesses. |
 
-Choose a plan where Opus or Fable can be selected.
+Choose a plan where Fable, Opus or GPT-SOL can be selected.
 
 Requirements:
 1. Open the study's `ai` folder as the workspace, so that the agent works
@@ -43,7 +45,7 @@ Requirements:
 
 1. Open the Code tab. Under the prompt box, click the project folder control
    and choose the study's `ai` folder (the one with `agent_prompt.md`).
-2. In the model picker (under the prompt box), choose Opus or Fable.
+2. In the model picker (under the prompt box), choose Fable, Opus or GPT-SOL.
 3. Paste the text of `ai/agent_prompt.md` as the first message.
 4. Answer its questions in the chat. At each stop reply `c` (the next
    request), a number such as `5` (the next 5 together) or `a` (all the rest).
