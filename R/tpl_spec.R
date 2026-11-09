@@ -455,7 +455,11 @@ tfl_template_to_spec <- function(output, study) {
     }
     if (.arg_keyed(it$fn, items) && length(keys)) {
       for (s in unique(af[not_tpl])) {
-        rest <- c(rest, list(tfl_item(it$fn, it$args[keys[af == s]], from = s)))
+        take <- af == s
+        # (rtfreporter's plan_stub() always sets `before`, FALSE by default: a
+        # second call would put it back, so the call says it again)
+        if (identical(it$fn, "plan_stub")) take <- take | keys == "before"
+        rest <- c(rest, list(tfl_item(it$fn, it$args[keys[take]], from = s)))
       }
     } else if (!identical(it$from, tag) && !same_as_tpl(it)) {
       rest <- c(rest, list(it))

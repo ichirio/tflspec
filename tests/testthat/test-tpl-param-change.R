@@ -431,9 +431,8 @@ test_that("a table with its own plan_stub and no name takes the layers' name; ex
   ro <- tfl_resolve_output(tfl_output("T-N", "table", population = "SAF", extends = "defaults",
                                       content = list(tfl_item("plan_stub", list(indent = 2L)))),
                            pch_study())
-  expect_identical(st(ro)[[1L]]$args, list(indent = 2L, name = "row_label"))
-  # the layers' item as it is, the report's other arguments kept; only `name` comes over
-  expect_false("before" %in% names(st(ro)[[1L]]$args))
+  # merged by argument: the layers' item (name, before), the report's indent on top
+  expect_identical(st(ro)[[1L]]$args, list(name = "row_label", before = TRUE, indent = 2L))
   # built: the study's header names `row_label` (it failed on the stub's old name), and the
   # program says the name
   saf <- adsl[adsl$SAFFL == "Y", ]
@@ -449,7 +448,7 @@ test_that("a table with its own plan_stub and no name takes the layers' name; ex
     rtfreporter::rtf_tables(rtfreporter::rtf_document(), rtfreporter::plan_apply(p)), f)))
   expect_match(paste(readLines(f), collapse = "\n"), "Characteristic\\cell", fixed = TRUE)
   expect_match(paste(tfl_content_code(ro), collapse = "\n"),
-               "plan_stub(indent = 2, name = \"row_label\")", fixed = TRUE)
+               "plan_stub(name = \"row_label\", before = TRUE, indent = 2)", fixed = TRUE)
   # no plan_stub below (extends: none): as written
   rn <- tfl_resolve_output(tfl_output("T-N", "table", population = "SAF", extends = "none",
                                       content = list(tfl_item("plan_stub", list(indent = 2L)))),
