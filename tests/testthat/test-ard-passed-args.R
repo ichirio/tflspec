@@ -18,8 +18,15 @@ test_that("each passed-on argument is one of the function it is passed to", {
     if (!requireNamespace(pkg, quietly = TRUE)) next
     f <- utils::getS3method(fn, "default", optional = TRUE, envir = asNamespace(pkg))
     if (is.null(f)) f <- getExportedValue(pkg, fn)
-    expect_true(d$arg[i] %in% names(formals(f)),
-                info = paste(d$passed_to[i], d$arg[i]))
+    has <- names(formals(f))
+    # (car::Anova(white.adjust =) is Anova.lm()'s, error.estimate Anova.glm()'s)
+    for (cl in c("lm", "glm")) {
+      m <- utils::getS3method(fn, cl, optional = TRUE, envir = asNamespace(pkg))
+      if (identical(d$passed_to[i], "car::Anova") && is.function(m)) {
+        has <- c(has, names(formals(m)))
+      }
+    }
+    expect_true(d$arg[i] %in% has, info = paste(d$passed_to[i], d$arg[i]))
   }
 })
 
@@ -332,4 +339,100 @@ test_that("a row's pairwise contrasts are each pair of arms' difference (emmeans
   fit <- stats::lm(AGE ~ factor(TRT01A), data = pop)
   p <- unname(unlist(ard$stat[ard$stat_name == "p.value"]))
   expect_true(any(abs(p - summary(fit)$coefficients[2L, 4L]) < 1e-8))
+})
+
+test_that("Hodges-Lehmann, the CMH odds ratio's level, Fisher's options and a robust ANCOVA are judged", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  row <- function(method, args, by = "TRT01A", variables = "AGE", strata = NULL)
+    list(method = method, population_id = "SAF", by = by, variables = variables,
+         strata = strata, args = args)
+  # the values, by kind (and a floor)
+  expect_warning(exact_spec(row("cardx::ard_stats_wilcox_test", "conf.int = \"yes\"", "SEX")),
+                 "ard_stats_wilcox_test\\(conf.int = \\) is TRUE or FALSE")
+  expect_warning(exact_spec(row("cardx::ard_stats_wilcox_test", "digits.rank = 0", "SEX")),
+                 "digits.rank = \\) is a number above 0")
+  expect_warning(exact_spec(row("cardx::ard_stats_mantelhaen_test", "conf.level = 90",
+                                variables = "EFFFL", by = "SEX", strata = "AGEGR1")),
+                 "ard_stats_mantelhaen_test\\(conf.level = \\) is between 0 and 1")
+  expect_warning(exact_spec(row("cardx::ard_stats_fisher_test", "or = 0", variables = "SEX")),
+                 "ard_stats_fisher_test\\(or = \\) is a number above 0")
+  expect_warning(exact_spec(row("cardx::ard_stats_fisher_test", "workspace = 0", variables = "SEX")),
+                 "workspace = \\) is a number at least 1")
+  expect_warning(exact_spec(row("cardx::ard_stats_fisher_test", "B = 0", variables = "SEX")),
+                 "B = \\) is a number at least 1")
+  expect_no_warning(exact_spec(row("cardx::ard_stats_fisher_test",
+    "conf.int = FALSE, or = 2, workspace = 2e7, hybrid = TRUE", variables = "SEX")))
+  expect_no_warning(exact_spec(row("cardx::ard_stats_paired_wilcox_test",
+    "conf.int = TRUE, digits.rank = 7", by = NULL)))
+  # car::Anova(white.adjust =): FALSE, TRUE or one of the HC types
+  p <- function(code) .arg_value_problem("white.adjust", str2lang(code), "choice",
+                                         "FALSE | TRUE | hc3 | hc0 | hc1 | hc2 | hc4")
+  expect_null(p("TRUE"))
+  expect_null(p("\"hc3\""))
+  expect_match(p("\"HC3\""), "is one of \"FALSE\", \"TRUE\", \"hc3\"")
+  a <- tfl_ard_args("cardx::ard_car_anova")
+  expect_identical(a$kind[a$arg == "white.adjust"], "choice")
+  expect_identical(a$kind[a$arg == "singular.ok"], "logical")
+})
+
+test_that("a catalogued name car's method of the model does not have is said", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("car")
+  anova_row <- function(args) list(method = "anova", population_id = "SAF",
+                                   args = args)
+  # Anova.glm() has no white.adjust: the robust covariance would be ignored
+  expect_warning(exact_spec(anova_row(paste(
+    "x = glm(I(SEX == \"F\") ~ TRT01A, family = binomial, data = data),",
+    "white.adjust = \"hc3\""))),
+    "has no argument `white.adjust`, and passes it on to car's Anova.glm\\(\\)")
+  # Anova.lm() has no test.statistic (an lm's test is F)
+  expect_warning(exact_spec(anova_row(
+    "x = lm(AGE ~ TRT01A + SEX, data = data), test.statistic = \"Wald\"")),
+    "has no argument `test.statistic`, and passes it on to car's Anova.lm\\(\\)")
+  expect_no_warning(exact_spec(anova_row(
+    "x = lm(AGE ~ TRT01A + SEX, data = data), white.adjust = TRUE, singular.ok = FALSE")))
+})
+
+test_that("the passed-on Hodges-Lehmann estimate, CMH level, Fisher's odds ratio and HC3 ANCOVA reach their functions", {
+  skip_on_cran()
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("dplyr")
+  skip_if_not_installed("broom", "1.0.8")
+  adam <- exact_data()
+  dir <- exact_dir(adam)
+  on.exit(unlink(dir, recursive = TRUE))
+  run <- function(r) suppressMessages(tfl_build_ard(exact_spec(c(
+    list(population_id = "SAF"), r)), dir = dir, save = FALSE))
+  stat <- function(ard, nm) unname(unlist(ard$stat[ard$stat_name == nm]))
+  pop <- adam$ADSL[adam$ADSL$SAFFL == "Y", ]
+  # Wilcoxon: the Hodges-Lehmann shift and its interval (conf.int = TRUE)
+  ard <- run(list(method = "cardx::ard_stats_wilcox_test", by = "SEX",
+                  variables = "AGE", args = "conf.int = TRUE, exact = FALSE"))
+  want <- stats::wilcox.test(AGE ~ SEX, data = pop, conf.int = TRUE, exact = FALSE)
+  expect_equal(stat(ard, "estimate"), unname(want$estimate), tolerance = 1e-8)
+  expect_equal(stat(ard, "conf.low"), want$conf.int[1L], tolerance = 1e-8)
+  # CMH: the common odds ratio's 90% interval
+  ard <- run(list(method = "cardx::ard_stats_mantelhaen_test", by = "SEX",
+                  variables = "EFFFL", strata = "AGEGR1", args = "conf.level = 0.9"))
+  want <- stats::mantelhaen.test(table(pop$SEX, pop$EFFFL, pop$AGEGR1),
+                                 conf.level = 0.9)
+  expect_equal(stat(ard, "conf.low"), want$conf.int[1L], tolerance = 1e-8)
+  expect_equal(stat(ard, "conf.high"), want$conf.int[2L], tolerance = 1e-8)
+  # Fisher: the null odds ratio moves the p-value, not the estimate
+  ard <- run(list(method = "cardx::ard_stats_fisher_test", by = "SEX",
+                  variables = "EFFFL", args = "or = 2"))
+  want <- stats::fisher.test(pop$EFFFL, pop$SEX, or = 2)
+  expect_equal(stat(ard, "p.value"), want$p.value, tolerance = 1e-10)
+  # ANCOVA with the HC3 covariance (car::Anova.lm(white.adjust = "hc3"))
+  skip_if_not_installed("car")
+  ard <- run(list(method = "anova", args = paste(
+    "x = lm(AGE ~ TRT01A + BMIBL, data = data), type = \"III\", white.adjust = \"hc3\"")))
+  fit <- stats::lm(AGE ~ TRT01A + BMIBL, data = pop)
+  want <- suppressMessages(car::Anova(fit, type = "III", white.adjust = "hc3"))
+  got <- ard[ard$variable == "TRT01A" & ard$stat_name == "p.value", ]
+  expect_equal(unname(unlist(got$stat)), want["TRT01A", "Pr(>F)"], tolerance = 1e-10)
+  expect_false(isTRUE(all.equal(unname(unlist(got$stat)),
+    car::Anova(fit, type = "III")["TRT01A", "Pr(>F)"])))
 })

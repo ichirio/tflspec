@@ -167,6 +167,36 @@ arguments of each (pairwise contrasts, reference rows, labels; left out:
 | cardx model arguments | 100.0% | 100.0% |
 | weight-3 functions only | 99.4% | 100.0% |
 
+2026-11-09 (wider scope; cards 0.9.0, cardx 0.3.4, still the CRAN
+versions; car 3.1, survival 3.8): 14 more passed-on arguments of 7
+functions that clinical tables use -- the Wilcoxon tests' `conf.int` (the
+Hodges-Lehmann estimate and its interval) and `digits.rank`, the CMH
+test's `conf.level` (the common odds ratio's interval), Fisher's
+`conf.int`, `or`, `workspace` and `hybrid`, and `car::Anova()`'s
+`white.adjust` (a robust, HC3 ANCOVA), `singular.ok` and
+`error.estimate`.  Left out: `car::Anova(vcov. =, error.df =)` (a matrix
+or function of the program's), `stats::wilcox.test(tol.root =)`,
+`effectsize`'s `verbose`, the tests' `subset` / `na.action` (the
+population's and the derivation's), `chisq.test(p =, rescale.p =)` and
+`prop.test(p =)` (one-sample forms cardx does not run).
+
+| Scope (2026-11-09, wider) | 2026-11-09 before | 2026-11-09 after |
+|---|---:|---:|
+| **cards / cardx, weighted** | **98.8%** (496 yes / 14 partial) | **100.0%** (510 / 0) |
+| cards ard_*() | 100.0% | 100.0% |
+| cardx ard_*() | 97.6% (278 / 14) | 100.0% (292 / 0) |
+| cards post helpers | 100.0% | 100.0% |
+| cards code helpers | 100.0% | 100.0% |
+| cardx CI helpers | 100.0% | 100.0% |
+| cardx model arguments | 100.0% | 100.0% |
+| weight-3 functions only | 98.5% | 100.0% |
+
+(2026-11-09 before: this branch before the run (tflspec@next 0890a63
+merged) on the wider scope -- the 14 arguments could be written as R in
+`args` and reached their function, but were not described and their
+values not judged: partial.  On the 2026-11-08 scope the run starts and
+ends at 100.0%.)
+
 (2026-11-08 before: tflspec@next 8a948f7 on the wider scope -- the 24
 arguments could be written as R in `args` and reached tidy_plus_plus(),
 but were not described and their values not judged: partial.  On the
@@ -206,6 +236,35 @@ function, but the catalog did not describe it and its value was not
 judged: partial.  2026-10-31 before: the same, with
 `update_ard_fmt_fun()` in the `post` scope -- written as R in `post`, its
 names checked, its values not judged.)
+
+### Added 2026-11-09
+
+* **The Hodges-Lehmann estimate** (`ard_stats_wilcox_test()`,
+  `ard_stats_paired_wilcox_test()`, `ard_stats_wilcox_test_onesample()`
+  with `conf.int = TRUE`): the location shift (median difference) and its
+  interval besides the p-value; `digits.rank` (above 0) makes values equal
+  but for floating point ties.  A test compares the row's estimate and
+  lower limit with `stats::wilcox.test(conf.int = TRUE)`.
+* **The CMH common odds ratio's level** (`ard_stats_mantelhaen_test(conf.level
+  =)`, between 0 and 1); a test compares the 90% limits with
+  `stats::mantelhaen.test()`.
+* **Fisher's options**: `conf.int` (the conditional odds ratio),
+  `or` (the null odds ratio, above 0), `workspace` (a whole number, 1 or
+  more: a grade by arm table that stops with FEXACT error 7 needs
+  `workspace = 2e7`), `hybrid`.  `B` (fisher.test() and chisq.test()) is
+  1 or more.
+* **A robust ANCOVA** (`ard_car_anova(white.adjust =)`, car's
+  Anova.lm(): FALSE, TRUE or one of `"hc3"`, `"hc0"` ... `"hc4"` -- the
+  heteroscedasticity-consistent covariance the covariate-adjustment
+  guidances suggest), `singular.ok`, and a GLM's F test's
+  `error.estimate`.  A test compares the treatment p-value with
+  `car::Anova(type = "III", white.adjust = "hc3")` and with the
+  model-based one (they differ).  A choice that is TRUE / FALSE is judged
+  as written (`white.adjust = TRUE`).
+* **A catalogued name car's method of the model does not have is said**
+  (gap 4): `white.adjust =` with `x = glm(...)` (Anova.glm() would ignore
+  it: no robust covariance), `test.statistic =` with `x = lm(...)`.  Before,
+  a name the catalog described was taken whatever the model.
 
 ### Added 2026-11-08
 
@@ -522,7 +581,8 @@ Every argument in scope is described and its value judged (since
    is not.
 4. A passed-on argument's name is checked (since 2026-11-04) when it
    reaches a stats or survival function, (since 2026-11-05) the
-   `car::Anova()` method of a model written in `x` and (since 2026-11-08)
+   `car::Anova()` method of a model written in `x` (since 2026-11-09 a
+   catalogued name too: `white.adjust =` with a glm) and (since 2026-11-08)
    `broom.helpers::tidy_plus_plus()` with broom's tidier of the model; one
    passed to effectsize or smd, which pass `...` on again, is not.  The catalog
    names the arguments clinical tables use, not every argument of the
@@ -591,6 +651,12 @@ Percentage: yes counts 1, partial 0.5.
 | 2026-11-06 before / after | 51.6% (326 / 19 / 305 of 650) | 59.0% (326 / 19 / 224 of 569) | 41 / 7 / 67 |
 | 2026-11-07 before / after | 51.6% (326 / 19 / 305 of 650) | 59.0% (326 / 19 / 224 of 569) | 41 / 7 / 67 |
 | 2026-11-08 before / after | 51.7% (327 / 19 / 305 of 651) | 59.0% (327 / 19 / 224 of 570) | 41 / 7 / 67 |
+| 2026-11-09 before / after | 51.7% (327 / 19 / 305 of 651) | 59.0% (327 / 19 / 224 of 570) | 41 / 7 / 67 |
+
+(2026-11-09: rtfreporter@next b1182ae (its changes since 29e1c24 are the
+header N read from a total stated by group, a maintainer change, tests and
+an internal helper dropped: no new exported argument) and tflspec@next
+0890a63 merged; the run went to cards / cardx -- the table is unchanged.)
 
 (2026-11-08: rtfreporter@next 29e1c24 (its changes since ccbcfe4 are
 pagination under `page_by` -- a listing record kept whole, a stub's

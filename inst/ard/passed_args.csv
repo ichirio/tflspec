@@ -43,6 +43,9 @@ cardx::ard_regression_basic,categorical_terms_pattern,broom.helpers::tidy_plus_p
 cardx::ard_regression_basic,interaction_sep,broom.helpers::tidy_plus_plus,""" * """,text,"The text between the terms of an interaction's label: "" * "" (default).",
 cardx::ard_car_anova,type,car::Anova,"""II""",choice,"The type of the sums of squares: ""II"" (default) or ""III"" (2 or 3).",II | III | 2 | 3
 cardx::ard_car_anova,test.statistic,car::Anova,,choice,"The test statistic of a generalized linear model: ""LR"" (default), ""Wald"" or ""F"".",LR | Wald | F
+cardx::ard_car_anova,white.adjust,car::Anova,FALSE,choice,"A linear model's (ANCOVA's) heteroscedasticity-consistent (sandwich) covariance: FALSE (default) the model's own; TRUE or ""hc3"" HC3, ""hc0"", ""hc1"", ""hc2"", ""hc4"" the others (car::Anova.lm()).",FALSE | TRUE | hc3 | hc0 | hc1 | hc2 | hc4
+cardx::ard_car_anova,singular.ok,car::Anova,TRUE,logical,"TRUE (default for type II): a model with aliased (inestimable) terms is tested on the terms that are estimable; FALSE: it stops.",
+cardx::ard_car_anova,error.estimate,car::Anova,"""pearson""",choice,"A generalized linear model's F test (test.statistic = ""F""): the dispersion from the Pearson residuals (""pearson"", default), the model's (""dispersion"") or the deviance (""deviance"") (car::Anova.glm()).",pearson | dispersion | deviance
 cardx::ard_stats_t_test,alternative,stats::t.test,"""two.sided""",choice,"The alternative hypothesis: two.sided (default), less or greater.",two.sided | less | greater
 cardx::ard_stats_t_test,mu,stats::t.test,0,number,The mean (of the difference) under the null hypothesis (default 0).,
 cardx::ard_stats_t_test,var.equal,stats::t.test,FALSE,logical,TRUE: the two groups have the same variance (Student's t test); FALSE (default): Welch's.,
@@ -54,25 +57,36 @@ cardx::ard_stats_wilcox_test,alternative,stats::wilcox.test,"""two.sided""",choi
 cardx::ard_stats_wilcox_test,mu,stats::wilcox.test,0,number,The location shift under the null hypothesis (default 0).,
 cardx::ard_stats_wilcox_test,exact,stats::wilcox.test,NULL,logical,TRUE: an exact p-value; FALSE: the normal approximation (default: exact for fewer than 50 values and no ties).,
 cardx::ard_stats_wilcox_test,correct,stats::wilcox.test,TRUE,logical,TRUE (default): the continuity correction in the normal approximation.,
+cardx::ard_stats_wilcox_test,conf.int,stats::wilcox.test,FALSE,logical,"TRUE: the Hodges-Lehmann estimate of the location shift and its confidence interval (conf.level) too; FALSE (default): the p-value only.",
+cardx::ard_stats_wilcox_test,digits.rank,stats::wilcox.test,Inf,number,"The values rounded to this many significant digits before they are ranked, so that values equal but for floating point are ties (default Inf: not rounded).",
 cardx::ard_stats_paired_wilcox_test,alternative,stats::wilcox.test,"""two.sided""",choice,"The alternative hypothesis: two.sided (default), less or greater.",two.sided | less | greater
 cardx::ard_stats_paired_wilcox_test,mu,stats::wilcox.test,0,number,The location shift under the null hypothesis (default 0).,
 cardx::ard_stats_paired_wilcox_test,exact,stats::wilcox.test,NULL,logical,TRUE: an exact p-value; FALSE: the normal approximation (default: exact for fewer than 50 values and no ties).,
 cardx::ard_stats_paired_wilcox_test,correct,stats::wilcox.test,TRUE,logical,TRUE (default): the continuity correction in the normal approximation.,
+cardx::ard_stats_paired_wilcox_test,conf.int,stats::wilcox.test,FALSE,logical,"TRUE: the Hodges-Lehmann estimate of the (pseudo)median difference and its confidence interval (conf.level) too; FALSE (default): the p-value only.",
+cardx::ard_stats_paired_wilcox_test,digits.rank,stats::wilcox.test,Inf,number,"The values rounded to this many significant digits before they are ranked, so that values equal but for floating point are ties (default Inf: not rounded).",
 cardx::ard_stats_wilcox_test_onesample,alternative,stats::wilcox.test,"""two.sided""",choice,"The alternative hypothesis: two.sided (default), less or greater.",two.sided | less | greater
 cardx::ard_stats_wilcox_test_onesample,mu,stats::wilcox.test,0,number,The location shift under the null hypothesis (default 0).,
 cardx::ard_stats_wilcox_test_onesample,exact,stats::wilcox.test,NULL,logical,TRUE: an exact p-value; FALSE: the normal approximation (default: exact for fewer than 50 values and no ties).,
 cardx::ard_stats_wilcox_test_onesample,correct,stats::wilcox.test,TRUE,logical,TRUE (default): the continuity correction in the normal approximation.,
+cardx::ard_stats_wilcox_test_onesample,conf.int,stats::wilcox.test,FALSE,logical,"TRUE: the Hodges-Lehmann estimate of the (pseudo)median and its confidence interval (conf.level) too; FALSE (default): the p-value only.",
+cardx::ard_stats_wilcox_test_onesample,digits.rank,stats::wilcox.test,Inf,number,"The values rounded to this many significant digits before they are ranked, so that values equal but for floating point are ties (default Inf: not rounded).",
 cardx::ard_stats_chisq_test,correct,stats::chisq.test,TRUE,logical,TRUE (default): Yates' continuity correction of a 2 x 2 table.,
 cardx::ard_stats_chisq_test,simulate.p.value,stats::chisq.test,FALSE,logical,TRUE: the p-value by Monte Carlo simulation (B replicates).,
 cardx::ard_stats_chisq_test,B,stats::chisq.test,2000,number,The number of replicates of a simulated p-value (default 2000).,
 cardx::ard_stats_fisher_test,alternative,stats::fisher.test,"""two.sided""",choice,"The alternative hypothesis: two.sided (default), less or greater.",two.sided | less | greater
 cardx::ard_stats_fisher_test,simulate.p.value,stats::fisher.test,FALSE,logical,TRUE: the p-value of a table larger than 2 x 2 by Monte Carlo simulation (B replicates).,
 cardx::ard_stats_fisher_test,B,stats::fisher.test,2000,number,The number of replicates of a simulated p-value (default 2000).,
+cardx::ard_stats_fisher_test,conf.int,stats::fisher.test,TRUE,logical,"TRUE (default): a 2 x 2 table's conditional odds ratio and its confidence interval (conf.level); FALSE: the p-value only.",
+cardx::ard_stats_fisher_test,or,stats::fisher.test,1,number,"A 2 x 2 table's odds ratio under the null hypothesis, above 0 (default 1).",
+cardx::ard_stats_fisher_test,workspace,stats::fisher.test,200000,number,"The workspace of the network algorithm for a table larger than 2 x 2, a whole number (default 200000): raise it (2e7) when the test stops with 'FEXACT error 7' (a grade by arm table).",
+cardx::ard_stats_fisher_test,hybrid,stats::fisher.test,FALSE,logical,"TRUE: a table larger than 2 x 2 by the hybrid approximation (Cochran's conditions); FALSE (default): exact.",
 cardx::ard_stats_prop_test,alternative,stats::prop.test,"""two.sided""",choice,"The alternative hypothesis: two.sided (default), less or greater.",two.sided | less | greater
 cardx::ard_stats_prop_test,correct,stats::prop.test,TRUE,logical,TRUE (default): Yates' continuity correction.,
 cardx::ard_stats_mantelhaen_test,alternative,stats::mantelhaen.test,"""two.sided""",choice,"The alternative hypothesis: two.sided (default), less or greater.",two.sided | less | greater
 cardx::ard_stats_mantelhaen_test,correct,stats::mantelhaen.test,TRUE,logical,TRUE (default): the continuity correction of the 2 x 2 x K statistic.,
 cardx::ard_stats_mantelhaen_test,exact,stats::mantelhaen.test,FALSE,logical,TRUE: the exact conditional test of a 2 x 2 x K table.,
+cardx::ard_stats_mantelhaen_test,conf.level,stats::mantelhaen.test,0.95,number,"Confidence level of the common odds ratio's interval (the CMH estimate of a 2 x 2 x K table), between 0 and 1 (0.95).",
 cardx::ard_stats_mcnemar_test,correct,stats::mcnemar.test,TRUE,logical,TRUE (default): the continuity correction.,
 cardx::ard_stats_mcnemar_test_long,correct,stats::mcnemar.test,TRUE,logical,TRUE (default): the continuity correction.,
 cardx::ard_stats_oneway_test,var.equal,stats::oneway.test,FALSE,logical,TRUE: the groups have the same variance (the F test); FALSE (default): Welch's.,

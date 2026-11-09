@@ -191,11 +191,18 @@
     if (arg %in% c("conf.level", "conf.int") && any(v <= 0 | v >= 1)) {
       return(sprintf("is between 0 and 1 (0.95 for 95%%); got %s", shown))
     }
+    lo <- .ard_number_floor[[paste0(fn, "$", arg)]]
+    if (!is.null(lo) && any(if (lo[2L] > 0) v <= lo[1L] else v < lo[1L])) {
+      return(sprintf("is a number %s %s; got %s",
+                     if (lo[2L] > 0) "above" else "at least", lo[1L], shown))
+    }
   }
   if (identical(kind, "choice") && nzchar(choices %||% "")) {
     ch <- .split_bar(choices)
-    # a number among the choices as a number (car::Anova(type = 3))
-    if (!(is.character(v) || is.numeric(v)) || !all(as.character(v) %in% ch)) {
+    # a number among the choices as a number (car::Anova(type = 3)), TRUE /
+    # FALSE among them as they are (car::Anova(white.adjust = TRUE))
+    if (!(is.character(v) || is.numeric(v) || is.logical(v)) ||
+        !all(as.character(v) %in% ch)) {
       return(sprintf("is one of %s; got %s",
                      paste0("\"", ch, "\"", collapse = ", "), shown))
     }
@@ -218,6 +225,19 @@
   }
   NULL
 }
+
+# The passed-on numbers with a floor, by `function$arg`: c(floor, 1 when
+# the floor itself is not allowed).  fisher.test()'s odds ratio under the
+# null is above 0, its workspace and the replicates of a simulated p-value
+# 1 or more, wilcox.test()'s digits of the ranks above 0.
+.ard_number_floor <- list(
+  `ard_stats_fisher_test$or` = c(0, 1),
+  `ard_stats_fisher_test$workspace` = c(1, 0),
+  `ard_stats_fisher_test$B` = c(1, 0),
+  `ard_stats_chisq_test$B` = c(1, 0),
+  `ard_stats_wilcox_test$digits.rank` = c(0, 1),
+  `ard_stats_paired_wilcox_test$digits.rank` = c(0, 1),
+  `ard_stats_wilcox_test_onesample$digits.rank` = c(0, 1))
 
 # A format string cards takes for a statistic (alias_as_fmt_fun()): an x,
 # then x's, at most one point and an optional % at the end ("xx",
@@ -474,7 +494,8 @@
 # The same for cardx::ard_car_anova(), which passes `...` to car::Anova():
 # since 2026-11-05 a name is looked for in the method of the model that
 # `x` fits (`x = lm(...)`: car's Anova.lm(); glm, coxph, aov, mlm ... the
-# same), whose `...` takes nothing else -- `tpye = "III"` would be ignored
+# same), whose `...` takes nothing else (since 2026-11-09 a catalogued name
+# too: `white.adjust =` with a glm) -- `tpye = "III"` would be ignored
 # and give type II.  A name R matches by its beginning (`typ = ` is
 # `type = `) is the argument's.  A model by a name (`x = fit`), or one car has no
 # method for, is not judged.
@@ -489,8 +510,10 @@
   if (!is.function(m)) return(character())
   fm <- names(formals(m))
   has <- setdiff(unique(c(names(formals(car::Anova)), fm)), "...")
-  # (`typ = "III"` is `type =`, as R matches it)
-  bad <- .args_not_matched(setdiff(given, c(has, catalogued)), fm)
+  # (`typ = "III"` is `type =`, as R matches it).  A name the catalog
+  # describes is judged by the method too: `white.adjust =` is Anova.lm()'s,
+  # ignored by Anova.glm(); `test.statistic =` the other way round.
+  bad <- .args_not_matched(setdiff(given, has), fm)
   if (!length(bad)) return(character())
   sprintf(paste(
     "%s: cardx %s's %s() has no argument %s, and passes it on to car's",
