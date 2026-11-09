@@ -861,6 +861,14 @@ tfl_templates <- function(source = NULL) {
   "\"tested\": the same, when `denominator` is \"data\" (the records' subjects); a header N",
   "apart from the denominator is not supported yet; \"none\": no N")
 
+# the stack templates' `denominator` (hierarchical, ae_soc_pt and its
+# variants, ae_pt_freq, ae_max_grade)
+.tpl_den_doc <- paste(
+  "the percentages' denominator: NULL (default): the analysis set's subjects; \"data\": the",
+  "subjects with a record kept; a number: that many subjects in every column; numbers named by",
+  "the values of `by` (`c(\"Drug X\" = 60, \"Control\" = 55)`): that many in each column; the id of",
+  "an analysis data (`adsl_itt`, or one of the report's own): its subjects in each column")
+
 .tpl_hier_params <- list(
   tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
   .tpl_subset_param(),
@@ -881,8 +889,7 @@ tfl_templates <- function(source = NULL) {
             doc = "where min_pct is met: \"any\" column, \"all\" of them, or the \"total\" column"),
   tfl_param("count_cell", NULL, study = "plan_cells.categorical",
             doc = "a count's cell, n (%) (plan_cells(categorical = )); NULL: the study standard's"),
-  tfl_param("denominator", NULL,
-            doc = "the percentages' denominator: NULL the analysis set's subjects, \"data\" the records' subjects"),
+  tfl_param("denominator", NULL, doc = .tpl_den_doc),
   tfl_param("total", FALSE, doc = "TRUE: a Total column (the analysis again without `by`, plan_total())"),
   tfl_param("header_n", "denominator", type = "choice",
             choices = c("denominator", "set", "tested", "none"), doc = .tpl_header_n_stack_doc)
@@ -913,6 +920,99 @@ names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
                        "is not supported yet: use header_n = \"denominator\" or \"none\"."))
 }
 
+# The values of a code list (as the YAML holds it: rows of value / label; or
+# the values themselves), NULL when the variable has none
+.tpl_cl_values <- function(codelists, var) {
+  cl <- codelists[[var]]
+  if (is.null(cl)) return(NULL)
+  if (is.character(cl)) return(unname(cl))
+  vapply(cl, function(r) as.character(r$value %||% r$label), "")
+}
+
+# The stack templates' `denominator`, checked.  It is NULL (the analysis
+# set), "data" (the records' subjects), a number (every column's N), numbers
+# named by the values of `by`, or the id of an analysis data (a text of
+# numbers, "50" or "c(\"Drug X\" = 60)", is read as the numbers).  Returns
+# `value`, what the analysis's `denominator` takes (NULL: the analysis set
+# `subj`); `header`, the same but NULL when it is the analysis set (for
+# header_n); `extra`, the analysis data to add (the subjects of another
+# analysis set, `adsl_<id>`).
+.tpl_den <- function(a, ctx, subj) {
+  tn <- ctx$template$name %||% "template"
+  by <- a$by
+  v <- a$denominator
+  out <- function(value, extra = list()) {
+    list(value = value, header = if (identical(value, subj)) NULL else value, extra = extra)
+  }
+  if (is.null(v)) return(out(NULL))
+  if (is.list(v) && length(v) && !is.null(names(v)) &&
+      all(vapply(v, function(z) is.numeric(z) && length(z) == 1L, NA))) v <- unlist(v)
+  if (is.character(v) && length(v) == 1L && !is.na(v)) {
+    t <- trimws(v)
+    if (identical(t, "data")) return(out("data"))
+    num <- .den_numbers(t)
+    if (is.null(num)) {
+      if (grepl("^[a-z][a-z0-9_.]*$", t)) {
+        if (identical(t, subj)) return(out(NULL))
+        pops <- vapply(ctx$population %||% list(), function(p) as.character(p$id %||% ""), "")
+        hit <- pops[nzchar(pops) & paste0("adsl_", tolower(pops)) == t]
+        extra <- if (length(hit)) list(list(
+          id = t, label = .tpl_set_label(hit[1L], ctx$population), from = "ADSL",
+          population = hit[1L])) else list()
+        return(out(t, extra))
+      }
+    } else if (length(num) == 1L && is.na(num)) {
+      .ard_stop(sprintf(paste0(
+        "%s: denominator \"%s\": numbers are whole and each named by a value of %s: ",
+        "c(\"Drug X\" = 60, \"Control\" = 55)."), tn, t, by))
+    } else v <- num
+  }
+  if (!is.numeric(v) || !length(v)) {
+    .ard_stop(sprintf(paste0(
+      "%s: denominator takes NULL (the analysis set), \"data\" (the records' subjects), a number, ",
+      "numbers named by the values of %s, or an analysis data's id."), tn, by))
+  }
+  nm <- names(v)
+  if (length(v) == 1L && is.null(nm)) {
+    if (is.na(v) || v <= 0 || v != round(v) || v > .Machine$integer.max) {
+      .ard_stop(sprintf(paste0(
+        "%s: denominator = %s: a number is the subjects of every column: a positive whole number."),
+        tn, format(v)))
+    }
+    return(out(as.integer(v)))
+  }
+  if (is.null(nm) || anyNA(nm) || !all(nzchar(nm))) {
+    .ard_stop(sprintf(paste0(
+      "%s: denominator: several numbers are named by the values of %s, ",
+      "c(\"Drug X\" = 60, \"Control\" = 55)."), tn, by))
+  }
+  if (anyDuplicated(nm)) {
+    .ard_stop(sprintf("%s: denominator names %s twice.", tn,
+                      paste(dQuote(unique(nm[duplicated(nm)]), FALSE), collapse = ", ")))
+  }
+  if (anyNA(v) || any(v <= 0) || any(v != round(v)) || any(v > .Machine$integer.max)) {
+    .ard_stop(sprintf(paste0(
+      "%s: denominator: the numbers are the subjects of each column: positive whole numbers."),
+      tn))
+  }
+  lv <- .tpl_cl_values(ctx$codelists, by)
+  if (length(lv)) {
+    unk <- setdiff(nm, lv)
+    if (length(unk)) {
+      .ard_stop(sprintf("%s: denominator names %s, not a value of %s (%s).", tn,
+                        paste(dQuote(unk, FALSE), collapse = ", "), by,
+                        paste(lv, collapse = ", ")))
+    }
+    miss <- setdiff(lv, nm)
+    if (length(miss)) {
+      .ard_stop(sprintf("%s: denominator has no number for %s, a value of %s: give one for each (%s).",
+                        tn, paste(dQuote(miss, FALSE), collapse = ", "), by,
+                        paste(lv, collapse = ", ")))
+    }
+  }
+  out(stats::setNames(as.integer(v), nm))
+}
+
 # The rows kept: `min_pct` % of subjects or more, in any column, every
 # column, or the Total column (plan_filter()); NULL when none is set
 .tpl_min_pct_items <- function(min_pct, min_pct_in = "any", by = NULL) {
@@ -925,25 +1025,26 @@ names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
 }
 
 .tpl_hier_body <- function(a, ctx) {
-  # (the header N is the stack's own denominator: only the text changes)
-  hn <- .tpl_header_n_stack(a, ctx)
-  # the any-record row: its label, when it is shown
-  overall <- if (isTRUE(a[["any_row"]])) a[["any_row_label"]]
   pop <- a$population
   subj <- paste0("adsl_", tolower(pop))
+  # (the header N is the stack's own denominator: only the text changes)
+  dn <- .tpl_den(a, ctx, subj)
+  hn <- .tpl_header_n_stack(a, ctx, den = dn$header)
+  # the any-record row: its label, when it is shown
+  overall <- if (isTRUE(a[["any_row"]])) a[["any_row_label"]]
   set <- a[["data_id"]] %||% paste0(tolower(a[["data"]]), "_", tolower(pop))
   d <- list(id = set, label = a[["data_label"]], from = a[["data"]], subjects = subj,
             where = if (!is.null(a$where)) tfl_r(a$where))
   nn <- function(x) Filter(Negate(is.null), x)
   # "data": the percentages' denominator is the records' subjects -- the
   # set's subjects with a record kept, one row each (so within the subset)
-  rec_den <- identical(a$denominator, "data")
+  rec_den <- identical(dn$value, "data")
   den_id <- paste0(set, "_den")
   ard <- list(
     analysis_data = c(list(
       list(id = subj, label = .tpl_set_label(pop, ctx$population), from = "ADSL",
-           population = pop),
-      nn(d)),
+           population = pop)),
+      dn$extra, list(nn(d)),
       if (rec_den) list(list(
         id = den_id, label = "the subjects with a record kept", from = set,
         code = tfl_r(sprintf("dplyr::distinct(%s, %s)", set,
@@ -952,7 +1053,7 @@ names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
       id = a[["analysis_id"]] %||% "AE", label = a[["analysis_label"]] %||% ctx$template$label,
       method = "hierarchical", data = set,
       by = a$by, overall = if (isTRUE(a[["total"]])) TRUE, variables = a$hierarchy,
-      denominator = if (rec_den) den_id else a$denominator %||% subj,
+      denominator = if (rec_den) den_id else dn$value %||% subj,
       args = if (!is.null(overall)) tfl_r("over_variables = TRUE"),
       purpose = "PRIMARY OUTCOME MEASURE"))))
   n <- length(a$hierarchy)
@@ -1048,10 +1149,9 @@ tpl_hierarchical <- function(ard, population, hierarchy, ..., codelists = NULL) 
   tfl_param("sort_by", NULL,
             doc = "the column (a value of `by`) whose counts order the PTs; NULL: the Total column with min_pct_in = \"total\", else the code list's first value of `by`, else all the columns"),
   tfl_param("heading", "Preferred Term", doc = "the label column's heading"),
+  tfl_param("denominator", NULL, doc = .tpl_den_doc),
   tfl_param("header_n", "denominator", type = "choice",
-            choices = c("denominator", "set", "none"), doc = paste(
-    "the arm headings' N: \"denominator\" (default) or \"set\": the arm's subjects in the",
-    "analysis set (with `subset`), the percentages' denominator; \"none\": no N"))
+            choices = c("denominator", "set", "tested", "none"), doc = .tpl_header_n_stack_doc)
 )
 names(.tpl_pt_params) <- vapply(.tpl_pt_params, `[[`, "", "name")
 
@@ -1128,20 +1228,24 @@ tpl_ae_pt_freq <- function(ard, population, ..., codelists = NULL) {
             doc = "the SOCs and PTs by their count, most first (\"n\"), or by \"name\""),
   tfl_param("heading", c("System Organ Class", "   Preferred Term"),
             doc = "the label column's heading, a line a level"),
+  tfl_param("denominator", NULL, doc = .tpl_den_doc),
   tfl_param("header_n", "denominator", type = "choice",
-            choices = c("denominator", "set", "none"), doc = paste(
-    "the arm headings' N: \"denominator\" (default) or \"set\": the arm's subjects in the",
-    "analysis set (with `subset`), the percentages' denominator; \"none\": no N"))
+            choices = c("denominator", "set", "tested", "none"), doc = .tpl_header_n_stack_doc)
 )
 names(.tpl_mg_params) <- vapply(.tpl_mg_params, `[[`, "", "name")
 
 .tpl_mg_body <- function(a, ctx) {
   rows_in <- identical(match.arg(a$grade_in, c("rows", "cols")), "rows")
-  # (the percentages are of the analysis set: "denominator" and "set" are one)
-  hn <- .tpl_header_n_stack(a, ctx, den = NULL)
   pop <- a$population
   subj <- paste0("adsl_", tolower(pop))
+  # (the header N is the stack's own denominator: only the text changes)
+  dn <- .tpl_den(a, ctx, subj)
+  hn <- .tpl_header_n_stack(a, ctx, den = dn$header)
   set <- a$data_id %||% paste0(tolower(a$data), "_", tolower(pop))
+  # "data": the percentages' denominator is the records' subjects -- the
+  # set's subjects with a record kept, one row each
+  rec_den <- identical(dn$value, "data")
+  den_id <- paste0(set, "_den")
   g <- a$grade
   h <- a$hierarchy
   lv <- a$grade_levels %||% .tpl_levels(g, ctx$codelists)[[g]]
@@ -1164,13 +1268,19 @@ names(.tpl_mg_params) <- vapply(.tpl_mg_params, `[[`, "", "name")
             where = if (!is.null(a$where)) tfl_r(a$where))
   an <- function(id, data, vars, over = FALSE) Filter(Negate(is.null), list(
     id = id, method = "hierarchical", data = data, by = a$by, variables = vars,
-    denominator = subj, args = if (over) tfl_r("over_variables = TRUE"),
+    denominator = if (rec_den) den_id else dn$value %||% subj,
+    args = if (over) tfl_r("over_variables = TRUE"),
     purpose = "PRIMARY OUTCOME MEASURE"))
   ard <- list(
     analysis_data = c(list(
       list(id = subj, label = .tpl_set_label(pop, ctx$population), from = "ADSL",
-           population = pop),
-      Filter(Negate(is.null), d)), lapply(maxes, function(m) Filter(Negate(is.null), m))),
+           population = pop)),
+      dn$extra, list(Filter(Negate(is.null), d)),
+      if (rec_den) list(list(
+        id = den_id, label = "the subjects with a record kept", from = set,
+        code = tfl_r(sprintf("dplyr::distinct(%s, %s)", set,
+                             paste(c("USUBJID", a$by), collapse = ", "))))),
+      lapply(maxes, function(m) Filter(Negate(is.null), m))),
     analyses = list(
       an("AE_MAX", maxes[[1L]]$id, c(h[1L], g)),
       an("AE_MAX_SOC", maxes[[2L]]$id, c(h[1L], g)),
