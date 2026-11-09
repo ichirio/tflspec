@@ -175,13 +175,6 @@
     if (!p$name %in% names(args)) {
       args[[p$name]] <- v
       from_study <- c(from_study, p$name)
-    } else if (identical(p$study, "output.population") && !identical(as.character(args[[p$name]]), as.character(v))) {
-      # (the analysis set is the report's `population:`: two ways to say it
-      # that differ are an error, not a choice)
-      .ard_stop(sprintf(paste0("%s: template %s's %s is %s but the report's `population:` is %s; ",
-                               "the analysis set is the report's `population:` field."),
-                        id, t$name, p$name, paste(sQuote(args[[p$name]], FALSE), collapse = ", "),
-                        paste(sQuote(v, FALSE), collapse = ", ")))
     } else if (!identical(args[[p$name]], v)) {
       message(sprintf("%s: template %s's %s overrides the study standard (%s).",
                       id, t$name, p$name, p$study))

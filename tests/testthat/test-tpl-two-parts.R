@@ -121,16 +121,17 @@ test_that("population: args equal to the report's, or the report has none: used,
   expect_identical(r$content, base$content)
 })
 
-test_that("population: args differing from the report's stop, naming both", {
+test_that("population: args differing from the report's: built with the template's, with the message (as before)", {
   s <- tp_study()
   o <- tp_output(list(name = "demog", args = list(population = "ITT", continuous = "AGE")))
-  expect_error(tfl_resolve_output(o, s), "'ITT'.*'SAF'")
-  expect_error(tfl_resolve_output(o, s), "report's `population:`")
+  expect_message(r <- tfl_resolve_output(o, s), "overrides the study standard \\(output.population\\)")
+  expect_identical(r$ard$analysis_data[[1L]]$population, "ITT")
   o <- tp_output(list(name = "demog", ard = list(population = "ITT", continuous = "AGE")))
-  expect_error(tfl_resolve_output(o, s), "'ITT'.*'SAF'")
+  expect_message(r <- tfl_resolve_output(o, s), "overrides the study standard")
+  expect_identical(r$ard$analysis_data[[1L]]$population, "ITT")
 })
 
-test_that("tfl_check_spec(): a template's population gives a warning row, or an error when it differs", {
+test_that("tfl_check_spec(): a template's population gives a warning row, naming both when it differs", {
   mk <- function(args, population = "SAF") tp_output(list(name = "demog", args = args), population)
   p <- tflspec:::.check_static_rows(mk(list(continuous = "AGE")), "T1")
   expect_identical(nrow(p), 0L)
@@ -143,8 +144,9 @@ test_that("tfl_check_spec(): a template's population gives a warning row, or an 
   p <- tflspec:::.check_static_rows(tp_output(list(name = "demog", ard = list(population = "SAF"))), "T1")
   expect_identical(p$level, "warning")
   p <- tflspec:::.check_static_rows(mk(list(population = "ITT")), "T1")
-  expect_identical(p$level, "error")
+  expect_identical(p$level, "warning")
   expect_match(p$message, "(ITT) differs from the report's `population:` (SAF)", fixed = TRUE)
+  expect_match(p$message, "make the report's `population:` the one to use", fixed = TRUE)
 })
 
 test_that("the look as a template parameter is no warning, and no finding", {

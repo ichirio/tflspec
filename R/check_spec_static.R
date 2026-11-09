@@ -49,9 +49,10 @@
                         error = function(e) NULL))) {
     rp <- o$population
     if (length(rp) == 1L && !is.na(rp) && !identical(as.character(args$population), as.character(rp))) {
-      add(part = "template", item = "population", level = "error", message = sprintf(paste0(
-        "template argument `population` (%s) differs from the report's `population:` (%s): ",
-        "the analysis set is the report's `population:` field"), args$population[1L], rp))
+      add(part = "template", item = "population", level = "warning", message = sprintf(paste0(
+        "template argument `population` (%s) differs from the report's `population:` (%s): the report is built ",
+        "with the template's; make the report's `population:` the one to use and remove the template's"),
+        args$population[1L], rp))
     } else {
       add(part = "template", item = "population", level = "warning", message = paste0(
         "move the template's `population` to the report's `population:` field: ",
