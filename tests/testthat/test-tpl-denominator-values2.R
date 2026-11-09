@@ -43,9 +43,10 @@ test_that("summary family: no denominator is today's analysis; the parameter has
   }
   expect_identical(doc("demog"), doc("summary"))
   expect_identical(doc("stf_t02_demog"), doc("summary"))
-  expect_match(doc("summary"), "\"data\"", fixed = TRUE)
-  # (disposition is ADSL only: no "data")
+  # ("data" is for ae_overview and the stack templates, not here)
+  expect_false(grepl("\"data\"", doc("summary"), fixed = TRUE))
   expect_false(grepl("\"data\"", doc("disposition"), fixed = TRUE))
+  expect_match(doc("summary"), "not for `total` = TRUE", fixed = TRUE)
 })
 
 test_that("summary family: a number, numbers by arm, an analysis data's id", {
@@ -82,15 +83,12 @@ test_that("summary family: a number, numbers by arm, an analysis data's id", {
   }
 })
 
-test_that("summary on records: \"data\" is the records' subjects", {
-  x <- d2_expand("summary", data = "ADAE", categorical = "AESEV", where = "TRTEMFL == \"Y\"",
-                 denominator = "data")
-  ids <- d2_ids(x)
-  expect_identical(ids, c("adsl_saf", "adae_saf", "adae_saf_den"))
-  d <- x$ard$analysis_data[[3L]]
-  expect_identical(d$from, "adae_saf")
-  expect_identical(as.character(d$code), "dplyr::distinct(adae_saf, USUBJID, TRT01A)")
-  expect_identical(d2_an(x, "CAT")$denominator, "adae_saf_den")
+test_that("summary on records: \"data\" stops until id exists; the default is the records", {
+  expect_error(d2_expand("summary", data = "ADAE", categorical = "AESEV", denominator = "data"),
+               paste0("summary: denominator = \"data\" on records (ADAE) is not supported yet: the counts ",
+                      "are of records and \"data\" is a base of subjects, so a percentage could pass ",
+                      "100%; leave it out (the records kept), or give a number, numbers named by the ",
+                      "values of TRT01A, or an analysis data's id."), fixed = TRUE)
   # (the default is the records: cards' column)
   expect_false("denominator" %in% names(d2_an(d2_expand("summary", data = "ADAE",
                                                          categorical = "AESEV"), "CAT")))
@@ -217,35 +215,38 @@ test_that("ae_overview: the checks of D2a's denominator", {
   expect_error(d2_expand("ae_overview", denominator = FALSE), d2_all_msg("ae_overview"), fixed = TRUE)
 })
 
-# ---- orr: the set is the one base ----
+# ---- orr: no denominator (the rate row has none) ----
 
-test_that("orr: the set's subjects, or the set's own id; any other base stops", {
-  for (lay in c("rows", "cols")) {
-    x <- d2_expand("orr", stat_layout = lay)
-    expect_identical(d2_expand("orr", stat_layout = lay, denominator = NULL), x)
-    expect_identical(d2_expand("orr", stat_layout = lay, denominator = "adsl_itt"), x)
-    expect_identical(d2_expand("orr", stat_layout = lay, denominator = "adsl_itt", header_n = "denominator"),
-                     x)
-  }
-  why <- paste0("the response rate and its CI (the rate row) are over the analysis set's subjects, ",
-                "and n (%) must have the same base. Change the base with `population` and `subset`.")
-  shown <- list("\"adsl_saf\"" = "adsl_saf", "20" = 20, "\"data\"" = "data",
-                "c(\"Drug X\" = 10, \"Control\" = 8)" = c("Drug X" = 10, Control = 8),
-                "\"adsl_part\"" = "adsl_part")
-  for (lay in c("rows", "cols")) {
-    for (nm in names(shown)) {
-      expect_error(d2_expand("orr", stat_layout = lay, denominator = shown[[nm]]),
-                   sprintf("orr: denominator = %s is not supported: %s", nm, why), fixed = TRUE,
-                   info = paste(lay, nm))
+test_that("orr has no denominator parameter", {
+  expect_false("denominator" %in% tfl_tpl_args("orr")$param)
+  expect_error(d2_expand("orr", denominator = "adsl_itt"), "no parameter 'denominator'", fixed = TRUE)
+})
+
+# ---- a number with a Total column ----
+
+test_that("a single number with total = TRUE stops; numbers by arm and a data id do not", {
+  hier <- list(hierarchy = c("AEBODSYS", "AEDECOD"))
+  for (tpl in c("summary", "demog", "stf_t02_demog", "hierarchical", "ae_soc_pt", "ae_ser_soc_pt",
+                "ae_disc_soc_pt")) {
+    a <- c(list(population = "SAF", total = TRUE),
+           if (tpl == "summary") list(categorical = "SEX"),
+           if (tpl == "hierarchical") hier)
+    ex <- function(den) tfl_template_expand(tpl, c(a, list(denominator = den)), codelists = d2_codelists,
+                                            population = d2_pops)
+    for (v in list(20, "20")) {
+      expect_error(ex(v), sprintf(paste0("%s: denominator = 20 with total = TRUE: one number is each ",
+                                         "arm's N and would be the Total column's too; give numbers ",
+                                         "named by the values of TRT01A (the Total column is their sum), ",
+                                         "or an analysis data's id."), tpl), fixed = TRUE, info = tpl)
+    }
+    expect_silent(ex(c("Drug X" = 10, Control = 8)))
+    expect_silent(ex("adsl_itt"))
+    # (without a Total column the number is fine)
+    if (tpl %in% c("summary", "hierarchical", "ae_soc_pt")) {
+      a$total <- FALSE
+      expect_silent(ex(20))
     }
   }
-  # (a value that is no denominator at all: the checks of the other templates)
-  expect_error(d2_expand("orr", denominator = 0),
-               "orr: denominator = 0: a number is the subjects of every column: a positive whole number.",
-               fixed = TRUE)
-  expect_error(d2_expand("orr", denominator = TRUE), d2_all_msg("orr", "TRT01P"), fixed = TRUE)
-  a <- tfl_tpl_args("orr")
-  expect_match(a$doc[a$param == "denominator"], "takes no other base", fixed = TRUE)
 })
 
 # ---- a report: the unknown data id ----
@@ -476,7 +477,7 @@ test_that("summary on records: n of the records over each denominator", {
   d2_skip()
   s <- d2_study(withr::local_tempdir())
   h <- d2_by_hand(s)
-  forms <- d2_forms(h, records = TRUE)
+  forms <- d2_forms(h)
   # (the default: the records, 5 and 3)
   forms$set <- list(den = NULL, N = c("Drug X" = 5L, Control = 3L))
   nsev <- function(a, v) sum(h$ev$TRT01A == a & h$ev$AESEV == v)
@@ -495,10 +496,6 @@ test_that("summary on records: n of the records over each denominator", {
       }
     }
   }
-  # by hand: Drug X has 3 mild, 1 moderate, 1 severe of 5 records; 3 subjects with an event
-  r <- d2_report(s, "summary", list(data = "ADAE", categorical = "AESEV", denominator = "data"))
-  expect_equal(d2_cells(r$ard, "AESEV", "MILD", "Drug X")[["p"]], 3 / 3)
-  expect_equal(d2_cells(r$ard, "AESEV", "MODERATE", "Control")[["p"]], 1 / 2)
 })
 
 test_that("a Total column and a stack take a number and an analysis data", {
@@ -573,36 +570,6 @@ test_that("ae_overview: n (%) of each denominator, and the header's N", {
   expect_equal(d2_cells(r$ard, "ANY", "TRUE", "Drug X")[["n"]], 2)
   expect_equal(d2_cells(r$ard, "ANY", "TRUE", "Drug X")[["p"]], 2 / 3)
   expect_equal(d2_cells(r$ard, "ANY", "TRUE", "Control")[["p"]], 1 / 4)
-})
-
-test_that("orr: n (%) and the rate over the set, with its own id; the header's N", {
-  d2_skip()
-  s <- d2_study(withr::local_tempdir())
-  # ITT: 6 an arm; responders (CR, PR): Drug X subjects 1, 2 (2 of 6); Control 7, 8, 10 (3 of 6)
-  want <- list("Drug X" = c(resp = 2, CR = 1, PD = 1), Control = c(resp = 3, CR = 1, PD = 2))
-  for (lay in c("rows", "cols")) {
-    for (den in list(NULL, "adsl_itt")) {
-      r <- d2_report(s, "orr", c(list(population = "ITT", stat_layout = lay, header_n = "denominator"),
-                                 if (!is.null(den)) list(denominator = den)))
-      for (arm in names(want)) {
-        info <- paste(lay, arm)
-        expect_true(any(grepl("(N=6)", r$header, fixed = TRUE)),
-                    info = paste(info, paste(r$header, collapse = " | ")))
-        o <- d2_cells(r$ard, "RESP", "TRUE", arm, analysis = "ORR")
-        expect_equal(c(o[["n"]], o[["N"]]), c(want[[arm]][["resp"]], 6), info = info)
-        for (g in c("CR", "PD")) {
-          b <- d2_cells(r$ard, "AVALC", g, arm, analysis = "BOR")
-          expect_equal(c(b[["n"]], b[["N"]], b[["p"]]),
-                       c(want[[arm]][[g]], 6, want[[arm]][[g]] / 6), info = paste(info, g))
-        }
-      }
-    }
-  }
-  # a base apart from the set stops, before any data is read
-  o <- tfl_output("T-DV", "table", population = "ITT", extends = "defaults",
-                  template = list(name = "orr", args = list(population = "ITT", denominator = 20)))
-  expect_error(tfl_resolve_output(o, tfl_read_study_spec(s$dir)),
-               "orr: denominator = 20 is not supported", fixed = TRUE)
 })
 
 test_that("the program: a number, a named vector, a data id, the records' subjects", {

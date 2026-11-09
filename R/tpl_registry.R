@@ -618,14 +618,14 @@ tpl_demog <- function(ard, population, ..., codelists = NULL) {
   "subjects (with a `data` other than ADSL, the records kept); a number: that many in every",
   "column; numbers named by the values of `by` (`c(\"Drug X\" = 60, \"Control\" = 55)`): that many",
   "in each column; the id of an analysis data (`adsl_itt`, or one of the report's own): its rows",
-  "in each column; \"data\" (a `data` other than ADSL): the subjects with a record kept.",
-  "The column headings' N is the study standard's, not moved")
+  "in each column. A number is not for `total` = TRUE. The column headings' N is the study",
+  "standard's, not moved")
 .tpl_den_adsl_doc <- paste(
   "the categorical variables' percentages' denominator: NULL (default): the analysis set's",
   "subjects (those with a value); a number: that many in every column; numbers named by the",
   "values of `by` (`c(\"Drug X\" = 60, \"Control\" = 55)`): that many in each column; the id of an",
-  "analysis data (`adsl_itt`, or one of the report's own): its rows in each column. The",
-  "column headings' N is the study standard's, not moved")
+  "analysis data (`adsl_itt`, or one of the report's own): its rows in each column. A number",
+  "is not for `total` = TRUE. The column headings' N is the study standard's, not moved")
 
 .tpl_summary_params <- list(
   tfl_param("population", required = TRUE, doc = "the analysis set's id (SAF)"),
@@ -678,6 +678,13 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
       "numbers named by the values of %s, or an analysis data's id (%s counts every subject of the set)."),
       tn, a$by, subj))
   }
+  if (one && identical(trimws(v), "data")) {
+    .ard_stop(sprintf(paste0(
+      "%s: denominator = \"data\" on records (%s) is not supported yet: the counts are of records ",
+      "and \"data\" is a base of subjects, so a percentage could pass 100%%; leave it out (the ",
+      "records kept), or give a number, numbers named by the values of %s, or an analysis data's id."),
+      tn, a[["data"]], a$by))
+  }
   dn <- .tpl_den(a, ctx, subj)
   value <- dn$value
   extra <- dn$extra
@@ -688,11 +695,6 @@ names(.tpl_summary_params) <- vapply(.tpl_summary_params, `[[`, "", "name")
       "one number, or an analysis data's id."), tn, a$by))
   }
   if (is.null(value) && one && identical(trimws(v), subj)) value <- subj
-  if (identical(value, "data")) {
-    d <- .tpl_den_records(set, a$by)
-    value <- d$id
-    extra <- list(d)
-  }
   list(value = value, extra = extra)
 }
 
@@ -991,21 +993,6 @@ names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
        code = tfl_r(sprintf("dplyr::distinct(%s, %s)", set, paste(c("USUBJID", by), collapse = ", "))))
 }
 
-# A template whose statistic takes one base only, the analysis set `subj`:
-# `denominator` may be NULL or the set's own id, anything else stops with `why`
-.tpl_den_set_only <- function(a, ctx, subj, why) {
-  dn <- .tpl_den(a, ctx, subj)
-  if (is.null(dn$value)) return(invisible())
-  v <- a$denominator
-  shown <- if (is.character(v)) sprintf("\"%s\"", trimws(v)) else {
-    z <- .den_cell(v)
-    if (is.character(z)) z else format(z)
-  }
-  .ard_stop(sprintf(paste0(
-    "%s: denominator = %s is not supported: %s. Change the base with `population` and `subset`."),
-    ctx$template$name %||% "template", shown, why))
-}
-
 # The values of a code list (as the YAML holds it: rows of value / label; or
 # the values themselves), NULL when the variable has none
 .tpl_cl_values <- function(codelists, var) {
@@ -1064,6 +1051,12 @@ names(.tpl_hier_params) <- vapply(.tpl_hier_params, `[[`, "", "name")
       .ard_stop(sprintf(paste0(
         "%s: denominator = %s: a number is the subjects of every column: a positive whole number."),
         tn, format(v)))
+    }
+    if (isTRUE(a[["total"]])) {
+      .ard_stop(sprintf(paste0(
+        "%s: denominator = %s with total = TRUE: one number is each arm's N and would be the Total ",
+        "column's too; give numbers named by the values of %s (the Total column is their sum), ",
+        "or an analysis data's id."), tn, format(v), by))
     }
     return(out(as.integer(v)))
   }
@@ -2319,11 +2312,6 @@ tpl_stat_block <- function(ard, ..., codelists = NULL) {
       "the rate and its CI: \"rows\", under each other in the arm's column, or \"cols\",",
       "each arm's two columns (stat_block)")),
     tfl_param("heading", "Response", doc = "the label column's heading"),
-    tfl_param("denominator", NULL, doc = paste(
-      "the percentages' and the rate's denominator: NULL (default), or the analysis set's own",
-      "id (`adsl_itt`): the analysis set's subjects. The rate row (cardx's proportion_ci) is",
-      "over the set's subjects and takes no other base, so another denominator is not",
-      "supported: change `population` or `subset`")),
     tfl_param("header_n", "set", type = "choice", choices = c("set", "denominator", "none"),
               doc = paste(
       "the arm headings' N: \"set\" (default) or \"denominator\": the arm's subjects in the",
@@ -2331,9 +2319,6 @@ tpl_stat_block <- function(ard, ..., codelists = NULL) {
       "\"tested\" is not supported, the rate row's base is the analysis set"))
   ),
   body = function(a, ctx) {
-    .tpl_den_set_only(a, ctx, paste0("adsl_", tolower(a$population)), paste0(
-      "the response rate and its CI (the rate row) are over the analysis set's subjects, and ",
-      "n (%) must have the same base"))
     hn <- .tpl_header_n(a, ctx, c("set", "denominator", "none"), paste0(
       "is not supported: the rate row's base is the analysis set; ",
       "use header_n = \"set\" or \"none\"."))
