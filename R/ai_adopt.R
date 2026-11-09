@@ -57,6 +57,15 @@
 #' is adopted as it is.  Where they cannot be filled, the report is adopted
 #' without, and a message says so.
 #'
+#' A draft with an error -- its YAML cannot be read as a report file, or
+#' the last collection ([tfl_ai_collect_answers()], `ai/manifest.csv`, when
+#' not older than the draft) marked it `error` -- is never copied, and
+#' never written over a study file: it is skipped (`skipped (error)`), the
+#' other drafts are adopted, and one message names each skipped report with
+#' its first error.  Drafts with warnings are adopted.  When every draft
+#' asked for has an error, nothing is copied (and it is not an R error).
+#' A report with no draft (a request never answered) is `no draft`, quietly.
+#'
 #' @param study_dir The study folder.
 #' @param outputs The reports to adopt (their ids); `NULL`, every draft.
 #' @param overwrite `TRUE` to write over a report already adopted (or
@@ -72,7 +81,10 @@
 #' @return A data frame, one row a report: `output_id`, `status`
 #'   (`adopted`, `same` -- the study's file is the draft already --, `kept`
 #'   -- the study's file differs and was left, pass `overwrite = TRUE` --,
-#'   `no draft`), `file` (the study's file), `toc` (`added`: its entry was
+#'   `skipped (error)` -- the draft has an error and was not copied; the
+#'   error is in `problem` --, `no draft`), `file` (the study's file; `NA`
+#'   for `skipped (error)` and `no draft`), `problem` (the draft's first
+#'   error for `skipped (error)`, else `NA`), `toc` (`added`: its entry was
 #'   added to `spec/toc.yml`; with `dry_run`, `add`).  The adoptions are recorded in
 #'   `ai/adopted.csv` (the report, when, the draft's md5).
 #' @seealso [tfl_ai_migrate()], [tfl_ai_collect_answers()]
@@ -87,18 +99,21 @@ tfl_ai_adopt <- function(study_dir, outputs = NULL, overwrite = FALSE, dry_run =
   drafts <- list.files(file.path(study_dir, a), "[.]ya?ml$", full.names = TRUE)
   ids <- tools::file_path_sans_ext(basename(drafts))
   want <- outputs %||% ids
+  # (a draft with an error is not adopted: it would make the study unreadable)
+  bad <- .ai_adopt_errors(study_dir, a, drafts[match(want, ids)], want)
+  want_ok <- setdiff(want, names(bad))
   dest_dir <- file.path(.spec_dir(study_dir), "outputs")
   dir.create(dest_dir, recursive = TRUE, showWarnings = FALSE)
   # (a draft about to be adopted that has no widths gets tflspec's first,
   # written into the draft: the study's file is then the draft, as when the
   # draft went through tfl_ai_collect_answers() or tfl_ai_run())
   if (!isTRUE(dry_run)) {
-    src_of <- drafts[match(want, ids)]
-    dest_of <- file.path(dest_dir, paste0(want, ".yml"))
+    src_of <- drafts[match(want_ok, ids)]
+    dest_of <- file.path(dest_dir, paste0(want_ok, ".yml"))
     todo <- !is.na(src_of) & (!file.exists(dest_of) | isTRUE(overwrite))
     both <- todo & file.exists(dest_of)
     todo[both] <- unname(tools::md5sum(src_of[both])) != unname(tools::md5sum(dest_of[both]))
-    if (any(todo)) .ai_adopt_widths(study_dir, a, want[todo])
+    if (any(todo)) .ai_adopt_widths(study_dir, a, want_ok[todo])
   }
   log <- .ai_adopted_read(study_dir)
   rows <- lapply(want, function(id) {
@@ -106,6 +121,9 @@ tfl_ai_adopt <- function(study_dir, outputs = NULL, overwrite = FALSE, dry_run =
     dest <- file.path(dest_dir, paste0(id, ".yml"))
     rel <- file.path("spec", "outputs", paste0(id, ".yml"))
     if (is.na(src)) return(data.frame(output_id = id, status = "no draft", file = NA_character_))
+    if (id %in% names(bad)) {
+      return(data.frame(output_id = id, status = "skipped (error)", file = NA_character_))
+    }
     md5 <- unname(tools::md5sum(src))
     if (isTRUE(dry_run)) {
       st <- if (!file.exists(dest)) "new" else
@@ -127,6 +145,8 @@ tfl_ai_adopt <- function(study_dir, outputs = NULL, overwrite = FALSE, dry_run =
   out <- do.call(rbind, c(list(data.frame(output_id = character(), status = character(),
                                           file = character())), rows))
   rownames(out) <- NULL
+  out$problem <- unname(bad[out$output_id])
+  out <- out[c("output_id", "status", "file", "problem")]
   # (the report list shows what spec/toc.yml lists: a report adopted that
   # it does not -- a part, a report the AI named -- gets its entry)
   in_toc <- .ai_toc_ids(study_dir)
@@ -140,11 +160,54 @@ tfl_ai_adopt <- function(study_dir, outputs = NULL, overwrite = FALSE, dry_run =
   out$toc <- ifelse(out$output_id %in% added, "added", NA_character_)
   utils::write.csv(log, .ai_adopted_file(study_dir), row.names = FALSE, fileEncoding = "UTF-8")
   rownames(out) <- NULL
+  skipped <- out$output_id[out$status == "skipped (error)"]
+  if (length(skipped)) {
+    all_bad <- all(out$status %in% c("skipped (error)", "no draft"))
+    n <- length(skipped)
+    message(sprintf("tfl_ai_adopt(): %s: %s. They were not copied; fix %s in the agent's chat and check again.",
+                    if (all_bad) "nothing was copied, every draft has an error" else
+                      sprintf("%d draft%s with an error", n, if (n == 1L) "" else "s"),
+                    paste(sprintf("%s (%s)", skipped, bad[skipped]), collapse = "; "),
+                    if (n == 1L) "it" else "them"))
+  }
   kept <- out$output_id[out$status == "kept"]
   if (length(kept)) {
     message(sprintf(paste0("tfl_ai_adopt(): %s left as the study has them (they differ from the ",
                            "drafts); pass overwrite = TRUE to adopt the drafts."),
                     paste(kept, collapse = ", ")))
+  }
+  out
+}
+
+# The drafts that have an error, named by report id: the first error, one
+# line.  A draft whose YAML cannot be read as a report file; one the last
+# collection's `ai/manifest.csv` (step 3: tfl_ai_collect_answers()) marks
+# `error`, when the manifest is not older than the draft.  `src`: the drafts' files (NA: none), `ids` theirs.
+.ai_adopt_errors <- function(study_dir, a, src, ids) {
+  out <- character()
+  has <- !is.na(src)
+  for (i in which(has)) {
+    r <- tryCatch(tfl_read_output(src[i]), error = function(e) e)
+    if (inherits(r, "error")) {
+      out[ids[i]] <- .ai_one_line(paste("the YAML cannot be read as a report file:",
+                                        conditionMessage(r)))
+    }
+  }
+  mf <- file.path(study_dir, "ai", "manifest.csv")
+  rest <- setdiff(ids[has], names(out))
+  if (length(rest) && file.exists(mf)) {
+    m <- .ai_csv_read(mf)
+    if (!is.null(m) && all(c("output_id", "status") %in% names(m))) {
+      for (id in rest) {
+        j <- which(m$output_id == id & m$status %in% "error")
+        f <- src[match(id, ids)]
+        if (length(j) && file.mtime(f) <= file.mtime(mf)) {
+          why <- if ("reason" %in% names(m) && !is.na(m$reason[j[1L]])) m$reason[j[1L]] else
+            "the last check found an error"
+          out[id] <- .ai_one_line(why)
+        }
+      }
+    }
   }
   out
 }
